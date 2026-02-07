@@ -1,0 +1,474 @@
+{% extends "base.html" %}
+
+{% block title %}Your Training Plan - RunCoach{% endblock %}
+
+{% block styles %}
+<link rel="stylesheet" href="/static/css/plan.css">
+{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="header">
+        <h1>🏃‍♂️ Your Personalized Training Plan</h1>
+        {% if target_distance|string == '30.0' or target_distance|string == '30' %}
+            <p>Ready to conquer the trails?</p>
+        {% else %}
+            <p>Ready to crush your {{ target_distance }}km goal?</p>
+        {% endif %}
+    </div>
+
+    <!-- Adaptation recommendation banner (hidden by default) -->
+    <div class="adaptation-banner" id="adaptation-banner" style="display: none;">
+        <div class="banner-content">
+            <span class="banner-icon">📊</span>
+            <div class="banner-text">
+                <strong>Plan Adaptation Recommended</strong>
+                <p id="adaptation-reason">Based on your synced runs, we recommend adjusting your plan.</p>
+            </div>
+            <div class="banner-actions">
+                <button onclick="viewAdaptationDetails()" class="btn btn-secondary btn-small">View Details</button>
+                <button onclick="adaptPlan()" class="btn btn-primary btn-small">Adapt Plan</button>
+                <button onclick="dismissAdaptationBanner()" class="btn-close">×</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="plan-summary">
+        <div class="summary-grid">
+            <div class="summary-item">
+                <strong>📊 Current Mileage</strong>
+                {{ current_km }} km/week
+            </div>
+            <div class="summary-item">
+                <strong>🎯 Target Distance</strong>
+                {% if target_distance|string == '30.0' or target_distance|string == '30' %}
+                    Trail Running
+                {% else %}
+                    {{ target_distance }} km
+                {% endif %}
+            </div>
+            <div class="summary-item">
+                <strong>📅 Duration</strong>
+                {{ weeks }} weeks
+            </div>
+            <div class="summary-item">
+                <strong>📈 Peak Week</strong>
+                {{ plan | map(attribute='total_km') | max | round(1) }} km
+            </div>
+        </div>
+    </div>
+    
+    {% if performance_analysis and performance_analysis.total_runs > 0 %}
+    <div class="plan-insights" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; margin-bottom: 2rem;">
+        <h3 style="color: white;">📊 Your Performance Analysis</h3>
+        <div class="insight-grid">
+            <div class="insight-item" style="background: rgba(255,255,255,0.1); border-color: rgba(255,255,255,0.2);">
+                <span class="insight-icon">🏃</span>
+                <div class="insight-content">
+                    <strong>Runs Completed</strong>
+                    <span>{{ performance_analysis.total_runs }} / {{ performance_analysis.planned_workouts }} ({{ performance_analysis.adherence_rate }}%)</span>
+                </div>
+            </div>
+            {% if performance_analysis.avg_effort %}
+            <div class="insight-item" style="background: rgba(255,255,255,0.1); border-color: rgba(255,255,255,0.2);">
+                <span class="insight-icon">💪</span>
+                <div class="insight-content">
+                    <strong>Average Effort</strong>
+                    <span>{{ performance_analysis.avg_effort }}/10 - {{ performance_analysis.effort_trend }}</span>
+                </div>
+            </div>
+            {% endif %}
+            {% if performance_analysis.pace_consistency %}
+            <div class="insight-item" style="background: rgba(255,255,255,0.1); border-color: rgba(255,255,255,0.2);">
+                <span class="insight-icon">⏱️</span>
+                <div class="insight-content">
+                    <strong>Pace Consistency</strong>
+                    <span>{{ performance_analysis.pace_consistency }}% variance</span>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+        {% if performance_analysis.recommendations %}
+        <div style="margin-top: 1rem; padding: 1rem; background: rgba(255,255,255,0.1); border-radius: 8px;">
+            <strong style="display: block; margin-bottom: 0.5rem;">💡 Recommendations:</strong>
+            <ul style="margin: 0; padding-left: 1.5rem;">
+                {% for rec in performance_analysis.recommendations %}
+                <li>{{ rec }}</li>
+                {% endfor %}
+            </ul>
+        </div>
+        {% endif %}
+        <button onclick="checkForAdaptation()" style="margin-top: 1rem; padding: 0.75rem 1.5rem; background: white; color: #667eea; border: none; border-radius: 8px; font-weight: 600; cursor: pointer;">
+            Check if Plan Needs Adaptation
+        </button>
+    </div>
+    {% endif %}
+    
+    {% if warnings %}
+    <div class="warning-container" style="margin-bottom: 2rem;">
+        {% for warning in warnings %}
+        <div class="warning-card" style="background: #fff3e0; color: #e65100; padding: 1rem; border-radius: 8px; border-left: 4px solid #ff9800; margin-bottom: 1rem;">
+            <div style="display: flex; align-items: center; margin-bottom: 0.5rem;">
+                <span style="font-size: 1.2rem; margin-right: 0.5rem;">⚠️</span>
+                <strong style="color: #e65100;">{{ warning.title }}</strong>
+            </div>
+            <div style="font-size: 0.95rem; line-height: 1.4;">{{ warning.message }}</div>
+            {% if warning.recommendation %}
+            <div style="margin-top: 0.5rem; font-size: 0.9rem; font-style: italic; color: #f57c00;">
+                💡 {{ warning.recommendation }}
+            </div>
+            {% endif %}
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+    
+    {% if nutrition_plan %}
+    <div class="nutrition-section">
+        <div class="section-header">
+            <h2>🥗 Personalized Nutrition Plan</h2>
+            <p>Optimized for your {{ target_distance }}km goal</p>
+        </div>
+        
+        <div class="nutrition-summary">
+            <div class="nutrition-grid">
+                <div class="nutrition-stat">
+                    <span class="stat-icon">🔥</span>
+                    <div class="stat-content">
+                        <div class="stat-label">Daily Calories</div>
+                        <div class="stat-value">{{ nutrition_plan.daily_calories }}</div>
+                        <div class="stat-detail">kcal/day</div>
+                    </div>
+                </div>
+                <div class="nutrition-stat">
+                    <span class="stat-icon">🍗</span>
+                    <div class="stat-content">
+                        <div class="stat-label">Protein</div>
+                        <div class="stat-value">{{ nutrition_plan.protein_g }}</div>
+                        <div class="stat-detail">g/day</div>
+                    </div>
+                </div>
+                <div class="nutrition-stat">
+                    <span class="stat-icon">🍝</span>
+                    <div class="stat-content">
+                        <div class="stat-label">Carbs</div>
+                        <div class="stat-value">{{ nutrition_plan.carbs_g }}</div>
+                        <div class="stat-detail">g/day</div>
+                    </div>
+                </div>
+                <div class="nutrition-stat">
+                    <span class="stat-icon">🥑</span>
+                    <div class="stat-content">
+                        <div class="stat-label">Fats</div>
+                        <div class="stat-value">{{ nutrition_plan.fats_g }}</div>
+                        <div class="stat-detail">g/day</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        {% if nutrition_plan.meal_suggestions and nutrition_plan.meal_suggestions|length > 0 %}
+        <div class="meal-suggestions">
+            <div class="meal-suggestions-header">
+                <h3>🍽️ Sample Meal Plan</h3>
+                <button onclick="randomizeMeals()" class="randomize-meals-btn">
+                    🎲 Randomize Meals
+                </button>
+            </div>
+            <div class="meals-grid">
+                {% for meal_type, meals in nutrition_plan.meal_suggestions.items() %}
+                <div class="meal-category">
+                    <h4 class="meal-category-title">
+                        {% if meal_type == 'breakfast' %}🌅 Breakfast
+                        {% elif meal_type == 'lunch' %}☀️ Lunch
+                        {% elif meal_type == 'dinner' %}🌙 Dinner
+                        {% elif meal_type == 'snacks' %}🍎 Snacks
+                        {% endif %}
+                    </h4>
+                    {% for meal in meals %}
+                    <div class="meal-option-card">
+                        <div class="meal-name">{{ meal.name }}</div>
+                        <div class="meal-nutrients">
+                            <span class="nutrient">🔥 {{ meal.calories }} cal</span>
+                            <span class="nutrient">🍗 {{ meal.protein }}g</span>
+                            <span class="nutrient">🍝 {{ meal.carbs }}g</span>
+                            <span class="nutrient">🥑 {{ meal.fat }}g</span>
+                        </div>
+                        <button class="show-recipe-btn" onclick="toggleRecipe('{{ meal.name | replace("'", "\\'") }}', this)">Show</button>
+                        <div class="recipe-details" id="recipe-{{ loop.index }}" style="display: none;">
+                            <div class="recipe-section">
+                                <h5>📝 Ingredients</h5>
+                                <ul class="recipe-list">
+                                    {% for ingredient in meal.ingredients %}
+                                    <li>{{ ingredient }}</li>
+                                    {% endfor %}
+                                </ul>
+                            </div>
+                            <div class="recipe-section">
+                                <h5>👨‍🍳 Instructions</h5>
+                                <p class="recipe-instructions">{{ meal.instructions }}</p>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+        
+        <div class="nutrition-details">
+            {% if nutrition_plan.pre_run_meal %}
+            <div class="nutrition-guide-card">
+                <h3>🏃‍♂️ Pre-Run Nutrition</h3>
+                <div class="nutrition-guide-content">
+                    <div class="guide-item">
+                        <strong>Timing:</strong> {{ nutrition_plan.pre_run_meal.timing }}
+                    </div>
+                    <div class="guide-item">
+                        <strong>Focus:</strong> {{ nutrition_plan.pre_run_meal.focus }}
+                    </div>
+                    {% if nutrition_plan.pre_run_meal.examples %}
+                    <div class="guide-examples">
+                        <strong>Examples:</strong>
+                        <ul>
+                            {% for example in nutrition_plan.pre_run_meal.examples %}
+                            <li>{{ example }}</li>
+                            {% endfor %}
+                        </ul>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+            {% endif %}
+            
+            {% if nutrition_plan.post_run_meal %}
+            <div class="nutrition-guide-card">
+                <h3>💪 Post-Run Recovery</h3>
+                <div class="nutrition-guide-content">
+                    <div class="guide-item">
+                        <strong>Timing:</strong> {{ nutrition_plan.post_run_meal.timing }}
+                    </div>
+                    <div class="guide-item">
+                        <strong>Focus:</strong> {{ nutrition_plan.post_run_meal.focus }}
+                    </div>
+                    {% if nutrition_plan.post_run_meal.examples %}
+                    <div class="guide-examples">
+                        <strong>Examples:</strong>
+                        <ul>
+                            {% for example in nutrition_plan.post_run_meal.examples %}
+                            <li>{{ example }}</li>
+                            {% endfor %}
+                        </ul>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+            {% endif %}
+            
+            {% if nutrition_plan.hydration_guide %}
+            <div class="hydration-guide-section">
+                <h3>💧 Hydration Guide</h3>
+                <div class="hydration-grid">
+                    <div class="hydration-item">
+                        <div class="hydration-label">Daily Target</div>
+                        <div class="hydration-value">{{ nutrition_plan.hydration_guide.daily_target }}</div>
+                    </div>
+                    <div class="hydration-item">
+                        <div class="hydration-label">Pre-Run</div>
+                        <div class="hydration-value">{{ nutrition_plan.hydration_guide.pre_run }}</div>
+                    </div>
+                    <div class="hydration-item">
+                        <div class="hydration-label">During Run</div>
+                        <div class="hydration-value">{{ nutrition_plan.hydration_guide.during_run }}</div>
+                    </div>
+                    <div class="hydration-item">
+                        <div class="hydration-label">Post-Run</div>
+                        <div class="hydration-value">{{ nutrition_plan.hydration_guide.post_run }}</div>
+                    </div>
+                </div>
+                {% if nutrition_plan.hydration_guide.tips %}
+                <div class="hydration-tips">
+                    {% for tip in nutrition_plan.hydration_guide.tips %}
+                    <div class="hydration-tip">💡 {{ tip }}</div>
+                    {% endfor %}
+                </div>
+                {% endif %}
+            </div>
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
+    
+    {% for week in plan %}
+    <div class="week-card">
+        <div class="week-header">
+            <div class="week-title">Week {{ week.week }}</div>
+            <div class="week-total">{{ week.total_km }} km</div>
+        </div>
+        
+        {% set day_names = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'] %}
+        <div class="workout-grid">
+            {% for workout in week.daily_workouts %}
+            {% set logged_run = logged_runs.get(workout.id) %}
+            <div class="workout-item {{ workout.type }} {% if logged_run %}completed{% endif %}" data-day="{{ day_names[workout.day - 1] }}">
+                <div class="workout-day-label">{{ day_names[workout.day - 1] }}</div>
+                <div class="workout-type">{{ workout.type }}</div>
+                {% if workout.distance > 0 %}
+                <div class="workout-distance">{{ workout.distance }} km</div>
+                {% endif %}
+                <div class="workout-notes">{{ workout.notes }}</div>
+                
+                {% if logged_run %}
+                <div class="run-stats">
+                    <div class="run-stats-row">
+                        <span>Completed:</span>
+                        <span>{{ "%.1f"|format(logged_run.distance_km) }} km in {{ "%.0f"|format(logged_run.duration_minutes) }} min</span>
+                    </div>
+                    {% if logged_run.perceived_effort %}
+                    <div class="run-stats-row">
+                        <span>Effort:</span>
+                        <span>{{ logged_run.perceived_effort }}/10</span>
+                    </div>
+                    {% endif %}
+                    {% if logged_run.avg_heart_rate %}
+                    <div class="run-stats-row">
+                        <span>Avg HR:</span>
+                        <span>{{ logged_run.avg_heart_rate }} bpm</span>
+                    </div>
+                    {% endif %}
+                </div>
+                {% elif workout.type != 'rest' and user %}
+                <button class="log-run-btn" onclick="openLogModal('{{ workout.id }}', '{{ workout.type }}', {{ workout.distance }}, '{{ day_names[workout.day - 1] }}', {{ week.week }})">Log This Run</button>
+                {% endif %}
+            </div>
+            {% endfor %}
+        </div>
+        
+        {% if week.strength_training %}
+        <div class="tips-section">
+            <div class="tips-title">💪 Strength Training ({{ week.strength_training[0].duration }})</div>
+            <ul class="tips-list">
+                {% for exercise in week.strength_training[0].exercises %}
+                <li>{{ exercise }}</li>
+                {% endfor %}
+            </ul>
+        </div>
+        {% endif %}
+        
+        {% if week.training_tips %}
+        <div class="tips-section">
+            <div class="tips-title">🎯 Training Tips for Week {{ week.week }}</div>
+            <ul class="tips-list">
+                {% for tip in week.training_tips %}
+                <li>{{ tip }}</li>
+                {% endfor %}
+            </ul>
+        </div>
+        {% endif %}
+    </div>
+    {% endfor %}
+    
+    <div class="download-section">
+        <a href="/download-pdf/{{ plan_id }}" class="btn">
+            <span class="pdf-icon">📄</span> Download PDF Plan
+        </a>
+        <!-- Save button - shown/hidden by JavaScript based on auth state -->
+        <button onclick="savePlanToAccount()" class="btn btn-save" id="save-plan-btn" style="display: none;">
+            💾 Save to My Plans
+        </button>
+        <a href="/my-plans" class="btn btn-secondary" id="view-plans-link" style="display: none;">📋 View My Plans</a>
+        <a href="/" class="btn btn-secondary">🏠 Generate New Plan</a>
+    </div>
+</div>
+
+<div class="scroll-to-top" onclick="scrollToTop()" title="Scroll to top">
+    ↑
+</div>
+
+<!-- Run Logging Modal -->
+<div id="logRunModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2 id="modal-title">Log Run</h2>
+            <span class="close" onclick="closeLogModal()">&times;</span>
+        </div>
+        <form id="logRunForm" onsubmit="submitRunLog(event)">
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="distance_km">Distance (km) *</label>
+                    <input type="number" id="distance_km" step="0.1" min="0" required>
+                </div>
+                <div class="form-group">
+                    <label for="duration_minutes">Duration (min) *</label>
+                    <input type="number" id="duration_minutes" step="0.1" min="0" required>
+                </div>
+            </div>
+            
+            <div class="form-group">
+                <label for="workout_type">Workout Type</label>
+                <select id="workout_type">
+                    <option value="easy">Easy</option>
+                    <option value="tempo">Tempo</option>
+                    <option value="interval">Interval</option>
+                    <option value="long">Long</option>
+                    <option value="hill">Hill</option>
+                </select>
+            </div>
+            
+            <div class="form-group">
+                <label for="perceived_effort">Perceived Effort (1-10)</label>
+                <input type="number" id="perceived_effort" min="1" max="10">
+                <div class="effort-scale">
+                    <span>1 (Very Easy)</span>
+                    <span>10 (Maximum)</span>
+                </div>
+            </div>
+            
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="avg_heart_rate">Avg HR (bpm)</label>
+                    <input type="number" id="avg_heart_rate" min="40" max="220">
+                </div>
+                <div class="form-group">
+                    <label for="max_heart_rate">Max HR (bpm)</label>
+                    <input type="number" id="max_heart_rate" min="40" max="220">
+                </div>
+            </div>
+            
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="avg_cadence">Avg Cadence (spm)</label>
+                    <input type="number" id="avg_cadence" min="100" max="220">
+                </div>
+                <div class="form-group">
+                    <label for="elevation_gain_m">Elevation (m)</label>
+                    <input type="number" id="elevation_gain_m" min="0">
+                </div>
+            </div>
+            
+            <div class="form-group">
+                <label for="notes">Notes</label>
+                <textarea id="notes" rows="3" placeholder="How did the run feel?"></textarea>
+            </div>
+            
+            <button type="submit" class="submit-btn">Log Run</button>
+        </form>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // Bootstrap dynamic data for plan.js
+    window.APP_CTX = {
+        plan_id: '{{ plan_id }}',
+        training_plan_id: '{{ training_plan.id }}',
+        created_at: '{{ training_plan.created_at }}',
+        weeks: {{ plan | length }},
+        plan_user_id: '{{ training_plan.user_id }}'
+    };
+</script>
+<script src="/static/js/plan.js" defer></script>
+{% endblock %}

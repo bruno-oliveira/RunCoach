@@ -1,0 +1,361 @@
+{% macro button(text, type='button', btn_class='primary', onclick='', disabled=False, icon='') %}
+<button 
+    type="{{ type }}" 
+    class="btn btn-{{ btn_class }} {{ 'disabled' if disabled else '' }}"
+    {% if onclick %}onclick="{{ onclick }}"{% endif %}
+    {% if disabled %}disabled{% endif %}
+>
+    {% if icon %}<span class="btn-icon">{{ icon }}</span>{% endif %}
+    {{ text }}
+</button>
+{% endmacro %}
+
+{% macro form_input(name, label, type='text', value='', required=False, placeholder='', help_text='', min='', max='', step='') %}
+<div class="form-group">
+    <label for="{{ name }}" class="form-label">
+        {{ label }}
+        {% if required %}<span class="required">*</span>{% endif %}
+    </label>
+    <input 
+        type="{{ type }}" 
+        id="{{ name }}" 
+        name="{{ name }}"
+        class="form-input"
+        {% if value %}value="{{ value }}"{% endif %}
+        {% if placeholder %}placeholder="{{ placeholder }}"{% endif %}
+        {% if required %}required{% endif %}
+        {% if min %}min="{{ min }}"{% endif %}
+        {% if max %}max="{{ max }}"{% endif %}
+        {% if step %}step="{{ step }}"{% endif %}
+    >
+    {% if help_text %}
+    <small class="form-help">{{ help_text }}</small>
+    {% endif %}
+</div>
+{% endmacro %}
+
+{% macro form_select(name, label, options, selected='', required=False, help_text='') %}
+<div class="form-group">
+    <label for="{{ name }}" class="form-label">
+        {{ label }}
+        {% if required %}<span class="required">*</span>{% endif %}
+    </label>
+    <select 
+        id="{{ name }}" 
+        name="{{ name }}"
+        class="form-select"
+        {% if required %}required{% endif %}
+    >
+        {% for option in options %}
+        <option value="{{ option.value }}" {{ 'selected' if option.value == selected else '' }}>
+            {{ option.label }}
+        </option>
+        {% endfor %}
+    </select>
+    {% if help_text %}
+    <small class="form-help">{{ help_text }}</small>
+    {% endif %}
+</div>
+{% endmacro %}
+
+{% macro form_textarea(name, label, value='', required=False, placeholder='', rows=4, help_text='') %}
+<div class="form-group">
+    <label for="{{ name }}" class="form-label">
+        {{ label }}
+        {% if required %}<span class="required">*</span>{% endif %}
+    </label>
+    <textarea 
+        id="{{ name }}" 
+        name="{{ name }}"
+        class="form-textarea"
+        rows="{{ rows }}"
+        {% if placeholder %}placeholder="{{ placeholder }}"{% endif %}
+        {% if required %}required{% endif %}
+    >{{ value }}</textarea>
+    {% if help_text %}
+    <small class="form-help">{{ help_text }}</small>
+    {% endif %}
+</div>
+{% endmacro %}
+
+{% macro alert(message, alert_type='info', dismissible=True, icon='') %}
+<div class="alert alert-{{ alert_type }} {{ 'alert-dismissible' if dismissible else '' }}">
+    {% if icon %}<span class="alert-icon">{{ icon }}</span>{% endif %}
+    <span class="alert-message">{{ message }}</span>
+    {% if dismissible %}
+    <button class="alert-close" onclick="this.parentElement.remove()">&times;</button>
+    {% endif %}
+</div>
+{% endmacro %}
+
+{% macro badge(text, badge_type='primary') %}
+<span class="badge badge-{{ badge_type }}">{{ text }}</span>
+{% endmacro %}
+
+{% macro card(title='', footer='') %}
+<div class="card">
+    {% if title %}
+    <div class="card-header">
+        <h3 class="card-title">{{ title }}</h3>
+    </div>
+    {% endif %}
+    <div class="card-body">
+        {{ caller() }}
+    </div>
+    {% if footer %}
+    <div class="card-footer">
+        {{ footer }}
+    </div>
+    {% endif %}
+</div>
+{% endmacro %}
+
+{% macro loading_spinner(size='medium', text='') %}
+<div class="spinner-container spinner-{{ size }}">
+    <div class="spinner"></div>
+    {% if text %}
+    <p class="spinner-text">{{ text }}</p>
+    {% endif %}
+</div>
+{% endmacro %}
+
+<style>
+/* Button Styles */
+.btn {
+    padding: 0.625rem 1.25rem;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.95rem;
+    font-weight: 500;
+    transition: background 0.3s, transform 0.1s;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.btn:active:not(.disabled) {
+    transform: scale(0.98);
+}
+
+.btn.disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.btn-primary { background: #667eea; color: white; }
+.btn-primary:hover:not(.disabled) { background: #5568d3; }
+
+.btn-secondary { background: #6c757d; color: white; }
+.btn-secondary:hover:not(.disabled) { background: #5a6268; }
+
+.btn-success { background: #28a745; color: white; }
+.btn-success:hover:not(.disabled) { background: #218838; }
+
+.btn-danger { background: #dc3545; color: white; }
+.btn-danger:hover:not(.disabled) { background: #c82333; }
+
+.btn-warning { background: #ffc107; color: #333; }
+.btn-warning:hover:not(.disabled) { background: #e0a800; }
+
+.btn-info { background: #17a2b8; color: white; }
+.btn-info:hover:not(.disabled) { background: #138496; }
+
+.btn-icon {
+    font-size: 1.1rem;
+}
+
+/* Form Styles */
+.form-group {
+    margin-bottom: 1.25rem;
+}
+
+.form-label {
+    display: block;
+    margin-bottom: 0.5rem;
+    font-weight: 600;
+    color: #333;
+    font-size: 0.95rem;
+}
+
+.required {
+    color: #dc3545;
+    margin-left: 0.25rem;
+}
+
+.form-input,
+.form-select,
+.form-textarea {
+    width: 100%;
+    padding: 0.75rem;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    font-size: 0.95rem;
+    transition: border-color 0.3s, box-shadow 0.3s;
+}
+
+.form-input:focus,
+.form-select:focus,
+.form-textarea:focus {
+    outline: none;
+    border-color: #667eea;
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+.form-textarea {
+    resize: vertical;
+    font-family: inherit;
+}
+
+.form-help {
+    display: block;
+    margin-top: 0.5rem;
+    color: #666;
+    font-size: 0.85rem;
+}
+
+/* Alert Styles */
+.alert {
+    padding: 1rem 1.25rem;
+    border-radius: 6px;
+    margin-bottom: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.alert-dismissible {
+    padding-right: 3rem;
+    position: relative;
+}
+
+.alert-icon {
+    font-size: 1.25rem;
+}
+
+.alert-message {
+    flex: 1;
+}
+
+.alert-close {
+    position: absolute;
+    right: 0.75rem;
+    top: 50%;
+    transform: translateY(-50%);
+    background: none;
+    border: none;
+    font-size: 1.5rem;
+    cursor: pointer;
+    color: inherit;
+    opacity: 0.7;
+    transition: opacity 0.3s;
+}
+
+.alert-close:hover {
+    opacity: 1;
+}
+
+.alert-success {
+    background: #d4edda;
+    color: #155724;
+    border: 1px solid #c3e6cb;
+}
+
+.alert-danger {
+    background: #f8d7da;
+    color: #721c24;
+    border: 1px solid #f5c6cb;
+}
+
+.alert-warning {
+    background: #fff3cd;
+    color: #856404;
+    border: 1px solid #ffeaa7;
+}
+
+.alert-info {
+    background: #d1ecf1;
+    color: #0c5460;
+    border: 1px solid #bee5eb;
+}
+
+/* Badge Styles */
+.badge {
+    display: inline-block;
+    padding: 0.35rem 0.65rem;
+    font-size: 0.8rem;
+    font-weight: 600;
+    border-radius: 12px;
+    line-height: 1;
+}
+
+.badge-primary { background: #667eea; color: white; }
+.badge-secondary { background: #6c757d; color: white; }
+.badge-success { background: #28a745; color: white; }
+.badge-danger { background: #dc3545; color: white; }
+.badge-warning { background: #ffc107; color: #333; }
+.badge-info { background: #17a2b8; color: white; }
+
+/* Card Styles */
+.card {
+    background: white;
+    border-radius: 10px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    overflow: hidden;
+}
+
+.card-header {
+    padding: 1.25rem 1.5rem;
+    border-bottom: 1px solid #e0e0e0;
+    background: #f8f9fa;
+}
+
+.card-title {
+    margin: 0;
+    font-size: 1.25rem;
+    color: #333;
+    font-weight: 600;
+}
+
+.card-body {
+    padding: 1.5rem;
+}
+
+.card-footer {
+    padding: 1rem 1.5rem;
+    border-top: 1px solid #e0e0e0;
+    background: #f8f9fa;
+}
+
+/* Loading Spinner */
+.spinner-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 1rem;
+}
+
+.spinner {
+    border: 3px solid #f3f3f3;
+    border-top: 3px solid #667eea;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+.spinner-small .spinner { width: 20px; height: 20px; border-width: 2px; }
+.spinner-medium .spinner { width: 40px; height: 40px; }
+.spinner-large .spinner { width: 60px; height: 60px; border-width: 4px; }
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+.spinner-text {
+    color: #666;
+    font-size: 0.95rem;
+    margin: 0;
+}
+</style>
+{% endmacro %}

@@ -1,0 +1,3547 @@
+[
+  {
+    "name": "Chocolate Protein Recovery Shake",
+    "meal_type": "post_workout",
+    "description": "Optimal recovery shake with protein, carbs, and essential nutrients",
+    "instructions": "Add liquid ingredients first to the blender, followed by protein powder, then fruits/vegetables. Blend on high for 60-90 seconds until completely smooth. The consistency should be drinkable but not too thin. Consume immediately for maximum nutrient absorption. This meal provides the ideal balance of protein and carbohydrates for muscle recovery and glycogen replenishment.",
+    "prep_time": 5,
+    "cook_time": 0,
+    "calories": 320,
+    "protein": 30,
+    "fiber": 6,
+    "carbs": 38,
+    "fat": 6,
+    "ingredients": [
+      "1.5 scoops chocolate protein powder",
+      "1 banana",
+      "1 cup almond milk",
+      "1 tbsp almond butter",
+      "1 cup spinach",
+      "ice"
+    ],
+    "dietary_tags": [
+      "high_protein",
+      "recovery",
+      "quick"
+    ]
+  },
+  {
+    "name": "Greek Yogurt with Berries and Honey",
+    "meal_type": "post_workout",
+    "description": "Quick protein-rich snack with antioxidant berries",
+    "instructions": "In a bowl or shaker cup, combine all ingredients. Mix thoroughly until no clumps remain. For smoothies, use a blender for best results. For shakes, a shaker cup works well. Drink within 30 minutes of workout for optimal recovery benefits. This meal provides the ideal balance of protein and carbohydrates for muscle recovery and glycogen replenishment.",
+    "prep_time": 3,
+    "cook_time": 0,
+    "calories": 280,
+    "protein": 24,
+    "fiber": 4,
+    "carbs": 32,
+    "fat": 6,
+    "ingredients": [
+      "1.5 cups Greek yogurt",
+      "1 cup mixed berries",
+      "1 tbsp honey",
+      "2 tbsp granola"
+    ],
+    "dietary_tags": [
+      "high_protein",
+      "recovery",
+      "quick"
+    ]
+  },
+  {
+    "name": "Cottage Cheese with Peach",
+    "meal_type": "post_workout",
+    "description": "Casein-rich cottage cheese with fast-digesting fruit",
+    "instructions": "Prepare 1 cup cottage cheese, 1 fresh peach, 1 tbsp almonds as directed in the ingredient list. Combine in a serving dish. For optimal recovery benefits, consume within 30-45 minutes after completing your workout. This meal provides the ideal balance of protein and carbohydrates for muscle recovery and glycogen replenishment. This meal provides the ideal balance of protein and carbohydrates for muscle recovery and glycogen replenishment.",
+    "prep_time": 4,
+    "cook_time": 0,
+    "calories": 240,
+    "protein": 22,
+    "fiber": 3,
+    "carbs": 28,
+    "fat": 4,
+    "ingredients": [
+      "1 cup cottage cheese",
+      "1 fresh peach",
+      "1 tbsp almonds",
+      "cinnamon"
+    ],
+    "dietary_tags": [
+      "high_protein",
+      "recovery",
+      "quick"
+    ]
+  },
+  {
+    "name": "Banana Protein Smoothie",
+    "meal_type": "post_workout",
+    "description": "Creamy banana smoothie with protein powder and peanut butter",
+    "instructions": "Add liquid ingredients first to the blender, followed by protein powder, then fruits/vegetables. Blend on high for 60-90 seconds until completely smooth. The consistency should be drinkable but not too thin. Consume immediately for maximum nutrient absorption. This meal provides the ideal balance of protein and carbohydrates for muscle recovery and glycogen replenishment.",
+    "prep_time": 5,
+    "cook_time": 0,
+    "calories": 380,
+    "protein": 32,
+    "fiber": 8,
+    "carbs": 45,
+    "fat": 10,
+    "ingredients": [
+      "1 banana",
+      "1 scoop vanilla protein powder",
+      "2 tbsp peanut butter",
+      "1 cup almond milk",
+      "1/2 cup ice",
+      "1 tsp honey"
+    ],
+    "dietary_tags": [
+      "high_protein",
+      "recovery",
+      "quick"
+    ]
+  },
+  {
+    "name": "Chocolate Milk",
+    "meal_type": "post_workout",
+    "description": "Classic recovery drink with optimal protein-carb ratio",
+    "instructions": "Prepare 1.5 cups chocolate milk, 1 tbsp honey as directed in the ingredient list. Combine in a serving dish. For optimal recovery benefits, consume within 30-45 minutes after completing your workout. This meal provides the ideal balance of protein and carbohydrates for muscle recovery and glycogen replenishment. This meal provides the ideal balance of protein and carbohydrates for muscle recovery and glycogen replenishment.",
+    "prep_time": 2,
+    "cook_time": 0,
+    "calories": 280,
+    "protein": 24,
+    "fiber": 2,
+    "carbs": 42,
+    "fat": 6,
+    "ingredients": [
+      "1.5 cups chocolate milk",
+      "1 tbsp honey"
+    ],
+    "dietary_tags": [
+      "high_protein",
+      "recovery",
+      "quick"
+    ]
+  },
+  {
+    "name": "Protein Oatmeal Bowl",
+    "meal_type": "post_workout",
+    "description": "Warm oatmeal with protein powder and banana for recovery",
+    "instructions": "In a bowl or shaker cup, combine all ingredients. Mix thoroughly until no clumps remain. For smoothies, use a blender for best results. For shakes, a shaker cup works well. Drink within 30 minutes of workout for optimal recovery benefits. This meal provides the ideal balance of protein and carbohydrates for muscle recovery and glycogen replenishment.",
+    "prep_time": 8,
+    "cook_time": 5,
+    "calories": 420,
+    "protein": 34,
+    "fiber": 10,
+    "carbs": 52,
+    "fat": 12,
+    "ingredients": [
+      "1 cup rolled oats",
+      "1 scoop chocolate protein powder",
+      "1 banana",
+      "1 cup almond milk",
+      "1 tbsp walnuts",
+      "1 tbsp honey"
+    ],
+    "dietary_tags": [
+      "high_protein",
+      "recovery",
+      "high_fiber"
+    ]
+  },
+  {
+    "name": "Greek Yogurt with Granola",
+    "meal_type": "post_workout",
+    "description": "Protein-packed yogurt with crunchy granola and berries",
+    "instructions": "Prepare 1.5 cups Greek yogurt, 1/2 cup granola, 1 cup mixed berries as directed in the ingredient list. Combine in a serving dish. For optimal recovery benefits, consume within 30-45 minutes after completing your workout. This meal provides the ideal balance of protein and carbohydrates for muscle recovery and glycogen replenishment. This meal provides the ideal balance of protein and carbohydrates for muscle recovery and glycogen replenishment.",
+    "prep_time": 4,
+    "cook_time": 0,
+    "calories": 360,
+    "protein": 28,
+    "fiber": 8,
+    "carbs": 42,
+    "fat": 10,
+    "ingredients": [
+      "1.5 cups Greek yogurt",
+      "1/2 cup granola",
+      "1 cup mixed berries",
+      "1 tbsp honey",
+      "1 tbsp chia seeds"
+    ],
+    "dietary_tags": [
+      "high_protein",
+      "recovery",
+      "quick"
+    ]
+  },
+  {
+    "name": "Turkey and Cheese Roll",
+    "meal_type": "post_workout",
+    "description": "Quick protein roll with turkey and cheese",
+    "instructions": "Prepare 4 oz turkey, 2 slices cheese, 1 tsp mustard as directed in the ingredient list. Combine in a serving dish. For optimal recovery benefits, consume within 30-45 minutes after completing your workout. This meal provides the ideal balance of protein and carbohydrates for muscle recovery and glycogen replenishment. This meal provides the ideal balance of protein and carbohydrates for muscle recovery and glycogen replenishment.",
+    "prep_time": 5,
+    "cook_time": 0,
+    "calories": 320,
+    "protein": 26,
+    "fiber": 4,
+    "carbs": 18,
+    "fat": 16,
+    "ingredients": [
+      "4 oz turkey",
+      "2 slices cheese",
+      "1 tsp mustard",
+      "4 whole grain crackers"
+    ],
+    "dietary_tags": [
+      "high_protein",
+      "recovery",
+      "quick"
+    ]
+  },
+  {
+    "name": "Protein Energy Balls",
+    "meal_type": "post_workout",
+    "description": "No-bake energy balls with protein powder and dates",
+    "instructions": "In a bowl or shaker cup, combine all ingredients. Mix thoroughly until no clumps remain. For smoothies, use a blender for best results. For shakes, a shaker cup works well. Drink within 30 minutes of workout for optimal recovery benefits. This meal provides the ideal balance of protein and carbohydrates for muscle recovery and glycogen replenishment.",
+    "prep_time": 15,
+    "cook_time": 0,
+    "calories": 280,
+    "protein": 18,
+    "fiber": 6,
+    "carbs": 32,
+    "fat": 12,
+    "ingredients": [
+      "1 cup dates",
+      "1/2 cup protein powder",
+      "1/2 cup almond butter",
+      "1/3 cup oats",
+      "2 tbsp chia seeds",
+      "1 tsp vanilla"
+    ],
+    "dietary_tags": [
+      "high_protein",
+      "recovery",
+      "meal_prep"
+    ]
+  },
+  {
+    "name": "Cottage Cheese with Fruit",
+    "meal_type": "post_workout",
+    "description": "High-protein cottage cheese with fresh fruit and nuts",
+    "instructions": "Prepare 1.5 cups cottage cheese, 1 cup mixed fruit, 2 tbsp almonds as directed in the ingredient list. Combine in a serving dish. For optimal recovery benefits, consume within 30-45 minutes after completing your workout. This meal provides the ideal balance of protein and carbohydrates for muscle recovery and glycogen replenishment. This meal provides the ideal balance of protein and carbohydrates for muscle recovery and glycogen replenishment.",
+    "prep_time": 5,
+    "cook_time": 0,
+    "calories": 340,
+    "protein": 32,
+    "fiber": 6,
+    "carbs": 28,
+    "fat": 12,
+    "ingredients": [
+      "1.5 cups cottage cheese",
+      "1 cup mixed fruit",
+      "2 tbsp almonds",
+      "1 tbsp honey",
+      "1 tsp cinnamon"
+    ],
+    "dietary_tags": [
+      "high_protein",
+      "recovery",
+      "quick"
+    ]
+  },
+  {
+    "name": "Hard-Boiled Eggs and Avocado",
+    "meal_type": "post_workout",
+    "description": "Simple protein-rich snack with healthy fats",
+    "instructions": "Prepare 3 hard-boiled eggs, 1/2 avocado, salt as directed in the ingredient list. Combine in a serving dish. For optimal recovery benefits, consume within 30-45 minutes after completing your workout. This meal provides the ideal balance of protein and carbohydrates for muscle recovery and glycogen replenishment. This meal provides the ideal balance of protein and carbohydrates for muscle recovery and glycogen replenishment.",
+    "prep_time": 3,
+    "cook_time": 0,
+    "calories": 300,
+    "protein": 24,
+    "fiber": 8,
+    "carbs": 12,
+    "fat": 18,
+    "ingredients": [
+      "3 hard-boiled eggs",
+      "1/2 avocado",
+      "salt",
+      "pepper",
+      "red pepper flakes"
+    ],
+    "dietary_tags": [
+      "high_protein",
+      "recovery",
+      "quick"
+    ]
+  },
+  {
+    "name": "Rice Cakes with Peanut Butter",
+    "meal_type": "post_workout",
+    "description": "Quick carb-protein combo with rice cakes and peanut butter",
+    "instructions": "Prepare 3 brown rice cakes, 2 tbsp peanut butter, 1/2 banana as directed in the ingredient list. Combine in a serving dish. For optimal recovery benefits, consume within 30-45 minutes after completing your workout. This meal provides the ideal balance of protein and carbohydrates for muscle recovery and glycogen replenishment. This meal provides the ideal balance of protein and carbohydrates for muscle recovery and glycogen replenishment.",
+    "prep_time": 3,
+    "cook_time": 0,
+    "calories": 320,
+    "protein": 14,
+    "fiber": 8,
+    "carbs": 42,
+    "fat": 14,
+    "ingredients": [
+      "3 brown rice cakes",
+      "2 tbsp peanut butter",
+      "1/2 banana",
+      "1 tsp honey"
+    ],
+    "dietary_tags": [
+      "recovery",
+      "quick",
+      "high_carb"
+    ]
+  },
+  {
+    "name": "Protein Muffin",
+    "meal_type": "post_workout",
+    "description": "Homemade protein muffin with oats and berries",
+    "instructions": "In a bowl or shaker cup, combine all ingredients. Mix thoroughly until no clumps remain. For smoothies, use a blender for best results. For shakes, a shaker cup works well. Drink within 30 minutes of workout for optimal recovery benefits. This meal provides the ideal balance of protein and carbohydrates for muscle recovery and glycogen replenishment.",
+    "prep_time": 10,
+    "cook_time": 20,
+    "calories": 340,
+    "protein": 22,
+    "fiber": 8,
+    "carbs": 38,
+    "fat": 12,
+    "ingredients": [
+      "1 scoop protein powder",
+      "1/2 cup oats",
+      "1 egg",
+      "1/4 cup Greek yogurt",
+      "1/2 cup berries",
+      "1 tsp baking powder",
+      "1 tsp vanilla"
+    ],
+    "dietary_tags": [
+      "high_protein",
+      "recovery",
+      "meal_prep"
+    ]
+  },
+  {
+    "name": "Tuna Salad Crackers",
+    "meal_type": "post_workout",
+    "description": "Tuna salad served on whole grain crackers",
+    "instructions": "In a bowl or shaker cup, combine all ingredients. Mix thoroughly until no clumps remain. For smoothies, use a blender for best results. For shakes, a shaker cup works well. Drink within 30 minutes of workout for optimal recovery benefits. This meal provides the ideal balance of protein and carbohydrates for muscle recovery and glycogen replenishment.",
+    "prep_time": 8,
+    "cook_time": 0,
+    "calories": 300,
+    "protein": 28,
+    "fiber": 6,
+    "carbs": 18,
+    "fat": 12,
+    "ingredients": [
+      "1 can tuna",
+      "2 tbsp Greek yogurt",
+      "1 tsp mustard",
+      "6 whole grain crackers",
+      "celery",
+      "onion",
+      "black pepper"
+    ],
+    "dietary_tags": [
+      "high_protein",
+      "recovery",
+      "quick"
+    ]
+  },
+  {
+    "name": "Peanut Butter Banana Smoothie",
+    "meal_type": "post_workout",
+    "description": "Creamy protein smoothie with peanut butter and banana",
+    "instructions": "Add liquid ingredients first to the blender, followed by protein powder, then fruits/vegetables. Blend on high for 60-90 seconds until completely smooth. The consistency should be drinkable but not too thin. Consume immediately for maximum nutrient absorption. This meal provides the ideal balance of protein and carbohydrates for muscle recovery and glycogen replenishment.",
+    "prep_time": 5,
+    "cook_time": 0,
+    "calories": 380,
+    "protein": 32,
+    "fiber": 6,
+    "carbs": 42,
+    "fat": 12,
+    "ingredients": [
+      "1.5 scoops protein powder",
+      "2 tbsp peanut butter",
+      "1 banana",
+      "1 cup almond milk",
+      "1 tbsp chia seeds",
+      "ice"
+    ],
+    "dietary_tags": [
+      "high_protein",
+      "recovery",
+      "quick"
+    ]
+  },
+  {
+    "name": "Avocado Toast with Egg",
+    "meal_type": "post_workout",
+    "description": "Whole grain toast with mashed avocado and poached egg",
+    "instructions": "Toast whole grain bread. Mash avocado with lime and season. Top with poached or fried egg. Sprinkle with red pepper flakes.",
+    "prep_time": 8,
+    "cook_time": 5,
+    "calories": 420,
+    "protein": 18,
+    "fiber": 8,
+    "carbs": 38,
+    "fat": 22,
+    "ingredients": [
+      "2 slices whole grain bread",
+      "1/2 avocado",
+      "2 eggs",
+      "lime juice",
+      "red pepper flakes"
+    ],
+    "dietary_tags": [
+      "high_protein",
+      "recovery"
+    ]
+  },
+  {
+    "name": "Berry Protein Muffin",
+    "meal_type": "post_workout",
+    "description": "Homemade protein muffin packed with antioxidant berries",
+    "instructions": "Combine ingredients and bake at 350\u00b0F for 20-25 minutes. Eat warm or at room temperature. Store in airtight container.",
+    "prep_time": 10,
+    "cook_time": 25,
+    "calories": 340,
+    "protein": 20,
+    "fiber": 4,
+    "carbs": 42,
+    "fat": 12,
+    "ingredients": [
+      "2 scoops protein powder",
+      "1/2 cup berries",
+      "1/2 cup oats",
+      "2 eggs",
+      "1/4 cup Greek yogurt",
+      "baking ingredients"
+    ],
+    "dietary_tags": [
+      "high_protein",
+      "recovery",
+      "meal_prep"
+    ]
+  },
+  {
+    "name": "Turkey Hummus Wrap",
+    "meal_type": "post_workout",
+    "description": "Lean turkey with hummus and vegetables in whole wheat wrap",
+    "instructions": "Spread hummus on wrap. Layer turkey slices, vegetables, and cheese. Roll tightly and cut in half. Serve immediately.",
+    "prep_time": 5,
+    "cook_time": 0,
+    "calories": 460,
+    "protein": 36,
+    "fiber": 6,
+    "carbs": 38,
+    "fat": 18,
+    "ingredients": [
+      "6 oz turkey",
+      "2 tbsp hummus",
+      "1 whole wheat wrap",
+      "mixed vegetables",
+      "1 slice cheese"
+    ],
+    "dietary_tags": [
+      "high_protein",
+      "recovery",
+      "quick"
+    ]
+  },
+  {
+    "name": "Protein Overnight Oats",
+    "meal_type": "post_workout",
+    "description": "No-cook protein-rich oats prepared the night before",
+    "instructions": "In a bowl or shaker cup, combine all ingredients. Mix thoroughly until no clumps remain. For smoothies, use a blender for best results. For shakes, a shaker cup works well. Drink within 30 minutes of workout for optimal recovery benefits. This meal provides the ideal balance of protein and carbohydrates for muscle recovery and glycogen replenishment.",
+    "prep_time": 5,
+    "cook_time": 0,
+    "calories": 400,
+    "protein": 28,
+    "fiber": 8,
+    "carbs": 52,
+    "fat": 12,
+    "ingredients": [
+      "1/2 cup rolled oats",
+      "1 scoop protein powder",
+      "1 cup almond milk",
+      "1 tbsp chia seeds",
+      "1 tbsp maple syrup",
+      "berries"
+    ],
+    "dietary_tags": [
+      "high_protein",
+      "recovery",
+      "meal_prep"
+    ]
+  },
+  {
+    "name": "Chicken and Rice Bowl",
+    "meal_type": "post_workout",
+    "description": "Simple grilled chicken with brown rice and vegetables",
+    "instructions": "Grill seasoned chicken breast. Cook brown rice. Steam vegetables. Assemble bowl with chicken, rice, and vegetables. Drizzle with soy sauce.",
+    "prep_time": 10,
+    "cook_time": 20,
+    "calories": 520,
+    "protein": 42,
+    "fiber": 6,
+    "carbs": 58,
+    "fat": 14,
+    "ingredients": [
+      "8 oz chicken breast",
+      "1 cup brown rice",
+      "1 cup vegetables",
+      "soy sauce",
+      "sesame seeds"
+    ],
+    "dietary_tags": [
+      "high_protein",
+      "recovery"
+    ]
+  },
+  {
+    "name": "Edamame and Tofu Stir-Fry",
+    "meal_type": "post_workout",
+    "description": "Plant-based protein-packed stir-fry",
+    "instructions": "Press and cube tofu. Stir-fry with edamame and vegetables in sesame oil. Add teriyaki sauce. Serve over quinoa or rice.",
+    "prep_time": 15,
+    "cook_time": 15,
+    "calories": 480,
+    "protein": 32,
+    "fiber": 10,
+    "carbs": 48,
+    "fat": 18,
+    "ingredients": [
+      "6 oz firm tofu",
+      "1 cup edamame",
+      "2 cups vegetables",
+      "1 tbsp sesame oil",
+      "teriyaki sauce"
+    ],
+    "dietary_tags": [
+      "vegetarian",
+      "high_protein",
+      "recovery"
+    ]
+  },
+  {
+    "name": "Almond Butter Toast with Banana",
+    "meal_type": "post_workout",
+    "description": "Simple toast with almond butter and sliced banana",
+    "instructions": "Toast bread. Spread almond butter generously. Top with sliced banana and sprinkle with cinnamon. Optional: add honey drizzle.",
+    "prep_time": 3,
+    "cook_time": 2,
+    "calories": 380,
+    "protein": 12,
+    "fiber": 8,
+    "carbs": 48,
+    "fat": 18,
+    "ingredients": [
+      "2 slices whole grain bread",
+      "3 tbsp almond butter",
+      "1 banana",
+      "cinnamon",
+      "honey (optional)"
+    ],
+    "dietary_tags": [
+      "recovery",
+      "quick"
+    ]
+  },
+  {
+    "name": "Protein Chia Pudding",
+    "meal_type": "post_workout",
+    "description": "Creamy chia pudding with protein powder",
+    "instructions": "Mix all ingredients and refrigerate for at least 2 hours or overnight. Stir before serving. Top with fresh fruit.",
+    "prep_time": 5,
+    "cook_time": 0,
+    "calories": 360,
+    "protein": 26,
+    "fiber": 12,
+    "carbs": 38,
+    "fat": 14,
+    "ingredients": [
+      "3 tbsp chia seeds",
+      "1 scoop protein powder",
+      "1 cup almond milk",
+      "1 tbsp maple syrup",
+      "vanilla extract",
+      "fresh fruit"
+    ],
+    "dietary_tags": [
+      "high_protein",
+      "recovery",
+      "meal_prep"
+    ]
+  },
+  {
+    "name": "Mango Lassi Protein Shake",
+    "meal_type": "post_workout",
+    "description": "Tropical mango shake with protein",
+    "instructions": "Blend all ingredients until smooth. Add ice for desired thickness. Garnish with cardamom if desired.",
+    "prep_time": 5,
+    "cook_time": 0,
+    "calories": 340,
+    "protein": 28,
+    "fiber": 4,
+    "carbs": 42,
+    "fat": 8,
+    "ingredients": [
+      "1.5 scoops protein powder",
+      "1 cup frozen mango",
+      "1 cup Greek yogurt",
+      "1/2 cup almond milk",
+      "cardamom (optional)",
+      "ice"
+    ],
+    "dietary_tags": [
+      "high_protein",
+      "recovery",
+      "quick"
+    ]
+  },
+  {
+    "name": "Almond Berry Smoothie",
+    "meal_type": "post_workout",
+    "description": "Berry-packed smoothie with almond butter",
+    "instructions": "Blend mixed berries, almond butter, protein powder, and almond milk until smooth. Add ice for thickness. Enjoy immediately.",
+    "prep_time": 5,
+    "cook_time": 0,
+    "calories": 360,
+    "protein": 28,
+    "fiber": 8,
+    "carbs": 38,
+    "fat": 12,
+    "ingredients": [
+      "1.5 scoops protein powder",
+      "2 tbsp almond butter",
+      "1 cup mixed berries",
+      "1 cup almond milk",
+      "1 tbsp ground flaxseed",
+      "ice"
+    ],
+    "dietary_tags": [
+      "high_protein",
+      "recovery",
+      "quick"
+    ]
+  },
+  {
+    "name": "Turkey and Cheese Roll-Ups",
+    "meal_type": "post_workout",
+    "description": "Simple turkey breast rolled with cheese and veggies",
+    "instructions": "Layer turkey breast with cheese and vegetables. Roll tightly. Cut into pinwheels. Serve immediately or refrigerate for later.",
+    "prep_time": 5,
+    "cook_time": 0,
+    "calories": 380,
+    "protein": 34,
+    "fiber": 2,
+    "carbs": 6,
+    "fat": 22,
+    "ingredients": [
+      "8 oz turkey breast",
+      "2 oz Swiss cheese",
+      "lettuce",
+      "tomato",
+      "mustard"
+    ],
+    "dietary_tags": [
+      "high_protein",
+      "recovery",
+      "quick"
+    ]
+  },
+  {
+    "name": "Protein Power Balls",
+    "meal_type": "post_workout",
+    "description": "No-bake energy balls with protein powder",
+    "instructions": "Mix all ingredients in a bowl. Roll into balls and refrigerate for 30 minutes. Store in airtight container for up to a week.",
+    "prep_time": 15,
+    "cook_time": 0,
+    "calories": 320,
+    "protein": 18,
+    "fiber": 6,
+    "carbs": 36,
+    "fat": 14,
+    "ingredients": [
+      "2 scoops protein powder",
+      "1 cup oats",
+      "1/2 cup peanut butter",
+      "1/4 cup honey",
+      "2 tbsp chia seeds",
+      "1/4 cup dark chocolate chips"
+    ],
+    "dietary_tags": [
+      "high_protein",
+      "recovery",
+      "meal_prep"
+    ]
+  },
+  {
+    "name": "Chicken and Sweet Potato Hash",
+    "meal_type": "post_workout",
+    "description": "Diced chicken and sweet potatoes with peppers",
+    "instructions": "Dice chicken breast and sweet potatoes. Cook in skillet until browned and chicken is cooked through. Add peppers and onions. Season and serve.",
+    "prep_time": 10,
+    "cook_time": 15,
+    "calories": 480,
+    "protein": 38,
+    "fiber": 6,
+    "carbs": 48,
+    "fat": 14,
+    "ingredients": [
+      "8 oz chicken breast",
+      "1 medium sweet potato",
+      "1/2 bell pepper",
+      "1/2 onion",
+      "olive oil",
+      "seasonings"
+    ],
+    "dietary_tags": [
+      "high_protein",
+      "recovery"
+    ]
+  },
+  {
+    "name": "Hummus and Veggie Plate",
+    "meal_type": "post_workout",
+    "description": "Protein-rich hummus with fresh vegetables and pita",
+    "instructions": "Arrange hummus, fresh vegetables, and pita bread on plate. Drizzle with olive oil and sprinkle with paprika. Serve immediately.",
+    "prep_time": 5,
+    "cook_time": 0,
+    "calories": 420,
+    "protein": 20,
+    "fiber": 12,
+    "carbs": 48,
+    "fat": 18,
+    "ingredients": [
+      "1 cup hummus",
+      "1 pita bread",
+      "carrot sticks",
+      "cucumber",
+      "bell pepper",
+      "cherry tomatoes"
+    ],
+    "dietary_tags": [
+      "vegetarian",
+      "high_fiber",
+      "recovery",
+      "quick"
+    ]
+  },
+  {
+    "name": "Protein Pancakes with Berries",
+    "meal_type": "post_workout",
+    "description": "Fluffy protein pancakes topped with fresh berries",
+    "instructions": "Blend ingredients into batter. Cook pancakes on griddle until bubbles form, flip and cook other side. Top with fresh berries and maple syrup.",
+    "prep_time": 10,
+    "cook_time": 10,
+    "calories": 440,
+    "protein": 30,
+    "fiber": 5,
+    "carbs": 52,
+    "fat": 12,
+    "ingredients": [
+      "2 scoops protein powder",
+      "1 cup oats",
+      "2 eggs",
+      "1 cup almond milk",
+      "1 cup berries",
+      "maple syrup"
+    ],
+    "dietary_tags": [
+      "high_protein",
+      "recovery"
+    ]
+  },
+  {
+    "name": "Greek Salad with Grilled Chicken",
+    "meal_type": "post_workout",
+    "description": "Classic Greek salad with grilled chicken and feta",
+    "instructions": "Grill chicken until cooked. Assemble salad with cucumber, tomatoes, olives, and feta. Top with sliced chicken and olive oil dressing.",
+    "prep_time": 10,
+    "cook_time": 10,
+    "calories": 480,
+    "protein": 40,
+    "fiber": 5,
+    "carbs": 22,
+    "fat": 24,
+    "ingredients": [
+      "8 oz chicken breast",
+      "1 cucumber",
+      "1 cup tomatoes",
+      "1/4 cup olives",
+      "2 oz feta cheese",
+      "olive oil"
+    ],
+    "dietary_tags": [
+      "high_protein",
+      "recovery"
+    ]
+  },
+  {
+    "name": "Cottage Cheese Bowl",
+    "meal_type": "post_workout",
+    "description": "Protein-packed cottage cheese with fruit and nuts",
+    "instructions": "Place cottage cheese in bowl. Top with fresh fruit, nuts, and drizzle with honey. Optional: add cinnamon for extra flavor.",
+    "prep_time": 5,
+    "cook_time": 0,
+    "calories": 360,
+    "protein": 28,
+    "fiber": 4,
+    "carbs": 32,
+    "fat": 14,
+    "ingredients": [
+      "1.5 cups cottage cheese",
+      "1/2 cup fruit",
+      "2 tbsp nuts",
+      "1 tbsp honey",
+      "cinnamon (optional)"
+    ],
+    "dietary_tags": [
+      "high_protein",
+      "recovery",
+      "quick"
+    ]
+  },
+  {
+    "name": "Salmon and Quinoa Bowl",
+    "meal_type": "post_workout",
+    "description": "Baked salmon with quinoa and roasted vegetables",
+    "instructions": "Bake salmon at 400\u00b0F for 12-15 minutes. Cook quinoa. Roast vegetables. Assemble bowl with salmon, quinoa, vegetables, and lemon vinaigrette.",
+    "prep_time": 10,
+    "cook_time": 20,
+    "calories": 520,
+    "protein": 38,
+    "fiber": 6,
+    "carbs": 42,
+    "fat": 24,
+    "ingredients": [
+      "6 oz salmon fillet",
+      "1/2 cup quinoa",
+      "1 cup roasted vegetables",
+      "lemon",
+      "olive oil",
+      "fresh herbs"
+    ],
+    "dietary_tags": [
+      "high_protein",
+      "omega_3",
+      "recovery"
+    ]
+  },
+  {
+    "name": "Vanilla Protein Mousse",
+    "meal_type": "post_workout",
+    "description": "Light and creamy protein mousse with berries",
+    "instructions": "Blend Greek yogurt, protein powder, and vanilla until smooth and airy. Fold in whipped cream. Top with fresh berries. Serve immediately.",
+    "prep_time": 8,
+    "cook_time": 0,
+    "calories": 280,
+    "protein": 24,
+    "fiber": 3,
+    "carbs": 22,
+    "fat": 10,
+    "ingredients": [
+      "1 scoop vanilla protein",
+      "1 cup Greek yogurt",
+      "1/4 cup whipped cream",
+      "1/2 cup berries",
+      "vanilla extract"
+    ],
+    "dietary_tags": [
+      "high_protein",
+      "recovery",
+      "quick"
+    ]
+  },
+  {
+    "name": "Beef and Brown Rice Stir-Fry",
+    "meal_type": "post_workout",
+    "description": "Lean beef with brown rice and Asian vegetables",
+    "instructions": "Stir-fry beef strips until browned. Add vegetables and cook until crisp-tender. Add cooked brown rice and soy sauce. Top with sesame seeds.",
+    "prep_time": 10,
+    "cook_time": 15,
+    "calories": 500,
+    "protein": 40,
+    "fiber": 5,
+    "carbs": 52,
+    "fat": 16,
+    "ingredients": [
+      "8 oz lean beef",
+      "1 cup brown rice",
+      "2 cups vegetables",
+      "soy sauce",
+      "ginger",
+      "sesame seeds"
+    ],
+    "dietary_tags": [
+      "high_protein",
+      "recovery"
+    ]
+  },
+  {
+    "name": "Apple and Peanut Butter Plate",
+    "meal_type": "post_workout",
+    "description": "Simple post-workout snack with apple and peanut butter",
+    "instructions": "Slice apple into wedges. Serve with generous portion of peanut butter. Optional: sprinkle with cinnamon or granola for extra texture.",
+    "prep_time": 3,
+    "cook_time": 0,
+    "calories": 340,
+    "protein": 10,
+    "fiber": 8,
+    "carbs": 42,
+    "fat": 18,
+    "ingredients": [
+      "1 large apple",
+      "3 tbsp natural peanut butter",
+      "cinnamon (optional)",
+      "granola (optional)"
+    ],
+    "dietary_tags": [
+      "recovery",
+      "quick"
+    ]
+  },
+  {
+    "name": "Protein Cookie Dough Bites",
+    "meal_type": "post_workout",
+    "description": "Edible cookie dough bites with protein powder",
+    "instructions": "Mix ingredients until cookie dough forms. Roll into small balls. Refrigerate for 30 minutes to set. Store in refrigerator for up to a week.",
+    "prep_time": 10,
+    "cook_time": 0,
+    "calories": 280,
+    "protein": 16,
+    "fiber": 4,
+    "carbs": 32,
+    "fat": 12,
+    "ingredients": [
+      "1 scoop protein powder",
+      "1/4 cup almond butter",
+      "2 tbsp maple syrup",
+      "1 tbsp ground flaxseed",
+      "dark chocolate chips",
+      "vanilla extract"
+    ],
+    "dietary_tags": [
+      "high_protein",
+      "recovery",
+      "meal_prep"
+    ]
+  },
+  {
+    "name": "Grilled Chicken and Avocado Toast",
+    "meal_type": "post_workout",
+    "description": "Whole grain toast topped with grilled chicken and avocado",
+    "instructions": "Grill chicken breast until cooked. Toast bread. Mash avocado and spread on toast. Top with sliced chicken and sprinkle with everything bagel seasoning.",
+    "prep_time": 8,
+    "cook_time": 10,
+    "calories": 460,
+    "protein": 34,
+    "fiber": 8,
+    "carbs": 38,
+    "fat": 20,
+    "ingredients": [
+      "6 oz chicken",
+      "2 slices whole grain bread",
+      "1/2 avocado",
+      "everything bagel seasoning",
+      "lemon juice"
+    ],
+    "dietary_tags": [
+      "high_protein",
+      "recovery"
+    ]
+  },
+  {
+    "name": "Pineapple Coconut Recovery Smoothie",
+    "meal_type": "post_workout",
+    "description": "Tropical smoothie with pineapple and coconut",
+    "instructions": "Blend pineapple, coconut milk, protein powder, and banana until smooth. Add ice for desired thickness. Garnish with toasted coconut.",
+    "prep_time": 5,
+    "cook_time": 0,
+    "calories": 340,
+    "protein": 24,
+    "fiber": 4,
+    "carbs": 44,
+    "fat": 10,
+    "ingredients": [
+      "1.5 scoops protein powder",
+      "1 cup frozen pineapple",
+      "1/2 banana",
+      "1/2 cup coconut milk",
+      "1 tbsp coconut oil",
+      "ice"
+    ],
+    "dietary_tags": [
+      "high_protein",
+      "recovery",
+      "quick"
+    ]
+  },
+  {
+    "name": "Tuna Ni\u00e7oise Wrap",
+    "meal_type": "post_workout",
+    "description": "Tuna salad with eggs and vegetables in a wrap",
+    "instructions": "Mix tuna with olive oil and herbs. Spread on wrap. Layer with hard-boiled egg, olives, tomatoes, and lettuce. Roll and serve.",
+    "prep_time": 10,
+    "cook_time": 0,
+    "calories": 440,
+    "protein": 36,
+    "fiber": 5,
+    "carbs": 38,
+    "fat": 18,
+    "ingredients": [
+      "6 oz tuna",
+      "1 hard-boiled egg",
+      "1 whole wheat wrap",
+      "olives",
+      "tomatoes",
+      "lettuce"
+    ],
+    "dietary_tags": [
+      "high_protein",
+      "recovery",
+      "quick"
+    ]
+  },
+  {
+    "name": "Protein Granola Bowl",
+    "meal_type": "post_workout",
+    "description": "Protein-packed granola with Greek yogurt and fruit",
+    "instructions": "Layer protein granola in bowl. Top with Greek yogurt and fresh fruit. Drizzle with honey and sprinkle with nuts.",
+    "prep_time": 5,
+    "cook_time": 0,
+    "calories": 420,
+    "protein": 26,
+    "fiber": 8,
+    "carbs": 52,
+    "fat": 14,
+    "ingredients": [
+      "1 cup protein granola",
+      "1 cup Greek yogurt",
+      "1 cup fresh fruit",
+      "2 tbsp nuts",
+      "1 tbsp honey"
+    ],
+    "dietary_tags": [
+      "high_protein",
+      "recovery",
+      "quick"
+    ]
+  },
+  {
+    "name": "Beef Jerky and Cheese Snack Pack",
+    "meal_type": "post_workout",
+    "description": "Portable protein snack with beef jerky and cheese",
+    "instructions": "Arrange beef jerky and cheese sticks. Add nuts and dried fruit for balanced macros. Perfect for on-the-go recovery.",
+    "prep_time": 3,
+    "cook_time": 0,
+    "calories": 360,
+    "protein": 28,
+    "fiber": 2,
+    "carbs": 12,
+    "fat": 20,
+    "ingredients": [
+      "2 oz beef jerky",
+      "2 cheese sticks",
+      "1 oz nuts",
+      "dried fruit",
+      "baby carrots"
+    ],
+    "dietary_tags": [
+      "high_protein",
+      "recovery",
+      "quick"
+    ]
+  },
+  {
+    "name": "Protein Waffles with Berries",
+    "meal_type": "post_workout",
+    "description": "Fluffy protein waffles topped with fresh berries",
+    "instructions": "Make batter with protein powder. Cook in waffle iron until golden. Top with fresh berries and Greek yogurt. Drizzle with maple syrup.",
+    "prep_time": 10,
+    "cook_time": 12,
+    "calories": 400,
+    "protein": 28,
+    "fiber": 5,
+    "carbs": 52,
+    "fat": 12,
+    "ingredients": [
+      "2 scoops protein powder",
+      "1 cup flour",
+      "1 cup berries",
+      "Greek yogurt",
+      "maple syrup",
+      "eggs"
+    ],
+    "dietary_tags": [
+      "high_protein",
+      "recovery"
+    ]
+  },
+  {
+    "name": "Egg White and Spinach Frittata",
+    "meal_type": "post_workout",
+    "description": "High-protein frittata with vegetables and cheese",
+    "instructions": "Saut\u00e9 spinach and vegetables. Whisk egg whites with milk. Pour over vegetables in skillet. Add cheese. Bake until set and golden.",
+    "prep_time": 10,
+    "cook_time": 20,
+    "calories": 320,
+    "protein": 28,
+    "fiber": 3,
+    "carbs": 12,
+    "fat": 16,
+    "ingredients": [
+      "6 egg whites",
+      "2 cups spinach",
+      "1/4 cup cheese",
+      "mixed vegetables",
+      "milk",
+      "seasonings"
+    ],
+    "dietary_tags": [
+      "high_protein",
+      "recovery"
+    ]
+  },
+  {
+    "name": "Peanut Butter Banana Protein Shake",
+    "meal_type": "post_workout",
+    "description": "Classic PB and banana protein smoothie",
+    "instructions": "Blend peanut butter, banana, protein powder, and almond milk until creamy. Add ice for thickness. Optional: add oats for extra carbs.",
+    "prep_time": 5,
+    "cook_time": 0,
+    "calories": 400,
+    "protein": 32,
+    "fiber": 6,
+    "carbs": 42,
+    "fat": 14,
+    "ingredients": [
+      "2 scoops protein powder",
+      "2 tbsp peanut butter",
+      "1 banana",
+      "1 cup almond milk",
+      "1 tbsp honey",
+      "ice"
+    ],
+    "dietary_tags": [
+      "high_protein",
+      "recovery",
+      "quick"
+    ]
+  },
+  {
+    "name": "Turkey Meatballs with Marinara",
+    "meal_type": "post_workout",
+    "description": "Lean turkey meatballs with marinara sauce",
+    "instructions": "Mix turkey with herbs and spices. Form into meatballs and bake. Simmer in marinara sauce until heated through. Serve with whole wheat pasta or zucchini noodles.",
+    "prep_time": 15,
+    "cook_time": 25,
+    "calories": 420,
+    "protein": 38,
+    "fiber": 5,
+    "carbs": 28,
+    "fat": 18,
+    "ingredients": [
+      "8 oz ground turkey",
+      "1 cup marinara sauce",
+      "herbs",
+      "garlic",
+      "whole wheat pasta",
+      "parmesan"
+    ],
+    "dietary_tags": [
+      "high_protein",
+      "recovery"
+    ]
+  },
+  {
+    "name": "Chia Seed Pudding Parfait",
+    "meal_type": "post_workout",
+    "description": "Layered chia pudding with Greek yogurt and fruit",
+    "instructions": "Make chia pudding and refrigerate overnight. Layer with Greek yogurt and fresh fruit in a glass. Top with granola and honey.",
+    "prep_time": 10,
+    "cook_time": 0,
+    "calories": 380,
+    "protein": 24,
+    "fiber": 14,
+    "carbs": 42,
+    "fat": 14,
+    "ingredients": [
+      "3 tbsp chia seeds",
+      "1 cup Greek yogurt",
+      "1 cup fruit",
+      "granola",
+      "honey",
+      "almond milk"
+    ],
+    "dietary_tags": [
+      "high_protein",
+      "recovery",
+      "meal_prep"
+    ]
+  },
+  {
+    "name": "Protein Brownie Bites",
+    "meal_type": "post_workout",
+    "description": "Fudgy protein brownie bites with chocolate",
+    "instructions": "Mix protein powder, cocoa powder, banana, and nut butter. Form into small balls. Refrigerate until set. Optional: roll in cocoa powder.",
+    "prep_time": 10,
+    "cook_time": 0,
+    "calories": 260,
+    "protein": 14,
+    "fiber": 5,
+    "carbs": 28,
+    "fat": 12,
+    "ingredients": [
+      "1 scoop chocolate protein",
+      "2 tbsp cocoa powder",
+      "1 banana",
+      "2 tbsp nut butter",
+      "dark chocolate chips",
+      "cocoa powder for rolling"
+    ],
+    "dietary_tags": [
+      "high_protein",
+      "recovery",
+      "meal_prep"
+    ]
+  },
+  {
+    "name": "Matcha Protein Smoothie",
+    "meal_type": "post_workout",
+    "description": "Antioxidant-rich matcha green tea smoothie",
+    "instructions": "Blend matcha powder, protein powder, banana, almond milk, and honey until smooth. Add ice for thickness. Serve immediately.",
+    "prep_time": 5,
+    "cook_time": 0,
+    "calories": 320,
+    "protein": 28,
+    "fiber": 4,
+    "carbs": 40,
+    "fat": 8,
+    "ingredients": [
+      "1.5 scoops protein powder",
+      "1 tsp matcha powder",
+      "1 banana",
+      "1 cup almond milk",
+      "1 tbsp honey",
+      "ice"
+    ],
+    "dietary_tags": [
+      "high_protein",
+      "recovery",
+      "quick"
+    ]
+  },
+  {
+    "name": "Protein Energy Bar",
+    "meal_type": "post_workout",
+    "description": "Homemade protein bars with oats and dates",
+    "instructions": "Process dates and nuts. Mix with protein powder and oats. Press into pan and refrigerate until set. Cut into bars.",
+    "prep_time": 15,
+    "cook_time": 0,
+    "calories": 280,
+    "protein": 16,
+    "fiber": 6,
+    "carbs": 36,
+    "fat": 10,
+    "ingredients": [
+      "1 scoop protein powder",
+      "1 cup dates",
+      "1/2 cup oats",
+      "1/4 cup nuts",
+      "2 tbsp nut butter",
+      "vanilla extract"
+    ],
+    "dietary_tags": [
+      "high_protein",
+      "recovery",
+      "meal_prep"
+    ]
+  },
+  {
+    "name": "Sardines and Crackers",
+    "meal_type": "post_workout",
+    "description": "Omega-rich sardines with whole grain crackers",
+    "instructions": "Open sardine tin and drain. Serve on whole grain crackers with mustard and lemon wedges. Top with fresh herbs.",
+    "prep_time": 3,
+    "cook_time": 0,
+    "calories": 340,
+    "protein": 28,
+    "fiber": 3,
+    "carbs": 18,
+    "fat": 18,
+    "ingredients": [
+      "1 can sardines",
+      "whole grain crackers",
+      "mustard",
+      "lemon",
+      "fresh herbs",
+      "cherry tomatoes"
+    ],
+    "dietary_tags": [
+      "high_protein",
+      "omega_3",
+      "recovery",
+      "quick"
+    ]
+  },
+  {
+    "name": "Chocolate Hazelnut Protein Spread",
+    "meal_type": "post_workout",
+    "description": "Homemade protein spread on whole grain toast",
+    "instructions": "Blend hazelnuts, cocoa powder, protein powder, and maple oil until smooth. Spread on toast. Top with banana slices.",
+    "prep_time": 10,
+    "cook_time": 0,
+    "calories": 400,
+    "protein": 18,
+    "fiber": 5,
+    "carbs": 42,
+    "fat": 20,
+    "ingredients": [
+      "1 scoop chocolate protein",
+      "1/2 cup hazelnuts",
+      "cocoa powder",
+      "maple syrup",
+      "toast",
+      "banana"
+    ],
+    "dietary_tags": [
+      "recovery",
+      "quick"
+    ]
+  },
+  {
+    "name": "Protein Cheesecake Bites",
+    "meal_type": "post_workout",
+    "description": "Mini cheesecake bites with protein powder",
+    "instructions": "Blend Greek yogurt, protein powder, cream cheese, and vanilla. Pour into muffin tins with graham crust. Refrigerate until set.",
+    "prep_time": 10,
+    "cook_time": 0,
+    "calories": 240,
+    "protein": 16,
+    "fiber": 1,
+    "carbs": 18,
+    "fat": 14,
+    "ingredients": [
+      "1 scoop vanilla protein",
+      "1 cup Greek yogurt",
+      "2 oz cream cheese",
+      "graham crust",
+      "vanilla extract",
+      "berries"
+    ],
+    "dietary_tags": [
+      "high_protein",
+      "recovery",
+      "meal_prep"
+    ]
+  },
+  {
+    "name": "Salmon and Avocado Salad",
+    "meal_type": "post_workout",
+    "description": "Protein-packed salad with smoked salmon",
+    "instructions": "Arrange mixed greens. Top with smoked salmon, avocado, cucumber, and red onion. Drizzle with olive oil and lemon.",
+    "prep_time": 8,
+    "cook_time": 0,
+    "calories": 420,
+    "protein": 28,
+    "fiber": 6,
+    "carbs": 18,
+    "fat": 28,
+    "ingredients": [
+      "4 oz smoked salmon",
+      "1/2 avocado",
+      "mixed greens",
+      "cucumber",
+      "red onion",
+      "lemon dressing"
+    ],
+    "dietary_tags": [
+      "high_protein",
+      "omega_3",
+      "recovery",
+      "quick"
+    ]
+  },
+  {
+    "name": "Peanut Butter Banana Toast",
+    "meal_type": "post_workout",
+    "description": "Simple post-workout toast with nut butter",
+    "instructions": "Toast whole grain bread. Spread generously with peanut butter. Top with banana slices and cinnamon. Optional: add chia seeds.",
+    "prep_time": 3,
+    "cook_time": 2,
+    "calories": 380,
+    "protein": 12,
+    "fiber": 8,
+    "carbs": 48,
+    "fat": 18,
+    "ingredients": [
+      "2 slices bread",
+      "3 tbsp peanut butter",
+      "1 banana",
+      "cinnamon",
+      "chia seeds"
+    ],
+    "dietary_tags": [
+      "recovery",
+      "quick"
+    ]
+  },
+  {
+    "name": "Protein Fruit Salad",
+    "meal_type": "post_workout",
+    "description": "Fresh fruit salad with protein yogurt dressing",
+    "instructions": "Mix Greek yogurt with protein powder. Toss fresh fruit in dressing. Top with nuts and shredded coconut.",
+    "prep_time": 10,
+    "cook_time": 0,
+    "calories": 340,
+    "protein": 20,
+    "fiber": 6,
+    "carbs": 52,
+    "fat": 10,
+    "ingredients": [
+      "1 scoop protein powder",
+      "1 cup Greek yogurt",
+      "mixed fruit",
+      "nuts",
+      "coconut",
+      "honey"
+    ],
+    "dietary_tags": [
+      "high_protein",
+      "recovery",
+      "quick"
+    ]
+  },
+  {
+    "name": "Edamame and Miso Soup",
+    "meal_type": "post_workout",
+    "description": "Japanese protein-packed starter",
+    "instructions": "Steam edamame in pods. Make miso soup with dashi and tofu. Serve edamame on the side with soy sauce.",
+    "prep_time": 5,
+    "cook_time": 10,
+    "calories": 280,
+    "protein": 22,
+    "fiber": 6,
+    "carbs": 28,
+    "fat": 10,
+    "ingredients": [
+      "1.5 cups edamame",
+      "miso paste",
+      "dashi",
+      "tofu",
+      "scallions",
+      "soy sauce"
+    ],
+    "dietary_tags": [
+      "vegetarian",
+      "high_protein",
+      "recovery"
+    ]
+  },
+  {
+    "name": "Protein Latte",
+    "meal_type": "post_workout",
+    "description": "Warm protein latte for recovery",
+    "instructions": "Heat milk and blend with protein powder. Pour over espresso or coffee. Top with frothed milk and cinnamon.",
+    "prep_time": 5,
+    "cook_time": 2,
+    "calories": 220,
+    "protein": 24,
+    "fiber": 1,
+    "carbs": 18,
+    "fat": 8,
+    "ingredients": [
+      "1 scoop protein powder",
+      "1 cup milk",
+      "espresso",
+      "cinnamon",
+      "vanilla",
+      "honey"
+    ],
+    "dietary_tags": [
+      "high_protein",
+      "recovery",
+      "quick"
+    ]
+  },
+  {
+    "name": "Chicken Salad Stuffed Avocado",
+    "meal_type": "post_workout",
+    "description": "Grilled chicken in avocado halves",
+    "instructions": "Dice grilled chicken. Mix with mayonnaise, lemon, and herbs. Halve avocados and remove pit. Stuff with chicken salad.",
+    "prep_time": 10,
+    "cook_time": 0,
+    "calories": 420,
+    "protein": 34,
+    "fiber": 10,
+    "carbs": 12,
+    "fat": 26,
+    "ingredients": [
+      "6 oz grilled chicken",
+      "2 avocados",
+      "mayonnaise",
+      "lemon",
+      "fresh herbs",
+      "celery"
+    ],
+    "dietary_tags": [
+      "high_protein",
+      "recovery",
+      "quick"
+    ]
+  },
+  {
+    "name": "Protein Overnight Oats with Apple",
+    "meal_type": "post_workout",
+    "description": "Apple cinnamon overnight oats",
+    "instructions": "Mix oats, protein powder, almond milk, chia seeds, and diced apple. Refrigerate overnight. Top with cinnamon and walnuts before eating.",
+    "prep_time": 5,
+    "cook_time": 0,
+    "calories": 380,
+    "protein": 26,
+    "fiber": 10,
+    "carbs": 52,
+    "fat": 12,
+    "ingredients": [
+      "1 scoop protein powder",
+      "1/2 cup oats",
+      "1 cup almond milk",
+      "1 apple",
+      "chia seeds",
+      "walnuts"
+    ],
+    "dietary_tags": [
+      "high_protein",
+      "recovery",
+      "meal_prep"
+    ]
+  },
+  {
+    "name": "Berry Acai Bowl",
+    "meal_type": "post_workout",
+    "description": "Antioxidant-rich acai bowl with granola and fruit",
+    "instructions": "Blend frozen acai with banana and almond milk. Pour into bowl. Top with granola, fresh berries, coconut, and drizzle with honey.",
+    "prep_time": 8,
+    "cook_time": 0,
+    "calories": 400,
+    "protein": 12,
+    "fiber": 10,
+    "carbs": 62,
+    "fat": 14,
+    "ingredients": [
+      "1 acai pack",
+      "1/2 banana",
+      "granola",
+      "mixed berries",
+      "coconut",
+      "honey"
+    ],
+    "dietary_tags": [
+      "recovery",
+      "quick"
+    ]
+  },
+  {
+    "name": "Pumpkin Protein Smoothie",
+    "meal_type": "post_workout",
+    "description": "Fall-inspired pumpkin smoothie with protein",
+    "instructions": "Blend pumpkin pur\u00e9e, protein powder, banana, almond milk, and pumpkin pie spice. Add ice for thickness. Top with granola.",
+    "prep_time": 5,
+    "cook_time": 0,
+    "calories": 340,
+    "protein": 28,
+    "fiber": 8,
+    "carbs": 42,
+    "fat": 8,
+    "ingredients": [
+      "1.5 scoops protein powder",
+      "1/2 cup pumpkin",
+      "1 banana",
+      "1 cup almond milk",
+      "pumpkin pie spice",
+      "ice"
+    ],
+    "dietary_tags": [
+      "high_protein",
+      "recovery",
+      "quick"
+    ]
+  },
+  {
+    "name": "Tuna Salad Stuffed Celery",
+    "meal_type": "post_workout",
+    "description": "Quick protein snack with tuna and celery",
+    "instructions": "Mix tuna with mayonnaise, celery, and seasonings. Stuff into celery stalks. Optional: add apple or grapes for sweetness.",
+    "prep_time": 5,
+    "cook_time": 0,
+    "calories": 280,
+    "protein": 28,
+    "fiber": 2,
+    "carbs": 6,
+    "fat": 14,
+    "ingredients": [
+      "6 oz tuna",
+      "mayonnaise",
+      "celery stalks",
+      "red onion",
+      "lemon juice",
+      "apple (optional)"
+    ],
+    "dietary_tags": [
+      "high_protein",
+      "recovery",
+      "quick"
+    ]
+  },
+  {
+    "name": "Protein Mug Cake",
+    "meal_type": "post_workout",
+    "description": "Single-serve chocolate protein mug cake",
+    "instructions": "Mix protein powder, cocoa powder, banana, and milk in mug. Microwave for 1-2 minutes. Let cool slightly. Top with peanut butter.",
+    "prep_time": 3,
+    "cook_time": 2,
+    "calories": 300,
+    "protein": 24,
+    "fiber": 5,
+    "carbs": 32,
+    "fat": 10,
+    "ingredients": [
+      "1 scoop protein powder",
+      "1 tbsp cocoa powder",
+      "1/2 banana",
+      "1/4 cup milk",
+      "peanut butter",
+      "chocolate chips (optional)"
+    ],
+    "dietary_tags": [
+      "high_protein",
+      "recovery",
+      "quick"
+    ]
+  },
+  {
+    "name": "Coconut Chia Pudding",
+    "meal_type": "post_workout",
+    "description": "Tropical chia pudding with coconut milk",
+    "instructions": "Mix chia seeds with coconut milk and maple syrup. Refrigerate overnight. Top with fresh mango, toasted coconut, and lime zest.",
+    "prep_time": 5,
+    "cook_time": 0,
+    "calories": 320,
+    "protein": 12,
+    "fiber": 14,
+    "carbs": 38,
+    "fat": 16,
+    "ingredients": [
+      "3 tbsp chia seeds",
+      "1 cup coconut milk",
+      "maple syrup",
+      "mango",
+      "toasted coconut",
+      "lime"
+    ],
+    "dietary_tags": [
+      "recovery",
+      "meal_prep"
+    ]
+  },
+  {
+    "name": "Protein Stuffed Dates",
+    "meal_type": "post_workout",
+    "description": "Medjool dates stuffed with almond butter and protein",
+    "instructions": "Mix almond butter with protein powder. Pit dates and stuff with mixture. Top with sea salt. Optional: add chopped walnuts.",
+    "prep_time": 5,
+    "cook_time": 0,
+    "calories": 260,
+    "protein": 10,
+    "fiber": 5,
+    "carbs": 32,
+    "fat": 12,
+    "ingredients": [
+      "6 Medjool dates",
+      "2 tbsp almond butter",
+      "1/2 scoop protein powder",
+      "sea salt",
+      "walnuts (optional)"
+    ],
+    "dietary_tags": [
+      "recovery",
+      "quick"
+    ]
+  },
+  {
+    "name": "Green Protein Smoothie",
+    "meal_type": "post_workout",
+    "description": "Nutrient-dense green smoothie with spinach",
+    "instructions": "Blend spinach, protein powder, banana, and almond milk until smooth. Add matcha for extra nutrients. Top with hemp seeds.",
+    "prep_time": 5,
+    "cook_time": 0,
+    "calories": 300,
+    "protein": 26,
+    "fiber": 6,
+    "carbs": 38,
+    "fat": 8,
+    "ingredients": [
+      "1.5 scoops protein powder",
+      "2 cups spinach",
+      "1 banana",
+      "1 cup almond milk",
+      "matcha powder",
+      "hemp seeds"
+    ],
+    "dietary_tags": [
+      "high_protein",
+      "recovery",
+      "quick"
+    ]
+  },
+  {
+    "name": "Protein Rice Cakes",
+    "meal_type": "post_workout",
+    "description": "Rice cakes topped with protein spread",
+    "instructions": "Mix protein powder with peanut butter and honey. Spread on rice cakes. Top with banana slices and chia seeds.",
+    "prep_time": 5,
+    "cook_time": 0,
+    "calories": 340,
+    "protein": 18,
+    "fiber": 4,
+    "carbs": 48,
+    "fat": 14,
+    "ingredients": [
+      "1 scoop protein powder",
+      "2 tbsp peanut butter",
+      "4 rice cakes",
+      "1 banana",
+      "honey",
+      "chia seeds"
+    ],
+    "dietary_tags": [
+      "recovery",
+      "quick"
+    ]
+  },
+  {
+    "name": "Cottage Cheese Fruit Bowl",
+    "meal_type": "post_workout",
+    "description": "High protein cottage cheese with seasonal fruit",
+    "instructions": "Place cottage cheese in bowl. Top with mixed fresh fruit and granola. Drizzle with honey and sprinkle with cinnamon.",
+    "prep_time": 3,
+    "cook_time": 0,
+    "calories": 320,
+    "protein": 26,
+    "fiber": 4,
+    "carbs": 38,
+    "fat": 10,
+    "ingredients": [
+      "1.5 cups cottage cheese",
+      "1 cup fresh fruit",
+      "1/4 cup granola",
+      "1 tbsp honey",
+      "cinnamon",
+      "almonds"
+    ],
+    "dietary_tags": [
+      "high_protein",
+      "recovery",
+      "quick"
+    ]
+  },
+  {
+    "name": "Protein Hot Chocolate",
+    "meal_type": "post_workout",
+    "description": "Warm chocolate protein drink for recovery",
+    "instructions": "Heat milk and whisk with chocolate protein powder. Top with marshmallows. Optional: add a shot of espresso for mocha flavor.",
+    "prep_time": 3,
+    "cook_time": 2,
+    "calories": 260,
+    "protein": 24,
+    "fiber": 1,
+    "carbs": 24,
+    "fat": 8,
+    "ingredients": [
+      "1 scoop chocolate protein",
+      "1 cup milk",
+      "cocoa powder",
+      "marshmallows",
+      "vanilla extract",
+      "espresso (optional)"
+    ],
+    "dietary_tags": [
+      "high_protein",
+      "recovery",
+      "quick"
+    ]
+  },
+  {
+    "name": "Smoked Salmon Cream Cheese Bagel",
+    "meal_type": "post_workout",
+    "description": "Classic bagel with smoked salmon and cream cheese",
+    "instructions": "Toast bagel. Spread with cream cheese. Layer smoked salmon, capers, red onion, and dill. Squeeze lemon over top.",
+    "prep_time": 5,
+    "cook_time": 0,
+    "calories": 440,
+    "protein": 26,
+    "fiber": 3,
+    "carbs": 48,
+    "fat": 20,
+    "ingredients": [
+      "1 bagel",
+      "4 oz smoked salmon",
+      "cream cheese",
+      "capers",
+      "red onion",
+      "fresh dill"
+    ],
+    "dietary_tags": [
+      "high_protein",
+      "recovery",
+      "quick"
+    ]
+  },
+  {
+    "name": "Protein Stuffed Apple",
+    "meal_type": "post_workout",
+    "description": "Baked apple stuffed with protein nut butter",
+    "instructions": "Core apple and cut crosswise. Mix protein powder with peanut butter. Stuff into apple. Optional: microwave for 30 seconds to warm.",
+    "prep_time": 3,
+    "cook_time": 0,
+    "calories": 320,
+    "protein": 14,
+    "fiber": 7,
+    "carbs": 42,
+    "fat": 14,
+    "ingredients": [
+      "1 large apple",
+      "2 tbsp peanut butter",
+      "1/2 scoop protein powder",
+      "cinnamon",
+      "oats (optional)",
+      "honey"
+    ],
+    "dietary_tags": [
+      "recovery",
+      "quick"
+    ]
+  },
+  {
+    "name": "Green Recovery Smoothie",
+    "meal_type": "post_workout",
+    "description": "Nutrient-dense smoothie with spinach, banana, and protein powder",
+    "instructions": "Add 2 large handfuls of fresh spinach, 1 frozen banana, 1.5 scoops vanilla protein powder, 1 tbsp almond butter, 1 tbsp ground flaxseed, and 1 cup almond milk to a high-speed blender. Add 1/2 cup ice cubes. Blend on high speed for 60-90 seconds until completely smooth and creamy. The spinach provides iron and antioxidants while remaining virtually tasteless. The banana offers potassium for electrolyte balance and fast-acting carbohydrates for glycogen replenishment. The almond butter adds healthy fats and extra protein. Pour into a large glass and consume within 30 minutes of workout completion for optimal recovery.",
+    "prep_time": 5,
+    "cook_time": 0,
+    "calories": 360,
+    "protein": 32,
+    "fiber": 8,
+    "carbs": 42,
+    "fat": 12,
+    "ingredients": [
+      "1.5 scoops vanilla protein powder",
+      "1 frozen banana",
+      "2 cups fresh spinach",
+      "1 cup almond milk",
+      "1 tbsp almond butter",
+      "1 tbsp ground flaxseed",
+      "ice cubes"
+    ],
+    "dietary_tags": [
+      "high_protein",
+      "recovery",
+      "quick",
+      "anti_inflammatory"
+    ]
+  },
+  {
+    "name": "Protein Energy Bites",
+    "meal_type": "post_workout",
+    "description": "No-bake energy bites with protein powder, dates, and nuts",
+    "instructions": "In a food processor, combine 1 cup pitted Medjool dates, 1/2 cup raw almonds, 1/2 cup rolled oats, 2 scoops chocolate protein powder, 3 tbsp almond butter, and 2 tbsp chia seeds. Process until mixture sticks together when pressed (about 1-2 minutes). Add 1/4 cup dark chocolate chips and pulse briefly to combine. Roll mixture into 12 equal-sized balls (about 1 tablespoon each). If mixture is too dry, add 1-2 tbsp water; if too wet, add more oats. Place balls on a parchment-lined baking sheet and refrigerate for 30 minutes until firm. Store in an airtight container in the refrigerator for up to 2 weeks. Enjoy 2-3 bites within 30 minutes post-workout.",
+    "prep_time": 15,
+    "cook_time": 0,
+    "calories": 320,
+    "protein": 20,
+    "fiber": 8,
+    "carbs": 36,
+    "fat": 16,
+    "ingredients": [
+      "2 scoops chocolate protein powder",
+      "1 cup Medjool dates",
+      "1/2 cup raw almonds",
+      "1/2 cup rolled oats",
+      "3 tbsp almond butter",
+      "2 tbsp chia seeds",
+      "1/4 cup dark chocolate chips"
+    ],
+    "dietary_tags": [
+      "high_protein",
+      "recovery",
+      "meal_prep",
+      "vegetarian"
+    ]
+  },
+  {
+    "name": "Recovery Grain Bowl",
+    "meal_type": "post_workout",
+    "description": "Balanced bowl with quinoa, chicken, vegetables, and tahini dressing",
+    "instructions": "Cook 1/2 cup quinoa according to package directions. While quinoa cooks, season 4 oz chicken breast with salt, pepper, and 1/2 tsp paprika. Heat 1 tsp olive oil in a skillet over medium-high heat and cook chicken for 5-6 minutes per side until cooked through. Let rest for 3 minutes, then dice. Steam 1 cup mixed vegetables (broccoli, carrots, bell peppers) for 3-4 minutes until tender-crisp. In a small bowl, whisk together 2 tbsp tahini, 1 tbsp lemon juice, 1 tbsp water, and a pinch of salt to make dressing. Assemble bowl with quinoa, diced chicken, steamed vegetables, and drizzle with tahini dressing. Top with 2 tbsp pumpkin seeds for extra crunch and minerals.",
+    "prep_time": 10,
+    "cook_time": 15,
+    "calories": 480,
+    "protein": 38,
+    "fiber": 10,
+    "carbs": 42,
+    "fat": 18,
+    "ingredients": [
+      "4 oz chicken breast",
+      "1/2 cup quinoa",
+      "1 cup mixed vegetables",
+      "2 tbsp tahini",
+      "1 tbsp lemon juice",
+      "2 tbsp pumpkin seeds",
+      "1 tsp olive oil",
+      "paprika"
+    ],
+    "dietary_tags": [
+      "high_protein",
+      "recovery",
+      "high_fiber",
+      "gluten_free"
+    ]
+  },
+  {
+    "name": "Green Recovery Smoothie",
+    "meal_type": "post_workout",
+    "description": "Nutrient-dense smoothie with spinach, banana, and protein powder",
+    "instructions": "Add 2 large handfuls of fresh spinach, 1 frozen banana, 1.5 scoops vanilla protein powder, 1 tbsp almond butter, 1 tbsp ground flaxseed, and 1 cup almond milk to a high-speed blender. Add 1/2 cup ice cubes. Blend on high speed for 60-90 seconds until completely smooth and creamy. The spinach provides iron and antioxidants while remaining virtually tasteless. The banana offers potassium for electrolyte balance and fast-acting carbohydrates for glycogen replenishment. The almond butter adds healthy fats and extra protein. Pour into a large glass and consume within 30 minutes of workout completion for optimal recovery.",
+    "prep_time": 5,
+    "cook_time": 0,
+    "calories": 360,
+    "protein": 32,
+    "fiber": 8,
+    "carbs": 42,
+    "fat": 12,
+    "ingredients": [
+      "1.5 scoops vanilla protein powder",
+      "1 frozen banana",
+      "2 cups fresh spinach",
+      "1 cup almond milk",
+      "1 tbsp almond butter",
+      "1 tbsp ground flaxseed",
+      "ice cubes"
+    ],
+    "dietary_tags": [
+      "high_protein",
+      "recovery",
+      "quick",
+      "anti_inflammatory"
+    ]
+  },
+  {
+    "name": "Protein Energy Bites",
+    "meal_type": "post_workout",
+    "description": "No-bake energy bites with protein powder, dates, and nuts",
+    "instructions": "In a food processor, combine 1 cup pitted Medjool dates, 1/2 cup raw almonds, 1/2 cup rolled oats, 2 scoops chocolate protein powder, 3 tbsp almond butter, and 2 tbsp chia seeds. Process until mixture sticks together when pressed (about 1-2 minutes). Add 1/4 cup dark chocolate chips and pulse briefly to combine. Roll mixture into 12 equal-sized balls (about 1 tablespoon each). If mixture is too dry, add 1-2 tbsp water; if too wet, add more oats. Place balls on a parchment-lined baking sheet and refrigerate for 30 minutes until firm. Store in an airtight container in the refrigerator for up to 2 weeks. Enjoy 2-3 bites within 30 minutes post-workout.",
+    "prep_time": 15,
+    "cook_time": 0,
+    "calories": 320,
+    "protein": 20,
+    "fiber": 8,
+    "carbs": 36,
+    "fat": 16,
+    "ingredients": [
+      "2 scoops chocolate protein powder",
+      "1 cup Medjool dates",
+      "1/2 cup raw almonds",
+      "1/2 cup rolled oats",
+      "3 tbsp almond butter",
+      "2 tbsp chia seeds",
+      "1/4 cup dark chocolate chips"
+    ],
+    "dietary_tags": [
+      "high_protein",
+      "recovery",
+      "meal_prep",
+      "vegetarian"
+    ]
+  },
+  {
+    "name": "Recovery Grain Bowl",
+    "meal_type": "post_workout",
+    "description": "Balanced bowl with quinoa, chicken, vegetables, and tahini dressing",
+    "instructions": "Cook 1/2 cup quinoa according to package directions. While quinoa cooks, season 4 oz chicken breast with salt, pepper, and 1/2 tsp paprika. Heat 1 tsp olive oil in a skillet over medium-high heat and cook chicken for 5-6 minutes per side until cooked through. Let rest for 3 minutes, then dice. Steam 1 cup mixed vegetables (broccoli, carrots, bell peppers) for 3-4 minutes until tender-crisp. In a small bowl, whisk together 2 tbsp tahini, 1 tbsp lemon juice, 1 tbsp water, and a pinch of salt to make dressing. Assemble bowl with quinoa, diced chicken, steamed vegetables, and drizzle with tahini dressing. Top with 2 tbsp pumpkin seeds for extra crunch and minerals.",
+    "prep_time": 10,
+    "cook_time": 15,
+    "calories": 480,
+    "protein": 38,
+    "fiber": 10,
+    "carbs": 42,
+    "fat": 18,
+    "ingredients": [
+      "4 oz chicken breast",
+      "1/2 cup quinoa",
+      "1 cup mixed vegetables",
+      "2 tbsp tahini",
+      "1 tbsp lemon juice",
+      "2 tbsp pumpkin seeds",
+      "1 tsp olive oil",
+      "paprika"
+    ],
+    "dietary_tags": [
+      "high_protein",
+      "recovery",
+      "high_fiber",
+      "gluten_free"
+    ]
+  },
+  {
+    "name": "Chocolate Peanut Butter Recovery Shake",
+    "meal_type": "post_workout",
+    "description": "Rich chocolate shake with peanut butter for muscle recovery",
+    "instructions": "Add 1.5 scoops chocolate protein powder, 2 tbsp natural peanut butter, 1 frozen banana, 1.5 cups almond milk, and 1 tbsp honey to a high-speed blender. Add 1/2 cup ice cubes. Blend on high speed for 60-90 seconds until completely smooth and creamy. The combination of chocolate protein powder and peanut butter provides essential amino acids for muscle repair, while the banana offers fast-acting carbohydrates to replenish glycogen stores. The healthy fats from peanut butter help reduce inflammation and support hormone production.",
+    "prep_time": 5,
+    "cook_time": 0,
+    "calories": 420,
+    "protein": 34,
+    "fiber": 8,
+    "carbs": 48,
+    "fat": 16,
+    "ingredients": [
+      "1.5 scoops chocolate protein powder",
+      "2 tbsp peanut butter",
+      "1 frozen banana",
+      "1.5 cups almond milk",
+      "1 tbsp honey",
+      "1/2 cup ice cubes"
+    ],
+    "dietary_tags": [
+      "high_protein",
+      "recovery",
+      "quick",
+      "comfort"
+    ]
+  },
+  {
+    "name": "Greek Yogurt Power Bowl",
+    "meal_type": "post_workout",
+    "description": "Protein-packed yogurt bowl with fruits, nuts, and seeds",
+    "instructions": "In a bowl, place 2 cups plain Greek yogurt. Top with 1 cup mixed berries (strawberries, blueberries, raspberries), 2 tbsp chopped walnuts, 1 tbsp pumpkin seeds, and 1 tbsp ground flaxseed. Drizzle with 1 tbsp honey and sprinkle with cinnamon. For enhanced recovery, add 1/2 scoop vanilla protein powder to the yogurt and mix well before adding toppings. The casein protein in Greek yogurt provides slow-release amino acids, while berries offer antioxidants to reduce exercise-induced oxidative stress.",
+    "prep_time": 8,
+    "cook_time": 0,
+    "calories": 440,
+    "protein": 36,
+    "fiber": 10,
+    "carbs": 42,
+    "fat": 16,
+    "ingredients": [
+      "2 cups Greek yogurt",
+      "1 cup mixed berries",
+      "2 tbsp walnuts",
+      "1 tbsp pumpkin seeds",
+      "1 tbsp ground flaxseed",
+      "1 tbsp honey",
+      "cinnamon",
+      "1/2 scoop vanilla protein powder (optional)"
+    ],
+    "dietary_tags": [
+      "high_protein",
+      "recovery",
+      "high_fiber",
+      "quick"
+    ]
+  },
+  {
+    "name": "Salmon and Sweet Potato Recovery Plate",
+    "meal_type": "post_workout",
+    "description": "Omega-rich salmon with complex carbs from sweet potato",
+    "instructions": "Preheat oven to 400\u00b0F (200\u00b0C). Cut 1 medium sweet potato into 1/2-inch thick rounds. Toss with 1 tbsp olive oil, salt, and pepper. Arrange on a baking sheet and roast for 20-25 minutes until tender and golden. Meanwhile, season 6 oz salmon fillet with salt, pepper, and 1 tsp dried dill. Heat 1 tsp olive oil in an oven-safe skillet over medium-high heat. Sear salmon for 2 minutes per side, then transfer to oven and bake for 8-10 minutes until cooked through. Serve salmon with roasted sweet potato rounds and a squeeze of fresh lemon.",
+    "prep_time": 10,
+    "cook_time": 25,
+    "calories": 520,
+    "protein": 38,
+    "fiber": 8,
+    "carbs": 42,
+    "fat": 22,
+    "ingredients": [
+      "6 oz salmon fillet",
+      "1 medium sweet potato",
+      "2 tbsp olive oil",
+      "1 tsp dried dill",
+      "fresh lemon",
+      "salt and pepper"
+    ],
+    "dietary_tags": [
+      "high_protein",
+      "omega_3",
+      "recovery",
+      "anti_inflammatory"
+    ]
+  },
+  {
+    "name": "Protein Coffee Recovery Drink",
+    "meal_type": "post_workout",
+    "description": "Iced coffee protein drink for caffeine and recovery",
+    "instructions": "Brew 1 cup strong coffee and let cool completely. Add cooled coffee, 1.5 scoops chocolate protein powder, 1 cup almond milk, and 1 tbsp maple syrup to a blender with 1 cup ice. Blend on high speed for 60 seconds until frothy and smooth. The caffeine helps reduce post-workout fatigue and improves alertness, while protein powder supports muscle protein synthesis. The cold temperature helps reduce core body temperature after intense exercise.",
+    "prep_time": 5,
+    "cook_time": 0,
+    "calories": 340,
+    "protein": 28,
+    "fiber": 4,
+    "carbs": 32,
+    "fat": 8,
+    "ingredients": [
+      "1.5 scoops chocolate protein powder",
+      "1 cup brewed coffee",
+      "1 cup almond milk",
+      "1 tbsp maple syrup",
+      "1 cup ice"
+    ],
+    "dietary_tags": [
+      "high_protein",
+      "recovery",
+      "energy_boost",
+      "quick"
+    ]
+  },
+  {
+    "name": "Turkey and Avocado Recovery Wrap",
+    "meal_type": "post_workout",
+    "description": "Lean protein wrap with healthy fats and vegetables",
+    "instructions": "Lay a whole grain tortilla flat. Spread 2 tbsp hummus evenly over the surface. Layer 6 oz sliced turkey breast, 1/2 sliced avocado, 1 cup mixed greens, sliced tomato, and thinly sliced red onion. For extra recovery, add 1 tbsp pumpkin seeds. Roll tightly, tucking in the sides as you roll. Cut in half and serve immediately. The combination of lean protein, healthy fats, and vegetables provides balanced macronutrients for optimal recovery.",
+    "prep_time": 8,
+    "cook_time": 0,
+    "calories": 480,
+    "protein": 36,
+    "fiber": 10,
+    "carbs": 32,
+    "fat": 22,
+    "ingredients": [
+      "6 oz turkey breast",
+      "whole grain tortilla",
+      "1/2 avocado",
+      "2 tbsp hummus",
+      "1 cup mixed greens",
+      "1 tbsp pumpkin seeds",
+      "tomato and onion"
+    ],
+    "dietary_tags": [
+      "high_protein",
+      "recovery",
+      "high_fiber",
+      "quick"
+    ]
+  },
+  {
+    "name": "Berry Recovery Smoothie Bowl",
+    "meal_type": "post_workout",
+    "description": "Thick smoothie bowl topped with protein-rich ingredients",
+    "instructions": "Add 1.5 scoops vanilla protein powder, 1 cup mixed frozen berries, 1 frozen banana, 1/2 cup Greek yogurt, and 1/4 cup almond milk to a high-speed blender. Blend until thick and creamy, adding more almond milk if needed. Pour into a bowl and arrange toppings: 2 tbsp granola, 1 tbsp hemp seeds, 1 tbsp almond butter, 1/2 cup fresh berries, and fresh mint. The antioxidant-rich berries help reduce inflammation, while protein powder supports muscle repair.",
+    "prep_time": 8,
+    "cook_time": 0,
+    "calories": 460,
+    "protein": 34,
+    "fiber": 12,
+    "carbs": 52,
+    "fat": 16,
+    "ingredients": [
+      "1.5 scoops vanilla protein powder",
+      "1 cup mixed frozen berries",
+      "1 frozen banana",
+      "1/2 cup Greek yogurt",
+      "1/4 cup almond milk",
+      "2 tbsp granola",
+      "1 tbsp hemp seeds",
+      "1 tbsp almond butter"
+    ],
+    "dietary_tags": [
+      "high_protein",
+      "recovery",
+      "high_fiber",
+      "antioxidant"
+    ]
+  },
+  {
+    "name": "Egg White and Vegetable Scramble",
+    "meal_type": "post_workout",
+    "description": "High-protein egg scramble with colorful vegetables",
+    "instructions": "Heat 1 tsp olive oil in a non-stick skillet over medium heat. Add 1 cup diced vegetables (bell peppers, onions, mushrooms) and saut\u00e9 for 3-4 minutes until tender. In a bowl, whisk 6 egg whites with 2 tbsp milk, salt, and pepper. Pour egg whites over vegetables in the skillet and cook, gently stirring, until just set (2-3 minutes). Remove from heat and stir in 2 oz feta cheese and 1 tbsp fresh herbs. Serve immediately with a slice of whole grain toast for additional carbohydrates.",
+    "prep_time": 10,
+    "cook_time": 8,
+    "calories": 320,
+    "protein": 32,
+    "fiber": 4,
+    "carbs": 12,
+    "fat": 8,
+    "ingredients": [
+      "6 egg whites",
+      "1 cup mixed vegetables",
+      "2 oz feta cheese",
+      "2 tbsp milk",
+      "1 tsp olive oil",
+      "fresh herbs",
+      "whole grain toast"
+    ],
+    "dietary_tags": [
+      "high_protein",
+      "low_carb",
+      "recovery",
+      "quick"
+    ]
+  },
+  {
+    "name": "Chocolate Protein Mousse",
+    "meal_type": "post_workout",
+    "description": "Light and airy chocolate mousse with protein powder",
+    "instructions": "In a blender, combine 1 scoop chocolate protein powder, 1 cup plain Greek yogurt, 1/4 cup unsweetened almond milk, 1 tbsp cocoa powder, and 1 tsp vanilla extract. Blend on high speed for 60 seconds until smooth and airy. In a separate bowl, whip 1 egg white until stiff peaks form (2-3 minutes). Gently fold whipped egg white into chocolate mixture until combined. Divide into 2 serving glasses and refrigerate for 30 minutes to set. Top with fresh berries before serving.",
+    "prep_time": 10,
+    "cook_time": 0,
+    "calories": 280,
+    "protein": 24,
+    "fiber": 4,
+    "carbs": 18,
+    "fat": 8,
+    "ingredients": [
+      "1 scoop chocolate protein powder",
+      "1 cup Greek yogurt",
+      "1 egg white",
+      "1 tbsp cocoa powder",
+      "1/4 cup almond milk",
+      "1 tsp vanilla extract",
+      "fresh berries"
+    ],
+    "dietary_tags": [
+      "high_protein",
+      "recovery",
+      "low_carb",
+      "vegetarian"
+    ]
+  },
+  {
+    "name": "Tuna and Crackers Recovery Plate",
+    "meal_type": "post_workout",
+    "description": "Simple tuna plate with whole grain crackers and vegetables",
+    "instructions": "Drain 1 can (5 oz) tuna and flake into a bowl. Add 2 tbsp Greek yogurt, 1 tsp Dijon mustard, 1/4 cup diced celery, and black pepper. Mix until combined. Arrange on a plate with 8 whole grain crackers, 1 cup cucumber slices, 1 cup cherry tomatoes, and 1/4 cup olives. The lean protein from tuna combined with complex carbs from crackers provides balanced recovery nutrition.",
+    "prep_time": 8,
+    "cook_time": 0,
+    "calories": 380,
+    "protein": 34,
+    "fiber": 6,
+    "carbs": 28,
+    "fat": 14,
+    "ingredients": [
+      "1 can tuna",
+      "2 tbsp Greek yogurt",
+      "8 whole grain crackers",
+      "1 cup cucumber slices",
+      "1 cup cherry tomatoes",
+      "1/4 cup olives",
+      "1 tsp Dijon mustard"
+    ],
+    "dietary_tags": [
+      "high_protein",
+      "recovery",
+      "quick",
+      "omega_3"
+    ]
+  },
+  {
+    "name": "Protein Hot Chocolate",
+    "meal_type": "post_workout",
+    "description": "Warm, comforting hot chocolate with protein powder",
+    "instructions": "Heat 1.5 cups milk in a small saucepan over medium heat until warm but not boiling. Remove from heat and whisk in 1 scoop chocolate protein powder and 1 tbsp cocoa powder until completely dissolved. Add 1 tsp vanilla extract and a pinch of cinnamon. Return to low heat and whisk for 1 minute until warm and frothy. Pour into a mug and top with mini marshmallows if desired. The warm temperature helps relax muscles while protein supports recovery.",
+    "prep_time": 5,
+    "cook_time": 5,
+    "calories": 300,
+    "protein": 24,
+    "fiber": 4,
+    "carbs": 24,
+    "fat": 8,
+    "ingredients": [
+      "1 scoop chocolate protein powder",
+      "1.5 cups milk",
+      "1 tbsp cocoa powder",
+      "1 tsp vanilla extract",
+      "pinch of cinnamon",
+      "mini marshmallows (optional)"
+    ],
+    "dietary_tags": [
+      "high_protein",
+      "recovery",
+      "comfort",
+      "quick"
+    ]
+  },
+  {
+    "name": "Chicken and Rice Recovery Bowl",
+    "meal_type": "post_workout",
+    "description": "Simple bowl with chicken, brown rice, and vegetables",
+    "instructions": "Cook 1/2 cup brown rice according to package directions. Season 6 oz chicken breast with salt, pepper, and garlic powder. Heat 1 tsp olive oil in a skillet over medium-high heat and cook chicken for 5-6 minutes per side until cooked through. Let rest for 3 minutes, then dice. Steam 1 cup mixed vegetables (broccoli, carrots) for 3-4 minutes. Assemble bowl with brown rice, diced chicken, and steamed vegetables. Drizzle with 1 tbsp soy sauce and sprinkle with sesame seeds.",
+    "prep_time": 10,
+    "cook_time": 20,
+    "calories": 480,
+    "protein": 42,
+    "fiber": 6,
+    "carbs": 48,
+    "fat": 14,
+    "ingredients": [
+      "6 oz chicken breast",
+      "1/2 cup brown rice",
+      "1 cup mixed vegetables",
+      "1 tbsp soy sauce",
+      "1 tsp olive oil",
+      "sesame seeds",
+      "garlic powder"
+    ],
+    "dietary_tags": [
+      "high_protein",
+      "recovery",
+      "high_carb",
+      "gluten_free"
+    ]
+  },
+  {
+    "name": "Protein Overnight Oats",
+    "meal_type": "post_workout",
+    "description": "No-cook oats prepared the night before for quick recovery",
+    "instructions": "In a bowl or shaker cup, combine all ingredients. Mix thoroughly until no clumps remain. For smoothies, use a blender for best results. For shakes, a shaker cup works well. Drink within 30 minutes of workout for optimal recovery benefits. This meal provides the ideal balance of protein and carbohydrates for muscle recovery and glycogen replenishment.",
+    "prep_time": 5,
+    "cook_time": 0,
+    "calories": 420,
+    "protein": 28,
+    "fiber": 12,
+    "carbs": 52,
+    "fat": 14,
+    "ingredients": [
+      "1/2 cup rolled oats",
+      "1 scoop vanilla protein powder",
+      "1.5 cups almond milk",
+      "1 tbsp chia seeds",
+      "1 tbsp ground flaxseed",
+      "1/2 cup mixed berries",
+      "1 tbsp almond butter",
+      "1 tsp honey"
+    ],
+    "dietary_tags": [
+      "high_protein",
+      "recovery",
+      "high_fiber",
+      "meal_prep"
+    ]
+  },
+  {
+    "name": "Edamame and Fruit Plate",
+    "meal_type": "post_workout",
+    "description": "Plant-based protein plate with edamame and fresh fruits",
+    "instructions": "Steam or boil 1.5 cups edamame in pods for 5 minutes until tender. Drain and sprinkle with sea salt. Arrange on a plate with 1 cup mixed fresh fruits (apple slices, grapes, berries), 1/4 cup almonds, and 2 tbsp dried apricots. The edamame provides complete plant protein, while fruits offer fast-acting carbohydrates for glycogen replenishment. Nuts add healthy fats and extra protein.",
+    "prep_time": 8,
+    "cook_time": 5,
+    "calories": 380,
+    "protein": 18,
+    "fiber": 12,
+    "carbs": 48,
+    "fat": 14,
+    "ingredients": [
+      "1.5 cups edamame",
+      "1 cup mixed fresh fruits",
+      "1/4 cup almonds",
+      "2 tbsp dried apricots",
+      "sea salt"
+    ],
+    "dietary_tags": [
+      "vegetarian",
+      "high_protein",
+      "recovery",
+      "high_fiber"
+    ]
+  },
+  {
+    "name": "Protein Rice Cakes with Toppings",
+    "meal_type": "post_workout",
+    "description": "Quick rice cakes topped with protein-rich ingredients",
+    "instructions": "Place 4 brown rice cakes on a plate. In a small bowl, mix 1 scoop vanilla protein powder with 2 tbsp peanut butter and 1 tbsp water until smooth. Spread protein mixture evenly over rice cakes. Top with 1/2 sliced banana, 1 tbsp hemp seeds, and a drizzle of honey. This quick option provides balanced macronutrients for immediate recovery when time is limited.",
+    "prep_time": 5,
+    "cook_time": 0,
+    "calories": 360,
+    "protein": 20,
+    "fiber": 6,
+    "carbs": 48,
+    "fat": 12,
+    "ingredients": [
+      "4 brown rice cakes",
+      "1 scoop vanilla protein powder",
+      "2 tbsp peanut butter",
+      "1/2 banana",
+      "1 tbsp hemp seeds",
+      "1 tbsp honey"
+    ],
+    "dietary_tags": [
+      "high_protein",
+      "recovery",
+      "quick",
+      "vegetarian"
+    ]
+  },
+  {
+    "name": "Cottage Cheese and Pineapple",
+    "meal_type": "post_workout",
+    "description": "High-protein cottage cheese with tropical pineapple",
+    "instructions": "Place 2 cups cottage cheese in a bowl. Top with 1 cup fresh pineapple chunks, 2 tbsp chopped macadamia nuts, and 1 tsp chia seeds. Drizzle with 1 tsp honey if desired. The casein protein in cottage cheese provides slow-release amino acids for prolonged recovery, while pineapple offers fast-acting carbs and bromelain to help reduce inflammation.",
+    "prep_time": 5,
+    "cook_time": 0,
+    "calories": 400,
+    "protein": 34,
+    "fiber": 6,
+    "carbs": 38,
+    "fat": 12,
+    "ingredients": [
+      "2 cups cottage cheese",
+      "1 cup fresh pineapple",
+      "2 tbsp macadamia nuts",
+      "1 tsp chia seeds",
+      "1 tsp honey"
+    ],
+    "dietary_tags": [
+      "high_protein",
+      "recovery",
+      "quick",
+      "anti_inflammatory"
+    ]
+  },
+  {
+    "name": "Beef Jerky Trail Mix",
+    "meal_type": "post_workout",
+    "description": "Portable trail mix with beef jerky for protein",
+    "instructions": "In a bowl, combine 2 oz beef jerky (torn into pieces), 1/4 cup roasted almonds, 1/4 cup dried cranberries, 2 tbsp pumpkin seeds, and 1/4 cup dark chocolate chips. Mix well and portion into snack-sized bags. The beef jerky provides portable protein, while nuts and seeds offer healthy fats and additional protein. Dried fruit supplies quick energy for recovery.",
+    "prep_time": 5,
+    "cook_time": 0,
+    "calories": 420,
+    "protein": 24,
+    "fiber": 6,
+    "carbs": 32,
+    "fat": 22,
+    "ingredients": [
+      "2 oz beef jerky",
+      "1/4 cup almonds",
+      "1/4 cup dried cranberries",
+      "2 tbsp pumpkin seeds",
+      "1/4 cup dark chocolate chips"
+    ],
+    "dietary_tags": [
+      "high_protein",
+      "recovery",
+      "portable",
+      "quick"
+    ]
+  },
+  {
+    "name": "Protein Fruit Salad",
+    "meal_type": "post_workout",
+    "description": "Fresh fruit salad with protein yogurt dressing",
+    "instructions": "In a large bowl, combine 2 cups mixed fresh fruits (strawberries, blueberries, grapes, melon). In a small bowl, mix 1/2 cup Greek yogurt with 1/2 scoop vanilla protein powder and 1 tsp honey until smooth. Pour protein dressing over fruit and toss gently to coat. Sprinkle with 1 tbsp chopped almonds and 1 tsp hemp seeds. The antioxidant-rich fruits help reduce exercise-induced oxidative stress while protein supports muscle repair.",
+    "prep_time": 10,
+    "cook_time": 0,
+    "calories": 340,
+    "protein": 18,
+    "fiber": 6,
+    "carbs": 52,
+    "fat": 8,
+    "ingredients": [
+      "2 cups mixed fresh fruits",
+      "1/2 cup Greek yogurt",
+      "1/2 scoop vanilla protein powder",
+      "1 tbsp honey",
+      "1 tbsp almonds",
+      "1 tsp hemp seeds"
+    ],
+    "dietary_tags": [
+      "high_protein",
+      "recovery",
+      "antioxidant",
+      "vegetarian"
+    ]
+  },
+  {
+    "name": "Hard-Boiled Eggs and Avocado",
+    "meal_type": "post_workout",
+    "description": "Simple protein-rich snack with healthy fats",
+    "instructions": "Prepare 3 hard-boiled eggs, 1/2 avocado, salt and pepper as directed in the ingredient list. Combine in a serving dish. For optimal recovery benefits, consume within 30-45 minutes after completing your workout. This meal provides the ideal balance of protein and carbohydrates for muscle recovery and glycogen replenishment. This meal provides the ideal balance of protein and carbohydrates for muscle recovery and glycogen replenishment.",
+    "prep_time": 3,
+    "cook_time": 0,
+    "calories": 340,
+    "protein": 24,
+    "fiber": 8,
+    "carbs": 12,
+    "fat": 22,
+    "ingredients": [
+      "3 hard-boiled eggs",
+      "1/2 avocado",
+      "salt and pepper",
+      "red pepper flakes",
+      "fresh lemon juice"
+    ],
+    "dietary_tags": [
+      "high_protein",
+      "recovery",
+      "quick",
+      "healthy_fats"
+    ]
+  },
+  {
+    "name": "Protein Latte",
+    "meal_type": "post_workout",
+    "description": "Warm protein latte with coffee for recovery and energy",
+    "instructions": "Brew 1 shot of espresso or 1/2 cup strong coffee. In a blender, combine hot coffee, 1 scoop vanilla protein powder, and 1 cup warm milk. Blend on high speed for 30 seconds until frothy. Pour into a mug and top with a sprinkle of cinnamon or cocoa powder. The caffeine helps reduce post-workout fatigue while protein supports muscle recovery. The warm temperature is comforting and helps relax muscles.",
+    "prep_time": 5,
+    "cook_time": 2,
+    "calories": 260,
+    "protein": 22,
+    "fiber": 2,
+    "carbs": 18,
+    "fat": 8,
+    "ingredients": [
+      "1 scoop vanilla protein powder",
+      "1 shot espresso",
+      "1 cup warm milk",
+      "cinnamon or cocoa powder",
+      "sweetener (optional)"
+    ],
+    "dietary_tags": [
+      "high_protein",
+      "recovery",
+      "energy_boost",
+      "quick"
+    ]
+  },
+  {
+    "name": "Roasted Chickpeas and Nuts",
+    "meal_type": "post_workout",
+    "description": "Crunchy roasted chickpeas with mixed nuts",
+    "instructions": "Preheat oven to 400\u00b0F (200\u00b0C). Drain and rinse 1 can chickpeas, pat dry thoroughly. Toss with 1 tbsp olive oil, 1/2 tsp smoked paprika, 1/4 tsp garlic powder, and salt. Spread on a baking sheet and roast for 20-25 minutes until crispy. Let cool slightly, then toss with 1/4 cup mixed nuts (almonds, walnuts, pecans). The roasted chickpeas provide plant-based protein and fiber, while nuts offer healthy fats and additional protein.",
+    "prep_time": 10,
+    "cook_time": 25,
+    "calories": 380,
+    "protein": 16,
+    "fiber": 10,
+    "carbs": 32,
+    "fat": 20,
+    "ingredients": [
+      "1 can chickpeas",
+      "1/4 cup mixed nuts",
+      "1 tbsp olive oil",
+      "1/2 tsp smoked paprika",
+      "1/4 tsp garlic powder",
+      "salt"
+    ],
+    "dietary_tags": [
+      "vegetarian",
+      "high_protein",
+      "recovery",
+      "high_fiber"
+    ]
+  },
+  {
+    "name": "Protein Pudding Cups",
+    "meal_type": "post_workout",
+    "description": "Creamy protein pudding perfect for meal prep",
+    "instructions": "In a blender, combine 1.5 scoops chocolate protein powder, 1 cup silken tofu, 1/4 cup unsweetened almond milk, 1 tbsp cocoa powder, and 1 tsp vanilla extract. Blend until completely smooth and creamy. Divide into 2 small cups or ramekins. Refrigerate for at least 2 hours to set. Top with fresh berries or a sprinkle of cacao nibs before serving. The silken tofu provides a creamy texture while adding plant-based protein.",
+    "prep_time": 8,
+    "cook_time": 0,
+    "calories": 280,
+    "protein": 24,
+    "fiber": 4,
+    "carbs": 16,
+    "fat": 8,
+    "ingredients": [
+      "1.5 scoops chocolate protein powder",
+      "1 cup silken tofu",
+      "1/4 cup almond milk",
+      "1 tbsp cocoa powder",
+      "1 tsp vanilla extract",
+      "fresh berries"
+    ],
+    "dietary_tags": [
+      "high_protein",
+      "recovery",
+      "meal_prep",
+      "vegetarian"
+    ]
+  },
+  {
+    "name": "Chocolate Recovery Mousse",
+    "meal_type": "post_workout",
+    "description": "Light and airy chocolate mousse with protein powder",
+    "instructions": "In a blender, combine 1 scoop chocolate protein powder, 1 cup plain Greek yogurt, 1/4 cup unsweetened almond milk, 1 tbsp cocoa powder, and 1 tsp vanilla extract. Blend on high speed for 60 seconds until smooth and airy. In a separate bowl, whip 1 egg white until stiff peaks form (2-3 minutes). Gently fold whipped egg white into chocolate mixture until combined. Divide into 2 serving glasses and refrigerate for 30 minutes to set. Top with fresh berries before serving.",
+    "prep_time": 10,
+    "cook_time": 0,
+    "calories": 280,
+    "protein": 24,
+    "fiber": 4,
+    "carbs": 18,
+    "fat": 8,
+    "ingredients": [
+      "1 scoop chocolate protein powder",
+      "1 cup Greek yogurt",
+      "1 egg white",
+      "1 tbsp cocoa powder",
+      "1/4 cup almond milk",
+      "1 tsp vanilla extract",
+      "fresh berries"
+    ],
+    "dietary_tags": [
+      "high_protein",
+      "recovery",
+      "low_carb",
+      "vegetarian"
+    ]
+  },
+  {
+    "name": "Tuna and Crackers Recovery Plate",
+    "meal_type": "post_workout",
+    "description": "Simple tuna plate with whole grain crackers and vegetables",
+    "instructions": "Drain 1 can (5 oz) tuna and flake into a bowl. Add 2 tbsp Greek yogurt, 1 tsp Dijon mustard, 1/4 cup diced celery, and black pepper. Mix until combined. Arrange on a plate with 8 whole grain crackers, 1 cup cucumber slices, 1 cup cherry tomatoes, and 1/4 cup olives. The lean protein from tuna combined with complex carbs from crackers provides balanced recovery nutrition.",
+    "prep_time": 8,
+    "cook_time": 0,
+    "calories": 380,
+    "protein": 34,
+    "fiber": 6,
+    "carbs": 28,
+    "fat": 14,
+    "ingredients": [
+      "1 can tuna",
+      "2 tbsp Greek yogurt",
+      "8 whole grain crackers",
+      "1 cup cucumber slices",
+      "1 cup cherry tomatoes",
+      "1/4 cup olives",
+      "1 tsp Dijon mustard"
+    ],
+    "dietary_tags": [
+      "high_protein",
+      "recovery",
+      "quick",
+      "omega_3"
+    ]
+  },
+  {
+    "name": "Protein Hot Chocolate",
+    "meal_type": "post_workout",
+    "description": "Warm, comforting hot chocolate with protein powder",
+    "instructions": "Heat 1.5 cups milk in a small saucepan over medium heat until warm but not boiling. Remove from heat and whisk in 1 scoop chocolate protein powder and 1 tbsp cocoa powder until completely dissolved. Add 1 tsp vanilla extract and a pinch of cinnamon. Return to low heat and whisk for 1 minute until warm and frothy. Pour into a mug and top with mini marshmallows if desired. The warm temperature helps relax muscles while protein supports recovery.",
+    "prep_time": 5,
+    "cook_time": 5,
+    "calories": 300,
+    "protein": 24,
+    "fiber": 4,
+    "carbs": 24,
+    "fat": 8,
+    "ingredients": [
+      "1 scoop chocolate protein powder",
+      "1.5 cups milk",
+      "1 tbsp cocoa powder",
+      "1 tsp vanilla extract",
+      "pinch of cinnamon",
+      "mini marshmallows (optional)"
+    ],
+    "dietary_tags": [
+      "high_protein",
+      "recovery",
+      "comfort",
+      "quick"
+    ]
+  },
+  {
+    "name": "Chicken and Rice Recovery Bowl",
+    "meal_type": "post_workout",
+    "description": "Simple bowl with chicken, brown rice, and vegetables",
+    "instructions": "Cook 1/2 cup brown rice according to package directions. Season 6 oz chicken breast with salt, pepper, and garlic powder. Heat 1 tsp olive oil in a skillet over medium-high heat and cook chicken for 5-6 minutes per side until cooked through. Let rest for 3 minutes, then dice. Steam 1 cup mixed vegetables (broccoli, carrots) for 3-4 minutes. Assemble bowl with brown rice, diced chicken, and steamed vegetables. Drizzle with 1 tbsp soy sauce and sprinkle with sesame seeds.",
+    "prep_time": 10,
+    "cook_time": 20,
+    "calories": 480,
+    "protein": 42,
+    "fiber": 6,
+    "carbs": 48,
+    "fat": 14,
+    "ingredients": [
+      "6 oz chicken breast",
+      "1/2 cup brown rice",
+      "1 cup mixed vegetables",
+      "1 tbsp soy sauce",
+      "1 tsp olive oil",
+      "sesame seeds",
+      "garlic powder"
+    ],
+    "dietary_tags": [
+      "high_protein",
+      "recovery",
+      "high_carb",
+      "gluten_free"
+    ]
+  },
+  {
+    "name": "Protein Overnight Oats",
+    "meal_type": "post_workout",
+    "description": "No-cook oats prepared the night before for quick recovery",
+    "instructions": "In a bowl or shaker cup, combine all ingredients. Mix thoroughly until no clumps remain. For smoothies, use a blender for best results. For shakes, a shaker cup works well. Drink within 30 minutes of workout for optimal recovery benefits. This meal provides the ideal balance of protein and carbohydrates for muscle recovery and glycogen replenishment.",
+    "prep_time": 5,
+    "cook_time": 0,
+    "calories": 420,
+    "protein": 28,
+    "fiber": 12,
+    "carbs": 52,
+    "fat": 14,
+    "ingredients": [
+      "1/2 cup rolled oats",
+      "1 scoop vanilla protein powder",
+      "1.5 cups almond milk",
+      "1 tbsp chia seeds",
+      "1 tbsp ground flaxseed",
+      "1/2 cup mixed berries",
+      "1 tbsp almond butter",
+      "1 tsp honey"
+    ],
+    "dietary_tags": [
+      "high_protein",
+      "recovery",
+      "high_fiber",
+      "meal_prep"
+    ]
+  },
+  {
+    "name": "Spanish Protein Tortilla",
+    "meal_type": "post_workout",
+    "description": "High-protein Spanish omelet for muscle recovery",
+    "instructions": "In a bowl, whisk 6 eggs with 2 scoops unflavored protein powder, salt, and pepper. Heat 1 tbsp olive oil in a non-stick skillet. Add 1 cup diced cooked potatoes and 1/4 cup diced ham, cook for 2 minutes. Pour egg mixture over and cook for 4-5 minutes. Flip and cook for 3 more minutes. Slide onto plate and cut into wedges.",
+    "prep_time": 8,
+    "cook_time": 10,
+    "calories": 480,
+    "protein": 42,
+    "fiber": 6,
+    "carbs": 28,
+    "fat": 22,
+    "ingredients": [
+      "6 eggs",
+      "2 scoops protein powder",
+      "1 cup cooked potatoes",
+      "1/4 cup ham",
+      "1 tbsp olive oil",
+      "salt and pepper"
+    ],
+    "dietary_tags": [
+      "high_protein",
+      "spanish",
+      "recovery",
+      "quick"
+    ]
+  },
+  {
+    "name": "Portuguese Protein Rice Pudding",
+    "meal_type": "post_workout",
+    "description": "Creamy protein-enhanced rice pudding for recovery",
+    "instructions": "In a saucepan, combine 1/2 cup arborio rice, 1.5 cups milk, and 1 scoop vanilla protein powder. Bring to a simmer and cook for 20 minutes, stirring occasionally. Add 1 tbsp honey and 1/4 tsp cinnamon. Cook for 5 more minutes until creamy. Serve warm topped with berries and 1 tbsp slivered almonds.",
+    "prep_time": 5,
+    "cook_time": 25,
+    "calories": 420,
+    "protein": 28,
+    "fiber": 4,
+    "carbs": 52,
+    "fat": 12,
+    "ingredients": [
+      "1/2 cup arborio rice",
+      "1 scoop vanilla protein powder",
+      "1.5 cups milk",
+      "1 tbsp honey",
+      "1/4 tsp cinnamon",
+      "berries",
+      "almonds"
+    ],
+    "dietary_tags": [
+      "high_protein",
+      "portuguese",
+      "recovery",
+      "comfort"
+    ]
+  },
+  {
+    "name": "Japanese Protein Miso Soup",
+    "meal_type": "post_workout",
+    "description": "Enhanced miso soup with added protein for recovery",
+    "instructions": "In a saucepan, bring 2 cups dashi broth to a simmer. Add 2 tbsp white miso paste and 1 scoop unflavored protein powder, whisking until dissolved. Add 4 oz silken tofu, 1/4 cup wakame seaweed, and 2 tbsp edamame. Simmer for 2 minutes. Serve topped with sliced green onions and sesame seeds.",
+    "prep_time": 5,
+    "cook_time": 8,
+    "calories": 280,
+    "protein": 24,
+    "fiber": 6,
+    "carbs": 18,
+    "fat": 8,
+    "ingredients": [
+      "1 scoop protein powder",
+      "2 tbsp miso paste",
+      "2 cups dashi broth",
+      "4 oz silken tofu",
+      "1/4 cup wakame",
+      "2 tbsp edamame",
+      "green onions"
+    ],
+    "dietary_tags": [
+      "high_protein",
+      "japanese",
+      "recovery",
+      "light"
+    ]
+  },
+  {
+    "name": "Korean Protein Kimchi Bowl",
+    "meal_type": "post_workout",
+    "description": "Nutrient-dense kimchi bowl with added protein",
+    "instructions": "Heat 1 tsp sesame oil in a pan. Add 1 cup kimchi and cook for 2 minutes. Add 1 cup cooked brown rice and 1 scoop unflavored protein powder, mix well. Add 1/2 cup black beans and 1 tsp gochujang. Top with 1 fried egg, sliced cucumber, and sesame seeds.",
+    "prep_time": 8,
+    "cook_time": 10,
+    "calories": 480,
+    "protein": 32,
+    "fiber": 12,
+    "carbs": 58,
+    "fat": 16,
+    "ingredients": [
+      "1 scoop protein powder",
+      "1 cup kimchi",
+      "1 cup brown rice",
+      "1/2 cup black beans",
+      "1 egg",
+      "1 tsp gochujang",
+      "sesame seeds"
+    ],
+    "dietary_tags": [
+      "high_protein",
+      "korean",
+      "recovery",
+      "probiotic"
+    ]
+  },
+  {
+    "name": "Thai Protein Smoothie",
+    "meal_type": "post_workout",
+    "description": "Tropical Thai-inspired protein smoothie",
+    "instructions": "In a blender, combine 1 scoop vanilla protein powder, 1 cup coconut milk, 1/2 cup mango chunks, 1/4 cup pineapple chunks, 1 tbsp lime juice, and 1/2 cup ice. Blend on high for 60 seconds until smooth. Pour into a glass and top with 1 tbsp shredded coconut and mint leaves.",
+    "prep_time": 5,
+    "cook_time": 0,
+    "calories": 380,
+    "protein": 28,
+    "fiber": 6,
+    "carbs": 42,
+    "fat": 12,
+    "ingredients": [
+      "1 scoop vanilla protein powder",
+      "1 cup coconut milk",
+      "1/2 cup mango",
+      "1/4 cup pineapple",
+      "1 tbsp lime juice",
+      "shredded coconut",
+      "mint leaves"
+    ],
+    "dietary_tags": [
+      "high_protein",
+      "thai",
+      "recovery",
+      "tropical"
+    ]
+  },
+  {
+    "name": "Japanese Recovery Bowl with Tororo",
+    "meal_type": "post_workout",
+    "description": "Grated yam over rice with salmon and egg for rapid recovery",
+    "instructions": "Cook Japanese rice according to package directions. While rice cooks, season salmon with salt and grill or pan-sear for 4-5 minutes per side. Grate nagaimo (Japanese yam) into a smooth paste. In a bowl, layer rice, flaked salmon, and grated yam. Top with a raw or soft-boiled egg, nori strips, and sprinkle with bonito flakes. Drizzle with soy sauce and serve immediately.",
+    "prep_time": 10,
+    "cook_time": 15,
+    "calories": 520,
+    "protein": 38,
+    "fiber": 4,
+    "carbs": 58,
+    "fat": 18,
+    "ingredients": [
+      "6 oz salmon fillet",
+      "1 cup Japanese rice",
+      "4 oz nagaimo (Japanese yam)",
+      "1 egg",
+      "2 tbsp soy sauce",
+      "nori strips",
+      "bonito flakes",
+      "salt"
+    ],
+    "dietary_tags": [
+      "high_protein",
+      "high_carb",
+      "japanese",
+      "recovery",
+      "quick"
+    ]
+  },
+  {
+    "name": "Korean Samgyetang (Ginseng Chicken Soup)",
+    "meal_type": "post_workout",
+    "description": "Young chicken stuffed with rice, ginseng, and dates for recovery",
+    "instructions": "Clean chicken cavity and stuff with sweet rice, ginseng, garlic, and jujubes. Place chicken in a pot with water to cover. Bring to a boil, then reduce heat to low and simmer for 1-1.5 hours until chicken is very tender and meat falls off the bone. Season with salt and pepper. Serve hot in the broth, which is considered medicinal. Eat the stuffing ingredients along with the chicken.",
+    "prep_time": 20,
+    "cook_time": 90,
+    "calories": 580,
+    "protein": 42,
+    "fiber": 6,
+    "carbs": 48,
+    "fat": 22,
+    "ingredients": [
+      "1 small young chicken (Cornish hen)",
+      "1/4 cup sweet rice",
+      "1 fresh ginseng root",
+      "6 cloves garlic",
+      "6 dried jujubes (red dates)",
+      "6 cups water",
+      "salt",
+      "black pepper"
+    ],
+    "dietary_tags": [
+      "high_protein",
+      "korean",
+      "recovery",
+      "medicinal",
+      "gluten_free"
+    ]
+  },
+  {
+    "name": "Andean Quinoa Ch'arki Soup",
+    "meal_type": "post_workout",
+    "description": "High-altitude recovery soup with quinoa, dried meat, and root vegetables",
+    "instructions": "Rinse quinoa and set aside. In a large pot, heat oil and saut\u00e9 onions and garlic until softened. Add diced potatoes, oca (or turnips as alternative), carrots, and vegetable broth. Bring to a boil and simmer for 10 minutes. Add quinoa and dried llama meat (or beef jerky as alternative). Simmer for another 15 minutes until quinoa is cooked and vegetables are tender. Add chu\u00f1o (freeze-dried potatoes) if available. Season with salt and cumin. Serve hot, garnished with fresh herbs.",
+    "prep_time": 15,
+    "cook_time": 30,
+    "calories": 480,
+    "protein": 28,
+    "fiber": 12,
+    "carbs": 58,
+    "fat": 12,
+    "ingredients": [
+      "1/2 cup quinoa",
+      "4 oz dried meat (ch'arki) or beef jerky",
+      "1 potato, diced",
+      "1/2 cup oca or turnips, diced",
+      "1 carrot, diced",
+      "1/4 cup chu\u00f1o (freeze-dried potatoes, optional)",
+      "1 onion, diced",
+      "2 cloves garlic, minced",
+      "3 cups vegetable broth",
+      "1 tsp cumin",
+      "2 tbsp vegetable oil",
+      "fresh cilantro",
+      "salt",
+      "pepper"
+    ],
+    "dietary_tags": [
+      "high_protein",
+      "high_fiber",
+      "andean",
+      "recovery",
+      "gluten_free",
+      "anti_inflammatory"
+    ]
+  },
+  {
+    "name": "Siberian Pine Nut Milk with Berries",
+    "meal_type": "post_workout",
+    "description": "Nutrient-dense pine nut milk with antioxidant berries for recovery",
+    "instructions": "Blend pine nuts with water until very smooth. Strain through a nut milk bag or fine mesh sieve. Pour milk into a blender and add frozen berries, honey, and vanilla. Blend until smooth. Add chia seeds and let sit for 5 minutes to thicken slightly. Pour into a glass and sprinkle with hemp seeds and goji berries. This omega-3 rich recovery drink supports muscle repair and reduces inflammation.",
+    "prep_time": 10,
+    "cook_time": 0,
+    "calories": 420,
+    "protein": 16,
+    "fiber": 10,
+    "carbs": 38,
+    "fat": 24,
+    "ingredients": [
+      "1/4 cup pine nuts",
+      "1 cup water",
+      "1 cup mixed berries (frozen)",
+      "1 tbsp honey",
+      "1 tsp vanilla extract",
+      "1 tbsp chia seeds",
+      "1 tbsp hemp seeds",
+      "1 tbsp goji berries",
+      "pinch of salt"
+    ],
+    "dietary_tags": [
+      "high_protein",
+      "omega_3",
+      "siberian",
+      "recovery",
+      "antioxidant",
+      "gluten_free",
+      "anti_inflammatory"
+    ]
+  },
+  {
+    "name": "Collagen Recovery Smoothie with Tart Cherry",
+    "meal_type": "post_workout",
+    "description": "Muscle-repairing collagen smoothie with tart cherry and electrolytes",
+    "instructions": "In a blender, combine collagen peptides, tart cherry juice, frozen banana, Greek yogurt, almond milk, and spinach. Blend until smooth. Add ice and blend again until thick and creamy. Pour into a glass and top with hemp seeds and a sprinkle of cinnamon. This recovery smoothie provides collagen for joint repair, tart cherry for muscle recovery, and electrolytes for hydration.",
+    "prep_time": 5,
+    "cook_time": 0,
+    "calories": 420,
+    "protein": 32,
+    "fiber": 8,
+    "carbs": 48,
+    "fat": 12,
+    "ingredients": [
+      "1 scoop collagen peptides",
+      "1 cup tart cherry juice",
+      "1/2 frozen banana",
+      "1/2 cup Greek yogurt",
+      "1 cup almond milk",
+      "1 cup spinach",
+      "1 tbsp hemp seeds",
+      "1/2 tsp cinnamon",
+      "ice cubes",
+      "pinch of salt"
+    ],
+    "dietary_tags": [
+      "collagen",
+      "muscle_recovery",
+      "electrolyte",
+      "anti_inflammatory",
+      "gluten_free",
+      "high_protein"
+    ]
+  },
+  {
+    "name": "Electrolyte-Rich Coconut Water Recovery Bowl",
+    "meal_type": "post_workout",
+    "description": "Hydrating bowl with coconut water, sea salt, and performance minerals",
+    "instructions": "In a bowl, mix chia seeds with coconut water and let sit for 10 minutes. Add mashed banana, pineapple chunks, and sea salt. Stir in whey or plant protein powder and maca powder. Top with coconut flakes, sliced banana, and a sprinkle of Himalayan pink salt. This electrolyte-rich bowl replenishes sodium, potassium, and magnesium lost during exercise.",
+    "prep_time": 5,
+    "cook_time": 0,
+    "calories": 460,
+    "protein": 28,
+    "fiber": 12,
+    "carbs": 58,
+    "fat": 14,
+    "ingredients": [
+      "3 tbsp chia seeds",
+      "1.5 cups coconut water",
+      "1 banana, mashed",
+      "1/2 cup pineapple chunks",
+      "1 scoop protein powder",
+      "1/2 tsp maca powder",
+      "2 tbsp coconut flakes",
+      "1/2 banana, sliced",
+      "1/4 tsp sea salt",
+      "1/8 tsp Himalayan pink salt"
+    ],
+    "dietary_tags": [
+      "electrolyte",
+      "hydration",
+      "recovery",
+      "gluten_free",
+      "high_protein",
+      "tropical"
+    ]
+  },
+  {
+    "name": "Beetroot and Pomegranate Recovery Elixir",
+    "meal_type": "post_workout",
+    "description": "Nitrate-rich beet juice with pomegranate for blood flow and antioxidant recovery",
+    "instructions": "In a juicer, juice fresh beetroot, carrots, ginger, and apple. Alternatively, use high-quality cold-pressed juices. In a blender, combine beet juice mixture with pomegranate juice, pea protein powder, and fresh lemon juice. Blend until smooth. Pour into a glass and add a few pomegranate seeds on top. This nitrate-rich elixir improves blood flow and oxygen delivery to recovering muscles.",
+    "prep_time": 8,
+    "cook_time": 0,
+    "calories": 380,
+    "protein": 24,
+    "fiber": 6,
+    "carbs": 52,
+    "fat": 8,
+    "ingredients": [
+      "1 small beetroot, juiced",
+      "1 carrot, juiced",
+      "1 inch ginger, juiced",
+      "1/2 apple, juiced",
+      "1/2 cup pomegranate juice",
+      "1 scoop pea protein powder",
+      "1 tbsp lemon juice",
+      "pomegranate seeds for garnish",
+      "ice"
+    ],
+    "dietary_tags": [
+      "nitrate_rich",
+      "antioxidant",
+      "blood_flow",
+      "recovery",
+      "gluten_free",
+      "plant_based"
+    ]
+  },
+  {
+    "name": "Mediterranean Recovery Smoothie Bowl",
+    "meal_type": "post_workout",
+    "description": "Greek yogurt with figs, walnuts, and honey for protein and antioxidants",
+    "instructions": "In a bowl, combine Greek yogurt with protein powder. Top with fresh figs, walnuts, honey, and a sprinkle of cinnamon. Add a drizzle of olive oil for healthy fats. This protein-rich recovery bowl supports muscle repair and provides antioxidants.",
+    "prep_time": 5,
+    "cook_time": 0,
+    "calories": 460,
+    "protein": 32,
+    "fiber": 8,
+    "carbs": 42,
+    "fat": 18,
+    "ingredients": [
+      "1 cup Greek yogurt",
+      "1 scoop protein powder",
+      "2 fresh figs",
+      "2 tbsp walnuts",
+      "1 tbsp honey",
+      "1 tsp olive oil",
+      "cinnamon",
+      "fresh mint"
+    ],
+    "dietary_tags": [
+      "high_protein",
+      "antioxidant",
+      "recovery",
+      "greek",
+      "quick"
+    ]
+  },
+  {
+    "name": "Iberian Electrolyte Recovery Drink",
+    "meal_type": "post_workout",
+    "description": "Coconut water with Iberian fruits and sea salt for hydration",
+    "instructions": "Blend coconut water with watermelon, orange, and a pinch of sea salt. Add fresh mint and a squeeze of lemon. Serve over ice with orange slices. This electrolyte-rich drink replenishes sodium, potassium, and magnesium lost during exercise.",
+    "prep_time": 5,
+    "cook_time": 0,
+    "calories": 120,
+    "protein": 2,
+    "fiber": 4,
+    "carbs": 28,
+    "fat": 1,
+    "ingredients": [
+      "2 cups coconut water",
+      "1 cup watermelon",
+      "1 orange",
+      "1/4 tsp sea salt",
+      "fresh mint",
+      "lemon juice",
+      "ice"
+    ],
+    "dietary_tags": [
+      "electrolyte",
+      "hydrating",
+      "iberian",
+      "recovery",
+      "gluten_free"
+    ]
+  },
+  {
+    "name": "Italian Tiramisu Recovery Parfait",
+    "meal_type": "post_workout",
+    "description": "Protein-rich version of tiramisu with espresso and mascarpone",
+    "instructions": "Layer coffee-soaked whole grain ladyfingers with mascarpone mixed with protein powder and vanilla. Top with cocoa powder and dark chocolate shavings. This protein-rich dessert supports muscle recovery while satisfying sweet cravings.",
+    "prep_time": 10,
+    "cook_time": 0,
+    "calories": 420,
+    "protein": 28,
+    "fiber": 6,
+    "carbs": 38,
+    "fat": 22,
+    "ingredients": [
+      "whole grain ladyfingers",
+      "espresso",
+      "4 oz mascarpone",
+      "1 scoop protein powder",
+      "vanilla extract",
+      "cocoa powder",
+      "dark chocolate",
+      "honey"
+    ],
+    "dietary_tags": [
+      "high_protein",
+      "recovery",
+      "italian",
+      "dessert",
+      "caffeine"
+    ]
+  },
+  {
+    "name": "Spanish Gazpacho Recovery Shot",
+    "meal_type": "post_workout",
+    "description": "Concentrated vegetable juice with electrolytes and antioxidants",
+    "instructions": "Blend tomatoes, cucumber, bell pepper, garlic, and olive oil until smooth. Add sea salt and apple cider vinegar. Pour into shot glasses and serve immediately. This concentrated recovery shot provides electrolytes and antioxidants.",
+    "prep_time": 5,
+    "cook_time": 0,
+    "calories": 80,
+    "protein": 2,
+    "fiber": 4,
+    "carbs": 12,
+    "fat": 4,
+    "ingredients": [
+      "1 tomato",
+      "1/4 cucumber",
+      "1/4 bell pepper",
+      "1 clove garlic",
+      "1 tbsp olive oil",
+      "sea salt",
+      "apple cider vinegar"
+    ],
+    "dietary_tags": [
+      "electrolyte",
+      "antioxidant",
+      "spanish",
+      "recovery",
+      "gluten_free"
+    ]
+  },
+  {
+    "name": "Portuguese Pastel de Nata Protein Bites",
+    "meal_type": "post_workout",
+    "description": "Protein-enriched version of Portuguese custard tarts",
+    "instructions": "Make mini tart shells with whole grain flour. Fill with custard made from eggs, protein powder, milk, and vanilla. Bake until set. Top with cinnamon. These protein bites support muscle recovery while providing traditional flavors.",
+    "prep_time": 20,
+    "cook_time": 15,
+    "calories": 280,
+    "protein": 18,
+    "fiber": 4,
+    "carbs": 28,
+    "fat": 14,
+    "ingredients": [
+      "whole grain flour",
+      "2 eggs",
+      "1/2 scoop protein powder",
+      "milk",
+      "vanilla extract",
+      "cinnamon",
+      "butter",
+      "sea salt"
+    ],
+    "dietary_tags": [
+      "high_protein",
+      "recovery",
+      "portuguese",
+      "dessert",
+      "traditional"
+    ]
+  },
+  {
+    "name": "Estremoz Marble Cake Energy Bars",
+    "meal_type": "post_workout",
+    "description": "Local marble-inspired energy bars with almonds and honey",
+    "instructions": "Mix whole grain flour, almonds, honey, eggs, and olive oil. Add cinnamon and vanilla. Pour into a baking dish and bake at 350\u00b0F for 25 minutes. Cool and cut into bars. These energy bars provide quick recovery carbohydrates and protein.",
+    "prep_time": 15,
+    "cook_time": 25,
+    "calories": 320,
+    "protein": 12,
+    "fiber": 6,
+    "carbs": 42,
+    "fat": 14,
+    "ingredients": [
+      "1 cup whole grain flour",
+      "1/2 cup almonds",
+      "3 tbsp honey",
+      "2 eggs",
+      "2 tbsp olive oil",
+      "cinnamon",
+      "vanilla",
+      "sea salt"
+    ],
+    "dietary_tags": [
+      "recovery",
+      "energy_bar",
+      "estremoz",
+      "quick",
+      "portable"
+    ]
+  },
+  {
+    "name": "Andalusian Salmorejo with Avocado",
+    "meal_type": "post_workout",
+    "description": "Thick tomato soup with avocado for healthy fats and recovery",
+    "instructions": "Blend tomatoes, bread, garlic, olive oil, and vinegar until smooth. Chill for 30 minutes. Serve with diced avocado, hard-boiled egg, and jam\u00f3n serrano. This creamy soup provides healthy fats and protein for recovery.",
+    "prep_time": 10,
+    "cook_time": 0,
+    "calories": 440,
+    "protein": 18,
+    "fiber": 10,
+    "carbs": 32,
+    "fat": 26,
+    "ingredients": [
+      "3 ripe tomatoes",
+      "1 slice bread",
+      "2 cloves garlic",
+      "3 tbsp olive oil",
+      "1 tbsp vinegar",
+      "1/2 avocado",
+      "1 hard-boiled egg",
+      "1 oz jam\u00f3n serrano",
+      "sea salt"
+    ],
+    "dietary_tags": [
+      "recovery",
+      "healthy_fats",
+      "andalusian",
+      "thick_soup",
+      "gluten_free_option"
+    ]
+  },
+  {
+    "name": "Mediterranean Chia Seed Pudding with Pistachios",
+    "meal_type": "post_workout",
+    "description": "Chia pudding with Greek yogurt, pistachios, and honey for recovery",
+    "instructions": "Mix chia seeds with Greek yogurt, milk, and honey. Let sit overnight. Top with pistachios, fresh berries, and a drizzle of honey. This protein-rich pudding supports muscle recovery and provides healthy fats.",
+    "prep_time": 5,
+    "cook_time": 0,
+    "calories": 420,
+    "protein": 24,
+    "fiber": 12,
+    "carbs": 38,
+    "fat": 20,
+    "ingredients": [
+      "3 tbsp chia seeds",
+      "1 cup Greek yogurt",
+      "1/4 cup milk",
+      "2 tbsp honey",
+      "2 tbsp pistachios",
+      "fresh berries",
+      "vanilla extract",
+      "cinnamon"
+    ],
+    "dietary_tags": [
+      "recovery",
+      "high_protein",
+      "mediterranean",
+      "make_ahead",
+      "gluten_free"
+    ]
+  },
+  {
+    "name": "Italian Espresso Protein Gelato",
+    "meal_type": "post_workout",
+    "description": "Protein-enriched espresso gelato for quick recovery and energy",
+    "instructions": "Blend espresso, protein powder, Greek yogurt, and honey. Pour into ice cream maker and churn until frozen. Alternatively, freeze in a shallow dish, stirring every 30 minutes. Serve immediately. This protein-rich gelato supports muscle recovery.",
+    "prep_time": 10,
+    "cook_time": 0,
+    "calories": 320,
+    "protein": 20,
+    "fiber": 2,
+    "carbs": 28,
+    "fat": 14,
+    "ingredients": [
+      "1 shot espresso",
+      "1 scoop protein powder",
+      "1/2 cup Greek yogurt",
+      "1 tbsp honey",
+      "dark chocolate shavings",
+      "cocoa powder"
+    ],
+    "dietary_tags": [
+      "recovery",
+      "high_protein",
+      "italian",
+      "caffeine",
+      "dessert"
+    ]
+  },
+  {
+    "name": "Spanish Horchata Recovery Drink",
+    "meal_type": "post_workout",
+    "description": "Tiger nut milk with cinnamon and protein for hydration and recovery",
+    "instructions": "Blend soaked tiger nuts with water, protein powder, cinnamon, and honey until smooth. Strain through nut milk bag. Serve over ice with a sprinkle of cinnamon. This hydrating drink provides electrolytes and protein.",
+    "prep_time": 10,
+    "cook_time": 0,
+    "calories": 280,
+    "protein": 16,
+    "fiber": 6,
+    "carbs": 32,
+    "fat": 12,
+    "ingredients": [
+      "1/4 cup tiger nuts, soaked",
+      "2 cups water",
+      "1/2 scoop protein powder",
+      "1 tsp cinnamon",
+      "1 tbsp honey",
+      "ice",
+      "vanilla extract"
+    ],
+    "dietary_tags": [
+      "hydrating",
+      "recovery",
+      "spanish",
+      "plant_based",
+      "gluten_free"
+    ]
+  },
+  {
+    "name": "Dutch Whey Protein Vla",
+    "meal_type": "post_workout",
+    "description": "Protein-enriched vla with Dutch berries for quick recovery",
+    "instructions": "Mix Dutch vla (custard) with whey protein powder and vanilla. Top with mixed Dutch berries and a sprinkle of chopped almonds. Serve chilled. This protein-rich dessert supports muscle recovery with familiar Dutch flavors.",
+    "prep_time": 5,
+    "cook_time": 0,
+    "calories": 320,
+    "protein": 24,
+    "fiber": 6,
+    "carbs": 32,
+    "fat": 12,
+    "ingredients": [
+      "1 cup Dutch vla",
+      "1 scoop whey protein",
+      "1/2 cup mixed berries",
+      "1 tbsp almonds",
+      "vanilla extract",
+      "cinnamon"
+    ],
+    "dietary_tags": [
+      "recovery",
+      "high_protein",
+      "dutch_mediterranean",
+      "quick",
+      "familiar"
+    ]
+  },
+  {
+    "name": "Mediterranean Dropjes Energy Bites",
+    "meal_type": "post_workout",
+    "description": "Energy bites using Dutch dropjes with Mediterranean nuts and protein",
+    "instructions": "Process dates, almonds, protein powder, and a few Dutch dropjes (licorice candies) in a food processor. Roll into balls and coat with crushed pistachios. Chill for 30 minutes. These energy bites provide quick recovery carbohydrates and protein.",
+    "prep_time": 10,
+    "cook_time": 0,
+    "calories": 280,
+    "protein": 12,
+    "fiber": 6,
+    "carbs": 38,
+    "fat": 12,
+    "ingredients": [
+      "1 cup dates",
+      "1/2 cup almonds",
+      "1/2 scoop protein powder",
+      "3 Dutch dropjes",
+      "crushed pistachios",
+      "coconut oil",
+      "vanilla extract"
+    ],
+    "dietary_tags": [
+      "recovery",
+      "energy_bites",
+      "dutch_mediterranean",
+      "portable",
+      "quick"
+    ]
+  },
+  {
+    "name": "Dutch Buttermilk Mediterranean Smoothie",
+    "meal_type": "post_workout",
+    "description": "Buttermilk smoothie with Mediterranean fruits and protein powder",
+    "instructions": "Blend Dutch buttermilk with mixed berries, banana, protein powder, and honey. Add a spoonful of tahini for healthy fats. Serve immediately. This hydrating smoothie provides electrolytes and protein for recovery.",
+    "prep_time": 5,
+    "cook_time": 0,
+    "calories": 380,
+    "protein": 26,
+    "fiber": 8,
+    "carbs": 48,
+    "fat": 14,
+    "ingredients": [
+      "1.5 cups Dutch buttermilk",
+      "1 cup mixed berries",
+      "1/2 banana",
+      "1 scoop protein powder",
+      "1 tbsp tahini",
+      "1 tbsp honey",
+      "ice"
+    ],
+    "dietary_tags": [
+      "recovery",
+      "hydrating",
+      "dutch_mediterranean",
+      "electrolyte",
+      "quick"
+    ]
+  },
+  {
+    "name": "Mediterranean Poffertjes with Protein",
+    "meal_type": "post_workout",
+    "description": "Protein-enriched poffertjes with Greek yogurt and berries",
+    "instructions": "Make poffertjes batter with added protein powder. Cook mini pancakes in a special poffertjes pan. Serve with Greek yogurt, mixed berries, and a drizzle of honey. These protein-rich pancakes support muscle recovery.",
+    "prep_time": 10,
+    "cook_time": 10,
+    "calories": 420,
+    "protein": 22,
+    "fiber": 6,
+    "carbs": 58,
+    "fat": 14,
+    "ingredients": [
+      "poffertjes mix",
+      "1/2 scoop protein powder",
+      "Greek yogurt",
+      "mixed berries",
+      "honey",
+      "butter",
+      "powdered sugar"
+    ],
+    "dietary_tags": [
+      "recovery",
+      "high_protein",
+      "dutch_mediterranean",
+      "comfort",
+      "quick"
+    ]
+  },
+  {
+    "name": "Chocolate Bean Recovery Smoothie",
+    "meal_type": "post_workout",
+    "description": "Creamy chocolate smoothie with white beans for added protein and fiber",
+    "instructions": "In a blender, combine 1/2 cup canned cannellini beans (rinsed), 1 banana, 1 scoop chocolate protein powder, 1 tbsp almond butter, 1 cup almond milk, and 1 tsp honey. Blend until completely smooth. Add ice if desired and blend again. Pour into glass and enjoy immediately for optimal recovery.",
+    "prep_time": 5,
+    "cook_time": 0,
+    "calories": 380,
+    "protein": 28,
+    "fiber": 10,
+    "carbs": 42,
+    "fat": 12,
+    "ingredients": [
+      "1/2 cup cannellini beans",
+      "1 banana",
+      "1 scoop chocolate protein powder",
+      "1 tbsp almond butter",
+      "1 cup almond milk",
+      "1 tsp honey",
+      "ice"
+    ],
+    "dietary_tags": [
+      "high_protein",
+      "high_fiber",
+      "recovery",
+      "no_cook"
+    ]
+  },
+  {
+    "name": "Black Bean Protein Bowl",
+    "meal_type": "post_workout",
+    "description": "Quick recovery bowl with black beans, quinoa, and protein-rich toppings",
+    "instructions": "In a microwave-safe bowl, combine 1 cup cooked quinoa and 1 cup canned black beans (rinsed). Microwave for 1-2 minutes until heated through. Top with 1/4 cup Greek yogurt, 2 tbsp salsa, and 1 tbsp shredded cheese. Add 1/4 avocado sliced and sprinkle with hot sauce to taste. Mix well before eating.",
+    "prep_time": 5,
+    "cook_time": 2,
+    "calories": 420,
+    "protein": 26,
+    "fiber": 14,
+    "carbs": 48,
+    "fat": 14,
+    "ingredients": [
+      "1 cup cooked quinoa",
+      "1 cup black beans",
+      "1/4 cup Greek yogurt",
+      "2 tbsp salsa",
+      "1 tbsp shredded cheese",
+      "1/4 avocado",
+      "hot sauce"
+    ],
+    "dietary_tags": [
+      "high_protein",
+      "high_fiber",
+      "recovery",
+      "quick",
+      "meal_prep"
+    ]
+  }
+]

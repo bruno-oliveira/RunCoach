@@ -1,0 +1,196 @@
+{% extends "base.html" %}
+
+{% block title %}RunCoach - Personalized Running Plans{% endblock %}
+
+{% block styles %}
+<link rel="stylesheet" href="/static/css/index.css">
+{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="header">
+        <h1>🏃‍♂️ RunCoach</h1>
+        <p>Generate personalized running training plans tailored to your goals</p>
+    </div>
+
+    
+    
+    <div class="form-card">
+        {% if error %}
+        <div class="error-container" style="margin-bottom: 1rem;">
+            {% if error_type == 'insufficient_time' %}
+                <div class="error-card time-error" style="background: #fff3e0; color: #e65100; padding: 1rem; border-radius: 8px; border-left: 4px solid #ff9800;">
+                    <div style="display: flex; align-items: center; margin-bottom: 0.5rem;">
+                        <span style="font-size: 1.2rem; margin-right: 0.5rem;">⏰</span>
+                        <strong style="color: #e65100;">Training Duration Too Short</strong>
+                    </div>
+                    <div style="font-size: 0.95rem; line-height: 1.4;">{{ error }}</div>
+                    {% if suggestion %}
+                    <div style="margin-top: 0.5rem; font-size: 0.9rem; font-style: italic; color: #f57c00;">
+                        💡 {{ suggestion }}
+                    </div>
+                    {% endif %}
+                </div>
+            {% elif error_type == 'inadequate_base' %}
+                <div class="error-card base-error" style="background: #e8f5e8; color: #2e7d32; padding: 1rem; border-radius: 8px; border-left: 4px solid #4caf50;">
+                    <div style="display: flex; align-items: center; margin-bottom: 0.5rem;">
+                        <span style="font-size: 1.2rem; margin-right: 0.5rem;">🏃</span>
+                        <strong style="color: #2e7d32;">Build Your Running Base First</strong>
+                    </div>
+                    <div style="font-size: 0.95rem; line-height: 1.4;">{{ error }}</div>
+                    {% if suggestion %}
+                    <div style="margin-top: 0.5rem; font-size: 0.9rem; font-style: italic; color: #388e3c;">
+                        💡 {{ suggestion }}
+                    </div>
+                    {% endif %}
+                </div>
+            {% elif error_type == 'validation' %}
+                <div class="error-card validation-error" style="background: #fff8e1; color: #f57f17; padding: 1rem; border-radius: 8px; border-left: 4px solid #ffc107;">
+                    <div style="display: flex; align-items: center; margin-bottom: 0.5rem;">
+                        <span style="font-size: 1.2rem; margin-right: 0.5rem;">✓</span>
+                        <strong style="color: #f57f17;">Please Check Your Input</strong>
+                    </div>
+                    <div style="font-size: 0.95rem; line-height: 1.4;">{{ error }}</div>
+                </div>
+            {% else %}
+                <div class="error-card general-error" style="background: #ffebee; color: #c62828; padding: 1rem; border-radius: 8px; border-left: 4px solid #f44336;">
+                    <div style="display: flex; align-items: center; margin-bottom: 0.5rem;">
+                        <span style="font-size: 1.2rem; margin-right: 0.5rem;">⚠️</span>
+                        <strong style="color: #c62828;">Error</strong>
+                    </div>
+                    <div style="font-size: 0.95rem; line-height: 1.4;">{{ error }}</div>
+                </div>
+             {% endif %}
+         </div>
+         {% endif %}
+
+        
+
+        <form method="post" action="/generate-plan">
+            <div class="form-group">
+                <label for="current_km">Current Weekly Mileage (km)</label>
+                <input type="number" id="current_km" name="current_km" step="0.1" min="0" max="200" required placeholder="e.g., 20">
+                <small style="color: #666; font-size: 0.9rem;">Your current weekly running distance</small>
+            </div>
+            
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="target_distance">Target Distance</label>
+                    <select id="target_distance" name="target_distance" required>
+                        <option value="">Select distance</option>
+                        <option value="5">5K</option>
+                        <option value="10">10K</option>
+                        <option value="21.1">Half Marathon (21.1km)</option>
+                        <option value="42.2">Marathon (42.2km)</option>
+                        <option value="30">🏔️ Trail Running</option>
+                    </select>
+                    <small style="color: #666; font-size: 0.9rem;">Your race goal distance or trail running focus</small>
+                </div>
+                
+                <div class="form-group">
+                    <label for="weeks">Training Duration (weeks)</label>
+                    <input type="number" id="weeks" name="weeks" min="4" max="24" required placeholder="e.g., 12">
+                    <small style="color: #666; font-size: 0.9rem;">Length of training plan</small>
+                </div>
+            </div>
+            
+            <div class="form-group">
+                <label for="max_runs_per_week">Maximum Runs Per Week</label>
+                <select id="max_runs_per_week" name="max_runs_per_week" required>
+                    <option value="3">3 runs (Beginner)</option>
+                    <option value="4" selected>4 runs (Recommended)</option>
+                    <option value="5">5 runs (Intermediate)</option>
+                    <option value="6">6 runs (Advanced)</option>
+                </select>
+                <small style="color: #666; font-size: 0.9rem;">How many days per week can you run?</small>
+            </div>
+            
+            <button type="submit" class="btn">Generate My Training Plan</button>
+        </form>
+    </div>
+    
+    <div class="features">
+        <h3>What You'll Get</h3>
+        <div class="feature-grid">
+            <div class="feature-item">
+                <strong>📋 Custom Schedule</strong>
+                <p>Weekly training plans tailored to your fitness level</p>
+            </div>
+            <div class="feature-item">
+                <strong>🏃‍♂️ Progressive Workouts</strong>
+                <p>Build mileage safely with proven training principles</p>
+            </div>
+            <div class="feature-item">
+                <strong>💪 Strength Training</strong>
+                <p>Integrated exercises to prevent injuries</p>
+            </div>
+            <div class="feature-item">
+                <strong>📄 PDF Export</strong>
+                <p>Download professional training plans</p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const form = document.querySelector('form[action="/generate-plan"]');
+    const submitBtn = form?.querySelector('button[type="submit"]');
+    
+    if (form && submitBtn) {
+        // Ensure form submission works on all devices
+        form.addEventListener('submit', function(e) {
+            // Add visual feedback
+            if (submitBtn) {
+                submitBtn.disabled = true;
+                submitBtn.textContent = 'Generating...';
+                submitBtn.style.opacity = '0.8';
+            }
+            
+            // Let the form submit normally
+            return true;
+        });
+        
+        // Add touch event support for mobile
+        submitBtn.addEventListener('touchend', function(e) {
+            e.preventDefault();
+            if (!submitBtn.disabled) {
+                form.requestSubmit();
+            }
+        }, { passive: false });
+        
+        // Validate form on submit
+        form.addEventListener('submit', function(e) {
+            const currentKm = document.getElementById('current_km');
+            const targetDistance = document.getElementById('target_distance');
+            const weeks = document.getElementById('weeks');
+            
+            if (!currentKm.value || parseFloat(currentKm.value) < 0) {
+                e.preventDefault();
+                alert('Please enter a valid current weekly mileage');
+                currentKm.focus();
+                return false;
+            }
+            
+            if (!targetDistance.value) {
+                e.preventDefault();
+                alert('Please select a target distance');
+                targetDistance.focus();
+                return false;
+            }
+            
+            if (!weeks.value || parseInt(weeks.value) < 4) {
+                e.preventDefault();
+                alert('Please enter a valid training duration (minimum 4 weeks)');
+                weeks.focus();
+                return false;
+            }
+            
+            return true;
+        });
+    }
+});
+</script>
+{% endblock %}

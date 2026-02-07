@@ -1,0 +1,355 @@
+{% extends "base.html" %}
+
+{% block title %}RunCoach - Analytics{% endblock %}
+
+{% block styles %}
+<style>
+.analytics-container {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 2rem;
+}
+
+.analytics-header {
+    margin-bottom: 2rem;
+}
+
+.analytics-title {
+    font-size: 2rem;
+    font-weight: 700;
+    color: #333;
+    margin-bottom: 0.5rem;
+}
+
+.analytics-subtitle {
+    color: #666;
+    font-size: 1rem;
+}
+
+.upload-section {
+    background: #f8f9fa;
+    border-radius: 12px;
+    padding: 2rem;
+    margin-bottom: 2rem;
+}
+
+.upload-area {
+    border: 2px dashed #ccc;
+    border-radius: 8px;
+    padding: 2rem;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.3s;
+}
+
+.upload-area:hover {
+    border-color: #667eea;
+    background: #f0f4ff;
+}
+
+.upload-area.dragover {
+    border-color: #667eea;
+    background: #e8eeff;
+}
+
+.upload-area svg {
+    width: 64px;
+    height: 64px;
+    fill: #667eea;
+    margin-bottom: 1rem;
+}
+
+.upload-area p {
+    color: #666;
+    margin: 0;
+}
+
+.upload-controls {
+    display: flex;
+    gap: 1rem;
+    margin-bottom: 1rem;
+}
+
+.analytics-name-input {
+    flex: 1;
+    padding: 0.75rem;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    font-size: 1rem;
+}
+
+.upload-btn {
+    padding: 0.75rem 2rem;
+    background: #667eea;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.3s;
+}
+
+.upload-btn:hover {
+    background: #5568d3;
+}
+
+.upload-btn:disabled {
+    background: #ccc;
+    cursor: not-allowed;
+}
+
+.section-title {
+    font-size: 1.5rem;
+    font-weight: 600;
+    color: #333;
+    margin-bottom: 1rem;
+}
+
+.section-subtitle {
+    color: #666;
+    font-size: 0.9rem;
+    margin-bottom: 1.5rem;
+}
+
+.analytics-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 1rem;
+}
+
+.analytics-card {
+    background: white;
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    padding: 1.5rem;
+    cursor: pointer;
+    transition: all 0.3s;
+}
+
+.analytics-card:hover {
+    border-color: #667eea;
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.2);
+    transform: translateY(-2px);
+}
+
+.analytics-card.selected {
+    border-color: #667eea;
+    background: #f0f4ff;
+}
+
+.analytics-card h3 {
+    margin: 0 0 0.5rem 0;
+    font-size: 1.1rem;
+    color: #333;
+}
+
+.analytics-card .date {
+    color: #666;
+    font-size: 0.85rem;
+    margin-bottom: 0.75rem;
+}
+
+.analytics-card .stats {
+    display: flex;
+    gap: 1rem;
+    flex-wrap: wrap;
+}
+
+.analytics-card .stat {
+    background: #f8f9fa;
+    padding: 0.25rem 0.5rem;
+    border-radius: 4px;
+    font-size: 0.85rem;
+    color: #666;
+}
+
+.analytics-card .actions {
+    margin-top: 1rem;
+    display: flex;
+    gap: 0.5rem;
+}
+
+.action-btn {
+    padding: 0.5rem 1rem;
+    border: none;
+    border-radius: 4px;
+    font-size: 0.85rem;
+    cursor: pointer;
+}
+
+.view-btn {
+    background: #667eea;
+    color: white;
+}
+
+.delete-btn {
+    background: #dc3545;
+    color: white;
+}
+
+.charts-container {
+    display: grid;
+    gap: 2rem;
+}
+
+.chart-section {
+    background: white;
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    padding: 1.5rem;
+}
+
+.chart-section h3 {
+    margin: 0 0 1rem 0;
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: #333;
+}
+
+.chart-section .chart {
+    width: 100%;
+    height: auto;
+}
+
+.chart-section .summary {
+    margin-top: 1rem;
+    padding: 1rem;
+    background: #f8f9fa;
+    border-radius: 6px;
+}
+
+.summary-line {
+    display: flex;
+    justify-content: space-between;
+    padding: 0.25rem 0;
+    font-size: 0.9rem;
+    color: #666;
+}
+
+.summary-value {
+    font-weight: 600;
+    color: #333;
+}
+
+.comparison-controls {
+    display: flex;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+    align-items: center;
+}
+
+.compare-btn {
+    padding: 0.75rem 2rem;
+    background: #667eea;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.3s;
+}
+
+.compare-btn:hover {
+    background: #5568d3;
+}
+
+.compare-btn:disabled {
+    background: #ccc;
+    cursor: not-allowed;
+}
+
+.empty-state {
+    text-align: center;
+    padding: 3rem;
+    color: #999;
+}
+
+.loading {
+    text-align: center;
+    padding: 2rem;
+}
+
+.spinner {
+    border: 3px solid #f3f3f3;
+    border-top: 3px solid #667eea;
+    border-radius: 50%;
+    width: 30px;
+    height: 30px;
+    animation: spin 1s linear infinite;
+    margin: 0 auto 1rem;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="analytics-container">
+    {% if not user %}
+    <div style="text-align: center; padding: 3rem;">
+        <h1>🔒 Authentication Required</h1>
+        <p style="font-size: 1.1rem; color: #666; margin-top: 1rem;">
+            You must be logged in to view your analytics data.
+        </p>
+        <p style="color: #999;">
+            Analytics are private and can only be viewed by you.
+        </p>
+    </div>
+    {% else %}
+    <div class="analytics-header">
+        <h1 class="analytics-title">📊 Analytics</h1>
+        <p class="analytics-subtitle">Upload your Strava activities.csv file to analyze your running performance</p>
+    </div>
+
+    <div class="upload-section">
+        <div class="upload-controls">
+            <input type="text" class="analytics-name-input" id="analyticsName" placeholder="Name this upload (e.g., '2024 Season')">
+            <button class="upload-btn" id="uploadBtn" disabled>Upload CSV</button>
+        </div>
+        <div class="upload-area" id="uploadArea">
+            <svg viewBox="0 0 24 24">
+                <path d="M19.35 10.04C18.67 6.59 15.64 4 12 4 9.11 4 6.6 5.64 5.35 8.04 2.34 8.36 0 10.91 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96zM14 13v4h-4v-4H7l5-5 5 5h-3z"/>
+            </svg>
+            <p><strong>Drag & drop</strong> your Strava activities.csv file here, or <strong>click to browse</strong></p>
+            <input type="file" id="fileInput" accept=".csv" style="display: none;">
+        </div>
+    </div>
+
+    <div id="uploadsSection" style="display: none;">
+        <h2 class="section-title">Your Analytics Uploads</h2>
+        <p class="section-subtitle">Select uploads to compare or click View to see detailed analytics</p>
+        
+        <div class="comparison-controls">
+            <button class="compare-btn" id="compareBtn" disabled>Compare Selected (2-5)</button>
+        </div>
+        
+        <div class="analytics-list" id="analyticsList"></div>
+    </div>
+
+    <div id="chartsSection" style="display: none;">
+        <h2 class="section-title" id="chartsTitle"></h2>
+        <p class="section-subtitle" id="chartsSubtitle"></p>
+        <button style="padding: 0.5rem 1rem; background: #666; color: white; border: none; border-radius: 6px; cursor: pointer; margin-bottom: 1rem;" id="backToList">← Back to Uploads</button>
+        
+        <div class="charts-container" id="chartsContainer"></div>
+    </div>
+
+    <div id="comparisonSection" style="display: none;">
+        <h2 class="section-title">Side-by-Side Comparison</h2>
+        <button style="padding: 0.5rem 1rem; background: #666; color: white; border: none; border-radius: 6px; cursor: pointer; margin-bottom: 1rem;" id="backFromComparison">← Back to Uploads</button>
+        
+        <div class="chart-section">
+            <h3>Comparison Overview</h3>
+            <img id="comparisonChart" class="chart" alt="Comparison Chart">
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="/static/js/analytics.js" defer></script>
+{% endblock %}

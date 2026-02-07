@@ -1,0 +1,18 @@
+{
+  "total": 225,
+  "files": {
+    "breakfast": "meals_breakfast.json",
+    "lunch": "meals_lunch.json",
+    "dinner": "meals_dinner.json",
+    "snack": "meals_snack.json",
+    "post_workout": "meals_post_workout.json"
+  },
+  "categories": {
+    "breakfast": 12,
+    "lunch": 43,
+    "dinner": 66,
+    "snack": 90,
+    "post_workout": 14
+  },
+  "final_update": "Added 10 final anti-inflammatory chicken and beef recipes"
+}

@@ -1,0 +1,446 @@
+{% extends "base.html" %}
+
+{% block title %}{{ recipe.name }} - RunCoach{% endblock %}
+
+{% block styles %}
+<style>
+.recipe-detail-container {
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 2rem;
+}
+
+.recipe-header {
+    text-align: center;
+    margin-bottom: 2rem;
+}
+
+.recipe-title {
+    font-size: 2.5rem;
+    font-weight: bold;
+    color: #1f2937;
+    margin-bottom: 0.5rem;
+}
+
+.recipe-meal-type {
+    display: inline-block;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 0.25rem 1rem;
+    border-radius: 1rem;
+    font-size: 0.875rem;
+    margin-bottom: 1rem;
+}
+
+.recipe-description {
+    color: #6b7280;
+    font-size: 1.125rem;
+    line-height: 1.6;
+    margin-bottom: 2rem;
+}
+
+.nutrition-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+    gap: 1rem;
+    margin-bottom: 2rem;
+    padding: 1.5rem;
+    background: #f9fafb;
+    border-radius: 0.75rem;
+}
+
+.nutrition-item {
+    text-align: center;
+}
+
+.nutrition-value {
+    font-size: 1.5rem;
+    font-weight: bold;
+    color: #1f2937;
+}
+
+.nutrition-label {
+    font-size: 0.875rem;
+    color: #6b7280;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.dietary-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-bottom: 2rem;
+    justify-content: center;
+}
+
+.dietary-tag {
+    background: #ecfdf5;
+    color: #065f46;
+    padding: 0.25rem 0.75rem;
+    border-radius: 0.375rem;
+    font-size: 0.875rem;
+    border: 1px solid #d1fae5;
+}
+
+.recipe-section {
+    margin-bottom: 2rem;
+}
+
+.section-title {
+    font-size: 1.5rem;
+    font-weight: bold;
+    color: #1f2937;
+    margin-bottom: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.section-icon {
+    width: 1.5rem;
+    height: 1.5rem;
+    color: #6366f1;
+}
+
+.ingredients-list {
+    list-style: none;
+    padding: 0;
+}
+
+.ingredient-item {
+    padding: 0.75rem 1rem;
+    margin-bottom: 0.5rem;
+    background: #f9fafb;
+    border-radius: 0.5rem;
+    border-left: 4px solid #6366f1;
+}
+
+.instructions-text {
+    padding: 1rem;
+    background: #f9fafb;
+    border-radius: 0.5rem;
+    line-height: 1.6;
+    color: #374151;
+    white-space: pre-line;
+}
+
+.action-buttons {
+    display: flex;
+    gap: 1rem;
+    justify-content: center;
+    margin-top: 2rem;
+    flex-wrap: wrap;
+}
+
+.btn {
+    padding: 0.75rem 1.5rem;
+    border-radius: 0.5rem;
+    font-weight: 500;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    transition: all 0.2s;
+    border: none;
+    cursor: pointer;
+    font-size: 1rem;
+}
+
+.btn-primary {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+}
+
+.btn-primary:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
+}
+
+.btn-secondary {
+    background: #f3f4f6;
+    color: #4b5563;
+    border: 1px solid #d1d5db;
+}
+
+.btn-secondary:hover {
+    background: #e5e7eb;
+}
+
+.btn-favorite {
+    background: #fef2f2;
+    color: #dc2626;
+    border: 1px solid #fecaca;
+}
+
+.btn-favorite:hover {
+    background: #fee2e2;
+}
+
+.btn-favorite.is-favorite {
+    background: #dc2626;
+    color: white;
+    border: 1px solid #dc2626;
+}
+
+.share-section {
+    margin-top: 2rem;
+    padding: 1.5rem;
+    background: #f9fafb;
+    border-radius: 0.75rem;
+    text-align: center;
+}
+
+.share-title {
+    font-size: 1.125rem;
+    font-weight: 600;
+    color: #1f2937;
+    margin-bottom: 1rem;
+}
+
+.share-buttons {
+    display: flex;
+    gap: 0.5rem;
+    justify-content: center;
+    flex-wrap: wrap;
+}
+
+.share-btn {
+    padding: 0.5rem 1rem;
+    border-radius: 0.375rem;
+    text-decoration: none;
+    color: white;
+    font-weight: 500;
+    transition: transform 0.2s;
+}
+
+.share-btn:hover {
+    opacity: 0.9;
+}
+
+.share-twitter {
+    background: #1da1f2;
+}
+
+.share-facebook {
+    background: #1877f2;
+}
+
+.share-linkedin {
+    background: #0077b5;
+}
+
+.share-copy {
+    background: #6b7280;
+}
+
+@media (max-width: 768px) {
+    .recipe-detail-container {
+        padding: 1rem;
+    }
+    
+    .recipe-title {
+        font-size: 2rem;
+    }
+    
+    .nutrition-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+    
+    .action-buttons {
+        flex-direction: column;
+        align-items: center;
+    }
+    
+    .btn {
+        width: 100%;
+        max-width: 300px;
+        justify-content: center;
+    }
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="recipe-detail-container">
+    <!-- Recipe Header -->
+    <div class="recipe-header">
+        <h1 class="recipe-title">{{ recipe.name }}</h1>
+        <span class="recipe-meal-type">{{ recipe.meal_type.title() }}</span>
+        {% if recipe.description %}
+        <p class="recipe-description">{{ recipe.description }}</p>
+        {% endif %}
+    </div>
+
+    <!-- Dietary Tags -->
+    {% if recipe.dietary_tags %}
+    <div class="dietary-tags">
+        {% for tag in recipe.dietary_tags %}
+        <span class="dietary-tag">{{ tag }}</span>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <!-- Nutrition Information -->
+    <div class="nutrition-grid">
+        <div class="nutrition-item">
+            <div class="nutrition-value">{{ recipe.calories }}</div>
+            <div class="nutrition-label">Calories</div>
+        </div>
+        <div class="nutrition-item">
+            <div class="nutrition-value">{{ recipe.protein }}g</div>
+            <div class="nutrition-label">Protein</div>
+        </div>
+        <div class="nutrition-item">
+            <div class="nutrition-value">{{ recipe.carbs }}g</div>
+            <div class="nutrition-label">Carbs</div>
+        </div>
+        <div class="nutrition-item">
+            <div class="nutrition-value">{{ recipe.fat }}g</div>
+            <div class="nutrition-label">Fat</div>
+        </div>
+    </div>
+
+    <!-- Ingredients -->
+    <div class="recipe-section">
+        <h2 class="section-title">
+            <svg class="section-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path>
+            </svg>
+            Ingredients
+        </h2>
+        <ul class="ingredients-list">
+            {% for ingredient in recipe.ingredients %}
+            <li class="ingredient-item">{{ ingredient }}</li>
+            {% endfor %}
+        </ul>
+    </div>
+
+    <!-- Instructions -->
+    <div class="recipe-section">
+        <h2 class="section-title">
+            <svg class="section-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"></path>
+            </svg>
+            Instructions
+        </h2>
+        <div class="instructions-text">
+            {{ recipe.instructions }}
+        </div>
+    </div>
+
+    <!-- Action Buttons -->
+    <div class="action-buttons">
+        {% if user %}
+        <button class="btn btn-favorite {% if is_favorite %}is-favorite{% endif %}" onclick="toggleFavorite()">
+            <svg width="20" height="20" fill="currentColor" viewBox="0 0 20 20">
+                <path fill-rule="evenodd" d="M3.172 5.172a4 4 0 015.656 0L10 6.343l1.172-1.171a4 4 0 115.656 5.656L10 17.657l-6.828-6.829a4 4 0 010-5.656z" clip-rule="evenodd"></path>
+            </svg>
+            {% if is_favorite %}Favorited{% else %}Add to Favorites{% endif %}
+        </button>
+        {% endif %}
+        <a href="/recipes" class="btn btn-secondary">
+            <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
+            </svg>
+            Back to Recipes
+        </a>
+    </div>
+
+    <!-- Share Section -->
+    <div class="share-section">
+        <h3 class="share-title">Share this recipe</h3>
+        <div class="share-buttons">
+            <a href="https://twitter.com/intent/tweet?text={{ recipe.name }}&url={{ request.url }}" target="_blank" class="share-btn share-twitter">
+                Twitter
+            </a>
+            <a href="https://www.facebook.com/sharer/sharer.php?u={{ request.url }}" target="_blank" class="share-btn share-facebook">
+                Facebook
+            </a>
+            <a href="https://www.linkedin.com/sharing/share-offsite/?url={{ request.url }}" target="_blank" class="share-btn share-linkedin">
+                LinkedIn
+            </a>
+            <button class="share-btn share-copy" onclick="copyLink()">
+                Copy Link
+            </button>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function toggleFavorite() {
+    const btn = document.querySelector('.btn-favorite');
+    const isFavorited = btn.classList.contains('is-favorite');
+    
+    const recipeData = {
+        name: "{{ recipe.name }}",
+        meal_type: "{{ recipe.meal_type }}",
+        calories: {{ recipe.calories }},
+        protein: {{ recipe.protein }},
+        carbs: {{ recipe.carbs }},
+        fat: {{ recipe.fat }},
+        ingredients: {{ recipe.ingredients | tojson }},
+        instructions: {{ recipe.instructions | tojson }},
+        dietary_tags: {{ recipe.dietary_tags | tojson }}
+    };
+    
+    if (isFavorited) {
+        // Remove from favorites
+        fetch(`/api/recipes/favorite/{{ favorite_id }}`, {
+            method: 'DELETE',
+            headers: {
+                'Content-Type': 'application/json',
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            btn.classList.remove('is-favorite');
+            btn.innerHTML = `
+                <svg width="20" height="20" fill="currentColor" viewBox="0 0 20 20">
+                    <path fill-rule="evenodd" d="M3.172 5.172a4 4 0 015.656 0L10 6.343l1.172-1.171a4 4 0 115.656 5.656L10 17.657l-6.828-6.829a4 4 0 010-5.656z" clip-rule="evenodd"></path>
+                </svg>
+                Add to Favorites
+            `;
+        })
+        .catch(error => {
+            console.error('Error removing favorite:', error);
+        });
+    } else {
+        // Add to favorites
+        fetch('/api/recipes/favorite', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(recipeData)
+        })
+        .then(response => response.json())
+        .then(data => {
+            btn.classList.add('is-favorite');
+            btn.innerHTML = `
+                <svg width="20" height="20" fill="currentColor" viewBox="0 0 20 20">
+                    <path fill-rule="evenodd" d="M3.172 5.172a4 4 0 015.656 0L10 6.343l1.172-1.171a4 4 0 115.656 5.656L10 17.657l-6.828-6.829a4 4 0 010-5.656z" clip-rule="evenodd"></path>
+                </svg>
+                Favorited
+            `;
+        })
+        .catch(error => {
+            console.error('Error adding favorite:', error);
+        });
+    }
+}
+
+function copyLink() {
+    navigator.clipboard.writeText(window.location.href).then(() => {
+        const btn = document.querySelector('.share-copy');
+        const originalText = btn.textContent;
+        btn.textContent = 'Copied!';
+        setTimeout(() => {
+            btn.textContent = originalText;
+        }, 2000);
+    });
+}
+</script>
+{% endblock %}

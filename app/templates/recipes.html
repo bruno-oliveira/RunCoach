@@ -1,0 +1,584 @@
+{% extends "base.html" %}
+
+{% block title %}Recipe Search - RunCoach{% endblock %}
+
+{% block styles %}
+<link rel="stylesheet" href="/static/css/recipes.css">
+{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="header">
+        <h1>🥗 Recipe Search</h1>
+        <p>Find and save your favorite running meals</p>
+    </div>
+
+    <div class="search-section">
+        <div class="search-bar">
+            <input 
+                type="text" 
+                id="searchInput" 
+                placeholder="Search recipes by name..." 
+                autocomplete="off"
+            >
+            <button class="search-btn" onclick="searchRecipes()">
+                🔍 Search
+            </button>
+        </div>
+
+        <div class="filters">
+            <div class="filter-group">
+                <label for="mealTypeFilter">Meal Type</label>
+                <select id="mealTypeFilter" onchange="searchRecipes()">
+                    <option value="">All Types</option>
+                    <option value="breakfast">🌅 Breakfast</option>
+                    <option value="lunch">☀️ Lunch</option>
+                    <option value="dinner">🌙 Dinner</option>
+                    <option value="snack">🍿 Snack</option>
+                    <option value="post_workout">💪 Post-Workout</option>
+                </select>
+            </div>
+
+            <div class="filter-group">
+                <label for="minProteinFilter">Min Protein (g)</label>
+                <input 
+                    type="number" 
+                    id="minProteinFilter" 
+                    value="0" 
+                    min="0" 
+                    max="100"
+                    onchange="searchRecipes()"
+                >
+            </div>
+
+            <div class="filter-group">
+                <label for="maxCaloriesFilter">Max Calories</label>
+                <input 
+                    type="number" 
+                    id="maxCaloriesFilter" 
+                    value="1000" 
+                    min="100" 
+                    max="2000"
+                    onchange="searchRecipes()"
+                >
+            </div>
+
+            <div class="filter-group">
+                <label>&nbsp;</label>
+                <button class="clear-filters-btn" onclick="clearFilters()">
+                    ✕ Clear Filters
+                </button>
+            </div>
+        </div>
+
+        <div class="dietary-filters">
+            <div class="dietary-filter-header">
+                <label>Dietary Preferences</label>
+                <button class="toggle-dietary-filters" onclick="toggleDietaryFilters()">
+                    <span id="dietaryToggleIcon">▼</span> Show Filters
+                </button>
+            </div>
+            <div class="dietary-filter-options" id="dietaryFilterOptions" style="display: none;">
+                <div class="dietary-filter-row">
+                    <label class="dietary-checkbox">
+                        <input type="checkbox" value="vegetarian" onchange="searchRecipes()">
+                        <span>🥬 Vegetarian</span>
+                    </label>
+                    <label class="dietary-checkbox">
+                        <input type="checkbox" value="vegan" onchange="searchRecipes()">
+                        <span>🌱 Vegan</span>
+                    </label>
+                    <label class="dietary-checkbox">
+                        <input type="checkbox" value="gluten_free" onchange="searchRecipes()">
+                        <span>🌾 Gluten-Free</span>
+                    </label>
+                    <label class="dietary-checkbox">
+                        <input type="checkbox" value="high_protein" onchange="searchRecipes()">
+                        <span>💪 High Protein</span>
+                    </label>
+                </div>
+                <div class="dietary-filter-row">
+                    <label class="dietary-checkbox">
+                        <input type="checkbox" value="low_carb" onchange="searchRecipes()">
+                        <span>🥬 Low Carb</span>
+                    </label>
+                    <label class="dietary-checkbox">
+                        <input type="checkbox" value="high_fiber" onchange="searchRecipes()">
+                        <span>🌾 High Fiber</span>
+                    </label>
+                    <label class="dietary-checkbox">
+                        <input type="checkbox" value="quick" onchange="searchRecipes()">
+                        <span>⚡ Quick (&lt;15min)</span>
+                    </label>
+                    <label class="dietary-checkbox">
+                        <input type="checkbox" value="meal_prep" onchange="searchRecipes()">
+                        <span>📦 Meal Prep</span>
+                    </label>
+                </div>
+                <div class="dietary-filter-row">
+                    <label class="dietary-checkbox">
+                        <input type="checkbox" value="omega_3" onchange="searchRecipes()">
+                        <span>🐟 Omega-3</span>
+                    </label>
+                    <label class="dietary-checkbox">
+                        <input type="checkbox" value="anti_inflammatory" onchange="searchRecipes()">
+                        <span>🌿 Anti-Inflammatory</span>
+                    </label>
+                    <label class="dietary-checkbox">
+                        <input type="checkbox" value="comfort" onchange="searchRecipes()">
+                        <span>🍲 Comfort Food</span>
+                    </label>
+                    <label class="dietary-checkbox">
+                        <input type="checkbox" value="healthy_fats" onchange="searchRecipes()">
+                        <span>🥑 Healthy Fats</span>
+                    </label>
+                </div>
+            </div>
+        </div>
+
+        <div class="filter-info" id="filterInfo" style="display: none;">
+            <span class="filter-count" id="filterCount"></span>
+            <span class="active-filters" id="activeFilters"></span>
+        </div>
+
+        <div class="view-toggle">
+            <button 
+                class="toggle-btn active" 
+                id="allRecipesBtn" 
+                onclick="showAllRecipes()"
+            >
+                All Recipes
+            </button>
+            {% if user %}
+            <button 
+                class="toggle-btn" 
+                id="favoritesBtn" 
+                onclick="showFavorites()"
+            >
+                ⭐ Favorites
+            </button>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="recipes-grid" id="recipesGrid">
+        <div class="loading" id="loadingSpinner">
+            <div class="spinner"></div>
+            <p>Loading recipes...</p>
+        </div>
+    </div>
+
+    <div class="pagination" id="pagination" style="display: none;">
+        <button class="page-btn" id="prevBtn" onclick="changePage(-1)">← Previous</button>
+        <span class="page-info" id="pageInfo"></span>
+        <button class="page-btn" id="nextBtn" onclick="changePage(1)">Next →</button>
+    </div>
+
+    <div class="no-results" id="noResults" style="display: none;">
+        <p>No recipes found. Try adjusting your filters.</p>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    let currentView = 'all';
+    let allRecipes = [];
+    let favoriteRecipes = [];
+    let currentPage = 1;
+    let totalPages = 1;
+    let totalRecipes = 0;
+    const pageSize = 50;
+    const isLoggedIn = {{ "true" if user else "false" }};
+
+    window.searchRecipes = async function(resetPage = true) {
+        if (resetPage) {
+            currentPage = 1;
+        }
+        
+        const query = document.getElementById('searchInput').value;
+        const mealType = document.getElementById('mealTypeFilter').value;
+        const minProtein = document.getElementById('minProteinFilter').value;
+        const maxCalories = document.getElementById('maxCaloriesFilter').value;
+        
+        // Get selected dietary tags
+        const dietaryTags = getSelectedDietaryTags();
+
+        showLoading();
+
+        try {
+            let url = `/api/recipes?query=${encodeURIComponent(query)}&meal_type=${mealType}&min_protein=${minProtein}&max_calories=${maxCalories}&page=${currentPage}&page_size=${pageSize}`;
+            
+            // Add dietary tags to URL if any are selected
+            if (dietaryTags.length > 0) {
+                url += `&dietary_tags=${dietaryTags.join(',')}`;
+            }
+            
+            const response = await fetch(url);
+            const data = await response.json();
+            
+            if (currentView === 'all') {
+                allRecipes = data.recipes;
+                totalPages = data.total_pages;
+                totalRecipes = data.total;
+                displayRecipes(allRecipes);
+                updatePagination();
+                updateFilterInfo();
+            }
+        } catch (error) {
+            console.error('Error searching recipes:', error);
+            hideLoading();
+        }
+    };
+
+    window.showAllRecipes = async function() {
+        currentView = 'all';
+        document.getElementById('allRecipesBtn').classList.add('active');
+        const favoritesBtn = document.getElementById('favoritesBtn');
+        if (favoritesBtn) {
+            favoritesBtn.classList.remove('active');
+        }
+        
+        if (allRecipes.length === 0) {
+            await searchRecipes();
+        } else {
+            displayRecipes(allRecipes);
+        }
+    };
+
+    window.showFavorites = async function() {
+        currentView = 'favorites';
+        document.getElementById('allRecipesBtn').classList.remove('active');
+        document.getElementById('favoritesBtn').classList.add('active');
+        
+        showLoading();
+        
+        try {
+            const response = await fetch('/api/recipes/favorites');
+            const data = await response.json();
+            favoriteRecipes = data.recipes;
+            displayRecipes(favoriteRecipes);
+        } catch (error) {
+            console.error('Error loading favorites:', error);
+            hideLoading();
+        }
+    };
+
+    window.addFavorite = async function(recipe) {
+        try {
+            const response = await fetch('/api/recipes/favorite', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(recipe),
+            });
+            
+            const data = await response.json();
+            
+            if (!data.already_exists) {
+                alert('Recipe added to favorites! ⭐');
+            }
+        } catch (error) {
+            if (error.message && error.message.includes('401')) {
+                alert('Please sign in to save favorites');
+            } else {
+                console.error('Error adding favorite:', error);
+                alert('Error adding recipe to favorites');
+            }
+        }
+    };
+
+    window.removeFavorite = async function(favoriteId, recipeName) {
+        if (!confirm(`Remove "${recipeName}" from favorites?`)) {
+            return;
+        }
+        
+        try {
+            const response = await fetch(`/api/recipes/favorite/${favoriteId}`, {
+                method: 'DELETE',
+            });
+            
+            if (response.ok) {
+                if (currentView === 'favorites') {
+                    favoriteRecipes = favoriteRecipes.filter(r => r.favorite_id !== favoriteId);
+                    displayRecipes(favoriteRecipes);
+                } else {
+                    const btn = document.querySelector(`[data-favorite-id="${favoriteId}"]`);
+                    if (btn) {
+                        btn.innerHTML = '☆ Add to Favorites';
+                        btn.onclick = () => addFavorite(getRecipeFromCard(btn));
+                    }
+                }
+                alert('Recipe removed from favorites');
+            }
+        } catch (error) {
+            console.error('Error removing favorite:', error);
+            alert('Error removing recipe from favorites');
+        }
+    };
+
+    window.toggleRecipeDetails = function(button) {
+        const details = button.nextElementSibling;
+        const card = button.closest('.recipe-card');
+        
+        if (details.style.display === 'none' || !details.style.display) {
+            details.style.display = 'block';
+            button.textContent = 'Hide Details';
+            card.classList.add('expanded');
+        } else {
+            details.style.display = 'none';
+            button.textContent = 'Show Details';
+            card.classList.remove('expanded');
+        }
+    };
+
+    window.clearFilters = function() {
+        document.getElementById('searchInput').value = '';
+        document.getElementById('mealTypeFilter').value = '';
+        document.getElementById('minProteinFilter').value = '0';
+        document.getElementById('maxCaloriesFilter').value = '1000';
+        
+        // Clear dietary tag checkboxes
+        const dietaryCheckboxes = document.querySelectorAll('.dietary-checkbox input[type="checkbox"]');
+        dietaryCheckboxes.forEach(checkbox => checkbox.checked = false);
+        
+        searchRecipes();
+    };
+
+    window.toggleDietaryFilters = function() {
+        const options = document.getElementById('dietaryFilterOptions');
+        const icon = document.getElementById('dietaryToggleIcon');
+        
+        if (options.style.display === 'none' || !options.style.display) {
+            options.style.display = 'block';
+            icon.textContent = '▲';
+        } else {
+            options.style.display = 'none';
+            icon.textContent = '▼';
+        }
+    };
+
+    function getSelectedDietaryTags() {
+        const checkboxes = document.querySelectorAll('.dietary-checkbox input[type="checkbox"]:checked');
+        return Array.from(checkboxes).map(cb => cb.value);
+    }
+
+    function updateFilterInfo() {
+        // Update filter info display to show active filters and accurate count
+        const query = document.getElementById('searchInput').value;
+        const mealType = document.getElementById('mealTypeFilter').value;
+        const minProtein = document.getElementById('minProteinFilter').value;
+        const maxCalories = document.getElementById('maxCaloriesFilter').value;
+        const dietaryTags = getSelectedDietaryTags();
+        
+        const filterInfo = document.getElementById('filterInfo');
+        const filterCount = document.getElementById('filterCount');
+        const activeFilters = document.getElementById('activeFilters');
+        
+        if (hasActiveFilters()) {
+            filterInfo.style.display = 'block';
+            filterCount.textContent = `${totalRecipes} recipes found`;
+            
+            const filterDescriptions = [];
+            if (query) filterDescriptions.push(`search: "${query}"`);
+            if (mealType) filterDescriptions.push(`type: ${mealType}`);
+            if (minProtein > 0) filterDescriptions.push(`protein: ≥${minProtein}g`);
+            if (maxCalories < 1000) filterDescriptions.push(`calories: ≤${maxCalories}`);
+            if (dietaryTags.length > 0) filterDescriptions.push(`tags: ${dietaryTags.join(', ')}`);
+            
+            activeFilters.textContent = filterDescriptions.length > 0 
+                ? `Filters: ${filterDescriptions.join(' | ')}` 
+                : '';
+        } else {
+            filterInfo.style.display = 'none';
+        }
+    }
+
+    function hasActiveFilters() {
+        const query = document.getElementById('searchInput').value;
+        const mealType = document.getElementById('mealTypeFilter').value;
+        const minProtein = document.getElementById('minProteinFilter').value;
+        const maxCalories = document.getElementById('maxCaloriesFilter').value;
+        const dietaryTags = getSelectedDietaryTags();
+        
+        return query || mealType || minProtein > 0 || maxCalories < 1000 || dietaryTags.length > 0;
+    }
+
+    window.changePage = function(delta) {
+        const newPage = currentPage + delta;
+        if (newPage >= 1 && newPage <= totalPages) {
+            currentPage = newPage;
+            searchRecipes(false);
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+    };
+
+    function updatePagination() {
+        const pagination = document.getElementById('pagination');
+        const pageInfo = document.getElementById('pageInfo');
+        const prevBtn = document.getElementById('prevBtn');
+        const nextBtn = document.getElementById('nextBtn');
+        
+        if (totalPages <= 1) {
+            pagination.style.display = 'none';
+            return;
+        }
+        
+        pagination.style.display = 'flex';
+        const start = (currentPage - 1) * pageSize + 1;
+        const end = Math.min(currentPage * pageSize, totalRecipes);
+        pageInfo.textContent = `Showing ${start}-${end} of ${totalRecipes} recipes (Page ${currentPage} of ${totalPages})`;
+        
+        prevBtn.disabled = currentPage === 1;
+        nextBtn.disabled = currentPage === totalPages;
+    }
+
+    function displayRecipes(recipes) {
+        hideLoading();
+        const grid = document.getElementById('recipesGrid');
+        const noResults = document.getElementById('noResults');
+        
+        if (recipes.length === 0) {
+            grid.innerHTML = '';
+            noResults.style.display = 'block';
+            return;
+        }
+        
+        noResults.style.display = 'none';
+        
+        grid.innerHTML = recipes.map(recipe => {
+            const isFavorite = recipe.favorite_id !== undefined;
+            const favoriteBtn = isLoggedIn 
+                ? (isFavorite
+                    ? `<button class="favorite-btn favorited" onclick="event.stopPropagation(); removeFavorite(${recipe.favorite_id}, '${recipe.name.replace(/'/g, "\\'")}')">★ Saved</button>`
+                    : `<button class="favorite-btn" onclick="event.stopPropagation(); addFavorite(${JSON.stringify(recipe).replace(/"/g, '&quot;')})">☆ Add to Favorites</button>`)
+                : '';
+            
+            return `
+                <div class="recipe-card ${isFavorite ? 'favorited-card' : ''}" data-recipe-name="${recipe.name}" onclick="goToRecipeDetail('${recipe.name.replace(/'/g, "\\'").replace(/ /g, '-')}')">
+                    <div class="recipe-header">
+                        <div class="meal-type-badge">${getMealTypeEmoji(recipe.meal_type)} ${recipe.meal_type}</div>
+                        ${favoriteBtn}
+                    </div>
+                    <h3 class="recipe-name">${recipe.name}</h3>
+                    <p class="recipe-description">${recipe.description || ''}</p>
+                    
+                    <div class="recipe-macros">
+                        <div class="macro-item">
+                            <span class="macro-icon">🔥</span>
+                            <span class="macro-value">${recipe.calories}</span>
+                            <span class="macro-label">cal</span>
+                        </div>
+                        <div class="macro-item">
+                            <span class="macro-icon">🍗</span>
+                            <span class="macro-value">${recipe.protein}g</span>
+                            <span class="macro-label">protein</span>
+                        </div>
+                        <div class="macro-item">
+                            <span class="macro-icon">🍝</span>
+                            <span class="macro-value">${recipe.carbs}g</span>
+                            <span class="macro-label">carbs</span>
+                        </div>
+                        <div class="macro-item">
+                            <span class="macro-icon">🥑</span>
+                            <span class="macro-value">${recipe.fat}g</span>
+                            <span class="macro-label">fat</span>
+                        </div>
+                    </div>
+                    
+                    <button class="show-details-btn" onclick="event.stopPropagation(); toggleRecipeDetails(this)">Show Details</button>
+                    
+                    <div class="recipe-details" style="display: none;">
+                        <div class="details-section">
+                            <h4>📝 Ingredients</h4>
+                            <ul class="ingredients-list">
+                                ${recipe.ingredients.map(ing => `<li>${ing}</li>`).join('')}
+                            </ul>
+                        </div>
+                        <div class="details-section">
+                            <h4>👨‍🍳 Instructions</h4>
+                            <p class="instructions-text">${recipe.instructions}</p>
+                        </div>
+                        ${recipe.dietary_tags && recipe.dietary_tags.length ? `
+                            <div class="details-section">
+                                <h4>🏷️ Dietary Tags</h4>
+                                <div class="tags-container">
+                                    ${recipe.dietary_tags.map(tag => `<span class="dietary-tag">${tag.replace('_', ' ')}</span>`).join('')}
+                                </div>
+                            </div>
+                        ` : ''}
+                    </div>
+                </div>
+            `;
+        }).join('');
+    }
+
+    function showLoading() {
+        const grid = document.getElementById('recipesGrid');
+        grid.innerHTML = `
+            <div class="loading" id="loadingSpinner">
+                <div class="spinner"></div>
+                <p>Loading recipes...</p>
+            </div>
+        `;
+    }
+
+    function hideLoading() {
+        const spinner = document.getElementById('loadingSpinner');
+        if (spinner) {
+            spinner.remove();
+        }
+    }
+
+    function getMealTypeEmoji(mealType) {
+        const emojis = {
+            breakfast: '🌅',
+            lunch: '☀️',
+            dinner: '🌙',
+            snack: '🍿',
+            post_workout: '💪',
+        };
+        return emojis[mealType] || '🍽️';
+    }
+
+    function getRecipeFromCard(button) {
+        const card = button.closest('.recipe-card');
+        return {
+            name: card.dataset.recipeName,
+        };
+    }
+
+    function goToRecipeDetail(recipeName) {
+        window.location.href = `/recipes/${recipeName}`;
+    }
+
+    // Real-time search with debouncing
+    let searchTimeout;
+    
+    function setupRealTimeSearch() {
+        const searchInput = document.getElementById('searchInput');
+        
+        searchInput.addEventListener('input', function(e) {
+            clearTimeout(searchTimeout);
+            searchTimeout = setTimeout(() => {
+                searchRecipes();
+            }, 300); // 300ms debounce
+        });
+        
+        // Also search on Enter key
+        searchInput.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                clearTimeout(searchTimeout);
+                searchRecipes();
+            }
+        });
+    }
+
+    // Initialize with search
+    document.addEventListener('DOMContentLoaded', function() {
+        searchRecipes();
+        setupRealTimeSearch();
+    });
+</script>
+{% endblock %}

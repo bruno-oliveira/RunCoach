@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Running Training Plan</title>
+</head>
+<body>
+    <div class="header">
+        <h1>🏃‍♂️ Personalized Running Training Plan</h1>
+        {% if target_distance|string == '30.0' or target_distance|string == '30' %}
+        <div class="subtitle">Target: Trail Running | {{ weeks }} Weeks</div>
+        {% else %}
+        <div class="subtitle">Target: {{ target_distance }}km Race | {{ weeks }} Weeks</div>
+        {% endif %}
+        <div class="subtitle">Generated on {{ created_at }}</div>
+    </div>
+    
+    <div class="plan-summary">
+        <div class="summary-grid">
+            <div class="summary-item">
+                <strong>📊 Current Mileage</strong>
+                {{ current_km }} km/week
+            </div>
+            <div class="summary-item">
+                <strong>🎯 Target Distance</strong>
+                {% if target_distance|string == '30.0' or target_distance|string == '30' %}
+                    Trail Running
+                {% else %}
+                    {{ target_distance }} km
+                {% endif %}
+            </div>
+            <div class="summary-item">
+                <strong>📅 Duration</strong>
+                {{ weeks }} weeks
+            </div>
+            <div class="summary-item">
+                <strong>📈 Peak Week</strong>
+                {{ plan | map(attribute='total_km') | max | round(1) }} km
+            </div>
+        </div>
+    </div>
+    
+    <div class="chart-container">
+        <div class="css-chart">
+            <h3>Weekly Mileage Progression</h3>
+            <div class="chart-bars">
+                {% for week in plan %}
+                <div class="chart-bar" style="height: {{ (week.total_km / (plan | map(attribute='total_km') | max)) * 100 }}%">
+                    <div class="bar-label">W{{ week.week }}</div>
+                    <div class="bar-value">{{ week.total_km }}km</div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+    
+    {% for week in plan %}
+    {% if loop.index0 % 3 == 0 and loop.index0 > 0 %}
+    <div class="page-break"></div>
+    {% endif %}
+    
+    <div class="week-card">
+        <div class="week-header">
+            <div class="week-title">Week {{ week.week }}</div>
+            <div class="week-total">{{ week.total_km }} km</div>
+        </div>
+        
+        <div class="workout-grid">
+            {% for workout in week.daily_workouts %}
+            <div class="workout-item {{ workout.type }}">
+                <div class="workout-type">{{ workout.type }}</div>
+                {% if workout.distance > 0 %}
+                <div class="workout-distance">{{ workout.distance }} km</div>
+                {% endif %}
+                <div class="workout-notes">{{ workout.notes }}</div>
+            </div>
+            {% endfor %}
+        </div>
+        
+        {% if week.strength_training %}
+        <div class="strength-section">
+            <div class="strength-title">💪 Strength Training</div>
+            <ul class="strength-list">
+                {% for exercise in week.strength_training[0].exercises %}
+                <li>{{ exercise }}</li>
+                {% endfor %}
+            </ul>
+        </div>
+        {% endif %}
+        
+        {% if week.training_tips %}
+        <div class="tips-section">
+            <div class="tips-title">🎯 Training Tips for Week {{ week.week }}</div>
+            <ul class="tips-list">
+                {% for tip in week.training_tips %}
+                <li>{{ tip }}</li>
+                {% endfor %}
+            </ul>
+        </div>
+        {% endif %}
+    </div>
+    {% endfor %}
+    
+    <div class="page-break"></div>
+    
+    <div class="nutrition-section">
+        <div class="nutrition-title">🥗 Nutrition Guidance for Runners</div>
+        <div class="nutrition-grid">
+            <div class="nutrition-item">
+                <h4>Pre-Run Fuel</h4>
+                <p>Banana with peanut butter, oatmeal, or toast 30-60 minutes before running</p>
+            </div>
+            <div class="nutrition-item">
+                <h4>Post-Run Recovery</h4>
+                <p>Chocolate milk, protein smoothie, or Greek yogurt within 30 minutes of completion</p>
+            </div>
+            <div class="nutrition-item">
+                <h4>Hydration</h4>
+                <p>Drink 2-3L water daily. Add electrolytes for runs over 60 minutes</p>
+            </div>
+            <div class="nutrition-item">
+                <h4>Meal Timing</h4>
+                <p>Eat balanced meals every 3-4 hours. Include complex carbs and lean protein</p>
+            </div>
+        </div>
+    </div>
+    
+    <div class="injury-prevention-section">
+        <div class="nutrition-title">🏥 Injury Prevention Tips</div>
+        <div class="tips-section">
+            <ul class="tips-list">
+                <li>Always warm up with 5-10 minutes of light jogging before workouts</li>
+                <li>Cool down with stretching after every run, focusing on hamstrings and calves</li>
+                <li>Replace running shoes every 500-800km to prevent injury</li>
+                <li>Listen to your body - take extra rest days if you feel pain or excessive fatigue</li>
+                <li>Include foam rolling 2-3 times per week for muscle recovery</li>
+                <li>Gradually increase mileage by no more than 10% per week</li>
+                <li>Cross-train with swimming or cycling on rest days to maintain fitness</li>
+            </ul>
+        </div>
+    </div>
+    
+    <div class="footer">
+        <p>Generated by RunCoach - Your Personalized Running Training Plan Generator</p>
+        <p>Consult with a healthcare professional before beginning any new training program</p>
+    </div>
+</body>
+</html>

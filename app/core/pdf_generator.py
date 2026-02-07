@@ -1,0 +1,698 @@
+import os
+import io
+import base64
+import hashlib
+import json
+import logging
+from typing import List, Dict, Any
+from datetime import datetime
+from pathlib import Path
+from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, PageBreak, KeepTogether
+from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+from reportlab.lib.pagesizes import A4
+from reportlab.lib.units import cm
+from reportlab.lib import colors
+from reportlab.lib.enums import TA_CENTER, TA_LEFT, TA_RIGHT, TA_JUSTIFY
+from reportlab.platypus.tableofcontents import TableOfContents
+from reportlab.lib.enums import TA_JUSTIFY
+import tempfile
+
+from app.models import TrainingPlan
+
+logger = logging.getLogger(__name__)
+
+class PDFGenerator:
+    def __init__(self, cache_dir: str = "./pdf_cache"):
+        self.cache_dir = Path(cache_dir)
+        self.cache_dir.mkdir(exist_ok=True)
+        self.styles = getSampleStyleSheet()
+        self._setup_custom_styles()
+        
+    def _setup_custom_styles(self):
+        """Setup custom styles for the PDF"""
+        # Title style
+        self.title_style = ParagraphStyle(
+            'CustomTitle',
+            parent=self.styles['Heading1'],
+            fontSize=24,
+            spaceAfter=30,
+            textColor=colors.HexColor('#667eea'),
+            alignment=TA_CENTER
+        )
+        
+        # Subtitle style
+        self.subtitle_style = ParagraphStyle(
+            'CustomSubtitle',
+            parent=self.styles['Heading2'],
+            fontSize=16,
+            spaceAfter=20,
+            textColor=colors.HexColor('#764ba2'),
+            alignment=TA_CENTER
+        )
+        
+        # Section header style
+        self.section_style = ParagraphStyle(
+            'SectionHeader',
+            parent=self.styles['Heading3'],
+            fontSize=14,
+            spaceAfter=12,
+            spaceBefore=20,
+            textColor=colors.HexColor('#667eea'),
+            alignment=TA_LEFT
+        )
+        
+        # Normal text style
+        self.normal_style = ParagraphStyle(
+            'CustomNormal',
+            parent=self.styles['Normal'],
+            fontSize=10,
+            spaceAfter=6,
+            leading=14
+        )
+        
+        # Small text style
+        self.small_style = ParagraphStyle(
+            'CustomSmall',
+            parent=self.styles['Normal'],
+            fontSize=8,
+            spaceAfter=3,
+            leading=10
+        )
+        
+        # Table cell style with text wrapping
+        self.table_cell_style = ParagraphStyle(
+            'TableCell',
+            parent=self.styles['Normal'],
+            fontSize=8,
+            leading=10,
+            wordWrap='CJK'
+        )
+        
+        # Table header style
+        self.table_header_style = ParagraphStyle(
+            'TableHeader',
+            parent=self.styles['Normal'],
+            fontSize=9,
+            leading=11,
+            wordWrap='CJK',
+            alignment=TA_CENTER
+        )
+
+    def _get_cache_key(self, plan_data: list, training_plan) -> str:
+        """Generate a unique cache key based on plan content."""
+        plan_str = json.dumps(plan_data, sort_keys=True)
+        content_hash = hashlib.md5(plan_str.encode()).hexdigest()
+        return f"{training_plan.id}_{content_hash}.pdf"
+
+    def generate_pdf(self, plan_data: List[Dict[str, Any]], training_plan: TrainingPlan) -> str:
+        """
+        Generate a professional PDF training plan using ReportLab
+
+        Args:
+            plan_data: List of weekly training plans
+            training_plan: Database training plan object
+
+        Returns:
+            Path to generated PDF file
+        """
+        cache_key = self._get_cache_key(plan_data, training_plan)
+        cache_path = self.cache_dir / cache_key
+
+        if cache_path.exists():
+            logger.info(f"Using cached PDF: {cache_key}")
+            return str(cache_path)
+
+        logger.info(f"Generating new PDF: {cache_key}")
+
+        temp_dir = tempfile.mkdtemp()
+        pdf_path = os.path.join(temp_dir, f"running_plan_{training_plan.id}.pdf")
+        
+        # Create PDF document
+        doc = SimpleDocTemplate(pdf_path, pagesize=A4, rightMargin=2*cm, leftMargin=2*cm, 
+                               topMargin=2*cm, bottomMargin=2*cm)
+        
+        # Build story (content)
+        story = []
+        
+        # First page: Title and overview only
+        self._add_title_page(story, training_plan, plan_data)
+        self._add_plan_summary(story, training_plan, plan_data)
+        
+        # Add page break before weekly plans
+        story.append(PageBreak())
+        
+        # Add weekly plans - each week on its own page
+        for week in plan_data:
+            self._add_weekly_plan(story, week)
+            story.append(PageBreak())
+        
+        # Remove the last page break if it's the final element
+        if story and isinstance(story[-1], PageBreak):
+            story.pop()
+        
+        # Add personalized nutrition plan if available
+        if training_plan.nutrition_plan_data:
+            story.append(PageBreak())
+            self._add_personalized_nutrition_plan(story, training_plan)
+        
+        # Add general nutrition guidance
+        story.append(PageBreak())
+        self._add_nutrition_guidance(story)
+        
+        # Add injury prevention
+        story.append(PageBreak())
+        self._add_injury_prevention(story)
+        
+        # Add footer
+        self._add_footer(story)
+        
+        # Build PDF
+        doc.build(story)
+
+        # Move to cache
+        import shutil
+        shutil.move(pdf_path, cache_path)
+        shutil.rmtree(temp_dir, ignore_errors=True)
+
+        return str(cache_path)
+    
+    def _add_title_page(self, story: List, training_plan: TrainingPlan, plan_data: List[Dict]):
+        """Add title page"""
+        story.append(Paragraph("🏃‍♂️ Personalized Running Training Plan", self.title_style))
+        story.append(Spacer(1, 0.5*cm))
+        
+        subtitle = f"Target: {training_plan.target_distance}km Race | {training_plan.weeks_duration} Weeks"
+        story.append(Paragraph(subtitle, self.subtitle_style))
+        story.append(Spacer(1, 0.3*cm))
+        
+        created_date = training_plan.created_at.strftime('%B %d, %Y')
+        story.append(Paragraph(f"Generated on {created_date}", self.normal_style))
+        story.append(Spacer(1, 2*cm))
+        
+        # Add key stats (30.0 = Trail Running)
+        target_distance_float = float(training_plan.target_distance)
+        target_display = "Trail Running" if target_distance_float == 30.0 else f"{training_plan.target_distance} km"
+        stats_data = [
+            ['Current Weekly Mileage', f"{training_plan.current_weekly_km} km"],
+            ['Target Distance', target_display],
+            ['Training Duration', f"{training_plan.weeks_duration} weeks"],
+            ['Peak Week Mileage', f"{max(week['total_km'] for week in plan_data):.1f} km"]
+        ]
+        
+        stats_table = Table(stats_data, colWidths=[5*cm, 3*cm])
+        stats_table.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, -1), colors.HexColor('#f8f9fa')),
+            ('TEXTCOLOR', (0, 0), (-1, -1), colors.black),
+            ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+            ('FONTNAME', (0, 0), (-1, -1), 'Helvetica'),
+            ('FONTSIZE', (0, 0), (-1, -1), 10),
+            ('GRID', (0, 0), (-1, -1), 1, colors.HexColor('#dee2e6'))
+        ]))
+        
+        story.append(stats_table)
+        story.append(Spacer(1, 2*cm))
+    
+    def _add_plan_summary(self, story: List, training_plan: TrainingPlan, plan_data: List[Dict]):
+        """Add plan overview with progress chart"""
+        story.append(Paragraph("Training Plan Overview", self.section_style))
+        
+        # Create simple progress chart using table
+        chart_data = [['Week', 'Mileage (km)', 'Progress']]
+        max_mileage = max(week['total_km'] for week in plan_data)
+        
+        for week in plan_data:
+            progress_bar = self._create_progress_bar(week['total_km'], max_mileage)
+            chart_data.append([f"Week {week['week']}", f"{week['total_km']:.1f}", progress_bar])
+        
+        chart_table = Table(chart_data, colWidths=[2*cm, 2*cm, 6*cm])
+        chart_table.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#667eea')),
+            ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+            ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+            ('FONTSIZE', (0, 0), (-1, 0), 10),
+            ('FONTNAME', (0, 1), (-1, -1), 'Helvetica'),
+            ('FONTSIZE', (0, 1), (-1, -1), 8),
+            ('GRID', (0, 0), (-1, -1), 1, colors.HexColor('#dee2e6'))
+        ]))
+        
+        story.append(chart_table)
+        story.append(Spacer(1, 1*cm))
+    
+    def _create_progress_bar(self, current: float, maximum: float) -> str:
+        """Create a simple text-based progress bar"""
+        if maximum == 0:
+            return "░" * 20 + " 0%"
+        
+        percentage = min(current / maximum, 1.0)
+        bar_length = 20
+        filled_length = int(bar_length * percentage)
+        bar = "█" * filled_length + "░" * (bar_length - filled_length)
+        return f"{bar} {percentage*100:.0f}%"
+    
+    def _add_weekly_plan(self, story: List, week: Dict[str, Any]):
+        """Add weekly training plan"""
+        story.append(Paragraph(f"Week {week['week']} - {week['total_km']:.1f} km", self.section_style))
+        
+        # Create workout table with proper text wrapping
+        workout_data = [['Day', 'Workout', 'Distance', 'Intensity', 'Notes']]
+        
+        for workout in week.get('daily_workouts', []):
+            # Convert all text to Paragraph objects for proper wrapping
+            workout_data.append([
+                Paragraph(self._get_day_name(workout['day']), self.table_cell_style),
+                Paragraph(workout['type'].title(), self.table_cell_style),
+                Paragraph(f"{workout.get('distance', 0):.1f} km" if workout.get('distance', 0) > 0 else "-", self.table_cell_style),
+                Paragraph(workout.get('intensity', '-').title(), self.table_cell_style),
+                Paragraph(self._wrap_text(workout.get('notes', ''), 40), self.table_cell_style)
+            ])
+        
+        # Convert headers to Paragraph objects with proper alignment
+        header_styles = [self.table_header_style] * len(workout_data[0])
+        header_styles[0] = ParagraphStyle(
+            'DayHeader',
+            parent=self.table_header_style,
+            alignment=TA_CENTER
+        )
+        for i in range(len(workout_data[0])):
+            workout_data[0][i] = Paragraph(workout_data[0][i], header_styles[i])
+        
+        workout_table = Table(workout_data, colWidths=[2.5*cm, 2*cm, 1.5*cm, 1.5*cm, 5*cm])
+        workout_table.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#667eea')),
+            ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+            ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+            ('FONTSIZE', (0, 0), (-1, 0), 9),
+            ('FONTNAME', (0, 1), (-1, -1), 'Helvetica'),
+            ('FONTSIZE', (0, 1), (-1, -1), 8),
+            ('GRID', (0, 0), (-1, -1), 1, colors.HexColor('#dee2e6')),
+            ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+            ('LEFTPADDING', (0, 0), (-1, -1), 6),
+            ('RIGHTPADDING', (0, 0), (-1, -1), 6),
+            ('TOPPADDING', (0, 0), (-1, -1), 8),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 8)
+        ]))
+        
+        story.append(workout_table)
+        story.append(Spacer(1, 0.5*cm))
+        
+        # Add strength training if available
+        if week.get('strength_training'):
+            story.append(Paragraph("💪 Strength Training", self.normal_style))
+            for exercise in week['strength_training'][0].get('exercises', []):
+                story.append(Paragraph(f"• {exercise}", self.small_style))
+            story.append(Spacer(1, 0.3*cm))
+        
+        # Add training tips if available
+        if week.get('training_tips'):
+            story.append(Paragraph("🎯 Training Tips", self.normal_style))
+            for tip in week['training_tips']:
+                story.append(Paragraph(f"• {tip}", self.small_style))
+            story.append(Spacer(1, 0.5*cm))
+    
+    def _add_nutrition_guidance(self, story: List):
+        """Add comprehensive nutrition guidance section"""
+        story.append(Paragraph("🥗 Complete Nutrition Guide for Runners", self.section_style))
+        
+        # Pre-Run Fuel section
+        story.append(Paragraph("⚡ Pre-Run Fuel (30-90 minutes before)", self.normal_style))
+        pre_run_meals = [
+            "Quick Energy: Banana + 1 tbsp peanut butter",
+            "Sustained Energy: Oatmeal with berries + honey",
+            "Light Option: Toast with avocado + sea salt",
+            "Hydration Focus: Smoothie with spinach, banana, almond milk",
+            "Race Day: Plain bagel with jam (low fiber)"
+        ]
+        for meal in pre_run_meals:
+            story.append(Paragraph(f"• {meal}", self.small_style))
+        story.append(Spacer(1, 0.3*cm))
+        
+        # Post-Run Recovery section
+        story.append(Paragraph("🔄 Post-Run Recovery (within 30 minutes)", self.normal_style))
+        post_run_options = [
+            "Protein + Carbs: Chocolate milk (8oz)",
+            "Muscle Repair: Greek yogurt + granola + berries",
+            "Hydration + Energy: Coconut water + banana",
+            "Complete Recovery: Protein smoothie (1 scoop protein, banana, spinach)",
+            "Quick Option: Recovery bar with 3:1 carb:protein ratio"
+        ]
+        for option in post_run_options:
+            story.append(Paragraph(f"• {option}", self.small_style))
+        story.append(Spacer(1, 0.3*cm))
+        
+        # Daily Meal Plans
+        story.append(Paragraph("🍽️ Comprehensive Daily Meal Plans", self.normal_style))
+        
+        meal_plan_data = [
+            ['Meal', 'Training Day Options', 'Rest Day Options'],
+            ['Breakfast', 
+             'Oatmeal with nuts, berries, honey\nWhole grain toast + eggs + avocado\nSmoothie with spinach, banana, protein powder\nGreek yogurt + granola + berries\nBreakfast burrito with black beans, eggs',
+             'Greek yogurt parfait\nSmoothie bowl with granola\nOvernight oats with chia seeds\nWhole grain pancakes with fruit\nAvocado toast with poached eggs'],
+            ['Lunch', 
+             'Quinoa bowl with roasted vegetables + chicken\nLarge salad with salmon + sweet potato\nTurkey wrap with hummus + vegetables\nLentil soup + whole grain bread\nBuddha bowl with tahini dressing',
+             'Vegetable soup + whole grain bread\nLentil salad with feta cheese\nCaprese salad with whole grain pasta\nChickpea salad sandwich\nQuinoa tabbouleh with grilled vegetables'],
+            ['Afternoon Snack', 
+             'Apple + almond butter\nTrail mix + dried fruit\nProtein smoothie with banana\nRice cakes with hummus\nEnergy balls with dates + nuts',
+             'Hummus + vegetable sticks\nCottage cheese + peaches\nGreek yogurt with honey\nMixed berries + nuts\nDark chocolate + almonds'],
+            ['Pre-Run Fuel', 
+             'Banana + peanut butter\nToast with jam + honey\nEnergy gel + water\nDates + almond butter\nOatmeal bar + sports drink',
+             'Light fruit + water\nHerbal tea + honey\nElectrolyte drink\nCoconut water\nRice cakes with banana'],
+            ['Post-Run Recovery', 
+             'Chocolate milk + banana\nProtein shake with berries\nGreek yogurt + granola\nRecovery smoothie with spinach\nCottage cheese + pineapple',
+             'Green smoothie + protein\nGreek yogurt + nuts\nOvernight oats + protein powder\nQuinoa bowl + fruit\nEggs + whole grain toast'],
+            ['Dinner', 
+             'Grilled salmon + brown rice + broccoli\nLean beef + roasted vegetables + quinoa\nChicken stir-fry with brown rice\nTurkey meatballs + whole wheat pasta\nFish tacos with slaw + beans',
+             'Vegetable stir-fry + tofu\nPasta primavera with olive oil\nBlack bean burgers + sweet potato\nLentil shepherd\'s pie\nRoasted vegetable + chickpea curry']
+        ]
+        
+        # Convert to Paragraph objects for proper wrapping
+        paragraph_data = []
+        for row in meal_plan_data:
+            paragraph_row = []
+            for cell in row:
+                paragraph_row.append(Paragraph(cell, self.table_cell_style))
+            paragraph_data.append(paragraph_row)
+        
+        # Convert headers
+        for i in range(len(paragraph_data[0])):
+            paragraph_data[0][i] = Paragraph(meal_plan_data[0][i], self.table_header_style)
+        
+        meal_table = Table(paragraph_data, colWidths=[2.5*cm, 5*cm, 5*cm])
+        meal_table.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#9c27b0')),
+            ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+            ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
+            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+            ('FONTSIZE', (0, 0), (-1, 0), 9),
+            ('FONTNAME', (0, 1), (-1, -1), 'Helvetica'),
+            ('FONTSIZE', (0, 1), (-1, -1), 8),
+            ('GRID', (0, 0), (-1, -1), 1, colors.HexColor('#dee2e6')),
+            ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+            ('LEFTPADDING', (0, 0), (-1, -1), 6),
+            ('RIGHTPADDING', (0, 0), (-1, -1), 6),
+            ('TOPPADDING', (0, 0), (-1, -1), 8),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 8)
+        ]))
+        
+        story.append(meal_table)
+        story.append(Spacer(1, 0.5*cm))
+        
+        # Hydration Strategy
+        story.append(Paragraph("💧 Hydration Strategy", self.normal_style))
+        hydration_tips = [
+            "Daily Base: 2.5-3L water + electrolytes",
+            "Pre-Run: 500ml 2 hours before, 250ml 30 minutes before",
+            "During Run: 150-200ml every 15-20 minutes (over 60 minutes)",
+            "Post-Run: 500-750ml per kg of body weight lost",
+            "Electrolyte Sources: Coconut water, sports drinks, salt tabs",
+            "Urine Color Test: Pale yellow = well hydrated"
+        ]
+        for tip in hydration_tips:
+            story.append(Paragraph(f"• {tip}", self.small_style))
+        story.append(Spacer(1, 0.5*cm))
+        
+        # Race Week Nutrition
+        story.append(Paragraph("🏁 Race Week Nutrition Strategy", self.normal_style))
+        race_week_tips = [
+            "7 Days Before: Increase carbs to 70% of calories",
+            "3 Days Before: Carb-load with pasta, rice, potatoes",
+            "2 Days Before: Reduce fiber, avoid spicy foods",
+            "Day Before: Simple carbs, hydrate well, early dinner",
+            "Race Morning: Familiar breakfast, 2-3 hours before start",
+            "During Race: Energy gels every 45 minutes + water"
+        ]
+        for tip in race_week_tips:
+            story.append(Paragraph(f"• {tip}", self.small_style))
+        story.append(Spacer(1, 1*cm))
+    
+    def _add_personalized_nutrition_plan(self, story: List, training_plan: TrainingPlan):
+        """Add personalized nutrition plan with meals"""
+        import json
+        
+        try:
+            nutrition_plan = json.loads(training_plan.nutrition_plan_data)
+        except (json.JSONDecodeError, AttributeError):
+            return
+        
+        story.append(Paragraph("🍽️ Your Personalized Nutrition Plan", self.section_style))
+        
+        # Add nutrition targets
+        if "nutrition_targets" in nutrition_plan:
+            targets = nutrition_plan["nutrition_targets"]
+            story.append(Paragraph("📊 Your Daily Nutrition Targets", self.normal_style))
+            
+            targets_data = [
+                ['Nutrient', 'Daily Target', 'Notes'],
+                ['Calories', f"{targets.get('calories', 0)} kcal", "Based on your training volume"],
+                ['Protein', f"{targets.get('protein', 0)} g", "For muscle repair and recovery"],
+                ['Carbs', f"{targets.get('carbs', 0)} g", "Primary fuel for running"],
+                ['Fat', f"{targets.get('fat', 0)} g", "For hormone production and health"],
+                ['Fiber', f"{targets.get('fiber', 0)} g", "For digestive health and satiety"]
+            ]
+            
+            targets_table = Table(targets_data, colWidths=[3*cm, 3*cm, 6*cm])
+            targets_table.setStyle(TableStyle([
+                ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#9c27b0')),
+                ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+                ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+                ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+                ('FONTSIZE', (0, 0), (-1, 0), 9),
+                ('FONTNAME', (0, 1), (-1, -1), 'Helvetica'),
+                ('FONTSIZE', (0, 1), (-1, -1), 8),
+                ('GRID', (0, 0), (-1, -1), 1, colors.HexColor('#dee2e6')),
+                ('VALIGN', (0, 0), (-1, -1), 'MIDDLE')
+            ]))
+            
+            story.append(targets_table)
+            story.append(Spacer(1, 0.5*cm))
+        
+        # Add meal options
+        if "meal_options" in nutrition_plan:
+            story.append(Paragraph("🥗 Your Personalized Meal Options", self.normal_style))
+            
+            meal_options = nutrition_plan["meal_options"]
+            
+            # Create meal plan table
+            meal_plan_data = [['Meal Type', 'Recommended Options', 'Key Benefits']]
+            
+            meal_benefits = {
+                'breakfast': 'Energy for morning runs',
+                'lunch': 'Sustained afternoon energy',
+                'dinner': 'Muscle recovery overnight',
+                'snack': 'Quick energy between meals',
+                'post_workout': 'Optimal recovery nutrition'
+            }
+            
+            for meal_type, meals in meal_options.items():
+                if meals and len(meals) > 0:
+                    # List top 2-3 meal options
+                    meal_list = []
+                    for meal in meals[:3]:
+                        meal_name = meal.get('name', 'Unknown meal')
+                        protein = meal.get('protein', 0)
+                        fiber = meal.get('fiber', 0)
+                        meal_list.append(f"• {meal_name} (P:{protein}g, F:{fiber}g)")
+                    
+                    meal_text = "\n".join(meal_list)
+                    benefits = meal_benefits.get(meal_type, 'Balanced nutrition')
+                    
+                    meal_plan_data.append([
+                        Paragraph(meal_type.title(), self.table_cell_style),
+                        Paragraph(meal_text, self.table_cell_style),
+                        Paragraph(benefits, self.table_cell_style)
+                    ])
+            
+            if len(meal_plan_data) > 1:  # Only add if we have meal data
+                meal_table = Table(meal_plan_data, colWidths=[3*cm, 7*cm, 4*cm])
+                meal_table.setStyle(TableStyle([
+                    ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#4caf50')),
+                    ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+                    ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
+                    ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+                    ('FONTSIZE', (0, 0), (-1, 0), 9),
+                    ('FONTNAME', (0, 1), (-1, -1), 'Helvetica'),
+                    ('FONTSIZE', (0, 1), (-1, -1), 8),
+                    ('GRID', (0, 0), (-1, -1), 1, colors.HexColor('#dee2e6')),
+                    ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+                    ('LEFTPADDING', (0, 0), (-1, -1), 6),
+                    ('RIGHTPADDING', (0, 0), (-1, -1), 6),
+                    ('TOPPADDING', (0, 0), (-1, -1), 8),
+                    ('BOTTOMPADDING', (0, 0), (-1, -1), 8)
+                ]))
+                
+                story.append(meal_table)
+                story.append(Spacer(1, 0.5*cm))
+        
+        # Add general nutrition tips
+        if "general_tips" in nutrition_plan:
+            story.append(Paragraph("💡 Your Personalized Nutrition Tips", self.normal_style))
+            for tip in nutrition_plan["general_tips"][:5]:  # Show top 5 tips
+                story.append(Paragraph(f"• {tip}", self.small_style))
+            story.append(Spacer(1, 0.5*cm))
+        
+        # Add hydration guide
+        if "hydration_guide" in nutrition_plan:
+            hydration = nutrition_plan["hydration_guide"]
+            story.append(Paragraph("💧 Your Personalized Hydration Plan", self.normal_style))
+            
+            hydration_data = [
+                ['Timing', 'Target', 'Notes'],
+                ['Daily Base', hydration.get('daily_target', '2000ml'), 'Maintain throughout the day'],
+                ['Pre-Run', hydration.get('pre_run', '300-500ml'), '2 hours before training'],
+                ['During Run', hydration.get('during_run', '200-400ml/hour'), 'Adjust for intensity and heat'],
+                ['Post-Run', hydration.get('post_run', '150% loss'), 'Replace lost fluids'],
+                ['Race Day', hydration.get('race_day', '400-600ml/hour'), 'With electrolytes for longer events']
+            ]
+            
+            hydration_table = Table(hydration_data, colWidths=[3*cm, 4*cm, 6*cm])
+            hydration_table.setStyle(TableStyle([
+                ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#2196f3')),
+                ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+                ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+                ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+                ('FONTSIZE', (0, 0), (-1, 0), 9),
+                ('FONTNAME', (0, 1), (-1, -1), 'Helvetica'),
+                ('FONTSIZE', (0, 1), (-1, -1), 8),
+                ('GRID', (0, 0), (-1, -1), 1, colors.HexColor('#dee2e6')),
+                ('VALIGN', (0, 0), (-1, -1), 'MIDDLE')
+            ]))
+            
+            story.append(hydration_table)
+            story.append(Spacer(1, 0.5*cm))
+        
+        story.append(Spacer(1, 1*cm))
+    
+    def _add_injury_prevention(self, story: List):
+        """Add comprehensive injury prevention section"""
+        story.append(Paragraph("🏥 Complete Injury Prevention Guide", self.section_style))
+        
+        # Warm-up and Cool-down
+        story.append(Paragraph("🔥 Warm-up Protocol (10-15 minutes)", self.normal_style))
+        warmup_steps = [
+            "Dynamic Stretches: Leg swings, walking lunges, high knees (5 minutes)",
+            "Activation Exercises: Glute bridges, monster walks (3 minutes)",
+            "Progressive Run: Walk 2min → jog 3min → run 5min (5 minutes)",
+            "Sport-Specific Drills: A-skips, B-skips, butt kicks (2 minutes)"
+        ]
+        for step in warmup_steps:
+            story.append(Paragraph(f"• {step}", self.small_style))
+        story.append(Spacer(1, 0.3*cm))
+        
+        story.append(Paragraph("❄️ Cool-down Protocol (10-15 minutes)", self.normal_style))
+        cooldown_steps = [
+            "Active Recovery: Easy walk or jog (5 minutes)",
+            "Static Stretches: Hold each 30 seconds, no bouncing",
+            "Focus Areas: Hamstrings, quads, calves, hips, IT band",
+            "Foam Rolling: 1-2 minutes per muscle group"
+        ]
+        for step in cooldown_steps:
+            story.append(Paragraph(f"• {step}", self.small_style))
+        story.append(Spacer(1, 0.3*cm))
+        
+        # Strength Training
+        story.append(Paragraph("💪 Essential Strength Training (2-3x per week)", self.normal_style))
+        strength_exercises = [
+            "Lower Body: Squats (3x12), Lunges (3x10 each), Calf raises (3x20)",
+            "Core: Plank (3x45sec), Side planks (3x30sec each), Dead bugs (3x10 each)",
+            "Hip Stability: Clamshells (3x15 each), Glute bridges (3x15), Monster walks (3x10 each)",
+            "Upper Body: Push-ups (3x10), Rows (3x12), Overhead press (3x10)"
+        ]
+        for exercise in strength_exercises:
+            story.append(Paragraph(f"• {exercise}", self.small_style))
+        story.append(Spacer(1, 0.3*cm))
+        
+        # Recovery Strategies
+        story.append(Paragraph("🛌 Recovery Strategies", self.normal_style))
+        recovery_tips = [
+            "Sleep: 7-9 hours nightly, consistent schedule",
+            "Nutrition: Protein within 30 minutes post-run, anti-inflammatory foods",
+            "Hydration: 2-3L daily + electrolytes on long run days",
+            "Active Recovery: Swimming, cycling, yoga on rest days",
+            "Massage: Professional monthly + self-massage weekly"
+        ]
+        for tip in recovery_tips:
+            story.append(Paragraph(f"• {tip}", self.small_style))
+        story.append(Spacer(1, 0.3*cm))
+        
+        # Warning Signs
+        story.append(Paragraph("⚠️ Warning Signs - When to Stop", self.normal_style))
+        warning_signs = [
+            "Pain that increases during run (vs. decreases with warm-up)",
+            "Sharp, stabbing, or localized pain",
+            "Pain that causes limping or form changes",
+            "Swelling, redness, or warmth in joints/tissues",
+            "Pain that persists >24 hours after rest",
+            "Night pain or pain at rest"
+        ]
+        for sign in warning_signs:
+            story.append(Paragraph(f"• {sign}", self.small_style))
+        story.append(Spacer(1, 0.3*cm))
+        
+        # Equipment Management
+        story.append(Paragraph("👟 Equipment Management", self.normal_style))
+        equipment_tips = [
+            "Running Shoes: Replace every 500-800km or 6-12 months",
+            "Rotation: Have 2+ pairs, alternate to extend life",
+            "Proper Fit: Shop in afternoon, thumb-width space at toe",
+            "Surface-Specific: Road shoes for pavement, trail shoes for off-road",
+            "Monitoring: Check for uneven wear patterns, midsole compression"
+        ]
+        for tip in equipment_tips:
+            story.append(Paragraph(f"• {tip}", self.small_style))
+        story.append(Spacer(1, 0.3*cm))
+        
+        # Training Progression
+        story.append(Paragraph("📈 Smart Training Progression", self.normal_style))
+        progression_rules = [
+            "10% Rule: Increase weekly mileage by max 10% every 2-3 weeks",
+            "Recovery Weeks: Reduce mileage by 20-30% every 4th week",
+            "Hard/Easy Balance: Follow hard days with easy or rest days",
+            "Listen to Body: Use perceived exertion scale 1-10, stay at 6-7 for easy runs",
+            "Cross-Training: Replace 1-2 runs weekly with low-impact activities"
+        ]
+        for rule in progression_rules:
+            story.append(Paragraph(f"• {rule}", self.small_style))
+        story.append(Spacer(1, 1*cm))
+    
+    def _wrap_text(self, text: str, max_chars: int) -> str:
+        """Wrap text to fit within table cells"""
+        if len(text) <= max_chars:
+            return text
+        
+        words = text.split()
+        lines = []
+        current_line = ""
+        
+        for word in words:
+            if len(current_line + " " + word) <= max_chars:
+                if current_line:
+                    current_line += " " + word
+                else:
+                    current_line = word
+            else:
+                if current_line:
+                    lines.append(current_line)
+                current_line = word
+        
+        if current_line:
+            lines.append(current_line)
+        
+        return "\n".join(lines)
+    
+    def _add_footer(self, story: List):
+        """Add footer information"""
+        story.append(Spacer(1, 1*cm))
+        story.append(Paragraph("Generated by RunCoach - Your Personalized Running Training Plan Generator", 
+                              ParagraphStyle('Footer', parent=self.styles['Normal'], fontSize=8, 
+                                            alignment=TA_CENTER, textColor=colors.gray)))
+        story.append(Paragraph("Consult with a healthcare professional before beginning any new training program", 
+                              ParagraphStyle('Footer', parent=self.styles['Normal'], fontSize=8, 
+                                            alignment=TA_CENTER, textColor=colors.gray)))
+    
+    def _get_day_name(self, day_number: int) -> str:
+        """Convert day number to day name"""
+        days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
+        if 1 <= day_number <= 7:
+            return days[day_number - 1]
+        return f"Day {day_number}"

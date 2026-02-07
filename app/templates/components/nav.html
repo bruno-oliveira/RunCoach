@@ -1,0 +1,204 @@
+{% macro render(user=None, show_logo=True, current_page='') %}
+<nav class="navbar">
+    <div class="nav-container">
+        {% if show_logo %}
+        <div class="nav-brand">
+            <a href="/">🏃‍♂️ RunCoach</a>
+        </div>
+        {% endif %}
+        
+        <button class="nav-toggle" onclick="toggleMobileNav()">
+            <span></span>
+            <span></span>
+            <span></span>
+        </button>
+        
+        <div class="nav-menu" id="navMenu">
+            <ul class="nav-links">
+                <li><a href="/" class="{{ 'active' if current_page == 'home' else '' }}">Home</a></li>
+                <li><a href="/recipes" class="{{ 'active' if current_page == 'recipes' else '' }}">🥗 Recipes</a></li>
+                <li><a href="/strength-training" class="{{ 'active' if current_page == 'strength' else '' }}">💪 Strength Training</a></li>
+                {% if user %}
+                <li><a href="/my-plans" class="{{ 'active' if current_page == 'my-plans' else '' }}">My Plans</a></li>
+                <li><a href="/analytics" class="{{ 'active' if current_page == 'analytics' else '' }}">📊 Analytics</a></li>
+                {% endif %}
+            </ul>
+            
+            {% if user %}
+            <div class="nav-user">
+                {% if user.picture %}
+                <img src="{{ user.picture }}" alt="{{ user.name }}" class="nav-user-avatar">
+                {% endif %}
+                <span class="nav-user-name">{{ user.name or user.email }}</span>
+                <button class="nav-logout-btn" onclick="logout()">Sign Out</button>
+            </div>
+            {% else %}
+            <div class="nav-auth">
+                <div id="nav-google-signin-button"></div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</nav>
+
+<style>
+.navbar {
+    background: white;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    position: sticky;
+    top: 0;
+    z-index: 1000;
+    transition: all 0.3s ease;
+}
+
+.nav-auth, .nav-user {
+    transition: all 0.3s ease;
+    min-height: 40px;
+    display: flex;
+    align-items: center;
+}
+
+.nav-container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 1rem 2rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.nav-brand a {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: #667eea;
+    text-decoration: none;
+}
+
+.nav-toggle {
+    display: none;
+    flex-direction: column;
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 0.5rem;
+}
+
+.nav-toggle span {
+    width: 25px;
+    height: 3px;
+    background: #333;
+    margin: 3px 0;
+    transition: 0.3s;
+}
+
+.nav-menu {
+    display: flex;
+    align-items: center;
+    gap: 2rem;
+}
+
+.nav-links {
+    display: flex;
+    list-style: none;
+    gap: 1.5rem;
+    margin: 0;
+    padding: 0;
+}
+
+.nav-links a {
+    color: #333;
+    text-decoration: none;
+    font-weight: 500;
+    transition: color 0.3s;
+}
+
+.nav-links a:hover,
+.nav-links a.active {
+    color: #667eea;
+}
+
+.nav-user {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.nav-user-avatar {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    object-fit: cover;
+}
+
+.nav-user-name {
+    font-size: 0.9rem;
+    color: #333;
+}
+
+.nav-logout-btn {
+    padding: 0.5rem 1rem;
+    background: #dc3545;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    transition: background 0.3s;
+}
+
+.nav-logout-btn:hover {
+    background: #c82333;
+}
+
+.nav-auth {
+    display: flex;
+    align-items: center;
+}
+
+#nav-google-signin-button {
+    display: flex;
+    align-items: center;
+}
+
+@media (max-width: 768px) {
+    .nav-toggle {
+        display: flex;
+    }
+    
+    .nav-menu {
+        position: absolute;
+        top: 100%;
+        left: 0;
+        right: 0;
+        background: white;
+        flex-direction: column;
+        padding: 1rem;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        display: none;
+    }
+    
+    .nav-menu.active {
+        display: flex;
+    }
+    
+    .nav-links {
+        flex-direction: column;
+        width: 100%;
+    }
+    
+    .nav-user {
+        flex-direction: column;
+        width: 100%;
+        padding-top: 1rem;
+        border-top: 1px solid #e0e0e0;
+    }
+}
+</style>
+
+<script>
+function toggleMobileNav() {
+    const navMenu = document.getElementById('navMenu');
+    navMenu.classList.toggle('active');
+}
+</script>
+{% endmacro %}

@@ -1,0 +1,2517 @@
+[
+  {
+    "name": "Apple with Almond Butter",
+    "meal_type": "snack",
+    "description": "Crunchy apple with protein-rich almond butter",
+    "instructions": "Using a sharp knife, carefully slice the main ingredient into uniform pieces. Arrange on a plate or in a container. Add 1 medium apple, 2 tbsp almond butter as specified. For enhanced flavor, let sit for 5 minutes before serving. Perfect for satisfying hunger between meals and maintaining steady energy levels.",
+    "prep_time": 3,
+    "cook_time": 0,
+    "calories": 220,
+    "protein": 6,
+    "fiber": 5,
+    "carbs": 24,
+    "fat": 12,
+    "ingredients": [
+      "1 medium apple",
+      "2 tbsp almond butter"
+    ],
+    "dietary_tags": [
+      "high_fiber",
+      "quick",
+      "portable"
+    ]
+  },
+  {
+    "name": "Hard-Boiled Eggs with Avocado",
+    "meal_type": "snack",
+    "description": "Protein-packed eggs with healthy fats from avocado",
+    "instructions": "Using a sharp knife, carefully slice the main ingredient into uniform pieces. Arrange on a plate or in a container. Add 2 hard-boiled eggs, 1/4 avocado, salt as specified. For enhanced flavor, let sit for 5 minutes before serving. Perfect for satisfying hunger between meals and maintaining steady energy levels.",
+    "prep_time": 5,
+    "cook_time": 0,
+    "calories": 240,
+    "protein": 14,
+    "fiber": 4,
+    "carbs": 8,
+    "fat": 18,
+    "ingredients": [
+      "2 hard-boiled eggs",
+      "1/4 avocado",
+      "salt",
+      "pepper"
+    ],
+    "dietary_tags": [
+      "high_protein",
+      "high_fiber",
+      "quick"
+    ]
+  },
+  {
+    "name": "Trail Mix with Nuts and Seeds",
+    "meal_type": "snack",
+    "description": "Energy-dense mix with protein, fiber, and healthy fats",
+    "instructions": "In a small bowl, gently combine 1/4 cup almonds, 1 tbsp pumpkin seeds, 1 tbsp dried cranberries until well distributed. For best flavor, let the mixture sit for 5-10 minutes before serving to allow flavors to meld. Store in an airtight container for up to 3 days. Perfect for satisfying hunger between meals and maintaining steady energy levels.",
+    "prep_time": 2,
+    "cook_time": 0,
+    "calories": 280,
+    "protein": 8,
+    "fiber": 4,
+    "carbs": 24,
+    "fat": 18,
+    "ingredients": [
+      "1/4 cup almonds",
+      "1 tbsp pumpkin seeds",
+      "1 tbsp dried cranberries",
+      "1 tbsp dark chocolate chips"
+    ],
+    "dietary_tags": [
+      "high_protein",
+      "high_fiber",
+      "portable"
+    ]
+  },
+  {
+    "name": "Edamame with Sea Salt",
+    "meal_type": "snack",
+    "description": "Steamed edamame pods with sea salt",
+    "instructions": "Prepare the base ingredient and arrange it on a serving plate. Evenly distribute 1 cup edamame pods, sea salt over the top. Garnish with optional herbs or spices if desired. Serve immediately for best texture and flavor. Perfect for satisfying hunger between meals and maintaining steady energy levels.",
+    "prep_time": 5,
+    "cook_time": 5,
+    "calories": 180,
+    "protein": 16,
+    "fiber": 8,
+    "carbs": 16,
+    "fat": 8,
+    "ingredients": [
+      "1 cup edamame pods",
+      "sea salt"
+    ],
+    "dietary_tags": [
+      "high_protein",
+      "high_fiber",
+      "vegetarian"
+    ]
+  },
+  {
+    "name": "Greek Yogurt with Honey",
+    "meal_type": "snack",
+    "description": "Creamy Greek yogurt drizzled with honey and nuts",
+    "instructions": "Prepare the base ingredient and arrange it on a serving plate. Evenly distribute 1 cup Greek yogurt, 1 tbsp honey, 2 tbsp almonds over the top. Garnish with optional herbs or spices if desired. Serve immediately for best texture and flavor. Perfect for satisfying hunger between meals and maintaining steady energy levels.",
+    "prep_time": 3,
+    "cook_time": 0,
+    "calories": 280,
+    "protein": 24,
+    "fiber": 6,
+    "carbs": 22,
+    "fat": 12,
+    "ingredients": [
+      "1 cup Greek yogurt",
+      "1 tbsp honey",
+      "2 tbsp almonds",
+      "1/2 cup berries"
+    ],
+    "dietary_tags": [
+      "high_protein",
+      "high_fiber",
+      "quick"
+    ]
+  },
+  {
+    "name": "Protein Bar",
+    "meal_type": "snack",
+    "description": "Homemade protein bar with oats and peanut butter",
+    "instructions": "In a small bowl, gently combine 1 cup oats, 1/2 cup protein powder, 1/2 cup peanut butter until well distributed. For best flavor, let the mixture sit for 5-10 minutes before serving to allow flavors to meld. Store in an airtight container for up to 3 days. Perfect for satisfying hunger between meals and maintaining steady energy levels.",
+    "prep_time": 15,
+    "cook_time": 0,
+    "calories": 320,
+    "protein": 20,
+    "fiber": 8,
+    "carbs": 28,
+    "fat": 16,
+    "ingredients": [
+      "1 cup oats",
+      "1/2 cup protein powder",
+      "1/2 cup peanut butter",
+      "1/4 cup honey",
+      "1/4 cup chocolate chips",
+      "1 tsp vanilla"
+    ],
+    "dietary_tags": [
+      "high_protein",
+      "high_fiber",
+      "meal_prep"
+    ]
+  },
+  {
+    "name": "Veggies and Hummus",
+    "meal_type": "snack",
+    "description": "Fresh vegetable sticks with protein-rich hummus",
+    "instructions": "Using a sharp knife, carefully slice the main ingredient into uniform pieces. Arrange on a plate or in a container. Add 1 cup hummus, 1 cup carrot sticks, 1 cup cucumber sticks as specified. For enhanced flavor, let sit for 5 minutes before serving. Perfect for satisfying hunger between meals and maintaining steady energy levels.",
+    "prep_time": 10,
+    "cook_time": 0,
+    "calories": 240,
+    "protein": 8,
+    "fiber": 10,
+    "carbs": 28,
+    "fat": 12,
+    "ingredients": [
+      "1 cup hummus",
+      "1 cup carrot sticks",
+      "1 cup cucumber sticks",
+      "1 cup bell pepper strips",
+      "1 cup celery sticks"
+    ],
+    "dietary_tags": [
+      "high_fiber",
+      "vegetarian",
+      "quick"
+    ]
+  },
+  {
+    "name": "Cottage Cheese with Pineapple",
+    "meal_type": "snack",
+    "description": "High-protein cottage cheese with sweet pineapple",
+    "instructions": "Prepare the base ingredient and arrange it on a serving plate. Evenly distribute 1 cup cottage cheese, 1/2 cup pineapple, 1 tsp cinnamon over the top. Garnish with optional herbs or spices if desired. Serve immediately for best texture and flavor. Perfect for satisfying hunger between meals and maintaining steady energy levels.",
+    "prep_time": 3,
+    "cook_time": 0,
+    "calories": 260,
+    "protein": 28,
+    "fiber": 4,
+    "carbs": 24,
+    "fat": 8,
+    "ingredients": [
+      "1 cup cottage cheese",
+      "1/2 cup pineapple",
+      "1 tsp cinnamon",
+      "1 tsp honey"
+    ],
+    "dietary_tags": [
+      "high_protein",
+      "quick"
+    ]
+  },
+  {
+    "name": "Banana with Peanut Butter",
+    "meal_type": "snack",
+    "description": "Simple banana with protein-rich peanut butter",
+    "instructions": "Using a sharp knife, carefully slice the main ingredient into uniform pieces. Arrange on a plate or in a container. Add 1 banana, 2 tbsp peanut butter, 1 tsp chia seeds as specified. For enhanced flavor, let sit for 5 minutes before serving. Perfect for satisfying hunger between meals and maintaining steady energy levels.",
+    "prep_time": 2,
+    "cook_time": 0,
+    "calories": 300,
+    "protein": 10,
+    "fiber": 8,
+    "carbs": 35,
+    "fat": 16,
+    "ingredients": [
+      "1 banana",
+      "2 tbsp peanut butter",
+      "1 tsp chia seeds"
+    ],
+    "dietary_tags": [
+      "high_fiber",
+      "quick"
+    ]
+  },
+  {
+    "name": "Roasted Chickpeas",
+    "meal_type": "snack",
+    "description": "Crispy roasted chickpeas with spices",
+    "instructions": "Prepare 1 can chickpeas, 1 tbsp olive oil, 1 tsp paprika as directed in the ingredient list. Combine in a serving dish. For optimal flavor and texture, allow to sit for a few minutes before enjoying. This snack is perfect for quick energy and satisfies hunger between meals. Perfect for satisfying hunger between meals and maintaining steady energy levels.",
+    "prep_time": 5,
+    "cook_time": 20,
+    "calories": 200,
+    "protein": 12,
+    "fiber": 10,
+    "carbs": 28,
+    "fat": 6,
+    "ingredients": [
+      "1 can chickpeas",
+      "1 tbsp olive oil",
+      "1 tsp paprika",
+      "1/2 tsp salt",
+      "1/2 tsp garlic powder",
+      "1/4 tsp cayenne"
+    ],
+    "dietary_tags": [
+      "high_fiber",
+      "vegetarian",
+      "meal_prep"
+    ]
+  },
+  {
+    "name": "Cheese and Whole Grain Crackers",
+    "meal_type": "snack",
+    "description": "Aged cheese with fiber-rich whole grain crackers",
+    "instructions": "Using a sharp knife, carefully slice the main ingredient into uniform pieces. Arrange on a plate or in a container. Add 2 oz cheese, 6 whole grain crackers, 1/2 cup grapes as specified. For enhanced flavor, let sit for 5 minutes before serving. Perfect for satisfying hunger between meals and maintaining steady energy levels.",
+    "prep_time": 3,
+    "cook_time": 0,
+    "calories": 280,
+    "protein": 14,
+    "fiber": 6,
+    "carbs": 24,
+    "fat": 16,
+    "ingredients": [
+      "2 oz cheese",
+      "6 whole grain crackers",
+      "1/2 cup grapes",
+      "1 tsp honey"
+    ],
+    "dietary_tags": [
+      "high_fiber",
+      "quick"
+    ]
+  },
+  {
+    "name": "Almonds and Dried Fruit",
+    "meal_type": "snack",
+    "description": "Energy-boosting mix of almonds and dried fruits",
+    "instructions": "In a small bowl, gently combine 1/4 cup almonds, 1/4 cup dried apricots, 1/4 cup dried cranberries until well distributed. For best flavor, let the mixture sit for 5-10 minutes before serving to allow flavors to meld. Store in an airtight container for up to 3 days. Perfect for satisfying hunger between meals and maintaining steady energy levels.",
+    "prep_time": 2,
+    "cook_time": 0,
+    "calories": 320,
+    "protein": 12,
+    "fiber": 8,
+    "carbs": 35,
+    "fat": 18,
+    "ingredients": [
+      "1/4 cup almonds",
+      "1/4 cup dried apricots",
+      "1/4 cup dried cranberries",
+      "1 tbsp dark chocolate chips"
+    ],
+    "dietary_tags": [
+      "high_fiber",
+      "quick"
+    ]
+  },
+  {
+    "name": "Hard-Boiled Eggs",
+    "meal_type": "snack",
+    "description": "Simple protein-packed hard-boiled eggs with seasoning",
+    "instructions": "Prepare 2 hard-boiled eggs, salt, pepper as directed in the ingredient list. Combine in a serving dish. For optimal flavor and texture, allow to sit for a few minutes before enjoying. This snack is perfect for quick energy and satisfies hunger between meals. Perfect for satisfying hunger between meals and maintaining steady energy levels.",
+    "prep_time": 2,
+    "cook_time": 12,
+    "calories": 180,
+    "protein": 18,
+    "fiber": 2,
+    "carbs": 4,
+    "fat": 12,
+    "ingredients": [
+      "2 hard-boiled eggs",
+      "salt",
+      "pepper",
+      "paprika",
+      "hot sauce"
+    ],
+    "dietary_tags": [
+      "high_protein",
+      "quick"
+    ]
+  },
+  {
+    "name": "Smoothie Bowl",
+    "meal_type": "snack",
+    "description": "Thick smoothie bowl topped with granola and fruits",
+    "instructions": "Prepare the base ingredient and arrange it on a serving plate. Evenly distribute 1 cup frozen berries, 1/2 cup Greek yogurt, 1/4 cup granola over the top. Garnish with optional herbs or spices if desired. Serve immediately for best texture and flavor. Perfect for satisfying hunger between meals and maintaining steady energy levels.",
+    "prep_time": 8,
+    "cook_time": 0,
+    "calories": 340,
+    "protein": 16,
+    "fiber": 12,
+    "carbs": 48,
+    "fat": 10,
+    "ingredients": [
+      "1 cup frozen berries",
+      "1/2 cup Greek yogurt",
+      "1/4 cup granola",
+      "1 tbsp chia seeds",
+      "1/2 banana",
+      "1 tbsp almond butter"
+    ],
+    "dietary_tags": [
+      "high_fiber",
+      "vegetarian",
+      "quick"
+    ]
+  },
+  {
+    "name": "Turkey Jerky",
+    "meal_type": "snack",
+    "description": "High-protein turkey jerky for portable snacking",
+    "instructions": "Using a sharp knife, carefully slice the main ingredient into uniform pieces. Arrange on a plate or in a container. Add 2 oz turkey jerky, 1 apple slice as specified. For enhanced flavor, let sit for 5 minutes before serving. Perfect for satisfying hunger between meals and maintaining steady energy levels.",
+    "prep_time": 1,
+    "cook_time": 0,
+    "calories": 160,
+    "protein": 24,
+    "fiber": 2,
+    "carbs": 8,
+    "fat": 4,
+    "ingredients": [
+      "2 oz turkey jerky",
+      "1 apple slice"
+    ],
+    "dietary_tags": [
+      "high_protein",
+      "quick"
+    ]
+  },
+  {
+    "name": "Popcorn with Nutritional Yeast",
+    "meal_type": "snack",
+    "description": "Air-popped popcorn with cheesy nutritional yeast",
+    "instructions": "Prepare the base ingredient and arrange it on a serving plate. Evenly distribute 3 cups air-popped popcorn, 2 tbsp nutritional yeast, 1/2 tsp salt over the top. Garnish with optional herbs or spices if desired. Serve immediately for best texture and flavor. Perfect for satisfying hunger between meals and maintaining steady energy levels.",
+    "prep_time": 3,
+    "cook_time": 3,
+    "calories": 180,
+    "protein": 8,
+    "fiber": 10,
+    "carbs": 28,
+    "fat": 6,
+    "ingredients": [
+      "3 cups air-popped popcorn",
+      "2 tbsp nutritional yeast",
+      "1/2 tsp salt",
+      "1 tsp olive oil"
+    ],
+    "dietary_tags": [
+      "high_fiber",
+      "vegetarian",
+      "quick"
+    ]
+  },
+  {
+    "name": "Peanut Butter Celery Sticks",
+    "meal_type": "snack",
+    "description": "Crunchy celery with protein-rich peanut butter",
+    "instructions": "Prepare the base ingredient and arrange it on a serving plate. Evenly distribute 3 celery stalks, 2 tbsp peanut butter, 1 tbsp raisins over the top. Garnish with optional herbs or spices if desired. Serve immediately for best texture and flavor. Perfect for satisfying hunger between meals and maintaining steady energy levels.",
+    "prep_time": 5,
+    "cook_time": 0,
+    "calories": 240,
+    "protein": 10,
+    "fiber": 6,
+    "carbs": 18,
+    "fat": 16,
+    "ingredients": [
+      "3 celery stalks",
+      "2 tbsp peanut butter",
+      "1 tbsp raisins",
+      "1 tsp chia seeds"
+    ],
+    "dietary_tags": [
+      "high_fiber",
+      "quick"
+    ]
+  },
+  {
+    "name": "Protein Pudding",
+    "meal_type": "snack",
+    "description": "Silken tofu blended with protein powder and cocoa",
+    "instructions": "Add all ingredients to a blender. Start on low speed and gradually increase to high, blending for 30-60 seconds until smooth and creamy. Pour into a glass and serve immediately. For best results, use frozen fruits for a thicker consistency. Perfect for satisfying hunger between meals and maintaining steady energy levels.",
+    "prep_time": 5,
+    "cook_time": 0,
+    "calories": 220,
+    "protein": 24,
+    "fiber": 8,
+    "carbs": 18,
+    "fat": 8,
+    "ingredients": [
+      "1/2 block silken tofu",
+      "1 scoop chocolate protein powder",
+      "1 tbsp cocoa powder",
+      "1 tsp honey",
+      "1/2 cup almond milk"
+    ],
+    "dietary_tags": [
+      "high_protein",
+      "high_fiber",
+      "vegetarian",
+      "quick"
+    ]
+  },
+  {
+    "name": "Cheese Stick and Grapes",
+    "meal_type": "snack",
+    "description": "Simple cheese stick with sweet grapes",
+    "instructions": "Prepare 1 cheese stick, 1 cup grapes as directed in the ingredient list. Combine in a serving dish. For optimal flavor and texture, allow to sit for a few minutes before enjoying. This snack is perfect for quick energy and satisfies hunger between meals. Perfect for satisfying hunger between meals and maintaining steady energy levels.",
+    "prep_time": 1,
+    "cook_time": 0,
+    "calories": 200,
+    "protein": 12,
+    "fiber": 2,
+    "carbs": 16,
+    "fat": 12,
+    "ingredients": [
+      "1 cheese stick",
+      "1 cup grapes"
+    ],
+    "dietary_tags": [
+      "quick"
+    ]
+  },
+  {
+    "name": "Roasted Nuts Mix",
+    "meal_type": "snack",
+    "description": "Mixed roasted nuts with a touch of sea salt",
+    "instructions": "In a small bowl, gently combine 1/4 cup almonds, 1/4 cup walnuts, 1/4 cup cashews until well distributed. For best flavor, let the mixture sit for 5-10 minutes before serving to allow flavors to meld. Store in an airtight container for up to 3 days. Perfect for satisfying hunger between meals and maintaining steady energy levels.",
+    "prep_time": 1,
+    "cook_time": 0,
+    "calories": 280,
+    "protein": 10,
+    "fiber": 6,
+    "carbs": 12,
+    "fat": 24,
+    "ingredients": [
+      "1/4 cup almonds",
+      "1/4 cup walnuts",
+      "1/4 cup cashews",
+      "sea salt"
+    ],
+    "dietary_tags": [
+      "high_fiber",
+      "quick"
+    ]
+  },
+  {
+    "name": "Berries and Cream",
+    "meal_type": "snack",
+    "description": "Fresh mixed berries with light whipped cream",
+    "instructions": "Prepare the base ingredient and arrange it on a serving plate. Evenly distribute 1 cup mixed berries, 2 tbsp light whipped cream, 1 tsp honey over the top. Garnish with optional herbs or spices if desired. Serve immediately for best texture and flavor. Perfect for satisfying hunger between meals and maintaining steady energy levels.",
+    "prep_time": 3,
+    "cook_time": 0,
+    "calories": 180,
+    "protein": 4,
+    "fiber": 8,
+    "carbs": 24,
+    "fat": 8,
+    "ingredients": [
+      "1 cup mixed berries",
+      "2 tbsp light whipped cream",
+      "1 tsp honey"
+    ],
+    "dietary_tags": [
+      "high_fiber",
+      "quick"
+    ]
+  },
+  {
+    "name": "Whole Grain Toast with Avocado",
+    "meal_type": "snack",
+    "description": "Toasted whole grain bread with mashed avocado",
+    "instructions": "Prepare the base ingredient and arrange it on a serving plate. Evenly distribute 1 slice whole grain bread, 1/2 avocado, lemon juice over the top. Garnish with optional herbs or spices if desired. Serve immediately for best texture and flavor. Perfect for satisfying hunger between meals and maintaining steady energy levels.",
+    "prep_time": 5,
+    "cook_time": 3,
+    "calories": 260,
+    "protein": 8,
+    "fiber": 10,
+    "carbs": 28,
+    "fat": 16,
+    "ingredients": [
+      "1 slice whole grain bread",
+      "1/2 avocado",
+      "lemon juice",
+      "red pepper flakes",
+      "salt"
+    ],
+    "dietary_tags": [
+      "high_fiber",
+      "vegetarian",
+      "quick"
+    ]
+  },
+  {
+    "name": "Protein Energy Bites",
+    "meal_type": "snack",
+    "description": "No-bake energy bites with protein powder and dates",
+    "instructions": "In a small bowl, gently combine 1 cup dates, 1/2 cup protein powder, 1/3 cup almond butter until well distributed. For best flavor, let the mixture sit for 5-10 minutes before serving to allow flavors to meld. Store in an airtight container for up to 3 days. Perfect for satisfying hunger between meals and maintaining steady energy levels.",
+    "prep_time": 15,
+    "cook_time": 0,
+    "calories": 240,
+    "protein": 14,
+    "fiber": 8,
+    "carbs": 28,
+    "fat": 12,
+    "ingredients": [
+      "1 cup dates",
+      "1/2 cup protein powder",
+      "1/3 cup almond butter",
+      "1/3 cup oats",
+      "2 tbsp chia seeds",
+      "1 tsp vanilla",
+      "dark chocolate chips"
+    ],
+    "dietary_tags": [
+      "high_protein",
+      "high_fiber",
+      "meal_prep"
+    ]
+  },
+  {
+    "name": "Cucumber and Cream Cheese",
+    "meal_type": "snack",
+    "description": "Cool cucumber slices with herbed cream cheese",
+    "instructions": "Prepare the base ingredient and arrange it on a serving plate. Evenly distribute 1 cucumber, 2 tbsp cream cheese, 1 tsp herbs over the top. Garnish with optional herbs or spices if desired. Serve immediately for best texture and flavor. Perfect for satisfying hunger between meals and maintaining steady energy levels.",
+    "prep_time": 5,
+    "cook_time": 0,
+    "calories": 180,
+    "protein": 8,
+    "fiber": 4,
+    "carbs": 12,
+    "fat": 12,
+    "ingredients": [
+      "1 cucumber",
+      "2 tbsp cream cheese",
+      "1 tsp herbs",
+      "paprika",
+      "salt"
+    ],
+    "dietary_tags": [
+      "quick",
+      "high_fiber"
+    ]
+  },
+  {
+    "name": "Dark Chocolate and Almonds",
+    "meal_type": "snack",
+    "description": "Dark chocolate squares with roasted almonds",
+    "instructions": "Prepare 2 squares dark chocolate, 10 almonds, sea salt as directed in the ingredient list. Combine in a serving dish. For optimal flavor and texture, allow to sit for a few minutes before enjoying. This snack is perfect for quick energy and satisfies hunger between meals. Perfect for satisfying hunger between meals and maintaining steady energy levels.",
+    "prep_time": 1,
+    "cook_time": 0,
+    "calories": 220,
+    "protein": 6,
+    "fiber": 6,
+    "carbs": 18,
+    "fat": 16,
+    "ingredients": [
+      "2 squares dark chocolate",
+      "10 almonds",
+      "sea salt"
+    ],
+    "dietary_tags": [
+      "high_fiber",
+      "quick"
+    ]
+  },
+  {
+    "name": "String Cheese and Apple",
+    "meal_type": "snack",
+    "description": "Classic string cheese with crisp apple slices",
+    "instructions": "Using a sharp knife, carefully slice the main ingredient into uniform pieces. Arrange on a plate or in a container. Add 1 string cheese, 1 apple, cinnamon as specified. For enhanced flavor, let sit for 5 minutes before serving. Perfect for satisfying hunger between meals and maintaining steady energy levels.",
+    "prep_time": 2,
+    "cook_time": 0,
+    "calories": 200,
+    "protein": 12,
+    "fiber": 6,
+    "carbs": 20,
+    "fat": 10,
+    "ingredients": [
+      "1 string cheese",
+      "1 apple",
+      "cinnamon"
+    ],
+    "dietary_tags": [
+      "quick",
+      "high_fiber"
+    ]
+  },
+  {
+    "name": "Hummus and Pita",
+    "meal_type": "snack",
+    "description": "Warm pita bread with creamy hummus",
+    "instructions": "Prepare the base ingredient and arrange it on a serving plate. Evenly distribute 1 whole wheat pita, 1/4 cup hummus, olive oil over the top. Garnish with optional herbs or spices if desired. Serve immediately for best texture and flavor. Perfect for satisfying hunger between meals and maintaining steady energy levels.",
+    "prep_time": 3,
+    "cook_time": 2,
+    "calories": 280,
+    "protein": 10,
+    "fiber": 8,
+    "carbs": 38,
+    "fat": 12,
+    "ingredients": [
+      "1 whole wheat pita",
+      "1/4 cup hummus",
+      "olive oil",
+      "paprika",
+      "parsley"
+    ],
+    "dietary_tags": [
+      "high_fiber",
+      "vegetarian",
+      "quick"
+    ]
+  },
+  {
+    "name": "Pumpkin Seeds",
+    "meal_type": "snack",
+    "description": "Roasted pumpkin seeds with sea salt and spices",
+    "instructions": "Prepare 1/4 cup pumpkin seeds, sea salt, garlic powder as directed in the ingredient list. Combine in a serving dish. For optimal flavor and texture, allow to sit for a few minutes before enjoying. This snack is perfect for quick energy and satisfies hunger between meals. Perfect for satisfying hunger between meals and maintaining steady energy levels.",
+    "prep_time": 1,
+    "cook_time": 0,
+    "calories": 180,
+    "protein": 12,
+    "fiber": 4,
+    "carbs": 8,
+    "fat": 14,
+    "ingredients": [
+      "1/4 cup pumpkin seeds",
+      "sea salt",
+      "garlic powder",
+      "paprika"
+    ],
+    "dietary_tags": [
+      "high_protein",
+      "quick"
+    ]
+  },
+  {
+    "name": "Yogurt with Granola",
+    "meal_type": "snack",
+    "description": "Creamy yogurt with crunchy granola and honey",
+    "instructions": "Prepare the base ingredient and arrange it on a serving plate. Evenly distribute 1 cup yogurt, 1/4 cup granola, 1/2 cup berries over the top. Garnish with optional herbs or spices if desired. Serve immediately for best texture and flavor. Perfect for satisfying hunger between meals and maintaining steady energy levels.",
+    "prep_time": 3,
+    "cook_time": 0,
+    "calories": 300,
+    "protein": 18,
+    "fiber": 8,
+    "carbs": 42,
+    "fat": 10,
+    "ingredients": [
+      "1 cup yogurt",
+      "1/4 cup granola",
+      "1/2 cup berries",
+      "1 tbsp honey",
+      "1 tbsp almonds"
+    ],
+    "dietary_tags": [
+      "high_protein",
+      "high_fiber",
+      "quick"
+    ]
+  },
+  {
+    "name": "Beef Jerky",
+    "meal_type": "snack",
+    "description": "High-protein beef jerky for portable energy",
+    "instructions": "Prepare 1 oz beef jerky, dried apricots as directed in the ingredient list. Combine in a serving dish. For optimal flavor and texture, allow to sit for a few minutes before enjoying. This snack is perfect for quick energy and satisfies hunger between meals. Perfect for satisfying hunger between meals and maintaining steady energy levels.",
+    "prep_time": 1,
+    "cook_time": 0,
+    "calories": 160,
+    "protein": 28,
+    "fiber": 2,
+    "carbs": 6,
+    "fat": 4,
+    "ingredients": [
+      "1 oz beef jerky",
+      "dried apricots"
+    ],
+    "dietary_tags": [
+      "high_protein",
+      "quick"
+    ]
+  },
+  {
+    "name": "Rice Cakes with Avocado",
+    "meal_type": "snack",
+    "description": "Brown rice cakes topped with mashed avocado",
+    "instructions": "Prepare the base ingredient and arrange it on a serving plate. Evenly distribute 2 brown rice cakes, 1/2 avocado, lemon juice over the top. Garnish with optional herbs or spices if desired. Serve immediately for best texture and flavor. Perfect for satisfying hunger between meals and maintaining steady energy levels.",
+    "prep_time": 3,
+    "cook_time": 0,
+    "calories": 200,
+    "protein": 6,
+    "fiber": 8,
+    "carbs": 24,
+    "fat": 12,
+    "ingredients": [
+      "2 brown rice cakes",
+      "1/2 avocado",
+      "lemon juice",
+      "red pepper flakes",
+      "salt"
+    ],
+    "dietary_tags": [
+      "high_fiber",
+      "vegetarian",
+      "quick"
+    ]
+  },
+  {
+    "name": "Mixed Berries",
+    "meal_type": "snack",
+    "description": "Fresh antioxidant-rich mixed berries",
+    "instructions": "In a small bowl, gently combine 1 cup mixed berries, 1 tbsp chopped nuts, 1 tsp honey until well distributed. For best flavor, let the mixture sit for 5-10 minutes before serving to allow flavors to meld. Store in an airtight container for up to 3 days. Perfect for satisfying hunger between meals and maintaining steady energy levels.",
+    "prep_time": 2,
+    "cook_time": 0,
+    "calories": 120,
+    "protein": 2,
+    "fiber": 8,
+    "carbs": 24,
+    "fat": 2,
+    "ingredients": [
+      "1 cup mixed berries",
+      "1 tbsp chopped nuts",
+      "1 tsp honey"
+    ],
+    "dietary_tags": [
+      "high_fiber",
+      "quick"
+    ]
+  },
+  {
+    "name": "Olives and Feta",
+    "meal_type": "snack",
+    "description": "Mediterranean mix of olives and feta cheese",
+    "instructions": "Prepare the base ingredient and arrange it on a serving plate. Evenly distribute 1/2 cup olives, 1 oz feta cheese, 1 tsp olive oil over the top. Garnish with optional herbs or spices if desired. Serve immediately for best texture and flavor. Perfect for satisfying hunger between meals and maintaining steady energy levels.",
+    "prep_time": 3,
+    "cook_time": 0,
+    "calories": 220,
+    "protein": 8,
+    "fiber": 4,
+    "carbs": 8,
+    "fat": 18,
+    "ingredients": [
+      "1/2 cup olives",
+      "1 oz feta cheese",
+      "1 tsp olive oil",
+      "oregano",
+      "lemon juice"
+    ],
+    "dietary_tags": [
+      "quick",
+      "high_fiber"
+    ]
+  },
+  {
+    "name": "Sunflower Seeds",
+    "meal_type": "snack",
+    "description": "Roasted sunflower seeds with sea salt",
+    "instructions": "Prepare 1/4 cup sunflower seeds, sea salt as directed in the ingredient list. Combine in a serving dish. For optimal flavor and texture, allow to sit for a few minutes before enjoying. This snack is perfect for quick energy and satisfies hunger between meals. Perfect for satisfying hunger between meals and maintaining steady energy levels.",
+    "prep_time": 1,
+    "cook_time": 0,
+    "calories": 160,
+    "protein": 8,
+    "fiber": 4,
+    "carbs": 8,
+    "fat": 14,
+    "ingredients": [
+      "1/4 cup sunflower seeds",
+      "sea salt"
+    ],
+    "dietary_tags": [
+      "quick",
+      "high_fiber"
+    ]
+  },
+  {
+    "name": "Pear with Walnuts",
+    "meal_type": "snack",
+    "description": "Sweet pear with crunchy walnuts and honey",
+    "instructions": "Prepare the base ingredient and arrange it on a serving plate. Evenly distribute 1 pear, 1/4 cup walnuts, 1 tsp honey over the top. Garnish with optional herbs or spices if desired. Serve immediately for best texture and flavor. Perfect for satisfying hunger between meals and maintaining steady energy levels.",
+    "prep_time": 3,
+    "cook_time": 0,
+    "calories": 240,
+    "protein": 6,
+    "fiber": 8,
+    "carbs": 28,
+    "fat": 14,
+    "ingredients": [
+      "1 pear",
+      "1/4 cup walnuts",
+      "1 tsp honey",
+      "cinnamon"
+    ],
+    "dietary_tags": [
+      "high_fiber",
+      "quick"
+    ]
+  },
+  {
+    "name": "Cottage Cheese with Tomato",
+    "meal_type": "snack",
+    "description": "Cottage cheese with fresh tomato and basil",
+    "instructions": "Prepare the base ingredient and arrange it on a serving plate. Evenly distribute 1 cup cottage cheese, 1 tomato, fresh basil over the top. Garnish with optional herbs or spices if desired. Serve immediately for best texture and flavor. Perfect for satisfying hunger between meals and maintaining steady energy levels.",
+    "prep_time": 4,
+    "cook_time": 0,
+    "calories": 200,
+    "protein": 24,
+    "fiber": 4,
+    "carbs": 12,
+    "fat": 8,
+    "ingredients": [
+      "1 cup cottage cheese",
+      "1 tomato",
+      "fresh basil",
+      "black pepper",
+      "salt"
+    ],
+    "dietary_tags": [
+      "high_protein",
+      "quick"
+    ]
+  },
+  {
+    "name": "Whole Grain Crackers and Cheese",
+    "meal_type": "snack",
+    "description": "Fiber-rich crackers with sliced cheese",
+    "instructions": "Using a sharp knife, carefully slice the main ingredient into uniform pieces. Arrange on a plate or in a container. Add 6 whole grain crackers, 2 oz cheese, 1 tsp mustard as specified. For enhanced flavor, let sit for 5 minutes before serving. Perfect for satisfying hunger between meals and maintaining steady energy levels.",
+    "prep_time": 2,
+    "cook_time": 0,
+    "calories": 240,
+    "protein": 10,
+    "fiber": 8,
+    "carbs": 24,
+    "fat": 14,
+    "ingredients": [
+      "6 whole grain crackers",
+      "2 oz cheese",
+      "1 tsp mustard",
+      "1 apple slice"
+    ],
+    "dietary_tags": [
+      "high_fiber",
+      "quick"
+    ]
+  },
+  {
+    "name": "Frozen Grapes",
+    "meal_type": "snack",
+    "description": "Chilled frozen grapes for a refreshing treat",
+    "instructions": "Prepare 1 cup frozen grapes as directed in the ingredient list. Combine in a serving dish. For optimal flavor and texture, allow to sit for a few minutes before enjoying. This snack is perfect for quick energy and satisfies hunger between meals. Perfect for satisfying hunger between meals and maintaining steady energy levels.",
+    "prep_time": 2,
+    "cook_time": 0,
+    "calories": 100,
+    "protein": 2,
+    "fiber": 2,
+    "carbs": 24,
+    "fat": 2,
+    "ingredients": [
+      "1 cup frozen grapes"
+    ],
+    "dietary_tags": [
+      "quick",
+      "refreshing"
+    ]
+  },
+  {
+    "name": "Cashews and Dried Cherries",
+    "meal_type": "snack",
+    "description": "Sweet and salty mix of cashews and dried cherries",
+    "instructions": "In a small bowl, gently combine 1/4 cup cashews, 2 tbsp dried cherries, sea salt until well distributed. For best flavor, let the mixture sit for 5-10 minutes before serving to allow flavors to meld. Store in an airtight container for up to 3 days. Perfect for satisfying hunger between meals and maintaining steady energy levels.",
+    "prep_time": 1,
+    "cook_time": 0,
+    "calories": 280,
+    "protein": 8,
+    "fiber": 4,
+    "carbs": 22,
+    "fat": 20,
+    "ingredients": [
+      "1/4 cup cashews",
+      "2 tbsp dried cherries",
+      "sea salt"
+    ],
+    "dietary_tags": [
+      "quick"
+    ]
+  },
+  {
+    "name": "Bell Pepper Strips with Guacamole",
+    "meal_type": "snack",
+    "description": "Crisp bell pepper strips with creamy guacamole",
+    "instructions": "Using a sharp knife, carefully slice the main ingredient into uniform pieces. Arrange on a plate or in a container. Add 1 bell pepper, 1/4 cup guacamole, lime juice as specified. For enhanced flavor, let sit for 5 minutes before serving. Perfect for satisfying hunger between meals and maintaining steady energy levels.",
+    "prep_time": 8,
+    "cook_time": 0,
+    "calories": 220,
+    "protein": 4,
+    "fiber": 10,
+    "carbs": 18,
+    "fat": 16,
+    "ingredients": [
+      "1 bell pepper",
+      "1/4 cup guacamole",
+      "lime juice",
+      "cilantro",
+      "salt"
+    ],
+    "dietary_tags": [
+      "high_fiber",
+      "vegetarian",
+      "quick"
+    ]
+  },
+  {
+    "name": "Protein Smoothie",
+    "meal_type": "snack",
+    "description": "Quick protein smoothie with fruits and spinach",
+    "instructions": "Add all ingredients to a blender. Start on low speed and gradually increase to high, blending for 30-60 seconds until smooth and creamy. Pour into a glass and serve immediately. For best results, use frozen fruits for a thicker consistency. Perfect for satisfying hunger between meals and maintaining steady energy levels.",
+    "prep_time": 5,
+    "cook_time": 0,
+    "calories": 280,
+    "protein": 26,
+    "fiber": 6,
+    "carbs": 32,
+    "fat": 8,
+    "ingredients": [
+      "1 scoop protein powder",
+      "1 banana",
+      "1 cup spinach",
+      "1 cup almond milk",
+      "1 tbsp almond butter",
+      "1 tsp honey"
+    ],
+    "dietary_tags": [
+      "high_protein",
+      "quick"
+    ]
+  },
+  {
+    "name": "Pretzels and Mustard",
+    "meal_type": "snack",
+    "description": "Whole grain pretzels with tangy mustard",
+    "instructions": "Prepare 1 cup whole grain pretzels, 2 tbsp mustard as directed in the ingredient list. Combine in a serving dish. For optimal flavor and texture, allow to sit for a few minutes before enjoying. This snack is perfect for quick energy and satisfies hunger between meals. Perfect for satisfying hunger between meals and maintaining steady energy levels.",
+    "prep_time": 1,
+    "cook_time": 0,
+    "calories": 180,
+    "protein": 6,
+    "fiber": 6,
+    "carbs": 32,
+    "fat": 4,
+    "ingredients": [
+      "1 cup whole grain pretzels",
+      "2 tbsp mustard"
+    ],
+    "dietary_tags": [
+      "high_fiber",
+      "quick"
+    ]
+  },
+  {
+    "name": "Kiwi and Seeds",
+    "meal_type": "snack",
+    "description": "Fresh kiwi with a sprinkle of mixed seeds",
+    "instructions": "In a small bowl, gently combine 2 kiwi, 1 tsp mixed seeds, 1 tsp honey until well distributed. For best flavor, let the mixture sit for 5-10 minutes before serving to allow flavors to meld. Store in an airtight container for up to 3 days. Perfect for satisfying hunger between meals and maintaining steady energy levels.",
+    "prep_time": 3,
+    "cook_time": 0,
+    "calories": 140,
+    "protein": 4,
+    "fiber": 8,
+    "carbs": 22,
+    "fat": 6,
+    "ingredients": [
+      "2 kiwi",
+      "1 tsp mixed seeds",
+      "1 tsp honey",
+      "lime juice"
+    ],
+    "dietary_tags": [
+      "high_fiber",
+      "quick"
+    ]
+  },
+  {
+    "name": "Mozzarella Cherry Tomatoes",
+    "meal_type": "snack",
+    "description": "Fresh mozzarella balls with cherry tomatoes and basil",
+    "instructions": "Prepare 4 mozzarella balls, 1/2 cup cherry tomatoes, fresh basil as directed in the ingredient list. Combine in a serving dish. For optimal flavor and texture, allow to sit for a few minutes before enjoying. This snack is perfect for quick energy and satisfies hunger between meals. Perfect for satisfying hunger between meals and maintaining steady energy levels.",
+    "prep_time": 5,
+    "cook_time": 0,
+    "calories": 200,
+    "protein": 12,
+    "fiber": 4,
+    "carbs": 12,
+    "fat": 14,
+    "ingredients": [
+      "4 mozzarella balls",
+      "1/2 cup cherry tomatoes",
+      "fresh basil",
+      "balsamic glaze",
+      "olive oil"
+    ],
+    "dietary_tags": [
+      "quick",
+      "high_fiber"
+    ]
+  },
+  {
+    "name": "Pistachios",
+    "meal_type": "snack",
+    "description": "Roasted pistachios in their shells",
+    "instructions": "Prepare 1/4 cup pistachios, sea salt as directed in the ingredient list. Combine in a serving dish. For optimal flavor and texture, allow to sit for a few minutes before enjoying. This snack is perfect for quick energy and satisfies hunger between meals. Perfect for satisfying hunger between meals and maintaining steady energy levels.",
+    "prep_time": 1,
+    "cook_time": 0,
+    "calories": 180,
+    "protein": 8,
+    "fiber": 6,
+    "carbs": 12,
+    "fat": 14,
+    "ingredients": [
+      "1/4 cup pistachios",
+      "sea salt"
+    ],
+    "dietary_tags": [
+      "high_fiber",
+      "quick"
+    ]
+  },
+  {
+    "name": "Orange and Almonds",
+    "meal_type": "snack",
+    "description": "Fresh orange segments with roasted almonds",
+    "instructions": "Prepare 1 orange, 1/4 cup almonds, cinnamon as directed in the ingredient list. Combine in a serving dish. For optimal flavor and texture, allow to sit for a few minutes before enjoying. This snack is perfect for quick energy and satisfies hunger between meals. Perfect for satisfying hunger between meals and maintaining steady energy levels.",
+    "prep_time": 3,
+    "cook_time": 0,
+    "calories": 200,
+    "protein": 6,
+    "fiber": 8,
+    "carbs": 28,
+    "fat": 10,
+    "ingredients": [
+      "1 orange",
+      "1/4 cup almonds",
+      "cinnamon"
+    ],
+    "dietary_tags": [
+      "high_fiber",
+      "quick"
+    ]
+  },
+  {
+    "name": "Whole Grain Toast with Peanut Butter",
+    "meal_type": "snack",
+    "description": "Warm toast with creamy peanut butter and banana",
+    "instructions": "Prepare the base ingredient and arrange it on a serving plate. Evenly distribute 1 slice whole grain bread, 2 tbsp peanut butter, 1/2 banana over the top. Garnish with optional herbs or spices if desired. Serve immediately for best texture and flavor. Perfect for satisfying hunger between meals and maintaining steady energy levels.",
+    "prep_time": 4,
+    "cook_time": 2,
+    "calories": 320,
+    "protein": 12,
+    "fiber": 8,
+    "carbs": 38,
+    "fat": 16,
+    "ingredients": [
+      "1 slice whole grain bread",
+      "2 tbsp peanut butter",
+      "1/2 banana",
+      "chia seeds"
+    ],
+    "dietary_tags": [
+      "high_protein",
+      "high_fiber",
+      "quick"
+    ]
+  },
+  {
+    "name": "Pickles and Cheese",
+    "meal_type": "snack",
+    "description": "Crunchy pickles with cheese slices",
+    "instructions": "Using a sharp knife, carefully slice the main ingredient into uniform pieces. Arrange on a plate or in a container. Add 4 pickle spears, 2 oz cheese, mustard as specified. For enhanced flavor, let sit for 5 minutes before serving. Perfect for satisfying hunger between meals and maintaining steady energy levels.",
+    "prep_time": 2,
+    "cook_time": 0,
+    "calories": 180,
+    "protein": 10,
+    "fiber": 4,
+    "carbs": 8,
+    "fat": 12,
+    "ingredients": [
+      "4 pickle spears",
+      "2 oz cheese",
+      "mustard"
+    ],
+    "dietary_tags": [
+      "quick"
+    ]
+  },
+  {
+    "name": "Mango and Lime",
+    "meal_type": "snack",
+    "description": "Fresh mango with lime juice and chili powder",
+    "instructions": "Prepare the base ingredient and arrange it on a serving plate. Evenly distribute 1 mango, lime juice, chili powder over the top. Garnish with optional herbs or spices if desired. Serve immediately for best texture and flavor. Perfect for satisfying hunger between meals and maintaining steady energy levels.",
+    "prep_time": 4,
+    "cook_time": 0,
+    "calories": 120,
+    "protein": 2,
+    "fiber": 4,
+    "carbs": 28,
+    "fat": 2,
+    "ingredients": [
+      "1 mango",
+      "lime juice",
+      "chili powder",
+      "salt"
+    ],
+    "dietary_tags": [
+      "high_fiber",
+      "quick",
+      "refreshing"
+    ]
+  },
+  {
+    "name": "Walnuts and Pear",
+    "meal_type": "snack",
+    "description": "Crunchy walnuts with sweet pear slices",
+    "instructions": "Prepare the base ingredient and arrange it on a serving plate. Evenly distribute 1 pear, 1/4 cup walnuts, 1 tsp honey over the top. Garnish with optional herbs or spices if desired. Serve immediately for best texture and flavor. Perfect for satisfying hunger between meals and maintaining steady energy levels.",
+    "prep_time": 3,
+    "cook_time": 0,
+    "calories": 260,
+    "protein": 6,
+    "fiber": 10,
+    "carbs": 30,
+    "fat": 16,
+    "ingredients": [
+      "1 pear",
+      "1/4 cup walnuts",
+      "1 tsp honey",
+      "cinnamon"
+    ],
+    "dietary_tags": [
+      "high_fiber",
+      "quick"
+    ]
+  },
+  {
+    "name": "Coconut Chips",
+    "meal_type": "snack",
+    "description": "Toasted coconut chips with a touch of sweetness",
+    "instructions": "Prepare 1/4 cup coconut chips, 1 tsp honey, sea salt as directed in the ingredient list. Combine in a serving dish. For optimal flavor and texture, allow to sit for a few minutes before enjoying. This snack is perfect for quick energy and satisfies hunger between meals. Perfect for satisfying hunger between meals and maintaining steady energy levels.",
+    "prep_time": 1,
+    "cook_time": 0,
+    "calories": 160,
+    "protein": 4,
+    "fiber": 6,
+    "carbs": 12,
+    "fat": 12,
+    "ingredients": [
+      "1/4 cup coconut chips",
+      "1 tsp honey",
+      "sea salt"
+    ],
+    "dietary_tags": [
+      "high_fiber",
+      "quick"
+    ]
+  },
+  {
+    "name": "Hard-Boiled Egg with Hot Sauce",
+    "meal_type": "snack",
+    "description": "Simple hard-boiled egg with spicy hot sauce",
+    "instructions": "Prepare the base ingredient and arrange it on a serving plate. Evenly distribute 1 hard-boiled egg, hot sauce, salt over the top. Garnish with optional herbs or spices if desired. Serve immediately for best texture and flavor. Perfect for satisfying hunger between meals and maintaining steady energy levels.",
+    "prep_time": 2,
+    "cook_time": 0,
+    "calories": 90,
+    "protein": 9,
+    "fiber": 1,
+    "carbs": 2,
+    "fat": 6,
+    "ingredients": [
+      "1 hard-boiled egg",
+      "hot sauce",
+      "salt",
+      "pepper"
+    ],
+    "dietary_tags": [
+      "high_protein",
+      "quick"
+    ]
+  },
+  {
+    "name": "Dried Apricots and Almonds",
+    "meal_type": "snack",
+    "description": "Sweet dried apricots with crunchy almonds",
+    "instructions": "Prepare 6 dried apricots, 10 almonds, sea salt as directed in the ingredient list. Combine in a serving dish. For optimal flavor and texture, allow to sit for a few minutes before enjoying. This snack is perfect for quick energy and satisfies hunger between meals. Perfect for satisfying hunger between meals and maintaining steady energy levels.",
+    "prep_time": 1,
+    "cook_time": 0,
+    "calories": 200,
+    "protein": 6,
+    "fiber": 6,
+    "carbs": 28,
+    "fat": 10,
+    "ingredients": [
+      "6 dried apricots",
+      "10 almonds",
+      "sea salt"
+    ],
+    "dietary_tags": [
+      "high_fiber",
+      "quick"
+    ]
+  },
+  {
+    "name": "Blueberries and Cream",
+    "meal_type": "snack",
+    "description": "Fresh blueberries with a dollop of whipped cream",
+    "instructions": "Prepare the base ingredient and arrange it on a serving plate. Evenly distribute 1 cup blueberries, 2 tbsp light whipped cream, 1 tsp honey over the top. Garnish with optional herbs or spices if desired. Serve immediately for best texture and flavor. Perfect for satisfying hunger between meals and maintaining steady energy levels.",
+    "prep_time": 2,
+    "cook_time": 0,
+    "calories": 140,
+    "protein": 2,
+    "fiber": 6,
+    "carbs": 22,
+    "fat": 6,
+    "ingredients": [
+      "1 cup blueberries",
+      "2 tbsp light whipped cream",
+      "1 tsp honey"
+    ],
+    "dietary_tags": [
+      "high_fiber",
+      "quick"
+    ]
+  },
+  {
+    "name": "Seaweed Snacks",
+    "meal_type": "snack",
+    "description": "Roasted seaweed sheets with sea salt",
+    "instructions": "Prepare 5 sheets roasted seaweed, sea salt as directed in the ingredient list. Combine in a serving dish. For optimal flavor and texture, allow to sit for a few minutes before enjoying. This snack is perfect for quick energy and satisfies hunger between meals. Perfect for satisfying hunger between meals and maintaining steady energy levels.",
+    "prep_time": 1,
+    "cook_time": 0,
+    "calories": 60,
+    "protein": 2,
+    "fiber": 2,
+    "carbs": 8,
+    "fat": 3,
+    "ingredients": [
+      "5 sheets roasted seaweed",
+      "sea salt"
+    ],
+    "dietary_tags": [
+      "quick",
+      "low_calorie"
+    ]
+  },
+  {
+    "name": "Grapes and Cheese",
+    "meal_type": "snack",
+    "description": "Sweet grapes with sharp cheese cubes",
+    "instructions": "Prepare 1 cup grapes, 1 oz cheese cubes, crackers as directed in the ingredient list. Combine in a serving dish. For optimal flavor and texture, allow to sit for a few minutes before enjoying. This snack is perfect for quick energy and satisfies hunger between meals. Perfect for satisfying hunger between meals and maintaining steady energy levels.",
+    "prep_time": 3,
+    "cook_time": 0,
+    "calories": 180,
+    "protein": 8,
+    "fiber": 2,
+    "carbs": 16,
+    "fat": 12,
+    "ingredients": [
+      "1 cup grapes",
+      "1 oz cheese cubes",
+      "crackers"
+    ],
+    "dietary_tags": [
+      "quick"
+    ]
+  },
+  {
+    "name": "Pineapple and Cottage Cheese",
+    "meal_type": "snack",
+    "description": "Fresh pineapple with high-protein cottage cheese",
+    "instructions": "Prepare the base ingredient and arrange it on a serving plate. Evenly distribute 1 cup cottage cheese, 1/2 cup pineapple, cinnamon over the top. Garnish with optional herbs or spices if desired. Serve immediately for best texture and flavor. Perfect for satisfying hunger between meals and maintaining steady energy levels.",
+    "prep_time": 3,
+    "cook_time": 0,
+    "calories": 220,
+    "protein": 24,
+    "fiber": 4,
+    "carbs": 20,
+    "fat": 8,
+    "ingredients": [
+      "1 cup cottage cheese",
+      "1/2 cup pineapple",
+      "cinnamon",
+      "honey"
+    ],
+    "dietary_tags": [
+      "high_protein",
+      "quick"
+    ]
+  },
+  {
+    "name": "Watermelon and Feta",
+    "meal_type": "snack",
+    "description": "Refreshing watermelon with salty feta cheese",
+    "instructions": "Prepare the base ingredient and arrange it on a serving plate. Evenly distribute 1 cup watermelon, 1 oz feta, fresh mint over the top. Garnish with optional herbs or spices if desired. Serve immediately for best texture and flavor. Perfect for satisfying hunger between meals and maintaining steady energy levels.",
+    "prep_time": 5,
+    "cook_time": 0,
+    "calories": 160,
+    "protein": 6,
+    "fiber": 2,
+    "carbs": 18,
+    "fat": 8,
+    "ingredients": [
+      "1 cup watermelon",
+      "1 oz feta",
+      "fresh mint",
+      "lime juice"
+    ],
+    "dietary_tags": [
+      "quick",
+      "refreshing"
+    ]
+  },
+  {
+    "name": "Apple Slices with Cheddar",
+    "meal_type": "snack",
+    "description": "Crisp apple slices with sharp cheddar cheese",
+    "instructions": "Using a sharp knife, carefully slice the main ingredient into uniform pieces. Arrange on a plate or in a container. Add 1 apple, 2 oz cheddar cheese, cinnamon as specified. For enhanced flavor, let sit for 5 minutes before serving. Perfect for satisfying hunger between meals and maintaining steady energy levels.",
+    "prep_time": 3,
+    "cook_time": 0,
+    "calories": 200,
+    "protein": 8,
+    "fiber": 8,
+    "carbs": 22,
+    "fat": 12,
+    "ingredients": [
+      "1 apple",
+      "2 oz cheddar cheese",
+      "cinnamon",
+      "walnuts"
+    ],
+    "dietary_tags": [
+      "high_fiber",
+      "quick"
+    ]
+  },
+  {
+    "name": "Carrot Sticks and Hummus",
+    "meal_type": "snack",
+    "description": "Crunchy carrot sticks with creamy hummus",
+    "instructions": "Using a sharp knife, carefully slice the main ingredient into uniform pieces. Arrange on a plate or in a container. Add 1 cup carrot sticks, 1/4 cup hummus, paprika as specified. For enhanced flavor, let sit for 5 minutes before serving. Perfect for satisfying hunger between meals and maintaining steady energy levels.",
+    "prep_time": 5,
+    "cook_time": 0,
+    "calories": 180,
+    "protein": 6,
+    "fiber": 10,
+    "carbs": 20,
+    "fat": 10,
+    "ingredients": [
+      "1 cup carrot sticks",
+      "1/4 cup hummus",
+      "paprika",
+      "olive oil"
+    ],
+    "dietary_tags": [
+      "high_fiber",
+      "vegetarian",
+      "quick"
+    ]
+  },
+  {
+    "name": "Peach and Yogurt",
+    "meal_type": "snack",
+    "description": "Fresh peach with creamy yogurt",
+    "instructions": "Prepare the base ingredient and arrange it on a serving plate. Evenly distribute 1 peach, 1/2 cup yogurt, 1 tbsp granola over the top. Garnish with optional herbs or spices if desired. Serve immediately for best texture and flavor. Perfect for satisfying hunger between meals and maintaining steady energy levels.",
+    "prep_time": 3,
+    "cook_time": 0,
+    "calories": 180,
+    "protein": 12,
+    "fiber": 6,
+    "carbs": 22,
+    "fat": 6,
+    "ingredients": [
+      "1 peach",
+      "1/2 cup yogurt",
+      "1 tbsp granola",
+      "honey"
+    ],
+    "dietary_tags": [
+      "high_fiber",
+      "quick"
+    ]
+  },
+  {
+    "name": "Plum and Almonds",
+    "meal_type": "snack",
+    "description": "Sweet plum with crunchy almonds",
+    "instructions": "Using a sharp knife, carefully slice the main ingredient into uniform pieces. Arrange on a plate or in a container. Add 1 plum, 8 almonds, cinnamon as specified. For enhanced flavor, let sit for 5 minutes before serving. Perfect for satisfying hunger between meals and maintaining steady energy levels.",
+    "prep_time": 2,
+    "cook_time": 0,
+    "calories": 180,
+    "protein": 6,
+    "fiber": 6,
+    "carbs": 24,
+    "fat": 10,
+    "ingredients": [
+      "1 plum",
+      "8 almonds",
+      "cinnamon"
+    ],
+    "dietary_tags": [
+      "high_fiber",
+      "quick"
+    ]
+  },
+  {
+    "name": "Strawberries and Cream",
+    "meal_type": "snack",
+    "description": "Fresh strawberries with light whipped cream",
+    "instructions": "Prepare the base ingredient and arrange it on a serving plate. Evenly distribute 1 cup strawberries, 2 tbsp light whipped cream, 1 tsp sugar over the top. Garnish with optional herbs or spices if desired. Serve immediately for best texture and flavor. Perfect for satisfying hunger between meals and maintaining steady energy levels.",
+    "prep_time": 3,
+    "cook_time": 0,
+    "calories": 120,
+    "protein": 2,
+    "fiber": 6,
+    "carbs": 18,
+    "fat": 6,
+    "ingredients": [
+      "1 cup strawberries",
+      "2 tbsp light whipped cream",
+      "1 tsp sugar"
+    ],
+    "dietary_tags": [
+      "high_fiber",
+      "quick"
+    ]
+  },
+  {
+    "name": "Nectarine and Pistachios",
+    "meal_type": "snack",
+    "description": "Juicy nectarine with salty pistachios",
+    "instructions": "Using a sharp knife, carefully slice the main ingredient into uniform pieces. Arrange on a plate or in a container. Add 1 nectarine, 12 pistachios, sea salt as specified. For enhanced flavor, let sit for 5 minutes before serving. Perfect for satisfying hunger between meals and maintaining steady energy levels.",
+    "prep_time": 2,
+    "cook_time": 0,
+    "calories": 160,
+    "protein": 6,
+    "fiber": 6,
+    "carbs": 20,
+    "fat": 8,
+    "ingredients": [
+      "1 nectarine",
+      "12 pistachios",
+      "sea salt"
+    ],
+    "dietary_tags": [
+      "high_fiber",
+      "quick"
+    ]
+  },
+  {
+    "name": "Cherry Tomatoes and Feta",
+    "meal_type": "snack",
+    "description": "Sweet cherry tomatoes with salty feta cheese",
+    "instructions": "Prepare 1 cup cherry tomatoes, 1 oz feta, oregano as directed in the ingredient list. Combine in a serving dish. For optimal flavor and texture, allow to sit for a few minutes before enjoying. This snack is perfect for quick energy and satisfies hunger between meals. Perfect for satisfying hunger between meals and maintaining steady energy levels.",
+    "prep_time": 4,
+    "cook_time": 0,
+    "calories": 140,
+    "protein": 8,
+    "fiber": 4,
+    "carbs": 8,
+    "fat": 10,
+    "ingredients": [
+      "1 cup cherry tomatoes",
+      "1 oz feta",
+      "oregano",
+      "olive oil"
+    ],
+    "dietary_tags": [
+      "quick",
+      "high_fiber"
+    ]
+  },
+  {
+    "name": "Cantaloupe and Prosciutto",
+    "meal_type": "snack",
+    "description": "Sweet cantaloupe with salty prosciutto",
+    "instructions": "Using a sharp knife, carefully slice the main ingredient into uniform pieces. Arrange on a plate or in a container. Add 1 cup cantaloupe, 2 slices prosciutto, mint as specified. For enhanced flavor, let sit for 5 minutes before serving. Perfect for satisfying hunger between meals and maintaining steady energy levels.",
+    "prep_time": 5,
+    "cook_time": 0,
+    "calories": 120,
+    "protein": 8,
+    "fiber": 2,
+    "carbs": 12,
+    "fat": 6,
+    "ingredients": [
+      "1 cup cantaloupe",
+      "2 slices prosciutto",
+      "mint",
+      "lime juice"
+    ],
+    "dietary_tags": [
+      "quick",
+      "refreshing"
+    ]
+  },
+  {
+    "name": "Fig and Walnuts",
+    "meal_type": "snack",
+    "description": "Fresh fig with crunchy walnuts",
+    "instructions": "Prepare the base ingredient and arrange it on a serving plate. Evenly distribute 2 fresh figs, 4 walnuts, 1 tsp honey over the top. Garnish with optional herbs or spices if desired. Serve immediately for best texture and flavor. Perfect for satisfying hunger between meals and maintaining steady energy levels.",
+    "prep_time": 3,
+    "cook_time": 0,
+    "calories": 140,
+    "protein": 4,
+    "fiber": 6,
+    "carbs": 18,
+    "fat": 8,
+    "ingredients": [
+      "2 fresh figs",
+      "4 walnuts",
+      "1 tsp honey",
+      "black pepper"
+    ],
+    "dietary_tags": [
+      "high_fiber",
+      "quick"
+    ]
+  },
+  {
+    "name": "Honeydew and Lime",
+    "meal_type": "snack",
+    "description": "Refreshing honeydew with lime juice",
+    "instructions": "Prepare 1 cup honeydew, lime juice, mint as directed in the ingredient list. Combine in a serving dish. For optimal flavor and texture, allow to sit for a few minutes before enjoying. This snack is perfect for quick energy and satisfies hunger between meals. Perfect for satisfying hunger between meals and maintaining steady energy levels.",
+    "prep_time": 4,
+    "cook_time": 0,
+    "calories": 100,
+    "protein": 2,
+    "fiber": 2,
+    "carbs": 22,
+    "fat": 2,
+    "ingredients": [
+      "1 cup honeydew",
+      "lime juice",
+      "mint",
+      "sea salt"
+    ],
+    "dietary_tags": [
+      "quick",
+      "refreshing"
+    ]
+  },
+  {
+    "name": "Blackberries and Yogurt",
+    "meal_type": "snack",
+    "description": "Fresh blackberries with creamy yogurt",
+    "instructions": "Prepare the base ingredient and arrange it on a serving plate. Evenly distribute 1 cup blackberries, 1/2 cup yogurt, 1 tbsp granola over the top. Garnish with optional herbs or spices if desired. Serve immediately for best texture and flavor. Perfect for satisfying hunger between meals and maintaining steady energy levels.",
+    "prep_time": 3,
+    "cook_time": 0,
+    "calories": 140,
+    "protein": 8,
+    "fiber": 10,
+    "carbs": 18,
+    "fat": 6,
+    "ingredients": [
+      "1 cup blackberries",
+      "1/2 cup yogurt",
+      "1 tbsp granola",
+      "honey"
+    ],
+    "dietary_tags": [
+      "high_fiber",
+      "quick"
+    ]
+  },
+  {
+    "name": "Raspberries and Dark Chocolate",
+    "meal_type": "snack",
+    "description": "Fresh raspberries with dark chocolate shavings",
+    "instructions": "Prepare the base ingredient and arrange it on a serving plate. Evenly distribute 1 cup raspberries, 1 square dark chocolate, mint over the top. Garnish with optional herbs or spices if desired. Serve immediately for best texture and flavor. Perfect for satisfying hunger between meals and maintaining steady energy levels.",
+    "prep_time": 3,
+    "cook_time": 0,
+    "calories": 120,
+    "protein": 2,
+    "fiber": 8,
+    "carbs": 16,
+    "fat": 8,
+    "ingredients": [
+      "1 cup raspberries",
+      "1 square dark chocolate",
+      "mint"
+    ],
+    "dietary_tags": [
+      "high_fiber",
+      "quick"
+    ]
+  },
+  {
+    "name": "Cranberry and Almond Mix",
+    "meal_type": "snack",
+    "description": "Dried cranberries with roasted almonds",
+    "instructions": "In a small bowl, gently combine 2 tbsp dried cranberries, 12 almonds, sea salt until well distributed. For best flavor, let the mixture sit for 5-10 minutes before serving to allow flavors to meld. Store in an airtight container for up to 3 days. Perfect for satisfying hunger between meals and maintaining steady energy levels.",
+    "prep_time": 1,
+    "cook_time": 0,
+    "calories": 200,
+    "protein": 6,
+    "fiber": 6,
+    "carbs": 24,
+    "fat": 12,
+    "ingredients": [
+      "2 tbsp dried cranberries",
+      "12 almonds",
+      "sea salt"
+    ],
+    "dietary_tags": [
+      "high_fiber",
+      "quick"
+    ]
+  },
+  {
+    "name": "Apricot and Pistachio Mix",
+    "meal_type": "snack",
+    "description": "Dried apricots with salty pistachios",
+    "instructions": "In a small bowl, gently combine 4 dried apricots, 15 pistachios, sea salt until well distributed. For best flavor, let the mixture sit for 5-10 minutes before serving to allow flavors to meld. Store in an airtight container for up to 3 days. Perfect for satisfying hunger between meals and maintaining steady energy levels.",
+    "prep_time": 1,
+    "cook_time": 0,
+    "calories": 180,
+    "protein": 6,
+    "fiber": 6,
+    "carbs": 22,
+    "fat": 10,
+    "ingredients": [
+      "4 dried apricots",
+      "15 pistachios",
+      "sea salt"
+    ],
+    "dietary_tags": [
+      "high_fiber",
+      "quick"
+    ]
+  },
+  {
+    "name": "Date and Walnut Mix",
+    "meal_type": "snack",
+    "description": "Sweet dates with crunchy walnuts",
+    "instructions": "In a small bowl, gently combine 3 dates, 4 walnuts, cinnamon until well distributed. For best flavor, let the mixture sit for 5-10 minutes before serving to allow flavors to meld. Store in an airtight container for up to 3 days. Perfect for satisfying hunger between meals and maintaining steady energy levels.",
+    "prep_time": 2,
+    "cook_time": 0,
+    "calories": 200,
+    "protein": 4,
+    "fiber": 8,
+    "carbs": 28,
+    "fat": 10,
+    "ingredients": [
+      "3 dates",
+      "4 walnuts",
+      "cinnamon"
+    ],
+    "dietary_tags": [
+      "high_fiber",
+      "quick"
+    ]
+  },
+  {
+    "name": "Prune and Almond Mix",
+    "meal_type": "snack",
+    "description": "Dried prunes with roasted almonds",
+    "instructions": "In a small bowl, gently combine 3 prunes, 8 almonds, sea salt until well distributed. For best flavor, let the mixture sit for 5-10 minutes before serving to allow flavors to meld. Store in an airtight container for up to 3 days. Perfect for satisfying hunger between meals and maintaining steady energy levels.",
+    "prep_time": 1,
+    "cook_time": 0,
+    "calories": 180,
+    "protein": 6,
+    "fiber": 8,
+    "carbs": 24,
+    "fat": 10,
+    "ingredients": [
+      "3 prunes",
+      "8 almonds",
+      "sea salt"
+    ],
+    "dietary_tags": [
+      "high_fiber",
+      "quick"
+    ]
+  },
+  {
+    "name": "Raisins and Cashews",
+    "meal_type": "snack",
+    "description": "Sweet raisins with creamy cashews",
+    "instructions": "In a small bowl, gently combine 2 tbsp raisins, 10 cashews, sea salt until well distributed. For best flavor, let the mixture sit for 5-10 minutes before serving to allow flavors to meld. Store in an airtight container for up to 3 days. Perfect for satisfying hunger between meals and maintaining steady energy levels.",
+    "prep_time": 1,
+    "cook_time": 0,
+    "calories": 200,
+    "protein": 6,
+    "fiber": 4,
+    "carbs": 26,
+    "fat": 12,
+    "ingredients": [
+      "2 tbsp raisins",
+      "10 cashews",
+      "sea salt"
+    ],
+    "dietary_tags": [
+      "quick"
+    ]
+  },
+  {
+    "name": "Current and Pecan Mix",
+    "meal_type": "snack",
+    "description": "Dried currants with toasted pecans",
+    "instructions": "In a small bowl, gently combine 2 tbsp dried currants, 6 pecans, sea salt until well distributed. For best flavor, let the mixture sit for 5-10 minutes before serving to allow flavors to meld. Store in an airtight container for up to 3 days. Perfect for satisfying hunger between meals and maintaining steady energy levels.",
+    "prep_time": 1,
+    "cook_time": 0,
+    "calories": 180,
+    "protein": 4,
+    "fiber": 6,
+    "carbs": 22,
+    "fat": 12,
+    "ingredients": [
+      "2 tbsp dried currants",
+      "6 pecans",
+      "sea salt"
+    ],
+    "dietary_tags": [
+      "high_fiber",
+      "quick"
+    ]
+  },
+  {
+    "name": "Mulberry and Pumpkin Seed Mix",
+    "meal_type": "snack",
+    "description": "Dried mulberries with roasted pumpkin seeds",
+    "instructions": "In a small bowl, gently combine 2 tbsp dried mulberries, 2 tbsp pumpkin seeds, sea salt until well distributed. For best flavor, let the mixture sit for 5-10 minutes before serving to allow flavors to meld. Store in an airtight container for up to 3 days. Perfect for satisfying hunger between meals and maintaining steady energy levels.",
+    "prep_time": 1,
+    "cook_time": 0,
+    "calories": 160,
+    "protein": 8,
+    "fiber": 6,
+    "carbs": 18,
+    "fat": 10,
+    "ingredients": [
+      "2 tbsp dried mulberries",
+      "2 tbsp pumpkin seeds",
+      "sea salt"
+    ],
+    "dietary_tags": [
+      "high_fiber",
+      "quick"
+    ]
+  },
+  {
+    "name": "Goji Berry and Almond Mix",
+    "meal_type": "snack",
+    "description": "Antioxidant goji berries with almonds",
+    "instructions": "In a small bowl, gently combine 2 tbsp goji berries, 10 almonds, sea salt until well distributed. For best flavor, let the mixture sit for 5-10 minutes before serving to allow flavors to meld. Store in an airtight container for up to 3 days. Perfect for satisfying hunger between meals and maintaining steady energy levels.",
+    "prep_time": 1,
+    "cook_time": 0,
+    "calories": 140,
+    "protein": 6,
+    "fiber": 6,
+    "carbs": 16,
+    "fat": 8,
+    "ingredients": [
+      "2 tbsp goji berries",
+      "10 almonds",
+      "sea salt"
+    ],
+    "dietary_tags": [
+      "high_fiber",
+      "quick"
+    ]
+  },
+  {
+    "name": "Golden Berry and Cashew Mix",
+    "meal_type": "snack",
+    "description": "Tart golden berries with creamy cashews",
+    "instructions": "In a small bowl, gently combine 2 tbsp golden berries, 8 cashews, sea salt until well distributed. For best flavor, let the mixture sit for 5-10 minutes before serving to allow flavors to meld. Store in an airtight container for up to 3 days. Perfect for satisfying hunger between meals and maintaining steady energy levels.",
+    "prep_time": 1,
+    "cook_time": 0,
+    "calories": 160,
+    "protein": 6,
+    "fiber": 6,
+    "carbs": 18,
+    "fat": 10,
+    "ingredients": [
+      "2 tbsp golden berries",
+      "8 cashews",
+      "sea salt"
+    ],
+    "dietary_tags": [
+      "high_fiber",
+      "quick"
+    ]
+  },
+  {
+    "name": "Blueberry and Walnut Mix",
+    "meal_type": "snack",
+    "description": "Dried blueberries with walnuts",
+    "instructions": "In a small bowl, gently combine 2 tbsp dried blueberries, 8 walnuts, sea salt until well distributed. For best flavor, let the mixture sit for 5-10 minutes before serving to allow flavors to meld. Store in an airtight container for up to 3 days. Perfect for satisfying hunger between meals and maintaining steady energy levels.",
+    "prep_time": 1,
+    "cook_time": 0,
+    "calories": 180,
+    "protein": 6,
+    "fiber": 8,
+    "carbs": 20,
+    "fat": 12,
+    "ingredients": [
+      "2 tbsp dried blueberries",
+      "8 walnuts",
+      "sea salt"
+    ],
+    "dietary_tags": [
+      "high_fiber",
+      "quick"
+    ]
+  },
+  {
+    "name": "Strawberry and Almond Mix",
+    "meal_type": "snack",
+    "description": "Dried strawberries with almonds",
+    "instructions": "In a small bowl, gently combine 2 tbsp dried strawberries, 10 almonds, sea salt until well distributed. For best flavor, let the mixture sit for 5-10 minutes before serving to allow flavors to meld. Store in an airtight container for up to 3 days. Perfect for satisfying hunger between meals and maintaining steady energy levels.",
+    "prep_time": 1,
+    "cook_time": 0,
+    "calories": 160,
+    "protein": 6,
+    "fiber": 6,
+    "carbs": 18,
+    "fat": 10,
+    "ingredients": [
+      "2 tbsp dried strawberries",
+      "10 almonds",
+      "sea salt"
+    ],
+    "dietary_tags": [
+      "high_fiber",
+      "quick"
+    ]
+  },
+  {
+    "name": "Cherry and Almond Mix",
+    "meal_type": "snack",
+    "description": "Dried cherries with almonds",
+    "instructions": "In a small bowl, gently combine 2 tbsp dried cherries, 10 almonds, sea salt until well distributed. For best flavor, let the mixture sit for 5-10 minutes before serving to allow flavors to meld. Store in an airtight container for up to 3 days. Perfect for satisfying hunger between meals and maintaining steady energy levels.",
+    "prep_time": 1,
+    "cook_time": 0,
+    "calories": 170,
+    "protein": 6,
+    "fiber": 6,
+    "carbs": 19,
+    "fat": 11,
+    "ingredients": [
+      "2 tbsp dried cherries",
+      "10 almonds",
+      "sea salt"
+    ],
+    "dietary_tags": [
+      "high_fiber",
+      "quick"
+    ]
+  },
+  {
+    "name": "Peach and Pecan Mix",
+    "meal_type": "snack",
+    "description": "Dried peaches with toasted pecans",
+    "instructions": "In a small bowl, gently combine 2 tbsp dried peaches, 6 pecans, sea salt until well distributed. For best flavor, let the mixture sit for 5-10 minutes before serving to allow flavors to meld. Store in an airtight container for up to 3 days. Perfect for satisfying hunger between meals and maintaining steady energy levels.",
+    "prep_time": 1,
+    "cook_time": 0,
+    "calories": 180,
+    "protein": 6,
+    "fiber": 8,
+    "carbs": 20,
+    "fat": 12,
+    "ingredients": [
+      "2 tbsp dried peaches",
+      "6 pecans",
+      "sea salt"
+    ],
+    "dietary_tags": [
+      "high_fiber",
+      "quick"
+    ]
+  },
+  {
+    "name": "Apple and Cashew Mix",
+    "meal_type": "snack",
+    "description": "Dried apple rings with cashews",
+    "instructions": "In a small bowl, gently combine 2 dried apple rings, 8 cashews, cinnamon until well distributed. For best flavor, let the mixture sit for 5-10 minutes before serving to allow flavors to meld. Store in an airtight container for up to 3 days. Perfect for satisfying hunger between meals and maintaining steady energy levels.",
+    "prep_time": 1,
+    "cook_time": 0,
+    "calories": 170,
+    "protein": 6,
+    "fiber": 6,
+    "carbs": 20,
+    "fat": 10,
+    "ingredients": [
+      "2 dried apple rings",
+      "8 cashews",
+      "cinnamon",
+      "sea salt"
+    ],
+    "dietary_tags": [
+      "high_fiber",
+      "quick"
+    ]
+  },
+  {
+    "name": "Pear and Walnut Mix",
+    "meal_type": "snack",
+    "description": "Dried pear with walnuts",
+    "instructions": "In a small bowl, gently combine 2 dried pear slices, 6 walnuts, sea salt until well distributed. For best flavor, let the mixture sit for 5-10 minutes before serving to allow flavors to meld. Store in an airtight container for up to 3 days. Perfect for satisfying hunger between meals and maintaining steady energy levels.",
+    "prep_time": 1,
+    "cook_time": 0,
+    "calories": 160,
+    "protein": 6,
+    "fiber": 8,
+    "carbs": 18,
+    "fat": 10,
+    "ingredients": [
+      "2 dried pear slices",
+      "6 walnuts",
+      "sea salt"
+    ],
+    "dietary_tags": [
+      "high_fiber",
+      "quick"
+    ]
+  },
+  {
+    "name": "Mango and Cashew Mix",
+    "meal_type": "snack",
+    "description": "Dried mango with cashews",
+    "instructions": "In a small bowl, gently combine 2 tbsp dried mango, 8 cashews, sea salt until well distributed. For best flavor, let the mixture sit for 5-10 minutes before serving to allow flavors to meld. Store in an airtight container for up to 3 days. Perfect for satisfying hunger between meals and maintaining steady energy levels.",
+    "prep_time": 1,
+    "cook_time": 0,
+    "calories": 190,
+    "protein": 6,
+    "fiber": 6,
+    "carbs": 22,
+    "fat": 12,
+    "ingredients": [
+      "2 tbsp dried mango",
+      "8 cashews",
+      "sea salt"
+    ],
+    "dietary_tags": [
+      "quick"
+    ]
+  },
+  {
+    "name": "Papaya and Pumpkin Seed Mix",
+    "meal_type": "snack",
+    "description": "Dried papaya with pumpkin seeds",
+    "instructions": "In a small bowl, gently combine 2 tbsp dried papaya, 2 tbsp pumpkin seeds, sea salt until well distributed. For best flavor, let the mixture sit for 5-10 minutes before serving to allow flavors to meld. Store in an airtight container for up to 3 days. Perfect for satisfying hunger between meals and maintaining steady energy levels.",
+    "prep_time": 1,
+    "cook_time": 0,
+    "calories": 150,
+    "protein": 8,
+    "fiber": 6,
+    "carbs": 16,
+    "fat": 10,
+    "ingredients": [
+      "2 tbsp dried papaya",
+      "2 tbsp pumpkin seeds",
+      "sea salt"
+    ],
+    "dietary_tags": [
+      "high_fiber",
+      "quick"
+    ]
+  },
+  {
+    "name": "Pineapple and Macadamia Mix",
+    "meal_type": "snack",
+    "description": "Dried pineapple with macadamia nuts",
+    "instructions": "In a small bowl, gently combine 2 tbsp dried pineapple, 6 macadamia nuts, sea salt until well distributed. For best flavor, let the mixture sit for 5-10 minutes before serving to allow flavors to meld. Store in an airtight container for up to 3 days. Perfect for satisfying hunger between meals and maintaining steady energy levels.",
+    "prep_time": 1,
+    "cook_time": 0,
+    "calories": 200,
+    "protein": 4,
+    "fiber": 6,
+    "carbs": 24,
+    "fat": 14,
+    "ingredients": [
+      "2 tbsp dried pineapple",
+      "6 macadamia nuts",
+      "sea salt"
+    ],
+    "dietary_tags": [
+      "high_fiber",
+      "quick"
+    ]
+  },
+  {
+    "name": "Coconut and Almond Mix",
+    "meal_type": "snack",
+    "description": "Toasted coconut with almonds",
+    "instructions": "In a small bowl, gently combine 2 tbsp toasted coconut, 10 almonds, sea salt until well distributed. For best flavor, let the mixture sit for 5-10 minutes before serving to allow flavors to meld. Store in an airtight container for up to 3 days. Perfect for satisfying hunger between meals and maintaining steady energy levels.",
+    "prep_time": 1,
+    "cook_time": 0,
+    "calories": 180,
+    "protein": 6,
+    "fiber": 8,
+    "carbs": 16,
+    "fat": 14,
+    "ingredients": [
+      "2 tbsp toasted coconut",
+      "10 almonds",
+      "sea salt"
+    ],
+    "dietary_tags": [
+      "high_fiber",
+      "quick"
+    ]
+  },
+  {
+    "name": "Banana and Walnut Mix",
+    "meal_type": "snack",
+    "description": "Dried banana with walnuts",
+    "instructions": "In a small bowl, gently combine 2 dried banana chips, 6 walnuts, sea salt until well distributed. For best flavor, let the mixture sit for 5-10 minutes before serving to allow flavors to meld. Store in an airtight container for up to 3 days. Perfect for satisfying hunger between meals and maintaining steady energy levels.",
+    "prep_time": 1,
+    "cook_time": 0,
+    "calories": 190,
+    "protein": 6,
+    "fiber": 8,
+    "carbs": 22,
+    "fat": 12,
+    "ingredients": [
+      "2 dried banana chips",
+      "6 walnuts",
+      "sea salt"
+    ],
+    "dietary_tags": [
+      "high_fiber",
+      "quick"
+    ]
+  },
+  {
+    "name": "Spicy Roasted Chickpeas",
+    "meal_type": "snack",
+    "description": "Crunchy, spicy roasted chickpeas for a satisfying high-protein snack",
+    "instructions": "Preheat oven to 400\u00b0F (200\u00b0C). Drain and rinse 1 can chickpeas, pat very dry with paper towels. Toss with 1 tsp olive oil, 1/2 tsp paprika, 1/4 tsp cayenne, 1/4 tsp garlic powder, and salt. Spread on baking sheet in single layer. Roast for 20-30 minutes until crispy, shaking halfway. Let cool completely before serving.",
+    "prep_time": 5,
+    "cook_time": 25,
+    "calories": 180,
+    "protein": 8,
+    "fiber": 6,
+    "carbs": 24,
+    "fat": 6,
+    "ingredients": [
+      "1 can chickpeas",
+      "1 tsp olive oil",
+      "1/2 tsp paprika",
+      "1/4 tsp cayenne",
+      "1/4 tsp garlic powder",
+      "salt"
+    ],
+    "dietary_tags": [
+      "high_protein",
+      "high_fiber",
+      "vegetarian",
+      "vegan",
+      "gluten_free",
+      "portable"
+    ]
+  },
+  {
+    "name": "White Bean Hummus",
+    "meal_type": "snack",
+    "description": "Creamy white bean hummus with herbs, perfect with vegetables or crackers",
+    "instructions": "In a food processor, combine 1 can cannellini beans (rinsed and drained), 2 tbsp tahini, 2 tbsp lemon juice, 1 minced garlic clove, 2 tbsp olive oil, 1 tsp fresh rosemary, salt and pepper. Process until smooth and creamy, scraping down sides as needed. Add 1-2 tbsp water if needed for consistency. Serve with vegetable sticks or whole grain crackers.",
+    "prep_time": 8,
+    "cook_time": 0,
+    "calories": 160,
+    "protein": 7,
+    "fiber": 5,
+    "carbs": 18,
+    "fat": 8,
+    "ingredients": [
+      "1 can cannellini beans",
+      "2 tbsp tahini",
+      "2 tbsp lemon juice",
+      "1 garlic clove",
+      "2 tbsp olive oil",
+      "1 tsp rosemary",
+      "vegetable sticks",
+      "whole grain crackers"
+    ],
+    "dietary_tags": [
+      "high_protein",
+      "high_fiber",
+      "vegetarian",
+      "vegan",
+      "no_cook",
+      "meal_prep"
+    ]
+  },
+  {
+    "name": "Edamame and Bean Mix",
+    "meal_type": "snack",
+    "description": "Protein-packed mix of edamame and various beans with a savory seasoning",
+    "instructions": "In a bowl, combine 1/2 cup shelled edamame (thawed), 1/4 cup canned black beans (rinsed), 1/4 cup canned kidney beans (rinsed), and 1/4 cup canned chickpeas (rinsed). Add 1 tsp soy sauce, 1 tsp rice vinegar, 1/2 tsp sesame oil, and a pinch of red pepper flakes. Toss well to combine. Sprinkle with 1 tsp sesame seeds before serving.",
+    "prep_time": 5,
+    "cook_time": 0,
+    "calories": 200,
+    "protein": 12,
+    "fiber": 8,
+    "carbs": 28,
+    "fat": 6,
+    "ingredients": [
+      "1/2 cup edamame",
+      "1/4 cup black beans",
+      "1/4 cup kidney beans",
+      "1/4 cup chickpeas",
+      "1 tsp soy sauce",
+      "1 tsp rice vinegar",
+      "1/2 tsp sesame oil",
+      "1 tsp sesame seeds",
+      "red pepper flakes"
+    ],
+    "dietary_tags": [
+      "high_protein",
+      "high_fiber",
+      "vegetarian",
+      "vegan",
+      "no_cook",
+      "portable"
+    ]
+  },
+  {
+    "name": "Beef Jerky and Roasted Chickpeas",
+    "meal_type": "snack",
+    "description": "High-protein snack combo of beef jerky and spiced chickpeas",
+    "instructions": "Roast 1/2 cup chickpeas with 1/2 tsp paprika at 400\u00b0F for 25 min. Serve with 1 oz beef jerky (store-bought). Enjoy as protein-rich snack.",
+    "prep_time": 2,
+    "cook_time": 25,
+    "calories": 240,
+    "protein": 20,
+    "fiber": 6,
+    "carbs": 18,
+    "fat": 10,
+    "ingredients": [
+      "1/2 cup chickpeas",
+      "1 oz beef jerky",
+      "1/2 tsp paprika"
+    ],
+    "dietary_tags": [
+      "high_protein",
+      "portable",
+      "no_cook"
+    ]
+  },
+  {
+    "name": "White Bean and Beef Trail Mix",
+    "meal_type": "snack",
+    "description": "Custom trail mix with roasted white beans and dried beef",
+    "instructions": "Roast 1/2 cup cannellini beans with sea salt until crispy. Mix with 1/4 cup dried beef strips, 1/4 cup nuts (almonds, cashews), 1/4 cup dried fruit. Portion into snack bags.",
+    "prep_time": 5,
+    "cook_time": 20,
+    "calories": 320,
+    "protein": 16,
+    "fiber": 6,
+    "carbs": 28,
+    "fat": 18,
+    "ingredients": [
+      "1/2 cup cannellini beans",
+      "1/4 cup dried beef",
+      "1/4 cup nuts",
+      "1/4 cup dried fruit"
+    ],
+    "dietary_tags": [
+      "high_protein",
+      "portable",
+      "meal_prep"
+    ]
+  },
+  {
+    "name": "Chickpea and Beef Protein Bites",
+    "meal_type": "snack",
+    "description": "No-bake protein energy balls with chickpea flour",
+    "instructions": "Process 1/2 cup roasted chickpeas into flour. Mix with 1 tbsp protein powder, 2 tbsp almond butter, 1 tbsp honey, 1 tbsp ground beef jerky bits. Form into 8 balls. Chill until firm.",
+    "prep_time": 10,
+    "cook_time": 0,
+    "calories": 200,
+    "protein": 14,
+    "fiber": 4,
+    "carbs": 16,
+    "fat": 12,
+    "ingredients": [
+      "1/2 cup chickpeas",
+      "1 tbsp protein powder",
+      "2 tbsp almond butter",
+      "1 tbsp honey",
+      "1 tbsp beef jerky"
+    ],
+    "dietary_tags": [
+      "high_protein",
+      "portable",
+      "no_cook"
+    ]
+  },
+  {
+    "name": "Black Bean and Beef Wrap Bites",
+    "meal_type": "snack",
+    "description": "Mini wraps with black beans and tiny beef pieces",
+    "instructions": "Heat 1 oz tiny beef pieces with 1/4 tsp cumin. Cut small whole wheat tortilla quarters. Fill each with 1 tbsp black beans, seasoned beef, 1 tsp cheese, shred of lettuce. Secure with toothpick.",
+    "prep_time": 8,
+    "cook_time": 5,
+    "calories": 180,
+    "protein": 14,
+    "fiber": 4,
+    "carbs": 14,
+    "fat": 10,
+    "ingredients": [
+      "1 oz beef pieces",
+      "1/4 cup black beans",
+      "small tortillas",
+      "1 tsp cheese",
+      "lettuce"
+    ],
+    "dietary_tags": [
+      "high_protein",
+      "portable",
+      "quick"
+    ]
+  },
+  {
+    "name": "Bean and Beef Hummus Dip",
+    "meal_type": "snack",
+    "description": "Creamy dip with white beans and beef jerky",
+    "instructions": "Blend 1/2 cup cannellini beans with 1 tbsp tahini, 1 tsp lemon juice, garlic, salt. Stir in 2 tbsp finely chopped beef jerky. Serve with vegetable sticks and crackers.",
+    "prep_time": 8,
+    "cook_time": 0,
+    "calories": 180,
+    "protein": 12,
+    "fiber": 4,
+    "carbs": 16,
+    "fat": 10,
+    "ingredients": [
+      "1/2 cup cannellini beans",
+      "2 tbsp beef jerky",
+      "1 tbsp tahini",
+      "vegetable sticks",
+      "crackers"
+    ],
+    "dietary_tags": [
+      "high_protein",
+      "portable",
+      "no_cook"
+    ]
+  },
+  {
+    "name": "Pinto Bean and Beef Crackers",
+    "meal_type": "snack",
+    "description": "Protein-rich topping for crackers with pinto beans and beef",
+    "instructions": "Mix 1/4 cup mashed pinto beans with 1 oz finely chopped beef, 1 tsp taco seasoning, 1 tsp yogurt. Spread on whole grain crackers. Top with shredded lettuce.",
+    "prep_time": 5,
+    "cook_time": 0,
+    "calories": 160,
+    "protein": 12,
+    "fiber": 4,
+    "carbs": 14,
+    "fat": 8,
+    "ingredients": [
+      "1/4 cup pinto beans",
+      "1 oz beef",
+      "whole grain crackers",
+      "1 tsp taco seasoning",
+      "1 tsp yogurt"
+    ],
+    "dietary_tags": [
+      "high_protein",
+      "portable",
+      "no_cook"
+    ]
+  },
+  {
+    "name": "Chickpea and Beef Energy Bar",
+    "meal_type": "snack",
+    "description": "Homemade protein bars with chickpeas and beef",
+    "instructions": "Blend 1/2 cup roasted chickpeas with 1 cup dates, 2 tbsp almond butter, 1 tbsp protein powder, 1 tbsp finely chopped beef jerky. Press into pan, chill 1 hour, cut into 6 bars.",
+    "prep_time": 12,
+    "cook_time": 0,
+    "calories": 220,
+    "protein": 14,
+    "fiber": 6,
+    "carbs": 26,
+    "fat": 10,
+    "ingredients": [
+      "1/2 cup chickpeas",
+      "1 cup dates",
+      "2 tbsp almond butter",
+      "1 tbsp protein powder",
+      "1 tbsp beef jerky"
+    ],
+    "dietary_tags": [
+      "high_protein",
+      "portable",
+      "meal_prep"
+    ]
+  },
+  {
+    "name": "Kidney Bean and Beef Salsa",
+    "meal_type": "snack",
+    "description": "Chunky salsa with kidney beans and ground beef",
+    "instructions": "Brown 2 oz ground beef with taco seasoning. Cool. Mix with 1/4 cup kidney beans, 1/4 cup diced tomatoes, 1 tbsp cilantro, onion, lime juice. Serve with tortilla chips.",
+    "prep_time": 10,
+    "cook_time": 8,
+    "calories": 200,
+    "protein": 14,
+    "fiber": 4,
+    "carbs": 16,
+    "fat": 10,
+    "ingredients": [
+      "2 oz ground beef",
+      "1/4 cup kidney beans",
+      "1/4 cup tomatoes",
+      "tortilla chips",
+      "cilantro"
+    ],
+    "dietary_tags": [
+      "high_protein",
+      "portable",
+      "quick"
+    ]
+  },
+  {
+    "name": "White Bean and Beef Toast",
+    "meal_type": "snack",
+    "description": "Protein toast with white bean spread and beef",
+    "instructions": "Mash 1/4 cup cannellini beans with garlic, 1 tsp olive oil. Toast 2 slices whole grain bread. Spread with bean mash, top with 1 oz finely chopped beef, tomato slice, parmesan.",
+    "prep_time": 5,
+    "cook_time": 3,
+    "calories": 220,
+    "protein": 16,
+    "fiber": 6,
+    "carbs": 24,
+    "fat": 8,
+    "ingredients": [
+      "1/4 cup cannellini beans",
+      "1 oz beef",
+      "2 slices bread",
+      "tomato",
+      "parmesan"
+    ],
+    "dietary_tags": [
+      "high_protein",
+      "quick",
+      "vegetarian_option"
+    ]
+  },
+  {
+    "name": "Black Bean and Beef Stuffed Dates",
+    "meal_type": "snack",
+    "description": "Sweet and savory dates stuffed with black beans and beef",
+    "instructions": "Pit 6 dates. Mix 1/4 cup black beans with 1 oz finely chopped beef, 1 tsp cinnamon, 1 tsp honey. Stuff each date with mixture. Chill 30 min.",
+    "prep_time": 8,
+    "cook_time": 0,
+    "calories": 180,
+    "protein": 10,
+    "fiber": 4,
+    "carbs": 24,
+    "fat": 6,
+    "ingredients": [
+      "6 dates",
+      "1/4 cup black beans",
+      "1 oz beef",
+      "1 tsp cinnamon",
+      "1 tsp honey"
+    ],
+    "dietary_tags": [
+      "high_protein",
+      "portable",
+      "no_cook"
+    ]
+  },
+  {
+    "name": "Chickpea and Beef Deviled Eggs",
+    "meal_type": "snack",
+    "description": "Protein-packed deviled eggs with chickpea and beef filling",
+    "instructions": "Hard boil 3 eggs, halve. Mix yolks with 1 tbsp mashed chickpeas, 1 oz finely chopped beef, 1 tsp mustard, 1 tsp yogurt. Pipe or spoon into whites. Sprinkle with paprika.",
+    "prep_time": 15,
+    "cook_time": 10,
+    "calories": 180,
+    "protein": 14,
+    "fiber": 2,
+    "carbs": 6,
+    "fat": 12,
+    "ingredients": [
+      "3 eggs",
+      "1 tbsp chickpeas",
+      "1 oz beef",
+      "1 tsp mustard",
+      "1 tsp yogurt"
+    ],
+    "dietary_tags": [
+      "high_protein",
+      "portable",
+      "quick"
+    ]
+  },
+  {
+    "name": "Bean and Beef Pinwheels",
+    "meal_type": "snack",
+    "description": "Spinach tortilla pinwheels with beans and beef",
+    "instructions": "Spread large spinach tortilla with 1/4 cup refried beans. Add 2 oz thin beef slices, cheese, lettuce. Roll tightly, slice into 8 pinwheels.",
+    "prep_time": 8,
+    "cook_time": 0,
+    "calories": 240,
+    "protein": 18,
+    "fiber": 4,
+    "carbs": 18,
+    "fat": 14,
+    "ingredients": [
+      "spinach tortilla",
+      "1/4 cup refried beans",
+      "2 oz beef",
+      "cheese",
+      "lettuce"
+    ],
+    "dietary_tags": [
+      "high_protein",
+      "portable",
+      "quick"
+    ]
+  },
+  {
+    "name": "Three Bean and Beef Skewers",
+    "meal_type": "snack",
+    "description": "Fun snack skewers alternating beans and beef",
+    "instructions": "On small skewers, alternate: black bean, piece of beef, kidney bean, piece of beef, chickpea. Serve with dipping sauce (mix yogurt, salsa, lime).",
+    "prep_time": 10,
+    "cook_time": 0,
+    "calories": 160,
+    "protein": 14,
+    "fiber": 4,
+    "carbs": 12,
+    "fat": 8,
+    "ingredients": [
+      "beans",
+      "beef pieces",
+      "yogurt",
+      "salsa",
+      "lime"
+    ],
+    "dietary_tags": [
+      "high_protein",
+      "portable",
+      "fun_kitchen"
+    ]
+  },
+  {
+    "name": "White Bean and Beef Quesadilla Bites",
+    "meal_type": "snack",
+    "description": "Mini quesadillas with white beans and beef",
+    "instructions": "Cut small tortillas in half. Fill each half with 1 tbsp white beans, 1 oz seasoned beef, 1 tsp cheese. Fold, cook in skillet 2-3 min each side until crispy.",
+    "prep_time": 8,
+    "cook_time": 6,
+    "calories": 200,
+    "protein": 14,
+    "fiber": 4,
+    "carbs": 16,
+    "fat": 12,
+    "ingredients": [
+      "small tortillas",
+      "white beans",
+      "1 oz beef",
+      "1 tsp cheese"
+    ],
+    "dietary_tags": [
+      "high_protein",
+      "portable",
+      "quick"
+    ]
+  },
+  {
+    "name": "Bean and Beef Pizza Bites",
+    "meal_type": "snack",
+    "description": "Mini pizza crusts topped with beans and beef",
+    "instructions": "Top 6 mini bagel halves with 1 tbsp pizza sauce, 1/4 cup black beans, 2 oz seasoned beef, 1 tsp cheese. Bake at 400\u00b0F for 8-10 min until melted.",
+    "prep_time": 5,
+    "cook_time": 10,
+    "calories": 240,
+    "protein": 16,
+    "fiber": 4,
+    "carbs": 28,
+    "fat": 10,
+    "ingredients": [
+      "6 mini bagels",
+      "1/4 cup black beans",
+      "2 oz beef",
+      "pizza sauce",
+      "cheese"
+    ],
+    "dietary_tags": [
+      "high_protein",
+      "portable",
+      "quick"
+    ]
+  }
+]

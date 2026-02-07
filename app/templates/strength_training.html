@@ -1,0 +1,928 @@
+{% extends "base.html" %}
+
+{% block title %}Strength Training - RunCoach{% endblock %}
+
+{% block styles %}
+<style>
+.container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 2rem 1rem;
+}
+
+.header {
+    text-align: center;
+    margin-bottom: 2rem;
+}
+
+.header h1 {
+    font-size: 2.5rem;
+    color: #667eea;
+    margin-bottom: 0.5rem;
+}
+
+.header p {
+    color: #666;
+    font-size: 1.1rem;
+}
+
+.workout-section {
+    margin-bottom: 3rem;
+}
+
+.section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.5rem;
+}
+
+.section-header h2 {
+    font-size: 1.8rem;
+    color: #333;
+    margin: 0;
+}
+
+.view-controls {
+    display: flex;
+    gap: 1rem;
+}
+
+.control-btn {
+    padding: 0.5rem 1rem;
+    border: 1px solid #667eea;
+    background: white;
+    color: #667eea;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.3s;
+}
+
+.control-btn:hover,
+.control-btn.active {
+    background: #667eea;
+    color: white;
+}
+
+.workout-card {
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
+}
+
+.workout-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: start;
+    margin-bottom: 1rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid #eee;
+}
+
+.workout-title {
+    font-size: 1.4rem;
+    color: #333;
+    margin-bottom: 0.5rem;
+}
+
+.workout-date {
+    color: #666;
+    font-size: 0.9rem;
+}
+
+.workout-duration {
+    display: flex;
+    gap: 1rem;
+    align-items: center;
+}
+
+.duration-badge {
+    background: #f0f0f0;
+    padding: 0.25rem 0.75rem;
+    border-radius: 12px;
+    font-size: 0.85rem;
+    color: #666;
+}
+
+.favorite-btn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 1.5rem;
+    transition: transform 0.3s;
+}
+
+.favorite-btn:hover {
+    transform: scale(1.1);
+}
+
+.favorite-btn.favorited {
+    color: #ffc107;
+}
+
+.workout-phases {
+    margin-top: 1.5rem;
+}
+
+.phase {
+    margin-bottom: 1.5rem;
+}
+
+.phase-title {
+    font-size: 1.2rem;
+    color: #667eea;
+    margin-bottom: 1rem;
+    font-weight: 600;
+}
+
+.exercise-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 1rem;
+}
+
+.exercise-item {
+    background: #f8f9fa;
+    padding: 1rem;
+    border-radius: 8px;
+    border-left: 3px solid #667eea;
+}
+
+.exercise-name {
+    font-weight: 600;
+    color: #333;
+    margin-bottom: 0.5rem;
+}
+
+.exercise-details {
+    color: #666;
+    font-size: 0.9rem;
+}
+
+.exercise-media {
+    margin-top: 0.5rem;
+}
+
+.exercise-image {
+    max-width: 100%;
+    border-radius: 6px;
+    margin-top: 0.5rem;
+}
+
+.exercise-gif {
+    max-width: 100%;
+    border-radius: 6px;
+}
+
+.loading {
+    text-align: center;
+    padding: 3rem;
+    color: #666;
+}
+
+.no-workouts {
+    text-align: center;
+    padding: 3rem;
+    color: #666;
+}
+
+.search-input {
+    width: 100%;
+    max-width: 500px;
+    padding: 0.75rem 1rem;
+    border: 2px solid #e0e0e0;
+    border-radius: 8px;
+    font-size: 1rem;
+    margin-bottom: 1.5rem;
+    transition: border-color 0.3s;
+}
+
+.search-input:focus {
+    outline: none;
+    border-color: #667eea;
+}
+
+.week-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+    gap: 1.5rem;
+}
+
+.week-nav {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+}
+
+.nav-btn {
+    padding: 0.5rem 1.5rem;
+    background: #667eea;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: background 0.3s;
+}
+
+.nav-btn:hover {
+    background: #5568d3;
+}
+
+.week-label {
+    font-size: 1.2rem;
+    font-weight: 600;
+    color: #333;
+}
+
+@media (max-width: 768px) {
+    .header h1 {
+        font-size: 2rem;
+    }
+    
+    .section-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 1rem;
+    }
+    
+    .exercise-list {
+        grid-template-columns: 1fr;
+    }
+    
+    .week-grid {
+        grid-template-columns: 1fr;
+    }
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="header">
+        <h1>💪 Strength Training</h1>
+        <p>Daily strength workouts designed for runners - 30-40 minutes</p>
+    </div>
+
+    <div class="workout-section">
+        <div class="section-header">
+            <h2>Today's Workout</h2>
+            <div class="view-controls">
+                <button class="control-btn active" id="todayBtn" onclick="showToday()">Today</button>
+                <button class="control-btn" id="weekBtn" onclick="showWeek()">This Week</button>
+                <button class="control-btn" id="searchBtn" onclick="showSearch()">🔍 Search</button>
+                {% if user %}
+                <button class="control-btn" id="favoritesBtn" onclick="showFavorites()">⭐ Favorites</button>
+                {% endif %}
+            </div>
+        </div>
+
+        <div id="workoutContent">
+            <div class="loading" id="loadingSpinner">
+                <p>Loading workout...</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+let currentView = 'today';
+let currentWorkoutId = null;
+let favorites = new Set();
+let favoriteWorkouts = [];
+
+// Label mappings for user-friendly display
+const focusLabels = {
+    'full_body': 'Full Body',
+    'upper_body': 'Upper Body',
+    'lower_body': 'Lower Body',
+    'core': 'Core',
+    'legs': 'Legs',
+    'glutes': 'Glutes',
+    'cardio': 'Cardio',
+    'flexibility': 'Flexibility'
+};
+
+const difficultyLabels = {
+    'beginner': 'Beginner',
+    'intermediate': 'Intermediate',
+    'advanced': 'Advanced'
+};
+
+const equipmentLabels = {
+    'body only': 'Body Weight',
+    'bodyweight': 'Body Weight',
+    'dumbbell': 'Dumbbells',
+    'bands': 'Resistance Bands',
+    'none': 'No Equipment'
+};
+
+function formatLabel(value, labelMap) {
+    if (!value) return 'General';
+    return labelMap[value.toLowerCase()] || value.charAt(0).toUpperCase() + value.slice(1).replace(/_/g, ' ');
+}
+
+async function loadFavoritesCache() {
+    {% if user %}
+    try {
+        const response = await fetch('/api/strength/favorites');
+        if (!response.ok) return;
+        
+        const favs = await response.json();
+        favoriteWorkouts = favs;
+        favorites = new Set(favs.map(f => f.workout_id));
+    } catch (error) {
+        console.error('Error loading favorites:', error);
+    }
+    {% endif %}
+}
+
+function showToday() {
+    currentView = 'today';
+    updateViewButtons('todayBtn');
+    loadTodayWorkout();
+}
+
+function showWeek() {
+    currentView = 'week';
+    updateViewButtons('weekBtn');
+    loadWeekWorkouts();
+}
+
+function showFavorites() {
+    currentView = 'favorites';
+    updateViewButtons('favoritesBtn');
+    loadFavorites();
+}
+
+function showSearch() {
+    currentView = 'search';
+    updateViewButtons('searchBtn');
+    renderSearchInterface();
+}
+
+function updateViewButtons(activeId) {
+    document.querySelectorAll('.control-btn').forEach(btn => btn.classList.remove('active'));
+    document.getElementById(activeId).classList.add('active');
+}
+
+function renderSearchInterface() {
+    const content = document.getElementById('workoutContent');
+    content.innerHTML = `
+        <div class="workout-card">
+            <input 
+                type="text" 
+                class="search-input" 
+                id="exerciseSearchInput"
+                placeholder="Search exercises... (e.g., squat, plank, push-up)"
+                onkeyup="handleSearch(event)"
+            >
+            <div id="searchResults">
+                <p style="color: #666; text-align: center;">Start typing to search exercises</p>
+            </div>
+        </div>
+    `;
+    document.getElementById('exerciseSearchInput').focus();
+}
+
+let searchTimeout;
+async function handleSearch(event) {
+    const searchTerm = event.target.value.trim();
+    
+    clearTimeout(searchTimeout);
+    
+    if (searchTerm.length < 2) {
+        document.getElementById('searchResults').innerHTML = 
+            '<p style="color: #666; text-align: center;">Start typing to search exercises</p>';
+        return;
+    }
+    
+    document.getElementById('searchResults').innerHTML = '<p style="color: #666; text-align: center;">Searching...</p>';
+    
+    searchTimeout = setTimeout(async () => {
+        await searchExercises(searchTerm);
+    }, 300);
+}
+
+async function searchExercises(searchTerm) {
+    try {
+        const response = await fetch(`/api/strength/exercises?name=${encodeURIComponent(searchTerm)}&limit=100`);
+        if (!response.ok) throw new Error('Failed to search exercises');
+        
+        const exercises = await response.json();
+        renderSearchResults(exercises);
+    } catch (error) {
+        console.error('Error searching exercises:', error);
+        document.getElementById('searchResults').innerHTML = 
+            '<p style="color: red; text-align: center;">Failed to search exercises. Please try again.</p>';
+    }
+}
+
+function renderSearchResults(exercises) {
+    const resultsContainer = document.getElementById('searchResults');
+    
+    if (!exercises || exercises.length === 0) {
+        resultsContainer.innerHTML = '<p style="color: #666; text-align: center;">No exercises found. Try a different search term.</p>';
+        return;
+    }
+    
+    resultsContainer.innerHTML = `
+        <p style="color: #666; margin-bottom: 1rem;">Found ${exercises.length} exercise(s)</p>
+        <div class="exercise-list">
+            ${exercises.map(ex => `
+                <div class="exercise-item" style="cursor: pointer;" onclick="showExerciseDetails('${ex.id}')">
+                    ${ex.gif_url ? `
+                        <img src="${ex.gif_url}" alt="${ex.name}" class="exercise-gif" style="width: 100%; height: 150px; object-fit: cover; margin-bottom: 0.5rem;">
+                    ` : ''}
+                    <div class="exercise-name">${ex.name} 🔍</div>
+                    <div class="exercise-details">
+                        <strong>Level:</strong> ${formatLabel(ex.level, difficultyLabels)}<br>
+                        <strong>Equipment:</strong> ${formatLabel(ex.equipment, equipmentLabels)}<br>
+                        <strong>Muscles:</strong> ${(ex.primary_muscles || []).map(m => m.charAt(0).toUpperCase() + m.slice(1)).join(', ')}
+                    </div>
+                </div>
+            `).join('')}
+        </div>
+    `;
+}
+
+async function loadTodayWorkout() {
+    const content = document.getElementById('workoutContent');
+    content.innerHTML = '<div class="loading"><p>Loading workout...</p></div>';
+
+    try {
+        console.log('Fetching today\'s workout from /api/strength/workout/today...');
+        const response = await fetch('/api/strength/workout/today');
+        console.log('Response status:', response.status);
+        
+        if (!response.ok) {
+            const errorText = await response.text();
+            console.error('API error:', errorText);
+            throw new Error(`Failed to load workout: ${response.status}`);
+        }
+        
+        const workout = await response.json();
+        console.log('Workout loaded:', workout);
+        currentWorkoutId = workout.id;
+        renderWorkout(workout, content, true);
+    } catch (error) {
+        console.error('Error loading workout:', error);
+        content.innerHTML = `<div class="no-workouts"><p>Failed to load workout. Please try again.</p><p style="color: red; font-size: 0.9rem;">Error: ${error.message}</p></div>`;
+    }
+}
+
+async function loadWeekWorkouts() {
+    const content = document.getElementById('workoutContent');
+    content.innerHTML = '<div class="loading"><p>Loading weekly workouts...</p></div>';
+
+    try {
+        const response = await fetch('/api/strength/workout/week');
+        if (!response.ok) throw new Error('Failed to load workouts');
+        
+        const workouts = await response.json();
+        renderWeekWorkouts(workouts, content);
+    } catch (error) {
+        console.error('Error loading workouts:', error);
+        content.innerHTML = '<div class="no-workouts"><p>Failed to load workouts. Please try again.</p></div>';
+    }
+}
+
+function renderWorkout(workout, container, showFavorite) {
+    const warmupExercises = workout.warmup_exercises || [];
+    const mainExercises = workout.main_exercises || [];
+    const cooldownExercises = workout.cooldown_exercises || [];
+
+    let favoriteButton = '';
+    if (showFavorite) {
+        favoriteButton = `
+            <button 
+                class="favorite-btn" 
+                id="favoriteBtn"
+                onclick="toggleFavorite('${workout.id}')"
+                title="Add to favorites"
+            >
+                ${isFavorited(workout.id) ? '⭐' : '☆'}
+            </button>
+        `;
+    }
+
+    container.innerHTML = `
+        <div class="workout-card">
+            <div class="workout-header">
+                <div>
+                    <h3 class="workout-title">${workout.title}</h3>
+                    <p class="workout-date">${formatDate(workout.date)}</p>
+                </div>
+                <div class="workout-duration">
+                    <span class="duration-badge">⏱️ ${workout.total_duration} min</span>
+                    ${favoriteButton}
+                </div>
+            </div>
+            <p>${workout.description || ''}</p>
+
+            <div class="workout-phases">
+                ${warmupExercises.length > 0 ? renderPhase('🔥 Warmup', warmupExercises, workout.warmup_duration) : ''}
+                ${mainExercises.length > 0 ? renderPhase('💪 Main Workout', mainExercises, workout.main_duration) : ''}
+                ${cooldownExercises.length > 0 ? renderPhase('🧘 Cooldown', cooldownExercises, workout.cooldown_duration) : ''}
+            </div>
+        </div>
+    `;
+}
+
+async function loadExerciseDetails(exerciseId) {
+    try {
+        const response = await fetch(`/api/strength/exercises/${exerciseId}`);
+        if (!response.ok) throw new Error('Failed to load exercise details');
+        return await response.json();
+    } catch (error) {
+        console.error('Error loading exercise:', error);
+        return null;
+    }
+}
+
+async function showExerciseDetails(exerciseId) {
+    const exercise = await loadExerciseDetails(exerciseId);
+    if (!exercise) {
+        alert('Failed to load exercise details');
+        return;
+    }
+
+    const modal = document.createElement('div');
+    modal.className = 'exercise-modal';
+    modal.style.cssText = `
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0,0,0,0.5);
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        z-index: 10000;
+    `;
+
+    modal.innerHTML = `
+        <div style="
+            background: white;
+            padding: 2rem;
+            border-radius: 12px;
+            max-width: 600px;
+            max-height: 80vh;
+            overflow-y: auto;
+            position: relative;
+        ">
+            <button onclick="this.closest('.exercise-modal').remove()" style="
+                position: absolute;
+                top: 1rem;
+                right: 1rem;
+                background: none;
+                border: none;
+                font-size: 1.5rem;
+                cursor: pointer;
+            ">×</button>
+            <h2 style="color: #667eea; margin-bottom: 1rem;">${exercise.name}</h2>
+            ${exercise.gif_url ? `
+                <img src="${exercise.gif_url}" alt="${exercise.name}" style="
+                    max-width: 100%;
+                    border-radius: 8px;
+                    margin-bottom: 1rem;
+                ">
+            ` : ''}
+            <p style="color: #666; margin-bottom: 1rem;">
+                <strong>Equipment:</strong> ${formatLabel(exercise.equipment, equipmentLabels)}<br>
+                <strong>Level:</strong> ${formatLabel(exercise.level, difficultyLabels)}<br>
+                <strong>Primary Muscles:</strong> ${(exercise.primary_muscles || []).map(m => m.charAt(0).toUpperCase() + m.slice(1)).join(', ')}
+            </p>
+            <h3 style="margin-bottom: 0.5rem;">Instructions:</h3>
+            <ol style="color: #666; line-height: 1.6;">
+                ${(exercise.instructions || []).map((instruction, index) => `
+                    <li style="margin-bottom: 0.5rem;">${instruction}</li>
+                `).join('')}
+            </ol>
+            ${exercise.gif_url ? `
+                <p style="margin-top: 1rem; font-size: 0.8rem; color: #999;">
+                    Image/GIF source: free-exercise-db & Exercises_Dataset (public domain)
+                </p>
+            ` : ''}
+        </div>
+    `;
+
+    document.body.appendChild(modal);
+    modal.addEventListener('click', (e) => {
+        if (e.target === modal) modal.remove();
+    });
+}
+
+function renderPhase(title, exercises, duration) {
+    return `
+        <div class="phase">
+            <h4 class="phase-title">${title} (${duration} min)</h4>
+            <div class="exercise-list">
+                ${exercises.map(ex => `
+                    <div class="exercise-item" style="cursor: pointer;" onclick="showExerciseDetails('${ex.exercise_id}')">
+                        ${ex.gif_url ? `
+                            <img src="${ex.gif_url}" alt="${ex.name}" class="exercise-gif" style="width: 100%; height: 150px; object-fit: cover; margin-bottom: 0.5rem;">
+                        ` : ''}
+                        <div class="exercise-name">${ex.name} 🔍</div>
+                        <div class="exercise-details">
+                            ${ex.sets} set(s) × ${ex.reps}${ex.rest_seconds ? ` • ${ex.rest_seconds}s rest` : ''}<br>
+                            ${ex.equipment ? `<span style="font-size: 0.85rem; color: #888;">Equipment: ${formatLabel(ex.equipment, equipmentLabels)}</span>` : ''}
+                        </div>
+                        ${ex.instructions && ex.instructions.length > 0 ? `
+                            <details style="margin-top: 0.5rem;">
+                                <summary style="cursor: pointer; color: #667eea; font-size: 0.9rem; font-weight: 500;">View Instructions</summary>
+                                <ol style="margin: 0.5rem 0 0 1rem; padding-left: 0.5rem; font-size: 0.85rem; color: #555; line-height: 1.4;">
+                                    ${ex.instructions.map(inst => `<li style="margin-bottom: 0.25rem;">${inst}</li>`).join('')}
+                                </ol>
+                            </details>
+                        ` : ''}
+                    </div>
+                `).join('')}
+            </div>
+        </div>
+    `;
+}
+
+function renderWeekWorkouts(workouts, container) {
+    if (!workouts || workouts.length === 0) {
+        container.innerHTML = '<div class="no-workouts"><p>No workouts found for this week.</p></div>';
+        return;
+    }
+
+    container.innerHTML = `
+        <div class="week-grid">
+            ${workouts.map(workout => `
+                <div class="workout-card" style="cursor: pointer;" onclick="goToWorkoutDetail('${workout.id}')">
+                    <div class="workout-header">
+                        <div>
+                            <h3 class="workout-title">${workout.title} 🔍</h3>
+                            <p class="workout-date">${formatDate(workout.date)}</p>
+                        </div>
+                        <div class="workout-duration">
+                            <span class="duration-badge">⏱️ ${workout.total_duration} min</span>
+                        </div>
+                    </div>
+                    <div class="exercise-details">
+                        <strong>Focus:</strong> ${formatLabel(workout.primary_focus, focusLabels)}<br>
+                        <strong>Difficulty:</strong> ${formatLabel(workout.difficulty, difficultyLabels)}<br>
+                        <strong>Exercises:</strong> ${(workout.main_exercises || []).length}
+                    </div>
+                </div>
+            `).join('')}
+        </div>
+    `;
+}
+
+function formatDate(dateString) {
+    const date = new Date(dateString);
+    const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+    return date.toLocaleDateString('en-US', options);
+}
+
+async function loadFavorites() {
+    const content = document.getElementById('workoutContent');
+    content.innerHTML = '<div class="loading"><p>Loading favorites...</p></div>';
+
+    try {
+        const response = await fetch('/api/strength/favorites');
+        if (!response.ok) throw new Error('Failed to load favorites');
+        
+        const favorites = await response.json();
+        renderFavorites(favorites, content);
+    } catch (error) {
+        console.error('Error loading favorites:', error);
+        content.innerHTML = '<div class="no-workouts"><p>No favorites yet. Add workouts to your favorites!</p></div>';
+    }
+}
+
+function renderFavorites(favorites, container) {
+    if (!favorites || favorites.length === 0) {
+        container.innerHTML = '<div class="no-workouts"><p>No favorites yet. Add workouts to your favorites!</p></div>';
+        return;
+    }
+
+    const workouts = favorites
+        .filter(f => f.workout)
+        .map(f => f.workout);
+
+    container.innerHTML = `
+        <div class="week-grid">
+            ${workouts.map(workout => `
+                <div class="workout-card">
+                    <div class="workout-header" style="cursor: pointer;" onclick="goToWorkoutDetail('${workout.id}')">
+                        <div>
+                            <h3 class="workout-title">${workout.title} 🔍</h3>
+                            <p class="workout-date">${formatDate(workout.date)}</p>
+                        </div>
+                        <button 
+                            class="favorite-btn favorited"
+                            onclick="event.stopPropagation(); toggleFavorite('${workout.id}')"
+                            title="Remove from favorites"
+                        >
+                            ⭐
+                        </button>
+                    </div>
+                    <div class="exercise-details" style="cursor: pointer;" onclick="goToWorkoutDetail('${workout.id}')">
+                        <strong>Focus:</strong> ${formatLabel(workout.primary_focus, focusLabels)}<br>
+                        <strong>Difficulty:</strong> ${formatLabel(workout.difficulty, difficultyLabels)}<br>
+                        <strong>Duration:</strong> ${workout.total_duration} min
+                    </div>
+                </div>
+            `).join('')}
+        </div>
+    `;
+}
+
+async function toggleFavorite(workoutId) {
+    try {
+        const btn = document.getElementById('favoriteBtn');
+        const isFavorited = favorites.has(workoutId);
+        
+        if (isFavorited) {
+            await fetch(`/api/strength/favorites/${workoutId}`, {
+                method: 'DELETE'
+            });
+            btn.textContent = '☆';
+            btn.classList.remove('favorited');
+            favorites.delete(workoutId);
+        } else {
+            await fetch('/api/strength/favorites', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ workout_id: workoutId })
+            });
+            btn.textContent = '⭐';
+            btn.classList.add('favorited');
+            favorites.add(workoutId);
+        }
+    } catch (error) {
+        console.error('Error toggling favorite:', error);
+        alert('Failed to update favorite status. Please try again.');
+    }
+}
+
+function isFavorited(workoutId) {
+    return favorites.has(workoutId);
+}
+
+function goToWorkoutDetail(workoutId) {
+    window.location.href = `/strength-training/${workoutId}`;
+}
+
+async function showWorkoutDetails(workoutDate) {
+    try {
+        console.log('Fetching workout for date:', workoutDate);
+        const response = await fetch(`/api/strength/workout/${workoutDate}`);
+        if (!response.ok) throw new Error('Failed to load workout details');
+        const workout = await response.json();
+        
+        console.log('Workout received:', workout);
+        console.log('Warmup exercises:', workout.warmup_exercises?.length || 0);
+        console.log('Main exercises:', workout.main_exercises?.length || 0);
+        console.log('Cooldown exercises:', workout.cooldown_exercises?.length || 0);
+
+        const modal = document.createElement('div');
+        modal.className = 'workout-detail-modal';
+        modal.style.cssText = `
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.5);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 10000;
+            overflow-y: auto;
+            padding: 2rem;
+        `;
+
+        const warmupExercises = workout.warmup_exercises || [];
+        const mainExercises = workout.main_exercises || [];
+        const cooldownExercises = workout.cooldown_exercises || [];
+
+        modal.innerHTML = `
+            <div style="
+                background: white;
+                padding: 2rem;
+                border-radius: 12px;
+                max-width: 900px;
+                width: 100%;
+                max-height: 90vh;
+                overflow-y: auto;
+                position: relative;
+            ">
+                <button onclick="this.closest('.workout-detail-modal').remove()" style="
+                    position: absolute;
+                    top: 1rem;
+                    right: 1rem;
+                    background: none;
+                    border: none;
+                    font-size: 2rem;
+                    cursor: pointer;
+                    color: #999;
+                ">×</button>
+                
+                <h2 style="color: #667eea; margin-bottom: 0.5rem;">${workout.title}</h2>
+                <p style="color: #666; margin-bottom: 1rem;">${formatDate(workout.date)}</p>
+                <p style="color: #555; margin-bottom: 1.5rem;">${workout.description || ''}</p>
+                
+                <div style="display: flex; gap: 1rem; flex-wrap: wrap; margin-bottom: 2rem;">
+                    <span class="duration-badge" style="background: #667eea; color: white;">⏱️ ${workout.total_duration} min</span>
+                    <span class="duration-badge" style="background: #f0f0f0; color: #666;">💪 ${formatLabel(workout.primary_focus, focusLabels)}</span>
+                    <span class="duration-badge" style="background: #f0f0f0; color: #666;">📊 ${formatLabel(workout.difficulty, difficultyLabels)}</span>
+                </div>
+
+                ${warmupExercises.length > 0 ? `
+                    <div style="margin-bottom: 2rem;">
+                        <h3 style="color: #667eea; margin-bottom: 1rem;">🔥 Warmup (${workout.warmup_duration} min)</h3>
+                        <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 1rem;">
+                            ${warmupExercises.map(ex => `
+                                <div style="
+                                    background: #f8f9fa;
+                                    padding: 1rem;
+                                    border-radius: 8px;
+                                    border-left: 3px solid #667eea;
+                                    cursor: pointer;
+                                " onclick="event.stopPropagation(); showExerciseDetails('${ex.exercise_id}')">
+                                    ${ex.gif_url ? `
+                                        <img src="${ex.gif_url}" alt="${ex.name}" style="width: 100%; height: 120px; object-fit: cover; border-radius: 6px; margin-bottom: 0.5rem;">
+                                    ` : ''}
+                                    <div style="font-weight: 600; color: #333; margin-bottom: 0.25rem;">${ex.name} 🔍</div>
+                                    <div style="color: #666; font-size: 0.9rem;">${ex.sets} set(s) × ${ex.reps}${ex.rest_seconds ? ` • ${ex.rest_seconds}s rest` : ''}</div>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                ` : ''}
+
+                ${mainExercises.length > 0 ? `
+                    <div style="margin-bottom: 2rem;">
+                        <h3 style="color: #667eea; margin-bottom: 1rem;">💪 Main Workout (${workout.main_duration} min)</h3>
+                        <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 1rem;">
+                            ${mainExercises.map(ex => `
+                                <div style="
+                                    background: #f8f9fa;
+                                    padding: 1rem;
+                                    border-radius: 8px;
+                                    border-left: 3px solid #667eea;
+                                    cursor: pointer;
+                                " onclick="event.stopPropagation(); showExerciseDetails('${ex.exercise_id}')">
+                                    ${ex.gif_url ? `
+                                        <img src="${ex.gif_url}" alt="${ex.name}" style="width: 100%; height: 120px; object-fit: cover; border-radius: 6px; margin-bottom: 0.5rem;">
+                                    ` : ''}
+                                    <div style="font-weight: 600; color: #333; margin-bottom: 0.25rem;">${ex.name} 🔍</div>
+                                    <div style="color: #666; font-size: 0.9rem;">${ex.sets} set(s) × ${ex.reps}${ex.rest_seconds ? ` • ${ex.rest_seconds}s rest` : ''}</div>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                ` : ''}
+
+                ${cooldownExercises.length > 0 ? `
+                    <div style="margin-bottom: 1rem;">
+                        <h3 style="color: #667eea; margin-bottom: 1rem;">🧘 Cooldown (${workout.cooldown_duration} min)</h3>
+                        <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 1rem;">
+                            ${cooldownExercises.map(ex => `
+                                <div style="
+                                    background: #f8f9fa;
+                                    padding: 1rem;
+                                    border-radius: 8px;
+                                    border-left: 3px solid #667eea;
+                                    cursor: pointer;
+                                " onclick="event.stopPropagation(); showExerciseDetails('${ex.exercise_id}')">
+                                    ${ex.gif_url ? `
+                                        <img src="${ex.gif_url}" alt="${ex.name}" style="width: 100%; height: 120px; object-fit: cover; border-radius: 6px; margin-bottom: 0.5rem;">
+                                    ` : ''}
+                                    <div style="font-weight: 600; color: #333; margin-bottom: 0.25rem;">${ex.name} 🔍</div>
+                                    <div style="color: #666; font-size: 0.9rem;">${ex.sets} set(s) × ${ex.reps}${ex.rest_seconds ? ` • ${ex.rest_seconds}s rest` : ''}</div>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                ` : ''}
+            </div>
+        `;
+
+        document.body.appendChild(modal);
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) modal.remove();
+        });
+    } catch (error) {
+        console.error('Error loading workout details:', error);
+        alert('Failed to load workout details. Please try again.');
+    }
+}
+
+// Load today's workout on page load
+document.addEventListener('DOMContentLoaded', () => {
+    loadFavoritesCache();
+    loadTodayWorkout();
+});
+</script>
+{% endblock %}

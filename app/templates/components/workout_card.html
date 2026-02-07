@@ -1,0 +1,272 @@
+{% macro render(workout, show_actions=True, compact=False) %}
+<div class="workout-card {{ 'completed' if workout.completed else '' }} {{ 'compact' if compact else '' }}">
+    <div class="workout-header">
+        <div class="workout-day">
+            <span class="day-label">Day {{ workout.day }}</span>
+            {% if workout.completed %}
+            <span class="completed-badge">✓ Completed</span>
+            {% endif %}
+        </div>
+        <div class="workout-type">{{ workout.type }}</div>
+    </div>
+    
+    <div class="workout-body">
+        <div class="workout-distance">
+            <strong>{{ workout.distance }} miles</strong>
+            {% if workout.pace %}
+            <span class="workout-pace">@ {{ workout.pace }}</span>
+            {% endif %}
+        </div>
+        
+        {% if workout.notes %}
+        <div class="workout-notes">
+            <p>{{ workout.notes }}</p>
+        </div>
+        {% endif %}
+        
+        {% if workout.effort_level %}
+        <div class="workout-effort">
+            <span class="effort-label">Effort:</span>
+            <div class="effort-bar">
+                <div class="effort-fill" style="width: {{ workout.effort_level * 10 }}%"></div>
+            </div>
+            <span class="effort-value">{{ workout.effort_level }}/10</span>
+        </div>
+        {% endif %}
+    </div>
+    
+    {% if show_actions %}
+    <div class="workout-actions">
+        {% if not workout.completed %}
+        <button class="btn-action btn-primary" onclick="logRun({{ workout.id or workout.day }})">
+            📝 Log Run
+        </button>
+        {% endif %}
+        {% if workout.workout_link %}
+        <a href="{{ workout.workout_link }}" target="_blank" class="btn-action btn-link">
+            🔗 Workout Details
+        </a>
+        {% endif %}
+        {% if show_actions == 'full' %}
+        <button class="btn-action btn-secondary" onclick="editWorkout({{ workout.id or workout.day }})">
+            ✏️ Edit
+        </button>
+        <button class="btn-action btn-danger" onclick="deleteWorkout({{ workout.id or workout.day }})">
+            🗑️ Delete
+        </button>
+        {% endif %}
+    </div>
+    {% endif %}
+</div>
+
+<style>
+.workout-card {
+    background: white;
+    border-radius: 10px;
+    padding: 1.5rem;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    transition: transform 0.2s, box-shadow 0.2s;
+    border-left: 4px solid #667eea;
+}
+
+.workout-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+}
+
+.workout-card.completed {
+    border-left-color: #28a745;
+    background: #f8fff9;
+}
+
+.workout-card.compact {
+    padding: 1rem;
+}
+
+.workout-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+    padding-bottom: 0.75rem;
+    border-bottom: 1px solid #e0e0e0;
+}
+
+.workout-day {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.day-label {
+    font-weight: 700;
+    font-size: 1.1rem;
+    color: #333;
+}
+
+.completed-badge {
+    background: #28a745;
+    color: white;
+    padding: 0.25rem 0.75rem;
+    border-radius: 20px;
+    font-size: 0.85rem;
+    font-weight: 500;
+}
+
+.workout-type {
+    background: #667eea;
+    color: white;
+    padding: 0.5rem 1rem;
+    border-radius: 20px;
+    font-weight: 600;
+    font-size: 0.9rem;
+}
+
+.workout-body {
+    margin-bottom: 1rem;
+}
+
+.workout-distance {
+    font-size: 1.2rem;
+    margin-bottom: 0.75rem;
+    color: #333;
+}
+
+.workout-distance strong {
+    color: #667eea;
+}
+
+.workout-pace {
+    color: #666;
+    font-size: 0.95rem;
+    margin-left: 0.5rem;
+}
+
+.workout-notes {
+    background: #f8f9fa;
+    padding: 1rem;
+    border-radius: 8px;
+    margin-bottom: 0.75rem;
+}
+
+.workout-notes p {
+    margin: 0;
+    color: #555;
+    font-size: 0.95rem;
+    line-height: 1.5;
+}
+
+.workout-effort {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-top: 0.75rem;
+}
+
+.effort-label {
+    font-size: 0.9rem;
+    color: #666;
+    font-weight: 500;
+}
+
+.effort-bar {
+    flex: 1;
+    height: 8px;
+    background: #e0e0e0;
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+.effort-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #28a745 0%, #ffc107 50%, #dc3545 100%);
+    transition: width 0.3s;
+}
+
+.effort-value {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: #333;
+    min-width: 40px;
+}
+
+.workout-actions {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+}
+
+.btn-action {
+    padding: 0.5rem 1rem;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    font-weight: 500;
+    transition: background 0.3s, transform 0.1s;
+    text-decoration: none;
+    display: inline-block;
+    text-align: center;
+}
+
+.btn-action:active {
+    transform: scale(0.98);
+}
+
+.btn-primary {
+    background: #667eea;
+    color: white;
+}
+
+.btn-primary:hover {
+    background: #5568d3;
+}
+
+.btn-secondary {
+    background: #6c757d;
+    color: white;
+}
+
+.btn-secondary:hover {
+    background: #5a6268;
+}
+
+.btn-danger {
+    background: #dc3545;
+    color: white;
+}
+
+.btn-danger:hover {
+    background: #c82333;
+}
+
+.btn-link {
+    background: #17a2b8;
+    color: white;
+}
+
+.btn-link:hover {
+    background: #138496;
+}
+
+@media (max-width: 768px) {
+    .workout-card {
+        padding: 1rem;
+    }
+    
+    .workout-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.5rem;
+    }
+    
+    .workout-actions {
+        flex-direction: column;
+    }
+    
+    .btn-action {
+        width: 100%;
+    }
+}
+</style>
+{% endmacro %}

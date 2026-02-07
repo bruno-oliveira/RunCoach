@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+
+{% block title %}My Training Plans - RunCoach{% endblock %}
+
+{% block styles %}
+<link rel="stylesheet" href="/static/css/my_plans.css">
+{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="header">
+        <h1>🏃‍♂️ My Training Plans</h1>
+        <a href="/" class="back-link">← Back to Home</a>
+    </div>
+
+    {% if plans %}
+    <div class="plans-grid">
+        {% for plan in plans %}
+        <div class="plan-card">
+            <h3>{{ plan.target_distance_display }} Training Plan</h3>
+            <div class="plan-details">
+                <div class="plan-detail-row">
+                    <span class="plan-detail-label">Target Distance:</span>
+                    <span class="plan-detail-value">{{ plan.target_distance_display }}</span>
+                </div>
+                <div class="plan-detail-row">
+                    <span class="plan-detail-label">Starting Mileage:</span>
+                    <span class="plan-detail-value">{{ "%.1f"|format(plan.current_weekly_km) }} km/week</span>
+                </div>
+                <div class="plan-detail-row">
+                    <span class="plan-detail-label">Duration:</span>
+                    <span class="plan-detail-value">{{ plan.weeks_duration }} weeks</span>
+                </div>
+                <div class="plan-detail-row">
+                    <span class="plan-detail-label">Runs per Week:</span>
+                    <span class="plan-detail-value">Up to {{ plan.max_runs_per_week }} runs</span>
+                </div>
+            </div>
+            <div class="created-date">
+                Created: {{ plan.created_at.strftime('%B %d, %Y') }}
+            </div>
+            <div class="plan-actions">
+                <a href="/plan/{{ plan.id }}" class="btn btn-primary">View Plan</a>
+                <a href="/download-pdf/{{ plan.id }}" class="btn btn-secondary">Download PDF</a>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="no-plans">
+        <h2>No Training Plans Yet</h2>
+        <p>You haven't created any training plans yet. Start by generating your first personalized plan!</p>
+        <a href="/" class="btn btn-primary">Generate Your First Plan</a>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
