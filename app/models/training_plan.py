@@ -21,3 +21,10 @@ class TrainingPlan(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
     plan_data = Column(Text)  # JSON string of the generated plan
     nutrition_plan_data = Column(Text)  # JSON string of the nutrition plan
+
+    # Performance training fields
+    plan_type = Column(String, default="distance")  # "distance" or "performance"
+    current_pace = Column(Float)  # min/km
+    goal_pace = Column(Float)  # min/km
+    current_time = Column(String)  # formatted time string (e.g., "55:00")
+    goal_time = Column(String)  # formatted time string (e.g., "50:00")

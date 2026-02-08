@@ -13,39 +13,25 @@ logger = logging.getLogger(__name__)
 class StravaCSVParser:
     """Parser for Strava activities.csv export files."""
 
+    # Minimal required columns for memory-constrained environment
     REQUIRED_COLUMNS = {
-        "Activity ID",
         "Activity Date",
-        "Activity Name",
         "Activity Type",
         "Distance",
-        "Moving Time",
-        "Elapsed Time",
     }
 
+    # Only essential optional columns: heart rate and moving time for performance analytics
     OPTIONAL_COLUMNS = {
-        "Average Speed",
-        "Max Speed",
         "Average Heart Rate",
-        "Max Heart Rate",
-        "Elevation Gain",
-        "Elevation Loss",
-        "Calories",
+        "Moving Time",
     }
 
     COLUMN_ALIASES = {
-        "Activity ID": ["Activity ID", "Activity Id", "id", "Id", "ID"],
         "Activity Date": ["Activity Date", "Date", "date", "activity_date"],
-        "Activity Name": ["Activity Name", "Name", "name", "activity_name"],
         "Activity Type": ["Activity Type", "Type", "type", "activity_type"],
         "Distance": ["Distance", "distance", "dist"],
-        "Moving Time": ["Moving Time", "Moving time", "Time", "time", "time_moving", "moving_time", "time moving"],
-        "Elapsed Time": ["Elapsed Time", "Elapsed time", "Duration", "duration", "time_elapsed", "elapsed_time", "time elapsed"],
-        "Average Speed": ["Average Speed", "Avg Speed", "average speed", "avg_speed", "speed"],
-        "Max Speed": ["Max Speed", "Maximum Speed", "max speed", "maximum_speed", "max_speed"],
         "Average Heart Rate": ["Average Heart Rate", "Avg Heart Rate", "average heart rate", "Avg HR", "avg_hr"],
-        "Max Heart Rate": ["Max Heart Rate", "Maximum Heart Rate", "max heart rate", "Max HR", "max_hr"],
-        "Elevation Gain": ["Elevation Gain", "Elevation gain", "Elevation", "elevation", "elevation_gain"],
+        "Moving Time": ["Moving Time", "moving_time", "Time", "Duration"],
     }
 
     @staticmethod
@@ -115,38 +101,20 @@ class StravaCSVParser:
 
     @staticmethod
     def _parse_activity(row: Dict[str, str]) -> Dict[str, Any]:
-        """Parse a single activity row from CSV."""
+        """Parse a single activity row from CSV - minimal data for memory efficiency."""
 
-        activity_id = (row.get("Activity ID") or row.get("Activity Id", "")).strip()
         date_str = (row.get("Activity Date") or "").strip()
         activity_type = (row.get("Activity Type") or "").strip()
         distance_str = (row.get("Distance") or "").strip()
-        moving_time_str = (row.get("Moving Time") or "").strip()
-        elapsed_time_str = (row.get("Elapsed Time") or "").strip()
 
         date = StravaCSVParser._parse_date(date_str)
         
         distance_km = 0
         if distance_str:
             try:
-                distance_km = float(distance_str)
-            except ValueError:
-                pass
-
-        moving_time_seconds = StravaCSVParser._parse_time(moving_time_str)
-        elapsed_time_seconds = StravaCSVParser._parse_time(elapsed_time_str)
-
-        avg_speed = 0
-        if row.get("Average Speed"):
-            try:
-                avg_speed = float(row.get("Average Speed", "0").replace(",", ""))
-            except ValueError:
-                pass
-
-        max_speed = 0
-        if row.get("Max Speed"):
-            try:
-                max_speed = float(row.get("Max Speed", "0").replace(",", ""))
+                # Strava exports distance in meters, convert to km
+                distance_meters = float(distance_str)
+                distance_km = distance_meters / 1000.0
             except ValueError:
                 pass
 
@@ -160,60 +128,58 @@ class StravaCSVParser:
             except ValueError:
                 pass
 
-        max_heart_rate = None
-        max_hr_key = "Max Heart Rate"
-        if row.get(max_hr_key):
+        moving_time_seconds = None
+        time_key = "Moving Time"
+        if row.get(time_key):
             try:
-                max_hr_value = float(row.get(max_hr_key, "0").replace(",", ""))
-                if max_hr_value > 0:
-                    max_heart_rate = int(max_hr_value)
+                moving_time_seconds = int(float(row.get(time_key, "0")))
             except ValueError:
                 pass
 
-        elevation_gain = None
-        if row.get("Elevation Gain"):
-            try:
-                gain_str = row.get("Elevation Gain", "0")
-                if "ft" in gain_str.lower():
-                    elevation_gain = float(gain_str.replace(",", "").replace("ft", "")) * 0.3048
-                elif "m" in gain_str.lower():
-                    elevation_gain = float(gain_str.replace(",", "").replace("m", ""))
-                else:
-                    elevation_gain = float(gain_str.replace(",", ""))
-            except ValueError:
-                pass
-
-        calories = None
-        if row.get("Calories"):
-            try:
-                calories_value = float(row.get("Calories", "0").replace(",", ""))
-                if calories_value > 0:
-                    calories = int(calories_value)
-            except ValueError:
-                pass
+        # Calculate pace (min/km) if we have both distance and time
+        pace_min_km = None
+        if distance_km and distance_km > 0 and moving_time_seconds and moving_time_seconds > 0:
+            pace_min_km = moving_time_seconds / 60.0 / distance_km
 
         return {
             "id": str(uuid.uuid4()),
-            "activity_id": activity_id,
             "date": date.isoformat() if date else None,
             "activity_type": activity_type,
             "distance_km": distance_km,
-            "moving_time_seconds": moving_time_seconds,
-            "elapsed_time_seconds": elapsed_time_seconds,
-            "avg_speed": avg_speed,
-            "max_speed": max_speed,
             "avg_heart_rate": avg_heart_rate,
-            "max_heart_rate": max_heart_rate,
-            "elevation_gain_meters": elevation_gain,
-            "calories": calories,
+            "moving_time_seconds": moving_time_seconds,
+            "pace_min_km": pace_min_km,
         }
 
     @staticmethod
     def _parse_date(date_str: str) -> datetime:
-        """Parse Strava date format (e.g., 'Oct 20, 2024, 5:30:00 PM')."""
+        """Parse Strava date format - supports ISO format with T or space separator."""
         if not date_str:
             return None
 
+        date_str_clean = date_str.strip()
+
+        # Try ISO format with 'T' or space (e.g., "2024-01-15T10:30:00" or "2024-01-15 10:30:00")
+        try:
+            # Replace space with T for ISO parsing
+            if ' ' in date_str_clean and 'T' not in date_str_clean:
+                date_str_clean = date_str_clean.replace(' ', 'T')
+            if date_str_clean.endswith('Z'):
+                date_str_clean = date_str_clean[:-1]
+            return datetime.fromisoformat(date_str_clean)
+        except (ValueError, AttributeError):
+            pass
+
+        # Try simple date format (e.g., "2024-01-01")
+        try:
+            parts = date_str_clean.split('-')
+            if len(parts) == 3 and len(parts[0]) == 4:
+                year, month, day = map(int, parts)
+                return datetime(year, month, day)
+        except (ValueError, AttributeError):
+            pass
+
+        # Try Strava's human-readable format: "Oct 20, 2024, 5:30:00 PM"
         month_map = {
             "Jan": 1, "Feb": 2, "Mar": 3, "Apr": 4, "May": 5, "Jun": 6,
             "Jul": 7, "Aug": 8, "Sep": 9, "Oct": 10, "Nov": 11, "Dec": 12
@@ -265,14 +231,13 @@ class StravaCSVParser:
 
     @staticmethod
     def _calculate_summary(activities: List[Dict[str, Any]]) -> Dict[str, Any]:
-        """Calculate summary statistics from parsed activities."""
+        """Calculate summary statistics from parsed activities - minimal memory footprint."""
         if not activities:
             return {}
 
         run_activities = [a for a in activities if a.get("activity_type") == "Run"]
 
         total_distance = sum(a.get("distance_km", 0) for a in run_activities)
-        total_time = sum(a.get("moving_time_seconds", 0) for a in run_activities)
 
         dates = [a.get("date") for a in run_activities if a.get("date")]
         date_span_days = 0
@@ -287,8 +252,6 @@ class StravaCSVParser:
         return {
             "total_distance_km": round(total_distance, 2),
             "total_runs": len(run_activities),
-            "total_hours": round(total_time / 3600, 1),
             "date_span_days": date_span_days,
-            "avg_heart_rate": round(avg_heart_rate, 1),
-            "activity_types": list({a.get("activity_type") for a in activities}),
+            "avg_heart_rate": round(avg_heart_rate, 1) if avg_heart_rate else None,
         }

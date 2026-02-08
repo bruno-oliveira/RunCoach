@@ -20,6 +20,7 @@ from app.routers import (
     analytics_router,
     auth_router,
     nutrition_router,
+    performance_router,
     plans_router,
     recipes_router,
     runs_router,
@@ -51,6 +52,37 @@ app = FastAPI(
     debug=settings.debug,
 )
 
+
+@app.middleware("http")
+async def set_anonymous_user_id_cookie(request: Request, call_next):
+    """Set anonymous_user_id cookie if not present and add it to request state."""
+    anonymous_user_id = request.cookies.get("anonymous_user_id")
+    generated_new_id = False
+    
+    if not anonymous_user_id:
+        import uuid
+        anonymous_user_id = str(uuid.uuid4())
+        generated_new_id = True
+    
+    # Store the ID in request state so endpoints can access it
+    request.state.anonymous_user_id = anonymous_user_id
+    request.state.generated_new_anonymous_id = generated_new_id
+    
+    response = await call_next(request)
+    
+    # Only set cookie if we generated a new ID
+    if generated_new_id:
+        response.set_cookie(
+            key="anonymous_user_id",
+            value=anonymous_user_id,
+            max_age=30 * 24 * 60 * 60,  # 30 days
+            httponly=True,
+            samesite="lax",
+            secure=not settings.debug,
+        )
+    
+    return response
+
 # Create database tables
 Base.metadata.create_all(bind=engine)
 
@@ -73,6 +105,7 @@ app.include_router(auth_router)
 app.include_router(runs_router)
 app.include_router(adaptive_router)
 app.include_router(strength_router)
+app.include_router(performance_router)
 app.include_router(analytics_router)
 app.include_router(analytics_page_router)
 

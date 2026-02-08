@@ -1,0 +1,6 @@
+Activity ID,Activity Date,Activity Name,Activity Type,Distance,Moving Time,Elapsed Time,Average Speed,Max Speed,Average Heart Rate,Max Heart Rate,Elevation Gain,Calories
+12345,2024-01-15 10:30:00,Morning Run,Run,5000,1800,2000,2.78,3.5,150,165,100,350
+12346,2024-01-17 18:00:00,Evening Run,Run,6200,2100,2300,2.95,3.8,148,162,120,400
+12347,2024-01-20 08:00:00,Long Run,Run,8000,2700,2900,2.96,3.6,145,158,150,520
+12348,2024-01-22 17:30:00,Tempo Run,Run,5500,1850,2000,2.97,3.7,152,168,90,360
+12349,2024-01-25 06:30:00,Easy Run,Run,10000,3400,3600,2.94,3.5,147,160,200,650

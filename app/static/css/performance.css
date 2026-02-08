@@ -1,0 +1,473 @@
+/* Performance Training Styles */
+
+.container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 2rem;
+}
+
+.header {
+    text-align: center;
+    margin-bottom: 2rem;
+}
+
+.header h1 {
+    font-size: 2.5rem;
+    margin-bottom: 0.5rem;
+    color: #1a1a1a;
+}
+
+.header p {
+    font-size: 1.1rem;
+    color: #666;
+}
+
+/* Form Styles */
+.form-card {
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    padding: 2rem;
+    margin-bottom: 2rem;
+}
+
+.form-group {
+    margin-bottom: 1.5rem;
+}
+
+.form-group label {
+    display: block;
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+    color: #333;
+}
+
+.form-group input,
+.form-group select {
+    width: 100%;
+    padding: 0.75rem;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    font-size: 1rem;
+}
+
+.form-group input:focus,
+.form-group select:focus {
+    outline: none;
+    border-color: #667eea;
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+.form-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.5rem;
+}
+
+.btn-primary {
+    width: 100%;
+    padding: 1rem;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-size: 1.1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: transform 0.2s;
+}
+
+.btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+}
+
+/* Plan Summary */
+.plan-summary {
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    padding: 2rem;
+    margin-bottom: 2rem;
+}
+
+.summary-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 1.5rem;
+}
+
+.summary-item {
+    text-align: center;
+}
+
+.summary-item strong {
+    display: block;
+    color: #666;
+    font-size: 0.9rem;
+    margin-bottom: 0.5rem;
+}
+
+/* Training Zones */
+.training-zones {
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    padding: 2rem;
+    margin-bottom: 2rem;
+}
+
+.training-zones h2 {
+    margin-top: 0;
+    margin-bottom: 0.5rem;
+}
+
+.zones-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 1.5rem;
+    margin-top: 1.5rem;
+}
+
+.zone-card {
+    background: #f9fafb;
+    border-radius: 8px;
+    padding: 1.5rem;
+    border-left: 4px solid #ccc;
+    transition: transform 0.2s;
+}
+
+.zone-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.zone-header {
+    display: flex;
+    align-items: center;
+    margin-bottom: 1rem;
+}
+
+.zone-number {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-weight: bold;
+    margin-right: 1rem;
+    flex-shrink: 0;
+}
+
+.zone-info {
+    flex: 1;
+}
+
+.zone-name {
+    font-weight: 600;
+    font-size: 1.1rem;
+    color: #333;
+}
+
+.zone-description {
+    font-size: 0.9rem;
+    color: #666;
+}
+
+.zone-metrics {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+    gap: 1rem;
+}
+
+.zone-metric {
+    text-align: center;
+}
+
+.metric-label {
+    font-size: 0.8rem;
+    color: #666;
+    margin-bottom: 0.25rem;
+}
+
+.metric-value {
+    font-weight: 600;
+    font-size: 1.1rem;
+    color: #333;
+}
+
+/* Weekly Plans */
+.weekly-plans {
+    margin-bottom: 2rem;
+}
+
+.weekly-plans h2 {
+    margin-bottom: 1.5rem;
+}
+
+.week-card {
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    padding: 1.5rem;
+    margin-bottom: 2rem;
+}
+
+.week-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.5rem;
+    padding-bottom: 1rem;
+    border-bottom: 2px solid #f0f0f0;
+}
+
+.week-info h3 {
+    margin: 0 0 0.5rem 0;
+    color: #333;
+}
+
+.phase-badge {
+    display: inline-block;
+    padding: 0.25rem 0.75rem;
+    border-radius: 12px;
+    font-size: 0.85rem;
+    font-weight: 600;
+}
+
+.phase-base {
+    background: #e8f5e9;
+    color: #2e7d32;
+}
+
+.phase-build {
+    background: #e3f2fd;
+    color: #1976d2;
+}
+
+.phase-sharpen {
+    background: #fff3e0;
+    color: #e65100;
+}
+
+.phase-taper {
+    background: #f3e5f5;
+    color: #7b1fa2;
+}
+
+.week-stats {
+    display: flex;
+    gap: 2rem;
+}
+
+.week-stat {
+    text-align: center;
+}
+
+.stat-label {
+    display: block;
+    font-size: 0.8rem;
+    color: #666;
+    margin-bottom: 0.25rem;
+}
+
+.stat-value {
+    display: block;
+    font-size: 1.2rem;
+    font-weight: 600;
+    color: #333;
+}
+
+/* Workouts Grid */
+.workouts-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 1rem;
+}
+
+.workout-card {
+    background: #f9fafb;
+    border-radius: 8px;
+    padding: 1rem;
+    border-left: 4px solid #ccc;
+}
+
+.workout-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.75rem;
+}
+
+.workout-day {
+    font-weight: 600;
+    font-size: 0.9rem;
+    color: #666;
+}
+
+.workout-type-badge {
+    background: #667eea;
+    color: white;
+    padding: 0.25rem 0.5rem;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+}
+
+.workout-content {
+    font-size: 0.9rem;
+}
+
+.workout-zone {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 0.5rem;
+}
+
+.zone-indicator {
+    padding: 0.2rem 0.5rem;
+    border-radius: 4px;
+    color: white;
+    font-size: 0.75rem;
+    font-weight: 600;
+}
+
+.zone-pace {
+    font-weight: 600;
+    color: #333;
+}
+
+.workout-description {
+    color: #555;
+    line-height: 1.4;
+    margin-bottom: 0.5rem;
+}
+
+.workout-distance {
+    font-size: 0.85rem;
+    color: #666;
+    font-weight: 600;
+}
+
+/* Zone-specific workout card colors */
+.workout-card.zone-zone_1 {
+    border-left-color: #4ade80;
+}
+
+.workout-card.zone-zone_2 {
+    border-left-color: #60a5fa;
+}
+
+.workout-card.zone-zone_3 {
+    border-left-color: #fbbf24;
+}
+
+.workout-card.zone-zone_4 {
+    border-left-color: #fb923c;
+}
+
+.workout-card.zone-zone_5 {
+    border-left-color: #ef4444;
+}
+
+.workout-card.zone-mixed {
+    border-left: 4px solid transparent;
+    border-image: linear-gradient(180deg, #fbbf24, #fb923c) 1;
+}
+
+/* Action Buttons */
+.action-buttons {
+    display: flex;
+    gap: 1rem;
+    margin: 2rem 0;
+}
+
+.btn {
+    padding: 0.75rem 1.5rem;
+    border-radius: 8px;
+    font-weight: 600;
+    text-decoration: none;
+    cursor: pointer;
+    transition: transform 0.2s;
+}
+
+.btn:hover {
+    transform: translateY(-2px);
+}
+
+.btn-secondary {
+    background: #667eea;
+    color: white;
+    border: none;
+}
+
+.btn-outline {
+    background: white;
+    color: #667eea;
+    border: 2px solid #667eea;
+}
+
+/* Tips Section */
+.tips-section {
+    background: #f9fafb;
+    border-radius: 12px;
+    padding: 2rem;
+    margin-bottom: 2rem;
+}
+
+.tips-section h3 {
+    margin-top: 0;
+    color: #333;
+}
+
+.tips-section ul {
+    margin: 0;
+    padding-left: 1.5rem;
+}
+
+.tips-section li {
+    margin-bottom: 0.75rem;
+    line-height: 1.5;
+    color: #555;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .container {
+        padding: 1rem;
+    }
+
+    .header h1 {
+        font-size: 2rem;
+    }
+
+    .form-row {
+        grid-template-columns: 1fr;
+    }
+
+    .summary-grid {
+        grid-template-columns: 1fr 1fr;
+    }
+
+    .zones-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .workouts-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .week-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 1rem;
+    }
+
+    .action-buttons {
+        flex-direction: column;
+    }
+}

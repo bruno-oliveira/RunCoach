@@ -52,6 +52,26 @@
     background: #e8eeff;
 }
 
+.upload-area.file-selected {
+    border-color: #28a745;
+    background: #f0fff4;
+}
+
+.upload-success-message {
+    animation: slideDown 0.3s ease-out;
+}
+
+@keyframes slideDown {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
 .upload-area svg {
     width: 64px;
     height: 64px;
@@ -209,6 +229,11 @@
 .chart-section .chart {
     width: 100%;
     height: auto;
+    display: block;
+    max-width: 100%;
+    background: #f8f9fa;
+    padding: 1rem;
+    border-radius: 8px;
 }
 
 .chart-section .summary {
@@ -283,6 +308,45 @@
     0% { transform: rotate(0deg); }
     100% { transform: rotate(360deg); }
 }
+
+.tabs {
+    display: flex;
+    gap: 1rem;
+    margin-bottom: 2rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 2px solid #e0e0e0;
+}
+
+.tab {
+    padding: 0.75rem 1.5rem;
+    background: transparent;
+    border: none;
+    border-radius: 6px 6px 0 0;
+    font-size: 1rem;
+    font-weight: 600;
+    color: #666;
+    cursor: pointer;
+    transition: all 0.3s;
+}
+
+.tab:hover {
+    color: #667eea;
+    background: #f0f4ff;
+}
+
+.tab.active {
+    color: #667eea;
+    background: #f0f4ff;
+    border-bottom: 3px solid #667eea;
+}
+
+.tab-content {
+    display: none;
+}
+
+.tab-content.active {
+    display: block;
+}
 </style>
 {% endblock %}
 
@@ -301,50 +365,63 @@
     {% else %}
     <div class="analytics-header">
         <h1 class="analytics-title">📊 Analytics</h1>
-        <p class="analytics-subtitle">Upload your Strava activities.csv file to analyze your running performance</p>
+        <p class="analytics-subtitle">Upload and compare your Strava activities data</p>
     </div>
 
-    <div class="upload-section">
-        <div class="upload-controls">
-            <input type="text" class="analytics-name-input" id="analyticsName" placeholder="Name this upload (e.g., '2024 Season')">
-            <button class="upload-btn" id="uploadBtn" disabled>Upload CSV</button>
+    <div class="tabs">
+        <button class="tab active" data-tab="upload">📤 Upload & Compare</button>
+        <button class="tab" data-tab="stored">📂 View Stored Analytics</button>
+    </div>
+
+    <div class="tab-content active" id="uploadTab">
+        <div class="upload-section">
+            <div class="upload-controls">
+                <input type="text" class="analytics-name-input" id="analyticsName" placeholder="Name this upload (e.g., '2024 Season')">
+                <button class="upload-btn" id="uploadBtn" disabled>Upload CSV</button>
+            </div>
+            <div class="upload-area" id="uploadArea" onclick="document.getElementById('fileInput').click()">
+                <svg viewBox="0 0 24 24">
+                    <path d="M19.35 10.04C18.67 6.59 15.64 4 12 4 9.11 4 6.6 5.64 5.35 8.04 2.34 8.36 0 10.91 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96zM14 13v4h-4v-4H7l5-5 5 5h-3z"/>
+                </svg>
+                <p><strong>Drag & drop</strong> your Strava activities.csv file here, or <strong>click to browse</strong></p>
+                <input type="file" id="fileInput" accept=".csv" style="display: none;">
+            </div>
         </div>
-        <div class="upload-area" id="uploadArea">
-            <svg viewBox="0 0 24 24">
-                <path d="M19.35 10.04C18.67 6.59 15.64 4 12 4 9.11 4 6.6 5.64 5.35 8.04 2.34 8.36 0 10.91 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96zM14 13v4h-4v-4H7l5-5 5 5h-3z"/>
-            </svg>
-            <p><strong>Drag & drop</strong> your Strava activities.csv file here, or <strong>click to browse</strong></p>
-            <input type="file" id="fileInput" accept=".csv" style="display: none;">
+
+        <div id="uploadsSection" style="display: none;">
+            <h2 class="section-title">Your Analytics Uploads</h2>
+            <p class="section-subtitle">Select uploads to compare or click View to see detailed analytics</p>
+            
+            <div class="comparison-controls">
+                <button class="compare-btn" id="compareBtn" disabled>Compare Selected (2-5)</button>
+            </div>
+            
+            <div class="analytics-list" id="analyticsList"></div>
+        </div>
+
+        <div id="chartsSection" style="display: none;">
+            <h2 class="section-title" id="chartsTitle"></h2>
+            <p class="section-subtitle" id="chartsSubtitle"></p>
+            <button style="padding: 0.5rem 1rem; background: #666; color: white; border: none; border-radius: 6px; cursor: pointer; margin-bottom: 1rem;" id="backToList">← Back to Uploads</button>
+            
+            <div class="charts-container" id="chartsContainer"></div>
+        </div>
+
+        <div id="comparisonSection" style="display: none;">
+            <h2 class="section-title">Side-by-Side Comparison</h2>
+            <button style="padding: 0.5rem 1rem; background: #666; color: white; border: none; border-radius: 6px; cursor: pointer; margin-bottom: 1rem;" id="backFromComparison">← Back to Uploads</button>
+            
+            <div class="chart-section">
+                <h3>Comparison Overview</h3>
+                <img id="comparisonChart" class="chart" alt="Comparison Chart">
+            </div>
         </div>
     </div>
 
-    <div id="uploadsSection" style="display: none;">
-        <h2 class="section-title">Your Analytics Uploads</h2>
-        <p class="section-subtitle">Select uploads to compare or click View to see detailed analytics</p>
-        
-        <div class="comparison-controls">
-            <button class="compare-btn" id="compareBtn" disabled>Compare Selected (2-5)</button>
-        </div>
-        
-        <div class="analytics-list" id="analyticsList"></div>
-    </div>
-
-    <div id="chartsSection" style="display: none;">
-        <h2 class="section-title" id="chartsTitle"></h2>
-        <p class="section-subtitle" id="chartsSubtitle"></p>
-        <button style="padding: 0.5rem 1rem; background: #666; color: white; border: none; border-radius: 6px; cursor: pointer; margin-bottom: 1rem;" id="backToList">← Back to Uploads</button>
-        
-        <div class="charts-container" id="chartsContainer"></div>
-    </div>
-
-    <div id="comparisonSection" style="display: none;">
-        <h2 class="section-title">Side-by-Side Comparison</h2>
-        <button style="padding: 0.5rem 1rem; background: #666; color: white; border: none; border-radius: 6px; cursor: pointer; margin-bottom: 1rem;" id="backFromComparison">← Back to Uploads</button>
-        
-        <div class="chart-section">
-            <h3>Comparison Overview</h3>
-            <img id="comparisonChart" class="chart" alt="Comparison Chart">
-        </div>
+    <div class="tab-content" id="storedTab">
+        <h2 class="section-title" id="storedTitle">Stored Analytics</h2>
+        <p class="section-subtitle" id="storedSubtitle">Loading...</p>
+        <div class="analytics-list" id="storedAnalyticsList"></div>
     </div>
     {% endif %}
 </div>

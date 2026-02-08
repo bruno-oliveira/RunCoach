@@ -1,5 +1,6 @@
 """FastAPI dependencies for dependency injection."""
 
+from datetime import datetime, timedelta
 from typing import Generator, Optional
 
 from fastapi import Cookie, Depends, HTTPException, Request, Security, status
@@ -13,6 +14,7 @@ from app.models import User
 from app.core.nutrition_engine import NutritionEngine
 from app.core.pdf_generator import PDFGenerator
 from app.core.plan_generator import TrainingPlanGenerator
+from app.core.performance_plan_generator import PerformancePlanGenerator
 
 # Cookie name must match the one in auth router
 COOKIE_NAME = "access_token"
@@ -52,6 +54,11 @@ def get_nutrition_engine(random_seed: int | None = None) -> NutritionEngine:
 def get_pdf_generator() -> PDFGenerator:
     """Get a PDFGenerator instance."""
     return PDFGenerator()
+
+
+def get_performance_plan_generator() -> PerformancePlanGenerator:
+    """Get a PerformancePlanGenerator instance."""
+    return PerformancePlanGenerator()
 
 
 def get_auth_service() -> AuthService:
@@ -114,8 +121,6 @@ async def get_current_user(
         )
 
     if user.last_activity:
-        from datetime import timedelta
-        from app.config import settings
         timeout_delta = timedelta(minutes=settings.session_timeout_minutes)
         if (datetime.utcnow() - user.last_activity) > timeout_delta:
             raise HTTPException(

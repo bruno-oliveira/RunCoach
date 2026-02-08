@@ -1,0 +1,220 @@
+{% extends "base.html" %}
+
+{% block title %}Performance Training Plan - RunCoach{% endblock %}
+
+{% block styles %}
+<link rel="stylesheet" href="/static/css/performance.css">
+{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="header">
+        <h1>⚡ Your Performance Training Plan</h1>
+        <p>Speed-focused training for {{ distance_name }}</p>
+    </div>
+
+    <div class="plan-summary">
+        <div class="summary-grid">
+            <div class="summary-item">
+                <strong>🎯 Target Distance</strong>
+                {{ distance_name }}
+            </div>
+            <div class="summary-item">
+                <strong>⏱️ Current Pace</strong>
+                {{ '{:d}:{:02d}/km'.format(plan.current_pace|int, ((plan.current_pace % 1) * 60)|int) }}
+            </div>
+            <div class="summary-item">
+                <strong>🎯 Goal Pace</strong>
+                {{ '{:d}:{:02d}/km'.format(plan.goal_pace|int, ((plan.goal_pace % 1) * 60)|int) }}
+            </div>
+            <div class="summary-item">
+                <strong>📈 Improvement</strong>
+                {{ '{:.1f}'.format(((plan.current_pace - plan.goal_pace) / plan.current_pace * 100)) }}%
+            </div>
+            <div class="summary-item">
+                <strong>📅 Duration</strong>
+                {{ plan.weeks_duration }} weeks
+            </div>
+            <div class="summary-item">
+                <strong>🏃 Runs/Week</strong>
+                {{ plan.max_runs_per_week }} runs
+            </div>
+        </div>
+    </div>
+
+    <!-- Training Zones -->
+    <div class="training-zones">
+        <h2>🎨 Training Zones</h2>
+        <p style="margin-bottom: 1.5rem; color: #666;">All workouts are based on these pace zones</p>
+
+        <div class="zones-grid">
+            {% for zone_name, zone_data in plan_data.training_zones.items() %}
+            <div class="zone-card" style="border-left: 4px solid {{ zone_data.color }};">
+                <div class="zone-header">
+                    <div class="zone-number" style="background: {{ zone_data.color }};">
+                        {{ loop.index }}
+                    </div>
+                    <div class="zone-info">
+                        <div class="zone-name">{{ zone_name.replace('_', ' ').title() }}</div>
+                        <div class="zone-description">{{ zone_data.description }}</div>
+                    </div>
+                </div>
+                <div class="zone-metrics">
+                    <div class="zone-metric">
+                        <div class="metric-label">Pace</div>
+                        <div class="metric-value">{{ zone_data.pace_formatted }}</div>
+                    </div>
+                    {% if zone_data.pace_range_formatted %}
+                    <div class="zone-metric">
+                        <div class="metric-label">Range</div>
+                        <div class="metric-value" style="font-size: 0.9rem;">{{ zone_data.pace_range_formatted }}</div>
+                    </div>
+                    {% endif %}
+                    <div class="zone-metric">
+                        <div class="metric-label">Heart Rate</div>
+                        <div class="metric-value">{{ zone_data.hr_range }}</div>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- Weekly Plan -->
+    <div class="weekly-plans">
+        <h2>📅 Weekly Training Schedule</h2>
+
+        {% for week in plan_data.weekly_plans %}
+        <div class="week-card">
+            <div class="week-header">
+                <div class="week-info">
+                    <h3>Week {{ week.week }}</h3>
+                    <span class="phase-badge phase-{{ week.phase }}">{{ week.phase_description }}</span>
+                </div>
+                <div class="week-stats">
+                    <div class="week-stat">
+                        <span class="stat-label">Total</span>
+                        <span class="stat-value">{{ week.total_km }}km</span>
+                    </div>
+                    <div class="week-stat">
+                        <span class="stat-label">Quality</span>
+                        <span class="stat-value">{{ week.quality_workouts }} workouts</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="workouts-grid">
+                {% for workout in week.daily_workouts %}
+                <div class="workout-card zone-{{ workout.zone|default('rest') }}">
+                    <div class="workout-header">
+                        <div class="workout-day">
+                            {% set day_names = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'] %}
+                            {{ day_names[workout.day - 1] }}
+                        </div>
+                        <div class="workout-type-badge">{{ workout.type|title }}</div>
+                    </div>
+
+                    <div class="workout-content">
+                        {% if workout.zone and workout.zone != 'mixed' %}
+                        <div class="workout-zone">
+                            <span class="zone-indicator" style="background: {{ plan_data.training_zones['zone_' + workout.zone.split('_')[1] + '_' + workout.zone.split('_')[2]].color }};">
+                                Zone {{ workout.zone.split('_')[1] }}
+                            </span>
+                            <span class="zone-pace">{{ workout.target_pace_formatted }}</span>
+                        </div>
+                        {% elif workout.zone == 'mixed' %}
+                        <div class="workout-zone">
+                            <span class="zone-indicator" style="background: linear-gradient(90deg, #fbbf24, #fb923c);">
+                                Mixed Zones
+                            </span>
+                            <span class="zone-pace">{{ workout.target_pace_formatted }}</span>
+                        </div>
+                        {% endif %}
+
+                        <div class="workout-description">
+                            {{ workout.description }}
+                        </div>
+
+                        <div class="workout-distance">
+                            {{ '{:.1f}'.format(workout.distance) }}km total
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    <!-- Nutrition Plan -->
+    {% if nutrition_plan %}
+    <div class="nutrition-section">
+        <h2>🥗 Nutrition Guidance</h2>
+        <p style="margin-bottom: 1.5rem; color: #666;">Fuel your performance training</p>
+
+        <div class="nutrition-summary">
+            <div class="nutrition-stat">
+                <span class="stat-label">Daily Calories</span>
+                <span class="stat-value">{{ nutrition_plan.daily_calories }}</span>
+            </div>
+            <div class="nutrition-stat">
+                <span class="stat-label">Protein</span>
+                <span class="stat-value">{{ nutrition_plan.protein_grams }}g</span>
+            </div>
+            <div class="nutrition-stat">
+                <span class="stat-label">Carbs</span>
+                <span class="stat-value">{{ nutrition_plan.carbs_grams }}g</span>
+            </div>
+            <div class="nutrition-stat">
+                <span class="stat-label">Fat</span>
+                <span class="stat-value">{{ nutrition_plan.fat_grams }}g</span>
+            </div>
+        </div>
+
+        <div class="meals-grid">
+            {% for meal_type, meals in nutrition_plan.meals.items() %}
+            <div class="meal-card">
+                <h4>{{ meal_type|title }}</h4>
+                <ul>
+                    {% for meal in meals %}
+                    <li>{{ meal.name }}</li>
+                    {% endfor %}
+                </ul>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Action Buttons -->
+    <div class="action-buttons">
+        <a href="/my-plans" class="btn btn-secondary">
+            📋 View All Plans
+        </a>
+        <button onclick="window.print()" class="btn btn-outline">
+            🖨️ Print Plan
+        </button>
+    </div>
+
+    <!-- Tips Section -->
+    <div class="tips-section">
+        <h3>💡 Performance Training Tips</h3>
+        <ul>
+            <li><strong>Respect the zones:</strong> Don't run tempo workouts at VO2 max pace. Each zone has a purpose.</li>
+            <li><strong>Easy days easy:</strong> Recovery runs should feel genuinely easy. This is how you absorb hard workouts.</li>
+            <li><strong>Quality over quantity:</strong> This plan maintains volume but increases intensity. Don't add extra miles.</li>
+            <li><strong>Trust the taper:</strong> Reducing volume in the final weeks maintains sharpness while ensuring recovery.</li>
+            <li><strong>Track your workouts:</strong> Log completed workouts to monitor if zones feel appropriate and adjust if needed.</li>
+            <li><strong>Listen to your body:</strong> Persistent fatigue or pain means you need extra recovery, not more intensity.</li>
+        </ul>
+    </div>
+</div>
+
+<style>
+/* Print styles */
+@media print {
+    .action-buttons, nav, .tips-section { display: none; }
+    .week-card { page-break-inside: avoid; }
+}
+</style>
+{% endblock %}

@@ -49,69 +49,22 @@ class AnalyticsService:
 
         sorted_activities = sorted(run_activities, key=lambda x: x["date"])
 
+        # Focus on essential analytics with minimal data: distance, heart rate, pace, number of runs
         analytics = {
-            "pace_trends": AnalyticsService._analyze_pace_trends(sorted_activities),
             "distance_trends": AnalyticsService._analyze_distance_trends(sorted_activities),
-            "hr_zones": AnalyticsService._analyze_hr_zones(sorted_activities),
             "hr_evolution": AnalyticsService._analyze_hr_evolution(sorted_activities),
+            "pace_evolution": AnalyticsService._analyze_pace_evolution(sorted_activities),
             "weekly_volume": AnalyticsService._analyze_weekly_volume(sorted_activities),
             "summary": AnalyticsService._calculate_overall_summary(sorted_activities),
         }
 
         return analytics
 
-    @staticmethod
-    def _analyze_pace_trends(activities: List[Dict[str, Any]]) -> Dict[str, Any]:
-        """Analyze pace trends over time."""
-        paces = []
-        dates = []
 
-        for activity in activities:
-            distance = activity.get("distance_km", 0)
-            moving_time = activity.get("moving_time_seconds", 0)
-            if distance > 0 and moving_time > 0:
-                pace_seconds_per_km = moving_time / distance
-                pace_min_per_km = pace_seconds_per_km / 60
-                paces.append(pace_min_per_km)
-                dates.append(datetime.fromisoformat(activity["date"]))
-
-        if not paces:
-            return {"chart": base64.b64encode(b"").decode(), "avg_pace_min_km": 0}
-
-        fig, ax = plt.subplots(figsize=(12, 6), dpi=100)
-        ax.plot(dates, paces, marker="o", markersize=4, linewidth=1.5, color="#667eea", alpha=0.7)
-
-        z = np.polyfit(range(len(dates)), paces, 1)
-        p = np.poly1d(z)
-        ax.plot(dates, p(range(len(dates))), "--", color="#f09", linewidth=2, label="Trend Line")
-
-        ax.set_xlabel("Date", fontsize=12, fontweight="bold")
-        ax.set_ylabel("Pace (min/km)", fontsize=12, fontweight="bold")
-        ax.set_title("Pace Trends Over Time", fontsize=14, fontweight="bold", pad=20)
-        ax.grid(True, alpha=0.3)
-        ax.legend()
-        plt.xticks(rotation=45)
-        plt.tight_layout()
-
-        img_buffer = io.BytesIO()
-        plt.savefig(img_buffer, format="png", bbox_inches="tight", facecolor="white")
-        plt.close()
-        img_buffer.seek(0)
-
-        trend_slope = z[0] * 7
-        trend_desc = f"{trend_slope:+.1f} min/km per week"
-
-        return {
-            "chart": base64.b64encode(img_buffer.getvalue()).decode(),
-            "avg_pace_min_km": sum(paces) / len(paces),
-            "avg_pace_formatted": AnalyticsService._format_pace(sum(paces) / len(paces)),
-            "trend_description": trend_desc,
-            "pace_improving": trend_slope < 0,
-        }
 
     @staticmethod
     def _analyze_distance_trends(activities: List[Dict[str, Any]]) -> Dict[str, Any]:
-        """Analyze distance trends over time."""
+        """Analyze distance trends over time with improved styling."""
         distances = []
         dates = []
 
@@ -122,89 +75,72 @@ class AnalyticsService:
         if not distances:
             return {"chart": base64.b64encode(b"").decode()}
 
-        fig, ax = plt.subplots(figsize=(12, 6), dpi=100)
-        ax.bar(dates, distances, color="#667eea", alpha=0.6)
+        # Create figure with improved styling
+        fig, ax = plt.subplots(figsize=(14, 7), dpi=120)
+        fig.patch.set_facecolor('#fafbfc')
+        ax.set_facecolor('#ffffff')
 
-        rolling_avg_days = 7
-        for i in range(rolling_avg_days - 1, len(distances)):
-            window = distances[max(0, i - rolling_avg_days + 1) : i + 1]
-            avg = sum(window) / len(window)
-            ax.axhline(y=avg, color="#f09", linestyle="--", alpha=0.3)
+        # Main bar chart with gradient-like colors
+        bars = ax.bar(dates, distances, color="#667eea", alpha=0.75, edgecolor="#5568d3", linewidth=1.2)
 
-        ax.set_xlabel("Date", fontsize=12, fontweight="bold")
-        ax.set_ylabel("Distance (km)", fontsize=12, fontweight="bold")
-        ax.set_title("Distance Trends Over Time", fontsize=14, fontweight="bold", pad=20)
-        ax.grid(True, alpha=0.3, axis="y")
-        plt.xticks(rotation=45)
+        # Calculate and plot rolling average
+        rolling_window = min(7, len(distances))
+        if len(distances) >= rolling_window:
+            rolling_avg = []
+            rolling_dates = []
+            for i in range(rolling_window - 1, len(distances)):
+                window = distances[max(0, i - rolling_window + 1) : i + 1]
+                avg = sum(window) / len(window)
+                rolling_avg.append(avg)
+                rolling_dates.append(dates[i])
+
+            ax.plot(rolling_dates, rolling_avg, color="#FF6B6B", linewidth=2.5,
+                   label=f'{rolling_window}-run Moving Average', marker='o', markersize=4, alpha=0.9)
+
+        # Add trend line
+        if len(distances) > 2:
+            x_numeric = np.arange(len(dates))
+            z = np.polyfit(x_numeric, distances, 1)
+            p = np.poly1d(z)
+            ax.plot(dates, p(x_numeric), "--", color="#4ECDC4", linewidth=2,
+                   alpha=0.8, label="Overall Trend")
+
+        # Styling improvements
+        ax.set_xlabel("Date", fontsize=13, fontweight="600", color="#2c3e50")
+        ax.set_ylabel("Distance (km)", fontsize=13, fontweight="600", color="#2c3e50")
+        ax.set_title("Distance Trends Over Time", fontsize=16, fontweight="700",
+                    pad=20, color="#2c3e50")
+
+        # Modern grid styling
+        ax.grid(True, alpha=0.2, linestyle='-', linewidth=0.8, color="#95a5a6", axis="y")
+        ax.spines['top'].set_visible(False)
+        ax.spines['right'].set_visible(False)
+        ax.spines['left'].set_color('#bdc3c7')
+        ax.spines['bottom'].set_color('#bdc3c7')
+
+        plt.xticks(rotation=45, ha='right', fontsize=10)
+        plt.yticks(fontsize=10)
+        ax.legend(loc='upper left', framealpha=0.95, fontsize=10)
         plt.tight_layout()
 
         img_buffer = io.BytesIO()
-        plt.savefig(img_buffer, format="png", bbox_inches="tight", facecolor="white")
+        plt.savefig(img_buffer, format="png", bbox_inches="tight", facecolor='#fafbfc', dpi=120)
         plt.close()
         img_buffer.seek(0)
 
         return {
             "chart": base64.b64encode(img_buffer.getvalue()).decode(),
-            "avg_distance_km": sum(distances) / len(distances),
-            "max_distance_km": max(distances),
+            "avg_distance_km": float(sum(distances) / len(distances)),
+            "max_distance_km": float(max(distances)),
             "longest_runs": sorted(activities, key=lambda x: x["distance_km"], reverse=True)[:5],
         }
 
-    @staticmethod
-    def _analyze_hr_zones(activities: List[Dict[str, Any]]) -> Dict[str, Any]:
-        """Analyze heart rate zones distribution."""
-        hr_data = [a for a in activities if a.get("avg_heart_rate")]
 
-        if not hr_data:
-            return {"chart": base64.b64encode(b"").decode(), "distribution": {}}
-
-        zone_counts = defaultdict(int)
-        max_hr_estimate = max(a.get("max_heart_rate", 180) for a in hr_data)
-
-        for activity in hr_data:
-            avg_hr = activity.get("avg_heart_rate", 0)
-            max_hr = activity.get("max_heart_rate") or max_hr_estimate
-            relative_intensity = (avg_hr / max_hr) * 100 if max_hr > 0 else 0
-
-            for zone, (lower, upper) in AnalyticsService.HR_ZONES.items():
-                if lower <= relative_intensity <= upper:
-                    zone_counts[zone] += 1
-                    break
-
-        zones = list(AnalyticsService.HR_ZONES.keys())
-        counts = [zone_counts[z] for z in zones]
-        colors = ["#81c784", "#4fc3f7", "#ba68c8", "#f06292", "#ff8a65"]
-
-        fig, ax = plt.subplots(figsize=(10, 6), dpi=100)
-        bars = ax.barh(zones, counts, color=colors)
-        ax.set_xlabel("Number of Activities", fontsize=12, fontweight="bold")
-        ax.set_title("Heart Rate Zone Distribution", fontsize=14, fontweight="bold", pad=20)
-        ax.grid(True, alpha=0.3, axis="x")
-
-        for bar, count in zip(bars, counts):
-            ax.text(bar.get_width() + 0.1, bar.get_y() + bar.get_height() / 2,
-                   f"{count}", va="center", fontsize=10)
-
-        plt.tight_layout()
-
-        img_buffer = io.BytesIO()
-        plt.savefig(img_buffer, format="png", bbox_inches="tight", facecolor="white")
-        plt.close()
-        img_buffer.seek(0)
-
-        distribution = {zone: count for zone, count in zone_counts.items()}
-
-        return {
-            "chart": base64.b64encode(img_buffer.getvalue()).decode(),
-            "distribution": distribution,
-            "dominant_zone": max(distribution.items(), key=lambda x: x[1])[0] if distribution else None,
-            "avg_heart_rate": sum(a["avg_heart_rate"] for a in hr_data) / len(hr_data),
-        }
 
     @staticmethod
     def _analyze_hr_evolution(activities: List[Dict[str, Any]]) -> Dict[str, Any]:
-        """Analyze heart rate evolution over time."""
-        hr_data = [(a["date"], a["avg_heart_rate"]) for a in activities 
+        """Analyze heart rate evolution over time with improved styling."""
+        hr_data = [(a["date"], a["avg_heart_rate"]) for a in activities
                    if a.get("avg_heart_rate") and a.get("date")]
 
         if len(hr_data) < 3:
@@ -214,32 +150,52 @@ class AnalyticsService:
         dates = [datetime.fromisoformat(d[0]) for d in hr_data]
         heart_rates = [d[1] for d in hr_data]
 
-        rolling_window = 8
+        rolling_window = min(8, len(heart_rates))
         rolling_avg = [
-            sum(heart_rates[max(0, i - rolling_window + 1) : i + 1]) / 
+            sum(heart_rates[max(0, i - rolling_window + 1) : i + 1]) /
             min(rolling_window, i + 1)
             for i in range(len(heart_rates))
         ]
 
-        fig, ax = plt.subplots(figsize=(12, 6), dpi=100)
-        ax.scatter(dates, heart_rates, alpha=0.4, color="#667eea", label="Sessions")
-        ax.plot(dates, rolling_avg, color="#f09", linewidth=2, label="Rolling Average (8 runs)")
+        # Create figure with improved styling
+        fig, ax = plt.subplots(figsize=(14, 7), dpi=120)
+        fig.patch.set_facecolor('#fafbfc')
+        ax.set_facecolor('#ffffff')
 
+        # Scatter plot for individual sessions
+        ax.scatter(dates, heart_rates, alpha=0.35, color="#667eea", s=60,
+                  edgecolors='#5568d3', linewidth=1, label="Individual Sessions")
+
+        # Rolling average
+        ax.plot(dates, rolling_avg, color="#FF6B6B", linewidth=3,
+               label=f"Rolling Average ({rolling_window} runs)", marker='o', markersize=4)
+
+        # Trend line
         z = np.polyfit(range(len(dates)), rolling_avg, 1)
         p = np.poly1d(z)
-        ax.plot(dates, p(range(len(dates))), "--", color="#333",
-               linewidth=1.5, alpha=0.5, label="Trend")
+        ax.plot(dates, p(range(len(dates))), "--", color="#4ECDC4",
+               linewidth=2.5, alpha=0.85, label="Trend Line")
 
-        ax.set_xlabel("Date", fontsize=12, fontweight="bold")
-        ax.set_ylabel("Average Heart Rate (bpm)", fontsize=12, fontweight="bold")
-        ax.set_title("Heart Rate Evolution", fontsize=14, fontweight="bold", pad=20)
-        ax.legend()
-        ax.grid(True, alpha=0.3)
-        plt.xticks(rotation=45)
+        # Styling improvements
+        ax.set_xlabel("Date", fontsize=13, fontweight="600", color="#2c3e50")
+        ax.set_ylabel("Average Heart Rate (bpm)", fontsize=13, fontweight="600", color="#2c3e50")
+        ax.set_title("Heart Rate Evolution", fontsize=16, fontweight="700",
+                    pad=20, color="#2c3e50")
+
+        # Modern grid and spines
+        ax.grid(True, alpha=0.2, linestyle='-', linewidth=0.8, color="#95a5a6")
+        ax.spines['top'].set_visible(False)
+        ax.spines['right'].set_visible(False)
+        ax.spines['left'].set_color('#bdc3c7')
+        ax.spines['bottom'].set_color('#bdc3c7')
+
+        ax.legend(loc='upper left', framealpha=0.95, fontsize=10)
+        plt.xticks(rotation=45, ha='right', fontsize=10)
+        plt.yticks(fontsize=10)
         plt.tight_layout()
 
         img_buffer = io.BytesIO()
-        plt.savefig(img_buffer, format="png", bbox_inches="tight", facecolor="white")
+        plt.savefig(img_buffer, format="png", bbox_inches="tight", facecolor='#fafbfc', dpi=120)
         plt.close()
         img_buffer.seek(0)
 
@@ -251,9 +207,99 @@ class AnalyticsService:
             "chart": base64.b64encode(img_buffer.getvalue()).decode(),
             "trend_description": trend_desc,
             "overall_trend": trend_type,
-            "avg_heart_rate": sum(heart_rates) / len(heart_rates),
-            "starting_hr": rolling_avg[0],
-            "current_hr": rolling_avg[-1],
+            "avg_heart_rate": float(sum(heart_rates) / len(heart_rates)),
+            "starting_hr": float(rolling_avg[0]),
+            "current_hr": float(rolling_avg[-1]),
+        }
+
+    @staticmethod
+    def _analyze_pace_evolution(activities: List[Dict[str, Any]]) -> Dict[str, Any]:
+        """Analyze pace evolution over time with trend lines."""
+        pace_data = [(a["date"], a["pace_min_km"]) for a in activities
+                     if a.get("pace_min_km") and a.get("date")]
+
+        if len(pace_data) < 3:
+            return {"chart": base64.b64encode(b"").decode(), "trend": "insufficient_data"}
+
+        pace_data.sort(key=lambda x: x[0])
+        dates = [datetime.fromisoformat(d[0]) for d in pace_data]
+        paces = [d[1] for d in pace_data]
+
+        rolling_window = min(8, len(paces))
+        rolling_avg = [
+            sum(paces[max(0, i - rolling_window + 1) : i + 1]) /
+            min(rolling_window, i + 1)
+            for i in range(len(paces))
+        ]
+
+        # Create figure with improved styling
+        fig, ax = plt.subplots(figsize=(14, 7), dpi=120)
+        fig.patch.set_facecolor('#fafbfc')
+        ax.set_facecolor('#ffffff')
+
+        # Scatter plot for individual sessions
+        ax.scatter(dates, paces, alpha=0.35, color="#667eea", s=60,
+                  edgecolors='#5568d3', linewidth=1, label="Individual Runs")
+
+        # Rolling average
+        ax.plot(dates, rolling_avg, color="#FF6B6B", linewidth=3,
+               label=f"Rolling Average ({rolling_window} runs)", marker='o', markersize=4)
+
+        # Trend line
+        z = np.polyfit(range(len(dates)), rolling_avg, 1)
+        p = np.poly1d(z)
+        ax.plot(dates, p(range(len(dates))), "--", color="#4ECDC4",
+               linewidth=2.5, alpha=0.85, label="Trend Line")
+
+        # Styling improvements
+        ax.set_xlabel("Date", fontsize=13, fontweight="600", color="#2c3e50")
+        ax.set_ylabel("Pace (min/km)", fontsize=13, fontweight="600", color="#2c3e50")
+        ax.set_title("Pace Evolution Over Time", fontsize=16, fontweight="700",
+                    pad=20, color="#2c3e50")
+
+        # Invert Y-axis (faster pace is lower number, should be at top)
+        ax.invert_yaxis()
+
+        # Format y-axis labels as min:sec
+        def pace_formatter(x, pos):
+            minutes = int(x)
+            seconds = int((x - minutes) * 60)
+            return f"{minutes}:{seconds:02d}"
+
+        from matplotlib.ticker import FuncFormatter
+        ax.yaxis.set_major_formatter(FuncFormatter(pace_formatter))
+
+        # Modern grid and spines
+        ax.grid(True, alpha=0.2, linestyle='-', linewidth=0.8, color="#95a5a6")
+        ax.spines['top'].set_visible(False)
+        ax.spines['right'].set_visible(False)
+        ax.spines['left'].set_color('#bdc3c7')
+        ax.spines['bottom'].set_color('#bdc3c7')
+
+        ax.legend(loc='upper right', framealpha=0.95, fontsize=10)
+        plt.xticks(rotation=45, ha='right', fontsize=10)
+        plt.yticks(fontsize=10)
+        plt.tight_layout()
+
+        img_buffer = io.BytesIO()
+        plt.savefig(img_buffer, format="png", bbox_inches="tight", facecolor='#fafbfc', dpi=120)
+        plt.close()
+        img_buffer.seek(0)
+
+        # Calculate trend (negative slope means getting faster)
+        trend_slope = z[0] * 7  # Change per week
+        trend_type = "improving" if trend_slope < 0 else "declining"
+        trend_desc = f"{abs(trend_slope):.1f} sec/km per week"
+
+        avg_pace = sum(paces) / len(paces)
+
+        return {
+            "chart": base64.b64encode(img_buffer.getvalue()).decode(),
+            "trend_description": trend_desc,
+            "overall_trend": trend_type,
+            "avg_pace": float(avg_pace),
+            "starting_pace": float(rolling_avg[0]),
+            "current_pace": float(rolling_avg[-1]),
         }
 
     @staticmethod
@@ -273,9 +319,11 @@ class AnalyticsService:
 
         years = sorted(weekly_data.keys())
 
-        fig, axes = plt.subplots(len(years), 1, figsize=(14, 4 * len(years)), dpi=100)
+        fig, axes = plt.subplots(len(years), 1, figsize=(14, 5 * len(years)), dpi=120)
         if len(years) == 1:
             axes = [axes]
+
+        fig.patch.set_facecolor('#fafbfc')
 
         yearly_stats = {}
 
@@ -283,18 +331,41 @@ class AnalyticsService:
             weeks = sorted(weekly_data[year].keys())
             distances = [weekly_data[year][w] for w in weeks]
 
-            bars = axes[idx].bar(weeks, distances, color="#667eea", alpha=0.7)
-            axes[idx].set_xlabel(f"Week Number ({year})", fontsize=11, fontweight="bold")
-            axes[idx].set_ylabel("Distance (km)", fontsize=11, fontweight="bold")
-            axes[idx].set_title(f"Weekly Running Volume - {year}", fontsize=12, fontweight="bold")
-            axes[idx].grid(True, alpha=0.3, axis="y")
+            axes[idx].set_facecolor('#ffffff')
+
+            # Bar chart with improved styling
+            bars = axes[idx].bar(weeks, distances, color="#667eea", alpha=0.75,
+                               edgecolor="#5568d3", linewidth=1.2)
+
+            # Calculate average and highlight bars above average
+            avg_dist = sum(distances) / len(distances)
+            axes[idx].axhline(y=avg_dist, color="#FF6B6B", linestyle="--",
+                            linewidth=2, alpha=0.8, label="Average")
+
+            # Add trend line
+            if len(distances) > 2:
+                x_numeric = np.array(weeks)
+                z = np.polyfit(x_numeric, distances, 1)
+                p = np.poly1d(z)
+                axes[idx].plot(weeks, p(x_numeric), "--", color="#4ECDC4",
+                             linewidth=2, alpha=0.8, label="Trend")
+
+            # Styling
+            axes[idx].set_xlabel(f"Week Number ({year})", fontsize=12, fontweight="600", color="#2c3e50")
+            axes[idx].set_ylabel("Distance (km)", fontsize=12, fontweight="600", color="#2c3e50")
+            axes[idx].set_title(f"Weekly Running Volume - {year}", fontsize=14,
+                              fontweight="700", pad=15, color="#2c3e50")
+
+            # Modern grid and spines
+            axes[idx].grid(True, alpha=0.2, linestyle='-', linewidth=0.8, color="#95a5a6", axis="y")
+            axes[idx].spines['top'].set_visible(False)
+            axes[idx].spines['right'].set_visible(False)
+            axes[idx].spines['left'].set_color('#bdc3c7')
+            axes[idx].spines['bottom'].set_color('#bdc3c7')
+
             axes[idx].set_xticks(range(1, max(weeks) + 2, 5))
-
-            highlight_bars = [d for d in distances if d > sum(distances) / len(distances)]
-            highlight_bars.sort(reverse=True)
-
-            axes[idx].axhline(y=sum(distances) / len(distances), 
-                            color="#f09", linestyle="--", alpha=0.5, label="Average")
+            axes[idx].tick_params(labelsize=10)
+            axes[idx].legend(loc='upper left', framealpha=0.95, fontsize=10)
 
             total_dist = sum(distances)
             max_dist = max(distances)
@@ -310,32 +381,30 @@ class AnalyticsService:
         plt.tight_layout()
 
         img_buffer = io.BytesIO()
-        plt.savefig(img_buffer, format="png", bbox_inches="tight", facecolor="white")
+        plt.savefig(img_buffer, format="png", bbox_inches="tight", facecolor='#fafbfc', dpi=120)
         plt.close()
         img_buffer.seek(0)
+
+        # Calculate aggregate weekly statistics across all years
+        all_weekly_avgs = [stats["weekly_average_km"] for stats in yearly_stats.values()]
+        all_max_weekly = [stats["max_weekly_km"] for stats in yearly_stats.values()]
 
         return {
             "chart": base64.b64encode(img_buffer.getvalue()).decode(),
             "yearly_breakdown": yearly_stats,
+            "avg_weekly_distance": sum(all_weekly_avgs) / len(all_weekly_avgs) if all_weekly_avgs else 0,
+            "max_weekly_distance": max(all_max_weekly) if all_max_weekly else 0,
         }
 
     @staticmethod
     def _calculate_overall_summary(activities: List[Dict[str, Any]]) -> Dict[str, Any]:
-        """Calculate overall summary statistics."""
+        """Calculate overall summary statistics from minimal data."""
         total_distance = sum(a.get("distance_km", 0) for a in activities)
-        total_time = sum(a.get("moving_time_seconds", 0) for a in activities)
+        distances = [a.get("distance_km", 0) for a in activities if a.get("distance_km", 0) > 0]
+        max_distance = max(distances) if distances else 0
 
         dates = [datetime.fromisoformat(a["date"]) for a in activities if a.get("date")]
         date_span = max(dates) - min(dates) if len(dates) >= 2 else None
-
-        paces = []
-        for activity in activities:
-            distance = activity.get("distance_km", 0)
-            time = activity.get("moving_time_seconds", 0)
-            if distance > 0 and time > 0:
-                paces.append((time / distance) / 60)
-
-        avg_pace = sum(paces) / len(paces) if paces else 0
 
         hr_rates = [a.get("avg_heart_rate") for a in activities if a.get("avg_heart_rate")]
         avg_hr = sum(hr_rates) / len(hr_rates) if hr_rates else 0
@@ -347,16 +416,21 @@ class AnalyticsService:
 
         most_active_month = max(months.items(), key=lambda x: x[1]) if months else None
 
+        avg_distance_per_run = float(round(total_distance / len(activities), 1)) if activities else 0
+
         return {
-            "total_runs": len(activities),
-            "total_distance_km": round(total_distance, 1),
-            "total_time_hours": round(total_time / 3600, 1),
-            "date_range_days": date_span.days if date_span else 0,
-            "avg_pace_min_km": round(avg_pace, 2),
-            "avg_pace_formatted": AnalyticsService._format_pace(avg_pace),
-            "avg_heart_rate": round(avg_hr, 1),
-            "avg_distance_per_run_km": round(total_distance / len(activities), 1) if activities else 0,
+            # Original field names
+            "total_runs": int(len(activities)),
+            "total_distance_km": float(round(total_distance, 1)),
+            "date_range_days": int(date_span.days) if date_span else 0,
+            "avg_heart_rate": float(round(avg_hr, 1)) if avg_hr else 0,
+            "avg_distance_per_run_km": avg_distance_per_run,
             "most_active_month": most_active_month[0] if most_active_month else None,
+            # Add backward compatible field aliases for template
+            "total_activities": int(len(activities)),
+            "total_distance": float(round(total_distance, 1)),
+            "avg_distance": avg_distance_per_run,
+            "max_distance": float(round(max_distance, 1)),
         }
 
     @staticmethod
@@ -386,25 +460,26 @@ class AnalyticsService:
 
         colors = ["#667eea", "#f09", "#4caf50", "#ff9800", "#9c27b0"]
 
+        # Compare essential metrics only: distance and heart rate
         for idx, (analytics, name) in enumerate(zip(analytics_list, names)):
             color = colors[idx % len(colors)]
 
             if idx < len(analytics_list):
-                if "pace_trends" in analytics and analytics["pace_trends"].get("avg_pace_min_km"):
-                    axes[0, 0].bar(idx, analytics["pace_trends"]["avg_pace_min_km"], 
-                                  color=color, alpha=0.7, label=name)
                 if "distance_trends" in analytics and analytics["distance_trends"].get("avg_distance_km"):
-                    axes[0, 1].bar(idx, analytics["distance_trends"]["avg_distance_km"], 
+                    axes[0, 0].bar(idx, analytics["distance_trends"]["avg_distance_km"], 
+                                  color=color, alpha=0.7, label=name)
+                if "summary" in analytics and analytics["summary"].get("avg_heart_rate"):
+                    axes[0, 1].bar(idx, analytics["summary"]["avg_heart_rate"], 
                                   color=color, alpha=0.7, label=name)
 
-        axes[0, 0].set_title("Average Pace Comparison", fontweight="bold")
-        axes[0, 0].set_ylabel("Pace (min/km)")
+        axes[0, 0].set_title("Average Distance per Run Comparison", fontweight="bold")
+        axes[0, 0].set_ylabel("Distance (km)")
         axes[0, 0].set_xticks(range(len(names)))
         axes[0, 0].set_xticklabels(names, rotation=15, ha="right")
         axes[0, 0].legend()
 
-        axes[0, 1].set_title("Average Distance per Run Comparison", fontweight="bold")
-        axes[0, 1].set_ylabel("Distance (km)")
+        axes[0, 1].set_title("Average Heart Rate Comparison", fontweight="bold")
+        axes[0, 1].set_ylabel("Heart Rate (bpm)")
         axes[0, 1].set_xticks(range(len(names)))
         axes[0, 1].set_xticklabels(names, rotation=15, ha="right")
         axes[0, 1].legend()
@@ -417,18 +492,17 @@ class AnalyticsService:
                     "name": name,
                     "total_distance_km": summary.get("total_distance_km", 0),
                     "total_runs": summary.get("total_runs", 0),
-                    "avg_pace_formatted": summary.get("avg_pace_formatted", ""),
                     "avg_heart_rate": summary.get("avg_heart_rate", 0),
                 })
 
         axes[1, 0].axis("off")
         table_data = [
             [f"{s['name']}", f"{s['total_distance_km']} km", str(s['total_runs']), 
-             s['avg_pace_formatted'], f"{s['avg_heart_rate']:.0f}"]
+             f"{s['avg_heart_rate']:.0f}" if s['avg_heart_rate'] else "N/A"]
             for s in summary_comparison
         ]
         table = axes[1, 0].table(cellText=table_data,
-                                colLabels=["Name", "Total Distance", "Total Runs", "Avg Pace", "Avg HR"],
+                                colLabels=["Name", "Total Distance", "Total Runs", "Avg HR"],
                                 cellLoc="center",
                                 loc="center")
         table.auto_set_font_size(False)
