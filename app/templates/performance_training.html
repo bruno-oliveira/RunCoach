@@ -13,6 +13,62 @@
         <p>Speed-focused training plans for experienced runners targeting race time improvements</p>
     </div>
 
+    {% if error %}
+    <div class="error-container" style="margin-bottom: 2rem;">
+        {% if error_type == 'inadequate_base' %}
+            <div class="error-card base-error" style="background: #e8f5e8; color: #2e7d32; padding: 1rem; border-radius: 8px; border-left: 4px solid #4caf50;">
+                <div style="display: flex; align-items: center; margin-bottom: 0.5rem;">
+                    <span style="font-size: 1.2rem; margin-right: 0.5rem;">🏃</span>
+                    <strong style="color: #2e7d32;">Build Your Running Base First</strong>
+                </div>
+                <div style="font-size: 0.95rem; line-height: 1.4;">{{ error }}</div>
+                {% if suggestion %}
+                <div style="margin-top: 0.5rem; font-size: 0.9rem; font-style: italic; color: #388e3c;">
+                    💡 {{ suggestion }}
+                </div>
+                {% endif %}
+            </div>
+        {% elif error_type == 'unrealistic_goal' %}
+            <div class="error-card goal-error" style="background: #fff3e0; color: #e65100; padding: 1rem; border-radius: 8px; border-left: 4px solid #ff9800;">
+                <div style="display: flex; align-items: center; margin-bottom: 0.5rem;">
+                    <span style="font-size: 1.2rem; margin-right: 0.5rem;">⏱️</span>
+                    <strong style="color: #e65100;">Goal Pace May Be Unrealistic</strong>
+                </div>
+                <div style="font-size: 0.95rem; line-height: 1.4;">{{ error }}</div>
+                {% if suggestion %}
+                <div style="margin-top: 0.5rem; font-size: 0.9rem; font-style: italic; color: #f57c00;">
+                    💡 {{ suggestion }}
+                </div>
+                {% endif %}
+            </div>
+        {% elif error_type == 'auth_required' %}
+            <div class="error-card auth-error" style="background: #fff3e0; color: #e65100; padding: 1rem; border-radius: 8px; border-left: 4px solid #ff9800;">
+                <div style="display: flex; align-items: center; margin-bottom: 0.5rem;">
+                    <span style="font-size: 1.2rem; margin-right: 0.5rem;">🔒</span>
+                    <strong style="color: #e65100;">Login Required</strong>
+                </div>
+                <div style="font-size: 0.95rem; line-height: 1.4;">{{ error }}</div>
+            </div>
+        {% elif error_type == 'validation' %}
+            <div class="error-card validation-error" style="background: #fff8e1; color: #f57f17; padding: 1rem; border-radius: 8px; border-left: 4px solid #ffc107;">
+                <div style="display: flex; align-items: center; margin-bottom: 0.5rem;">
+                    <span style="font-size: 1.2rem; margin-right: 0.5rem;">✓</span>
+                    <strong style="color: #f57f17;">Please Check Your Input</strong>
+                </div>
+                <div style="font-size: 0.95rem; line-height: 1.4;">{{ error }}</div>
+            </div>
+        {% else %}
+            <div class="error-card general-error" style="background: #ffebee; color: #c62828; padding: 1rem; border-radius: 8px; border-left: 4px solid #f44336;">
+                <div style="display: flex; align-items: center; margin-bottom: 0.5rem;">
+                    <span style="font-size: 1.2rem; margin-right: 0.5rem;">⚠️</span>
+                    <strong style="color: #c62828;">Error</strong>
+                </div>
+                <div style="font-size: 0.95rem; line-height: 1.4;">{{ error }}</div>
+            </div>
+        {% endif %}
+    </div>
+    {% endif %}
+
     {% if not user %}
     <div class="auth-required" style="background: #fff3e0; color: #e65100; padding: 1.5rem; border-radius: 8px; border-left: 4px solid #ff9800; margin-bottom: 2rem;">
         <div style="display: flex; align-items: center; margin-bottom: 0.5rem;">
@@ -135,6 +191,44 @@
                     placeholder="e.g., 40"
                 >
                 <small style="color: #666; font-size: 0.9rem;">{% if fitness_data and fitness_data.has_sufficient_data %}Auto-calculated from your runs (you can adjust){% else %}Your current average weekly running distance{% endif %}</small>
+            </div>
+
+            <div class="form-group">
+                <label for="max_heart_rate">Maximum Heart Rate (BPM)</label>
+                <input
+                    type="number"
+                    id="max_heart_rate"
+                    name="max_heart_rate"
+                    min="120"
+                    max="220"
+                    step="1"
+                    {% if hr_data %}value="{{ hr_data.max_hr }}"{% endif %}
+                    placeholder="e.g., 185"
+                >
+                <small style="color: #666; font-size: 0.9rem;">
+                    {% if hr_data %}
+                        {{ hr_data.message }}
+                        <span style="{% if hr_data.confidence == 'high' %}color: #2e7d32;{% elif hr_data.confidence == 'medium' %}color: #f57c00;{% else %}color: #666;{% endif %}">
+                            ({{ hr_data.confidence }} confidence)
+                        </span>
+                    {% else %}
+                        Optional - enables heart rate zones in BPM
+                    {% endif %}
+                </small>
+                <details style="margin-top: 0.5rem;">
+                    <summary style="cursor: pointer; color: #1976d2; font-size: 0.9rem; font-weight: 500;">
+                        💡 How to Find Your Max Heart Rate
+                    </summary>
+                    <div style="margin-top: 0.5rem; padding: 0.75rem; background: #f5f5f5; border-radius: 4px; font-size: 0.85rem; line-height: 1.5;">
+                        <p style="margin: 0 0 0.5rem 0;"><strong>Most accurate methods:</strong></p>
+                        <ul style="margin: 0 0 0.5rem 1rem; padding: 0;">
+                            <li>Lab test (VO2 max test)</li>
+                            <li>Field test: 5-10min all-out effort with HR monitor</li>
+                            <li>Check your watch data: highest HR during hard workouts</li>
+                        </ul>
+                        <p style="margin: 0.5rem 0 0 0;"><strong>Formula (less accurate):</strong> 220 - your age</p>
+                    </div>
+                </details>
             </div>
 
             <div class="pace-calculator" style="background: #f5f5f5; padding: 1rem; border-radius: 8px; margin-bottom: 1.5rem;">

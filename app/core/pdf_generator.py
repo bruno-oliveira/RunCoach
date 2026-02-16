@@ -178,26 +178,51 @@ class PDFGenerator:
     
     def _add_title_page(self, story: List, training_plan: TrainingPlan, plan_data: List[Dict]):
         """Add title page"""
-        story.append(Paragraph("🏃‍♂️ Personalized Running Training Plan", self.title_style))
+        # Check if this is a performance plan
+        is_performance = getattr(training_plan, 'plan_type', 'distance') == 'performance'
+
+        if is_performance:
+            story.append(Paragraph("⚡ Performance Training Plan", self.title_style))
+        else:
+            story.append(Paragraph("🏃‍♂️ Personalized Running Training Plan", self.title_style))
         story.append(Spacer(1, 0.5*cm))
-        
+
         subtitle = f"Target: {training_plan.target_distance}km Race | {training_plan.weeks_duration} Weeks"
         story.append(Paragraph(subtitle, self.subtitle_style))
         story.append(Spacer(1, 0.3*cm))
-        
+
         created_date = training_plan.created_at.strftime('%B %d, %Y')
         story.append(Paragraph(f"Generated on {created_date}", self.normal_style))
         story.append(Spacer(1, 2*cm))
-        
+
         # Add key stats (30.0 = Trail Running)
         target_distance_float = float(training_plan.target_distance)
         target_display = "Trail Running" if target_distance_float == 30.0 else f"{training_plan.target_distance} km"
-        stats_data = [
-            ['Current Weekly Mileage', f"{training_plan.current_weekly_km} km"],
-            ['Target Distance', target_display],
-            ['Training Duration', f"{training_plan.weeks_duration} weeks"],
-            ['Peak Week Mileage', f"{max(week['total_km'] for week in plan_data):.1f} km"]
-        ]
+
+        if is_performance and training_plan.current_pace and training_plan.goal_pace:
+            # Performance plan stats
+            current_pace_min = int(training_plan.current_pace)
+            current_pace_sec = int((training_plan.current_pace % 1) * 60)
+            goal_pace_min = int(training_plan.goal_pace)
+            goal_pace_sec = int((training_plan.goal_pace % 1) * 60)
+            improvement = ((training_plan.current_pace - training_plan.goal_pace) / training_plan.current_pace) * 100
+
+            stats_data = [
+                ['Target Distance', target_display],
+                ['Current Pace', f"{current_pace_min}:{current_pace_sec:02d}/km"],
+                ['Goal Pace', f"{goal_pace_min}:{goal_pace_sec:02d}/km"],
+                ['Target Improvement', f"{improvement:.1f}%"],
+                ['Training Duration', f"{training_plan.weeks_duration} weeks"],
+                ['Weekly Mileage', f"{training_plan.current_weekly_km:.1f} km"]
+            ]
+        else:
+            # Distance plan stats
+            stats_data = [
+                ['Current Weekly Mileage', f"{training_plan.current_weekly_km} km"],
+                ['Target Distance', target_display],
+                ['Training Duration', f"{training_plan.weeks_duration} weeks"],
+                ['Peak Week Mileage', f"{max(week['total_km'] for week in plan_data):.1f} km"]
+            ]
         
         stats_table = Table(stats_data, colWidths=[5*cm, 3*cm])
         stats_table.setStyle(TableStyle([
@@ -252,7 +277,14 @@ class PDFGenerator:
     
     def _add_weekly_plan(self, story: List, week: Dict[str, Any]):
         """Add weekly training plan"""
-        story.append(Paragraph(f"Week {week['week']} - {week['total_km']:.1f} km", self.section_style))
+        # Add phase info if this is a performance plan
+        if 'phase' in week and 'phase_description' in week:
+            title = f"Week {week['week']} - {week['total_km']:.1f} km | {week['phase'].title()} Phase"
+            story.append(Paragraph(title, self.section_style))
+            story.append(Paragraph(f"<i>{week['phase_description']}</i>", self.normal_style))
+            story.append(Spacer(1, 0.3*cm))
+        else:
+            story.append(Paragraph(f"Week {week['week']} - {week['total_km']:.1f} km", self.section_style))
         
         # Create workout table with proper text wrapping
         workout_data = [['Day', 'Workout', 'Distance', 'Intensity', 'Notes']]

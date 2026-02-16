@@ -58,16 +58,26 @@ class PerformancePlanGenerator:
             }
         }
 
-    def calculate_training_zones(self, goal_pace: float) -> Dict[str, Dict[str, Any]]:
+    def calculate_training_zones(self, goal_pace: float, max_hr: Optional[int] = None) -> Dict[str, Dict[str, Any]]:
         """
-        Calculate 5 training zones based on goal pace.
+        Calculate 5 training zones based on goal pace and optionally max heart rate.
 
         Args:
             goal_pace: Goal race pace in min/km
+            max_hr: Maximum heart rate in BPM (optional)
 
         Returns:
-            Dictionary of training zones with pace and description
+            Dictionary of training zones with pace, HR percentage, and BPM ranges
         """
+        # Define HR percentage ranges for each zone (simple % of max HR method)
+        hr_percentages = {
+            'zone_1_recovery': (0.60, 0.70),
+            'zone_2_aerobic': (0.70, 0.80),
+            'zone_3_tempo': (0.80, 0.88),
+            'zone_4_vo2max': (0.88, 0.95),
+            'zone_5_race': (0.95, 1.00)
+        }
+
         zones = {
             'zone_1_recovery': {
                 'pace': goal_pace + 1.5,  # Very easy
@@ -105,6 +115,16 @@ class PerformancePlanGenerator:
                 'color': '#ef4444'  # red
             }
         }
+
+        # Add BPM ranges if max_hr is provided
+        if max_hr:
+            for zone_name, zone_data in zones.items():
+                if zone_name in hr_percentages:
+                    lower_pct, upper_pct = hr_percentages[zone_name]
+                    lower_bpm = int(max_hr * lower_pct)
+                    upper_bpm = int(max_hr * upper_pct)
+                    zone_data['hr_bpm_range'] = f"{lower_bpm}-{upper_bpm} BPM"
+
         return zones
 
     def _format_pace(self, pace_min_per_km: float) -> str:
@@ -460,7 +480,8 @@ class PerformancePlanGenerator:
         goal_pace: float,
         weeks: int,
         current_weekly_km: float,
-        runs_per_week: int = 5
+        runs_per_week: int = 5,
+        max_heart_rate: Optional[int] = None
     ) -> Dict[str, Any]:
         """
         Generate a complete performance training plan.
@@ -472,6 +493,7 @@ class PerformancePlanGenerator:
             weeks: Duration of the plan
             current_weekly_km: Current weekly mileage
             runs_per_week: Number of runs per week (3-6)
+            max_heart_rate: Maximum heart rate in BPM (optional)
 
         Returns:
             Complete training plan with zones and weekly workouts
@@ -490,7 +512,7 @@ class PerformancePlanGenerator:
             weeks = 16
 
         # Calculate training zones
-        zones = self.calculate_training_zones(goal_pace)
+        zones = self.calculate_training_zones(goal_pace, max_heart_rate)
 
         # Calculate phases
         phases = self._calculate_phases(weeks)

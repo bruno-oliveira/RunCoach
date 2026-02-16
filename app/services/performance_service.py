@@ -37,6 +37,81 @@ class PerformanceService:
         self.performance_generator = performance_generator or PerformancePlanGenerator()
         self.nutrition_engine = nutrition_engine or NutritionEngine()
 
+    def calculate_max_heart_rate(
+        self,
+        user_id: str,
+        goal_pace: float,
+        lookback_weeks: int = 8
+    ) -> Dict[str, Any]:
+        """
+        Calculate maximum heart rate using three-tier fallback strategy.
+
+        Args:
+            user_id: User ID
+            goal_pace: Goal pace in min/km (for pace-based estimation)
+            lookback_weeks: How many weeks to look back for run data
+
+        Returns:
+            Dictionary with max_hr, confidence, source, and message
+        """
+        # Strategy 1: Use RunLog data (highest confidence)
+        cutoff_date = datetime.utcnow() - timedelta(weeks=lookback_weeks)
+        runs = (
+            self.db.query(RunLog)
+            .filter(
+                RunLog.user_id == user_id,
+                RunLog.date >= cutoff_date,
+                RunLog.max_heart_rate.isnot(None)
+            )
+            .order_by(RunLog.date.desc())
+            .all()
+        )
+
+        if len(runs) >= 5:
+            # Use 98th percentile to avoid outliers
+            hr_values = sorted([r.max_heart_rate for r in runs])
+            percentile_98_idx = int(len(hr_values) * 0.98)
+            max_hr = hr_values[percentile_98_idx]
+
+            return {
+                'max_hr': max_hr,
+                'confidence': 'high',
+                'source': 'run_data',
+                'message': f'Calculated from {len(runs)} runs with heart rate data (98th percentile)'
+            }
+
+        # Strategy 2: Age-based formula (medium confidence)
+        user = self.db.query(User).filter(User.id == user_id).first()
+        if user and user.age:
+            max_hr = 220 - user.age
+            return {
+                'max_hr': max_hr,
+                'confidence': 'medium',
+                'source': 'age_formula',
+                'message': f'Estimated from age using 220 - {user.age} formula'
+            }
+
+        # Strategy 3: Pace-based estimation (low confidence)
+        # Fast pace (~4:00/km) suggests younger/fitter: 185 BPM
+        # Average pace (~5:30/km): 180 BPM
+        # Slower pace (~7:00/km): 175 BPM
+        if goal_pace <= 4.5:
+            max_hr = 185
+            pace_desc = "fast"
+        elif goal_pace <= 6.0:
+            max_hr = 180
+            pace_desc = "average"
+        else:
+            max_hr = 175
+            pace_desc = "slower"
+
+        return {
+            'max_hr': max_hr,
+            'confidence': 'low',
+            'source': 'pace_estimation',
+            'message': f'Rough estimate based on {pace_desc} goal pace (consider testing your actual max HR)'
+        }
+
     def calculate_fitness_from_runs(
         self,
         user_id: str,
@@ -142,7 +217,8 @@ class PerformanceService:
         goal_time: str | None = None,
         current_time: str | None = None,
         runs_per_week: int = 5,
-        auto_calculate: bool = True
+        auto_calculate: bool = True,
+        max_heart_rate: int | None = None
     ) -> Tuple[TrainingPlan, Dict[str, Any]]:
         """
         Create a performance-focused training plan.
@@ -158,6 +234,7 @@ class PerformanceService:
             current_time: Current finish time string
             runs_per_week: Number of runs per week
             auto_calculate: Whether to auto-calculate from run logs
+            max_heart_rate: Maximum heart rate in BPM (optional)
 
         Returns:
             Tuple of (TrainingPlan, plan_data)
@@ -185,7 +262,8 @@ class PerformanceService:
             goal_pace=goal_pace,
             weeks=weeks,
             current_weekly_km=current_weekly_km,
-            runs_per_week=runs_per_week
+            runs_per_week=runs_per_week,
+            max_heart_rate=max_heart_rate
         )
 
         # Create training plan record
@@ -200,6 +278,7 @@ class PerformanceService:
             current_time=current_time,
             goal_time=goal_time,
             max_runs_per_week=runs_per_week,
+            max_heart_rate=max_heart_rate,
             plan_data=json.dumps(plan_data['weekly_plans'])
         )
 
@@ -276,9 +355,10 @@ class PerformanceService:
 
         plan_data = json.loads(training_plan.plan_data)
 
-        # Reconstruct full plan data with zones
+        # Reconstruct full plan data with zones (include max_hr if available)
         zones = self.performance_generator.calculate_training_zones(
-            training_plan.goal_pace
+            training_plan.goal_pace,
+            training_plan.max_heart_rate
         )
 
         full_data = {
@@ -288,6 +368,7 @@ class PerformanceService:
             'current_pace': training_plan.current_pace,
             'goal_pace': training_plan.goal_pace,
             'weeks': training_plan.weeks_duration,
+            'max_heart_rate': training_plan.max_heart_rate,
         }
 
         return training_plan, full_data

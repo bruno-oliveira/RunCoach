@@ -16,3 +16,4 @@ class User(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
     last_activity = Column(DateTime, default=datetime.utcnow, nullable=True)
     plans_generated = Column(Integer, default=0)
+    age = Column(Integer, nullable=True)  # Age for max heart rate calculation

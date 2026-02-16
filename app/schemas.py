@@ -531,6 +531,9 @@ class PerformancePlanRequest(BaseModel):
     runs_per_week: int = Field(
         default=5, ge=3, le=6, description="Number of runs per week"
     )
+    max_heart_rate: Optional[int] = Field(
+        None, ge=120, le=220, description="Maximum heart rate in BPM (optional, auto-calculated if not provided)"
+    )
 
     @field_validator("target_distance")
     @classmethod

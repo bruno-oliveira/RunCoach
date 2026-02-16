@@ -72,7 +72,12 @@
                     {% endif %}
                     <div class="zone-metric">
                         <div class="metric-label">Heart Rate</div>
+                        {% if zone_data.hr_bpm_range %}
+                        <div class="metric-value" style="font-weight: 600;">{{ zone_data.hr_bpm_range }}</div>
+                        <div style="font-size: 0.75rem; color: #666; margin-top: 0.25rem;">{{ zone_data.hr_range }}</div>
+                        {% else %}
                         <div class="metric-value">{{ zone_data.hr_range }}</div>
+                        {% endif %}
                     </div>
                 </div>
             </div>
@@ -115,13 +120,23 @@
                     </div>
 
                     <div class="workout-content">
-                        {% if workout.zone and workout.zone != 'mixed' %}
+                        {% if workout.zone and workout.zone != 'mixed' and workout.zone != 'rest' %}
+                        {% set zone_number = workout.zone.split('_')[1] %}
+                        {% set zone_map = {
+                            '1': 'zone_1_recovery',
+                            '2': 'zone_2_aerobic',
+                            '3': 'zone_3_tempo',
+                            '4': 'zone_4_vo2max',
+                            '5': 'zone_5_race'
+                        } %}
+                        {% if zone_number in zone_map %}
                         <div class="workout-zone">
-                            <span class="zone-indicator" style="background: {{ plan_data.training_zones['zone_' + workout.zone.split('_')[1] + '_' + workout.zone.split('_')[2]].color }};">
-                                Zone {{ workout.zone.split('_')[1] }}
+                            <span class="zone-indicator" style="background: {{ plan_data.training_zones[zone_map[zone_number]].color }};">
+                                Zone {{ zone_number }}
                             </span>
                             <span class="zone-pace">{{ workout.target_pace_formatted }}</span>
                         </div>
+                        {% endif %}
                         {% elif workout.zone == 'mixed' %}
                         <div class="workout-zone">
                             <span class="zone-indicator" style="background: linear-gradient(90deg, #fbbf24, #fb923c);">
@@ -188,6 +203,9 @@
 
     <!-- Action Buttons -->
     <div class="action-buttons">
+        <a href="/download-pdf/{{ plan.id }}" class="btn btn-primary">
+            📄 Download PDF
+        </a>
         <a href="/my-plans" class="btn btn-secondary">
             📋 View All Plans
         </a>

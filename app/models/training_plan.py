@@ -28,3 +28,8 @@ class TrainingPlan(Base):
     goal_pace = Column(Float)  # min/km
     current_time = Column(String)  # formatted time string (e.g., "55:00")
     goal_time = Column(String)  # formatted time string (e.g., "50:00")
+
+    # Heart rate training fields
+    max_heart_rate = Column(Integer, nullable=True)  # Maximum heart rate in BPM
+    resting_heart_rate = Column(Integer, nullable=True)  # Resting heart rate in BPM (for future Karvonen method)
+    hr_zone_method = Column(String, default="simple_percent")  # HR zone calculation method
