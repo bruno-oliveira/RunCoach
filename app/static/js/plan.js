@@ -466,7 +466,7 @@ window.adaptFromStrava = async function(planId) {
                 }
                 showStravaAdaptMessage(msg, false);
                 // Reload after a short delay so the user can see the banner
-                setTimeout(() => location.reload(), 1800);
+                setTimeout(() => location.reload(), 5800);
             } else {
                 showStravaAdaptMessage(result.reason, false);
                 restoreBtn();
