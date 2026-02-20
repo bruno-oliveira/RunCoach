@@ -35,6 +35,18 @@
         <h1 style="margin-bottom: var(--space-2);">Analytics</h1>
         <p style="color: var(--color-text-secondary); margin-bottom: var(--space-6);">Your running trends at a glance</p>
 
+        <!-- Period Selector -->
+        <div class="analytics-period-selector">
+            <label>Show data from:</label>
+            <select id="periodSelector" class="chart-grouping-select">
+                <option value="30">Last 30 days</option>
+                <option value="60">Last 60 days</option>
+                <option value="90" selected>Last 90 days</option>
+                <option value="365">Last year</option>
+                <option value="all">All time</option>
+            </select>
+        </div>
+
         <!-- Summary Stats -->
         <div class="analytics-stats-row stagger">
             <div class="analytics-stat">

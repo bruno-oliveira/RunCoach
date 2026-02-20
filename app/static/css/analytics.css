@@ -35,6 +35,21 @@
     letter-spacing: var(--tracking-wide);
 }
 
+/* ---- Period Selector ---- */
+.analytics-period-selector {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    margin-bottom: var(--space-6);
+}
+
+.analytics-period-selector label {
+    font-size: var(--text-sm);
+    font-weight: var(--weight-semibold);
+    color: var(--color-text-secondary);
+    white-space: nowrap;
+}
+
 /* ---- Chart Cards ---- */
 .charts-section {
     display: flex;

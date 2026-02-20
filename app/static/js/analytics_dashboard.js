@@ -2,6 +2,7 @@
  * Analytics Dashboard — client-side aggregation + Chart.js rendering.
  */
 const AnalyticsDashboard = {
+    allRuns: [],
     runs: [],
     charts: {},
 
@@ -28,23 +29,47 @@ const AnalyticsDashboard = {
             const res = await fetch('/api/analytics/runs', { credentials: 'same-origin' });
             if (!res.ok) throw new Error('Failed to fetch runs');
             const data = await res.json();
-            this.runs = data.runs.filter(r => r.date);
+            this.allRuns = data.runs.filter(r => r.date);
 
             loading.style.display = 'none';
 
-            if (this.runs.length === 0) {
+            if (this.allRuns.length === 0) {
                 empty.style.display = 'block';
                 return;
             }
 
             dashboard.style.display = 'block';
-            this.renderSummary();
-            this.renderAllCharts();
+            this.filterByPeriod(90);
             this.bindGroupingControls();
+            this.bindPeriodSelector();
         } catch (err) {
             console.error('Analytics load error:', err);
             loading.style.display = 'none';
             empty.style.display = 'block';
+        }
+    },
+
+    /* ------------------------------------------------------------------ */
+    /*  Period Filtering                                                    */
+    /* ------------------------------------------------------------------ */
+    filterByPeriod(days) {
+        if (days === 'all') {
+            this.runs = [...this.allRuns];
+        } else {
+            const cutoff = new Date();
+            cutoff.setDate(cutoff.getDate() - Number(days));
+            this.runs = this.allRuns.filter(r => new Date(r.date) >= cutoff);
+        }
+        this.renderSummary();
+        this.renderAllCharts();
+    },
+
+    bindPeriodSelector() {
+        const el = document.getElementById('periodSelector');
+        if (el) {
+            el.addEventListener('change', () => {
+                this.filterByPeriod(el.value);
+            });
         }
     },
 

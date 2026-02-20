@@ -11,7 +11,6 @@ from app.models.favorite_recipe import FavoriteRecipe
 from app.models.strength_exercise import StrengthExercise
 from app.models.daily_strength_workout import DailyStrengthWorkout
 from app.models.user_favorite_workout import UserFavoriteWorkout
-from app.models.strava_analytics import StravaAnalytics, StravaActivity
 
 # Configure relationships after all models are imported
 User.training_plans = relationship("TrainingPlan", back_populates="user")
@@ -33,8 +32,6 @@ RunLog.daily_workout = relationship("DailyWorkout")
 
 User.favorite_recipes = relationship("FavoriteRecipe")
 
-# relationships for StravaAnalytics and StravaActivity are defined in strava_analytics.py
-
 __all__ = [
     "Base",
     "User",
@@ -47,6 +44,4 @@ __all__ = [
     "StrengthExercise",
     "DailyStrengthWorkout",
     "UserFavoriteWorkout",
-    "StravaAnalytics",
-    "StravaActivity",
 ]
