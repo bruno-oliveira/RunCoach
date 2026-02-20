@@ -56,12 +56,13 @@ const AnalyticsDashboard = {
         if (days === 'all') {
             this.runs = [...this.allRuns];
         } else {
-            const cutoff = new Date();
-            cutoff.setDate(cutoff.getDate() - Number(days));
+            const now = new Date();
+            // Build a UTC date-only cutoff so it matches the UTC date-only strings from the API
+            const cutoff = new Date(Date.UTC(now.getFullYear(), now.getMonth(), now.getDate() - Number(days)));
             this.runs = this.allRuns.filter(r => new Date(r.date) >= cutoff);
         }
         this.renderSummary();
-        this.renderAllCharts();
+        this.renderCurrentCharts();
     },
 
     bindPeriodSelector() {
@@ -194,6 +195,16 @@ const AnalyticsDashboard = {
         this.renderHRChart('weekly');
         this.renderWorkoutTypeChart();
         this.renderCadenceChart('weekly');
+    },
+
+    /** Re-render all charts respecting current grouping dropdown values. */
+    renderCurrentCharts() {
+        const g = id => { const el = document.getElementById(id); return el ? el.value : 'weekly'; };
+        this.renderPaceChart(g('paceGrouping'));
+        this.renderDistanceChart(g('distanceGrouping'));
+        this.renderHRChart(g('hrGrouping'));
+        this.renderWorkoutTypeChart();
+        this.renderCadenceChart(g('cadenceGrouping'));
     },
 
     getGroupedData(grouping) {
