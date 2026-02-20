@@ -31,8 +31,6 @@ class TrainingPlan(Base):
 
     # Heart rate training fields
     max_heart_rate = Column(Integer, nullable=True)  # Maximum heart rate in BPM
-    resting_heart_rate = Column(Integer, nullable=True)  # Resting heart rate in BPM (for future Karvonen method)
-    hr_zone_method = Column(String, default="simple_percent")  # HR zone calculation method
     start_date = Column(DateTime, nullable=True)
     # Tracks the last Strava-fitness multiplier applied so re-runs can reverse it
     strava_adapted_multiplier = Column(Float, nullable=True)

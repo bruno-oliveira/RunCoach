@@ -201,43 +201,12 @@ class PlanRequest(BaseModel):
         return self
 
 
-class WorkoutAdjustment(BaseModel):
-    """Schema for adjusting a single workout."""
-
-    day: int = Field(..., ge=1, le=7, description="Day of week (1-7)")
-    workout_type: Optional[str] = Field(None, description="New workout type")
-    distance: Optional[float] = Field(None, ge=0, description="New distance in km")
-    intensity: Optional[str] = Field(None, description="New intensity level")
-    notes: Optional[str] = Field(None, description="Updated workout notes")
-
-
-class PlanCustomizationRequest(BaseModel):
-    """Schema for customizing a training plan."""
-
-    plan_id: str = Field(..., description="Training plan ID")
-    week_number: int = Field(..., ge=1, description="Week number to customize")
-    adjustments: List[WorkoutAdjustment] = Field(
-        ..., description="List of workout adjustments"
-    )
-    preference_notes: Optional[str] = Field(
-        None, description="User preferences for AI suggestions"
-    )
-
-
 # Response schemas
 class HealthResponse(BaseModel):
     """Health check response."""
 
     status: str = "healthy"
     version: str = Field(default_factory=lambda: settings.app_version)
-
-
-class ErrorResponse(BaseModel):
-    """Error response schema."""
-
-    error: str
-    error_type: str
-    suggestion: Optional[str] = None
 
 
 class WorkoutResponse(BaseModel):

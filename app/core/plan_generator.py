@@ -268,8 +268,20 @@ class TrainingPlanGenerator:
             'rest': {'intensity': 'rest', 'description': 'Rest day'},
             'strength': {'intensity': 'low', 'description': 'Strength training'}
         }
-        self._last_warnings = []
-    
+
+    def _get_distance_category(self, target_distance: float) -> str:
+        """Map target distance to a category key."""
+        if target_distance <= 5:
+            return '5K'
+        elif target_distance <= 10:
+            return '10K'
+        elif target_distance <= 21.1:
+            return 'Half'
+        elif target_distance == 30.0:
+            return 'Trail'
+        else:
+            return 'Marathon'
+
     def _calculate_phases(self, weeks: int) -> Dict[str, int]:
         """
         Calculate proportional phase distribution based on total weeks
@@ -317,17 +329,8 @@ class TrainingPlanGenerator:
         Returns:
             Tuple of (min_ratio, max_ratio)
         """
-        if target_distance <= 5:
-            category = '5K'
-        elif target_distance <= 10:
-            category = '10K'
-        elif target_distance <= 21.1:
-            category = 'Half'
-        elif target_distance == 30.0:
-            category = 'Trail'
-        else:
-            category = 'Marathon'
-        
+        category = self._get_distance_category(target_distance)
+
         ratio_ranges = {
             '5K': {
                 'base': (0.25, 0.30),
@@ -418,43 +421,6 @@ class TrainingPlanGenerator:
 
         return round(ratio, 3)
 
-    def _get_workout_distribution_simple(self, total_km: float, max_runs: int) -> Dict[str, int]:
-        """
-        Simplified version of workout distribution for backward compatibility with tests.
-        """
-        long_runs = 1
-        running_days = max_runs - long_runs
-
-        if max_runs == 3:
-            easy_runs = 1
-            rest_days = 4
-            quality_workouts = 1
-        elif max_runs == 4:
-            easy_runs = 2
-            rest_days = 3
-            quality_workouts = 1
-        elif max_runs == 5:
-            easy_runs = 2
-            rest_days = 2
-            quality_workouts = 2
-        elif max_runs == 6:
-            easy_runs = 3
-            rest_days = 1
-            quality_workouts = 2
-        else:
-            easy_runs = max(0, running_days - quality_workouts)
-            rest_days = max_runs - long_runs - quality_workouts - easy_runs
-            quality_workouts = max(1, running_days - easy_runs)
-
-        return {
-            'easy': easy_runs,
-            'long': long_runs,
-            'interval': quality_workouts if quality_workouts == 1 or (quality_workouts == 2 and max_runs == 4) else (1 if quality_workouts >= 1 else 0),
-            'tempo': 1 if quality_workouts >= 2 and max_runs > 4 else 0,
-            'hill': 0,
-            'rest': rest_days
-        }
-
     def _get_workout_distribution(self, total_km: float, max_runs: int, phase: str = 'build',
                                 is_recovery_week: bool = False, week_number: int = 1, phases: Dict[str, int] = None,
                                 target_distance: float = 10.0) -> Dict[str, int]:
@@ -466,7 +432,7 @@ class TrainingPlanGenerator:
                                      target_distance == 10.0)
         
         if is_backward_compatible_call:
-            return self._get_workout_distribution_simple(total_km, max_runs, week_number)
+            return self._get_workout_distribution_simple(total_km, max_runs)
         
         long_runs = 1
         has_recovery = True
@@ -526,22 +492,6 @@ class TrainingPlanGenerator:
 
 
 
-    def _calculate_long_run_distance_simple(self, total_km: float, target_distance: float) -> float:
-        """
-        Simplified version of long run distance calculation for backward compatibility with tests.
-        """
-        long_run_base = total_km * 0.33
-
-        long_run_cap = {
-            5.0: 8.0,
-            10.0: 15.0,
-            21.1: 20.0,
-            30.0: 24.0,
-            42.2: 32.0
-        }.get(target_distance, target_distance * 0.77)
-
-        return round(min(long_run_base, long_run_cap), 1)
-
     def _schedule_workout_types(self, distribution: Dict[str, int], phase: str,
                                week_number: int, is_recovery_week: bool) -> List[Optional[str]]:
         """
@@ -584,7 +534,7 @@ class TrainingPlanGenerator:
 
         return workout_types
     
-    def _get_workout_distribution_simple(self, total_km: float, max_runs: int, week_number: int = 1) -> Dict[str, int]:
+    def _get_workout_distribution_simple(self, total_km: float, max_runs: int) -> Dict[str, int]:
         """
         Simplified version of workout distribution for backward compatibility with tests.
         """
@@ -804,18 +754,14 @@ class TrainingPlanGenerator:
             'Marathon': {'long': 0.40, 'tempo': 0.10, 'interval': 0.0, 'hill': 0.0, 'easy': 0.50}
         }
 
-        if phase == 'base':
-            dist_key = '5K' if target_distance <= 5 else '10K' if target_distance <= 10 else 'Half' if target_distance <= 21.1 else 'Trail' if target_distance == 30.0 else 'Marathon'
-            return base_distributions[dist_key]
-        elif phase == 'build':
-            dist_key = '5K' if target_distance <= 5 else '10K' if target_distance <= 10 else 'Half' if target_distance <= 21.1 else 'Trail' if target_distance == 30.0 else 'Marathon'
-            return build_distributions[dist_key]
-        elif phase == 'peak':
-            dist_key = '5K' if target_distance <= 5 else '10K' if target_distance <= 10 else 'Half' if target_distance <= 21.1 else 'Trail' if target_distance == 30.0 else 'Marathon'
-            return peak_distributions[dist_key]
-        else:
-            dist_key = '5K' if target_distance <= 5 else '10K' if target_distance <= 10 else 'Half' if target_distance <= 21.1 else 'Trail' if target_distance == 30.0 else 'Marathon'
-            return taper_distributions[dist_key]
+        dist_key = self._get_distance_category(target_distance)
+        distributions = {
+            'base': base_distributions,
+            'build': build_distributions,
+            'peak': peak_distributions,
+            'taper': taper_distributions,
+        }
+        return distributions.get(phase, taper_distributions)[dist_key]
 
     def _calculate_long_run_distance(self, total_km: float, target_distance: float,
                                   weeks: int = 12, week_number: int = 1, phase: str = 'build',
@@ -1419,12 +1365,3 @@ class TrainingPlanGenerator:
             training_plan.append(weekly_plan)
         
         return training_plan
-    
-    def get_last_warnings(self) -> List[str]:
-        """
-        Get validation warnings from last plan generation
-        
-        Returns:
-            List of warning messages
-        """
-        return self._last_warnings.copy()

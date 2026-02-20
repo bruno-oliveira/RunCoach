@@ -1,4 +1,4 @@
-from sqlalchemy import Column, String, Integer, Float, ForeignKey, Text, Boolean, Index
+from sqlalchemy import Column, String, Integer, Float, ForeignKey, Text, Index
 import uuid
 
 from app.models.base import Base
@@ -17,5 +17,3 @@ class DailyWorkout(Base):
     distance_km = Column(Float)
     intensity = Column(String)  # 'low', 'medium', 'high'
     notes = Column(Text)
-    is_customized = Column(Boolean, default=False)  # Track if workout was customized
-    original_workout_type = Column(String)  # Store original type for reference

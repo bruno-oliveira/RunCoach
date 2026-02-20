@@ -337,7 +337,7 @@ class PDFGenerator:
                 Paragraph(workout['type'].title(), self.table_cell_style),
                 Paragraph(f"{workout.get('distance', 0):.1f} km" if workout.get('distance', 0) > 0 else "-", self.table_cell_style),
                 Paragraph(workout.get('intensity', '-').title(), self.table_cell_style),
-                Paragraph(self._wrap_text(workout.get('notes', ''), 40), self.table_cell_style)
+                Paragraph(self._wrap_text(workout.get('description', ''), 40), self.table_cell_style)
             ])
         
         # Convert headers to Paragraph objects with proper alignment

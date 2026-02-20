@@ -204,12 +204,12 @@ class AdaptivePlanGenerator:
                 for workout in adjusted_week["daily_workouts"]:
                     if workout["type"] in ["easy", "long"]:
                         if random.random() > 0.5:
-                            workout["notes"] += " (Progressive effort - aim for slight pace improvement)"
+                            workout["description"] = workout.get("description", "") + " (Progressive effort - aim for slight pace improvement)"
             elif metrics["improvement_trend"] < -2:  # Declining
                 # Reduce intensity for recovery
                 for workout in adjusted_week["daily_workouts"]:
                     if workout["type"] in ["interval", "tempo"]:
-                        workout["notes"] += " (Focus on form over speed - recovery emphasis)"
+                        workout["description"] = workout.get("description", "") + " (Focus on form over speed - recovery emphasis)"
 
             # Customize workout types based on preferences
             if metrics["preferred_workout_types"]:
@@ -217,8 +217,8 @@ class AdaptivePlanGenerator:
                 for workout in adjusted_week["daily_workouts"]:
                     if workout["type"] == "easy" and preferred != "easy":
                         if random.random() > 0.7:  # 30% chance to customize
-                            workout["notes"] = workout["notes"].replace("easy", preferred.lower())
-                            workout["notes"] += f" (Your preferred {preferred} style)"
+                            desc = workout.get("description", "")
+                            workout["description"] = desc.replace("easy", preferred.lower()) + f" (Your preferred {preferred} style)"
 
             # Add personalized tips based on heart rate data
             if metrics["avg_heart_rate"]:
