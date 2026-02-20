@@ -3,7 +3,7 @@
 {% block title %}RunCoach - Analytics{% endblock %}
 
 {% block styles %}
-<link rel="stylesheet" href="/static/css/analytics.css">
+<link rel="stylesheet" href="/static/css/analytics.css?v=2">
 {% endblock %}
 
 {% block content %}
@@ -155,6 +155,6 @@
 {% block scripts %}
 {% if user %}
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-<script src="/static/js/analytics_dashboard.js" defer></script>
+<script src="/static/js/analytics_dashboard.js?v=2" defer></script>
 {% endif %}
 {% endblock %}

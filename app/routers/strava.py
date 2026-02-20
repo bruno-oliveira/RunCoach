@@ -1,6 +1,7 @@
 """Strava OAuth and sync endpoints."""
 
 import logging
+from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from fastapi.responses import RedirectResponse
@@ -75,9 +76,9 @@ async def strava_callback(
     user.strava_token_expires_at = token_data["expires_at"]
     db.commit()
 
-    # Trigger initial 30-day sync
+    # Trigger initial full sync (all historical activities)
     try:
-        result = await strava_service.sync_activities(user, db, days_back=30)
+        result = await strava_service.sync_activities(user, db, days_back=None)
         logger.info(
             f"Initial Strava sync for user {user.id}: "
             f"{result['synced']} synced, {result['skipped']} skipped"
@@ -91,12 +92,16 @@ async def strava_callback(
 
 @strava_router.post("/sync", response_model=StravaSyncResponse)
 async def strava_sync(
-    days_back: int = Query(default=30, ge=1, le=365),
+    days_back: Optional[int] = Query(default=None, ge=1, le=3650),
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
     strava_service: StravaService = Depends(get_strava_service),
 ):
-    """Manually trigger Strava activity sync."""
+    """Manually trigger Strava activity sync.
+
+    If days_back is not provided, syncs all historical activities.
+    If days_back is provided, only syncs activities from the last N days (max 3650 = ~10 years).
+    """
     if not current_user.strava_athlete_id:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,

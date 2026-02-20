@@ -173,18 +173,26 @@ class StravaService:
         )
 
     async def sync_activities(
-        self, user: User, db: Session, days_back: int = 30
+        self, user: User, db: Session, days_back: Optional[int] = None
     ) -> dict[str, Any]:
         """Sync Strava activities into RunLog entries.
+
+        Args:
+            user: User to sync activities for
+            db: Database session
+            days_back: If provided, only sync activities from the last N days.
+                      If None, sync all historical activities.
 
         Returns:
             Dict with synced count, skipped count, and errors list.
         """
         access_token = await self.ensure_valid_token(user, db)
 
-        after_timestamp = int(
-            (datetime.now(timezone.utc) - timedelta(days=days_back)).timestamp()
-        )
+        after_timestamp = None
+        if days_back is not None:
+            after_timestamp = int(
+                (datetime.now(timezone.utc) - timedelta(days=days_back)).timestamp()
+            )
 
         synced = 0
         skipped = 0
