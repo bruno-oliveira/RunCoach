@@ -1,7 +1,7 @@
 from sqlalchemy import Column, Integer, String, Float, DateTime, ForeignKey, Text, Boolean
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship
-from datetime import datetime
+from datetime import datetime, timezone
 import uuid
 
 Base = declarative_base()
@@ -28,7 +28,7 @@ class Meal(Base):
     ingredients = Column(Text)  # JSON string of ingredients
     dietary_tags = Column(Text)  # JSON string of dietary tags
     
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
 
 class NutritionPlan(Base):
     __tablename__ = "nutrition_plans"
@@ -43,7 +43,7 @@ class NutritionPlan(Base):
     # Meal plan data (JSON)
     meal_plan_data = Column(Text)  # Daily meal plans
     
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
     
     training_plan = relationship("TrainingPlan")
 

@@ -1,41 +1,60 @@
 {% macro render(user=None, show_logo=True, current_page='') %}
-<nav class="navbar">
+<nav class="navbar" id="mainNav">
     <div class="nav-container">
         {% if show_logo %}
-        <div class="nav-brand">
-            <a href="/">🏃‍♂️ RunCoach</a>
-        </div>
+        <a href="/" class="nav-brand">
+            <span class="nav-brand-mark">RC</span>
+            <span class="nav-brand-text">RunCoach</span>
+        </a>
         {% endif %}
-        
-        <button class="nav-toggle" onclick="toggleMobileNav()">
-            <span></span>
-            <span></span>
-            <span></span>
+
+        <button class="nav-toggle" onclick="toggleMobileNav()" aria-label="Toggle menu" aria-expanded="false">
+            <svg width="22" height="16" viewBox="0 0 22 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+                <line x1="1" y1="1" x2="21" y2="1" class="nav-toggle-top"/>
+                <line x1="1" y1="8" x2="21" y2="8" class="nav-toggle-mid"/>
+                <line x1="1" y1="15" x2="21" y2="15" class="nav-toggle-bot"/>
+            </svg>
         </button>
-        
+
         <div class="nav-menu" id="navMenu">
             <ul class="nav-links">
-                <li><a href="/" class="{{ 'active' if current_page == 'home' else '' }}">Home</a></li>
-                <li><a href="/recipes" class="{{ 'active' if current_page == 'recipes' else '' }}">🥗 Recipes</a></li>
-                <li><a href="/strength-training" class="{{ 'active' if current_page == 'strength' else '' }}">💪 Strength Training</a></li>
-                <li><a href="/performance-training" class="{{ 'active' if current_page == 'performance' else '' }}">⚡ Performance Training</a></li>
+                <li><a href="/" class="nav-link {{ 'is-active' if current_page == 'home' else '' }}">Home</a></li>
+                <li><a href="/recipes" class="nav-link {{ 'is-active' if current_page == 'recipes' else '' }}">Recipes</a></li>
+                <li><a href="/strength-training" class="nav-link {{ 'is-active' if current_page == 'strength' else '' }}">Strength</a></li>
+                <li><a href="/performance-training" class="nav-link {{ 'is-active' if current_page == 'performance' else '' }}">Performance</a></li>
                 {% if user %}
-                <li><a href="/my-plans" class="{{ 'active' if current_page == 'my-plans' else '' }}">My Plans</a></li>
-                <li><a href="/analytics" class="{{ 'active' if current_page == 'analytics' else '' }}">📊 Analytics</a></li>
+                <li><a href="/my-plans" class="nav-link {{ 'is-active' if current_page == 'my-plans' else '' }}">My Plans</a></li>
+                <li><a href="/analytics" class="nav-link {{ 'is-active' if current_page == 'analytics' else '' }}">Analytics</a></li>
+                {% if user.strava_athlete_id %}
+                <li><a href="#" onclick="syncStrava(); return false;" class="nav-link nav-link-strava">Sync Strava</a></li>
+                {% else %}
+                <li><a href="#" onclick="connectStrava(); return false;" class="nav-link nav-link-strava">Connect Strava</a></li>
+                {% endif %}
                 {% endif %}
             </ul>
-            
+
             {% if user %}
             <div class="nav-user">
                 {% if user.picture %}
-                <img src="{{ user.picture }}" alt="{{ user.name }}" class="nav-user-avatar">
+                <img src="{{ user.picture }}" alt="{{ user.name }}" class="nav-avatar">
+                {% else %}
+                <div class="nav-avatar nav-avatar-placeholder">{{ (user.name or user.email)[0] | upper }}</div>
                 {% endif %}
                 <span class="nav-user-name">{{ user.name or user.email }}</span>
-                <button class="nav-logout-btn" onclick="logout()">Sign Out</button>
+                <button class="btn btn-ghost btn-sm nav-signout" onclick="logout()">Sign Out</button>
             </div>
             {% else %}
-            <div class="nav-auth">
-                <div id="nav-google-signin-button"></div>
+            <div class="nav-auth" id="nav-auth-container">
+                <div id="nav-google-signin-button" class="nav-gsi-button"></div>
+                <button class="nav-signin-btn" id="nav-signin-fallback" onclick="triggerGoogleSignIn()" style="display:none">
+                    <svg width="18" height="18" viewBox="0 0 18 18" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                        <path d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.717v2.258h2.908c1.702-1.567 2.684-3.874 2.684-6.615z" fill="#4285F4"/>
+                        <path d="M9 18c2.43 0 4.467-.806 5.956-2.18l-2.908-2.259c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 0 0 9 18z" fill="#34A853"/>
+                        <path d="M3.964 10.71A5.41 5.41 0 0 1 3.682 9c0-.593.102-1.17.282-1.71V4.958H.957A8.996 8.996 0 0 0 0 9c0 1.452.348 2.827.957 4.042l3.007-2.332z" fill="#FBBC05"/>
+                        <path d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 0 0 .957 4.958L3.964 6.29C4.672 4.163 6.656 3.58 9 3.58z" fill="#EA4335"/>
+                    </svg>
+                    Sign in with Google
+                </button>
             </div>
             {% endif %}
         </div>
@@ -43,163 +62,397 @@
 </nav>
 
 <style>
+/* ---- Navbar ---- */
 .navbar {
-    background: white;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
     position: sticky;
     top: 0;
-    z-index: 1000;
-    transition: all 0.3s ease;
+    z-index: var(--z-sticky);
+    background: rgba(250, 250, 247, 0.85);
+    backdrop-filter: blur(14px) saturate(180%);
+    -webkit-backdrop-filter: blur(14px) saturate(180%);
+    border-bottom: 1px solid var(--color-border-subtle);
+    transition: box-shadow var(--duration-base) var(--ease-out);
 }
 
-.nav-auth, .nav-user {
-    transition: all 0.3s ease;
-    min-height: 40px;
-    display: flex;
-    align-items: center;
+.navbar.scrolled {
+    box-shadow: 0 1px 8px rgba(28, 25, 23, 0.06);
 }
 
 .nav-container {
-    max-width: 1200px;
+    max-width: var(--container-max);
     margin: 0 auto;
-    padding: 1rem 2rem;
+    padding: 0 var(--space-6);
     display: flex;
-    justify-content: space-between;
     align-items: center;
+    justify-content: space-between;
+    height: 60px;
 }
 
-.nav-brand a {
-    font-size: 1.5rem;
-    font-weight: 700;
-    color: #667eea;
+/* Brand */
+.nav-brand {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
     text-decoration: none;
+    flex-shrink: 0;
 }
 
+.nav-brand-mark {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    border-radius: var(--radius-md);
+    background: var(--color-primary);
+    color: white;
+    font-family: var(--font-display);
+    font-weight: var(--weight-extrabold);
+    font-size: var(--text-sm);
+    letter-spacing: -0.04em;
+}
+
+.nav-brand-text {
+    font-family: var(--font-display);
+    font-size: var(--text-lg);
+    font-weight: var(--weight-bold);
+    color: var(--color-text);
+    letter-spacing: -0.02em;
+}
+
+/* Hamburger toggle */
 .nav-toggle {
     display: none;
-    flex-direction: column;
+    align-items: center;
+    justify-content: center;
     background: none;
     border: none;
     cursor: pointer;
-    padding: 0.5rem;
+    padding: var(--space-2);
+    color: var(--color-text);
+    border-radius: var(--radius-md);
+    min-width: 44px;
+    min-height: 44px;
+    transition: background var(--duration-fast) var(--ease-out);
 }
 
-.nav-toggle span {
-    width: 25px;
-    height: 3px;
-    background: #333;
-    margin: 3px 0;
-    transition: 0.3s;
+.nav-toggle:hover {
+    background: var(--color-surface);
 }
 
+.nav-toggle svg line {
+    transition: all var(--duration-slow) var(--ease-out);
+    transform-origin: center;
+}
+
+/* Menu */
 .nav-menu {
     display: flex;
     align-items: center;
-    gap: 2rem;
+    gap: var(--space-2);
 }
 
 .nav-links {
     display: flex;
     list-style: none;
-    gap: 1.5rem;
+    gap: var(--space-1);
     margin: 0;
     padding: 0;
 }
 
-.nav-links a {
-    color: #333;
+.nav-link {
+    display: inline-flex;
+    align-items: center;
+    padding: 6px 12px;
+    color: var(--color-text-secondary);
+    font-size: var(--text-sm);
+    font-weight: var(--weight-medium);
     text-decoration: none;
-    font-weight: 500;
-    transition: color 0.3s;
+    border-radius: var(--radius-md);
+    white-space: nowrap;
+    transition: all var(--duration-fast) var(--ease-out);
 }
 
-.nav-links a:hover,
-.nav-links a.active {
-    color: #667eea;
+.nav-link:hover {
+    color: var(--color-text);
+    background: var(--color-surface);
 }
 
+.nav-link.is-active {
+    color: var(--color-primary);
+    background: var(--color-primary-subtle);
+    font-weight: var(--weight-semibold);
+}
+
+.nav-link-strava {
+    color: var(--color-accent);
+}
+
+.nav-link-strava:hover {
+    color: var(--color-accent-dark);
+    background: var(--color-accent-subtle);
+}
+
+/* User section */
 .nav-user {
     display: flex;
     align-items: center;
-    gap: 0.75rem;
+    gap: var(--space-3);
+    padding-left: var(--space-3);
+    margin-left: var(--space-2);
+    border-left: 1px solid var(--color-border);
 }
 
-.nav-user-avatar {
-    width: 32px;
-    height: 32px;
-    border-radius: 50%;
+.nav-avatar {
+    width: 30px;
+    height: 30px;
+    border-radius: var(--radius-full);
     object-fit: cover;
+    flex-shrink: 0;
+}
+
+.nav-avatar-placeholder {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--color-primary-subtle);
+    color: var(--color-primary);
+    font-weight: var(--weight-bold);
+    font-size: var(--text-sm);
 }
 
 .nav-user-name {
-    font-size: 0.9rem;
-    color: #333;
+    font-size: var(--text-sm);
+    font-weight: var(--weight-medium);
+    color: var(--color-text);
+    max-width: 120px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
-.nav-logout-btn {
-    padding: 0.5rem 1rem;
-    background: #dc3545;
-    color: white;
-    border: none;
-    border-radius: 6px;
-    cursor: pointer;
-    font-size: 0.9rem;
-    transition: background 0.3s;
-}
-
-.nav-logout-btn:hover {
-    background: #c82333;
+.nav-signout {
+    font-size: var(--text-xs) !important;
+    padding: 4px 10px !important;
+    min-height: 32px !important;
 }
 
 .nav-auth {
     display: flex;
     align-items: center;
+    padding-left: var(--space-3);
+    margin-left: var(--space-2);
+    border-left: 1px solid var(--color-border);
+    min-height: 40px;
 }
 
-#nav-google-signin-button {
-    display: flex;
+.nav-gsi-button {
+    width: 200px;
+    flex-shrink: 0;
+}
+
+.nav-signin-btn {
+    display: inline-flex;
     align-items: center;
+    gap: var(--space-3);
+    width: 100%;
+    padding: var(--space-3) var(--space-4);
+    background: var(--color-bg-elevated);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-lg);
+    font-size: var(--text-base);
+    font-weight: var(--weight-medium);
+    color: var(--color-text);
+    cursor: pointer;
+    transition: background var(--duration-fast) var(--ease-out),
+                border-color var(--duration-fast) var(--ease-out);
 }
 
+.nav-signin-btn:hover {
+    background: var(--color-surface);
+    border-color: var(--color-border);
+}
+
+/* ---- Mobile nav ---- */
 @media (max-width: 768px) {
+    .nav-container {
+        padding: 0 var(--space-4);
+    }
+
     .nav-toggle {
         display: flex;
+        z-index: calc(var(--z-sticky) + 1);
     }
-    
+
     .nav-menu {
-        position: absolute;
-        top: 100%;
+        position: fixed;
+        top: 60px;
         left: 0;
         right: 0;
-        background: white;
+        height: calc(100vh - 60px);
+        height: calc(100dvh - 60px);
+        background: var(--color-bg);
         flex-direction: column;
-        padding: 1rem;
-        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-        display: none;
-    }
-    
-    .nav-menu.active {
+        align-items: stretch;
+        padding: var(--space-6) var(--space-4);
+        gap: var(--space-4);
+        overflow-x: hidden;
+        overflow-y: auto;
+        z-index: var(--z-sticky);
+        /* Hidden by default */
+        opacity: 0;
+        pointer-events: none;
+        transform: translateY(-8px);
+        transition: opacity var(--duration-base) var(--ease-out),
+                    transform var(--duration-base) var(--ease-out);
         display: flex;
     }
-    
+
+    .nav-menu.active {
+        opacity: 1;
+        pointer-events: auto;
+        transform: translateY(0);
+    }
+
     .nav-links {
         flex-direction: column;
+        gap: var(--space-1);
         width: 100%;
     }
-    
+
+    .nav-link {
+        padding: var(--space-3) var(--space-4);
+        font-size: var(--text-md);
+        border-radius: var(--radius-lg);
+        white-space: normal;
+        justify-content: flex-start;
+        width: 100%;
+    }
+
     .nav-user {
         flex-direction: column;
+        align-items: stretch;
+        padding-left: 0;
+        margin-left: 0;
+        border-left: none;
+        padding-top: var(--space-4);
+        border-top: 1px solid var(--color-border);
+        gap: var(--space-3);
+    }
+
+    .nav-user-name {
+        max-width: none;
+    }
+
+    .nav-signout {
         width: 100%;
-        padding-top: 1rem;
-        border-top: 1px solid #e0e0e0;
+    }
+
+    .nav-auth {
+        padding-left: 0;
+        margin-left: 0;
+        border-left: none;
+        padding-top: var(--space-4);
+        border-top: 1px solid var(--color-border);
+        justify-content: center;
+        overflow: hidden;
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    /* Hide the GSI iframe button on mobile, show our custom button instead */
+    .nav-gsi-button {
+        display: none !important;
+    }
+
+    #nav-signin-fallback {
+        display: inline-flex !important;
+    }
+}
+
+/* Dark mode support */
+@media (prefers-color-scheme: dark) {
+    .navbar {
+        background: rgba(15, 14, 19, 0.85);
+        border-bottom-color: var(--color-border);
+    }
+
+    .nav-menu {
+        background: var(--color-bg);
     }
 }
 </style>
 
 <script>
+function triggerGoogleSignIn() {
+    if (window.google && google.accounts && google.accounts.id) {
+        google.accounts.id.prompt();
+    } else {
+        // GSI not loaded yet — wait briefly and retry
+        setTimeout(() => {
+            if (window.google && google.accounts && google.accounts.id) {
+                google.accounts.id.prompt();
+            }
+        }, 500);
+    }
+}
+
 function toggleMobileNav() {
     const navMenu = document.getElementById('navMenu');
-    navMenu.classList.toggle('active');
+    const toggle = document.querySelector('.nav-toggle');
+    const isOpen = navMenu.classList.toggle('active');
+    toggle.setAttribute('aria-expanded', isOpen);
+    document.body.style.overflow = isOpen ? 'hidden' : '';
+}
+
+// Close mobile nav on resize to desktop
+window.addEventListener('resize', () => {
+    if (window.innerWidth > 768) {
+        const navMenu = document.getElementById('navMenu');
+        const toggle = document.querySelector('.nav-toggle');
+        if (navMenu.classList.contains('active')) {
+            navMenu.classList.remove('active');
+            toggle.setAttribute('aria-expanded', 'false');
+            document.body.style.overflow = '';
+        }
+    }
+});
+
+// Scroll shadow
+let lastScroll = 0;
+window.addEventListener('scroll', () => {
+    const nav = document.getElementById('mainNav');
+    if (window.scrollY > 8) {
+        nav.classList.add('scrolled');
+    } else {
+        nav.classList.remove('scrolled');
+    }
+}, { passive: true });
+
+async function connectStrava() {
+    try {
+        const response = await fetch('/api/strava/connect');
+        const data = await response.json();
+        if (data.authorize_url) {
+            window.location.href = data.authorize_url;
+        }
+    } catch (err) {
+        alert('Failed to connect to Strava. Please try again.');
+    }
+}
+
+async function syncStrava() {
+    try {
+        const response = await fetch('/api/strava/sync', { method: 'POST' });
+        const data = await response.json();
+        if (response.ok) {
+            alert('Strava sync complete: ' + data.synced + ' new runs synced, ' + data.skipped + ' already existed.');
+        } else {
+            alert('Sync failed: ' + (data.detail || 'Unknown error'));
+        }
+    } catch (err) {
+        alert('Failed to sync Strava activities. Please try again.');
+    }
 }
 </script>
 {% endmacro %}

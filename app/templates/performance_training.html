@@ -87,7 +87,7 @@
             <div class="fitness-metric">
                 <div style="font-size: 0.85rem; color: #666;">Average Pace</div>
                 <div style="font-size: 1.5rem; font-weight: bold; color: #2e7d32;">
-                    {{ '{:d}:{:02d}/km'.format(fitness_data.avg_pace|int, ((fitness_data.avg_pace % 1) * 60)|int) }}
+                    {{ fitness_data.avg_pace|format_pace }}
                 </div>
             </div>
             <div class="fitness-metric">

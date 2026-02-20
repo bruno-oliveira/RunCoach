@@ -1,20 +1,21 @@
 """FastAPI dependencies for dependency injection."""
 
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Generator, Optional
 
-from fastapi import Cookie, Depends, HTTPException, Request, Security, status
+from fastapi import Depends, HTTPException, Request, Security, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session, sessionmaker
 
 from app.auth_service import AuthService
 from app.config import settings
-from app.models import User
+from app.models import TrainingPlan, User
 from app.core.nutrition_engine import NutritionEngine
 from app.core.pdf_generator import PDFGenerator
 from app.core.plan_generator import TrainingPlanGenerator
 from app.core.performance_plan_generator import PerformancePlanGenerator
+from app.services.strava_service import StravaService
 
 # Cookie name must match the one in auth router
 COOKIE_NAME = "access_token"
@@ -64,6 +65,11 @@ def get_performance_plan_generator() -> PerformancePlanGenerator:
 def get_auth_service() -> AuthService:
     """Get an AuthService instance."""
     return AuthService()
+
+
+def get_strava_service() -> StravaService:
+    """Get a StravaService instance."""
+    return StravaService()
 
 
 security = HTTPBearer(auto_error=False)
@@ -122,7 +128,7 @@ async def get_current_user(
 
     if user.last_activity:
         timeout_delta = timedelta(minutes=settings.session_timeout_minutes)
-        if (datetime.utcnow() - user.last_activity) > timeout_delta:
+        if (datetime.now(timezone.utc).replace(tzinfo=None) - user.last_activity) > timeout_delta:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Session expired due to inactivity",
@@ -170,12 +176,26 @@ async def get_optional_user(
     if user_id is None:
         return None
 
-    return auth_service.get_current_user(db, user_id)
+    user = auth_service.get_current_user(db, user_id)
+    if user is None:
+        return None
+
+    if user.last_activity:
+        timeout_delta = timedelta(minutes=settings.session_timeout_minutes)
+        if (datetime.now(timezone.utc).replace(tzinfo=None) - user.last_activity) > timeout_delta:
+            return None
+
+    auth_service.update_user_activity(db, user)
+
+    return user
 
 
-# Type aliases for dependency injection
-DatabaseSession = Session
-PlanGenerator = TrainingPlanGenerator
-NutritionGenerator = NutritionEngine
-PdfGenerator = PDFGenerator
-AuthService = AuthService
+def verify_plan_ownership(
+    plan: TrainingPlan, current_user: Optional[User], anonymous_user_id: Optional[str]
+) -> bool:
+    """Check if the current user or anonymous session owns the plan."""
+    if current_user is not None:
+        return plan.user_id == current_user.id
+    if anonymous_user_id is not None:
+        return plan.user_id == anonymous_user_id
+    return False

@@ -1,5 +1,5 @@
 from sqlalchemy import Column, String, Float, Integer, DateTime, ForeignKey, Text, Index
-from datetime import datetime
+from datetime import datetime, timezone
 import uuid
 
 from app.models.base import Base
@@ -18,7 +18,7 @@ class RunLog(Base):
     user_id = Column(String, ForeignKey("users.id"))
     training_plan_id = Column(String, ForeignKey("training_plans.id"), nullable=True)
     daily_workout_id = Column(String, ForeignKey("daily_workouts.id"), nullable=True)
-    date = Column(DateTime, default=datetime.utcnow)
+    date = Column(DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
     distance_km = Column(Float)
     duration_minutes = Column(Float)
     avg_pace_min_km = Column(Float)
@@ -29,4 +29,5 @@ class RunLog(Base):
     notes = Column(Text, nullable=True)
     workout_type = Column(String, nullable=True)  # 'easy', 'tempo', 'interval', 'long', 'hill'
     perceived_effort = Column(Integer, nullable=True)  # 1-10 scale
-    created_at = Column(DateTime, default=datetime.utcnow)
+    strava_activity_id = Column(String, unique=True, nullable=True, index=True)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None))

@@ -3,7 +3,7 @@
 import json
 import logging
 import uuid
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, Optional, Tuple
 
 from sqlalchemy import func
@@ -55,7 +55,7 @@ class PerformanceService:
             Dictionary with max_hr, confidence, source, and message
         """
         # Strategy 1: Use RunLog data (highest confidence)
-        cutoff_date = datetime.utcnow() - timedelta(weeks=lookback_weeks)
+        cutoff_date = datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(weeks=lookback_weeks)
         runs = (
             self.db.query(RunLog)
             .filter(
@@ -130,7 +130,7 @@ class PerformanceService:
             Dictionary with fitness metrics or None if insufficient data
         """
         # Get recent runs
-        cutoff_date = datetime.utcnow() - timedelta(weeks=lookback_weeks)
+        cutoff_date = datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(weeks=lookback_weeks)
 
         runs = (
             self.db.query(RunLog)
@@ -282,6 +282,8 @@ class PerformanceService:
             plan_data=json.dumps(plan_data['weekly_plans'])
         )
 
+        training_plan.start_date = datetime.now(timezone.utc).replace(tzinfo=None)
+
         self.db.add(training_plan)
         self.db.flush()
 
@@ -372,3 +374,178 @@ class PerformanceService:
         }
 
         return training_plan, full_data
+
+    def get_todays_workout(self, plan: TrainingPlan) -> Dict[str, Any]:
+        """
+        Determine today's workout from the training plan.
+
+        Args:
+            plan: The training plan to check.
+
+        Returns:
+            Dictionary with status and workout details if applicable.
+        """
+        start = plan.start_date or plan.created_at
+        today = datetime.now(timezone.utc).replace(tzinfo=None).date()
+        days_elapsed = (today - start.date()).days
+
+        if days_elapsed < 0:
+            return {"status": "not_started"}
+
+        week = days_elapsed // 7 + 1
+        day_of_week = days_elapsed % 7 + 1  # 1=Mon, 7=Sun (ISO style)
+
+        # Parse plan data
+        plan_data = json.loads(plan.plan_data)
+
+        if week > len(plan_data):
+            return {"status": "completed"}
+
+        # Find the matching week
+        week_data = None
+        for w in plan_data:
+            if w.get('week') == week:
+                week_data = w
+                break
+
+        if not week_data:
+            return {"status": "rest_day", "week": week, "day": day_of_week}
+
+        # Find workout matching day_of_week
+        workout = None
+        for w in week_data.get('daily_workouts', []):
+            if w.get('day') == day_of_week:
+                workout = w
+                break
+
+        if not workout:
+            return {"status": "rest_day", "week": week, "day": day_of_week}
+
+        # Check if a RunLog already exists for today
+        already_logged = False
+        if plan.user_id:
+            today_start = datetime(today.year, today.month, today.day)
+            today_end = today_start + timedelta(days=1)
+            existing = (
+                self.db.query(RunLog)
+                .filter(
+                    RunLog.user_id == plan.user_id,
+                    RunLog.date >= today_start,
+                    RunLog.date < today_end,
+                )
+                .first()
+            )
+            already_logged = existing is not None
+
+        return {
+            "status": "workout",
+            "week": week,
+            "day": day_of_week,
+            "workout": workout,
+            "already_logged": already_logged,
+        }
+
+    def get_plan_progress(self, plan: TrainingPlan) -> Dict[str, Any]:
+        """
+        Calculate progress metrics for a training plan.
+
+        Args:
+            plan: The training plan to analyze.
+
+        Returns:
+            Dictionary with progress stats including weekly km, pace, completion, etc.
+        """
+        plan_data = json.loads(plan.plan_data)
+        start = plan.start_date or plan.created_at
+        start_date = start.date()
+        total_weeks = len(plan_data)
+        end_date = start_date + timedelta(days=total_weeks * 7)
+
+        # Planned weekly km
+        planned_weekly_km = [w.get('total_km', 0) for w in plan_data]
+
+        # Planned workout count
+        planned_count = sum(
+            len(w.get('daily_workouts', [])) for w in plan_data
+        )
+
+        # Query all RunLogs within plan date range
+        plan_start_dt = datetime(start_date.year, start_date.month, start_date.day)
+        plan_end_dt = datetime(end_date.year, end_date.month, end_date.day)
+
+        runs = []
+        if plan.user_id:
+            runs = (
+                self.db.query(RunLog)
+                .filter(
+                    RunLog.user_id == plan.user_id,
+                    RunLog.date >= plan_start_dt,
+                    RunLog.date < plan_end_dt,
+                )
+                .order_by(RunLog.date.asc())
+                .all()
+            )
+
+        # Compute actual weekly km and pace by week
+        actual_weekly_km = [0.0] * total_weeks
+        pace_by_week_data: Dict[int, list] = {}
+
+        for run in runs:
+            run_date = run.date.date() if isinstance(run.date, datetime) else run.date
+            days_from_start = (run_date - start_date).days
+            if days_from_start < 0:
+                continue
+            week_idx = days_from_start // 7
+            if week_idx >= total_weeks:
+                continue
+            actual_weekly_km[week_idx] += run.distance_km or 0
+
+            if run.avg_pace_min_km:
+                if week_idx not in pace_by_week_data:
+                    pace_by_week_data[week_idx] = []
+                pace_by_week_data[week_idx].append(run.avg_pace_min_km)
+
+        # Round actual weekly km
+        actual_weekly_km = [round(km, 1) for km in actual_weekly_km]
+
+        # Build pace_by_week list
+        pace_by_week = []
+        for week_idx in sorted(pace_by_week_data.keys()):
+            paces = pace_by_week_data[week_idx]
+            avg_pace = round(sum(paces) / len(paces), 2)
+            pace_by_week.append({
+                'week_label': f'W{week_idx + 1}',
+                'avg_pace': avg_pace,
+            })
+
+        # Completed count and total km
+        completed_count = len(runs)
+        total_km_logged = round(sum(r.distance_km or 0 for r in runs), 1)
+
+        # Completion percentage
+        completion_pct = round(completed_count / planned_count * 100) if planned_count > 0 else 0
+
+        # Streak days: consecutive days backward from today with a run log
+        today = datetime.now(timezone.utc).replace(tzinfo=None).date()
+        streak_days = 0
+        if runs:
+            run_dates = set()
+            for r in runs:
+                rd = r.date.date() if isinstance(r.date, datetime) else r.date
+                run_dates.add(rd)
+
+            check_date = today
+            while check_date in run_dates:
+                streak_days += 1
+                check_date -= timedelta(days=1)
+
+        return {
+            'planned_weekly_km': planned_weekly_km,
+            'actual_weekly_km': actual_weekly_km,
+            'pace_by_week': pace_by_week,
+            'completed_count': completed_count,
+            'planned_count': planned_count,
+            'completion_pct': completion_pct,
+            'streak_days': streak_days,
+            'total_km_logged': total_km_logged,
+        }

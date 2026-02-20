@@ -103,7 +103,108 @@
         </button>
     </div>
     {% endif %}
-    
+
+    {% if strava_fitness and strava_fitness.fitness_score > 0 %}
+    <div class="plan-insights" style="background: linear-gradient(135deg, #fc4c02 0%, #e8430a 100%); color: white; margin-bottom: 2rem;">
+        <h3 style="color: white;">
+            <img src="https://upload.wikimedia.org/wikipedia/commons/c/cb/Strava_Logo.svg" alt="Strava" style="height: 1.2em; vertical-align: middle; filter: brightness(0) invert(1); margin-right: 0.5rem;">
+            Strava Fitness Summary
+        </h3>
+        <div class="insight-grid">
+            <div class="insight-item" style="background: rgba(255,255,255,0.1); border-color: rgba(255,255,255,0.2);">
+                <span class="insight-icon">💪</span>
+                <div class="insight-content">
+                    <strong>Fitness Score</strong>
+                    <span>{{ strava_fitness.fitness_score }} / 100</span>
+                </div>
+            </div>
+            <div class="insight-item" style="background: rgba(255,255,255,0.1); border-color: rgba(255,255,255,0.2);">
+                <span class="insight-icon">🏃</span>
+                <div class="insight-content">
+                    <strong>Avg Weekly Distance</strong>
+                    <span>{{ strava_fitness.avg_weekly_km }} km/week</span>
+                </div>
+            </div>
+            {% if strava_fitness.current_pace %}
+            <div class="insight-item" style="background: rgba(255,255,255,0.1); border-color: rgba(255,255,255,0.2);">
+                <span class="insight-icon">⏱️</span>
+                <div class="insight-content">
+                    <strong>Current Pace</strong>
+                    <span>{{ strava_fitness.current_pace|format_pace }}</span>
+                </div>
+            </div>
+            {% endif %}
+            {% if strava_fitness.avg_heart_rate %}
+            <div class="insight-item" style="background: rgba(255,255,255,0.1); border-color: rgba(255,255,255,0.2);">
+                <span class="insight-icon">❤️</span>
+                <div class="insight-content">
+                    <strong>Avg Heart Rate</strong>
+                    <span>{{ strava_fitness.avg_heart_rate }} bpm</span>
+                </div>
+            </div>
+            {% endif %}
+            <div class="insight-item" style="background: rgba(255,255,255,0.1); border-color: rgba(255,255,255,0.2);">
+                <span class="insight-icon">📈</span>
+                <div class="insight-content">
+                    <strong>Improvement Trend</strong>
+                    <span>{% if strava_fitness.improvement_trend > 0 %}+{% endif %}{{ strava_fitness.improvement_trend }}%</span>
+                </div>
+            </div>
+        </div>
+        <button id="adapt-strava-btn" onclick="adaptFromStrava(window.APP_CTX.plan_id)" style="margin-top: 1rem; padding: 0.75rem 1.5rem; background: white; color: #fc4c02; border: none; border-radius: 8px; font-weight: 600; cursor: pointer;">
+            Adapt Remaining Weeks from Strava Data
+        </button>
+    </div>
+    {% endif %}
+
+    {% if progress_data and progress_data.completed_count > 0 %}
+    <div class="plan-insights" style="margin-bottom: 2rem;">
+        <h3>📈 Your Progress</h3>
+        <div class="insight-grid">
+            <div class="insight-item">
+                <span class="insight-icon">✅</span>
+                <div class="insight-content">
+                    <strong>Workouts Completed</strong>
+                    <span>{{ progress_data.completed_count }} / {{ progress_data.planned_count }}</span>
+                </div>
+            </div>
+            <div class="insight-item">
+                <span class="insight-icon">📊</span>
+                <div class="insight-content">
+                    <strong>Completion</strong>
+                    <span>{{ progress_data.completion_pct }}%</span>
+                </div>
+            </div>
+            <div class="insight-item">
+                <span class="insight-icon">🏃</span>
+                <div class="insight-content">
+                    <strong>Total Logged</strong>
+                    <span>{{ progress_data.total_km_logged }} km</span>
+                </div>
+            </div>
+            <div class="insight-item">
+                <span class="insight-icon">🔥</span>
+                <div class="insight-content">
+                    <strong>Streak</strong>
+                    <span>{{ progress_data.streak_days }} day{{ 's' if progress_data.streak_days != 1 else '' }}</span>
+                </div>
+            </div>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-top: 1.5rem;">
+            <div style="background: var(--color-bg-sunken, #f9fafb); border-radius: 12px; padding: 1rem;">
+                <canvas id="weeklyMileageChart"></canvas>
+            </div>
+            <div style="background: var(--color-bg-sunken, #f9fafb); border-radius: 12px; padding: 1rem;">
+                <canvas id="paceTrendChart"></canvas>
+            </div>
+        </div>
+        <div style="max-width: 280px; margin: 1.5rem auto 0;">
+            <canvas id="completionDonutChart"></canvas>
+        </div>
+    </div>
+    {% endif %}
+
     {% if warnings %}
     <div class="warning-container" style="margin-bottom: 2rem;">
         {% for warning in warnings %}
@@ -123,251 +224,272 @@
     </div>
     {% endif %}
     
-    {% if nutrition_plan %}
-    <div class="nutrition-section">
-        <div class="section-header">
-            <h2>🥗 Personalized Nutrition Plan</h2>
-            <p>Optimized for your {{ target_distance }}km goal</p>
-        </div>
-        
-        <div class="nutrition-summary">
-            <div class="nutrition-grid">
-                <div class="nutrition-stat">
-                    <span class="stat-icon">🔥</span>
-                    <div class="stat-content">
-                        <div class="stat-label">Daily Calories</div>
-                        <div class="stat-value">{{ nutrition_plan.daily_calories }}</div>
-                        <div class="stat-detail">kcal/day</div>
-                    </div>
-                </div>
-                <div class="nutrition-stat">
-                    <span class="stat-icon">🍗</span>
-                    <div class="stat-content">
-                        <div class="stat-label">Protein</div>
-                        <div class="stat-value">{{ nutrition_plan.protein_g }}</div>
-                        <div class="stat-detail">g/day</div>
-                    </div>
-                </div>
-                <div class="nutrition-stat">
-                    <span class="stat-icon">🍝</span>
-                    <div class="stat-content">
-                        <div class="stat-label">Carbs</div>
-                        <div class="stat-value">{{ nutrition_plan.carbs_g }}</div>
-                        <div class="stat-detail">g/day</div>
-                    </div>
-                </div>
-                <div class="nutrition-stat">
-                    <span class="stat-icon">🥑</span>
-                    <div class="stat-content">
-                        <div class="stat-label">Fats</div>
-                        <div class="stat-value">{{ nutrition_plan.fats_g }}</div>
-                        <div class="stat-detail">g/day</div>
-                    </div>
-                </div>
+    <!-- Tab Navigation -->
+    <nav class="plan-tabs" role="tablist">
+        <button class="plan-tab active" role="tab" aria-selected="true" aria-controls="panel-training" id="tab-training" onclick="switchPlanTab('training')">
+            <svg class="plan-tab-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+            Training Plan
+            <span class="plan-tab-badge">{{ plan | length }}w</span>
+        </button>
+        {% if nutrition_plan %}
+        <button class="plan-tab" role="tab" aria-selected="false" aria-controls="panel-nutrition" id="tab-nutrition" onclick="switchPlanTab('nutrition')">
+            <svg class="plan-tab-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8h1a4 4 0 010 8h-1"/><path d="M2 8h16v9a4 4 0 01-4 4H6a4 4 0 01-4-4V8z"/><line x1="6" y1="1" x2="6" y2="4"/><line x1="10" y1="1" x2="10" y2="4"/><line x1="14" y1="1" x2="14" y2="4"/></svg>
+            Nutrition
+        </button>
+        {% endif %}
+    </nav>
+
+    <!-- Training Tab Panel -->
+    <div class="plan-tab-panel active" id="panel-training" role="tabpanel" aria-labelledby="tab-training">
+        {% for week in plan %}
+        <div class="week-card">
+            <div class="week-header">
+                <div class="week-title">Week {{ week.week }}</div>
+                <div class="week-total">{{ week.total_km }} km</div>
             </div>
-        </div>
-        
-        {% if nutrition_plan.meal_suggestions and nutrition_plan.meal_suggestions|length > 0 %}
-        <div class="meal-suggestions">
-            <div class="meal-suggestions-header">
-                <h3>🍽️ Sample Meal Plan</h3>
-                <button onclick="randomizeMeals()" class="randomize-meals-btn">
-                    🎲 Randomize Meals
-                </button>
-            </div>
-            <div class="meals-grid">
-                {% for meal_type, meals in nutrition_plan.meal_suggestions.items() %}
-                <div class="meal-category">
-                    <h4 class="meal-category-title">
-                        {% if meal_type == 'breakfast' %}🌅 Breakfast
-                        {% elif meal_type == 'lunch' %}☀️ Lunch
-                        {% elif meal_type == 'dinner' %}🌙 Dinner
-                        {% elif meal_type == 'snacks' %}🍎 Snacks
+
+            {% set day_names = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'] %}
+            <div class="workout-grid">
+                {% for workout in week.daily_workouts %}
+                {% set logged_run = logged_runs.get(workout.id) %}
+                <div class="workout-item {{ workout.type }} {% if logged_run %}completed{% endif %}" data-day="{{ day_names[workout.day - 1] }}">
+                    <div class="workout-day-label">{{ day_names[workout.day - 1] }}</div>
+                    <div class="workout-type">{{ workout.type }}</div>
+                    {% if workout.distance > 0 %}
+                    <div class="workout-distance">{{ workout.distance }} km</div>
+                    {% endif %}
+                    <div class="workout-notes">{{ workout.notes }}</div>
+
+                    {% if logged_run %}
+                    <div class="run-stats">
+                        <div class="run-stats-row">
+                            <span>Completed:</span>
+                            <span>{{ "%.1f"|format(logged_run.distance_km) }} km in {{ "%.0f"|format(logged_run.duration_minutes) }} min</span>
+                        </div>
+                        {% if logged_run.perceived_effort %}
+                        <div class="run-stats-row">
+                            <span>Effort:</span>
+                            <span>{{ logged_run.perceived_effort }}/10</span>
+                        </div>
                         {% endif %}
-                    </h4>
-                    {% for meal in meals %}
-                    <div class="meal-option-card">
-                        <div class="meal-name">{{ meal.name }}</div>
-                        <div class="meal-nutrients">
-                            <span class="nutrient">🔥 {{ meal.calories }} cal</span>
-                            <span class="nutrient">🍗 {{ meal.protein }}g</span>
-                            <span class="nutrient">🍝 {{ meal.carbs }}g</span>
-                            <span class="nutrient">🥑 {{ meal.fat }}g</span>
+                        {% if logged_run.avg_heart_rate %}
+                        <div class="run-stats-row">
+                            <span>Avg HR:</span>
+                            <span>{{ logged_run.avg_heart_rate }} bpm</span>
                         </div>
-                        <button class="show-recipe-btn" onclick="toggleRecipe('{{ meal.name | replace("'", "\\'") }}', this)">Show</button>
-                        <div class="recipe-details" id="recipe-{{ loop.index }}" style="display: none;">
-                            <div class="recipe-section">
-                                <h5>📝 Ingredients</h5>
-                                <ul class="recipe-list">
-                                    {% for ingredient in meal.ingredients %}
-                                    <li>{{ ingredient }}</li>
-                                    {% endfor %}
-                                </ul>
-                            </div>
-                            <div class="recipe-section">
-                                <h5>👨‍🍳 Instructions</h5>
-                                <p class="recipe-instructions">{{ meal.instructions }}</p>
-                            </div>
-                        </div>
+                        {% endif %}
                     </div>
-                    {% endfor %}
+                    {% elif workout.type != 'rest' and user and not user.strava_athlete_id %}
+                    <button class="log-run-btn" onclick="openLogModal('{{ workout.id }}', '{{ workout.type }}', {{ workout.distance }}, '{{ day_names[workout.day - 1] }}', {{ week.week }})">Log This Run</button>
+                    {% endif %}
                 </div>
                 {% endfor %}
             </div>
-        </div>
-        {% endif %}
-        
-        <div class="nutrition-details">
-            {% if nutrition_plan.pre_run_meal %}
-            <div class="nutrition-guide-card">
-                <h3>🏃‍♂️ Pre-Run Nutrition</h3>
-                <div class="nutrition-guide-content">
-                    <div class="guide-item">
-                        <strong>Timing:</strong> {{ nutrition_plan.pre_run_meal.timing }}
-                    </div>
-                    <div class="guide-item">
-                        <strong>Focus:</strong> {{ nutrition_plan.pre_run_meal.focus }}
-                    </div>
-                    {% if nutrition_plan.pre_run_meal.examples %}
-                    <div class="guide-examples">
-                        <strong>Examples:</strong>
-                        <ul>
-                            {% for example in nutrition_plan.pre_run_meal.examples %}
-                            <li>{{ example }}</li>
-                            {% endfor %}
-                        </ul>
-                    </div>
-                    {% endif %}
-                </div>
-            </div>
-            {% endif %}
-            
-            {% if nutrition_plan.post_run_meal %}
-            <div class="nutrition-guide-card">
-                <h3>💪 Post-Run Recovery</h3>
-                <div class="nutrition-guide-content">
-                    <div class="guide-item">
-                        <strong>Timing:</strong> {{ nutrition_plan.post_run_meal.timing }}
-                    </div>
-                    <div class="guide-item">
-                        <strong>Focus:</strong> {{ nutrition_plan.post_run_meal.focus }}
-                    </div>
-                    {% if nutrition_plan.post_run_meal.examples %}
-                    <div class="guide-examples">
-                        <strong>Examples:</strong>
-                        <ul>
-                            {% for example in nutrition_plan.post_run_meal.examples %}
-                            <li>{{ example }}</li>
-                            {% endfor %}
-                        </ul>
-                    </div>
-                    {% endif %}
-                </div>
-            </div>
-            {% endif %}
-            
-            {% if nutrition_plan.hydration_guide %}
-            <div class="hydration-guide-section">
-                <h3>💧 Hydration Guide</h3>
-                <div class="hydration-grid">
-                    <div class="hydration-item">
-                        <div class="hydration-label">Daily Target</div>
-                        <div class="hydration-value">{{ nutrition_plan.hydration_guide.daily_target }}</div>
-                    </div>
-                    <div class="hydration-item">
-                        <div class="hydration-label">Pre-Run</div>
-                        <div class="hydration-value">{{ nutrition_plan.hydration_guide.pre_run }}</div>
-                    </div>
-                    <div class="hydration-item">
-                        <div class="hydration-label">During Run</div>
-                        <div class="hydration-value">{{ nutrition_plan.hydration_guide.during_run }}</div>
-                    </div>
-                    <div class="hydration-item">
-                        <div class="hydration-label">Post-Run</div>
-                        <div class="hydration-value">{{ nutrition_plan.hydration_guide.post_run }}</div>
-                    </div>
-                </div>
-                {% if nutrition_plan.hydration_guide.tips %}
-                <div class="hydration-tips">
-                    {% for tip in nutrition_plan.hydration_guide.tips %}
-                    <div class="hydration-tip">💡 {{ tip }}</div>
+
+            {% if week.strength_training %}
+            <div class="tips-section">
+                <div class="tips-title">💪 Strength Training ({{ week.strength_training[0].duration }})</div>
+                <ul class="tips-list">
+                    {% for exercise in week.strength_training[0].exercises %}
+                    <li>{{ exercise }}</li>
                     {% endfor %}
+                </ul>
+            </div>
+            {% endif %}
+
+            {% if week.training_tips %}
+            <div class="tips-section">
+                <div class="tips-title">🎯 Training Tips for Week {{ week.week }}</div>
+                <ul class="tips-list">
+                    {% for tip in week.training_tips %}
+                    <li>{{ tip }}</li>
+                    {% endfor %}
+                </ul>
+            </div>
+            {% endif %}
+        </div>
+        {% endfor %}
+    </div>
+
+    {% if nutrition_plan %}
+    <!-- Nutrition Tab Panel -->
+    <div class="plan-tab-panel" id="panel-nutrition" role="tabpanel" aria-labelledby="tab-nutrition">
+        <div class="nutrition-section">
+            <div class="section-header">
+                <h2>Personalized Nutrition Plan</h2>
+                <p>Optimized for your {{ target_distance }}km goal</p>
+            </div>
+
+            <div class="nutrition-summary">
+                <div class="nutrition-grid">
+                    <div class="nutrition-stat">
+                        <span class="stat-icon">🔥</span>
+                        <div class="stat-content">
+                            <div class="stat-label">Daily Calories</div>
+                            <div class="stat-value">{{ nutrition_plan.daily_calories }}</div>
+                            <div class="stat-detail">kcal/day</div>
+                        </div>
+                    </div>
+                    <div class="nutrition-stat">
+                        <span class="stat-icon">🍗</span>
+                        <div class="stat-content">
+                            <div class="stat-label">Protein</div>
+                            <div class="stat-value">{{ nutrition_plan.protein_g }}</div>
+                            <div class="stat-detail">g/day</div>
+                        </div>
+                    </div>
+                    <div class="nutrition-stat">
+                        <span class="stat-icon">🍝</span>
+                        <div class="stat-content">
+                            <div class="stat-label">Carbs</div>
+                            <div class="stat-value">{{ nutrition_plan.carbs_g }}</div>
+                            <div class="stat-detail">g/day</div>
+                        </div>
+                    </div>
+                    <div class="nutrition-stat">
+                        <span class="stat-icon">🥑</span>
+                        <div class="stat-content">
+                            <div class="stat-label">Fats</div>
+                            <div class="stat-value">{{ nutrition_plan.fats_g }}</div>
+                            <div class="stat-detail">g/day</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            {% if nutrition_plan.meal_suggestions and nutrition_plan.meal_suggestions|length > 0 %}
+            <div class="meal-suggestions">
+                <div class="meal-suggestions-header">
+                    <h3>🍽️ Sample Meal Plan</h3>
+                    <button onclick="randomizeMeals()" class="randomize-meals-btn">
+                        🎲 Randomize Meals
+                    </button>
+                </div>
+                <div class="meals-grid">
+                    {% for meal_type, meals in nutrition_plan.meal_suggestions.items() %}
+                    <div class="meal-category">
+                        <h4 class="meal-category-title">
+                            {% if meal_type == 'breakfast' %}🌅 Breakfast
+                            {% elif meal_type == 'lunch' %}☀️ Lunch
+                            {% elif meal_type == 'dinner' %}🌙 Dinner
+                            {% elif meal_type == 'snacks' %}🍎 Snacks
+                            {% endif %}
+                        </h4>
+                        {% for meal in meals %}
+                        <div class="meal-option-card">
+                            <div class="meal-name">{{ meal.name }}</div>
+                            <div class="meal-nutrients">
+                                <span class="nutrient">🔥 {{ meal.calories }} cal</span>
+                                <span class="nutrient">🍗 {{ meal.protein }}g</span>
+                                <span class="nutrient">🍝 {{ meal.carbs }}g</span>
+                                <span class="nutrient">🥑 {{ meal.fat }}g</span>
+                            </div>
+                            <button class="show-recipe-btn" onclick="toggleRecipe('{{ meal.name | replace("'", "\\'") }}', this)">Show</button>
+                            <div class="recipe-details" id="recipe-{{ loop.index }}" style="display: none;">
+                                <div class="recipe-section">
+                                    <h5>📝 Ingredients</h5>
+                                    <ul class="recipe-list">
+                                        {% for ingredient in meal.ingredients %}
+                                        <li>{{ ingredient }}</li>
+                                        {% endfor %}
+                                    </ul>
+                                </div>
+                                <div class="recipe-section">
+                                    <h5>👨‍🍳 Instructions</h5>
+                                    <p class="recipe-instructions">{{ meal.instructions }}</p>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+
+            <div class="nutrition-details">
+                {% if nutrition_plan.pre_run_meal %}
+                <div class="nutrition-guide-card">
+                    <h3>🏃‍♂️ Pre-Run Nutrition</h3>
+                    <div class="nutrition-guide-content">
+                        <div class="guide-item">
+                            <strong>Timing:</strong> {{ nutrition_plan.pre_run_meal.timing }}
+                        </div>
+                        <div class="guide-item">
+                            <strong>Focus:</strong> {{ nutrition_plan.pre_run_meal.focus }}
+                        </div>
+                        {% if nutrition_plan.pre_run_meal.examples %}
+                        <div class="guide-examples">
+                            <strong>Examples:</strong>
+                            <ul>
+                                {% for example in nutrition_plan.pre_run_meal.examples %}
+                                <li>{{ example }}</li>
+                                {% endfor %}
+                            </ul>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endif %}
+
+                {% if nutrition_plan.post_run_meal %}
+                <div class="nutrition-guide-card">
+                    <h3>💪 Post-Run Recovery</h3>
+                    <div class="nutrition-guide-content">
+                        <div class="guide-item">
+                            <strong>Timing:</strong> {{ nutrition_plan.post_run_meal.timing }}
+                        </div>
+                        <div class="guide-item">
+                            <strong>Focus:</strong> {{ nutrition_plan.post_run_meal.focus }}
+                        </div>
+                        {% if nutrition_plan.post_run_meal.examples %}
+                        <div class="guide-examples">
+                            <strong>Examples:</strong>
+                            <ul>
+                                {% for example in nutrition_plan.post_run_meal.examples %}
+                                <li>{{ example }}</li>
+                                {% endfor %}
+                            </ul>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endif %}
+
+                {% if nutrition_plan.hydration_guide %}
+                <div class="hydration-guide-section">
+                    <h3>💧 Hydration Guide</h3>
+                    <div class="hydration-grid">
+                        <div class="hydration-item">
+                            <div class="hydration-label">Daily Target</div>
+                            <div class="hydration-value">{{ nutrition_plan.hydration_guide.daily_target }}</div>
+                        </div>
+                        <div class="hydration-item">
+                            <div class="hydration-label">Pre-Run</div>
+                            <div class="hydration-value">{{ nutrition_plan.hydration_guide.pre_run }}</div>
+                        </div>
+                        <div class="hydration-item">
+                            <div class="hydration-label">During Run</div>
+                            <div class="hydration-value">{{ nutrition_plan.hydration_guide.during_run }}</div>
+                        </div>
+                        <div class="hydration-item">
+                            <div class="hydration-label">Post-Run</div>
+                            <div class="hydration-value">{{ nutrition_plan.hydration_guide.post_run }}</div>
+                        </div>
+                    </div>
+                    {% if nutrition_plan.hydration_guide.tips %}
+                    <div class="hydration-tips">
+                        {% for tip in nutrition_plan.hydration_guide.tips %}
+                        <div class="hydration-tip">💡 {{ tip }}</div>
+                        {% endfor %}
+                    </div>
+                    {% endif %}
                 </div>
                 {% endif %}
             </div>
-            {% endif %}
         </div>
     </div>
     {% endif %}
-    
-    {% for week in plan %}
-    <div class="week-card">
-        <div class="week-header">
-            <div class="week-title">Week {{ week.week }}</div>
-            <div class="week-total">{{ week.total_km }} km</div>
-        </div>
-        
-        {% set day_names = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'] %}
-        <div class="workout-grid">
-            {% for workout in week.daily_workouts %}
-            {% set logged_run = logged_runs.get(workout.id) %}
-            <div class="workout-item {{ workout.type }} {% if logged_run %}completed{% endif %}" data-day="{{ day_names[workout.day - 1] }}">
-                <div class="workout-day-label">{{ day_names[workout.day - 1] }}</div>
-                <div class="workout-type">{{ workout.type }}</div>
-                {% if workout.distance > 0 %}
-                <div class="workout-distance">{{ workout.distance }} km</div>
-                {% endif %}
-                <div class="workout-notes">{{ workout.notes }}</div>
-                
-                {% if logged_run %}
-                <div class="run-stats">
-                    <div class="run-stats-row">
-                        <span>Completed:</span>
-                        <span>{{ "%.1f"|format(logged_run.distance_km) }} km in {{ "%.0f"|format(logged_run.duration_minutes) }} min</span>
-                    </div>
-                    {% if logged_run.perceived_effort %}
-                    <div class="run-stats-row">
-                        <span>Effort:</span>
-                        <span>{{ logged_run.perceived_effort }}/10</span>
-                    </div>
-                    {% endif %}
-                    {% if logged_run.avg_heart_rate %}
-                    <div class="run-stats-row">
-                        <span>Avg HR:</span>
-                        <span>{{ logged_run.avg_heart_rate }} bpm</span>
-                    </div>
-                    {% endif %}
-                </div>
-                {% elif workout.type != 'rest' and user %}
-                <button class="log-run-btn" onclick="openLogModal('{{ workout.id }}', '{{ workout.type }}', {{ workout.distance }}, '{{ day_names[workout.day - 1] }}', {{ week.week }})">Log This Run</button>
-                {% endif %}
-            </div>
-            {% endfor %}
-        </div>
-        
-        {% if week.strength_training %}
-        <div class="tips-section">
-            <div class="tips-title">💪 Strength Training ({{ week.strength_training[0].duration }})</div>
-            <ul class="tips-list">
-                {% for exercise in week.strength_training[0].exercises %}
-                <li>{{ exercise }}</li>
-                {% endfor %}
-            </ul>
-        </div>
-        {% endif %}
-        
-        {% if week.training_tips %}
-        <div class="tips-section">
-            <div class="tips-title">🎯 Training Tips for Week {{ week.week }}</div>
-            <ul class="tips-list">
-                {% for tip in week.training_tips %}
-                <li>{{ tip }}</li>
-                {% endfor %}
-            </ul>
-        </div>
-        {% endif %}
-    </div>
-    {% endfor %}
     
     <div class="download-section">
         <a href="/download-pdf/{{ plan_id }}" class="btn">
@@ -471,4 +593,11 @@
     };
 </script>
 <script src="/static/js/plan.js" defer></script>
+{% if progress_data and progress_data.completed_count > 0 %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
+<script>
+    window.PROGRESS_DATA = {{ progress_data | tojson }};
+</script>
+<script src="/static/js/performance_dashboard.js" defer></script>
+{% endif %}
 {% endblock %}

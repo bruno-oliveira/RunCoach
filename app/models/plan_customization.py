@@ -1,5 +1,5 @@
 from sqlalchemy import Column, String, Integer, DateTime, ForeignKey
-from datetime import datetime
+from datetime import datetime, timezone
 import uuid
 
 from app.models.base import Base
@@ -13,4 +13,4 @@ class PlanCustomization(Base):
     week_number = Column(Integer)
     adjustment_type = Column(String)
     adjustment_value = Column(String)
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None))

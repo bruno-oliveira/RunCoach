@@ -4,7 +4,7 @@ import json
 import logging
 from typing import Any, Dict, Optional
 
-from fastapi import APIRouter, Depends, Form, HTTPException, Request
+from fastapi import APIRouter, Cookie, Depends, Form, HTTPException, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
@@ -15,17 +15,22 @@ from app.dependencies import (
     get_db,
     get_optional_user,
     get_performance_plan_generator,
+    verify_plan_ownership,
 )
 from app.models import User
 from app.schemas import PerformancePlanRequest, DISTANCE_NAMES
 from app.services.performance_service import PerformanceService
 from app.exceptions import RunCoachException, InadequateBaseException
 from app.core.performance_plan_generator import PerformancePlanGenerator
+from app.models import TrainingPlan
+from app.utils import format_pace, format_pace_bare
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter(tags=["performance"])
 templates = Jinja2Templates(directory="app/templates")
+
+templates.env.filters['format_pace'] = format_pace
 
 
 def _parse_time_to_pace(time_str: str, distance_km: float) -> float:
@@ -166,6 +171,33 @@ async def generate_performance_plan(
     # Convert auto_calculate string to boolean
     auto_calculate_bool = auto_calculate == "true" if auto_calculate else False
 
+    # Check 3-plan limit
+    plan_count = db.query(TrainingPlan).filter(
+        TrainingPlan.user_id == current_user.id
+    ).count()
+    if plan_count >= 3:
+        fitness_data = None
+        hr_data = None
+        try:
+            service = PerformanceService(db)
+            fitness_data = service.calculate_fitness_from_runs(
+                user_id=current_user.id, target_distance=target_distance
+            )
+        except Exception:
+            pass
+        return templates.TemplateResponse(
+            "performance_training.html",
+            {
+                "request": request,
+                "user": current_user,
+                "fitness_data": fitness_data,
+                "hr_data": hr_data,
+                "distance_names": DISTANCE_NAMES,
+                "error": "You've reached the maximum of 3 training plans. Please delete an existing plan before creating a new one.",
+                "error_type": "plan_limit",
+            },
+        )
+
     try:
         # Parse goal time to pace
         goal_pace = _parse_time_to_pace(goal_time, target_distance)
@@ -203,6 +235,10 @@ async def generate_performance_plan(
             auto_calculate=request_data.auto_calculate,
             max_heart_rate=request_data.max_heart_rate,
         )
+
+        # Invalidate plans cache
+        from app.routers.plans import user_plans_cache
+        user_plans_cache.pop(f"plans_{current_user.id}", None)
 
         # Redirect to plan display
         return RedirectResponse(
@@ -298,6 +334,7 @@ async def generate_performance_plan(
 async def view_performance_plan(
     request: Request,
     plan_id: str,
+    anonymous_user_id: Optional[str] = Cookie(None),
     db: Session = Depends(get_db),
     current_user: Optional[User] = Depends(get_optional_user),
 ):
@@ -322,24 +359,22 @@ async def view_performance_plan(
 
         training_plan, plan_data = result
 
+        if not verify_plan_ownership(training_plan, current_user, anonymous_user_id):
+            raise HTTPException(status_code=403, detail="Not authorized to view this plan")
+
         # Add formatted versions for zones
         for zone_name, zone_data in plan_data['training_zones'].items():
-            pace_min = zone_data['pace']
-            zone_data['pace_formatted'] = f"{int(pace_min)}:{int((pace_min % 1) * 60):02d}/km"
+            zone_data['pace_formatted'] = format_pace(zone_data['pace'])
 
             if 'pace_range' in zone_data:
-                pace_range = zone_data['pace_range']
-                zone_data['pace_range_formatted'] = (
-                    f"{int(pace_range[0])}:{int((pace_range[0] % 1) * 60):02d} - "
-                    f"{int(pace_range[1])}:{int((pace_range[1] % 1) * 60):02d}/km"
-                )
+                pr = zone_data['pace_range']
+                zone_data['pace_range_formatted'] = f"{format_pace(pr[0])} - {format_pace(pr[1])}"
 
         # Ensure all workouts have formatted pace (generator should already add this, but double-check)
         for week in plan_data['weekly_plans']:
             for workout in week.get('daily_workouts', []):
                 if 'target_pace' in workout and 'target_pace_formatted' not in workout:
-                    pace_min = workout['target_pace']
-                    workout['target_pace_formatted'] = f"{int(pace_min)}:{int((pace_min % 1) * 60):02d}/km"
+                    workout['target_pace_formatted'] = format_pace(workout['target_pace'])
 
         # Parse and transform nutrition plan
         nutrition_plan = None
@@ -366,6 +401,14 @@ async def view_performance_plan(
 
         logger.info(f"Rendering performance plan {plan_id} with {len(plan_data['weekly_plans'])} weeks")
 
+        today_workout = None
+        progress_data = None
+        try:
+            today_workout = service.get_todays_workout(training_plan)
+            progress_data = service.get_plan_progress(training_plan)
+        except Exception as e:
+            logger.warning(f"Could not load today/progress data: {e}")
+
         return templates.TemplateResponse(
             "performance_plan.html",
             {
@@ -375,6 +418,8 @@ async def view_performance_plan(
                 "plan": training_plan,
                 "plan_data": plan_data,
                 "nutrition_plan": nutrition_plan,
+                "today_workout": today_workout,
+                "progress_data": progress_data,
                 "distance_name": DISTANCE_NAMES.get(
                     float(training_plan.target_distance),
                     f"{training_plan.target_distance}km"

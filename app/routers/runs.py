@@ -1,7 +1,7 @@
 """Router for run logging and performance tracking."""
 
 import logging
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
@@ -24,6 +24,26 @@ logger = logging.getLogger(__name__)
 runs_router = APIRouter(prefix="/api/runs", tags=["runs"])
 adaptive_router = APIRouter(prefix="/api/adaptive", tags=["adaptive-plans"])
 adaptive_generator = AdaptivePlanGenerator()
+
+
+def _run_to_response(run: RunLog) -> RunLogResponse:
+    """Convert a RunLog model instance to a RunLogResponse schema."""
+    return RunLogResponse(
+        id=run.id,
+        user_id=run.user_id,
+        date=run.date,
+        distance_km=run.distance_km,
+        duration_minutes=run.duration_minutes,
+        avg_pace_min_km=round(run.avg_pace_min_km, 2) if run.avg_pace_min_km else None,
+        avg_heart_rate=run.avg_heart_rate,
+        max_heart_rate=run.max_heart_rate,
+        avg_cadence=run.avg_cadence,
+        elevation_gain_m=run.elevation_gain_m,
+        notes=run.notes,
+        workout_type=run.workout_type,
+        perceived_effort=run.perceived_effort,
+        created_at=run.created_at,
+    )
 
 
 @runs_router.post("", response_model=RunLogResponse, status_code=status.HTTP_201_CREATED)
@@ -50,7 +70,7 @@ async def create_run_log(
             user_id=current_user.id,
             training_plan_id=run_log.training_plan_id,
             daily_workout_id=run_log.daily_workout_id,
-            date=run_log.date or datetime.utcnow(),
+            date=run_log.date or datetime.now(timezone.utc).replace(tzinfo=None),
             distance_km=run_log.distance_km,
             duration_minutes=run_log.duration_minutes,
             avg_pace_min_km=avg_pace_min_km,
@@ -69,22 +89,7 @@ async def create_run_log(
 
         logger.info(f"Run log created for user {current_user.id}: {run_log.distance_km}km in {run_log.duration_minutes}min")
 
-        return RunLogResponse(
-            id=new_run.id,
-            user_id=new_run.user_id,
-            date=new_run.date,
-            distance_km=new_run.distance_km,
-            duration_minutes=new_run.duration_minutes,
-            avg_pace_min_km=round(new_run.avg_pace_min_km, 2),
-            avg_heart_rate=new_run.avg_heart_rate,
-            max_heart_rate=new_run.max_heart_rate,
-            avg_cadence=new_run.avg_cadence,
-            elevation_gain_m=new_run.elevation_gain_m,
-            notes=new_run.notes,
-            workout_type=new_run.workout_type,
-            perceived_effort=new_run.perceived_effort,
-            created_at=new_run.created_at,
-        )
+        return _run_to_response(new_run)
     except Exception as e:
         logger.error(f"Error creating run log: {e}")
         db.rollback()
@@ -130,25 +135,7 @@ async def get_run_logs(
         run_logs = query.order_by(RunLog.date.desc()).offset(offset).limit(page_size).all()
 
         return RunLogListResponse(
-            runs=[
-                RunLogResponse(
-                    id=run.id,
-                    user_id=run.user_id,
-                    date=run.date,
-                    distance_km=run.distance_km,
-                    duration_minutes=run.duration_minutes,
-                    avg_pace_min_km=round(run.avg_pace_min_km, 2) if run.avg_pace_min_km else None,
-                    avg_heart_rate=run.avg_heart_rate,
-                    max_heart_rate=run.max_heart_rate,
-                    avg_cadence=run.avg_cadence,
-                    elevation_gain_m=run.elevation_gain_m,
-                    notes=run.notes,
-                    workout_type=run.workout_type,
-                    perceived_effort=run.perceived_effort,
-                    created_at=run.created_at,
-                )
-                for run in run_logs
-            ],
+            runs=[_run_to_response(run) for run in run_logs],
             total=total,
             page=page,
             page_size=page_size,
@@ -180,22 +167,7 @@ async def get_run_log(
             detail="Run log not found",
         )
 
-    return RunLogResponse(
-        id=run.id,
-        user_id=run.user_id,
-        date=run.date,
-        distance_km=run.distance_km,
-        duration_minutes=run.duration_minutes,
-        avg_pace_min_km=round(run.avg_pace_min_km, 2) if run.avg_pace_min_km else None,
-        avg_heart_rate=run.avg_heart_rate,
-        max_heart_rate=run.max_heart_rate,
-        avg_cadence=run.avg_cadence,
-        elevation_gain_m=run.elevation_gain_m,
-        notes=run.notes,
-        workout_type=run.workout_type,
-        perceived_effort=run.perceived_effort,
-        created_at=run.created_at,
-    )
+    return _run_to_response(run)
 
 
 @runs_router.put("/{run_id}", response_model=RunLogResponse)
@@ -232,22 +204,7 @@ async def update_run_log(
 
     logger.info(f"Run log {run_id} updated for user {current_user.id}")
 
-    return RunLogResponse(
-        id=run.id,
-        user_id=run.user_id,
-        date=run.date,
-        distance_km=run.distance_km,
-        duration_minutes=run.duration_minutes,
-        avg_pace_min_km=round(run.avg_pace_min_km, 2) if run.avg_pace_min_km else None,
-        avg_heart_rate=run.avg_heart_rate,
-        max_heart_rate=run.max_heart_rate,
-        avg_cadence=run.avg_cadence,
-        elevation_gain_m=run.elevation_gain_m,
-        notes=run.notes,
-        workout_type=run.workout_type,
-        perceived_effort=run.perceived_effort,
-        created_at=run.created_at,
-    )
+    return _run_to_response(run)
 
 
 @runs_router.delete("/{run_id}", status_code=status.HTTP_204_NO_CONTENT)

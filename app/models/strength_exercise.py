@@ -1,5 +1,5 @@
 from sqlalchemy import Column, String, Text, Integer, DateTime, ForeignKey, Boolean
-from datetime import datetime
+from datetime import datetime, timezone
 import uuid
 
 from app.models.base import Base
@@ -30,5 +30,5 @@ class StrengthExercise(Base):
     is_bodyweight = Column(Boolean, default=False, index=True)
     is_dumbbell = Column(Boolean, default=False, index=True)
     
-    created_at = Column(DateTime, default=datetime.utcnow)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
+    updated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None), onupdate=lambda: datetime.now(timezone.utc).replace(tzinfo=None))

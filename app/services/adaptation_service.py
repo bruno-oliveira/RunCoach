@@ -1,13 +1,13 @@
 """Service for adapting training plans based on performance data."""
 
 import logging
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Dict, List, Optional, Tuple
 
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
-from app.models import DailyWorkout, RunLog, TrainingPlan, WeeklyPlan
+from app.models import DailyWorkout, RunLog, TrainingPlan, WeeklyPlan, User
 
 logger = logging.getLogger(__name__)
 
@@ -321,7 +321,7 @@ class AdaptationService:
             return 0
 
         plan_start_date = training_plan.created_at.date()
-        today = datetime.utcnow().date()
+        today = datetime.now(timezone.utc).replace(tzinfo=None).date()
 
         # Get all daily workouts with their week numbers
         daily_workouts = (
@@ -360,3 +360,174 @@ class AdaptationService:
                 )
 
         return skipped_count
+
+    def adapt_plan_from_fitness(
+        self,
+        plan_id: str,
+        user_id: str,
+        db: Session,
+    ) -> Dict[str, any]:
+        """
+        Adapt remaining plan weeks based on Strava-synced fitness metrics.
+
+        Uses AdaptivePlanGenerator to compute fitness from all RunLog data
+        (including Strava-synced runs) and adjusts future weeks accordingly.
+
+        If the plan was previously adapted, the old multiplier is reversed before
+        the new one is applied so distances never compound across repeated calls.
+
+        Args:
+            plan_id: Training plan ID
+            user_id: User ID
+            db: Database session
+
+        Returns:
+            Dict with adaptation results including fitness metrics and changes
+        """
+        import re
+        from app.core.adaptive_plan_generator import AdaptivePlanGenerator
+
+        training_plan = db.query(TrainingPlan).filter(
+            TrainingPlan.id == plan_id,
+            TrainingPlan.user_id == user_id,
+        ).first()
+
+        if not training_plan:
+            return {"adapted": False, "reason": "Plan not found", "changes": []}
+
+        # Calculate fitness metrics from all run logs
+        adaptive_gen = AdaptivePlanGenerator()
+        metrics = adaptive_gen.calculate_current_fitness_metrics(user_id, db)
+
+        if metrics["fitness_score"] == 0:
+            return {
+                "adapted": False,
+                "reason": "No run data available to adapt from",
+                "fitness": metrics,
+                "changes": [],
+            }
+
+        # Determine current week based on plan start date
+        start_date = (training_plan.start_date or training_plan.created_at).date()
+        today = datetime.now(timezone.utc).replace(tzinfo=None).date()
+        days_elapsed = (today - start_date).days
+        current_week = max(1, days_elapsed // 7 + 1)
+
+        # Fitness-based multiplier: score 50 -> 1.0x, higher -> increase, lower -> decrease
+        new_multiplier = 0.8 + (metrics["fitness_score"] / 100) * 0.4  # 0.8-1.2x
+
+        # Read previously applied multiplier (stored on training_plan) so we can
+        # reverse it before applying the new one — prevents compounding on re-runs.
+        prev_multiplier = getattr(training_plan, "strava_adapted_multiplier", None)
+
+        # Get future weeks
+        future_weeks = (
+            db.query(WeeklyPlan)
+            .filter(
+                WeeklyPlan.training_plan_id == plan_id,
+                WeeklyPlan.week_number > current_week,
+            )
+            .all()
+        )
+
+        if not future_weeks:
+            return {
+                "adapted": False,
+                "reason": "No future weeks remaining to adapt",
+                "fitness": metrics,
+                "changes": [],
+            }
+
+        # Regex to strip any previously appended adaptation note from workout.notes
+        _adapted_note_re = re.compile(r"\s*\(Adapted:[^)]*\)")
+
+        changes = []
+        for week in future_weeks:
+            workouts = (
+                db.query(DailyWorkout)
+                .filter(DailyWorkout.weekly_plan_id == week.id)
+                .all()
+            )
+
+            week_changes = []
+            for workout in workouts:
+                if workout.workout_type != "rest" and workout.distance_km and workout.distance_km > 0:
+                    # Reverse previous adaptation to get back to the original distance
+                    base_distance = workout.distance_km
+                    if prev_multiplier and prev_multiplier != 0:
+                        base_distance = base_distance / prev_multiplier
+
+                    new_distance = max(1.0, round(base_distance * new_multiplier, 1))
+                    old_distance = workout.distance_km
+
+                    # Skip if distance doesn't actually change
+                    if new_distance == old_distance:
+                        continue
+
+                    workout.distance_km = new_distance
+
+                    # Strip any prior adaptation note then append the updated one
+                    clean_notes = _adapted_note_re.sub("", workout.notes or "").strip()
+                    if metrics["current_pace"]:
+                        pace_str = f"{metrics['current_pace']:.2f} min/km"
+                        workout.notes = (
+                            f"{clean_notes} "
+                            f"(Adapted: {round(base_distance, 1)}->{new_distance}km, "
+                            f"target pace ~{pace_str})"
+                        ).strip()
+                    else:
+                        workout.notes = (
+                            f"{clean_notes} "
+                            f"(Adapted: {round(base_distance, 1)}->{new_distance}km)"
+                        ).strip()
+
+                    week_changes.append({
+                        "day": workout.day_of_week,
+                        "workout_type": workout.workout_type,
+                        "old_distance": old_distance,
+                        "new_distance": new_distance,
+                    })
+
+            if week_changes:
+                new_total = sum(w.distance_km for w in workouts if w.distance_km)
+                week.total_km = round(new_total, 1)
+                changes.append({
+                    "week": week.week_number,
+                    "workouts_adjusted": week_changes,
+                    "new_total_km": round(new_total, 1),
+                })
+
+        if not changes:
+            return {
+                "adapted": False,
+                "reason": (
+                    "Your plan distances already match your current fitness level "
+                    f"(score {metrics['fitness_score']}/100, "
+                    f"avg {metrics['avg_weekly_km']}km/week). "
+                    "No adjustments needed."
+                ),
+                "fitness": metrics,
+                "fitness_multiplier": round(new_multiplier, 2),
+                "changes": [],
+            }
+
+        # Persist the multiplier we just applied so future calls can reverse it
+        if hasattr(training_plan, "strava_adapted_multiplier"):
+            training_plan.strava_adapted_multiplier = round(new_multiplier, 4)
+
+        db.commit()
+
+        first_adapted = changes[0]["week"]
+        last_adapted = changes[-1]["week"]
+
+        return {
+            "adapted": True,
+            "reason": (
+                f"Adjusted weeks {first_adapted}-{last_adapted} based on "
+                f"Strava data: avg {metrics['avg_weekly_km']}km/week, "
+                f"fitness score {metrics['fitness_score']}/100"
+            ),
+            "fitness": metrics,
+            "fitness_multiplier": round(new_multiplier, 2),
+            "changes": changes,
+        }

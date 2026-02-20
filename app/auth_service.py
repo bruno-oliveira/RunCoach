@@ -1,7 +1,7 @@
 """Authentication service for Google OAuth."""
 
 import logging
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Optional
 
 import httpx
@@ -21,16 +21,16 @@ class AuthService:
     _cert_cache_ttl = timedelta(hours=1)
 
     def __init__(self):
-        self.secret_key = settings.secret_key if hasattr(settings, 'secret_key') else "dev-secret-key-change-in-production"
+        self.secret_key = settings.secret_key
         self.algorithm = "HS256"
         self.google_cert_url = "https://www.googleapis.com/oauth2/v3/certs"
 
     def create_access_token(self, data: dict, expires_delta: Optional[timedelta] = None) -> str:
         to_encode = data.copy()
         if expires_delta:
-            expire = datetime.utcnow() + expires_delta
+            expire = datetime.now(timezone.utc).replace(tzinfo=None) + expires_delta
         else:
-            expire = datetime.utcnow() + timedelta(days=1)
+            expire = datetime.now(timezone.utc).replace(tzinfo=None) + timedelta(days=1)
         to_encode.update({"exp": expire})
         encoded_jwt = jwt.encode(to_encode, self.secret_key, algorithm=self.algorithm)
         return encoded_jwt
@@ -44,7 +44,7 @@ class AuthService:
 
     async def _get_google_certs(self) -> dict:
         """Get Google's public keys with 1-hour cache."""
-        now = datetime.utcnow()
+        now = datetime.now(timezone.utc).replace(tzinfo=None)
 
         if (self._cert_cache and self._cert_cache_time and
             now - self._cert_cache_time < self._cert_cache_ttl):
@@ -64,40 +64,20 @@ class AuthService:
     async def verify_google_token(self, id_token: str) -> Optional[dict]:
         """Verify Google ID token using Google's public keys."""
         try:
-            logger.info(f"Attempting to verify Google token...")
-
             certs = await self._get_google_certs()
 
-            # First, try to decode without issuer/audience validation to see what's in the token
-            try:
-                unverified_payload = jwt.decode(
-                    id_token,
-                    certs,
-                    algorithms=["RS256"],
-                    options={"verify_signature": False}
-                )
-                logger.info(f"Token issuer: {unverified_payload.get('iss')}")
-                logger.info(f"Token audience: {unverified_payload.get('aud')}")
-                logger.info(f"Expected audience: {settings.google_client_id if hasattr(settings, 'google_client_id') else 'NOT SET'}")
-            except Exception as e:
-                logger.error(f"Failed to decode unverified token: {e}")
-
-            # Verify the token with proper validation
-            try:
-                payload = jwt.decode(
-                    id_token,
-                    certs,
-                    algorithms=["RS256"],
-                    audience=settings.google_client_id if hasattr(settings, 'google_client_id') else None,
-                    issuer="https://accounts.google.com"
-                )
-                logger.info(f"Google token verified successfully for: {payload.get('email')}")
-                return payload
-            except JWTError as e:
-                logger.error(f"JWT verification failed: {type(e).__name__}: {e}")
-                logger.error(f"Google Client ID configured: {settings.google_client_id if hasattr(settings, 'google_client_id') else 'NOT SET'}")
-                return None
-
+            payload = jwt.decode(
+                id_token,
+                certs,
+                algorithms=["RS256"],
+                audience=settings.google_client_id or None,
+                issuer="https://accounts.google.com"
+            )
+            logger.info(f"Google token verified successfully for: {payload.get('email')}")
+            return payload
+        except JWTError as e:
+            logger.error(f"JWT verification failed: {type(e).__name__}: {e}")
+            return None
         except Exception as e:
             logger.error(f"Google token verification error: {type(e).__name__}: {e}")
             return None
@@ -140,7 +120,7 @@ class AuthService:
             from app.services.merge_service import MergeService
             MergeService.merge_anonymous_user(db, anonymous_user_id, user.id)
 
-        user.last_activity = datetime.utcnow()
+        user.last_activity = datetime.now(timezone.utc).replace(tzinfo=None)
         db.commit()
 
         return user
@@ -151,5 +131,5 @@ class AuthService:
 
     def update_user_activity(self, db: Session, user: User) -> None:
         """Update user's last activity timestamp."""
-        user.last_activity = datetime.utcnow()
+        user.last_activity = datetime.now(timezone.utc).replace(tzinfo=None)
         db.commit()

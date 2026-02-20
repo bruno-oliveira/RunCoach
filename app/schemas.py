@@ -7,6 +7,7 @@ from pydantic import BaseModel, Field, field_validator, model_validator
 
 from app.config import settings
 from app.exceptions import InadequateBaseException, InsufficientTimeException
+from app.utils import format_pace_bare
 
 # Distance name mapping for display purposes
 DISTANCE_NAMES = {
@@ -345,6 +346,7 @@ class UserResponse(UserBase):
     google_id: Optional[str] = None
     created_at: datetime
     plans_generated: int
+    strava_connected: bool = False
 
 
 class Token(BaseModel):
@@ -403,6 +405,7 @@ class RunLogResponse(RunLogBase):
     user_id: str
     date: datetime
     avg_pace_min_km: Optional[float] = None
+    strava_activity_id: Optional[str] = None
     created_at: datetime
 
 
@@ -426,11 +429,6 @@ class AdaptivePlanRequest(BaseModel):
             valid_names = [DISTANCE_NAMES[d] for d in valid_distances]
             raise ValueError(f"Please select a valid distance: {', '.join(valid_names)}")
         return v
-
-
-
-    activity_name: str
-    distance_km: float
 
 
 # Strength Training Schemas
@@ -557,8 +555,8 @@ class PerformancePlanRequest(BaseModel):
 
             improvement = (self.current_pace - self.goal_pace) / self.current_pace
             if improvement > 0.15:
-                current_formatted = f"{int(self.current_pace)}:{int((self.current_pace % 1) * 60):02d}"
-                goal_formatted = f"{int(self.goal_pace)}:{int((self.goal_pace % 1) * 60):02d}"
+                current_formatted = format_pace_bare(self.current_pace)
+                goal_formatted = format_pace_bare(self.goal_pace)
                 raise ValueError(
                     f"Goal pace ({goal_formatted}/km) represents >{15}% improvement from current "
                     f"({current_formatted}/km). This is unrealistic for a single training cycle. "
@@ -594,3 +592,19 @@ class PerformancePlanRequest(BaseModel):
                     )
 
         return self
+
+
+# Strava integration schemas
+class StravaSyncResponse(BaseModel):
+    """Response for Strava sync operation."""
+
+    synced: int
+    skipped: int
+    errors: List[str] = []
+
+
+class StravaStatusResponse(BaseModel):
+    """Response for Strava connection status."""
+
+    connected: bool
+    athlete_id: Optional[str] = None

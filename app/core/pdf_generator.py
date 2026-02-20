@@ -13,11 +13,10 @@ from reportlab.lib.pagesizes import A4
 from reportlab.lib.units import cm
 from reportlab.lib import colors
 from reportlab.lib.enums import TA_CENTER, TA_LEFT, TA_RIGHT, TA_JUSTIFY
-from reportlab.platypus.tableofcontents import TableOfContents
-from reportlab.lib.enums import TA_JUSTIFY
 import tempfile
 
 from app.models import TrainingPlan
+from app.utils import format_pace as _shared_format_pace
 
 logger = logging.getLogger(__name__)
 
@@ -126,43 +125,69 @@ class PDFGenerator:
 
         temp_dir = tempfile.mkdtemp()
         pdf_path = os.path.join(temp_dir, f"running_plan_{training_plan.id}.pdf")
-        
+
         # Create PDF document
-        doc = SimpleDocTemplate(pdf_path, pagesize=A4, rightMargin=2*cm, leftMargin=2*cm, 
+        doc = SimpleDocTemplate(pdf_path, pagesize=A4, rightMargin=2*cm, leftMargin=2*cm,
                                topMargin=2*cm, bottomMargin=2*cm)
-        
+
         # Build story (content)
         story = []
-        
+
+        is_performance = getattr(training_plan, 'plan_type', 'distance') == 'performance'
+
         # First page: Title and overview only
         self._add_title_page(story, training_plan, plan_data)
         self._add_plan_summary(story, training_plan, plan_data)
-        
-        # Add page break before weekly plans
-        story.append(PageBreak())
-        
-        # Add weekly plans - each week on its own page
-        for week in plan_data:
-            self._add_weekly_plan(story, week)
+
+        if is_performance:
+            # Plan philosophy intro
+            story.append(Spacer(1, 0.5*cm))
+            self._add_performance_philosophy(story)
+
+            # Training zones page with pace summary
             story.append(PageBreak())
-        
-        # Remove the last page break if it's the final element
-        if story and isinstance(story[-1], PageBreak):
-            story.pop()
-        
-        # Add personalized nutrition plan if available
-        if training_plan.nutrition_plan_data:
+            self._add_training_zones_page(story, training_plan)
+            self._add_pace_improvement_summary(story, training_plan)
+
+            # Weekly plans with performance-specific rendering
+            for week in plan_data:
+                story.append(PageBreak())
+                self._add_performance_weekly_plan(story, week)
+
+            # Add nutrition for performance plans
+            if training_plan.nutrition_plan_data:
+                story.append(PageBreak())
+                self._add_personalized_nutrition_plan(story, training_plan)
+
+            # Add general nutrition guidance
             story.append(PageBreak())
-            self._add_personalized_nutrition_plan(story, training_plan)
-        
-        # Add general nutrition guidance
-        story.append(PageBreak())
-        self._add_nutrition_guidance(story)
-        
-        # Add injury prevention
-        story.append(PageBreak())
-        self._add_injury_prevention(story)
-        
+            self._add_nutrition_guidance(story)
+        else:
+            # Add page break before weekly plans
+            story.append(PageBreak())
+
+            # Add weekly plans - each week on its own page
+            for week in plan_data:
+                self._add_weekly_plan(story, week)
+                story.append(PageBreak())
+
+            # Remove the last page break if it's the final element
+            if story and isinstance(story[-1], PageBreak):
+                story.pop()
+
+            # Add personalized nutrition plan if available
+            if training_plan.nutrition_plan_data:
+                story.append(PageBreak())
+                self._add_personalized_nutrition_plan(story, training_plan)
+
+            # Add general nutrition guidance
+            story.append(PageBreak())
+            self._add_nutrition_guidance(story)
+
+            # Add injury prevention
+            story.append(PageBreak())
+            self._add_injury_prevention(story)
+
         # Add footer
         self._add_footer(story)
         
@@ -201,16 +226,12 @@ class PDFGenerator:
 
         if is_performance and training_plan.current_pace and training_plan.goal_pace:
             # Performance plan stats
-            current_pace_min = int(training_plan.current_pace)
-            current_pace_sec = int((training_plan.current_pace % 1) * 60)
-            goal_pace_min = int(training_plan.goal_pace)
-            goal_pace_sec = int((training_plan.goal_pace % 1) * 60)
             improvement = ((training_plan.current_pace - training_plan.goal_pace) / training_plan.current_pace) * 100
 
             stats_data = [
                 ['Target Distance', target_display],
-                ['Current Pace', f"{current_pace_min}:{current_pace_sec:02d}/km"],
-                ['Goal Pace', f"{goal_pace_min}:{goal_pace_sec:02d}/km"],
+                ['Current Pace', self._format_pace(training_plan.current_pace)],
+                ['Goal Pace', self._format_pace(training_plan.goal_pace)],
                 ['Target Improvement', f"{improvement:.1f}%"],
                 ['Training Duration', f"{training_plan.weeks_duration} weeks"],
                 ['Weekly Mileage', f"{training_plan.current_weekly_km:.1f} km"]
@@ -240,16 +261,36 @@ class PDFGenerator:
     def _add_plan_summary(self, story: List, training_plan: TrainingPlan, plan_data: List[Dict]):
         """Add plan overview with progress chart"""
         story.append(Paragraph("Training Plan Overview", self.section_style))
-        
-        # Create simple progress chart using table
-        chart_data = [['Week', 'Mileage (km)', 'Progress']]
-        max_mileage = max(week['total_km'] for week in plan_data)
-        
-        for week in plan_data:
-            progress_bar = self._create_progress_bar(week['total_km'], max_mileage)
-            chart_data.append([f"Week {week['week']}", f"{week['total_km']:.1f}", progress_bar])
-        
-        chart_table = Table(chart_data, colWidths=[2*cm, 2*cm, 6*cm])
+
+        is_performance = getattr(training_plan, 'plan_type', 'distance') == 'performance'
+
+        if is_performance:
+            # Performance plan: include phase column
+            chart_data = [['Week', 'Phase', 'Mileage (km)', 'Progress']]
+            max_mileage = max(week['total_km'] for week in plan_data)
+
+            for week in plan_data:
+                progress_bar = self._create_progress_bar(week['total_km'], max_mileage)
+                phase = week.get('phase', '').title()
+                chart_data.append([
+                    f"Week {week['week']}",
+                    phase,
+                    f"{week['total_km']:.1f}",
+                    progress_bar
+                ])
+
+            chart_table = Table(chart_data, colWidths=[2 * cm, 2 * cm, 2 * cm, 5 * cm])
+        else:
+            # Distance plan: original layout
+            chart_data = [['Week', 'Mileage (km)', 'Progress']]
+            max_mileage = max(week['total_km'] for week in plan_data)
+
+            for week in plan_data:
+                progress_bar = self._create_progress_bar(week['total_km'], max_mileage)
+                chart_data.append([f"Week {week['week']}", f"{week['total_km']:.1f}", progress_bar])
+
+            chart_table = Table(chart_data, colWidths=[2 * cm, 2 * cm, 6 * cm])
+
         chart_table.setStyle(TableStyle([
             ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#667eea')),
             ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
@@ -260,9 +301,9 @@ class PDFGenerator:
             ('FONTSIZE', (0, 1), (-1, -1), 8),
             ('GRID', (0, 0), (-1, -1), 1, colors.HexColor('#dee2e6'))
         ]))
-        
+
         story.append(chart_table)
-        story.append(Spacer(1, 1*cm))
+        story.append(Spacer(1, 1 * cm))
     
     def _create_progress_bar(self, current: float, maximum: float) -> str:
         """Create a simple text-based progress bar"""
@@ -343,6 +384,203 @@ class PDFGenerator:
                 story.append(Paragraph(f"• {tip}", self.small_style))
             story.append(Spacer(1, 0.5*cm))
     
+    def _format_pace(self, pace_min_per_km: float) -> str:
+        """Format pace as MM:SS/km."""
+        return _shared_format_pace(pace_min_per_km)
+
+    def _add_performance_philosophy(self, story: List):
+        """Add a brief plan philosophy section for performance PDFs."""
+        story.append(Paragraph("Plan Philosophy", self.section_style))
+        philosophy_text = (
+            "This performance plan uses a zone-based training approach with four phases: "
+            "<b>Base</b> (aerobic foundation), <b>Build</b> (increasing intensity), "
+            "<b>Sharpen</b> (peak race-specific work), and <b>Taper</b> (volume reduction "
+            "while maintaining sharpness). Each workout targets a specific training zone "
+            "to develop the physiological systems needed for your goal pace. "
+            "Trust the process: easy days should feel genuinely easy so your body can "
+            "absorb the hard sessions."
+        )
+        story.append(Paragraph(philosophy_text, self.normal_style))
+        story.append(Spacer(1, 0.5*cm))
+
+    def _add_pace_improvement_summary(self, story: List, training_plan: TrainingPlan):
+        """Add current pace -> goal pace improvement summary."""
+        if not training_plan.current_pace or not training_plan.goal_pace:
+            return
+
+        current_formatted = self._format_pace(training_plan.current_pace)
+        goal_formatted = self._format_pace(training_plan.goal_pace)
+        improvement = ((training_plan.current_pace - training_plan.goal_pace)
+                       / training_plan.current_pace * 100)
+
+        story.append(Spacer(1, 0.5*cm))
+        story.append(Paragraph("Pace Improvement Target", self.section_style))
+
+        pace_data = [
+            ['Current Pace', 'Goal Pace', 'Improvement'],
+            [current_formatted, goal_formatted, f"{improvement:.1f}%"]
+        ]
+
+        pace_table = Table(pace_data, colWidths=[4*cm, 4*cm, 4*cm])
+        pace_table.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#764ba2')),
+            ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+            ('FONTSIZE', (0, 0), (-1, 0), 10),
+            ('FONTNAME', (0, 1), (-1, -1), 'Helvetica'),
+            ('FONTSIZE', (0, 1), (-1, -1), 12),
+            ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+            ('GRID', (0, 0), (-1, -1), 1, colors.HexColor('#dee2e6')),
+            ('TOPPADDING', (0, 0), (-1, -1), 10),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 10),
+        ]))
+
+        story.append(pace_table)
+        story.append(Spacer(1, 0.5*cm))
+
+    def _add_training_zones_page(self, story: List, training_plan: TrainingPlan):
+        """Add training zones table for performance plans."""
+        from app.core.performance_plan_generator import PerformancePlanGenerator
+
+        gen = PerformancePlanGenerator()
+        zones = gen.calculate_training_zones(
+            training_plan.goal_pace,
+            training_plan.max_heart_rate
+        )
+
+        story.append(Paragraph("Training Zones", self.section_style))
+        story.append(Spacer(1, 0.3 * cm))
+
+        # Build table data
+        header = ['Zone', 'Name', 'Pace', 'Pace Range', 'HR Range', 'Description']
+        table_data = [[Paragraph(h, self.table_header_style) for h in header]]
+
+        zone_display = [
+            ('zone_1_recovery', '1', 'Recovery'),
+            ('zone_2_aerobic', '2', 'Aerobic'),
+            ('zone_3_tempo', '3', 'Tempo'),
+            ('zone_4_vo2max', '4', 'VO2 Max'),
+            ('zone_5_race', '5', 'Race Pace'),
+        ]
+
+        zone_colors = []
+        for zone_key, zone_num, zone_name in zone_display:
+            z = zones[zone_key]
+            pace_str = self._format_pace(z['pace'])
+            pr = z.get('pace_range', (0, 0))
+            pace_range_str = f"{self._format_pace(pr[0])} - {self._format_pace(pr[1])}"
+            hr_str = z.get('hr_bpm_range', z.get('hr_range', '-'))
+            desc = z.get('description', '')
+            zone_colors.append(colors.HexColor(z.get('color', '#cccccc')))
+
+            table_data.append([
+                Paragraph(zone_num, self.table_cell_style),
+                Paragraph(zone_name, self.table_cell_style),
+                Paragraph(pace_str, self.table_cell_style),
+                Paragraph(pace_range_str, self.table_cell_style),
+                Paragraph(hr_str, self.table_cell_style),
+                Paragraph(desc, self.table_cell_style),
+            ])
+
+        zone_table = Table(table_data, colWidths=[1.2 * cm, 2 * cm, 2 * cm, 3.5 * cm, 2.5 * cm, 5.3 * cm])
+        style_cmds = [
+            ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#667eea')),
+            ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+            ('FONTSIZE', (0, 0), (-1, 0), 9),
+            ('FONTNAME', (0, 1), (-1, -1), 'Helvetica'),
+            ('FONTSIZE', (0, 1), (-1, -1), 8),
+            ('GRID', (0, 0), (-1, -1), 1, colors.HexColor('#dee2e6')),
+            ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+            ('LEFTPADDING', (0, 0), (-1, -1), 6),
+            ('RIGHTPADDING', (0, 0), (-1, -1), 6),
+            ('TOPPADDING', (0, 0), (-1, -1), 8),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 8),
+        ]
+
+        # Color-code each zone row
+        for i, zc in enumerate(zone_colors):
+            row = i + 1  # offset for header
+            style_cmds.append(('BACKGROUND', (0, row), (0, row), zc))
+
+        zone_table.setStyle(TableStyle(style_cmds))
+        story.append(zone_table)
+        story.append(Spacer(1, 1 * cm))
+
+    def _add_performance_weekly_plan(self, story: List, week: Dict[str, Any]):
+        """Add a performance-specific weekly plan with segments."""
+        phase = week.get('phase', '')
+        phase_desc = week.get('phase_description', '')
+        title = f"Week {week['week']} - {week['total_km']:.1f} km | {phase.title()} Phase"
+        story.append(Paragraph(title, self.section_style))
+        if phase_desc:
+            story.append(Paragraph(f"<i>{phase_desc}</i>", self.normal_style))
+        story.append(Spacer(1, 0.3 * cm))
+
+        for workout in week.get('daily_workouts', []):
+            day_name = self._get_day_name(workout.get('day', 0))
+            w_type = workout.get('type', 'easy').replace('_', ' ').title()
+            dist = workout.get('distance', 0)
+            zone_label = workout.get('zone', '-')
+            target_pace = workout.get('target_pace_formatted', '-')
+            desc = workout.get('description', '')
+
+            # Workout header row
+            header_text = f"<b>{day_name}</b> | {w_type} | {dist:.1f} km | {target_pace}"
+            story.append(Paragraph(header_text, self.normal_style))
+
+            if desc:
+                story.append(Paragraph(f"<i>{desc}</i>", self.small_style))
+
+            # Segments sub-table
+            segments = workout.get('segments', [])
+            if segments:
+                seg_header = ['Segment', 'Distance', 'Pace', 'Zone']
+                seg_data = [[Paragraph(h, self.table_header_style) for h in seg_header]]
+
+                for seg in segments:
+                    seg_name = seg.get('name', '')
+                    seg_dist = f"{seg.get('distance_km', 0):.1f} km"
+                    seg_pace = seg.get('pace_formatted', '-')
+                    seg_zone = seg.get('zone_label', '-')
+
+                    # Add interval detail if present
+                    intervals = seg.get('intervals')
+                    if intervals:
+                        reps = intervals.get('reps', '')
+                        interval_m = intervals.get('interval_m', '')
+                        recovery = intervals.get('recovery_min')
+                        detail = f"{reps}x{interval_m}"
+                        if recovery:
+                            detail += f" ({recovery}min rec.)"
+                        seg_name = f"{seg_name} - {detail}"
+
+                    seg_data.append([
+                        Paragraph(seg_name, self.table_cell_style),
+                        Paragraph(seg_dist, self.table_cell_style),
+                        Paragraph(seg_pace, self.table_cell_style),
+                        Paragraph(seg_zone, self.table_cell_style),
+                    ])
+
+                seg_table = Table(seg_data, colWidths=[5.5 * cm, 2.5 * cm, 3.5 * cm, 2.5 * cm])
+                seg_table.setStyle(TableStyle([
+                    ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#764ba2')),
+                    ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+                    ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+                    ('FONTSIZE', (0, 0), (-1, 0), 8),
+                    ('FONTNAME', (0, 1), (-1, -1), 'Helvetica'),
+                    ('FONTSIZE', (0, 1), (-1, -1), 8),
+                    ('GRID', (0, 0), (-1, -1), 0.5, colors.HexColor('#dee2e6')),
+                    ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+                    ('LEFTPADDING', (0, 0), (-1, -1), 4),
+                    ('RIGHTPADDING', (0, 0), (-1, -1), 4),
+                    ('TOPPADDING', (0, 0), (-1, -1), 4),
+                    ('BOTTOMPADDING', (0, 0), (-1, -1), 4),
+                ]))
+                story.append(seg_table)
+
+            story.append(Spacer(1, 0.4 * cm))
+
     def _add_nutrition_guidance(self, story: List):
         """Add comprehensive nutrition guidance section"""
         story.append(Paragraph("🥗 Complete Nutrition Guide for Runners", self.section_style))

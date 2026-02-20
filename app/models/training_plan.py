@@ -1,5 +1,5 @@
-from sqlalchemy import Column, String, Float, Integer, DateTime, ForeignKey, Text, Index
-from datetime import datetime
+from sqlalchemy import Column, String, Float, Integer, DateTime, ForeignKey, Text, Index, Boolean
+from datetime import datetime, timezone
 import uuid
 
 from app.models.base import Base
@@ -18,7 +18,7 @@ class TrainingPlan(Base):
     target_distance = Column(String)  # in km as string (e.g., "30.0" for Trail Running)
     weeks_duration = Column(Integer)
     max_runs_per_week = Column(Integer, default=4)
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
     plan_data = Column(Text)  # JSON string of the generated plan
     nutrition_plan_data = Column(Text)  # JSON string of the nutrition plan
 
@@ -33,3 +33,6 @@ class TrainingPlan(Base):
     max_heart_rate = Column(Integer, nullable=True)  # Maximum heart rate in BPM
     resting_heart_rate = Column(Integer, nullable=True)  # Resting heart rate in BPM (for future Karvonen method)
     hr_zone_method = Column(String, default="simple_percent")  # HR zone calculation method
+    start_date = Column(DateTime, nullable=True)
+    # Tracks the last Strava-fitness multiplier applied so re-runs can reverse it
+    strava_adapted_multiplier = Column(Float, nullable=True)

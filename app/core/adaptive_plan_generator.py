@@ -2,7 +2,7 @@
 
 import logging
 import random
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import List, Dict, Any, Optional
 from sqlalchemy.orm import Session
 
@@ -33,10 +33,9 @@ class AdaptivePlanGenerator:
                 - preferred_workout_types: Most frequent workout types
         """
         from sqlalchemy import func, desc
-        from datetime import datetime, timedelta
 
         # Get runs from the last 8 weeks
-        eight_weeks_ago = datetime.utcnow() - timedelta(weeks=8)
+        eight_weeks_ago = datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(weeks=8)
         recent_runs = (
             db.query(RunLog)
             .filter(RunLog.user_id == user_id, RunLog.date >= eight_weeks_ago)

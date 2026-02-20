@@ -457,7 +457,7 @@
                 {% if analytics_data.pace_evolution.avg_pace %}
                 <div class="chart-summary-row">
                     <span class="chart-summary-label">Average Pace</span>
-                    <span class="chart-summary-value">{{ "%d:%02d"|format(analytics_data.pace_evolution.avg_pace|int, ((analytics_data.pace_evolution.avg_pace - (analytics_data.pace_evolution.avg_pace|int)) * 60)|int) }} min/km</span>
+                    <span class="chart-summary-value">{{ analytics_data.pace_evolution.avg_pace|format_pace }}</span>
                 </div>
                 {% endif %}
             </div>

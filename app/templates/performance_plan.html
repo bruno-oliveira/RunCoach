@@ -13,6 +13,120 @@
         <p>Speed-focused training for {{ distance_name }}</p>
     </div>
 
+    <!-- Today's Workout Hero Card -->
+    {% if today_workout %}
+    <div class="today-hero-card">
+        {% if today_workout.status == 'workout' %}
+        <div class="today-header">
+            <div class="today-badge">TODAY'S WORKOUT</div>
+            <div class="today-type">{{ today_workout.workout.type|title }}</div>
+        </div>
+        <div class="today-stats">
+            <div class="today-stat">
+                <span class="today-stat-value">{{ '{:.1f}'.format(today_workout.workout.distance) }}</span>
+                <span class="today-stat-label">km</span>
+            </div>
+            <div class="today-stat">
+                <span class="today-stat-value">{{ today_workout.workout.target_pace_formatted }}</span>
+                <span class="today-stat-label">pace</span>
+            </div>
+            {% if today_workout.workout.total_duration_est_min %}
+            <div class="today-stat">
+                <span class="today-stat-value">{{ today_workout.workout.total_duration_est_min }}</span>
+                <span class="today-stat-label">min</span>
+            </div>
+            {% endif %}
+        </div>
+        <div class="today-description">{{ today_workout.workout.description }}</div>
+        {% if today_workout.workout.segments %}
+        <div class="today-segments">
+            {% for seg in today_workout.workout.segments %}
+            <div class="segment-row">
+                <div class="segment-type segment-type-{{ seg.type }}">{{ seg.name }}</div>
+                <div class="segment-details">
+                    <span class="segment-distance">{{ '{:.1f}'.format(seg.distance_km) }}km</span>
+                    <span class="segment-pace">{{ seg.pace_formatted }}</span>
+                    {% if seg.zone_label %}
+                    <span class="segment-zone">{{ seg.zone_label }}</span>
+                    {% endif %}
+                </div>
+                {% if seg.intervals %}
+                <div class="segment-intervals">
+                    {{ seg.intervals.reps }}x{{ seg.intervals.interval_m }}m
+                    {% if seg.intervals.recovery_min %}({{ seg.intervals.recovery_min }}min recovery){% endif %}
+                </div>
+                {% endif %}
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+        {% if not today_workout.already_logged %}
+        <button class="btn-log-run" onclick="openLogRunModal()">Log This Run</button>
+        {% else %}
+        <div class="already-logged">Workout logged! Great job!</div>
+        {% endif %}
+        {% elif today_workout.status == 'rest_day' %}
+        <div class="today-header">
+            <div class="today-badge">TODAY</div>
+            <div class="today-type">Rest Day</div>
+        </div>
+        <div class="today-description">Recovery is part of training. Take it easy today.</div>
+        {% elif today_workout.status == 'completed' %}
+        <div class="today-header">
+            <div class="today-badge">PLAN COMPLETE</div>
+        </div>
+        <div class="today-description">Congratulations! You've completed your training plan. Time to race!</div>
+        {% elif today_workout.status == 'not_started' %}
+        <div class="today-header">
+            <div class="today-badge">COMING SOON</div>
+        </div>
+        <div class="today-description">Your plan hasn't started yet. Get ready!</div>
+        {% endif %}
+    </div>
+    {% endif %}
+
+    <!-- Progress Dashboard -->
+    {% if progress_data %}
+    <div class="progress-dashboard">
+        <h2>Progress Dashboard</h2>
+        <div class="progress-stats-row">
+            <div class="progress-stat">
+                <span class="progress-stat-value">{{ progress_data.completion_pct }}%</span>
+                <span class="progress-stat-label">Completed</span>
+            </div>
+            <div class="progress-stat">
+                <span class="progress-stat-value">{{ progress_data.streak_days }}</span>
+                <span class="progress-stat-label">Day Streak</span>
+            </div>
+            <div class="progress-stat">
+                <span class="progress-stat-value">{{ '{:.1f}'.format(progress_data.total_km_logged) }}</span>
+                <span class="progress-stat-label">Total km</span>
+            </div>
+            <div class="progress-stat">
+                <span class="progress-stat-value">{{ progress_data.completed_count }}</span>
+                <span class="progress-stat-label">Runs Logged</span>
+            </div>
+        </div>
+        {% if progress_data.completed_count > 0 %}
+        <div class="charts-grid">
+            <div class="chart-container">
+                <canvas id="weeklyMileageChart"></canvas>
+            </div>
+            <div class="chart-container">
+                <canvas id="paceTrendChart"></canvas>
+            </div>
+        </div>
+        <div class="chart-container chart-container-small">
+            <canvas id="completionDonutChart"></canvas>
+        </div>
+        {% else %}
+        <div class="empty-progress">
+            <p>No runs logged yet. Complete your first workout to see your progress!</p>
+        </div>
+        {% endif %}
+    </div>
+    {% endif %}
+
     <div class="plan-summary">
         <div class="summary-grid">
             <div class="summary-item">
@@ -21,11 +135,11 @@
             </div>
             <div class="summary-item">
                 <strong>⏱️ Current Pace</strong>
-                {{ '{:d}:{:02d}/km'.format(plan.current_pace|int, ((plan.current_pace % 1) * 60)|int) }}
+                {{ plan.current_pace|format_pace }}
             </div>
             <div class="summary-item">
                 <strong>🎯 Goal Pace</strong>
-                {{ '{:d}:{:02d}/km'.format(plan.goal_pace|int, ((plan.goal_pace % 1) * 60)|int) }}
+                {{ plan.goal_pace|format_pace }}
             </div>
             <div class="summary-item">
                 <strong>📈 Improvement</strong>
@@ -226,13 +340,88 @@
             <li><strong>Listen to your body:</strong> Persistent fatigue or pain means you need extra recovery, not more intensity.</li>
         </ul>
     </div>
+
+    <!-- Log Run Modal -->
+    <div id="logRunModal" class="modal" style="display:none;">
+        <div class="modal-content">
+            <span class="modal-close" onclick="closeLogRunModal()">&times;</span>
+            <h3>Log Your Run</h3>
+            <form id="logRunForm" onsubmit="submitRunLog(event)">
+                <div class="form-group">
+                    <label>Distance (km)</label>
+                    <input type="number" id="logDistance" step="0.1" required
+                        {% if today_workout and today_workout.status == 'workout' %}value="{{ '{:.1f}'.format(today_workout.workout.distance) }}"{% endif %}>
+                </div>
+                <div class="form-group">
+                    <label>Duration (minutes)</label>
+                    <input type="number" id="logDuration" step="1" required>
+                </div>
+                <div class="form-group">
+                    <label>Average Heart Rate (optional)</label>
+                    <input type="number" id="logHeartRate">
+                </div>
+                <div class="form-group">
+                    <label>Perceived Effort (1-10)</label>
+                    <input type="number" id="logEffort" min="1" max="10">
+                </div>
+                <div class="form-group">
+                    <label>Notes (optional)</label>
+                    <textarea id="logNotes" rows="2"></textarea>
+                </div>
+                <button type="submit" class="btn btn-primary">Save Run</button>
+            </form>
+        </div>
+    </div>
 </div>
 
 <style>
 /* Print styles */
 @media print {
-    .action-buttons, nav, .tips-section { display: none; }
+    .action-buttons, nav, .tips-section, .today-hero-card, .progress-dashboard { display: none; }
     .week-card { page-break-inside: avoid; }
 }
 </style>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+{% if progress_data %}
+<script>
+    window.PROGRESS_DATA = {{ progress_data | tojson }};
+</script>
+{% endif %}
+<script src="/static/js/performance_dashboard.js"></script>
+<script>
+function openLogRunModal() {
+    document.getElementById('logRunModal').style.display = 'flex';
+}
+function closeLogRunModal() {
+    document.getElementById('logRunModal').style.display = 'none';
+}
+async function submitRunLog(e) {
+    e.preventDefault();
+    const data = {
+        distance_km: parseFloat(document.getElementById('logDistance').value),
+        duration_minutes: parseFloat(document.getElementById('logDuration').value),
+        avg_heart_rate: document.getElementById('logHeartRate').value ? parseInt(document.getElementById('logHeartRate').value) : null,
+        perceived_effort: document.getElementById('logEffort').value ? parseInt(document.getElementById('logEffort').value) : null,
+        notes: document.getElementById('logNotes').value || null,
+        training_plan_id: '{{ plan.id }}'
+    };
+    try {
+        const resp = await fetch('/api/runs', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify(data)
+        });
+        if (resp.ok) {
+            closeLogRunModal();
+            ApiClient.showSuccess('Run logged successfully!');
+            setTimeout(() => location.reload(), 1500);
+        } else {
+            ApiClient.showError('Failed to log run. Please try again.');
+        }
+    } catch (err) {
+        ApiClient.showError('Error: ' + err.message);
+    }
+}
+</script>
 {% endblock %}

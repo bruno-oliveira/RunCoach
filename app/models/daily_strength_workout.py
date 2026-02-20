@@ -1,5 +1,5 @@
 from sqlalchemy import Column, String, Text, Integer, DateTime, ForeignKey
-from datetime import datetime
+from datetime import datetime, timezone
 import uuid
 
 from app.models.base import Base
@@ -29,5 +29,5 @@ class DailyStrengthWorkout(Base):
     secondary_focus = Column(String)
     difficulty = Column(String, default="beginner")  # "beginner", "intermediate", "advanced"
     
-    created_at = Column(DateTime, default=datetime.utcnow)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
+    updated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None), onupdate=lambda: datetime.now(timezone.utc).replace(tzinfo=None))

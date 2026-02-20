@@ -1,196 +1,237 @@
 {% extends "base.html" %}
 
-{% block title %}RunCoach - Personalized Running Plans{% endblock %}
+{% block title %}RunCoach — Your Personal Running Plan{% endblock %}
 
 {% block styles %}
 <link rel="stylesheet" href="/static/css/index.css">
 {% endblock %}
 
 {% block content %}
-<div class="container">
-    <div class="header">
-        <h1>🏃‍♂️ RunCoach</h1>
-        <p>Generate personalized running training plans tailored to your goals</p>
+<div class="hero">
+    <div class="hero-bg" aria-hidden="true">
+        <div class="hero-orb hero-orb-1"></div>
+        <div class="hero-orb hero-orb-2"></div>
+        <div class="hero-orb hero-orb-3"></div>
     </div>
 
-    
-    
-    <div class="form-card">
-        {% if error %}
-        <div class="error-container" style="margin-bottom: 1rem;">
-            {% if error_type == 'insufficient_time' %}
-                <div class="error-card time-error" style="background: #fff3e0; color: #e65100; padding: 1rem; border-radius: 8px; border-left: 4px solid #ff9800;">
-                    <div style="display: flex; align-items: center; margin-bottom: 0.5rem;">
-                        <span style="font-size: 1.2rem; margin-right: 0.5rem;">⏰</span>
-                        <strong style="color: #e65100;">Training Duration Too Short</strong>
+    <div class="container">
+        <div class="hero-layout">
+            <!-- Left: headline + features -->
+            <div class="hero-content stagger">
+                <div class="hero-badge">
+                    <span class="hero-badge-dot"></span>
+                    Free personalized training
+                </div>
+
+                <h1 class="hero-title">
+                    Train smarter.<br>
+                    <span class="hero-title-accent">Run stronger.</span>
+                </h1>
+
+                <p class="hero-subtitle">
+                    Get a training plan built around your fitness level, race goal, and schedule. Backed by proven progression principles.
+                </p>
+
+                <div class="hero-features">
+                    <div class="hero-feature">
+                        <div class="hero-feature-icon">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+                        </div>
+                        <span>Progressive weekly mileage</span>
                     </div>
-                    <div style="font-size: 0.95rem; line-height: 1.4;">{{ error }}</div>
-                    {% if suggestion %}
-                    <div style="margin-top: 0.5rem; font-size: 0.9rem; font-style: italic; color: #f57c00;">
-                        💡 {{ suggestion }}
+                    <div class="hero-feature">
+                        <div class="hero-feature-icon">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+                        </div>
+                        <span>Nutrition & strength guidance</span>
+                    </div>
+                    <div class="hero-feature">
+                        <div class="hero-feature-icon">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+                        </div>
+                        <span>Adaptive to your performance</span>
+                    </div>
+                    <div class="hero-feature">
+                        <div class="hero-feature-icon">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+                        </div>
+                        <span>Download as PDF</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right: form card -->
+            <div class="hero-form-wrap">
+                <div class="form-card">
+                    <div class="form-card-header">
+                        <h2 class="form-card-title">Create your plan</h2>
+                        <p class="form-card-desc">Fill in your details to get started</p>
+                    </div>
+
+                    {% if error %}
+                    <div class="form-alert">
+                        {% if error_type == 'insufficient_time' %}
+                        <div class="alert alert-warning">
+                            <span class="alert-icon">
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                            </span>
+                            <div class="alert-content">
+                                <div class="alert-title">Training Duration Too Short</div>
+                                <div class="alert-message">{{ error }}</div>
+                                {% if suggestion %}
+                                <div class="alert-message" style="margin-top:4px; font-style: italic;">{{ suggestion }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        {% elif error_type == 'inadequate_base' %}
+                        <div class="alert alert-info">
+                            <span class="alert-icon">
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+                            </span>
+                            <div class="alert-content">
+                                <div class="alert-title">Build Your Base First</div>
+                                <div class="alert-message">{{ error }}</div>
+                                {% if suggestion %}
+                                <div class="alert-message" style="margin-top:4px; font-style: italic;">{{ suggestion }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        {% elif error_type == 'validation' %}
+                        <div class="alert alert-warning">
+                            <span class="alert-icon">
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                            </span>
+                            <div class="alert-content">
+                                <div class="alert-title">Please Check Your Input</div>
+                                <div class="alert-message">{{ error }}</div>
+                            </div>
+                        </div>
+                        {% else %}
+                        <div class="alert alert-error">
+                            <span class="alert-icon">
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
+                            </span>
+                            <div class="alert-content">
+                                <div class="alert-title">Something went wrong</div>
+                                <div class="alert-message">{{ error }}</div>
+                            </div>
+                        </div>
+                        {% endif %}
                     </div>
                     {% endif %}
-                </div>
-            {% elif error_type == 'inadequate_base' %}
-                <div class="error-card base-error" style="background: #e8f5e8; color: #2e7d32; padding: 1rem; border-radius: 8px; border-left: 4px solid #4caf50;">
-                    <div style="display: flex; align-items: center; margin-bottom: 0.5rem;">
-                        <span style="font-size: 1.2rem; margin-right: 0.5rem;">🏃</span>
-                        <strong style="color: #2e7d32;">Build Your Running Base First</strong>
-                    </div>
-                    <div style="font-size: 0.95rem; line-height: 1.4;">{{ error }}</div>
-                    {% if suggestion %}
-                    <div style="margin-top: 0.5rem; font-size: 0.9rem; font-style: italic; color: #388e3c;">
-                        💡 {{ suggestion }}
-                    </div>
-                    {% endif %}
-                </div>
-            {% elif error_type == 'validation' %}
-                <div class="error-card validation-error" style="background: #fff8e1; color: #f57f17; padding: 1rem; border-radius: 8px; border-left: 4px solid #ffc107;">
-                    <div style="display: flex; align-items: center; margin-bottom: 0.5rem;">
-                        <span style="font-size: 1.2rem; margin-right: 0.5rem;">✓</span>
-                        <strong style="color: #f57f17;">Please Check Your Input</strong>
-                    </div>
-                    <div style="font-size: 0.95rem; line-height: 1.4;">{{ error }}</div>
-                </div>
-            {% else %}
-                <div class="error-card general-error" style="background: #ffebee; color: #c62828; padding: 1rem; border-radius: 8px; border-left: 4px solid #f44336;">
-                    <div style="display: flex; align-items: center; margin-bottom: 0.5rem;">
-                        <span style="font-size: 1.2rem; margin-right: 0.5rem;">⚠️</span>
-                        <strong style="color: #c62828;">Error</strong>
-                    </div>
-                    <div style="font-size: 0.95rem; line-height: 1.4;">{{ error }}</div>
-                </div>
-             {% endif %}
-         </div>
-         {% endif %}
 
-        
+                    <form method="post" action="/generate-plan" class="plan-form">
+                        <div class="form-group">
+                            <label for="current_km" class="form-label">Weekly mileage</label>
+                            <div class="input-with-unit">
+                                <input type="number" id="current_km" name="current_km" class="form-input" step="0.1" min="0" max="200" required placeholder="20">
+                                <span class="input-unit">km</span>
+                            </div>
+                            <span class="form-help">Your current weekly running distance</span>
+                        </div>
 
-        <form method="post" action="/generate-plan">
-            <div class="form-group">
-                <label for="current_km">Current Weekly Mileage (km)</label>
-                <input type="number" id="current_km" name="current_km" step="0.1" min="0" max="200" required placeholder="e.g., 20">
-                <small style="color: #666; font-size: 0.9rem;">Your current weekly running distance</small>
-            </div>
-            
-            <div class="form-row">
-                <div class="form-group">
-                    <label for="target_distance">Target Distance</label>
-                    <select id="target_distance" name="target_distance" required>
-                        <option value="">Select distance</option>
-                        <option value="5">5K</option>
-                        <option value="10">10K</option>
-                        <option value="21.1">Half Marathon (21.1km)</option>
-                        <option value="42.2">Marathon (42.2km)</option>
-                        <option value="30">🏔️ Trail Running</option>
-                    </select>
-                    <small style="color: #666; font-size: 0.9rem;">Your race goal distance or trail running focus</small>
+                        <div class="form-row-2">
+                            <div class="form-group">
+                                <label for="target_distance" class="form-label">Race goal</label>
+                                <div class="select-wrap">
+                                    <select id="target_distance" name="target_distance" class="form-select" required>
+                                        <option value="">Select distance</option>
+                                        <option value="5">5K</option>
+                                        <option value="10">10K</option>
+                                        <option value="21.1">Half Marathon</option>
+                                        <option value="42.2">Marathon</option>
+                                        <option value="30">Trail Running</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="weeks" class="form-label">Duration</label>
+                                <div class="input-with-unit">
+                                    <input type="number" id="weeks" name="weeks" class="form-input" min="4" max="24" required placeholder="12">
+                                    <span class="input-unit">weeks</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="max_runs_per_week" class="form-label">Runs per week</label>
+                            <div class="select-wrap">
+                                <select id="max_runs_per_week" name="max_runs_per_week" class="form-select" required>
+                                    <option value="3">3 runs &mdash; Beginner</option>
+                                    <option value="4" selected>4 runs &mdash; Recommended</option>
+                                    <option value="5">5 runs &mdash; Intermediate</option>
+                                    <option value="6">6 runs &mdash; Advanced</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <button type="submit" class="btn btn-accent btn-lg btn-full form-submit">
+                            Generate my plan
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+                        </button>
+                    </form>
                 </div>
-                
-                <div class="form-group">
-                    <label for="weeks">Training Duration (weeks)</label>
-                    <input type="number" id="weeks" name="weeks" min="4" max="24" required placeholder="e.g., 12">
-                    <small style="color: #666; font-size: 0.9rem;">Length of training plan</small>
-                </div>
-            </div>
-            
-            <div class="form-group">
-                <label for="max_runs_per_week">Maximum Runs Per Week</label>
-                <select id="max_runs_per_week" name="max_runs_per_week" required>
-                    <option value="3">3 runs (Beginner)</option>
-                    <option value="4" selected>4 runs (Recommended)</option>
-                    <option value="5">5 runs (Intermediate)</option>
-                    <option value="6">6 runs (Advanced)</option>
-                </select>
-                <small style="color: #666; font-size: 0.9rem;">How many days per week can you run?</small>
-            </div>
-            
-            <button type="submit" class="btn">Generate My Training Plan</button>
-        </form>
-    </div>
-    
-    <div class="features">
-        <h3>What You'll Get</h3>
-        <div class="feature-grid">
-            <div class="feature-item">
-                <strong>📋 Custom Schedule</strong>
-                <p>Weekly training plans tailored to your fitness level</p>
-            </div>
-            <div class="feature-item">
-                <strong>🏃‍♂️ Progressive Workouts</strong>
-                <p>Build mileage safely with proven training principles</p>
-            </div>
-            <div class="feature-item">
-                <strong>💪 Strength Training</strong>
-                <p>Integrated exercises to prevent injuries</p>
-            </div>
-            <div class="feature-item">
-                <strong>📄 PDF Export</strong>
-                <p>Download professional training plans</p>
             </div>
         </div>
     </div>
 </div>
+
+<!-- Social proof / stats strip -->
+<section class="stats-strip">
+    <div class="container">
+        <div class="stats-grid stagger">
+            <div class="stat-card">
+                <span class="stat-card-value">5K &ndash; 42K</span>
+                <span class="stat-card-label">Supported distances</span>
+            </div>
+            <div class="stat-card">
+                <span class="stat-card-value">4 &ndash; 24</span>
+                <span class="stat-card-label">Weeks of structured training</span>
+            </div>
+            <div class="stat-card">
+                <span class="stat-card-value">Adaptive</span>
+                <span class="stat-card-label">Plans adjust to your progress</span>
+            </div>
+        </div>
+    </div>
+</section>
 {% endblock %}
 
 {% block scripts %}
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    const form = document.querySelector('form[action="/generate-plan"]');
-    const submitBtn = form?.querySelector('button[type="submit"]');
-    
+    const form = document.querySelector('.plan-form');
+    const submitBtn = form?.querySelector('.form-submit');
+
     if (form && submitBtn) {
-        // Ensure form submission works on all devices
-        form.addEventListener('submit', function(e) {
-            // Add visual feedback
-            if (submitBtn) {
-                submitBtn.disabled = true;
-                submitBtn.textContent = 'Generating...';
-                submitBtn.style.opacity = '0.8';
-            }
-            
-            // Let the form submit normally
-            return true;
-        });
-        
-        // Add touch event support for mobile
-        submitBtn.addEventListener('touchend', function(e) {
-            e.preventDefault();
-            if (!submitBtn.disabled) {
-                form.requestSubmit();
-            }
-        }, { passive: false });
-        
-        // Validate form on submit
         form.addEventListener('submit', function(e) {
             const currentKm = document.getElementById('current_km');
             const targetDistance = document.getElementById('target_distance');
             const weeks = document.getElementById('weeks');
-            
+
             if (!currentKm.value || parseFloat(currentKm.value) < 0) {
                 e.preventDefault();
-                alert('Please enter a valid current weekly mileage');
                 currentKm.focus();
                 return false;
             }
-            
             if (!targetDistance.value) {
                 e.preventDefault();
-                alert('Please select a target distance');
                 targetDistance.focus();
                 return false;
             }
-            
             if (!weeks.value || parseInt(weeks.value) < 4) {
                 e.preventDefault();
-                alert('Please enter a valid training duration (minimum 4 weeks)');
                 weeks.focus();
                 return false;
             }
-            
-            return true;
+
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<span class="spinner spinner-sm"></span> Generating\u2026';
         });
     }
 });
 </script>
 {% endblock %}
+
+{% block footer %}{% endblock %}

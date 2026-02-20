@@ -9,7 +9,8 @@ from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
 
 from app.config import settings
-from app.dependencies import get_db, get_optional_user
+from app.dependencies import get_current_user, get_db, get_optional_user
+from app.models import User
 from app.meal_database import get_meal_database
 from app.models import FavoriteRecipe
 
@@ -25,13 +26,22 @@ async def recipes_page(
     request: Request,
     current_user = Depends(get_optional_user),
 ) -> HTMLResponse:
-    """Recipe search and browse page."""
+    """Render the recipe search and browse page.
+
+    Args:
+        request: The incoming HTTP request.
+        current_user: The currently authenticated user, if any.
+
+    Returns:
+        HTMLResponse with the rendered recipes template.
+    """
     return templates.TemplateResponse(
         "recipes.html",
         {
             "request": request,
             "user": current_user,
             "google_client_id": settings.google_client_id,
+            "current_page": "recipes",
         },
     )
 
@@ -43,17 +53,30 @@ async def recipe_detail(
     db: Session = Depends(get_db),
     current_user = Depends(get_optional_user),
 ) -> HTMLResponse:
-    """Recipe detail page with shareable URL."""
+    """Render a single recipe detail page with a shareable URL.
+
+    Args:
+        request: The incoming HTTP request.
+        recipe_name: URL-slug of the recipe (e.g. "chicken-stir-fry").
+        db: Database session.
+        current_user: The currently authenticated user, if any.
+
+    Returns:
+        HTMLResponse with the rendered recipe detail template.
+
+    Raises:
+        HTTPException: 404 if the recipe is not found.
+    """
     # Find recipe by name (case-insensitive search)
     recipe = None
     for meal in meal_db.meals:
         if meal.get("name", "").lower().replace(" ", "-") == recipe_name.lower():
             recipe = meal
             break
-    
+
     if not recipe:
         raise HTTPException(status_code=404, detail="Recipe not found")
-    
+
     # Check if recipe is in user's favorites
     is_favorite = False
     favorite_id = None
@@ -69,7 +92,7 @@ async def recipe_detail(
         if existing:
             is_favorite = True
             favorite_id = existing.id
-    
+
     return templates.TemplateResponse(
         "recipe_detail.html",
         {
@@ -79,6 +102,7 @@ async def recipe_detail(
             "is_favorite": is_favorite,
             "favorite_id": favorite_id,
             "google_client_id": settings.google_client_id,
+            "current_page": "recipes",
         },
     )
 
@@ -93,7 +117,20 @@ async def search_recipes(
     page: int = 1,
     page_size: int = 50,
 ):
-    """Search recipes from meals database with pagination and dietary tag filtering."""
+    """Search and filter recipes from the meals database with pagination.
+
+    Args:
+        query: Free-text search term matched against recipe names.
+        meal_type: Filter by meal type (e.g. "breakfast", "lunch", "dinner", "snacks").
+        min_protein: Minimum protein in grams.
+        max_calories: Maximum calories per serving.
+        dietary_tags: Comma-separated dietary tags (e.g. "vegetarian,gluten-free").
+        page: Page number (1-indexed).
+        page_size: Number of recipes per page.
+
+    Returns:
+        Dictionary with paginated recipe list, total count, and page metadata.
+    """
     all_recipes = meal_db.meals
     
     # Parse dietary tags from comma-separated string
@@ -133,7 +170,15 @@ async def get_favorites(
     db: Session = Depends(get_db),
     current_user = Depends(get_optional_user),
 ):
-    """Get user's favorite recipes."""
+    """Get the current user's favorite recipes.
+
+    Args:
+        db: Database session.
+        current_user: The currently authenticated user, if any.
+
+    Returns:
+        Dictionary with a list of favorited recipe data objects.
+    """
     if not current_user:
         return {"recipes": []}
     
@@ -160,12 +205,18 @@ async def get_favorites(
 async def add_favorite(
     recipe_data: dict,
     db: Session = Depends(get_db),
-    current_user = Depends(get_optional_user),
+    current_user: User = Depends(get_current_user),
 ):
-    """Add a recipe to user's favorites."""
-    if not current_user:
-        raise HTTPException(status_code=401, detail="Authentication required")
-    
+    """Add a recipe to the current user's favorites.
+
+    Args:
+        recipe_data: Dictionary with recipe name, meal_type, and full recipe data.
+        db: Database session.
+        current_user: The authenticated user (required).
+
+    Returns:
+        Dictionary with success message and favorite ID, or already_exists flag.
+    """
     recipe_name = recipe_data.get("name")
     meal_type = recipe_data.get("meal_type")
     
@@ -198,12 +249,21 @@ async def add_favorite(
 async def remove_favorite(
     favorite_id: int,
     db: Session = Depends(get_db),
-    current_user = Depends(get_optional_user),
+    current_user: User = Depends(get_current_user),
 ):
-    """Remove a recipe from user's favorites."""
-    if not current_user:
-        raise HTTPException(status_code=401, detail="Authentication required")
-    
+    """Remove a recipe from the current user's favorites.
+
+    Args:
+        favorite_id: ID of the favorite record to remove.
+        db: Database session.
+        current_user: The authenticated user (required).
+
+    Returns:
+        Dictionary with success message.
+
+    Raises:
+        HTTPException: 404 if the favorite is not found or doesn't belong to the user.
+    """
     favorite = (
         db.query(FavoriteRecipe)
         .filter(

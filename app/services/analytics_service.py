@@ -12,6 +12,8 @@ import matplotlib
 import matplotlib.pyplot as plt
 import numpy as np
 
+from app.utils import format_pace_bare
+
 matplotlib.use("Agg")
 
 logger = logging.getLogger(__name__)
@@ -436,9 +438,7 @@ class AnalyticsService:
     @staticmethod
     def _format_pace(pace_min_km: float) -> str:
         """Format pace as mm:ss."""
-        minutes = int(pace_min_km)
-        seconds = int((pace_min_km - minutes) * 60)
-        return f"{minutes}:{seconds:02d}"
+        return format_pace_bare(pace_min_km)
 
     @staticmethod
     def compare_analytics(analytics_list: List[Dict[str, Any]], names: List[str]) -> Dict[str, Any]:

@@ -9,6 +9,20 @@
 let currentWeek = 1;
 let currentWorkoutId = null;
 
+/**
+ * Build fetch headers including Authorization only when a real token exists.
+ * The app uses httponly cookies as the primary auth mechanism; localStorage
+ * may not hold a token at all. Sending "Bearer null" breaks cookie fallback.
+ */
+function authHeaders(extra) {
+    const headers = Object.assign({}, extra);
+    const token = localStorage.getItem('access_token');
+    if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+    }
+    return headers;
+}
+
 // Global functions called from HTML
 window.adjustIntensity = function(intensity) {
     submitCustomization('intensity', intensity);
@@ -229,7 +243,7 @@ window.submitRunLog = async function(event) {
     const durationInput = document.getElementById('duration_minutes');
     
     if (!distanceInput || !durationInput) {
-        alert('Error: Required form fields not found');
+        ApiClient.showError('Required form fields not found.');
         return;
     }
     
@@ -237,7 +251,7 @@ window.submitRunLog = async function(event) {
     const duration = parseFloat(durationInput.value);
     
     if (isNaN(distance) || distance <= 0) {
-        alert('Please enter a valid distance');
+        ApiClient.showWarning('Please enter a valid distance.');
         if (distanceInput) {
             distanceInput.focus();
             distanceInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -246,7 +260,7 @@ window.submitRunLog = async function(event) {
     }
     
     if (isNaN(duration) || duration <= 0) {
-        alert('Please enter a valid duration');
+        ApiClient.showWarning('Please enter a valid duration.');
         if (durationInput) {
             durationInput.focus();
             durationInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -255,12 +269,12 @@ window.submitRunLog = async function(event) {
     }
     
     if (!window.APP_CTX || !window.APP_CTX.training_plan_id) {
-        alert('Error: Plan context not loaded. Please refresh the page.');
+        ApiClient.showError('Plan context not loaded. Please refresh the page.');
         return;
     }
     
     if (!currentWorkoutId) {
-        alert('Error: Workout not selected. Please try again.');
+        ApiClient.showError('Workout not selected. Please try again.');
         return;
     }
     
@@ -289,30 +303,22 @@ window.submitRunLog = async function(event) {
     try {
         const response = await fetch('/api/runs', {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${localStorage.getItem('access_token')}`
-            },
+            headers: authHeaders({ 'Content-Type': 'application/json' }),
+            credentials: 'same-origin',
             body: JSON.stringify(formData)
         });
         
         if (response.ok) {
             closeLogModal();
-            
-            // Show success message with adaptation check option
-            const adaptCheck = confirm('Run logged successfully! 🎉\n\nWould you like to check if your plan should be adapted based on your performance?');
-            if (adaptCheck) {
-                await checkForAdaptation();
-            } else {
-                location.reload();
-            }
+            ApiClient.showSuccess('Run logged successfully!');
+            setTimeout(() => location.reload(), 1500);
         } else {
             const error = await response.json();
-            alert('Error logging run: ' + (error.detail || 'Unknown error'));
+            ApiClient.showError('Error logging run: ' + (error.detail || 'Unknown error'));
         }
     } catch (error) {
         console.error('Error logging run:', error);
-        alert('Error logging run: ' + error.message);
+        ApiClient.showError('Error logging run: ' + error.message);
     } finally {
         // Reset button state
         if (submitBtn) {
@@ -327,27 +333,25 @@ window.submitRunLog = async function(event) {
 window.checkForAdaptation = async function() {
     try {
         const response = await fetch(`/api/plan/${window.APP_CTX.plan_id}/performance`, {
-            headers: {
-                'Authorization': `Bearer ${localStorage.getItem('access_token')}`
-            }
+            headers: authHeaders(),
+            credentials: 'same-origin'
         });
         
         if (response.ok) {
             const data = await response.json();
             
             if (data.should_adapt) {
-                const msg = `Your performance suggests adapting your plan:\n\n${data.adaptation_reason}\n\nWould you like to adapt future weeks automatically?`;
-                if (confirm(msg)) {
-                    await adaptPlan();
-                }
+                ApiClient.showInfo('Plan adaptation recommended: ' + data.adaptation_reason);
+                // Show the adaptation banner for user to take action
+                showAdaptationBanner(data.adaptation_reason);
             } else {
-                alert(`Your plan is working well!\n\n${data.adaptation_reason}\n\nKeep up the great work! 🎉`);
+                ApiClient.showSuccess('Your plan is working well! Keep it up!');
             }
         } else {
-            alert('Unable to check adaptation. Please make sure you are logged in.');
+            ApiClient.showError('Unable to check adaptation. Please make sure you are logged in.');
         }
     } catch (error) {
-        alert('Error checking adaptation: ' + error.message);
+        ApiClient.showError('Error checking adaptation: ' + error.message);
     }
 };
 
@@ -358,29 +362,131 @@ window.adaptPlan = async function() {
 
         const response = await fetch(`/api/plan/${window.APP_CTX.plan_id}/adapt?current_week=${currentWeek}`, {
             method: 'POST',
-            headers: {
-                'Authorization': `Bearer ${localStorage.getItem('access_token')}`
-            }
+            headers: authHeaders(),
+            credentials: 'same-origin'
         });
 
         if (response.ok) {
             const result = await response.json();
 
             if (result.adapted) {
-                let msg = `Plan adapted successfully! 🎉\n\n${result.reason}\n\nChanges made:\n`;
-                result.changes.forEach(change => {
-                    msg += `\nWeek ${change.week}: ${change.workouts_adjusted.length} workouts adjusted (Total: ${change.new_total_km}km)`;
-                });
-                alert(msg);
-                location.reload(); // Reload to show updated plan
+                ApiClient.showSuccess('Plan adapted successfully! Reloading...');
+                setTimeout(() => location.reload(), 1500);
             } else {
-                alert(`No adaptation needed:\n${result.reason}`);
+                ApiClient.showInfo('No adaptation needed: ' + result.reason);
             }
         } else {
-            alert('Error adapting plan. Please try again.');
+            ApiClient.showError('Error adapting plan. Please try again.');
         }
     } catch (error) {
-        alert('Error adapting plan: ' + error.message);
+        ApiClient.showError('Error adapting plan: ' + error.message);
+    }
+};
+
+// Show an inline banner below the Strava card instead of a native alert
+function showStravaAdaptMessage(message, isError) {
+    const bannerId = 'strava-adapt-message';
+    let banner = document.getElementById(bannerId);
+    if (!banner) {
+        banner = document.createElement('div');
+        banner.id = bannerId;
+        banner.style.cssText = [
+            'margin-top:0.75rem',
+            'padding:0.75rem 1rem',
+            'border-radius:6px',
+            'font-size:0.9rem',
+            'line-height:1.4',
+            'white-space:pre-wrap',
+        ].join(';');
+        const btn = document.getElementById('adapt-strava-btn');
+        if (btn) btn.parentNode.insertBefore(banner, btn.nextSibling);
+    }
+    banner.style.background = isError
+        ? 'rgba(0,0,0,0.25)'
+        : 'rgba(255,255,255,0.15)';
+    banner.style.color = 'white';
+    banner.style.border = isError
+        ? '1px solid rgba(255,100,100,0.6)'
+        : '1px solid rgba(255,255,255,0.4)';
+    banner.textContent = message;
+    banner.style.display = 'block';
+}
+
+// Adapt plan from Strava fitness data
+window.adaptFromStrava = async function(planId) {
+    console.log('adaptFromStrava called with planId:', planId);
+    const btn = document.getElementById('adapt-strava-btn');
+    const originalText = btn ? btn.textContent : '';
+
+    // Ask for confirmation before mutating the plan
+    const confirmed = window.confirm(
+        'This will adjust the distance of all remaining workouts based on your current Strava fitness.\n\n' +
+        'If you have adapted before, the previous adjustment will be replaced (not stacked).\n\n' +
+        'Continue?'
+    );
+    if (!confirmed) return;
+
+    // Clear any previous feedback banner
+    const existingBanner = document.getElementById('strava-adapt-message');
+    if (existingBanner) existingBanner.style.display = 'none';
+
+    if (btn) {
+        btn.disabled = true;
+        btn.textContent = 'Adapting...';
+        btn.style.opacity = '0.7';
+    }
+
+    const restoreBtn = () => {
+        if (btn) {
+            btn.disabled = false;
+            btn.textContent = originalText;
+            btn.style.opacity = '1';
+        }
+    };
+
+    try {
+        console.log('Making fetch request to:', `/api/plan/${planId}/adapt-from-strava`);
+        const response = await fetch(`/api/plan/${planId}/adapt-from-strava`, {
+            method: 'POST',
+            headers: authHeaders(),
+            credentials: 'same-origin'
+        });
+        console.log('Response status:', response.status);
+
+        if (response.ok) {
+            const result = await response.json();
+
+            if (result.adapted) {
+                let msg = `Plan adapted from Strava data!\n\n${result.reason}`;
+                if (result.changes && result.changes.length > 0) {
+                    msg += '\n\nChanges:';
+                    result.changes.forEach(change => {
+                        msg += `\n  Week ${change.week}: ${change.workouts_adjusted.length} workouts adjusted (Total: ${change.new_total_km} km)`;
+                    });
+                }
+                showStravaAdaptMessage(msg, false);
+                // Reload after a short delay so the user can see the banner
+                setTimeout(() => location.reload(), 1800);
+            } else {
+                showStravaAdaptMessage(result.reason, false);
+                restoreBtn();
+            }
+        } else {
+            let errorMsg;
+            if (response.status === 400) {
+                errorMsg = 'Strava is not connected. Please connect Strava first.';
+            } else if (response.status === 401) {
+                errorMsg = 'Please sign in to adapt your plan.';
+            } else {
+                errorMsg = `Error adapting plan (HTTP ${response.status}). Please try again.`;
+            }
+            showStravaAdaptMessage(errorMsg, true);
+            restoreBtn();
+        }
+    } catch (error) {
+        console.error('Error adapting from Strava:', error);
+        showStravaAdaptMessage('Network error: ' + error.message, true);
+        restoreBtn();
     }
 };
 
@@ -397,9 +503,7 @@ window.savePlanToAccount = async function() {
     try {
         const response = await fetch(`/api/plan/${window.APP_CTX.plan_id}/save`, {
             method: 'POST',
-            headers: {
-                'Authorization': `Bearer ${localStorage.getItem('access_token')}`
-            },
+            headers: authHeaders(),
             credentials: 'same-origin'
         });
 
@@ -412,17 +516,17 @@ window.savePlanToAccount = async function() {
                 btn.outerHTML = '<a href="/my-plans" class="btn btn-secondary">📋 View My Plans</a>';
             }, 1500);
         } else if (response.status === 401) {
-            alert('Please sign in to save this plan to your account.');
+            ApiClient.showWarning('Please sign in to save this plan to your account.');
             btn.innerHTML = originalText;
             btn.disabled = false;
         } else {
             const error = await response.json();
-            alert('Error saving plan: ' + (error.detail || 'Unknown error'));
+            ApiClient.showError('Error saving plan: ' + (error.detail || 'Unknown error'));
             btn.innerHTML = originalText;
             btn.disabled = false;
         }
     } catch (error) {
-        alert('Error saving plan: ' + error.message);
+        ApiClient.showError('Error saving plan: ' + error.message);
         btn.innerHTML = originalText;
         btn.disabled = false;
     }
@@ -481,6 +585,20 @@ function viewAdaptationDetails() {
     dismissAdaptationBanner();
 }
 
+// Plan tab switching
+window.switchPlanTab = function(tabName) {
+    document.querySelectorAll('.plan-tab').forEach(t => {
+        t.classList.remove('active');
+        t.setAttribute('aria-selected', 'false');
+    });
+    document.querySelectorAll('.plan-tab-panel').forEach(p => p.classList.remove('active'));
+
+    const tab = document.getElementById('tab-' + tabName);
+    const panel = document.getElementById('panel-' + tabName);
+    if (tab) { tab.classList.add('active'); tab.setAttribute('aria-selected', 'true'); }
+    if (panel) panel.classList.add('active');
+};
+
 window.toggleRecipe = function(mealName, button) {
     const recipeDetails = button.nextElementSibling;
     
@@ -517,6 +635,14 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Initialize save button visibility
     initSaveButton();
+
+    // Initialize Strava adapt button (backup listener; primary handler is onclick)
+    const adaptStravaBtn = document.getElementById('adapt-strava-btn');
+    if (adaptStravaBtn) {
+        console.log('Strava adapt button found');
+    } else {
+        console.log('Strava adapt button NOT found');
+    }
 
     // Close modal when clicking outside (works on mobile too)
     document.addEventListener('click', function(event) {

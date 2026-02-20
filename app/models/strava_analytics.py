@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone
 import uuid
 from sqlalchemy import Column, String, Integer, Float, DateTime, Text, ForeignKey, JSON as SQLAlchemyJSON
 from sqlalchemy.orm import relationship
@@ -12,7 +12,7 @@ class StravaAnalytics(Base):
     id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
     user_id = Column(String, ForeignKey("users.id"), nullable=True)
     name = Column(String, nullable=False)
-    upload_date = Column(DateTime, default=datetime.utcnow)
+    upload_date = Column(DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
     total_activities = Column(Integer, default=0)
     summary_data = Column(SQLAlchemyJSON, nullable=True)
     analytics_data = Column(SQLAlchemyJSON, nullable=True)

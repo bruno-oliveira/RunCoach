@@ -1,21 +1,22 @@
 """Router for Strava analytics functionality."""
 
-import io
 import json
 import logging
 import uuid
 from typing import List, Optional
 
-from fastapi import APIRouter, Depends, HTTPException, Request, UploadFile, Query, status, Cookie
-from fastapi.responses import HTMLResponse, Response
+from fastapi import APIRouter, Depends, HTTPException, Request, UploadFile, Query, status
+from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
 
 from app.config import settings
 from app.dependencies import get_db, get_current_user, get_optional_user
 from app.models import User, StravaAnalytics, StravaActivity
+from app.models.run_log import RunLog
 from app.services.strava_csv_parser import StravaCSVParser
 from app.services.analytics_service import AnalyticsService
+from app.utils import format_pace
 
 logger = logging.getLogger(__name__)
 
@@ -23,21 +24,71 @@ analytics_router = APIRouter(prefix="/api/analytics", tags=["analytics"])
 analytics_page_router = APIRouter(tags=["analytics-page"])
 templates = Jinja2Templates(directory="app/templates")
 
+templates.env.filters['format_pace'] = format_pace
+
+
+def _get_effective_user_id(request: Request, current_user: Optional[User]) -> Optional[str]:
+    """Get the effective user ID from authenticated user or anonymous cookie."""
+    if current_user:
+        return current_user.id
+    return getattr(request.state, 'anonymous_user_id', None)
+
 
 @analytics_page_router.get("/analytics", response_class=HTMLResponse)
 async def analytics_page(
     request: Request,
     current_user = Depends(get_optional_user),
 ) -> HTMLResponse:
-    """Analytics page."""
+    """Analytics dashboard page."""
     return templates.TemplateResponse(
         "analytics.html",
         {
             "request": request,
             "user": current_user,
+            "current_page": "analytics",
             "google_client_id": settings.google_client_id,
         },
     )
+
+
+@analytics_router.get("/runs")
+async def get_analytics_runs(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Get all runs for the current user for the analytics dashboard."""
+    try:
+        runs = (
+            db.query(RunLog)
+            .filter(RunLog.user_id == current_user.id)
+            .order_by(RunLog.date.asc())
+            .all()
+        )
+
+        return {
+            "runs": [
+                {
+                    "date": run.date.isoformat() if run.date else None,
+                    "distance_km": run.distance_km,
+                    "duration_minutes": run.duration_minutes,
+                    "avg_pace_min_km": run.avg_pace_min_km,
+                    "avg_heart_rate": run.avg_heart_rate,
+                    "max_heart_rate": run.max_heart_rate,
+                    "avg_cadence": run.avg_cadence,
+                    "elevation_gain_m": run.elevation_gain_m,
+                    "workout_type": run.workout_type,
+                    "perceived_effort": run.perceived_effort,
+                }
+                for run in runs
+            ],
+            "total": len(runs),
+        }
+    except Exception as e:
+        logger.error(f"Error fetching analytics runs: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to retrieve run data",
+        )
 
 
 def _ensure_compatible_analytics_data(analytics_data: dict) -> dict:
@@ -79,14 +130,12 @@ async def analytics_detail_page(
 ) -> HTMLResponse:
     """Analytics detail page showing charts for a specific upload."""
     try:
-        anonymous_user_id = getattr(request.state, 'anonymous_user_id', None)
-        user_filter = current_user.id if current_user else anonymous_user_id
-        
+        user_id = _get_effective_user_id(request, current_user)
         analytics = (
             db.query(StravaAnalytics)
             .filter(
                 StravaAnalytics.id == analytics_id,
-                StravaAnalytics.user_id == user_filter,
+                StravaAnalytics.user_id == user_id,
             )
             .first()
         )
@@ -139,13 +188,10 @@ async def analytics_detail_page(
     except Exception as e:
         logger.error(f"Error loading analytics detail page: {e}", exc_info=True)
         # Provide more specific error information
-        error_detail = f"Failed to load analytics detail page: {str(e)}"
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=error_detail,
+            detail=f"Failed to load analytics detail page: {str(e)}",
         )
-    finally:
-        db.close()
 
 
 @analytics_router.post("/upload", status_code=status.HTTP_201_CREATED)
@@ -258,15 +304,11 @@ async def upload_strava_data(
         )
     except Exception as e:
         db.rollback()
-        logger.error(f"Error uploading Strava data: {e}")
-        import traceback
-        traceback.print_exc()
+        logger.error(f"Error uploading Strava data: {e}", exc_info=True)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to process upload: {str(e)}",
         )
-    finally:
-        db.close()
 
 
 @analytics_router.get("")
@@ -277,19 +319,11 @@ async def list_analytics_uploads(
 ):
     """List all analytics uploads for the current user."""
     try:
-        anonymous_user_id = getattr(request.state, 'anonymous_user_id', None)
-        
-        if current_user:
+        user_id = _get_effective_user_id(request, current_user)
+        if user_id:
             uploads = (
                 db.query(StravaAnalytics)
-                .filter(StravaAnalytics.user_id == current_user.id)
-                .order_by(StravaAnalytics.upload_date.desc())
-                .all()
-            )
-        elif anonymous_user_id:
-            uploads = (
-                db.query(StravaAnalytics)
-                .filter(StravaAnalytics.user_id == anonymous_user_id)
+                .filter(StravaAnalytics.user_id == user_id)
                 .order_by(StravaAnalytics.upload_date.desc())
                 .all()
             )
@@ -325,13 +359,12 @@ async def get_analytics_activities(
 ):
     """Get all activities for a specific analytics upload."""
     try:
-        anonymous_user_id = getattr(request.state, 'anonymous_user_id', None)
-        user_filter = current_user.id if current_user else anonymous_user_id
+        user_id = _get_effective_user_id(request, current_user)
         analytics = (
             db.query(StravaAnalytics)
             .filter(
                 StravaAnalytics.id == analytics_id,
-                StravaAnalytics.user_id == user_filter,
+                StravaAnalytics.user_id == user_id,
             )
             .first()
         )
@@ -383,13 +416,12 @@ async def get_analytics(
 ):
     """Get detailed analytics for a specific upload including all charts."""
     try:
-        anonymous_user_id = getattr(request.state, 'anonymous_user_id', None)
-        user_filter = current_user.id if current_user else anonymous_user_id
+        user_id = _get_effective_user_id(request, current_user)
         analytics = (
             db.query(StravaAnalytics)
             .filter(
                 StravaAnalytics.id == analytics_id,
-                StravaAnalytics.user_id == user_filter,
+                StravaAnalytics.user_id == user_id,
             )
             .first()
         )
@@ -452,13 +484,12 @@ async def delete_analytics(
 ):
     """Delete an analytics upload and all associated data."""
     try:
-        anonymous_user_id = getattr(request.state, 'anonymous_user_id', None)
-        user_filter = current_user.id if current_user else anonymous_user_id
+        user_id = _get_effective_user_id(request, current_user)
         analytics = (
             db.query(StravaAnalytics)
             .filter(
                 StravaAnalytics.id == analytics_id,
-                StravaAnalytics.user_id == user_filter,
+                StravaAnalytics.user_id == user_id,
             )
             .first()
         )
@@ -472,7 +503,7 @@ async def delete_analytics(
         db.delete(analytics)
         db.commit()
 
-        logger.info(f"Analytics {analytics_id} deleted for user {user_filter}")
+        logger.info(f"Analytics {analytics_id} deleted for user {user_id}")
 
     except HTTPException:
         raise
@@ -510,13 +541,12 @@ async def compare_analytics(
                 detail="Maximum 5 analytics can be compared at once",
             )
 
-        anonymous_user_id = getattr(request.state, 'anonymous_user_id', None)
-        user_filter = current_user.id if current_user else anonymous_user_id
+        user_id = _get_effective_user_id(request, current_user)
         uploads = (
             db.query(StravaAnalytics)
             .filter(
                 StravaAnalytics.id.in_(analytics_ids),
-                StravaAnalytics.user_id == user_filter,
+                StravaAnalytics.user_id == user_id,
             )
             .all()
         )
@@ -576,35 +606,3 @@ async def compare_analytics(
         )
 
 
-class AnalyticsRouterHelpers:
-    @staticmethod
-    def _format_pace(pace_min_km: float) -> str:
-        minutes = int(pace_min_km)
-        seconds = int((pace_min_km - minutes) * 60)
-        return f"{minutes}:{seconds:02d}"
-
-    @staticmethod
-    def _format_duration(seconds: int) -> str:
-        hours = seconds // 3600
-        minutes = (seconds % 3600) // 60
-        secs = seconds % 60
-        if hours > 0:
-            return f"{hours}:{minutes:02d}:{secs:02d}"
-        return f"{minutes}:{secs:02d}"
-
-    @staticmethod
-    def _sanitize_analytics_for_json(data):
-        """
-        Recursively sanitize analytics data to ensure JSON serializability.
-        Converts booleans and other non-JSON-serializable types to JSON-safe formats.
-        """
-        if isinstance(data, dict):
-            return {key: AnalyticsRouterHelpers._sanitize_analytics_for_json(value) for key, value in data.items()}
-        elif isinstance(data, list):
-            return [AnalyticsRouterHelpers._sanitize_analytics_for_json(item) for item in data]
-        elif isinstance(data, bool):
-            return data  # Booleans are JSON-serializable, but SQLAlchemy may have issues
-        elif isinstance(data, (int, float, str, type(None))):
-            return data
-        else:
-            return str(data)

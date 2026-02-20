@@ -26,20 +26,24 @@ from app.exceptions import (
     PlanGenerationException,
     ValidationException,
 )
-from app.models import DailyWorkout, TrainingPlan, User, WeeklyPlan
+from app.models import DailyWorkout, RunLog, TrainingPlan, User, WeeklyPlan
 from app.models import PlanCustomization as PlanCustomizationModel
 from app.core.nutrition_engine import NutritionEngine
 from app.core.pdf_generator import PDFGenerator
 from app.core.plan_generator import TrainingPlanGenerator
-from app.schemas import PlanRequest, get_mileage_warning, parse_target_distance
-from app.dependencies import get_current_user, get_optional_user
+from app.schemas import DISTANCE_NAMES, PlanRequest, get_mileage_warning, parse_target_distance
+from app.dependencies import get_current_user, get_optional_user, verify_plan_ownership
 from app.services.adaptation_service import AdaptationService
+from app.utils import format_pace
 
 logger = logging.getLogger(__name__)
 adaptation_service = AdaptationService()
 
 router = APIRouter(tags=["plans"])
 templates = Jinja2Templates(directory="app/templates")
+
+
+templates.env.filters['format_pace'] = format_pace
 
 user_plans_cache = TTLCache(maxsize=1000, ttl=300)
 
@@ -205,6 +209,23 @@ async def generate_plan(
             },
         )
 
+    # Check 3-plan limit for logged-in users
+    if current_user:
+        plan_count = db.query(TrainingPlan).filter(
+            TrainingPlan.user_id == current_user.id
+        ).count()
+        if plan_count >= 3:
+            return templates.TemplateResponse(
+                "index.html",
+                {
+                    "request": request,
+                    "user": current_user,
+                    "google_client_id": settings.google_client_id,
+                    "error": "You've reached the maximum of 3 training plans. Please delete an existing plan before creating a new one.",
+                    "error_type": "plan_limit",
+                },
+            )
+
     # Check for high mileage warning
     warning_message = get_mileage_warning(
         plan_request.target_distance, plan_request.current_km
@@ -296,6 +317,7 @@ async def generate_plan(
             ),
             "logged_runs": {},  # New plan has no logged runs yet
             "performance_analysis": None,
+            "progress_data": None,
         }
 
         if warning_message:
@@ -361,6 +383,7 @@ async def customize_plan(
     week_number: int = Form(...),
     adjustment_type: str = Form(...),
     adjustment_value: str = Form(...),
+    anonymous_user_id: Optional[str] = Cookie(None),
     db: Session = Depends(get_db),
     current_user: Optional[User] = Depends(get_optional_user),
 ) -> HTMLResponse:
@@ -372,6 +395,9 @@ async def customize_plan(
         )
         if not training_plan:
             raise HTTPException(status_code=404, detail="Plan not found")
+
+        if not verify_plan_ownership(training_plan, current_user, anonymous_user_id):
+            raise HTTPException(status_code=403, detail="Not authorized to modify this plan")
 
         plan_data = json.loads(training_plan.plan_data)
 
@@ -416,6 +442,7 @@ async def customize_plan(
                 "target_distance": training_plan.target_distance,
                 "weeks": training_plan.weeks_duration,
                 "nutrition_plan": nutrition_plan,
+                "progress_data": None,
             },
         )
 
@@ -434,6 +461,7 @@ async def customize_plan(
                 )
                 if training_plan and training_plan.nutrition_plan_data
                 else {},
+                "progress_data": None,
                 "error": f"Error customizing plan: {str(e)}",
             },
         )
@@ -443,6 +471,7 @@ async def customize_plan(
 async def view_plan(
     plan_id: str,
     request: Request,
+    anonymous_user_id: Optional[str] = Cookie(None),
     db: Session = Depends(get_db),
     current_user: Optional[User] = Depends(get_optional_user),
     nutrition_engine: NutritionEngine = Depends(get_nutrition_engine),
@@ -454,6 +483,9 @@ async def view_plan(
         )
         if not training_plan:
             raise HTTPException(status_code=404, detail="Plan not found")
+
+        if not verify_plan_ownership(training_plan, current_user, anonymous_user_id):
+            raise HTTPException(status_code=403, detail="Not authorized to view this plan")
 
         plan_data = json.loads(training_plan.plan_data)
 
@@ -487,6 +519,25 @@ async def view_plan(
         # Create a map of workout_id -> run for easy lookup
         logged_runs_map = {run.daily_workout_id: run for run in logged_runs if run.daily_workout_id}
 
+        # Compute Strava fitness metrics if user has Strava connected
+        strava_fitness = None
+        if current_user and current_user.strava_athlete_id:
+            from app.core.adaptive_plan_generator import AdaptivePlanGenerator
+            adaptive_gen = AdaptivePlanGenerator()
+            strava_fitness = adaptive_gen.calculate_current_fitness_metrics(
+                current_user.id, db
+            )
+
+        # Compute progress data for plan vs actual charts
+        progress_data = None
+        if current_user and logged_runs:
+            from app.services.performance_service import PerformanceService
+            perf_service = PerformanceService(db)
+            try:
+                progress_data = perf_service.get_plan_progress(training_plan)
+            except Exception as e:
+                logger.warning(f"Could not compute progress data: {e}")
+
         return templates.TemplateResponse(
             "plan.html",
             {
@@ -502,6 +553,8 @@ async def view_plan(
                 "nutrition_plan": nutrition_plan,
                 "performance_analysis": performance_analysis,
                 "logged_runs": logged_runs_map,
+                "strava_fitness": strava_fitness,
+                "progress_data": progress_data,
             },
         )
 
@@ -537,8 +590,9 @@ async def list_my_plans(
         
         # Parse target distance for display
         for plan in plans:
-            plan.target_distance_display = parse_target_distance(plan.target_distance)
-        
+            td = parse_target_distance(plan.target_distance)
+            plan.target_distance_display = DISTANCE_NAMES.get(td, f"{td}km")
+
         return templates.TemplateResponse(
             "my_plans.html",
             {
@@ -546,6 +600,8 @@ async def list_my_plans(
                 "user": current_user,
                 "google_client_id": settings.google_client_id,
                 "plans": plans,
+                "plan_count": len(plans),
+                "max_plans": 3,
             },
         )
     except Exception as e:
@@ -599,6 +655,31 @@ async def adapt_plan(
     return result
 
 
+@router.post("/api/plan/{plan_id}/adapt-from-strava")
+async def adapt_plan_from_strava(
+    plan_id: str,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Adapt future weeks of a plan based on Strava fitness metrics."""
+    if not current_user.strava_athlete_id:
+        raise HTTPException(status_code=400, detail="Strava not connected")
+
+    training_plan = db.query(TrainingPlan).filter(
+        TrainingPlan.id == plan_id,
+        TrainingPlan.user_id == current_user.id,
+    ).first()
+
+    if not training_plan:
+        raise HTTPException(status_code=404, detail="Plan not found")
+
+    result = adaptation_service.adapt_plan_from_fitness(
+        plan_id, current_user.id, db
+    )
+
+    return result
+
+
 @router.post("/api/plan/{plan_id}/save")
 async def save_plan_to_account(
     plan_id: str,
@@ -615,6 +696,11 @@ async def save_plan_to_account(
     if training_plan.user_id == current_user.id:
         return {"message": "Plan already saved to your account", "plan_id": plan_id}
 
+    # Only allow claiming plans owned by anonymous users
+    plan_owner = db.query(User).filter(User.id == training_plan.user_id).first()
+    if plan_owner and (plan_owner.google_id or plan_owner.email):
+        raise HTTPException(status_code=403, detail="This plan belongs to another user")
+
     # Transfer ownership to current user
     training_plan.user_id = current_user.id
     db.commit()
@@ -622,10 +708,57 @@ async def save_plan_to_account(
     return {"message": "Plan saved to your account", "plan_id": plan_id}
 
 
+@router.delete("/api/plan/{plan_id}")
+async def delete_plan(
+    plan_id: str,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Delete a training plan owned by the current user."""
+    training_plan = db.query(TrainingPlan).filter(
+        TrainingPlan.id == plan_id,
+        TrainingPlan.user_id == current_user.id,
+    ).first()
+
+    if not training_plan:
+        raise HTTPException(status_code=404, detail="Plan not found")
+
+    # Delete associated records (weekly plans cascade to daily workouts)
+    weekly_plans = db.query(WeeklyPlan).filter(
+        WeeklyPlan.training_plan_id == plan_id
+    ).all()
+    for wp in weekly_plans:
+        db.query(DailyWorkout).filter(
+            DailyWorkout.weekly_plan_id == wp.id
+        ).delete()
+    db.query(WeeklyPlan).filter(
+        WeeklyPlan.training_plan_id == plan_id
+    ).delete()
+
+    # Delete run logs
+    db.query(RunLog).filter(RunLog.training_plan_id == plan_id).delete()
+
+    # Delete customizations
+    db.query(PlanCustomizationModel).filter(
+        PlanCustomizationModel.training_plan_id == plan_id
+    ).delete()
+
+    # Delete the plan itself
+    db.delete(training_plan)
+    db.commit()
+
+    # Invalidate cache
+    user_plans_cache.pop(f"plans_{current_user.id}", None)
+
+    return {"message": "Plan deleted successfully"}
+
+
 @router.get("/download-pdf/{plan_id}")
 async def download_pdf(
     plan_id: str,
+    anonymous_user_id: Optional[str] = Cookie(None),
     db: Session = Depends(get_db),
+    current_user: Optional[User] = Depends(get_optional_user),
     pdf_generator: PDFGenerator = Depends(get_pdf_generator),
 ) -> FileResponse:
     """Download training plan as PDF."""
@@ -636,6 +769,9 @@ async def download_pdf(
         )
         if not training_plan:
             raise HTTPException(status_code=404, detail="Plan not found")
+
+        if not verify_plan_ownership(training_plan, current_user, anonymous_user_id):
+            raise HTTPException(status_code=403, detail="Not authorized to download this plan")
 
         # Validate plan data exists
         if not training_plan.plan_data:

@@ -14,6 +14,7 @@ from fastapi.templating import Jinja2Templates
 from app.config import settings, setup_logging
 from app.dependencies import engine, get_optional_user
 from app.models import Base, User
+from app.utils import format_pace
 from app.routers import (
     adaptive_router,
     analytics_page_router,
@@ -25,6 +26,7 @@ from app.routers import (
     recipes_router,
     runs_router,
     strength_router,
+    strava_router,
 )
 from app.schemas import HealthResponse
 
@@ -89,6 +91,9 @@ Base.metadata.create_all(bind=engine)
 # Templates
 templates = Jinja2Templates(directory="app/templates")
 
+
+templates.env.filters['format_pace'] = format_pace
+
 # Static files with caching
 app.mount("/static", CachedStaticFiles(
     directory="app/static",
@@ -108,6 +113,7 @@ app.include_router(strength_router)
 app.include_router(performance_router)
 app.include_router(analytics_router)
 app.include_router(analytics_page_router)
+app.include_router(strava_router)
 
 
 @app.get("/health", response_model=HealthResponse, tags=["health"])
@@ -116,51 +122,41 @@ async def health_check() -> HealthResponse:
     return HealthResponse()
 
 
-@app.get("/debug/config", tags=["debug"])
-async def debug_config():
-    """Debug endpoint to check configuration (development only)."""
-    client_id = settings.google_client_id
-    is_placeholder = (
-        not client_id or 
-        client_id == 'null' or 
-        client_id == '' or 
-        'your-google' in client_id.lower() or 
-        'placeholder' in client_id.lower() or
-        len(client_id) < 20
-    )
-    
-    return {
-        "google_client_id_configured": bool(client_id),
-        "google_client_id_preview": client_id[:20] + "..." if len(client_id) > 20 else client_id,
-        "google_client_id_is_placeholder": is_placeholder,
-        "google_client_id_length": len(client_id) if client_id else 0,
-        "secret_key_configured": bool(settings.secret_key),
-        "secret_key_is_default": "dev-secret" in settings.secret_key.lower() or "your-secret" in settings.secret_key.lower(),
-        "secret_key_length": len(settings.secret_key),
-        "debug_mode": settings.debug,
-        "environment": "production" if not settings.debug else "development",
-    }
+if settings.debug:
+    @app.get("/debug/config", tags=["debug"])
+    async def debug_config():
+        """Debug endpoint to check configuration (development only)."""
+        client_id = settings.google_client_id
+        return {
+            "google_client_id_configured": settings.is_google_client_id_configured,
+            "google_client_id_preview": client_id[:20] + "..." if len(client_id) > 20 else client_id,
+            "google_client_id_is_placeholder": not settings.is_google_client_id_configured,
+            "google_client_id_length": len(client_id) if client_id else 0,
+            "secret_key_configured": bool(settings.secret_key),
+            "secret_key_is_default": "dev-secret" in settings.secret_key.lower() or "your-secret" in settings.secret_key.lower(),
+            "secret_key_length": len(settings.secret_key),
+            "debug_mode": settings.debug,
+            "environment": "development",
+        }
 
+    @app.get("/debug/test-auth", tags=["debug"])
+    async def test_auth():
+        """Test endpoint to verify auth service is working."""
+        from app.auth_service import AuthService
 
-@app.get("/debug/test-auth", tags=["debug"])
-async def test_auth():
-    """Test endpoint to verify auth service is working."""
-    from app.auth_service import AuthService
-    import asyncio
+        auth = AuthService()
 
-    auth = AuthService()
+        # Test JWT creation/verification
+        test_payload = {"sub": "test-user-id", "email": "test@example.com"}
+        token = auth.create_access_token(test_payload)
+        verified = auth.verify_token(token)
 
-    # Test JWT creation/verification
-    test_payload = {"sub": "test-user-id", "email": "test@example.com"}
-    token = auth.create_access_token(test_payload)
-    verified = auth.verify_token(token)
-
-    return {
-        "jwt_creation": "success" if token else "failed",
-        "jwt_verification": "success" if verified else "failed",
-        "token_preview": token[:50] + "..." if token else None,
-        "verified_payload": verified if verified else None,
-    }
+        return {
+            "jwt_creation": "success" if token else "failed",
+            "jwt_verification": "success" if verified else "failed",
+            "token_preview": token[:50] + "..." if token else None,
+            "verified_payload": verified if verified else None,
+        }
 
 
 @app.get("/", response_class=HTMLResponse, tags=["pages"])
@@ -169,31 +165,10 @@ async def home(
     current_user: Optional[User] = Depends(get_optional_user),
 ) -> HTMLResponse:
     """Render home page."""
-    client_id = settings.google_client_id
-    is_configured = bool(client_id) and not (
-        not client_id or 
-        client_id == 'null' or 
-        client_id == '' or 
-        'your-google' in client_id.lower() or 
-        'placeholder' in client_id.lower() or
-        len(client_id) < 20
-    )
-    
-    logger.info(f"Rendering home page. Client ID configured: {is_configured}")
-    logger.info(f"Client ID length: {len(client_id) if client_id else 0}")
-    
-    # Enhanced configuration validation
-    if not is_configured:
-        logger.warning("Google Client ID is not properly configured - authentication may not work")
-        if client_id:
-            logger.warning(f"Client ID appears to be placeholder: {client_id[:30]}...")
-        else:
-            logger.warning("Client ID is completely missing")
-
     return templates.TemplateResponse("index.html", {
         "request": request,
         "user": current_user,
-        "google_client_id": client_id or ""
+        "google_client_id": settings.google_client_id or ""
     })
 
 
@@ -202,32 +177,21 @@ async def startup_event() -> None:
     """Application startup tasks."""
     logger.info(f"Starting {settings.app_name} v{settings.app_version}")
     logger.info(f"Debug mode: {settings.debug}")
-    
-    # Enhanced startup validation for Google authentication
-    client_id = settings.google_client_id
-    is_configured = bool(client_id) and not (
-        not client_id or 
-        client_id == 'null' or 
-        client_id == '' or 
-        'your-google' in client_id.lower() or 
-        'placeholder' in client_id.lower() or
-        len(client_id) < 20
-    )
-    
-    if is_configured:
-        logger.info("✅ Google Client ID is properly configured")
-        logger.info(f"Client ID length: {len(client_id)} characters")
+
+    if settings.is_google_client_id_configured:
+        logger.info("Google Client ID is properly configured")
     else:
-        logger.warning("⚠️ Google Client ID is not properly configured")
-        if client_id:
-            logger.warning(f"Client ID appears to be placeholder: {client_id[:30]}...")
-        else:
-            logger.warning("Client ID is completely missing")
-        logger.warning("Google Sign-In will not work until GOOGLE_CLIENT_ID is properly set")
-    
-    # Log environment info for debugging
-    logger.info(f"Environment: {'Production' if not settings.debug else 'Development'}")
-    logger.info(f"Secret Key configured: {bool(settings.secret_key)}")
+        logger.warning("Google Client ID is not properly configured - Google Sign-In will not work")
+
+    # Validate secret key in production
+    if not settings.debug:
+        weak_patterns = ["dev-secret", "your-secret", "change-in-production", "placeholder"]
+        key = settings.secret_key
+        if len(key) < 32 or any(p in key.lower() for p in weak_patterns):
+            raise RuntimeError(
+                "SECRET_KEY is too weak for production. "
+                "Set a random key of at least 32 characters."
+            )
 
 
 @app.on_event("shutdown")
