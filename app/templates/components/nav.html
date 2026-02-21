@@ -443,10 +443,13 @@ async function connectStrava() {
 
 async function syncStrava() {
     try {
-        const response = await fetch('/api/strava/sync', { method: 'POST' });
+        // Default to 30 days sync
+        const response = await fetch('/api/strava/sync?days_back=30', { method: 'POST' });
         const data = await response.json();
         if (response.ok) {
             alert('Strava sync complete: ' + data.synced + ' new runs synced, ' + data.skipped + ' already existed.');
+            // Reload page to reflect new data
+            window.location.reload();
         } else {
             alert('Sync failed: ' + (data.detail || 'Unknown error'));
         }

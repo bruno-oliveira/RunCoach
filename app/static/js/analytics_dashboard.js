@@ -26,6 +26,14 @@ const AnalyticsDashboard = {
         if (!dashboard) return;
 
         try {
+            // Check if Strava is connected
+            const stravaConnected = await this.checkStravaConnection();
+
+            // If Strava connected, sync default period (30 days) before loading
+            if (stravaConnected) {
+                await this.syncStravaPeriod(30);
+            }
+
             const res = await fetch('/api/analytics/runs', { credentials: 'same-origin' });
             if (!res.ok) throw new Error('Failed to fetch runs');
             const data = await res.json();
@@ -39,7 +47,7 @@ const AnalyticsDashboard = {
             }
 
             dashboard.style.display = 'block';
-            this.filterByPeriod(90);
+            this.filterByPeriod(30);
             this.bindGroupingControls();
             this.bindPeriodSelector();
         } catch (err) {
@@ -68,8 +76,27 @@ const AnalyticsDashboard = {
     bindPeriodSelector() {
         const el = document.getElementById('periodSelector');
         if (el) {
-            el.addEventListener('change', () => {
-                this.filterByPeriod(el.value);
+            el.addEventListener('change', async () => {
+                const days = el.value;
+
+                // Show loading indicator
+                this.showLoadingIndicator();
+
+                // Check if Strava is connected and sync for this period
+                const stravaConnected = await this.checkStravaConnection();
+                if (stravaConnected && days !== 'all') {
+                    // Only sync for specific periods, not "all time"
+                    // (All time would sync everything which is expensive)
+                    const daysBack = parseInt(days);
+                    await this.syncStravaPeriod(daysBack);
+
+                    // Reload runs data after sync
+                    await this.reloadRuns();
+                }
+
+                // Hide loading and filter
+                this.hideLoadingIndicator();
+                this.filterByPeriod(days);
             });
         }
     },
@@ -539,6 +566,65 @@ const AnalyticsDashboard = {
         const mins = Math.floor(pace);
         const secs = Math.round((pace - mins) * 60);
         return `${mins}:${secs < 10 ? '0' : ''}${secs}`;
+    },
+
+    /* ------------------------------------------------------------------ */
+    /*  Strava Integration                                                 */
+    /* ------------------------------------------------------------------ */
+    async checkStravaConnection() {
+        try {
+            const res = await fetch('/api/strava/status', { credentials: 'same-origin' });
+            if (!res.ok) return false;
+            const data = await res.json();
+            return data.connected;
+        } catch (err) {
+            console.error('Failed to check Strava connection:', err);
+            return false;
+        }
+    },
+
+    async syncStravaPeriod(daysBack) {
+        try {
+            const params = daysBack !== null ? `?days_back=${daysBack}` : '';
+            const res = await fetch(`/api/strava/sync${params}`, {
+                method: 'POST',
+                credentials: 'same-origin'
+            });
+
+            if (!res.ok) {
+                console.warn('Strava sync failed:', await res.text());
+                return;
+            }
+
+            const data = await res.json();
+            console.log(`Strava sync complete: ${data.synced} new, ${data.skipped} skipped`);
+        } catch (err) {
+            console.error('Strava sync error:', err);
+        }
+    },
+
+    async reloadRuns() {
+        try {
+            const res = await fetch('/api/analytics/runs', { credentials: 'same-origin' });
+            if (!res.ok) throw new Error('Failed to reload runs');
+            const data = await res.json();
+            this.allRuns = data.runs.filter(r => r.date);
+        } catch (err) {
+            console.error('Failed to reload runs:', err);
+        }
+    },
+
+    showLoadingIndicator() {
+        const loading = document.getElementById('analyticsLoading');
+        if (loading) {
+            loading.style.display = 'flex';
+            loading.innerHTML = '<div class="analytics-loading-spinner"></div><p style="color: var(--color-text-secondary);">Syncing Strava data&hellip;</p>';
+        }
+    },
+
+    hideLoadingIndicator() {
+        const loading = document.getElementById('analyticsLoading');
+        if (loading) loading.style.display = 'none';
     },
 };
 
