@@ -5,8 +5,9 @@ from typing import Generator, Optional
 
 from fastapi import Depends, HTTPException, Request, Security, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, event
 from sqlalchemy.orm import Session, sessionmaker
+from sqlalchemy.pool import NullPool
 
 from app.auth_service import AuthService
 from app.config import settings
@@ -23,10 +24,26 @@ COOKIE_NAME = "access_token"
 ANONYMOUS_USER_COOKIE = "anonymous_user_id"
 
 # Database setup
+_is_sqlite = "sqlite" in settings.database_url
+
 engine = create_engine(
     settings.database_url,
-    connect_args={"check_same_thread": False} if "sqlite" in settings.database_url else {},
+    connect_args={"check_same_thread": False} if _is_sqlite else {},
+    poolclass=NullPool if _is_sqlite else None,
 )
+
+if _is_sqlite:
+    @event.listens_for(engine, "connect")
+    def _set_sqlite_pragmas(dbapi_conn, _):
+        cursor = dbapi_conn.cursor()
+        cursor.execute("PRAGMA journal_mode=WAL")    # readers don't block writers
+        cursor.execute("PRAGMA synchronous=NORMAL")  # safe + faster than FULL (default)
+        cursor.execute("PRAGMA foreign_keys=ON")     # enforce FK constraints
+        cursor.execute("PRAGMA busy_timeout=5000")   # wait up to 5s on a locked DB
+        cursor.execute("PRAGMA cache_size=-32000")   # 32MB page cache
+        cursor.execute("PRAGMA temp_store=MEMORY")   # temp tables in RAM
+        cursor.close()
+
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 
