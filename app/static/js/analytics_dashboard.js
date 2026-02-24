@@ -75,31 +75,37 @@ const AnalyticsDashboard = {
 
     bindPeriodSelector() {
         const el = document.getElementById('periodSelector');
-        if (el) {
-            el.addEventListener('change', async () => {
-                const days = el.value;
+        if (!el) return;
 
-                // Show loading indicator
-                this.showLoadingIndicator();
+        el.addEventListener('change', async () => {
+            const days = el.value;
 
-                // Check if Strava is connected and sync for this period
-                const stravaConnected = await this.checkStravaConnection();
-                if (stravaConnected) {
-                    // For specific periods: force re-pull that window.
-                    // For "all time": incremental sync (no force_days) to catch
-                    // any new activities since last sync, then show all stored runs.
-                    const daysBack = days !== 'all' ? parseInt(days) : null;
-                    await this.syncStravaPeriod(daysBack);
+            // Apply filter immediately so charts reflect the new period right away
+            this.filterByPeriod(days);
 
-                    // Reload runs data after sync
-                    await this.reloadRuns();
-                }
+            // Check Strava connection; if connected, sync then re-render with full data
+            const stravaConnected = await this.checkStravaConnection();
+            if (!stravaConnected) return;
 
-                // Hide loading and filter
-                this.hideLoadingIndicator();
+            // Show inline sync indicator while the Strava pull runs
+            this.showSyncIndicator();
+            el.disabled = true;
+
+            try {
+                // For specific periods: force re-pull that window.
+                // For "all time": incremental sync (no force_days) to catch
+                // any new activities since last sync, then show all stored runs.
+                const daysBack = days !== 'all' ? parseInt(days) : null;
+                await this.syncStravaPeriod(daysBack);
+                await this.reloadRuns();
+
+                // Re-render now that the DB has the full data for this period
                 this.filterByPeriod(days);
-            });
-        }
+            } finally {
+                this.hideSyncIndicator();
+                el.disabled = false;
+            }
+        });
     },
 
     /* ------------------------------------------------------------------ */
@@ -114,7 +120,7 @@ const AnalyticsDashboard = {
         const avgPace       = paceRuns.length ? paceRuns.reduce((s, r) => s + r.avg_pace_min_km, 0) / paceRuns.length : 0;
         const hrRuns        = runs.filter(r => r.avg_heart_rate && r.avg_heart_rate > 0);
         const avgHR         = hrRuns.length ? Math.round(hrRuns.reduce((s, r) => s + r.avg_heart_rate, 0) / hrRuns.length) : 0;
-        const longestRun    = Math.max(...runs.map(r => r.distance_km || 0));
+        const longestRun    = runs.length > 0 ? Math.max(...runs.map(r => r.distance_km || 0)) : 0;
         const totalHours    = totalMinutes / 60;
 
         this.setText('statTotalRuns', totalRuns);
@@ -586,7 +592,7 @@ const AnalyticsDashboard = {
 
     async syncStravaPeriod(daysBack) {
         try {
-            const params = daysBack !== null ? `?force_days=${daysBack}` : '';
+            const params = daysBack !== null ? `?force_days=${daysBack}` : '?full_sync=true';
             const res = await fetch(`/api/strava/sync${params}`, {
                 method: 'POST',
                 credentials: 'same-origin'
@@ -615,17 +621,14 @@ const AnalyticsDashboard = {
         }
     },
 
-    showLoadingIndicator() {
-        const loading = document.getElementById('analyticsLoading');
-        if (loading) {
-            loading.style.display = 'flex';
-            loading.innerHTML = '<div class="analytics-loading-spinner"></div><p style="color: var(--color-text-secondary);">Syncing Strava data&hellip;</p>';
-        }
+    showSyncIndicator() {
+        const el = document.getElementById('stravaSyncIndicator');
+        if (el) el.style.display = 'flex';
     },
 
-    hideLoadingIndicator() {
-        const loading = document.getElementById('analyticsLoading');
-        if (loading) loading.style.display = 'none';
+    hideSyncIndicator() {
+        const el = document.getElementById('stravaSyncIndicator');
+        if (el) el.style.display = 'none';
     },
 };
 

@@ -26,7 +26,60 @@
                 <li><a href="/my-plans" class="nav-link {{ 'is-active' if current_page == 'my-plans' else '' }}">My Plans</a></li>
                 <li><a href="/analytics" class="nav-link {{ 'is-active' if current_page == 'analytics' else '' }}">Analytics</a></li>
                 {% if user.strava_athlete_id %}
-                <li><a href="#" onclick="syncStrava(); return false;" class="nav-link nav-link-strava">Sync Strava</a></li>
+                <li class="nav-item-strava">
+                    <button
+                        class="nav-link nav-link-strava strava-trigger"
+                        id="stravaTrigger"
+                        onclick="toggleStravaPanel(); return false;"
+                        aria-expanded="false"
+                        aria-controls="stravaPanel"
+                    >
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" class="strava-icon">
+                            <path d="M15.387 17.944l-2.089-4.116h-3.065L15.387 24l5.15-10.172h-3.066m-7.008-5.599l2.836 5.598h4.172L10.463 0l-7 13.828h4.169"/>
+                        </svg>
+                        Strava
+                        <svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="strava-chevron" aria-hidden="true">
+                            <polyline points="2,3 5,7 8,3"/>
+                        </svg>
+                    </button>
+
+                    <div class="strava-panel" id="stravaPanel" role="region" aria-label="Strava sync options" data-ts="{{ user.strava_last_synced_at or '' }}">
+                        <div class="strava-status">
+                            <span class="strava-dot" aria-hidden="true"></span>
+                            <span class="strava-status-text">Connected</span>
+                            <span class="strava-sep" aria-hidden="true">&middot;</span>
+                            <span class="strava-last-synced" id="stravaLastSynced">Loading…</span>
+                        </div>
+
+                        <button
+                            class="strava-primary-btn"
+                            id="stravaSyncBtn"
+                            onclick="syncStrava()"
+                            aria-label="Sync new runs from Strava"
+                        >
+                            <svg class="strava-refresh-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                <polyline points="23 4 23 10 17 10"/>
+                                <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/>
+                            </svg>
+                            <svg class="strava-spinner" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true" style="display:none">
+                                <path d="M12 2a10 10 0 1 0 10 10" stroke-linecap="round"/>
+                            </svg>
+                            <span class="strava-primary-label">Sync new runs</span>
+                        </button>
+
+                        <div class="strava-divider">
+                            <span class="strava-divider-label">Fetch older runs</span>
+                        </div>
+
+                        <div class="strava-chips">
+                            <button class="strava-chip" onclick="syncStravaForDays(1)" aria-label="Fetch runs from yesterday">Yesterday</button>
+                            <button class="strava-chip" onclick="syncStravaForDays(7)" aria-label="Fetch runs from the last 7 days">Last 7 days</button>
+                            <button class="strava-chip" onclick="syncStravaForDays(30)" aria-label="Fetch runs from the last 30 days">Last 30 days</button>
+                        </div>
+
+                        <div class="strava-feedback" id="stravaFeedback" role="status" aria-live="polite" style="display:none"></div>
+                    </div>
+                </li>
                 {% else %}
                 <li><a href="#" onclick="connectStrava(); return false;" class="nav-link nav-link-strava">Connect Strava</a></li>
                 {% endif %}
@@ -425,6 +478,232 @@
 [data-theme="dark"] .nav-menu {
     background: var(--color-bg);
 }
+
+/* ---- Strava dropdown ---- */
+.nav-item-strava {
+    position: relative;
+}
+
+.strava-trigger {
+    /* inherits .nav-link and .nav-link-strava */
+    background: none;
+    border: none;
+    cursor: pointer;
+    gap: 6px;
+}
+
+.strava-icon {
+    flex-shrink: 0;
+}
+
+.strava-chevron {
+    flex-shrink: 0;
+    transition: transform var(--duration-fast) var(--ease-out);
+}
+
+.strava-trigger[aria-expanded="true"] .strava-chevron {
+    transform: rotate(180deg);
+}
+
+/* Panel */
+.strava-panel {
+    display: none;
+    position: absolute;
+    top: calc(100% + 8px);
+    right: 0;
+    min-width: 280px;
+    background: var(--color-bg-elevated);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-lg);
+    box-shadow: 0 4px 24px rgba(28, 25, 23, 0.10), 0 1px 4px rgba(28, 25, 23, 0.06);
+    padding: 14px;
+    z-index: 200;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.strava-panel.is-open {
+    display: flex;
+}
+
+[data-theme="dark"] .strava-panel {
+    box-shadow: 0 4px 24px rgba(0, 0, 0, 0.4), 0 1px 4px rgba(0, 0, 0, 0.2);
+}
+
+/* Status row */
+.strava-status {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: var(--text-xs);
+    color: var(--color-text-secondary);
+    font-weight: var(--weight-medium);
+}
+
+.strava-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: var(--radius-full);
+    background: var(--color-success);
+    flex-shrink: 0;
+}
+
+.strava-status-text {
+    color: var(--color-success);
+    font-weight: var(--weight-semibold);
+}
+
+.strava-sep {
+    color: var(--color-text-muted);
+}
+
+.strava-last-synced {
+    color: var(--color-text-secondary);
+}
+
+/* Primary sync button */
+.strava-primary-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    width: 100%;
+    padding: 9px 14px;
+    background: var(--color-primary);
+    color: #fff;
+    border: none;
+    border-radius: var(--radius-md);
+    font-size: var(--text-sm);
+    font-weight: var(--weight-semibold);
+    font-family: var(--font-body);
+    cursor: pointer;
+    transition: background var(--duration-fast) var(--ease-out),
+                opacity var(--duration-fast) var(--ease-out);
+}
+
+.strava-primary-btn:hover:not(:disabled) {
+    background: var(--color-primary-dark);
+}
+
+.strava-primary-btn:disabled {
+    opacity: 0.65;
+    cursor: not-allowed;
+}
+
+/* Divider with label */
+.strava-divider {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: var(--text-xs);
+    color: var(--color-text-muted);
+    font-weight: var(--weight-medium);
+}
+
+.strava-divider::before,
+.strava-divider::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--color-border);
+}
+
+.strava-divider-label {
+    white-space: nowrap;
+}
+
+/* Chips row */
+.strava-chips {
+    display: inline-flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.strava-chip {
+    display: inline-flex;
+    align-items: center;
+    padding: 5px 10px;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-full);
+    background: transparent;
+    color: var(--color-text-secondary);
+    font-size: var(--text-xs);
+    font-weight: var(--weight-medium);
+    font-family: var(--font-body);
+    cursor: pointer;
+    transition: background var(--duration-fast) var(--ease-out),
+                color var(--duration-fast) var(--ease-out),
+                border-color var(--duration-fast) var(--ease-out);
+    white-space: nowrap;
+}
+
+.strava-chip:hover:not(:disabled) {
+    background: var(--color-surface);
+    color: var(--color-text);
+}
+
+.strava-chip:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+/* Feedback area */
+.strava-feedback {
+    font-size: var(--text-xs);
+    font-weight: var(--weight-medium);
+    padding: 8px 10px;
+    border-radius: var(--radius-md);
+    line-height: 1.4;
+}
+
+.strava-feedback.is-success {
+    background: var(--color-success-subtle);
+    color: var(--color-success);
+    border: 1px solid var(--color-success-border);
+}
+
+.strava-feedback.is-error {
+    background: var(--color-error-subtle);
+    color: var(--color-error);
+    border: 1px solid var(--color-error-border);
+}
+
+/* Spinner animation */
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+.strava-spinner {
+    animation: spin 0.8s linear infinite;
+}
+
+/* Mobile: panel is inline, no absolute positioning */
+@media (max-width: 768px) {
+    .nav-item-strava {
+        position: static;
+        width: 100%;
+    }
+
+    .strava-trigger {
+        width: 100%;
+        justify-content: flex-start;
+    }
+
+    .strava-panel {
+        position: static;
+        top: auto;
+        right: auto;
+        box-shadow: none;
+        border-radius: var(--radius-md);
+        background: var(--color-surface);
+        border-color: var(--color-border);
+        margin-top: 4px;
+    }
+
+    .strava-chips {
+        width: 100%;
+    }
+}
 </style>
 
 <script>
@@ -444,8 +723,6 @@ function initThemeToggle() {
         }
     });
 }
-
-document.addEventListener('DOMContentLoaded', initThemeToggle);
 
 function triggerGoogleSignIn() {
     if (window.google && google.accounts && google.accounts.id) {
@@ -504,20 +781,165 @@ async function connectStrava() {
     }
 }
 
-async function syncStrava() {
+// ---- Strava panel ----
+
+function toggleStravaPanel() {
+    const trigger = document.getElementById('stravaTrigger');
+    const panel = document.getElementById('stravaPanel');
+    if (!trigger || !panel) return;
+
+    const isOpen = panel.classList.toggle('is-open');
+    trigger.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+}
+
+function closeStravaPanel() {
+    const trigger = document.getElementById('stravaTrigger');
+    const panel = document.getElementById('stravaPanel');
+    if (!trigger || !panel) return;
+
+    panel.classList.remove('is-open');
+    trigger.setAttribute('aria-expanded', 'false');
+}
+
+function formatRelativeTime(ts) {
+    // ts is a unix epoch (seconds), or an empty string / falsy
+    if (!ts) return 'Never synced';
+
+    const tsNum = parseInt(ts, 10);
+    if (isNaN(tsNum) || tsNum <= 0) return 'Never synced';
+
+    const nowSec = Math.floor(Date.now() / 1000);
+    const diffSec = nowSec - tsNum;
+
+    if (diffSec < 60) return 'just now';
+    if (diffSec < 3600) {
+        const m = Math.floor(diffSec / 60);
+        return m + 'm ago';
+    }
+    if (diffSec < 86400) {
+        const h = Math.floor(diffSec / 3600);
+        return h + 'h ago';
+    }
+    if (diffSec < 172800) return 'yesterday';
+    const d = Math.floor(diffSec / 86400);
+    return d + ' days ago';
+}
+
+function initStravaPanel() {
+    const panel = document.getElementById('stravaPanel');
+    if (!panel) return;
+
+    // Populate "last synced" text from the data attribute
+    const ts = panel.getAttribute('data-ts');
+    const lastSyncedEl = document.getElementById('stravaLastSynced');
+    if (lastSyncedEl) {
+        lastSyncedEl.textContent = formatRelativeTime(ts);
+    }
+
+    // Close panel on outside click
+    document.addEventListener('click', (e) => {
+        const trigger = document.getElementById('stravaTrigger');
+        if (!trigger || !panel) return;
+        if (!trigger.contains(e.target) && !panel.contains(e.target)) {
+            closeStravaPanel();
+        }
+    });
+
+    // Close panel on Escape key
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') {
+            closeStravaPanel();
+        }
+    });
+}
+
+async function doStravaSync(forceDays) {
+    const syncBtn = document.getElementById('stravaSyncBtn');
+    const chips = document.querySelectorAll('.strava-chip');
+    const feedback = document.getElementById('stravaFeedback');
+    const refreshIcon = syncBtn ? syncBtn.querySelector('.strava-refresh-icon') : null;
+    const spinner = syncBtn ? syncBtn.querySelector('.strava-spinner') : null;
+    const label = syncBtn ? syncBtn.querySelector('.strava-primary-label') : null;
+
+    // Set loading state
+    if (syncBtn) syncBtn.disabled = true;
+    chips.forEach(c => { c.disabled = true; });
+    if (refreshIcon) refreshIcon.style.display = 'none';
+    if (spinner) spinner.style.display = '';
+    if (label) label.textContent = 'Syncing\u2026';
+    if (feedback) feedback.style.display = 'none';
+
     try {
-        const response = await fetch('/api/strava/sync', { method: 'POST' });
+        let url = '/api/strava/sync';
+        if (forceDays !== null && forceDays !== undefined) {
+            url += '?force_days=' + encodeURIComponent(forceDays);
+        }
+
+        const response = await fetch(url, { method: 'POST' });
         const data = await response.json();
+
         if (response.ok) {
-            const runWord = data.synced === 1 ? 'run' : 'runs';
-            alert(`Strava sync complete: ${data.synced} new ${runWord} since last sync, ${data.total} total runs.`);
-            window.location.reload();
+            // Update "last synced" text to now
+            const lastSyncedEl = document.getElementById('stravaLastSynced');
+            if (lastSyncedEl) lastSyncedEl.textContent = 'just now';
+            // Also update the panel's data-ts to current unix time
+            const panel = document.getElementById('stravaPanel');
+            if (panel) panel.setAttribute('data-ts', String(Math.floor(Date.now() / 1000)));
+
+            // Show success feedback
+            const synced = data.synced || 0;
+            let message;
+            if (synced === 0) {
+                message = 'Already up to date.';
+            } else {
+                const runWord = synced === 1 ? 'run' : 'runs';
+                message = synced + ' new ' + runWord + ' synced.';
+            }
+            if (feedback) {
+                feedback.textContent = message;
+                feedback.className = 'strava-feedback is-success';
+                feedback.style.display = '';
+            }
+
+            // Auto-hide feedback after 4 seconds
+            setTimeout(() => {
+                if (feedback) feedback.style.display = 'none';
+            }, 4000);
         } else {
-            alert('Sync failed: ' + (data.detail || 'Unknown error'));
+            const detail = (data && data.detail) ? data.detail : 'Unknown error';
+            if (feedback) {
+                feedback.textContent = 'Sync failed: ' + detail;
+                feedback.className = 'strava-feedback is-error';
+                feedback.style.display = '';
+            }
         }
     } catch (err) {
-        alert('Failed to sync Strava activities. Please try again.');
+        if (feedback) {
+            feedback.textContent = 'Failed to reach Strava. Please try again.';
+            feedback.className = 'strava-feedback is-error';
+            feedback.style.display = '';
+        }
+    } finally {
+        // Restore button state
+        if (syncBtn) syncBtn.disabled = false;
+        chips.forEach(c => { c.disabled = false; });
+        if (refreshIcon) refreshIcon.style.display = '';
+        if (spinner) spinner.style.display = 'none';
+        if (label) label.textContent = 'Sync new runs';
     }
 }
+
+function syncStrava() {
+    doStravaSync(null);
+}
+
+function syncStravaForDays(days) {
+    doStravaSync(days);
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    initThemeToggle();
+    initStravaPanel();
+});
 </script>
 {% endmacro %}

@@ -1,6 +1,6 @@
 /* ============================================================================
    RunCoach Design System — "Refined Athletic"
-   Barlow Condensed (display) + Barlow (body) + JetBrains Mono (data)
+   Bricolage Grotesque (display) + DM Sans (body) + JetBrains Mono (data)
    Cobalt blue primary, warm coral accent, warm off-white light theme
    ========================================================================= */
 
@@ -52,8 +52,8 @@
   --color-info-border: #BAE6FD;
 
   /* ---- Typography ---- */
-  --font-display: "Barlow Condensed", "Arial Narrow", sans-serif;
-  --font-body: "Barlow", -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-display: "Bricolage Grotesque", Georgia, serif;
+  --font-body: "DM Sans", -apple-system, BlinkMacSystemFont, sans-serif;
   --font-mono: "JetBrains Mono", "SF Mono", Consolas, monospace;
 
   --text-xs: 0.75rem;     /* 12px */

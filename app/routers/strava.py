@@ -100,6 +100,10 @@ async def strava_sync(
         le=3650,
         description="Force a full re-sync for the last N days, ignoring the cursor.",
     ),
+    full_sync: bool = Query(
+        default=False,
+        description="Fetch all historical activities with no time filter, ignoring the cursor.",
+    ),
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
     strava_service: StravaService = Depends(get_strava_service),
@@ -107,7 +111,8 @@ async def strava_sync(
     """Sync new Strava activities since the last sync.
 
     By default, only fetches activities created after the last successful sync
-    (incremental). Pass force_days to override and re-pull a specific window.
+    (incremental). Pass force_days to re-pull a specific window, or full_sync=true
+    to fetch the entire activity history.
     """
     if not current_user.strava_athlete_id:
         raise HTTPException(
@@ -115,7 +120,9 @@ async def strava_sync(
             detail="Strava account not connected. Connect via /api/strava/connect first.",
         )
 
-    if force_days is not None:
+    if full_sync:
+        after_timestamp = None  # no time filter — fetch entire history
+    elif force_days is not None:
         after_timestamp = int(
             (datetime.now(timezone.utc) - timedelta(days=force_days)).timestamp()
         )

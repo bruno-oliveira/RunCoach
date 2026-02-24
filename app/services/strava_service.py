@@ -189,6 +189,12 @@ class StravaService:
         """
         access_token = await self.ensure_valid_token(user, db)
 
+        # Capture sync start time BEFORE any API calls. This is intentional:
+        # if an activity is mid-upload during this sync, its start_date will be
+        # before sync_started_at, so the next incremental sync (using
+        # sync_started_at as `after`) will still pick it up.
+        sync_started_at = int(time.time())
+
         synced = 0
         skipped = 0
         errors: list[str] = []
@@ -231,8 +237,7 @@ class StravaService:
 
             page += 1
 
-        now = int(time.time())
-        user.strava_last_synced_at = now
+        user.strava_last_synced_at = sync_started_at
         db.commit()
 
         total = db.query(RunLog).filter(RunLog.user_id == user.id).count()
@@ -246,7 +251,7 @@ class StravaService:
             "skipped": skipped,
             "errors": errors,
             "total": total,
-            "last_synced_at": now,
+            "last_synced_at": sync_started_at,
         }
 
     def disconnect(self, user: User, db: Session) -> None:
