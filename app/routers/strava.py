@@ -1,6 +1,7 @@
 """Strava OAuth and sync endpoints."""
 
 import logging
+from datetime import datetime, timedelta, timezone
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
@@ -13,11 +14,13 @@ from app.dependencies import get_current_user, get_db, get_auth_service, get_str
 from app.models.user import User
 from app.schemas import StravaStatusResponse, StravaSyncResponse
 from app.services.strava_service import StravaService
-from app.services.strava_cache import get_strava_cache, StravaSyncCache
 
 logger = logging.getLogger(__name__)
 
 strava_router = APIRouter(prefix="/api/strava", tags=["strava"])
+
+# How far back to look on the very first sync (before any cursor exists)
+INITIAL_SYNC_DAYS = 90
 
 
 @strava_router.get("/connect")
@@ -27,7 +30,6 @@ async def strava_connect(
     strava_service: StravaService = Depends(get_strava_service),
 ):
     """Return Strava OAuth authorization URL."""
-    # Encode user_id into a signed JWT state parameter for CSRF protection
     state = auth_service.create_access_token(
         {"sub": current_user.id, "purpose": "strava_oauth"}
     )
@@ -44,7 +46,6 @@ async def strava_callback(
     strava_service: StravaService = Depends(get_strava_service),
 ):
     """Handle Strava OAuth callback: exchange code, store tokens, trigger initial sync."""
-    # Verify state JWT to get user_id
     payload = auth_service.verify_token(state)
     if not payload or payload.get("purpose") != "strava_oauth":
         raise HTTPException(
@@ -59,7 +60,6 @@ async def strava_callback(
             status_code=status.HTTP_404_NOT_FOUND, detail="User not found"
         )
 
-    # Exchange code for tokens
     try:
         token_data = await strava_service.exchange_code_for_tokens(code)
     except Exception as e:
@@ -69,7 +69,6 @@ async def strava_callback(
             detail="Failed to exchange code with Strava",
         )
 
-    # Store tokens on user
     athlete = token_data.get("athlete", {})
     user.strava_athlete_id = str(athlete.get("id", ""))
     user.strava_access_token = token_data["access_token"]
@@ -77,35 +76,38 @@ async def strava_callback(
     user.strava_token_expires_at = token_data["expires_at"]
     db.commit()
 
-    # Trigger initial sync (default to 30 days)
+    # Initial sync: pull last INITIAL_SYNC_DAYS days
+    initial_after = int(
+        (datetime.now(timezone.utc) - timedelta(days=INITIAL_SYNC_DAYS)).timestamp()
+    )
     try:
-        result = await strava_service.sync_activities(user, db, days_back=30)
+        result = await strava_service.sync_activities(user, db, after_timestamp=initial_after)
         logger.info(
             f"Initial Strava sync for user {user.id}: "
-            f"{result['synced']} synced, {result['skipped']} skipped"
+            f"{result['synced']} synced, {result['total']} total"
         )
     except Exception as e:
         logger.error(f"Initial Strava sync failed: {e}")
 
-    # Redirect back to the app
     return RedirectResponse(url="/my-plans", status_code=status.HTTP_302_FOUND)
 
 
 @strava_router.post("/sync", response_model=StravaSyncResponse)
 async def strava_sync(
-    days_back: Optional[int] = Query(default=30, ge=1, le=3650),
+    force_days: Optional[int] = Query(
+        default=None,
+        ge=1,
+        le=3650,
+        description="Force a full re-sync for the last N days, ignoring the cursor.",
+    ),
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
     strava_service: StravaService = Depends(get_strava_service),
-    cache: StravaSyncCache = Depends(get_strava_cache),
 ):
-    """Manually trigger Strava activity sync with caching.
+    """Sync new Strava activities since the last sync.
 
-    Defaults to 30 days if days_back is not provided.
-    Cache TTL: 2 hours per user per period.
-
-    Args:
-        days_back: Number of days to sync (1-3650). Defaults to 30.
+    By default, only fetches activities created after the last successful sync
+    (incremental). Pass force_days to override and re-pull a specific window.
     """
     if not current_user.strava_athlete_id:
         raise HTTPException(
@@ -113,20 +115,22 @@ async def strava_sync(
             detail="Strava account not connected. Connect via /api/strava/connect first.",
         )
 
-    # Check cache first
-    cached_result = cache.get(current_user.id, days_back)
-    if cached_result is not None:
-        logger.info(f"Returning cached Strava sync result for user {current_user.id}, days_back={days_back}")
-        return StravaSyncResponse(**cached_result)
+    if force_days is not None:
+        after_timestamp = int(
+            (datetime.now(timezone.utc) - timedelta(days=force_days)).timestamp()
+        )
+    elif current_user.strava_last_synced_at:
+        after_timestamp = current_user.strava_last_synced_at
+    else:
+        # No cursor yet — treat like an initial sync
+        after_timestamp = int(
+            (datetime.now(timezone.utc) - timedelta(days=INITIAL_SYNC_DAYS)).timestamp()
+        )
 
-    # Cache miss - perform sync
     try:
         result = await strava_service.sync_activities(
-            current_user, db, days_back=days_back
+            current_user, db, after_timestamp=after_timestamp
         )
-        # Store in cache
-        cache.set(current_user.id, days_back, result)
-        logger.info(f"Strava sync complete for user {current_user.id}, days_back={days_back}: {result['synced']} synced")
     except Exception as e:
         logger.error(f"Strava sync failed for user {current_user.id}: {e}")
         raise HTTPException(
@@ -146,6 +150,7 @@ async def strava_status(
     return StravaStatusResponse(
         connected=connected,
         athlete_id=current_user.strava_athlete_id if connected else None,
+        last_synced_at=current_user.strava_last_synced_at if connected else None,
     )
 
 

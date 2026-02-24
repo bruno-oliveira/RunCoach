@@ -173,26 +173,21 @@ class StravaService:
         )
 
     async def sync_activities(
-        self, user: User, db: Session, days_back: Optional[int] = None
+        self, user: User, db: Session, after_timestamp: Optional[int] = None
     ) -> dict[str, Any]:
         """Sync Strava activities into RunLog entries.
 
         Args:
             user: User to sync activities for
             db: Database session
-            days_back: If provided, only sync activities from the last N days.
-                      If None, sync all historical activities.
+            after_timestamp: Unix epoch; only fetch activities after this time.
+                             If None, fetches all historical activities.
 
         Returns:
-            Dict with synced count, skipped count, and errors list.
+            Dict with synced count, skipped count, errors list, total count,
+            and last_synced_at timestamp.
         """
         access_token = await self.ensure_valid_token(user, db)
-
-        after_timestamp = None
-        if days_back is not None:
-            after_timestamp = int(
-                (datetime.now(timezone.utc) - timedelta(days=days_back)).timestamp()
-            )
 
         synced = 0
         skipped = 0
@@ -236,11 +231,23 @@ class StravaService:
 
             page += 1
 
+        now = int(time.time())
+        user.strava_last_synced_at = now
         db.commit()
+
+        total = db.query(RunLog).filter(RunLog.user_id == user.id).count()
+
         logger.info(
-            f"Strava sync for user {user.id}: {synced} synced, {skipped} skipped, {len(errors)} errors"
+            f"Strava sync for user {user.id}: {synced} synced, {skipped} skipped, "
+            f"{len(errors)} errors, {total} total runs"
         )
-        return {"synced": synced, "skipped": skipped, "errors": errors}
+        return {
+            "synced": synced,
+            "skipped": skipped,
+            "errors": errors,
+            "total": total,
+            "last_synced_at": now,
+        }
 
     def disconnect(self, user: User, db: Session) -> None:
         """Clear all Strava fields on the user."""
@@ -248,4 +255,5 @@ class StravaService:
         user.strava_access_token = None
         user.strava_refresh_token = None
         user.strava_token_expires_at = None
+        user.strava_last_synced_at = None
         db.commit()

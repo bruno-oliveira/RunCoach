@@ -81,6 +81,7 @@ async def google_auth(
             picture=user.picture,
             created_at=user.created_at,
             plans_generated=user.plans_generated,
+            strava_connected=bool(user.strava_athlete_id),
         ),
     )
 
@@ -100,6 +101,7 @@ async def get_current_user_info(current_user: User = Depends(get_current_user)):
         picture=current_user.picture,
         created_at=current_user.created_at,
         plans_generated=current_user.plans_generated,
+        strava_connected=bool(current_user.strava_athlete_id),
     )
 
 

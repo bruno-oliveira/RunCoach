@@ -21,3 +21,4 @@ class User(Base):
     strava_access_token = Column(String, nullable=True)
     strava_refresh_token = Column(String, nullable=True)
     strava_token_expires_at = Column(Integer, nullable=True)  # Unix epoch
+    strava_last_synced_at = Column(Integer, nullable=True)  # Unix epoch of last successful sync

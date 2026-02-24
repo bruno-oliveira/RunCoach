@@ -570,6 +570,8 @@ class StravaSyncResponse(BaseModel):
     synced: int
     skipped: int
     errors: List[str] = []
+    total: int = 0
+    last_synced_at: Optional[int] = None
 
 
 class StravaStatusResponse(BaseModel):
@@ -577,3 +579,4 @@ class StravaStatusResponse(BaseModel):
 
     connected: bool
     athlete_id: Optional[str] = None
+    last_synced_at: Optional[int] = None

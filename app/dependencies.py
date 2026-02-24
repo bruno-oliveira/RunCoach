@@ -17,7 +17,6 @@ from app.core.pdf_generator import PDFGenerator
 from app.core.plan_generator import TrainingPlanGenerator
 from app.core.performance_plan_generator import PerformancePlanGenerator
 from app.services.strava_service import StravaService
-from app.services.strava_cache import get_strava_cache as _get_cache_singleton, StravaSyncCache
 
 # Cookie name must match the one in auth router
 COOKIE_NAME = "access_token"
@@ -88,11 +87,6 @@ def get_auth_service() -> AuthService:
 def get_strava_service() -> StravaService:
     """Get a StravaService instance."""
     return StravaService()
-
-
-def get_strava_cache() -> StravaSyncCache:
-    """Get the global Strava cache instance."""
-    return _get_cache_singleton()
 
 
 security = HTTPBearer(auto_error=False)

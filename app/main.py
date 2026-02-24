@@ -88,6 +88,18 @@ async def set_anonymous_user_id_cookie(request: Request, call_next):
 # Create database tables
 Base.metadata.create_all(bind=engine)
 
+# Lightweight column migrations for existing databases
+# ALTER TABLE ADD COLUMN is a no-op if the column already exists (handled by try/except)
+with engine.connect() as _conn:
+    for _stmt in [
+        "ALTER TABLE users ADD COLUMN strava_last_synced_at INTEGER",
+    ]:
+        try:
+            _conn.execute(__import__("sqlalchemy").text(_stmt))
+            _conn.commit()
+        except Exception:
+            pass  # Column already exists
+
 # Templates
 templates = Jinja2Templates(directory="app/templates")
 
