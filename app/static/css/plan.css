@@ -197,6 +197,51 @@
     to   { opacity: 1; transform: translateY(0); }
 }
 
+/* ---- Overall Plan Progress Bar ---- */
+.plan-overall-progress {
+    background: var(--color-bg-elevated);
+    border: 1px solid var(--color-border-subtle);
+    border-radius: var(--radius-xl);
+    padding: var(--space-4) var(--space-5);
+    margin-bottom: var(--space-5);
+}
+
+.plan-overall-progress-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    margin-bottom: var(--space-3);
+}
+
+.plan-overall-progress-label {
+    font-family: var(--font-display);
+    font-weight: var(--weight-semibold);
+    font-size: var(--text-sm);
+    color: var(--color-text);
+}
+
+.plan-overall-progress-stats {
+    font-size: var(--text-sm);
+    color: var(--color-text-muted);
+    font-weight: var(--weight-medium);
+}
+
+.plan-overall-progress-track {
+    height: 10px;
+    background: var(--color-bg-sunken);
+    border-radius: var(--radius-full);
+    overflow: hidden;
+    border: 1px solid var(--color-border-subtle);
+}
+
+.plan-overall-progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--color-primary) 0%, var(--color-success) 100%);
+    border-radius: var(--radius-full);
+    transition: width 0.6s var(--ease-out);
+    min-width: 4px;
+}
+
 /* ---- Week Cards ---- */
 .week-card {
     background: var(--color-bg-elevated);
@@ -234,6 +279,27 @@
     border-radius: var(--radius-full);
     font-weight: var(--weight-semibold);
     font-size: var(--text-sm);
+}
+
+/* ---- Week Progress Badge ---- */
+.week-progress-badge {
+    padding: 4px 14px;
+    border-radius: var(--radius-full);
+    font-weight: var(--weight-semibold);
+    font-size: var(--text-sm);
+    background: var(--color-bg-sunken);
+    color: var(--color-text-muted);
+    border: 1px solid var(--color-border-subtle);
+}
+.week-progress-badge.in-progress {
+    background: var(--color-warning-subtle);
+    color: var(--color-warning);
+    border-color: var(--color-warning);
+}
+.week-progress-badge.all-done {
+    background: var(--color-success-subtle);
+    color: var(--color-success);
+    border-color: var(--color-success);
 }
 
 /* ---- Workout Grid ---- */
@@ -343,6 +409,24 @@
 }
 
 .log-run-btn:hover { background: var(--color-primary-dark); }
+
+.undo-log-btn {
+    margin-top: var(--space-2);
+    padding: 4px 10px;
+    background: transparent;
+    color: var(--color-text-muted);
+    border: 1px solid var(--color-border-subtle);
+    border-radius: var(--radius-md);
+    font-size: var(--text-xs);
+    cursor: pointer;
+    width: 100%;
+    transition: all var(--duration-fast) var(--ease-out);
+}
+.undo-log-btn:hover {
+    background: var(--color-error-subtle);
+    color: var(--color-error);
+    border-color: var(--color-error);
+}
 
 /* ---- Modal (plan-specific overrides) ---- */
 .modal {

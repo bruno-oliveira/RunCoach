@@ -329,6 +329,25 @@ window.submitRunLog = async function(event) {
     }
 };
 
+window.unlinkRun = async function(runId) {
+    if (!confirm('Remove this logged run?')) return;
+    try {
+        const response = await fetch(`/api/runs/${runId}`, {
+            method: 'DELETE',
+            headers: authHeaders(),
+            credentials: 'same-origin'
+        });
+        if (response.ok) {
+            ApiClient.showSuccess('Run removed.');
+            setTimeout(() => location.reload(), 800);
+        } else {
+            ApiClient.showError('Could not remove run.');
+        }
+    } catch (err) {
+        ApiClient.showError('Error: ' + err.message);
+    }
+};
+
 // Plan adaptation functionality
 window.checkForAdaptation = async function() {
     try {

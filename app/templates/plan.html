@@ -241,10 +241,46 @@
 
     <!-- Training Tab Panel -->
     <div class="plan-tab-panel active" id="panel-training" role="tabpanel" aria-labelledby="tab-training">
+        {% set ns = namespace(total=0, done=0) %}
         {% for week in plan %}
+          {% for workout in week.daily_workouts %}
+            {% if workout.type != 'rest' %}
+              {% set ns.total = ns.total + 1 %}
+              {% if logged_runs.get(workout.id) %}
+                {% set ns.done = ns.done + 1 %}
+              {% endif %}
+            {% endif %}
+          {% endfor %}
+        {% endfor %}
+        {% if ns.total > 0 %}
+        <div class="plan-overall-progress">
+            <div class="plan-overall-progress-header">
+                <span class="plan-overall-progress-label">Overall Progress</span>
+                <span class="plan-overall-progress-stats">{{ ns.done }} / {{ ns.total }} workouts &middot; {{ (ns.done / ns.total * 100) | round | int }}%</span>
+            </div>
+            <div class="plan-overall-progress-track">
+                <div class="plan-overall-progress-fill" style="width: {{ (ns.done / ns.total * 100) | round(1) }}%"></div>
+            </div>
+        </div>
+        {% endif %}
+        {% for week in plan %}
+        {% set ns = namespace(completed=0, total=0) %}
+        {% for workout in week.daily_workouts %}
+            {% if workout.type != 'rest' %}
+                {% set ns.total = ns.total + 1 %}
+                {% if logged_runs.get(workout.id) %}
+                    {% set ns.completed = ns.completed + 1 %}
+                {% endif %}
+            {% endif %}
+        {% endfor %}
         <div class="week-card">
             <div class="week-header">
                 <div class="week-title">Week {{ week.week }}</div>
+                {% if ns.total > 0 %}
+                <div class="week-progress-badge {% if ns.completed == ns.total %}all-done{% elif ns.completed > 0 %}in-progress{% endif %}">
+                    {{ ns.completed }}/{{ ns.total }}
+                </div>
+                {% endif %}
                 <div class="week-total">{{ week.total_km }} km</div>
             </div>
 
@@ -279,7 +315,8 @@
                         </div>
                         {% endif %}
                     </div>
-                    {% elif workout.type != 'rest' and user and not user.strava_athlete_id %}
+                    <button class="undo-log-btn" onclick="unlinkRun('{{ logged_run.id }}')">Undo</button>
+                    {% elif workout.type != 'rest' and user %}
                     <button class="log-run-btn" onclick="openLogModal('{{ workout.id }}', '{{ workout.type }}', {{ workout.distance }}, '{{ day_names[workout.day - 1] }}', {{ week.week }})">Log This Run</button>
                     {% endif %}
                 </div>
