@@ -7,13 +7,13 @@ const AnalyticsDashboard = {
     charts: {},
 
     COLORS: {
-        primary:      '#5B3AE0',
-        primaryFill:  'rgba(91, 58, 224, 0.15)',
+        primary:      '#1D4ED8',
+        primaryFill:  'rgba(29, 78, 216, 0.15)',
         accent:       '#FF6246',
         accentFill:   'rgba(255, 98, 70, 0.15)',
         secondary:    '#0D9488',
         secondaryFill:'rgba(13, 148, 136, 0.15)',
-        trend:        'rgba(91, 58, 224, 0.5)',
+        trend:        'rgba(29, 78, 216, 0.45)',
     },
 
     /* ------------------------------------------------------------------ */
@@ -84,10 +84,11 @@ const AnalyticsDashboard = {
 
                 // Check if Strava is connected and sync for this period
                 const stravaConnected = await this.checkStravaConnection();
-                if (stravaConnected && days !== 'all') {
-                    // Only sync for specific periods, not "all time"
-                    // (All time would sync everything which is expensive)
-                    const daysBack = parseInt(days);
+                if (stravaConnected) {
+                    // For specific periods: force re-pull that window.
+                    // For "all time": incremental sync (no force_days) to catch
+                    // any new activities since last sync, then show all stored runs.
+                    const daysBack = days !== 'all' ? parseInt(days) : null;
                     await this.syncStravaPeriod(daysBack);
 
                     // Reload runs data after sync
@@ -585,7 +586,7 @@ const AnalyticsDashboard = {
 
     async syncStravaPeriod(daysBack) {
         try {
-            const params = daysBack !== null ? `?days_back=${daysBack}` : '';
+            const params = daysBack !== null ? `?force_days=${daysBack}` : '';
             const res = await fetch(`/api/strava/sync${params}`, {
                 method: 'POST',
                 credentials: 'same-origin'

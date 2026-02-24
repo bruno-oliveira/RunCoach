@@ -23,8 +23,8 @@
                     {
                         label: 'Planned (km)',
                         data: data.planned_weekly_km,
-                        backgroundColor: 'rgba(102, 126, 234, 0.3)',
-                        borderColor: '#667eea',
+                        backgroundColor: 'rgba(29, 78, 216, 0.25)',
+                        borderColor: '#1D4ED8',
                         borderWidth: 1
                     },
                     {

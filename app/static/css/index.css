@@ -1,5 +1,6 @@
 /* ============================================================================
    Home Page — RunCoach Hero & Form
+   Barlow Condensed display headlines, warm off-white, cobalt blue + coral
    ========================================================================= */
 
 /* ---- Hero Section ---- */
@@ -32,7 +33,7 @@
 .hero-orb-1 {
     width: 500px;
     height: 500px;
-    background: radial-gradient(circle, rgba(91, 58, 224, 0.25) 0%, transparent 70%);
+    background: radial-gradient(circle, rgba(29, 78, 216, 0.2) 0%, transparent 70%);
     top: -10%;
     right: -5%;
     animation-delay: 0s;
@@ -41,7 +42,7 @@
 .hero-orb-2 {
     width: 400px;
     height: 400px;
-    background: radial-gradient(circle, rgba(255, 98, 70, 0.15) 0%, transparent 70%);
+    background: radial-gradient(circle, rgba(255, 98, 70, 0.12) 0%, transparent 70%);
     bottom: -5%;
     left: -8%;
     animation-delay: -7s;
@@ -50,7 +51,7 @@
 .hero-orb-3 {
     width: 300px;
     height: 300px;
-    background: radial-gradient(circle, rgba(13, 148, 136, 0.12) 0%, transparent 70%);
+    background: radial-gradient(circle, rgba(13, 148, 136, 0.10) 0%, transparent 70%);
     top: 40%;
     left: 50%;
     animation-delay: -14s;
@@ -58,9 +59,9 @@
 
 @keyframes orbFloat {
     0%, 100% { transform: translate(0, 0) scale(1); }
-    25% { transform: translate(30px, -20px) scale(1.05); }
-    50% { transform: translate(-20px, 15px) scale(0.95); }
-    75% { transform: translate(15px, 25px) scale(1.03); }
+    25%       { transform: translate(30px, -20px) scale(1.05); }
+    50%       { transform: translate(-20px, 15px) scale(0.95); }
+    75%       { transform: translate(15px, 25px) scale(1.03); }
 }
 
 /* Layout */
@@ -85,7 +86,7 @@
     gap: var(--space-2);
     padding: 5px 14px 5px 10px;
     background: var(--color-primary-subtle);
-    border: 1px solid rgba(91, 58, 224, 0.12);
+    border: 1px solid rgba(29, 78, 216, 0.12);
     border-radius: var(--radius-full);
     font-size: var(--text-xs);
     font-weight: var(--weight-semibold);
@@ -104,24 +105,28 @@
 
 @keyframes pulse-dot {
     0%, 100% { opacity: 1; transform: scale(1); }
-    50% { opacity: 0.5; transform: scale(0.8); }
+    50%       { opacity: 0.5; transform: scale(0.8); }
 }
 
+/* Large condensed headline */
 .hero-title {
     font-family: var(--font-display);
-    font-size: var(--text-5xl);
-    font-weight: var(--weight-extrabold);
-    line-height: 1.05;
-    letter-spacing: -0.04em;
+    font-size: clamp(3rem, 6vw, var(--text-5xl));
+    font-weight: 900;
+    line-height: 0.95;
+    letter-spacing: 0.01em;
+    text-transform: uppercase;
     color: var(--color-text);
     margin: 0;
 }
 
 .hero-title-accent {
-    background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-accent) 100%);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
+    display: block;
+    color: var(--color-primary);
+    background: none;
+    -webkit-text-fill-color: var(--color-primary);
+    -webkit-background-clip: unset;
+    background-clip: unset;
 }
 
 .hero-subtitle {
@@ -181,10 +186,11 @@
 .form-card-title {
     font-family: var(--font-display);
     font-size: var(--text-2xl);
-    font-weight: var(--weight-bold);
+    font-weight: 700;
     color: var(--color-text);
     margin: 0 0 var(--space-1) 0;
-    letter-spacing: -0.02em;
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
 }
 
 .form-card-desc {
@@ -247,8 +253,10 @@
     margin-top: var(--space-2);
     gap: var(--space-2);
     font-family: var(--font-display);
-    font-weight: var(--weight-bold);
-    letter-spacing: -0.01em;
+    font-weight: 800;
+    font-size: var(--text-lg) !important;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
 }
 
 .form-submit svg {
@@ -292,9 +300,9 @@
 .stat-card-value {
     font-family: var(--font-display);
     font-size: var(--text-2xl);
-    font-weight: var(--weight-bold);
+    font-weight: 700;
     color: var(--color-text);
-    letter-spacing: -0.02em;
+    letter-spacing: 0.01em;
 }
 
 .stat-card-label {
@@ -343,7 +351,7 @@
     }
 
     .hero-title {
-        font-size: 2.25rem;
+        font-size: 2.5rem;
     }
 
     .hero-subtitle {
@@ -378,7 +386,7 @@
 
 @media (max-width: 480px) {
     .hero-title {
-        font-size: 1.875rem;
+        font-size: 2rem;
     }
 
     .form-card {
@@ -396,10 +404,19 @@
 
 @keyframes slideUp {
     from { opacity: 0; transform: translateY(16px); }
-    to { opacity: 1; transform: translateY(0); }
+    to   { opacity: 1; transform: translateY(0); }
 }
 
 @keyframes slideDown {
     from { opacity: 0; transform: translateY(-8px); }
-    to { opacity: 1; transform: translateY(0); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ============================================================================
+   Dark Mode Overrides
+   ========================================================================= */
+
+/* Select chevron: lighter grey so it's visible on dark input backgrounds */
+[data-theme="dark"] .select-wrap .form-select {
+    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='none' stroke='%23A0A0A0' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpath d='M4 6l4 4 4-4'/%3e%3c/svg%3e");
 }

@@ -44,16 +44,16 @@
   outline-offset: 2px;
 }
 
-/* Primary — deep indigo with glow */
+/* Primary — cobalt blue */
 .btn-primary {
   background: var(--color-primary);
   color: var(--color-text-on-primary);
-  box-shadow: var(--shadow-sm), 0 2px 8px rgba(91, 58, 224, 0.15);
+  box-shadow: var(--shadow-sm), 0 2px 8px rgba(29, 78, 216, 0.15);
 }
 
 .btn-primary:hover:not(:disabled) {
   background: var(--color-primary-dark);
-  box-shadow: var(--shadow-md), 0 4px 16px rgba(91, 58, 224, 0.25);
+  box-shadow: var(--shadow-md), 0 4px 16px rgba(29, 78, 216, 0.25);
   transform: translateY(-1px);
 }
 
@@ -62,7 +62,7 @@
   box-shadow: var(--shadow-xs);
 }
 
-/* Accent — warm coral, for CTAs */
+/* Accent — warm coral */
 .btn-accent {
   background: var(--color-accent);
   color: var(--color-text-on-accent);
@@ -82,7 +82,7 @@
 /* Secondary */
 .btn-secondary {
   background: var(--color-secondary);
-  color: var(--color-text-on-primary);
+  color: #ffffff;
   box-shadow: var(--shadow-sm);
 }
 
@@ -95,11 +95,11 @@
 /* Danger */
 .btn-danger {
   background: var(--color-error);
-  color: var(--color-text-on-primary);
+  color: #ffffff;
 }
 
 .btn-danger:hover:not(:disabled) {
-  background: #B91C1C;
+  background: #CC2222;
   box-shadow: var(--shadow-md);
   transform: translateY(-1px);
 }
@@ -135,7 +135,7 @@
 }
 
 .btn-subtle:hover:not(:disabled) {
-  background: rgba(91, 58, 224, 0.14);
+  background: rgba(29, 78, 216, 0.12);
 }
 
 /* Button sizes */

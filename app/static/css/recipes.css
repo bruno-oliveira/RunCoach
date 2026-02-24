@@ -279,7 +279,7 @@
     background: var(--color-primary);
     color: white;
     border-color: var(--color-primary);
-    box-shadow: 0 2px 8px rgba(91, 58, 224, 0.2);
+    box-shadow: 0 2px 8px rgba(29, 78, 216, 0.2);
 }
 
 /* ---- Recipe Grid ---- */
@@ -601,4 +601,13 @@
     .search-section { padding: var(--space-3); }
     .filters { grid-template-columns: 1fr; }
     .recipe-name { font-size: var(--text-lg); }
+}
+
+/* ============================================================================
+   Dark Mode Overrides
+   ========================================================================= */
+
+/* Select chevron: lighter grey so it's visible on dark input backgrounds */
+[data-theme="dark"] .filter-group select {
+    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='none' stroke='%23A0A0A0' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpath d='M4 6l4 4 4-4'/%3e%3c/svg%3e");
 }

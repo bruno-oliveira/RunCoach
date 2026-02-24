@@ -1,16 +1,16 @@
 /* ============================================================================
    RunCoach Design System — "Refined Athletic"
-   Bricolage Grotesque (display) + DM Sans (body)
-   Deep indigo accents, warm coral energy, editorial whitespace
+   Barlow Condensed (display) + Barlow (body) + JetBrains Mono (data)
+   Cobalt blue primary, warm coral accent, warm off-white light theme
    ========================================================================= */
 
 :root {
   /* ---- Color Tokens ---- */
-  --color-primary: #5B3AE0;
-  --color-primary-light: #7C5CFF;
-  --color-primary-dark: #4328B0;
-  --color-primary-subtle: rgba(91, 58, 224, 0.08);
-  --color-primary-ghost: rgba(91, 58, 224, 0.04);
+  --color-primary: #1D4ED8;
+  --color-primary-light: #3B6EEA;
+  --color-primary-dark: #1639B0;
+  --color-primary-subtle: rgba(29, 78, 216, 0.08);
+  --color-primary-ghost: rgba(29, 78, 216, 0.04);
 
   --color-accent: #FF6246;
   --color-accent-light: #FF8A74;
@@ -21,7 +21,7 @@
   --color-secondary-light: #2DD4BF;
   --color-secondary-dark: #0F766E;
 
-  /* Neutrals — warm undertone */
+  /* Neutrals — warm undertone (light mode) */
   --color-bg: #FAFAF7;
   --color-bg-elevated: #FFFFFF;
   --color-bg-sunken: #F3F2EE;
@@ -52,8 +52,8 @@
   --color-info-border: #BAE6FD;
 
   /* ---- Typography ---- */
-  --font-display: "Bricolage Grotesque", Georgia, serif;
-  --font-body: "DM Sans", -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-display: "Barlow Condensed", "Arial Narrow", sans-serif;
+  --font-body: "Barlow", -apple-system, BlinkMacSystemFont, sans-serif;
   --font-mono: "JetBrains Mono", "SF Mono", Consolas, monospace;
 
   --text-xs: 0.75rem;     /* 12px */
@@ -121,7 +121,7 @@
   --shadow-md: 0 4px 8px -1px rgba(28, 25, 23, 0.06), 0 2px 4px -2px rgba(28, 25, 23, 0.04);
   --shadow-lg: 0 12px 24px -4px rgba(28, 25, 23, 0.08), 0 4px 8px -4px rgba(28, 25, 23, 0.04);
   --shadow-xl: 0 20px 40px -8px rgba(28, 25, 23, 0.1), 0 8px 16px -8px rgba(28, 25, 23, 0.06);
-  --shadow-glow: 0 0 0 1px var(--color-primary-subtle), 0 4px 16px rgba(91, 58, 224, 0.12);
+  --shadow-glow: 0 0 0 1px var(--color-primary-subtle), 0 4px 16px rgba(29, 78, 216, 0.12);
   --shadow-accent-glow: 0 0 0 1px var(--color-accent-subtle), 0 4px 16px rgba(255, 98, 70, 0.12);
 
   /* ---- Transitions ---- */
@@ -255,23 +255,24 @@ table {
 
 h1, h2, h3, h4, h5, h6 {
   font-family: var(--font-display);
-  font-weight: var(--weight-bold);
+  font-weight: 700;
   line-height: var(--leading-tight);
   color: var(--color-text);
-  letter-spacing: var(--tracking-tight);
+  letter-spacing: 0.03em;
   margin-block-end: var(--space-4);
 }
 
 h1 {
   font-size: var(--text-4xl);
-  font-weight: var(--weight-extrabold);
-  letter-spacing: -0.035em;
+  font-weight: 900;
+  letter-spacing: 0.01em;
   margin-block-end: var(--space-6);
 }
 
 h2 {
   font-size: var(--text-3xl);
-  font-weight: var(--weight-bold);
+  font-weight: 700;
+  letter-spacing: 0.02em;
 }
 
 h3 {
@@ -510,7 +511,7 @@ pre code {
 
 .site-footer {
   margin-top: var(--space-16);
-  padding: var(--space-8) 0;
+  padding: var(--space-6) 0;
   border-top: 1px solid var(--color-border);
 }
 
@@ -522,14 +523,18 @@ pre code {
 
 .footer-brand {
   font-family: var(--font-display);
-  font-weight: var(--weight-bold);
+  font-weight: 700;
   font-size: var(--text-base);
   color: var(--color-text-muted);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
 }
 
 .footer-copy {
-  font-size: var(--text-sm);
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
   color: var(--color-text-muted);
+  letter-spacing: 0.05em;
 }
 
 /* ============================================================================
@@ -647,26 +652,52 @@ pre code {
 }
 
 /* ============================================================================
-   Dark Mode (future enhancement)
+   Dark Mode — applied via [data-theme="dark"] on <html> element
    ========================================================================= */
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --color-bg: #0F0E13;
-    --color-bg-elevated: #1A1920;
-    --color-bg-sunken: #0A090E;
-    --color-bg-overlay: rgba(0, 0, 0, 0.6);
-    --color-surface: #242330;
-    --color-border: #2E2D3A;
-    --color-border-subtle: #1F1E28;
-    --color-text: #F0EDE8;
-    --color-text-secondary: #9B978F;
-    --color-text-muted: #6B6862;
-    --color-primary: #7C5CFF;
-    --color-primary-light: #9B82FF;
-    --color-primary-dark: #5B3AE0;
-    --color-primary-subtle: rgba(124, 92, 255, 0.12);
-    --color-accent: #FF7A62;
-    --color-accent-subtle: rgba(255, 122, 98, 0.12);
-  }
+[data-theme="dark"] {
+  --color-primary: #4F83F0;
+  --color-primary-light: #6B99F5;
+  --color-primary-dark: #3366D0;
+  --color-primary-subtle: rgba(79, 131, 240, 0.12);
+  --color-primary-ghost: rgba(79, 131, 240, 0.06);
+
+  --color-accent: #FF7A62;
+  --color-accent-light: #FF9A86;
+  --color-accent-dark: #E05A42;
+  --color-accent-subtle: rgba(255, 122, 98, 0.12);
+
+  --color-bg: #0F0E13;
+  --color-bg-elevated: #1A1920;
+  --color-bg-sunken: #0A090E;
+  --color-bg-overlay: rgba(0, 0, 0, 0.7);
+  --color-surface: #242330;
+  --color-border: #2E2D3A;
+  --color-border-subtle: #1F1E28;
+
+  --color-text: #F0EDE8;
+  --color-text-secondary: #9B978F;
+  --color-text-muted: #6B6862;
+  --color-text-on-primary: #FFFFFF;
+
+  --color-error: #FF6B6B;
+  --color-error-subtle: rgba(255, 107, 107, 0.12);
+  --color-error-border: rgba(255, 107, 107, 0.25);
+  --color-success: #34D46A;
+  --color-success-subtle: rgba(52, 212, 106, 0.12);
+  --color-success-border: rgba(52, 212, 106, 0.25);
+  --color-warning: #FFBA2E;
+  --color-warning-subtle: rgba(255, 186, 46, 0.12);
+  --color-warning-border: rgba(255, 186, 46, 0.25);
+  --color-info: #4BA8FF;
+  --color-info-subtle: rgba(75, 168, 255, 0.12);
+  --color-info-border: rgba(75, 168, 255, 0.25);
+
+  --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.5), 0 1px 2px rgba(0, 0, 0, 0.4);
+  --shadow-md: 0 4px 8px rgba(0, 0, 0, 0.5), 0 2px 4px rgba(0, 0, 0, 0.3);
+  --shadow-lg: 0 12px 24px rgba(0, 0, 0, 0.6), 0 4px 8px rgba(0, 0, 0, 0.4);
+  --shadow-xl: 0 20px 40px rgba(0, 0, 0, 0.7), 0 8px 16px rgba(0, 0, 0, 0.5);
+  --shadow-glow: 0 0 0 1px var(--color-primary-subtle), 0 4px 16px rgba(79, 131, 240, 0.2);
+  --shadow-accent-glow: 0 0 0 1px var(--color-accent-subtle), 0 4px 16px rgba(255, 122, 98, 0.2);
 }
