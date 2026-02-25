@@ -39,6 +39,21 @@ from app.utils import format_pace
 logger = logging.getLogger(__name__)
 adaptation_service = AdaptationService()
 
+
+def _parse_race_time_to_seconds(time_str: Optional[str]) -> Optional[int]:
+    """Convert HH:MM:SS or MM:SS string to integer seconds."""
+    if not time_str:
+        return None
+    parts = time_str.strip().split(":")
+    try:
+        if len(parts) == 3:
+            return int(parts[0]) * 3600 + int(parts[1]) * 60 + int(parts[2])
+        elif len(parts) == 2:
+            return int(parts[0]) * 60 + int(parts[1])
+    except (ValueError, IndexError):
+        return None
+    return None
+
 router = APIRouter(tags=["plans"])
 templates = Jinja2Templates(directory="app/templates")
 
@@ -139,6 +154,9 @@ async def generate_plan(
     target_distance: str = Form(...),
     weeks: int = Form(...),
     max_runs_per_week: int = Form(4),
+    body_weight_kg: float = Form(70.0),
+    recent_race_distance_km: Optional[float] = Form(None),
+    recent_race_time: Optional[str] = Form(None),
     anonymous_user_id: Optional[str] = Cookie(None),
     db: Session = Depends(get_db),
     current_user: Optional[User] = Depends(get_optional_user),
@@ -161,6 +179,9 @@ async def generate_plan(
             target_distance=target_distance_parsed,
             weeks=weeks,
             max_runs_per_week=max_runs_per_week,
+            body_weight_kg=body_weight_kg,
+            recent_race_distance_km=recent_race_distance_km or None,
+            recent_race_time=recent_race_time or None,
         )
     except InsufficientTimeException as e:
         return templates.TemplateResponse(
@@ -232,12 +253,13 @@ async def generate_plan(
     )
 
     try:
-        # Generate training plan
+        # Generate training plan (with optional VDOT-based pace zones)
         plan_data = plan_generator.generate_plan(
             plan_request.current_km,
             plan_request.target_distance,
             plan_request.weeks,
             plan_request.max_runs_per_week,
+            vdot=plan_request.vdot,
         )
 
         if current_user:
@@ -257,16 +279,23 @@ async def generate_plan(
         training_plan = TrainingPlan(
             user_id=user.id,
             current_weekly_km=plan_request.current_km,
-            target_distance=str(plan_request.target_distance),  # Store as string for DB
+            target_distance=str(plan_request.target_distance),
             weeks_duration=plan_request.weeks,
             max_runs_per_week=plan_request.max_runs_per_week,
             plan_data=json.dumps(plan_data),
+            body_weight_kg=plan_request.body_weight_kg,
+            recent_race_distance_km=plan_request.recent_race_distance_km,
+            recent_race_time_seconds=(
+                _parse_race_time_to_seconds(plan_request.recent_race_time)
+                if plan_request.recent_race_time else None
+            ),
+            vdot=plan_request.vdot,
         )
 
         db.add(training_plan)
         db.flush()
 
-        # Save weekly plans and daily workouts
+        # Save weekly plans and daily workouts (including coaching rationale)
         for week_data in plan_data:
             weekly_plan = WeeklyPlan(
                 training_plan_id=training_plan.id,
@@ -284,18 +313,49 @@ async def generate_plan(
                     workout_type=day_workout["type"],
                     distance_km=day_workout.get("distance", 0),
                     intensity=day_workout.get("intensity", "low"),
-                    notes=day_workout.get("notes", ""),
+                    notes=day_workout.get("description", day_workout.get("notes", "")),
+                    coaching_rationale=day_workout.get("coaching_rationale"),
                 )
                 db.add(daily_workout)
 
-        # Generate nutrition plan
+        # Generate base nutrition plan (for meal suggestions)
         nutrition_plan = nutrition_engine.generate_weekly_meal_plan(
             plan_request.current_km,
             plan_request.target_distance,
+            body_weight=plan_request.body_weight_kg,
         )
-
-        # Store nutrition plan with training plan
         training_plan.nutrition_plan_data = json.dumps(nutrition_plan)
+
+        # Generate phase-specific nutrition targets
+        nutrition_phases = nutrition_engine.generate_phased_nutrition_plan(
+            plan_data,
+            plan_request.current_km,
+            plan_request.target_distance,
+            body_weight_kg=plan_request.body_weight_kg,
+        )
+        training_plan.nutrition_phases_data = json.dumps(nutrition_phases)
+
+        # Generate race-day protocol
+        from app.core.race_protocol_generator import generate_race_protocol
+        goal_pace = None
+        if plan_request.vdot:
+            from app.core.vdot_calculator import VDOTCalculator
+            zones = VDOTCalculator.get_pace_zones(plan_request.vdot)
+            if zones and all(k in zones for k in ("I", "T", "M")):
+                if plan_request.target_distance <= 5.0:
+                    goal_pace = zones["I"]["pace_min_km"]
+                elif plan_request.target_distance <= 10.0:
+                    goal_pace = zones["T"]["pace_min_km"]
+                elif plan_request.target_distance <= 21.1:
+                    goal_pace = zones["M"]["pace_min_km"] * 0.95
+                else:
+                    goal_pace = zones["M"]["pace_min_km"]
+
+        race_protocol = generate_race_protocol(
+            plan_request.target_distance,
+            goal_pace,
+        )
+        training_plan.race_protocol_data = json.dumps(race_protocol)
 
         db.commit()
 
@@ -315,7 +375,10 @@ async def generate_plan(
             "nutrition_plan": get_nutrition_plan_for_template(
                 training_plan.nutrition_plan_data
             ),
-            "logged_runs": {},  # New plan has no logged runs yet
+            "nutrition_phases": json.loads(training_plan.nutrition_phases_data) if training_plan.nutrition_phases_data else {},
+            "race_protocol": json.loads(training_plan.race_protocol_data) if training_plan.race_protocol_data else {},
+            "vdot": training_plan.vdot,
+            "logged_runs": {},
             "performance_analysis": None,
             "progress_data": None,
         }
@@ -551,6 +614,9 @@ async def view_plan(
                 "target_distance": training_plan.target_distance,
                 "weeks": training_plan.weeks_duration,
                 "nutrition_plan": nutrition_plan,
+                "nutrition_phases": json.loads(training_plan.nutrition_phases_data) if training_plan.nutrition_phases_data else {},
+                "race_protocol": json.loads(training_plan.race_protocol_data) if training_plan.race_protocol_data else {},
+                "vdot": training_plan.vdot,
                 "performance_analysis": performance_analysis,
                 "logged_runs": logged_runs_map,
                 "strava_fitness": strava_fitness,

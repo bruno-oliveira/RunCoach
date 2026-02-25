@@ -109,6 +109,106 @@ class NutritionEngine:
         
         return meal_blueprint
     
+    def generate_phased_nutrition_plan(
+        self,
+        plan_data: List[Dict],
+        weekly_km: float,
+        target_distance: float,
+        body_weight_kg: float = 70.0,
+    ) -> Dict[str, Any]:
+        """Generate phase-specific nutrition targets for a training plan.
+
+        Nutrition targets shift between Base, Build, Peak, and Taper phases to
+        match the evolving training load.
+
+        Args:
+            plan_data:      Generated weekly plan (list of week dicts with 'phase' key)
+            weekly_km:      Starting weekly mileage
+            target_distance: Target race distance in km
+            body_weight_kg: Athlete body weight in kg
+
+        Returns:
+            Dict mapping phase names to nutrition targets and advice
+        """
+        # Determine which weeks belong to each phase
+        phase_weeks: Dict[str, List[int]] = {"base": [], "build": [], "peak": [], "taper": []}
+        for week in plan_data:
+            phase = week.get("phase", "base")
+            if phase in phase_weeks:
+                phase_weeks[phase].append(week["week"])
+
+        # Calculate peak mileage from plan data for build/peak phases
+        peak_km = max((w.get("total_km", weekly_km) for w in plan_data), default=weekly_km)
+
+        phase_configs = {
+            "base": {
+                "km": weekly_km,
+                "carb_multiplier": 1.0,
+                "cal_multiplier": 1.0,
+                "advice": (
+                    "Your base phase focuses on building your aerobic engine. "
+                    "Prioritise whole grains, lean proteins, and plenty of vegetables. "
+                    "Carb intake is moderate — you're building a foundation, not fuelling a race."
+                ),
+            },
+            "build": {
+                "km": (weekly_km + peak_km) / 2,
+                "carb_multiplier": 1.08,
+                "cal_multiplier": 1.05,
+                "advice": (
+                    "Build phase brings quality sessions — your carb needs increase to fuel "
+                    "tempo runs and intervals. Add an extra serving of complex carbs on hard "
+                    "training days (pasta, rice, sweet potato). Protein stays high for muscle repair."
+                ),
+            },
+            "peak": {
+                "km": peak_km,
+                "carb_multiplier": 1.12,
+                "cal_multiplier": 1.08,
+                "advice": (
+                    "Peak training demands maximum fuelling. Carbs are your primary performance lever "
+                    "right now. Practise your race-day nutrition strategy during long runs. "
+                    "Iron, vitamin D, and omega-3s are especially important at high training loads."
+                ),
+            },
+            "taper": {
+                "km": weekly_km * 0.6,
+                "carb_multiplier": 1.05,   # slightly elevated to top up glycogen
+                "cal_multiplier": 0.92,    # overall calories fall with reduced volume
+                "advice": (
+                    "Taper phase: volume drops but don't cut carbs. Your muscles are topping up "
+                    "glycogen stores for race day. In the final 2–3 days before the race, shift to "
+                    "~70% carbs. Keep protein steady and stay well hydrated."
+                ),
+            },
+        }
+
+        result: Dict[str, Any] = {}
+        for phase_name, config in phase_configs.items():
+            weeks_in_phase = phase_weeks.get(phase_name, [])
+            if not weeks_in_phase:
+                continue
+
+            base_needs = self.calculate_nutrition_needs(
+                config["km"], target_distance, body_weight_kg
+            )
+
+            calories = round(base_needs["calories"] * config["cal_multiplier"])
+            protein = round(base_needs["protein"])   # protein unchanged between phases
+            carbs = round(base_needs["carbs"] * config["carb_multiplier"])
+            fat = round(calories * 0.25 / 9)
+
+            result[phase_name] = {
+                "weeks": weeks_in_phase,
+                "daily_calories": calories,
+                "protein_g": protein,
+                "carbs_g": carbs,
+                "fats_g": fat,
+                "advice": config["advice"],
+            }
+
+        return result
+
     def _select_optimal_meal(self, meal_type: str, nutrition_needs: Dict[str, float], current_totals: Dict[str, float], force_random: bool = False) -> Optional[Dict[str, Any]]:
         """Select the optimal meal based on nutritional needs and current totals"""
         

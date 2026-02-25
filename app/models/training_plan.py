@@ -34,3 +34,15 @@ class TrainingPlan(Base):
     start_date = Column(DateTime, nullable=True)
     # Tracks the last Strava-fitness multiplier applied so re-runs can reverse it
     strava_adapted_multiplier = Column(Float, nullable=True)
+
+    # VDOT / pace zone fields
+    body_weight_kg = Column(Float, nullable=True)
+    recent_race_distance_km = Column(Float, nullable=True)
+    recent_race_time_seconds = Column(Integer, nullable=True)
+    vdot = Column(Float, nullable=True)
+
+    # Phase-specific nutrition data (JSON)
+    nutrition_phases_data = Column(Text, nullable=True)
+
+    # Race-day protocol (JSON)
+    race_protocol_data = Column(Text, nullable=True)

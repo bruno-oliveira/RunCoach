@@ -107,24 +107,39 @@ class AdaptivePlanGenerator:
     def _calculate_fitness_score(
         self, weekly_km: float, pace: Optional[float], improvement: float, run_count: int
     ) -> int:
-        """Calculate a fitness score from 0-100."""
+        """Calculate a fitness score from 0-100.
+
+        Uses percentile-based pace scoring so recreational runners (5:00–8:00 min/km)
+        receive realistic scores instead of being unfairly penalised against a 4:00/km elite
+        baseline.
+        """
         score = 0
 
-        # Volume component (40 points)
-        volume_score = min(40, (weekly_km / 50) * 40)  # 50km/week = full points
+        # Volume component (40 points): 50 km/week = full points
+        volume_score = min(40, (weekly_km / 50) * 40)
         score += volume_score
 
-        # Pace component (30 points) - assuming 6:00 min/km is good
+        # Pace component (30 points): percentile-based ranges
+        # <5:00 → elite/sub-elite; 5:00–6:00 → good recreational; 6:00–8:00 → developing runner
         if pace:
-            pace_score = max(0, 30 - (pace - 4.0) * 10)  # 4:00 = 30 points, scales down
+            if pace < 5.0:
+                pace_score = 30.0
+            elif pace < 6.0:
+                pace_score = 20.0 + (6.0 - pace) * 10.0
+            elif pace < 7.0:
+                pace_score = 12.0 + (7.0 - pace) * 8.0
+            elif pace < 8.0:
+                pace_score = 5.0 + (8.0 - pace) * 7.0
+            else:
+                pace_score = max(0.0, 5.0 - (pace - 8.0) * 2.5)
             score += pace_score
 
-        # Improvement component (20 points)
-        improvement_score = min(20, max(0, improvement * 2))  # 10% improvement = 20 points
+        # Improvement component (20 points): 10% improvement = full points
+        improvement_score = min(20, max(0, improvement * 2))
         score += improvement_score
 
-        # Consistency component (10 points)
-        consistency_score = min(10, (run_count / 20) * 10)  # 20 runs = full points
+        # Consistency component (10 points): 20 runs in 8 weeks = full points
+        consistency_score = min(10, (run_count / 20) * 10)
         score += consistency_score
 
         return int(min(100, max(0, score)))

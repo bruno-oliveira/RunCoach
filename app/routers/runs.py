@@ -8,8 +8,9 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 
 from app.core.adaptive_plan_generator import AdaptivePlanGenerator
+from app.core.quality_scorer import calculate_quality_score
 from app.dependencies import get_db, get_current_user
-from app.models import RunLog, User
+from app.models import RunLog, User, DailyWorkout, WeeklyPlan, TrainingPlan
 from app.schemas import (
     RunLogCreate,
     RunLogListResponse,
@@ -42,6 +43,8 @@ def _run_to_response(run: RunLog) -> RunLogResponse:
         notes=run.notes,
         workout_type=run.workout_type,
         perceived_effort=run.perceived_effort,
+        effort_quality_score=round(run.effort_quality_score, 1) if run.effort_quality_score else None,
+        quality_label=run.quality_label,
         created_at=run.created_at,
     )
 
@@ -82,6 +85,22 @@ async def create_run_log(
             workout_type=run_log.workout_type,
             perceived_effort=run_log.perceived_effort,
         )
+
+        # Calculate effort quality score if we have enough data
+        if run_log.daily_workout_id and run_log.perceived_effort:
+            planned_workout = db.query(DailyWorkout).filter(
+                DailyWorkout.id == run_log.daily_workout_id
+            ).first()
+            if planned_workout:
+                workout_type = planned_workout.workout_type or run_log.workout_type or "easy"
+                score, label = calculate_quality_score(
+                    actual_effort=run_log.perceived_effort,
+                    actual_pace_min_km=avg_pace_min_km,
+                    workout_type=workout_type,
+                    planned_pace_min_km=planned_workout.planned_pace_min_km if hasattr(planned_workout, "planned_pace_min_km") else None,
+                )
+                new_run.effort_quality_score = score
+                new_run.quality_label = label
 
         db.add(new_run)
         db.commit()

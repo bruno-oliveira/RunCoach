@@ -43,6 +43,22 @@ class PlanRequest(BaseModel):
     weeks: int = Field(..., ge=4, le=24, description="Training duration in weeks")
     max_runs_per_week: int = Field(default=4, ge=3, le=6, description="Maximum runs per week")
 
+    # Body weight — used for personalised nutrition
+    body_weight_kg: float = Field(
+        default=70.0, ge=30.0, le=250.0, description="Body weight in kg"
+    )
+
+    # Optional: recent race result for VDOT-based pace zones
+    recent_race_distance_km: Optional[float] = Field(
+        default=None, description="Recent race distance in km (for VDOT calculation)"
+    )
+    recent_race_time: Optional[str] = Field(
+        default=None, description="Recent race finish time (HH:MM:SS or MM:SS)"
+    )
+
+    # Auto-computed from race result — not a user input
+    vdot: Optional[float] = Field(default=None, exclude=True)
+
     @field_validator("target_distance")
     @classmethod
     def validate_target_distance(cls, v: float) -> float:
@@ -198,6 +214,18 @@ class PlanRequest(BaseModel):
                     req["low_msg"],
                 )
 
+        return self
+
+    @model_validator(mode="after")
+    def compute_vdot(self) -> "PlanRequest":
+        """Calculate VDOT from optional race result."""
+        if self.recent_race_distance_km and self.recent_race_time:
+            from app.core.vdot_calculator import VDOTCalculator
+            seconds = VDOTCalculator.parse_time_to_seconds(self.recent_race_time)
+            if seconds and seconds > 0:
+                self.vdot = VDOTCalculator.calculate_vdot(
+                    self.recent_race_distance_km, seconds
+                )
         return self
 
 
@@ -375,6 +403,8 @@ class RunLogResponse(RunLogBase):
     date: datetime
     avg_pace_min_km: Optional[float] = None
     strava_activity_id: Optional[str] = None
+    effort_quality_score: Optional[float] = None
+    quality_label: Optional[str] = None
     created_at: datetime
 
 

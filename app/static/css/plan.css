@@ -1352,3 +1352,402 @@
 [data-theme="dark"] .day-selector select {
     background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='none' stroke='%23A0A0A0' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpath d='M4 6l4 4 4-4'/%3e%3c/svg%3e");
 }
+
+/* ============================================================================
+   Coaching Notes (expandable per workout)
+   ========================================================================= */
+.coaching-note {
+    margin-top: var(--space-2);
+}
+
+.coaching-note-toggle {
+    font-size: var(--text-xs);
+    color: var(--color-primary);
+    cursor: pointer;
+    font-weight: var(--weight-semibold);
+    list-style: none;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.coaching-note-toggle::-webkit-details-marker { display: none; }
+
+.coaching-note-toggle::before {
+    content: "▸";
+    font-size: 10px;
+    transition: transform var(--duration-fast) var(--ease-out);
+}
+
+.coaching-note[open] .coaching-note-toggle::before {
+    transform: rotate(90deg);
+}
+
+.coaching-note-content {
+    margin-top: var(--space-2);
+    padding: var(--space-3);
+    background: var(--color-bg-sunken);
+    border-radius: var(--radius-md);
+    font-size: var(--text-xs);
+    color: var(--color-text-secondary);
+    line-height: var(--leading-normal);
+    border-left: 2px solid var(--color-primary);
+    animation: slideDown var(--duration-base) var(--ease-out);
+}
+
+/* ============================================================================
+   Quality Badges
+   ========================================================================= */
+.quality-badge {
+    display: inline-block;
+    margin-top: var(--space-2);
+    padding: 2px 10px;
+    border-radius: var(--radius-full);
+    font-size: var(--text-xs);
+    font-weight: var(--weight-semibold);
+    text-align: center;
+}
+
+.quality-nailed-it {
+    background: var(--color-success-subtle);
+    color: var(--color-success);
+    border: 1px solid var(--color-success);
+}
+
+.quality-on-track {
+    background: var(--color-info-subtle);
+    color: var(--color-info);
+    border: 1px solid var(--color-info);
+}
+
+.quality-too-easy {
+    background: var(--color-warning-subtle);
+    color: var(--color-warning);
+    border: 1px solid var(--color-warning);
+}
+
+.quality-too-hard {
+    background: var(--color-error-subtle);
+    color: var(--color-error);
+    border: 1px solid var(--color-error);
+}
+
+/* ============================================================================
+   Phase Nutrition
+   ========================================================================= */
+.phase-nutrition {
+    margin-bottom: var(--space-6);
+}
+
+.phase-nutrition h3 {
+    font-family: var(--font-display);
+    font-size: var(--text-lg);
+    font-weight: var(--weight-bold);
+    color: var(--color-text);
+    margin-bottom: var(--space-1);
+}
+
+.phase-nutrition-desc {
+    font-size: var(--text-sm);
+    color: var(--color-text-muted);
+    margin-bottom: var(--space-4);
+}
+
+.phase-nutrition-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: var(--space-4);
+}
+
+.phase-card {
+    background: var(--color-bg-sunken);
+    border: 1px solid var(--color-border-subtle);
+    border-radius: var(--radius-lg);
+    padding: var(--space-4);
+}
+
+.phase-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: var(--space-3);
+    padding-bottom: var(--space-2);
+    border-bottom: 1px solid var(--color-border-subtle);
+}
+
+.phase-name {
+    font-weight: var(--weight-bold);
+    font-size: var(--text-sm);
+    color: var(--color-primary);
+    text-transform: capitalize;
+}
+
+.phase-weeks {
+    font-size: var(--text-xs);
+    color: var(--color-text-muted);
+}
+
+.phase-macros {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: var(--space-2);
+}
+
+.phase-macro {
+    text-align: center;
+    padding: var(--space-2);
+    background: var(--color-bg-elevated);
+    border-radius: var(--radius-md);
+}
+
+.phase-macro-value {
+    display: block;
+    font-weight: var(--weight-bold);
+    font-size: var(--text-base);
+    color: var(--color-text);
+}
+
+.phase-macro-label {
+    font-size: var(--text-xs);
+    color: var(--color-text-muted);
+    text-transform: uppercase;
+    letter-spacing: var(--tracking-wider);
+}
+
+.phase-advice {
+    margin-top: var(--space-3);
+    padding: var(--space-3);
+    background: var(--color-info-subtle);
+    border-radius: var(--radius-md);
+    font-size: var(--text-xs);
+    color: var(--color-info);
+    line-height: var(--leading-normal);
+}
+
+/* ============================================================================
+   Race Day Tab
+   ========================================================================= */
+.raceday-section {
+    background: var(--color-bg-elevated);
+    border: 1px solid var(--color-border-subtle);
+    border-radius: var(--radius-xl);
+    padding: var(--space-6);
+}
+
+.raceday-section .section-header {
+    text-align: center;
+    margin-bottom: var(--space-6);
+}
+
+.raceday-section .section-header h2 {
+    font-family: var(--font-display);
+    font-size: var(--text-2xl);
+    font-weight: var(--weight-extrabold);
+    color: var(--color-text);
+    margin-bottom: var(--space-1);
+}
+
+.raceday-section .section-header p {
+    color: var(--color-text-secondary);
+    font-size: var(--text-base);
+}
+
+.raceday-card {
+    background: var(--color-bg-sunken);
+    border: 1px solid var(--color-border-subtle);
+    border-radius: var(--radius-lg);
+    padding: var(--space-5);
+    margin-bottom: var(--space-4);
+}
+
+.raceday-card h3 {
+    font-family: var(--font-display);
+    font-size: var(--text-lg);
+    font-weight: var(--weight-bold);
+    color: var(--color-text);
+    margin-bottom: var(--space-4);
+}
+
+.raceday-strategy {
+    font-size: var(--text-sm);
+    color: var(--color-text-secondary);
+    line-height: var(--leading-relaxed);
+    margin: 0;
+}
+
+/* Splits table */
+.splits-table {
+    overflow-x: auto;
+}
+
+.splits-header,
+.splits-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr 1fr;
+    gap: var(--space-2);
+    padding: var(--space-3) var(--space-2);
+}
+
+.splits-header {
+    font-weight: var(--weight-semibold);
+    font-size: var(--text-xs);
+    color: var(--color-text-muted);
+    text-transform: uppercase;
+    letter-spacing: var(--tracking-wider);
+    border-bottom: 2px solid var(--color-border-subtle);
+}
+
+.splits-row {
+    font-size: var(--text-sm);
+    color: var(--color-text-secondary);
+    border-bottom: 1px solid var(--color-border-subtle);
+}
+
+.splits-row:last-child { border-bottom: none; }
+
+.splits-highlight {
+    background: var(--color-primary-subtle);
+    border-radius: var(--radius-md);
+    font-weight: var(--weight-semibold);
+    color: var(--color-primary);
+}
+
+/* Timeline */
+.timeline {
+    display: grid;
+    gap: var(--space-1);
+}
+
+.timeline-item {
+    display: grid;
+    grid-template-columns: 120px 1fr;
+    gap: var(--space-3);
+    padding: var(--space-3) 0;
+    border-bottom: 1px solid var(--color-border-subtle);
+    font-size: var(--text-sm);
+}
+
+.timeline-item:last-child { border-bottom: none; }
+
+.timeline-time {
+    font-weight: var(--weight-semibold);
+    color: var(--color-primary);
+}
+
+.timeline-activity {
+    color: var(--color-text-secondary);
+}
+
+/* Nutrition timing */
+.nutrition-timeline {
+    display: grid;
+    gap: var(--space-3);
+}
+
+.nutrition-timing-item {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--space-3);
+    padding: var(--space-3);
+    background: var(--color-bg-elevated);
+    border-radius: var(--radius-md);
+    border: 1px solid var(--color-border-subtle);
+}
+
+.nutrition-timing-icon {
+    font-size: 1.25rem;
+    flex-shrink: 0;
+    margin-top: 2px;
+}
+
+.nutrition-timing-content {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    font-size: var(--text-sm);
+}
+
+.nutrition-timing-content strong {
+    color: var(--color-text);
+}
+
+.nutrition-timing-content span {
+    color: var(--color-text-secondary);
+}
+
+/* Mental checkpoints */
+.mental-checkpoints {
+    display: grid;
+    gap: var(--space-3);
+}
+
+.checkpoint-item {
+    display: flex;
+    gap: var(--space-3);
+    padding: var(--space-3);
+    background: var(--color-bg-elevated);
+    border-radius: var(--radius-md);
+    border-left: 3px solid var(--color-primary);
+}
+
+.checkpoint-distance {
+    font-weight: var(--weight-bold);
+    color: var(--color-primary);
+    font-size: var(--text-sm);
+    min-width: 60px;
+    flex-shrink: 0;
+}
+
+.checkpoint-message {
+    font-size: var(--text-sm);
+    color: var(--color-text-secondary);
+    line-height: var(--leading-normal);
+    font-style: italic;
+}
+
+/* Checklist */
+.checklist {
+    display: grid;
+    gap: var(--space-2);
+}
+
+.checklist-item {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--space-3);
+    padding: var(--space-3);
+    background: var(--color-bg-elevated);
+    border-radius: var(--radius-md);
+    cursor: pointer;
+    font-size: var(--text-sm);
+    color: var(--color-text-secondary);
+    transition: all var(--duration-fast) var(--ease-out);
+    border: 1px solid var(--color-border-subtle);
+}
+
+.checklist-item:hover {
+    background: var(--color-primary-subtle);
+}
+
+.checklist-checkbox {
+    margin-top: 2px;
+    accent-color: var(--color-primary);
+    cursor: pointer;
+}
+
+.checklist-item:has(.checklist-checkbox:checked) {
+    text-decoration: line-through;
+    opacity: 0.6;
+}
+
+/* Responsive race day */
+@media (max-width: 768px) {
+    .splits-header, .splits-row { font-size: var(--text-xs); }
+    .timeline-item { grid-template-columns: 100px 1fr; }
+    .phase-nutrition-grid { grid-template-columns: 1fr 1fr; }
+}
+
+@media (max-width: 480px) {
+    .phase-nutrition-grid { grid-template-columns: 1fr; }
+    .timeline-item { grid-template-columns: 1fr; }
+}

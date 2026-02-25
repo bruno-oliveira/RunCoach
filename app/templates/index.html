@@ -154,15 +154,53 @@
                             </div>
                         </div>
 
-                        <div class="form-group">
-                            <label for="max_runs_per_week" class="form-label">Runs per week</label>
-                            <div class="select-wrap">
-                                <select id="max_runs_per_week" name="max_runs_per_week" class="form-select" required>
-                                    <option value="3">3 runs &mdash; Beginner</option>
-                                    <option value="4" selected>4 runs &mdash; Recommended</option>
-                                    <option value="5">5 runs &mdash; Intermediate</option>
-                                    <option value="6">6 runs &mdash; Advanced</option>
-                                </select>
+                        <div class="form-row-2">
+                            <div class="form-group">
+                                <label for="max_runs_per_week" class="form-label">Runs per week</label>
+                                <div class="select-wrap">
+                                    <select id="max_runs_per_week" name="max_runs_per_week" class="form-select" required>
+                                        <option value="3">3 runs &mdash; Beginner</option>
+                                        <option value="4" selected>4 runs &mdash; Recommended</option>
+                                        <option value="5">5 runs &mdash; Intermediate</option>
+                                        <option value="6">6 runs &mdash; Advanced</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="body_weight_kg" class="form-label">Body weight</label>
+                                <div class="input-with-unit">
+                                    <input type="number" id="body_weight_kg" name="body_weight_kg" class="form-input" step="0.1" min="30" max="250" required placeholder="70" value="70">
+                                    <span class="input-unit">kg</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="form-group form-collapsible">
+                            <button type="button" class="form-collapsible-toggle" onclick="toggleRaceFields()">
+                                <span>Got a recent race result? (optional)</span>
+                                <svg class="chevron-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+                            </button>
+                            <div id="race-fields" class="form-collapsible-content" style="display:none;">
+                                <span class="form-help" style="margin-bottom: 8px; display:block;">We'll calculate your VDOT and set personalised pace zones</span>
+                                <div class="form-row-2">
+                                    <div class="form-group">
+                                        <label for="recent_race_distance_km" class="form-label">Race distance</label>
+                                        <div class="select-wrap">
+                                            <select id="recent_race_distance_km" name="recent_race_distance_km" class="form-select">
+                                                <option value="">Select</option>
+                                                <option value="5">5K</option>
+                                                <option value="10">10K</option>
+                                                <option value="21.1">Half Marathon</option>
+                                                <option value="42.2">Marathon</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="recent_race_time" class="form-label">Finish time</label>
+                                        <input type="text" id="recent_race_time" name="recent_race_time" class="form-input" placeholder="HH:MM:SS or MM:SS">
+                                    </div>
+                                </div>
                             </div>
                         </div>
 
@@ -200,6 +238,18 @@
 
 {% block scripts %}
 <script>
+function toggleRaceFields() {
+    const fields = document.getElementById('race-fields');
+    const toggle = document.querySelector('.form-collapsible-toggle');
+    if (fields.style.display === 'none') {
+        fields.style.display = 'block';
+        toggle.classList.add('open');
+    } else {
+        fields.style.display = 'none';
+        toggle.classList.remove('open');
+    }
+}
+
 document.addEventListener('DOMContentLoaded', function() {
     const form = document.querySelector('.plan-form');
     const submitBtn = form?.querySelector('.form-submit');

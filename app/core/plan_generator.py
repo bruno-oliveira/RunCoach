@@ -573,7 +573,9 @@ class TrainingPlanGenerator:
 
     def _generate_daily_workouts(self, week_number: int, total_km: float, distribution: Dict[str, int],
                                 target_distance: float, weeks: int, phase: str,
-                                is_recovery_week: bool) -> List[Dict[str, Any]]:
+                                is_recovery_week: bool,
+                                vdot: Optional[float] = None,
+                                pace_zones: Optional[Dict] = None) -> List[Dict[str, Any]]:
         """
         Generate daily workouts with integrated strength/cross-training and rest day rules
         """
@@ -669,17 +671,25 @@ class TrainingPlanGenerator:
             elif workout_type == 'easy':
                 workout = self._generate_easy_run(day_number, easy_distance, total_km)
             elif workout_type == 'tempo':
-                workout = self._generate_tempo_run(day_number, easy_distance, total_km)
+                workout = self._generate_tempo_run(day_number, easy_distance, total_km,
+                                                   vdot=vdot, pace_zones=pace_zones)
             elif workout_type == 'interval':
-                workout = self._generate_interval_run(day_number, easy_distance, total_km)
+                workout = self._generate_interval_run(day_number, easy_distance, total_km,
+                                                      vdot=vdot, pace_zones=pace_zones)
             elif workout_type == 'hill':
                 workout = self._generate_hill_workout(day_number, easy_distance)
-            
+
             if workout_type == 'easy':
                 strength_session = self._generate_strength_session(day_number, week_number, phase, workout_type)
                 if strength_session:
                     workout['strength_session'] = strength_session
-            
+
+            # Add coaching rationale
+            from app.core.coaching_notes_generator import generate_coaching_note
+            workout['coaching_rationale'] = generate_coaching_note(
+                workout_type, phase, week_number, target_distance, is_recovery_week
+            )
+
             workouts.append(workout)
         
         return workouts
@@ -897,37 +907,102 @@ class TrainingPlanGenerator:
             'description': easy_variations[day % len(easy_variations)]
         }
     
-    def _generate_tempo_run(self, day: int, distance: float, total_km: float) -> Dict[str, Any]:
-        """Generate tempo run workout"""
-        tempo_variations = [
-            f'Tempo run: 2km warmup, {round(distance-2, 1)}km at threshold pace, 2km cooldown.',
-            f'Cruise intervals: 3x{round((distance-2)/3, 1)}km at tempo pace with 3min recovery.',
-            f'Tempo run with surges: Main tempo with 4x30sec faster surges.'
-        ]
-        
+    def _generate_tempo_run(self, day: int, distance: float, total_km: float,
+                            vdot: Optional[float] = None,
+                            pace_zones: Optional[Dict] = None) -> Dict[str, Any]:
+        """Generate tempo run workout, with specific paces if VDOT is available."""
+        if pace_zones:
+            t_pace = pace_zones["T"]["pace_str"]
+            m_pace = pace_zones["M"]["pace_str"]
+            tempo_variations = [
+                f'Tempo run: 2km warmup, {round(distance-2, 1)}km at {t_pace} (T-pace), 2km cooldown.',
+                f'Cruise intervals: 3×{round((distance-2)/3, 1)}km at {t_pace} (T-pace) with 3min recovery.',
+                f'Tempo run with surges: main tempo at {t_pace} (T-pace) with 4×30sec faster surges.',
+            ]
+        else:
+            tempo_variations = [
+                f'Tempo run: 2km warmup, {round(distance-2, 1)}km at threshold pace, 2km cooldown.',
+                f'Cruise intervals: 3×{round((distance-2)/3, 1)}km at tempo pace with 3min recovery.',
+                f'Tempo run with surges: Main tempo with 4×30sec faster surges.',
+            ]
+
+        from app.core.vdot_calculator import VDOTCalculator
+        description = VDOTCalculator.inject_paces_into_description(
+            tempo_variations[day % len(tempo_variations)], pace_zones or {}, "tempo"
+        )
+
         return {
             'day': day,
             'type': 'tempo',
             'distance': round(distance, 1),
             'intensity': 'medium',
-            'description': tempo_variations[day % len(tempo_variations)]
+            'description': description,
         }
     
-    def _generate_interval_run(self, day: int, distance: float, total_km: float) -> Dict[str, Any]:
-        """Generate interval run workout"""
-        interval_workouts = [
-            f'VO2 max intervals: 6x400m at 5K pace with 400m recovery jog.',
-            f'Pyramid intervals: 400m-800m-1200m-800m-400m with equal recovery.',
-            f'Hill repeats: 8x45sec hill repeats with jog down recovery.',
-            f'Yasso 800s: {round(distance/0.8, 0)}x800m at marathon goal pace.'
-        ]
-        
+    def _generate_interval_run(self, day: int, distance: float, total_km: float,
+                               vdot: Optional[float] = None,
+                               pace_zones: Optional[Dict] = None) -> Dict[str, Any]:
+        """Generate interval run workout.
+
+        Guardrail: 1000m+ intervals are gated behind 40km/week base.
+        200m repeats are offered for 5K-focused runners with <30km base.
+        VDOT pace zones are injected when available.
+        """
+        if pace_zones:
+            i_pace = pace_zones["I"]["pace_str"]
+            t_pace = pace_zones["T"]["pace_str"]
+            m_pace = pace_zones["M"]["pace_str"]
+            r_pace = pace_zones["R"]["pace_str"]
+        else:
+            i_pace = t_pace = m_pace = r_pace = None
+
+        # ── Guardrail: gate long intervals behind sufficient base ──────
+        if total_km >= 40:
+            # Full suite including 1000m+ intervals
+            if i_pace:
+                interval_workouts = [
+                    f'VO₂max intervals: 6×400m at {i_pace} (I-pace) with 400m recovery jog.',
+                    f'Pyramid: 400m–800m–1200m–800m–400m at {i_pace} (I-pace) with equal recovery.',
+                    f'Hill repeats: 8×45sec at {t_pace} (T-pace) effort with jog-down recovery.',
+                    f'Yasso 800s: {max(4, round(distance / 0.8))}×800m at {m_pace} (M-pace).',
+                    f'VO₂max intervals: 5×1000m at {i_pace} (I-pace) with 400m recovery jog.',
+                ]
+            else:
+                interval_workouts = [
+                    f'VO₂max intervals: 6×400m at 5K pace with 400m recovery jog.',
+                    f'Pyramid intervals: 400m–800m–1200m–800m–400m with equal recovery.',
+                    f'Hill repeats: 8×45sec at threshold effort with jog-down recovery.',
+                    f'Yasso 800s: {max(4, round(distance / 0.8))}×800m at marathon goal pace.',
+                    f'VO₂max intervals: 5×1000m at 5K pace with 400m recovery jog.',
+                ]
+        else:
+            # Conservative: 400m–800m only; 200m repeats for low-base runners
+            if i_pace:
+                interval_workouts = [
+                    f'Speed intervals: 10×400m at {i_pace} (I-pace) with 400m recovery jog.',
+                    f'Cruise intervals: 6×800m at {t_pace} (T-pace) with 90sec rest.',
+                    f'Speed work: 12×200m at {r_pace} (R-pace) with 200m recovery jog.',
+                    f'Hill repeats: 8×30sec at hard effort with walk-down recovery.',
+                ]
+            else:
+                interval_workouts = [
+                    f'Speed intervals: 10×400m at 5K pace with 400m recovery jog.',
+                    f'Cruise intervals: 6×800m at 10K pace with 90sec rest.',
+                    f'Speed work: 12×200m at fast-but-controlled effort with 200m jog.',
+                    f'Hill repeats: 8×30sec at hard effort with walk-down recovery.',
+                ]
+
+        from app.core.vdot_calculator import VDOTCalculator
+        description = VDOTCalculator.inject_paces_into_description(
+            interval_workouts[day % len(interval_workouts)], pace_zones or {}, "interval"
+        )
+
         return {
             'day': day,
             'type': 'interval',
             'distance': round(distance, 1),
             'intensity': 'high',
-            'description': interval_workouts[day % len(interval_workouts)]
+            'description': description,
         }
     
     def _generate_hill_workout(self, day: int, distance: float = 0) -> Dict[str, Any]:
@@ -1316,20 +1391,24 @@ class TrainingPlanGenerator:
         
         return weekly_progression
     
-    def _generate_weekly_plan(self, week_number: int, total_km: float, target_distance: float, 
-                            max_runs_per_week: int, weeks: int) -> Dict[str, Any]:
+    def _generate_weekly_plan(self, week_number: int, total_km: float, target_distance: float,
+                            max_runs_per_week: int, weeks: int,
+                            vdot: Optional[float] = None,
+                            pace_zones: Optional[Dict] = None) -> Dict[str, Any]:
         """
-        Generate a single week's training plan
+        Generate a single week's training plan.
         """
         phases = self._calculate_phases(weeks)
         phase = self._get_phase(week_number, phases)
         is_recovery_week = self._is_recovery_week(week_number, phase)
-        
-        distribution = self._get_workout_distribution(total_km, max_runs_per_week, phase, 
+
+        distribution = self._get_workout_distribution(total_km, max_runs_per_week, phase,
                                                    is_recovery_week, week_number, phases, target_distance)
-        
-        workouts = self._generate_daily_workouts(week_number, total_km, distribution,
-                                              target_distance, weeks, phase, is_recovery_week)
+
+        workouts = self._generate_daily_workouts(
+            week_number, total_km, distribution, target_distance, weeks, phase, is_recovery_week,
+            vdot=vdot, pace_zones=pace_zones,
+        )
 
         actual_total_km = round(sum(w.get('distance', 0) for w in workouts), 1)
 
@@ -1350,18 +1429,31 @@ class TrainingPlanGenerator:
         
         return weekly_plan
     
-    def generate_plan(self, current_km: float, target_distance: float, weeks: int, 
-                      max_runs_per_week: int = 4) -> List[Dict[str, Any]]:
+    def generate_plan(self, current_km: float, target_distance: float, weeks: int,
+                      max_runs_per_week: int = 4, vdot: Optional[float] = None) -> List[Dict[str, Any]]:
         """
         Generate a comprehensive training plan with phase structure, conservative progression,
-        mandatory rest days, and integrated strength/cross-training
+        mandatory rest days, and integrated strength/cross-training.
+
+        Args:
+            current_km:          Current weekly mileage in km
+            target_distance:     Race distance in km
+            weeks:               Training duration in weeks
+            max_runs_per_week:   Maximum runs per week (3-6)
+            vdot:                Optional VDOT score for personalised pace zones
         """
+        from app.core.vdot_calculator import VDOTCalculator
+        pace_zones = VDOTCalculator.get_pace_zones(vdot) if vdot else None
+
         weekly_progression = self._calculate_weekly_progression(current_km, target_distance, weeks, max_runs_per_week)
-        
+
         training_plan = []
         for week in range(1, weeks + 1):
             week_km = weekly_progression[week - 1]
-            weekly_plan = self._generate_weekly_plan(week, week_km, target_distance, max_runs_per_week, weeks)
+            weekly_plan = self._generate_weekly_plan(
+                week, week_km, target_distance, max_runs_per_week, weeks,
+                vdot=vdot, pace_zones=pace_zones,
+            )
             training_plan.append(weekly_plan)
-        
+
         return training_plan

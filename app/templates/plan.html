@@ -55,6 +55,12 @@
                 <strong>📈 Peak Week</strong>
                 {{ plan | map(attribute='total_km') | max | round(1) }} km
             </div>
+            {% if vdot %}
+            <div class="summary-item">
+                <strong>🧮 VDOT</strong>
+                {{ "%.1f"|format(vdot) }}
+            </div>
+            {% endif %}
         </div>
     </div>
     
@@ -237,6 +243,12 @@
             Nutrition
         </button>
         {% endif %}
+        {% if race_protocol %}
+        <button class="plan-tab" role="tab" aria-selected="false" aria-controls="panel-raceday" id="tab-raceday" onclick="switchPlanTab('raceday')">
+            <svg class="plan-tab-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/></svg>
+            Race Day
+        </button>
+        {% endif %}
     </nav>
 
     <!-- Training Tab Panel -->
@@ -296,7 +308,19 @@
                     {% endif %}
                     <div class="workout-notes">{{ workout.notes }}</div>
 
+                    {% if workout.coaching_rationale %}
+                    <details class="coaching-note">
+                        <summary class="coaching-note-toggle">Coach says</summary>
+                        <div class="coaching-note-content">{{ workout.coaching_rationale }}</div>
+                    </details>
+                    {% endif %}
+
                     {% if logged_run %}
+                    {% if logged_run.quality_label %}
+                    <div class="quality-badge quality-{{ logged_run.quality_label|lower|replace(' ', '-') }}">
+                        {{ logged_run.quality_label }}
+                    </div>
+                    {% endif %}
                     <div class="run-stats">
                         <div class="run-stats-row">
                             <span>Completed:</span>
@@ -312,6 +336,12 @@
                         <div class="run-stats-row">
                             <span>Avg HR:</span>
                             <span>{{ logged_run.avg_heart_rate }} bpm</span>
+                        </div>
+                        {% endif %}
+                        {% if logged_run.effort_quality_score %}
+                        <div class="run-stats-row">
+                            <span>Quality:</span>
+                            <span>{{ "%.0f"|format(logged_run.effort_quality_score) }}/100</span>
                         </div>
                         {% endif %}
                     </div>
@@ -393,6 +423,32 @@
                     </div>
                 </div>
             </div>
+
+            {% if nutrition_phases and nutrition_phases|length > 0 %}
+            <div class="phase-nutrition">
+                <h3>📈 Nutrition by Training Phase</h3>
+                <p class="phase-nutrition-desc">Your macro targets adjust as training intensity changes</p>
+                <div class="phase-nutrition-grid">
+                    {% for phase_name, phase in nutrition_phases.items() %}
+                    <div class="phase-card">
+                        <div class="phase-card-header">
+                            <span class="phase-name">{{ phase_name }}</span>
+                            <span class="phase-weeks">Weeks {{ phase.weeks|join(', ') }}</span>
+                        </div>
+                        <div class="phase-macros">
+                            <div class="phase-macro"><span class="phase-macro-value">{{ phase.daily_calories }}</span><span class="phase-macro-label">kcal</span></div>
+                            <div class="phase-macro"><span class="phase-macro-value">{{ phase.protein_g }}g</span><span class="phase-macro-label">protein</span></div>
+                            <div class="phase-macro"><span class="phase-macro-value">{{ phase.carbs_g }}g</span><span class="phase-macro-label">carbs</span></div>
+                            <div class="phase-macro"><span class="phase-macro-value">{{ phase.fats_g }}g</span><span class="phase-macro-label">fats</span></div>
+                        </div>
+                        {% if phase.advice %}
+                        <div class="phase-advice">{{ phase.advice }}</div>
+                        {% endif %}
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
 
             {% if nutrition_plan.meal_suggestions and nutrition_plan.meal_suggestions|length > 0 %}
             <div class="meal-suggestions">
@@ -527,7 +583,107 @@
         </div>
     </div>
     {% endif %}
-    
+
+    {% if race_protocol %}
+    <!-- Race Day Tab Panel -->
+    <div class="plan-tab-panel" id="panel-raceday" role="tabpanel" aria-labelledby="tab-raceday">
+        <div class="raceday-section">
+            <div class="section-header">
+                <h2>Race Day Protocol</h2>
+                <p>Your {{ race_protocol.distance_name }} game plan{% if race_protocol.predicted_finish_time %} &mdash; target {{ race_protocol.predicted_finish_time }}{% endif %}</p>
+            </div>
+
+            {% if race_protocol.pacing_strategy %}
+            <div class="raceday-card">
+                <h3>🎯 Pacing Strategy</h3>
+                <p class="raceday-strategy">{{ race_protocol.pacing_strategy }}</p>
+            </div>
+            {% endif %}
+
+            {% if race_protocol.pacing_splits %}
+            <div class="raceday-card">
+                <h3>📊 Pacing Splits</h3>
+                <div class="splits-table">
+                    <div class="splits-header">
+                        <span>Distance</span>
+                        <span>Target Pace</span>
+                        <span>Split</span>
+                        <span>Cumulative</span>
+                    </div>
+                    {% for split in race_protocol.pacing_splits %}
+                    <div class="splits-row {% if split.highlight %}splits-highlight{% endif %}">
+                        <span>{{ split.distance }} km</span>
+                        <span>{{ split.target_pace }}</span>
+                        <span>{{ split.split_time }}</span>
+                        <span>{{ split.cumulative }}</span>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+
+            {% if race_protocol.race_morning_timeline %}
+            <div class="raceday-card">
+                <h3>🌅 Race Morning Timeline</h3>
+                <div class="timeline">
+                    {% for item in race_protocol.race_morning_timeline %}
+                    <div class="timeline-item">
+                        <span class="timeline-time">{{ item.time }}</span>
+                        <span class="timeline-activity">{{ item.activity }}</span>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+
+            {% if race_protocol.nutrition_timing %}
+            <div class="raceday-card">
+                <h3>🍌 Nutrition Timing</h3>
+                <div class="nutrition-timeline">
+                    {% for item in race_protocol.nutrition_timing %}
+                    <div class="nutrition-timing-item">
+                        <span class="nutrition-timing-icon">{{ item.icon }}</span>
+                        <div class="nutrition-timing-content">
+                            <strong>{{ item.when }}</strong>
+                            <span>{{ item.what }}</span>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+
+            {% if race_protocol.mental_checkpoints %}
+            <div class="raceday-card">
+                <h3>🧠 Mental Checkpoints</h3>
+                <div class="mental-checkpoints">
+                    {% for cp in race_protocol.mental_checkpoints %}
+                    <div class="checkpoint-item">
+                        <span class="checkpoint-distance">{{ cp.distance }}</span>
+                        <span class="checkpoint-message">{{ cp.message }}</span>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+
+            {% if race_protocol.week_before_checklist %}
+            <div class="raceday-card">
+                <h3>📋 Week-Before Checklist</h3>
+                <div class="checklist">
+                    {% for item in race_protocol.week_before_checklist %}
+                    <label class="checklist-item">
+                        <input type="checkbox" class="checklist-checkbox">
+                        <span>{{ item }}</span>
+                    </label>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
+
     <div class="download-section">
         <a href="/download-pdf/{{ plan_id }}" class="btn">
             <span class="pdf-icon">📄</span> Download PDF Plan

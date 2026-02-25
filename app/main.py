@@ -93,6 +93,19 @@ Base.metadata.create_all(bind=engine)
 with engine.connect() as _conn:
     for _stmt in [
         "ALTER TABLE users ADD COLUMN strava_last_synced_at INTEGER",
+        # VDOT / pace zone fields
+        "ALTER TABLE training_plans ADD COLUMN body_weight_kg FLOAT",
+        "ALTER TABLE training_plans ADD COLUMN recent_race_distance_km FLOAT",
+        "ALTER TABLE training_plans ADD COLUMN recent_race_time_seconds INTEGER",
+        "ALTER TABLE training_plans ADD COLUMN vdot FLOAT",
+        "ALTER TABLE training_plans ADD COLUMN nutrition_phases_data TEXT",
+        "ALTER TABLE training_plans ADD COLUMN race_protocol_data TEXT",
+        # Coaching notes
+        "ALTER TABLE daily_workouts ADD COLUMN coaching_rationale TEXT",
+        # Effort quality scoring
+        "ALTER TABLE run_logs ADD COLUMN effort_quality_score FLOAT",
+        "ALTER TABLE run_logs ADD COLUMN quality_label VARCHAR(20)",
+        "ALTER TABLE run_logs ADD COLUMN planned_pace_min_km FLOAT",
     ]:
         try:
             _conn.execute(__import__("sqlalchemy").text(_stmt))

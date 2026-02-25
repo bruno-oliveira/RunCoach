@@ -31,3 +31,8 @@ class RunLog(Base):
     perceived_effort = Column(Integer, nullable=True)  # 1-10 scale
     strava_activity_id = Column(String, unique=True, nullable=True, index=True)
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
+
+    # Effort quality scoring
+    effort_quality_score = Column(Float, nullable=True)   # 0-100
+    quality_label = Column(String(20), nullable=True)     # "Nailed it", "On track", "Too easy", "Too hard"
+    planned_pace_min_km = Column(Float, nullable=True)    # Expected pace from workout plan
