@@ -65,8 +65,10 @@ const AnalyticsDashboard = {
             this.runs = [...this.allRuns];
         } else {
             const now = new Date();
-            // Build a UTC date-only cutoff so it matches the UTC date-only strings from the API
-            const cutoff = new Date(Date.UTC(now.getFullYear(), now.getMonth(), now.getDate() - Number(days)));
+            // Local midnight N days ago — consistent with start_date_local stored in DB.
+            // Dates returned by the API have no TZ suffix, so JS parses them as local time;
+            // the cutoff must also be local midnight to avoid off-by-timezone-offset mismatches.
+            const cutoff = new Date(now.getFullYear(), now.getMonth(), now.getDate() - Number(days));
             this.runs = this.allRuns.filter(r => new Date(r.date) >= cutoff);
         }
         this.renderSummary();
@@ -139,13 +141,17 @@ const AnalyticsDashboard = {
         for (const r of runs) {
             const d = new Date(r.date);
             const mon = this.startOfWeek(d);
-            const key = mon.toISOString().slice(0, 10);
+            // Build the key from local date components so it isn't shifted by
+            // the UTC offset when toISOString() is called on a midnight-local Date.
+            const key = `${mon.getFullYear()}-${String(mon.getMonth() + 1).padStart(2, '0')}-${String(mon.getDate()).padStart(2, '0')}`;
             if (!buckets[key]) buckets[key] = [];
             buckets[key].push(r);
         }
         return this.aggregateBuckets(buckets, k => {
-            const d = new Date(k);
-            return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+            const [y, m, day] = k.split('-').map(Number);
+            // Use Date(y, m-1, d) so it's local time, not UTC-midnight which
+            // would display as the previous day in UTC- timezones.
+            return new Date(y, m - 1, day).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
         });
     },
 

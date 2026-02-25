@@ -905,6 +905,14 @@ async function doStravaSync(forceDays) {
             setTimeout(() => {
                 if (feedback) feedback.style.display = 'none';
             }, 4000);
+
+            // If the analytics dashboard is open, reload its data live
+            if (synced > 0 && window.AnalyticsDashboard && window.AnalyticsDashboard.allRuns !== undefined) {
+                await window.AnalyticsDashboard.reloadRuns();
+                const periodSel = document.getElementById('periodSelector');
+                const period = periodSel ? periodSel.value : '30';
+                window.AnalyticsDashboard.filterByPeriod(period);
+            }
         } else {
             const detail = (data && data.detail) ? data.detail : 'Unknown error';
             if (feedback) {

@@ -2,7 +2,6 @@
 
 import logging
 import time
-from datetime import datetime, timedelta, timezone
 from typing import Any, Optional
 from urllib.parse import urlencode
 
@@ -12,6 +11,7 @@ from sqlalchemy.orm import Session
 from app.config import settings
 from app.models.run_log import RunLog
 from app.models.user import User
+from app.utils import TimestampAdapter
 
 logger = logging.getLogger(__name__)
 
@@ -140,10 +140,8 @@ class StravaService:
         workout_type_raw = activity.get("workout_type")
         workout_type = STRAVA_WORKOUT_TYPE_MAP.get(workout_type_raw, "easy")
 
-        # Parse start date
-        start_date = datetime.fromisoformat(
-            activity["start_date_local"].replace("Z", "+00:00")
-        ).replace(tzinfo=None)
+        # Parse start date — local wall-clock time, stored TZ-naive
+        start_date = TimestampAdapter.parse_strava_local(activity["start_date_local"])
 
         return RunLog(
             user_id=user_id,
@@ -189,10 +187,10 @@ class StravaService:
         """
         access_token = await self.ensure_valid_token(user, db)
 
-        # Capture sync start time BEFORE any API calls. This is intentional:
-        # if an activity is mid-upload during this sync, its start_date will be
-        # before sync_started_at, so the next incremental sync (using
-        # sync_started_at as `after`) will still pick it up.
+        # Capture sync start time BEFORE any API calls so the cursor always
+        # advances, even if this sync takes a while. The router subtracts a
+        # 24-hour buffer when passing `after_timestamp`, so runs whose
+        # start_date fell before this timestamp are still fetched next time.
         sync_started_at = int(time.time())
 
         synced = 0

@@ -1,7 +1,6 @@
 """Strava OAuth and sync endpoints."""
 
 import logging
-from datetime import datetime, timedelta, timezone
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
@@ -14,6 +13,7 @@ from app.dependencies import get_current_user, get_db, get_auth_service, get_str
 from app.models.user import User
 from app.schemas import StravaStatusResponse, StravaSyncResponse
 from app.services.strava_service import StravaService
+from app.utils import TimestampAdapter
 
 logger = logging.getLogger(__name__)
 
@@ -77,9 +77,7 @@ async def strava_callback(
     db.commit()
 
     # Initial sync: pull last INITIAL_SYNC_DAYS days
-    initial_after = int(
-        (datetime.now(timezone.utc) - timedelta(days=INITIAL_SYNC_DAYS)).timestamp()
-    )
+    initial_after = TimestampAdapter.days_ago_utc_epoch(INITIAL_SYNC_DAYS)
     try:
         result = await strava_service.sync_activities(user, db, after_timestamp=initial_after)
         logger.info(
@@ -123,16 +121,16 @@ async def strava_sync(
     if full_sync:
         after_timestamp = None  # no time filter — fetch entire history
     elif force_days is not None:
-        after_timestamp = int(
-            (datetime.now(timezone.utc) - timedelta(days=force_days)).timestamp()
-        )
+        after_timestamp = TimestampAdapter.days_ago_utc_epoch(force_days)
     elif current_user.strava_last_synced_at:
-        after_timestamp = current_user.strava_last_synced_at
+        # Subtract a 24-hour buffer so runs whose start_date fell before the
+        # last sync (e.g. a long run that was still in-progress when we last
+        # synced) are still fetched. Dedup by strava_activity_id prevents
+        # double-counting previously imported activities.
+        after_timestamp = current_user.strava_last_synced_at - 86400
     else:
         # No cursor yet — treat like an initial sync
-        after_timestamp = int(
-            (datetime.now(timezone.utc) - timedelta(days=INITIAL_SYNC_DAYS)).timestamp()
-        )
+        after_timestamp = TimestampAdapter.days_ago_utc_epoch(INITIAL_SYNC_DAYS)
 
     try:
         result = await strava_service.sync_activities(
