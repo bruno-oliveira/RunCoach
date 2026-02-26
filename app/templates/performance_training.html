@@ -3,132 +3,97 @@
 {% block title %}Performance Training - RunCoach{% endblock %}
 
 {% block styles %}
-<link rel="stylesheet" href="/static/css/performance.css">
+<link rel="stylesheet" href="/static/css/performance.css?v=2">
 {% endblock %}
 
 {% block content %}
 <div class="container">
     <div class="header">
-        <h1>⚡ Performance Training</h1>
+        <h1>Performance Training</h1>
         <p>Speed-focused training plans for experienced runners targeting race time improvements</p>
     </div>
 
     {% if error %}
-    <div class="error-container" style="margin-bottom: 2rem;">
+    <div style="margin-bottom: var(--space-5);">
         {% if error_type == 'inadequate_base' %}
-            <div class="error-card base-error" style="background: #e8f5e8; color: #2e7d32; padding: 1rem; border-radius: 8px; border-left: 4px solid #4caf50;">
-                <div style="display: flex; align-items: center; margin-bottom: 0.5rem;">
-                    <span style="font-size: 1.2rem; margin-right: 0.5rem;">🏃</span>
-                    <strong style="color: #2e7d32;">Build Your Running Base First</strong>
-                </div>
-                <div style="font-size: 0.95rem; line-height: 1.4;">{{ error }}</div>
+            <div class="info-card info-card-success">
+                <span class="info-card-title">Build Your Running Base First</span>
+                <div class="info-card-body">{{ error }}</div>
                 {% if suggestion %}
-                <div style="margin-top: 0.5rem; font-size: 0.9rem; font-style: italic; color: #388e3c;">
-                    💡 {{ suggestion }}
-                </div>
+                <div class="info-card-note">{{ suggestion }}</div>
                 {% endif %}
             </div>
         {% elif error_type == 'unrealistic_goal' %}
-            <div class="error-card goal-error" style="background: #fff3e0; color: #e65100; padding: 1rem; border-radius: 8px; border-left: 4px solid #ff9800;">
-                <div style="display: flex; align-items: center; margin-bottom: 0.5rem;">
-                    <span style="font-size: 1.2rem; margin-right: 0.5rem;">⏱️</span>
-                    <strong style="color: #e65100;">Goal Pace May Be Unrealistic</strong>
-                </div>
-                <div style="font-size: 0.95rem; line-height: 1.4;">{{ error }}</div>
+            <div class="info-card info-card-warning">
+                <span class="info-card-title">Goal Pace May Be Unrealistic</span>
+                <div class="info-card-body">{{ error }}</div>
                 {% if suggestion %}
-                <div style="margin-top: 0.5rem; font-size: 0.9rem; font-style: italic; color: #f57c00;">
-                    💡 {{ suggestion }}
-                </div>
+                <div class="info-card-note">{{ suggestion }}</div>
                 {% endif %}
             </div>
         {% elif error_type == 'auth_required' %}
-            <div class="error-card auth-error" style="background: #fff3e0; color: #e65100; padding: 1rem; border-radius: 8px; border-left: 4px solid #ff9800;">
-                <div style="display: flex; align-items: center; margin-bottom: 0.5rem;">
-                    <span style="font-size: 1.2rem; margin-right: 0.5rem;">🔒</span>
-                    <strong style="color: #e65100;">Login Required</strong>
-                </div>
-                <div style="font-size: 0.95rem; line-height: 1.4;">{{ error }}</div>
+            <div class="info-card info-card-warning">
+                <span class="info-card-title">Login Required</span>
+                <div class="info-card-body">{{ error }}</div>
             </div>
         {% elif error_type == 'validation' %}
-            <div class="error-card validation-error" style="background: #fff8e1; color: #f57f17; padding: 1rem; border-radius: 8px; border-left: 4px solid #ffc107;">
-                <div style="display: flex; align-items: center; margin-bottom: 0.5rem;">
-                    <span style="font-size: 1.2rem; margin-right: 0.5rem;">✓</span>
-                    <strong style="color: #f57f17;">Please Check Your Input</strong>
-                </div>
-                <div style="font-size: 0.95rem; line-height: 1.4;">{{ error }}</div>
+            <div class="info-card info-card-warning">
+                <span class="info-card-title">Please Check Your Input</span>
+                <div class="info-card-body">{{ error }}</div>
             </div>
         {% else %}
-            <div class="error-card general-error" style="background: #ffebee; color: #c62828; padding: 1rem; border-radius: 8px; border-left: 4px solid #f44336;">
-                <div style="display: flex; align-items: center; margin-bottom: 0.5rem;">
-                    <span style="font-size: 1.2rem; margin-right: 0.5rem;">⚠️</span>
-                    <strong style="color: #c62828;">Error</strong>
-                </div>
-                <div style="font-size: 0.95rem; line-height: 1.4;">{{ error }}</div>
+            <div class="info-card info-card-danger">
+                <span class="info-card-title">Error</span>
+                <div class="info-card-body">{{ error }}</div>
             </div>
         {% endif %}
     </div>
     {% endif %}
 
     {% if not user %}
-    <div class="auth-required" style="background: #fff3e0; color: #e65100; padding: 1.5rem; border-radius: 8px; border-left: 4px solid #ff9800; margin-bottom: 2rem;">
-        <div style="display: flex; align-items: center; margin-bottom: 0.5rem;">
-            <span style="font-size: 1.5rem; margin-right: 0.5rem;">🔒</span>
-            <strong style="font-size: 1.1rem;">Login Required</strong>
-        </div>
-        <p style="margin: 0.5rem 0;">Performance training requires logged run data to auto-calculate your current fitness level.</p>
-        <p style="margin: 0; font-size: 0.9rem;">Please sign in with Google to access this feature.</p>
+    <div class="info-card info-card-warning">
+        <span class="info-card-title">Login Required</span>
+        <p class="info-card-body">Performance training requires logged run data to auto-calculate your current fitness level.</p>
+        <p class="info-card-note">Please sign in with Google to access this feature.</p>
     </div>
     {% else %}
 
     {% if fitness_data and fitness_data.has_sufficient_data %}
-    <div class="fitness-display" style="background: #e8f5e9; padding: 1.5rem; border-radius: 8px; margin-bottom: 2rem;">
-        <h3 style="margin-top: 0; color: #2e7d32;">📊 Your Current Fitness</h3>
-        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-top: 1rem;">
-            <div class="fitness-metric">
-                <div style="font-size: 0.85rem; color: #666;">Average Pace</div>
-                <div style="font-size: 1.5rem; font-weight: bold; color: #2e7d32;">
-                    {{ fitness_data.avg_pace|format_pace }}
-                </div>
+    <div class="fitness-display">
+        <h3>Your Current Fitness</h3>
+        <div class="fitness-metrics-grid">
+            <div>
+                <div class="fitness-metric-label">Average Pace</div>
+                <div class="fitness-metric-value">{{ fitness_data.avg_pace|format_pace }}</div>
             </div>
-            <div class="fitness-metric">
-                <div style="font-size: 0.85rem; color: #666;">Weekly Mileage</div>
-                <div style="font-size: 1.5rem; font-weight: bold; color: #2e7d32;">
-                    {{ '{:.1f} km'.format(fitness_data.avg_weekly_km) }}
-                </div>
+            <div>
+                <div class="fitness-metric-label">Weekly Mileage</div>
+                <div class="fitness-metric-value">{{ '{:.1f} km'.format(fitness_data.avg_weekly_km) }}</div>
             </div>
-            <div class="fitness-metric">
-                <div style="font-size: 0.85rem; color: #666;">Recent Runs</div>
-                <div style="font-size: 1.5rem; font-weight: bold; color: #2e7d32;">
-                    {{ fitness_data.total_runs }}
-                </div>
+            <div>
+                <div class="fitness-metric-label">Recent Runs</div>
+                <div class="fitness-metric-value">{{ fitness_data.total_runs }}</div>
             </div>
-            <div class="fitness-metric">
-                <div style="font-size: 0.85rem; color: #666;">Trend</div>
-                <div style="font-size: 1.5rem; font-weight: bold; color: {% if fitness_data.improvement_trend > 0 %}#2e7d32{% else %}#666{% endif %};">
+            <div>
+                <div class="fitness-metric-label">Trend</div>
+                <div class="fitness-metric-value {% if fitness_data.improvement_trend > 0 %}trend-positive{% else %}trend-neutral{% endif %}">
                     {% if fitness_data.improvement_trend > 0 %}
-                    📈 +{{ '{:.1f}'.format(fitness_data.improvement_trend) }}%
+                    +{{ '{:.1f}'.format(fitness_data.improvement_trend) }}%
                     {% elif fitness_data.improvement_trend < 0 %}
-                    📉 {{ '{:.1f}'.format(fitness_data.improvement_trend) }}%
+                    {{ '{:.1f}'.format(fitness_data.improvement_trend) }}%
                     {% else %}
-                    ➡️ Stable
+                    Stable
                     {% endif %}
                 </div>
             </div>
         </div>
-        <p style="margin: 1rem 0 0 0; font-size: 0.9rem; color: #555;">
-            Based on {{ fitness_data.total_runs }} runs in the last {{ fitness_data.lookback_weeks }} weeks
-        </p>
+        <p class="fitness-meta">Based on {{ fitness_data.total_runs }} runs in the last {{ fitness_data.lookback_weeks }} weeks</p>
     </div>
     {% elif fitness_data and not fitness_data.has_sufficient_data %}
-    <div class="insufficient-data" style="background: #fff3e0; color: #e65100; padding: 1.5rem; border-radius: 8px; border-left: 4px solid #ff9800; margin-bottom: 2rem;">
-        <div style="display: flex; align-items: center; margin-bottom: 0.5rem;">
-            <span style="font-size: 1.5rem; margin-right: 0.5rem;">📝</span>
-            <strong style="font-size: 1.1rem;">Insufficient Run Data</strong>
-        </div>
-        <p style="margin: 0.5rem 0;">{{ fitness_data.message }}</p>
-        <p style="margin: 0.5rem 0 0 0; font-size: 0.9rem;">
-            You can still create a performance plan by manually entering your current pace below.
-        </p>
+    <div class="info-card info-card-info">
+        <span class="info-card-title">Insufficient Run Data</span>
+        <p class="info-card-body">{{ fitness_data.message }}</p>
+        <p class="info-card-note">You can still create a performance plan by manually entering your current pace below.</p>
     </div>
     {% endif %}
 
@@ -143,12 +108,12 @@
                     <option value="21.1">Half Marathon (21.1km)</option>
                     <option value="42.2">Marathon (42.2km)</option>
                 </select>
-                <small style="color: #666; font-size: 0.9rem;">Your target race distance</small>
+                <small>Your target race distance</small>
             </div>
 
             <div class="form-row">
                 <div class="form-group">
-                    <label for="current_time">Current Finish Time {% if not (fitness_data and fitness_data.has_sufficient_data) %}<span style="color: #c62828;">*</span>{% endif %}</label>
+                    <label for="current_time">Current Finish Time {% if not (fitness_data and fitness_data.has_sufficient_data) %}<span style="color: var(--color-error, #dc2626);">*</span>{% endif %}</label>
                     <input
                         type="text"
                         id="current_time"
@@ -157,11 +122,11 @@
                         placeholder="MM:SS or HH:MM:SS"
                         pattern="^(\d{1,2}:\d{2}|\d{1,2}:\d{2}:\d{2})$"
                     >
-                    <small style="color: #666; font-size: 0.9rem;">{% if fitness_data and fitness_data.has_sufficient_data %}Auto-calculated from your runs (optional){% else %}Your current race time at this distance{% endif %}</small>
+                    <small style="color: var(--color-text-muted); font-size: var(--text-xs);">{% if fitness_data and fitness_data.has_sufficient_data %}Auto-calculated from your runs (optional){% else %}Your current race time at this distance{% endif %}</small>
                 </div>
 
                 <div class="form-group">
-                    <label for="goal_time">Goal Finish Time <span style="color: #c62828;">*</span></label>
+                    <label for="goal_time">Goal Finish Time <span style="color: var(--color-error, #dc2626);">*</span></label>
                     <input
                         type="text"
                         id="goal_time"
@@ -170,12 +135,12 @@
                         placeholder="MM:SS or HH:MM:SS"
                         pattern="^(\d{1,2}:\d{2}|\d{1,2}:\d{2}:\d{2})$"
                     >
-                    <small style="color: #666; font-size: 0.9rem;">Your target race time</small>
+                    <small style="color: var(--color-text-muted); font-size: var(--text-xs);">Your target race time</small>
                 </div>
             </div>
 
             <div class="form-group">
-                <label for="current_weekly_km_input">Current Weekly Mileage (km) {% if not (fitness_data and fitness_data.has_sufficient_data) %}<span style="color: #c62828;">*</span>{% endif %}</label>
+                <label for="current_weekly_km_input">Current Weekly Mileage (km) {% if not (fitness_data and fitness_data.has_sufficient_data) %}<span style="color: var(--color-error, #dc2626);">*</span>{% endif %}</label>
                 <input
                     type="number"
                     id="current_weekly_km_input"
@@ -190,7 +155,7 @@
                     {% endif %}
                     placeholder="e.g., 40"
                 >
-                <small style="color: #666; font-size: 0.9rem;">{% if fitness_data and fitness_data.has_sufficient_data %}Auto-calculated from your runs (you can adjust){% else %}Your current average weekly running distance{% endif %}</small>
+                <small style="color: var(--color-text-muted); font-size: var(--text-xs);">{% if fitness_data and fitness_data.has_sufficient_data %}Auto-calculated from your runs (you can adjust){% else %}Your current average weekly running distance{% endif %}</small>
             </div>
 
             <div class="form-group">
@@ -205,42 +170,42 @@
                     {% if hr_data %}value="{{ hr_data.max_hr }}"{% endif %}
                     placeholder="e.g., 185"
                 >
-                <small style="color: #666; font-size: 0.9rem;">
+                <small style="color: var(--color-text-muted); font-size: var(--text-xs);">
                     {% if hr_data %}
                         {{ hr_data.message }}
-                        <span style="{% if hr_data.confidence == 'high' %}color: #2e7d32;{% elif hr_data.confidence == 'medium' %}color: #f57c00;{% else %}color: #666;{% endif %}">
+                        <span class="{% if hr_data.confidence == 'high' %}trend-positive{% elif hr_data.confidence == 'medium' %}trend-neutral{% else %}trend-neutral{% endif %}">
                             ({{ hr_data.confidence }} confidence)
                         </span>
                     {% else %}
                         Optional - enables heart rate zones in BPM
                     {% endif %}
                 </small>
-                <details style="margin-top: 0.5rem;">
-                    <summary style="cursor: pointer; color: #1976d2; font-size: 0.9rem; font-weight: 500;">
-                        💡 How to Find Your Max Heart Rate
+                <details style="margin-top: var(--space-2);">
+                    <summary style="cursor: pointer; color: var(--color-primary); font-size: var(--text-sm); font-weight: var(--weight-medium);">
+                        How to Find Your Max Heart Rate
                     </summary>
-                    <div style="margin-top: 0.5rem; padding: 0.75rem; background: #f5f5f5; border-radius: 4px; font-size: 0.85rem; line-height: 1.5;">
-                        <p style="margin: 0 0 0.5rem 0;"><strong>Most accurate methods:</strong></p>
-                        <ul style="margin: 0 0 0.5rem 1rem; padding: 0;">
+                    <div style="margin-top: var(--space-2); padding: var(--space-3); background: var(--color-bg-sunken); border-radius: var(--radius-md); font-size: var(--text-sm); line-height: var(--leading-normal);">
+                        <p style="margin: 0 0 var(--space-2) 0;"><strong>Most accurate methods:</strong></p>
+                        <ul style="margin: 0 0 var(--space-2) var(--space-4); padding: 0;">
                             <li>Lab test (VO2 max test)</li>
                             <li>Field test: 5-10min all-out effort with HR monitor</li>
                             <li>Check your watch data: highest HR during hard workouts</li>
                         </ul>
-                        <p style="margin: 0.5rem 0 0 0;"><strong>Formula (less accurate):</strong> 220 - your age</p>
+                        <p style="margin: var(--space-2) 0 0 0;"><strong>Formula (less accurate):</strong> 220 - your age</p>
                     </div>
                 </details>
             </div>
 
-            <div class="pace-calculator" style="background: #f5f5f5; padding: 1rem; border-radius: 8px; margin-bottom: 1.5rem;">
-                <div style="font-size: 0.9rem; font-weight: 600; margin-bottom: 0.5rem;">📐 Pace Calculator</div>
-                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 1rem;">
+            <div class="pace-calculator">
+                <div class="pace-calculator-label">Pace Calculator</div>
+                <div class="pace-calculator-grid">
                     <div>
-                        <div style="font-size: 0.85rem; color: #666;">Goal Pace</div>
-                        <div id="goal-pace-display" style="font-size: 1.2rem; font-weight: bold;">--:--/km</div>
+                        <div class="pace-stat-label">Goal Pace</div>
+                        <div id="goal-pace-display" class="pace-stat-value">--:--/km</div>
                     </div>
                     <div>
-                        <div style="font-size: 0.85rem; color: #666;">Improvement</div>
-                        <div id="improvement-display" style="font-size: 1.2rem; font-weight: bold;">--%</div>
+                        <div class="pace-stat-label">Improvement</div>
+                        <div id="improvement-display" class="pace-stat-value">--%</div>
                     </div>
                 </div>
             </div>
@@ -249,7 +214,7 @@
                 <div class="form-group">
                     <label for="weeks">Training Duration (weeks)</label>
                     <input type="number" id="weeks" name="weeks" min="6" max="16" value="12" required>
-                    <small style="color: #666; font-size: 0.9rem;">6-16 weeks recommended</small>
+                    <small style="color: var(--color-text-muted); font-size: var(--text-xs);">6-16 weeks recommended</small>
                 </div>
 
                 <div class="form-group">
@@ -260,13 +225,13 @@
                         <option value="5" selected>5 runs (Recommended)</option>
                         <option value="6">6 runs</option>
                     </select>
-                    <small style="color: #666; font-size: 0.9rem;">More runs = more quality workouts</small>
+                    <small style="color: var(--color-text-muted); font-size: var(--text-xs);">More runs = more quality workouts</small>
                 </div>
             </div>
 
-            <div class="info-box" style="background: #e3f2fd; padding: 1rem; border-radius: 8px; margin-bottom: 1.5rem; border-left: 4px solid #2196f3;">
-                <div style="font-weight: 600; margin-bottom: 0.5rem; color: #1976d2;">💡 Performance Training Philosophy</div>
-                <ul style="margin: 0; padding-left: 1.5rem; font-size: 0.9rem; color: #555;">
+            <div class="performance-info-box">
+                <div class="performance-info-box-title">Performance Training Philosophy</div>
+                <ul>
                     <li>Maintains current volume, increases intensity (quality over quantity)</li>
                     <li>5 pace-based training zones from recovery to race pace</li>
                     <li>Phase progression: Base → Build → Sharpen → Taper</li>
@@ -278,7 +243,7 @@
             <input type="hidden" name="auto_calculate" value="{% if fitness_data and fitness_data.has_sufficient_data %}true{% else %}false{% endif %}">
 
             <button type="submit" class="btn-primary">
-                ⚡ Generate Performance Plan
+                Generate Performance Plan
             </button>
         </form>
     </div>

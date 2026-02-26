@@ -3,267 +3,13 @@
 {% block title %}Strength Training - RunCoach{% endblock %}
 
 {% block styles %}
-<style>
-.container {
-    max-width: 1200px;
-    margin: 0 auto;
-    padding: 2rem 1rem;
-}
-
-.header {
-    text-align: center;
-    margin-bottom: 2rem;
-}
-
-.header h1 {
-    font-size: 2.5rem;
-    color: #667eea;
-    margin-bottom: 0.5rem;
-}
-
-.header p {
-    color: #666;
-    font-size: 1.1rem;
-}
-
-.workout-section {
-    margin-bottom: 3rem;
-}
-
-.section-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 1.5rem;
-}
-
-.section-header h2 {
-    font-size: 1.8rem;
-    color: #333;
-    margin: 0;
-}
-
-.view-controls {
-    display: flex;
-    gap: 1rem;
-}
-
-.control-btn {
-    padding: 0.5rem 1rem;
-    border: 1px solid #667eea;
-    background: white;
-    color: #667eea;
-    border-radius: 6px;
-    cursor: pointer;
-    transition: all 0.3s;
-}
-
-.control-btn:hover,
-.control-btn.active {
-    background: #667eea;
-    color: white;
-}
-
-.workout-card {
-    background: white;
-    border-radius: 12px;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-    padding: 1.5rem;
-    margin-bottom: 1.5rem;
-}
-
-.workout-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: start;
-    margin-bottom: 1rem;
-    padding-bottom: 1rem;
-    border-bottom: 1px solid #eee;
-}
-
-.workout-title {
-    font-size: 1.4rem;
-    color: #333;
-    margin-bottom: 0.5rem;
-}
-
-.workout-date {
-    color: #666;
-    font-size: 0.9rem;
-}
-
-.workout-duration {
-    display: flex;
-    gap: 1rem;
-    align-items: center;
-}
-
-.duration-badge {
-    background: #f0f0f0;
-    padding: 0.25rem 0.75rem;
-    border-radius: 12px;
-    font-size: 0.85rem;
-    color: #666;
-}
-
-.favorite-btn {
-    background: none;
-    border: none;
-    cursor: pointer;
-    font-size: 1.5rem;
-    transition: transform 0.3s;
-}
-
-.favorite-btn:hover {
-    transform: scale(1.1);
-}
-
-.favorite-btn.favorited {
-    color: #ffc107;
-}
-
-.workout-phases {
-    margin-top: 1.5rem;
-}
-
-.phase {
-    margin-bottom: 1.5rem;
-}
-
-.phase-title {
-    font-size: 1.2rem;
-    color: #667eea;
-    margin-bottom: 1rem;
-    font-weight: 600;
-}
-
-.exercise-list {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-    gap: 1rem;
-}
-
-.exercise-item {
-    background: #f8f9fa;
-    padding: 1rem;
-    border-radius: 8px;
-    border-left: 3px solid #667eea;
-}
-
-.exercise-name {
-    font-weight: 600;
-    color: #333;
-    margin-bottom: 0.5rem;
-}
-
-.exercise-details {
-    color: #666;
-    font-size: 0.9rem;
-}
-
-.exercise-media {
-    margin-top: 0.5rem;
-}
-
-.exercise-image {
-    max-width: 100%;
-    border-radius: 6px;
-    margin-top: 0.5rem;
-}
-
-.exercise-gif {
-    max-width: 100%;
-    border-radius: 6px;
-}
-
-.loading {
-    text-align: center;
-    padding: 3rem;
-    color: #666;
-}
-
-.no-workouts {
-    text-align: center;
-    padding: 3rem;
-    color: #666;
-}
-
-.search-input {
-    width: 100%;
-    max-width: 500px;
-    padding: 0.75rem 1rem;
-    border: 2px solid #e0e0e0;
-    border-radius: 8px;
-    font-size: 1rem;
-    margin-bottom: 1.5rem;
-    transition: border-color 0.3s;
-}
-
-.search-input:focus {
-    outline: none;
-    border-color: #667eea;
-}
-
-.week-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
-    gap: 1.5rem;
-}
-
-.week-nav {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    gap: 1rem;
-    margin-bottom: 1.5rem;
-}
-
-.nav-btn {
-    padding: 0.5rem 1.5rem;
-    background: #667eea;
-    color: white;
-    border: none;
-    border-radius: 6px;
-    cursor: pointer;
-    transition: background 0.3s;
-}
-
-.nav-btn:hover {
-    background: #5568d3;
-}
-
-.week-label {
-    font-size: 1.2rem;
-    font-weight: 600;
-    color: #333;
-}
-
-@media (max-width: 768px) {
-    .header h1 {
-        font-size: 2rem;
-    }
-    
-    .section-header {
-        flex-direction: column;
-        align-items: flex-start;
-        gap: 1rem;
-    }
-    
-    .exercise-list {
-        grid-template-columns: 1fr;
-    }
-    
-    .week-grid {
-        grid-template-columns: 1fr;
-    }
-}
-</style>
+<link rel="stylesheet" href="/static/css/strength.css">
 {% endblock %}
 
 {% block content %}
 <div class="container">
     <div class="header">
-        <h1>💪 Strength Training</h1>
+        <h1>Strength Training</h1>
         <p>Daily strength workouts designed for runners - 30-40 minutes</p>
     </div>
 
@@ -273,9 +19,9 @@
             <div class="view-controls">
                 <button class="control-btn active" id="todayBtn" onclick="showToday()">Today</button>
                 <button class="control-btn" id="weekBtn" onclick="showWeek()">This Week</button>
-                <button class="control-btn" id="searchBtn" onclick="showSearch()">🔍 Search</button>
+                <button class="control-btn" id="searchBtn" onclick="showSearch()">Search</button>
                 {% if user %}
-                <button class="control-btn" id="favoritesBtn" onclick="showFavorites()">⭐ Favorites</button>
+                <button class="control-btn" id="favoritesBtn" onclick="showFavorites()">Favorites</button>
                 {% endif %}
             </div>
         </div>
@@ -381,7 +127,7 @@ function renderSearchInterface() {
                 onkeyup="handleSearch(event)"
             >
             <div id="searchResults">
-                <p style="color: #666; text-align: center;">Start typing to search exercises</p>
+                <p style="color: var(--color-text-secondary); text-align: center;">Start typing to search exercises</p>
             </div>
         </div>
     `;
@@ -396,11 +142,11 @@ async function handleSearch(event) {
     
     if (searchTerm.length < 2) {
         document.getElementById('searchResults').innerHTML = 
-            '<p style="color: #666; text-align: center;">Start typing to search exercises</p>';
+            '<p style="color: var(--color-text-secondary); text-align: center;">Start typing to search exercises</p>';
         return;
     }
     
-    document.getElementById('searchResults').innerHTML = '<p style="color: #666; text-align: center;">Searching...</p>';
+    document.getElementById('searchResults').innerHTML = '<p style="color: var(--color-text-secondary); text-align: center;">Searching...</p>';
     
     searchTimeout = setTimeout(async () => {
         await searchExercises(searchTerm);
@@ -425,19 +171,19 @@ function renderSearchResults(exercises) {
     const resultsContainer = document.getElementById('searchResults');
     
     if (!exercises || exercises.length === 0) {
-        resultsContainer.innerHTML = '<p style="color: #666; text-align: center;">No exercises found. Try a different search term.</p>';
+        resultsContainer.innerHTML = '<p style="color: var(--color-text-secondary); text-align: center;">No exercises found. Try a different search term.</p>';
         return;
     }
     
     resultsContainer.innerHTML = `
-        <p style="color: #666; margin-bottom: 1rem;">Found ${exercises.length} exercise(s)</p>
+        <p style="color: var(--color-text-secondary); margin-bottom: 1rem;">Found ${exercises.length} exercise(s)</p>
         <div class="exercise-list">
             ${exercises.map(ex => `
                 <div class="exercise-item" style="cursor: pointer;" onclick="showExerciseDetails('${ex.id}')">
                     ${ex.gif_url ? `
                         <img src="${ex.gif_url}" alt="${ex.name}" class="exercise-gif" style="width: 100%; height: 150px; object-fit: cover; margin-bottom: 0.5rem;">
                     ` : ''}
-                    <div class="exercise-name">${ex.name} 🔍</div>
+                    <div class="exercise-name">${ex.name}</div>
                     <div class="exercise-details">
                         <strong>Level:</strong> ${formatLabel(ex.level, difficultyLabels)}<br>
                         <strong>Equipment:</strong> ${formatLabel(ex.equipment, equipmentLabels)}<br>
@@ -470,7 +216,7 @@ async function loadTodayWorkout() {
         renderWorkout(workout, content, true);
     } catch (error) {
         console.error('Error loading workout:', error);
-        content.innerHTML = `<div class="no-workouts"><p>Failed to load workout. Please try again.</p><p style="color: red; font-size: 0.9rem;">Error: ${error.message}</p></div>`;
+        content.innerHTML = `<div class="no-workouts"><p>Failed to load workout. Please try again.</p><p style="color: red; font-size: var(--text-sm);">Error: ${error.message}</p></div>`;
     }
 }
 
@@ -524,9 +270,9 @@ function renderWorkout(workout, container, showFavorite) {
             <p>${workout.description || ''}</p>
 
             <div class="workout-phases">
-                ${warmupExercises.length > 0 ? renderPhase('🔥 Warmup', warmupExercises, workout.warmup_duration) : ''}
-                ${mainExercises.length > 0 ? renderPhase('💪 Main Workout', mainExercises, workout.main_duration) : ''}
-                ${cooldownExercises.length > 0 ? renderPhase('🧘 Cooldown', cooldownExercises, workout.cooldown_duration) : ''}
+                ${warmupExercises.length > 0 ? renderPhase('Warmup', warmupExercises, workout.warmup_duration) : ''}
+                ${mainExercises.length > 0 ? renderPhase('Main Workout', mainExercises, workout.main_duration) : ''}
+                ${cooldownExercises.length > 0 ? renderPhase('Cooldown', cooldownExercises, workout.cooldown_duration) : ''}
             </div>
         </div>
     `;
@@ -567,13 +313,15 @@ async function showExerciseDetails(exerciseId) {
 
     modal.innerHTML = `
         <div style="
-            background: white;
-            padding: 2rem;
-            border-radius: 12px;
+            background: var(--color-bg-elevated);
+            padding: var(--space-6);
+            border-radius: var(--radius-2xl);
             max-width: 600px;
             max-height: 80vh;
             overflow-y: auto;
             position: relative;
+            box-shadow: var(--shadow-xl);
+            border: 1px solid var(--color-border-subtle);
         ">
             <button onclick="this.closest('.exercise-modal').remove()" style="
                 position: absolute;
@@ -584,27 +332,27 @@ async function showExerciseDetails(exerciseId) {
                 font-size: 1.5rem;
                 cursor: pointer;
             ">×</button>
-            <h2 style="color: #667eea; margin-bottom: 1rem;">${exercise.name}</h2>
+            <h2 style="color: var(--color-primary); margin-bottom: 1rem;">${exercise.name}</h2>
             ${exercise.gif_url ? `
                 <img src="${exercise.gif_url}" alt="${exercise.name}" style="
                     max-width: 100%;
-                    border-radius: 8px;
+                    border-radius: var(--radius-lg);
                     margin-bottom: 1rem;
                 ">
             ` : ''}
-            <p style="color: #666; margin-bottom: 1rem;">
+            <p style="color: var(--color-text-secondary); margin-bottom: 1rem;">
                 <strong>Equipment:</strong> ${formatLabel(exercise.equipment, equipmentLabels)}<br>
                 <strong>Level:</strong> ${formatLabel(exercise.level, difficultyLabels)}<br>
                 <strong>Primary Muscles:</strong> ${(exercise.primary_muscles || []).map(m => m.charAt(0).toUpperCase() + m.slice(1)).join(', ')}
             </p>
             <h3 style="margin-bottom: 0.5rem;">Instructions:</h3>
-            <ol style="color: #666; line-height: 1.6;">
+            <ol style="color: var(--color-text-secondary); line-height: 1.6;">
                 ${(exercise.instructions || []).map((instruction, index) => `
                     <li style="margin-bottom: 0.5rem;">${instruction}</li>
                 `).join('')}
             </ol>
             ${exercise.gif_url ? `
-                <p style="margin-top: 1rem; font-size: 0.8rem; color: #999;">
+                <p style="margin-top: 1rem; font-size: 0.8rem; color: var(--color-text-muted);">
                     Image/GIF source: free-exercise-db & Exercises_Dataset (public domain)
                 </p>
             ` : ''}
@@ -627,15 +375,15 @@ function renderPhase(title, exercises, duration) {
                         ${ex.gif_url ? `
                             <img src="${ex.gif_url}" alt="${ex.name}" class="exercise-gif" style="width: 100%; height: 150px; object-fit: cover; margin-bottom: 0.5rem;">
                         ` : ''}
-                        <div class="exercise-name">${ex.name} 🔍</div>
+                        <div class="exercise-name">${ex.name}</div>
                         <div class="exercise-details">
                             ${ex.sets} set(s) × ${ex.reps}${ex.rest_seconds ? ` • ${ex.rest_seconds}s rest` : ''}<br>
                             ${ex.equipment ? `<span style="font-size: 0.85rem; color: #888;">Equipment: ${formatLabel(ex.equipment, equipmentLabels)}</span>` : ''}
                         </div>
                         ${ex.instructions && ex.instructions.length > 0 ? `
                             <details style="margin-top: 0.5rem;">
-                                <summary style="cursor: pointer; color: #667eea; font-size: 0.9rem; font-weight: 500;">View Instructions</summary>
-                                <ol style="margin: 0.5rem 0 0 1rem; padding-left: 0.5rem; font-size: 0.85rem; color: #555; line-height: 1.4;">
+                                <summary style="cursor: pointer; color: var(--color-primary); font-size: var(--text-sm); font-weight: 500;">View Instructions</summary>
+                                <ol style="margin: 0.5rem 0 0 1rem; padding-left: 0.5rem; font-size: 0.85rem; color: var(--color-text-secondary); line-height: 1.4;">
                                     ${ex.instructions.map(inst => `<li style="margin-bottom: 0.25rem;">${inst}</li>`).join('')}
                                 </ol>
                             </details>
@@ -659,7 +407,7 @@ function renderWeekWorkouts(workouts, container) {
                 <div class="workout-card" style="cursor: pointer;" onclick="goToWorkoutDetail('${workout.id}')">
                     <div class="workout-header">
                         <div>
-                            <h3 class="workout-title">${workout.title} 🔍</h3>
+                            <h3 class="workout-title">${workout.title}</h3>
                             <p class="workout-date">${formatDate(workout.date)}</p>
                         </div>
                         <div class="workout-duration">
@@ -715,7 +463,7 @@ function renderFavorites(favorites, container) {
                 <div class="workout-card">
                     <div class="workout-header" style="cursor: pointer;" onclick="goToWorkoutDetail('${workout.id}')">
                         <div>
-                            <h3 class="workout-title">${workout.title} 🔍</h3>
+                            <h3 class="workout-title">${workout.title}</h3>
                             <p class="workout-date">${formatDate(workout.date)}</p>
                         </div>
                         <button 
@@ -808,14 +556,16 @@ async function showWorkoutDetails(workoutDate) {
 
         modal.innerHTML = `
             <div style="
-                background: white;
-                padding: 2rem;
-                border-radius: 12px;
+                background: var(--color-bg-elevated);
+                padding: var(--space-6);
+                border-radius: var(--radius-2xl);
                 max-width: 900px;
                 width: 100%;
                 max-height: 90vh;
                 overflow-y: auto;
                 position: relative;
+                box-shadow: var(--shadow-xl);
+                border: 1px solid var(--color-border-subtle);
             ">
                 <button onclick="this.closest('.workout-detail-modal').remove()" style="
                     position: absolute;
@@ -825,36 +575,36 @@ async function showWorkoutDetails(workoutDate) {
                     border: none;
                     font-size: 2rem;
                     cursor: pointer;
-                    color: #999;
+                    color: var(--color-text-muted);
                 ">×</button>
                 
-                <h2 style="color: #667eea; margin-bottom: 0.5rem;">${workout.title}</h2>
-                <p style="color: #666; margin-bottom: 1rem;">${formatDate(workout.date)}</p>
-                <p style="color: #555; margin-bottom: 1.5rem;">${workout.description || ''}</p>
+                <h2 style="color: var(--color-primary); margin-bottom: 0.5rem;">${workout.title}</h2>
+                <p style="color: var(--color-text-secondary); margin-bottom: 1rem;">${formatDate(workout.date)}</p>
+                <p style="color: var(--color-text-secondary); margin-bottom: 1.5rem;">${workout.description || ''}</p>
                 
                 <div style="display: flex; gap: 1rem; flex-wrap: wrap; margin-bottom: 2rem;">
-                    <span class="duration-badge" style="background: #667eea; color: white;">⏱️ ${workout.total_duration} min</span>
-                    <span class="duration-badge" style="background: #f0f0f0; color: #666;">💪 ${formatLabel(workout.primary_focus, focusLabels)}</span>
-                    <span class="duration-badge" style="background: #f0f0f0; color: #666;">📊 ${formatLabel(workout.difficulty, difficultyLabels)}</span>
+                    <span class="duration-badge" style="background: var(--color-primary); color: white;">⏱️ ${workout.total_duration} min</span>
+                    <span class="duration-badge" style="background: var(--color-bg-sunken); color: var(--color-text-muted);">💪 ${formatLabel(workout.primary_focus, focusLabels)}</span>
+                    <span class="duration-badge" style="background: var(--color-bg-sunken); color: var(--color-text-muted);">📊 ${formatLabel(workout.difficulty, difficultyLabels)}</span>
                 </div>
 
                 ${warmupExercises.length > 0 ? `
                     <div style="margin-bottom: 2rem;">
-                        <h3 style="color: #667eea; margin-bottom: 1rem;">🔥 Warmup (${workout.warmup_duration} min)</h3>
+                        <h3 style="color: var(--color-primary); margin-bottom: 1rem;">Warmup (${workout.warmup_duration} min)</h3>
                         <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 1rem;">
                             ${warmupExercises.map(ex => `
                                 <div style="
-                                    background: #f8f9fa;
+                                    background: var(--color-bg-sunken);
                                     padding: 1rem;
-                                    border-radius: 8px;
-                                    border-left: 3px solid #667eea;
+                                    border-radius: var(--radius-lg);
+                                    border-left: 3px solid var(--color-primary);
                                     cursor: pointer;
                                 " onclick="event.stopPropagation(); showExerciseDetails('${ex.exercise_id}')">
                                     ${ex.gif_url ? `
                                         <img src="${ex.gif_url}" alt="${ex.name}" style="width: 100%; height: 120px; object-fit: cover; border-radius: 6px; margin-bottom: 0.5rem;">
                                     ` : ''}
-                                    <div style="font-weight: 600; color: #333; margin-bottom: 0.25rem;">${ex.name} 🔍</div>
-                                    <div style="color: #666; font-size: 0.9rem;">${ex.sets} set(s) × ${ex.reps}${ex.rest_seconds ? ` • ${ex.rest_seconds}s rest` : ''}</div>
+                                    <div style="font-weight: 600; color: var(--color-text); margin-bottom: 0.25rem;">${ex.name}</div>
+                                    <div style="color: var(--color-text-secondary); font-size: var(--text-sm);">${ex.sets} set(s) × ${ex.reps}${ex.rest_seconds ? ` • ${ex.rest_seconds}s rest` : ''}</div>
                                 </div>
                             `).join('')}
                         </div>
@@ -863,21 +613,21 @@ async function showWorkoutDetails(workoutDate) {
 
                 ${mainExercises.length > 0 ? `
                     <div style="margin-bottom: 2rem;">
-                        <h3 style="color: #667eea; margin-bottom: 1rem;">💪 Main Workout (${workout.main_duration} min)</h3>
+                        <h3 style="color: var(--color-primary); margin-bottom: 1rem;">Main Workout (${workout.main_duration} min)</h3>
                         <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 1rem;">
                             ${mainExercises.map(ex => `
                                 <div style="
-                                    background: #f8f9fa;
+                                    background: var(--color-bg-sunken);
                                     padding: 1rem;
-                                    border-radius: 8px;
-                                    border-left: 3px solid #667eea;
+                                    border-radius: var(--radius-lg);
+                                    border-left: 3px solid var(--color-primary);
                                     cursor: pointer;
                                 " onclick="event.stopPropagation(); showExerciseDetails('${ex.exercise_id}')">
                                     ${ex.gif_url ? `
                                         <img src="${ex.gif_url}" alt="${ex.name}" style="width: 100%; height: 120px; object-fit: cover; border-radius: 6px; margin-bottom: 0.5rem;">
                                     ` : ''}
-                                    <div style="font-weight: 600; color: #333; margin-bottom: 0.25rem;">${ex.name} 🔍</div>
-                                    <div style="color: #666; font-size: 0.9rem;">${ex.sets} set(s) × ${ex.reps}${ex.rest_seconds ? ` • ${ex.rest_seconds}s rest` : ''}</div>
+                                    <div style="font-weight: 600; color: var(--color-text); margin-bottom: 0.25rem;">${ex.name}</div>
+                                    <div style="color: var(--color-text-secondary); font-size: var(--text-sm);">${ex.sets} set(s) × ${ex.reps}${ex.rest_seconds ? ` • ${ex.rest_seconds}s rest` : ''}</div>
                                 </div>
                             `).join('')}
                         </div>
@@ -886,21 +636,21 @@ async function showWorkoutDetails(workoutDate) {
 
                 ${cooldownExercises.length > 0 ? `
                     <div style="margin-bottom: 1rem;">
-                        <h3 style="color: #667eea; margin-bottom: 1rem;">🧘 Cooldown (${workout.cooldown_duration} min)</h3>
+                        <h3 style="color: var(--color-primary); margin-bottom: 1rem;">Cooldown (${workout.cooldown_duration} min)</h3>
                         <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 1rem;">
                             ${cooldownExercises.map(ex => `
                                 <div style="
-                                    background: #f8f9fa;
+                                    background: var(--color-bg-sunken);
                                     padding: 1rem;
-                                    border-radius: 8px;
-                                    border-left: 3px solid #667eea;
+                                    border-radius: var(--radius-lg);
+                                    border-left: 3px solid var(--color-primary);
                                     cursor: pointer;
                                 " onclick="event.stopPropagation(); showExerciseDetails('${ex.exercise_id}')">
                                     ${ex.gif_url ? `
                                         <img src="${ex.gif_url}" alt="${ex.name}" style="width: 100%; height: 120px; object-fit: cover; border-radius: 6px; margin-bottom: 0.5rem;">
                                     ` : ''}
-                                    <div style="font-weight: 600; color: #333; margin-bottom: 0.25rem;">${ex.name} 🔍</div>
-                                    <div style="color: #666; font-size: 0.9rem;">${ex.sets} set(s) × ${ex.reps}${ex.rest_seconds ? ` • ${ex.rest_seconds}s rest` : ''}</div>
+                                    <div style="font-weight: 600; color: var(--color-text); margin-bottom: 0.25rem;">${ex.name}</div>
+                                    <div style="color: var(--color-text-secondary); font-size: var(--text-sm);">${ex.sets} set(s) × ${ex.reps}${ex.rest_seconds ? ` • ${ex.rest_seconds}s rest` : ''}</div>
                                 </div>
                             `).join('')}
                         </div>
