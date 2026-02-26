@@ -19,6 +19,16 @@ STRAVA_AUTH_URL = "https://www.strava.com/oauth/authorize"
 STRAVA_TOKEN_URL = "https://www.strava.com/oauth/token"
 STRAVA_API_BASE = "https://www.strava.com/api/v3"
 
+# Timeout for all Strava API calls (seconds). Without this a hung connection
+# would block the server worker indefinitely.
+STRAVA_TIMEOUT = httpx.Timeout(30.0)
+
+# Safety cap on pagination. Strava returns at most 200 activities per page
+# (per_page ≤ 200). 200 pages × 50 per page = 10 000 activities — more than
+# enough for any real user while protecting against an infinite loop if the
+# API ever returns a non-empty page erroneously.
+MAX_SYNC_PAGES = 200
+
 # Strava workout_type mapping: 0/None→easy, 1→tempo (race), 2→long, 3→interval (workout)
 STRAVA_WORKOUT_TYPE_MAP = {
     0: "easy",
@@ -51,7 +61,7 @@ class StravaService:
         Returns:
             Dict with access_token, refresh_token, expires_at, and athlete info.
         """
-        async with httpx.AsyncClient() as client:
+        async with httpx.AsyncClient(timeout=STRAVA_TIMEOUT) as client:
             response = await client.post(
                 STRAVA_TOKEN_URL,
                 data={
@@ -70,7 +80,7 @@ class StravaService:
         Returns:
             Dict with new access_token, refresh_token, and expires_at.
         """
-        async with httpx.AsyncClient() as client:
+        async with httpx.AsyncClient(timeout=STRAVA_TIMEOUT) as client:
             response = await client.post(
                 STRAVA_TOKEN_URL,
                 data={
@@ -99,7 +109,15 @@ class StravaService:
         user.strava_access_token = token_data["access_token"]
         user.strava_refresh_token = token_data["refresh_token"]
         user.strava_token_expires_at = token_data["expires_at"]
-        db.commit()
+        try:
+            db.commit()
+        except Exception as commit_err:
+            db.rollback()
+            logger.error(
+                f"Failed to persist refreshed Strava token for user {user.id}: {commit_err}"
+            )
+            # Re-raise so the caller knows the token state is unreliable.
+            raise
 
         return user.strava_access_token
 
@@ -115,7 +133,7 @@ class StravaService:
         if after is not None:
             params["after"] = after
 
-        async with httpx.AsyncClient() as client:
+        async with httpx.AsyncClient(timeout=STRAVA_TIMEOUT) as client:
             response = await client.get(
                 f"{STRAVA_API_BASE}/athlete/activities",
                 headers={"Authorization": f"Bearer {access_token}"},
@@ -128,20 +146,34 @@ class StravaService:
         self, activity: dict[str, Any], user_id: str
     ) -> RunLog:
         """Convert a Strava activity dict to a RunLog instance."""
-        distance_km = activity["distance"] / 1000.0
-        duration_minutes = activity["moving_time"] / 60.0
+        # Validate required fields up-front so any problem produces a clear
+        # ValueError rather than an opaque KeyError or TypeError deep in the
+        # mapping logic.
+        distance_m = activity.get("distance")
+        moving_time_s = activity.get("moving_time")
+        start_date_local_str = activity.get("start_date_local")
+
+        if distance_m is None:
+            raise ValueError("Activity is missing required field 'distance'")
+        if moving_time_s is None:
+            raise ValueError("Activity is missing required field 'moving_time'")
+        if not start_date_local_str:
+            raise ValueError("Activity is missing required field 'start_date_local'")
+
+        distance_km = distance_m / 1000.0
+        duration_minutes = moving_time_s / 60.0
         avg_pace = duration_minutes / distance_km if distance_km > 0 else 0
 
         # Strava cadence is per leg; RunLog expects steps/min (both legs)
         avg_cadence = None
         if activity.get("average_cadence"):
-            avg_cadence = int(activity["average_cadence"] * 2)
+            avg_cadence = round(activity["average_cadence"] * 2)
 
         workout_type_raw = activity.get("workout_type")
         workout_type = STRAVA_WORKOUT_TYPE_MAP.get(workout_type_raw, "easy")
 
         # Parse start date — local wall-clock time, stored TZ-naive
-        start_date = TimestampAdapter.parse_strava_local(activity["start_date_local"])
+        start_date = TimestampAdapter.parse_strava_local(start_date_local_str)
 
         return RunLog(
             user_id=user_id,
@@ -198,7 +230,7 @@ class StravaService:
         errors: list[str] = []
         page = 1
 
-        while True:
+        while page <= MAX_SYNC_PAGES:
             activities = await self.fetch_activities(
                 access_token, after=after_timestamp, page=page
             )
@@ -206,8 +238,15 @@ class StravaService:
                 break
 
             for activity in activities:
-                # Filter to run activity types only
-                if activity.get("type") not in RUN_ACTIVITY_TYPES:
+                # Filter to run activity types only.
+                # Check both `type` (deprecated) and `sport_type` (current) because
+                # Strava's v3 API may return `type=null` for newer activities that
+                # only set `sport_type`, and Garmin-synced activities in particular
+                # can arrive with no `type` value.
+                if (
+                    activity.get("type") not in RUN_ACTIVITY_TYPES
+                    and activity.get("sport_type") not in RUN_ACTIVITY_TYPES
+                ):
                     continue
 
                 strava_id = str(activity["id"])
@@ -234,6 +273,12 @@ class StravaService:
                     errors.append(f"Activity {strava_id}: {str(e)}")
 
             page += 1
+
+        if page > MAX_SYNC_PAGES:
+            logger.warning(
+                f"Strava sync for user {user.id} hit the {MAX_SYNC_PAGES}-page cap. "
+                "Some activities may not have been fetched."
+            )
 
         user.strava_last_synced_at = sync_started_at
         db.commit()

@@ -98,11 +98,18 @@ const AnalyticsDashboard = {
                 // For "all time": incremental sync (no force_days) to catch
                 // any new activities since last sync, then show all stored runs.
                 const daysBack = days !== 'all' ? parseInt(days) : null;
-                await this.syncStravaPeriod(daysBack);
+                const syncOk = await this.syncStravaPeriod(daysBack);
+
+                // Always reload from DB — even if the Strava sync failed,
+                // the locally-stored runs are still valid and should be shown.
                 await this.reloadRuns();
 
                 // Re-render now that the DB has the full data for this period
                 this.filterByPeriod(days);
+
+                if (!syncOk) {
+                    this.showSyncError('Strava sync failed — showing cached data');
+                }
             } finally {
                 this.hideSyncIndicator();
                 el.disabled = false;
@@ -606,13 +613,18 @@ const AnalyticsDashboard = {
 
             if (!res.ok) {
                 console.warn('Strava sync failed:', await res.text());
-                return;
+                return false;
             }
 
             const data = await res.json();
             console.log(`Strava sync complete: ${data.synced} new, ${data.skipped} skipped`);
+            if (data.errors && data.errors.length > 0) {
+                console.warn('Strava sync mapping errors:', data.errors);
+            }
+            return true;
         } catch (err) {
             console.error('Strava sync error:', err);
+            return false;
         }
     },
 
@@ -635,6 +647,17 @@ const AnalyticsDashboard = {
     hideSyncIndicator() {
         const el = document.getElementById('stravaSyncIndicator');
         if (el) el.style.display = 'none';
+    },
+
+    showSyncError(message) {
+        const el = document.getElementById('stravaSyncIndicator');
+        if (!el) return;
+        const label = el.querySelector('.strava-sync-label');
+        const spinner = el.querySelector('.strava-sync-spinner');
+        if (spinner) spinner.style.display = 'none';
+        if (label) label.textContent = message;
+        el.style.display = 'flex';
+        setTimeout(() => { el.style.display = 'none'; if (label) label.textContent = 'Syncing Strava\u2026'; if (spinner) spinner.style.display = ''; }, 4000);
     },
 };
 

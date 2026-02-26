@@ -888,6 +888,7 @@ async function doStravaSync(forceDays) {
 
             // Show success feedback
             const synced = data.synced || 0;
+            const errorCount = (data.errors && data.errors.length) || 0;
             let message;
             if (synced === 0) {
                 message = 'Already up to date.';
@@ -895,9 +896,12 @@ async function doStravaSync(forceDays) {
                 const runWord = synced === 1 ? 'run' : 'runs';
                 message = synced + ' new ' + runWord + ' synced.';
             }
+            if (errorCount > 0) {
+                message += ' (' + errorCount + ' import error' + (errorCount > 1 ? 's' : '') + ' — check logs)';
+            }
             if (feedback) {
                 feedback.textContent = message;
-                feedback.className = 'strava-feedback is-success';
+                feedback.className = 'strava-feedback ' + (errorCount > 0 ? 'is-error' : 'is-success');
                 feedback.style.display = '';
             }
 
@@ -906,8 +910,10 @@ async function doStravaSync(forceDays) {
                 if (feedback) feedback.style.display = 'none';
             }, 4000);
 
-            // If the analytics dashboard is open, reload its data live
-            if (synced > 0 && window.AnalyticsDashboard && window.AnalyticsDashboard.allRuns !== undefined) {
+            // If the analytics dashboard is open, always reload so stats
+            // stay fresh — even when synced=0 (run may have landed in the DB
+            // between the auto-sync on page load and this manual sync).
+            if (window.AnalyticsDashboard && window.AnalyticsDashboard.allRuns !== undefined) {
                 await window.AnalyticsDashboard.reloadRuns();
                 const periodSel = document.getElementById('periodSelector');
                 const period = periodSel ? periodSel.value : '30';
