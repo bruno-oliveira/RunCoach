@@ -17,11 +17,19 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copy application code (including data directory)
 COPY app/ ./app/
 
-# Copy database file
-COPY runcoach.db ./runcoach.db
+# Bake the current DB as a seed snapshot.
+# On first boot start.sh copies this to the persistent volume at /data/runcoach.db.
+# Subsequent boots skip the copy and use the live volume DB.
+COPY runcoach.db ./runcoach.db.seed
+
+# Startup script — handles volume seeding then launches uvicorn
+COPY start.sh ./start.sh
 
 # Create non-root user for security
-RUN useradd --create-home appuser && chown -R appuser:appuser /app
+RUN useradd --create-home appuser && \
+    chown -R appuser:appuser /app && \
+    chmod +x /app/start.sh
+
 USER appuser
 
 # Expose port
@@ -31,5 +39,5 @@ EXPOSE 8000
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
     CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')" || exit 1
 
-# Run the application
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+# Run via startup script so the volume is seeded before uvicorn starts
+CMD ["/app/start.sh"]

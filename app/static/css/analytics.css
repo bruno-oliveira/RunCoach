@@ -2,6 +2,46 @@
    Analytics Dashboard — Refined Athletic
    ========================================================================= */
 
+/* ---- Page Header (shared pattern with plan/my_plans) ---- */
+.header {
+    text-align: center;
+    margin-bottom: var(--space-8);
+    padding: var(--space-10) var(--space-6);
+    background: var(--color-bg-elevated);
+    border: 1px solid var(--color-border-subtle);
+    border-radius: var(--radius-2xl);
+    position: relative;
+    overflow: hidden;
+}
+
+.header::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(135deg, var(--color-primary-subtle) 0%, var(--color-accent-subtle) 100%);
+    pointer-events: none;
+}
+
+.header h1 {
+    position: relative;
+    font-family: var(--font-display);
+    font-size: var(--text-3xl);
+    font-weight: var(--weight-extrabold);
+    color: var(--color-text);
+    letter-spacing: -0.03em;
+    margin-bottom: var(--space-2);
+}
+
+.header p {
+    position: relative;
+    color: var(--color-text-secondary);
+}
+
+@media (max-width: 768px) {
+    .header { padding: var(--space-6); }
+    .header h1 { font-size: var(--text-2xl); }
+}
+
 /* ---- Summary Stats ---- */
 .analytics-stats-row {
     display: grid;

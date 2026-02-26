@@ -65,10 +65,12 @@ const AnalyticsDashboard = {
             this.runs = [...this.allRuns];
         } else {
             const now = new Date();
-            // Local midnight N days ago — consistent with start_date_local stored in DB.
-            // Dates returned by the API have no TZ suffix, so JS parses them as local time;
-            // the cutoff must also be local midnight to avoid off-by-timezone-offset mismatches.
-            const cutoff = new Date(now.getFullYear(), now.getMonth(), now.getDate() - Number(days));
+            // Local midnight N+1 days ago. We add 1 so that the boundary calendar day
+            // is fully included: "last 30 days" means runs on or after the day that is
+            // 30 days before today, not the day after it. Without +1 a run on Jan 26
+            // would be excluded when today is Feb 26, even though users intuitively
+            // count Jan 26 as within a "30-day" look-back.
+            const cutoff = new Date(now.getFullYear(), now.getMonth(), now.getDate() - Number(days) - 1);
             this.runs = this.allRuns.filter(r => new Date(r.date) >= cutoff);
         }
         this.renderSummary();
@@ -660,5 +662,9 @@ const AnalyticsDashboard = {
         setTimeout(() => { el.style.display = 'none'; if (label) label.textContent = 'Syncing Strava\u2026'; if (spinner) spinner.style.display = ''; }, 4000);
     },
 };
+
+// Expose on window so nav.html's sync handler can reload the dashboard
+// after a manual sync. `const` at the top level does NOT attach to window.
+window.AnalyticsDashboard = AnalyticsDashboard;
 
 document.addEventListener('DOMContentLoaded', () => AnalyticsDashboard.init());
