@@ -69,23 +69,6 @@ async def strava_callback(
             detail="Failed to exchange code with Strava",
         )
 
-    # Verify the user actually granted the required scope. Strava silently
-    # reduces the scope if the user unchecks permissions on the consent screen,
-    # so we must check before trusting the token.
-    granted_scopes = {s.strip() for s in token_data.get("scope", "").split(",")}
-    if "activity:read_all" not in granted_scopes:
-        logger.warning(
-            f"Strava OAuth for user {user_id} is missing 'activity:read_all' scope "
-            f"(granted: {granted_scopes})"
-        )
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=(
-                "RunCoach needs the 'All Activities' permission to sync your runs. "
-                "Please reconnect and tick 'View data about your activities' when prompted."
-            ),
-        )
-
     athlete = token_data.get("athlete", {})
     user.strava_athlete_id = str(athlete.get("id", ""))
     user.strava_access_token = token_data["access_token"]
