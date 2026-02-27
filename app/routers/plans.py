@@ -3,11 +3,13 @@
 import json
 import logging
 import os
+from datetime import date, datetime
 from typing import Optional
 
 from fastapi import APIRouter, Cookie, Depends, Form, HTTPException, Request, Response
 from fastapi.responses import FileResponse, HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
+from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
 from app.config import settings
@@ -304,9 +306,25 @@ async def list_my_plans(
             user_plans_cache[cache_key] = plans
             logger.info(f"Cached plans for user {current_user.id}")
 
+        today = date.today()
         for plan in plans:
             td = parse_target_distance(plan.target_distance)
             plan.target_distance_display = DISTANCE_NAMES.get(td, f"{td}km")
+
+            # Compute plan status for display
+            if plan.start_date:
+                sd = plan.start_date
+                start_d = sd.date() if hasattr(sd, "date") and callable(sd.date) else sd
+                delta_days = (today - start_d).days
+                current_wk = (delta_days // 7) + 1 if delta_days >= 0 else 0
+                if current_wk > plan.weeks_duration:
+                    plan.status_label = "Completed"
+                elif current_wk >= 1:
+                    plan.status_label = f"Week {current_wk} of {plan.weeks_duration}"
+                else:
+                    plan.status_label = f"Starts {start_d.strftime('%b %-d')}"
+            else:
+                plan.status_label = None
 
         return templates.TemplateResponse(
             "my_plans.html",
@@ -381,6 +399,31 @@ async def adapt_plan_from_strava(
     return adaptation_service.adapt_plan_from_fitness(
         plan_id, current_user.id, db
     )
+
+
+# ---------------------------------------------------------------------------
+# Start date
+# ---------------------------------------------------------------------------
+
+
+class StartDateRequest(BaseModel):
+    start_date: date
+
+
+@router.post("/api/plan/{plan_id}/start")
+async def set_plan_start_date(
+    plan_id: str,
+    body: StartDateRequest,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Set the start date for a training plan."""
+    training_plan = get_plan_or_404(
+        plan_id, db, current_user, require_user_match=True
+    )
+    training_plan.start_date = datetime.combine(body.start_date, datetime.min.time())
+    db.commit()
+    return {"ok": True, "start_date": body.start_date.isoformat()}
 
 
 # ---------------------------------------------------------------------------

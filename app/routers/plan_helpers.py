@@ -1,6 +1,7 @@
 """Reusable helpers for plan route handlers."""
 
 import json
+from datetime import date, datetime, timedelta
 from typing import Any, Optional
 
 from fastapi import HTTPException, Request
@@ -81,6 +82,50 @@ def get_plan_or_404(
     return training_plan
 
 
+def _build_week_dates(start_date: date, num_weeks: int) -> list[dict]:
+    """Build a list of week date ranges from a start date."""
+    week_dates = []
+    for i in range(num_weeks):
+        week_start = start_date + timedelta(weeks=i)
+        week_end = week_start + timedelta(days=6)
+        week_dates.append({
+            "week": i + 1,
+            "start": week_start.strftime("%b %-d"),
+            "end": week_end.strftime("%b %-d"),
+            "start_iso": week_start.isoformat(),
+        })
+    return week_dates
+
+
+def _compute_current_week(start_date: date, today: date) -> Optional[int]:
+    """Compute 1-indexed current week number, or None if plan hasn't started or is over."""
+    delta_days = (today - start_date).days
+    if delta_days < 0:
+        return None
+    return (delta_days // 7) + 1
+
+
+def _next_monday() -> str:
+    """Return the ISO date string of the next Monday."""
+    today = date.today()
+    days_ahead = (7 - today.weekday()) % 7
+    if days_ahead == 0:
+        days_ahead = 7
+    return (today + timedelta(days=days_ahead)).isoformat()
+
+
+def _workout_dates(start_date: date, num_weeks: int) -> dict[tuple[int, int], str]:
+    """Map (week, day) to formatted date string like 'Mon, Mar 3'."""
+    day_abbrevs = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
+    result = {}
+    for w in range(num_weeks):
+        week_start = start_date + timedelta(weeks=w)
+        for d in range(7):
+            dt = week_start + timedelta(days=d)
+            result[(w + 1, d + 1)] = f"{day_abbrevs[d]}, {dt.strftime('%b %-d')}"
+    return result
+
+
 def plan_view_context(
     request: Request,
     current_user: Optional[User],
@@ -90,6 +135,23 @@ def plan_view_context(
     **extra: Any,
 ) -> dict[str, Any]:
     """Build the standard plan.html template context dict."""
+    # Calendar tracking
+    start_date_val = None
+    current_week_number = None
+    week_dates = None
+    workout_date_labels: dict[tuple[int, int], str] = {}
+    today_obj = date.today()
+
+    if training_plan.start_date:
+        sd = training_plan.start_date
+        start_date_val = sd if isinstance(sd, date) else sd.date() if hasattr(sd, "date") else sd
+        num_weeks = len(plan_data) if plan_data else training_plan.weeks_duration
+        week_dates = _build_week_dates(start_date_val, num_weeks)
+        current_week_number = _compute_current_week(start_date_val, today_obj)
+        if current_week_number and current_week_number > num_weeks:
+            current_week_number = None  # plan is over
+        workout_date_labels = _workout_dates(start_date_val, num_weeks)
+
     ctx: dict[str, Any] = {
         "request": request,
         "user": current_user,
@@ -115,6 +177,13 @@ def plan_view_context(
         "logged_runs": {},
         "performance_analysis": None,
         "progress_data": None,
+        # Calendar tracking
+        "start_date": start_date_val,
+        "current_week_number": current_week_number,
+        "today_iso": today_obj.isoformat(),
+        "week_dates": week_dates,
+        "workout_date_labels": workout_date_labels,
+        "next_monday": _next_monday(),
     }
     ctx.update(extra)
     return ctx

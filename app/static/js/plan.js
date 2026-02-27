@@ -604,6 +604,34 @@ function viewAdaptationDetails() {
     dismissAdaptationBanner();
 }
 
+// Set plan start date
+window.startPlan = async function() {
+    const dateInput = document.getElementById('plan-start-date');
+    if (!dateInput || !dateInput.value) {
+        ApiClient.showWarning('Please select a start date.');
+        return;
+    }
+
+    try {
+        const response = await fetch(`/api/plan/${window.APP_CTX.plan_id}/start`, {
+            method: 'POST',
+            headers: authHeaders({ 'Content-Type': 'application/json' }),
+            credentials: 'same-origin',
+            body: JSON.stringify({ start_date: dateInput.value })
+        });
+
+        if (response.ok) {
+            ApiClient.showSuccess('Plan started! Reloading...');
+            setTimeout(() => location.reload(), 800);
+        } else {
+            const error = await response.json();
+            ApiClient.showError('Error: ' + (error.detail || 'Could not set start date'));
+        }
+    } catch (error) {
+        ApiClient.showError('Error setting start date: ' + error.message);
+    }
+};
+
 // Plan tab switching
 window.switchPlanTab = function(tabName) {
     document.querySelectorAll('.plan-tab').forEach(t => {

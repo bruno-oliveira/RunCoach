@@ -231,6 +231,16 @@
         {% endif %}
     </nav>
 
+    {% if not start_date and user %}
+    <div class="plan-start-banner">
+        <p>Set a start date to track your progress against real calendar dates</p>
+        <div class="plan-start-banner-controls">
+            <input type="date" id="plan-start-date" value="{{ next_monday }}">
+            <button onclick="startPlan()" class="btn btn-primary btn-small">Start Plan</button>
+        </div>
+    </div>
+    {% endif %}
+
     <!-- Training Tab Panel -->
     <div class="plan-tab-panel active" id="panel-training" role="tabpanel" aria-labelledby="tab-training">
         {% set ns = namespace(total=0, done=0) %}
@@ -265,9 +275,9 @@
                 {% endif %}
             {% endif %}
         {% endfor %}
-        <div class="week-card">
+        <div class="week-card {% if current_week_number and week.week == current_week_number %}current-week{% endif %}">
             <div class="week-header">
-                <div class="week-title">Week {{ week.week }}</div>
+                <div class="week-title">Week {{ week.week }}{% if week_dates %} <span class="week-date-range">{{ week_dates[week.week - 1].start }} – {{ week_dates[week.week - 1].end }}</span>{% endif %}</div>
                 {% if ns.total > 0 %}
                 <div class="week-progress-badge {% if ns.completed == ns.total %}all-done{% elif ns.completed > 0 %}in-progress{% endif %}">
                     {{ ns.completed }}/{{ ns.total }}
@@ -280,8 +290,9 @@
             <div class="workout-grid">
                 {% for workout in week.daily_workouts %}
                 {% set logged_run = logged_runs.get(workout.id) %}
-                <div class="workout-item {{ workout.type }} {% if logged_run %}completed{% endif %}" data-day="{{ day_names[workout.day - 1] }}">
-                    <div class="workout-day-label">{{ day_names[workout.day - 1] }}</div>
+                {% set is_past = start_date and workout_date_labels and current_week_number and (week.week < current_week_number or (week.week == current_week_number and workout.day <= (today_iso | length and 1))) %}
+                <div class="workout-item {{ workout.type }} {% if logged_run %}completed{% elif is_past and workout.type != 'rest' and current_week_number and week.week < current_week_number %}missed{% endif %}" data-day="{{ day_names[workout.day - 1] }}">
+                    <div class="workout-day-label">{% if workout_date_labels %}{{ workout_date_labels.get((week.week, workout.day), day_names[workout.day - 1]) }}{% else %}{{ day_names[workout.day - 1] }}{% endif %}</div>
                     <div class="workout-type">{{ workout.type }}</div>
                     {% if workout.distance > 0 %}
                     <div class="workout-distance">{{ workout.distance }} km</div>
@@ -326,7 +337,7 @@
                         {% endif %}
                     </div>
                     <button class="undo-log-btn" onclick="unlinkRun('{{ logged_run.id }}')">Undo</button>
-                    {% elif workout.type != 'rest' and user %}
+                    {% elif workout.type != 'rest' and user and not user.strava_athlete_id %}
                     <button class="log-run-btn" onclick="openLogModal('{{ workout.id }}', '{{ workout.type }}', {{ workout.distance }}, '{{ day_names[workout.day - 1] }}', {{ week.week }})">Log This Run</button>
                     {% endif %}
                 </div>
@@ -681,6 +692,7 @@
     ↑
 </div>
 
+{% if user and not user.strava_athlete_id %}
 <!-- Run Logging Modal -->
 <div id="logRunModal" class="modal">
     <div class="modal-content">
@@ -751,6 +763,7 @@
         </form>
     </div>
 </div>
+{% endif %}
 
 {% endblock %}
 
