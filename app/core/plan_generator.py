@@ -667,9 +667,9 @@ class TrainingPlanGenerator:
             elif workout_type == 'recovery':
                 workout = self._generate_recovery_day(day_number, phase)
             elif workout_type == 'long':
-                workout = self._generate_long_run(day_number, long_run_distance, total_km)
+                workout = self._generate_long_run(day_number, long_run_distance, total_km, pace_zones=pace_zones)
             elif workout_type == 'easy':
-                workout = self._generate_easy_run(day_number, easy_distance, total_km)
+                workout = self._generate_easy_run(day_number, easy_distance, total_km, pace_zones=pace_zones)
             elif workout_type == 'tempo':
                 workout = self._generate_tempo_run(day_number, easy_distance, total_km,
                                                    vdot=vdot, pace_zones=pace_zones)
@@ -875,14 +875,24 @@ class TrainingPlanGenerator:
         session_index = week_number % len(strength_sessions)
         return strength_sessions[session_index]
 
-    def _generate_long_run(self, day: int, distance: float, total_km: float) -> Dict[str, Any]:
+    def _generate_long_run(self, day: int, distance: float, total_km: float,
+                            pace_zones: Optional[Dict] = None) -> Dict[str, Any]:
         """Generate long run workout"""
-        long_run_notes = [
-            f'Long run at conversational pace. Focus on endurance and mental toughness.',
-            f'Long run with race pace finish: first {round(distance*0.8, 1)}km easy, final {round(distance*0.2, 1)}km at goal pace.',
-            f'Long run on varied terrain if possible. Practice nutrition strategy every 45-60 minutes.'
-        ]
-        
+        if pace_zones:
+            e_pace = pace_zones["E"]["pace_str"]
+            m_pace = pace_zones["M"]["pace_str"]
+            long_run_notes = [
+                f'Long run at {e_pace} (E-pace). Focus on endurance and mental toughness.',
+                f'Long run: first {round(distance*0.8, 1)}km at {e_pace}, final {round(distance*0.2, 1)}km at {m_pace} (M-pace).',
+                f'Long run at {e_pace} (E-pace). Practice nutrition every 45-60 minutes.',
+            ]
+        else:
+            long_run_notes = [
+                f'Long run at conversational pace. Focus on endurance and mental toughness.',
+                f'Long run with race pace finish: first {round(distance*0.8, 1)}km easy, final {round(distance*0.2, 1)}km at goal pace.',
+                f'Long run on varied terrain if possible. Practice nutrition strategy every 45-60 minutes.'
+            ]
+
         return {
             'day': day,
             'type': 'long',
@@ -890,15 +900,24 @@ class TrainingPlanGenerator:
             'intensity': 'medium',
             'description': long_run_notes[day % len(long_run_notes)]
         }
-    
-    def _generate_easy_run(self, day: int, distance: float, total_km: float) -> Dict[str, Any]:
+
+    def _generate_easy_run(self, day: int, distance: float, total_km: float,
+                            pace_zones: Optional[Dict] = None) -> Dict[str, Any]:
         """Generate easy run workout"""
-        easy_variations = [
-            f'Easy recovery run. Should be conversational pace.',
-            f'Easy run with strides: main run easy, finish with 6x100m accelerations.',
-            f'Conversational pace run. Focus on relaxed form and breathing.'
-        ]
-        
+        if pace_zones:
+            e_pace = pace_zones["E"]["pace_str"]
+            easy_variations = [
+                f'Easy recovery run at {e_pace} (E-pace). Should feel conversational.',
+                f'Easy run at {e_pace} with strides: 6×100m accelerations at the end.',
+                f'Conversational pace at {e_pace}. Focus on relaxed form.',
+            ]
+        else:
+            easy_variations = [
+                f'Easy recovery run. Should be conversational pace.',
+                f'Easy run with strides: main run easy, finish with 6x100m accelerations.',
+                f'Conversational pace run. Focus on relaxed form and breathing.'
+            ]
+
         return {
             'day': day,
             'type': 'easy',
@@ -1213,20 +1232,27 @@ class TrainingPlanGenerator:
         else:
             return 'taper'
     
-    def _get_peak_mileage(self, target_distance: float, current_km: float, weeks: int) -> float:
+    def _get_peak_mileage(self, target_distance: float, current_km: float, weeks: int,
+                          vdot: Optional[float] = None) -> float:
         """
-        Determine peak weekly mileage with length-based multipliers
+        Determine peak weekly mileage with length-based multipliers and optional VDOT adjustment.
+        Higher VDOT runners can absorb slightly more volume (better aerobic fitness / recovery).
         """
         peak_multiplier = 1 + (1.5 * (weeks / 16))
         peak_multiplier = min(peak_multiplier, 2.6)
-        
+
         ideal_peak = self._get_ideal_peak(target_distance, current_km, weeks)
-        
+
+        # VDOT adjustment: VDOT 30 = 0.95x, VDOT 50 = 1.0x, VDOT 65+ = 1.08x
+        if vdot:
+            vdot_factor = 0.95 + min(0.13, (vdot - 30) / 350)
+            ideal_peak = ideal_peak * vdot_factor
+
         if current_km == 0:
             return ideal_peak
-        
+
         peak = min(current_km * peak_multiplier, ideal_peak)
-        
+
         return max(peak, current_km * 1.2)
     
     def _get_ideal_peak(self, target_distance: float, current_km: float, weeks: int) -> float:
@@ -1257,7 +1283,7 @@ class TrainingPlanGenerator:
             return False
         return week_number % 4 == 0
     
-    def _calculate_weekly_progression(self, current_km: float, target_distance: float, weeks: int, max_runs: int = 4) -> List[float]:
+    def _calculate_weekly_progression(self, current_km: float, target_distance: float, weeks: int, max_runs: int = 4, vdot: Optional[float] = None) -> List[float]:
         """
         Calculate weekly mileage with phase-aware progression
         
@@ -1268,7 +1294,7 @@ class TrainingPlanGenerator:
         - Taper: Progressive reduction toward race week
         """
         phases = self._calculate_phases(weeks)
-        peak_km = self._get_peak_mileage(target_distance, current_km, weeks)
+        peak_km = self._get_peak_mileage(target_distance, current_km, weeks, vdot=vdot)
         weekly_progression = []
         
         # For very short plans, skip recovery weeks in build phase to maintain progression
@@ -1445,7 +1471,7 @@ class TrainingPlanGenerator:
         from app.core.vdot_calculator import VDOTCalculator
         pace_zones = VDOTCalculator.get_pace_zones(vdot) if vdot else None
 
-        weekly_progression = self._calculate_weekly_progression(current_km, target_distance, weeks, max_runs_per_week)
+        weekly_progression = self._calculate_weekly_progression(current_km, target_distance, weeks, max_runs_per_week, vdot=vdot)
 
         training_plan = []
         for week in range(1, weeks + 1):

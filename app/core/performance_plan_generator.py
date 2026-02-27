@@ -15,6 +15,14 @@ from app.utils import format_pace as _shared_format_pace
 class PerformancePlanGenerator:
     """Generates performance-focused training plans with pace-based zones."""
 
+    # Phase-appropriate quality workout types (avoids race-pace work in base, etc.)
+    PHASE_QUALITY_PRIORITY = {
+        'base':    ['tempo', 'fartlek'],
+        'build':   ['tempo', 'vo2max'],
+        'sharpen': ['vo2max', 'race_pace'],
+        'taper':   ['race_pace', 'tempo'],
+    }
+
     def __init__(self):
         """Initialize the performance plan generator."""
         self.workout_types = {
@@ -60,13 +68,17 @@ class PerformancePlanGenerator:
             }
         }
 
-    def calculate_training_zones(self, goal_pace: float, max_hr: Optional[int] = None) -> Dict[str, Dict[str, Any]]:
+    def calculate_training_zones(self, goal_pace: float, max_hr: Optional[int] = None,
+                                  vdot_zones: Optional[Dict] = None) -> Dict[str, Dict[str, Any]]:
         """
         Calculate 5 training zones based on goal pace and optionally max heart rate.
+        When vdot_zones is provided, use Daniels' physiology-grounded paces instead of
+        fixed offsets from goal pace.
 
         Args:
             goal_pace: Goal race pace in min/km
             max_hr: Maximum heart rate in BPM (optional)
+            vdot_zones: Pre-computed VDOT pace zones from VDOTCalculator (optional)
 
         Returns:
             Dictionary of training zones with pace, HR percentage, and BPM ranges
@@ -80,43 +92,89 @@ class PerformancePlanGenerator:
             'zone_5_race': (0.95, 1.00)
         }
 
-        zones = {
-            'zone_1_recovery': {
-                'pace': goal_pace + 1.5,  # Very easy
-                'pace_range': (goal_pace + 1.3, goal_pace + 1.8),
-                'hr_range': '60-70%',
-                'description': 'Easy recovery - conversational',
-                'color': '#4ade80'  # green
-            },
-            'zone_2_aerobic': {
-                'pace': goal_pace + 0.9,  # Easy
-                'pace_range': (goal_pace + 0.7, goal_pace + 1.1),
-                'hr_range': '70-80%',
-                'description': 'Aerobic base building',
-                'color': '#60a5fa'  # blue
-            },
-            'zone_3_tempo': {
-                'pace': goal_pace + 0.3,  # Threshold
-                'pace_range': (goal_pace + 0.2, goal_pace + 0.4),
-                'hr_range': '80-88%',
-                'description': 'Lactate threshold / tempo',
-                'color': '#fbbf24'  # yellow
-            },
-            'zone_4_vo2max': {
-                'pace': goal_pace - 0.2,  # Hard
-                'pace_range': (goal_pace - 0.3, goal_pace - 0.1),
-                'hr_range': '88-95%',
-                'description': 'VO2 max / hard intervals',
-                'color': '#fb923c'  # orange
-            },
-            'zone_5_race': {
-                'pace': goal_pace,  # Goal pace
-                'pace_range': (goal_pace - 0.1, goal_pace + 0.1),
-                'hr_range': '95-100%',
-                'description': 'Goal race pace',
-                'color': '#ef4444'  # red
+        if vdot_zones:
+            # Use Daniels' physiology-grounded paces
+            e_slow = vdot_zones['E']['pace_min_km_slow']
+            e_fast = vdot_zones['E']['pace_min_km_fast']
+            t_pace = vdot_zones['T']['pace_min_km']
+            i_pace = vdot_zones['I']['pace_min_km']
+            m_pace = vdot_zones['M']['pace_min_km']
+            zones = {
+                'zone_1_recovery': {
+                    'pace': e_slow,
+                    'pace_range': (e_slow, e_fast),
+                    'hr_range': '60-70%',
+                    'description': 'Easy recovery - conversational',
+                    'color': '#4ade80'
+                },
+                'zone_2_aerobic': {
+                    'pace': e_fast,
+                    'pace_range': (e_fast, m_pace),
+                    'hr_range': '70-80%',
+                    'description': 'Aerobic base building',
+                    'color': '#60a5fa'
+                },
+                'zone_3_tempo': {
+                    'pace': t_pace,
+                    'pace_range': (t_pace - 0.1, t_pace + 0.1),
+                    'hr_range': '80-88%',
+                    'description': 'Lactate threshold / tempo',
+                    'color': '#fbbf24'
+                },
+                'zone_4_vo2max': {
+                    'pace': i_pace,
+                    'pace_range': (i_pace - 0.1, i_pace + 0.1),
+                    'hr_range': '88-95%',
+                    'description': 'VO2 max / hard intervals',
+                    'color': '#fb923c'
+                },
+                'zone_5_race': {
+                    'pace': goal_pace,
+                    'pace_range': (goal_pace - 0.1, goal_pace + 0.1),
+                    'hr_range': '95-100%',
+                    'description': 'Goal race pace',
+                    'color': '#ef4444'
+                }
             }
-        }
+        else:
+            # Fallback: fixed offsets from goal pace
+            zones = {
+                'zone_1_recovery': {
+                    'pace': goal_pace + 1.5,  # Very easy
+                    'pace_range': (goal_pace + 1.3, goal_pace + 1.8),
+                    'hr_range': '60-70%',
+                    'description': 'Easy recovery - conversational',
+                    'color': '#4ade80'
+                },
+                'zone_2_aerobic': {
+                    'pace': goal_pace + 0.9,  # Easy
+                    'pace_range': (goal_pace + 0.7, goal_pace + 1.1),
+                    'hr_range': '70-80%',
+                    'description': 'Aerobic base building',
+                    'color': '#60a5fa'
+                },
+                'zone_3_tempo': {
+                    'pace': goal_pace + 0.3,  # Threshold
+                    'pace_range': (goal_pace + 0.2, goal_pace + 0.4),
+                    'hr_range': '80-88%',
+                    'description': 'Lactate threshold / tempo',
+                    'color': '#fbbf24'
+                },
+                'zone_4_vo2max': {
+                    'pace': goal_pace - 0.2,  # Hard
+                    'pace_range': (goal_pace - 0.3, goal_pace - 0.1),
+                    'hr_range': '88-95%',
+                    'description': 'VO2 max / hard intervals',
+                    'color': '#fb923c'
+                },
+                'zone_5_race': {
+                    'pace': goal_pace,  # Goal pace
+                    'pace_range': (goal_pace - 0.1, goal_pace + 0.1),
+                    'hr_range': '95-100%',
+                    'description': 'Goal race pace',
+                    'color': '#ef4444'
+                }
+            }
 
         # Add BPM ranges if max_hr is provided
         if max_hr:
@@ -215,6 +273,40 @@ class PerformancePlanGenerator:
             if week_number <= week_count:
                 return phase_name
         return 'taper'
+
+    def _calculate_weekly_km_progression(self, current_weekly_km: float, weeks: int, phases: Dict) -> List[float]:
+        """Ramp from current → peak in base/build, hold in sharpen, taper down.
+
+        Peak = min(current * 1.5, current + 30) — performance plans assume fit runners.
+        """
+        peak_km = min(current_weekly_km * 1.5, current_weekly_km + 30)
+        progression = []
+
+        # Base: linear build to 80% of peak
+        base_target = peak_km * 0.80
+        base_weeks = phases['base']['weeks']
+        for i in range(base_weeks):
+            t = (i + 1) / base_weeks
+            progression.append(round(current_weekly_km + (base_target - current_weekly_km) * t, 1))
+
+        # Build: linear build from 80% to 100% of peak
+        build_weeks = phases['build']['weeks']
+        for i in range(build_weeks):
+            t = (i + 1) / build_weeks
+            progression.append(round(base_target + (peak_km - base_target) * t, 1))
+
+        # Sharpen: hold at ~95% of peak
+        for _ in range(phases['sharpen']['weeks']):
+            progression.append(round(peak_km * 0.95, 1))
+
+        # Taper: step down 80% → 65%
+        taper_weeks = phases['taper']['weeks']
+        for i in range(taper_weeks):
+            t = i / max(taper_weeks - 1, 1)
+            factor = 0.80 - (0.15 * t)
+            progression.append(round(peak_km * factor, 1))
+
+        return progression
 
     def _generate_tempo_workout(self, zones: Dict, distance_km: float, week: int, phase: str) -> Dict:
         """Generate a tempo workout."""
@@ -606,10 +698,6 @@ class PerformancePlanGenerator:
         quality_percent = phases[phase]['quality_percent']
         quality_workouts_needed = max(1, int(runs_per_week * quality_percent / 100))
 
-        # Taper: reduce volume but maintain quality
-        if phase == 'taper':
-            weekly_km *= 0.75
-
         daily_workouts = []
         total_assigned_km = 0
 
@@ -623,11 +711,12 @@ class PerformancePlanGenerator:
         })
 
         # Add quality workouts on Tuesday and Thursday/Friday
+        # Use phase-appropriate workout types, rotating by week number within each phase
         quality_days = [2, 5] if runs_per_week >= 4 else [2]
-        quality_types = ['tempo', 'vo2max', 'race_pace', 'fartlek']
+        quality_types = self.PHASE_QUALITY_PRIORITY.get(phase, ['tempo', 'vo2max'])
 
         for i, day in enumerate(quality_days[:quality_workouts_needed]):
-            workout_type = quality_types[i % len(quality_types)]
+            workout_type = quality_types[(week_number - 1 + i) % len(quality_types)]
             if workout_type == 'tempo':
                 generator = lambda wt=workout_type: self._generate_tempo_workout(zones, target_distance, week_number, phase)
             elif workout_type == 'vo2max':
@@ -713,11 +802,23 @@ class PerformancePlanGenerator:
         if weeks > 16:
             weeks = 16
 
-        # Calculate training zones
-        zones = self.calculate_training_zones(goal_pace, max_heart_rate)
-
-        # Calculate phases
+        # Calculate phases first (needed for progression)
         phases = self._calculate_phases(weeks)
+
+        # Compute VDOT-grounded zones when current_pace is available
+        from app.core.vdot_calculator import VDOTCalculator
+        vdot_zones = None
+        if current_pace:
+            implied_seconds = int(current_pace * target_distance * 60)
+            vdot = VDOTCalculator.calculate_vdot(target_distance, implied_seconds)
+            if vdot:
+                vdot_zones = VDOTCalculator.get_pace_zones(vdot)
+
+        # Calculate training zones (VDOT-grounded when possible, offset-based fallback)
+        zones = self.calculate_training_zones(goal_pace, max_heart_rate, vdot_zones=vdot_zones)
+
+        # Calculate weekly km progression (ramps through base/build, peaks in sharpen, tapers)
+        km_progression = self._calculate_weekly_km_progression(current_weekly_km, weeks, phases)
 
         # Generate weekly plans
         weekly_plans = []
@@ -728,7 +829,7 @@ class PerformancePlanGenerator:
                 phase,
                 phases,
                 zones,
-                current_weekly_km,
+                km_progression[week_num - 1],
                 target_distance,
                 runs_per_week
             )
