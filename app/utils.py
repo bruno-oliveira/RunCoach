@@ -57,6 +57,25 @@ class TimestampAdapter:
         return datetime.fromisoformat(start_date_local.replace("Z", ""))
 
 
+def format_pace_bare(pace_min_per_km: float) -> str:
+    """Convert decimal pace to 'mm:ss' without the '/km' suffix.
+
+    Args:
+        pace_min_per_km: Pace in decimal minutes per kilometer.
+
+    Returns:
+        Formatted pace string like '6:36', or '--' for invalid values.
+    """
+    if not pace_min_per_km or pace_min_per_km <= 0:
+        return "--"
+    minutes = int(pace_min_per_km)
+    seconds = round((pace_min_per_km - minutes) * 60)
+    if seconds == 60:
+        minutes += 1
+        seconds = 0
+    return f"{minutes}:{seconds:02d}"
+
+
 def format_pace(pace_min_per_km: float) -> str:
     """Convert decimal pace (e.g. 6.60) to 'mm:ss/km' (e.g. '6:36/km').
 
@@ -66,28 +85,20 @@ def format_pace(pace_min_per_km: float) -> str:
     Returns:
         Formatted pace string like '6:36/km', or '--' for invalid values.
     """
-    if not pace_min_per_km or pace_min_per_km <= 0:
-        return "--"
-    minutes = int(pace_min_per_km)
-    seconds = round((pace_min_per_km - minutes) * 60)
-    if seconds == 60:
-        minutes += 1
-        seconds = 0
-    return f"{minutes}:{seconds:02d}/km"
+    bare = format_pace_bare(pace_min_per_km)
+    return bare if bare == "--" else f"{bare}/km"
 
 
-def format_pace_bare(pace_min_per_km: float) -> str:
-    """Convert decimal pace to 'mm:ss' without the '/km' suffix.
-
-    Args:
-        pace_min_per_km: Pace in decimal minutes per kilometer.
-
-    Returns:
-        Formatted pace string like '6:36'.
-    """
-    minutes = int(pace_min_per_km)
-    seconds = round((pace_min_per_km - minutes) * 60)
-    if seconds == 60:
-        minutes += 1
-        seconds = 0
-    return f"{minutes}:{seconds:02d}"
+def parse_race_time_to_seconds(time_str: str | None) -> int | None:
+    """Convert HH:MM:SS or MM:SS string to integer seconds."""
+    if not time_str:
+        return None
+    parts = time_str.strip().split(":")
+    try:
+        if len(parts) == 3:
+            return int(parts[0]) * 3600 + int(parts[1]) * 60 + int(parts[2])
+        elif len(parts) == 2:
+            return int(parts[0]) * 60 + int(parts[1])
+    except (ValueError, IndexError):
+        return None
+    return None

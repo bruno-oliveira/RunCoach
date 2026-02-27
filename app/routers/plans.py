@@ -3,21 +3,25 @@
 import json
 import logging
 import os
-from typing import Any, Optional
+from typing import Optional
 
-from cachetools import TTLCache
 from fastapi import APIRouter, Cookie, Depends, Form, HTTPException, Request, Response
 from fastapi.responses import FileResponse, HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
 
 from app.config import settings
-
+from app.core.nutrition_engine import NutritionEngine
+from app.core.pdf_generator import PDFGenerator
+from app.core.plan_generator import TrainingPlanGenerator
 from app.dependencies import (
+    get_current_user,
     get_db,
     get_nutrition_engine,
+    get_optional_user,
     get_pdf_generator,
     get_plan_generator,
+    verify_plan_ownership,
 )
 from app.exceptions import (
     DatabaseException,
@@ -26,124 +30,23 @@ from app.exceptions import (
     PlanGenerationException,
     ValidationException,
 )
-from app.models import DailyWorkout, RunLog, TrainingPlan, User, WeeklyPlan
-from app.models import PlanCustomization as PlanCustomizationModel
-from app.core.nutrition_engine import NutritionEngine
-from app.core.pdf_generator import PDFGenerator
-from app.core.plan_generator import TrainingPlanGenerator
+from app.models import TrainingPlan, User
+from app.routers.plan_helpers import error_response, get_plan_or_404, plan_view_context
 from app.schemas import DISTANCE_NAMES, PlanRequest, get_mileage_warning, parse_target_distance
-from app.dependencies import get_current_user, get_optional_user, verify_plan_ownership
 from app.services.adaptation_service import AdaptationService
+from app.services.plan_service import PlanService, user_plans_cache
 from app.utils import format_pace
 
 logger = logging.getLogger(__name__)
-adaptation_service = AdaptationService()
-
-
-def _parse_race_time_to_seconds(time_str: Optional[str]) -> Optional[int]:
-    """Convert HH:MM:SS or MM:SS string to integer seconds."""
-    if not time_str:
-        return None
-    parts = time_str.strip().split(":")
-    try:
-        if len(parts) == 3:
-            return int(parts[0]) * 3600 + int(parts[1]) * 60 + int(parts[2])
-        elif len(parts) == 2:
-            return int(parts[0]) * 60 + int(parts[1])
-    except (ValueError, IndexError):
-        return None
-    return None
 
 router = APIRouter(tags=["plans"])
 templates = Jinja2Templates(directory="app/templates")
+templates.env.filters["format_pace"] = format_pace
 
 
-templates.env.filters['format_pace'] = format_pace
-
-user_plans_cache = TTLCache(maxsize=1000, ttl=300)
-
-
-def get_nutrition_plan_for_template(nutrition_plan_data: str) -> dict[str, Any]:
-    """Convert nutrition plan data to template-compatible format."""
-    if not nutrition_plan_data:
-        return {}
-
-    nutrition_plan = json.loads(nutrition_plan_data)
-
-    # Check if it's the old format (list of daily plans) or new format (blueprint)
-    if isinstance(nutrition_plan, list):
-        # Old format - convert to new blueprint format
-        if nutrition_plan:
-            first_day = nutrition_plan[0]
-            # Ensure first_day is a dict before calling .get()
-            if not isinstance(first_day, dict):
-                return {}
-            targets = first_day.get("nutrition_targets", {})
-            if not isinstance(targets, dict):
-                targets = {}
-            blueprint = {
-                "daily_calories": targets.get("calories", 0),
-                "protein_g": targets.get("protein", 0),
-                "carbs_g": targets.get("carbs", 0),
-                "fats_g": targets.get("fat", 0),
-                "meal_suggestions": {},
-                "general_tips": first_day.get("nutrition_tips", []),
-                "hydration_guide": {
-                    "daily_target": "2000ml",
-                    "pre_run": "300-500ml, 2 hours before",
-                    "during_run": "200-400ml per hour",
-                    "post_run": "150% of fluid lost",
-                    "tips": ["Stay hydrated throughout the day"],
-                },
-            }
-
-            for daily_plan in nutrition_plan:
-                # Skip non-dict items in the list
-                if not isinstance(daily_plan, dict):
-                    continue
-                meals = daily_plan.get("meals", {})
-                if not isinstance(meals, dict):
-                    continue
-                for meal_type, meal_data in meals.items():
-                    if meal_type not in blueprint["meal_suggestions"]:
-                        blueprint["meal_suggestions"][meal_type] = []
-                    blueprint["meal_suggestions"][meal_type].append(meal_data)
-
-            return blueprint
-        return {}
-
-    # New blueprint format - transform to template-expected structure
-    # Ensure nutrition_plan is a dict before accessing
-    if not isinstance(nutrition_plan, dict):
-        return {}
-
-    targets = nutrition_plan.get("nutrition_targets", {})
-    if not isinstance(targets, dict):
-        targets = {}
-
-    meal_options = nutrition_plan.get("meal_options", {})
-    if not isinstance(meal_options, dict):
-        meal_options = {}
-
-    general_tips = nutrition_plan.get("general_tips", [])
-    if not isinstance(general_tips, list):
-        general_tips = []
-
-    hydration_guide = nutrition_plan.get("hydration_guide", {})
-    if not isinstance(hydration_guide, dict):
-        hydration_guide = {}
-
-    return {
-        "daily_calories": targets.get("calories", 0),
-        "protein_g": targets.get("protein", 0),
-        "carbs_g": targets.get("carbs", 0),
-        "fats_g": targets.get("fat", 0),
-        "meal_suggestions": meal_options,
-        "general_tips": general_tips,
-        "hydration_guide": hydration_guide,
-        "pre_run_meal": nutrition_plan.get("pre_run_meal"),
-        "post_run_meal": nutrition_plan.get("post_run_meal"),
-    }
+# ---------------------------------------------------------------------------
+# Plan generation
+# ---------------------------------------------------------------------------
 
 
 @router.post("/generate-plan", response_class=HTMLResponse)
@@ -164,19 +67,23 @@ async def generate_plan(
     nutrition_engine: NutritionEngine = Depends(get_nutrition_engine),
 ) -> HTMLResponse:
     """Generate a personalized training plan."""
-    # Debug: log auth state
-    logger.info(f"Generate plan - current_user: {current_user.id if current_user else 'None'}")
-    logger.info(f"Generate plan - anonymous_user_id cookie: {request.cookies.get('anonymous_user_id', 'NO COOKIE')}")
-    logger.info(f"Generate plan - access_token cookie: {request.cookies.get('access_token', 'NO COOKIE')[:20] if request.cookies.get('access_token') else 'NO COOKIE'}...")
+    logger.info(
+        f"Generate plan - current_user: {current_user.id if current_user else 'None'}"
+    )
+    logger.info(
+        f"Generate plan - anonymous_user_id cookie: "
+        f"{request.cookies.get('anonymous_user_id', 'NO COOKIE')}"
+    )
+    logger.info(
+        f"Generate plan - has_access_token: "
+        f"{bool(request.cookies.get('access_token'))}"
+    )
 
-    # Validate input using Pydantic
+    # --- Validate input via Pydantic ---
     try:
-        # Convert string target_distance to float
-        target_distance_parsed = float(target_distance)
-
         plan_request = PlanRequest(
             current_km=current_km,
-            target_distance=target_distance_parsed,
+            target_distance=float(target_distance),
             weeks=weeks,
             max_runs_per_week=max_runs_per_week,
             body_weight_kg=body_weight_kg,
@@ -184,209 +91,53 @@ async def generate_plan(
             recent_race_time=recent_race_time or None,
         )
     except InsufficientTimeException as e:
-        return templates.TemplateResponse(
-            "index.html",
-            {
-                "request": request,
-                "user": current_user,
-                "google_client_id": settings.google_client_id,
-                "error": e.user_message,
-                "error_type": "insufficient_time",
-                "suggestion": e.suggestion,
-            },
-        )
+        return error_response(request, current_user, e.user_message, "insufficient_time", e.suggestion)
     except InadequateBaseException as e:
-        return templates.TemplateResponse(
-            "index.html",
-            {
-                "request": request,
-                "user": current_user,
-                "google_client_id": settings.google_client_id,
-                "error": e.user_message,
-                "error_type": "inadequate_base",
-                "suggestion": e.suggestion,
-            },
-        )
+        return error_response(request, current_user, e.user_message, "inadequate_base", e.suggestion)
     except ValidationException as e:
-        return templates.TemplateResponse(
-            "index.html",
-            {
-                "request": request,
-                "user": current_user,
-                "google_client_id": settings.google_client_id,
-                "error": e.user_message,
-                "error_type": "validation",
-            },
-        )
+        return error_response(request, current_user, e.user_message, "validation")
     except Exception as e:
-        return templates.TemplateResponse(
-            "index.html",
-            {
-                "request": request,
-                "user": current_user,
-                "google_client_id": settings.google_client_id,
-                "error": f"Invalid input: {str(e)}",
-                "error_type": "general",
-            },
-        )
+        return error_response(request, current_user, f"Invalid input: {str(e)}", "general")
 
-    # Check 3-plan limit for logged-in users
+    # --- 3-plan limit ---
     if current_user:
-        plan_count = db.query(TrainingPlan).filter(
-            TrainingPlan.user_id == current_user.id
-        ).count()
+        plan_count = (
+            db.query(TrainingPlan)
+            .filter(TrainingPlan.user_id == current_user.id)
+            .count()
+        )
         if plan_count >= 3:
-            return templates.TemplateResponse(
-                "index.html",
-                {
-                    "request": request,
-                    "user": current_user,
-                    "google_client_id": settings.google_client_id,
-                    "error": "You've reached the maximum of 3 training plans. Please delete an existing plan before creating a new one.",
-                    "error_type": "plan_limit",
-                },
+            return error_response(
+                request,
+                current_user,
+                "You've reached the maximum of 3 training plans. "
+                "Please delete an existing plan before creating a new one.",
+                "plan_limit",
             )
 
-    # Check for high mileage warning
     warning_message = get_mileage_warning(
         plan_request.target_distance, plan_request.current_km
     )
 
     try:
-        # Generate training plan (with optional VDOT-based pace zones)
-        plan_data = plan_generator.generate_plan(
-            plan_request.current_km,
-            plan_request.target_distance,
-            plan_request.weeks,
-            plan_request.max_runs_per_week,
-            vdot=plan_request.vdot,
+        user = PlanService.get_or_create_anonymous_user(
+            current_user, anonymous_user_id, db
+        )
+        training_plan, plan_data = PlanService.create_plan(
+            plan_request, user, db, plan_generator, nutrition_engine
         )
 
-        if current_user:
-            user = current_user
-        else:
-            if anonymous_user_id:
-                user = db.query(User).filter(User.id == anonymous_user_id).first()
-                if not user or (user.google_id or user.email):
-                    user = User()
-                    db.add(user)
-                    db.flush()
-            else:
-                user = User()
-                db.add(user)
-                db.flush()
-
-        training_plan = TrainingPlan(
-            user_id=user.id,
-            current_weekly_km=plan_request.current_km,
-            target_distance=str(plan_request.target_distance),
-            weeks_duration=plan_request.weeks,
-            max_runs_per_week=plan_request.max_runs_per_week,
-            plan_data=json.dumps(plan_data),
-            body_weight_kg=plan_request.body_weight_kg,
-            recent_race_distance_km=plan_request.recent_race_distance_km,
-            recent_race_time_seconds=(
-                _parse_race_time_to_seconds(plan_request.recent_race_time)
-                if plan_request.recent_race_time else None
-            ),
-            vdot=plan_request.vdot,
-        )
-
-        db.add(training_plan)
-        db.flush()
-
-        # Save weekly plans and daily workouts (including coaching rationale)
-        for week_data in plan_data:
-            weekly_plan = WeeklyPlan(
-                training_plan_id=training_plan.id,
-                week_number=week_data["week"],
-                total_km=week_data["total_km"],
-                workout_types=json.dumps(week_data.get("workout_distribution", {})),
-            )
-            db.add(weekly_plan)
-            db.flush()
-
-            for day_workout in week_data.get("daily_workouts", []):
-                daily_workout = DailyWorkout(
-                    weekly_plan_id=weekly_plan.id,
-                    day_of_week=day_workout["day"],
-                    workout_type=day_workout["type"],
-                    distance_km=day_workout.get("distance", 0),
-                    intensity=day_workout.get("intensity", "low"),
-                    notes=day_workout.get("description", day_workout.get("notes", "")),
-                    coaching_rationale=day_workout.get("coaching_rationale"),
-                )
-                db.add(daily_workout)
-
-        # Generate base nutrition plan (for meal suggestions)
-        nutrition_plan = nutrition_engine.generate_weekly_meal_plan(
-            plan_request.current_km,
-            plan_request.target_distance,
-            body_weight=plan_request.body_weight_kg,
-        )
-        training_plan.nutrition_plan_data = json.dumps(nutrition_plan)
-
-        # Generate phase-specific nutrition targets
-        nutrition_phases = nutrition_engine.generate_phased_nutrition_plan(
+        ctx = plan_view_context(
+            request,
+            current_user,
+            training_plan,
             plan_data,
-            plan_request.current_km,
-            plan_request.target_distance,
-            body_weight_kg=plan_request.body_weight_kg,
+            PlanService.nutrition_for_template(training_plan.nutrition_plan_data),
         )
-        training_plan.nutrition_phases_data = json.dumps(nutrition_phases)
-
-        # Generate race-day protocol
-        from app.core.race_protocol_generator import generate_race_protocol
-        goal_pace = None
-        if plan_request.vdot:
-            from app.core.vdot_calculator import VDOTCalculator
-            zones = VDOTCalculator.get_pace_zones(plan_request.vdot)
-            if zones and all(k in zones for k in ("I", "T", "M")):
-                if plan_request.target_distance <= 5.0:
-                    goal_pace = zones["I"]["pace_min_km"]
-                elif plan_request.target_distance <= 10.0:
-                    goal_pace = zones["T"]["pace_min_km"]
-                elif plan_request.target_distance <= 21.1:
-                    goal_pace = zones["M"]["pace_min_km"] * 0.95
-                else:
-                    goal_pace = zones["M"]["pace_min_km"]
-
-        race_protocol = generate_race_protocol(
-            plan_request.target_distance,
-            goal_pace,
-        )
-        training_plan.race_protocol_data = json.dumps(race_protocol)
-
-        db.commit()
-
-        user_plans_cache.pop(f"plans_{user.id}", None)
-        logger.info(f"Invalidated plans cache for user {user.id}")
-
-        response_data = {
-            "request": request,
-            "user": current_user,
-            "google_client_id": settings.google_client_id,
-            "plan": plan_data,
-            "plan_id": training_plan.id,
-            "training_plan": training_plan,
-            "current_km": training_plan.current_weekly_km,
-            "target_distance": training_plan.target_distance,
-            "weeks": training_plan.weeks_duration,
-            "nutrition_plan": get_nutrition_plan_for_template(
-                training_plan.nutrition_plan_data
-            ),
-            "nutrition_phases": json.loads(training_plan.nutrition_phases_data) if training_plan.nutrition_phases_data else {},
-            "race_protocol": json.loads(training_plan.race_protocol_data) if training_plan.race_protocol_data else {},
-            "vdot": training_plan.vdot,
-            "logged_runs": {},
-            "performance_analysis": None,
-            "progress_data": None,
-        }
-
         if warning_message:
-            response_data["warning"] = warning_message
+            ctx["warning"] = warning_message
 
-        template_response = templates.TemplateResponse("plan.html", response_data)
+        template_response = templates.TemplateResponse("plan.html", ctx)
 
         if not current_user:
             template_response.set_cookie(
@@ -402,41 +153,23 @@ async def generate_plan(
 
     except PlanGenerationException as e:
         db.rollback()
-        return templates.TemplateResponse(
-            "index.html",
-            {
-                "request": request,
-                "user": current_user,
-                "google_client_id": settings.google_client_id,
-                "error": e.user_message,
-                "error_type": "plan_generation",
-            },
-        )
-    except DatabaseException as e:
+        return error_response(request, current_user, e.user_message, "plan_generation")
+    except DatabaseException:
         db.rollback()
-        return templates.TemplateResponse(
-            "index.html",
-            {
-                "request": request,
-                "user": current_user,
-                "google_client_id": settings.google_client_id,
-                "error": "Database error occurred. Please try again.",
-                "error_type": "database",
-            },
+        return error_response(
+            request, current_user, "Database error occurred. Please try again.", "database"
         )
     except Exception as e:
         logger.exception("Plan generation failed")
         db.rollback()
-        return templates.TemplateResponse(
-            "index.html",
-            {
-                "request": request,
-                "user": current_user,
-                "google_client_id": settings.google_client_id,
-                "error": f"An unexpected error occurred: {str(e)}",
-                "error_type": "general",
-            },
+        return error_response(
+            request, current_user, f"An unexpected error occurred: {str(e)}", "general"
         )
+
+
+# ---------------------------------------------------------------------------
+# Plan customization
+# ---------------------------------------------------------------------------
 
 
 @router.post("/customize-plan", response_class=HTMLResponse)
@@ -452,63 +185,25 @@ async def customize_plan(
 ) -> HTMLResponse:
     """Handle plan customization with simple interface."""
     try:
-        # Get existing plan
-        training_plan = (
-            db.query(TrainingPlan).filter(TrainingPlan.id == plan_id).first()
+        training_plan = get_plan_or_404(
+            plan_id, db, current_user, anonymous_user_id
         )
-        if not training_plan:
-            raise HTTPException(status_code=404, detail="Plan not found")
 
-        if not verify_plan_ownership(training_plan, current_user, anonymous_user_id):
-            raise HTTPException(status_code=403, detail="Not authorized to modify this plan")
+        plan_data = PlanService.customize_plan(
+            training_plan, week_number, adjustment_type, adjustment_value, db
+        )
 
-        plan_data = json.loads(training_plan.plan_data)
-
-        # Get nutrition plan for template
-        nutrition_plan = get_nutrition_plan_for_template(
+        nutrition_plan = PlanService.nutrition_for_template(
             training_plan.nutrition_plan_data
         )
 
-        # Apply customization based on adjustment type
-        if adjustment_type == "intensity":
-            plan_data = _adjust_intensity(plan_data, week_number, adjustment_value)
-        elif adjustment_type == "workout_swap":
-            plan_data = _swap_workout(plan_data, week_number, adjustment_value)
-        elif adjustment_type == "distance":
-            plan_data = _adjust_distance(plan_data, week_number, float(adjustment_value))
-        elif adjustment_type == "ai_suggest":
-            plan_data = _apply_ai_suggestions(plan_data, week_number, adjustment_value)
-
-        # Track customization in database
-        customization = PlanCustomizationModel(
-            training_plan_id=plan_id,
-            week_number=week_number,
-            adjustment_type=adjustment_type,
-            adjustment_value=adjustment_value,
+        ctx = plan_view_context(
+            request, current_user, training_plan, plan_data, nutrition_plan
         )
-        db.add(customization)
+        return templates.TemplateResponse("plan.html", ctx)
 
-        # Update database
-        training_plan.plan_data = json.dumps(plan_data)
-        db.commit()
-
-        return templates.TemplateResponse(
-            "plan.html",
-            {
-                "request": request,
-                "user": current_user,
-                "google_client_id": settings.google_client_id,
-                "plan": plan_data,
-                "plan_id": training_plan.id,
-                "training_plan": training_plan,
-                "current_km": training_plan.current_weekly_km,
-                "target_distance": training_plan.target_distance,
-                "weeks": training_plan.weeks_duration,
-                "nutrition_plan": nutrition_plan,
-                "progress_data": None,
-            },
-        )
-
+    except HTTPException:
+        raise
     except Exception as e:
         db.rollback()
         return templates.TemplateResponse(
@@ -517,17 +212,22 @@ async def customize_plan(
                 "request": request,
                 "user": current_user,
                 "google_client_id": settings.google_client_id,
-                "plan": plan_data if "plan_data" in locals() else [],
+                "plan": json.loads(training_plan.plan_data) if "training_plan" in dir() else [],
                 "plan_id": plan_id,
-                "nutrition_plan": get_nutrition_plan_for_template(
-                    training_plan.nutrition_plan_data
-                )
-                if training_plan and training_plan.nutrition_plan_data
-                else {},
+                "nutrition_plan": (
+                    PlanService.nutrition_for_template(training_plan.nutrition_plan_data)
+                    if "training_plan" in dir() and training_plan.nutrition_plan_data
+                    else {}
+                ),
                 "progress_data": None,
                 "error": f"Error customizing plan: {str(e)}",
             },
         )
+
+
+# ---------------------------------------------------------------------------
+# View plan
+# ---------------------------------------------------------------------------
 
 
 @router.get("/plan/{plan_id}", response_class=HTMLResponse)
@@ -541,14 +241,9 @@ async def view_plan(
 ) -> HTMLResponse:
     """View an existing training plan."""
     try:
-        training_plan = (
-            db.query(TrainingPlan).filter(TrainingPlan.id == plan_id).first()
+        training_plan = get_plan_or_404(
+            plan_id, db, current_user, anonymous_user_id
         )
-        if not training_plan:
-            raise HTTPException(status_code=404, detail="Plan not found")
-
-        if not verify_plan_ownership(training_plan, current_user, anonymous_user_id):
-            raise HTTPException(status_code=403, detail="Not authorized to view this plan")
 
         plan_data = json.loads(training_plan.plan_data)
 
@@ -561,71 +256,26 @@ async def view_plan(
             training_plan.nutrition_plan_data = json.dumps(nutrition_plan_raw)
             db.commit()
 
-        # Transform nutrition data to template-compatible format
-        nutrition_plan = get_nutrition_plan_for_template(
+        nutrition_plan = PlanService.nutrition_for_template(
             training_plan.nutrition_plan_data
         )
-        logger.info(f"Nutrition plan for template: {nutrition_plan}")
 
-        # Get performance analysis
-        performance_analysis = adaptation_service.analyze_performance(plan_id, db)
+        extra = PlanService.get_plan_view_data(training_plan, current_user, db)
 
-        # Get logged runs for this plan
-        from app.models import RunLog
-        logged_runs = (
-            db.query(RunLog)
-            .filter(RunLog.training_plan_id == plan_id)
-            .order_by(RunLog.date.desc())
-            .all()
+        ctx = plan_view_context(
+            request, current_user, training_plan, plan_data, nutrition_plan, **extra
         )
+        return templates.TemplateResponse("plan.html", ctx)
 
-        # Create a map of workout_id -> run for easy lookup
-        logged_runs_map = {run.daily_workout_id: run for run in logged_runs if run.daily_workout_id}
-
-        # Compute Strava fitness metrics if user has Strava connected
-        strava_fitness = None
-        if current_user and current_user.strava_athlete_id:
-            from app.core.adaptive_plan_generator import AdaptivePlanGenerator
-            adaptive_gen = AdaptivePlanGenerator()
-            strava_fitness = adaptive_gen.calculate_current_fitness_metrics(
-                current_user.id, db
-            )
-
-        # Compute progress data for plan vs actual charts
-        progress_data = None
-        if current_user and logged_runs:
-            from app.services.performance_service import PerformanceService
-            perf_service = PerformanceService(db)
-            try:
-                progress_data = perf_service.get_plan_progress(training_plan)
-            except Exception as e:
-                logger.warning(f"Could not compute progress data: {e}")
-
-        return templates.TemplateResponse(
-            "plan.html",
-            {
-                "request": request,
-                "user": current_user,
-                "google_client_id": settings.google_client_id,
-                "plan": plan_data,
-                "plan_id": training_plan.id,
-                "training_plan": training_plan,
-                "current_km": training_plan.current_weekly_km,
-                "target_distance": training_plan.target_distance,
-                "weeks": training_plan.weeks_duration,
-                "nutrition_plan": nutrition_plan,
-                "nutrition_phases": json.loads(training_plan.nutrition_phases_data) if training_plan.nutrition_phases_data else {},
-                "race_protocol": json.loads(training_plan.race_protocol_data) if training_plan.race_protocol_data else {},
-                "vdot": training_plan.vdot,
-                "performance_analysis": performance_analysis,
-                "logged_runs": logged_runs_map,
-                "strava_fitness": strava_fitness,
-                "progress_data": progress_data,
-            },
-        )
-
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+
+# ---------------------------------------------------------------------------
+# My plans
+# ---------------------------------------------------------------------------
 
 
 @router.get("/my-plans")
@@ -653,8 +303,7 @@ async def list_my_plans(
             )
             user_plans_cache[cache_key] = plans
             logger.info(f"Cached plans for user {current_user.id}")
-        
-        # Parse target distance for display
+
         for plan in plans:
             td = parse_target_distance(plan.target_distance)
             plan.target_distance_display = DISTANCE_NAMES.get(td, f"{td}km")
@@ -675,6 +324,11 @@ async def list_my_plans(
         raise HTTPException(status_code=500, detail=str(e))
 
 
+# ---------------------------------------------------------------------------
+# Performance & adaptation API endpoints
+# ---------------------------------------------------------------------------
+
+
 @router.get("/api/plan/{plan_id}/performance")
 async def get_plan_performance(
     plan_id: str,
@@ -682,21 +336,18 @@ async def get_plan_performance(
     db: Session = Depends(get_db),
 ):
     """Get performance analysis for a training plan."""
-    training_plan = db.query(TrainingPlan).filter(
-        TrainingPlan.id == plan_id,
-        TrainingPlan.user_id == current_user.id
-    ).first()
-    
-    if not training_plan:
-        raise HTTPException(status_code=404, detail="Plan not found")
-    
+    training_plan = get_plan_or_404(
+        plan_id, db, current_user, require_user_match=True
+    )
+
+    adaptation_service = AdaptationService()
     analysis = adaptation_service.analyze_performance(plan_id, db)
     should_adapt, reason = adaptation_service.should_adapt_plan(plan_id, db)
-    
+
     return {
         **analysis,
         "should_adapt": should_adapt,
-        "adaptation_reason": reason
+        "adaptation_reason": reason,
     }
 
 
@@ -708,17 +359,10 @@ async def adapt_plan(
     db: Session = Depends(get_db),
 ):
     """Adapt future weeks of a plan based on performance."""
-    training_plan = db.query(TrainingPlan).filter(
-        TrainingPlan.id == plan_id,
-        TrainingPlan.user_id == current_user.id
-    ).first()
-    
-    if not training_plan:
-        raise HTTPException(status_code=404, detail="Plan not found")
-    
-    result = adaptation_service.adapt_future_weeks(plan_id, db, current_week)
+    get_plan_or_404(plan_id, db, current_user, require_user_match=True)
 
-    return result
+    adaptation_service = AdaptationService()
+    return adaptation_service.adapt_future_weeks(plan_id, db, current_week)
 
 
 @router.post("/api/plan/{plan_id}/adapt-from-strava")
@@ -731,19 +375,17 @@ async def adapt_plan_from_strava(
     if not current_user.strava_athlete_id:
         raise HTTPException(status_code=400, detail="Strava not connected")
 
-    training_plan = db.query(TrainingPlan).filter(
-        TrainingPlan.id == plan_id,
-        TrainingPlan.user_id == current_user.id,
-    ).first()
+    get_plan_or_404(plan_id, db, current_user, require_user_match=True)
 
-    if not training_plan:
-        raise HTTPException(status_code=404, detail="Plan not found")
-
-    result = adaptation_service.adapt_plan_from_fitness(
+    adaptation_service = AdaptationService()
+    return adaptation_service.adapt_plan_from_fitness(
         plan_id, current_user.id, db
     )
 
-    return result
+
+# ---------------------------------------------------------------------------
+# Save / delete plan
+# ---------------------------------------------------------------------------
 
 
 @router.post("/api/plan/{plan_id}/save")
@@ -753,21 +395,19 @@ async def save_plan_to_account(
     db: Session = Depends(get_db),
 ):
     """Save/claim a plan to the current user's account."""
-    training_plan = db.query(TrainingPlan).filter(TrainingPlan.id == plan_id).first()
+    training_plan = get_plan_or_404(
+        plan_id, db, check_ownership=False
+    )
 
-    if not training_plan:
-        raise HTTPException(status_code=404, detail="Plan not found")
-
-    # Check if plan already belongs to this user
     if training_plan.user_id == current_user.id:
         return {"message": "Plan already saved to your account", "plan_id": plan_id}
 
-    # Only allow claiming plans owned by anonymous users
     plan_owner = db.query(User).filter(User.id == training_plan.user_id).first()
     if plan_owner and (plan_owner.google_id or plan_owner.email):
-        raise HTTPException(status_code=403, detail="This plan belongs to another user")
+        raise HTTPException(
+            status_code=403, detail="This plan belongs to another user"
+        )
 
-    # Transfer ownership to current user
     training_plan.user_id = current_user.id
     db.commit()
 
@@ -781,42 +421,18 @@ async def delete_plan(
     db: Session = Depends(get_db),
 ):
     """Delete a training plan owned by the current user."""
-    training_plan = db.query(TrainingPlan).filter(
-        TrainingPlan.id == plan_id,
-        TrainingPlan.user_id == current_user.id,
-    ).first()
+    training_plan = get_plan_or_404(
+        plan_id, db, current_user, require_user_match=True
+    )
 
-    if not training_plan:
-        raise HTTPException(status_code=404, detail="Plan not found")
-
-    # Delete associated records (weekly plans cascade to daily workouts)
-    weekly_plans = db.query(WeeklyPlan).filter(
-        WeeklyPlan.training_plan_id == plan_id
-    ).all()
-    for wp in weekly_plans:
-        db.query(DailyWorkout).filter(
-            DailyWorkout.weekly_plan_id == wp.id
-        ).delete()
-    db.query(WeeklyPlan).filter(
-        WeeklyPlan.training_plan_id == plan_id
-    ).delete()
-
-    # Delete run logs
-    db.query(RunLog).filter(RunLog.training_plan_id == plan_id).delete()
-
-    # Delete customizations
-    db.query(PlanCustomizationModel).filter(
-        PlanCustomizationModel.training_plan_id == plan_id
-    ).delete()
-
-    # Delete the plan itself
-    db.delete(training_plan)
-    db.commit()
-
-    # Invalidate cache
-    user_plans_cache.pop(f"plans_{current_user.id}", None)
+    PlanService.delete_plan(training_plan, db)
 
     return {"message": "Plan deleted successfully"}
+
+
+# ---------------------------------------------------------------------------
+# PDF download
+# ---------------------------------------------------------------------------
 
 
 @router.get("/download-pdf/{plan_id}")
@@ -829,21 +445,15 @@ async def download_pdf(
 ) -> FileResponse:
     """Download training plan as PDF."""
     try:
-        # Get plan from database
-        training_plan = (
-            db.query(TrainingPlan).filter(TrainingPlan.id == plan_id).first()
+        training_plan = get_plan_or_404(
+            plan_id, db, current_user, anonymous_user_id
         )
-        if not training_plan:
-            raise HTTPException(status_code=404, detail="Plan not found")
 
-        if not verify_plan_ownership(training_plan, current_user, anonymous_user_id):
-            raise HTTPException(status_code=403, detail="Not authorized to download this plan")
-
-        # Validate plan data exists
         if not training_plan.plan_data:
-            raise HTTPException(status_code=400, detail="No training plan data found")
+            raise HTTPException(
+                status_code=400, detail="No training plan data found"
+            )
 
-        # Parse plan data
         try:
             plan_data = json.loads(training_plan.plan_data)
         except json.JSONDecodeError:
@@ -852,22 +462,23 @@ async def download_pdf(
             )
 
         if not plan_data:
-            raise HTTPException(status_code=400, detail="Empty training plan data")
-
-        # Generate PDF using ReportLab
-        pdf_path = pdf_generator.generate_pdf(plan_data, training_plan)
-
-        # Verify PDF was created
-        if not os.path.exists(pdf_path):
             raise HTTPException(
-                status_code=500, detail="PDF generation failed - file not created"
+                status_code=400, detail="Empty training plan data"
             )
 
-        # Check PDF file size
-        file_size = os.path.getsize(pdf_path)
-        if file_size < 1000:  # Should be at least 1KB for a valid PDF
+        pdf_path = pdf_generator.generate_pdf(plan_data, training_plan)
+
+        if not os.path.exists(pdf_path):
             raise HTTPException(
-                status_code=500, detail="PDF generation failed - file too small"
+                status_code=500,
+                detail="PDF generation failed - file not created",
+            )
+
+        file_size = os.path.getsize(pdf_path)
+        if file_size < 1000:
+            raise HTTPException(
+                status_code=500,
+                detail="PDF generation failed - file too small",
             )
 
         return FileResponse(
@@ -880,125 +491,6 @@ async def download_pdf(
         raise
     except Exception as e:
         logger.exception("PDF generation error")
-        raise HTTPException(status_code=500, detail=f"PDF generation failed: {str(e)}")
-
-
-# Helper functions for plan customization
-def _adjust_intensity(
-    plan_data: list[dict], week_number: int, intensity_level: str
-) -> list[dict]:
-    """Adjust workout intensity for a specific week."""
-    for week in plan_data:
-        if week["week"] == week_number:
-            for workout in week.get("daily_workouts", []):
-                if workout["type"] != "rest":
-                    workout["intensity"] = intensity_level
-                    if intensity_level == "low":
-                        workout["notes"] = (
-                            workout["notes"]
-                            .replace("threshold", "easy")
-                            .replace("tempo", "easy")
-                        )
-                    elif intensity_level == "high":
-                        workout["notes"] = (
-                            workout["notes"]
-                            .replace("easy", "tempo")
-                            .replace("recovery", "moderate")
-                        )
-    return plan_data
-
-
-def _swap_workout(
-    plan_data: list[dict], week_number: int, swap_info: str
-) -> list[dict]:
-    """Swap workout types for a specific week."""
-    try:
-        day, new_type = swap_info.split(",")
-        day = int(day)
-
-        for week in plan_data:
-            if week["week"] == week_number:
-                for workout in week.get("daily_workouts", []):
-                    if workout["day"] == day:
-                        old_type = workout["type"]
-                        workout["type"] = new_type
-
-                        if new_type == "rest":
-                            workout["distance"] = 0
-                            workout["notes"] = "Rest day for recovery"
-                        elif old_type == "rest" and new_type != "rest":
-                            workout["distance"] = 5.0
-                            workout["notes"] = f"Easy {new_type} run - focus on form"
-
-                        workout["intensity"] = (
-                            "low" if new_type in ["rest", "easy"] else "medium"
-                        )
-    except (ValueError, TypeError):
-        pass  # Invalid swap format, ignore
-
-    return plan_data
-
-
-def _adjust_distance(
-    plan_data: list[dict], week_number: int, distance_change: float
-) -> list[dict]:
-    """Adjust distances for all workouts in a week."""
-    for week in plan_data:
-        if week["week"] == week_number:
-            current_total = sum(
-                w.get("distance", 0) for w in week.get("daily_workouts", [])
-            )
-
-            if current_total > 0:
-                ratio = (current_total + distance_change) / current_total
-
-                for workout in week.get("daily_workouts", []):
-                    if workout["distance"] > 0:
-                        workout["distance"] = round(workout["distance"] * ratio, 1)
-
-                week["total_km"] = round(week["total_km"] + distance_change, 1)
-
-    return plan_data
-
-
-def _apply_ai_suggestions(
-    plan_data: list[dict], week_number: int, preference: str
-) -> list[dict]:
-    """Apply AI-powered suggestions based on user preferences."""
-    for week in plan_data:
-        if week["week"] == week_number:
-            if preference == "more_rest":
-                for workout in week.get("daily_workouts", []):
-                    if workout["type"] == "easy":
-                        workout["type"] = "rest"
-                        workout["distance"] = 0
-                        workout["notes"] = "Additional rest day for recovery"
-                        week["total_km"] = round(
-                            week["total_km"] - workout.get("distance", 0), 1
-                        )
-                        break
-
-            elif preference == "more_speed":
-                for workout in week.get("daily_workouts", []):
-                    if workout["type"] == "easy":
-                        workout["type"] = "interval"
-                        workout["intensity"] = "high"
-                        workout["notes"] = (
-                            "Speed work: 6x400m at 5K pace with 400m recovery"
-                        )
-                        break
-
-            elif preference == "more_endurance":
-                for workout in week.get("daily_workouts", []):
-                    if workout["type"] == "long":
-                        workout["distance"] = round(workout["distance"] * 1.2, 1)
-                        week["total_km"] = round(
-                            week["total_km"] + (workout["distance"] * 0.2), 1
-                        )
-                        workout["notes"] = (
-                            f'Extended long run: {workout["distance"]}km at '
-                            "conversational pace"
-                        )
-                        break
-
-    return plan_data
+        raise HTTPException(
+            status_code=500, detail=f"PDF generation failed: {str(e)}"
+        )

@@ -92,68 +92,62 @@ def get_strava_service() -> StravaService:
 security = HTTPBearer(auto_error=False)
 
 
+async def _resolve_user(
+    request: Request,
+    db: Session,
+    auth_service: AuthService,
+) -> Optional[User]:
+    """Shared token-extraction → user-lookup logic used by both auth dependencies."""
+    # Extract token from Authorization header or cookie
+    token = None
+    auth_header = request.headers.get("Authorization")
+    if auth_header and auth_header.startswith("Bearer "):
+        token = auth_header.split(" ")[1]
+    if not token:
+        token = request.cookies.get(COOKIE_NAME)
+
+    if not token:
+        return None
+
+    payload = auth_service.verify_token(token)
+    if payload is None:
+        return None
+
+    user_id = payload.get("sub")
+    if user_id is None:
+        return None
+
+    user = auth_service.get_current_user(db, user_id)
+    if user is None:
+        return None
+
+    # Inactivity timeout check
+    if user.last_activity:
+        timeout_delta = timedelta(minutes=settings.session_timeout_minutes)
+        if (datetime.now(timezone.utc).replace(tzinfo=None) - user.last_activity) > timeout_delta:
+            return None
+
+    auth_service.update_user_activity(db, user)
+    return user
+
+
 async def get_current_user(
     request: Request,
     credentials: Optional[HTTPAuthorizationCredentials] = Security(security),
     db: Session = Depends(get_db),
     auth_service: AuthService = Depends(get_auth_service),
 ) -> User:
+    """Get the current authenticated user from JWT token.
+
+    Raises 401 when no valid session is found.
     """
-    Get the current authenticated user from JWT token.
-    Updates last_activity timestamp and checks for inactivity timeout.
-    """
-    token = None
-
-    # First, try Authorization header
-    if credentials:
-        token = credentials.credentials
-
-    # Fall back to cookie
-    if not token:
-        token = request.cookies.get(COOKIE_NAME)
-
-    if not token:
+    user = await _resolve_user(request, db, auth_service)
+    if user is None:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Not authenticated",
             headers={"WWW-Authenticate": "Bearer"},
         )
-
-    payload = auth_service.verify_token(token)
-
-    if payload is None:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid authentication credentials",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
-
-    user_id = payload.get("sub")
-    if user_id is None:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid authentication credentials",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
-
-    user = auth_service.get_current_user(db, user_id)
-    if user is None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="User not found",
-        )
-
-    if user.last_activity:
-        timeout_delta = timedelta(minutes=settings.session_timeout_minutes)
-        if (datetime.now(timezone.utc).replace(tzinfo=None) - user.last_activity) > timeout_delta:
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Session expired due to inactivity",
-                headers={"WWW-Authenticate": "Bearer"},
-            )
-
-    auth_service.update_user_activity(db, user)
-
     return user
 
 
@@ -162,49 +156,11 @@ async def get_optional_user(
     db: Session = Depends(get_db),
     auth_service: AuthService = Depends(get_auth_service),
 ) -> Optional[User]:
-    """
-    Get the current authenticated user if a valid token is provided.
+    """Get the current authenticated user if a valid token is provided.
+
     Returns None if no token or invalid token (for optional authentication).
-
-    Checks for token in:
-    1. Authorization header (Bearer token)
-    2. HTTP cookie (for browser navigation)
     """
-    token = None
-
-    # First, try Authorization header
-    auth_header = request.headers.get("Authorization")
-    if auth_header and auth_header.startswith("Bearer "):
-        token = auth_header.split(" ")[1]
-
-    # Fall back to cookie
-    if not token:
-        token = request.cookies.get(COOKIE_NAME)
-
-    if not token:
-        return None
-
-    payload = auth_service.verify_token(token)
-
-    if payload is None:
-        return None
-
-    user_id = payload.get("sub")
-    if user_id is None:
-        return None
-
-    user = auth_service.get_current_user(db, user_id)
-    if user is None:
-        return None
-
-    if user.last_activity:
-        timeout_delta = timedelta(minutes=settings.session_timeout_minutes)
-        if (datetime.now(timezone.utc).replace(tzinfo=None) - user.last_activity) > timeout_delta:
-            return None
-
-    auth_service.update_user_activity(db, user)
-
-    return user
+    return await _resolve_user(request, db, auth_service)
 
 
 def verify_plan_ownership(

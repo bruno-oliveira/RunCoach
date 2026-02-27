@@ -90,8 +90,12 @@ Base.metadata.create_all(bind=engine)
 
 # Lightweight column migrations for existing databases
 # ALTER TABLE ADD COLUMN is a no-op if the column already exists (handled by try/except)
-with engine.connect() as _conn:
-    for _stmt in [
+from sqlalchemy import text as _sa_text
+
+
+def _run_migrations(eng) -> None:
+    """Apply ADD COLUMN migrations; silently skip columns that already exist."""
+    stmts = [
         "ALTER TABLE users ADD COLUMN strava_last_synced_at INTEGER",
         # VDOT / pace zone fields
         "ALTER TABLE training_plans ADD COLUMN body_weight_kg FLOAT",
@@ -106,12 +110,17 @@ with engine.connect() as _conn:
         "ALTER TABLE run_logs ADD COLUMN effort_quality_score FLOAT",
         "ALTER TABLE run_logs ADD COLUMN quality_label VARCHAR(20)",
         "ALTER TABLE run_logs ADD COLUMN planned_pace_min_km FLOAT",
-    ]:
-        try:
-            _conn.execute(__import__("sqlalchemy").text(_stmt))
-            _conn.commit()
-        except Exception:
-            pass  # Column already exists
+    ]
+    with eng.connect() as conn:
+        for stmt in stmts:
+            try:
+                conn.execute(_sa_text(stmt))
+                conn.commit()
+            except Exception:
+                pass  # Column already exists
+
+
+_run_migrations(engine)
 
 # Templates
 templates = Jinja2Templates(directory="app/templates")

@@ -237,7 +237,7 @@ async def generate_performance_plan(
         )
 
         # Invalidate plans cache
-        from app.routers.plans import user_plans_cache
+        from app.services.plan_service import user_plans_cache
         user_plans_cache.pop(f"plans_{current_user.id}", None)
 
         # Redirect to plan display

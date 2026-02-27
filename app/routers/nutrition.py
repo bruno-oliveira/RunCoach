@@ -15,7 +15,7 @@ from app.config import settings
 from app.dependencies import get_db, get_optional_user, verify_plan_ownership
 from app.models import TrainingPlan, RunLog
 from app.core.nutrition_engine import NutritionEngine
-from app.routers.plans import get_nutrition_plan_for_template
+from app.services.plan_service import PlanService
 from app.schemas import parse_target_distance
 from app.services.adaptation_service import AdaptationService
 
@@ -85,7 +85,7 @@ async def randomize_meals(
         }
 
         # Convert nutrition plan to template-compatible format
-        response_data["nutrition_plan"] = get_nutrition_plan_for_template(
+        response_data["nutrition_plan"] = PlanService.nutrition_for_template(
             training_plan.nutrition_plan_data
         )
 

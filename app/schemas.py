@@ -31,6 +31,70 @@ def parse_target_distance(value: str | float) -> float:
     return float(value)
 
 
+_MILEAGE_CONFIG = {
+    5.0: {
+        "min": settings.min_mileage_5k,
+        "max": 40,
+        "low_msg": (
+            "Your current mileage is quite low for 5K training. "
+            "Consider building a base with 2-3 weeks of easy running first."
+        ),
+        "high_msg": (
+            "You're already running high mileage for 5K. "
+            "Consider focusing on speed work rather than volume."
+        ),
+    },
+    10.0: {
+        "min": settings.min_mileage_10k,
+        "max": 50,
+        "low_msg": (
+            "Your current mileage may be insufficient for 10K training. "
+            "Build to at least 10km/week for 2-3 weeks first."
+        ),
+        "high_msg": (
+            "High mileage for 10K. "
+            "You might benefit from focusing on quality over quantity."
+        ),
+    },
+    21.1: {
+        "min": settings.min_mileage_half,
+        "max": 70,
+        "low_msg": (
+            "Half marathon training requires a stronger base. "
+            "Build to 15km/week for 3-4 weeks before starting."
+        ),
+        "high_msg": (
+            "Very high mileage for half marathon. "
+            "Ensure adequate recovery and consider periodization."
+        ),
+    },
+    30.0: {
+        "min": settings.min_mileage_30k,
+        "max": 60,
+        "low_msg": (
+            "Trail running requires good base fitness. "
+            "Build to 8km/week with some trail experience first."
+        ),
+        "high_msg": (
+            "High mileage for trail running. "
+            "Focus on time on feet rather than distance."
+        ),
+    },
+    42.2: {
+        "min": settings.min_mileage_marathon,
+        "max": 100,
+        "low_msg": (
+            "Marathon training requires significant base fitness. "
+            "Build to 25km/week for 4-6 weeks before beginning."
+        ),
+        "high_msg": (
+            "Extremely high mileage. "
+            "Be cautious about injury risk and ensure proper recovery."
+        ),
+    },
+}
+
+
 class PlanRequest(BaseModel):
     """Request schema for generating a training plan."""
 
@@ -75,7 +139,6 @@ class PlanRequest(BaseModel):
         target = self.target_distance
         weeks = self.weeks
 
-        # Define minimum training weeks and user-friendly messages
         min_weeks_requirements = {
             5.0: (
                 settings.min_weeks_5k,
@@ -99,7 +162,6 @@ class PlanRequest(BaseModel):
             ),
         }
 
-        # Define maximum training weeks to prevent overtraining
         max_weeks_requirements = {
             5.0: (settings.max_weeks_5k, "Training beyond 16 weeks for 5K can lead to burnout"),
             10.0: (settings.max_weeks_10k, "16 weeks is optimal for 10K preparation"),
@@ -117,7 +179,6 @@ class PlanRequest(BaseModel):
             ),
         }
 
-        # Check minimum requirements
         if target in min_weeks_requirements:
             min_weeks, reason = min_weeks_requirements[target]
             if weeks < min_weeks:
@@ -127,7 +188,6 @@ class PlanRequest(BaseModel):
                     f"Consider extending your training to {min_weeks} weeks. {reason}",
                 )
 
-        # Check maximum requirements
         if target in max_weeks_requirements:
             max_weeks, reason = max_weeks_requirements[target]
             if weeks > max_weeks:
@@ -143,7 +203,6 @@ class PlanRequest(BaseModel):
         target_distance = values.get("target_distance")
 
         if target_distance:
-            # For longer races (marathon, trail), suggest more runs
             if target_distance >= 30.0 and v < 4:
                 distance_name = DISTANCE_NAMES.get(target_distance, f"{target_distance}km")
                 raise ValueError(
@@ -158,54 +217,9 @@ class PlanRequest(BaseModel):
         target = self.target_distance
         current_km = self.current_km
 
-        # Define reasonable current mileage ranges for each distance
-        mileage_requirements = {
-            5.0: {
-                "min": settings.min_mileage_5k,
-                "max": 40,
-                "low_msg": "Your current mileage is quite low for 5K training. "
-                "Consider building a base with 2-3 weeks of easy running first.",
-                "high_msg": "You're already running high mileage for 5K. "
-                "Consider focusing on speed work rather than volume.",
-            },
-            10.0: {
-                "min": settings.min_mileage_10k,
-                "max": 50,
-                "low_msg": "Your current mileage may be insufficient for 10K training. "
-                "Build to at least 10km/week for 2-3 weeks first.",
-                "high_msg": "High mileage for 10K. "
-                "You might benefit from focusing on quality over quantity.",
-            },
-            21.1: {
-                "min": settings.min_mileage_half,
-                "max": 70,
-                "low_msg": "Half marathon training requires a stronger base. "
-                "Build to 15km/week for 3-4 weeks before starting.",
-                "high_msg": "Very high mileage for half marathon. "
-                "Ensure adequate recovery and consider periodization.",
-            },
-            30.0: {
-                "min": settings.min_mileage_30k,
-                "max": 60,
-                "low_msg": "Trail running requires good base fitness. "
-                "Build to 8km/week with some trail experience first.",
-                "high_msg": "High mileage for trail running. "
-                "Focus on time on feet rather than distance.",
-            },
-            42.2: {
-                "min": settings.min_mileage_marathon,
-                "max": 100,
-                "low_msg": "Marathon training requires significant base fitness. "
-                "Build to 25km/week for 4-6 weeks before beginning.",
-                "high_msg": "Extremely high mileage. "
-                "Be cautious about injury risk and ensure proper recovery.",
-            },
-        }
+        if target in _MILEAGE_CONFIG:
+            req = _MILEAGE_CONFIG[target]
 
-        if target in mileage_requirements:
-            req = mileage_requirements[target]
-
-            # Check if mileage is too low (but allow 0 for new runners)
             if current_km > 0 and current_km < req["min"]:
                 target_display = DISTANCE_NAMES.get(target, f"{target}km")
                 raise InadequateBaseException(
@@ -292,38 +306,10 @@ class NutritionPlanResponse(BaseModel):
 # Helper functions for mileage warnings
 def get_mileage_warning(target_distance: float, current_km: float) -> Optional[str]:
     """Get warning message if mileage is unusually high for target distance."""
-    mileage_warnings = {
-        5.0: {
-            "max": 40,
-            "msg": "You're already running high mileage for 5K. "
-            "Consider focusing on speed work rather than volume.",
-        },
-        10.0: {
-            "max": 50,
-            "msg": "High mileage for 10K. "
-            "You might benefit from focusing on quality over quantity.",
-        },
-        21.1: {
-            "max": 70,
-            "msg": "Very high mileage for half marathon. "
-            "Ensure adequate recovery and consider periodization.",
-        },
-        30.0: {
-            "max": 60,
-            "msg": "High mileage for trail running. "
-            "Focus on time on feet rather than distance.",
-        },
-        42.2: {
-            "max": 100,
-            "msg": "Extremely high mileage. "
-            "Be cautious about injury risk and ensure proper recovery.",
-        },
-    }
-
-    if target_distance in mileage_warnings:
-        warning_data = mileage_warnings[target_distance]
-        if current_km > warning_data["max"]:
-            return warning_data["msg"]
+    if target_distance in _MILEAGE_CONFIG:
+        cfg = _MILEAGE_CONFIG[target_distance]
+        if current_km > cfg["max"]:
+            return cfg["high_msg"]
     return None
 
 
