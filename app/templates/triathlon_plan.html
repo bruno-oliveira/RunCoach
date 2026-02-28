@@ -1,0 +1,178 @@
+{% extends "base.html" %}
+
+{% block title %}{{ distance_label }} — {{ plan.weeks_duration }}-Week Plan — RunCoach{% endblock %}
+
+{% block styles %}
+<link rel="stylesheet" href="/static/css/triathlon.css">
+{% endblock %}
+
+{% block content %}
+
+<!-- Plan header -->
+<header class="tri-plan-header">
+    <div class="tri-plan-header-inner">
+        <p class="tri-plan-eyebrow">
+            <a href="/triathlon" style="color:inherit;text-decoration:none;">Triathlon</a>
+            &rsaquo; {{ distance_label }}
+        </p>
+        <h1 class="tri-plan-title">{{ distance_label }} Training Plan</h1>
+        <p class="tri-plan-meta">
+            {{ plan.weeks_duration }} weeks &nbsp;&middot;&nbsp;
+            {{ distance_info.swim }} swim &nbsp;&middot;&nbsp;
+            {{ distance_info.bike }} bike &nbsp;&middot;&nbsp;
+            {{ distance_info.run }} run
+        </p>
+
+        <!-- Phase legend -->
+        <div class="tri-phase-legend" aria-label="Phase legend">
+            {% for phase in phases %}
+            <span class="tri-phase-pill {{ phase }}">
+                <span class="dot" aria-hidden="true"></span>
+                {{ phase | title }}
+            </span>
+            {% endfor %}
+        </div>
+    </div>
+</header>
+
+<!-- Week-by-week accordion -->
+<div class="tri-plan-body">
+    <div class="tri-week-list">
+        {% for week in weeks %}
+        <details class="tri-week{% if week.is_recovery %} is-recovery{% endif %}" {% if loop.index == 1 %}open{% endif %}>
+            <summary class="tri-week-header">
+                <span class="tri-week-num">Week {{ week.week }}</span>
+                <span class="tri-week-badges">
+                    <span class="tri-phase-badge {{ week.phase }}">{{ week.phase | title }}</span>
+                    {% if week.is_recovery %}
+                    <span class="tri-recovery-badge">Recovery</span>
+                    {% endif %}
+                </span>
+
+                <!-- Volume summary (visible in header on desktop) -->
+                <span class="tri-week-volumes" aria-label="Weekly volumes">
+                    <span class="tri-vol">
+                        <span class="tri-vol-dot swim" aria-hidden="true"></span>
+                        <span class="tri-vol-text">{{ week.swim_volume }}</span>
+                    </span>
+                    <span class="tri-vol">
+                        <span class="tri-vol-dot bike" aria-hidden="true"></span>
+                        <span class="tri-vol-text">{{ week.bike_volume }}</span>
+                    </span>
+                    <span class="tri-vol">
+                        <span class="tri-vol-dot run" aria-hidden="true"></span>
+                        <span class="tri-vol-text">{{ week.run_volume }}</span>
+                    </span>
+                </span>
+
+                <svg class="tri-week-chevron" width="16" height="16" viewBox="0 0 24 24" fill="none"
+                     stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"
+                     aria-hidden="true">
+                    <polyline points="6 9 12 15 18 9"/>
+                </svg>
+            </summary>
+
+            <div class="tri-week-body">
+                <!-- Volume grid -->
+                <div class="tri-volume-grid" aria-label="Volume summary">
+                    <div class="tri-vol-card swim">
+                        <div class="tri-vol-card-label">Swim</div>
+                        <div class="tri-vol-card-value">{{ week.swim_volume }}</div>
+                    </div>
+                    <div class="tri-vol-card bike">
+                        <div class="tri-vol-card-label">Bike</div>
+                        <div class="tri-vol-card-value">{{ week.bike_volume }}</div>
+                    </div>
+                    <div class="tri-vol-card run">
+                        <div class="tri-vol-card-label">Run</div>
+                        <div class="tri-vol-card-value">{{ week.run_volume }}</div>
+                    </div>
+                    <div class="tri-vol-card total">
+                        <div class="tri-vol-card-label">Total</div>
+                        <div class="tri-vol-card-value">~{{ week.total_hours }} hrs</div>
+                    </div>
+                </div>
+
+                <!-- Day schedule -->
+                <div class="tri-schedule" role="list" aria-label="Weekly schedule">
+                    {% set days = ['monday','tuesday','wednesday','thursday','friday','saturday','sunday'] %}
+                    {% set day_abbr = {'monday':'Mon','tuesday':'Tue','wednesday':'Wed','thursday':'Thu','friday':'Fri','saturday':'Sat','sunday':'Sun'} %}
+                    {% for day in days %}
+                    <div class="tri-schedule-day" role="listitem">
+                        <span class="tri-sched-label">{{ day_abbr[day] }}</span>
+                        <div class="tri-sched-pills">
+                            {% for activity in week.weekly_schedule[day] %}
+                            <span class="tri-sched-pill {{ activity }}">{{ activity }}</span>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+
+                <!-- Key sessions -->
+                <p class="tri-key-sessions-title">Key sessions</p>
+                <div class="tri-sessions">
+                    {% for session in week.key_sessions %}
+                    <div class="tri-session {{ session.type }}" role="article">
+                        <span class="tri-session-type">{{ session.type }}</span>
+                        <div class="tri-session-content">
+                            <div class="tri-session-name">{{ session.name }}</div>
+                            <div class="tri-session-desc">{{ session.description }}</div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+
+                <!-- Coaching note -->
+                <div class="tri-coaching-note" role="note">
+                    <svg class="tri-coaching-icon" width="16" height="16" viewBox="0 0 24 24" fill="none"
+                         stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"
+                         aria-hidden="true">
+                        <circle cx="12" cy="12" r="10"/>
+                        <line x1="12" y1="8" x2="12" y2="12"/>
+                        <line x1="12" y1="16" x2="12.01" y2="16"/>
+                    </svg>
+                    <p class="tri-coaching-text">{{ week.coaching_note }}</p>
+                </div>
+            </div>
+        </details>
+        {% endfor %}
+    </div><!-- .tri-week-list -->
+
+    <!-- Delete plan -->
+    <div class="tri-delete-row">
+        <button class="btn btn-ghost btn-sm" id="deletePlanBtn"
+                onclick="deletePlan('{{ plan.id }}')"
+                aria-label="Delete this triathlon plan">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                 stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <polyline points="3 6 5 6 21 6"/>
+                <path d="M19 6l-1 14H6L5 6"/>
+                <path d="M10 11v6M14 11v6"/>
+                <path d="M9 6V4h6v2"/>
+            </svg>
+            Delete plan
+        </button>
+    </div>
+</div><!-- .tri-plan-body -->
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+async function deletePlan(planId) {
+    if (!confirm('Delete this triathlon plan? This cannot be undone.')) return;
+    try {
+        const resp = await fetch(`/api/triathlon/plan/${planId}`, { method: 'DELETE' });
+        if (resp.ok) {
+            window.location.href = '/triathlon';
+        } else {
+            const data = await resp.json().catch(() => ({}));
+            alert('Could not delete plan: ' + (data.detail || resp.statusText));
+        }
+    } catch (err) {
+        alert('Network error — please try again.');
+    }
+}
+</script>
+{% endblock %}

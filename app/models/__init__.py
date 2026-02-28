@@ -11,6 +11,7 @@ from app.models.favorite_recipe import FavoriteRecipe
 from app.models.strength_exercise import StrengthExercise
 from app.models.daily_strength_workout import DailyStrengthWorkout
 from app.models.user_favorite_workout import UserFavoriteWorkout
+from app.models.triathlon_plan import TriathlonPlan
 
 # Configure relationships after all models are imported
 User.training_plans = relationship("TrainingPlan", back_populates="user")
@@ -32,6 +33,9 @@ RunLog.daily_workout = relationship("DailyWorkout")
 
 User.favorite_recipes = relationship("FavoriteRecipe")
 
+User.triathlon_plans = relationship("TriathlonPlan", back_populates="user")
+TriathlonPlan.user = relationship("User", back_populates="triathlon_plans")
+
 __all__ = [
     "Base",
     "User",
@@ -44,4 +48,5 @@ __all__ = [
     "StrengthExercise",
     "DailyStrengthWorkout",
     "UserFavoriteWorkout",
+    "TriathlonPlan",
 ]

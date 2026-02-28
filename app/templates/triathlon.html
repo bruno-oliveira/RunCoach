@@ -1,0 +1,156 @@
+{% extends "base.html" %}
+
+{% block title %}Triathlon Training Plans — RunCoach{% endblock %}
+
+{% block styles %}
+<link rel="stylesheet" href="/static/css/triathlon.css">
+{% endblock %}
+
+{% block content %}
+<!-- Hero -->
+<section class="tri-hero">
+    <div class="tri-hero-eyebrow">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <circle cx="12" cy="12" r="10"/>
+            <polyline points="12 6 12 12 16 14"/>
+        </svg>
+        Multi-sport training
+    </div>
+    <h1>Triathlon Training Plans</h1>
+    <p class="tri-hero-sub">Choose your distance and get a complete swim–bike–run training plan built from proven race-day programmes.</p>
+</section>
+
+<!-- Distance selection -->
+<section class="tri-distances">
+    <form method="post" action="/triathlon/generate" id="triForm">
+        <div class="tri-cards">
+
+            <!-- Sprint -->
+            <label class="tri-card" id="card-sprint" for="dist-sprint">
+                <input class="tri-card-radio" type="radio" name="distance" id="dist-sprint" value="sprint">
+                <span class="tri-card-check" aria-hidden="true"></span>
+                <span class="tri-card-badge sprint">Beginner</span>
+                <h3>Sprint</h3>
+                <p class="tri-card-duration">8 weeks &mdash; 3&ndash;6 hrs/week</p>
+                <div class="tri-card-distances">
+                    <div class="tri-distance-row">
+                        <span class="tri-discipline-dot swim" aria-hidden="true"></span>
+                        <span class="tri-distance-label">Swim</span>
+                        <span class="tri-distance-value">750m</span>
+                    </div>
+                    <div class="tri-distance-row">
+                        <span class="tri-discipline-dot bike" aria-hidden="true"></span>
+                        <span class="tri-distance-label">Bike</span>
+                        <span class="tri-distance-value">20km</span>
+                    </div>
+                    <div class="tri-distance-row">
+                        <span class="tri-discipline-dot run" aria-hidden="true"></span>
+                        <span class="tri-distance-label">Run</span>
+                        <span class="tri-distance-value">5km</span>
+                    </div>
+                </div>
+                <p class="tri-card-prereq"><strong>Prerequisites:</strong> Swim 200m, bike 30 min, run/walk 20 min continuously.</p>
+            </label>
+
+            <!-- Olympic -->
+            <label class="tri-card" id="card-olympic" for="dist-olympic">
+                <input class="tri-card-radio" type="radio" name="distance" id="dist-olympic" value="olympic">
+                <span class="tri-card-check" aria-hidden="true"></span>
+                <span class="tri-card-badge olympic">Intermediate</span>
+                <h3>Olympic</h3>
+                <p class="tri-card-duration">16 weeks &mdash; 5&ndash;11 hrs/week</p>
+                <div class="tri-card-distances">
+                    <div class="tri-distance-row">
+                        <span class="tri-discipline-dot swim" aria-hidden="true"></span>
+                        <span class="tri-distance-label">Swim</span>
+                        <span class="tri-distance-value">1.5km</span>
+                    </div>
+                    <div class="tri-distance-row">
+                        <span class="tri-discipline-dot bike" aria-hidden="true"></span>
+                        <span class="tri-distance-label">Bike</span>
+                        <span class="tri-distance-value">40km</span>
+                    </div>
+                    <div class="tri-distance-row">
+                        <span class="tri-discipline-dot run" aria-hidden="true"></span>
+                        <span class="tri-distance-label">Run</span>
+                        <span class="tri-distance-value">10km</span>
+                    </div>
+                </div>
+                <p class="tri-card-prereq"><strong>Prerequisites:</strong> Swim 800m, bike 60 min, run 45 min continuously.</p>
+            </label>
+
+            <!-- Half Ironman -->
+            <label class="tri-card" id="card-half_ironman" for="dist-half_ironman">
+                <input class="tri-card-radio" type="radio" name="distance" id="dist-half_ironman" value="half_ironman">
+                <span class="tri-card-check" aria-hidden="true"></span>
+                <span class="tri-card-badge half">Advanced</span>
+                <h3>Half Ironman</h3>
+                <p class="tri-card-duration">20 weeks &mdash; 4&ndash;10 hrs/week</p>
+                <div class="tri-card-distances">
+                    <div class="tri-distance-row">
+                        <span class="tri-discipline-dot swim" aria-hidden="true"></span>
+                        <span class="tri-distance-label">Swim</span>
+                        <span class="tri-distance-value">1.9km</span>
+                    </div>
+                    <div class="tri-distance-row">
+                        <span class="tri-discipline-dot bike" aria-hidden="true"></span>
+                        <span class="tri-distance-label">Bike</span>
+                        <span class="tri-distance-value">90km</span>
+                    </div>
+                    <div class="tri-distance-row">
+                        <span class="tri-discipline-dot run" aria-hidden="true"></span>
+                        <span class="tri-distance-label">Run</span>
+                        <span class="tri-distance-value">21.1km</span>
+                    </div>
+                </div>
+                <p class="tri-card-prereq"><strong>Prerequisites:</strong> Completed sprint or Olympic tri; comfortable with 5+ hrs/week training.</p>
+            </label>
+
+        </div><!-- .tri-cards -->
+
+        <div class="tri-submit-row">
+            <button type="submit" class="btn btn-primary btn-lg" id="generateBtn" disabled>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <polyline points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>
+                </svg>
+                Generate Training Plan
+            </button>
+        </div>
+    </form>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function () {
+    const radios = document.querySelectorAll('.tri-card-radio');
+    const btn = document.getElementById('generateBtn');
+
+    function updateSelection() {
+        document.querySelectorAll('.tri-card').forEach(card => card.classList.remove('is-selected'));
+        const checked = document.querySelector('.tri-card-radio:checked');
+        if (checked) {
+            checked.closest('.tri-card').classList.add('is-selected');
+            btn.disabled = false;
+        } else {
+            btn.disabled = true;
+        }
+    }
+
+    radios.forEach(r => r.addEventListener('change', updateSelection));
+
+    // Clicking anywhere on the card selects the radio
+    document.querySelectorAll('.tri-card').forEach(card => {
+        card.addEventListener('click', () => {
+            const radio = card.querySelector('.tri-card-radio');
+            if (radio) {
+                radio.checked = true;
+                updateSelection();
+            }
+        });
+    });
+
+    updateSelection();
+})();
+</script>
+{% endblock %}
