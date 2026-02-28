@@ -69,14 +69,27 @@ async def generate_triathlon_plan(
     if distance not in DISTANCE_LABELS:
         raise HTTPException(status_code=400, detail=f"Invalid distance: {distance}")
 
+    # Only persist user_id for authenticated (DB-backed) users; anonymous cookie
+    # IDs are not rows in the users table so we leave user_id NULL instead.
+    user_id: Optional[str] = current_user.id if current_user else None
+
+    # --- Duplicate detection ---
+    if user_id:
+        existing = (
+            db.query(TriathlonPlan)
+            .filter(TriathlonPlan.user_id == user_id, TriathlonPlan.distance == distance)
+            .first()
+        )
+        if existing:
+            logger.info(
+                f"Duplicate triathlon plan detected for user {user_id} — returning existing plan {existing.id}"
+            )
+            return RedirectResponse(url=f"/triathlon/plan/{existing.id}", status_code=303)
+
     try:
         weeks = _generator.generate_plan(distance)
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc))
-
-    # Only persist user_id for authenticated (DB-backed) users; anonymous cookie
-    # IDs are not rows in the users table so we leave user_id NULL instead.
-    user_id: Optional[str] = current_user.id if current_user else None
 
     plan = TriathlonPlan(
         user_id=user_id,

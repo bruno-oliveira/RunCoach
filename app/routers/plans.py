@@ -102,6 +102,26 @@ async def generate_plan(
     except Exception as e:
         return error_response(request, current_user, f"Invalid input: {str(e)}", "general")
 
+    # --- Duplicate detection (check before plan limit so duplicates always pass through) ---
+    if current_user:
+        existing = PlanService.find_duplicate(plan_request, current_user.id, db)
+        if existing:
+            logger.info(
+                f"Returning existing plan {existing.id} for user {current_user.id}"
+            )
+            plan_data = json.loads(existing.plan_data)
+            ctx = plan_view_context(
+                request,
+                current_user,
+                existing,
+                plan_data,
+                PlanService.nutrition_for_template(existing.nutrition_plan_data),
+            )
+            warning = get_mileage_warning(plan_request.target_distance, plan_request.current_km)
+            if warning:
+                ctx["warning"] = warning
+            return templates.TemplateResponse("plan.html", ctx)
+
     # --- 3-plan limit ---
     if current_user:
         plan_count = (

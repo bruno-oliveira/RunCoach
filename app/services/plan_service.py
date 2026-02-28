@@ -63,6 +63,45 @@ class PlanService:
     # ------------------------------------------------------------------
 
     @staticmethod
+    def find_duplicate(
+        plan_request: PlanRequest,
+        user_id: str,
+        db: Session,
+    ) -> Optional[TrainingPlan]:
+        """Return an existing plan that matches all inputs, or None."""
+        race_time_seconds = (
+            parse_race_time_to_seconds(plan_request.recent_race_time)
+            if plan_request.recent_race_time
+            else None
+        )
+        filters = [
+            TrainingPlan.user_id == user_id,
+            TrainingPlan.current_weekly_km == plan_request.current_km,
+            TrainingPlan.target_distance == str(plan_request.target_distance),
+            TrainingPlan.weeks_duration == plan_request.weeks,
+            TrainingPlan.max_runs_per_week == plan_request.max_runs_per_week,
+        ]
+        if plan_request.body_weight_kg is not None:
+            filters.append(TrainingPlan.body_weight_kg == plan_request.body_weight_kg)
+        else:
+            filters.append(TrainingPlan.body_weight_kg.is_(None))
+        if plan_request.recent_race_distance_km is not None:
+            filters.append(
+                TrainingPlan.recent_race_distance_km == plan_request.recent_race_distance_km
+            )
+        else:
+            filters.append(TrainingPlan.recent_race_distance_km.is_(None))
+        if race_time_seconds is not None:
+            filters.append(TrainingPlan.recent_race_time_seconds == race_time_seconds)
+        else:
+            filters.append(TrainingPlan.recent_race_time_seconds.is_(None))
+        if plan_request.vdot is not None:
+            filters.append(TrainingPlan.vdot == plan_request.vdot)
+        else:
+            filters.append(TrainingPlan.vdot.is_(None))
+        return db.query(TrainingPlan).filter(*filters).first()
+
+    @staticmethod
     def create_plan(
         plan_request: PlanRequest,
         user: User,
@@ -74,7 +113,17 @@ class PlanService:
 
         Returns:
             (training_plan, plan_data) — the saved ORM object and the raw week list.
+            If an identical plan already exists for this user, the existing plan is
+            returned and no new record is created.
         """
+        # --- Duplicate detection ---
+        existing = PlanService.find_duplicate(plan_request, user.id, db)
+        if existing:
+            logger.info(
+                f"Duplicate plan detected for user {user.id} — returning existing plan {existing.id}"
+            )
+            return existing, json.loads(existing.plan_data)
+
         plan_data = plan_generator.generate_plan(
             plan_request.current_km,
             plan_request.target_distance,
