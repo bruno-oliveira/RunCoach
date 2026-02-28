@@ -52,7 +52,7 @@ class Settings(BaseSettings):
     google_client_id: str = ""
 
     # Session settings
-    session_timeout_minutes: int = 480  # 8 hours — long enough for a full training day
+    session_timeout_minutes: int = 1440  # 24 hours — matches JWT cookie lifespan
     anonymous_cookie_max_age: int = 30 * 24 * 60 * 60
 
     # Strava OAuth

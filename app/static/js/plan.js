@@ -493,9 +493,20 @@ window.adaptFromStrava = async function(planId) {
         } else {
             let errorMsg;
             if (response.status === 400) {
-                errorMsg = 'Strava is not connected. Please connect Strava first.';
+                errorMsg = 'Strava is not connected. Please connect Strava from the nav menu first.';
             } else if (response.status === 401) {
-                errorMsg = 'Please sign in to adapt your plan.';
+                errorMsg = 'Your session has expired. Please sign in again — your plan data is safe.';
+                // Show a reload-to-sign-in link in the banner
+                setTimeout(() => {
+                    const banner = document.getElementById('strava-adapt-message');
+                    if (banner) {
+                        const link = document.createElement('a');
+                        link.href = '/';
+                        link.textContent = 'Go to home page to sign in';
+                        link.style.cssText = 'display:block;margin-top:0.5rem;color:white;text-decoration:underline;';
+                        banner.appendChild(link);
+                    }
+                }, 50);
             } else {
                 errorMsg = `Error adapting plan (HTTP ${response.status}). Please try again.`;
             }
@@ -659,6 +670,25 @@ window.toggleRecipe = function(mealName, button) {
         button.classList.remove('active');
     }
 }
+
+// Detect bfcache (back/forward cache) restores.
+// When a browser restores a page from bfcache, no new server request is made,
+// so the server-rendered "logged in" state can be stale. If the user's session
+// has expired, any API call from the restored page will return 401.
+// Reloading forces a fresh server render with the correct auth state.
+window.addEventListener('pageshow', function(event) {
+    if (event.persisted) {
+        // Page was restored from bfcache — verify session is still alive.
+        fetch('/api/auth/me', { credentials: 'same-origin' }).then(function(resp) {
+            if (resp.status === 401) {
+                // Session expired while page was cached — reload to get fresh state.
+                window.location.reload();
+            }
+        }).catch(function() {
+            // Network error — don't reload, let the user try normally.
+        });
+    }
+});
 
 // Initialize on DOM ready
 document.addEventListener('DOMContentLoaded', function() {
