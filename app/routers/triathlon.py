@@ -2,14 +2,16 @@
 
 import json
 import logging
+import os
 from typing import Optional
 
 from fastapi import APIRouter, Cookie, Depends, Form, HTTPException, Request
-from fastapi.responses import HTMLResponse, RedirectResponse
+from fastapi.responses import FileResponse, HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
 
 from app.config import settings
+from app.core.triathlon_pdf_generator import TriathlonPDFGenerator
 from app.core.triathlon_plan_generator import TriathlonPlanGenerator
 from app.dependencies import get_db, get_optional_user
 from app.models.triathlon_plan import TriathlonPlan
@@ -21,6 +23,7 @@ router = APIRouter(tags=["triathlon"])
 templates = Jinja2Templates(directory="app/templates")
 
 _generator = TriathlonPlanGenerator()
+_pdf_generator = TriathlonPDFGenerator()
 
 DISTANCE_LABELS = {
     "sprint": "Sprint Triathlon",
@@ -170,3 +173,44 @@ async def delete_triathlon_plan(
     db.delete(plan)
     db.commit()
     return {"message": "Triathlon plan deleted"}
+
+
+# ---------------------------------------------------------------------------
+# Download PDF
+# ---------------------------------------------------------------------------
+
+
+@router.get("/triathlon/download-pdf/{plan_id}")
+async def download_triathlon_pdf(
+    plan_id: str,
+    db: Session = Depends(get_db),
+    current_user: Optional[User] = Depends(get_optional_user),
+    anonymous_user_id: Optional[str] = Cookie(None),
+) -> FileResponse:
+    plan = db.query(TriathlonPlan).filter(TriathlonPlan.id == plan_id).first()
+    if not plan:
+        raise HTTPException(status_code=404, detail="Plan not found")
+
+    owner_ok = (
+        plan.user_id is None
+        or (current_user and plan.user_id == current_user.id)
+        or (anonymous_user_id and plan.user_id == anonymous_user_id)
+    )
+    if not owner_ok:
+        raise HTTPException(status_code=403, detail="Access denied")
+
+    try:
+        pdf_path = _pdf_generator.generate_pdf(plan)
+    except Exception:
+        logger.exception("Triathlon PDF generation error for plan %s", plan_id)
+        raise HTTPException(status_code=500, detail="PDF generation failed")
+
+    if not os.path.exists(pdf_path):
+        raise HTTPException(status_code=500, detail="PDF generation failed — file not created")
+
+    label = DISTANCE_LABELS.get(plan.distance, plan.distance).replace(" ", "_")
+    return FileResponse(
+        pdf_path,
+        media_type="application/pdf",
+        filename=f"triathlon_{label}_{plan_id[:8]}.pdf",
+    )

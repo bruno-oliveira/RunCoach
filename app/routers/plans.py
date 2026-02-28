@@ -33,6 +33,7 @@ from app.exceptions import (
     ValidationException,
 )
 from app.models import TrainingPlan, User
+from app.models.triathlon_plan import TriathlonPlan
 from app.routers.plan_helpers import error_response, get_plan_or_404, plan_view_context
 from app.schemas import DISTANCE_NAMES, PlanRequest, get_mileage_warning, parse_target_distance
 from app.services.adaptation_service import AdaptationService
@@ -326,6 +327,21 @@ async def list_my_plans(
             else:
                 plan.status_label = None
 
+        triathlon_plans = (
+            db.query(TriathlonPlan)
+            .filter(TriathlonPlan.user_id == current_user.id)
+            .order_by(TriathlonPlan.created_at.desc())
+            .all()
+        )
+
+        _tri_labels = {
+            "sprint": "Sprint Triathlon",
+            "olympic": "Olympic Triathlon",
+            "half_ironman": "Half Ironman (70.3)",
+        }
+        for tp in triathlon_plans:
+            tp.distance_label = _tri_labels.get(tp.distance, tp.distance)
+
         return templates.TemplateResponse(
             "my_plans.html",
             {
@@ -335,6 +351,7 @@ async def list_my_plans(
                 "plans": plans,
                 "plan_count": len(plans),
                 "max_plans": 3,
+                "triathlon_plans": triathlon_plans,
             },
         )
     except Exception as e:
