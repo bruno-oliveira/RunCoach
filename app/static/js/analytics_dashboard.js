@@ -1,19 +1,26 @@
 /**
- * Analytics Dashboard — client-side aggregation + Chart.js rendering.
+ * Analytics Dashboard — Performance Hub
+ * Full client-side aggregation + Chart.js rendering.
  */
 const AnalyticsDashboard = {
     allRuns: [],
-    runs: [],
+    runs: [],      // current period
+    prevRuns: [],  // previous period (for trend comparison)
     charts: {},
+    currentPeriodDays: 30,
 
     COLORS: {
-        primary:      '#1D4ED8',
-        primaryFill:  'rgba(29, 78, 216, 0.15)',
-        accent:       '#FF6246',
-        accentFill:   'rgba(255, 98, 70, 0.15)',
-        secondary:    '#0D9488',
-        secondaryFill:'rgba(13, 148, 136, 0.15)',
-        trend:        'rgba(29, 78, 216, 0.45)',
+        primary:       '#1D4ED8',
+        primaryFill:   'rgba(29, 78, 216, 0.12)',
+        accent:        '#FF6246',
+        accentFill:    'rgba(255, 98, 70, 0.12)',
+        secondary:     '#0D9488',
+        secondaryFill: 'rgba(13, 148, 136, 0.12)',
+        purple:        '#7C3AED',
+        purpleFill:    'rgba(124, 58, 237, 0.12)',
+        trend:         'rgba(29, 78, 216, 0.4)',
+        grid:          'rgba(28, 25, 23, 0.06)',
+        tick:          '#A09A93',
     },
 
     /* ------------------------------------------------------------------ */
@@ -26,10 +33,7 @@ const AnalyticsDashboard = {
         if (!dashboard) return;
 
         try {
-            // Check if Strava is connected
             const stravaConnected = await this.checkStravaConnection();
-
-            // If Strava connected, sync default period (30 days) before loading
             if (stravaConnected) {
                 await this.syncStravaPeriod(30);
             }
@@ -61,57 +65,44 @@ const AnalyticsDashboard = {
     /*  Period Filtering                                                    */
     /* ------------------------------------------------------------------ */
     filterByPeriod(days) {
+        this.currentPeriodDays = days;
+
         if (days === 'all') {
             this.runs = [...this.allRuns];
+            this.prevRuns = [];
         } else {
+            const n = Number(days);
             const now = new Date();
-            // Local midnight N+1 days ago. We add 1 so that the boundary calendar day
-            // is fully included: "last 30 days" means runs on or after the day that is
-            // 30 days before today, not the day after it. Without +1 a run on Jan 26
-            // would be excluded when today is Feb 26, even though users intuitively
-            // count Jan 26 as within a "30-day" look-back.
-            const cutoff = new Date(now.getFullYear(), now.getMonth(), now.getDate() - Number(days) - 1);
-            this.runs = this.allRuns.filter(r => new Date(r.date) >= cutoff);
+            const cutoffCurrent = new Date(now.getFullYear(), now.getMonth(), now.getDate() - n - 1);
+            const cutoffPrev    = new Date(now.getFullYear(), now.getMonth(), now.getDate() - n * 2 - 1);
+            this.runs     = this.allRuns.filter(r => new Date(r.date) >= cutoffCurrent);
+            this.prevRuns = this.allRuns.filter(r => {
+                const d = new Date(r.date);
+                return d >= cutoffPrev && d < cutoffCurrent;
+            });
         }
-        this.renderSummary();
-        this.renderCurrentCharts();
+
+        this.renderAll();
     },
 
     bindPeriodSelector() {
         const el = document.getElementById('periodSelector');
         if (!el) return;
-
         el.addEventListener('change', async () => {
             const days = el.value;
-
-            // Apply filter immediately so charts reflect the new period right away
             this.filterByPeriod(days);
 
-            // Check Strava connection; if connected, sync then re-render with full data
             const stravaConnected = await this.checkStravaConnection();
             if (!stravaConnected) return;
 
-            // Show inline sync indicator while the Strava pull runs
             this.showSyncIndicator();
             el.disabled = true;
-
             try {
-                // For specific periods: force re-pull that window.
-                // For "all time": incremental sync (no force_days) to catch
-                // any new activities since last sync, then show all stored runs.
                 const daysBack = days !== 'all' ? parseInt(days) : null;
                 const syncOk = await this.syncStravaPeriod(daysBack);
-
-                // Always reload from DB — even if the Strava sync failed,
-                // the locally-stored runs are still valid and should be shown.
                 await this.reloadRuns();
-
-                // Re-render now that the DB has the full data for this period
                 this.filterByPeriod(days);
-
-                if (!syncOk) {
-                    this.showSyncError('Strava sync failed — showing cached data');
-                }
+                if (!syncOk) this.showSyncError('Strava sync failed — showing cached data');
             } finally {
                 this.hideSyncIndicator();
                 el.disabled = false;
@@ -120,46 +111,492 @@ const AnalyticsDashboard = {
     },
 
     /* ------------------------------------------------------------------ */
-    /*  Summary Stats                                                      */
+    /*  Render All                                                         */
     /* ------------------------------------------------------------------ */
-    renderSummary() {
-        const runs = this.runs;
-        const totalRuns     = runs.length;
-        const totalKm       = runs.reduce((s, r) => s + (r.distance_km || 0), 0);
-        const totalMinutes  = runs.reduce((s, r) => s + (r.duration_minutes || 0), 0);
-        const paceRuns      = runs.filter(r => r.avg_pace_min_km && r.avg_pace_min_km > 0);
-        const avgPace       = paceRuns.length ? paceRuns.reduce((s, r) => s + r.avg_pace_min_km, 0) / paceRuns.length : 0;
-        const hrRuns        = runs.filter(r => r.avg_heart_rate && r.avg_heart_rate > 0);
-        const avgHR         = hrRuns.length ? Math.round(hrRuns.reduce((s, r) => s + r.avg_heart_rate, 0) / hrRuns.length) : 0;
-        const longestRun    = runs.length > 0 ? Math.max(...runs.map(r => r.distance_km || 0)) : 0;
-        const totalHours    = totalMinutes / 60;
+    renderAll() {
+        this.renderSummary();
+        this.renderHeatmap();
+        this.renderInsights();
+        this.renderPersonalRecords();
+        this.renderRecentRuns();
+        this.renderCurrentCharts();
+        this.renderEffortQualityChart();
+    },
 
-        this.setText('statTotalRuns', totalRuns);
-        this.setText('statTotalKm', totalKm.toFixed(1));
-        this.setText('statAvgPace', avgPace > 0 ? this.formatPace(avgPace) : '--');
-        this.setText('statAvgHR', avgHR > 0 ? avgHR : '--');
-        this.setText('statLongest', longestRun.toFixed(1));
-        this.setText('statTotalHours', totalHours.toFixed(1));
+    /** Re-render charts respecting current grouping dropdown values. */
+    renderCurrentCharts() {
+        const g = id => { const el = document.getElementById(id); return el ? el.value : 'weekly'; };
+        this.renderPaceChart(g('paceGrouping'));
+        this.renderDistanceChart(g('distanceGrouping'));
+        this.renderHRChart(g('hrGrouping'));
+        this.renderWorkoutTypeChart();
+        this.renderCadenceChart(g('cadenceGrouping'));
     },
 
     /* ------------------------------------------------------------------ */
-    /*  Grouping                                                           */
+    /*  Summary Stats with Trend Indicators                                */
+    /* ------------------------------------------------------------------ */
+    renderSummary() {
+        const runs = this.runs;
+        const prev = this.prevRuns;
+
+        const totalKm      = runs.reduce((s, r) => s + (r.distance_km || 0), 0);
+        const prevTotalKm  = prev.reduce((s, r) => s + (r.distance_km || 0), 0);
+
+        const paceRuns     = runs.filter(r => r.avg_pace_min_km && r.avg_pace_min_km > 0);
+        const avgPace      = paceRuns.length ? paceRuns.reduce((s, r) => s + r.avg_pace_min_km, 0) / paceRuns.length : 0;
+        const prevPaceRuns = prev.filter(r => r.avg_pace_min_km && r.avg_pace_min_km > 0);
+        const prevAvgPace  = prevPaceRuns.length ? prevPaceRuns.reduce((s, r) => s + r.avg_pace_min_km, 0) / prevPaceRuns.length : 0;
+
+        const totalRuns    = runs.length;
+        const prevTotalRuns= prev.length;
+
+        const totalMins    = runs.reduce((s, r) => s + (r.duration_minutes || 0), 0);
+        const prevTotalMins= prev.reduce((s, r) => s + (r.duration_minutes || 0), 0);
+        const totalHours   = totalMins / 60;
+        const prevTotalHours = prevTotalMins / 60;
+
+        this.setText('statTotalKm',    totalKm.toFixed(1));
+        this.setText('statAvgPace',    avgPace > 0 ? this.formatPace(avgPace) : '--');
+        this.setText('statTotalRuns',  totalRuns);
+        this.setText('statTotalHours', totalHours.toFixed(1));
+
+        // Trend badges — for pace, lower is better (faster)
+        this.setTrend('trendTotalKm',    this.pctChange(totalKm, prevTotalKm),    false);
+        this.setTrend('trendAvgPace',    this.pctChange(avgPace, prevAvgPace),    true); // inverted
+        this.setTrend('trendTotalRuns',  this.pctChange(totalRuns, prevTotalRuns), false);
+        this.setTrend('trendTotalHours', this.pctChange(totalHours, prevTotalHours), false);
+    },
+
+    pctChange(current, previous) {
+        if (!previous || previous === 0) return null;
+        return ((current - previous) / previous) * 100;
+    },
+
+    setTrend(id, pct, invertedIsGood) {
+        const el = document.getElementById(id);
+        if (!el) return;
+        if (pct === null || this.currentPeriodDays === 'all') {
+            el.textContent = '';
+            el.className = 'hero-stat-trend';
+            return;
+        }
+        const isPositive = invertedIsGood ? pct < 0 : pct > 0;
+        const arrow = pct > 0 ? '↑' : pct < 0 ? '↓' : '→';
+        const abs = Math.abs(pct).toFixed(1);
+        el.textContent = `${arrow} ${abs}%`;
+        el.className = 'hero-stat-trend ' + (
+            Math.abs(pct) < 1 ? 'trend-neutral' :
+            isPositive ? 'trend-up' : 'trend-down'
+        );
+    },
+
+    /* ------------------------------------------------------------------ */
+    /*  Activity Heatmap (52 weeks)                                        */
+    /* ------------------------------------------------------------------ */
+    renderHeatmap() {
+        const container = document.getElementById('activityHeatmap');
+        const monthsEl  = document.getElementById('heatmapMonths');
+        if (!container) return;
+
+        // Build date → distance map from ALL runs (all time)
+        const dateMap = {};
+        for (const r of this.allRuns) {
+            if (!r.date) continue;
+            const key = r.date.slice(0, 10);
+            dateMap[key] = (dateMap[key] || 0) + (r.distance_km || 0);
+        }
+
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+
+        // Start from Monday 52 weeks ago
+        const startDate = new Date(today);
+        startDate.setDate(startDate.getDate() - 364);
+        const dayOfWeek = startDate.getDay(); // 0=Sun
+        const diffToMon = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
+        startDate.setDate(startDate.getDate() - diffToMon);
+
+        // Intensity thresholds (km)
+        const thresholds = [0, 3, 7, 12, 18];
+
+        const cells = [];
+        const monthLabels = [];
+        let col = 0;
+        const cur = new Date(startDate);
+        let lastMonth = -1;
+
+        while (cur <= today) {
+            const key = `${cur.getFullYear()}-${String(cur.getMonth() + 1).padStart(2, '0')}-${String(cur.getDate()).padStart(2, '0')}`;
+            const km = dateMap[key] || 0;
+            const dow = cur.getDay(); // 0=Sun
+
+            // Track month label position
+            if (cur.getMonth() !== lastMonth && dow === 1) {
+                monthLabels.push({ col, label: cur.toLocaleDateString('en-US', { month: 'short' }) });
+                lastMonth = cur.getMonth();
+            }
+
+            const level = km === 0 ? 0 :
+                          km < thresholds[1] ? 1 :
+                          km < thresholds[2] ? 2 :
+                          km < thresholds[3] ? 3 : 4;
+
+            const cell = document.createElement('div');
+            cell.className = `heatmap-cell${level > 0 ? ' heatmap-cell--' + level : ''}`;
+
+            const dateLabel = cur.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+            cell.title = km > 0 ? `${dateLabel}: ${km.toFixed(1)} km` : dateLabel;
+
+            cells.push(cell);
+
+            cur.setDate(cur.getDate() + 1);
+            if (cur.getDay() === 1) col++;
+        }
+
+        container.innerHTML = '';
+        cells.forEach(c => container.appendChild(c));
+
+        // Month labels — one span per month, width = span of columns × cellSize
+        if (monthsEl) {
+            monthsEl.innerHTML = '';
+            const totalCols = col + 1;
+            const cellSize  = 15; // 12px cell + 3px gap
+            for (let i = 0; i < monthLabels.length; i++) {
+                const { col: c, label } = monthLabels[i];
+                const nextCol = i + 1 < monthLabels.length ? monthLabels[i + 1].col : totalCols;
+                const span = document.createElement('span');
+                span.className = 'heatmap-month-label';
+                span.textContent = label;
+                span.style.width = ((nextCol - c) * cellSize) + 'px';
+                span.style.flexShrink = '0';
+                monthsEl.appendChild(span);
+            }
+        }
+    },
+
+    /* ------------------------------------------------------------------ */
+    /*  Insights                                                           */
+    /* ------------------------------------------------------------------ */
+    renderInsights() {
+        const container = document.getElementById('analyticsInsights');
+        if (!container) return;
+
+        const insights = [];
+        const runs = this.runs;
+        const prev = this.prevRuns;
+
+        if (runs.length === 0) {
+            container.style.display = 'none';
+            return;
+        }
+
+        // 1. Volume change
+        const km    = runs.reduce((s, r) => s + (r.distance_km || 0), 0);
+        const prevKm= prev.reduce((s, r) => s + (r.distance_km || 0), 0);
+        if (prevKm > 0) {
+            const pct = this.pctChange(km, prevKm);
+            if (pct !== null) {
+                const better = pct > 0;
+                insights.push({
+                    icon: better ? '📈' : '📉',
+                    value: `${Math.abs(pct).toFixed(0)}%`,
+                    title: better ? 'Volume Up' : 'Volume Down',
+                    sub: `vs previous period (${prevKm.toFixed(0)} km → ${km.toFixed(0)} km)`,
+                    type: better ? 'positive' : '',
+                });
+            }
+        }
+
+        // 2. Pace change
+        const paceRuns = runs.filter(r => r.avg_pace_min_km > 0);
+        const prevPaceRuns = prev.filter(r => r.avg_pace_min_km > 0);
+        if (paceRuns.length && prevPaceRuns.length) {
+            const ap = paceRuns.reduce((s, r) => s + r.avg_pace_min_km, 0) / paceRuns.length;
+            const pp = prevPaceRuns.reduce((s, r) => s + r.avg_pace_min_km, 0) / prevPaceRuns.length;
+            const diff = pp - ap; // positive = faster this period
+            if (Math.abs(diff) > 0.05) {
+                const faster = diff > 0;
+                const absSecs = Math.round(Math.abs(diff) * 60);
+                insights.push({
+                    icon: faster ? '⚡' : '🐢',
+                    value: `${absSecs}s/km`,
+                    title: faster ? 'Running Faster' : 'Running Slower',
+                    sub: `${this.formatPace(pp)} → ${this.formatPace(ap)} avg pace`,
+                    type: faster ? 'positive' : 'warning',
+                });
+            }
+        }
+
+        // 3. Consistency: unique days with runs
+        const runDays = new Set(runs.map(r => r.date ? r.date.slice(0, 10) : null)).size;
+        const periodLen = this.currentPeriodDays === 'all' ? null : Number(this.currentPeriodDays);
+        if (periodLen) {
+            const weeks = Math.max(1, Math.floor(periodLen / 7));
+            const runsPerWeek = (runs.length / weeks).toFixed(1);
+            insights.push({
+                icon: '🗓️',
+                value: runsPerWeek,
+                title: 'Runs/Week',
+                sub: `${runDays} active days, ${runs.length} runs`,
+                type: runsPerWeek >= 3 ? 'positive' : '',
+            });
+        }
+
+        // 4. Longest run this period
+        if (runs.length > 0) {
+            const longest = Math.max(...runs.map(r => r.distance_km || 0));
+            const longestRun = runs.find(r => r.distance_km === longest);
+            if (longest > 0) {
+                insights.push({
+                    icon: '📏',
+                    value: `${longest.toFixed(1)} km`,
+                    title: 'Longest Run',
+                    sub: longestRun && longestRun.date
+                        ? new Date(longestRun.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+                        : 'this period',
+                    type: 'highlight',
+                });
+            }
+        }
+
+        // 5. Run streak
+        const streak = this.computeStreak();
+        if (streak > 2) {
+            insights.push({
+                icon: '🔥',
+                value: `${streak}d`,
+                title: 'Current Streak',
+                sub: `${streak} consecutive days with a run`,
+                type: streak >= 7 ? 'positive' : 'highlight',
+            });
+        }
+
+        if (insights.length === 0) {
+            container.style.display = 'none';
+            return;
+        }
+
+        container.style.display = 'flex';
+        container.innerHTML = insights.map(i => `
+            <div class="insight-card${i.type ? ' insight-card--' + i.type : ''}">
+                <div class="insight-icon">${i.icon}</div>
+                <div class="insight-value">${i.value}</div>
+                <div class="insight-title">${i.title}</div>
+                <div class="insight-sub">${i.sub}</div>
+            </div>
+        `).join('');
+    },
+
+    computeStreak() {
+        const dateSet = new Set(this.allRuns.map(r => r.date ? r.date.slice(0, 10) : null));
+        let streak = 0;
+        const d = new Date();
+        d.setHours(0, 0, 0, 0);
+        while (true) {
+            const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+            if (!dateSet.has(key)) break;
+            streak++;
+            d.setDate(d.getDate() - 1);
+        }
+        return streak;
+    },
+
+    /* ------------------------------------------------------------------ */
+    /*  Personal Records (all-time)                                        */
+    /* ------------------------------------------------------------------ */
+    renderPersonalRecords() {
+        const el = document.getElementById('recordsList');
+        const card = document.getElementById('recordsCard');
+        if (!el) return;
+
+        const all = this.allRuns;
+        if (all.length === 0) {
+            if (card) card.style.display = 'none';
+            return;
+        }
+        if (card) card.style.display = '';
+
+        const longestRun = all.reduce((best, r) =>
+            (r.distance_km || 0) > (best.distance_km || 0) ? r : best, all[0]);
+
+        const fastestRun = all
+            .filter(r => r.avg_pace_min_km > 0 && r.distance_km >= 3)
+            .reduce((best, r) => (!best || r.avg_pace_min_km < best.avg_pace_min_km) ? r : best, null);
+
+        // Best week (by km)
+        const weekBuckets = {};
+        for (const r of all) {
+            if (!r.date) continue;
+            const d = new Date(r.date);
+            const mon = this.startOfWeek(d);
+            const key = `${mon.getFullYear()}-${String(mon.getMonth()+1).padStart(2,'0')}-${String(mon.getDate()).padStart(2,'0')}`;
+            weekBuckets[key] = (weekBuckets[key] || 0) + (r.distance_km || 0);
+        }
+        const bestWeekKm = Object.values(weekBuckets).reduce((m, v) => Math.max(m, v), 0);
+
+        const elevRuns = all.filter(r => r.elevation_gain_m > 0);
+        const mostElev = elevRuns.length
+            ? elevRuns.reduce((best, r) => r.elevation_gain_m > best.elevation_gain_m ? r : best, elevRuns[0])
+            : null;
+
+        const records = [
+            { icon: '📏', label: 'Longest Run',   value: longestRun ? longestRun.distance_km.toFixed(1) : null, unit: 'km' },
+            { icon: '⚡', label: 'Fastest Pace',  value: fastestRun ? this.formatPace(fastestRun.avg_pace_min_km) : null, unit: 'min/km' },
+            { icon: '📅', label: 'Best Week',     value: bestWeekKm > 0 ? bestWeekKm.toFixed(1) : null, unit: 'km' },
+            mostElev ? { icon: '⛰️', label: 'Most Elevation', value: mostElev.elevation_gain_m.toFixed(0), unit: 'm' } : null,
+        ].filter(Boolean).filter(r => r.value !== null);
+
+        el.innerHTML = records.map(r => `
+            <div class="record-item">
+                <span class="record-icon">${r.icon}</span>
+                <span class="record-label">${r.label}</span>
+                <span class="record-value">${r.value}<span class="record-unit">${r.unit}</span></span>
+            </div>
+        `).join('');
+    },
+
+    /* ------------------------------------------------------------------ */
+    /*  Recent Runs Feed                                                   */
+    /* ------------------------------------------------------------------ */
+    renderRecentRuns() {
+        const list = document.getElementById('recentRunsList');
+        const count = document.getElementById('recentRunsCount');
+        if (!list) return;
+
+        const recent = [...this.runs]
+            .sort((a, b) => new Date(b.date) - new Date(a.date))
+            .slice(0, 8);
+
+        if (count) count.textContent = `${this.runs.length} in this period`;
+
+        if (recent.length === 0) {
+            list.innerHTML = '<p style="color:var(--color-text-muted);font-size:var(--text-sm);padding:var(--space-3) 0">No runs in this period.</p>';
+            return;
+        }
+
+        list.innerHTML = recent.map(r => {
+            const date = r.date
+                ? new Date(r.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+                : '--';
+            const dist = r.distance_km ? `${r.distance_km.toFixed(1)}<span class="run-distance-unit">km</span>` : '--';
+            const pace = r.avg_pace_min_km > 0 ? `${this.formatPace(r.avg_pace_min_km)}/km` : '';
+            const hr   = r.avg_heart_rate > 0  ? `${Math.round(r.avg_heart_rate)} bpm` : '';
+            const type = r.workout_type || 'unknown';
+            const typeClass = `badge-${type}`;
+            const typeLabel = type.charAt(0).toUpperCase() + type.slice(1);
+            const ql = this.qualityLabel(r);
+
+            return `
+                <div class="run-row">
+                    <span class="run-date">${date}</span>
+                    <span class="run-distance">${dist}</span>
+                    <span class="run-pace">${pace}</span>
+                    <span class="run-hr">${hr}</span>
+                    <span class="run-type-badge ${typeClass}">${typeLabel}</span>
+                    ${ql ? `<span class="quality-badge ${ql.cls}">${ql.label}</span>` : ''}
+                </div>
+            `;
+        }).join('');
+    },
+
+    qualityLabel(run) {
+        // Prefer quality_label if set
+        if (run.quality_label) {
+            const map = {
+                'Nailed it': { cls: 'quality-nailed', label: 'Nailed it' },
+                'On track':  { cls: 'quality-track',  label: 'On track' },
+                'Too easy':  { cls: 'quality-easy',   label: 'Too easy' },
+                'Too hard':  { cls: 'quality-hard',   label: 'Too hard' },
+            };
+            return map[run.quality_label] || null;
+        }
+        // Fallback to perceived_effort
+        const e = run.perceived_effort;
+        if (!e || e <= 0) return null;
+        if (e <= 3) return { cls: 'quality-easy',   label: 'Easy' };
+        if (e <= 6) return { cls: 'quality-track',  label: 'Moderate' };
+        if (e <= 8) return { cls: 'quality-nailed', label: 'Hard' };
+        return { cls: 'quality-hard', label: 'Max' };
+    },
+
+    /* ------------------------------------------------------------------ */
+    /*  Effort Quality Chart                                               */
+    /* ------------------------------------------------------------------ */
+    renderEffortQualityChart() {
+        const card = document.getElementById('effortChartCard');
+        const runsWithEffort = this.runs.filter(r => r.perceived_effort > 0 || r.quality_label);
+
+        if (runsWithEffort.length === 0) {
+            if (card) card.style.display = 'none';
+            return;
+        }
+        if (card) card.style.display = '';
+
+        const buckets = { 'Easy (1–3)': 0, 'Moderate (4–6)': 0, 'Hard (7–8)': 0, 'Max (9–10)': 0 };
+        for (const r of runsWithEffort) {
+            const e = r.perceived_effort;
+            if (e <= 3)  buckets['Easy (1–3)']++;
+            else if (e <= 6) buckets['Moderate (4–6)']++;
+            else if (e <= 8) buckets['Hard (7–8)']++;
+            else            buckets['Max (9–10)']++;
+        }
+
+        const labels = Object.keys(buckets).filter(k => buckets[k] > 0);
+        const values = labels.map(k => buckets[k]);
+
+        this.destroyChart('effortChart');
+        const ctx = document.getElementById('effortChart');
+        if (!ctx) return;
+
+        this.charts.effortChart = new Chart(ctx.getContext('2d'), {
+            type: 'doughnut',
+            data: {
+                labels,
+                datasets: [{
+                    data: values,
+                    backgroundColor: [
+                        'rgba(13, 148, 136, 0.75)',
+                        'rgba(29, 78, 216, 0.75)',
+                        'rgba(255, 98, 70, 0.75)',
+                        'rgba(220, 38, 38, 0.75)',
+                    ].slice(0, labels.length),
+                    borderWidth: 0,
+                }],
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: true,
+                aspectRatio: this._mobileRatio(1.4, 1.2),
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                        labels: { padding: 14, usePointStyle: true, pointStyle: 'circle', font: { size: 11 } },
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: ctx => ` ${ctx.label}: ${ctx.parsed} runs`,
+                        },
+                    },
+                },
+            },
+        });
+    },
+
+    /* ------------------------------------------------------------------ */
+    /*  Grouping Helpers                                                   */
     /* ------------------------------------------------------------------ */
     groupByWeek(runs) {
         const buckets = {};
         for (const r of runs) {
             const d = new Date(r.date);
             const mon = this.startOfWeek(d);
-            // Build the key from local date components so it isn't shifted by
-            // the UTC offset when toISOString() is called on a midnight-local Date.
-            const key = `${mon.getFullYear()}-${String(mon.getMonth() + 1).padStart(2, '0')}-${String(mon.getDate()).padStart(2, '0')}`;
+            const key = `${mon.getFullYear()}-${String(mon.getMonth()+1).padStart(2,'0')}-${String(mon.getDate()).padStart(2,'0')}`;
             if (!buckets[key]) buckets[key] = [];
             buckets[key].push(r);
         }
         return this.aggregateBuckets(buckets, k => {
             const [y, m, day] = k.split('-').map(Number);
-            // Use Date(y, m-1, d) so it's local time, not UTC-midnight which
-            // would display as the previous day in UTC- timezones.
             return new Date(y, m - 1, day).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
         });
     },
@@ -168,28 +605,26 @@ const AnalyticsDashboard = {
         const buckets = {};
         for (const r of runs) {
             const d = new Date(r.date);
-            const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+            const key = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
             if (!buckets[key]) buckets[key] = [];
             buckets[key].push(r);
         }
         return this.aggregateBuckets(buckets, k => {
             const [y, m] = k.split('-');
-            const d = new Date(parseInt(y), parseInt(m) - 1);
-            return d.toLocaleDateString('en-US', { month: 'short', year: '2-digit' });
+            return new Date(parseInt(y), parseInt(m) - 1).toLocaleDateString('en-US', { month: 'short', year: '2-digit' });
         });
     },
 
     aggregateBuckets(buckets, labelFn) {
-        const sorted = Object.keys(buckets).sort();
-        return sorted.map(key => {
+        return Object.keys(buckets).sort().map(key => {
             const group = buckets[key];
-            const totalKm = group.reduce((s, r) => s + (r.distance_km || 0), 0);
-            const paceRuns = group.filter(r => r.avg_pace_min_km && r.avg_pace_min_km > 0);
-            const avgPace = paceRuns.length ? paceRuns.reduce((s, r) => s + r.avg_pace_min_km, 0) / paceRuns.length : null;
-            const hrRuns = group.filter(r => r.avg_heart_rate && r.avg_heart_rate > 0);
-            const avgHR = hrRuns.length ? Math.round(hrRuns.reduce((s, r) => s + r.avg_heart_rate, 0) / hrRuns.length) : null;
-            const cadRuns = group.filter(r => r.avg_cadence && r.avg_cadence > 0);
-            const avgCadence = cadRuns.length ? Math.round(cadRuns.reduce((s, r) => s + r.avg_cadence, 0) / cadRuns.length) : null;
+            const totalKm   = group.reduce((s, r) => s + (r.distance_km || 0), 0);
+            const paceRuns  = group.filter(r => r.avg_pace_min_km > 0);
+            const avgPace   = paceRuns.length ? paceRuns.reduce((s, r) => s + r.avg_pace_min_km, 0) / paceRuns.length : null;
+            const hrRuns    = group.filter(r => r.avg_heart_rate > 0);
+            const avgHR     = hrRuns.length ? Math.round(hrRuns.reduce((s, r) => s + r.avg_heart_rate, 0) / hrRuns.length) : null;
+            const cadRuns   = group.filter(r => r.avg_cadence > 0);
+            const avgCadence= cadRuns.length ? Math.round(cadRuns.reduce((s, r) => s + r.avg_cadence, 0) / cadRuns.length) : null;
             return { label: labelFn(key), totalKm, avgPace, avgHR, avgCadence, runCount: group.length };
         });
     },
@@ -197,14 +632,17 @@ const AnalyticsDashboard = {
     startOfWeek(d) {
         const dt = new Date(d);
         const day = dt.getDay();
-        const diff = day === 0 ? 6 : day - 1; // Monday start
-        dt.setDate(dt.getDate() - diff);
+        dt.setDate(dt.getDate() - (day === 0 ? 6 : day - 1));
         dt.setHours(0, 0, 0, 0);
         return dt;
     },
 
+    getGroupedData(grouping) {
+        return grouping === 'monthly' ? this.groupByMonth(this.runs) : this.groupByWeek(this.runs);
+    },
+
     /* ------------------------------------------------------------------ */
-    /*  Trend Line (linear regression)                                     */
+    /*  Trend Line                                                         */
     /* ------------------------------------------------------------------ */
     computeTrendLine(values) {
         const n = values.length;
@@ -217,11 +655,11 @@ const AnalyticsDashboard = {
         if (count < 2) return values;
         const slope = (count * sumXY - sumX * sumY) / (count * sumXX - sumX * sumX);
         const intercept = (sumY - slope * sumX) / count;
-        return values.map((_, i) => slope * i + intercept);
+        return values.map((_, i) => parseFloat((slope * i + intercept).toFixed(4)));
     },
 
     /* ------------------------------------------------------------------ */
-    /*  Responsive Helpers                                                 */
+    /*  Chart Config Helpers                                               */
     /* ------------------------------------------------------------------ */
     _mobileRatio(desktop, mobile) {
         return window.innerWidth < 768 ? (mobile || 1.5) : desktop;
@@ -231,49 +669,56 @@ const AnalyticsDashboard = {
         const isMobile = window.innerWidth < 768;
         return {
             maxRotation: isMobile ? 45 : 0,
-            font: { size: isMobile ? 10 : 12 },
+            font: { size: isMobile ? 10 : 11 },
+            color: this.COLORS.tick,
+        };
+    },
+
+    _baseChartOptions(aspectRatio, yOptions = {}) {
+        return {
+            responsive: true,
+            maintainAspectRatio: true,
+            aspectRatio: this._mobileRatio(aspectRatio),
+            onResize: (chart) => { chart.options.aspectRatio = this._mobileRatio(aspectRatio); },
+            plugins: {
+                legend: { display: false },
+            },
+            scales: {
+                x: {
+                    ticks: this._mobileTickOpts(),
+                    grid: { color: this.COLORS.grid },
+                },
+                y: {
+                    ticks: { font: { size: 11 }, color: this.COLORS.tick },
+                    grid: { color: this.COLORS.grid },
+                    ...yOptions,
+                },
+            },
         };
     },
 
     /* ------------------------------------------------------------------ */
-    /*  Chart Rendering                                                    */
+    /*  Charts                                                             */
     /* ------------------------------------------------------------------ */
-    renderAllCharts() {
-        this.renderPaceChart('weekly');
-        this.renderDistanceChart('weekly');
-        this.renderHRChart('weekly');
-        this.renderWorkoutTypeChart();
-        this.renderCadenceChart('weekly');
-    },
-
-    /** Re-render all charts respecting current grouping dropdown values. */
-    renderCurrentCharts() {
-        const g = id => { const el = document.getElementById(id); return el ? el.value : 'weekly'; };
-        this.renderPaceChart(g('paceGrouping'));
-        this.renderDistanceChart(g('distanceGrouping'));
-        this.renderHRChart(g('hrGrouping'));
-        this.renderWorkoutTypeChart();
-        this.renderCadenceChart(g('cadenceGrouping'));
-    },
-
-    getGroupedData(grouping) {
-        return grouping === 'monthly' ? this.groupByMonth(this.runs) : this.groupByWeek(this.runs);
-    },
-
     renderPaceChart(grouping) {
-        const data = this.getGroupedData(grouping);
+        const data   = this.getGroupedData(grouping);
         const labels = data.map(d => d.label);
         const values = data.map(d => d.avgPace);
-        const validValues = values.filter(v => v != null);
-        if (validValues.length === 0) {
-            this.hideChart('paceChartCard');
-            return;
-        }
+        if (!values.some(v => v != null)) { this.hideChart('paceChartCard'); return; }
         this.showChart('paceChartCard');
         const trend = this.computeTrendLine(values);
 
         this.destroyChart('paceChart');
         const ctx = document.getElementById('paceChart').getContext('2d');
+        const opts = this._baseChartOptions(2.2, {
+            reverse: true,
+            ticks: { callback: v => this.formatPace(v), font: { size: 11 }, color: this.COLORS.tick },
+            grid: { color: this.COLORS.grid },
+        });
+        opts.plugins.tooltip = {
+            callbacks: { label: c => c.dataset.label + ': ' + this.formatPace(c.parsed.y) },
+        };
+
         this.charts.paceChart = new Chart(ctx, {
             type: 'line',
             data: {
@@ -282,111 +727,82 @@ const AnalyticsDashboard = {
                     {
                         label: 'Avg Pace',
                         data: values,
-                        borderColor: this.COLORS.primary,
-                        backgroundColor: this.COLORS.primaryFill,
+                        borderColor: this.COLORS.accent,
+                        backgroundColor: this.COLORS.accentFill,
                         fill: true,
-                        tension: 0.3,
+                        tension: 0.35,
                         pointRadius: 3,
+                        pointBackgroundColor: this.COLORS.accent,
                         pointHoverRadius: 5,
                     },
                     {
                         label: 'Trend',
                         data: trend,
-                        borderColor: this.COLORS.trend,
-                        borderDash: [5, 5],
+                        borderColor: 'rgba(255,98,70,0.4)',
+                        borderDash: [4, 4],
                         pointRadius: 0,
                         fill: false,
+                        tension: 0,
                     },
                 ],
             },
-            options: {
-                responsive: true,
-                maintainAspectRatio: true,
-                aspectRatio: this._mobileRatio(2.5),
-                onResize: (chart) => {
-                    chart.options.aspectRatio = this._mobileRatio(2.5);
-                },
-                plugins: {
-                    legend: { display: false },
-                    tooltip: {
-                        callbacks: {
-                            label: ctx => ctx.dataset.label + ': ' + this.formatPace(ctx.parsed.y),
-                        },
-                    },
-                },
-                scales: {
-                    x: { ticks: this._mobileTickOpts() },
-                    y: {
-                        reverse: true,
-                        ticks: { callback: v => this.formatPace(v) },
-                        title: { display: true, text: 'min/km' },
-                    },
-                },
-            },
+            options: opts,
         });
     },
 
     renderDistanceChart(grouping) {
-        const data = this.getGroupedData(grouping);
+        const data   = this.getGroupedData(grouping);
         const labels = data.map(d => d.label);
         const values = data.map(d => d.totalKm);
 
         this.destroyChart('distanceChart');
         const ctx = document.getElementById('distanceChart').getContext('2d');
+        const opts = this._baseChartOptions(2.8, {
+            beginAtZero: true,
+            ticks: { callback: v => `${v} km`, font: { size: 11 }, color: this.COLORS.tick },
+            grid: { color: this.COLORS.grid },
+        });
+        opts.plugins.tooltip = {
+            callbacks: { label: c => `${c.parsed.y.toFixed(1)} km` },
+        };
+
         this.charts.distanceChart = new Chart(ctx, {
             type: 'bar',
             data: {
                 labels,
                 datasets: [{
-                    label: 'Distance (km)',
+                    label: 'Distance',
                     data: values,
                     backgroundColor: this.COLORS.primaryFill,
                     borderColor: this.COLORS.primary,
                     borderWidth: 1.5,
-                    borderRadius: 4,
+                    borderRadius: 5,
+                    borderSkipped: false,
                 }],
             },
-            options: {
-                responsive: true,
-                maintainAspectRatio: true,
-                aspectRatio: this._mobileRatio(2.5),
-                onResize: (chart) => {
-                    chart.options.aspectRatio = this._mobileRatio(2.5);
-                },
-                plugins: {
-                    legend: { display: false },
-                    tooltip: {
-                        callbacks: {
-                            label: ctx => ctx.parsed.y.toFixed(1) + ' km',
-                        },
-                    },
-                },
-                scales: {
-                    x: { ticks: this._mobileTickOpts() },
-                    y: {
-                        beginAtZero: true,
-                        title: { display: true, text: 'km' },
-                    },
-                },
-            },
+            options: opts,
         });
     },
 
     renderHRChart(grouping) {
-        const hasHR = this.runs.some(r => r.avg_heart_rate && r.avg_heart_rate > 0);
-        if (!hasHR) {
-            this.hideChart('hrChartCard');
-            return;
-        }
+        if (!this.runs.some(r => r.avg_heart_rate > 0)) { this.hideChart('hrChartCard'); return; }
         this.showChart('hrChartCard');
 
-        const data = this.getGroupedData(grouping);
+        const data   = this.getGroupedData(grouping);
         const labels = data.map(d => d.label);
         const values = data.map(d => d.avgHR);
-        const trend = this.computeTrendLine(values);
+        const trend  = this.computeTrendLine(values);
 
         this.destroyChart('hrChart');
         const ctx = document.getElementById('hrChart').getContext('2d');
+        const opts = this._baseChartOptions(2.2, {
+            ticks: { callback: v => `${v} bpm`, font: { size: 11 }, color: this.COLORS.tick },
+            grid: { color: this.COLORS.grid },
+        });
+        opts.plugins.tooltip = {
+            callbacks: { label: c => `${c.dataset.label}: ${Math.round(c.parsed.y)} bpm` },
+        };
+
         this.charts.hrChart = new Chart(ctx, {
             type: 'line',
             data: {
@@ -395,45 +811,26 @@ const AnalyticsDashboard = {
                     {
                         label: 'Avg HR',
                         data: values,
-                        borderColor: this.COLORS.accent,
-                        backgroundColor: this.COLORS.accentFill,
+                        borderColor: '#E84393',
+                        backgroundColor: 'rgba(232,67,147,0.10)',
                         fill: true,
-                        tension: 0.3,
+                        tension: 0.35,
                         pointRadius: 3,
+                        pointBackgroundColor: '#E84393',
                         pointHoverRadius: 5,
                     },
                     {
                         label: 'Trend',
                         data: trend,
-                        borderColor: 'rgba(255, 98, 70, 0.5)',
-                        borderDash: [5, 5],
+                        borderColor: 'rgba(232,67,147,0.35)',
+                        borderDash: [4, 4],
                         pointRadius: 0,
                         fill: false,
+                        tension: 0,
                     },
                 ],
             },
-            options: {
-                responsive: true,
-                maintainAspectRatio: true,
-                aspectRatio: this._mobileRatio(2.5),
-                onResize: (chart) => {
-                    chart.options.aspectRatio = this._mobileRatio(2.5);
-                },
-                plugins: {
-                    legend: { display: false },
-                    tooltip: {
-                        callbacks: {
-                            label: ctx => ctx.dataset.label + ': ' + Math.round(ctx.parsed.y) + ' bpm',
-                        },
-                    },
-                },
-                scales: {
-                    x: { ticks: this._mobileTickOpts() },
-                    y: {
-                        title: { display: true, text: 'bpm' },
-                    },
-                },
-            },
+            options: opts,
         });
     },
 
@@ -444,17 +841,16 @@ const AnalyticsDashboard = {
             counts[type] = (counts[type] || 0) + 1;
         }
         const labels = Object.keys(counts);
-        const values = Object.values(counts);
-
-        if (labels.length === 0) {
-            this.hideChart('workoutTypeChartCard');
-            return;
-        }
+        if (labels.length === 0) { this.hideChart('workoutTypeChartCard'); return; }
         this.showChart('workoutTypeChartCard');
 
         const palette = [
-            this.COLORS.primary, this.COLORS.accent, this.COLORS.secondary,
-            '#F59E0B', '#8B5CF6', '#EC4899', '#10B981',
+            'rgba(29,78,216,0.75)',
+            'rgba(255,98,70,0.75)',
+            'rgba(13,148,136,0.75)',
+            'rgba(245,158,11,0.75)',
+            'rgba(124,58,237,0.75)',
+            'rgba(236,72,153,0.75)',
         ];
 
         this.destroyChart('workoutTypeChart');
@@ -463,20 +859,19 @@ const AnalyticsDashboard = {
             type: 'doughnut',
             data: {
                 labels: labels.map(l => l.charAt(0).toUpperCase() + l.slice(1)),
-                datasets: [{
-                    data: values,
-                    backgroundColor: palette.slice(0, labels.length),
-                    borderWidth: 0,
-                }],
+                datasets: [{ data: Object.values(counts), backgroundColor: palette.slice(0, labels.length), borderWidth: 0 }],
             },
             options: {
                 responsive: true,
                 maintainAspectRatio: true,
-                aspectRatio: this._mobileRatio(1.2, 1),
+                aspectRatio: this._mobileRatio(1.4, 1.2),
                 plugins: {
                     legend: {
                         position: 'bottom',
-                        labels: { padding: 16, usePointStyle: true, pointStyle: 'circle' },
+                        labels: { padding: 14, usePointStyle: true, pointStyle: 'circle', font: { size: 11 } },
+                    },
+                    tooltip: {
+                        callbacks: { label: c => ` ${c.label}: ${c.parsed} runs` },
                     },
                 },
             },
@@ -484,19 +879,23 @@ const AnalyticsDashboard = {
     },
 
     renderCadenceChart(grouping) {
-        const hasCadence = this.runs.some(r => r.avg_cadence && r.avg_cadence > 0);
-        if (!hasCadence) {
-            this.hideChart('cadenceChartCard');
-            return;
-        }
+        if (!this.runs.some(r => r.avg_cadence > 0)) { this.hideChart('cadenceChartCard'); return; }
         this.showChart('cadenceChartCard');
 
-        const data = this.getGroupedData(grouping);
+        const data   = this.getGroupedData(grouping);
         const labels = data.map(d => d.label);
         const values = data.map(d => d.avgCadence);
 
         this.destroyChart('cadenceChart');
         const ctx = document.getElementById('cadenceChart').getContext('2d');
+        const opts = this._baseChartOptions(2.2, {
+            ticks: { callback: v => `${v} spm`, font: { size: 11 }, color: this.COLORS.tick },
+            grid: { color: this.COLORS.grid },
+        });
+        opts.plugins.tooltip = {
+            callbacks: { label: c => `${c.parsed.y} spm` },
+        };
+
         this.charts.cadenceChart = new Chart(ctx, {
             type: 'line',
             data: {
@@ -507,33 +906,13 @@ const AnalyticsDashboard = {
                     borderColor: this.COLORS.secondary,
                     backgroundColor: this.COLORS.secondaryFill,
                     fill: true,
-                    tension: 0.3,
+                    tension: 0.35,
                     pointRadius: 3,
+                    pointBackgroundColor: this.COLORS.secondary,
                     pointHoverRadius: 5,
                 }],
             },
-            options: {
-                responsive: true,
-                maintainAspectRatio: true,
-                aspectRatio: this._mobileRatio(1.2, 1),
-                onResize: (chart) => {
-                    chart.options.aspectRatio = this._mobileRatio(1.2, 1);
-                },
-                plugins: {
-                    legend: { display: false },
-                    tooltip: {
-                        callbacks: {
-                            label: ctx => ctx.parsed.y + ' spm',
-                        },
-                    },
-                },
-                scales: {
-                    x: { ticks: this._mobileTickOpts() },
-                    y: {
-                        title: { display: true, text: 'spm' },
-                    },
-                },
-            },
+            options: opts,
         });
     },
 
@@ -542,46 +921,26 @@ const AnalyticsDashboard = {
     /* ------------------------------------------------------------------ */
     bindGroupingControls() {
         const mapping = {
-            paceGrouping:    'renderPaceChart',
-            distanceGrouping:'renderDistanceChart',
-            hrGrouping:      'renderHRChart',
-            cadenceGrouping: 'renderCadenceChart',
+            paceGrouping:     'renderPaceChart',
+            distanceGrouping: 'renderDistanceChart',
+            hrGrouping:       'renderHRChart',
+            cadenceGrouping:  'renderCadenceChart',
         };
-
-        for (const [selectId, method] of Object.entries(mapping)) {
-            const el = document.getElementById(selectId);
-            if (el) {
-                el.addEventListener('change', () => {
-                    this[method](el.value);
-                });
-            }
+        for (const [id, method] of Object.entries(mapping)) {
+            const el = document.getElementById(id);
+            if (el) el.addEventListener('change', () => this[method](el.value));
         }
     },
 
     /* ------------------------------------------------------------------ */
-    /*  Helpers                                                            */
+    /*  Utility Helpers                                                    */
     /* ------------------------------------------------------------------ */
     destroyChart(name) {
-        if (this.charts[name]) {
-            this.charts[name].destroy();
-            delete this.charts[name];
-        }
+        if (this.charts[name]) { this.charts[name].destroy(); delete this.charts[name]; }
     },
-
-    hideChart(id) {
-        const el = document.getElementById(id);
-        if (el) el.style.display = 'none';
-    },
-
-    showChart(id) {
-        const el = document.getElementById(id);
-        if (el) el.style.display = '';
-    },
-
-    setText(id, value) {
-        const el = document.getElementById(id);
-        if (el) el.textContent = value;
-    },
+    hideChart(id) { const el = document.getElementById(id); if (el) el.style.display = 'none'; },
+    showChart(id) { const el = document.getElementById(id); if (el) el.style.display = ''; },
+    setText(id, value) { const el = document.getElementById(id); if (el) el.textContent = value; },
 
     formatPace(pace) {
         if (!pace || pace <= 0) return '--';
@@ -597,60 +956,39 @@ const AnalyticsDashboard = {
         try {
             const res = await fetch('/api/strava/status', { credentials: 'same-origin' });
             if (!res.ok) return false;
-            const data = await res.json();
-            return data.connected;
-        } catch (err) {
-            console.error('Failed to check Strava connection:', err);
-            return false;
-        }
+            return (await res.json()).connected;
+        } catch { return false; }
     },
 
     async syncStravaPeriod(daysBack) {
         try {
             const params = daysBack !== null ? `?force_days=${daysBack}` : '?full_sync=true';
-            const res = await fetch(`/api/strava/sync${params}`, {
-                method: 'POST',
-                credentials: 'same-origin'
-            });
-
-            if (!res.ok) {
-                console.warn('Strava sync failed:', await res.text());
-                return false;
-            }
-
+            const res = await fetch(`/api/strava/sync${params}`, { method: 'POST', credentials: 'same-origin' });
+            if (!res.ok) { console.warn('Strava sync failed:', await res.text()); return false; }
             const data = await res.json();
-            console.log(`Strava sync complete: ${data.synced} new, ${data.skipped} skipped`);
-            if (data.errors && data.errors.length > 0) {
-                console.warn('Strava sync mapping errors:', data.errors);
-            }
+            console.log(`Strava sync: ${data.synced} new, ${data.skipped} skipped`);
+            if (data.errors?.length) console.warn('Mapping errors:', data.errors);
             return true;
-        } catch (err) {
-            console.error('Strava sync error:', err);
-            return false;
-        }
+        } catch (err) { console.error('Strava sync error:', err); return false; }
     },
 
     async reloadRuns() {
         try {
             const res = await fetch('/api/analytics/runs', { credentials: 'same-origin' });
-            if (!res.ok) throw new Error('Failed to reload runs');
+            if (!res.ok) throw new Error('Failed to reload');
             const data = await res.json();
             this.allRuns = data.runs.filter(r => r.date);
-        } catch (err) {
-            console.error('Failed to reload runs:', err);
-        }
+        } catch (err) { console.error('Reload runs error:', err); }
     },
 
     showSyncIndicator() {
         const el = document.getElementById('stravaSyncIndicator');
         if (el) el.style.display = 'flex';
     },
-
     hideSyncIndicator() {
         const el = document.getElementById('stravaSyncIndicator');
         if (el) el.style.display = 'none';
     },
-
     showSyncError(message) {
         const el = document.getElementById('stravaSyncIndicator');
         if (!el) return;
@@ -659,12 +997,15 @@ const AnalyticsDashboard = {
         if (spinner) spinner.style.display = 'none';
         if (label) label.textContent = message;
         el.style.display = 'flex';
-        setTimeout(() => { el.style.display = 'none'; if (label) label.textContent = 'Syncing Strava\u2026'; if (spinner) spinner.style.display = ''; }, 4000);
+        setTimeout(() => {
+            el.style.display = 'none';
+            if (label) label.textContent = 'Syncing\u2026';
+            if (spinner) spinner.style.display = '';
+        }, 4000);
     },
 };
 
 // Expose on window so nav.html's sync handler can reload the dashboard
-// after a manual sync. `const` at the top level does NOT attach to window.
 window.AnalyticsDashboard = AnalyticsDashboard;
 
 document.addEventListener('DOMContentLoaded', () => AnalyticsDashboard.init());

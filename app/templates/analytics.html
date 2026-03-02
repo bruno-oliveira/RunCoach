@@ -1,32 +1,48 @@
 {% extends "base.html" %}
 
-{% block title %}RunCoach - Analytics{% endblock %}
+{% block title %}RunCoach — Analytics{% endblock %}
 
 {% block styles %}
-<link rel="stylesheet" href="/static/css/analytics.css?v=3">
+<link rel="stylesheet" href="/static/css/analytics.css?v=4">
 {% endblock %}
 
 {% block content %}
-<div class="container">
+<div class="analytics-page">
 
     {% if not user %}
     <!-- Auth guard -->
     <div class="analytics-auth-guard">
+        <div class="auth-guard-icon">&#x1F3C3;</div>
         <h2>Sign in to view your analytics</h2>
         <p>Analytics are based on your logged runs and require authentication.</p>
     </div>
     {% else %}
 
-    <!-- Page header — always visible when authenticated -->
-    <div class="header">
-        <h1>Analytics</h1>
-        <p>Your running trends at a glance</p>
+    <!-- Page Header -->
+    <div class="analytics-page-header">
+        <div class="analytics-page-header-left">
+            <h1 class="analytics-page-title">Performance</h1>
+            <p class="analytics-page-sub">Your running data at a glance</p>
+        </div>
+        <div class="analytics-page-header-right">
+            <select id="periodSelector" class="period-select">
+                <option value="30" selected>Last 30 days</option>
+                <option value="60">Last 60 days</option>
+                <option value="90">Last 90 days</option>
+                <option value="365">Last year</option>
+                <option value="all">All time</option>
+            </select>
+            <div id="stravaSyncIndicator" class="strava-sync-indicator" style="display:none;" aria-live="polite">
+                <span class="strava-sync-spinner"></span>
+                <span class="strava-sync-label">Syncing&hellip;</span>
+            </div>
+        </div>
     </div>
 
     <!-- Loading state -->
     <div id="analyticsLoading" class="analytics-loading">
         <div class="analytics-loading-spinner"></div>
-        <p style="color: var(--color-text-secondary);">Loading your run data&hellip;</p>
+        <p>Loading your run data&hellip;</p>
     </div>
 
     <!-- Empty state -->
@@ -39,72 +55,76 @@
     <!-- Dashboard -->
     <div id="analyticsDashboard" style="display:none;">
 
-        <!-- Period Selector -->
-        <div class="analytics-period-selector">
-            <label>Show data from:</label>
-            <select id="periodSelector" class="chart-grouping-select">
-                <option value="30" selected>Last 30 days</option>
-                <option value="60">Last 60 days</option>
-                <option value="90">Last 90 days</option>
-                <option value="365">Last year</option>
-                <option value="all">All time</option>
-            </select>
-            <div id="stravaSyncIndicator" class="strava-sync-indicator" style="display:none;" aria-live="polite">
-                <span class="strava-sync-spinner"></span>
-                <span class="strava-sync-label">Syncing Strava&hellip;</span>
+        <!-- ── Hero Stats ── -->
+        <div class="hero-stats-row">
+            <div class="hero-stat">
+                <div class="hero-stat-inner">
+                    <span class="hero-stat-value" id="statTotalKm">--</span>
+                    <span class="hero-stat-unit">km</span>
+                </div>
+                <span class="hero-stat-label">Total Distance</span>
+                <span class="hero-stat-trend" id="trendTotalKm"></span>
+            </div>
+            <div class="hero-stat hero-stat--accent">
+                <div class="hero-stat-inner">
+                    <span class="hero-stat-value" id="statAvgPace">--</span>
+                    <span class="hero-stat-unit">min/km</span>
+                </div>
+                <span class="hero-stat-label">Avg Pace</span>
+                <span class="hero-stat-trend" id="trendAvgPace"></span>
+            </div>
+            <div class="hero-stat">
+                <div class="hero-stat-inner">
+                    <span class="hero-stat-value" id="statTotalRuns">--</span>
+                    <span class="hero-stat-unit">runs</span>
+                </div>
+                <span class="hero-stat-label">Activities</span>
+                <span class="hero-stat-trend" id="trendTotalRuns"></span>
+            </div>
+            <div class="hero-stat">
+                <div class="hero-stat-inner">
+                    <span class="hero-stat-value" id="statTotalHours">--</span>
+                    <span class="hero-stat-unit">hrs</span>
+                </div>
+                <span class="hero-stat-label">Time on Feet</span>
+                <span class="hero-stat-trend" id="trendTotalHours"></span>
             </div>
         </div>
 
-        <!-- Summary Stats -->
-        <div class="analytics-stats-row stagger">
-            <div class="analytics-stat">
-                <span class="analytics-stat-value" id="statTotalRuns">--</span>
-                <span class="analytics-stat-label">Total Runs</span>
+        <!-- ── Activity Heatmap ── -->
+        <div class="analytics-card heatmap-card">
+            <div class="analytics-card-header">
+                <h3 class="analytics-card-title">Activity Heatmap</h3>
+                <div class="heatmap-legend">
+                    <span class="heatmap-legend-label">Less</span>
+                    <span class="heatmap-swatch heatmap-swatch--0"></span>
+                    <span class="heatmap-swatch heatmap-swatch--1"></span>
+                    <span class="heatmap-swatch heatmap-swatch--2"></span>
+                    <span class="heatmap-swatch heatmap-swatch--3"></span>
+                    <span class="heatmap-swatch heatmap-swatch--4"></span>
+                    <span class="heatmap-legend-label">More</span>
+                </div>
             </div>
-            <div class="analytics-stat">
-                <span class="analytics-stat-value" id="statTotalKm">--</span>
-                <span class="analytics-stat-label">Total km</span>
+            <div class="heatmap-scroll-wrap">
+                <div id="activityHeatmap" class="heatmap-grid" role="img" aria-label="Activity heatmap for the past year"></div>
+                <div class="heatmap-months" id="heatmapMonths"></div>
             </div>
-            <div class="analytics-stat">
-                <span class="analytics-stat-value" id="statAvgPace">--</span>
-                <span class="analytics-stat-label">Avg Pace</span>
-            </div>
-            <div class="analytics-stat">
-                <span class="analytics-stat-value" id="statAvgHR">--</span>
-                <span class="analytics-stat-label">Avg HR (bpm)</span>
-            </div>
-            <div class="analytics-stat">
-                <span class="analytics-stat-value" id="statLongest">--</span>
-                <span class="analytics-stat-label">Longest (km)</span>
-            </div>
-            <div class="analytics-stat">
-                <span class="analytics-stat-value" id="statTotalHours">--</span>
-                <span class="analytics-stat-label">Total Hours</span>
+            <div class="heatmap-days">
+                <span>Mon</span><span>Wed</span><span>Fri</span>
             </div>
         </div>
 
-        <!-- Charts -->
-        <div class="charts-section">
+        <!-- ── Insights Strip ── -->
+        <div id="analyticsInsights" class="insights-strip" style="display:none;"></div>
 
-            <!-- Pace Trends -->
-            <div class="chart-card" id="paceChartCard">
-                <div class="chart-card-header">
-                    <h3 class="chart-card-title">Pace Trends</h3>
-                    <select class="chart-grouping-select" id="paceGrouping">
-                        <option value="weekly">Weekly</option>
-                        <option value="monthly">Monthly</option>
-                    </select>
-                </div>
-                <div class="chart-canvas-wrap">
-                    <canvas id="paceChart"></canvas>
-                </div>
-            </div>
+        <!-- ── Charts Grid ── -->
+        <div class="charts-grid">
 
-            <!-- Distance Volume -->
-            <div class="chart-card" id="distanceChartCard">
-                <div class="chart-card-header">
-                    <h3 class="chart-card-title">Distance Volume</h3>
-                    <select class="chart-grouping-select" id="distanceGrouping">
+            <!-- Weekly Volume (wide) -->
+            <div class="analytics-card chart-wide" id="distanceChartCard">
+                <div class="analytics-card-header">
+                    <h3 class="analytics-card-title">Weekly Volume</h3>
+                    <select class="grouping-select" id="distanceGrouping">
                         <option value="weekly">Weekly</option>
                         <option value="monthly">Monthly</option>
                     </select>
@@ -114,11 +134,34 @@
                 </div>
             </div>
 
-            <!-- Heart Rate Trends -->
-            <div class="chart-card" id="hrChartCard">
-                <div class="chart-card-header">
-                    <h3 class="chart-card-title">Heart Rate Trends</h3>
-                    <select class="chart-grouping-select" id="hrGrouping">
+            <!-- Personal Records -->
+            <div class="analytics-card records-card" id="recordsCard">
+                <div class="analytics-card-header">
+                    <h3 class="analytics-card-title">Personal Bests</h3>
+                    <span class="records-badge">All time</span>
+                </div>
+                <div id="recordsList" class="records-list"></div>
+            </div>
+
+            <!-- Pace Trends -->
+            <div class="analytics-card" id="paceChartCard">
+                <div class="analytics-card-header">
+                    <h3 class="analytics-card-title">Pace Trend</h3>
+                    <select class="grouping-select" id="paceGrouping">
+                        <option value="weekly">Weekly</option>
+                        <option value="monthly">Monthly</option>
+                    </select>
+                </div>
+                <div class="chart-canvas-wrap">
+                    <canvas id="paceChart"></canvas>
+                </div>
+            </div>
+
+            <!-- Heart Rate -->
+            <div class="analytics-card" id="hrChartCard">
+                <div class="analytics-card-header">
+                    <h3 class="analytics-card-title">Heart Rate</h3>
+                    <select class="grouping-select" id="hrGrouping">
                         <option value="weekly">Weekly</option>
                         <option value="monthly">Monthly</option>
                     </select>
@@ -128,33 +171,52 @@
                 </div>
             </div>
 
-            <!-- Two-column row: Workout Types + Cadence -->
-            <div class="charts-row-2col">
-                <div class="chart-card" id="workoutTypeChartCard">
-                    <div class="chart-card-header">
-                        <h3 class="chart-card-title">Workout Types</h3>
-                    </div>
-                    <div class="chart-canvas-wrap">
-                        <canvas id="workoutTypeChart"></canvas>
-                    </div>
+            <!-- Effort Quality -->
+            <div class="analytics-card" id="effortChartCard">
+                <div class="analytics-card-header">
+                    <h3 class="analytics-card-title">Effort Quality</h3>
                 </div>
+                <div class="chart-canvas-wrap">
+                    <canvas id="effortChart"></canvas>
+                </div>
+            </div>
 
-                <div class="chart-card" id="cadenceChartCard">
-                    <div class="chart-card-header">
-                        <h3 class="chart-card-title">Cadence Trends</h3>
-                        <select class="chart-grouping-select" id="cadenceGrouping">
-                            <option value="weekly">Weekly</option>
-                            <option value="monthly">Monthly</option>
-                        </select>
-                    </div>
-                    <div class="chart-canvas-wrap">
-                        <canvas id="cadenceChart"></canvas>
-                    </div>
+            <!-- Workout Types -->
+            <div class="analytics-card" id="workoutTypeChartCard">
+                <div class="analytics-card-header">
+                    <h3 class="analytics-card-title">Workout Mix</h3>
+                </div>
+                <div class="chart-canvas-wrap">
+                    <canvas id="workoutTypeChart"></canvas>
+                </div>
+            </div>
+
+            <!-- Cadence (hidden if no data) -->
+            <div class="analytics-card" id="cadenceChartCard">
+                <div class="analytics-card-header">
+                    <h3 class="analytics-card-title">Cadence</h3>
+                    <select class="grouping-select" id="cadenceGrouping">
+                        <option value="weekly">Weekly</option>
+                        <option value="monthly">Monthly</option>
+                    </select>
+                </div>
+                <div class="chart-canvas-wrap">
+                    <canvas id="cadenceChart"></canvas>
                 </div>
             </div>
 
         </div>
-    </div>
+
+        <!-- ── Recent Runs ── -->
+        <div class="analytics-card recent-runs-card">
+            <div class="analytics-card-header">
+                <h3 class="analytics-card-title">Recent Runs</h3>
+                <span class="recent-runs-count" id="recentRunsCount"></span>
+            </div>
+            <div id="recentRunsList" class="recent-runs-list"></div>
+        </div>
+
+    </div><!-- /analyticsDashboard -->
 
     {% endif %}
 </div>
@@ -163,6 +225,6 @@
 {% block scripts %}
 {% if user %}
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-<script src="/static/js/analytics_dashboard.js?v=5" defer></script>
+<script src="/static/js/analytics_dashboard.js?v=6" defer></script>
 {% endif %}
 {% endblock %}

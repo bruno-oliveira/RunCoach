@@ -66,6 +66,8 @@ async def get_analytics_runs(
                     "elevation_gain_m": run.elevation_gain_m,
                     "workout_type": run.workout_type,
                     "perceived_effort": run.perceived_effort,
+                    "quality_label": run.quality_label,
+                    "effort_quality_score": run.effort_quality_score,
                 }
                 for run in runs
             ],
