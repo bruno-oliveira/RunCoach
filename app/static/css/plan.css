@@ -771,6 +771,17 @@
 
 .tips-list { list-style: none; }
 
+.strength-phase-label {
+    font-size: var(--text-xs);
+    font-weight: var(--weight-semibold);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--color-warning);
+    margin: var(--space-3) 0 var(--space-1) var(--space-2);
+}
+
+.strength-phase-list { margin-bottom: 0; }
+
 .tips-list li {
     padding: 4px 0 4px var(--space-6);
     position: relative;

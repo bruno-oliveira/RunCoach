@@ -78,13 +78,31 @@
         </div>
         
         {% if week.strength_training %}
+        {% set st = week.strength_training[0] %}
         <div class="strength-section">
-            <div class="strength-title">💪 Strength Training</div>
+            <div class="strength-title">💪 Strength Training ({{ st.duration }})</div>
+            {% if st.warm_up %}
+            <div class="strength-phase">Warm-up</div>
             <ul class="strength-list">
-                {% for exercise in week.strength_training[0].exercises %}
-                <li>{{ exercise }}</li>
+                {% for item in st.warm_up %}<li>{{ item }}</li>{% endfor %}
+            </ul>
+            {% endif %}
+            <div class="strength-phase">Main Workout</div>
+            <ul class="strength-list">
+                {% for ex in st.exercises %}
+                {% if ex is mapping %}
+                <li><strong>{{ ex.name }}</strong> — {{ ex.sets }}×{{ ex.reps }}</li>
+                {% else %}
+                <li>{{ ex }}</li>
+                {% endif %}
                 {% endfor %}
             </ul>
+            {% if st.cool_down %}
+            <div class="strength-phase">Cool-down</div>
+            <ul class="strength-list">
+                {% for item in st.cool_down %}<li>{{ item }}</li>{% endfor %}
+            </ul>
+            {% endif %}
         </div>
         {% endif %}
         

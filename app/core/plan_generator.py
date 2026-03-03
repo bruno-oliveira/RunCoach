@@ -858,18 +858,39 @@ class TrainingPlanGenerator:
             {
                 'type': 'core',
                 'duration': '20-30 min',
-                'exercises': ['Planks', 'Side planks', 'Dead bugs', 'Bird dogs']
+                'warm_up': ['5 min easy walk or light jog', 'Leg swings — 10 each side', 'Hip circles — 10 each side'],
+                'exercises': [
+                    {'name': 'Plank', 'sets': 3, 'reps': '30-45 sec hold'},
+                    {'name': 'Side Plank', 'sets': 2, 'reps': '20-30 sec each side'},
+                    {'name': 'Dead Bug', 'sets': 3, 'reps': '8 each side'},
+                    {'name': 'Bird Dog', 'sets': 3, 'reps': '10 each side'},
+                ],
+                'cool_down': ['Cat-cow stretch — 10 slow reps', "Child's pose — 30 sec", 'Hip flexor stretch — 30 sec each side'],
             },
             {
                 'type': 'lower_body',
                 'duration': '25-35 min',
-                'exercises': ['Bulgarian split squats', 'Glute bridges', 'Calf raises', 'Single-leg deadlifts']
+                'warm_up': ['5 min easy walk', 'Bodyweight squats — 10 reps', 'Ankle circles — 10 each side'],
+                'exercises': [
+                    {'name': 'Bulgarian Split Squat', 'sets': 3, 'reps': '8 each side'},
+                    {'name': 'Glute Bridge', 'sets': 3, 'reps': '15 reps'},
+                    {'name': 'Calf Raises', 'sets': 3, 'reps': '15 reps'},
+                    {'name': 'Single-leg Deadlift', 'sets': 2, 'reps': '8 each side'},
+                ],
+                'cool_down': ['Standing quad stretch — 30 sec each', 'Pigeon pose — 45 sec each side', 'Calf stretch — 30 sec each'],
             },
             {
                 'type': 'full_body',
                 'duration': '30-40 min',
-                'exercises': ['Push-ups', 'Rows', 'Lunges', 'Plank variations']
-            }
+                'warm_up': ['5 min easy walk', 'Arm circles — 10 each direction', 'Leg swings — 10 each side'],
+                'exercises': [
+                    {'name': 'Push-ups', 'sets': 3, 'reps': '8-12 reps'},
+                    {'name': 'Bodyweight Row (or Dumbbell Row)', 'sets': 3, 'reps': '10 each side'},
+                    {'name': 'Reverse Lunges', 'sets': 2, 'reps': '10 each side'},
+                    {'name': 'Plank Shoulder Taps', 'sets': 3, 'reps': '10 each side'},
+                ],
+                'cool_down': ['Chest stretch — 30 sec', 'Hamstring stretch — 30 sec each side', 'Downward dog — 30 sec'],
+            },
         ]
 
         session_index = week_number % len(strength_sessions)

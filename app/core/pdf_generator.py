@@ -372,9 +372,22 @@ class PDFGenerator:
         
         # Add strength training if available
         if week.get('strength_training'):
-            story.append(Paragraph("💪 Strength Training", self.normal_style))
-            for exercise in week['strength_training'][0].get('exercises', []):
-                story.append(Paragraph(f"• {exercise}", self.small_style))
+            st = week['strength_training'][0]
+            story.append(Paragraph(f"💪 Strength Training ({st.get('duration', '')})", self.normal_style))
+            if st.get('warm_up'):
+                story.append(Paragraph("Warm-up", self.small_style))
+                for item in st['warm_up']:
+                    story.append(Paragraph(f"  • {item}", self.small_style))
+            story.append(Paragraph("Main Workout", self.small_style))
+            for ex in st.get('exercises', []):
+                if isinstance(ex, dict):
+                    story.append(Paragraph(f"  • {ex['name']} — {ex['sets']}×{ex['reps']}", self.small_style))
+                else:
+                    story.append(Paragraph(f"  • {ex}", self.small_style))
+            if st.get('cool_down'):
+                story.append(Paragraph("Cool-down", self.small_style))
+                for item in st['cool_down']:
+                    story.append(Paragraph(f"  • {item}", self.small_style))
             story.append(Spacer(1, 0.3*cm))
         
         # Add training tips if available
