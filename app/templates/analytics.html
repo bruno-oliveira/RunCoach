@@ -31,7 +31,13 @@
                 <option value="90">Last 90 days</option>
                 <option value="365">Last year</option>
                 <option value="all">All time</option>
+                <option value="custom">Custom days…</option>
             </select>
+            <div id="customDaysWrap" class="custom-days-wrap" style="display:none;">
+                <input id="customDaysInput" type="number" class="custom-days-input"
+                       min="1" max="366" placeholder="Days" aria-label="Custom number of days">
+                <button id="customDaysApply" class="custom-days-apply" type="button">Go</button>
+            </div>
             <div id="stravaSyncIndicator" class="strava-sync-indicator" style="display:none;" aria-live="polite">
                 <span class="strava-sync-spinner"></span>
                 <span class="strava-sync-label">Syncing&hellip;</span>
@@ -171,23 +177,31 @@
                 </div>
             </div>
 
-            <!-- Effort Quality -->
-            <div class="analytics-card" id="effortChartCard">
+            <!-- Aerobic Efficiency -->
+            <div class="analytics-card" id="efficiencyChartCard">
                 <div class="analytics-card-header">
-                    <h3 class="analytics-card-title">Effort Quality</h3>
+                    <h3 class="analytics-card-title">Aerobic Efficiency</h3>
+                    <select class="grouping-select" id="efficiencyGrouping">
+                        <option value="weekly">Weekly</option>
+                        <option value="monthly">Monthly</option>
+                    </select>
                 </div>
                 <div class="chart-canvas-wrap">
-                    <canvas id="effortChart"></canvas>
+                    <canvas id="efficiencyChart"></canvas>
                 </div>
             </div>
 
-            <!-- Workout Types -->
-            <div class="analytics-card" id="workoutTypeChartCard">
+            <!-- Training Load -->
+            <div class="analytics-card" id="trainingLoadChartCard">
                 <div class="analytics-card-header">
-                    <h3 class="analytics-card-title">Workout Mix</h3>
+                    <h3 class="analytics-card-title">Training Load</h3>
+                    <select class="grouping-select" id="loadGrouping">
+                        <option value="weekly">Weekly</option>
+                        <option value="monthly">Monthly</option>
+                    </select>
                 </div>
                 <div class="chart-canvas-wrap">
-                    <canvas id="workoutTypeChart"></canvas>
+                    <canvas id="trainingLoadChart"></canvas>
                 </div>
             </div>
 
@@ -202,6 +216,16 @@
                 </div>
                 <div class="chart-canvas-wrap">
                     <canvas id="cadenceChart"></canvas>
+                </div>
+            </div>
+
+            <!-- Distance Distribution -->
+            <div class="analytics-card" id="distDistChartCard">
+                <div class="analytics-card-header">
+                    <h3 class="analytics-card-title">Run Length Distribution</h3>
+                </div>
+                <div class="chart-canvas-wrap">
+                    <canvas id="distDistChart"></canvas>
                 </div>
             </div>
 
@@ -225,6 +249,6 @@
 {% block scripts %}
 {% if user %}
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-<script src="/static/js/analytics_dashboard.js?v=6" defer></script>
+<script src="/static/js/analytics_dashboard.js?v=7" defer></script>
 {% endif %}
 {% endblock %}

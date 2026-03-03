@@ -69,6 +69,63 @@
     box-shadow: 0 0 0 3px var(--color-primary-subtle);
 }
 
+/* ── Custom Days Input ── */
+.custom-days-wrap {
+    display: flex;
+    align-items: center;
+    gap: var(--space-1);
+}
+
+.custom-days-input {
+    width: 72px;
+    padding: 8px 10px;
+    border: 1.5px solid var(--color-border);
+    border-radius: var(--radius-lg);
+    font-size: var(--text-sm);
+    font-family: var(--font-body);
+    font-weight: var(--weight-semibold);
+    color: var(--color-text);
+    background: var(--color-bg-elevated);
+    min-height: 38px;
+    text-align: center;
+    transition: border-color 150ms ease, box-shadow 150ms ease;
+}
+
+.custom-days-input:focus {
+    outline: none;
+    border-color: var(--color-primary);
+    box-shadow: 0 0 0 3px var(--color-primary-subtle);
+}
+
+/* hide browser spin arrows */
+.custom-days-input::-webkit-inner-spin-button,
+.custom-days-input::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+.custom-days-input[type=number] { -moz-appearance: textfield; }
+
+.custom-days-apply {
+    padding: 8px 12px;
+    border: 1.5px solid var(--color-primary);
+    border-radius: var(--radius-lg);
+    font-size: var(--text-sm);
+    font-family: var(--font-body);
+    font-weight: var(--weight-semibold);
+    color: var(--color-primary);
+    background: transparent;
+    cursor: pointer;
+    min-height: 38px;
+    transition: background 150ms ease, color 150ms ease;
+}
+
+.custom-days-apply:hover {
+    background: var(--color-primary);
+    color: #fff;
+}
+
+.custom-days-apply:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
 /* ── Strava Sync Indicator ── */
 .strava-sync-indicator {
     display: flex;

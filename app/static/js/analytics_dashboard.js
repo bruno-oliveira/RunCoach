@@ -88,8 +88,12 @@ const AnalyticsDashboard = {
     bindPeriodSelector() {
         const el = document.getElementById('periodSelector');
         if (!el) return;
-        el.addEventListener('change', async () => {
-            const days = el.value;
+
+        const customWrap  = document.getElementById('customDaysWrap');
+        const customInput = document.getElementById('customDaysInput');
+        const customApply = document.getElementById('customDaysApply');
+
+        const applyPeriod = async (days) => {
             this.filterByPeriod(days);
 
             const stravaConnected = await this.checkStravaConnection();
@@ -97,6 +101,7 @@ const AnalyticsDashboard = {
 
             this.showSyncIndicator();
             el.disabled = true;
+            if (customApply) customApply.disabled = true;
             try {
                 const daysBack = days !== 'all' ? parseInt(days) : null;
                 const syncOk = await this.syncStravaPeriod(daysBack);
@@ -106,8 +111,36 @@ const AnalyticsDashboard = {
             } finally {
                 this.hideSyncIndicator();
                 el.disabled = false;
+                if (customApply) customApply.disabled = false;
             }
+        };
+
+        el.addEventListener('change', async () => {
+            const days = el.value;
+            if (days === 'custom') {
+                if (customWrap) customWrap.style.display = 'flex';
+                if (customInput) customInput.focus();
+                return;
+            }
+            if (customWrap) customWrap.style.display = 'none';
+            await applyPeriod(days);
         });
+
+        if (customApply) {
+            customApply.addEventListener('click', async () => {
+                const raw = parseInt(customInput.value, 10);
+                if (!raw || raw < 1) { customInput.focus(); return; }
+                const days = Math.min(raw, 366).toString();
+                customInput.value = Math.min(raw, 366);
+                await applyPeriod(days);
+            });
+        }
+
+        if (customInput) {
+            customInput.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') customApply && customApply.click();
+            });
+        }
     },
 
     /* ------------------------------------------------------------------ */
@@ -120,7 +153,9 @@ const AnalyticsDashboard = {
         this.renderPersonalRecords();
         this.renderRecentRuns();
         this.renderCurrentCharts();
-        this.renderEffortQualityChart();
+        this.renderEfficiencyChart('weekly');
+        this.renderTrainingLoadChart('weekly');
+        this.renderDistanceDistChart();
     },
 
     /** Re-render charts respecting current grouping dropdown values. */
@@ -129,7 +164,9 @@ const AnalyticsDashboard = {
         this.renderPaceChart(g('paceGrouping'));
         this.renderDistanceChart(g('distanceGrouping'));
         this.renderHRChart(g('hrGrouping'));
-        this.renderWorkoutTypeChart();
+        this.renderEfficiencyChart(g('efficiencyGrouping'));
+        this.renderTrainingLoadChart(g('loadGrouping'));
+        this.renderDistanceDistChart();
         this.renderCadenceChart(g('cadenceGrouping'));
     },
 
@@ -521,65 +558,59 @@ const AnalyticsDashboard = {
     },
 
     /* ------------------------------------------------------------------ */
-    /*  Effort Quality Chart                                               */
+    /*  Aerobic Efficiency Chart                                           */
     /* ------------------------------------------------------------------ */
-    renderEffortQualityChart() {
-        const card = document.getElementById('effortChartCard');
-        const runsWithEffort = this.runs.filter(r => r.perceived_effort > 0 || r.quality_label);
+    renderEfficiencyChart(grouping) {
+        const data   = this.getGroupedData(grouping);
+        const labels = data.map(d => d.label);
+        const values = data.map(d => d.avgEfficiency);
+        if (!values.some(v => v != null)) { this.hideChart('efficiencyChartCard'); return; }
+        this.showChart('efficiencyChartCard');
+        const trend = this.computeTrendLine(values.map(v => v ?? null));
 
-        if (runsWithEffort.length === 0) {
-            if (card) card.style.display = 'none';
-            return;
-        }
-        if (card) card.style.display = '';
+        this.destroyChart('efficiencyChart');
+        const ctx = document.getElementById('efficiencyChart').getContext('2d');
+        const opts = this._baseChartOptions(2.2, {
+            ticks: { callback: v => v != null ? v.toFixed(2) : '', font: { size: 11 }, color: this.COLORS.tick },
+            grid: { color: this.COLORS.grid },
+        });
+        opts.plugins.tooltip = {
+            callbacks: {
+                label: c => c.dataset.label === 'Trend' ? null
+                    : `Efficiency: ${c.parsed.y != null ? c.parsed.y.toFixed(2) : '--'} (speed ÷ HR × 100)`,
+            },
+        };
 
-        const buckets = { 'Easy (1–3)': 0, 'Moderate (4–6)': 0, 'Hard (7–8)': 0, 'Max (9–10)': 0 };
-        for (const r of runsWithEffort) {
-            const e = r.perceived_effort;
-            if (e <= 3)  buckets['Easy (1–3)']++;
-            else if (e <= 6) buckets['Moderate (4–6)']++;
-            else if (e <= 8) buckets['Hard (7–8)']++;
-            else            buckets['Max (9–10)']++;
-        }
-
-        const labels = Object.keys(buckets).filter(k => buckets[k] > 0);
-        const values = labels.map(k => buckets[k]);
-
-        this.destroyChart('effortChart');
-        const ctx = document.getElementById('effortChart');
-        if (!ctx) return;
-
-        this.charts.effortChart = new Chart(ctx.getContext('2d'), {
-            type: 'doughnut',
+        this.charts.efficiencyChart = new Chart(ctx, {
+            type: 'line',
             data: {
                 labels,
-                datasets: [{
-                    data: values,
-                    backgroundColor: [
-                        'rgba(13, 148, 136, 0.75)',
-                        'rgba(29, 78, 216, 0.75)',
-                        'rgba(255, 98, 70, 0.75)',
-                        'rgba(220, 38, 38, 0.75)',
-                    ].slice(0, labels.length),
-                    borderWidth: 0,
-                }],
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: true,
-                aspectRatio: this._mobileRatio(1.4, 1.2),
-                plugins: {
-                    legend: {
-                        position: 'bottom',
-                        labels: { padding: 14, usePointStyle: true, pointStyle: 'circle', font: { size: 11 } },
+                datasets: [
+                    {
+                        label: 'Aerobic Efficiency',
+                        data: values,
+                        borderColor: this.COLORS.secondary,
+                        backgroundColor: this.COLORS.secondaryFill,
+                        fill: true,
+                        tension: 0.35,
+                        pointRadius: 3,
+                        pointBackgroundColor: this.COLORS.secondary,
+                        pointHoverRadius: 5,
+                        spanGaps: true,
                     },
-                    tooltip: {
-                        callbacks: {
-                            label: ctx => ` ${ctx.label}: ${ctx.parsed} runs`,
-                        },
+                    {
+                        label: 'Trend',
+                        data: trend,
+                        borderColor: this.COLORS.accent,
+                        borderWidth: 1.5,
+                        borderDash: [4, 3],
+                        pointRadius: 0,
+                        fill: false,
+                        tension: 0,
                     },
-                },
+                ],
             },
+            options: opts,
         });
     },
 
@@ -625,7 +656,23 @@ const AnalyticsDashboard = {
             const avgHR     = hrRuns.length ? Math.round(hrRuns.reduce((s, r) => s + r.avg_heart_rate, 0) / hrRuns.length) : null;
             const cadRuns   = group.filter(r => r.avg_cadence > 0);
             const avgCadence= cadRuns.length ? Math.round(cadRuns.reduce((s, r) => s + r.avg_cadence, 0) / cadRuns.length) : null;
-            return { label: labelFn(key), totalKm, avgPace, avgHR, avgCadence, runCount: group.length };
+
+            const effortRuns = group.filter(r => r.perceived_effort > 0);
+            const avgEffort  = effortRuns.length ? effortRuns.reduce((s, r) => s + r.perceived_effort, 0) / effortRuns.length : null;
+
+            const effRuns = group.filter(r => r.avg_pace_min_km > 0 && r.avg_heart_rate > 0);
+            const avgEfficiency = effRuns.length
+                ? effRuns.reduce((s, r) => s + (60 / r.avg_pace_min_km) / r.avg_heart_rate * 100, 0) / effRuns.length
+                : null;
+
+            const load = group.reduce((s, r) => {
+                const km = r.distance_km || 0;
+                if (r.perceived_effort > 0) return s + km * r.perceived_effort;
+                if (r.avg_heart_rate > 0)   return s + km * (r.avg_heart_rate / 150);
+                return s + km;
+            }, 0);
+
+            return { label: labelFn(key), totalKm, avgPace, avgHR, avgCadence, runCount: group.length, avgEffort, avgEfficiency, load };
         });
     },
 
@@ -834,44 +881,126 @@ const AnalyticsDashboard = {
         });
     },
 
-    renderWorkoutTypeChart() {
-        const counts = {};
-        for (const r of this.runs) {
-            const type = r.workout_type || 'unknown';
-            counts[type] = (counts[type] || 0) + 1;
-        }
-        const labels = Object.keys(counts);
-        if (labels.length === 0) { this.hideChart('workoutTypeChartCard'); return; }
-        this.showChart('workoutTypeChartCard');
+    /* ------------------------------------------------------------------ */
+    /*  Training Load Chart                                                */
+    /* ------------------------------------------------------------------ */
+    renderTrainingLoadChart(grouping) {
+        const data = this.getGroupedData(grouping);
+        if (data.length === 0) { this.hideChart('trainingLoadChartCard'); return; }
+        this.showChart('trainingLoadChartCard');
 
-        const palette = [
-            'rgba(29,78,216,0.75)',
-            'rgba(255,98,70,0.75)',
-            'rgba(13,148,136,0.75)',
-            'rgba(245,158,11,0.75)',
-            'rgba(124,58,237,0.75)',
-            'rgba(236,72,153,0.75)',
-        ];
+        const labels = data.map(d => d.label);
+        const loads  = data.map(d => parseFloat(d.load.toFixed(1)));
 
-        this.destroyChart('workoutTypeChart');
-        const ctx = document.getElementById('workoutTypeChart').getContext('2d');
-        this.charts.workoutTypeChart = new Chart(ctx, {
-            type: 'doughnut',
+        // 4-period rolling average
+        const rolling = loads.map((_, i) => {
+            const window = loads.slice(Math.max(0, i - 3), i + 1).filter(v => v != null);
+            return window.length ? parseFloat((window.reduce((a, b) => a + b, 0) / window.length).toFixed(1)) : null;
+        });
+
+        this.destroyChart('trainingLoadChart');
+        const ctx = document.getElementById('trainingLoadChart').getContext('2d');
+        const opts = this._baseChartOptions(2.2, {
+            ticks: { font: { size: 11 }, color: this.COLORS.tick },
+            grid: { color: this.COLORS.grid },
+        });
+        opts.plugins.tooltip = {
+            callbacks: {
+                label: c => c.dataset.label === 'Rolling Avg'
+                    ? `4-period avg: ${c.parsed.y}`
+                    : `Load: ${c.parsed.y}`,
+            },
+        };
+
+        this.charts.trainingLoadChart = new Chart(ctx, {
+            type: 'bar',
             data: {
-                labels: labels.map(l => l.charAt(0).toUpperCase() + l.slice(1)),
-                datasets: [{ data: Object.values(counts), backgroundColor: palette.slice(0, labels.length), borderWidth: 0 }],
+                labels,
+                datasets: [
+                    {
+                        label: 'Training Load',
+                        data: loads,
+                        backgroundColor: this.COLORS.primaryFill,
+                        borderColor: this.COLORS.primary,
+                        borderWidth: 1.5,
+                        borderRadius: 4,
+                    },
+                    {
+                        label: 'Rolling Avg',
+                        data: rolling,
+                        type: 'line',
+                        borderColor: this.COLORS.accent,
+                        borderWidth: 2,
+                        pointRadius: 0,
+                        fill: false,
+                        tension: 0.35,
+                        spanGaps: true,
+                    },
+                ],
+            },
+            options: opts,
+        });
+    },
+
+    /* ------------------------------------------------------------------ */
+    /*  Distance Distribution Chart                                        */
+    /* ------------------------------------------------------------------ */
+    renderDistanceDistChart() {
+        const buckets = [
+            { label: '< 5 km',   min: 0,  max: 5  },
+            { label: '5–10 km',  min: 5,  max: 10 },
+            { label: '10–15 km', min: 10, max: 15 },
+            { label: '15–20 km', min: 15, max: 20 },
+            { label: '20–25 km', min: 20, max: 25 },
+            { label: '25+ km',   min: 25, max: Infinity },
+        ];
+        const counts = buckets.map(b => this.runs.filter(r => {
+            const d = r.distance_km || 0;
+            return d >= b.min && d < b.max;
+        }).length);
+
+        if (!counts.some(c => c > 0)) { this.hideChart('distDistChartCard'); return; }
+        this.showChart('distDistChartCard');
+
+        this.destroyChart('distDistChart');
+        const ctx = document.getElementById('distDistChart').getContext('2d');
+
+        this.charts.distDistChart = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: buckets.map(b => b.label),
+                datasets: [{
+                    label: 'Runs',
+                    data: counts,
+                    backgroundColor: buckets.map((_, i) => [
+                        'rgba(13,148,136,0.7)',
+                        'rgba(29,78,216,0.7)',
+                        'rgba(124,58,237,0.7)',
+                        'rgba(245,158,11,0.7)',
+                        'rgba(255,98,70,0.7)',
+                        'rgba(220,38,38,0.7)',
+                    ][i]),
+                    borderWidth: 0,
+                    borderRadius: 4,
+                }],
             },
             options: {
                 responsive: true,
                 maintainAspectRatio: true,
-                aspectRatio: this._mobileRatio(1.4, 1.2),
+                aspectRatio: this._mobileRatio(2.2),
+                indexAxis: 'y',
                 plugins: {
-                    legend: {
-                        position: 'bottom',
-                        labels: { padding: 14, usePointStyle: true, pointStyle: 'circle', font: { size: 11 } },
+                    legend: { display: false },
+                    tooltip: { callbacks: { label: c => ` ${c.parsed.x} run${c.parsed.x !== 1 ? 's' : ''}` } },
+                },
+                scales: {
+                    x: {
+                        ticks: { stepSize: 1, font: { size: 11 }, color: this.COLORS.tick },
+                        grid: { color: this.COLORS.grid },
                     },
-                    tooltip: {
-                        callbacks: { label: c => ` ${c.label}: ${c.parsed} runs` },
+                    y: {
+                        ticks: { font: { size: 11 }, color: this.COLORS.tick },
+                        grid: { display: false },
                     },
                 },
             },
@@ -921,10 +1050,12 @@ const AnalyticsDashboard = {
     /* ------------------------------------------------------------------ */
     bindGroupingControls() {
         const mapping = {
-            paceGrouping:     'renderPaceChart',
-            distanceGrouping: 'renderDistanceChart',
-            hrGrouping:       'renderHRChart',
-            cadenceGrouping:  'renderCadenceChart',
+            paceGrouping:       'renderPaceChart',
+            distanceGrouping:   'renderDistanceChart',
+            hrGrouping:         'renderHRChart',
+            cadenceGrouping:    'renderCadenceChart',
+            efficiencyGrouping: 'renderEfficiencyChart',
+            loadGrouping:       'renderTrainingLoadChart',
         };
         for (const [id, method] of Object.entries(mapping)) {
             const el = document.getElementById(id);
