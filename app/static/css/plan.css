@@ -201,16 +201,24 @@
 .strava-adapted-badge {
     display: inline-flex;
     align-items: center;
-    gap: 4px;
+    gap: 5px;
     font-size: var(--text-xs, 11px);
     font-weight: 700;
-    padding: 3px 10px;
+    padding: 4px 12px;
     border-radius: 20px;
-    background: rgba(255, 255, 255, 0.25);
+    background: rgba(255, 255, 255, 0.18);
     color: white;
-    border: 1px solid rgba(255, 255, 255, 0.5);
-    letter-spacing: 0.02em;
+    border: 1.5px solid rgba(255, 255, 255, 0.55);
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
     white-space: nowrap;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.12);
+}
+
+.strava-adapted-badge::before {
+    content: "✓";
+    font-size: 10px;
+    opacity: 0.9;
 }
 
 /* ---- Progress Charts ---- */

@@ -542,6 +542,12 @@ window.resetStravaAdaptation = async function(planId) {
         });
 
         if (response.ok) {
+            // Immediately hide the adapted badge and reset button before reload
+            document.querySelectorAll('.strava-adapted-badge').forEach(el => el.remove());
+            if (btn) btn.remove();
+            // Update adapt button label back to "Adapt"
+            const adaptBtn = document.getElementById('adapt-strava-btn');
+            if (adaptBtn) adaptBtn.textContent = 'Adapt Remaining Weeks from Strava Data';
             showStravaAdaptMessage('Plan restored to original distances. Reloading…', false);
             setTimeout(() => location.reload(), 2000);
         } else {
