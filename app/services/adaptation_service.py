@@ -8,6 +8,7 @@ from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from app.models import DailyWorkout, RunLog, TrainingPlan, WeeklyPlan, User
+from app.utils import format_pace_bare
 
 logger = logging.getLogger(__name__)
 
@@ -479,7 +480,6 @@ class AdaptationService:
 
                     # Build the adaptation note
                     if metrics["current_pace"]:
-                        from app.utils import format_pace_bare
                         pace_str = f"{format_pace_bare(metrics['current_pace'])} min/km"
                         adapt_note = (
                             f"(Adapted: {round(base_distance, 1)}->{new_distance}km, "
