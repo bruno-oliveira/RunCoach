@@ -441,6 +441,17 @@ class AdaptationService:
         # Regex to strip any previously appended adaptation note from workout.notes
         _adapted_note_re = re.compile(r"\s*\(Adapted:[^)]*\)")
 
+        # Load plan_data JSON so we can keep it in sync with DB changes
+        import json as _json
+        plan_data = _json.loads(training_plan.plan_data)
+        # Build lookup: (week_number, day_of_week) -> workout dict in plan_data
+        _pd_workout: dict[tuple[int, int], dict] = {}
+        _pd_week: dict[int, dict] = {}
+        for _wk in plan_data:
+            _pd_week[_wk["week"]] = _wk
+            for _wo in _wk.get("daily_workouts", []):
+                _pd_workout[(_wk["week"], _wo["day"])] = _wo
+
         changes = []
         for week in future_weeks:
             workouts = (
@@ -466,20 +477,28 @@ class AdaptationService:
 
                     workout.distance_km = new_distance
 
-                    # Strip any prior adaptation note then append the updated one
-                    clean_notes = _adapted_note_re.sub("", workout.notes or "").strip()
+                    # Build the adaptation note
                     if metrics["current_pace"]:
                         pace_str = f"{metrics['current_pace']:.2f} min/km"
-                        workout.notes = (
-                            f"{clean_notes} "
+                        adapt_note = (
                             f"(Adapted: {round(base_distance, 1)}->{new_distance}km, "
                             f"target pace ~{pace_str})"
-                        ).strip()
+                        )
                     else:
-                        workout.notes = (
-                            f"{clean_notes} "
-                            f"(Adapted: {round(base_distance, 1)}->{new_distance}km)"
+                        adapt_note = f"(Adapted: {round(base_distance, 1)}->{new_distance}km)"
+
+                    # Strip any prior adaptation note then append the updated one (DB)
+                    clean_notes = _adapted_note_re.sub("", workout.notes or "").strip()
+                    workout.notes = f"{clean_notes} {adapt_note}".strip() if clean_notes else adapt_note
+
+                    # Keep plan_data JSON in sync
+                    pd_wo = _pd_workout.get((week.week_number, workout.day_of_week))
+                    if pd_wo is not None:
+                        pd_wo["distance"] = new_distance
+                        pd_clean = _adapted_note_re.sub(
+                            "", pd_wo.get("notes", pd_wo.get("description", ""))
                         ).strip()
+                        pd_wo["notes"] = f"{pd_clean} {adapt_note}".strip() if pd_clean else adapt_note
 
                     week_changes.append({
                         "day": workout.day_of_week,
@@ -491,6 +510,9 @@ class AdaptationService:
             if week_changes:
                 new_total = sum(w.distance_km for w in workouts if w.distance_km)
                 week.total_km = round(new_total, 1)
+                # Sync total_km into plan_data
+                if week.week_number in _pd_week:
+                    _pd_week[week.week_number]["total_km"] = round(new_total, 1)
                 changes.append({
                     "week": week.week_number,
                     "workouts_adjusted": week_changes,
@@ -515,6 +537,9 @@ class AdaptationService:
         if hasattr(training_plan, "strava_adapted_multiplier"):
             training_plan.strava_adapted_multiplier = round(new_multiplier, 4)
 
+        # Persist updated plan_data JSON
+        training_plan.plan_data = _json.dumps(plan_data)
+
         db.commit()
 
         first_adapted = changes[0]["week"]
@@ -530,4 +555,89 @@ class AdaptationService:
             "fitness": metrics,
             "fitness_multiplier": round(new_multiplier, 2),
             "changes": changes,
+        }
+
+    def reset_strava_adaptation(
+        self,
+        plan_id: str,
+        user_id: str,
+        db: Session,
+    ) -> Dict[str, any]:
+        """Reverse a previous Strava adaptation, restoring original planned distances.
+
+        Extracts the pre-adaptation distance from the note embedded in each
+        adapted workout (format: ``(Adapted: X->Ykm...)``), restores it, and
+        clears the stored multiplier.
+        """
+        import re
+        import json as _json
+
+        training_plan = db.query(TrainingPlan).filter(
+            TrainingPlan.id == plan_id,
+            TrainingPlan.user_id == user_id,
+        ).first()
+
+        if not training_plan:
+            return {"reset": False, "reason": "Plan not found"}
+
+        if not training_plan.strava_adapted_multiplier:
+            return {"reset": False, "reason": "Plan has not been Strava-adapted"}
+
+        adapted_re = re.compile(r"\s*\(Adapted:\s*([\d.]+)->[\d.]+km[^)]*\)")
+
+        plan_data = _json.loads(training_plan.plan_data)
+        # Build lookup: (week_number, day_of_week) -> (week_dict, workout_dict)
+        pd_workout: dict[tuple[int, int], dict] = {}
+        pd_week: dict[int, dict] = {}
+        for wk in plan_data:
+            pd_week[wk["week"]] = wk
+            for wo in wk.get("daily_workouts", []):
+                pd_workout[(wk["week"], wo["day"])] = wo
+
+        all_weeks = (
+            db.query(WeeklyPlan)
+            .filter(WeeklyPlan.training_plan_id == plan_id)
+            .all()
+        )
+
+        reset_count = 0
+        for week in all_weeks:
+            workouts = (
+                db.query(DailyWorkout)
+                .filter(DailyWorkout.weekly_plan_id == week.id)
+                .all()
+            )
+            week_changed = False
+            for workout in workouts:
+                notes = workout.notes or ""
+                m = adapted_re.search(notes)
+                if m:
+                    original_distance = float(m.group(1))
+                    workout.distance_km = original_distance
+                    workout.notes = adapted_re.sub("", notes).strip() or None
+                    reset_count += 1
+                    week_changed = True
+
+                    # Sync plan_data
+                    pd_wo = pd_workout.get((week.week_number, workout.day_of_week))
+                    if pd_wo is not None:
+                        pd_wo["distance"] = original_distance
+                        pd_notes = adapted_re.sub(
+                            "", pd_wo.get("notes", pd_wo.get("description", ""))
+                        ).strip()
+                        pd_wo["notes"] = pd_notes
+
+            if week_changed:
+                new_total = round(sum(w.distance_km for w in workouts if w.distance_km), 1)
+                week.total_km = new_total
+                if week.week_number in pd_week:
+                    pd_week[week.week_number]["total_km"] = new_total
+
+        training_plan.strava_adapted_multiplier = None
+        training_plan.plan_data = _json.dumps(plan_data)
+        db.commit()
+
+        return {
+            "reset": True,
+            "reason": f"Removed Strava adaptation from {reset_count} workout(s). Distances restored to original plan.",
         }

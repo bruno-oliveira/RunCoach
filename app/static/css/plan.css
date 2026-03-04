@@ -198,6 +198,21 @@
     transform: translateY(-1px);
 }
 
+.strava-adapted-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: var(--text-xs, 11px);
+    font-weight: 700;
+    padding: 3px 10px;
+    border-radius: 20px;
+    background: rgba(255, 255, 255, 0.25);
+    color: white;
+    border: 1px solid rgba(255, 255, 255, 0.5);
+    letter-spacing: 0.02em;
+    white-space: nowrap;
+}
+
 /* ---- Progress Charts ---- */
 .progress-charts-grid {
     display: grid;

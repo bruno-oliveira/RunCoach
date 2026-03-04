@@ -26,6 +26,9 @@
                 {% else %}
                 <span class="plan-badge badge-distance">Distance</span>
                 {% endif %}
+                {% if plan.strava_adapted_multiplier %}
+                <span class="plan-badge badge-strava-adapted">Strava Adjusted</span>
+                {% endif %}
             </div>
             <div class="plan-details">
                 <div class="plan-detail-row">

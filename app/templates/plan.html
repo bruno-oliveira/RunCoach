@@ -109,7 +109,12 @@
 
     {% if strava_fitness and strava_fitness.fitness_score > 0 %}
     <div class="plan-insights plan-insights-strava" style="margin-bottom: var(--space-6);">
-        <h3>Strava Fitness Summary</h3>
+        <div style="display:flex;align-items:center;gap:var(--space-3);flex-wrap:wrap;margin-bottom:var(--space-4);">
+            <h3 style="margin:0;">Strava Fitness Summary</h3>
+            {% if training_plan.strava_adapted_multiplier %}
+            <span class="strava-adapted-badge">Strava Adjusted &times;{{ "%.2f"|format(training_plan.strava_adapted_multiplier) }}</span>
+            {% endif %}
+        </div>
         <div class="insight-grid">
             <div class="insight-item">
                 <div class="insight-content">
@@ -146,9 +151,16 @@
                 </div>
             </div>
         </div>
-        <button id="adapt-strava-btn" onclick="adaptFromStrava(window.APP_CTX.plan_id)" class="plan-insights-strava-btn">
-            Adapt Remaining Weeks from Strava Data
-        </button>
+        <div style="display:flex;gap:var(--space-3);flex-wrap:wrap;margin-top:var(--space-4);">
+            <button id="adapt-strava-btn" onclick="adaptFromStrava(window.APP_CTX.plan_id)" class="plan-insights-strava-btn" style="margin-top:0;">
+                {% if training_plan.strava_adapted_multiplier %}Re-adapt{% else %}Adapt{% endif %} Remaining Weeks from Strava Data
+            </button>
+            {% if training_plan.strava_adapted_multiplier %}
+            <button id="reset-strava-btn" onclick="resetStravaAdaptation(window.APP_CTX.plan_id)" class="plan-insights-strava-btn" style="margin-top:0;background:rgba(0,0,0,0.25);border-color:rgba(255,255,255,0.5);color:white;">
+                Reset to Original Plan
+            </button>
+            {% endif %}
+        </div>
     </div>
     {% endif %}
 

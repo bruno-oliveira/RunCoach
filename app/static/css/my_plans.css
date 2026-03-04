@@ -167,6 +167,11 @@
     color: var(--color-primary);
 }
 
+.badge-strava-adapted {
+    background: rgba(252, 76, 2, 0.12);
+    color: #c43a00;
+}
+
 /* ---- Delete button ---- */
 .btn-danger {
     background: rgba(239, 68, 68, 0.1);

@@ -418,7 +418,11 @@ function showStravaAdaptMessage(message, isError) {
             'white-space:pre-wrap',
         ].join(';');
         const btn = document.getElementById('adapt-strava-btn');
-        if (btn) btn.parentNode.insertBefore(banner, btn.nextSibling);
+        if (btn) {
+            // Insert at the end of the strava card so it sits below the buttons
+            const stravaCard = btn.closest('.plan-insights-strava') || btn.parentNode;
+            stravaCard.appendChild(banner);
+        }
     }
     banner.style.background = isError
         ? 'rgba(0,0,0,0.25)'
@@ -517,6 +521,37 @@ window.adaptFromStrava = async function(planId) {
         console.error('Error adapting from Strava:', error);
         showStravaAdaptMessage('Network error: ' + error.message, true);
         restoreBtn();
+    }
+};
+
+// Reset Strava adaptation — restore original planned distances
+window.resetStravaAdaptation = async function(planId) {
+    const confirmed = window.confirm(
+        'This will remove the Strava adjustment and restore all workouts to their original planned distances.\n\nContinue?'
+    );
+    if (!confirmed) return;
+
+    const btn = document.getElementById('reset-strava-btn');
+    if (btn) { btn.disabled = true; btn.textContent = 'Resetting…'; }
+
+    try {
+        const response = await fetch(`/api/plan/${planId}/adapt-from-strava`, {
+            method: 'DELETE',
+            headers: authHeaders(),
+            credentials: 'same-origin',
+        });
+
+        if (response.ok) {
+            showStravaAdaptMessage('Plan restored to original distances. Reloading…', false);
+            setTimeout(() => location.reload(), 2000);
+        } else {
+            const data = await response.json().catch(() => ({}));
+            showStravaAdaptMessage(data.detail || 'Reset failed. Please try again.', true);
+            if (btn) { btn.disabled = false; btn.textContent = 'Reset to Original Plan'; }
+        }
+    } catch (err) {
+        showStravaAdaptMessage('Network error: ' + err.message, true);
+        if (btn) { btn.disabled = false; btn.textContent = 'Reset to Original Plan'; }
     }
 };
 

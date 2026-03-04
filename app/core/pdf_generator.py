@@ -218,6 +218,20 @@ class PDFGenerator:
 
         created_date = training_plan.created_at.strftime('%B %d, %Y')
         story.append(Paragraph(f"Generated on {created_date}", self.normal_style))
+
+        strava_multiplier = getattr(training_plan, 'strava_adapted_multiplier', None)
+        if strava_multiplier:
+            adapted_style = ParagraphStyle(
+                'StravaAdapted',
+                parent=self.normal_style,
+                textColor=colors.HexColor('#fc4c02'),
+                fontName='Helvetica-Bold',
+            )
+            story.append(Paragraph(
+                f"★ Strava Adjusted (multiplier ×{strava_multiplier:.2f}) — distances reflect your current fitness",
+                adapted_style,
+            ))
+
         story.append(Spacer(1, 2*cm))
 
         # Add key stats (30.0 = Trail Running)

@@ -438,6 +438,22 @@ async def adapt_plan_from_strava(
     )
 
 
+@router.delete("/api/plan/{plan_id}/adapt-from-strava")
+async def reset_strava_adaptation(
+    plan_id: str,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Reset a Strava adaptation, restoring original planned distances."""
+    get_plan_or_404(plan_id, db, current_user, require_user_match=True)
+
+    adaptation_service = AdaptationService()
+    result = adaptation_service.reset_strava_adaptation(plan_id, current_user.id, db)
+    if not result.get("reset"):
+        raise HTTPException(status_code=400, detail=result.get("reason", "Reset failed"))
+    return result
+
+
 # ---------------------------------------------------------------------------
 # Start date
 # ---------------------------------------------------------------------------
