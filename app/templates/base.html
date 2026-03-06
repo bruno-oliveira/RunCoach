@@ -2,9 +2,35 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!-- viewport-fit=cover lets us use safe-area-inset-* for notch/home-bar -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <meta http-equiv="Cross-Origin-Opener-Policy" content="same-origin-allow-popups">
     <title>{% block title %}RunCoach{% endblock %}</title>
+
+    <!-- PWA: Web App Manifest -->
+    <link rel="manifest" href="/static/manifest.json">
+
+    <!-- PWA: Theme color (matches --color-primary; dark-mode variant handled by JS) -->
+    <meta name="theme-color" content="#1D4ED8" media="(prefers-color-scheme: light)">
+    <meta name="theme-color" content="#4F83F0" media="(prefers-color-scheme: dark)">
+
+    <!-- PWA: iOS / Safari home-screen meta -->
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="RunCoach">
+    <meta name="mobile-web-app-capable" content="yes">
+
+    <!-- PWA: Apple touch icons (iOS requires PNG) -->
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+
+    <!-- PWA: Standard favicon / icon -->
+    <link rel="icon" type="image/svg+xml" href="/static/icons/icon.svg">
+    <link rel="icon" type="image/png"     sizes="192x192" href="/static/icons/icon-192.png">
+
+    <!-- SEO / social -->
+    <meta name="description" content="Personalized running training plans with nutrition guidance">
+    <meta name="application-name" content="RunCoach">
 
     <!-- Typography: Bricolage Grotesque (display) + DM Sans (body) + JetBrains Mono (data) -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -24,6 +50,8 @@
     <!-- Base styles -->
     <link rel="stylesheet" href="/static/css/base.css">
     <link rel="stylesheet" href="/static/css/components.css">
+    <!-- PWA styles (safe-area, bottom nav, install/update banners) -->
+    <link rel="stylesheet" href="/static/css/pwa.css">
 
     <!-- Google Sign-In script (loaded on all pages for nav login) -->
     <script src="https://accounts.google.com/gsi/client" async defer></script>
@@ -58,10 +86,118 @@
     </footer>
     {% endblock %}
 
+    <!-- =====================================================================
+         PWA: Bottom Navigation Bar (mobile + standalone)
+         Shows: Home always; My Plans + Analytics + Account when logged in.
+         ===================================================================== -->
+    <nav class="bottom-nav" id="bottomNav" aria-label="Main navigation">
+        <div class="bottom-nav-items">
+
+            <!-- Home -->
+            <a href="/" class="bottom-nav-item {% if current_page == 'home' %}is-active{% endif %}" aria-label="Home">
+                <svg class="bottom-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+                    <polyline points="9 22 9 12 15 12 15 22"/>
+                </svg>
+                <span class="bottom-nav-label">Home</span>
+            </a>
+
+            {% if user %}
+            <!-- My Plans -->
+            <a href="/my-plans" class="bottom-nav-item {% if current_page == 'my-plans' %}is-active{% endif %}" aria-label="My Plans">
+                <svg class="bottom-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                    <polyline points="14 2 14 8 20 8"/>
+                    <line x1="16" y1="13" x2="8" y2="13"/>
+                    <line x1="16" y1="17" x2="8" y2="17"/>
+                </svg>
+                <span class="bottom-nav-label">My Plans</span>
+            </a>
+
+            <!-- Analytics -->
+            <a href="/analytics" class="bottom-nav-item {% if current_page == 'analytics' %}is-active{% endif %}" aria-label="Analytics">
+                <svg class="bottom-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <line x1="18" y1="20" x2="18" y2="10"/>
+                    <line x1="12" y1="20" x2="12" y2="4"/>
+                    <line x1="6"  y1="20" x2="6"  y2="14"/>
+                </svg>
+                <span class="bottom-nav-label">Analytics</span>
+            </a>
+
+            <!-- Account / sign out -->
+            <button class="bottom-nav-item" onclick="logout()" aria-label="Sign out">
+                {% if user.picture %}
+                <img src="{{ user.picture }}" alt="{{ user.name }}" class="bottom-nav-avatar">
+                {% else %}
+                <div class="bottom-nav-avatar-placeholder" aria-hidden="true">{{ (user.name or user.email)[0] | upper }}</div>
+                {% endif %}
+                <span class="bottom-nav-label">Account</span>
+            </button>
+
+            {% else %}
+            <!-- Sign In -->
+            <button class="bottom-nav-item" onclick="triggerGoogleSignIn()" aria-label="Sign in with Google">
+                <svg class="bottom-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+                    <circle cx="12" cy="7" r="4"/>
+                </svg>
+                <span class="bottom-nav-label">Sign In</span>
+            </button>
+            {% endif %}
+
+        </div>
+    </nav>
+
+    <!-- =====================================================================
+         PWA: Install Banner
+         ===================================================================== -->
+    <div class="pwa-install-banner" id="pwa-install-banner" role="complementary" aria-label="Install RunCoach app">
+        <div class="pwa-install-icon">
+            <img src="/static/icons/icon-192.png" alt="RunCoach icon">
+        </div>
+        <div class="pwa-install-content">
+            <p class="pwa-install-title">Add to Home Screen</p>
+            <p class="pwa-install-desc">Install RunCoach for a faster, native-like experience.</p>
+            <!-- iOS hint shown only on Safari (no beforeinstallprompt) -->
+            <p class="pwa-ios-hint">
+                Tap <strong>Share</strong>
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;" aria-hidden="true"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg>
+                then &ldquo;Add to Home Screen&rdquo;.
+            </p>
+        </div>
+        <div class="pwa-install-actions">
+            <button class="pwa-install-btn" onclick="pwaInstall()">Install</button>
+        </div>
+        <button class="pwa-dismiss-btn" onclick="pwaInstallDismiss()" aria-label="Dismiss install prompt">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+    </div>
+
+    <!-- =====================================================================
+         PWA: Update Banner
+         ===================================================================== -->
+    <div class="pwa-update-banner" id="pwa-update-banner" role="status" aria-live="polite">
+        <span class="pwa-update-text">Update available</span>
+        <button class="pwa-update-btn" data-pwa="refresh">Refresh</button>
+        <button class="pwa-update-dismiss" data-pwa="dismiss-update" aria-label="Dismiss update notification">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+    </div>
+
+    <!-- =====================================================================
+         PWA: Offline Toast
+         ===================================================================== -->
+    <div class="pwa-offline-toast" id="pwa-offline-toast" role="status" aria-live="assertive">
+        <span class="pwa-offline-dot" aria-hidden="true"></span>
+        You're offline
+    </div>
+
     <!-- Base scripts -->
     <script src="/static/js/modal.js" defer></script>
     <script src="/static/js/api.js" defer></script>
     <script src="/static/js/auth.js" defer></script>
+    <!-- PWA: service worker + install prompt + offline detection -->
+    <script src="/static/js/pwa.js" defer></script>
 
     <!-- Page-specific scripts -->
     {% block scripts %}{% endblock %}
