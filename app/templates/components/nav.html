@@ -8,7 +8,7 @@
         </a>
         {% endif %}
 
-        <button class="nav-toggle" onclick="toggleMobileNav()" aria-label="Toggle menu" aria-expanded="false">
+        <button class="nav-toggle" id="navToggle" onclick="toggleMobileNav()" aria-label="Toggle menu" aria-expanded="false">
             <svg width="22" height="16" viewBox="0 0 22 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
                 <line x1="1" y1="1" x2="21" y2="1" class="nav-toggle-top"/>
                 <line x1="1" y1="8" x2="21" y2="8" class="nav-toggle-mid"/>
@@ -119,6 +119,9 @@
         </div>
     </div>
 </nav>
+
+<!-- Mobile backdrop: dims content behind the open nav sheet -->
+<div class="nav-backdrop" id="navBackdrop" aria-hidden="true" onclick="toggleMobileNav()"></div>
 
 <style>
 /* ---- Navbar ---- */
@@ -738,37 +741,88 @@ function triggerGoogleSignIn() {
     }
 }
 
-function toggleMobileNav() {
-    const navMenu = document.getElementById('navMenu');
-    const toggle = document.querySelector('.nav-toggle');
-    const isOpen = navMenu.classList.toggle('active');
-    toggle.setAttribute('aria-expanded', isOpen);
-    document.body.style.overflow = isOpen ? 'hidden' : '';
+// ---- Mobile nav toggle ----
+function toggleMobileNav(forceClose) {
+    const navMenu  = document.getElementById('navMenu');
+    const toggle   = document.getElementById('navToggle');
+    const backdrop = document.getElementById('navBackdrop');
+    const nav      = document.getElementById('mainNav');
+
+    const willOpen = forceClose === true ? false : !navMenu.classList.contains('active');
+
+    navMenu.classList.toggle('active', willOpen);
+    toggle.classList.toggle('is-open', willOpen);
+    toggle.setAttribute('aria-expanded', willOpen);
+    document.body.style.overflow = willOpen ? 'hidden' : '';
+
+    if (backdrop) backdrop.classList.toggle('is-active', willOpen);
+
+    // When the menu opens, always make the nav visible again
+    if (willOpen) nav.classList.remove('nav-is-hidden');
 }
 
-// Close mobile nav on resize to desktop
+// Close on resize to desktop
 window.addEventListener('resize', () => {
     if (window.innerWidth > 768) {
         const navMenu = document.getElementById('navMenu');
-        const toggle = document.querySelector('.nav-toggle');
-        if (navMenu.classList.contains('active')) {
-            navMenu.classList.remove('active');
-            toggle.setAttribute('aria-expanded', 'false');
-            document.body.style.overflow = '';
-        }
+        if (navMenu.classList.contains('active')) toggleMobileNav(true);
     }
 });
 
-// Scroll shadow
-let lastScroll = 0;
-window.addEventListener('scroll', () => {
-    const nav = document.getElementById('mainNav');
-    if (window.scrollY > 8) {
-        nav.classList.add('scrolled');
-    } else {
-        nav.classList.remove('scrolled');
+// Close on Escape key
+document.addEventListener('keydown', e => {
+    if (e.key === 'Escape') {
+        const navMenu = document.getElementById('navMenu');
+        if (navMenu.classList.contains('active')) toggleMobileNav(true);
     }
-}, { passive: true });
+});
+
+// ---- Scroll: hide nav on scroll-down, reveal on scroll-up ----
+// Like native apps: reclaims screen space while reading.
+(function () {
+    const HIDE_THRESHOLD   = 80;   // px scrolled before we start hiding
+    const DELTA_HIDE       = 12;   // px scrolled down before hiding
+    const DELTA_SHOW       = 8;    // px scrolled up before showing
+
+    let lastY     = window.scrollY;
+    let delta     = 0;
+    let ticking   = false;
+
+    window.addEventListener('scroll', () => {
+        if (ticking) return;
+        ticking = true;
+        requestAnimationFrame(() => {
+            const nav     = document.getElementById('mainNav');
+            const navMenu = document.getElementById('navMenu');
+            const currentY = window.scrollY;
+            const diff     = currentY - lastY;
+
+            // Never hide while the mobile menu is open
+            if (!navMenu.classList.contains('active')) {
+                if (currentY <= HIDE_THRESHOLD) {
+                    // Always visible near the top
+                    nav.classList.remove('nav-is-hidden');
+                    delta = 0;
+                } else {
+                    delta += diff;
+                    if (delta > DELTA_HIDE) {
+                        nav.classList.add('nav-is-hidden');
+                        delta = 0;
+                    } else if (delta < -DELTA_SHOW) {
+                        nav.classList.remove('nav-is-hidden');
+                        delta = 0;
+                    }
+                }
+            }
+
+            // Scroll shadow (existing behaviour)
+            nav.classList.toggle('scrolled', currentY > 8);
+
+            lastY   = currentY;
+            ticking = false;
+        });
+    }, { passive: true });
+})();
 
 async function connectStrava() {
     try {

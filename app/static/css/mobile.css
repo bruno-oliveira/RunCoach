@@ -1,0 +1,186 @@
+/* =============================================================================
+   RunCoach — Mobile Native Feel
+   Pure CSS + small JS hooks in nav.html. No platform detection, no APIs.
+   ============================================================================= */
+
+/* ---------------------------------------------------------------------------
+   1. Disable hover effects on touch devices
+      Prevents "sticky" hover states after a tap — a dead giveaway of websites.
+   --------------------------------------------------------------------------- */
+@media (hover: none) and (pointer: coarse) {
+  .btn-primary:hover:not(:disabled),
+  .btn-accent:hover:not(:disabled),
+  .btn-secondary:hover:not(:disabled) {
+    transform: none;
+    box-shadow: var(--shadow-sm);
+  }
+
+  .btn-primary:hover:not(:disabled) { background: var(--color-primary); }
+  .btn-accent:hover:not(:disabled)  { background: var(--color-accent); }
+
+  .stat-card:hover {
+    transform: none;
+    box-shadow: none;
+    border-color: var(--color-border-subtle);
+  }
+
+  .nav-link:hover {
+    background: transparent;
+    color: var(--color-text-secondary);
+  }
+}
+
+/* ---------------------------------------------------------------------------
+   2. Crisp press / tap feedback
+      Replaces hover-based feedback with immediate `:active` press response.
+   --------------------------------------------------------------------------- */
+.btn:active:not(:disabled) {
+  transform: scale(0.965) !important;
+  transition-duration: 80ms !important;
+}
+
+@media (hover: none) and (pointer: coarse) {
+  .nav-link:active {
+    background: var(--color-surface) !important;
+    color: var(--color-text) !important;
+  }
+
+  .strava-chip:active:not(:disabled) {
+    background: var(--color-surface);
+    border-color: var(--color-primary);
+    color: var(--color-primary);
+  }
+}
+
+/* ---------------------------------------------------------------------------
+   3. Remove text selection on all interactive UI elements
+   --------------------------------------------------------------------------- */
+.btn,
+.nav-link,
+.nav-toggle,
+.nav-brand,
+.nav-theme-toggle,
+.strava-chip,
+.strava-primary-btn,
+[role="button"] {
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+/* ---------------------------------------------------------------------------
+   4. Scroll-to-hide navbar  (JS toggles .nav-is-hidden)
+      Like every native app: nav shrinks away when scrolling content,
+      snaps back when you scroll up.
+   --------------------------------------------------------------------------- */
+.navbar {
+  will-change: transform;
+  /* transition already set in nav.html; just ensure it covers transform */
+  transition:
+    transform    var(--duration-base) var(--ease-out),
+    box-shadow   var(--duration-base) var(--ease-out),
+    background   var(--duration-base) var(--ease-out);
+}
+
+.navbar.nav-is-hidden {
+  transform: translateY(-100%);
+  box-shadow: none;
+}
+
+/* ---------------------------------------------------------------------------
+   5. Mobile nav backdrop  (JS toggles .is-active on #navBackdrop)
+      Dimmed blurred overlay behind the open hamburger sheet.
+   --------------------------------------------------------------------------- */
+.nav-backdrop {
+  position: fixed;
+  inset: 0;
+  background: var(--color-bg-overlay);
+  z-index: calc(var(--z-sticky) - 1);
+  opacity: 0;
+  pointer-events: none;
+  -webkit-backdrop-filter: blur(2px);
+  backdrop-filter: blur(2px);
+  transition: opacity var(--duration-base) var(--ease-out);
+}
+
+.nav-backdrop.is-active {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+/* ---------------------------------------------------------------------------
+   6. Hamburger → ✕ animation  (JS toggles .is-open on .nav-toggle)
+   --------------------------------------------------------------------------- */
+.nav-toggle .nav-toggle-top,
+.nav-toggle .nav-toggle-mid,
+.nav-toggle .nav-toggle-bot {
+  transform-box: fill-box;
+  transform-origin: center;
+  /* transition already on svg line via nav.html styles */
+}
+
+.nav-toggle.is-open .nav-toggle-top {
+  transform: translateY(7px) rotate(45deg);
+}
+
+.nav-toggle.is-open .nav-toggle-mid {
+  transform: scaleX(0);
+  opacity: 0;
+}
+
+.nav-toggle.is-open .nav-toggle-bot {
+  transform: translateY(-7px) rotate(-45deg);
+}
+
+/* ---------------------------------------------------------------------------
+   7. Hide the footer on mobile — footers are a web pattern, not an app pattern
+   --------------------------------------------------------------------------- */
+@media (max-width: 768px) {
+  .site-footer {
+    display: none;
+  }
+}
+
+/* ---------------------------------------------------------------------------
+   8. Hide nav brand text on very small phones — keeps the bar uncluttered
+   --------------------------------------------------------------------------- */
+@media (max-width: 359px) {
+  .nav-brand-text {
+    display: none;
+  }
+}
+
+/* ---------------------------------------------------------------------------
+   9. Mobile nav sheet polish
+      Rounded bottom corners + extra bottom padding so content doesn't
+      sit hard against the home indicator bar.
+   --------------------------------------------------------------------------- */
+@media (max-width: 768px) {
+  .nav-menu {
+    /* Soft bottom corners give a "sheet" feel */
+    border-radius: 0 0 var(--radius-xl) var(--radius-xl);
+    /* Respect home indicator safe area */
+    padding-bottom: max(var(--space-8), env(safe-area-inset-bottom, 0px));
+  }
+
+  /* Slightly larger nav links for comfortable thumb reach */
+  .nav-links .nav-link {
+    min-height: 52px;
+  }
+
+  /* Sign-out button: full width, clearly destructive on mobile */
+  .nav-signout {
+    min-height: 44px !important;
+    font-size: var(--text-sm) !important;
+    padding: 10px 16px !important;
+  }
+}
+
+/* ---------------------------------------------------------------------------
+   10. Inputs: lock font-size to 16px to prevent iOS auto-zoom on focus
+       (already in base.css for common types; this catches edge cases)
+   --------------------------------------------------------------------------- */
+@media (max-width: 768px) {
+  input, textarea, select {
+    font-size: max(16px, 1em) !important;
+  }
+}

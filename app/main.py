@@ -4,11 +4,10 @@ FastAPI application entry point.
 """
 
 import logging
-from pathlib import Path
 from typing import Optional
 
 from fastapi import Depends, FastAPI, Request
-from fastapi.responses import FileResponse, HTMLResponse, RedirectResponse
+from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
@@ -209,42 +208,6 @@ async def home(
     })
 
 
-@app.get("/sw.js", tags=["pwa"])
-async def service_worker() -> FileResponse:
-    """Serve the service worker from the root so its scope covers the whole origin."""
-    return FileResponse(
-        "app/static/sw.js",
-        media_type="application/javascript",
-        headers={
-            # SW must not be cached by the browser (it manages its own caching)
-            "Cache-Control": "no-cache, no-store, must-revalidate",
-            # Allow SW to control the entire origin
-            "Service-Worker-Allowed": "/",
-        },
-    )
-
-
-@app.get("/offline", response_class=HTMLResponse, tags=["pwa"])
-async def offline_page(
-    request: Request,
-    current_user: Optional[User] = Depends(get_optional_user),
-) -> HTMLResponse:
-    """Offline fallback page cached by the service worker."""
-    return templates.TemplateResponse("offline.html", {
-        "request": request,
-        "user": current_user,
-        "google_client_id": settings.google_client_id or "",
-        "current_page": "",
-    })
-
-
-@app.get("/apple-touch-icon.png", tags=["pwa"])
-@app.get("/apple-touch-icon-precomposed.png", tags=["pwa"])
-async def apple_touch_icon() -> RedirectResponse:
-    """Redirect iOS apple-touch-icon requests to the generated static PNG."""
-    return RedirectResponse(url="/static/icons/apple-touch-icon.png", status_code=301)
-
-
 @app.on_event("startup")
 async def startup_event() -> None:
     """Application startup tasks."""
@@ -255,13 +218,6 @@ async def startup_event() -> None:
         logger.info("Google Client ID is properly configured")
     else:
         logger.warning("Google Client ID is not properly configured - Google Sign-In will not work")
-
-    # Generate PWA icon PNGs if they don't exist yet (stdlib only, no extra deps)
-    try:
-        from app.pwa_icons import generate_pwa_icons
-        generate_pwa_icons("app/static")
-    except Exception as exc:
-        logger.warning("PWA icon generation failed: %s", exc)
 
     # Validate secret key in production
     if not settings.debug:
