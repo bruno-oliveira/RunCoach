@@ -8,26 +8,28 @@ class TestPlanGeneratorV2:
     def generator(self):
         return TrainingPlanGenerator()
     
-    def test_phase_calculation_8_weeks(self, generator):
-        phases = generator._calculate_phases(8)
-        assert phases['base'] == 3
-        assert phases['build'] == 2
-        assert phases['peak'] == 1
-        assert phases['taper'] == 2
-    
-    def test_phase_calculation_17_weeks(self, generator):
-        phases = generator._calculate_phases(17)
-        assert phases['base'] == 8
-        assert phases['build'] == 4
-        assert phases['peak'] == 2
+    def test_phase_calculation_8_weeks_10k(self, generator):
+        """10K 8-week plan: short taper, balanced base/build."""
+        phases = generator._calculate_phases(8, target_distance=10.0)
+        assert sum(phases.values()) == 8
+        assert phases['taper'] == 1
+        assert phases['base'] >= 2
+        assert phases['build'] >= 2
+
+    def test_phase_calculation_17_weeks_marathon(self, generator):
+        """Marathon 17-week plan: 3-week taper, longer build."""
+        phases = generator._calculate_phases(17, target_distance=42.2)
+        assert sum(phases.values()) == 17
         assert phases['taper'] == 3
-    
-    def test_phase_calculation_10_weeks(self, generator):
-        phases = generator._calculate_phases(10)
-        assert phases['base'] == 4
-        assert phases['build'] == 3
-        assert phases['peak'] == 1
+        assert phases['build'] >= phases['base']  # marathon emphasises build
+
+    def test_phase_calculation_10_weeks_half(self, generator):
+        """Half marathon 10-week plan: 2-week taper."""
+        phases = generator._calculate_phases(10, target_distance=21.1)
+        assert sum(phases.values()) == 10
         assert phases['taper'] == 2
+        assert phases['base'] >= 2
+        assert phases['build'] >= 2
     
     def test_get_phase_base(self, generator):
         phases = {'base': 4, 'build': 3, 'peak': 1, 'taper': 2}
@@ -74,7 +76,7 @@ class TestPlanGeneratorV2:
     def test_no_quality_workouts_in_base(self, generator):
         """Base phase should have no quality workouts"""
         plan = generator.generate_plan(current_km=10, target_distance=10, weeks=12)
-        phases = generator._calculate_phases(12)
+        phases = generator._calculate_phases(12, target_distance=10)
         
         for week in plan:
             if week['phase'] == 'base':

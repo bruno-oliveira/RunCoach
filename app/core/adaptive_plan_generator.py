@@ -201,62 +201,90 @@ class AdaptivePlanGenerator:
         user_id: str,
         db: Session,
     ) -> List[Dict[str, Any]]:
-        """Apply adaptive adjustments to the base plan based on user metrics."""
+        """Apply targeted adaptive adjustments based on specific fitness dimensions.
 
+        Instead of a single fitness multiplier, adjustments are applied per-dimension:
+        - Volume: scaled by how close avg_weekly_km is to plan expectations
+        - Intensity: quality workouts annotated based on improvement trend
+        - HR zones: relative to estimated max HR (not absolute thresholds)
+        """
         adaptive_plan = []
 
+        # Estimate max HR from data (highest recorded) or use age-based fallback
+        est_max_hr = self._estimate_max_hr(user_id, db, metrics)
+
         for week in base_plan:
-            week_number = week["week"]
             adjusted_week = week.copy()
 
-            # Adjust weekly mileage based on fitness score
-            fitness_multiplier = 0.8 + (metrics["fitness_score"] / 100) * 0.4  # 0.8-1.2x range
-            adjusted_week["total_km"] = round(week["total_km"] * fitness_multiplier, 1)
+            # ── Volume adjustment (capped at ±15% of base plan) ───────────
+            if metrics["avg_weekly_km"] > 0:
+                plan_week_km = week["total_km"]
+                # If runner is already exceeding the plan's expectation, nudge up slightly
+                # If below, keep the plan conservative (don't reduce further)
+                ratio = metrics["avg_weekly_km"] / max(plan_week_km, 1)
+                if ratio > 1.15:
+                    volume_factor = 1.10  # runner is well ahead — modest bump
+                elif ratio > 0.9:
+                    volume_factor = 1.0   # on track — no change
+                else:
+                    volume_factor = 0.95  # behind — slight ease, let them build
+                adjusted_week["total_km"] = round(plan_week_km * volume_factor, 1)
 
-            # Adjust workout intensities based on improvement trend
-            if metrics["improvement_trend"] > 5:  # Rapidly improving
-                # Add more quality work
+            # ── Intensity annotations (deterministic, not random) ─────────
+            if metrics["improvement_trend"] > 5:
+                # Rapidly improving: annotate long runs with progressive finish
                 for workout in adjusted_week["daily_workouts"]:
-                    if workout["type"] in ["easy", "long"]:
-                        if random.random() > 0.5:
-                            workout["description"] = workout.get("description", "") + " (Progressive effort - aim for slight pace improvement)"
-            elif metrics["improvement_trend"] < -2:  # Declining
-                # Reduce intensity for recovery
+                    if workout["type"] == "long":
+                        workout["description"] = workout.get("description", "") + (
+                            " (You're improving fast — try a progressive finish: "
+                            "last 20% at a comfortably hard effort)"
+                        )
+            elif metrics["improvement_trend"] < -2:
+                # Declining: ease quality sessions
                 for workout in adjusted_week["daily_workouts"]:
                     if workout["type"] in ["interval", "tempo"]:
-                        workout["description"] = workout.get("description", "") + " (Focus on form over speed - recovery emphasis)"
+                        workout["description"] = workout.get("description", "") + (
+                            " (Recent trend suggests fatigue — prioritise form over speed, "
+                            "cut intervals short if RPE exceeds 8)"
+                        )
 
-            # Customize workout types based on preferences
-            if metrics["preferred_workout_types"]:
-                preferred = metrics["preferred_workout_types"][0]
-                for workout in adjusted_week["daily_workouts"]:
-                    if workout["type"] == "easy" and preferred != "easy":
-                        if random.random() > 0.7:  # 30% chance to customize
-                            desc = workout.get("description", "")
-                            workout["description"] = desc.replace("easy", preferred.lower()) + f" (Your preferred {preferred} style)"
-
-            # Add personalized tips based on heart rate data
-            if metrics["avg_heart_rate"]:
-                if metrics["avg_heart_rate"] > 160:
+            # ── HR-relative tips (using % of max HR, not absolute values) ─
+            if metrics["avg_heart_rate"] and est_max_hr:
+                hr_pct = metrics["avg_heart_rate"] / est_max_hr
+                if hr_pct > 0.82:
                     adjusted_week["training_tips"].append(
-                        f"Your avg HR ({metrics['avg_heart_rate']}) suggests high effort - "
-                        "ensure adequate recovery between hard sessions"
+                        f"Your avg HR ({metrics['avg_heart_rate']} bpm, ~{hr_pct:.0%} of est. max) "
+                        "suggests most runs are too hard. Aim for easy runs below 75% of max HR."
                     )
-                elif metrics["avg_heart_rate"] < 140:
+                elif hr_pct < 0.68:
                     adjusted_week["training_tips"].append(
-                        f"Your avg HR ({metrics['avg_heart_rate']}) indicates good aerobic base - "
-                        "consider adding more quality sessions"
+                        f"Your avg HR ({metrics['avg_heart_rate']} bpm, ~{hr_pct:.0%} of est. max) "
+                        "shows a strong aerobic base. You can handle more quality sessions."
                     )
 
-            # Add personalized tips based on improvement trend
+            # ── Improvement trend tip ─────────────────────────────────────
             if metrics["improvement_trend"] > 0:
                 adjusted_week["training_tips"].append(
-                    f"You're improving {metrics['improvement_trend']:.1f}% - keep up the great work!"
+                    f"You're improving {metrics['improvement_trend']:.1f}% — keep up the great work!"
                 )
 
             adaptive_plan.append(adjusted_week)
 
         return adaptive_plan
+
+    def _estimate_max_hr(self, user_id: str, db: Session, metrics: Dict[str, Any]) -> Optional[int]:
+        """Estimate max HR from the user's highest recorded HR, or fall back to 200."""
+        from sqlalchemy import func
+
+        result = db.query(func.max(RunLog.max_heart_rate)).filter(
+            RunLog.user_id == user_id,
+            RunLog.max_heart_rate.isnot(None),
+        ).scalar()
+
+        if result and result > 140:
+            return int(result)
+        # Fallback: conservative estimate (avoids age-based assumptions)
+        return 200
 
     def analyze_performance_gaps(self, user_id: str, target_distance: float, db: Session) -> Dict[str, Any]:
         """

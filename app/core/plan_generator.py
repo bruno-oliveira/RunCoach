@@ -282,38 +282,57 @@ class TrainingPlanGenerator:
         else:
             return 'Marathon'
 
-    def _calculate_phases(self, weeks: int) -> Dict[str, int]:
+    def _calculate_phases(self, weeks: int, target_distance: float = 10.0) -> Dict[str, int]:
         """
-        Calculate proportional phase distribution based on total weeks
+        Calculate distance-aware phase distribution.
+
+        Marathon/half marathon plans get longer builds and tapers.
+        5K plans get more sharpening (peak) and shorter tapers.
 
         Args:
             weeks: Total training plan duration
+            target_distance: Race distance in km (affects phase proportions)
 
         Returns:
             Dict with phase durations: {'base': int, 'build': int, 'peak': int, 'taper': int}
         """
-        base_min, build_min, peak_min, taper_min = 3, 3, 1, 2
+        category = self._get_distance_category(target_distance)
 
-        if weeks <= 10:
-            base = round(weeks * 0.4)
-            build = round(weeks * 0.3)
-            peak = 1
-            taper = weeks - base - build - peak
-        elif weeks <= 14:
-            base = round(weeks * 0.45)
-            build = round(weeks * 0.3)
-            peak = 1
-            taper = weeks - base - build - peak
-        elif weeks <= 18:
-            base = round(weeks * 0.5)
-            build = round(weeks * 0.25)
-            peak = round(weeks * 0.1)
-            taper = weeks - base - build - peak
-        else:
-            base = round(weeks * 0.5)
-            build = round(weeks * 0.25)
-            peak = round(weeks * 0.1)
-            taper = weeks - base - build - peak
+        # Distance-specific ideal proportions: (base%, build%, peak%, taper_weeks)
+        # Taper is prescribed as a fixed week count (not a %), then remaining weeks
+        # are split among base/build/peak proportionally.
+        phase_profiles = {
+            '5K':       {'base_pct': 0.35, 'build_pct': 0.30, 'peak_pct': 0.20, 'taper': 1},
+            '10K':      {'base_pct': 0.35, 'build_pct': 0.30, 'peak_pct': 0.15, 'taper': 1},
+            'Half':     {'base_pct': 0.35, 'build_pct': 0.35, 'peak_pct': 0.10, 'taper': 2},
+            'Trail':    {'base_pct': 0.35, 'build_pct': 0.35, 'peak_pct': 0.10, 'taper': 2},
+            'Marathon': {'base_pct': 0.30, 'build_pct': 0.35, 'peak_pct': 0.05, 'taper': 3},
+        }
+
+        profile = phase_profiles[category]
+
+        # Taper is prescribed by distance (marathon = 3 weeks, 5K = 1 week)
+        taper = min(profile['taper'], max(1, weeks // 4))
+
+        # Distribute remaining weeks among base/build/peak
+        remaining = weeks - taper
+        total_pct = profile['base_pct'] + profile['build_pct'] + profile['peak_pct']
+        base = max(2, round(remaining * profile['base_pct'] / total_pct))
+        build = max(2, round(remaining * profile['build_pct'] / total_pct))
+        peak = max(1, remaining - base - build)
+
+        # Safety: if rounding pushed us over, trim from the largest non-taper phase
+        while base + build + peak + taper > weeks:
+            if base >= build and base >= peak:
+                base -= 1
+            elif build >= peak:
+                build -= 1
+            else:
+                peak -= 1
+
+        # Safety: if rounding left us short, add to build
+        while base + build + peak + taper < weeks:
+            build += 1
 
         return {'base': base, 'build': build, 'peak': peak, 'taper': taper}
 
@@ -587,40 +606,24 @@ class TrainingPlanGenerator:
 
         workout_types = self._schedule_workout_types(distribution.copy(), phase, week_number, is_recovery_week)
 
-        quality_total = sum(quality_distances.values())
-        
-        quality_total = sum(quality_distances.values())
-        
-        # Ensure no quality workout exceeds 85% of long run distance (training principle)
-        # This must be done BEFORE calculating easy total to ensure proper distribution
-        max_quality_distance = long_run_distance * 0.85
+        # Cap quality workouts: 85% of long run AND absolute physiological caps
+        max_quality_pct = long_run_distance * 0.85
+        quality_caps = {'tempo': 12.0, 'interval': 10.0, 'hill': 8.0}
         for key in quality_distances:
-            if quality_distances[key] > max_quality_distance:
-                quality_distances[key] = round(max_quality_distance, 1)
-        
+            cap = min(max_quality_pct, quality_caps.get(key, max_quality_pct))
+            if quality_distances[key] > cap:
+                quality_distances[key] = round(cap, 1)
+
         quality_total = sum(quality_distances.values())
         easy_total = remaining_km - quality_total
 
         easy_runs = sum(1 for wt in workout_types if wt == 'easy')
 
+        # Cap individual easy runs at 95% of long run distance
         max_easy_distance = long_run_distance * 0.95
         total_max_easy = max_easy_distance * easy_runs
+        # Accept the shortfall instead of redistributing to quality workouts
         actual_easy_total = min(easy_total, total_max_easy)
-
-        if actual_easy_total < easy_total and quality_total > 0:
-            lost_distance = easy_total - actual_easy_total
-            scaling_factor = (quality_total + lost_distance) / quality_total if quality_total > 0 else 1
-
-            for key in quality_distances:
-                quality_distances[key] = round(quality_distances[key] * scaling_factor, 1)
-            
-            # FINAL SAFETY CHECK: Ensure no quality workout exceeds long run distance
-            # This is a critical training principle - long run must always be longest
-            for key in quality_distances:
-                if quality_distances[key] > max_quality_distance:
-                    quality_distances[key] = round(max_quality_distance, 1)
-            quality_total = sum(quality_distances.values())
-            actual_easy_total = total_km - long_run_distance - quality_total
 
         easy_distances = [round(actual_easy_total / max(easy_runs, 1), 1) for _ in range(easy_runs)]
         
@@ -780,7 +783,7 @@ class TrainingPlanGenerator:
         Calculate long run distance with proper progression and phase-specific percentage.
         Long run percentage increases with race distance for appropriate endurance building.
         """
-        phases = self._calculate_phases(weeks)
+        phases = self._calculate_phases(weeks, target_distance)
         long_run_ratio = self._calculate_long_run_ratio(
             phase, week_number, phases, target_distance, is_recovery_week, weeks
         )
@@ -1293,125 +1296,105 @@ class TrainingPlanGenerator:
         
         return ideal_peak
     
-    def _is_recovery_week(self, week_number: int, phase: str) -> bool:
+    def _is_recovery_week(self, week_number: int, phase: str, phases: Optional[Dict[str, int]] = None) -> bool:
         """
-        Determine if a week is a recovery week
-        
-        Every 4th week in base and build phases is a recovery week.
+        Determine if a week is a recovery week.
+
+        Every 4th week in base and build phases is a recovery week,
+        but only if the phase is long enough (>=4 weeks) to justify it.
         No recovery weeks in peak or taper phases.
         """
         if phase in ['peak', 'taper']:
             return False
+        if phases:
+            phase_length = phases.get(phase, 0)
+            if phase_length < 4:
+                return False
         return week_number % 4 == 0
     
     def _calculate_weekly_progression(self, current_km: float, target_distance: float, weeks: int, max_runs: int = 4, vdot: Optional[float] = None) -> List[float]:
         """
-        Calculate weekly mileage with phase-aware progression
-        
+        Calculate weekly mileage with phase-aware progression and 10% rule enforcement.
+
+        Key safety invariant: no non-recovery week increases more than 10% over the
+        previous non-recovery week's mileage.  Recovery weeks reduce by 25% but the
+        "high-water mark" is tracked separately so the post-recovery ramp resumes
+        from the pre-recovery level — never recalculating from the dip.
+
         Phases:
-        - Base: Build to 70% of peak, 25% recovery every 4th week
-        - Build: Progress from 70% to 100% of peak, 25% recovery every 3rd week
-        - Peak: Maintain peak with slight variation
-        - Taper: Progressive reduction toward race week
+        - Base: Build to 70% of peak, recovery every 4th week
+        - Build: Progress from 70% to 100% of peak, recovery every 4th week
+        - Peak: Maintain near peak with slight variation
+        - Taper: Distance-appropriate progressive reduction toward race week
         """
-        phases = self._calculate_phases(weeks)
+        phases = self._calculate_phases(weeks, target_distance)
         peak_km = self._get_peak_mileage(target_distance, current_km, weeks, vdot=vdot)
-        weekly_progression = []
-        
-        # For very short plans, skip recovery weeks in build phase to maintain progression
-        skip_build_recovery = phases['build'] <= 2
-        
-        current_week_km = current_km
-        
-        # Base phase: Build from current to 70% of peak
+        weekly_progression: List[float] = []
+
+        # high_water tracks the last non-recovery mileage (recovery dips don't reset it)
+        high_water = current_km
+
+        def _apply_10pct_cap(target: float, reference: float) -> float:
+            """Enforce 10% rule: target can't exceed reference * 1.10."""
+            return min(target, reference * 1.10)
+
+        # ── Base phase: current → 70% of peak ─────────────────────────────
         base_end_target = peak_km * 0.70
-        non_recovery_base_weeks = phases['base'] - (phases['base'] // 4)
-        
+        non_recovery_base = sum(1 for i in range(phases['base']) if not self._is_recovery_week(i + 1, 'base', phases))
+
+        base_step = 0
         for week in range(phases['base']):
             week_number = week + 1
-            if self._is_recovery_week(week_number, 'base'):
-                # Recovery week: reduce by 25%, keep as starting point for next week
-                week_km = current_week_km * 0.75
-                current_week_km = week_km
+            if self._is_recovery_week(week_number, 'base', phases):
+                week_km = high_water * 0.75
             else:
-                # Calculate how much distance we need to cover in remaining non-recovery weeks
-                weeks_passed = sum(1 for i in range(week) if not self._is_recovery_week(i + 1, 'base'))
-                total_non_recovery = sum(1 for i in range(phases['base']) if not self._is_recovery_week(i + 1, 'base'))
-                weeks_remaining = total_non_recovery - weeks_passed
-                
-                if weeks_remaining > 0:
-                    needed_increase = base_end_target - current_week_km
-                    weekly_increase = needed_increase / weeks_remaining
-                    week_km = current_week_km + weekly_increase
+                if non_recovery_base > 0:
+                    ideal = current_km + (base_end_target - current_km) * ((base_step + 1) / non_recovery_base)
                 else:
-                    week_km = current_week_km
-                
-                # Cap at target and ensure it's greater than current
-                week_km = min(week_km, base_end_target)
-                week_km = max(week_km, current_week_km * 1.01)
-                current_week_km = week_km
-            
+                    ideal = current_km
+                week_km = _apply_10pct_cap(ideal, high_water)
+                week_km = max(week_km, high_water * 1.01)
+                high_water = week_km
+                base_step += 1
+
             weekly_progression.append(round(week_km, 1))
-        
-        # Build phase: Progress from where base should have been (or ended) to 100% of peak
-        # If base ended on recovery week, use pre-recovery value as build start
-        build_end_target = peak_km
-        non_recovery_build_weeks = phases['build']
-        if not skip_build_recovery:
-            non_recovery_build_weeks = phases['build'] - (phases['build'] // 3)
-        
-        # Build start should be base_end_target or the last non-recovery week of base
-        if phases['base'] > 0 and self._is_recovery_week(phases['base'], 'base'):
-            # Base ended on recovery week, use base_end_target as build start
-            build_start_target = base_end_target
-        else:
-            # Base ended on non-recovery week
-            build_start_target = current_week_km
-        
-        # Ensure build_start_target is reasonable (at least base_end_target)
-        build_start_target = max(build_start_target, base_end_target)
-        
+
+        # ── Build phase: 70% of peak → 100% of peak ──────────────────────
+        build_start = max(high_water, base_end_target)
+        non_recovery_build = sum(
+            1 for i in range(phases['build'])
+            if not self._is_recovery_week(phases['base'] + i + 1, 'build', phases)
+        )
+
+        build_step = 0
         for week in range(phases['build']):
             week_number = phases['base'] + week + 1
-            should_be_recovery = self._is_recovery_week(week_number, 'build')
-            
-            # Skip recovery week in build phase for very short build phases
-            if skip_build_recovery and should_be_recovery:
-                # Treat as regular build week instead
-                should_be_recovery = False
-            
-            if should_be_recovery:
-                # Recovery week: reduce by 25%
-                recovery_base = min(peak_km * 0.85, current_week_km * 0.75)
-                week_km = recovery_base
-                # Don't reset current_week_km to recovery value - resume from before recovery
+            should_recover = self._is_recovery_week(week_number, 'build', phases)
+
+            if should_recover:
+                week_km = high_water * 0.75
             else:
-                # Calculate progression from build start to peak
-                build_weeks_passed = sum(1 for i in range(week) if not (self._is_recovery_week(phases['base'] + i + 1, 'build') and not skip_build_recovery))
-                build_weeks_remaining = non_recovery_build_weeks - build_weeks_passed
-                
-                if build_weeks_remaining > 0:
-                    needed_increase = build_end_target - build_start_target
-                    weekly_increase = needed_increase / non_recovery_build_weeks
-                    week_km = build_start_target + (weekly_increase * build_weeks_passed)
+                if non_recovery_build > 0:
+                    ideal = build_start + (peak_km - build_start) * ((build_step + 1) / non_recovery_build)
                 else:
-                    week_km = build_end_target
-                
-                # Ensure progression and cap at peak
-                week_km = min(week_km, build_end_target)
-                week_km = max(week_km, current_week_km * 1.01)
-                current_week_km = week_km
-            
+                    ideal = peak_km
+                week_km = _apply_10pct_cap(ideal, high_water)
+                week_km = max(week_km, high_water * 1.01)
+                high_water = week_km
+                build_step += 1
+
             weekly_progression.append(round(week_km, 1))
-        
-        # Peak phase: Maintain near peak mileage
+
+        # ── Peak phase: the highest mileage weeks ──────────────────────────
+        # Peak is NOT subject to the 10% cap — it's the summit by definition.
+        # Ensure peak is at least as high as anything in the build phase.
         for week in range(phases['peak']):
-            # Peak phase should stay within 95-100% of peak
             week_km = peak_km * (0.97 + (week % 3) * 0.01)
-            current_week_km = week_km
+            week_km = max(week_km, high_water)
+            high_water = week_km
             weekly_progression.append(round(week_km, 1))
-        
-        # Taper phase: Progressive reduction
+
+        # ── Taper phase: distance-appropriate reduction ───────────────────
         taper_weeks = phases['taper']
         for week in range(taper_weeks):
             if taper_weeks == 1:
@@ -1419,21 +1402,12 @@ class TrainingPlanGenerator:
             elif taper_weeks == 2:
                 week_km = peak_km * (0.80 if week == 0 else 0.60)
             elif taper_weeks == 3:
-                week_km = peak_km * (0.80 if week == 0 else (0.70 if week == 1 else 0.60))
+                week_km = peak_km * (0.85 if week == 0 else (0.70 if week == 1 else 0.55))
             else:
-                # For longer tapers, use gradual reduction
-                if week == 0:
-                    week_km = peak_km * 0.90
-                elif week == 1:
-                    week_km = peak_km * 0.80
-                elif week == taper_weeks - 1:
-                    week_km = peak_km * 0.60
-                else:
-                    taper_remaining = taper_weeks - week - 2
-                    reduction = 0.10 + (0.10 / (taper_remaining + 1))
-                    week_km = peak_km * (0.80 - reduction)
-            
-            current_week_km = week_km
+                taper_pcts = [0.90, 0.80, 0.65, 0.55]
+                pct = taper_pcts[min(week, len(taper_pcts) - 1)]
+                week_km = peak_km * pct
+
             weekly_progression.append(round(week_km, 1))
         
         return weekly_progression
@@ -1445,9 +1419,9 @@ class TrainingPlanGenerator:
         """
         Generate a single week's training plan.
         """
-        phases = self._calculate_phases(weeks)
+        phases = self._calculate_phases(weeks, target_distance)
         phase = self._get_phase(week_number, phases)
-        is_recovery_week = self._is_recovery_week(week_number, phase)
+        is_recovery_week = self._is_recovery_week(week_number, phase, phases)
 
         distribution = self._get_workout_distribution(total_km, max_runs_per_week, phase,
                                                    is_recovery_week, week_number, phases, target_distance)
@@ -1458,6 +1432,14 @@ class TrainingPlanGenerator:
         )
 
         actual_total_km = round(sum(w.get('distance', 0) for w in workouts), 1)
+
+        # Scale workouts down if actual exceeds target (preserves 10% progression cap)
+        if actual_total_km > total_km * 1.03 and actual_total_km > 0:
+            scale = total_km / actual_total_km
+            for w in workouts:
+                if w.get('distance', 0) > 0:
+                    w['distance'] = round(w['distance'] * scale, 1)
+            actual_total_km = round(sum(w.get('distance', 0) for w in workouts), 1)
 
         is_valid, validation_message = self._validate_week_plan(workouts, actual_total_km, phase)
 
