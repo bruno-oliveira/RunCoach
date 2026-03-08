@@ -311,6 +311,13 @@
                     {% endif %}
                     <div class="workout-notes">{{ workout.notes }}</div>
 
+                    {% if workout.strength_session %}
+                    <div class="workout-strength-tag">
+                        + {{ (workout.strength_session.focus or workout.strength_session.type) | replace('_', ' ') | title }} Strength
+                        <span class="workout-strength-duration">{{ workout.strength_session.duration }}</span>
+                    </div>
+                    {% endif %}
+
                     {% if workout.coaching_rationale %}
                     <details class="coaching-note">
                         <summary class="coaching-note-toggle">Coach says</summary>

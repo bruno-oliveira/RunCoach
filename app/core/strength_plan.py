@@ -53,6 +53,7 @@ _PHASE_MODIFIERS: Dict[str, Dict[str, Any]] = {
 
 _EXERCISES: Dict[str, Dict[str, Dict[str, Any]]] = {
     # ── Lower body ────────────────────────────────────────────────────────
+    # Simple, proven bodyweight exercises that complement running.
     "lower_body": {
         "beginner": {
             "base_duration": "20-30 min",
@@ -82,11 +83,11 @@ _EXERCISES: Dict[str, Dict[str, Dict[str, Any]]] = {
                 "Hip circles — 10 each direction",
             ],
             "exercises": [
-                {"name": "Bulgarian Split Squat", "sets": 3, "reps": "10 each side"},
-                {"name": "Romanian Deadlift (bodyweight)", "sets": 3, "reps": "12"},
-                {"name": "Hip Thrust", "sets": 3, "reps": "12-15"},
+                {"name": "Split Squat", "sets": 3, "reps": "10 each side"},
+                {"name": "Single-leg Glute Bridge", "sets": 3, "reps": "12 each side"},
                 {"name": "Single-leg Calf Raise", "sets": 3, "reps": "12 each side"},
                 {"name": "Step-ups", "sets": 3, "reps": "10 each side"},
+                {"name": "Side-lying Leg Raise", "sets": 3, "reps": "15 each side"},
             ],
             "cool_down": [
                 "Pigeon pose — 45 sec each side",
@@ -102,11 +103,11 @@ _EXERCISES: Dict[str, Dict[str, Dict[str, Any]]] = {
                 "Leg swings — 10 each direction",
             ],
             "exercises": [
-                {"name": "Single-leg Squat (pistol progression)", "sets": 3, "reps": "6-8 each side"},
-                {"name": "Nordic Curl (eccentric)", "sets": 3, "reps": "6-8"},
-                {"name": "Plyometric Lunge", "sets": 3, "reps": "8 each side"},
-                {"name": "Box Jump", "sets": 3, "reps": "8"},
-                {"name": "Single-leg Deadlift (weighted)", "sets": 3, "reps": "8 each side"},
+                {"name": "Bulgarian Split Squat", "sets": 3, "reps": "10 each side"},
+                {"name": "Single-leg Deadlift (bodyweight)", "sets": 3, "reps": "10 each side"},
+                {"name": "Jump Squat", "sets": 3, "reps": "10"},
+                {"name": "Walking Lunge", "sets": 3, "reps": "12 each side"},
+                {"name": "Single-leg Calf Raise", "sets": 3, "reps": "15 each side"},
             ],
             "cool_down": [
                 "Pigeon pose — 60 sec each side",
@@ -130,7 +131,7 @@ _EXERCISES: Dict[str, Dict[str, Dict[str, Any]]] = {
                 {"name": "Dead Bug", "sets": 3, "reps": "8 each side"},
                 {"name": "Bird Dog", "sets": 3, "reps": "10 each side"},
                 {"name": "Side Plank", "sets": 2, "reps": "20-30 sec each side"},
-                {"name": "Pelvic Tilt", "sets": 2, "reps": "15"},
+                {"name": "Glute Bridge", "sets": 2, "reps": "15"},
             ],
             "cool_down": [
                 "Child's pose — 30 sec",
@@ -146,11 +147,11 @@ _EXERCISES: Dict[str, Dict[str, Dict[str, Any]]] = {
                 "Leg swings — 10 each side",
             ],
             "exercises": [
-                {"name": "Hollow Body Hold", "sets": 3, "reps": "30 sec"},
-                {"name": "Copenhagen Plank", "sets": 3, "reps": "20 sec each side"},
-                {"name": "RKC Plank", "sets": 3, "reps": "30 sec"},
-                {"name": "Pallof Press (band)", "sets": 3, "reps": "10 each side"},
-                {"name": "Ab Wheel Rollout", "sets": 3, "reps": "8-10"},
+                {"name": "Plank", "sets": 3, "reps": "45-60 sec hold"},
+                {"name": "Side Plank", "sets": 3, "reps": "30 sec each side"},
+                {"name": "Dead Bug", "sets": 3, "reps": "12 each side"},
+                {"name": "Bicycle Crunch", "sets": 3, "reps": "15 each side"},
+                {"name": "Superman Hold", "sets": 3, "reps": "30 sec"},
             ],
             "cool_down": [
                 "Child's pose — 30 sec",
@@ -166,11 +167,11 @@ _EXERCISES: Dict[str, Dict[str, Dict[str, Any]]] = {
                 "Hip circles — 10 each direction",
             ],
             "exercises": [
-                {"name": "Dragon Flag Progression", "sets": 3, "reps": "6-8"},
-                {"name": "Stir the Pot (stability ball)", "sets": 3, "reps": "10 each direction"},
-                {"name": "Copenhagen Plank (elevated)", "sets": 3, "reps": "20 sec each side"},
-                {"name": "Single-leg V-up", "sets": 3, "reps": "8 each side"},
-                {"name": "L-sit Hold", "sets": 3, "reps": "15-20 sec"},
+                {"name": "Plank", "sets": 3, "reps": "60 sec hold"},
+                {"name": "Side Plank with Leg Lift", "sets": 3, "reps": "30 sec each side"},
+                {"name": "Mountain Climber", "sets": 3, "reps": "20 each side"},
+                {"name": "Hollow Body Hold", "sets": 3, "reps": "30-45 sec"},
+                {"name": "Bird Dog", "sets": 3, "reps": "12 each side"},
             ],
             "cool_down": [
                 "Child's pose — 45 sec",
@@ -190,11 +191,11 @@ _EXERCISES: Dict[str, Dict[str, Dict[str, Any]]] = {
                 "Leg swings — 10 each side",
             ],
             "exercises": [
-                {"name": "Push-ups", "sets": 3, "reps": "8-12"},
-                {"name": "Reverse Lunge", "sets": 2, "reps": "10 each side"},
+                {"name": "Push-ups (or knee push-ups)", "sets": 3, "reps": "8-12"},
+                {"name": "Bodyweight Squat", "sets": 3, "reps": "12-15"},
                 {"name": "Plank Shoulder Taps", "sets": 3, "reps": "10 each side"},
                 {"name": "Glute Bridge", "sets": 3, "reps": "15"},
-                {"name": "Bodyweight Row (or Band Row)", "sets": 3, "reps": "10"},
+                {"name": "Reverse Lunge", "sets": 2, "reps": "10 each side"},
             ],
             "cool_down": [
                 "Chest stretch — 30 sec",
@@ -210,11 +211,11 @@ _EXERCISES: Dict[str, Dict[str, Dict[str, Any]]] = {
                 "Leg swings — 10 each side",
             ],
             "exercises": [
-                {"name": "Push-up Variations (diamond or decline)", "sets": 3, "reps": "10-12"},
-                {"name": "Dumbbell Romanian Deadlift", "sets": 3, "reps": "10-12"},
-                {"name": "Single-arm Dumbbell Row", "sets": 3, "reps": "10 each side"},
+                {"name": "Push-ups", "sets": 3, "reps": "12-15"},
+                {"name": "Split Squat", "sets": 3, "reps": "10 each side"},
+                {"name": "Plank", "sets": 3, "reps": "45-60 sec hold"},
                 {"name": "Lateral Lunge", "sets": 3, "reps": "10 each side"},
-                {"name": "Renegade Row", "sets": 3, "reps": "8 each side"},
+                {"name": "Superman", "sets": 3, "reps": "12"},
             ],
             "cool_down": [
                 "Chest stretch — 30 sec",
@@ -230,11 +231,11 @@ _EXERCISES: Dict[str, Dict[str, Dict[str, Any]]] = {
                 "Arm circles — 10 each direction",
             ],
             "exercises": [
-                {"name": "Plyometric Push-up", "sets": 3, "reps": "8-10"},
-                {"name": "Single-leg Squat (pistol progression)", "sets": 3, "reps": "6 each side"},
-                {"name": "Pull-up (or TRX Row)", "sets": 3, "reps": "8-10"},
-                {"name": "Jump Squat", "sets": 3, "reps": "10"},
-                {"name": "Weighted Plank", "sets": 3, "reps": "30-45 sec"},
+                {"name": "Push-ups", "sets": 3, "reps": "15-20"},
+                {"name": "Bulgarian Split Squat", "sets": 3, "reps": "10 each side"},
+                {"name": "Plank with Leg Lift", "sets": 3, "reps": "10 each side"},
+                {"name": "Jump Squat", "sets": 3, "reps": "12"},
+                {"name": "Single-leg Glute Bridge", "sets": 3, "reps": "12 each side"},
             ],
             "cool_down": [
                 "Chest stretch — 30 sec",
