@@ -25,7 +25,6 @@ from app.routers import (
     plans_router,
     recipes_router,
     runs_router,
-    strength_router,
     strava_router,
     triathlon_router,
 )
@@ -144,7 +143,6 @@ app.include_router(recipes_router)
 app.include_router(auth_router)
 app.include_router(runs_router)
 app.include_router(adaptive_router)
-app.include_router(strength_router)
 app.include_router(performance_router)
 app.include_router(analytics_router)
 app.include_router(analytics_page_router)

@@ -386,23 +386,32 @@ class PDFGenerator:
         
         # Add strength training if available
         if week.get('strength_training'):
-            st = week['strength_training'][0]
-            story.append(Paragraph(f"💪 Strength Training ({st.get('duration', '')})", self.normal_style))
-            if st.get('warm_up'):
-                story.append(Paragraph("Warm-up", self.small_style))
-                for item in st['warm_up']:
-                    story.append(Paragraph(f"  • {item}", self.small_style))
-            story.append(Paragraph("Main Workout", self.small_style))
-            for ex in st.get('exercises', []):
-                if isinstance(ex, dict):
-                    story.append(Paragraph(f"  • {ex['name']} — {ex['sets']}×{ex['reps']}", self.small_style))
-                else:
-                    story.append(Paragraph(f"  • {ex}", self.small_style))
-            if st.get('cool_down'):
-                story.append(Paragraph("Cool-down", self.small_style))
-                for item in st['cool_down']:
-                    story.append(Paragraph(f"  • {item}", self.small_style))
-            story.append(Spacer(1, 0.3*cm))
+            count = len(week['strength_training'])
+            label = f"💪 Strength Training ({count} session{'s' if count != 1 else ''})"
+            story.append(Paragraph(label, self.normal_style))
+            for st in week['strength_training']:
+                focus = (st.get('focus') or st.get('type', '')).replace('_', ' ').title()
+                level = st.get('level', '')
+                header = f"{focus} — {st.get('duration', '')}"
+                if level:
+                    header += f" ({level.title()})"
+                story.append(Paragraph(header, self.small_style))
+                if st.get('warm_up'):
+                    story.append(Paragraph("Warm-up:", self.small_style))
+                    for item in st['warm_up']:
+                        story.append(Paragraph(f"  • {item}", self.small_style))
+                story.append(Paragraph("Exercises:", self.small_style))
+                for ex in st.get('exercises', []):
+                    if isinstance(ex, dict):
+                        story.append(Paragraph(f"  • {ex['name']} — {ex['sets']}×{ex['reps']}", self.small_style))
+                    else:
+                        story.append(Paragraph(f"  • {ex}", self.small_style))
+                if st.get('cool_down'):
+                    story.append(Paragraph("Cool-down:", self.small_style))
+                    for item in st['cool_down']:
+                        story.append(Paragraph(f"  • {item}", self.small_style))
+                story.append(Spacer(1, 0.2*cm))
+            story.append(Spacer(1, 0.1*cm))
         
         # Add training tips if available
         if week.get('training_tips'):

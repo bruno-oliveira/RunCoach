@@ -8,9 +8,6 @@ from app.models.daily_workout import DailyWorkout
 from app.models.plan_customization import PlanCustomization
 from app.models.run_log import RunLog
 from app.models.favorite_recipe import FavoriteRecipe
-from app.models.strength_exercise import StrengthExercise
-from app.models.daily_strength_workout import DailyStrengthWorkout
-from app.models.user_favorite_workout import UserFavoriteWorkout
 from app.models.triathlon_plan import TriathlonPlan
 
 # Configure relationships after all models are imported
@@ -45,8 +42,5 @@ __all__ = [
     "PlanCustomization",
     "RunLog",
     "FavoriteRecipe",
-    "StrengthExercise",
-    "DailyStrengthWorkout",
-    "UserFavoriteWorkout",
     "TriathlonPlan",
 ]

@@ -2,6 +2,12 @@ import math
 import random
 from typing import List, Dict, Any, Optional
 
+from app.core.strength_plan import (
+    derive_experience_level,
+    generate_strength_session as _build_strength_session,
+    get_phase_focus_rotation,
+)
+
 TRAINING_TIP_DATABASE = {
     "foundation": [
         "Establish a consistent training schedule - same time daily builds habit",
@@ -594,7 +600,8 @@ class TrainingPlanGenerator:
                                 target_distance: float, weeks: int, phase: str,
                                 is_recovery_week: bool,
                                 vdot: Optional[float] = None,
-                                pace_zones: Optional[Dict] = None) -> List[Dict[str, Any]]:
+                                pace_zones: Optional[Dict] = None,
+                                experience_level: str = "beginner") -> List[Dict[str, Any]]:
         """
         Generate daily workouts with integrated strength/cross-training and rest day rules
         """
@@ -631,6 +638,7 @@ class TrainingPlanGenerator:
         easy_distances = [round(min(d, max_easy_distance), 1) for d in easy_distances]
 
         easy_run_counter = 0
+        strength_session_counter = 0
 
         # Track counters for quality workouts to get their distances
         quality_counters = {wt: 0 for wt in ['tempo', 'interval', 'hill']}
@@ -683,9 +691,14 @@ class TrainingPlanGenerator:
                 workout = self._generate_hill_workout(day_number, easy_distance)
 
             if workout_type == 'easy':
-                strength_session = self._generate_strength_session(day_number, week_number, phase, workout_type)
+                strength_session = self._generate_strength_session(
+                    day_number, week_number, phase, workout_type,
+                    session_index=strength_session_counter,
+                    experience_level=experience_level,
+                )
                 if strength_session:
                     workout['strength_session'] = strength_session
+                    strength_session_counter += 1
 
             # Add coaching rationale
             from app.core.coaching_notes_generator import generate_coaching_note
@@ -847,57 +860,37 @@ class TrainingPlanGenerator:
             'description': recovery_descriptions[day % len(recovery_descriptions)]
         }
 
-    def _generate_strength_session(self, day: int, week_number: int, phase: str, workout_type: str) -> Optional[Dict[str, Any]]:
-        """
-        Generate strength workout to attach to easy runs.
+    def _generate_strength_session(
+        self,
+        day: int,
+        week_number: int,
+        phase: str,
+        workout_type: str,
+        session_index: int = 0,
+        experience_level: str = "beginner",
+    ) -> Optional[Dict[str, Any]]:
+        """Generate a periodized strength session to attach to an easy run.
+
+        Args:
+            day: Day number (1-7)
+            week_number: Week number in plan
+            phase: Training phase (base, build, peak, taper)
+            workout_type: Must be 'easy' — other types return None
+            session_index: 0-based counter of easy runs in this week,
+                           used to cycle through the phase focus rotation
+            experience_level: beginner / intermediate / advanced
         """
         if workout_type != 'easy':
             return None
 
-        if phase == 'taper':
+        # Taper: only one session (the first easy run), reduced volume
+        if phase == 'taper' and session_index > 0:
             return None
 
-        strength_sessions = [
-            {
-                'type': 'core',
-                'duration': '20-30 min',
-                'warm_up': ['5 min easy walk or light jog', 'Leg swings — 10 each side', 'Hip circles — 10 each side'],
-                'exercises': [
-                    {'name': 'Plank', 'sets': 3, 'reps': '30-45 sec hold'},
-                    {'name': 'Side Plank', 'sets': 2, 'reps': '20-30 sec each side'},
-                    {'name': 'Dead Bug', 'sets': 3, 'reps': '8 each side'},
-                    {'name': 'Bird Dog', 'sets': 3, 'reps': '10 each side'},
-                ],
-                'cool_down': ['Cat-cow stretch — 10 slow reps', "Child's pose — 30 sec", 'Hip flexor stretch — 30 sec each side'],
-            },
-            {
-                'type': 'lower_body',
-                'duration': '25-35 min',
-                'warm_up': ['5 min easy walk', 'Bodyweight squats — 10 reps', 'Ankle circles — 10 each side'],
-                'exercises': [
-                    {'name': 'Bulgarian Split Squat', 'sets': 3, 'reps': '8 each side'},
-                    {'name': 'Glute Bridge', 'sets': 3, 'reps': '15 reps'},
-                    {'name': 'Calf Raises', 'sets': 3, 'reps': '15 reps'},
-                    {'name': 'Single-leg Deadlift', 'sets': 2, 'reps': '8 each side'},
-                ],
-                'cool_down': ['Standing quad stretch — 30 sec each', 'Pigeon pose — 45 sec each side', 'Calf stretch — 30 sec each'],
-            },
-            {
-                'type': 'full_body',
-                'duration': '30-40 min',
-                'warm_up': ['5 min easy walk', 'Arm circles — 10 each direction', 'Leg swings — 10 each side'],
-                'exercises': [
-                    {'name': 'Push-ups', 'sets': 3, 'reps': '8-12 reps'},
-                    {'name': 'Bodyweight Row (or Dumbbell Row)', 'sets': 3, 'reps': '10 each side'},
-                    {'name': 'Reverse Lunges', 'sets': 2, 'reps': '10 each side'},
-                    {'name': 'Plank Shoulder Taps', 'sets': 3, 'reps': '10 each side'},
-                ],
-                'cool_down': ['Chest stretch — 30 sec', 'Hamstring stretch — 30 sec each side', 'Downward dog — 30 sec'],
-            },
-        ]
+        rotation = get_phase_focus_rotation(phase)
+        focus = rotation[session_index % len(rotation)]
 
-        session_index = week_number % len(strength_sessions)
-        return strength_sessions[session_index]
+        return _build_strength_session(focus, phase, experience_level, week_number)
 
     def _generate_long_run(self, day: int, distance: float, total_km: float,
                             pace_zones: Optional[Dict] = None) -> Dict[str, Any]:
@@ -1415,7 +1408,8 @@ class TrainingPlanGenerator:
     def _generate_weekly_plan(self, week_number: int, total_km: float, target_distance: float,
                             max_runs_per_week: int, weeks: int,
                             vdot: Optional[float] = None,
-                            pace_zones: Optional[Dict] = None) -> Dict[str, Any]:
+                            pace_zones: Optional[Dict] = None,
+                            experience_level: str = "beginner") -> Dict[str, Any]:
         """
         Generate a single week's training plan.
         """
@@ -1429,6 +1423,7 @@ class TrainingPlanGenerator:
         workouts = self._generate_daily_workouts(
             week_number, total_km, distribution, target_distance, weeks, phase, is_recovery_week,
             vdot=vdot, pace_zones=pace_zones,
+            experience_level=experience_level,
         )
 
         actual_total_km = round(sum(w.get('distance', 0) for w in workouts), 1)
@@ -1474,6 +1469,8 @@ class TrainingPlanGenerator:
         from app.core.vdot_calculator import VDOTCalculator
         pace_zones = VDOTCalculator.get_pace_zones(vdot) if vdot else None
 
+        experience_level = derive_experience_level(current_km)
+
         weekly_progression = self._calculate_weekly_progression(current_km, target_distance, weeks, max_runs_per_week, vdot=vdot)
 
         training_plan = []
@@ -1482,6 +1479,7 @@ class TrainingPlanGenerator:
             weekly_plan = self._generate_weekly_plan(
                 week, week_km, target_distance, max_runs_per_week, weeks,
                 vdot=vdot, pace_zones=pace_zones,
+                experience_level=experience_level,
             )
             training_plan.append(weekly_plan)
 
