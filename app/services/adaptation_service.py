@@ -697,6 +697,36 @@ class AdaptationService:
         start_date = _to_date(training_plan.start_date)
         today = datetime.now(timezone.utc).replace(tzinfo=None).date()
 
+        # Fix legacy: unlink any runs erroneously mapped to rest/recovery workouts.
+        # These workouts are not running workouts (swimming/walking) and should
+        # never consume a run log.
+        recovery_workout_ids = [
+            row[0] for row in
+            db.query(DailyWorkout.id)
+            .join(WeeklyPlan)
+            .filter(
+                WeeklyPlan.training_plan_id == plan_id,
+                DailyWorkout.workout_type.in_(["rest", "recovery"]),
+            )
+            .all()
+        ]
+        if recovery_workout_ids:
+            bad_links = (
+                db.query(RunLog)
+                .filter(
+                    RunLog.daily_workout_id.in_(recovery_workout_ids),
+                )
+                .all()
+            )
+            for run in bad_links:
+                logger.info(
+                    "Unlinking run %s from recovery/rest workout %s",
+                    run.id, run.daily_workout_id,
+                )
+                run.daily_workout_id = None
+            if bad_links:
+                db.flush()
+
         # Build list of (DailyWorkout, computed_date) for non-rest past workouts
         # that do NOT already have a linked RunLog.
         daily_workouts = (
