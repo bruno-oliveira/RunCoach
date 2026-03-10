@@ -13,6 +13,15 @@ from app.utils import format_pace_bare
 logger = logging.getLogger(__name__)
 
 
+def _to_date(value) -> Optional[datetime]:
+    """Coerce a date or datetime to a plain date object."""
+    if value is None:
+        return None
+    if hasattr(value, "date") and callable(value.date):
+        return value.date()
+    return value
+
+
 class AdaptationService:
     """Service for analyzing run performance and adapting training plans."""
 
@@ -321,7 +330,8 @@ class AdaptationService:
         if not training_plan:
             return 0
 
-        plan_start_date = training_plan.created_at.date()
+        sd = training_plan.start_date or training_plan.created_at
+        plan_start_date = _to_date(sd)
         today = datetime.now(timezone.utc).replace(tzinfo=None).date()
 
         # Get all daily workouts with their week numbers
@@ -684,10 +694,7 @@ class AdaptationService:
         if not training_plan.start_date:
             return {"mapped": 0, "proposals": [], "error": "Plan has no start date. Set a start date first."}
 
-        start_date = training_plan.start_date
-        if hasattr(start_date, "date") and callable(start_date.date):
-            start_date = start_date.date()
-
+        start_date = _to_date(training_plan.start_date)
         today = datetime.now(timezone.utc).replace(tzinfo=None).date()
 
         # Build list of (DailyWorkout, computed_date) for non-rest past workouts
@@ -746,7 +753,7 @@ class AdaptationService:
         from collections import defaultdict
         runs_by_date: Dict[any, list] = defaultdict(list)
         for run in unlinked_runs:
-            run_date = run.date.date() if hasattr(run.date, "date") and callable(run.date.date) else run.date
+            run_date = _to_date(run.date)
             runs_by_date[run_date].append(run)
 
         proposals = []
@@ -772,7 +779,7 @@ class AdaptationService:
             best_run = candidates[0][0]
             used_run_ids.add(best_run.id)
 
-            run_date = best_run.date.date() if hasattr(best_run.date, "date") and callable(best_run.date.date) else best_run.date
+            run_date = _to_date(best_run.date)
             proposals.append({
                 "run_id": best_run.id,
                 "workout_id": workout.id,
@@ -854,10 +861,7 @@ class AdaptationService:
         if not training_plan.start_date:
             return {"recalibrated": False, "reason": "Plan has no start date.", "changes": []}
 
-        start_date = training_plan.start_date
-        if hasattr(start_date, "date") and callable(start_date.date):
-            start_date = start_date.date()
-
+        start_date = _to_date(training_plan.start_date)
         today = datetime.now(timezone.utc).replace(tzinfo=None).date()
         days_elapsed = (today - start_date).days
         current_week = max(1, days_elapsed // 7 + 1)
