@@ -163,14 +163,16 @@ class PlanService:
             db.flush()
 
             for day_workout in week_data.get("daily_workouts", []):
+                dist = day_workout.get("distance", 0)
                 daily_workout = DailyWorkout(
                     weekly_plan_id=weekly_plan.id,
                     day_of_week=day_workout["day"],
                     workout_type=day_workout["type"],
-                    distance_km=day_workout.get("distance", 0),
+                    distance_km=dist,
                     intensity=day_workout.get("intensity", "low"),
                     notes=day_workout.get("description", day_workout.get("notes", "")),
                     coaching_rationale=day_workout.get("coaching_rationale"),
+                    baseline_distance_km=dist,
                 )
                 db.add(daily_workout)
 
@@ -464,14 +466,22 @@ class PlanService:
 
         # Compute recalibration / mapping hints for the UI
         skipped_count = 0
+        rescheduled_count = 0
         unmapped_runs_count = 0
         needs_recalibration = False
+        avg_effort = performance_analysis.get("avg_effort")
         if current_user and training_plan.start_date:
             try:
-                skipped_count = adaptation_service.detect_skipped_workouts(
+                skip_result = adaptation_service.detect_skipped_workouts(
                     training_plan.id, db
                 )
-                needs_recalibration = skipped_count >= 2
+                skipped_count = skip_result["skipped"]
+                rescheduled_count = skip_result["rescheduled"]
+                # Trigger recalibration on skipped workouts OR extreme effort
+                needs_recalibration = (
+                    skipped_count >= 2
+                    or (avg_effort is not None and (avg_effort >= 8 or avg_effort <= 3))
+                )
             except Exception as e:
                 logger.warning(f"Could not detect skipped workouts: {e}")
 
@@ -493,6 +503,7 @@ class PlanService:
             "strava_fitness": strava_fitness,
             "progress_data": progress_data,
             "skipped_count": skipped_count,
+            "rescheduled_count": rescheduled_count,
             "unmapped_runs_count": unmapped_runs_count,
             "needs_recalibration": needs_recalibration,
         }

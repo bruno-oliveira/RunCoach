@@ -350,58 +350,15 @@ window.unlinkRun = async function(runId) {
     }
 };
 
-// Plan adaptation functionality
+// Plan adaptation functionality — delegates to recalibrate for backward compat
 window.checkForAdaptation = async function() {
-    try {
-        const response = await fetch(`/api/plan/${window.APP_CTX.plan_id}/performance`, {
-            headers: authHeaders(),
-            credentials: 'same-origin'
-        });
-        
-        if (response.ok) {
-            const data = await response.json();
-            
-            if (data.should_adapt) {
-                ApiClient.showInfo('Plan adaptation recommended: ' + data.adaptation_reason);
-                // Show the adaptation banner for user to take action
-                showAdaptationBanner(data.adaptation_reason);
-            } else {
-                ApiClient.showSuccess('Your plan is working well! Keep it up!');
-            }
-        } else {
-            ApiClient.showError('Unable to check adaptation. Please make sure you are logged in.');
-        }
-    } catch (error) {
-        ApiClient.showError('Error checking adaptation: ' + error.message);
-    }
+    // Kept for backward compatibility; triggers recalibrate flow
+    window.recalibratePlan();
 };
 
 window.adaptPlan = async function() {
-    try {
-        // Get current week (simple approximation - you might want to track this better)
-        const currentWeek = Math.floor((new Date() - new Date(window.APP_CTX.created_at)) / (7 * 24 * 60 * 60 * 1000)) + 1;
-
-        const response = await fetch(`/api/plan/${window.APP_CTX.plan_id}/adapt?current_week=${currentWeek}`, {
-            method: 'POST',
-            headers: authHeaders(),
-            credentials: 'same-origin'
-        });
-
-        if (response.ok) {
-            const result = await response.json();
-
-            if (result.adapted) {
-                ApiClient.showSuccess('Plan adapted successfully! Reloading...');
-                setTimeout(() => location.reload(), 1500);
-            } else {
-                ApiClient.showInfo('No adaptation needed: ' + result.reason);
-            }
-        } else {
-            ApiClient.showError('Error adapting plan. Please try again.');
-        }
-    } catch (error) {
-        ApiClient.showError('Error adapting plan: ' + error.message);
-    }
+    // Kept for backward compatibility; delegates to recalibrate
+    window.recalibratePlan();
 };
 
 // Show an inline banner below the Strava card instead of a native alert
@@ -734,7 +691,7 @@ window.mapRunsToPlan = async function() {
 
 window.recalibratePlan = async function() {
     const confirmed = window.confirm(
-        'This will adjust future week distances based on your actual adherence.\n\n' +
+        'This will adjust future week distances based on your adherence and effort data.\n\n' +
         'Past weeks will not be changed.\n\nContinue?'
     );
     if (!confirmed) return;

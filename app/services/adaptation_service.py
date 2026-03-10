@@ -1,6 +1,9 @@
 """Service for adapting training plans based on performance data."""
 
+import json
 import logging
+import re
+from collections import defaultdict
 from datetime import datetime, timedelta, timezone
 from typing import Dict, List, Optional, Tuple
 
@@ -32,9 +35,89 @@ class AdaptationService:
             "hard": 7,      # Effort >= 7 is challenging
             "too_hard": 9,  # Effort >= 9 is too difficult
         }
-        
+
         self.PACE_VARIANCE_THRESHOLD = 0.15  # 15% variance from expected
         self.MIN_RUNS_FOR_ADAPTATION = 3  # Need at least 3 runs to adapt
+
+    # ------------------------------------------------------------------
+    # Baseline backfill
+    # ------------------------------------------------------------------
+
+    @staticmethod
+    def _backfill_baselines(
+        training_plan: "TrainingPlan",
+        db: Session,
+    ) -> None:
+        """Ensure every DailyWorkout has a baseline_distance_km.
+
+        For plans created before the column existed, sets baseline to
+        current distance_km. If the plan already has a strava_adapted_multiplier,
+        the baseline is reverse-computed as distance / multiplier.
+        """
+        workouts_needing_backfill = (
+            db.query(DailyWorkout)
+            .join(WeeklyPlan)
+            .filter(
+                WeeklyPlan.training_plan_id == training_plan.id,
+                DailyWorkout.baseline_distance_km.is_(None),
+                DailyWorkout.distance_km.isnot(None),
+                DailyWorkout.distance_km > 0,
+            )
+            .all()
+        )
+        if not workouts_needing_backfill:
+            return
+
+        strava_mult = training_plan.strava_adapted_multiplier
+        recal_mult = training_plan.recalibration_multiplier
+        for workout in workouts_needing_backfill:
+            base = workout.distance_km
+            # Reverse existing multipliers to recover original baseline
+            if strava_mult and strava_mult != 0:
+                base = base / strava_mult
+            if recal_mult and recal_mult != 0:
+                base = base / recal_mult
+            workout.baseline_distance_km = round(base, 2)
+        db.flush()
+
+    @staticmethod
+    def _parse_plan_data_lookups(
+        training_plan: "TrainingPlan",
+    ) -> tuple[list[dict], dict[int, dict], dict[tuple[int, int], dict]]:
+        """Parse plan_data JSON and build lookup dicts for plan syncing.
+
+        Returns (plan_data, pd_week, pd_workout) where:
+        - plan_data: the parsed list of week dicts
+        - pd_week: {week_number: week_dict}
+        - pd_workout: {(week_number, day): workout_dict}
+        """
+        plan_data = json.loads(training_plan.plan_data)
+        pd_week: dict[int, dict] = {}
+        pd_workout: dict[tuple[int, int], dict] = {}
+        for wk in plan_data:
+            pd_week[wk["week"]] = wk
+            for wo in wk.get("daily_workouts", []):
+                pd_workout[(wk["week"], wo["day"])] = wo
+        return plan_data, pd_week, pd_workout
+
+    @staticmethod
+    def _batch_workouts_by_week(
+        week_ids: list[str],
+        db: Session,
+    ) -> dict[str, list["DailyWorkout"]]:
+        """Fetch all DailyWorkouts for the given WeeklyPlan IDs in one query.
+
+        Returns {weekly_plan_id: [DailyWorkout, ...]}.
+        """
+        all_workouts = (
+            db.query(DailyWorkout)
+            .filter(DailyWorkout.weekly_plan_id.in_(week_ids))
+            .all()
+        )
+        grouped: dict[str, list] = defaultdict(list)
+        for w in all_workouts:
+            grouped[w.weekly_plan_id].append(w)
+        return grouped
 
     def analyze_performance(
         self, 
@@ -217,124 +300,60 @@ class AdaptationService:
         db: Session,
         current_week: int,
     ) -> Dict[str, any]:
-        """
-        Adapt future weeks of a training plan based on performance.
-        
-        Only modifies weeks that haven't been completed yet.
-        """
-        should_adapt, reason = self.should_adapt_plan(training_plan_id, db)
-        
-        if not should_adapt:
-            return {
-                "adapted": False,
-                "reason": reason,
-                "changes": []
-            }
-        
-        analysis = self.analyze_performance(training_plan_id, db)
-        avg_effort = analysis.get("avg_effort")
-        
-        # Determine adjustment factor
-        if avg_effort and avg_effort >= self.EFFORT_THRESHOLDS["too_hard"]:
-            distance_multiplier = 0.9  # Reduce by 10%
-            adjustment_type = "reduction"
-        elif avg_effort and avg_effort <= self.EFFORT_THRESHOLDS["too_easy"]:
-            distance_multiplier = 1.1  # Increase by 10%
-            adjustment_type = "increase"
-        else:
-            distance_multiplier = 0.95  # Conservative reduction
-            adjustment_type = "recovery"
-        
-        # Get future weeks (current week + 1 onwards)
-        future_weeks = (
-            db.query(WeeklyPlan)
-            .filter(
-                WeeklyPlan.training_plan_id == training_plan_id,
-                WeeklyPlan.week_number > current_week
-            )
-            .all()
-        )
-        
-        changes = []
-        for week in future_weeks:
-            # Get workouts for this week
-            workouts = (
-                db.query(DailyWorkout)
-                .filter(DailyWorkout.weekly_plan_id == week.id)
-                .all()
-            )
-            
-            week_changes = []
-            for workout in workouts:
-                if workout.workout_type != "rest" and workout.distance_km > 0:
-                    old_distance = workout.distance_km
-                    new_distance = round(old_distance * distance_multiplier, 1)
-                    
-                    workout.distance_km = new_distance
-                    workout.notes = f"Adapted: {workout.notes or ''} (adjusted from {old_distance}km based on performance)"
-                    
-                    week_changes.append({
-                        "day": workout.day_of_week,
-                        "workout_type": workout.workout_type,
-                        "old_distance": old_distance,
-                        "new_distance": new_distance,
-                    })
-            
-            if week_changes:
-                # Update weekly total
-                new_total = sum(w.distance_km for w in workouts if w.distance_km)
-                week.total_km = new_total
-                
-                changes.append({
-                    "week": week.week_number,
-                    "workouts_adjusted": week_changes,
-                    "new_total_km": round(new_total, 1),
-                })
-        
-        db.commit()
+        """Adapt future weeks based on performance (delegates to recalibrate).
 
+        This endpoint is kept for backward compatibility. It now delegates
+        to recalibrate_plan() which incorporates both adherence and effort
+        signals into a single adjustment.
+        """
+        training_plan = db.query(TrainingPlan).filter(
+            TrainingPlan.id == training_plan_id,
+        ).first()
+        if not training_plan:
+            return {"adapted": False, "reason": "Plan not found", "changes": []}
+
+        result = self.recalibrate_plan(training_plan_id, training_plan.user_id, db)
+
+        # Map recalibrate response to adapt response format
+        if result.get("recalibrated"):
+            return {
+                "adapted": True,
+                "reason": result["reason"],
+                "adjustment_type": "recalibration",
+                "changes": result["changes"],
+            }
         return {
-            "adapted": True,
-            "reason": reason,
-            "adjustment_type": adjustment_type,
-            "changes": changes,
+            "adapted": False,
+            "reason": result.get("reason", "No adaptation needed"),
+            "changes": [],
         }
 
     def detect_skipped_workouts(
         self,
         plan_id: str,
         db: Session,
-    ) -> int:
-        """
-        Detect how many planned workouts have been skipped up to today.
+    ) -> Dict[str, int]:
+        """Detect skipped and rescheduled workouts up to today.
 
-        A workout is considered skipped if:
-        - It's not a rest day
-        - The workout date is in the past (including today)
-        - No RunLog exists for this workout (either directly or via date matching)
-
-        Args:
-            plan_id: Training plan ID
-            db: Database session
+        A workout is "unlinked" if no RunLog references it directly.
+        Among unlinked workouts:
+        - "rescheduled" = that week's total volume was still met (>= 80%)
+        - "skipped" = truly missed (week volume not met)
 
         Returns:
-            Count of skipped workouts
+            Dict with ``skipped`` and ``rescheduled`` counts.
         """
-        from app.models import DailyWorkout, WeeklyPlan, RunLog, TrainingPlan
-
-        # Get training plan to calculate dates
         training_plan = db.query(TrainingPlan).filter(
             TrainingPlan.id == plan_id
         ).first()
 
         if not training_plan:
-            return 0
+            return {"skipped": 0, "rescheduled": 0}
 
         sd = training_plan.start_date or training_plan.created_at
         plan_start_date = _to_date(sd)
         today = datetime.now(timezone.utc).replace(tzinfo=None).date()
 
-        # Get all daily workouts with their week numbers
         daily_workouts = (
             db.query(DailyWorkout, WeeklyPlan.week_number)
             .join(WeeklyPlan)
@@ -345,32 +364,72 @@ class AdaptationService:
             .all()
         )
 
-        skipped_count = 0
+        # Batch: fetch all linked workout IDs in one query
+        linked_workout_ids = set(
+            row[0] for row in
+            db.query(RunLog.daily_workout_id)
+            .filter(
+                RunLog.training_plan_id == plan_id,
+                RunLog.daily_workout_id.isnot(None),
+            )
+            .all()
+        )
+
+        # Group unlinked past workouts by week
+        unlinked_by_week: Dict[int, int] = defaultdict(int)
 
         for workout, week_number in daily_workouts:
-            # Calculate workout date
             workout_date = plan_start_date + timedelta(
                 weeks=(week_number - 1),
                 days=(workout.day_of_week - 1)
             )
-
-            # Only consider workouts up to today
             if workout_date > today:
                 continue
+            if workout.id not in linked_workout_ids:
+                unlinked_by_week[week_number] += 1
 
-            # Check if run log exists for this workout
-            run_log_exists = db.query(RunLog).filter(
-                RunLog.daily_workout_id == workout.id
-            ).first()
+        if not unlinked_by_week:
+            return {"skipped": 0, "rescheduled": 0}
 
-            if not run_log_exists:
-                skipped_count += 1
-                logger.debug(
-                    f"Skipped workout detected: Week {week_number}, "
-                    f"Day {workout.day_of_week} ({workout_date})"
-                )
+        # Batch: fetch all run volumes for this plan in one query, bucket in Python
+        all_plan_runs = (
+            db.query(RunLog.date, RunLog.distance_km)
+            .filter(RunLog.training_plan_id == plan_id)
+            .all()
+        )
+        weekly_actual_km: Dict[int, float] = defaultdict(float)
+        for run_date, dist in all_plan_runs:
+            rd = _to_date(run_date)
+            if rd and plan_start_date:
+                delta = (rd - plan_start_date).days
+                if delta >= 0:
+                    wk = delta // 7 + 1
+                    weekly_actual_km[wk] += dist or 0.0
 
-        return skipped_count
+        weekly_plans = {
+            wp.week_number: wp
+            for wp in db.query(WeeklyPlan)
+            .filter(WeeklyPlan.training_plan_id == plan_id)
+            .all()
+        }
+
+        skipped = 0
+        rescheduled = 0
+
+        for week_num, unlinked_count in unlinked_by_week.items():
+            wp = weekly_plans.get(week_num)
+            if not wp:
+                skipped += unlinked_count
+                continue
+
+            planned_km = wp.total_km or 0
+            actual_km = weekly_actual_km.get(week_num, 0.0)
+            if planned_km > 0 and actual_km >= planned_km * 0.8:
+                rescheduled += unlinked_count
+            else:
+                skipped += unlinked_count
+
+        return {"skipped": skipped, "rescheduled": rescheduled}
 
     def adapt_plan_from_fitness(
         self,
@@ -395,7 +454,6 @@ class AdaptationService:
         Returns:
             Dict with adaptation results including fitness metrics and changes
         """
-        import re
         from app.core.adaptive_plan_generator import AdaptivePlanGenerator
 
         training_plan = db.query(TrainingPlan).filter(
@@ -405,6 +463,9 @@ class AdaptationService:
 
         if not training_plan:
             return {"adapted": False, "reason": "Plan not found", "changes": []}
+
+        # Backfill baselines for legacy plans
+        self._backfill_baselines(training_plan, db)
 
         # Calculate fitness metrics from all run logs
         adaptive_gen = AdaptivePlanGenerator()
@@ -426,10 +487,7 @@ class AdaptationService:
 
         # Fitness-based multiplier: score 50 -> 1.0x, higher -> increase, lower -> decrease
         new_multiplier = 0.8 + (metrics["fitness_score"] / 100) * 0.4  # 0.8-1.2x
-
-        # Read previously applied multiplier (stored on training_plan) so we can
-        # reverse it before applying the new one — prevents compounding on re-runs.
-        prev_multiplier = getattr(training_plan, "strava_adapted_multiplier", None)
+        recal_mult = training_plan.recalibration_multiplier or 1.0
 
         # Get future weeks
         future_weeks = (
@@ -452,43 +510,29 @@ class AdaptationService:
         # Regex to strip any previously appended adaptation note from workout.notes
         _adapted_note_re = re.compile(r"\s*\(Adapted:[^)]*\)")
 
-        # Load plan_data JSON so we can keep it in sync with DB changes
-        import json as _json
-        plan_data = _json.loads(training_plan.plan_data)
-        # Build lookup: (week_number, day_of_week) -> workout dict in plan_data
-        _pd_workout: dict[tuple[int, int], dict] = {}
-        _pd_week: dict[int, dict] = {}
-        for _wk in plan_data:
-            _pd_week[_wk["week"]] = _wk
-            for _wo in _wk.get("daily_workouts", []):
-                _pd_workout[(_wk["week"], _wo["day"])] = _wo
+        plan_data, pd_week, pd_workout = self._parse_plan_data_lookups(training_plan)
+
+        # Batch-load all workouts for future weeks
+        workouts_by_week = self._batch_workouts_by_week(
+            [week.id for week in future_weeks], db
+        )
 
         changes = []
         for week in future_weeks:
-            workouts = (
-                db.query(DailyWorkout)
-                .filter(DailyWorkout.weekly_plan_id == week.id)
-                .all()
-            )
+            workouts = workouts_by_week.get(week.id, [])
 
             week_changes = []
             for workout in workouts:
                 if workout.workout_type != "rest" and workout.distance_km and workout.distance_km > 0:
-                    # Reverse previous adaptation to get back to the original distance
-                    base_distance = workout.distance_km
-                    if prev_multiplier and prev_multiplier != 0:
-                        base_distance = base_distance / prev_multiplier
-
-                    new_distance = max(1.0, round(base_distance * new_multiplier, 1))
+                    base_distance = workout.baseline_distance_km or workout.distance_km
+                    new_distance = max(1.0, round(base_distance * new_multiplier * recal_mult, 1))
                     old_distance = workout.distance_km
 
-                    # Skip if distance doesn't actually change
                     if new_distance == old_distance:
                         continue
 
                     workout.distance_km = new_distance
 
-                    # Build the adaptation note
                     if metrics["current_pace"]:
                         pace_str = f"{format_pace_bare(metrics['current_pace'])} min/km"
                         adapt_note = (
@@ -498,12 +542,10 @@ class AdaptationService:
                     else:
                         adapt_note = f"(Adapted: {round(base_distance, 1)}->{new_distance}km)"
 
-                    # Strip any prior adaptation note then append the updated one (DB)
                     clean_notes = _adapted_note_re.sub("", workout.notes or "").strip()
                     workout.notes = f"{clean_notes} {adapt_note}".strip() if clean_notes else adapt_note
 
-                    # Keep plan_data JSON in sync
-                    pd_wo = _pd_workout.get((week.week_number, workout.day_of_week))
+                    pd_wo = pd_workout.get((week.week_number, workout.day_of_week))
                     if pd_wo is not None:
                         pd_wo["distance"] = new_distance
                         pd_clean = _adapted_note_re.sub(
@@ -521,9 +563,8 @@ class AdaptationService:
             if week_changes:
                 new_total = sum(w.distance_km for w in workouts if w.distance_km)
                 week.total_km = round(new_total, 1)
-                # Sync total_km into plan_data
-                if week.week_number in _pd_week:
-                    _pd_week[week.week_number]["total_km"] = round(new_total, 1)
+                if week.week_number in pd_week:
+                    pd_week[week.week_number]["total_km"] = round(new_total, 1)
                 changes.append({
                     "week": week.week_number,
                     "workouts_adjusted": week_changes,
@@ -544,12 +585,10 @@ class AdaptationService:
                 "changes": [],
             }
 
-        # Persist the multiplier we just applied so future calls can reverse it
-        if hasattr(training_plan, "strava_adapted_multiplier"):
-            training_plan.strava_adapted_multiplier = round(new_multiplier, 4)
+        # Persist the multiplier
+        training_plan.strava_adapted_multiplier = round(new_multiplier, 4)
 
-        # Persist updated plan_data JSON
-        training_plan.plan_data = _json.dumps(plan_data)
+        training_plan.plan_data = json.dumps(plan_data)
 
         db.commit()
 
@@ -574,15 +613,12 @@ class AdaptationService:
         user_id: str,
         db: Session,
     ) -> Dict[str, any]:
-        """Reverse a previous Strava adaptation, restoring original planned distances.
+        """Reverse a previous Strava adaptation, restoring distances.
 
-        Extracts the pre-adaptation distance from the note embedded in each
-        adapted workout (format: ``(Adapted: X->Ykm...)``), restores it, and
-        clears the stored multiplier.
+        Uses baseline_distance_km * (recalibration_multiplier or 1.0) to
+        compute the correct post-reset distance. Falls back to parsing
+        the adaptation note for legacy workouts without a baseline.
         """
-        import re
-        import json as _json
-
         training_plan = db.query(TrainingPlan).filter(
             TrainingPlan.id == plan_id,
             TrainingPlan.user_id == user_id,
@@ -594,45 +630,44 @@ class AdaptationService:
         if not training_plan.strava_adapted_multiplier:
             return {"reset": False, "reason": "Plan has not been Strava-adapted"}
 
-        adapted_re = re.compile(r"\s*\(Adapted:\s*([\d.]+)->[\d.]+km[^)]*\)")
+        # Backfill baselines so we can compute reset distances
+        self._backfill_baselines(training_plan, db)
 
-        plan_data = _json.loads(training_plan.plan_data)
-        # Build lookup: (week_number, day_of_week) -> (week_dict, workout_dict)
-        pd_workout: dict[tuple[int, int], dict] = {}
-        pd_week: dict[int, dict] = {}
-        for wk in plan_data:
-            pd_week[wk["week"]] = wk
-            for wo in wk.get("daily_workouts", []):
-                pd_workout[(wk["week"], wo["day"])] = wo
+        adapted_re = re.compile(r"\s*\(Adapted:\s*([\d.]+)->[\d.]+km[^)]*\)")
+        recal_mult = training_plan.recalibration_multiplier or 1.0
+
+        plan_data, pd_week, pd_workout = self._parse_plan_data_lookups(training_plan)
 
         all_weeks = (
             db.query(WeeklyPlan)
             .filter(WeeklyPlan.training_plan_id == plan_id)
             .all()
         )
+        workouts_by_week = self._batch_workouts_by_week(
+            [week.id for week in all_weeks], db
+        )
 
         reset_count = 0
         for week in all_weeks:
-            workouts = (
-                db.query(DailyWorkout)
-                .filter(DailyWorkout.weekly_plan_id == week.id)
-                .all()
-            )
+            workouts = workouts_by_week.get(week.id, [])
             week_changed = False
             for workout in workouts:
                 notes = workout.notes or ""
                 m = adapted_re.search(notes)
                 if m:
-                    original_distance = float(m.group(1))
-                    workout.distance_km = original_distance
+                    # Use baseline if available, otherwise fall back to note
+                    if workout.baseline_distance_km:
+                        restored = round(workout.baseline_distance_km * recal_mult, 1)
+                    else:
+                        restored = float(m.group(1))
+                    workout.distance_km = restored
                     workout.notes = adapted_re.sub("", notes).strip() or None
                     reset_count += 1
                     week_changed = True
 
-                    # Sync plan_data
                     pd_wo = pd_workout.get((week.week_number, workout.day_of_week))
                     if pd_wo is not None:
-                        pd_wo["distance"] = original_distance
+                        pd_wo["distance"] = restored
                         pd_notes = adapted_re.sub(
                             "", pd_wo.get("notes", pd_wo.get("description", ""))
                         ).strip()
@@ -645,12 +680,12 @@ class AdaptationService:
                     pd_week[week.week_number]["total_km"] = new_total
 
         training_plan.strava_adapted_multiplier = None
-        training_plan.plan_data = _json.dumps(plan_data)
+        training_plan.plan_data = json.dumps(plan_data)
         db.commit()
 
         return {
             "reset": True,
-            "reason": f"Removed Strava adaptation from {reset_count} workout(s). Distances restored to original plan.",
+            "reason": f"Removed Strava adaptation from {reset_count} workout(s). Distances restored.",
         }
 
     # ------------------------------------------------------------------
@@ -681,8 +716,6 @@ class AdaptationService:
         Returns:
             Dict with ``mapped`` count, ``proposals`` list, and ``skipped`` count.
         """
-        import json as _json
-
         training_plan = db.query(TrainingPlan).filter(
             TrainingPlan.id == plan_id,
             TrainingPlan.user_id == user_id,
@@ -790,9 +823,9 @@ class AdaptationService:
         used_run_ids = set()
 
         for workout, week_number, workout_date in sorted(workout_candidates, key=lambda x: x[2]):
-            # Look within ±1 day window
+            # Look within ±2 day window (catches runs done 2 days off schedule)
             candidates = []
-            for offset in [0, -1, 1]:
+            for offset in [0, -1, 1, -2, 2]:
                 check_date = workout_date + timedelta(days=offset)
                 for run in runs_by_date.get(check_date, []):
                     if run.id not in used_run_ids:
@@ -820,7 +853,40 @@ class AdaptationService:
                 "actual_distance": best_run.distance_km,
                 "run_date": str(run_date),
                 "workout_date": str(workout_date),
+                "match_type": "workout",
             })
+
+        # --- Weekly volume pass ---
+        # Find still-unlinked runs that fall within a training week's date range
+        # and link them to the plan (without a specific workout) for volume credit.
+        weekly_plans = (
+            db.query(WeeklyPlan)
+            .filter(WeeklyPlan.training_plan_id == plan_id)
+            .all()
+        )
+        for wp in weekly_plans:
+            week_start = start_date + timedelta(weeks=(wp.week_number - 1))
+            week_end = week_start + timedelta(days=6)
+            if week_start > today:
+                continue
+            for d in range((min(week_end, today) - week_start).days + 1):
+                check_date = week_start + timedelta(days=d)
+                for run in runs_by_date.get(check_date, []):
+                    if run.id not in used_run_ids:
+                        used_run_ids.add(run.id)
+                        run_date = _to_date(run.date)
+                        proposals.append({
+                            "run_id": run.id,
+                            "workout_id": None,
+                            "week": wp.week_number,
+                            "day": None,
+                            "workout_type": None,
+                            "planned_distance": None,
+                            "actual_distance": run.distance_km,
+                            "run_date": str(run_date),
+                            "workout_date": None,
+                            "match_type": "weekly_volume",
+                        })
 
         if not proposals:
             return {"mapped": 0, "proposals": [], "message": "No matching runs found for unmapped workouts."}
@@ -828,11 +894,18 @@ class AdaptationService:
         if dry_run:
             return {"mapped": 0, "proposals": proposals, "dry_run": True}
 
-        # Apply mappings
+        # Apply mappings — build lookup dict to avoid per-proposal queries
+        proposal_run_ids = [p["run_id"] for p in proposals]
+        runs_by_id = {
+            r.id: r
+            for r in db.query(RunLog).filter(RunLog.id.in_(proposal_run_ids)).all()
+        }
         for p in proposals:
-            run = db.query(RunLog).filter(RunLog.id == p["run_id"]).first()
+            run = runs_by_id.get(p["run_id"])
             if run:
-                run.daily_workout_id = p["workout_id"]
+                if p["match_type"] == "workout":
+                    run.daily_workout_id = p["workout_id"]
+                # Both types get linked to the plan for volume tracking
                 run.training_plan_id = plan_id
 
         db.commit()
@@ -846,40 +919,85 @@ class AdaptationService:
     # Feature: Plan recalibration based on actual adherence
     # ------------------------------------------------------------------
 
+    def _calculate_weekly_volume_adherence(
+        self,
+        training_plan: "TrainingPlan",
+        current_week: int,
+        db: Session,
+    ) -> float:
+        """Calculate adherence based on weekly volume rather than per-workout.
+
+        For each completed week, compares total actual km (all linked runs)
+        against the WeeklyPlan.total_km.  A week with actual >= 80% of planned
+        counts as "volume met".
+
+        Returns ratio of volume-met weeks / total past weeks, as a percentage.
+        """
+        if not training_plan.start_date:
+            return 0.0
+
+        start_date = _to_date(training_plan.start_date)
+        plan_id = training_plan.id
+
+        past_weeks = (
+            db.query(WeeklyPlan)
+            .filter(
+                WeeklyPlan.training_plan_id == plan_id,
+                WeeklyPlan.week_number < current_week,
+            )
+            .all()
+        )
+        if not past_weeks:
+            return 0.0
+
+        # Single query: fetch all runs for the plan, bucket by week in Python
+        all_runs = (
+            db.query(RunLog.date, RunLog.distance_km)
+            .filter(RunLog.training_plan_id == plan_id)
+            .all()
+        )
+        weekly_actual: Dict[int, float] = defaultdict(float)
+        for run_date, dist in all_runs:
+            rd = _to_date(run_date)
+            if rd and start_date:
+                delta = (rd - start_date).days
+                if delta >= 0:
+                    wk = delta // 7 + 1
+                    weekly_actual[wk] += dist or 0.0
+
+        volume_met = 0
+        for week in past_weeks:
+            planned_km = week.total_km or 0
+            actual_km = weekly_actual.get(week.week_number, 0.0)
+            if planned_km > 0 and actual_km >= planned_km * 0.8:
+                volume_met += 1
+
+        return (volume_met / len(past_weeks) * 100) if past_weeks else 0.0
+
     def recalibrate_plan(
         self,
         plan_id: str,
         user_id: str,
         db: Session,
     ) -> Dict[str, any]:
-        """Recalibrate future plan weeks based on actual adherence.
+        """Recalibrate future plan weeks based on adherence, volume, and effort.
 
-        Analyses completed vs skipped workouts in past weeks, computes an
-        adherence-based multiplier, and adjusts future-week distances.
-        Only modifies weeks strictly after the current week.
+        Combines three signals into a single multiplier:
+        1. Workout adherence (per-workout completion) — blended with volume adherence
+        2. Volume adherence (weekly total km vs planned) — gives credit for rescheduled runs
+        3. Perceived effort trend — biases multiplier when effort is too high/low
+
+        Computes from baseline_distance_km to prevent compounding across
+        repeated calls or with Strava adaptation.
 
         Logic:
-        - Adherence >= 90%: nudge future weeks up by 5% (runner is strong)
-        - Adherence 70-89%: keep as-is
-        - Adherence 50-69%: reduce future weeks by 10%
-        - Adherence < 50%: reduce by 15%
-
-        Also accounts for actual volume: if average completed distance
-        exceeds planned distance, that signals the runner is ahead.
-
-        Updates both DailyWorkout DB rows AND the plan_data JSON.
-
-        Args:
-            plan_id: Training plan ID.
-            user_id: User ID.
-            db: Database session.
-
-        Returns:
-            Dict with recalibration results.
+        - Combined adherence >= 90%: nudge up 5%
+        - 70-89%: keep as-is
+        - 50-69%: reduce 10%
+        - < 50%: reduce 15%
+        - Effort bias: avg >= 9 → -0.05, avg <= 3 → +0.05, increasing + avg > 7 → -0.03
+        - Final multiplier clamped to [0.80, 1.15]
         """
-        import json as _json
-        import re
-
         training_plan = db.query(TrainingPlan).filter(
             TrainingPlan.id == plan_id,
             TrainingPlan.user_id == user_id,
@@ -891,12 +1009,15 @@ class AdaptationService:
         if not training_plan.start_date:
             return {"recalibrated": False, "reason": "Plan has no start date.", "changes": []}
 
+        # Backfill baselines for legacy plans
+        self._backfill_baselines(training_plan, db)
+
         start_date = _to_date(training_plan.start_date)
         today = datetime.now(timezone.utc).replace(tzinfo=None).date()
         days_elapsed = (today - start_date).days
         current_week = max(1, days_elapsed // 7 + 1)
 
-        # Gather past workouts and their completion status
+        # --- Workout adherence ---
         past_workouts = (
             db.query(DailyWorkout, WeeklyPlan.week_number)
             .join(WeeklyPlan)
@@ -915,7 +1036,6 @@ class AdaptationService:
                 "changes": [],
             }
 
-        # Check which workouts have linked runs
         workout_ids = [w.id for w, _ in past_workouts]
         linked_runs = (
             db.query(RunLog)
@@ -929,31 +1049,61 @@ class AdaptationService:
 
         total_planned = len(past_workouts)
         completed = len(linked_map)
-        adherence = (completed / total_planned * 100) if total_planned > 0 else 0
+        workout_adherence = (completed / total_planned * 100) if total_planned > 0 else 0
+
+        # --- Volume adherence ---
+        volume_adherence = self._calculate_weekly_volume_adherence(training_plan, current_week, db)
+
+        # Blend: 50/50
+        combined_adherence = 0.5 * workout_adherence + 0.5 * volume_adherence
 
         # Compare planned vs actual volume for completed workouts
         planned_km_total = sum(w.distance_km or 0 for w, _ in past_workouts if w.id in linked_map)
         actual_km_total = sum(r.distance_km or 0 for r in linked_runs)
-
         volume_ratio = (actual_km_total / planned_km_total) if planned_km_total > 0 else 1.0
 
-        # Determine multiplier based on adherence + volume
-        if adherence >= 90:
-            base_mult = 1.05  # Slight increase
-        elif adherence >= 70:
-            base_mult = 1.0   # Keep as-is
-        elif adherence >= 50:
-            base_mult = 0.90  # Reduce
+        # --- Adherence-based multiplier ---
+        if combined_adherence >= 90:
+            base_mult = 1.05
+        elif combined_adherence >= 70:
+            base_mult = 1.0
+        elif combined_adherence >= 50:
+            base_mult = 0.90
         else:
-            base_mult = 0.85  # Significant reduction
+            base_mult = 0.85
 
-        # Adjust for actual volume: if they ran more than planned, nudge up
+        # Adjust for actual volume
         if volume_ratio > 1.1 and base_mult < 1.1:
             base_mult = min(base_mult + 0.05, 1.15)
         elif volume_ratio < 0.8 and base_mult > 0.85:
             base_mult = max(base_mult - 0.05, 0.80)
 
-        multiplier = round(base_mult, 2)
+        # --- Effort bias (Phase 4) ---
+        plan_runs = (
+            db.query(RunLog)
+            .filter(
+                RunLog.training_plan_id == plan_id,
+                RunLog.perceived_effort.isnot(None),
+            )
+            .order_by(RunLog.date)
+            .all()
+        )
+        efforts = [r.perceived_effort for r in plan_runs]
+        avg_effort = sum(efforts) / len(efforts) if efforts else None
+        effort_trend = self._analyze_effort_trend(efforts)
+
+        if avg_effort is not None:
+            if avg_effort >= 9:
+                base_mult -= 0.05
+            elif avg_effort <= 3:
+                base_mult += 0.05
+            if effort_trend == "increasing" and avg_effort > 7:
+                base_mult -= 0.03
+
+        # Clamp
+        multiplier = round(max(0.80, min(1.15, base_mult)), 2)
+
+        strava_mult = training_plan.strava_adapted_multiplier or 1.0
 
         # Get future weeks
         future_weeks = (
@@ -969,44 +1119,38 @@ class AdaptationService:
             return {
                 "recalibrated": False,
                 "reason": "No future weeks remaining to recalibrate.",
-                "adherence_pct": round(adherence, 1),
+                "adherence_pct": round(combined_adherence, 1),
                 "changes": [],
             }
 
-        # Load plan_data JSON to keep in sync
-        plan_data = _json.loads(training_plan.plan_data)
+        plan_data, pd_week, pd_workout = self._parse_plan_data_lookups(training_plan)
         _recal_re = re.compile(r"\s*\(Recalibrated:[^)]*\)")
-        pd_workout: dict[tuple[int, int], dict] = {}
-        pd_week: dict[int, dict] = {}
-        for wk in plan_data:
-            pd_week[wk["week"]] = wk
-            for wo in wk.get("daily_workouts", []):
-                pd_workout[(wk["week"], wo["day"])] = wo
+
+        workouts_by_week = self._batch_workouts_by_week(
+            [week.id for week in future_weeks], db
+        )
 
         changes = []
         for week in future_weeks:
-            workouts = (
-                db.query(DailyWorkout)
-                .filter(DailyWorkout.weekly_plan_id == week.id)
-                .all()
-            )
+            workouts = workouts_by_week.get(week.id, [])
 
             week_changes = []
             for workout in workouts:
                 if workout.workout_type != "rest" and workout.distance_km and workout.distance_km > 0:
+                    # Compute from baseline: baseline * strava_mult * recal_mult
+                    base_distance = workout.baseline_distance_km or workout.distance_km
+                    new_distance = max(1.0, round(base_distance * strava_mult * multiplier, 1))
                     old_distance = workout.distance_km
-                    new_distance = max(1.0, round(old_distance * multiplier, 1))
 
                     if new_distance == old_distance:
                         continue
 
                     workout.distance_km = new_distance
-                    recal_note = f"(Recalibrated: {old_distance}->{new_distance}km, {round(adherence)}% adherence)"
+                    recal_note = f"(Recalibrated: {round(base_distance, 1)}->{new_distance}km, {round(combined_adherence)}% adherence)"
 
                     clean_notes = _recal_re.sub("", workout.notes or "").strip()
                     workout.notes = f"{clean_notes} {recal_note}".strip() if clean_notes else recal_note
 
-                    # Sync plan_data JSON
                     pd_wo = pd_workout.get((week.week_number, workout.day_of_week))
                     if pd_wo is not None:
                         pd_wo["distance"] = new_distance
@@ -1037,29 +1181,41 @@ class AdaptationService:
             return {
                 "recalibrated": False,
                 "reason": "Distances already match your current performance.",
-                "adherence_pct": round(adherence, 1),
+                "adherence_pct": round(combined_adherence, 1),
                 "multiplier": multiplier,
+                "avg_effort": round(avg_effort, 1) if avg_effort else None,
+                "effort_trend": effort_trend,
                 "changes": [],
             }
 
-        training_plan.plan_data = _json.dumps(plan_data)
+        # Persist multiplier and plan data
+        training_plan.recalibration_multiplier = multiplier
+        training_plan.plan_data = json.dumps(plan_data)
         db.commit()
 
         direction = "increased" if multiplier > 1.0 else "reduced" if multiplier < 1.0 else "kept"
         first_wk = changes[0]["week"]
         last_wk = changes[-1]["week"]
 
+        reason_parts = [
+            f"Weeks {first_wk}-{last_wk} {direction} based on "
+            f"{round(combined_adherence)}% adherence ({completed}/{total_planned} workouts, "
+            f"{round(volume_adherence)}% weekly volume met)."
+        ]
+        if avg_effort is not None:
+            reason_parts.append(f"Avg effort: {round(avg_effort, 1)}/10 ({effort_trend}).")
+
         return {
             "recalibrated": True,
-            "reason": (
-                f"Weeks {first_wk}-{last_wk} {direction} based on "
-                f"{round(adherence)}% adherence ({completed}/{total_planned} workouts). "
-                f"Volume ratio: {round(volume_ratio * 100)}% of planned."
-            ),
-            "adherence_pct": round(adherence, 1),
+            "reason": " ".join(reason_parts),
+            "adherence_pct": round(combined_adherence, 1),
+            "workout_adherence_pct": round(workout_adherence, 1),
+            "volume_adherence_pct": round(volume_adherence, 1),
             "completed": completed,
             "total_planned": total_planned,
             "volume_ratio": round(volume_ratio, 2),
             "multiplier": multiplier,
+            "avg_effort": round(avg_effort, 1) if avg_effort else None,
+            "effort_trend": effort_trend,
             "changes": changes,
         }

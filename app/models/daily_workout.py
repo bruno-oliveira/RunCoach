@@ -18,3 +18,4 @@ class DailyWorkout(Base):
     intensity = Column(String)  # 'low', 'medium', 'high'
     notes = Column(Text)
     coaching_rationale = Column(Text, nullable=True)
+    baseline_distance_km = Column(Float, nullable=True)

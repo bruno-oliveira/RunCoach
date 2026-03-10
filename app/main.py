@@ -109,6 +109,9 @@ def _run_migrations(eng) -> None:
         "ALTER TABLE run_logs ADD COLUMN effort_quality_score FLOAT",
         "ALTER TABLE run_logs ADD COLUMN quality_label VARCHAR(20)",
         "ALTER TABLE run_logs ADD COLUMN planned_pace_min_km FLOAT",
+        # Baseline distances for non-compounding adaptations
+        "ALTER TABLE daily_workouts ADD COLUMN baseline_distance_km FLOAT",
+        "ALTER TABLE training_plans ADD COLUMN recalibration_multiplier FLOAT",
     ]
     with eng.connect() as conn:
         for stmt in stmts:

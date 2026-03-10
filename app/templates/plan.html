@@ -108,9 +108,6 @@
             </ul>
         </div>
         {% endif %}
-        <button onclick="checkForAdaptation()" class="btn btn-primary" style="margin-top: var(--space-4);">
-            Check for Plan Adaptation
-        </button>
     </div>
     {% endif %}
 
@@ -292,7 +289,9 @@
         <div class="banner-content">
             <div class="banner-text">
                 <strong>Recalibrate Plan</strong>
-                <p>{{ skipped_count }} workout{{ 's' if skipped_count != 1 else '' }} skipped in past weeks. Recalibrate to adjust future weeks to your actual progress.</p>
+                <p>Plan adjustment recommended based on your adherence and effort data.
+                {% if skipped_count > 0 %}{{ skipped_count }} missed{% endif %}{% if skipped_count > 0 and rescheduled_count > 0 %}, {% endif %}{% if rescheduled_count > 0 %}{{ rescheduled_count }} rescheduled{% endif %}{% if skipped_count > 0 or rescheduled_count > 0 %} workout{{ 's' if (skipped_count + rescheduled_count) != 1 else '' }}.{% endif %}
+                Recalibrate to align future weeks with your actual progress.</p>
             </div>
             <div class="banner-actions">
                 <button onclick="recalibratePlan()" class="btn btn-primary btn-small" id="recalibrate-btn">Recalibrate</button>

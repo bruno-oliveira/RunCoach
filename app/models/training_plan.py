@@ -34,6 +34,7 @@ class TrainingPlan(Base):
     start_date = Column(DateTime, nullable=True)
     # Tracks the last Strava-fitness multiplier applied so re-runs can reverse it
     strava_adapted_multiplier = Column(Float, nullable=True)
+    recalibration_multiplier = Column(Float, nullable=True)
 
     # VDOT / pace zone fields
     body_weight_kg = Column(Float, nullable=True)
