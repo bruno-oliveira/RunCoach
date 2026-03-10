@@ -67,13 +67,13 @@ class AdaptationService:
         # Calculate metrics
         total_logged = len(runs)
         
-        # Get planned workouts count (excluding rest days)
+        # Get planned workouts count (excluding rest and recovery days)
         planned_workouts = (
             db.query(DailyWorkout)
             .join(WeeklyPlan)
             .filter(
                 WeeklyPlan.training_plan_id == training_plan_id,
-                DailyWorkout.workout_type != "rest"
+                DailyWorkout.workout_type.notin_(["rest", "recovery"]),
             )
             .count()
         )
@@ -340,7 +340,7 @@ class AdaptationService:
             .join(WeeklyPlan)
             .filter(
                 WeeklyPlan.training_plan_id == plan_id,
-                DailyWorkout.workout_type != "rest"
+                DailyWorkout.workout_type.notin_(["rest", "recovery"]),
             )
             .all()
         )
@@ -704,7 +704,7 @@ class AdaptationService:
             .join(WeeklyPlan)
             .filter(
                 WeeklyPlan.training_plan_id == plan_id,
-                DailyWorkout.workout_type != "rest",
+                DailyWorkout.workout_type.notin_(["rest", "recovery"]),
             )
             .all()
         )
@@ -873,7 +873,7 @@ class AdaptationService:
             .filter(
                 WeeklyPlan.training_plan_id == plan_id,
                 WeeklyPlan.week_number < current_week,
-                DailyWorkout.workout_type != "rest",
+                DailyWorkout.workout_type.notin_(["rest", "recovery"]),
             )
             .all()
         )
