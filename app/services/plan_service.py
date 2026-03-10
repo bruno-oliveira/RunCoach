@@ -293,6 +293,44 @@ class PlanService:
         user_plans_cache.pop(f"plans_{user_id}", None)
 
     # ------------------------------------------------------------------
+    # Plan data enrichment
+    # ------------------------------------------------------------------
+
+    @staticmethod
+    def enrich_plan_data_with_ids(
+        plan_data: list[dict],
+        training_plan_id: str,
+        db: Session,
+    ) -> list[dict]:
+        """Inject database DailyWorkout.id into each workout dict.
+
+        The plan_data JSON doesn't include database IDs, but the template
+        needs them to look up logged runs via ``logged_runs.get(workout.id)``.
+        This method queries the DailyWorkout table and matches by
+        (week_number, day_of_week) to inject the ``id`` key.
+        """
+        # Build mapping: (week_number, day_of_week) -> DailyWorkout.id
+        rows = (
+            db.query(
+                WeeklyPlan.week_number,
+                DailyWorkout.day_of_week,
+                DailyWorkout.id,
+            )
+            .join(DailyWorkout, DailyWorkout.weekly_plan_id == WeeklyPlan.id)
+            .filter(WeeklyPlan.training_plan_id == training_plan_id)
+            .all()
+        )
+        id_map = {(wn, dow): wid for wn, dow, wid in rows}
+
+        for week in plan_data:
+            week_num = week.get("week")
+            for workout in week.get("daily_workouts", []):
+                key = (week_num, workout.get("day"))
+                workout["id"] = id_map.get(key)
+
+        return plan_data
+
+    # ------------------------------------------------------------------
     # Nutrition helpers
     # ------------------------------------------------------------------
 

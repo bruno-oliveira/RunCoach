@@ -380,30 +380,35 @@
                         {{ logged_run.quality_label }}
                     </div>
                     {% endif %}
-                    <div class="run-stats">
-                        <div class="run-stats-row">
-                            <span>Completed:</span>
-                            <span>{{ "%.1f"|format(logged_run.distance_km) }} km in {{ "%.0f"|format(logged_run.duration_minutes) }} min</span>
+                    <details class="run-stats-details">
+                        <summary class="run-stats-summary">{{ "%.1f"|format(logged_run.distance_km) }} km &middot; {{ "%.0f"|format(logged_run.duration_minutes) }} min</summary>
+                        <div class="run-stats">
+                            {% if logged_run.avg_pace_min_km %}
+                            <div class="run-stats-row">
+                                <span>Pace:</span>
+                                <span>{{ logged_run.avg_pace_min_km|format_pace }} /km</span>
+                            </div>
+                            {% endif %}
+                            {% if logged_run.perceived_effort %}
+                            <div class="run-stats-row">
+                                <span>Effort:</span>
+                                <span>{{ logged_run.perceived_effort }}/10</span>
+                            </div>
+                            {% endif %}
+                            {% if logged_run.avg_heart_rate %}
+                            <div class="run-stats-row">
+                                <span>Avg HR:</span>
+                                <span>{{ logged_run.avg_heart_rate }} bpm</span>
+                            </div>
+                            {% endif %}
+                            {% if logged_run.effort_quality_score %}
+                            <div class="run-stats-row">
+                                <span>Quality:</span>
+                                <span>{{ "%.0f"|format(logged_run.effort_quality_score) }}/100</span>
+                            </div>
+                            {% endif %}
                         </div>
-                        {% if logged_run.perceived_effort %}
-                        <div class="run-stats-row">
-                            <span>Effort:</span>
-                            <span>{{ logged_run.perceived_effort }}/10</span>
-                        </div>
-                        {% endif %}
-                        {% if logged_run.avg_heart_rate %}
-                        <div class="run-stats-row">
-                            <span>Avg HR:</span>
-                            <span>{{ logged_run.avg_heart_rate }} bpm</span>
-                        </div>
-                        {% endif %}
-                        {% if logged_run.effort_quality_score %}
-                        <div class="run-stats-row">
-                            <span>Quality:</span>
-                            <span>{{ "%.0f"|format(logged_run.effort_quality_score) }}/100</span>
-                        </div>
-                        {% endif %}
-                    </div>
+                    </details>
                     <button class="undo-log-btn" onclick="unlinkRun('{{ logged_run.id }}')">Undo</button>
                     {% elif workout.type != 'rest' and user and not user.strava_athlete_id %}
                     <button class="log-run-btn" onclick="openLogModal('{{ workout.id }}', '{{ workout.type }}', {{ workout.distance }}, '{{ day_names[workout.day - 1] }}', {{ week.week }})">Log This Run</button>

@@ -108,6 +108,9 @@ async def generate_plan(
                 f"Returning existing plan {existing.id} for user {current_user.id}"
             )
             plan_data = json.loads(existing.plan_data)
+            plan_data = PlanService.enrich_plan_data_with_ids(
+                plan_data, existing.id, db
+            )
             ctx = plan_view_context(
                 request,
                 current_user,
@@ -146,6 +149,9 @@ async def generate_plan(
         )
         training_plan, plan_data = PlanService.create_plan(
             plan_request, user, db, plan_generator, nutrition_engine
+        )
+        plan_data = PlanService.enrich_plan_data_with_ids(
+            plan_data, training_plan.id, db
         )
 
         ctx = plan_view_context(
@@ -213,6 +219,9 @@ async def customize_plan(
         plan_data = PlanService.customize_plan(
             training_plan, week_number, adjustment_type, adjustment_value, db
         )
+        plan_data = PlanService.enrich_plan_data_with_ids(
+            plan_data, training_plan.id, db
+        )
 
         nutrition_plan = PlanService.nutrition_for_template(
             training_plan.nutrition_plan_data
@@ -267,6 +276,9 @@ async def view_plan(
         )
 
         plan_data = json.loads(training_plan.plan_data)
+        plan_data = PlanService.enrich_plan_data_with_ids(
+            plan_data, training_plan.id, db
+        )
 
         # Generate nutrition plan for existing plans if not present
         if not training_plan.nutrition_plan_data:
