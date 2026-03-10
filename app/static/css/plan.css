@@ -1613,6 +1613,27 @@
 
 .btn-close:hover { opacity: 1; background: rgba(255,255,255,0.1); }
 
+/* ---- Plan Action Banners (map runs, recalibrate) ---- */
+.plan-action-banner {
+    border-radius: var(--radius-xl);
+    padding: var(--space-5);
+    margin-bottom: var(--space-6);
+}
+
+.map-runs-banner {
+    background: linear-gradient(135deg, #1e40af, #3b82f6);
+    box-shadow: 0 2px 12px rgba(59, 130, 246, 0.25);
+}
+
+.recalibrate-banner {
+    background: linear-gradient(135deg, #b45309, #f59e0b);
+    box-shadow: 0 2px 12px rgba(245, 158, 11, 0.25);
+}
+
+.plan-action-banner .banner-text { color: white; }
+.plan-action-banner .banner-text strong { display: block; font-size: var(--text-lg); margin-bottom: var(--space-1); }
+.plan-action-banner .banner-text p { margin: 0; opacity: 0.9; font-size: var(--text-sm); }
+
 /* Day selector */
 .day-selector {
     margin-bottom: var(--space-4);

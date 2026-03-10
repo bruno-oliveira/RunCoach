@@ -253,6 +253,37 @@
     </div>
     {% endif %}
 
+    {% if start_date and user and unmapped_runs_count and unmapped_runs_count > 0 %}
+    <div class="plan-action-banner map-runs-banner" id="map-runs-banner">
+        <div class="banner-content">
+            <div class="banner-text">
+                <strong>Map Existing Runs</strong>
+                <p>You have {{ unmapped_runs_count }} unlinked run{{ 's' if unmapped_runs_count != 1 else '' }}. Map them to this plan to track your progress retroactively.</p>
+            </div>
+            <div class="banner-actions">
+                <button onclick="previewMapRuns()" class="btn btn-secondary btn-small" id="preview-map-btn">Preview</button>
+                <button onclick="mapRunsToPlan()" class="btn btn-primary btn-small" id="map-runs-btn">Map Runs</button>
+                <button onclick="this.closest('.plan-action-banner').style.display='none'" class="btn-close">&times;</button>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    {% if needs_recalibration and user %}
+    <div class="plan-action-banner recalibrate-banner" id="recalibrate-banner">
+        <div class="banner-content">
+            <div class="banner-text">
+                <strong>Recalibrate Plan</strong>
+                <p>{{ skipped_count }} workout{{ 's' if skipped_count != 1 else '' }} skipped in past weeks. Recalibrate to adjust future weeks to your actual progress.</p>
+            </div>
+            <div class="banner-actions">
+                <button onclick="recalibratePlan()" class="btn btn-primary btn-small" id="recalibrate-btn">Recalibrate</button>
+                <button onclick="this.closest('.plan-action-banner').style.display='none'" class="btn-close">&times;</button>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
     <!-- Training Tab Panel -->
     <div class="plan-tab-panel active" id="panel-training" role="tabpanel" aria-labelledby="tab-training">
         {% set ns = namespace(total=0, done=0) %}

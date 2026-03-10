@@ -656,6 +656,124 @@ function viewAdaptationDetails() {
     dismissAdaptationBanner();
 }
 
+// ------------------------------------------------------------------
+// Retroactive run mapping
+// ------------------------------------------------------------------
+
+window.previewMapRuns = async function() {
+    const btn = document.getElementById('preview-map-btn');
+    if (btn) { btn.disabled = true; btn.textContent = 'Loading...'; }
+
+    try {
+        const response = await fetch(`/api/plan/${window.APP_CTX.plan_id}/map-runs/preview`, {
+            headers: authHeaders(),
+            credentials: 'same-origin',
+        });
+
+        if (response.ok) {
+            const result = await response.json();
+            if (result.proposals && result.proposals.length > 0) {
+                let msg = `Found ${result.proposals.length} run(s) to map:\n\n`;
+                result.proposals.forEach(p => {
+                    msg += `  Week ${p.week} Day ${p.day} (${p.workout_type}): `;
+                    msg += `${p.actual_distance}km run on ${p.run_date}`;
+                    msg += ` → planned ${p.planned_distance}km on ${p.workout_date}\n`;
+                });
+                msg += '\nClick "Map Runs" to apply.';
+                ApiClient.showInfo(msg);
+            } else {
+                ApiClient.showInfo(result.message || 'No matching runs found.');
+            }
+        } else {
+            const err = await response.json();
+            ApiClient.showError(err.detail || 'Could not preview mappings.');
+        }
+    } catch (error) {
+        ApiClient.showError('Error: ' + error.message);
+    } finally {
+        if (btn) { btn.disabled = false; btn.textContent = 'Preview'; }
+    }
+};
+
+window.mapRunsToPlan = async function() {
+    const btn = document.getElementById('map-runs-btn');
+    if (btn) { btn.disabled = true; btn.textContent = 'Mapping...'; }
+
+    try {
+        const response = await fetch(`/api/plan/${window.APP_CTX.plan_id}/map-runs`, {
+            method: 'POST',
+            headers: authHeaders(),
+            credentials: 'same-origin',
+        });
+
+        if (response.ok) {
+            const result = await response.json();
+            if (result.mapped > 0) {
+                ApiClient.showSuccess(`Mapped ${result.mapped} run(s) to your plan! Reloading...`);
+                setTimeout(() => location.reload(), 1500);
+            } else {
+                ApiClient.showInfo(result.message || 'No runs could be mapped.');
+                if (btn) { btn.disabled = false; btn.textContent = 'Map Runs'; }
+            }
+        } else {
+            const err = await response.json();
+            ApiClient.showError(err.detail || 'Could not map runs.');
+            if (btn) { btn.disabled = false; btn.textContent = 'Map Runs'; }
+        }
+    } catch (error) {
+        ApiClient.showError('Error: ' + error.message);
+        if (btn) { btn.disabled = false; btn.textContent = 'Map Runs'; }
+    }
+};
+
+// ------------------------------------------------------------------
+// Plan recalibration
+// ------------------------------------------------------------------
+
+window.recalibratePlan = async function() {
+    const confirmed = window.confirm(
+        'This will adjust future week distances based on your actual adherence.\n\n' +
+        'Past weeks will not be changed.\n\nContinue?'
+    );
+    if (!confirmed) return;
+
+    const btn = document.getElementById('recalibrate-btn');
+    if (btn) { btn.disabled = true; btn.textContent = 'Recalibrating...'; }
+
+    try {
+        const response = await fetch(`/api/plan/${window.APP_CTX.plan_id}/recalibrate`, {
+            method: 'POST',
+            headers: authHeaders(),
+            credentials: 'same-origin',
+        });
+
+        if (response.ok) {
+            const result = await response.json();
+            if (result.recalibrated) {
+                let msg = `Plan recalibrated!\n\n${result.reason}`;
+                if (result.changes && result.changes.length > 0) {
+                    msg += '\n\nChanges:';
+                    result.changes.forEach(c => {
+                        msg += `\n  Week ${c.week}: ${c.workouts_adjusted.length} workout(s) adjusted (Total: ${c.new_total_km} km)`;
+                    });
+                }
+                ApiClient.showSuccess(msg);
+                setTimeout(() => location.reload(), 2500);
+            } else {
+                ApiClient.showInfo(result.reason || 'No recalibration needed.');
+                if (btn) { btn.disabled = false; btn.textContent = 'Recalibrate'; }
+            }
+        } else {
+            const err = await response.json();
+            ApiClient.showError(err.detail || 'Recalibration failed.');
+            if (btn) { btn.disabled = false; btn.textContent = 'Recalibrate'; }
+        }
+    } catch (error) {
+        ApiClient.showError('Error: ' + error.message);
+        if (btn) { btn.disabled = false; btn.textContent = 'Recalibrate'; }
+    }
+};
+
 // Set plan start date
 window.startPlan = async function() {
     const dateInput = document.getElementById('plan-start-date');

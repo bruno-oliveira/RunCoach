@@ -424,11 +424,39 @@ class PlanService:
             except Exception as e:
                 logger.warning(f"Could not compute progress data: {e}")
 
+        # Compute recalibration / mapping hints for the UI
+        skipped_count = 0
+        unmapped_runs_count = 0
+        needs_recalibration = False
+        if current_user and training_plan.start_date:
+            try:
+                skipped_count = adaptation_service.detect_skipped_workouts(
+                    training_plan.id, db
+                )
+                needs_recalibration = skipped_count >= 2
+            except Exception as e:
+                logger.warning(f"Could not detect skipped workouts: {e}")
+
+            try:
+                unmapped_runs_count = (
+                    db.query(RunLog)
+                    .filter(
+                        RunLog.user_id == current_user.id,
+                        RunLog.daily_workout_id.is_(None),
+                    )
+                    .count()
+                )
+            except Exception as e:
+                logger.warning(f"Could not count unmapped runs: {e}")
+
         return {
             "performance_analysis": performance_analysis,
             "logged_runs": logged_runs_map,
             "strava_fitness": strava_fitness,
             "progress_data": progress_data,
+            "skipped_count": skipped_count,
+            "unmapped_runs_count": unmapped_runs_count,
+            "needs_recalibration": needs_recalibration,
         }
 
 
