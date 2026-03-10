@@ -58,37 +58,49 @@ const ApiClient = {
       container.className = 'toast-container';
       document.body.appendChild(container);
     }
-    
+
     const toast = document.createElement('div');
-    toast.className = `toast alert-${type}`;
-    
+    toast.className = `toast toast-${type}`;
+
     const icons = {
-      success: '✓',
-      error: '✕',
-      warning: '⚠',
-      info: 'ℹ'
+      success: '\u2713',
+      error: '\u2715',
+      warning: '\u0021',
+      info: 'i'
     };
-    
+
+    // Sanitize and format message
+    const safeMessage = message
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/\n/g, '<br>');
+
     toast.innerHTML = `
       <span class="toast-icon">${icons[type] || icons.info}</span>
       <div class="toast-content">
-        <div class="toast-message">${message}</div>
+        <div class="toast-message">${safeMessage}</div>
       </div>
-      <button class="toast-close" aria-label="Close">✕</button>
+      <button class="toast-close" aria-label="Close">\u2715</button>
+      <div class="toast-progress"></div>
     `;
-    
+
     container.appendChild(toast);
-    
-    // Auto-remove after 5 seconds
-    setTimeout(() => {
-      toast.classList.add('toast-exit');
-      setTimeout(() => toast.remove(), 300);
-    }, 5000);
-    
+
+    const dismiss = () => {
+      if (toast.parentNode) {
+        toast.classList.add('toast-exit');
+        setTimeout(() => toast.remove(), 300);
+      }
+    };
+
+    // Auto-remove after 8 seconds
+    const autoTimer = setTimeout(dismiss, 8000);
+
     // Manual close
     toast.querySelector('.toast-close').addEventListener('click', () => {
-      toast.classList.add('toast-exit');
-      setTimeout(() => toast.remove(), 300);
+      clearTimeout(autoTimer);
+      dismiss();
     });
   },
   

@@ -3,7 +3,7 @@
 {% block title %}Performance Training Plan - RunCoach{% endblock %}
 
 {% block styles %}
-<link rel="stylesheet" href="/static/css/performance.css">
+<link rel="stylesheet" href="{{ static_url('css/performance.css') }}">
 {% endblock %}
 
 {% block content %}
@@ -388,7 +388,7 @@
     window.PROGRESS_DATA = {{ progress_data | tojson }};
 </script>
 {% endif %}
-<script src="/static/js/performance_dashboard.js"></script>
+<script src="{{ static_url('js/performance_dashboard.js') }}"></script>
 <script>
 function openLogRunModal() {
     document.getElementById('logRunModal').style.display = 'flex';

@@ -6,7 +6,6 @@ from typing import Any, Dict, Optional
 
 from fastapi import APIRouter, Cookie, Depends, Form, HTTPException, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
-from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
 
 from app.config import settings
@@ -23,14 +22,13 @@ from app.services.performance_service import PerformanceService
 from app.exceptions import RunCoachException, InadequateBaseException
 from app.core.performance_plan_generator import PerformancePlanGenerator
 from app.models import TrainingPlan
+from app.template_helpers import create_templates
 from app.utils import format_pace, format_pace_bare
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter(tags=["performance"])
-templates = Jinja2Templates(directory="app/templates")
-
-templates.env.filters['format_pace'] = format_pace
+templates = create_templates()
 
 
 def _parse_time_to_pace(time_str: str, distance_km: float) -> float:

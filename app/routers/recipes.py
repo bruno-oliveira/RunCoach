@@ -5,7 +5,6 @@ import logging
 
 from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import HTMLResponse
-from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
 
 from app.config import settings
@@ -13,11 +12,12 @@ from app.dependencies import get_current_user, get_db, get_optional_user
 from app.models import User
 from app.meal_database import get_meal_database
 from app.models import FavoriteRecipe
+from app.template_helpers import create_templates
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter(tags=["recipes"])
-templates = Jinja2Templates(directory="app/templates")
+templates = create_templates()
 meal_db = get_meal_database()
 
 

@@ -3,7 +3,7 @@
 {% block title %}Your Training Plan - RunCoach{% endblock %}
 
 {% block styles %}
-<link rel="stylesheet" href="/static/css/plan.css">
+<link rel="stylesheet" href="{{ static_url('css/plan.css') }}">
 {% endblock %}
 
 {% block content %}
@@ -875,12 +875,12 @@
         plan_user_id: '{{ training_plan.user_id }}'
     };
 </script>
-<script src="/static/js/plan.js" defer></script>
+<script src="{{ static_url('js/plan.js') }}" defer></script>
 {% if progress_data and progress_data.completed_count > 0 %}
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
 <script>
     window.PROGRESS_DATA = {{ progress_data | tojson }};
 </script>
-<script src="/static/js/performance_dashboard.js" defer></script>
+<script src="{{ static_url('js/performance_dashboard.js') }}" defer></script>
 {% endif %}
 {% endblock %}

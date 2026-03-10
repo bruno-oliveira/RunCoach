@@ -6,6 +6,8 @@
  * Initialization code runs after DOMContentLoaded.
  */
 
+console.log('[plan.js] loaded');
+
 let currentWeek = 1;
 let currentWorkoutId = null;
 

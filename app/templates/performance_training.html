@@ -3,7 +3,7 @@
 {% block title %}Performance Training - RunCoach{% endblock %}
 
 {% block styles %}
-<link rel="stylesheet" href="/static/css/performance.css?v=2">
+<link rel="stylesheet" href="{{ static_url('css/performance.css') }}">
 {% endblock %}
 
 {% block content %}
@@ -250,5 +250,5 @@
     {% endif %}
 </div>
 
-<script src="/static/js/performance.js"></script>
+<script src="{{ static_url('js/performance.js') }}"></script>
 {% endblock %}

@@ -9,12 +9,11 @@ from typing import Optional
 from fastapi import Depends, FastAPI, Request
 from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
-from fastapi.templating import Jinja2Templates
 
 from app.config import settings, setup_logging
 from app.dependencies import engine, get_optional_user
 from app.models import Base, User
-from app.utils import format_pace
+from app.template_helpers import create_templates
 from app.routers import (
     adaptive_router,
     analytics_page_router,
@@ -123,10 +122,7 @@ def _run_migrations(eng) -> None:
 _run_migrations(engine)
 
 # Templates
-templates = Jinja2Templates(directory="app/templates")
-
-
-templates.env.filters['format_pace'] = format_pace
+templates = create_templates()
 
 # Static files with caching
 app.mount("/static", CachedStaticFiles(

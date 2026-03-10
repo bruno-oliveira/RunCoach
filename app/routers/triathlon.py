@@ -7,7 +7,6 @@ from typing import Optional
 
 from fastapi import APIRouter, Cookie, Depends, Form, HTTPException, Request
 from fastapi.responses import FileResponse, HTMLResponse, RedirectResponse
-from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
 
 from app.config import settings
@@ -16,11 +15,12 @@ from app.core.triathlon_plan_generator import TriathlonPlanGenerator
 from app.dependencies import get_db, get_optional_user
 from app.models.triathlon_plan import TriathlonPlan
 from app.models.user import User
+from app.template_helpers import create_templates
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter(tags=["triathlon"])
-templates = Jinja2Templates(directory="app/templates")
+templates = create_templates()
 
 _generator = TriathlonPlanGenerator()
 _pdf_generator = TriathlonPDFGenerator()

@@ -8,7 +8,6 @@ from typing import Optional
 
 from fastapi import APIRouter, Cookie, Depends, Form, HTTPException, Request
 from fastapi.responses import HTMLResponse
-from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
 
 from app.config import settings
@@ -18,11 +17,12 @@ from app.core.nutrition_engine import NutritionEngine
 from app.services.plan_service import PlanService
 from app.schemas import parse_target_distance
 from app.services.adaptation_service import AdaptationService
+from app.template_helpers import create_templates
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter(tags=["nutrition"])
-templates = Jinja2Templates(directory="app/templates")
+templates = create_templates()
 
 
 @router.post("/randomize-meals", response_class=HTMLResponse)

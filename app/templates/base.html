@@ -21,11 +21,19 @@
         })();
     </script>
 
+    <script>
+    window.onerror = function(msg) {
+        if (msg && msg.indexOf('is not defined') !== -1) {
+            alert('Action unavailable. Please hard-refresh (Ctrl+Shift+R / Cmd+Shift+R).');
+        }
+    };
+    </script>
+
     <!-- Base styles -->
-    <link rel="stylesheet" href="/static/css/base.css">
-    <link rel="stylesheet" href="/static/css/components.css">
+    <link rel="stylesheet" href="{{ static_url('css/base.css') }}">
+    <link rel="stylesheet" href="{{ static_url('css/components.css') }}">
     <!-- Mobile-native feel improvements -->
-    <link rel="stylesheet" href="/static/css/mobile.css">
+    <link rel="stylesheet" href="{{ static_url('css/mobile.css') }}">
 
     <!-- Google Sign-In script (loaded on all pages for nav login) -->
     <script src="https://accounts.google.com/gsi/client" async defer></script>
@@ -61,9 +69,9 @@
     {% endblock %}
 
     <!-- Base scripts -->
-    <script src="/static/js/modal.js" defer></script>
-    <script src="/static/js/api.js" defer></script>
-    <script src="/static/js/auth.js" defer></script>
+    <script src="{{ static_url('js/modal.js') }}" defer></script>
+    <script src="{{ static_url('js/api.js') }}" defer></script>
+    <script src="{{ static_url('js/auth.js') }}" defer></script>
 
     <!-- Page-specific scripts -->
     {% block scripts %}{% endblock %}

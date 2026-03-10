@@ -8,7 +8,6 @@ from typing import Optional
 
 from fastapi import APIRouter, Cookie, Depends, Form, HTTPException, Request, Response
 from fastapi.responses import FileResponse, HTMLResponse, RedirectResponse
-from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
@@ -38,13 +37,12 @@ from app.routers.plan_helpers import error_response, get_plan_or_404, plan_view_
 from app.schemas import DISTANCE_NAMES, PlanRequest, get_mileage_warning, parse_target_distance
 from app.services.adaptation_service import AdaptationService
 from app.services.plan_service import PlanService, user_plans_cache
-from app.utils import format_pace
+from app.template_helpers import create_templates
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter(tags=["plans"])
-templates = Jinja2Templates(directory="app/templates")
-templates.env.filters["format_pace"] = format_pace
+templates = create_templates()
 
 
 # ---------------------------------------------------------------------------

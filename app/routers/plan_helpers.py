@@ -5,15 +5,15 @@ from datetime import date, datetime, timedelta
 from typing import Any, Optional
 
 from fastapi import HTTPException, Request
-from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
 
 from app.config import settings
 from app.models import TrainingPlan, User
 from app.dependencies import verify_plan_ownership
+from app.template_helpers import create_templates
 
 
-templates = Jinja2Templates(directory="app/templates")
+templates = create_templates()
 
 
 def error_response(

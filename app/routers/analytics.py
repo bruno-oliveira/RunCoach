@@ -4,22 +4,19 @@ import logging
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from fastapi.responses import HTMLResponse
-from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
 
 from app.config import settings
 from app.dependencies import get_db, get_current_user, get_optional_user
 from app.models import User
 from app.models.run_log import RunLog
-from app.utils import format_pace
+from app.template_helpers import create_templates
 
 logger = logging.getLogger(__name__)
 
 analytics_router = APIRouter(prefix="/api/analytics", tags=["analytics"])
 analytics_page_router = APIRouter(tags=["analytics-page"])
-templates = Jinja2Templates(directory="app/templates")
-
-templates.env.filters['format_pace'] = format_pace
+templates = create_templates()
 
 
 @analytics_page_router.get("/analytics", response_class=HTMLResponse)
