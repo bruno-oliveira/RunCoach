@@ -144,7 +144,8 @@ def plan_view_context(
 
     if training_plan.start_date:
         sd = training_plan.start_date
-        start_date_val = sd if isinstance(sd, date) else sd.date() if hasattr(sd, "date") else sd
+        # Coerce datetime → date (datetime is a subclass of date, so check it first)
+        start_date_val = sd.date() if isinstance(sd, datetime) else sd if isinstance(sd, date) else sd
         num_weeks = len(plan_data) if plan_data else training_plan.weeks_duration
         week_dates = _build_week_dates(start_date_val, num_weeks)
         current_week_number = _compute_current_week(start_date_val, today_obj)

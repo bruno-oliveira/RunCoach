@@ -335,7 +335,7 @@ async def list_my_plans(
             # Compute plan status for display
             if plan.start_date:
                 sd = plan.start_date
-                start_d = sd.date() if hasattr(sd, "date") and callable(sd.date) else sd
+                start_d = sd.date() if isinstance(sd, datetime) else sd
                 delta_days = (today - start_d).days
                 current_wk = (delta_days // 7) + 1 if delta_days >= 0 else 0
                 if current_wk > plan.weeks_duration:

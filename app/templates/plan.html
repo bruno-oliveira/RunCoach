@@ -61,6 +61,13 @@
                 {{ "%.1f"|format(vdot) }}
             </div>
             {% endif %}
+            {% if start_date and user %}
+            <div class="summary-item">
+                <strong>Started</strong>
+                {{ start_date.strftime('%b %-d, %Y') }}
+                <a href="#" onclick="event.preventDefault();document.getElementById('edit-start-date-banner').style.display=''" class="edit-start-link">change</a>
+            </div>
+            {% endif %}
         </div>
     </div>
     
@@ -243,7 +250,8 @@
         {% endif %}
     </nav>
 
-    {% if not start_date and user %}
+    {% if user %}
+    {% if not start_date %}
     <div class="plan-start-banner">
         <p>Set a start date to track your progress against real calendar dates</p>
         <div class="plan-start-banner-controls">
@@ -251,6 +259,16 @@
             <button onclick="startPlan()" class="btn btn-primary btn-small">Start Plan</button>
         </div>
     </div>
+    {% else %}
+    <div class="plan-start-banner plan-start-banner-edit" id="edit-start-date-banner" style="display:none;">
+        <p>Change start date (this will shift all week/day calendar labels)</p>
+        <div class="plan-start-banner-controls">
+            <input type="date" id="plan-start-date" value="{{ start_date.isoformat() }}">
+            <button onclick="startPlan()" class="btn btn-primary btn-small">Update</button>
+            <button onclick="document.getElementById('edit-start-date-banner').style.display='none'" class="btn btn-ghost btn-small">Cancel</button>
+        </div>
+    </div>
+    {% endif %}
     {% endif %}
 
     {% if start_date and user and unmapped_runs_count and unmapped_runs_count > 0 %}

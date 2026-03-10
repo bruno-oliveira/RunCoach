@@ -387,7 +387,8 @@ class PerformanceService:
         """
         start = plan.start_date or plan.created_at
         today = datetime.now(timezone.utc).replace(tzinfo=None).date()
-        days_elapsed = (today - start.date()).days
+        start_d = start.date() if isinstance(start, datetime) else start
+        days_elapsed = (today - start_d).days
 
         if days_elapsed < 0:
             return {"status": "not_started"}
@@ -457,7 +458,7 @@ class PerformanceService:
         """
         plan_data = json.loads(plan.plan_data)
         start = plan.start_date or plan.created_at
-        start_date = start.date()
+        start_date = start.date() if isinstance(start, datetime) else start
         total_weeks = len(plan_data)
         end_date = start_date + timedelta(days=total_weeks * 7)
 

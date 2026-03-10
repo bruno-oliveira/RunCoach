@@ -419,7 +419,7 @@ class AdaptationService:
             }
 
         # Determine current week based on plan start date
-        start_date = (training_plan.start_date or training_plan.created_at).date()
+        start_date = _to_date(training_plan.start_date or training_plan.created_at)
         today = datetime.now(timezone.utc).replace(tzinfo=None).date()
         days_elapsed = (today - start_date).days
         current_week = max(1, days_elapsed // 7 + 1)
