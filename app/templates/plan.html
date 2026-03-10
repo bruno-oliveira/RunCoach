@@ -307,7 +307,7 @@
         {% set ns = namespace(total=0, done=0) %}
         {% for week in plan %}
           {% for workout in week.daily_workouts %}
-            {% if workout.type != 'rest' %}
+            {% if workout.type not in ['rest', 'recovery'] %}
               {% set ns.total = ns.total + 1 %}
               {% if logged_runs.get(workout.id) %}
                 {% set ns.done = ns.done + 1 %}
@@ -329,7 +329,7 @@
         {% for week in plan %}
         {% set ns = namespace(completed=0, total=0) %}
         {% for workout in week.daily_workouts %}
-            {% if workout.type != 'rest' %}
+            {% if workout.type not in ['rest', 'recovery'] %}
                 {% set ns.total = ns.total + 1 %}
                 {% if logged_runs.get(workout.id) %}
                     {% set ns.completed = ns.completed + 1 %}
@@ -352,7 +352,7 @@
                 {% for workout in week.daily_workouts %}
                 {% set logged_run = logged_runs.get(workout.id) %}
                 {% set is_past = start_date and workout_date_labels and current_week_number and (week.week < current_week_number or (week.week == current_week_number and workout.day <= (today_iso | length and 1))) %}
-                <div class="workout-item {{ workout.type }} {% if logged_run %}completed{% elif is_past and workout.type != 'rest' and current_week_number and week.week < current_week_number %}missed{% endif %}" data-day="{{ day_names[workout.day - 1] }}">
+                <div class="workout-item {{ workout.type }} {% if logged_run %}completed{% elif is_past and workout.type not in ['rest', 'recovery'] and current_week_number and week.week < current_week_number %}missed{% endif %}" data-day="{{ day_names[workout.day - 1] }}">
                     <div class="workout-day-label">{% if workout_date_labels %}{{ workout_date_labels.get((week.week, workout.day), day_names[workout.day - 1]) }}{% else %}{{ day_names[workout.day - 1] }}{% endif %}</div>
                     <div class="workout-type">{{ workout.type }}</div>
                     {% if workout.distance > 0 %}
