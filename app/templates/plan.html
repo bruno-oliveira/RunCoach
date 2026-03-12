@@ -112,13 +112,18 @@
     {% endif %}
 
     {% if strava_fitness and strava_fitness.fitness_score > 0 %}
-    <div class="plan-insights plan-insights-strava" style="margin-bottom: var(--space-6);">
-        <div style="display:flex;align-items:center;gap:var(--space-3);flex-wrap:wrap;margin-bottom:var(--space-4);">
-            <h3 style="margin:0;">Strava Fitness Summary</h3>
-            {% if training_plan.strava_adapted_multiplier %}
+    {% if training_plan.strava_adapted_multiplier %}
+    {# Already adapted — compact badge only #}
+    <div class="plan-insights plan-insights-strava strava-adapted-compact" style="margin-bottom: var(--space-6);">
+        <div style="display:flex;align-items:center;gap:var(--space-3);flex-wrap:wrap;">
             <span class="strava-adapted-badge">Strava Adjusted &times;{{ "%.2f"|format(training_plan.strava_adapted_multiplier) }}</span>
-            {% endif %}
+            <span style="color:rgba(255,255,255,0.8);font-size:var(--text-sm);">Fitness score {{ strava_fitness.fitness_score }}/100 &middot; {{ strava_fitness.avg_weekly_km }} km/week</span>
         </div>
+    </div>
+    {% else %}
+    {# Not yet adapted — full fitness summary with adapt button #}
+    <div class="plan-insights plan-insights-strava" style="margin-bottom: var(--space-6);">
+        <h3 style="margin:0 0 var(--space-4) 0;">Strava Fitness Summary</h3>
         <div class="insight-grid">
             <div class="insight-item">
                 <div class="insight-content">
@@ -155,17 +160,13 @@
                 </div>
             </div>
         </div>
-        <div style="display:flex;gap:var(--space-3);flex-wrap:wrap;margin-top:var(--space-4);">
+        <div style="margin-top:var(--space-4);">
             <button id="adapt-strava-btn" onclick="adaptFromStrava(window.APP_CTX.plan_id)" class="plan-insights-strava-btn" style="margin-top:0;">
-                {% if training_plan.strava_adapted_multiplier %}Re-adapt{% else %}Adapt{% endif %} Remaining Weeks from Strava Data
+                Adapt Remaining Weeks from Strava Data
             </button>
-            {% if training_plan.strava_adapted_multiplier %}
-            <button id="reset-strava-btn" onclick="resetStravaAdaptation(window.APP_CTX.plan_id)" class="plan-insights-strava-btn" style="margin-top:0;background:rgba(0,0,0,0.25);border-color:rgba(255,255,255,0.5);color:white;">
-                Reset to Original Plan
-            </button>
-            {% endif %}
         </div>
     </div>
+    {% endif %}
     {% endif %}
 
     {% if progress_data and progress_data.completed_count > 0 %}
@@ -284,18 +285,16 @@
     </div>
     {% endif %}
 
-    {% if needs_recalibration and user %}
-    <div class="plan-action-banner recalibrate-banner" id="recalibrate-banner">
+    {% if user and start_date %}
+    <div class="plan-action-banner recalibrate-banner {% if needs_recalibration %}recalibrate-urgent{% endif %}" id="recalibrate-banner">
         <div class="banner-content">
             <div class="banner-text">
-                <strong>Recalibrate Plan</strong>
-                <p>Plan adjustment recommended based on your adherence and effort data.
-                {% if skipped_count > 0 %}{{ skipped_count }} missed{% endif %}{% if skipped_count > 0 and rescheduled_count > 0 %}, {% endif %}{% if rescheduled_count > 0 %}{{ rescheduled_count }} rescheduled{% endif %}{% if skipped_count > 0 or rescheduled_count > 0 %} workout{{ 's' if (skipped_count + rescheduled_count) != 1 else '' }}.{% endif %}
-                Recalibrate to align future weeks with your actual progress.</p>
+                <strong>Adapt Plan</strong>
+                <p>Adjust future weeks based on your progress.
+                {% if skipped_count and skipped_count > 0 %}{{ skipped_count }} missed{% endif %}{% if skipped_count and rescheduled_count and skipped_count > 0 and rescheduled_count > 0 %}, {% endif %}{% if rescheduled_count and rescheduled_count > 0 %}{{ rescheduled_count }} rescheduled{% endif %}{% if (skipped_count and skipped_count > 0) or (rescheduled_count and rescheduled_count > 0) %} workout{{ 's' if (skipped_count + rescheduled_count) != 1 else '' }}.{% endif %}</p>
             </div>
             <div class="banner-actions">
                 <button onclick="recalibratePlan()" class="btn btn-primary btn-small" id="recalibrate-btn">Recalibrate</button>
-                <button onclick="this.closest('.plan-action-banner').style.display='none'" class="btn-close">&times;</button>
             </div>
         </div>
     </div>

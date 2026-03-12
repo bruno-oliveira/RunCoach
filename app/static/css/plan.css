@@ -1670,8 +1670,22 @@
 }
 
 .recalibrate-banner {
-    background: linear-gradient(135deg, #b45309, #f59e0b);
-    box-shadow: 0 2px 12px rgba(245, 158, 11, 0.25);
+    background: var(--color-bg-elevated);
+    border: 1px solid var(--color-border-subtle);
+    box-shadow: none;
+}
+
+.recalibrate-banner .banner-text { color: var(--color-text); }
+.recalibrate-banner .banner-text strong { color: var(--color-text); }
+.recalibrate-banner .banner-text p { color: var(--color-text-secondary); opacity: 1; }
+
+.recalibrate-banner.recalibrate-urgent {
+    border-color: #f59e0b;
+    box-shadow: 0 0 0 1px rgba(245, 158, 11, 0.3);
+}
+
+.strava-adapted-compact {
+    padding: var(--space-3) var(--space-4);
 }
 
 .plan-action-banner .banner-text { color: white; }

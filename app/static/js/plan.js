@@ -400,10 +400,10 @@ window.adaptFromStrava = async function(planId) {
     const btn = document.getElementById('adapt-strava-btn');
     const originalText = btn ? btn.textContent : '';
 
-    // Ask for confirmation before mutating the plan
+    // Ask for confirmation — this is a one-time action
     const confirmed = window.confirm(
         'This will adjust the distance of all remaining workouts based on your current Strava fitness.\n\n' +
-        'If you have adapted before, the previous adjustment will be replaced (not stacked).\n\n' +
+        'This is a one-time calibration and cannot be undone.\n\n' +
         'Continue?'
     );
     if (!confirmed) return;
@@ -480,43 +480,6 @@ window.adaptFromStrava = async function(planId) {
         console.error('Error adapting from Strava:', error);
         showStravaAdaptMessage('Network error: ' + error.message, true);
         restoreBtn();
-    }
-};
-
-// Reset Strava adaptation — restore original planned distances
-window.resetStravaAdaptation = async function(planId) {
-    const confirmed = window.confirm(
-        'This will remove the Strava adjustment and restore all workouts to their original planned distances.\n\nContinue?'
-    );
-    if (!confirmed) return;
-
-    const btn = document.getElementById('reset-strava-btn');
-    if (btn) { btn.disabled = true; btn.textContent = 'Resetting…'; }
-
-    try {
-        const response = await fetch(`/api/plan/${planId}/adapt-from-strava`, {
-            method: 'DELETE',
-            headers: authHeaders(),
-            credentials: 'same-origin',
-        });
-
-        if (response.ok) {
-            // Immediately hide the adapted badge and reset button before reload
-            document.querySelectorAll('.strava-adapted-badge').forEach(el => el.remove());
-            if (btn) btn.remove();
-            // Update adapt button label back to "Adapt"
-            const adaptBtn = document.getElementById('adapt-strava-btn');
-            if (adaptBtn) adaptBtn.textContent = 'Adapt Remaining Weeks from Strava Data';
-            showStravaAdaptMessage('Plan restored to original distances. Reloading…', false);
-            setTimeout(() => location.reload(), 2000);
-        } else {
-            const data = await response.json().catch(() => ({}));
-            showStravaAdaptMessage(data.detail || 'Reset failed. Please try again.', true);
-            if (btn) { btn.disabled = false; btn.textContent = 'Reset to Original Plan'; }
-        }
-    } catch (err) {
-        showStravaAdaptMessage('Network error: ' + err.message, true);
-        if (btn) { btn.disabled = false; btn.textContent = 'Reset to Original Plan'; }
     }
 };
 

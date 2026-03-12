@@ -436,11 +436,19 @@ async def adapt_plan_from_strava(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    """Adapt future weeks of a plan based on Strava fitness metrics."""
+    """Adapt future weeks of a plan based on Strava fitness metrics (one-time)."""
     if not current_user.strava_athlete_id:
         raise HTTPException(status_code=400, detail="Strava not connected")
 
-    get_plan_or_404(plan_id, db, current_user, require_user_match=True)
+    training_plan = get_plan_or_404(
+        plan_id, db, current_user, require_user_match=True
+    )
+
+    if training_plan.strava_adapted_multiplier:
+        raise HTTPException(
+            status_code=400,
+            detail="Strava adaptation has already been applied to this plan.",
+        )
 
     adaptation_service = AdaptationService()
     return adaptation_service.adapt_plan_from_fitness(
@@ -495,22 +503,6 @@ async def recalibrate_plan(
     result = adaptation_service.recalibrate_plan(plan_id, current_user.id, db)
     if result.get("error"):
         raise HTTPException(status_code=400, detail=result.get("error"))
-    return result
-
-
-@router.delete("/api/plan/{plan_id}/adapt-from-strava")
-async def reset_strava_adaptation(
-    plan_id: str,
-    current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db),
-):
-    """Reset a Strava adaptation, restoring original planned distances."""
-    get_plan_or_404(plan_id, db, current_user, require_user_match=True)
-
-    adaptation_service = AdaptationService()
-    result = adaptation_service.reset_strava_adaptation(plan_id, current_user.id, db)
-    if not result.get("reset"):
-        raise HTTPException(status_code=400, detail=result.get("reason", "Reset failed"))
     return result
 
 

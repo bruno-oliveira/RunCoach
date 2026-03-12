@@ -1379,10 +1379,12 @@ class TrainingPlanGenerator:
             weekly_progression.append(round(week_km, 1))
 
         # ── Peak phase: the highest mileage weeks ──────────────────────────
-        # Peak is NOT subject to the 10% cap — it's the summit by definition.
-        # Ensure peak is at least as high as anything in the build phase.
+        # First peak week is capped at +10% over build high-water to prevent
+        # abrupt jumps. Subsequent peak weeks are uncapped (summit by definition).
         for week in range(phases['peak']):
             week_km = peak_km * (0.97 + (week % 3) * 0.01)
+            if week == 0 and phases['peak'] >= 2:
+                week_km = min(week_km, high_water * 1.10)
             week_km = max(week_km, high_water)
             high_water = week_km
             weekly_progression.append(round(week_km, 1))
