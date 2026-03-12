@@ -284,7 +284,12 @@ class PlanService:
             WeeklyPlan.training_plan_id == plan_id
         ).delete()
 
-        db.query(RunLog).filter(RunLog.training_plan_id == plan_id).delete()
+        # Unlink runs from this plan (don't delete them — they're synced from
+        # Strava and should remain available for mapping to other plans).
+        db.query(RunLog).filter(RunLog.training_plan_id == plan_id).update(
+            {RunLog.training_plan_id: None, RunLog.daily_workout_id: None},
+            synchronize_session="fetch",
+        )
 
         db.query(PlanCustomization).filter(
             PlanCustomization.training_plan_id == plan_id

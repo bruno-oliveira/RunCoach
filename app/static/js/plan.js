@@ -604,7 +604,11 @@ window.previewMapRuns = async function() {
                 msg += '\nClick "Map Runs" to apply.';
                 ApiClient.showInfo(msg);
             } else {
-                ApiClient.showInfo(result.message || 'No matching runs found.');
+                let msg = result.message || 'No matching runs found.';
+                if (result.debug) {
+                    msg += '\n\nDebug: ' + JSON.stringify(result.debug, null, 2);
+                }
+                ApiClient.showInfo(msg);
             }
         } else {
             const err = await response.json();

@@ -729,6 +729,16 @@ class AdaptationService:
 
         start_date = _to_date(training_plan.start_date)
         today = datetime.now(timezone.utc).replace(tzinfo=None).date()
+        logger.info(
+            "map_runs_to_plan: plan=%s, start_date=%s (type=%s), today=%s",
+            plan_id, start_date, type(start_date).__name__, today,
+        )
+
+        # Total runs for this user (for diagnostics)
+        total_user_runs = db.query(func.count(RunLog.id)).filter(
+            RunLog.user_id == user_id
+        ).scalar()
+        logger.info("map_runs_to_plan: total runs for user = %d", total_user_runs)
 
         # Fix legacy: unlink any runs erroneously mapped to rest/recovery workouts.
         # These workouts are not running workouts (swimming/walking) and should
@@ -794,8 +804,46 @@ class AdaptationService:
                 continue
             workout_candidates.append((workout, week_number, workout_date))
 
+        logger.info(
+            "map_runs_to_plan: %d daily_workouts, %d already_linked, "
+            "%d workout_candidates (past & unmapped)",
+            len(daily_workouts), len(already_linked_ids), len(workout_candidates),
+        )
+        if workout_candidates:
+            dates = [str(wd) for _, _, wd in workout_candidates[:5]]
+            logger.info("map_runs_to_plan: first candidate dates = %s", dates)
+
         if not workout_candidates:
-            return {"mapped": 0, "proposals": [], "message": "No unmapped past workouts found."}
+            # Diagnose: were all filtered by future date or already linked?
+            future_count = 0
+            linked_count = 0
+            for workout, week_number in daily_workouts:
+                if workout.id in already_linked_ids:
+                    linked_count += 1
+                    continue
+                workout_date = start_date + timedelta(
+                    weeks=(week_number - 1),
+                    days=(workout.day_of_week - 1),
+                )
+                if workout_date > today:
+                    future_count += 1
+            logger.info(
+                "map_runs_to_plan: 0 candidates — %d future, %d already linked, "
+                "%d total workouts",
+                future_count, linked_count, len(daily_workouts),
+            )
+            return {
+                "mapped": 0, "proposals": [],
+                "message": "No unmapped past workouts found.",
+                "debug": {
+                    "total_user_runs": total_user_runs,
+                    "total_workouts": len(daily_workouts),
+                    "already_linked": linked_count,
+                    "future": future_count,
+                    "start_date": str(start_date),
+                    "today": str(today),
+                },
+            }
 
         # Get runs available for mapping: either no workout link at all, or
         # linked to a workout from a different plan (so the user can re-map
@@ -815,8 +863,37 @@ class AdaptationService:
             .all()
         )
 
+        logger.info(
+            "map_runs_to_plan: %d unlinked runs available, "
+            "%d this-plan workout IDs excluded",
+            len(unlinked_runs), len(this_plan_workout_ids),
+        )
+        if unlinked_runs:
+            run_dates = sorted(set(str(_to_date(r.date)) for r in unlinked_runs[:20]))
+            logger.info("map_runs_to_plan: sample run dates = %s", run_dates[:10])
+
         if not unlinked_runs:
-            return {"mapped": 0, "proposals": [], "message": "No unlinked runs to map."}
+            # Show what daily_workout_ids the runs have
+            linked_sample = (
+                db.query(RunLog.daily_workout_id)
+                .filter(RunLog.user_id == user_id, RunLog.daily_workout_id.isnot(None))
+                .limit(5)
+                .all()
+            )
+            logger.info(
+                "map_runs_to_plan: 0 unlinked runs — sample linked workout_ids: %s",
+                [row[0] for row in linked_sample],
+            )
+            return {
+                "mapped": 0, "proposals": [],
+                "message": "No unlinked runs to map.",
+                "debug": {
+                    "total_user_runs": total_user_runs,
+                    "workout_candidates": len(workout_candidates),
+                    "this_plan_workout_ids_count": len(this_plan_workout_ids),
+                    "sample_linked_ids": [row[0] for row in linked_sample],
+                },
+            }
 
         # Index runs by date for fast lookup
         from collections import defaultdict
@@ -895,7 +972,22 @@ class AdaptationService:
                         })
 
         if not proposals:
-            return {"mapped": 0, "proposals": [], "message": "No matching runs found for unmapped workouts."}
+            candidate_dates = sorted(str(wd) for _, _, wd in workout_candidates[:10])
+            run_dates = sorted(set(str(_to_date(r.date)) for r in unlinked_runs[:20]))
+            logger.info(
+                "map_runs_to_plan: 0 proposals — candidate dates: %s, run dates: %s",
+                candidate_dates, run_dates[:10],
+            )
+            return {
+                "mapped": 0, "proposals": [],
+                "message": "No matching runs found for unmapped workouts.",
+                "debug": {
+                    "workout_candidate_dates": candidate_dates,
+                    "run_dates": run_dates[:10],
+                    "workout_candidates_count": len(workout_candidates),
+                    "unlinked_runs_count": len(unlinked_runs),
+                },
+            }
 
         if dry_run:
             return {"mapped": 0, "proposals": proposals, "dry_run": True}
