@@ -7,7 +7,7 @@ from collections import defaultdict
 from datetime import datetime, timedelta, timezone
 from typing import Dict, List, Optional, Tuple
 
-from sqlalchemy import func
+from sqlalchemy import func, or_
 from sqlalchemy.orm import Session
 
 from app.models import DailyWorkout, RunLog, TrainingPlan, WeeklyPlan, User
@@ -797,14 +797,20 @@ class AdaptationService:
         if not workout_candidates:
             return {"mapped": 0, "proposals": [], "message": "No unmapped past workouts found."}
 
-        # Get unlinked runs for this user (no daily_workout_id, or linked to a
-        # different plan). Include runs with no plan AND runs already on this plan
-        # but without a workout link.
+        # Get runs available for mapping: either no workout link at all, or
+        # linked to a workout from a different plan (so the user can re-map
+        # runs when they create a new plan).
+        this_plan_workout_ids = (
+            {w.id for w, _ in daily_workouts} | set(recovery_workout_ids)
+        )
         unlinked_runs = (
             db.query(RunLog)
             .filter(
                 RunLog.user_id == user_id,
-                RunLog.daily_workout_id.is_(None),
+                or_(
+                    RunLog.daily_workout_id.is_(None),
+                    ~RunLog.daily_workout_id.in_(this_plan_workout_ids),
+                ),
             )
             .all()
         )

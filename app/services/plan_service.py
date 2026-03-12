@@ -5,6 +5,7 @@ import logging
 from typing import Any, Optional
 
 from cachetools import TTLCache
+from sqlalchemy import or_
 from sqlalchemy.orm import Session
 
 from app.core.nutrition_engine import NutritionEngine
@@ -486,11 +487,23 @@ class PlanService:
                 logger.warning(f"Could not detect skipped workouts: {e}")
 
             try:
+                # Count runs not linked to this plan's workouts (available
+                # for mapping), including runs linked to other plans.
+                this_plan_workout_ids = [
+                    row[0] for row in
+                    db.query(DailyWorkout.id)
+                    .join(WeeklyPlan)
+                    .filter(WeeklyPlan.training_plan_id == training_plan.id)
+                    .all()
+                ]
                 unmapped_runs_count = (
                     db.query(RunLog)
                     .filter(
                         RunLog.user_id == current_user.id,
-                        RunLog.daily_workout_id.is_(None),
+                        or_(
+                            RunLog.daily_workout_id.is_(None),
+                            ~RunLog.daily_workout_id.in_(this_plan_workout_ids),
+                        ),
                     )
                     .count()
                 )
