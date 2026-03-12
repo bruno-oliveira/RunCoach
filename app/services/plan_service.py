@@ -492,22 +492,17 @@ class PlanService:
                 logger.warning(f"Could not detect skipped workouts: {e}")
 
             try:
-                # Count runs not linked to this plan's workouts (available
-                # for mapping), including runs linked to other plans.
-                this_plan_workout_ids = [
-                    row[0] for row in
-                    db.query(DailyWorkout.id)
-                    .join(WeeklyPlan)
-                    .filter(WeeklyPlan.training_plan_id == training_plan.id)
-                    .all()
-                ]
+                # Count runs not yet linked to this plan (available for
+                # mapping). Uses training_plan_id so that runs linked via
+                # the weekly-volume pass (daily_workout_id=NULL) aren't
+                # re-counted as unmapped.
                 unmapped_runs_count = (
                     db.query(RunLog)
                     .filter(
                         RunLog.user_id == current_user.id,
                         or_(
-                            RunLog.daily_workout_id.is_(None),
-                            ~RunLog.daily_workout_id.in_(this_plan_workout_ids),
+                            RunLog.training_plan_id.is_(None),
+                            RunLog.training_plan_id != training_plan.id,
                         ),
                     )
                     .count()

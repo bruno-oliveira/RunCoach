@@ -845,44 +845,39 @@ class AdaptationService:
                 },
             }
 
-        # Get runs available for mapping: either no workout link at all, or
-        # linked to a workout from a different plan (so the user can re-map
-        # runs when they create a new plan).
-        this_plan_workout_ids = (
-            {w.id for w, _ in daily_workouts} | set(recovery_workout_ids)
-        )
+        # Get runs not yet linked to THIS plan (available for mapping).
+        # Includes fresh Strava runs (training_plan_id IS NULL) and runs
+        # linked to a different plan (so the user can re-map after creating
+        # a new plan).
         unlinked_runs = (
             db.query(RunLog)
             .filter(
                 RunLog.user_id == user_id,
                 or_(
-                    RunLog.daily_workout_id.is_(None),
-                    ~RunLog.daily_workout_id.in_(this_plan_workout_ids),
+                    RunLog.training_plan_id.is_(None),
+                    RunLog.training_plan_id != plan_id,
                 ),
             )
             .all()
         )
 
         logger.info(
-            "map_runs_to_plan: %d unlinked runs available, "
-            "%d this-plan workout IDs excluded",
-            len(unlinked_runs), len(this_plan_workout_ids),
+            "map_runs_to_plan: %d unlinked runs available (not linked to plan %s)",
+            len(unlinked_runs), plan_id[:8],
         )
         if unlinked_runs:
             run_dates = sorted(set(str(_to_date(r.date)) for r in unlinked_runs[:20]))
             logger.info("map_runs_to_plan: sample run dates = %s", run_dates[:10])
 
         if not unlinked_runs:
-            # Show what daily_workout_ids the runs have
-            linked_sample = (
-                db.query(RunLog.daily_workout_id)
-                .filter(RunLog.user_id == user_id, RunLog.daily_workout_id.isnot(None))
-                .limit(5)
-                .all()
-            )
+            # All runs are already linked to this plan
+            linked_to_this_plan = db.query(func.count(RunLog.id)).filter(
+                RunLog.user_id == user_id,
+                RunLog.training_plan_id == plan_id,
+            ).scalar()
             logger.info(
-                "map_runs_to_plan: 0 unlinked runs — sample linked workout_ids: %s",
-                [row[0] for row in linked_sample],
+                "map_runs_to_plan: 0 unlinked runs — %d already linked to this plan",
+                linked_to_this_plan,
             )
             return {
                 "mapped": 0, "proposals": [],
@@ -890,8 +885,7 @@ class AdaptationService:
                 "debug": {
                     "total_user_runs": total_user_runs,
                     "workout_candidates": len(workout_candidates),
-                    "this_plan_workout_ids_count": len(this_plan_workout_ids),
-                    "sample_linked_ids": [row[0] for row in linked_sample],
+                    "already_linked_to_this_plan": linked_to_this_plan,
                 },
             }
 
