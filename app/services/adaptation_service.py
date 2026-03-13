@@ -7,7 +7,7 @@ from collections import defaultdict
 from datetime import datetime, timedelta, timezone
 from typing import Dict, List, Optional, Tuple
 
-from sqlalchemy import func, or_
+from sqlalchemy import and_, func, or_
 from sqlalchemy.orm import Session
 
 from app.models import DailyWorkout, RunLog, TrainingPlan, WeeklyPlan, User
@@ -845,10 +845,12 @@ class AdaptationService:
                 },
             }
 
-        # Get runs not yet linked to THIS plan (available for mapping).
-        # Includes fresh Strava runs (training_plan_id IS NULL) and runs
-        # linked to a different plan (so the user can re-map after creating
-        # a new plan).
+        # Get runs available for (re-)mapping.  This includes:
+        #   1. Fresh runs not linked to any plan (training_plan_id IS NULL)
+        #   2. Runs linked to a different plan (can be re-mapped)
+        #   3. Runs already on THIS plan but volume-only (daily_workout_id
+        #      IS NULL) — these can be upgraded to workout matches when the
+        #      user re-maps after shifting workouts around.
         unlinked_runs = (
             db.query(RunLog)
             .filter(
@@ -856,6 +858,10 @@ class AdaptationService:
                 or_(
                     RunLog.training_plan_id.is_(None),
                     RunLog.training_plan_id != plan_id,
+                    and_(
+                        RunLog.training_plan_id == plan_id,
+                        RunLog.daily_workout_id.is_(None),
+                    ),
                 ),
             )
             .all()
@@ -933,9 +939,23 @@ class AdaptationService:
                 "match_type": "workout",
             })
 
-        # --- Weekly volume pass ---
-        # Find still-unlinked runs that fall within a training week's date range
-        # and link them to the plan (without a specific workout) for volume credit.
+        # --- Weekly pass ---
+        # Runs that weren't matched in the ±2-day workout pass are matched
+        # here using a full-week window.  When an unmatched run falls in a
+        # training week that still has unmatched workouts, pair them by
+        # distance similarity (so a shifted Tuesday tempo run still counts
+        # as completing the Thursday tempo workout).  Remaining runs with
+        # no workout to pair get linked as volume-only.
+        matched_workout_ids = {
+            p["workout_id"] for p in proposals if p["workout_id"]
+        }
+        unmatched_workouts_by_week: Dict[int, list] = defaultdict(list)
+        for workout, week_number, workout_date in workout_candidates:
+            if workout.id not in matched_workout_ids:
+                unmatched_workouts_by_week[week_number].append(
+                    (workout, workout_date)
+                )
+
         weekly_plans = (
             db.query(WeeklyPlan)
             .filter(WeeklyPlan.training_plan_id == plan_id)
@@ -946,24 +966,68 @@ class AdaptationService:
             week_end = week_start + timedelta(days=6)
             if week_start > today:
                 continue
+
+            # Collect unmatched runs in this week
+            week_runs = []
             for d in range((min(week_end, today) - week_start).days + 1):
                 check_date = week_start + timedelta(days=d)
                 for run in runs_by_date.get(check_date, []):
                     if run.id not in used_run_ids:
-                        used_run_ids.add(run.id)
-                        run_date = _to_date(run.date)
-                        proposals.append({
-                            "run_id": run.id,
-                            "workout_id": None,
-                            "week": wp.week_number,
-                            "day": None,
-                            "workout_type": None,
-                            "planned_distance": None,
-                            "actual_distance": run.distance_km,
-                            "run_date": str(run_date),
-                            "workout_date": None,
-                            "match_type": "weekly_volume",
-                        })
+                        week_runs.append(run)
+
+            for run in week_runs:
+                if run.id in used_run_ids:
+                    continue
+
+                run_date = _to_date(run.date)
+
+                # Try to pair with the closest unmatched workout in this week
+                best_wo = None
+                best_score = (float("inf"), float("inf"))
+                for wo, wo_date in unmatched_workouts_by_week.get(
+                    wp.week_number, []
+                ):
+                    if wo.id in matched_workout_ids:
+                        continue
+                    date_diff = abs((run_date - wo_date).days)
+                    dist_diff = abs(
+                        (run.distance_km or 0) - (wo.distance_km or 0)
+                    )
+                    score = (date_diff, dist_diff)
+                    if score < best_score:
+                        best_score = score
+                        best_wo = (wo, wo_date)
+
+                used_run_ids.add(run.id)
+
+                if best_wo:
+                    wo, wo_date = best_wo
+                    matched_workout_ids.add(wo.id)
+                    proposals.append({
+                        "run_id": run.id,
+                        "workout_id": wo.id,
+                        "week": wp.week_number,
+                        "day": wo.day_of_week,
+                        "workout_type": wo.workout_type,
+                        "planned_distance": wo.distance_km,
+                        "actual_distance": run.distance_km,
+                        "run_date": str(run_date),
+                        "workout_date": str(wo_date),
+                        "match_type": "workout",
+                    })
+                else:
+                    proposals.append({
+                        "run_id": run.id,
+                        "workout_id": None,
+                        "week": wp.week_number,
+                        "day": None,
+                        "workout_type": None,
+                        "planned_distance": None,
+                        "actual_distance": run.distance_km,
+                        "run_date": str(run_date),
+                        "workout_date": None,
+                        "match_type": "weekly_volume",
+                    })
 
         if not proposals:
             candidate_dates = sorted(str(wd) for _, _, wd in workout_candidates[:10])
