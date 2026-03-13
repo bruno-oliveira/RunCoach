@@ -36,7 +36,7 @@ from app.models.triathlon_plan import TriathlonPlan
 from app.routers.plan_helpers import error_response, get_plan_or_404, plan_view_context
 from app.schemas import DISTANCE_NAMES, PlanRequest, get_mileage_warning, parse_target_distance
 from app.services.adaptation_service import AdaptationService
-from app.services.plan_service import PlanService, user_plans_cache
+from app.services.plan_service import PlanService
 from app.template_helpers import create_templates
 
 logger = logging.getLogger(__name__)
@@ -322,20 +322,12 @@ async def list_my_plans(
         return RedirectResponse(url="/", status_code=302)
 
     try:
-        cache_key = f"plans_{current_user.id}"
-
-        if cache_key in user_plans_cache:
-            plans = user_plans_cache[cache_key]
-            logger.info(f"Using cached plans for user {current_user.id}")
-        else:
-            plans = (
-                db.query(TrainingPlan)
-                .filter(TrainingPlan.user_id == current_user.id)
-                .order_by(TrainingPlan.created_at.desc())
-                .all()
-            )
-            user_plans_cache[cache_key] = plans
-            logger.info(f"Cached plans for user {current_user.id}")
+        plans = (
+            db.query(TrainingPlan)
+            .filter(TrainingPlan.user_id == current_user.id)
+            .order_by(TrainingPlan.created_at.desc())
+            .all()
+        )
 
         today = date.today()
         for plan in plans:

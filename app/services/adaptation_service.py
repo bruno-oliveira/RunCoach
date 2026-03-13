@@ -995,8 +995,11 @@ class AdaptationService:
         for p in proposals:
             run = runs_by_id.get(p["run_id"])
             if run:
-                if p["match_type"] == "workout":
-                    run.daily_workout_id = p["workout_id"]
+                # Clear any stale daily_workout_id from a previous plan first,
+                # then set if this proposal has a direct workout match.
+                run.daily_workout_id = (
+                    p["workout_id"] if p["match_type"] == "workout" else None
+                )
                 # Both types get linked to the plan for volume tracking
                 run.training_plan_id = plan_id
 

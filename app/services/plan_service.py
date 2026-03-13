@@ -2,9 +2,9 @@
 
 import json
 import logging
+from datetime import datetime, timedelta
 from typing import Any, Optional
 
-from cachetools import TTLCache
 from sqlalchemy import or_
 from sqlalchemy.orm import Session
 
@@ -24,9 +24,6 @@ from app.schemas import PlanRequest
 from app.utils import parse_race_time_to_seconds
 
 logger = logging.getLogger(__name__)
-
-# Process-scoped cache shared across requests
-user_plans_cache = TTLCache(maxsize=1000, ttl=300)
 
 
 class PlanService:
@@ -215,9 +212,6 @@ class PlanService:
 
         db.commit()
 
-        user_plans_cache.pop(f"plans_{user.id}", None)
-        logger.info(f"Invalidated plans cache for user {user.id}")
-
         return training_plan, plan_data
 
     # ------------------------------------------------------------------
@@ -271,6 +265,15 @@ class PlanService:
         plan_id = training_plan.id
         user_id = training_plan.user_id
 
+        # Unlink runs FIRST — must happen before DailyWorkout deletion to
+        # avoid FK constraint violations (RunLog.daily_workout_id →
+        # daily_workouts.id). Runs are preserved so they remain available
+        # for mapping to other plans.
+        db.query(RunLog).filter(RunLog.training_plan_id == plan_id).update(
+            {RunLog.training_plan_id: None, RunLog.daily_workout_id: None},
+            synchronize_session="fetch",
+        )
+
         weekly_plans = (
             db.query(WeeklyPlan)
             .filter(WeeklyPlan.training_plan_id == plan_id)
@@ -284,21 +287,12 @@ class PlanService:
             WeeklyPlan.training_plan_id == plan_id
         ).delete()
 
-        # Unlink runs from this plan (don't delete them — they're synced from
-        # Strava and should remain available for mapping to other plans).
-        db.query(RunLog).filter(RunLog.training_plan_id == plan_id).update(
-            {RunLog.training_plan_id: None, RunLog.daily_workout_id: None},
-            synchronize_session="fetch",
-        )
-
         db.query(PlanCustomization).filter(
             PlanCustomization.training_plan_id == plan_id
         ).delete()
 
         db.delete(training_plan)
         db.commit()
-
-        user_plans_cache.pop(f"plans_{user_id}", None)
 
     # ------------------------------------------------------------------
     # Plan data enrichment
@@ -436,7 +430,7 @@ class PlanService:
         Returns extra context keys: performance_analysis, logged_runs,
         strava_fitness, progress_data.
         """
-        from app.services.adaptation_service import AdaptationService
+        from app.services.adaptation_service import AdaptationService, _to_date
         from app.core.adaptive_plan_generator import AdaptivePlanGenerator
         from app.services.performance_service import PerformanceService
 
@@ -492,14 +486,21 @@ class PlanService:
                 logger.warning(f"Could not detect skipped workouts: {e}")
 
             try:
-                # Count runs not yet linked to this plan (available for
-                # mapping). Uses training_plan_id so that runs linked via
-                # the weekly-volume pass (daily_workout_id=NULL) aren't
-                # re-counted as unmapped.
+                # Count runs not yet linked to this plan that fall within
+                # the plan's date window (± 2 day buffer matching the
+                # mapping algorithm). Without this filter the banner shows
+                # a misleading count for runs that can never be mapped.
+                plan_start = _to_date(training_plan.start_date)
+                plan_end = plan_start + timedelta(
+                    weeks=training_plan.weeks_duration, days=2
+                )
+                buffer_start = plan_start - timedelta(days=2)
                 unmapped_runs_count = (
                     db.query(RunLog)
                     .filter(
                         RunLog.user_id == current_user.id,
+                        RunLog.date >= buffer_start,
+                        RunLog.date <= plan_end,
                         or_(
                             RunLog.training_plan_id.is_(None),
                             RunLog.training_plan_id != training_plan.id,
