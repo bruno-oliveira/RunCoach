@@ -111,12 +111,14 @@ async def generate_plan(
             plan_data = PlanService.enrich_plan_data_with_ids(
                 plan_data, existing.id, db
             )
+            extra = PlanService.get_plan_view_data(existing, current_user, db)
             ctx = plan_view_context(
                 request,
                 current_user,
                 existing,
                 plan_data,
                 PlanService.nutrition_for_template(existing.nutrition_plan_data),
+                **extra,
             )
             warning = get_mileage_warning(plan_request.target_distance, plan_request.current_km)
             if warning:
@@ -154,12 +156,14 @@ async def generate_plan(
             plan_data, training_plan.id, db
         )
 
+        extra = PlanService.get_plan_view_data(training_plan, current_user, db)
         ctx = plan_view_context(
             request,
             current_user,
             training_plan,
             plan_data,
             PlanService.nutrition_for_template(training_plan.nutrition_plan_data),
+            **extra,
         )
         if warning_message:
             ctx["warning"] = warning_message
@@ -227,8 +231,10 @@ async def customize_plan(
             training_plan.nutrition_plan_data
         )
 
+        extra = PlanService.get_plan_view_data(training_plan, current_user, db)
         ctx = plan_view_context(
-            request, current_user, training_plan, plan_data, nutrition_plan
+            request, current_user, training_plan, plan_data, nutrition_plan,
+            **extra,
         )
         return templates.TemplateResponse("plan.html", ctx)
 
