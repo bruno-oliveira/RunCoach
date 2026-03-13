@@ -740,36 +740,6 @@ class AdaptationService:
         ).scalar()
         logger.info("map_runs_to_plan: total runs for user = %d", total_user_runs)
 
-        # Fix legacy: unlink any runs erroneously mapped to rest/recovery workouts.
-        # These workouts are not running workouts (swimming/walking) and should
-        # never consume a run log.
-        recovery_workout_ids = [
-            row[0] for row in
-            db.query(DailyWorkout.id)
-            .join(WeeklyPlan)
-            .filter(
-                WeeklyPlan.training_plan_id == plan_id,
-                DailyWorkout.workout_type.in_(["rest", "recovery"]),
-            )
-            .all()
-        ]
-        if recovery_workout_ids:
-            bad_links = (
-                db.query(RunLog)
-                .filter(
-                    RunLog.daily_workout_id.in_(recovery_workout_ids),
-                )
-                .all()
-            )
-            for run in bad_links:
-                logger.info(
-                    "Unlinking run %s from recovery/rest workout %s",
-                    run.id, run.daily_workout_id,
-                )
-                run.daily_workout_id = None
-            if bad_links:
-                db.flush()
-
         # Build list of (DailyWorkout, computed_date) for non-rest past workouts
         # that do NOT already have a linked RunLog.
         daily_workouts = (
@@ -778,6 +748,18 @@ class AdaptationService:
             .filter(
                 WeeklyPlan.training_plan_id == plan_id,
                 DailyWorkout.workout_type.notin_(["rest", "recovery"]),
+            )
+            .all()
+        )
+
+        # Also fetch rest/recovery workouts — runs done on planned rest days
+        # should still show up on the plan (matched in a later pass).
+        rest_recovery_workouts = (
+            db.query(DailyWorkout, WeeklyPlan.week_number)
+            .join(WeeklyPlan)
+            .filter(
+                WeeklyPlan.training_plan_id == plan_id,
+                DailyWorkout.workout_type.in_(["rest", "recovery"]),
             )
             .all()
         )
@@ -905,35 +887,59 @@ class AdaptationService:
         proposals = []
         used_run_ids = set()
 
-        for workout, week_number, workout_date in sorted(workout_candidates, key=lambda x: x[2]):
-            # Look within ±2 day window (catches runs done 2 days off schedule)
-            candidates = []
+        def _match_score(date_penalty: float, dist_diff: float) -> float:
+            """Combined score balancing date proximity and distance similarity.
+
+            Each day offset costs 3 points, so a 1-day shift is equivalent to
+            a 3 km distance mismatch.  This prevents a same-day run with a huge
+            distance gap from beating a 1-day-off run with near-perfect distance
+            — the main cause of mis-mappings reported by users.
+            """
+            return date_penalty * 3.0 + dist_diff
+
+        # --- First pass: build all candidate edges, then greedily assign ---
+        # Collect (score, workout_index, run) triples for global sorting so
+        # that the best overall edges are assigned first instead of letting
+        # early workouts "steal" runs from later, better matches.
+        all_edges: list[tuple[float, int, object, int, object]] = []
+        #                    score, wo_idx, workout,  week_number, run
+
+        for wo_idx, (workout, week_number, workout_date) in enumerate(
+            sorted(workout_candidates, key=lambda x: x[2])
+        ):
             for offset in [0, -1, 1, -2, 2]:
                 check_date = workout_date + timedelta(days=offset)
                 for run in runs_by_date.get(check_date, []):
-                    if run.id not in used_run_ids:
-                        # Score: prefer same date (0 offset), then similar distance
-                        date_penalty = abs(offset)
-                        dist_diff = abs((run.distance_km or 0) - (workout.distance_km or 0))
-                        candidates.append((run, date_penalty, dist_diff))
+                    date_penalty = abs(offset)
+                    dist_diff = abs(
+                        (run.distance_km or 0) - (workout.distance_km or 0)
+                    )
+                    score = _match_score(date_penalty, dist_diff)
+                    all_edges.append(
+                        (score, wo_idx, workout, week_number, run, workout_date)
+                    )
 
-            if not candidates:
+        # Sort by score (best first) and greedily assign — this gives the
+        # globally best edges priority rather than letting chronologically
+        # earlier workouts claim runs that would be a much better fit later.
+        all_edges.sort(key=lambda e: e[0])
+        matched_wo_indices: set[int] = set()
+
+        for score, wo_idx, workout, week_number, run, workout_date in all_edges:
+            if wo_idx in matched_wo_indices or run.id in used_run_ids:
                 continue
+            matched_wo_indices.add(wo_idx)
+            used_run_ids.add(run.id)
 
-            # Sort by date proximity first, then distance similarity
-            candidates.sort(key=lambda c: (c[1], c[2]))
-            best_run = candidates[0][0]
-            used_run_ids.add(best_run.id)
-
-            run_date = _to_date(best_run.date)
+            run_date = _to_date(run.date)
             proposals.append({
-                "run_id": best_run.id,
+                "run_id": run.id,
                 "workout_id": workout.id,
                 "week": week_number,
                 "day": workout.day_of_week,
                 "workout_type": workout.workout_type,
                 "planned_distance": workout.distance_km,
-                "actual_distance": best_run.distance_km,
+                "actual_distance": run.distance_km,
                 "run_date": str(run_date),
                 "workout_date": str(workout_date),
                 "match_type": "workout",
@@ -983,7 +989,7 @@ class AdaptationService:
 
                 # Try to pair with the closest unmatched workout in this week
                 best_wo = None
-                best_score = (float("inf"), float("inf"))
+                best_score = float("inf")
                 for wo, wo_date in unmatched_workouts_by_week.get(
                     wp.week_number, []
                 ):
@@ -993,7 +999,7 @@ class AdaptationService:
                     dist_diff = abs(
                         (run.distance_km or 0) - (wo.distance_km or 0)
                     )
-                    score = (date_diff, dist_diff)
+                    score = _match_score(date_diff, dist_diff)
                     if score < best_score:
                         best_score = score
                         best_wo = (wo, wo_date)
@@ -1028,6 +1034,59 @@ class AdaptationService:
                         "workout_date": None,
                         "match_type": "weekly_volume",
                     })
+
+        # --- Rest/recovery pass ---
+        # Runs matched as volume-only may actually fall on a rest or recovery
+        # day.  Linking them to that workout makes them visible on the plan
+        # card so the user sees "I ran on a rest day" instead of the run
+        # silently disappearing.
+        rest_candidates = []
+        for workout, week_number in rest_recovery_workouts:
+            if workout.id in already_linked_ids:
+                continue
+            workout_date = start_date + timedelta(
+                weeks=(week_number - 1),
+                days=(workout.day_of_week - 1),
+            )
+            if workout_date > today:
+                continue
+            rest_candidates.append((workout, week_number, workout_date))
+
+        if rest_candidates:
+            rest_by_date: Dict[any, tuple] = {}
+            for workout, week_number, workout_date in rest_candidates:
+                # Keep one rest workout per date (first wins — usually only one)
+                if workout_date not in rest_by_date:
+                    rest_by_date[workout_date] = (workout, week_number, workout_date)
+
+            matched_rest_ids: set = set()
+            for i, p in enumerate(proposals):
+                if p["match_type"] != "weekly_volume":
+                    continue
+                run_date_str = p["run_date"]
+                # Try exact date, then ±1 day
+                try:
+                    rd = datetime.strptime(run_date_str, "%Y-%m-%d").date()
+                except (ValueError, TypeError):
+                    continue
+                for offset in [0, -1, 1]:
+                    check = rd + timedelta(days=offset)
+                    rest_match = rest_by_date.get(check)
+                    if rest_match and rest_match[0].id not in matched_rest_ids:
+                        wo, wn, wd = rest_match
+                        matched_rest_ids.add(wo.id)
+                        # Upgrade volume-only → rest-day workout match
+                        proposals[i] = {
+                            **p,
+                            "workout_id": wo.id,
+                            "week": wn,
+                            "day": wo.day_of_week,
+                            "workout_type": wo.workout_type,
+                            "planned_distance": wo.distance_km,
+                            "workout_date": str(wd),
+                            "match_type": "workout",
+                        }
+                        break
 
         if not proposals:
             candidate_dates = sorted(str(wd) for _, _, wd in workout_candidates[:10])
