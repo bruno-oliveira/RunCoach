@@ -1,6 +1,7 @@
 """Strava OAuth and sync endpoints."""
 
 import logging
+from datetime import datetime, timezone
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
@@ -10,6 +11,7 @@ from sqlalchemy.orm import Session
 from app.auth_service import AuthService
 from app.config import settings
 from app.dependencies import get_current_user, get_db, get_auth_service, get_strava_service
+from app.models import TrainingPlan
 from app.models.user import User
 from app.schemas import StravaStatusResponse, StravaSyncResponse
 from app.services.strava_service import StravaService
@@ -19,8 +21,9 @@ logger = logging.getLogger(__name__)
 
 strava_router = APIRouter(prefix="/api/strava", tags=["strava"])
 
-# How far back to look on the very first sync (before any cursor exists)
-INITIAL_SYNC_DAYS = 90
+# How far back to look on the very first sync (before any cursor exists).
+# A full year ensures we cover any active training plan the user might have.
+INITIAL_SYNC_DAYS = 365
 
 
 @strava_router.get("/connect")
@@ -123,11 +126,39 @@ async def strava_sync(
     elif force_days is not None:
         after_timestamp = TimestampAdapter.days_ago_utc_epoch(force_days)
     elif current_user.strava_last_synced_at:
-        # Subtract a 24-hour buffer so runs whose start_date fell before the
-        # last sync (e.g. a long run that was still in-progress when we last
-        # synced) are still fetched. Dedup by strava_activity_id prevents
-        # double-counting previously imported activities.
+        # Start from the last sync cursor minus a 24-hour buffer so runs
+        # whose start_date fell before the last sync are still fetched.
         after_timestamp = current_user.strava_last_synced_at - 86400
+
+        # If the user has a training plan whose start date is before the
+        # cursor, extend the window to cover the entire plan period.  This
+        # backfills any runs that were missed during the initial sync
+        # (e.g. the initial sync only pulled 90 days and the plan started
+        # earlier).
+        earliest_plan_start = (
+            db.query(TrainingPlan.start_date)
+            .filter(
+                TrainingPlan.user_id == current_user.id,
+                TrainingPlan.start_date.isnot(None),
+            )
+            .order_by(TrainingPlan.start_date.asc())
+            .first()
+        )
+        if earliest_plan_start and earliest_plan_start[0]:
+            sd = earliest_plan_start[0]
+            plan_epoch = int(
+                datetime.combine(
+                    sd if not hasattr(sd, "date") else sd.date(),
+                    datetime.min.time(),
+                    tzinfo=timezone.utc,
+                ).timestamp()
+            )
+            if plan_epoch < after_timestamp:
+                logger.info(
+                    "Extending sync window to plan start %s (was %s)",
+                    sd, after_timestamp,
+                )
+                after_timestamp = plan_epoch
     else:
         # No cursor yet — treat like an initial sync
         after_timestamp = TimestampAdapter.days_ago_utc_epoch(INITIAL_SYNC_DAYS)
