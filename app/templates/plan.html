@@ -269,17 +269,20 @@
     {% endif %}
     {% endif %}
 
-    {% if start_date and user and unmapped_runs_count and unmapped_runs_count > 0 %}
+    {% if start_date and user %}
     <div class="plan-action-banner map-runs-banner" id="map-runs-banner">
         <div class="banner-content">
             <div class="banner-text">
-                <strong>Map Existing Runs</strong>
-                <p>You have {{ unmapped_runs_count }} unlinked run{{ 's' if unmapped_runs_count != 1 else '' }}. Map them to this plan to track your progress retroactively.</p>
+                <strong>Map Runs</strong>
+                {% if unmapped_runs_count and unmapped_runs_count > 0 %}
+                <p>{{ unmapped_runs_count }} unlinked run{{ 's' if unmapped_runs_count != 1 else '' }} found. Map them to track progress.</p>
+                {% else %}
+                <p>Re-map runs to update workout assignments after syncing new activities.</p>
+                {% endif %}
             </div>
             <div class="banner-actions">
                 <button onclick="previewMapRuns()" class="btn btn-secondary btn-small" id="preview-map-btn">Preview</button>
                 <button onclick="mapRunsToPlan()" class="btn btn-primary btn-small" id="map-runs-btn">Map Runs</button>
-                <button onclick="this.closest('.plan-action-banner').style.display='none'" class="btn-close">&times;</button>
             </div>
         </div>
     </div>

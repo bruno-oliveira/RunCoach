@@ -2,10 +2,10 @@
 
 import json
 import logging
-from datetime import datetime, timedelta
+from datetime import date, datetime, timedelta
 from typing import Any, Optional
 
-from sqlalchemy import or_
+from sqlalchemy import and_, or_
 from sqlalchemy.orm import Session
 
 from app.core.nutrition_engine import NutritionEngine
@@ -486,24 +486,23 @@ class PlanService:
                 logger.warning(f"Could not detect skipped workouts: {e}")
 
             try:
-                # Count runs not yet linked to this plan that fall within
-                # the plan's date window (± 2 day buffer matching the
-                # mapping algorithm). Without this filter the banner shows
-                # a misleading count for runs that can never be mapped.
+                # Count runs in the plan period that are not yet linked
+                # to a specific workout (includes unlinked + volume-only).
                 plan_start = _to_date(training_plan.start_date)
-                plan_end = plan_start + timedelta(
-                    weeks=training_plan.weeks_duration, days=2
-                )
-                buffer_start = plan_start - timedelta(days=2)
+                today = date.today()
                 unmapped_runs_count = (
                     db.query(RunLog)
                     .filter(
                         RunLog.user_id == current_user.id,
-                        RunLog.date >= buffer_start,
-                        RunLog.date <= plan_end,
+                        RunLog.date >= plan_start,
+                        RunLog.date <= today,
                         or_(
                             RunLog.training_plan_id.is_(None),
                             RunLog.training_plan_id != training_plan.id,
+                            and_(
+                                RunLog.training_plan_id == training_plan.id,
+                                RunLog.daily_workout_id.is_(None),
+                            ),
                         ),
                     )
                     .count()
