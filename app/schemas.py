@@ -358,7 +358,7 @@ class RunLogBase(BaseModel):
     @classmethod
     def validate_workout_type(cls, v: Optional[str]) -> Optional[str]:
         if v is not None:
-            valid_types = ["easy", "tempo", "interval", "long", "hill", "rest"]
+            valid_types = ["easy", "tempo", "interval", "long", "hill", "rest", "race"]
             if v not in valid_types:
                 raise ValueError(f"workout_type must be one of: {', '.join(valid_types)}")
         return v
@@ -391,6 +391,7 @@ class RunLogResponse(RunLogBase):
     strava_activity_id: Optional[str] = None
     effort_quality_score: Optional[float] = None
     quality_label: Optional[str] = None
+    vdot: Optional[float] = None
     created_at: datetime
 
 

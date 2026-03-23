@@ -7,6 +7,14 @@ Reference: Daniels' Running Formula (3rd ed.)
 import math
 from typing import Dict, Optional, Tuple
 
+STANDARD_RACE_DISTANCES = {
+    "5K": 5.0,
+    "10K": 10.0,
+    "trail": 30.0,
+    "half_marathon": 21.0975,
+    "marathon": 42.195,
+}
+
 
 def _vo2_at_velocity(v: float) -> float:
     """Oxygen cost at velocity v (m/min)."""
@@ -197,3 +205,96 @@ class VDOTCalculator:
             enriched = enriched.replace(generic, specific)
 
         return enriched
+
+    @staticmethod
+    def validate_race_distance(distance_km: float) -> bool:
+        """Check if distance is valid for prediction."""
+        return distance_km in STANDARD_RACE_DISTANCES.values()
+
+    @staticmethod
+    def format_duration(seconds: int) -> str:
+        """Format seconds as HH:MM:SS or MM:SS."""
+        if seconds < 3600:
+            minutes = seconds // 60
+            secs = seconds % 60
+            return f"{minutes}:{secs:02d}"
+        hours = seconds // 3600
+        minutes = (seconds % 3600) // 60
+        secs = seconds % 60
+        return f"{hours}:{minutes:02d}:{secs:02d}"
+
+    @staticmethod
+    def predict_time_for_distance(vdot: float, distance_km: float) -> Optional[int]:
+        """Predict race time for a given VDOT and distance.
+
+        Uses the inverse of Daniels' VO2 cost formula.
+
+        Args:
+            vdot: Current fitness level (25-85)
+            distance_km: Target race distance
+
+        Returns:
+            Predicted time in seconds, or None if invalid
+        """
+        if vdot < 25 or vdot > 85:
+            return None
+        if distance_km <= 0:
+            return None
+
+        distance_m = distance_km * 1000.0
+        time_min = 0.0
+        step = 0.1
+        velocity = 0.0
+        for _ in range(10000):
+            vo2 = _vo2_at_velocity(velocity)
+            if vo2 <= 0:
+                velocity += step
+                continue
+            pct = _pct_vo2max_at_time(time_min)
+            if pct <= 0:
+                velocity += step
+                time_min = velocity / 1000.0 * time_min if time_min > 0 else 0.1
+                continue
+            calc_vdot = vo2 / pct
+            if abs(calc_vdot - vdot) < 0.05:
+                time_sec = time_min * 60
+                if 30 <= time_sec <= 18000:
+                    return int(round(time_sec))
+            velocity += step
+            time_min = distance_m / velocity if velocity > 0 else 0.1
+        return None
+
+    @staticmethod
+    def get_confidence_range(vdot: float, distance_km: float) -> Dict[str, int]:
+        """Get optimistic and pessimistic time estimates (±1 VO2max)."""
+        fast_vdot = min(85.0, vdot + 1.0)
+        slow_vdot = max(25.0, vdot - 1.0)
+
+        fast_time = VDOTCalculator.predict_time_for_distance(fast_vdot, distance_km)
+        slow_time = VDOTCalculator.predict_time_for_distance(slow_vdot, distance_km)
+
+        base_time = VDOTCalculator.predict_time_for_distance(vdot, distance_km)
+
+        return {
+            "fast": fast_time or base_time,
+            "slow": slow_time or base_time,
+            "base": base_time,
+        }
+
+    @staticmethod
+    def predict_times(vdot: float) -> Dict[str, Dict]:
+        """Get predicted times for all standard race distances.
+
+        Returns:
+            Dict with distance keys mapping to time info
+        """
+        predictions = {}
+        for name, distance in STANDARD_RACE_DISTANCES.items():
+            seconds = VDOTCalculator.predict_time_for_distance(vdot, distance)
+            if seconds:
+                predictions[name] = {
+                    "seconds": seconds,
+                    "formatted": VDOTCalculator.format_duration(seconds),
+                    "distance_km": distance,
+                }
+        return predictions

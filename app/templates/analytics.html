@@ -126,6 +126,26 @@
         <!-- ── Charts Grid ── -->
         <div class="charts-grid">
 
+            <!-- Race Predictions (collapsible) -->
+            <div class="analytics-card predictions-card" id="predictionsCard" style="display:none;">
+                <div class="analytics-card-header">
+                    <h3 class="analytics-card-title">Race Predictions</h3>
+                    <button class="predictions-toggle" id="predictionsToggle" aria-label="Toggle predictions">
+                        <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                            <path d="M4 6l4 4 4-4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                    </button>
+                </div>
+                <div class="predictions-content" id="predictionsContent">
+                    <div class="predictions-header">
+                        <span class="predictions-vdot" id="predictionsVdot">VDOT --</span>
+                        <span class="predictions-trend" id="predictionsTrend"></span>
+                    </div>
+                    <div class="predictions-grid" id="predictionsGrid"></div>
+                    <div class="predictions-footer" id="predictionsFooter"></div>
+                </div>
+            </div>
+
             <!-- Weekly Volume (wide) -->
             <div class="analytics-card chart-wide" id="distanceChartCard">
                 <div class="analytics-card-header">

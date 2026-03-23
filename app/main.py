@@ -119,6 +119,8 @@ def _run_migrations(eng) -> None:
         "ALTER TABLE daily_workouts ADD COLUMN hr_zone_target INTEGER",
         # Key workout library (Feature: Race-Specific Key Workouts)
         "ALTER TABLE daily_workouts ADD COLUMN key_workout_id VARCHAR",
+        # VDOT for race runs
+        "ALTER TABLE run_logs ADD COLUMN vdot FLOAT",
     ]
     with eng.connect() as conn:
         for stmt in stmts:

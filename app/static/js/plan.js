@@ -311,9 +311,18 @@ window.submitRunLog = async function(event) {
         });
         
         if (response.ok) {
+            const data = await response.json();
             closeLogModal();
-            ApiClient.showSuccess('Run logged successfully!');
-            setTimeout(() => location.reload(), 1500);
+            
+            // Check if this was a race and show predictions toast
+            const workoutType = document.getElementById('workout_type').value;
+            if (workoutType === 'race' && data.predictions) {
+                showRacePredictionsToast(data);
+                setTimeout(() => location.reload(), 6000);
+            } else {
+                ApiClient.showSuccess('Run logged successfully!');
+                setTimeout(() => location.reload(), 1500);
+            }
         } else {
             const error = await response.json();
             ApiClient.showError('Error logging run: ' + (error.detail || 'Unknown error'));
@@ -328,6 +337,73 @@ window.submitRunLog = async function(event) {
             submitBtn.textContent = 'Log Run';
             submitBtn.style.opacity = '1';
         }
+    }
+};
+
+window.showRacePredictionsToast = function(data) {
+    const toastId = 'race-predictions-toast';
+    let toast = document.getElementById(toastId);
+    
+    if (toast) {
+        toast.remove();
+    }
+    
+    toast = document.createElement('div');
+    toast.id = toastId;
+    toast.className = 'race-predictions-toast';
+    
+    const predictions = data.predictions || {};
+    const distanceLabels = {
+        '5K': '5K',
+        '10K': '10K',
+        'trail': 'Trail',
+        'half_marathon': 'Half',
+        'marathon': 'Full'
+    };
+    
+    let predictionsHtml = '';
+    for (const [key, pred] of Object.entries(predictions)) {
+        const label = distanceLabels[key] || key;
+        predictionsHtml += `<span class="toast-prediction"><strong>${label}:</strong> ${pred.formatted}</span>`;
+    }
+    
+    toast.innerHTML = `
+        <div class="toast-icon">🎯</div>
+        <div class="toast-content">
+            <div class="toast-title">Race logged! Based on your performance:</div>
+            <div class="toast-predictions">${predictionsHtml}</div>
+        </div>
+        <div class="toast-actions">
+            <button class="toast-btn toast-btn-secondary" onclick="dismissRaceToast()">Dismiss</button>
+            <a href="/analytics" class="toast-btn toast-btn-primary">View</a>
+        </div>
+        <button class="toast-close" onclick="dismissRaceToast()">&times;</button>
+    `;
+    
+    document.body.appendChild(toast);
+    
+    // Store in sessionStorage to prevent showing again in same session
+    try {
+        const dismissed = JSON.parse(sessionStorage.getItem('race_toast_dismissed') || '[]');
+        const key = `race_${data.id || Date.now()}`;
+        if (!dismissed.includes(key)) {
+            sessionStorage.setItem('race_toast_dismissed', JSON.stringify([...dismissed, key]));
+        }
+    } catch (e) {}
+    
+    // Auto dismiss after 6 seconds
+    setTimeout(() => {
+        if (document.getElementById(toastId)) {
+            dismissRaceToast();
+        }
+    }, 6000);
+};
+
+window.dismissRaceToast = function() {
+    const toast = document.getElementById('race-predictions-toast');
+    if (toast) {
+        toast.classList.add('toast-fade-out');
+        setTimeout(() => toast.remove(), 300);
     }
 };
 

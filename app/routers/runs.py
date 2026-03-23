@@ -9,6 +9,7 @@ from sqlalchemy.orm import Session
 
 from app.core.adaptive_plan_generator import AdaptivePlanGenerator
 from app.core.quality_scorer import calculate_quality_score
+from app.core.vdot_calculator import VDOTCalculator
 from app.dependencies import get_db, get_current_user
 from app.models import RunLog, User, DailyWorkout, WeeklyPlan, TrainingPlan
 from app.schemas import (
@@ -45,6 +46,7 @@ def _run_to_response(run: RunLog) -> RunLogResponse:
         perceived_effort=run.perceived_effort,
         effort_quality_score=round(run.effort_quality_score, 1) if run.effort_quality_score else None,
         quality_label=run.quality_label,
+        vdot=run.vdot,
         created_at=run.created_at,
     )
 
@@ -104,7 +106,19 @@ async def create_run_log(
 
         db.add(new_run)
         db.commit()
-        db.refresh(new_run)
+
+        # Auto-calculate VDOT for race-type runs
+        race_predictions = None
+        if run_log.workout_type == "race":
+            vdot = VDOTCalculator.calculate_vdot(
+                run_log.distance_km, int(run_log.duration_minutes * 60)
+            )
+            if vdot:
+                new_run.vdot = vdot
+                db.commit()
+                db.refresh(new_run)
+                # Generate predictions for the toast
+                race_predictions = VDOTCalculator.predict_times(vdot)
 
         # Generate coaching feedback (non-fatal)
         try:
@@ -115,7 +129,10 @@ async def create_run_log(
 
         logger.info(f"Run log created for user {current_user.id}: {run_log.distance_km}km in {run_log.duration_minutes}min")
 
-        return _run_to_response(new_run)
+        response_data = _run_to_response(new_run)
+        if race_predictions:
+            response_data.predictions = race_predictions
+        return response_data
     except Exception as e:
         logger.error(f"Error creating run log: {e}")
         db.rollback()
@@ -256,6 +273,77 @@ async def delete_run_log(
     db.commit()
 
     logger.info(f"Run log {run_id} deleted for user {current_user.id}")
+
+
+@runs_router.get("/predictions")
+async def get_race_predictions(
+    target_distance: Optional[float] = Query(None, description="Target race distance in km"),
+    goal_time: Optional[str] = Query(None, description="Goal time in HH:MM:SS or MM:SS"),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """
+    Get race predictions based on user's recent race VDOT.
+
+    Returns predictions for all standard distances unless target_distance is specified.
+    When goal_time is provided, performs gap analysis.
+    """
+    from app.services.race_predictor_service import RacePredictorService
+
+    predictions_data = RacePredictorService.get_predictions_for_user(current_user.id, db)
+
+    if not predictions_data.get("has_sufficient_data"):
+        return {
+            "current_vdot": None,
+            "vdot_trend": "stable",
+            "predictions": {},
+            "last_race": None,
+            "has_sufficient_data": False,
+            "message": "Log a race-type run to get predictions",
+        }
+
+    result = {
+        "current_vdot": predictions_data["current_vdot"],
+        "vdot_trend": predictions_data["vdot_trend"],
+        "predictions": {},
+        "last_race": predictions_data["last_race"],
+        "has_sufficient_data": True,
+    }
+
+    if target_distance:
+        result["target_distance"] = target_distance
+        if goal_time:
+            goal_seconds = VDOTCalculator.parse_time_to_seconds(goal_time)
+            if goal_seconds:
+                gap_analysis = RacePredictorService.analyze_fitness_gap(
+                    predictions_data["current_vdot"],
+                    target_distance,
+                    goal_seconds,
+                    db,
+                )
+                result.update(gap_analysis)
+            else:
+                result["message"] = "Invalid goal_time format"
+        else:
+            current_vdot = predictions_data["current_vdot"]
+            predicted = VDOTCalculator.predict_time_for_distance(current_vdot, target_distance)
+            range_data = VDOTCalculator.get_confidence_range(current_vdot, target_distance)
+            result["predicted_time"] = VDOTCalculator.format_duration(predicted) if predicted else None
+            result["range"] = {
+                "fast": VDOTCalculator.format_duration(range_data["fast"]),
+                "slow": VDOTCalculator.format_duration(range_data["slow"]),
+            }
+            result["message"] = "Log a goal time to see gap analysis"
+    else:
+        for name, pred in predictions_data["predictions"].items():
+            result["predictions"][name] = {
+                "distance_km": pred["distance_km"],
+                "seconds": pred["seconds"],
+                "formatted": pred["formatted"],
+                "range": pred.get("range", {}),
+            }
+
+    return result
 
 
 @runs_router.get("/{run_id}/feedback")

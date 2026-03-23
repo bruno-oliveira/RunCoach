@@ -36,3 +36,5 @@ class RunLog(Base):
     effort_quality_score = Column(Float, nullable=True)   # 0-100
     quality_label = Column(String(20), nullable=True)     # "Nailed it", "On track", "Too easy", "Too hard"
     planned_pace_min_km = Column(Float, nullable=True)    # Expected pace from workout plan
+    # VDOT from race runs
+    vdot = Column(Float, nullable=True)                   # VDOT calculated from race performance
