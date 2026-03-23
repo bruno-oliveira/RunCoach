@@ -281,6 +281,16 @@ async def view_plan(
             plan_id, db, current_user, anonymous_user_id
         )
 
+        # Auto-map any unmapped Strava runs to this plan
+        if current_user and training_plan.start_date:
+            try:
+                adaptation_service = AdaptationService()
+                adaptation_service.map_runs_to_plan(
+                    plan_id, current_user.id, db
+                )
+            except Exception as e:
+                logger.warning(f"Auto-map on view failed: {e}")
+
         plan_data = json.loads(training_plan.plan_data)
         plan_data = PlanService.enrich_plan_data_with_ids(
             plan_data, training_plan.id, db

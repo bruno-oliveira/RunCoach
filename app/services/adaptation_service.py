@@ -641,7 +641,10 @@ class AdaptationService:
         if not training_plan.start_date:
             return {"adjusted": False, "reason": "Plan has no start date."}
 
-        # 2. Backfill baselines for legacy plans
+        # 2. Auto-map any unmapped runs before adjusting
+        self.map_runs_to_plan(plan_id, user_id, db)
+
+        # 3. Backfill baselines for legacy plans
         self._backfill_baselines(training_plan, db)
 
         # 3. Determine current week
