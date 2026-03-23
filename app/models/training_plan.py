@@ -43,6 +43,9 @@ class TrainingPlan(Base):
     recent_race_time_seconds = Column(Integer, nullable=True)
     vdot = Column(Float, nullable=True)
 
+    # Heart rate zones (JSON: {max_hr, source, zones: [...]})
+    hr_zones_data = Column(Text, nullable=True)
+
     # Phase-specific nutrition data (JSON)
     nutrition_phases_data = Column(Text, nullable=True)
 

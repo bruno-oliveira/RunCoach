@@ -7,10 +7,12 @@ from typing import Any, Optional
 
 from sqlalchemy.orm import Session
 
+from app.core.hr_zone_calculator import HRZoneCalculator
 from app.core.nutrition_engine import NutritionEngine
 from app.core.plan_generator import TrainingPlanGenerator
 from app.core.race_protocol_generator import generate_race_protocol
 from app.core.vdot_calculator import VDOTCalculator
+from app.services.hr_zone_service import HRZoneService
 from app.models import (
     DailyWorkout,
     PlanCustomization,
@@ -172,6 +174,37 @@ class PlanService:
                     baseline_distance_km=dist,
                 )
                 db.add(daily_workout)
+
+        # HR zones — compute and inject into plan_data + DailyWorkout rows
+        try:
+            zones = HRZoneService.compute_and_store_zones(training_plan, user, db)
+            HRZoneService.inject_hr_zones_into_plan_data(plan_data, zones)
+            # Persist hr_zone_target on DailyWorkout rows
+            for week_data in plan_data:
+                week_num = week_data.get("week")
+                for workout in week_data.get("daily_workouts", []):
+                    hr_target = workout.get("hr_zone_target")
+                    key_wk_id = workout.get("key_workout_id")
+                    if hr_target is not None or key_wk_id is not None:
+                        dw = (
+                            db.query(DailyWorkout)
+                            .join(WeeklyPlan)
+                            .filter(
+                                WeeklyPlan.training_plan_id == training_plan.id,
+                                WeeklyPlan.week_number == week_num,
+                                DailyWorkout.day_of_week == workout.get("day"),
+                            )
+                            .first()
+                        )
+                        if dw:
+                            if hr_target is not None:
+                                dw.hr_zone_target = hr_target
+                            if key_wk_id is not None:
+                                dw.key_workout_id = key_wk_id
+            # Re-serialise plan_data with zone annotations
+            training_plan.plan_data = json.dumps(plan_data)
+        except Exception as e:
+            logger.warning(f"HR zone injection failed: {e}")
 
         # Nutrition
         nutrition_plan = nutrition_engine.generate_weekly_meal_plan(
@@ -475,6 +508,24 @@ class PlanService:
             except Exception as e:
                 logger.warning(f"Could not detect skipped workouts: {e}")
 
+        # HR zones for template rendering
+        hr_zones_info = HRZoneService.get_zones_for_plan(training_plan)
+
+        # Coaching feedback for logged runs
+        feedback_map: dict[str, Any] = {}
+        try:
+            from app.models.run_feedback import RunFeedback
+            if logged_runs:
+                run_ids = [r.id for r in logged_runs]
+                feedbacks = (
+                    db.query(RunFeedback)
+                    .filter(RunFeedback.run_log_id.in_(run_ids))
+                    .all()
+                )
+                feedback_map = {fb.run_log_id: fb for fb in feedbacks}
+        except Exception as e:
+            logger.warning(f"Could not load feedback: {e}")
+
         return {
             "performance_analysis": performance_analysis,
             "logged_runs": logged_runs_map,
@@ -482,6 +533,8 @@ class PlanService:
             "skipped_count": skipped_count,
             "rescheduled_count": rescheduled_count,
             "needs_adjustment": needs_adjustment,
+            "hr_zones": hr_zones_info,
+            "feedback_map": feedback_map,
         }
 
 

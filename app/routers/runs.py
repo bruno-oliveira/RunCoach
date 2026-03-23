@@ -106,6 +106,13 @@ async def create_run_log(
         db.commit()
         db.refresh(new_run)
 
+        # Generate coaching feedback (non-fatal)
+        try:
+            from app.services.feedback_service import FeedbackService
+            FeedbackService.generate_and_store(new_run, db)
+        except Exception as e:
+            logger.warning(f"Feedback generation failed for run {new_run.id}: {e}")
+
         logger.info(f"Run log created for user {current_user.id}: {run_log.distance_km}km in {run_log.duration_minutes}min")
 
         return _run_to_response(new_run)
@@ -249,6 +256,72 @@ async def delete_run_log(
     db.commit()
 
     logger.info(f"Run log {run_id} deleted for user {current_user.id}")
+
+
+@runs_router.get("/{run_id}/feedback")
+async def get_run_feedback(
+    run_id: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Get coaching feedback for a specific run."""
+    from app.services.feedback_service import FeedbackService
+
+    # Verify run ownership
+    run = (
+        db.query(RunLog)
+        .filter(RunLog.id == run_id, RunLog.user_id == current_user.id)
+        .first()
+    )
+    if not run:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Run log not found",
+        )
+
+    feedback = FeedbackService.get_feedback_for_run(run_id, db)
+    if not feedback:
+        return {"message": "No feedback available for this run"}
+
+    return {
+        "id": feedback.id,
+        "run_log_id": feedback.run_log_id,
+        "pace_feedback": feedback.pace_feedback,
+        "hr_zone_feedback": feedback.hr_zone_feedback,
+        "effort_feedback": feedback.effort_feedback,
+        "volume_feedback": feedback.volume_feedback,
+        "pattern_feedback": feedback.pattern_feedback,
+        "overall_sentiment": feedback.overall_sentiment,
+        "created_at": feedback.created_at,
+    }
+
+
+@runs_router.get("/feedback/plan/{plan_id}")
+async def get_plan_feedback(
+    plan_id: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Get all coaching feedback for runs logged against a plan."""
+    from app.services.feedback_service import FeedbackService
+
+    feedbacks = FeedbackService.get_feedback_for_plan(
+        plan_id, current_user.id, db
+    )
+    return [
+        {
+            "id": fb.id,
+            "run_log_id": fb.run_log_id,
+            "pace_feedback": fb.pace_feedback,
+            "hr_zone_feedback": fb.hr_zone_feedback,
+            "effort_feedback": fb.effort_feedback,
+            "volume_feedback": fb.volume_feedback,
+            "pattern_feedback": fb.pattern_feedback,
+            "overall_sentiment": fb.overall_sentiment,
+            "created_at": fb.created_at,
+        }
+        for fb in feedbacks
+    ]
 
 
 @adaptive_router.get("/metrics")

@@ -265,6 +265,14 @@ class StravaService:
                     run_log = self.map_activity_to_run_log(activity, user.id)
                     db.add(run_log)
                     db.flush()
+                    # Generate coaching feedback (non-fatal)
+                    try:
+                        from app.services.feedback_service import FeedbackService
+                        FeedbackService.generate_and_store(run_log, db)
+                    except Exception as fb_err:
+                        logger.warning(
+                            f"Feedback generation failed for Strava run {run_log.id}: {fb_err}"
+                        )
                     synced += 1
                 except Exception as e:
                     logger.error(

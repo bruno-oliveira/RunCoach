@@ -7,6 +7,7 @@ from app.models.weekly_plan import WeeklyPlan
 from app.models.daily_workout import DailyWorkout
 from app.models.plan_customization import PlanCustomization
 from app.models.run_log import RunLog
+from app.models.run_feedback import RunFeedback
 from app.models.favorite_recipe import FavoriteRecipe
 from app.models.triathlon_plan import TriathlonPlan
 
@@ -27,6 +28,10 @@ PlanCustomization.training_plan = relationship("TrainingPlan")
 RunLog.user = relationship("User", back_populates="run_logs")
 RunLog.training_plan = relationship("TrainingPlan")
 RunLog.daily_workout = relationship("DailyWorkout")
+RunLog.feedback = relationship("RunFeedback", uselist=False, back_populates="run_log")
+
+RunFeedback.run_log = relationship("RunLog", back_populates="feedback")
+RunFeedback.user = relationship("User")
 
 User.favorite_recipes = relationship("FavoriteRecipe")
 
@@ -41,6 +46,7 @@ __all__ = [
     "DailyWorkout",
     "PlanCustomization",
     "RunLog",
+    "RunFeedback",
     "FavoriteRecipe",
     "TriathlonPlan",
 ]

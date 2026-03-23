@@ -601,7 +601,8 @@ class TrainingPlanGenerator:
                                 is_recovery_week: bool,
                                 vdot: Optional[float] = None,
                                 pace_zones: Optional[Dict] = None,
-                                experience_level: str = "beginner") -> List[Dict[str, Any]]:
+                                experience_level: str = "beginner",
+                                week_in_phase: int = 0) -> List[Dict[str, Any]]:
         """
         Generate daily workouts with integrated strength/cross-training and rest day rules
         """
@@ -689,6 +690,21 @@ class TrainingPlanGenerator:
                                                       vdot=vdot, pace_zones=pace_zones)
             elif workout_type == 'hill':
                 workout = self._generate_hill_workout(day_number, easy_distance)
+
+            # Overlay key workout description for quality sessions in build/peak
+            if workout_type in ('interval', 'tempo', 'hill') and phase in ('build', 'peak'):
+                from app.core.key_workout_library import KeyWorkoutLibrary
+                key_wk = KeyWorkoutLibrary.get_for_phase(
+                    target_distance, phase, week_in_phase, workout_type
+                )
+                if key_wk:
+                    if pace_zones:
+                        key_wk = KeyWorkoutLibrary.inject_vdot_paces(key_wk, pace_zones)
+                    workout['description'] = key_wk['description']
+                    workout['key_workout_id'] = key_wk['id']
+                    workout['key_workout_name'] = key_wk['name']
+                    workout['structure'] = key_wk['structure']
+                    workout['key_workout_rationale'] = key_wk['rationale']
 
             if workout_type == 'easy':
                 strength_session = self._generate_strength_session(
@@ -1419,6 +1435,16 @@ class TrainingPlanGenerator:
         phase = self._get_phase(week_number, phases)
         is_recovery_week = self._is_recovery_week(week_number, phase, phases)
 
+        # Calculate week_in_phase for key workout rotation
+        if phase == 'base':
+            week_in_phase = week_number - 1
+        elif phase == 'build':
+            week_in_phase = week_number - phases['base'] - 1
+        elif phase == 'peak':
+            week_in_phase = week_number - phases['base'] - phases['build'] - 1
+        else:
+            week_in_phase = week_number - phases['base'] - phases['build'] - phases['peak'] - 1
+
         distribution = self._get_workout_distribution(total_km, max_runs_per_week, phase,
                                                    is_recovery_week, week_number, phases, target_distance)
 
@@ -1426,6 +1452,7 @@ class TrainingPlanGenerator:
             week_number, total_km, distribution, target_distance, weeks, phase, is_recovery_week,
             vdot=vdot, pace_zones=pace_zones,
             experience_level=experience_level,
+            week_in_phase=week_in_phase,
         )
 
         actual_total_km = round(sum(w.get('distance', 0) for w in workouts), 1)

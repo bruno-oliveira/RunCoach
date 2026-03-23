@@ -114,6 +114,11 @@ def _run_migrations(eng) -> None:
         "ALTER TABLE training_plans ADD COLUMN recalibration_multiplier FLOAT",
         # Unified adaptation multiplier (Phase 1 of simplified adaptation)
         "ALTER TABLE training_plans ADD COLUMN adjustment_multiplier FLOAT",
+        # HR zones (Feature: Heart Rate Zone Training)
+        "ALTER TABLE training_plans ADD COLUMN hr_zones_data TEXT",
+        "ALTER TABLE daily_workouts ADD COLUMN hr_zone_target INTEGER",
+        # Key workout library (Feature: Race-Specific Key Workouts)
+        "ALTER TABLE daily_workouts ADD COLUMN key_workout_id VARCHAR",
     ]
     with eng.connect() as conn:
         for stmt in stmts:

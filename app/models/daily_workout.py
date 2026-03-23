@@ -19,3 +19,5 @@ class DailyWorkout(Base):
     notes = Column(Text)
     coaching_rationale = Column(Text, nullable=True)
     baseline_distance_km = Column(Float, nullable=True)
+    hr_zone_target = Column(Integer, nullable=True)  # Target HR zone (1-5)
+    key_workout_id = Column(String, nullable=True)  # ID from KeyWorkoutLibrary
