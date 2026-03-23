@@ -405,6 +405,10 @@ class AdaptationService:
 
         start_date = _to_date(training_plan.start_date)
         today = datetime.now(timezone.utc).replace(tzinfo=None).date()
+        # Use tomorrow for upper-bound queries so today's runs are included.
+        # SQLite compares dates as strings, so "2026-03-23 07:36:20" > "2026-03-23"
+        # and a <= today filter would exclude all runs logged today.
+        tomorrow = today + timedelta(days=1)
         num_weeks = training_plan.weeks_duration
         logger.info(
             "map_runs_to_plan: plan=%s, start_date=%s, today=%s, weeks=%d",
@@ -460,7 +464,7 @@ class AdaptationService:
             .filter(
                 RunLog.user_id == user_id,
                 RunLog.date >= start_date,
-                RunLog.date <= today,
+                RunLog.date < tomorrow,
                 or_(
                     RunLog.training_plan_id.is_(None),
                     RunLog.training_plan_id != plan_id,

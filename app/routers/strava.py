@@ -233,10 +233,9 @@ async def strava_sync(
             detail=f"Strava sync failed: {str(e)}",
         )
 
-    # Auto-map and adjust active plans if new runs were synced
-    adjustment_results = None
-    if result.get("synced", 0) > 0:
-        adjustment_results = _auto_map_and_adjust(current_user, db)
+    # Auto-map and adjust active plans on every sync (not just when new
+    # runs arrive) so previously-unmapped runs get linked too.
+    adjustment_results = _auto_map_and_adjust(current_user, db) or None
 
     return StravaSyncResponse(**result, adjustment_results=adjustment_results)
 
