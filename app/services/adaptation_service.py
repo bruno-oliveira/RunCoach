@@ -802,9 +802,9 @@ class AdaptationService:
         elif completion_rate >= 0.7:
             completion_factor = 1.00
         elif completion_rate >= 0.5:
-            completion_factor = 0.92
+            completion_factor = 0.95
         else:
-            completion_factor = 0.85
+            completion_factor = 0.90
 
         # ----------------------------------------------------------
         # Combine signals
@@ -814,7 +814,8 @@ class AdaptationService:
             + (effort_factor * 0.30)
             + (completion_factor * 0.20)
         )
-        multiplier = round(max(0.80, min(1.15, raw_multiplier)), 2)
+        # Floor at 0.85 — never cut more than 15% from baseline
+        multiplier = round(max(0.85, min(1.15, raw_multiplier)), 2)
 
         # ----------------------------------------------------------
         # Apply to future weeks
@@ -862,7 +863,14 @@ class AdaptationService:
                     continue
 
                 base_distance = workout.baseline_distance_km or workout.distance_km
-                new_distance = max(1.0, round(base_distance * multiplier, 1))
+
+                # Protect long runs: they are the most important race-
+                # preparation workouts. When reducing, keep them at
+                # baseline so the runner can still hit their goal.
+                if workout.workout_type == "long" and multiplier < 1.0:
+                    new_distance = round(base_distance, 1)
+                else:
+                    new_distance = max(1.0, round(base_distance * multiplier, 1))
                 old_distance = workout.distance_km
 
                 if new_distance == old_distance:
@@ -872,9 +880,15 @@ class AdaptationService:
                 any_distance_changed = True
                 week_changed = True
 
+                # Long runs kept at baseline should not carry an
+                # adjustment annotation — strip any old one.
+                is_protected = (
+                    workout.workout_type == "long" and multiplier < 1.0
+                )
+
                 # Strip old annotations and append new one
                 clean_notes = _ANNOTATION_RE.sub("", workout.notes or "").strip()
-                if multiplier != 1.0:
+                if multiplier != 1.0 and not is_protected:
                     adjust_note = f"(Adjusted: x{multiplier})"
                     workout.notes = (
                         f"{clean_notes} {adjust_note}".strip()
@@ -891,7 +905,8 @@ class AdaptationService:
                     pd_clean = _ANNOTATION_RE.sub(
                         "", pd_wo.get("notes", pd_wo.get("description", ""))
                     ).strip()
-                    if multiplier != 1.0:
+                    if multiplier != 1.0 and not is_protected:
+                        adjust_note = f"(Adjusted: x{multiplier})"
                         pd_wo["notes"] = (
                             f"{pd_clean} {adjust_note}".strip()
                             if pd_clean
@@ -924,12 +939,29 @@ class AdaptationService:
         if avg_effort is not None:
             reason_parts.append(f"Avg effort: {round(avg_effort, 1)}/10.")
 
+        logger.info(
+            "adjust_plan result: multiplier=%.2f raw=%.3f "
+            "volume_ratio=%.2f effort_factor=%.2f(avg=%.1f) "
+            "completion_factor=%.2f(rate=%.2f) runs=%d",
+            multiplier,
+            raw_multiplier,
+            volume_ratio,
+            effort_factor,
+            avg_effort if avg_effort is not None else 0,
+            completion_factor,
+            completion_rate,
+            len(all_plan_runs),
+        )
+
         return {
             "adjusted": any_distance_changed,
             "multiplier": multiplier,
             "volume_ratio": round(volume_ratio, 2),
+            "effort_factor": round(effort_factor, 2),
             "avg_effort": round(avg_effort, 1) if avg_effort is not None else None,
             "completion_rate": round(completion_rate, 2),
+            "completion_factor": round(completion_factor, 2),
+            "raw_multiplier": round(raw_multiplier, 3),
             "total_runs": len(all_plan_runs),
             "weeks_changed": weeks_changed,
             "reason": " ".join(reason_parts),

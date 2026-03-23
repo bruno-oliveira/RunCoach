@@ -485,6 +485,9 @@ window.adjustPlan = async function() {
             if (result.adjusted) {
                 let msg = `Plan adjusted!\n\n${result.reason}`;
                 msg += `\n\n${result.weeks_changed} week(s) updated (x${result.multiplier}).`;
+                if (result.raw_multiplier != null) {
+                    msg += `\n\nSignals: volume=${result.volume_ratio}, effort=${result.effort_factor}, completion=${result.completion_rate} (${result.total_runs} runs)`;
+                }
                 ApiClient.showSuccess(msg);
                 setTimeout(() => location.reload(), 2500);
             } else {
