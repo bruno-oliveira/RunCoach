@@ -36,6 +36,7 @@ from app.models.triathlon_plan import TriathlonPlan
 from app.routers.plan_helpers import error_response, get_plan_or_404, plan_view_context
 from app.schemas import DISTANCE_NAMES, PlanRequest, get_mileage_warning, parse_target_distance
 from app.services.adaptation_service import AdaptationService
+from app.services.hr_zone_service import HRZoneService
 from app.services.plan_service import PlanService
 from app.template_helpers import create_templates
 
@@ -308,6 +309,22 @@ async def view_plan(
         nutrition_plan = PlanService.nutrition_for_template(
             training_plan.nutrition_plan_data
         )
+
+        # Retroactive HR zone computation for existing plans
+        if not training_plan.hr_zones_data:
+            try:
+                user = current_user or db.query(User).filter(
+                    User.id == training_plan.user_id
+                ).first()
+                if user:
+                    zones = HRZoneService.compute_and_store_zones(
+                        training_plan, user, db
+                    )
+                    HRZoneService.inject_hr_zones_into_plan_data(plan_data, zones)
+                    training_plan.plan_data = json.dumps(plan_data)
+                    db.commit()
+            except Exception as e:
+                logger.warning(f"Retroactive HR zone computation failed: {e}")
 
         extra = PlanService.get_plan_view_data(training_plan, current_user, db)
 

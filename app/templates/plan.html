@@ -61,6 +61,13 @@
                 {{ "%.1f"|format(vdot) }}
             </div>
             {% endif %}
+            {% if hr_zones %}
+            <div class="summary-item">
+                <strong>Max HR</strong>
+                {{ hr_zones.max_hr }} bpm
+                <span class="hr-source-label">({{ hr_zones.source }})</span>
+            </div>
+            {% endif %}
             {% if start_date and user %}
             <div class="summary-item">
                 <strong>Started</strong>
@@ -71,6 +78,21 @@
         </div>
     </div>
     
+    {% if hr_zones and hr_zones.zones %}
+    <div class="hr-zones-panel">
+        <h3>Your Heart Rate Training Zones</h3>
+        <div class="hr-zones-bar">
+            {% for zone in hr_zones.zones %}
+            <div class="hr-zone-segment hr-zone-{{ zone.zone }}" style="flex: 1;">
+                <div class="hr-zone-number">Z{{ zone.zone }}</div>
+                <div class="hr-zone-name">{{ zone.name }}</div>
+                <div class="hr-zone-bpm">{{ zone.min_bpm }}-{{ zone.max_bpm }}</div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
     {% if performance_analysis and performance_analysis.total_runs > 0 %}
     <div class="plan-insights plan-insights-data" style="margin-bottom: var(--space-6);">
         <h3>Performance Analysis</h3>
@@ -287,11 +309,28 @@
                 {% set is_past = start_date and workout_date_labels and current_week_number and (week.week < current_week_number or (week.week == current_week_number and workout.day <= (today_iso | length and 1))) %}
                 <div class="workout-item {{ workout.type }} {% if logged_run %}completed{% elif is_past and workout.type not in ['rest', 'recovery'] and current_week_number and week.week < current_week_number %}missed{% endif %}" data-day="{{ day_names[workout.day - 1] }}">
                     <div class="workout-day-label">{% if workout_date_labels %}{{ workout_date_labels.get((week.week, workout.day), day_names[workout.day - 1]) }}{% else %}{{ day_names[workout.day - 1] }}{% endif %}</div>
-                    <div class="workout-type">{{ workout.type }}</div>
+                    <div class="workout-type-row">
+                        <div class="workout-type">{{ workout.type }}</div>
+                        {% if workout.hr_zone_label %}
+                        <span class="hr-zone-badge hr-zone-{{ workout.hr_zone_target }}">Z{{ workout.hr_zone_target }}</span>
+                        {% endif %}
+                    </div>
+                    {% if workout.key_workout_name %}
+                    <div class="key-workout-badge">{{ workout.key_workout_name }}</div>
+                    {% endif %}
                     {% if workout.distance > 0 %}
-                    <div class="workout-distance">{{ workout.distance }} km</div>
+                    <div class="workout-distance">{{ workout.distance }} km{% if workout.hr_zone_label %} <span class="workout-zone-hint">{{ workout.hr_zone_label }}</span>{% endif %}</div>
+                    {% endif %}
+                    {% if workout.structure %}
+                    <div class="workout-structure">{{ workout.structure }}</div>
                     {% endif %}
                     <div class="workout-notes">{{ workout.notes }}</div>
+                    {% if workout.key_workout_rationale %}
+                    <details class="coaching-note key-workout-rationale">
+                        <summary class="coaching-note-toggle">Why this workout</summary>
+                        <div class="coaching-note-content">{{ workout.key_workout_rationale }}</div>
+                    </details>
+                    {% endif %}
 
                     {% if workout.strength_session %}
                     <div class="workout-strength-tag">
@@ -342,6 +381,26 @@
                             {% endif %}
                         </div>
                     </details>
+                    {% set run_feedback = feedback_map.get(logged_run.id) if feedback_map else None %}
+                    {% if run_feedback %}
+                    <div class="coaching-feedback sentiment-{{ run_feedback.overall_sentiment }}">
+                        {% if run_feedback.pace_feedback %}
+                        <div class="feedback-item feedback-pace">{{ run_feedback.pace_feedback }}</div>
+                        {% endif %}
+                        {% if run_feedback.hr_zone_feedback %}
+                        <div class="feedback-item feedback-hr">{{ run_feedback.hr_zone_feedback }}</div>
+                        {% endif %}
+                        {% if run_feedback.effort_feedback %}
+                        <div class="feedback-item feedback-effort">{{ run_feedback.effort_feedback }}</div>
+                        {% endif %}
+                        {% if run_feedback.volume_feedback %}
+                        <div class="feedback-item feedback-volume">{{ run_feedback.volume_feedback }}</div>
+                        {% endif %}
+                        {% if run_feedback.pattern_feedback %}
+                        <div class="feedback-item feedback-pattern">{{ run_feedback.pattern_feedback }}</div>
+                        {% endif %}
+                    </div>
+                    {% endif %}
                     <button class="undo-log-btn" onclick="unlinkRun('{{ logged_run.id }}')">Undo</button>
                     {% elif workout.type != 'rest' and user and not user.strava_athlete_id %}
                     <button class="log-run-btn" onclick="openLogModal('{{ workout.id }}', '{{ workout.type }}', {{ workout.distance }}, '{{ day_names[workout.day - 1] }}', {{ week.week }})">Log This Run</button>
