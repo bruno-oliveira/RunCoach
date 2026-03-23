@@ -105,7 +105,7 @@ class TestMapActivityToRunLog:
         run_log = strava_service.map_activity_to_run_log(
             sample_strava_activity, "user-123"
         )
-        assert run_log.workout_type == "tempo"
+        assert run_log.workout_type == "race"
 
     def test_workout_type_mapping_long(self, strava_service, sample_strava_activity):
         sample_strava_activity["workout_type"] = 2

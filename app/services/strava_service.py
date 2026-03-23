@@ -29,10 +29,10 @@ STRAVA_TIMEOUT = httpx.Timeout(30.0)
 # API ever returns a non-empty page erroneously.
 MAX_SYNC_PAGES = 200
 
-# Strava workout_type mapping: 0/None→easy, 1→tempo (race), 2→long, 3→interval (workout)
+# Strava workout_type mapping: 0/None→easy, 1→race, 2→long, 3→interval (workout)
 STRAVA_WORKOUT_TYPE_MAP = {
     0: "easy",
-    1: "tempo",
+    1: "race",
     2: "long",
     3: "interval",
 }
@@ -263,6 +263,14 @@ class StravaService:
 
                 try:
                     run_log = self.map_activity_to_run_log(activity, user.id)
+                    # Auto-calculate VDOT for race-type runs
+                    if run_log.workout_type == "race" and run_log.distance_km > 0 and run_log.duration_minutes > 0:
+                        from app.core.vdot_calculator import VDOTCalculator
+                        vdot = VDOTCalculator.calculate_vdot(
+                            run_log.distance_km, int(run_log.duration_minutes * 60)
+                        )
+                        if vdot:
+                            run_log.vdot = vdot
                     db.add(run_log)
                     db.flush()
                     # Generate coaching feedback (non-fatal)
