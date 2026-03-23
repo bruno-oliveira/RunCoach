@@ -432,6 +432,19 @@ async def adjust_plan(
     return adaptation_service.adjust_plan(plan_id, current_user.id, db)
 
 
+@router.post("/api/plan/{plan_id}/reset-adjustment")
+async def reset_plan_adjustment(
+    plan_id: str,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Reset plan adjustment, restoring original baseline distances."""
+    get_plan_or_404(plan_id, db, current_user, require_user_match=True)
+
+    adaptation_service = AdaptationService()
+    return adaptation_service.reset_adjustment(plan_id, current_user.id, db)
+
+
 # ---------------------------------------------------------------------------
 # Start date
 # ---------------------------------------------------------------------------

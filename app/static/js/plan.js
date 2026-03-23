@@ -505,6 +505,43 @@ window.adjustPlan = async function() {
 // Backward compatibility alias
 window.recalibratePlan = window.adjustPlan;
 
+// Reset adjustment — restore original baseline distances
+window.resetAdjustment = async function() {
+    const confirmed = window.confirm(
+        'This will reset all adjusted distances back to the original plan.\n\nContinue?'
+    );
+    if (!confirmed) return;
+
+    const btn = document.getElementById('reset-adjust-btn');
+    if (btn) { btn.disabled = true; btn.textContent = 'Resetting...'; }
+
+    try {
+        const response = await fetch(`/api/plan/${window.APP_CTX.plan_id}/reset-adjustment`, {
+            method: 'POST',
+            headers: authHeaders(),
+            credentials: 'same-origin',
+        });
+
+        if (response.ok) {
+            const result = await response.json();
+            if (result.reset) {
+                ApiClient.showSuccess('Plan restored to original distances.');
+                setTimeout(() => location.reload(), 1500);
+            } else {
+                ApiClient.showInfo(result.reason || 'No adjustment to reset.');
+                if (btn) { btn.disabled = false; btn.textContent = 'Reset to original'; }
+            }
+        } else {
+            const err = await response.json();
+            ApiClient.showError(err.detail || 'Reset failed.');
+            if (btn) { btn.disabled = false; btn.textContent = 'Reset to original'; }
+        }
+    } catch (error) {
+        ApiClient.showError('Error: ' + error.message);
+        if (btn) { btn.disabled = false; btn.textContent = 'Reset to original'; }
+    }
+};
+
 // Set plan start date
 window.startPlan = async function() {
     const dateInput = document.getElementById('plan-start-date');

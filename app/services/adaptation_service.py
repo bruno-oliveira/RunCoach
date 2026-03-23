@@ -619,11 +619,13 @@ class AdaptationService:
         user_id: str,
         db: Session,
     ) -> Dict[str, any]:
-        """Adjust future plan weeks using a 14-day sliding window with 3 signals.
+        """Adjust future plan weeks using full-history weighted signals.
 
-        Combines volume adherence (50%), perceived effort (30%), and
-        completion rate (20%) into a single multiplier that is applied to
-        all future non-rest workouts from their baseline distances.
+        Uses exponential decay (half-life = 3 weeks) so all past workouts
+        contribute, but recent performance weighs more heavily.  Combines
+        volume adherence (50%), perceived effort (30%), and completion
+        rate (20%) into a single multiplier applied to all future non-rest
+        workouts from their baseline distances.
 
         Args:
             plan_id: Training plan ID.
@@ -651,34 +653,39 @@ class AdaptationService:
         # 3. Backfill baselines for legacy plans
         self._backfill_baselines(training_plan, db)
 
-        # 3. Determine current week
+        # 4. Determine current week
         start_date = _to_date(training_plan.start_date)
         today = datetime.now(timezone.utc).replace(tzinfo=None).date()
         days_elapsed = (today - start_date).days
         current_week = max(1, days_elapsed // 7 + 1)
 
-        # 4. Get runs in the last 14 days linked to this plan
-        window_start = today - timedelta(days=14)
-        runs_in_window = (
+        # 5. Get ALL runs linked to this plan (not just a 14-day window)
+        all_plan_runs = (
             db.query(RunLog)
-            .filter(
-                RunLog.training_plan_id == plan_id,
-                RunLog.date >= window_start,
-            )
+            .filter(RunLog.training_plan_id == plan_id)
             .all()
         )
 
-        if len(runs_in_window) < 3:
+        if len(all_plan_runs) < 3:
             return {
                 "adjusted": False,
-                "reason": "Not enough recent data (need at least 3 runs in the last 14 days)",
-                "runs_in_window": len(runs_in_window),
+                "reason": (
+                    "Not enough data (need at least 3 logged runs "
+                    "linked to this plan)"
+                ),
+                "total_runs": len(all_plan_runs),
             }
 
+        # Exponential-decay weight: half-life of 3 weeks
+        half_life_weeks = 3.0
+
+        def _recency_weight(scheduled_date):
+            weeks_ago = max(0, (today - scheduled_date).days) / 7.0
+            return 2.0 ** (-weeks_ago / half_life_weeks)
+
         # ----------------------------------------------------------
-        # Signal 1 -- Volume adherence (weight 50%)
+        # Gather all past non-rest workouts with their scheduled dates
         # ----------------------------------------------------------
-        # Compute planned km in window from non-rest DailyWorkouts
         all_workouts_with_week = (
             db.query(DailyWorkout, WeeklyPlan.week_number)
             .join(WeeklyPlan)
@@ -689,22 +696,42 @@ class AdaptationService:
             .all()
         )
 
-        planned_km_in_window = 0.0
-        # Build a set of workout IDs whose scheduled date is in window AND in the past
-        workouts_in_window_ids = set()
+        # Build lookup: workout_id -> scheduled_date (only past)
+        past_workouts: List[Tuple] = []  # (workout, scheduled_date)
+        past_workout_ids: set = set()
         for workout, week_number in all_workouts_with_week:
             scheduled_date = start_date + timedelta(
                 weeks=(week_number - 1),
                 days=(workout.day_of_week - 1),
             )
-            if window_start <= scheduled_date <= today:
-                planned_km_in_window += workout.baseline_distance_km or workout.distance_km or 0
-                workouts_in_window_ids.add(workout.id)
+            if scheduled_date <= today:
+                past_workouts.append((workout, scheduled_date))
+                past_workout_ids.add(workout.id)
 
-        actual_km_in_window = sum(r.distance_km or 0 for r in runs_in_window)
+        if not past_workouts:
+            return {
+                "adjusted": False,
+                "reason": "No past workouts to evaluate yet.",
+            }
 
-        if planned_km_in_window > 0:
-            volume_ratio = actual_km_in_window / planned_km_in_window
+        # ----------------------------------------------------------
+        # Signal 1 -- Volume adherence (weight 50%)
+        # Weighted by recency: recent planned/actual km count more
+        # ----------------------------------------------------------
+        planned_weighted = 0.0
+        for workout, sched_date in past_workouts:
+            w = _recency_weight(sched_date)
+            dist = workout.baseline_distance_km or workout.distance_km or 0
+            planned_weighted += dist * w
+
+        actual_weighted = 0.0
+        for run in all_plan_runs:
+            run_date = _to_date(run.date) if run.date else today
+            w = _recency_weight(run_date)
+            actual_weighted += (run.distance_km or 0) * w
+
+        if planned_weighted > 0:
+            volume_ratio = actual_weighted / planned_weighted
         else:
             volume_ratio = 1.0
         # Clamp to [0.5, 1.5]
@@ -712,16 +739,19 @@ class AdaptationService:
 
         # ----------------------------------------------------------
         # Signal 2 -- Effort signal (weight 30%)
+        # Weighted average of perceived effort
         # ----------------------------------------------------------
-        efforts = [
-            r.perceived_effort for r in runs_in_window
-            if r.perceived_effort is not None
-        ]
-        if not efforts:
-            effort_factor = 1.0
-            avg_effort = None
-        else:
-            avg_effort = sum(efforts) / len(efforts)
+        effort_sum = 0.0
+        effort_weight_sum = 0.0
+        for run in all_plan_runs:
+            if run.perceived_effort is not None:
+                run_date = _to_date(run.date) if run.date else today
+                w = _recency_weight(run_date)
+                effort_sum += run.perceived_effort * w
+                effort_weight_sum += w
+
+        if effort_weight_sum > 0:
+            avg_effort = effort_sum / effort_weight_sum
             if avg_effort <= 3:
                 effort_factor = 1.08
             elif avg_effort <= 5:
@@ -732,30 +762,38 @@ class AdaptationService:
                 effort_factor = 0.95
             else:
                 effort_factor = 0.88
+        else:
+            effort_factor = 1.0
+            avg_effort = None
 
         # ----------------------------------------------------------
         # Signal 3 -- Completion rate (weight 20%)
+        # Weighted: each scheduled workout contributes its recency
+        # weight to the denominator; completed ones also to numerator
         # ----------------------------------------------------------
-        # scheduled_in_window: non-rest workouts whose scheduled date
-        # is in the 14-day window AND in the past (<= today)
-        scheduled_in_window = len(workouts_in_window_ids)
-
-        # completed_in_window: those with a linked RunLog
-        if workouts_in_window_ids:
-            completed_in_window = (
-                db.query(RunLog)
+        completed_ids = set()
+        if past_workout_ids:
+            completed_rows = (
+                db.query(RunLog.daily_workout_id)
                 .filter(
                     RunLog.training_plan_id == plan_id,
-                    RunLog.daily_workout_id.in_(workouts_in_window_ids),
+                    RunLog.daily_workout_id.in_(past_workout_ids),
                 )
-                .count()
+                .all()
             )
-        else:
-            completed_in_window = 0
+            completed_ids = {row[0] for row in completed_rows}
+
+        scheduled_weighted = 0.0
+        completed_weighted = 0.0
+        for workout, sched_date in past_workouts:
+            w = _recency_weight(sched_date)
+            scheduled_weighted += w
+            if workout.id in completed_ids:
+                completed_weighted += w
 
         completion_rate = (
-            completed_in_window / scheduled_in_window
-            if scheduled_in_window > 0
+            completed_weighted / scheduled_weighted
+            if scheduled_weighted > 0
             else 0.0
         )
 
@@ -797,7 +835,7 @@ class AdaptationService:
                 "volume_ratio": round(volume_ratio, 2),
                 "avg_effort": round(avg_effort, 1) if avg_effort is not None else None,
                 "completion_rate": round(completion_rate, 2),
-                "runs_in_window": len(runs_in_window),
+                "total_runs": len(all_plan_runs),
                 "weeks_changed": 0,
                 "reason": "No future weeks remaining to adjust.",
             }
@@ -892,7 +930,112 @@ class AdaptationService:
             "volume_ratio": round(volume_ratio, 2),
             "avg_effort": round(avg_effort, 1) if avg_effort is not None else None,
             "completion_rate": round(completion_rate, 2),
-            "runs_in_window": len(runs_in_window),
+            "total_runs": len(all_plan_runs),
             "weeks_changed": weeks_changed,
             "reason": " ".join(reason_parts),
+        }
+
+    def reset_adjustment(
+        self,
+        plan_id: str,
+        user_id: str,
+        db: Session,
+    ) -> Dict[str, any]:
+        """Reset plan to original baseline distances, removing any adjustment.
+
+        Restores every workout's distance_km from baseline_distance_km,
+        clears the adjustment_multiplier, and strips adjustment annotations.
+
+        Args:
+            plan_id: Training plan ID.
+            user_id: User ID (for ownership verification).
+            db: Database session.
+
+        Returns:
+            Dict with reset results.
+        """
+        training_plan = db.query(TrainingPlan).filter(
+            TrainingPlan.id == plan_id,
+            TrainingPlan.user_id == user_id,
+        ).first()
+
+        if not training_plan:
+            return {"reset": False, "reason": "Plan not found"}
+
+        if not training_plan.adjustment_multiplier:
+            return {"reset": False, "reason": "Plan has no active adjustment."}
+
+        plan_data, pd_week, pd_workout = self._parse_plan_data_lookups(
+            training_plan
+        )
+
+        all_weeks = (
+            db.query(WeeklyPlan)
+            .filter(WeeklyPlan.training_plan_id == plan_id)
+            .all()
+        )
+
+        workouts_by_week = self._batch_workouts_by_week(
+            [week.id for week in all_weeks], db
+        )
+
+        weeks_changed = 0
+        for week in all_weeks:
+            workouts = workouts_by_week.get(week.id, [])
+            week_changed = False
+
+            for workout in workouts:
+                if not workout.baseline_distance_km:
+                    # Strip annotation even if no baseline
+                    clean = _ANNOTATION_RE.sub(
+                        "", workout.notes or ""
+                    ).strip()
+                    if clean != (workout.notes or "").strip():
+                        workout.notes = clean or None
+                    continue
+
+                if workout.distance_km != workout.baseline_distance_km:
+                    workout.distance_km = workout.baseline_distance_km
+                    week_changed = True
+
+                # Strip adjustment annotations
+                clean_notes = _ANNOTATION_RE.sub(
+                    "", workout.notes or ""
+                ).strip()
+                workout.notes = clean_notes or None
+
+                # Sync plan_data JSON
+                pd_wo = pd_workout.get(
+                    (week.week_number, workout.day_of_week)
+                )
+                if pd_wo is not None:
+                    pd_wo["distance"] = workout.baseline_distance_km
+                    pd_clean = _ANNOTATION_RE.sub(
+                        "",
+                        pd_wo.get("notes", pd_wo.get("description", "")),
+                    ).strip()
+                    pd_wo["notes"] = pd_clean
+
+            if week_changed:
+                weeks_changed += 1
+                new_total = round(
+                    sum(
+                        w.distance_km
+                        for w in workouts
+                        if w.distance_km
+                    ),
+                    1,
+                )
+                week.total_km = new_total
+                if week.week_number in pd_week:
+                    pd_week[week.week_number]["total_km"] = new_total
+
+        training_plan.adjustment_multiplier = None
+        training_plan.plan_data = json.dumps(plan_data)
+        db.commit()
+
+        return {
+            "reset": True,
+            "weeks_changed": weeks_changed,
+            "reason": "Plan restored to original distances.",
         }
