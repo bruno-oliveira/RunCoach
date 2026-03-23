@@ -68,6 +68,12 @@
     margin-bottom: var(--space-1);
 }
 
+.peak-adjusted-label {
+    font-size: var(--text-xs);
+    color: var(--color-text-muted);
+    font-weight: 500;
+}
+
 /* ---- Plan Insights ---- */
 .plan-insights {
     background: var(--color-bg-elevated);

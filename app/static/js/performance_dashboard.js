@@ -94,20 +94,35 @@
     // Completion Donut Chart
     const donutCtx = document.getElementById('completionDonutChart');
     if (donutCtx) {
+        var missed = data.missed_count || 0;
+        var remaining = Math.max(0, data.planned_count - data.completed_count - missed);
+        var donutLabels = ['Completed'];
+        var donutData = [data.completed_count];
+        var donutColors = ['#4ade80'];
+        if (missed > 0) {
+            donutLabels.push('Missed');
+            donutData.push(missed);
+            donutColors.push('#f87171');
+        }
+        if (remaining > 0) {
+            donutLabels.push('Remaining');
+            donutData.push(remaining);
+            donutColors.push('#e5e7eb');
+        }
         new Chart(donutCtx, {
             type: 'doughnut',
             data: {
-                labels: ['Completed', 'Remaining'],
+                labels: donutLabels,
                 datasets: [{
-                    data: [data.completed_count, Math.max(0, data.planned_count - data.completed_count)],
-                    backgroundColor: ['#4ade80', '#e5e7eb']
+                    data: donutData,
+                    backgroundColor: donutColors
                 }]
             },
             options: {
                 responsive: true,
                 aspectRatio: window.innerWidth < 768 ? 1 : 1.2,
                 plugins: {
-                    title: { display: true, text: 'Workout Completion' },
+                    title: { display: true, text: 'Run Completion' },
                     legend: { position: 'bottom' }
                 }
             }

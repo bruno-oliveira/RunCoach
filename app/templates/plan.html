@@ -53,7 +53,7 @@
             </div>
             <div class="summary-item">
                 <strong>Peak Week</strong>
-                {{ plan | map(attribute='total_km') | max | round(1) }} km
+                {{ plan | map(attribute='total_km') | max | round(1) }} km{% if training_plan.adjustment_multiplier %} <span class="peak-adjusted-label">(adjusted)</span>{% endif %}
             </div>
             {% if vdot %}
             <div class="summary-item">
@@ -126,7 +126,7 @@
         <div class="insight-grid">
             <div class="insight-item">
                 <div class="insight-content">
-                    <strong>Workouts Completed</strong>
+                    <strong>Runs Completed</strong>
                     <span>{{ progress_data.completed_count }} / {{ progress_data.planned_count }}</span>
                 </div>
             </div>
@@ -252,7 +252,7 @@
         <div class="plan-overall-progress">
             <div class="plan-overall-progress-header">
                 <span class="plan-overall-progress-label">Overall Progress</span>
-                <span class="plan-overall-progress-stats">{{ ns.done }} / {{ ns.total }} workouts &middot; {{ (ns.done / ns.total * 100) | round | int }}%</span>
+                <span class="plan-overall-progress-stats">{{ ns.done }} / {{ ns.total }} runs &middot; {{ (ns.done / ns.total * 100) | round | int }}%</span>
             </div>
             <div class="plan-overall-progress-track">
                 <div class="plan-overall-progress-fill" style="width: {{ (ns.done / ns.total * 100) | round(1) }}%"></div>

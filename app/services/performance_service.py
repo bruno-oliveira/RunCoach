@@ -465,9 +465,12 @@ class PerformanceService:
         # Planned weekly km
         planned_weekly_km = [w.get('total_km', 0) for w in plan_data]
 
-        # Planned workout count
+        # Planned run count (exclude rest/recovery — only actual runs)
         planned_count = sum(
-            len(w.get('daily_workouts', [])) for w in plan_data
+            1
+            for w in plan_data
+            for wo in w.get('daily_workouts', [])
+            if wo.get('type') not in ('rest', 'recovery')
         )
 
         # Query all RunLogs within plan date range
@@ -526,8 +529,20 @@ class PerformanceService:
         # Completion percentage
         completion_pct = round(completed_count / planned_count * 100) if planned_count > 0 else 0
 
-        # Streak days: consecutive days backward from today with a run log
+        # Missed runs: past scheduled runs with no logged run
         today = datetime.now(timezone.utc).replace(tzinfo=None).date()
+        days_elapsed = (today - start_date).days
+        current_week = days_elapsed // 7  # 0-indexed
+        past_run_count = sum(
+            1
+            for week_idx, w in enumerate(plan_data)
+            for wo in w.get('daily_workouts', [])
+            if wo.get('type') not in ('rest', 'recovery')
+            and week_idx < current_week
+        )
+        missed_count = max(0, past_run_count - completed_count)
+
+        # Streak days: consecutive days backward from today with a run log
         streak_days = 0
         if runs:
             run_dates = set()
@@ -546,6 +561,7 @@ class PerformanceService:
             'pace_by_week': pace_by_week,
             'completed_count': completed_count,
             'planned_count': planned_count,
+            'missed_count': missed_count,
             'completion_pct': completion_pct,
             'streak_days': streak_days,
             'total_km_logged': total_km_logged,
