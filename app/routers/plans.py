@@ -399,109 +399,27 @@ async def get_plan_performance(
     db: Session = Depends(get_db),
 ):
     """Get performance analysis for a training plan."""
-    training_plan = get_plan_or_404(
+    get_plan_or_404(
         plan_id, db, current_user, require_user_match=True
     )
 
     adaptation_service = AdaptationService()
     analysis = adaptation_service.analyze_performance(plan_id, db)
-    should_adapt, reason = adaptation_service.should_adapt_plan(plan_id, db)
 
-    return {
-        **analysis,
-        "should_adapt": should_adapt,
-        "adaptation_reason": reason,
-    }
+    return analysis
 
 
-@router.post("/api/plan/{plan_id}/adapt")
-async def adapt_plan(
+@router.post("/api/plan/{plan_id}/adjust")
+async def adjust_plan(
     plan_id: str,
-    current_week: int,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    """Adapt future weeks of a plan based on performance."""
+    """Adjust future plan weeks based on recent performance data."""
     get_plan_or_404(plan_id, db, current_user, require_user_match=True)
 
     adaptation_service = AdaptationService()
-    return adaptation_service.adapt_future_weeks(plan_id, db, current_week)
-
-
-@router.post("/api/plan/{plan_id}/adapt-from-strava")
-async def adapt_plan_from_strava(
-    plan_id: str,
-    current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db),
-):
-    """Adapt future weeks of a plan based on Strava fitness metrics (one-time)."""
-    if not current_user.strava_athlete_id:
-        raise HTTPException(status_code=400, detail="Strava not connected")
-
-    training_plan = get_plan_or_404(
-        plan_id, db, current_user, require_user_match=True
-    )
-
-    if training_plan.strava_adapted_multiplier:
-        raise HTTPException(
-            status_code=400,
-            detail="Strava adaptation has already been applied to this plan.",
-        )
-
-    adaptation_service = AdaptationService()
-    return adaptation_service.adapt_plan_from_fitness(
-        plan_id, current_user.id, db
-    )
-
-
-@router.post("/api/plan/{plan_id}/map-runs")
-async def map_runs_to_plan(
-    plan_id: str,
-    current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db),
-):
-    """Map unlinked runs to plan workouts by date proximity."""
-    get_plan_or_404(plan_id, db, current_user, require_user_match=True)
-
-    adaptation_service = AdaptationService()
-    result = adaptation_service.map_runs_to_plan(plan_id, current_user.id, db)
-    if result.get("error"):
-        raise HTTPException(status_code=400, detail=result["error"])
-    return result
-
-
-@router.get("/api/plan/{plan_id}/map-runs/preview")
-async def preview_map_runs(
-    plan_id: str,
-    current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db),
-):
-    """Preview which runs would be mapped to plan workouts (dry run)."""
-    get_plan_or_404(plan_id, db, current_user, require_user_match=True)
-
-    adaptation_service = AdaptationService()
-    result = adaptation_service.map_runs_to_plan(
-        plan_id, current_user.id, db, dry_run=True
-    )
-    if result.get("error"):
-        raise HTTPException(status_code=400, detail=result["error"])
-    return result
-
-
-@router.post("/api/plan/{plan_id}/recalibrate")
-async def recalibrate_plan(
-    plan_id: str,
-    current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db),
-):
-    """Recalibrate future plan weeks based on actual adherence."""
-    get_plan_or_404(plan_id, db, current_user, require_user_match=True)
-
-    adaptation_service = AdaptationService()
-    result = adaptation_service.recalibrate_plan(plan_id, current_user.id, db)
-    if result.get("error"):
-        raise HTTPException(status_code=400, detail=result.get("error"))
-    return result
+    return adaptation_service.adjust_plan(plan_id, current_user.id, db)
 
 
 # ---------------------------------------------------------------------------

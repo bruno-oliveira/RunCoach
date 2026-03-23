@@ -2,10 +2,9 @@
 
 import json
 import logging
-from datetime import date, datetime, timedelta
+from datetime import datetime, timedelta
 from typing import Any, Optional
 
-from sqlalchemy import and_, or_
 from sqlalchemy.orm import Session
 
 from app.core.nutrition_engine import NutritionEngine
@@ -428,10 +427,9 @@ class PlanService:
         """Assemble view-layer data for plan.html without rendering.
 
         Returns extra context keys: performance_analysis, logged_runs,
-        strava_fitness, progress_data.
+        progress_data, skipped_count, rescheduled_count, needs_adjustment.
         """
-        from app.services.adaptation_service import AdaptationService, _to_date
-        from app.core.adaptive_plan_generator import AdaptivePlanGenerator
+        from app.services.adaptation_service import AdaptationService
         from app.services.performance_service import PerformanceService
 
         adaptation_service = AdaptationService()
@@ -449,13 +447,6 @@ class PlanService:
             run.daily_workout_id: run for run in logged_runs if run.daily_workout_id
         }
 
-        strava_fitness = None
-        if current_user and current_user.strava_athlete_id:
-            adaptive_gen = AdaptivePlanGenerator()
-            strava_fitness = adaptive_gen.calculate_current_fitness_metrics(
-                current_user.id, db
-            )
-
         progress_data = None
         if current_user and logged_runs:
             perf_service = PerformanceService(db)
@@ -464,11 +455,10 @@ class PlanService:
             except Exception as e:
                 logger.warning(f"Could not compute progress data: {e}")
 
-        # Compute recalibration / mapping hints for the UI
+        # Compute adjustment hints for the UI
         skipped_count = 0
         rescheduled_count = 0
-        unmapped_runs_count = 0
-        needs_recalibration = False
+        needs_adjustment = False
         avg_effort = performance_analysis.get("avg_effort")
         if current_user and training_plan.start_date:
             try:
@@ -477,48 +467,21 @@ class PlanService:
                 )
                 skipped_count = skip_result["skipped"]
                 rescheduled_count = skip_result["rescheduled"]
-                # Trigger recalibration on skipped workouts OR extreme effort
-                needs_recalibration = (
+                # Trigger adjustment on skipped workouts OR extreme effort
+                needs_adjustment = (
                     skipped_count >= 2
                     or (avg_effort is not None and (avg_effort >= 8 or avg_effort <= 3))
                 )
             except Exception as e:
                 logger.warning(f"Could not detect skipped workouts: {e}")
 
-            try:
-                # Count runs in the plan period that are not yet linked
-                # to a specific workout (includes unlinked + volume-only).
-                plan_start = _to_date(training_plan.start_date)
-                today = date.today()
-                unmapped_runs_count = (
-                    db.query(RunLog)
-                    .filter(
-                        RunLog.user_id == current_user.id,
-                        RunLog.date >= plan_start,
-                        RunLog.date <= today,
-                        or_(
-                            RunLog.training_plan_id.is_(None),
-                            RunLog.training_plan_id != training_plan.id,
-                            and_(
-                                RunLog.training_plan_id == training_plan.id,
-                                RunLog.daily_workout_id.is_(None),
-                            ),
-                        ),
-                    )
-                    .count()
-                )
-            except Exception as e:
-                logger.warning(f"Could not count unmapped runs: {e}")
-
         return {
             "performance_analysis": performance_analysis,
             "logged_runs": logged_runs_map,
-            "strava_fitness": strava_fitness,
             "progress_data": progress_data,
             "skipped_count": skipped_count,
             "rescheduled_count": rescheduled_count,
-            "unmapped_runs_count": unmapped_runs_count,
-            "needs_recalibration": needs_recalibration,
+            "needs_adjustment": needs_adjustment,
         }
 
 

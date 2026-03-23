@@ -112,6 +112,8 @@ def _run_migrations(eng) -> None:
         # Baseline distances for non-compounding adaptations
         "ALTER TABLE daily_workouts ADD COLUMN baseline_distance_km FLOAT",
         "ALTER TABLE training_plans ADD COLUMN recalibration_multiplier FLOAT",
+        # Unified adaptation multiplier (Phase 1 of simplified adaptation)
+        "ALTER TABLE training_plans ADD COLUMN adjustment_multiplier FLOAT",
     ]
     with eng.connect() as conn:
         for stmt in stmts:

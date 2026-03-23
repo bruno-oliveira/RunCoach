@@ -32,9 +32,10 @@ class TrainingPlan(Base):
     # Heart rate training fields
     max_heart_rate = Column(Integer, nullable=True)  # Maximum heart rate in BPM
     start_date = Column(DateTime, nullable=True)
-    # Tracks the last Strava-fitness multiplier applied so re-runs can reverse it
-    strava_adapted_multiplier = Column(Float, nullable=True)
-    recalibration_multiplier = Column(Float, nullable=True)
+    # Unified adaptation multiplier (replaces strava_adapted_multiplier
+    # and recalibration_multiplier which still exist in the DB but are no
+    # longer mapped by SQLAlchemy — they will be removed in a future phase).
+    adjustment_multiplier = Column(Float, nullable=True)
 
     # VDOT / pace zone fields
     body_weight_kg = Column(Float, nullable=True)

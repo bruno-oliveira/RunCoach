@@ -111,62 +111,12 @@
     </div>
     {% endif %}
 
-    {% if strava_fitness and strava_fitness.fitness_score > 0 %}
-    {% if training_plan.strava_adapted_multiplier %}
-    {# Already adapted — compact badge only #}
+    {% if training_plan.adjustment_multiplier %}
     <div class="plan-insights plan-insights-strava strava-adapted-compact" style="margin-bottom: var(--space-6);">
         <div style="display:flex;align-items:center;gap:var(--space-3);flex-wrap:wrap;">
-            <span class="strava-adapted-badge">Strava Adjusted &times;{{ "%.2f"|format(training_plan.strava_adapted_multiplier) }}</span>
-            <span style="color:rgba(255,255,255,0.8);font-size:var(--text-sm);">Fitness score {{ strava_fitness.fitness_score }}/100 &middot; {{ strava_fitness.avg_weekly_km }} km/week</span>
+            <span class="strava-adapted-badge">Adjusted &times;{{ "%.2f"|format(training_plan.adjustment_multiplier) }}</span>
         </div>
     </div>
-    {% else %}
-    {# Not yet adapted — full fitness summary with adapt button #}
-    <div class="plan-insights plan-insights-strava" style="margin-bottom: var(--space-6);">
-        <h3 style="margin:0 0 var(--space-4) 0;">Strava Fitness Summary</h3>
-        <div class="insight-grid">
-            <div class="insight-item">
-                <div class="insight-content">
-                    <strong>Fitness Score</strong>
-                    <span>{{ strava_fitness.fitness_score }} / 100</span>
-                </div>
-            </div>
-            <div class="insight-item">
-                <div class="insight-content">
-                    <strong>Avg Weekly Distance</strong>
-                    <span>{{ strava_fitness.avg_weekly_km }} km/week</span>
-                </div>
-            </div>
-            {% if strava_fitness.current_pace %}
-            <div class="insight-item">
-                <div class="insight-content">
-                    <strong>Current Pace</strong>
-                    <span>{{ strava_fitness.current_pace|format_pace }}</span>
-                </div>
-            </div>
-            {% endif %}
-            {% if strava_fitness.avg_heart_rate %}
-            <div class="insight-item">
-                <div class="insight-content">
-                    <strong>Avg Heart Rate</strong>
-                    <span>{{ strava_fitness.avg_heart_rate }} bpm</span>
-                </div>
-            </div>
-            {% endif %}
-            <div class="insight-item">
-                <div class="insight-content">
-                    <strong>Improvement Trend</strong>
-                    <span>{% if strava_fitness.improvement_trend > 0 %}+{% endif %}{{ strava_fitness.improvement_trend }}%</span>
-                </div>
-            </div>
-        </div>
-        <div style="margin-top:var(--space-4);">
-            <button id="adapt-strava-btn" onclick="adaptFromStrava(window.APP_CTX.plan_id)" class="plan-insights-strava-btn" style="margin-top:0;">
-                Adapt Remaining Weeks from Strava Data
-            </button>
-        </div>
-    </div>
-    {% endif %}
     {% endif %}
 
     {% if progress_data and progress_data.completed_count > 0 %}
@@ -269,35 +219,16 @@
     {% endif %}
     {% endif %}
 
-    {% if start_date and user %}
-    <div class="plan-action-banner map-runs-banner" id="map-runs-banner">
-        <div class="banner-content">
-            <div class="banner-text">
-                <strong>Map Runs</strong>
-                {% if unmapped_runs_count and unmapped_runs_count > 0 %}
-                <p>{{ unmapped_runs_count }} unlinked run{{ 's' if unmapped_runs_count != 1 else '' }} found. Map them to track progress.</p>
-                {% else %}
-                <p>Re-map runs to update workout assignments after syncing new activities.</p>
-                {% endif %}
-            </div>
-            <div class="banner-actions">
-                <button onclick="previewMapRuns()" class="btn btn-secondary btn-small" id="preview-map-btn">Preview</button>
-                <button onclick="mapRunsToPlan()" class="btn btn-primary btn-small" id="map-runs-btn">Map Runs</button>
-            </div>
-        </div>
-    </div>
-    {% endif %}
-
     {% if user and start_date %}
-    <div class="plan-action-banner recalibrate-banner {% if needs_recalibration %}recalibrate-urgent{% endif %}" id="recalibrate-banner">
+    <div class="plan-action-banner recalibrate-banner {% if needs_adjustment %}recalibrate-urgent{% endif %}" id="adjust-banner">
         <div class="banner-content">
             <div class="banner-text">
-                <strong>Adapt Plan</strong>
-                <p>Adjust future weeks based on your progress.
+                <strong>Adjust Plan</strong>
+                <p>Adjust future weeks based on your recent running data.
                 {% if skipped_count and skipped_count > 0 %}{{ skipped_count }} missed{% endif %}{% if skipped_count and rescheduled_count and skipped_count > 0 and rescheduled_count > 0 %}, {% endif %}{% if rescheduled_count and rescheduled_count > 0 %}{{ rescheduled_count }} rescheduled{% endif %}{% if (skipped_count and skipped_count > 0) or (rescheduled_count and rescheduled_count > 0) %} workout{{ 's' if (skipped_count + rescheduled_count) != 1 else '' }}.{% endif %}</p>
             </div>
             <div class="banner-actions">
-                <button onclick="recalibratePlan()" class="btn btn-primary btn-small" id="recalibrate-btn">Recalibrate</button>
+                <button onclick="adjustPlan()" class="btn btn-primary btn-small" id="adjust-btn">Adjust Plan</button>
             </div>
         </div>
     </div>

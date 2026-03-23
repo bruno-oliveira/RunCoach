@@ -350,137 +350,18 @@ window.unlinkRun = async function(runId) {
     }
 };
 
-// Plan adaptation functionality — delegates to recalibrate for backward compat
+// Plan adaptation functionality — delegates to adjustPlan
 window.checkForAdaptation = async function() {
-    // Kept for backward compatibility; triggers recalibrate flow
-    window.recalibratePlan();
+    window.adjustPlan();
 };
 
 window.adaptPlan = async function() {
-    // Kept for backward compatibility; delegates to recalibrate
-    window.recalibratePlan();
+    window.adjustPlan();
 };
 
-// Show an inline banner below the Strava card instead of a native alert
-function showStravaAdaptMessage(message, isError) {
-    const bannerId = 'strava-adapt-message';
-    let banner = document.getElementById(bannerId);
-    if (!banner) {
-        banner = document.createElement('div');
-        banner.id = bannerId;
-        banner.style.cssText = [
-            'margin-top:0.75rem',
-            'padding:0.75rem 1rem',
-            'border-radius:6px',
-            'font-size:0.9rem',
-            'line-height:1.4',
-            'white-space:pre-wrap',
-        ].join(';');
-        const btn = document.getElementById('adapt-strava-btn');
-        if (btn) {
-            // Insert at the end of the strava card so it sits below the buttons
-            const stravaCard = btn.closest('.plan-insights-strava') || btn.parentNode;
-            stravaCard.appendChild(banner);
-        }
-    }
-    banner.style.background = isError
-        ? 'rgba(0,0,0,0.25)'
-        : 'rgba(255,255,255,0.15)';
-    banner.style.color = 'white';
-    banner.style.border = isError
-        ? '1px solid rgba(255,100,100,0.6)'
-        : '1px solid rgba(255,255,255,0.4)';
-    banner.textContent = message;
-    banner.style.display = 'block';
-}
-
-// Adapt plan from Strava fitness data
+// Legacy Strava adapt — now delegates to adjustPlan
 window.adaptFromStrava = async function(planId) {
-    console.log('adaptFromStrava called with planId:', planId);
-    const btn = document.getElementById('adapt-strava-btn');
-    const originalText = btn ? btn.textContent : '';
-
-    // Ask for confirmation — this is a one-time action
-    const confirmed = window.confirm(
-        'This will adjust the distance of all remaining workouts based on your current Strava fitness.\n\n' +
-        'This is a one-time calibration and cannot be undone.\n\n' +
-        'Continue?'
-    );
-    if (!confirmed) return;
-
-    // Clear any previous feedback banner
-    const existingBanner = document.getElementById('strava-adapt-message');
-    if (existingBanner) existingBanner.style.display = 'none';
-
-    if (btn) {
-        btn.disabled = true;
-        btn.textContent = 'Adapting...';
-        btn.style.opacity = '0.7';
-    }
-
-    const restoreBtn = () => {
-        if (btn) {
-            btn.disabled = false;
-            btn.textContent = originalText;
-            btn.style.opacity = '1';
-        }
-    };
-
-    try {
-        console.log('Making fetch request to:', `/api/plan/${planId}/adapt-from-strava`);
-        const response = await fetch(`/api/plan/${planId}/adapt-from-strava`, {
-            method: 'POST',
-            headers: authHeaders(),
-            credentials: 'same-origin'
-        });
-        console.log('Response status:', response.status);
-
-        if (response.ok) {
-            const result = await response.json();
-
-            if (result.adapted) {
-                let msg = `Plan adapted from Strava data!\n\n${result.reason}`;
-                if (result.changes && result.changes.length > 0) {
-                    msg += '\n\nChanges:';
-                    result.changes.forEach(change => {
-                        msg += `\n  Week ${change.week}: ${change.workouts_adjusted.length} workouts adjusted (Total: ${change.new_total_km} km)`;
-                    });
-                }
-                showStravaAdaptMessage(msg, false);
-                // Reload after a short delay so the user can see the banner
-                setTimeout(() => location.reload(), 5800);
-            } else {
-                showStravaAdaptMessage(result.reason, false);
-                restoreBtn();
-            }
-        } else {
-            let errorMsg;
-            if (response.status === 400) {
-                errorMsg = 'Strava is not connected. Please connect Strava from the nav menu first.';
-            } else if (response.status === 401) {
-                errorMsg = 'Your session has expired. Please sign in again — your plan data is safe.';
-                // Show a reload-to-sign-in link in the banner
-                setTimeout(() => {
-                    const banner = document.getElementById('strava-adapt-message');
-                    if (banner) {
-                        const link = document.createElement('a');
-                        link.href = '/';
-                        link.textContent = 'Go to home page to sign in';
-                        link.style.cssText = 'display:block;margin-top:0.5rem;color:white;text-decoration:underline;';
-                        banner.appendChild(link);
-                    }
-                }, 50);
-            } else {
-                errorMsg = `Error adapting plan (HTTP ${response.status}). Please try again.`;
-            }
-            showStravaAdaptMessage(errorMsg, true);
-            restoreBtn();
-        }
-    } catch (error) {
-        console.error('Error adapting from Strava:', error);
-        showStravaAdaptMessage('Network error: ' + error.message, true);
-        restoreBtn();
-    }
+    window.adjustPlan();
 };
 
 // Save plan to user account
@@ -579,95 +460,21 @@ function viewAdaptationDetails() {
 }
 
 // ------------------------------------------------------------------
-// Retroactive run mapping
+// Plan adjustment (unified — replaces map-runs + recalibrate)
 // ------------------------------------------------------------------
 
-window.previewMapRuns = async function() {
-    const btn = document.getElementById('preview-map-btn');
-    if (btn) { btn.disabled = true; btn.textContent = 'Loading...'; }
-
-    try {
-        const response = await fetch(`/api/plan/${window.APP_CTX.plan_id}/map-runs/preview`, {
-            headers: authHeaders(),
-            credentials: 'same-origin',
-        });
-
-        if (response.ok) {
-            const result = await response.json();
-            if (result.proposals && result.proposals.length > 0) {
-                let msg = `Found ${result.proposals.length} run(s) to map:\n\n`;
-                result.proposals.forEach(p => {
-                    msg += `  Week ${p.week} Day ${p.day} (${p.workout_type}): `;
-                    msg += `${p.actual_distance}km run on ${p.run_date}`;
-                    msg += ` → planned ${p.planned_distance}km on ${p.workout_date}\n`;
-                });
-                msg += '\nClick "Map Runs" to apply.';
-                ApiClient.showInfo(msg);
-            } else {
-                let msg = result.message || 'No matching runs found.';
-                if (result.debug) {
-                    msg += '\n\nDebug: ' + JSON.stringify(result.debug, null, 2);
-                }
-                ApiClient.showInfo(msg);
-            }
-        } else {
-            const err = await response.json();
-            ApiClient.showError(err.detail || 'Could not preview mappings.');
-        }
-    } catch (error) {
-        ApiClient.showError('Error: ' + error.message);
-    } finally {
-        if (btn) { btn.disabled = false; btn.textContent = 'Preview'; }
-    }
-};
-
-window.mapRunsToPlan = async function() {
-    const btn = document.getElementById('map-runs-btn');
-    if (btn) { btn.disabled = true; btn.textContent = 'Mapping...'; }
-
-    try {
-        const response = await fetch(`/api/plan/${window.APP_CTX.plan_id}/map-runs`, {
-            method: 'POST',
-            headers: authHeaders(),
-            credentials: 'same-origin',
-        });
-
-        if (response.ok) {
-            const result = await response.json();
-            if (result.mapped > 0) {
-                ApiClient.showSuccess(`Mapped ${result.mapped} run(s) to your plan! Reloading...`);
-                setTimeout(() => location.reload(), 1500);
-            } else {
-                ApiClient.showInfo(result.message || 'No runs could be mapped.');
-                if (btn) { btn.disabled = false; btn.textContent = 'Map Runs'; }
-            }
-        } else {
-            const err = await response.json();
-            ApiClient.showError(err.detail || 'Could not map runs.');
-            if (btn) { btn.disabled = false; btn.textContent = 'Map Runs'; }
-        }
-    } catch (error) {
-        ApiClient.showError('Error: ' + error.message);
-        if (btn) { btn.disabled = false; btn.textContent = 'Map Runs'; }
-    }
-};
-
-// ------------------------------------------------------------------
-// Plan recalibration
-// ------------------------------------------------------------------
-
-window.recalibratePlan = async function() {
+window.adjustPlan = async function() {
     const confirmed = window.confirm(
-        'This will adjust future week distances based on your adherence and effort data.\n\n' +
+        'This will adjust future week distances based on your recent running data.\n\n' +
         'Past weeks will not be changed.\n\nContinue?'
     );
     if (!confirmed) return;
 
-    const btn = document.getElementById('recalibrate-btn');
-    if (btn) { btn.disabled = true; btn.textContent = 'Recalibrating...'; }
+    const btn = document.getElementById('adjust-btn');
+    if (btn) { btn.disabled = true; btn.textContent = 'Adjusting...'; }
 
     try {
-        const response = await fetch(`/api/plan/${window.APP_CTX.plan_id}/recalibrate`, {
+        const response = await fetch(`/api/plan/${window.APP_CTX.plan_id}/adjust`, {
             method: 'POST',
             headers: authHeaders(),
             credentials: 'same-origin',
@@ -675,30 +482,28 @@ window.recalibratePlan = async function() {
 
         if (response.ok) {
             const result = await response.json();
-            if (result.recalibrated) {
-                let msg = `Plan recalibrated!\n\n${result.reason}`;
-                if (result.changes && result.changes.length > 0) {
-                    msg += '\n\nChanges:';
-                    result.changes.forEach(c => {
-                        msg += `\n  Week ${c.week}: ${c.workouts_adjusted.length} workout(s) adjusted (Total: ${c.new_total_km} km)`;
-                    });
-                }
+            if (result.adjusted) {
+                let msg = `Plan adjusted!\n\n${result.reason}`;
+                msg += `\n\n${result.weeks_changed} week(s) updated (x${result.multiplier}).`;
                 ApiClient.showSuccess(msg);
                 setTimeout(() => location.reload(), 2500);
             } else {
-                ApiClient.showInfo(result.reason || 'No recalibration needed.');
-                if (btn) { btn.disabled = false; btn.textContent = 'Recalibrate'; }
+                ApiClient.showInfo(result.reason || 'No adjustment needed.');
+                if (btn) { btn.disabled = false; btn.textContent = 'Adjust Plan'; }
             }
         } else {
             const err = await response.json();
-            ApiClient.showError(err.detail || 'Recalibration failed.');
-            if (btn) { btn.disabled = false; btn.textContent = 'Recalibrate'; }
+            ApiClient.showError(err.detail || 'Adjustment failed.');
+            if (btn) { btn.disabled = false; btn.textContent = 'Adjust Plan'; }
         }
     } catch (error) {
         ApiClient.showError('Error: ' + error.message);
-        if (btn) { btn.disabled = false; btn.textContent = 'Recalibrate'; }
+        if (btn) { btn.disabled = false; btn.textContent = 'Adjust Plan'; }
     }
 };
+
+// Backward compatibility alias
+window.recalibratePlan = window.adjustPlan;
 
 // Set plan start date
 window.startPlan = async function() {

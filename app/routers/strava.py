@@ -1,7 +1,7 @@
 """Strava OAuth and sync endpoints."""
 
 import logging
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
@@ -20,6 +20,57 @@ from app.utils import TimestampAdapter
 logger = logging.getLogger(__name__)
 
 strava_router = APIRouter(prefix="/api/strava", tags=["strava"])
+
+
+def _auto_map_and_adjust(
+    user: User,
+    db: Session,
+) -> list[dict]:
+    """Find active plans and auto-map runs + auto-adjust each one.
+
+    Returns a list of per-plan result dicts suitable for the sync response.
+    """
+    from app.services.adaptation_service import AdaptationService, _to_date
+
+    adaptation_service = AdaptationService()
+    today = datetime.now(timezone.utc).date()
+
+    active_plans = (
+        db.query(TrainingPlan)
+        .filter(
+            TrainingPlan.user_id == user.id,
+            TrainingPlan.start_date.isnot(None),
+        )
+        .all()
+    )
+
+    results: list[dict] = []
+    for plan in active_plans:
+        start = _to_date(plan.start_date)
+        if start is None:
+            continue
+        end_date = start + timedelta(weeks=plan.weeks_duration)
+        if today > end_date:
+            continue  # plan is completed
+
+        try:
+            map_result = adaptation_service.map_runs_to_plan(
+                plan.id, user.id, db
+            )
+            adjust_result = adaptation_service.adjust_plan(
+                plan.id, user.id, db
+            )
+            results.append({
+                "plan_id": plan.id,
+                "runs_mapped": map_result.get("mapped", 0),
+                "adjusted": adjust_result.get("adjusted", False),
+                "multiplier": adjust_result.get("multiplier"),
+                "reason": adjust_result.get("reason", ""),
+            })
+        except Exception as e:
+            logger.warning(f"Auto-adjust failed for plan {plan.id}: {e}")
+
+    return results
 
 # How far back to look on the very first sync (before any cursor exists).
 # A full year ensures we cover any active training plan the user might have.
@@ -87,6 +138,14 @@ async def strava_callback(
             f"Initial Strava sync for user {user.id}: "
             f"{result['synced']} synced, {result['total']} total"
         )
+
+        # Auto-map and adjust active plans if new runs were synced
+        if result.get("synced", 0) > 0:
+            adjustment_results = _auto_map_and_adjust(user, db)
+            if adjustment_results:
+                logger.info(
+                    f"Auto-adjusted {len(adjustment_results)} plan(s) for user {user.id}"
+                )
     except Exception as e:
         logger.error(f"Initial Strava sync failed: {e}")
 
@@ -174,7 +233,12 @@ async def strava_sync(
             detail=f"Strava sync failed: {str(e)}",
         )
 
-    return StravaSyncResponse(**result)
+    # Auto-map and adjust active plans if new runs were synced
+    adjustment_results = None
+    if result.get("synced", 0) > 0:
+        adjustment_results = _auto_map_and_adjust(current_user, db)
+
+    return StravaSyncResponse(**result, adjustment_results=adjustment_results)
 
 
 @strava_router.get("/status", response_model=StravaStatusResponse)

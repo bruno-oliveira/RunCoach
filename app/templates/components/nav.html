@@ -953,6 +953,17 @@ async function doStravaSync(forceDays) {
             if (errorCount > 0) {
                 message += ' (' + errorCount + ' import error' + (errorCount > 1 ? 's' : '') + ' — check logs)';
             }
+            // Show adjustment results if any plans were auto-adjusted
+            if (data.adjustment_results && data.adjustment_results.length > 0) {
+                const adjusted = data.adjustment_results.filter(r => r.adjusted);
+                const mapped = data.adjustment_results.reduce((sum, r) => sum + (r.runs_mapped || 0), 0);
+                if (mapped > 0) {
+                    message += ' ' + mapped + ' run' + (mapped !== 1 ? 's' : '') + ' mapped to plan' + (data.adjustment_results.length !== 1 ? 's' : '') + '.';
+                }
+                if (adjusted.length > 0) {
+                    message += ' ' + adjusted.length + ' plan' + (adjusted.length !== 1 ? 's' : '') + ' auto-adjusted.';
+                }
+            }
             if (feedback) {
                 feedback.textContent = message;
                 feedback.className = 'strava-feedback ' + (errorCount > 0 ? 'is-error' : 'is-success');

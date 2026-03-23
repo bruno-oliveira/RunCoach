@@ -520,6 +520,7 @@ class StravaSyncResponse(BaseModel):
     errors: List[str] = []
     total: int = 0
     last_synced_at: Optional[int] = None
+    adjustment_results: Optional[List[dict]] = None
 
 
 class StravaStatusResponse(BaseModel):
