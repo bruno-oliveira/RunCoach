@@ -104,21 +104,21 @@ async def create_run_log(
                 new_run.effort_quality_score = score
                 new_run.quality_label = label
 
-        db.add(new_run)
-        db.commit()
-
-        # Auto-calculate VDOT for race-type runs
-        race_predictions = None
-        if run_log.workout_type == "race":
+        # Auto-calculate VDOT for all runs with sufficient distance
+        if run_log.distance_km >= 2.0 and run_log.duration_minutes > 0:
             vdot = VDOTCalculator.calculate_vdot(
                 run_log.distance_km, int(run_log.duration_minutes * 60)
             )
             if vdot:
                 new_run.vdot = vdot
-                db.commit()
-                db.refresh(new_run)
-                # Generate predictions for the toast
-                race_predictions = VDOTCalculator.predict_times(vdot)
+
+        db.add(new_run)
+        db.commit()
+
+        # Generate predictions for the toast if VDOT was calculated
+        race_predictions = None
+        if new_run.vdot:
+            race_predictions = VDOTCalculator.predict_times(new_run.vdot)
 
         # Generate coaching feedback (non-fatal)
         try:
@@ -189,6 +189,105 @@ async def get_run_logs(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to fetch run logs",
         )
+
+
+@runs_router.get("/predictions")
+async def get_race_predictions(
+    target_distance: Optional[float] = Query(None, description="Target race distance in km"),
+    goal_time: Optional[str] = Query(None, description="Goal time in HH:MM:SS or MM:SS"),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """
+    Get race predictions based on user's best recent VDOT from all runs.
+
+    Returns predictions for all standard distances unless target_distance is specified.
+    When goal_time is provided, performs gap analysis.
+    """
+    from app.services.race_predictor_service import RacePredictorService
+
+    predictions_data = RacePredictorService.get_predictions_for_user(current_user.id, db)
+
+    if not predictions_data.get("has_sufficient_data"):
+        return {
+            "current_vdot": None,
+            "vdot_trend": "stable",
+            "predictions": {},
+            "best_effort": None,
+            "has_sufficient_data": False,
+            "message": "Log some runs to get predictions",
+        }
+
+    result = {
+        "current_vdot": predictions_data["current_vdot"],
+        "vdot_trend": predictions_data["vdot_trend"],
+        "predictions": {},
+        "best_effort": predictions_data["best_effort"],
+        "has_sufficient_data": True,
+    }
+
+    if target_distance:
+        result["target_distance"] = target_distance
+        if goal_time:
+            goal_seconds = VDOTCalculator.parse_time_to_seconds(goal_time)
+            if goal_seconds:
+                gap_analysis = RacePredictorService.analyze_fitness_gap(
+                    predictions_data["current_vdot"],
+                    target_distance,
+                    goal_seconds,
+                    db,
+                )
+                result.update(gap_analysis)
+            else:
+                result["message"] = "Invalid goal_time format"
+        else:
+            current_vdot = predictions_data["current_vdot"]
+            predicted = VDOTCalculator.predict_time_for_distance(current_vdot, target_distance)
+            range_data = VDOTCalculator.get_confidence_range(current_vdot, target_distance)
+            result["predicted_time"] = VDOTCalculator.format_duration(predicted) if predicted else None
+            result["range"] = {
+                "fast": VDOTCalculator.format_duration(range_data["fast"]),
+                "slow": VDOTCalculator.format_duration(range_data["slow"]),
+            }
+            result["message"] = "Log a goal time to see gap analysis"
+    else:
+        for name, pred in predictions_data["predictions"].items():
+            result["predictions"][name] = {
+                "distance_km": pred["distance_km"],
+                "seconds": pred["seconds"],
+                "formatted": pred["formatted"],
+                "range": pred.get("range", {}),
+            }
+
+    return result
+
+
+@runs_router.get("/feedback/plan/{plan_id}")
+async def get_plan_feedback(
+    plan_id: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Get all coaching feedback for runs logged against a plan."""
+    from app.services.feedback_service import FeedbackService
+
+    feedbacks = FeedbackService.get_feedback_for_plan(
+        plan_id, current_user.id, db
+    )
+    return [
+        {
+            "id": fb.id,
+            "run_log_id": fb.run_log_id,
+            "pace_feedback": fb.pace_feedback,
+            "hr_zone_feedback": fb.hr_zone_feedback,
+            "effort_feedback": fb.effort_feedback,
+            "volume_feedback": fb.volume_feedback,
+            "pattern_feedback": fb.pattern_feedback,
+            "overall_sentiment": fb.overall_sentiment,
+            "created_at": fb.created_at,
+        }
+        for fb in feedbacks
+    ]
 
 
 @runs_router.get("/{run_id}", response_model=RunLogResponse)
@@ -275,77 +374,6 @@ async def delete_run_log(
     logger.info(f"Run log {run_id} deleted for user {current_user.id}")
 
 
-@runs_router.get("/predictions")
-async def get_race_predictions(
-    target_distance: Optional[float] = Query(None, description="Target race distance in km"),
-    goal_time: Optional[str] = Query(None, description="Goal time in HH:MM:SS or MM:SS"),
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
-):
-    """
-    Get race predictions based on user's recent race VDOT.
-
-    Returns predictions for all standard distances unless target_distance is specified.
-    When goal_time is provided, performs gap analysis.
-    """
-    from app.services.race_predictor_service import RacePredictorService
-
-    predictions_data = RacePredictorService.get_predictions_for_user(current_user.id, db)
-
-    if not predictions_data.get("has_sufficient_data"):
-        return {
-            "current_vdot": None,
-            "vdot_trend": "stable",
-            "predictions": {},
-            "last_race": None,
-            "has_sufficient_data": False,
-            "message": "Log a race-type run to get predictions",
-        }
-
-    result = {
-        "current_vdot": predictions_data["current_vdot"],
-        "vdot_trend": predictions_data["vdot_trend"],
-        "predictions": {},
-        "last_race": predictions_data["last_race"],
-        "has_sufficient_data": True,
-    }
-
-    if target_distance:
-        result["target_distance"] = target_distance
-        if goal_time:
-            goal_seconds = VDOTCalculator.parse_time_to_seconds(goal_time)
-            if goal_seconds:
-                gap_analysis = RacePredictorService.analyze_fitness_gap(
-                    predictions_data["current_vdot"],
-                    target_distance,
-                    goal_seconds,
-                    db,
-                )
-                result.update(gap_analysis)
-            else:
-                result["message"] = "Invalid goal_time format"
-        else:
-            current_vdot = predictions_data["current_vdot"]
-            predicted = VDOTCalculator.predict_time_for_distance(current_vdot, target_distance)
-            range_data = VDOTCalculator.get_confidence_range(current_vdot, target_distance)
-            result["predicted_time"] = VDOTCalculator.format_duration(predicted) if predicted else None
-            result["range"] = {
-                "fast": VDOTCalculator.format_duration(range_data["fast"]),
-                "slow": VDOTCalculator.format_duration(range_data["slow"]),
-            }
-            result["message"] = "Log a goal time to see gap analysis"
-    else:
-        for name, pred in predictions_data["predictions"].items():
-            result["predictions"][name] = {
-                "distance_km": pred["distance_km"],
-                "seconds": pred["seconds"],
-                "formatted": pred["formatted"],
-                "range": pred.get("range", {}),
-            }
-
-    return result
-
-
 @runs_router.get("/{run_id}/feedback")
 async def get_run_feedback(
     run_id: str,
@@ -382,34 +410,6 @@ async def get_run_feedback(
         "overall_sentiment": feedback.overall_sentiment,
         "created_at": feedback.created_at,
     }
-
-
-@runs_router.get("/feedback/plan/{plan_id}")
-async def get_plan_feedback(
-    plan_id: str,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
-):
-    """Get all coaching feedback for runs logged against a plan."""
-    from app.services.feedback_service import FeedbackService
-
-    feedbacks = FeedbackService.get_feedback_for_plan(
-        plan_id, current_user.id, db
-    )
-    return [
-        {
-            "id": fb.id,
-            "run_log_id": fb.run_log_id,
-            "pace_feedback": fb.pace_feedback,
-            "hr_zone_feedback": fb.hr_zone_feedback,
-            "effort_feedback": fb.effort_feedback,
-            "volume_feedback": fb.volume_feedback,
-            "pattern_feedback": fb.pattern_feedback,
-            "overall_sentiment": fb.overall_sentiment,
-            "created_at": fb.created_at,
-        }
-        for fb in feedbacks
-    ]
 
 
 @adaptive_router.get("/metrics")

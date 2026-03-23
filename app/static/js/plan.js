@@ -314,9 +314,8 @@ window.submitRunLog = async function(event) {
             const data = await response.json();
             closeLogModal();
             
-            // Check if this was a race and show predictions toast
-            const workoutType = document.getElementById('workout_type').value;
-            if (workoutType === 'race' && data.predictions) {
+            // Show predictions toast if VDOT was calculated
+            if (data.predictions) {
                 showRacePredictionsToast(data);
                 setTimeout(() => location.reload(), 6000);
             } else {
@@ -370,7 +369,7 @@ window.showRacePredictionsToast = function(data) {
     toast.innerHTML = `
         <div class="toast-icon">🎯</div>
         <div class="toast-content">
-            <div class="toast-title">Race logged! Based on your performance:</div>
+            <div class="toast-title">Run logged! Based on your performance:</div>
             <div class="toast-predictions">${predictionsHtml}</div>
         </div>
         <div class="toast-actions">

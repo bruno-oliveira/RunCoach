@@ -133,6 +133,45 @@ def _run_migrations(eng) -> None:
 
 _run_migrations(engine)
 
+
+def _backfill_vdot(eng) -> None:
+    """Backfill VDOT for all runs that have sufficient distance but no VDOT yet."""
+    from app.core.vdot_calculator import VDOTCalculator
+    from app.models.run_log import RunLog
+    from sqlalchemy.orm import Session as _Session
+
+    session = _Session(bind=eng)
+    try:
+        runs = (
+            session.query(RunLog)
+            .filter(
+                RunLog.vdot.is_(None),
+                RunLog.distance_km >= 2.0,
+                RunLog.duration_minutes > 0,
+            )
+            .all()
+        )
+        if not runs:
+            return
+        updated = 0
+        for run in runs:
+            vdot = VDOTCalculator.calculate_vdot(
+                run.distance_km, int(run.duration_minutes * 60)
+            )
+            if vdot:
+                run.vdot = vdot
+                updated += 1
+        session.commit()
+        logger.info(f"VDOT backfill: updated {updated}/{len(runs)} runs")
+    except Exception as e:
+        session.rollback()
+        logger.warning(f"VDOT backfill failed: {e}")
+    finally:
+        session.close()
+
+
+_backfill_vdot(engine)
+
 # Templates
 templates = create_templates()
 

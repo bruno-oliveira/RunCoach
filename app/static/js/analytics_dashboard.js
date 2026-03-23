@@ -131,10 +131,10 @@ const AnalyticsDashboard = {
             }).join('');
         }
 
-        if (footerEl && data.last_race) {
-            const lastRace = data.last_race;
-            const date = lastRace.date ? new Date(lastRace.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : '';
-            footerEl.textContent = `Based on: ${lastRace.distance_km}K race on ${date} (${lastRace.time})`;
+        if (footerEl && data.best_effort) {
+            const effort = data.best_effort;
+            const date = effort.date ? new Date(effort.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : '';
+            footerEl.textContent = `Based on: ${effort.distance_km}K run on ${date} (${effort.time})`;
         }
     },
 

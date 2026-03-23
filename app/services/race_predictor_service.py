@@ -1,4 +1,9 @@
-"""Race predictor service for performance predictions and VDOT trend analysis."""
+"""Race predictor service for performance predictions and VDOT trend analysis.
+
+Estimates fitness from ALL logged runs (not just race-tagged ones).  The best
+recent VDOT naturally comes from the hardest efforts — tempo runs, intervals,
+and races — so we don't need an explicit race-type gate.
+"""
 
 from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, List, Optional
@@ -8,31 +13,38 @@ from sqlalchemy.orm import Session
 from app.core.vdot_calculator import VDOTCalculator
 from app.models import RunLog
 
+# Minimum distance (km) for a run to be useful for VDOT estimation.
+# Very short runs produce unreliable VDOT values.
+MIN_DISTANCE_KM = 2.0
+
 
 class RacePredictorService:
     """Service for race predictions and VDOT trend analysis."""
 
     @staticmethod
     def calculate_vdot_from_run(run: RunLog) -> Optional[float]:
-        """Calculate VDOT from a race-type run."""
-        if run.distance_km <= 0 or run.duration_minutes <= 0:
+        """Calculate VDOT from any run with sufficient distance."""
+        if run.distance_km < MIN_DISTANCE_KM or run.duration_minutes <= 0:
             return None
         return VDOTCalculator.calculate_vdot(
             run.distance_km, int(run.duration_minutes * 60)
         )
 
     @staticmethod
-    def get_vdot_history(user_id: str, weeks: int = 12, db: Session) -> List[Dict]:
-        """Get VDOT history from recent race runs for trend analysis."""
+    def get_vdot_history(user_id: str, weeks: int = 12, db: Session = None) -> List[Dict]:
+        """Get VDOT history from recent runs for trend analysis.
+
+        Uses all runs with a stored VDOT (not just races).
+        """
         cutoff_date = datetime.now(timezone.utc) - timedelta(weeks=weeks)
         cutoff_date_naive = cutoff_date.replace(tzinfo=None)
 
-        races = (
+        runs = (
             db.query(RunLog)
             .filter(
                 RunLog.user_id == user_id,
-                RunLog.workout_type == "race",
                 RunLog.vdot.isnot(None),
+                RunLog.distance_km >= MIN_DISTANCE_KM,
                 RunLog.date >= cutoff_date_naive,
             )
             .order_by(RunLog.date.asc())
@@ -46,51 +58,56 @@ class RacePredictorService:
                 "duration_minutes": run.duration_minutes,
                 "vdot": run.vdot,
             }
-            for run in races
+            for run in runs
         ]
 
     @staticmethod
-    def get_best_recent_vdot(user_id: str, weeks: int = 12, db: Session) -> Optional[float]:
-        """Get best VDOT from races in the last N weeks."""
+    def get_best_recent_vdot(user_id: str, weeks: int = 12, db: Session = None) -> Optional[float]:
+        """Get best VDOT from all runs in the last N weeks.
+
+        The highest VDOT naturally comes from the hardest efforts (races,
+        tempo runs, fast intervals) and best approximates race-day fitness.
+        """
         cutoff_date = datetime.now(timezone.utc) - timedelta(weeks=weeks)
         cutoff_date_naive = cutoff_date.replace(tzinfo=None)
 
-        best_race = (
+        best_run = (
             db.query(RunLog)
             .filter(
                 RunLog.user_id == user_id,
-                RunLog.workout_type == "race",
                 RunLog.vdot.isnot(None),
+                RunLog.distance_km >= MIN_DISTANCE_KM,
                 RunLog.date >= cutoff_date_naive,
             )
             .order_by(RunLog.vdot.desc())
             .first()
         )
 
-        return best_race.vdot if best_race else None
+        return best_run.vdot if best_run else None
 
     @staticmethod
-    def get_last_race(user_id: str, db: Session) -> Optional[Dict]:
-        """Get the most recent race for a user."""
-        last_race = (
+    def get_best_effort(user_id: str, db: Session) -> Optional[Dict]:
+        """Get the run with the highest VDOT (best effort) for a user."""
+        best_run = (
             db.query(RunLog)
             .filter(
                 RunLog.user_id == user_id,
-                RunLog.workout_type == "race",
                 RunLog.vdot.isnot(None),
+                RunLog.distance_km >= MIN_DISTANCE_KM,
             )
-            .order_by(RunLog.date.desc())
+            .order_by(RunLog.vdot.desc())
             .first()
         )
 
-        if not last_race:
+        if not best_run:
             return None
 
         return {
-            "date": last_race.date.isoformat() if last_race.date else None,
-            "distance_km": last_race.distance_km,
-            "time": VDOTCalculator.format_duration(int(last_race.duration_minutes * 60)),
-            "vdot": last_race.vdot,
+            "date": best_run.date.isoformat() if best_run.date else None,
+            "distance_km": best_run.distance_km,
+            "time": VDOTCalculator.format_duration(int(best_run.duration_minutes * 60)),
+            "vdot": best_run.vdot,
+            "workout_type": best_run.workout_type,
         }
 
     @staticmethod
@@ -114,7 +131,7 @@ class RacePredictorService:
 
     @staticmethod
     def get_predictions_for_user(user_id: str, db: Session) -> Dict[str, Any]:
-        """Get race predictions based on user's best recent VDOT."""
+        """Get race predictions based on user's best recent VDOT from all runs."""
         current_vdot = RacePredictorService.get_best_recent_vdot(user_id, weeks=12, db=db)
 
         if not current_vdot:
@@ -122,14 +139,14 @@ class RacePredictorService:
                 "current_vdot": None,
                 "vdot_trend": "stable",
                 "predictions": {},
-                "last_race": None,
-                "race_count": 0,
+                "best_effort": None,
+                "run_count": 0,
                 "has_sufficient_data": False,
             }
 
         vdot_history = RacePredictorService.get_vdot_history(user_id, weeks=12, db=db)
         trend = RacePredictorService.calculate_vdot_trend(vdot_history)
-        last_race = RacePredictorService.get_last_race(user_id, db=db)
+        best_effort = RacePredictorService.get_best_effort(user_id, db=db)
 
         predictions = VDOTCalculator.predict_times(current_vdot)
         for name in predictions:
@@ -145,8 +162,8 @@ class RacePredictorService:
             "current_vdot": current_vdot,
             "vdot_trend": trend,
             "predictions": predictions,
-            "last_race": last_race,
-            "race_count": len(vdot_history),
+            "best_effort": best_effort,
+            "run_count": len(vdot_history),
             "has_sufficient_data": True,
         }
 
