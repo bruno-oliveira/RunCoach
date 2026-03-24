@@ -392,7 +392,11 @@ class RunLogResponse(RunLogBase):
     effort_quality_score: Optional[float] = None
     quality_label: Optional[str] = None
     vdot: Optional[float] = None
+    predicted_time_seconds: Optional[float] = None
     created_at: datetime
+    # Dynamically populated fields (not from DB)
+    predictions: Optional[Dict[str, Dict]] = None
+    race_comparison: Optional[Dict[str, Any]] = None
 
 
 class RunLogListResponse(BaseModel):

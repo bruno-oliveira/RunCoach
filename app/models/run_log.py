@@ -38,3 +38,5 @@ class RunLog(Base):
     planned_pace_min_km = Column(Float, nullable=True)    # Expected pace from workout plan
     # VDOT from race runs
     vdot = Column(Float, nullable=True)                   # VDOT calculated from race performance
+    # Predicted time (seconds) at the moment a race was logged
+    predicted_time_seconds = Column(Float, nullable=True)  # Snapshot of prediction when race was logged

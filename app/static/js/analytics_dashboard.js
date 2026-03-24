@@ -56,6 +56,7 @@ const AnalyticsDashboard = {
             this.bindPeriodSelector();
             this.bindPredictionsToggle();
             this.loadRacePredictions();
+            this.loadRaceResults();
         } catch (err) {
             console.error('Analytics load error:', err);
             loading.style.display = 'none';
@@ -150,6 +151,102 @@ const AnalyticsDashboard = {
                 ? `<svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M4 10l4-4 4 4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>`
                 : `<svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M4 6l4 4 4-4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
         });
+    },
+
+    /* ------------------------------------------------------------------ */
+    /*  Race Results (Predicted vs Actual)                                  */
+    /* ------------------------------------------------------------------ */
+    async loadRaceResults() {
+        const card = document.getElementById('raceResultsCard');
+        if (!card) return;
+
+        try {
+            const res = await fetch('/api/runs/race-history', { credentials: 'same-origin' });
+            if (!res.ok) return;
+            const data = await res.json();
+
+            if (!data.races || data.races.length === 0) {
+                card.style.display = 'none';
+                return;
+            }
+
+            card.style.display = '';
+            this.renderRaceResults(data);
+        } catch (err) {
+            console.error('Failed to load race results:', err);
+        }
+    },
+
+    renderRaceResults(data) {
+        const listEl = document.getElementById('raceResultsList');
+        const accuracyEl = document.getElementById('raceResultsAccuracy');
+        const emptyEl = document.getElementById('raceResultsEmpty');
+
+        if (accuracyEl && data.avg_prediction_accuracy != null) {
+            accuracyEl.textContent = `${data.avg_prediction_accuracy}% accuracy`;
+            accuracyEl.className = 'race-results-accuracy';
+        }
+
+        if (!listEl) return;
+
+        if (data.races.length === 0) {
+            if (emptyEl) emptyEl.style.display = 'block';
+            return;
+        }
+
+        listEl.innerHTML = data.races.map(race => {
+            const date = race.date
+                ? new Date(race.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+                : '';
+            const comp = race.comparison;
+
+            let comparisonHtml = '';
+            if (comp) {
+                const deltaClass = comp.faster_than_predicted ? 'race-delta-fast' : 'race-delta-slow';
+                const deltaSign = comp.faster_than_predicted ? '-' : '+';
+                const deltaIcon = comp.faster_than_predicted ? '&#9650;' : '&#9660;';
+                comparisonHtml = `
+                    <div class="race-result-comparison">
+                        <div class="race-result-times">
+                            <div class="race-result-time-col">
+                                <span class="race-time-label">Predicted</span>
+                                <span class="race-time-value">${comp.predicted_formatted}</span>
+                            </div>
+                            <span class="race-result-arrow">&#8594;</span>
+                            <div class="race-result-time-col">
+                                <span class="race-time-label">Actual</span>
+                                <span class="race-time-value race-time-actual">${comp.actual_formatted}</span>
+                            </div>
+                        </div>
+                        <div class="race-result-delta ${deltaClass}">
+                            <span class="race-delta-icon">${deltaIcon}</span>
+                            ${deltaSign}${comp.delta_formatted}
+                        </div>
+                    </div>
+                `;
+            } else {
+                comparisonHtml = `
+                    <div class="race-result-comparison race-result-no-prediction">
+                        <div class="race-result-time-col">
+                            <span class="race-time-label">Finish time</span>
+                            <span class="race-time-value">${race.actual_formatted || '--'}</span>
+                        </div>
+                        <span class="race-no-prediction-note">No prediction available</span>
+                    </div>
+                `;
+            }
+
+            return `
+                <div class="race-result-row">
+                    <div class="race-result-header">
+                        <span class="race-result-distance">${race.distance_name}</span>
+                        <span class="race-result-date">${date}</span>
+                    </div>
+                    ${comparisonHtml}
+                    ${race.vdot ? `<span class="race-result-vdot">VDOT ${race.vdot}</span>` : ''}
+                </div>
+            `;
+        }).join('');
     },
 
     /* ------------------------------------------------------------------ */

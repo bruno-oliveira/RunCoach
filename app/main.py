@@ -121,6 +121,8 @@ def _run_migrations(eng) -> None:
         "ALTER TABLE daily_workouts ADD COLUMN key_workout_id VARCHAR",
         # VDOT for race runs
         "ALTER TABLE run_logs ADD COLUMN vdot FLOAT",
+        # Predicted time snapshot when a race is logged
+        "ALTER TABLE run_logs ADD COLUMN predicted_time_seconds FLOAT",
     ]
     with eng.connect() as conn:
         for stmt in stmts:

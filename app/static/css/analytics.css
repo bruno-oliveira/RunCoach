@@ -865,6 +865,152 @@
     text-align: center;
 }
 
+/* ── Race Results (Predicted vs Actual) ── */
+.race-results-card {
+    grid-column: 1 / -1;
+}
+
+.race-results-accuracy {
+    font-size: var(--text-xs);
+    font-weight: var(--weight-semibold);
+    padding: 2px 8px;
+    border-radius: var(--radius-full);
+    color: var(--color-success);
+    background: var(--color-success-subtle);
+}
+
+.race-results-list {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+}
+
+.race-result-row {
+    padding: var(--space-4);
+    background: var(--color-bg-sunken);
+    border-radius: var(--radius-lg);
+    border: 1px solid var(--color-border-subtle);
+}
+
+.race-result-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: var(--space-3);
+}
+
+.race-result-distance {
+    font-family: var(--font-display);
+    font-size: var(--text-base);
+    font-weight: var(--weight-bold);
+    color: var(--color-text);
+}
+
+.race-result-date {
+    font-size: var(--text-xs);
+    color: var(--color-text-muted);
+}
+
+.race-result-comparison {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-3);
+}
+
+.race-result-times {
+    display: flex;
+    align-items: center;
+    gap: var(--space-4);
+}
+
+.race-result-time-col {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+}
+
+.race-time-label {
+    font-size: var(--text-xs);
+    color: var(--color-text-muted);
+    text-transform: uppercase;
+    letter-spacing: var(--tracking-wide);
+    font-weight: var(--weight-semibold);
+}
+
+.race-time-value {
+    font-family: var(--font-display);
+    font-size: var(--text-lg);
+    font-weight: var(--weight-bold);
+    color: var(--color-text);
+    letter-spacing: var(--tracking-tight);
+}
+
+.race-time-actual {
+    color: #1D4ED8;
+}
+
+.race-result-arrow {
+    font-size: var(--text-base);
+    color: var(--color-text-muted);
+}
+
+.race-result-delta {
+    font-family: var(--font-mono);
+    font-size: var(--text-sm);
+    font-weight: var(--weight-bold);
+    padding: 4px 10px;
+    border-radius: var(--radius-lg);
+    white-space: nowrap;
+}
+
+.race-delta-icon {
+    font-size: 10px;
+    margin-right: 2px;
+}
+
+.race-delta-fast {
+    color: var(--color-success);
+    background: var(--color-success-subtle);
+}
+
+.race-delta-slow {
+    color: var(--color-error);
+    background: var(--color-error-subtle);
+}
+
+.race-result-no-prediction {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--space-2);
+}
+
+.race-no-prediction-note {
+    font-size: var(--text-xs);
+    color: var(--color-text-muted);
+    font-style: italic;
+}
+
+.race-result-vdot {
+    display: inline-block;
+    margin-top: var(--space-2);
+    font-size: var(--text-xs);
+    font-weight: var(--weight-semibold);
+    color: var(--color-text-muted);
+    background: var(--color-bg-elevated);
+    padding: 1px 6px;
+    border-radius: var(--radius-md);
+    border: 1px solid var(--color-border-subtle);
+}
+
+.race-results-empty p {
+    font-size: var(--text-sm);
+    color: var(--color-text-muted);
+    text-align: center;
+    padding: var(--space-4);
+}
+
 /* ── Responsive ── */
 @media (max-width: 900px) {
     .charts-grid {
@@ -915,6 +1061,16 @@
 
     .analytics-card-header {
         flex-wrap: wrap;
+    }
+
+    .race-result-comparison {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .race-result-times {
+        width: 100%;
+        justify-content: space-between;
     }
 
     .run-row {

@@ -20,6 +20,7 @@ from app.schemas import (
     AdaptivePlanRequest,
     WeeklyPlanResponse,
 )
+from app.services.race_predictor_service import RacePredictorService
 
 logger = logging.getLogger(__name__)
 
@@ -47,6 +48,7 @@ def _run_to_response(run: RunLog) -> RunLogResponse:
         effort_quality_score=round(run.effort_quality_score, 1) if run.effort_quality_score else None,
         quality_label=run.quality_label,
         vdot=run.vdot,
+        predicted_time_seconds=run.predicted_time_seconds,
         created_at=run.created_at,
     )
 
@@ -112,6 +114,21 @@ async def create_run_log(
             if vdot:
                 new_run.vdot = vdot
 
+        # Snapshot the pre-race prediction for race-type runs
+        if run_log.workout_type == "race" and run_log.distance_km >= 2.0:
+            try:
+                pre_race_vdot = RacePredictorService.get_best_recent_vdot(
+                    current_user.id, weeks=12, db=db
+                )
+                if pre_race_vdot:
+                    predicted_seconds = VDOTCalculator.predict_time_for_distance(
+                        pre_race_vdot, run_log.distance_km
+                    )
+                    if predicted_seconds:
+                        new_run.predicted_time_seconds = float(predicted_seconds)
+            except Exception as e:
+                logger.warning(f"Failed to snapshot prediction for race: {e}")
+
         db.add(new_run)
         db.commit()
 
@@ -132,6 +149,20 @@ async def create_run_log(
         response_data = _run_to_response(new_run)
         if race_predictions:
             response_data.predictions = race_predictions
+        # Include race comparison data for race-type runs
+        if run_log.workout_type == "race" and new_run.predicted_time_seconds:
+            actual_seconds = int(run_log.duration_minutes * 60)
+            predicted_seconds = int(new_run.predicted_time_seconds)
+            delta = actual_seconds - predicted_seconds
+            response_data.race_comparison = {
+                "predicted_seconds": predicted_seconds,
+                "predicted_formatted": VDOTCalculator.format_duration(predicted_seconds),
+                "actual_seconds": actual_seconds,
+                "actual_formatted": VDOTCalculator.format_duration(actual_seconds),
+                "delta_seconds": delta,
+                "delta_formatted": VDOTCalculator.format_duration(abs(delta)),
+                "faster_than_predicted": delta < 0,
+            }
         return response_data
     except Exception as e:
         logger.error(f"Error creating run log: {e}")
@@ -191,6 +222,92 @@ async def get_run_logs(
         )
 
 
+@runs_router.get("/race-history")
+async def get_race_history(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """
+    Get all race-type runs with predicted vs actual comparison data.
+
+    Returns races sorted by date (newest first) with:
+    - Actual time and pace
+    - Predicted time (if available)
+    - Delta between predicted and actual
+    - Prediction accuracy percentage
+    """
+    races = (
+        db.query(RunLog)
+        .filter(
+            RunLog.user_id == current_user.id,
+            RunLog.workout_type == "race",
+        )
+        .order_by(RunLog.date.desc())
+        .all()
+    )
+
+    results = []
+    for race in races:
+        actual_seconds = int(race.duration_minutes * 60) if race.duration_minutes else None
+        predicted_seconds = int(race.predicted_time_seconds) if race.predicted_time_seconds else None
+
+        comparison = None
+        if actual_seconds and predicted_seconds:
+            delta = actual_seconds - predicted_seconds
+            accuracy_pct = round((1 - abs(delta) / predicted_seconds) * 100, 1)
+            comparison = {
+                "predicted_seconds": predicted_seconds,
+                "predicted_formatted": VDOTCalculator.format_duration(predicted_seconds),
+                "actual_seconds": actual_seconds,
+                "actual_formatted": VDOTCalculator.format_duration(actual_seconds),
+                "delta_seconds": delta,
+                "delta_formatted": VDOTCalculator.format_duration(abs(delta)),
+                "faster_than_predicted": delta < 0,
+                "accuracy_pct": accuracy_pct,
+            }
+
+        # Find closest standard distance name
+        distance_names = {5.0: "5K", 10.0: "10K", 21.1: "Half Marathon", 21.0975: "Half Marathon",
+                          30.0: "Trail", 42.2: "Marathon", 42.195: "Marathon"}
+        closest_name = None
+        for dist, name in distance_names.items():
+            if abs(race.distance_km - dist) < 1.0:
+                closest_name = name
+                break
+        if not closest_name:
+            closest_name = f"{race.distance_km:.1f}K"
+
+        results.append({
+            "id": race.id,
+            "date": race.date.isoformat() if race.date else None,
+            "distance_km": race.distance_km,
+            "distance_name": closest_name,
+            "actual_seconds": actual_seconds,
+            "actual_formatted": VDOTCalculator.format_duration(actual_seconds) if actual_seconds else None,
+            "avg_pace_min_km": round(race.avg_pace_min_km, 2) if race.avg_pace_min_km else None,
+            "vdot": race.vdot,
+            "comparison": comparison,
+            "notes": race.notes,
+        })
+
+    # Calculate overall prediction accuracy
+    races_with_predictions = [r for r in results if r["comparison"]]
+    avg_accuracy = None
+    if races_with_predictions:
+        avg_accuracy = round(
+            sum(r["comparison"]["accuracy_pct"] for r in races_with_predictions)
+            / len(races_with_predictions),
+            1,
+        )
+
+    return {
+        "races": results,
+        "total": len(results),
+        "races_with_predictions": len(races_with_predictions),
+        "avg_prediction_accuracy": avg_accuracy,
+    }
+
+
 @runs_router.get("/predictions")
 async def get_race_predictions(
     target_distance: Optional[float] = Query(None, description="Target race distance in km"),
@@ -204,8 +321,6 @@ async def get_race_predictions(
     Returns predictions for all standard distances unless target_distance is specified.
     When goal_time is provided, performs gap analysis.
     """
-    from app.services.race_predictor_service import RacePredictorService
-
     predictions_data = RacePredictorService.get_predictions_for_user(current_user.id, db)
 
     if not predictions_data.get("has_sufficient_data"):

@@ -2507,3 +2507,56 @@
         max-width: none;
     }
 }
+
+/* ---- Race Comparison Toast (extends predictions toast) ---- */
+.race-comparison-toast .toast-comparison {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+    margin-bottom: var(--space-2);
+}
+
+.race-comparison-toast .toast-comparison-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: var(--space-3);
+}
+
+.race-comparison-toast .toast-comparison-label {
+    font-size: var(--text-xs);
+    color: var(--color-text-muted);
+    text-transform: uppercase;
+    letter-spacing: var(--tracking-wide);
+    font-weight: var(--weight-semibold);
+}
+
+.race-comparison-toast .toast-comparison-value {
+    font-family: var(--font-display);
+    font-size: var(--text-base);
+    font-weight: var(--weight-bold);
+    color: var(--color-text);
+}
+
+.race-comparison-toast .toast-comparison-actual {
+    color: #1D4ED8;
+}
+
+.race-comparison-toast .toast-comparison-verdict {
+    font-size: var(--text-sm);
+    font-weight: var(--weight-bold);
+    padding: 4px 10px;
+    border-radius: var(--radius-md);
+    text-align: center;
+    margin-top: var(--space-1);
+}
+
+.race-comparison-toast .comparison-faster {
+    color: var(--color-success);
+    background: var(--color-success-subtle);
+}
+
+.race-comparison-toast .comparison-slower {
+    color: var(--color-error);
+    background: var(--color-error-subtle);
+}

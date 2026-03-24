@@ -313,9 +313,13 @@ window.submitRunLog = async function(event) {
         if (response.ok) {
             const data = await response.json();
             closeLogModal();
-            
-            // Show predictions toast if VDOT was calculated
-            if (data.predictions) {
+
+            // Show race comparison toast if this was a race with prediction data
+            if (data.race_comparison) {
+                showRaceComparisonToast(data);
+                setTimeout(() => location.reload(), 8000);
+            } else if (data.predictions) {
+                // Show predictions toast if VDOT was calculated
                 showRacePredictionsToast(data);
                 setTimeout(() => location.reload(), 6000);
             } else {
@@ -404,6 +408,66 @@ window.dismissRaceToast = function() {
         toast.classList.add('toast-fade-out');
         setTimeout(() => toast.remove(), 300);
     }
+};
+
+window.showRaceComparisonToast = function(data) {
+    const toastId = 'race-predictions-toast';
+    let toast = document.getElementById(toastId);
+    if (toast) toast.remove();
+
+    toast = document.createElement('div');
+    toast.id = toastId;
+    toast.className = 'race-predictions-toast race-comparison-toast';
+
+    const comp = data.race_comparison;
+    const isFaster = comp.faster_than_predicted;
+    const icon = isFaster ? '🎉' : '🏁';
+    const verdictClass = isFaster ? 'comparison-faster' : 'comparison-slower';
+    const verdictText = isFaster
+        ? `${comp.delta_formatted} faster than predicted!`
+        : `${comp.delta_formatted} slower than predicted`;
+
+    // Also show all-distance predictions if available
+    let predictionsHtml = '';
+    if (data.predictions) {
+        const distanceLabels = { '5K': '5K', '10K': '10K', 'trail': 'Trail', 'half_marathon': 'Half', 'marathon': 'Full' };
+        for (const [key, pred] of Object.entries(data.predictions)) {
+            const label = distanceLabels[key] || key;
+            predictionsHtml += `<span class="toast-prediction"><strong>${label}:</strong> ${pred.formatted}</span>`;
+        }
+    }
+
+    toast.innerHTML = `
+        <div class="toast-icon">${icon}</div>
+        <div class="toast-content">
+            <div class="toast-title">Race logged!</div>
+            <div class="toast-comparison">
+                <div class="toast-comparison-row">
+                    <span class="toast-comparison-label">Predicted</span>
+                    <span class="toast-comparison-value">${comp.predicted_formatted}</span>
+                </div>
+                <div class="toast-comparison-row">
+                    <span class="toast-comparison-label">Actual</span>
+                    <span class="toast-comparison-value toast-comparison-actual">${comp.actual_formatted}</span>
+                </div>
+                <div class="toast-comparison-verdict ${verdictClass}">${verdictText}</div>
+            </div>
+            ${predictionsHtml ? `<div class="toast-predictions">${predictionsHtml}</div>` : ''}
+        </div>
+        <div class="toast-actions">
+            <button class="toast-btn toast-btn-secondary" onclick="dismissRaceToast()">Dismiss</button>
+            <a href="/analytics" class="toast-btn toast-btn-primary">View Analytics</a>
+        </div>
+        <button class="toast-close" onclick="dismissRaceToast()">&times;</button>
+    `;
+
+    document.body.appendChild(toast);
+
+    setTimeout(() => {
+        if (document.getElementById(toastId)) {
+            dismissRaceToast();
+        }
+    }, 8000);
 };
 
 window.unlinkRun = async function(runId) {
