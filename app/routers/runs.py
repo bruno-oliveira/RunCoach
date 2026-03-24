@@ -254,19 +254,43 @@ async def get_race_history(
         .all()
     )
 
-    # Single pass: track rolling best VDOT and compute predictions
-    best_vdot_so_far = None
+    # Single pass: track a sliding window of recent VDOTs and use the
+    # median of the top 3 as the "current fitness" estimate.  This is
+    # robust to GPS glitches and auto-pause artifacts that inflate one
+    # run's VDOT far above reality.
+    import statistics
+    from collections import deque
+    from datetime import timedelta
+
+    WINDOW_WEEKS = 12
+    TOP_N = 3
+
+    prior_vdots: list[tuple[float, float]] = []  # (date_ts, vdot)
     enriched = []
     for run in all_runs:
         actual_seconds = int(run.duration_minutes * 60) if run.duration_minutes else None
+
+        # Determine the best VDOT estimate from runs BEFORE this one,
+        # within the sliding window, using median-of-top-N.
+        run_ts = run.date.timestamp() if run.date else 0
+        cutoff_ts = run_ts - WINDOW_WEEKS * 7 * 86400
+        window_vdots = sorted(
+            [v for ts, v in prior_vdots if ts >= cutoff_ts],
+            reverse=True,
+        )
+        if window_vdots:
+            top_vdots = window_vdots[:TOP_N]
+            rolling_vdot = statistics.median(top_vdots)
+        else:
+            rolling_vdot = None
 
         # Use stored prediction if available, otherwise compute retroactively
         predicted_seconds = None
         if run.predicted_time_seconds:
             predicted_seconds = int(run.predicted_time_seconds)
-        elif best_vdot_so_far:
+        elif rolling_vdot:
             pred = VDOTCalculator.predict_time_for_distance(
-                best_vdot_so_far, run.distance_km
+                rolling_vdot, run.distance_km
             )
             if pred:
                 predicted_seconds = pred
@@ -314,9 +338,9 @@ async def get_race_history(
             "notes": run.notes,
         })
 
-        # Update rolling best VDOT *after* processing this run
-        if run.vdot and (best_vdot_so_far is None or run.vdot > best_vdot_so_far):
-            best_vdot_so_far = run.vdot
+        # Add this run's VDOT to the history *after* processing it
+        if run.vdot:
+            prior_vdots.append((run_ts, run.vdot))
 
     # Return newest first, limited
     results = list(reversed(enriched))[:limit]

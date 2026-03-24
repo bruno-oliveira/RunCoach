@@ -140,8 +140,13 @@ const AnalyticsDashboard = {
     },
 
     bindPredictionsToggle() {
-        const toggle = document.getElementById('predictionsToggle');
-        const content = document.getElementById('predictionsContent');
+        this._bindCollapseToggle('predictionsToggle', 'predictionsContent');
+        this._bindCollapseToggle('raceResultsToggle', 'raceResultsContent');
+    },
+
+    _bindCollapseToggle(toggleId, contentId) {
+        const toggle = document.getElementById(toggleId);
+        const content = document.getElementById(contentId);
         if (!toggle || !content) return;
 
         toggle.addEventListener('click', () => {

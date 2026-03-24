@@ -15,6 +15,11 @@ STANDARD_RACE_DISTANCES = {
     "marathon": 42.195,
 }
 
+# Fastest realistic pace for runs >= 2 km.  The 3 km world record is ~2:23/km;
+# anything faster than 2:30/km over 2+ km is almost certainly a GPS glitch or
+# auto-pause artifact.
+MIN_REALISTIC_PACE_MIN_KM = 2.5
+
 
 def _vo2_at_velocity(v: float) -> float:
     """Oxygen cost at velocity v (m/min)."""
@@ -81,8 +86,14 @@ class VDOTCalculator:
 
         Returns:
             VDOT value (rounded to 1 dp), or None if inputs are invalid
+            or the pace is unrealistically fast (GPS glitch / auto-pause artifact).
         """
         if distance_km <= 0 or time_seconds <= 0:
+            return None
+
+        # Reject unrealistic pace — almost certainly bad data
+        pace_min_km = (time_seconds / 60.0) / distance_km
+        if pace_min_km < MIN_REALISTIC_PACE_MIN_KM:
             return None
 
         distance_m = distance_km * 1000.0
@@ -227,7 +238,9 @@ class VDOTCalculator:
     def predict_time_for_distance(vdot: float, distance_km: float) -> Optional[int]:
         """Predict race time for a given VDOT and distance.
 
-        Uses the inverse of Daniels' VO2 cost formula.
+        Uses binary search to solve: vo2(d/t) / pct_vo2max(t) = VDOT
+        For a fixed distance, increasing time → lower velocity → lower VDOT,
+        so the function is monotonically decreasing in time.
 
         Args:
             vdot: Current fitness level (25-85)
@@ -242,27 +255,29 @@ class VDOTCalculator:
             return None
 
         distance_m = distance_km * 1000.0
-        time_min = 0.0
-        step = 0.1
-        velocity = 0.0
-        for _ in range(10000):
+
+        # Search bounds in minutes: 1 min to 600 min (10 hours)
+        lo, hi = 1.0, 600.0
+
+        for _ in range(100):
+            mid = (lo + hi) / 2.0
+            velocity = distance_m / mid
             vo2 = _vo2_at_velocity(velocity)
-            if vo2 <= 0:
-                velocity += step
-                continue
-            pct = _pct_vo2max_at_time(time_min)
+            pct = _pct_vo2max_at_time(mid)
             if pct <= 0:
-                velocity += step
-                time_min = velocity / 1000.0 * time_min if time_min > 0 else 0.1
+                lo = mid
                 continue
             calc_vdot = vo2 / pct
-            if abs(calc_vdot - vdot) < 0.05:
-                time_sec = time_min * 60
-                if 30 <= time_sec <= 18000:
-                    return int(round(time_sec))
-            velocity += step
-            time_min = distance_m / velocity if velocity > 0 else 0.1
-        return None
+            if abs(calc_vdot - vdot) < 0.01:
+                break
+            if calc_vdot > vdot:
+                # Too fast — need more time
+                lo = mid
+            else:
+                # Too slow — need less time
+                hi = mid
+
+        return int(round(mid * 60))
 
     @staticmethod
     def get_confidence_range(vdot: float, distance_km: float) -> Dict[str, int]:

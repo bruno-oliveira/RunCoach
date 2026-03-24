@@ -1,10 +1,12 @@
 """Race predictor service for performance predictions and VDOT trend analysis.
 
-Estimates fitness from ALL logged runs (not just race-tagged ones).  The best
-recent VDOT naturally comes from the hardest efforts — tempo runs, intervals,
-and races — so we don't need an explicit race-type gate.
+Estimates fitness from ALL logged runs (not just race-tagged ones).  Uses the
+median of the top-3 VDOTs in a recent window to be robust against GPS glitches,
+auto-pause artifacts, and other data quality issues that can inflate a single
+run's VDOT far beyond the user's actual fitness.
 """
 
+import statistics
 from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, List, Optional
 
@@ -16,6 +18,11 @@ from app.models import RunLog
 # Minimum distance (km) for a run to be useful for VDOT estimation.
 # Very short runs produce unreliable VDOT values.
 MIN_DISTANCE_KM = 2.0
+
+# How many top VDOTs to consider when estimating current fitness.
+# Using the median of the top N is robust to 1-2 outliers while
+# still reflecting the user's best genuine efforts.
+TOP_N_VDOTS = 3
 
 
 class RacePredictorService:
@@ -63,16 +70,17 @@ class RacePredictorService:
 
     @staticmethod
     def get_best_recent_vdot(user_id: str, weeks: int = 12, db: Session = None) -> Optional[float]:
-        """Get best VDOT from all runs in the last N weeks.
+        """Get a robust VDOT estimate from recent runs.
 
-        The highest VDOT naturally comes from the hardest efforts (races,
-        tempo runs, fast intervals) and best approximates race-day fitness.
+        Uses the median of the top N VDOTs instead of a raw MAX. This is
+        resilient to GPS glitches and auto-pause artifacts that can inflate
+        a single run's VDOT far above the user's actual fitness.
         """
         cutoff_date = datetime.now(timezone.utc) - timedelta(weeks=weeks)
         cutoff_date_naive = cutoff_date.replace(tzinfo=None)
 
-        best_run = (
-            db.query(RunLog)
+        top_runs = (
+            db.query(RunLog.vdot)
             .filter(
                 RunLog.user_id == user_id,
                 RunLog.vdot.isnot(None),
@@ -80,15 +88,24 @@ class RacePredictorService:
                 RunLog.date >= cutoff_date_naive,
             )
             .order_by(RunLog.vdot.desc())
-            .first()
+            .limit(TOP_N_VDOTS)
+            .all()
         )
 
-        return best_run.vdot if best_run else None
+        if not top_runs:
+            return None
+
+        vdots = [row[0] for row in top_runs]
+        return round(statistics.median(vdots), 1)
 
     @staticmethod
     def get_best_effort(user_id: str, db: Session) -> Optional[Dict]:
-        """Get the run with the highest VDOT (best effort) for a user."""
-        best_run = (
+        """Get the best genuine effort for a user.
+
+        Uses the median-of-top-N approach to avoid returning a GPS-glitch
+        outlier as the user's "best effort".
+        """
+        top_runs = (
             db.query(RunLog)
             .filter(
                 RunLog.user_id == user_id,
@@ -96,11 +113,17 @@ class RacePredictorService:
                 RunLog.distance_km >= MIN_DISTANCE_KM,
             )
             .order_by(RunLog.vdot.desc())
-            .first()
+            .limit(TOP_N_VDOTS)
+            .all()
         )
 
-        if not best_run:
+        if not top_runs:
             return None
+
+        # Pick the run closest to the median VDOT of the top N
+        vdots = [r.vdot for r in top_runs]
+        median_vdot = statistics.median(vdots)
+        best_run = min(top_runs, key=lambda r: abs(r.vdot - median_vdot))
 
         return {
             "date": best_run.date.isoformat() if best_run.date else None,
