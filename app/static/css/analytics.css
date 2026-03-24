@@ -899,6 +899,48 @@
     margin-bottom: var(--space-3);
 }
 
+.race-result-header-left {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+}
+
+.race-result-type {
+    font-size: 10px;
+    font-weight: var(--weight-semibold);
+    padding: 1px 6px;
+    border-radius: var(--radius-full);
+    text-transform: uppercase;
+    letter-spacing: var(--tracking-wide);
+    background: var(--color-bg-sunken);
+    color: var(--color-text-muted);
+    border: 1px solid var(--color-border-subtle);
+}
+
+.race-result-type--race {
+    color: #1D4ED8;
+    background: rgba(29, 78, 216, 0.08);
+    border-color: rgba(29, 78, 216, 0.2);
+}
+
+.race-result-type--tempo {
+    color: #B45309;
+    background: rgba(180, 83, 9, 0.08);
+    border-color: rgba(180, 83, 9, 0.2);
+}
+
+.race-result-type--interval {
+    color: #7C3AED;
+    background: rgba(124, 58, 237, 0.08);
+    border-color: rgba(124, 58, 237, 0.2);
+}
+
+.race-result-type--long {
+    color: #0D9488;
+    background: rgba(13, 148, 136, 0.08);
+    border-color: rgba(13, 148, 136, 0.2);
+}
+
 .race-result-distance {
     font-family: var(--font-display);
     font-size: var(--text-base);

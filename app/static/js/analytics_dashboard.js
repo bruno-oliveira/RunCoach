@@ -154,7 +154,7 @@ const AnalyticsDashboard = {
     },
 
     /* ------------------------------------------------------------------ */
-    /*  Race Results (Predicted vs Actual)                                  */
+    /*  Predicted vs Actual                                                 */
     /* ------------------------------------------------------------------ */
     async loadRaceResults() {
         const card = document.getElementById('raceResultsCard');
@@ -165,7 +165,14 @@ const AnalyticsDashboard = {
             if (!res.ok) return;
             const data = await res.json();
 
-            if (!data.races || data.races.length === 0) {
+            if (!data.runs || data.runs.length === 0) {
+                card.style.display = 'none';
+                return;
+            }
+
+            // Only show the card if at least some runs have comparison data
+            const hasComparisons = data.runs.some(r => r.comparison);
+            if (!hasComparisons) {
                 card.style.display = 'none';
                 return;
             }
@@ -189,23 +196,40 @@ const AnalyticsDashboard = {
 
         if (!listEl) return;
 
-        if (data.races.length === 0) {
+        // Only show runs that have comparison data
+        const runs = (data.runs || []).filter(r => r.comparison);
+
+        if (runs.length === 0) {
             if (emptyEl) emptyEl.style.display = 'block';
             return;
         }
 
-        listEl.innerHTML = data.races.map(race => {
-            const date = race.date
-                ? new Date(race.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
-                : '';
-            const comp = race.comparison;
+        const typeLabels = {
+            easy: 'Easy', tempo: 'Tempo', interval: 'Interval',
+            long: 'Long', hill: 'Hill', race: 'Race', rest: 'Rest',
+        };
 
-            let comparisonHtml = '';
-            if (comp) {
-                const deltaClass = comp.faster_than_predicted ? 'race-delta-fast' : 'race-delta-slow';
-                const deltaSign = comp.faster_than_predicted ? '-' : '+';
-                const deltaIcon = comp.faster_than_predicted ? '&#9650;' : '&#9660;';
-                comparisonHtml = `
+        listEl.innerHTML = runs.map(run => {
+            const date = run.date
+                ? new Date(run.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+                : '';
+            const comp = run.comparison;
+            const deltaClass = comp.faster_than_predicted ? 'race-delta-fast' : 'race-delta-slow';
+            const deltaSign = comp.faster_than_predicted ? '-' : '+';
+            const deltaIcon = comp.faster_than_predicted ? '&#9650;' : '&#9660;';
+            const typeBadge = run.workout_type
+                ? `<span class="race-result-type race-result-type--${run.workout_type}">${typeLabels[run.workout_type] || run.workout_type}</span>`
+                : '';
+
+            return `
+                <div class="race-result-row">
+                    <div class="race-result-header">
+                        <div class="race-result-header-left">
+                            <span class="race-result-distance">${run.distance_name}</span>
+                            ${typeBadge}
+                        </div>
+                        <span class="race-result-date">${date}</span>
+                    </div>
                     <div class="race-result-comparison">
                         <div class="race-result-times">
                             <div class="race-result-time-col">
@@ -223,27 +247,7 @@ const AnalyticsDashboard = {
                             ${deltaSign}${comp.delta_formatted}
                         </div>
                     </div>
-                `;
-            } else {
-                comparisonHtml = `
-                    <div class="race-result-comparison race-result-no-prediction">
-                        <div class="race-result-time-col">
-                            <span class="race-time-label">Finish time</span>
-                            <span class="race-time-value">${race.actual_formatted || '--'}</span>
-                        </div>
-                        <span class="race-no-prediction-note">No prediction available</span>
-                    </div>
-                `;
-            }
-
-            return `
-                <div class="race-result-row">
-                    <div class="race-result-header">
-                        <span class="race-result-distance">${race.distance_name}</span>
-                        <span class="race-result-date">${date}</span>
-                    </div>
-                    ${comparisonHtml}
-                    ${race.vdot ? `<span class="race-result-vdot">VDOT ${race.vdot}</span>` : ''}
+                    ${run.vdot ? `<span class="race-result-vdot">VDOT ${run.vdot}</span>` : ''}
                 </div>
             `;
         }).join('');

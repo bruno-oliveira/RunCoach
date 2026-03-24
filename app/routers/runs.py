@@ -114,8 +114,8 @@ async def create_run_log(
             if vdot:
                 new_run.vdot = vdot
 
-        # Snapshot the pre-race prediction for race-type runs
-        if run_log.workout_type == "race" and run_log.distance_km >= 2.0:
+        # Snapshot the pre-run prediction based on prior fitness
+        if run_log.distance_km >= 2.0:
             try:
                 pre_race_vdot = RacePredictorService.get_best_recent_vdot(
                     current_user.id, weeks=12, db=db
@@ -127,7 +127,7 @@ async def create_run_log(
                     if predicted_seconds:
                         new_run.predicted_time_seconds = float(predicted_seconds)
             except Exception as e:
-                logger.warning(f"Failed to snapshot prediction for race: {e}")
+                logger.warning(f"Failed to snapshot prediction for run: {e}")
 
         db.add(new_run)
         db.commit()
@@ -149,8 +149,8 @@ async def create_run_log(
         response_data = _run_to_response(new_run)
         if race_predictions:
             response_data.predictions = race_predictions
-        # Include race comparison data for race-type runs
-        if run_log.workout_type == "race" and new_run.predicted_time_seconds:
+        # Include comparison data when a prediction was available
+        if new_run.predicted_time_seconds:
             actual_seconds = int(run_log.duration_minutes * 60)
             predicted_seconds = int(new_run.predicted_time_seconds)
             delta = actual_seconds - predicted_seconds
@@ -224,32 +224,52 @@ async def get_run_logs(
 
 @runs_router.get("/race-history")
 async def get_race_history(
+    limit: int = Query(20, ge=1, le=100, description="Max results"),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
     """
-    Get all race-type runs with predicted vs actual comparison data.
+    Get recent runs with predicted vs actual comparison data.
 
-    Returns races sorted by date (newest first) with:
+    For each run, compares the actual finish time against what the user's
+    prior fitness (best VDOT before that run) predicted. Works for all
+    workout types — not just race-tagged runs.
+
+    Returns runs sorted by date (newest first) with:
     - Actual time and pace
-    - Predicted time (if available)
+    - Predicted time based on prior best VDOT
     - Delta between predicted and actual
     - Prediction accuracy percentage
     """
-    races = (
+    # Get all runs with VDOT, ordered by date ASC for a single-pass
+    # rolling best-VDOT calculation
+    all_runs = (
         db.query(RunLog)
         .filter(
             RunLog.user_id == current_user.id,
-            RunLog.workout_type == "race",
+            RunLog.vdot.isnot(None),
+            RunLog.distance_km >= 2.0,
         )
-        .order_by(RunLog.date.desc())
+        .order_by(RunLog.date.asc())
         .all()
     )
 
-    results = []
-    for race in races:
-        actual_seconds = int(race.duration_minutes * 60) if race.duration_minutes else None
-        predicted_seconds = int(race.predicted_time_seconds) if race.predicted_time_seconds else None
+    # Single pass: track rolling best VDOT and compute predictions
+    best_vdot_so_far = None
+    enriched = []
+    for run in all_runs:
+        actual_seconds = int(run.duration_minutes * 60) if run.duration_minutes else None
+
+        # Use stored prediction if available, otherwise compute retroactively
+        predicted_seconds = None
+        if run.predicted_time_seconds:
+            predicted_seconds = int(run.predicted_time_seconds)
+        elif best_vdot_so_far:
+            pred = VDOTCalculator.predict_time_for_distance(
+                best_vdot_so_far, run.distance_km
+            )
+            if pred:
+                predicted_seconds = pred
 
         comparison = None
         if actual_seconds and predicted_seconds:
@@ -267,43 +287,54 @@ async def get_race_history(
             }
 
         # Find closest standard distance name
-        distance_names = {5.0: "5K", 10.0: "10K", 21.1: "Half Marathon", 21.0975: "Half Marathon",
-                          30.0: "Trail", 42.2: "Marathon", 42.195: "Marathon"}
+        distance_names = {
+            5.0: "5K", 10.0: "10K", 21.1: "Half Marathon",
+            21.0975: "Half Marathon", 30.0: "Trail",
+            42.2: "Marathon", 42.195: "Marathon",
+        }
         closest_name = None
         for dist, name in distance_names.items():
-            if abs(race.distance_km - dist) < 1.0:
+            if abs(run.distance_km - dist) < 1.0:
                 closest_name = name
                 break
         if not closest_name:
-            closest_name = f"{race.distance_km:.1f}K"
+            closest_name = f"{run.distance_km:.1f}K"
 
-        results.append({
-            "id": race.id,
-            "date": race.date.isoformat() if race.date else None,
-            "distance_km": race.distance_km,
+        enriched.append({
+            "id": run.id,
+            "date": run.date.isoformat() if run.date else None,
+            "distance_km": run.distance_km,
             "distance_name": closest_name,
+            "workout_type": run.workout_type,
             "actual_seconds": actual_seconds,
             "actual_formatted": VDOTCalculator.format_duration(actual_seconds) if actual_seconds else None,
-            "avg_pace_min_km": round(race.avg_pace_min_km, 2) if race.avg_pace_min_km else None,
-            "vdot": race.vdot,
+            "avg_pace_min_km": round(run.avg_pace_min_km, 2) if run.avg_pace_min_km else None,
+            "vdot": run.vdot,
             "comparison": comparison,
-            "notes": race.notes,
+            "notes": run.notes,
         })
 
+        # Update rolling best VDOT *after* processing this run
+        if run.vdot and (best_vdot_so_far is None or run.vdot > best_vdot_so_far):
+            best_vdot_so_far = run.vdot
+
+    # Return newest first, limited
+    results = list(reversed(enriched))[:limit]
+
     # Calculate overall prediction accuracy
-    races_with_predictions = [r for r in results if r["comparison"]]
+    with_predictions = [r for r in results if r["comparison"]]
     avg_accuracy = None
-    if races_with_predictions:
+    if with_predictions:
         avg_accuracy = round(
-            sum(r["comparison"]["accuracy_pct"] for r in races_with_predictions)
-            / len(races_with_predictions),
+            sum(r["comparison"]["accuracy_pct"] for r in with_predictions)
+            / len(with_predictions),
             1,
         )
 
     return {
-        "races": results,
+        "runs": results,
         "total": len(results),
-        "races_with_predictions": len(races_with_predictions),
+        "runs_with_predictions": len(with_predictions),
         "avg_prediction_accuracy": avg_accuracy,
     }
 
