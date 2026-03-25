@@ -38,6 +38,7 @@ from app.schemas import DISTANCE_NAMES, PlanRequest, get_mileage_warning, parse_
 from app.services.adaptation_service import AdaptationService
 from app.services.hr_zone_service import HRZoneService
 from app.services.plan_service import PlanService
+from app.services.readiness_service import ReadinessService
 from app.template_helpers import create_templates
 
 logger = logging.getLogger(__name__)
@@ -434,6 +435,27 @@ async def get_plan_performance(
     analysis = adaptation_service.analyze_performance(plan_id, db)
 
     return analysis
+
+
+@router.get("/api/plan/{plan_id}/readiness")
+async def get_plan_readiness(
+    plan_id: str,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Get race readiness assessment for a training plan."""
+    training_plan = get_plan_or_404(
+        plan_id, db, current_user, require_user_match=True
+    )
+
+    readiness = ReadinessService.compute_readiness(
+        training_plan, current_user.id, db
+    )
+
+    if readiness is None:
+        return {"available": False, "reason": "Set a start date and log some runs first."}
+
+    return {"available": True, **readiness}
 
 
 @router.post("/api/plan/{plan_id}/adjust")
