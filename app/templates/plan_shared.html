@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% block title %}Your Training Plan - RunCoach{% endblock %}
+{% block title %}{{ plan_owner.name if plan_owner and plan_owner.name else 'Shared' }}'s {{ distance_display }} Plan - RunCoach{% endblock %}
 
 {% block styles %}
 <link rel="stylesheet" href="{{ static_url('css/plan.css') }}">
@@ -9,79 +9,102 @@
 
 {% block content %}
 <div class="container">
-    <div class="header">
-        <h1>Your Training Plan</h1>
-        {% if target_distance|string == '30.0' or target_distance|string == '30' %}
-            <p>Ready to conquer the trails?</p>
-        {% else %}
-            <p>Ready to crush your {{ target_distance }}km goal?</p>
+
+    {# ============================================================
+       HERO BANNER
+       ============================================================ #}
+    <div class="shared-hero">
+        <div class="shared-hero-bg"></div>
+        <div class="shared-hero-content">
+            <div class="shared-hero-profile">
+                {% if plan_owner and plan_owner.picture %}
+                <img src="{{ plan_owner.picture }}" alt="{{ plan_owner.name }}" class="shared-avatar">
+                {% else %}
+                <div class="shared-avatar shared-avatar-placeholder">
+                    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                </div>
+                {% endif %}
+                <div>
+                    <h1>{{ plan_owner.name if plan_owner and plan_owner.name else 'A Runner' }}'s Training Plan</h1>
+                    <p class="shared-hero-subtitle">
+                        {% if training_plan.plan_type == 'performance' %}Performance{% else %}Distance{% endif %} plan
+                        {% if training_plan.goal_time %} &middot; Goal: {{ training_plan.goal_time }}{% endif %}
+                    </p>
+                </div>
+            </div>
+            <div class="shared-hero-badges">
+                <span class="shared-distance-badge">{{ distance_display }}</span>
+                <span class="shared-meta-badge">{{ weeks }} weeks</span>
+                {% if vdot %}
+                <span class="shared-meta-badge">VDOT {{ "%.1f"|format(vdot) }}</span>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    {# ============================================================
+       AT-A-GLANCE STATS
+       ============================================================ #}
+    <div class="shared-glance">
+        <div class="shared-glance-stat">
+            <div class="shared-glance-value">{{ current_km }}</div>
+            <div class="shared-glance-label">km/week base</div>
+        </div>
+        <div class="shared-glance-stat">
+            <div class="shared-glance-value">{{ plan | map(attribute='total_km') | max | round(1) }}</div>
+            <div class="shared-glance-label">km peak week</div>
+        </div>
+        <div class="shared-glance-stat">
+            <div class="shared-glance-value">{{ training_plan.max_runs_per_week or 4 }}</div>
+            <div class="shared-glance-label">runs/week</div>
+        </div>
+        {% if start_date %}
+        <div class="shared-glance-stat">
+            <div class="shared-glance-value">{{ start_date.strftime('%b %-d') }}</div>
+            <div class="shared-glance-label">started</div>
+        </div>
+        {% endif %}
+        {% if progress_data and progress_data.completed_count > 0 %}
+        <div class="shared-glance-stat shared-glance-highlight">
+            <div class="shared-glance-value">{{ progress_data.completion_pct }}%</div>
+            <div class="shared-glance-label">complete</div>
+        </div>
         {% endif %}
     </div>
 
-    <!-- Adaptation recommendation banner (hidden by default) -->
-    <div class="adaptation-banner" id="adaptation-banner" style="display: none;">
-        <div class="banner-content">
-            <span class="banner-icon"></span>
-            <div class="banner-text">
-                <strong>Plan Adaptation Recommended</strong>
-                <p id="adaptation-reason">Based on your synced runs, we recommend adjusting your plan.</p>
+    {# ============================================================
+       MILEAGE PROGRESSION VISUAL
+       ============================================================ #}
+    <div class="shared-mileage-chart">
+        <h3>Weekly Mileage Progression</h3>
+        <div class="shared-mileage-bars">
+            {% set max_km = plan | map(attribute='total_km') | max %}
+            {% for week in plan %}
+            {% set pct = (week.total_km / max_km * 100) if max_km > 0 else 0 %}
+            <div class="shared-mileage-bar-wrap" title="Week {{ week.week }}: {{ week.total_km }} km">
+                <div class="shared-mileage-bar {% if current_week_number and week.week == current_week_number %}current{% endif %}" style="height: {{ pct }}%;">
+                    {% if progress_data and progress_data.actual_weekly_km and (week.week - 1) < progress_data.actual_weekly_km|length and progress_data.actual_weekly_km[week.week - 1] > 0 %}
+                    <div class="shared-mileage-actual" style="height: {{ (progress_data.actual_weekly_km[week.week - 1] / week.total_km * 100) | round(1) if week.total_km > 0 else 0 }}%;"></div>
+                    {% endif %}
+                </div>
+                <span class="shared-mileage-label">{{ week.week }}</span>
             </div>
-            <div class="banner-actions">
-                <button onclick="viewAdaptationDetails()" class="btn btn-secondary btn-small">View Details</button>
-                <button onclick="adaptPlan()" class="btn btn-primary btn-small">Adapt Plan</button>
-                <button onclick="dismissAdaptationBanner()" class="btn-close">×</button>
-            </div>
+            {% endfor %}
+        </div>
+        <div class="shared-mileage-legend">
+            <span class="shared-mileage-legend-item"><span class="legend-swatch planned"></span>Planned</span>
+            {% if progress_data and progress_data.completed_count > 0 %}
+            <span class="shared-mileage-legend-item"><span class="legend-swatch actual"></span>Actual</span>
+            {% endif %}
         </div>
     </div>
 
-    <div class="plan-summary">
-        <div class="summary-grid">
-            <div class="summary-item">
-                <strong>Current Mileage</strong>
-                {{ current_km }} km/week
-            </div>
-            <div class="summary-item">
-                <strong>Target Distance</strong>
-                {% if target_distance|string == '30.0' or target_distance|string == '30' %}
-                    Trail Running
-                {% else %}
-                    {{ target_distance }} km
-                {% endif %}
-            </div>
-            <div class="summary-item">
-                <strong>Duration</strong>
-                {{ weeks }} weeks
-            </div>
-            <div class="summary-item">
-                <strong>Peak Week</strong>
-                {{ plan | map(attribute='total_km') | max | round(1) }} km{% if training_plan.adjustment_multiplier %} <span class="peak-adjusted-label">(adjusted)</span>{% endif %}
-            </div>
-            {% if vdot %}
-            <div class="summary-item">
-                <strong>VDOT</strong>
-                {{ "%.1f"|format(vdot) }}
-            </div>
-            {% endif %}
-            {% if hr_zones %}
-            <div class="summary-item">
-                <strong>Max HR</strong>
-                {{ hr_zones.max_hr }} bpm
-                <span class="hr-source-label">({{ hr_zones.source }})</span>
-            </div>
-            {% endif %}
-            {% if start_date and user %}
-            <div class="summary-item">
-                <strong>Started</strong>
-                {{ start_date.strftime('%b %-d, %Y') }}
-                <a href="#" onclick="event.preventDefault();document.getElementById('edit-start-date-banner').style.display=''" class="edit-start-link">change</a>
-            </div>
-            {% endif %}
-        </div>
-    </div>
-    
+    {# ============================================================
+       HR ZONES
+       ============================================================ #}
     {% if hr_zones and hr_zones.zones %}
     <div class="hr-zones-panel">
-        <h3>Your Heart Rate Training Zones</h3>
+        <h3>Heart Rate Training Zones</h3>
         <div class="hr-zones-bar">
             {% for zone in hr_zones.zones %}
             <div class="hr-zone-segment hr-zone-{{ zone.zone }}" style="flex: 1;">
@@ -90,6 +113,53 @@
                 <div class="hr-zone-bpm">{{ zone.min_bpm }}-{{ zone.max_bpm }}</div>
             </div>
             {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+    {# ============================================================
+       PROGRESS + PERFORMANCE (when runs exist)
+       ============================================================ #}
+    {% if progress_data and progress_data.completed_count > 0 %}
+    <div class="plan-insights" style="margin-bottom: var(--space-6);">
+        <h3>Training Progress</h3>
+        <div class="insight-grid">
+            <div class="insight-item">
+                <div class="insight-content">
+                    <strong>Runs Completed</strong>
+                    <span>{{ progress_data.completed_count }} / {{ progress_data.planned_count }}</span>
+                </div>
+            </div>
+            <div class="insight-item">
+                <div class="insight-content">
+                    <strong>Completion</strong>
+                    <span>{{ progress_data.completion_pct }}%</span>
+                </div>
+            </div>
+            <div class="insight-item">
+                <div class="insight-content">
+                    <strong>Total Logged</strong>
+                    <span>{{ progress_data.total_km_logged }} km</span>
+                </div>
+            </div>
+            <div class="insight-item">
+                <div class="insight-content">
+                    <strong>Streak</strong>
+                    <span>{{ progress_data.streak_days }} day{{ 's' if progress_data.streak_days != 1 else '' }}</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="progress-charts-grid">
+            <div class="progress-chart-card">
+                <canvas id="weeklyMileageChart"></canvas>
+            </div>
+            <div class="progress-chart-card">
+                <canvas id="paceTrendChart"></canvas>
+            </div>
+        </div>
+        <div class="progress-donut-wrap">
+            <canvas id="completionDonutChart"></canvas>
         </div>
     </div>
     {% endif %}
@@ -134,74 +204,9 @@
     </div>
     {% endif %}
 
-    {% if training_plan.adjustment_multiplier %}
-    <div class="plan-insights plan-insights-strava strava-adapted-compact" style="margin-bottom: var(--space-6);">
-        <div style="display:flex;align-items:center;gap:var(--space-3);flex-wrap:wrap;">
-            <span class="strava-adapted-badge">Adjusted &times;{{ "%.2f"|format(training_plan.adjustment_multiplier) }}</span>
-            <button onclick="resetAdjustment()" class="btn btn-ghost btn-small" id="reset-adjust-btn">Reset to original</button>
-        </div>
-    </div>
-    {% endif %}
-
-    {% if progress_data and progress_data.completed_count > 0 %}
-    <div class="plan-insights" style="margin-bottom: var(--space-6);">
-        <h3>Your Progress</h3>
-        <div class="insight-grid">
-            <div class="insight-item">
-                <div class="insight-content">
-                    <strong>Runs Completed</strong>
-                    <span>{{ progress_data.completed_count }} / {{ progress_data.planned_count }}</span>
-                </div>
-            </div>
-            <div class="insight-item">
-                <div class="insight-content">
-                    <strong>Completion</strong>
-                    <span>{{ progress_data.completion_pct }}%</span>
-                </div>
-            </div>
-            <div class="insight-item">
-                <div class="insight-content">
-                    <strong>Total Logged</strong>
-                    <span>{{ progress_data.total_km_logged }} km</span>
-                </div>
-            </div>
-            <div class="insight-item">
-                <div class="insight-content">
-                    <strong>Streak</strong>
-                    <span>{{ progress_data.streak_days }} day{{ 's' if progress_data.streak_days != 1 else '' }}</span>
-                </div>
-            </div>
-        </div>
-
-        <div class="progress-charts-grid">
-            <div class="progress-chart-card">
-                <canvas id="weeklyMileageChart"></canvas>
-            </div>
-            <div class="progress-chart-card">
-                <canvas id="paceTrendChart"></canvas>
-            </div>
-        </div>
-        <div class="progress-donut-wrap">
-            <canvas id="completionDonutChart"></canvas>
-        </div>
-    </div>
-    {% endif %}
-
-    {% if warnings %}
-    <div class="warning-container" style="margin-bottom: var(--space-6);">
-        {% for warning in warnings %}
-        <div class="warning-card">
-            <div class="warning-card-title">{{ warning.title }}</div>
-            <div class="warning-card-message">{{ warning.message }}</div>
-            {% if warning.recommendation %}
-            <div class="warning-card-rec">{{ warning.recommendation }}</div>
-            {% endif %}
-        </div>
-        {% endfor %}
-    </div>
-    {% endif %}
-    
-    <!-- Tab Navigation -->
+    {# ============================================================
+       TAB NAVIGATION
+       ============================================================ #}
     <nav class="plan-tabs" role="tablist">
         <button class="plan-tab active" role="tab" aria-selected="true" aria-controls="panel-training" id="tab-training" onclick="switchPlanTab('training')">
             <svg class="plan-tab-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
@@ -220,51 +225,11 @@
             Race Day
         </button>
         {% endif %}
-        {% if user and start_date %}
-        <button class="plan-tab" role="tab" aria-selected="false" aria-controls="panel-readiness" id="tab-readiness" onclick="switchPlanTab('readiness'); loadReadiness();">
-            <svg class="plan-tab-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
-            Race Readiness
-        </button>
-        {% endif %}
     </nav>
 
-    {% if user %}
-    {% if not start_date %}
-    <div class="plan-start-banner">
-        <p>Set a start date to track your progress against real calendar dates</p>
-        <div class="plan-start-banner-controls">
-            <input type="date" id="plan-start-date" value="{{ next_monday }}">
-            <button onclick="startPlan()" class="btn btn-primary btn-small">Start Plan</button>
-        </div>
-    </div>
-    {% else %}
-    <div class="plan-start-banner plan-start-banner-edit" id="edit-start-date-banner" style="display:none;">
-        <p>Change start date (this will shift all week/day calendar labels)</p>
-        <div class="plan-start-banner-controls">
-            <input type="date" id="plan-start-date" value="{{ start_date.isoformat() }}">
-            <button onclick="startPlan()" class="btn btn-primary btn-small">Update</button>
-            <button onclick="document.getElementById('edit-start-date-banner').style.display='none'" class="btn btn-ghost btn-small">Cancel</button>
-        </div>
-    </div>
-    {% endif %}
-    {% endif %}
-
-    {% if user and start_date %}
-    <div class="plan-action-banner recalibrate-banner {% if needs_adjustment %}recalibrate-urgent{% endif %}" id="adjust-banner">
-        <div class="banner-content">
-            <div class="banner-text">
-                <strong>Adjust Plan</strong>
-                <p>Adjust future weeks based on your recent running data.
-                {% if skipped_count and skipped_count > 0 %}{{ skipped_count }} missed{% endif %}{% if skipped_count and rescheduled_count and skipped_count > 0 and rescheduled_count > 0 %}, {% endif %}{% if rescheduled_count and rescheduled_count > 0 %}{{ rescheduled_count }} rescheduled{% endif %}{% if (skipped_count and skipped_count > 0) or (rescheduled_count and rescheduled_count > 0) %} workout{{ 's' if (skipped_count + rescheduled_count) != 1 else '' }}.{% endif %}</p>
-            </div>
-            <div class="banner-actions">
-                <button onclick="adjustPlan()" class="btn btn-primary btn-small" id="adjust-btn">Adjust Plan</button>
-            </div>
-        </div>
-    </div>
-    {% endif %}
-
-    <!-- Training Tab Panel -->
+    {# ============================================================
+       TRAINING TAB
+       ============================================================ #}
     <div class="plan-tab-panel active" id="panel-training" role="tabpanel" aria-labelledby="tab-training">
         {% set ns = namespace(total=0, done=0) %}
         {% for week in plan %}
@@ -288,6 +253,7 @@
             </div>
         </div>
         {% endif %}
+
         {% for week in plan %}
         {% set ns = namespace(completed=0, total=0) %}
         {% for workout in week.daily_workouts %}
@@ -313,8 +279,8 @@
             <div class="workout-grid">
                 {% for workout in week.daily_workouts %}
                 {% set logged_run = logged_runs.get(workout.id) %}
-                {% set is_past = start_date and workout_date_labels and current_week_number and (week.week < current_week_number or (week.week == current_week_number and workout.day <= (today_iso | length and 1))) %}
-                <div class="workout-item {{ workout.type }} {% if logged_run %}completed{% elif is_past and workout.type not in ['rest', 'recovery'] and current_week_number and week.week < current_week_number %}missed{% endif %}" data-day="{{ day_names[workout.day - 1] }}">
+                {% set is_past = start_date and workout_date_labels and current_week_number and (week.week < current_week_number) %}
+                <div class="workout-item {{ workout.type }} {% if logged_run %}completed{% elif is_past and workout.type not in ['rest', 'recovery'] %}missed{% endif %}" data-day="{{ day_names[workout.day - 1] }}">
                     <div class="workout-day-label">{% if workout_date_labels %}{{ workout_date_labels.get((week.week, workout.day), day_names[workout.day - 1]) }}{% else %}{{ day_names[workout.day - 1] }}{% endif %}</div>
                     <div class="workout-type-row">
                         <div class="workout-type">{{ workout.type }}</div>
@@ -332,6 +298,7 @@
                     <div class="workout-structure">{{ workout.structure }}</div>
                     {% endif %}
                     <div class="workout-notes">{{ workout.notes }}</div>
+
                     {% if workout.key_workout_rationale %}
                     <details class="coaching-note key-workout-rationale">
                         <summary class="coaching-note-toggle">Why this workout</summary>
@@ -394,23 +361,11 @@
                         {% if run_feedback.pace_feedback %}
                         <div class="feedback-item feedback-pace">{{ run_feedback.pace_feedback }}</div>
                         {% endif %}
-                        {% if run_feedback.hr_zone_feedback %}
-                        <div class="feedback-item feedback-hr">{{ run_feedback.hr_zone_feedback }}</div>
-                        {% endif %}
                         {% if run_feedback.effort_feedback %}
                         <div class="feedback-item feedback-effort">{{ run_feedback.effort_feedback }}</div>
                         {% endif %}
-                        {% if run_feedback.volume_feedback %}
-                        <div class="feedback-item feedback-volume">{{ run_feedback.volume_feedback }}</div>
-                        {% endif %}
-                        {% if run_feedback.pattern_feedback %}
-                        <div class="feedback-item feedback-pattern">{{ run_feedback.pattern_feedback }}</div>
-                        {% endif %}
                     </div>
                     {% endif %}
-                    <button class="undo-log-btn" onclick="unlinkRun('{{ logged_run.id }}')">Undo</button>
-                    {% elif workout.type != 'rest' and user and not user.strava_athlete_id %}
-                    <button class="log-run-btn" onclick="openLogModal('{{ workout.id }}', '{{ workout.type }}', {{ workout.distance }}, '{{ day_names[workout.day - 1] }}', {{ week.week }})">Log This Run</button>
                     {% endif %}
                 </div>
                 {% endfor %}
@@ -436,7 +391,7 @@
                     <ul class="tips-list strength-phase-list">
                         {% for ex in st.exercises %}
                         {% if ex is mapping %}
-                        <li><strong>{{ ex.name }}</strong> — {{ ex.sets }}×{{ ex.reps }}</li>
+                        <li><strong>{{ ex.name }}</strong> — {{ ex.sets }}x{{ ex.reps }}</li>
                         {% else %}
                         <li>{{ ex }}</li>
                         {% endif %}
@@ -470,13 +425,15 @@
         {% endfor %}
     </div>
 
+    {# ============================================================
+       NUTRITION TAB (full content)
+       ============================================================ #}
     {% if nutrition_plan %}
-    <!-- Nutrition Tab Panel -->
     <div class="plan-tab-panel" id="panel-nutrition" role="tabpanel" aria-labelledby="tab-nutrition">
         <div class="nutrition-section">
             <div class="section-header">
-                <h2>Personalized Nutrition Plan</h2>
-                <p>Optimized for your {{ target_distance }}km goal</p>
+                <h2>Nutrition Plan</h2>
+                <p>Optimized for a {{ distance_display }} goal</p>
             </div>
 
             <div class="nutrition-summary">
@@ -519,7 +476,7 @@
             {% if nutrition_phases and nutrition_phases|length > 0 %}
             <div class="phase-nutrition">
                 <h3>Nutrition by Training Phase</h3>
-                <p class="phase-nutrition-desc">Your macro targets adjust as training intensity changes</p>
+                <p class="phase-nutrition-desc">Macro targets adjust as training intensity changes</p>
                 <div class="phase-nutrition-grid">
                     {% for phase_name, phase in nutrition_phases.items() %}
                     <div class="phase-card">
@@ -544,12 +501,7 @@
 
             {% if nutrition_plan.meal_suggestions and nutrition_plan.meal_suggestions|length > 0 %}
             <div class="meal-suggestions">
-                <div class="meal-suggestions-header">
-                    <h3>Sample Meal Plan</h3>
-                    <button onclick="randomizeMeals()" class="randomize-meals-btn">
-                        🎲 Randomize Meals
-                    </button>
-                </div>
+                <h3>Sample Meal Plan</h3>
                 <div class="meals-grid">
                     {% for meal_type, meals in nutrition_plan.meal_suggestions.items() %}
                     <div class="meal-category">
@@ -568,21 +520,6 @@
                                 <span class="nutrient">🍗 {{ meal.protein }}g</span>
                                 <span class="nutrient">🍝 {{ meal.carbs }}g</span>
                                 <span class="nutrient">🥑 {{ meal.fat }}g</span>
-                            </div>
-                            <button class="show-recipe-btn" onclick="toggleRecipe('{{ meal.name | replace("'", "\\'") }}', this)">Show</button>
-                            <div class="recipe-details" id="recipe-{{ loop.index }}" style="display: none;">
-                                <div class="recipe-section">
-                                    <h5>Ingredients</h5>
-                                    <ul class="recipe-list">
-                                        {% for ingredient in meal.ingredients %}
-                                        <li>{{ ingredient }}</li>
-                                        {% endfor %}
-                                    </ul>
-                                </div>
-                                <div class="recipe-section">
-                                    <h5>Instructions</h5>
-                                    <p class="recipe-instructions">{{ meal.instructions }}</p>
-                                </div>
                             </div>
                         </div>
                         {% endfor %}
@@ -676,13 +613,15 @@
     </div>
     {% endif %}
 
+    {# ============================================================
+       RACE DAY TAB (full content)
+       ============================================================ #}
     {% if race_protocol %}
-    <!-- Race Day Tab Panel -->
     <div class="plan-tab-panel" id="panel-raceday" role="tabpanel" aria-labelledby="tab-raceday">
         <div class="raceday-section">
             <div class="section-header">
                 <h2>Race Day Protocol</h2>
-                <p>Your {{ race_protocol.distance_name }} game plan{% if race_protocol.predicted_finish_time %} &mdash; target {{ race_protocol.predicted_finish_time }}{% endif %}</p>
+                <p>{{ race_protocol.distance_name }} game plan{% if race_protocol.predicted_finish_time %} &mdash; target {{ race_protocol.predicted_finish_time }}{% endif %}</p>
             </div>
 
             {% if race_protocol.pacing_strategy %}
@@ -776,173 +715,35 @@
     </div>
     {% endif %}
 
-    {% if user and start_date %}
-    <!-- Race Readiness Tab Panel -->
-    <div class="plan-tab-panel" id="panel-readiness" role="tabpanel" aria-labelledby="tab-readiness">
-        <div class="readiness-section">
-            <div class="readiness-loading" id="readiness-loading">
-                <div class="readiness-spinner"></div>
-                <p>Analyzing your training data...</p>
-            </div>
-            <div id="readiness-content" style="display: none;"></div>
-            <div id="readiness-empty" style="display: none;">
-                <div class="readiness-empty-state">
-                    <p>Set a start date and log some runs to see your race readiness assessment.</p>
-                </div>
-            </div>
+    {# ============================================================
+       FOOTER CTA
+       ============================================================ #}
+    <div class="shared-footer-cta">
+        <div class="shared-footer-cta-inner">
+            <h2>Ready to start your own training journey?</h2>
+            <p>RunCoach builds personalized plans with nutrition guidance, heart rate zones, and adaptive training.</p>
+            <a href="/" class="btn btn-primary btn-lg">Create Your Free Plan</a>
         </div>
     </div>
-    {% endif %}
-
-    <div class="download-section">
-        <a href="/download-pdf/{{ plan_id }}" class="btn btn-ghost">
-            Download PDF
-        </a>
-        {% if user and training_plan.user_id == user.id %}
-        <button class="btn-share {% if training_plan.share_token %}shared{% endif %}" id="share-plan-btn" onclick="toggleSharePlan()">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
-            <span id="share-btn-label">{% if training_plan.share_token %}Shared{% else %}Share{% endif %}</span>
-        </button>
-        {% endif %}
-        <!-- Save button - shown/hidden by JavaScript based on auth state -->
-        <button onclick="savePlanToAccount()" class="btn btn-primary btn-save" id="save-plan-btn" style="display: none;">
-            Save to My Plans
-        </button>
-        <a href="/my-plans" class="btn btn-ghost" id="view-plans-link" style="display: none;">View My Plans</a>
-        <a href="/" class="btn btn-ghost">New Plan</a>
-    </div>
-    <div class="share-toast" id="share-toast"></div>
 </div>
-
-<div class="scroll-to-top" onclick="scrollToTop()" title="Scroll to top">
-    ↑
-</div>
-
-{% if user and not user.strava_athlete_id %}
-<!-- Run Logging Modal -->
-<div id="logRunModal" class="modal">
-    <div class="modal-content">
-        <div class="modal-header">
-            <h2 id="modal-title">Log Run</h2>
-            <span class="close" onclick="closeLogModal()">&times;</span>
-        </div>
-        <form id="logRunForm" onsubmit="submitRunLog(event)">
-            <div class="form-row">
-                <div class="form-group">
-                    <label for="distance_km">Distance (km) *</label>
-                    <input type="number" id="distance_km" step="0.1" min="0" required>
-                </div>
-                <div class="form-group">
-                    <label for="duration_minutes">Duration (min) *</label>
-                    <input type="number" id="duration_minutes" step="0.1" min="0" required>
-                </div>
-            </div>
-            
-            <div class="form-group">
-                <label for="workout_type">Workout Type</label>
-                <select id="workout_type">
-                    <option value="easy">Easy</option>
-                    <option value="tempo">Tempo</option>
-                    <option value="interval">Interval</option>
-                    <option value="long">Long</option>
-                    <option value="hill">Hill</option>
-                    <option value="race">Race</option>
-                </select>
-            </div>
-            
-            <div class="form-group">
-                <label for="perceived_effort">Perceived Effort (1-10)</label>
-                <input type="number" id="perceived_effort" min="1" max="10">
-                <div class="effort-scale">
-                    <span>1 (Very Easy)</span>
-                    <span>10 (Maximum)</span>
-                </div>
-            </div>
-            
-            <div class="form-row">
-                <div class="form-group">
-                    <label for="avg_heart_rate">Avg HR (bpm)</label>
-                    <input type="number" id="avg_heart_rate" min="40" max="220">
-                </div>
-                <div class="form-group">
-                    <label for="max_heart_rate">Max HR (bpm)</label>
-                    <input type="number" id="max_heart_rate" min="40" max="220">
-                </div>
-            </div>
-            
-            <div class="form-row">
-                <div class="form-group">
-                    <label for="avg_cadence">Avg Cadence (spm)</label>
-                    <input type="number" id="avg_cadence" min="100" max="220">
-                </div>
-                <div class="form-group">
-                    <label for="elevation_gain_m">Elevation (m)</label>
-                    <input type="number" id="elevation_gain_m" min="0">
-                </div>
-            </div>
-            
-            <div class="form-group">
-                <label for="notes">Notes</label>
-                <textarea id="notes" rows="3" placeholder="How did the run feel?"></textarea>
-            </div>
-            
-            <button type="submit" class="submit-btn">Log Run</button>
-        </form>
-    </div>
-</div>
-{% endif %}
-
 {% endblock %}
 
 {% block scripts %}
 <script>
-    // Bootstrap dynamic data for plan.js
-    window.APP_CTX = {
-        plan_id: '{{ plan_id }}',
-        training_plan_id: '{{ training_plan.id }}',
-        created_at: '{{ training_plan.created_at }}',
-        weeks: {{ plan | length }},
-        plan_user_id: '{{ training_plan.user_id }}',
-        share_token: '{{ training_plan.share_token or '' }}'
-    };
-
-    function showShareToast(msg) {
-        var t = document.getElementById('share-toast');
-        t.textContent = msg;
-        t.classList.add('visible');
-        setTimeout(function() { t.classList.remove('visible'); }, 2500);
-    }
-
-    async function toggleSharePlan() {
-        try {
-            var resp = await fetch('/api/plan/' + APP_CTX.plan_id + '/share', { method: 'POST' });
-            if (!resp.ok) throw new Error('Failed');
-            var data = await resp.json();
-            var btn = document.getElementById('share-plan-btn');
-            var label = document.getElementById('share-btn-label');
-            if (data.shared) {
-                APP_CTX.share_token = data.share_token;
-                btn.classList.add('shared');
-                label.textContent = 'Shared';
-                var url = window.location.origin + '/shared/' + data.share_token;
-                navigator.clipboard.writeText(url).then(function() {
-                    showShareToast('Link copied to clipboard!');
-                }).catch(function() {
-                    showShareToast('Share link: ' + url);
-                });
-            } else {
-                APP_CTX.share_token = '';
-                btn.classList.remove('shared');
-                label.textContent = 'Share';
-                showShareToast('Share link removed');
-            }
-        } catch (e) {
-            showShareToast('Error toggling share');
-        }
+    function switchPlanTab(tabName) {
+        document.querySelectorAll('.plan-tab').forEach(function(t) {
+            t.classList.remove('active');
+            t.setAttribute('aria-selected', 'false');
+        });
+        document.querySelectorAll('.plan-tab-panel').forEach(function(p) {
+            p.classList.remove('active');
+        });
+        var tab = document.getElementById('tab-' + tabName);
+        var panel = document.getElementById('panel-' + tabName);
+        if (tab) { tab.classList.add('active'); tab.setAttribute('aria-selected', 'true'); }
+        if (panel) { panel.classList.add('active'); }
     }
 </script>
-<script src="{{ static_url('js/plan.js') }}" defer></script>
-<script src="{{ static_url('js/readiness.js') }}" defer></script>
 {% if progress_data and progress_data.completed_count > 0 %}
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
 <script>

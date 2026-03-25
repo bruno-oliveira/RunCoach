@@ -3,6 +3,7 @@
 import json
 import logging
 import os
+import secrets
 from datetime import date, datetime
 from typing import Optional
 
@@ -507,6 +508,78 @@ async def set_plan_start_date(
     training_plan.start_date = datetime.combine(body.start_date, datetime.min.time())
     db.commit()
     return {"ok": True, "start_date": body.start_date.isoformat()}
+
+
+# ---------------------------------------------------------------------------
+# Share plan
+# ---------------------------------------------------------------------------
+
+
+@router.post("/api/plan/{plan_id}/share")
+async def toggle_share_plan(
+    plan_id: str,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Generate or revoke a share link for a training plan."""
+    training_plan = get_plan_or_404(
+        plan_id, db, current_user, require_user_match=True
+    )
+
+    if training_plan.share_token:
+        # Revoke: clear the token
+        training_plan.share_token = None
+        db.commit()
+        return {"shared": False, "share_token": None, "share_url": None}
+
+    # Generate a new token
+    token = secrets.token_urlsafe(16)
+    training_plan.share_token = token
+    db.commit()
+    return {"shared": True, "share_token": token}
+
+
+@router.get("/shared/{share_token}", response_class=HTMLResponse)
+async def view_shared_plan(
+    share_token: str,
+    request: Request,
+    db: Session = Depends(get_db),
+    current_user: Optional[User] = Depends(get_optional_user),
+):
+    """View a publicly shared training plan (read-only)."""
+    training_plan = (
+        db.query(TrainingPlan)
+        .filter(TrainingPlan.share_token == share_token)
+        .first()
+    )
+    if not training_plan:
+        raise HTTPException(status_code=404, detail="Shared plan not found")
+
+    plan_data = json.loads(training_plan.plan_data)
+    plan_data = PlanService.enrich_plan_data_with_ids(
+        plan_data, training_plan.id, db
+    )
+
+    nutrition_plan = PlanService.nutrition_for_template(
+        training_plan.nutrition_plan_data
+    )
+
+    # Get the plan owner for display
+    owner = db.query(User).filter(User.id == training_plan.user_id).first()
+
+    # Build view data using the plan owner so progress_data is populated
+    extra = PlanService.get_plan_view_data(training_plan, owner, db)
+
+    ctx = plan_view_context(
+        request, current_user, training_plan, plan_data, nutrition_plan, **extra
+    )
+    ctx["shared_view"] = True
+    ctx["plan_owner"] = owner
+    ctx["share_token"] = share_token
+    td = parse_target_distance(training_plan.target_distance)
+    ctx["distance_display"] = DISTANCE_NAMES.get(td, f"{td} km")
+
+    return templates.TemplateResponse("plan_shared.html", ctx)
 
 
 # ---------------------------------------------------------------------------

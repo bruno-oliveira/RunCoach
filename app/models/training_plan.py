@@ -51,3 +51,6 @@ class TrainingPlan(Base):
 
     # Race-day protocol (JSON)
     race_protocol_data = Column(Text, nullable=True)
+
+    # Shareable link token
+    share_token = Column(String, unique=True, nullable=True, index=True)

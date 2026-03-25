@@ -1,0 +1,409 @@
+/* ============================================================================
+   Shared Plan Page — Public read-only view
+   ========================================================================= */
+
+/* ---- Hero Banner ---- */
+.shared-hero {
+    position: relative;
+    border-radius: var(--radius-2xl);
+    overflow: hidden;
+    margin-bottom: var(--space-6);
+}
+
+.shared-hero-bg {
+    position: absolute;
+    inset: 0;
+    background:
+        linear-gradient(135deg, var(--color-primary) 0%, #4f46e5 50%, var(--color-accent) 100%);
+    opacity: 0.95;
+}
+
+.shared-hero-bg::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background:
+        radial-gradient(circle at 20% 80%, rgba(255,255,255,0.1) 0%, transparent 50%),
+        radial-gradient(circle at 80% 20%, rgba(255,255,255,0.08) 0%, transparent 50%);
+}
+
+.shared-hero-content {
+    position: relative;
+    z-index: 1;
+    padding: var(--space-10) var(--space-8);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-6);
+    flex-wrap: wrap;
+}
+
+.shared-hero-profile {
+    display: flex;
+    align-items: center;
+    gap: var(--space-5);
+}
+
+.shared-avatar {
+    width: 64px;
+    height: 64px;
+    border-radius: 50%;
+    border: 3px solid rgba(255,255,255,0.4);
+    object-fit: cover;
+    flex-shrink: 0;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.2);
+}
+
+.shared-avatar-placeholder {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(255,255,255,0.15);
+    color: rgba(255,255,255,0.7);
+}
+
+.shared-hero h1 {
+    font-family: var(--font-display);
+    font-size: var(--text-2xl);
+    font-weight: var(--weight-bold);
+    color: #fff;
+    letter-spacing: -0.03em;
+    margin: 0 0 var(--space-1) 0;
+    text-shadow: 0 1px 4px rgba(0,0,0,0.15);
+}
+
+.shared-hero-subtitle {
+    color: rgba(255,255,255,0.8);
+    font-size: var(--text-base);
+    margin: 0;
+}
+
+.shared-hero-badges {
+    display: flex;
+    gap: var(--space-2);
+    flex-wrap: wrap;
+}
+
+.shared-distance-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: var(--space-2) var(--space-5);
+    background: rgba(255,255,255,0.2);
+    backdrop-filter: blur(8px);
+    color: #fff;
+    font-family: var(--font-display);
+    font-size: var(--text-lg);
+    font-weight: var(--weight-bold);
+    border-radius: var(--radius-xl);
+    border: 1px solid rgba(255,255,255,0.25);
+    letter-spacing: -0.02em;
+}
+
+.shared-meta-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: var(--space-2) var(--space-4);
+    background: rgba(255,255,255,0.12);
+    backdrop-filter: blur(8px);
+    color: rgba(255,255,255,0.9);
+    font-size: var(--text-sm);
+    font-weight: var(--weight-semibold);
+    border-radius: var(--radius-xl);
+    border: 1px solid rgba(255,255,255,0.15);
+}
+
+/* ---- At-a-Glance Stats ---- */
+.shared-glance {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+    gap: var(--space-3);
+    margin-bottom: var(--space-6);
+}
+
+.shared-glance-stat {
+    text-align: center;
+    padding: var(--space-5) var(--space-3);
+    background: var(--color-bg-elevated);
+    border: 1px solid var(--color-border-subtle);
+    border-radius: var(--radius-xl);
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.shared-glance-stat:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+}
+
+.shared-glance-value {
+    font-family: var(--font-display);
+    font-size: var(--text-2xl);
+    font-weight: var(--weight-bold);
+    color: var(--color-text);
+    letter-spacing: -0.03em;
+    line-height: 1.1;
+}
+
+.shared-glance-label {
+    font-size: var(--text-xs);
+    color: var(--color-text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-top: var(--space-1);
+    font-weight: var(--weight-semibold);
+}
+
+.shared-glance-highlight {
+    background: var(--color-success-subtle);
+    border-color: var(--color-success-border);
+}
+
+.shared-glance-highlight .shared-glance-value {
+    color: var(--color-success);
+}
+
+/* ---- Mileage Progression Chart ---- */
+.shared-mileage-chart {
+    background: var(--color-bg-elevated);
+    border: 1px solid var(--color-border-subtle);
+    border-radius: var(--radius-xl);
+    padding: var(--space-6);
+    margin-bottom: var(--space-6);
+}
+
+.shared-mileage-chart h3 {
+    margin: 0 0 var(--space-4) 0;
+    font-size: var(--text-lg);
+    color: var(--color-text);
+}
+
+.shared-mileage-bars {
+    display: flex;
+    align-items: flex-end;
+    gap: 3px;
+    height: 120px;
+    padding: 0 var(--space-2);
+}
+
+.shared-mileage-bar-wrap {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    height: 100%;
+    justify-content: flex-end;
+    min-width: 0;
+}
+
+.shared-mileage-bar {
+    width: 100%;
+    max-width: 40px;
+    background: var(--color-primary);
+    opacity: 0.25;
+    border-radius: var(--radius-sm) var(--radius-sm) 0 0;
+    transition: opacity 0.2s ease;
+    position: relative;
+    overflow: hidden;
+    min-height: 2px;
+}
+
+.shared-mileage-bar:hover {
+    opacity: 0.4;
+}
+
+.shared-mileage-bar.current {
+    opacity: 0.6;
+    box-shadow: 0 0 0 2px var(--color-primary);
+}
+
+.shared-mileage-actual {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: var(--color-success);
+    opacity: 1;
+    border-radius: var(--radius-sm) var(--radius-sm) 0 0;
+}
+
+.shared-mileage-label {
+    font-size: 10px;
+    color: var(--color-text-muted);
+    margin-top: var(--space-1);
+    font-family: var(--font-mono);
+}
+
+.shared-mileage-legend {
+    display: flex;
+    gap: var(--space-4);
+    margin-top: var(--space-3);
+    justify-content: center;
+}
+
+.shared-mileage-legend-item {
+    display: flex;
+    align-items: center;
+    gap: var(--space-1);
+    font-size: var(--text-xs);
+    color: var(--color-text-muted);
+}
+
+.legend-swatch {
+    display: inline-block;
+    width: 10px;
+    height: 10px;
+    border-radius: var(--radius-sm);
+}
+
+.legend-swatch.planned {
+    background: var(--color-primary);
+    opacity: 0.3;
+}
+
+.legend-swatch.actual {
+    background: var(--color-success);
+}
+
+/* ---- Share button (on plan.html and my_plans.html) ---- */
+.btn-share {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: var(--color-bg-elevated);
+    color: var(--color-primary);
+    border: 1px solid var(--color-primary);
+    padding: var(--space-2) var(--space-4);
+    border-radius: var(--radius-lg);
+    font-size: var(--text-sm);
+    font-weight: var(--weight-semibold);
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.btn-share:hover {
+    background: var(--color-primary);
+    color: var(--color-text-on-primary);
+}
+
+.btn-share.shared {
+    background: var(--color-success-subtle);
+    border-color: var(--color-success);
+    color: var(--color-success);
+}
+
+.btn-share.shared:hover {
+    background: var(--color-success);
+    color: #fff;
+}
+
+.share-toast {
+    position: fixed;
+    bottom: var(--space-6);
+    left: 50%;
+    transform: translateX(-50%) translateY(20px);
+    background: var(--color-text);
+    color: var(--color-bg);
+    padding: var(--space-3) var(--space-6);
+    border-radius: var(--radius-xl);
+    font-size: var(--text-sm);
+    font-weight: var(--weight-semibold);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s ease, transform 0.2s ease;
+    z-index: 9999;
+}
+
+.share-toast.visible {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+}
+
+/* ---- Footer CTA ---- */
+.shared-footer-cta {
+    margin-top: var(--space-10);
+    margin-bottom: var(--space-6);
+}
+
+.shared-footer-cta-inner {
+    text-align: center;
+    padding: var(--space-12) var(--space-8);
+    background: var(--color-bg-elevated);
+    border: 1px solid var(--color-border-subtle);
+    border-radius: var(--radius-2xl);
+    position: relative;
+    overflow: hidden;
+}
+
+.shared-footer-cta-inner::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(135deg, var(--color-primary-subtle) 0%, var(--color-accent-subtle) 100%);
+    pointer-events: none;
+}
+
+.shared-footer-cta-inner h2 {
+    position: relative;
+    font-family: var(--font-display);
+    font-size: var(--text-2xl);
+    font-weight: var(--weight-bold);
+    color: var(--color-text);
+    letter-spacing: -0.03em;
+    margin: 0 0 var(--space-2) 0;
+}
+
+.shared-footer-cta-inner p {
+    position: relative;
+    color: var(--color-text-secondary);
+    font-size: var(--text-base);
+    margin: 0 0 var(--space-6) 0;
+    max-width: 480px;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+.shared-footer-cta-inner .btn-lg {
+    position: relative;
+    padding: var(--space-4) var(--space-8);
+    font-size: var(--text-base);
+}
+
+/* ---- Responsive ---- */
+@media (max-width: 640px) {
+    .shared-hero-content {
+        flex-direction: column;
+        text-align: center;
+        padding: var(--space-8) var(--space-4);
+    }
+
+    .shared-hero-profile {
+        flex-direction: column;
+    }
+
+    .shared-hero h1 {
+        font-size: var(--text-xl);
+    }
+
+    .shared-hero-badges {
+        justify-content: center;
+    }
+
+    .shared-glance {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    .shared-mileage-bars {
+        height: 80px;
+    }
+
+    .shared-mileage-label {
+        font-size: 8px;
+    }
+
+    .shared-footer-cta-inner {
+        padding: var(--space-8) var(--space-4);
+    }
+
+    .shared-footer-cta-inner h2 {
+        font-size: var(--text-xl);
+    }
+}
