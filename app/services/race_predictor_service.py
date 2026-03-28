@@ -191,6 +191,126 @@ class RacePredictorService:
         }
 
     @staticmethod
+    def get_race_history(
+        user_id: str,
+        limit: int,
+        db: Session,
+    ) -> Dict[str, Any]:
+        """Get recent runs with predicted vs actual comparison data.
+
+        For each run, compares the actual finish time against what the user's
+        prior fitness (best VDOT before that run) predicted. Uses a sliding
+        window median-of-top-N for robustness against outliers.
+
+        Returns dict with runs (newest first), total count, and avg accuracy.
+        """
+        all_runs = (
+            db.query(RunLog)
+            .filter(
+                RunLog.user_id == user_id,
+                RunLog.vdot.isnot(None),
+                RunLog.distance_km >= MIN_DISTANCE_KM,
+            )
+            .order_by(RunLog.date.asc())
+            .all()
+        )
+
+        WINDOW_WEEKS = 12
+
+        prior_vdots: list[tuple[float, float]] = []  # (date_ts, vdot)
+        enriched = []
+
+        for run in all_runs:
+            actual_seconds = int(run.duration_minutes * 60) if run.duration_minutes else None
+
+            run_ts = run.date.timestamp() if run.date else 0
+            cutoff_ts = run_ts - WINDOW_WEEKS * 7 * 86400
+            window_vdots = sorted(
+                [v for ts, v in prior_vdots if ts >= cutoff_ts],
+                reverse=True,
+            )
+            if window_vdots:
+                top_vdots = window_vdots[:TOP_N_VDOTS]
+                rolling_vdot = statistics.median(top_vdots)
+            else:
+                rolling_vdot = None
+
+            predicted_seconds = None
+            if run.predicted_time_seconds:
+                predicted_seconds = int(run.predicted_time_seconds)
+            elif rolling_vdot:
+                pred = VDOTCalculator.predict_time_for_distance(
+                    rolling_vdot, run.distance_km
+                )
+                if pred:
+                    predicted_seconds = pred
+
+            comparison = None
+            if actual_seconds and predicted_seconds:
+                delta = actual_seconds - predicted_seconds
+                accuracy_pct = round((1 - abs(delta) / predicted_seconds) * 100, 1)
+                comparison = {
+                    "predicted_seconds": predicted_seconds,
+                    "predicted_formatted": VDOTCalculator.format_duration(predicted_seconds),
+                    "actual_seconds": actual_seconds,
+                    "actual_formatted": VDOTCalculator.format_duration(actual_seconds),
+                    "delta_seconds": delta,
+                    "delta_formatted": VDOTCalculator.format_duration(abs(delta)),
+                    "faster_than_predicted": delta < 0,
+                    "accuracy_pct": accuracy_pct,
+                }
+
+            distance_name = RacePredictorService._closest_distance_name(run.distance_km)
+
+            enriched.append({
+                "id": run.id,
+                "date": run.date.isoformat() if run.date else None,
+                "distance_km": run.distance_km,
+                "distance_name": distance_name,
+                "workout_type": run.workout_type,
+                "actual_seconds": actual_seconds,
+                "actual_formatted": VDOTCalculator.format_duration(actual_seconds) if actual_seconds else None,
+                "avg_pace_min_km": round(run.avg_pace_min_km, 2) if run.avg_pace_min_km else None,
+                "vdot": run.vdot,
+                "comparison": comparison,
+                "notes": run.notes,
+            })
+
+            if run.vdot:
+                prior_vdots.append((run_ts, run.vdot))
+
+        results = list(reversed(enriched))[:limit]
+
+        with_predictions = [r for r in results if r["comparison"]]
+        avg_accuracy = None
+        if with_predictions:
+            avg_accuracy = round(
+                sum(r["comparison"]["accuracy_pct"] for r in with_predictions)
+                / len(with_predictions),
+                1,
+            )
+
+        return {
+            "runs": results,
+            "total": len(results),
+            "runs_with_predictions": len(with_predictions),
+            "avg_prediction_accuracy": avg_accuracy,
+        }
+
+    @staticmethod
+    def _closest_distance_name(distance_km: float) -> str:
+        """Find the closest standard race distance name for a given km."""
+        distance_names = {
+            5.0: "5K", 10.0: "10K", 21.1: "Half Marathon",
+            21.0975: "Half Marathon", 30.0: "Trail",
+            42.2: "Marathon", 42.195: "Marathon",
+        }
+        for dist, name in distance_names.items():
+            if abs(distance_km - dist) < 1.0:
+                return name
+        return f"{distance_km:.1f}K"
+
+    @staticmethod
     def analyze_fitness_gap(
         current_vdot: float,
         target_distance: float,

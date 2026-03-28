@@ -2,31 +2,26 @@
 
 import logging
 from datetime import datetime, timezone
-from typing import List, Optional
+from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 
-from app.core.adaptive_plan_generator import AdaptivePlanGenerator
 from app.core.quality_scorer import calculate_quality_score
 from app.core.vdot_calculator import VDOTCalculator
 from app.dependencies import get_db, get_current_user
-from app.models import RunLog, User, DailyWorkout, WeeklyPlan, TrainingPlan
+from app.models import RunLog, User, DailyWorkout
 from app.schemas import (
     RunLogCreate,
     RunLogListResponse,
     RunLogResponse,
     RunLogUpdate,
-    AdaptivePlanRequest,
-    WeeklyPlanResponse,
 )
 from app.services.race_predictor_service import RacePredictorService
 
 logger = logging.getLogger(__name__)
 
 runs_router = APIRouter(prefix="/api/runs", tags=["runs"])
-adaptive_router = APIRouter(prefix="/api/adaptive", tags=["adaptive-plans"])
-adaptive_generator = AdaptivePlanGenerator()
 
 
 def _run_to_response(run: RunLog) -> RunLogResponse:
@@ -228,139 +223,8 @@ async def get_race_history(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    """
-    Get recent runs with predicted vs actual comparison data.
-
-    For each run, compares the actual finish time against what the user's
-    prior fitness (best VDOT before that run) predicted. Works for all
-    workout types — not just race-tagged runs.
-
-    Returns runs sorted by date (newest first) with:
-    - Actual time and pace
-    - Predicted time based on prior best VDOT
-    - Delta between predicted and actual
-    - Prediction accuracy percentage
-    """
-    # Get all runs with VDOT, ordered by date ASC for a single-pass
-    # rolling best-VDOT calculation
-    all_runs = (
-        db.query(RunLog)
-        .filter(
-            RunLog.user_id == current_user.id,
-            RunLog.vdot.isnot(None),
-            RunLog.distance_km >= 2.0,
-        )
-        .order_by(RunLog.date.asc())
-        .all()
-    )
-
-    # Single pass: track a sliding window of recent VDOTs and use the
-    # median of the top 3 as the "current fitness" estimate.  This is
-    # robust to GPS glitches and auto-pause artifacts that inflate one
-    # run's VDOT far above reality.
-    import statistics
-    from collections import deque
-    from datetime import timedelta
-
-    WINDOW_WEEKS = 12
-    TOP_N = 3
-
-    prior_vdots: list[tuple[float, float]] = []  # (date_ts, vdot)
-    enriched = []
-    for run in all_runs:
-        actual_seconds = int(run.duration_minutes * 60) if run.duration_minutes else None
-
-        # Determine the best VDOT estimate from runs BEFORE this one,
-        # within the sliding window, using median-of-top-N.
-        run_ts = run.date.timestamp() if run.date else 0
-        cutoff_ts = run_ts - WINDOW_WEEKS * 7 * 86400
-        window_vdots = sorted(
-            [v for ts, v in prior_vdots if ts >= cutoff_ts],
-            reverse=True,
-        )
-        if window_vdots:
-            top_vdots = window_vdots[:TOP_N]
-            rolling_vdot = statistics.median(top_vdots)
-        else:
-            rolling_vdot = None
-
-        # Use stored prediction if available, otherwise compute retroactively
-        predicted_seconds = None
-        if run.predicted_time_seconds:
-            predicted_seconds = int(run.predicted_time_seconds)
-        elif rolling_vdot:
-            pred = VDOTCalculator.predict_time_for_distance(
-                rolling_vdot, run.distance_km
-            )
-            if pred:
-                predicted_seconds = pred
-
-        comparison = None
-        if actual_seconds and predicted_seconds:
-            delta = actual_seconds - predicted_seconds
-            accuracy_pct = round((1 - abs(delta) / predicted_seconds) * 100, 1)
-            comparison = {
-                "predicted_seconds": predicted_seconds,
-                "predicted_formatted": VDOTCalculator.format_duration(predicted_seconds),
-                "actual_seconds": actual_seconds,
-                "actual_formatted": VDOTCalculator.format_duration(actual_seconds),
-                "delta_seconds": delta,
-                "delta_formatted": VDOTCalculator.format_duration(abs(delta)),
-                "faster_than_predicted": delta < 0,
-                "accuracy_pct": accuracy_pct,
-            }
-
-        # Find closest standard distance name
-        distance_names = {
-            5.0: "5K", 10.0: "10K", 21.1: "Half Marathon",
-            21.0975: "Half Marathon", 30.0: "Trail",
-            42.2: "Marathon", 42.195: "Marathon",
-        }
-        closest_name = None
-        for dist, name in distance_names.items():
-            if abs(run.distance_km - dist) < 1.0:
-                closest_name = name
-                break
-        if not closest_name:
-            closest_name = f"{run.distance_km:.1f}K"
-
-        enriched.append({
-            "id": run.id,
-            "date": run.date.isoformat() if run.date else None,
-            "distance_km": run.distance_km,
-            "distance_name": closest_name,
-            "workout_type": run.workout_type,
-            "actual_seconds": actual_seconds,
-            "actual_formatted": VDOTCalculator.format_duration(actual_seconds) if actual_seconds else None,
-            "avg_pace_min_km": round(run.avg_pace_min_km, 2) if run.avg_pace_min_km else None,
-            "vdot": run.vdot,
-            "comparison": comparison,
-            "notes": run.notes,
-        })
-
-        # Add this run's VDOT to the history *after* processing it
-        if run.vdot:
-            prior_vdots.append((run_ts, run.vdot))
-
-    # Return newest first, limited
-    results = list(reversed(enriched))[:limit]
-
-    # Calculate overall prediction accuracy
-    with_predictions = [r for r in results if r["comparison"]]
-    avg_accuracy = None
-    if with_predictions:
-        avg_accuracy = round(
-            sum(r["comparison"]["accuracy_pct"] for r in with_predictions)
-            / len(with_predictions),
-            1,
-        )
-
-    return {
-        "runs": results,
-        "total": len(results),
-        "runs_with_predictions": len(with_predictions),
-        "avg_prediction_accuracy": avg_accuracy,
-    }
+    """Get recent runs with predicted vs actual comparison data."""
+    return RacePredictorService.get_race_history(current_user.id, limit, db)
 
 
 @runs_router.get("/predictions")
@@ -581,124 +445,6 @@ async def get_run_feedback(
         "created_at": feedback.created_at,
     }
 
-
-@adaptive_router.get("/metrics")
-async def get_fitness_metrics(
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
-):
-    """
-    Get user's current fitness metrics based on run logs.
-
-    Returns:
-        - Average weekly distance
-        - Current pace
-        - Average heart rate
-        - Improvement trend
-        - Fitness score (0-100)
-        - Preferred workout types
-    """
-    metrics = adaptive_generator.calculate_current_fitness_metrics(current_user.id, db)
-    return metrics
-
-
-@adaptive_router.get("/suggestions")
-async def get_training_suggestions(
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
-):
-    """
-    Get personalized training suggestions based on recent performance.
-
-    Returns prioritized recommendations for:
-    - Volume adjustments
-    - Speed work
-    - Recovery
-    - Consistency
-    - Balance
-    """
-    suggestions = adaptive_generator.get_training_suggestions(current_user.id, db)
-    return {"suggestions": suggestions}
-
-
-@adaptive_router.get("/performance-gaps")
-async def get_performance_gaps(
-    target_distance: float,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
-):
-    """
-    Analyze gaps between current performance and race requirements.
-
-    Provides:
-        - Mileage gap
-        - Target race pace
-        - Key weaknesses
-        - Specific recommendations
-    """
-    gaps = adaptive_generator.analyze_performance_gaps(
-        current_user.id, target_distance, db
-    )
-    return gaps
-
-
-@adaptive_router.post("/generate-plan", response_model=List[WeeklyPlanResponse])
-async def generate_adaptive_plan(
-    request: AdaptivePlanRequest,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
-):
-    """
-    Generate an adaptive training plan based on user's performance data.
-
-    The plan is personalized based on:
-        - Current weekly mileage from run logs
-        - Average pace and improvement trend
-        - Fitness score
-        - Preferred workout types
-        - Heart rate data
-    """
-    try:
-        plan = adaptive_generator.generate_adaptive_plan(
-            user_id=current_user.id,
-            target_distance=request.target_distance,
-            weeks=request.weeks,
-            max_runs_per_week=request.max_runs_per_week,
-            db=db,
-        )
-
-        logger.info(
-            f"Adaptive plan generated for user {current_user.id}: "
-            f"{request.weeks} weeks for {request.target_distance}km"
-        )
-
-        # Convert to response format
-        return [
-            WeeklyPlanResponse(
-                week=week["week"],
-                total_km=week["total_km"],
-                workout_distribution=week["workout_distribution"],
-                daily_workouts=[
-                    {
-                        "day": workout["day"],
-                        "type": workout["type"],
-                        "distance": workout["distance"],
-                        "intensity": workout["intensity"],
-                        "notes": workout["notes"],
-                    }
-                    for workout in week["daily_workouts"]
-                ],
-                strength_training=week["strength_training"],
-                training_tips=week["training_tips"],
-            )
-            for week in plan
-        ]
-    except Exception as e:
-        logger.error(f"Error generating adaptive plan: {e}")
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to generate adaptive plan",
-        )
 
 
 

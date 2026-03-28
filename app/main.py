@@ -124,7 +124,8 @@ def _run_migrations(eng) -> None:
         # Predicted time snapshot when a race is logged
         "ALTER TABLE run_logs ADD COLUMN predicted_time_seconds FLOAT",
         # Shareable link token
-        "ALTER TABLE training_plans ADD COLUMN share_token VARCHAR UNIQUE",
+        "ALTER TABLE training_plans ADD COLUMN share_token VARCHAR",
+        "CREATE UNIQUE INDEX IF NOT EXISTS idx_training_plan_share_token ON training_plans(share_token)",
     ]
     with eng.connect() as conn:
         for stmt in stmts:
