@@ -329,9 +329,9 @@ class TrainingPlanGenerator:
             rest_days = 0
             quality_workouts = 2
         else:
+            quality_workouts = max(1, running_days - 1)
             easy_runs = max(0, running_days - quality_workouts)
-            rest_days = max_runs - long_runs - quality_workouts - easy_runs
-            quality_workouts = max(1, running_days - easy_runs)
+            rest_days = max(0, max_runs - long_runs - quality_workouts - easy_runs)
 
         return {
             'easy': easy_runs,
@@ -436,6 +436,8 @@ class TrainingPlanGenerator:
                                                       vdot=vdot, pace_zones=pace_zones)
             elif workout_type == 'hill':
                 workout = self._generate_hill_workout(day_number, easy_distance)
+            else:
+                raise ValueError(f"Unknown workout_type: {workout_type}")
 
             # Overlay key workout description for quality sessions in build/peak
             if workout_type in ('interval', 'tempo', 'hill') and phase in ('build', 'peak'):

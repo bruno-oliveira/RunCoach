@@ -143,9 +143,9 @@ def _backfill_vdot(eng) -> None:
     """Backfill VDOT for all runs that have sufficient distance but no VDOT yet."""
     from app.core.vdot_calculator import VDOTCalculator
     from app.models.run_log import RunLog
-    from sqlalchemy.orm import Session as _Session
+    from app.dependencies import SessionLocal
 
-    session = _Session(bind=eng)
+    session = SessionLocal()
     try:
         runs = (
             session.query(RunLog)

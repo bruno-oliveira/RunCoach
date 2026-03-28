@@ -171,7 +171,8 @@ class PerformanceService:
         # Calculate weekly mileage
         weeks_data = {}
         for run in runs:
-            week_key = run.date.isocalendar()[1]  # ISO week number
+            iso = run.date.isocalendar()
+            week_key = (iso[0], iso[1])  # (year, week) to avoid cross-year collisions
             if week_key not in weeks_data:
                 weeks_data[week_key] = 0
             weeks_data[week_key] += run.distance_km
@@ -336,7 +337,7 @@ class PerformanceService:
 
         self.db.bulk_insert_mappings(WeeklyPlan, weekly_plan_records)
         self.db.bulk_insert_mappings(DailyWorkout, daily_workout_records)
-        self.db.commit()
+        self.db.flush()
 
     def get_plan(self, plan_id: str) -> Optional[TrainingPlan]:
         """Get a performance training plan by ID."""

@@ -1,5 +1,6 @@
 """Adaptive training plan generator based on user performance data."""
 
+import copy
 import logging
 import random
 from datetime import datetime, timedelta, timezone
@@ -214,7 +215,7 @@ class AdaptivePlanGenerator:
         est_max_hr = self._estimate_max_hr(user_id, db, metrics)
 
         for week in base_plan:
-            adjusted_week = week.copy()
+            adjusted_week = copy.deepcopy(week)
 
             # ── Volume adjustment (capped at ±15% of base plan) ───────────
             if metrics["avg_weekly_km"] > 0:
@@ -249,22 +250,24 @@ class AdaptivePlanGenerator:
                         )
 
             # ── HR-relative tips (using % of max HR, not absolute values) ─
+            # ── HR-relative tips (using % of max HR, not absolute values) ─
+            tips = adjusted_week.setdefault("training_tips", [])
             if metrics["avg_heart_rate"] and est_max_hr:
                 hr_pct = metrics["avg_heart_rate"] / est_max_hr
                 if hr_pct > 0.82:
-                    adjusted_week["training_tips"].append(
+                    tips.append(
                         f"Your avg HR ({metrics['avg_heart_rate']} bpm, ~{hr_pct:.0%} of est. max) "
                         "suggests most runs are too hard. Aim for easy runs below 75% of max HR."
                     )
                 elif hr_pct < 0.68:
-                    adjusted_week["training_tips"].append(
+                    tips.append(
                         f"Your avg HR ({metrics['avg_heart_rate']} bpm, ~{hr_pct:.0%} of est. max) "
                         "shows a strong aerobic base. You can handle more quality sessions."
                     )
 
             # ── Improvement trend tip ─────────────────────────────────────
             if metrics["improvement_trend"] > 0:
-                adjusted_week["training_tips"].append(
+                tips.append(
                     f"You're improving {metrics['improvement_trend']:.1f}% — keep up the great work!"
                 )
 

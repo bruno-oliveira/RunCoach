@@ -629,11 +629,12 @@ def _apply_ai_suggestions(
             if preference == "more_rest":
                 for workout in week.get("daily_workouts", []):
                     if workout["type"] == "easy":
+                        removed_distance = workout.get("distance", 0)
                         workout["type"] = "rest"
                         workout["distance"] = 0
                         workout["notes"] = "Additional rest day for recovery"
                         week["total_km"] = round(
-                            week["total_km"] - workout.get("distance", 0), 1
+                            week["total_km"] - removed_distance, 1
                         )
                         break
 
@@ -650,9 +651,10 @@ def _apply_ai_suggestions(
             elif preference == "more_endurance":
                 for workout in week.get("daily_workouts", []):
                     if workout["type"] == "long":
-                        workout["distance"] = round(workout["distance"] * 1.2, 1)
+                        old_distance = workout["distance"]
+                        workout["distance"] = round(old_distance * 1.2, 1)
                         week["total_km"] = round(
-                            week["total_km"] + (workout["distance"] * 0.2), 1
+                            week["total_km"] + (workout["distance"] - old_distance), 1
                         )
                         workout["notes"] = (
                             f'Extended long run: {workout["distance"]}km at '

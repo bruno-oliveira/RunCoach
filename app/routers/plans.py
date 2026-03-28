@@ -218,6 +218,7 @@ async def customize_plan(
     current_user: Optional[User] = Depends(get_optional_user),
 ) -> HTMLResponse:
     """Handle plan customization with simple interface."""
+    training_plan = None
     try:
         training_plan = get_plan_or_404(
             plan_id, db, current_user, anonymous_user_id
@@ -251,11 +252,11 @@ async def customize_plan(
                 "request": request,
                 "user": current_user,
                 "google_client_id": settings.google_client_id,
-                "plan": json.loads(training_plan.plan_data) if "training_plan" in dir() else [],
+                "plan": json.loads(training_plan.plan_data) if training_plan and training_plan.plan_data else [],
                 "plan_id": plan_id,
                 "nutrition_plan": (
                     PlanService.nutrition_for_template(training_plan.nutrition_plan_data)
-                    if "training_plan" in dir() and training_plan.nutrition_plan_data
+                    if training_plan and training_plan.nutrition_plan_data
                     else {}
                 ),
                 "progress_data": None,
