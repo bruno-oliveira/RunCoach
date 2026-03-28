@@ -124,7 +124,10 @@ async def _resolve_user(
     # Inactivity timeout check
     if user.last_activity:
         timeout_delta = timedelta(minutes=settings.session_timeout_minutes)
-        if (datetime.now(timezone.utc).replace(tzinfo=None) - user.last_activity) > timeout_delta:
+        last_activity = user.last_activity
+        if last_activity.tzinfo is not None:
+            last_activity = last_activity.replace(tzinfo=None)
+        if (datetime.now(timezone.utc).replace(tzinfo=None) - last_activity) > timeout_delta:
             return None
 
     auth_service.update_user_activity(db, user)

@@ -7,6 +7,7 @@ Build and Peak phases to make training plans feel coached, not generated.
 from typing import Dict, List, Optional
 
 from app.core.hr_zone_calculator import WORKOUT_ZONE_MAP
+from app.core.vdot_calculator import VDOTCalculator
 
 
 # ---------------------------------------------------------------------------
@@ -510,8 +511,6 @@ class KeyWorkoutLibrary:
         """
         if not vdot_zones:
             return workout
-
-        from app.core.vdot_calculator import VDOTCalculator
 
         enriched = dict(workout)
         enriched["description"] = VDOTCalculator.inject_paces_into_description(

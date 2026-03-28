@@ -2,6 +2,8 @@ import math
 import random
 from typing import List, Dict, Any, Optional
 
+from app.core.coaching_notes_generator import generate_coaching_note
+from app.core.key_workout_library import KeyWorkoutLibrary
 from app.core.strength_plan import (
     derive_experience_level,
     generate_strength_session as _build_strength_session,
@@ -430,10 +432,10 @@ class TrainingPlanGenerator:
                 workout = self._generate_easy_run(day_number, easy_distance, total_km, pace_zones=pace_zones)
             elif workout_type == 'tempo':
                 workout = self._generate_tempo_run(day_number, easy_distance, total_km,
-                                                   vdot=vdot, pace_zones=pace_zones)
+                                                   pace_zones=pace_zones)
             elif workout_type == 'interval':
                 workout = self._generate_interval_run(day_number, easy_distance, total_km,
-                                                      vdot=vdot, pace_zones=pace_zones)
+                                                      pace_zones=pace_zones)
             elif workout_type == 'hill':
                 workout = self._generate_hill_workout(day_number, easy_distance)
             else:
@@ -441,7 +443,6 @@ class TrainingPlanGenerator:
 
             # Overlay key workout description for quality sessions in build/peak
             if workout_type in ('interval', 'tempo', 'hill') and phase in ('build', 'peak'):
-                from app.core.key_workout_library import KeyWorkoutLibrary
                 key_wk = KeyWorkoutLibrary.get_for_phase(
                     target_distance, phase, week_in_phase, workout_type
                 )
@@ -465,7 +466,6 @@ class TrainingPlanGenerator:
                     strength_session_counter += 1
 
             # Add coaching rationale
-            from app.core.coaching_notes_generator import generate_coaching_note
             workout['coaching_rationale'] = generate_coaching_note(
                 workout_type, phase, week_number, target_distance, is_recovery_week
             )
@@ -708,7 +708,6 @@ class TrainingPlanGenerator:
         }
     
     def _generate_tempo_run(self, day: int, distance: float, total_km: float,
-                            vdot: Optional[float] = None,
                             pace_zones: Optional[Dict] = None) -> Dict[str, Any]:
         """Generate tempo run workout, with specific paces if VDOT is available."""
         if pace_zones:
@@ -740,7 +739,6 @@ class TrainingPlanGenerator:
         }
     
     def _generate_interval_run(self, day: int, distance: float, total_km: float,
-                               vdot: Optional[float] = None,
                                pace_zones: Optional[Dict] = None) -> Dict[str, Any]:
         """Generate interval run workout.
 

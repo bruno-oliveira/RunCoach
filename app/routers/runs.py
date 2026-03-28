@@ -5,6 +5,7 @@ from datetime import datetime, timezone
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
+from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
 from app.core.quality_scorer import calculate_quality_score
@@ -159,7 +160,7 @@ async def create_run_log(
                 "faster_than_predicted": delta < 0,
             }
         return response_data
-    except Exception as e:
+    except SQLAlchemyError as e:
         logger.error(f"Error creating run log: {e}")
         db.rollback()
         raise HTTPException(

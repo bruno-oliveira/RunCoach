@@ -33,7 +33,8 @@ RunLog.feedback = relationship("RunFeedback", uselist=False, back_populates="run
 RunFeedback.run_log = relationship("RunLog", back_populates="feedback")
 RunFeedback.user = relationship("User")
 
-User.favorite_recipes = relationship("FavoriteRecipe")
+User.favorite_recipes = relationship("FavoriteRecipe", back_populates="user")
+FavoriteRecipe.user = relationship("User", back_populates="favorite_recipes")
 
 User.triathlon_plans = relationship("TriathlonPlan", back_populates="user")
 TriathlonPlan.user = relationship("User", back_populates="triathlon_plans")

@@ -209,72 +209,6 @@ class NutritionEngine:
 
         return result
 
-    def _select_optimal_meal(self, meal_type: str, nutrition_needs: Dict[str, float], current_totals: Dict[str, float], force_random: bool = False) -> Optional[Dict[str, Any]]:
-        """Select the optimal meal based on nutritional needs and current totals"""
-        
-        available_meals = self.meal_db.get_meals_by_type(meal_type)
-        if not available_meals:
-            return None
-        
-        # Score meals based on how well they fit remaining nutritional needs
-        scored_meals = []
-        remaining_needs = {
-            "calories": nutrition_needs["calories"] - current_totals["calories"],
-            "protein": nutrition_needs["protein"] - current_totals["protein"],
-            "fiber": nutrition_needs["fiber"] - current_totals["fiber"]
-        }
-        
-        for meal in available_meals:
-            score = 0
-            
-            # Protein scoring (most important)
-            if remaining_needs["protein"] > 0:
-                protein_ratio = min(meal["protein"] / remaining_needs["protein"], 1.0)
-                score += protein_ratio * 3
-            
-            # Fiber scoring
-            if remaining_needs["fiber"] > 0:
-                fiber_ratio = min(meal["fiber"] / remaining_needs["fiber"], 1.0)
-                score += fiber_ratio * 2
-            
-            # Calorie scoring
-            if remaining_needs["calories"] > 0:
-                calorie_ratio = min(meal["calories"] / remaining_needs["calories"], 1.0)
-                score += calorie_ratio * 1
-            
-            # Bonus for high protein meals
-            if meal["protein"] >= 25:
-                score += 1
-            
-            # Bonus for high fiber meals
-            if meal["fiber"] >= 10:
-                score += 1
-            
-            # Add randomness factor for variety
-            if force_random:
-                score += random.uniform(-2, 2)  # Add random variation
-            
-            scored_meals.append((score, meal))
-        
-        # Select meal with more randomness when forced
-        if scored_meals:
-            scored_meals.sort(key=lambda x: x[0], reverse=True)
-            
-            if force_random:
-                # Select from top 5 meals with more randomness
-                top_meals = scored_meals[:min(5, len(scored_meals))]
-                # Weight towards top but allow lower-ranked meals
-                weights = [3, 2.5, 2, 1.5, 1][:len(top_meals)]
-                selected = random.choices(top_meals, weights=weights)[0][1]
-            else:
-                # Select from top 3 meals for normal variety
-                top_meals = scored_meals[:min(3, len(scored_meals))]
-                selected = random.choice(top_meals)[1]
-            
-            return selected
-        
-        return None
-    
     def _select_varied_meal(self, meal_type: str, nutrition_needs: Dict[str, float], used_meals: set) -> Optional[Dict[str, Any]]:
         """Select a meal with emphasis on variety from already used meals"""
 
@@ -307,9 +241,8 @@ class NutritionEngine:
             else:
                 score -= 20  # Stronger penalty for already used meals
 
-            # MUCH more randomness to ensure different meals each time
-            # Random bonus now dominates the selection (0-50 range)
-            score += random.uniform(0, 50)
+            # Add randomness for variety without dominating nutritional scores
+            score += random.uniform(0, 15)
 
             scored_meals.append((score, meal))
 

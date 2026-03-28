@@ -19,6 +19,7 @@ from app.dependencies import (
 from app.models import User
 from app.schemas import PerformancePlanRequest, DISTANCE_NAMES
 from app.services.performance_service import PerformanceService
+from app.services.plan_service import PlanService
 from app.exceptions import RunCoachException, InadequateBaseException
 from app.core.performance_plan_generator import PerformancePlanGenerator
 from app.models import TrainingPlan
@@ -61,16 +62,29 @@ def _parse_time_to_pace(time_str: str, distance_km: float) -> float:
     return pace
 
 
-def _format_time(total_minutes: float) -> str:
-    """Format decimal minutes to HH:MM:SS or MM:SS."""
-    hours = int(total_minutes // 60)
-    minutes = int(total_minutes % 60)
-    seconds = int((total_minutes % 1) * 60)
-
-    if hours > 0:
-        return f"{hours}:{minutes:02d}:{seconds:02d}"
-    else:
-        return f"{minutes}:{seconds:02d}"
+def _perf_error_response(
+    request: Request,
+    user: User,
+    error: str,
+    error_type: str = "general",
+    *,
+    fitness_data=None,
+    hr_data=None,
+    suggestion: Optional[str] = None,
+):
+    """Build a performance_training.html error TemplateResponse."""
+    ctx: Dict[str, Any] = {
+        "request": request,
+        "user": user,
+        "fitness_data": fitness_data,
+        "hr_data": hr_data,
+        "distance_names": DISTANCE_NAMES,
+        "error": error,
+        "error_type": error_type,
+    }
+    if suggestion:
+        ctx["suggestion"] = suggestion
+    return templates.TemplateResponse("performance_training.html", ctx)
 
 
 @router.get("/performance-training", response_class=HTMLResponse)
@@ -170,30 +184,20 @@ async def generate_performance_plan(
     auto_calculate_bool = auto_calculate == "true" if auto_calculate else False
 
     # Check 3-plan limit
-    plan_count = db.query(TrainingPlan).filter(
-        TrainingPlan.user_id == current_user.id
-    ).count()
-    if plan_count >= 3:
+    if PlanService.has_reached_plan_limit(current_user.id, db):
         fitness_data = None
-        hr_data = None
         try:
-            service = PerformanceService(db)
-            fitness_data = service.calculate_fitness_from_runs(
+            fitness_data = PerformanceService(db).calculate_fitness_from_runs(
                 user_id=current_user.id, target_distance=target_distance
             )
         except Exception:
             pass
-        return templates.TemplateResponse(
-            "performance_training.html",
-            {
-                "request": request,
-                "user": current_user,
-                "fitness_data": fitness_data,
-                "hr_data": hr_data,
-                "distance_names": DISTANCE_NAMES,
-                "error": "You've reached the maximum of 3 training plans. Please delete an existing plan before creating a new one.",
-                "error_type": "plan_limit",
-            },
+        return _perf_error_response(
+            request, current_user,
+            "You've reached the maximum of 3 training plans. "
+            "Please delete an existing plan before creating a new one.",
+            "plan_limit",
+            fitness_data=fitness_data,
         )
 
     try:
@@ -242,85 +246,53 @@ async def generate_performance_plan(
 
     except RunCoachException as e:
         logger.warning(f"Validation error: {e.user_message}")
-        # Get fitness and HR data for the form
         fitness_data = None
         hr_data = None
         try:
             service = PerformanceService(db)
             fitness_data = service.calculate_fitness_from_runs(
-                user_id=current_user.id,
-                target_distance=target_distance
+                user_id=current_user.id, target_distance=target_distance
             )
             hr_data = service.calculate_max_heart_rate(
-                user_id=current_user.id,
-                goal_pace=goal_pace
+                user_id=current_user.id, goal_pace=goal_pace
             )
         except Exception:
             pass
 
-        # Determine error type for better styling
         error_type = "validation"
         if isinstance(e, InadequateBaseException):
             error_type = "inadequate_base"
         elif "unrealistic" in e.user_message.lower():
             error_type = "unrealistic_goal"
 
-        return templates.TemplateResponse(
-            "performance_training.html",
-            {
-                "request": request,
-                "user": current_user,
-                "fitness_data": fitness_data,
-                "hr_data": hr_data,
-                "distance_names": DISTANCE_NAMES,
-                "error": e.user_message,
-                "error_type": error_type,
-                "suggestion": e.suggestion if hasattr(e, 'suggestion') else None,
-            },
+        return _perf_error_response(
+            request, current_user, e.user_message, error_type,
+            fitness_data=fitness_data, hr_data=hr_data,
+            suggestion=e.suggestion if hasattr(e, 'suggestion') else None,
         )
     except ValueError as e:
         logger.warning(f"Validation error: {str(e)}")
-        # Get fitness and HR data for the form
         fitness_data = None
         hr_data = None
         try:
             service = PerformanceService(db)
             fitness_data = service.calculate_fitness_from_runs(
-                user_id=current_user.id,
-                target_distance=target_distance
+                user_id=current_user.id, target_distance=target_distance
             )
             hr_data = service.calculate_max_heart_rate(
-                user_id=current_user.id,
-                goal_pace=goal_pace
+                user_id=current_user.id, goal_pace=goal_pace
             )
         except Exception:
             pass
-
-        return templates.TemplateResponse(
-            "performance_training.html",
-            {
-                "request": request,
-                "user": current_user,
-                "fitness_data": fitness_data,
-                "hr_data": hr_data,
-                "distance_names": DISTANCE_NAMES,
-                "error": str(e),
-                "error_type": "validation",
-            },
+        return _perf_error_response(
+            request, current_user, str(e), "validation",
+            fitness_data=fitness_data, hr_data=hr_data,
         )
     except Exception as e:
         logger.error(f"Error generating performance plan: {e}", exc_info=True)
-        return templates.TemplateResponse(
-            "performance_training.html",
-            {
-                "request": request,
-                "user": current_user,
-                "fitness_data": None,
-                "hr_data": None,
-                "distance_names": DISTANCE_NAMES,
-                "error": "An unexpected error occurred while generating your plan. Please try again.",
-                "error_type": "general",
-            },
+        return _perf_error_response(
+            request, current_user,
+            "An unexpected error occurred while generating your plan. Please try again.",
         )
 
 

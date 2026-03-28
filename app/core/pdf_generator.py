@@ -4,6 +4,7 @@ import base64
 import hashlib
 import json
 import logging
+import shutil
 from typing import List, Dict, Any
 from datetime import datetime
 from pathlib import Path
@@ -195,7 +196,6 @@ class PDFGenerator:
         doc.build(story)
 
         # Move to cache
-        import shutil
         shutil.move(pdf_path, cache_path)
         shutil.rmtree(temp_dir, ignore_errors=True)
 
@@ -617,73 +617,72 @@ class PDFGenerator:
 
             story.append(Spacer(1, 0.4 * cm))
 
+    def _add_bullet_list(self, story: List, items: List[str], spacing: float = 0.3):
+        """Append a bulleted list to the PDF story."""
+        for item in items:
+            story.append(Paragraph(f"• {item}", self.small_style))
+        story.append(Spacer(1, spacing * cm))
+
     def _add_nutrition_guidance(self, story: List):
-        """Add comprehensive nutrition guidance section"""
+        """Add comprehensive nutrition guidance section."""
         story.append(Paragraph("🥗 Complete Nutrition Guide for Runners", self.section_style))
-        
-        # Pre-Run Fuel section
+        self._add_pre_run_fuel(story)
+        self._add_post_run_recovery(story)
+        self._add_daily_meal_plans(story)
+        self._add_hydration_strategy(story)
+        self._add_race_week_nutrition(story)
+
+    def _add_pre_run_fuel(self, story: List):
         story.append(Paragraph("⚡ Pre-Run Fuel (30-90 minutes before)", self.normal_style))
-        pre_run_meals = [
+        self._add_bullet_list(story, [
             "Quick Energy: Banana + 1 tbsp peanut butter",
             "Sustained Energy: Oatmeal with berries + honey",
             "Light Option: Toast with avocado + sea salt",
             "Hydration Focus: Smoothie with spinach, banana, almond milk",
-            "Race Day: Plain bagel with jam (low fiber)"
-        ]
-        for meal in pre_run_meals:
-            story.append(Paragraph(f"• {meal}", self.small_style))
-        story.append(Spacer(1, 0.3*cm))
-        
-        # Post-Run Recovery section
+            "Race Day: Plain bagel with jam (low fiber)",
+        ])
+
+    def _add_post_run_recovery(self, story: List):
         story.append(Paragraph("🔄 Post-Run Recovery (within 30 minutes)", self.normal_style))
-        post_run_options = [
+        self._add_bullet_list(story, [
             "Protein + Carbs: Chocolate milk (8oz)",
             "Muscle Repair: Greek yogurt + granola + berries",
             "Hydration + Energy: Coconut water + banana",
             "Complete Recovery: Protein smoothie (1 scoop protein, banana, spinach)",
-            "Quick Option: Recovery bar with 3:1 carb:protein ratio"
-        ]
-        for option in post_run_options:
-            story.append(Paragraph(f"• {option}", self.small_style))
-        story.append(Spacer(1, 0.3*cm))
-        
-        # Daily Meal Plans
+            "Quick Option: Recovery bar with 3:1 carb:protein ratio",
+        ])
+
+    def _add_daily_meal_plans(self, story: List):
         story.append(Paragraph("🍽️ Comprehensive Daily Meal Plans", self.normal_style))
-        
+
         meal_plan_data = [
             ['Meal', 'Training Day Options', 'Rest Day Options'],
-            ['Breakfast', 
+            ['Breakfast',
              'Oatmeal with nuts, berries, honey\nWhole grain toast + eggs + avocado\nSmoothie with spinach, banana, protein powder\nGreek yogurt + granola + berries\nBreakfast burrito with black beans, eggs',
              'Greek yogurt parfait\nSmoothie bowl with granola\nOvernight oats with chia seeds\nWhole grain pancakes with fruit\nAvocado toast with poached eggs'],
-            ['Lunch', 
+            ['Lunch',
              'Quinoa bowl with roasted vegetables + chicken\nLarge salad with salmon + sweet potato\nTurkey wrap with hummus + vegetables\nLentil soup + whole grain bread\nBuddha bowl with tahini dressing',
              'Vegetable soup + whole grain bread\nLentil salad with feta cheese\nCaprese salad with whole grain pasta\nChickpea salad sandwich\nQuinoa tabbouleh with grilled vegetables'],
-            ['Afternoon Snack', 
+            ['Afternoon Snack',
              'Apple + almond butter\nTrail mix + dried fruit\nProtein smoothie with banana\nRice cakes with hummus\nEnergy balls with dates + nuts',
              'Hummus + vegetable sticks\nCottage cheese + peaches\nGreek yogurt with honey\nMixed berries + nuts\nDark chocolate + almonds'],
-            ['Pre-Run Fuel', 
+            ['Pre-Run Fuel',
              'Banana + peanut butter\nToast with jam + honey\nEnergy gel + water\nDates + almond butter\nOatmeal bar + sports drink',
              'Light fruit + water\nHerbal tea + honey\nElectrolyte drink\nCoconut water\nRice cakes with banana'],
-            ['Post-Run Recovery', 
+            ['Post-Run Recovery',
              'Chocolate milk + banana\nProtein shake with berries\nGreek yogurt + granola\nRecovery smoothie with spinach\nCottage cheese + pineapple',
              'Green smoothie + protein\nGreek yogurt + nuts\nOvernight oats + protein powder\nQuinoa bowl + fruit\nEggs + whole grain toast'],
-            ['Dinner', 
+            ['Dinner',
              'Grilled salmon + brown rice + broccoli\nLean beef + roasted vegetables + quinoa\nChicken stir-fry with brown rice\nTurkey meatballs + whole wheat pasta\nFish tacos with slaw + beans',
              'Vegetable stir-fry + tofu\nPasta primavera with olive oil\nBlack bean burgers + sweet potato\nLentil shepherd\'s pie\nRoasted vegetable + chickpea curry']
         ]
-        
-        # Convert to Paragraph objects for proper wrapping
+
         paragraph_data = []
         for row in meal_plan_data:
-            paragraph_row = []
-            for cell in row:
-                paragraph_row.append(Paragraph(cell, self.table_cell_style))
-            paragraph_data.append(paragraph_row)
-        
-        # Convert headers
+            paragraph_data.append([Paragraph(cell, self.table_cell_style) for cell in row])
         for i in range(len(paragraph_data[0])):
             paragraph_data[0][i] = Paragraph(meal_plan_data[0][i], self.table_header_style)
-        
+
         meal_table = Table(paragraph_data, colWidths=[2.5*cm, 5*cm, 5*cm])
         meal_table.setStyle(TableStyle([
             ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#9c27b0')),
@@ -700,42 +699,33 @@ class PDFGenerator:
             ('TOPPADDING', (0, 0), (-1, -1), 8),
             ('BOTTOMPADDING', (0, 0), (-1, -1), 8)
         ]))
-        
         story.append(meal_table)
         story.append(Spacer(1, 0.5*cm))
-        
-        # Hydration Strategy
+
+    def _add_hydration_strategy(self, story: List):
         story.append(Paragraph("💧 Hydration Strategy", self.normal_style))
-        hydration_tips = [
+        self._add_bullet_list(story, [
             "Daily Base: 2.5-3L water + electrolytes",
             "Pre-Run: 500ml 2 hours before, 250ml 30 minutes before",
             "During Run: 150-200ml every 15-20 minutes (over 60 minutes)",
             "Post-Run: 500-750ml per kg of body weight lost",
             "Electrolyte Sources: Coconut water, sports drinks, salt tabs",
-            "Urine Color Test: Pale yellow = well hydrated"
-        ]
-        for tip in hydration_tips:
-            story.append(Paragraph(f"• {tip}", self.small_style))
-        story.append(Spacer(1, 0.5*cm))
-        
-        # Race Week Nutrition
+            "Urine Color Test: Pale yellow = well hydrated",
+        ], spacing=0.5)
+
+    def _add_race_week_nutrition(self, story: List):
         story.append(Paragraph("🏁 Race Week Nutrition Strategy", self.normal_style))
-        race_week_tips = [
+        self._add_bullet_list(story, [
             "7 Days Before: Increase carbs to 70% of calories",
             "3 Days Before: Carb-load with pasta, rice, potatoes",
             "2 Days Before: Reduce fiber, avoid spicy foods",
             "Day Before: Simple carbs, hydrate well, early dinner",
             "Race Morning: Familiar breakfast, 2-3 hours before start",
-            "During Race: Energy gels every 45 minutes + water"
-        ]
-        for tip in race_week_tips:
-            story.append(Paragraph(f"• {tip}", self.small_style))
-        story.append(Spacer(1, 1*cm))
+            "During Race: Energy gels every 45 minutes + water",
+        ], spacing=1.0)
     
     def _add_personalized_nutrition_plan(self, story: List, training_plan: TrainingPlan):
         """Add personalized nutrition plan with meals"""
-        import json
-        
         try:
             nutrition_plan = json.loads(training_plan.nutrition_plan_data)
         except (json.JSONDecodeError, AttributeError):

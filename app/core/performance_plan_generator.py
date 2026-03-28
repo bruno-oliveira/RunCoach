@@ -9,6 +9,7 @@ import math
 from typing import List, Dict, Any, Optional
 from datetime import datetime, timedelta
 
+from app.core.vdot_calculator import VDOTCalculator
 from app.utils import format_pace as _shared_format_pace
 
 
@@ -718,13 +719,13 @@ class PerformancePlanGenerator:
         for i, day in enumerate(quality_days[:quality_workouts_needed]):
             workout_type = quality_types[(week_number - 1 + i) % len(quality_types)]
             if workout_type == 'tempo':
-                generator = lambda wt=workout_type: self._generate_tempo_workout(zones, target_distance, week_number, phase)
+                generator = lambda: self._generate_tempo_workout(zones, target_distance, week_number, phase)
             elif workout_type == 'vo2max':
-                generator = lambda wt=workout_type: self._generate_vo2max_workout(zones, target_distance, week_number, phase)
+                generator = lambda: self._generate_vo2max_workout(zones, target_distance, week_number, phase)
             elif workout_type == 'race_pace':
-                generator = lambda wt=workout_type: self._generate_race_pace_workout(zones, target_distance, week_number, phase)
+                generator = lambda: self._generate_race_pace_workout(zones, target_distance, week_number, phase)
             else:  # fartlek
-                generator = lambda wt=workout_type: self._generate_fartlek_workout(zones, target_distance, week_number, phase)
+                generator = lambda: self._generate_fartlek_workout(zones, target_distance, week_number, phase)
 
             workout_schedule.append({'day': day, 'workout_generator': generator})
 
@@ -806,7 +807,6 @@ class PerformancePlanGenerator:
         phases = self._calculate_phases(weeks)
 
         # Compute VDOT-grounded zones when current_pace is available
-        from app.core.vdot_calculator import VDOTCalculator
         vdot_zones = None
         if current_pace:
             implied_seconds = int(current_pace * target_distance * 60)

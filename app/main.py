@@ -4,6 +4,8 @@ FastAPI application entry point.
 """
 
 import logging
+import uuid
+from contextlib import asynccontextmanager
 from typing import Optional
 
 from fastapi import Depends, FastAPI, Request
@@ -45,12 +47,42 @@ class CachedStaticFiles(StaticFiles):
 setup_logging(settings)
 logger = logging.getLogger(__name__)
 
+
+@asynccontextmanager
+async def lifespan(application: FastAPI):
+    """Application startup and shutdown lifecycle."""
+    # Startup
+    logger.info(f"Starting {settings.app_name} v{settings.app_version}")
+    logger.info(f"Debug mode: {settings.debug}")
+
+    if settings.is_google_client_id_configured:
+        logger.info("Google Client ID is properly configured")
+    else:
+        logger.warning("Google Client ID is not properly configured - Google Sign-In will not work")
+
+    # Validate secret key in production
+    if not settings.debug:
+        weak_patterns = ["dev-secret", "your-secret", "change-in-production", "placeholder"]
+        key = settings.secret_key
+        if len(key) < 32 or any(p in key.lower() for p in weak_patterns):
+            raise RuntimeError(
+                "SECRET_KEY is too weak for production. "
+                "Set a random key of at least 32 characters."
+            )
+
+    yield
+
+    # Shutdown
+    logger.info(f"Shutting down {settings.app_name}")
+
+
 # Create FastAPI application
 app = FastAPI(
     title=settings.app_name,
     description="Personalized Running Plan Generator with Nutrition Guidance",
     version=settings.app_version,
     debug=settings.debug,
+    lifespan=lifespan,
 )
 
 
@@ -61,7 +93,6 @@ async def set_anonymous_user_id_cookie(request: Request, call_next):
     generated_new_id = False
     
     if not anonymous_user_id:
-        import uuid
         anonymous_user_id = str(uuid.uuid4())
         generated_new_id = True
     
@@ -90,6 +121,7 @@ Base.metadata.create_all(bind=engine)
 # Lightweight column migrations for existing databases
 # ALTER TABLE ADD COLUMN is a no-op if the column already exists (handled by try/except)
 from sqlalchemy import text as _sa_text
+from sqlalchemy.exc import OperationalError as _SAOperationalError
 
 
 def _run_migrations(eng) -> None:
@@ -132,8 +164,8 @@ def _run_migrations(eng) -> None:
             try:
                 conn.execute(_sa_text(stmt))
                 conn.commit()
-            except Exception:
-                pass  # Column already exists
+            except _SAOperationalError:
+                pass  # Column/index already exists
 
 
 _run_migrations(engine)
@@ -256,34 +288,6 @@ async def home(
         "user": current_user,
         "google_client_id": settings.google_client_id or ""
     })
-
-
-@app.on_event("startup")
-async def startup_event() -> None:
-    """Application startup tasks."""
-    logger.info(f"Starting {settings.app_name} v{settings.app_version}")
-    logger.info(f"Debug mode: {settings.debug}")
-
-    if settings.is_google_client_id_configured:
-        logger.info("Google Client ID is properly configured")
-    else:
-        logger.warning("Google Client ID is not properly configured - Google Sign-In will not work")
-
-    # Validate secret key in production
-    if not settings.debug:
-        weak_patterns = ["dev-secret", "your-secret", "change-in-production", "placeholder"]
-        key = settings.secret_key
-        if len(key) < 32 or any(p in key.lower() for p in weak_patterns):
-            raise RuntimeError(
-                "SECRET_KEY is too weak for production. "
-                "Set a random key of at least 32 characters."
-            )
-
-
-@app.on_event("shutdown")
-async def shutdown_event() -> None:
-    """Application shutdown tasks."""
-    logger.info(f"Shutting down {settings.app_name}")
 
 
 if __name__ == "__main__":

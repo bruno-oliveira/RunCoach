@@ -15,6 +15,7 @@ from sqlalchemy.orm import Session
 from app.core.vdot_calculator import VDOTCalculator
 from app.models import DailyWorkout, RunLog, TrainingPlan, WeeklyPlan
 from app.services.race_predictor_service import RacePredictorService
+from app.utils import to_date as _to_date
 
 logger = logging.getLogger(__name__)
 
@@ -28,15 +29,6 @@ DISTANCE_LABELS = {
     42.2: "Marathon",
     42.195: "Marathon",
 }
-
-
-def _to_date(value) -> Optional[date]:
-    """Coerce datetime/date to a plain date."""
-    if value is None:
-        return None
-    if isinstance(value, datetime):
-        return value.date()
-    return value
 
 
 class ReadinessService:

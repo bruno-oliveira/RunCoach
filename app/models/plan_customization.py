@@ -9,7 +9,7 @@ class PlanCustomization(Base):
     __tablename__ = "plan_customizations"
     
     id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
-    training_plan_id = Column(String, ForeignKey("training_plans.id"))
+    training_plan_id = Column(String, ForeignKey("training_plans.id"), index=True)
     week_number = Column(Integer)
     adjustment_type = Column(String)
     adjustment_value = Column(String)

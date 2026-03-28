@@ -16,8 +16,7 @@ logger = logging.getLogger(__name__)
 
 
 class AuthService:
-    _cert_cache: Optional[dict] = None
-    _cert_cache_time: Optional[datetime] = None
+    _cert_cache_entry: Optional[tuple[dict, datetime]] = None  # (certs, fetched_at)
     _cert_cache_ttl = timedelta(hours=1)
 
     def __init__(self):
@@ -46,18 +45,17 @@ class AuthService:
         """Get Google's public keys with 1-hour cache."""
         now = datetime.now(timezone.utc).replace(tzinfo=None)
 
-        if (self._cert_cache and self._cert_cache_time and
-            now - self._cert_cache_time < self._cert_cache_ttl):
+        entry = self._cert_cache_entry  # single atomic read
+        if entry is not None and (now - entry[1]) < self._cert_cache_ttl:
             logger.info("Using cached Google OAuth certificates")
-            return self._cert_cache
+            return entry[0]
 
         logger.info("Fetching Google OAuth certificates")
         async with httpx.AsyncClient() as client:
             response = await client.get(self.google_cert_url)
             response.raise_for_status()
             certs = response.json()
-            AuthService._cert_cache = certs
-            AuthService._cert_cache_time = now
+            AuthService._cert_cache_entry = (certs, now)  # single atomic write
             logger.info(f"Retrieved {len(certs.get('keys', []))} public keys from Google")
             return certs
 
@@ -130,6 +128,13 @@ class AuthService:
         return db.query(User).filter(User.id == user_id).first()
 
     def update_user_activity(self, db: Session, user: User) -> None:
-        """Update user's last activity timestamp."""
-        user.last_activity = datetime.now(timezone.utc).replace(tzinfo=None)
+        """Update user's last activity timestamp (throttled to once per 5 minutes)."""
+        now = datetime.now(timezone.utc).replace(tzinfo=None)
+        if user.last_activity:
+            last = user.last_activity
+            if last.tzinfo is not None:
+                last = last.replace(tzinfo=None)
+            if (now - last) < timedelta(minutes=5):
+                return
+        user.last_activity = now
         db.commit()

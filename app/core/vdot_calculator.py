@@ -55,12 +55,8 @@ def _pace_from_velocity(v: float) -> float:
 
 def _format_pace(pace_min_km: float) -> str:
     """Format decimal min/km as MM:SS/km string."""
-    minutes = int(pace_min_km)
-    seconds = round((pace_min_km - minutes) * 60)
-    if seconds == 60:
-        minutes += 1
-        seconds = 0
-    return f"{minutes}:{seconds:02d}/km"
+    from app.utils import format_pace
+    return format_pace(pace_min_km)
 
 
 class VDOTCalculator:
@@ -173,19 +169,8 @@ class VDOTCalculator:
         Returns:
             Total seconds, or None if unparseable
         """
-        if not time_str:
-            return None
-        parts = time_str.strip().split(":")
-        try:
-            if len(parts) == 3:
-                h, m, s = int(parts[0]), int(parts[1]), int(parts[2])
-                return h * 3600 + m * 60 + s
-            elif len(parts) == 2:
-                m, s = int(parts[0]), int(parts[1])
-                return m * 60 + s
-        except (ValueError, IndexError):
-            return None
-        return None
+        from app.utils import parse_race_time_to_seconds
+        return parse_race_time_to_seconds(time_str)
 
     @staticmethod
     def inject_paces_into_description(description: str, zones: Dict, workout_type: str) -> str:

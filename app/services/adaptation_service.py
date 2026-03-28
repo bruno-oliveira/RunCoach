@@ -5,26 +5,18 @@ import logging
 import re
 from collections import defaultdict
 from datetime import datetime, timedelta, timezone
-from typing import Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
 from sqlalchemy import and_, func, or_
 from sqlalchemy.orm import Session
 
 from app.models import DailyWorkout, RunLog, TrainingPlan, WeeklyPlan, User
+from app.utils import to_date as _to_date
 
 logger = logging.getLogger(__name__)
 
 # Regex to strip legacy adaptation/recalibration notes from workout notes
 _ANNOTATION_RE = re.compile(r"\s*\((Adapted|Recalibrated|Adjusted):[^)]*\)")
-
-
-def _to_date(value) -> Optional[datetime]:
-    """Coerce a date or datetime to a plain date object."""
-    if value is None:
-        return None
-    if hasattr(value, "date") and callable(value.date):
-        return value.date()
-    return value
 
 
 class AdaptationService:
@@ -120,7 +112,7 @@ class AdaptationService:
         self,
         training_plan_id: str,
         db: Session
-    ) -> Dict[str, any]:
+    ) -> Dict[str, Any]:
         """Analyze user's performance on a training plan.
 
         Returns metrics about adherence, effort levels, and pace.
@@ -157,7 +149,7 @@ class AdaptationService:
             .count()
         )
 
-        adherence_rate = (total_logged / planned_workouts * 100) if planned_workouts > 0 else 0
+        adherence_rate = min(100.0, total_logged / planned_workouts * 100) if planned_workouts > 0 else 0
 
         # Effort analysis
         efforts = [r.perceived_effort for r in runs if r.perceived_effort is not None]
@@ -203,7 +195,7 @@ class AdaptationService:
         else:
             return "stable"
 
-    def _calculate_pace_consistency(self, paces: List[float]) -> float:
+    def _calculate_pace_consistency(self, paces: List[float]) -> Optional[float]:
         """Calculate coefficient of variation for pace."""
         if len(paces) < 2:
             return None
@@ -374,7 +366,7 @@ class AdaptationService:
         db: Session,
         *,
         dry_run: bool = False,
-    ) -> Dict[str, any]:
+    ) -> Dict[str, Any]:
         """Match unlinked RunLog entries to plan DailyWorkouts by week.
 
         Assigns every run between the plan start_date and today to its
@@ -618,7 +610,7 @@ class AdaptationService:
         plan_id: str,
         user_id: str,
         db: Session,
-    ) -> Dict[str, any]:
+    ) -> Dict[str, Any]:
         """Adjust future plan weeks using full-history weighted signals.
 
         Uses exponential decay (half-life = 3 weeks) so all past workouts
@@ -714,39 +706,112 @@ class AdaptationService:
                 "reason": "No past workouts to evaluate yet.",
             }
 
-        # ----------------------------------------------------------
-        # Signal 1 -- Volume adherence (weight 50%)
-        # Weighted by recency: recent planned/actual km count more
-        # ----------------------------------------------------------
+        # Compute signals and combined multiplier
+        signals = self._compute_adjustment_signals(
+            all_plan_runs, past_workouts, past_workout_ids,
+            today, plan_id, db, _recency_weight,
+        )
+        multiplier = signals["multiplier"]
+
+        # Apply to future weeks
+        future_weeks = (
+            db.query(WeeklyPlan)
+            .filter(
+                WeeklyPlan.training_plan_id == plan_id,
+                WeeklyPlan.week_number > current_week,
+            )
+            .all()
+        )
+
+        if not future_weeks:
+            return {
+                "adjusted": False,
+                **{k: signals[k] for k in (
+                    "multiplier", "volume_ratio", "avg_effort", "completion_rate",
+                )},
+                "total_runs": len(all_plan_runs),
+                "weeks_changed": 0,
+                "reason": "No future weeks remaining to adjust.",
+            }
+
+        weeks_changed, any_distance_changed = self._apply_adjustment_to_future_weeks(
+            training_plan, future_weeks, multiplier, db,
+        )
+
+        # Persist
+        training_plan.adjustment_multiplier = multiplier
+        db.commit()
+
+        # Build human-readable reason
+        volume_ratio = signals["volume_ratio"]
+        completion_rate = signals["completion_rate"]
+        avg_effort = signals["avg_effort"]
+        direction = "increased" if multiplier > 1.0 else "reduced" if multiplier < 1.0 else "kept"
+        reason_parts = [f"Future weeks {direction} (x{multiplier})."]
+        reason_parts.append(
+            f"Volume ratio: {round(volume_ratio, 2)}, "
+            f"completion: {round(completion_rate * 100)}%."
+        )
+        if avg_effort is not None:
+            reason_parts.append(f"Avg effort: {round(avg_effort, 1)}/10.")
+
+        logger.info(
+            "adjust_plan result: multiplier=%.2f raw=%.3f "
+            "volume_ratio=%.2f effort_factor=%.2f(avg=%.1f) "
+            "completion_factor=%.2f(rate=%.2f) runs=%d",
+            multiplier,
+            signals["raw_multiplier"],
+            volume_ratio,
+            signals["effort_factor"],
+            avg_effort if avg_effort is not None else 0,
+            signals["completion_factor"],
+            completion_rate,
+            len(all_plan_runs),
+        )
+
+        return {
+            "adjusted": any_distance_changed,
+            **signals,
+            "total_runs": len(all_plan_runs),
+            "weeks_changed": weeks_changed,
+            "reason": " ".join(reason_parts),
+        }
+
+    def _compute_adjustment_signals(
+        self,
+        all_plan_runs: List,
+        past_workouts: List[Tuple],
+        past_workout_ids: set,
+        today,
+        plan_id: str,
+        db: Session,
+        recency_weight_fn,
+    ) -> Dict[str, Any]:
+        """Compute volume, effort, and completion signals for plan adjustment."""
+        # Volume adherence (weight 50%)
         planned_weighted = 0.0
         for workout, sched_date in past_workouts:
-            w = _recency_weight(sched_date)
+            w = recency_weight_fn(sched_date)
             dist = workout.baseline_distance_km or workout.distance_km or 0
             planned_weighted += dist * w
 
         actual_weighted = 0.0
         for run in all_plan_runs:
             run_date = _to_date(run.date) if run.date else today
-            w = _recency_weight(run_date)
+            w = recency_weight_fn(run_date)
             actual_weighted += (run.distance_km or 0) * w
 
-        if planned_weighted > 0:
-            volume_ratio = actual_weighted / planned_weighted
-        else:
-            volume_ratio = 1.0
-        # Clamp to [0.5, 1.5]
-        volume_ratio = max(0.5, min(1.5, volume_ratio))
+        volume_ratio = max(0.5, min(1.5,
+            actual_weighted / planned_weighted if planned_weighted > 0 else 1.0
+        ))
 
-        # ----------------------------------------------------------
-        # Signal 2 -- Effort signal (weight 30%)
-        # Weighted average of perceived effort
-        # ----------------------------------------------------------
+        # Effort signal (weight 30%)
         effort_sum = 0.0
         effort_weight_sum = 0.0
         for run in all_plan_runs:
             if run.perceived_effort is not None:
                 run_date = _to_date(run.date) if run.date else today
-                w = _recency_weight(run_date)
+                w = recency_weight_fn(run_date)
                 effort_sum += run.perceived_effort * w
                 effort_weight_sum += w
 
@@ -766,11 +831,7 @@ class AdaptationService:
             effort_factor = 1.0
             avg_effort = None
 
-        # ----------------------------------------------------------
-        # Signal 3 -- Completion rate (weight 20%)
-        # Weighted: each scheduled workout contributes its recency
-        # weight to the denominator; completed ones also to numerator
-        # ----------------------------------------------------------
+        # Completion rate (weight 20%)
         completed_ids = set()
         if past_workout_ids:
             completed_rows = (
@@ -786,15 +847,14 @@ class AdaptationService:
         scheduled_weighted = 0.0
         completed_weighted = 0.0
         for workout, sched_date in past_workouts:
-            w = _recency_weight(sched_date)
+            w = recency_weight_fn(sched_date)
             scheduled_weighted += w
             if workout.id in completed_ids:
                 completed_weighted += w
 
         completion_rate = (
             completed_weighted / scheduled_weighted
-            if scheduled_weighted > 0
-            else 0.0
+            if scheduled_weighted > 0 else 0.0
         )
 
         if completion_rate >= 0.9:
@@ -806,41 +866,32 @@ class AdaptationService:
         else:
             completion_factor = 0.90
 
-        # ----------------------------------------------------------
         # Combine signals
-        # ----------------------------------------------------------
         raw_multiplier = (
             (volume_ratio * 0.50)
             + (effort_factor * 0.30)
             + (completion_factor * 0.20)
         )
-        # Floor at 0.85 — never cut more than 15% from baseline
         multiplier = round(max(0.85, min(1.15, raw_multiplier)), 2)
 
-        # ----------------------------------------------------------
-        # Apply to future weeks
-        # ----------------------------------------------------------
-        future_weeks = (
-            db.query(WeeklyPlan)
-            .filter(
-                WeeklyPlan.training_plan_id == plan_id,
-                WeeklyPlan.week_number > current_week,
-            )
-            .all()
-        )
+        return {
+            "multiplier": multiplier,
+            "volume_ratio": round(volume_ratio, 2),
+            "effort_factor": round(effort_factor, 2),
+            "avg_effort": round(avg_effort, 1) if avg_effort is not None else None,
+            "completion_rate": round(completion_rate, 2),
+            "completion_factor": round(completion_factor, 2),
+            "raw_multiplier": round(raw_multiplier, 3),
+        }
 
-        if not future_weeks:
-            return {
-                "adjusted": False,
-                "multiplier": multiplier,
-                "volume_ratio": round(volume_ratio, 2),
-                "avg_effort": round(avg_effort, 1) if avg_effort is not None else None,
-                "completion_rate": round(completion_rate, 2),
-                "total_runs": len(all_plan_runs),
-                "weeks_changed": 0,
-                "reason": "No future weeks remaining to adjust.",
-            }
-
+    def _apply_adjustment_to_future_weeks(
+        self,
+        training_plan: TrainingPlan,
+        future_weeks: List,
+        multiplier: float,
+        db: Session,
+    ) -> Tuple[int, bool]:
+        """Apply the adjustment multiplier to future weeks. Returns (weeks_changed, any_distance_changed)."""
         plan_data, pd_week, pd_workout = self._parse_plan_data_lookups(training_plan)
 
         workouts_by_week = self._batch_workouts_by_week(
@@ -864,9 +915,7 @@ class AdaptationService:
 
                 base_distance = workout.baseline_distance_km or workout.distance_km
 
-                # Protect long runs: they are the most important race-
-                # preparation workouts. When reducing, keep them at
-                # baseline so the runner can still hit their goal.
+                # Protect long runs: keep at baseline when reducing
                 if workout.workout_type == "long" and multiplier < 1.0:
                     new_distance = round(base_distance, 1)
                 else:
@@ -880,8 +929,6 @@ class AdaptationService:
                 any_distance_changed = True
                 week_changed = True
 
-                # Long runs kept at baseline should not carry an
-                # adjustment annotation — strip any old one.
                 is_protected = (
                     workout.workout_type == "long" and multiplier < 1.0
                 )
@@ -924,55 +971,15 @@ class AdaptationService:
                 if week.week_number in pd_week:
                     pd_week[week.week_number]["total_km"] = new_total
 
-        # Persist
-        training_plan.adjustment_multiplier = multiplier
         training_plan.plan_data = json.dumps(plan_data)
-        db.commit()
-
-        # Build human-readable reason
-        direction = "increased" if multiplier > 1.0 else "reduced" if multiplier < 1.0 else "kept"
-        reason_parts = [f"Future weeks {direction} (x{multiplier})."]
-        reason_parts.append(
-            f"Volume ratio: {round(volume_ratio, 2)}, "
-            f"completion: {round(completion_rate * 100)}%."
-        )
-        if avg_effort is not None:
-            reason_parts.append(f"Avg effort: {round(avg_effort, 1)}/10.")
-
-        logger.info(
-            "adjust_plan result: multiplier=%.2f raw=%.3f "
-            "volume_ratio=%.2f effort_factor=%.2f(avg=%.1f) "
-            "completion_factor=%.2f(rate=%.2f) runs=%d",
-            multiplier,
-            raw_multiplier,
-            volume_ratio,
-            effort_factor,
-            avg_effort if avg_effort is not None else 0,
-            completion_factor,
-            completion_rate,
-            len(all_plan_runs),
-        )
-
-        return {
-            "adjusted": any_distance_changed,
-            "multiplier": multiplier,
-            "volume_ratio": round(volume_ratio, 2),
-            "effort_factor": round(effort_factor, 2),
-            "avg_effort": round(avg_effort, 1) if avg_effort is not None else None,
-            "completion_rate": round(completion_rate, 2),
-            "completion_factor": round(completion_factor, 2),
-            "raw_multiplier": round(raw_multiplier, 3),
-            "total_runs": len(all_plan_runs),
-            "weeks_changed": weeks_changed,
-            "reason": " ".join(reason_parts),
-        }
+        return weeks_changed, any_distance_changed
 
     def reset_adjustment(
         self,
         plan_id: str,
         user_id: str,
         db: Session,
-    ) -> Dict[str, any]:
+    ) -> Dict[str, Any]:
         """Reset plan to original baseline distances, removing any adjustment.
 
         Restores every workout's distance_km from baseline_distance_km,

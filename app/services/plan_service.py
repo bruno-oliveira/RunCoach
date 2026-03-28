@@ -30,6 +30,18 @@ logger = logging.getLogger(__name__)
 class PlanService:
     """Encapsulates plan lifecycle operations."""
 
+    MAX_PLANS_PER_USER = 3
+
+    # ------------------------------------------------------------------
+    # Plan limit
+    # ------------------------------------------------------------------
+
+    @staticmethod
+    def has_reached_plan_limit(user_id: str, db: Session) -> bool:
+        """Return True if the user has reached the maximum number of plans."""
+        count = db.query(TrainingPlan).filter(TrainingPlan.user_id == user_id).count()
+        return count >= PlanService.MAX_PLANS_PER_USER
+
     # ------------------------------------------------------------------
     # User resolution
     # ------------------------------------------------------------------
@@ -452,6 +464,75 @@ class PlanService:
     # ------------------------------------------------------------------
 
     @staticmethod
+    def get_logged_runs_map(
+        training_plan_id: str, db: Session,
+    ) -> tuple[dict, list]:
+        """Return (workout_id → RunLog map, all logged runs) for a plan."""
+        logged_runs = (
+            db.query(RunLog)
+            .filter(RunLog.training_plan_id == training_plan_id)
+            .order_by(RunLog.date.desc())
+            .all()
+        )
+        runs_map = {
+            run.daily_workout_id: run for run in logged_runs if run.daily_workout_id
+        }
+        return runs_map, logged_runs
+
+    @staticmethod
+    def get_adjustment_hints(
+        training_plan: TrainingPlan,
+        performance_analysis: dict,
+        db: Session,
+    ) -> dict[str, Any]:
+        """Compute skipped/rescheduled counts and whether adjustment is needed."""
+        from app.services.adaptation_service import AdaptationService
+
+        skipped_count = 0
+        rescheduled_count = 0
+        needs_adjustment = False
+        avg_effort = performance_analysis.get("avg_effort")
+
+        if training_plan.start_date:
+            try:
+                skip_result = AdaptationService().detect_skipped_workouts(
+                    training_plan.id, db
+                )
+                skipped_count = skip_result["skipped"]
+                rescheduled_count = skip_result["rescheduled"]
+                needs_adjustment = (
+                    skipped_count >= 2
+                    or (avg_effort is not None and (avg_effort >= 8 or avg_effort <= 3))
+                )
+            except Exception as e:
+                logger.warning(f"Could not detect skipped workouts: {e}")
+
+        return {
+            "skipped_count": skipped_count,
+            "rescheduled_count": rescheduled_count,
+            "needs_adjustment": needs_adjustment,
+        }
+
+    @staticmethod
+    def get_feedback_map(logged_runs: list, db: Session) -> dict[str, Any]:
+        """Load coaching feedback keyed by run_log_id."""
+        from app.models.run_feedback import RunFeedback
+
+        if not logged_runs:
+            return {}
+        try:
+            run_ids = [r.id for r in logged_runs]
+            feedbacks = (
+                db.query(RunFeedback)
+                .filter(RunFeedback.run_log_id.in_(run_ids))
+                .all()
+            )
+            return {fb.run_log_id: fb for fb in feedbacks}
+        except Exception as e:
+            logger.warning(f"Could not load feedback: {e}")
+            return {}
+
+    @staticmethod
     def get_plan_view_data(
         training_plan: TrainingPlan,
         current_user: Optional[User],
@@ -470,71 +551,31 @@ class PlanService:
             training_plan.id, db
         )
 
-        logged_runs = (
-            db.query(RunLog)
-            .filter(RunLog.training_plan_id == training_plan.id)
-            .order_by(RunLog.date.desc())
-            .all()
+        logged_runs_map, logged_runs = PlanService.get_logged_runs_map(
+            training_plan.id, db
         )
-        logged_runs_map = {
-            run.daily_workout_id: run for run in logged_runs if run.daily_workout_id
-        }
 
         progress_data = None
         if current_user and logged_runs:
-            perf_service = PerformanceService(db)
             try:
-                progress_data = perf_service.get_plan_progress(training_plan)
+                progress_data = PerformanceService(db).get_plan_progress(training_plan)
             except Exception as e:
                 logger.warning(f"Could not compute progress data: {e}")
 
-        # Compute adjustment hints for the UI
-        skipped_count = 0
-        rescheduled_count = 0
-        needs_adjustment = False
-        avg_effort = performance_analysis.get("avg_effort")
-        if current_user and training_plan.start_date:
-            try:
-                skip_result = adaptation_service.detect_skipped_workouts(
-                    training_plan.id, db
-                )
-                skipped_count = skip_result["skipped"]
-                rescheduled_count = skip_result["rescheduled"]
-                # Trigger adjustment on skipped workouts OR extreme effort
-                needs_adjustment = (
-                    skipped_count >= 2
-                    or (avg_effort is not None and (avg_effort >= 8 or avg_effort <= 3))
-                )
-            except Exception as e:
-                logger.warning(f"Could not detect skipped workouts: {e}")
-
-        # HR zones for template rendering
-        hr_zones_info = HRZoneService.get_zones_for_plan(training_plan)
-
-        # Coaching feedback for logged runs
-        feedback_map: dict[str, Any] = {}
-        try:
-            from app.models.run_feedback import RunFeedback
-            if logged_runs:
-                run_ids = [r.id for r in logged_runs]
-                feedbacks = (
-                    db.query(RunFeedback)
-                    .filter(RunFeedback.run_log_id.in_(run_ids))
-                    .all()
-                )
-                feedback_map = {fb.run_log_id: fb for fb in feedbacks}
-        except Exception as e:
-            logger.warning(f"Could not load feedback: {e}")
+        # Adjustment hints
+        hints = {"skipped_count": 0, "rescheduled_count": 0, "needs_adjustment": False}
+        if current_user:
+            hints = PlanService.get_adjustment_hints(
+                training_plan, performance_analysis, db
+            )
 
         return {
             "performance_analysis": performance_analysis,
             "logged_runs": logged_runs_map,
             "progress_data": progress_data,
-            "skipped_count": skipped_count,
-            "rescheduled_count": rescheduled_count,
-            "needs_adjustment": needs_adjustment,
-            "hr_zones": hr_zones_info,
-            "feedback_map": feedback_map,
+            **hints,
+            "hr_zones": HRZoneService.get_zones_for_plan(training_plan),
+            "feedback_map": PlanService.get_feedback_map(logged_runs, db),
         }
 
 

@@ -480,7 +480,7 @@ class PerformancePlanRequest(BaseModel):
                 current_formatted = format_pace_bare(self.current_pace)
                 goal_formatted = format_pace_bare(self.goal_pace)
                 raise ValueError(
-                    f"Goal pace ({goal_formatted}/km) represents >{15}% improvement from current "
+                    f"Goal pace ({goal_formatted}/km) represents >15% improvement from current "
                     f"({current_formatted}/km). This is unrealistic for a single training cycle. "
                     "Consider a more conservative goal or extend your training timeline."
                 )

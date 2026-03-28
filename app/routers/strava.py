@@ -30,7 +30,8 @@ def _auto_map_and_adjust(
 
     Returns a list of per-plan result dicts suitable for the sync response.
     """
-    from app.services.adaptation_service import AdaptationService, _to_date
+    from app.services.adaptation_service import AdaptationService
+    from app.utils import to_date as _to_date
 
     adaptation_service = AdaptationService()
     today = datetime.now(timezone.utc).date()

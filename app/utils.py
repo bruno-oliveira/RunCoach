@@ -1,6 +1,7 @@
 """Shared utility functions for the RunCoach application."""
 
-from datetime import datetime, timedelta, timezone
+from datetime import date, datetime, timedelta, timezone
+from typing import Optional, Union
 
 
 class TimestampAdapter:
@@ -102,3 +103,19 @@ def parse_race_time_to_seconds(time_str: str | None) -> int | None:
     except (ValueError, IndexError):
         return None
     return None
+
+
+def to_date(value: Union[datetime, date, None]) -> Optional[date]:
+    """Coerce a datetime or date to a plain date object.
+
+    Args:
+        value: A datetime, date, or None.
+
+    Returns:
+        A date object, or None if value is None.
+    """
+    if value is None:
+        return None
+    if hasattr(value, "date") and callable(value.date):
+        return value.date()
+    return value

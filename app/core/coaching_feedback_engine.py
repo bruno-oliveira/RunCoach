@@ -28,12 +28,8 @@ PACE_TOLERANCES: dict[str, tuple[float, float]] = {
 
 def _fmt_pace(pace: float) -> str:
     """Format decimal min/km as M:SS."""
-    m = int(pace)
-    s = round((pace - m) * 60)
-    if s == 60:
-        m += 1
-        s = 0
-    return f"{m}:{s:02d}"
+    from app.utils import format_pace_bare
+    return format_pace_bare(pace)
 
 
 class CoachingFeedbackEngine:

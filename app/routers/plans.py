@@ -130,12 +130,7 @@ async def generate_plan(
 
     # --- 3-plan limit ---
     if current_user:
-        plan_count = (
-            db.query(TrainingPlan)
-            .filter(TrainingPlan.user_id == current_user.id)
-            .count()
-        )
-        if plan_count >= 3:
+        if PlanService.has_reached_plan_limit(current_user.id, db):
             return error_response(
                 request,
                 current_user,
