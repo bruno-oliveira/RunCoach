@@ -31,6 +31,7 @@ from app.exceptions import (
     InsufficientTimeException,
     PlanGenerationException,
     ValidationException,
+    ZeroMileageUnsupportedException,
 )
 from app.models import TrainingPlan, User
 from app.models.triathlon_plan import TriathlonPlan
@@ -98,6 +99,8 @@ async def generate_plan(
         return error_response(request, current_user, e.user_message, "insufficient_time", e.suggestion)
     except InadequateBaseException as e:
         return error_response(request, current_user, e.user_message, "inadequate_base", e.suggestion)
+    except ZeroMileageUnsupportedException as e:
+        return error_response(request, current_user, e.user_message, "zero_mileage_unsupported", e.suggestion)
     except ValidationException as e:
         return error_response(request, current_user, e.user_message, "validation")
     except Exception as e:

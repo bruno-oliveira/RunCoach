@@ -3013,3 +3013,66 @@
         display: none;
     }
 }
+
+/* ---- Beginner Plan Styles ---- */
+.beginner-plan-badge {
+    position: relative;
+    margin-top: var(--space-4);
+}
+
+.beginner-plan-badge .badge-beginner {
+    display: inline-block;
+    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+    color: white;
+    padding: var(--space-2) var(--space-4);
+    border-radius: var(--radius-full);
+    font-size: var(--text-sm);
+    font-weight: var(--weight-semibold);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.beginner-plan-badge p {
+    margin-top: var(--space-2);
+    color: var(--color-text-secondary);
+    font-size: var(--text-sm);
+}
+
+.run-walk-intervals {
+    background: var(--color-primary-subtle);
+    border-radius: var(--radius-md);
+    padding: var(--space-3);
+    margin: var(--space-2) 0;
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-2);
+    align-items: center;
+}
+
+.run-walk-intervals strong {
+    color: var(--color-primary);
+    font-size: var(--text-sm);
+}
+
+.run-walk-intervals .repeats {
+    color: var(--color-text-secondary);
+    font-size: var(--text-xs);
+    background: var(--color-bg-elevated);
+    padding: var(--space-1) var(--space-2);
+    border-radius: var(--radius-sm);
+}
+
+.run-walk-intervals .total-time {
+    color: var(--color-text-secondary);
+    font-size: var(--text-xs);
+    margin-left: auto;
+}
+
+/* Beginner workout card adjustments */
+.workout-item.run_walk {
+    background: linear-gradient(135deg, var(--color-bg-elevated) 0%, var(--color-primary-subtle) 100%);
+}
+
+.workout-item.run_walk .workout-type {
+    color: var(--color-primary);
+}

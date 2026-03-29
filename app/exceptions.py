@@ -33,6 +33,11 @@ class InadequateBaseException(UnrealisticGoalException):
     pass
 
 
+class ZeroMileageUnsupportedException(UnrealisticGoalException):
+    """Exception when user has 0 mileage but selects an unsupported distance."""
+    pass
+
+
 class PlanGenerationException(RunCoachException):
     """Exception for errors during plan generation."""
     pass

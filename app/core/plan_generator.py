@@ -2,6 +2,7 @@ import math
 import random
 from typing import List, Dict, Any, Optional
 
+from app.core.beginner_plan_generator import BeginnerPlanGenerator
 from app.core.coaching_notes_generator import generate_coaching_note
 from app.core.key_workout_library import KeyWorkoutLibrary
 from app.core.strength_plan import (
@@ -1107,6 +1108,10 @@ class TrainingPlanGenerator:
             max_runs_per_week:   Maximum runs per week (3-6)
             vdot:                Optional VDOT score for personalised pace zones
         """
+        if current_km == 0 and target_distance in [5.0, 10.0]:
+            beginner_generator = BeginnerPlanGenerator()
+            return beginner_generator.generate_plan(target_distance, weeks, max_runs_per_week)
+
         from app.core.vdot_calculator import VDOTCalculator
         pace_zones = VDOTCalculator.get_pace_zones(vdot) if vdot else None
 

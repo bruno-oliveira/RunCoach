@@ -127,7 +127,7 @@
                                 <input type="number" id="current_km" name="current_km" class="form-input" step="0.1" min="0" max="200" required placeholder="20">
                                 <span class="input-unit">km</span>
                             </div>
-                            <span class="form-help">Your current weekly running distance</span>
+                            <span class="form-help">Your current weekly running distance. <strong>Enter 0 if just starting out (5K/10K only, 8+ weeks)</strong></span>
                         </div>
 
                         <div class="form-row-2">
@@ -265,6 +265,25 @@ document.addEventListener('DOMContentLoaded', function() {
                 currentKm.focus();
                 return false;
             }
+
+            // Zero mileage validation
+            if (parseFloat(currentKm.value) === 0) {
+                const supportedDistances = [5, 10];
+                const selectedDistance = parseFloat(targetDistance.value);
+                if (!supportedDistances.includes(selectedDistance)) {
+                    e.preventDefault();
+                    alert('Starting from zero mileage is only supported for 5K and 10K goals. Please select a shorter distance or enter your current weekly mileage.');
+                    targetDistance.focus();
+                    return false;
+                }
+                if (parseInt(weeks.value) < 8) {
+                    e.preventDefault();
+                    alert('Beginner plans require at least 8 weeks for safe progression. Please extend your training duration.');
+                    weeks.focus();
+                    return false;
+                }
+            }
+
             if (!targetDistance.value) {
                 e.preventDefault();
                 targetDistance.focus();

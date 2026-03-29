@@ -7,7 +7,7 @@ from pydantic import BaseModel, Field, field_validator, model_validator
 
 from app.config import settings
 from app.constants import DISTANCE_NAMES, SUPPORTED_DISTANCES, WORKOUT_TYPES
-from app.exceptions import InadequateBaseException, InsufficientTimeException
+from app.exceptions import InadequateBaseException, InsufficientTimeException, ZeroMileageUnsupportedException
 from app.utils import format_pace_bare
 
 
@@ -207,11 +207,31 @@ class PlanRequest(BaseModel):
         """Validate that current mileage is appropriate for target distance."""
         target = self.target_distance
         current_km = self.current_km
+        weeks = self.weeks
+
+        if current_km == 0:
+            supported_distances = [5.0, 10.0]
+            if target not in supported_distances:
+                target_display = DISTANCE_NAMES.get(target, f"{target}km")
+                raise ZeroMileageUnsupportedException(
+                    f"Starting from zero for {target_display} is not recommended.",
+                    f"Starting from zero mileage for a {target_display} requires building a running base first. "
+                    f"Consider training for a 5K or 10K first to build your fitness foundation."
+                )
+            
+            if weeks < 8:
+                raise InsufficientTimeException(
+                    "Beginner plans require at least 8 weeks for safe progression.",
+                    "Couch to 5K programs need 8+ weeks to build fitness safely. "
+                    "Consider extending your training to at least 8 weeks."
+                )
+            
+            return self
 
         if target in _MILEAGE_CONFIG:
             req = _MILEAGE_CONFIG[target]
 
-            if current_km > 0 and current_km < req["min"]:
+            if current_km < req["min"]:
                 target_display = DISTANCE_NAMES.get(target, f"{target}km")
                 raise InadequateBaseException(
                     f"Current mileage ({current_km}km/week) is below recommended "
