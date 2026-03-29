@@ -11,6 +11,40 @@ from app.core.strength_plan import (
 )
 from app.core.training_tips import get_tips_for_week
 
+# Phase-specific distance distribution percentages by race category.
+# Each dict maps workout types to their share of weekly distance.
+PHASE_DISTRIBUTIONS = {
+    'base': {
+        '5K': {'long': 0.35, 'tempo': 0.0, 'interval': 0.0, 'hill': 0.0, 'easy': 0.65},
+        '10K': {'long': 0.40, 'tempo': 0.0, 'interval': 0.0, 'hill': 0.0, 'easy': 0.60},
+        'Half': {'long': 0.45, 'tempo': 0.0, 'interval': 0.0, 'hill': 0.0, 'easy': 0.55},
+        'Trail': {'long': 0.45, 'tempo': 0.0, 'interval': 0.0, 'hill': 0.0, 'easy': 0.55},
+        'Marathon': {'long': 0.45, 'tempo': 0.0, 'interval': 0.0, 'hill': 0.0, 'easy': 0.55},
+    },
+    'build': {
+        '5K': {'long': 0.35, 'tempo': 0.12, 'interval': 0.10, 'hill': 0.05, 'easy': 0.38},
+        '10K': {'long': 0.40, 'tempo': 0.12, 'interval': 0.10, 'hill': 0.05, 'easy': 0.33},
+        'Half': {'long': 0.45, 'tempo': 0.10, 'interval': 0.08, 'hill': 0.04, 'easy': 0.33},
+        'Trail': {'long': 0.45, 'tempo': 0.10, 'interval': 0.08, 'hill': 0.04, 'easy': 0.33},
+        'Marathon': {'long': 0.45, 'tempo': 0.10, 'interval': 0.08, 'hill': 0.04, 'easy': 0.33},
+    },
+    'peak': {
+        '5K': {'long': 0.33, 'tempo': 0.12, 'interval': 0.10, 'hill': 0.05, 'easy': 0.40},
+        '10K': {'long': 0.38, 'tempo': 0.12, 'interval': 0.10, 'hill': 0.05, 'easy': 0.35},
+        'Half': {'long': 0.43, 'tempo': 0.10, 'interval': 0.08, 'hill': 0.04, 'easy': 0.35},
+        'Trail': {'long': 0.43, 'tempo': 0.10, 'interval': 0.08, 'hill': 0.04, 'easy': 0.35},
+        'Marathon': {'long': 0.43, 'tempo': 0.10, 'interval': 0.08, 'hill': 0.04, 'easy': 0.35},
+    },
+    'taper': {
+        '5K': {'long': 0.30, 'tempo': 0.12, 'interval': 0.0, 'hill': 0.0, 'easy': 0.58},
+        '10K': {'long': 0.35, 'tempo': 0.12, 'interval': 0.0, 'hill': 0.0, 'easy': 0.53},
+        'Half': {'long': 0.40, 'tempo': 0.10, 'interval': 0.0, 'hill': 0.0, 'easy': 0.50},
+        'Trail': {'long': 0.40, 'tempo': 0.10, 'interval': 0.0, 'hill': 0.0, 'easy': 0.50},
+        'Marathon': {'long': 0.40, 'tempo': 0.10, 'interval': 0.0, 'hill': 0.0, 'easy': 0.50},
+    },
+}
+
+
 class TrainingPlanGenerator:
     def __init__(self):
         self.workout_types = {
@@ -31,7 +65,7 @@ class TrainingPlanGenerator:
             return '10K'
         elif target_distance <= 21.1:
             return 'Half'
-        elif target_distance == 30.0:
+        elif target_distance <= 30.0:
             return 'Trail'
         else:
             return 'Marathon'
@@ -208,8 +242,6 @@ class TrainingPlanGenerator:
             return self._get_workout_distribution_simple(total_km, max_runs)
         
         long_runs = 1
-        has_recovery = True
- 
         if phase == 'base' or is_recovery_week:
             quality_workouts = 0
         elif phase == 'build':
@@ -414,12 +446,12 @@ class TrainingPlanGenerator:
                 # Get quality workout distance
                 if workout_type in quality_distances:
                     distance = quality_distances[workout_type]
-                    easy_distance = distance
+                    workout_distance = distance
                     quality_counters[workout_type] += 1
                 else:
-                    easy_distance = 0
+                    workout_distance = 0
             else:
-                easy_distance = 0
+                workout_distance = 0
 
             # Generate workout based on type
             if workout_type == 'rest':
@@ -431,13 +463,13 @@ class TrainingPlanGenerator:
             elif workout_type == 'easy':
                 workout = self._generate_easy_run(day_number, easy_distance, total_km, pace_zones=pace_zones)
             elif workout_type == 'tempo':
-                workout = self._generate_tempo_run(day_number, easy_distance, total_km,
+                workout = self._generate_tempo_run(day_number, workout_distance, total_km,
                                                    pace_zones=pace_zones)
             elif workout_type == 'interval':
-                workout = self._generate_interval_run(day_number, easy_distance, total_km,
+                workout = self._generate_interval_run(day_number, workout_distance, total_km,
                                                       pace_zones=pace_zones)
             elif workout_type == 'hill':
-                workout = self._generate_hill_workout(day_number, easy_distance)
+                workout = self._generate_hill_workout(day_number, workout_distance)
             else:
                 raise ValueError(f"Unknown workout_type: {workout_type}")
 
@@ -512,46 +544,8 @@ class TrainingPlanGenerator:
         Returns:
             Dict with percentage breakdown of workout types
         """
-        base_distributions = {
-            '5K': {'long': 0.35, 'tempo': 0.0, 'interval': 0.0, 'hill': 0.0, 'easy': 0.65},
-            '10K': {'long': 0.40, 'tempo': 0.0, 'interval': 0.0, 'hill': 0.0, 'easy': 0.60},
-            'Half': {'long': 0.45, 'tempo': 0.0, 'interval': 0.0, 'hill': 0.0, 'easy': 0.55},
-            'Trail': {'long': 0.45, 'tempo': 0.0, 'interval': 0.0, 'hill': 0.0, 'easy': 0.55},
-            'Marathon': {'long': 0.45, 'tempo': 0.0, 'interval': 0.0, 'hill': 0.0, 'easy': 0.55}
-        }
-
-        build_distributions = {
-            '5K': {'long': 0.35, 'tempo': 0.12, 'interval': 0.10, 'hill': 0.05, 'easy': 0.38},
-            '10K': {'long': 0.40, 'tempo': 0.12, 'interval': 0.10, 'hill': 0.05, 'easy': 0.33},
-            'Half': {'long': 0.45, 'tempo': 0.10, 'interval': 0.08, 'hill': 0.04, 'easy': 0.33},
-            'Trail': {'long': 0.45, 'tempo': 0.10, 'interval': 0.08, 'hill': 0.04, 'easy': 0.33},
-            'Marathon': {'long': 0.45, 'tempo': 0.10, 'interval': 0.08, 'hill': 0.04, 'easy': 0.33}
-        }
-
-        peak_distributions = {
-            '5K': {'long': 0.33, 'tempo': 0.12, 'interval': 0.10, 'hill': 0.05, 'easy': 0.40},
-            '10K': {'long': 0.38, 'tempo': 0.12, 'interval': 0.10, 'hill': 0.05, 'easy': 0.35},
-            'Half': {'long': 0.43, 'tempo': 0.10, 'interval': 0.08, 'hill': 0.04, 'easy': 0.35},
-            'Trail': {'long': 0.43, 'tempo': 0.10, 'interval': 0.08, 'hill': 0.04, 'easy': 0.35},
-            'Marathon': {'long': 0.43, 'tempo': 0.10, 'interval': 0.08, 'hill': 0.04, 'easy': 0.35}
-        }
-
-        taper_distributions = {
-            '5K': {'long': 0.30, 'tempo': 0.12, 'interval': 0.0, 'hill': 0.0, 'easy': 0.58},
-            '10K': {'long': 0.35, 'tempo': 0.12, 'interval': 0.0, 'hill': 0.0, 'easy': 0.53},
-            'Half': {'long': 0.40, 'tempo': 0.10, 'interval': 0.0, 'hill': 0.0, 'easy': 0.50},
-            'Trail': {'long': 0.40, 'tempo': 0.10, 'interval': 0.0, 'hill': 0.0, 'easy': 0.50},
-            'Marathon': {'long': 0.40, 'tempo': 0.10, 'interval': 0.0, 'hill': 0.0, 'easy': 0.50}
-        }
-
         dist_key = self._get_distance_category(target_distance)
-        distributions = {
-            'base': base_distributions,
-            'build': build_distributions,
-            'peak': peak_distributions,
-            'taper': taper_distributions,
-        }
-        return distributions.get(phase, taper_distributions)[dist_key]
+        return PHASE_DISTRIBUTIONS.get(phase, PHASE_DISTRIBUTIONS['taper'])[dist_key]
 
     def _calculate_long_run_distance(self, total_km: float, target_distance: float,
                                   weeks: int = 12, week_number: int = 1, phase: str = 'build',

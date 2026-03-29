@@ -137,4 +137,5 @@ async def get_nutrition_plan(
         )
 
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"Error fetching nutrition plan: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="An internal error occurred while fetching the nutrition plan")

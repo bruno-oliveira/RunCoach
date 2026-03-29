@@ -62,13 +62,17 @@ class AuthService:
     async def verify_google_token(self, id_token: str) -> Optional[dict]:
         """Verify Google ID token using Google's public keys."""
         try:
+            if not settings.google_client_id:
+                logger.error("Google client ID is not configured — refusing to verify token without audience validation")
+                return None
+
             certs = await self._get_google_certs()
 
             payload = jwt.decode(
                 id_token,
                 certs,
                 algorithms=["RS256"],
-                audience=settings.google_client_id or None,
+                audience=settings.google_client_id,
                 issuer="https://accounts.google.com"
             )
             logger.info(f"Google token verified successfully for: {payload.get('email')}")

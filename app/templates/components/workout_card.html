@@ -12,7 +12,7 @@
     
     <div class="workout-body">
         <div class="workout-distance">
-            <strong>{{ workout.distance }} miles</strong>
+            <strong>{{ workout.distance }} km</strong>
             {% if workout.pace %}
             <span class="workout-pace">@ {{ workout.pace }}</span>
             {% endif %}
@@ -47,13 +47,6 @@
             🔗 Workout Details
         </a>
         {% endif %}
-        {% if show_actions == 'full' %}
-        <button class="btn-action btn-secondary" onclick="editWorkout({{ workout.id or workout.day }})">
-            ✏️ Edit
-        </button>
-        <button class="btn-action btn-danger" onclick="deleteWorkout({{ workout.id or workout.day }})">
-            🗑️ Delete
-        </button>
         {% endif %}
     </div>
     {% endif %}

@@ -9,8 +9,8 @@ primary_region = 'sjc'
 [build]
   dockerfile = 'Dockerfile'
 
- [env]
-   DATABASE_URL = 'sqlite:////data/runcoach.db'
+[env]
+  DATABASE_URL = 'sqlite:////data/runcoach.db'
    # SECRET_KEY and GOOGLE_CLIENT_ID are set via Fly.io secrets
 
 [mounts]

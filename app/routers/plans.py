@@ -334,7 +334,8 @@ async def view_plan(
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"Error generating plan: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="An internal error occurred while generating the plan")
 
 
 # ---------------------------------------------------------------------------
@@ -408,8 +409,8 @@ async def list_my_plans(
             },
         )
     except Exception as e:
-        logger.error(f"Error listing plans: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"Error listing plans: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="An internal error occurred while listing plans")
 
 
 # ---------------------------------------------------------------------------

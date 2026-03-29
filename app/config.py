@@ -4,6 +4,7 @@ import logging
 from functools import lru_cache
 from typing import Literal
 
+from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -48,7 +49,7 @@ class Settings(BaseSettings):
     min_mileage_marathon: float = 25.0
 
     # OAuth / Authentication
-    secret_key: str = "your-secret-key-change-in-production"
+    secret_key: str = Field(default_factory=lambda: __import__("secrets").token_urlsafe(32))
     google_client_id: str = ""
 
     # Session settings

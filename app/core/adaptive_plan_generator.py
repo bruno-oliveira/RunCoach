@@ -53,11 +53,12 @@ class AdaptivePlanGenerator:
                 "improvement_trend": 0,
                 "fitness_score": 0,
                 "preferred_workout_types": [],
+                "total_runs_last_8_weeks": 0,
             }
 
         # Calculate average weekly distance
         total_distance = sum(run.distance_km for run in recent_runs)
-        weeks_span = max(1, (recent_runs[0].date - recent_runs[-1].date).days / 7)
+        weeks_span = max(1, min(8, (recent_runs[0].date - recent_runs[-1].date).days / 7))
         avg_weekly_km = total_distance / weeks_span
 
         # Calculate current pace
@@ -105,42 +106,54 @@ class AdaptivePlanGenerator:
             "total_runs_last_8_weeks": len(recent_runs),
         }
 
+    # Fitness score component weights and thresholds
+    VOLUME_MAX_POINTS = 40
+    VOLUME_FULL_KM_PER_WEEK = 50
+    PACE_MAX_POINTS = 30
+    PACE_ELITE_THRESHOLD = 5.0       # min/km — elite/sub-elite
+    PACE_GOOD_THRESHOLD = 6.0        # min/km — good recreational
+    PACE_DEVELOPING_THRESHOLD = 7.0  # min/km — developing runner
+    PACE_SLOW_THRESHOLD = 8.0        # min/km — beginning runner
+    IMPROVEMENT_MAX_POINTS = 20
+    IMPROVEMENT_FULL_PCT = 10        # 10% improvement = full points
+    CONSISTENCY_MAX_POINTS = 10
+    CONSISTENCY_FULL_RUNS = 20       # 20 runs in 8 weeks = full points
+
     def _calculate_fitness_score(
         self, weekly_km: float, pace: Optional[float], improvement: float, run_count: int
     ) -> int:
         """Calculate a fitness score from 0-100.
 
-        Uses percentile-based pace scoring so recreational runners (5:00–8:00 min/km)
+        Uses percentile-based pace scoring so recreational runners (5:00-8:00 min/km)
         receive realistic scores instead of being unfairly penalised against a 4:00/km elite
         baseline.
         """
         score = 0
 
-        # Volume component (40 points): 50 km/week = full points
-        volume_score = min(40, (weekly_km / 50) * 40)
+        # Volume component
+        volume_score = min(self.VOLUME_MAX_POINTS, (weekly_km / self.VOLUME_FULL_KM_PER_WEEK) * self.VOLUME_MAX_POINTS)
         score += volume_score
 
-        # Pace component (30 points): percentile-based ranges
-        # <5:00 → elite/sub-elite; 5:00–6:00 → good recreational; 6:00–8:00 → developing runner
+        # Pace component: percentile-based ranges
         if pace:
-            if pace < 5.0:
-                pace_score = 30.0
-            elif pace < 6.0:
-                pace_score = 20.0 + (6.0 - pace) * 10.0
-            elif pace < 7.0:
-                pace_score = 12.0 + (7.0 - pace) * 8.0
-            elif pace < 8.0:
-                pace_score = 5.0 + (8.0 - pace) * 7.0
+            if pace < self.PACE_ELITE_THRESHOLD:
+                pace_score = float(self.PACE_MAX_POINTS)
+            elif pace < self.PACE_GOOD_THRESHOLD:
+                pace_score = 20.0 + (self.PACE_GOOD_THRESHOLD - pace) * 10.0
+            elif pace < self.PACE_DEVELOPING_THRESHOLD:
+                pace_score = 12.0 + (self.PACE_DEVELOPING_THRESHOLD - pace) * 8.0
+            elif pace < self.PACE_SLOW_THRESHOLD:
+                pace_score = 5.0 + (self.PACE_SLOW_THRESHOLD - pace) * 7.0
             else:
-                pace_score = max(0.0, 5.0 - (pace - 8.0) * 2.5)
+                pace_score = max(0.0, 5.0 - (pace - self.PACE_SLOW_THRESHOLD) * 2.5)
             score += pace_score
 
-        # Improvement component (20 points): 10% improvement = full points
-        improvement_score = min(20, max(0, improvement * 2))
+        # Improvement component
+        improvement_score = min(self.IMPROVEMENT_MAX_POINTS, max(0, improvement * (self.IMPROVEMENT_MAX_POINTS / self.IMPROVEMENT_FULL_PCT)))
         score += improvement_score
 
-        # Consistency component (10 points): 20 runs in 8 weeks = full points
-        consistency_score = min(10, (run_count / 20) * 10)
+        # Consistency component
+        consistency_score = min(self.CONSISTENCY_MAX_POINTS, (run_count / self.CONSISTENCY_FULL_RUNS) * self.CONSISTENCY_MAX_POINTS)
         score += consistency_score
 
         return int(min(100, max(0, score)))
@@ -250,7 +263,6 @@ class AdaptivePlanGenerator:
                         )
 
             # ── HR-relative tips (using % of max HR, not absolute values) ─
-            # ── HR-relative tips (using % of max HR, not absolute values) ─
             tips = adjusted_week.setdefault("training_tips", [])
             if metrics["avg_heart_rate"] and est_max_hr:
                 hr_pct = metrics["avg_heart_rate"] / est_max_hr
@@ -265,13 +277,13 @@ class AdaptivePlanGenerator:
                         "shows a strong aerobic base. You can handle more quality sessions."
                     )
 
-            # ── Improvement trend tip ─────────────────────────────────────
-            if metrics["improvement_trend"] > 0:
-                tips.append(
-                    f"You're improving {metrics['improvement_trend']:.1f}% — keep up the great work!"
-                )
-
             adaptive_plan.append(adjusted_week)
+
+        # Append improvement tip only to the first week
+        if metrics["improvement_trend"] > 0 and adaptive_plan:
+            adaptive_plan[0].setdefault("training_tips", []).append(
+                f"You're improving {metrics['improvement_trend']:.1f}% — keep up the great work!"
+            )
 
         return adaptive_plan
 

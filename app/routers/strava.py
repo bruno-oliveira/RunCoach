@@ -4,7 +4,7 @@ import logging
 from datetime import datetime, timedelta, timezone
 from typing import Optional
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, status
 from fastapi.responses import RedirectResponse
 from sqlalchemy.orm import Session
 
@@ -96,6 +96,7 @@ async def strava_connect(
 async def strava_callback(
     code: str = Query(...),
     state: str = Query(...),
+    background_tasks: BackgroundTasks = BackgroundTasks(),
     db: Session = Depends(get_db),
     auth_service: AuthService = Depends(get_auth_service),
     strava_service: StravaService = Depends(get_strava_service),
@@ -131,24 +132,32 @@ async def strava_callback(
     user.strava_token_expires_at = token_data["expires_at"]
     db.commit()
 
-    # Initial sync: pull last INITIAL_SYNC_DAYS days
-    initial_after = TimestampAdapter.days_ago_utc_epoch(INITIAL_SYNC_DAYS)
-    try:
-        result = await strava_service.sync_activities(user, db, after_timestamp=initial_after)
-        logger.info(
-            f"Initial Strava sync for user {user.id}: "
-            f"{result['synced']} synced, {result['total']} total"
-        )
+    # Initial sync in background to avoid blocking the HTTP response
+    async def _initial_sync(user_id: str):
+        from app.dependencies import SessionLocal
+        sync_db = SessionLocal()
+        try:
+            sync_user = sync_db.query(User).filter(User.id == user_id).first()
+            if not sync_user:
+                return
+            initial_after = TimestampAdapter.days_ago_utc_epoch(INITIAL_SYNC_DAYS)
+            result = await strava_service.sync_activities(sync_user, sync_db, after_timestamp=initial_after)
+            logger.info(
+                f"Initial Strava sync for user {user_id}: "
+                f"{result['synced']} synced, {result['total']} total"
+            )
+            if result.get("synced", 0) > 0:
+                adjustment_results = _auto_map_and_adjust(sync_user, sync_db)
+                if adjustment_results:
+                    logger.info(
+                        f"Auto-adjusted {len(adjustment_results)} plan(s) for user {user_id}"
+                    )
+        except Exception as e:
+            logger.error(f"Initial Strava sync failed: {e}")
+        finally:
+            sync_db.close()
 
-        # Auto-map and adjust active plans if new runs were synced
-        if result.get("synced", 0) > 0:
-            adjustment_results = _auto_map_and_adjust(user, db)
-            if adjustment_results:
-                logger.info(
-                    f"Auto-adjusted {len(adjustment_results)} plan(s) for user {user.id}"
-                )
-    except Exception as e:
-        logger.error(f"Initial Strava sync failed: {e}")
+    background_tasks.add_task(_initial_sync, user.id)
 
     return RedirectResponse(url="/my-plans", status_code=status.HTTP_302_FOUND)
 

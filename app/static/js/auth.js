@@ -92,7 +92,10 @@
         const errorDiv = document.createElement('div');
         errorDiv.id = 'auth-error';
         errorDiv.style.cssText = 'background: #fee2e2; color: #991b1b; padding: 0.75rem 1rem; border-radius: 6px; margin: 0.5rem 0; border-left: 4px solid #ef4444; font-size: 0.9rem;';
-        errorDiv.innerHTML = `<strong>Error:</strong> ${message}`;
+        const strong = document.createElement('strong');
+        strong.textContent = 'Error: ';
+        errorDiv.appendChild(strong);
+        errorDiv.appendChild(document.createTextNode(message));
 
         // Insert near the sign-in button
         const navAuth = document.querySelector('.nav-auth');

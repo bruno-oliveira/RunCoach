@@ -24,13 +24,14 @@
     <script>
     window.onerror = function(msg) {
         if (msg && msg.indexOf('is not defined') !== -1) {
-            alert('Action unavailable. Please hard-refresh (Ctrl+Shift+R / Cmd+Shift+R).');
+            console.warn('Action unavailable. Please hard-refresh (Ctrl+Shift+R / Cmd+Shift+R).', msg);
         }
     };
     </script>
 
     <!-- Base styles -->
     <link rel="stylesheet" href="{{ static_url('css/base.css') }}">
+    <link rel="stylesheet" href="{{ static_url('css/nav.css') }}">
     <link rel="stylesheet" href="{{ static_url('css/components.css') }}">
     <!-- Mobile-native feel improvements -->
     <link rel="stylesheet" href="{{ static_url('css/mobile.css') }}">

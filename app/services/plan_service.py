@@ -58,15 +58,13 @@ class PlanService:
 
         if anonymous_user_id:
             user = db.query(User).filter(User.id == anonymous_user_id).first()
-            if not user or (user.google_id or user.email):
-                user = User()
-                db.add(user)
-                db.flush()
-        else:
-            user = User()
-            db.add(user)
-            db.flush()
+            if user and not user.google_id and not user.email:
+                return user
+            # Stale or authenticated user — fall through to create new anonymous user
 
+        user = User()
+        db.add(user)
+        db.flush()
         return user
 
     # ------------------------------------------------------------------
@@ -309,6 +307,8 @@ class PlanService:
         plan_id = training_plan.id
         user_id = training_plan.user_id
 
+        from app.models.run_feedback import RunFeedback
+
         # Unlink runs FIRST — must happen before DailyWorkout deletion to
         # avoid FK constraint violations (RunLog.daily_workout_id →
         # daily_workouts.id). Runs are preserved so they remain available
@@ -323,6 +323,24 @@ class PlanService:
             .filter(WeeklyPlan.training_plan_id == plan_id)
             .all()
         )
+        # NULL out RunFeedback.planned_workout_id before deleting DailyWorkouts
+        workout_ids = []
+        for wp in weekly_plans:
+            wids = [
+                w.id
+                for w in db.query(DailyWorkout.id)
+                .filter(DailyWorkout.weekly_plan_id == wp.id)
+                .all()
+            ]
+            workout_ids.extend(wids)
+        if workout_ids:
+            db.query(RunFeedback).filter(
+                RunFeedback.planned_workout_id.in_(workout_ids)
+            ).update(
+                {RunFeedback.planned_workout_id: None},
+                synchronize_session="fetch",
+            )
+
         for wp in weekly_plans:
             db.query(DailyWorkout).filter(
                 DailyWorkout.weekly_plan_id == wp.id

@@ -201,7 +201,7 @@ class AdaptationService:
             return None
 
         avg_pace = sum(paces) / len(paces)
-        variance = sum((p - avg_pace) ** 2 for p in paces) / len(paces)
+        variance = sum((p - avg_pace) ** 2 for p in paces) / (len(paces) - 1)
         std_dev = variance ** 0.5
 
         # Coefficient of variation (lower is more consistent)

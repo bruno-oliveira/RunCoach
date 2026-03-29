@@ -15,7 +15,7 @@ class RunLog(Base):
     )
 
     id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
-    user_id = Column(String, ForeignKey("users.id"))
+    user_id = Column(String, ForeignKey("users.id"), nullable=False)
     training_plan_id = Column(String, ForeignKey("training_plans.id"), nullable=True)
     daily_workout_id = Column(String, ForeignKey("daily_workouts.id"), nullable=True)
     date = Column(DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None))

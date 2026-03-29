@@ -17,4 +17,4 @@ else
     echo "[start.sh] Existing database found at $DB_PATH — skipping seed."
 fi
 
-exec uvicorn app.main:app --host 0.0.0.0 --port 8000
+exec uvicorn app.main:app --host 0.0.0.0 --port 8000 --timeout-graceful-shutdown 30

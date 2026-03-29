@@ -12,14 +12,14 @@ from app.models.favorite_recipe import FavoriteRecipe
 from app.models.triathlon_plan import TriathlonPlan
 
 # Configure relationships after all models are imported
-User.training_plans = relationship("TrainingPlan", back_populates="user")
-User.run_logs = relationship("RunLog", back_populates="user")
+User.training_plans = relationship("TrainingPlan", back_populates="user", cascade="all, delete-orphan")
+User.run_logs = relationship("RunLog", back_populates="user", cascade="all, delete-orphan")
 
 TrainingPlan.user = relationship("User", back_populates="training_plans")
-TrainingPlan.weekly_plans = relationship("WeeklyPlan", back_populates="training_plan")
+TrainingPlan.weekly_plans = relationship("WeeklyPlan", back_populates="training_plan", cascade="all, delete-orphan")
 
 WeeklyPlan.training_plan = relationship("TrainingPlan", back_populates="weekly_plans")
-WeeklyPlan.daily_workouts = relationship("DailyWorkout", back_populates="weekly_plan")
+WeeklyPlan.daily_workouts = relationship("DailyWorkout", back_populates="weekly_plan", cascade="all, delete-orphan")
 
 DailyWorkout.weekly_plan = relationship("WeeklyPlan", back_populates="daily_workouts")
 

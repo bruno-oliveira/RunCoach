@@ -8,6 +8,12 @@
 
 console.log('[plan.js] loaded');
 
+function escapeHtml(str) {
+    const div = document.createElement('div');
+    div.appendChild(document.createTextNode(str));
+    return div.innerHTML;
+}
+
 let currentWeek = 1;
 let currentWorkoutId = null;
 
@@ -367,9 +373,9 @@ window.showRacePredictionsToast = function(data) {
     let predictionsHtml = '';
     for (const [key, pred] of Object.entries(predictions)) {
         const label = distanceLabels[key] || key;
-        predictionsHtml += `<span class="toast-prediction"><strong>${label}:</strong> ${pred.formatted}</span>`;
+        predictionsHtml += `<span class="toast-prediction"><strong>${escapeHtml(label)}:</strong> ${escapeHtml(pred.formatted)}</span>`;
     }
-    
+
     toast.innerHTML = `
         <div class="toast-icon">🎯</div>
         <div class="toast-content">
@@ -424,8 +430,8 @@ window.showRaceComparisonToast = function(data) {
     const icon = isFaster ? '🎉' : '🏁';
     const verdictClass = isFaster ? 'comparison-faster' : 'comparison-slower';
     const verdictText = isFaster
-        ? `${comp.delta_formatted} faster than predicted!`
-        : `${comp.delta_formatted} slower than predicted`;
+        ? `${escapeHtml(comp.delta_formatted)} faster than predicted!`
+        : `${escapeHtml(comp.delta_formatted)} slower than predicted`;
 
     // Also show all-distance predictions if available
     let predictionsHtml = '';
@@ -433,7 +439,7 @@ window.showRaceComparisonToast = function(data) {
         const distanceLabels = { '5K': '5K', '10K': '10K', 'trail': 'Trail', 'half_marathon': 'Half', 'marathon': 'Full' };
         for (const [key, pred] of Object.entries(data.predictions)) {
             const label = distanceLabels[key] || key;
-            predictionsHtml += `<span class="toast-prediction"><strong>${label}:</strong> ${pred.formatted}</span>`;
+            predictionsHtml += `<span class="toast-prediction"><strong>${escapeHtml(label)}:</strong> ${escapeHtml(pred.formatted)}</span>`;
         }
     }
 
@@ -444,11 +450,11 @@ window.showRaceComparisonToast = function(data) {
             <div class="toast-comparison">
                 <div class="toast-comparison-row">
                     <span class="toast-comparison-label">Predicted</span>
-                    <span class="toast-comparison-value">${comp.predicted_formatted}</span>
+                    <span class="toast-comparison-value">${escapeHtml(comp.predicted_formatted)}</span>
                 </div>
                 <div class="toast-comparison-row">
                     <span class="toast-comparison-label">Actual</span>
-                    <span class="toast-comparison-value toast-comparison-actual">${comp.actual_formatted}</span>
+                    <span class="toast-comparison-value toast-comparison-actual">${escapeHtml(comp.actual_formatted)}</span>
                 </div>
                 <div class="toast-comparison-verdict ${verdictClass}">${verdictText}</div>
             </div>
@@ -545,33 +551,31 @@ window.savePlanToAccount = async function() {
     }
 };
 
-// Check if user is logged in and show appropriate save/view button
+// Check if user is logged in and show appropriate save/view button.
+// Uses server-rendered APP_CTX (current_user_id, plan_user_id) so that
+// the decision is based on the actual session, not stale localStorage.
 function initSaveButton() {
     const saveBtn = document.getElementById('save-plan-btn');
     const viewLink = document.getElementById('view-plans-link');
 
     if (!saveBtn || !viewLink) return;
 
-    const token = localStorage.getItem('access_token');
-    const userJson = localStorage.getItem('user');
+    const ctx = window.APP_CTX;
+    if (!ctx) return;
 
-    if (token && userJson) {
-        try {
-            const user = JSON.parse(userJson);
-            const planUserId = window.APP_CTX.plan_user_id;
+    const currentUserId = ctx.current_user_id;
+    const planUserId = ctx.plan_user_id;
 
-            // Show save button if logged in and plan doesn't belong to user
-            if (user.id !== planUserId) {
-                if (saveBtn.style) saveBtn.style.display = 'inline-flex';
-            } else {
-                // Plan already belongs to user, show view link
-                if (viewLink.style) viewLink.style.display = 'inline-flex';
-            }
-        } catch (e) {
-            console.error('Error checking plan ownership:', e);
+    if (currentUserId) {
+        if (currentUserId !== planUserId) {
+            // Logged in, but plan belongs to someone else (or no one) — offer save
+            if (saveBtn.style) saveBtn.style.display = 'inline-flex';
+        } else {
+            // Plan already belongs to the current user — show view link
+            if (viewLink.style) viewLink.style.display = 'inline-flex';
         }
     }
-    // If not logged in, neither button shows (default hidden state)
+    // If not logged in (currentUserId is null), neither button shows (default hidden state)
 }
 
 function showAdaptationBanner(reason) {

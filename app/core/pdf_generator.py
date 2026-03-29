@@ -351,7 +351,7 @@ class PDFGenerator:
                 Paragraph(workout['type'].title(), self.table_cell_style),
                 Paragraph(f"{workout.get('distance', 0):.1f} km" if workout.get('distance', 0) > 0 else "-", self.table_cell_style),
                 Paragraph(workout.get('intensity', '-').title(), self.table_cell_style),
-                Paragraph(self._wrap_text(workout.get('description', ''), 40), self.table_cell_style)
+                Paragraph(workout.get('description', ''), self.table_cell_style)
             ])
         
         # Convert headers to Paragraph objects with proper alignment
@@ -950,31 +950,6 @@ class PDFGenerator:
         for rule in progression_rules:
             story.append(Paragraph(f"• {rule}", self.small_style))
         story.append(Spacer(1, 1*cm))
-    
-    def _wrap_text(self, text: str, max_chars: int) -> str:
-        """Wrap text to fit within table cells"""
-        if len(text) <= max_chars:
-            return text
-        
-        words = text.split()
-        lines = []
-        current_line = ""
-        
-        for word in words:
-            if len(current_line + " " + word) <= max_chars:
-                if current_line:
-                    current_line += " " + word
-                else:
-                    current_line = word
-            else:
-                if current_line:
-                    lines.append(current_line)
-                current_line = word
-        
-        if current_line:
-            lines.append(current_line)
-        
-        return "\n".join(lines)
     
     def _add_footer(self, story: List):
         """Add footer information"""

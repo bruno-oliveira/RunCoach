@@ -37,7 +37,7 @@
 }
 
 .modal {
-    background: white;
+    background: var(--color-bg-elevated);
     border-radius: 12px;
     box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
     width: 90%;
@@ -68,13 +68,13 @@
     justify-content: space-between;
     align-items: center;
     padding: 1.5rem;
-    border-bottom: 1px solid #e0e0e0;
+    border-bottom: 1px solid var(--color-border);
 }
 
 .modal-title {
     margin: 0;
     font-size: 1.5rem;
-    color: #333;
+    color: var(--color-text);
     font-weight: 600;
 }
 
@@ -82,7 +82,7 @@
     background: none;
     border: none;
     font-size: 2rem;
-    color: #666;
+    color: var(--color-text-secondary);
     cursor: pointer;
     line-height: 1;
     padding: 0;
@@ -96,8 +96,8 @@
 }
 
 .modal-close:hover {
-    background: #f0f0f0;
-    color: #333;
+    background: var(--color-surface);
+    color: var(--color-text);
 }
 
 .modal-body {
@@ -108,7 +108,7 @@
 
 .modal-footer {
     padding: 1rem 1.5rem;
-    border-top: 1px solid #e0e0e0;
+    border-top: 1px solid var(--color-border);
     display: flex;
     justify-content: flex-end;
     gap: 0.75rem;
@@ -125,30 +125,30 @@
 }
 
 .btn-secondary {
-    background: #6c757d;
-    color: white;
+    background: var(--color-text-secondary);
+    color: var(--color-text-on-primary);
 }
 
 .btn-secondary:hover {
-    background: #5a6268;
+    background: var(--color-text);
 }
 
 .btn-primary {
-    background: #667eea;
-    color: white;
+    background: var(--color-primary);
+    color: var(--color-text-on-primary);
 }
 
 .btn-primary:hover {
-    background: #5568d3;
+    background: var(--color-primary-dark);
 }
 
 .btn-danger {
-    background: #dc3545;
-    color: white;
+    background: var(--color-error);
+    color: var(--color-text-on-primary);
 }
 
 .btn-danger:hover {
-    background: #c82333;
+    background: var(--color-accent-dark);
 }
 </style>
 
@@ -157,6 +157,7 @@ function openModal(modalId) {
     const overlay = document.getElementById(modalId + '-overlay');
     if (overlay) {
         overlay.classList.add('active');
+        overlay.classList.add('is-open');
         document.body.style.overflow = 'hidden';
     }
 }
@@ -165,6 +166,7 @@ function closeModal(modalId) {
     const overlay = document.getElementById(modalId + '-overlay');
     if (overlay) {
         overlay.classList.remove('active');
+        overlay.classList.remove('is-open');
         document.body.style.overflow = '';
     }
 }
@@ -172,7 +174,7 @@ function closeModal(modalId) {
 // Close modal on Escape key
 document.addEventListener('keydown', function(e) {
     if (e.key === 'Escape') {
-        const activeModal = document.querySelector('.modal-overlay.active');
+        const activeModal = document.querySelector('.modal-overlay.active, .modal-overlay.is-open');
         if (activeModal) {
             const modalId = activeModal.id.replace('-overlay', '');
             closeModal(modalId);

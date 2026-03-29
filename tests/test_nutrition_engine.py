@@ -108,15 +108,17 @@ class TestNutritionEngine:
         plan1 = engine1.generate_weekly_meal_plan(30.0, 10)
         plan2 = engine2.generate_weekly_meal_plan(30.0, 10)
 
-        # Different seeds should produce different meal selections
-        breakfast1 = [m["name"] for m in plan1["meal_options"]["breakfast"]]
-        breakfast2 = [m["name"] for m in plan2["meal_options"]["breakfast"]]
+        # Collect all meal names across all categories for each seed
+        all_meals_1 = []
+        all_meals_2 = []
+        for category in plan1["meal_options"]:
+            all_meals_1.extend(m["name"] for m in plan1["meal_options"][category])
+            all_meals_2.extend(m["name"] for m in plan2["meal_options"][category])
 
-        # They should not be identical (very unlikely with different seeds)
-        # But we can't guarantee they're different due to randomness
-        # Just verify the structure is correct
-        assert len(breakfast1) > 0
-        assert len(breakfast2) > 0
+        assert len(all_meals_1) > 0
+        assert len(all_meals_2) > 0
+        # Different seeds should produce at least one different meal selection
+        assert all_meals_1 != all_meals_2, "Different seeds should produce different meal selections"
 
     def test_meal_nutritional_info(self, nutrition_engine: NutritionEngine):
         """Test that meals have nutritional information."""

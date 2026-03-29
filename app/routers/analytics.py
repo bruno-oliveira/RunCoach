@@ -47,6 +47,7 @@ async def get_analytics_runs(
             db.query(RunLog)
             .filter(RunLog.user_id == current_user.id)
             .order_by(RunLog.date.asc())
+            .limit(5000)
             .all()
         )
 

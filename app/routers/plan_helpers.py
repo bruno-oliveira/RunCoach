@@ -56,24 +56,19 @@ def get_plan_or_404(
         require_user_match: If True, match on user_id column directly
             (used by endpoints that already require authentication).
     """
-    if require_user_match and current_user:
-        training_plan = (
-            db.query(TrainingPlan)
-            .filter(
-                TrainingPlan.id == plan_id,
-                TrainingPlan.user_id == current_user.id,
-            )
-            .first()
-        )
-    else:
-        training_plan = (
-            db.query(TrainingPlan).filter(TrainingPlan.id == plan_id).first()
-        )
+    training_plan = (
+        db.query(TrainingPlan).filter(TrainingPlan.id == plan_id).first()
+    )
 
     if not training_plan:
         raise HTTPException(status_code=404, detail="Plan not found")
 
-    if check_ownership and not require_user_match:
+    if require_user_match and current_user:
+        if training_plan.user_id != current_user.id:
+            raise HTTPException(
+                status_code=403, detail="Not authorized to access this plan"
+            )
+    elif check_ownership:
         if not verify_plan_ownership(training_plan, current_user, anonymous_user_id):
             raise HTTPException(
                 status_code=403, detail="Not authorized to access this plan"
@@ -182,6 +177,7 @@ def plan_view_context(
         "start_date": start_date_val,
         "current_week_number": current_week_number,
         "today_iso": today_obj.isoformat(),
+        "current_day_of_week": today_obj.isoweekday(),
         "week_dates": week_dates,
         "workout_date_labels": workout_date_labels,
         "next_monday": _next_monday(),

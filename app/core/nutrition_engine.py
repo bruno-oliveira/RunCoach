@@ -34,8 +34,7 @@ class NutritionEngine:
 
     def __init__(self, random_seed: int = None):
         self.meal_db = get_meal_database()
-        if random_seed is not None:
-            random.seed(random_seed)
+        self._rng = random.Random(random_seed)
 
     def calculate_nutrition_needs(self, weekly_km: float, target_distance: float, body_weight: float = 70) -> Dict[str, float]:
         """
@@ -57,8 +56,8 @@ class NutritionEngine:
             "calories": calories,
             "protein": protein,
             "fiber": fiber,
-            "carbs": round((calories - (protein * 4) - (fiber * 2)) / 4, 0),
-            "fat": round(calories * 0.25 / 9, 0)
+            "fat": round(calories * 0.25 / 9, 0),
+            "carbs": max(0, round((calories - (protein * 4) - (round(calories * 0.25 / 9, 0) * 9)) / 4, 0))
         }
     
     def generate_weekly_meal_plan(self, weekly_km: float, target_distance: float, body_weight: float = 70) -> Dict[str, Any]:
@@ -222,7 +221,7 @@ class NutritionEngine:
             remaining_meals = available_meals
 
         # Shuffle the available meals first to add randomness
-        random.shuffle(remaining_meals)
+        self._rng.shuffle(remaining_meals)
 
         # Score meals with MUCH stronger randomness to ensure variety
         scored_meals = []
@@ -242,7 +241,7 @@ class NutritionEngine:
                 score -= 20  # Stronger penalty for already used meals
 
             # Add randomness for variety without dominating nutritional scores
-            score += random.uniform(0, 15)
+            score += self._rng.uniform(0, 15)
 
             scored_meals.append((score, meal))
 
@@ -252,7 +251,7 @@ class NutritionEngine:
             top_meals = scored_meals[:min(8, len(scored_meals))]
             # Use weighted random to favor top scores but allow variety
             weights = [8, 7, 6, 5, 4, 3, 2, 1][:len(top_meals)]
-            selected = random.choices(top_meals, weights=weights)[0][1]
+            selected = self._rng.choices(top_meals, weights=weights)[0][1]
             return selected
 
         return None

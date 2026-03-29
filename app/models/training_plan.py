@@ -1,4 +1,4 @@
-from sqlalchemy import Column, String, Float, Integer, DateTime, ForeignKey, Text, Index, Boolean
+from sqlalchemy import Column, String, Float, Integer, DateTime, ForeignKey, Text, Index
 from datetime import datetime, timezone
 import uuid
 
@@ -13,7 +13,7 @@ class TrainingPlan(Base):
     )
 
     id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
-    user_id = Column(String, ForeignKey("users.id"))
+    user_id = Column(String, ForeignKey("users.id"), nullable=False)
     current_weekly_km = Column(Float)
     target_distance = Column(String)  # in km as string (e.g., "30.0" for Trail Running)
     weeks_duration = Column(Integer)

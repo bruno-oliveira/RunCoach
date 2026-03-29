@@ -98,8 +98,10 @@ class TestPlanGeneration:
         )
 
         assert response.status_code == 200  # Returns HTML with error
-        # Should show error message about insufficient time
-        assert "week" in response.text.lower()
+        # Should show specific error message about insufficient time
+        html = response.text.lower()
+        assert "week" in html
+        assert "error" in html or "insufficient" in html or "minimum" in html
 
     def test_inadequate_base_mileage_error(self, client: TestClient):
         """Test error when base mileage is too low."""
@@ -114,6 +116,8 @@ class TestPlanGeneration:
 
         assert response.status_code == 200  # Returns HTML with error
         # Should show error about mileage
+        html = response.text.lower()
+        assert "error" in html or "mileage" in html or "base" in html
 
     def test_invalid_current_km(self, client: TestClient):
         """Test error with invalid current km."""
@@ -203,7 +207,7 @@ class TestPlanCreationAndWorkflow:
         )
 
         assert response.status_code == 200
-        # Should include nutrition-related content
         html = response.text.lower()
-        # Nutrition content should be present
-        assert "nutrition" in html or "meal" in html or "calorie" in html
+        # Should include actual nutrition data, not just nav references
+        assert "calorie" in html or "protein" in html, "Response should contain actual nutrition data (calories or protein)"
+        assert "meal" in html, "Response should contain meal suggestions"

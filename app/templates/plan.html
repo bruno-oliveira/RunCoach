@@ -313,7 +313,8 @@
             <div class="workout-grid">
                 {% for workout in week.daily_workouts %}
                 {% set logged_run = logged_runs.get(workout.id) %}
-                {% set is_past = start_date and workout_date_labels and current_week_number and (week.week < current_week_number or (week.week == current_week_number and workout.day <= (today_iso | length and 1))) %}
+                {% set today_weekday = today_iso[8:10] | int if today_iso else 0 %}
+                {% set is_past = start_date and workout_date_labels and current_week_number and (week.week < current_week_number or (week.week == current_week_number and workout.day < current_day_of_week)) %}
                 <div class="workout-item {{ workout.type }} {% if logged_run %}completed{% elif is_past and workout.type not in ['rest', 'recovery'] and current_week_number and week.week < current_week_number %}missed{% endif %}" data-day="{{ day_names[workout.day - 1] }}">
                     <div class="workout-day-label">{% if workout_date_labels %}{{ workout_date_labels.get((week.week, workout.day), day_names[workout.day - 1]) }}{% else %}{{ day_names[workout.day - 1] }}{% endif %}</div>
                     <div class="workout-type-row">
@@ -570,7 +571,7 @@
                                 <span class="nutrient">🥑 {{ meal.fat }}g</span>
                             </div>
                             <button class="show-recipe-btn" onclick="toggleRecipe('{{ meal.name | replace("'", "\\'") }}', this)">Show</button>
-                            <div class="recipe-details" id="recipe-{{ loop.index }}" style="display: none;">
+                            <div class="recipe-details" id="recipe-{{ meal_type }}-{{ loop.index }}" style="display: none;">
                                 <div class="recipe-section">
                                     <h5>Ingredients</h5>
                                     <ul class="recipe-list">
@@ -898,12 +899,13 @@
 <script>
     // Bootstrap dynamic data for plan.js
     window.APP_CTX = {
-        plan_id: '{{ plan_id }}',
-        training_plan_id: '{{ training_plan.id }}',
-        created_at: '{{ training_plan.created_at }}',
+        plan_id: {{ plan_id | tojson }},
+        training_plan_id: {{ training_plan.id | tojson }},
+        created_at: {{ training_plan.created_at | string | tojson }},
         weeks: {{ plan | length }},
-        plan_user_id: '{{ training_plan.user_id }}',
-        share_token: '{{ training_plan.share_token or '' }}'
+        plan_user_id: {{ training_plan.user_id | tojson }},
+        current_user_id: {{ (user.id if user else None) | tojson }},
+        share_token: {{ (training_plan.share_token or '') | tojson }}
     };
 
     function showShareToast(msg) {

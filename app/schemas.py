@@ -6,17 +6,9 @@ from typing import Any, Dict, List, Optional
 from pydantic import BaseModel, Field, field_validator, model_validator
 
 from app.config import settings
+from app.constants import DISTANCE_NAMES, SUPPORTED_DISTANCES, WORKOUT_TYPES
 from app.exceptions import InadequateBaseException, InsufficientTimeException
 from app.utils import format_pace_bare
-
-# Distance name mapping for display purposes
-DISTANCE_NAMES = {
-    5.0: "5K",
-    10.0: "10K",
-    21.1: "Half Marathon",
-    30.0: "Trail Running",
-    42.2: "Marathon",
-}
 
 
 def parse_target_distance(value: str | float) -> float:
@@ -127,9 +119,8 @@ class PlanRequest(BaseModel):
     @classmethod
     def validate_target_distance(cls, v: float) -> float:
         """Validate that target distance is a supported race distance."""
-        valid_distances = [5.0, 10.0, 21.1, 30.0, 42.2]
-        if v not in valid_distances:
-            valid_names = [DISTANCE_NAMES[d] for d in valid_distances]
+        if v not in SUPPORTED_DISTANCES:
+            valid_names = [DISTANCE_NAMES[d] for d in SUPPORTED_DISTANCES]
             raise ValueError(f"Please select a valid distance: {', '.join(valid_names)}")
         return v
 
@@ -358,9 +349,8 @@ class RunLogBase(BaseModel):
     @classmethod
     def validate_workout_type(cls, v: Optional[str]) -> Optional[str]:
         if v is not None:
-            valid_types = ["easy", "tempo", "interval", "long", "hill", "rest", "race"]
-            if v not in valid_types:
-                raise ValueError(f"workout_type must be one of: {', '.join(valid_types)}")
+            if v not in WORKOUT_TYPES:
+                raise ValueError(f"workout_type must be one of: {', '.join(WORKOUT_TYPES)}")
         return v
 
 
@@ -381,6 +371,14 @@ class RunLogUpdate(BaseModel):
     workout_type: Optional[str] = Field(None)
     perceived_effort: Optional[int] = Field(None, ge=1, le=10)
     date: Optional[datetime] = None
+
+    @field_validator("workout_type")
+    @classmethod
+    def validate_workout_type(cls, v: Optional[str]) -> Optional[str]:
+        if v is not None:
+            if v not in WORKOUT_TYPES:
+                raise ValueError(f"workout_type must be one of: {', '.join(WORKOUT_TYPES)}")
+        return v
 
 
 class RunLogResponse(RunLogBase):
@@ -414,9 +412,8 @@ class AdaptivePlanRequest(BaseModel):
     @field_validator("target_distance")
     @classmethod
     def validate_target_distance(cls, v: float) -> float:
-        valid_distances = [5.0, 10.0, 21.1, 30.0, 42.2]
-        if v not in valid_distances:
-            valid_names = [DISTANCE_NAMES[d] for d in valid_distances]
+        if v not in SUPPORTED_DISTANCES:
+            valid_names = [DISTANCE_NAMES[d] for d in SUPPORTED_DISTANCES]
             raise ValueError(f"Please select a valid distance: {', '.join(valid_names)}")
         return v
 
@@ -459,7 +456,7 @@ class PerformancePlanRequest(BaseModel):
     @classmethod
     def validate_target_distance(cls, v: float) -> float:
         """Validate that target distance is a supported race distance."""
-        valid_distances = [5.0, 10.0, 21.1, 42.2]
+        valid_distances = [d for d in SUPPORTED_DISTANCES if d != 30.0]
         if v not in valid_distances:
             valid_names = [DISTANCE_NAMES.get(d, f"{d}km") for d in valid_distances]
             raise ValueError(f"Please select a valid distance: {', '.join(valid_names)}")
