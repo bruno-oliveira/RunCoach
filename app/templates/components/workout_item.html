@@ -1,0 +1,110 @@
+{# Renders a single workout item within the workout grid.
+   Expected context variables: workout, week, logged_run, is_past, day_names,
+   workout_date_labels, current_week_number, current_day_of_week, user,
+   feedback_map, start_date #}
+<div class="workout-item {{ workout.type }} {% if logged_run %}completed{% elif is_past and workout.type not in ['rest', 'recovery'] and current_week_number and week.week < current_week_number %}missed{% endif %}" data-day="{{ day_names[workout.day - 1] }}">
+    <div class="workout-day-label">{% if workout_date_labels %}{{ workout_date_labels.get((week.week, workout.day), day_names[workout.day - 1]) }}{% else %}{{ day_names[workout.day - 1] }}{% endif %}</div>
+    <div class="workout-type-row">
+        <div class="workout-type">{{ workout.type }}</div>
+        {% if workout.hr_zone_label %}
+        <span class="hr-zone-badge hr-zone-{{ workout.hr_zone_target }}">Z{{ workout.hr_zone_target }}</span>
+        {% endif %}
+    </div>
+    {% if workout.type == 'run_walk' and workout.run_min and workout.walk_min %}
+    <div class="run-walk-intervals">
+        <strong>Run {{ workout.run_min }} min / Walk {{ workout.walk_min }} min</strong>
+        <span class="repeats">× {{ workout.repeats }}</span>
+        <span class="total-time">{{ workout.duration_min }} min total</span>
+    </div>
+    {% endif %}
+    {% if workout.key_workout_name %}
+    <div class="key-workout-badge">{{ workout.key_workout_name }}</div>
+    {% endif %}
+    {% if workout.distance > 0 %}
+    <div class="workout-distance">{{ workout.distance }} km{% if workout.hr_zone_label %} <span class="workout-zone-hint">{{ workout.hr_zone_label }}</span>{% endif %}</div>
+    {% endif %}
+    {% if workout.structure %}
+    <div class="workout-structure">{{ workout.structure }}</div>
+    {% endif %}
+    <div class="workout-notes">{{ workout.notes }}</div>
+    {% if workout.key_workout_rationale %}
+    <details class="coaching-note key-workout-rationale">
+        <summary class="coaching-note-toggle">Why this workout</summary>
+        <div class="coaching-note-content">{{ workout.key_workout_rationale }}</div>
+    </details>
+    {% endif %}
+
+    {% if workout.strength_session %}
+    <div class="workout-strength-tag">
+        + {{ (workout.strength_session.focus or workout.strength_session.type) | replace('_', ' ') | title }} Strength
+        <span class="workout-strength-duration">{{ workout.strength_session.duration }}</span>
+    </div>
+    {% endif %}
+
+    {% if workout.coaching_rationale %}
+    <details class="coaching-note">
+        <summary class="coaching-note-toggle">Coach says</summary>
+        <div class="coaching-note-content">{{ workout.coaching_rationale }}</div>
+    </details>
+    {% endif %}
+
+    {% if logged_run %}
+    {% if logged_run.quality_label %}
+    <div class="quality-badge quality-{{ logged_run.quality_label|lower|replace(' ', '-') }}">
+        {{ logged_run.quality_label }}
+    </div>
+    {% endif %}
+    <details class="run-stats-details">
+        <summary class="run-stats-summary">{{ "%.1f"|format(logged_run.distance_km) }} km &middot; {{ "%.0f"|format(logged_run.duration_minutes) }} min</summary>
+        <div class="run-stats">
+            {% if logged_run.avg_pace_min_km %}
+            <div class="run-stats-row">
+                <span>Pace:</span>
+                <span>{{ logged_run.avg_pace_min_km|format_pace }}</span>
+            </div>
+            {% endif %}
+            {% if logged_run.perceived_effort %}
+            <div class="run-stats-row">
+                <span>Effort:</span>
+                <span>{{ logged_run.perceived_effort }}/10</span>
+            </div>
+            {% endif %}
+            {% if logged_run.avg_heart_rate %}
+            <div class="run-stats-row">
+                <span>Avg HR:</span>
+                <span>{{ logged_run.avg_heart_rate }} bpm</span>
+            </div>
+            {% endif %}
+            {% if logged_run.effort_quality_score %}
+            <div class="run-stats-row">
+                <span>Quality:</span>
+                <span>{{ "%.0f"|format(logged_run.effort_quality_score) }}/100</span>
+            </div>
+            {% endif %}
+        </div>
+    </details>
+    {% set run_feedback = feedback_map.get(logged_run.id) if feedback_map else None %}
+    {% if run_feedback %}
+    <div class="coaching-feedback sentiment-{{ run_feedback.overall_sentiment }}">
+        {% if run_feedback.pace_feedback %}
+        <div class="feedback-item feedback-pace">{{ run_feedback.pace_feedback }}</div>
+        {% endif %}
+        {% if run_feedback.hr_zone_feedback %}
+        <div class="feedback-item feedback-hr">{{ run_feedback.hr_zone_feedback }}</div>
+        {% endif %}
+        {% if run_feedback.effort_feedback %}
+        <div class="feedback-item feedback-effort">{{ run_feedback.effort_feedback }}</div>
+        {% endif %}
+        {% if run_feedback.volume_feedback %}
+        <div class="feedback-item feedback-volume">{{ run_feedback.volume_feedback }}</div>
+        {% endif %}
+        {% if run_feedback.pattern_feedback %}
+        <div class="feedback-item feedback-pattern">{{ run_feedback.pattern_feedback }}</div>
+        {% endif %}
+    </div>
+    {% endif %}
+    <button class="undo-log-btn" onclick="unlinkRun('{{ logged_run.id }}')">Undo</button>
+    {% elif workout.type != 'rest' and user and not user.strava_athlete_id %}
+    <button class="log-run-btn" onclick="openLogModal('{{ workout.id }}', '{{ workout.type }}', {{ workout.distance }}, '{{ day_names[workout.day - 1] }}', {{ week.week }})">Log This Run</button>
+    {% endif %}
+</div>

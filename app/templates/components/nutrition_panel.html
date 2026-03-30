@@ -1,0 +1,203 @@
+<!-- Nutrition Tab Panel -->
+<div class="plan-tab-panel" id="panel-nutrition" role="tabpanel" aria-labelledby="tab-nutrition">
+    <div class="nutrition-section">
+        <div class="section-header">
+            <h2>Personalized Nutrition Plan</h2>
+            <p>Optimized for your {{ target_distance }}km goal</p>
+        </div>
+
+        <div class="nutrition-summary">
+            <div class="nutrition-grid">
+                <div class="nutrition-stat">
+                    <span class="stat-icon">🔥</span>
+                    <div class="stat-content">
+                        <div class="stat-label">Daily Calories</div>
+                        <div class="stat-value">{{ nutrition_plan.daily_calories }}</div>
+                        <div class="stat-detail">kcal/day</div>
+                    </div>
+                </div>
+                <div class="nutrition-stat">
+                    <span class="stat-icon">🍗</span>
+                    <div class="stat-content">
+                        <div class="stat-label">Protein</div>
+                        <div class="stat-value">{{ nutrition_plan.protein_g }}</div>
+                        <div class="stat-detail">g/day</div>
+                    </div>
+                </div>
+                <div class="nutrition-stat">
+                    <span class="stat-icon">🍝</span>
+                    <div class="stat-content">
+                        <div class="stat-label">Carbs</div>
+                        <div class="stat-value">{{ nutrition_plan.carbs_g }}</div>
+                        <div class="stat-detail">g/day</div>
+                    </div>
+                </div>
+                <div class="nutrition-stat">
+                    <span class="stat-icon">🥑</span>
+                    <div class="stat-content">
+                        <div class="stat-label">Fats</div>
+                        <div class="stat-value">{{ nutrition_plan.fats_g }}</div>
+                        <div class="stat-detail">g/day</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        {% if nutrition_phases and nutrition_phases|length > 0 %}
+        <div class="phase-nutrition">
+            <h3>Nutrition by Training Phase</h3>
+            <p class="phase-nutrition-desc">Your macro targets adjust as training intensity changes</p>
+            <div class="phase-nutrition-grid">
+                {% for phase_name, phase in nutrition_phases.items() %}
+                <div class="phase-card">
+                    <div class="phase-card-header">
+                        <span class="phase-name">{{ phase_name }}</span>
+                        <span class="phase-weeks">Weeks {{ phase.weeks|join(', ') }}</span>
+                    </div>
+                    <div class="phase-macros">
+                        <div class="phase-macro"><span class="phase-macro-value">{{ phase.daily_calories }}</span><span class="phase-macro-label">kcal</span></div>
+                        <div class="phase-macro"><span class="phase-macro-value">{{ phase.protein_g }}g</span><span class="phase-macro-label">protein</span></div>
+                        <div class="phase-macro"><span class="phase-macro-value">{{ phase.carbs_g }}g</span><span class="phase-macro-label">carbs</span></div>
+                        <div class="phase-macro"><span class="phase-macro-value">{{ phase.fats_g }}g</span><span class="phase-macro-label">fats</span></div>
+                    </div>
+                    {% if phase.advice %}
+                    <div class="phase-advice">{{ phase.advice }}</div>
+                    {% endif %}
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+
+        {% if nutrition_plan.meal_suggestions and nutrition_plan.meal_suggestions|length > 0 %}
+        <div class="meal-suggestions">
+            <div class="meal-suggestions-header">
+                <h3>Sample Meal Plan</h3>
+                <button onclick="randomizeMeals()" class="randomize-meals-btn">
+                    🎲 Randomize Meals
+                </button>
+            </div>
+            <div class="meals-grid">
+                {% for meal_type, meals in nutrition_plan.meal_suggestions.items() %}
+                <div class="meal-category">
+                    <h4 class="meal-category-title">
+                        {% if meal_type == 'breakfast' %}Breakfast
+                        {% elif meal_type == 'lunch' %}Lunch
+                        {% elif meal_type == 'dinner' %}Dinner
+                        {% elif meal_type == 'snacks' %}Snacks
+                        {% endif %}
+                    </h4>
+                    {% for meal in meals %}
+                    <div class="meal-option-card">
+                        <div class="meal-name">{{ meal.name }}</div>
+                        <div class="meal-nutrients">
+                            <span class="nutrient">🔥 {{ meal.calories }} cal</span>
+                            <span class="nutrient">🍗 {{ meal.protein }}g</span>
+                            <span class="nutrient">🍝 {{ meal.carbs }}g</span>
+                            <span class="nutrient">🥑 {{ meal.fat }}g</span>
+                        </div>
+                        <button class="show-recipe-btn" onclick="toggleRecipe('{{ meal.name | replace("'", "\\'") }}', this)">Show</button>
+                        <div class="recipe-details" id="recipe-{{ meal_type }}-{{ loop.index }}" style="display: none;">
+                            <div class="recipe-section">
+                                <h5>Ingredients</h5>
+                                <ul class="recipe-list">
+                                    {% for ingredient in meal.ingredients %}
+                                    <li>{{ ingredient }}</li>
+                                    {% endfor %}
+                                </ul>
+                            </div>
+                            <div class="recipe-section">
+                                <h5>Instructions</h5>
+                                <p class="recipe-instructions">{{ meal.instructions }}</p>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+
+        <div class="nutrition-details">
+            {% if nutrition_plan.pre_run_meal %}
+            <div class="nutrition-guide-card">
+                <h3>Pre-Run Nutrition</h3>
+                <div class="nutrition-guide-content">
+                    <div class="guide-item">
+                        <strong>Timing:</strong> {{ nutrition_plan.pre_run_meal.timing }}
+                    </div>
+                    <div class="guide-item">
+                        <strong>Focus:</strong> {{ nutrition_plan.pre_run_meal.focus }}
+                    </div>
+                    {% if nutrition_plan.pre_run_meal.examples %}
+                    <div class="guide-examples">
+                        <strong>Examples:</strong>
+                        <ul>
+                            {% for example in nutrition_plan.pre_run_meal.examples %}
+                            <li>{{ example }}</li>
+                            {% endfor %}
+                        </ul>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+            {% endif %}
+
+            {% if nutrition_plan.post_run_meal %}
+            <div class="nutrition-guide-card">
+                <h3>Post-Run Recovery</h3>
+                <div class="nutrition-guide-content">
+                    <div class="guide-item">
+                        <strong>Timing:</strong> {{ nutrition_plan.post_run_meal.timing }}
+                    </div>
+                    <div class="guide-item">
+                        <strong>Focus:</strong> {{ nutrition_plan.post_run_meal.focus }}
+                    </div>
+                    {% if nutrition_plan.post_run_meal.examples %}
+                    <div class="guide-examples">
+                        <strong>Examples:</strong>
+                        <ul>
+                            {% for example in nutrition_plan.post_run_meal.examples %}
+                            <li>{{ example }}</li>
+                            {% endfor %}
+                        </ul>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+            {% endif %}
+
+            {% if nutrition_plan.hydration_guide %}
+            <div class="hydration-guide-section">
+                <h3>Hydration Guide</h3>
+                <div class="hydration-grid">
+                    <div class="hydration-item">
+                        <div class="hydration-label">Daily Target</div>
+                        <div class="hydration-value">{{ nutrition_plan.hydration_guide.daily_target }}</div>
+                    </div>
+                    <div class="hydration-item">
+                        <div class="hydration-label">Pre-Run</div>
+                        <div class="hydration-value">{{ nutrition_plan.hydration_guide.pre_run }}</div>
+                    </div>
+                    <div class="hydration-item">
+                        <div class="hydration-label">During Run</div>
+                        <div class="hydration-value">{{ nutrition_plan.hydration_guide.during_run }}</div>
+                    </div>
+                    <div class="hydration-item">
+                        <div class="hydration-label">Post-Run</div>
+                        <div class="hydration-value">{{ nutrition_plan.hydration_guide.post_run }}</div>
+                    </div>
+                </div>
+                {% if nutrition_plan.hydration_guide.tips %}
+                <div class="hydration-tips">
+                    {% for tip in nutrition_plan.hydration_guide.tips %}
+                    <div class="hydration-tip">{{ tip }}</div>
+                    {% endfor %}
+                </div>
+                {% endif %}
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>

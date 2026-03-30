@@ -1,0 +1,97 @@
+<!-- Race Day Tab Panel -->
+<div class="plan-tab-panel" id="panel-raceday" role="tabpanel" aria-labelledby="tab-raceday">
+    <div class="raceday-section">
+        <div class="section-header">
+            <h2>Race Day Protocol</h2>
+            <p>Your {{ race_protocol.distance_name }} game plan{% if race_protocol.predicted_finish_time %} &mdash; target {{ race_protocol.predicted_finish_time }}{% endif %}</p>
+        </div>
+
+        {% if race_protocol.pacing_strategy %}
+        <div class="raceday-card">
+            <h3>Pacing Strategy</h3>
+            <p class="raceday-strategy">{{ race_protocol.pacing_strategy }}</p>
+        </div>
+        {% endif %}
+
+        {% if race_protocol.pacing_splits %}
+        <div class="raceday-card">
+            <h3>Pacing Splits</h3>
+            <div class="splits-table">
+                <div class="splits-header">
+                    <span>Distance</span>
+                    <span>Target Pace</span>
+                    <span>Split</span>
+                    <span>Cumulative</span>
+                </div>
+                {% for split in race_protocol.pacing_splits %}
+                <div class="splits-row {% if split.highlight %}splits-highlight{% endif %}">
+                    <span>{{ split.distance }} km</span>
+                    <span>{{ split.target_pace }}</span>
+                    <span>{{ split.split_time }}</span>
+                    <span>{{ split.cumulative }}</span>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+
+        {% if race_protocol.race_morning_timeline %}
+        <div class="raceday-card">
+            <h3>Race Morning Timeline</h3>
+            <div class="timeline">
+                {% for item in race_protocol.race_morning_timeline %}
+                <div class="timeline-item">
+                    <span class="timeline-time">{{ item.time }}</span>
+                    <span class="timeline-activity">{{ item.activity }}</span>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+
+        {% if race_protocol.nutrition_timing %}
+        <div class="raceday-card">
+            <h3>Nutrition Timing</h3>
+            <div class="nutrition-timeline">
+                {% for item in race_protocol.nutrition_timing %}
+                <div class="nutrition-timing-item">
+                    <span class="nutrition-timing-icon">{{ item.icon }}</span>
+                    <div class="nutrition-timing-content">
+                        <strong>{{ item.when }}</strong>
+                        <span>{{ item.what }}</span>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+
+        {% if race_protocol.mental_checkpoints %}
+        <div class="raceday-card">
+            <h3>Mental Checkpoints</h3>
+            <div class="mental-checkpoints">
+                {% for cp in race_protocol.mental_checkpoints %}
+                <div class="checkpoint-item">
+                    <span class="checkpoint-distance">{{ cp.distance }}</span>
+                    <span class="checkpoint-message">{{ cp.message }}</span>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+
+        {% if race_protocol.week_before_checklist %}
+        <div class="raceday-card">
+            <h3>Race Week Checklist</h3>
+            <div class="checklist">
+                {% for item in race_protocol.week_before_checklist %}
+                <label class="checklist-item">
+                    <input type="checkbox" class="checklist-checkbox">
+                    <span>{{ item }}</span>
+                </label>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
