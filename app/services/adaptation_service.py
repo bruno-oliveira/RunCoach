@@ -713,17 +713,18 @@ class AdaptationService:
         )
         multiplier = signals["multiplier"]
 
-        # Apply to future weeks
-        future_weeks = (
+        # Apply to current and future weeks (skip past workouts in current week)
+        current_day_of_week = today.isoweekday()  # 1=Mon … 7=Sun
+        adjustable_weeks = (
             db.query(WeeklyPlan)
             .filter(
                 WeeklyPlan.training_plan_id == plan_id,
-                WeeklyPlan.week_number > current_week,
+                WeeklyPlan.week_number >= current_week,
             )
             .all()
         )
 
-        if not future_weeks:
+        if not adjustable_weeks:
             return {
                 "adjusted": False,
                 **{k: signals[k] for k in (
@@ -731,11 +732,13 @@ class AdaptationService:
                 )},
                 "total_runs": len(all_plan_runs),
                 "weeks_changed": 0,
-                "reason": "No future weeks remaining to adjust.",
+                "reason": "No remaining workouts to adjust.",
             }
 
         weeks_changed, any_distance_changed = self._apply_adjustment_to_future_weeks(
-            training_plan, future_weeks, multiplier, db,
+            training_plan, adjustable_weeks, multiplier, db,
+            current_week=current_week,
+            current_day_of_week=current_day_of_week,
         )
 
         # Persist
@@ -747,7 +750,7 @@ class AdaptationService:
         completion_rate = signals["completion_rate"]
         avg_effort = signals["avg_effort"]
         direction = "increased" if multiplier > 1.0 else "reduced" if multiplier < 1.0 else "kept"
-        reason_parts = [f"Future weeks {direction} (x{multiplier})."]
+        reason_parts = [f"Remaining workouts {direction} (x{multiplier})."]
         reason_parts.append(
             f"Volume ratio: {round(volume_ratio, 2)}, "
             f"completion: {round(completion_rate * 100)}%."
@@ -890,8 +893,16 @@ class AdaptationService:
         future_weeks: List,
         multiplier: float,
         db: Session,
+        *,
+        current_week: int | None = None,
+        current_day_of_week: int | None = None,
     ) -> Tuple[int, bool]:
-        """Apply the adjustment multiplier to future weeks. Returns (weeks_changed, any_distance_changed)."""
+        """Apply the adjustment multiplier to future weeks. Returns (weeks_changed, any_distance_changed).
+
+        When *current_week* and *current_day_of_week* are provided, workouts
+        in the current week that are already past (day < current_day_of_week)
+        are left untouched.
+        """
         plan_data, pd_week, pd_workout = self._parse_plan_data_lookups(training_plan)
 
         workouts_by_week = self._batch_workouts_by_week(
@@ -910,6 +921,15 @@ class AdaptationService:
                     workout.workout_type == "rest"
                     or not workout.distance_km
                     or workout.distance_km <= 0
+                ):
+                    continue
+
+                # Skip workouts already past in the current week
+                if (
+                    current_week is not None
+                    and current_day_of_week is not None
+                    and week.week_number == current_week
+                    and workout.day_of_week < current_day_of_week
                 ):
                     continue
 

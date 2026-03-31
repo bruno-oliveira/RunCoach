@@ -279,7 +279,7 @@
             <div class="workout-grid">
                 {% for workout in week.daily_workouts %}
                 {% set logged_run = logged_runs.get(workout.id) %}
-                {% set is_past = start_date and workout_date_labels and current_week_number and (week.week < current_week_number) %}
+                {% set is_past = start_date and workout_date_labels and current_week_number and (week.week < current_week_number or (week.week == current_week_number and workout.day < current_day_of_week)) %}
                 <div class="workout-item {{ workout.type }} {% if logged_run %}completed{% elif is_past and workout.type not in ['rest', 'recovery'] %}missed{% endif %}" data-day="{{ day_names[workout.day - 1] }}">
                     <div class="workout-day-label">{% if workout_date_labels %}{{ workout_date_labels.get((week.week, workout.day), day_names[workout.day - 1]) }}{% else %}{{ day_names[workout.day - 1] }}{% endif %}</div>
                     <div class="workout-type-row">
