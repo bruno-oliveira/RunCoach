@@ -2,6 +2,12 @@
  * Race Readiness Tab — loads data via API and renders the dashboard.
  */
 
+function escapeReadinessHtml(str) {
+    var div = document.createElement('div');
+    div.appendChild(document.createTextNode(str == null ? '' : String(str)));
+    return div.innerHTML;
+}
+
 let readinessLoaded = false;
 
 window.loadReadiness = function () {
@@ -53,7 +59,7 @@ function renderReadiness(d) {
     html += '  </div>';
     html += '  <div class="readiness-hero-meta">';
     html += '    <h2>Race Readiness</h2>';
-    html += '    <p class="readiness-hero-subtitle">' + d.distance_label + ' &mdash; ' + d.overall_label + '</p>';
+    html += '    <p class="readiness-hero-subtitle">' + escapeReadinessHtml(d.distance_label) + ' &mdash; ' + escapeReadinessHtml(d.overall_label) + '</p>';
     html += '    <div class="readiness-hero-stats">';
     html += '      <span>Week ' + d.current_week + ' / ' + d.total_weeks + '</span>';
     html += '      <span>' + d.days_to_race + ' days to race</span>';
@@ -80,7 +86,7 @@ function renderReadiness(d) {
         html += '    <span class="readiness-comp-score">' + comp.score + '</span>';
         html += '  </div>';
         html += '  <div class="readiness-comp-bar"><div class="readiness-comp-fill" style="width:' + comp.score + '%"></div></div>';
-        html += '  <div class="readiness-comp-detail">' + comp.detail + '</div>';
+        html += '  <div class="readiness-comp-detail">' + escapeReadinessHtml(comp.detail) + '</div>';
         html += '</div>';
     }
     html += '  </div>';
@@ -89,7 +95,7 @@ function renderReadiness(d) {
     // ── Race predictions ──
     if (d.vdot && d.vdot.current && d.predictions && Object.keys(d.predictions).length > 0) {
         html += '<div class="readiness-predictions">';
-        html += '  <h3>Race Predictions <span class="readiness-vdot-badge">VDOT ' + d.vdot.current + ' &mdash; ' + d.vdot.trend + '</span></h3>';
+        html += '  <h3>Race Predictions <span class="readiness-vdot-badge">VDOT ' + escapeReadinessHtml(d.vdot.current) + ' &mdash; ' + escapeReadinessHtml(d.vdot.trend) + '</span></h3>';
         html += '  <div class="readiness-predictions-grid">';
         var predKeys = Object.keys(d.predictions);
         for (var j = 0; j < predKeys.length; j++) {
@@ -97,10 +103,10 @@ function renderReadiness(d) {
             var pred = d.predictions[name];
             var highlight = pred.is_target ? ' prediction-target' : '';
             html += '<div class="readiness-prediction-card' + highlight + '">';
-            html += '  <div class="prediction-name">' + name + '</div>';
-            html += '  <div class="prediction-time">' + pred.time + '</div>';
+            html += '  <div class="prediction-name">' + escapeReadinessHtml(name) + '</div>';
+            html += '  <div class="prediction-time">' + escapeReadinessHtml(pred.time) + '</div>';
             if (pred.range && pred.range.fast && pred.range.slow) {
-                html += '  <div class="prediction-range">' + pred.range.fast + ' &ndash; ' + pred.range.slow + '</div>';
+                html += '  <div class="prediction-range">' + escapeReadinessHtml(pred.range.fast) + ' &ndash; ' + escapeReadinessHtml(pred.range.slow) + '</div>';
             }
             html += '</div>';
         }
@@ -121,11 +127,11 @@ function renderReadiness(d) {
             var rowClass = 'scenario-' + s.name.toLowerCase();
             html += '<div class="scenario-row ' + rowClass + '">';
             html += '  <div class="scenario-name">';
-            html += '    <strong>' + s.name + '</strong>';
-            html += '    <span class="scenario-desc">' + s.description + '</span>';
+            html += '    <strong>' + escapeReadinessHtml(s.name) + '</strong>';
+            html += '    <span class="scenario-desc">' + escapeReadinessHtml(s.description) + '</span>';
             html += '  </div>';
-            html += '  <span class="scenario-time">' + s.time + '</span>';
-            html += '  <span class="scenario-pace">' + s.pace + '</span>';
+            html += '  <span class="scenario-time">' + escapeReadinessHtml(s.time) + '</span>';
+            html += '  <span class="scenario-pace">' + escapeReadinessHtml(s.pace) + '</span>';
             html += '  <span class="scenario-prob">' + s.probability + '%</span>';
             html += '</div>';
         }

@@ -63,7 +63,11 @@ def get_plan_or_404(
     if not training_plan:
         raise HTTPException(status_code=404, detail="Plan not found")
 
-    if require_user_match and current_user:
+    if require_user_match:
+        if not current_user:
+            raise HTTPException(
+                status_code=403, detail="Authentication required to access this plan"
+            )
         if training_plan.user_id != current_user.id:
             raise HTTPException(
                 status_code=403, detail="Not authorized to access this plan"

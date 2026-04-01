@@ -76,7 +76,7 @@ class AdaptationService:
         - pd_week: {week_number: week_dict}
         - pd_workout: {(week_number, day): workout_dict}
         """
-        plan_data = json.loads(training_plan.plan_data)
+        plan_data = json.loads(training_plan.plan_data) if training_plan.plan_data else []
         pd_week: dict[int, dict] = {}
         pd_workout: dict[tuple[int, int], dict] = {}
         for wk in plan_data:

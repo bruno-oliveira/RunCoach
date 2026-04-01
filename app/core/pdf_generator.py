@@ -235,7 +235,10 @@ class PDFGenerator:
         story.append(Spacer(1, 2*cm))
 
         # Add key stats (30.0 = Trail Running)
-        target_distance_float = float(training_plan.target_distance)
+        try:
+            target_distance_float = float(training_plan.target_distance)
+        except (TypeError, ValueError):
+            target_distance_float = 0.0
         target_display = "Trail Running" if target_distance_float == 30.0 else f"{training_plan.target_distance} km"
 
         if is_performance and training_plan.current_pace and training_plan.goal_pace:

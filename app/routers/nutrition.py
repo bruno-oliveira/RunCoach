@@ -73,7 +73,7 @@ async def randomize_meals(
             "request": request,
             "user": current_user,
             "google_client_id": settings.google_client_id,
-            "plan": json.loads(training_plan.plan_data),
+            "plan": json.loads(training_plan.plan_data) if training_plan.plan_data else [],
             "plan_id": training_plan.id,
             "training_plan": training_plan,
             "current_km": training_plan.current_weekly_km,
@@ -94,11 +94,10 @@ async def randomize_meals(
     except HTTPException:
         db.rollback()
         raise
-    except Exception as e:
+    except Exception:
         db.rollback()
         logger.exception("Error randomizing meals")
-        error_msg = str(e) if str(e) else f"{type(e).__name__}: Error randomizing meals"
-        raise HTTPException(status_code=500, detail=error_msg)
+        raise HTTPException(status_code=500, detail="An internal error occurred while randomizing meals")
 
 
 @router.get("/nutrition-plan/{plan_id}", response_class=HTMLResponse)

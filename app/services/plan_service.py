@@ -131,7 +131,7 @@ class PlanService:
             logger.info(
                 f"Duplicate plan detected for user {user.id} — returning existing plan {existing.id}"
             )
-            return existing, json.loads(existing.plan_data)
+            return existing, json.loads(existing.plan_data) if existing.plan_data else []
 
         plan_data = plan_generator.generate_plan(
             plan_request.current_km,
@@ -273,7 +273,7 @@ class PlanService:
         Returns:
             The updated plan_data list.
         """
-        plan_data = json.loads(training_plan.plan_data)
+        plan_data = json.loads(training_plan.plan_data) if training_plan.plan_data else []
 
         if adjustment_type == "intensity":
             plan_data = _adjust_intensity(plan_data, week_number, adjustment_value)
@@ -611,15 +611,16 @@ def _adjust_intensity(
             for workout in week.get("daily_workouts", []):
                 if workout["type"] != "rest":
                     workout["intensity"] = intensity_level
+                    notes = workout.get("notes") or ""
                     if intensity_level == "low":
                         workout["notes"] = (
-                            workout["notes"]
+                            notes
                             .replace("threshold", "easy")
                             .replace("tempo", "easy")
                         )
                     elif intensity_level == "high":
                         workout["notes"] = (
-                            workout["notes"]
+                            notes
                             .replace("easy", "tempo")
                             .replace("recovery", "moderate")
                         )
@@ -668,13 +669,15 @@ def _adjust_distance(
             )
 
             if current_total > 0:
-                ratio = (current_total + distance_change) / current_total
+                ratio = max(0.0, (current_total + distance_change) / current_total)
 
                 for workout in week.get("daily_workouts", []):
                     if workout["distance"] > 0:
                         workout["distance"] = round(workout["distance"] * ratio, 1)
 
-                week["total_km"] = round(week["total_km"] + distance_change, 1)
+                week["total_km"] = round(
+                    sum(w.get("distance", 0) for w in week.get("daily_workouts", [])), 1
+                )
 
     return plan_data
 

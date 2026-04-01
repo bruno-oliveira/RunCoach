@@ -7,35 +7,35 @@ Methodology: 5 parallel review agents (core logic, API layer, models/services, f
 
 ## 1 -- Security (Critical / High)
 
-- [ ] **`secret_key` regenerates on every Fly.io cold start** (`config.py:52`). `default_factory=lambda: secrets.token_urlsafe(32)` produces a new key each time the machine wakes from `auto_stop_machines='stop'`, invalidating all existing JWTs/sessions. Fix: set `SECRET_KEY` as a persistent Fly.io secret.
+- [x] **`secret_key` regenerates on every Fly.io cold start** (`config.py:52`). `default_factory=lambda: secrets.token_urlsafe(32)` produces a new key each time the machine wakes from `auto_stop_machines='stop'`, invalidating all existing JWTs/sessions. Fix: set `SECRET_KEY` as a persistent Fly.io secret.
 
 - [ ] **Strava tokens stored in plaintext** (`user.py:22-23`). `strava_access_token` and `strava_refresh_token` are plain strings. Encryption at rest would be better practice.
 
-- [ ] **XSS in `readiness.js` innerHTML** (`readiness.js:33,57,82-84,125-129`). Server-provided strings (`overall_label`, `distance_label`, `comp.detail`, `s.description`, etc.) are interpolated directly into `innerHTML` without escaping. Fix: use `escapeHtml()` (already exists in `plan.js`) or build DOM nodes with `textContent`.
+- [x] **XSS in `readiness.js` innerHTML** (`readiness.js:33,57,82-84,125-129`). Server-provided strings (`overall_label`, `distance_label`, `comp.detail`, `s.description`, etc.) are interpolated directly into `innerHTML` without escaping. Fix: use `escapeHtml()` (already exists in `plan.js`) or build DOM nodes with `textContent`.
 
-- [ ] **Strava OAuth state token valid for 24h** (`routers/strava.py:88-92`). The JWT state has no short expiry, creating a CSRF replay window. Fix: pass `expires_delta=timedelta(minutes=5)` when minting.
+- [x] **Strava OAuth state token valid for 24h** (`routers/strava.py:88-92`). The JWT state has no short expiry, creating a CSRF replay window. Fix: pass `expires_delta=timedelta(minutes=5)` when minting.
 
-- [ ] **Latent authorization bypass in `get_plan_or_404`** (`routers/plan_helpers.py:66`). When `require_user_match=True` but `current_user` is `None`, the ownership check is skipped. Not currently triggerable but fail-unsafe. Fix: raise 403 when `current_user is None` and `require_user_match=True`.
+- [x] **Latent authorization bypass in `get_plan_or_404`** (`routers/plan_helpers.py:66`). When `require_user_match=True` but `current_user` is `None`, the ownership check is skipped. Not currently triggerable but fail-unsafe. Fix: raise 403 when `current_user is None` and `require_user_match=True`.
 
-- [ ] **Raw SQLAlchemy exception message exposed in `/randomize-meals` 500 response** (`routers/nutrition.py:97-101`). `str(e)` may contain table names, column names, and SQL fragments. Fix: return a generic message and log the original.
+- [x] **Raw SQLAlchemy exception message exposed in `/randomize-meals` 500 response** (`routers/nutrition.py:97-101`). `str(e)` may contain table names, column names, and SQL fragments. Fix: return a generic message and log the original.
 
 ---
 
 ## 2 -- Correctness: Critical Bugs
 
-- [ ] **`current_km=0` with Half Marathon/Marathon/Trail produces all-zero weekly plans** (`plan_generator.py:957-979,1111`). The beginner-plan shortcut only fires for 5K/10K. For longer distances, `_calculate_weekly_progression(current_km=0)` sets `high_water=0`, and `_apply_10pct_cap(ideal, 0)` returns 0 for every base/build week. Fix: extend the beginner guard or raise `InadequateBaseException` for unsupported 0-mileage distances.
+- [x] **`current_km=0` with Half Marathon/Marathon/Trail produces all-zero weekly plans** (`plan_generator.py:957-979,1111`). The beginner-plan shortcut only fires for 5K/10K. For longer distances, `_calculate_weekly_progression(current_km=0)` sets `high_water=0`, and `_apply_10pct_cap(ideal, 0)` returns 0 for every base/build week. Fix: extend the beginner guard or raise `InadequateBaseException` for unsupported 0-mileage distances.
 
-- [ ] **`NameError` crash in `generate_performance_plan` error handlers** (`routers/performance.py:205,257,283`). `goal_pace` is assigned inside the `try` block. If `_parse_time_to_pace` raises `ValueError`, both `except` handlers reference `goal_pace` which was never assigned, causing a secondary `NameError` masked by `except Exception`. Fix: initialize `goal_pace = None` before the `try`.
+- [x] **`NameError` crash in `generate_performance_plan` error handlers** (`routers/performance.py:205,257,283`). `goal_pace` is assigned inside the `try` block. If `_parse_time_to_pace` raises `ValueError`, both `except` handlers reference `goal_pace` which was never assigned, causing a secondary `NameError` masked by `except Exception`. Fix: initialize `goal_pace = None` before the `try`.
 
-- [ ] **Unguarded `json.loads` on nullable `plan_data` fields** (`plan_service.py:134,276`, `adaptation_service.py:79`, `performance_service.py:359,401,460`). `plan_data`, `nutrition_plan_data`, `hr_zones_data`, `nutrition_phases_data`, and `race_protocol_data` are all nullable `Text` columns. `json.loads(None)` raises `TypeError`. Fix: use `json.loads(x) if x else []` consistently (pattern already exists in `readiness_service.py`).
+- [x] **Unguarded `json.loads` on nullable `plan_data` fields** (`plan_service.py:134,276`, `adaptation_service.py:79`, `performance_service.py:359,401,460`). `plan_data`, `nutrition_plan_data`, `hr_zones_data`, `nutrition_phases_data`, and `race_protocol_data` are all nullable `Text` columns. `json.loads(None)` raises `TypeError`. Fix: use `json.loads(x) if x else []` consistently (pattern already exists in `readiness_service.py`).
 
-- [ ] **`workout["notes"].replace()` crashes when notes is `None`** (`plan_service.py:615-625`). `_adjust_intensity` calls `.replace()` on `workout["notes"]`, but `DailyWorkout.notes` is nullable. Fix: `notes = workout.get("notes") or ""`.
+- [x] **`workout["notes"].replace()` crashes when notes is `None`** (`plan_service.py:615-625`). `_adjust_intensity` calls `.replace()` on `workout["notes"]`, but `DailyWorkout.notes` is nullable. Fix: `notes = workout.get("notes") or ""`.
 
-- [ ] **`_adjust_distance` produces negative distances** (`plan_service.py:670-677`). When `distance_change` exceeds `current_total`, `ratio` goes negative and all workout distances become negative, persisted to DB. Fix: `ratio = max(0.0, (current_total + distance_change) / current_total)`.
+- [x] **`_adjust_distance` produces negative distances** (`plan_service.py:670-677`). When `distance_change` exceeds `current_total`, `ratio` goes negative and all workout distances become negative, persisted to DB. Fix: `ratio = max(0.0, (current_total + distance_change) / current_total)`.
 
-- [ ] **`float(target_distance)` crashes on non-numeric stored values** (`performance_service.py:370`, `pdf_generator.py:238`). `target_distance` is a `String` column; legacy data could contain `"Trail Running"`, `""`, or `None`. Fix: use the existing `_parse_float()` utility or `try/except`.
+- [x] **`float(target_distance)` crashes on non-numeric stored values** (`performance_service.py:370`, `pdf_generator.py:238`). `target_distance` is a `String` column; legacy data could contain `"Trail Running"`, `""`, or `None`. Fix: use the existing `_parse_float()` utility or `try/except`.
 
-- [ ] **Lambda closure-in-loop bug: all quality workouts get the same type** (`performance_plan_generator.py:719-730`). Python lambdas capture variables by reference. When `quality_workouts_needed >= 2`, both generators point to the last iteration's `workout_type`. Fix: capture via default arguments or use `functools.partial`.
+- [x] **Lambda closure-in-loop bug: all quality workouts get the same type** (`performance_plan_generator.py:719-730`). Python lambdas capture variables by reference. When `quality_workouts_needed >= 2`, both generators point to the last iteration's `workout_type`. Fix: capture via default arguments or use `functools.partial`.
 
 ---
 

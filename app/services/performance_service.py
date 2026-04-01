@@ -16,6 +16,14 @@ from app.core.nutrition_engine import NutritionEngine
 logger = logging.getLogger(__name__)
 
 
+def _safe_float(val, default: float = 0.0) -> float:
+    """Safely parse a value to float, returning *default* on failure."""
+    try:
+        return float(val)
+    except (TypeError, ValueError):
+        return default
+
+
 class PerformanceService:
     """Service for performance training plans and fitness analysis."""
 
@@ -356,7 +364,7 @@ class PerformanceService:
         if not training_plan:
             return None
 
-        plan_data = json.loads(training_plan.plan_data)
+        plan_data = json.loads(training_plan.plan_data) if training_plan.plan_data else []
 
         # Reconstruct full plan data with zones (include max_hr if available)
         zones = self.performance_generator.calculate_training_zones(
@@ -367,7 +375,7 @@ class PerformanceService:
         full_data = {
             'weekly_plans': plan_data,
             'training_zones': zones,
-            'target_distance': float(training_plan.target_distance),
+            'target_distance': _safe_float(training_plan.target_distance),
             'current_pace': training_plan.current_pace,
             'goal_pace': training_plan.goal_pace,
             'weeks': training_plan.weeks_duration,
@@ -398,7 +406,7 @@ class PerformanceService:
         day_of_week = days_elapsed % 7 + 1  # 1=Mon, 7=Sun (ISO style)
 
         # Parse plan data
-        plan_data = json.loads(plan.plan_data)
+        plan_data = json.loads(plan.plan_data) if plan.plan_data else []
 
         if week > len(plan_data):
             return {"status": "completed"}
@@ -457,7 +465,7 @@ class PerformanceService:
         Returns:
             Dictionary with progress stats including weekly km, pace, completion, etc.
         """
-        plan_data = json.loads(plan.plan_data)
+        plan_data = json.loads(plan.plan_data) if plan.plan_data else []
         start = plan.start_date or plan.created_at
         start_date = start.date() if isinstance(start, datetime) else start
         total_weeks = len(plan_data)

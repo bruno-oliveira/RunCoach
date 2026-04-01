@@ -4,6 +4,7 @@ FastAPI application entry point.
 """
 
 import logging
+import os
 import uuid
 from contextlib import asynccontextmanager
 from typing import Optional
@@ -61,6 +62,12 @@ async def lifespan(application: FastAPI):
         logger.warning("Google Client ID is not properly configured - Google Sign-In will not work")
 
     # Validate secret key in production
+    if not os.environ.get("SECRET_KEY"):
+        logger.warning(
+            "SECRET_KEY not set via environment variable — using random default. "
+            "JWTs will be invalidated on every restart. "
+            "Set SECRET_KEY as a persistent secret (e.g. `fly secrets set SECRET_KEY=...`)."
+        )
     if not settings.debug:
         weak_patterns = ["dev-secret", "your-secret", "change-in-production", "placeholder"]
         key = settings.secret_key

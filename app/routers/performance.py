@@ -200,6 +200,7 @@ async def generate_performance_plan(
             fitness_data=fitness_data,
         )
 
+    goal_pace = None
     try:
         # Parse goal time to pace
         goal_pace = _parse_time_to_pace(goal_time, target_distance)

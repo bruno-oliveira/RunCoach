@@ -14,6 +14,7 @@ from app.core.beginner_plan_generator import BeginnerPlanGenerator
 from app.core.coaching_notes_generator import generate_coaching_note
 from app.core.key_workout_library import KeyWorkoutLibrary
 from app.core.strength_plan import derive_experience_level
+from app.exceptions import ZeroMileageUnsupportedException
 
 # Re-export for any code that imports PHASE_DISTRIBUTIONS from here
 from app.core.phase_calculator import PHASE_DISTRIBUTIONS  # noqa: F401
@@ -380,9 +381,17 @@ class TrainingPlanGenerator:
             max_runs_per_week:   Maximum runs per week (3-6)
             vdot:                Optional VDOT score for personalised pace zones
         """
-        if current_km == 0 and target_distance in [5.0, 10.0]:
-            beginner_generator = BeginnerPlanGenerator()
-            return beginner_generator.generate_plan(target_distance, weeks, max_runs_per_week)
+        if current_km == 0:
+            if target_distance in [5.0, 10.0]:
+                beginner_generator = BeginnerPlanGenerator()
+                return beginner_generator.generate_plan(target_distance, weeks, max_runs_per_week)
+            raise ZeroMileageUnsupportedException(
+                user_message=(
+                    f"A {target_distance} km race requires an existing running base. "
+                    "Please start with a 5K or 10K beginner plan to build your fitness first."
+                ),
+                suggestion="Try a 5K or 10K plan with 0 km/week to get started.",
+            )
 
         from app.core.vdot_calculator import VDOTCalculator
         pace_zones = VDOTCalculator.get_pace_zones(vdot) if vdot else None

@@ -716,17 +716,16 @@ class PerformancePlanGenerator:
         quality_days = [2, 5] if runs_per_week >= 4 else [2]
         quality_types = self.PHASE_QUALITY_PRIORITY.get(phase, ['tempo', 'vo2max'])
 
+        _generators = {
+            'tempo': lambda: self._generate_tempo_workout(zones, target_distance, week_number, phase),
+            'vo2max': lambda: self._generate_vo2max_workout(zones, target_distance, week_number, phase),
+            'race_pace': lambda: self._generate_race_pace_workout(zones, target_distance, week_number, phase),
+            'fartlek': lambda: self._generate_fartlek_workout(zones, target_distance, week_number, phase),
+        }
+
         for i, day in enumerate(quality_days[:quality_workouts_needed]):
             workout_type = quality_types[(week_number - 1 + i) % len(quality_types)]
-            if workout_type == 'tempo':
-                generator = lambda: self._generate_tempo_workout(zones, target_distance, week_number, phase)
-            elif workout_type == 'vo2max':
-                generator = lambda: self._generate_vo2max_workout(zones, target_distance, week_number, phase)
-            elif workout_type == 'race_pace':
-                generator = lambda: self._generate_race_pace_workout(zones, target_distance, week_number, phase)
-            else:  # fartlek
-                generator = lambda: self._generate_fartlek_workout(zones, target_distance, week_number, phase)
-
+            generator = _generators.get(workout_type, _generators['fartlek'])
             workout_schedule.append({'day': day, 'workout_generator': generator})
 
         # Generate the scheduled workouts

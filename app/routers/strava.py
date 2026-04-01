@@ -86,7 +86,8 @@ async def strava_connect(
 ):
     """Return Strava OAuth authorization URL."""
     state = auth_service.create_access_token(
-        {"sub": current_user.id, "purpose": "strava_oauth"}
+        {"sub": current_user.id, "purpose": "strava_oauth"},
+        expires_delta=timedelta(minutes=5),
     )
     authorize_url = strava_service.get_authorization_url(state)
     return {"authorize_url": authorize_url}

@@ -50,6 +50,9 @@ class Settings(BaseSettings):
 
     # OAuth / Authentication
     secret_key: str = Field(default_factory=lambda: __import__("secrets").token_urlsafe(32))
+    # NOTE: In production, SECRET_KEY must be set as a persistent environment
+    # variable (e.g. Fly.io secret) so JWTs survive cold starts.
+    # The random default is for local development only.
     google_client_id: str = ""
 
     # Session settings
