@@ -1,0 +1,226 @@
+/* ============================================================================
+   Plan Page — Race Day Tab
+   ========================================================================= */
+
+.raceday-section {
+    background: var(--color-bg-elevated);
+    border: 1px solid var(--color-border-subtle);
+    border-radius: var(--radius-xl);
+    padding: var(--space-6);
+}
+
+.raceday-section .section-header {
+    text-align: center;
+    margin-bottom: var(--space-6);
+}
+
+.raceday-section .section-header h2 {
+    font-family: var(--font-display);
+    font-size: var(--text-2xl);
+    font-weight: var(--weight-extrabold);
+    color: var(--color-text);
+    margin-bottom: var(--space-1);
+}
+
+.raceday-section .section-header p {
+    color: var(--color-text-secondary);
+    font-size: var(--text-base);
+}
+
+.raceday-card {
+    background: var(--color-bg-sunken);
+    border: 1px solid var(--color-border-subtle);
+    border-radius: var(--radius-lg);
+    padding: var(--space-5);
+    margin-bottom: var(--space-4);
+}
+
+.raceday-card h3 {
+    font-family: var(--font-display);
+    font-size: var(--text-lg);
+    font-weight: var(--weight-bold);
+    color: var(--color-text);
+    margin-bottom: var(--space-4);
+}
+
+.raceday-strategy {
+    font-size: var(--text-sm);
+    color: var(--color-text-secondary);
+    line-height: var(--leading-relaxed);
+    margin: 0;
+}
+
+/* Splits table */
+.splits-table {
+    overflow-x: auto;
+}
+
+.splits-header,
+.splits-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr 1fr;
+    gap: var(--space-2);
+    padding: var(--space-3) var(--space-2);
+}
+
+.splits-header {
+    font-weight: var(--weight-semibold);
+    font-size: var(--text-xs);
+    color: var(--color-text-muted);
+    text-transform: uppercase;
+    letter-spacing: var(--tracking-wider);
+    border-bottom: 2px solid var(--color-border-subtle);
+}
+
+.splits-row {
+    font-size: var(--text-sm);
+    color: var(--color-text-secondary);
+    border-bottom: 1px solid var(--color-border-subtle);
+}
+
+.splits-row:last-child { border-bottom: none; }
+
+.splits-highlight {
+    background: var(--color-primary-subtle);
+    border-radius: var(--radius-md);
+    font-weight: var(--weight-semibold);
+    color: var(--color-primary);
+}
+
+/* Timeline */
+.timeline {
+    display: grid;
+    gap: var(--space-1);
+}
+
+.timeline-item {
+    display: grid;
+    grid-template-columns: 120px 1fr;
+    gap: var(--space-3);
+    padding: var(--space-3) 0;
+    border-bottom: 1px solid var(--color-border-subtle);
+    font-size: var(--text-sm);
+}
+
+.timeline-item:last-child { border-bottom: none; }
+
+.timeline-time {
+    font-weight: var(--weight-semibold);
+    color: var(--color-primary);
+}
+
+.timeline-activity {
+    color: var(--color-text-secondary);
+}
+
+/* Nutrition timing */
+.nutrition-timeline {
+    display: grid;
+    gap: var(--space-3);
+}
+
+.nutrition-timing-item {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--space-3);
+    padding: var(--space-3);
+    background: var(--color-bg-elevated);
+    border-radius: var(--radius-md);
+    border: 1px solid var(--color-border-subtle);
+}
+
+.nutrition-timing-icon {
+    font-size: 1.25rem;
+    flex-shrink: 0;
+    margin-top: 2px;
+}
+
+.nutrition-timing-content {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    font-size: var(--text-sm);
+}
+
+.nutrition-timing-content strong {
+    color: var(--color-text);
+}
+
+.nutrition-timing-content span {
+    color: var(--color-text-secondary);
+}
+
+/* Mental checkpoints */
+.mental-checkpoints {
+    display: grid;
+    gap: var(--space-3);
+}
+
+.checkpoint-item {
+    display: flex;
+    gap: var(--space-3);
+    padding: var(--space-3);
+    background: var(--color-bg-elevated);
+    border-radius: var(--radius-md);
+    border-left: 3px solid var(--color-primary);
+}
+
+.checkpoint-distance {
+    font-weight: var(--weight-bold);
+    color: var(--color-primary);
+    font-size: var(--text-sm);
+    min-width: 60px;
+    flex-shrink: 0;
+}
+
+.checkpoint-message {
+    font-size: var(--text-sm);
+    color: var(--color-text-secondary);
+    line-height: var(--leading-normal);
+    font-style: italic;
+}
+
+/* Checklist */
+.checklist {
+    display: grid;
+    gap: var(--space-2);
+}
+
+.checklist-item {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--space-3);
+    padding: var(--space-3);
+    background: var(--color-bg-elevated);
+    border-radius: var(--radius-md);
+    cursor: pointer;
+    font-size: var(--text-sm);
+    color: var(--color-text-secondary);
+    transition: all var(--duration-fast) var(--ease-out);
+    border: 1px solid var(--color-border-subtle);
+}
+
+.checklist-item:hover {
+    background: var(--color-primary-subtle);
+}
+
+.checklist-checkbox {
+    margin-top: 2px;
+    accent-color: var(--color-primary);
+    cursor: pointer;
+}
+
+.checklist-item:has(.checklist-checkbox:checked) {
+    text-decoration: line-through;
+    opacity: 0.6;
+}
+
+/* ---- Responsive ---- */
+@media (max-width: 768px) {
+    .splits-header, .splits-row { font-size: var(--text-xs); }
+    .timeline-item { grid-template-columns: 100px 1fr; }
+}
+
+@media (max-width: 480px) {
+    .timeline-item { grid-template-columns: 1fr; }
+}

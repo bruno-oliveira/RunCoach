@@ -3,8 +3,21 @@
 {% block title %}Your Training Plan - RunCoach{% endblock %}
 
 {% block styles %}
-<link rel="stylesheet" href="{{ static_url('css/plan.css') }}">
+<link rel="stylesheet" href="{{ static_url('css/plan-core.css') }}">
 <link rel="stylesheet" href="{{ static_url('css/plan_shared.css') }}">
+<link rel="stylesheet" href="{{ static_url('css/plan-toasts.css') }}">
+{% if nutrition_plan %}
+<link rel="stylesheet" href="{{ static_url('css/plan-nutrition.css') }}">
+{% endif %}
+{% if race_protocol %}
+<link rel="stylesheet" href="{{ static_url('css/plan-raceday.css') }}">
+{% endif %}
+{% if user and start_date %}
+<link rel="stylesheet" href="{{ static_url('css/plan-readiness.css') }}">
+{% endif %}
+{% if user and not user.strava_athlete_id %}
+<link rel="stylesheet" href="{{ static_url('css/plan-modal.css') }}">
+{% endif %}
 {% endblock %}
 
 {% block content %}

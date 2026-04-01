@@ -140,7 +140,7 @@ Methodology: 5 parallel review agents (core logic, API layer, models/services, f
 
 ## 6 -- Modularity: Large Files to Split
 
-- [ ] **`plan.css` is 3,078 lines** -- split into:
+- [x] **`plan.css` is 3,078 lines** -- split into:
   - `plan-core.css` -- header, summary, progress, week cards, workout grid (~600 lines)
   - `plan-nutrition.css` -- nutrition tab, meals, hydration (~400 lines)
   - `plan-raceday.css` -- race day tab, splits, timeline (~400 lines)
@@ -149,7 +149,7 @@ Methodology: 5 parallel review agents (core logic, API layer, models/services, f
   - `plan-modal.css` -- log-run modal overrides (~100 lines)
   Only `plan-core.css` loaded unconditionally; others conditional on tab data.
 
-- [ ] **`plan.html` is 967 lines** -- extract:
+- [x] **`plan.html` is 967 lines** -- extract:
   - `components/nutrition_panel.html` -- nutrition tab content
   - `components/raceday_panel.html` -- race day tab content
   - `components/workout_item.html` -- workout rendering macro

@@ -3,8 +3,14 @@
 {% block title %}{{ plan_owner.name if plan_owner and plan_owner.name else 'Shared' }}'s {{ distance_display }} Plan - RunCoach{% endblock %}
 
 {% block styles %}
-<link rel="stylesheet" href="{{ static_url('css/plan.css') }}">
+<link rel="stylesheet" href="{{ static_url('css/plan-core.css') }}">
 <link rel="stylesheet" href="{{ static_url('css/plan_shared.css') }}">
+{% if nutrition_plan %}
+<link rel="stylesheet" href="{{ static_url('css/plan-nutrition.css') }}">
+{% endif %}
+{% if race_protocol %}
+<link rel="stylesheet" href="{{ static_url('css/plan-raceday.css') }}">
+{% endif %}
 {% endblock %}
 
 {% block content %}
