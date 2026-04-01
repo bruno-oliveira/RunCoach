@@ -3,11 +3,12 @@ from datetime import datetime, timezone
 import uuid
 
 from app.models.base import Base
+from app.models.encrypted_type import EncryptedString
 
 
 class User(Base):
     __tablename__ = "users"
-    
+
     id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
     google_id = Column(String, unique=True, nullable=True, index=True)
     email = Column(String, unique=True, nullable=True, index=True)
@@ -18,7 +19,7 @@ class User(Base):
     plans_generated = Column(Integer, default=0)
     age = Column(Integer, nullable=True)  # Age for max heart rate calculation
     strava_athlete_id = Column(String, unique=True, nullable=True, index=True)
-    strava_access_token = Column(String, nullable=True)
-    strava_refresh_token = Column(String, nullable=True)
+    strava_access_token = Column(EncryptedString, nullable=True)
+    strava_refresh_token = Column(EncryptedString, nullable=True)
     strava_token_expires_at = Column(Integer, nullable=True)  # Unix epoch
     strava_last_synced_at = Column(Integer, nullable=True)  # Unix epoch of last successful sync

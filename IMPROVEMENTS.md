@@ -9,7 +9,7 @@ Methodology: 5 parallel review agents (core logic, API layer, models/services, f
 
 - [x] **`secret_key` regenerates on every Fly.io cold start** (`config.py:52`). `default_factory=lambda: secrets.token_urlsafe(32)` produces a new key each time the machine wakes from `auto_stop_machines='stop'`, invalidating all existing JWTs/sessions. Fix: set `SECRET_KEY` as a persistent Fly.io secret.
 
-- [ ] **Strava tokens stored in plaintext** (`user.py:22-23`). `strava_access_token` and `strava_refresh_token` are plain strings. Encryption at rest would be better practice.
+- [x] **Strava tokens stored in plaintext** (`user.py:22-23`). `strava_access_token` and `strava_refresh_token` are plain strings. Encryption at rest would be better practice.
 
 - [x] **XSS in `readiness.js` innerHTML** (`readiness.js:33,57,82-84,125-129`). Server-provided strings (`overall_label`, `distance_label`, `comp.detail`, `s.description`, etc.) are interpolated directly into `innerHTML` without escaping. Fix: use `escapeHtml()` (already exists in `plan.js`) or build DOM nodes with `textContent`.
 
