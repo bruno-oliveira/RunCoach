@@ -11,7 +11,7 @@ class DailyWorkout(Base):
     )
 
     id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
-    weekly_plan_id = Column(String, ForeignKey("weekly_plans.id"))
+    weekly_plan_id = Column(String, ForeignKey("weekly_plans.id"), nullable=False)
     day_of_week = Column(Integer)  # 1-7 (Monday-Sunday)
     workout_type = Column(String)  # 'easy', 'tempo', 'interval', 'long', 'rest', 'strength'
     distance_km = Column(Float)

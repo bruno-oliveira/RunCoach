@@ -12,11 +12,10 @@ from sqlalchemy.orm import Session
 
 from app.config import settings
 from app.dependencies import get_db, get_optional_user, verify_plan_ownership
-from app.models import TrainingPlan, RunLog
+from app.models import TrainingPlan
 from app.core.nutrition_engine import NutritionEngine
 from app.services.plan_service import PlanService
 from app.schemas import parse_target_distance
-from app.services.adaptation_service import AdaptationService
 from app.template_helpers import create_templates
 
 logger = logging.getLogger(__name__)
@@ -59,37 +58,19 @@ async def randomize_meals(
         db.commit()
         logger.info(f"Successfully updated nutrition plan for {plan_id}")
 
-        # Get performance analysis and logged runs for the plan
-        adaptation_service = AdaptationService()
-        performance_analysis = adaptation_service.analyze_performance(plan_id, db)
-        logged_runs = db.query(RunLog).filter(RunLog.training_plan_id == plan_id).all()
+        from app.routers.plan_helpers import plan_view_context
 
-        # Convert to map for template lookup (template uses logged_runs.get(workout.id))
-        logged_runs_map = {
-            run.daily_workout_id: run for run in logged_runs if run.daily_workout_id
-        }
+        plan_data = json.loads(training_plan.plan_data) if training_plan.plan_data else []
+        plan_data = PlanService.enrich_plan_data_with_ids(plan_data, training_plan.id, db)
+        nutrition_plan = PlanService.nutrition_for_template(training_plan.nutrition_plan_data)
+        extra = PlanService.get_plan_view_data(training_plan, current_user, db)
 
-        response_data = {
-            "request": request,
-            "user": current_user,
-            "google_client_id": settings.google_client_id,
-            "plan": json.loads(training_plan.plan_data) if training_plan.plan_data else [],
-            "plan_id": training_plan.id,
-            "training_plan": training_plan,
-            "current_km": training_plan.current_weekly_km,
-            "target_distance": training_plan.target_distance,
-            "weeks": training_plan.weeks_duration,
-            "logged_runs": logged_runs_map,
-            "performance_analysis": performance_analysis,
-            "success_message": "Generated new meal options with different variety!",
-        }
-
-        # Convert nutrition plan to template-compatible format
-        response_data["nutrition_plan"] = PlanService.nutrition_for_template(
-            training_plan.nutrition_plan_data
+        ctx = plan_view_context(
+            request, current_user, training_plan, plan_data, nutrition_plan, **extra
         )
+        ctx["success_message"] = "Generated new meal options with different variety!"
 
-        return templates.TemplateResponse("plan.html", response_data)
+        return templates.TemplateResponse("plan.html", ctx)
 
     except HTTPException:
         db.rollback()

@@ -41,65 +41,65 @@ Methodology: 5 parallel review agents (core logic, API layer, models/services, f
 
 ## 3 -- Correctness: High-Priority Bugs
 
-- [ ] **`_validate_week_plan` is a no-op** (`plan_generator.py:1071-1082`). The validator receives `actual_total_km` (computed from workouts) as `total_km`, then re-computes the same sum and compares -- always passes. Fix: pass the original target `week_km` from `weekly_progression`.
+- [x] **`_validate_week_plan` is a no-op** (`plan_generator.py:1071-1082`). The validator receives `actual_total_km` (computed from workouts) as `total_km`, then re-computes the same sum and compares -- always passes. Fix: pass the original target `week_km` from `weekly_progression`.
 
 - [ ] **Very low mileage (1-3 km/week) for long distances: long run minimum exceeds weekly budget** (`plan_generator.py:975-979`). For a marathon, `target_distance * 0.25 = 10.5 km` long-run minimum exceeds the total weekly km of ~1.1 km. Fix: add minimum base mileage check for longer distances, consistent with `config.py` constraints.
 
-- [ ] **`body_weight=0` produces zero-calorie nutrition plan, cached permanently** (`nutrition_engine.py:14,27`). `base_calories = 0 * 22 = 0`. The `lru_cache` then poisons future calls. Fix: `if body_weight <= 0: raise ValueError(...)`.
+- [x] **`body_weight=0` produces zero-calorie nutrition plan, cached permanently** (`nutrition_engine.py:14,27`). `base_calories = 0 * 22 = 0`. The `lru_cache` then poisons future calls. Fix: `if body_weight <= 0: raise ValueError(...)`.
 
-- [ ] **Negative `taper_weeks` risk in performance plan** (`performance_plan_generator.py:228-242`). Phase allocation uses `max()` floors that can sum to more than `weeks`. No guard on `taper_weeks = weeks - sum(others)`. Fix: `taper_weeks = max(0, ...)`.
+- [x] **Negative `taper_weeks` risk in performance plan** (`performance_plan_generator.py:228-242`). Phase allocation uses `max()` floors that can sum to more than `weeks`. No guard on `taper_weeks = weeks - sum(others)`. Fix: `taper_weeks = max(0, ...)`.
 
-- [ ] **Single-run edge case gives wrong weekly average** (`adaptive_plan_generator.py:61`). With one run, `weeks_span=1`, treating one run's distance as full-week volume. A 5 km run = "5 km/week". Fix: flag single-run data as low-confidence or return no-data default.
+- [x] **Single-run edge case gives wrong weekly average** (`adaptive_plan_generator.py:61`). With one run, `weeks_span=1`, treating one run's distance as full-week volume. A 5 km run = "5 km/week". Fix: flag single-run data as low-confidence or return no-data default.
 
-- [ ] **Partial flush-then-commit in `create_plan` with no rollback** (`plan_service.py:160-255`). Multiple `db.flush()` calls; if HR-zone injection fails after the first flush, the session is dirty. Fix: wrap entire body in `try/except` with `db.rollback()`.
+- [x] **Partial flush-then-commit in `create_plan` with no rollback** (`plan_service.py:160-255`). Multiple `db.flush()` calls; if HR-zone injection fails after the first flush, the session is dirty. Fix: wrap entire body in `try/except` with `db.rollback()`.
 
-- [ ] **`FavoriteRecipe` and `TriathlonPlan` missing cascade on User delete** (`models/__init__.py:36-40`). `FavoriteRecipe.user_id` is `nullable=False`; deleting a user raises `IntegrityError`. Fix: add `cascade="all, delete-orphan"`.
+- [x] **`FavoriteRecipe` and `TriathlonPlan` missing cascade on User delete** (`models/__init__.py:36-40`). `FavoriteRecipe.user_id` is `nullable=False`; deleting a user raises `IntegrityError`. Fix: add `cascade="all, delete-orphan"`.
 
-- [ ] **`merge_anonymous_user` leaves `RunFeedback`, `FavoriteRecipe`, `TriathlonPlan` orphaned** (`merge_service.py:44-68`). Only `TrainingPlan` and `RunLog` are re-parented. Fix: re-parent or delete all related rows before `db.delete(anonymous_user)`.
+- [x] **`merge_anonymous_user` leaves `RunFeedback`, `FavoriteRecipe`, `TriathlonPlan` orphaned** (`merge_service.py:44-68`). Only `TrainingPlan` and `RunLog` are re-parented. Fix: re-parent or delete all related rows before `db.delete(anonymous_user)`.
 
-- [ ] **FK columns `WeeklyPlan.training_plan_id` and `DailyWorkout.weekly_plan_id` missing `nullable=False`** (`weekly_plan.py:14`, `daily_workout.py:14`). Orphaned rows with `NULL` FK can be silently created.
+- [x] **FK columns `WeeklyPlan.training_plan_id` and `DailyWorkout.weekly_plan_id` missing `nullable=False`** (`weekly_plan.py:14`, `daily_workout.py:14`). Orphaned rows with `NULL` FK can be silently created.
 
-- [ ] **`PlanCustomization` FK and payload columns missing `nullable=False`** (`plan_customization.py:12-15`). Half-formed customization records can be persisted.
+- [x] **`PlanCustomization` FK and payload columns missing `nullable=False`** (`plan_customization.py:12-15`). Half-formed customization records can be persisted.
 
-- [ ] **`get_logged_runs_map` dict silently drops all-but-last run per workout** (`plan_service.py:494-498`). Dict comprehension keeps only the last run per `daily_workout_id`. Fix: sort by `date.desc()` and keep first, or disallow duplicates at the model level.
+- [x] **`get_logged_runs_map` dict silently drops all-but-last run per workout** (`plan_service.py:494-498`). Dict comprehension keeps only the last run per `daily_workout_id`. Fix: sort by `date.desc()` and keep first, or disallow duplicates at the model level.
 
-- [ ] **`customize_plan` swallows `HTTPException` from service layer as 200** (`routers/plans.py:243-263`). `except HTTPException: raise` only covers `get_plan_or_404`; service-layer HTTPExceptions become 200 with error string. Fix: propagate all `HTTPException` before the generic handler.
+- [x] **`customize_plan` swallows `HTTPException` from service layer as 200** (`routers/plans.py:243-263`). `except HTTPException: raise` only covers `get_plan_or_404`; service-layer HTTPExceptions become 200 with error string. Fix: propagate all `HTTPException` before the generic handler.
 
-- [ ] **`/api/recipes` has no Query bounds** (`routers/recipes.py:110-119`). `page=0` gives negative slice index (returns last N recipes); `page_size=10000` loads entire dataset. Fix: `page: int = Query(1, ge=1)`, `page_size: int = Query(50, ge=1, le=200)`.
+- [x] **`/api/recipes` has no Query bounds** (`routers/recipes.py:110-119`). `page=0` gives negative slice index (returns last N recipes); `page_size=10000` loads entire dataset. Fix: `page: int = Query(1, ge=1)`, `page_size: int = Query(50, ge=1, le=200)`.
 
-- [ ] **`bulk_insert_mappings` deprecated and skips `baseline_distance_km`** (`performance_service.py:338-340`). Performance-created plans lack `baseline_distance_km`, forcing a backfill query on every adjustment. Fix: use ORM `db.add_all()` with explicit field.
+- [x] **`bulk_insert_mappings` deprecated and skips `baseline_distance_km`** (`performance_service.py:338-340`). Performance-created plans lack `baseline_distance_km`, forcing a backfill query on every adjustment. Fix: use ORM `db.add_all()` with explicit field.
 
 ---
 
 ## 4 -- Correctness: Medium-Priority Bugs
 
-- [ ] **`generate_phased_nutrition_plan` returns `{}` for beginner plans** (`nutrition_engine.py:132-137`). Beginner plans use `phase="beginner"` which is not in `phase_weeks`. Fix: add fallback for unrecognized phases.
+- [x] **`generate_phased_nutrition_plan` returns `{}` for beginner plans** (`nutrition_engine.py:132-137`). Beginner plans use `phase="beginner"` which is not in `phase_weeks`. Fix: add fallback for unrecognized phases.
 
-- [ ] **All Couch-to-5K weeks report `total_km=0`** (`beginner_plan_generator.py:99-107`). Propagates into nutrition calculations as `peak_km=0`, halving nutrition targets. Fix: compute estimated `total_km` from `base_duration` and assumed pace.
+- [x] **All Couch-to-5K weeks report `total_km=0`** (`beginner_plan_generator.py:99-107`). Propagates into nutrition calculations as `peak_km=0`, halving nutrition targets. Fix: compute estimated `total_km` from `base_duration` and assumed pace.
 
-- [ ] **`_calculate_phases` can decrement `peak` to 0** (`plan_generator.py:111-120`). While-loop trimming overage has no floor on `peak`. For very short plans, result is a plan with no peak phase.
+- [x] **`_calculate_phases` can decrement `peak` to 0** (`plan_generator.py:111-120`). While-loop trimming overage has no floor on `peak`. For very short plans, result is a plan with no peak phase.
 
-- [ ] **`rest_days` can go negative if `max_runs > 6`** (`plan_generator.py:266`). `7 - (max_runs + 1)` with `max_runs=7` gives `-1`. Fix: `max_runs = min(max_runs, 6)`.
+- [x] **`rest_days` can go negative if `max_runs > 6`** (`plan_generator.py:266`). `7 - (max_runs + 1)` with `max_runs=7` gives `-1`. Fix: `max_runs = min(max_runs, 6)`.
 
-- [ ] **VDOT binary search returns unconverged result silently** (`vdot_calculator.py:247-265`). After 100 iterations without converging within 0.01, `mid` is returned with no warning. Fix: log a warning on non-convergence.
+- [x] **VDOT binary search returns unconverged result silently** (`vdot_calculator.py:247-265`). After 100 iterations without converging within 0.01, `mid` is returned with no warning. Fix: log a warning on non-convergence.
 
-- [ ] **Naive/aware datetime mismatch risk** (`coaching_feedback_engine.py:228-230`). `run_log.date - plan.start_date` will raise `TypeError` if timezone awareness differs. `adaptive_plan_generator.py` strips timezone; `coaching_feedback_engine.py` does not.
+- [x] **Naive/aware datetime mismatch risk** (`coaching_feedback_engine.py:228-230`). `run_log.date - plan.start_date` will raise `TypeError` if timezone awareness differs. `adaptive_plan_generator.py` strips timezone; `coaching_feedback_engine.py` does not.
 
-- [ ] **`week["total_km"]` accumulates drift after modifications** (`plan_service.py:712-720`). Incremental delta updates diverge from actual workout sum over time. Fix: recompute `sum(w["distance"] for w in workouts)` after any modification.
+- [x] **`week["total_km"]` accumulates drift after modifications** (`plan_service.py:712-720`). Incremental delta updates diverge from actual workout sum over time. Fix: recompute `sum(w["distance"] for w in workouts)` after any modification.
 
-- [ ] **`randomize_meals` builds template context manually, missing keys** (`routers/nutrition.py:72-92`). Omits `start_date`, `current_week_number`, `vdot`, `nutrition_phases`, `race_protocol`, etc. that `plan_view_context()` provides. Fix: use `plan_view_context`.
+- [x] **`randomize_meals` builds template context manually, missing keys** (`routers/nutrition.py:72-92`). Omits `start_date`, `current_week_number`, `vdot`, `nutrition_phases`, `race_protocol`, etc. that `plan_view_context()` provides. Fix: use `plan_view_context`.
 
-- [ ] **`RunLogUpdate` has no upper bounds on `distance_km`/`duration_minutes`** (`schemas.py:383-401`). `distance_km=99999` is accepted, corrupting VDOT/analytics. Fix: `Field(None, gt=0, le=1000)`.
+- [x] **`RunLogUpdate` has no upper bounds on `distance_km`/`duration_minutes`** (`schemas.py:383-401`). `distance_km=99999` is accepted, corrupting VDOT/analytics. Fix: `Field(None, gt=0, le=1000)`.
 
-- [ ] **`%-d` strftime format is Linux-only** (`routers/plans.py:383`, `plan_helpers.py:88,120`). Crashes on macOS dev environment. Fix: use `str(dt.day)` instead.
+- [x] **`%-d` strftime format is Linux-only** (`routers/plans.py:383`, `plan_helpers.py:88,120`). Crashes on macOS dev environment. Fix: use `str(dt.day)` instead.
 
-- [ ] **98th-percentile HR index is wrong for small lists** (`performance_service.py:73`). For 5-6 values, always returns the absolute max, defeating outlier protection. Fix: use `statistics.quantiles` or require >= 10 runs.
+- [x] **98th-percentile HR index is wrong for small lists** (`performance_service.py:73`). For 5-6 values, always returns the absolute max, defeating outlier protection. Fix: use `statistics.quantiles` or require >= 10 runs.
 
-- [ ] **`race_predictor_service` `db=None` default masks required param** (`race_predictor_service.py:41,72`). Calling without `db` gives `AttributeError`. Fix: make `db: Session` required.
+- [x] **`race_predictor_service` `db=None` default masks required param** (`race_predictor_service.py:41,72`). Calling without `db` gives `AttributeError`. Fix: make `db: Session` required.
 
-- [ ] **`.timestamp()` on naive datetime uses local timezone** (`race_predictor_service.py:226`). Correct on UTC Fly.io container, wrong in non-UTC environments. Fix: use `(dt - datetime(1970,1,1)).total_seconds()`.
+- [x] **`.timestamp()` on naive datetime uses local timezone** (`race_predictor_service.py:226`). Correct on UTC Fly.io container, wrong in non-UTC environments. Fix: use `(dt - datetime(1970,1,1)).total_seconds()`.
 
-- [ ] **Division-by-zero risk in `_calculate_quality_distances`** (`plan_generator.py:526-530`). Safe with current `PHASE_DISTRIBUTIONS` but no guard if `phase_dist['long']` ever reaches `1.0`. Fix: `safe_denom = max(0.01, 1 - long_pct)`.
+- [x] **Division-by-zero risk in `_calculate_quality_distances`** (`plan_generator.py:526-530`). Safe with current `PHASE_DISTRIBUTIONS` but no guard if `phase_dist['long']` ever reaches `1.0`. Fix: `safe_denom = max(0.01, 1 - long_pct)`.
 
 ---
 

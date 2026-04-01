@@ -95,13 +95,22 @@ def calculate_phases(weeks: int, target_distance: float = 10.0) -> Dict[str, int
     peak = max(1, remaining - base - build)
 
     # Safety: if rounding pushed us over, trim from the largest non-taper phase
+    # but never let any phase drop below its floor
     while base + build + peak + taper > weeks:
-        if base >= build and base >= peak:
+        if base >= build and base >= peak and base > 2:
             base -= 1
-        elif build >= peak:
+        elif build >= peak and build > 2:
             build -= 1
-        else:
+        elif peak > 1:
             peak -= 1
+        else:
+            # All at minimums — trim from the largest anyway
+            if base >= build and base >= peak:
+                base -= 1
+            elif build >= peak:
+                build -= 1
+            else:
+                peak -= 1
 
     # Safety: if rounding left us short, add to build
     while base + build + peak + taper < weeks:

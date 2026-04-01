@@ -89,8 +89,8 @@ def _build_week_dates(start_date: date, num_weeks: int) -> list[dict]:
         week_end = week_start + timedelta(days=6)
         week_dates.append({
             "week": i + 1,
-            "start": week_start.strftime("%b %-d"),
-            "end": week_end.strftime("%b %-d"),
+            "start": f"{week_start.strftime('%b')} {week_start.day}",
+            "end": f"{week_end.strftime('%b')} {week_end.day}",
             "start_iso": week_start.isoformat(),
         })
     return week_dates
@@ -121,7 +121,7 @@ def _workout_dates(start_date: date, num_weeks: int) -> dict[tuple[int, int], st
         week_start = start_date + timedelta(weeks=w)
         for d in range(7):
             dt = week_start + timedelta(days=d)
-            result[(w + 1, d + 1)] = f"{day_abbrevs[d]}, {dt.strftime('%b %-d')}"
+            result[(w + 1, d + 1)] = f"{day_abbrevs[d]}, {dt.strftime('%b')} {dt.day}"
     return result
 
 

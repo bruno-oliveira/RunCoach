@@ -76,10 +76,14 @@ class PerformanceService:
         )
 
         if len(runs) >= 5:
-            # Use 98th percentile to avoid outliers
+            # Use 98th percentile to avoid outliers (need at least 10 for meaningful percentile)
             hr_values = sorted([r.max_heart_rate for r in runs])
-            percentile_98_idx = int(len(hr_values) * 0.98)
-            max_hr = hr_values[percentile_98_idx]
+            if len(hr_values) >= 10:
+                percentile_98_idx = min(int(len(hr_values) * 0.98), len(hr_values) - 1)
+                max_hr = hr_values[percentile_98_idx]
+            else:
+                # With fewer values, use second-highest to filter single outlier
+                max_hr = hr_values[-2] if len(hr_values) >= 2 else hr_values[-1]
 
             return {
                 'max_hr': max_hr,
@@ -333,18 +337,20 @@ class PerformanceService:
             })
 
             for workout in week_data.get('daily_workouts', []):
+                dist = workout.get('distance', 0)
                 daily_workout_records.append({
                     'id': str(uuid.uuid4()),
                     'weekly_plan_id': week_id,
                     'day_of_week': workout['day'],
                     'workout_type': workout['type'],
-                    'distance_km': workout.get('distance', 0),
+                    'distance_km': dist,
                     'intensity': workout.get('zone', 'zone_1'),
                     'notes': workout.get('description', ''),
+                    'baseline_distance_km': dist,
                 })
 
-        self.db.bulk_insert_mappings(WeeklyPlan, weekly_plan_records)
-        self.db.bulk_insert_mappings(DailyWorkout, daily_workout_records)
+        self.db.add_all([WeeklyPlan(**r) for r in weekly_plan_records])
+        self.db.add_all([DailyWorkout(**r) for r in daily_workout_records])
         self.db.flush()
 
     def get_plan(self, plan_id: str) -> Optional[TrainingPlan]:

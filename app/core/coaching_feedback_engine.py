@@ -225,7 +225,10 @@ class CoachingFeedbackEngine:
             return None
 
         # Determine which plan week this run falls in
-        days_since_start = (run_log.date - plan.start_date).days
+        # Strip timezone info to avoid naive/aware mismatch
+        run_date = run_log.date.replace(tzinfo=None) if hasattr(run_log.date, 'replace') and run_log.date.tzinfo else run_log.date
+        plan_start = plan.start_date.replace(tzinfo=None) if hasattr(plan.start_date, 'replace') and plan.start_date.tzinfo else plan.start_date
+        days_since_start = (run_date - plan_start).days
         if days_since_start < 0:
             return None
         current_week_num = (days_since_start // 7) + 1

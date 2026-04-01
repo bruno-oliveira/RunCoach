@@ -187,11 +187,13 @@ def calculate_quality_distances(total_km: float, phase: str,
 
     remaining_km = total_km - long_run_distance
 
+    non_long_pct = max(0.01, 1 - phase_dist['long'])
+
     if distribution['tempo'] > 0:
-        quality_distances['tempo'] = round(remaining_km * (phase_dist['tempo'] / (1 - phase_dist['long'])), 1)
+        quality_distances['tempo'] = round(remaining_km * (phase_dist['tempo'] / non_long_pct), 1)
     if distribution['interval'] > 0:
-        quality_distances['interval'] = round(remaining_km * (phase_dist['interval'] / (1 - phase_dist['long'])), 1)
+        quality_distances['interval'] = round(remaining_km * (phase_dist['interval'] / non_long_pct), 1)
     if distribution['hill'] > 0:
-        quality_distances['hill'] = round(remaining_km * (phase_dist['hill'] / (1 - phase_dist['long'])), 1)
+        quality_distances['hill'] = round(remaining_km * (phase_dist['hill'] / non_long_pct), 1)
 
     return quality_distances

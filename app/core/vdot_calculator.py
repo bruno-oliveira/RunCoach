@@ -244,6 +244,7 @@ class VDOTCalculator:
         # Search bounds in minutes: 1 min to 600 min (10 hours)
         lo, hi = 1.0, 600.0
 
+        converged = False
         for _ in range(100):
             mid = (lo + hi) / 2.0
             velocity = distance_m / mid
@@ -254,6 +255,7 @@ class VDOTCalculator:
                 continue
             calc_vdot = vo2 / pct
             if abs(calc_vdot - vdot) < 0.01:
+                converged = True
                 break
             if calc_vdot > vdot:
                 # Too fast — need more time
@@ -261,6 +263,12 @@ class VDOTCalculator:
             else:
                 # Too slow — need less time
                 hi = mid
+
+        if not converged:
+            import logging
+            logging.getLogger(__name__).warning(
+                f"VDOT binary search did not converge for vdot={vdot}, distance={distance_km}km"
+            )
 
         return int(round(mid * 60))
 

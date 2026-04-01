@@ -229,17 +229,17 @@ class PerformancePlanGenerator:
             base_weeks = max(2, weeks // 3)
             build_weeks = max(2, weeks // 3)
             sharpen_weeks = max(1, weeks // 4)
-            taper_weeks = weeks - base_weeks - build_weeks - sharpen_weeks
+            taper_weeks = max(0, weeks - base_weeks - build_weeks - sharpen_weeks)
         elif weeks <= 12:
             base_weeks = max(3, int(weeks * 0.33))
             build_weeks = max(3, int(weeks * 0.33))
             sharpen_weeks = max(2, int(weeks * 0.20))
-            taper_weeks = weeks - base_weeks - build_weeks - sharpen_weeks
+            taper_weeks = max(0, weeks - base_weeks - build_weeks - sharpen_weeks)
         else:
             base_weeks = max(4, int(weeks * 0.35))
             build_weeks = max(4, int(weeks * 0.35))
             sharpen_weeks = max(2, int(weeks * 0.18))
-            taper_weeks = weeks - base_weeks - build_weeks - sharpen_weeks
+            taper_weeks = max(0, weeks - base_weeks - build_weeks - sharpen_weeks)
 
         phases = {
             'base': {

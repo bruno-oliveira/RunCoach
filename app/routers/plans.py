@@ -242,8 +242,9 @@ async def customize_plan(
 
     except HTTPException:
         raise
-    except Exception as e:
+    except Exception:
         db.rollback()
+        logger.exception("Error customizing plan")
         return templates.TemplateResponse(
             "plan.html",
             {
@@ -258,7 +259,7 @@ async def customize_plan(
                     else {}
                 ),
                 "progress_data": None,
-                "error": f"Error customizing plan: {str(e)}",
+                "error": "An error occurred while customizing the plan.",
             },
         )
 
@@ -380,7 +381,7 @@ async def list_my_plans(
                 elif current_wk >= 1:
                     plan.status_label = f"Week {current_wk} of {plan.weeks_duration}"
                 else:
-                    plan.status_label = f"Starts {start_d.strftime('%b %-d')}"
+                    plan.status_label = f"Starts {start_d.strftime('%b')} {start_d.day}"
             else:
                 plan.status_label = None
 

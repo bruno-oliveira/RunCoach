@@ -11,7 +11,7 @@ class WeeklyPlan(Base):
     )
 
     id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
-    training_plan_id = Column(String, ForeignKey("training_plans.id"))
+    training_plan_id = Column(String, ForeignKey("training_plans.id"), nullable=False)
     week_number = Column(Integer)
     total_km = Column(Float)
     workout_types = Column(Text)  # JSON string of workout distribution

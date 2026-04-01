@@ -381,8 +381,8 @@ class RunLogCreate(RunLogBase):
 
 
 class RunLogUpdate(BaseModel):
-    distance_km: Optional[float] = Field(None, gt=0)
-    duration_minutes: Optional[float] = Field(None, gt=0)
+    distance_km: Optional[float] = Field(None, gt=0, le=1000)
+    duration_minutes: Optional[float] = Field(None, gt=0, le=6000)
     avg_heart_rate: Optional[int] = Field(None, ge=40, le=220)
     max_heart_rate: Optional[int] = Field(None, ge=40, le=220)
     avg_cadence: Optional[int] = Field(None, ge=100, le=220)

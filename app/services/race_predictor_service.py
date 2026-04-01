@@ -38,7 +38,7 @@ class RacePredictorService:
         )
 
     @staticmethod
-    def get_vdot_history(user_id: str, weeks: int = 12, db: Session = None) -> List[Dict]:
+    def get_vdot_history(user_id: str, weeks: int = 12, *, db: Session) -> List[Dict]:
         """Get VDOT history from recent runs for trend analysis.
 
         Uses all runs with a stored VDOT (not just races).
@@ -69,7 +69,7 @@ class RacePredictorService:
         ]
 
     @staticmethod
-    def get_best_recent_vdot(user_id: str, weeks: int = 12, db: Session = None) -> Optional[float]:
+    def get_best_recent_vdot(user_id: str, weeks: int = 12, *, db: Session) -> Optional[float]:
         """Get a robust VDOT estimate from recent runs.
 
         Uses the median of the top N VDOTs instead of a raw MAX. This is
@@ -223,7 +223,7 @@ class RacePredictorService:
         for run in all_runs:
             actual_seconds = int(run.duration_minutes * 60) if run.duration_minutes else None
 
-            run_ts = run.date.timestamp() if run.date else 0
+            run_ts = (run.date - datetime(1970, 1, 1)).total_seconds() if run.date else 0
             cutoff_ts = run_ts - WINDOW_WEEKS * 7 * 86400
             window_vdots = sorted(
                 [v for ts, v in prior_vdots if ts >= cutoff_ts],

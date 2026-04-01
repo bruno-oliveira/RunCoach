@@ -275,7 +275,8 @@ class TrainingPlanGenerator:
         return workouts
 
     def _validate_week_plan(self, workouts: List[Dict[str, Any]],
-                            total_km: float, phase: str) -> tuple[bool, str]:
+                            total_km: float, target_total_km: float,
+                            phase: str) -> tuple[bool, str]:
         """
         Validate week plan follows training principles.
 
@@ -283,7 +284,13 @@ class TrainingPlanGenerator:
         - All workouts have 'description' field
         - Recovery day has label 'recovery' (not 'recovery_rest')
         - No easy run > 60% of long run distance
-        - Total distance matches expected (+/-5% tolerance)
+        - Total distance matches target (+/-5% tolerance)
+
+        Args:
+            workouts: List of workout dicts for the week.
+            total_km: Actual total km computed from workouts.
+            target_total_km: Target total km from weekly progression.
+            phase: Current training phase.
         """
         for workout in workouts:
             if 'description' not in workout:
@@ -300,10 +307,9 @@ class TrainingPlanGenerator:
                     if workout.get('distance', 0) > long_run_dist * 1.05:
                         return False, f"Easy run ({workout.get('distance')}km) > 105% of long run ({long_run_dist}km) on day {workout['day']}"
 
-        actual_total = sum(w.get('distance', 0) for w in workouts)
-        tolerance = total_km * 0.05
-        if abs(actual_total - total_km) > tolerance:
-            return False, f"Total distance mismatch: expected {total_km}km, got {actual_total}km"
+        tolerance = target_total_km * 0.05
+        if abs(total_km - target_total_km) > tolerance:
+            return False, f"Total distance mismatch: expected {target_total_km}km, got {total_km}km"
 
         for workout in workouts:
             if workout['type'] == 'recovery' and workout.get('distance', 0) != 0:
@@ -353,7 +359,7 @@ class TrainingPlanGenerator:
                     w['distance'] = round(w['distance'] * scale, 1)
             actual_total_km = round(sum(w.get('distance', 0) for w in workouts), 1)
 
-        is_valid, validation_message = self._validate_week_plan(workouts, actual_total_km, phase)
+        is_valid, validation_message = self._validate_week_plan(workouts, actual_total_km, total_km, phase)
 
         training_tips = self._generate_training_tips(week_number, target_distance)
 

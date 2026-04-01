@@ -96,9 +96,13 @@ class BeginnerPlanGenerator:
             }
             workouts.append(workout)
 
+        # Estimate total_km from base_duration and assumed beginner pace (~8 min/km)
+        assumed_pace_km_per_min = 1 / 8.0  # 8 min/km
+        estimated_km = round(week_config["total_min"] * assumed_pace_km_per_min * (week_config["run"] / (week_config["run"] + week_config["walk"])) * max_runs, 1) if week_config["run"] > 0 else 0
+
         return {
             "week": week_number,
-            "total_km": 0,
+            "total_km": estimated_km,
             "phase": "beginner",
             "daily_workouts": workouts,
             "training_tips": self._get_beginner_tips(week_number),

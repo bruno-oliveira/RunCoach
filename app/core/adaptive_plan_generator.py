@@ -58,7 +58,11 @@ class AdaptivePlanGenerator:
 
         # Calculate average weekly distance
         total_distance = sum(run.distance_km for run in recent_runs)
-        weeks_span = max(1, min(8, (recent_runs[0].date - recent_runs[-1].date).days / 7))
+        if len(recent_runs) == 1:
+            # Single run: not enough data to estimate weekly volume reliably
+            weeks_span = 1
+        else:
+            weeks_span = max(1, min(8, (recent_runs[0].date - recent_runs[-1].date).days / 7))
         avg_weekly_km = total_distance / weeks_span
 
         # Calculate current pace

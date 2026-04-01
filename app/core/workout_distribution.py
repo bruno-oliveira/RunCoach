@@ -40,6 +40,7 @@ def get_workout_distribution(total_km: float, max_runs: int, phase: str = 'build
     actual_run_slots = max_runs
     running_days = actual_run_slots - long_runs - quality_workouts
     easy_runs = max(0, running_days)
+    max_runs = min(max_runs, 6)
     rest_days = 7 - (max_runs + 1)
 
     if target_distance == 30.0 and quality_workouts > 0:

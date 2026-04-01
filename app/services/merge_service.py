@@ -3,7 +3,7 @@
 import logging
 from typing import Optional
 from sqlalchemy.orm import Session
-from app.models import User, TrainingPlan, RunLog
+from app.models import User, TrainingPlan, RunLog, FavoriteRecipe, TriathlonPlan
 
 logger = logging.getLogger(__name__)
 
@@ -38,6 +38,8 @@ class MergeService:
         stats = {
             "training_plans": 0,
             "run_logs": 0,
+            "favorite_recipes": 0,
+            "triathlon_plans": 0,
             "merged": True
         }
 
@@ -57,6 +59,22 @@ class MergeService:
             for log in logs:
                 log.user_id = authenticated_user_id
                 stats["run_logs"] += 1
+
+            recipes = db.query(FavoriteRecipe).filter(
+                FavoriteRecipe.user_id == anonymous_user_id
+            ).all()
+
+            for recipe in recipes:
+                recipe.user_id = authenticated_user_id
+                stats["favorite_recipes"] += 1
+
+            tri_plans = db.query(TriathlonPlan).filter(
+                TriathlonPlan.user_id == anonymous_user_id
+            ).all()
+
+            for tp in tri_plans:
+                tp.user_id = authenticated_user_id
+                stats["triathlon_plans"] += 1
 
             db.delete(anonymous_user)
 

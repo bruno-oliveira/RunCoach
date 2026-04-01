@@ -11,6 +11,8 @@ def _calculate_nutrition_needs_cached(
     body_weight: float
 ) -> tuple:
     """Pure function for calculating nutrition needs (cached)."""
+    if body_weight <= 0:
+        raise ValueError("body_weight must be positive")
     base_calories = body_weight * 22
 
     training_factor = 1.0 + (weekly_km / 50) * 0.3
@@ -135,6 +137,9 @@ class NutritionEngine:
             phase = week.get("phase", "base")
             if phase in phase_weeks:
                 phase_weeks[phase].append(week["week"])
+            else:
+                # Unrecognized phase (e.g. "beginner") — treat as base
+                phase_weeks["base"].append(week["week"])
 
         # Calculate peak mileage from plan data for build/peak phases
         peak_km = max((w.get("total_km", weekly_km) for w in plan_data), default=weekly_km)
