@@ -2,7 +2,7 @@
 
 import pytest
 from fastapi.testclient import TestClient
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, event
 from sqlalchemy.orm import Session, sessionmaker
 from sqlalchemy.pool import StaticPool
 
@@ -21,6 +21,14 @@ def test_db() -> Session:
         connect_args={"check_same_thread": False},
         poolclass=StaticPool,
     )
+
+    # Match production SQLite pragmas (dependencies.py)
+    @event.listens_for(engine, "connect")
+    def _set_sqlite_pragmas(dbapi_conn, _):
+        cursor = dbapi_conn.cursor()
+        cursor.execute("PRAGMA foreign_keys=ON")
+        cursor.close()
+
     TestSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
     # Create tables

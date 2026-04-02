@@ -141,8 +141,7 @@ class TestPlanViewing:
         """Test viewing a plan that doesn't exist."""
         response = client.get("/plan/nonexistent-plan-id")
 
-        # Should return 404 or error page
-        assert response.status_code in [404, 500]
+        assert response.status_code == 404
 
 
 class TestPDFDownload:
@@ -152,7 +151,7 @@ class TestPDFDownload:
         """Test downloading PDF for nonexistent plan."""
         response = client.get("/download-pdf/nonexistent-plan-id")
 
-        assert response.status_code in [404, 500]
+        assert response.status_code == 404
 
 
 class TestNutritionEndpoints:
@@ -165,13 +164,13 @@ class TestNutritionEndpoints:
             data={"plan_id": "nonexistent-plan-id"},
         )
 
-        assert response.status_code in [404, 500]
+        assert response.status_code == 404
 
     def test_nutrition_plan_nonexistent(self, client: TestClient):
         """Test getting nutrition plan for nonexistent plan."""
         response = client.get("/nutrition-plan/nonexistent-plan-id")
 
-        assert response.status_code in [404, 500]
+        assert response.status_code == 404
 
 
 class TestPlanCreationAndWorkflow:

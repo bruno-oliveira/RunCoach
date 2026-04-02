@@ -231,6 +231,45 @@ class TestSyncActivities:
         assert result["synced"] == 2
         assert result["skipped"] == 0
 
+    @pytest.mark.asyncio
+    async def test_sync_sport_type_only_run(
+        self, strava_service, mock_user, sample_strava_activity, test_db
+    ):
+        """Activities with type=None but sport_type='Run' should be synced."""
+        test_db.add(mock_user)
+        test_db.commit()
+
+        sport_type_run = {
+            **sample_strava_activity,
+            "id": 444,
+            "type": None,
+            "sport_type": "Run",
+        }
+        sport_type_ride = {
+            **sample_strava_activity,
+            "id": 555,
+            "type": None,
+            "sport_type": "Ride",
+        }
+
+        with patch.object(
+            strava_service, "ensure_valid_token", new_callable=AsyncMock
+        ) as mock_token, patch.object(
+            strava_service, "fetch_activities", new_callable=AsyncMock
+        ) as mock_fetch:
+            mock_token.return_value = "valid-token"
+            mock_fetch.side_effect = [[sport_type_run, sport_type_ride], []]
+
+            result = await strava_service.sync_activities(mock_user, test_db)
+
+        # Only the Run sport_type should be synced, Ride should be skipped
+        assert result["synced"] == 1
+        assert result["skipped"] == 0
+
+        logs = test_db.query(RunLog).filter(RunLog.user_id == "user-123").all()
+        assert len(logs) == 1
+        assert logs[0].strava_activity_id == "444"
+
 
 class TestTokenRefresh:
     @pytest.mark.asyncio

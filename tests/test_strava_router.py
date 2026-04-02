@@ -42,82 +42,85 @@ def plain_user(test_db: Session) -> User:
     return user
 
 
-def _make_client(test_db: Session, user: User) -> TestClient:
-    """Create a test client with auth and db overrides."""
-
-    async def override_get_current_user():
-        return user
-
+@pytest.fixture
+def _override_db(test_db: Session):
+    """Override the DB dependency and clean up after the test."""
     def override_get_db():
         try:
             yield test_db
         finally:
             pass
 
-    app.dependency_overrides[get_current_user] = override_get_current_user
     app.dependency_overrides[get_db] = override_get_db
+    yield
+    app.dependency_overrides.clear()
 
-    return TestClient(app)
+
+def _set_user(user: User):
+    """Set the current user override."""
+    async def override():
+        return user
+    app.dependency_overrides[get_current_user] = override
 
 
+@pytest.mark.usefixtures("_override_db")
 class TestStravaConnect:
-    def test_returns_authorize_url(self, test_db, plain_user):
-        client = _make_client(test_db, plain_user)
-        response = client.get("/api/strava/connect")
+    def test_returns_authorize_url(self, plain_user):
+        _set_user(plain_user)
+        with TestClient(app) as client:
+            response = client.get("/api/strava/connect")
         assert response.status_code == 200
         data = response.json()
         assert "authorize_url" in data
         assert "https://www.strava.com/oauth/authorize" in data["authorize_url"]
 
-    def test_requires_auth(self, test_db):
-        app.dependency_overrides.clear()
-
-        def override_get_db():
-            try:
-                yield test_db
-            finally:
-                pass
-
-        app.dependency_overrides[get_db] = override_get_db
-        client = TestClient(app)
-        response = client.get("/api/strava/connect")
+    def test_requires_auth(self):
+        # No user override — should fail auth
+        app.dependency_overrides.pop(get_current_user, None)
+        with TestClient(app) as client:
+            response = client.get("/api/strava/connect")
         assert response.status_code == 401
 
 
+@pytest.mark.usefixtures("_override_db")
 class TestStravaStatus:
-    def test_connected_user(self, test_db, strava_user):
-        client = _make_client(test_db, strava_user)
-        response = client.get("/api/strava/status")
+    def test_connected_user(self, strava_user):
+        _set_user(strava_user)
+        with TestClient(app) as client:
+            response = client.get("/api/strava/status")
         assert response.status_code == 200
         data = response.json()
         assert data["connected"] is True
         assert data["athlete_id"] == "12345"
 
-    def test_disconnected_user(self, test_db, plain_user):
-        client = _make_client(test_db, plain_user)
-        response = client.get("/api/strava/status")
+    def test_disconnected_user(self, plain_user):
+        _set_user(plain_user)
+        with TestClient(app) as client:
+            response = client.get("/api/strava/status")
         assert response.status_code == 200
         data = response.json()
         assert data["connected"] is False
         assert data["athlete_id"] is None
 
 
+@pytest.mark.usefixtures("_override_db")
 class TestStravaSync:
-    def test_sync_requires_strava_connection(self, test_db, plain_user):
-        client = _make_client(test_db, plain_user)
-        response = client.post("/api/strava/sync")
+    def test_sync_requires_strava_connection(self, plain_user):
+        _set_user(plain_user)
+        with TestClient(app) as client:
+            response = client.post("/api/strava/sync")
         assert response.status_code == 400
         assert "not connected" in response.json()["detail"].lower()
 
-    def test_sync_connected_user(self, test_db, strava_user):
-        client = _make_client(test_db, strava_user)
-
+    def test_sync_connected_user(self, strava_user):
+        _set_user(strava_user)
         with patch(
             "app.services.strava_service.StravaService.sync_activities",
             new_callable=AsyncMock,
         ) as mock_sync:
-            mock_sync.return_value = {"synced": 5, "skipped": 2, "errors": []}
-            response = client.post("/api/strava/sync")
+            mock_sync.return_value = {"synced": 5, "skipped": 2, "errors": [], "total": 7}
+            with TestClient(app) as client:
+                response = client.post("/api/strava/sync")
 
         assert response.status_code == 200
         data = response.json()
@@ -125,10 +128,12 @@ class TestStravaSync:
         assert data["skipped"] == 2
 
 
+@pytest.mark.usefixtures("_override_db")
 class TestStravaDisconnect:
     def test_disconnect_clears_fields(self, test_db, strava_user):
-        client = _make_client(test_db, strava_user)
-        response = client.post("/api/strava/disconnect")
+        _set_user(strava_user)
+        with TestClient(app) as client:
+            response = client.post("/api/strava/disconnect")
         assert response.status_code == 200
 
         test_db.refresh(strava_user)

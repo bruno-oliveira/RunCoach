@@ -392,10 +392,8 @@ class TrainingPlanGenerator:
                 beginner_generator = BeginnerPlanGenerator()
                 return beginner_generator.generate_plan(target_distance, weeks, max_runs_per_week)
             raise ZeroMileageUnsupportedException(
-                user_message=(
-                    f"A {target_distance} km race requires an existing running base. "
-                    "Please start with a 5K or 10K beginner plan to build your fitness first."
-                ),
+                f"A {target_distance} km race requires an existing running base. "
+                "Please start with a 5K or 10K beginner plan to build your fitness first.",
                 suggestion="Try a 5K or 10K plan with 0 km/week to get started.",
             )
 

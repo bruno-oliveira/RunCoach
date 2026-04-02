@@ -22,6 +22,12 @@ from app.models import (
     WeeklyPlan,
 )
 from app.schemas import PlanRequest
+from app.services.plan_adjustments import (
+    adjust_distance,
+    adjust_intensity,
+    apply_ai_suggestions,
+    swap_workout,
+)
 from app.utils import parse_race_time_to_seconds
 
 logger = logging.getLogger(__name__)
@@ -280,13 +286,13 @@ class PlanService:
         plan_data = json.loads(training_plan.plan_data) if training_plan.plan_data else []
 
         if adjustment_type == "intensity":
-            plan_data = _adjust_intensity(plan_data, week_number, adjustment_value)
+            plan_data = adjust_intensity(plan_data, week_number, adjustment_value)
         elif adjustment_type == "workout_swap":
-            plan_data = _swap_workout(plan_data, week_number, adjustment_value)
+            plan_data = swap_workout(plan_data, week_number, adjustment_value)
         elif adjustment_type == "distance":
-            plan_data = _adjust_distance(plan_data, week_number, float(adjustment_value))
+            plan_data = adjust_distance(plan_data, week_number, float(adjustment_value))
         elif adjustment_type == "ai_suggest":
-            plan_data = _apply_ai_suggestions(plan_data, week_number, adjustment_value)
+            plan_data = apply_ai_suggestions(plan_data, week_number, adjustment_value)
 
         customization = PlanCustomization(
             training_plan_id=training_plan.id,
@@ -602,133 +608,3 @@ class PlanService:
             "feedback_map": PlanService.get_feedback_map(logged_runs, db),
         }
 
-
-# ------------------------------------------------------------------
-# Private customization helpers
-# ------------------------------------------------------------------
-
-
-def _adjust_intensity(
-    plan_data: list[dict], week_number: int, intensity_level: str
-) -> list[dict]:
-    """Adjust workout intensity for a specific week."""
-    for week in plan_data:
-        if week["week"] == week_number:
-            for workout in week.get("daily_workouts", []):
-                if workout["type"] != "rest":
-                    workout["intensity"] = intensity_level
-                    notes = workout.get("notes") or ""
-                    if intensity_level == "low":
-                        workout["notes"] = (
-                            notes
-                            .replace("threshold", "easy")
-                            .replace("tempo", "easy")
-                        )
-                    elif intensity_level == "high":
-                        workout["notes"] = (
-                            notes
-                            .replace("easy", "tempo")
-                            .replace("recovery", "moderate")
-                        )
-    return plan_data
-
-
-def _swap_workout(
-    plan_data: list[dict], week_number: int, swap_info: str
-) -> list[dict]:
-    """Swap workout types for a specific week."""
-    try:
-        day, new_type = swap_info.split(",")
-        day = int(day)
-
-        for week in plan_data:
-            if week["week"] == week_number:
-                for workout in week.get("daily_workouts", []):
-                    if workout["day"] == day:
-                        old_type = workout["type"]
-                        workout["type"] = new_type
-
-                        if new_type == "rest":
-                            workout["distance"] = 0
-                            workout["notes"] = "Rest day for recovery"
-                        elif old_type == "rest" and new_type != "rest":
-                            workout["distance"] = 5.0
-                            workout["notes"] = f"Easy {new_type} run - focus on form"
-
-                        workout["intensity"] = (
-                            "low" if new_type in ["rest", "easy"] else "medium"
-                        )
-    except (ValueError, TypeError):
-        pass
-
-    return plan_data
-
-
-def _adjust_distance(
-    plan_data: list[dict], week_number: int, distance_change: float
-) -> list[dict]:
-    """Adjust distances for all workouts in a week."""
-    for week in plan_data:
-        if week["week"] == week_number:
-            current_total = sum(
-                w.get("distance", 0) for w in week.get("daily_workouts", [])
-            )
-
-            if current_total > 0:
-                ratio = max(0.0, (current_total + distance_change) / current_total)
-
-                for workout in week.get("daily_workouts", []):
-                    if workout["distance"] > 0:
-                        workout["distance"] = round(workout["distance"] * ratio, 1)
-
-                week["total_km"] = round(
-                    sum(w.get("distance", 0) for w in week.get("daily_workouts", [])), 1
-                )
-
-    return plan_data
-
-
-def _apply_ai_suggestions(
-    plan_data: list[dict], week_number: int, preference: str
-) -> list[dict]:
-    """Apply AI-powered suggestions based on user preferences."""
-    for week in plan_data:
-        if week["week"] == week_number:
-            if preference == "more_rest":
-                for workout in week.get("daily_workouts", []):
-                    if workout["type"] == "easy":
-                        removed_distance = workout.get("distance", 0)
-                        workout["type"] = "rest"
-                        workout["distance"] = 0
-                        workout["notes"] = "Additional rest day for recovery"
-                        week["total_km"] = round(
-                            week["total_km"] - removed_distance, 1
-                        )
-                        break
-
-            elif preference == "more_speed":
-                for workout in week.get("daily_workouts", []):
-                    if workout["type"] == "easy":
-                        workout["type"] = "interval"
-                        workout["intensity"] = "high"
-                        workout["notes"] = (
-                            "Speed work: 6x400m at 5K pace with 400m recovery"
-                        )
-                        break
-
-            elif preference == "more_endurance":
-                for workout in week.get("daily_workouts", []):
-                    if workout["type"] == "long":
-                        workout["distance"] = round(workout["distance"] * 1.2, 1)
-                        workout["notes"] = (
-                            f'Extended long run: {workout["distance"]}km at '
-                            "conversational pace"
-                        )
-                        break
-
-            # Recompute total_km from actual workout distances to avoid drift
-            week["total_km"] = round(
-                sum(w.get("distance", 0) for w in week.get("daily_workouts", [])), 1
-            )
-
-    return plan_data

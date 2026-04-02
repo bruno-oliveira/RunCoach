@@ -165,29 +165,29 @@ Methodology: 5 parallel review agents (core logic, API layer, models/services, f
 
 - [x] **`nav.html` is 438 lines (312 lines of script)** -- extract JS to `nav.js`.
 
-- [ ] **`plan_service.py` private helpers could be extracted** -- `_adjust_intensity`, `_adjust_distance`, `_swap_workout`, `_apply_ai_suggestions` are self-contained and independently testable. Consider `plan_adjustments.py`.
+- [x] **`plan_service.py` private helpers could be extracted** -- `_adjust_intensity`, `_adjust_distance`, `_swap_workout`, `_apply_ai_suggestions` are self-contained and independently testable. Consider `plan_adjustments.py`.
 
 ---
 
 ## 7 -- Testing
 
-- [ ] **Zero-mileage / beginner plan path has no test coverage** (`beginner_plan_generator.py`). Need tests for: `current_km=0, target=5K, weeks=8` succeeds; `current_km=0, target=42.2K` raises `ZeroMileageUnsupportedException`; `current_km=0, target=5K, weeks=6` raises `InsufficientTimeException`.
+- [x] **Zero-mileage / beginner plan path has no test coverage** (`beginner_plan_generator.py`). Need tests for: `current_km=0, target=5K, weeks=8` succeeds; `current_km=0, target=42.2K` raises `ZeroMileageUnsupportedException`; `current_km=0, target=5K, weeks=6` raises `InsufficientTimeException`.
 
-- [ ] **No tests for `/api/auth/google` (Google login flow)** (`routers/auth.py`, `auth_service.py`). Need: valid token creates user + JWT cookie; invalid token returns 401; anonymous-user merge on login.
+- [x] **No tests for `/api/auth/google` (Google login flow)** (`routers/auth.py`, `auth_service.py`). Need: valid token creates user + JWT cookie; invalid token returns 401; anonymous-user merge on login.
 
-- [ ] **No tests for `/api/strava/callback` (OAuth callback)** (`routers/strava.py:95-158`). Need: valid state + code stores tokens; invalid/expired state returns 400; Strava exchange failure returns 502.
+- [x] **No tests for `/api/strava/callback` (OAuth callback)** (`routers/strava.py:95-158`). Need: valid state + code stores tokens; invalid/expired state returns 400; Strava exchange failure returns 502.
 
-- [ ] **`sport_type`-only Strava activity not tested** (`test_strava_service.py`). Known production bug (MEMORY.md). Need: `{"type": None, "sport_type": "Run"}` gets synced; `{"type": None, "sport_type": "Ride"}` skipped.
+- [x] **`sport_type`-only Strava activity not tested** (`test_strava_service.py`). Known production bug (MEMORY.md). Need: `{"type": None, "sport_type": "Run"}` gets synced; `{"type": None, "sport_type": "Ride"}` skipped.
 
-- [ ] **No router-level tests for runs, analytics, performance, adaptive, triathlon, recipes** -- at minimum one authenticated success + one 401 smoke test per router.
+- [x] **No router-level tests for runs, analytics, performance, adaptive, triathlon, recipes** -- at minimum one authenticated success + one 401 smoke test per router.
 
-- [ ] **Test DB missing `PRAGMA foreign_keys=ON`** (`conftest.py:19-23`). Production enables it via `dependencies.py:36-44`. Tests can insert dangling FK rows without error. Fix: add `event.listens_for` on the test engine.
+- [x] **Test DB missing `PRAGMA foreign_keys=ON`** (`conftest.py:19-23`). Production enables it via `dependencies.py:36-44`. Tests can insert dangling FK rows without error. Fix: add `event.listens_for` on the test engine.
 
-- [ ] **`dependency_overrides` leak in `test_strava_router.py`** (`test_strava_router.py:45-60`). `_make_client()` sets overrides but never clears them, causing test order-dependence. Fix: use a fixture with teardown.
+- [x] **`dependency_overrides` leak in `test_strava_router.py`** (`test_strava_router.py:45-60`). `_make_client()` sets overrides but never clears them, causing test order-dependence. Fix: use a fixture with teardown.
 
-- [ ] **`test_plan_generator.py` and `test_plan_generator_v2.py` overlap** -- duplicate tests and fixtures. Fix: consolidate into a single file using shared `conftest.py` fixture.
+- [x] **`test_plan_generator.py` and `test_plan_generator_v2.py` overlap** -- duplicate tests and fixtures. Fix: consolidate into a single file using shared `conftest.py` fixture.
 
-- [ ] **Not-found tests accept 500 as valid** (`test_api.py:141-155`). `assert response.status_code in [404, 500]` masks unhandled exceptions. Fix: assert 404 only.
+- [x] **Not-found tests accept 500 as valid** (`test_api.py:141-155`). `assert response.status_code in [404, 500]` masks unhandled exceptions. Fix: assert 404 only.
 
 ---
 
