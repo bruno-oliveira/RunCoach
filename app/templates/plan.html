@@ -46,7 +46,7 @@
             </div>
             <div class="banner-actions">
                 <button onclick="viewAdaptationDetails()" class="btn btn-secondary btn-small">View Details</button>
-                <button onclick="adaptPlan()" class="btn btn-primary btn-small">Adapt Plan</button>
+                <button onclick="adjustPlan()" class="btn btn-primary btn-small">Adjust Plan</button>
                 <button onclick="dismissAdaptationBanner()" class="btn-close">×</button>
             </div>
         </div>
@@ -436,9 +436,9 @@
     <div class="share-toast" id="share-toast"></div>
 </div>
 
-<div class="scroll-to-top" onclick="scrollToTop()" title="Scroll to top">
+<button class="scroll-to-top" onclick="scrollToTop()" aria-label="Scroll to top">
     ↑
-</div>
+</button>
 
 {% if user and not user.strava_athlete_id %}
 <!-- Run Logging Modal -->
@@ -464,6 +464,8 @@
                 <label for="workout_type">Workout Type</label>
                 <select id="workout_type">
                     <option value="easy">Easy</option>
+                    <option value="recovery">Recovery</option>
+                    <option value="run_walk">Run/Walk</option>
                     <option value="tempo">Tempo</option>
                     <option value="interval">Interval</option>
                     <option value="long">Long</option>
@@ -567,7 +569,7 @@
 <script src="{{ static_url('js/plan.js') }}" defer></script>
 <script src="{{ static_url('js/readiness.js') }}" defer></script>
 {% if progress_data and progress_data.completed_count > 0 %}
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.8/dist/chart.umd.min.js" crossorigin="anonymous"></script>
 <script>
     window.PROGRESS_DATA = {{ progress_data | tojson }};
 </script>

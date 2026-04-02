@@ -106,35 +106,35 @@ Methodology: 5 parallel review agents (core logic, API layer, models/services, f
 ## 5 -- UI / Frontend
 
 ### Critical
-- [ ] **Duplicate `window.logout` definition** (`auth.js:207`, `api.js:328`). Last-loaded file wins. If loading order changes, logout silently breaks. Fix: remove `window.logout` from `api.js`.
+- [x] **Duplicate `window.logout` definition** (`auth.js:207`, `api.js:328`). Last-loaded file wins. If loading order changes, logout silently breaks. Fix: remove `window.logout` from `api.js`.
 
-- [ ] **`onclick` regex parsing in `plan.js` is fragile and broken** (`plan.js:816-820`). `dayName` is always `undefined` because `String.match()` without `g` flag returns only one match, so `[2]` is always `undefined`. Touch-path `openLogModal` never fires. Fix: use `data-*` attributes instead of regex on `onclick`.
+- [x] **`onclick` regex parsing in `plan.js` is fragile and broken** (`plan.js:816-820`). `dayName` is always `undefined` because `String.match()` without `g` flag returns only one match, so `[2]` is always `undefined`. Touch-path `openLogModal` never fires. Fix: use `data-*` attributes instead of regex on `onclick`.
 
 ### High
-- [ ] **Chart.js loaded from CDN without integrity or version pin** (`plan.html:961`). `chart.js@4` auto-resolves to any 4.x release. Fix: pin version, add `integrity` + `crossorigin`, or self-host.
+- [x] **Chart.js loaded from CDN without integrity or version pin** (`plan.html:961`). `chart.js@4` auto-resolves to any 4.x release. Fix: pin version, add `integrity` + `crossorigin`, or self-host.
 
-- [ ] **Tab panel keyboard navigation missing** (`plan.html:210-234`, `plan.js:720-731`). ARIA tab pattern requires arrow key navigation between tabs. Fix: add `keydown` handler for `ArrowLeft`, `ArrowRight`, `Home`, `End`.
+- [x] **Tab panel keyboard navigation missing** (`plan.html:210-234`, `plan.js:720-731`). ARIA tab pattern requires arrow key navigation between tabs. Fix: add `keydown` handler for `ArrowLeft`, `ArrowRight`, `Home`, `End`.
 
-- [ ] **`workout_card.html` component is unused and has conflicting styles** (`components/workout_card.html`). Never imported; its `<style>` block defines `.btn-primary` etc. with hardcoded colors that conflict with the design system. Fix: delete or rewrite.
+- [x] **`workout_card.html` component is unused and has conflicting styles** (`components/workout_card.html`). Never imported; its `<style>` block defines `.btn-primary` etc. with hardcoded colors that conflict with the design system. Fix: delete or rewrite.
 
-- [ ] **`nav.html` contains 312 lines of inline `<script>`** (`nav.html:126-437`). Re-parsed on every page. Strava sync logic runs even for non-Strava users. Fix: extract to `nav.js` with `defer`.
+- [x] **`nav.html` contains 312 lines of inline `<script>`** (`nav.html:126-437`). Re-parsed on every page. Strava sync logic runs even for non-Strava users. Fix: extract to `nav.js` with `defer`.
 
-- [ ] **`ModalManager` in `modal.js` never used for log-run modal** (`modal.js`, `plan.js`). `openLogModal`/`closeLogModal` use `style.display` directly, missing focus trapping and scroll-lock. Fix: use `ModalManager.openModal('logRunModal')`.
+- [x] **`ModalManager` in `modal.js` never used for log-run modal** (`modal.js`, `plan.js`). `openLogModal`/`closeLogModal` use `style.display` directly, missing focus trapping and scroll-lock. Fix: use `ModalManager.openModal('logRunModal')`.
 
-- [ ] **`run_walk` workout type missing from log-run modal select** (`plan.html:856-863`). Beginners get `run_walk` workouts but can't log them correctly. Fix: add `<option value="run_walk">Run/Walk</option>` and `recovery`.
+- [x] **`run_walk` workout type missing from log-run modal select** (`plan.html:856-863`). Beginners get `run_walk` workouts but can't log them correctly. Fix: add `<option value="run_walk">Run/Walk</option>` and `recovery`.
 
-- [ ] **Strava last-synced timestamp format mismatch** (`nav.html:46`). SQLAlchemy returns a `datetime` object; `parseInt()` produces `NaN`, showing "Never synced" even after sync. Fix: pass as Unix timestamp in template context.
+- [x] **Strava last-synced timestamp format mismatch** (`nav.html:46`). Not a bug: `strava_last_synced_at` is already stored as `Integer` (Unix epoch) in the model. `parseInt()` handles it correctly.
 
 ### Medium
-- [ ] **`scroll-to-top` button has no accessible label** (`plan.html:830`). A `<div>` with no `role`, `aria-label`, or `tabindex`. Fix: change to `<button aria-label="Scroll to top">`.
+- [x] **`scroll-to-top` button has no accessible label** (`plan.html:830`). A `<div>` with no `role`, `aria-label`, or `tabindex`. Fix: change to `<button aria-label="Scroll to top">`.
 
-- [ ] **`toggleRecipe` relies on `nextElementSibling`** (`plan.js:733-745`). Fragile to any markup change. `mealName` parameter is unused. Fix: use `data-target` attribute pointing to recipe div ID.
+- [x] **`toggleRecipe` relies on `nextElementSibling`** (`plan.js:733-745`). Fragile to any markup change. `mealName` parameter is unused. Fix: use `data-target` attribute pointing to recipe div ID.
 
-- [ ] **`@keyframes fadeIn` injected at runtime** (`plan.js:768-776`). Collides with any CSS `fadeIn` and forces style recalculation. Fix: move to `plan.css`.
+- [x] **`@keyframes fadeIn` injected at runtime** (`plan.js:768-776`). Collides with any CSS `fadeIn` and forces style recalculation. Fix: removed (already defined in `base.css`).
 
-- [ ] **Dead `today_weekday` variable in plan template** (`plan.html:321-322`). Computed but never used. Fix: remove.
+- [x] **Dead `today_weekday` variable in plan template** (`plan.html:321-322`). Already removed in prior refactor.
 
-- [ ] **Multiple `console.log` debug statements in production** (`plan.js:9,793-794`, `auth.js:52,148,181,213`). Fix: remove or wrap behind DEBUG flag.
+- [x] **Multiple `console.log` debug statements in production** (`plan.js:9,793-794`, `auth.js:52,148,181,213`). Fix: remove or wrap behind DEBUG flag.
 
 ---
 
@@ -163,7 +163,7 @@ Methodology: 5 parallel review agents (core logic, API layer, models/services, f
   - `long_run_calculator.py` -- `_calculate_long_run_distance`, `_calculate_long_run_ratio`
   `TrainingPlanGenerator` becomes a thin orchestrator.
 
-- [ ] **`nav.html` is 438 lines (312 lines of script)** -- extract JS to `nav.js`.
+- [x] **`nav.html` is 438 lines (312 lines of script)** -- extract JS to `nav.js`.
 
 - [ ] **`plan_service.py` private helpers could be extracted** -- `_adjust_intensity`, `_adjust_distance`, `_swap_workout`, `_apply_ai_suggestions` are self-contained and independently testable. Consider `plan_adjustments.py`.
 

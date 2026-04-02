@@ -1,12 +1,10 @@
 /**
  * Training Plan Page JavaScript
  * Extracted from plan.html
- * 
+ *
  * Global functions are exposed via window for HTML onclick handlers.
  * Initialization code runs after DOMContentLoaded.
  */
-
-console.log('[plan.js] loaded');
 
 function escapeHtml(str) {
     const div = document.createElement('div');
@@ -192,46 +190,22 @@ window.scrollToTop = function() {
     });
 };
 
-// Run logging functionality
-window.logRun = function(workoutId) {
-    // For now, just open the modal - you'd need to pass more data from the template
-    const modal = document.getElementById('logRunModal');
-    if (modal && modal.style) {
-        currentWorkoutId = workoutId;
-        modal.style.display = 'block';
-    }
-};
-
 window.openLogModal = function(workoutId, workoutType, distance, dayName, weekNum) {
     currentWorkoutId = workoutId;
     const modalTitle = document.getElementById('modal-title');
     const workoutTypeSelect = document.getElementById('workout_type');
     const distanceInput = document.getElementById('distance_km');
-    const modal = document.getElementById('logRunModal');
-    
+
     if (modalTitle) modalTitle.textContent = `Log Run - Week ${weekNum} ${dayName} (${workoutType})`;
     if (workoutTypeSelect) workoutTypeSelect.value = workoutType;
     if (distanceInput) distanceInput.value = distance;
-    
-    if (modal) {
-        modal.style.display = 'flex';
-        modal.style.alignItems = 'flex-start';
-        modal.style.justifyContent = 'center';
-        
-        // Set focus on first input for better mobile UX
-        const firstInput = modal.querySelector('input');
-        if (firstInput) {
-            setTimeout(() => firstInput.focus(), 100);
-        }
-    }
+
+    ModalManager.openModal('logRunModal');
 };
 
 window.closeLogModal = function() {
-    const modal = document.getElementById('logRunModal');
+    ModalManager.closeModal('logRunModal');
     const form = document.getElementById('logRunForm');
-    if (modal) {
-        modal.style.display = 'none';
-    }
     if (form) {
         form.reset();
     }
@@ -495,20 +469,6 @@ window.unlinkRun = async function(runId) {
     }
 };
 
-// Plan adaptation functionality — delegates to adjustPlan
-window.checkForAdaptation = async function() {
-    window.adjustPlan();
-};
-
-window.adaptPlan = async function() {
-    window.adjustPlan();
-};
-
-// Legacy Strava adapt — now delegates to adjustPlan
-window.adaptFromStrava = async function(planId) {
-    window.adjustPlan();
-};
-
 // Save plan to user account
 window.savePlanToAccount = async function() {
     const btn = document.getElementById('save-plan-btn');
@@ -648,9 +608,6 @@ window.adjustPlan = async function() {
     }
 };
 
-// Backward compatibility alias
-window.recalibratePlan = window.adjustPlan;
-
 // Reset adjustment — restore original baseline distances
 window.resetAdjustment = async function() {
     const confirmed = window.confirm(
@@ -721,18 +678,54 @@ window.switchPlanTab = function(tabName) {
     document.querySelectorAll('.plan-tab').forEach(t => {
         t.classList.remove('active');
         t.setAttribute('aria-selected', 'false');
+        t.setAttribute('tabindex', '-1');
     });
     document.querySelectorAll('.plan-tab-panel').forEach(p => p.classList.remove('active'));
 
     const tab = document.getElementById('tab-' + tabName);
     const panel = document.getElementById('panel-' + tabName);
-    if (tab) { tab.classList.add('active'); tab.setAttribute('aria-selected', 'true'); }
+    if (tab) {
+        tab.classList.add('active');
+        tab.setAttribute('aria-selected', 'true');
+        tab.setAttribute('tabindex', '0');
+    }
     if (panel) panel.classList.add('active');
 };
 
-window.toggleRecipe = function(mealName, button) {
-    const recipeDetails = button.nextElementSibling;
-    
+// Tab keyboard navigation (ARIA tab pattern)
+function initTabKeyboardNav() {
+    const tablist = document.querySelector('.plan-tabs[role="tablist"]');
+    if (!tablist) return;
+
+    tablist.addEventListener('keydown', function(e) {
+        const tabs = Array.from(tablist.querySelectorAll('.plan-tab[role="tab"]'));
+        const current = tabs.indexOf(document.activeElement);
+        if (current < 0) return;
+
+        let next = -1;
+        if (e.key === 'ArrowRight') {
+            next = (current + 1) % tabs.length;
+        } else if (e.key === 'ArrowLeft') {
+            next = (current - 1 + tabs.length) % tabs.length;
+        } else if (e.key === 'Home') {
+            next = 0;
+        } else if (e.key === 'End') {
+            next = tabs.length - 1;
+        }
+
+        if (next >= 0) {
+            e.preventDefault();
+            tabs[next].focus();
+            tabs[next].click();
+        }
+    });
+}
+
+window.toggleRecipe = function(button) {
+    const targetId = button.getAttribute('data-target');
+    const recipeDetails = targetId ? document.getElementById(targetId) : null;
+    if (!recipeDetails) return;
+
     if (recipeDetails.style.display === 'none' || !recipeDetails.style.display) {
         recipeDetails.style.display = 'block';
         button.textContent = 'Hide';
@@ -742,7 +735,7 @@ window.toggleRecipe = function(mealName, button) {
         button.textContent = 'Show';
         button.classList.remove('active');
     }
-}
+};
 
 // Detect bfcache (back/forward cache) restores.
 // When a browser restores a page from bfcache, no new server request is made,
@@ -765,16 +758,6 @@ window.addEventListener('pageshow', function(event) {
 
 // Initialize on DOM ready
 document.addEventListener('DOMContentLoaded', function() {
-    // Add CSS animation for customization
-    const style = document.createElement('style');
-    style.textContent = `
-        @keyframes fadeIn {
-            from { opacity: 0.7; transform: translateY(5px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-    `;
-    document.head.appendChild(style);
-
     // Initialize customization week
     if (typeof updateCustomizationWeek === 'function') {
         updateCustomizationWeek();
@@ -786,51 +769,24 @@ document.addEventListener('DOMContentLoaded', function() {
     // Initialize save button visibility
     initSaveButton();
 
-    // Initialize Strava adapt button (backup listener; primary handler is onclick)
-    const adaptStravaBtn = document.getElementById('adapt-strava-btn');
-    if (adaptStravaBtn) {
-        console.log('Strava adapt button found');
-    } else {
-        console.log('Strava adapt button NOT found');
-    }
+    // Initialize tab keyboard navigation
+    initTabKeyboardNav();
 
-    // Close modal when clicking outside (works on mobile too)
-    document.addEventListener('click', function(event) {
-        const modal = document.getElementById('logRunModal');
-        if (modal && event.target === modal) {
-            closeLogModal();
-        }
-    });
-    
-    // Add touch event handling for mobile devices
-    const logRunBtns = document.querySelectorAll('.log-run-btn');
-    logRunBtns.forEach(btn => {
-        // Remove existing event listeners to avoid duplicates
-        const newBtn = btn.cloneNode(true);
-        btn.parentNode.replaceChild(newBtn, btn);
-        
-        newBtn.addEventListener('click', function(e) {
+    // Log-run buttons — read data-* attributes (works on all devices including touch)
+    document.querySelectorAll('.log-run-btn').forEach(btn => {
+        btn.addEventListener('click', function(e) {
             e.preventDefault();
             e.stopPropagation();
-            
-            const workoutId = this.getAttribute('onclick')?.match(/'([^']+)'/)?.[1];
-            const workoutType = this.getAttribute('onclick')?.match(/,\s*'(\w+)'/)?.[1];
-            const distance = this.getAttribute('onclick')?.match(/,\s*(\d+)/)?.[1];
-            const dayName = this.getAttribute('onclick')?.match(/,\s*'(\w+)'/)?.[2];
-            const weekNum = this.getAttribute('onclick')?.match(/,\s*(\d+)\)/)?.[1];
-            
+
+            const workoutId = this.dataset.workoutId;
+            const workoutType = this.dataset.workoutType;
+            const distance = this.dataset.distance;
+            const dayName = this.dataset.dayName;
+            const weekNum = this.dataset.weekNum;
+
             if (workoutId && workoutType && distance && dayName && weekNum) {
                 openLogModal(workoutId, workoutType, distance, dayName, weekNum);
             }
-        }, { passive: false });
-    });
-    
-    // Add touch event handling for modal close button
-    const closeButtons = document.querySelectorAll('.close, [data-modal-close]');
-    closeButtons.forEach(btn => {
-        btn.addEventListener('touchend', function(e) {
-            e.preventDefault();
-            closeLogModal();
-        }, { passive: false });
+        });
     });
 });

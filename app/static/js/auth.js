@@ -17,7 +17,6 @@
      * Handle the credential response from Google Sign-In
      */
     async function handleCredentialResponse(response) {
-        console.log('Google credential received, authenticating...');
 
         // Show loading state on the sign-in button
         const navSigninBtn = document.getElementById('nav-google-signin-button');
@@ -49,7 +48,6 @@
                 throw new Error('Invalid response from server');
             }
 
-            console.log('Login successful, reloading page...');
             // Reload page to get server-rendered authenticated state
             window.location.reload();
 
@@ -128,7 +126,6 @@
                 text: 'signin_with',
                 logo_alignment: 'left'
             });
-            console.log('Google Sign-In button rendered');
         } catch (e) {
             console.error('Failed to render sign-in button:', e);
             navContainer.innerHTML = '<span style="color: #6b7280; font-size: 0.85rem;">Sign-in unavailable</span>';
@@ -144,7 +141,6 @@
         // Check if sign-in button exists (only rendered for logged-out users)
         const navContainer = document.getElementById('nav-google-signin-button');
         if (!navContainer) {
-            console.log('User is logged in, skipping Google Sign-In init');
             return;
         }
 
@@ -178,7 +174,6 @@
 
         renderButton();
         gsiInitialized = true;
-        console.log('Google Sign-In initialized');
     }
 
     /**
@@ -210,7 +205,6 @@
         }
 
         window.isLoggingOut = true;
-        console.log('Logging out...');
 
         // Show loading state on logout button
         const logoutBtns = document.querySelectorAll('.nav-logout-btn, .logout-btn');
@@ -227,7 +221,6 @@
                 method: 'POST',
                 credentials: 'same-origin'
             });
-            console.log('Server logout successful');
         } catch (err) {
             console.error('Server logout failed:', err);
         }
@@ -255,7 +248,6 @@
 
     // Initialize on DOM ready
     document.addEventListener('DOMContentLoaded', () => {
-        console.log('Initializing auth...');
         initGoogleSignIn();
         waitForGsiAndInit();
     });

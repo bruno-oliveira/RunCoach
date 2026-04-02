@@ -321,26 +321,6 @@ const ApiClient = {
 // Global window functions for easy access
 window.api = ApiClient;
 
-/**
- * Global logout function
- * Clears local storage, calls logout API, and redirects to home
- */
-window.logout = async function() {
-  try {
-    // Call logout API to clear server-side cookie
-    await fetch('/api/auth/logout', { method: 'POST' });
-  } catch (err) {
-    console.warn('Server logout failed:', err);
-  }
-
-  // Clear client-side storage
-  localStorage.removeItem('access_token');
-  localStorage.removeItem('user');
-
-  // Redirect to home page
-  window.location.href = '/';
-};
-
 // Export for module usage
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = ApiClient;

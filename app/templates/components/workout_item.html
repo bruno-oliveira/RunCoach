@@ -105,6 +105,6 @@
     {% endif %}
     <button class="undo-log-btn" onclick="unlinkRun('{{ logged_run.id }}')">Undo</button>
     {% elif workout.type != 'rest' and user and not user.strava_athlete_id %}
-    <button class="log-run-btn" onclick="openLogModal('{{ workout.id }}', '{{ workout.type }}', {{ workout.distance }}, '{{ day_names[workout.day - 1] }}', {{ week.week }})">Log This Run</button>
+    <button class="log-run-btn" data-workout-id="{{ workout.id }}" data-workout-type="{{ workout.type }}" data-distance="{{ workout.distance }}" data-day-name="{{ day_names[workout.day - 1] }}" data-week-num="{{ week.week }}">Log This Run</button>
     {% endif %}
 </div>

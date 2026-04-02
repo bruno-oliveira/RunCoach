@@ -96,7 +96,7 @@
                             <span class="nutrient">🍝 {{ meal.carbs }}g</span>
                             <span class="nutrient">🥑 {{ meal.fat }}g</span>
                         </div>
-                        <button class="show-recipe-btn" onclick="toggleRecipe('{{ meal.name | replace("'", "\\'") }}', this)">Show</button>
+                        <button class="show-recipe-btn" data-target="recipe-{{ meal_type }}-{{ loop.index }}" onclick="toggleRecipe(this)">Show</button>
                         <div class="recipe-details" id="recipe-{{ meal_type }}-{{ loop.index }}" style="display: none;">
                             <div class="recipe-section">
                                 <h5>Ingredients</h5>
