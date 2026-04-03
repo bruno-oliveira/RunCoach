@@ -18,7 +18,6 @@ from app.dependencies import engine, get_optional_user
 from app.models import Base, User
 from app.template_helpers import create_templates
 from app.routers import (
-    adaptive_router,
     analytics_page_router,
     analytics_router,
     auth_router,
@@ -235,7 +234,6 @@ app.include_router(nutrition_router)
 app.include_router(recipes_router)
 app.include_router(auth_router)
 app.include_router(runs_router)
-app.include_router(adaptive_router)
 app.include_router(performance_router)
 app.include_router(analytics_router)
 app.include_router(analytics_page_router)

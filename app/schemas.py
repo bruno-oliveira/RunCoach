@@ -262,58 +262,6 @@ class HealthResponse(BaseModel):
     version: str = Field(default_factory=lambda: settings.app_version)
 
 
-class WorkoutResponse(BaseModel):
-    """Single workout response."""
-
-    day: int
-    type: str
-    distance: float
-    intensity: str
-    notes: str
-
-
-class WeeklyPlanResponse(BaseModel):
-    """Weekly plan response."""
-
-    week: int
-    total_km: float
-    workout_distribution: dict[str, int]
-    daily_workouts: List[WorkoutResponse]
-    strength_training: List[dict[str, Any]]
-    training_tips: List[str]
-
-
-class NutritionTargets(BaseModel):
-    """Nutrition targets response."""
-
-    calories: float
-    protein: float
-    fiber: float
-    carbs: float
-    fat: float
-
-
-class MealOption(BaseModel):
-    """Meal option response."""
-
-    name: str
-    description: str
-    calories: int
-    protein: int
-    fiber: int
-    carbs: int
-    fat: int
-
-
-class NutritionPlanResponse(BaseModel):
-    """Nutrition plan response."""
-
-    nutrition_targets: NutritionTargets
-    meal_options: dict[str, List[MealOption]]
-    general_tips: List[str]
-    hydration_guide: dict[str, Any]
-
-
 # Helper functions for mileage warnings
 def get_mileage_warning(target_distance: float, current_km: float) -> Optional[str]:
     """Get warning message if mileage is unusually high for target distance."""
@@ -423,19 +371,6 @@ class RunLogListResponse(BaseModel):
     page: int
     page_size: int
 
-
-class AdaptivePlanRequest(BaseModel):
-    target_distance: float = Field(..., description="Target race distance in km (30.0 = Trail Running)")
-    weeks: int = Field(..., ge=4, le=24, description="Training duration in weeks")
-    max_runs_per_week: int = Field(default=4, ge=3, le=6, description="Maximum runs per week")
-
-    @field_validator("target_distance")
-    @classmethod
-    def validate_target_distance(cls, v: float) -> float:
-        if v not in SUPPORTED_DISTANCES:
-            valid_names = [DISTANCE_NAMES[d] for d in SUPPORTED_DISTANCES]
-            raise ValueError(f"Please select a valid distance: {', '.join(valid_names)}")
-        return v
 
 
 class PerformancePlanRequest(BaseModel):

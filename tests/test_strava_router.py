@@ -128,16 +128,3 @@ class TestStravaSync:
         assert data["skipped"] == 2
 
 
-@pytest.mark.usefixtures("_override_db")
-class TestStravaDisconnect:
-    def test_disconnect_clears_fields(self, test_db, strava_user):
-        _set_user(strava_user)
-        with TestClient(app) as client:
-            response = client.post("/api/strava/disconnect")
-        assert response.status_code == 200
-
-        test_db.refresh(strava_user)
-        assert strava_user.strava_athlete_id is None
-        assert strava_user.strava_access_token is None
-        assert strava_user.strava_refresh_token is None
-        assert strava_user.strava_token_expires_at is None

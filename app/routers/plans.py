@@ -416,23 +416,6 @@ async def list_my_plans(
 # ---------------------------------------------------------------------------
 
 
-@router.get("/api/plan/{plan_id}/performance")
-async def get_plan_performance(
-    plan_id: str,
-    current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db),
-):
-    """Get performance analysis for a training plan."""
-    get_plan_or_404(
-        plan_id, db, current_user, require_user_match=True
-    )
-
-    adaptation_service = AdaptationService()
-    analysis = adaptation_service.analyze_performance(plan_id, db)
-
-    return analysis
-
-
 @router.get("/api/plan/{plan_id}/readiness")
 async def get_plan_readiness(
     plan_id: str,

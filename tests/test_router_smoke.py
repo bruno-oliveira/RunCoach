@@ -119,38 +119,6 @@ class TestAnalyticsRouter:
 
 
 # ---------------------------------------------------------------------------
-# Adaptive router  (/api/adaptive)
-# ---------------------------------------------------------------------------
-
-
-@pytest.mark.usefixtures("_override_db")
-class TestAdaptiveRouter:
-    def test_get_metrics_authenticated(self, smoke_user):
-        _set_user(smoke_user)
-        with TestClient(app) as c:
-            resp = c.get("/api/adaptive/metrics")
-        assert resp.status_code == 200
-
-    def test_get_metrics_unauthenticated(self):
-        _clear_user()
-        with TestClient(app) as c:
-            resp = c.get("/api/adaptive/metrics")
-        assert resp.status_code == 401
-
-    def test_get_suggestions_authenticated(self, smoke_user):
-        _set_user(smoke_user)
-        with TestClient(app) as c:
-            resp = c.get("/api/adaptive/suggestions")
-        assert resp.status_code == 200
-
-    def test_get_suggestions_unauthenticated(self):
-        _clear_user()
-        with TestClient(app) as c:
-            resp = c.get("/api/adaptive/suggestions")
-        assert resp.status_code == 401
-
-
-# ---------------------------------------------------------------------------
 # Performance router  (/performance-training, /api/performance)
 # ---------------------------------------------------------------------------
 

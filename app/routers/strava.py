@@ -264,12 +264,3 @@ async def strava_status(
     )
 
 
-@strava_router.post("/disconnect")
-async def strava_disconnect(
-    current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db),
-    strava_service: StravaService = Depends(get_strava_service),
-):
-    """Disconnect Strava account. Keeps previously synced RunLogs."""
-    strava_service.disconnect(current_user, db)
-    return {"detail": "Strava account disconnected"}

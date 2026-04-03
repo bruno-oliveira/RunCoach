@@ -10,7 +10,6 @@ from fastapi import APIRouter, Cookie, Depends, Form, HTTPException, Request
 from fastapi.responses import HTMLResponse
 from sqlalchemy.orm import Session
 
-from app.config import settings
 from app.dependencies import get_db, get_optional_user, get_plan_service, verify_plan_ownership
 from app.models import TrainingPlan
 from app.core.nutrition_engine import NutritionEngine
@@ -81,43 +80,3 @@ async def randomize_meals(
         raise HTTPException(status_code=500, detail="An internal error occurred while randomizing meals")
 
 
-@router.get("/nutrition-plan/{plan_id}", response_class=HTMLResponse)
-async def get_nutrition_plan(
-    plan_id: str,
-    request: Request,
-    anonymous_user_id: Optional[str] = Cookie(None),
-    db: Session = Depends(get_db),
-    current_user = Depends(get_optional_user),
-) -> HTMLResponse:
-    """Get detailed nutrition plan for a training plan."""
-    try:
-        training_plan = (
-            db.query(TrainingPlan).filter(TrainingPlan.id == plan_id).first()
-        )
-        if not training_plan:
-            raise HTTPException(status_code=404, detail="Plan not found")
-
-        if not verify_plan_ownership(training_plan, current_user, anonymous_user_id):
-            raise HTTPException(status_code=403, detail="Not authorized to view this plan")
-
-        nutrition_plan = []
-        if training_plan.nutrition_plan_data:
-            nutrition_plan = json.loads(training_plan.nutrition_plan_data)
-
-        return templates.TemplateResponse(
-            "nutrition.html",
-            {
-                "request": request,
-                "user": current_user,
-                "google_client_id": settings.google_client_id,
-                "nutrition_plan": nutrition_plan,
-                "plan_id": plan_id,
-                "training_plan": training_plan,
-            },
-        )
-
-    except HTTPException:
-        raise
-    except Exception as e:
-        logger.error(f"Error fetching nutrition plan: {e}", exc_info=True)
-        raise HTTPException(status_code=500, detail="An internal error occurred while fetching the nutrition plan")
