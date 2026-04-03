@@ -18,6 +18,7 @@ from app.dependencies import engine, get_optional_user
 from app.models import Base, User
 from app.template_helpers import create_templates
 from app.routers import (
+    adaptive_router,
     analytics_page_router,
     analytics_router,
     auth_router,
@@ -46,6 +47,83 @@ class CachedStaticFiles(StaticFiles):
 # Setup logging
 setup_logging(settings)
 logger = logging.getLogger(__name__)
+
+
+@asynccontextmanager
+async def lifespan(application: FastAPI):
+    """Application startup and shutdown lifecycle."""
+    # Startup
+    logger.info(f"Starting {settings.app_name} v{settings.app_version}")
+    logger.info(f"Debug mode: {settings.debug}")
+
+    if settings.is_google_client_id_configured:
+        logger.info("Google Client ID is properly configured")
+    else:
+        logger.warning("Google Client ID is not properly configured - Google Sign-In will not work")
+
+    # Validate secret key in production
+    if not os.environ.get("SECRET_KEY"):
+        logger.warning(
+            "SECRET_KEY not set via environment variable — using random default. "
+            "JWTs will be invalidated on every restart. "
+            "Set SECRET_KEY as a persistent secret (e.g. `fly secrets set SECRET_KEY=...`)."
+        )
+    if not settings.debug:
+        weak_patterns = ["dev-secret", "your-secret", "change-in-production", "placeholder"]
+        key = settings.secret_key
+        if len(key) < 32 or any(p in key.lower() for p in weak_patterns):
+            raise RuntimeError(
+                "SECRET_KEY is too weak for production. "
+                "Set a random key of at least 32 characters."
+            )
+
+    yield
+
+    # Shutdown
+    logger.info(f"Shutting down {settings.app_name}")
+
+
+# Create FastAPI application
+app = FastAPI(
+    title=settings.app_name,
+    description="Personalized Running Plan Generator with Nutrition Guidance",
+    version=settings.app_version,
+    debug=settings.debug,
+    lifespan=lifespan,
+)
+
+
+@app.middleware("http")
+async def set_anonymous_user_id_cookie(request: Request, call_next):
+    """Set anonymous_user_id cookie if not present and add it to request state."""
+    anonymous_user_id = request.cookies.get("anonymous_user_id")
+    generated_new_id = False
+    
+    if not anonymous_user_id:
+        anonymous_user_id = str(uuid.uuid4())
+        generated_new_id = True
+    
+    # Store the ID in request state so endpoints can access it
+    request.state.anonymous_user_id = anonymous_user_id
+    request.state.generated_new_anonymous_id = generated_new_id
+    
+    response = await call_next(request)
+    
+    # Only set cookie if we generated a new ID
+    if generated_new_id:
+        response.set_cookie(
+            key="anonymous_user_id",
+            value=anonymous_user_id,
+            max_age=30 * 24 * 60 * 60,  # 30 days
+            httponly=True,
+            samesite="lax",
+            secure=not settings.debug,
+        )
+    
+    return response
+
+# Create database tables
+Base.metadata.create_all(bind=engine)
 
 # Lightweight column migrations for existing databases
 # ALTER TABLE ADD COLUMN is a no-op if the column already exists (handled by try/except)
@@ -99,6 +177,9 @@ def _run_migrations(eng) -> None:
                 logger.debug("Migration skipped (already applied): %s — %s", stmt.split()[-1], exc)
 
 
+_run_migrations(engine)
+
+
 def _backfill_vdot(eng) -> None:
     """Backfill VDOT for all runs that have sufficient distance but no VDOT yet."""
     from app.core.vdot_calculator import VDOTCalculator
@@ -127,95 +208,15 @@ def _backfill_vdot(eng) -> None:
                 run.vdot = vdot
                 updated += 1
         session.commit()
-        logger.info("VDOT backfill: updated %d/%d runs", updated, len(runs))
+        logger.info(f"VDOT backfill: updated {updated}/{len(runs)} runs")
     except Exception as e:
         session.rollback()
-        logger.warning("VDOT backfill failed: %s", e)
+        logger.warning(f"VDOT backfill failed: {e}")
     finally:
         session.close()
 
 
-@asynccontextmanager
-async def lifespan(application: FastAPI):
-    """Application startup and shutdown lifecycle."""
-    # Startup
-    logger.info("Starting %s v%s", settings.app_name, settings.app_version)
-    logger.info("Debug mode: %s", settings.debug)
-
-    if settings.is_google_client_id_configured:
-        logger.info("Google Client ID is properly configured")
-    else:
-        logger.warning("Google Client ID is not properly configured - Google Sign-In will not work")
-
-    # Validate secret key in production
-    if not os.environ.get("SECRET_KEY"):
-        logger.warning(
-            "SECRET_KEY not set via environment variable — using random default. "
-            "JWTs will be invalidated on every restart. "
-            "Set SECRET_KEY as a persistent secret (e.g. `fly secrets set SECRET_KEY=...`)."
-        )
-    if not settings.debug:
-        weak_patterns = ["dev-secret", "your-secret", "change-in-production", "placeholder"]
-        key = settings.secret_key
-        if len(key) < 32 or any(p in key.lower() for p in weak_patterns):
-            raise RuntimeError(
-                "SECRET_KEY is too weak for production. "
-                "Set a random key of at least 32 characters."
-            )
-
-    # Create database tables
-    Base.metadata.create_all(bind=engine)
-    
-    # Run migrations
-    _run_migrations(engine)
-    
-    # Backfill VDOT values
-    _backfill_vdot(engine)
-
-    yield
-
-    # Shutdown
-    logger.info("Shutting down %s", settings.app_name)
-
-
-# Create FastAPI application
-app = FastAPI(
-    title=settings.app_name,
-    description="Personalized Running Plan Generator with Nutrition Guidance",
-    version=settings.app_version,
-    debug=settings.debug,
-    lifespan=lifespan,
-)
-
-
-@app.middleware("http")
-async def set_anonymous_user_id_cookie(request: Request, call_next):
-    """Set anonymous_user_id cookie if not present and add it to request state."""
-    anonymous_user_id = request.cookies.get("anonymous_user_id")
-    generated_new_id = False
-    
-    if not anonymous_user_id:
-        anonymous_user_id = str(uuid.uuid4())
-        generated_new_id = True
-    
-    # Store the ID in request state so endpoints can access it
-    request.state.anonymous_user_id = anonymous_user_id
-    request.state.generated_new_anonymous_id = generated_new_id
-    
-    response = await call_next(request)
-    
-    # Only set cookie if we generated a new ID
-    if generated_new_id:
-        response.set_cookie(
-            key="anonymous_user_id",
-            value=anonymous_user_id,
-            max_age=settings.anonymous_cookie_max_age,
-            httponly=True,
-            samesite="lax",
-            secure=not settings.debug,
-        )
-    
-    return response
+_backfill_vdot(engine)
 
 # Templates
 templates = create_templates()
@@ -234,6 +235,7 @@ app.include_router(nutrition_router)
 app.include_router(recipes_router)
 app.include_router(auth_router)
 app.include_router(runs_router)
+app.include_router(adaptive_router)
 app.include_router(performance_router)
 app.include_router(analytics_router)
 app.include_router(analytics_page_router)

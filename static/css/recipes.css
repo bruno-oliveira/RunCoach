@@ -370,6 +370,11 @@
     margin: 0 auto 1rem;
 }
 
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
 .no-recipes {
     text-align: center;
     padding: 3rem;

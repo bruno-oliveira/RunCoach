@@ -25,9 +25,9 @@ logger = logging.getLogger(__name__)
 class PDFGenerator:
     CACHE_TTL_SECONDS = 3600  # Evict cached PDFs older than 1 hour
 
-    def __init__(self, cache_dir: str = "/data/pdf_cache"):
+    def __init__(self, cache_dir: str = "./pdf_cache"):
         self.cache_dir = Path(cache_dir)
-        self.cache_dir.mkdir(parents=True, exist_ok=True)
+        self.cache_dir.mkdir(exist_ok=True)
         self.styles = getSampleStyleSheet()
         self._setup_custom_styles()
 
@@ -134,89 +134,87 @@ class PDFGenerator:
         cache_path = self.cache_dir / cache_key
 
         if cache_path.exists():
-            logger.info("Using cached PDF: %s", cache_key)
+            logger.info(f"Using cached PDF: {cache_key}")
             return str(cache_path)
 
-        logger.info("Generating new PDF: %s", cache_key)
+        logger.info(f"Generating new PDF: {cache_key}")
 
         temp_dir = tempfile.mkdtemp()
-        try:
-            pdf_path = os.path.join(temp_dir, f"running_plan_{training_plan.id}.pdf")
+        pdf_path = os.path.join(temp_dir, f"running_plan_{training_plan.id}.pdf")
 
-            # Create PDF document
-            doc = SimpleDocTemplate(pdf_path, pagesize=A4, rightMargin=2*cm, leftMargin=2*cm,
-                                   topMargin=2*cm, bottomMargin=2*cm)
+        # Create PDF document
+        doc = SimpleDocTemplate(pdf_path, pagesize=A4, rightMargin=2*cm, leftMargin=2*cm,
+                               topMargin=2*cm, bottomMargin=2*cm)
 
-            # Build story (content)
-            story = []
+        # Build story (content)
+        story = []
 
-            is_performance = getattr(training_plan, 'plan_type', 'distance') == 'performance'
+        is_performance = getattr(training_plan, 'plan_type', 'distance') == 'performance'
 
-            # First page: Title and overview only
-            self._add_title_page(story, training_plan, plan_data)
-            self._add_plan_summary(story, training_plan, plan_data)
+        # First page: Title and overview only
+        self._add_title_page(story, training_plan, plan_data)
+        self._add_plan_summary(story, training_plan, plan_data)
 
-            if is_performance:
-                # Plan philosophy intro
-                story.append(Spacer(1, 0.5*cm))
-                self._add_performance_philosophy(story)
+        if is_performance:
+            # Plan philosophy intro
+            story.append(Spacer(1, 0.5*cm))
+            self._add_performance_philosophy(story)
 
-                # Training zones page with pace summary
+            # Training zones page with pace summary
+            story.append(PageBreak())
+            self._add_training_zones_page(story, training_plan)
+            self._add_pace_improvement_summary(story, training_plan)
+
+            # Weekly plans with performance-specific rendering
+            for week in plan_data:
                 story.append(PageBreak())
-                self._add_training_zones_page(story, training_plan)
-                self._add_pace_improvement_summary(story, training_plan)
+                self._add_performance_weekly_plan(story, week)
 
-                # Weekly plans with performance-specific rendering
-                for week in plan_data:
-                    story.append(PageBreak())
-                    self._add_performance_weekly_plan(story, week)
-
-                # Add nutrition for performance plans
-                if training_plan.nutrition_plan_data:
-                    story.append(PageBreak())
-                    self._add_personalized_nutrition_plan(story, training_plan)
-
-                # Add general nutrition guidance
+            # Add nutrition for performance plans
+            if training_plan.nutrition_plan_data:
                 story.append(PageBreak())
-                self._add_nutrition_guidance(story)
-            else:
-                # Add page break before weekly plans
+                self._add_personalized_nutrition_plan(story, training_plan)
+
+            # Add general nutrition guidance
+            story.append(PageBreak())
+            self._add_nutrition_guidance(story)
+        else:
+            # Add page break before weekly plans
+            story.append(PageBreak())
+
+            # Add weekly plans - each week on its own page
+            for week in plan_data:
+                self._add_weekly_plan(story, week)
                 story.append(PageBreak())
 
-                # Add weekly plans - each week on its own page
-                for week in plan_data:
-                    self._add_weekly_plan(story, week)
-                    story.append(PageBreak())
+            # Remove the last page break if it's the final element
+            if story and isinstance(story[-1], PageBreak):
+                story.pop()
 
-                # Remove the last page break if it's the final element
-                if story and isinstance(story[-1], PageBreak):
-                    story.pop()
-
-                # Add personalized nutrition plan if available
-                if training_plan.nutrition_plan_data:
-                    story.append(PageBreak())
-                    self._add_personalized_nutrition_plan(story, training_plan)
-
-                # Add general nutrition guidance
+            # Add personalized nutrition plan if available
+            if training_plan.nutrition_plan_data:
                 story.append(PageBreak())
-                self._add_nutrition_guidance(story)
+                self._add_personalized_nutrition_plan(story, training_plan)
 
-                # Add injury prevention
-                story.append(PageBreak())
-                self._add_injury_prevention(story)
+            # Add general nutrition guidance
+            story.append(PageBreak())
+            self._add_nutrition_guidance(story)
 
-            # Add footer
-            self._add_footer(story)
-            
-            # Build PDF
-            doc.build(story)
+            # Add injury prevention
+            story.append(PageBreak())
+            self._add_injury_prevention(story)
 
-            # Move to cache
-            shutil.move(pdf_path, cache_path)
-            return str(cache_path)
-        finally:
-            # Clean up temp directory
-            shutil.rmtree(temp_dir, ignore_errors=True)
+        # Add footer
+        self._add_footer(story)
+        
+        # Build PDF
+        doc.build(story)
+
+        # Move to cache
+        shutil.move(pdf_path, cache_path)
+        shutil.rmtree(temp_dir, ignore_errors=True)
+
+        return str(cache_path)
     
     def _add_title_page(self, story: List, training_plan: TrainingPlan, plan_data: List[Dict]):
         """Add title page"""

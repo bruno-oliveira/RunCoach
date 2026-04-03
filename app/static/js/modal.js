@@ -58,12 +58,6 @@ const ModalManager = {
     if (modal.style) modal.style.display = 'none';
     this.openModals.delete(modalId);
     
-    // Remove focus trap handler
-    if (modal._tabHandler) {
-      modal.removeEventListener('keydown', modal._tabHandler);
-      delete modal._tabHandler;
-    }
-    
     // Restore body scroll if no modals are open
     if (this.openModals.size === 0 && document.body.style) {
       document.body.style.overflow = '';
@@ -181,6 +175,28 @@ const ModalManager = {
         }
       }
     });
+    
+    // Open button handler (delegate)
+    document.addEventListener('click', (e) => {
+      const openBtn = e.target.closest('[data-modal-open]');
+      if (openBtn) {
+        const modalId = openBtn.dataset.modalOpen;
+        if (modalId) {
+          this.openModal(modalId);
+        }
+      }
+    });
+    
+    // Toggle button handler (delegate)
+    document.addEventListener('click', (e) => {
+      const toggleBtn = e.target.closest('[data-modal-toggle]');
+      if (toggleBtn) {
+        const modalId = toggleBtn.dataset.modalToggle;
+        if (modalId) {
+          this.toggleModal(modalId);
+        }
+      }
+    });
   }
 };
 
@@ -195,4 +211,9 @@ if (document.readyState === 'loading') {
   document.addEventListener('DOMContentLoaded', () => ModalManager.init());
 } else {
   ModalManager.init();
+}
+
+// Export for module usage
+if (typeof module !== 'undefined' && module.exports) {
+  module.exports = ModalManager;
 }

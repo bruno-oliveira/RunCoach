@@ -1731,7 +1731,6 @@
 .btn-small {
     padding: 6px 14px;
     font-size: var(--text-sm);
-    min-height: 44px;
 }
 
 /* ============================================================================
@@ -2392,6 +2391,17 @@
     animation: toastSlideIn 0.3s ease;
 }
 
+@keyframes toastSlideIn {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
 .toast-fade-out {
     animation: toastFadeOut 0.3s ease forwards;
 }
@@ -2575,6 +2585,10 @@
     border-top-color: var(--color-primary);
     border-radius: 50%;
     animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
 }
 
 .readiness-empty-state {

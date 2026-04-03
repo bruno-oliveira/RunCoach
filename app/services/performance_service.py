@@ -311,7 +311,7 @@ class PerformanceService:
 
         self.db.commit()
 
-        logger.info("Created performance training plan %s", training_plan.id)
+        logger.info(f"Created performance training plan {training_plan.id}")
         return training_plan, plan_data
 
     def _save_weekly_plans(

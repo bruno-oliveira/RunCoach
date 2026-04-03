@@ -18,7 +18,6 @@ from app.core.plan_generator import TrainingPlanGenerator
 from app.core.performance_plan_generator import PerformancePlanGenerator
 from app.services.plan_service import PlanService
 from app.services.strava_service import StravaService
-from app.services.adaptation_service import AdaptationService
 
 # Cookie name must match the one in auth router
 COOKIE_NAME = "access_token"
@@ -94,11 +93,6 @@ def get_plan_service() -> PlanService:
 def get_strava_service() -> StravaService:
     """Get a StravaService instance."""
     return StravaService()
-
-
-def get_adaptation_service() -> AdaptationService:
-    """Get an AdaptationService instance."""
-    return AdaptationService()
 
 
 security = HTTPBearer(auto_error=False)

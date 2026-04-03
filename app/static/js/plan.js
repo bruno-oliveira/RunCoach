@@ -107,6 +107,68 @@ window.updateCustomizationWeek = function() {
     }
 };
 
+window.randomizeMeals = function() {
+    // Show loading state
+    const btn = document.querySelector('.randomize-meals-btn');
+    if (!btn) {
+        return;
+    }
+    
+    const originalText = btn.innerHTML;
+    btn.innerHTML = '🎲 Generating New Meals...';
+    btn.disabled = true;
+    if (btn.style) {
+        btn.style.background = 'linear-gradient(135deg, #f39c12, #e67e22)';
+        btn.style.transform = 'scale(0.95)';
+    }
+    
+    // Add enhanced visual feedback to meal section
+    const nutritionSection = document.querySelector('.nutrition-section');
+    const mealCards = document.querySelectorAll('.meal-option-card');
+    
+    if (nutritionSection && nutritionSection.style) {
+        nutritionSection.style.opacity = '0.7';
+        nutritionSection.style.transition = 'opacity 0.3s ease';
+        nutritionSection.style.transform = 'scale(0.98)';
+        nutritionSection.style.transition = 'all 0.3s ease';
+    }
+    
+    // Add loading animation to meal cards
+    mealCards.forEach((card, index) => {
+        setTimeout(() => {
+            if (card && card.style) {
+                card.style.opacity = '0.5';
+                card.style.transform = 'scale(0.95)';
+                card.style.transition = 'all 0.3s ease';
+            }
+        }, index * 50);
+    });
+    
+    // Create and submit form
+    const form = document.createElement('form');
+    form.method = 'POST';
+    form.action = '/randomize-meals';
+    
+    const fields = [
+        { name: 'plan_id', value: window.APP_CTX.plan_id }
+    ];
+    
+    fields.forEach(field => {
+        const input = document.createElement('input');
+        input.type = 'hidden';
+        input.name = field.name;
+        input.value = field.value;
+        form.appendChild(input);
+    });
+    
+    document.body.appendChild(form);
+    
+    // Small delay to show loading state
+    setTimeout(() => {
+        form.submit();
+    }, 300);
+};
+
 function initScrollToTop() {
     const scrollButton = document.querySelector('.scroll-to-top');
     

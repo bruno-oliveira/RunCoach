@@ -551,6 +551,10 @@
 }
 
 /* Spinner animation */
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
 .strava-spinner {
     animation: spin 0.8s linear infinite;
 }

@@ -256,21 +256,3 @@ def generate_hill_workout(day: int, distance: float = 0) -> Dict[str, Any]:
 def generate_training_tips(week_number: int, target_distance: float) -> List[str]:
     """Generate diverse and week-specific training tips."""
     return get_tips_for_week(week_number, target_distance)
-
-
-def generate_strength_workout(day: int) -> Dict[str, Any]:
-    """Generate a dedicated strength training workout day."""
-    strength_descriptions = [
-        "Strength training: Core and leg stability exercises",
-        "Strength training: Upper body and core conditioning",
-        "Strength training: Full body functional strength",
-        "Strength training: Plyometric and explosive power",
-        "Strength training: Balance and proprioception work",
-    ]
-    return {
-        'day': day,
-        'type': 'strength',
-        'distance': 0,
-        'intensity': 'moderate',
-        'description': strength_descriptions[day % len(strength_descriptions)]
-    }

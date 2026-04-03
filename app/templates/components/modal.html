@@ -1,0 +1,185 @@
+{% macro render(id, title='', size='medium') %}
+<div class="modal-overlay" id="{{ id }}-overlay" onclick="closeModal('{{ id }}')">
+    <div class="modal modal-{{ size }}" onclick="event.stopPropagation()">
+        <div class="modal-header">
+            <h3 class="modal-title">{{ title }}</h3>
+            <button class="modal-close" onclick="closeModal('{{ id }}')">&times;</button>
+        </div>
+        <div class="modal-body" id="{{ id }}-body">
+            {% block modal_content %}
+            {{ caller() if caller }}
+            {% endblock %}
+        </div>
+        <div class="modal-footer" id="{{ id }}-footer">
+            {% block modal_footer %}
+            <button class="btn btn-secondary" onclick="closeModal('{{ id }}')">Close</button>
+            {% endblock %}
+        </div>
+    </div>
+</div>
+
+<style>
+.modal-overlay {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 2000;
+    align-items: center;
+    justify-content: center;
+}
+
+.modal-overlay.active {
+    display: flex;
+}
+
+.modal {
+    background: var(--color-bg-elevated);
+    border-radius: 12px;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+    width: 90%;
+    max-height: 90vh;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    animation: modalSlideIn 0.3s ease-out;
+}
+
+.modal-small { max-width: 400px; }
+.modal-medium { max-width: 600px; }
+.modal-large { max-width: 900px; }
+
+@keyframes modalSlideIn {
+    from {
+        opacity: 0;
+        transform: translateY(-50px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1.5rem;
+    border-bottom: 1px solid var(--color-border);
+}
+
+.modal-title {
+    margin: 0;
+    font-size: 1.5rem;
+    color: var(--color-text);
+    font-weight: 600;
+}
+
+.modal-close {
+    background: none;
+    border: none;
+    font-size: 2rem;
+    color: var(--color-text-secondary);
+    cursor: pointer;
+    line-height: 1;
+    padding: 0;
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 4px;
+    transition: background 0.3s, color 0.3s;
+}
+
+.modal-close:hover {
+    background: var(--color-surface);
+    color: var(--color-text);
+}
+
+.modal-body {
+    padding: 1.5rem;
+    overflow-y: auto;
+    flex: 1;
+}
+
+.modal-footer {
+    padding: 1rem 1.5rem;
+    border-top: 1px solid var(--color-border);
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.75rem;
+}
+
+.btn {
+    padding: 0.625rem 1.25rem;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.95rem;
+    font-weight: 500;
+    transition: background 0.3s;
+}
+
+.btn-secondary {
+    background: var(--color-text-secondary);
+    color: var(--color-text-on-primary);
+}
+
+.btn-secondary:hover {
+    background: var(--color-text);
+}
+
+.btn-primary {
+    background: var(--color-primary);
+    color: var(--color-text-on-primary);
+}
+
+.btn-primary:hover {
+    background: var(--color-primary-dark);
+}
+
+.btn-danger {
+    background: var(--color-error);
+    color: var(--color-text-on-primary);
+}
+
+.btn-danger:hover {
+    background: var(--color-accent-dark);
+}
+</style>
+
+<script>
+function openModal(modalId) {
+    const overlay = document.getElementById(modalId + '-overlay');
+    if (overlay) {
+        overlay.classList.add('active');
+        overlay.classList.add('is-open');
+        document.body.style.overflow = 'hidden';
+    }
+}
+
+function closeModal(modalId) {
+    const overlay = document.getElementById(modalId + '-overlay');
+    if (overlay) {
+        overlay.classList.remove('active');
+        overlay.classList.remove('is-open');
+        document.body.style.overflow = '';
+    }
+}
+
+// Close modal on Escape key
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+        const activeModal = document.querySelector('.modal-overlay.active, .modal-overlay.is-open');
+        if (activeModal) {
+            const modalId = activeModal.id.replace('-overlay', '');
+            closeModal(modalId);
+        }
+    }
+});
+</script>
+{% endmacro %}

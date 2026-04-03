@@ -16,9 +16,8 @@ from app.dependencies import (
     get_performance_plan_generator,
     verify_plan_ownership,
 )
-from app.constants import DISTANCE_NAMES
 from app.models import User
-from app.schemas import PerformancePlanRequest
+from app.schemas import PerformancePlanRequest, DISTANCE_NAMES
 from app.services.performance_service import PerformanceService
 from app.dependencies import get_plan_service
 from app.services.plan_service import PlanService
@@ -118,7 +117,7 @@ async def performance_training_page(
                 goal_pace=default_goal_pace
             )
         except Exception as e:
-            logger.warning("Could not auto-calculate fitness: %s", e)
+            logger.warning(f"Could not auto-calculate fitness: {e}")
 
     return templates.TemplateResponse(
         "performance_training.html",
@@ -147,7 +146,7 @@ async def calculate_fitness(
         )
         return fitness
     except Exception as e:
-        logger.error("Error calculating fitness: %s", e)
+        logger.error(f"Error calculating fitness: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 
@@ -197,7 +196,7 @@ async def generate_performance_plan(
             pass
         return _perf_error_response(
             request, current_user,
-            f"You've reached the maximum of {PlanService.MAX_PLANS_PER_USER} training plans. "
+            "You've reached the maximum of 3 training plans. "
             "Please delete an existing plan before creating a new one.",
             "plan_limit",
             fitness_data=fitness_data,
@@ -249,7 +248,7 @@ async def generate_performance_plan(
         )
 
     except RunCoachException as e:
-        logger.warning("Validation error: %s", e.user_message)
+        logger.warning(f"Validation error: {e.user_message}")
         fitness_data = None
         hr_data = None
         try:
@@ -275,7 +274,7 @@ async def generate_performance_plan(
             suggestion=e.suggestion if hasattr(e, 'suggestion') else None,
         )
     except ValueError as e:
-        logger.warning("Validation error: %s", str(e))
+        logger.warning(f"Validation error: {str(e)}")
         fitness_data = None
         hr_data = None
         try:
@@ -293,7 +292,7 @@ async def generate_performance_plan(
             fitness_data=fitness_data, hr_data=hr_data,
         )
     except Exception as e:
-        logger.error("Error generating performance plan: %s", e, exc_info=True)
+        logger.error(f"Error generating performance plan: {e}", exc_info=True)
         return _perf_error_response(
             request, current_user,
             "An unexpected error occurred while generating your plan. Please try again.",
@@ -365,11 +364,11 @@ async def view_performance_plan(
                         'meals': meal_options  # Already in the right format
                     }
             except Exception as e:
-                logger.warning("Failed to parse nutrition plan: %s", e)
+                logger.warning(f"Failed to parse nutrition plan: {e}")
                 # Nutrition plan is optional, continue without it
                 nutrition_plan = None
 
-        logger.info("Rendering performance plan %s with %s weeks", plan_id, len(plan_data['weekly_plans']))
+        logger.info(f"Rendering performance plan {plan_id} with {len(plan_data['weekly_plans'])} weeks")
 
         today_workout = None
         progress_data = None
@@ -377,7 +376,7 @@ async def view_performance_plan(
             today_workout = service.get_todays_workout(training_plan)
             progress_data = service.get_plan_progress(training_plan)
         except Exception as e:
-            logger.warning("Could not load today/progress data: %s", e)
+            logger.warning(f"Could not load today/progress data: {e}")
 
         return templates.TemplateResponse(
             "performance_plan.html",
@@ -398,7 +397,7 @@ async def view_performance_plan(
         )
 
     except Exception as e:
-        logger.error("Error displaying performance plan: %s", e, exc_info=True)
+        logger.error(f"Error displaying performance plan: {e}", exc_info=True)
         return templates.TemplateResponse(
             "performance_training.html",
             {

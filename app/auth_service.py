@@ -27,12 +27,10 @@ class AuthService:
     def create_access_token(self, data: dict, expires_delta: Optional[timedelta] = None) -> str:
         to_encode = data.copy()
         if expires_delta:
-            expire = datetime.now(timezone.utc) + expires_delta
+            expire = datetime.now(timezone.utc).replace(tzinfo=None) + expires_delta
         else:
-            # Use session timeout from config (convert minutes to seconds)
-            expire = datetime.now(timezone.utc) + timedelta(minutes=settings.session_timeout_minutes)
-        # Use Unix timestamp for JWT exp claim
-        to_encode.update({"exp": int(expire.timestamp())})
+            expire = datetime.now(timezone.utc).replace(tzinfo=None) + timedelta(days=1)
+        to_encode.update({"exp": expire})
         encoded_jwt = jwt.encode(to_encode, self.secret_key, algorithm=self.algorithm)
         return encoded_jwt
 
@@ -49,7 +47,7 @@ class AuthService:
 
         entry = self._cert_cache_entry  # single atomic read
         if entry is not None and (now - entry[1]) < self._cert_cache_ttl:
-            logger.debug("Using cached Google OAuth certificates")
+            logger.info("Using cached Google OAuth certificates")
             return entry[0]
 
         logger.info("Fetching Google OAuth certificates")
@@ -58,7 +56,7 @@ class AuthService:
             response.raise_for_status()
             certs = response.json()
             AuthService._cert_cache_entry = (certs, now)  # single atomic write
-            logger.info("Retrieved %s public keys from Google", len(certs.get('keys', [])))
+            logger.info(f"Retrieved {len(certs.get('keys', []))} public keys from Google")
             return certs
 
     async def verify_google_token(self, id_token: str) -> Optional[dict]:
@@ -77,13 +75,13 @@ class AuthService:
                 audience=settings.google_client_id,
                 issuer="https://accounts.google.com"
             )
-            logger.info("Google token verified successfully for: %s", payload.get('email'))
+            logger.info(f"Google token verified successfully for: {payload.get('email')}")
             return payload
         except JWTError as e:
-            logger.error("JWT verification failed: %s: %s", type(e).__name__, e)
+            logger.error(f"JWT verification failed: {type(e).__name__}: {e}")
             return None
         except Exception as e:
-            logger.error("Google token verification error: %s: %s", type(e).__name__, e)
+            logger.error(f"Google token verification error: {type(e).__name__}: {e}")
             return None
 
     def get_or_create_user(self, db: Session, google_user_data: dict, anonymous_user_id: Optional[str] = None) -> User:

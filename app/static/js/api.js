@@ -223,6 +223,69 @@ const ApiClient = {
   },
   
   /**
+   * Makes a PUT request
+   * @param {string} url - Request URL (relative or absolute)
+   * @param {Object} data - Request body data
+   * @param {Object} options - Additional fetch options
+   * @returns {Promise<any>}
+   */
+  async put(url, data = {}, options = {}) {
+    const fullUrl = url.startsWith('http') ? url : `${this.BASE_URL}${url}`;
+    
+    const response = await this._fetchWithRetry(fullUrl, {
+      method: 'PUT',
+      headers: this._buildHeaders(options.headers),
+      body: JSON.stringify(data),
+      ...options
+    });
+    
+    return response.json();
+  },
+  
+  /**
+   * Makes a PATCH request
+   * @param {string} url - Request URL (relative or absolute)
+   * @param {Object} data - Request body data
+   * @param {Object} options - Additional fetch options
+   * @returns {Promise<any>}
+   */
+  async patch(url, data = {}, options = {}) {
+    const fullUrl = url.startsWith('http') ? url : `${this.BASE_URL}${url}`;
+    
+    const response = await this._fetchWithRetry(fullUrl, {
+      method: 'PATCH',
+      headers: this._buildHeaders(options.headers),
+      body: JSON.stringify(data),
+      ...options
+    });
+    
+    return response.json();
+  },
+  
+  /**
+   * Makes a DELETE request
+   * @param {string} url - Request URL (relative or absolute)
+   * @param {Object} options - Additional fetch options
+   * @returns {Promise<any>}
+   */
+  async del(url, options = {}) {
+    const fullUrl = url.startsWith('http') ? url : `${this.BASE_URL}${url}`;
+    
+    const response = await this._fetchWithRetry(fullUrl, {
+      method: 'DELETE',
+      headers: this._buildHeaders(options.headers),
+      ...options
+    });
+    
+    // DELETE might return 204 No Content
+    if (response.status === 204) {
+      return null;
+    }
+    
+    return response.json();
+  },
+  
+  /**
    * Shows a success toast
    * @param {string} message - Success message
    */
@@ -236,8 +299,29 @@ const ApiClient = {
    */
   showError(message) {
     this._showToast(message, 'error');
+  },
+  
+  /**
+   * Shows a warning toast
+   * @param {string} message - Warning message
+   */
+  showWarning(message) {
+    this._showToast(message, 'warning');
+  },
+  
+  /**
+   * Shows an info toast
+   * @param {string} message - Info message
+   */
+  showInfo(message) {
+    this._showToast(message, 'info');
   }
 };
 
 // Global window functions for easy access
 window.api = ApiClient;
+
+// Export for module usage
+if (typeof module !== 'undefined' && module.exports) {
+  module.exports = ApiClient;
+}

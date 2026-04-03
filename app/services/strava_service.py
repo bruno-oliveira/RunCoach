@@ -103,7 +103,7 @@ class StravaService:
         if user.strava_token_expires_at and user.strava_token_expires_at > now + 300:
             return user.strava_access_token
 
-        logger.info("Refreshing Strava token for user %s", user.id)
+        logger.info(f"Refreshing Strava token for user {user.id}")
         token_data = await self.refresh_access_token(user.strava_refresh_token)
 
         user.strava_access_token = token_data["access_token"]
