@@ -27,17 +27,6 @@ from app.core import long_run_calculator
 
 
 class TrainingPlanGenerator:
-    def __init__(self):
-        self.workout_types = {
-            'easy': {'intensity': 'low', 'description': 'Easy recovery run'},
-            'tempo': {'intensity': 'medium', 'description': 'Tempo run at threshold pace'},
-            'interval': {'intensity': 'high', 'description': 'High-intensity intervals'},
-            'long': {'intensity': 'medium', 'description': 'Long distance run'},
-            'hill': {'intensity': 'high', 'description': 'Hill repeats and strength training'},
-            'rest': {'intensity': 'rest', 'description': 'Rest day'},
-            'strength': {'intensity': 'low', 'description': 'Strength training'}
-        }
-
     # ── Delegating methods (preserve backward-compatible API) ────────────
 
     def _get_distance_category(self, target_distance: float) -> str:
@@ -139,6 +128,9 @@ class TrainingPlanGenerator:
     def _generate_hill_workout(self, day: int, distance: float = 0) -> Dict[str, Any]:
         return workout_builders.generate_hill_workout(day, distance)
 
+    def _generate_strength_workout(self, day: int) -> Dict[str, Any]:
+        return workout_builders.generate_strength_workout(day)
+
     def _generate_training_tips(self, week_number: int, target_distance: float) -> List[str]:
         return workout_builders.generate_training_tips(week_number, target_distance)
 
@@ -206,11 +198,14 @@ class TrainingPlanGenerator:
 
             # Get distance based on workout type
             if workout_type == 'easy':
-                if easy_run_counter < len(easy_distances):
-                    easy_distance = easy_distances[easy_run_counter]
+                if easy_distances:
+                    if easy_run_counter < len(easy_distances):
+                        easy_distance = easy_distances[easy_run_counter]
+                    else:
+                        easy_distance = easy_distances[0]
+                    easy_run_counter += 1
                 else:
-                    easy_distance = easy_distances[0]
-                easy_run_counter += 1
+                    easy_distance = 0
             elif workout_type in ['tempo', 'interval', 'hill']:
                 if workout_type in quality_distances:
                     distance = quality_distances[workout_type]
@@ -238,6 +233,8 @@ class TrainingPlanGenerator:
                                                       pace_zones=pace_zones)
             elif workout_type == 'hill':
                 workout = self._generate_hill_workout(day_number, workout_distance)
+            elif workout_type == 'strength':
+                workout = self._generate_strength_workout(day_number)
             else:
                 raise ValueError(f"Unknown workout_type: {workout_type}")
 

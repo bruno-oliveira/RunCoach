@@ -18,7 +18,7 @@ auth_router = APIRouter(prefix="/api/auth", tags=["authentication"])
 
 # Cookie settings
 COOKIE_NAME = "access_token"
-COOKIE_MAX_AGE = 24 * 60 * 60  # 1 day in seconds
+COOKIE_MAX_AGE = settings.session_timeout_minutes * 60  # Convert minutes to seconds
 
 
 @auth_router.post("/google", response_model=Token)
@@ -33,26 +33,26 @@ async def google_auth(
     Authenticate user using Google OAuth ID token.
     Merges anonymous user data if anonymous_user_id cookie is present.
     """
-    logger.info(f"Attempting Google OAuth authentication...")
+    logger.info("Attempting Google OAuth authentication...")
 
     google_user_data = await auth_service.verify_google_token(auth_request.id_token)
 
     if not google_user_data:
-        logger.error(f"Google token verification failed")
+        logger.error("Google token verification failed")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid Google token",
             headers={"WWW-Authenticate": "Bearer"},
         )
 
-    logger.info(f"Google authentication successful for: {google_user_data.get('email')}")
+    logger.info("Google authentication successful for: %s", google_user_data.get('email'))
 
     anonymous_user_id = request.cookies.get("anonymous_user_id")
-    logger.info(f"Anonymous user ID from cookie: {anonymous_user_id}")
+    logger.info("Anonymous user ID from cookie: %s", anonymous_user_id)
 
     user = auth_service.get_or_create_user(db, google_user_data, anonymous_user_id)
 
-    logger.info(f"User created/retrieved: {user.id}, Name: {user.name}")
+    logger.info("User created/retrieved: %s, Name: %s", user.id, user.name)
 
     access_token = auth_service.create_access_token(
         data={"sub": user.id, "email": user.email},
@@ -68,7 +68,12 @@ async def google_auth(
         secure=not settings.debug,
     )
 
-    response.delete_cookie(key="anonymous_user_id", samesite="lax")
+    response.delete_cookie(
+        key="anonymous_user_id",
+        httponly=True,
+        secure=not settings.debug,
+        samesite="lax"
+    )
 
     return Token(
         access_token=access_token,

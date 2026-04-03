@@ -17,6 +17,7 @@ from app.core.nutrition_engine import NutritionEngine
 from app.core.pdf_generator import PDFGenerator
 from app.core.plan_generator import TrainingPlanGenerator
 from app.dependencies import (
+    get_adaptation_service,
     get_current_user,
     get_db,
     get_nutrition_engine,
@@ -36,8 +37,9 @@ from app.exceptions import (
 )
 from app.models import TrainingPlan, User
 from app.models.triathlon_plan import TriathlonPlan
+from app.constants import DISTANCE_NAMES
 from app.routers.plan_helpers import error_response, get_plan_or_404, plan_view_context
-from app.schemas import DISTANCE_NAMES, PlanRequest, get_mileage_warning
+from app.schemas import PlanRequest, get_mileage_warning
 from app.services.adaptation_service import AdaptationService
 from app.services.hr_zone_service import HRZoneService
 from app.services.plan_service import PlanService
@@ -139,7 +141,7 @@ async def generate_plan(
             return error_response(
                 request,
                 current_user,
-                "You've reached the maximum of 3 training plans. "
+                f"You've reached the maximum of {PlanService.MAX_PLANS_PER_USER} training plans. "
                 "Please delete an existing plan before creating a new one.",
                 "plan_limit",
             )
@@ -271,6 +273,7 @@ async def view_plan(
     current_user: Optional[User] = Depends(get_optional_user),
     nutrition_engine: NutritionEngine = Depends(get_nutrition_engine),
     plan_service: PlanService = Depends(get_plan_service),
+    adaptation_service: AdaptationService = Depends(get_adaptation_service),
 ) -> HTMLResponse:
     """View an existing training plan."""
     try:
@@ -281,12 +284,11 @@ async def view_plan(
         # Auto-map any unmapped Strava runs to this plan
         if current_user and training_plan.start_date:
             try:
-                adaptation_service = AdaptationService()
                 adaptation_service.map_runs_to_plan(
                     plan_id, current_user.id, db
                 )
             except Exception as e:
-                logger.warning(f"Auto-map on view failed: {e}")
+                logger.warning("Auto-map on view failed: %s", e)
 
         plan_data = json.loads(training_plan.plan_data)
         plan_data = plan_service.enrich_plan_data_with_ids(
@@ -320,7 +322,7 @@ async def view_plan(
                     training_plan.plan_data = json.dumps(plan_data)
                     db.commit()
             except Exception as e:
-                logger.warning(f"Retroactive HR zone computation failed: {e}")
+                logger.warning("Retroactive HR zone computation failed: %s", e)
 
         extra = plan_service.get_plan_view_data(training_plan, current_user, db)
 
@@ -332,7 +334,7 @@ async def view_plan(
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Error generating plan: {e}", exc_info=True)
+        logger.error("Error generating plan: %s", e, exc_info=True)
         raise HTTPException(status_code=500, detail="An internal error occurred while generating the plan")
 
 
@@ -407,30 +409,13 @@ async def list_my_plans(
             },
         )
     except Exception as e:
-        logger.error(f"Error listing plans: {e}", exc_info=True)
+        logger.error("Error listing plans: %s", e, exc_info=True)
         raise HTTPException(status_code=500, detail="An internal error occurred while listing plans")
 
 
 # ---------------------------------------------------------------------------
 # Performance & adaptation API endpoints
 # ---------------------------------------------------------------------------
-
-
-@router.get("/api/plan/{plan_id}/performance")
-async def get_plan_performance(
-    plan_id: str,
-    current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db),
-):
-    """Get performance analysis for a training plan."""
-    get_plan_or_404(
-        plan_id, db, current_user, require_user_match=True
-    )
-
-    adaptation_service = AdaptationService()
-    analysis = adaptation_service.analyze_performance(plan_id, db)
-
-    return analysis
 
 
 @router.get("/api/plan/{plan_id}/readiness")
@@ -459,11 +444,11 @@ async def adjust_plan(
     plan_id: str,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
+    adaptation_service: AdaptationService = Depends(get_adaptation_service),
 ):
     """Adjust future plan weeks based on recent performance data."""
     get_plan_or_404(plan_id, db, current_user, require_user_match=True)
 
-    adaptation_service = AdaptationService()
     return adaptation_service.adjust_plan(plan_id, current_user.id, db)
 
 
@@ -472,11 +457,11 @@ async def reset_plan_adjustment(
     plan_id: str,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
+    adaptation_service: AdaptationService = Depends(get_adaptation_service),
 ):
     """Reset plan adjustment, restoring original baseline distances."""
     get_plan_or_404(plan_id, db, current_user, require_user_match=True)
 
-    adaptation_service = AdaptationService()
     return adaptation_service.reset_adjustment(plan_id, current_user.id, db)
 
 
@@ -598,7 +583,11 @@ async def save_plan_to_account(
         return {"message": "Plan already saved to your account", "plan_id": plan_id}
 
     plan_owner = db.query(User).filter(User.id == training_plan.user_id).first()
-    if plan_owner and (plan_owner.google_id or plan_owner.email):
+    if plan_owner is None:
+        raise HTTPException(
+            status_code=403, detail="This plan cannot be claimed"
+        )
+    if plan_owner.google_id or plan_owner.email:
         raise HTTPException(
             status_code=403, detail="This plan belongs to another user"
         )

@@ -2,7 +2,6 @@
 
 import json
 import logging
-import time
 
 from typing import Optional
 
@@ -11,9 +10,8 @@ from fastapi.responses import HTMLResponse
 from sqlalchemy.orm import Session
 
 from app.config import settings
-from app.dependencies import get_db, get_optional_user, get_plan_service, verify_plan_ownership
+from app.dependencies import get_db, get_nutrition_engine, get_optional_user, get_plan_service, verify_plan_ownership
 from app.models import TrainingPlan
-from app.core.nutrition_engine import NutritionEngine
 from app.services.plan_service import PlanService
 from app.template_helpers import create_templates
 
@@ -31,6 +29,7 @@ async def randomize_meals(
     current_user = Depends(get_optional_user),
     db: Session = Depends(get_db),
     plan_service: PlanService = Depends(get_plan_service),
+    nutrition_engine: NutritionEngine = Depends(get_nutrition_engine),
 ) -> HTMLResponse:
     """Generate different meal suggestions for the nutrition blueprint."""
     try:
@@ -43,10 +42,6 @@ async def randomize_meals(
         if not verify_plan_ownership(training_plan, current_user, anonymous_user_id):
             raise HTTPException(status_code=403, detail="Not authorized to modify this plan")
 
-        # Use current time to ensure different results each time
-        random_seed = int(time.time() * 1000000) % 100000000
-        nutrition_engine = NutritionEngine(random_seed=random_seed)
-
         # Generate new meal blueprint with different randomization
         new_nutrition_plan = nutrition_engine.generate_weekly_meal_plan(
             training_plan.current_weekly_km,
@@ -56,7 +51,7 @@ async def randomize_meals(
         # Update the plan with new blueprint
         training_plan.nutrition_plan_data = json.dumps(new_nutrition_plan)
         db.commit()
-        logger.info(f"Successfully updated nutrition plan for {plan_id}")
+        logger.info("Successfully updated nutrition plan for %s", plan_id)
 
         from app.routers.plan_helpers import plan_view_context
 
@@ -79,45 +74,3 @@ async def randomize_meals(
         db.rollback()
         logger.exception("Error randomizing meals")
         raise HTTPException(status_code=500, detail="An internal error occurred while randomizing meals")
-
-
-@router.get("/nutrition-plan/{plan_id}", response_class=HTMLResponse)
-async def get_nutrition_plan(
-    plan_id: str,
-    request: Request,
-    anonymous_user_id: Optional[str] = Cookie(None),
-    db: Session = Depends(get_db),
-    current_user = Depends(get_optional_user),
-) -> HTMLResponse:
-    """Get detailed nutrition plan for a training plan."""
-    try:
-        training_plan = (
-            db.query(TrainingPlan).filter(TrainingPlan.id == plan_id).first()
-        )
-        if not training_plan:
-            raise HTTPException(status_code=404, detail="Plan not found")
-
-        if not verify_plan_ownership(training_plan, current_user, anonymous_user_id):
-            raise HTTPException(status_code=403, detail="Not authorized to view this plan")
-
-        nutrition_plan = []
-        if training_plan.nutrition_plan_data:
-            nutrition_plan = json.loads(training_plan.nutrition_plan_data)
-
-        return templates.TemplateResponse(
-            "nutrition.html",
-            {
-                "request": request,
-                "user": current_user,
-                "google_client_id": settings.google_client_id,
-                "nutrition_plan": nutrition_plan,
-                "plan_id": plan_id,
-                "training_plan": training_plan,
-            },
-        )
-
-    except HTTPException:
-        raise
-    except Exception as e:
-        logger.error(f"Error fetching nutrition plan: {e}", exc_info=True)
-        raise HTTPException(status_code=500, detail="An internal error occurred while fetching the nutrition plan")

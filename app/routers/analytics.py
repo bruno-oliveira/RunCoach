@@ -72,7 +72,7 @@ async def get_analytics_runs(
             "total": len(runs),
         }
     except Exception as e:
-        logger.error(f"Error fetching analytics runs: {e}", exc_info=True)
+        logger.error("Error fetching analytics runs: %s", e, exc_info=True)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to retrieve run data",

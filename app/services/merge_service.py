@@ -79,11 +79,11 @@ class MergeService:
             db.delete(anonymous_user)
 
             db.commit()
-            logger.info(f"Merged anonymous user {anonymous_user_id} to {authenticated_user_id}: {stats}")
+            logger.info("Merged anonymous user %s to %s: %s", anonymous_user_id, authenticated_user_id, stats)
 
         except Exception as e:
             db.rollback()
-            logger.error(f"Error merging anonymous user: {e}")
+            logger.error("Error merging anonymous user: %s", e)
             raise
 
         return stats

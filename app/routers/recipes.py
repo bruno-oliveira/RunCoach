@@ -196,7 +196,7 @@ async def get_favorites(
             recipe_data["favorite_id"] = fav.id
             recipes.append(recipe_data)
         except (json.JSONDecodeError, TypeError):
-            logger.warning(f"Could not parse favorite recipe data for user {current_user.id}")
+            logger.warning("Could not parse favorite recipe data for user %s", current_user.id)
     
     return {"recipes": recipes}
 

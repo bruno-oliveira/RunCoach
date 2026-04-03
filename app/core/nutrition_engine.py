@@ -54,12 +54,14 @@ class NutritionEngine:
             weekly_km, target_distance, body_weight
         )
 
+        fat = round(calories * 0.25 / 9, 0)
+
         return {
             "calories": calories,
             "protein": protein,
             "fiber": fiber,
-            "fat": round(calories * 0.25 / 9, 0),
-            "carbs": max(0, round((calories - (protein * 4) - (round(calories * 0.25 / 9, 0) * 9)) / 4, 0))
+            "fat": fat,
+            "carbs": max(0, round((calories - (protein * 4) - (fat * 9)) / 4, 0))
         }
     
     def generate_weekly_meal_plan(self, weekly_km: float, target_distance: float, body_weight: float = 70) -> Dict[str, Any]:

@@ -33,11 +33,6 @@ const AnalyticsDashboard = {
         if (!dashboard) return;
 
         try {
-            const stravaConnected = await this.checkStravaConnection();
-            if (stravaConnected) {
-                await this.syncStravaPeriod(30);
-            }
-
             const res = await fetch('/api/analytics/runs', { credentials: 'same-origin' });
             if (!res.ok) throw new Error('Failed to fetch runs');
             const data = await res.json();

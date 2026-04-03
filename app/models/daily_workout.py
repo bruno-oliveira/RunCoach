@@ -8,6 +8,7 @@ class DailyWorkout(Base):
     __tablename__ = "daily_workouts"
     __table_args__ = (
         Index('idx_daily_workout_weekly_plan_id', 'weekly_plan_id'),
+        Index('idx_daily_workout_plan_day', 'weekly_plan_id', 'day_of_week'),
     )
 
     id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))

@@ -22,4 +22,5 @@ WORKOUT_TYPES: list[str] = [
     "rest",
     "recovery",
     "race",
+    "strength",
 ]

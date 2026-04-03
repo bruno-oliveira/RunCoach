@@ -58,26 +58,6 @@
 </div>
 {% endmacro %}
 
-{% macro form_textarea(name, label, value='', required=False, placeholder='', rows=4, help_text='') %}
-<div class="form-group">
-    <label for="{{ name }}" class="form-label">
-        {{ label }}
-        {% if required %}<span class="required">*</span>{% endif %}
-    </label>
-    <textarea 
-        id="{{ name }}" 
-        name="{{ name }}"
-        class="form-textarea"
-        rows="{{ rows }}"
-        {% if placeholder %}placeholder="{{ placeholder }}"{% endif %}
-        {% if required %}required{% endif %}
-    >{{ value }}</textarea>
-    {% if help_text %}
-    <small class="form-help">{{ help_text }}</small>
-    {% endif %}
-</div>
-{% endmacro %}
-
 {% macro alert(message, alert_type='info', dismissible=True, icon='') %}
 <div class="alert alert-{{ alert_type }} {{ 'alert-dismissible' if dismissible else '' }}">
     {% if icon %}<span class="alert-icon">{{ icon }}</span>{% endif %}
@@ -90,33 +70,6 @@
 
 {% macro badge(text, badge_type='primary') %}
 <span class="badge badge-{{ badge_type }}">{{ text }}</span>
-{% endmacro %}
-
-{% macro card(title='', footer='') %}
-<div class="card">
-    {% if title %}
-    <div class="card-header">
-        <h3 class="card-title">{{ title }}</h3>
-    </div>
-    {% endif %}
-    <div class="card-body">
-        {{ caller() }}
-    </div>
-    {% if footer %}
-    <div class="card-footer">
-        {{ footer }}
-    </div>
-    {% endif %}
-</div>
-{% endmacro %}
-
-{% macro loading_spinner(size='medium', text='') %}
-<div class="spinner-container spinner-{{ size }}">
-    <div class="spinner"></div>
-    {% if text %}
-    <p class="spinner-text">{{ text }}</p>
-    {% endif %}
-</div>
 {% endmacro %}
 
 <style>
@@ -295,67 +248,5 @@
 .badge-danger { background: var(--color-error); color: var(--color-text-on-primary); }
 .badge-warning { background: var(--color-warning); color: var(--color-text); }
 .badge-info { background: var(--color-info); color: var(--color-text-on-primary); }
-
-/* Card Styles */
-.card {
-    background: var(--color-bg-elevated);
-    border-radius: 10px;
-    box-shadow: var(--shadow-sm);
-    overflow: hidden;
-}
-
-.card-header {
-    padding: 1.25rem 1.5rem;
-    border-bottom: 1px solid var(--color-border);
-    background: var(--color-bg-sunken);
-}
-
-.card-title {
-    margin: 0;
-    font-size: 1.25rem;
-    color: var(--color-text);
-    font-weight: 600;
-}
-
-.card-body {
-    padding: 1.5rem;
-}
-
-.card-footer {
-    padding: 1rem 1.5rem;
-    border-top: 1px solid var(--color-border);
-    background: var(--color-bg-sunken);
-}
-
-/* Loading Spinner */
-.spinner-container {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: 1rem;
-}
-
-.spinner {
-    border: 3px solid var(--color-surface);
-    border-top: 3px solid var(--color-primary);
-    border-radius: 50%;
-    animation: spin 1s linear infinite;
-}
-
-.spinner-small .spinner { width: 20px; height: 20px; border-width: 2px; }
-.spinner-medium .spinner { width: 40px; height: 40px; }
-.spinner-large .spinner { width: 60px; height: 60px; border-width: 4px; }
-
-@keyframes spin {
-    0% { transform: rotate(0deg); }
-    100% { transform: rotate(360deg); }
-}
-
-.spinner-text {
-    color: var(--color-text-secondary);
-    font-size: 0.95rem;
-    margin: 0;
-}
 </style>
 {% endmacro %}

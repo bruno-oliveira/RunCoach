@@ -222,7 +222,7 @@ class PlanService:
                 # Re-serialise plan_data with zone annotations
                 training_plan.plan_data = json.dumps(plan_data)
             except Exception as e:
-                logger.warning(f"HR zone injection failed: {e}")
+                logger.warning("HR zone injection failed: %s", e)
 
             # Nutrition
             nutrition_plan = nutrition_engine.generate_weekly_meal_plan(
@@ -260,6 +260,10 @@ class PlanService:
             )
             training_plan.race_protocol_data = json.dumps(race_protocol)
 
+            db.commit()
+            
+            # Increment user's plans_generated counter
+            user.plans_generated = (user.plans_generated or 0) + 1
             db.commit()
         except Exception:
             db.rollback()
@@ -528,7 +532,7 @@ class PlanService:
                     or (avg_effort is not None and (avg_effort >= 8 or avg_effort <= 3))
                 )
             except Exception as e:
-                logger.warning(f"Could not detect skipped workouts: {e}")
+                logger.warning("Could not detect skipped workouts: %s", e)
 
         return {
             "skipped_count": skipped_count,
@@ -551,7 +555,7 @@ class PlanService:
             )
             return {fb.run_log_id: fb for fb in feedbacks}
         except Exception as e:
-            logger.warning(f"Could not load feedback: {e}")
+            logger.warning("Could not load feedback: %s", e)
             return {}
 
     def get_plan_view_data(self,
@@ -579,7 +583,7 @@ class PlanService:
             try:
                 progress_data = PerformanceService(db).get_plan_progress(training_plan)
             except Exception as e:
-                logger.warning(f"Could not compute progress data: {e}")
+                logger.warning("Could not compute progress data: %s", e)
 
         # Adjustment hints
         hints = {"skipped_count": 0, "rescheduled_count": 0, "needs_adjustment": False}

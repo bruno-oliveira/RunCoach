@@ -10,7 +10,7 @@ from sqlalchemy.orm import Session
 
 from app.auth_service import AuthService
 from app.config import settings
-from app.dependencies import get_current_user, get_db, get_auth_service, get_strava_service
+from app.dependencies import get_adaptation_service, get_current_user, get_db, get_auth_service, get_strava_service
 from app.models import TrainingPlan
 from app.models.user import User
 from app.schemas import StravaStatusResponse, StravaSyncResponse
@@ -25,15 +25,14 @@ strava_router = APIRouter(prefix="/api/strava", tags=["strava"])
 def _auto_map_and_adjust(
     user: User,
     db: Session,
+    adaptation_service,
 ) -> list[dict]:
     """Find active plans and auto-map runs + auto-adjust each one.
 
     Returns a list of per-plan result dicts suitable for the sync response.
     """
-    from app.services.adaptation_service import AdaptationService
     from app.utils import to_date as _to_date
 
-    adaptation_service = AdaptationService()
     today = datetime.now(timezone.utc).date()
 
     active_plans = (
@@ -69,7 +68,7 @@ def _auto_map_and_adjust(
                 "reason": adjust_result.get("reason", ""),
             })
         except Exception as e:
-            logger.warning(f"Auto-adjust failed for plan {plan.id}: {e}")
+            logger.warning("Auto-adjust failed for plan %s: %s", plan.id, e)
 
     return results
 
@@ -120,7 +119,7 @@ async def strava_callback(
     try:
         token_data = await strava_service.exchange_code_for_tokens(code)
     except Exception as e:
-        logger.error(f"Strava token exchange failed: {e}")
+        logger.error("Strava token exchange failed: %s", e)
         raise HTTPException(
             status_code=status.HTTP_502_BAD_GATEWAY,
             detail="Failed to exchange code with Strava",
@@ -136,6 +135,7 @@ async def strava_callback(
     # Initial sync in background to avoid blocking the HTTP response
     async def _initial_sync(user_id: str):
         from app.dependencies import SessionLocal
+        from app.services.adaptation_service import AdaptationService
         sync_db = SessionLocal()
         try:
             sync_user = sync_db.query(User).filter(User.id == user_id).first()
@@ -148,13 +148,14 @@ async def strava_callback(
                 f"{result['synced']} synced, {result['total']} total"
             )
             if result.get("synced", 0) > 0:
-                adjustment_results = _auto_map_and_adjust(sync_user, sync_db)
+                adaptation_service = AdaptationService()
+                adjustment_results = _auto_map_and_adjust(sync_user, sync_db, adaptation_service)
                 if adjustment_results:
                     logger.info(
                         f"Auto-adjusted {len(adjustment_results)} plan(s) for user {user_id}"
                     )
         except Exception as e:
-            logger.error(f"Initial Strava sync failed: {e}")
+            logger.error("Initial Strava sync failed: %s", e)
         finally:
             sync_db.close()
 
@@ -178,6 +179,7 @@ async def strava_sync(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
     strava_service: StravaService = Depends(get_strava_service),
+    adaptation_service = Depends(get_adaptation_service),
 ):
     """Sync new Strava activities since the last sync.
 
@@ -238,7 +240,7 @@ async def strava_sync(
             current_user, db, after_timestamp=after_timestamp
         )
     except Exception as e:
-        logger.error(f"Strava sync failed for user {current_user.id}: {e}")
+        logger.error("Strava sync failed for user %s: %s", current_user.id, e)
         raise HTTPException(
             status_code=status.HTTP_502_BAD_GATEWAY,
             detail=f"Strava sync failed: {str(e)}",
@@ -246,7 +248,7 @@ async def strava_sync(
 
     # Auto-map and adjust active plans on every sync (not just when new
     # runs arrive) so previously-unmapped runs get linked too.
-    adjustment_results = _auto_map_and_adjust(current_user, db) or None
+    adjustment_results = _auto_map_and_adjust(current_user, db, adaptation_service) or None
 
     return StravaSyncResponse(**result, adjustment_results=adjustment_results)
 
@@ -263,13 +265,3 @@ async def strava_status(
         last_synced_at=current_user.strava_last_synced_at if connected else None,
     )
 
-
-@strava_router.post("/disconnect")
-async def strava_disconnect(
-    current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db),
-    strava_service: StravaService = Depends(get_strava_service),
-):
-    """Disconnect Strava account. Keeps previously synced RunLogs."""
-    strava_service.disconnect(current_user, db)
-    return {"detail": "Strava account disconnected"}
