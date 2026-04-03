@@ -10,7 +10,7 @@ class TriathlonPlan(Base):
     __tablename__ = "triathlon_plans"
 
     id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
-    user_id = Column(String, ForeignKey("users.id"), nullable=True, index=True)
+    user_id = Column(String, ForeignKey("users.id"), nullable=False, index=True)
     distance = Column(String)       # 'sprint' | 'olympic' | 'half_ironman'
     weeks_duration = Column(Integer)
     plan_data = Column(Text)        # JSON list of weekly dicts

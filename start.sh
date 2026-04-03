@@ -10,9 +10,13 @@ DB_PATH="/data/runcoach.db"
 SEED_PATH="/app/runcoach.db.seed"
 
 if [ ! -f "$DB_PATH" ]; then
-    echo "[start.sh] Volume is empty — seeding database from image snapshot..."
-    cp "$SEED_PATH" "$DB_PATH"
-    echo "[start.sh] Database seeded at $DB_PATH"
+    if [ -f "$SEED_PATH" ]; then
+        echo "[start.sh] Volume is empty — seeding database from image snapshot..."
+        cp "$SEED_PATH" "$DB_PATH"
+        echo "[start.sh] Database seeded at $DB_PATH"
+    else
+        echo "[start.sh] Volume is empty and no seed file found at $SEED_PATH — starting with fresh database."
+    fi
 else
     echo "[start.sh] Existing database found at $DB_PATH — skipping seed."
 fi

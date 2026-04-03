@@ -52,5 +52,24 @@ class TrainingPlan(Base):
     # Race-day protocol (JSON)
     race_protocol_data = Column(Text, nullable=True)
 
+    # JSON schema version for plan_data / nutrition_plan_data / etc.
+    # Increment when the JSON structure changes in a breaking way.
+    CURRENT_SCHEMA_VERSION = 1
+    plan_data_version = Column(Integer, default=CURRENT_SCHEMA_VERSION)
+
     # Shareable link token
     share_token = Column(String, unique=True, nullable=True, index=True)
+
+    @property
+    def target_distance_km(self) -> float:
+        """Parse target_distance string to float, handling legacy values."""
+        if self.target_distance is None:
+            return 0.0
+        try:
+            if isinstance(self.target_distance, (int, float)):
+                return float(self.target_distance)
+            if self.target_distance.lower() == "trail":
+                return 30.0
+            return float(self.target_distance)
+        except (ValueError, AttributeError):
+            return 0.0

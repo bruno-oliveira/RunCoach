@@ -188,10 +188,6 @@ class PerformancePlanGenerator:
 
         return zones
 
-    def _format_pace(self, pace_min_per_km: float) -> str:
-        """Format pace as MM:SS/km."""
-        return _shared_format_pace(pace_min_per_km)
-
     def _estimate_duration_min(self, segments: list) -> int:
         """
         Estimate total workout duration from segments.
@@ -206,10 +202,6 @@ class PerformancePlanGenerator:
         for seg in segments:
             total += seg['distance_km'] * seg.get('pace_raw', 6.0)
         return round(total)
-
-    def _format_pace_range(self, pace_range: tuple) -> str:
-        """Format a pace range."""
-        return f"{self._format_pace(pace_range[0])} - {self._format_pace(pace_range[1])}"
 
     def _calculate_phases(self, weeks: int) -> Dict[str, Dict[str, Any]]:
         """
@@ -332,7 +324,7 @@ class PerformancePlanGenerator:
             {
                 'name': 'Warm-up',
                 'distance_km': warmup_km,
-                'pace_formatted': self._format_pace(warmup_pace),
+                'pace_formatted': _shared_format_pace(warmup_pace),
                 'pace_raw': warmup_pace,
                 'zone': 'zone_1',
                 'zone_label': 'Zone 1',
@@ -341,7 +333,7 @@ class PerformancePlanGenerator:
             {
                 'name': 'Tempo',
                 'distance_km': round(tempo_km, 1),
-                'pace_formatted': self._format_pace(target_pace),
+                'pace_formatted': _shared_format_pace(target_pace),
                 'pace_raw': target_pace,
                 'zone': 'zone_3',
                 'zone_label': 'Zone 3',
@@ -350,7 +342,7 @@ class PerformancePlanGenerator:
             {
                 'name': 'Cool-down',
                 'distance_km': cooldown_km,
-                'pace_formatted': self._format_pace(warmup_pace),
+                'pace_formatted': _shared_format_pace(warmup_pace),
                 'pace_raw': warmup_pace,
                 'zone': 'zone_1',
                 'zone_label': 'Zone 1',
@@ -362,8 +354,8 @@ class PerformancePlanGenerator:
             'type': 'tempo',
             'zone': 'zone_3',
             'target_pace': target_pace,
-            'target_pace_formatted': self._format_pace(target_pace),
-            'description': f"{total_km:.0f}km tempo: {warmup_km}km warmup, {tempo_km:.0f}km at {self._format_pace(target_pace)}, {cooldown_km}km cooldown",
+            'target_pace_formatted': _shared_format_pace(target_pace),
+            'description': f"{total_km:.0f}km tempo: {warmup_km}km warmup, {tempo_km:.0f}km at {_shared_format_pace(target_pace)}, {cooldown_km}km cooldown",
             'distance': total_km,
             'quality': True,
             'segments': segments,
@@ -400,7 +392,7 @@ class PerformancePlanGenerator:
             {
                 'name': 'Warm-up',
                 'distance_km': warmup_km,
-                'pace_formatted': self._format_pace(warmup_pace),
+                'pace_formatted': _shared_format_pace(warmup_pace),
                 'pace_raw': warmup_pace,
                 'zone': 'zone_1',
                 'zone_label': 'Zone 1',
@@ -409,7 +401,7 @@ class PerformancePlanGenerator:
             {
                 'name': 'Intervals',
                 'distance_km': round(total_interval_km, 1),
-                'pace_formatted': self._format_pace(target_pace),
+                'pace_formatted': _shared_format_pace(target_pace),
                 'pace_raw': target_pace,
                 'zone': 'zone_4',
                 'zone_label': 'Zone 4',
@@ -423,7 +415,7 @@ class PerformancePlanGenerator:
             {
                 'name': 'Cool-down',
                 'distance_km': cooldown_km,
-                'pace_formatted': self._format_pace(warmup_pace),
+                'pace_formatted': _shared_format_pace(warmup_pace),
                 'pace_raw': warmup_pace,
                 'zone': 'zone_1',
                 'zone_label': 'Zone 1',
@@ -435,8 +427,8 @@ class PerformancePlanGenerator:
             'type': 'vo2max',
             'zone': 'zone_4',
             'target_pace': target_pace,
-            'target_pace_formatted': self._format_pace(target_pace),
-            'description': f"{total_km:.0f}km intervals: {warmup_km}km warmup, {reps}x{interval_m}m at {self._format_pace(target_pace)} ({recovery_time}min recovery), {cooldown_km}km cooldown",
+            'target_pace_formatted': _shared_format_pace(target_pace),
+            'description': f"{total_km:.0f}km intervals: {warmup_km}km warmup, {reps}x{interval_m}m at {_shared_format_pace(target_pace)} ({recovery_time}min recovery), {cooldown_km}km cooldown",
             'distance': total_km,
             'quality': True,
             'segments': segments,
@@ -466,7 +458,7 @@ class PerformancePlanGenerator:
             {
                 'name': 'Warm-up',
                 'distance_km': warmup_km,
-                'pace_formatted': self._format_pace(warmup_pace),
+                'pace_formatted': _shared_format_pace(warmup_pace),
                 'pace_raw': warmup_pace,
                 'zone': 'zone_1',
                 'zone_label': 'Zone 1',
@@ -475,7 +467,7 @@ class PerformancePlanGenerator:
             {
                 'name': 'Race Pace',
                 'distance_km': round(race_km, 1),
-                'pace_formatted': self._format_pace(target_pace),
+                'pace_formatted': _shared_format_pace(target_pace),
                 'pace_raw': target_pace,
                 'zone': 'zone_5',
                 'zone_label': 'Zone 5',
@@ -484,7 +476,7 @@ class PerformancePlanGenerator:
             {
                 'name': 'Cool-down',
                 'distance_km': cooldown_km,
-                'pace_formatted': self._format_pace(warmup_pace),
+                'pace_formatted': _shared_format_pace(warmup_pace),
                 'pace_raw': warmup_pace,
                 'zone': 'zone_1',
                 'zone_label': 'Zone 1',
@@ -496,8 +488,8 @@ class PerformancePlanGenerator:
             'type': 'race_pace',
             'zone': 'zone_5',
             'target_pace': target_pace,
-            'target_pace_formatted': self._format_pace(target_pace),
-            'description': f"{total_km:.0f}km race pace: {warmup_km}km warmup, {race_km:.0f}km at {self._format_pace(target_pace)}, {cooldown_km}km cooldown",
+            'target_pace_formatted': _shared_format_pace(target_pace),
+            'description': f"{total_km:.0f}km race pace: {warmup_km}km warmup, {race_km:.0f}km at {_shared_format_pace(target_pace)}, {cooldown_km}km cooldown",
             'distance': total_km,
             'quality': True,
             'segments': segments,
@@ -533,7 +525,7 @@ class PerformancePlanGenerator:
             {
                 'name': 'Warm-up',
                 'distance_km': warmup_km,
-                'pace_formatted': self._format_pace(warmup_pace),
+                'pace_formatted': _shared_format_pace(warmup_pace),
                 'pace_raw': warmup_pace,
                 'zone': 'zone_1',
                 'zone_label': 'Zone 1',
@@ -542,7 +534,7 @@ class PerformancePlanGenerator:
             {
                 'name': 'Fartlek',
                 'distance_km': round(main_km, 1),
-                'pace_formatted': f"{self._format_pace(tempo_pace)} - {self._format_pace(hard_pace)}",
+                'pace_formatted': f"{_shared_format_pace(tempo_pace)} - {_shared_format_pace(hard_pace)}",
                 'pace_raw': fartlek_avg_pace,
                 'zone': 'mixed',
                 'zone_label': 'Mixed Zones',
@@ -556,7 +548,7 @@ class PerformancePlanGenerator:
             {
                 'name': 'Cool-down',
                 'distance_km': cooldown_km,
-                'pace_formatted': self._format_pace(warmup_pace),
+                'pace_formatted': _shared_format_pace(warmup_pace),
                 'pace_raw': warmup_pace,
                 'zone': 'zone_1',
                 'zone_label': 'Zone 1',
@@ -568,8 +560,8 @@ class PerformancePlanGenerator:
             'type': 'fartlek',
             'zone': 'mixed',
             'target_pace': tempo_pace,
-            'target_pace_formatted': f"{self._format_pace(tempo_pace)} - {self._format_pace(hard_pace)}",
-            'description': f"{total_km}km fartlek: {surges} surges of 1-3min at {self._format_pace(hard_pace)}, easy running between",
+            'target_pace_formatted': f"{_shared_format_pace(tempo_pace)} - {_shared_format_pace(hard_pace)}",
+            'description': f"{total_km}km fartlek: {surges} surges of 1-3min at {_shared_format_pace(hard_pace)}, easy running between",
             'distance': total_km,
             'quality': True,
             'segments': segments,
@@ -596,12 +588,12 @@ class PerformancePlanGenerator:
         if phase in ['build', 'sharpen'] and long_run_km >= 12:
             race_pace_km = min(4, distance_km * 0.3)
             easy_km = long_run_km - race_pace_km
-            description = f"{long_run_km:.0f}km long run: {easy_km:.0f}km easy at {self._format_pace(easy_pace)}, last {race_pace_km:.0f}km at {self._format_pace(race_pace)}"
+            description = f"{long_run_km:.0f}km long run: {easy_km:.0f}km easy at {_shared_format_pace(easy_pace)}, last {race_pace_km:.0f}km at {_shared_format_pace(race_pace)}"
             segments = [
                 {
                     'name': 'Easy',
                     'distance_km': round(easy_km, 1),
-                    'pace_formatted': self._format_pace(easy_pace),
+                    'pace_formatted': _shared_format_pace(easy_pace),
                     'pace_raw': easy_pace,
                     'zone': 'zone_1',
                     'zone_label': 'Zone 1',
@@ -610,7 +602,7 @@ class PerformancePlanGenerator:
                 {
                     'name': 'Race Pace Finish',
                     'distance_km': round(race_pace_km, 1),
-                    'pace_formatted': self._format_pace(race_pace),
+                    'pace_formatted': _shared_format_pace(race_pace),
                     'pace_raw': race_pace,
                     'zone': 'zone_5',
                     'zone_label': 'Zone 5',
@@ -618,12 +610,12 @@ class PerformancePlanGenerator:
                 },
             ]
         else:
-            description = f"{long_run_km:.0f}km long run at {self._format_pace(easy_pace)}"
+            description = f"{long_run_km:.0f}km long run at {_shared_format_pace(easy_pace)}"
             segments = [
                 {
                     'name': 'Easy Long Run',
                     'distance_km': round(long_run_km, 1),
-                    'pace_formatted': self._format_pace(easy_pace),
+                    'pace_formatted': _shared_format_pace(easy_pace),
                     'pace_raw': easy_pace,
                     'zone': 'zone_1',
                     'zone_label': 'Zone 1',
@@ -635,7 +627,7 @@ class PerformancePlanGenerator:
             'type': 'long',
             'zone': 'zone_1',
             'target_pace': easy_pace,
-            'target_pace_formatted': self._format_pace(easy_pace),
+            'target_pace_formatted': _shared_format_pace(easy_pace),
             'description': description,
             'distance': long_run_km,
             'quality': False,
@@ -651,7 +643,7 @@ class PerformancePlanGenerator:
             {
                 'name': 'Easy Run',
                 'distance_km': round(distance_km, 1),
-                'pace_formatted': self._format_pace(easy_pace),
+                'pace_formatted': _shared_format_pace(easy_pace),
                 'pace_raw': easy_pace,
                 'zone': 'zone_1',
                 'zone_label': 'Zone 1',
@@ -663,8 +655,8 @@ class PerformancePlanGenerator:
             'type': 'easy',
             'zone': 'zone_1',
             'target_pace': easy_pace,
-            'target_pace_formatted': self._format_pace(easy_pace),
-            'description': f"{distance_km:.0f}km easy at {self._format_pace(easy_pace)}",
+            'target_pace_formatted': _shared_format_pace(easy_pace),
+            'description': f"{distance_km:.0f}km easy at {_shared_format_pace(easy_pace)}",
             'distance': distance_km,
             'quality': False,
             'segments': segments,

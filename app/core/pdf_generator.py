@@ -5,6 +5,7 @@ import hashlib
 import json
 import logging
 import shutil
+import time
 from typing import List, Dict, Any
 from datetime import datetime
 from pathlib import Path
@@ -22,11 +23,23 @@ from app.utils import format_pace as _shared_format_pace
 logger = logging.getLogger(__name__)
 
 class PDFGenerator:
+    CACHE_TTL_SECONDS = 3600  # Evict cached PDFs older than 1 hour
+
     def __init__(self, cache_dir: str = "./pdf_cache"):
         self.cache_dir = Path(cache_dir)
         self.cache_dir.mkdir(exist_ok=True)
         self.styles = getSampleStyleSheet()
         self._setup_custom_styles()
+
+    def _evict_stale_cache(self) -> None:
+        """Remove cached PDFs older than CACHE_TTL_SECONDS."""
+        cutoff = time.time() - self.CACHE_TTL_SECONDS
+        try:
+            for entry in self.cache_dir.iterdir():
+                if entry.is_file() and entry.stat().st_mtime < cutoff:
+                    entry.unlink(missing_ok=True)
+        except OSError:
+            pass  # Best-effort cleanup
         
     def _setup_custom_styles(self):
         """Setup custom styles for the PDF"""
@@ -115,6 +128,8 @@ class PDFGenerator:
         Returns:
             Path to generated PDF file
         """
+        self._evict_stale_cache()
+
         cache_key = self._get_cache_key(plan_data, training_plan)
         cache_path = self.cache_dir / cache_key
 
@@ -235,10 +250,7 @@ class PDFGenerator:
         story.append(Spacer(1, 2*cm))
 
         # Add key stats (30.0 = Trail Running)
-        try:
-            target_distance_float = float(training_plan.target_distance)
-        except (TypeError, ValueError):
-            target_distance_float = 0.0
+        target_distance_float = training_plan.target_distance_km
         target_display = "Trail Running" if target_distance_float == 30.0 else f"{training_plan.target_distance} km"
 
         if is_performance and training_plan.current_pace and training_plan.goal_pace:

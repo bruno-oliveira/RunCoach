@@ -165,14 +165,16 @@ def _run_migrations(eng) -> None:
         # Shareable link token
         "ALTER TABLE training_plans ADD COLUMN share_token VARCHAR",
         "CREATE UNIQUE INDEX IF NOT EXISTS idx_training_plan_share_token ON training_plans(share_token)",
+        # JSON schema version tracking
+        "ALTER TABLE training_plans ADD COLUMN plan_data_version INTEGER DEFAULT 1",
     ]
     with eng.connect() as conn:
         for stmt in stmts:
             try:
                 conn.execute(_sa_text(stmt))
                 conn.commit()
-            except _SAOperationalError:
-                pass  # Column/index already exists
+            except _SAOperationalError as exc:
+                logger.debug("Migration skipped (already applied): %s — %s", stmt.split()[-1], exc)
 
 
 _run_migrations(engine)

@@ -159,7 +159,7 @@ class ReadinessService:
                 "actual": round(actual_weekly_km[i], 1) if i < len(actual_weekly_km) else 0,
             })
 
-        target_dist = _parse_float(plan.target_distance)
+        target_dist = plan.target_distance_km
         distance_label = DISTANCE_LABELS.get(target_dist, f"{target_dist}km")
 
         return {

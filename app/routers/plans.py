@@ -23,6 +23,7 @@ from app.dependencies import (
     get_optional_user,
     get_pdf_generator,
     get_plan_generator,
+    get_plan_service,
     verify_plan_ownership,
 )
 from app.exceptions import (
@@ -36,7 +37,7 @@ from app.exceptions import (
 from app.models import TrainingPlan, User
 from app.models.triathlon_plan import TriathlonPlan
 from app.routers.plan_helpers import error_response, get_plan_or_404, plan_view_context
-from app.schemas import DISTANCE_NAMES, PlanRequest, get_mileage_warning, parse_target_distance
+from app.schemas import DISTANCE_NAMES, PlanRequest, get_mileage_warning
 from app.services.adaptation_service import AdaptationService
 from app.services.hr_zone_service import HRZoneService
 from app.services.plan_service import PlanService
@@ -70,6 +71,7 @@ async def generate_plan(
     current_user: Optional[User] = Depends(get_optional_user),
     plan_generator: TrainingPlanGenerator = Depends(get_plan_generator),
     nutrition_engine: NutritionEngine = Depends(get_nutrition_engine),
+    plan_service: PlanService = Depends(get_plan_service),
 ) -> HTMLResponse:
     """Generate a personalized training plan."""
     logger.info(
@@ -108,22 +110,22 @@ async def generate_plan(
 
     # --- Duplicate detection (check before plan limit so duplicates always pass through) ---
     if current_user:
-        existing = PlanService.find_duplicate(plan_request, current_user.id, db)
+        existing = plan_service.find_duplicate(plan_request, current_user.id, db)
         if existing:
             logger.info(
                 f"Returning existing plan {existing.id} for user {current_user.id}"
             )
             plan_data = json.loads(existing.plan_data)
-            plan_data = PlanService.enrich_plan_data_with_ids(
+            plan_data = plan_service.enrich_plan_data_with_ids(
                 plan_data, existing.id, db
             )
-            extra = PlanService.get_plan_view_data(existing, current_user, db)
+            extra = plan_service.get_plan_view_data(existing, current_user, db)
             ctx = plan_view_context(
                 request,
                 current_user,
                 existing,
                 plan_data,
-                PlanService.nutrition_for_template(existing.nutrition_plan_data),
+                plan_service.nutrition_for_template(existing.nutrition_plan_data),
                 **extra,
             )
             warning = get_mileage_warning(plan_request.target_distance, plan_request.current_km)
@@ -133,7 +135,7 @@ async def generate_plan(
 
     # --- 3-plan limit ---
     if current_user:
-        if PlanService.has_reached_plan_limit(current_user.id, db):
+        if plan_service.has_reached_plan_limit(current_user.id, db):
             return error_response(
                 request,
                 current_user,
@@ -147,39 +149,29 @@ async def generate_plan(
     )
 
     try:
-        user = PlanService.get_or_create_anonymous_user(
+        user = plan_service.get_or_create_anonymous_user(
             current_user, anonymous_user_id, db
         )
-        training_plan, plan_data = PlanService.create_plan(
+        training_plan, plan_data = plan_service.create_plan(
             plan_request, user, db, plan_generator, nutrition_engine
         )
-        plan_data = PlanService.enrich_plan_data_with_ids(
+        plan_data = plan_service.enrich_plan_data_with_ids(
             plan_data, training_plan.id, db
         )
 
-        extra = PlanService.get_plan_view_data(training_plan, current_user, db)
+        extra = plan_service.get_plan_view_data(training_plan, current_user, db)
         ctx = plan_view_context(
             request,
             current_user,
             training_plan,
             plan_data,
-            PlanService.nutrition_for_template(training_plan.nutrition_plan_data),
+            plan_service.nutrition_for_template(training_plan.nutrition_plan_data),
             **extra,
         )
         if warning_message:
             ctx["warning"] = warning_message
 
         template_response = templates.TemplateResponse("plan.html", ctx)
-
-        if not current_user:
-            template_response.set_cookie(
-                key="anonymous_user_id",
-                value=user.id,
-                max_age=30 * 24 * 60 * 60,
-                httponly=True,
-                samesite="lax",
-                secure=not settings.debug,
-            )
 
         return template_response
 
@@ -214,6 +206,7 @@ async def customize_plan(
     anonymous_user_id: Optional[str] = Cookie(None),
     db: Session = Depends(get_db),
     current_user: Optional[User] = Depends(get_optional_user),
+    plan_service: PlanService = Depends(get_plan_service),
 ) -> HTMLResponse:
     """Handle plan customization with simple interface."""
     training_plan = None
@@ -222,18 +215,18 @@ async def customize_plan(
             plan_id, db, current_user, anonymous_user_id
         )
 
-        plan_data = PlanService.customize_plan(
+        plan_data = plan_service.customize_plan(
             training_plan, week_number, adjustment_type, adjustment_value, db
         )
-        plan_data = PlanService.enrich_plan_data_with_ids(
+        plan_data = plan_service.enrich_plan_data_with_ids(
             plan_data, training_plan.id, db
         )
 
-        nutrition_plan = PlanService.nutrition_for_template(
+        nutrition_plan = plan_service.nutrition_for_template(
             training_plan.nutrition_plan_data
         )
 
-        extra = PlanService.get_plan_view_data(training_plan, current_user, db)
+        extra = plan_service.get_plan_view_data(training_plan, current_user, db)
         ctx = plan_view_context(
             request, current_user, training_plan, plan_data, nutrition_plan,
             **extra,
@@ -254,7 +247,7 @@ async def customize_plan(
                 "plan": json.loads(training_plan.plan_data) if training_plan and training_plan.plan_data else [],
                 "plan_id": plan_id,
                 "nutrition_plan": (
-                    PlanService.nutrition_for_template(training_plan.nutrition_plan_data)
+                    plan_service.nutrition_for_template(training_plan.nutrition_plan_data)
                     if training_plan and training_plan.nutrition_plan_data
                     else {}
                 ),
@@ -277,6 +270,7 @@ async def view_plan(
     db: Session = Depends(get_db),
     current_user: Optional[User] = Depends(get_optional_user),
     nutrition_engine: NutritionEngine = Depends(get_nutrition_engine),
+    plan_service: PlanService = Depends(get_plan_service),
 ) -> HTMLResponse:
     """View an existing training plan."""
     try:
@@ -295,7 +289,7 @@ async def view_plan(
                 logger.warning(f"Auto-map on view failed: {e}")
 
         plan_data = json.loads(training_plan.plan_data)
-        plan_data = PlanService.enrich_plan_data_with_ids(
+        plan_data = plan_service.enrich_plan_data_with_ids(
             plan_data, training_plan.id, db
         )
 
@@ -303,12 +297,12 @@ async def view_plan(
         if not training_plan.nutrition_plan_data:
             nutrition_plan_raw = nutrition_engine.generate_weekly_meal_plan(
                 training_plan.current_weekly_km,
-                parse_target_distance(training_plan.target_distance),
+                training_plan.target_distance_km,
             )
             training_plan.nutrition_plan_data = json.dumps(nutrition_plan_raw)
             db.commit()
 
-        nutrition_plan = PlanService.nutrition_for_template(
+        nutrition_plan = plan_service.nutrition_for_template(
             training_plan.nutrition_plan_data
         )
 
@@ -328,7 +322,7 @@ async def view_plan(
             except Exception as e:
                 logger.warning(f"Retroactive HR zone computation failed: {e}")
 
-        extra = PlanService.get_plan_view_data(training_plan, current_user, db)
+        extra = plan_service.get_plan_view_data(training_plan, current_user, db)
 
         ctx = plan_view_context(
             request, current_user, training_plan, plan_data, nutrition_plan, **extra
@@ -367,7 +361,7 @@ async def list_my_plans(
 
         today = date.today()
         for plan in plans:
-            td = parse_target_distance(plan.target_distance)
+            td = plan.target_distance_km
             plan.target_distance_display = DISTANCE_NAMES.get(td, f"{td}km")
 
             # Compute plan status for display
@@ -546,6 +540,7 @@ async def view_shared_plan(
     request: Request,
     db: Session = Depends(get_db),
     current_user: Optional[User] = Depends(get_optional_user),
+    plan_service: PlanService = Depends(get_plan_service),
 ):
     """View a publicly shared training plan (read-only)."""
     training_plan = (
@@ -557,11 +552,11 @@ async def view_shared_plan(
         raise HTTPException(status_code=404, detail="Shared plan not found")
 
     plan_data = json.loads(training_plan.plan_data)
-    plan_data = PlanService.enrich_plan_data_with_ids(
+    plan_data = plan_service.enrich_plan_data_with_ids(
         plan_data, training_plan.id, db
     )
 
-    nutrition_plan = PlanService.nutrition_for_template(
+    nutrition_plan = plan_service.nutrition_for_template(
         training_plan.nutrition_plan_data
     )
 
@@ -569,7 +564,7 @@ async def view_shared_plan(
     owner = db.query(User).filter(User.id == training_plan.user_id).first()
 
     # Build view data using the plan owner so progress_data is populated
-    extra = PlanService.get_plan_view_data(training_plan, owner, db)
+    extra = plan_service.get_plan_view_data(training_plan, owner, db)
 
     ctx = plan_view_context(
         request, current_user, training_plan, plan_data, nutrition_plan, **extra
@@ -577,7 +572,7 @@ async def view_shared_plan(
     ctx["shared_view"] = True
     ctx["plan_owner"] = owner
     ctx["share_token"] = share_token
-    td = parse_target_distance(training_plan.target_distance)
+    td = training_plan.target_distance_km
     ctx["distance_display"] = DISTANCE_NAMES.get(td, f"{td} km")
 
     return templates.TemplateResponse("plan_shared.html", ctx)
@@ -619,13 +614,14 @@ async def delete_plan(
     plan_id: str,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
+    plan_service: PlanService = Depends(get_plan_service),
 ):
     """Delete a training plan owned by the current user."""
     training_plan = get_plan_or_404(
         plan_id, db, current_user, require_user_match=True
     )
 
-    PlanService.delete_plan(training_plan, db)
+    plan_service.delete_plan(training_plan, db)
 
     return {"message": "Plan deleted successfully"}
 

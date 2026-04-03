@@ -193,8 +193,11 @@ class AdaptivePlanGenerator:
         if metrics["avg_weekly_km"] > 0:
             current_km = metrics["avg_weekly_km"]
         else:
-            # Fallback to default if no data
             current_km = 10.0
+            logger.warning(
+                "User %s has no run data — falling back to default 10 km/week baseline",
+                user_id,
+            )
 
         # Generate base plan using the existing generator
         base_plan = self.base_generator.generate_plan(

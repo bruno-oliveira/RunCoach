@@ -16,6 +16,7 @@ from app.core.nutrition_engine import NutritionEngine
 from app.core.pdf_generator import PDFGenerator
 from app.core.plan_generator import TrainingPlanGenerator
 from app.core.performance_plan_generator import PerformancePlanGenerator
+from app.services.plan_service import PlanService
 from app.services.strava_service import StravaService
 
 # Cookie name must match the one in auth router
@@ -82,6 +83,11 @@ def get_performance_plan_generator() -> PerformancePlanGenerator:
 def get_auth_service() -> AuthService:
     """Get an AuthService instance."""
     return AuthService()
+
+
+def get_plan_service() -> PlanService:
+    """Get a PlanService instance."""
+    return PlanService()
 
 
 def get_strava_service() -> StravaService:

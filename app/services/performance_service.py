@@ -381,7 +381,7 @@ class PerformanceService:
         full_data = {
             'weekly_plans': plan_data,
             'training_zones': zones,
-            'target_distance': _safe_float(training_plan.target_distance),
+            'target_distance': training_plan.target_distance_km,
             'current_pace': training_plan.current_pace,
             'goal_pace': training_plan.goal_pace,
             'weeks': training_plan.weeks_duration,

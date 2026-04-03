@@ -11,11 +11,10 @@ from fastapi.responses import HTMLResponse
 from sqlalchemy.orm import Session
 
 from app.config import settings
-from app.dependencies import get_db, get_optional_user, verify_plan_ownership
+from app.dependencies import get_db, get_optional_user, get_plan_service, verify_plan_ownership
 from app.models import TrainingPlan
 from app.core.nutrition_engine import NutritionEngine
 from app.services.plan_service import PlanService
-from app.schemas import parse_target_distance
 from app.template_helpers import create_templates
 
 logger = logging.getLogger(__name__)
@@ -31,6 +30,7 @@ async def randomize_meals(
     anonymous_user_id: Optional[str] = Cookie(None),
     current_user = Depends(get_optional_user),
     db: Session = Depends(get_db),
+    plan_service: PlanService = Depends(get_plan_service),
 ) -> HTMLResponse:
     """Generate different meal suggestions for the nutrition blueprint."""
     try:
@@ -50,7 +50,7 @@ async def randomize_meals(
         # Generate new meal blueprint with different randomization
         new_nutrition_plan = nutrition_engine.generate_weekly_meal_plan(
             training_plan.current_weekly_km,
-            parse_target_distance(training_plan.target_distance),
+            training_plan.target_distance_km,
         )
 
         # Update the plan with new blueprint
@@ -61,9 +61,9 @@ async def randomize_meals(
         from app.routers.plan_helpers import plan_view_context
 
         plan_data = json.loads(training_plan.plan_data) if training_plan.plan_data else []
-        plan_data = PlanService.enrich_plan_data_with_ids(plan_data, training_plan.id, db)
-        nutrition_plan = PlanService.nutrition_for_template(training_plan.nutrition_plan_data)
-        extra = PlanService.get_plan_view_data(training_plan, current_user, db)
+        plan_data = plan_service.enrich_plan_data_with_ids(plan_data, training_plan.id, db)
+        nutrition_plan = plan_service.nutrition_for_template(training_plan.nutrition_plan_data)
+        extra = plan_service.get_plan_view_data(training_plan, current_user, db)
 
         ctx = plan_view_context(
             request, current_user, training_plan, plan_data, nutrition_plan, **extra

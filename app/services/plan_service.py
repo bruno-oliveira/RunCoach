@@ -38,22 +38,25 @@ class PlanService:
 
     MAX_PLANS_PER_USER = 3
 
+    def __init__(self) -> None:
+        from app.services.adaptation_service import AdaptationService
+
+        self._adaptation_service = AdaptationService()
+
     # ------------------------------------------------------------------
     # Plan limit
     # ------------------------------------------------------------------
 
-    @staticmethod
-    def has_reached_plan_limit(user_id: str, db: Session) -> bool:
+    def has_reached_plan_limit(self, user_id: str, db: Session) -> bool:
         """Return True if the user has reached the maximum number of plans."""
         count = db.query(TrainingPlan).filter(TrainingPlan.user_id == user_id).count()
-        return count >= PlanService.MAX_PLANS_PER_USER
+        return count >= self.MAX_PLANS_PER_USER
 
     # ------------------------------------------------------------------
     # User resolution
     # ------------------------------------------------------------------
 
-    @staticmethod
-    def get_or_create_anonymous_user(
+    def get_or_create_anonymous_user(self,
         current_user: Optional[User],
         anonymous_user_id: Optional[str],
         db: Session,
@@ -77,8 +80,7 @@ class PlanService:
     # Plan creation
     # ------------------------------------------------------------------
 
-    @staticmethod
-    def find_duplicate(
+    def find_duplicate(self,
         plan_request: PlanRequest,
         user_id: str,
         db: Session,
@@ -116,8 +118,7 @@ class PlanService:
             filters.append(TrainingPlan.vdot.is_(None))
         return db.query(TrainingPlan).filter(*filters).first()
 
-    @staticmethod
-    def create_plan(
+    def create_plan(self,
         plan_request: PlanRequest,
         user: User,
         db: Session,
@@ -132,7 +133,7 @@ class PlanService:
             returned and no new record is created.
         """
         # --- Duplicate detection ---
-        existing = PlanService.find_duplicate(plan_request, user.id, db)
+        existing = self.find_duplicate(plan_request, user.id, db)
         if existing:
             logger.info(
                 f"Duplicate plan detected for user {user.id} — returning existing plan {existing.id}"
@@ -270,8 +271,7 @@ class PlanService:
     # Plan customization
     # ------------------------------------------------------------------
 
-    @staticmethod
-    def customize_plan(
+    def customize_plan(self,
         training_plan: TrainingPlan,
         week_number: int,
         adjustment_type: str,
@@ -311,8 +311,7 @@ class PlanService:
     # Plan deletion
     # ------------------------------------------------------------------
 
-    @staticmethod
-    def delete_plan(training_plan: TrainingPlan, db: Session) -> None:
+    def delete_plan(self, training_plan: TrainingPlan, db: Session) -> None:
         """Delete a training plan and all associated records."""
         plan_id = training_plan.id
         user_id = training_plan.user_id
@@ -370,8 +369,7 @@ class PlanService:
     # Plan data enrichment
     # ------------------------------------------------------------------
 
-    @staticmethod
-    def enrich_plan_data_with_ids(
+    def enrich_plan_data_with_ids(self,
         plan_data: list[dict],
         training_plan_id: str,
         db: Session,
@@ -408,8 +406,7 @@ class PlanService:
     # Nutrition helpers
     # ------------------------------------------------------------------
 
-    @staticmethod
-    def nutrition_for_template(nutrition_plan_data: str) -> dict[str, Any]:
+    def nutrition_for_template(self, nutrition_plan_data: str) -> dict[str, Any]:
         """Convert stored nutrition plan JSON to a template-compatible dict."""
         if not nutrition_plan_data:
             return {}
@@ -491,8 +488,7 @@ class PlanService:
     # View data assembly
     # ------------------------------------------------------------------
 
-    @staticmethod
-    def get_logged_runs_map(
+    def get_logged_runs_map(self,
         training_plan_id: str, db: Session,
     ) -> tuple[dict, list]:
         """Return (workout_id → RunLog map, all logged runs) for a plan."""
@@ -509,15 +505,12 @@ class PlanService:
                 runs_map[run.daily_workout_id] = run
         return runs_map, logged_runs
 
-    @staticmethod
-    def get_adjustment_hints(
+    def get_adjustment_hints(self,
         training_plan: TrainingPlan,
         performance_analysis: dict,
         db: Session,
     ) -> dict[str, Any]:
         """Compute skipped/rescheduled counts and whether adjustment is needed."""
-        from app.services.adaptation_service import AdaptationService
-
         skipped_count = 0
         rescheduled_count = 0
         needs_adjustment = False
@@ -525,7 +518,7 @@ class PlanService:
 
         if training_plan.start_date:
             try:
-                skip_result = AdaptationService().detect_skipped_workouts(
+                skip_result = self._adaptation_service.detect_skipped_workouts(
                     training_plan.id, db
                 )
                 skipped_count = skip_result["skipped"]
@@ -543,8 +536,7 @@ class PlanService:
             "needs_adjustment": needs_adjustment,
         }
 
-    @staticmethod
-    def get_feedback_map(logged_runs: list, db: Session) -> dict[str, Any]:
+    def get_feedback_map(self, logged_runs: list, db: Session) -> dict[str, Any]:
         """Load coaching feedback keyed by run_log_id."""
         from app.models.run_feedback import RunFeedback
 
@@ -562,8 +554,7 @@ class PlanService:
             logger.warning(f"Could not load feedback: {e}")
             return {}
 
-    @staticmethod
-    def get_plan_view_data(
+    def get_plan_view_data(self,
         training_plan: TrainingPlan,
         current_user: Optional[User],
         db: Session,
@@ -573,15 +564,13 @@ class PlanService:
         Returns extra context keys: performance_analysis, logged_runs,
         progress_data, skipped_count, rescheduled_count, needs_adjustment.
         """
-        from app.services.adaptation_service import AdaptationService
         from app.services.performance_service import PerformanceService
 
-        adaptation_service = AdaptationService()
-        performance_analysis = adaptation_service.analyze_performance(
+        performance_analysis = self._adaptation_service.analyze_performance(
             training_plan.id, db
         )
 
-        logged_runs_map, logged_runs = PlanService.get_logged_runs_map(
+        logged_runs_map, logged_runs = self.get_logged_runs_map(
             training_plan.id, db
         )
 
@@ -595,7 +584,7 @@ class PlanService:
         # Adjustment hints
         hints = {"skipped_count": 0, "rescheduled_count": 0, "needs_adjustment": False}
         if current_user:
-            hints = PlanService.get_adjustment_hints(
+            hints = self.get_adjustment_hints(
                 training_plan, performance_analysis, db
             )
 
@@ -605,6 +594,6 @@ class PlanService:
             "progress_data": progress_data,
             **hints,
             "hr_zones": HRZoneService.get_zones_for_plan(training_plan),
-            "feedback_map": PlanService.get_feedback_map(logged_runs, db),
+            "feedback_map": self.get_feedback_map(logged_runs, db),
         }
 

@@ -50,7 +50,7 @@ def calculate_quality_score(
 
     Returns:
         (score, label) where score is 0–100 and label is one of:
-        "Nailed it", "On track", "Too easy", "Too hard", "Unscored"
+        "Nailed it", "On track", "Too easy", "Too hard"
     """
     wtype = workout_type.lower() if workout_type else "easy"
     effort_range = EXPECTED_EFFORT.get(wtype, (4, 7))

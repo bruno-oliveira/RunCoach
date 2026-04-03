@@ -19,6 +19,7 @@ from app.dependencies import (
 from app.models import User
 from app.schemas import PerformancePlanRequest, DISTANCE_NAMES
 from app.services.performance_service import PerformanceService
+from app.dependencies import get_plan_service
 from app.services.plan_service import PlanService
 from app.exceptions import RunCoachException, InadequateBaseException
 from app.core.performance_plan_generator import PerformancePlanGenerator
@@ -163,6 +164,7 @@ async def generate_performance_plan(
     max_heart_rate: Optional[int] = Form(None),
     db: Session = Depends(get_db),
     current_user: Optional[User] = Depends(get_optional_user),
+    plan_service: PlanService = Depends(get_plan_service),
 ):
     """Generate a performance training plan."""
     # Check if user is logged in (required for performance training)
@@ -184,7 +186,7 @@ async def generate_performance_plan(
     auto_calculate_bool = auto_calculate == "true" if auto_calculate else False
 
     # Check 3-plan limit
-    if PlanService.has_reached_plan_limit(current_user.id, db):
+    if plan_service.has_reached_plan_limit(current_user.id, db):
         fitness_data = None
         try:
             fitness_data = PerformanceService(db).calculate_fitness_from_runs(
@@ -388,7 +390,7 @@ async def view_performance_plan(
                 "today_workout": today_workout,
                 "progress_data": progress_data,
                 "distance_name": DISTANCE_NAMES.get(
-                    float(training_plan.target_distance),
+                    training_plan.target_distance_km,
                     f"{training_plan.target_distance}km"
                 ),
             }
