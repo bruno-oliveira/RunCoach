@@ -936,30 +936,54 @@ window.skipSuggestion = function(btn) {
     }
 };
 
-// ---- Collapsible week cards on mobile ----
+// ---- Collapsible week cards (all viewports) ----
 function initCollapsibleWeeks() {
-    if (window.innerWidth > 768) return;
+    var cards = document.querySelectorAll('#panel-training .week-card');
+    if (!cards.length) return;
 
+    // If no pinned current week exists, expand the first card in the list
+    if (!document.getElementById('pinned-current-week') && cards.length > 0) {
+        cards[0].classList.add('week-expanded');
+    }
+
+    // Click headers to toggle — works on pinned card too
     document.querySelectorAll('.week-card .week-header').forEach(function(header) {
         header.addEventListener('click', function() {
             var card = this.closest('.week-card');
             if (!card) return;
-            // Current-week cards toggle their expanded state
+            card.classList.toggle('week-expanded');
+            // Keep current-week class in sync for CSS
             if (card.classList.contains('current-week')) {
-                card.classList.toggle('week-expanded');
-                // If toggling off, also remove current-week visual so CSS collapses
                 if (!card.classList.contains('week-expanded')) {
                     card.classList.remove('current-week');
                     card.dataset.wasCurrent = '1';
-                } else if (card.dataset.wasCurrent) {
-                    card.classList.add('current-week');
                 }
-            } else {
-                card.classList.toggle('week-expanded');
+            } else if (card.dataset.wasCurrent === '1' && card.classList.contains('week-expanded')) {
+                card.classList.add('current-week');
             }
         });
     });
 }
+
+// Expand / collapse all weeks (training tab list only)
+window.toggleAllWeeks = function() {
+    var cards = document.querySelectorAll('#panel-training .week-card');
+    var btn = document.getElementById('expand-all-btn');
+    var expandedCount = document.querySelectorAll('#panel-training .week-card.week-expanded').length;
+    var shouldExpand = expandedCount <= cards.length / 2;
+
+    cards.forEach(function(card) {
+        if (shouldExpand) {
+            card.classList.add('week-expanded');
+        } else {
+            card.classList.remove('week-expanded');
+        }
+    });
+
+    if (btn) {
+        btn.textContent = shouldExpand ? 'Collapse all' : 'Expand all';
+    }
+};
 
 // Initialize on DOM ready
 document.addEventListener('DOMContentLoaded', function() {

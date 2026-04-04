@@ -1,0 +1,84 @@
+{# Renders a single week card.
+   Expected context: week, logged_runs, start_date, workout_date_labels,
+   current_week_number, current_day_of_week, user, feedback_map, week_dates,
+   css_class (extra classes for the wrapper) #}
+{% set ns = namespace(completed=0, total=0) %}
+{% for workout in week.daily_workouts %}
+    {% if workout.type not in ['rest', 'recovery'] %}
+        {% set ns.total = ns.total + 1 %}
+        {% if logged_runs.get(workout.id) %}
+            {% set ns.completed = ns.completed + 1 %}
+        {% endif %}
+    {% endif %}
+{% endfor %}
+<div class="week-card {{ css_class }}">
+    <div class="week-header">
+        <div class="week-title">Week {{ week.week }}{% if week_dates %} <span class="week-date-range">{{ week_dates[week.week - 1].start }} – {{ week_dates[week.week - 1].end }}</span>{% endif %}</div>
+        {% if ns.total > 0 %}
+        <div class="week-progress-badge {% if ns.completed == ns.total %}all-done{% elif ns.completed > 0 %}in-progress{% endif %}">
+            {{ ns.completed }}/{{ ns.total }}
+        </div>
+        {% endif %}
+        <div class="week-total">{{ week.total_km }} km</div>
+    </div>
+
+    {% set day_names = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'] %}
+    <div class="workout-grid">
+        {% for workout in week.daily_workouts %}
+        {% set logged_run = logged_runs.get(workout.id) %}
+        {% set is_past = start_date and workout_date_labels and current_week_number and (week.week < current_week_number or (week.week == current_week_number and workout.day < current_day_of_week)) %}
+        {% include 'components/workout_item.html' %}
+        {% endfor %}
+    </div>
+
+    {% if week.strength_training %}
+    <div class="tips-section strength-block">
+        <div class="tips-title">Strength Training ({{ week.strength_training | length }} session{{ 's' if week.strength_training | length != 1 else '' }})</div>
+        {% for st in week.strength_training %}
+        <div class="strength-session-card">
+            <div class="strength-session-header">
+                <span class="strength-focus-badge">{{ (st.focus or st.type) | replace('_', ' ') | title }}</span>
+                <span class="strength-duration">{{ st.duration }}</span>
+                {% if st.level %}<span class="strength-level">{{ st.level | title }}</span>{% endif %}
+            </div>
+            {% if st.warm_up %}
+            <div class="strength-phase-label">Warm-up</div>
+            <ul class="tips-list strength-phase-list">
+                {% for item in st.warm_up %}<li>{{ item }}</li>{% endfor %}
+            </ul>
+            {% endif %}
+            <div class="strength-phase-label">Exercises</div>
+            <ul class="tips-list strength-phase-list">
+                {% for ex in st.exercises %}
+                {% if ex is mapping %}
+                <li><strong>{{ ex.name }}</strong> — {{ ex.sets }}×{{ ex.reps }}</li>
+                {% else %}
+                <li>{{ ex }}</li>
+                {% endif %}
+                {% endfor %}
+            </ul>
+            {% if st.cool_down %}
+            <div class="strength-phase-label">Cool-down</div>
+            <ul class="tips-list strength-phase-list">
+                {% for item in st.cool_down %}<li>{{ item }}</li>{% endfor %}
+            </ul>
+            {% endif %}
+            {% if st.note %}
+            <div class="strength-note">{{ st.note }}</div>
+            {% endif %}
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    {% if week.training_tips %}
+    <div class="tips-section">
+        <div class="tips-title">Training Tips — Week {{ week.week }}</div>
+        <ul class="tips-list">
+            {% for tip in week.training_tips %}
+            <li>{{ tip }}</li>
+            {% endfor %}
+        </ul>
+    </div>
+    {% endif %}
+</div>
