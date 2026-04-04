@@ -34,11 +34,12 @@ from app.exceptions import (
     ValidationException,
     ZeroMileageUnsupportedException,
 )
-from app.models import TrainingPlan, User
+from app.models import DailyWorkout, TrainingPlan, User, WeeklyPlan
 from app.models.triathlon_plan import TriathlonPlan
 from app.routers.plan_helpers import error_response, get_plan_or_404, plan_view_context
 from app.schemas import DISTANCE_NAMES, PlanRequest, get_mileage_warning
 from app.services.adaptation_service import AdaptationService
+from app.services.gap_analysis_service import GapAnalysisService
 from app.services.hr_zone_service import HRZoneService
 from app.services.plan_service import PlanService
 from app.services.readiness_service import ReadinessService
@@ -437,6 +438,36 @@ async def get_plan_readiness(
     return {"available": True, **readiness}
 
 
+@router.get("/api/plan/{plan_id}/gaps")
+async def get_plan_gaps(
+    plan_id: str,
+    weekly: bool = False,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Get gap analysis report for a training plan."""
+    training_plan = get_plan_or_404(
+        plan_id, db, current_user, require_user_match=True
+    )
+
+    if weekly:
+        data = GapAnalysisService.analyze_gaps_weekly(
+            training_plan, current_user.id, db
+        )
+        if data is None:
+            return {"available": False, "reason": "Set a start date and log some runs first."}
+        return {"available": True, "weeks": data}
+
+    gaps = GapAnalysisService.analyze_gaps(
+        training_plan, current_user.id, db
+    )
+
+    if gaps is None:
+        return {"available": False, "reason": "Set a start date and log some runs first."}
+
+    return {"available": True, **gaps}
+
+
 @router.post("/api/plan/{plan_id}/adjust")
 async def adjust_plan(
     plan_id: str,
@@ -448,6 +479,146 @@ async def adjust_plan(
 
     adaptation_service = AdaptationService()
     return adaptation_service.adjust_plan(plan_id, current_user.id, db)
+
+
+@router.get("/api/plan/{plan_id}/suggestions")
+async def get_plan_suggestions(
+    plan_id: str,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Get per-week adaptive suggestions for upcoming plan weeks."""
+    get_plan_or_404(plan_id, db, current_user, require_user_match=True)
+
+    adaptation_service = AdaptationService()
+    suggestions = adaptation_service.get_weekly_suggestions(
+        plan_id, current_user.id, db
+    )
+    return {"suggestions": suggestions}
+
+
+class RecalibrateRequest(BaseModel):
+    strategy: str  # "time_off" | "ahead"
+
+
+@router.post("/api/plan/{plan_id}/recalibrate")
+async def recalibrate_plan(
+    plan_id: str,
+    body: RecalibrateRequest,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Recalibrate remaining plan weeks based on user-chosen strategy."""
+    get_plan_or_404(plan_id, db, current_user, require_user_match=True)
+
+    adaptation_service = AdaptationService()
+    return adaptation_service.recalibrate(
+        plan_id, current_user.id, body.strategy, db
+    )
+
+
+@router.post("/api/plan/{plan_id}/dismiss-alert")
+async def dismiss_alert(
+    plan_id: str,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Dismiss an active adaptation alert."""
+    training_plan = get_plan_or_404(
+        plan_id, db, current_user, require_user_match=True
+    )
+    training_plan.adaptation_alert = None
+    db.commit()
+    return {"ok": True}
+
+
+class WeekOverrideRequest(BaseModel):
+    action: str  # "skip_bump" | "reduce_30"
+
+
+@router.post("/api/plan/{plan_id}/week/{week_number}/override")
+async def override_plan_week(
+    plan_id: str,
+    week_number: int,
+    body: WeekOverrideRequest,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Apply a per-week override to the plan."""
+    training_plan = get_plan_or_404(
+        plan_id, db, current_user, require_user_match=True
+    )
+
+    plan_data = json.loads(training_plan.plan_data) if training_plan.plan_data else []
+    week_data = next((w for w in plan_data if w.get("week") == week_number), None)
+    if not week_data:
+        raise HTTPException(status_code=404, detail="Week not found in plan")
+
+    if body.action == "skip_bump":
+        # Preserve baseline distances for this week (undo any adjustment)
+        weekly_plan = (
+            db.query(WeeklyPlan)
+            .filter(
+                WeeklyPlan.training_plan_id == plan_id,
+                WeeklyPlan.week_number == week_number,
+            )
+            .first()
+        )
+        if weekly_plan:
+            workouts = (
+                db.query(DailyWorkout)
+                .filter(DailyWorkout.weekly_plan_id == weekly_plan.id)
+                .all()
+            )
+            for wo in workouts:
+                if wo.baseline_distance_km:
+                    wo.distance_km = wo.baseline_distance_km
+            # Sync plan_data
+            for wo_data in week_data.get("daily_workouts", []):
+                for db_wo in workouts:
+                    if db_wo.day_of_week == wo_data.get("day"):
+                        wo_data["distance"] = db_wo.distance_km
+            week_data["total_km"] = round(
+                sum(wo.distance_km for wo in workouts if wo.distance_km), 1
+            )
+
+    elif body.action == "reduce_30":
+        # Reduce this week and the next by 30%
+        factor = 0.7
+        for target_week in range(week_number, min(week_number + 2, len(plan_data) + 1)):
+            tw_data = next((w for w in plan_data if w.get("week") == target_week), None)
+            if not tw_data:
+                continue
+            weekly_plan = (
+                db.query(WeeklyPlan)
+                .filter(
+                    WeeklyPlan.training_plan_id == plan_id,
+                    WeeklyPlan.week_number == target_week,
+                )
+                .first()
+            )
+            if weekly_plan:
+                workouts = (
+                    db.query(DailyWorkout)
+                    .filter(DailyWorkout.weekly_plan_id == weekly_plan.id)
+                    .all()
+                )
+                for wo in workouts:
+                    if wo.distance_km:
+                        wo.distance_km = round(wo.distance_km * factor, 1)
+                for wo_data in tw_data.get("daily_workouts", []):
+                    if "distance" in wo_data:
+                        wo_data["distance"] = round(wo_data["distance"] * factor, 1)
+                tw_data["total_km"] = round(
+                    sum(wo.distance_km for wo in workouts if wo.distance_km), 1
+                )
+    else:
+        raise HTTPException(status_code=400, detail=f"Unknown action: {body.action}")
+
+    training_plan.plan_data = json.dumps(plan_data)
+    db.commit()
+
+    return {"ok": True, "action": body.action, "week": week_number}
 
 
 @router.post("/api/plan/{plan_id}/reset-adjustment")

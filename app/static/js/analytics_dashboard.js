@@ -8,6 +8,8 @@ const AnalyticsDashboard = {
     prevRuns: [],  // previous period (for trend comparison)
     charts: {},
     currentPeriodDays: 30,
+    currentPlanId: null,
+    planInfo: null,
 
     COLORS: {
         primary:       '#1D4ED8',
@@ -38,10 +40,7 @@ const AnalyticsDashboard = {
                 await this.syncStravaPeriod(30);
             }
 
-            const res = await fetch('/api/analytics/runs', { credentials: 'same-origin' });
-            if (!res.ok) throw new Error('Failed to fetch runs');
-            const data = await res.json();
-            this.allRuns = data.runs.filter(r => r.date);
+            await this.loadRuns();
 
             loading.style.display = 'none';
 
@@ -54,9 +53,11 @@ const AnalyticsDashboard = {
             this.filterByPeriod(30);
             this.bindGroupingControls();
             this.bindPeriodSelector();
+            this.bindPlanSelector();
             this.bindPredictionsToggle();
             this.loadRacePredictions();
             this.loadRaceResults();
+            this.loadVdotProgression();
         } catch (err) {
             console.error('Analytics load error:', err);
             loading.style.display = 'none';
@@ -1300,13 +1301,270 @@ const AnalyticsDashboard = {
         } catch (err) { console.error('Strava sync error:', err); return false; }
     },
 
+    async loadRuns() {
+        let url = '/api/analytics/runs';
+        if (this.currentPlanId) url += '?plan_id=' + encodeURIComponent(this.currentPlanId);
+        const res = await fetch(url, { credentials: 'same-origin' });
+        if (!res.ok) throw new Error('Failed to fetch runs');
+        const data = await res.json();
+        this.allRuns = data.runs.filter(r => r.date);
+        this.planInfo = data.plan || null;
+    },
+
     async reloadRuns() {
         try {
-            const res = await fetch('/api/analytics/runs', { credentials: 'same-origin' });
-            if (!res.ok) throw new Error('Failed to reload');
-            const data = await res.json();
-            this.allRuns = data.runs.filter(r => r.date);
+            await this.loadRuns();
         } catch (err) { console.error('Reload runs error:', err); }
+    },
+
+    bindPlanSelector() {
+        const el = document.getElementById('planSelector');
+        if (!el) return;
+        el.addEventListener('change', async () => {
+            this.currentPlanId = el.value || null;
+            const loading = document.getElementById('analyticsLoading');
+            const dashboard = document.getElementById('analyticsDashboard');
+            const empty = document.getElementById('analyticsEmpty');
+            if (loading) loading.style.display = '';
+            if (dashboard) dashboard.style.display = 'none';
+            if (empty) empty.style.display = 'none';
+
+            try {
+                await this.loadRuns();
+                if (loading) loading.style.display = 'none';
+                if (this.allRuns.length === 0) {
+                    if (empty) empty.style.display = 'block';
+                    return;
+                }
+                if (dashboard) dashboard.style.display = 'block';
+                this.filterByPeriod(this.currentPlanId ? 'all' : this.currentPeriodDays);
+                this.loadVdotProgression();
+                if (this.currentPlanId) {
+                    this.loadGapTrend(this.currentPlanId);
+                    this.loadAdherenceHeatmap(this.currentPlanId);
+                } else {
+                    this.hidePlanCharts();
+                }
+            } catch (err) {
+                console.error('Plan switch error:', err);
+                if (loading) loading.style.display = 'none';
+                if (empty) empty.style.display = 'block';
+            }
+        });
+    },
+
+    hidePlanCharts() {
+        ['gapTrendChartCard', 'adherenceHeatmapCard'].forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.style.display = 'none';
+        });
+    },
+
+    /* ------------------------------------------------------------------ */
+    /*  VDOT Progression Chart                                             */
+    /* ------------------------------------------------------------------ */
+    async loadVdotProgression() {
+        const card = document.getElementById('vdotChartCard');
+        if (!card) return;
+
+        // Use per-run VDOT data from allRuns
+        const vdotRuns = this.allRuns.filter(r => r.vdot && r.vdot > 0);
+        if (vdotRuns.length < 2) {
+            card.style.display = 'none';
+            return;
+        }
+
+        card.style.display = '';
+        const badge = document.getElementById('vdotCurrentBadge');
+
+        try {
+            const res = await fetch('/api/analytics/vdot-history?weeks=52', { credentials: 'same-origin' });
+            if (!res.ok) return;
+            const data = await res.json();
+            if (badge && data.current_vdot) {
+                const trendIcon = data.vdot_trend === 'improving' ? ' ↑' : data.vdot_trend === 'declining' ? ' ↓' : '';
+                badge.textContent = 'VDOT ' + data.current_vdot + trendIcon;
+            }
+        } catch (e) { /* ignore - badge is optional */ }
+
+        const labels = vdotRuns.map(r => {
+            const d = new Date(r.date);
+            return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+        });
+        const values = vdotRuns.map(r => r.vdot);
+
+        // Compute trend line (linear regression)
+        const n = values.length;
+        const xMean = (n - 1) / 2;
+        const yMean = values.reduce((a, b) => a + b, 0) / n;
+        let num = 0, den = 0;
+        for (let i = 0; i < n; i++) {
+            num += (i - xMean) * (values[i] - yMean);
+            den += (i - xMean) * (i - xMean);
+        }
+        const slope = den !== 0 ? num / den : 0;
+        const intercept = yMean - slope * xMean;
+        const trendLine = values.map((_, i) => Math.round((slope * i + intercept) * 10) / 10);
+
+        if (this.charts.vdot) this.charts.vdot.destroy();
+        const ctx = document.getElementById('vdotChart');
+        if (!ctx) return;
+
+        this.charts.vdot = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: labels,
+                datasets: [
+                    {
+                        label: 'VDOT',
+                        data: values,
+                        borderColor: this.COLORS.primary,
+                        backgroundColor: this.COLORS.primaryFill,
+                        fill: true,
+                        tension: 0.3,
+                        pointRadius: 3,
+                    },
+                    {
+                        label: 'Trend',
+                        data: trendLine,
+                        borderColor: this.COLORS.trend,
+                        borderDash: [6, 4],
+                        pointRadius: 0,
+                        fill: false,
+                    },
+                ],
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { display: true, position: 'top' } },
+                scales: {
+                    y: { beginAtZero: false, grid: { color: this.COLORS.grid } },
+                    x: { grid: { display: false }, ticks: { maxTicksLimit: 10 } },
+                },
+            },
+        });
+    },
+
+    /* ------------------------------------------------------------------ */
+    /*  Gap Trend Chart (plan-scoped)                                      */
+    /* ------------------------------------------------------------------ */
+    async loadGapTrend(planId) {
+        const card = document.getElementById('gapTrendChartCard');
+        if (!card) return;
+
+        try {
+            const res = await fetch('/api/analytics/gap-trend/' + planId, { credentials: 'same-origin' });
+            if (!res.ok) { card.style.display = 'none'; return; }
+            const data = await res.json();
+            if (!data.available || !data.weeks || data.weeks.length === 0) {
+                card.style.display = 'none';
+                return;
+            }
+
+            card.style.display = '';
+            const labels = data.weeks.map(w => 'W' + w.week);
+            const volumePcts = data.weeks.map(w => w.volume_pct);
+            const longRunPcts = data.weeks.map(w => w.long_run_pct);
+
+            if (this.charts.gapTrend) this.charts.gapTrend.destroy();
+            const ctx = document.getElementById('gapTrendChart');
+            if (!ctx) return;
+
+            this.charts.gapTrend = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [
+                        {
+                            label: 'Volume %',
+                            data: volumePcts,
+                            borderColor: this.COLORS.primary,
+                            backgroundColor: this.COLORS.primaryFill,
+                            fill: false,
+                            tension: 0.3,
+                        },
+                        {
+                            label: 'Long Run %',
+                            data: longRunPcts,
+                            borderColor: this.COLORS.accent,
+                            backgroundColor: this.COLORS.accentFill,
+                            fill: false,
+                            tension: 0.3,
+                        },
+                        {
+                            label: '100% Target',
+                            data: labels.map(() => 100),
+                            borderColor: 'rgba(0,0,0,0.15)',
+                            borderDash: [4, 4],
+                            pointRadius: 0,
+                            fill: false,
+                        },
+                    ],
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: true, position: 'top' } },
+                    scales: {
+                        y: {
+                            min: 0,
+                            max: 150,
+                            grid: { color: this.COLORS.grid },
+                            ticks: { callback: v => v + '%' },
+                        },
+                        x: { grid: { display: false } },
+                    },
+                },
+            });
+        } catch (err) {
+            console.error('Gap trend load error:', err);
+            card.style.display = 'none';
+        }
+    },
+
+    /* ------------------------------------------------------------------ */
+    /*  Workout Adherence Heatmap (plan-scoped)                            */
+    /* ------------------------------------------------------------------ */
+    async loadAdherenceHeatmap(planId) {
+        const card = document.getElementById('adherenceHeatmapCard');
+        const wrap = document.getElementById('adherenceHeatmap');
+        if (!card || !wrap) return;
+
+        try {
+            const res = await fetch('/api/analytics/workout-adherence/' + planId, { credentials: 'same-origin' });
+            if (!res.ok) { card.style.display = 'none'; return; }
+            const data = await res.json();
+            if (!data.available || !data.grid || data.grid.length === 0) {
+                card.style.display = 'none';
+                return;
+            }
+
+            card.style.display = '';
+            const types = data.workout_types;
+            const grid = data.grid;
+
+            let html = '<table class="adherence-table">';
+            html += '<thead><tr><th></th>';
+            types.forEach(t => { html += '<th>' + t.charAt(0).toUpperCase() + t.slice(1) + '</th>'; });
+            html += '</tr></thead><tbody>';
+
+            grid.forEach(row => {
+                html += '<tr>';
+                html += '<td class="adherence-week-label">W' + row.week + '</td>';
+                types.forEach(t => {
+                    const status = row.cells[t] || 'future';
+                    html += '<td><span class="adherence-cell adherence-cell--' + status + '" title="' + status + '"></span></td>';
+                });
+                html += '</tr>';
+            });
+
+            html += '</tbody></table>';
+            wrap.innerHTML = html;
+        } catch (err) {
+            console.error('Adherence heatmap load error:', err);
+            card.style.display = 'none';
+        }
     },
 
     showSyncIndicator() {

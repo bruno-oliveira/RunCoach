@@ -756,6 +756,186 @@ window.addEventListener('pageshow', function(event) {
     }
 });
 
+// ------------------------------------------------------------------
+// In-plan adaptive suggestions (Phase 3)
+// ------------------------------------------------------------------
+
+let suggestionsLoaded = false;
+
+window.loadSuggestions = function() {
+    if (suggestionsLoaded) return;
+    var planId = window.APP_CTX && window.APP_CTX.plan_id;
+    if (!planId) return;
+
+    fetch('/api/plan/' + planId + '/suggestions', {
+        headers: authHeaders(),
+        credentials: 'same-origin'
+    })
+    .then(function(res) { return res.json(); })
+    .then(function(data) {
+        suggestionsLoaded = true;
+        if (!data.suggestions || data.suggestions.length === 0) return;
+        renderSuggestionCards(data.suggestions);
+    })
+    .catch(function(err) {
+        console.error('[suggestions]', err);
+    });
+};
+
+function renderSuggestionCards(suggestions) {
+    suggestions.forEach(function(weekSuggestion) {
+        var weekNum = weekSuggestion.week;
+        // Find the week card in the DOM
+        var weekCard = document.querySelector('[data-week="' + weekNum + '"]');
+        if (!weekCard) return;
+
+        var container = document.createElement('div');
+        container.className = 'suggestion-cards';
+
+        weekSuggestion.suggestions.forEach(function(s) {
+            var card = document.createElement('div');
+            card.className = 'suggestion-card suggestion-card--' + s.type;
+
+            var html = '<div class="suggestion-message">' + escapeHtml(s.message) + '</div>';
+
+            if (s.action === 'accept') {
+                html += '<div class="suggestion-actions">';
+                html += '<button class="btn btn-small btn-primary" onclick="acceptSuggestion(\'' + weekNum + '\')">Accept</button>';
+                html += '<button class="btn btn-small btn-ghost" onclick="skipSuggestion(this)">Skip</button>';
+                html += '</div>';
+            } else if (s.action === 'reduce') {
+                html += '<div class="suggestion-actions">';
+                html += '<button class="btn btn-small btn-primary" onclick="reduceWeek(' + weekNum + ')">Reduce 30%</button>';
+                html += '<button class="btn btn-small btn-ghost" onclick="skipSuggestion(this)">Skip</button>';
+                html += '</div>';
+            }
+
+            card.innerHTML = html;
+            container.appendChild(card);
+        });
+
+        // Insert after the week header
+        var weekHeader = weekCard.querySelector('.week-header, .week-card-header');
+        if (weekHeader) {
+            weekHeader.after(container);
+        } else {
+            weekCard.prepend(container);
+        }
+    });
+}
+
+window.acceptSuggestion = function(weekNum) {
+    // Trigger plan adjustment for the suggestion
+    adjustPlan();
+};
+
+window.reduceWeek = function(weekNum) {
+    var planId = window.APP_CTX && window.APP_CTX.plan_id;
+    if (!planId) return;
+
+    fetch('/api/plan/' + planId + '/week/' + weekNum + '/override', {
+        method: 'POST',
+        headers: authHeaders({ 'Content-Type': 'application/json' }),
+        credentials: 'same-origin',
+        body: JSON.stringify({ action: 'reduce_30' })
+    })
+    .then(function(res) { return res.json(); })
+    .then(function(data) {
+        if (data.ok) {
+            ApiClient.showSuccess('Week reduced by 30%. Reloading...');
+            setTimeout(function() { location.reload(); }, 1200);
+        }
+    })
+    .catch(function(err) {
+        ApiClient.showError('Error: ' + err.message);
+    });
+};
+
+// ------------------------------------------------------------------
+// Proactive adaptation alerts (Phase 4)
+// ------------------------------------------------------------------
+
+window.showRecalibrateModal = function() {
+    var modal = document.getElementById('recalibrate-modal');
+    if (modal) modal.style.display = 'flex';
+};
+
+window.dismissAdaptationAlert = function() {
+    var planId = window.APP_CTX && window.APP_CTX.plan_id;
+    if (!planId) return;
+
+    fetch('/api/plan/' + planId + '/dismiss-alert', {
+        method: 'POST',
+        headers: authHeaders(),
+        credentials: 'same-origin'
+    })
+    .then(function(res) { return res.json(); })
+    .then(function() {
+        var banner = document.getElementById('adaptation-alert-banner');
+        if (banner) {
+            banner.style.opacity = '0';
+            banner.style.transition = 'opacity 0.3s ease';
+            setTimeout(function() { banner.remove(); }, 300);
+        }
+    })
+    .catch(function(err) {
+        console.error('[alert] dismiss failed:', err);
+    });
+};
+
+window.recalibratePlan = function(strategy) {
+    var planId = window.APP_CTX && window.APP_CTX.plan_id;
+    if (!planId) return;
+
+    fetch('/api/plan/' + planId + '/recalibrate', {
+        method: 'POST',
+        headers: authHeaders({ 'Content-Type': 'application/json' }),
+        credentials: 'same-origin',
+        body: JSON.stringify({ strategy: strategy })
+    })
+    .then(function(res) { return res.json(); })
+    .then(function(data) {
+        var modal = document.getElementById('recalibrate-modal');
+        if (modal) modal.style.display = 'none';
+
+        if (data.ok) {
+            ApiClient.showSuccess(data.reason || 'Plan recalibrated.');
+            setTimeout(function() { location.reload(); }, 1500);
+        } else {
+            ApiClient.showError(data.error || 'Recalibration failed.');
+        }
+    })
+    .catch(function(err) {
+        ApiClient.showError('Error: ' + err.message);
+    });
+};
+
+function initAdaptationAlert() {
+    var alertText = document.getElementById('adaptation-alert-text');
+    var alertDetail = document.getElementById('recalibrate-alert-detail');
+    if (!alertText) return;
+
+    // Parse the alert from the server-rendered data
+    try {
+        var alertData = window.APP_CTX && window.APP_CTX.adaptation_alert;
+        if (alertData) {
+            alertText.textContent = alertData.message || 'Your plan needs attention.';
+            if (alertDetail) alertDetail.textContent = alertData.message || '';
+        }
+    } catch (e) {
+        alertText.textContent = 'Your plan may need adjustment.';
+    }
+}
+
+window.skipSuggestion = function(btn) {
+    var card = btn.closest('.suggestion-card');
+    if (card) {
+        card.style.opacity = '0';
+        card.style.transition = 'opacity 0.3s ease';
+        setTimeout(function() { card.remove(); }, 300);
+    }
+};
+
 // Initialize on DOM ready
 document.addEventListener('DOMContentLoaded', function() {
     // Initialize customization week
@@ -771,6 +951,14 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Initialize tab keyboard navigation
     initTabKeyboardNav();
+
+    // Load inline suggestions for upcoming weeks
+    if (window.APP_CTX && window.APP_CTX.plan_id && window.APP_CTX.current_user_id) {
+        loadSuggestions();
+    }
+
+    // Initialize adaptation alert banner
+    initAdaptationAlert();
 
     // Log-run buttons — read data-* attributes (works on all devices including touch)
     document.querySelectorAll('.log-run-btn').forEach(btn => {

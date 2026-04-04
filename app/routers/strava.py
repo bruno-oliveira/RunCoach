@@ -61,12 +61,15 @@ def _auto_map_and_adjust(
             adjust_result = adaptation_service.adjust_plan(
                 plan.id, user.id, db
             )
+            # Check for proactive adaptation alerts
+            alert = adaptation_service.check_alerts(plan.id, user.id, db)
             results.append({
                 "plan_id": plan.id,
                 "runs_mapped": map_result.get("mapped", 0),
                 "adjusted": adjust_result.get("adjusted", False),
                 "multiplier": adjust_result.get("multiplier"),
                 "reason": adjust_result.get("reason", ""),
+                "alert": alert,
             })
         except Exception as e:
             logger.warning(f"Auto-adjust failed for plan {plan.id}: {e}")

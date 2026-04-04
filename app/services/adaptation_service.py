@@ -11,6 +11,7 @@ from sqlalchemy import and_, func, or_
 from sqlalchemy.orm import Session
 
 from app.models import DailyWorkout, RunLog, TrainingPlan, WeeklyPlan, User
+from app.services.race_predictor_service import RacePredictorService
 from app.utils import to_date as _to_date
 
 logger = logging.getLogger(__name__)
@@ -1098,3 +1099,396 @@ class AdaptationService:
             "weeks_changed": weeks_changed,
             "reason": "Plan restored to original distances.",
         }
+
+    # ------------------------------------------------------------------
+    # Proactive adaptation alerts
+    # ------------------------------------------------------------------
+
+    def check_alerts(
+        self,
+        plan_id: str,
+        user_id: str,
+        db: Session,
+    ) -> Optional[Dict[str, Any]]:
+        """Check if a plan needs a proactive adaptation alert.
+
+        Evaluates:
+        - Weekly volume deficit > 25% for 2+ consecutive weeks
+        - Effort trending "increasing" for 3+ weeks
+        - No runs logged in 7+ days (potential injury/break)
+        - VDOT declining over 4+ week window
+
+        Returns an alert dict if a condition is met, or None.
+        """
+        training_plan = db.query(TrainingPlan).filter(
+            TrainingPlan.id == plan_id,
+            TrainingPlan.user_id == user_id,
+        ).first()
+
+        if not training_plan or not training_plan.start_date:
+            return None
+
+        start_date = _to_date(training_plan.start_date)
+        today = datetime.now(timezone.utc).replace(tzinfo=None).date()
+        delta_days = (today - start_date).days
+        if delta_days < 7:
+            return None
+
+        current_week = min((delta_days // 7) + 1, training_plan.weeks_duration or 0)
+        if current_week < 2:
+            return None
+
+        plan_data = json.loads(training_plan.plan_data) if training_plan.plan_data else []
+
+        # Get runs
+        runs = (
+            db.query(RunLog)
+            .filter(
+                RunLog.user_id == user_id,
+                RunLog.date >= datetime.combine(start_date, datetime.min.time()),
+            )
+            .order_by(RunLog.date.asc())
+            .all()
+        )
+
+        # ── Check 1: No runs in 7+ days ──
+        if runs:
+            last_run_date = _to_date(runs[-1].date)
+            if last_run_date and (today - last_run_date).days >= 7:
+                alert = {
+                    "type": "no_recent_runs",
+                    "severity": "high",
+                    "message": f"No runs logged in {(today - last_run_date).days} days. Are you taking a break or dealing with an injury?",
+                    "created_at": today.isoformat(),
+                }
+                training_plan.adaptation_alert = json.dumps(alert)
+                db.commit()
+                return alert
+
+        # ── Check 2: Volume deficit for 2+ consecutive weeks ──
+        weekly_actual = defaultdict(float)
+        for run in runs:
+            rd = _to_date(run.date)
+            if rd and start_date:
+                d = (rd - start_date).days
+                if d >= 0:
+                    wk = d // 7 + 1
+                    weekly_actual[wk] += run.distance_km or 0
+
+        consecutive_deficit = 0
+        for wk_num in range(max(1, current_week - 4), current_week + 1):
+            week_data = next((w for w in plan_data if w.get("week") == wk_num), None)
+            if not week_data:
+                continue
+            planned = week_data.get("total_km", 0)
+            actual = weekly_actual.get(wk_num, 0)
+            if planned > 0 and actual < planned * 0.75:
+                consecutive_deficit += 1
+            else:
+                consecutive_deficit = 0
+
+        if consecutive_deficit >= 2:
+            alert = {
+                "type": "volume_deficit",
+                "severity": "medium",
+                "message": f"Weekly volume has been 25%+ below target for {consecutive_deficit} consecutive weeks.",
+                "created_at": today.isoformat(),
+            }
+            training_plan.adaptation_alert = json.dumps(alert)
+            db.commit()
+            return alert
+
+        # ── Check 3: Effort trend increasing ──
+        perf = self.analyze_performance(plan_id, db)
+        if perf.get("effort_trend") == "increasing":
+            avg_effort = perf.get("avg_effort")
+            if avg_effort and avg_effort >= 7:
+                alert = {
+                    "type": "high_effort",
+                    "severity": "medium",
+                    "message": "Effort is trending upward and averaging above 7/10. Fatigue may be building.",
+                    "created_at": today.isoformat(),
+                }
+                training_plan.adaptation_alert = json.dumps(alert)
+                db.commit()
+                return alert
+
+        # ── Check 4: VDOT declining ──
+        predictions = RacePredictorService.get_predictions_for_user(user_id, db)
+        if predictions.get("vdot_trend") == "declining":
+            alert = {
+                "type": "vdot_declining",
+                "severity": "low",
+                "message": "Your VDOT has been declining. Consider adding quality speed work or reviewing recovery.",
+                "created_at": today.isoformat(),
+            }
+            training_plan.adaptation_alert = json.dumps(alert)
+            db.commit()
+            return alert
+
+        # No alerts — clear any existing one
+        if training_plan.adaptation_alert is not None:
+            training_plan.adaptation_alert = None
+            db.commit()
+
+        return None
+
+    def recalibrate(
+        self,
+        plan_id: str,
+        user_id: str,
+        strategy: str,
+        db: Session,
+    ) -> Dict[str, Any]:
+        """Recalibrate remaining plan weeks based on a user-chosen strategy.
+
+        Strategies:
+        - "time_off": Rebuild remaining weeks with a gentler ramp
+        - "ahead": Bump up remaining weeks' targets
+        - "new_goal": Not handled here (requires new goal_time from UI)
+        """
+        training_plan = db.query(TrainingPlan).filter(
+            TrainingPlan.id == plan_id,
+            TrainingPlan.user_id == user_id,
+        ).first()
+
+        if not training_plan:
+            return {"ok": False, "error": "Plan not found"}
+
+        start_date = _to_date(training_plan.start_date)
+        if not start_date:
+            return {"ok": False, "error": "Plan has no start date"}
+
+        today = datetime.now(timezone.utc).replace(tzinfo=None).date()
+        current_week = min(
+            ((today - start_date).days // 7) + 1,
+            training_plan.weeks_duration or 0,
+        )
+
+        plan_data, pd_week, pd_workout = self._parse_plan_data_lookups(training_plan)
+
+        weekly_plans = {
+            wp.week_number: wp
+            for wp in db.query(WeeklyPlan)
+            .filter(WeeklyPlan.training_plan_id == plan_id)
+            .all()
+        }
+
+        week_ids = [wp.id for wp in weekly_plans.values()]
+        workouts_by_week = self._batch_workouts_by_week(week_ids, db)
+
+        if strategy == "time_off":
+            factor = 0.8  # reduce remaining by 20% then ramp back
+        elif strategy == "ahead":
+            factor = 1.1  # bump up by 10%
+        else:
+            return {"ok": False, "error": f"Unknown strategy: {strategy}"}
+
+        weeks_changed = 0
+        for week in weekly_plans.values():
+            if week.week_number <= current_week:
+                continue
+
+            workouts = workouts_by_week.get(week.id, [])
+            week_changed = False
+
+            # For time_off: gentler ramp — reduce more for nearer weeks, less for later
+            if strategy == "time_off":
+                weeks_from_now = week.week_number - current_week
+                total_remaining = training_plan.weeks_duration - current_week
+                ramp = weeks_from_now / max(total_remaining, 1)
+                week_factor = 0.7 + 0.3 * ramp  # 70% to 100% ramp
+            else:
+                week_factor = factor
+
+            for workout in workouts:
+                if not workout.distance_km or workout.workout_type in ("rest", "recovery"):
+                    continue
+                new_dist = round(workout.distance_km * week_factor, 1)
+                if abs(new_dist - workout.distance_km) > 0.05:
+                    workout.distance_km = new_dist
+                    week_changed = True
+                    pd_wo = pd_workout.get((week.week_number, workout.day_of_week))
+                    if pd_wo:
+                        pd_wo["distance"] = new_dist
+
+            if week_changed:
+                weeks_changed += 1
+                new_total = round(
+                    sum(w.distance_km for w in workouts if w.distance_km), 1
+                )
+                week.total_km = new_total
+                if week.week_number in pd_week:
+                    pd_week[week.week_number]["total_km"] = new_total
+
+        training_plan.plan_data = json.dumps(plan_data)
+        # Clear the alert after recalibration
+        training_plan.adaptation_alert = None
+        db.commit()
+
+        strategy_labels = {
+            "time_off": "Plan recalibrated with a gentler ramp from current fitness.",
+            "ahead": "Plan targets increased based on your strong performance.",
+        }
+
+        return {
+            "ok": True,
+            "strategy": strategy,
+            "weeks_changed": weeks_changed,
+            "reason": strategy_labels.get(strategy, "Plan recalibrated."),
+        }
+
+    # ------------------------------------------------------------------
+    # Weekly inline suggestions
+    # ------------------------------------------------------------------
+
+    def get_weekly_suggestions(
+        self,
+        plan_id: str,
+        user_id: str,
+        db: Session,
+    ) -> List[Dict[str, Any]]:
+        """Generate per-week suggestion cards for in-plan display.
+
+        Returns a list of suggestion objects, each tied to a specific
+        upcoming week in the plan.
+        """
+        training_plan = db.query(TrainingPlan).filter(
+            TrainingPlan.id == plan_id,
+            TrainingPlan.user_id == user_id,
+        ).first()
+
+        if not training_plan or not training_plan.start_date:
+            return []
+
+        start_date = _to_date(training_plan.start_date)
+        today = datetime.now(timezone.utc).replace(tzinfo=None).date()
+        total_weeks = training_plan.weeks_duration or 0
+
+        delta_days = (today - start_date).days
+        if delta_days < 0:
+            return []
+
+        current_week = min((delta_days // 7) + 1, total_weeks)
+
+        # Get performance analysis
+        perf = self.analyze_performance(plan_id, db)
+        skipped = self.detect_skipped_workouts(plan_id, db)
+        adherence = perf.get("adherence_rate", 0)
+        effort_trend = perf.get("effort_trend", "stable")
+        avg_effort = perf.get("avg_effort")
+
+        # Get planned data
+        plan_data = json.loads(training_plan.plan_data) if training_plan.plan_data else []
+
+        # Get recent run volumes by week
+        runs = (
+            db.query(RunLog)
+            .filter(
+                RunLog.user_id == user_id,
+                RunLog.training_plan_id == plan_id,
+            )
+            .order_by(RunLog.date.asc())
+            .all()
+        )
+
+        weekly_actual = defaultdict(float)
+        for run in runs:
+            rd = _to_date(run.date)
+            if rd and start_date:
+                d = (rd - start_date).days
+                if d >= 0:
+                    wk = d // 7 + 1
+                    weekly_actual[wk] += run.distance_km or 0
+
+        # Check for consecutive weeks exceeding or falling short
+        exceeding_count = 0
+        deficit_count = 0
+        for wk in range(max(1, current_week - 3), current_week + 1):
+            week_data = next((w for w in plan_data if w.get("week") == wk), None)
+            if not week_data:
+                continue
+            planned = week_data.get("total_km", 0)
+            actual = weekly_actual.get(wk, 0)
+            if planned > 0:
+                ratio = actual / planned
+                if ratio >= 1.05:
+                    exceeding_count += 1
+                elif ratio < 0.75:
+                    deficit_count += 1
+
+        # Compute the adjustment multiplier if it exists
+        multiplier = training_plan.adjustment_multiplier
+
+        # Generate suggestions for upcoming weeks
+        suggestions = []
+
+        for week_data in plan_data:
+            wk_num = week_data.get("week", 0)
+            if wk_num <= current_week or wk_num > current_week + 3:
+                continue  # Only show suggestions for next 3 upcoming weeks
+
+            week_suggestions = []
+
+            # Exceeding targets pattern
+            if exceeding_count >= 3:
+                pct = "+" + str(round((multiplier - 1) * 100)) + "%" if multiplier and multiplier > 1 else "+8%"
+                week_suggestions.append({
+                    "type": "exceeding",
+                    "message": f"You've exceeded targets {exceeding_count} weeks in a row — this week's distances have been bumped {pct}",
+                    "action": "accept",
+                })
+
+            # Deficit pattern
+            if deficit_count >= 2 and not any(s["type"] == "exceeding" for s in week_suggestions):
+                week_suggestions.append({
+                    "type": "deficit",
+                    "message": "Volume has been below target — consider adding an extra easy run this week",
+                    "action": "accept",
+                })
+
+            # Long run suggestion
+            long_wo = next(
+                (wo for wo in week_data.get("daily_workouts", []) if wo.get("type") == "long"),
+                None,
+            )
+            if long_wo and skipped.get("skipped", 0) > 2:
+                km = long_wo.get("distance", 0)
+                week_suggestions.append({
+                    "type": "long_run",
+                    "message": f"Long run completion is behind — consider extending Sunday's run to {round(km + 2)}km",
+                    "action": "accept",
+                })
+
+            # Effort trend
+            if effort_trend == "increasing" and avg_effort and avg_effort > 7:
+                # Check if this is a recovery week
+                is_recovery = week_data.get("phase", "").lower() in ("recovery", "taper")
+                if is_recovery:
+                    week_suggestions.append({
+                        "type": "effort_recovery",
+                        "message": "Effort trending high — this recovery week is well-timed",
+                        "action": None,
+                    })
+                else:
+                    week_suggestions.append({
+                        "type": "effort_high",
+                        "message": "Effort is trending high — consider reducing intensity this week",
+                        "action": "reduce",
+                    })
+
+            # Low adherence
+            if adherence < 60 and not any(s["type"] in ("deficit",) for s in week_suggestions):
+                week_suggestions.append({
+                    "type": "adherence",
+                    "message": "Consistency is low — focus on completing the key workouts this week",
+                    "action": None,
+                })
+
+            if week_suggestions:
+                suggestions.append({
+                    "week": wk_num,
+                    "suggestions": week_suggestions[:2],  # max 2 per week
+                })
+
+        return suggestions

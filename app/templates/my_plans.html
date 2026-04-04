@@ -64,6 +64,9 @@
                 {% else %}
                 <span class="plan-status-badge plan-status-not-started">Not started</span>
                 {% endif %}
+                {% if plan.adaptation_alert %}
+                <span class="plan-alert-badge" title="Plan needs attention">Needs Attention</span>
+                {% endif %}
             </div>
             <div class="plan-actions">
                 {% if plan.plan_type == 'performance' %}

@@ -25,6 +25,14 @@
             <p class="analytics-page-sub">Your running data at a glance</p>
         </div>
         <div class="analytics-page-header-right">
+            {% if plans %}
+            <select id="planSelector" class="period-select">
+                <option value="">All runs</option>
+                {% for p in plans %}
+                <option value="{{ p.id }}">{{ p.label }}</option>
+                {% endfor %}
+            </select>
+            {% endif %}
             <select id="periodSelector" class="period-select">
                 <option value="30" selected>Last 30 days</option>
                 <option value="60">Last 60 days</option>
@@ -268,6 +276,35 @@
                 <div class="chart-canvas-wrap">
                     <canvas id="distDistChart"></canvas>
                 </div>
+            </div>
+
+            <!-- VDOT Progression (always visible if data exists) -->
+            <div class="analytics-card chart-wide" id="vdotChartCard" style="display:none;">
+                <div class="analytics-card-header">
+                    <h3 class="analytics-card-title">VDOT Progression</h3>
+                    <span class="vdot-current-badge" id="vdotCurrentBadge"></span>
+                </div>
+                <div class="chart-canvas-wrap">
+                    <canvas id="vdotChart"></canvas>
+                </div>
+            </div>
+
+            <!-- Gap Trend (plan-scoped only) -->
+            <div class="analytics-card chart-wide" id="gapTrendChartCard" style="display:none;">
+                <div class="analytics-card-header">
+                    <h3 class="analytics-card-title">Plan Gap Trend</h3>
+                </div>
+                <div class="chart-canvas-wrap">
+                    <canvas id="gapTrendChart"></canvas>
+                </div>
+            </div>
+
+            <!-- Workout Adherence Heatmap (plan-scoped only) -->
+            <div class="analytics-card chart-wide" id="adherenceHeatmapCard" style="display:none;">
+                <div class="analytics-card-header">
+                    <h3 class="analytics-card-title">Workout Adherence</h3>
+                </div>
+                <div class="adherence-heatmap-wrap" id="adherenceHeatmap"></div>
             </div>
 
         </div>

@@ -57,6 +57,9 @@ class TrainingPlan(Base):
     CURRENT_SCHEMA_VERSION = 1
     plan_data_version = Column(Integer, default=CURRENT_SCHEMA_VERSION)
 
+    # Proactive adaptation alerts (JSON: {type, message, severity, created_at})
+    adaptation_alert = Column(Text, nullable=True)
+
     # Shareable link token
     share_token = Column(String, unique=True, nullable=True, index=True)
 

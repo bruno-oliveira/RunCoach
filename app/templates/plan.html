@@ -14,6 +14,7 @@
 {% endif %}
 {% if user and start_date %}
 <link rel="stylesheet" href="{{ static_url('css/plan-readiness.css') }}">
+<link rel="stylesheet" href="{{ static_url('css/plan-gaps.css') }}">
 {% endif %}
 {% if user and not user.strava_athlete_id %}
 <link rel="stylesheet" href="{{ static_url('css/plan-modal.css') }}">
@@ -243,6 +244,10 @@
             <svg class="plan-tab-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
             Race Readiness
         </button>
+        <button class="plan-tab" role="tab" aria-selected="false" aria-controls="panel-gaps" id="tab-gaps" onclick="switchPlanTab('gaps'); loadGapAnalysis();">
+            <svg class="plan-tab-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+            Gap Analysis
+        </button>
         {% endif %}
     </nav>
 
@@ -265,6 +270,40 @@
         </div>
     </div>
     {% endif %}
+    {% endif %}
+
+    {% if user and start_date and training_plan.adaptation_alert %}
+    <div class="adaptation-alert-banner" id="adaptation-alert-banner">
+        <div class="alert-banner-content">
+            <div class="alert-banner-icon">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+            </div>
+            <div class="alert-banner-text" id="adaptation-alert-text"></div>
+            <div class="alert-banner-actions">
+                <button class="btn btn-small btn-primary" onclick="showRecalibrateModal()">Recalibrate</button>
+                <button class="btn btn-small btn-ghost" onclick="dismissAdaptationAlert()">Dismiss</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Recalibrate Modal -->
+    <div class="recalibrate-modal-overlay" id="recalibrate-modal" style="display:none;" onclick="if(event.target===this)this.style.display='none'">
+        <div class="recalibrate-modal">
+            <h3>Recalibrate Plan</h3>
+            <p class="recalibrate-modal-desc" id="recalibrate-alert-detail"></p>
+            <div class="recalibrate-options">
+                <button class="recalibrate-option" onclick="recalibratePlan('time_off')">
+                    <strong>I took time off</strong>
+                    <span>Rebuild remaining weeks with a gentler ramp from current fitness</span>
+                </button>
+                <button class="recalibrate-option" onclick="recalibratePlan('ahead')">
+                    <strong>I'm ahead of schedule</strong>
+                    <span>Bump up remaining weeks' targets by 10%</span>
+                </button>
+            </div>
+            <button class="btn btn-ghost btn-small" style="margin-top:12px" onclick="document.getElementById('recalibrate-modal').style.display='none'">Cancel</button>
+        </div>
+    </div>
     {% endif %}
 
     {% if user and start_date %}
@@ -414,6 +453,8 @@
             </div>
         </div>
     </div>
+
+    {% include 'components/gap_panel.html' %}
     {% endif %}
 
     <div class="download-section">
@@ -528,7 +569,8 @@
         weeks: {{ plan | length }},
         plan_user_id: {{ training_plan.user_id | tojson }},
         current_user_id: {{ (user.id if user else None) | tojson }},
-        share_token: {{ (training_plan.share_token or '') | tojson }}
+        share_token: {{ (training_plan.share_token or '') | tojson }},
+        adaptation_alert: {{ (training_plan.adaptation_alert | default('null', true)) | safe }}
     };
 
     function showShareToast(msg) {
@@ -568,6 +610,7 @@
 </script>
 <script src="{{ static_url('js/plan.js') }}" defer></script>
 <script src="{{ static_url('js/readiness.js') }}" defer></script>
+<script src="{{ static_url('js/gap_analysis.js') }}" defer></script>
 {% if progress_data and progress_data.completed_count > 0 %}
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.8/dist/chart.umd.min.js" crossorigin="anonymous"></script>
 <script>
