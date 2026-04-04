@@ -6,7 +6,7 @@ from typing import Optional
 
 from sqlalchemy.orm import Session
 
-from app.core.hr_zone_calculator import HRZoneCalculator
+from app.core.training.hr_zone_calculator import HRZoneCalculator
 from app.models.training_plan import TrainingPlan
 from app.models.user import User
 

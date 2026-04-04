@@ -2,8 +2,8 @@
 
 import pytest
 
-from app.core.beginner_plan_generator import BeginnerPlanGenerator
-from app.core.plan_generator import TrainingPlanGenerator
+from app.core.generators.beginner_plan_generator import BeginnerPlanGenerator
+from app.core.generators.plan_generator import TrainingPlanGenerator
 from app.exceptions import ZeroMileageUnsupportedException
 
 

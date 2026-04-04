@@ -13,7 +13,7 @@ from app.config import settings
 from app.dependencies import get_db, get_current_user, get_optional_user
 from app.models import DailyWorkout, TrainingPlan, User, WeeklyPlan
 from app.models.run_log import RunLog
-from app.routers.plan_helpers import get_plan_or_404
+from app.services.plan_helpers import get_plan_or_404
 from app.schemas import DISTANCE_NAMES
 from app.services.gap_analysis_service import GapAnalysisService
 from app.services.race_predictor_service import RacePredictorService

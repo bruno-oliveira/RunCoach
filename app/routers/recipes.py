@@ -10,7 +10,7 @@ from sqlalchemy.orm import Session
 from app.config import settings
 from app.dependencies import get_current_user, get_db, get_optional_user
 from app.models import User
-from app.meal_database import get_meal_database
+from app.core.nutrition.meal_database import get_meal_database
 from app.models import FavoriteRecipe
 from app.template_helpers import create_templates
 

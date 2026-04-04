@@ -22,7 +22,7 @@ from app.services.performance_service import PerformanceService
 from app.dependencies import get_plan_service
 from app.services.plan_service import PlanService
 from app.exceptions import RunCoachException, InadequateBaseException
-from app.core.performance_plan_generator import PerformancePlanGenerator
+from app.core.generators.performance_plan_generator import PerformancePlanGenerator
 from app.models import TrainingPlan
 from app.template_helpers import create_templates
 from app.utils import format_pace, format_pace_bare

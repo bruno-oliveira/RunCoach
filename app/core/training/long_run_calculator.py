@@ -7,7 +7,7 @@ quality workout distance allocation.
 import random
 from typing import Dict
 
-from app.core.phase_calculator import (
+from app.core.training.phase_calculator import (
     PHASE_DISTRIBUTIONS,
     calculate_phases,
     get_distance_category,

@@ -491,7 +491,7 @@ class PDFGenerator:
 
     def _add_training_zones_page(self, story: List, training_plan: TrainingPlan):
         """Add training zones table for performance plans."""
-        from app.core.performance_plan_generator import PerformancePlanGenerator
+        from app.core.generators.performance_plan_generator import PerformancePlanGenerator
 
         gen = PerformancePlanGenerator()
         zones = gen.calculate_training_zones(

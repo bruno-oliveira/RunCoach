@@ -1,7 +1,7 @@
 from typing import List, Dict, Any, Optional
 import random
 from functools import lru_cache
-from app.meal_database import get_meal_database
+from app.core.nutrition.meal_database import get_meal_database
 
 
 @lru_cache(maxsize=256)

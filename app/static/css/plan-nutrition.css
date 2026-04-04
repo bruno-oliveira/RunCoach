@@ -57,10 +57,13 @@
 }
 
 .nutrition-summary {
+    margin-bottom: var(--space-5);
+}
+
+.nutrition-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
     gap: var(--space-3);
-    margin-bottom: var(--space-5);
 }
 
 .nutrition-stat {
@@ -183,6 +186,39 @@
     border-radius: var(--radius-full);
     font-size: var(--text-xs);
     font-weight: var(--weight-semibold);
+}
+
+.meal-suggestions-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: var(--space-4);
+}
+
+.meal-suggestions-header h3 {
+    margin: 0;
+}
+
+.meals-grid {
+    display: grid;
+    gap: var(--space-5);
+}
+
+.meal-category-title {
+    font-size: var(--text-base);
+    font-weight: var(--weight-semibold);
+    color: var(--color-text);
+    margin-bottom: var(--space-3);
+    text-transform: capitalize;
+}
+
+.meal-nutrients {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-2);
+    font-size: var(--text-xs);
+    color: var(--color-text-secondary);
+    margin-bottom: var(--space-2);
 }
 
 .meal-options-list { display: grid; gap: var(--space-3); }
@@ -549,12 +585,23 @@
 
 /* ---- Responsive ---- */
 @media (max-width: 768px) {
-    .nutrition-summary { grid-template-columns: repeat(2, 1fr); }
+    .nutrition-section { padding: var(--space-4); margin: var(--space-4) 0; }
+    .nutrition-grid { grid-template-columns: repeat(2, 1fr); gap: var(--space-2); }
+    .nutrition-stat { padding: var(--space-3); }
+    .nutrition-stat-value { font-size: var(--text-xl); }
     .meal-grid { grid-template-columns: 1fr; }
-    .phase-nutrition-grid { grid-template-columns: 1fr 1fr; }
+    .meal-card { padding: var(--space-3); }
+    .phase-nutrition-grid { grid-template-columns: 1fr 1fr; gap: var(--space-3); }
+    .phase-card { padding: var(--space-3); }
+    .nutrition-header { flex-direction: column; gap: var(--space-3); align-items: flex-start; }
+    .nutrition-guide-card { padding: var(--space-4); }
+    .hydration-grid { grid-template-columns: repeat(2, 1fr); gap: var(--space-2); }
+    .hydration-item { padding: var(--space-3); }
+    .meal-suggestions-header { flex-direction: column; gap: var(--space-3); align-items: flex-start; }
 }
 
 @media (max-width: 480px) {
-    .nutrition-section { padding: var(--space-4); }
+    .nutrition-section { padding: var(--space-3); }
     .phase-nutrition-grid { grid-template-columns: 1fr; }
+    .nutrition-grid { grid-template-columns: 1fr 1fr; }
 }

@@ -1,13 +1,10 @@
-"""Core business logic modules for RunCoach."""
+"""Core business logic modules for RunCoach.
 
-from app.core.nutrition_engine import NutritionEngine
-from app.core.pdf_generator import PDFGenerator
-from app.core.plan_generator import TrainingPlanGenerator
-from app.core.performance_plan_generator import PerformancePlanGenerator
-
-__all__ = [
-    "NutritionEngine",
-    "PDFGenerator",
-    "PerformancePlanGenerator",
-    "TrainingPlanGenerator",
-]
+Sub-packages:
+- generators: Plan generation (training, beginner, performance, triathlon)
+- training: Calculations, workout building, VDOT, HR zones, strength
+- nutrition: Nutrition engine and meal database
+- coaching: Feedback, notes, training tips
+- race: Race protocol generation
+- export: PDF generation
+"""

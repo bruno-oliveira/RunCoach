@@ -245,7 +245,7 @@ class PlanRequest(BaseModel):
     def compute_vdot(self) -> "PlanRequest":
         """Calculate VDOT from optional race result."""
         if self.recent_race_distance_km and self.recent_race_time:
-            from app.core.vdot_calculator import VDOTCalculator
+            from app.core.training.vdot_calculator import VDOTCalculator
             seconds = VDOTCalculator.parse_time_to_seconds(self.recent_race_time)
             if seconds and seconds > 0:
                 self.vdot = VDOTCalculator.calculate_vdot(

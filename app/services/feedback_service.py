@@ -6,7 +6,7 @@ from typing import Optional
 
 from sqlalchemy.orm import Session
 
-from app.core.coaching_feedback_engine import CoachingFeedbackEngine
+from app.core.coaching.coaching_feedback_engine import CoachingFeedbackEngine
 from app.models.daily_workout import DailyWorkout
 from app.models.run_feedback import RunFeedback
 from app.models.run_log import RunLog

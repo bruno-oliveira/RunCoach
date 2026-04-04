@@ -2,8 +2,8 @@
 
 import pytest
 
-from app.meal_database import MealDatabase
-from app.core.nutrition_engine import NutritionEngine
+from app.core.nutrition.meal_database import MealDatabase
+from app.core.nutrition.nutrition_engine import NutritionEngine
 
 
 class TestNutritionEngine:

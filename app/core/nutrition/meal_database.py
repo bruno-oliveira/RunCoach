@@ -12,7 +12,7 @@ from typing import Any
 logger = logging.getLogger(__name__)
 
 # Path to meal data directory
-MEALS_DATA_DIR = Path(__file__).parent / "data"
+MEALS_DATA_DIR = Path(__file__).parent.parent.parent / "data"
 
 # Individual meal type files
 MEAL_TYPE_FILES = {

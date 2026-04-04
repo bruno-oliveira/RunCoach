@@ -8,7 +8,7 @@ from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, s
 from fastapi.responses import RedirectResponse
 from sqlalchemy.orm import Session
 
-from app.auth_service import AuthService
+from app.services.auth_service import AuthService
 from app.config import settings
 from app.dependencies import get_current_user, get_db, get_auth_service, get_strava_service
 from app.models import TrainingPlan

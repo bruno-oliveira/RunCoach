@@ -10,20 +10,20 @@ Delegates to focused modules:
 
 from typing import List, Dict, Any, Optional
 
-from app.core.beginner_plan_generator import BeginnerPlanGenerator
-from app.core.coaching_notes_generator import generate_coaching_note
-from app.core.key_workout_library import KeyWorkoutLibrary
-from app.core.strength_plan import derive_experience_level
+from app.core.generators.beginner_plan_generator import BeginnerPlanGenerator
+from app.core.coaching.coaching_notes_generator import generate_coaching_note
+from app.core.training.key_workout_library import KeyWorkoutLibrary
+from app.core.training.strength_plan import derive_experience_level
 from app.exceptions import ZeroMileageUnsupportedException
 
 # Re-export for any code that imports PHASE_DISTRIBUTIONS from here
-from app.core.phase_calculator import PHASE_DISTRIBUTIONS  # noqa: F401
+from app.core.training.phase_calculator import PHASE_DISTRIBUTIONS  # noqa: F401
 
-from app.core import phase_calculator
-from app.core import mileage_progression
-from app.core import workout_distribution as workout_dist_mod
-from app.core import workout_builders
-from app.core import long_run_calculator
+from app.core.training import phase_calculator
+from app.core.training import mileage_progression
+from app.core.training import workout_distribution as workout_dist_mod
+from app.core.training import workout_builders
+from app.core.training import long_run_calculator
 
 
 class TrainingPlanGenerator:
@@ -397,7 +397,7 @@ class TrainingPlanGenerator:
                 suggestion="Try a 5K or 10K plan with 0 km/week to get started.",
             )
 
-        from app.core.vdot_calculator import VDOTCalculator
+        from app.core.training.vdot_calculator import VDOTCalculator
         pace_zones = VDOTCalculator.get_pace_zones(vdot) if vdot else None
 
         experience_level = derive_experience_level(current_km)

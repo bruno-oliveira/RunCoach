@@ -2,7 +2,7 @@
 
 import pytest
 
-from app.core.key_workout_library import KeyWorkoutLibrary, _WORKOUTS
+from app.core.training.key_workout_library import KeyWorkoutLibrary, _WORKOUTS
 
 
 class TestLibraryCompleteness:

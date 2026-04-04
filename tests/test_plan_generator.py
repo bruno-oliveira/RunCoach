@@ -2,7 +2,7 @@
 
 import pytest
 
-from app.core.plan_generator import TrainingPlanGenerator
+from app.core.generators.plan_generator import TrainingPlanGenerator
 
 
 class TestTrainingPlanGenerator:

@@ -183,7 +183,7 @@ _run_migrations(engine)
 
 def _backfill_vdot(eng) -> None:
     """Backfill VDOT for all runs that have sufficient distance but no VDOT yet."""
-    from app.core.vdot_calculator import VDOTCalculator
+    from app.core.training.vdot_calculator import VDOTCalculator
     from app.models.run_log import RunLog
     from app.dependencies import SessionLocal
 
@@ -269,7 +269,7 @@ if settings.debug:
     @app.get("/debug/test-auth", tags=["debug"])
     async def test_auth():
         """Test endpoint to verify auth service is working."""
-        from app.auth_service import AuthService
+        from app.services.auth_service import AuthService
 
         auth = AuthService()
 

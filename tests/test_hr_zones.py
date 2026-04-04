@@ -2,7 +2,7 @@
 
 import pytest
 
-from app.core.hr_zone_calculator import HRZoneCalculator, ZONE_DEFINITIONS
+from app.core.training.hr_zone_calculator import HRZoneCalculator, ZONE_DEFINITIONS
 
 
 class TestCalculateZones:

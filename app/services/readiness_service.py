@@ -12,7 +12,7 @@ from typing import Any, Dict, List, Optional
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
-from app.core.vdot_calculator import VDOTCalculator
+from app.core.training.vdot_calculator import VDOTCalculator
 from app.models import DailyWorkout, RunLog, TrainingPlan, WeeklyPlan
 from app.services.race_predictor_service import RacePredictorService
 from app.utils import to_date as _to_date

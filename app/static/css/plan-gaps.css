@@ -248,12 +248,25 @@
 .gap-vdot-trend-stable { color: var(--color-text-secondary); }
 
 /* ---- Responsive ---- */
-@media (max-width: 640px) {
+@media (max-width: 768px) {
     .gap-summary {
         grid-template-columns: 1fr 1fr;
+        gap: var(--space-3);
     }
+    .gap-summary-card { padding: var(--space-4); }
+    .gap-summary-card .gap-card-value { font-size: var(--text-xl); }
+    .gap-dimension { padding: var(--space-4); }
     .gap-vdot-section {
         flex-direction: column;
         text-align: center;
+        padding: var(--space-4);
     }
+    .gap-vdot-value { font-size: var(--text-2xl); }
+    .gap-actions { padding: var(--space-4); }
+    .gap-action-item { font-size: var(--text-xs); }
+    .gap-dimensions { gap: var(--space-3); }
+}
+
+@media (max-width: 480px) {
+    .gap-summary { grid-template-columns: 1fr; }
 }

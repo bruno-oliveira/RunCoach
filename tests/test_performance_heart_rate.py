@@ -3,7 +3,7 @@
 import pytest
 from datetime import datetime, timedelta, timezone
 
-from app.core.performance_plan_generator import PerformancePlanGenerator
+from app.core.generators.performance_plan_generator import PerformancePlanGenerator
 from app.services.performance_service import PerformanceService
 from app.models import User, RunLog
 

@@ -9,7 +9,7 @@ import math
 from typing import List, Dict, Any, Optional
 from datetime import datetime, timedelta
 
-from app.core.vdot_calculator import VDOTCalculator
+from app.core.training.vdot_calculator import VDOTCalculator
 from app.utils import format_pace as _shared_format_pace
 
 

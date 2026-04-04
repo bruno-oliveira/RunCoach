@@ -6,7 +6,7 @@ with 10% rule enforcement and phase-aware periodization.
 
 from typing import List, Optional
 
-from app.core.phase_calculator import calculate_phases, is_recovery_week
+from app.core.training.phase_calculator import calculate_phases, is_recovery_week
 
 
 def get_ideal_peak(target_distance: float, current_km: float, weeks: int) -> float:

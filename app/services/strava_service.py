@@ -265,7 +265,7 @@ class StravaService:
                     run_log = self.map_activity_to_run_log(activity, user.id)
                     # Auto-calculate VDOT for all runs with sufficient distance
                     if run_log.distance_km >= 2.0 and run_log.duration_minutes > 0:
-                        from app.core.vdot_calculator import VDOTCalculator
+                        from app.core.training.vdot_calculator import VDOTCalculator
                         vdot = VDOTCalculator.calculate_vdot(
                             run_log.distance_km, int(run_log.duration_minutes * 60)
                         )

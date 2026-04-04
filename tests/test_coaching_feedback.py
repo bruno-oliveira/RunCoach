@@ -4,8 +4,8 @@ import pytest
 from unittest.mock import MagicMock
 from datetime import datetime, timezone
 
-from app.core.coaching_feedback_engine import CoachingFeedbackEngine
-from app.core.hr_zone_calculator import HRZoneCalculator
+from app.core.coaching.coaching_feedback_engine import CoachingFeedbackEngine
+from app.core.training.hr_zone_calculator import HRZoneCalculator
 
 
 def _make_run_log(**kwargs):

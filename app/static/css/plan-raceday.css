@@ -217,10 +217,22 @@
 
 /* ---- Responsive ---- */
 @media (max-width: 768px) {
-    .splits-header, .splits-row { font-size: var(--text-xs); }
-    .timeline-item { grid-template-columns: 100px 1fr; }
+    .raceday-section { padding: var(--space-4); }
+    .raceday-card { padding: var(--space-4); margin-bottom: var(--space-3); }
+    .raceday-card h3 { font-size: var(--text-base); margin-bottom: var(--space-3); }
+    .splits-header, .splits-row { font-size: var(--text-xs); padding: var(--space-2); }
+    .timeline-item { grid-template-columns: 100px 1fr; font-size: var(--text-xs); }
+    .checkpoint-item { padding: var(--space-2); }
+    .checkpoint-distance { min-width: 50px; font-size: var(--text-xs); }
+    .checkpoint-message { font-size: var(--text-xs); }
+    .checklist-item { padding: var(--space-2); font-size: var(--text-xs); }
+    .nutrition-timing-item { padding: var(--space-2); }
+    .nutrition-timing-content { font-size: var(--text-xs); }
 }
 
 @media (max-width: 480px) {
+    .raceday-section { padding: var(--space-3); }
     .timeline-item { grid-template-columns: 1fr; }
+    .splits-header, .splits-row { grid-template-columns: 1fr 1fr 1fr; }
+    .splits-header span:last-child, .splits-row span:last-child { display: none; }
 }

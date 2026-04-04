@@ -8,8 +8,8 @@ import logging
 from datetime import timedelta
 from typing import Optional
 
-from app.core.hr_zone_calculator import HRZoneCalculator
-from app.core.quality_scorer import calculate_quality_score
+from app.core.training.hr_zone_calculator import HRZoneCalculator
+from app.core.training.quality_scorer import calculate_quality_score
 
 logger = logging.getLogger(__name__)
 

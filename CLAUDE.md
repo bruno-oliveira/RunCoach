@@ -24,7 +24,7 @@ python3 -m pytest tests/test_nutrition_engine.py -v
 python3 -m pytest tests/test_plan_generator.py -v
 
 # Test PDF generation
-python3 -c "from app.core.pdf_generator import PDFGenerator; from app.core.plan_generator import TrainingPlanGenerator; TrainingPlanGenerator().generate_plan(20, 10, 8)"
+python3 -c "from app.core.export.pdf_generator import PDFGenerator; from app.core.generators.plan_generator import TrainingPlanGenerator; TrainingPlanGenerator().generate_plan(20, 10, 8)"
 ```
 
 ## Deployment
@@ -45,15 +45,35 @@ app/
 ├── dependencies.py      # FastAPI dependency injection
 ├── schemas.py           # Pydantic request/response schemas
 ├── exceptions.py        # Custom exception hierarchy
-├── auth_service.py      # Authentication service (Google OAuth, JWT)
-├── meal_database.py     # Meal data management
-├── nutrition_models.py  # Nutrition-related database models
-├── core/                # Core business logic
-│   ├── __init__.py
-│   ├── plan_generator.py        # Training plan generation
-│   ├── nutrition_engine.py      # Nutrition plan generation
-│   ├── pdf_generator.py         # PDF export using ReportLab
-│   └── adaptive_plan_generator.py  # Adaptive plans based on performance
+├── core/                # Core business logic (domain sub-packages)
+│   ├── generators/      # Plan generation
+│   │   ├── plan_generator.py        # Main training plan orchestrator
+│   │   ├── beginner_plan_generator.py # Couch-to-5K plans
+│   │   ├── performance_plan_generator.py # VDOT-based plans
+│   │   └── triathlon_plan_generator.py  # Triathlon plans
+│   ���── training/        # Training calculations & workout building
+│   │   ├── phase_calculator.py     # Phase distribution & recovery weeks
+│   │   ├── mileage_progression.py  # Weekly mileage with 10% rule
+│   │   ├── workout_builders.py     # Individual workout generation
+│   │   ├── workout_distribution.py # Workout type scheduling
+│   │   ├── long_run_calculator.py  # Long run distances
+│   │   ├── key_workout_library.py  # Race-specific key workouts
+│   │   ├── vdot_calculator.py      # VDOT & pace zones
+│   │   ├── hr_zone_calculator.py   # Heart rate training zones
+│   │   ├── quality_scorer.py       # Effort quality scoring
+│   │   └── strength_plan.py        # Strength training plans
+│   ├── nutrition/       # Nutrition planning
+│   │   ├── nutrition_engine.py     # Meal plan generation
+│   │   └── meal_database.py        # Meal data management
+│   ├── coaching/        # Coaching & feedback
+│   │   ├── coaching_feedback_engine.py # Post-run coaching feedback
+│   │   ├── coaching_notes_generator.py # Per-workout coaching notes
+│   │   └── training_tips.py        # Weekly training tips
+│   ├── race/            # Race-specific logic
+│   │   └── race_protocol_generator.py  # Race day protocols
+│   └── export/          # PDF generation
+│       ├── pdf_generator.py         # Training plan PDF export
+│       └── triathlon_pdf_generator.py # Triathlon plan PDF export
 ├── models/              # SQLAlchemy database models
 │   ├── __init__.py      # Model exports and relationship configuration
 │   ├── base.py          # SQLAlchemy Base class
@@ -68,18 +88,32 @@ app/
 │   ├── plans.py         # Plan generation endpoints
 │   ├── nutrition.py     # Nutrition endpoints
 │   ├── auth.py          # Authentication endpoints (Google OAuth)
-│   └── runs.py          # Run logging and adaptive training endpoints
+│   ├── runs.py          # Run logging and adaptive training endpoints
+│   ├── analytics.py     # Analytics endpoints and page
+│   ├── performance.py   # Performance plan endpoints
+│   ├── recipes.py       # Recipe endpoints
+│   ├── strava.py        # Strava OAuth + sync
+│   └── triathlon.py     # Triathlon plan endpoints
 ├── services/
 │   ├── __init__.py
+│   ├── auth_service.py      # Google OAuth, JWT handling
 │   ├── plan_service.py      # Plan business logic
-│   ├── nutrition_service.py # Nutrition business logic
-│   └── adaptation_service.py # Plan adaptation based on performance
+│   ├── plan_helpers.py      # Plan view context helpers
+│   ├── plan_adjustments.py  # Plan adjustment logic
+│   ├── adaptation_service.py # Plan adaptation based on performance
+│   ├── feedback_service.py  # Coaching feedback service
+│   ├── gap_analysis_service.py # Training gap analysis
+│   ├── hr_zone_service.py   # HR zone management
+│   ├── performance_service.py # Performance analysis
+│   ├���─ race_predictor_service.py # Race time predictions
+│   ├── readiness_service.py # Race readiness assessment
+│   ├── strava_service.py    # Strava API integration
+│   └── merge_service.py     # Plan merge logic
 ├── templates/           # Jinja2 HTML templates
 │   ├── base.html        # Base template with common layout
 │   ├── index.html       # Home page with input form
 │   ├── plan.html        # Training plan display
 │   ├── my_plans.html    # User's saved plans
-│   ├── pdf_template.html # PDF generation template
 │   └── components/      # Reusable template components
 │       ├── nav.html     # Navigation component
 │       ├── modal.html   # Modal dialog component
@@ -117,7 +151,7 @@ tests/
 
 - **`app/schemas.py`** - Pydantic models for request/response validation. Includes `PlanRequest`, `GoogleAuthRequest`, `Token`, `UserResponse`, `RunLogCreate`, `RunLogResponse`, `AdaptivePlanRequest`, and various workout/nutrition schemas.
 
-- **`app/auth_service.py`** - `AuthService` class for authentication. Handles Google OAuth token verification via Google's public keys, JWT creation/verification using `python-jose`, and user creation/retrieval.
+- **`app/services/auth_service.py`** - `AuthService` class for authentication. Handles Google OAuth token verification via Google's public keys, JWT creation/verification using `python-jose`, and user creation/retrieval.
 
 - **`app/routers/plans.py`** - Plan generation and management endpoints: `/generate-plan`, `/customize-plan`, `/plan/{plan_id}`, `/download-pdf/{plan_id}`. Handles form submissions, validation errors, and plan customization.
 
@@ -138,13 +172,13 @@ tests/
 
 - **`app/services/adaptation_service.py`** - `AdaptationService` class for analyzing run performance and adapting training plans. Analyzes effort trends, pace consistency, adherence rates, and can automatically adjust future weeks based on performance.
 
-- **`app/core/plan_generator.py`** - `TrainingPlanGenerator` class that creates weekly training schedules. Implements the 10% rule for mileage progression, calculates peak mileage based on race distance, supports configurable runs per week (3-6), and generates varied daily workouts.
+- **`app/core/generators/plan_generator.py`** - `TrainingPlanGenerator` class that orchestrates weekly training schedules. Delegates to focused modules for phases, mileage progression, workout distribution, and workout building.
 
-- **`app/core/nutrition_engine.py`** - `NutritionEngine` class that generates personalized meal blueprints. Calculates macronutrient needs based on training volume and body weight, uses scoring system to select optimal meals with variety.
+- **`app/core/nutrition/nutrition_engine.py`** - `NutritionEngine` class that generates personalized meal blueprints. Calculates macronutrient needs based on training volume and body weight, uses scoring system to select optimal meals with variety.
 
-- **`app/core/pdf_generator.py`** - `PDFGenerator` class using ReportLab to create downloadable PDF training plans.
+- **`app/core/export/pdf_generator.py`** - `PDFGenerator` class using ReportLab to create downloadable PDF training plans.
 
-- **`app/core/adaptive_plan_generator.py`** - `AdaptivePlanGenerator` class that generates training plans based on user's actual running data. Calculates fitness metrics from run logs (weekly mileage, pace, heart rate, improvement trends) and adjusts plans accordingly.
+- **`app/core/generators/performance_plan_generator.py`** - `PerformancePlanGenerator` class that generates VDOT-based plans from user's actual running data.
 
 - **`app/models/__init__.py`** - Exports all models and configures SQLAlchemy relationships between them.
 

@@ -1,7 +1,7 @@
 """Tests for VDOT calculator prediction methods."""
 
 import pytest
-from app.core.vdot_calculator import VDOTCalculator
+from app.core.training.vdot_calculator import VDOTCalculator
 
 
 class TestVDOTCalculator:

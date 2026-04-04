@@ -9,8 +9,8 @@ from sqlalchemy.pool import StaticPool
 from app.dependencies import get_db
 from app.main import app
 from app.models import Base
-from app.core.nutrition_engine import NutritionEngine
-from app.core.plan_generator import TrainingPlanGenerator
+from app.core.nutrition.nutrition_engine import NutritionEngine
+from app.core.generators.plan_generator import TrainingPlanGenerator
 
 
 @pytest.fixture(scope="function")

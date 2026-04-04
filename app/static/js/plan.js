@@ -936,8 +936,35 @@ window.skipSuggestion = function(btn) {
     }
 };
 
+// ---- Collapsible week cards on mobile ----
+function initCollapsibleWeeks() {
+    if (window.innerWidth > 768) return;
+
+    document.querySelectorAll('.week-card .week-header').forEach(function(header) {
+        header.addEventListener('click', function() {
+            var card = this.closest('.week-card');
+            if (!card) return;
+            // Current-week cards toggle their expanded state
+            if (card.classList.contains('current-week')) {
+                card.classList.toggle('week-expanded');
+                // If toggling off, also remove current-week visual so CSS collapses
+                if (!card.classList.contains('week-expanded')) {
+                    card.classList.remove('current-week');
+                    card.dataset.wasCurrent = '1';
+                } else if (card.dataset.wasCurrent) {
+                    card.classList.add('current-week');
+                }
+            } else {
+                card.classList.toggle('week-expanded');
+            }
+        });
+    });
+}
+
 // Initialize on DOM ready
 document.addEventListener('DOMContentLoaded', function() {
+    // Initialize collapsible weeks for mobile
+    initCollapsibleWeeks();
     // Initialize customization week
     if (typeof updateCustomizationWeek === 'function') {
         updateCustomizationWeek();

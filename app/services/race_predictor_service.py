@@ -12,7 +12,7 @@ from typing import Any, Dict, List, Optional
 
 from sqlalchemy.orm import Session
 
-from app.core.vdot_calculator import VDOTCalculator
+from app.core.training.vdot_calculator import VDOTCalculator
 from app.models import RunLog
 
 # Minimum distance (km) for a run to be useful for VDOT estimation.

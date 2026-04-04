@@ -13,9 +13,9 @@ from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
 from app.config import settings
-from app.core.nutrition_engine import NutritionEngine
-from app.core.pdf_generator import PDFGenerator
-from app.core.plan_generator import TrainingPlanGenerator
+from app.core.nutrition.nutrition_engine import NutritionEngine
+from app.core.export.pdf_generator import PDFGenerator
+from app.core.generators.plan_generator import TrainingPlanGenerator
 from app.dependencies import (
     get_current_user,
     get_db,
@@ -36,7 +36,7 @@ from app.exceptions import (
 )
 from app.models import DailyWorkout, TrainingPlan, User, WeeklyPlan
 from app.models.triathlon_plan import TriathlonPlan
-from app.routers.plan_helpers import error_response, get_plan_or_404, plan_view_context
+from app.services.plan_helpers import error_response, get_plan_or_404, plan_view_context
 from app.schemas import DISTANCE_NAMES, PlanRequest, get_mileage_warning
 from app.services.adaptation_service import AdaptationService
 from app.services.gap_analysis_service import GapAnalysisService

@@ -12,7 +12,7 @@ from sqlalchemy.orm import Session
 
 from app.dependencies import get_db, get_optional_user, get_plan_service, verify_plan_ownership
 from app.models import TrainingPlan
-from app.core.nutrition_engine import NutritionEngine
+from app.core.nutrition.nutrition_engine import NutritionEngine
 from app.services.plan_service import PlanService
 from app.template_helpers import create_templates
 
@@ -57,7 +57,7 @@ async def randomize_meals(
         db.commit()
         logger.info(f"Successfully updated nutrition plan for {plan_id}")
 
-        from app.routers.plan_helpers import plan_view_context
+        from app.services.plan_helpers import plan_view_context
 
         plan_data = json.loads(training_plan.plan_data) if training_plan.plan_data else []
         plan_data = plan_service.enrich_plan_data_with_ids(plan_data, training_plan.id, db)

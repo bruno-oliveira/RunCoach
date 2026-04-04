@@ -10,8 +10,8 @@ from fastapi.responses import FileResponse, HTMLResponse, RedirectResponse
 from sqlalchemy.orm import Session
 
 from app.config import settings
-from app.core.triathlon_pdf_generator import TriathlonPDFGenerator
-from app.core.triathlon_plan_generator import TriathlonPlanGenerator
+from app.core.export.triathlon_pdf_generator import TriathlonPDFGenerator
+from app.core.generators.triathlon_plan_generator import TriathlonPlanGenerator
 from app.dependencies import get_db, get_optional_user
 from app.models.triathlon_plan import TriathlonPlan
 from app.models.user import User

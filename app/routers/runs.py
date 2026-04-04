@@ -8,8 +8,8 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
-from app.core.quality_scorer import calculate_quality_score
-from app.core.vdot_calculator import VDOTCalculator
+from app.core.training.quality_scorer import calculate_quality_score
+from app.core.training.vdot_calculator import VDOTCalculator
 from app.dependencies import get_db, get_current_user
 from app.models import RunLog, User, DailyWorkout
 from app.schemas import (

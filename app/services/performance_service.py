@@ -10,8 +10,8 @@ from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from app.models import RunLog, TrainingPlan, User, WeeklyPlan, DailyWorkout
-from app.core.performance_plan_generator import PerformancePlanGenerator
-from app.core.nutrition_engine import NutritionEngine
+from app.core.generators.performance_plan_generator import PerformancePlanGenerator
+from app.core.nutrition.nutrition_engine import NutritionEngine
 
 logger = logging.getLogger(__name__)
 

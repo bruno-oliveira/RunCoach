@@ -8,7 +8,7 @@ import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy.orm import Session
 
-from app.auth_service import AuthService
+from app.services.auth_service import AuthService
 from app.dependencies import get_db
 from app.main import app
 from app.models.user import User

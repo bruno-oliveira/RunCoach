@@ -6,8 +6,8 @@ Build and Peak phases to make training plans feel coached, not generated.
 
 from typing import Dict, List, Optional
 
-from app.core.hr_zone_calculator import WORKOUT_ZONE_MAP
-from app.core.vdot_calculator import VDOTCalculator
+from app.core.training.hr_zone_calculator import WORKOUT_ZONE_MAP
+from app.core.training.vdot_calculator import VDOTCalculator
 
 
 # ---------------------------------------------------------------------------

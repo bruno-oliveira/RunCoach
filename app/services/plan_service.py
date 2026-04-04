@@ -7,11 +7,11 @@ from typing import Any, Optional
 
 from sqlalchemy.orm import Session
 
-from app.core.hr_zone_calculator import HRZoneCalculator
-from app.core.nutrition_engine import NutritionEngine
-from app.core.plan_generator import TrainingPlanGenerator
-from app.core.race_protocol_generator import generate_race_protocol
-from app.core.vdot_calculator import VDOTCalculator
+from app.core.training.hr_zone_calculator import HRZoneCalculator
+from app.core.nutrition.nutrition_engine import NutritionEngine
+from app.core.generators.plan_generator import TrainingPlanGenerator
+from app.core.race.race_protocol_generator import generate_race_protocol
+from app.core.training.vdot_calculator import VDOTCalculator
 from app.services.hr_zone_service import HRZoneService
 from app.models import (
     DailyWorkout,

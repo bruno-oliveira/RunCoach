@@ -9,13 +9,13 @@ from sqlalchemy import create_engine, event
 from sqlalchemy.orm import Session, sessionmaker
 from sqlalchemy.pool import NullPool
 
-from app.auth_service import AuthService
+from app.services.auth_service import AuthService
 from app.config import settings
 from app.models import TrainingPlan, User
-from app.core.nutrition_engine import NutritionEngine
-from app.core.pdf_generator import PDFGenerator
-from app.core.plan_generator import TrainingPlanGenerator
-from app.core.performance_plan_generator import PerformancePlanGenerator
+from app.core.nutrition.nutrition_engine import NutritionEngine
+from app.core.export.pdf_generator import PDFGenerator
+from app.core.generators.plan_generator import TrainingPlanGenerator
+from app.core.generators.performance_plan_generator import PerformancePlanGenerator
 from app.services.plan_service import PlanService
 from app.services.strava_service import StravaService
 
