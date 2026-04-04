@@ -166,6 +166,8 @@ def _run_migrations(eng) -> None:
         "CREATE UNIQUE INDEX IF NOT EXISTS idx_training_plan_share_token ON training_plans(share_token)",
         # JSON schema version tracking
         "ALTER TABLE training_plans ADD COLUMN plan_data_version INTEGER DEFAULT 1",
+        # Proactive adaptation alerts (Phase 3: Adaptation Alerts)
+        "ALTER TABLE training_plans ADD COLUMN adaptation_alert TEXT",
     ]
     with eng.connect() as conn:
         for stmt in stmts:
