@@ -375,7 +375,8 @@ class TrainingPlanGenerator:
         }
 
     def generate_plan(self, current_km: float, target_distance: float, weeks: int,
-                      max_runs_per_week: int = 4, vdot: Optional[float] = None) -> List[Dict[str, Any]]:
+                      max_runs_per_week: int = 4, vdot: Optional[float] = None,
+                      profile: Optional[Dict[str, Any]] = None) -> List[Dict[str, Any]]:
         """
         Generate a comprehensive training plan with phase structure, conservative progression,
         mandatory rest days, and integrated strength/cross-training.
@@ -386,6 +387,7 @@ class TrainingPlanGenerator:
             weeks:               Training duration in weeks
             max_runs_per_week:   Maximum runs per week (3-6)
             vdot:                Optional VDOT score for personalised pace zones
+            profile:             Optional RunnerProfile dict to tailor plan to actual fitness
         """
         if current_km == 0:
             if target_distance in [5.0, 10.0]:
@@ -396,6 +398,15 @@ class TrainingPlanGenerator:
                 "Please start with a 5K or 10K beginner plan to build your fitness first.",
                 suggestion="Try a 5K or 10K plan with 0 km/week to get started.",
             )
+
+        # When a runner profile is provided, use actual data to refine inputs
+        if profile:
+            if profile.get("current_vdot") and not vdot:
+                vdot = profile["current_vdot"]
+            # Use actual average weekly km if it's higher than self-reported
+            actual_km = profile.get("avg_weekly_km", 0)
+            if actual_km > current_km:
+                current_km = actual_km
 
         from app.core.training.vdot_calculator import VDOTCalculator
         pace_zones = VDOTCalculator.get_pace_zones(vdot) if vdot else None

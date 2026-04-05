@@ -55,6 +55,23 @@
         </div>
     </div>
 
+    <!-- Tab navigation -->
+    <nav class="analytics-tabs" id="analyticsTabs" style="display:none;">
+        <button class="analytics-tab analytics-tab--active" data-tab="dashboard">
+            <svg class="analytics-tab-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/>
+            </svg>
+            <span>Dashboard</span>
+        </button>
+        <button class="analytics-tab" data-tab="insights">
+            <svg class="analytics-tab-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/>
+            </svg>
+            <span>Insights</span>
+            <span class="insights-badge" id="insightsBadge" style="display:none;">0</span>
+        </button>
+    </nav>
+
     <!-- Loading state -->
     <div id="analyticsLoading" class="analytics-loading">
         <div class="analytics-loading-spinner"></div>
@@ -68,8 +85,8 @@
         <p>Log runs manually or connect Strava to see your analytics dashboard.</p>
     </div>
 
-    <!-- Dashboard -->
-    <div id="analyticsDashboard" style="display:none;">
+    <!-- Dashboard tab -->
+    <div id="analyticsDashboard" class="analytics-tab-panel" style="display:none;">
 
         <!-- ── Hero Stats ── -->
         <div class="hero-stats-row">
@@ -320,6 +337,51 @@
         </div>
 
     </div><!-- /analyticsDashboard -->
+
+    <!-- Insights tab -->
+    <div id="analyticsInsightsTab" class="analytics-tab-panel" style="display:none;">
+
+        <!-- Profile summary strip -->
+        <div class="profile-summary" id="profileSummary" style="display:none;">
+            <div class="profile-stat">
+                <span class="profile-stat-value" id="profileVdot">--</span>
+                <span class="profile-stat-label">VDOT</span>
+            </div>
+            <div class="profile-stat">
+                <span class="profile-stat-value" id="profileWeeklyKm">--</span>
+                <span class="profile-stat-label">km/week</span>
+            </div>
+            <div class="profile-stat">
+                <span class="profile-stat-value" id="profileRunsWeek">--</span>
+                <span class="profile-stat-label">runs/week</span>
+            </div>
+            <div class="profile-stat">
+                <span class="profile-stat-value" id="profileAcwr">--</span>
+                <span class="profile-stat-label">ACWR</span>
+            </div>
+            <div class="profile-stat">
+                <span class="profile-stat-value" id="profileEasyPct">--</span>
+                <span class="profile-stat-label">easy %</span>
+            </div>
+        </div>
+
+        <!-- Insights list -->
+        <div id="insightsList" class="insights-list"></div>
+
+        <!-- Insights empty -->
+        <div id="insightsEmpty" class="analytics-empty" style="display:none;">
+            <div class="analytics-empty-icon">&#x1F4A1;</div>
+            <h2>Not enough data yet</h2>
+            <p>Log at least 3 runs to unlock personalized training insights.</p>
+        </div>
+
+        <!-- Insights loading -->
+        <div id="insightsLoading" class="analytics-loading" style="display:none;">
+            <div class="analytics-loading-spinner"></div>
+            <p>Analyzing your training&hellip;</p>
+        </div>
+
+    </div><!-- /analyticsInsightsTab -->
 
     {% endif %}
 </div>

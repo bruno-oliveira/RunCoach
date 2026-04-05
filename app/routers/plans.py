@@ -16,6 +16,7 @@ from app.config import settings
 from app.core.nutrition.nutrition_engine import NutritionEngine
 from app.core.export.pdf_generator import PDFGenerator
 from app.core.generators.plan_generator import TrainingPlanGenerator
+from app.core.runner_profile import build_profile
 from app.dependencies import (
     get_current_user,
     get_db,
@@ -67,6 +68,7 @@ async def generate_plan(
     body_weight_kg: float = Form(70.0),
     recent_race_distance_km: Optional[float] = Form(None),
     recent_race_time: Optional[str] = Form(None),
+    use_profile: Optional[str] = Form(None),
     anonymous_user_id: Optional[str] = Cookie(None),
     db: Session = Depends(get_db),
     current_user: Optional[User] = Depends(get_optional_user),
@@ -153,8 +155,16 @@ async def generate_plan(
         user = plan_service.get_or_create_anonymous_user(
             current_user, anonymous_user_id, db
         )
+        # Build runner profile if toggle is on and user is authenticated
+        runner_profile = None
+        if use_profile == "on" and current_user:
+            rp = build_profile(current_user.id, db)
+            if rp.has_sufficient_data:
+                runner_profile = rp.to_dict()
+
         training_plan, plan_data = plan_service.create_plan(
-            plan_request, user, db, plan_generator, nutrition_engine
+            plan_request, user, db, plan_generator, nutrition_engine,
+            profile=runner_profile,
         )
         plan_data = plan_service.enrich_plan_data_with_ids(
             plan_data, training_plan.id, db

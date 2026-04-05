@@ -12,6 +12,8 @@ const AnalyticsDashboard = {
     planInfo: null,
     acwrData: null,
     prData: null,
+    insightsData: null,
+    activeTab: 'dashboard',
 
     COLORS: {
         primary:       '#1D4ED8',
@@ -51,16 +53,21 @@ const AnalyticsDashboard = {
                 return;
             }
 
+            const tabs = document.getElementById('analyticsTabs');
+            if (tabs) tabs.style.display = 'flex';
+
             dashboard.style.display = 'block';
             this.filterByPeriod(30);
             this.bindGroupingControls();
             this.bindPeriodSelector();
             this.bindPlanSelector();
             this.bindPredictionsToggle();
+            this.bindTabSwitching();
             this.loadRacePredictions();
             this.loadRaceResults();
             this.loadTrainingLoad();
             this.loadPersonalRecords();
+            this.loadInsights();
         } catch (err) {
             console.error('Analytics load error:', err);
             loading.style.display = 'none';
@@ -1805,6 +1812,107 @@ const AnalyticsDashboard = {
             console.error('Adherence heatmap load error:', err);
             card.style.display = 'none';
         }
+    },
+
+    /* ------------------------------------------------------------------ */
+    /*  Tab Switching                                                      */
+    /* ------------------------------------------------------------------ */
+    bindTabSwitching() {
+        const tabs = document.querySelectorAll('.analytics-tab');
+        tabs.forEach(tab => {
+            tab.addEventListener('click', () => {
+                const target = tab.dataset.tab;
+                if (target === this.activeTab) return;
+                this.switchTab(target);
+            });
+        });
+    },
+
+    switchTab(tabName) {
+        this.activeTab = tabName;
+        // Update tab buttons
+        document.querySelectorAll('.analytics-tab').forEach(t => {
+            t.classList.toggle('analytics-tab--active', t.dataset.tab === tabName);
+        });
+        // Show/hide panels
+        const dashboard = document.getElementById('analyticsDashboard');
+        const insights = document.getElementById('analyticsInsightsTab');
+        if (dashboard) dashboard.style.display = tabName === 'dashboard' ? 'block' : 'none';
+        if (insights) insights.style.display = tabName === 'insights' ? 'block' : 'none';
+    },
+
+    /* ------------------------------------------------------------------ */
+    /*  Insights Tab                                                       */
+    /* ------------------------------------------------------------------ */
+    async loadInsights() {
+        try {
+            const res = await fetch('/api/analytics/insights', { credentials: 'same-origin' });
+            if (!res.ok) return;
+            this.insightsData = await res.json();
+            this.renderInsights();
+        } catch (err) {
+            console.error('Insights load error:', err);
+        }
+    },
+
+    renderInsights() {
+        const data = this.insightsData;
+        const list = document.getElementById('insightsList');
+        const empty = document.getElementById('insightsEmpty');
+        const loading = document.getElementById('insightsLoading');
+        const badge = document.getElementById('insightsBadge');
+
+        if (loading) loading.style.display = 'none';
+
+        if (!data || !data.available) {
+            if (empty) empty.style.display = 'block';
+            if (list) list.style.display = 'none';
+            return;
+        }
+
+        // Update badge with count of actionable insights (priority <= 3)
+        const actionable = data.insights.filter(i => i.priority <= 3).length;
+        if (badge) {
+            badge.textContent = actionable;
+            badge.style.display = actionable > 0 ? 'inline-flex' : 'none';
+        }
+
+        // Render profile summary
+        this.renderProfileSummary(data.profile);
+
+        // Render insight cards
+        if (!list) return;
+        list.innerHTML = data.insights.map(i => `
+            <div class="insight-card insight-card--${this._esc(i.sentiment)}">
+                <div class="insight-icon">${i.icon}</div>
+                <div class="insight-content">
+                    <div class="insight-header">
+                        <span class="insight-title">${this._esc(i.title)}</span>
+                        <span class="insight-category">${this._esc(i.category)}</span>
+                    </div>
+                    <p class="insight-body">${this._esc(i.body)}</p>
+                </div>
+            </div>
+        `).join('');
+        list.style.display = 'flex';
+    },
+
+    renderProfileSummary(profile) {
+        const el = document.getElementById('profileSummary');
+        if (!el || !profile) return;
+
+        const set = (id, val) => {
+            const s = document.getElementById(id);
+            if (s) s.textContent = val;
+        };
+
+        set('profileVdot', profile.current_vdot || '--');
+        set('profileWeeklyKm', profile.avg_weekly_km || '--');
+        set('profileRunsWeek', profile.runs_per_week || '--');
+        set('profileAcwr', profile.acwr != null ? profile.acwr.toFixed(2) : '--');
+        set('profileEasyPct', profile.easy_pct ? `${Math.round(profile.easy_pct)}%` : '--');
+
+        el.style.display = 'flex';
     },
 
     showSyncIndicator() {

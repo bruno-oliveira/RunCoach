@@ -16,7 +16,9 @@ from app.models.run_log import RunLog
 from app.services.plan_helpers import get_plan_or_404
 from app.schemas import DISTANCE_NAMES
 from app.core.training.vdot_calculator import VDOTCalculator
+from app.core.runner_profile import build_profile
 from app.services.gap_analysis_service import GapAnalysisService
+from app.services.insights_service import InsightsService
 from app.services.personal_records_service import PersonalRecordsService
 from app.services.race_predictor_service import RacePredictorService
 from app.services.training_load_service import TrainingLoadService
@@ -297,3 +299,22 @@ async def get_pace_zones(
         "vdot": vdot,
         "zones": zones,
     }
+
+
+@analytics_router.get("/insights")
+async def get_insights(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Get personalized training insights synthesized from all data."""
+    return InsightsService.get_insights(current_user.id, db)
+
+
+@analytics_router.get("/profile")
+async def get_runner_profile(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Get the runner's synthesized profile for plan generation."""
+    profile = build_profile(current_user.id, db)
+    return profile.to_dict()

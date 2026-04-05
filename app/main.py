@@ -14,7 +14,7 @@ from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 
 from app.config import settings, setup_logging
-from app.dependencies import engine, get_optional_user
+from app.dependencies import engine, get_db, get_optional_user
 from app.models import Base, User
 from app.template_helpers import create_templates
 from app.routers import (
@@ -290,12 +290,27 @@ if settings.debug:
 async def home(
     request: Request,
     current_user: Optional[User] = Depends(get_optional_user),
+    db=Depends(get_db),
 ) -> HTMLResponse:
     """Render home page."""
+    has_profile = False
+    if current_user:
+        from datetime import datetime, timedelta, timezone
+        from app.models.run_log import RunLog
+        cutoff = (datetime.now(timezone.utc) - timedelta(weeks=12)).replace(tzinfo=None)
+        run_count = (
+            db.query(RunLog.id)
+            .filter(RunLog.user_id == current_user.id, RunLog.date >= cutoff)
+            .limit(3)
+            .count()
+        )
+        has_profile = run_count >= 3
+
     return templates.TemplateResponse("index.html", {
         "request": request,
         "user": current_user,
-        "google_client_id": settings.google_client_id or ""
+        "google_client_id": settings.google_client_id or "",
+        "has_profile": has_profile,
     })
 
 

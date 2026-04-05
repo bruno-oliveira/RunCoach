@@ -124,6 +124,7 @@ class PlanService:
         db: Session,
         plan_generator: TrainingPlanGenerator,
         nutrition_engine: NutritionEngine,
+        profile: Optional[dict] = None,
     ) -> tuple[TrainingPlan, list[dict]]:
         """Generate a training plan with nutrition and race protocol, persist to DB.
 
@@ -146,6 +147,7 @@ class PlanService:
             plan_request.weeks,
             plan_request.max_runs_per_week,
             vdot=plan_request.vdot,
+            profile=profile,
         )
 
         try:
