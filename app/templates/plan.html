@@ -6,6 +6,8 @@
 <link rel="stylesheet" href="{{ static_url('css/plan-core.css') }}">
 <link rel="stylesheet" href="{{ static_url('css/plan_shared.css') }}">
 <link rel="stylesheet" href="{{ static_url('css/plan-toasts.css') }}">
+<link rel="stylesheet" href="{{ static_url('css/plan-readiness.css') }}">
+<link rel="stylesheet" href="{{ static_url('css/plan-gaps.css') }}">
 {% if nutrition_plan %}
 <link rel="stylesheet" href="{{ static_url('css/plan-nutrition.css') }}">
 {% endif %}
@@ -240,6 +242,12 @@
             Nutrition
         </button>
         {% endif %}
+        {% if user %}
+        <button class="plan-tab" role="tab" aria-selected="false" aria-controls="panel-readiness" id="tab-readiness" onclick="switchPlanTab('readiness')">
+            <svg class="plan-tab-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+            Race Readiness
+        </button>
+        {% endif %}
         {% if race_protocol %}
         <button class="plan-tab" role="tab" aria-selected="false" aria-controls="panel-raceday" id="tab-raceday" onclick="switchPlanTab('raceday')">
             <svg class="plan-tab-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/></svg>
@@ -357,6 +365,31 @@
 
     {% if nutrition_plan %}
     {% include 'components/nutrition_panel.html' %}
+    {% endif %}
+
+    {% if user %}
+    <div class="plan-tab-panel" id="panel-readiness" role="tabpanel" aria-labelledby="tab-readiness">
+        <div class="readiness-section">
+            <div id="readiness-loading" class="readiness-loading">
+                <div class="readiness-spinner"></div>
+                <p>Analyzing your race readiness&hellip;</p>
+            </div>
+            <div id="readiness-content" style="display:none;"></div>
+            <div id="readiness-empty" class="readiness-empty-state" style="display:none;">
+                <div style="font-size:2rem; margin-bottom:12px;">&#x1F3C1;</div>
+                <h3>Not enough data yet</h3>
+                <p>Set a start date and log runs to see your race readiness score.</p>
+            </div>
+        </div>
+        <div class="gap-section" style="margin-top: var(--space-6);">
+            <div id="gap-loading" class="readiness-loading" style="display:none;">
+                <div class="readiness-spinner"></div>
+                <p>Analyzing training gaps&hellip;</p>
+            </div>
+            <div id="gap-content" style="display:none;"></div>
+            <div id="gap-empty" style="display:none;"></div>
+        </div>
+    </div>
     {% endif %}
 
     {% if race_protocol %}
@@ -516,6 +549,10 @@
     }
 </script>
 <script src="{{ static_url('js/plan.js') }}" defer></script>
+{% if user %}
+<script src="{{ static_url('js/readiness.js') }}" defer></script>
+<script src="{{ static_url('js/gap_analysis.js') }}" defer></script>
+{% endif %}
 {% if progress_data and progress_data.completed_count > 0 %}
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.8/dist/chart.umd.min.js" crossorigin="anonymous"></script>
 <script>

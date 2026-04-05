@@ -690,6 +690,15 @@ window.switchPlanTab = function(tabName) {
         tab.setAttribute('tabindex', '0');
     }
     if (panel) panel.classList.add('active');
+
+    // Lazy-load readiness data when tab is first opened
+    if (tabName === 'readiness') {
+        if (typeof loadReadiness === 'function') loadReadiness();
+        if (typeof loadGapAnalysis === 'function') {
+            // Small delay so readiness renders first
+            setTimeout(function() { loadGapAnalysis(); }, 100);
+        }
+    }
 };
 
 // Tab keyboard navigation (ARIA tab pattern)

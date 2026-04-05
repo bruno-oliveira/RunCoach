@@ -16,6 +16,8 @@ window.loadGapAnalysis = function () {
 
     if (!loading || !content) return;
 
+    loading.style.display = 'flex';
+
     fetch('/api/plan/' + planId + '/gaps', { headers: authHeaders(), credentials: 'same-origin' })
         .then(function (res) { return res.json(); })
         .then(function (data) {
