@@ -12,10 +12,6 @@
 {% if race_protocol %}
 <link rel="stylesheet" href="{{ static_url('css/plan-raceday.css') }}">
 {% endif %}
-{% if user and start_date %}
-<link rel="stylesheet" href="{{ static_url('css/plan-readiness.css') }}">
-<link rel="stylesheet" href="{{ static_url('css/plan-gaps.css') }}">
-{% endif %}
 {% if user and not user.strava_athlete_id %}
 <link rel="stylesheet" href="{{ static_url('css/plan-modal.css') }}">
 {% endif %}
@@ -250,16 +246,6 @@
             Race Day
         </button>
         {% endif %}
-        {% if user and start_date %}
-        <button class="plan-tab" role="tab" aria-selected="false" aria-controls="panel-readiness" id="tab-readiness" onclick="switchPlanTab('readiness'); loadReadiness();">
-            <svg class="plan-tab-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
-            Race Readiness
-        </button>
-        <button class="plan-tab" role="tab" aria-selected="false" aria-controls="panel-gaps" id="tab-gaps" onclick="switchPlanTab('gaps'); loadGapAnalysis();">
-            <svg class="plan-tab-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-            Gap Analysis
-        </button>
-        {% endif %}
     </nav>
 
     {% if user %}
@@ -377,25 +363,6 @@
     {% include 'components/raceday_panel.html' %}
     {% endif %}
 
-    {% if user and start_date %}
-    <!-- Race Readiness Tab Panel -->
-    <div class="plan-tab-panel" id="panel-readiness" role="tabpanel" aria-labelledby="tab-readiness">
-        <div class="readiness-section">
-            <div class="readiness-loading" id="readiness-loading">
-                <div class="readiness-spinner"></div>
-                <p>Analyzing your training data...</p>
-            </div>
-            <div id="readiness-content" style="display: none;"></div>
-            <div id="readiness-empty" style="display: none;">
-                <div class="readiness-empty-state">
-                    <p>Set a start date and log some runs to see your race readiness assessment.</p>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    {% include 'components/gap_panel.html' %}
-    {% endif %}
 
     <div class="download-section">
         <a href="/download-pdf/{{ plan_id }}" class="btn btn-ghost">
@@ -549,8 +516,6 @@
     }
 </script>
 <script src="{{ static_url('js/plan.js') }}" defer></script>
-<script src="{{ static_url('js/readiness.js') }}" defer></script>
-<script src="{{ static_url('js/gap_analysis.js') }}" defer></script>
 {% if progress_data and progress_data.completed_count > 0 %}
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.8/dist/chart.umd.min.js" crossorigin="anonymous"></script>
 <script>

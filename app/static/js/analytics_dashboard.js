@@ -10,6 +10,8 @@ const AnalyticsDashboard = {
     currentPeriodDays: 30,
     currentPlanId: null,
     planInfo: null,
+    acwrData: null,
+    prData: null,
 
     COLORS: {
         primary:       '#1D4ED8',
@@ -57,7 +59,8 @@ const AnalyticsDashboard = {
             this.bindPredictionsToggle();
             this.loadRacePredictions();
             this.loadRaceResults();
-            this.loadVdotProgression();
+            this.loadTrainingLoad();
+            this.loadPersonalRecords();
         } catch (err) {
             console.error('Analytics load error:', err);
             loading.style.display = 'none';
@@ -348,12 +351,13 @@ const AnalyticsDashboard = {
         this.renderSummary();
         this.renderHeatmap();
         this.renderInsights();
-        this.renderPersonalRecords();
         this.renderRecentRuns();
         this.renderCurrentCharts();
         this.renderEfficiencyChart('weekly');
         this.renderTrainingLoadChart('weekly');
-        this.renderDistanceDistChart();
+        this.renderPaceZonesChart();
+        // PRs rendered once via loadPersonalRecords(); client fallback if API hasn't loaded
+        if (!this.prData) this.renderPersonalRecordsFallback();
     },
 
     /** Re-render charts respecting current grouping dropdown values. */
@@ -361,11 +365,9 @@ const AnalyticsDashboard = {
         const g = id => { const el = document.getElementById(id); return el ? el.value : 'weekly'; };
         this.renderPaceChart(g('paceGrouping'));
         this.renderDistanceChart(g('distanceGrouping'));
-        this.renderHRChart(g('hrGrouping'));
         this.renderEfficiencyChart(g('efficiencyGrouping'));
         this.renderTrainingLoadChart(g('loadGrouping'));
-        this.renderDistanceDistChart();
-        this.renderCadenceChart(g('cadenceGrouping'));
+        this.renderPaceZonesChart();
     },
 
     /* ------------------------------------------------------------------ */
@@ -595,7 +597,26 @@ const AnalyticsDashboard = {
             }
         }
 
-        // 5. Run streak
+        // 5. ACWR status
+        if (this.acwrData && this.acwrData.current) {
+            const c = this.acwrData.current;
+            const zoneMap = {
+                low:       { icon: '🔻', title: 'Under-training', type: 'warning' },
+                optimal:   { icon: '✅', title: 'Sweet Spot',     type: 'positive' },
+                high:      { icon: '⚠️', title: 'Elevated Risk',  type: 'warning' },
+                very_high: { icon: '🔴', title: 'Injury Danger',  type: 'negative' },
+            };
+            const zone = zoneMap[c.risk] || zoneMap.optimal;
+            insights.push({
+                icon: zone.icon,
+                value: c.acwr.toFixed(2),
+                title: zone.title,
+                sub: `ACWR — acute/chronic load ratio`,
+                type: zone.type,
+            });
+        }
+
+        // 6. Run streak
         const streak = this.computeStreak();
         if (streak > 2) {
             insights.push({
@@ -638,49 +659,111 @@ const AnalyticsDashboard = {
     },
 
     /* ------------------------------------------------------------------ */
-    /*  Personal Records (all-time)                                        */
+    /*  Personal Records — API-powered                                     */
     /* ------------------------------------------------------------------ */
-    renderPersonalRecords() {
+    async loadPersonalRecords() {
+        const el = document.getElementById('recordsList');
+        const card = document.getElementById('recordsCard');
+        if (!el || !card) return;
+
+        try {
+            const res = await fetch('/api/analytics/personal-records', { credentials: 'same-origin' });
+            if (!res.ok) { this.renderPersonalRecordsFallback(); return; }
+            const data = await res.json();
+            if (!data.available) { this.renderPersonalRecordsFallback(); return; }
+
+            this.prData = data;
+            card.style.display = '';
+
+            const distIcons = { sprint: '⚡', race: '🏃', medal: '🏅', trophy: '🏆' };
+            const genIcons  = { longest_run: '📏', fastest_pace: '⚡', highest_vdot: '🧠', best_week: '📅' };
+
+            let html = '';
+
+            // Distance PRs
+            if (data.distance_records && data.distance_records.length > 0) {
+                html += '<div class="records-section"><div class="records-section-title">Race Distances</div>';
+                html += data.distance_records.map(rec => {
+                    const pr = rec.current_pr;
+                    const icon = distIcons[rec.icon] || '🏃';
+                    const dateStr = pr.date
+                        ? new Date(pr.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+                        : '';
+                    const prCount = rec.pr_count > 1 ? `<span class="pr-count">${rec.pr_count} PRs</span>` : '';
+                    const historyDots = rec.history.length > 1
+                        ? `<div class="pr-history-dots">${rec.history.map((_, i) => `<span class="pr-dot${i === rec.history.length - 1 ? ' pr-dot--current' : ''}"></span>`).join('')}</div>`
+                        : '';
+                    const improvement = pr.improvement_seconds
+                        ? `<span class="pr-improvement">-${Math.round(pr.improvement_seconds)}s</span>`
+                        : '';
+
+                    return `
+                        <div class="record-item record-item--distance">
+                            <span class="record-icon">${icon}</span>
+                            <div class="record-info">
+                                <span class="record-label">${rec.distance_name}</span>
+                                <span class="record-meta">${dateStr} ${prCount}</span>
+                                ${historyDots}
+                            </div>
+                            <div class="record-result">
+                                <span class="record-value">${pr.duration_formatted}</span>
+                                <span class="record-pace">${pr.pace_formatted}/km ${improvement}</span>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+                html += '</div>';
+            }
+
+            // General records
+            if (data.general && data.general.length > 0) {
+                html += '<div class="records-section"><div class="records-section-title">All-Time</div>';
+                html += data.general.map(rec => {
+                    const icon = genIcons[rec.type] || '📊';
+                    const dateStr = rec.date
+                        ? new Date(rec.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+                        : '';
+                    return `
+                        <div class="record-item">
+                            <span class="record-icon">${icon}</span>
+                            <span class="record-label">${rec.label}</span>
+                            <div class="record-result">
+                                <span class="record-value">${rec.formatted}<span class="record-unit">${rec.unit}</span></span>
+                                ${dateStr ? `<span class="record-date">${dateStr}</span>` : ''}
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+                html += '</div>';
+            }
+
+            el.innerHTML = html;
+        } catch (err) {
+            console.error('Failed to load personal records:', err);
+            this.renderPersonalRecordsFallback();
+        }
+    },
+
+    /** Client-side fallback when API is unavailable. */
+    renderPersonalRecordsFallback() {
         const el = document.getElementById('recordsList');
         const card = document.getElementById('recordsCard');
         if (!el) return;
 
         const all = this.allRuns;
-        if (all.length === 0) {
-            if (card) card.style.display = 'none';
-            return;
-        }
+        if (all.length === 0) { if (card) card.style.display = 'none'; return; }
         if (card) card.style.display = '';
 
         const longestRun = all.reduce((best, r) =>
             (r.distance_km || 0) > (best.distance_km || 0) ? r : best, all[0]);
-
         const fastestRun = all
             .filter(r => r.avg_pace_min_km > 0 && r.distance_km >= 3)
             .reduce((best, r) => (!best || r.avg_pace_min_km < best.avg_pace_min_km) ? r : best, null);
 
-        // Best week (by km)
-        const weekBuckets = {};
-        for (const r of all) {
-            if (!r.date) continue;
-            const d = new Date(r.date);
-            const mon = this.startOfWeek(d);
-            const key = `${mon.getFullYear()}-${String(mon.getMonth()+1).padStart(2,'0')}-${String(mon.getDate()).padStart(2,'0')}`;
-            weekBuckets[key] = (weekBuckets[key] || 0) + (r.distance_km || 0);
-        }
-        const bestWeekKm = Object.values(weekBuckets).reduce((m, v) => Math.max(m, v), 0);
-
-        const elevRuns = all.filter(r => r.elevation_gain_m > 0);
-        const mostElev = elevRuns.length
-            ? elevRuns.reduce((best, r) => r.elevation_gain_m > best.elevation_gain_m ? r : best, elevRuns[0])
-            : null;
-
         const records = [
-            { icon: '📏', label: 'Longest Run',   value: longestRun ? longestRun.distance_km.toFixed(1) : null, unit: 'km' },
-            { icon: '⚡', label: 'Fastest Pace',  value: fastestRun ? this.formatPace(fastestRun.avg_pace_min_km) : null, unit: 'min/km' },
-            { icon: '📅', label: 'Best Week',     value: bestWeekKm > 0 ? bestWeekKm.toFixed(1) : null, unit: 'km' },
-            mostElev ? { icon: '⛰️', label: 'Most Elevation', value: mostElev.elevation_gain_m.toFixed(0), unit: 'm' } : null,
-        ].filter(Boolean).filter(r => r.value !== null);
+            { icon: '📏', label: 'Longest Run', value: longestRun ? longestRun.distance_km.toFixed(1) : null, unit: 'km' },
+            { icon: '⚡', label: 'Fastest Pace', value: fastestRun ? this.formatPace(fastestRun.avg_pace_min_km) : null, unit: 'min/km' },
+        ].filter(r => r.value !== null);
 
         el.innerHTML = records.map(r => `
             <div class="record-item">
@@ -766,6 +849,10 @@ const AnalyticsDashboard = {
         this.showChart('efficiencyChartCard');
         const trend = this.computeTrendLine(values.map(v => v ?? null));
 
+        // Compute improvement for badge
+        const validValues = values.filter(v => v != null);
+        this._renderEfficiencyBadge(validValues);
+
         this.destroyChart('efficiencyChart');
         const ctx = document.getElementById('efficiencyChart').getContext('2d');
         const opts = this._baseChartOptions(2.2, {
@@ -774,8 +861,13 @@ const AnalyticsDashboard = {
         });
         opts.plugins.tooltip = {
             callbacks: {
-                label: c => c.dataset.label === 'Trend' ? null
-                    : `Efficiency: ${c.parsed.y != null ? c.parsed.y.toFixed(2) : '--'} (speed ÷ HR × 100)`,
+                label: c => {
+                    if (c.dataset.label === 'Trend') return null;
+                    const v = c.parsed.y;
+                    if (v == null) return '--';
+                    const rating = v >= 0.85 ? 'Excellent' : v >= 0.70 ? 'Good' : v >= 0.55 ? 'Developing' : 'Building';
+                    return `EF: ${v.toFixed(3)} — ${rating}  (speed/HR × 100)`;
+                },
             },
         };
 
@@ -809,6 +901,135 @@ const AnalyticsDashboard = {
                 ],
             },
             options: opts,
+        });
+    },
+
+    _renderEfficiencyBadge(validValues) {
+        const header = document.querySelector('#efficiencyChartCard .analytics-card-header');
+        if (!header) return;
+        const old = header.querySelector('.efficiency-trend-badge');
+        if (old) old.remove();
+
+        if (validValues.length < 3) return;
+        const first = validValues.slice(0, Math.ceil(validValues.length / 3));
+        const last  = validValues.slice(-Math.ceil(validValues.length / 3));
+        const avgFirst = first.reduce((a, b) => a + b, 0) / first.length;
+        const avgLast  = last.reduce((a, b) => a + b, 0) / last.length;
+        const pctChange = ((avgLast - avgFirst) / avgFirst * 100).toFixed(1);
+
+        const badge = document.createElement('span');
+        const improving = pctChange > 1;
+        const declining = pctChange < -1;
+        badge.className = 'efficiency-trend-badge ' + (improving ? 'trend-up' : declining ? 'trend-down' : 'trend-neutral');
+        badge.textContent = `${pctChange > 0 ? '+' : ''}${pctChange}%`;
+        badge.title = improving ? 'Aerobic fitness improving' : declining ? 'Aerobic fitness declining' : 'Aerobic fitness stable';
+
+        const select = header.querySelector('.grouping-select');
+        if (select) header.insertBefore(badge, select);
+        else header.appendChild(badge);
+    },
+
+    /* ------------------------------------------------------------------ */
+    /*  Pace Zone Distribution                                             */
+    /* ------------------------------------------------------------------ */
+    paceZoneData: null,
+
+    async renderPaceZonesChart() {
+        const card = document.getElementById('paceZonesCard');
+        if (!card) return;
+
+        // Fetch zones if not yet loaded
+        if (!this.paceZoneData) {
+            try {
+                const res = await fetch('/api/analytics/pace-zones', { credentials: 'same-origin' });
+                if (!res.ok) { card.style.display = 'none'; return; }
+                const data = await res.json();
+                if (!data.available) { card.style.display = 'none'; return; }
+                this.paceZoneData = data;
+            } catch { card.style.display = 'none'; return; }
+        }
+
+        const zones = this.paceZoneData.zones;
+        const runs = this.runs.filter(r => r.avg_pace_min_km && r.avg_pace_min_km > 0);
+        if (runs.length === 0) { card.style.display = 'none'; return; }
+
+        // Zone boundaries (faster = lower pace number)
+        // R < I < T < M < E_slow  (pace in min/km, lower = faster)
+        const boundaries = [
+            { name: 'Repetition', key: 'R', min: 0,                          max: zones.R.pace_min_km, color: '#EF4444' },
+            { name: 'Interval',   key: 'I', min: zones.R.pace_min_km,        max: zones.I.pace_min_km, color: '#F97316' },
+            { name: 'Threshold',  key: 'T', min: zones.I.pace_min_km,        max: zones.T.pace_min_km, color: '#EAB308' },
+            { name: 'Marathon',   key: 'M', min: zones.T.pace_min_km,        max: zones.M.pace_min_km, color: '#3B82F6' },
+            { name: 'Easy',       key: 'E', min: zones.M.pace_min_km,        max: 99,                  color: '#10B981' },
+        ];
+
+        // Classify runs by total distance in each zone
+        const zoneKm = boundaries.map(() => 0);
+        for (const r of runs) {
+            const pace = r.avg_pace_min_km;
+            for (let i = 0; i < boundaries.length; i++) {
+                if (pace >= boundaries[i].min && pace < boundaries[i].max) {
+                    zoneKm[i] += r.distance_km || 0;
+                    break;
+                }
+            }
+            // Catch very slow runs in Easy
+            if (pace >= boundaries[boundaries.length - 1].min) {
+                zoneKm[boundaries.length - 1] += r.distance_km || 0;
+            }
+        }
+
+        const totalKm = zoneKm.reduce((a, b) => a + b, 0);
+        if (totalKm === 0) { card.style.display = 'none'; return; }
+
+        card.style.display = '';
+
+        // Show 80/20 badge
+        const easyPct = (zoneKm[4] + zoneKm[3]) / totalKm * 100; // Easy + Marathon = low intensity
+        const badge = document.getElementById('paceZonesBadge');
+        if (badge) {
+            const ratio = Math.round(easyPct);
+            badge.textContent = `${ratio}/${100 - ratio} split`;
+            badge.title = `${ratio}% low intensity / ${100 - ratio}% high intensity`;
+        }
+
+        this.destroyChart('paceZonesChart');
+        const ctx = document.getElementById('paceZonesChart');
+        if (!ctx) return;
+
+        this.charts.paceZonesChart = new Chart(ctx, {
+            type: 'doughnut',
+            data: {
+                labels: boundaries.map(b => b.name),
+                datasets: [{
+                    data: zoneKm.map(v => parseFloat(v.toFixed(1))),
+                    backgroundColor: boundaries.map(b => b.color),
+                    borderWidth: 2,
+                    borderColor: 'var(--color-bg, #fff)',
+                }],
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: true,
+                aspectRatio: this._mobileRatio(1.8, 1.4),
+                cutout: '55%',
+                plugins: {
+                    legend: {
+                        display: true,
+                        position: 'right',
+                        labels: { boxWidth: 12, font: { size: 11 }, padding: 8 },
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: c => {
+                                const km = c.parsed;
+                                const pct = (km / totalKm * 100).toFixed(1);
+                                return ` ${c.label}: ${km.toFixed(1)} km (${pct}%)`;
+                            },
+                        },
+                    },
+                },
+            },
         });
     },
 
@@ -1029,59 +1250,26 @@ const AnalyticsDashboard = {
         });
     },
 
-    renderHRChart(grouping) {
-        if (!this.runs.some(r => r.avg_heart_rate > 0)) { this.hideChart('hrChartCard'); return; }
-        this.showChart('hrChartCard');
 
-        const data   = this.getGroupedData(grouping);
-        const labels = data.map(d => d.label);
-        const values = data.map(d => d.avgHR);
-        const trend  = this.computeTrendLine(values);
+    /* ------------------------------------------------------------------ */
+    /*  Training Load + ACWR Chart                                         */
+    /* ------------------------------------------------------------------ */
+    async loadTrainingLoad() {
+        try {
+            const res = await fetch('/api/analytics/training-load?days=90', { credentials: 'same-origin' });
+            if (!res.ok) return;
+            const data = await res.json();
+            if (!data.available) return;
 
-        this.destroyChart('hrChart');
-        const ctx = document.getElementById('hrChart').getContext('2d');
-        const opts = this._baseChartOptions(2.2, {
-            ticks: { callback: v => `${v} bpm`, font: { size: 11 }, color: this.COLORS.tick },
-            grid: { color: this.COLORS.grid },
-        });
-        opts.plugins.tooltip = {
-            callbacks: { label: c => `${c.dataset.label}: ${Math.round(c.parsed.y)} bpm` },
-        };
-
-        this.charts.hrChart = new Chart(ctx, {
-            type: 'line',
-            data: {
-                labels,
-                datasets: [
-                    {
-                        label: 'Avg HR',
-                        data: values,
-                        borderColor: '#E84393',
-                        backgroundColor: 'rgba(232,67,147,0.10)',
-                        fill: true,
-                        tension: 0.35,
-                        pointRadius: 3,
-                        pointBackgroundColor: '#E84393',
-                        pointHoverRadius: 5,
-                    },
-                    {
-                        label: 'Trend',
-                        data: trend,
-                        borderColor: 'rgba(232,67,147,0.35)',
-                        borderDash: [4, 4],
-                        pointRadius: 0,
-                        fill: false,
-                        tension: 0,
-                    },
-                ],
-            },
-            options: opts,
-        });
+            this.acwrData = data;
+            // Re-render chart with ACWR overlay
+            const g = document.getElementById('loadGrouping');
+            this.renderTrainingLoadChart(g ? g.value : 'weekly');
+        } catch (err) {
+            console.error('Failed to load training load:', err);
+        }
     },
 
-    /* ------------------------------------------------------------------ */
-    /*  Training Load Chart                                                */
-    /* ------------------------------------------------------------------ */
     renderTrainingLoadChart(grouping) {
         const data = this.getGroupedData(grouping);
         if (data.length === 0) { this.hideChart('trainingLoadChartCard'); return; }
@@ -1090,11 +1278,39 @@ const AnalyticsDashboard = {
         const labels = data.map(d => d.label);
         const loads  = data.map(d => parseFloat(d.load.toFixed(1)));
 
-        // 4-period rolling average
-        const rolling = loads.map((_, i) => {
-            const window = loads.slice(Math.max(0, i - 3), i + 1).filter(v => v != null);
-            return window.length ? parseFloat((window.reduce((a, b) => a + b, 0) / window.length).toFixed(1)) : null;
-        });
+        const datasets = [
+            {
+                label: 'Training Load',
+                data: loads,
+                backgroundColor: this.COLORS.primaryFill,
+                borderColor: this.COLORS.primary,
+                borderWidth: 1.5,
+                borderRadius: 4,
+                yAxisID: 'y',
+            },
+        ];
+
+        // Overlay ACWR line from server data
+        const acwrValues = this._groupAcwrByPeriod(grouping, labels.length);
+        const hasAcwr = acwrValues && acwrValues.some(v => v != null);
+
+        if (hasAcwr) {
+            datasets.push({
+                label: 'ACWR',
+                data: acwrValues,
+                type: 'line',
+                borderColor: this.COLORS.purple,
+                backgroundColor: this.COLORS.purpleFill,
+                borderWidth: 2.5,
+                pointRadius: 4,
+                pointBackgroundColor: acwrValues.map(v => this._acwrColor(v)),
+                pointBorderColor: acwrValues.map(v => this._acwrColor(v)),
+                fill: false,
+                tension: 0.35,
+                spanGaps: true,
+                yAxisID: 'y1',
+            });
+        }
 
         this.destroyChart('trainingLoadChart');
         const ctx = document.getElementById('trainingLoadChart').getContext('2d');
@@ -1102,146 +1318,110 @@ const AnalyticsDashboard = {
             ticks: { font: { size: 11 }, color: this.COLORS.tick },
             grid: { color: this.COLORS.grid },
         });
+
+        if (hasAcwr) {
+            opts.scales.y1 = {
+                position: 'right',
+                min: 0,
+                max: 2.5,
+                ticks: {
+                    callback: v => v.toFixed(1),
+                    font: { size: 10 },
+                    color: this.COLORS.purple,
+                    stepSize: 0.5,
+                },
+                grid: { display: false },
+            };
+            opts.plugins.legend = { display: true, position: 'top', labels: { boxWidth: 12, font: { size: 11 } } };
+        }
+
         opts.plugins.tooltip = {
             callbacks: {
-                label: c => c.dataset.label === 'Rolling Avg'
-                    ? `4-period avg: ${c.parsed.y}`
-                    : `Load: ${c.parsed.y}`,
+                label: c => {
+                    if (c.dataset.label === 'ACWR') {
+                        const v = c.parsed.y;
+                        if (v == null) return null;
+                        return `ACWR: ${v.toFixed(2)} (${this._acwrLabel(v)})`;
+                    }
+                    return `Load: ${c.parsed.y}`;
+                },
             },
         };
 
         this.charts.trainingLoadChart = new Chart(ctx, {
             type: 'bar',
-            data: {
-                labels,
-                datasets: [
-                    {
-                        label: 'Training Load',
-                        data: loads,
-                        backgroundColor: this.COLORS.primaryFill,
-                        borderColor: this.COLORS.primary,
-                        borderWidth: 1.5,
-                        borderRadius: 4,
-                    },
-                    {
-                        label: 'Rolling Avg',
-                        data: rolling,
-                        type: 'line',
-                        borderColor: this.COLORS.accent,
-                        borderWidth: 2,
-                        pointRadius: 0,
-                        fill: false,
-                        tension: 0.35,
-                        spanGaps: true,
-                    },
-                ],
-            },
+            data: { labels, datasets },
             options: opts,
         });
+
+        // Render ACWR status badge on the card header
+        this._renderAcwrBadge();
     },
 
-    /* ------------------------------------------------------------------ */
-    /*  Distance Distribution Chart                                        */
-    /* ------------------------------------------------------------------ */
-    renderDistanceDistChart() {
-        const buckets = [
-            { label: '< 5 km',   min: 0,  max: 5  },
-            { label: '5–10 km',  min: 5,  max: 10 },
-            { label: '10–15 km', min: 10, max: 15 },
-            { label: '15–20 km', min: 15, max: 20 },
-            { label: '20–25 km', min: 20, max: 25 },
-            { label: '25+ km',   min: 25, max: Infinity },
-        ];
-        const counts = buckets.map(b => this.runs.filter(r => {
-            const d = r.distance_km || 0;
-            return d >= b.min && d < b.max;
-        }).length);
+    _groupAcwrByPeriod(grouping, expectedLen) {
+        if (!this.acwrData || !this.acwrData.history) return null;
 
-        if (!counts.some(c => c > 0)) { this.hideChart('distDistChartCard'); return; }
-        this.showChart('distDistChartCard');
+        const buckets = {};
+        for (const d of this.acwrData.history) {
+            const dt = new Date(d.date);
+            let key;
+            if (grouping === 'monthly') {
+                key = `${dt.getFullYear()}-${String(dt.getMonth()+1).padStart(2,'0')}`;
+            } else {
+                const mon = this.startOfWeek(dt);
+                key = `${mon.getFullYear()}-${String(mon.getMonth()+1).padStart(2,'0')}-${String(mon.getDate()).padStart(2,'0')}`;
+            }
+            if (!buckets[key]) buckets[key] = [];
+            buckets[key].push(d.acwr);
+        }
 
-        this.destroyChart('distDistChart');
-        const ctx = document.getElementById('distDistChart').getContext('2d');
-
-        this.charts.distDistChart = new Chart(ctx, {
-            type: 'bar',
-            data: {
-                labels: buckets.map(b => b.label),
-                datasets: [{
-                    label: 'Runs',
-                    data: counts,
-                    backgroundColor: buckets.map((_, i) => [
-                        'rgba(13,148,136,0.7)',
-                        'rgba(29,78,216,0.7)',
-                        'rgba(124,58,237,0.7)',
-                        'rgba(245,158,11,0.7)',
-                        'rgba(255,98,70,0.7)',
-                        'rgba(220,38,38,0.7)',
-                    ][i]),
-                    borderWidth: 0,
-                    borderRadius: 4,
-                }],
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: true,
-                aspectRatio: this._mobileRatio(2.2),
-                indexAxis: 'y',
-                plugins: {
-                    legend: { display: false },
-                    tooltip: { callbacks: { label: c => ` ${c.parsed.x} run${c.parsed.x !== 1 ? 's' : ''}` } },
-                },
-                scales: {
-                    x: {
-                        ticks: { stepSize: 1, font: { size: 11 }, color: this.COLORS.tick },
-                        grid: { color: this.COLORS.grid },
-                    },
-                    y: {
-                        ticks: { font: { size: 11 }, color: this.COLORS.tick },
-                        grid: { display: false },
-                    },
-                },
-            },
+        const sorted = Object.keys(buckets).sort();
+        const values = sorted.map(k => {
+            const vals = buckets[k];
+            return parseFloat((vals.reduce((a, b) => a + b, 0) / vals.length).toFixed(2));
         });
+
+        // Align: take last N to match chart labels
+        if (values.length >= expectedLen) return values.slice(values.length - expectedLen);
+        const padded = Array(expectedLen - values.length).fill(null).concat(values);
+        return padded;
     },
 
-    renderCadenceChart(grouping) {
-        if (!this.runs.some(r => r.avg_cadence > 0)) { this.hideChart('cadenceChartCard'); return; }
-        this.showChart('cadenceChartCard');
-
-        const data   = this.getGroupedData(grouping);
-        const labels = data.map(d => d.label);
-        const values = data.map(d => d.avgCadence);
-
-        this.destroyChart('cadenceChart');
-        const ctx = document.getElementById('cadenceChart').getContext('2d');
-        const opts = this._baseChartOptions(2.2, {
-            ticks: { callback: v => `${v} spm`, font: { size: 11 }, color: this.COLORS.tick },
-            grid: { color: this.COLORS.grid },
-        });
-        opts.plugins.tooltip = {
-            callbacks: { label: c => `${c.parsed.y} spm` },
-        };
-
-        this.charts.cadenceChart = new Chart(ctx, {
-            type: 'line',
-            data: {
-                labels,
-                datasets: [{
-                    label: 'Avg Cadence',
-                    data: values,
-                    borderColor: this.COLORS.secondary,
-                    backgroundColor: this.COLORS.secondaryFill,
-                    fill: true,
-                    tension: 0.35,
-                    pointRadius: 3,
-                    pointBackgroundColor: this.COLORS.secondary,
-                    pointHoverRadius: 5,
-                }],
-            },
-            options: opts,
-        });
+    _acwrColor(v) {
+        if (v == null) return '#999';
+        if (v < 0.8)  return '#F59E0B';  // amber — under-training
+        if (v <= 1.3)  return '#10B981';  // green — optimal
+        if (v <= 1.5)  return '#F97316';  // orange — caution
+        return '#EF4444';                  // red — danger
     },
+
+    _acwrLabel(v) {
+        if (v == null) return '';
+        if (v < 0.8)  return 'Under-training';
+        if (v <= 1.3)  return 'Optimal';
+        if (v <= 1.5)  return 'Elevated risk';
+        return 'Injury danger';
+    },
+
+    _renderAcwrBadge() {
+        const header = document.querySelector('#trainingLoadChartCard .analytics-card-header');
+        if (!header) return;
+        // Remove old badge
+        const old = header.querySelector('.acwr-badge');
+        if (old) old.remove();
+
+        if (!this.acwrData || !this.acwrData.current) return;
+        const c = this.acwrData.current;
+        const badge = document.createElement('span');
+        badge.className = `acwr-badge acwr-badge--${c.risk}`;
+        badge.textContent = `ACWR ${c.acwr.toFixed(2)}`;
+        badge.title = this._acwrLabel(c.acwr);
+        // Insert before the grouping select
+        const select = header.querySelector('.grouping-select');
+        if (select) header.insertBefore(badge, select);
+        else header.appendChild(badge);
+    },
+
 
     /* ------------------------------------------------------------------ */
     /*  Grouping Controls                                                  */
@@ -1250,8 +1430,6 @@ const AnalyticsDashboard = {
         const mapping = {
             paceGrouping:       'renderPaceChart',
             distanceGrouping:   'renderDistanceChart',
-            hrGrouping:         'renderHRChart',
-            cadenceGrouping:    'renderCadenceChart',
             efficiencyGrouping: 'renderEfficiencyChart',
             loadGrouping:       'renderTrainingLoadChart',
         };
@@ -1338,12 +1516,10 @@ const AnalyticsDashboard = {
                 }
                 if (dashboard) dashboard.style.display = 'block';
                 this.filterByPeriod(this.currentPlanId ? 'all' : this.currentPeriodDays);
-                this.loadVdotProgression();
                 if (this.currentPlanId) {
-                    this.loadGapTrend(this.currentPlanId);
-                    this.loadAdherenceHeatmap(this.currentPlanId);
+                    this.showPlanSection(this.currentPlanId);
                 } else {
-                    this.hidePlanCharts();
+                    this.hidePlanSection();
                 }
             } catch (err) {
                 console.error('Plan switch error:', err);
@@ -1353,98 +1529,162 @@ const AnalyticsDashboard = {
         });
     },
 
-    hidePlanCharts() {
-        ['gapTrendChartCard', 'adherenceHeatmapCard'].forEach(id => {
-            const el = document.getElementById(id);
-            if (el) el.style.display = 'none';
-        });
+    showPlanSection(planId) {
+        const section = document.getElementById('planScopedSection');
+        if (section) section.style.display = '';
+        this.loadReadiness(planId);
+        this.loadGapAnalysis(planId);
+        this.loadGapTrend(planId);
+        this.loadAdherenceHeatmap(planId);
+    },
+
+    hidePlanSection() {
+        const section = document.getElementById('planScopedSection');
+        if (section) section.style.display = 'none';
     },
 
     /* ------------------------------------------------------------------ */
-    /*  VDOT Progression Chart                                             */
+    /*  Race Readiness (plan-scoped)                                       */
     /* ------------------------------------------------------------------ */
-    async loadVdotProgression() {
-        const card = document.getElementById('vdotChartCard');
-        if (!card) return;
+    async loadReadiness(planId) {
+        const loading = document.getElementById('analyticsReadinessLoading');
+        const content = document.getElementById('analyticsReadinessContent');
+        const empty   = document.getElementById('analyticsReadinessEmpty');
+        if (!content) return;
 
-        // Use per-run VDOT data from allRuns
-        const vdotRuns = this.allRuns.filter(r => r.vdot && r.vdot > 0);
-        if (vdotRuns.length < 2) {
-            card.style.display = 'none';
-            return;
-        }
-
-        card.style.display = '';
-        const badge = document.getElementById('vdotCurrentBadge');
+        if (loading) loading.style.display = '';
+        if (content) content.style.display = 'none';
+        if (empty) empty.style.display = 'none';
 
         try {
-            const res = await fetch('/api/analytics/vdot-history?weeks=52', { credentials: 'same-origin' });
-            if (!res.ok) return;
+            const res = await fetch('/api/plan/' + planId + '/readiness', { credentials: 'same-origin' });
+            if (!res.ok) throw new Error('readiness fetch failed');
             const data = await res.json();
-            if (badge && data.current_vdot) {
-                const trendIcon = data.vdot_trend === 'improving' ? ' ↑' : data.vdot_trend === 'declining' ? ' ↓' : '';
-                badge.textContent = 'VDOT ' + data.current_vdot + trendIcon;
+
+            if (loading) loading.style.display = 'none';
+            if (!data.available) {
+                if (empty) { empty.style.display = ''; empty.querySelector('p').textContent = data.reason || 'Not enough data yet.'; }
+                return;
             }
-        } catch (e) { /* ignore - badge is optional */ }
-
-        const labels = vdotRuns.map(r => {
-            const d = new Date(r.date);
-            return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-        });
-        const values = vdotRuns.map(r => r.vdot);
-
-        // Compute trend line (linear regression)
-        const n = values.length;
-        const xMean = (n - 1) / 2;
-        const yMean = values.reduce((a, b) => a + b, 0) / n;
-        let num = 0, den = 0;
-        for (let i = 0; i < n; i++) {
-            num += (i - xMean) * (values[i] - yMean);
-            den += (i - xMean) * (i - xMean);
+            content.style.display = '';
+            content.innerHTML = this._renderReadiness(data);
+        } catch (err) {
+            console.error('Readiness load error:', err);
+            if (loading) loading.style.display = 'none';
+            if (empty) { empty.style.display = ''; }
         }
-        const slope = den !== 0 ? num / den : 0;
-        const intercept = yMean - slope * xMean;
-        const trendLine = values.map((_, i) => Math.round((slope * i + intercept) * 10) / 10);
-
-        if (this.charts.vdot) this.charts.vdot.destroy();
-        const ctx = document.getElementById('vdotChart');
-        if (!ctx) return;
-
-        this.charts.vdot = new Chart(ctx, {
-            type: 'line',
-            data: {
-                labels: labels,
-                datasets: [
-                    {
-                        label: 'VDOT',
-                        data: values,
-                        borderColor: this.COLORS.primary,
-                        backgroundColor: this.COLORS.primaryFill,
-                        fill: true,
-                        tension: 0.3,
-                        pointRadius: 3,
-                    },
-                    {
-                        label: 'Trend',
-                        data: trendLine,
-                        borderColor: this.COLORS.trend,
-                        borderDash: [6, 4],
-                        pointRadius: 0,
-                        fill: false,
-                    },
-                ],
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: { legend: { display: true, position: 'top' } },
-                scales: {
-                    y: { beginAtZero: false, grid: { color: this.COLORS.grid } },
-                    x: { grid: { display: false }, ticks: { maxTicksLimit: 10 } },
-                },
-            },
-        });
     },
+
+    _renderReadiness(d) {
+        const scoreClass = d.overall_score >= 75 ? 'score-strong' : d.overall_score >= 50 ? 'score-good' : 'score-developing';
+
+        let html = '<div class="readiness-hero">';
+        html += `<div class="readiness-score-ring ${scoreClass}">`;
+        html += `<span class="readiness-score-number">${d.overall_score}</span>`;
+        html += '<span class="readiness-score-label">/ 100</span></div>';
+        html += '<div class="readiness-hero-meta">';
+        html += `<span class="readiness-hero-label">${this._esc(d.overall_label)}</span>`;
+        html += `<span class="readiness-hero-sub">${this._esc(d.distance_label)} — ${d.weeks_remaining}w to race day</span>`;
+        if (d.days_to_race != null) html += `<span class="readiness-hero-date">${this._esc(d.race_date_display)} (${d.days_to_race}d)</span>`;
+        html += '</div></div>';
+
+        // Component bars
+        html += '<div class="readiness-components">';
+        for (const [key, comp] of Object.entries(d.components)) {
+            const label = key === 'fitness' ? 'Fitness (VDOT)' : key.charAt(0).toUpperCase() + key.slice(1).replace(/_/g, ' ');
+            html += `<div class="readiness-bar-row">`;
+            html += `<span class="readiness-bar-label">${label}</span>`;
+            html += `<div class="readiness-bar-track"><div class="readiness-bar-fill readiness-bar--${comp.label.toLowerCase().replace(/\s+/g, '-')}" style="width:${comp.score}%"></div></div>`;
+            html += `<span class="readiness-bar-score">${comp.score}</span>`;
+            html += '</div>';
+            if (comp.detail) html += `<div class="readiness-bar-detail">${this._esc(comp.detail)}</div>`;
+        }
+        html += '</div>';
+
+        // Scenarios
+        if (d.scenarios && d.scenarios.length > 0) {
+            html += '<div class="readiness-scenarios"><h4>Race Scenarios</h4><div class="readiness-scenarios-grid">';
+            for (const s of d.scenarios) {
+                html += `<div class="readiness-scenario">`;
+                html += `<span class="readiness-scenario-name">${this._esc(s.name)}</span>`;
+                html += `<span class="readiness-scenario-time">${this._esc(s.time)}</span>`;
+                html += `<span class="readiness-scenario-pace">${this._esc(s.pace)}</span>`;
+                html += `<span class="readiness-scenario-prob">${s.probability}%</span>`;
+                html += '</div>';
+            }
+            html += '</div></div>';
+        }
+
+        return html;
+    },
+
+    /* ------------------------------------------------------------------ */
+    /*  Gap Analysis (plan-scoped)                                         */
+    /* ------------------------------------------------------------------ */
+    async loadGapAnalysis(planId) {
+        const loading = document.getElementById('analyticsGapLoading');
+        const content = document.getElementById('analyticsGapContent');
+        const empty   = document.getElementById('analyticsGapEmpty');
+        if (!content) return;
+
+        if (loading) loading.style.display = '';
+        if (content) content.style.display = 'none';
+        if (empty) empty.style.display = 'none';
+
+        try {
+            const res = await fetch('/api/plan/' + planId + '/gaps', { credentials: 'same-origin' });
+            if (!res.ok) throw new Error('gap fetch failed');
+            const data = await res.json();
+
+            if (loading) loading.style.display = 'none';
+            if (!data.available) {
+                if (empty) { empty.style.display = ''; const p = empty.querySelector('p'); if (p) p.textContent = data.reason || 'Not enough data yet.'; }
+                return;
+            }
+            content.style.display = '';
+            content.innerHTML = this._renderGapAnalysis(data);
+        } catch (err) {
+            console.error('Gap analysis load error:', err);
+            if (loading) loading.style.display = 'none';
+            if (empty) empty.style.display = '';
+        }
+    },
+
+    _renderGapAnalysis(data) {
+        const verdictLabels = { on_track: 'On Track', close: 'Close', behind: 'Behind', far_behind: 'Far Behind', needs_attention: 'Needs Attention', insufficient_data: 'No Data' };
+        const verdictColors = { on_track: '#16a34a', close: '#ca8a04', behind: '#ea580c', far_behind: '#dc2626', needs_attention: '#ea580c', insufficient_data: '#999' };
+
+        let html = '';
+        if (data.overall_verdict) {
+            const vl = verdictLabels[data.overall_verdict] || data.overall_verdict;
+            html += `<div class="gap-overall"><span class="gap-overall-label">Overall: </span><span class="gap-verdict gap-verdict--${data.overall_verdict}">${this._esc(vl)}</span></div>`;
+        }
+
+        if (data.dimensions) {
+            html += '<div class="gap-dimensions">';
+            for (const dim of data.dimensions) {
+                const vl = verdictLabels[dim.verdict] || dim.verdict;
+                const color = verdictColors[dim.verdict] || '#999';
+                const pct = Math.min(100, Math.max(0, dim.pct || 0));
+                html += '<div class="gap-dimension-row">';
+                html += `<div class="gap-dim-header"><span class="gap-dim-label">${this._esc(dim.label)}</span><span class="gap-verdict gap-verdict--${dim.verdict}">${this._esc(vl)}</span></div>`;
+                html += `<div class="gap-bar-track"><div class="gap-bar-fill" style="width:${pct}%;background:${color}"></div></div>`;
+                if (dim.detail) html += `<div class="gap-dim-detail">${this._esc(dim.detail)}</div>`;
+                html += '</div>';
+            }
+            html += '</div>';
+        }
+
+        return html;
+    },
+
+    _esc(str) {
+        if (str == null) return '';
+        const div = document.createElement('div');
+        div.appendChild(document.createTextNode(String(str)));
+        return div.innerHTML;
+    },
+
 
     /* ------------------------------------------------------------------ */
     /*  Gap Trend Chart (plan-scoped)                                      */

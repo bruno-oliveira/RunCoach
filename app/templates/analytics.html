@@ -4,6 +4,8 @@
 
 {% block styles %}
 <link rel="stylesheet" href="{{ static_url('css/analytics.css') }}">
+<link rel="stylesheet" href="{{ static_url('css/plan-readiness.css') }}">
+<link rel="stylesheet" href="{{ static_url('css/plan-gaps.css') }}">
 {% endblock %}
 
 {% block content %}
@@ -192,10 +194,12 @@
             <!-- Personal Records -->
             <div class="analytics-card records-card" id="recordsCard">
                 <div class="analytics-card-header">
-                    <h3 class="analytics-card-title">Personal Bests</h3>
+                    <h3 class="analytics-card-title">Personal Records</h3>
                     <span class="records-badge">All time</span>
                 </div>
-                <div id="recordsList" class="records-list"></div>
+                <div id="recordsList" class="records-list">
+                    <div class="records-loading">Loading records&hellip;</div>
+                </div>
             </div>
 
             <!-- Pace Trends -->
@@ -209,20 +213,6 @@
                 </div>
                 <div class="chart-canvas-wrap">
                     <canvas id="paceChart"></canvas>
-                </div>
-            </div>
-
-            <!-- Heart Rate -->
-            <div class="analytics-card" id="hrChartCard">
-                <div class="analytics-card-header">
-                    <h3 class="analytics-card-title">Heart Rate</h3>
-                    <select class="grouping-select" id="hrGrouping">
-                        <option value="weekly">Weekly</option>
-                        <option value="monthly">Monthly</option>
-                    </select>
-                </div>
-                <div class="chart-canvas-wrap">
-                    <canvas id="hrChart"></canvas>
                 </div>
             </div>
 
@@ -254,58 +244,69 @@
                 </div>
             </div>
 
-            <!-- Cadence (hidden if no data) -->
-            <div class="analytics-card" id="cadenceChartCard">
+            <!-- Pace Zone Distribution -->
+            <div class="analytics-card" id="paceZonesCard">
                 <div class="analytics-card-header">
-                    <h3 class="analytics-card-title">Cadence</h3>
-                    <select class="grouping-select" id="cadenceGrouping">
-                        <option value="weekly">Weekly</option>
-                        <option value="monthly">Monthly</option>
-                    </select>
+                    <h3 class="analytics-card-title">Pace Zones</h3>
+                    <span class="records-badge" id="paceZonesBadge"></span>
                 </div>
                 <div class="chart-canvas-wrap">
-                    <canvas id="cadenceChart"></canvas>
+                    <canvas id="paceZonesChart"></canvas>
                 </div>
             </div>
 
-            <!-- Distance Distribution -->
-            <div class="analytics-card" id="distDistChartCard">
-                <div class="analytics-card-header">
-                    <h3 class="analytics-card-title">Run Length Distribution</h3>
-                </div>
-                <div class="chart-canvas-wrap">
-                    <canvas id="distDistChart"></canvas>
-                </div>
-            </div>
+            <!-- ── Plan-scoped section (visible when a plan is selected) ── -->
+            <div id="planScopedSection" style="display:none;">
 
-            <!-- VDOT Progression (always visible if data exists) -->
-            <div class="analytics-card chart-wide" id="vdotChartCard" style="display:none;">
-                <div class="analytics-card-header">
-                    <h3 class="analytics-card-title">VDOT Progression</h3>
-                    <span class="vdot-current-badge" id="vdotCurrentBadge"></span>
+                <!-- Race Readiness -->
+                <div class="analytics-card chart-wide" id="readinessCard">
+                    <div class="analytics-card-header">
+                        <h3 class="analytics-card-title">Race Readiness</h3>
+                    </div>
+                    <div class="readiness-loading" id="analyticsReadinessLoading">
+                        <div class="analytics-loading-spinner"></div>
+                        <p>Analyzing readiness&hellip;</p>
+                    </div>
+                    <div id="analyticsReadinessContent" style="display:none;"></div>
+                    <div id="analyticsReadinessEmpty" style="display:none;">
+                        <p class="analytics-empty-text">Set a start date and log some runs to see readiness.</p>
+                    </div>
                 </div>
-                <div class="chart-canvas-wrap">
-                    <canvas id="vdotChart"></canvas>
-                </div>
-            </div>
 
-            <!-- Gap Trend (plan-scoped only) -->
-            <div class="analytics-card chart-wide" id="gapTrendChartCard" style="display:none;">
-                <div class="analytics-card-header">
-                    <h3 class="analytics-card-title">Plan Gap Trend</h3>
+                <!-- Gap Analysis -->
+                <div class="analytics-card chart-wide" id="gapAnalysisCard">
+                    <div class="analytics-card-header">
+                        <h3 class="analytics-card-title">Gap Analysis</h3>
+                    </div>
+                    <div class="readiness-loading" id="analyticsGapLoading">
+                        <div class="analytics-loading-spinner"></div>
+                        <p>Analyzing gaps&hellip;</p>
+                    </div>
+                    <div id="analyticsGapContent" style="display:none;"></div>
+                    <div id="analyticsGapEmpty" style="display:none;">
+                        <p class="analytics-empty-text">Set a start date and log some runs to see gap analysis.</p>
+                    </div>
                 </div>
-                <div class="chart-canvas-wrap">
-                    <canvas id="gapTrendChart"></canvas>
-                </div>
-            </div>
 
-            <!-- Workout Adherence Heatmap (plan-scoped only) -->
-            <div class="analytics-card chart-wide" id="adherenceHeatmapCard" style="display:none;">
-                <div class="analytics-card-header">
-                    <h3 class="analytics-card-title">Workout Adherence</h3>
+                <!-- Gap Trend -->
+                <div class="analytics-card chart-wide" id="gapTrendChartCard" style="display:none;">
+                    <div class="analytics-card-header">
+                        <h3 class="analytics-card-title">Gap Trend</h3>
+                    </div>
+                    <div class="chart-canvas-wrap">
+                        <canvas id="gapTrendChart"></canvas>
+                    </div>
                 </div>
-                <div class="adherence-heatmap-wrap" id="adherenceHeatmap"></div>
-            </div>
+
+                <!-- Workout Adherence Heatmap -->
+                <div class="analytics-card chart-wide" id="adherenceHeatmapCard" style="display:none;">
+                    <div class="analytics-card-header">
+                        <h3 class="analytics-card-title">Workout Adherence</h3>
+                    </div>
+                    <div class="adherence-heatmap-wrap" id="adherenceHeatmap"></div>
+                </div>
+
+            </div><!-- /planScopedSection -->
 
         </div>
 

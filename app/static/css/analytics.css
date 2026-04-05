@@ -584,6 +584,162 @@
     margin-left: 2px;
 }
 
+/* ── PR Distance Records ── */
+.records-section {
+    margin-bottom: var(--space-3);
+}
+
+.records-section:last-child {
+    margin-bottom: 0;
+}
+
+.records-section-title {
+    font-size: 10px;
+    font-weight: var(--weight-bold);
+    text-transform: uppercase;
+    letter-spacing: var(--tracking-widest);
+    color: var(--color-text-muted);
+    padding-bottom: var(--space-2);
+    margin-bottom: var(--space-1);
+    border-bottom: 1px solid var(--color-border-subtle);
+}
+
+.record-item--distance {
+    align-items: flex-start;
+}
+
+.record-info {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+}
+
+.record-meta {
+    font-size: var(--text-xs);
+    color: var(--color-text-muted);
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+}
+
+.record-result {
+    text-align: right;
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+    flex-shrink: 0;
+}
+
+.record-pace {
+    font-size: var(--text-xs);
+    color: var(--color-text-secondary);
+}
+
+.record-date {
+    font-size: 10px;
+    color: var(--color-text-muted);
+}
+
+.records-loading {
+    font-size: var(--text-sm);
+    color: var(--color-text-muted);
+    padding: var(--space-4) 0;
+    text-align: center;
+}
+
+.pr-count {
+    font-size: 10px;
+    font-weight: var(--weight-semibold);
+    color: var(--color-primary);
+    background: var(--color-primary-subtle);
+    padding: 1px 6px;
+    border-radius: var(--radius-full);
+}
+
+.pr-improvement {
+    font-size: 10px;
+    font-weight: var(--weight-bold);
+    color: #10B981;
+}
+
+.pr-history-dots {
+    display: flex;
+    gap: 3px;
+    margin-top: 2px;
+}
+
+.pr-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--color-border);
+}
+
+.pr-dot--current {
+    background: var(--color-primary);
+}
+
+/* ── ACWR Badge ── */
+.acwr-badge {
+    font-size: 11px;
+    font-weight: var(--weight-bold);
+    padding: 3px 10px;
+    border-radius: var(--radius-full);
+    white-space: nowrap;
+}
+
+.acwr-badge--optimal {
+    color: #065F46;
+    background: #D1FAE5;
+}
+
+.acwr-badge--low {
+    color: #92400E;
+    background: #FEF3C7;
+}
+
+.acwr-badge--high {
+    color: #9A3412;
+    background: #FFEDD5;
+}
+
+.acwr-badge--very_high {
+    color: #991B1B;
+    background: #FEE2E2;
+}
+
+/* ── Efficiency Trend Badge ── */
+.efficiency-trend-badge {
+    font-size: 11px;
+    font-weight: var(--weight-bold);
+    padding: 3px 8px;
+    border-radius: var(--radius-full);
+    white-space: nowrap;
+}
+
+.efficiency-trend-badge.trend-up {
+    color: #065F46;
+    background: #D1FAE5;
+}
+
+.efficiency-trend-badge.trend-down {
+    color: #991B1B;
+    background: #FEE2E2;
+}
+
+.efficiency-trend-badge.trend-neutral {
+    color: var(--color-text-secondary);
+    background: var(--color-bg-subtle);
+}
+
+/* ── Insight negative type ── */
+.insight-card--negative {
+    border-color: #FCA5A5;
+    background: #FEF2F2;
+}
+
 /* ── Recent Runs ── */
 .recent-runs-card {
     margin-bottom: var(--space-5);
@@ -1210,4 +1366,126 @@
 .adherence-cell--future {
     background: var(--color-bg-subtle);
     border: 1px solid var(--color-border-subtle);
+}
+
+/* ============================================================================
+   Plan-scoped Analytics Section
+   ========================================================================= */
+
+#planScopedSection {
+    display: contents;
+}
+
+.analytics-empty-text {
+    font-size: var(--text-sm);
+    color: var(--color-text-muted);
+    padding: var(--space-4) 0;
+    text-align: center;
+}
+
+/* Readiness inside analytics — reuse plan-readiness.css classes */
+#analyticsReadinessContent .readiness-hero {
+    margin-bottom: var(--space-4);
+}
+
+#analyticsReadinessContent .readiness-components {
+    margin-bottom: var(--space-4);
+}
+
+#analyticsReadinessContent .readiness-scenarios-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: var(--space-3);
+}
+
+#analyticsReadinessContent .readiness-scenario {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding: var(--space-3);
+    background: var(--color-bg-subtle);
+    border-radius: var(--radius-lg);
+    text-align: center;
+}
+
+#analyticsReadinessContent .readiness-scenario-name {
+    font-weight: var(--weight-bold);
+    font-size: var(--text-sm);
+}
+
+#analyticsReadinessContent .readiness-scenario-time {
+    font-family: var(--font-display);
+    font-size: var(--text-lg);
+    font-weight: var(--weight-bold);
+}
+
+#analyticsReadinessContent .readiness-scenario-pace {
+    font-size: var(--text-xs);
+    color: var(--color-text-secondary);
+}
+
+#analyticsReadinessContent .readiness-scenario-prob {
+    font-size: 10px;
+    color: var(--color-text-muted);
+}
+
+/* Gap analysis inside analytics */
+.gap-overall {
+    font-size: var(--text-sm);
+    margin-bottom: var(--space-3);
+}
+
+.gap-verdict {
+    font-weight: var(--weight-bold);
+    padding: 2px 8px;
+    border-radius: var(--radius-full);
+    font-size: var(--text-xs);
+}
+
+.gap-verdict--on_track { color: #065F46; background: #D1FAE5; }
+.gap-verdict--close { color: #92400E; background: #FEF3C7; }
+.gap-verdict--behind { color: #9A3412; background: #FFEDD5; }
+.gap-verdict--far_behind { color: #991B1B; background: #FEE2E2; }
+.gap-verdict--needs_attention { color: #9A3412; background: #FFEDD5; }
+.gap-verdict--insufficient_data { color: var(--color-text-muted); background: var(--color-bg-subtle); }
+
+.gap-dimensions {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+}
+
+.gap-dimension-row {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-1);
+}
+
+.gap-dim-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.gap-dim-label {
+    font-size: var(--text-sm);
+    font-weight: var(--weight-medium);
+}
+
+.gap-bar-track {
+    height: 6px;
+    background: var(--color-bg-subtle);
+    border-radius: var(--radius-full);
+    overflow: hidden;
+}
+
+.gap-bar-fill {
+    height: 100%;
+    border-radius: var(--radius-full);
+    transition: width 0.3s ease;
+}
+
+.gap-dim-detail {
+    font-size: var(--text-xs);
+    color: var(--color-text-muted);
 }

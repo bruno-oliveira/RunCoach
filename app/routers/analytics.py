@@ -15,8 +15,11 @@ from app.models import DailyWorkout, TrainingPlan, User, WeeklyPlan
 from app.models.run_log import RunLog
 from app.services.plan_helpers import get_plan_or_404
 from app.schemas import DISTANCE_NAMES
+from app.core.training.vdot_calculator import VDOTCalculator
 from app.services.gap_analysis_service import GapAnalysisService
+from app.services.personal_records_service import PersonalRecordsService
 from app.services.race_predictor_service import RacePredictorService
+from app.services.training_load_service import TrainingLoadService
 from app.template_helpers import create_templates
 from app.utils import to_date as _to_date
 
@@ -254,4 +257,43 @@ async def get_workout_adherence(
         "grid": grid,
         "current_week": current_week,
         "total_weeks": total_weeks,
+    }
+
+
+@analytics_router.get("/training-load")
+async def get_training_load(
+    days: int = Query(90, ge=14, le=365),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Get ACWR (Acute:Chronic Workload Ratio) and training load history."""
+    return TrainingLoadService.get_training_load(current_user.id, db, lookback_days=days)
+
+
+@analytics_router.get("/personal-records")
+async def get_personal_records(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Get personal records across standard race distances."""
+    return PersonalRecordsService.get_personal_records(current_user.id, db)
+
+
+@analytics_router.get("/pace-zones")
+async def get_pace_zones(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Get the user's VDOT-derived pace zones for classifying runs."""
+    vdot = RacePredictorService.get_best_recent_vdot(
+        current_user.id, weeks=12, db=db
+    )
+    if not vdot:
+        return {"available": False}
+
+    zones = VDOTCalculator.get_pace_zones(vdot)
+    return {
+        "available": True,
+        "vdot": vdot,
+        "zones": zones,
     }
