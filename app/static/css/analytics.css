@@ -446,7 +446,7 @@
 
 .insights-strip::-webkit-scrollbar { display: none; }
 
-.insight-card {
+.insights-strip .insight-card {
     flex: 0 0 auto;
     min-width: 220px;
     max-width: 280px;
@@ -459,17 +459,17 @@
     gap: var(--space-1);
 }
 
-.insight-card--highlight {
+.insights-strip .insight-card--highlight {
     border-color: rgba(29, 78, 216, 0.25);
     background: var(--color-primary-ghost, rgba(29, 78, 216, 0.04));
 }
 
-.insight-card--positive {
+.insights-strip .insight-card--positive {
     border-color: var(--color-success-border);
     background: var(--color-success-subtle);
 }
 
-.insight-card--warning {
+.insights-strip .insight-card--warning {
     border-color: var(--color-warning-border);
     background: var(--color-warning-subtle);
 }
@@ -734,8 +734,8 @@
     background: var(--color-bg-subtle);
 }
 
-/* ── Insight negative type ── */
-.insight-card--negative {
+/* ── Insight negative type (strip) ── */
+.insights-strip .insight-card--negative {
     border-color: #FCA5A5;
     background: #FEF2F2;
 }

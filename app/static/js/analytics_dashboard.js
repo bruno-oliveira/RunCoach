@@ -1870,6 +1870,9 @@ const AnalyticsDashboard = {
             return;
         }
 
+        // Hide empty state, show list
+        if (empty) empty.style.display = 'none';
+
         // Update badge with count of actionable insights (priority <= 3)
         const actionable = data.insights.filter(i => i.priority <= 3).length;
         if (badge) {

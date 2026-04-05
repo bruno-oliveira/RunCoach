@@ -94,6 +94,21 @@ def _generate_insights(p: RunnerProfile) -> list:
     if p.workout_type_counts:
         insights.append(_variety_insight(p))
 
+    # -- Recovery / rest days --
+    insights.append(_recovery_insight(p))
+
+    # -- Volume progression --
+    if p.volume_trend != "stable":
+        insights.append(_volume_trend_insight(p))
+
+    # -- Average run length --
+    if p.avg_run_km > 0 and p.avg_weekly_km > 0:
+        insights.append(_run_length_insight(p))
+
+    # -- Race readiness (VDOT-based prediction context) --
+    if p.current_vdot and p.weeks_of_data >= 4:
+        insights.append(_race_readiness_insight(p))
+
     return insights
 
 
@@ -382,4 +397,138 @@ def _variety_insight(p: RunnerProfile) -> Insight:
         priority=5,
         icon="\u2705",
         sentiment="positive",
+    )
+
+
+def _recovery_insight(p: RunnerProfile) -> Insight:
+    rest = p.rest_days_per_week
+    if rest >= 3:
+        return Insight(
+            category="recovery",
+            title=f"{rest:.0f} rest days per week",
+            body="You're giving your body plenty of recovery time. "
+                 "Rest is when adaptation happens — this is smart training.",
+            priority=5,
+            icon="\U0001F6CC",
+            sentiment="positive",
+        )
+    elif rest >= 2:
+        return Insight(
+            category="recovery",
+            title=f"{rest:.0f} rest days per week",
+            body="Two rest days is a reasonable balance for most runners. "
+                 "Make sure at least one is a full rest day with no cross-training.",
+            priority=4,
+            icon="\U0001F6CC",
+            sentiment="neutral",
+        )
+    else:
+        return Insight(
+            category="recovery",
+            title="Very few rest days",
+            body=f"You're averaging only {rest:.1f} rest days per week. "
+                 "Running 6–7 days/week increases injury risk significantly. "
+                 "Consider adding at least one complete rest day.",
+            priority=1,
+            icon="\U0001F6D1",
+            sentiment="negative",
+        )
+
+
+def _volume_trend_insight(p: RunnerProfile) -> Insight:
+    if p.volume_trend == "increasing":
+        return Insight(
+            category="volume",
+            title="Volume is trending up",
+            body=f"Your weekly mileage has been increasing over the past "
+                 f"{p.weeks_of_data} weeks. Make sure you're following the 10% rule "
+                 "— don't increase total volume by more than 10% per week.",
+            priority=3,
+            icon="\U0001F4C8",
+            sentiment="neutral",
+        )
+    return Insight(
+        category="volume",
+        title="Volume is trending down",
+        body=f"Your weekly mileage has decreased over the past {p.weeks_of_data} weeks. "
+             "If this is a planned taper or recovery block, great. Otherwise, "
+             "try to stabilize your training before adding intensity.",
+        priority=3,
+        icon="\U0001F4C9",
+        sentiment="warning",
+    )
+
+
+def _run_length_insight(p: RunnerProfile) -> Insight:
+    avg = p.avg_run_km
+    if avg < 5:
+        return Insight(
+            category="volume",
+            title=f"Short average run ({avg} km)",
+            body="Most of your runs are under 5 km. While short runs have value, "
+                 "extending 1–2 runs per week to 6–8 km will build your aerobic base "
+                 "more efficiently.",
+            priority=3,
+            icon="\U0001F4CF",
+            sentiment="warning",
+        )
+    elif avg > 12:
+        return Insight(
+            category="volume",
+            title=f"Long average run ({avg} km)",
+            body="Your average run is quite long. Make sure your easy days are truly easy "
+                 "and short. Varying run lengths helps prevent overuse injuries.",
+            priority=3,
+            icon="\U0001F4CF",
+            sentiment="neutral",
+        )
+    return Insight(
+        category="volume",
+        title=f"Healthy average run length ({avg} km)",
+        body="Your typical run distance is in a good range for building "
+             "aerobic fitness without excessive fatigue.",
+        priority=5,
+        icon="\U0001F44D",
+        sentiment="positive",
+    )
+
+
+def _race_readiness_insight(p: RunnerProfile) -> Insight:
+    vdot = p.current_vdot
+    # Rough VDOT-to-level mapping
+    if vdot >= 55:
+        level = "advanced"
+        desc = "competitive"
+        distances = "sub-19 5K, sub-40 10K, sub-1:28 half marathon"
+    elif vdot >= 45:
+        level = "intermediate"
+        desc = "solid recreational"
+        distances = "~21 min 5K, ~44 min 10K, ~1:38 half marathon"
+    elif vdot >= 35:
+        level = "developing"
+        desc = "building"
+        distances = "~27 min 5K, ~56 min 10K, ~2:05 half marathon"
+    else:
+        level = "beginner"
+        desc = "early-stage"
+        distances = "focus on building a consistent base before targeting times"
+
+    body = (
+        f"Your VDOT of {vdot} puts you at a {desc} fitness level. "
+        f"Predicted range: {distances}. "
+    )
+    if p.vdot_trend == "improving":
+        body += "Your fitness is trending up — consider entering a race to test yourself."
+    elif p.vdot_trend == "declining":
+        body += "Your fitness has dipped recently — focus on consistency before racing."
+    else:
+        body += "Maintain your current training to hold this level, or add a quality session to push higher."
+
+    return Insight(
+        category="fitness",
+        title=f"Race fitness level: {level}",
+        body=body,
+        priority=4,
+        icon="\U0001F3C6",
+        sentiment="positive" if p.vdot_trend == "improving" else "neutral",
     )

@@ -43,6 +43,12 @@ class RunnerProfile:
     moderate_pct: float = 0.0
     hard_pct: float = 0.0
 
+    # Run characteristics
+    avg_run_km: float = 0.0
+    avg_pace_min_km: Optional[float] = None
+    rest_days_per_week: float = 0.0
+    volume_trend: str = "stable"  # increasing / stable / decreasing
+
     # Gaps / areas to improve
     workout_type_counts: Optional[Dict[str, int]] = None
     total_runs: int = 0
@@ -132,10 +138,28 @@ def _compute_volume(profile: RunnerProfile, runs: list) -> None:
         profile.peak_weekly_km = round(max(totals), 1)
         run_counts = list(week_run_counts.values())
         profile.runs_per_week = round(sum(run_counts) / len(run_counts), 1)
+        profile.rest_days_per_week = round(7 - sum(run_counts) / len(run_counts), 1)
+
+        # Volume trend: compare first half vs second half of weeks
+        if len(totals) >= 4:
+            mid = len(totals) // 2
+            first_avg = sum(totals[:mid]) / mid
+            second_avg = sum(totals[mid:]) / (len(totals) - mid)
+            if first_avg > 0:
+                change_pct = (second_avg - first_avg) / first_avg * 100
+                if change_pct > 10:
+                    profile.volume_trend = "increasing"
+                elif change_pct < -10:
+                    profile.volume_trend = "decreasing"
 
     distances = [r.distance_km for r in runs if r.distance_km]
     if distances:
         profile.longest_run_km = round(max(distances), 1)
+        profile.avg_run_km = round(sum(distances) / len(distances), 1)
+
+    paces = [r.avg_pace_min_km for r in runs if r.avg_pace_min_km and r.avg_pace_min_km > 0]
+    if paces:
+        profile.avg_pace_min_km = round(sum(paces) / len(paces), 2)
 
 
 def _compute_load(profile: RunnerProfile, user_id: str, db: Session) -> None:
