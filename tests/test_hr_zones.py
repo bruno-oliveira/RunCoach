@@ -57,8 +57,9 @@ class TestWorkoutZone:
     def test_recovery_maps_to_zone_1(self):
         assert HRZoneCalculator.get_workout_zone("recovery") == 1
 
-    def test_interval_maps_to_zone_4(self):
-        assert HRZoneCalculator.get_workout_zone("interval") == 4
+    def test_interval_and_hill_map_to_zone_5(self):
+        assert HRZoneCalculator.get_workout_zone("interval") == 5
+        assert HRZoneCalculator.get_workout_zone("hill") == 5
 
     def test_unknown_defaults_to_zone_2(self):
         assert HRZoneCalculator.get_workout_zone("unknown") == 2

@@ -939,6 +939,11 @@ class AdaptationService:
                 # Protect long runs: keep at baseline when reducing
                 if workout.workout_type == "long" and multiplier < 1.0:
                     new_distance = round(base_distance, 1)
+                elif workout.workout_type in ("interval", "tempo", "hill"):
+                    # Quality workouts get half the adjustment to avoid
+                    # over-inflating/deflating structured work
+                    quality_mult = 1.0 + (multiplier - 1.0) * 0.5
+                    new_distance = max(1.0, round(base_distance * quality_mult, 1))
                 else:
                     new_distance = max(1.0, round(base_distance * multiplier, 1))
                 old_distance = workout.distance_km

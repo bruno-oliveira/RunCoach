@@ -60,6 +60,7 @@ def generate_strength_session(
     workout_type: str,
     session_index: int = 0,
     experience_level: str = "beginner",
+    target_distance: float = 0.0,
 ) -> Optional[Dict[str, Any]]:
     """Generate a periodized strength session to attach to an easy run.
 
@@ -71,6 +72,7 @@ def generate_strength_session(
         session_index: 0-based counter of easy runs in this week,
                        used to cycle through the phase focus rotation
         experience_level: beginner / intermediate / advanced
+        target_distance: Race distance in km (trail gets stability work)
     """
     if workout_type != 'easy':
         return None
@@ -79,7 +81,7 @@ def generate_strength_session(
     if phase == 'taper' and session_index > 0:
         return None
 
-    rotation = get_phase_focus_rotation(phase)
+    rotation = get_phase_focus_rotation(phase, target_distance)
     focus = rotation[session_index % len(rotation)]
 
     return _build_strength_session(focus, phase, experience_level, week_number)

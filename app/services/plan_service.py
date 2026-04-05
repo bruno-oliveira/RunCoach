@@ -148,6 +148,7 @@ class PlanService:
             plan_request.max_runs_per_week,
             vdot=plan_request.vdot,
             profile=profile,
+            terrain=plan_request.terrain,
         )
 
         try:

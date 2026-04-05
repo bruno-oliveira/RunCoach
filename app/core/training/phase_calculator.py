@@ -11,38 +11,49 @@ from typing import Dict, Optional
 # Each dict maps workout types to their share of weekly distance.
 PHASE_DISTRIBUTIONS = {
     'base': {
-        '5K': {'long': 0.35, 'tempo': 0.0, 'interval': 0.0, 'hill': 0.0, 'easy': 0.65},
-        '10K': {'long': 0.40, 'tempo': 0.0, 'interval': 0.0, 'hill': 0.0, 'easy': 0.60},
-        'Half': {'long': 0.45, 'tempo': 0.0, 'interval': 0.0, 'hill': 0.0, 'easy': 0.55},
-        'Trail': {'long': 0.45, 'tempo': 0.0, 'interval': 0.0, 'hill': 0.0, 'easy': 0.55},
-        'Marathon': {'long': 0.45, 'tempo': 0.0, 'interval': 0.0, 'hill': 0.0, 'easy': 0.55},
+        # Base now includes 1 light quality session (5% allocation):
+        # 5K/10K: strides/interval; Half/Marathon: short threshold; Trail: easy hills
+        '5K':       {'long': 0.35, 'tempo': 0.0,  'interval': 0.05, 'hill': 0.0,  'easy': 0.60},
+        '10K':      {'long': 0.40, 'tempo': 0.0,  'interval': 0.05, 'hill': 0.0,  'easy': 0.55},
+        'Half':     {'long': 0.45, 'tempo': 0.05, 'interval': 0.0,  'hill': 0.0,  'easy': 0.50},
+        'Trail':    {'long': 0.45, 'tempo': 0.0,  'interval': 0.0,  'hill': 0.05, 'easy': 0.50},
+        'FlatTrail': {'long': 0.45, 'tempo': 0.05, 'interval': 0.0,  'hill': 0.0,  'easy': 0.50},
+        'Marathon': {'long': 0.45, 'tempo': 0.05, 'interval': 0.0,  'hill': 0.0,  'easy': 0.50},
     },
     'build': {
-        '5K': {'long': 0.35, 'tempo': 0.12, 'interval': 0.10, 'hill': 0.05, 'easy': 0.38},
-        '10K': {'long': 0.40, 'tempo': 0.12, 'interval': 0.10, 'hill': 0.05, 'easy': 0.33},
-        'Half': {'long': 0.45, 'tempo': 0.10, 'interval': 0.08, 'hill': 0.04, 'easy': 0.33},
-        'Trail': {'long': 0.45, 'tempo': 0.10, 'interval': 0.08, 'hill': 0.04, 'easy': 0.33},
+        '5K':       {'long': 0.35, 'tempo': 0.12, 'interval': 0.10, 'hill': 0.05, 'easy': 0.38},
+        '10K':      {'long': 0.40, 'tempo': 0.12, 'interval': 0.10, 'hill': 0.05, 'easy': 0.33},
+        'Half':     {'long': 0.45, 'tempo': 0.10, 'interval': 0.08, 'hill': 0.04, 'easy': 0.33},
+        'Trail':    {'long': 0.45, 'tempo': 0.06, 'interval': 0.06, 'hill': 0.08, 'easy': 0.35},
+        'FlatTrail': {'long': 0.45, 'tempo': 0.14, 'interval': 0.06, 'hill': 0.0,  'easy': 0.35},
         'Marathon': {'long': 0.45, 'tempo': 0.10, 'interval': 0.08, 'hill': 0.04, 'easy': 0.33},
     },
     'peak': {
-        '5K': {'long': 0.33, 'tempo': 0.12, 'interval': 0.10, 'hill': 0.05, 'easy': 0.40},
-        '10K': {'long': 0.38, 'tempo': 0.12, 'interval': 0.10, 'hill': 0.05, 'easy': 0.35},
-        'Half': {'long': 0.43, 'tempo': 0.10, 'interval': 0.08, 'hill': 0.04, 'easy': 0.35},
-        'Trail': {'long': 0.43, 'tempo': 0.10, 'interval': 0.08, 'hill': 0.04, 'easy': 0.35},
+        '5K':       {'long': 0.33, 'tempo': 0.12, 'interval': 0.10, 'hill': 0.05, 'easy': 0.40},
+        '10K':      {'long': 0.38, 'tempo': 0.12, 'interval': 0.10, 'hill': 0.05, 'easy': 0.35},
+        'Half':     {'long': 0.43, 'tempo': 0.10, 'interval': 0.08, 'hill': 0.04, 'easy': 0.35},
+        'Trail':    {'long': 0.43, 'tempo': 0.06, 'interval': 0.06, 'hill': 0.08, 'easy': 0.37},
+        'FlatTrail': {'long': 0.43, 'tempo': 0.14, 'interval': 0.06, 'hill': 0.0,  'easy': 0.37},
         'Marathon': {'long': 0.43, 'tempo': 0.10, 'interval': 0.08, 'hill': 0.04, 'easy': 0.35},
     },
     'taper': {
-        '5K': {'long': 0.30, 'tempo': 0.12, 'interval': 0.0, 'hill': 0.0, 'easy': 0.58},
-        '10K': {'long': 0.35, 'tempo': 0.12, 'interval': 0.0, 'hill': 0.0, 'easy': 0.53},
-        'Half': {'long': 0.40, 'tempo': 0.10, 'interval': 0.0, 'hill': 0.0, 'easy': 0.50},
-        'Trail': {'long': 0.40, 'tempo': 0.10, 'interval': 0.0, 'hill': 0.0, 'easy': 0.50},
-        'Marathon': {'long': 0.40, 'tempo': 0.10, 'interval': 0.0, 'hill': 0.0, 'easy': 0.50},
+        '5K':       {'long': 0.30, 'tempo': 0.12, 'interval': 0.0, 'hill': 0.0,  'easy': 0.58},
+        '10K':      {'long': 0.35, 'tempo': 0.12, 'interval': 0.0, 'hill': 0.0,  'easy': 0.53},
+        'Half':     {'long': 0.40, 'tempo': 0.10, 'interval': 0.0, 'hill': 0.0,  'easy': 0.50},
+        'Trail':    {'long': 0.40, 'tempo': 0.06, 'interval': 0.0, 'hill': 0.04, 'easy': 0.50},
+        'FlatTrail': {'long': 0.40, 'tempo': 0.10, 'interval': 0.0, 'hill': 0.0,  'easy': 0.50},
+        'Marathon': {'long': 0.40, 'tempo': 0.10, 'interval': 0.0, 'hill': 0.0,  'easy': 0.50},
     },
 }
 
 
-def get_distance_category(target_distance: float) -> str:
-    """Map target distance to a category key."""
+def get_distance_category(target_distance: float, terrain: Optional[str] = None) -> str:
+    """Map target distance to a category key.
+
+    Args:
+        target_distance: Race distance in km
+        terrain: Optional terrain access ('flat' for no-hills trail plans)
+    """
     if target_distance <= 5:
         return '5K'
     elif target_distance <= 10:
@@ -50,6 +61,8 @@ def get_distance_category(target_distance: float) -> str:
     elif target_distance <= 21.1:
         return 'Half'
     elif target_distance <= 30.0:
+        if terrain == 'flat':
+            return 'FlatTrail'
         return 'Trail'
     else:
         return 'Marathon'
@@ -141,10 +154,18 @@ def is_recovery_week(week_number: int, phase: str, phases: Optional[Dict[str, in
 
     Every 4th week in base and build phases is a recovery week,
     but only if the phase is long enough (>=4 weeks) to justify it.
-    No recovery weeks in peak or taper phases.
+    Peak phases of 4+ weeks get a recovery week in the 3rd week to
+    consolidate adaptations before taper. No recovery weeks in taper.
     """
-    if phase in ['peak', 'taper']:
+    if phase == 'taper':
         return False
+    if phase == 'peak':
+        if not phases or phases.get('peak', 0) < 4:
+            return False
+        # 3rd week of a 4+ week peak is recovery
+        peak_start = phases['base'] + phases['build']
+        week_in_peak = week_number - peak_start
+        return week_in_peak == 3
     if phases:
         phase_length = phases.get(phase, 0)
         if phase_length < 4:

@@ -145,6 +145,16 @@
                                 </div>
                             </div>
 
+                            <div class="form-group" id="terrain-group" style="display: none;">
+                                <label for="terrain" class="form-label">Terrain access</label>
+                                <div class="select-wrap">
+                                    <select id="terrain" name="terrain" class="form-select">
+                                        <option value="">Hilly (default)</option>
+                                        <option value="flat">Flat / No hills</option>
+                                    </select>
+                                </div>
+                            </div>
+
                             <div class="form-group">
                                 <label for="weeks" class="form-label">Duration</label>
                                 <div class="input-with-unit">
@@ -266,6 +276,15 @@ function toggleRaceFields() {
 }
 
 document.addEventListener('DOMContentLoaded', function() {
+    // Show/hide terrain selector for trail distance
+    const distSelect = document.getElementById('target_distance');
+    const terrainGroup = document.getElementById('terrain-group');
+    function updateTerrainVisibility() {
+        terrainGroup.style.display = distSelect.value === '30' ? '' : 'none';
+    }
+    distSelect.addEventListener('change', updateTerrainVisibility);
+    updateTerrainVisibility();
+
     const form = document.querySelector('.plan-form');
     const submitBtn = form?.querySelector('.form-submit');
 

@@ -26,6 +26,26 @@ from app.core.training import workout_builders
 from app.core.training import long_run_calculator
 
 
+def _get_quality_caps(target_distance: float, phase: str) -> Dict[str, float]:
+    """Distance-scaled physiological caps for quality workout distances (km).
+
+    Shorter races need smaller quality volumes; trail prioritises hill work.
+    Base phase caps are reduced 20% to keep early quality conservative.
+    """
+    caps_by_distance = {
+        5.0:  {'tempo': 6.0,  'interval': 5.0,  'hill': 5.0},
+        10.0: {'tempo': 10.0, 'interval': 8.0,  'hill': 6.0},
+        21.1: {'tempo': 14.0, 'interval': 10.0, 'hill': 8.0},
+        30.0: {'tempo': 12.0, 'interval': 8.0,  'hill': 12.0},  # trail: hill is primary
+        42.2: {'tempo': 18.0, 'interval': 12.0, 'hill': 10.0},
+    }
+    caps = caps_by_distance.get(target_distance, {'tempo': 12.0, 'interval': 10.0, 'hill': 8.0})
+
+    if phase == 'base':
+        return {k: round(v * 0.80, 1) for k, v in caps.items()}
+    return caps
+
+
 class TrainingPlanGenerator:
     def __init__(self):
         self.workout_types = {
@@ -67,10 +87,12 @@ class TrainingPlanGenerator:
     def _get_workout_distribution(self, total_km: float, max_runs: int, phase: str = 'build',
                                   is_recovery_week: bool = False, week_number: int = 1,
                                   phases: Dict[str, int] = None,
-                                  target_distance: float = 10.0) -> Dict[str, int]:
+                                  target_distance: float = 10.0,
+                                  terrain: Optional[str] = None) -> Dict[str, int]:
         return workout_dist_mod.get_workout_distribution(total_km, max_runs, phase,
                                                          is_recovery_week, week_number,
-                                                         phases, target_distance)
+                                                         phases, target_distance,
+                                                         terrain=terrain)
 
     def _get_workout_distribution_simple(self, total_km: float, max_runs: int) -> Dict[str, int]:
         return workout_dist_mod.get_workout_distribution_simple(total_km, max_runs)
@@ -93,9 +115,11 @@ class TrainingPlanGenerator:
     def _calculate_long_run_distance(self, total_km: float, target_distance: float,
                                      weeks: int = 12, week_number: int = 1,
                                      phase: str = 'build',
-                                     is_recovery_week: bool = False) -> float:
-        return long_run_calculator.calculate_long_run_distance(total_km, target_distance, weeks,
-                                                               week_number, phase, is_recovery_week)
+                                     is_recovery_week: bool = False,
+                                     experience_level: str = 'intermediate') -> float:
+        return long_run_calculator.calculate_long_run_distance(
+            total_km, target_distance, weeks, week_number, phase,
+            is_recovery_week, experience_level)
 
     def _get_phase_distribution(self, phase: str, target_distance: float = 10.0) -> Dict[str, float]:
         return long_run_calculator.get_phase_distribution(phase, target_distance)
@@ -116,9 +140,11 @@ class TrainingPlanGenerator:
 
     def _generate_strength_session(self, day: int, week_number: int, phase: str,
                                    workout_type: str, session_index: int = 0,
-                                   experience_level: str = "beginner") -> Optional[Dict[str, Any]]:
+                                   experience_level: str = "beginner",
+                                   target_distance: float = 0.0) -> Optional[Dict[str, Any]]:
         return workout_builders.generate_strength_session(day, week_number, phase, workout_type,
-                                                          session_index, experience_level)
+                                                          session_index, experience_level,
+                                                          target_distance)
 
     def _generate_long_run(self, day: int, distance: float, total_km: float,
                            pace_zones: Optional[Dict] = None) -> Dict[str, Any]:
@@ -151,10 +177,12 @@ class TrainingPlanGenerator:
                                  vdot: Optional[float] = None,
                                  pace_zones: Optional[Dict] = None,
                                  experience_level: str = "beginner",
-                                 week_in_phase: int = 0) -> List[Dict[str, Any]]:
+                                 week_in_phase: int = 0,
+                                 terrain: Optional[str] = None) -> List[Dict[str, Any]]:
         """Generate daily workouts with integrated strength/cross-training and rest day rules."""
         long_run_distance = self._calculate_long_run_distance(
-            total_km, target_distance, weeks, week_number, phase, is_recovery_week
+            total_km, target_distance, weeks, week_number, phase, is_recovery_week,
+            experience_level
         )
         remaining_km = total_km - long_run_distance
 
@@ -164,9 +192,9 @@ class TrainingPlanGenerator:
 
         workout_types = self._schedule_workout_types(distribution.copy(), phase, week_number, is_recovery_week)
 
-        # Cap quality workouts: 85% of long run AND absolute physiological caps
+        # Cap quality workouts: 85% of long run AND distance-scaled physiological caps
         max_quality_pct = long_run_distance * 0.85
-        quality_caps = {'tempo': 12.0, 'interval': 10.0, 'hill': 8.0}
+        quality_caps = _get_quality_caps(target_distance, phase)
         for key in quality_distances:
             cap = min(max_quality_pct, quality_caps.get(key, max_quality_pct))
             if quality_distances[key] > cap:
@@ -244,7 +272,8 @@ class TrainingPlanGenerator:
             # Overlay key workout description for quality sessions in build/peak
             if workout_type in ('interval', 'tempo', 'hill') and phase in ('build', 'peak'):
                 key_wk = KeyWorkoutLibrary.get_for_phase(
-                    target_distance, phase, week_in_phase, workout_type
+                    target_distance, phase, week_in_phase, workout_type,
+                    terrain=terrain,
                 )
                 if key_wk:
                     if pace_zones:
@@ -260,6 +289,7 @@ class TrainingPlanGenerator:
                     day_number, week_number, phase, workout_type,
                     session_index=strength_session_counter,
                     experience_level=experience_level,
+                    target_distance=target_distance,
                 )
                 if strength_session:
                     workout['strength_session'] = strength_session
@@ -321,7 +351,8 @@ class TrainingPlanGenerator:
                               max_runs_per_week: int, weeks: int,
                               vdot: Optional[float] = None,
                               pace_zones: Optional[Dict] = None,
-                              experience_level: str = "beginner") -> Dict[str, Any]:
+                              experience_level: str = "beginner",
+                              terrain: Optional[str] = None) -> Dict[str, Any]:
         """Generate a single week's training plan."""
         phases = self._calculate_phases(weeks, target_distance)
         phase = self._get_phase(week_number, phases)
@@ -339,7 +370,8 @@ class TrainingPlanGenerator:
 
         distribution = self._get_workout_distribution(
             total_km, max_runs_per_week, phase,
-            is_recovery, week_number, phases, target_distance
+            is_recovery, week_number, phases, target_distance,
+            terrain=terrain,
         )
 
         workouts = self._generate_daily_workouts(
@@ -347,6 +379,7 @@ class TrainingPlanGenerator:
             vdot=vdot, pace_zones=pace_zones,
             experience_level=experience_level,
             week_in_phase=week_in_phase,
+            terrain=terrain,
         )
 
         actual_total_km = round(sum(w.get('distance', 0) for w in workouts), 1)
@@ -376,7 +409,8 @@ class TrainingPlanGenerator:
 
     def generate_plan(self, current_km: float, target_distance: float, weeks: int,
                       max_runs_per_week: int = 4, vdot: Optional[float] = None,
-                      profile: Optional[Dict[str, Any]] = None) -> List[Dict[str, Any]]:
+                      profile: Optional[Dict[str, Any]] = None,
+                      terrain: Optional[str] = None) -> List[Dict[str, Any]]:
         """
         Generate a comprehensive training plan with phase structure, conservative progression,
         mandatory rest days, and integrated strength/cross-training.
@@ -388,6 +422,7 @@ class TrainingPlanGenerator:
             max_runs_per_week:   Maximum runs per week (3-6)
             vdot:                Optional VDOT score for personalised pace zones
             profile:             Optional RunnerProfile dict to tailor plan to actual fitness
+            terrain:             Terrain access: 'flat' for no-hill trail plans (trail only)
         """
         if current_km == 0:
             if target_distance in [5.0, 10.0]:
@@ -424,6 +459,7 @@ class TrainingPlanGenerator:
                 week, week_km, target_distance, max_runs_per_week, weeks,
                 vdot=vdot, pace_zones=pace_zones,
                 experience_level=experience_level,
+                terrain=terrain,
             )
             training_plan.append(weekly_plan)
 

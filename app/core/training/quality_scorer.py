@@ -57,27 +57,34 @@ def calculate_quality_score(
     lo, hi = effort_range
     mid = _midpoint(lo, hi)
 
-    # ── Effort component (50 pts) ─────────────────────────────────────
+    # Hills use 50/50 weighting (pace unreliable on hills); others use 40/60
+    is_hill = wtype == "hill"
+    effort_max = 50.0 if is_hill else 40.0
+    pace_max = 50.0 if is_hill else 60.0
+    neutral_effort = effort_max / 2.0
+    neutral_pace = pace_max / 2.0
+
+    # ── Effort component ──────────────────────────────────────────────
     if actual_effort is None:
-        effort_score = 25.0  # neutral when no effort data
+        effort_score = neutral_effort
     elif lo <= actual_effort <= hi:
-        effort_score = 50.0
+        effort_score = effort_max
     else:
         deviation = min(abs(actual_effort - lo), abs(actual_effort - hi))
-        effort_score = max(0.0, 50.0 - deviation * 12.5)
+        effort_score = max(0.0, effort_max - deviation * (effort_max / 4.0))
 
-    # ── Pace component (50 pts) ───────────────────────────────────────
+    # ── Pace component ────────────────────────────────────────────────
     if planned_pace_min_km and actual_pace_min_km:
         # Allowed tolerance: ±8% of planned pace
         deviation_pct = abs(actual_pace_min_km - planned_pace_min_km) / planned_pace_min_km
         if deviation_pct <= 0.08:
-            pace_score = 50.0
+            pace_score = pace_max
         else:
-            # Penalise beyond tolerance: lose 5 pts per extra 1%
+            # Penalise beyond tolerance: lose points per extra 1%
             excess = deviation_pct - 0.08
-            pace_score = max(0.0, 50.0 - excess * 500)
+            pace_score = max(0.0, pace_max - excess * (pace_max / 0.10))
     else:
-        pace_score = 25.0  # neutral when no VDOT/pace data
+        pace_score = neutral_pace
 
     total = effort_score + pace_score
 

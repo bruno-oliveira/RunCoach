@@ -18,8 +18,19 @@ BEGINNER_WEEKS = {
         "notes": "Week 6: Run 10 minutes, Walk 3 minutes. Repeat 3 times (39 min total)."},
     7: {"run": 15, "walk": 3, "repeats": 2, "total_min": 36,
         "notes": "Week 7: Run 15 minutes, Walk 3 minutes. Repeat 2 times (36 min total)."},
-    8: {"run": 20, "walk": 0, "repeats": 1, "total_min": 20,
-        "notes": "Week 8: Run 20 minutes continuously - you did it!"},
+    8: {"run": 20, "walk": 2, "repeats": 1, "total_min": 30,
+        "notes": "Week 8: Run 20 minutes, Walk 2 minutes, Run 8 minutes (30 min total). Almost there!"},
+    9: {"run": 25, "walk": 0, "repeats": 1, "total_min": 25,
+        "notes": "Week 9: Run 25 minutes continuously. You can do this!"},
+    10: {"run": 30, "walk": 0, "repeats": 1, "total_min": 30,
+         "notes": "Week 10: Run 30 minutes continuously - you did it!"},
+}
+
+# Compressed progression for shorter plans (8-9 weeks).
+# Merges early weeks to preserve the critical run/walk-to-continuous transition.
+_COMPRESSED_WEEKS = {
+    8: [1, 3, 4, 5, 6, 7, 8, 10],   # skip week 2,9; merge early, keep transition
+    9: [1, 3, 4, 5, 6, 7, 8, 9, 10],  # skip week 2; keep full transition
 }
 
 BEGINNER_TIPS = {
@@ -63,21 +74,40 @@ class BeginnerPlanGenerator:
         max_runs = min(max_runs_per_week, 3)
         plan = []
 
-        for week in range(1, weeks + 1):
-            if week <= 8:
-                week_plan = self._generate_couch_to_5k_week(week, max_runs)
-            else:
-                week_plan = self._generate_10k_extension_week(
-                    week, target_distance, max_runs, weeks
-                )
+        c25k_total = len(BEGINNER_WEEKS)  # 10 weeks
+
+        # Build the C25K week sequence — compress if plan is shorter than 10 weeks
+        if weeks < c25k_total and weeks in _COMPRESSED_WEEKS:
+            c25k_sequence = _COMPRESSED_WEEKS[weeks]
+        elif weeks < c25k_total:
+            # For very short plans, take last N weeks to preserve transition
+            c25k_sequence = list(range(c25k_total - weeks + 1, c25k_total + 1))
+        else:
+            c25k_sequence = list(range(1, c25k_total + 1))
+
+        c25k_weeks_needed = min(weeks, len(c25k_sequence))
+
+        for i in range(c25k_weeks_needed):
+            source_week = c25k_sequence[i]
+            week_plan = self._generate_couch_to_5k_week(source_week, max_runs,
+                                                         display_week=i + 1)
+            plan.append(week_plan)
+
+        # Extension weeks for 10K plans (weeks beyond C25K)
+        for week in range(c25k_weeks_needed + 1, weeks + 1):
+            week_plan = self._generate_10k_extension_week(
+                week, target_distance, max_runs, weeks, c25k_total
+            )
             plan.append(week_plan)
 
         return plan
 
     def _generate_couch_to_5k_week(self, week_number: int,
-                                    max_runs: int) -> Dict[str, Any]:
+                                    max_runs: int,
+                                    display_week: int = 0) -> Dict[str, Any]:
         """Generate a single week for Couch to 5K plan."""
-        week_config = BEGINNER_WEEKS.get(week_number, BEGINNER_WEEKS[8])
+        week_config = BEGINNER_WEEKS.get(week_number, BEGINNER_WEEKS[10])
+        display = display_week or week_number
 
         workouts = []
         days = self._get_workout_days(max_runs)
@@ -101,7 +131,7 @@ class BeginnerPlanGenerator:
         estimated_km = round(week_config["total_min"] * assumed_pace_km_per_min * (week_config["run"] / (week_config["run"] + week_config["walk"])) * max_runs, 1) if week_config["run"] > 0 else 0
 
         return {
-            "week": week_number,
+            "week": display,
             "total_km": estimated_km,
             "phase": "beginner",
             "daily_workouts": workouts,
@@ -111,9 +141,10 @@ class BeginnerPlanGenerator:
         }
 
     def _generate_10k_extension_week(self, week_number: int, target_distance: float,
-                                      max_runs: int, total_weeks: int) -> Dict[str, Any]:
-        """Generate weeks 9+ for 10K beginner extension."""
-        extension_week = week_number - 8
+                                      max_runs: int, total_weeks: int,
+                                      c25k_length: int = 10) -> Dict[str, Any]:
+        """Generate weeks beyond C25K for 10K beginner extension."""
+        extension_week = week_number - c25k_length
         base_duration = 25 + (extension_week - 1) * 5
 
         workouts = []

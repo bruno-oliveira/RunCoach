@@ -26,8 +26,8 @@ class TestBeginnerPlanGenerator:
         plan = gen.generate_plan(target_distance=10.0, weeks=12)
 
         assert len(plan) == 12
-        # Weeks 9-12 should be extension weeks with actual distances
-        for week in plan[8:]:
+        # Extension weeks (beyond C25K) should have actual distances
+        for week in plan[10:]:
             total = sum(w.get("distance", 0) for w in week["daily_workouts"])
             assert total > 0, f"Week {week['week']} extension should have distance"
 

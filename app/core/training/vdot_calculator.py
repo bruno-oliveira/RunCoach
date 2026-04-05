@@ -273,10 +273,16 @@ class VDOTCalculator:
         return int(round(mid * 60))
 
     @staticmethod
-    def get_confidence_range(vdot: float, distance_km: float) -> Dict[str, int]:
-        """Get optimistic and pessimistic time estimates (±1 VO2max)."""
-        fast_vdot = min(85.0, vdot + 1.0)
-        slow_vdot = max(25.0, vdot - 1.0)
+    def get_confidence_range(vdot: float, distance_km: float,
+                             target_distance: float = 0.0) -> Dict[str, int]:
+        """Get optimistic and pessimistic time estimates.
+
+        Uses ±1.5 VDOT for road distances and ±2.0 for trail (30km)
+        where terrain/elevation noise makes predictions less precise.
+        """
+        margin = 2.0 if target_distance == 30.0 else 1.5
+        fast_vdot = min(85.0, vdot + margin)
+        slow_vdot = max(25.0, vdot - margin)
 
         fast_time = VDOTCalculator.predict_time_for_distance(fast_vdot, distance_km)
         slow_time = VDOTCalculator.predict_time_for_distance(slow_vdot, distance_km)

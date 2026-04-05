@@ -99,6 +99,12 @@ class PlanRequest(BaseModel):
     weeks: int = Field(..., ge=4, le=24, description="Training duration in weeks")
     max_runs_per_week: int = Field(default=4, ge=3, le=6, description="Maximum runs per week")
 
+    # Terrain access — only meaningful for trail (30.0)
+    terrain: Optional[str] = Field(
+        default=None,
+        description="Terrain access: 'hilly' (default for trail) or 'flat' (no hill access)"
+    )
+
     # Body weight — used for personalised nutrition
     body_weight_kg: float = Field(
         default=70.0, ge=30.0, le=250.0, description="Body weight in kg"

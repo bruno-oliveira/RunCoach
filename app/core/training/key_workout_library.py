@@ -25,6 +25,8 @@ from app.core.training.vdot_calculator import VDOTCalculator
 #   target_zone   – HR zone (1-5)
 #   pace_zone     – VDOT zone key for pace injection (E, M, T, I, R)
 #   rationale     – coaching "why" behind this workout
+#   terrain       – list of terrain tags: ["any"], ["hilly"], or ["flat"]
+#                   (only meaningful for trail workouts; road = ["any"])
 # ---------------------------------------------------------------------------
 
 _WORKOUTS: List[Dict] = [
@@ -34,6 +36,7 @@ _WORKOUTS: List[Dict] = [
         "distances": [5.0],
         "phases": ["build", "peak"],
         "type": "interval",
+        "terrain": ["any"],
         "name": "VO2max 400m Repeats",
         "structure": "10-12 x 400m at 5K pace with 90s recovery jogs",
         "description": (
@@ -53,6 +56,7 @@ _WORKOUTS: List[Dict] = [
         "distances": [5.0],
         "phases": ["build", "peak"],
         "type": "tempo",
+        "terrain": ["any"],
         "name": "Race-Pace 3km Block",
         "structure": "2 x 1.5km at 5K goal pace with 3min recovery",
         "description": (
@@ -68,10 +72,52 @@ _WORKOUTS: List[Dict] = [
         ),
     },
     {
+        "id": "5k_cruise_intervals",
+        "distances": [5.0],
+        "phases": ["build"],
+        "type": "tempo",
+        "terrain": ["any"],
+        "name": "Cruise Intervals",
+        "structure": "4 x 1km at threshold pace with 60s recovery",
+        "description": (
+            "Warm up 2km easy. Run 4 x 1km at threshold pace with "
+            "60 seconds easy jog between reps. Cool down 2km easy."
+        ),
+        "intensity": "high",
+        "target_zone": 4,
+        "pace_zone": "T",
+        "rationale": (
+            "Accumulates threshold-pace volume in manageable chunks. "
+            "Builds the lactate clearance capacity that underpins 5K racing."
+        ),
+    },
+    {
+        "id": "5k_threshold_run",
+        "distances": [5.0],
+        "phases": ["build"],
+        "type": "tempo",
+        "terrain": ["any"],
+        "name": "Threshold Run",
+        "structure": "3km continuous at threshold pace",
+        "description": (
+            "Warm up 2km easy. Run 3km continuous at threshold pace — "
+            "comfortably hard, you can speak a few words at a time. "
+            "Cool down 2km easy."
+        ),
+        "intensity": "high",
+        "target_zone": 4,
+        "pace_zone": "T",
+        "rationale": (
+            "A sustained threshold effort trains your body to clear lactate "
+            "at a faster pace — the key limiter in 5K performance."
+        ),
+    },
+    {
         "id": "5k_hill_sprints",
         "distances": [5.0],
         "phases": ["build"],
         "type": "hill",
+        "terrain": ["any"],
         "name": "Short Hill Sprints",
         "structure": "8-10 x 60s uphill at hard effort with jog-back recovery",
         "description": (
@@ -80,7 +126,7 @@ _WORKOUTS: List[Dict] = [
             "Cool down 2km easy."
         ),
         "intensity": "high",
-        "target_zone": 4,
+        "target_zone": 5,
         "pace_zone": "R",
         "rationale": (
             "Develops explosive power and neuromuscular recruitment. "
@@ -92,6 +138,7 @@ _WORKOUTS: List[Dict] = [
         "distances": [5.0],
         "phases": ["peak"],
         "type": "interval",
+        "terrain": ["any"],
         "name": "Pyramid Intervals",
         "structure": "200-400-600-800-600-400-200m at 5K pace",
         "description": (
@@ -114,6 +161,7 @@ _WORKOUTS: List[Dict] = [
         "distances": [10.0],
         "phases": ["build", "peak"],
         "type": "tempo",
+        "terrain": ["any"],
         "name": "Cruise Intervals",
         "structure": "4 x 1.5km at threshold pace with 60s recovery",
         "description": (
@@ -133,6 +181,7 @@ _WORKOUTS: List[Dict] = [
         "distances": [10.0],
         "phases": ["build", "peak"],
         "type": "tempo",
+        "terrain": ["any"],
         "name": "10K Goal-Pace Segments",
         "structure": "2 x 3km at 10K goal pace with 3min recovery",
         "description": (
@@ -152,6 +201,7 @@ _WORKOUTS: List[Dict] = [
         "distances": [10.0],
         "phases": ["peak"],
         "type": "tempo",
+        "terrain": ["any"],
         "name": "Tempo Progression",
         "structure": "5km starting at easy pace, finishing at 10K pace",
         "description": (
@@ -172,6 +222,7 @@ _WORKOUTS: List[Dict] = [
         "distances": [10.0],
         "phases": ["build"],
         "type": "interval",
+        "terrain": ["any"],
         "name": "Structured Fartlek",
         "structure": "6 x (3min hard / 2min easy) within a 7km run",
         "description": (
@@ -193,6 +244,7 @@ _WORKOUTS: List[Dict] = [
         "distances": [21.1],
         "phases": ["build", "peak"],
         "type": "tempo",
+        "terrain": ["any"],
         "name": "Progressive Long Run",
         "structure": "14-16km: first 10km easy, last 4-6km at marathon pace",
         "description": (
@@ -213,6 +265,7 @@ _WORKOUTS: List[Dict] = [
         "distances": [21.1],
         "phases": ["build", "peak"],
         "type": "tempo",
+        "terrain": ["any"],
         "name": "Threshold Cruise",
         "structure": "3 x 2km at threshold pace with 90s recovery",
         "description": (
@@ -232,6 +285,7 @@ _WORKOUTS: List[Dict] = [
         "distances": [21.1],
         "phases": ["peak"],
         "type": "tempo",
+        "terrain": ["any"],
         "name": "Half Marathon Pace Segments",
         "structure": "3 x 3km at half marathon goal pace with 2min recovery",
         "description": (
@@ -251,6 +305,7 @@ _WORKOUTS: List[Dict] = [
         "distances": [21.1],
         "phases": ["build"],
         "type": "interval",
+        "terrain": ["any"],
         "name": "Cut-Down Long Run",
         "structure": "15km: each 5km segment 15s/km faster than the last",
         "description": (
@@ -272,6 +327,7 @@ _WORKOUTS: List[Dict] = [
         "distances": [42.2],
         "phases": ["build", "peak"],
         "type": "tempo",
+        "terrain": ["any"],
         "name": "Marathon-Pace Long Run",
         "structure": "25km: first 15km easy, last 10km at marathon pace",
         "description": (
@@ -292,6 +348,7 @@ _WORKOUTS: List[Dict] = [
         "distances": [42.2],
         "phases": ["build", "peak"],
         "type": "interval",
+        "terrain": ["any"],
         "name": "Yasso 800s",
         "structure": "8-10 x 800m at VO2max pace with equal-time recovery jog",
         "description": (
@@ -312,6 +369,7 @@ _WORKOUTS: List[Dict] = [
         "distances": [42.2],
         "phases": ["build"],
         "type": "tempo",
+        "terrain": ["any"],
         "name": "Progressive Long Run",
         "structure": "28-30km: first 20km easy, last 8-10km descending pace",
         "description": (
@@ -332,6 +390,7 @@ _WORKOUTS: List[Dict] = [
         "distances": [42.2],
         "phases": ["peak"],
         "type": "tempo",
+        "terrain": ["any"],
         "name": "Lactate-Clearing Tempo",
         "structure": "2 x 5km at threshold pace with 3min recovery",
         "description": (
@@ -351,6 +410,7 @@ _WORKOUTS: List[Dict] = [
         "distances": [42.2],
         "phases": ["peak"],
         "type": "interval",
+        "terrain": ["any"],
         "name": "Race-Pace Cut-Down",
         "structure": "5 x 2km: alternate MP and T-pace with 90s recovery",
         "description": (
@@ -367,12 +427,58 @@ _WORKOUTS: List[Dict] = [
         ),
     },
 
+    {
+        "id": "marathon_easy_long_fueling",
+        "distances": [42.2],
+        "phases": ["build"],
+        "type": "tempo",
+        "terrain": ["any"],
+        "name": "Easy Long with Fueling",
+        "structure": "30-32km all easy pace, practice nutrition every 5km",
+        "description": (
+            "Run 30-32km at easy conversational pace. Take a gel or fuel "
+            "every 5km starting at km 10. Practice your exact race-day "
+            "nutrition strategy. Walk 1 min after each fuel stop if needed."
+        ),
+        "intensity": "low",
+        "target_zone": 2,
+        "pace_zone": "E",
+        "rationale": (
+            "The longest run in marathon prep. Builds aerobic endurance and "
+            "trains your gut to absorb fuel under exercise stress — a key "
+            "limiter in marathon performance."
+        ),
+    },
+    {
+        "id": "marathon_peak_progressive",
+        "distances": [42.2],
+        "phases": ["peak"],
+        "type": "tempo",
+        "terrain": ["any"],
+        "name": "Peak Progressive Long",
+        "structure": "28km: first 16km easy, last 12km descending to marathon pace",
+        "description": (
+            "Run 28km total. First 16km at easy pace. Then run each "
+            "subsequent 3km segment 5-10s/km faster, finishing the last "
+            "3km at marathon pace. Take gels at km 8 and km 20."
+        ),
+        "intensity": "medium",
+        "target_zone": 3,
+        "pace_zone": "M",
+        "rationale": (
+            "The capstone workout before taper. A longer finish-fast segment "
+            "than the build-phase progressive run teaches your body to run "
+            "marathon pace on deeply fatigued legs."
+        ),
+    },
+
     # ── Trail (30.0) ──────────────────────────────────────────────────
     {
         "id": "trail_elevation_repeats",
         "distances": [30.0],
         "phases": ["build", "peak"],
         "type": "hill",
+        "terrain": ["hilly"],
         "name": "Elevation Gain Repeats",
         "structure": "6-8 x 3min uphill at hard effort with jog-back recovery",
         "description": (
@@ -381,7 +487,7 @@ _WORKOUTS: List[Dict] = [
             "short stride. Jog back down for recovery. Cool down 2km easy."
         ),
         "intensity": "high",
-        "target_zone": 4,
+        "target_zone": 5,
         "pace_zone": "T",
         "rationale": (
             "Trail races are won on the climbs. Uphill repeats build "
@@ -394,6 +500,7 @@ _WORKOUTS: List[Dict] = [
         "distances": [30.0],
         "phases": ["build", "peak"],
         "type": "tempo",
+        "terrain": ["hilly"],
         "name": "Time-on-Feet Long Run",
         "structure": "2.5-3 hours on trails at easy effort, walk steep uphills",
         "description": (
@@ -414,6 +521,7 @@ _WORKOUTS: List[Dict] = [
         "distances": [30.0],
         "phases": ["build"],
         "type": "interval",
+        "terrain": ["hilly"],
         "name": "Technical Trail Session",
         "structure": "8km on technical terrain with rocks/roots at moderate effort",
         "description": (
@@ -435,6 +543,7 @@ _WORKOUTS: List[Dict] = [
         "distances": [30.0],
         "phases": ["peak"],
         "type": "hill",
+        "terrain": ["hilly"],
         "name": "Power-Hike Intervals",
         "structure": "5 x 5min power hiking steep uphill, run flat/down between",
         "description": (
@@ -451,6 +560,147 @@ _WORKOUTS: List[Dict] = [
             "rhythm on flat/descending sections."
         ),
     },
+    {
+        "id": "trail_back_to_back",
+        "distances": [30.0],
+        "phases": ["peak"],
+        "type": "tempo",
+        "terrain": ["hilly"],
+        "name": "Back-to-Back Long Runs",
+        "structure": "Saturday 20-22km + Sunday 15-18km, both easy on trails",
+        "description": (
+            "Saturday: 20-22km trail run at easy effort on hilly terrain. "
+            "Sunday: 15-18km trail run at easy effort on fatigued legs. "
+            "Practice race fueling on both days. The second day simulates "
+            "late-race fatigue better than any single long run."
+        ),
+        "intensity": "medium",
+        "target_zone": 2,
+        "pace_zone": "E",
+        "rationale": (
+            "Back-to-back long runs are the hallmark of trail/ultra training. "
+            "Running on tired legs from the previous day simulates the final "
+            "hours of a 30km trail race."
+        ),
+    },
+    {
+        "id": "trail_downhill_technique",
+        "distances": [30.0],
+        "phases": ["build"],
+        "type": "interval",
+        "terrain": ["hilly"],
+        "name": "Downhill Technique Repeats",
+        "structure": "6-8 x 400-600m downhill repeats (5-8% grade), hike up",
+        "description": (
+            "Find a trail descent (5-8% grade, 400-600m). Run 6-8 downhill "
+            "repeats focusing on: quick cadence, slight forward lean, and "
+            "soft landings. Hike back up for recovery. 2km warm-up, "
+            "2km cool-down on flat."
+        ),
+        "intensity": "medium",
+        "target_zone": 3,
+        "pace_zone": "E",
+        "rationale": (
+            "Downhill running causes the most eccentric muscle damage in trail "
+            "races. Training the technique — and the quads — specifically "
+            "prevents race-day blowups on descents."
+        ),
+    },
+
+    # ── Trail Flat-Terrain Alternatives ───────────────────────────────
+    {
+        "id": "trail_flat_surge_fartlek",
+        "distances": [30.0],
+        "phases": ["build", "peak"],
+        "type": "tempo",
+        "terrain": ["flat"],
+        "name": "Trail Surge Fartlek",
+        "structure": "60-75 min with 8 x 3min hard surges / 2min easy recovery",
+        "description": (
+            "On varied terrain (grass, dirt path, or trail). Run 8 x 3 min "
+            "at hill-repeat effort level (Zone 4-5) with 2 min easy jog "
+            "recovery. Focus on driving arms and powerful stride — simulate "
+            "the effort of climbing even on flat ground. "
+            "2km warm-up, 2km cool-down."
+        ),
+        "intensity": "high",
+        "target_zone": 5,
+        "pace_zone": "T",
+        "rationale": (
+            "Same cardiovascular stimulus as hill repeats — the heart doesn't "
+            "know it's flat. Effort-matched surges drive VO2max adaptation "
+            "without requiring elevation."
+        ),
+    },
+    {
+        "id": "trail_flat_soft_surface",
+        "distances": [30.0],
+        "phases": ["build", "peak"],
+        "type": "tempo",
+        "terrain": ["flat"],
+        "name": "Soft-Surface Time-on-Feet",
+        "structure": "2.5-3 hours on grass/dirt/sand at easy effort, fuel every 30min",
+        "description": (
+            "Find the softest running surface available: grass fields, dirt "
+            "trails, beach, gravel paths. Run 2.5-3 hours at easy effort. "
+            "The soft surface increases energy cost 10-15% vs pavement, "
+            "partially compensating for lack of elevation. Walk 2 min every "
+            "45 min. Practice race fueling."
+        ),
+        "intensity": "low",
+        "target_zone": 2,
+        "pace_zone": "E",
+        "rationale": (
+            "Soft-surface running increases metabolic demand closer to trail "
+            "effort. Builds time-on-feet endurance without hills."
+        ),
+    },
+    {
+        "id": "trail_flat_power_walk",
+        "distances": [30.0],
+        "phases": ["peak"],
+        "type": "tempo",
+        "terrain": ["flat"],
+        "name": "Power-Walk Intervals",
+        "structure": "60 min: 5min max-effort power walk / 5min easy run x 6",
+        "description": (
+            "Alternate 5 min of maximum-effort power walking (pumping arms, "
+            "longest possible stride) with 5 min easy running x 6 sets. "
+            "Total 60 min. Max-effort power walking at 9-10 min/km builds "
+            "the specific muscular endurance for race-day hiking sections."
+        ),
+        "intensity": "medium",
+        "target_zone": 3,
+        "pace_zone": "E",
+        "rationale": (
+            "Power-hiking efficiency is independent of terrain. The walk-run "
+            "transition that defines trail racing can be trained on flat ground."
+        ),
+    },
+    {
+        "id": "trail_flat_proprioception",
+        "distances": [30.0],
+        "phases": ["build"],
+        "type": "interval",
+        "terrain": ["flat"],
+        "name": "Proprioception Circuit Run",
+        "structure": "8km on varied surfaces + 4 x agility circuit",
+        "description": (
+            "Run 8km alternating surfaces every 1-2km: pavement, grass, "
+            "gravel, dirt. Every 2km, stop for a 2-min agility circuit: "
+            "10 single-leg hops each side, 20m lateral shuffles, "
+            "20m backward running. Trains the foot-ankle proprioception "
+            "that technical trail demands."
+        ),
+        "intensity": "medium",
+        "target_zone": 3,
+        "pace_zone": "E",
+        "rationale": (
+            "Proprioception training transfers to technical terrain even when "
+            "trained on flat varied surfaces. Reduces ankle sprain risk on "
+            "race day."
+        ),
+    },
 ]
 
 
@@ -464,6 +714,7 @@ class KeyWorkoutLibrary:
         phase: str,
         week_in_phase: int,
         workout_type: str = "interval",
+        terrain: Optional[str] = None,
     ) -> Optional[Dict]:
         """Select a key workout for the given distance, phase, and week.
 
@@ -472,6 +723,8 @@ class KeyWorkoutLibrary:
             phase:           Training phase (base, build, peak, taper).
             week_in_phase:   Zero-indexed week within the current phase.
             workout_type:    Requested workout type (interval, tempo, hill).
+            terrain:         Terrain access ('flat' or None/hilly). Only
+                             affects trail (30km) workout selection.
 
         Returns:
             A workout dict or None if no key workout applies.
@@ -487,6 +740,16 @@ class KeyWorkoutLibrary:
             and w["type"] == workout_type
         ]
 
+        # Filter by terrain for trail workouts
+        if terrain == "flat":
+            candidates = [w for w in candidates if "flat" in w.get("terrain", ["any"])]
+        else:
+            candidates = [
+                w for w in candidates
+                if "any" in w.get("terrain", ["any"])
+                or "hilly" in w.get("terrain", ["any"])
+            ]
+
         if not candidates:
             return None
 
@@ -494,9 +757,18 @@ class KeyWorkoutLibrary:
         return candidates[week_in_phase % len(candidates)]
 
     @classmethod
-    def get_all_for_distance(cls, target_distance: float) -> List[Dict]:
+    def get_all_for_distance(cls, target_distance: float, terrain: Optional[str] = None) -> List[Dict]:
         """Return all key workouts for a race distance."""
-        return [w for w in _WORKOUTS if target_distance in w["distances"]]
+        workouts = [w for w in _WORKOUTS if target_distance in w["distances"]]
+        if terrain == "flat":
+            workouts = [w for w in workouts if "flat" in w.get("terrain", ["any"])]
+        elif terrain is not None:
+            workouts = [
+                w for w in workouts
+                if "any" in w.get("terrain", ["any"])
+                or "hilly" in w.get("terrain", ["any"])
+            ]
+        return workouts
 
     @classmethod
     def inject_vdot_paces(cls, workout: Dict, vdot_zones: Optional[Dict]) -> Dict:

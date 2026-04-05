@@ -27,8 +27,16 @@ def derive_experience_level(current_km: float) -> str:
 
 PHASE_FOCUS_ROTATIONS: Dict[str, List[str]] = {
     "base": ["lower_body", "core"],
-    "build": ["lower_body", "core", "full_body"],
-    "peak": ["lower_body", "core", "full_body"],
+    "build": ["lower_body", "core", "plyometric"],
+    "peak": ["lower_body", "plyometric", "core"],
+    "taper": ["core"],
+}
+
+# Trail runners get stability work replacing generic full_body
+TRAIL_FOCUS_ROTATIONS: Dict[str, List[str]] = {
+    "base": ["lower_body", "trail_stability", "core"],
+    "build": ["lower_body", "trail_stability", "plyometric"],
+    "peak": ["lower_body", "plyometric", "trail_stability"],
     "taper": ["core"],
 }
 
@@ -181,6 +189,131 @@ _EXERCISES: Dict[str, Dict[str, Dict[str, Any]]] = {
         },
     },
 
+    # ── Plyometrics (progressive by level) ──────────────────────────────
+    "plyometric": {
+        "beginner": {
+            "base_duration": "15-20 min",
+            "warm_up": [
+                "5 min easy walk",
+                "Bodyweight squats — 10 reps",
+                "Ankle circles — 10 each side",
+            ],
+            "exercises": [
+                {"name": "Box Step-Down (slow eccentric)", "sets": 3, "reps": "8 each side"},
+                {"name": "Bilateral Landing Drill (jump & stick)", "sets": 3, "reps": "6"},
+                {"name": "Calf Bounce (low amplitude)", "sets": 3, "reps": "15"},
+                {"name": "Squat Jump (quarter depth)", "sets": 2, "reps": "6"},
+            ],
+            "cool_down": [
+                "Standing quad stretch — 30 sec each",
+                "Calf stretch — 30 sec each",
+                "Ankle circles — 10 each side",
+            ],
+        },
+        "intermediate": {
+            "base_duration": "20-25 min",
+            "warm_up": [
+                "5 min easy jog",
+                "Leg swings — 10 each side",
+                "A-skips — 2 x 20m",
+            ],
+            "exercises": [
+                {"name": "Single-Leg Hop (forward)", "sets": 3, "reps": "8 each side"},
+                {"name": "Lateral Bound", "sets": 3, "reps": "8 each side"},
+                {"name": "Low Box Jump", "sets": 3, "reps": "8"},
+                {"name": "Split Squat Jump (alternating)", "sets": 3, "reps": "6 each side"},
+            ],
+            "cool_down": [
+                "Pigeon pose — 45 sec each side",
+                "Calf stretch — 30 sec each",
+                "Standing quad stretch — 30 sec each",
+            ],
+        },
+        "advanced": {
+            "base_duration": "20-30 min",
+            "warm_up": [
+                "5 min easy jog",
+                "A-skips — 2 x 20m",
+                "B-skips — 2 x 20m",
+            ],
+            "exercises": [
+                {"name": "Depth Drop (from step)", "sets": 3, "reps": "6"},
+                {"name": "Single-Leg Bounding", "sets": 3, "reps": "10"},
+                {"name": "Jump Squat (full depth)", "sets": 3, "reps": "10"},
+                {"name": "Lateral Bound to Stick", "sets": 3, "reps": "8 each side"},
+                {"name": "Box Jump (high)", "sets": 3, "reps": "6"},
+            ],
+            "cool_down": [
+                "Pigeon pose — 60 sec each side",
+                "Downward dog — 45 sec",
+                "Calf stretch — 30 sec each",
+            ],
+        },
+    },
+
+    # ── Trail proprioception & lateral stability ─────────────────────────
+    "trail_stability": {
+        "beginner": {
+            "base_duration": "15-20 min",
+            "warm_up": [
+                "5 min easy walk on uneven surface",
+                "Ankle circles — 10 each side",
+                "Single-leg stand — 15 sec each",
+            ],
+            "exercises": [
+                {"name": "Single-Leg Balance (eyes open)", "sets": 3, "reps": "30 sec each side"},
+                {"name": "Lateral Step-Down (from step)", "sets": 3, "reps": "10 each side"},
+                {"name": "Slow Eccentric Step-Down", "sets": 3, "reps": "8 each side"},
+                {"name": "Calf Raise (single-leg)", "sets": 3, "reps": "12 each side"},
+            ],
+            "cool_down": [
+                "Ankle circles — 10 each side",
+                "Calf stretch — 30 sec each",
+                "Standing quad stretch — 30 sec each",
+            ],
+        },
+        "intermediate": {
+            "base_duration": "20-25 min",
+            "warm_up": [
+                "5 min easy jog on grass/trail",
+                "Ankle circles — 10 each side",
+                "Single-leg stand — 20 sec each (eyes closed)",
+            ],
+            "exercises": [
+                {"name": "Single-Leg Balance (eyes closed)", "sets": 3, "reps": "30 sec each side"},
+                {"name": "Lateral Step-Down (slow)", "sets": 3, "reps": "10 each side"},
+                {"name": "Nordic Curl Negative", "sets": 3, "reps": "5"},
+                {"name": "Lateral Bounds (stick landing)", "sets": 3, "reps": "8 each side"},
+                {"name": "Single-Leg Deadlift", "sets": 3, "reps": "10 each side"},
+            ],
+            "cool_down": [
+                "Pigeon pose — 45 sec each side",
+                "Calf stretch — 30 sec each",
+                "Ankle circles — 10 each side",
+            ],
+        },
+        "advanced": {
+            "base_duration": "20-30 min",
+            "warm_up": [
+                "5 min easy jog on grass/trail",
+                "A-skips — 2 x 20m on grass",
+                "Single-leg stand — 30 sec each (eyes closed, on pillow)",
+            ],
+            "exercises": [
+                {"name": "Single-Leg Balance on Unstable Surface", "sets": 3, "reps": "30 sec each side"},
+                {"name": "Nordic Curl", "sets": 3, "reps": "8"},
+                {"name": "Pistol Squat (assisted or full)", "sets": 3, "reps": "6 each side"},
+                {"name": "Lateral Bound to Single-Leg Stick", "sets": 3, "reps": "8 each side"},
+                {"name": "Depth Drop to Single-Leg Land", "sets": 3, "reps": "6 each side"},
+            ],
+            "cool_down": [
+                "Pigeon pose — 60 sec each side",
+                "Downward dog — 45 sec",
+                "Ankle circles — 10 each side",
+            ],
+        },
+    },
+
     # ── Full body ─────────────────────────────────────────────────────────
     "full_body": {
         "beginner": {
@@ -252,11 +385,14 @@ _EXERCISES: Dict[str, Dict[str, Dict[str, Any]]] = {
 # ---------------------------------------------------------------------------
 
 
-def get_phase_focus_rotation(phase: str) -> List[str]:
+def get_phase_focus_rotation(phase: str, target_distance: float = 0.0) -> List[str]:
     """Return the ordered focus list for a training phase.
 
+    Trail runners (30km) get trail-specific stability work.
     Falls back to the "build" rotation for unknown phases.
     """
+    if target_distance == 30.0:
+        return TRAIL_FOCUS_ROTATIONS.get(phase, TRAIL_FOCUS_ROTATIONS["build"])
     return PHASE_FOCUS_ROTATIONS.get(phase, PHASE_FOCUS_ROTATIONS["build"])
 
 

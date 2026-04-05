@@ -10,7 +10,8 @@ from typing import Dict, List, Optional
 def get_workout_distribution(total_km: float, max_runs: int, phase: str = 'build',
                              is_recovery_week: bool = False, week_number: int = 1,
                              phases: Dict[str, int] = None,
-                             target_distance: float = 10.0) -> Dict[str, int]:
+                             target_distance: float = 10.0,
+                             terrain: Optional[str] = None) -> Dict[str, int]:
     """Calculate how many of each workout type per week."""
     is_backward_compatible_call = (phase == 'build' and not is_recovery_week and
                                    week_number == 1 and phases is None and
@@ -20,8 +21,12 @@ def get_workout_distribution(total_km: float, max_runs: int, phase: str = 'build
         return get_workout_distribution_simple(total_km, max_runs)
 
     long_runs = 1
-    if phase == 'base' or is_recovery_week:
+
+    # Base phase now gets 1 light quality session when runner has enough days
+    if is_recovery_week:
         quality_workouts = 0
+    elif phase == 'base':
+        quality_workouts = 1 if max_runs >= 4 else 0
     elif phase == 'build':
         if phases:
             week_in_build = week_number - phases['base']
@@ -43,34 +48,129 @@ def get_workout_distribution(total_km: float, max_runs: int, phase: str = 'build
     max_runs = min(max_runs, 6)
     rest_days = 7 - (max_runs + 1)
 
-    if target_distance == 30.0 and quality_workouts > 0:
-        if week_number % 4 in [1, 2]:
-            distribution = {
-                'easy': easy_runs,
-                'long': long_runs,
-                'interval': 0,
-                'tempo': 0,
-                'hill': quality_workouts,
-                'rest': rest_days
-            }
+    distribution = _build_quality_distribution(
+        target_distance, terrain, quality_workouts, phase,
+        easy_runs, long_runs, rest_days, week_number,
+    )
+
+    if not is_recovery_week:
+        distribution = _validate_polarized_ratio(distribution, phase, target_distance)
+
+    return distribution
+
+
+def _build_quality_distribution(target_distance: float, terrain: Optional[str],
+                                quality_workouts: int, phase: str,
+                                easy_runs: int, long_runs: int, rest_days: int,
+                                week_number: int) -> Dict[str, int]:
+    """Assign quality workout types based on race distance and terrain."""
+    base = {'easy': easy_runs, 'long': long_runs, 'interval': 0,
+            'tempo': 0, 'hill': 0, 'rest': rest_days}
+
+    if quality_workouts == 0:
+        return base
+
+    is_trail = target_distance == 30.0
+    is_flat_trail = is_trail and terrain == 'flat'
+
+    # ── Base phase: 1 light quality session (distance-specific type) ──
+    if phase == 'base':
+        if is_trail and not is_flat_trail:
+            base['hill'] = 1
+        elif is_flat_trail:
+            base['tempo'] = 1
+        elif target_distance <= 10:
+            base['interval'] = 1    # strides
         else:
-            distribution = {
-                'easy': easy_runs,
-                'long': long_runs,
-                'interval': quality_workouts,
-                'tempo': 0,
-                'hill': 0,
-                'rest': rest_days
-            }
+            base['tempo'] = 1       # short threshold
+        return base
+
+    # ── Trail (hilly) ──
+    if is_trail and not is_flat_trail:
+        if quality_workouts >= 2:
+            base['hill'] = 1
+            if week_number % 4 in [1, 2]:
+                base['interval'] = 1
+            else:
+                base['tempo'] = 1
+        else:
+            base['hill'] = 1 if week_number % 3 in [0, 1] else 0
+            base['interval'] = 0 if week_number % 3 in [0, 1] else 1
+        return base
+
+    # ── Flat trail: no hills, tempo replaces hill stimulus ──
+    if is_flat_trail:
+        if quality_workouts >= 2:
+            if week_number % 4 in [1, 2]:
+                base['tempo'] = 1
+                base['interval'] = 1
+            else:
+                base['tempo'] = 2
+        else:
+            base['tempo'] = 1
+        return base
+
+    # ── Distance-specific road distributions ──
+    if target_distance <= 5:
+        # 5K: VO2max emphasis
+        if quality_workouts >= 2:
+            base['interval'] = 2
+        else:
+            base['interval'] = 1
+    elif target_distance <= 10:
+        # 10K: balanced (current default)
+        base['interval'] = 1 if quality_workouts >= 1 else 0
+        base['tempo'] = 1 if quality_workouts >= 2 else 0
+    elif target_distance <= 21.1:
+        # Half: balanced with tempo emphasis
+        base['interval'] = 1 if quality_workouts >= 1 else 0
+        base['tempo'] = 1 if quality_workouts >= 2 else 0
     else:
-        distribution = {
-            'easy': easy_runs,
-            'long': long_runs,
-            'interval': 1 if quality_workouts >= 1 else 0,
-            'tempo': 1 if quality_workouts >= 2 else 0,
-            'hill': 0,
-            'rest': rest_days
-        }
+        # Marathon: tempo/MP emphasis
+        if quality_workouts >= 2:
+            base['tempo'] = 2 if phase == 'peak' else 1
+            base['interval'] = 0 if phase == 'peak' else 1
+        else:
+            base['tempo'] = 1
+
+    return base
+
+
+def _validate_polarized_ratio(distribution: Dict[str, int], phase: str,
+                              target_distance: float) -> Dict[str, int]:
+    """Validate 80/20 polarized training ratio and adjust if needed.
+
+    Trail gets slightly easier targets (85/15 build, 80/20 peak) because
+    terrain naturally provides intensity through elevation.
+    """
+    is_trail = target_distance == 30.0
+    hard_targets = {
+        'base': 0.10,
+        'build': 0.15 if is_trail else 0.20,
+        'peak': 0.20 if is_trail else 0.25,
+        'taper': 0.10,
+    }
+
+    hard_count = distribution.get('interval', 0) + distribution.get('tempo', 0) + distribution.get('hill', 0)
+    total_runs = hard_count + distribution.get('easy', 0) + distribution.get('long', 0)
+
+    if total_runs == 0:
+        return distribution
+
+    hard_pct = hard_count / total_runs
+    target = hard_targets.get(phase, 0.20)
+
+    # If hard% exceeds target by >5%, reduce quality by 1
+    if hard_pct > target + 0.05 and hard_count > 0:
+        for key in ('interval', 'tempo', 'hill'):
+            if distribution.get(key, 0) > 0:
+                distribution[key] -= 1
+                distribution['easy'] = distribution.get('easy', 0) + 1
+                break
+    # If under by >10% in build/peak, increase by 1
+    elif phase in ('build', 'peak') and hard_pct < target - 0.10 and distribution.get('easy', 0) > 0:
+        distribution['easy'] -= 1
+        distribution['interval'] = distribution.get('interval', 0) + 1
 
     return distribution
 
@@ -124,7 +224,7 @@ def schedule_workout_types(distribution: Dict[str, int], phase: str,
     workout_types[5] = 'long'
     distribution['long'] -= 1
 
-    if phase != 'base' and not is_recovery_week:
+    if not is_recovery_week:
         quality_slots = [2, 3, 4]
         for day_idx in quality_slots:
             if workout_types[day_idx] is not None:

@@ -284,7 +284,11 @@ class CoachingFeedbackEngine:
 
     @classmethod
     def _pattern_feedback(cls, run_log, db) -> Optional[str]:
-        """Detect repeated pace patterns in same workout type over last 30 days."""
+        """Detect repeated pace patterns over last 45 days with recency weighting.
+
+        Uses a 14-day half-life: recent deviations matter more than older ones.
+        Also detects 3+ consecutive same-direction deviations (streak trigger).
+        """
         if not run_log.avg_pace_min_km or not run_log.planned_pace_min_km:
             return None
 
@@ -294,7 +298,7 @@ class CoachingFeedbackEngine:
 
         from app.models import RunLog
 
-        cutoff = run_log.date - timedelta(days=30)
+        cutoff = run_log.date - timedelta(days=45)
         recent = (
             db.query(RunLog)
             .filter(
@@ -306,38 +310,59 @@ class CoachingFeedbackEngine:
                 RunLog.id != run_log.id,
             )
             .order_by(RunLog.date.desc())
-            .limit(3)
+            .limit(6)
             .all()
         )
 
         if len(recent) < 2:
             return None
 
-        # Check if all recent runs were consistently too fast
-        too_fast_count = sum(
-            1
-            for r in recent
-            if (r.avg_pace_min_km - r.planned_pace_min_km) / r.planned_pace_min_km
-            < -0.05
-        )
-        too_slow_count = sum(
-            1
-            for r in recent
-            if (r.avg_pace_min_km - r.planned_pace_min_km) / r.planned_pace_min_km
-            > 0.08
-        )
+        # Recency-weighted deviation scoring (14-day half-life)
+        half_life = 14.0
+        weighted_fast = 0.0
+        weighted_slow = 0.0
+        total_weight = 0.0
+        streak_fast = 0
+        streak_slow = 0
+        max_streak_fast = 0
+        max_streak_slow = 0
 
-        if too_fast_count >= 2 and wtype in ("easy", "recovery", "long"):
+        for r in recent:
+            days_ago = max(0, (run_log.date - r.date).days)
+            weight = 0.5 ** (days_ago / half_life)
+            deviation = (r.avg_pace_min_km - r.planned_pace_min_km) / r.planned_pace_min_km
+
+            total_weight += weight
+            if deviation < -0.05:
+                weighted_fast += weight
+                streak_fast += 1
+                streak_slow = 0
+            elif deviation > 0.08:
+                weighted_slow += weight
+                streak_fast = 0
+                streak_slow += 1
+            else:
+                streak_fast = 0
+                streak_slow = 0
+
+            max_streak_fast = max(max_streak_fast, streak_fast)
+            max_streak_slow = max(max_streak_slow, streak_slow)
+
+        fast_score = weighted_fast / total_weight if total_weight > 0 else 0
+        slow_score = weighted_slow / total_weight if total_weight > 0 else 0
+
+        # Trigger on weighted pattern OR 3+ consecutive streak
+        if (fast_score >= 0.6 or max_streak_fast >= 3) and wtype in ("easy", "recovery", "long"):
             return (
-                f"Pattern detected: your last {too_fast_count + 1} {wtype} runs "
-                "have been faster than planned. Running easy days too hard "
-                "limits recovery and long-term improvement."
+                f"Pattern detected: your recent {wtype} runs "
+                "have been consistently faster than planned. Running easy days "
+                "too hard limits recovery and long-term improvement."
             )
-        elif too_slow_count >= 2 and wtype in ("tempo", "interval"):
+        elif (slow_score >= 0.6 or max_streak_slow >= 3) and wtype in ("tempo", "interval"):
             return (
-                f"Pattern detected: your last {too_slow_count + 1} {wtype} "
-                "sessions have been slower than target. Consider whether the "
-                "pace target is realistic or if you need more recovery."
+                f"Pattern detected: your recent {wtype} "
+                "sessions have been consistently slower than target. Consider "
+                "whether the pace target is realistic or if you need more recovery."
             )
         return None
 

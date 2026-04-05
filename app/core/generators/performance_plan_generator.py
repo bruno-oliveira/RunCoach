@@ -366,19 +366,20 @@ class PerformancePlanGenerator:
         """Generate a VO2 max interval workout."""
         target_pace = zones['zone_4_vo2max']['pace']
 
-        # Interval distance and reps vary by phase
-        if phase == 'base':
-            interval_m = 800
-            reps = 4
-        elif phase == 'build':
-            interval_m = 1000
-            reps = 6
-        elif phase == 'sharpen':
-            interval_m = 1200
-            reps = 5
-        else:  # taper
-            interval_m = 600
-            reps = 4
+        # Interval distance scales by race distance AND phase.
+        # 5K: shorter/faster reps; Marathon: longer sustained reps.
+        if distance_km <= 5:
+            base_intervals = {'base': 400, 'build': 500, 'sharpen': 600, 'taper': 400}
+        elif distance_km <= 10:
+            base_intervals = {'base': 600, 'build': 800, 'sharpen': 1000, 'taper': 600}
+        elif distance_km <= 30:   # Half marathon and trail
+            base_intervals = {'base': 800, 'build': 1000, 'sharpen': 1200, 'taper': 600}
+        else:                     # Marathon
+            base_intervals = {'base': 1000, 'build': 1200, 'sharpen': 1600, 'taper': 800}
+
+        interval_m = base_intervals.get(phase, 800)
+        reps_map = {'base': 4, 'build': 6, 'sharpen': 5, 'taper': 4}
+        reps = reps_map.get(phase, 4)
 
         interval_km = interval_m / 1000
         recovery_time = int(interval_km * 2)  # 2 min recovery per km

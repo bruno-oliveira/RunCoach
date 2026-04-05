@@ -4,7 +4,6 @@ Handles long run ratio progression, distance caps, and phase-based
 quality workout distance allocation.
 """
 
-import random
 from typing import Dict
 
 from app.core.training.phase_calculator import (
@@ -111,8 +110,7 @@ def calculate_long_run_ratio(phase: str, week_number: int, phases: Dict[str, int
     ratio = min_ratio + (max_ratio - min_ratio) * progression
 
     if is_recovery_week:
-        recovery_reduction = random.uniform(0.08, 0.12)
-        ratio = ratio * (1.0 - recovery_reduction)
+        ratio = ratio * 0.85  # Fixed 15% reduction for deterministic recovery
         recovery_min = max(0.20, min_ratio - 0.05)
         ratio = max(recovery_min, ratio)
     else:
@@ -121,10 +119,26 @@ def calculate_long_run_ratio(phase: str, week_number: int, phases: Dict[str, int
     return round(ratio, 3)
 
 
+def _get_long_run_cap(target_distance: float, experience_level: str = 'intermediate') -> float:
+    """Experience-tiered long run distance caps (km)."""
+    caps = {
+        5.0:  {'beginner': 7.0,  'intermediate': 8.0,  'advanced': 10.0},
+        10.0: {'beginner': 12.0, 'intermediate': 15.0, 'advanced': 16.0},
+        21.1: {'beginner': 18.0, 'intermediate': 20.0, 'advanced': 22.0},
+        30.0: {'beginner': 20.0, 'intermediate': 24.0, 'advanced': 28.0},
+        42.2: {'beginner': 28.0, 'intermediate': 32.0, 'advanced': 35.0},
+    }
+    tier = caps.get(target_distance)
+    if tier:
+        return tier.get(experience_level, tier['intermediate'])
+    return target_distance * 0.77
+
+
 def calculate_long_run_distance(total_km: float, target_distance: float,
                                 weeks: int = 12, week_number: int = 1,
                                 phase: str = 'build',
-                                is_recovery_week: bool = False) -> float:
+                                is_recovery_week: bool = False,
+                                experience_level: str = 'intermediate') -> float:
     """
     Calculate long run distance with proper progression and phase-specific percentage.
     Long run percentage increases with race distance for appropriate endurance building.
@@ -136,13 +150,7 @@ def calculate_long_run_distance(total_km: float, target_distance: float,
 
     long_run_base = total_km * long_run_ratio
 
-    long_run_cap = {
-        5.0: 8.0,
-        10.0: 15.0,
-        21.1: 20.0,
-        30.0: 24.0,
-        42.2: 32.0
-    }.get(target_distance, target_distance * 0.77)
+    long_run_cap = _get_long_run_cap(target_distance, experience_level)
 
     long_run_base = min(long_run_base, long_run_cap)
 
