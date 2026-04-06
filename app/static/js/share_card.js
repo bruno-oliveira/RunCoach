@@ -3,6 +3,7 @@
  *
  * Creates branded, downloadable images from run data.
  * Supports Instagram Post (1080x1080) and Story (1080x1920).
+ * Three visual themes: Midnight (dark), Dawn (light), Dusk (deep).
  */
 const ShareCard = {
 
@@ -14,14 +15,50 @@ const ShareCard = {
         story:  { w: 1080, h: 1920, label: 'Story' },
     },
 
-    // Dark athletic palette
-    BG: ['#0F172A', '#162044', '#1E3A5F'],
-    ACCENT:          '#FF6246',
-    ACCENT_GLOW:     'rgba(255, 98, 70, 0.25)',
-    TEXT_PRIMARY:    '#FFFFFF',
-    TEXT_SECONDARY:  '#94A3B8',
-    TEXT_MUTED:      '#475569',
-    RING_BG:         'rgba(255,255,255,0.08)',
+    THEMES: {
+        midnight: {
+            label: 'Midnight',
+            bg:            ['#0F172A', '#162044', '#1E3A5F'],
+            accent:        '#FF6246',
+            accentSlash:   'rgba(255, 98, 70, 0.06)',
+            textPrimary:   '#FFFFFF',
+            textSecondary: '#94A3B8',
+            textMuted:     '#475569',
+            ringBg:        'rgba(255,255,255,0.08)',
+            divider:       'rgba(255,255,255,0.08)',
+            topoStroke:    '#FFFFFF',
+            topoAlpha:     0.04,
+            vdotBadgeBg:   'rgba(255, 98, 70, 0.12)',
+        },
+        dawn: {
+            label: 'Dawn',
+            bg:            ['#FAFAF7', '#F3F0E8', '#EBE6DC'],
+            accent:        '#1D4ED8',
+            accentSlash:   'rgba(29, 78, 216, 0.04)',
+            textPrimary:   '#1C1917',
+            textSecondary: '#6B6560',
+            textMuted:     '#A09A93',
+            ringBg:        'rgba(28, 25, 23, 0.06)',
+            divider:       'rgba(28, 25, 23, 0.10)',
+            topoStroke:    '#1D4ED8',
+            topoAlpha:     0.05,
+            vdotBadgeBg:   'rgba(29, 78, 216, 0.08)',
+        },
+        dusk: {
+            label: 'Dusk',
+            bg:            ['#0A0A12', '#140E20', '#1C1230'],
+            accent:        '#C084FC',
+            accentSlash:   'rgba(192, 132, 252, 0.05)',
+            textPrimary:   '#F1F0FB',
+            textSecondary: '#8B83A8',
+            textMuted:     '#5B5475',
+            ringBg:        'rgba(241,240,251,0.07)',
+            divider:       'rgba(241,240,251,0.07)',
+            topoStroke:    '#C084FC',
+            topoAlpha:     0.035,
+            vdotBadgeBg:   'rgba(192, 132, 252, 0.12)',
+        },
+    },
 
     QUALITY_COLORS: {
         'Nailed it': '#22C55E',
@@ -54,6 +91,10 @@ const ShareCard = {
     _canvas: null,
     _currentRun: null,
     _currentFormat: 'square',
+    _currentTheme: 'midnight',
+
+    /** Shortcut to the active theme palette. */
+    _t() { return this.THEMES[this._currentTheme]; },
 
     /* ------------------------------------------------------------------ */
     /*  Public API                                                         */
@@ -83,6 +124,15 @@ const ShareCard = {
     _ensureModal() {
         if (this._modal) return;
 
+        const themeButtons = Object.entries(this.THEMES).map(([key, t]) => {
+            const active = key === this._currentTheme ? ' share-theme-btn--active' : '';
+            const swatch = t.bg[0];
+            return `<button class="share-theme-btn${active}" data-theme="${key}">
+                <span class="share-theme-swatch" style="background:${swatch}"></span>
+                ${t.label}
+            </button>`;
+        }).join('');
+
         const modal = document.createElement('div');
         modal.className = 'share-modal';
         modal.innerHTML = `
@@ -92,15 +142,18 @@ const ShareCard = {
                     <h3 class="share-modal-title">Share Your Run</h3>
                     <button class="share-modal-close" aria-label="Close">&times;</button>
                 </div>
-                <div class="share-modal-formats">
-                    <button class="share-format-btn share-format-btn--active" data-fmt="square">
-                        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="2" width="12" height="12" rx="1.5"/></svg>
-                        Post
-                    </button>
-                    <button class="share-format-btn" data-fmt="story">
-                        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="4" y="1" width="8" height="14" rx="1.5"/></svg>
-                        Story
-                    </button>
+                <div class="share-modal-controls">
+                    <div class="share-modal-formats">
+                        <button class="share-format-btn share-format-btn--active" data-fmt="square">
+                            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="2" width="12" height="12" rx="1.5"/></svg>
+                            Post
+                        </button>
+                        <button class="share-format-btn" data-fmt="story">
+                            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="4" y="1" width="8" height="14" rx="1.5"/></svg>
+                            Story
+                        </button>
+                    </div>
+                    <div class="share-modal-themes">${themeButtons}</div>
                 </div>
                 <div class="share-modal-preview">
                     <canvas id="shareCardCanvas"></canvas>
@@ -129,11 +182,22 @@ const ShareCard = {
         modal.querySelector('.share-modal-backdrop').addEventListener('click', () => this.close());
         modal.querySelector('.share-modal-close').addEventListener('click', () => this.close());
 
+        // Format buttons
         modal.querySelectorAll('.share-format-btn').forEach(btn => {
             btn.addEventListener('click', () => {
                 modal.querySelectorAll('.share-format-btn').forEach(b => b.classList.remove('share-format-btn--active'));
                 btn.classList.add('share-format-btn--active');
                 this._currentFormat = btn.dataset.fmt;
+                this._render();
+            });
+        });
+
+        // Theme buttons
+        modal.querySelectorAll('.share-theme-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                modal.querySelectorAll('.share-theme-btn').forEach(b => b.classList.remove('share-theme-btn--active'));
+                btn.classList.add('share-theme-btn--active');
+                this._currentTheme = btn.dataset.theme;
                 this._render();
             });
         });
@@ -173,13 +237,12 @@ const ShareCard = {
         const run = this._currentRun;
         const w = fmt.w;
         const h = fmt.h;
-        const isStory = this._currentFormat === 'story';
 
         this._drawBackground(ctx, w, h);
         this._drawTopoLines(ctx, w, h);
         this._drawAccentSlash(ctx, w, h);
 
-        if (isStory) {
+        if (this._currentFormat === 'story') {
             this._drawStoryLayout(ctx, run, w, h);
         } else {
             this._drawSquareLayout(ctx, run, w, h);
@@ -190,19 +253,21 @@ const ShareCard = {
     /*  Background                                                         */
     /* ------------------------------------------------------------------ */
     _drawBackground(ctx, w, h) {
+        const t = this._t();
         const grad = ctx.createLinearGradient(0, 0, w * 0.3, h);
-        grad.addColorStop(0, this.BG[0]);
-        grad.addColorStop(0.5, this.BG[1]);
-        grad.addColorStop(1, this.BG[2]);
+        grad.addColorStop(0, t.bg[0]);
+        grad.addColorStop(0.5, t.bg[1]);
+        grad.addColorStop(1, t.bg[2]);
         ctx.fillStyle = grad;
         ctx.fillRect(0, 0, w, h);
     },
 
     /** Subtle topographic contour lines — RunCoach's unique visual signature. */
     _drawTopoLines(ctx, w, h) {
+        const t = this._t();
         ctx.save();
-        ctx.globalAlpha = 0.04;
-        ctx.strokeStyle = '#FFFFFF';
+        ctx.globalAlpha = t.topoAlpha;
+        ctx.strokeStyle = t.topoStroke;
         ctx.lineWidth = 1.2;
 
         const lines = 20;
@@ -223,13 +288,14 @@ const ShareCard = {
         ctx.restore();
     },
 
-    /** Diagonal coral accent stripe for visual pop. */
+    /** Diagonal accent stripe for visual pop. */
     _drawAccentSlash(ctx, w, h) {
+        const t = this._t();
         ctx.save();
         const grad = ctx.createLinearGradient(w * 0.6, 0, w, h * 0.4);
-        grad.addColorStop(0, 'rgba(255, 98, 70, 0.0)');
-        grad.addColorStop(0.5, 'rgba(255, 98, 70, 0.06)');
-        grad.addColorStop(1, 'rgba(255, 98, 70, 0.0)');
+        grad.addColorStop(0, 'rgba(0,0,0,0)');
+        grad.addColorStop(0.5, t.accentSlash);
+        grad.addColorStop(1, 'rgba(0,0,0,0)');
         ctx.fillStyle = grad;
         ctx.beginPath();
         ctx.moveTo(w * 0.55, 0);
@@ -247,6 +313,7 @@ const ShareCard = {
     /*  Square Layout (1080x1080)                                          */
     /* ------------------------------------------------------------------ */
     _drawSquareLayout(ctx, run, w, h) {
+        const t = this._t();
         const pad = 72;
         let y = pad;
 
@@ -256,18 +323,18 @@ const ShareCard = {
 
         // ── Date + Workout Type ──
         y = this._drawDateRow(ctx, run, pad, y, w);
-        y += 48;
+        y += 36;
 
         // ── Hero: distance ──
         const distStr = run.distance_km ? run.distance_km.toFixed(1) : '0.0';
         ctx.font = `800 140px ${this.FONT_DISPLAY}`;
-        ctx.fillStyle = this.TEXT_PRIMARY;
+        ctx.fillStyle = t.textPrimary;
         ctx.textAlign = 'left';
         ctx.fillText(distStr, pad, y + 120);
         // "km" unit
         const distWidth = ctx.measureText(distStr).width;
         ctx.font = `500 36px ${this.FONT_BODY}`;
-        ctx.fillStyle = this.TEXT_SECONDARY;
+        ctx.fillStyle = t.textSecondary;
         ctx.fillText('km', pad + distWidth + 12, y + 120);
         y += 150;
 
@@ -276,7 +343,7 @@ const ShareCard = {
 
         // ── Quality Ring (right side) ──
         if (run.effort_quality_score || run.quality_label) {
-            this._drawQualityRing(ctx, run, w - pad - 100, 280, 85);
+            this._drawQualityRing(ctx, run, w - pad - 100, 295, 85);
         } else if (run.vdot) {
             this._drawVdotBadge(ctx, run.vdot, w - pad - 80, 290);
         }
@@ -303,6 +370,7 @@ const ShareCard = {
     /*  Story Layout (1080x1920)                                           */
     /* ------------------------------------------------------------------ */
     _drawStoryLayout(ctx, run, w, h) {
+        const t = this._t();
         const pad = 72;
         let y = 100;
 
@@ -312,30 +380,30 @@ const ShareCard = {
 
         // ── Date + Workout Type ──
         y = this._drawDateRow(ctx, run, pad, y, w);
-        y += 100;
+        y += 80;
 
         // ── Hero: distance (centered) ──
         const distStr = run.distance_km ? run.distance_km.toFixed(1) : '0.0';
         ctx.font = `800 200px ${this.FONT_DISPLAY}`;
-        ctx.fillStyle = this.TEXT_PRIMARY;
+        ctx.fillStyle = t.textPrimary;
         ctx.textAlign = 'center';
         ctx.fillText(distStr, w / 2, y + 170);
         ctx.font = `500 48px ${this.FONT_BODY}`;
-        ctx.fillStyle = this.TEXT_SECONDARY;
+        ctx.fillStyle = t.textSecondary;
         ctx.fillText('km', w / 2, y + 230);
         y += 280;
 
         // ── Duration + Pace (centered) ──
         const duration = this._formatDuration(run.duration_minutes);
         ctx.font = `600 64px ${this.FONT_MONO}`;
-        ctx.fillStyle = this.TEXT_PRIMARY;
+        ctx.fillStyle = t.textPrimary;
         ctx.fillText(duration, w / 2, y);
         y += 56;
 
         const pace = run.avg_pace_min_km > 0 ? this._formatPace(run.avg_pace_min_km) + ' /km' : '';
         if (pace) {
             ctx.font = `500 36px ${this.FONT_MONO}`;
-            ctx.fillStyle = this.TEXT_SECONDARY;
+            ctx.fillStyle = t.textSecondary;
             ctx.fillText(pace, w / 2, y);
         }
         y += 80;
@@ -363,7 +431,7 @@ const ShareCard = {
             y += 30;
             ctx.textAlign = 'center';
             ctx.font = `600 28px ${this.FONT_MONO}`;
-            ctx.fillStyle = this.ACCENT;
+            ctx.fillStyle = t.accent;
             ctx.fillText(`VDOT ${run.vdot.toFixed(1)}`, w / 2, y);
         }
 
@@ -375,10 +443,10 @@ const ShareCard = {
     /*  Shared Drawing Helpers                                             */
     /* ------------------------------------------------------------------ */
     _drawBranding(ctx, pad, y, w) {
+        const t = this._t();
         ctx.font = `700 18px ${this.FONT_DISPLAY}`;
-        ctx.fillStyle = this.ACCENT;
+        ctx.fillStyle = t.accent;
         ctx.textAlign = 'left';
-        ctx.letterSpacing = '4px';
         // Manual letter spacing for canvas
         const brand = 'RUNCOACH';
         let bx = pad;
@@ -386,42 +454,50 @@ const ShareCard = {
             ctx.fillText(ch, bx, y);
             bx += ctx.measureText(ch).width + 4;
         }
-        ctx.letterSpacing = '0px';
         return y + 12;
     },
 
     _drawDateRow(ctx, run, pad, y, w) {
-        const date = run.date
-            ? new Date(run.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
-            : '';
+        const t = this._t();
         const type = run.workout_type
             ? run.workout_type.charAt(0).toUpperCase() + run.workout_type.slice(1)
             : '';
 
-        ctx.font = `500 22px ${this.FONT_BODY}`;
-        ctx.fillStyle = this.TEXT_SECONDARY;
+        // Date — larger, primary weight
+        const dateStr = run.date
+            ? new Date(run.date).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })
+            : '';
+
         ctx.textAlign = 'left';
+        ctx.font = `600 26px ${this.FONT_BODY}`;
+        ctx.fillStyle = t.textSecondary;
+        ctx.fillText(dateStr, pad, y + 26);
 
-        let label = date;
-        if (type) label += ` \u00B7 ${type} Run`;
-        ctx.fillText(label, pad, y + 22);
-
-        // Workout type color dot
-        if (run.workout_type && this.WORKOUT_COLORS[run.workout_type]) {
-            const dotX = pad + ctx.measureText(label).width + 16;
-            ctx.beginPath();
-            ctx.arc(dotX, y + 17, 5, 0, Math.PI * 2);
-            ctx.fillStyle = this.WORKOUT_COLORS[run.workout_type];
+        // Workout type pill
+        if (type) {
+            const pillColor = this.WORKOUT_COLORS[run.workout_type] || t.accent;
+            const pillText = type + ' Run';
+            ctx.font = `600 18px ${this.FONT_BODY}`;
+            const tw = ctx.measureText(pillText).width;
+            const px = pad + ctx.measureText(dateStr).width + 20;
+            // Pill background
+            const pillH = 28, pillR = 14;
+            ctx.fillStyle = pillColor + '22'; // 13% opacity
+            this._roundRect(ctx, px - 10, y + 8, tw + 20, pillH, pillR);
             ctx.fill();
+            // Pill text
+            ctx.fillStyle = pillColor;
+            ctx.fillText(pillText, px, y + 27);
         }
 
-        return y + 30;
+        return y + 40;
     },
 
     _drawTimePaceRow(ctx, run, pad, y, w) {
+        const t = this._t();
         const duration = this._formatDuration(run.duration_minutes);
         ctx.font = `600 48px ${this.FONT_MONO}`;
-        ctx.fillStyle = this.TEXT_PRIMARY;
+        ctx.fillStyle = t.textPrimary;
         ctx.textAlign = 'left';
         ctx.fillText(duration, pad, y + 48);
 
@@ -429,7 +505,7 @@ const ShareCard = {
         if (pace) {
             const durWidth = ctx.measureText(duration).width;
             ctx.font = `500 28px ${this.FONT_MONO}`;
-            ctx.fillStyle = this.TEXT_SECONDARY;
+            ctx.fillStyle = t.textSecondary;
             ctx.fillText(pace, pad + durWidth + 32, y + 48);
         }
 
@@ -438,14 +514,15 @@ const ShareCard = {
 
     /** Effort quality arc ring. */
     _drawQualityRing(ctx, run, cx, cy, radius) {
+        const t = this._t();
         const score = run.effort_quality_score || 0;
         const label = run.quality_label || '';
-        const color = this.QUALITY_COLORS[label] || this.ACCENT;
+        const color = this.QUALITY_COLORS[label] || t.accent;
 
         // Background ring
         ctx.beginPath();
         ctx.arc(cx, cy, radius, 0, Math.PI * 2);
-        ctx.strokeStyle = this.RING_BG;
+        ctx.strokeStyle = t.ringBg;
         ctx.lineWidth = 10;
         ctx.stroke();
 
@@ -472,7 +549,7 @@ const ShareCard = {
 
         // Score number
         ctx.font = `700 42px ${this.FONT_DISPLAY}`;
-        ctx.fillStyle = this.TEXT_PRIMARY;
+        ctx.fillStyle = t.textPrimary;
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
         ctx.fillText(Math.round(score), cx, cy - 8);
@@ -488,41 +565,44 @@ const ShareCard = {
     },
 
     _drawVdotBadge(ctx, vdot, cx, cy) {
+        const t = this._t();
         ctx.textAlign = 'center';
-        // Badge background
         const bw = 120, bh = 52, br = 12;
-        ctx.fillStyle = 'rgba(255, 98, 70, 0.12)';
+        ctx.fillStyle = t.vdotBadgeBg;
         this._roundRect(ctx, cx - bw / 2, cy - bh / 2, bw, bh, br);
         ctx.fill();
 
         ctx.font = `600 14px ${this.FONT_BODY}`;
-        ctx.fillStyle = this.ACCENT;
+        ctx.fillStyle = t.accent;
         ctx.fillText('VDOT', cx, cy - 6);
         ctx.font = `700 22px ${this.FONT_MONO}`;
         ctx.fillText(vdot.toFixed(1), cx, cy + 18);
     },
 
     _drawVdotRow(ctx, vdot, pad, y, w) {
+        const t = this._t();
         ctx.textAlign = 'left';
         ctx.font = `600 16px ${this.FONT_BODY}`;
-        ctx.fillStyle = this.ACCENT;
+        ctx.fillStyle = t.accent;
         ctx.fillText('VDOT', pad, y);
         ctx.font = `700 24px ${this.FONT_MONO}`;
-        ctx.fillStyle = this.TEXT_PRIMARY;
+        ctx.fillStyle = t.textPrimary;
         ctx.fillText(vdot.toFixed(1), pad + 60, y);
         return y + 10;
     },
 
     _drawDivider(ctx, x1, y, x2) {
+        const t = this._t();
         ctx.beginPath();
         ctx.moveTo(x1, y);
         ctx.lineTo(x2, y);
-        ctx.strokeStyle = 'rgba(255,255,255,0.08)';
+        ctx.strokeStyle = t.divider;
         ctx.lineWidth = 1;
         ctx.stroke();
     },
 
     _drawSecondaryStats(ctx, run, pad, y, w) {
+        const t = this._t();
         const stats = [];
         if (run.avg_heart_rate > 0)    stats.push({ icon: '\u2665', value: Math.round(run.avg_heart_rate), unit: 'bpm', color: '#EF4444' });
         if (run.elevation_gain_m > 0)  stats.push({ icon: '\u25B2', value: run.elevation_gain_m, unit: 'm', color: '#22C55E' });
@@ -537,19 +617,16 @@ const ShareCard = {
         stats.forEach((s, i) => {
             const cx = pad + colW * i + colW / 2;
 
-            // Icon
             ctx.font = `20px ${this.FONT_BODY}`;
             ctx.fillStyle = s.color;
             ctx.fillText(s.icon, cx, y);
 
-            // Value
             ctx.font = `700 32px ${this.FONT_MONO}`;
-            ctx.fillStyle = this.TEXT_PRIMARY;
+            ctx.fillStyle = t.textPrimary;
             ctx.fillText(String(s.value), cx, y + 40);
 
-            // Unit
             ctx.font = `500 16px ${this.FONT_BODY}`;
-            ctx.fillStyle = this.TEXT_MUTED;
+            ctx.fillStyle = t.textMuted;
             ctx.fillText(s.unit, cx, y + 62);
         });
 
@@ -558,11 +635,12 @@ const ShareCard = {
 
     /** Vertical stat blocks for story layout. */
     _drawStoryStats(ctx, run, pad, y, w) {
+        const t = this._t();
         const stats = [];
-        if (run.avg_heart_rate > 0)    stats.push({ icon: '\u2665', label: 'Heart Rate', value: Math.round(run.avg_heart_rate), unit: 'bpm', color: '#EF4444' });
-        if (run.elevation_gain_m > 0)  stats.push({ icon: '\u25B2', label: 'Elevation', value: run.elevation_gain_m, unit: 'm', color: '#22C55E' });
-        if (run.avg_cadence > 0)       stats.push({ icon: '\u26A1', label: 'Cadence', value: Math.round(run.avg_cadence), unit: 'spm', color: '#EAB308' });
-        if (run.perceived_effort > 0)  stats.push({ icon: '\u{1F4AA}', label: 'Effort', value: run.perceived_effort, unit: '/10', color: '#8B5CF6' });
+        if (run.avg_heart_rate > 0)    stats.push({ icon: '\u2665', value: Math.round(run.avg_heart_rate), unit: 'bpm', color: '#EF4444' });
+        if (run.elevation_gain_m > 0)  stats.push({ icon: '\u25B2', value: run.elevation_gain_m, unit: 'm', color: '#22C55E' });
+        if (run.avg_cadence > 0)       stats.push({ icon: '\u26A1', value: Math.round(run.avg_cadence), unit: 'spm', color: '#EAB308' });
+        if (run.perceived_effort > 0)  stats.push({ icon: '\u{1F4AA}', value: run.perceived_effort, unit: '/10', color: '#8B5CF6' });
 
         if (stats.length === 0) return y;
 
@@ -577,11 +655,11 @@ const ShareCard = {
             ctx.fillText(s.icon, cx, y);
 
             ctx.font = `700 40px ${this.FONT_MONO}`;
-            ctx.fillStyle = this.TEXT_PRIMARY;
+            ctx.fillStyle = t.textPrimary;
             ctx.fillText(String(s.value), cx, y + 48);
 
             ctx.font = `500 18px ${this.FONT_BODY}`;
-            ctx.fillStyle = this.TEXT_MUTED;
+            ctx.fillStyle = t.textMuted;
             ctx.fillText(s.unit, cx, y + 72);
         });
 
@@ -589,15 +667,14 @@ const ShareCard = {
     },
 
     _drawFooter(ctx, w, h, pad) {
+        const t = this._t();
         const fy = h - pad + 10;
 
-        // Horizontal line
         this._drawDivider(ctx, pad, fy - 36, w - pad);
 
-        // Logo wordmark
         ctx.textAlign = 'center';
         ctx.font = `700 16px ${this.FONT_DISPLAY}`;
-        ctx.fillStyle = this.TEXT_MUTED;
+        ctx.fillStyle = t.textMuted;
         const brand = 'runcoach';
         let totalW = 0;
         for (const ch of brand) totalW += ctx.measureText(ch).width + 2.5;
@@ -672,7 +749,6 @@ const ShareCard = {
             await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]);
             this._flashButton('shareCopyBtn', 'Copied!');
         } catch {
-            // Fallback: download instead
             this._download();
         }
     },

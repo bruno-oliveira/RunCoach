@@ -60,6 +60,10 @@ class TrainingPlan(Base):
     # Proactive adaptation alerts (JSON: {type, message, severity, created_at})
     adaptation_alert = Column(Text, nullable=True)
 
+    # Timestamp of the last plan adjustment/recalibration — used to suppress
+    # the "needs adjustment" banner for workouts that were already accounted for.
+    last_adjusted_at = Column(DateTime, nullable=True)
+
     # Shareable link token
     share_token = Column(String, unique=True, nullable=True, index=True)
 

@@ -69,7 +69,14 @@
     color: var(--color-text, #1C1917);
 }
 
-/* ── Format Toggles ── */
+/* ── Controls row (format + theme) ── */
+.share-modal-controls {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-3, 12px);
+    flex-wrap: wrap;
+}
 .share-modal-formats {
     display: flex;
     gap: var(--space-2, 8px);
@@ -78,7 +85,7 @@
     display: flex;
     align-items: center;
     gap: 6px;
-    padding: 8px 16px;
+    padding: 7px 14px;
     border: 1.5px solid var(--color-border, #E2E0DB);
     border-radius: var(--radius-full, 9999px);
     background: transparent;
@@ -99,9 +106,46 @@
     color: var(--color-primary, #1D4ED8);
 }
 
+/* ── Theme Picker ── */
+.share-modal-themes {
+    display: flex;
+    gap: 6px;
+}
+.share-theme-btn {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    padding: 6px 12px;
+    border: 1.5px solid var(--color-border, #E2E0DB);
+    border-radius: var(--radius-full, 9999px);
+    background: transparent;
+    font-family: var(--font-body, sans-serif);
+    font-size: var(--text-xs, 12px);
+    font-weight: 600;
+    color: var(--color-text-secondary, #6B6560);
+    cursor: pointer;
+    transition: all 0.15s;
+}
+.share-theme-btn:hover {
+    border-color: var(--color-text-secondary, #6B6560);
+}
+.share-theme-btn--active {
+    border-color: var(--color-primary, #1D4ED8);
+    color: var(--color-primary, #1D4ED8);
+    background: var(--color-primary-subtle, rgba(29, 78, 216, 0.08));
+}
+.share-theme-swatch {
+    display: inline-block;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    border: 1px solid rgba(0,0,0,0.12);
+    flex-shrink: 0;
+}
+
 /* ── Card Preview ── */
 .share-modal-preview {
-    background: #0F172A;
+    background: #111;
     border-radius: var(--radius-lg, 12px);
     overflow: hidden;
     display: flex;
@@ -184,14 +228,14 @@
     position: absolute;
     top: 6px;
     right: 6px;
-    opacity: 0;
+    opacity: 0.45;
     transition: opacity 0.15s;
 }
 .workout-item.completed:hover .workout-share-corner,
 .workout-item.completed:focus-within .workout-share-corner {
     opacity: 1;
 }
-/* Always visible on touch devices */
+/* Always fully visible on touch devices */
 @media (hover: none) {
     .workout-item.completed .workout-share-corner {
         opacity: 1;
@@ -209,6 +253,10 @@
     }
     .share-modal {
         align-items: flex-end;
+    }
+    .share-modal-controls {
+        flex-direction: column;
+        align-items: flex-start;
     }
     .share-action-btn {
         padding: 14px 12px;

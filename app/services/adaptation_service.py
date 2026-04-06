@@ -257,6 +257,8 @@ class AdaptationService:
         self,
         plan_id: str,
         db: Session,
+        *,
+        since: Optional[datetime] = None,
     ) -> Dict[str, int]:
         """Detect skipped and rescheduled workouts up to today.
 
@@ -264,6 +266,11 @@ class AdaptationService:
         Among unlinked workouts:
         - "rescheduled" = that week's total volume was still met (>= 80%)
         - "skipped" = truly missed (week volume not met)
+
+        Args:
+            since: If provided, only count workouts scheduled after this date.
+                   Used to avoid re-flagging misses that were already addressed
+                   by a prior adjustment.
 
         Returns:
             Dict with ``skipped`` and ``rescheduled`` counts.
@@ -302,6 +309,7 @@ class AdaptationService:
 
         # Group unlinked past workouts by week
         unlinked_by_week: Dict[int, int] = defaultdict(int)
+        since_date = _to_date(since) if since else None
 
         for workout, week_number in daily_workouts:
             workout_date = plan_start_date + timedelta(
@@ -309,6 +317,9 @@ class AdaptationService:
                 days=(workout.day_of_week - 1)
             )
             if workout_date > today:
+                continue
+            # Skip workouts that were already accounted for by a prior adjustment
+            if since_date and workout_date <= since_date:
                 continue
             if workout.id not in linked_workout_ids:
                 unlinked_by_week[week_number] += 1
@@ -744,6 +755,7 @@ class AdaptationService:
 
         # Persist
         training_plan.adjustment_multiplier = multiplier
+        training_plan.last_adjusted_at = datetime.now(timezone.utc).replace(tzinfo=None)
         db.commit()
 
         # Build human-readable reason
@@ -1329,6 +1341,7 @@ class AdaptationService:
         training_plan.plan_data = json.dumps(plan_data)
         # Clear the alert after recalibration
         training_plan.adaptation_alert = None
+        training_plan.last_adjusted_at = datetime.now(timezone.utc).replace(tzinfo=None)
         db.commit()
 
         strategy_labels = {

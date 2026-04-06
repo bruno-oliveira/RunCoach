@@ -168,6 +168,8 @@ def _run_migrations(eng) -> None:
         "ALTER TABLE training_plans ADD COLUMN plan_data_version INTEGER DEFAULT 1",
         # Proactive adaptation alerts (Phase 3: Adaptation Alerts)
         "ALTER TABLE training_plans ADD COLUMN adaptation_alert TEXT",
+        # Track last adjustment time to suppress stale "needs adjustment" banners
+        "ALTER TABLE training_plans ADD COLUMN last_adjusted_at DATETIME",
     ]
     with eng.connect() as conn:
         for stmt in stmts:

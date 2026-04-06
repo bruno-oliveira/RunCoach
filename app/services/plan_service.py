@@ -513,7 +513,11 @@ class PlanService:
         performance_analysis: dict,
         db: Session,
     ) -> dict[str, Any]:
-        """Compute skipped/rescheduled counts and whether adjustment is needed."""
+        """Compute skipped/rescheduled counts and whether adjustment is needed.
+
+        Only counts misses that occurred **after** the most recent adjustment
+        (if any), so the banner doesn't re-appear for already-addressed issues.
+        """
         skipped_count = 0
         rescheduled_count = 0
         needs_adjustment = False
@@ -521,15 +525,33 @@ class PlanService:
 
         if training_plan.start_date:
             try:
+                since = training_plan.last_adjusted_at
                 skip_result = self._adaptation_service.detect_skipped_workouts(
-                    training_plan.id, db
+                    training_plan.id, db, since=since,
                 )
                 skipped_count = skip_result["skipped"]
                 rescheduled_count = skip_result["rescheduled"]
-                needs_adjustment = (
-                    skipped_count >= 2
-                    or (avg_effort is not None and (avg_effort >= 8 or avg_effort <= 3))
-                )
+
+                # For effort, only consider runs logged after the last
+                # adjustment so old extremes don't re-trigger the banner.
+                effort_extreme = False
+                if avg_effort is not None and not since:
+                    effort_extreme = avg_effort >= 8 or avg_effort <= 3
+                elif since:
+                    recent_runs = (
+                        db.query(RunLog.perceived_effort)
+                        .filter(
+                            RunLog.training_plan_id == training_plan.id,
+                            RunLog.perceived_effort.isnot(None),
+                            RunLog.date > since,
+                        )
+                        .all()
+                    )
+                    if len(recent_runs) >= 3:
+                        recent_avg = sum(r[0] for r in recent_runs) / len(recent_runs)
+                        effort_extreme = recent_avg >= 8 or recent_avg <= 3
+
+                needs_adjustment = skipped_count >= 2 or effort_extreme
             except Exception as e:
                 logger.warning(f"Could not detect skipped workouts: {e}")
 
