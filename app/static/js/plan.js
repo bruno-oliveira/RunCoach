@@ -1037,4 +1037,18 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
     });
+
+    // Share buttons on completed workout items
+    document.querySelectorAll('.workout-share-corner .share-run-btn').forEach(btn => {
+        btn.addEventListener('click', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            try {
+                const run = JSON.parse(this.dataset.run);
+                if (window.ShareCard) window.ShareCard.open(run);
+            } catch (err) {
+                console.warn('Failed to open share card:', err);
+            }
+        });
+    });
 });

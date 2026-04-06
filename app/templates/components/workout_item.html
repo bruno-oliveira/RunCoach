@@ -49,6 +49,12 @@
     {% endif %}
 
     {% if logged_run %}
+    <div class="workout-share-corner">
+        <button class="share-run-btn" title="Share this run"
+            data-run='{{ {"distance_km": logged_run.distance_km, "duration_minutes": logged_run.duration_minutes, "avg_pace_min_km": logged_run.avg_pace_min_km, "avg_heart_rate": logged_run.avg_heart_rate or 0, "elevation_gain_m": logged_run.elevation_gain_m or 0, "avg_cadence": logged_run.avg_cadence or 0, "perceived_effort": logged_run.perceived_effort or 0, "workout_type": logged_run.workout_type or workout.type, "date": logged_run.date.isoformat() if logged_run.date else "", "effort_quality_score": logged_run.effort_quality_score or 0, "quality_label": logged_run.quality_label or "", "vdot": logged_run.vdot or 0}|tojson }}'>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
+        </button>
+    </div>
     {% if logged_run.quality_label %}
     <div class="quality-badge quality-{{ logged_run.quality_label|lower|replace(' ', '-') }}">
         {{ logged_run.quality_label }}

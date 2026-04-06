@@ -17,6 +17,7 @@
 {% if user and not user.strava_athlete_id %}
 <link rel="stylesheet" href="{{ static_url('css/plan-modal.css') }}">
 {% endif %}
+<link rel="stylesheet" href="{{ static_url('css/share.css') }}">
 {% endblock %}
 
 {% block content %}
@@ -548,6 +549,7 @@
         }
     }
 </script>
+<script src="{{ static_url('js/share_card.js') }}" defer></script>
 <script src="{{ static_url('js/plan.js') }}" defer></script>
 {% if user %}
 <script src="{{ static_url('js/readiness.js') }}" defer></script>

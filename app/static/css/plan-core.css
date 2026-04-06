@@ -543,6 +543,7 @@
 }
 
 .workout-item {
+    position: relative;
     padding: var(--space-4);
     border-radius: var(--radius-lg);
     border-left: 3px solid;
