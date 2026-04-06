@@ -323,7 +323,7 @@ const ShareCard = {
 
         // ── Date + Workout Type ──
         y = this._drawDateRow(ctx, run, pad, y, w);
-        y += 36;
+        y += 48;
 
         // ── Hero: distance ──
         const distStr = run.distance_km ? run.distance_km.toFixed(1) : '0.0';
@@ -343,7 +343,7 @@ const ShareCard = {
 
         // ── Quality Ring (right side) ──
         if (run.effort_quality_score || run.quality_label) {
-            this._drawQualityRing(ctx, run, w - pad - 100, 295, 85);
+            this._drawQualityRing(ctx, run, w - pad - 100, 280, 85);
         } else if (run.vdot) {
             this._drawVdotBadge(ctx, run.vdot, w - pad - 80, 290);
         }
@@ -380,7 +380,7 @@ const ShareCard = {
 
         // ── Date + Workout Type ──
         y = this._drawDateRow(ctx, run, pad, y, w);
-        y += 80;
+        y += 100;
 
         // ── Hero: distance (centered) ──
         const distStr = run.distance_km ? run.distance_km.toFixed(1) : '0.0';
@@ -459,38 +459,31 @@ const ShareCard = {
 
     _drawDateRow(ctx, run, pad, y, w) {
         const t = this._t();
+        const date = run.date
+            ? new Date(run.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+            : '';
         const type = run.workout_type
             ? run.workout_type.charAt(0).toUpperCase() + run.workout_type.slice(1)
             : '';
 
-        // Date — larger, primary weight
-        const dateStr = run.date
-            ? new Date(run.date).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })
-            : '';
-
-        ctx.textAlign = 'left';
-        ctx.font = `600 26px ${this.FONT_BODY}`;
+        ctx.font = `500 22px ${this.FONT_BODY}`;
         ctx.fillStyle = t.textSecondary;
-        ctx.fillText(dateStr, pad, y + 26);
+        ctx.textAlign = 'left';
 
-        // Workout type pill
-        if (type) {
-            const pillColor = this.WORKOUT_COLORS[run.workout_type] || t.accent;
-            const pillText = type + ' Run';
-            ctx.font = `600 18px ${this.FONT_BODY}`;
-            const tw = ctx.measureText(pillText).width;
-            const px = pad + ctx.measureText(dateStr).width + 20;
-            // Pill background
-            const pillH = 28, pillR = 14;
-            ctx.fillStyle = pillColor + '22'; // 13% opacity
-            this._roundRect(ctx, px - 10, y + 8, tw + 20, pillH, pillR);
+        let label = date;
+        if (type) label += ` \u00B7 ${type} Run`;
+        ctx.fillText(label, pad, y + 22);
+
+        // Workout type color dot
+        if (run.workout_type && this.WORKOUT_COLORS[run.workout_type]) {
+            const dotX = pad + ctx.measureText(label).width + 16;
+            ctx.beginPath();
+            ctx.arc(dotX, y + 17, 5, 0, Math.PI * 2);
+            ctx.fillStyle = this.WORKOUT_COLORS[run.workout_type];
             ctx.fill();
-            // Pill text
-            ctx.fillStyle = pillColor;
-            ctx.fillText(pillText, px, y + 27);
         }
 
-        return y + 40;
+        return y + 30;
     },
 
     _drawTimePaceRow(ctx, run, pad, y, w) {

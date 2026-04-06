@@ -224,10 +224,11 @@
 }
 
 /* ── Plan page: corner widget on completed workouts ── */
+/* Sits left of the green checkmark (::after at right:8px, 20px wide) */
 .workout-share-corner {
     position: absolute;
     top: 6px;
-    right: 6px;
+    right: 34px;
     opacity: 0.45;
     transition: opacity 0.15s;
 }
