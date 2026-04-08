@@ -17,8 +17,14 @@
     </div>
 
     {% if plans %}
+    {# Separate active from completed #}
+    {% set active_plans = plans | selectattr("status_label", "ne", "Completed") | list %}
+    {% set completed_plans = plans | selectattr("status_label", "equalto", "Completed") | list %}
+
+    {% if active_plans %}
     <div class="plans-grid">
-        {% for plan in plans %}
+        {% for plan in active_plans %}
+        {% set is_completed = plan.status_label == 'Completed' %}
         <div class="plan-card" id="plan-{{ plan.id }}">
             <div class="plan-card-header">
                 <h3>{{ plan.target_distance_display }} Training Plan</h3>
@@ -89,6 +95,76 @@
     </div>
     {% endif %}
 
+    {% if completed_plans %}
+    <div class="plans-section-header">
+        <h2>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:6px;color:var(--color-success)"><circle cx="12" cy="12" r="10"/><path d="M8 12l2.5 2.5L16 9"/></svg>
+            Completed Plans
+        </h2>
+        <button class="plans-section-toggle" onclick="toggleCompletedPlans(this)">Hide</button>
+    </div>
+    <div class="plans-grid" id="completed-plans-grid">
+        {% for plan in completed_plans %}
+        <div class="plan-card plan-card-completed" id="plan-{{ plan.id }}">
+            <div class="plan-card-header">
+                <h3>{{ plan.target_distance_display }} Training Plan</h3>
+                <span class="plan-badge badge-completed">
+                    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-1px;margin-right:3px;"><path d="M20 6L9 17l-5-5"/></svg>
+                    Done
+                </span>
+            </div>
+            <div class="plan-details">
+                <div class="plan-detail-row">
+                    <span class="plan-detail-label">Target Distance:</span>
+                    <span class="plan-detail-value">{{ plan.target_distance_display }}</span>
+                </div>
+                {% if plan.plan_type == 'performance' and plan.goal_time %}
+                <div class="plan-detail-row">
+                    <span class="plan-detail-label">Goal Time:</span>
+                    <span class="plan-detail-value">{{ plan.goal_time }}</span>
+                </div>
+                {% endif %}
+                <div class="plan-detail-row">
+                    <span class="plan-detail-label">Duration:</span>
+                    <span class="plan-detail-value">{{ plan.weeks_duration }} weeks</span>
+                </div>
+                <div class="plan-detail-row">
+                    <span class="plan-detail-label">Started:</span>
+                    <span class="plan-detail-value">{{ plan.start_date.strftime('%b %d, %Y') if plan.start_date else '—' }}</span>
+                </div>
+            </div>
+            <div class="created-date">
+                Created: {{ plan.created_at.strftime('%B %d, %Y') }}
+            </div>
+            <div class="plan-actions">
+                {% if plan.plan_type == 'performance' %}
+                <a href="/performance-plan/{{ plan.id }}" class="btn btn-secondary">View Summary</a>
+                {% else %}
+                <a href="/plan/{{ plan.id }}" class="btn btn-secondary">View Summary</a>
+                {% endif %}
+                <a href="/download-pdf/{{ plan.id }}" class="btn btn-secondary">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: -2px;"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                    PDF
+                </a>
+                <button class="btn btn-danger" onclick="deletePlan('{{ plan.id }}')">Delete</button>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    {% if not active_plans and not completed_plans %}
+    <div class="no-plans">
+        <h2>No Training Plans Yet</h2>
+        <p>You haven't created any training plans yet.</p>
+        <div style="display:flex;gap:var(--space-3);flex-wrap:wrap;justify-content:center;margin-top:var(--space-4);">
+            <a href="/" class="btn btn-primary">Running Plan</a>
+            <a href="/triathlon" class="btn btn-secondary">Triathlon Plan</a>
+        </div>
+    </div>
+    {% endif %}
+    {% endif %}
+
     {# ---- Triathlon plans section ---- #}
     {% if triathlon_plans %}
     <div class="header" style="margin-top: var(--space-10);">
@@ -149,6 +225,14 @@
 </div>
 
 <script>
+function toggleCompletedPlans(btn) {
+    const grid = document.getElementById('completed-plans-grid');
+    if (!grid) return;
+    const hidden = grid.style.display === 'none';
+    grid.style.display = hidden ? '' : 'none';
+    btn.textContent = hidden ? 'Hide' : 'Show';
+}
+
 async function deletePlan(planId) {
     if (!confirm('Are you sure you want to delete this training plan? This action cannot be undone.')) {
         return;

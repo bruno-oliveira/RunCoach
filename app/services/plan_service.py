@@ -579,6 +579,80 @@ class PlanService:
             logger.warning(f"Could not load feedback: {e}")
             return {}
 
+    def get_completion_stats(self,
+        training_plan: TrainingPlan,
+        db: Session,
+    ) -> dict[str, Any]:
+        """Compute summary stats for a completed plan from its run logs."""
+        runs = (
+            db.query(RunLog)
+            .filter(RunLog.training_plan_id == training_plan.id)
+            .all()
+        )
+
+        if not runs:
+            return {"has_data": False}
+
+        distances = [r.distance_km for r in runs if r.distance_km]
+        total_km = sum(distances) if distances else 0
+        longest_run = max(distances) if distances else 0
+
+        paces = [r.avg_pace_min_km for r in runs if r.avg_pace_min_km]
+        best_pace = min(paces) if paces else None
+
+        efforts = [r.perceived_effort for r in runs if r.perceived_effort]
+        avg_effort = round(sum(efforts) / len(efforts), 1) if efforts else None
+
+        plan_data = json.loads(training_plan.plan_data) if training_plan.plan_data else []
+        peak_km = max((w.get("total_km", 0) for w in plan_data), default=0)
+
+        return {
+            "has_data": bool(distances),
+            "total_km": round(total_km, 1),
+            "total_runs": len(runs),
+            "longest_run_km": round(longest_run, 1),
+            "best_pace_min_km": best_pace,
+            "avg_effort": avg_effort,
+            "start_km_per_week": training_plan.current_weekly_km,
+            "peak_km_per_week": round(peak_km, 1),
+        }
+
+    _NEXT_PLAN_MAP: dict[float, dict[str, str]] = {
+        5.0: {
+            "label": "10K",
+            "url": "/?target_distance=10",
+            "message": "Ready to double the distance? Take on the 10K.",
+        },
+        10.0: {
+            "label": "Half Marathon",
+            "url": "/?target_distance=21.1",
+            "message": "You've got the base. The Half Marathon is your next big step.",
+        },
+        21.1: {
+            "label": "Marathon",
+            "url": "/?target_distance=42.2",
+            "message": "Go the full distance. You're ready for the Marathon.",
+        },
+        42.2: {
+            "label": "Trail Running",
+            "url": "/?target_distance=30",
+            "message": "Take your fitness off-road with a Trail Running plan.",
+        },
+        30.0: {
+            "label": "Marathon",
+            "url": "/?target_distance=42.2",
+            "message": "Bring your trail strength to the road with a Marathon plan.",
+        },
+    }
+
+    def get_next_plan_cta(self, target_distance_km: float) -> dict[str, str]:
+        """Return a next-step CTA dict based on the completed plan's target distance."""
+        return self._NEXT_PLAN_MAP.get(target_distance_km, {
+            "label": "New Plan",
+            "url": "/",
+            "message": "Keep the momentum going — start your next training plan.",
+        })
+
     def get_plan_view_data(self,
         training_plan: TrainingPlan,
         current_user: Optional[User],
@@ -613,6 +687,21 @@ class PlanService:
                 training_plan, performance_analysis, db
             )
 
+        # Completion stats — computed from run_logs for finished plans.
+        # We check start_date + weeks_duration here; plan_helpers will also
+        # set `plan_completed` in the template context via plan_view_context.
+        completion_stats = None
+        next_plan_cta = None
+        if training_plan.start_date and current_user:
+            from datetime import date as _date, datetime as _datetime
+            sd = training_plan.start_date
+            start_d = sd.date() if isinstance(sd, _datetime) else sd
+            delta_days = (_date.today() - start_d).days
+            current_wk = (delta_days // 7) + 1 if delta_days >= 0 else 0
+            if current_wk > training_plan.weeks_duration:
+                completion_stats = self.get_completion_stats(training_plan, db)
+                next_plan_cta = self.get_next_plan_cta(training_plan.target_distance_km)
+
         return {
             "performance_analysis": performance_analysis,
             "logged_runs": logged_runs_map,
@@ -620,5 +709,7 @@ class PlanService:
             **hints,
             "hr_zones": HRZoneService.get_zones_for_plan(training_plan),
             "feedback_map": self.get_feedback_map(logged_runs, db),
+            "completion_stats": completion_stats,
+            "next_plan_cta": next_plan_cta,
         }
 

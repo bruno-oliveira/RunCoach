@@ -22,7 +22,18 @@
 
 {% block content %}
 <div class="container">
-    <div class="header">
+    <div class="header{% if plan_completed %} header-completed{% endif %}">
+        {% if plan_completed %}
+        <div class="header-completed-icon" aria-hidden="true">
+            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M8 12l2.5 2.5L16 9"/></svg>
+        </div>
+        <h1>Plan Complete!</h1>
+        {% if target_distance|string == '30.0' or target_distance|string == '30' %}
+        <p>You conquered {{ weeks }} weeks of trail running. That's something to be proud of.</p>
+        {% else %}
+        <p>You finished your {{ target_distance }}km plan. {{ weeks }} weeks of work, done.</p>
+        {% endif %}
+        {% else %}
         <h1>Your Training Plan</h1>
         {% if plan and plan[0].is_beginner_plan %}
         <div class="beginner-plan-badge">
@@ -34,7 +45,71 @@
         {% else %}
             <p>Ready to crush your {{ target_distance }}km goal?</p>
         {% endif %}
+        {% endif %}
     </div>
+
+    {% if plan_completed and completion_stats %}
+    <div class="plan-complete-hero">
+        {% if completion_stats.has_data %}
+        <div class="complete-stats-grid">
+            <div class="complete-stat-card">
+                <div class="complete-stat-value">{{ completion_stats.total_runs }}</div>
+                <div class="complete-stat-label">Runs Logged</div>
+            </div>
+            <div class="complete-stat-card">
+                <div class="complete-stat-value">{{ "%.1f"|format(completion_stats.total_km) }}</div>
+                <div class="complete-stat-label">Total km</div>
+            </div>
+            <div class="complete-stat-card">
+                <div class="complete-stat-value">{{ "%.1f"|format(completion_stats.longest_run_km) }}</div>
+                <div class="complete-stat-label">Longest Run (km)</div>
+            </div>
+            {% if completion_stats.best_pace_min_km %}
+            <div class="complete-stat-card">
+                <div class="complete-stat-value">{{ completion_stats.best_pace_min_km | format_pace }}</div>
+                <div class="complete-stat-label">Best Pace</div>
+            </div>
+            {% endif %}
+            {% if completion_stats.avg_effort %}
+            <div class="complete-stat-card">
+                <div class="complete-stat-value">{{ completion_stats.avg_effort }}<span class="complete-stat-denom">/10</span></div>
+                <div class="complete-stat-label">Avg Effort</div>
+            </div>
+            {% endif %}
+        </div>
+        {% endif %}
+
+        <div class="complete-growth-bar">
+            <div class="complete-growth-label">Weekly Mileage Growth</div>
+            <div class="complete-growth-track">
+                <div class="complete-growth-start">
+                    <span class="complete-growth-km">{{ "%.0f"|format(completion_stats.start_km_per_week) }} km</span>
+                    <span class="complete-growth-desc">Starting</span>
+                </div>
+                <div class="complete-growth-arrow">
+                    <svg width="32" height="16" viewBox="0 0 32 16" fill="none"><path d="M0 8h28M22 2l8 6-8 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                </div>
+                <div class="complete-growth-end">
+                    <span class="complete-growth-km">{{ "%.0f"|format(completion_stats.peak_km_per_week) }} km</span>
+                    <span class="complete-growth-desc">Peak Week</span>
+                </div>
+            </div>
+        </div>
+
+        {% if next_plan_cta %}
+        <div class="complete-next-cta">
+            <div class="complete-next-cta-text">
+                <strong>What's Next?</strong>
+                <p>{{ next_plan_cta.message }}</p>
+            </div>
+            <a href="{{ next_plan_cta.url }}" class="btn btn-primary">
+                Start {{ next_plan_cta.label }} Plan
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-1px;margin-left:4px;"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+            </a>
+        </div>
+        {% endif %}
+    </div>
+    {% endif %}
 
     <!-- Adaptation recommendation banner (hidden by default) -->
     <div class="adaptation-banner" id="adaptation-banner" style="display: none;">
@@ -262,7 +337,7 @@
         {% endif %}
     </nav>
 
-    {% if user %}
+    {% if user and not plan_completed %}
     {% if not start_date %}
     <div class="plan-start-banner">
         <p>Set a start date to track your progress against real calendar dates</p>
@@ -283,7 +358,7 @@
     {% endif %}
     {% endif %}
 
-    {% if user and start_date and training_plan.adaptation_alert %}
+    {% if user and start_date and training_plan.adaptation_alert and not plan_completed %}
     <div class="adaptation-alert-banner" id="adaptation-alert-banner">
         <div class="alert-banner-content">
             <div class="alert-banner-icon">
@@ -317,7 +392,7 @@
     </div>
     {% endif %}
 
-    {% if user and start_date %}
+    {% if user and start_date and not plan_completed %}
     <div class="plan-action-banner recalibrate-banner {% if needs_adjustment %}recalibrate-urgent{% endif %}" id="adjust-banner">
         <div class="banner-content">
             <div class="banner-text">

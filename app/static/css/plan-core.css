@@ -3,6 +3,162 @@
    Header, summary, progress, week cards, workout grid, tabs, banners
    ========================================================================= */
 
+/* ---- Completion hero ---- */
+.header-completed {
+    background: linear-gradient(135deg, var(--color-success-subtle) 0%, var(--color-bg-elevated) 100%);
+    border-color: var(--color-success-border);
+}
+
+.header-completed::before {
+    background: none;
+}
+
+.header-completed-icon {
+    display: flex;
+    justify-content: center;
+    margin-bottom: var(--space-3);
+    color: var(--color-success);
+}
+
+.plan-complete-hero {
+    background: var(--color-bg-elevated);
+    border: 1px solid var(--color-success-border);
+    border-radius: var(--radius-2xl);
+    padding: var(--space-8) var(--space-6);
+    margin-bottom: var(--space-6);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-6);
+}
+
+.complete-stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+    gap: var(--space-3);
+}
+
+.complete-stat-card {
+    background: var(--color-success-subtle);
+    border: 1px solid var(--color-success-border);
+    border-radius: var(--radius-xl);
+    padding: var(--space-5) var(--space-4);
+    text-align: center;
+}
+
+.complete-stat-value {
+    font-family: var(--font-display);
+    font-size: var(--text-2xl);
+    font-weight: var(--weight-extrabold);
+    color: var(--color-success);
+    line-height: 1.1;
+    letter-spacing: -0.02em;
+}
+
+.complete-stat-denom {
+    font-size: var(--text-base);
+    font-weight: var(--weight-semibold);
+    opacity: 0.7;
+}
+
+.complete-stat-label {
+    font-size: var(--text-xs);
+    color: var(--color-text-secondary);
+    font-weight: var(--weight-medium);
+    margin-top: var(--space-1);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.complete-growth-bar {
+    background: var(--color-bg-sunken);
+    border: 1px solid var(--color-border-subtle);
+    border-radius: var(--radius-xl);
+    padding: var(--space-4) var(--space-5);
+}
+
+.complete-growth-label {
+    font-size: var(--text-xs);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    font-weight: var(--weight-semibold);
+    color: var(--color-text-secondary);
+    margin-bottom: var(--space-3);
+}
+
+.complete-growth-track {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-4);
+}
+
+.complete-growth-start,
+.complete-growth-end {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--space-1);
+}
+
+.complete-growth-km {
+    font-family: var(--font-display);
+    font-size: var(--text-xl);
+    font-weight: var(--weight-extrabold);
+    color: var(--color-text);
+    letter-spacing: -0.02em;
+}
+
+.complete-growth-desc {
+    font-size: var(--text-xs);
+    color: var(--color-text-secondary);
+    font-weight: var(--weight-medium);
+}
+
+.complete-growth-arrow {
+    flex: 1;
+    color: var(--color-success);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0.7;
+}
+
+.complete-next-cta {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-4);
+    background: var(--color-primary-subtle);
+    border: 1px solid var(--color-primary-subtle);
+    border-radius: var(--radius-xl);
+    padding: var(--space-5) var(--space-5);
+    flex-wrap: wrap;
+}
+
+.complete-next-cta-text strong {
+    display: block;
+    font-size: var(--text-base);
+    font-weight: var(--weight-semibold);
+    color: var(--color-text);
+    margin-bottom: var(--space-1);
+}
+
+.complete-next-cta-text p {
+    font-size: var(--text-sm);
+    color: var(--color-text-secondary);
+    margin: 0;
+}
+
+@media (max-width: 600px) {
+    .complete-stats-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+    .complete-next-cta {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+}
+
 /* ---- Page header ---- */
 .header {
     text-align: center;

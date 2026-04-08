@@ -141,6 +141,7 @@ def plan_view_context(
     workout_date_labels: dict[tuple[int, int], str] = {}
     today_obj = date.today()
 
+    plan_completed = False
     if training_plan.start_date:
         sd = training_plan.start_date
         # Coerce datetime → date (datetime is a subclass of date, so check it first)
@@ -150,6 +151,7 @@ def plan_view_context(
         current_week_number = _compute_current_week(start_date_val, today_obj)
         if current_week_number and current_week_number > num_weeks:
             current_week_number = None  # plan is over
+            plan_completed = True
         workout_date_labels = _workout_dates(start_date_val, num_weeks)
 
     ctx: dict[str, Any] = {
@@ -180,6 +182,7 @@ def plan_view_context(
         # Calendar tracking
         "start_date": start_date_val,
         "current_week_number": current_week_number,
+        "plan_completed": plan_completed,
         "today_iso": today_obj.isoformat(),
         "current_day_of_week": today_obj.isoweekday(),
         "week_dates": week_dates,

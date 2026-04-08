@@ -241,6 +241,90 @@
     width: auto;
 }
 
+/* ---- Completed plans section ---- */
+.plans-section-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-top: var(--space-10);
+    margin-bottom: var(--space-1);
+    gap: var(--space-4);
+}
+
+.plans-section-header h2 {
+    font-family: var(--font-display);
+    font-size: var(--text-xl);
+    font-weight: var(--weight-bold);
+    color: var(--color-text-secondary);
+    letter-spacing: -0.02em;
+}
+
+.plans-section-toggle {
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: var(--color-text-muted);
+    font-size: var(--text-sm);
+    font-weight: var(--weight-medium);
+    padding: var(--space-1) var(--space-2);
+    border-radius: var(--radius-md);
+    transition: color var(--duration-fast) var(--ease-out);
+}
+
+.plans-section-toggle:hover {
+    color: var(--color-text);
+}
+
+.plan-card-completed {
+    opacity: 0.75;
+    border-color: var(--color-border-subtle);
+}
+
+.plan-card-completed:hover {
+    opacity: 1;
+    border-color: var(--color-success-border);
+}
+
+.plan-card-completed .plan-card-header h3 {
+    color: var(--color-text-secondary);
+}
+
+.badge-completed {
+    background: var(--color-success-subtle);
+    color: var(--color-success);
+    border: 1px solid var(--color-success-border);
+}
+
+.plan-status-badge-completed {
+    background: var(--color-success-subtle);
+    color: var(--color-success);
+    border: 1px solid var(--color-success-border);
+    font-weight: var(--weight-bold);
+}
+
+/* Share toast */
+.share-toast {
+    position: fixed;
+    bottom: var(--space-6);
+    left: 50%;
+    transform: translateX(-50%) translateY(12px);
+    background: var(--color-text);
+    color: var(--color-bg);
+    padding: 10px 20px;
+    border-radius: var(--radius-full);
+    font-size: var(--text-sm);
+    font-weight: var(--weight-semibold);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s, transform 0.2s;
+    z-index: 9999;
+}
+
+.share-toast.visible {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+}
+
 /* ---- Responsive ---- */
 @media (max-width: 768px) {
     .header { padding: var(--space-6); }
