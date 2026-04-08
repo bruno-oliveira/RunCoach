@@ -64,6 +64,12 @@
             </svg>
             <span>Dashboard</span>
         </button>
+        <button class="analytics-tab" data-tab="evolution">
+            <svg class="analytics-tab-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
+            </svg>
+            <span>Evolution</span>
+        </button>
         <button class="analytics-tab" data-tab="insights">
             <svg class="analytics-tab-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                 <circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/>
@@ -383,6 +389,97 @@
         </div>
 
     </div><!-- /analyticsInsightsTab -->
+
+    <!-- Evolution Over Time tab -->
+    <div id="analyticsEvolutionTab" class="analytics-tab-panel" style="display:none;">
+
+        <!-- Period selector -->
+        <div class="evolution-controls">
+            <div class="evolution-controls-label">Show progress over</div>
+            <div class="evolution-period-group">
+                <button class="evolution-period-btn evolution-period-btn--active" data-days="90">3 months</button>
+                <button class="evolution-period-btn" data-days="180">6 months</button>
+                <button class="evolution-period-btn" data-days="365">1 year</button>
+                <button class="evolution-period-btn" data-days="all">All time</button>
+            </div>
+            <div id="evolutionSyncIndicator" class="strava-sync-indicator" style="display:none;" aria-live="polite">
+                <span class="strava-sync-spinner"></span>
+                <span class="strava-sync-label">Syncing&hellip;</span>
+            </div>
+        </div>
+
+        <!-- Summary stat cards -->
+        <div class="evolution-stats-row">
+            <div class="evolution-stat">
+                <span class="evolution-stat-label">Pace Change</span>
+                <span class="evolution-stat-value" id="evoStatPaceChange">--</span>
+                <span class="evolution-stat-badge" id="evoStatPaceBadge"></span>
+                <span class="evolution-stat-sub" id="evoStatPaceSub"></span>
+            </div>
+            <div class="evolution-stat">
+                <span class="evolution-stat-label">VDOT Change</span>
+                <span class="evolution-stat-value" id="evoStatVdotChange">--</span>
+                <span class="evolution-stat-badge" id="evoStatVdotBadge"></span>
+                <span class="evolution-stat-sub" id="evoStatVdotSub"></span>
+            </div>
+            <div class="evolution-stat">
+                <span class="evolution-stat-label">Aerobic Efficiency</span>
+                <span class="evolution-stat-value" id="evoStatEffChange">--</span>
+                <span class="evolution-stat-badge" id="evoStatEffBadge"></span>
+                <span class="evolution-stat-sub" id="evoStatEffSub"></span>
+            </div>
+            <div class="evolution-stat">
+                <span class="evolution-stat-label">Total Runs</span>
+                <span class="evolution-stat-value" id="evoStatTotalRuns">--</span>
+                <span class="evolution-stat-badge" id="evoStatRunsBadge"></span>
+                <span class="evolution-stat-sub" id="evoStatRunsSub"></span>
+            </div>
+        </div>
+
+        <!-- Charts -->
+        <div class="analytics-card chart-wide" id="evoPaceChartCard">
+            <div class="analytics-card-header">
+                <h3 class="analytics-card-title">Pace Evolution</h3>
+                <span class="evolution-trend-badge" id="evoPaceTrendBadge"></span>
+            </div>
+            <p class="evolution-chart-annotation" id="evoPaceAnnotation"></p>
+            <div class="chart-canvas-wrap"><canvas id="evoPaceChart"></canvas></div>
+        </div>
+
+        <div class="analytics-card chart-wide" id="evoVdotChartCard">
+            <div class="analytics-card-header">
+                <h3 class="analytics-card-title">VDOT / Fitness Progression</h3>
+                <span class="evolution-trend-badge" id="evoVdotTrendBadge"></span>
+            </div>
+            <p class="evolution-chart-annotation" id="evoVdotAnnotation"></p>
+            <div class="chart-canvas-wrap"><canvas id="evoVdotChart"></canvas></div>
+        </div>
+
+        <div class="analytics-card chart-wide" id="evoEffChartCard">
+            <div class="analytics-card-header">
+                <h3 class="analytics-card-title">Aerobic Efficiency</h3>
+                <span class="evolution-trend-badge" id="evoEffTrendBadge"></span>
+            </div>
+            <p class="evolution-chart-annotation" id="evoEffAnnotation"></p>
+            <div class="chart-canvas-wrap"><canvas id="evoEffChart"></canvas></div>
+        </div>
+
+        <div class="analytics-card chart-wide" id="evoVolumeChartCard">
+            <div class="analytics-card-header">
+                <h3 class="analytics-card-title">Weekly Volume</h3>
+                <span class="evolution-trend-badge" id="evoVolumeTrendBadge"></span>
+            </div>
+            <div class="chart-canvas-wrap"><canvas id="evoVolumeChart"></canvas></div>
+        </div>
+
+        <!-- Empty state -->
+        <div id="evolutionEmpty" class="analytics-empty" style="display:none;">
+            <div class="analytics-empty-icon">&#x1F4C8;</div>
+            <h2>Not enough data</h2>
+            <p>Log at least 2 weeks of runs to see your evolution over time.</p>
+        </div>
+
+    </div><!-- /analyticsEvolutionTab -->
 
     {% endif %}
 </div>
