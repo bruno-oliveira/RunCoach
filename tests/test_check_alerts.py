@@ -85,6 +85,7 @@ def _create_plan(db: Session, *, weeks: int = 10, weeks_ago: int | None = None):
                 day_of_week=day,
                 workout_type="easy",
                 distance_km=7.5,
+                baseline_distance_km=7.5,
             )
             db.add(dw)
 
@@ -331,3 +332,65 @@ class TestEdgeCases:
         result = svc.check_alerts(plan.id, user.id, db)
         assert result is not None
         assert result["type"] == "missed_workouts"
+
+
+class TestResetRecalibration:
+    """Reset restores baseline distances and clears recalibration state."""
+
+    def test_reset_after_recalibration(self, db):
+        """Reset restores baseline distances and clears last_recalibrated_at."""
+        svc = AdaptationService()
+        user, plan = _create_plan(db, weeks=10, weeks_ago=6)
+
+        # Mark recalibrated and change some distances
+        plan.last_recalibrated_at = _now()
+        db.commit()
+
+        # Manually change a future workout's distance to simulate recalibration
+        wp = db.query(WeeklyPlan).filter(
+            WeeklyPlan.training_plan_id == plan.id,
+            WeeklyPlan.week_number == 8,
+        ).one()
+        workouts = db.query(DailyWorkout).filter(
+            DailyWorkout.weekly_plan_id == wp.id
+        ).all()
+        for wo in workouts:
+            wo.distance_km = 5.0  # changed from baseline 7.5
+        db.commit()
+
+        result = svc.reset_adjustment(plan.id, user.id, db)
+        assert result["reset"] is True
+        assert result["weeks_changed"] >= 1
+
+        db.refresh(plan)
+        assert plan.last_recalibrated_at is None
+
+        # Distances should be back to baseline
+        for wo in workouts:
+            db.refresh(wo)
+            assert wo.distance_km == wo.baseline_distance_km
+
+    def test_reset_clears_cooldown_so_alert_can_fire(self, db):
+        """After reset, the 3-week cooldown is cleared and alerts can fire."""
+        svc = AdaptationService()
+        user, plan = _create_plan(db, weeks=10, weeks_ago=6)
+        # window = 4,5,6 — all missed
+
+        # Recalibrate → cooldown active
+        plan.last_recalibrated_at = _now()
+        db.commit()
+        assert svc.check_alerts(plan.id, user.id, db) is None  # suppressed
+
+        # Reset → cooldown gone
+        svc.reset_adjustment(plan.id, user.id, db)
+        result = svc.check_alerts(plan.id, user.id, db)
+        assert result is not None
+        assert result["type"] == "missed_workouts"
+
+    def test_reset_no_op_without_adjustment_or_recalibration(self, db):
+        """Reset returns no-op when there's nothing to reset."""
+        svc = AdaptationService()
+        user, plan = _create_plan(db, weeks=10, weeks_ago=6)
+
+        result = svc.reset_adjustment(plan.id, user.id, db)
+        assert result["reset"] is False

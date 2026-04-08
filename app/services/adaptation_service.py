@@ -1039,7 +1039,10 @@ class AdaptationService:
         if not training_plan:
             return {"reset": False, "reason": "Plan not found"}
 
-        if not training_plan.adjustment_multiplier:
+        has_adjustment = training_plan.adjustment_multiplier is not None
+        has_recalibration = training_plan.last_recalibrated_at is not None
+
+        if not has_adjustment and not has_recalibration:
             return {"reset": False, "reason": "Plan has no active adjustment."}
 
         plan_data, pd_week, pd_workout = self._parse_plan_data_lookups(
@@ -1108,6 +1111,7 @@ class AdaptationService:
                     pd_week[week.week_number]["total_km"] = new_total
 
         training_plan.adjustment_multiplier = None
+        training_plan.last_recalibrated_at = None
         training_plan.plan_data = json.dumps(plan_data)
         db.commit()
 

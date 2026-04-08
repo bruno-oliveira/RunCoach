@@ -152,10 +152,15 @@
     </div>
     {% endif %}
 
-    {% if training_plan.adjustment_multiplier %}
+    {% if training_plan.adjustment_multiplier or training_plan.last_recalibrated_at %}
     <div class="plan-insights plan-insights-strava strava-adapted-compact" style="margin-bottom: var(--space-6);">
         <div style="display:flex;align-items:center;gap:var(--space-3);flex-wrap:wrap;">
+            {% if training_plan.adjustment_multiplier %}
             <span class="strava-adapted-badge">Adjusted &times;{{ "%.2f"|format(training_plan.adjustment_multiplier) }}</span>
+            {% endif %}
+            {% if training_plan.last_recalibrated_at %}
+            <span class="strava-adapted-badge" style="background:var(--color-warning-subtle,#fef9c3);color:var(--color-warning,#ca8a04);border-color:var(--color-warning,#ca8a04);">Recalibrated</span>
+            {% endif %}
             <button onclick="resetAdjustment()" class="btn btn-ghost btn-small" id="reset-adjust-btn">Reset to original</button>
         </div>
     </div>
