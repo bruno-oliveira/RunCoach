@@ -64,6 +64,11 @@ class TrainingPlan(Base):
     # the "needs adjustment" banner for workouts that were already accounted for.
     last_adjusted_at = Column(DateTime, nullable=True)
 
+    # Timestamp of the last recalibration only — used for the 3-week cooldown
+    # on the "Needs Attention" alert.  Separate from last_adjusted_at which is
+    # also set by the global "Adjust Plan" flow.
+    last_recalibrated_at = Column(DateTime, nullable=True)
+
     # Shareable link token
     share_token = Column(String, unique=True, nullable=True, index=True)
 

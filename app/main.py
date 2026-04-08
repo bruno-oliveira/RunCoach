@@ -170,6 +170,8 @@ def _run_migrations(eng) -> None:
         "ALTER TABLE training_plans ADD COLUMN adaptation_alert TEXT",
         # Track last adjustment time to suppress stale "needs adjustment" banners
         "ALTER TABLE training_plans ADD COLUMN last_adjusted_at DATETIME",
+        # Track last recalibration time (separate from adjust) for 3-week cooldown
+        "ALTER TABLE training_plans ADD COLUMN last_recalibrated_at DATETIME",
     ]
     with eng.connect() as conn:
         for stmt in stmts:

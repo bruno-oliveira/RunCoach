@@ -233,7 +233,7 @@ class TestCooldownAfterRecalibration:
         # current_week ~= 8; window = 5,6,7 — all missed
 
         # Simulate recalibration at week 6 (2 weeks ago)
-        plan.last_adjusted_at = _now() - timedelta(weeks=2)
+        plan.last_recalibrated_at = _now() - timedelta(weeks=2)
         db.commit()
 
         result = svc.check_alerts(plan.id, user.id, db)
@@ -246,7 +246,7 @@ class TestCooldownAfterRecalibration:
 
         # Pre-existing alert
         plan.adaptation_alert = json.dumps({"type": "missed_workouts", "message": "old"})
-        plan.last_adjusted_at = _now() - timedelta(weeks=1)
+        plan.last_recalibrated_at = _now() - timedelta(weeks=1)
         db.commit()
 
         result = svc.check_alerts(plan.id, user.id, db)
@@ -261,7 +261,7 @@ class TestCooldownAfterRecalibration:
         # current_week ~= 11; window = 8,9,10 — all missed
 
         # Recalibrated at week 4 (~6 weeks ago), well past cooldown
-        plan.last_adjusted_at = plan.start_date + timedelta(weeks=3)
+        plan.last_recalibrated_at = plan.start_date + timedelta(weeks=3)
         db.commit()
 
         result = svc.check_alerts(plan.id, user.id, db)
@@ -317,3 +317,17 @@ class TestEdgeCases:
         # Weeks 1, 2, 3 are unlinked but outside the window
         result = svc.check_alerts(plan.id, user.id, db)
         assert result is None
+
+    def test_global_adjust_does_not_trigger_cooldown(self, db):
+        """Setting last_adjusted_at (global adjust) should NOT suppress alerts."""
+        svc = AdaptationService()
+        user, plan = _create_plan(db, weeks=10, weeks_ago=6)
+        # current_week ~= 7; window = 4,5,6 — all missed
+
+        # Simulate a global adjust (sets last_adjusted_at but NOT last_recalibrated_at)
+        plan.last_adjusted_at = _now()
+        db.commit()
+
+        result = svc.check_alerts(plan.id, user.id, db)
+        assert result is not None
+        assert result["type"] == "missed_workouts"

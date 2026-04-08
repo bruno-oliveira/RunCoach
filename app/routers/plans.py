@@ -375,6 +375,7 @@ async def list_my_plans(
             .all()
         )
 
+        adaptation_service = AdaptationService()
         today = date.today()
         for plan in plans:
             td = plan.target_distance_km
@@ -390,6 +391,13 @@ async def list_my_plans(
                     plan.status_label = "Completed"
                 elif current_wk >= 1:
                     plan.status_label = f"Week {current_wk} of {plan.weeks_duration}"
+                    # Evaluate recalibration alerts for active plans
+                    try:
+                        adaptation_service.check_alerts(
+                            plan.id, current_user.id, db
+                        )
+                    except Exception:
+                        logger.warning(f"Alert check failed for plan {plan.id}", exc_info=True)
                 else:
                     plan.status_label = f"Starts {start_d.strftime('%b')} {start_d.day}"
             else:

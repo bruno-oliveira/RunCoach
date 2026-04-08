@@ -1161,15 +1161,17 @@ class AdaptationService:
             return None
 
         # ── Cooldown after recalibration ──
-        adjusted_at = training_plan.last_adjusted_at
-        if adjusted_at:
-            adjusted_at_date = _to_date(adjusted_at)
-            if adjusted_at_date and start_date:
-                d = (adjusted_at_date - start_date).days
+        # Only suppress alerts based on last *recalibration*, not global
+        # "Adjust Plan" (which sets last_adjusted_at but not this field).
+        recalibrated_at = training_plan.last_recalibrated_at
+        if recalibrated_at:
+            recalibrated_date = _to_date(recalibrated_at)
+            if recalibrated_date and start_date:
+                d = (recalibrated_date - start_date).days
                 if d >= 0:
-                    adjusted_at_week = d // 7 + 1
-                    # Wait 3 full weeks after the adjustment before re-checking
-                    if current_week < adjusted_at_week + 4:
+                    recalibrated_week = d // 7 + 1
+                    # Wait 3 full weeks after recalibration before re-checking
+                    if current_week < recalibrated_week + 4:
                         if training_plan.adaptation_alert is not None:
                             training_plan.adaptation_alert = None
                             db.commit()
@@ -1325,7 +1327,9 @@ class AdaptationService:
         training_plan.plan_data = json.dumps(plan_data)
         # Clear the alert after recalibration
         training_plan.adaptation_alert = None
-        training_plan.last_adjusted_at = datetime.now(timezone.utc).replace(tzinfo=None)
+        now = datetime.now(timezone.utc).replace(tzinfo=None)
+        training_plan.last_adjusted_at = now
+        training_plan.last_recalibrated_at = now
         db.commit()
 
         strategy_labels = {
