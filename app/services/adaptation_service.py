@@ -1129,13 +1129,14 @@ class AdaptationService:
     ) -> Optional[Dict[str, Any]]:
         """Check if a plan needs a proactive adaptation alert.
 
-        Evaluates:
-        - Weekly volume deficit > 25% for 2+ consecutive weeks
-        - Effort trending "increasing" for 3+ weeks
-        - No runs logged in 7+ days (potential injury/break)
-        - VDOT declining over 4+ week window
+        Looks at the 3 most recent completed weeks (W-1, W-2, W-3 relative
+        to the current week W).  If 50 %+ of non-rest workouts in that
+        window are unlinked (no matching RunLog), an alert is raised.
 
-        Returns an alert dict if a condition is met, or None.
+        After recalibration the alert is suppressed for 3 full weeks so the
+        adjusted plan has time to take effect before re-evaluating.
+
+        Returns an alert dict if the threshold is met, or None.
         """
         training_plan = db.query(TrainingPlan).filter(
             TrainingPlan.id == plan_id,
@@ -1148,138 +1149,85 @@ class AdaptationService:
         start_date = _to_date(training_plan.start_date)
         today = datetime.now(timezone.utc).replace(tzinfo=None).date()
         delta_days = (today - start_date).days
-        if delta_days < 7:
+        if delta_days < 0:
             return None
 
-        current_week = min((delta_days // 7) + 1, training_plan.weeks_duration or 0)
-        if current_week < 2:
+        current_week = min(
+            (delta_days // 7) + 1, training_plan.weeks_duration or 0
+        )
+
+        # Need at least 4 weeks in so that weeks 1-3 are fully in the past
+        if current_week < 4:
             return None
 
-        plan_data = json.loads(training_plan.plan_data) if training_plan.plan_data else []
-
-        # If the plan was recently adjusted/recalibrated, only alert on
-        # conditions that developed *after* the adjustment.
+        # ── Cooldown after recalibration ──
         adjusted_at = training_plan.last_adjusted_at
-        adjusted_at_date = _to_date(adjusted_at) if adjusted_at else None
-        # Week number when the last adjustment happened
-        adjusted_at_week = None
-        if adjusted_at_date and start_date:
-            d = (adjusted_at_date - start_date).days
-            if d >= 0:
-                adjusted_at_week = d // 7 + 1
+        if adjusted_at:
+            adjusted_at_date = _to_date(adjusted_at)
+            if adjusted_at_date and start_date:
+                d = (adjusted_at_date - start_date).days
+                if d >= 0:
+                    adjusted_at_week = d // 7 + 1
+                    # Wait 3 full weeks after the adjustment before re-checking
+                    if current_week < adjusted_at_week + 4:
+                        if training_plan.adaptation_alert is not None:
+                            training_plan.adaptation_alert = None
+                            db.commit()
+                        return None
 
-        # Get runs
-        runs = (
-            db.query(RunLog)
+        # ── 3-week window: W-3, W-2, W-1 ──
+        window_weeks = [current_week - 3, current_week - 2, current_week - 1]
+
+        # All non-rest/recovery workouts in the window weeks
+        window_workouts = (
+            db.query(DailyWorkout.id)
+            .join(WeeklyPlan)
             .filter(
-                RunLog.user_id == user_id,
-                RunLog.date >= datetime.combine(start_date, datetime.min.time()),
+                WeeklyPlan.training_plan_id == plan_id,
+                WeeklyPlan.week_number.in_(window_weeks),
+                DailyWorkout.workout_type.notin_(["rest", "recovery"]),
             )
-            .order_by(RunLog.date.asc())
             .all()
         )
 
-        # ── Check 1: No runs in 7+ days ──
-        if runs:
-            last_run_date = _to_date(runs[-1].date)
-            days_silent = (today - last_run_date).days if last_run_date else 0
-            # If we already adjusted, only alert when 7+ days have
-            # passed since *that adjustment* (not since the last run).
-            if adjusted_at_date:
-                days_since_adjust = (today - adjusted_at_date).days
-                alert_no_runs = days_silent >= 7 and days_since_adjust >= 7
-            else:
-                alert_no_runs = days_silent >= 7
-
-            if last_run_date and alert_no_runs:
-                alert = {
-                    "type": "no_recent_runs",
-                    "severity": "high",
-                    "message": f"No runs logged in {days_silent} days. Are you taking a break or dealing with an injury?",
-                    "created_at": today.isoformat(),
-                }
-                training_plan.adaptation_alert = json.dumps(alert)
+        total = len(window_workouts)
+        if total == 0:
+            if training_plan.adaptation_alert is not None:
+                training_plan.adaptation_alert = None
                 db.commit()
-                return alert
+            return None
 
-        # ── Check 2: Volume deficit for 2+ consecutive weeks ──
-        weekly_actual = defaultdict(float)
-        for run in runs:
-            rd = _to_date(run.date)
-            if rd and start_date:
-                d = (rd - start_date).days
-                if d >= 0:
-                    wk = d // 7 + 1
-                    weekly_actual[wk] += run.distance_km or 0
+        workout_ids = {row[0] for row in window_workouts}
 
-        # Only evaluate weeks after the last adjustment
-        range_start = max(1, current_week - 4)
-        if adjusted_at_week:
-            range_start = max(range_start, adjusted_at_week + 1)
-
-        consecutive_deficit = 0
-        for wk_num in range(range_start, current_week + 1):
-            week_data = next((w for w in plan_data if w.get("week") == wk_num), None)
-            if not week_data:
-                continue
-            planned = week_data.get("total_km", 0)
-            actual = weekly_actual.get(wk_num, 0)
-            if planned > 0 and actual < planned * 0.75:
-                consecutive_deficit += 1
-            else:
-                consecutive_deficit = 0
-
-        if consecutive_deficit >= 2:
-            alert = {
-                "type": "volume_deficit",
-                "severity": "medium",
-                "message": f"Weekly volume has been 25%+ below target for {consecutive_deficit} consecutive weeks.",
-                "created_at": today.isoformat(),
-            }
-            training_plan.adaptation_alert = json.dumps(alert)
-            db.commit()
-            return alert
-
-        # ── Check 3: Effort trend increasing ──
-        # Skip effort/VDOT checks if we recalibrated in the last 7 days —
-        # give the new plan time to take effect before re-alerting.
-        days_since_adjust = (
-            (today - adjusted_at_date).days if adjusted_at_date else None
+        # Linked workout IDs (have a matching RunLog)
+        linked_ids = set(
+            row[0]
+            for row in db.query(RunLog.daily_workout_id)
+            .filter(
+                RunLog.training_plan_id == plan_id,
+                RunLog.daily_workout_id.in_(workout_ids),
+            )
+            .all()
         )
-        suppress_trend_alerts = days_since_adjust is not None and days_since_adjust < 7
 
-        if not suppress_trend_alerts:
-            perf = self.analyze_performance(plan_id, db)
-            if perf.get("effort_trend") == "increasing":
-                avg_effort = perf.get("avg_effort")
-                if avg_effort and avg_effort >= 7:
-                    alert = {
-                        "type": "high_effort",
-                        "severity": "medium",
-                        "message": "Effort is trending upward and averaging above 7/10. Fatigue may be building.",
-                        "created_at": today.isoformat(),
-                    }
-                    training_plan.adaptation_alert = json.dumps(alert)
-                    db.commit()
-                    return alert
+        missed = total - len(linked_ids)
 
-        # ── Check 4: VDOT declining ──
-        if not suppress_trend_alerts:
-            predictions = RacePredictorService.get_predictions_for_user(user_id, db)
-        else:
-            predictions = {}
-        if predictions.get("vdot_trend") == "declining":
+        if missed / total >= 0.5:
+            pct = round(missed / total * 100)
             alert = {
-                "type": "vdot_declining",
-                "severity": "low",
-                "message": "Your VDOT has been declining. Consider adding quality speed work or reviewing recovery.",
+                "type": "missed_workouts",
+                "severity": "high",
+                "message": (
+                    f"{pct}% of workouts missed in the last 3 weeks. "
+                    "Your plan needs attention."
+                ),
                 "created_at": today.isoformat(),
             }
             training_plan.adaptation_alert = json.dumps(alert)
             db.commit()
             return alert
 
-        # No alerts — clear any existing one
+        # No alert — clear any existing one
         if training_plan.adaptation_alert is not None:
             training_plan.adaptation_alert = None
             db.commit()
