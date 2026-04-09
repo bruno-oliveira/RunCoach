@@ -15,7 +15,7 @@ from sqlalchemy.orm import Session
 from app.core.training.vdot_calculator import VDOTCalculator
 from app.models import DailyWorkout, RunLog, TrainingPlan, WeeklyPlan
 from app.services.race_predictor_service import RacePredictorService
-from app.utils import to_date as _to_date
+from app.utils import parse_race_time_to_seconds, to_date as _to_date
 
 logger = logging.getLogger(__name__)
 
@@ -133,7 +133,7 @@ class ReadinessService:
 
         # VDOT & predictions
         vdot_score, vdot_detail, predictions, vdot_data = _score_vdot(
-            user_id, plan.target_distance, db
+            user_id, plan.target_distance, db, goal_time=plan.goal_time
         )
 
         # ── Weighted total ──
@@ -352,47 +352,116 @@ def _score_taper(current_week: int, total_weeks: int) -> tuple[float, str]:
         return 55.0, "Base phase — building foundation"
 
 
+def _vdot_for_goal_time(goal_time_str: str, target_distance_km: float) -> Optional[float]:
+    """Find the VDOT needed to achieve a goal time at a given distance.
+
+    Uses linear search from low-to-high VDOT (25.0 to 85.0 in 0.1 steps).
+    Returns the first VDOT whose predicted time is <= the goal time.
+    """
+    goal_seconds = parse_race_time_to_seconds(goal_time_str)
+    if not goal_seconds or target_distance_km <= 0:
+        return None
+
+    for test_vdot_10x in range(250, 850):
+        test_vdot = test_vdot_10x / 10.0
+        pred = VDOTCalculator.predict_time_for_distance(test_vdot, target_distance_km)
+        if pred and pred <= goal_seconds:
+            return test_vdot
+
+    return None
+
+
 def _score_vdot(
     user_id: str,
     target_distance_str: str,
     db: Session,
+    *,
+    goal_time: Optional[str] = None,
 ) -> tuple[float, str, Dict, Dict]:
-    """Score fitness based on VDOT trend and predictions."""
+    """Score fitness based on VDOT relative to the runner's goal.
+
+    When a goal time is available, scores how close current VDOT is to
+    the VDOT needed for that goal. Otherwise falls back to a
+    distance-relative assessment.
+    """
     prediction_data = RacePredictorService.get_predictions_for_user(user_id, db)
 
     current_vdot = prediction_data.get("current_vdot")
     trend = prediction_data.get("vdot_trend", "stable")
     predictions = prediction_data.get("predictions", {})
 
+    target_dist = _parse_float(target_distance_str)
+
+    # Compute needed VDOT from goal time (if available)
+    needed_vdot = None
+    if goal_time:
+        needed_vdot = _vdot_for_goal_time(goal_time, target_dist)
+
     vdot_info = {
         "current": current_vdot,
         "trend": trend,
         "run_count": prediction_data.get("run_count", 0),
         "best_effort": prediction_data.get("best_effort"),
+        "needed_for_goal": needed_vdot,
     }
 
     if not current_vdot:
         return 50.0, "Not enough run data for VDOT", {}, vdot_info
 
-    # Base score from VDOT itself (25=very beginner → 85=world class)
-    # Map to a 40-100 range for recreational runners
-    vdot_normalized = min(100, max(0, (current_vdot - 25) / 35 * 60 + 40))
+    # ---------- Goal-relative scoring ----------
+    if needed_vdot is not None:
+        vdot_gap = needed_vdot - current_vdot
 
-    # Trend bonus/penalty
-    if trend == "improving":
-        vdot_normalized = min(100, vdot_normalized + 10)
-        trend_str = "improving"
-    elif trend == "declining":
-        vdot_normalized = max(0, vdot_normalized - 10)
-        trend_str = "declining"
+        if vdot_gap <= 0:
+            vdot_normalized = 100.0
+        elif vdot_gap <= 1.0:
+            vdot_normalized = 100.0 - (vdot_gap * 15.0)
+        elif vdot_gap <= 3.0:
+            vdot_normalized = 85.0 - ((vdot_gap - 1.0) * 10.0)
+        elif vdot_gap <= 5.0:
+            vdot_normalized = 65.0 - ((vdot_gap - 3.0) * 10.0)
+        else:
+            vdot_normalized = max(20.0, 45.0 - ((vdot_gap - 5.0) * 5.0))
+
+        # Smaller trend adjustments — score is already precise
+        if trend == "improving":
+            vdot_normalized = min(100, vdot_normalized + 5)
+            trend_str = "improving"
+        elif trend == "declining":
+            vdot_normalized = max(0, vdot_normalized - 5)
+            trend_str = "declining"
+        else:
+            trend_str = "stable"
+
+        gap_dir = "above" if current_vdot >= needed_vdot else "below"
+        gap_val = abs(current_vdot - needed_vdot)
+        detail = f"VDOT {current_vdot} ({trend_str}) — {gap_val:.1f} {gap_dir} goal VDOT {needed_vdot}"
     else:
-        trend_str = "stable"
+        # ---------- Fallback: distance-relative assessment ----------
+        if target_dist > 0:
+            predicted_time = VDOTCalculator.predict_time_for_distance(
+                current_vdot, target_dist
+            )
+            if predicted_time:
+                vdot_normalized = min(85.0, max(60.0, (current_vdot - 25) / 35 * 25 + 60))
+            else:
+                vdot_normalized = 50.0
+        else:
+            vdot_normalized = min(100, max(0, (current_vdot - 25) / 35 * 60 + 40))
 
-    detail = f"VDOT {current_vdot} ({trend_str})"
+        if trend == "improving":
+            vdot_normalized = min(100, vdot_normalized + 10)
+            trend_str = "improving"
+        elif trend == "declining":
+            vdot_normalized = max(0, vdot_normalized - 10)
+            trend_str = "declining"
+        else:
+            trend_str = "stable"
+
+        detail = f"VDOT {current_vdot} ({trend_str})"
 
     # Format predictions for display
     formatted_predictions = {}
-    target_dist = _parse_float(target_distance_str)
     for name, pred in predictions.items():
         formatted_predictions[name] = {
             "time": pred.get("formatted", ""),

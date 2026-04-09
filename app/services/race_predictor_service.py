@@ -24,6 +24,22 @@ MIN_DISTANCE_KM = 2.0
 # still reflecting the user's best genuine efforts.
 TOP_N_VDOTS = 3
 
+# Number of candidate runs to fetch before applying confidence weighting.
+_CANDIDATE_POOL_SIZE = 10
+
+# Confidence multiplier by workout type. Higher = more reliable VDOT indicator.
+_EFFORT_TYPE_WEIGHT: dict[str, float] = {
+    "race": 1.5,
+    "interval": 1.3,
+    "tempo": 1.2,
+    "hill": 1.1,
+    "long": 1.0,
+    "easy": 0.7,
+    "recovery": 0.5,
+    "rest": 0.3,
+}
+_DEFAULT_EFFORT_WEIGHT = 0.8
+
 
 class RacePredictorService:
     """Service for race predictions and VDOT trend analysis."""
@@ -70,17 +86,25 @@ class RacePredictorService:
 
     @staticmethod
     def get_best_recent_vdot(user_id: str, weeks: int = 12, *, db: Session) -> Optional[float]:
-        """Get a robust VDOT estimate from recent runs.
+        """Get a confidence-weighted VDOT estimate from recent runs.
 
-        Uses the median of the top N VDOTs instead of a raw MAX. This is
-        resilient to GPS glitches and auto-pause artifacts that can inflate
-        a single run's VDOT far above the user's actual fitness.
+        Fetches a pool of top-VDOT candidates and weights each by:
+        - Distance (longer runs yield more reliable VDOT estimates)
+        - Workout type (race/interval > tempo > easy/recovery)
+        - Perceived effort (high effort ≥ 7 boosts confidence)
+
+        The top N entries by weight are combined via weighted average.
         """
         cutoff_date = datetime.now(timezone.utc) - timedelta(weeks=weeks)
         cutoff_date_naive = cutoff_date.replace(tzinfo=None)
 
-        top_runs = (
-            db.query(RunLog.vdot)
+        candidates = (
+            db.query(
+                RunLog.vdot,
+                RunLog.distance_km,
+                RunLog.workout_type,
+                RunLog.perceived_effort,
+            )
             .filter(
                 RunLog.user_id == user_id,
                 RunLog.vdot.isnot(None),
@@ -88,15 +112,32 @@ class RacePredictorService:
                 RunLog.date >= cutoff_date_naive,
             )
             .order_by(RunLog.vdot.desc())
-            .limit(TOP_N_VDOTS)
+            .limit(_CANDIDATE_POOL_SIZE)
             .all()
         )
 
-        if not top_runs:
+        if not candidates:
             return None
 
-        vdots = [row[0] for row in top_runs]
-        return round(statistics.median(vdots), 1)
+        weighted_entries = []
+        for vdot, distance_km, workout_type, perceived_effort in candidates:
+            distance_weight = min(distance_km / 10.0, 1.5)
+            effort_weight = _EFFORT_TYPE_WEIGHT.get(
+                workout_type or "", _DEFAULT_EFFORT_WEIGHT
+            )
+            pe_multiplier = 1.2 if (perceived_effort and perceived_effort >= 7) else 1.0
+            total_weight = distance_weight * effort_weight * pe_multiplier
+            weighted_entries.append((vdot, total_weight))
+
+        weighted_entries.sort(key=lambda x: x[1], reverse=True)
+        top_entries = weighted_entries[:TOP_N_VDOTS]
+
+        total_w = sum(w for _, w in top_entries)
+        if total_w <= 0:
+            return round(statistics.median([v for v, _ in top_entries]), 1)
+
+        weighted_vdot = sum(v * w for v, w in top_entries) / total_w
+        return round(weighted_vdot, 1)
 
     @staticmethod
     def get_best_effort(user_id: str, db: Session) -> Optional[Dict]:
