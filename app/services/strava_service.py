@@ -6,6 +6,7 @@ from typing import Any, Optional
 from urllib.parse import urlencode
 
 import httpx
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.config import settings
@@ -272,7 +273,15 @@ class StravaService:
                         if vdot:
                             run_log.vdot = vdot
                     db.add(run_log)
-                    db.flush()
+                    try:
+                        db.flush()
+                    except IntegrityError:
+                        # Duplicate strava_activity_id — two concurrent sync calls
+                        # raced past the SELECT check above. Roll back the savepoint
+                        # and treat this activity as already synced.
+                        db.rollback()
+                        skipped += 1
+                        continue
                     # Generate coaching feedback (non-fatal)
                     try:
                         from app.services.feedback_service import FeedbackService

@@ -247,7 +247,7 @@ async def add_favorite(
 
 @router.delete("/api/recipes/favorite/{favorite_id}")
 async def remove_favorite(
-    favorite_id: int,
+    favorite_id: str,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):

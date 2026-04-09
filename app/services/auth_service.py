@@ -75,7 +75,7 @@ class AuthService:
                 audience=settings.google_client_id,
                 issuer="https://accounts.google.com"
             )
-            logger.info(f"Google token verified successfully for: {payload.get('email')}")
+            logger.debug(f"Google token verified successfully for: {payload.get('email')}")
             return payload
         except JWTError as e:
             logger.error(f"JWT verification failed: {type(e).__name__}: {e}")

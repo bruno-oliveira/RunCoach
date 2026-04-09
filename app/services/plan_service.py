@@ -21,6 +21,7 @@ from app.models import (
     User,
     WeeklyPlan,
 )
+from app.models.triathlon_plan import TriathlonPlan
 from app.schemas import PlanRequest
 from app.services.plan_adjustments import (
     adjust_distance,
@@ -48,9 +49,13 @@ class PlanService:
     # ------------------------------------------------------------------
 
     def has_reached_plan_limit(self, user_id: str, db: Session) -> bool:
-        """Return True if the user has reached the maximum number of plans."""
-        count = db.query(TrainingPlan).filter(TrainingPlan.user_id == user_id).count()
-        return count >= self.MAX_PLANS_PER_USER
+        """Return True if the user has reached the maximum number of plans.
+
+        Counts both regular training plans and triathlon plans.
+        """
+        training_count = db.query(TrainingPlan).filter(TrainingPlan.user_id == user_id).count()
+        triathlon_count = db.query(TriathlonPlan).filter(TriathlonPlan.user_id == user_id).count()
+        return (training_count + triathlon_count) >= self.MAX_PLANS_PER_USER
 
     # ------------------------------------------------------------------
     # User resolution

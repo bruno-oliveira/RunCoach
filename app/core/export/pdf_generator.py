@@ -25,7 +25,7 @@ logger = logging.getLogger(__name__)
 class PDFGenerator:
     CACHE_TTL_SECONDS = 3600  # Evict cached PDFs older than 1 hour
 
-    def __init__(self, cache_dir: str = "./pdf_cache"):
+    def __init__(self, cache_dir: str = "/tmp/pdf_cache"):
         self.cache_dir = Path(cache_dir)
         self.cache_dir.mkdir(exist_ok=True)
         self.styles = getSampleStyleSheet()

@@ -12,9 +12,10 @@ from sqlalchemy.orm import Session
 from app.config import settings
 from app.core.export.triathlon_pdf_generator import TriathlonPDFGenerator
 from app.core.generators.triathlon_plan_generator import TriathlonPlanGenerator
-from app.dependencies import get_db, get_optional_user
+from app.dependencies import get_db, get_optional_user, get_plan_service
 from app.models.triathlon_plan import TriathlonPlan
 from app.models.user import User
+from app.services.plan_service import PlanService
 from app.template_helpers import create_templates
 
 logger = logging.getLogger(__name__)
@@ -65,6 +66,7 @@ async def generate_triathlon_plan(
     db: Session = Depends(get_db),
     current_user: Optional[User] = Depends(get_optional_user),
     anonymous_user_id: Optional[str] = Cookie(None),
+    plan_service: PlanService = Depends(get_plan_service),
 ) -> HTMLResponse:
     if distance not in DISTANCE_LABELS:
         raise HTTPException(status_code=400, detail=f"Invalid distance: {distance}")
@@ -72,6 +74,13 @@ async def generate_triathlon_plan(
     # Only persist user_id for authenticated (DB-backed) users; anonymous cookie
     # IDs are not rows in the users table so we leave user_id NULL instead.
     user_id: Optional[str] = current_user.id if current_user else None
+
+    # Enforce per-user plan limit (counts both training and triathlon plans)
+    if user_id and plan_service.has_reached_plan_limit(user_id, db):
+        raise HTTPException(
+            status_code=400,
+            detail=f"Plan limit reached. You can have a maximum of {plan_service.MAX_PLANS_PER_USER} plans.",
+        )
 
     # --- Duplicate detection ---
     if user_id:

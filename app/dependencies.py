@@ -127,7 +127,12 @@ async def _resolve_user(
     if user is None:
         return None
 
-    # Inactivity timeout check
+    # Inactivity timeout check.
+    # All datetimes in this app are stored as naive UTC (tzinfo=None).
+    # datetime.now(timezone.utc).replace(tzinfo=None) produces a naive UTC
+    # "now" for comparison. The .replace(tzinfo=None) on last_activity is a
+    # safety strip in case a future code path stores a tz-aware value.
+    # Do NOT mix tz-aware and tz-naive datetimes here — it will raise TypeError.
     if user.last_activity:
         timeout_delta = timedelta(minutes=settings.session_timeout_minutes)
         last_activity = user.last_activity

@@ -763,6 +763,7 @@ async def view_shared_plan(
 @router.post("/api/plan/{plan_id}/save")
 async def save_plan_to_account(
     plan_id: str,
+    anonymous_user_id: Optional[str] = Cookie(None),
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
@@ -778,6 +779,12 @@ async def save_plan_to_account(
     if plan_owner and (plan_owner.google_id or plan_owner.email):
         raise HTTPException(
             status_code=403, detail="This plan belongs to another user"
+        )
+
+    # Verify the requesting session actually owns this anonymous plan
+    if training_plan.user_id != anonymous_user_id:
+        raise HTTPException(
+            status_code=403, detail="This plan does not belong to your session"
         )
 
     training_plan.user_id = current_user.id

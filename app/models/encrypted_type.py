@@ -46,11 +46,11 @@ class EncryptedString(TypeDecorator):
         try:
             return self._get_fernet().decrypt(value.encode()).decode()
         except InvalidToken:
-            # Gracefully handle pre-existing plaintext values written
-            # before encryption was enabled. They will be re-encrypted
-            # on the next token refresh cycle.
+            # Token cannot be decrypted — either SECRET_KEY changed or the
+            # value is corrupt. Return None so callers treat it as absent and
+            # trigger a re-authorization flow rather than using a garbled string.
             logger.warning(
-                "Failed to decrypt token — returning plaintext value. "
-                "It will be re-encrypted on the next write."
+                "Failed to decrypt token — returning None. "
+                "User will need to re-authenticate to refresh credentials."
             )
-            return value
+            return None

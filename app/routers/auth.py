@@ -45,7 +45,7 @@ async def google_auth(
             headers={"WWW-Authenticate": "Bearer"},
         )
 
-    logger.info(f"Google authentication successful for: {google_user_data.get('email')}")
+    logger.debug(f"Google authentication successful for: {google_user_data.get('email')}")
 
     anonymous_user_id = request.cookies.get("anonymous_user_id")
     logger.info(f"Anonymous user ID from cookie: {anonymous_user_id}")

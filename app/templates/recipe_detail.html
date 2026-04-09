@@ -367,10 +367,12 @@
 
 {% block extra_js %}
 <script>
+let currentFavoriteId = {{ favorite_id | tojson }};
+
 function toggleFavorite() {
     const btn = document.querySelector('.btn-favorite');
     const isFavorited = btn.classList.contains('is-favorite');
-    
+
     const recipeData = {
         name: "{{ recipe.name }}",
         meal_type: "{{ recipe.meal_type }}",
@@ -382,17 +384,21 @@ function toggleFavorite() {
         instructions: {{ recipe.instructions | tojson }},
         dietary_tags: {{ recipe.dietary_tags | tojson }}
     };
-    
+
     if (isFavorited) {
         // Remove from favorites
-        fetch(`/api/recipes/favorite/{{ favorite_id }}`, {
+        fetch(`/api/recipes/favorite/${currentFavoriteId}`, {
             method: 'DELETE',
             headers: {
                 'Content-Type': 'application/json',
             }
         })
-        .then(response => response.json())
+        .then(response => {
+            if (!response.ok) throw new Error('Failed to remove favorite');
+            return response.json();
+        })
         .then(data => {
+            currentFavoriteId = null;
             btn.classList.remove('is-favorite');
             btn.innerHTML = `
                 <svg width="20" height="20" fill="currentColor" viewBox="0 0 20 20">
@@ -413,8 +419,12 @@ function toggleFavorite() {
             },
             body: JSON.stringify(recipeData)
         })
-        .then(response => response.json())
+        .then(response => {
+            if (!response.ok) throw new Error('Failed to add favorite');
+            return response.json();
+        })
         .then(data => {
+            currentFavoriteId = data.id;
             btn.classList.add('is-favorite');
             btn.innerHTML = `
                 <svg width="20" height="20" fill="currentColor" viewBox="0 0 20 20">

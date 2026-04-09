@@ -11,7 +11,7 @@ from sqlalchemy.orm import Session
 from app.core.training.quality_scorer import calculate_quality_score
 from app.core.training.vdot_calculator import VDOTCalculator
 from app.dependencies import get_db, get_current_user
-from app.models import RunLog, User, DailyWorkout
+from app.models import RunLog, User, DailyWorkout, TrainingPlan
 from app.schemas import (
     RunLogCreate,
     RunLogListResponse,
@@ -66,6 +66,37 @@ async def create_run_log(
     - Notes
     """
     try:
+        # Validate plan ownership to prevent IDOR
+        if run_log.training_plan_id:
+            plan = db.query(TrainingPlan).filter(
+                TrainingPlan.id == run_log.training_plan_id,
+                TrainingPlan.user_id == current_user.id,
+            ).first()
+            if not plan:
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail="Training plan not found or access denied",
+                )
+
+        validated_workout: Optional[DailyWorkout] = None
+        if run_log.daily_workout_id:
+            from app.models import WeeklyPlan
+            validated_workout = (
+                db.query(DailyWorkout)
+                .join(WeeklyPlan, DailyWorkout.weekly_plan_id == WeeklyPlan.id)
+                .join(TrainingPlan, WeeklyPlan.training_plan_id == TrainingPlan.id)
+                .filter(
+                    DailyWorkout.id == run_log.daily_workout_id,
+                    TrainingPlan.user_id == current_user.id,
+                )
+                .first()
+            )
+            if not validated_workout:
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail="Workout not found or access denied",
+                )
+
         # Calculate average pace (min/km)
         avg_pace_min_km = run_log.duration_minutes / run_log.distance_km
 
@@ -87,20 +118,16 @@ async def create_run_log(
         )
 
         # Calculate effort quality score if we have enough data
-        if run_log.daily_workout_id and run_log.perceived_effort:
-            planned_workout = db.query(DailyWorkout).filter(
-                DailyWorkout.id == run_log.daily_workout_id
-            ).first()
-            if planned_workout:
-                workout_type = planned_workout.workout_type or run_log.workout_type or "easy"
-                score, label = calculate_quality_score(
-                    actual_effort=run_log.perceived_effort,
-                    actual_pace_min_km=avg_pace_min_km,
-                    workout_type=workout_type,
-                    planned_pace_min_km=planned_workout.planned_pace_min_km if hasattr(planned_workout, "planned_pace_min_km") else None,
-                )
-                new_run.effort_quality_score = score
-                new_run.quality_label = label
+        if validated_workout and run_log.perceived_effort:
+            workout_type = validated_workout.workout_type or run_log.workout_type or "easy"
+            score, label = calculate_quality_score(
+                actual_effort=run_log.perceived_effort,
+                actual_pace_min_km=avg_pace_min_km,
+                workout_type=workout_type,
+                planned_pace_min_km=validated_workout.planned_pace_min_km if hasattr(validated_workout, "planned_pace_min_km") else None,
+            )
+            new_run.effort_quality_score = score
+            new_run.quality_label = label
 
         # Auto-calculate VDOT for all runs with sufficient distance
         if run_log.distance_km >= 2.0 and run_log.duration_minutes > 0:

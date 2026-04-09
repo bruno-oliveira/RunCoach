@@ -154,11 +154,12 @@ def calculate_long_run_distance(total_km: float, target_distance: float,
 
     long_run_base = min(long_run_base, long_run_cap)
 
-    min_long_run = target_distance * 0.25
+    # Floor: at least 25% of target race distance, but never more than total
+    # weekly volume (a single run cannot exceed the week's total mileage).
+    min_long_run = min(target_distance * 0.25, total_km)
 
     if is_recovery_week:
-        recovery_min = target_distance * 0.20
-        min_long_run = recovery_min
+        min_long_run = min(target_distance * 0.20, total_km)
 
     return round(max(min_long_run, long_run_base), 1)
 
