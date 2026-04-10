@@ -57,6 +57,22 @@ def swap_workout(
     return plan_data
 
 
+def swap_days(
+    plan_data: list[dict], week_number: int, source_day: int, target_day: int
+) -> list[dict]:
+    """Swap two workouts within a week by exchanging their day assignments."""
+    for week in plan_data:
+        if week["week"] == week_number:
+            workouts = week.get("daily_workouts", [])
+            src = next((w for w in workouts if w.get("day") == source_day), None)
+            tgt = next((w for w in workouts if w.get("day") == target_day), None)
+            if src and tgt:
+                src["day"], tgt["day"] = tgt["day"], src["day"]
+                week["daily_workouts"] = sorted(workouts, key=lambda w: w.get("day", 0))
+            break
+    return plan_data
+
+
 def adjust_distance(
     plan_data: list[dict], week_number: int, distance_change: float
 ) -> list[dict]:

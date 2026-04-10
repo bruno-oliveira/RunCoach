@@ -644,6 +644,69 @@ async def override_plan_week(
     return {"ok": True, "action": body.action, "week": week_number}
 
 
+class SwapDaysRequest(BaseModel):
+    source_day: int
+    target_day: int
+
+
+@router.post("/api/plan/{plan_id}/week/{week_number}/swap-days")
+async def swap_plan_days(
+    plan_id: str,
+    week_number: int,
+    body: SwapDaysRequest,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Swap two workouts within the same week."""
+    from app.services.plan_adjustments import swap_days
+
+    training_plan = get_plan_or_404(
+        plan_id, db, current_user, require_user_match=True
+    )
+
+    if body.source_day == body.target_day:
+        return {"ok": True}
+
+    plan_data = json.loads(training_plan.plan_data) if training_plan.plan_data else []
+    week_data = next((w for w in plan_data if w.get("week") == week_number), None)
+    if not week_data:
+        raise HTTPException(status_code=404, detail="Week not found in plan")
+
+    plan_data = swap_days(plan_data, week_number, body.source_day, body.target_day)
+
+    # Sync day_of_week in DailyWorkout DB records
+    weekly_plan = (
+        db.query(WeeklyPlan)
+        .filter(
+            WeeklyPlan.training_plan_id == plan_id,
+            WeeklyPlan.week_number == week_number,
+        )
+        .first()
+    )
+    if weekly_plan:
+        db_workouts = (
+            db.query(DailyWorkout)
+            .filter(DailyWorkout.weekly_plan_id == weekly_plan.id)
+            .all()
+        )
+        src_db = next(
+            (wo for wo in db_workouts if wo.day_of_week == body.source_day), None
+        )
+        tgt_db = next(
+            (wo for wo in db_workouts if wo.day_of_week == body.target_day), None
+        )
+        if src_db and tgt_db:
+            src_db.day_of_week, tgt_db.day_of_week = (
+                tgt_db.day_of_week,
+                src_db.day_of_week,
+            )
+
+    training_plan.plan_data = json.dumps(plan_data)
+    db.commit()
+
+    return {"ok": True}
+
+
 @router.post("/api/plan/{plan_id}/reset-adjustment")
 async def reset_plan_adjustment(
     plan_id: str,

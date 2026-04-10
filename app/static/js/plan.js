@@ -994,6 +994,142 @@ window.toggleAllWeeks = function() {
     }
 };
 
+// ------------------------------------------------------------------
+// Drag-and-drop day swapping
+// ------------------------------------------------------------------
+
+let dragSource = null;
+
+function initDragAndDrop() {
+    const ctx = window.APP_CTX;
+    // Only plan owners can reorder days
+    if (!ctx || !ctx.current_user_id || ctx.current_user_id !== ctx.plan_user_id) return;
+
+    document.querySelectorAll('.workout-item[data-day-num]').forEach(item => {
+        item.addEventListener('dragstart', handleDragStart);
+        item.addEventListener('dragend', handleDragEnd);
+        item.addEventListener('dragover', handleDragOver);
+        item.addEventListener('dragleave', handleDragLeave);
+        item.addEventListener('drop', handleDrop);
+    });
+}
+
+function handleDragStart(e) {
+    dragSource = this;
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/plain', ''); // required for Firefox
+    this.classList.add('dragging');
+}
+
+function handleDragEnd() {
+    this.classList.remove('dragging');
+    dragSource = null;
+    document.querySelectorAll('.workout-item.drag-over').forEach(el => {
+        el.classList.remove('drag-over');
+    });
+}
+
+function handleDragOver(e) {
+    if (!dragSource || dragSource === this) return;
+    if (dragSource.dataset.weekNum !== this.dataset.weekNum) return;
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    this.classList.add('drag-over');
+}
+
+function handleDragLeave() {
+    this.classList.remove('drag-over');
+}
+
+async function handleDrop(e) {
+    e.preventDefault();
+    this.classList.remove('drag-over');
+
+    if (!dragSource || dragSource === this) return;
+    if (dragSource.dataset.weekNum !== this.dataset.weekNum) {
+        ApiClient.showWarning('Workouts can only be swapped within the same week.');
+        return;
+    }
+
+    const planId = window.APP_CTX.plan_id;
+    const weekNum = parseInt(this.dataset.weekNum);
+    const sourceDay = parseInt(dragSource.dataset.dayNum);
+    const targetDay = parseInt(this.dataset.dayNum);
+    const target = this;
+
+    try {
+        const resp = await fetch(
+            `/api/plan/${planId}/week/${weekNum}/swap-days`,
+            {
+                method: 'POST',
+                headers: authHeaders({ 'Content-Type': 'application/json' }),
+                credentials: 'same-origin',
+                body: JSON.stringify({ source_day: sourceDay, target_day: targetDay })
+            }
+        );
+
+        if (!resp.ok) {
+            const err = await resp.json().catch(() => ({}));
+            ApiClient.showError(err.detail || 'Failed to swap workouts.');
+            return;
+        }
+
+        swapWorkoutDomElements(dragSource, target);
+    } catch (err) {
+        ApiClient.showError('Error: ' + err.message);
+    }
+}
+
+function swapWorkoutDomElements(a, b) {
+    const parent = a.parentNode;
+    const aNext = a.nextSibling;
+    const bNext = b.nextSibling;
+
+    // Swap DOM positions
+    if (aNext === b) {
+        parent.insertBefore(b, a);
+    } else if (bNext === a) {
+        parent.insertBefore(a, b);
+    } else {
+        if (bNext) {
+            parent.insertBefore(a, bNext);
+        } else {
+            parent.appendChild(a);
+        }
+        if (aNext) {
+            parent.insertBefore(b, aNext);
+        } else {
+            parent.appendChild(b);
+        }
+    }
+
+    // Swap day labels so each card reflects its new calendar position
+    const aDayLabel = a.querySelector('.workout-day-label');
+    const bDayLabel = b.querySelector('.workout-day-label');
+    if (aDayLabel && bDayLabel) {
+        const temp = aDayLabel.innerHTML;
+        aDayLabel.innerHTML = bDayLabel.innerHTML;
+        bDayLabel.innerHTML = temp;
+    }
+
+    // Swap data attributes so subsequent drags use correct values
+    const aDay = a.getAttribute('data-day');
+    const aDayNum = a.getAttribute('data-day-num');
+    a.setAttribute('data-day', b.getAttribute('data-day'));
+    a.setAttribute('data-day-num', b.getAttribute('data-day-num'));
+    b.setAttribute('data-day', aDay);
+    b.setAttribute('data-day-num', aDayNum);
+
+    // Keep log-run-btn data-day-name in sync
+    const aLogBtn = a.querySelector('.log-run-btn');
+    const bLogBtn = b.querySelector('.log-run-btn');
+    if (aLogBtn && bLogBtn) {
+        const aDayName = aLogBtn.dataset.dayName;
+        aLogBtn.dataset.dayName = bLogBtn.dataset.dayName;
+        bLogBtn.dataset.dayName = aDayName;
+    }
+}
+
 // Initialize on DOM ready
 document.addEventListener('DOMContentLoaded', function() {
     // Initialize collapsible weeks for mobile
@@ -1019,6 +1155,9 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Initialize adaptation alert banner
     initAdaptationAlert();
+
+    // Initialize drag-and-drop day swapping
+    initDragAndDrop();
 
     // Log-run buttons — read data-* attributes (works on all devices including touch)
     document.querySelectorAll('.log-run-btn').forEach(btn => {
