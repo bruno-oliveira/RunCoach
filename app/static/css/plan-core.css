@@ -669,6 +669,23 @@
     font-size: var(--text-sm);
 }
 
+.reset-week-btn {
+    background: none;
+    border: 1px solid var(--color-border-subtle);
+    color: var(--color-text-muted);
+    padding: 2px 10px;
+    border-radius: var(--radius-full);
+    font-size: var(--text-xs);
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.reset-week-btn:hover {
+    border-color: var(--color-warning);
+    color: var(--color-warning);
+    background: var(--color-warning-subtle, rgba(234, 179, 8, 0.08));
+}
+
 /* ---- Week Progress Badge ---- */
 .week-progress-badge {
     padding: 4px 14px;

@@ -707,6 +707,19 @@ class PlanService:
                 completion_stats = self.get_completion_stats(training_plan, db)
                 next_plan_cta = self.get_next_plan_cta(training_plan.target_distance_km)
 
+        # Weeks that have had suggestion overrides applied (baseline exists)
+        overridden_week_rows = (
+            db.query(WeeklyPlan.week_number)
+            .join(DailyWorkout, DailyWorkout.weekly_plan_id == WeeklyPlan.id)
+            .filter(
+                WeeklyPlan.training_plan_id == training_plan.id,
+                DailyWorkout.baseline_distance_km.isnot(None),
+            )
+            .distinct()
+            .all()
+        )
+        overridden_weeks = {row[0] for row in overridden_week_rows}
+
         return {
             "performance_analysis": performance_analysis,
             "logged_runs": logged_runs_map,
@@ -716,5 +729,6 @@ class PlanService:
             "feedback_map": self.get_feedback_map(logged_runs, db),
             "completion_stats": completion_stats,
             "next_plan_cta": next_plan_cta,
+            "overridden_weeks": overridden_weeks,
         }
 

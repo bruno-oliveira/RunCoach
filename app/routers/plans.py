@@ -556,7 +556,7 @@ async def dismiss_alert(
 
 
 class WeekOverrideRequest(BaseModel):
-    action: str  # "skip_bump" | "reduce_30" | "bump" | "ease_deficit" | "extend_long_run"
+    action: str  # "skip_bump" | "reduce_30" | "bump" | "ease_deficit" | "extend_long_run" | "reset_week"
 
 
 @router.post("/api/plan/{plan_id}/week/{week_number}/override")
@@ -720,6 +720,34 @@ async def override_plan_week(
                 if wo_data.get("type") == "long" and "distance" in wo_data:
                     wo_data["distance"] = round(wo_data["distance"] + 2, 1)
                     break
+            week_data["total_km"] = round(
+                sum(wo.distance_km for wo in workouts if wo.distance_km), 1
+            )
+
+    elif body.action == "reset_week":
+        # Restore all workouts to their baseline distances and clear baselines
+        weekly_plan = (
+            db.query(WeeklyPlan)
+            .filter(
+                WeeklyPlan.training_plan_id == plan_id,
+                WeeklyPlan.week_number == week_number,
+            )
+            .first()
+        )
+        if weekly_plan:
+            workouts = (
+                db.query(DailyWorkout)
+                .filter(DailyWorkout.weekly_plan_id == weekly_plan.id)
+                .all()
+            )
+            for wo in workouts:
+                if wo.baseline_distance_km is not None:
+                    wo.distance_km = wo.baseline_distance_km
+                    wo.baseline_distance_km = None
+            for wo_data in week_data.get("daily_workouts", []):
+                for db_wo in workouts:
+                    if db_wo.day_of_week == wo_data.get("day"):
+                        wo_data["distance"] = db_wo.distance_km
             week_data["total_km"] = round(
                 sum(wo.distance_km for wo in workouts if wo.distance_km), 1
             )

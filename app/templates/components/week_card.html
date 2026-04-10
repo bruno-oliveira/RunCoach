@@ -20,6 +20,9 @@
         </div>
         {% endif %}
         <div class="week-total">{{ week.total_km }} km</div>
+        {% if user and overridden_weeks is defined and week.week in overridden_weeks %}
+        <button class="reset-week-btn" onclick="resetWeek({{ week.week }})" title="Reset to original distances">Reset week</button>
+        {% endif %}
     </div>
 
     {% set day_names = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'] %}

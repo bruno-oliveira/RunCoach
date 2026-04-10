@@ -891,6 +891,30 @@ window.reduceWeek = function(weekNum) {
     });
 };
 
+window.resetWeek = function(weekNum) {
+    var planId = window.APP_CTX && window.APP_CTX.plan_id;
+    if (!planId) return;
+
+    fetch('/api/plan/' + planId + '/week/' + weekNum + '/override', {
+        method: 'POST',
+        headers: authHeaders({ 'Content-Type': 'application/json' }),
+        credentials: 'same-origin',
+        body: JSON.stringify({ action: 'reset_week' })
+    })
+    .then(function(res) { return res.json(); })
+    .then(function(data) {
+        if (data.ok) {
+            ApiClient.showSuccess('Week reset to original distances. Reloading...');
+            setTimeout(function() { location.reload(); }, 1200);
+        } else {
+            ApiClient.showError(data.detail || 'Failed to reset week.');
+        }
+    })
+    .catch(function(err) {
+        ApiClient.showError('Error: ' + err.message);
+    });
+};
+
 // ------------------------------------------------------------------
 // Proactive adaptation alerts (Phase 4)
 // ------------------------------------------------------------------
