@@ -809,7 +809,7 @@ function renderSuggestionCards(suggestions) {
 
             if (s.action === 'accept') {
                 html += '<div class="suggestion-actions">';
-                html += '<button class="btn btn-small btn-primary" onclick="acceptSuggestion(\'' + weekNum + '\')">Accept</button>';
+                html += '<button class="btn btn-small btn-primary" onclick="acceptSuggestion(\'' + weekNum + '\', \'' + s.type + '\', this)">Accept</button>';
                 html += '<button class="btn btn-small btn-ghost" onclick="skipSuggestion(this)">Skip</button>';
                 html += '</div>';
             } else if (s.action === 'reduce') {
@@ -833,9 +833,40 @@ function renderSuggestionCards(suggestions) {
     });
 }
 
-window.acceptSuggestion = function(weekNum) {
-    // Trigger plan adjustment for the suggestion
-    adjustPlan();
+window.acceptSuggestion = function(weekNum, suggestionType, btn) {
+    var planId = window.APP_CTX && window.APP_CTX.plan_id;
+    if (!planId) return;
+
+    var actionMap = {
+        'exceeding': 'bump',
+        'deficit': 'ease_deficit',
+        'long_run': 'extend_long_run'
+    };
+    var action = actionMap[suggestionType];
+    if (!action) return;
+
+    if (btn) { btn.disabled = true; btn.textContent = 'Applying...'; }
+
+    fetch('/api/plan/' + planId + '/week/' + weekNum + '/override', {
+        method: 'POST',
+        headers: authHeaders({ 'Content-Type': 'application/json' }),
+        credentials: 'same-origin',
+        body: JSON.stringify({ action: action })
+    })
+    .then(function(res) { return res.json(); })
+    .then(function(data) {
+        if (data.ok) {
+            ApiClient.showSuccess('Suggestion applied. Reloading...');
+            setTimeout(function() { location.reload(); }, 1200);
+        } else {
+            ApiClient.showError(data.detail || 'Failed to apply suggestion.');
+            if (btn) { btn.disabled = false; btn.textContent = 'Accept'; }
+        }
+    })
+    .catch(function(err) {
+        ApiClient.showError('Error: ' + err.message);
+        if (btn) { btn.disabled = false; btn.textContent = 'Accept'; }
+    });
 };
 
 window.reduceWeek = function(weekNum) {
@@ -1051,9 +1082,11 @@ async function handleDrop(e) {
         return;
     }
 
+    // Capture before await — dragend fires during fetch and nulls the global
+    const source = dragSource;
     const planId = window.APP_CTX.plan_id;
     const weekNum = parseInt(this.dataset.weekNum);
-    const sourceDay = parseInt(dragSource.dataset.dayNum);
+    const sourceDay = parseInt(source.dataset.dayNum);
     const targetDay = parseInt(this.dataset.dayNum);
     const target = this;
 
@@ -1074,7 +1107,7 @@ async function handleDrop(e) {
             return;
         }
 
-        swapWorkoutDomElements(dragSource, target);
+        swapWorkoutDomElements(source, target);
     } catch (err) {
         ApiClient.showError('Error: ' + err.message);
     }

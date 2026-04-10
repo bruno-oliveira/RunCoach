@@ -556,7 +556,7 @@ async def dismiss_alert(
 
 
 class WeekOverrideRequest(BaseModel):
-    action: str  # "skip_bump" | "reduce_30"
+    action: str  # "skip_bump" | "reduce_30" | "bump" | "ease_deficit" | "extend_long_run"
 
 
 @router.post("/api/plan/{plan_id}/week/{week_number}/override")
@@ -635,6 +635,95 @@ async def override_plan_week(
                 tw_data["total_km"] = round(
                     sum(wo.distance_km for wo in workouts if wo.distance_km), 1
                 )
+    elif body.action == "bump":
+        # Bump distances for this week (user exceeding targets)
+        multiplier = training_plan.adjustment_multiplier or 1.08
+        weekly_plan = (
+            db.query(WeeklyPlan)
+            .filter(
+                WeeklyPlan.training_plan_id == plan_id,
+                WeeklyPlan.week_number == week_number,
+            )
+            .first()
+        )
+        if weekly_plan:
+            workouts = (
+                db.query(DailyWorkout)
+                .filter(DailyWorkout.weekly_plan_id == weekly_plan.id)
+                .all()
+            )
+            for wo in workouts:
+                if wo.distance_km:
+                    if not wo.baseline_distance_km:
+                        wo.baseline_distance_km = wo.distance_km
+                    wo.distance_km = round(wo.distance_km * multiplier, 1)
+            for wo_data in week_data.get("daily_workouts", []):
+                if "distance" in wo_data:
+                    wo_data["distance"] = round(wo_data["distance"] * multiplier, 1)
+            week_data["total_km"] = round(
+                sum(wo.distance_km for wo in workouts if wo.distance_km), 1
+            )
+
+    elif body.action == "ease_deficit":
+        # Reduce distances by 15% (user below target)
+        factor = 0.85
+        weekly_plan = (
+            db.query(WeeklyPlan)
+            .filter(
+                WeeklyPlan.training_plan_id == plan_id,
+                WeeklyPlan.week_number == week_number,
+            )
+            .first()
+        )
+        if weekly_plan:
+            workouts = (
+                db.query(DailyWorkout)
+                .filter(DailyWorkout.weekly_plan_id == weekly_plan.id)
+                .all()
+            )
+            for wo in workouts:
+                if wo.distance_km:
+                    if not wo.baseline_distance_km:
+                        wo.baseline_distance_km = wo.distance_km
+                    wo.distance_km = round(wo.distance_km * factor, 1)
+            for wo_data in week_data.get("daily_workouts", []):
+                if "distance" in wo_data:
+                    wo_data["distance"] = round(wo_data["distance"] * factor, 1)
+            week_data["total_km"] = round(
+                sum(wo.distance_km for wo in workouts if wo.distance_km), 1
+            )
+
+    elif body.action == "extend_long_run":
+        # Extend the long run by 2km
+        weekly_plan = (
+            db.query(WeeklyPlan)
+            .filter(
+                WeeklyPlan.training_plan_id == plan_id,
+                WeeklyPlan.week_number == week_number,
+            )
+            .first()
+        )
+        if weekly_plan:
+            workouts = (
+                db.query(DailyWorkout)
+                .filter(DailyWorkout.weekly_plan_id == weekly_plan.id)
+                .all()
+            )
+            long_wo = next(
+                (wo for wo in workouts if wo.workout_type == "long"), None
+            )
+            if long_wo and long_wo.distance_km:
+                if not long_wo.baseline_distance_km:
+                    long_wo.baseline_distance_km = long_wo.distance_km
+                long_wo.distance_km = round(long_wo.distance_km + 2, 1)
+            for wo_data in week_data.get("daily_workouts", []):
+                if wo_data.get("type") == "long" and "distance" in wo_data:
+                    wo_data["distance"] = round(wo_data["distance"] + 2, 1)
+                    break
+            week_data["total_km"] = round(
+                sum(wo.distance_km for wo in workouts if wo.distance_km), 1
+            )
+
     else:
         raise HTTPException(status_code=400, detail=f"Unknown action: {body.action}")
 
