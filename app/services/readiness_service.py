@@ -7,15 +7,24 @@ a single readiness report displayed on the plan view.
 import json
 import logging
 from datetime import date, datetime, timedelta
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, Optional
 
-from sqlalchemy import func
 from sqlalchemy.orm import Session
 
-from app.core.training.vdot_calculator import VDOTCalculator
-from app.models import DailyWorkout, RunLog, TrainingPlan, WeeklyPlan
-from app.services.race_predictor_service import RacePredictorService
-from app.utils import parse_race_time_to_seconds, to_date as _to_date
+from app.models import TrainingPlan
+from app.services.readiness_scoring import (
+    build_scenarios,
+    compute_weekly_volumes,
+    parse_float,
+    score_consistency,
+    score_label,
+    score_long_run,
+    score_taper,
+    score_vdot,
+    score_volume,
+)
+from app.models import RunLog
+from app.utils import to_date as _to_date
 
 logger = logging.getLogger(__name__)
 
@@ -29,6 +38,25 @@ DISTANCE_LABELS = {
     42.2: "Marathon",
     42.195: "Marathon",
 }
+
+# Backward-compatible aliases for the private module-level functions
+# that were previously defined in this file.
+_compute_weekly_volumes = compute_weekly_volumes
+_score_volume = score_volume
+_score_consistency = score_consistency
+_score_long_run = score_long_run
+_score_taper = score_taper
+_score_vdot = score_vdot
+_build_scenarios = build_scenarios
+_parse_float = parse_float
+_score_label = score_label
+_vdot_for_goal_time = None  # re-exported below
+
+try:
+    from app.services.readiness_scoring import vdot_for_goal_time
+    _vdot_for_goal_time = vdot_for_goal_time
+except ImportError:
+    pass
 
 
 class ReadinessService:
@@ -72,7 +100,7 @@ class ReadinessService:
         # Race day estimate (end of last week)
         race_date = start_date + timedelta(weeks=total_weeks)
 
-        # ── Parse plan data for weekly targets ──
+        # Parse plan data for weekly targets
         plan_data = json.loads(plan.plan_data) if plan.plan_data else []
         planned_weekly_km = []
         planned_long_run_km = 0.0
@@ -88,7 +116,7 @@ class ReadinessService:
                     if dist > planned_long_run_km:
                         planned_long_run_km = dist
 
-        # ── Fetch logged runs for this plan ──
+        # Fetch logged runs for this plan
         runs = (
             db.query(RunLog)
             .filter(
@@ -113,44 +141,44 @@ class ReadinessService:
         if not all_runs_in_range:
             return None
 
-        # ── Actual weekly volumes ──
-        actual_weekly_km = _compute_weekly_volumes(all_runs_in_range, start_date, current_week)
+        # Actual weekly volumes
+        actual_weekly_km = compute_weekly_volumes(all_runs_in_range, start_date, current_week)
 
-        # ── Longest run ──
+        # Longest run
         longest_run_km = max((r.distance_km for r in all_runs_in_range), default=0)
 
-        # ── Component scores ──
-        volume_score, volume_detail = _score_volume(
+        # Component scores
+        volume_score, volume_detail = score_volume(
             actual_weekly_km, planned_weekly_km, current_week
         )
-        consistency_score, consistency_detail = _score_consistency(
+        consistency_score, consistency_detail = score_consistency(
             runs, plan.id, db, current_week
         )
-        long_run_score, long_run_detail = _score_long_run(
+        long_run_score, long_run_detail = score_long_run(
             longest_run_km, planned_long_run_km, plan.target_distance
         )
-        taper_score, taper_detail = _score_taper(current_week, total_weeks)
+        taper_score, taper_detail = score_taper(current_week, total_weeks)
 
         # VDOT & predictions
-        vdot_score, vdot_detail, predictions, vdot_data = _score_vdot(
+        vdot_score, vdot_detail, predictions, vdot_data = score_vdot(
             user_id, plan.target_distance, db, goal_time=plan.goal_time
         )
 
-        # ── Weighted total ──
+        # Weighted total
         overall = (
             volume_score * ReadinessService.WEIGHT_VOLUME
             + vdot_score * ReadinessService.WEIGHT_VDOT
             + long_run_score * ReadinessService.WEIGHT_LONG_RUN
             + consistency_score * ReadinessService.WEIGHT_CONSISTENCY
             + taper_score * ReadinessService.WEIGHT_TAPER
-        ) / 100  # scores are 0-100, weights sum to 100 → result is 0-100
+        ) / 100
 
         overall = round(min(100, max(0, overall)), 0)
 
-        # ── Race scenarios ──
-        scenarios = _build_scenarios(vdot_data, plan.target_distance)
+        # Race scenarios
+        scenarios = build_scenarios(vdot_data, plan.target_distance)
 
-        # ── Volume comparison data (for chart) ──
+        # Volume comparison data (for chart)
         volume_comparison = []
         for i in range(min(current_week, len(planned_weekly_km))):
             volume_comparison.append({
@@ -164,7 +192,7 @@ class ReadinessService:
 
         return {
             "overall_score": int(overall),
-            "overall_label": _score_label(overall),
+            "overall_label": score_label(overall),
             "distance_label": distance_label,
             "target_distance_km": target_dist,
             "current_week": current_week,
@@ -177,31 +205,31 @@ class ReadinessService:
                 "volume": {
                     "score": round(volume_score),
                     "weight": ReadinessService.WEIGHT_VOLUME,
-                    "label": _score_label(volume_score),
+                    "label": score_label(volume_score),
                     "detail": volume_detail,
                 },
                 "fitness": {
                     "score": round(vdot_score),
                     "weight": ReadinessService.WEIGHT_VDOT,
-                    "label": _score_label(vdot_score),
+                    "label": score_label(vdot_score),
                     "detail": vdot_detail,
                 },
                 "long_run": {
                     "score": round(long_run_score),
                     "weight": ReadinessService.WEIGHT_LONG_RUN,
-                    "label": _score_label(long_run_score),
+                    "label": score_label(long_run_score),
                     "detail": long_run_detail,
                 },
                 "consistency": {
                     "score": round(consistency_score),
                     "weight": ReadinessService.WEIGHT_CONSISTENCY,
-                    "label": _score_label(consistency_score),
+                    "label": score_label(consistency_score),
                     "detail": consistency_detail,
                 },
                 "taper": {
                     "score": round(taper_score),
                     "weight": ReadinessService.WEIGHT_TAPER,
-                    "label": _score_label(taper_score),
+                    "label": score_label(taper_score),
                     "detail": taper_detail,
                 },
             },
@@ -215,329 +243,3 @@ class ReadinessService:
             "total_runs": len(all_runs_in_range),
             "total_km": round(sum(r.distance_km for r in all_runs_in_range), 1),
         }
-
-
-# ──────────────────────────────────────────────────────────────────
-# Component scoring functions (each returns score 0-100 + detail str)
-# ──────────────────────────────────────────────────────────────────
-
-
-def _compute_weekly_volumes(
-    runs: List[RunLog], start_date: date, num_weeks: int
-) -> List[float]:
-    """Bucket runs into weekly volumes aligned to the plan start."""
-    volumes = [0.0] * num_weeks
-    for run in runs:
-        run_date = _to_date(run.date)
-        if run_date is None:
-            continue
-        delta = (run_date - start_date).days
-        if delta < 0:
-            continue
-        week_idx = delta // 7
-        if week_idx < num_weeks:
-            volumes[week_idx] += run.distance_km
-    return volumes
-
-
-def _score_volume(
-    actual: List[float], planned: List[float], current_week: int
-) -> tuple[float, str]:
-    """Score volume adherence for completed weeks."""
-    if current_week == 0 or not planned:
-        return 50.0, "Plan hasn't started yet"
-
-    weeks_to_check = min(current_week, len(planned), len(actual))
-    if weeks_to_check == 0:
-        return 50.0, "No completed weeks yet"
-
-    total_planned = sum(planned[:weeks_to_check])
-    total_actual = sum(actual[:weeks_to_check])
-
-    if total_planned == 0:
-        return 80.0, "No planned volume"
-
-    ratio = total_actual / total_planned
-    # 100% adherence = 100 score, scale down from there
-    # >110% still caps at 100 (over-training is separate concern)
-    score = min(100, ratio * 100)
-
-    pct = round(ratio * 100)
-    detail = f"{round(total_actual, 1)} / {round(total_planned, 1)} km ({pct}% of planned)"
-    return score, detail
-
-
-def _score_consistency(
-    plan_runs: List[RunLog],
-    plan_id: str,
-    db: Session,
-    current_week: int,
-) -> tuple[float, str]:
-    """Score run completion rate against planned workouts."""
-    if current_week == 0:
-        return 50.0, "Plan hasn't started yet"
-
-    # Count planned non-rest workouts for completed weeks
-    planned_count = (
-        db.query(func.count(DailyWorkout.id))
-        .join(WeeklyPlan)
-        .filter(
-            WeeklyPlan.training_plan_id == plan_id,
-            WeeklyPlan.week_number <= current_week,
-            DailyWorkout.workout_type.notin_(["rest", "recovery"]),
-        )
-        .scalar()
-    ) or 0
-
-    completed_count = len([
-        r for r in plan_runs if r.daily_workout_id is not None
-    ])
-
-    if planned_count == 0:
-        return 80.0, "No planned workouts found"
-
-    ratio = min(1.0, completed_count / planned_count)
-    score = ratio * 100
-
-    detail = f"{completed_count} / {planned_count} workouts completed ({round(ratio * 100)}%)"
-    return score, detail
-
-
-def _score_long_run(
-    longest_actual: float,
-    longest_planned: float,
-    target_distance_str: str,
-) -> tuple[float, str]:
-    """Score long run readiness against the target race distance."""
-    target = _parse_float(target_distance_str)
-
-    # Use the race distance as the benchmark (you don't need to run
-    # the full distance in training, ~70-80% is typical)
-    benchmark = target * 0.75
-    if benchmark <= 0:
-        benchmark = longest_planned or 15.0
-
-    if longest_actual >= benchmark:
-        score = 100.0
-    elif benchmark > 0:
-        score = (longest_actual / benchmark) * 100
-    else:
-        score = 50.0
-
-    score = min(100, score)
-    detail = f"Longest: {round(longest_actual, 1)} km (target ~{round(benchmark, 1)} km)"
-    return score, detail
-
-
-def _score_taper(current_week: int, total_weeks: int) -> tuple[float, str]:
-    """Score taper positioning — are we where we should be?"""
-    if total_weeks == 0:
-        return 50.0, "No plan data"
-    if current_week == 0:
-        return 50.0, "Plan hasn't started yet"
-
-    progress_pct = current_week / total_weeks
-
-    if progress_pct >= 0.85:
-        # Taper phase — should be resting
-        return 95.0, "Taper phase — trust the training"
-    elif progress_pct >= 0.70:
-        # Peak/transition
-        return 85.0, "Peak training phase — key workouts matter most now"
-    elif progress_pct >= 0.40:
-        # Build phase
-        return 70.0, "Build phase — stay consistent"
-    else:
-        # Early base
-        return 55.0, "Base phase — building foundation"
-
-
-def _vdot_for_goal_time(goal_time_str: str, target_distance_km: float) -> Optional[float]:
-    """Find the VDOT needed to achieve a goal time at a given distance.
-
-    Uses linear search from low-to-high VDOT (25.0 to 85.0 in 0.1 steps).
-    Returns the first VDOT whose predicted time is <= the goal time.
-    """
-    goal_seconds = parse_race_time_to_seconds(goal_time_str)
-    if not goal_seconds or target_distance_km <= 0:
-        return None
-
-    for test_vdot_10x in range(250, 850):
-        test_vdot = test_vdot_10x / 10.0
-        pred = VDOTCalculator.predict_time_for_distance(test_vdot, target_distance_km)
-        if pred and pred <= goal_seconds:
-            return test_vdot
-
-    return None
-
-
-def _score_vdot(
-    user_id: str,
-    target_distance_str: str,
-    db: Session,
-    *,
-    goal_time: Optional[str] = None,
-) -> tuple[float, str, Dict, Dict]:
-    """Score fitness based on VDOT relative to the runner's goal.
-
-    When a goal time is available, scores how close current VDOT is to
-    the VDOT needed for that goal. Otherwise falls back to a
-    distance-relative assessment.
-    """
-    prediction_data = RacePredictorService.get_predictions_for_user(user_id, db)
-
-    current_vdot = prediction_data.get("current_vdot")
-    trend = prediction_data.get("vdot_trend", "stable")
-    predictions = prediction_data.get("predictions", {})
-
-    target_dist = _parse_float(target_distance_str)
-
-    # Compute needed VDOT from goal time (if available)
-    needed_vdot = None
-    if goal_time:
-        needed_vdot = _vdot_for_goal_time(goal_time, target_dist)
-
-    vdot_info = {
-        "current": current_vdot,
-        "trend": trend,
-        "run_count": prediction_data.get("run_count", 0),
-        "best_effort": prediction_data.get("best_effort"),
-        "needed_for_goal": needed_vdot,
-    }
-
-    if not current_vdot:
-        return 50.0, "Not enough run data for VDOT", {}, vdot_info
-
-    # ---------- Goal-relative scoring ----------
-    if needed_vdot is not None:
-        vdot_gap = needed_vdot - current_vdot
-
-        if vdot_gap <= 0:
-            vdot_normalized = 100.0
-        elif vdot_gap <= 1.0:
-            vdot_normalized = 100.0 - (vdot_gap * 15.0)
-        elif vdot_gap <= 3.0:
-            vdot_normalized = 85.0 - ((vdot_gap - 1.0) * 10.0)
-        elif vdot_gap <= 5.0:
-            vdot_normalized = 65.0 - ((vdot_gap - 3.0) * 10.0)
-        else:
-            vdot_normalized = max(20.0, 45.0 - ((vdot_gap - 5.0) * 5.0))
-
-        # Smaller trend adjustments — score is already precise
-        if trend == "improving":
-            vdot_normalized = min(100, vdot_normalized + 5)
-            trend_str = "improving"
-        elif trend == "declining":
-            vdot_normalized = max(0, vdot_normalized - 5)
-            trend_str = "declining"
-        else:
-            trend_str = "stable"
-
-        gap_dir = "above" if current_vdot >= needed_vdot else "below"
-        gap_val = abs(current_vdot - needed_vdot)
-        detail = f"VDOT {current_vdot} ({trend_str}) — {gap_val:.1f} {gap_dir} goal VDOT {needed_vdot}"
-    else:
-        # ---------- Fallback: distance-relative assessment ----------
-        if target_dist > 0:
-            predicted_time = VDOTCalculator.predict_time_for_distance(
-                current_vdot, target_dist
-            )
-            if predicted_time:
-                vdot_normalized = min(85.0, max(60.0, (current_vdot - 25) / 35 * 25 + 60))
-            else:
-                vdot_normalized = 50.0
-        else:
-            vdot_normalized = min(100, max(0, (current_vdot - 25) / 35 * 60 + 40))
-
-        if trend == "improving":
-            vdot_normalized = min(100, vdot_normalized + 10)
-            trend_str = "improving"
-        elif trend == "declining":
-            vdot_normalized = max(0, vdot_normalized - 10)
-            trend_str = "declining"
-        else:
-            trend_str = "stable"
-
-        detail = f"VDOT {current_vdot} ({trend_str})"
-
-    # Format predictions for display
-    formatted_predictions = {}
-    for name, pred in predictions.items():
-        formatted_predictions[name] = {
-            "time": pred.get("formatted", ""),
-            "distance_km": pred.get("distance_km", 0),
-            "seconds": pred.get("seconds", 0),
-            "range": pred.get("range", {}),
-            "is_target": abs(pred.get("distance_km", 0) - target_dist) < 1.0,
-        }
-
-    return vdot_normalized, detail, formatted_predictions, vdot_info
-
-
-def _build_scenarios(
-    vdot_data: Dict, target_distance_str: str
-) -> List[Dict[str, Any]]:
-    """Build Dream/Solid/Tough/Survival race scenarios."""
-    current_vdot = vdot_data.get("current")
-    if not current_vdot:
-        return []
-
-    target_dist = _parse_float(target_distance_str)
-    if target_dist <= 0:
-        return []
-
-    base_time = VDOTCalculator.predict_time_for_distance(current_vdot, target_dist)
-    if not base_time:
-        return []
-
-    # Dream: VDOT+2, Solid: VDOT+0.5, Tough: VDOT-1, Survival: VDOT-3
-    scenario_defs = [
-        ("Dream", current_vdot + 2.0, 15, "Everything clicks — conservative start, strong finish"),
-        ("Solid", current_vdot + 0.5, 50, "Smart race execution — controlled effort throughout"),
-        ("Tough", current_vdot - 1.0, 25, "Challenging conditions or pacing errors — grit required"),
-        ("Survival", current_vdot - 3.0, 10, "Worst case — walk/run to the finish, still get it done"),
-    ]
-
-    scenarios = []
-    for name, vdot_adj, probability, description in scenario_defs:
-        clamped = max(25.0, min(85.0, vdot_adj))
-        time_secs = VDOTCalculator.predict_time_for_distance(clamped, target_dist)
-        if time_secs:
-            pace_secs_per_km = time_secs / target_dist
-            pace_min = int(pace_secs_per_km // 60)
-            pace_sec = int(pace_secs_per_km % 60)
-            scenarios.append({
-                "name": name,
-                "time": VDOTCalculator.format_duration(time_secs),
-                "pace": f"{pace_min}:{pace_sec:02d}/km",
-                "probability": probability,
-                "description": description,
-            })
-
-    return scenarios
-
-
-# ──────────────────────────────────────────────────────────────────
-# Helpers
-# ──────────────────────────────────────────────────────────────────
-
-
-def _parse_float(val) -> float:
-    """Safely parse a string/float target distance."""
-    try:
-        return float(val)
-    except (TypeError, ValueError):
-        return 0.0
-
-
-def _score_label(score: float) -> str:
-    """Return a human-readable label for a 0-100 score."""
-    if score >= 85:
-        return "Strong"
-    elif score >= 65:
-        return "Good"
-    elif score >= 45:
-        return "Moderate"
-    elif score >= 25:
-        return "Developing"
-    return "Needs work"

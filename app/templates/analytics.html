@@ -488,7 +488,17 @@
 {% block scripts %}
 {% if user %}
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-<script src="{{ static_url('js/share_card.js') }}" defer></script>
-<script src="{{ static_url('js/analytics_dashboard.js') }}" defer></script>
+<script src="{{ static_url('js/share/share_themes.js') }}" defer></script>
+<script src="{{ static_url('js/share/share_card.js') }}" defer></script>
+<script src="{{ static_url('js/share/share_renderer.js') }}" defer></script>
+<script src="{{ static_url('js/analytics/analytics_dashboard.js') }}" defer></script>
+<script src="{{ static_url('js/analytics/analytics_render.js') }}" defer></script>
+<script src="{{ static_url('js/analytics/analytics_charts.js') }}" defer></script>
+<script src="{{ static_url('js/analytics/analytics_predictions.js') }}" defer></script>
+<script src="{{ static_url('js/analytics/analytics_records.js') }}" defer></script>
+<script src="{{ static_url('js/analytics/analytics_insights.js') }}" defer></script>
+<script src="{{ static_url('js/analytics/analytics_evolution.js') }}" defer></script>
+<script src="{{ static_url('js/analytics/analytics_load.js') }}" defer></script>
+<script src="{{ static_url('js/analytics/analytics_plan.js') }}" defer></script>
 {% endif %}
 {% endblock %}

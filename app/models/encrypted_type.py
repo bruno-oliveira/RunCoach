@@ -46,11 +46,21 @@ class EncryptedString(TypeDecorator):
         try:
             return self._get_fernet().decrypt(value.encode()).decode()
         except InvalidToken:
-            # Token cannot be decrypted — either SECRET_KEY changed or the
-            # value is corrupt. Return None so callers treat it as absent and
-            # trigger a re-authorization flow rather than using a garbled string.
-            logger.warning(
-                "Failed to decrypt token — returning None. "
-                "User will need to re-authenticate to refresh credentials."
+            # Fernet tokens always start with "gAAAAA" (base64url of version
+            # byte 0x80).  If the stored value has that prefix, it was
+            # encrypted with a different key (SECRET_KEY rotated) — return
+            # None so callers trigger a re-authorization flow.
+            if value.startswith("gAAAAA"):
+                logger.warning(
+                    "Failed to decrypt token (likely SECRET_KEY change) "
+                    "— returning None. User will need to re-authenticate."
+                )
+                return None
+            # Otherwise it's a legacy plaintext value written before
+            # encryption was enabled.  Return it as-is; it will be
+            # re-encrypted on the next write via process_bind_param.
+            logger.info(
+                "Found legacy plaintext token — returning as-is. "
+                "It will be re-encrypted on the next write."
             )
-            return None
+            return value

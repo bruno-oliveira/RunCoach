@@ -16,6 +16,21 @@ let currentWeek = 1;
 let currentWorkoutId = null;
 
 /**
+ * Navigate to the canonical plan URL instead of reloadPlanPage().
+ * After a POST /generate-plan the browser URL may still be /generate-plan;
+ * a plain reload on mobile sends GET to that URL → 405.  This always
+ * navigates to /plan/{id} which is a safe GET endpoint.
+ */
+function reloadPlanPage() {
+    const planId = window.APP_CTX && window.APP_CTX.plan_id;
+    if (planId) {
+        window.location.href = '/plan/' + planId;
+    } else {
+        window.reloadPlanPage();
+    }
+}
+
+/**
  * Build fetch headers including Authorization only when a real token exists.
  * The app uses httponly cookies as the primary auth mechanism; localStorage
  * may not hold a token at all. Sending "Bearer null" breaks cookie fallback.
@@ -297,14 +312,14 @@ window.submitRunLog = async function(event) {
             // Show race comparison toast if this was a race with prediction data
             if (data.race_comparison) {
                 showRaceComparisonToast(data);
-                setTimeout(() => location.reload(), 8000);
+                setTimeout(() => reloadPlanPage(), 8000);
             } else if (data.predictions) {
                 // Show predictions toast if VDOT was calculated
                 showRacePredictionsToast(data);
-                setTimeout(() => location.reload(), 6000);
+                setTimeout(() => reloadPlanPage(), 6000);
             } else {
                 ApiClient.showSuccess('Run logged successfully!');
-                setTimeout(() => location.reload(), 1500);
+                setTimeout(() => reloadPlanPage(), 1500);
             }
         } else {
             const error = await response.json();
@@ -460,7 +475,7 @@ window.unlinkRun = async function(runId) {
         });
         if (response.ok) {
             ApiClient.showSuccess('Run removed.');
-            setTimeout(() => location.reload(), 800);
+            setTimeout(() => reloadPlanPage(), 800);
         } else {
             ApiClient.showError('Could not remove run.');
         }
@@ -592,7 +607,7 @@ window.adjustPlan = async function() {
                     msg += `\n\nSignals: volume=${result.volume_ratio}, effort=${result.effort_factor}, completion=${result.completion_rate} (${result.total_runs} runs)`;
                 }
                 ApiClient.showSuccess(msg);
-                setTimeout(() => location.reload(), 2500);
+                setTimeout(() => reloadPlanPage(), 2500);
             } else {
                 ApiClient.showInfo(result.reason || 'No adjustment needed.');
                 if (btn) { btn.disabled = false; btn.textContent = 'Adjust Plan'; }
@@ -629,7 +644,7 @@ window.resetAdjustment = async function() {
             const result = await response.json();
             if (result.reset) {
                 ApiClient.showSuccess('Plan restored to original distances.');
-                setTimeout(() => location.reload(), 1500);
+                setTimeout(() => reloadPlanPage(), 1500);
             } else {
                 ApiClient.showInfo(result.reason || 'No adjustment to reset.');
                 if (btn) { btn.disabled = false; btn.textContent = 'Reset to original'; }
@@ -663,7 +678,7 @@ window.startPlan = async function() {
 
         if (response.ok) {
             ApiClient.showSuccess('Plan started! Reloading...');
-            setTimeout(() => location.reload(), 800);
+            setTimeout(() => reloadPlanPage(), 800);
         } else {
             const error = await response.json();
             ApiClient.showError('Error: ' + (error.detail || 'Could not set start date'));
@@ -757,7 +772,7 @@ window.addEventListener('pageshow', function(event) {
         fetch('/api/auth/me', { credentials: 'same-origin' }).then(function(resp) {
             if (resp.status === 401) {
                 // Session expired while page was cached — reload to get fresh state.
-                window.location.reload();
+                window.reloadPlanPage();
             }
         }).catch(function() {
             // Network error — don't reload, let the user try normally.
@@ -857,7 +872,7 @@ window.acceptSuggestion = function(weekNum, suggestionType, btn) {
     .then(function(data) {
         if (data.ok) {
             ApiClient.showSuccess('Suggestion applied. Reloading...');
-            setTimeout(function() { location.reload(); }, 1200);
+            setTimeout(function() { reloadPlanPage(); }, 1200);
         } else {
             ApiClient.showError(data.detail || 'Failed to apply suggestion.');
             if (btn) { btn.disabled = false; btn.textContent = 'Accept'; }
@@ -883,7 +898,7 @@ window.reduceWeek = function(weekNum) {
     .then(function(data) {
         if (data.ok) {
             ApiClient.showSuccess('Week reduced by 30%. Reloading...');
-            setTimeout(function() { location.reload(); }, 1200);
+            setTimeout(function() { reloadPlanPage(); }, 1200);
         }
     })
     .catch(function(err) {
@@ -905,7 +920,7 @@ window.resetWeek = function(weekNum) {
     .then(function(data) {
         if (data.ok) {
             ApiClient.showSuccess('Week reset to original distances. Reloading...');
-            setTimeout(function() { location.reload(); }, 1200);
+            setTimeout(function() { reloadPlanPage(); }, 1200);
         } else {
             ApiClient.showError(data.detail || 'Failed to reset week.');
         }
@@ -964,7 +979,7 @@ window.recalibratePlan = function(strategy) {
 
         if (data.ok) {
             ApiClient.showSuccess(data.reason || 'Plan recalibrated.');
-            setTimeout(function() { location.reload(); }, 1500);
+            setTimeout(function() { reloadPlanPage(); }, 1500);
         } else {
             ApiClient.showError(data.error || 'Recalibration failed.');
         }
