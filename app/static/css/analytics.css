@@ -710,6 +710,97 @@
     background: #FEE2E2;
 }
 
+/* ─────────────────────────────────────────────────────────────── */
+/*  Fitness · Fatigue · Form card                                  */
+/* ─────────────────────────────────────────────────────────────── */
+#fitnessFormCard {
+    animation: ffCardIn 0.5s ease-out both;
+}
+@keyframes ffCardIn {
+    from { opacity: 0; transform: translateY(8px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+.ff-strip {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: var(--space-3);
+    padding: var(--space-4) var(--space-2);
+    margin-bottom: var(--space-3);
+}
+.ff-stat {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding: var(--space-3) var(--space-4);
+    border-radius: var(--radius-lg, 14px);
+    background: var(--color-bg-elevated);
+    border: 1px solid var(--color-border-subtle);
+    transition: transform 0.18s ease, box-shadow 0.18s ease;
+    position: relative;
+    overflow: hidden;
+}
+.ff-stat::after {
+    content: "";
+    position: absolute;
+    top: 0; right: 0;
+    width: 52px; height: 52px;
+    border-radius: 50%;
+    background: radial-gradient(circle, currentColor 0%, transparent 70%);
+    opacity: 0.12;
+    pointer-events: none;
+}
+.ff-stat:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 14px -6px rgba(15, 23, 42, 0.12);
+}
+.ff-stat--ctl { color: #10B981; }
+.ff-stat--atl { color: #F59E0B; }
+.ff-stat--tsb { color: #6366F1; }
+.ff-stat-label {
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    font-weight: var(--weight-bold, 700);
+    color: currentColor;
+    opacity: 0.85;
+}
+.ff-stat-value {
+    font-family: var(--font-display, inherit);
+    font-size: 28px;
+    font-weight: 800;
+    color: var(--color-text);
+    font-variant-numeric: tabular-nums;
+    line-height: 1.1;
+}
+.ff-stat-sub {
+    font-size: 11px;
+    color: var(--color-text-secondary);
+}
+.ff-form-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 3px 10px;
+    border-radius: var(--radius-full);
+    font-size: 11px;
+    font-weight: var(--weight-bold);
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+}
+.ff-form-badge--fresh    { color: #065F46; background: #D1FAE5; }
+.ff-form-badge--neutral  { color: #3730A3; background: #E0E7FF; }
+.ff-form-badge--fatigued { color: #92400E; background: #FEF3C7; }
+.ff-form-badge--deep     { color: #991B1B; background: #FEE2E2; }
+.ff-caption {
+    font-size: 11px;
+    color: var(--color-text-secondary);
+    margin: var(--space-3) var(--space-2) 0;
+    line-height: 1.5;
+}
+@media (max-width: 640px) {
+    .ff-strip { grid-template-columns: 1fr; gap: var(--space-2); }
+    .ff-stat-value { font-size: 24px; }
+}
+
 /* ── Efficiency Trend Badge ── */
 .efficiency-trend-badge {
     font-size: 11px;

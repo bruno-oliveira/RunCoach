@@ -10,6 +10,7 @@ from app.models.run_log import RunLog
 from app.models.run_feedback import RunFeedback
 from app.models.favorite_recipe import FavoriteRecipe
 from app.models.triathlon_plan import TriathlonPlan
+from app.models.readiness_log import ReadinessLog
 
 # Configure relationships after all models are imported
 User.training_plans = relationship("TrainingPlan", back_populates="user", cascade="all, delete-orphan")
@@ -39,6 +40,9 @@ FavoriteRecipe.user = relationship("User", back_populates="favorite_recipes")
 User.triathlon_plans = relationship("TriathlonPlan", back_populates="user", cascade="all, delete-orphan")
 TriathlonPlan.user = relationship("User", back_populates="triathlon_plans")
 
+User.readiness_logs = relationship("ReadinessLog", back_populates="user", cascade="all, delete-orphan")
+ReadinessLog.user = relationship("User", back_populates="readiness_logs")
+
 __all__ = [
     "Base",
     "User",
@@ -50,4 +54,5 @@ __all__ = [
     "RunFeedback",
     "FavoriteRecipe",
     "TriathlonPlan",
+    "ReadinessLog",
 ]

@@ -1,0 +1,28 @@
+{# Renders the structured steps of a workout.
+   Expected context: workout (dict with optional 'steps' array) #}
+{% if workout.steps %}
+<ol class="workout-steps" aria-label="Workout steps">
+    {% for step in workout.steps %}
+    <li class="workout-step workout-step-{{ step.kind }}">
+        <span class="workout-step-dot" aria-hidden="true"></span>
+        <div class="workout-step-body">
+            <div class="workout-step-head">
+                <span class="workout-step-label">{{ step.label }}</span>
+                {% if step.pace_zone %}<span class="workout-step-zone workout-step-zone-{{ step.pace_zone }}">{{ step.pace_zone }}</span>{% endif %}
+            </div>
+            {% set meta = [] %}
+            {% if step.distance_m and step.distance_m >= 1000 %}{% set _ = meta.append((step.distance_m / 1000) | round(1) | string + ' km') %}{% elif step.distance_m %}{% set _ = meta.append(step.distance_m ~ ' m') %}{% endif %}
+            {% if step.duration_s %}{% if step.duration_s >= 60 %}{% set _ = meta.append((step.duration_s // 60) ~ ':' ~ '%02d'|format(step.duration_s % 60)) %}{% else %}{% set _ = meta.append(step.duration_s ~ ' s') %}{% endif %}{% endif %}
+            {% if step.pace_str %}{% set _ = meta.append(step.pace_str) %}{% endif %}
+            {% if step.effort %}{% set _ = meta.append(step.effort) %}{% endif %}
+            {% if meta %}
+            <div class="workout-step-meta">{{ meta | join(' · ') }}</div>
+            {% endif %}
+            {% if step.note %}
+            <div class="workout-step-note">{{ step.note }}</div>
+            {% endif %}
+        </div>
+    </li>
+    {% endfor %}
+</ol>
+{% endif %}

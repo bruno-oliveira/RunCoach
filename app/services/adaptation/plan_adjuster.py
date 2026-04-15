@@ -10,6 +10,8 @@ from sqlalchemy.orm import Session
 from app.models import DailyWorkout, RunLog, TrainingPlan, WeeklyPlan
 from app.utils import to_date as _to_date
 
+from app.core.training import workout_steps as _steps_mod
+
 from ._helpers import (
     ANNOTATION_RE,
     backfill_baselines,
@@ -352,6 +354,9 @@ def _apply_adjustment_to_future_weeks(
             pd_wo = pd_workout.get((week.week_number, workout.day_of_week))
             if pd_wo is not None:
                 pd_wo["distance"] = new_distance
+                if pd_wo.get("steps") and old_distance and old_distance > 0:
+                    step_scale = new_distance / old_distance
+                    pd_wo["steps"] = _steps_mod.scale_steps(pd_wo["steps"], step_scale)
                 pd_clean = ANNOTATION_RE.sub(
                     "", pd_wo.get("notes", pd_wo.get("description", ""))
                 ).strip()

@@ -1,11 +1,199 @@
 """Marathon and trail key workout definitions.
 
 See key_workout_data.py for the full field documentation.
+
+Long-run variants (`type: "long"`) carry a `steps_builder` field that points
+to a callable in `workout_steps` — KeyWorkoutLibrary resolves it at request
+time so we don't duplicate step definitions across entries.
 """
 
 from typing import Dict, List
 
 WORKOUTS_LONG: List[Dict] = [
+    # -- Long-run variants (Half Marathon) --
+    {
+        "id": "half_long_alternating_mp",
+        "distances": [21.1],
+        "phases": ["build", "peak"],
+        "type": "long",
+        "terrain": ["any"],
+        "name": "Alternating Marathon-Pace Long",
+        "structure": "Long run alternating 2km easy / 2km at marathon pace",
+        "description": (
+            "Run your long-run distance alternating 2 km easy and 2 km at "
+            "marathon pace. No rest between blocks. The switching rehearses "
+            "race-pace discipline on fatigued legs."
+        ),
+        "intensity": "medium",
+        "target_zone": 3,
+        "pace_zone": "M",
+        "rationale": (
+            "Blends aerobic volume with race-pace specificity in a single "
+            "session. The forced switch between paces trains mental focus."
+        ),
+        "steps_builder": "alternating_mp",
+    },
+    {
+        "id": "half_long_fast_finish",
+        "distances": [21.1],
+        "phases": ["build", "peak"],
+        "type": "long",
+        "terrain": ["any"],
+        "name": "Fast-Finish Long Run",
+        "structure": "Long run with the last 3 km at threshold pace",
+        "description": (
+            "Run your long-run distance with the first portion at easy pace, "
+            "then accelerate into the final 3 km at threshold pace. "
+            "Build effort into the last kilometer."
+        ),
+        "intensity": "medium",
+        "target_zone": 3,
+        "pace_zone": "T",
+        "rationale": (
+            "Fast-finish runs teach your legs to change gears when tired — "
+            "the biggest predictor of a strong negative-split race."
+        ),
+        "steps_builder": "fast_finish",
+    },
+    {
+        "id": "half_long_rolling_hills",
+        "distances": [21.1],
+        "phases": ["build"],
+        "type": "long",
+        "terrain": ["any"],
+        "name": "Rolling Hills Long Run",
+        "structure": "Long run on a rolling hills route at even effort",
+        "description": (
+            "Run your long-run distance on a rolling hills route. "
+            "Keep effort even — push on the climbs, float on the descents. "
+            "Do NOT chase pace on the flats."
+        ),
+        "intensity": "medium",
+        "target_zone": 3,
+        "pace_zone": "E",
+        "rationale": (
+            "Even on a flat race course, rolling-hill long runs build "
+            "stride-cycle strength and cardiovascular variability that "
+            "flat-only runs can't replicate."
+        ),
+        "steps_builder": "rolling_hills",
+    },
+
+    # -- Long-run variants (Marathon) --
+    {
+        "id": "marathon_long_alternating_mp",
+        "distances": [42.2],
+        "phases": ["build", "peak"],
+        "type": "long",
+        "terrain": ["any"],
+        "name": "Alternating Marathon-Pace Long",
+        "structure": "Long run alternating 3km easy / 3km at marathon pace",
+        "description": (
+            "Run your long-run distance alternating 3 km easy and 3 km at "
+            "marathon pace. No stops. The back-to-back pace changes simulate "
+            "late-race moments where you must hold form."
+        ),
+        "intensity": "high",
+        "target_zone": 4,
+        "pace_zone": "M",
+        "rationale": (
+            "A classic Runna/Daniels-style workout. Gets race-pace volume "
+            "into a long run without running it all fast — lower injury risk, "
+            "higher specificity."
+        ),
+        "steps_builder": "alternating_mp_3k",
+    },
+    {
+        "id": "marathon_long_fast_finish",
+        "distances": [42.2],
+        "phases": ["build", "peak"],
+        "type": "long",
+        "terrain": ["any"],
+        "name": "Fast-Finish Long Run",
+        "structure": "Long run with the last 4 km at threshold pace",
+        "description": (
+            "Run your long-run distance easy, then finish with the last 4 km "
+            "at threshold pace. Build effort kilometer by kilometer — the "
+            "last km should be your fastest."
+        ),
+        "intensity": "medium",
+        "target_zone": 4,
+        "pace_zone": "T",
+        "rationale": (
+            "Running fast on fatigued legs teaches the specific neuromuscular "
+            "and metabolic skill of finishing a marathon strong."
+        ),
+        "steps_builder": "fast_finish_4k",
+    },
+    {
+        "id": "marathon_long_depletion",
+        "distances": [42.2],
+        "phases": ["build"],
+        "type": "long",
+        "terrain": ["any"],
+        "name": "Depletion Long Run",
+        "structure": "Fasted long run at easy effort — water only",
+        "description": (
+            "Run your long-run distance fasted (pre-breakfast). Water only "
+            "during the run — no carbs. Keep effort conservative; run slower "
+            "than your normal long-run pace."
+        ),
+        "intensity": "low",
+        "target_zone": 2,
+        "pace_zone": "E",
+        "rationale": (
+            "Depletion runs drive mitochondrial adaptation and fat oxidation "
+            "— a critical but often-missed training stimulus for marathoners."
+        ),
+        "steps_builder": "depletion",
+    },
+    {
+        "id": "marathon_long_rolling_hills",
+        "distances": [42.2],
+        "phases": ["build"],
+        "type": "long",
+        "terrain": ["any"],
+        "name": "Rolling Hills Long Run",
+        "structure": "Long run on a rolling hills route at steady effort",
+        "description": (
+            "Run your long-run distance on a rolling hills route. Hold even "
+            "effort throughout — the hills become natural fartlek intervals "
+            "without breaking rhythm."
+        ),
+        "intensity": "medium",
+        "target_zone": 3,
+        "pace_zone": "E",
+        "rationale": (
+            "Rolling terrain forces natural effort variation and recruits "
+            "muscle fibers that flat running misses — making you more "
+            "resilient on race day, regardless of course profile."
+        ),
+        "steps_builder": "rolling_hills",
+    },
+
+    # -- Long-run variants (10K) --
+    {
+        "id": "10k_long_fast_finish",
+        "distances": [10.0],
+        "phases": ["build", "peak"],
+        "type": "long",
+        "terrain": ["any"],
+        "name": "Fast-Finish Long Run",
+        "structure": "Long run with the last 2 km at threshold pace",
+        "description": (
+            "Run your long-run distance easy, then finish with the last 2 km "
+            "at threshold pace. A miniature version of the classic "
+            "marathon fast-finish long run."
+        ),
+        "intensity": "medium",
+        "target_zone": 3,
+        "pace_zone": "T",
+        "rationale": (
+            "Short fast-finish long runs develop the 10K-specific skill of "
+            "holding form when tired — exactly what you need in the final 2 km."
+        ),
+        "steps_builder": "fast_finish_2k",
+    },
     # -- Marathon --
     {
         "id": "marathon_mp_long",

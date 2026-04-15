@@ -268,6 +268,35 @@
                 </div>
             </div>
 
+            <!-- Fitness / Fatigue / Form -->
+            <div class="analytics-card chart-wide" id="fitnessFormCard" style="display:none;">
+                <div class="analytics-card-header">
+                    <h3 class="analytics-card-title">Fitness &middot; Fatigue &middot; Form</h3>
+                    <span class="ff-form-badge" id="ffFormBadge"></span>
+                </div>
+                <div class="ff-strip" id="ffStrip">
+                    <div class="ff-stat ff-stat--ctl">
+                        <span class="ff-stat-label">Fitness</span>
+                        <span class="ff-stat-value" id="ffCtlValue">—</span>
+                        <span class="ff-stat-sub">42-day load</span>
+                    </div>
+                    <div class="ff-stat ff-stat--atl">
+                        <span class="ff-stat-label">Fatigue</span>
+                        <span class="ff-stat-value" id="ffAtlValue">—</span>
+                        <span class="ff-stat-sub">7-day load</span>
+                    </div>
+                    <div class="ff-stat ff-stat--tsb">
+                        <span class="ff-stat-label">Form</span>
+                        <span class="ff-stat-value" id="ffTsbValue">—</span>
+                        <span class="ff-stat-sub" id="ffTsbSub">Fitness − Fatigue</span>
+                    </div>
+                </div>
+                <div class="chart-canvas-wrap">
+                    <canvas id="fitnessFormChart"></canvas>
+                </div>
+                <p class="ff-caption">Fitness climbs slowly with consistent work. Fatigue reacts to recent sessions. Form &gt; 0 means you&rsquo;re rested; form &lt; &minus;10 means you&rsquo;re digging in.</p>
+            </div>
+
             <!-- Pace Zone Distribution -->
             <div class="analytics-card" id="paceZonesCard">
                 <div class="analytics-card-header">

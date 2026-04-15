@@ -67,6 +67,7 @@ async def generate_plan(
     body_weight_kg: float = Form(70.0),
     recent_race_distance_km: Optional[float] = Form(None),
     recent_race_time: Optional[str] = Form(None),
+    goal_time: Optional[str] = Form(None),
     use_profile: Optional[str] = Form(None),
     anonymous_user_id: Optional[str] = Cookie(None),
     db: Session = Depends(get_db),
@@ -101,6 +102,7 @@ async def generate_plan(
             body_weight_kg=body_weight_kg,
             recent_race_distance_km=recent_race_distance_km or None,
             recent_race_time=recent_race_time or None,
+            goal_time=goal_time or None,
         )
     except InsufficientTimeException as e:
         return error_response(request, current_user, e.user_message, "insufficient_time", e.suggestion)

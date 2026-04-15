@@ -4,14 +4,48 @@ Curated workouts that replace generic interval/tempo sessions during
 Build and Peak phases to make training plans feel coached, not generated.
 """
 
-from typing import Dict, List, Optional
+from typing import Any, Dict, List, Optional
 
+from app.core.training import workout_steps as _steps_mod
 from app.core.training.hr_zone_calculator import WORKOUT_ZONE_MAP
 from app.core.training.key_workout_data import WORKOUTS
 from app.core.training.vdot_calculator import VDOTCalculator
 
 # Backward-compatible alias: tests and internal code import _WORKOUTS.
 _WORKOUTS = WORKOUTS
+
+
+def _resolve_long_steps_builder(
+    builder_key: str,
+    distance_km: float,
+    pace_zones: Optional[Dict],
+) -> List[Dict[str, Any]]:
+    """Dispatch a long-run steps_builder string to its builder function."""
+    if builder_key == "alternating_mp":
+        return _steps_mod.build_alternating_mp_long_steps(
+            distance_km, pace_zones, block_km=2.0
+        )
+    if builder_key == "alternating_mp_3k":
+        return _steps_mod.build_alternating_mp_long_steps(
+            distance_km, pace_zones, block_km=3.0
+        )
+    if builder_key == "fast_finish":
+        return _steps_mod.build_fast_finish_long_steps(
+            distance_km, pace_zones, finish_km=3.0
+        )
+    if builder_key == "fast_finish_2k":
+        return _steps_mod.build_fast_finish_long_steps(
+            distance_km, pace_zones, finish_km=2.0
+        )
+    if builder_key == "fast_finish_4k":
+        return _steps_mod.build_fast_finish_long_steps(
+            distance_km, pace_zones, finish_km=4.0
+        )
+    if builder_key == "rolling_hills":
+        return _steps_mod.build_rolling_hills_long_steps(distance_km, pace_zones)
+    if builder_key == "depletion":
+        return _steps_mod.build_depletion_long_steps(distance_km, pace_zones)
+    return _steps_mod.build_long_steps(distance_km, pace_zones, variant="easy")
 
 
 class KeyWorkoutLibrary:

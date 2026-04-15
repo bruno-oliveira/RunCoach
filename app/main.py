@@ -24,6 +24,7 @@ from app.routers import (
     nutrition_router,
     performance_router,
     plans_router,
+    readiness_router,
     recipes_router,
     runs_router,
     strava_router,
@@ -245,6 +246,7 @@ app.include_router(analytics_router)
 app.include_router(analytics_page_router)
 app.include_router(strava_router)
 app.include_router(triathlon_router)
+app.include_router(readiness_router)
 
 
 @app.get("/health", response_model=HealthResponse, tags=["health"])

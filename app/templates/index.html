@@ -214,6 +214,20 @@
                             </div>
                         </div>
 
+                        <div class="form-group form-collapsible">
+                            <button type="button" class="form-collapsible-toggle" onclick="toggleGoalFields()">
+                                <span>Chasing a goal time? (optional)</span>
+                                <svg class="chevron-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+                            </button>
+                            <div id="goal-fields" class="form-collapsible-content" style="display:none;">
+                                <span class="form-help" style="margin-bottom: 8px; display:block;">Every quality session will be paced off your goal, not your current fitness</span>
+                                <div class="form-group">
+                                    <label for="goal_time" class="form-label">Goal finish time</label>
+                                    <input type="text" id="goal_time" name="goal_time" class="form-input" placeholder="HH:MM:SS or MM:SS">
+                                </div>
+                            </div>
+                        </div>
+
                         {% if has_profile %}
                         <div class="form-group profile-toggle-group">
                             <label class="toggle-label" for="use_profile">
@@ -263,10 +277,10 @@
 
 {% block scripts %}
 <script>
-function toggleRaceFields() {
-    const fields = document.getElementById('race-fields');
-    const toggle = document.querySelector('.form-collapsible-toggle');
-    if (fields.style.display === 'none') {
+function toggleCollapsibleFields(fieldsId) {
+    const fields = document.getElementById(fieldsId);
+    const toggle = fields.previousElementSibling;
+    if (fields.style.display === 'none' || !fields.style.display) {
         fields.style.display = 'block';
         toggle.classList.add('open');
     } else {
@@ -274,6 +288,8 @@ function toggleRaceFields() {
         toggle.classList.remove('open');
     }
 }
+function toggleRaceFields() { toggleCollapsibleFields('race-fields'); }
+function toggleGoalFields() { toggleCollapsibleFields('goal-fields'); }
 
 document.addEventListener('DOMContentLoaded', function() {
     // Show/hide terrain selector for trail distance

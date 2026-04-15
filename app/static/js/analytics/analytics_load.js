@@ -121,6 +121,8 @@
             // Re-render chart with ACWR overlay
             const g = document.getElementById('loadGrouping');
             this.renderTrainingLoadChart(g ? g.value : 'weekly');
+            // Fitness / fatigue / form card
+            this.renderFitnessForm(data);
         } catch (err) {
             console.error('Failed to load training load:', err);
         }
@@ -276,6 +278,149 @@
         const select = header.querySelector('.grouping-select');
         if (select) header.insertBefore(badge, select);
         else header.appendChild(badge);
+    };
+
+    /* ------------------------------------------------------------------ */
+    /*  Fitness / Fatigue / Form (CTL / ATL / TSB)                         */
+    /* ------------------------------------------------------------------ */
+    AD._formLabel = function(form) {
+        return ({
+            fresh: 'Fresh',
+            neutral: 'Neutral',
+            fatigued: 'Fatigued',
+            deep: 'Deep fatigue'
+        })[form] || 'Neutral';
+    };
+
+    AD._formColor = function(form) {
+        return ({
+            fresh: '#10B981',     // green
+            neutral: '#6366F1',   // indigo
+            fatigued: '#F59E0B',  // amber
+            deep: '#EF4444'       // red
+        })[form] || '#6366F1';
+    };
+
+    AD.renderFitnessForm = function(data) {
+        const card = document.getElementById('fitnessFormCard');
+        if (!card) return;
+        if (!data || !data.current || data.current.ctl == null) {
+            card.style.display = 'none';
+            return;
+        }
+        card.style.display = '';
+
+        const cur = data.current;
+        const ctlEl = document.getElementById('ffCtlValue');
+        const atlEl = document.getElementById('ffAtlValue');
+        const tsbEl = document.getElementById('ffTsbValue');
+        const tsbSub = document.getElementById('ffTsbSub');
+        const badge = document.getElementById('ffFormBadge');
+
+        if (ctlEl) ctlEl.textContent = cur.ctl.toFixed(1);
+        if (atlEl) atlEl.textContent = cur.atl.toFixed(1);
+        if (tsbEl) {
+            const sign = cur.tsb > 0 ? '+' : '';
+            tsbEl.textContent = sign + cur.tsb.toFixed(1);
+            tsbEl.style.color = this._formColor(cur.form);
+        }
+        if (tsbSub) {
+            tsbSub.textContent = ({
+                fresh: 'Rested — go race or PB',
+                neutral: 'Balanced — keep building',
+                fatigued: 'Productive load',
+                deep: 'Back off before injury'
+            })[cur.form] || 'Balanced';
+        }
+        if (badge) {
+            badge.textContent = this._formLabel(cur.form);
+            badge.className = 'ff-form-badge ff-form-badge--' + cur.form;
+        }
+
+        // Chart: two lines (CTL solid, ATL dashed) + TSB area, using recent 60 days
+        const history = data.history.slice(-60);
+        const labels = history.map(d => d.date.slice(5)); // mm-dd
+        const ctl = history.map(d => d.ctl);
+        const atl = history.map(d => d.atl);
+        const tsb = history.map(d => d.tsb);
+
+        this.destroyChart('fitnessFormChart');
+        const canvas = document.getElementById('fitnessFormChart');
+        if (!canvas) return;
+        const ctx = canvas.getContext('2d');
+
+        this.charts.fitnessFormChart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels,
+                datasets: [
+                    {
+                        label: 'Form (TSB)',
+                        data: tsb,
+                        borderColor: 'rgba(99,102,241,0.45)',
+                        backgroundColor: 'rgba(99,102,241,0.14)',
+                        borderWidth: 1,
+                        pointRadius: 0,
+                        fill: 'origin',
+                        tension: 0.35,
+                        yAxisID: 'yTsb',
+                    },
+                    {
+                        label: 'Fitness (CTL)',
+                        data: ctl,
+                        borderColor: '#10B981',
+                        backgroundColor: 'transparent',
+                        borderWidth: 3,
+                        pointRadius: 0,
+                        tension: 0.35,
+                        yAxisID: 'y',
+                    },
+                    {
+                        label: 'Fatigue (ATL)',
+                        data: atl,
+                        borderColor: '#F59E0B',
+                        backgroundColor: 'transparent',
+                        borderWidth: 2,
+                        borderDash: [6, 4],
+                        pointRadius: 0,
+                        tension: 0.35,
+                        yAxisID: 'y',
+                    },
+                ],
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                interaction: { mode: 'index', intersect: false },
+                plugins: {
+                    legend: { position: 'top', labels: { boxWidth: 14, font: { size: 11 } } },
+                    tooltip: {
+                        callbacks: {
+                            label: c => `${c.dataset.label}: ${c.parsed.y.toFixed(1)}`,
+                        },
+                    },
+                },
+                scales: {
+                    x: {
+                        ticks: { font: { size: 10 }, color: this.COLORS.tick, maxRotation: 0, autoSkip: true, maxTicksLimit: 10 },
+                        grid: { display: false },
+                    },
+                    y: {
+                        position: 'left',
+                        beginAtZero: true,
+                        ticks: { font: { size: 10 }, color: this.COLORS.tick },
+                        grid: { color: this.COLORS.grid },
+                        title: { display: true, text: 'Load', font: { size: 11 }, color: this.COLORS.tick },
+                    },
+                    yTsb: {
+                        position: 'right',
+                        grid: { display: false },
+                        ticks: { font: { size: 10 }, color: 'rgba(99,102,241,0.7)' },
+                        title: { display: true, text: 'Form', font: { size: 11 }, color: 'rgba(99,102,241,0.7)' },
+                    },
+                },
+            },
+        });
     };
 
 })();

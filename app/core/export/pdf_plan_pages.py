@@ -168,7 +168,9 @@ class PlanPagesMixin:
         ]))
 
         story.append(workout_table)
-        story.append(Spacer(1, 0.5 * cm))
+        story.append(Spacer(1, 0.4 * cm))
+
+        self._add_workout_steps_block(story, week.get('daily_workouts', []))
 
         if week.get('strength_training'):
             count = len(week['strength_training'])
@@ -203,6 +205,82 @@ class PlanPagesMixin:
             for tip in week['training_tips']:
                 story.append(Paragraph(f"• {tip}", self.small_style))
             story.append(Spacer(1, 0.5 * cm))
+
+    def _add_workout_steps_block(self, story: List, workouts: List[Dict[str, Any]]):
+        """Render structured session blocks for any workouts that have steps."""
+        from reportlab.lib.enums import TA_LEFT
+
+        stepped = [w for w in workouts if w.get('steps') and w.get('type') not in ('rest', 'recovery')]
+        if not stepped:
+            return
+
+        heading_style = ParagraphStyle(
+            'StepsHeading',
+            parent=self.small_style,
+            fontName='Helvetica-Bold',
+            fontSize=8,
+            textColor=colors.HexColor('#4a5568'),
+            spaceAfter=2,
+        )
+        step_style = ParagraphStyle(
+            'StepLine',
+            parent=self.small_style,
+            fontName='Helvetica',
+            fontSize=7.5,
+            leading=10,
+            textColor=colors.HexColor('#2d3748'),
+            leftIndent=10,
+            alignment=TA_LEFT,
+        )
+
+        zone_colors = {
+            'E': '#10b981',
+            'M': '#3b82f6',
+            'T': '#f59e0b',
+            'I': '#ef4444',
+            'R': '#8b5cf6',
+        }
+
+        for workout in stepped:
+            day_name = self._get_day_name(workout.get('day', 0))
+            w_type = workout.get('type', '').replace('_', ' ').title()
+            story.append(Paragraph(f"▸ {day_name} — {w_type} · Session blocks", heading_style))
+
+            for step in workout['steps']:
+                label = step.get('label', '')
+                meta_parts = []
+                if step.get('distance_m'):
+                    if step['distance_m'] >= 1000:
+                        meta_parts.append(f"{step['distance_m'] / 1000:.1f} km")
+                    else:
+                        meta_parts.append(f"{step['distance_m']} m")
+                if step.get('duration_s'):
+                    secs = step['duration_s']
+                    if secs >= 60:
+                        meta_parts.append(f"{secs // 60}:{secs % 60:02d}")
+                    else:
+                        meta_parts.append(f"{secs}s")
+                if step.get('pace_str'):
+                    meta_parts.append(step['pace_str'])
+                if step.get('effort'):
+                    meta_parts.append(step['effort'])
+
+                meta = " · ".join(meta_parts)
+                zone = step.get('pace_zone')
+                if zone:
+                    color = zone_colors.get(zone, '#6b7280')
+                    zone_tag = f' <font color="{color}"><b>[{zone}]</b></font>'
+                else:
+                    zone_tag = ''
+
+                line = f"• <b>{label}</b>{zone_tag}"
+                if meta:
+                    line += f" — <font color='#6b7280'>{meta}</font>"
+                story.append(Paragraph(line, step_style))
+
+            story.append(Spacer(1, 0.15 * cm))
+
+        story.append(Spacer(1, 0.25 * cm))
 
     def _format_pace(self, pace_min_per_km: float) -> str:
         return _shared_format_pace(pace_min_per_km)

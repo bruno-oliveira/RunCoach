@@ -147,12 +147,13 @@ class PlanService:
             )
             return existing, json.loads(existing.plan_data) if existing.plan_data else []
 
+        effective_vdot = plan_request.goal_vdot or plan_request.vdot
         plan_data = plan_generator.generate_plan(
             plan_request.current_km,
             plan_request.target_distance,
             plan_request.weeks,
             plan_request.max_runs_per_week,
-            vdot=plan_request.vdot,
+            vdot=effective_vdot,
             profile=profile,
             terrain=plan_request.terrain,
         )
@@ -197,6 +198,9 @@ class PlanService:
                 else None
             ),
             vdot=plan_request.vdot,
+            goal_time=plan_request.goal_time,
+            goal_pace=plan_request.goal_pace_min_km,
+            current_pace=plan_request.current_pace_min_km,
         )
         db.add(training_plan)
         db.flush()
@@ -304,8 +308,12 @@ class PlanService:
         training_plan: TrainingPlan,
         plan_request: PlanRequest,
     ) -> None:
-        """Compute a VDOT-derived goal pace and attach the race protocol."""
-        goal_pace = PlanService._goal_pace_from_vdot(
+        """Compute a VDOT-derived goal pace and attach the race protocol.
+
+        User-provided goal_pace wins when set; otherwise fall back to the
+        VDOT-derived race pace.
+        """
+        goal_pace = plan_request.goal_pace_min_km or PlanService._goal_pace_from_vdot(
             plan_request.vdot, plan_request.target_distance
         )
         race_protocol = generate_race_protocol(

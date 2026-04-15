@@ -27,6 +27,17 @@
     <div class="workout-structure">{{ workout.structure }}</div>
     {% endif %}
     <div class="workout-notes">{{ workout.notes }}</div>
+
+    {% if workout.steps and workout.type not in ['rest', 'recovery'] %}
+    <details class="workout-steps-wrap">
+        <summary class="workout-steps-toggle">
+            <svg class="workout-steps-chevron" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+            <span>Session blocks</span>
+            <span class="workout-steps-count">{{ workout.steps | length }}</span>
+        </summary>
+        {% include 'components/workout_steps.html' %}
+    </details>
+    {% endif %}
     {% if workout.key_workout_rationale %}
     <details class="coaching-note key-workout-rationale">
         <summary class="coaching-note-toggle">Why this workout</summary>

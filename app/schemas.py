@@ -118,8 +118,17 @@ class PlanRequest(BaseModel):
         default=None, description="Recent race finish time (HH:MM:SS or MM:SS)"
     )
 
-    # Auto-computed from race result — not a user input
+    # Optional: goal finish time for the target race — drives aspirational
+    # pace zones when present (goal VDOT used in place of current VDOT).
+    goal_time: Optional[str] = Field(
+        default=None, description="Goal finish time for the target race (HH:MM:SS or MM:SS)"
+    )
+
+    # Auto-computed — not user inputs
     vdot: Optional[float] = Field(default=None, exclude=True)
+    goal_vdot: Optional[float] = Field(default=None, exclude=True)
+    goal_pace_min_km: Optional[float] = Field(default=None, exclude=True)
+    current_pace_min_km: Optional[float] = Field(default=None, exclude=True)
 
     @field_validator("target_distance")
     @classmethod
@@ -249,13 +258,15 @@ class PlanRequest(BaseModel):
 
     @model_validator(mode="after")
     def compute_vdot(self) -> "PlanRequest":
-        """Calculate VDOT from optional race result.
+        """Calculate current and goal VDOT from optional inputs.
 
-        Raises ValueError when the race time string is unparseable so the
-        user sees a concrete error instead of silently losing their VDOT.
+        - recent_race_distance_km + recent_race_time → current VDOT
+        - target_distance + goal_time → goal VDOT (and goal pace)
+        - Validates that the goal improvement is plausible (max ~15%).
         """
+        from app.core.training.vdot_calculator import VDOTCalculator
+
         if self.recent_race_distance_km and self.recent_race_time:
-            from app.core.training.vdot_calculator import VDOTCalculator
             seconds = VDOTCalculator.parse_time_to_seconds(self.recent_race_time)
             if not seconds or seconds <= 0:
                 raise ValueError(
@@ -265,6 +276,28 @@ class PlanRequest(BaseModel):
             self.vdot = VDOTCalculator.calculate_vdot(
                 self.recent_race_distance_km, seconds
             )
+            self.current_pace_min_km = (seconds / 60) / self.recent_race_distance_km
+
+        if self.goal_time:
+            goal_seconds = VDOTCalculator.parse_time_to_seconds(self.goal_time)
+            if not goal_seconds or goal_seconds <= 0:
+                raise ValueError(
+                    f"Could not parse goal_time '{self.goal_time}'. "
+                    "Use HH:MM:SS or MM:SS format (e.g. '42:15' or '1:45:30')."
+                )
+            self.goal_vdot = VDOTCalculator.calculate_vdot(
+                self.target_distance, goal_seconds
+            )
+            self.goal_pace_min_km = (goal_seconds / 60) / self.target_distance
+
+            if self.vdot and self.goal_vdot and self.goal_vdot > self.vdot:
+                improvement = (self.goal_vdot - self.vdot) / self.vdot
+                if improvement > 0.15:
+                    raise ValueError(
+                        f"Goal time represents a >15% VDOT jump from your recent "
+                        f"race ({self.vdot:.1f} → {self.goal_vdot:.1f}). "
+                        "Consider a more conservative goal or extend your training."
+                    )
         return self
 
 

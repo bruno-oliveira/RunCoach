@@ -688,6 +688,35 @@
     window.reloadPlanPage = reloadPlanPage;
     window.authHeaders = authHeaders;
 
+    /**
+     * Highlight tomorrow's hard workout after a low-readiness check-in.
+     * Called from plan_readiness_daily.js on non-"ready" status.
+     */
+    window.highlightTomorrowSwap = function (status) {
+        if (!status || status === 'ready') return;
+
+        const today = new Date();
+        const tomorrow = new Date(today);
+        tomorrow.setDate(today.getDate() + 1);
+        const tomorrowDayNum = tomorrow.getDay() === 0 ? 7 : tomorrow.getDay();
+
+        // Only touch the pinned-current-week block (drives "this week's plan")
+        const container = document.getElementById('pinned-current-week');
+        if (!container) return;
+
+        const items = container.querySelectorAll('.workout-item[data-day-num="' + tomorrowDayNum + '"]');
+        items.forEach(function (item) {
+            const type = (item.className.match(/\b(interval|tempo|hill|long|threshold)\b/) || [])[0];
+            if (!type) return;
+            item.classList.add('readiness-swap-hint');
+            // Auto-remove the class after the animation plays so the badge
+            // doesn't linger through the whole session.
+            setTimeout(function () {
+                item.classList.remove('readiness-swap-hint');
+            }, 8000);
+        });
+    };
+
     /* -------------------------------------------------------------- */
     /*  DOMContentLoaded — master init                                 */
     /* -------------------------------------------------------------- */
