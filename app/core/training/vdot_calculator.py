@@ -219,6 +219,21 @@ class VDOTCalculator:
         secs = seconds % 60
         return f"{hours}:{minutes:02d}:{secs:02d}"
 
+    # --- Binary-search constants for predict_time_for_distance ---------
+    # Search window in minutes: covers a 1-minute 400m up to a 10-hour ultra.
+    # No race time of interest falls outside this range.
+    _PREDICT_TIME_LO_MIN = 1.0
+    _PREDICT_TIME_HI_MIN = 600.0
+
+    # Convergence threshold in VDOT points. The user-visible unit is seconds
+    # per km of race pace; 0.01 VDOT is roughly 1 second over a marathon.
+    _PREDICT_VDOT_EPSILON = 0.01
+
+    # Max iterations. log2((600 - 1) / 0.01) ≈ 16, so 100 iterations gives
+    # enormous headroom and guarantees termination for any well-behaved VDOT
+    # curve — if we ever fail to converge in 100 steps the inputs are broken.
+    _PREDICT_MAX_ITERS = 100
+
     @staticmethod
     def predict_time_for_distance(vdot: float, distance_km: float) -> Optional[int]:
         """Predict race time for a given VDOT and distance.
@@ -240,12 +255,10 @@ class VDOTCalculator:
             return None
 
         distance_m = distance_km * 1000.0
-
-        # Search bounds in minutes: 1 min to 600 min (10 hours)
-        lo, hi = 1.0, 600.0
+        lo, hi = VDOTCalculator._PREDICT_TIME_LO_MIN, VDOTCalculator._PREDICT_TIME_HI_MIN
 
         converged = False
-        for _ in range(100):
+        for _ in range(VDOTCalculator._PREDICT_MAX_ITERS):
             mid = (lo + hi) / 2.0
             velocity = distance_m / mid
             vo2 = _vo2_at_velocity(velocity)
@@ -254,15 +267,13 @@ class VDOTCalculator:
                 lo = mid
                 continue
             calc_vdot = vo2 / pct
-            if abs(calc_vdot - vdot) < 0.01:
+            if abs(calc_vdot - vdot) < VDOTCalculator._PREDICT_VDOT_EPSILON:
                 converged = True
                 break
             if calc_vdot > vdot:
-                # Too fast — need more time
-                lo = mid
+                lo = mid  # calculated VDOT too high → need slower pace → more time
             else:
-                # Too slow — need less time
-                hi = mid
+                hi = mid  # calculated VDOT too low → need faster pace → less time
 
         if not converged:
             import logging

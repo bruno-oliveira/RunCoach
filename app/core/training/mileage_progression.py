@@ -9,6 +9,31 @@ from typing import List, Optional
 from app.core.training.phase_calculator import calculate_phases, is_recovery_week
 
 
+# --- Progression safety constants ---------------------------------------------
+# Non-recovery weeks can increase at most this fraction above the previous
+# non-recovery mileage. The classic "10% rule" that prevents overuse injuries.
+WEEK_OVER_WEEK_CAP = 1.10
+
+# Recovery weeks cut mileage to this fraction of the high-water mark.
+# A ~35% reduction gives the body a real absorption window without losing
+# the fitness gained in the preceding load block.
+RECOVERY_WEEK_RATIO = 0.65
+
+# Minimum bump to register a "progressed" non-recovery week — otherwise the
+# week would be flat and look like a plateau.
+MIN_NON_RECOVERY_BUMP = 1.01
+
+# Base phase ends at this fraction of peak mileage; build phase ramps from
+# here to full peak. Gives the runner time to adapt to the eventual peak
+# before quality work layers on.
+BASE_PHASE_END_FRACTION = 0.70
+
+# Small oscillation within peak weeks so the body doesn't sit on an exact
+# ceiling. Cycles 0.97 → 0.98 → 0.99 → repeat.
+PEAK_OSCILLATION_BASE = 0.97
+PEAK_OSCILLATION_STEP = 0.01
+
+
 def get_ideal_peak(target_distance: float, current_km: float, weeks: int) -> float:
     """Get ideal peak mileage based on race distance."""
     if target_distance == 30:
@@ -63,15 +88,110 @@ def _get_taper_curve(taper_weeks: int, target_distance: float) -> list[float]:
         return [0.92, 0.82, 0.68, 0.50]       # 4+ week taper
 
 
+def _ramp_week_km(start_km: float, end_km: float, step_idx: int,
+                  total_steps: int, high_water: float) -> float:
+    """Compute one ramp step toward ``end_km``, capped by the 10% rule.
+
+    Linear interpolation from ``start_km`` to ``end_km`` across ``total_steps``
+    non-recovery weeks, then clamped by both the week-over-week cap and the
+    minimum bump so the week is at least a measurable progression.
+    """
+    if total_steps <= 0:
+        ideal = start_km
+    else:
+        ideal = start_km + (end_km - start_km) * ((step_idx + 1) / total_steps)
+    capped = min(ideal, high_water * WEEK_OVER_WEEK_CAP)
+    return max(capped, high_water * MIN_NON_RECOVERY_BUMP)
+
+
+def _progress_ramp_phase(phase_name: str, phase_weeks: int, phase_start_week: int,
+                         phase_start_km: float, phase_end_km: float,
+                         phases: dict, high_water: float) -> tuple[list[float], float]:
+    """Progress a ramp-style phase (base or build) one week at a time.
+
+    Returns ``(weeks_km, new_high_water)``. Non-recovery weeks ramp linearly
+    from ``phase_start_km`` to ``phase_end_km`` under the 10% cap; recovery
+    weeks dip to ``RECOVERY_WEEK_RATIO * high_water`` without disturbing the
+    high-water mark.
+    """
+    non_recovery_count = sum(
+        1 for i in range(phase_weeks)
+        if not is_recovery_week(phase_start_week + i, phase_name, phases)
+    )
+
+    weeks_km: list[float] = []
+    step_idx = 0
+    for week_offset in range(phase_weeks):
+        week_number = phase_start_week + week_offset
+        if is_recovery_week(week_number, phase_name, phases):
+            weeks_km.append(round(high_water * RECOVERY_WEEK_RATIO, 1))
+            continue
+
+        week_km = _ramp_week_km(
+            phase_start_km, phase_end_km, step_idx, non_recovery_count, high_water,
+        )
+        high_water = week_km
+        weeks_km.append(round(week_km, 1))
+        step_idx += 1
+
+    return weeks_km, high_water
+
+
+def _progress_peak_phase(phases: dict, peak_km: float,
+                         high_water: float) -> tuple[list[float], float]:
+    """Progress the peak phase.
+
+    Peak weeks oscillate slightly around peak_km so the body doesn't sit on
+    a flat ceiling. The first peak week is capped to +10% over build
+    high-water to prevent an abrupt jump; subsequent weeks are uncapped.
+    4+ week peaks include a mid-phase recovery week.
+    """
+    peak_weeks = phases['peak']
+    phase_start_week = phases['base'] + phases['build'] + 1
+    weeks_km: list[float] = []
+
+    for week_offset in range(peak_weeks):
+        week_number = phase_start_week + week_offset
+        if is_recovery_week(week_number, 'peak', phases):
+            weeks_km.append(round(high_water * RECOVERY_WEEK_RATIO, 1))
+            continue
+
+        oscillation = PEAK_OSCILLATION_BASE + (week_offset % 3) * PEAK_OSCILLATION_STEP
+        week_km = peak_km * oscillation
+        if week_offset == 0 and peak_weeks >= 2:
+            week_km = min(week_km, high_water * WEEK_OVER_WEEK_CAP)
+        week_km = max(week_km, high_water)
+        high_water = week_km
+        weeks_km.append(round(week_km, 1))
+
+    return weeks_km, high_water
+
+
+def _progress_taper_phase(phases: dict, peak_km: float,
+                          target_distance: float) -> list[float]:
+    """Progress the taper phase.
+
+    Shorter races taper faster; marathon tapers more gradually. Trail tapers
+    more aggressively than half (eccentric damage needs extra recovery).
+    The curve is independent of high_water — it scales straight from peak.
+    """
+    taper_weeks = phases['taper']
+    curve = _get_taper_curve(taper_weeks, target_distance)
+    return [
+        round(peak_km * curve[min(week, len(curve) - 1)], 1)
+        for week in range(taper_weeks)
+    ]
+
+
 def calculate_weekly_progression(current_km: float, target_distance: float, weeks: int,
                                  max_runs: int = 4, vdot: Optional[float] = None) -> List[float]:
     """
     Calculate weekly mileage with phase-aware progression and 10% rule enforcement.
 
     Key safety invariant: no non-recovery week increases more than 10% over the
-    previous non-recovery week's mileage.  Recovery weeks reduce by 35% but the
+    previous non-recovery week's mileage. Recovery weeks reduce by 35% but the
     "high-water mark" is tracked separately so the post-recovery ramp resumes
-    from the pre-recovery level -- never recalculating from the dip.
+    from the pre-recovery level — never recalculating from the dip.
 
     Phases:
     - Base: Build to 70% of peak, recovery every 4th week
@@ -81,86 +201,29 @@ def calculate_weekly_progression(current_km: float, target_distance: float, week
     """
     phases = calculate_phases(weeks, target_distance)
     peak_km = get_peak_mileage(target_distance, current_km, weeks, vdot=vdot)
-    weekly_progression: List[float] = []
+    base_end_target = peak_km * BASE_PHASE_END_FRACTION
 
-    # high_water tracks the last non-recovery mileage (recovery dips don't reset it)
+    weekly_progression: List[float] = []
     high_water = current_km
 
-    def _apply_10pct_cap(target: float, reference: float) -> float:
-        """Enforce 10% rule: target can't exceed reference * 1.10."""
-        return min(target, reference * 1.10)
-
-    # -- Base phase: current -> 70% of peak
-    base_end_target = peak_km * 0.70
-    non_recovery_base = sum(1 for i in range(phases['base']) if not is_recovery_week(i + 1, 'base', phases))
-
-    base_step = 0
-    for week in range(phases['base']):
-        week_number = week + 1
-        if is_recovery_week(week_number, 'base', phases):
-            week_km = high_water * 0.65
-        else:
-            if non_recovery_base > 0:
-                ideal = current_km + (base_end_target - current_km) * ((base_step + 1) / non_recovery_base)
-            else:
-                ideal = current_km
-            week_km = _apply_10pct_cap(ideal, high_water)
-            week_km = max(week_km, high_water * 1.01)
-            high_water = week_km
-            base_step += 1
-
-        weekly_progression.append(round(week_km, 1))
-
-    # -- Build phase: 70% of peak -> 100% of peak
-    build_start = max(high_water, base_end_target)
-    non_recovery_build = sum(
-        1 for i in range(phases['build'])
-        if not is_recovery_week(phases['base'] + i + 1, 'build', phases)
+    base_weeks, high_water = _progress_ramp_phase(
+        'base', phases['base'], phase_start_week=1,
+        phase_start_km=current_km, phase_end_km=base_end_target,
+        phases=phases, high_water=high_water,
     )
+    weekly_progression.extend(base_weeks)
 
-    build_step = 0
-    for week in range(phases['build']):
-        week_number = phases['base'] + week + 1
-        should_recover = is_recovery_week(week_number, 'build', phases)
+    build_start = max(high_water, base_end_target)
+    build_weeks, high_water = _progress_ramp_phase(
+        'build', phases['build'], phase_start_week=phases['base'] + 1,
+        phase_start_km=build_start, phase_end_km=peak_km,
+        phases=phases, high_water=high_water,
+    )
+    weekly_progression.extend(build_weeks)
 
-        if should_recover:
-            week_km = high_water * 0.65
-        else:
-            if non_recovery_build > 0:
-                ideal = build_start + (peak_km - build_start) * ((build_step + 1) / non_recovery_build)
-            else:
-                ideal = peak_km
-            week_km = _apply_10pct_cap(ideal, high_water)
-            week_km = max(week_km, high_water * 1.01)
-            high_water = week_km
-            build_step += 1
+    peak_weeks, high_water = _progress_peak_phase(phases, peak_km, high_water)
+    weekly_progression.extend(peak_weeks)
 
-        weekly_progression.append(round(week_km, 1))
-
-    # -- Peak phase: the highest mileage weeks
-    # First peak week is capped at +10% over build high-water to prevent
-    # abrupt jumps. Subsequent peak weeks are uncapped (summit by definition).
-    # Peak phases of 4+ weeks include a recovery week (3rd week).
-    for week in range(phases['peak']):
-        week_number = phases['base'] + phases['build'] + week + 1
-        if is_recovery_week(week_number, 'peak', phases):
-            week_km = high_water * 0.65
-        else:
-            week_km = peak_km * (0.97 + (week % 3) * 0.01)
-            if week == 0 and phases['peak'] >= 2:
-                week_km = min(week_km, high_water * 1.10)
-            week_km = max(week_km, high_water)
-            high_water = week_km
-        weekly_progression.append(round(week_km, 1))
-
-    # -- Taper phase: distance-specific reduction curves.
-    # Shorter races taper faster; marathon tapers more gradually.
-    # Trail tapers more aggressively than half (eccentric damage needs extra recovery).
-    taper_weeks = phases['taper']
-    taper_curves = _get_taper_curve(taper_weeks, target_distance)
-    for week in range(taper_weeks):
-        pct = taper_curves[min(week, len(taper_curves) - 1)]
-        week_km = peak_km * pct
-        weekly_progression.append(round(week_km, 1))
+    weekly_progression.extend(_progress_taper_phase(phases, peak_km, target_distance))
 
     return weekly_progression

@@ -20,6 +20,7 @@ from app.models import (
     User,
     WeeklyPlan,
 )
+from app.services.adaptation_service import AdaptationService
 from app.services.hr_zone_service import HRZoneService
 
 logger = logging.getLogger(__name__)
@@ -29,8 +30,6 @@ class PlanViewService:
     """Assembles view-layer data for training plan templates."""
 
     def __init__(self) -> None:
-        from app.services.adaptation_service import AdaptationService
-
         self._adaptation_service = AdaptationService()
 
     # ------------------------------------------------------------------

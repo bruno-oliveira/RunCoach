@@ -4,29 +4,61 @@ from functools import lru_cache
 from app.core.nutrition.meal_database import get_meal_database
 
 
+# --- Nutrition formula constants ----------------------------------------------
+# Resting-metabolism baseline: approx 22 kcal per kg of body weight for a
+# lightly-active adult runner. Derived from Harris-Benedict simplified for the
+# endurance-athlete population (source: ACSM Nutrition for Athletic Performance).
+BASE_CALORIES_PER_KG = 22
+
+# Training-load multiplier: every 50 km/week adds 30% on top of base calories.
+# A 0-km runner eats base; a 50-km runner eats 1.3x base; 100-km eats 1.6x.
+# Calibrated against the ~60 kcal/km burn rate for average pace running.
+TRAINING_KM_REFERENCE = 50
+TRAINING_FACTOR_PER_REFERENCE = 0.3
+
+# Distance-specific boost on top of the training factor — longer races
+# require higher glycogen turnover and post-session recovery fuel.
+DISTANCE_BOOST_MARATHON = 0.10  # 42.2 km
+DISTANCE_BOOST_ULTRA_TRAIL = 0.10  # 30 km (trail)
+DISTANCE_BOOST_HALF = 0.05  # 21.1 km
+
+# Daily protein: 1.8 g/kg is the upper end of the ACSM endurance recommendation
+# (1.2-2.0 g/kg) — runners on a training block sit near the top.
+PROTEIN_G_PER_KG = 1.8
+
+# Daily fiber: USDA recommended minimum for adults.
+DAILY_FIBER_G = 35
+
+
 @lru_cache(maxsize=256)
 def _calculate_nutrition_needs_cached(
     weekly_km: float,
     target_distance: float,
     body_weight: float
 ) -> tuple:
-    """Pure function for calculating nutrition needs (cached)."""
+    """Pure function for calculating nutrition needs (cached).
+
+    Formula: ``base_kcal = body_weight * BASE_CALORIES_PER_KG``
+             ``factor = 1 + (weekly_km / 50) * 0.3 + distance_boost``
+             ``daily_kcal = base_kcal * factor``
+    See module constants for the rationale behind each coefficient.
+    """
     if body_weight <= 0:
         raise ValueError("body_weight must be positive")
-    base_calories = body_weight * 22
 
-    training_factor = 1.0 + (weekly_km / 50) * 0.3
+    base_calories = body_weight * BASE_CALORIES_PER_KG
+    training_factor = 1.0 + (weekly_km / TRAINING_KM_REFERENCE) * TRAINING_FACTOR_PER_REFERENCE
 
     if target_distance >= 42.2:
-        training_factor += 0.1
+        training_factor += DISTANCE_BOOST_MARATHON
     elif target_distance >= 30:
-        training_factor += 0.1
+        training_factor += DISTANCE_BOOST_ULTRA_TRAIL
     elif target_distance >= 21.1:
-        training_factor += 0.05
+        training_factor += DISTANCE_BOOST_HALF
 
     daily_calories = base_calories * training_factor
-    daily_protein = body_weight * 1.8
-    daily_fiber = 35
+    daily_protein = body_weight * PROTEIN_G_PER_KG
+    daily_fiber = DAILY_FIBER_G
 
     return (round(daily_calories, 0), round(daily_protein, 0), daily_fiber)
 

@@ -59,81 +59,128 @@ def get_workout_distribution(total_km: float, max_runs: int, phase: str = 'build
     return distribution
 
 
+def _profile_for(target_distance: float, terrain: Optional[str]) -> str:
+    """Map (distance, terrain) to a quality-distribution profile name."""
+    if target_distance == 30.0:
+        return 'trail_flat' if terrain == 'flat' else 'trail_hilly'
+    if target_distance <= 5:
+        return 'road_5k'
+    if target_distance <= 10:
+        return 'road_10k'
+    if target_distance <= 21.1:
+        return 'road_half'
+    return 'road_marathon'
+
+
+# Base-phase quality: every profile gets exactly one light quality session,
+# but the type depends on the race it's preparing for.
+_BASE_PHASE_QUALITY = {
+    'trail_hilly':    {'hill': 1},
+    'trail_flat':     {'tempo': 1},
+    'road_5k':        {'interval': 1},   # strides
+    'road_10k':       {'interval': 1},   # strides
+    'road_half':      {'tempo': 1},      # short threshold
+    'road_marathon':  {'tempo': 1},      # short threshold
+}
+
+
+def _quality_for_trail_hilly(quality_workouts: int, week_number: int,
+                             phase: str) -> Dict[str, int]:
+    """Trail (hilly): hills are the dominant stimulus, tempo/interval rotate."""
+    if quality_workouts >= 2:
+        # Hills every week + rotating second quality session.
+        # Week-of-month cycle: weeks 1-2 → intervals, weeks 3-4 → tempo.
+        rotating = 'interval' if week_number % 4 in (1, 2) else 'tempo'
+        return {'hill': 1, rotating: 1}
+    # Single-quality: hills in 2/3 of weeks, interval on the off week.
+    # 3-week cycle: weeks divisible by 3 and 3k+1 → hill, 3k+2 → interval.
+    if week_number % 3 in (0, 1):
+        return {'hill': 1}
+    return {'interval': 1}
+
+
+def _quality_for_trail_flat(quality_workouts: int, week_number: int,
+                            phase: str) -> Dict[str, int]:
+    """Flat trail: no hill access, tempo replaces the hill stimulus."""
+    if quality_workouts >= 2:
+        # Weeks 1-2 of the 4-week cycle: mixed quality; weeks 3-4: double tempo.
+        if week_number % 4 in (1, 2):
+            return {'tempo': 1, 'interval': 1}
+        return {'tempo': 2}
+    return {'tempo': 1}
+
+
+def _quality_for_road_5k(quality_workouts: int, week_number: int,
+                         phase: str) -> Dict[str, int]:
+    """5K: VO2max emphasis — intervals dominate."""
+    return {'interval': 2 if quality_workouts >= 2 else 1}
+
+
+def _quality_for_road_10k(quality_workouts: int, week_number: int,
+                          phase: str) -> Dict[str, int]:
+    """10K: balanced — 1 interval + optional tempo."""
+    result: Dict[str, int] = {'interval': 1}
+    if quality_workouts >= 2:
+        result['tempo'] = 1
+    return result
+
+
+def _quality_for_road_half(quality_workouts: int, week_number: int,
+                           phase: str) -> Dict[str, int]:
+    """Half: balanced — 1 interval + optional tempo."""
+    result: Dict[str, int] = {'interval': 1}
+    if quality_workouts >= 2:
+        result['tempo'] = 1
+    return result
+
+
+def _quality_for_road_marathon(quality_workouts: int, week_number: int,
+                               phase: str) -> Dict[str, int]:
+    """Marathon: tempo/MP emphasis; peak phase drops intervals entirely."""
+    if quality_workouts < 2:
+        return {'tempo': 1}
+    if phase == 'peak':
+        return {'tempo': 2}
+    return {'tempo': 1, 'interval': 1}
+
+
+_PROFILE_BUILDERS = {
+    'trail_hilly':   _quality_for_trail_hilly,
+    'trail_flat':    _quality_for_trail_flat,
+    'road_5k':       _quality_for_road_5k,
+    'road_10k':      _quality_for_road_10k,
+    'road_half':     _quality_for_road_half,
+    'road_marathon': _quality_for_road_marathon,
+}
+
+
 def _build_quality_distribution(target_distance: float, terrain: Optional[str],
                                 quality_workouts: int, phase: str,
                                 easy_runs: int, long_runs: int, rest_days: int,
                                 week_number: int) -> Dict[str, int]:
-    """Assign quality workout types based on race distance and terrain."""
-    base = {'easy': easy_runs, 'long': long_runs, 'interval': 0,
-            'tempo': 0, 'hill': 0, 'rest': rest_days}
+    """Assign quality workout types based on race distance, terrain, and phase.
+
+    Dispatches to a per-profile builder keyed by (distance, terrain).
+    Base phase always returns a single light quality session;
+    build/peak use the profile's full quality pattern.
+    """
+    distribution = {
+        'easy': easy_runs, 'long': long_runs,
+        'interval': 0, 'tempo': 0, 'hill': 0,
+        'rest': rest_days,
+    }
 
     if quality_workouts == 0:
-        return base
+        return distribution
 
-    is_trail = target_distance == 30.0
-    is_flat_trail = is_trail and terrain == 'flat'
+    profile = _profile_for(target_distance, terrain)
 
-    # ── Base phase: 1 light quality session (distance-specific type) ──
     if phase == 'base':
-        if is_trail and not is_flat_trail:
-            base['hill'] = 1
-        elif is_flat_trail:
-            base['tempo'] = 1
-        elif target_distance <= 10:
-            base['interval'] = 1    # strides
-        else:
-            base['tempo'] = 1       # short threshold
-        return base
+        distribution.update(_BASE_PHASE_QUALITY[profile])
+        return distribution
 
-    # ── Trail (hilly) ──
-    if is_trail and not is_flat_trail:
-        if quality_workouts >= 2:
-            base['hill'] = 1
-            if week_number % 4 in [1, 2]:
-                base['interval'] = 1
-            else:
-                base['tempo'] = 1
-        else:
-            base['hill'] = 1 if week_number % 3 in [0, 1] else 0
-            base['interval'] = 0 if week_number % 3 in [0, 1] else 1
-        return base
-
-    # ── Flat trail: no hills, tempo replaces hill stimulus ──
-    if is_flat_trail:
-        if quality_workouts >= 2:
-            if week_number % 4 in [1, 2]:
-                base['tempo'] = 1
-                base['interval'] = 1
-            else:
-                base['tempo'] = 2
-        else:
-            base['tempo'] = 1
-        return base
-
-    # ── Distance-specific road distributions ──
-    if target_distance <= 5:
-        # 5K: VO2max emphasis
-        if quality_workouts >= 2:
-            base['interval'] = 2
-        else:
-            base['interval'] = 1
-    elif target_distance <= 10:
-        # 10K: balanced (current default)
-        base['interval'] = 1 if quality_workouts >= 1 else 0
-        base['tempo'] = 1 if quality_workouts >= 2 else 0
-    elif target_distance <= 21.1:
-        # Half: balanced with tempo emphasis
-        base['interval'] = 1 if quality_workouts >= 1 else 0
-        base['tempo'] = 1 if quality_workouts >= 2 else 0
-    else:
-        # Marathon: tempo/MP emphasis
-        if quality_workouts >= 2:
-            base['tempo'] = 2 if phase == 'peak' else 1
-            base['interval'] = 0 if phase == 'peak' else 1
-        else:
-            base['tempo'] = 1
-
-    return base
+    distribution.update(_PROFILE_BUILDERS[profile](quality_workouts, week_number, phase))
+    return distribution
 
 
 def _validate_polarized_ratio(distribution: Dict[str, int], phase: str,

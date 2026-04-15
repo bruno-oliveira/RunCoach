@@ -26,23 +26,42 @@ from app.core.training import workout_builders
 from app.core.training import long_run_calculator
 
 
+# --- Training safety ratios ---------------------------------------------------
+# Quality workouts (tempo/interval/hill) may not exceed this fraction of the
+# long run distance. Prevents a hard effort being longer than the weekly
+# endurance anchor, which would invert the easy/hard ratio.
+MAX_QUALITY_VS_LONG_RUN = 0.85
+
+# Individual easy runs may not exceed this fraction of the long run distance.
+# Keeps the long run as the unambiguous weekly peak and preserves the 80/20
+# easy/hard principle.
+MAX_EASY_VS_LONG_RUN = 0.95
+
+# Base phase reduces quality caps by this factor — early quality is
+# introduced conservatively while aerobic base is built.
+BASE_PHASE_QUALITY_REDUCTION = 0.80
+
+# Distance-scaled physiological quality caps (km). Shorter races need smaller
+# quality volumes; trail prioritises hill work over tempo/interval.
+_QUALITY_CAPS_BY_DISTANCE = {
+    5.0:  {'tempo': 6.0,  'interval': 5.0,  'hill': 5.0},
+    10.0: {'tempo': 10.0, 'interval': 8.0,  'hill': 6.0},
+    21.1: {'tempo': 14.0, 'interval': 10.0, 'hill': 8.0},
+    30.0: {'tempo': 12.0, 'interval': 8.0,  'hill': 12.0},  # trail: hill is primary
+    42.2: {'tempo': 18.0, 'interval': 12.0, 'hill': 10.0},
+}
+_DEFAULT_QUALITY_CAPS = {'tempo': 12.0, 'interval': 10.0, 'hill': 8.0}
+
+
 def _get_quality_caps(target_distance: float, phase: str) -> Dict[str, float]:
     """Distance-scaled physiological caps for quality workout distances (km).
 
-    Shorter races need smaller quality volumes; trail prioritises hill work.
-    Base phase caps are reduced 20% to keep early quality conservative.
+    Base phase caps are reduced by ``BASE_PHASE_QUALITY_REDUCTION`` to keep
+    early-cycle quality conservative.
     """
-    caps_by_distance = {
-        5.0:  {'tempo': 6.0,  'interval': 5.0,  'hill': 5.0},
-        10.0: {'tempo': 10.0, 'interval': 8.0,  'hill': 6.0},
-        21.1: {'tempo': 14.0, 'interval': 10.0, 'hill': 8.0},
-        30.0: {'tempo': 12.0, 'interval': 8.0,  'hill': 12.0},  # trail: hill is primary
-        42.2: {'tempo': 18.0, 'interval': 12.0, 'hill': 10.0},
-    }
-    caps = caps_by_distance.get(target_distance, {'tempo': 12.0, 'interval': 10.0, 'hill': 8.0})
-
+    caps = _QUALITY_CAPS_BY_DISTANCE.get(target_distance, _DEFAULT_QUALITY_CAPS)
     if phase == 'base':
-        return {k: round(v * 0.80, 1) for k, v in caps.items()}
+        return {k: round(v * BASE_PHASE_QUALITY_REDUCTION, 1) for k, v in caps.items()}
     return caps
 
 
@@ -170,6 +189,87 @@ class TrainingPlanGenerator:
 
     # ── Orchestration methods ────────────────────────────────────────────
 
+    @staticmethod
+    def _apply_quality_caps(quality_distances: Dict[str, float],
+                            long_run_distance: float,
+                            target_distance: float,
+                            phase: str) -> Dict[str, float]:
+        """Cap each quality workout by the smaller of:
+        ``MAX_QUALITY_VS_LONG_RUN * long_run`` or the distance-scaled
+        physiological cap for that workout type.
+        """
+        ceiling = long_run_distance * MAX_QUALITY_VS_LONG_RUN
+        phys_caps = _get_quality_caps(target_distance, phase)
+        capped = dict(quality_distances)
+        for key in capped:
+            cap = min(ceiling, phys_caps.get(key, ceiling))
+            if capped[key] > cap:
+                capped[key] = round(cap, 1)
+        return capped
+
+    @staticmethod
+    def _allocate_easy_distances(remaining_km: float,
+                                 quality_total: float,
+                                 long_run_distance: float,
+                                 easy_runs: int) -> List[float]:
+        """Distribute the easy-run budget evenly across easy days.
+
+        Shortfalls (from capping) are accepted rather than redistributed to
+        quality workouts — the 80/20 easy/hard ratio must be preserved.
+        """
+        if easy_runs <= 0:
+            return []
+        easy_budget = remaining_km - quality_total
+        max_easy = long_run_distance * MAX_EASY_VS_LONG_RUN
+        actual_easy_total = min(easy_budget, max_easy * easy_runs)
+        per_run = actual_easy_total / easy_runs
+        return [round(min(per_run, max_easy), 1) for _ in range(easy_runs)]
+
+    def _build_workout_for_type(self, workout_type: str, day_number: int,
+                                distance: float, total_km: float,
+                                phase: str,
+                                pace_zones: Optional[Dict]) -> Dict[str, Any]:
+        """Dispatch workout creation to the appropriate builder."""
+        if workout_type == 'rest':
+            return self._generate_rest_day(day_number)
+        if workout_type == 'recovery':
+            return self._generate_recovery_day(day_number, phase)
+        if workout_type == 'long':
+            return self._generate_long_run(day_number, distance, total_km, pace_zones=pace_zones)
+        if workout_type == 'easy':
+            return self._generate_easy_run(day_number, distance, total_km, pace_zones=pace_zones)
+        if workout_type == 'tempo':
+            return self._generate_tempo_run(day_number, distance, total_km, pace_zones=pace_zones)
+        if workout_type == 'interval':
+            return self._generate_interval_run(day_number, distance, total_km, pace_zones=pace_zones)
+        if workout_type == 'hill':
+            return self._generate_hill_workout(day_number, distance)
+        raise ValueError(f"Unknown workout_type: {workout_type}")
+
+    @staticmethod
+    def _overlay_key_workout(workout: Dict[str, Any], workout_type: str,
+                             phase: str, target_distance: float,
+                             week_in_phase: int,
+                             terrain: Optional[str],
+                             pace_zones: Optional[Dict]) -> None:
+        """Attach a KeyWorkoutLibrary description for quality sessions in build/peak."""
+        if workout_type not in ('interval', 'tempo', 'hill'):
+            return
+        if phase not in ('build', 'peak'):
+            return
+        key_wk = KeyWorkoutLibrary.get_for_phase(
+            target_distance, phase, week_in_phase, workout_type, terrain=terrain,
+        )
+        if not key_wk:
+            return
+        if pace_zones:
+            key_wk = KeyWorkoutLibrary.inject_vdot_paces(key_wk, pace_zones)
+        workout['description'] = key_wk['description']
+        workout['key_workout_id'] = key_wk['id']
+        workout['key_workout_name'] = key_wk['name']
+        workout['structure'] = key_wk['structure']
+        workout['key_workout_rationale'] = key_wk['rationale']
+
     def _generate_daily_workouts(self, week_number: int, total_km: float,
                                  distribution: Dict[str, int],
                                  target_distance: float, weeks: int, phase: str,
@@ -179,127 +279,81 @@ class TrainingPlanGenerator:
                                  experience_level: str = "beginner",
                                  week_in_phase: int = 0,
                                  terrain: Optional[str] = None) -> List[Dict[str, Any]]:
-        """Generate daily workouts with integrated strength/cross-training and rest day rules."""
+        """Generate daily workouts for one week.
+
+        Pipeline:
+        1. Compute long-run distance and quality-workout budgets.
+        2. Cap quality workouts vs long run + physiological ceilings.
+        3. Allocate remaining km to easy runs (capped individually).
+        4. For each scheduled day: build the workout, overlay key-workout
+           details for quality in build/peak, attach strength session on
+           easy days, and add coaching rationale.
+        """
         long_run_distance = self._calculate_long_run_distance(
             total_km, target_distance, weeks, week_number, phase, is_recovery_week,
-            experience_level
+            experience_level,
         )
-        remaining_km = total_km - long_run_distance
-
         quality_distances = self._calculate_quality_distances(
-            total_km, phase, distribution, is_recovery_week, long_run_distance, target_distance
+            total_km, phase, distribution, is_recovery_week, long_run_distance, target_distance,
+        )
+        quality_distances = self._apply_quality_caps(
+            quality_distances, long_run_distance, target_distance, phase,
         )
 
-        workout_types = self._schedule_workout_types(distribution.copy(), phase, week_number, is_recovery_week)
+        workout_types = self._schedule_workout_types(
+            distribution.copy(), phase, week_number, is_recovery_week,
+        )
 
-        # Cap quality workouts: 85% of long run AND distance-scaled physiological caps
-        max_quality_pct = long_run_distance * 0.85
-        quality_caps = _get_quality_caps(target_distance, phase)
-        for key in quality_distances:
-            cap = min(max_quality_pct, quality_caps.get(key, max_quality_pct))
-            if quality_distances[key] > cap:
-                quality_distances[key] = round(cap, 1)
-
+        remaining_km = total_km - long_run_distance
         quality_total = sum(quality_distances.values())
-        easy_total = remaining_km - quality_total
-
         easy_runs = sum(1 for wt in workout_types if wt == 'easy')
+        easy_distances = self._allocate_easy_distances(
+            remaining_km, quality_total, long_run_distance, easy_runs,
+        )
 
-        # Cap individual easy runs at 95% of long run distance
-        max_easy_distance = long_run_distance * 0.95
-        total_max_easy = max_easy_distance * easy_runs
-        # Accept the shortfall instead of redistributing to quality workouts
-        actual_easy_total = min(easy_total, total_max_easy)
-
-        easy_distances = [round(actual_easy_total / max(easy_runs, 1), 1) for _ in range(easy_runs)]
-
-        # Cap individual easy runs to 95% of long run distance
-        easy_distances = [round(min(d, max_easy_distance), 1) for d in easy_distances]
-
-        easy_run_counter = 0
-        strength_session_counter = 0
-
-        # Track counters for quality workouts to get their distances
-        quality_counters = {wt: 0 for wt in ['tempo', 'interval', 'hill']}
-
-        workouts = []
+        easy_run_idx = 0
+        strength_session_idx = 0
+        workouts: List[Dict[str, Any]] = []
 
         for day in range(7):
             workout_type = workout_types[day]
-
             if workout_type is None:
                 continue
-
             day_number = day + 1
 
-            # Get distance based on workout type
             if workout_type == 'easy':
-                if easy_run_counter < len(easy_distances):
-                    easy_distance = easy_distances[easy_run_counter]
-                else:
-                    easy_distance = easy_distances[0]
-                easy_run_counter += 1
-            elif workout_type in ['tempo', 'interval', 'hill']:
-                if workout_type in quality_distances:
-                    distance = quality_distances[workout_type]
-                    workout_distance = distance
-                    quality_counters[workout_type] += 1
-                else:
-                    workout_distance = 0
-            else:
-                workout_distance = 0
-
-            # Generate workout based on type
-            if workout_type == 'rest':
-                workout = self._generate_rest_day(day_number)
-            elif workout_type == 'recovery':
-                workout = self._generate_recovery_day(day_number, phase)
+                distance = easy_distances[easy_run_idx] if easy_run_idx < len(easy_distances) else easy_distances[0]
+                easy_run_idx += 1
             elif workout_type == 'long':
-                workout = self._generate_long_run(day_number, long_run_distance, total_km, pace_zones=pace_zones)
-            elif workout_type == 'easy':
-                workout = self._generate_easy_run(day_number, easy_distance, total_km, pace_zones=pace_zones)
-            elif workout_type == 'tempo':
-                workout = self._generate_tempo_run(day_number, workout_distance, total_km,
-                                                   pace_zones=pace_zones)
-            elif workout_type == 'interval':
-                workout = self._generate_interval_run(day_number, workout_distance, total_km,
-                                                      pace_zones=pace_zones)
-            elif workout_type == 'hill':
-                workout = self._generate_hill_workout(day_number, workout_distance)
+                distance = long_run_distance
+            elif workout_type in ('tempo', 'interval', 'hill'):
+                distance = quality_distances.get(workout_type, 0)
             else:
-                raise ValueError(f"Unknown workout_type: {workout_type}")
+                distance = 0
 
-            # Overlay key workout description for quality sessions in build/peak
-            if workout_type in ('interval', 'tempo', 'hill') and phase in ('build', 'peak'):
-                key_wk = KeyWorkoutLibrary.get_for_phase(
-                    target_distance, phase, week_in_phase, workout_type,
-                    terrain=terrain,
-                )
-                if key_wk:
-                    if pace_zones:
-                        key_wk = KeyWorkoutLibrary.inject_vdot_paces(key_wk, pace_zones)
-                    workout['description'] = key_wk['description']
-                    workout['key_workout_id'] = key_wk['id']
-                    workout['key_workout_name'] = key_wk['name']
-                    workout['structure'] = key_wk['structure']
-                    workout['key_workout_rationale'] = key_wk['rationale']
+            workout = self._build_workout_for_type(
+                workout_type, day_number, distance, total_km, phase, pace_zones,
+            )
+
+            self._overlay_key_workout(
+                workout, workout_type, phase, target_distance,
+                week_in_phase, terrain, pace_zones,
+            )
 
             if workout_type == 'easy':
                 strength_session = self._generate_strength_session(
                     day_number, week_number, phase, workout_type,
-                    session_index=strength_session_counter,
+                    session_index=strength_session_idx,
                     experience_level=experience_level,
                     target_distance=target_distance,
                 )
                 if strength_session:
                     workout['strength_session'] = strength_session
-                    strength_session_counter += 1
+                    strength_session_idx += 1
 
-            # Add coaching rationale
             workout['coaching_rationale'] = generate_coaching_note(
-                workout_type, phase, week_number, target_distance, is_recovery_week
+                workout_type, phase, week_number, target_distance, is_recovery_week,
             )
-
             workouts.append(workout)
 
         return workouts

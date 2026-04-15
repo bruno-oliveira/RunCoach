@@ -192,8 +192,8 @@ async def generate_performance_plan(
             fitness_data = PerformanceService(db).calculate_fitness_from_runs(
                 user_id=current_user.id, target_distance=target_distance
             )
-        except Exception:
-            pass
+        except Exception as e:
+            logger.warning(f"Could not load fitness data for plan-limit error page: {e}")
         return _perf_error_response(
             request, current_user,
             "You've reached the maximum of 3 training plans. "
@@ -259,8 +259,8 @@ async def generate_performance_plan(
             hr_data = service.calculate_max_heart_rate(
                 user_id=current_user.id, goal_pace=goal_pace
             )
-        except Exception:
-            pass
+        except Exception as ctx_err:
+            logger.warning(f"Could not load context for validation error page: {ctx_err}")
 
         error_type = "validation"
         if isinstance(e, InadequateBaseException):
@@ -285,8 +285,8 @@ async def generate_performance_plan(
             hr_data = service.calculate_max_heart_rate(
                 user_id=current_user.id, goal_pace=goal_pace
             )
-        except Exception:
-            pass
+        except Exception as ctx_err:
+            logger.warning(f"Could not load context for ValueError page: {ctx_err}")
         return _perf_error_response(
             request, current_user, str(e), "validation",
             fitness_data=fitness_data, hr_data=hr_data,

@@ -22,6 +22,121 @@ from app.utils import parse_race_time_to_seconds, to_date as _to_date
 logger = logging.getLogger(__name__)
 
 
+class _PlanGapContext:
+    """Shared setup data for gap analysis: parsed plan, logged runs, and week state."""
+
+    __slots__ = ("plan", "plan_data", "start_date", "total_weeks",
+                 "current_week", "runs")
+
+    def __init__(self, plan: TrainingPlan, plan_data: List[dict],
+                 start_date: date, total_weeks: int, current_week: int,
+                 runs: List[RunLog]) -> None:
+        self.plan = plan
+        self.plan_data = plan_data
+        self.start_date = start_date
+        self.total_weeks = total_weeks
+        self.current_week = current_week
+        self.runs = runs
+
+
+def _load_gap_context(
+    plan: TrainingPlan,
+    user_id: str,
+    db: Session,
+    *,
+    require_runs: bool,
+) -> Optional[_PlanGapContext]:
+    """Parse plan data, fetch runs, and compute the current-week cursor.
+
+    Returns None if any precondition for gap analysis is not met:
+    plan hasn't started, no duration, no plan_data, or (when
+    ``require_runs`` is True) no logged runs yet.
+    """
+    start_date = _to_date(plan.start_date)
+    if not start_date:
+        return None
+
+    total_weeks = plan.weeks_duration or 0
+    if total_weeks == 0:
+        return None
+
+    delta_days = (date.today() - start_date).days
+    if delta_days < 0:
+        return None  # plan hasn't started
+
+    current_week = min((delta_days // 7) + 1, total_weeks)
+    if current_week < 1:
+        return None
+
+    plan_data = json.loads(plan.plan_data) if plan.plan_data else []
+    if not plan_data:
+        return None
+
+    runs = (
+        db.query(RunLog)
+        .filter(
+            RunLog.user_id == user_id,
+            RunLog.date >= datetime.combine(start_date, datetime.min.time()),
+        )
+        .order_by(RunLog.date.asc())
+        .all()
+    )
+    if require_runs and not runs:
+        return None
+
+    return _PlanGapContext(plan, plan_data, start_date, total_weeks, current_week, runs)
+
+
+def _bucket_runs_by_week(runs: List[RunLog], start_date: date,
+                         current_week: int) -> tuple[Dict[int, float], Dict[int, float]]:
+    """Group runs into (week_num → total_km) and (week_num → longest_km).
+
+    Runs before plan start or after the current week are dropped.
+    """
+    weekly_km: Dict[int, float] = {}
+    weekly_longest: Dict[int, float] = {}
+
+    for run in runs:
+        run_date = _to_date(run.date)
+        if not run_date:
+            continue
+        delta = (run_date - start_date).days
+        if delta < 0:
+            continue
+        wk = delta // 7 + 1
+        if wk > current_week:
+            continue
+        weekly_km[wk] = weekly_km.get(wk, 0) + run.distance_km
+        weekly_longest[wk] = max(weekly_longest.get(wk, 0), run.distance_km)
+
+    return weekly_km, weekly_longest
+
+
+def _weekly_breakpoint(wk_data: dict, weekly_km: Dict[int, float],
+                       weekly_longest: Dict[int, float]) -> dict:
+    """Build one per-week trend-chart datapoint."""
+    wk_num = wk_data.get("week", 0)
+    planned_km = wk_data.get("total_km", 0)
+    actual_km = weekly_km.get(wk_num, 0)
+
+    planned_long = 0.0
+    for wo in wk_data.get("daily_workouts", []):
+        if wo.get("type") == "long":
+            planned_long = max(planned_long, wo.get("distance", 0))
+    actual_long = weekly_longest.get(wk_num, 0)
+
+    volume_pct = round(actual_km / planned_km * 100, 1) if planned_km > 0 else 0
+    long_run_pct = round(actual_long / planned_long * 100, 1) if planned_long > 0 else 0
+
+    return {
+        "week": wk_num,
+        "volume_pct": min(150, volume_pct),
+        "long_run_pct": min(150, long_run_pct),
+        "actual_km": round(actual_km, 1),
+        "planned_km": round(planned_km, 1),
+    }
+
+
 class GapAnalysisService:
     """Computes per-plan gap analysis across multiple dimensions."""
 
@@ -35,52 +150,21 @@ class GapAnalysisService:
 
         Returns None if there's insufficient data.
         """
-        start_date = _to_date(plan.start_date)
-        if not start_date:
+        ctx = _load_gap_context(plan, user_id, db, require_runs=True)
+        if ctx is None:
             return None
 
-        today = date.today()
-        total_weeks = plan.weeks_duration or 0
-        if total_weeks == 0:
-            return None
-
-        delta_days = (today - start_date).days
-        if delta_days < 0:
-            return None  # plan hasn't started
-
-        current_week = min((delta_days // 7) + 1, total_weeks)
-
-        # ── Parse plan data ──
-        plan_data = json.loads(plan.plan_data) if plan.plan_data else []
-        if not plan_data:
-            return None
-
-        # ── Fetch runs ──
-        runs = (
-            db.query(RunLog)
-            .filter(
-                RunLog.user_id == user_id,
-                RunLog.date >= datetime.combine(start_date, datetime.min.time()),
-            )
-            .order_by(RunLog.date.asc())
-            .all()
-        )
-
-        if not runs:
-            return None
-
-        # ── Fetch prediction data once for pace + fitness ──
         prediction_data = RacePredictorService.get_predictions_for_user(user_id, db)
 
-        # ── Compute dimensions ──
-        volume_gap = _compute_volume_gap(plan_data, runs, start_date, current_week)
-        long_run_gap = _compute_long_run_gap(plan_data, runs, plan.target_distance_km)
-        pace_gap = _compute_pace_gap(plan, runs, prediction_data)
-        consistency = _compute_consistency(plan, runs, db, current_week)
+        volume_gap = _compute_volume_gap(ctx.plan_data, ctx.runs, ctx.start_date, ctx.current_week)
+        long_run_gap = _compute_long_run_gap(ctx.plan_data, ctx.runs, plan.target_distance_km)
+        pace_gap = _compute_pace_gap(plan, ctx.runs, prediction_data)
+        consistency = _compute_consistency(plan, ctx.runs, db, ctx.current_week)
         fitness = _compute_fitness_trajectory(plan, prediction_data)
 
         top_actions = _generate_top_actions(
-            volume_gap, long_run_gap, pace_gap, consistency, fitness, current_week, total_weeks
+            volume_gap, long_run_gap, pace_gap, consistency, fitness,
+            ctx.current_week, ctx.total_weeks,
         )
 
         return {
@@ -90,8 +174,8 @@ class GapAnalysisService:
             "consistency": consistency,
             "fitness_trajectory": fitness,
             "top_actions": top_actions,
-            "current_week": current_week,
-            "total_weeks": total_weeks,
+            "current_week": ctx.current_week,
+            "total_weeks": ctx.total_weeks,
         }
 
     @staticmethod
@@ -103,84 +187,23 @@ class GapAnalysisService:
         """Return per-week gap breakpoints for trend charts.
 
         Each entry contains the week number and % of target achieved
-        for volume, long run, and pace.
+        for volume and long run.
         """
-        start_date = _to_date(plan.start_date)
-        if not start_date:
+        ctx = _load_gap_context(plan, user_id, db, require_runs=False)
+        if ctx is None:
             return None
 
-        today = date.today()
-        total_weeks = plan.weeks_duration or 0
-        if total_weeks == 0:
-            return None
-
-        current_week = min((today - start_date).days // 7 + 1, total_weeks)
-        if current_week < 1:
-            return None
-
-        plan_data = json.loads(plan.plan_data) if plan.plan_data else []
-        if not plan_data:
-            return None
-
-        runs = (
-            db.query(RunLog)
-            .filter(
-                RunLog.user_id == user_id,
-                RunLog.date >= datetime.combine(start_date, datetime.min.time()),
-            )
-            .order_by(RunLog.date.asc())
-            .all()
+        weekly_km, weekly_longest = _bucket_runs_by_week(
+            ctx.runs, ctx.start_date, ctx.current_week,
         )
 
-        # Bucket runs into weeks
-        weekly_km: Dict[int, float] = {}
-        weekly_longest: Dict[int, float] = {}
-        weekly_paces: Dict[int, List[float]] = {}
-
-        for run in runs:
-            run_date = _to_date(run.date)
-            if not run_date:
-                continue
-            delta = (run_date - start_date).days
-            if delta < 0:
-                continue
-            wk = delta // 7 + 1
-            if wk > current_week:
-                continue
-            weekly_km[wk] = weekly_km.get(wk, 0) + run.distance_km
-            weekly_longest[wk] = max(weekly_longest.get(wk, 0), run.distance_km)
-            if run.avg_pace_min_km:
-                weekly_paces.setdefault(wk, []).append(run.avg_pace_min_km)
-
-        weekly_breakpoints = []
-        for wk_data in plan_data:
-            wk_num = wk_data.get("week", 0)
-            if wk_num > current_week:
+        breakpoints: list[dict] = []
+        for wk_data in ctx.plan_data:
+            if wk_data.get("week", 0) > ctx.current_week:
                 break
+            breakpoints.append(_weekly_breakpoint(wk_data, weekly_km, weekly_longest))
 
-            planned_km = wk_data.get("total_km", 0)
-            actual_km = weekly_km.get(wk_num, 0)
-
-            # Find planned long run distance for this week
-            planned_long = 0
-            for wo in wk_data.get("daily_workouts", []):
-                if wo.get("type") == "long":
-                    planned_long = max(planned_long, wo.get("distance", 0))
-
-            actual_long = weekly_longest.get(wk_num, 0)
-
-            volume_pct = round(actual_km / planned_km * 100, 1) if planned_km > 0 else 0
-            long_run_pct = round(actual_long / planned_long * 100, 1) if planned_long > 0 else 0
-
-            weekly_breakpoints.append({
-                "week": wk_num,
-                "volume_pct": min(150, volume_pct),
-                "long_run_pct": min(150, long_run_pct),
-                "actual_km": round(actual_km, 1),
-                "planned_km": round(planned_km, 1),
-            })
-
-        return weekly_breakpoints
+        return breakpoints
 
 
 # ──────────────────────────────────────────────────────────────────────

@@ -249,14 +249,22 @@ class PlanRequest(BaseModel):
 
     @model_validator(mode="after")
     def compute_vdot(self) -> "PlanRequest":
-        """Calculate VDOT from optional race result."""
+        """Calculate VDOT from optional race result.
+
+        Raises ValueError when the race time string is unparseable so the
+        user sees a concrete error instead of silently losing their VDOT.
+        """
         if self.recent_race_distance_km and self.recent_race_time:
             from app.core.training.vdot_calculator import VDOTCalculator
             seconds = VDOTCalculator.parse_time_to_seconds(self.recent_race_time)
-            if seconds and seconds > 0:
-                self.vdot = VDOTCalculator.calculate_vdot(
-                    self.recent_race_distance_km, seconds
+            if not seconds or seconds <= 0:
+                raise ValueError(
+                    f"Could not parse recent_race_time '{self.recent_race_time}'. "
+                    "Use HH:MM:SS or MM:SS format (e.g. '42:15' or '1:45:30')."
                 )
+            self.vdot = VDOTCalculator.calculate_vdot(
+                self.recent_race_distance_km, seconds
+            )
         return self
 
 

@@ -11,7 +11,9 @@ from app.core.nutrition.nutrition_engine import NutritionEngine
 from app.core.generators.plan_generator import TrainingPlanGenerator
 from app.core.race.race_protocol_generator import generate_race_protocol
 from app.core.training.vdot_calculator import VDOTCalculator
+from app.services.adaptation_service import AdaptationService
 from app.services.hr_zone_service import HRZoneService
+from app.services.plan_view_service import PlanViewService
 from app.models import (
     DailyWorkout,
     PlanCustomization,
@@ -39,9 +41,8 @@ class PlanService:
     MAX_PLANS_PER_USER = 3
 
     def __init__(self) -> None:
-        from app.services.adaptation_service import AdaptationService
-
         self._adaptation_service = AdaptationService()
+        self._plan_view_service = PlanViewService()
 
     # ------------------------------------------------------------------
     # Plan limit
@@ -139,7 +140,6 @@ class PlanService:
             If an identical plan already exists for this user, the existing plan is
             returned and no new record is created.
         """
-        # --- Duplicate detection ---
         existing = self.find_duplicate(plan_request, user.id, db)
         if existing:
             logger.info(
@@ -158,123 +158,187 @@ class PlanService:
         )
 
         try:
-            training_plan = TrainingPlan(
-                user_id=user.id,
-                current_weekly_km=plan_request.current_km,
-                target_distance=str(plan_request.target_distance),
-                weeks_duration=plan_request.weeks,
-                max_runs_per_week=plan_request.max_runs_per_week,
-                plan_data=json.dumps(plan_data),
-                body_weight_kg=plan_request.body_weight_kg,
-                recent_race_distance_km=plan_request.recent_race_distance_km,
-                recent_race_time_seconds=(
-                    parse_race_time_to_seconds(plan_request.recent_race_time)
-                    if plan_request.recent_race_time
-                    else None
-                ),
-                vdot=plan_request.vdot,
-            )
-            db.add(training_plan)
-            db.flush()
-
-            # Weekly plans + daily workouts
-            for week_data in plan_data:
-                weekly_plan = WeeklyPlan(
-                    training_plan_id=training_plan.id,
-                    week_number=week_data["week"],
-                    total_km=week_data["total_km"],
-                    workout_types=json.dumps(week_data.get("workout_distribution", {})),
-                )
-                db.add(weekly_plan)
-                db.flush()
-
-                for day_workout in week_data.get("daily_workouts", []):
-                    dist = day_workout.get("distance", 0)
-                    daily_workout = DailyWorkout(
-                        weekly_plan_id=weekly_plan.id,
-                        day_of_week=day_workout["day"],
-                        workout_type=day_workout["type"],
-                        distance_km=dist,
-                        intensity=day_workout.get("intensity", "low"),
-                        notes=day_workout.get("description", day_workout.get("notes", "")),
-                        coaching_rationale=day_workout.get("coaching_rationale"),
-                        baseline_distance_km=dist,
-                    )
-                    db.add(daily_workout)
-
-            # HR zones — compute and inject into plan_data + DailyWorkout rows
-            try:
-                zones = HRZoneService.compute_and_store_zones(training_plan, user, db)
-                HRZoneService.inject_hr_zones_into_plan_data(plan_data, zones)
-                # Persist hr_zone_target on DailyWorkout rows
-                for week_data in plan_data:
-                    week_num = week_data.get("week")
-                    for workout in week_data.get("daily_workouts", []):
-                        hr_target = workout.get("hr_zone_target")
-                        key_wk_id = workout.get("key_workout_id")
-                        if hr_target is not None or key_wk_id is not None:
-                            dw = (
-                                db.query(DailyWorkout)
-                                .join(WeeklyPlan)
-                                .filter(
-                                    WeeklyPlan.training_plan_id == training_plan.id,
-                                    WeeklyPlan.week_number == week_num,
-                                    DailyWorkout.day_of_week == workout.get("day"),
-                                )
-                                .first()
-                            )
-                            if dw:
-                                if hr_target is not None:
-                                    dw.hr_zone_target = hr_target
-                                if key_wk_id is not None:
-                                    dw.key_workout_id = key_wk_id
-                # Re-serialise plan_data with zone annotations
-                training_plan.plan_data = json.dumps(plan_data)
-            except Exception as e:
-                logger.warning(f"HR zone injection failed: {e}")
-
-            # Nutrition
-            nutrition_plan = nutrition_engine.generate_weekly_meal_plan(
-                plan_request.current_km,
-                plan_request.target_distance,
-                body_weight=plan_request.body_weight_kg,
-            )
-            training_plan.nutrition_plan_data = json.dumps(nutrition_plan)
-
-            nutrition_phases = nutrition_engine.generate_phased_nutrition_plan(
-                plan_data,
-                plan_request.current_km,
-                plan_request.target_distance,
-                body_weight_kg=plan_request.body_weight_kg,
-            )
-            training_plan.nutrition_phases_data = json.dumps(nutrition_phases)
-
-            # Race-day protocol
-            goal_pace = None
-            if plan_request.vdot:
-                zones = VDOTCalculator.get_pace_zones(plan_request.vdot)
-                if zones and all(k in zones for k in ("I", "T", "M")):
-                    if plan_request.target_distance <= 5.0:
-                        goal_pace = zones["I"]["pace_min_km"]
-                    elif plan_request.target_distance <= 10.0:
-                        goal_pace = zones["T"]["pace_min_km"]
-                    elif plan_request.target_distance <= 21.1:
-                        goal_pace = zones["M"]["pace_min_km"] * 0.95
-                    else:
-                        goal_pace = zones["M"]["pace_min_km"]
-
-            race_protocol = generate_race_protocol(
-                plan_request.target_distance,
-                goal_pace,
-            )
-            training_plan.race_protocol_data = json.dumps(race_protocol)
-
+            training_plan = self._persist_plan_core(plan_request, user, plan_data, db)
+            self._persist_weekly_workouts(training_plan, plan_data, db)
+            self._attach_hr_zones(training_plan, user, plan_data, db)
+            self._attach_nutrition(training_plan, plan_request, plan_data, nutrition_engine)
+            self._attach_race_protocol(training_plan, plan_request)
             db.commit()
         except Exception:
             db.rollback()
             raise
 
         return training_plan, plan_data
+
+    # ------------------------------------------------------------------
+    # create_plan helpers
+    # ------------------------------------------------------------------
+
+    @staticmethod
+    def _persist_plan_core(
+        plan_request: PlanRequest,
+        user: User,
+        plan_data: list[dict],
+        db: Session,
+    ) -> TrainingPlan:
+        """Create and flush the TrainingPlan row."""
+        training_plan = TrainingPlan(
+            user_id=user.id,
+            current_weekly_km=plan_request.current_km,
+            target_distance=str(plan_request.target_distance),
+            weeks_duration=plan_request.weeks,
+            max_runs_per_week=plan_request.max_runs_per_week,
+            plan_data=json.dumps(plan_data),
+            body_weight_kg=plan_request.body_weight_kg,
+            recent_race_distance_km=plan_request.recent_race_distance_km,
+            recent_race_time_seconds=(
+                parse_race_time_to_seconds(plan_request.recent_race_time)
+                if plan_request.recent_race_time
+                else None
+            ),
+            vdot=plan_request.vdot,
+        )
+        db.add(training_plan)
+        db.flush()
+        return training_plan
+
+    @staticmethod
+    def _persist_weekly_workouts(
+        training_plan: TrainingPlan,
+        plan_data: list[dict],
+        db: Session,
+    ) -> None:
+        """Persist WeeklyPlan and DailyWorkout rows for each week of the plan."""
+        for week_data in plan_data:
+            weekly_plan = WeeklyPlan(
+                training_plan_id=training_plan.id,
+                week_number=week_data["week"],
+                total_km=week_data["total_km"],
+                workout_types=json.dumps(week_data.get("workout_distribution", {})),
+            )
+            db.add(weekly_plan)
+            db.flush()
+
+            for day_workout in week_data.get("daily_workouts", []):
+                dist = day_workout.get("distance", 0)
+                daily_workout = DailyWorkout(
+                    weekly_plan_id=weekly_plan.id,
+                    day_of_week=day_workout["day"],
+                    workout_type=day_workout["type"],
+                    distance_km=dist,
+                    intensity=day_workout.get("intensity", "low"),
+                    notes=day_workout.get("description", day_workout.get("notes", "")),
+                    coaching_rationale=day_workout.get("coaching_rationale"),
+                    baseline_distance_km=dist,
+                )
+                db.add(daily_workout)
+
+    @staticmethod
+    def _attach_hr_zones(
+        training_plan: TrainingPlan,
+        user: User,
+        plan_data: list[dict],
+        db: Session,
+    ) -> None:
+        """Compute HR zones, inject them into plan_data, and persist per-workout targets.
+
+        Non-fatal: HR zones are optional enrichment — a failure here must not
+        roll back the plan, so the exception is logged and swallowed.
+        """
+        try:
+            zones = HRZoneService.compute_and_store_zones(training_plan, user, db)
+            HRZoneService.inject_hr_zones_into_plan_data(plan_data, zones)
+            for week_data in plan_data:
+                week_num = week_data.get("week")
+                for workout in week_data.get("daily_workouts", []):
+                    hr_target = workout.get("hr_zone_target")
+                    key_wk_id = workout.get("key_workout_id")
+                    if hr_target is None and key_wk_id is None:
+                        continue
+                    dw = (
+                        db.query(DailyWorkout)
+                        .join(WeeklyPlan)
+                        .filter(
+                            WeeklyPlan.training_plan_id == training_plan.id,
+                            WeeklyPlan.week_number == week_num,
+                            DailyWorkout.day_of_week == workout.get("day"),
+                        )
+                        .first()
+                    )
+                    if dw:
+                        if hr_target is not None:
+                            dw.hr_zone_target = hr_target
+                        if key_wk_id is not None:
+                            dw.key_workout_id = key_wk_id
+            training_plan.plan_data = json.dumps(plan_data)
+        except Exception as e:
+            logger.warning(
+                f"HR zone injection failed for plan {training_plan.id}: {e}"
+            )
+
+    @staticmethod
+    def _attach_nutrition(
+        training_plan: TrainingPlan,
+        plan_request: PlanRequest,
+        plan_data: list[dict],
+        nutrition_engine: NutritionEngine,
+    ) -> None:
+        """Generate weekly + phased nutrition plans and attach as JSON."""
+        nutrition_plan = nutrition_engine.generate_weekly_meal_plan(
+            plan_request.current_km,
+            plan_request.target_distance,
+            body_weight=plan_request.body_weight_kg,
+        )
+        training_plan.nutrition_plan_data = json.dumps(nutrition_plan)
+
+        nutrition_phases = nutrition_engine.generate_phased_nutrition_plan(
+            plan_data,
+            plan_request.current_km,
+            plan_request.target_distance,
+            body_weight_kg=plan_request.body_weight_kg,
+        )
+        training_plan.nutrition_phases_data = json.dumps(nutrition_phases)
+
+    @staticmethod
+    def _attach_race_protocol(
+        training_plan: TrainingPlan,
+        plan_request: PlanRequest,
+    ) -> None:
+        """Compute a VDOT-derived goal pace and attach the race protocol."""
+        goal_pace = PlanService._goal_pace_from_vdot(
+            plan_request.vdot, plan_request.target_distance
+        )
+        race_protocol = generate_race_protocol(
+            plan_request.target_distance,
+            goal_pace,
+        )
+        training_plan.race_protocol_data = json.dumps(race_protocol)
+
+    @staticmethod
+    def _goal_pace_from_vdot(
+        vdot: Optional[float],
+        target_distance: float,
+    ) -> Optional[float]:
+        """Return a goal race pace (min/km) from VDOT zones, or None if unavailable.
+
+        Zone selection is distance-specific:
+        - ≤5K: I zone (VO2max)
+        - ≤10K: T zone (threshold)
+        - ≤half: M zone, held 5% faster than marathon pace
+        - longer: straight M zone
+        """
+        if not vdot:
+            return None
+        zones = VDOTCalculator.get_pace_zones(vdot)
+        if not zones or not all(k in zones for k in ("I", "T", "M")):
+            return None
+        if target_distance <= 5.0:
+            return zones["I"]["pace_min_km"]
+        if target_distance <= 10.0:
+            return zones["T"]["pace_min_km"]
+        if target_distance <= 21.1:
+            return zones["M"]["pace_min_km"] * 0.95
+        return zones["M"]["pace_min_km"]
 
     # ------------------------------------------------------------------
     # Plan customization
@@ -378,33 +442,50 @@ class PlanService:
     # Delegation to PlanViewService
     # ------------------------------------------------------------------
 
-    def _view_service(self) -> "PlanViewService":
-        from app.services.plan_view_service import PlanViewService
-        if not hasattr(self, "_plan_view_service"):
-            self._plan_view_service = PlanViewService()
-        return self._plan_view_service
+    def enrich_plan_data_with_ids(
+        self,
+        plan_data: list[dict],
+        training_plan_id: str,
+        db: Session,
+    ) -> list[dict]:
+        return self._plan_view_service.enrich_plan_data_with_ids(plan_data, training_plan_id, db)
 
-    def enrich_plan_data_with_ids(self, plan_data, training_plan_id, db):
-        return self._view_service().enrich_plan_data_with_ids(plan_data, training_plan_id, db)
+    def nutrition_for_template(self, nutrition_plan_data: str) -> dict[str, Any]:
+        return self._plan_view_service.nutrition_for_template(nutrition_plan_data)
 
-    def nutrition_for_template(self, nutrition_plan_data):
-        return self._view_service().nutrition_for_template(nutrition_plan_data)
+    def get_logged_runs_map(
+        self,
+        training_plan_id: str,
+        db: Session,
+    ) -> tuple[dict, list]:
+        return self._plan_view_service.get_logged_runs_map(training_plan_id, db)
 
-    def get_logged_runs_map(self, training_plan_id, db):
-        return self._view_service().get_logged_runs_map(training_plan_id, db)
+    def get_adjustment_hints(
+        self,
+        training_plan: TrainingPlan,
+        performance_analysis: dict,
+        db: Session,
+    ) -> dict[str, Any]:
+        return self._plan_view_service.get_adjustment_hints(training_plan, performance_analysis, db)
 
-    def get_adjustment_hints(self, training_plan, performance_analysis, db):
-        return self._view_service().get_adjustment_hints(training_plan, performance_analysis, db)
+    def get_feedback_map(self, logged_runs: list, db: Session) -> dict[str, Any]:
+        return self._plan_view_service.get_feedback_map(logged_runs, db)
 
-    def get_feedback_map(self, logged_runs, db):
-        return self._view_service().get_feedback_map(logged_runs, db)
+    def get_completion_stats(
+        self,
+        training_plan: TrainingPlan,
+        db: Session,
+    ) -> dict[str, Any]:
+        return self._plan_view_service.get_completion_stats(training_plan, db)
 
-    def get_completion_stats(self, training_plan, db):
-        return self._view_service().get_completion_stats(training_plan, db)
+    def get_next_plan_cta(self, target_distance_km: float) -> dict[str, str]:
+        return self._plan_view_service.get_next_plan_cta(target_distance_km)
 
-    def get_next_plan_cta(self, target_distance_km):
-        return self._view_service().get_next_plan_cta(target_distance_km)
-
-    def get_plan_view_data(self, training_plan, current_user, db):
-        return self._view_service().get_plan_view_data(training_plan, current_user, db)
+    def get_plan_view_data(
+        self,
+        training_plan: TrainingPlan,
+        current_user: Optional[User],
+        db: Session,
+    ) -> dict[str, Any]:
+        return self._plan_view_service.get_plan_view_data(training_plan, current_user, db)
 
