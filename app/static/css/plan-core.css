@@ -2749,6 +2749,50 @@
     padding: 8px 12px;
     border-radius: 8px;
 }
+/* Adapt button — shown in result card for caution/rest */
+.daily-readiness-adapt {
+    background: rgba(255,255,255,0.18);
+    border: 1px solid rgba(255,255,255,0.5);
+    color: #fff;
+    font-size: 13px;
+    font-weight: 600;
+    padding: 7px 16px;
+    border-radius: 8px;
+    cursor: pointer;
+    margin: 6px 4px 0 0;
+    transition: background 0.18s ease, transform 0.12s ease;
+}
+.daily-readiness-adapt:hover:not(:disabled) {
+    background: rgba(255,255,255,0.3);
+    transform: translateY(-1px);
+}
+.daily-readiness-adapt:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+.daily-readiness-adapt-error {
+    font-size: 12px;
+    color: #fca5a5;
+    margin-top: 4px;
+}
+
+/* Adapted confirmation */
+.daily-readiness-adapted {
+    display: inline-flex;
+    align-items: baseline;
+    gap: 6px;
+    margin: 6px 0 2px;
+    font-size: 13px;
+    line-height: 1.4;
+}
+.daily-readiness-adapted-label {
+    font-weight: 700;
+    color: #a7f3d0;
+}
+.daily-readiness-adapted-detail {
+    opacity: 0.85;
+}
+
 .daily-readiness.is-hidden { display: none; }
 
 @media (max-width: 600px) {

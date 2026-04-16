@@ -151,7 +151,7 @@
         return 'Preview: <strong>' + score + '</strong> — ' + STATUS_META[status].chip;
     }
 
-    function renderResult(log) {
+    function renderResult(log, adapted) {
         var status = log.status || 'ready';
         var meta = STATUS_META[status] || STATUS_META.ready;
         var html = '';
@@ -164,10 +164,30 @@
         html += '    <span class="daily-readiness-status-chip">' + meta.chip + '</span>';
         html += '    <div class="daily-readiness-headline">' + meta.headline + '</div>';
         html += '    <p class="daily-readiness-message">' + meta.message + '</p>';
+        if (adapted) {
+            html += '    <div class="daily-readiness-adapted">';
+            html += '      <span class="daily-readiness-adapted-label">Workout adjusted</span> ';
+            html += '      <span class="daily-readiness-adapted-detail">' + formatAdaptation(adapted) + '</span>';
+            html += '    </div>';
+        } else if (status !== 'ready') {
+            html += '    <button type="button" class="daily-readiness-adapt" data-action="adapt">Adjust today\'s workout</button>';
+        }
         html += '    <button type="button" class="daily-readiness-retry" data-action="redo">Update check-in</button>';
         html += '  </div>';
         html += '</div>';
         return html;
+    }
+
+    function formatAdaptation(adapted) {
+        var orig = adapted.original || {};
+        var next = adapted.adapted || {};
+        if (next.type === 'rest') {
+            return (orig.type || 'workout') + ' ' + (orig.distance || 0) + ' km → Rest day';
+        }
+        var parts = [];
+        if (orig.type !== next.type) parts.push(orig.type + ' → ' + next.type);
+        if (orig.distance !== next.distance) parts.push(orig.distance + ' km → ' + next.distance + ' km');
+        return parts.length ? parts.join(', ') : 'Intensity eased';
     }
 
     /* -------------------------------------------------------------- */
@@ -226,10 +246,11 @@
         this.bindForm();
     };
 
-    Widget.prototype.showResult = function (log) {
+    Widget.prototype.showResult = function (log, adapted) {
         this.mode = 'result';
         this.existing = log;
-        this.inner.innerHTML = renderResult(log);
+        this.adapted = adapted || null;
+        this.inner.innerHTML = renderResult(log, this.adapted);
         this.bindResult();
     };
 
@@ -248,9 +269,43 @@
     };
 
     Widget.prototype.bindResult = function () {
-        var btn = this.inner.querySelector('[data-action="redo"]');
         var self = this;
-        if (btn) btn.addEventListener('click', function () { self.showForm(); });
+        var redoBtn = this.inner.querySelector('[data-action="redo"]');
+        if (redoBtn) redoBtn.addEventListener('click', function () { self.showForm(); });
+
+        var adaptBtn = this.inner.querySelector('[data-action="adapt"]');
+        if (adaptBtn) adaptBtn.addEventListener('click', function () { self.adaptWorkout(adaptBtn); });
+    };
+
+    Widget.prototype.adaptWorkout = async function (btn) {
+        var planId = window.APP_CTX && window.APP_CTX.plan_id;
+        if (!planId) return;
+
+        btn.disabled = true;
+        btn.textContent = 'Adjusting…';
+
+        try {
+            var result = await fetchJson('/api/readiness/adapt', {
+                method: 'POST',
+                body: { plan_id: planId }
+            });
+            this.showResult(this.existing, result);
+            // Refresh the workout card on the plan page if available
+            if (typeof window.refreshTodaysWorkout === 'function') {
+                window.refreshTodaysWorkout();
+            }
+        } catch (err) {
+            console.error('[daily-readiness] adapt failed', err);
+            btn.disabled = false;
+            btn.textContent = 'Adjust today\'s workout';
+            // Show inline error
+            var errMsg = (err && err.message) || 'Could not adjust workout.';
+            var errEl = document.createElement('div');
+            errEl.className = 'daily-readiness-adapt-error';
+            errEl.textContent = errMsg;
+            btn.parentElement.insertBefore(errEl, btn.nextSibling);
+            setTimeout(function () { errEl.remove(); }, 4000);
+        }
     };
 
     Widget.prototype.bindForm = function () {
