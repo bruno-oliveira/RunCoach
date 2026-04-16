@@ -100,9 +100,26 @@ function renderGapAnalysis(d) {
         html += '<div class="gap-actions-title">Top Actions</div>';
         html += '<ol class="gap-action-list">';
         for (var i = 0; i < d.top_actions.length; i++) {
+            var action = d.top_actions[i];
+            // Backward compat: older shape was plain string
+            var message = typeof action === 'string' ? action : action.message;
+            var actionType = typeof action === 'string' ? null : action.action_type;
+            var label = typeof action === 'string' ? null : action.label;
+            var weekNumber = typeof action === 'string' ? null : action.week_number;
+            var payload = typeof action === 'string' ? null : action.payload;
+
             html += '<li class="gap-action-item">';
             html += '<span class="gap-action-number">' + (i + 1) + '</span>';
-            html += '<span>' + esc(d.top_actions[i]) + '</span>';
+            html += '<div class="gap-action-body">';
+            html += '<span>' + esc(message) + '</span>';
+            if (actionType && label) {
+                var attrs = 'data-action-type="' + esc(actionType) + '"';
+                if (weekNumber) attrs += ' data-week="' + weekNumber + '"';
+                if (payload) attrs += " data-payload='" + esc(JSON.stringify(payload)) + "'";
+                html += ' <button class="btn btn-sm btn-outline gap-action-btn" ' + attrs
+                     + ' onclick="applyGapAction(this)">' + esc(label) + '</button>';
+            }
+            html += '</div>';
             html += '</li>';
         }
         html += '</ol>';
@@ -194,6 +211,58 @@ function formatPace(minPerKm) {
     if (secs === 60) { mins++; secs = 0; }
     return mins + ':' + (secs < 10 ? '0' : '') + secs;
 }
+
+window.applyGapAction = function (btn) {
+    var planId = window.APP_CTX && window.APP_CTX.plan_id;
+    if (!planId) return;
+
+    var actionType = btn.getAttribute('data-action-type');
+    var weekNumber = btn.getAttribute('data-week');
+    var payloadStr = btn.getAttribute('data-payload');
+    var payload = payloadStr ? JSON.parse(payloadStr) : null;
+
+    var url = null;
+    var body = null;
+
+    if (actionType === 'extend_long_run' || actionType === 'bump_volume') {
+        if (!weekNumber) return;
+        url = '/api/plan/' + planId + '/week/' + weekNumber + '/override';
+        body = payload;
+    } else if (actionType === 'adjust_plan') {
+        url = '/api/plan/' + planId + '/adjust';
+        body = {};
+    } else if (actionType === 'view_swap_proposals') {
+        // Switch to adaptations tab / trigger swap modal
+        var tab = document.querySelector('[data-tab="adaptations"]');
+        if (tab) tab.click();
+        return;
+    } else {
+        return;
+    }
+
+    btn.disabled = true;
+    btn.textContent = 'Applying...';
+
+    fetch(url, {
+        method: 'POST',
+        headers: authHeaders({'Content-Type': 'application/json'}),
+        credentials: 'same-origin',
+        body: JSON.stringify(body || {}),
+    })
+        .then(function (res) { return res.json(); })
+        .then(function (data) {
+            if (window.showToast) {
+                window.showToast('Recommendation applied');
+            }
+            gapLoaded = false;
+            loadGapAnalysis();
+        })
+        .catch(function (err) {
+            btn.disabled = false;
+            console.error('[gap-analysis] apply failed:', err);
+            if (window.showToast) window.showToast('Could not apply — try again');
+        });
+};
 
 window.adjustPlanFromGaps = function () {
     var planId = window.APP_CTX && window.APP_CTX.plan_id;

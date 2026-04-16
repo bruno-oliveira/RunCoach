@@ -143,7 +143,7 @@ class AdaptRequest(BaseModel):
     plan_id: str
 
 
-_HARD_TYPES = {"tempo", "interval", "threshold", "speed", "race", "long"}
+_HARD_TYPES = {"tempo", "interval", "threshold", "speed", "race", "long", "vo2max", "race_pace", "fartlek"}
 
 
 def _find_todays_workout(plan: TrainingPlan):

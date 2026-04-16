@@ -1,12 +1,18 @@
 """
 Performance Training Plan Generator
 
-Generates speed-focused training plans for experienced runners targeting race time improvements.
-Uses pace zones and periodization to balance intensity and recovery.
+Generates speed-focused training plans for experienced runners targeting
+race time improvements.  Delegates to shared core modules for periodization
+and mileage progression, then layers performance-specific pace zones and
+segment-based workout structure.
 """
 
 from typing import List, Dict, Any, Optional
 
+from app.core.coaching.coaching_notes_generator import generate_coaching_note
+from app.core.training import phase_calculator
+from app.core.training import mileage_progression
+from app.core.training.key_workout_library import KeyWorkoutLibrary
 from app.core.training.vdot_calculator import VDOTCalculator
 from app.utils import format_pace as _shared_format_pace
 
@@ -20,13 +26,49 @@ from .performance_workout_builders import (
 )
 
 
+# Performance-specific phase metadata (quality_percent drives how many
+# quality sessions appear each week; descriptions shown in the UI).
+_PHASE_METADATA = {
+    'base':  {'quality_percent': 30, 'description': 'Build aerobic foundation'},
+    'build': {'quality_percent': 50, 'description': 'Add intensity and volume'},
+    'peak':  {'quality_percent': 60, 'description': 'Peak intensity and sharpness'},
+    'taper': {'quality_percent': 40, 'description': 'Reduce volume, maintain sharpness'},
+}
+
+# Map performance workout types to KeyWorkoutLibrary types for overlay.
+# Fartlek has no library equivalent and stays formulaic.
+_LIBRARY_TYPE_MAP = {
+    'vo2max': 'interval',
+    'tempo': 'tempo',
+    'race_pace': 'tempo',
+}
+
+# Map performance workout types to coaching-note types (the coaching notes
+# generator uses regular plan type names).
+_COACHING_TYPE_MAP = {
+    'vo2max': 'interval',
+    'race_pace': 'tempo',
+    'fartlek': 'interval',
+}
+
+
 class PerformancePlanGenerator:
-    """Generates performance-focused training plans with pace-based zones."""
+    """Generates performance-focused training plans with pace-based zones.
+
+    Delegates to the same core modules as TrainingPlanGenerator:
+    - phase_calculator: distance-aware phase distribution with recovery weeks
+    - mileage_progression: 10% rule enforcement with VDOT-adjusted peak
+    - key_workout_library: curated race-specific workouts (build/peak phases)
+
+    Adds performance-specific value:
+    - 5-zone pace-based training zones (with optional HR)
+    - Segment-based workout structure for zone visualization
+    """
 
     PHASE_QUALITY_PRIORITY = {
         'base':    ['tempo', 'fartlek'],
         'build':   ['tempo', 'vo2max'],
-        'sharpen': ['vo2max', 'race_pace'],
+        'peak':    ['vo2max', 'race_pace'],
         'taper':   ['race_pace', 'tempo'],
     }
 
@@ -145,105 +187,85 @@ class PerformancePlanGenerator:
         return zones
 
     # ------------------------------------------------------------------
-    # Phase & progression helpers
+    # Key workout overlay
     # ------------------------------------------------------------------
 
-    def _calculate_phases(self, weeks: int) -> Dict[str, Dict[str, Any]]:
-        if weeks < 6:
-            weeks = 6
+    @staticmethod
+    def _overlay_key_workout(workout: Dict[str, Any], phase: str,
+                             target_distance: float, week_in_phase: int,
+                             vdot_zones: Optional[Dict]) -> None:
+        """Attach key workout details for quality sessions in build/peak.
 
-        if weeks <= 8:
-            base_weeks = max(2, weeks // 3)
-            build_weeks = max(2, weeks // 3)
-            sharpen_weeks = max(1, weeks // 4)
-            taper_weeks = max(0, weeks - base_weeks - build_weeks - sharpen_weeks)
-        elif weeks <= 12:
-            base_weeks = max(3, int(weeks * 0.33))
-            build_weeks = max(3, int(weeks * 0.33))
-            sharpen_weeks = max(2, int(weeks * 0.20))
-            taper_weeks = max(0, weeks - base_weeks - build_weeks - sharpen_weeks)
-        else:
-            base_weeks = max(4, int(weeks * 0.35))
-            build_weeks = max(4, int(weeks * 0.35))
-            sharpen_weeks = max(2, int(weeks * 0.18))
-            taper_weeks = max(0, weeks - base_weeks - build_weeks - sharpen_weeks)
+        Keeps the performance-specific description and segments but enriches
+        the workout with curated key workout metadata from the shared library.
+        """
+        if phase not in ('build', 'peak'):
+            return
 
-        return {
-            'base': {'weeks': base_weeks, 'quality_percent': 30, 'description': 'Build aerobic foundation'},
-            'build': {'weeks': build_weeks, 'quality_percent': 50, 'description': 'Add intensity and volume'},
-            'sharpen': {'weeks': sharpen_weeks, 'quality_percent': 60, 'description': 'Peak intensity and sharpness'},
-            'taper': {'weeks': taper_weeks, 'quality_percent': 40, 'description': 'Reduce volume, maintain sharpness'},
-        }
+        library_type = _LIBRARY_TYPE_MAP.get(workout['type'])
+        if not library_type:
+            return
 
-    def _get_phase_for_week(self, week_number: int, phases: Dict[str, Dict[str, Any]]) -> str:
-        week_count = 0
-        for phase_name in ['base', 'build', 'sharpen', 'taper']:
-            week_count += phases[phase_name]['weeks']
-            if week_number <= week_count:
-                return phase_name
-        return 'taper'
+        key_wk = KeyWorkoutLibrary.get_for_phase(
+            target_distance, phase, week_in_phase, library_type,
+        )
+        if not key_wk:
+            return
 
-    def _calculate_weekly_km_progression(self, current_weekly_km: float, weeks: int, phases: Dict) -> List[float]:
-        peak_km = min(current_weekly_km * 1.5, current_weekly_km + 30)
-        progression = []
+        if vdot_zones:
+            key_wk = KeyWorkoutLibrary.inject_vdot_paces(key_wk, vdot_zones)
 
-        base_target = peak_km * 0.80
-        base_weeks = phases['base']['weeks']
-        for i in range(base_weeks):
-            t = (i + 1) / base_weeks
-            progression.append(round(current_weekly_km + (base_target - current_weekly_km) * t, 1))
-
-        build_weeks = phases['build']['weeks']
-        for i in range(build_weeks):
-            t = (i + 1) / build_weeks
-            progression.append(round(base_target + (peak_km - base_target) * t, 1))
-
-        for _ in range(phases['sharpen']['weeks']):
-            progression.append(round(peak_km * 0.95, 1))
-
-        taper_weeks = phases['taper']['weeks']
-        for i in range(taper_weeks):
-            t = i / max(taper_weeks - 1, 1)
-            factor = 0.80 - (0.15 * t)
-            progression.append(round(peak_km * factor, 1))
-
-        return progression
+        workout['key_workout_id'] = key_wk['id']
+        workout['key_workout_name'] = key_wk['name']
+        workout['structure'] = key_wk['structure']
+        workout['key_workout_rationale'] = key_wk['rationale']
+        workout['key_workout_description'] = key_wk['description']
 
     # ------------------------------------------------------------------
     # Weekly plan assembly
     # ------------------------------------------------------------------
 
     def _generate_weekly_plan(
-        self, week_number: int, phase: str, phases: Dict, zones: Dict,
+        self, week_number: int, phase: str, phases_rich: Dict, zones: Dict,
         weekly_km: float, target_distance: float, runs_per_week: int,
+        is_recovery: bool, vdot_zones: Optional[Dict] = None,
+        week_in_phase: int = 0,
     ) -> Dict[str, Any]:
-        quality_percent = phases[phase]['quality_percent']
-        quality_workouts_needed = max(1, int(runs_per_week * quality_percent / 100))
+        quality_percent = phases_rich[phase]['quality_percent']
+
+        if is_recovery:
+            # Recovery weeks: at most 1 light quality session
+            quality_workouts_needed = 1 if runs_per_week >= 4 else 0
+        else:
+            quality_workouts_needed = max(1, int(runs_per_week * quality_percent / 100))
 
         daily_workouts = []
         total_assigned_km = 0
 
         workout_schedule = []
 
+        # Long run on Sunday (day 7)
         workout_schedule.append({
             'day': 7,
             'workout_generator': lambda: generate_long_run(zones, weekly_km, week_number, phase, target_distance)
         })
 
-        quality_days = [2, 5] if runs_per_week >= 4 else [2]
-        quality_types = self.PHASE_QUALITY_PRIORITY.get(phase, ['tempo', 'vo2max'])
+        # Quality workouts on Tuesday (day 2) and Friday (day 5)
+        if quality_workouts_needed > 0:
+            quality_days = [2, 5] if runs_per_week >= 4 else [2]
+            quality_types = self.PHASE_QUALITY_PRIORITY.get(phase, ['tempo', 'vo2max'])
 
-        _generators = {
-            'tempo': lambda: generate_tempo_workout(zones, target_distance, week_number, phase),
-            'vo2max': lambda: generate_vo2max_workout(zones, target_distance, week_number, phase),
-            'race_pace': lambda: generate_race_pace_workout(zones, target_distance, week_number, phase),
-            'fartlek': lambda: generate_fartlek_workout(zones, target_distance, week_number, phase),
-        }
+            _generators = {
+                'tempo': lambda: generate_tempo_workout(zones, target_distance, week_number, phase),
+                'vo2max': lambda: generate_vo2max_workout(zones, target_distance, week_number, phase),
+                'race_pace': lambda: generate_race_pace_workout(zones, target_distance, week_number, phase),
+                'fartlek': lambda: generate_fartlek_workout(zones, target_distance, week_number, phase),
+            }
 
-        for i, day in enumerate(quality_days[:quality_workouts_needed]):
-            workout_type = quality_types[(week_number - 1 + i) % len(quality_types)]
-            generator = _generators.get(workout_type, _generators['fartlek'])
-            workout_schedule.append({'day': day, 'workout_generator': generator})
+            for i, day in enumerate(quality_days[:quality_workouts_needed]):
+                workout_type = quality_types[(week_number - 1 + i) % len(quality_types)]
+                generator = _generators.get(workout_type, _generators['fartlek'])
+                workout_schedule.append({'day': day, 'workout_generator': generator})
 
         for item in workout_schedule:
             workout = item['workout_generator']()
@@ -251,6 +273,7 @@ class PerformancePlanGenerator:
             daily_workouts.append(workout)
             total_assigned_km += workout['distance']
 
+        # Fill remaining days with easy runs
         remaining_km = weekly_km - total_assigned_km
         scheduled_days = {w['day'] for w in daily_workouts}
         available_days = [d for d in [1, 3, 4, 6] if d not in scheduled_days]
@@ -265,12 +288,25 @@ class PerformancePlanGenerator:
                     daily_workouts.append(workout)
 
         daily_workouts.sort(key=lambda x: x['day'])
+
+        # Overlay key workouts and coaching rationale
+        for workout in daily_workouts:
+            if workout.get('quality', False):
+                self._overlay_key_workout(
+                    workout, phase, target_distance, week_in_phase, vdot_zones,
+                )
+            coaching_type = _COACHING_TYPE_MAP.get(workout['type'], workout['type'])
+            workout['coaching_rationale'] = generate_coaching_note(
+                coaching_type, phase, week_number, target_distance, is_recovery,
+            )
+
         actual_total_km = sum(w['distance'] for w in daily_workouts)
 
         return {
             'week': week_number,
             'phase': phase,
-            'phase_description': phases[phase]['description'],
+            'phase_description': phases_rich[phase]['description'],
+            'is_recovery': is_recovery,
             'total_km': round(actual_total_km, 1),
             'quality_workouts': sum(1 for w in daily_workouts if w.get('quality', False)),
             'daily_workouts': daily_workouts,
@@ -300,8 +336,15 @@ class PerformancePlanGenerator:
 
         weeks = max(6, min(16, weeks))
 
-        phases = self._calculate_phases(weeks)
+        # --- Shared modules: phase calculation & mileage progression ---
+        phase_durations = phase_calculator.calculate_phases(weeks, target_distance)
+        phases_rich = {
+            phase: {'weeks': phase_durations[phase], **_PHASE_METADATA[phase]}
+            for phase in phase_durations
+        }
 
+        # --- VDOT & pace zones ---
+        vdot = None
         vdot_zones = None
         if current_pace:
             implied_seconds = int(current_pace * target_distance * 60)
@@ -310,14 +353,32 @@ class PerformancePlanGenerator:
                 vdot_zones = VDOTCalculator.get_pace_zones(vdot)
 
         zones = self.calculate_training_zones(goal_pace, max_heart_rate, vdot_zones=vdot_zones)
-        km_progression = self._calculate_weekly_km_progression(current_weekly_km, weeks, phases)
+
+        # Shared mileage progression (10% rule, recovery weeks, VDOT-adjusted peak)
+        km_progression = mileage_progression.calculate_weekly_progression(
+            current_weekly_km, target_distance, weeks, runs_per_week, vdot=vdot,
+        )
 
         weekly_plans = []
         for week_num in range(1, weeks + 1):
-            phase = self._get_phase_for_week(week_num, phases)
+            phase = phase_calculator.get_phase(week_num, phase_durations)
+            is_recovery = phase_calculator.is_recovery_week(week_num, phase, phase_durations)
+
+            # Calculate week_in_phase for key workout rotation
+            if phase == 'base':
+                week_in_phase = week_num - 1
+            elif phase == 'build':
+                week_in_phase = week_num - phase_durations['base'] - 1
+            elif phase == 'peak':
+                week_in_phase = week_num - phase_durations['base'] - phase_durations['build'] - 1
+            else:
+                week_in_phase = (week_num - phase_durations['base']
+                                 - phase_durations['build'] - phase_durations['peak'] - 1)
+
             weekly_plan = self._generate_weekly_plan(
-                week_num, phase, phases, zones,
+                week_num, phase, phases_rich, zones,
                 km_progression[week_num - 1], target_distance, runs_per_week,
+                is_recovery, vdot_zones=vdot_zones, week_in_phase=week_in_phase,
             )
             weekly_plans.append(weekly_plan)
 
@@ -331,7 +392,8 @@ class PerformancePlanGenerator:
             'weeks': weeks,
             'runs_per_week': runs_per_week,
             'training_zones': zones,
-            'phases': phases,
+            'phases': phases_rich,
+            'vdot': vdot,
             'weekly_plans': weekly_plans,
             'summary': {
                 'total_weeks': weeks,

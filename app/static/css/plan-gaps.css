@@ -205,6 +205,19 @@
     font-weight: var(--weight-bold);
 }
 
+.gap-action-body {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--space-2);
+    flex: 1;
+}
+
+.gap-action-btn {
+    font-size: var(--text-xs);
+    padding: var(--space-1) var(--space-3);
+}
+
 /* ---- Adjust button ---- */
 .gap-adjust-cta {
     text-align: center;

@@ -344,8 +344,9 @@ class PerformanceService:
                     'day_of_week': workout['day'],
                     'workout_type': workout['type'],
                     'distance_km': dist,
-                    'intensity': workout.get('zone', 'zone_1'),
+                    'intensity': workout.get('intensity', workout.get('zone', 'zone_1')),
                     'notes': workout.get('description', ''),
+                    'coaching_rationale': workout.get('coaching_rationale'),
                     'baseline_distance_km': dist,
                 })
 

@@ -8,7 +8,7 @@ from typing import Any, Dict, List, Optional
 
 from sqlalchemy.orm import Session
 
-from . import alert_checker, plan_adjuster, recalibrator, run_mapper
+from . import alert_checker, plan_adjuster, recalibrator, run_mapper, type_swapper
 from .performance_analyzer import analyze_performance as _analyze_performance
 from .skipped_detector import detect_skipped_workouts as _detect_skipped
 

@@ -9,6 +9,7 @@ from sqlalchemy.orm import Session
 
 from app.dependencies import get_current_user, get_db
 from app.models import DailyWorkout, TrainingPlan, User, WeeklyPlan
+from app.services.adaptation import type_swapper
 from app.services.adaptation_service import AdaptationService
 from app.services.gap_analysis_service import GapAnalysisService
 from app.services.plan_helpers import get_plan_or_404
@@ -329,6 +330,45 @@ def _action_reset_week(week_data, plan_id, week_number, db):
             wo.distance_km = wo.baseline_distance_km
             wo.baseline_distance_km = None
     _sync_plan_data_distances(week_data, workouts)
+
+
+# ---------------------------------------------------------------------------
+# Type swap (coach-suggested workout type substitution)
+# ---------------------------------------------------------------------------
+
+
+@router.get("/api/plan/{plan_id}/swap-proposals")
+async def get_swap_proposals(
+    plan_id: str,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Get coach-suggested workout type swap proposals based on run patterns."""
+    get_plan_or_404(plan_id, db, current_user, require_user_match=True)
+    proposals = type_swapper.get_swap_proposals(plan_id, current_user.id, db)
+    return {"proposals": proposals}
+
+
+class SwapTypeRequest(BaseModel):
+    workout_id: str
+    to_type: str
+
+
+@router.post("/api/plan/{plan_id}/swap-type")
+async def apply_type_swap(
+    plan_id: str,
+    body: SwapTypeRequest,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Apply an accepted workout type swap to a specific workout."""
+    get_plan_or_404(plan_id, db, current_user, require_user_match=True)
+    result = type_swapper.apply_swap(
+        body.workout_id, plan_id, current_user.id, body.to_type, db
+    )
+    if result is None:
+        raise HTTPException(status_code=404, detail="Workout not found")
+    return result
 
 
 # ---------------------------------------------------------------------------

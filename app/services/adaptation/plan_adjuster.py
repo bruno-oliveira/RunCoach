@@ -3,7 +3,7 @@
 import json
 import logging
 from datetime import timedelta
-from typing import Any, Dict, List, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
 from sqlalchemy.orm import Session
 
@@ -11,6 +11,7 @@ from app.models import DailyWorkout, RunLog, TrainingPlan, WeeklyPlan
 from app.utils import to_date as _to_date
 
 from app.core.training import workout_steps as _steps_mod
+from app.core.training.vdot_calculator import VDOTCalculator
 
 from ._helpers import (
     ANNOTATION_RE,
@@ -22,6 +23,9 @@ from ._helpers import (
 from .run_mapper import map_runs_to_plan
 
 logger = logging.getLogger(__name__)
+
+# Minimum VDOT change to trigger recalibration
+_VDOT_RECALIBRATION_THRESHOLD = 1.0
 
 
 def adjust_plan(
@@ -132,6 +136,13 @@ def adjust_plan(
         current_day_of_week=current_day_of_week,
     )
 
+    # VDOT recalibration: update pace zones if fitness has shifted
+    vdot_result = None
+    try:
+        vdot_result = _check_vdot_recalibration(training_plan, user_id, db)
+    except Exception as e:
+        logger.warning("VDOT recalibration failed (non-fatal): %s", e)
+
     from datetime import datetime, timezone
     training_plan.adjustment_multiplier = multiplier
     training_plan.last_adjusted_at = datetime.now(timezone.utc).replace(tzinfo=None)
@@ -148,6 +159,11 @@ def adjust_plan(
     )
     if avg_effort is not None:
         reason_parts.append(f"Avg effort: {round(avg_effort, 1)}/10.")
+    if vdot_result:
+        reason_parts.append(
+            f"VDOT recalibrated: {vdot_result['old_vdot']} → {vdot_result['new_vdot']} "
+            f"({vdot_result['direction']})."
+        )
 
     logger.info(
         "adjust_plan result: multiplier=%.2f raw=%.3f "
@@ -163,13 +179,16 @@ def adjust_plan(
         len(all_plan_runs),
     )
 
-    return {
-        "adjusted": any_distance_changed,
+    result = {
+        "adjusted": any_distance_changed or bool(vdot_result),
         **signals,
         "total_runs": len(all_plan_runs),
         "weeks_changed": weeks_changed,
         "reason": " ".join(reason_parts),
     }
+    if vdot_result:
+        result["vdot_recalibration"] = vdot_result
+    return result
 
 
 def _compute_adjustment_signals(
@@ -278,6 +297,112 @@ def _compute_adjustment_signals(
     }
 
 
+def _check_vdot_recalibration(
+    training_plan: TrainingPlan,
+    user_id: str,
+    db: Session,
+) -> Optional[Dict[str, Any]]:
+    """Check if VDOT has changed enough to recalibrate pace zones.
+
+    Compares the plan's stored VDOT with the runner's current VDOT
+    (computed from logged runs).  If the delta exceeds the threshold,
+    recomputes pace zones and updates future workouts' pace strings
+    in the plan_data JSON.
+
+    Returns a recalibration summary dict, or None if no recalibration needed.
+    """
+    from app.services.race_predictor_service import RacePredictorService
+
+    plan_vdot = training_plan.vdot
+    if not plan_vdot:
+        return None
+
+    current_vdot = RacePredictorService.get_best_recent_vdot(
+        user_id, weeks=12, db=db,
+    )
+    if not current_vdot:
+        return None
+
+    delta = current_vdot - plan_vdot
+    if abs(delta) < _VDOT_RECALIBRATION_THRESHOLD:
+        return None
+
+    # Recompute pace zones from new VDOT
+    new_zones = VDOTCalculator.get_pace_zones(current_vdot)
+    if not new_zones:
+        return None
+
+    old_zones = VDOTCalculator.get_pace_zones(plan_vdot)
+
+    # Update plan_data JSON: rewrite pace strings in future workout descriptions
+    plan_data, pd_week, pd_workout = parse_plan_data_lookups(training_plan)
+
+    start_date = _to_date(training_plan.start_date)
+    today = today_date()
+    days_elapsed = (today - start_date).days
+    current_week = max(1, days_elapsed // 7 + 1)
+
+    pace_updates = 0
+    for (week_num, day_num), workout in pd_workout.items():
+        if week_num < current_week:
+            continue
+
+        # Update target_pace_formatted if present
+        if workout.get("target_pace") and old_zones:
+            # Find which zone this workout targets and update with new zone pace
+            zone = workout.get("zone", "")
+            zone_map = {
+                "zone_1": "E", "zone_2": "E", "zone_3": "T",
+                "zone_4": "I", "zone_5": "I",
+            }
+            vdot_key = zone_map.get(zone)
+            if vdot_key and vdot_key in new_zones:
+                new_pace = new_zones[vdot_key].get("pace_min_km")
+                if new_pace:
+                    from app.utils import format_pace
+                    workout["target_pace"] = new_pace
+                    workout["target_pace_formatted"] = format_pace(new_pace)
+                    pace_updates += 1
+
+        # Update pace strings in segments
+        for seg in workout.get("segments", []):
+            zone = seg.get("zone", "")
+            zone_map = {
+                "zone_1": "E", "zone_2": "E", "zone_3": "T",
+                "zone_4": "I", "zone_5": "I",
+            }
+            vdot_key = zone_map.get(zone)
+            if vdot_key and vdot_key in new_zones:
+                new_pace = new_zones[vdot_key].get("pace_min_km")
+                if new_pace:
+                    from app.utils import format_pace
+                    seg["pace_raw"] = new_pace
+                    seg["pace_formatted"] = format_pace(new_pace)
+
+    if pace_updates == 0:
+        return None
+
+    training_plan.plan_data = json.dumps(plan_data)
+    old_vdot = training_plan.vdot
+    training_plan.vdot = round(current_vdot, 1)
+    db.flush()
+
+    direction = "improved" if delta > 0 else "decreased"
+    logger.info(
+        "VDOT recalibration: plan=%s old=%.1f new=%.1f delta=%.1f pace_updates=%d",
+        training_plan.id, old_vdot, current_vdot, delta, pace_updates,
+    )
+
+    return {
+        "recalibrated": True,
+        "old_vdot": round(old_vdot, 1),
+        "new_vdot": round(current_vdot, 1),
+        "delta": round(delta, 1),
+        "direction": direction,
+        "pace_updates": pace_updates,
+    }
+
+
 def _apply_adjustment_to_future_weeks(
     training_plan: TrainingPlan,
     future_weeks: List,
@@ -324,7 +449,7 @@ def _apply_adjustment_to_future_weeks(
 
             if workout.workout_type == "long" and multiplier < 1.0:
                 new_distance = round(base_distance, 1)
-            elif workout.workout_type in ("interval", "tempo", "hill"):
+            elif workout.workout_type in ("interval", "tempo", "hill", "vo2max", "race_pace", "fartlek"):
                 quality_mult = 1.0 + (multiplier - 1.0) * 0.5
                 new_distance = max(1.0, round(base_distance * quality_mult, 1))
             else:

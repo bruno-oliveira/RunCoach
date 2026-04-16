@@ -45,7 +45,7 @@ def generate_tempo_workout(zones: Dict, distance_km: float, week: int, phase: st
         tempo_km = min(6, distance_km * 0.6)
     elif phase == 'build':
         tempo_km = min(10, distance_km * 0.8)
-    elif phase == 'sharpen':
+    elif phase == 'peak':
         tempo_km = min(12, distance_km)
     else:
         tempo_km = min(5, distance_km * 0.5)
@@ -71,6 +71,7 @@ def generate_tempo_workout(zones: Dict, distance_km: float, week: int, phase: st
 
     return {
         'type': 'tempo',
+        'intensity': 'medium',
         'zone': 'zone_3',
         'target_pace': target_pace,
         'target_pace_formatted': _shared_format_pace(target_pace),
@@ -87,16 +88,16 @@ def generate_vo2max_workout(zones: Dict, distance_km: float, week: int, phase: s
     target_pace = zones['zone_4_vo2max']['pace']
 
     if distance_km <= 5:
-        base_intervals = {'base': 400, 'build': 500, 'sharpen': 600, 'taper': 400}
+        base_intervals = {'base': 400, 'build': 500, 'peak': 600, 'taper': 400}
     elif distance_km <= 10:
-        base_intervals = {'base': 600, 'build': 800, 'sharpen': 1000, 'taper': 600}
+        base_intervals = {'base': 600, 'build': 800, 'peak': 1000, 'taper': 600}
     elif distance_km <= 30:
-        base_intervals = {'base': 800, 'build': 1000, 'sharpen': 1200, 'taper': 600}
+        base_intervals = {'base': 800, 'build': 1000, 'peak': 1200, 'taper': 600}
     else:
-        base_intervals = {'base': 1000, 'build': 1200, 'sharpen': 1600, 'taper': 800}
+        base_intervals = {'base': 1000, 'build': 1200, 'peak': 1600, 'taper': 800}
 
     interval_m = base_intervals.get(phase, 800)
-    reps_map = {'base': 4, 'build': 6, 'sharpen': 5, 'taper': 4}
+    reps_map = {'base': 4, 'build': 6, 'peak': 5, 'taper': 4}
     reps = reps_map.get(phase, 4)
 
     interval_km = interval_m / 1000
@@ -128,6 +129,7 @@ def generate_vo2max_workout(zones: Dict, distance_km: float, week: int, phase: s
 
     return {
         'type': 'vo2max',
+        'intensity': 'high',
         'zone': 'zone_4',
         'target_pace': target_pace,
         'target_pace_formatted': _shared_format_pace(target_pace),
@@ -147,7 +149,7 @@ def generate_race_pace_workout(zones: Dict, distance_km: float, week: int, phase
         race_km = min(4, distance_km * 0.4)
     elif phase == 'build':
         race_km = min(8, distance_km * 0.6)
-    elif phase == 'sharpen':
+    elif phase == 'peak':
         race_km = min(12, distance_km * 0.8)
     else:
         race_km = min(3, distance_km * 0.3)
@@ -173,6 +175,7 @@ def generate_race_pace_workout(zones: Dict, distance_km: float, week: int, phase
 
     return {
         'type': 'race_pace',
+        'intensity': 'high',
         'zone': 'zone_5',
         'target_pace': target_pace,
         'target_pace_formatted': _shared_format_pace(target_pace),
@@ -195,7 +198,7 @@ def generate_fartlek_workout(zones: Dict, distance_km: float, week: int, phase: 
     elif phase == 'build':
         total_km = 10
         surges = 8
-    elif phase == 'sharpen':
+    elif phase == 'peak':
         total_km = 12
         surges = 10
     else:
@@ -229,6 +232,7 @@ def generate_fartlek_workout(zones: Dict, distance_km: float, week: int, phase: 
 
     return {
         'type': 'fartlek',
+        'intensity': 'medium',
         'zone': 'mixed',
         'target_pace': tempo_pace,
         'target_pace_formatted': f"{_shared_format_pace(tempo_pace)} - {_shared_format_pace(hard_pace)}",
@@ -254,7 +258,7 @@ def generate_long_run(zones: Dict, weekly_km: float, week: int, phase: str, dist
     else:
         long_run_km = min(long_run_km, 32)
 
-    if phase in ['build', 'sharpen'] and long_run_km >= 12:
+    if phase in ['build', 'peak'] and long_run_km >= 12:
         race_pace_km = min(4, distance_km * 0.3)
         easy_km = long_run_km - race_pace_km
         description = f"{long_run_km:.0f}km long run: {easy_km:.0f}km easy at {_shared_format_pace(easy_pace)}, last {race_pace_km:.0f}km at {_shared_format_pace(race_pace)}"
@@ -294,6 +298,7 @@ def generate_long_run(zones: Dict, weekly_km: float, week: int, phase: str, dist
 
     return {
         'type': 'long',
+        'intensity': 'medium',
         'zone': 'zone_1',
         'target_pace': easy_pace,
         'target_pace_formatted': _shared_format_pace(easy_pace),
@@ -323,6 +328,7 @@ def generate_easy_run(zones: Dict, distance_km: float) -> Dict:
 
     return {
         'type': 'easy',
+        'intensity': 'low',
         'zone': 'zone_1',
         'target_pace': easy_pace,
         'target_pace_formatted': _shared_format_pace(easy_pace),

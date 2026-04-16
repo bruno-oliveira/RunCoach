@@ -453,25 +453,46 @@ def _generate_top_actions(
     fitness: Dict,
     current_week: int,
     total_weeks: int,
-) -> List[str]:
-    """Generate prioritized, actionable recommendations."""
-    actions = []
+) -> List[Dict[str, Any]]:
+    """Generate prioritized, actionable recommendations.
+
+    Each action is a dict:
+      {message, action_type, week_number?, payload?, label?}
+
+    ``action_type`` is one of:
+      - "extend_long_run"     → per-week override at week_number
+      - "bump_volume"         → per-week override "bump" at week_number
+      - "view_swap_proposals" → open type-swap proposals modal
+      - "adjust_plan"         → trigger /adjust endpoint
+      - None                  → informational only
+    """
+    actions: List[Dict[str, Any]] = []
     weeks_left = total_weeks - current_week
+    next_week = min(current_week + 1, total_weeks)
 
     # Consistency is the foundation
     if consistency.get("verdict") in ("needs_attention", "far_behind"):
-        actions.append(
-            "Focus on completing scheduled easy runs — consistency matters "
-            "more than intensity right now"
-        )
+        actions.append({
+            "message": (
+                "Focus on completing scheduled easy runs — consistency matters "
+                "more than intensity right now"
+            ),
+            "action_type": None,
+        })
 
     # Volume gap
     v_deficit = volume.get("deficit_pct", 0)
     if v_deficit > 15:
-        actions.append(
-            f"Weekly volume is {v_deficit:.0f}% below plan — "
-            "add short easy runs or extend existing ones to close the gap"
-        )
+        actions.append({
+            "message": (
+                f"Weekly volume is {v_deficit:.0f}% below plan — "
+                "add short easy runs or extend existing ones to close the gap"
+            ),
+            "action_type": "bump_volume",
+            "week_number": next_week,
+            "label": f"Bump week {next_week}",
+            "payload": {"action": "bump"},
+        })
 
     # Long run gap
     lr_deficit = long_run.get("deficit_pct", 0)
@@ -480,29 +501,46 @@ def _generate_top_actions(
     if lr_deficit > 15 and weeks_left > 2:
         km_gap = lr_target - lr_actual
         ramp = round(km_gap / max(weeks_left - 1, 1), 1)
-        actions.append(
-            f"Increase long run by ~{ramp} km/week to close the "
-            f"{km_gap:.0f} km gap before taper"
-        )
+        actions.append({
+            "message": (
+                f"Increase long run by ~{ramp} km/week to close the "
+                f"{km_gap:.0f} km gap before taper"
+            ),
+            "action_type": "extend_long_run",
+            "week_number": next_week,
+            "label": f"Extend week {next_week} long run",
+            "payload": {"action": "extend_long_run"},
+        })
 
     # Pace gap
     if pace.get("verdict") in ("behind", "far_behind"):
-        actions.append(
-            "Add one tempo session per week to bring pace closer to target"
-        )
+        actions.append({
+            "message": (
+                "Add one tempo session per week to bring pace closer to target"
+            ),
+            "action_type": "view_swap_proposals",
+            "label": "Review swap proposals",
+        })
 
     # Fitness trajectory
     if fitness.get("on_track") is False:
         needed = fitness.get("needed_vdot_for_goal")
         current = fitness.get("current_vdot")
         if needed and current:
-            actions.append(
-                f"VDOT gap: {current} vs {needed} needed — "
-                "include quality speed work to improve fitness"
-            )
+            actions.append({
+                "message": (
+                    f"VDOT gap: {current} vs {needed} needed — "
+                    "include quality speed work to improve fitness"
+                ),
+                "action_type": "adjust_plan",
+                "label": "Recalibrate plan",
+            })
 
     # Cap at 3 actions
     if not actions:
-        actions.append("You're on track — keep following the plan!")
+        actions.append({
+            "message": "You're on track — keep following the plan!",
+            "action_type": None,
+        })
 
     return actions[:3]

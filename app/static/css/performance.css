@@ -406,7 +406,7 @@
 
 .phase-base { background: var(--color-success-subtle); color: var(--color-success); }
 .phase-build { background: var(--color-info-subtle); color: var(--color-info); }
-.phase-sharpen { background: var(--color-warning-subtle); color: var(--color-warning); }
+.phase-sharpen, .phase-peak { background: var(--color-warning-subtle); color: var(--color-warning); }
 .phase-taper { background: var(--color-primary-subtle); color: var(--color-primary); }
 
 .week-stats { display: flex; gap: var(--space-6); }

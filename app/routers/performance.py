@@ -24,6 +24,7 @@ from app.services.plan_service import PlanService
 from app.exceptions import RunCoachException, InadequateBaseException
 from app.core.generators.performance_plan_generator import PerformancePlanGenerator
 from app.models import TrainingPlan
+from app.services.adaptation_service import AdaptationService
 from app.template_helpers import create_templates
 from app.utils import format_pace, format_pace_bare
 
@@ -330,6 +331,19 @@ async def view_performance_plan(
 
         if not verify_plan_ownership(training_plan, current_user, anonymous_user_id):
             raise HTTPException(status_code=403, detail="Not authorized to view this plan")
+
+        # Auto-map runs and check adaptation alerts
+        if current_user and training_plan.start_date:
+            try:
+                adaptation_service = AdaptationService()
+                adaptation_service.map_runs_to_plan(
+                    plan_id, current_user.id, db
+                )
+                adaptation_service.check_alerts(
+                    plan_id, current_user.id, db
+                )
+            except Exception as e:
+                logger.warning(f"Auto-map/alert on performance plan view failed: {e}")
 
         # Add formatted versions for zones
         for zone_name, zone_data in plan_data['training_zones'].items():
