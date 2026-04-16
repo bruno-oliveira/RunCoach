@@ -22,8 +22,13 @@ def get_workout_distribution(total_km: float, max_runs: int, phase: str = 'build
 
     long_runs = 1
 
+    # At 2 runs/week (minimum effective dose for busy schedules), the week is
+    # always 1 long + 1 easy — quality workouts need a third running day to
+    # keep the weekly 80/20 easy/hard balance intact.
+    if max_runs <= 2:
+        quality_workouts = 0
     # Base phase now gets 1 light quality session when runner has enough days
-    if is_recovery_week:
+    elif is_recovery_week:
         quality_workouts = 0
     elif phase == 'base':
         quality_workouts = 1 if max_runs >= 4 else 0
@@ -214,8 +219,11 @@ def _validate_polarized_ratio(distribution: Dict[str, int], phase: str,
                 distribution[key] -= 1
                 distribution['easy'] = distribution.get('easy', 0) + 1
                 break
-    # If under by >10% in build/peak, increase by 1
-    elif phase in ('build', 'peak') and hard_pct < target - 0.10 and distribution.get('easy', 0) > 0:
+    # If under by >10% in build/peak, increase by 1.
+    # Skip for 2-run weeks: adding quality would displace the only easy run
+    # and leave the week without an aerobic recovery session.
+    elif (phase in ('build', 'peak') and hard_pct < target - 0.10
+          and distribution.get('easy', 0) > 0 and total_runs >= 3):
         distribution['easy'] -= 1
         distribution['interval'] = distribution.get('interval', 0) + 1
 
@@ -285,6 +293,16 @@ def schedule_workout_types(distribution: Dict[str, int], phase: str,
             elif distribution['tempo'] > 0:
                 workout_types[day_idx] = 'tempo'
                 distribution['tempo'] -= 1
+
+    # For busy 2-run weeks (1 easy + 1 long), anchor easy on Wed (day_idx 2)
+    # so it sits ~3 days from the Saturday long on either side. The default
+    # left-to-right fill would put easy on Monday and leave 5 days of no-run,
+    # a lopsided spacing.
+    if distribution['easy'] == 1 and sum(
+        distribution.get(k, 0) for k in ('interval', 'tempo', 'hill')
+    ) == 0 and workout_types[2] is None:
+        workout_types[2] = 'easy'
+        distribution['easy'] -= 1
 
     for day_idx in range(7):
         if workout_types[day_idx] is not None:

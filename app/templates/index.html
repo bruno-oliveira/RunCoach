@@ -169,6 +169,7 @@
                                 <label for="max_runs_per_week" class="form-label">Runs per week</label>
                                 <div class="select-wrap">
                                     <select id="max_runs_per_week" name="max_runs_per_week" class="form-select" required>
+                                        <option value="2">2 runs &mdash; Busy schedule</option>
                                         <option value="3">3 runs &mdash; Beginner</option>
                                         <option value="4" selected>4 runs &mdash; Recommended</option>
                                         <option value="5">5 runs &mdash; Intermediate</option>
@@ -300,6 +301,28 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     distSelect.addEventListener('change', updateTerrainVisibility);
     updateTerrainVisibility();
+
+    // Disable options in "Runs per week" that aren't viable for the chosen distance.
+    // 2 runs → 5K/10K only. 3 runs → anything except marathon/trail.
+    const runsSelect = document.getElementById('max_runs_per_week');
+    function updateRunsOptions() {
+        const d = parseFloat(distSelect.value);
+        const opts = runsSelect.options;
+        for (const opt of opts) {
+            const v = parseInt(opt.value);
+            let disabled = false;
+            if (!isNaN(d)) {
+                if (v === 2 && d >= 21.1) disabled = true;
+                if (v === 3 && d >= 30.0) disabled = true;
+            }
+            opt.disabled = disabled;
+        }
+        if (runsSelect.selectedOptions[0]?.disabled) {
+            runsSelect.value = '4';
+        }
+    }
+    distSelect.addEventListener('change', updateRunsOptions);
+    updateRunsOptions();
 
     const form = document.querySelector('.plan-form');
     const submitBtn = form?.querySelector('.form-submit');

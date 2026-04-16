@@ -97,7 +97,7 @@ class PlanRequest(BaseModel):
         ..., description="Target race distance in km (30.0 = Trail Running)"
     )
     weeks: int = Field(..., ge=4, le=24, description="Training duration in weeks")
-    max_runs_per_week: int = Field(default=4, ge=3, le=6, description="Maximum runs per week")
+    max_runs_per_week: int = Field(default=4, ge=2, le=6, description="Maximum runs per week")
 
     # Terrain access — only meaningful for trail (30.0)
     terrain: Optional[str] = Field(
@@ -204,7 +204,12 @@ class PlanRequest(BaseModel):
     @field_validator("max_runs_per_week")
     @classmethod
     def validate_runs_per_week(cls, v: int, info) -> int:
-        """Validate max runs per week based on target distance."""
+        """Validate max runs per week based on target distance.
+
+        Trail/marathon need 4+ runs (high volume can't compress into 3 sessions).
+        Half marathon needs 3+ (long run alone is too big a share of weekly load with 2).
+        5K/10K accept 2 runs — busy-schedule minimum effective dose.
+        """
         values = info.data if isinstance(info.data, dict) else {}
         target_distance = values.get("target_distance")
 
@@ -214,6 +219,12 @@ class PlanRequest(BaseModel):
                 raise ValueError(
                     f"{distance_name} training typically requires at least 4 runs per week. "
                     f"Consider 4-5 runs per week for {distance_name.lower()} preparation."
+                )
+            if target_distance >= 21.1 and v < 3:
+                distance_name = DISTANCE_NAMES.get(target_distance, f"{target_distance}km")
+                raise ValueError(
+                    f"{distance_name} training requires at least 3 runs per week. "
+                    f"The 2-runs option is only available for 5K and 10K plans."
                 )
         return v
 
