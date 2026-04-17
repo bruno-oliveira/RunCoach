@@ -92,12 +92,14 @@ def generate_long_run(day: int, distance: float, total_km: float,
                       pace_zones: Optional[Dict] = None) -> Dict[str, Any]:
     """Generate long run workout."""
     if pace_zones:
-        e_pace = pace_zones["E"]["pace_str"]
+        e_zone = pace_zones["E"]
+        lr_sub = e_zone.get("sub_zones", {}).get("long_run")
+        lr_pace = lr_sub["pace_str"] if lr_sub else e_zone["pace_str"]
         m_pace = pace_zones["M"]["pace_str"]
         long_run_notes = [
-            f'Long run at {e_pace} (E-pace). Focus on endurance and mental toughness.',
-            f'Long run: first {round(distance*0.8, 1)}km at {e_pace}, final {round(distance*0.2, 1)}km at {m_pace} (M-pace).',
-            f'Long run at {e_pace} (E-pace). Practice nutrition every 45-60 minutes.',
+            f'Long run at {lr_pace} (long run pace). Focus on endurance and mental toughness.',
+            f'Long run: first {round(distance*0.8, 1)}km at {lr_pace}, final {round(distance*0.2, 1)}km at {m_pace} (M-pace).',
+            f'Long run at {lr_pace} (long run pace). Practice nutrition every 45-60 minutes.',
         ]
     else:
         long_run_notes = [
@@ -122,11 +124,15 @@ def generate_easy_run(day: int, distance: float, total_km: float,
     """Generate easy run workout."""
     variant_idx = day % 3
     if pace_zones:
-        e_pace = pace_zones["E"]["pace_str"]
+        e_zone = pace_zones["E"]
+        easy_sub = e_zone.get("sub_zones", {}).get("easy")
+        rec_sub = e_zone.get("sub_zones", {}).get("recovery")
+        easy_pace = easy_sub["pace_str"] if easy_sub else e_zone["pace_str"]
+        rec_pace = rec_sub["pace_str"] if rec_sub else e_zone["pace_str"]
         easy_variations = [
-            f'Easy recovery run at {e_pace} (E-pace). Should feel conversational.',
-            f'Easy run at {e_pace} with strides: 6x100m accelerations at the end.',
-            f'Conversational pace at {e_pace}. Focus on relaxed form.',
+            f'Recovery run at {rec_pace} (recovery pace). Should feel very easy.',
+            f'Easy run at {easy_pace} with strides: 6x100m accelerations at the end.',
+            f'Conversational pace at {easy_pace} (easy pace). Focus on relaxed form.',
         ]
     else:
         easy_variations = [

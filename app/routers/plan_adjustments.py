@@ -10,6 +10,7 @@ from sqlalchemy.orm import Session
 from app.dependencies import get_current_user, get_db
 from app.models import DailyWorkout, TrainingPlan, User, WeeklyPlan
 from app.services.adaptation import type_swapper
+from app.services.adaptation.recalibrator import detect_missed_weeks
 from app.services.adaptation_service import AdaptationService
 from app.services.gap_analysis_service import GapAnalysisService
 from app.services.plan_helpers import get_plan_or_404
@@ -90,6 +91,18 @@ async def get_plan_suggestions(
         plan_id, current_user.id, db
     )
     return {"suggestions": suggestions}
+
+
+@router.get("/api/plan/{plan_id}/missed-weeks")
+async def get_missed_weeks(
+    plan_id: str,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Detect fully missed weeks (0 runs logged)."""
+    get_plan_or_404(plan_id, db, current_user, require_user_match=True)
+    missed = detect_missed_weeks(plan_id, current_user.id, db)
+    return {"missed_weeks": missed, "count": len(missed)}
 
 
 # ---------------------------------------------------------------------------

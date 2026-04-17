@@ -2283,6 +2283,128 @@
 }
 
 /* ------------------------------------------------------------------
+   Workout segments (performance plan workouts)
+   ------------------------------------------------------------------ */
+.workout-segments {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-1);
+    padding: var(--space-2) 0;
+}
+
+.segment-row {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    padding: 4px 0;
+    font-size: var(--text-xs);
+}
+
+.segment-name {
+    font-weight: var(--weight-semibold);
+    min-width: 80px;
+    color: var(--color-text);
+}
+
+.segment-distance {
+    color: var(--color-text-muted);
+    font-variant-numeric: tabular-nums;
+}
+
+.segment-pace {
+    color: var(--color-text-secondary);
+    font-variant-numeric: tabular-nums;
+}
+
+.segment-zone-label {
+    padding: 1px 6px;
+    border-radius: var(--radius-sm);
+    background: var(--color-bg-sunken);
+    color: var(--color-text-muted);
+    font-size: 10px;
+    font-weight: var(--weight-medium);
+}
+
+/* ------------------------------------------------------------------
+   Training zones panel (performance plans)
+   ------------------------------------------------------------------ */
+.training-zones-panel {
+    margin: var(--space-4) 0 var(--space-5);
+    padding: var(--space-5);
+    background: var(--color-bg-elevated);
+    border-radius: var(--radius-lg, 16px);
+    border: 1px solid var(--color-border-subtle);
+}
+
+.training-zones-panel h3 {
+    margin: 0 0 var(--space-1);
+    font-size: var(--text-lg);
+}
+
+.zones-subtitle {
+    margin: 0 0 var(--space-4);
+    color: var(--color-text-muted);
+    font-size: var(--text-sm);
+}
+
+.zones-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: var(--space-3);
+}
+
+.zone-card {
+    padding: var(--space-3);
+    background: var(--color-bg);
+    border-radius: var(--radius-md);
+}
+
+.zone-card-header {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    margin-bottom: var(--space-2);
+}
+
+.zone-number {
+    width: 24px;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: var(--radius-full);
+    color: white;
+    font-size: var(--text-xs);
+    font-weight: var(--weight-bold);
+    flex-shrink: 0;
+}
+
+.zone-info { flex: 1; }
+.zone-name { font-weight: var(--weight-semibold); font-size: var(--text-sm); }
+.zone-desc { font-size: 11px; color: var(--color-text-muted); }
+
+.zone-metrics {
+    display: flex;
+    gap: var(--space-3);
+    flex-wrap: wrap;
+}
+
+.zone-metric-label {
+    font-size: 10px;
+    color: var(--color-text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.zone-metric-value {
+    font-size: var(--text-sm);
+    font-weight: var(--weight-semibold);
+    font-variant-numeric: tabular-nums;
+}
+
+.zone-metric-sm { font-size: var(--text-xs); }
+
+/* ------------------------------------------------------------------
    Goal pace panel — shown when user submitted a goal_time
    ------------------------------------------------------------------ */
 .goal-pace-panel {

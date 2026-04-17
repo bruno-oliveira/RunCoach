@@ -1,37 +1,27 @@
-"""Performance training endpoints."""
+"""Performance training endpoints.
 
-import json
+Legacy endpoints redirect to the unified plan system.
+The /api/performance/* endpoints remain for direct API callers.
+"""
+
 import logging
 from typing import Any, Dict, Optional
 
-from fastapi import APIRouter, Cookie, Depends, Form, HTTPException, Request
+from fastapi import APIRouter, Depends, Form, HTTPException, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
 from sqlalchemy.orm import Session
 
-from app.config import settings
-from app.dependencies import (
-    get_current_user,
-    get_db,
-    get_optional_user,
-    get_performance_plan_generator,
-    verify_plan_ownership,
-)
+from app.dependencies import get_current_user, get_db, get_optional_user, get_plan_service
+from app.exceptions import RunCoachException, InadequateBaseException
 from app.models import User
 from app.schemas import PerformancePlanRequest, DISTANCE_NAMES
 from app.services.performance_service import PerformanceService
-from app.dependencies import get_plan_service
+from app.services.plan_helpers import error_response
 from app.services.plan_service import PlanService
-from app.exceptions import RunCoachException, InadequateBaseException
-from app.core.generators.performance_plan_generator import PerformancePlanGenerator
-from app.models import TrainingPlan
-from app.services.adaptation_service import AdaptationService
-from app.template_helpers import create_templates
-from app.utils import format_pace, format_pace_bare
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter(tags=["performance"])
-templates = create_templates()
 
 
 def _parse_time_to_pace(time_str: str, distance_km: float) -> float:
@@ -74,62 +64,14 @@ def _perf_error_response(
     hr_data=None,
     suggestion: Optional[str] = None,
 ):
-    """Build a performance_training.html error TemplateResponse."""
-    ctx: Dict[str, Any] = {
-        "request": request,
-        "user": user,
-        "fitness_data": fitness_data,
-        "hr_data": hr_data,
-        "distance_names": DISTANCE_NAMES,
-        "error": error,
-        "error_type": error_type,
-    }
-    if suggestion:
-        ctx["suggestion"] = suggestion
-    return templates.TemplateResponse("performance_training.html", ctx)
+    """Build an error TemplateResponse using the unified index.html form."""
+    return error_response(request, user, error, error_type, suggestion)
 
 
-@router.get("/performance-training", response_class=HTMLResponse)
-async def performance_training_page(
-    request: Request,
-    db: Session = Depends(get_db),
-    current_user: Optional[User] = Depends(get_optional_user),
-):
-    """Render the performance training input page."""
-    # Auto-calculate fitness if user is logged in
-    fitness_data = None
-    hr_data = None
-    if current_user:
-        try:
-            service = PerformanceService(db)
-            # Default to 10K for initial calculation
-            fitness_data = service.calculate_fitness_from_runs(
-                user_id=current_user.id,
-                target_distance=10.0
-            )
-
-            # Auto-calculate max heart rate (use a reasonable default pace for initial estimate)
-            default_goal_pace = 5.5  # Average 10K pace
-            if fitness_data and fitness_data.get('has_sufficient_data'):
-                default_goal_pace = fitness_data.get('avg_pace', 5.5)
-
-            hr_data = service.calculate_max_heart_rate(
-                user_id=current_user.id,
-                goal_pace=default_goal_pace
-            )
-        except Exception as e:
-            logger.warning(f"Could not auto-calculate fitness: {e}")
-
-    return templates.TemplateResponse(
-        "performance_training.html",
-        {
-            "request": request,
-            "user": current_user,
-            "fitness_data": fitness_data,
-            "hr_data": hr_data,
-            "distance_names": DISTANCE_NAMES,
-        }
-    )
+@router.get("/performance-training")
+async def performance_training_page():
+    """Redirect to unified home with time-goal mode."""
+    return RedirectResponse(url="/?mode=time", status_code=302)
 
 
 @router.get("/api/performance/calculate-fitness")
@@ -167,20 +109,12 @@ async def generate_performance_plan(
     current_user: Optional[User] = Depends(get_optional_user),
     plan_service: PlanService = Depends(get_plan_service),
 ):
-    """Generate a performance training plan."""
-    # Check if user is logged in (required for performance training)
+    """Generate a performance training plan (API endpoint, kept for direct callers)."""
     if not current_user:
-        return templates.TemplateResponse(
-            "performance_training.html",
-            {
-                "request": request,
-                "user": None,
-                "fitness_data": None,
-                "hr_data": None,
-                "distance_names": DISTANCE_NAMES,
-                "error": "You must be logged in to create a performance training plan.",
-                "error_type": "auth_required",
-            },
+        return error_response(
+            request, None,
+            "You must be logged in to create a performance training plan.",
+            "auth_required",
         )
 
     # Convert auto_calculate string to boolean
@@ -244,7 +178,7 @@ async def generate_performance_plan(
 
         # Redirect to plan display
         return RedirectResponse(
-            url=f"/performance-plan/{training_plan.id}",
+            url=f"/plan/{training_plan.id}",
             status_code=303
         )
 
@@ -300,127 +234,7 @@ async def generate_performance_plan(
         )
 
 
-@router.get("/performance-plan/{plan_id}", response_class=HTMLResponse)
-async def view_performance_plan(
-    request: Request,
-    plan_id: str,
-    anonymous_user_id: Optional[str] = Cookie(None),
-    db: Session = Depends(get_db),
-    current_user: Optional[User] = Depends(get_optional_user),
-):
-    """Display a performance training plan."""
-    try:
-        service = PerformanceService(db)
-        result = service.get_plan_with_data(plan_id)
-
-        if not result:
-            return templates.TemplateResponse(
-                "performance_training.html",
-                {
-                    "request": request,
-                    "user": current_user,
-                    "fitness_data": None,
-                    "distance_names": DISTANCE_NAMES,
-                    "error": "Training plan not found.",
-                    "error_type": "not_found",
-                },
-                status_code=404,
-            )
-
-        training_plan, plan_data = result
-
-        if not verify_plan_ownership(training_plan, current_user, anonymous_user_id):
-            raise HTTPException(status_code=403, detail="Not authorized to view this plan")
-
-        # Auto-map runs and check adaptation alerts
-        if current_user and training_plan.start_date:
-            try:
-                adaptation_service = AdaptationService()
-                adaptation_service.map_runs_to_plan(
-                    plan_id, current_user.id, db
-                )
-                adaptation_service.check_alerts(
-                    plan_id, current_user.id, db
-                )
-            except Exception as e:
-                logger.warning(f"Auto-map/alert on performance plan view failed: {e}")
-
-        # Add formatted versions for zones
-        for zone_name, zone_data in plan_data['training_zones'].items():
-            zone_data['pace_formatted'] = format_pace(zone_data['pace'])
-
-            if 'pace_range' in zone_data:
-                pr = zone_data['pace_range']
-                zone_data['pace_range_formatted'] = f"{format_pace(pr[0])} - {format_pace(pr[1])}"
-
-        # Ensure all workouts have formatted pace (generator should already add this, but double-check)
-        for week in plan_data['weekly_plans']:
-            for workout in week.get('daily_workouts', []):
-                if 'target_pace' in workout and 'target_pace_formatted' not in workout:
-                    workout['target_pace_formatted'] = format_pace(workout['target_pace'])
-
-        # Parse and transform nutrition plan
-        nutrition_plan = None
-        if training_plan.nutrition_plan_data:
-            try:
-                raw_nutrition = json.loads(training_plan.nutrition_plan_data)
-
-                # Transform to performance template format
-                if isinstance(raw_nutrition, dict):
-                    targets = raw_nutrition.get('nutrition_targets', {})
-                    meal_options = raw_nutrition.get('meal_options', {})
-
-                    nutrition_plan = {
-                        'daily_calories': targets.get('calories', 0),
-                        'protein_grams': targets.get('protein', 0),
-                        'carbs_grams': targets.get('carbs', 0),
-                        'fat_grams': targets.get('fat', 0),
-                        'meals': meal_options  # Already in the right format
-                    }
-            except Exception as e:
-                logger.warning(f"Failed to parse nutrition plan: {e}")
-                # Nutrition plan is optional, continue without it
-                nutrition_plan = None
-
-        logger.info(f"Rendering performance plan {plan_id} with {len(plan_data['weekly_plans'])} weeks")
-
-        today_workout = None
-        progress_data = None
-        try:
-            today_workout = service.get_todays_workout(training_plan)
-            progress_data = service.get_plan_progress(training_plan)
-        except Exception as e:
-            logger.warning(f"Could not load today/progress data: {e}")
-
-        return templates.TemplateResponse(
-            "performance_plan.html",
-            {
-                "request": request,
-                "user": current_user,
-                "google_client_id": settings.google_client_id,
-                "plan": training_plan,
-                "plan_data": plan_data,
-                "nutrition_plan": nutrition_plan,
-                "today_workout": today_workout,
-                "progress_data": progress_data,
-                "distance_name": DISTANCE_NAMES.get(
-                    training_plan.target_distance_km,
-                    f"{training_plan.target_distance}km"
-                ),
-            }
-        )
-
-    except Exception as e:
-        logger.error(f"Error displaying performance plan: {e}", exc_info=True)
-        return templates.TemplateResponse(
-            "performance_training.html",
-            {
-                "request": request,
-                "user": current_user,
-                "fitness_data": None,
-                "distance_names": DISTANCE_NAMES,
-                "error": f"Failed to load training plan: {str(e)}",
-                "error_type": "general",
-            },
-            status_code=500,
-        )
+@router.get("/performance-plan/{plan_id}")
+async def view_performance_plan(plan_id: str):
+    """Redirect to unified plan view."""
+    return RedirectResponse(url=f"/plan/{plan_id}", status_code=302)

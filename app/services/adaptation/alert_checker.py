@@ -47,22 +47,25 @@ def check_alerts(
     if current_week < 4:
         return None
 
-    # Cooldown after recalibration
-    recalibrated_at = training_plan.last_recalibrated_at
-    if recalibrated_at:
-        recalibrated_date = _to_date(recalibrated_at)
-        if recalibrated_date and start_date:
-            d = (recalibrated_date - start_date).days
-            if d >= 0:
-                recalibrated_week = d // 7 + 1
-                if current_week < recalibrated_week + 4:
-                    if training_plan.adaptation_alert is not None:
-                        training_plan.adaptation_alert = None
-                        db.commit()
-                    return None
+    # Graduated cooldown after recalibration:
+    #   Week 1: suppress all alerts
+    #   Week 2: suppress volume alerts, allow effort alerts
+    #   Week 3+: full alerting resumed
+    cooldown_level = _cooldown_level(training_plan, start_date, current_week)
+
+    if cooldown_level == "full":
+        if training_plan.adaptation_alert is not None:
+            training_plan.adaptation_alert = None
+            db.commit()
+        return None
 
     # 3-week window: W-3, W-2, W-1
     window_weeks = [current_week - 3, current_week - 2, current_week - 1]
+
+    # During partial cooldown, only look at effort-related types
+    excluded_types = ["rest", "recovery"]
+    if cooldown_level == "volume_only":
+        excluded_types += ["easy", "long"]
 
     window_workouts = (
         db.query(DailyWorkout.id)
@@ -70,7 +73,7 @@ def check_alerts(
         .filter(
             WeeklyPlan.training_plan_id == plan_id,
             WeeklyPlan.week_number.in_(window_weeks),
-            DailyWorkout.workout_type.notin_(["rest", "recovery"]),
+            DailyWorkout.workout_type.notin_(excluded_types),
         )
         .all()
     )
@@ -98,8 +101,11 @@ def check_alerts(
 
     if missed / total >= 0.5:
         pct = round(missed / total * 100)
+        alert_type = "missed_workouts"
+        if cooldown_level == "volume_only":
+            alert_type = "missed_quality_workouts"
         alert = {
-            "type": "missed_workouts",
+            "type": alert_type,
             "severity": "high",
             "message": (
                 f"{pct}% of workouts missed in the last 3 weeks. "
@@ -116,3 +122,37 @@ def check_alerts(
         db.commit()
 
     return None
+
+
+def _cooldown_level(
+    training_plan: TrainingPlan,
+    start_date,
+    current_week: int,
+) -> str:
+    """Determine the post-recalibration cooldown level.
+
+    Returns:
+      "full"        — suppress all alerts (week 1 after recalibration)
+      "volume_only" — suppress volume alerts, allow effort (week 2)
+      "none"        — full alerting (week 3+)
+    """
+    recalibrated_at = training_plan.last_recalibrated_at
+    if not recalibrated_at:
+        return "none"
+
+    recalibrated_date = _to_date(recalibrated_at)
+    if not recalibrated_date or not start_date:
+        return "none"
+
+    d = (recalibrated_date - start_date).days
+    if d < 0:
+        return "none"
+
+    recalibrated_week = d // 7 + 1
+    weeks_since = current_week - recalibrated_week
+
+    if weeks_since <= 1:
+        return "full"
+    elif weeks_since <= 2:
+        return "volume_only"
+    return "none"

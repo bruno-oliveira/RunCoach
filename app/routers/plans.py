@@ -26,17 +26,20 @@ from app.exceptions import (
     InadequateBaseException,
     InsufficientTimeException,
     PlanGenerationException,
+    RunCoachException,
     ValidationException,
     ZeroMileageUnsupportedException,
 )
 from app.models import TrainingPlan, User
 from app.models.triathlon_plan import TriathlonPlan
-from app.services.plan_helpers import error_response, get_plan_or_404, plan_view_context
 from app.schemas import DISTANCE_NAMES, PlanRequest
 from app.services.adaptation_service import AdaptationService
 from app.services.hr_zone_service import HRZoneService
+from app.services.performance_service import PerformanceService
+from app.services.plan_helpers import error_response, get_plan_or_404, plan_view_context
 from app.services.plan_service import PlanService
 from app.template_helpers import create_templates
+from app.utils import format_pace
 
 # Sub-routers
 from app.routers.plan_adjustments import router as adjustments_router
@@ -69,6 +72,10 @@ async def generate_plan(
     recent_race_time: Optional[str] = Form(None),
     goal_time: Optional[str] = Form(None),
     use_profile: Optional[str] = Form(None),
+    plan_mode: Optional[str] = Form("distance"),
+    goal_time_required: Optional[str] = Form(None),
+    current_time: Optional[str] = Form(None),
+    max_heart_rate: Optional[int] = Form(None),
     anonymous_user_id: Optional[str] = Cookie(None),
     db: Session = Depends(get_db),
     current_user: Optional[User] = Depends(get_optional_user),
@@ -77,6 +84,21 @@ async def generate_plan(
     plan_service: PlanService = Depends(get_plan_service),
 ) -> HTMLResponse:
     """Generate a personalized training plan."""
+    if plan_mode == "time":
+        return await _generate_time_goal_plan(
+            request=request,
+            current_km=current_km,
+            target_distance=float(target_distance),
+            weeks=weeks,
+            runs_per_week=max_runs_per_week,
+            goal_time=goal_time_required or "",
+            current_time=current_time,
+            max_heart_rate=max_heart_rate,
+            current_user=current_user,
+            db=db,
+            plan_service=plan_service,
+        )
+
     logger.info(
         f"Generate plan - current_user: {current_user.id if current_user else 'None'}"
     )
@@ -163,6 +185,74 @@ async def generate_plan(
         db.rollback()
         return error_response(
             request, current_user, f"An unexpected error occurred: {str(e)}", "general"
+        )
+
+
+async def _generate_time_goal_plan(
+    request: Request,
+    current_km: float,
+    target_distance: float,
+    weeks: int,
+    runs_per_week: int,
+    goal_time: str,
+    current_time: Optional[str],
+    max_heart_rate: Optional[int],
+    current_user: Optional[User],
+    db: Session,
+    plan_service: PlanService,
+):
+    """Dispatch performance (time-goal) plan creation from the unified form."""
+    from app.routers.performance import _parse_time_to_pace
+
+    if not current_user:
+        return error_response(
+            request, None,
+            "Time-goal plans require a logged-in account so we can track your progress.",
+            "auth_required",
+        )
+
+    if plan_service.has_reached_plan_limit(current_user.id, db):
+        return error_response(
+            request, current_user,
+            "You've reached the maximum of 3 training plans. "
+            "Please delete an existing plan before creating a new one.",
+            "plan_limit",
+        )
+
+    try:
+        goal_pace = _parse_time_to_pace(goal_time, target_distance)
+        current_pace = None
+        if current_time:
+            current_pace = _parse_time_to_pace(current_time, target_distance)
+
+        service = PerformanceService(db)
+        training_plan, _ = service.create_performance_plan(
+            user=current_user,
+            target_distance=target_distance,
+            goal_pace=goal_pace,
+            weeks=weeks,
+            current_pace=current_pace,
+            current_weekly_km=current_km if current_km > 0 else None,
+            goal_time=goal_time,
+            current_time=current_time,
+            runs_per_week=runs_per_week,
+            auto_calculate=current_km == 0,
+            max_heart_rate=max_heart_rate,
+        )
+
+        return RedirectResponse(url=f"/plan/{training_plan.id}", status_code=303)
+
+    except RunCoachException as e:
+        return error_response(request, current_user, e.user_message, "validation",
+                              e.suggestion if hasattr(e, "suggestion") else None)
+    except ValueError as e:
+        return error_response(request, current_user, str(e), "validation")
+    except Exception as e:
+        logger.exception("Time-goal plan generation failed")
+        return error_response(
+            request, current_user,
+            "An unexpected error occurred while generating your plan. Please try again.",
+            "general",
         )
 
 
@@ -286,6 +376,28 @@ async def view_plan(
                 logger.warning(f"Retroactive HR zone computation failed: {e}")
 
         extra = plan_service.get_plan_view_data(training_plan, current_user, db)
+
+        # Performance plans: add training zones + progress data
+        if training_plan.plan_type == "performance":
+            try:
+                perf_service = PerformanceService(db)
+                from app.core.generators.performance_plan_generator import PerformancePlanGenerator
+                gen = PerformancePlanGenerator()
+                zones = gen.calculate_training_zones(
+                    training_plan.goal_pace, training_plan.max_heart_rate
+                )
+                for zone_data in zones.values():
+                    zone_data["pace_formatted"] = format_pace(zone_data["pace"])
+                    if "pace_range" in zone_data:
+                        pr = zone_data["pace_range"]
+                        zone_data["pace_range_formatted"] = (
+                            f"{format_pace(pr[0])} - {format_pace(pr[1])}"
+                        )
+                extra["training_zones"] = zones
+                extra["today_workout"] = perf_service.get_todays_workout(training_plan)
+                extra["perf_progress_data"] = perf_service.get_plan_progress(training_plan)
+            except Exception as e:
+                logger.warning(f"Performance context enrichment failed: {e}")
 
         ctx = plan_view_context(
             request, current_user, training_plan, plan_data, nutrition_plan, **extra

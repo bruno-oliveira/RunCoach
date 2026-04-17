@@ -203,6 +203,46 @@
     </div>
     {% endif %}
 
+    {% if training_zones %}
+    <div class="training-zones-panel">
+        <h3>Training Zones</h3>
+        <p class="zones-subtitle">All workouts are based on these pace zones</p>
+        <div class="zones-grid">
+            {% for zone_name, zone_data in training_zones.items() %}
+            <div class="zone-card" style="border-left: 4px solid {{ zone_data.color }};">
+                <div class="zone-card-header">
+                    <div class="zone-number" style="background: {{ zone_data.color }};">{{ loop.index }}</div>
+                    <div class="zone-info">
+                        <div class="zone-name">{{ zone_name.replace('_', ' ').title() }}</div>
+                        <div class="zone-desc">{{ zone_data.description }}</div>
+                    </div>
+                </div>
+                <div class="zone-metrics">
+                    <div class="zone-metric">
+                        <div class="zone-metric-label">Pace</div>
+                        <div class="zone-metric-value">{{ zone_data.pace_formatted }}</div>
+                    </div>
+                    {% if zone_data.pace_range_formatted %}
+                    <div class="zone-metric">
+                        <div class="zone-metric-label">Range</div>
+                        <div class="zone-metric-value zone-metric-sm">{{ zone_data.pace_range_formatted }}</div>
+                    </div>
+                    {% endif %}
+                    <div class="zone-metric">
+                        <div class="zone-metric-label">Heart Rate</div>
+                        {% if zone_data.hr_bpm_range %}
+                        <div class="zone-metric-value">{{ zone_data.hr_bpm_range }}</div>
+                        {% else %}
+                        <div class="zone-metric-value">{{ zone_data.hr_range }}</div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
     {% if hr_zones and hr_zones.zones %}
     <div class="hr-zones-panel">
         <h3>Your Heart Rate Training Zones</h3>

@@ -121,6 +121,13 @@
                     {% endif %}
 
                     <form method="post" action="/generate-plan" class="plan-form">
+                        <!-- Plan mode toggle -->
+                        <div class="mode-toggle-wrap">
+                            <input type="hidden" id="plan_mode" name="plan_mode" value="{{ request.query_params.get('mode', 'distance') }}">
+                            <button type="button" class="mode-btn mode-btn-active" id="mode-distance-btn" onclick="setPlanMode('distance')">Distance Goal</button>
+                            <button type="button" class="mode-btn" id="mode-time-btn" onclick="setPlanMode('time')">Time Goal</button>
+                        </div>
+
                         <div class="form-group">
                             <label for="current_km" class="form-label">Weekly mileage</label>
                             <div class="input-with-unit">
@@ -215,7 +222,7 @@
                             </div>
                         </div>
 
-                        <div class="form-group form-collapsible">
+                        <div class="form-group form-collapsible" id="goal-collapsible">
                             <button type="button" class="form-collapsible-toggle" onclick="toggleGoalFields()">
                                 <span>Chasing a goal time? (optional)</span>
                                 <svg class="chevron-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
@@ -225,6 +232,30 @@
                                 <div class="form-group">
                                     <label for="goal_time" class="form-label">Goal finish time</label>
                                     <input type="text" id="goal_time" name="goal_time" class="form-input" placeholder="HH:MM:SS or MM:SS">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Time Goal mode fields (hidden by default) -->
+                        <div id="time-mode-fields" style="display:none;">
+                            <div class="form-group">
+                                <label for="goal_time_required" class="form-label">Goal finish time</label>
+                                <input type="text" id="goal_time_required" name="goal_time_required" class="form-input" placeholder="HH:MM:SS or MM:SS" pattern="^(\d{1,2}:\d{2}|\d{1,2}:\d{2}:\d{2})$">
+                                <span class="form-help">Your target race time &mdash; all workouts will be paced from this goal</span>
+                            </div>
+                            <div class="form-row-2">
+                                <div class="form-group">
+                                    <label for="current_time" class="form-label">Current finish time <span class="form-optional">(optional)</span></label>
+                                    <input type="text" id="current_time" name="current_time" class="form-input" placeholder="HH:MM:SS or MM:SS" pattern="^(\d{1,2}:\d{2}|\d{1,2}:\d{2}:\d{2})$">
+                                    <span class="form-help">{% if has_profile %}Auto-calculated from your runs{% else %}Your current race time at this distance{% endif %}</span>
+                                </div>
+                                <div class="form-group">
+                                    <label for="max_heart_rate" class="form-label">Max heart rate <span class="form-optional">(optional)</span></label>
+                                    <div class="input-with-unit">
+                                        <input type="number" id="max_heart_rate" name="max_heart_rate" class="form-input" min="120" max="220" step="1" placeholder="185">
+                                        <span class="input-unit">bpm</span>
+                                    </div>
+                                    <span class="form-help">Enables heart rate zones</span>
                                 </div>
                             </div>
                         </div>
@@ -292,6 +323,43 @@ function toggleCollapsibleFields(fieldsId) {
 function toggleRaceFields() { toggleCollapsibleFields('race-fields'); }
 function toggleGoalFields() { toggleCollapsibleFields('goal-fields'); }
 
+function setPlanMode(mode) {
+    document.getElementById('plan_mode').value = mode;
+    var distBtn = document.getElementById('mode-distance-btn');
+    var timeBtn = document.getElementById('mode-time-btn');
+    var timeFields = document.getElementById('time-mode-fields');
+    var goalCollapsible = document.getElementById('goal-collapsible');
+    var raceCollapsible = document.querySelector('.form-collapsible:first-of-type');
+    var terrainGroup = document.getElementById('terrain-group');
+    var bodyWeight = document.getElementById('body_weight_kg');
+    var bodyWeightGroup = bodyWeight ? bodyWeight.closest('.form-group') : null;
+    var goalTimeReq = document.getElementById('goal_time_required');
+    var weeksInput = document.getElementById('weeks');
+
+    if (mode === 'time') {
+        distBtn.classList.remove('mode-btn-active');
+        timeBtn.classList.add('mode-btn-active');
+        timeFields.style.display = '';
+        goalCollapsible.style.display = 'none';
+        if (terrainGroup) terrainGroup.style.display = 'none';
+        if (bodyWeightGroup) bodyWeightGroup.style.display = 'none';
+        if (goalTimeReq) goalTimeReq.required = true;
+        if (weeksInput) { weeksInput.min = '6'; weeksInput.max = '16'; }
+        // Default runs to 5
+        var runsSelect = document.getElementById('max_runs_per_week');
+        if (runsSelect && !runsSelect.dataset.userChanged) runsSelect.value = '5';
+    } else {
+        timeBtn.classList.remove('mode-btn-active');
+        distBtn.classList.add('mode-btn-active');
+        timeFields.style.display = 'none';
+        goalCollapsible.style.display = '';
+        if (bodyWeightGroup) bodyWeightGroup.style.display = '';
+        if (goalTimeReq) goalTimeReq.required = false;
+        if (weeksInput) { weeksInput.min = '4'; weeksInput.max = '24'; }
+        updateTerrainVisibility();
+    }
+}
+
 document.addEventListener('DOMContentLoaded', function() {
     // Show/hide terrain selector for trail distance
     const distSelect = document.getElementById('target_distance');
@@ -301,6 +369,10 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     distSelect.addEventListener('change', updateTerrainVisibility);
     updateTerrainVisibility();
+
+    // Initialize mode from query param
+    var initialMode = document.getElementById('plan_mode').value;
+    if (initialMode === 'time') setPlanMode('time');
 
     // Disable options in "Runs per week" that aren't viable for the chosen distance.
     // 2 runs → 5K/10K only. 3 runs → anything except marathon/trail.
@@ -366,6 +438,18 @@ document.addEventListener('DOMContentLoaded', function() {
                 e.preventDefault();
                 weeks.focus();
                 return false;
+            }
+
+            // Time mode: require goal time
+            var planMode = document.getElementById('plan_mode').value;
+            if (planMode === 'time') {
+                var goalTimeReq = document.getElementById('goal_time_required');
+                if (!goalTimeReq.value || !goalTimeReq.value.match(/^\d{1,2}:\d{2}(:\d{2})?$/)) {
+                    e.preventDefault();
+                    goalTimeReq.focus();
+                    alert('Please enter a valid goal finish time (MM:SS or HH:MM:SS)');
+                    return false;
+                }
             }
 
             submitBtn.disabled = true;

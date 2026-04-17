@@ -61,6 +61,11 @@ def recalibrate(
         factor = 0.8
     elif strategy == "ahead":
         factor = 1.1
+    elif strategy == "missed_week":
+        return _recalibrate_missed_week(
+            training_plan, plan_data, pd_week, pd_workout,
+            weekly_plans, workouts_by_week, current_week, db,
+        )
     else:
         return {"ok": False, "error": f"Unknown strategy: {strategy}"}
 
@@ -283,3 +288,135 @@ def _build_week_suggestions(
         })
 
     return week_suggestions
+
+
+# ---------------------------------------------------------------------------
+# Missed-week detection and recalibration
+# ---------------------------------------------------------------------------
+
+
+def detect_missed_weeks(
+    plan_id: str,
+    user_id: str,
+    db: Session,
+) -> List[int]:
+    """Return a list of fully missed week numbers (0 runs logged)."""
+    training_plan = db.query(TrainingPlan).filter(
+        TrainingPlan.id == plan_id,
+        TrainingPlan.user_id == user_id,
+    ).first()
+
+    if not training_plan or not training_plan.start_date:
+        return []
+
+    start_date = _to_date(training_plan.start_date)
+    today = today_date()
+    total_weeks = training_plan.weeks_duration or 0
+    current_week = min(((today - start_date).days // 7) + 1, total_weeks)
+
+    runs = (
+        db.query(RunLog)
+        .filter(
+            RunLog.user_id == user_id,
+            RunLog.training_plan_id == plan_id,
+        )
+        .all()
+    )
+
+    weekly_runs: Dict[int, int] = defaultdict(int)
+    for run in runs:
+        rd = _to_date(run.date)
+        if rd and start_date:
+            d = (rd - start_date).days
+            if d >= 0:
+                wk = d // 7 + 1
+                weekly_runs[wk] += 1
+
+    missed = []
+    for wk in range(1, current_week):
+        if weekly_runs.get(wk, 0) == 0:
+            missed.append(wk)
+    return missed
+
+
+def _recalibrate_missed_week(
+    training_plan: TrainingPlan,
+    plan_data: list,
+    pd_week: Dict,
+    pd_workout: Dict,
+    weekly_plans: Dict,
+    workouts_by_week: Dict,
+    current_week: int,
+    db: Session,
+) -> Dict[str, Any]:
+    """Recalibrate after a missed week.
+
+    Strategy:
+    1. Scale the next week's distances to 70% (ease-in)
+    2. Shift subsequent week targets down by 1 week (repeat the progression)
+    3. If a taper week exists at the end, shrink it by 1 week to preserve race date
+    """
+    total_weeks = training_plan.weeks_duration or 0
+    future_weeks = sorted(
+        wk for wk in weekly_plans if wk > current_week and wk <= total_weeks
+    )
+
+    if not future_weeks:
+        return {"ok": False, "error": "No future weeks to adjust"}
+
+    # Step 1: 70% ease-in for the immediate next week
+    ease_in_week = future_weeks[0]
+    ease_workouts = workouts_by_week.get(
+        weekly_plans[ease_in_week].id, []
+    )
+    for workout in ease_workouts:
+        if not workout.distance_km or workout.workout_type in ("rest", "recovery"):
+            continue
+        workout.distance_km = round(workout.distance_km * 0.70, 1)
+        pd_wo = pd_workout.get((ease_in_week, workout.day_of_week))
+        if pd_wo:
+            pd_wo["distance"] = workout.distance_km
+
+    new_total = round(sum(w.distance_km for w in ease_workouts if w.distance_km), 1)
+    if ease_in_week in weekly_plans:
+        weekly_plans[ease_in_week].total_km = new_total
+    if ease_in_week in pd_week:
+        pd_week[ease_in_week]["total_km"] = new_total
+
+    # Step 2: Shift remaining weeks' distances down by 1 slot
+    remaining = [w for w in future_weeks if w > ease_in_week]
+    if len(remaining) >= 2:
+        for i in range(len(remaining) - 1):
+            target_wk = remaining[i]
+            source_wk = remaining[i + 1]
+            target_workouts = workouts_by_week.get(weekly_plans[target_wk].id, [])
+            source_workouts = workouts_by_week.get(weekly_plans[source_wk].id, [])
+            source_dists = {w.day_of_week: w.distance_km for w in source_workouts}
+            for wo in target_workouts:
+                if wo.day_of_week in source_dists and source_dists[wo.day_of_week]:
+                    wo.distance_km = source_dists[wo.day_of_week]
+                    pd_wo = pd_workout.get((target_wk, wo.day_of_week))
+                    if pd_wo:
+                        pd_wo["distance"] = wo.distance_km
+            wk_total = round(sum(w.distance_km for w in target_workouts if w.distance_km), 1)
+            if target_wk in weekly_plans:
+                weekly_plans[target_wk].total_km = wk_total
+            if target_wk in pd_week:
+                pd_week[target_wk]["total_km"] = wk_total
+
+    training_plan.plan_data = json.dumps(plan_data)
+    training_plan.adaptation_alert = None
+    now = datetime.now(timezone.utc).replace(tzinfo=None)
+    training_plan.last_adjusted_at = now
+    training_plan.last_recalibrated_at = now
+    db.commit()
+
+    return {
+        "ok": True,
+        "strategy": "missed_week",
+        "weeks_changed": len(future_weeks),
+        "reason": (
+            "Plan recalibrated for a missed week: next week eased to 70%, "
+            "remaining weeks shifted to preserve race date."
+        ),
+    }

@@ -72,6 +72,13 @@ class VDOTCalculator:
         "R": 1.05,        # Repetition pace (speed / economy work)
     }
 
+    # Easy sub-zones: Recovery / Easy / Long Run
+    E_SUB_ZONES = {
+        "recovery": (0.59, 0.65),   # very easy, active recovery
+        "easy":     (0.65, 0.72),   # standard easy run
+        "long_run": (0.72, 0.76),   # upper easy, long run pace
+    }
+
     @staticmethod
     def calculate_vdot(distance_km: float, time_seconds: int) -> Optional[float]:
         """Calculate VDOT from a race result.
@@ -125,12 +132,39 @@ class VDOTCalculator:
                 "pace_str": _format_pace(pace),
             }
 
+        # Compute easy sub-zone paces
+        easy_subs = {}
+        for sub_name, (lo_pct, hi_pct) in VDOTCalculator.E_SUB_ZONES.items():
+            v_slow = _velocity_at_pct_vdot(vdot, lo_pct)
+            v_fast = _velocity_at_pct_vdot(vdot, hi_pct)
+            p_slow = _pace_from_velocity(v_slow)
+            p_fast = _pace_from_velocity(v_fast)
+            easy_subs[sub_name] = {
+                "pace_min_km_slow": round(p_slow, 2),
+                "pace_min_km_fast": round(p_fast, 2),
+                "pace_str": f"{_format_pace(p_slow)}–{_format_pace(p_fast)}",
+            }
+
         return {
             "E": {
                 "pace_min_km_slow": zones["E_slow"]["pace_min_km"],
                 "pace_min_km_fast": zones["E_fast"]["pace_min_km"],
                 "pace_str": f"{zones['E_slow']['pace_str']}–{zones['E_fast']['pace_str']}",
                 "description": "Easy / recovery",
+                "sub_zones": {
+                    "recovery": {
+                        **easy_subs["recovery"],
+                        "description": "Recovery run — very easy, conversational",
+                    },
+                    "easy": {
+                        **easy_subs["easy"],
+                        "description": "Standard easy run",
+                    },
+                    "long_run": {
+                        **easy_subs["long_run"],
+                        "description": "Long run pace — upper easy range",
+                    },
+                },
             },
             "M": {
                 "pace_min_km": zones["M"]["pace_min_km"],
