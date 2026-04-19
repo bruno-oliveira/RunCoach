@@ -189,13 +189,13 @@
                 {% if training_plan.current_pace %}
                 <div class="goal-pace-stat">
                     <span class="goal-pace-label">Current</span>
-                    <span class="goal-pace-value">{{ training_plan.current_pace | format_pace }}/km</span>
+                    <span class="goal-pace-value">{{ training_plan.current_pace | format_pace }}</span>
                 </div>
                 <svg class="goal-pace-arrow" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
                 {% endif %}
                 <div class="goal-pace-stat goal-pace-stat-target">
                     <span class="goal-pace-label">Goal</span>
-                    <span class="goal-pace-value">{{ training_plan.goal_pace | format_pace }}/km</span>
+                    <span class="goal-pace-value">{{ training_plan.goal_pace | format_pace }}</span>
                 </div>
             </div>
             <p class="goal-pace-note">Every quality workout below is paced off this goal, not your current fitness.</p>
