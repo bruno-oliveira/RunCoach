@@ -287,6 +287,18 @@ class PerformancePlanGenerator:
                     workout['day'] = available_days[i]
                     daily_workouts.append(workout)
 
+        # Fill unscheduled days with rest
+        scheduled_days = {w['day'] for w in daily_workouts}
+        for d in range(1, 8):
+            if d not in scheduled_days:
+                daily_workouts.append({
+                    'day': d,
+                    'type': 'rest',
+                    'distance': 0,
+                    'description': 'Rest day',
+                    'intensity': 'rest',
+                })
+
         daily_workouts.sort(key=lambda x: x['day'])
 
         # Overlay key workouts and coaching rationale

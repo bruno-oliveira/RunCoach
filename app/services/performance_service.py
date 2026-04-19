@@ -295,8 +295,6 @@ class PerformanceService:
             plan_data=json.dumps(plan_data['weekly_plans'])
         )
 
-        training_plan.start_date = datetime.now(timezone.utc).replace(tzinfo=None)
-
         self.db.add(training_plan)
         self.db.flush()
 
