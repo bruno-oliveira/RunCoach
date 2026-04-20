@@ -17,6 +17,10 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copy application code (including data directory)
 COPY app/ ./app/
 
+# Copy Alembic migration config and scripts
+COPY alembic.ini ./alembic.ini
+COPY alembic/ ./alembic/
+
 # Bake the current DB as a seed snapshot.
 # On first boot start.sh copies this to the persistent volume at /data/runcoach.db.
 # Subsequent boots skip the copy and use the live volume DB.
