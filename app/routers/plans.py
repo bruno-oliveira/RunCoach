@@ -150,8 +150,8 @@ async def generate_plan(
             return error_response(
                 request,
                 current_user,
-                "You've reached the maximum of 3 training plans. "
-                "Please delete an existing plan before creating a new one.",
+                "You've reached the maximum of 3 active training plans. "
+                "Please delete or complete an existing plan before creating a new one.",
                 "plan_limit",
             )
 
@@ -214,8 +214,8 @@ async def _generate_time_goal_plan(
     if plan_service.has_reached_plan_limit(current_user.id, db):
         return error_response(
             request, current_user,
-            "You've reached the maximum of 3 training plans. "
-            "Please delete an existing plan before creating a new one.",
+            "You've reached the maximum of 3 active training plans. "
+            "Please delete or complete an existing plan before creating a new one.",
             "plan_limit",
         )
 
@@ -482,7 +482,7 @@ async def list_my_plans(
                 "user": current_user,
                 "google_client_id": settings.google_client_id,
                 "plans": plans,
-                "plan_count": len(plans),
+                "plan_count": sum(1 for p in plans if p.status_label != "Completed"),
                 "max_plans": 3,
                 "triathlon_plans": triathlon_plans,
             },

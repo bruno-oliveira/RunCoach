@@ -2,7 +2,7 @@
 
 import json
 import logging
-from datetime import datetime
+from datetime import date, datetime, timedelta
 from typing import Any, Optional
 
 from sqlalchemy.orm import Session
@@ -49,13 +49,27 @@ class PlanService:
     # ------------------------------------------------------------------
 
     def has_reached_plan_limit(self, user_id: str, db: Session) -> bool:
-        """Return True if the user has reached the maximum number of plans.
+        """Return True if the user has reached the maximum number of active plans.
 
-        Counts both regular training plans and triathlon plans.
+        Counts both regular training plans and triathlon plans, excluding
+        completed training plans (past their end date).
         """
-        training_count = db.query(TrainingPlan).filter(TrainingPlan.user_id == user_id).count()
+        today = date.today()
+        training_plans = db.query(TrainingPlan).filter(TrainingPlan.user_id == user_id).all()
+        active_training = sum(
+            1 for p in training_plans
+            if not self._is_plan_completed(p, today)
+        )
         triathlon_count = db.query(TriathlonPlan).filter(TriathlonPlan.user_id == user_id).count()
-        return (training_count + triathlon_count) >= self.MAX_PLANS_PER_USER
+        return (active_training + triathlon_count) >= self.MAX_PLANS_PER_USER
+
+    @staticmethod
+    def _is_plan_completed(plan: TrainingPlan, today: date) -> bool:
+        if not plan.start_date:
+            return False
+        start_d = plan.start_date.date() if isinstance(plan.start_date, datetime) else plan.start_date
+        end_date = start_d + timedelta(weeks=plan.weeks_duration)
+        return today > end_date
 
     # ------------------------------------------------------------------
     # User resolution

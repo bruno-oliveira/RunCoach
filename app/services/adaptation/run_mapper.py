@@ -53,6 +53,8 @@ def map_runs_to_plan(
     today = today_date()
     tomorrow = today + timedelta(days=1)
     num_weeks = training_plan.weeks_duration
+    plan_end_date = start_date + timedelta(weeks=num_weeks)
+    upper_bound = min(tomorrow, plan_end_date + timedelta(days=1))
     logger.info(
         "map_runs_to_plan: plan=%s, start_date=%s, today=%s, weeks=%d",
         plan_id, start_date, today, num_weeks,
@@ -102,7 +104,7 @@ def map_runs_to_plan(
         .filter(
             RunLog.user_id == user_id,
             RunLog.date >= start_date,
-            RunLog.date < tomorrow,
+            RunLog.date < upper_bound,
             or_(
                 RunLog.training_plan_id.is_(None),
                 RunLog.training_plan_id != plan_id,
