@@ -11,18 +11,57 @@ from sqlalchemy.orm import Session
 from app.core.training.quality_scorer import calculate_quality_score
 from app.core.training.vdot_calculator import VDOTCalculator
 from app.dependencies import get_db, get_current_user
-from app.models import RunLog, User, DailyWorkout, TrainingPlan
+from app.models import RunLog, User, DailyWorkout, TrainingPlan, WeeklyPlan
 from app.schemas import (
     RunLogCreate,
     RunLogListResponse,
     RunLogResponse,
     RunLogUpdate,
 )
+from app.services.feedback_service import FeedbackService
 from app.services.race_predictor_service import RacePredictorService
 
 logger = logging.getLogger(__name__)
 
 runs_router = APIRouter(prefix="/api/runs", tags=["runs"])
+
+
+def _enrich_vdot_and_prediction(
+    new_run: RunLog, distance_km: float, duration_minutes: float, user_id: str, db: Session
+) -> None:
+    """Calculate VDOT and snapshot pre-run prediction onto the run."""
+    if distance_km >= 2.0 and duration_minutes > 0:
+        vdot = VDOTCalculator.calculate_vdot(distance_km, int(duration_minutes * 60))
+        if vdot:
+            new_run.vdot = vdot
+
+    if distance_km >= 2.0:
+        try:
+            pre_race_vdot = RacePredictorService.get_best_recent_vdot(user_id, weeks=12, db=db)
+            if pre_race_vdot:
+                predicted_seconds = VDOTCalculator.predict_time_for_distance(pre_race_vdot, distance_km)
+                if predicted_seconds:
+                    new_run.predicted_time_seconds = float(predicted_seconds)
+        except Exception as e:
+            logger.warning(f"Failed to snapshot prediction for run: {e}")
+
+
+def _build_race_comparison(run: RunLog, duration_minutes: float) -> Optional[dict]:
+    """Build predicted vs actual comparison dict if prediction data is available."""
+    if not run.predicted_time_seconds:
+        return None
+    actual_seconds = int(duration_minutes * 60)
+    predicted_seconds = int(run.predicted_time_seconds)
+    delta = actual_seconds - predicted_seconds
+    return {
+        "predicted_seconds": predicted_seconds,
+        "predicted_formatted": VDOTCalculator.format_duration(predicted_seconds),
+        "actual_seconds": actual_seconds,
+        "actual_formatted": VDOTCalculator.format_duration(actual_seconds),
+        "delta_seconds": delta,
+        "delta_formatted": VDOTCalculator.format_duration(abs(delta)),
+        "faster_than_predicted": delta < 0,
+    }
 
 
 def _run_to_response(run: RunLog) -> RunLogResponse:
@@ -80,7 +119,6 @@ async def create_run_log(
 
         validated_workout: Optional[DailyWorkout] = None
         if run_log.daily_workout_id:
-            from app.models import WeeklyPlan
             validated_workout = (
                 db.query(DailyWorkout)
                 .join(WeeklyPlan, DailyWorkout.weekly_plan_id == WeeklyPlan.id)
@@ -129,40 +167,12 @@ async def create_run_log(
             new_run.effort_quality_score = score
             new_run.quality_label = label
 
-        # Auto-calculate VDOT for all runs with sufficient distance
-        if run_log.distance_km >= 2.0 and run_log.duration_minutes > 0:
-            vdot = VDOTCalculator.calculate_vdot(
-                run_log.distance_km, int(run_log.duration_minutes * 60)
-            )
-            if vdot:
-                new_run.vdot = vdot
-
-        # Snapshot the pre-run prediction based on prior fitness
-        if run_log.distance_km >= 2.0:
-            try:
-                pre_race_vdot = RacePredictorService.get_best_recent_vdot(
-                    current_user.id, weeks=12, db=db
-                )
-                if pre_race_vdot:
-                    predicted_seconds = VDOTCalculator.predict_time_for_distance(
-                        pre_race_vdot, run_log.distance_km
-                    )
-                    if predicted_seconds:
-                        new_run.predicted_time_seconds = float(predicted_seconds)
-            except Exception as e:
-                logger.warning(f"Failed to snapshot prediction for run: {e}")
+        _enrich_vdot_and_prediction(new_run, run_log.distance_km, run_log.duration_minutes, current_user.id, db)
 
         db.add(new_run)
         db.commit()
 
-        # Generate predictions for the toast if VDOT was calculated
-        race_predictions = None
-        if new_run.vdot:
-            race_predictions = VDOTCalculator.predict_times(new_run.vdot)
-
-        # Generate coaching feedback (non-fatal)
         try:
-            from app.services.feedback_service import FeedbackService
             FeedbackService.generate_and_store(new_run, db)
         except Exception as e:
             logger.warning(f"Feedback generation failed for run {new_run.id}: {e}")
@@ -170,22 +180,9 @@ async def create_run_log(
         logger.info(f"Run log created for user {current_user.id}: {run_log.distance_km}km in {run_log.duration_minutes}min")
 
         response_data = _run_to_response(new_run)
-        if race_predictions:
-            response_data.predictions = race_predictions
-        # Include comparison data when a prediction was available
-        if new_run.predicted_time_seconds:
-            actual_seconds = int(run_log.duration_minutes * 60)
-            predicted_seconds = int(new_run.predicted_time_seconds)
-            delta = actual_seconds - predicted_seconds
-            response_data.race_comparison = {
-                "predicted_seconds": predicted_seconds,
-                "predicted_formatted": VDOTCalculator.format_duration(predicted_seconds),
-                "actual_seconds": actual_seconds,
-                "actual_formatted": VDOTCalculator.format_duration(actual_seconds),
-                "delta_seconds": delta,
-                "delta_formatted": VDOTCalculator.format_duration(abs(delta)),
-                "faster_than_predicted": delta < 0,
-            }
+        if new_run.vdot:
+            response_data.predictions = VDOTCalculator.predict_times(new_run.vdot)
+        response_data.race_comparison = _build_race_comparison(new_run, run_log.duration_minutes)
         return response_data
     except SQLAlchemyError as e:
         logger.error(f"Error creating run log: {e}")
@@ -331,8 +328,6 @@ async def get_plan_feedback(
     current_user: User = Depends(get_current_user),
 ):
     """Get all coaching feedback for runs logged against a plan."""
-    from app.services.feedback_service import FeedbackService
-
     feedbacks = FeedbackService.get_feedback_for_plan(
         plan_id, current_user.id, db
     )
@@ -443,8 +438,6 @@ async def get_run_feedback(
     current_user: User = Depends(get_current_user),
 ):
     """Get coaching feedback for a specific run."""
-    from app.services.feedback_service import FeedbackService
-
     # Verify run ownership
     run = (
         db.query(RunLog)

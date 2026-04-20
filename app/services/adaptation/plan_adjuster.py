@@ -1,7 +1,7 @@
 """Plan adjustment — scale future workout distances based on performance."""
 
 import logging
-from datetime import timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, List, Optional, Tuple
 
 from sqlalchemy.orm import Session
@@ -142,7 +142,6 @@ def adjust_plan(
     except Exception as e:
         logger.warning("VDOT recalibration failed (non-fatal): %s", e)
 
-    from datetime import datetime, timezone
     training_plan.adjustment_multiplier = multiplier
     training_plan.last_adjusted_at = datetime.now(timezone.utc).replace(tzinfo=None)
     db.commit()

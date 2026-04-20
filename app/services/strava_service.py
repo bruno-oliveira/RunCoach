@@ -10,8 +10,10 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.config import settings
+from app.core.training.vdot_calculator import VDOTCalculator
 from app.models.run_log import RunLog
 from app.models.user import User
+from app.services.feedback_service import FeedbackService
 from app.utils import TimestampAdapter
 
 logger = logging.getLogger(__name__)
@@ -266,7 +268,6 @@ class StravaService:
                     run_log = self.map_activity_to_run_log(activity, user.id)
                     # Auto-calculate VDOT for all runs with sufficient distance
                     if run_log.distance_km >= 2.0 and run_log.duration_minutes > 0:
-                        from app.core.training.vdot_calculator import VDOTCalculator
                         vdot = VDOTCalculator.calculate_vdot(
                             run_log.distance_km, int(run_log.duration_minutes * 60)
                         )
@@ -284,7 +285,6 @@ class StravaService:
                         continue
                     # Generate coaching feedback (non-fatal)
                     try:
-                        from app.services.feedback_service import FeedbackService
                         FeedbackService.generate_and_store(run_log, db)
                     except Exception as fb_err:
                         logger.warning(

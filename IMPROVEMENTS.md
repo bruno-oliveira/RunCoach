@@ -51,40 +51,35 @@ None of these are referenced in any template.
 
 ---
 
-## Priority 2 — Long Functions
+## Priority 2 — Long Functions (partially done)
 
-Functions over 100 lines hurt readability. The top offenders:
+Functions over 100 lines hurt readability. Progress:
 
-| Lines | Location | Function |
-|-------|----------|----------|
-| 173 | `app/services/readiness_service.py:72` | `compute_readiness` |
-| 161 | `app/services/adaptation/plan_adjuster.py:30` | `adjust_plan` |
-| 158 | `app/core/training/workout_steps.py:474` | `parse_key_workout_steps` |
-| 144 | `app/routers/runs.py:53` | `create_run_log` |
-| 143 | `app/core/export/triathlon_pdf_generator.py:294` | `_week_page` |
-| 132 | `app/services/adaptation/type_swapper.py:71` | `get_swap_proposals` |
-| 131 | `app/services/adaptation/run_mapper.py:19` | `map_runs_to_plan` |
-| 130 | `app/routers/plans_pages.py:57` | `generate_plan` (dead code) |
-| 127 | `app/routers/plans.py:61` | `generate_plan` |
-| 120 | `app/routers/readiness.py:172` | `adapt_todays_workout` |
-
-**Suggested refactors:**
-- `create_run_log` (144 lines): Extract VDOT calculation, prediction snapshot, and feedback generation into helper functions or a service method.
-- `compute_readiness` (173 lines): Extract scoring into a separate `_compute_scores()` helper.
-- `parse_key_workout_steps` (158 lines): Each regex pattern (A through F) can be its own function.
-- `adjust_plan` (161 lines): Already partially decomposed into helpers; move the orchestration preamble (validation, fetching) into smaller steps.
+| Lines | Location | Function | Status |
+|-------|----------|----------|--------|
+| 173 | `app/services/readiness_service.py` | `compute_readiness` | ✅ Extracted `_parse_plan_targets` + `_build_component_dict` |
+| 161 | `app/services/adaptation/plan_adjuster.py` | `adjust_plan` | ✅ Already well-decomposed (+ fixed stale datetime import) |
+| 158 | `app/core/training/workout_steps.py` | `parse_key_workout_steps` | ✅ Each regex pattern extracted to own function |
+| 144 | `app/routers/runs.py` | `create_run_log` | ✅ Extracted `_enrich_vdot_and_prediction` + `_build_race_comparison` |
+| 143 | `app/core/export/triathlon_pdf_generator.py` | `_week_page` | Acceptable (PDF layout logic) |
+| 132 | `app/services/adaptation/type_swapper.py` | `get_swap_proposals` | Acceptable (linear logic) |
+| 131 | `app/services/adaptation/run_mapper.py` | `map_runs_to_plan` | Acceptable (orchestration) |
+| 127 | `app/routers/plans.py` | `generate_plan` | Acceptable (endpoint handler) |
+| 120 | `app/routers/readiness.py` | `adapt_todays_workout` | Acceptable (endpoint handler) |
 
 ---
 
-## Priority 3 — Excessive Lazy Imports
+## ~~Priority 3 — Excessive Lazy Imports~~ ✅ DONE
 
-30+ `from app.xxx import ...` statements appear inside function bodies. Many are avoidable:
+Moved unnecessary lazy imports to module level:
 
-- `app/routers/runs.py` imports `FeedbackService` at 3 separate call sites (lines 165, 334, 446). Move to module-level.
-- `app/core/generators/plan_generator.py:531` imports `VDOTCalculator` inside `generate_plan()` despite it being used unconditionally. Move to top.
-- `app/services/performance_service.py` imports from `performance_progress` at 3 locations (367, 372, 377). Consolidate at module level.
+- ~~`app/routers/runs.py` — `FeedbackService` (3 sites) and `WeeklyPlan` moved to top~~ Done.
+- ~~`app/core/generators/plan_generator.py` — `VDOTCalculator` moved to top~~ Done.
+- ~~`app/services/performance_service.py` — `performance_progress` imports consolidated at module level~~ Done.
+- ~~`app/core/training/workout_builders.py` — `VDOTCalculator` (2 sites) moved to top~~ Done.
+- ~~`app/services/strava_service.py` — `VDOTCalculator` and `FeedbackService` moved to top~~ Done.
 
-Lazy imports are acceptable to break circular dependencies, but most of these are not circular — they're just leftover from iterative development.
+Remaining lazy imports are genuinely breaking circular dependencies (e.g., `insights_service` ↔ `insight_generators`).
 
 ---
 
@@ -118,11 +113,11 @@ The refactored `analytics/` version is already modular and fine. Just delete the
 
 ## Summary
 
-| Category | Lines removable | Effort |
-|----------|----------------|--------|
-| Top-level recipe scripts | ~10,962 | Low (just delete) |
-| Dead router (`plans_pages.py`) | 490 | Low (just delete) |
-| Dead JS monoliths | 4,297 | Low (just delete) |
-| **Total dead code** | **~15,749** | **Done** |
-| Long function refactors | — | Medium |
-| Lazy import cleanup | — | Low-Medium |
+| Category | Lines removable | Effort | Status |
+|----------|----------------|--------|--------|
+| Top-level recipe scripts | ~10,962 | Low (just delete) | ✅ Done |
+| Dead router (`plans_pages.py`) | 490 | Low (just delete) | ✅ Done |
+| Dead JS monoliths | 4,297 | Low (just delete) | ✅ Done |
+| **Total dead code** | **~15,749** | | **Done** |
+| Long function refactors | — | Medium | ✅ Top 4 refactored |
+| Lazy import cleanup | — | Low-Medium | ✅ Done |

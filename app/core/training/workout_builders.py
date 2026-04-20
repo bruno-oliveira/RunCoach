@@ -12,6 +12,7 @@ from app.core.training.strength_plan import (
     generate_strength_session as _build_strength_session,
     get_phase_focus_rotation,
 )
+from app.core.training.vdot_calculator import VDOTCalculator
 from app.core.coaching.training_tips import get_tips_for_week
 
 
@@ -171,7 +172,6 @@ def generate_tempo_run(day: int, distance: float, total_km: float,
             f'Tempo run with surges: Main tempo with 4x30sec faster surges.',
         ]
 
-    from app.core.training.vdot_calculator import VDOTCalculator
     description = VDOTCalculator.inject_paces_into_description(
         tempo_variations[day % len(tempo_variations)], pace_zones or {}, "tempo"
     )
@@ -238,7 +238,6 @@ def generate_interval_run(day: int, distance: float, total_km: float,
                 f'Hill repeats: 8x30sec at hard effort with walk-down recovery.',
             ]
 
-    from app.core.training.vdot_calculator import VDOTCalculator
     description = VDOTCalculator.inject_paces_into_description(
         interval_workouts[day % len(interval_workouts)], pace_zones or {}, "interval"
     )

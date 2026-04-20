@@ -15,6 +15,7 @@ from app.core.coaching.coaching_notes_generator import generate_coaching_note
 from app.core.training.key_workout_library import KeyWorkoutLibrary
 from app.core.training.strength_plan import derive_experience_level
 from app.core.training import workout_steps as _steps_mod
+from app.core.training.vdot_calculator import VDOTCalculator
 from app.exceptions import ZeroMileageUnsupportedException
 
 # Re-export for any code that imports PHASE_DISTRIBUTIONS from here
@@ -528,7 +529,6 @@ class TrainingPlanGenerator:
             if actual_km > current_km:
                 current_km = actual_km
 
-        from app.core.training.vdot_calculator import VDOTCalculator
         pace_zones = VDOTCalculator.get_pace_zones(vdot) if vdot else None
 
         experience_level = derive_experience_level(current_km)

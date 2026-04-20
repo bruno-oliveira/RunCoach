@@ -58,6 +58,34 @@ except ImportError:
     pass
 
 
+def _parse_plan_targets(plan_data: list) -> tuple:
+    """Extract weekly km targets, peak long run, and peak week km from plan data."""
+    planned_weekly_km = []
+    planned_long_run_km = 0.0
+    peak_week_km = 0.0
+    for week in plan_data:
+        wk_km = week.get("total_km", 0)
+        planned_weekly_km.append(wk_km)
+        if wk_km > peak_week_km:
+            peak_week_km = wk_km
+        for workout in week.get("daily_workouts", []):
+            if workout.get("type") == "long":
+                dist = workout.get("distance", 0)
+                if dist > planned_long_run_km:
+                    planned_long_run_km = dist
+    return planned_weekly_km, planned_long_run_km, peak_week_km
+
+
+def _build_component_dict(score: float, weight: int, detail: str) -> Dict[str, Any]:
+    """Build a standardized component entry for the readiness report."""
+    return {
+        "score": round(score),
+        "weight": weight,
+        "label": score_label(score),
+        "detail": detail,
+    }
+
+
 class ReadinessService:
     """Computes race readiness from plan + run log data."""
 
@@ -87,46 +115,22 @@ class ReadinessService:
         if total_weeks == 0:
             return None
 
-        # Current week (1-indexed, clamped)
         delta_days = (today - start_date).days
-        if delta_days < 0:
-            current_week = 0
-        else:
-            current_week = min((delta_days // 7) + 1, total_weeks)
-
+        current_week = 0 if delta_days < 0 else min((delta_days // 7) + 1, total_weeks)
         weeks_remaining = max(0, total_weeks - current_week)
-
-        # Race day estimate (end of last week)
         race_date = start_date + timedelta(weeks=total_weeks)
 
-        # Parse plan data for weekly targets
-        plan_data = plan.plan_data if plan.plan_data else []
-        planned_weekly_km = []
-        planned_long_run_km = 0.0
-        peak_week_km = 0.0
-        for week in plan_data:
-            wk_km = week.get("total_km", 0)
-            planned_weekly_km.append(wk_km)
-            if wk_km > peak_week_km:
-                peak_week_km = wk_km
-            for workout in week.get("daily_workouts", []):
-                if workout.get("type") == "long":
-                    dist = workout.get("distance", 0)
-                    if dist > planned_long_run_km:
-                        planned_long_run_km = dist
+        planned_weekly_km, planned_long_run_km, peak_week_km = _parse_plan_targets(
+            plan.plan_data or []
+        )
 
-        # Fetch logged runs for this plan
         runs = (
             db.query(RunLog)
-            .filter(
-                RunLog.user_id == user_id,
-                RunLog.training_plan_id == plan.id,
-            )
+            .filter(RunLog.user_id == user_id, RunLog.training_plan_id == plan.id)
             .order_by(RunLog.date.asc())
             .all()
         )
 
-        # Also consider runs not mapped to plan but in date range
         all_runs_in_range = (
             db.query(RunLog)
             .filter(
@@ -140,30 +144,17 @@ class ReadinessService:
         if not all_runs_in_range:
             return None
 
-        # Actual weekly volumes
         actual_weekly_km = compute_weekly_volumes(all_runs_in_range, start_date, current_week)
-
-        # Longest run
         longest_run_km = max((r.distance_km for r in all_runs_in_range), default=0)
 
-        # Component scores
-        volume_score, volume_detail = score_volume(
-            actual_weekly_km, planned_weekly_km, current_week
-        )
-        consistency_score, consistency_detail = score_consistency(
-            runs, plan.id, db, current_week
-        )
-        long_run_score, long_run_detail = score_long_run(
-            longest_run_km, planned_long_run_km, plan.target_distance
-        )
+        volume_score, volume_detail = score_volume(actual_weekly_km, planned_weekly_km, current_week)
+        consistency_score, consistency_detail = score_consistency(runs, plan.id, db, current_week)
+        long_run_score, long_run_detail = score_long_run(longest_run_km, planned_long_run_km, plan.target_distance)
         taper_score, taper_detail = score_taper(current_week, total_weeks)
-
-        # VDOT & predictions
         vdot_score, vdot_detail, predictions, vdot_data = score_vdot(
             user_id, plan.target_distance, db, goal_time=plan.goal_time
         )
 
-        # Weighted total
         overall = (
             volume_score * ReadinessService.WEIGHT_VOLUME
             + vdot_score * ReadinessService.WEIGHT_VDOT
@@ -171,20 +162,16 @@ class ReadinessService:
             + consistency_score * ReadinessService.WEIGHT_CONSISTENCY
             + taper_score * ReadinessService.WEIGHT_TAPER
         ) / 100
-
         overall = round(min(100, max(0, overall)), 0)
 
-        # Race scenarios
-        scenarios = build_scenarios(vdot_data, plan.target_distance)
-
-        # Volume comparison data (for chart)
-        volume_comparison = []
-        for i in range(min(current_week, len(planned_weekly_km))):
-            volume_comparison.append({
+        volume_comparison = [
+            {
                 "week": i + 1,
                 "planned": round(planned_weekly_km[i], 1) if i < len(planned_weekly_km) else 0,
                 "actual": round(actual_weekly_km[i], 1) if i < len(actual_weekly_km) else 0,
-            })
+            }
+            for i in range(min(current_week, len(planned_weekly_km)))
+        ]
 
         target_dist = plan.target_distance_km
         distance_label = DISTANCE_LABELS.get(target_dist, f"{target_dist}km")
@@ -201,40 +188,15 @@ class ReadinessService:
             "race_date_display": race_date.strftime("%b %-d, %Y"),
             "days_to_race": (race_date - today).days,
             "components": {
-                "volume": {
-                    "score": round(volume_score),
-                    "weight": ReadinessService.WEIGHT_VOLUME,
-                    "label": score_label(volume_score),
-                    "detail": volume_detail,
-                },
-                "fitness": {
-                    "score": round(vdot_score),
-                    "weight": ReadinessService.WEIGHT_VDOT,
-                    "label": score_label(vdot_score),
-                    "detail": vdot_detail,
-                },
-                "long_run": {
-                    "score": round(long_run_score),
-                    "weight": ReadinessService.WEIGHT_LONG_RUN,
-                    "label": score_label(long_run_score),
-                    "detail": long_run_detail,
-                },
-                "consistency": {
-                    "score": round(consistency_score),
-                    "weight": ReadinessService.WEIGHT_CONSISTENCY,
-                    "label": score_label(consistency_score),
-                    "detail": consistency_detail,
-                },
-                "taper": {
-                    "score": round(taper_score),
-                    "weight": ReadinessService.WEIGHT_TAPER,
-                    "label": score_label(taper_score),
-                    "detail": taper_detail,
-                },
+                "volume": _build_component_dict(volume_score, ReadinessService.WEIGHT_VOLUME, volume_detail),
+                "fitness": _build_component_dict(vdot_score, ReadinessService.WEIGHT_VDOT, vdot_detail),
+                "long_run": _build_component_dict(long_run_score, ReadinessService.WEIGHT_LONG_RUN, long_run_detail),
+                "consistency": _build_component_dict(consistency_score, ReadinessService.WEIGHT_CONSISTENCY, consistency_detail),
+                "taper": _build_component_dict(taper_score, ReadinessService.WEIGHT_TAPER, taper_detail),
             },
             "predictions": predictions,
             "vdot": vdot_data,
-            "scenarios": scenarios,
+            "scenarios": build_scenarios(vdot_data, plan.target_distance),
             "volume_comparison": volume_comparison,
             "longest_run_km": round(longest_run_km, 1),
             "peak_planned_long_run_km": round(planned_long_run_km, 1),

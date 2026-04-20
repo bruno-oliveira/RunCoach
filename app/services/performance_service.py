@@ -11,6 +11,11 @@ from sqlalchemy.orm import Session
 from app.models import RunLog, TrainingPlan, User, WeeklyPlan, DailyWorkout
 from app.core.generators.performance_plan_generator import PerformancePlanGenerator
 from app.core.nutrition.nutrition_engine import NutritionEngine
+from app.services.performance_progress import (
+    get_plan_progress,
+    get_plan_with_data,
+    get_todays_workout,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -364,15 +369,12 @@ class PerformanceService:
 
     def get_plan_with_data(self, plan_id: str) -> Optional[Tuple[TrainingPlan, Dict]]:
         """Get a training plan with parsed plan data."""
-        from app.services.performance_progress import get_plan_with_data
         return get_plan_with_data(self.db, plan_id, self.performance_generator)
 
     def get_todays_workout(self, plan: TrainingPlan) -> Dict[str, Any]:
         """Determine today's workout from the training plan."""
-        from app.services.performance_progress import get_todays_workout
         return get_todays_workout(self.db, plan)
 
     def get_plan_progress(self, plan: TrainingPlan) -> Dict[str, Any]:
         """Calculate progress metrics for a training plan."""
-        from app.services.performance_progress import get_plan_progress
         return get_plan_progress(self.db, plan)
