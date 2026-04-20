@@ -125,6 +125,24 @@ def _workout_dates(start_date: date, num_weeks: int) -> dict[tuple[int, int], st
     return result
 
 
+def _ensure_seven_days(plan_data: list[dict]) -> list[dict]:
+    """Fill missing days in each week with rest entries so all 7 days appear."""
+    for week in plan_data:
+        workouts = week.get("daily_workouts", [])
+        existing_days = {w["day"] for w in workouts}
+        for d in range(1, 8):
+            if d not in existing_days:
+                workouts.append({
+                    "day": d,
+                    "type": "rest",
+                    "distance": 0,
+                    "intensity": "rest",
+                    "description": "Rest day",
+                })
+        workouts.sort(key=lambda w: w["day"])
+    return plan_data
+
+
 def plan_view_context(
     request: Request,
     current_user: Optional[User],
@@ -134,6 +152,8 @@ def plan_view_context(
     **extra: Any,
 ) -> dict[str, Any]:
     """Build the standard plan.html template context dict."""
+    plan_data = _ensure_seven_days(plan_data)
+
     # Calendar tracking
     start_date_val = None
     current_week_number = None
