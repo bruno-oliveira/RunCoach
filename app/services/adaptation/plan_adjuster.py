@@ -1,6 +1,7 @@
 """Plan adjustment — scale future workout distances based on performance."""
 
 import logging
+from collections import defaultdict
 from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, List, Optional, Tuple
 
@@ -10,6 +11,7 @@ from app.models import DailyWorkout, RunLog, TrainingPlan, WeeklyPlan
 from app.utils import to_date as _to_date
 
 from app.core.training import workout_steps as _steps_mod
+from app.core.training.quality_caps import enforce_week_caps
 from app.core.training.vdot_calculator import VDOTCalculator
 
 from ._helpers import (
@@ -133,6 +135,7 @@ def adjust_plan(
         training_plan, adjustable_weeks, multiplier, db,
         current_week=current_week,
         current_day_of_week=current_day_of_week,
+        per_type_ratios=signals.get("per_type_ratios"),
     )
 
     # VDOT recalibration: update pace zones if fitness has shifted
@@ -149,6 +152,9 @@ def adjust_plan(
     volume_ratio = signals["volume_ratio"]
     completion_rate = signals["completion_rate"]
     avg_effort = signals["avg_effort"]
+    effort_trend = signals.get("effort_trend", "stable")
+    overreach_detected = signals.get("overreach_detected", False)
+
     direction = "increased" if multiplier > 1.0 else "reduced" if multiplier < 1.0 else "kept"
     reason_parts = [f"Remaining workouts {direction} (x{multiplier})."]
     reason_parts.append(
@@ -156,7 +162,9 @@ def adjust_plan(
         f"completion: {round(completion_rate * 100)}%."
     )
     if avg_effort is not None:
-        reason_parts.append(f"Avg effort: {round(avg_effort, 1)}/10.")
+        reason_parts.append(f"Avg effort: {round(avg_effort, 1)}/10 (trend: {effort_trend}).")
+    if overreach_detected:
+        reason_parts.append("Overreach detected — forced reduction to protect recovery.")
     if vdot_result:
         reason_parts.append(
             f"VDOT recalibrated: {vdot_result['old_vdot']} → {vdot_result['new_vdot']} "
@@ -166,7 +174,7 @@ def adjust_plan(
     logger.info(
         "adjust_plan result: multiplier=%.2f raw=%.3f "
         "volume_ratio=%.2f effort_factor=%.2f(avg=%.1f) "
-        "completion_factor=%.2f(rate=%.2f) runs=%d",
+        "completion_factor=%.2f(rate=%.2f) trend=%s overreach=%s runs=%d",
         multiplier,
         signals["raw_multiplier"],
         volume_ratio,
@@ -174,8 +182,20 @@ def adjust_plan(
         avg_effort if avg_effort is not None else 0,
         signals["completion_factor"],
         completion_rate,
+        effort_trend,
+        overreach_detected,
         len(all_plan_runs),
     )
+
+    # Record adaptation event in history
+    _record_adaptation_event(training_plan, {
+        "type": "adjust",
+        "multiplier": multiplier,
+        "direction": direction,
+        "effort_trend": effort_trend,
+        "overreach": overreach_detected,
+        "reason": " ".join(reason_parts),
+    })
 
     result = {
         "adjusted": any_distance_changed or bool(vdot_result),
@@ -189,6 +209,17 @@ def adjust_plan(
     return result
 
 
+def _record_adaptation_event(training_plan: TrainingPlan, event: Dict[str, Any]) -> None:
+    """Append an event to the plan's adaptation_history JSON."""
+    event["date"] = today_date().isoformat()
+    history = training_plan.adaptation_history or []
+    history.append(event)
+    # Keep last 20 events
+    if len(history) > 20:
+        history = history[-20:]
+    training_plan.adaptation_history = history
+
+
 def _compute_adjustment_signals(
     all_plan_runs: List,
     past_workouts: List[Tuple],
@@ -198,51 +229,76 @@ def _compute_adjustment_signals(
     db: Session,
     recency_weight_fn,
 ) -> Dict[str, Any]:
-    """Compute volume, effort, and completion signals for plan adjustment."""
-    # Volume adherence (weight 50%)
+    """Compute volume, effort, completion, and trend signals for plan adjustment.
+
+    Improvements over prior version:
+    - Continuous effort mapping (no step discontinuities)
+    - Overreach detection override (volume high + effort high = force reduce)
+    - Effort trend wired into the multiplier
+    - Per-type volume ratios for targeted adjustment
+    """
+    # --- Volume adherence (weight 50%) ---
     planned_weighted = 0.0
+    planned_by_type: Dict[str, float] = defaultdict(float)
     for workout, sched_date in past_workouts:
         w = recency_weight_fn(sched_date)
         dist = workout.baseline_distance_km or workout.distance_km or 0
         planned_weighted += dist * w
+        wtype = workout.workout_type or "easy"
+        planned_by_type[wtype] += dist * w
 
     actual_weighted = 0.0
+    actual_by_type: Dict[str, float] = defaultdict(float)
     for run in all_plan_runs:
         run_date = _to_date(run.date) if run.date else today
         w = recency_weight_fn(run_date)
-        actual_weighted += (run.distance_km or 0) * w
+        dist = run.distance_km or 0
+        actual_weighted += dist * w
+        rtype = run.workout_type or "easy"
+        actual_by_type[rtype] += dist * w
 
     volume_ratio = max(0.5, min(1.5,
         actual_weighted / planned_weighted if planned_weighted > 0 else 1.0
     ))
 
-    # Effort signal (weight 30%)
+    # Per-type volume ratios (improvement #5)
+    per_type_ratios: Dict[str, float] = {}
+    for wtype in ("easy", "long", "tempo", "interval", "hill"):
+        planned = planned_by_type.get(wtype, 0)
+        actual = actual_by_type.get(wtype, 0)
+        if planned > 0:
+            per_type_ratios[wtype] = max(0.5, min(1.5, actual / planned))
+
+    # --- Effort signal (weight 30%) — continuous mapping (improvement #2) ---
     effort_sum = 0.0
     effort_weight_sum = 0.0
+    recent_efforts: List[float] = []
     for run in all_plan_runs:
         if run.perceived_effort is not None:
             run_date = _to_date(run.date) if run.date else today
             w = recency_weight_fn(run_date)
             effort_sum += run.perceived_effort * w
             effort_weight_sum += w
+            recent_efforts.append(run.perceived_effort)
 
     if effort_weight_sum > 0:
         avg_effort = effort_sum / effort_weight_sum
-        if avg_effort <= 3:
-            effort_factor = 1.08
-        elif avg_effort <= 5:
-            effort_factor = 1.03
-        elif avg_effort <= 7:
-            effort_factor = 1.00
-        elif avg_effort <= 8.5:
-            effort_factor = 0.95
-        else:
-            effort_factor = 0.88
+        # Continuous linear mapping: effort 1→1.10, effort 10→0.85
+        effort_factor = max(0.85, min(1.10, 1.10 - (avg_effort - 1.0) * (0.25 / 9.0)))
     else:
         effort_factor = 1.0
         avg_effort = None
 
-    # Completion rate (weight 20%)
+    # --- Effort trend (improvement #4) ---
+    effort_trend = _compute_effort_trend(recent_efforts)
+    trend_modifier = {
+        "increasing": -0.03,
+        "decreasing": +0.02,
+        "stable": 0.0,
+        "insufficient_data": 0.0,
+    }.get(effort_trend, 0.0)
+
+    # --- Completion rate (weight 20%) ---
     completed_ids = set()
     if past_workout_ids:
         completed_rows = (
@@ -277,11 +333,24 @@ def _compute_adjustment_signals(
     else:
         completion_factor = 0.90
 
+    # --- Combine signals ---
     raw_multiplier = (
         (volume_ratio * 0.50)
         + (effort_factor * 0.30)
         + (completion_factor * 0.20)
     )
+
+    # Apply effort trend modifier
+    raw_multiplier += trend_modifier
+
+    # Overreach detection override (improvement #3):
+    # If runner is doing much more than planned AND reporting very high effort,
+    # they're overreaching — force a reduction regardless of weighted formula
+    overreach_detected = False
+    if volume_ratio > 1.2 and avg_effort is not None and avg_effort > 8.0:
+        raw_multiplier = min(raw_multiplier, 0.88)
+        overreach_detected = True
+
     multiplier = round(max(0.85, min(1.15, raw_multiplier)), 2)
 
     return {
@@ -289,10 +358,29 @@ def _compute_adjustment_signals(
         "volume_ratio": round(volume_ratio, 2),
         "effort_factor": round(effort_factor, 2),
         "avg_effort": round(avg_effort, 1) if avg_effort is not None else None,
+        "effort_trend": effort_trend,
         "completion_rate": round(completion_rate, 2),
         "completion_factor": round(completion_factor, 2),
         "raw_multiplier": round(raw_multiplier, 3),
+        "trend_modifier": round(trend_modifier, 3),
+        "overreach_detected": overreach_detected,
+        "per_type_ratios": {k: round(v, 2) for k, v in per_type_ratios.items()},
     }
+
+
+def _compute_effort_trend(efforts: List[float]) -> str:
+    """Analyze if effort is increasing, decreasing, or stable."""
+    if len(efforts) < 4:
+        return "insufficient_data"
+    mid_point = len(efforts) // 2
+    first_half_avg = sum(efforts[:mid_point]) / mid_point
+    second_half_avg = sum(efforts[mid_point:]) / (len(efforts) - mid_point)
+    diff = second_half_avg - first_half_avg
+    if diff > 1.0:
+        return "increasing"
+    elif diff < -1.0:
+        return "decreasing"
+    return "stable"
 
 
 def _check_vdot_recalibration(
@@ -409,12 +497,18 @@ def _apply_adjustment_to_future_weeks(
     *,
     current_week: int | None = None,
     current_day_of_week: int | None = None,
+    per_type_ratios: Optional[Dict[str, float]] = None,
 ) -> Tuple[int, bool]:
     """Apply the adjustment multiplier to future weeks.
+
+    Uses per-type ratios (improvement #5) when available, falling back to
+    the blanket multiplier. Enforces quality caps (improvement #1) after
+    all scaling is done.
 
     Returns (weeks_changed, any_distance_changed).
     """
     plan_data, pd_week, pd_workout = parse_plan_data_lookups(training_plan)
+    target_distance = training_plan.target_distance_km
 
     workouts_by_week = batch_workouts_by_week(
         [week.id for week in future_weeks], db
@@ -426,6 +520,7 @@ def _apply_adjustment_to_future_weeks(
     for week in future_weeks:
         workouts = workouts_by_week.get(week.id, [])
         week_changed = False
+        phase = pd_week.get(week.week_number, {}).get("phase", "build")
 
         for workout in workouts:
             if (
@@ -445,13 +540,21 @@ def _apply_adjustment_to_future_weeks(
 
             base_distance = workout.baseline_distance_km or workout.distance_km
 
-            if workout.workout_type == "long" and multiplier < 1.0:
+            # Per-type multiplier: use type-specific ratio when we have enough
+            # data for that type, otherwise fall back to blanket multiplier
+            wtype = workout.workout_type or "easy"
+            type_mult = multiplier
+            if per_type_ratios and wtype in per_type_ratios:
+                type_ratio = per_type_ratios[wtype]
+                type_mult = round(max(0.85, min(1.15, type_ratio)), 2)
+
+            if workout.workout_type == "long" and type_mult < 1.0:
                 new_distance = round(base_distance, 1)
             elif workout.workout_type in ("interval", "tempo", "hill", "vo2max", "race_pace", "fartlek"):
-                quality_mult = 1.0 + (multiplier - 1.0) * 0.5
+                quality_mult = 1.0 + (type_mult - 1.0) * 0.5
                 new_distance = max(1.0, round(base_distance * quality_mult, 1))
             else:
-                new_distance = max(1.0, round(base_distance * multiplier, 1))
+                new_distance = max(1.0, round(base_distance * type_mult, 1))
             old_distance = workout.distance_km
 
             if new_distance == old_distance:
@@ -461,11 +564,11 @@ def _apply_adjustment_to_future_weeks(
             any_distance_changed = True
             week_changed = True
 
-            is_protected = workout.workout_type == "long" and multiplier < 1.0
+            is_protected = workout.workout_type == "long" and type_mult < 1.0
 
             clean_notes = ANNOTATION_RE.sub("", workout.notes or "").strip()
-            if multiplier != 1.0 and not is_protected:
-                adjust_note = f"(Adjusted: x{multiplier})"
+            if type_mult != 1.0 and not is_protected:
+                adjust_note = f"(Adjusted: x{type_mult})"
                 workout.notes = (
                     f"{clean_notes} {adjust_note}".strip()
                     if clean_notes
@@ -483,8 +586,8 @@ def _apply_adjustment_to_future_weeks(
                 pd_clean = ANNOTATION_RE.sub(
                     "", pd_wo.get("notes", pd_wo.get("description", ""))
                 ).strip()
-                if multiplier != 1.0 and not is_protected:
-                    adjust_note = f"(Adjusted: x{multiplier})"
+                if type_mult != 1.0 and not is_protected:
+                    adjust_note = f"(Adjusted: x{type_mult})"
                     pd_wo["notes"] = (
                         f"{pd_clean} {adjust_note}".strip()
                         if pd_clean
@@ -492,6 +595,10 @@ def _apply_adjustment_to_future_weeks(
                     )
                 else:
                     pd_wo["notes"] = pd_clean
+
+        # Improvement #1: enforce quality caps after scaling
+        if week_changed and target_distance > 0:
+            enforce_week_caps(workouts, target_distance, phase)
 
         if week_changed:
             weeks_changed += 1
@@ -501,6 +608,11 @@ def _apply_adjustment_to_future_weeks(
             week.total_km = new_total
             if week.week_number in pd_week:
                 pd_week[week.week_number]["total_km"] = new_total
+                # Sync capped distances back to plan_data
+                for workout in workouts:
+                    pd_wo = pd_workout.get((week.week_number, workout.day_of_week))
+                    if pd_wo is not None:
+                        pd_wo["distance"] = workout.distance_km
 
     training_plan.plan_data = plan_data
     return weeks_changed, any_distance_changed

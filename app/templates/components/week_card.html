@@ -19,11 +19,25 @@
             {{ ns.completed }}/{{ ns.total }}
         </div>
         {% endif %}
+        {% if week_evolution is defined and week.week in week_evolution %}
+        {% set evo = week_evolution[week.week] %}
+        <div class="week-evolution-badge week-evo-{{ evo.direction }}" title="Originally {{ evo.original_km }} km, now {{ evo.current_km }} km">
+            {% if evo.direction == 'up' %}
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 19V5M5 12l7-7 7 7"/></svg>
+            {% else %}
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12l7 7 7-7"/></svg>
+            {% endif %}
+            {{ evo.delta_pct }}%
+        </div>
+        {% endif %}
         <div class="week-total">{{ week.total_km }} km</div>
         {% if user and overridden_weeks is defined and week.week in overridden_weeks %}
         <button class="reset-week-btn" onclick="resetWeek({{ week.week }})" title="Reset to original distances">Reset week</button>
         {% endif %}
     </div>
+    {% if week.recovery_inserted %}
+    <div class="week-recovery-inserted-badge">Recovery week inserted — easy pace only</div>
+    {% endif %}
 
     {% set day_names = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'] %}
     <div class="workout-grid">

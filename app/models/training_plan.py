@@ -47,6 +47,7 @@ class TrainingPlan(Base):
     plan_data_version = Column(Integer, default=CURRENT_SCHEMA_VERSION)
 
     adaptation_alert = Column(JSON, nullable=True)
+    adaptation_history = Column(JSON, nullable=True)
     last_adjusted_at = Column(DateTime, nullable=True)
     last_recalibrated_at = Column(DateTime, nullable=True)
     share_token = Column(String, unique=True, nullable=True, index=True)

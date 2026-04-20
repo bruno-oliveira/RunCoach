@@ -16,6 +16,11 @@ from app.core.training.key_workout_library import KeyWorkoutLibrary
 from app.core.training.strength_plan import derive_experience_level
 from app.core.training import workout_steps as _steps_mod
 from app.core.training.vdot_calculator import VDOTCalculator
+from app.core.training.quality_caps import (
+    MAX_QUALITY_VS_LONG_RUN,
+    MAX_EASY_VS_LONG_RUN,
+    get_quality_caps as _get_quality_caps,
+)
 from app.exceptions import ZeroMileageUnsupportedException
 
 # Re-export for any code that imports PHASE_DISTRIBUTIONS from here
@@ -26,45 +31,6 @@ from app.core.training import mileage_progression
 from app.core.training import workout_distribution as workout_dist_mod
 from app.core.training import workout_builders
 from app.core.training import long_run_calculator
-
-
-# --- Training safety ratios ---------------------------------------------------
-# Quality workouts (tempo/interval/hill) may not exceed this fraction of the
-# long run distance. Prevents a hard effort being longer than the weekly
-# endurance anchor, which would invert the easy/hard ratio.
-MAX_QUALITY_VS_LONG_RUN = 0.85
-
-# Individual easy runs may not exceed this fraction of the long run distance.
-# Keeps the long run as the unambiguous weekly peak and preserves the 80/20
-# easy/hard principle.
-MAX_EASY_VS_LONG_RUN = 0.95
-
-# Base phase reduces quality caps by this factor — early quality is
-# introduced conservatively while aerobic base is built.
-BASE_PHASE_QUALITY_REDUCTION = 0.80
-
-# Distance-scaled physiological quality caps (km). Shorter races need smaller
-# quality volumes; trail prioritises hill work over tempo/interval.
-_QUALITY_CAPS_BY_DISTANCE = {
-    5.0:  {'tempo': 6.0,  'interval': 5.0,  'hill': 5.0},
-    10.0: {'tempo': 10.0, 'interval': 8.0,  'hill': 6.0},
-    21.1: {'tempo': 14.0, 'interval': 10.0, 'hill': 8.0},
-    30.0: {'tempo': 12.0, 'interval': 8.0,  'hill': 12.0},  # trail: hill is primary
-    42.2: {'tempo': 18.0, 'interval': 12.0, 'hill': 10.0},
-}
-_DEFAULT_QUALITY_CAPS = {'tempo': 12.0, 'interval': 10.0, 'hill': 8.0}
-
-
-def _get_quality_caps(target_distance: float, phase: str) -> Dict[str, float]:
-    """Distance-scaled physiological caps for quality workout distances (km).
-
-    Base phase caps are reduced by ``BASE_PHASE_QUALITY_REDUCTION`` to keep
-    early-cycle quality conservative.
-    """
-    caps = _QUALITY_CAPS_BY_DISTANCE.get(target_distance, _DEFAULT_QUALITY_CAPS)
-    if phase == 'base':
-        return {k: round(v * BASE_PHASE_QUALITY_REDUCTION, 1) for k, v in caps.items()}
-    return caps
 
 
 def _inject_pace_into_steps(steps: List[Dict[str, Any]],

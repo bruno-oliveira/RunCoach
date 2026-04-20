@@ -312,6 +312,37 @@
     </div>
     {% endif %}
 
+    {% if adaptation_timeline and adaptation_timeline|length > 0 %}
+    <div class="adaptation-timeline-panel" style="margin-bottom: var(--space-6);">
+        <details class="adaptation-timeline-details">
+            <summary class="adaptation-timeline-summary">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                Plan Evolution <span class="adaptation-timeline-count">{{ adaptation_timeline|length }} adaptation{{ 's' if adaptation_timeline|length != 1 else '' }}</span>
+            </summary>
+            <div class="adaptation-timeline-entries">
+                {% for event in adaptation_timeline|reverse %}
+                <div class="timeline-entry timeline-{{ event.type }}">
+                    <div class="timeline-dot"></div>
+                    <div class="timeline-content">
+                        <span class="timeline-date">{{ event.date }}</span>
+                        {% if event.type == 'adjust' %}
+                        <span class="timeline-badge timeline-badge-adjust">
+                            {% if event.get('overreach', false) %}Overreach detected{% elif event.get('direction') == 'increased' %}Adjusted up{% elif event.get('direction') == 'reduced' %}Adjusted down{% else %}Reviewed{% endif %}
+                        </span>
+                        {% elif event.type == 'recalibrate' %}
+                        <span class="timeline-badge timeline-badge-recalibrate">
+                            {% if event.get('strategy') == 'recovery_insertion' %}Recovery inserted{% elif event.get('strategy') == 'missed_week' %}Missed week{% elif event.get('strategy') == 'time_off' %}Time off{% elif event.get('strategy') == 'ahead' %}Ahead of plan{% else %}Recalibrated{% endif %}
+                        </span>
+                        {% endif %}
+                        <div class="timeline-reason">{{ event.reason }}</div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </details>
+    </div>
+    {% endif %}
+
     {% if progress_data and progress_data.completed_count > 0 %}
     <div class="plan-insights" style="margin-bottom: var(--space-6);">
         <h3>Your Progress</h3>
@@ -376,6 +407,20 @@
 
     <!-- Pinned current week — always visible above tabs -->
     {% if current_week_number %}
+
+    {% if week_pulse %}
+    <div class="week-pulse week-pulse--{{ week_pulse.mood }}">
+        <div class="week-pulse-message">{{ week_pulse.message }}</div>
+        {% if week_pulse.details %}
+        <div class="week-pulse-details">
+            {% for detail in week_pulse.details %}
+            <span class="week-pulse-detail">{{ detail }}</span>
+            {% endfor %}
+        </div>
+        {% endif %}
+    </div>
+    {% endif %}
+
     {% for week in plan if week.week == current_week_number %}
     <div class="pinned-week" id="pinned-current-week">
         <div class="pinned-week-label">This Week</div>
@@ -460,6 +505,10 @@
                 <button class="recalibrate-option" onclick="recalibratePlan('ahead')">
                     <strong>I'm ahead of schedule</strong>
                     <span>Bump up remaining weeks' targets by 10%</span>
+                </button>
+                <button class="recalibrate-option" onclick="recalibratePlan('recovery_insertion')">
+                    <strong>I need extra recovery</strong>
+                    <span>Convert next week to a recovery week (60% volume, easy pace only)</span>
                 </button>
             </div>
             <button class="btn btn-ghost btn-small" style="margin-top:12px" onclick="document.getElementById('recalibrate-modal').style.display='none'">Cancel</button>

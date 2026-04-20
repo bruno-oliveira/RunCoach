@@ -41,30 +41,35 @@ class PlanViewService:
         training_plan_id: str,
         db: Session,
     ) -> list[dict]:
-        """Inject database DailyWorkout.id into each workout dict.
+        """Inject database DailyWorkout.id and baseline_distance into each workout dict.
 
         The plan_data JSON doesn't include database IDs, but the template
         needs them to look up logged runs via ``logged_runs.get(workout.id)``.
-        This method queries the DailyWorkout table and matches by
-        (week_number, day_of_week) to inject the ``id`` key.
+        Also injects ``baseline_distance`` so the template can show
+        original vs adjusted distance.
         """
         rows = (
             db.query(
                 WeeklyPlan.week_number,
                 DailyWorkout.day_of_week,
                 DailyWorkout.id,
+                DailyWorkout.baseline_distance_km,
             )
             .join(DailyWorkout, DailyWorkout.weekly_plan_id == WeeklyPlan.id)
             .filter(WeeklyPlan.training_plan_id == training_plan_id)
             .all()
         )
-        id_map = {(wn, dow): wid for wn, dow, wid in rows}
+        id_map = {(wn, dow): wid for wn, dow, wid, _ in rows}
+        baseline_map = {(wn, dow): bl for wn, dow, _, bl in rows}
 
         for week in plan_data:
             week_num = week.get("week")
             for workout in week.get("daily_workouts", []):
                 key = (week_num, workout.get("day"))
                 workout["id"] = id_map.get(key)
+                bl = baseline_map.get(key)
+                if bl is not None and bl != workout.get("distance"):
+                    workout["baseline_distance"] = bl
 
         return plan_data
 
@@ -317,6 +322,131 @@ class PlanViewService:
             "message": "Keep the momentum going -- start your next training plan.",
         })
 
+    def get_week_pulse(
+        self,
+        training_plan: TrainingPlan,
+        current_week: int,
+        db: Session,
+    ) -> Optional[dict[str, Any]]:
+        """Generate a chatty 'week pulse' summary tying recent activity together.
+
+        Returns a dict with 'message' (main feedback), 'mood' (positive/neutral/
+        caution), and 'details' (list of data points). Returns None if there's
+        not enough data.
+        """
+        from app.utils import to_date as _to_date
+        from datetime import date as _date
+
+        if not training_plan.start_date:
+            return None
+
+        start_date = (
+            training_plan.start_date.date()
+            if isinstance(training_plan.start_date, datetime)
+            else training_plan.start_date
+        )
+
+        # Get runs from the current week and previous week
+        week_start = start_date + timedelta(weeks=current_week - 1)
+        prev_week_start = start_date + timedelta(weeks=max(0, current_week - 2))
+        today = _date.today()
+
+        current_week_runs = (
+            db.query(RunLog)
+            .filter(
+                RunLog.training_plan_id == training_plan.id,
+                RunLog.date >= week_start,
+                RunLog.date <= today,
+            )
+            .all()
+        )
+
+        prev_week_runs = (
+            db.query(RunLog)
+            .filter(
+                RunLog.training_plan_id == training_plan.id,
+                RunLog.date >= prev_week_start,
+                RunLog.date < week_start,
+            )
+            .all()
+        )
+
+        if not current_week_runs and not prev_week_runs:
+            return None
+
+        # Compute metrics
+        current_km = sum(r.distance_km or 0 for r in current_week_runs)
+        prev_km = sum(r.distance_km or 0 for r in prev_week_runs)
+        current_efforts = [r.perceived_effort for r in current_week_runs if r.perceived_effort]
+        prev_efforts = [r.perceived_effort for r in prev_week_runs if r.perceived_effort]
+
+        avg_effort_now = sum(current_efforts) / len(current_efforts) if current_efforts else None
+        avg_effort_prev = sum(prev_efforts) / len(prev_efforts) if prev_efforts else None
+
+        # Get planned total for current week from plan_data
+        plan_data = training_plan.plan_data or []
+        week_data = next((w for w in plan_data if w.get("week") == current_week), None)
+        planned_km = week_data.get("total_km", 0) if week_data else 0
+
+        # Build the chatty message
+        messages = []
+        details = []
+        mood = "neutral"
+
+        runs_this_week = len(current_week_runs)
+        if runs_this_week > 0:
+            details.append(f"{runs_this_week} run{'s' if runs_this_week != 1 else ''} logged this week ({current_km:.1f} km)")
+
+        if planned_km > 0 and current_km > 0:
+            pct = current_km / planned_km * 100
+            if pct >= 90:
+                messages.append("You're on track this week — strong execution.")
+                mood = "positive"
+            elif pct >= 60:
+                messages.append(f"About {pct:.0f}% of this week's volume done. Keep going!")
+                mood = "positive"
+            elif pct > 0:
+                messages.append(f"{pct:.0f}% done so far. Still time to get the key sessions in.")
+                mood = "neutral"
+
+        if prev_km > 0 and current_km > 0:
+            if current_km > prev_km * 0.8:
+                details.append(f"Volume holding steady vs last week ({prev_km:.0f} km)")
+            elif current_km < prev_km * 0.5 and runs_this_week >= 2:
+                details.append(f"Lower volume than last week ({prev_km:.0f} km) — intentional rest?")
+
+        if avg_effort_now is not None:
+            if avg_effort_now <= 5:
+                details.append(f"Avg effort: {avg_effort_now:.1f}/10 — feeling fresh")
+            elif avg_effort_now <= 7:
+                details.append(f"Avg effort: {avg_effort_now:.1f}/10 — good working range")
+            else:
+                details.append(f"Avg effort: {avg_effort_now:.1f}/10 — running hard this week")
+                mood = "caution"
+
+            if avg_effort_prev is not None:
+                if avg_effort_now > avg_effort_prev + 1.5:
+                    messages.append("Effort is climbing compared to last week. Watch for fatigue.")
+                    mood = "caution"
+                elif avg_effort_now < avg_effort_prev - 1.5:
+                    messages.append("Runs are feeling easier — your fitness is adapting!")
+                    mood = "positive"
+
+        if not messages and runs_this_week == 0 and prev_km > 0:
+            messages.append("No runs logged yet this week. Ready to get started?")
+            mood = "neutral"
+
+        if not messages:
+            messages.append("Keep it up — consistency builds fitness.")
+
+        return {
+            "message": messages[0] if messages else None,
+            "mood": mood,
+            "details": details[:3],
+            "runs_this_week": runs_this_week,
+            "km_this_week": round(current_km, 1),
+        }
+
     def get_plan_view_data(
         self,
         training_plan: TrainingPlan,
@@ -378,6 +508,24 @@ class PlanViewService:
         )
         overridden_weeks = {row[0] for row in overridden_week_rows}
 
+        # Adaptation evolution data for UI
+        adaptation_timeline = training_plan.adaptation_history or []
+        week_evolution = self._compute_week_evolution(training_plan, db)
+
+        # Week pulse — chatty inline feedback
+        week_pulse = None
+        if current_user and training_plan.start_date:
+            from datetime import date as _d2, datetime as _dt2
+            sd2 = training_plan.start_date
+            start_d2 = sd2.date() if isinstance(sd2, _dt2) else sd2
+            delta2 = (_d2.today() - start_d2).days
+            cw = (delta2 // 7) + 1 if delta2 >= 0 else 0
+            if 1 <= cw <= (training_plan.weeks_duration or 0):
+                try:
+                    week_pulse = self.get_week_pulse(training_plan, cw, db)
+                except Exception as e:
+                    logger.warning(f"Week pulse failed: {e}")
+
         return {
             "performance_analysis": performance_analysis,
             "logged_runs": logged_runs_map,
@@ -388,4 +536,55 @@ class PlanViewService:
             "completion_stats": completion_stats,
             "next_plan_cta": next_plan_cta,
             "overridden_weeks": overridden_weeks,
+            "adaptation_timeline": adaptation_timeline,
+            "week_evolution": week_evolution,
+            "week_pulse": week_pulse,
         }
+
+    def _compute_week_evolution(
+        self,
+        training_plan: TrainingPlan,
+        db: Session,
+    ) -> dict[int, dict[str, Any]]:
+        """Compute per-week evolution data showing original vs current state.
+
+        Returns {week_number: {direction, original_km, current_km, delta_pct}}.
+        """
+        plan_data = training_plan.plan_data or []
+
+        weekly_plans = (
+            db.query(WeeklyPlan)
+            .filter(WeeklyPlan.training_plan_id == training_plan.id)
+            .all()
+        )
+
+        # Get original totals from baseline distances
+        evolution: dict[int, dict[str, Any]] = {}
+        for wp in weekly_plans:
+            workouts = (
+                db.query(DailyWorkout)
+                .filter(DailyWorkout.weekly_plan_id == wp.id)
+                .all()
+            )
+            original_total = sum(
+                w.baseline_distance_km or w.distance_km or 0
+                for w in workouts
+                if w.workout_type not in ("rest", "recovery")
+            )
+            current_total = sum(
+                w.distance_km or 0
+                for w in workouts
+                if w.workout_type not in ("rest", "recovery")
+            )
+
+            if original_total > 0 and abs(current_total - original_total) > 0.2:
+                delta_pct = round((current_total - original_total) / original_total * 100)
+                direction = "up" if delta_pct > 0 else "down"
+                evolution[wp.week_number] = {
+                    "direction": direction,
+                    "original_km": round(original_total, 1),
+                    "current_km": round(current_total, 1),
+                    "delta_pct": delta_pct,
+                }
+
+        return evolution

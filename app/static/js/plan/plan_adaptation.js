@@ -251,6 +251,18 @@
             if (alertData) {
                 alertText.textContent = alertData.message || 'Your plan needs attention.';
                 if (alertDetail) alertDetail.textContent = alertData.message || '';
+
+                // For fatigue alerts, highlight the recovery insertion option
+                if (alertData.type === 'fatigue_high' && alertData.suggestion === 'recovery_insertion') {
+                    var recoveryBtn = document.querySelector('[onclick*="recovery_insertion"]');
+                    if (recoveryBtn) {
+                        recoveryBtn.classList.add('recalibrate-option--recommended');
+                        var badge = document.createElement('span');
+                        badge.className = 'recommended-badge';
+                        badge.textContent = 'Recommended';
+                        recoveryBtn.prepend(badge);
+                    }
+                }
             }
         } catch (e) {
             alertText.textContent = 'Your plan may need adjustment.';

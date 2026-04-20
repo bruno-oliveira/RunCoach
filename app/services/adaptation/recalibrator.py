@@ -65,6 +65,11 @@ def recalibrate(
             training_plan, plan_data, pd_week, pd_workout,
             weekly_plans, workouts_by_week, current_week, db,
         )
+    elif strategy == "recovery_insertion":
+        return _recalibrate_recovery_insertion(
+            training_plan, plan_data, pd_week, pd_workout,
+            weekly_plans, workouts_by_week, current_week, db,
+        )
     else:
         return {"ok": False, "error": f"Unknown strategy: {strategy}"}
 
@@ -109,18 +114,21 @@ def recalibrate(
     now = datetime.now(timezone.utc).replace(tzinfo=None)
     training_plan.last_adjusted_at = now
     training_plan.last_recalibrated_at = now
-    db.commit()
 
     strategy_labels = {
         "time_off": "Plan recalibrated with a gentler ramp from current fitness.",
         "ahead": "Plan targets increased based on your strong performance.",
     }
+    reason = strategy_labels.get(strategy, "Plan recalibrated.")
+
+    _record_recalibration_event(training_plan, strategy, weeks_changed, reason)
+    db.commit()
 
     return {
         "ok": True,
         "strategy": strategy,
         "weeks_changed": weeks_changed,
-        "reason": strategy_labels.get(strategy, "Plan recalibrated."),
+        "reason": reason,
     }
 
 
@@ -351,10 +359,19 @@ def _recalibrate_missed_week(
     """Recalibrate after a missed week.
 
     Strategy:
-    1. Scale the next week's distances to 70% (ease-in)
+    1. Scale the next week's distances by a phase-aware ease-in factor
+       (base=80%, build=75%, peak=65%, taper=80%)
     2. Shift subsequent week targets down by 1 week (repeat the progression)
     3. If a taper week exists at the end, shrink it by 1 week to preserve race date
     """
+    # Phase-aware ease-in factors (improvement #6)
+    _PHASE_EASE_IN = {
+        "base": 0.80,
+        "build": 0.75,
+        "peak": 0.65,
+        "taper": 0.80,
+    }
+
     total_weeks = training_plan.weeks_duration or 0
     future_weeks = sorted(
         wk for wk in weekly_plans if wk > current_week and wk <= total_weeks
@@ -363,15 +380,18 @@ def _recalibrate_missed_week(
     if not future_weeks:
         return {"ok": False, "error": "No future weeks to adjust"}
 
-    # Step 1: 70% ease-in for the immediate next week
+    # Step 1: Phase-aware ease-in for the immediate next week
     ease_in_week = future_weeks[0]
+    phase = pd_week.get(ease_in_week, {}).get("phase", "build")
+    ease_factor = _PHASE_EASE_IN.get(phase, 0.70)
+
     ease_workouts = workouts_by_week.get(
         weekly_plans[ease_in_week].id, []
     )
     for workout in ease_workouts:
         if not workout.distance_km or workout.workout_type in ("rest", "recovery"):
             continue
-        workout.distance_km = round(workout.distance_km * 0.70, 1)
+        workout.distance_km = round(workout.distance_km * ease_factor, 1)
         pd_wo = pd_workout.get((ease_in_week, workout.day_of_week))
         if pd_wo:
             pd_wo["distance"] = workout.distance_km
@@ -408,14 +428,119 @@ def _recalibrate_missed_week(
     now = datetime.now(timezone.utc).replace(tzinfo=None)
     training_plan.last_adjusted_at = now
     training_plan.last_recalibrated_at = now
+
+    reason = (
+        f"Plan recalibrated for a missed week: next week eased to {int(ease_factor*100)}% "
+        f"({phase} phase), remaining weeks shifted to preserve race date."
+    )
+    _record_recalibration_event(training_plan, "missed_week", len(future_weeks), reason)
     db.commit()
 
     return {
         "ok": True,
         "strategy": "missed_week",
         "weeks_changed": len(future_weeks),
-        "reason": (
-            "Plan recalibrated for a missed week: next week eased to 70%, "
-            "remaining weeks shifted to preserve race date."
-        ),
+        "reason": reason,
     }
+
+
+def _recalibrate_recovery_insertion(
+    training_plan: TrainingPlan,
+    plan_data: list,
+    pd_week: Dict,
+    pd_workout: Dict,
+    weekly_plans: Dict,
+    workouts_by_week: Dict,
+    current_week: int,
+    db: Session,
+) -> Dict[str, Any]:
+    """Insert an ad-hoc recovery week (improvement #7).
+
+    Converts the next non-recovery week into a recovery week by scaling
+    all workouts to 60% of their current distance, preserving structure
+    but reducing load.
+    """
+    total_weeks = training_plan.weeks_duration or 0
+
+    # Don't allow more than 2 recovery insertions per plan
+    history = training_plan.adaptation_history or []
+    insertion_count = sum(
+        1 for e in history if e.get("type") == "recalibrate" and e.get("strategy") == "recovery_insertion"
+    )
+    if insertion_count >= 2:
+        return {"ok": False, "error": "Maximum recovery insertions (2) already used for this plan."}
+
+    # Find the next non-recovery week
+    target_week_num = None
+    for wk_num in sorted(weekly_plans.keys()):
+        if wk_num <= current_week or wk_num > total_weeks:
+            continue
+        week_data = pd_week.get(wk_num, {})
+        if not week_data.get("is_recovery", False):
+            target_week_num = wk_num
+            break
+
+    if target_week_num is None:
+        return {"ok": False, "error": "No eligible week found for recovery insertion."}
+
+    # Scale all workouts in that week to 60%
+    recovery_factor = 0.60
+    workouts = workouts_by_week.get(weekly_plans[target_week_num].id, [])
+
+    for workout in workouts:
+        if not workout.distance_km or workout.workout_type in ("rest", "recovery"):
+            continue
+        workout.distance_km = round(workout.distance_km * recovery_factor, 1)
+        pd_wo = pd_workout.get((target_week_num, workout.day_of_week))
+        if pd_wo:
+            pd_wo["distance"] = workout.distance_km
+
+    new_total = round(sum(w.distance_km for w in workouts if w.distance_km), 1)
+    weekly_plans[target_week_num].total_km = new_total
+    if target_week_num in pd_week:
+        pd_week[target_week_num]["total_km"] = new_total
+        pd_week[target_week_num]["is_recovery"] = True
+        pd_week[target_week_num]["recovery_inserted"] = True
+
+    training_plan.plan_data = plan_data
+    training_plan.adaptation_alert = None
+    now = datetime.now(timezone.utc).replace(tzinfo=None)
+    training_plan.last_adjusted_at = now
+    training_plan.last_recalibrated_at = now
+
+    reason = (
+        f"Week {target_week_num} converted to recovery (60% volume). "
+        "Listen to your body — easy pace only this week."
+    )
+    _record_recalibration_event(training_plan, "recovery_insertion", 1, reason)
+    db.commit()
+
+    return {
+        "ok": True,
+        "strategy": "recovery_insertion",
+        "weeks_changed": 1,
+        "target_week": target_week_num,
+        "reason": reason,
+    }
+
+
+def _record_recalibration_event(
+    training_plan: TrainingPlan,
+    strategy: str,
+    weeks_changed: int,
+    reason: str,
+) -> None:
+    """Append a recalibration event to adaptation_history."""
+    from ._helpers import today_date
+    event = {
+        "date": today_date().isoformat(),
+        "type": "recalibrate",
+        "strategy": strategy,
+        "weeks_changed": weeks_changed,
+        "reason": reason,
+    }
+    history = training_plan.adaptation_history or []
+    history.append(event)
+    if len(history) > 20:
+        history = history[-20:]
+    training_plan.adaptation_history = history

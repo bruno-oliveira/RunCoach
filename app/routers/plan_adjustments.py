@@ -123,7 +123,7 @@ async def adjust_plan(
 
 
 class RecalibrateRequest(BaseModel):
-    strategy: str  # "time_off" | "ahead"
+    strategy: str  # "time_off" | "ahead" | "missed_week" | "recovery_insertion"
 
 
 @router.post("/api/plan/{plan_id}/recalibrate")

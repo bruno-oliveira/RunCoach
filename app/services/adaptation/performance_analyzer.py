@@ -1,6 +1,7 @@
 """Performance analysis — read-only metrics from logged runs."""
 
-from typing import Any, Dict, List, Optional
+from collections import defaultdict
+from typing import Any, Dict, List, Optional, Tuple
 
 from sqlalchemy.orm import Session
 
@@ -39,6 +40,7 @@ def analyze_performance(
             "avg_effort": None,
             "effort_trend": "insufficient_data",
             "pace_consistency": None,
+            "pace_consistency_by_type": {},
             "recommendations": ["Log more runs to get personalized feedback"],
         }
 
@@ -64,8 +66,27 @@ def analyze_performance(
     avg_effort = sum(efforts) / len(efforts) if efforts else None
     effort_trend = _analyze_effort_trend(efforts)
 
-    paces = [r.avg_pace_min_km for r in runs if r.avg_pace_min_km]
-    pace_consistency = _calculate_pace_consistency(paces) if paces else None
+    # Per-type pace consistency (improvement #8):
+    # Join runs to workouts to get planned type, then compute CV per type
+    paces_by_type = _get_paces_by_type(training_plan_id, db)
+    pace_consistency_by_type = {}
+    all_per_type_cvs = []
+    for wtype, paces in paces_by_type.items():
+        cv = _calculate_pace_consistency(paces)
+        if cv is not None:
+            pace_consistency_by_type[wtype] = cv
+            all_per_type_cvs.append((cv, len(paces)))
+
+    # Weighted average of per-type CVs for a single headline number
+    if all_per_type_cvs:
+        total_weight = sum(count for _, count in all_per_type_cvs)
+        pace_consistency = round(
+            sum(cv * count for cv, count in all_per_type_cvs) / total_weight, 2
+        )
+    else:
+        # Fall back to raw CV across all runs
+        all_paces = [r.avg_pace_min_km for r in runs if r.avg_pace_min_km]
+        pace_consistency = _calculate_pace_consistency(all_paces)
 
     recommendations = _generate_recommendations(
         avg_effort, effort_trend, adherence_rate, pace_consistency
@@ -78,11 +99,32 @@ def analyze_performance(
         "avg_effort": round(avg_effort, 1) if avg_effort else None,
         "effort_trend": effort_trend,
         "pace_consistency": pace_consistency,
+        "pace_consistency_by_type": pace_consistency_by_type,
         "recommendations": recommendations,
     }
 
 
-def _analyze_effort_trend(efforts: List[int]) -> str:
+def _get_paces_by_type(
+    training_plan_id: str, db: Session,
+) -> Dict[str, List[float]]:
+    """Get paces grouped by planned workout type."""
+    rows = (
+        db.query(RunLog.avg_pace_min_km, DailyWorkout.workout_type)
+        .outerjoin(DailyWorkout, RunLog.daily_workout_id == DailyWorkout.id)
+        .filter(
+            RunLog.training_plan_id == training_plan_id,
+            RunLog.avg_pace_min_km.isnot(None),
+        )
+        .all()
+    )
+    paces_by_type: Dict[str, List[float]] = defaultdict(list)
+    for pace, wtype in rows:
+        key = wtype or "unknown"
+        paces_by_type[key].append(pace)
+    return paces_by_type
+
+
+def _analyze_effort_trend(efforts: List) -> str:
     """Analyze if effort is increasing, decreasing, or stable."""
     if len(efforts) < 4:
         return "insufficient_data"

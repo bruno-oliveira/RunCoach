@@ -557,10 +557,15 @@
             if (response.ok) {
                 var result = await response.json();
                 if (result.adjusted) {
-                    var msg = 'Plan adjusted!\n\n' + result.reason;
-                    msg += '\n\n' + result.weeks_changed + ' week(s) updated (x' + result.multiplier + ').';
-                    if (result.raw_multiplier != null) {
-                        msg += '\n\nSignals: volume=' + result.volume_ratio + ', effort=' + result.effort_factor + ', completion=' + result.completion_rate + ' (' + result.total_runs + ' runs)';
+                    var msg = result.reason;
+                    if (result.overreach_detected) {
+                        msg = '⚠️ Overreach detected — plan reduced to protect recovery.\n\n' + msg;
+                    }
+                    if (result.effort_trend && result.effort_trend !== 'stable' && result.effort_trend !== 'insufficient_data') {
+                        msg += '\nEffort trend: ' + result.effort_trend + '.';
+                    }
+                    if (result.vdot_recalibration) {
+                        msg += '\nVDOT updated: ' + result.vdot_recalibration.old_vdot + ' → ' + result.vdot_recalibration.new_vdot + ' (' + result.vdot_recalibration.direction + ')';
                     }
                     ApiClient.showSuccess(msg);
                     setTimeout(function () { reloadPlanPage(); }, 2500);

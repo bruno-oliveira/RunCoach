@@ -8,6 +8,7 @@ from app.models import DailyWorkout, RunLog, TrainingPlan, WeeklyPlan
 from app.utils import to_date as _to_date
 
 from ._helpers import today_date
+from datetime import timedelta
 
 
 def check_alerts(
@@ -116,11 +117,69 @@ def check_alerts(
         db.commit()
         return alert
 
+    # Fatigue alert: high effort + increasing trend (improvement #7 trigger)
+    fatigue_alert = _check_fatigue_alert(plan_id, training_plan, db, today)
+    if fatigue_alert:
+        return fatigue_alert
+
     if training_plan.adaptation_alert is not None:
         training_plan.adaptation_alert = None
         db.commit()
 
     return None
+
+
+def _check_fatigue_alert(
+    plan_id: str,
+    training_plan,
+    db: Session,
+    today,
+) -> Optional[Dict[str, Any]]:
+    """Check for high fatigue signals that suggest a recovery insertion."""
+    recent_cutoff = today - timedelta(weeks=2)
+    recent_runs = (
+        db.query(RunLog)
+        .filter(
+            RunLog.training_plan_id == plan_id,
+            RunLog.date >= recent_cutoff,
+            RunLog.perceived_effort.isnot(None),
+        )
+        .all()
+    )
+
+    if len(recent_runs) < 3:
+        return None
+
+    efforts = [r.perceived_effort for r in recent_runs if r.perceived_effort]
+    if not efforts:
+        return None
+
+    avg_recent_effort = sum(efforts) / len(efforts)
+
+    if avg_recent_effort < 7.5:
+        return None
+
+    # Check for increasing trend in the last few runs
+    if len(efforts) >= 4:
+        mid = len(efforts) // 2
+        first_half = sum(efforts[:mid]) / mid
+        second_half = sum(efforts[mid:]) / (len(efforts) - mid)
+        if second_half - first_half < 0.5:
+            return None
+
+    alert = {
+        "type": "fatigue_high",
+        "severity": "medium",
+        "message": (
+            f"Your recent effort is averaging {avg_recent_effort:.1f}/10 and trending up. "
+            "Consider inserting a recovery week."
+        ),
+        "suggestion": "recovery_insertion",
+        "created_at": today.isoformat(),
+    }
+    training_plan.adaptation_alert = alert
+    db.commit()
+    return alert
 
 
 def _cooldown_level(
