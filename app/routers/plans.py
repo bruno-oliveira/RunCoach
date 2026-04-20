@@ -187,6 +187,22 @@ async def generate_plan(
         )
 
 
+def _parse_time_to_pace(time_str: str, distance_km: float) -> float:
+    parts = time_str.strip().split(':')
+    if len(parts) == 2:
+        minutes = int(parts[0])
+        seconds = int(parts[1])
+        total_minutes = minutes + seconds / 60
+    elif len(parts) == 3:
+        hours = int(parts[0])
+        minutes = int(parts[1])
+        seconds = int(parts[2])
+        total_minutes = hours * 60 + minutes + seconds / 60
+    else:
+        raise ValueError("Time must be in MM:SS or HH:MM:SS format")
+    return total_minutes / distance_km
+
+
 async def _generate_time_goal_plan(
     request: Request,
     current_km: float,
@@ -201,8 +217,6 @@ async def _generate_time_goal_plan(
     plan_service: PlanService,
 ):
     """Dispatch performance (time-goal) plan creation from the unified form."""
-    from app.routers.performance import _parse_time_to_pace
-
     if not current_user:
         return error_response(
             request, None,

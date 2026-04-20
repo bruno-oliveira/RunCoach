@@ -10,7 +10,7 @@ import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy.orm import Session
 
-from app.dependencies import get_current_user, get_db
+from app.dependencies import get_current_user, get_db, get_optional_user
 from app.main import app
 from app.models.user import User
 
@@ -194,3 +194,50 @@ class TestRecipesRouter:
             resp = c.get("/api/recipes/favorites")
         assert resp.status_code == 200
         assert resp.json()["recipes"] == []
+
+
+# ---------------------------------------------------------------------------
+# Time-goal plan generation  (/generate-plan with plan_mode=time)
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.usefixtures("_override_db")
+class TestTimeGoalPlan:
+    def test_time_goal_plan_generates_successfully(self, smoke_user):
+        """Time-goal plan should redirect to the new plan on success."""
+        _set_user(smoke_user)
+        app.dependency_overrides[get_optional_user] = lambda: smoke_user
+        try:
+            with TestClient(app) as c:
+                resp = c.post("/generate-plan", data={
+                    "current_km": 30.0,
+                    "target_distance": "10",
+                    "weeks": 8,
+                    "max_runs_per_week": 4,
+                    "plan_mode": "time",
+                    "goal_time_required": "50:00",
+                    "current_time": "55:00",
+                }, follow_redirects=False)
+            assert resp.status_code == 303
+            assert resp.headers["location"].startswith("/plan/")
+        finally:
+            app.dependency_overrides.pop(get_optional_user, None)
+
+    def test_time_goal_plan_requires_auth(self):
+        """Time-goal plan without auth should return auth_required error."""
+        _clear_user()
+        app.dependency_overrides[get_optional_user] = lambda: None
+        try:
+            with TestClient(app) as c:
+                resp = c.post("/generate-plan", data={
+                    "current_km": 30.0,
+                    "target_distance": "10",
+                    "weeks": 8,
+                    "max_runs_per_week": 4,
+                    "plan_mode": "time",
+                    "goal_time_required": "50:00",
+                })
+            assert resp.status_code == 200
+            assert "logged-in" in resp.text.lower() or "auth" in resp.text.lower()
+        finally:
+            app.dependency_overrides.pop(get_optional_user, None)
