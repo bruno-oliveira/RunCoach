@@ -1,6 +1,5 @@
 """Plan creation, customization, and deletion business logic."""
 
-import json
 import logging
 from datetime import date, datetime, timedelta
 from typing import Any, Optional
@@ -14,6 +13,7 @@ from app.core.training.vdot_calculator import VDOTCalculator
 from app.services.adaptation_service import AdaptationService
 from app.services.hr_zone_service import HRZoneService
 from app.services.plan_view_service import PlanViewService
+from app.config import settings
 from app.models import (
     DailyWorkout,
     PlanCustomization,
@@ -38,8 +38,6 @@ logger = logging.getLogger(__name__)
 class PlanService:
     """Encapsulates plan lifecycle operations."""
 
-    MAX_PLANS_PER_USER = 3
-
     def __init__(self) -> None:
         self._adaptation_service = AdaptationService()
         self._plan_view_service = PlanViewService()
@@ -61,7 +59,7 @@ class PlanService:
             if not self._is_plan_completed(p, today)
         )
         triathlon_count = db.query(TriathlonPlan).filter(TriathlonPlan.user_id == user_id).count()
-        return (active_training + triathlon_count) >= self.MAX_PLANS_PER_USER
+        return (active_training + triathlon_count) >= settings.max_plans_per_user
 
     @staticmethod
     def _is_plan_completed(plan: TrainingPlan, today: date) -> bool:
@@ -159,7 +157,7 @@ class PlanService:
             logger.info(
                 f"Duplicate plan detected for user {user.id} — returning existing plan {existing.id}"
             )
-            return existing, json.loads(existing.plan_data) if existing.plan_data else []
+            return existing, existing.plan_data if existing.plan_data else []
 
         effective_vdot = plan_request.goal_vdot or plan_request.vdot
         plan_data = plan_generator.generate_plan(
@@ -203,7 +201,7 @@ class PlanService:
             target_distance=str(plan_request.target_distance),
             weeks_duration=plan_request.weeks,
             max_runs_per_week=plan_request.max_runs_per_week,
-            plan_data=json.dumps(plan_data),
+            plan_data=plan_data,
             body_weight_kg=plan_request.body_weight_kg,
             recent_race_distance_km=plan_request.recent_race_distance_km,
             recent_race_time_seconds=(
@@ -232,7 +230,7 @@ class PlanService:
                 training_plan_id=training_plan.id,
                 week_number=week_data["week"],
                 total_km=week_data["total_km"],
-                workout_types=json.dumps(week_data.get("workout_distribution", {})),
+                workout_types=week_data.get("workout_distribution", {}),
             )
             db.add(weekly_plan)
             db.flush()
@@ -288,7 +286,7 @@ class PlanService:
                             dw.hr_zone_target = hr_target
                         if key_wk_id is not None:
                             dw.key_workout_id = key_wk_id
-            training_plan.plan_data = json.dumps(plan_data)
+            training_plan.plan_data = plan_data
         except Exception as e:
             logger.warning(
                 f"HR zone injection failed for plan {training_plan.id}: {e}"
@@ -307,7 +305,7 @@ class PlanService:
             plan_request.target_distance,
             body_weight=plan_request.body_weight_kg,
         )
-        training_plan.nutrition_plan_data = json.dumps(nutrition_plan)
+        training_plan.nutrition_plan_data = nutrition_plan
 
         nutrition_phases = nutrition_engine.generate_phased_nutrition_plan(
             plan_data,
@@ -315,7 +313,7 @@ class PlanService:
             plan_request.target_distance,
             body_weight_kg=plan_request.body_weight_kg,
         )
-        training_plan.nutrition_phases_data = json.dumps(nutrition_phases)
+        training_plan.nutrition_phases_data = nutrition_phases
 
     @staticmethod
     def _attach_race_protocol(
@@ -334,7 +332,7 @@ class PlanService:
             plan_request.target_distance,
             goal_pace,
         )
-        training_plan.race_protocol_data = json.dumps(race_protocol)
+        training_plan.race_protocol_data = race_protocol
 
     @staticmethod
     def _goal_pace_from_vdot(
@@ -378,7 +376,7 @@ class PlanService:
         Returns:
             The updated plan_data list.
         """
-        plan_data = json.loads(training_plan.plan_data) if training_plan.plan_data else []
+        plan_data = training_plan.plan_data if training_plan.plan_data else []
 
         if adjustment_type == "intensity":
             plan_data = adjust_intensity(plan_data, week_number, adjustment_value)
@@ -397,7 +395,7 @@ class PlanService:
         )
         db.add(customization)
 
-        training_plan.plan_data = json.dumps(plan_data)
+        training_plan.plan_data = plan_data
         db.commit()
 
         return plan_data

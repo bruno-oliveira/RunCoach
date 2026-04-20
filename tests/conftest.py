@@ -1,28 +1,38 @@
 """Pytest fixtures for RunCoach tests."""
 
+import os
+import tempfile
+
 import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine, event
 from sqlalchemy.orm import Session, sessionmaker
-from sqlalchemy.pool import StaticPool
+
+from alembic import command
+from alembic.config import Config
 
 from app.dependencies import get_db
-from app.main import app
 from app.models import Base
 from app.core.nutrition.nutrition_engine import NutritionEngine
 from app.core.generators.plan_generator import TrainingPlanGenerator
 
 
+def _run_alembic_migrations(engine) -> None:
+    """Run Alembic migrations against the given engine."""
+    alembic_cfg = Config("alembic.ini")
+    alembic_cfg.set_main_option("sqlalchemy.url", str(engine.url))
+    command.upgrade(alembic_cfg, "head")
+
+
 @pytest.fixture(scope="function")
 def test_db() -> Session:
-    """Create a test database session."""
-    engine = create_engine(
-        "sqlite:///:memory:",
-        connect_args={"check_same_thread": False},
-        poolclass=StaticPool,
-    )
+    """Create a test database session using a temporary file."""
+    tmp = tempfile.NamedTemporaryFile(suffix=".db", delete=False)
+    tmp.close()
+    db_url = f"sqlite:///{tmp.name}"
 
-    # Match production SQLite pragmas (dependencies.py)
+    engine = create_engine(db_url)
+
     @event.listens_for(engine, "connect")
     def _set_sqlite_pragmas(dbapi_conn, _):
         cursor = dbapi_conn.cursor()
@@ -31,8 +41,7 @@ def test_db() -> Session:
 
     TestSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
-    # Create tables
-    Base.metadata.create_all(bind=engine)
+    _run_alembic_migrations(engine)
 
     db = TestSessionLocal()
     try:
@@ -40,23 +49,29 @@ def test_db() -> Session:
     finally:
         db.close()
         Base.metadata.drop_all(bind=engine)
+        if os.path.exists(tmp.name):
+            os.unlink(tmp.name)
 
 
 @pytest.fixture(scope="function")
 def client(test_db: Session) -> TestClient:
     """Create a test client with overridden database dependency."""
+    from app.main import create_app
+
+    test_app = create_app(skip_migrations=True)
+
     def override_get_db():
         try:
             yield test_db
         finally:
             pass
 
-    app.dependency_overrides[get_db] = override_get_db
+    test_app.dependency_overrides[get_db] = override_get_db
 
-    with TestClient(app) as test_client:
+    with TestClient(test_app) as test_client:
         yield test_client
 
-    app.dependency_overrides.clear()
+    test_app.dependency_overrides.clear()
 
 
 @pytest.fixture
@@ -77,7 +92,6 @@ def nutrition_engine_seeded() -> NutritionEngine:
     return NutritionEngine(random_seed=42)
 
 
-# Test data fixtures
 @pytest.fixture
 def sample_5k_params() -> dict:
     """Sample parameters for 5K training plan."""

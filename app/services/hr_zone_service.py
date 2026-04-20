@@ -1,6 +1,5 @@
 """Heart rate zone service — orchestrates zone computation and persistence."""
 
-import json
 import logging
 from typing import Optional
 
@@ -37,11 +36,11 @@ class HRZoneService:
         )
         zones = HRZoneCalculator.calculate_zones(max_hr)
 
-        plan.hr_zones_data = json.dumps({
+        plan.hr_zones_data = {
             "max_hr": max_hr,
             "source": source,
             "zones": zones,
-        })
+        }
         plan.max_heart_rate = max_hr
 
         logger.info(
@@ -77,7 +76,4 @@ class HRZoneService:
         """
         if not plan.hr_zones_data:
             return None
-        try:
-            return json.loads(plan.hr_zones_data)
-        except (json.JSONDecodeError, TypeError):
-            return None
+        return plan.hr_zones_data

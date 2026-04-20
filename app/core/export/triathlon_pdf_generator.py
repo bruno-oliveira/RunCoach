@@ -1,7 +1,6 @@
 """PDF generation for triathlon training plans."""
 
 import hashlib
-import json
 import logging
 import os
 import shutil
@@ -79,7 +78,7 @@ class TriathlonPDFGenerator:
         Returns:
             Absolute path to the PDF file.
         """
-        weeks: list[dict] = json.loads(plan.plan_data)
+        weeks: list[dict] = plan.plan_data
         cache_key = self._cache_key(plan)
         cache_path = self.cache_dir / cache_key
 

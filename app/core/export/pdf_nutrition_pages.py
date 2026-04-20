@@ -1,6 +1,5 @@
 """PDF nutrition content pages — general guidance and personalized plans."""
 
-import json
 from typing import List
 
 from reportlab.platypus import Paragraph, Spacer, Table, TableStyle
@@ -119,9 +118,8 @@ class NutritionPagesMixin:
         ], spacing=1.0)
 
     def _add_personalized_nutrition_plan(self, story: List, training_plan: TrainingPlan):
-        try:
-            nutrition_plan = json.loads(training_plan.nutrition_plan_data)
-        except (json.JSONDecodeError, AttributeError):
+        nutrition_plan = training_plan.nutrition_plan_data
+        if not nutrition_plan:
             return
 
         story.append(Paragraph("🍽️ Your Personalized Nutrition Plan", self.section_style))

@@ -5,7 +5,6 @@ adjustment hints, feedback, completion stats, and the full
 get_plan_view_data orchestrator from PlanService.
 """
 
-import json
 import logging
 from datetime import datetime, timedelta
 from typing import Any, Optional
@@ -78,7 +77,7 @@ class PlanViewService:
         if not nutrition_plan_data:
             return {}
 
-        nutrition_plan = json.loads(nutrition_plan_data)
+        nutrition_plan = nutrition_plan_data
 
         # Old format: list of daily plans
         if isinstance(nutrition_plan, list):
@@ -268,7 +267,7 @@ class PlanViewService:
         efforts = [r.perceived_effort for r in runs if r.perceived_effort]
         avg_effort = round(sum(efforts) / len(efforts), 1) if efforts else None
 
-        plan_data = json.loads(training_plan.plan_data) if training_plan.plan_data else []
+        plan_data = training_plan.plan_data if training_plan.plan_data else []
         peak_km = max((w.get("total_km", 0) for w in plan_data), default=0)
 
         return {

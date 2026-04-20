@@ -1,4 +1,5 @@
 from sqlalchemy import Column, String, Float, Integer, DateTime, ForeignKey, Text, Index
+from sqlalchemy.orm import Mapped, relationship
 from datetime import datetime, timezone
 import uuid
 
@@ -27,16 +28,18 @@ class RunLog(Base):
     avg_cadence = Column(Integer, nullable=True)
     elevation_gain_m = Column(Integer, nullable=True)
     notes = Column(Text, nullable=True)
-    workout_type = Column(String, nullable=True)  # 'easy', 'tempo', 'interval', 'long', 'hill'
-    perceived_effort = Column(Integer, nullable=True)  # 1-10 scale
+    workout_type = Column(String, nullable=True)
+    perceived_effort = Column(Integer, nullable=True)
     strava_activity_id = Column(String, unique=True, nullable=True, index=True)
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
 
-    # Effort quality scoring
-    effort_quality_score = Column(Float, nullable=True)   # 0-100
-    quality_label = Column(String(20), nullable=True)     # "Nailed it", "On track", "Too easy", "Too hard"
-    planned_pace_min_km = Column(Float, nullable=True)    # Expected pace from workout plan
-    # VDOT from race runs
-    vdot = Column(Float, nullable=True)                   # VDOT calculated from race performance
-    # Predicted time (seconds) at the moment a race was logged
-    predicted_time_seconds = Column(Float, nullable=True)  # Snapshot of prediction when race was logged
+    effort_quality_score = Column(Float, nullable=True)
+    quality_label = Column(String(20), nullable=True)
+    planned_pace_min_km = Column(Float, nullable=True)
+    vdot = Column(Float, nullable=True)
+    predicted_time_seconds = Column(Float, nullable=True)
+
+    user: Mapped["User"] = relationship("User", back_populates="run_logs")
+    training_plan: Mapped["TrainingPlan"] = relationship("TrainingPlan")
+    daily_workout: Mapped["DailyWorkout"] = relationship("DailyWorkout")
+    feedback: Mapped["RunFeedback"] = relationship("RunFeedback", uselist=False, back_populates="run_log")

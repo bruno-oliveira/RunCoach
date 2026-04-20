@@ -1,6 +1,5 @@
 """Proactive adaptation alerts — detect when a plan needs attention."""
 
-import json
 from typing import Any, Dict, Optional
 
 from sqlalchemy.orm import Session
@@ -113,7 +112,7 @@ def check_alerts(
             ),
             "created_at": today.isoformat(),
         }
-        training_plan.adaptation_alert = json.dumps(alert)
+        training_plan.adaptation_alert = alert
         db.commit()
         return alert
 

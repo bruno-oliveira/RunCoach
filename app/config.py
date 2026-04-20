@@ -66,6 +66,63 @@ class Settings(BaseSettings):
 
     # Feature Flags
 
+    # Plan limits
+    max_plans_per_user: int = 3
+
+    # Mileage max thresholds and warnings
+    max_mileage_5k: int = 40
+    max_mileage_10k: int = 50
+    max_mileage_half: int = 70
+    max_mileage_30k: int = 60
+    max_mileage_marathon: int = 100
+
+    low_mileage_msg_5k: str = (
+        "Your current mileage is quite low for 5K training. "
+        "Consider building a base with 2-3 weeks of easy running first."
+    )
+    high_mileage_msg_5k: str = (
+        "You're already running high mileage for 5K. "
+        "Consider focusing on speed work rather than volume."
+    )
+    low_mileage_msg_10k: str = (
+        "Your current mileage may be insufficient for 10K training. "
+        "Build to at least 10km/week for 2-3 weeks first."
+    )
+    high_mileage_msg_10k: str = (
+        "High mileage for 10K. "
+        "You might benefit from focusing on quality over quantity."
+    )
+    low_mileage_msg_half: str = (
+        "Half marathon training requires a stronger base. "
+        "Build to 15km/week for 3-4 weeks before starting."
+    )
+    high_mileage_msg_half: str = (
+        "Very high mileage for half marathon. "
+        "Ensure adequate recovery and consider periodization."
+    )
+    low_mileage_msg_30k: str = (
+        "Trail running requires good base fitness. "
+        "Build to 8km/week with some trail experience first."
+    )
+    high_mileage_msg_30k: str = (
+        "High mileage for trail running. "
+        "Focus on time on feet rather than distance."
+    )
+    low_mileage_msg_marathon: str = (
+        "Marathon training requires significant base fitness. "
+        "Build to 25km/week for 4-6 weeks before beginning."
+    )
+    high_mileage_msg_marathon: str = (
+        "Extremely high mileage. "
+        "Be cautious about injury risk and ensure proper recovery."
+    )
+
+    # Performance training minimum mileage requirements
+    perf_min_mileage_5k: int = 20
+    perf_min_mileage_10k: int = 25
+    perf_min_mileage_half: int = 35
+    perf_min_mileage_marathon: int = 50
+
     @property
     def is_google_client_id_configured(self) -> bool:
         """Check whether the Google Client ID looks valid (not empty/placeholder)."""

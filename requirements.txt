@@ -11,6 +11,7 @@ reportlab==4.0.7
 
 # Database
 sqlalchemy==2.0.23
+alembic==1.18.4
 
 # Validation and settings
 pydantic==2.5.0

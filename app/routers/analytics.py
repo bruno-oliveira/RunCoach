@@ -1,6 +1,5 @@
 """Router for analytics functionality."""
 
-import json
 import logging
 from datetime import date, datetime, timedelta
 from typing import Optional
@@ -190,7 +189,7 @@ async def get_workout_adherence(
     total_weeks = plan.weeks_duration or 0
     current_week = min(((today - start_date).days // 7) + 1, total_weeks)
 
-    plan_data = json.loads(plan.plan_data) if plan.plan_data else []
+    plan_data = plan.plan_data if plan.plan_data else []
 
     # Get all run logs mapped to this plan
     runs = (

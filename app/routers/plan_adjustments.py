@@ -1,6 +1,5 @@
 """Plan adjustment, recalibration, override, and swap endpoints."""
 
-import json
 import logging
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -193,14 +192,14 @@ async def override_plan_week(
         plan_id, db, current_user, require_user_match=True
     )
 
-    plan_data = json.loads(training_plan.plan_data) if training_plan.plan_data else []
+    plan_data = training_plan.plan_data if training_plan.plan_data else []
     week_data = next((w for w in plan_data if w.get("week") == week_number), None)
     if not week_data:
         raise HTTPException(status_code=404, detail="Week not found in plan")
 
     _apply_week_action(body.action, training_plan, plan_data, week_data, week_number, plan_id, db)
 
-    training_plan.plan_data = json.dumps(plan_data)
+    training_plan.plan_data = plan_data
     db.commit()
 
     return {"ok": True, "action": body.action, "week": week_number}
@@ -412,7 +411,7 @@ async def swap_plan_days(
     if body.source_day == body.target_day:
         return {"ok": True}
 
-    plan_data = json.loads(training_plan.plan_data) if training_plan.plan_data else []
+    plan_data = training_plan.plan_data if training_plan.plan_data else []
     week_data = next((w for w in plan_data if w.get("week") == week_number), None)
     if not week_data:
         raise HTTPException(status_code=404, detail="Week not found in plan")
@@ -445,7 +444,7 @@ async def swap_plan_days(
                 src_db.day_of_week,
             )
 
-    training_plan.plan_data = json.dumps(plan_data)
+    training_plan.plan_data = plan_data
     db.commit()
 
     return {"ok": True}

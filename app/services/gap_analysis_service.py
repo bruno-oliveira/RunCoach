@@ -5,7 +5,6 @@ to produce a structured gap report showing where a runner stands relative
 to their plan targets.
 """
 
-import json
 import logging
 from datetime import date, datetime, timedelta
 from typing import Any, Dict, List, Optional
@@ -68,7 +67,7 @@ def _load_gap_context(
     if current_week < 1:
         return None
 
-    plan_data = json.loads(plan.plan_data) if plan.plan_data else []
+    plan_data = plan.plan_data if plan.plan_data else []
     if not plan_data:
         return None
 

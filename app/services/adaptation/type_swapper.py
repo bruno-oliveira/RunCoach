@@ -218,8 +218,6 @@ def apply_swap(
     Returns:
         Dict with swap details, or None if the workout was not found.
     """
-    import json
-
     training_plan = db.query(TrainingPlan).filter(
         TrainingPlan.id == plan_id,
         TrainingPlan.user_id == user_id,
@@ -243,7 +241,7 @@ def apply_swap(
 
     # Update plan_data JSON
     try:
-        plan_data = json.loads(training_plan.plan_data) if training_plan.plan_data else []
+        plan_data = training_plan.plan_data if training_plan.plan_data else []
         week_plan = db.query(WeeklyPlan).filter(
             WeeklyPlan.id == workout.weekly_plan_id
         ).first()
@@ -256,7 +254,7 @@ def apply_swap(
                         w["type"] = to_type
                         w["description"] = workout.notes
                         break
-            training_plan.plan_data = json.dumps(plan_data)
+            training_plan.plan_data = plan_data
     except Exception as e:
         logger.warning("Failed to update plan_data JSON for type swap: %s", e)
 

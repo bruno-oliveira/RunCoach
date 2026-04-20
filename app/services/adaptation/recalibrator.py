@@ -1,6 +1,5 @@
 """Recalibration and weekly inline suggestions."""
 
-import json
 from collections import defaultdict
 from datetime import datetime, timezone
 from typing import Any, Dict, List
@@ -105,7 +104,7 @@ def recalibrate(
             if week.week_number in pd_week:
                 pd_week[week.week_number]["total_km"] = new_total
 
-    training_plan.plan_data = json.dumps(plan_data)
+    training_plan.plan_data = plan_data
     training_plan.adaptation_alert = None
     now = datetime.now(timezone.utc).replace(tzinfo=None)
     training_plan.last_adjusted_at = now
@@ -155,7 +154,7 @@ def get_weekly_suggestions(
     effort_trend = perf.get("effort_trend", "stable")
     avg_effort = perf.get("avg_effort")
 
-    plan_data = json.loads(training_plan.plan_data) if training_plan.plan_data else []
+    plan_data = training_plan.plan_data if training_plan.plan_data else []
 
     # Get recent run volumes by week
     runs = (
@@ -404,7 +403,7 @@ def _recalibrate_missed_week(
             if target_wk in pd_week:
                 pd_week[target_wk]["total_km"] = wk_total
 
-    training_plan.plan_data = json.dumps(plan_data)
+    training_plan.plan_data = plan_data
     training_plan.adaptation_alert = None
     now = datetime.now(timezone.utc).replace(tzinfo=None)
     training_plan.last_adjusted_at = now

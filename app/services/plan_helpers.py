@@ -1,6 +1,5 @@
 """Reusable helpers for plan route handlers."""
 
-import json
 from datetime import date, datetime, timedelta
 from typing import Any, Optional
 
@@ -186,12 +185,12 @@ def plan_view_context(
         "weeks": training_plan.weeks_duration,
         "nutrition_plan": nutrition_plan,
         "nutrition_phases": (
-            json.loads(training_plan.nutrition_phases_data)
+            training_plan.nutrition_phases_data
             if training_plan.nutrition_phases_data
             else {}
         ),
         "race_protocol": (
-            json.loads(training_plan.race_protocol_data)
+            training_plan.race_protocol_data
             if training_plan.race_protocol_data
             else {}
         ),

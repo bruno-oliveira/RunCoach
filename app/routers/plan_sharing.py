@@ -1,6 +1,5 @@
 """Plan sharing, start date, save/claim, delete, and PDF download endpoints."""
 
-import json
 import logging
 import os
 import secrets
@@ -102,7 +101,7 @@ async def view_shared_plan(
     if not training_plan:
         raise HTTPException(status_code=404, detail="Shared plan not found")
 
-    plan_data = json.loads(training_plan.plan_data)
+    plan_data = training_plan.plan_data
     plan_data = plan_service.enrich_plan_data_with_ids(
         plan_data, training_plan.id, db
     )
@@ -198,10 +197,7 @@ async def download_pdf(
         if not training_plan.plan_data:
             raise HTTPException(status_code=400, detail="No training plan data found")
 
-        try:
-            plan_data = json.loads(training_plan.plan_data)
-        except json.JSONDecodeError:
-            raise HTTPException(status_code=400, detail="Invalid training plan data format")
+        plan_data = training_plan.plan_data
 
         if not plan_data:
             raise HTTPException(status_code=400, detail="Empty training plan data")

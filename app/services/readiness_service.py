@@ -4,7 +4,6 @@ Synthesizes run log data, VDOT predictions, and plan adherence into
 a single readiness report displayed on the plan view.
 """
 
-import json
 import logging
 from datetime import date, datetime, timedelta
 from typing import Any, Dict, Optional
@@ -101,7 +100,7 @@ class ReadinessService:
         race_date = start_date + timedelta(weeks=total_weeks)
 
         # Parse plan data for weekly targets
-        plan_data = json.loads(plan.plan_data) if plan.plan_data else []
+        plan_data = plan.plan_data if plan.plan_data else []
         planned_weekly_km = []
         planned_long_run_km = 0.0
         peak_week_km = 0.0

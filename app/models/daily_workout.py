@@ -1,4 +1,5 @@
 from sqlalchemy import Column, String, Integer, Float, ForeignKey, Text, Index
+from sqlalchemy.orm import Mapped, relationship
 import uuid
 
 from app.models.base import Base
@@ -12,12 +13,14 @@ class DailyWorkout(Base):
 
     id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
     weekly_plan_id = Column(String, ForeignKey("weekly_plans.id"), nullable=False)
-    day_of_week = Column(Integer)  # 1-7 (Monday-Sunday)
-    workout_type = Column(String)  # 'easy', 'tempo', 'interval', 'long', 'rest', 'strength'
+    day_of_week = Column(Integer)
+    workout_type = Column(String)
     distance_km = Column(Float)
-    intensity = Column(String)  # 'low', 'medium', 'high'
+    intensity = Column(String)
     notes = Column(Text)
     coaching_rationale = Column(Text, nullable=True)
     baseline_distance_km = Column(Float, nullable=True)
-    hr_zone_target = Column(Integer, nullable=True)  # Target HR zone (1-5)
-    key_workout_id = Column(String, nullable=True)  # ID from KeyWorkoutLibrary
+    hr_zone_target = Column(Integer, nullable=True)
+    key_workout_id = Column(String, nullable=True)
+
+    weekly_plan: Mapped["WeeklyPlan"] = relationship("WeeklyPlan", back_populates="daily_workouts")

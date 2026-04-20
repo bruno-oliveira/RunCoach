@@ -1,6 +1,5 @@
 """Performance training plan service."""
 
-import json
 import logging
 import uuid
 from datetime import datetime, timedelta, timezone
@@ -292,7 +291,7 @@ class PerformanceService:
             goal_time=goal_time,
             max_runs_per_week=runs_per_week,
             max_heart_rate=max_heart_rate,
-            plan_data=json.dumps(plan_data['weekly_plans'])
+            plan_data=plan_data['weekly_plans']
         )
 
         self.db.add(training_plan)
@@ -305,7 +304,7 @@ class PerformanceService:
         nutrition_plan = self.nutrition_engine.generate_weekly_meal_plan(
             current_weekly_km, target_distance
         )
-        training_plan.nutrition_plan_data = json.dumps(nutrition_plan)
+        training_plan.nutrition_plan_data = nutrition_plan
 
         self.db.commit()
 
@@ -328,10 +327,10 @@ class PerformanceService:
                 'training_plan_id': training_plan_id,
                 'week_number': week_data['week'],
                 'total_km': week_data['total_km'],
-                'workout_types': json.dumps({
+                'workout_types': {
                     'quality_workouts': week_data.get('quality_workouts', 0),
                     'phase': week_data.get('phase', '')
-                })
+                }
             })
 
             for workout in week_data.get('daily_workouts', []):

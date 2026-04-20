@@ -1,6 +1,5 @@
 """Nutrition-related endpoints."""
 
-import json
 import logging
 import time
 
@@ -10,7 +9,7 @@ from fastapi import APIRouter, Cookie, Depends, Form, HTTPException, Request
 from fastapi.responses import HTMLResponse
 from sqlalchemy.orm import Session
 
-from app.dependencies import get_db, get_optional_user, get_plan_service, verify_plan_ownership
+from app.dependencies import get_db, get_optional_user, get_plan_service, get_nutrition_engine, verify_plan_ownership
 from app.models import TrainingPlan
 from app.core.nutrition.nutrition_engine import NutritionEngine
 from app.services.plan_service import PlanService
@@ -30,6 +29,7 @@ async def randomize_meals(
     current_user = Depends(get_optional_user),
     db: Session = Depends(get_db),
     plan_service: PlanService = Depends(get_plan_service),
+    nutrition_engine: NutritionEngine = Depends(get_nutrition_engine),
 ) -> HTMLResponse:
     """Generate different meal suggestions for the nutrition blueprint."""
     try:
@@ -44,22 +44,22 @@ async def randomize_meals(
 
         # Use current time to ensure different results each time
         random_seed = int(time.time() * 1000000) % 100000000
-        nutrition_engine = NutritionEngine(random_seed=random_seed)
+        random_nutrition_engine = NutritionEngine(random_seed=random_seed)
 
         # Generate new meal blueprint with different randomization
-        new_nutrition_plan = nutrition_engine.generate_weekly_meal_plan(
+        new_nutrition_plan = random_nutrition_engine.generate_weekly_meal_plan(
             training_plan.current_weekly_km,
             training_plan.target_distance_km,
         )
 
         # Update the plan with new blueprint
-        training_plan.nutrition_plan_data = json.dumps(new_nutrition_plan)
+        training_plan.nutrition_plan_data = new_nutrition_plan
         db.commit()
         logger.info(f"Successfully updated nutrition plan for {plan_id}")
 
         from app.services.plan_helpers import plan_view_context
 
-        plan_data = json.loads(training_plan.plan_data) if training_plan.plan_data else []
+        plan_data = training_plan.plan_data if training_plan.plan_data else []
         plan_data = plan_service.enrich_plan_data_with_ids(plan_data, training_plan.id, db)
         nutrition_plan = plan_service.nutrition_for_template(training_plan.nutrition_plan_data)
         extra = plan_service.get_plan_view_data(training_plan, current_user, db)

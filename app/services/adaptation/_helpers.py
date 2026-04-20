@@ -1,6 +1,5 @@
 """Shared helpers for the adaptation sub-package."""
 
-import json
 import re
 from collections import defaultdict
 from datetime import datetime, timezone
@@ -55,7 +54,7 @@ def parse_plan_data_lookups(
     - pd_week: {week_number: week_dict}
     - pd_workout: {(week_number, day): workout_dict}
     """
-    plan_data = json.loads(training_plan.plan_data) if training_plan.plan_data else []
+    plan_data = training_plan.plan_data if training_plan.plan_data else []
     pd_week: Dict[int, Dict] = {}
     pd_workout: Dict[Tuple[int, int], Dict] = {}
     for wk in plan_data:

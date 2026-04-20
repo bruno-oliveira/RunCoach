@@ -1,6 +1,5 @@
 """Feedback service — orchestrates coaching feedback generation and persistence."""
 
-import json
 import logging
 from typing import Optional
 
@@ -50,9 +49,9 @@ class FeedbackService:
             )
             if plan and plan.hr_zones_data:
                 try:
-                    data = json.loads(plan.hr_zones_data)
+                    data = plan.hr_zones_data
                     hr_zones = data.get("zones")
-                except (json.JSONDecodeError, TypeError):
+                except (AttributeError, TypeError):
                     pass
 
         # Generate feedback

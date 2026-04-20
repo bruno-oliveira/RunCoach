@@ -3,7 +3,6 @@
 Extracted from PerformanceService to keep the main service under 500 lines.
 """
 
-import json
 import logging
 from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, Optional, Tuple
@@ -42,7 +41,7 @@ def get_plan_with_data(
     if not training_plan:
         return None
 
-    plan_data = json.loads(training_plan.plan_data) if training_plan.plan_data else []
+    plan_data = training_plan.plan_data if training_plan.plan_data else []
 
     zones = performance_generator.calculate_training_zones(
         training_plan.goal_pace,
@@ -83,7 +82,7 @@ def get_todays_workout(db: Session, plan: TrainingPlan) -> Dict[str, Any]:
     week = days_elapsed // 7 + 1
     day_of_week = days_elapsed % 7 + 1  # 1=Mon, 7=Sun (ISO style)
 
-    plan_data = json.loads(plan.plan_data) if plan.plan_data else []
+    plan_data = plan.plan_data if plan.plan_data else []
 
     if week > len(plan_data):
         return {"status": "completed"}
@@ -140,7 +139,7 @@ def get_plan_progress(db: Session, plan: TrainingPlan) -> Dict[str, Any]:
     Returns:
         Dictionary with progress stats.
     """
-    plan_data = json.loads(plan.plan_data) if plan.plan_data else []
+    plan_data = plan.plan_data if plan.plan_data else []
     start = plan.start_date or plan.created_at
     start_date = start.date() if isinstance(start, datetime) else start
     total_weeks = len(plan_data)

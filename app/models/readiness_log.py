@@ -4,6 +4,7 @@ import uuid
 from datetime import date, datetime, timezone
 
 from sqlalchemy import Column, Date, DateTime, ForeignKey, Index, Integer, String, Text
+from sqlalchemy.orm import Mapped, relationship
 
 from app.models.base import Base
 
@@ -18,16 +19,13 @@ class ReadinessLog(Base):
     user_id = Column(String, ForeignKey("users.id"), nullable=False)
     log_date = Column(Date, nullable=False, default=lambda: date.today())
 
-    # 1-5 scale: 1 = very poor, 5 = excellent
     sleep = Column(Integer, nullable=False)
     soreness = Column(Integer, nullable=False)
     energy = Column(Integer, nullable=False)
     stress = Column(Integer, nullable=False)
 
-    # Computed composite score (0-100)
     score = Column(Integer, nullable=False, default=50)
 
-    # "ready", "caution", "rest"
     status = Column(String(16), nullable=False, default="ready")
 
     notes = Column(Text, nullable=True)
@@ -37,19 +35,14 @@ class ReadinessLog(Base):
         default=lambda: datetime.now(timezone.utc).replace(tzinfo=None),
     )
 
+    user: Mapped["User"] = relationship("User", back_populates="readiness_logs")
+
     @staticmethod
     def compute_score(sleep: int, soreness: int, energy: int, stress: int) -> int:
-        """Weighted composite on a 0-100 scale.
-
-        Soreness and energy carry slightly more weight because they correlate
-        most directly with injury risk and training capacity. Stress is
-        inverted (higher reported stress = lower contribution).
-        """
-        # Normalize each to 0-1
         s_sleep = (sleep - 1) / 4
         s_sore = (soreness - 1) / 4
         s_energy = (energy - 1) / 4
-        s_stress = 1.0 - (stress - 1) / 4  # inverted
+        s_stress = 1.0 - (stress - 1) / 4
         weighted = (
             s_sleep * 0.25
             + s_sore * 0.30

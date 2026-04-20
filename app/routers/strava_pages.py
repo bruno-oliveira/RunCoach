@@ -1,4 +1,8 @@
-"""Strava OAuth and sync endpoints."""
+"""Strava OAuth page endpoints.
+
+Page/redirect endpoints have been moved here.
+API endpoints remain in strava.py.
+"""
 
 import logging
 from datetime import datetime, timedelta, timezone
@@ -13,14 +17,18 @@ from app.config import settings
 from app.dependencies import get_current_user, get_db, get_auth_service, get_strava_service, get_adaptation_service
 from app.models import TrainingPlan
 from app.models.user import User
-from app.schemas import StravaStatusResponse, StravaSyncResponse
+from app.schemas import StravaSyncResponse
 from app.services.strava_service import StravaService
 from app.services.adaptation_service import AdaptationService
 from app.utils import TimestampAdapter
 
 logger = logging.getLogger(__name__)
 
-strava_router = APIRouter(prefix="/api/strava", tags=["strava"])
+router = APIRouter(tags=["strava-pages"])
+
+# How far back to look on the very first sync (before any cursor exists).
+# A full year ensures we cover any active training plan the user might have.
+INITIAL_SYNC_DAYS = 365
 
 
 def _auto_map_and_adjust(
@@ -76,27 +84,8 @@ def _auto_map_and_adjust(
 
     return results
 
-# How far back to look on the very first sync (before any cursor exists).
-# A full year ensures we cover any active training plan the user might have.
-INITIAL_SYNC_DAYS = 365
 
-
-@strava_router.get("/connect")
-async def strava_connect(
-    current_user: User = Depends(get_current_user),
-    auth_service: AuthService = Depends(get_auth_service),
-    strava_service: StravaService = Depends(get_strava_service),
-):
-    """Return Strava OAuth authorization URL."""
-    state = auth_service.create_access_token(
-        {"sub": current_user.id, "purpose": "strava_oauth"},
-        expires_delta=timedelta(minutes=5),
-    )
-    authorize_url = strava_service.get_authorization_url(state)
-    return {"authorize_url": authorize_url}
-
-
-@strava_router.get("/callback")
+@router.get("/api/strava/callback")
 async def strava_callback(
     code: str = Query(...),
     state: str = Query(...),
@@ -165,107 +154,3 @@ async def strava_callback(
     background_tasks.add_task(_initial_sync, user.id)
 
     return RedirectResponse(url="/my-plans", status_code=status.HTTP_302_FOUND)
-
-
-@strava_router.post("/sync", response_model=StravaSyncResponse)
-async def strava_sync(
-    force_days: Optional[int] = Query(
-        default=None,
-        ge=1,
-        le=3650,
-        description="Force a full re-sync for the last N days, ignoring the cursor.",
-    ),
-    full_sync: bool = Query(
-        default=False,
-        description="Fetch all historical activities with no time filter, ignoring the cursor.",
-    ),
-    current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db),
-    strava_service: StravaService = Depends(get_strava_service),
-):
-    """Sync new Strava activities since the last sync.
-
-    By default, only fetches activities created after the last successful sync
-    (incremental). Pass force_days to re-pull a specific window, or full_sync=true
-    to fetch the entire activity history.
-    """
-    if not current_user.strava_athlete_id:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Strava account not connected. Connect via /api/strava/connect first.",
-        )
-
-    if full_sync:
-        after_timestamp = None  # no time filter — fetch entire history
-    elif force_days is not None:
-        after_timestamp = TimestampAdapter.days_ago_utc_epoch(force_days)
-    elif current_user.strava_last_synced_at:
-        # Start from the last sync cursor minus a 24-hour buffer so runs
-        # whose start_date fell before the last sync are still fetched.
-        after_timestamp = current_user.strava_last_synced_at - 86400
-
-        # If the user has a training plan whose start date is before the
-        # cursor, extend the window to cover the entire plan period.  This
-        # backfills any runs that were missed during the initial sync
-        # (e.g. the initial sync only pulled 90 days and the plan started
-        # earlier).
-        earliest_plan_start = (
-            db.query(TrainingPlan.start_date)
-            .filter(
-                TrainingPlan.user_id == current_user.id,
-                TrainingPlan.start_date.isnot(None),
-            )
-            .order_by(TrainingPlan.start_date.asc())
-            .first()
-        )
-        if earliest_plan_start and earliest_plan_start[0]:
-            sd = earliest_plan_start[0]
-            plan_epoch = int(
-                datetime.combine(
-                    sd if not hasattr(sd, "date") else sd.date(),
-                    datetime.min.time(),
-                    tzinfo=timezone.utc,
-                ).timestamp()
-            )
-            if plan_epoch < after_timestamp:
-                logger.info(
-                    "Extending sync window to plan start %s (was %s)",
-                    sd, after_timestamp,
-                )
-                after_timestamp = plan_epoch
-    else:
-        # No cursor yet — treat like an initial sync
-        after_timestamp = TimestampAdapter.days_ago_utc_epoch(INITIAL_SYNC_DAYS)
-
-    try:
-        result = await strava_service.sync_activities(
-            current_user, db, after_timestamp=after_timestamp
-        )
-    except Exception as e:
-        logger.error(f"Strava sync failed for user {current_user.id}: {e}")
-        raise HTTPException(
-            status_code=status.HTTP_502_BAD_GATEWAY,
-            detail=f"Strava sync failed: {str(e)}",
-        )
-
-    # Auto-map and adjust active plans on every sync (not just when new
-    # runs arrive) so previously-unmapped runs get linked too.
-    adaptation_service = AdaptationService()
-    adjustment_results = _auto_map_and_adjust(current_user, db, adaptation_service) or None
-
-    return StravaSyncResponse(**result, adjustment_results=adjustment_results)
-
-
-@strava_router.get("/status", response_model=StravaStatusResponse)
-async def strava_status(
-    current_user: User = Depends(get_current_user),
-):
-    """Return Strava connection status for the current user."""
-    connected = bool(current_user.strava_athlete_id)
-    return StravaStatusResponse(
-        connected=connected,
-        athlete_id=current_user.strava_athlete_id if connected else None,
-        last_synced_at=current_user.strava_last_synced_at if connected else None,
-    )
-
-

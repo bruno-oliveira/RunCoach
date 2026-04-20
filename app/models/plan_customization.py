@@ -1,4 +1,5 @@
 from sqlalchemy import Column, String, Integer, DateTime, ForeignKey
+from sqlalchemy.orm import Mapped, relationship
 from datetime import datetime, timezone
 import uuid
 
@@ -14,3 +15,5 @@ class PlanCustomization(Base):
     adjustment_type = Column(String, nullable=False)
     adjustment_value = Column(String, nullable=False)
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
+
+    training_plan: Mapped["TrainingPlan"] = relationship("TrainingPlan")

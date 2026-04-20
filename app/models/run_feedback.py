@@ -4,6 +4,7 @@ import uuid
 from datetime import datetime, timezone
 
 from sqlalchemy import Column, DateTime, ForeignKey, Index, String, Text
+from sqlalchemy.orm import Mapped, relationship
 
 from app.models.base import Base
 
@@ -19,17 +20,14 @@ class RunFeedback(Base):
     run_log_id = Column(String, ForeignKey("run_logs.id"), nullable=False)
     user_id = Column(String, ForeignKey("users.id"), nullable=False)
 
-    # Feedback categories — each nullable, populated only when applicable
     pace_feedback = Column(Text, nullable=True)
     hr_zone_feedback = Column(Text, nullable=True)
     effort_feedback = Column(Text, nullable=True)
     volume_feedback = Column(Text, nullable=True)
     pattern_feedback = Column(Text, nullable=True)
 
-    # "positive", "warning", "info"
     overall_sentiment = Column(String(10), nullable=False, default="info")
 
-    # Source of the planned workout comparison
     planned_workout_id = Column(
         String, ForeignKey("daily_workouts.id"), nullable=True
     )
@@ -38,3 +36,6 @@ class RunFeedback(Base):
         DateTime,
         default=lambda: datetime.now(timezone.utc).replace(tzinfo=None),
     )
+
+    run_log: Mapped["RunLog"] = relationship("RunLog", back_populates="feedback")
+    user: Mapped["User"] = relationship("User")

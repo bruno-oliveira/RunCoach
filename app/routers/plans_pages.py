@@ -1,4 +1,4 @@
-"""Plan generation, customization, viewing, and listing endpoints."""
+"""Plan generation, customization, viewing, and listing page endpoints."""
 
 import logging
 from datetime import date, datetime
@@ -13,10 +13,12 @@ from app.core.nutrition.nutrition_engine import NutritionEngine
 from app.core.generators.plan_generator import TrainingPlanGenerator
 from app.core.runner_profile import build_profile
 from app.dependencies import (
+    get_adaptation_service,
     get_current_user,
     get_db,
     get_nutrition_engine,
     get_optional_user,
+    get_performance_service,
     get_plan_generator,
     get_plan_service,
 )
@@ -40,15 +42,9 @@ from app.services.plan_service import PlanService
 from app.template_helpers import create_templates
 from app.utils import format_pace
 
-# Sub-routers
-from app.routers.plan_adjustments import router as adjustments_router
-from app.routers.plan_sharing import router as sharing_router
-
 logger = logging.getLogger(__name__)
 
-router = APIRouter(tags=["plans"])
-router.include_router(adjustments_router)
-router.include_router(sharing_router)
+router = APIRouter(tags=["plans-pages"])
 templates = create_templates()
 
 
@@ -81,6 +77,8 @@ async def generate_plan(
     plan_generator: TrainingPlanGenerator = Depends(get_plan_generator),
     nutrition_engine: NutritionEngine = Depends(get_nutrition_engine),
     plan_service: PlanService = Depends(get_plan_service),
+    performance_service: PerformanceService = Depends(get_performance_service),
+    adaptation_service: AdaptationService = Depends(get_adaptation_service),
 ) -> HTMLResponse:
     """Generate a personalized training plan."""
     if plan_mode == "time":
@@ -96,6 +94,7 @@ async def generate_plan(
             current_user=current_user,
             db=db,
             plan_service=plan_service,
+            performance_service=performance_service,
         )
 
     logger.info(
@@ -199,6 +198,7 @@ async def _generate_time_goal_plan(
     current_user: Optional[User],
     db: Session,
     plan_service: PlanService,
+    performance_service: PerformanceService,
 ):
     """Dispatch performance (time-goal) plan creation from the unified form."""
     from app.routers.performance import _parse_time_to_pace
@@ -224,8 +224,7 @@ async def _generate_time_goal_plan(
         if current_time:
             current_pace = _parse_time_to_pace(current_time, target_distance)
 
-        service = PerformanceService(db)
-        training_plan, _ = service.create_performance_plan(
+        training_plan, _ = performance_service.create_performance_plan(
             user=current_user,
             target_distance=target_distance,
             goal_pace=goal_pace,
@@ -323,6 +322,8 @@ async def view_plan(
     current_user: Optional[User] = Depends(get_optional_user),
     nutrition_engine: NutritionEngine = Depends(get_nutrition_engine),
     plan_service: PlanService = Depends(get_plan_service),
+    performance_service: PerformanceService = Depends(get_performance_service),
+    adaptation_service: AdaptationService = Depends(get_adaptation_service),
 ) -> HTMLResponse:
     """View an existing training plan."""
     try:
@@ -332,7 +333,6 @@ async def view_plan(
 
         if current_user and training_plan.start_date:
             try:
-                adaptation_service = AdaptationService()
                 adaptation_service.map_runs_to_plan(
                     plan_id, current_user.id, db
                 )
@@ -379,7 +379,6 @@ async def view_plan(
         # Performance plans: add training zones + progress data
         if training_plan.plan_type == "performance":
             try:
-                perf_service = PerformanceService(db)
                 from app.core.generators.performance_plan_generator import PerformancePlanGenerator
                 gen = PerformancePlanGenerator()
                 zones = gen.calculate_training_zones(
@@ -393,8 +392,8 @@ async def view_plan(
                             f"{format_pace(pr[0])} - {format_pace(pr[1])}"
                         )
                 extra["training_zones"] = zones
-                extra["today_workout"] = perf_service.get_todays_workout(training_plan)
-                extra["perf_progress_data"] = perf_service.get_plan_progress(training_plan)
+                extra["today_workout"] = performance_service.get_todays_workout(training_plan)
+                extra["perf_progress_data"] = performance_service.get_plan_progress(training_plan)
             except Exception as e:
                 logger.warning(f"Performance context enrichment failed: {e}")
 
@@ -420,6 +419,7 @@ async def list_my_plans(
     request: Request,
     current_user: Optional[User] = Depends(get_optional_user),
     db: Session = Depends(get_db),
+    adaptation_service: AdaptationService = Depends(get_adaptation_service),
 ):
     """List all training plans for current user."""
     if current_user is None:
@@ -433,7 +433,6 @@ async def list_my_plans(
             .all()
         )
 
-        adaptation_service = AdaptationService()
         today = date.today()
         for plan in plans:
             td = plan.target_distance_km

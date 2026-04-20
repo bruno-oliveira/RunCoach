@@ -10,6 +10,8 @@ from sqlalchemy.orm import Session, sessionmaker
 from sqlalchemy.pool import NullPool
 
 from app.services.auth_service import AuthService
+from app.services.performance_service import PerformanceService
+from app.services.adaptation_service import AdaptationService
 from app.config import settings
 from app.models import TrainingPlan, User
 from app.core.nutrition.nutrition_engine import NutritionEngine
@@ -93,6 +95,16 @@ def get_plan_service() -> PlanService:
 def get_strava_service() -> StravaService:
     """Get a StravaService instance."""
     return StravaService()
+
+
+def get_performance_service(db: Session = Depends(get_db)) -> PerformanceService:
+    """Get a PerformanceService instance with database session."""
+    return PerformanceService(db)
+
+
+def get_adaptation_service() -> AdaptationService:
+    """Get an AdaptationService instance."""
+    return AdaptationService()
 
 
 security = HTTPBearer(auto_error=False)

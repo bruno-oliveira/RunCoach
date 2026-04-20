@@ -5,13 +5,12 @@ score and let the plan page swap tomorrow's hard session for an easy run
 when the score is low.
 """
 
-import json
 import logging
 from datetime import date as date_cls, datetime, timedelta, timezone
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy.orm import Session
 
 from app.dependencies import get_current_user, get_db
@@ -31,6 +30,8 @@ class ReadinessCreate(BaseModel):
 
 
 class ReadinessResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
     id: str
     log_date: date_cls
     sleep: int
@@ -40,9 +41,6 @@ class ReadinessResponse(BaseModel):
     score: int
     status: str
     notes: Optional[str]
-
-    class Config:
-        from_attributes = True
 
 
 @router.post("", response_model=ReadinessResponse)
@@ -158,7 +156,7 @@ def _find_todays_workout(plan: TrainingPlan):
     week = days_elapsed // 7 + 1
     day_of_week = days_elapsed % 7 + 1  # 1=Mon .. 7=Sun
 
-    plan_data = json.loads(plan.plan_data) if plan.plan_data else []
+    plan_data = plan.plan_data if plan.plan_data else []
     week_data = next((w for w in plan_data if w.get("week") == week), None)
     if not week_data:
         return None
@@ -248,7 +246,7 @@ def adapt_todays_workout(
     )
 
     # 6. Persist plan_data JSON
-    plan.plan_data = json.dumps(plan_data)
+    plan.plan_data = plan_data
 
     # 7. Also update the DailyWorkout DB row if it exists
     weekly_plan = (

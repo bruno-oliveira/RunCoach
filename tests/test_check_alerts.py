@@ -1,6 +1,5 @@
 """Tests for AdaptationService.check_alerts() — 3-week window logic."""
 
-import json
 import uuid
 from datetime import datetime, timedelta, timezone
 
@@ -63,7 +62,7 @@ def _create_plan(db: Session, *, weeks: int = 10, weeks_ago: int | None = None):
         target_distance="10",
         weeks_duration=weeks,
         start_date=start,
-        plan_data=json.dumps([{"week": w + 1, "total_km": 30} for w in range(weeks)]),
+        plan_data=[{"week": w + 1, "total_km": 30} for w in range(weeks)],
     )
     db.add(plan)
     db.flush()
@@ -246,7 +245,7 @@ class TestCooldownAfterRecalibration:
         user, plan = _create_plan(db, weeks=12, weeks_ago=7)
 
         # Pre-existing alert
-        plan.adaptation_alert = json.dumps({"type": "missed_workouts", "message": "old"})
+        plan.adaptation_alert = {"type": "missed_workouts", "message": "old"}
         plan.last_recalibrated_at = _now() - timedelta(weeks=1)
         db.commit()
 

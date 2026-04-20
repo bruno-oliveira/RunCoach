@@ -26,69 +26,39 @@ def parse_target_distance(value: str | float) -> float:
 _MILEAGE_CONFIG = {
     5.0: {
         "min": settings.min_mileage_5k,
-        "max": 40,
-        "low_msg": (
-            "Your current mileage is quite low for 5K training. "
-            "Consider building a base with 2-3 weeks of easy running first."
-        ),
-        "high_msg": (
-            "You're already running high mileage for 5K. "
-            "Consider focusing on speed work rather than volume."
-        ),
+        "max": settings.max_mileage_5k,
+        "low_msg": settings.low_mileage_msg_5k,
+        "high_msg": settings.high_mileage_msg_5k,
     },
     10.0: {
         "min": settings.min_mileage_10k,
-        "max": 50,
-        "low_msg": (
-            "Your current mileage may be insufficient for 10K training. "
-            "Build to at least 10km/week for 2-3 weeks first."
-        ),
-        "high_msg": (
-            "High mileage for 10K. "
-            "You might benefit from focusing on quality over quantity."
-        ),
+        "max": settings.max_mileage_10k,
+        "low_msg": settings.low_mileage_msg_10k,
+        "high_msg": settings.high_mileage_msg_10k,
     },
     21.1: {
         "min": settings.min_mileage_half,
-        "max": 70,
-        "low_msg": (
-            "Half marathon training requires a stronger base. "
-            "Build to 15km/week for 3-4 weeks before starting."
-        ),
-        "high_msg": (
-            "Very high mileage for half marathon. "
-            "Ensure adequate recovery and consider periodization."
-        ),
+        "max": settings.max_mileage_half,
+        "low_msg": settings.low_mileage_msg_half,
+        "high_msg": settings.high_mileage_msg_half,
     },
     30.0: {
         "min": settings.min_mileage_30k,
-        "max": 60,
-        "low_msg": (
-            "Trail running requires good base fitness. "
-            "Build to 8km/week with some trail experience first."
-        ),
-        "high_msg": (
-            "High mileage for trail running. "
-            "Focus on time on feet rather than distance."
-        ),
+        "max": settings.max_mileage_30k,
+        "low_msg": settings.low_mileage_msg_30k,
+        "high_msg": settings.high_mileage_msg_30k,
     },
     42.2: {
         "min": settings.min_mileage_marathon,
-        "max": 100,
-        "low_msg": (
-            "Marathon training requires significant base fitness. "
-            "Build to 25km/week for 4-6 weeks before beginning."
-        ),
-        "high_msg": (
-            "Extremely high mileage. "
-            "Be cautious about injury risk and ensure proper recovery."
-        ),
+        "max": settings.max_mileage_marathon,
+        "low_msg": settings.low_mileage_msg_marathon,
+        "high_msg": settings.high_mileage_msg_marathon,
     },
 }
 
 
-class PlanRequest(BaseModel):
-    """Request schema for generating a training plan."""
+class PlanRequestBase(BaseModel):
+    """Basic fields for training plan generation."""
 
     current_km: float = Field(
         ..., ge=0, le=200, description="Current weekly mileage in km"
@@ -110,7 +80,10 @@ class PlanRequest(BaseModel):
         default=70.0, ge=30.0, le=250.0, description="Body weight in kg"
     )
 
-    # Optional: recent race result for VDOT-based pace zones
+
+class RaceInfoMixin(BaseModel):
+    """Optional race info for VDOT-based pace zones."""
+
     recent_race_distance_km: Optional[float] = Field(
         default=None, description="Recent race distance in km (for VDOT calculation)"
     )
@@ -123,6 +96,10 @@ class PlanRequest(BaseModel):
     goal_time: Optional[str] = Field(
         default=None, description="Goal finish time for the target race (HH:MM:SS or MM:SS)"
     )
+
+
+class PlanRequest(PlanRequestBase, RaceInfoMixin):
+    """Request schema for generating a training plan."""
 
     # Auto-computed — not user inputs
     vdot: Optional[float] = Field(default=None, exclude=True)
@@ -506,10 +483,10 @@ class PerformancePlanRequest(BaseModel):
 
             # Minimum mileage requirements for performance training (higher than beginner plans)
             min_requirements = {
-                5.0: 20,
-                10.0: 25,
-                21.1: 35,
-                42.2: 50
+                5.0: settings.perf_min_mileage_5k,
+                10.0: settings.perf_min_mileage_10k,
+                21.1: settings.perf_min_mileage_half,
+                42.2: settings.perf_min_mileage_marathon,
             }
 
             if target in min_requirements:

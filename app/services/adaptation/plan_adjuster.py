@@ -1,6 +1,5 @@
 """Plan adjustment — scale future workout distances based on performance."""
 
-import json
 import logging
 from datetime import timedelta
 from typing import Any, Dict, List, Optional, Tuple
@@ -382,7 +381,7 @@ def _check_vdot_recalibration(
     if pace_updates == 0:
         return None
 
-    training_plan.plan_data = json.dumps(plan_data)
+    training_plan.plan_data = plan_data
     old_vdot = training_plan.vdot
     training_plan.vdot = round(current_vdot, 1)
     db.flush()
@@ -504,7 +503,7 @@ def _apply_adjustment_to_future_weeks(
             if week.week_number in pd_week:
                 pd_week[week.week_number]["total_km"] = new_total
 
-    training_plan.plan_data = json.dumps(plan_data)
+    training_plan.plan_data = plan_data
     return weeks_changed, any_distance_changed
 
 
@@ -578,7 +577,7 @@ def reset_adjustment(
 
     training_plan.adjustment_multiplier = None
     training_plan.last_recalibrated_at = None
-    training_plan.plan_data = json.dumps(plan_data)
+    training_plan.plan_data = plan_data
     db.commit()
 
     return {
