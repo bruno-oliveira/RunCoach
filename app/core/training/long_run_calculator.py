@@ -119,19 +119,36 @@ def calculate_long_run_ratio(phase: str, week_number: int, phases: Dict[str, int
     return round(ratio, 3)
 
 
-def _get_long_run_cap(target_distance: float, experience_level: str = 'intermediate') -> float:
-    """Experience-tiered long run distance caps (km)."""
-    caps = {
+def _get_long_run_cap(target_distance: float, experience_level: str = 'intermediate',
+                      weekly_km: float = 0) -> float:
+    """Experience-tiered long run distance caps, with volume-aware scaling.
+
+    When weekly volume is high enough that the static cap would prevent
+    filling target volume, the cap scales up to a hard ceiling.
+    """
+    base_caps = {
         5.0:  {'beginner': 7.0,  'intermediate': 8.0,  'advanced': 10.0},
         10.0: {'beginner': 12.0, 'intermediate': 15.0, 'advanced': 16.0},
         21.1: {'beginner': 18.0, 'intermediate': 20.0, 'advanced': 22.0},
         30.0: {'beginner': 20.0, 'intermediate': 24.0, 'advanced': 28.0},
         42.2: {'beginner': 28.0, 'intermediate': 32.0, 'advanced': 35.0},
     }
-    tier = caps.get(target_distance)
+    hard_ceilings = {5.0: 14.0, 10.0: 22.0, 21.1: 28.0, 30.0: 32.0, 42.2: 38.0}
+
+    tier = base_caps.get(target_distance)
     if tier:
-        return tier.get(experience_level, tier['intermediate'])
-    return target_distance * 0.77
+        base_cap = tier.get(experience_level, tier['intermediate'])
+    else:
+        base_cap = target_distance * 0.77
+
+    if weekly_km <= 0:
+        return base_cap
+
+    ceiling = hard_ceilings.get(target_distance, target_distance * 0.9)
+    volume_ratio = weekly_km * 0.30
+    if volume_ratio > base_cap:
+        return min(round(volume_ratio, 1), ceiling)
+    return base_cap
 
 
 def calculate_long_run_distance(total_km: float, target_distance: float,
@@ -150,7 +167,7 @@ def calculate_long_run_distance(total_km: float, target_distance: float,
 
     long_run_base = total_km * long_run_ratio
 
-    long_run_cap = _get_long_run_cap(target_distance, experience_level)
+    long_run_cap = _get_long_run_cap(target_distance, experience_level, weekly_km=total_km)
 
     long_run_base = min(long_run_base, long_run_cap)
 

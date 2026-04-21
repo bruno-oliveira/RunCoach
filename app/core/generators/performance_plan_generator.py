@@ -13,6 +13,7 @@ from app.core.coaching.coaching_notes_generator import generate_coaching_note
 from app.core.training import phase_calculator
 from app.core.training import mileage_progression
 from app.core.training.key_workout_library import KeyWorkoutLibrary
+from app.core.training.quality_caps import enforce_week_caps
 from app.core.training.vdot_calculator import VDOTCalculator
 from app.utils import format_pace as _shared_format_pace
 
@@ -256,10 +257,10 @@ class PerformancePlanGenerator:
             quality_types = self.PHASE_QUALITY_PRIORITY.get(phase, ['tempo', 'vo2max'])
 
             _generators = {
-                'tempo': lambda: generate_tempo_workout(zones, target_distance, week_number, phase),
-                'vo2max': lambda: generate_vo2max_workout(zones, target_distance, week_number, phase),
-                'race_pace': lambda: generate_race_pace_workout(zones, target_distance, week_number, phase),
-                'fartlek': lambda: generate_fartlek_workout(zones, target_distance, week_number, phase),
+                'tempo': lambda: generate_tempo_workout(zones, weekly_km, week_number, phase),
+                'vo2max': lambda: generate_vo2max_workout(zones, weekly_km, week_number, phase),
+                'race_pace': lambda: generate_race_pace_workout(zones, weekly_km, week_number, phase),
+                'fartlek': lambda: generate_fartlek_workout(zones, weekly_km, week_number, phase),
             }
 
             for i, day in enumerate(quality_days[:quality_workouts_needed]):
@@ -273,6 +274,10 @@ class PerformancePlanGenerator:
             daily_workouts.append(workout)
             total_assigned_km += workout['distance']
 
+        # Apply quality caps against the long run
+        enforce_week_caps(daily_workouts, target_distance, phase)
+        total_assigned_km = sum(w['distance'] for w in daily_workouts)
+
         # Fill remaining days with easy runs
         remaining_km = weekly_km - total_assigned_km
         scheduled_days = {w['day'] for w in daily_workouts}
@@ -281,6 +286,10 @@ class PerformancePlanGenerator:
         easy_runs_needed = runs_per_week - len(daily_workouts)
         if easy_runs_needed > 0 and remaining_km > 0:
             easy_run_km = remaining_km / easy_runs_needed
+            long_runs = [w for w in daily_workouts if w['type'] == 'long']
+            long_dist = long_runs[0]['distance'] if long_runs else 0
+            min_easy_km = max(3.0, long_dist * 0.20) if long_dist > 0 else 3.0
+            easy_run_km = max(easy_run_km, min_easy_km)
             for i in range(easy_runs_needed):
                 if i < len(available_days):
                     workout = generate_easy_run(zones, easy_run_km)
@@ -313,6 +322,7 @@ class PerformancePlanGenerator:
             )
 
         actual_total_km = sum(w['distance'] for w in daily_workouts)
+        is_valid, validation_msg = self._validate_week_plan(daily_workouts, actual_total_km, weekly_km)
 
         return {
             'week': week_number,
@@ -322,7 +332,33 @@ class PerformancePlanGenerator:
             'total_km': round(actual_total_km, 1),
             'quality_workouts': sum(1 for w in daily_workouts if w.get('quality', False)),
             'daily_workouts': daily_workouts,
+            'validation': {'valid': is_valid, 'message': validation_msg},
         }
+
+    # ------------------------------------------------------------------
+    # Validation
+    # ------------------------------------------------------------------
+
+    @staticmethod
+    def _validate_week_plan(workouts: List[Dict], total_km: float,
+                            target_km: float) -> tuple:
+        """Validate a week's workouts follow training principles."""
+        long_runs = [w for w in workouts if w['type'] == 'long']
+        long_dist = long_runs[0]['distance'] if long_runs else 0
+
+        for workout in workouts:
+            if workout.get('quality', False) and workout['distance'] > long_dist * 1.1:
+                return False, (f"Quality workout {workout['type']} ({workout['distance']:.1f}km) "
+                               f"exceeds long run ({long_dist:.1f}km)")
+
+            if workout['type'] == 'easy' and 0 < workout['distance'] < 2.0:
+                return False, f"Easy run too short ({workout['distance']:.1f}km)"
+
+        tolerance = target_km * 0.15
+        if total_km < target_km - tolerance:
+            return False, f"Volume shortfall: target {target_km:.1f}km, got {total_km:.1f}km"
+
+        return True, "Valid"
 
     # ------------------------------------------------------------------
     # Public entry point

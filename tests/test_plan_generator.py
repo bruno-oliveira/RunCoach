@@ -447,11 +447,11 @@ class TestTrainingPlanGenerator:
         assert 60 <= peak_marathon <= 80
 
     def test_calculate_long_run_distance_caps(self, plan_generator: TrainingPlanGenerator):
-        """Test _calculate_long_run_distance() caps properly."""
-        assert plan_generator._calculate_long_run_distance(50, 5) <= 10
-        assert plan_generator._calculate_long_run_distance(60, 10) <= 15
-        assert plan_generator._calculate_long_run_distance(80, 21.1) <= 24
-        assert plan_generator._calculate_long_run_distance(100, 42.2) <= 35
+        """Test _calculate_long_run_distance() respects hard ceilings."""
+        assert plan_generator._calculate_long_run_distance(50, 5) <= 14
+        assert plan_generator._calculate_long_run_distance(60, 10) <= 22
+        assert plan_generator._calculate_long_run_distance(80, 21.1) <= 28
+        assert plan_generator._calculate_long_run_distance(100, 42.2) <= 38
 
     # ------------------------------------------------------------------
     # Long run progression and distribution

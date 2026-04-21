@@ -197,16 +197,24 @@ class TrainingPlanGenerator:
                                  easy_runs: int) -> List[float]:
         """Distribute the easy-run budget evenly across easy days.
 
-        Shortfalls (from capping) are accepted rather than redistributed to
-        quality workouts — the 80/20 easy/hard ratio must be preserved.
+        If quality caps caused a shortfall, redistribute to easy runs up to
+        a relaxed cap (120% of long run) so target volume is met.
         """
         if easy_runs <= 0:
             return []
         easy_budget = remaining_km - quality_total
         max_easy = long_run_distance * MAX_EASY_VS_LONG_RUN
-        actual_easy_total = min(easy_budget, max_easy * easy_runs)
-        per_run = actual_easy_total / easy_runs
-        return [round(min(per_run, max_easy), 1) for _ in range(easy_runs)]
+        per_run = easy_budget / easy_runs
+        capped = [round(min(per_run, max_easy), 1) for _ in range(easy_runs)]
+
+        actual_total = sum(capped)
+        shortfall = easy_budget - actual_total
+        if shortfall > 0.5:
+            relaxed_max = long_run_distance * 1.20
+            extra_per = shortfall / easy_runs
+            capped = [round(min(d + extra_per, relaxed_max), 1) for d in capped]
+
+        return capped
 
     def _build_workout_for_type(self, workout_type: str, day_number: int,
                                 distance: float, total_km: float,
@@ -386,8 +394,8 @@ class TrainingPlanGenerator:
         if long_run_dist > 0:
             for workout in workouts:
                 if workout['type'] == 'easy':
-                    if workout.get('distance', 0) > long_run_dist * 1.05:
-                        return False, f"Easy run ({workout.get('distance')}km) > 105% of long run ({long_run_dist}km) on day {workout['day']}"
+                    if workout.get('distance', 0) > long_run_dist * 1.25:
+                        return False, f"Easy run ({workout.get('distance')}km) > 125% of long run ({long_run_dist}km) on day {workout['day']}"
 
         tolerance = target_total_km * 0.05
         if abs(total_km - target_total_km) > tolerance:

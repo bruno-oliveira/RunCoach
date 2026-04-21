@@ -37,18 +37,18 @@ def _cooldown_segment(cooldown_km: float, pace: float) -> dict:
     }
 
 
-def generate_tempo_workout(zones: Dict, distance_km: float, week: int, phase: str) -> Dict:
-    """Generate a tempo workout."""
+def generate_tempo_workout(zones: Dict, weekly_km: float, week: int, phase: str) -> Dict:
+    """Generate a tempo workout scaled to weekly volume."""
     target_pace = zones['zone_3_tempo']['pace']
 
     if phase == 'base':
-        tempo_km = min(6, distance_km * 0.6)
+        tempo_km = min(6, weekly_km * 0.20)
     elif phase == 'build':
-        tempo_km = min(10, distance_km * 0.8)
+        tempo_km = min(10, weekly_km * 0.25)
     elif phase == 'peak':
-        tempo_km = min(12, distance_km)
+        tempo_km = min(12, weekly_km * 0.30)
     else:
-        tempo_km = min(5, distance_km * 0.5)
+        tempo_km = min(5, weekly_km * 0.15)
 
     warmup_km = 2
     cooldown_km = 2
@@ -83,24 +83,25 @@ def generate_tempo_workout(zones: Dict, distance_km: float, week: int, phase: st
     }
 
 
-def generate_vo2max_workout(zones: Dict, distance_km: float, week: int, phase: str) -> Dict:
-    """Generate a VO2 max interval workout."""
+def generate_vo2max_workout(zones: Dict, weekly_km: float, week: int, phase: str) -> Dict:
+    """Generate a VO2 max interval workout scaled to weekly volume."""
     target_pace = zones['zone_4_vo2max']['pace']
 
-    if distance_km <= 5:
-        base_intervals = {'base': 400, 'build': 500, 'peak': 600, 'taper': 400}
-    elif distance_km <= 10:
-        base_intervals = {'base': 600, 'build': 800, 'peak': 1000, 'taper': 600}
-    elif distance_km <= 30:
-        base_intervals = {'base': 800, 'build': 1000, 'peak': 1200, 'taper': 600}
-    else:
-        base_intervals = {'base': 1000, 'build': 1200, 'peak': 1600, 'taper': 800}
+    pct_map = {'base': 0.15, 'build': 0.20, 'peak': 0.18, 'taper': 0.12}
+    target_interval_km = weekly_km * pct_map.get(phase, 0.15)
 
-    interval_m = base_intervals.get(phase, 800)
-    reps_map = {'base': 4, 'build': 6, 'peak': 5, 'taper': 4}
-    reps = reps_map.get(phase, 4)
+    if target_interval_km <= 3:
+        interval_m = 400
+    elif target_interval_km <= 5:
+        interval_m = 600
+    elif target_interval_km <= 8:
+        interval_m = 800
+    else:
+        interval_m = 1000
 
     interval_km = interval_m / 1000
+    reps = max(3, min(8, round(target_interval_km / interval_km)))
+
     recovery_time = int(interval_km * 2)
     total_interval_km = interval_km * reps
     warmup_km = 2
@@ -141,18 +142,18 @@ def generate_vo2max_workout(zones: Dict, distance_km: float, week: int, phase: s
     }
 
 
-def generate_race_pace_workout(zones: Dict, distance_km: float, week: int, phase: str) -> Dict:
-    """Generate a race pace workout."""
+def generate_race_pace_workout(zones: Dict, weekly_km: float, week: int, phase: str) -> Dict:
+    """Generate a race pace workout scaled to weekly volume."""
     target_pace = zones['zone_5_race']['pace']
 
     if phase == 'base':
-        race_km = min(4, distance_km * 0.4)
+        race_km = min(4, weekly_km * 0.15)
     elif phase == 'build':
-        race_km = min(8, distance_km * 0.6)
+        race_km = min(8, weekly_km * 0.20)
     elif phase == 'peak':
-        race_km = min(12, distance_km * 0.8)
+        race_km = min(12, weekly_km * 0.25)
     else:
-        race_km = min(3, distance_km * 0.3)
+        race_km = min(3, weekly_km * 0.10)
 
     warmup_km = 2
     cooldown_km = 2
@@ -187,23 +188,17 @@ def generate_race_pace_workout(zones: Dict, distance_km: float, week: int, phase
     }
 
 
-def generate_fartlek_workout(zones: Dict, distance_km: float, week: int, phase: str) -> Dict:
-    """Generate a fartlek (speed play) workout."""
+def generate_fartlek_workout(zones: Dict, weekly_km: float, week: int, phase: str) -> Dict:
+    """Generate a fartlek (speed play) workout scaled to weekly volume."""
     tempo_pace = zones['zone_3_tempo']['pace']
     hard_pace = zones['zone_4_vo2max']['pace']
 
-    if phase == 'base':
-        total_km = 8
-        surges = 6
-    elif phase == 'build':
-        total_km = 10
-        surges = 8
-    elif phase == 'peak':
-        total_km = 12
-        surges = 10
-    else:
-        total_km = 6
-        surges = 4
+    pct_map = {'base': 0.20, 'build': 0.25, 'peak': 0.28, 'taper': 0.15}
+    total_km = round(weekly_km * pct_map.get(phase, 0.20), 1)
+    total_km = max(5, min(14, total_km))
+
+    surges_per_km = 1.5
+    surges = max(4, min(10, round((total_km - 4) * surges_per_km)))
 
     warmup_km = 2
     cooldown_km = 2
