@@ -213,7 +213,7 @@
                 <div class="week-stats">
                     <div class="week-stat">
                         <span class="stat-label">Total</span>
-                        <span class="stat-value">{{ week.total_km }}km</span>
+                        <span class="stat-value">{{ '%.1f'|format(week.total_km) }}km</span>
                     </div>
                     <div class="week-stat">
                         <span class="stat-label">Quality</span>
