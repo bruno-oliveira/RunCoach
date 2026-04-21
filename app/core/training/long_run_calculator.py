@@ -48,8 +48,8 @@ def get_long_run_ratio_range(phase: str, target_distance: float, weeks: int) -> 
         },
         'Trail': {
             'base': (0.30, 0.35),
-            'build': (0.35, 0.40),
-            'peak': (0.40, 0.45),
+            'build': (0.40, 0.45),
+            'peak': (0.45, 0.50),
             'taper': (0.35, 0.40)
         },
         'Marathon': {
