@@ -15,7 +15,7 @@ from app.constants import SUPPORTED_DISTANCES, DISTANCE_NAMES
 
 # ── Shared fixtures & helpers ──────────────────────────────────────────────
 
-MIN_MILEAGE = {5.0: 5.0, 10.0: 10.0, 21.1: 15.0, 30.0: 8.0, 42.2: 25.0}
+MIN_MILEAGE = {5.0: 5.0, 10.0: 10.0, 21.1: 15.0, 30.0: 15.0, 42.2: 25.0}
 DEFAULT_WEEKS = {5.0: 8, 10.0: 10, 21.1: 12, 30.0: 12, 42.2: 16}
 MILEAGES = list(range(5, 95, 5))
 RUNS_OPTIONS = [2, 3, 4, 5]
@@ -138,10 +138,7 @@ class TestLongRunDominance:
     """The long run should be ≤ 55% of weekly volume for non-trail plans
     with starting mileage ≥ 15km.  Trail at very low volume is exempt."""
 
-    @pytest.mark.parametrize("combo", [
-        c for c in ALL_COMBOS
-        if not (c[0] == 30.0 and c[1] <= 15)  # exempt trail ≤ 15km
-    ], ids=[_id(c) for c in ALL_COMBOS if not (c[0] == 30.0 and c[1] <= 15)])
+    @pytest.mark.parametrize("combo", ALL_COMBOS, ids=[_id(c) for c in ALL_COMBOS])
     def test_long_run_not_dominant(self, combo):
         distance, mileage, max_runs = combo
         plan, _ = _generate_plan(distance, mileage, max_runs)

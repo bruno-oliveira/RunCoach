@@ -60,7 +60,7 @@ All three generators share core infrastructure:
 | 5K | 5 |
 | 10K | 10 |
 | Half Marathon | 15 |
-| Trail | 8 |
+| Trail | 15 |
 | Marathon | 25 |
 
 **Mileage minimums (performance plans):**

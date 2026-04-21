@@ -45,7 +45,7 @@ class Settings(BaseSettings):
     min_mileage_5k: float = 5.0
     min_mileage_10k: float = 10.0
     min_mileage_half: float = 15.0
-    min_mileage_30k: float = 8.0
+    min_mileage_30k: float = 15.0
     min_mileage_marathon: float = 25.0
 
     # OAuth / Authentication
@@ -101,8 +101,8 @@ class Settings(BaseSettings):
         "Ensure adequate recovery and consider periodization."
     )
     low_mileage_msg_30k: str = (
-        "Trail running requires good base fitness. "
-        "Build to 8km/week with some trail experience first."
+        "Trail running requires a solid base. "
+        "Build to 15km/week with some trail experience first."
     )
     high_mileage_msg_30k: str = (
         "High mileage for trail running. "

@@ -86,7 +86,7 @@ def run_validation():
     distances = SUPPORTED_DISTANCES  # [5.0, 10.0, 21.1, 30.0, 42.2]
 
     # Constraints from config defaults
-    min_mileage = {5.0: 5.0, 10.0: 10.0, 21.1: 15.0, 30.0: 8.0, 42.2: 25.0}
+    min_mileage = {5.0: 5.0, 10.0: 10.0, 21.1: 15.0, 30.0: 15.0, 42.2: 25.0}
     min_runs = {5.0: 2, 10.0: 2, 21.1: 3, 30.0: 4, 42.2: 4}
     default_weeks = {5.0: 8, 10.0: 10, 21.1: 12, 30.0: 12, 42.2: 16}
 

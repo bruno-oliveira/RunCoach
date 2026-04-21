@@ -145,7 +145,7 @@ Starting mileage must meet distance-specific thresholds:
 | 5K | 5 | Base aerobic fitness |
 | 10K | 10 | Sustained running ability |
 | Half | 15 | Endurance foundation |
-| Trail | 8 | Trail-specific base |
+| Trail | 15 | Trail-specific base |
 | Marathon | 25 | Significant base fitness |
 
 Zero-mileage runners are routed to a Couch-to-5K program (5K/10K only, minimum 8 weeks).

@@ -429,6 +429,18 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
             }
 
+            // Minimum mileage per distance
+            const km = parseFloat(currentKm.value);
+            const dist = parseFloat(targetDistance.value);
+            const minMileage = {5: 5, 10: 10, 21.1: 15, 30: 15, 42.2: 25};
+            const distNames = {5: '5K', 10: '10K', 21.1: 'Half Marathon', 30: 'Trail Running', 42.2: 'Marathon'};
+            if (km > 0 && minMileage[dist] && km < minMileage[dist]) {
+                e.preventDefault();
+                alert(distNames[dist] + ' training requires at least ' + minMileage[dist] + ' km/week. Please build your base before starting.');
+                currentKm.focus();
+                return false;
+            }
+
             if (!targetDistance.value) {
                 e.preventDefault();
                 targetDistance.focus();
