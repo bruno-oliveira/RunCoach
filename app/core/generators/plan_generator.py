@@ -197,24 +197,17 @@ class TrainingPlanGenerator:
                                  easy_runs: int) -> List[float]:
         """Distribute the easy-run budget evenly across easy days.
 
-        If quality caps caused a shortfall, redistribute to easy runs up to
-        a relaxed cap (120% of long run) so target volume is met.
+        Each easy run is capped at MAX_EASY_VS_LONG_RUN × long_run_distance.
+        Any remaining shortfall is handled at the weekly-plan level where both
+        easy and long runs can be expanded together, preserving the invariant
+        that the long run stays the longest session.
         """
         if easy_runs <= 0:
             return []
         easy_budget = remaining_km - quality_total
         max_easy = long_run_distance * MAX_EASY_VS_LONG_RUN
         per_run = easy_budget / easy_runs
-        capped = [round(min(per_run, max_easy), 1) for _ in range(easy_runs)]
-
-        actual_total = sum(capped)
-        shortfall = easy_budget - actual_total
-        if shortfall > 0.5:
-            relaxed_max = long_run_distance * 1.20
-            extra_per = shortfall / easy_runs
-            capped = [round(min(d + extra_per, relaxed_max), 1) for d in capped]
-
-        return capped
+        return [round(min(per_run, max_easy), 1) for _ in range(easy_runs)]
 
     def _build_workout_for_type(self, workout_type: str, day_number: int,
                                 distance: float, total_km: float,
@@ -452,17 +445,30 @@ class TrainingPlanGenerator:
                     w['distance'] = round(w['distance'] * scale, 1)
             actual_total_km = round(sum(w.get('distance', 0) for w in workouts), 1)
 
-        # Scale easy/long runs UP if quality caps caused a shortfall.
-        # This prevents weeks from landing far below their progression target,
-        # which causes large apparent jumps when the next week hits its target.
+        # Fill shortfall by expanding easy and long runs proportionally,
+        # then enforce that no easy run exceeds the long run.
         if actual_total_km < total_km * 0.97 and actual_total_km > 0:
             deficit = total_km - actual_total_km
             expandable = [w for w in workouts if w.get('type') in ('easy', 'long') and w.get('distance', 0) > 0]
             if expandable:
-                add_per = deficit / len(expandable)
-                for w in expandable:
-                    w['distance'] = round(w['distance'] + add_per, 1)
-                actual_total_km = round(sum(w.get('distance', 0) for w in workouts), 1)
+                total_expandable = sum(w['distance'] for w in expandable)
+                if total_expandable > 0:
+                    for w in expandable:
+                        share = deficit * (w['distance'] / total_expandable)
+                        w['distance'] = round(w['distance'] + share, 1)
+
+            # Enforce invariant: no easy run exceeds the long run
+            long_ws = [w for w in workouts if w.get('type') == 'long' and w.get('distance', 0) > 0]
+            if long_ws:
+                long_d = long_ws[0]['distance']
+                for w in workouts:
+                    if w.get('type') == 'easy' and w.get('distance', 0) > long_d:
+                        excess = w['distance'] - long_d
+                        w['distance'] = round(long_d, 1)
+                        long_ws[0]['distance'] = round(long_ws[0]['distance'] + excess, 1)
+                        long_d = long_ws[0]['distance']
+
+            actual_total_km = round(sum(w.get('distance', 0) for w in workouts), 1)
 
         is_valid, validation_message = self._validate_week_plan(workouts, actual_total_km, total_km, phase)
 
@@ -524,6 +530,7 @@ class TrainingPlanGenerator:
         )
 
         training_plan = []
+        actual_high_water = current_km
         for week in range(1, weeks + 1):
             week_km = weekly_progression[week - 1]
             weekly_plan = self._generate_weekly_plan(
@@ -532,6 +539,39 @@ class TrainingPlanGenerator:
                 experience_level=experience_level,
                 terrain=terrain,
             )
+
+            # Enforce 10% cap against actual high-water mark.  The mileage
+            # progression module already enforces this against its own targets,
+            # but workout-allocation rounding can push the actual total a few
+            # percent above or below the target, compounding into 12-15% jumps.
+            is_recovery = weekly_plan.get('is_recovery', False)
+            actual_km = weekly_plan['total_km']
+            if not is_recovery and actual_high_water > 0:
+                ceiling = round(actual_high_water * 1.10, 1)
+                if actual_km > ceiling and actual_km > 0:
+                    scale = ceiling / actual_km
+                    for w in weekly_plan['daily_workouts']:
+                        if w.get('distance', 0) > 0:
+                            w['distance'] = round(w['distance'] * scale, 1)
+                    new_total = round(
+                        sum(w.get('distance', 0) for w in weekly_plan['daily_workouts']), 1,
+                    )
+                    # Rounding individual workouts can push total back above
+                    # ceiling; trim the largest workout to absorb the excess.
+                    if new_total > ceiling:
+                        excess = round(new_total - ceiling, 1)
+                        largest = max(
+                            (w for w in weekly_plan['daily_workouts'] if w.get('distance', 0) > 0),
+                            key=lambda w: w['distance'],
+                        )
+                        largest['distance'] = round(largest['distance'] - excess, 1)
+                        new_total = round(
+                            sum(w.get('distance', 0) for w in weekly_plan['daily_workouts']), 1,
+                        )
+                    weekly_plan['total_km'] = new_total
+            if not is_recovery and weekly_plan['total_km'] > actual_high_water:
+                actual_high_water = weekly_plan['total_km']
+
             training_plan.append(weekly_plan)
 
         return training_plan
