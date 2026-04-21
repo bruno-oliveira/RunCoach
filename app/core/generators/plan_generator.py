@@ -452,6 +452,18 @@ class TrainingPlanGenerator:
                     w['distance'] = round(w['distance'] * scale, 1)
             actual_total_km = round(sum(w.get('distance', 0) for w in workouts), 1)
 
+        # Scale easy/long runs UP if quality caps caused a shortfall.
+        # This prevents weeks from landing far below their progression target,
+        # which causes large apparent jumps when the next week hits its target.
+        if actual_total_km < total_km * 0.97 and actual_total_km > 0:
+            deficit = total_km - actual_total_km
+            expandable = [w for w in workouts if w.get('type') in ('easy', 'long') and w.get('distance', 0) > 0]
+            if expandable:
+                add_per = deficit / len(expandable)
+                for w in expandable:
+                    w['distance'] = round(w['distance'] + add_per, 1)
+                actual_total_km = round(sum(w.get('distance', 0) for w in workouts), 1)
+
         is_valid, validation_message = self._validate_week_plan(workouts, actual_total_km, total_km, phase)
 
         training_tips = self._generate_training_tips(week_number, target_distance)
