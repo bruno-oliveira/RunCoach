@@ -177,6 +177,8 @@ def calculate_long_run_distance(total_km: float, target_distance: float,
 
     if is_recovery_week:
         min_long_run = min(target_distance * 0.20, total_km)
+        # Ensure recovery long run doesn't exceed 30% of weekly volume
+        min_long_run = min(min_long_run, total_km * 0.30)
 
     return round(max(min_long_run, long_run_base), 1)
 

@@ -81,7 +81,7 @@ def validate_plan(plan: List[Dict[str, Any]], current_km: float,
 def run_validation():
     generator = TrainingPlanGenerator()
 
-    mileages = list(range(0, 95, 5))  # 0, 5, 10, ... 90
+    mileages = list(range(10, 81, 5))  # 10-80km (step 5)
     runs_per_week = [2, 3, 4, 5]
     distances = SUPPORTED_DISTANCES  # [5.0, 10.0, 21.1, 30.0, 42.2]
 

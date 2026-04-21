@@ -6,7 +6,7 @@ with 10% rule enforcement and phase-aware periodization.
 
 from typing import List, Optional
 
-from app.core.training.phase_calculator import calculate_phases, is_recovery_week
+from app.core.training.phase_calculator import calculate_phases, get_phase, is_recovery_week
 
 
 # --- Progression safety constants ---------------------------------------------
@@ -34,18 +34,39 @@ PEAK_OSCILLATION_BASE = 0.97
 PEAK_OSCILLATION_STEP = 0.01
 
 
+# Absolute maximum weekly mileage per race distance.
+# Geared toward recreational runners — sufficient to finish strong without
+# requiring elite-level volume.
+MAX_PEAK_MILEAGE = {
+    5.0: 40.0,     # Recreational 5K runners peak around 25-40 km/wk
+    10.0: 50.0,    # Recreational 10K runners ~30-50 km/wk
+    21.1: 65.0,    # Recreational half marathon ~40-65 km/wk
+    30.0: 75.0,    # Recreational trail 30K ~50-75 km/wk
+    42.2: 85.0,    # Recreational marathon ~55-85 km/wk
+}
+
+
 def get_ideal_peak(target_distance: float, current_km: float, weeks: int) -> float:
-    """Get ideal peak mileage based on race distance."""
+    """Get ideal peak mileage based on race distance.
+
+    Multipliers are conservative — suitable for recreational runners who
+    want to finish strong without needing elite-level weekly volume.
+    """
     if target_distance == 30:
-        ideal_peak = max(45, current_km * 2.0)
+        ideal_peak = max(35, current_km * 1.5)
     elif target_distance <= 5:
-        ideal_peak = max(25, current_km * 2.0)
+        ideal_peak = max(20, current_km * 1.5)
     elif target_distance <= 10:
-        ideal_peak = max(30, current_km * 2.2)
+        ideal_peak = max(25, current_km * 1.6)
     elif target_distance <= 21.1:
-        ideal_peak = max(40, current_km * 2.3)
+        ideal_peak = max(30, current_km * 1.7)
     else:
-        ideal_peak = max(50, current_km * 2.0)
+        ideal_peak = max(40, current_km * 1.5)
+
+    # Apply absolute ceiling so high-base runners don't get absurd peaks
+    cap = MAX_PEAK_MILEAGE.get(target_distance)
+    if cap is not None:
+        ideal_peak = min(ideal_peak, cap)
 
     return ideal_peak
 
@@ -71,7 +92,13 @@ def get_peak_mileage(target_distance: float, current_km: float, weeks: int,
 
     peak = min(current_km * peak_multiplier, ideal_peak)
 
-    return max(peak, current_km * 1.2)
+    # Ensure peak is at least 1.2x base but never exceeds the distance cap
+    peak = max(peak, current_km * 1.2)
+    cap = MAX_PEAK_MILEAGE.get(target_distance)
+    if cap is not None:
+        peak = min(peak, cap)
+
+    return peak
 
 
 def _get_taper_curve(taper_weeks: int, target_distance: float) -> list[float]:
@@ -94,14 +121,18 @@ def _ramp_week_km(start_km: float, end_km: float, step_idx: int,
 
     Linear interpolation from ``start_km`` to ``end_km`` across ``total_steps``
     non-recovery weeks, then clamped by both the week-over-week cap and the
-    minimum bump so the week is at least a measurable progression.
+    minimum bump so the week is at least a measurable progression — but only
+    when the target is actually above the current base.
     """
     if total_steps <= 0:
         ideal = start_km
     else:
         ideal = start_km + (end_km - start_km) * ((step_idx + 1) / total_steps)
     capped = min(ideal, high_water * WEEK_OVER_WEEK_CAP)
-    return max(capped, high_water * MIN_NON_RECOVERY_BUMP)
+    # Only enforce minimum bump when actually ramping up
+    if end_km > start_km:
+        return max(capped, high_water * MIN_NON_RECOVERY_BUMP)
+    return capped
 
 
 def _progress_ramp_phase(phase_name: str, phase_weeks: int, phase_start_week: int,
@@ -198,31 +229,49 @@ def calculate_weekly_progression(current_km: float, target_distance: float, week
     - Build: Progress from 70% to 100% of peak, recovery every 4th week
     - Peak: Maintain near peak with slight variation
     - Taper: Distance-appropriate progressive reduction toward race week
+
+    When the runner's base already meets or exceeds the target peak (common for
+    high-mileage runners training for shorter distances), the ramp phases are
+    skipped and weekly mileage is held flat at the capped peak.
     """
     phases = calculate_phases(weeks, target_distance)
     peak_km = get_peak_mileage(target_distance, current_km, weeks, vdot=vdot)
     base_end_target = peak_km * BASE_PHASE_END_FRACTION
 
     weekly_progression: List[float] = []
-    high_water = current_km
 
-    base_weeks, high_water = _progress_ramp_phase(
-        'base', phases['base'], phase_start_week=1,
-        phase_start_km=current_km, phase_end_km=base_end_target,
-        phases=phases, high_water=high_water,
-    )
-    weekly_progression.extend(base_weeks)
+    # If runner's base already meets or exceeds the target peak, skip ramping
+    # and hold steady at peak_km with recovery weeks as normal.
+    if current_km >= peak_km:
+        high_water = peak_km
+        phase_start_week = 1
+        for week_offset in range(weeks - phases['taper']):
+            week_number = phase_start_week + week_offset
+            phase = get_phase(week_number, phases)
+            if is_recovery_week(week_number, phase, phases):
+                weekly_progression.append(round(high_water * RECOVERY_WEEK_RATIO, 1))
+            else:
+                weekly_progression.append(round(high_water, 1))
+    else:
+        high_water = current_km
 
-    build_start = max(high_water, base_end_target)
-    build_weeks, high_water = _progress_ramp_phase(
-        'build', phases['build'], phase_start_week=phases['base'] + 1,
-        phase_start_km=build_start, phase_end_km=peak_km,
-        phases=phases, high_water=high_water,
-    )
-    weekly_progression.extend(build_weeks)
+        base_weeks, high_water = _progress_ramp_phase(
+            'base', phases['base'], phase_start_week=1,
+            phase_start_km=current_km, phase_end_km=base_end_target,
+            phases=phases, high_water=high_water,
+        )
+        weekly_progression.extend(base_weeks)
 
-    peak_weeks, high_water = _progress_peak_phase(phases, peak_km, high_water)
-    weekly_progression.extend(peak_weeks)
+        build_start = max(high_water, base_end_target)
+        build_weeks, high_water = _progress_ramp_phase(
+            'build', phases['build'], phase_start_week=phases['base'] + 1,
+            phase_start_km=build_start, phase_end_km=peak_km,
+            phases=phases, high_water=high_water,
+        )
+        weekly_progression.extend(build_weeks)
+
+        peak_weeks, high_water = _progress_peak_phase(phases, peak_km, high_water)
+        weekly_progression.extend(peak_weeks)
 
     weekly_progression.extend(_progress_taper_phase(phases, peak_km, target_distance))
 
