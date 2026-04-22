@@ -573,4 +573,150 @@ WORKOUTS_LONG: List[Dict] = [
             "race day."
         ),
     },
+
+    # -- Long-run variants (Trail 30K — hilly) --
+    {
+        "id": "trail_long_fast_finish",
+        "distances": [30.0],
+        "phases": ["build", "peak"],
+        "type": "long",
+        "terrain": ["hilly"],
+        "name": "Trail Fast-Finish Long Run",
+        "structure": "Long run with the last 3 km at tempo effort on trail",
+        "description": (
+            "Run your long-run distance on trails at easy effort. In the "
+            "final 3 km, pick up to tempo effort — push the climbs, float "
+            "the descents. Finish with purpose, not a sprint."
+        ),
+        "intensity": "medium",
+        "target_zone": 3,
+        "pace_zone": "T",
+        "rationale": (
+            "Finishing a trail long run strong teaches your legs to change "
+            "gears in the final hour — the difference between holding pace "
+            "and fading in a 30K trail race."
+        ),
+        "steps_builder": "fast_finish",
+    },
+    {
+        "id": "trail_long_rolling_hills",
+        "distances": [30.0],
+        "phases": ["build"],
+        "type": "long",
+        "terrain": ["hilly"],
+        "name": "Trail Rolling Hills Long Run",
+        "structure": "Long run on a hilly trail route at even effort",
+        "description": (
+            "Run your long-run distance on the hilliest trail you can find. "
+            "Keep effort even throughout — push the climbs at threshold effort, "
+            "recover on the descents. Walk uphills steeper than 15% grade."
+        ),
+        "intensity": "medium",
+        "target_zone": 3,
+        "pace_zone": "E",
+        "rationale": (
+            "Running long on hilly terrain is the most race-specific long run "
+            "for trail. The repeated climb-descend cycles build the exact "
+            "muscular endurance you need on race day."
+        ),
+        "steps_builder": "rolling_hills",
+    },
+    {
+        "id": "trail_long_race_simulation",
+        "distances": [30.0],
+        "phases": ["peak"],
+        "type": "long",
+        "terrain": ["hilly"],
+        "name": "Race Simulation Long Run",
+        "structure": "Long run at race effort with fueling every 30 min",
+        "description": (
+            "Run your long-run distance on trails that approximate race "
+            "terrain. Run at planned race effort — walk uphills you plan to "
+            "walk on race day. Practice your exact fueling strategy: take "
+            "nutrition every 30 min. Treat this as a dress rehearsal."
+        ),
+        "intensity": "medium",
+        "target_zone": 3,
+        "pace_zone": "E",
+        "rationale": (
+            "The capstone peak workout. A full race-effort rehearsal builds "
+            "confidence and tests your fueling, pacing, and gear strategy "
+            "before taper begins."
+        ),
+        "steps_builder": "rolling_hills",
+    },
+
+    # -- Long-run variants (Trail 30K — flat) --
+    {
+        "id": "trail_flat_long_fast_finish",
+        "distances": [30.0],
+        "phases": ["build", "peak"],
+        "type": "long",
+        "terrain": ["flat"],
+        "name": "Soft-Surface Fast-Finish Long",
+        "structure": "Long run on soft surface with the last 3 km at tempo effort",
+        "description": (
+            "Run your long-run distance on the softest surface available "
+            "(grass, dirt, gravel). In the final 3 km, pick up to tempo "
+            "effort. The soft surface adds 10-15% metabolic cost, partially "
+            "compensating for lack of hills."
+        ),
+        "intensity": "medium",
+        "target_zone": 3,
+        "pace_zone": "T",
+        "rationale": (
+            "Fast-finish runs on soft surfaces combine the metabolic demand "
+            "of trail with the gear-change skill needed in the final hour "
+            "of a 30K race."
+        ),
+        "steps_builder": "fast_finish",
+    },
+    {
+        "id": "trail_flat_long_fueling",
+        "distances": [30.0],
+        "phases": ["build"],
+        "type": "long",
+        "terrain": ["flat"],
+        "name": "Fueling Practice Long Run",
+        "structure": "Long run at easy effort, practice nutrition every 30 min",
+        "description": (
+            "Run your long-run distance at easy conversational pace. Take "
+            "your planned race nutrition every 30 min starting at minute 30. "
+            "Test exactly what you'll eat and drink on race day. Walk 1 min "
+            "after each fuel stop if needed."
+        ),
+        "intensity": "low",
+        "target_zone": 2,
+        "pace_zone": "E",
+        "rationale": (
+            "Gut training is as important as leg training for a 30K. "
+            "Practicing your fueling plan under exercise stress prevents "
+            "the GI issues that ruin trail races."
+        ),
+        "steps_builder": "depletion",
+    },
+    {
+        "id": "trail_flat_long_race_sim",
+        "distances": [30.0],
+        "phases": ["peak"],
+        "type": "long",
+        "terrain": ["flat"],
+        "name": "Race Simulation Long Run",
+        "structure": "Long run at race effort on varied surfaces with fueling",
+        "description": (
+            "Run your long-run distance alternating surfaces (grass, dirt, "
+            "gravel, pavement) every 2-3 km. Run at planned race effort. "
+            "Practice your exact fueling strategy. Treat this as a dress "
+            "rehearsal for race day."
+        ),
+        "intensity": "medium",
+        "target_zone": 3,
+        "pace_zone": "E",
+        "rationale": (
+            "Even without hills, a dress-rehearsal long run on varied "
+            "surfaces tests your pacing, fueling, and mental approach "
+            "before taper begins."
+        ),
+        "steps_builder": "rolling_hills",
+    },
 ]

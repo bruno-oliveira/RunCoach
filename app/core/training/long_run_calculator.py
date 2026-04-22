@@ -172,18 +172,20 @@ def calculate_long_run_distance(total_km: float, target_distance: float,
     long_run_base = min(long_run_base, long_run_cap)
 
     # Floor: at least 25% of target race distance, but never more than total
-    # weekly volume (a single run cannot exceed the week's total mileage).
-    min_long_run = min(target_distance * 0.25, total_km)
+    # weekly volume (a single run cannot exceed the week's total mileage)
+    # and never more than 50% of total (prevents long-run dominance in low-
+    # volume taper weeks where the distance floor would otherwise dominate).
+    min_long_run = min(target_distance * 0.25, total_km, total_km * 0.50)
 
     if is_recovery_week:
         min_long_run = min(target_distance * 0.20, total_km)
-        # Ensure recovery long run doesn't exceed 30% of weekly volume
         min_long_run = min(min_long_run, total_km * 0.30)
 
     return round(max(min_long_run, long_run_base), 1)
 
 
-def get_phase_distribution(phase: str, target_distance: float = 10.0) -> Dict[str, float]:
+def get_phase_distribution(phase: str, target_distance: float = 10.0,
+                           terrain: str | None = None) -> Dict[str, float]:
     """
     Get distance distribution percentages for each phase.
 
@@ -193,35 +195,36 @@ def get_phase_distribution(phase: str, target_distance: float = 10.0) -> Dict[st
     Args:
         phase: Current training phase (base, build, peak, taper)
         target_distance: Race distance in km (adjusts long run percentage)
+        terrain: Optional terrain ('flat' for no-hill trail plans)
 
     Returns:
         Dict with percentage breakdown of workout types
     """
-    dist_key = get_distance_category(target_distance)
+    dist_key = get_distance_category(target_distance, terrain=terrain)
     return PHASE_DISTRIBUTIONS.get(phase, PHASE_DISTRIBUTIONS['taper'])[dist_key]
 
 
 def calculate_quality_distances(total_km: float, phase: str,
                                 distribution: Dict[str, int], is_recovery_week: bool,
                                 long_run_distance: float = 0,
-                                target_distance: float = 10.0) -> Dict[str, float]:
+                                target_distance: float = 10.0,
+                                terrain: str | None = None) -> Dict[str, float]:
     """Calculate distances for quality workouts based on phase distribution."""
     quality_distances = {}
 
     if is_recovery_week:
         return {'tempo': 0, 'interval': 0, 'hill': 0}
 
-    phase_dist = get_phase_distribution(phase, target_distance)
+    phase_dist = get_phase_distribution(phase, target_distance, terrain=terrain)
 
     remaining_km = total_km - long_run_distance
 
     non_long_pct = max(0.01, 1 - phase_dist['long'])
 
-    if distribution['tempo'] > 0:
-        quality_distances['tempo'] = round(remaining_km * (phase_dist['tempo'] / non_long_pct), 1)
-    if distribution['interval'] > 0:
-        quality_distances['interval'] = round(remaining_km * (phase_dist['interval'] / non_long_pct), 1)
-    if distribution['hill'] > 0:
-        quality_distances['hill'] = round(remaining_km * (phase_dist['hill'] / non_long_pct), 1)
+    for qtype in ('tempo', 'interval', 'hill'):
+        if distribution.get(qtype, 0) > 0:
+            pct = phase_dist.get(qtype, 0)
+            dist = remaining_km * (pct / non_long_pct) if pct > 0 else 0
+            quality_distances[qtype] = round(max(dist, 1.0), 1)
 
     return quality_distances

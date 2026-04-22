@@ -236,6 +236,19 @@ def calculate_weekly_progression(current_km: float, target_distance: float, week
     """
     phases = calculate_phases(weeks, target_distance)
     peak_km = get_peak_mileage(target_distance, current_km, weeks, vdot=vdot)
+
+    # Cap peak at what can physically be distributed across max_runs
+    # within per-run structural limits (long run ceiling + quality caps).
+    # Without this, low-run plans target volumes that force the shortfall
+    # fill-up to inflate individual runs past safe distances.
+    if max_runs <= 4:
+        _CEILINGS = {5.0: 14.0, 10.0: 22.0, 21.1: 28.0, 30.0: 32.0, 42.2: 38.0}
+        _Q_CAPS = {5.0: 5.0, 10.0: 8.0, 21.1: 10.0, 30.0: 12.0, 42.2: 12.0}
+        run_ceiling = _CEILINGS.get(target_distance, target_distance * 0.9)
+        q_cap = _Q_CAPS.get(target_distance, 8.0)
+        quality_slots = 1 if max_runs >= 2 else 0
+        distributable = run_ceiling * (max_runs - quality_slots) + q_cap * quality_slots
+        peak_km = min(peak_km, distributable)
     base_end_target = peak_km * BASE_PHASE_END_FRACTION
 
     weekly_progression: List[float] = []

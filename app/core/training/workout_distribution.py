@@ -30,14 +30,18 @@ def get_workout_distribution(total_km: float, max_runs: int, phase: str = 'build
     elif max_runs <= 2:
         quality_workouts = 1 if phase in ('build', 'peak') else 0
     elif phase == 'base':
-        quality_workouts = 1 if max_runs >= 4 else 0
+        base_quality_km = total_km * 0.05
+        if max_runs >= 4 and base_quality_km >= 1.0:
+            quality_workouts = 1
+        else:
+            quality_workouts = 0
     elif phase == 'build':
         if phases:
             week_in_build = week_number - phases['base']
         else:
             week_in_build = week_number
         if week_in_build <= 2:
-            quality_workouts = 1 if max_runs >= 4 else 0
+            quality_workouts = 1 if max_runs >= 3 else 0
         else:
             quality_workouts = 2 if max_runs >= 5 else 1
     elif phase == 'peak':
@@ -131,11 +135,12 @@ def _quality_for_road_10k(quality_workouts: int, week_number: int,
 
 def _quality_for_road_half(quality_workouts: int, week_number: int,
                            phase: str) -> Dict[str, int]:
-    """Half: balanced — 1 interval + optional tempo."""
-    result: Dict[str, int] = {'interval': 1}
+    """Half: balanced — interval and tempo rotate when only 1 quality slot."""
     if quality_workouts >= 2:
-        result['tempo'] = 1
-    return result
+        return {'interval': 1, 'tempo': 1}
+    if week_number % 2 == 1:
+        return {'interval': 1}
+    return {'tempo': 1}
 
 
 def _quality_for_road_marathon(quality_workouts: int, week_number: int,
@@ -211,9 +216,16 @@ def _validate_polarized_ratio(distribution: Dict[str, int], phase: str,
     hard_pct = hard_count / total_runs
     target = hard_targets.get(phase, 0.20)
 
-    # If hard% exceeds target by >5%, reduce quality by 1
+    # If hard% exceeds target by >5%, reduce quality by 1.
+    # Never reduce below 1 quality in build/peak — with 3-4 total runs the
+    # count-based ratio overstates intensity (one 4km tempo in a 30km week
+    # is only 13% of volume, not the 33% that 1-of-3 suggests).
     if hard_pct > target + 0.05 and hard_count > 0:
-        if not (phase == 'base' and hard_count <= 1):
+        if phase == 'base' and hard_count <= 1:
+            pass
+        elif phase in ('build', 'peak') and hard_count <= 1:
+            pass
+        else:
             for key in ('interval', 'tempo', 'hill'):
                 if distribution.get(key, 0) > 0:
                     distribution[key] -= 1

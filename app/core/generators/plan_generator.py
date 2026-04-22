@@ -123,16 +123,18 @@ class TrainingPlanGenerator:
             total_km, target_distance, weeks, week_number, phase,
             is_recovery_week, experience_level)
 
-    def _get_phase_distribution(self, phase: str, target_distance: float = 10.0) -> Dict[str, float]:
-        return long_run_calculator.get_phase_distribution(phase, target_distance)
+    def _get_phase_distribution(self, phase: str, target_distance: float = 10.0,
+                                terrain: Optional[str] = None) -> Dict[str, float]:
+        return long_run_calculator.get_phase_distribution(phase, target_distance, terrain=terrain)
 
     def _calculate_quality_distances(self, total_km: float, phase: str,
                                      distribution: Dict[str, int], is_recovery_week: bool,
                                      long_run_distance: float = 0,
-                                     target_distance: float = 10.0) -> Dict[str, float]:
+                                     target_distance: float = 10.0,
+                                     terrain: Optional[str] = None) -> Dict[str, float]:
         return long_run_calculator.calculate_quality_distances(total_km, phase, distribution,
                                                                is_recovery_week, long_run_distance,
-                                                               target_distance)
+                                                               target_distance, terrain=terrain)
 
     def _generate_rest_day(self, day: int) -> Dict[str, Any]:
         return workout_builders.generate_rest_day(day)
@@ -294,6 +296,7 @@ class TrainingPlanGenerator:
         )
         quality_distances = self._calculate_quality_distances(
             total_km, phase, distribution, is_recovery_week, long_run_distance, target_distance,
+            terrain=terrain,
         )
         quality_distances = self._apply_quality_caps(
             quality_distances, long_run_distance, target_distance, phase,
@@ -459,16 +462,41 @@ class TrainingPlanGenerator:
                         share = deficit * (w['distance'] / total_expandable)
                         w['distance'] = round(w['distance'] + share, 1)
 
-            # Enforce invariant: no easy run exceeds the long run
+            # Re-enforce long run hard ceiling after fill-up — the
+            # proportional distribution can push long runs past their
+            # distance ceiling, especially in low-run weeks.
+            _HARD_CEILINGS = {5.0: 14.0, 10.0: 22.0, 21.1: 28.0, 30.0: 32.0, 42.2: 38.0}
+            hard_ceiling = _HARD_CEILINGS.get(target_distance, target_distance * 0.9)
+            long_ws = [w for w in workouts if w.get('type') == 'long' and w.get('distance', 0) > 0]
+            if long_ws and long_ws[0]['distance'] > hard_ceiling:
+                excess = round(long_ws[0]['distance'] - hard_ceiling, 1)
+                long_ws[0]['distance'] = round(hard_ceiling, 1)
+                easy_ws = [w for w in workouts
+                           if w.get('type') == 'easy' and w.get('distance', 0) > 0]
+                if easy_ws:
+                    per_easy = excess / len(easy_ws)
+                    for w in easy_ws:
+                        w['distance'] = round(w['distance'] + per_easy, 1)
+
+            # Enforce invariant: no easy run exceeds the long run.
+            # The hard ceiling is an upper bound — don't let the
+            # easy-vs-long transfer push long back above it.  If the
+            # ceiling is the binding constraint, trim easy to match long
+            # and accept a small total shortfall.
             long_ws = [w for w in workouts if w.get('type') == 'long' and w.get('distance', 0) > 0]
             if long_ws:
                 long_d = long_ws[0]['distance']
                 for w in workouts:
                     if w.get('type') == 'easy' and w.get('distance', 0) > long_d:
-                        excess = w['distance'] - long_d
-                        w['distance'] = round(long_d, 1)
-                        long_ws[0]['distance'] = round(long_ws[0]['distance'] + excess, 1)
-                        long_d = long_ws[0]['distance']
+                        transferable = w['distance'] - long_d
+                        headroom = hard_ceiling - long_d
+                        transfer = min(transferable, max(0, headroom))
+                        if transfer > 0:
+                            w['distance'] = round(w['distance'] - transfer, 1)
+                            long_ws[0]['distance'] = round(long_ws[0]['distance'] + transfer, 1)
+                            long_d = long_ws[0]['distance']
+                        if w['distance'] > long_d + 0.05:
+                            w['distance'] = round(long_d, 1)
 
             actual_total_km = round(sum(w.get('distance', 0) for w in workouts), 1)
 
