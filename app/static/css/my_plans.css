@@ -176,6 +176,26 @@
     align-items: center;
 }
 
+/* ---- Tier dot ---- */
+.tier-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+
+.tier-dot-beginner {
+    background: #10b981;
+}
+
+.tier-dot-intermediate {
+    background: #3b82f6;
+}
+
+.tier-dot-advanced {
+    background: #8b5cf6;
+}
+
 /* ---- Delete button ---- */
 .btn-danger {
     background: rgba(239, 68, 68, 0.1);

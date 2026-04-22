@@ -37,6 +37,7 @@ from app.services.hr_zone_service import HRZoneService
 from app.services.performance_service import PerformanceService
 from app.services.plan_helpers import error_response, get_plan_or_404, plan_view_context
 from app.services.plan_service import PlanService
+from app.core.training.strength_plan import derive_experience_level
 from app.template_helpers import create_templates
 from app.utils import format_pace
 
@@ -452,6 +453,7 @@ async def list_my_plans(
         for plan in plans:
             td = plan.target_distance_km
             plan.target_distance_display = DISTANCE_NAMES.get(td, f"{td}km")
+            plan.experience_level = derive_experience_level(plan.current_weekly_km or 0)
 
             if plan.start_date:
                 sd = plan.start_date
