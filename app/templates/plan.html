@@ -35,10 +35,16 @@
         {% endif %}
         {% else %}
         <h1>Your Training Plan</h1>
-        {% if plan and plan[0].is_beginner_plan %}
-        <div class="beginner-plan-badge">
-            <span class="badge badge-beginner">Beginner Plan</span>
+        {% if experience_level %}
+        <div class="tier-badge">
+            <span class="badge badge-{{ experience_level }}">{{ experience_level | title }} Plan</span>
+            {% if experience_level == "beginner" %}
             <p>A Couch to 5K program designed for new runners</p>
+            {% elif target_distance|string == '30.0' or target_distance|string == '30' %}
+            <p>Ready to conquer the trails?</p>
+            {% else %}
+            <p>Ready to crush your {{ target_distance }}km goal?</p>
+            {% endif %}
         </div>
         {% elif target_distance|string == '30.0' or target_distance|string == '30' %}
             <p>Ready to conquer the trails?</p>

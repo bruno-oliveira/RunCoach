@@ -1653,16 +1653,14 @@
     margin-bottom: 0;
 }
 
-/* ---- Beginner Plan Styles ---- */
-.beginner-plan-badge {
+/* ---- Tier Badge Styles ---- */
+.tier-badge {
     position: relative;
     margin-top: var(--space-4);
 }
 
-.beginner-plan-badge .badge-beginner {
+.tier-badge .badge {
     display: inline-block;
-    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
-    color: white;
     padding: var(--space-2) var(--space-4);
     border-radius: var(--radius-full);
     font-size: var(--text-sm);
@@ -1671,7 +1669,22 @@
     letter-spacing: 0.05em;
 }
 
-.beginner-plan-badge p {
+.tier-badge .badge-beginner {
+    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+    color: white;
+}
+
+.tier-badge .badge-intermediate {
+    background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+    color: white;
+}
+
+.tier-badge .badge-advanced {
+    background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
+    color: white;
+}
+
+.tier-badge p {
     margin-top: var(--space-2);
     color: var(--color-text-secondary);
     font-size: var(--text-sm);
