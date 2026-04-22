@@ -7,6 +7,7 @@ from fastapi import HTTPException, Request
 from sqlalchemy.orm import Session
 
 from app.config import settings
+from app.core.training.strength_plan import derive_experience_level
 from app.models import TrainingPlan, User
 from app.dependencies import verify_plan_ownership
 from app.template_helpers import create_templates
@@ -181,6 +182,7 @@ def plan_view_context(
         "plan_id": training_plan.id,
         "training_plan": training_plan,
         "current_km": training_plan.current_weekly_km,
+        "experience_level": derive_experience_level(training_plan.current_weekly_km or 0),
         "target_distance": training_plan.target_distance,
         "weeks": training_plan.weeks_duration,
         "nutrition_plan": nutrition_plan,

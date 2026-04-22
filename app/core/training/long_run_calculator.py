@@ -129,11 +129,11 @@ def _get_long_run_cap(target_distance: float, experience_level: str = 'intermedi
     base_caps = {
         5.0:  {'beginner': 7.0,  'intermediate': 8.0,  'advanced': 10.0},
         10.0: {'beginner': 12.0, 'intermediate': 15.0, 'advanced': 16.0},
-        21.1: {'beginner': 18.0, 'intermediate': 21.0, 'advanced': 22.0},
-        30.0: {'beginner': 20.0, 'intermediate': 24.0, 'advanced': 28.0},
-        42.2: {'beginner': 28.0, 'intermediate': 34.0, 'advanced': 36.0},
+        21.1: {'beginner': 17.0, 'intermediate': 18.0, 'advanced': 19.0},
+        30.0: {'beginner': 24.0, 'intermediate': 25.5, 'advanced': 27.0},
+        42.2: {'beginner': 32.0, 'intermediate': 34.0, 'advanced': 36.0},
     }
-    hard_ceilings = {5.0: 14.0, 10.0: 22.0, 21.1: 28.0, 30.0: 32.0, 42.2: 38.0}
+    hard_ceilings = {5.0: 14.0, 10.0: 22.0, 21.1: 24.0, 30.0: 30.0, 42.2: 40.0}
 
     tier = base_caps.get(target_distance)
     if tier:

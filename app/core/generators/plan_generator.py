@@ -250,7 +250,15 @@ class TrainingPlanGenerator:
             return
         if pace_zones:
             key_wk = KeyWorkoutLibrary.inject_vdot_paces(key_wk, pace_zones)
-        workout['description'] = key_wk['description']
+
+        actual_distance = workout.get('distance', 0)
+        description = key_wk['description']
+        if actual_distance > 0:
+            from app.core.training.key_workout_library import _rewrite_key_workout_description
+            description = _rewrite_key_workout_description(
+                description, key_wk['id'], actual_distance,
+            )
+        workout['description'] = description
         workout['key_workout_id'] = key_wk['id']
         workout['key_workout_name'] = key_wk['name']
         workout['structure'] = key_wk['structure']
@@ -465,7 +473,7 @@ class TrainingPlanGenerator:
             # Re-enforce long run hard ceiling after fill-up — the
             # proportional distribution can push long runs past their
             # distance ceiling, especially in low-run weeks.
-            _HARD_CEILINGS = {5.0: 14.0, 10.0: 22.0, 21.1: 28.0, 30.0: 32.0, 42.2: 38.0}
+            _HARD_CEILINGS = {5.0: 14.0, 10.0: 22.0, 21.1: 24.0, 30.0: 30.0, 42.2: 40.0}
             hard_ceiling = _HARD_CEILINGS.get(target_distance, target_distance * 0.9)
             long_ws = [w for w in workouts if w.get('type') == 'long' and w.get('distance', 0) > 0]
             if long_ws and long_ws[0]['distance'] > hard_ceiling:

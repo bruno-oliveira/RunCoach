@@ -4,12 +4,156 @@ Curated workouts that replace generic interval/tempo sessions during
 Build and Peak phases to make training plans feel coached, not generated.
 """
 
+import re
 from typing import Any, Dict, List, Optional
 
 from app.core.training import workout_steps as _steps_mod
 from app.core.training.hr_zone_calculator import WORKOUT_ZONE_MAP
 from app.core.training.key_workout_data import WORKOUTS
 from app.core.training.vdot_calculator import VDOTCalculator
+
+
+# Key workouts with hardcoded distances that need rewriting when the
+# assigned distance differs from the description's implied distance.
+# Each entry maps a workout id to (total_pattern, splits_pattern).
+# total_pattern replaces "Run Xkm" / "Run X-Ykm" with the actual distance.
+# splits_pattern is a callable(actual_distance) -> str for proportional splits.
+_DISTANCE_REWRITES: Dict[str, tuple] = {
+    "marathon_mp_long": (
+        r"Run 25km total",
+        lambda d: f"First {round(d * 0.60, 0):.0f}km at easy pace, then shift to marathon goal pace for the final {round(d * 0.40, 0):.0f}km",
+    ),
+    "marathon_progressive_long": (
+        r"Run 28-30km\. First 20km",
+        lambda d: f"Run {round(d, 0):.0f}km. First {round(d * 0.67, 0):.0f}km",
+    ),
+    "marathon_peak_progressive": (
+        r"Run 28km total\. First 16km",
+        lambda d: f"Run {round(d, 0):.0f}km total. First {round(d * 0.57, 0):.0f}km",
+    ),
+    "marathon_easy_long_fueling": (
+        r"Run 30-32km",
+        lambda d: f"Run {round(d, 0):.0f}km",
+    ),
+    "marathon_tempo_cutdown": (
+        None,
+        lambda d: f"Warm up {round(d * 0.10, 0):.0f}km easy. Run 2 x {round(d * 0.35, 0):.0f}km at threshold pace with 3 min easy jog recovery. Cool down {round(d * 0.10, 0):.0f}km easy.",
+    ),
+    "marathon_mp_cutdown": (
+        None,
+        lambda d: f"Warm up {round(d * 0.10, 0):.0f}km easy. Run 5 x 2km alternating between marathon pace and threshold pace, with 90s jog recovery between each. Cool down {round(d * 0.10, 0):.0f}km easy.",
+    ),
+    "half_progressive_long": (
+        r"Run 14-16km total\. Start at easy pace for 10km",
+        lambda d: f"Run {round(d, 0):.0f}km total. Start at easy pace for {round(d * 0.65, 0):.0f}km",
+    ),
+    "half_cutdown_long": (
+        r"Run 15km in three 5km segments",
+        lambda d: f"Run {round(d, 0):.0f}km in three equal segments",
+    ),
+    "half_race_pace_segments": (
+        None,
+        lambda d: f"Warm up 2km easy. Run 3 x {round(d * 0.25, 0):.0f}km at half marathon goal pace with 2 min easy jog recovery. Cool down 2km easy.",
+    ),
+    "half_threshold_cruise": (
+        None,
+        lambda d: f"Warm up 2km easy. Run 3 x {round(d * 0.20, 0):.0f}km at threshold pace with 90 seconds easy jog recovery. Cool down 2km easy.",
+    ),
+    "trail_flat_surge_fartlek": (
+        r"Run 8 x 3 min",
+        lambda d: f"Run 8 x 3 min",
+    ),
+    "trail_flat_soft_surface": (
+        r"Run 2\.5-3 hours",
+        lambda d: f"Run your long-run duration",
+    ),
+    "trail_time_on_feet": (
+        r"Run 2\.5-3 hours",
+        lambda d: f"Run your long-run duration",
+    ),
+    "trail_back_to_back": (
+        r"Saturday: 20-22km.*?Sunday: 15-18km",
+        lambda d: f"Saturday: {round(d * 0.57, 0):.0f}km trail run at easy effort on hilly terrain. Sunday: {round(d * 0.43, 0):.0f}km trail run at easy effort on fatigued legs",
+    ),
+    "trail_technical_terrain": (
+        r"Run 8km",
+        lambda d: f"Run {round(d * 0.80, 0):.0f}km",
+    ),
+    "10k_goal_pace_segments": (
+        None,
+        lambda d: f"Warm up 2km easy. Run 2 x {round(d * 0.25, 0):.0f}km at 10K goal pace with 3 min standing recovery. Cool down 2km easy.",
+    ),
+    "10k_tempo_progression": (
+        None,
+        lambda d: f"Warm up 2km easy. Run {round(d * 0.50, 0):.0f}km as a progression: first km at easy pace, each subsequent km 10-15 sec/km faster, finishing last km at 10K goal pace. Cool down 2km easy.",
+    ),
+    "10k_fartlek": (
+        None,
+        lambda d: f"Warm up 2km easy. Within a continuous run, alternate 6 x (3 min at 10K pace / 2 min easy jog). Cool down 2km easy.",
+    ),
+}
+
+
+def _rewrite_key_workout_description(description: str, workout_id: str,
+                                      actual_distance: float) -> str:
+    """Rewrite hardcoded distances in a key workout description.
+
+    Uses a lookup table of known patterns to replace specific distance
+    references with values proportional to the actual assigned distance.
+    Falls back to the original description if no rewrite rule matches.
+    """
+    rewrite = _DISTANCE_REWRITES.get(workout_id)
+    if not rewrite:
+        return description
+
+    total_pattern, splits_fn = rewrite
+
+    if total_pattern:
+        description = re.sub(total_pattern, f"Run {round(actual_distance, 0):.0f}km", description)
+
+    if splits_fn:
+        splits_text = splits_fn(actual_distance)
+        description = re.sub(
+            r"(First \d+km.*?(?:final \d+km|last \d+km|descending pace|marathon pace))",
+            splits_text,
+            description,
+            flags=re.DOTALL,
+        )
+        description = re.sub(
+            r"(Warm up \d+km.*?Cool down \d+km.*?)(?:\.)?",
+            splits_text + ".",
+            description,
+            flags=re.DOTALL,
+        )
+        if "Run 2 x" in splits_text or "Run 3 x" in splits_text or "Run 5 x" in splits_text:
+            description = re.sub(
+                r"Run \d+ x \d+km.*?(?:\.|$)",
+                splits_text + ".",
+                description,
+                flags=re.DOTALL,
+            )
+        if "Within a continuous run" in splits_text:
+            description = re.sub(
+                r"Within a continuous run.*?(?:\.|$)",
+                splits_text + ".",
+                description,
+                flags=re.DOTALL,
+            )
+        if "Saturday:" in splits_text:
+            description = re.sub(
+                r"Saturday:.*?(?:fatigued legs)\.",
+                splits_text + ".",
+                description,
+                flags=re.DOTALL,
+            )
+        if "Run your long-run duration" in splits_text:
+            description = re.sub(
+                r"Run \d+(?:\.\d+)?-\d+(?:\.\d+)? hours",
+                "your long-run duration",
+                description,
+            )
+
+    return description
 
 # Backward-compatible alias: tests and internal code import _WORKOUTS.
 _WORKOUTS = WORKOUTS
