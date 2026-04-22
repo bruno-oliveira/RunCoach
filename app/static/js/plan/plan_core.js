@@ -747,6 +747,8 @@
         // Inline suggestions for upcoming weeks (defined in plan_adaptation.js)
         if (window.APP_CTX && window.APP_CTX.plan_id && window.APP_CTX.current_user_id) {
             if (typeof window.loadSuggestions === 'function') window.loadSuggestions();
+        } else {
+            console.log('[suggestions] Not loading — plan_id:', window.APP_CTX && window.APP_CTX.plan_id, 'current_user_id:', window.APP_CTX && window.APP_CTX.current_user_id);
         }
 
         // Adaptation alert banner (defined in plan_adaptation.js)

@@ -1653,6 +1653,88 @@
     margin-bottom: 0;
 }
 
+/* ============================================================================
+   Weekly Coaching Summary
+   ========================================================================= */
+.weekly-coaching-summary {
+    margin: var(--space-3) var(--space-4);
+    padding: var(--space-3) var(--space-4);
+    border-radius: var(--radius-lg);
+    font-size: var(--text-sm);
+    line-height: 1.5;
+    border-left: 3px solid;
+}
+
+.weekly-coaching-summary.sentiment-positive {
+    background: var(--color-success-subtle);
+    border-left-color: var(--color-success);
+}
+
+.weekly-coaching-summary.sentiment-warning {
+    background: var(--color-warning-subtle);
+    border-left-color: var(--color-warning);
+}
+
+.weekly-coaching-summary.sentiment-info {
+    background: var(--color-info-subtle);
+    border-left-color: var(--color-info);
+}
+
+.weekly-summary-main {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--space-2);
+}
+
+.weekly-summary-icon {
+    flex-shrink: 0;
+    margin-top: 2px;
+}
+
+.sentiment-positive .weekly-summary-icon {
+    color: var(--color-success);
+}
+
+.sentiment-warning .weekly-summary-icon {
+    color: var(--color-warning);
+}
+
+.sentiment-info .weekly-summary-icon {
+    color: var(--color-info);
+}
+
+.weekly-summary-text {
+    font-weight: var(--weight-medium);
+}
+
+.sentiment-positive .weekly-summary-text {
+    color: var(--color-success);
+}
+
+.sentiment-warning .weekly-summary-text {
+    color: var(--color-warning);
+}
+
+.sentiment-info .weekly-summary-text {
+    color: var(--color-info);
+}
+
+.weekly-summary-details {
+    margin: var(--space-2) 0 0 var(--space-6);
+    padding: 0;
+    list-style: disc;
+    font-size: var(--text-xs);
+    color: var(--color-text-secondary, #6b7280);
+}
+
+.weekly-summary-details li {
+    margin-bottom: 2px;
+}
+
+.weekly-summary-details li:last-child {
+    margin-bottom: 0;
+}
+
 /* ---- Tier Badge Styles ---- */
 .tier-badge {
     position: relative;

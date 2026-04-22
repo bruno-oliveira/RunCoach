@@ -39,6 +39,31 @@
     <div class="week-recovery-inserted-badge">Recovery week inserted — easy pace only</div>
     {% endif %}
 
+    {% if weekly_feedback_summaries is defined and week.week in weekly_feedback_summaries %}
+    {% set ws = weekly_feedback_summaries[week.week] %}
+    <div class="weekly-coaching-summary sentiment-{{ ws.sentiment }}">
+        <div class="weekly-summary-main">
+            <svg class="weekly-summary-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                {% if ws.sentiment == 'warning' %}
+                <path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
+                {% elif ws.sentiment == 'positive' %}
+                <path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/>
+                {% else %}
+                <circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/>
+                {% endif %}
+            </svg>
+            <span class="weekly-summary-text">{{ ws.summary }}</span>
+        </div>
+        {% if ws.highlights %}
+        <ul class="weekly-summary-details">
+            {% for detail in ws.highlights %}
+            <li>{{ detail }}</li>
+            {% endfor %}
+        </ul>
+        {% endif %}
+    </div>
+    {% endif %}
+
     {% set day_names = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'] %}
     <div class="workout-grid">
         {% for workout in week.daily_workouts %}

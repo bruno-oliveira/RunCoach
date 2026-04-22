@@ -43,20 +43,33 @@
     window.loadSuggestions = function () {
         if (suggestionsLoaded) return;
         var planId = window.APP_CTX && window.APP_CTX.plan_id;
-        if (!planId) return;
+        if (!planId) {
+            console.log('[suggestions] No plan_id in APP_CTX');
+            return;
+        }
 
         fetch('/api/plan/' + planId + '/suggestions', {
             headers: window.authHeaders(),
             credentials: 'same-origin'
         })
-        .then(function (res) { return res.json(); })
+        .then(function (res) {
+            if (!res.ok) {
+                console.warn('[suggestions] HTTP ' + res.status);
+                return { suggestions: [] };
+            }
+            return res.json();
+        })
         .then(function (data) {
             suggestionsLoaded = true;
-            if (!data.suggestions || data.suggestions.length === 0) return;
+            if (!data.suggestions || data.suggestions.length === 0) {
+                console.log('[suggestions] No suggestions returned (need more run data)');
+                return;
+            }
+            console.log('[suggestions] Rendering ' + data.suggestions.length + ' week(s) of suggestions');
             renderSuggestionCards(data.suggestions);
         })
         .catch(function (err) {
-            console.error('[suggestions]', err);
+            console.error('[suggestions] Fetch error:', err);
         });
     };
 
@@ -64,7 +77,10 @@
         suggestions.forEach(function (weekSuggestion) {
             var weekNum = weekSuggestion.week;
             var weekCard = document.querySelector('[data-week="' + weekNum + '"]');
-            if (!weekCard) return;
+            if (!weekCard) {
+                console.warn('[suggestions] Week card not found for week ' + weekNum);
+                return;
+            }
 
             var container = document.createElement('div');
             container.className = 'suggestion-cards';

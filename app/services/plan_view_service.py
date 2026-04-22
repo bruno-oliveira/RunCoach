@@ -526,6 +526,17 @@ class PlanViewService:
                 except Exception as e:
                     logger.warning(f"Week pulse failed: {e}")
 
+        # Weekly coaching feedback summaries
+        weekly_feedback_summaries = {}
+        if current_user:
+            try:
+                from app.services.feedback_service import FeedbackService
+                weekly_feedback_summaries = FeedbackService.get_weekly_feedback_summary(
+                    training_plan.id, current_user.id, db
+                )
+            except Exception as e:
+                logger.warning(f"Weekly feedback summary failed: {e}")
+
         return {
             "performance_analysis": performance_analysis,
             "logged_runs": logged_runs_map,
@@ -539,6 +550,7 @@ class PlanViewService:
             "adaptation_timeline": adaptation_timeline,
             "week_evolution": week_evolution,
             "week_pulse": week_pulse,
+            "weekly_feedback_summaries": weekly_feedback_summaries,
         }
 
     def _compute_week_evolution(
