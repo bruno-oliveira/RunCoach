@@ -75,26 +75,31 @@ class TrainingPlanGenerator:
         return phase_calculator.is_recovery_week(week_number, phase, phases)
 
     def _get_peak_mileage(self, target_distance: float, current_km: float, weeks: int,
-                          vdot: Optional[float] = None) -> float:
-        return mileage_progression.get_peak_mileage(target_distance, current_km, weeks, vdot)
+                          vdot: Optional[float] = None,
+                          profile: Optional[Dict[str, Any]] = None) -> float:
+        return mileage_progression.get_peak_mileage(target_distance, current_km, weeks, vdot, profile)
 
     def _get_ideal_peak(self, target_distance: float, current_km: float, weeks: int) -> float:
         return mileage_progression.get_ideal_peak(target_distance, current_km, weeks)
 
     def _calculate_weekly_progression(self, current_km: float, target_distance: float,
                                       weeks: int, max_runs: int = 4,
-                                      vdot: Optional[float] = None) -> List[float]:
-        return mileage_progression.calculate_weekly_progression(current_km, target_distance, weeks, max_runs, vdot)
+                                      vdot: Optional[float] = None,
+                                      profile: Optional[Dict[str, Any]] = None) -> List[float]:
+        return mileage_progression.calculate_weekly_progression(
+            current_km, target_distance, weeks, max_runs, vdot, profile,
+        )
 
     def _get_workout_distribution(self, total_km: float, max_runs: int, phase: str = 'build',
                                   is_recovery_week: bool = False, week_number: int = 1,
                                   phases: Dict[str, int] = None,
                                   target_distance: float = 10.0,
-                                  terrain: Optional[str] = None) -> Dict[str, int]:
+                                  terrain: Optional[str] = None,
+                                  profile: Optional[Dict[str, Any]] = None) -> Dict[str, int]:
         return workout_dist_mod.get_workout_distribution(total_km, max_runs, phase,
                                                          is_recovery_week, week_number,
                                                          phases, target_distance,
-                                                         terrain=terrain)
+                                                         terrain=terrain, profile=profile)
 
     def _get_workout_distribution_simple(self, total_km: float, max_runs: int) -> Dict[str, int]:
         return workout_dist_mod.get_workout_distribution_simple(total_km, max_runs)
@@ -118,10 +123,11 @@ class TrainingPlanGenerator:
                                      weeks: int = 12, week_number: int = 1,
                                      phase: str = 'build',
                                      is_recovery_week: bool = False,
-                                     experience_level: str = 'intermediate') -> float:
+                                     experience_level: str = 'intermediate',
+                                     profile: Optional[Dict[str, Any]] = None) -> float:
         return long_run_calculator.calculate_long_run_distance(
             total_km, target_distance, weeks, week_number, phase,
-            is_recovery_week, experience_level)
+            is_recovery_week, experience_level, profile)
 
     def _get_phase_distribution(self, phase: str, target_distance: float = 10.0,
                                 terrain: Optional[str] = None) -> Dict[str, float]:
@@ -287,7 +293,8 @@ class TrainingPlanGenerator:
                                  pace_zones: Optional[Dict] = None,
                                  experience_level: str = "beginner",
                                  week_in_phase: int = 0,
-                                 terrain: Optional[str] = None) -> List[Dict[str, Any]]:
+                                 terrain: Optional[str] = None,
+                                 profile: Optional[Dict[str, Any]] = None) -> List[Dict[str, Any]]:
         """Generate daily workouts for one week.
 
         Pipeline:
@@ -300,7 +307,7 @@ class TrainingPlanGenerator:
         """
         long_run_distance = self._calculate_long_run_distance(
             total_km, target_distance, weeks, week_number, phase, is_recovery_week,
-            experience_level,
+            experience_level, profile=profile,
         )
         quality_distances = self._calculate_quality_distances(
             total_km, phase, distribution, is_recovery_week, long_run_distance, target_distance,
@@ -416,7 +423,8 @@ class TrainingPlanGenerator:
                               vdot: Optional[float] = None,
                               pace_zones: Optional[Dict] = None,
                               experience_level: str = "beginner",
-                              terrain: Optional[str] = None) -> Dict[str, Any]:
+                              terrain: Optional[str] = None,
+                              profile: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
         """Generate a single week's training plan."""
         phases = self._calculate_phases(weeks, target_distance)
         phase = self._get_phase(week_number, phases)
@@ -435,7 +443,7 @@ class TrainingPlanGenerator:
         distribution = self._get_workout_distribution(
             total_km, max_runs_per_week, phase,
             is_recovery, week_number, phases, target_distance,
-            terrain=terrain,
+            terrain=terrain, profile=profile,
         )
 
         workouts = self._generate_daily_workouts(
@@ -444,6 +452,7 @@ class TrainingPlanGenerator:
             experience_level=experience_level,
             week_in_phase=week_in_phase,
             terrain=terrain,
+            profile=profile,
         )
 
         actual_total_km = round(sum(w.get('distance', 0) for w in workouts), 1)
@@ -564,7 +573,7 @@ class TrainingPlanGenerator:
         experience_level = derive_experience_level(current_km)
 
         weekly_progression = self._calculate_weekly_progression(
-            current_km, target_distance, weeks, max_runs_per_week, vdot=vdot
+            current_km, target_distance, weeks, max_runs_per_week, vdot=vdot, profile=profile,
         )
 
         training_plan = []
@@ -576,6 +585,7 @@ class TrainingPlanGenerator:
                 vdot=vdot, pace_zones=pace_zones,
                 experience_level=experience_level,
                 terrain=terrain,
+                profile=profile,
             )
 
             # Enforce 10% cap against actual high-water mark.  The mileage
