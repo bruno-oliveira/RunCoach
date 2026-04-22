@@ -88,11 +88,11 @@ def calculate_phases(weeks: int, target_distance: float = 10.0) -> Dict[str, int
     # Taper is prescribed as a fixed week count (not a %), then remaining weeks
     # are split among base/build/peak proportionally.
     phase_profiles = {
-        '5K':       {'base_pct': 0.35, 'build_pct': 0.30, 'peak_pct': 0.20, 'taper': 1},
-        '10K':      {'base_pct': 0.35, 'build_pct': 0.30, 'peak_pct': 0.15, 'taper': 1},
-        'Half':     {'base_pct': 0.35, 'build_pct': 0.35, 'peak_pct': 0.10, 'taper': 2},
-        'Trail':    {'base_pct': 0.35, 'build_pct': 0.35, 'peak_pct': 0.10, 'taper': 2},
-        'Marathon': {'base_pct': 0.30, 'build_pct': 0.35, 'peak_pct': 0.05, 'taper': 3},
+        '5K':       {'base_pct': 0.35, 'build_pct': 0.30, 'peak_pct': 0.20, 'taper': 2},
+        '10K':      {'base_pct': 0.35, 'build_pct': 0.30, 'peak_pct': 0.15, 'taper': 2},
+        'Half':     {'base_pct': 0.35, 'build_pct': 0.35, 'peak_pct': 0.15, 'taper': 2},
+        'Trail':    {'base_pct': 0.35, 'build_pct': 0.35, 'peak_pct': 0.15, 'taper': 2},
+        'Marathon': {'base_pct': 0.30, 'build_pct': 0.35, 'peak_pct': 0.15, 'taper': 3},
     }
 
     profile = phase_profiles[category]

@@ -43,7 +43,7 @@ def get_long_run_ratio_range(phase: str, target_distance: float, weeks: int) -> 
         'Half': {
             'base': (0.30, 0.35),
             'build': (0.33, 0.38),
-            'peak': (0.38, 0.43),
+            'peak': (0.40, 0.48),
             'taper': (0.30, 0.35)
         },
         'Trail': {
@@ -55,7 +55,7 @@ def get_long_run_ratio_range(phase: str, target_distance: float, weeks: int) -> 
         'Marathon': {
             'base': (0.32, 0.38),
             'build': (0.35, 0.42),
-            'peak': (0.40, 0.45),
+            'peak': (0.42, 0.50),
             'taper': (0.32, 0.38)
         }
     }
@@ -129,9 +129,9 @@ def _get_long_run_cap(target_distance: float, experience_level: str = 'intermedi
     base_caps = {
         5.0:  {'beginner': 7.0,  'intermediate': 8.0,  'advanced': 10.0},
         10.0: {'beginner': 12.0, 'intermediate': 15.0, 'advanced': 16.0},
-        21.1: {'beginner': 18.0, 'intermediate': 20.0, 'advanced': 22.0},
+        21.1: {'beginner': 18.0, 'intermediate': 21.0, 'advanced': 22.0},
         30.0: {'beginner': 20.0, 'intermediate': 24.0, 'advanced': 28.0},
-        42.2: {'beginner': 28.0, 'intermediate': 32.0, 'advanced': 35.0},
+        42.2: {'beginner': 28.0, 'intermediate': 34.0, 'advanced': 36.0},
     }
     hard_ceilings = {5.0: 14.0, 10.0: 22.0, 21.1: 28.0, 30.0: 32.0, 42.2: 38.0}
 

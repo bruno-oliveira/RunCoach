@@ -59,9 +59,9 @@ def get_ideal_peak(target_distance: float, current_km: float, weeks: int) -> flo
     elif target_distance <= 10:
         ideal_peak = max(25, current_km * 1.6)
     elif target_distance <= 21.1:
-        ideal_peak = max(30, current_km * 1.7)
+        ideal_peak = max(40, current_km * 1.85)
     else:
-        ideal_peak = max(40, current_km * 1.5)
+        ideal_peak = max(55, current_km * 2.0)
 
     # Apply absolute ceiling so high-base runners don't get absurd peaks
     cap = MAX_PEAK_MILEAGE.get(target_distance)

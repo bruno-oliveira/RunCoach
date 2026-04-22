@@ -25,11 +25,10 @@ def get_workout_distribution(total_km: float, max_runs: int, phase: str = 'build
     # At 2 runs/week (minimum effective dose for busy schedules), the week is
     # always 1 long + 1 easy — quality workouts need a third running day to
     # keep the weekly 80/20 easy/hard balance intact.
-    if max_runs <= 2:
+    if is_recovery_week:
         quality_workouts = 0
-    # Base phase now gets 1 light quality session when runner has enough days
-    elif is_recovery_week:
-        quality_workouts = 0
+    elif max_runs <= 2:
+        quality_workouts = 1 if phase in ('build', 'peak') else 0
     elif phase == 'base':
         quality_workouts = 1 if max_runs >= 4 else 0
     elif phase == 'build':
@@ -58,7 +57,7 @@ def get_workout_distribution(total_km: float, max_runs: int, phase: str = 'build
         easy_runs, long_runs, rest_days, week_number,
     )
 
-    if not is_recovery_week:
+    if not is_recovery_week and max_runs > 2:
         distribution = _validate_polarized_ratio(distribution, phase, target_distance)
 
     return distribution
@@ -214,11 +213,12 @@ def _validate_polarized_ratio(distribution: Dict[str, int], phase: str,
 
     # If hard% exceeds target by >5%, reduce quality by 1
     if hard_pct > target + 0.05 and hard_count > 0:
-        for key in ('interval', 'tempo', 'hill'):
-            if distribution.get(key, 0) > 0:
-                distribution[key] -= 1
-                distribution['easy'] = distribution.get('easy', 0) + 1
-                break
+        if not (phase == 'base' and hard_count <= 1):
+            for key in ('interval', 'tempo', 'hill'):
+                if distribution.get(key, 0) > 0:
+                    distribution[key] -= 1
+                    distribution['easy'] = distribution.get('easy', 0) + 1
+                    break
     # If under by >10% in build/peak, increase by 1.
     # Skip for 2-run weeks: adding quality would displace the only easy run
     # and leave the week without an aerobic recovery session.

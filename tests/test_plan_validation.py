@@ -29,13 +29,23 @@ def _generate_plan(distance, mileage, max_runs):
     return plan, weeks
 
 
+MIN_RUNS = {5.0: 2, 10.0: 2, 21.1: 3, 30.0: 4, 42.2: 4}
+
+
 def _valid_combos():
-    """Yield (distance, mileage, max_runs) for all valid non-beginner combos."""
+    """Yield (distance, mileage, max_runs) for all valid non-beginner combos.
+
+    Respects the same min-runs constraints as the PlanRequest schema:
+    half requires 3+, trail/marathon require 4+.
+    """
     for distance in SUPPORTED_DISTANCES:
         for mileage in MILEAGES:
             if mileage < MIN_MILEAGE[distance]:
                 continue
+            min_runs = MIN_RUNS.get(distance, 2)
             for max_runs in RUNS_OPTIONS:
+                if max_runs < min_runs:
+                    continue
                 yield distance, mileage, max_runs
 
 
@@ -135,12 +145,17 @@ class TestRunCountRespected:
 
 
 class TestLongRunDominance:
-    """The long run should be ≤ 55% of weekly volume for non-trail plans
-    with starting mileage ≥ 15km.  Trail at very low volume is exempt."""
+    """The long run should be ≤ 55% of weekly volume for 3+ run plans.
+
+    2-run plans are exempt: with only 1 long + 1 quality/easy, the long
+    run naturally consumes 60-70% of volume by design.
+    """
 
     @pytest.mark.parametrize("combo", ALL_COMBOS, ids=[_id(c) for c in ALL_COMBOS])
     def test_long_run_not_dominant(self, combo):
         distance, mileage, max_runs = combo
+        if max_runs <= 2:
+            return
         plan, _ = _generate_plan(distance, mileage, max_runs)
 
         for week in plan:

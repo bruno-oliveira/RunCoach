@@ -449,7 +449,9 @@ class TrainingPlanGenerator:
         # then enforce that no easy run exceeds the long run.
         if actual_total_km < total_km * 0.97 and actual_total_km > 0:
             deficit = total_km - actual_total_km
-            expandable = [w for w in workouts if w.get('type') in ('easy', 'long') and w.get('distance', 0) > 0]
+            has_easy = any(w.get('type') == 'easy' and w.get('distance', 0) > 0 for w in workouts)
+            expandable_types = ('easy', 'long') if has_easy else ('easy', 'long', 'tempo', 'interval', 'hill')
+            expandable = [w for w in workouts if w.get('type') in expandable_types and w.get('distance', 0) > 0]
             if expandable:
                 total_expandable = sum(w['distance'] for w in expandable)
                 if total_expandable > 0:

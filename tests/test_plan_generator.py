@@ -216,10 +216,10 @@ class TestTrainingPlanGenerator:
     # ------------------------------------------------------------------
 
     def test_phase_calculation_8_weeks_10k(self, plan_generator: TrainingPlanGenerator):
-        """10K 8-week plan: short taper, balanced base/build."""
+        """10K 8-week plan: 2-week taper for smoother volume reduction."""
         phases = plan_generator._calculate_phases(8, target_distance=10.0)
         assert sum(phases.values()) == 8
-        assert phases["taper"] == 1
+        assert phases["taper"] == 2
         assert phases["base"] >= 2
         assert phases["build"] >= 2
 
@@ -507,3 +507,75 @@ class TestTrainingPlanGenerator:
                 if phase not in ["peak"]:
                     assert long_pct >= min_ratio - tolerance, \
                         f"Week {week['week']} ({phase}): Long run {long_pct:.1%} below minimum {min_ratio:.1%}"
+
+    # ------------------------------------------------------------------
+    # Improvement verification tests
+    # ------------------------------------------------------------------
+
+    def test_base_phase_has_quality_session(self, plan_generator: TrainingPlanGenerator):
+        """Base phase should have exactly 1 quality session for 4+ run days."""
+        plan = plan_generator.generate_plan(current_km=25, target_distance=10, weeks=12,
+                                            max_runs_per_week=4)
+        base_non_recovery = [w for w in plan if w["phase"] == "base" and not w["is_recovery"]]
+        assert base_non_recovery, "Plan should have non-recovery base weeks"
+        for week in base_non_recovery:
+            workout_types = [w["type"] for w in week["daily_workouts"]]
+            quality_count = sum(1 for t in workout_types if t in ("interval", "tempo", "hill"))
+            assert quality_count == 1, \
+                f"Week {week['week']}: base phase has {quality_count} quality (expected 1)"
+
+    def test_5k_two_week_taper(self, plan_generator: TrainingPlanGenerator):
+        """5K/10K plans of 8+ weeks should have 2-week taper."""
+        for dist in [5.0, 10.0]:
+            phases = plan_generator._calculate_phases(8, target_distance=dist)
+            assert phases["taper"] == 2, f"{dist}km 8wk should have 2-week taper"
+        phases_short = plan_generator._calculate_phases(4, target_distance=5.0)
+        assert phases_short["taper"] == 1, "4-week 5K should still have 1-week taper"
+
+    def test_two_run_quality_in_build_peak(self, plan_generator: TrainingPlanGenerator):
+        """2-run plans should have 1 quality session in build/peak phases."""
+        plan = plan_generator.generate_plan(
+            current_km=15, target_distance=5.0, weeks=8, max_runs_per_week=2,
+        )
+        quality_found = False
+        for week in plan:
+            if week["phase"] in ("build", "peak") and not week["is_recovery"]:
+                workout_types = [w["type"] for w in week["daily_workouts"]]
+                quality_count = sum(1 for t in workout_types if t in ("interval", "tempo", "hill"))
+                assert quality_count == 1, \
+                    f"Week {week['week']} ({week['phase']}): expected 1 quality, got {quality_count}"
+                quality_found = True
+        assert quality_found, "Plan should have build/peak weeks with quality"
+
+    def test_low_volume_time_based_description(self, plan_generator: TrainingPlanGenerator):
+        """Very low volume plans should use time-based descriptions."""
+        plan = plan_generator.generate_plan(
+            current_km=5.0, target_distance=5.0, weeks=8, max_runs_per_week=3,
+        )
+        found_time_based = False
+        for week in plan:
+            for workout in week["daily_workouts"]:
+                if workout["type"] == "easy" and workout.get("distance", 0) < 3.0:
+                    assert "duration_min" in workout, \
+                        f"W{week['week']} D{workout['day']}: low-distance easy should have duration_min"
+                    assert "minutes" in workout["description"].lower(), \
+                        f"W{week['week']} D{workout['day']}: description should mention minutes"
+                    found_time_based = True
+        assert found_time_based, "Low-volume plan should have time-based workouts"
+
+    def test_marathon_adequate_peak_and_long_run(self, plan_generator: TrainingPlanGenerator):
+        """Marathon plans should reach adequate peak mileage and long run distances."""
+        plan = plan_generator.generate_plan(
+            current_km=25, target_distance=42.2, weeks=16, max_runs_per_week=4,
+        )
+        peak_km = max(w["total_km"] for w in plan if not w.get("is_recovery", False))
+        assert peak_km >= 45, f"Marathon peak {peak_km}km is too low (need >=45)"
+        max_long = max(
+            d["distance"] for w in plan for d in w["daily_workouts"] if d["type"] == "long"
+        )
+        assert max_long >= 25, f"Marathon max long run {max_long}km is too short (need >=25)"
+
+    def test_marathon_has_multiple_peak_weeks(self, plan_generator: TrainingPlanGenerator):
+        """Marathon plans should have at least 2 peak weeks."""
+        phases = plan_generator._calculate_phases(16, target_distance=42.2)
+        assert phases["peak"] >= 2, f"Marathon 16wk has {phases['peak']} peak weeks (need >=2)"

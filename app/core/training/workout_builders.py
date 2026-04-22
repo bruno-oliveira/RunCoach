@@ -16,6 +16,31 @@ from app.core.training.vdot_calculator import VDOTCalculator
 from app.core.coaching.training_tips import get_tips_for_week
 
 
+_TIME_THRESHOLD = {'easy': 3.0, 'long': 3.0, 'tempo': 2.0, 'interval': 2.0, 'hill': 2.0}
+_MIN_DURATION = {'easy': 20, 'long': 25, 'tempo': 25, 'interval': 25, 'hill': 25}
+
+
+def _apply_time_based(workout: Dict[str, Any]) -> Dict[str, Any]:
+    """Add duration_min and rewrite description when distance is too short to be meaningful."""
+    wtype = workout.get('type', '')
+    dist = workout.get('distance', 0)
+    threshold = _TIME_THRESHOLD.get(wtype)
+    if threshold is None or dist >= threshold:
+        return workout
+    dur = _MIN_DURATION[wtype]
+    workout['duration_min'] = dur
+    descs = {
+        'easy': f'Easy run for {dur} minutes at conversational pace.',
+        'long': f'Long run for {dur} minutes at easy pace. Focus on time on feet.',
+        'tempo': f'Tempo session for {dur} minutes: 5min warmup, {dur - 10}min at comfortably hard effort, 5min cooldown.',
+        'interval': f'Interval session for {dur} minutes: warmup, 6x1min hard / 1min easy, cooldown.',
+        'hill': f'Hill session for {dur} minutes: warmup, 6x30sec uphill hard with jog-down recovery, cooldown.',
+    }
+    if wtype in descs:
+        workout['description'] = descs[wtype]
+    return workout
+
+
 def generate_rest_day(day: int) -> Dict[str, Any]:
     """
     Generate regular rest day (NOT recovery day after long run).
@@ -110,14 +135,14 @@ def generate_long_run(day: int, distance: float, total_km: float,
         ]
 
     variant = 'mp_finish' if (day % 3 == 1) else 'easy'
-    return {
+    return _apply_time_based({
         'day': day,
         'type': 'long',
         'distance': round(distance, 1),
         'intensity': 'medium',
         'description': long_run_notes[day % len(long_run_notes)],
         'steps': workout_steps.build_long_steps(distance, pace_zones, variant=variant),
-    }
+    })
 
 
 def generate_easy_run(day: int, distance: float, total_km: float,
@@ -142,7 +167,7 @@ def generate_easy_run(day: int, distance: float, total_km: float,
             f'Conversational pace run. Focus on relaxed form and breathing.'
         ]
 
-    return {
+    return _apply_time_based({
         'day': day,
         'type': 'easy',
         'distance': distance,
@@ -151,7 +176,7 @@ def generate_easy_run(day: int, distance: float, total_km: float,
         'steps': workout_steps.build_easy_steps(
             distance, pace_zones, with_strides=(variant_idx == 1)
         ),
-    }
+    })
 
 
 def generate_tempo_run(day: int, distance: float, total_km: float,
@@ -176,14 +201,14 @@ def generate_tempo_run(day: int, distance: float, total_km: float,
         tempo_variations[day % len(tempo_variations)], pace_zones or {}, "tempo"
     )
 
-    return {
+    return _apply_time_based({
         'day': day,
         'type': 'tempo',
         'distance': round(distance, 1),
         'intensity': 'medium',
         'description': description,
         'steps': workout_steps.build_tempo_steps(distance, pace_zones),
-    }
+    })
 
 
 def generate_interval_run(day: int, distance: float, total_km: float,
@@ -242,14 +267,14 @@ def generate_interval_run(day: int, distance: float, total_km: float,
         interval_workouts[day % len(interval_workouts)], pace_zones or {}, "interval"
     )
 
-    return {
+    return _apply_time_based({
         'day': day,
         'type': 'interval',
         'distance': round(distance, 1),
         'intensity': 'high',
         'description': description,
         'steps': workout_steps.build_interval_steps(distance, total_km, pace_zones),
-    }
+    })
 
 
 def generate_hill_workout(day: int, distance: float = 0) -> Dict[str, Any]:
@@ -260,14 +285,14 @@ def generate_hill_workout(day: int, distance: float = 0) -> Dict[str, Any]:
         f'Hill bounding: 8x20sec explosive uphill bounds with full recovery.'
     ]
 
-    return {
+    return _apply_time_based({
         'day': day,
         'type': 'hill',
         'distance': round(distance, 1) if distance > 0 else 0,
         'intensity': 'high',
         'description': hill_workouts[day % len(hill_workouts)],
         'steps': workout_steps.build_hill_steps(distance, None),
-    }
+    })
 
 
 def generate_training_tips(week_number: int, target_distance: float) -> List[str]:
