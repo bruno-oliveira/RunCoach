@@ -1,23 +1,31 @@
-# flyctl launch added from .idea/.gitignore
-# Default ignored files
-.idea/shelf
-.idea/workspace.xml
-# Editor-based HTTP Client requests
-.idea/httpRequests
-# Datasource local storage ignored files
-.idea/dataSources
-.idea/dataSources.local.xml
-
-# flyctl launch added from .venv/.gitignore
-.venv/**/*
-fly.toml
-
-# Security: keep sensitive and ephemeral files out of the image
+# Security: sensitive and ephemeral files
 .env
+*.db
 *.db.backup
-app.db
+*.db.seed
 pdf_cache/
-.claude/
+
+# Version control
+.git/
+.gitignore
+
+# IDE
+.idea/
+.vscode/
+
+# Python artifacts
+.venv/
 __pycache__/
+*.py[cod]
+*.egg-info/
 .pytest_cache/
+
+# Project tooling and docs
+.claude/
+.opencode/
 tests/
+*.log
+
+# Deployment config (already in image via fly.toml env injection)
+fly.toml
+render.yaml

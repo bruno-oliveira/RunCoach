@@ -5,7 +5,9 @@ from datetime import datetime, timedelta, timezone
 from typing import Optional
 
 import httpx
-from jose import JWTError, jwt
+import jwt as pyjwt
+from jwt import PyJWKSet
+from jwt.exceptions import PyJWTError
 from sqlalchemy.orm import Session
 
 from app.config import settings
@@ -34,14 +36,12 @@ class AuthService:
             "exp": expire,
             "iat": datetime.now(timezone.utc).replace(tzinfo=None),
         })
-        encoded_jwt = jwt.encode(to_encode, self.secret_key, algorithm=self.algorithm)
-        return encoded_jwt
+        return pyjwt.encode(to_encode, self.secret_key, algorithm=self.algorithm)
 
     def verify_token(self, token: str) -> Optional[dict]:
         try:
-            payload = jwt.decode(token, self.secret_key, algorithms=[self.algorithm])
-            return payload
-        except JWTError:
+            return pyjwt.decode(token, self.secret_key, algorithms=[self.algorithm])
+        except PyJWTError:
             return None
 
     async def _get_google_certs(self) -> dict:
@@ -70,21 +70,32 @@ class AuthService:
                 return None
 
             certs = await self._get_google_certs()
+            jwk_set = PyJWKSet.from_dict(certs)
 
-            payload = jwt.decode(
+            header = pyjwt.get_unverified_header(id_token)
+            kid = header.get("kid")
+            signing_key = next(
+                (k.key for k in jwk_set.keys if k.key_id == kid),
+                None,
+            )
+            if signing_key is None:
+                logger.error("No matching Google public key for kid: %s", kid)
+                return None
+
+            payload = pyjwt.decode(
                 id_token,
-                certs,
+                signing_key,
                 algorithms=["RS256"],
                 audience=settings.google_client_id,
-                issuer="https://accounts.google.com"
+                issuer=["https://accounts.google.com", "accounts.google.com"],
             )
             logger.debug("Google token verified successfully for sub: %s", payload.get("sub"))
             return payload
-        except JWTError as e:
-            logger.error(f"JWT verification failed: {type(e).__name__}: {e}")
+        except PyJWTError as e:
+            logger.error("JWT verification failed: %s: %s", type(e).__name__, e)
             return None
         except Exception as e:
-            logger.error(f"Google token verification error: {type(e).__name__}: {e}")
+            logger.error("Google token verification error: %s: %s", type(e).__name__, e)
             return None
 
     def get_or_create_user(self, db: Session, google_user_data: dict, anonymous_user_id: Optional[str] = None) -> User:

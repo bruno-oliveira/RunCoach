@@ -9,6 +9,9 @@ primary_region = 'sjc'
 [build]
   dockerfile = 'Dockerfile'
 
+[deploy]
+  strategy = 'rolling'
+
 [env]
   DATABASE_URL = 'sqlite:////data/runcoach.db'
    # SECRET_KEY and GOOGLE_CLIENT_ID are set via Fly.io secrets
@@ -22,6 +25,7 @@ primary_region = 'sjc'
   force_https = true
   auto_stop_machines = 'stop'
   auto_start_machines = true
+  grace_period = '60s'
 
   [[http_service.checks]]
     interval = '30s'

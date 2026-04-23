@@ -21,18 +21,13 @@ COPY app/ ./app/
 COPY alembic.ini ./alembic.ini
 COPY alembic/ ./alembic/
 
-# Bake the current DB as a seed snapshot.
-# On first boot start.sh copies this to the persistent volume at /data/runcoach.db.
-# Subsequent boots skip the copy and use the live volume DB.
-COPY runcoach.db ./runcoach.db.seed
-
-# Startup script — handles volume seeding then launches uvicorn
+# Startup script — runs Alembic migrations then launches uvicorn
 COPY start.sh ./start.sh
 
-# Create non-root user for security
+# Create non-root user, prepare directories with restrictive permissions
 RUN useradd --create-home appuser && \
     mkdir -p /data/pdf_cache && \
-    chown -R appuser:appuser /app /data/pdf_cache && \
+    chown -R appuser:appuser /app /data /data/pdf_cache && \
     chmod 700 /data/pdf_cache && \
     chmod +x /app/start.sh
 
@@ -45,5 +40,5 @@ EXPOSE 8000
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
     CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')" || exit 1
 
-# Run via startup script so the volume is seeded before uvicorn starts
+# Run via startup script
 CMD ["/app/start.sh"]

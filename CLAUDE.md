@@ -151,7 +151,7 @@ tests/
 
 - **`app/schemas.py`** - Pydantic models for request/response validation. Includes `PlanRequest`, `GoogleAuthRequest`, `Token`, `UserResponse`, `RunLogCreate`, `RunLogResponse`, `AdaptivePlanRequest`, and various workout/nutrition schemas.
 
-- **`app/services/auth_service.py`** - `AuthService` class for authentication. Handles Google OAuth token verification via Google's public keys, JWT creation/verification using `python-jose`, and user creation/retrieval.
+- **`app/services/auth_service.py`** - `AuthService` class for authentication. Handles Google OAuth token verification via Google's public keys, JWT creation/verification using `PyJWT`, and user creation/retrieval.
 
 - **`app/routers/plans.py`** - Plan generation and management endpoints: `/generate-plan`, `/customize-plan`, `/plan/{plan_id}`, `/download-pdf/{plan_id}`. Handles form submissions, validation errors, and plan customization.
 
