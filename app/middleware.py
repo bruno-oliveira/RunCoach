@@ -10,6 +10,41 @@ from app.config import settings
 _CSRF_EXEMPT = {"/api/auth/google", "/api/auth/logout", "/health"}
 _STATE_CHANGING_METHODS = {"POST", "PUT", "PATCH", "DELETE"}
 
+_SECURITY_HEADERS = {
+    "X-Content-Type-Options": "nosniff",
+    "X-Frame-Options": "DENY",
+    "Referrer-Policy": "strict-origin-when-cross-origin",
+    "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+    "X-XSS-Protection": "0",
+}
+if not settings.debug:
+    _SECURITY_HEADERS["Strict-Transport-Security"] = (
+        "max-age=31536000; includeSubDomains"
+    )
+
+
+def _cookie_secure() -> bool:
+    return settings.force_secure_cookies and not settings.debug
+
+
+async def security_headers(request: Request, call_next):
+    """Add security headers to every response."""
+    response = await call_next(request)
+    for header, value in _SECURITY_HEADERS.items():
+        response.headers[header] = value
+    return response
+
+
+async def request_size_limit(request: Request, call_next):
+    """Reject requests whose Content-Length exceeds the configured limit."""
+    content_length = request.headers.get("content-length")
+    if content_length and int(content_length) > settings.max_request_body_bytes:
+        return JSONResponse(
+            status_code=413,
+            content={"detail": "Request body too large"},
+        )
+    return await call_next(request)
+
 
 async def set_anonymous_user_id_cookie(request: Request, call_next):
     """Set anonymous_user_id cookie if not present and add it to request state."""
@@ -32,7 +67,7 @@ async def set_anonymous_user_id_cookie(request: Request, call_next):
             max_age=settings.anonymous_cookie_max_age,
             httponly=True,
             samesite="lax",
-            secure=not settings.debug,
+            secure=_cookie_secure(),
         )
 
     return response

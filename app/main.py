@@ -14,7 +14,7 @@ from fastapi.staticfiles import StaticFiles
 
 from app.config import settings, setup_logging
 from app.dependencies import get_db, get_optional_user
-from app.middleware import csrf_protection, set_anonymous_user_id_cookie
+from app.middleware import csrf_protection, request_size_limit, security_headers, set_anonymous_user_id_cookie
 from app.models import Base, User
 from app.template_helpers import create_templates
 from app.routers import (
@@ -126,6 +126,8 @@ def create_app(skip_migrations: bool = False) -> FastAPI:
 
     app.middleware("http")(set_anonymous_user_id_cookie)
     app.middleware("http")(csrf_protection)
+    app.middleware("http")(request_size_limit)
+    app.middleware("http")(security_headers)
 
     app.mount("/static", CachedStaticFiles(
         directory="app/static",
@@ -177,6 +179,17 @@ def create_app(skip_migrations: bool = False) -> FastAPI:
             "user": current_user,
             "google_client_id": settings.google_client_id or "",
             "has_profile": has_profile,
+        })
+
+    @app.get("/privacy", response_class=HTMLResponse, tags=["pages"])
+    async def privacy_policy(
+        request: Request,
+        current_user: Optional[User] = Depends(get_optional_user),
+    ) -> HTMLResponse:
+        return templates.TemplateResponse("privacy.html", {
+            "request": request,
+            "user": current_user,
+            "google_client_id": settings.google_client_id or "",
         })
 
     if settings.enable_debug_endpoints:

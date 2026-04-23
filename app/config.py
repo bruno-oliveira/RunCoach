@@ -67,6 +67,8 @@ class Settings(BaseSettings):
     # Security
     enable_debug_endpoints: bool = False
     encryption_key: str = ""
+    force_secure_cookies: bool = True
+    max_request_body_bytes: int = 1_048_576  # 1 MB
 
     # Feature Flags
 

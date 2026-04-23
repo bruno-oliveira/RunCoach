@@ -77,6 +77,15 @@
                         </div>
 
                         <div class="strava-feedback" id="stravaFeedback" role="status" aria-live="polite" style="display:none"></div>
+
+                        <div class="strava-divider">
+                            <span class="strava-divider-label">Connection</span>
+                        </div>
+                        <button
+                            class="strava-disconnect-btn"
+                            id="stravaDisconnectBtn"
+                            onclick="disconnectStrava()"
+                        >Disconnect Strava</button>
                     </div>
                 </li>
                 {% else %}
@@ -99,6 +108,7 @@
                 {% endif %}
                 <span class="nav-user-name">{{ user.name or user.email }}</span>
                 <button class="btn btn-ghost btn-sm nav-signout" onclick="logout()">Sign Out</button>
+                <button class="btn btn-ghost btn-sm nav-delete-account" onclick="deleteAccount()">Delete Account</button>
             </div>
             {% else %}
             <div class="nav-auth" id="nav-auth-container">

@@ -9,6 +9,7 @@ from sqlalchemy.orm import Session
 from app.services.auth_service import AuthService
 from app.config import settings
 from app.dependencies import get_auth_service, get_db, get_current_user
+from app.middleware import _cookie_secure
 from app.models import User
 from app.rate_limit import auth_limiter
 from app.schemas import AuthResponse, GoogleAuthRequest, UserResponse
@@ -65,7 +66,7 @@ async def google_auth(
         max_age=COOKIE_MAX_AGE,
         httponly=True,
         samesite="lax",
-        secure=not settings.debug,
+        secure=_cookie_secure(),
     )
 
     response.delete_cookie(key="anonymous_user_id", samesite="lax")
@@ -112,3 +113,18 @@ async def logout(response: Response):
     response.delete_cookie(key=COOKIE_NAME, samesite="lax")
     response.delete_cookie(key="anonymous_user_id", samesite="lax")
     return {"message": "Successfully logged out"}
+
+
+@auth_router.delete("/account")
+async def delete_account(
+    response: Response,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Delete the current user's account and all associated data."""
+    logger.info("Account deletion requested for user %s", current_user.id)
+    db.delete(current_user)
+    db.commit()
+    response.delete_cookie(key=COOKIE_NAME, samesite="lax")
+    response.delete_cookie(key="anonymous_user_id", samesite="lax")
+    return {"message": "Account deleted"}

@@ -550,6 +550,38 @@
     border: 1px solid var(--color-error-border);
 }
 
+.strava-disconnect-btn {
+    width: 100%;
+    padding: 6px 10px;
+    font-size: 0.75rem;
+    font-weight: 500;
+    color: var(--color-error);
+    background: transparent;
+    border: 1px solid var(--color-error-border);
+    border-radius: var(--radius-md);
+    cursor: pointer;
+    transition: background 0.15s, color 0.15s;
+}
+
+.strava-disconnect-btn:hover:not(:disabled) {
+    background: var(--color-error-subtle);
+}
+
+.strava-disconnect-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.nav-delete-account {
+    color: var(--color-error) !important;
+    font-size: 0.75rem;
+    opacity: 0.7;
+}
+
+.nav-delete-account:hover {
+    opacity: 1;
+}
+
 /* Spinner animation */
 @keyframes spin {
     to { transform: rotate(360deg); }

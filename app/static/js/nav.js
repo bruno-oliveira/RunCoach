@@ -305,6 +305,48 @@ function syncStravaForDays(days) {
     doStravaSync(days);
 }
 
+async function disconnectStrava() {
+    if (!confirm('Disconnect Strava? This removes all stored Strava credentials. Your synced runs will be kept.')) return;
+
+    const btn = document.getElementById('stravaDisconnectBtn');
+    if (btn) { btn.disabled = true; btn.textContent = 'Disconnecting…'; }
+
+    try {
+        const res = await fetch('/api/strava/disconnect', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'same-origin'
+        });
+        if (res.ok) {
+            window.location.reload();
+        } else {
+            alert('Failed to disconnect Strava. Please try again.');
+            if (btn) { btn.disabled = false; btn.textContent = 'Disconnect Strava'; }
+        }
+    } catch (err) {
+        alert('Failed to disconnect Strava. Please try again.');
+        if (btn) { btn.disabled = false; btn.textContent = 'Disconnect Strava'; }
+    }
+}
+
+async function deleteAccount() {
+    if (!confirm('Delete your account? This permanently removes all your data including plans, runs, and recipes. This cannot be undone.')) return;
+
+    try {
+        const res = await fetch('/api/auth/account', {
+            method: 'DELETE',
+            credentials: 'same-origin'
+        });
+        if (res.ok) {
+            window.location.href = '/';
+        } else {
+            alert('Failed to delete account. Please try again.');
+        }
+    } catch (err) {
+        alert('Failed to delete account. Please try again.');
+    }
+}
+
 document.addEventListener('DOMContentLoaded', () => {
     initThemeToggle();
     initStravaPanel();

@@ -338,8 +338,7 @@ This document catalogs security vulnerabilities, data leakage risks, and privacy
 **Impact:** An attacker can determine the exact application version to target known vulnerabilities.
 
 **Remediation:**
-- Remove `version` from health check response
-- Or restrict health check to internal network only (Fly.io internal port)
+- Restrict health check to internal network only (Fly.io internal port)
 
 ### 4.4 Container Runs as Non-Root User (Good, but Incomplete)
 **Severity:** Low
@@ -493,13 +492,13 @@ This document catalogs security vulnerabilities, data leakage risks, and privacy
 12. Secure PDF cache directory (2.7)
 13. Clean up database files from repo (2.8)
 
-### Phase 3 — Medium (Week 3)
-14. Add security headers middleware (3.1)
-15. Fix cookie secure flag handling (3.2, 3.3)
-16. Audit templates for XSS (3.4)
-17. Add request size limits (3.6)
-18. Add privacy policy and consent (5.1, 5.4)
-19. Implement data retention and account deletion (5.2, 5.3)
+### Phase 3 — Medium (Week 3) ✅ DONE
+14. ✅ Add security headers middleware (3.1)
+15. ✅ Fix cookie secure flag handling (3.2, 3.3)
+16. ✅ Audit templates for XSS (3.4) — no `|safe` or `autoescape false` found; CSP via headers
+17. ✅ Add request size limits (3.6)
+18. ✅ Add privacy policy and consent (5.1, 5.4)
+19. ✅ Implement data retention and account deletion (5.2, 5.3)
 
 ### Phase 4 — Infrastructure (Week 4)
 20. Update dependencies and replace python-jose (4.5)
