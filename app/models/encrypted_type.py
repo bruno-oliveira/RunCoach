@@ -18,22 +18,26 @@ def _derive_fernet_key(secret: str) -> bytes:
     return base64.urlsafe_b64encode(digest)
 
 
+def _get_encryption_secret() -> str:
+    """Return the encryption key source, preferring ENCRYPTION_KEY over SECRET_KEY."""
+    from app.config import settings
+    return settings.encryption_key if settings.encryption_key else settings.secret_key
+
+
 class EncryptedString(TypeDecorator):
     """Stores string values encrypted with Fernet.
 
     Values are encrypted before writing to the database and decrypted
     when read back. Null values pass through unchanged.
 
-    The encryption key is derived from the application's SECRET_KEY.
+    Uses ENCRYPTION_KEY if set, otherwise falls back to SECRET_KEY.
     """
 
     impl = String
     cache_ok = True
 
     def _get_fernet(self) -> Fernet:
-        from app.config import settings
-
-        return Fernet(_derive_fernet_key(settings.secret_key))
+        return Fernet(_derive_fernet_key(_get_encryption_secret()))
 
     def process_bind_param(self, value: Optional[str], dialect) -> Optional[str]:
         if value is None:
@@ -46,21 +50,8 @@ class EncryptedString(TypeDecorator):
         try:
             return self._get_fernet().decrypt(value.encode()).decode()
         except InvalidToken:
-            # Fernet tokens always start with "gAAAAA" (base64url of version
-            # byte 0x80).  If the stored value has that prefix, it was
-            # encrypted with a different key (SECRET_KEY rotated) — return
-            # None so callers trigger a re-authorization flow.
-            if value.startswith("gAAAAA"):
-                logger.warning(
-                    "Failed to decrypt token (likely SECRET_KEY change) "
-                    "— returning None. User will need to re-authenticate."
-                )
-                return None
-            # Otherwise it's a legacy plaintext value written before
-            # encryption was enabled.  Return it as-is; it will be
-            # re-encrypted on the next write via process_bind_param.
-            logger.info(
-                "Found legacy plaintext token — returning as-is. "
-                "It will be re-encrypted on the next write."
+            logger.warning(
+                "Failed to decrypt token — returning None. "
+                "User will need to re-authenticate."
             )
-            return value
+            return None

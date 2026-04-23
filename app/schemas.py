@@ -326,6 +326,11 @@ class UserResponse(UserBase):
     strava_connected: bool = False
 
 
+class AuthResponse(BaseModel):
+    message: str = "authenticated"
+    user: UserResponse
+
+
 class Token(BaseModel):
     access_token: str
     token_type: str = "bearer"

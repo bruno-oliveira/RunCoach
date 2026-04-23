@@ -42,12 +42,7 @@
      * may not hold a token at all. Sending "Bearer null" breaks cookie fallback.
      */
     function authHeaders(extra) {
-        const headers = Object.assign({}, extra);
-        const token = localStorage.getItem('access_token');
-        if (token) {
-            headers['Authorization'] = 'Bearer ' + token;
-        }
-        return headers;
+        return Object.assign({}, extra);
     }
 
     /* -------------------------------------------------------------- */

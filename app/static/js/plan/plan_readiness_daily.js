@@ -40,16 +40,10 @@
 
     function $(id) { return document.getElementById(id); }
 
-    function getCsrfToken() {
-        var token = localStorage.getItem('access_token');
-        return token ? { Authorization: 'Bearer ' + token } : {};
-    }
-
     async function fetchJson(url, options) {
         options = options || {};
         var headers = Object.assign(
             { 'Content-Type': 'application/json' },
-            getCsrfToken(),
             options.headers || {}
         );
         var resp = await fetch(url, {

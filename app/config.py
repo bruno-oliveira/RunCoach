@@ -64,6 +64,10 @@ class Settings(BaseSettings):
     strava_client_secret: str = ""
     strava_redirect_uri: str = "http://localhost:8000/api/strava/callback"
 
+    # Security
+    enable_debug_endpoints: bool = False
+    encryption_key: str = ""
+
     # Feature Flags
 
     # Plan limits

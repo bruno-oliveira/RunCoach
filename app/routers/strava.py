@@ -4,7 +4,7 @@ import logging
 from datetime import datetime, timedelta, timezone
 from typing import Optional
 
-from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, status
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, Request, status
 from fastapi.responses import RedirectResponse
 from sqlalchemy.orm import Session
 
@@ -14,6 +14,7 @@ from app.dependencies import get_current_user, get_db, get_auth_service, get_str
 from app.models import TrainingPlan
 from app.models.user import User
 from app.schemas import StravaStatusResponse, StravaSyncResponse
+from app.rate_limit import strava_callback_limiter
 from app.services.strava_service import StravaService
 from app.services.adaptation_service import AdaptationService
 from app.utils import TimestampAdapter
@@ -98,6 +99,7 @@ async def strava_connect(
 
 @strava_router.get("/callback")
 async def strava_callback(
+    request: Request,
     code: str = Query(...),
     state: str = Query(...),
     background_tasks: BackgroundTasks = BackgroundTasks(),
@@ -106,6 +108,7 @@ async def strava_callback(
     strava_service: StravaService = Depends(get_strava_service),
 ):
     """Handle Strava OAuth callback: exchange code, store tokens, trigger initial sync."""
+    strava_callback_limiter.check(request)
     payload = auth_service.verify_token(state)
     if not payload or payload.get("purpose") != "strava_oauth":
         raise HTTPException(

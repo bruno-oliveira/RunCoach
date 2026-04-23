@@ -44,7 +44,7 @@
 
             const data = await res.json();
 
-            if (!data || !data.access_token || !data.user) {
+            if (!data || !data.user) {
                 throw new Error('Invalid response from server');
             }
 

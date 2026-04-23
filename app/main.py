@@ -14,7 +14,7 @@ from fastapi.staticfiles import StaticFiles
 
 from app.config import settings, setup_logging
 from app.dependencies import get_db, get_optional_user
-from app.middleware import set_anonymous_user_id_cookie
+from app.middleware import csrf_protection, set_anonymous_user_id_cookie
 from app.models import Base, User
 from app.template_helpers import create_templates
 from app.routers import (
@@ -63,6 +63,11 @@ def _validate_production_secrets() -> None:
             "SECRET_KEY not set via environment variable — using random default. "
             "JWTs will be invalidated on every restart. "
             "Set SECRET_KEY as a persistent secret (e.g. `fly secrets set SECRET_KEY=...`)."
+        )
+    if not os.environ.get("ENCRYPTION_KEY"):
+        logger.warning(
+            "ENCRYPTION_KEY not set — falling back to SECRET_KEY for data encryption. "
+            "Set a separate ENCRYPTION_KEY for defense-in-depth."
         )
     if not settings.debug:
         weak_patterns = ["dev-secret", "your-secret", "change-in-production", "placeholder"]
@@ -120,6 +125,7 @@ def create_app(skip_migrations: bool = False) -> FastAPI:
     )
 
     app.middleware("http")(set_anonymous_user_id_cookie)
+    app.middleware("http")(csrf_protection)
 
     app.mount("/static", CachedStaticFiles(
         directory="app/static",
@@ -173,34 +179,13 @@ def create_app(skip_migrations: bool = False) -> FastAPI:
             "has_profile": has_profile,
         })
 
-    if settings.debug:
+    if settings.enable_debug_endpoints:
         @app.get("/debug/config", tags=["debug"])
         async def debug_config():
-            client_id = settings.google_client_id
             return {
                 "google_client_id_configured": settings.is_google_client_id_configured,
-                "google_client_id_preview": client_id[:20] + "..." if len(client_id) > 20 else client_id,
-                "google_client_id_is_placeholder": not settings.is_google_client_id_configured,
-                "google_client_id_length": len(client_id) if client_id else 0,
-                "secret_key_configured": bool(settings.secret_key),
-                "secret_key_is_default": "dev-secret" in settings.secret_key.lower() or "your-secret" in settings.secret_key.lower(),
-                "secret_key_length": len(settings.secret_key),
                 "debug_mode": settings.debug,
                 "environment": "development",
-            }
-
-        @app.get("/debug/test-auth", tags=["debug"])
-        async def test_auth():
-            from app.services.auth_service import AuthService
-            auth = AuthService()
-            test_payload = {"sub": "test-user-id", "email": "test@example.com"}
-            token = auth.create_access_token(test_payload)
-            verified = auth.verify_token(token)
-            return {
-                "jwt_creation": "success" if token else "failed",
-                "jwt_verification": "success" if verified else "failed",
-                "token_preview": token[:50] + "..." if token else None,
-                "verified_payload": verified if verified else None,
             }
 
     return app

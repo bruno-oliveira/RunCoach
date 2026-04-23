@@ -10,7 +10,8 @@ from app.services.auth_service import AuthService
 from app.config import settings
 from app.dependencies import get_auth_service, get_db, get_current_user
 from app.models import User
-from app.schemas import GoogleAuthRequest, Token, UserResponse
+from app.rate_limit import auth_limiter
+from app.schemas import AuthResponse, GoogleAuthRequest, UserResponse
 
 logger = logging.getLogger(__name__)
 
@@ -21,7 +22,7 @@ COOKIE_NAME = "access_token"
 COOKIE_MAX_AGE = 24 * 60 * 60  # 1 day in seconds
 
 
-@auth_router.post("/google", response_model=Token)
+@auth_router.post("/google", response_model=AuthResponse)
 async def google_auth(
     auth_request: GoogleAuthRequest,
     request: Request,
@@ -29,30 +30,29 @@ async def google_auth(
     db: Session = Depends(get_db),
     auth_service: AuthService = Depends(get_auth_service),
 ):
+    """Authenticate user using Google OAuth ID token.
+
+    Sets an httponly cookie with the JWT. The token is NOT returned in the
+    response body to prevent XSS exfiltration.
     """
-    Authenticate user using Google OAuth ID token.
-    Merges anonymous user data if anonymous_user_id cookie is present.
-    """
-    logger.info(f"Attempting Google OAuth authentication...")
+    auth_limiter.check(request)
+    logger.info("Attempting Google OAuth authentication")
 
     google_user_data = await auth_service.verify_google_token(auth_request.id_token)
 
     if not google_user_data:
-        logger.error(f"Google token verification failed")
+        logger.error("Google token verification failed")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid Google token",
             headers={"WWW-Authenticate": "Bearer"},
         )
 
-    logger.debug(f"Google authentication successful for: {google_user_data.get('email')}")
-
     anonymous_user_id = request.cookies.get("anonymous_user_id")
-    logger.info(f"Anonymous user ID from cookie: {anonymous_user_id}")
 
     user = auth_service.get_or_create_user(db, google_user_data, anonymous_user_id)
 
-    logger.info(f"User created/retrieved: {user.id}, Name: {user.name}")
+    logger.info("User authenticated: %s", user.id)
 
     access_token = auth_service.create_access_token(
         data={"sub": user.id, "email": user.email},
@@ -70,9 +70,7 @@ async def google_auth(
 
     response.delete_cookie(key="anonymous_user_id", samesite="lax")
 
-    return Token(
-        access_token=access_token,
-        token_type="bearer",
+    return AuthResponse(
         user=UserResponse(
             id=user.id,
             google_id=user.google_id,

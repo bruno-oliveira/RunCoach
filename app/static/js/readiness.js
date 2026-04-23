@@ -22,11 +22,7 @@ window.loadReadiness = function () {
 
     if (!loading || !content) return;
 
-    const token = localStorage.getItem('access_token');
-    const headers = {};
-    if (token) headers['Authorization'] = 'Bearer ' + token;
-
-    fetch('/api/plan/' + planId + '/readiness', { headers: headers, credentials: 'same-origin' })
+    fetch('/api/plan/' + planId + '/readiness', { credentials: 'same-origin' })
         .then(function (res) { return res.json(); })
         .then(function (data) {
             loading.style.display = 'none';

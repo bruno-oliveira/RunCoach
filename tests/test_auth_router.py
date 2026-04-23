@@ -49,8 +49,8 @@ class TestGoogleAuth:
 
         assert response.status_code == 200
         data = response.json()
-        assert data["token_type"] == "bearer"
-        assert data["access_token"]
+        assert data["message"] == "authenticated"
+        assert "access_token" not in data
         assert data["user"]["email"] == "test@example.com"
         assert data["user"]["name"] == "Test User"
 

@@ -16,32 +16,16 @@ const ApiClient = {
   TIMEOUT: 30000,
   
   /**
-   * Gets the auth token from localStorage
-   * @private
-   * @returns {string|null}
-   */
-  _getAuthToken() {
-    return localStorage.getItem('access_token');
-  },
-  
-  /**
    * Builds headers for requests
    * @private
    * @param {Object} customHeaders - Additional headers
    * @returns {Object}
    */
   _buildHeaders(customHeaders = {}) {
-    const headers = {
+    return {
       'Content-Type': 'application/json',
       ...customHeaders
     };
-    
-    const token = this._getAuthToken();
-    if (token) {
-      headers['Authorization'] = `Bearer ${token}`;
-    }
-    
-    return headers;
   },
   
   /**
@@ -161,6 +145,7 @@ const ApiClient = {
       
       const response = await fetch(url, {
         ...options,
+        credentials: 'same-origin',
         signal: controller.signal
       });
       
