@@ -31,7 +31,9 @@ COPY start.sh ./start.sh
 
 # Create non-root user for security
 RUN useradd --create-home appuser && \
-    chown -R appuser:appuser /app && \
+    mkdir -p /data/pdf_cache && \
+    chown -R appuser:appuser /app /data/pdf_cache && \
+    chmod 700 /data/pdf_cache && \
     chmod +x /app/start.sh
 
 USER appuser

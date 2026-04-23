@@ -30,7 +30,10 @@ class AuthService:
             expire = datetime.now(timezone.utc).replace(tzinfo=None) + expires_delta
         else:
             expire = datetime.now(timezone.utc).replace(tzinfo=None) + timedelta(days=1)
-        to_encode.update({"exp": expire})
+        to_encode.update({
+            "exp": expire,
+            "iat": datetime.now(timezone.utc).replace(tzinfo=None),
+        })
         encoded_jwt = jwt.encode(to_encode, self.secret_key, algorithm=self.algorithm)
         return encoded_jwt
 

@@ -11,3 +11,13 @@
 # flyctl launch added from .venv/.gitignore
 .venv/**/*
 fly.toml
+
+# Security: keep sensitive and ephemeral files out of the image
+.env
+*.db.backup
+app.db
+pdf_cache/
+.claude/
+__pycache__/
+.pytest_cache/
+tests/

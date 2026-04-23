@@ -248,7 +248,7 @@ async def strava_sync(
         logger.error(f"Strava sync failed for user {current_user.id}: {e}")
         raise HTTPException(
             status_code=status.HTTP_502_BAD_GATEWAY,
-            detail=f"Strava sync failed: {str(e)}",
+            detail="Strava sync failed. Please try again.",
         )
 
     # Auto-map and adjust active plans on every sync (not just when new

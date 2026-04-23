@@ -29,9 +29,12 @@ logger = logging.getLogger(__name__)
 class PDFGenerator(PlanPagesMixin, NutritionPagesMixin, SupplementaryPagesMixin):
     CACHE_TTL_SECONDS = 3600
 
-    def __init__(self, cache_dir: str = "/tmp/pdf_cache"):
+    def __init__(self, cache_dir: str | None = None):
+        if cache_dir is None:
+            base = Path(os.environ.get("DATA_DIR", tempfile.gettempdir()))
+            cache_dir = str(base / "pdf_cache")
         self.cache_dir = Path(cache_dir)
-        self.cache_dir.mkdir(exist_ok=True)
+        self.cache_dir.mkdir(mode=0o700, exist_ok=True)
         self.styles = getSampleStyleSheet()
         self._setup_custom_styles()
 

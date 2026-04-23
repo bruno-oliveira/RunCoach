@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% block title %}{{ plan_owner.name if plan_owner and plan_owner.name else 'Shared' }}'s {{ distance_display }} Plan - RunCoach{% endblock %}
+{% block title %}{{ plan_owner_display_name }}'s {{ distance_display }} Plan - RunCoach{% endblock %}
 
 {% block styles %}
 <link rel="stylesheet" href="{{ static_url('css/plan-core.css') }}">
@@ -23,15 +23,11 @@
         <div class="shared-hero-bg"></div>
         <div class="shared-hero-content">
             <div class="shared-hero-profile">
-                {% if plan_owner and plan_owner.picture %}
-                <img src="{{ plan_owner.picture }}" alt="{{ plan_owner.name }}" class="shared-avatar">
-                {% else %}
                 <div class="shared-avatar shared-avatar-placeholder">
                     <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
                 </div>
-                {% endif %}
                 <div>
-                    <h1>{{ plan_owner.name if plan_owner and plan_owner.name else 'A Runner' }}'s Training Plan</h1>
+                    <h1>{{ plan_owner_display_name }}'s Training Plan</h1>
                     <p class="shared-hero-subtitle">
                         {% if training_plan.plan_type == 'performance' %}Performance{% else %}Distance{% endif %} plan
                         {% if training_plan.goal_time %} &middot; Goal: {{ training_plan.goal_time }}{% endif %}

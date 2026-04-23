@@ -117,7 +117,9 @@ async def view_shared_plan(
         request, current_user, training_plan, plan_data, nutrition_plan, **extra
     )
     ctx["shared_view"] = True
-    ctx["plan_owner"] = owner
+    ctx["plan_owner_display_name"] = (
+        owner.name.split()[0] if owner and owner.name else "A Runner"
+    )
     ctx["share_token"] = share_token
     td = training_plan.target_distance_km
     ctx["distance_display"] = DISTANCE_NAMES.get(td, f"{td} km")
@@ -226,5 +228,5 @@ async def download_pdf(
     except Exception as e:
         logger.exception("PDF generation error")
         raise HTTPException(
-            status_code=500, detail=f"PDF generation failed: {str(e)}"
+            status_code=500, detail="PDF generation failed. Please try again."
         )

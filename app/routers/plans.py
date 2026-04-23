@@ -135,7 +135,8 @@ async def generate_plan(
     except ValidationException as e:
         return error_response(request, current_user, e.user_message, "validation")
     except Exception as e:
-        return error_response(request, current_user, f"Invalid input: {str(e)}", "general")
+        logger.exception("Plan request validation failed")
+        return error_response(request, current_user, "Invalid input. Please check your values and try again.", "general")
 
     if current_user:
         existing = plan_service.find_duplicate(plan_request, current_user.id, db)
@@ -184,7 +185,7 @@ async def generate_plan(
         logger.exception("Plan generation failed")
         db.rollback()
         return error_response(
-            request, current_user, f"An unexpected error occurred: {str(e)}", "general"
+            request, current_user, "An unexpected error occurred. Please try again.", "general"
         )
 
 

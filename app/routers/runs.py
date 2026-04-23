@@ -68,7 +68,6 @@ def _run_to_response(run: RunLog) -> RunLogResponse:
     """Convert a RunLog model instance to a RunLogResponse schema."""
     return RunLogResponse(
         id=run.id,
-        user_id=run.user_id,
         date=run.date,
         distance_km=run.distance_km,
         duration_minutes=run.duration_minutes,

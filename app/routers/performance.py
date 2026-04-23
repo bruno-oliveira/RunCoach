@@ -39,4 +39,4 @@ async def calculate_fitness(
         return fitness
     except Exception as e:
         logger.error(f"Error calculating fitness: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="Failed to calculate fitness. Please try again.")
