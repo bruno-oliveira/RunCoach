@@ -28,6 +28,22 @@ logger = logging.getLogger(__name__)
 # Minimum VDOT change to trigger recalibration
 _VDOT_RECALIBRATION_THRESHOLD = 1.0
 
+# Phase-specific signal weights for adaptation
+# (volume_weight, effort_weight, completion_weight)
+_PHASE_WEIGHTS = {
+    "base":   (0.55, 0.25, 0.20),  # Volume building is primary focus
+    "build":  (0.50, 0.30, 0.20),  # Balanced approach (current default)
+    "peak":   (0.40, 0.35, 0.25),  # Effort matters more at peak load
+    "taper":  (0.20, 0.30, 0.50),  # Completion critical, volume less relevant
+}
+
+# Minimum logged runs of a type before trusting per-type ratio
+_MIN_RUNS_PER_TYPE = 3
+
+# Bayesian shrinkage factor: how much to pull sparse type ratios toward global
+# 0.0 = fully shrink to global, 1.0 = use raw ratio
+_BAYESIAN_SHRINKAGE_PER_RUN = 0.30  # Each run adds 30% confidence
+
 
 def adjust_plan(
     plan_id: str,
@@ -107,6 +123,7 @@ def adjust_plan(
     signals = _compute_adjustment_signals(
         all_plan_runs, past_workouts, past_workout_ids,
         today, plan_id, db, _recency_weight,
+        current_phase=_get_current_phase(training_plan, current_week),
     )
     multiplier = signals["multiplier"]
 
@@ -154,6 +171,8 @@ def adjust_plan(
     avg_effort = signals["avg_effort"]
     effort_trend = signals.get("effort_trend", "stable")
     overreach_detected = signals.get("overreach_detected", False)
+    current_phase = signals.get("current_phase", "build")
+    phase_weights = signals.get("phase_weights", {})
 
     direction = "increased" if multiplier > 1.0 else "reduced" if multiplier < 1.0 else "kept"
     reason_parts = [f"Remaining workouts {direction} (x{multiplier})."]
@@ -170,11 +189,12 @@ def adjust_plan(
             f"VDOT recalibrated: {vdot_result['old_vdot']} → {vdot_result['new_vdot']} "
             f"({vdot_result['direction']})."
         )
+    reason_parts.append(f"Phase: {current_phase} (weights: V={phase_weights.get('volume', 0):.0%} E={phase_weights.get('effort', 0):.0%} C={phase_weights.get('completion', 0):.0%}).")
 
     logger.info(
         "adjust_plan result: multiplier=%.2f raw=%.3f "
         "volume_ratio=%.2f effort_factor=%.2f(avg=%.1f) "
-        "completion_factor=%.2f(rate=%.2f) trend=%s overreach=%s runs=%d",
+        "completion_factor=%.2f(rate=%.2f) trend=%s overreach=%s runs=%d phase=%s",
         multiplier,
         signals["raw_multiplier"],
         volume_ratio,
@@ -185,6 +205,7 @@ def adjust_plan(
         effort_trend,
         overreach_detected,
         len(all_plan_runs),
+        current_phase,
     )
 
     # Record adaptation event in history
@@ -194,6 +215,7 @@ def adjust_plan(
         "direction": direction,
         "effort_trend": effort_trend,
         "overreach": overreach_detected,
+        "phase": current_phase,
         "reason": " ".join(reason_parts),
     })
 
@@ -220,6 +242,15 @@ def _record_adaptation_event(training_plan: TrainingPlan, event: Dict[str, Any])
     training_plan.adaptation_history = history
 
 
+def _get_current_phase(training_plan: TrainingPlan, current_week: int) -> str:
+    """Determine the current training phase from plan_data."""
+    plan_data = training_plan.plan_data or []
+    for week in plan_data:
+        if week.get("week") == current_week:
+            return week.get("phase", "build")
+    return "build"
+
+
 def _compute_adjustment_signals(
     all_plan_runs: List,
     past_workouts: List[Tuple],
@@ -228,6 +259,8 @@ def _compute_adjustment_signals(
     plan_id: str,
     db: Session,
     recency_weight_fn,
+    *,
+    current_phase: str = "build",
 ) -> Dict[str, Any]:
     """Compute volume, effort, completion, and trend signals for plan adjustment.
 
@@ -236,7 +269,13 @@ def _compute_adjustment_signals(
     - Overreach detection override (volume high + effort high = force reduce)
     - Effort trend wired into the multiplier
     - Per-type volume ratios for targeted adjustment
+    - Phase-aware signal weights (P0): taper prioritizes completion, peak prioritizes effort
+    - Bayesian shrinkage for sparse per-type data (P0): requires MIN_RUNS_PER_TYPE samples
     """
+    # Phase-aware weights (P0 improvement)
+    volume_weight, effort_weight, completion_weight = _PHASE_WEIGHTS.get(
+        current_phase, _PHASE_WEIGHTS["build"],
+    )
     # --- Volume adherence (weight 50%) ---
     planned_weighted = 0.0
     planned_by_type: Dict[str, float] = defaultdict(float)
@@ -262,12 +301,32 @@ def _compute_adjustment_signals(
     ))
 
     # Per-type volume ratios (improvement #5)
+    # P0: Bayesian shrinkage for sparse data — require MIN_RUNS_PER_TYPE runs
+    # before trusting type-specific ratio; shrink toward global volume_ratio
     per_type_ratios: Dict[str, float] = {}
+    per_type_run_counts: Dict[str, int] = defaultdict(int)
+    for run in all_plan_runs:
+        rtype = run.workout_type or "easy"
+        per_type_run_counts[rtype] += 1
+
     for wtype in ("easy", "long", "tempo", "interval", "hill"):
         planned = planned_by_type.get(wtype, 0)
         actual = actual_by_type.get(wtype, 0)
         if planned > 0:
-            per_type_ratios[wtype] = max(0.5, min(1.5, actual / planned))
+            raw_ratio = max(0.5, min(1.5, actual / planned))
+            n_runs = per_type_run_counts.get(wtype, 0)
+            if n_runs >= _MIN_RUNS_PER_TYPE:
+                # Enough data: partial shrinkage toward global
+                confidence = min(1.0, n_runs * _BAYESIAN_SHRINKAGE_PER_RUN)
+                per_type_ratios[wtype] = round(
+                    confidence * raw_ratio + (1.0 - confidence) * volume_ratio, 2,
+                )
+            else:
+                # Sparse data: strong shrinkage toward global ratio
+                confidence = n_runs * _BAYESIAN_SHRINKAGE_PER_RUN
+                per_type_ratios[wtype] = round(
+                    confidence * raw_ratio + (1.0 - confidence) * volume_ratio, 2,
+                )
 
     # --- Effort signal (weight 30%) — continuous mapping (improvement #2) ---
     effort_sum = 0.0
@@ -333,11 +392,11 @@ def _compute_adjustment_signals(
     else:
         completion_factor = 0.90
 
-    # --- Combine signals ---
+    # --- Combine signals with phase-aware weights ---
     raw_multiplier = (
-        (volume_ratio * 0.50)
-        + (effort_factor * 0.30)
-        + (completion_factor * 0.20)
+        (volume_ratio * volume_weight)
+        + (effort_factor * effort_weight)
+        + (completion_factor * completion_weight)
     )
 
     # Apply effort trend modifier
@@ -365,6 +424,12 @@ def _compute_adjustment_signals(
         "trend_modifier": round(trend_modifier, 3),
         "overreach_detected": overreach_detected,
         "per_type_ratios": {k: round(v, 2) for k, v in per_type_ratios.items()},
+        "phase_weights": {
+            "volume": round(volume_weight, 2),
+            "effort": round(effort_weight, 2),
+            "completion": round(completion_weight, 2),
+        },
+        "current_phase": current_phase,
     }
 
 
