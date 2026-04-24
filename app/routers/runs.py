@@ -10,7 +10,7 @@ from sqlalchemy.orm import Session
 
 from app.core.training.quality_scorer import calculate_quality_score
 from app.core.training.vdot_calculator import VDOTCalculator
-from app.dependencies import get_db, get_current_user
+from app.dependencies import get_db, get_current_user, validate_plan_ownership
 from app.models import RunLog, User, DailyWorkout, TrainingPlan, WeeklyPlan
 from app.schemas import (
     RunLogCreate,
@@ -20,71 +20,15 @@ from app.schemas import (
 )
 from app.services.feedback_service import FeedbackService
 from app.services.race_predictor_service import RacePredictorService
+from app.services.run_enrichment_service import (
+    build_race_comparison,
+    enrich_vdot_and_prediction,
+    run_to_response,
+)
 
 logger = logging.getLogger(__name__)
 
 runs_router = APIRouter(prefix="/api/runs", tags=["runs"])
-
-
-def _enrich_vdot_and_prediction(
-    new_run: RunLog, distance_km: float, duration_minutes: float, user_id: str, db: Session
-) -> None:
-    """Calculate VDOT and snapshot pre-run prediction onto the run."""
-    if distance_km >= 2.0 and duration_minutes > 0:
-        vdot = VDOTCalculator.calculate_vdot(distance_km, int(duration_minutes * 60))
-        if vdot:
-            new_run.vdot = vdot
-
-    if distance_km >= 2.0:
-        try:
-            pre_race_vdot = RacePredictorService.get_best_recent_vdot(user_id, weeks=12, db=db)
-            if pre_race_vdot:
-                predicted_seconds = VDOTCalculator.predict_time_for_distance(pre_race_vdot, distance_km)
-                if predicted_seconds:
-                    new_run.predicted_time_seconds = float(predicted_seconds)
-        except Exception as e:
-            logger.warning(f"Failed to snapshot prediction for run: {e}")
-
-
-def _build_race_comparison(run: RunLog, duration_minutes: float) -> Optional[dict]:
-    """Build predicted vs actual comparison dict if prediction data is available."""
-    if not run.predicted_time_seconds:
-        return None
-    actual_seconds = int(duration_minutes * 60)
-    predicted_seconds = int(run.predicted_time_seconds)
-    delta = actual_seconds - predicted_seconds
-    return {
-        "predicted_seconds": predicted_seconds,
-        "predicted_formatted": VDOTCalculator.format_duration(predicted_seconds),
-        "actual_seconds": actual_seconds,
-        "actual_formatted": VDOTCalculator.format_duration(actual_seconds),
-        "delta_seconds": delta,
-        "delta_formatted": VDOTCalculator.format_duration(abs(delta)),
-        "faster_than_predicted": delta < 0,
-    }
-
-
-def _run_to_response(run: RunLog) -> RunLogResponse:
-    """Convert a RunLog model instance to a RunLogResponse schema."""
-    return RunLogResponse(
-        id=run.id,
-        date=run.date,
-        distance_km=run.distance_km,
-        duration_minutes=run.duration_minutes,
-        avg_pace_min_km=round(run.avg_pace_min_km, 2) if run.avg_pace_min_km else None,
-        avg_heart_rate=run.avg_heart_rate,
-        max_heart_rate=run.max_heart_rate,
-        avg_cadence=run.avg_cadence,
-        elevation_gain_m=run.elevation_gain_m,
-        notes=run.notes,
-        workout_type=run.workout_type,
-        perceived_effort=run.perceived_effort,
-        effort_quality_score=round(run.effort_quality_score, 1) if run.effort_quality_score else None,
-        quality_label=run.quality_label,
-        vdot=run.vdot,
-        predicted_time_seconds=run.predicted_time_seconds,
-        created_at=run.created_at,
-    )
 
 
 @runs_router.post("", response_model=RunLogResponse, status_code=status.HTTP_201_CREATED)
@@ -93,28 +37,10 @@ async def create_run_log(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    """
-    Create a new run log entry.
-
-    Allows users to track their runs with detailed metrics including:
-    - Distance and duration
-    - Heart rate data (average and maximum)
-    - Cadence and elevation
-    - Workout type and perceived effort
-    - Notes
-    """
+    """Create a new run log entry."""
     try:
-        # Validate plan ownership to prevent IDOR
         if run_log.training_plan_id:
-            plan = db.query(TrainingPlan).filter(
-                TrainingPlan.id == run_log.training_plan_id,
-                TrainingPlan.user_id == current_user.id,
-            ).first()
-            if not plan:
-                raise HTTPException(
-                    status_code=status.HTTP_403_FORBIDDEN,
-                    detail="Training plan not found or access denied",
-                )
+            validate_plan_ownership(run_log.training_plan_id, db, current_user)
 
         validated_workout: Optional[DailyWorkout] = None
         if run_log.daily_workout_id:
@@ -134,7 +60,6 @@ async def create_run_log(
                     detail="Workout not found or access denied",
                 )
 
-        # Calculate average pace (min/km)
         avg_pace_min_km = run_log.duration_minutes / run_log.distance_km
 
         new_run = RunLog(
@@ -154,7 +79,6 @@ async def create_run_log(
             perceived_effort=run_log.perceived_effort,
         )
 
-        # Calculate effort quality score if we have enough data
         if validated_workout and run_log.perceived_effort:
             workout_type = validated_workout.workout_type or run_log.workout_type or "easy"
             score, label = calculate_quality_score(
@@ -166,7 +90,7 @@ async def create_run_log(
             new_run.effort_quality_score = score
             new_run.quality_label = label
 
-        _enrich_vdot_and_prediction(new_run, run_log.distance_km, run_log.duration_minutes, current_user.id, db)
+        enrich_vdot_and_prediction(new_run, run_log.distance_km, run_log.duration_minutes, current_user.id, db)
 
         db.add(new_run)
         db.commit()
@@ -178,11 +102,13 @@ async def create_run_log(
 
         logger.info(f"Run log created for user {current_user.id}: {run_log.distance_km}km in {run_log.duration_minutes}min")
 
-        response_data = _run_to_response(new_run)
+        response_data = run_to_response(new_run)
         if new_run.vdot:
             response_data.predictions = VDOTCalculator.predict_times(new_run.vdot)
-        response_data.race_comparison = _build_race_comparison(new_run, run_log.duration_minutes)
+        response_data.race_comparison = build_race_comparison(new_run, run_log.duration_minutes)
         return response_data
+    except HTTPException:
+        raise
     except SQLAlchemyError as e:
         logger.error(f"Error creating run log: {e}")
         db.rollback()
@@ -202,17 +128,10 @@ async def get_run_logs(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    """
-    Get paginated list of user's run logs with optional filtering.
-
-    Supports filtering by:
-    - Workout type (easy, tempo, interval, long, hill)
-    - Date range (start_date and end_date)
-    """
+    """Get paginated list of user's run logs with optional filtering."""
     try:
         query = db.query(RunLog).filter(RunLog.user_id == current_user.id)
 
-        # Apply filters
         if workout_type:
             query = query.filter(RunLog.workout_type == workout_type)
         if start_date:
@@ -220,15 +139,13 @@ async def get_run_logs(
         if end_date:
             query = query.filter(RunLog.date <= end_date)
 
-        # Get total count
         total = query.count()
 
-        # Apply pagination
         offset = (page - 1) * page_size
         run_logs = query.order_by(RunLog.date.desc()).offset(offset).limit(page_size).all()
 
         return RunLogListResponse(
-            runs=[_run_to_response(run) for run in run_logs],
+            runs=[run_to_response(run) for run in run_logs],
             total=total,
             page=page,
             page_size=page_size,
@@ -258,12 +175,7 @@ async def get_race_predictions(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    """
-    Get race predictions based on user's best recent VDOT from all runs.
-
-    Returns predictions for all standard distances unless target_distance is specified.
-    When goal_time is provided, performs gap analysis.
-    """
+    """Get race predictions based on user's best recent VDOT from all runs."""
     predictions_data = RacePredictorService.get_predictions_for_user(current_user.id, db)
 
     if not predictions_data.get("has_sufficient_data"):
@@ -365,7 +277,7 @@ async def get_run_log(
             detail="Run log not found",
         )
 
-    return _run_to_response(run)
+    return run_to_response(run)
 
 
 @runs_router.put("/{run_id}", response_model=RunLogResponse)
@@ -388,12 +300,10 @@ async def update_run_log(
             detail="Run log not found",
         )
 
-    # Update fields
     update_data = run_update.model_dump(exclude_unset=True)
     for field, value in update_data.items():
         setattr(run, field, value)
 
-    # Recalculate pace if distance or duration changed
     if "distance_km" in update_data or "duration_minutes" in update_data:
         run.avg_pace_min_km = run.duration_minutes / run.distance_km
 
@@ -402,7 +312,7 @@ async def update_run_log(
 
     logger.info(f"Run log {run_id} updated for user {current_user.id}")
 
-    return _run_to_response(run)
+    return run_to_response(run)
 
 
 @runs_router.delete("/{run_id}", status_code=status.HTTP_204_NO_CONTENT)
@@ -437,7 +347,6 @@ async def get_run_feedback(
     current_user: User = Depends(get_current_user),
 ):
     """Get coaching feedback for a specific run."""
-    # Verify run ownership
     run = (
         db.query(RunLog)
         .filter(RunLog.id == run_id, RunLog.user_id == current_user.id)
@@ -464,7 +373,3 @@ async def get_run_feedback(
         "overall_sentiment": feedback.overall_sentiment,
         "created_at": feedback.created_at,
     }
-
-
-
-

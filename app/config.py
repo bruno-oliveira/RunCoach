@@ -63,6 +63,7 @@ class Settings(BaseSettings):
     strava_client_id: str = ""
     strava_client_secret: str = ""
     strava_redirect_uri: str = "http://localhost:8000/api/strava/callback"
+    strava_initial_sync_days: int = 365
 
     # Security
     enable_debug_endpoints: bool = False

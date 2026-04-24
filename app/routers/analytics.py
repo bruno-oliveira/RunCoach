@@ -1,72 +1,28 @@
-"""Router for analytics functionality."""
+"""Analytics API endpoints."""
 
 import logging
-from datetime import date, datetime, timedelta
 from typing import Optional
 
-from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
-from fastapi.responses import HTMLResponse
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 
-from app.config import settings
-from app.dependencies import get_db, get_current_user, get_optional_user
-from app.models import DailyWorkout, TrainingPlan, User, WeeklyPlan
+from app.dependencies import get_db, get_current_user
+from app.models import TrainingPlan, User
 from app.models.run_log import RunLog
-from app.services.plan_helpers import get_plan_or_404
-from app.schemas import DISTANCE_NAMES
 from app.core.training.vdot_calculator import VDOTCalculator
 from app.core.runner_profile import build_profile
+from app.services.adherence_service import compute_adherence_heatmap
 from app.services.gap_analysis_service import GapAnalysisService
 from app.services.insights_service import InsightsService
 from app.services.personal_records_service import PersonalRecordsService
+from app.services.plan_helpers import get_plan_or_404
 from app.services.race_predictor_service import RacePredictorService
 from app.services.training_load_service import TrainingLoadService
-from app.template_helpers import create_templates
 from app.utils import to_date as _to_date
 
 logger = logging.getLogger(__name__)
 
 analytics_router = APIRouter(prefix="/api/analytics", tags=["analytics"])
-analytics_page_router = APIRouter(tags=["analytics-page"])
-templates = create_templates()
-
-
-@analytics_page_router.get("/analytics", response_class=HTMLResponse)
-async def analytics_page(
-    request: Request,
-    current_user=Depends(get_optional_user),
-    db: Session = Depends(get_db),
-) -> HTMLResponse:
-    """Analytics dashboard page."""
-    plans = []
-    if current_user:
-        plans = (
-            db.query(TrainingPlan)
-            .filter(TrainingPlan.user_id == current_user.id)
-            .order_by(TrainingPlan.created_at.desc())
-            .all()
-        )
-
-    plan_summaries = []
-    for p in plans:
-        td = p.target_distance_km
-        label = DISTANCE_NAMES.get(td, f"{td}km")
-        plan_summaries.append({
-            "id": p.id,
-            "label": f"{label} — {p.weeks_duration}wk",
-            "target_distance_km": td,
-        })
-
-    return templates.TemplateResponse(
-        "analytics.html",
-        {
-            "request": request,
-            "user": current_user,
-            "current_page": "analytics",
-            "google_client_id": settings.google_client_id,
-            "plans": plan_summaries,
-        },
-    )
 
 
 @analytics_router.get("/runs")
@@ -175,90 +131,9 @@ async def get_workout_adherence(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    """Get workout type adherence heatmap data for a plan.
-
-    Returns a grid of (week, workout_type) with completion status.
-    """
+    """Get workout type adherence heatmap data for a plan."""
     plan = get_plan_or_404(plan_id, db, current_user, require_user_match=True)
-
-    start_date = _to_date(plan.start_date)
-    if not start_date:
-        return {"available": False, "reason": "Plan has no start date."}
-
-    today = date.today()
-    total_weeks = plan.weeks_duration or 0
-    current_week = min(((today - start_date).days // 7) + 1, total_weeks)
-
-    plan_data = plan.plan_data if plan.plan_data else []
-
-    # Get all run logs mapped to this plan
-    runs = (
-        db.query(RunLog)
-        .filter(
-            RunLog.user_id == current_user.id,
-            RunLog.training_plan_id == plan_id,
-        )
-        .all()
-    )
-    linked_workout_ids = {r.daily_workout_id for r in runs if r.daily_workout_id}
-
-    # Get all daily workouts, pre-indexed by week number
-    workouts_raw = (
-        db.query(DailyWorkout, WeeklyPlan.week_number)
-        .join(WeeklyPlan)
-        .filter(WeeklyPlan.training_plan_id == plan_id)
-        .all()
-    )
-    workouts_by_week: dict[int, list] = {}
-    for workout, wk in workouts_raw:
-        workouts_by_week.setdefault(wk, []).append(workout)
-
-    # Collect all workout types
-    workout_types = set()
-    for week_data in plan_data:
-        for wo in week_data.get("daily_workouts", []):
-            wo_type = wo.get("type", "unknown")
-            if wo_type not in ("rest", "recovery"):
-                workout_types.add(wo_type)
-
-    workout_types = sorted(workout_types)
-
-    # Build heatmap grid
-    grid = []
-    for week_data in plan_data:
-        wk_num = week_data.get("week", 0)
-        row = {"week": wk_num, "cells": {}}
-        for wo_type in workout_types:
-            if wk_num > current_week:
-                row["cells"][wo_type] = "future"
-            else:
-                row["cells"][wo_type] = "skipped"
-
-        for workout in workouts_by_week.get(wk_num, []):
-            wo_type = workout.workout_type
-            if wo_type in ("rest", "recovery") or wo_type not in workout_types:
-                continue
-            if workout.id in linked_workout_ids:
-                row["cells"][wo_type] = "completed"
-            elif wk_num <= current_week:
-                week_start = start_date + timedelta(weeks=wk_num - 1)
-                week_end = week_start + timedelta(days=7)
-                week_runs = [
-                    r for r in runs
-                    if r.date and week_start <= _to_date(r.date) < week_end
-                ]
-                if week_runs:
-                    row["cells"][wo_type] = "rescheduled"
-
-        grid.append(row)
-
-    return {
-        "available": True,
-        "workout_types": workout_types,
-        "grid": grid,
-        "current_week": current_week,
-        "total_weeks": total_weeks,
-    }
+    return compute_adherence_heatmap(plan, current_user.id, db)
 
 
 @analytics_router.get("/training-load")

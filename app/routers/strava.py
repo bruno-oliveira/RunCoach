@@ -10,76 +10,19 @@ from sqlalchemy.orm import Session
 
 from app.services.auth_service import AuthService
 from app.config import settings
-from app.dependencies import get_current_user, get_db, get_auth_service, get_strava_service, get_adaptation_service
+from app.dependencies import get_current_user, get_db, get_auth_service, get_strava_service
 from app.models import TrainingPlan
 from app.models.user import User
 from app.schemas import StravaStatusResponse, StravaSyncResponse
 from app.rate_limit import strava_callback_limiter
 from app.services.strava_service import StravaService
 from app.services.adaptation_service import AdaptationService
+from app.services.strava_post_sync_service import auto_map_and_adjust, initial_sync
 from app.utils import TimestampAdapter
 
 logger = logging.getLogger(__name__)
 
 strava_router = APIRouter(prefix="/api/strava", tags=["strava"])
-
-
-def _auto_map_and_adjust(
-    user: User,
-    db: Session,
-    adaptation_service: AdaptationService,
-) -> list[dict]:
-    """Find active plans and auto-map runs + auto-adjust each one.
-
-    Returns a list of per-plan result dicts suitable for the sync response.
-    """
-    from app.utils import to_date as _to_date
-
-    today = datetime.now(timezone.utc).date()
-
-    active_plans = (
-        db.query(TrainingPlan)
-        .filter(
-            TrainingPlan.user_id == user.id,
-            TrainingPlan.start_date.isnot(None),
-        )
-        .all()
-    )
-
-    results: list[dict] = []
-    for plan in active_plans:
-        start = _to_date(plan.start_date)
-        if start is None:
-            continue
-        end_date = start + timedelta(weeks=plan.weeks_duration)
-        if today > end_date:
-            continue  # plan is completed
-
-        try:
-            map_result = adaptation_service.map_runs_to_plan(
-                plan.id, user.id, db
-            )
-            adjust_result = adaptation_service.adjust_plan(
-                plan.id, user.id, db
-            )
-            # Check for proactive adaptation alerts
-            alert = adaptation_service.check_alerts(plan.id, user.id, db)
-            results.append({
-                "plan_id": plan.id,
-                "runs_mapped": map_result.get("mapped", 0),
-                "adjusted": adjust_result.get("adjusted", False),
-                "multiplier": adjust_result.get("multiplier"),
-                "reason": adjust_result.get("reason", ""),
-                "alert": alert,
-            })
-        except Exception as e:
-            logger.warning(f"Auto-adjust failed for plan {plan.id}: {e}")
-
-    return results
-
-# How far back to look on the very first sync (before any cursor exists).
-# A full year ensures we cover any active training plan the user might have.
-INITIAL_SYNC_DAYS = 365
 
 
 @strava_router.get("/connect")
@@ -139,33 +82,7 @@ async def strava_callback(
     user.strava_token_expires_at = token_data["expires_at"]
     db.commit()
 
-    # Initial sync in background to avoid blocking the HTTP response
-    async def _initial_sync(user_id: str):
-        from app.dependencies import SessionLocal, get_adaptation_service
-        sync_db = SessionLocal()
-        try:
-            sync_user = sync_db.query(User).filter(User.id == user_id).first()
-            if not sync_user:
-                return
-            initial_after = TimestampAdapter.days_ago_utc_epoch(INITIAL_SYNC_DAYS)
-            result = await strava_service.sync_activities(sync_user, sync_db, after_timestamp=initial_after)
-            logger.info(
-                f"Initial Strava sync for user {user_id}: "
-                f"{result['synced']} synced, {result['total']} total"
-            )
-            if result.get("synced", 0) > 0:
-                adaptation_service = AdaptationService()
-                adjustment_results = _auto_map_and_adjust(sync_user, sync_db, adaptation_service)
-                if adjustment_results:
-                    logger.info(
-                        f"Auto-adjusted {len(adjustment_results)} plan(s) for user {user_id}"
-                    )
-        except Exception as e:
-            logger.error(f"Initial Strava sync failed: {e}")
-        finally:
-            sync_db.close()
-
-    background_tasks.add_task(_initial_sync, user.id)
+    background_tasks.add_task(initial_sync, user.id, strava_service)
 
     return RedirectResponse(url="/my-plans", status_code=status.HTTP_302_FOUND)
 
@@ -186,12 +103,7 @@ async def strava_sync(
     db: Session = Depends(get_db),
     strava_service: StravaService = Depends(get_strava_service),
 ):
-    """Sync new Strava activities since the last sync.
-
-    By default, only fetches activities created after the last successful sync
-    (incremental). Pass force_days to re-pull a specific window, or full_sync=true
-    to fetch the entire activity history.
-    """
+    """Sync new Strava activities since the last sync."""
     if not current_user.strava_athlete_id:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -199,19 +111,12 @@ async def strava_sync(
         )
 
     if full_sync:
-        after_timestamp = None  # no time filter — fetch entire history
+        after_timestamp = None
     elif force_days is not None:
         after_timestamp = TimestampAdapter.days_ago_utc_epoch(force_days)
     elif current_user.strava_last_synced_at:
-        # Start from the last sync cursor minus a 24-hour buffer so runs
-        # whose start_date fell before the last sync are still fetched.
         after_timestamp = current_user.strava_last_synced_at - 86400
 
-        # If the user has a training plan whose start date is before the
-        # cursor, extend the window to cover the entire plan period.  This
-        # backfills any runs that were missed during the initial sync
-        # (e.g. the initial sync only pulled 90 days and the plan started
-        # earlier).
         earliest_plan_start = (
             db.query(TrainingPlan.start_date)
             .filter(
@@ -237,8 +142,7 @@ async def strava_sync(
                 )
                 after_timestamp = plan_epoch
     else:
-        # No cursor yet — treat like an initial sync
-        after_timestamp = TimestampAdapter.days_ago_utc_epoch(INITIAL_SYNC_DAYS)
+        after_timestamp = TimestampAdapter.days_ago_utc_epoch(settings.strava_initial_sync_days)
 
     try:
         result = await strava_service.sync_activities(
@@ -251,10 +155,8 @@ async def strava_sync(
             detail="Strava sync failed. Please try again.",
         )
 
-    # Auto-map and adjust active plans on every sync (not just when new
-    # runs arrive) so previously-unmapped runs get linked too.
     adaptation_service = AdaptationService()
-    adjustment_results = _auto_map_and_adjust(current_user, db, adaptation_service) or None
+    adjustment_results = auto_map_and_adjust(current_user, db, adaptation_service) or None
 
     return StravaSyncResponse(**result, adjustment_results=adjustment_results)
 
@@ -282,5 +184,3 @@ async def strava_disconnect(
     await strava_service.disconnect(current_user, db)
     logger.info("Strava disconnected for user %s", current_user.id)
     return {"message": "Strava disconnected"}
-
-

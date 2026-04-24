@@ -1,0 +1,291 @@
+"""Plan generation and customization endpoints."""
+
+import logging
+from typing import Optional
+
+from fastapi import APIRouter, Cookie, Depends, Form, HTTPException, Request, Response
+from fastapi.responses import HTMLResponse, RedirectResponse
+from sqlalchemy.orm import Session
+
+from app.config import settings
+from app.core.nutrition.nutrition_engine import NutritionEngine
+from app.core.generators.plan_generator import TrainingPlanGenerator
+from app.core.runner_profile import build_profile
+from app.dependencies import (
+    get_current_user,
+    get_db,
+    get_nutrition_engine,
+    get_optional_user,
+    get_plan_generator,
+    get_plan_service,
+)
+from app.exceptions import (
+    DatabaseException,
+    InadequateBaseException,
+    InsufficientTimeException,
+    PlanGenerationException,
+    RunCoachException,
+    ValidationException,
+    ZeroMileageUnsupportedException,
+)
+from app.models import User
+from app.schemas import PlanRequest
+from app.services.performance_service import PerformanceService
+from app.services.plan_helpers import error_response, get_plan_or_404
+from app.services.plan_service import PlanService
+from app.template_helpers import create_templates
+from app.utils import parse_time_to_pace
+
+logger = logging.getLogger(__name__)
+
+router = APIRouter(tags=["plans"])
+templates = create_templates()
+
+
+@router.post("/generate-plan", response_class=HTMLResponse)
+async def generate_plan(
+    request: Request,
+    response: Response,
+    current_km: float = Form(...),
+    target_distance: str = Form(...),
+    weeks: int = Form(...),
+    max_runs_per_week: int = Form(4),
+    terrain: Optional[str] = Form(None),
+    body_weight_kg: float = Form(70.0),
+    recent_race_distance_km: Optional[str] = Form(None),
+    recent_race_time: Optional[str] = Form(None),
+    goal_time: Optional[str] = Form(None),
+    use_profile: Optional[str] = Form(None),
+    plan_mode: Optional[str] = Form("distance"),
+    goal_time_required: Optional[str] = Form(None),
+    current_time: Optional[str] = Form(None),
+    max_heart_rate: Optional[str] = Form(None),
+    anonymous_user_id: Optional[str] = Cookie(None),
+    db: Session = Depends(get_db),
+    current_user: Optional[User] = Depends(get_optional_user),
+    plan_generator: TrainingPlanGenerator = Depends(get_plan_generator),
+    nutrition_engine: NutritionEngine = Depends(get_nutrition_engine),
+    plan_service: PlanService = Depends(get_plan_service),
+) -> HTMLResponse:
+    """Generate a personalized training plan."""
+    race_dist = float(recent_race_distance_km) if recent_race_distance_km else None
+    hr_max = int(max_heart_rate) if max_heart_rate else None
+
+    if plan_mode == "time":
+        return await _generate_time_goal_plan(
+            request=request,
+            current_km=current_km,
+            target_distance=float(target_distance),
+            weeks=weeks,
+            runs_per_week=max_runs_per_week,
+            goal_time=goal_time_required or "",
+            current_time=current_time,
+            max_heart_rate=hr_max,
+            current_user=current_user,
+            db=db,
+            plan_service=plan_service,
+        )
+
+    logger.info(
+        f"Generate plan - current_user: {current_user.id if current_user else 'None'}"
+    )
+    logger.info(
+        f"Generate plan - anonymous_user_id cookie: "
+        f"{request.cookies.get('anonymous_user_id', 'NO COOKIE')}"
+    )
+    logger.info(
+        f"Generate plan - has_access_token: "
+        f"{bool(request.cookies.get('access_token'))}"
+    )
+
+    if not anonymous_user_id:
+        anonymous_user_id = getattr(request.state, "anonymous_user_id", None)
+
+    try:
+        plan_request = PlanRequest(
+            current_km=current_km,
+            target_distance=float(target_distance),
+            weeks=weeks,
+            max_runs_per_week=max_runs_per_week,
+            terrain=terrain if float(target_distance) == 30.0 else None,
+            body_weight_kg=body_weight_kg,
+            recent_race_distance_km=race_dist,
+            recent_race_time=recent_race_time or None,
+            goal_time=goal_time or None,
+        )
+    except InsufficientTimeException as e:
+        return error_response(request, current_user, e.user_message, "insufficient_time", e.suggestion)
+    except InadequateBaseException as e:
+        return error_response(request, current_user, e.user_message, "inadequate_base", e.suggestion)
+    except ZeroMileageUnsupportedException as e:
+        return error_response(request, current_user, e.user_message, "zero_mileage_unsupported", e.suggestion)
+    except ValidationException as e:
+        return error_response(request, current_user, e.user_message, "validation")
+    except Exception as e:
+        logger.exception("Plan request validation failed")
+        return error_response(request, current_user, "Invalid input. Please check your values and try again.", "general")
+
+    if current_user:
+        existing = plan_service.find_duplicate(plan_request, current_user.id, db)
+        if existing:
+            logger.info(
+                f"Returning existing plan {existing.id} for user {current_user.id}"
+            )
+            return RedirectResponse(url=f"/plan/{existing.id}", status_code=303)
+
+    if current_user:
+        if plan_service.has_reached_plan_limit(current_user.id, db):
+            return error_response(
+                request,
+                current_user,
+                "You've reached the maximum of 3 active training plans. "
+                "Please delete or complete an existing plan before creating a new one.",
+                "plan_limit",
+            )
+
+    try:
+        user = plan_service.get_or_create_anonymous_user(
+            current_user, anonymous_user_id, db
+        )
+        runner_profile = None
+        if use_profile == "on" and current_user:
+            rp = build_profile(current_user.id, db)
+            if rp.has_sufficient_data:
+                runner_profile = rp.to_dict()
+
+        training_plan, plan_data = plan_service.create_plan(
+            plan_request, user, db, plan_generator, nutrition_engine,
+            profile=runner_profile,
+        )
+
+        return RedirectResponse(url=f"/plan/{training_plan.id}", status_code=303)
+
+    except PlanGenerationException as e:
+        db.rollback()
+        return error_response(request, current_user, e.user_message, "plan_generation")
+    except DatabaseException:
+        db.rollback()
+        return error_response(
+            request, current_user, "Database error occurred. Please try again.", "database"
+        )
+    except Exception as e:
+        logger.exception("Plan generation failed")
+        db.rollback()
+        return error_response(
+            request, current_user, "An unexpected error occurred. Please try again.", "general"
+        )
+
+
+async def _generate_time_goal_plan(
+    request: Request,
+    current_km: float,
+    target_distance: float,
+    weeks: int,
+    runs_per_week: int,
+    goal_time: str,
+    current_time: Optional[str],
+    max_heart_rate: Optional[int],
+    current_user: Optional[User],
+    db: Session,
+    plan_service: PlanService,
+):
+    """Dispatch performance (time-goal) plan creation from the unified form."""
+    if not current_user:
+        return error_response(
+            request, None,
+            "Time-goal plans require a logged-in account so we can track your progress.",
+            "auth_required",
+        )
+
+    if plan_service.has_reached_plan_limit(current_user.id, db):
+        return error_response(
+            request, current_user,
+            "You've reached the maximum of 3 active training plans. "
+            "Please delete or complete an existing plan before creating a new one.",
+            "plan_limit",
+        )
+
+    try:
+        goal_pace = parse_time_to_pace(goal_time, target_distance)
+        current_pace = None
+        if current_time:
+            current_pace = parse_time_to_pace(current_time, target_distance)
+
+        service = PerformanceService(db)
+        training_plan, _ = service.create_performance_plan(
+            user=current_user,
+            target_distance=target_distance,
+            goal_pace=goal_pace,
+            weeks=weeks,
+            current_pace=current_pace,
+            current_weekly_km=current_km if current_km > 0 else None,
+            goal_time=goal_time,
+            current_time=current_time,
+            runs_per_week=runs_per_week,
+            auto_calculate=current_km == 0,
+            max_heart_rate=max_heart_rate,
+        )
+
+        return RedirectResponse(url=f"/plan/{training_plan.id}", status_code=303)
+
+    except RunCoachException as e:
+        return error_response(request, current_user, e.user_message, "validation",
+                              e.suggestion if hasattr(e, "suggestion") else None)
+    except ValueError as e:
+        return error_response(request, current_user, str(e), "validation")
+    except Exception as e:
+        logger.exception("Time-goal plan generation failed")
+        return error_response(
+            request, current_user,
+            "An unexpected error occurred while generating your plan. Please try again.",
+            "general",
+        )
+
+
+@router.post("/customize-plan", response_class=HTMLResponse)
+async def customize_plan(
+    request: Request,
+    plan_id: str = Form(...),
+    week_number: int = Form(...),
+    adjustment_type: str = Form(...),
+    adjustment_value: str = Form(...),
+    anonymous_user_id: Optional[str] = Cookie(None),
+    db: Session = Depends(get_db),
+    current_user: Optional[User] = Depends(get_optional_user),
+    plan_service: PlanService = Depends(get_plan_service),
+) -> HTMLResponse:
+    """Handle plan customization with simple interface."""
+    training_plan = None
+    try:
+        training_plan = get_plan_or_404(
+            plan_id, db, current_user, anonymous_user_id
+        )
+
+        plan_service.customize_plan(
+            training_plan, week_number, adjustment_type, adjustment_value, db
+        )
+
+        return RedirectResponse(url=f"/plan/{training_plan.id}", status_code=303)
+
+    except HTTPException:
+        raise
+    except Exception:
+        db.rollback()
+        logger.exception("Error customizing plan")
+        return templates.TemplateResponse(
+            "plan.html",
+            {
+                "request": request,
+                "user": current_user,
+                "google_client_id": settings.google_client_id,
+                "plan": training_plan.plan_data if training_plan and training_plan.plan_data else [],
+                "plan_id": plan_id,
+                "nutrition_plan": (
+                    plan_service.nutrition_for_template(training_plan.nutrition_plan_data)
+                    if training_plan and training_plan.nutrition_plan_data
+                    else {}
+                ),
+                "progress_data": None,
+                "error": "An error occurred while customizing the plan.",
+            },
+        )

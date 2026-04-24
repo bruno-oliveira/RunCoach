@@ -198,3 +198,21 @@ def verify_plan_ownership(
     if anonymous_user_id is not None:
         return plan.user_id == anonymous_user_id
     return False
+
+
+def validate_plan_ownership(
+    plan_id: str,
+    db: Session,
+    current_user: User,
+) -> TrainingPlan:
+    """Validate that the authenticated user owns the given plan. Raises 403 if not."""
+    plan = db.query(TrainingPlan).filter(
+        TrainingPlan.id == plan_id,
+        TrainingPlan.user_id == current_user.id,
+    ).first()
+    if not plan:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Training plan not found or access denied",
+        )
+    return plan

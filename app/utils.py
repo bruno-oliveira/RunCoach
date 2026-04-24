@@ -105,6 +105,23 @@ def parse_race_time_to_seconds(time_str: str | None) -> int | None:
     return None
 
 
+def parse_time_to_pace(time_str: str, distance_km: float) -> float:
+    """Parse a time string (MM:SS or HH:MM:SS) and return pace in min/km."""
+    parts = time_str.strip().split(':')
+    if len(parts) == 2:
+        minutes = int(parts[0])
+        seconds = int(parts[1])
+        total_minutes = minutes + seconds / 60
+    elif len(parts) == 3:
+        hours = int(parts[0])
+        minutes = int(parts[1])
+        seconds = int(parts[2])
+        total_minutes = hours * 60 + minutes + seconds / 60
+    else:
+        raise ValueError("Time must be in MM:SS or HH:MM:SS format")
+    return total_minutes / distance_km
+
+
 def to_date(value: Union[datetime, date, None]) -> Optional[date]:
     """Coerce a datetime or date to a plain date object.
 
