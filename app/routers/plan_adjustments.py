@@ -9,7 +9,7 @@ from sqlalchemy.orm import Session
 from app.dependencies import get_current_user, get_db
 from app.models import DailyWorkout, TrainingPlan, User, WeeklyPlan
 from app.services.adaptation import type_swapper
-from app.services.adaptation.recalibrator import detect_missed_weeks
+from app.services.adaptation.missed_week_handler import detect_missed_weeks
 from app.services.adaptation_service import AdaptationService
 from app.services.gap_analysis_service import GapAnalysisService
 from app.services.plan_helpers import get_plan_or_404

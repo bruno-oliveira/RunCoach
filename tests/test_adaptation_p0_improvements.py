@@ -9,12 +9,12 @@ from sqlalchemy.orm import Session, sessionmaker
 from sqlalchemy.pool import StaticPool
 
 from app.models import Base, User, TrainingPlan, WeeklyPlan, DailyWorkout, RunLog
-from app.services.adaptation.plan_adjuster import (
+from app.services.adaptation.plan_adjuster import _get_current_phase
+from app.services.adaptation.signal_computer import (
     _PHASE_WEIGHTS,
     _MIN_RUNS_PER_TYPE,
     _BAYESIAN_SHRINKAGE_PER_RUN,
-    _get_current_phase,
-    _compute_adjustment_signals,
+    compute_adjustment_signals as _compute_adjustment_signals,
 )
 
 

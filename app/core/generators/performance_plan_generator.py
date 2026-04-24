@@ -14,6 +14,7 @@ from app.core.training import phase_calculator
 from app.core.training import mileage_progression
 from app.core.training.key_workout_library import KeyWorkoutLibrary
 from app.core.training.quality_caps import enforce_week_caps
+from app.core.training.training_constants import calculate_week_in_phase
 from app.core.training.vdot_calculator import VDOTCalculator
 from app.utils import format_pace as _shared_format_pace
 
@@ -412,16 +413,7 @@ class PerformancePlanGenerator:
             phase = phase_calculator.get_phase(week_num, phase_durations)
             is_recovery = phase_calculator.is_recovery_week(week_num, phase, phase_durations)
 
-            # Calculate week_in_phase for key workout rotation
-            if phase == 'base':
-                week_in_phase = week_num - 1
-            elif phase == 'build':
-                week_in_phase = week_num - phase_durations['base'] - 1
-            elif phase == 'peak':
-                week_in_phase = week_num - phase_durations['base'] - phase_durations['build'] - 1
-            else:
-                week_in_phase = (week_num - phase_durations['base']
-                                 - phase_durations['build'] - phase_durations['peak'] - 1)
+            week_in_phase = calculate_week_in_phase(week_num, phase, phase_durations)
 
             weekly_plan = self._generate_weekly_plan(
                 week_num, phase, phases_rich, zones,

@@ -1,7 +1,6 @@
 """Plan adjustment — scale future workout distances based on performance."""
 
 import logging
-from collections import defaultdict
 from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, List, Optional, Tuple
 
@@ -9,10 +8,6 @@ from sqlalchemy.orm import Session
 
 from app.models import DailyWorkout, RunLog, TrainingPlan, WeeklyPlan
 from app.utils import to_date as _to_date
-
-from app.core.training import workout_steps as _steps_mod
-from app.core.training.quality_caps import enforce_week_caps
-from app.core.training.vdot_calculator import VDOTCalculator
 
 from ._helpers import (
     ANNOTATION_RE,
@@ -22,27 +17,11 @@ from ._helpers import (
     today_date,
 )
 from .run_mapper import map_runs_to_plan
+from .signal_computer import compute_adjustment_signals
+from .vdot_recalibrator import check_vdot_recalibration
+from .week_adjuster import apply_adjustment_to_future_weeks
 
 logger = logging.getLogger(__name__)
-
-# Minimum VDOT change to trigger recalibration
-_VDOT_RECALIBRATION_THRESHOLD = 1.0
-
-# Phase-specific signal weights for adaptation
-# (volume_weight, effort_weight, completion_weight)
-_PHASE_WEIGHTS = {
-    "base":   (0.55, 0.25, 0.20),  # Volume building is primary focus
-    "build":  (0.50, 0.30, 0.20),  # Balanced approach (current default)
-    "peak":   (0.40, 0.35, 0.25),  # Effort matters more at peak load
-    "taper":  (0.20, 0.30, 0.50),  # Completion critical, volume less relevant
-}
-
-# Minimum logged runs of a type before trusting per-type ratio
-_MIN_RUNS_PER_TYPE = 3
-
-# Bayesian shrinkage factor: how much to pull sparse type ratios toward global
-# 0.0 = fully shrink to global, 1.0 = use raw ratio
-_BAYESIAN_SHRINKAGE_PER_RUN = 0.30  # Each run adds 30% confidence
 
 
 def adjust_plan(
@@ -50,13 +29,7 @@ def adjust_plan(
     user_id: str,
     db: Session,
 ) -> Dict[str, Any]:
-    """Adjust future plan weeks using full-history weighted signals.
-
-    Uses exponential decay (half-life = 3 weeks) so all past workouts
-    contribute, but recent performance weighs more heavily.  Combines
-    volume adherence (50%), perceived effort (30%), and completion
-    rate (20%) into a single multiplier.
-    """
+    """Adjust future plan weeks using full-history weighted signals."""
     training_plan = db.query(TrainingPlan).filter(
         TrainingPlan.id == plan_id,
         TrainingPlan.user_id == user_id,
@@ -67,7 +40,6 @@ def adjust_plan(
     if not training_plan.start_date:
         return {"adjusted": False, "reason": "Plan has no start date."}
 
-    # Auto-map any unmapped runs before adjusting
     map_runs_to_plan(plan_id, user_id, db)
     backfill_baselines(training_plan, db)
 
@@ -95,7 +67,6 @@ def adjust_plan(
         weeks_ago = max(0, (today - scheduled_date).days) / 7.0
         return 2.0 ** (-weeks_ago / half_life_weeks)
 
-    # Gather all past non-rest workouts with scheduled dates
     all_workouts_with_week = (
         db.query(DailyWorkout, WeeklyPlan.week_number)
         .join(WeeklyPlan)
@@ -120,7 +91,7 @@ def adjust_plan(
     if not past_workouts:
         return {"adjusted": False, "reason": "No past workouts to evaluate yet."}
 
-    signals = _compute_adjustment_signals(
+    signals = compute_adjustment_signals(
         all_plan_runs, past_workouts, past_workout_ids,
         today, plan_id, db, _recency_weight,
         current_phase=_get_current_phase(training_plan, current_week),
@@ -148,17 +119,16 @@ def adjust_plan(
             "reason": "No remaining workouts to adjust.",
         }
 
-    weeks_changed, any_distance_changed = _apply_adjustment_to_future_weeks(
+    weeks_changed, any_distance_changed = apply_adjustment_to_future_weeks(
         training_plan, adjustable_weeks, multiplier, db,
         current_week=current_week,
         current_day_of_week=current_day_of_week,
         per_type_ratios=signals.get("per_type_ratios"),
     )
 
-    # VDOT recalibration: update pace zones if fitness has shifted
     vdot_result = None
     try:
-        vdot_result = _check_vdot_recalibration(training_plan, user_id, db)
+        vdot_result = check_vdot_recalibration(training_plan, user_id, db)
     except Exception as e:
         logger.warning("VDOT recalibration failed (non-fatal): %s", e)
 
@@ -208,7 +178,6 @@ def adjust_plan(
         current_phase,
     )
 
-    # Record adaptation event in history
     _record_adaptation_event(training_plan, {
         "type": "adjust",
         "multiplier": multiplier,
@@ -232,455 +201,20 @@ def adjust_plan(
 
 
 def _record_adaptation_event(training_plan: TrainingPlan, event: Dict[str, Any]) -> None:
-    """Append an event to the plan's adaptation_history JSON."""
     event["date"] = today_date().isoformat()
     history = training_plan.adaptation_history or []
     history.append(event)
-    # Keep last 20 events
     if len(history) > 20:
         history = history[-20:]
     training_plan.adaptation_history = history
 
 
 def _get_current_phase(training_plan: TrainingPlan, current_week: int) -> str:
-    """Determine the current training phase from plan_data."""
     plan_data = training_plan.plan_data or []
     for week in plan_data:
         if week.get("week") == current_week:
             return week.get("phase", "build")
     return "build"
-
-
-def _compute_adjustment_signals(
-    all_plan_runs: List,
-    past_workouts: List[Tuple],
-    past_workout_ids: set,
-    today,
-    plan_id: str,
-    db: Session,
-    recency_weight_fn,
-    *,
-    current_phase: str = "build",
-) -> Dict[str, Any]:
-    """Compute volume, effort, completion, and trend signals for plan adjustment.
-
-    Improvements over prior version:
-    - Continuous effort mapping (no step discontinuities)
-    - Overreach detection override (volume high + effort high = force reduce)
-    - Effort trend wired into the multiplier
-    - Per-type volume ratios for targeted adjustment
-    - Phase-aware signal weights (P0): taper prioritizes completion, peak prioritizes effort
-    - Bayesian shrinkage for sparse per-type data (P0): requires MIN_RUNS_PER_TYPE samples
-    """
-    # Phase-aware weights (P0 improvement)
-    volume_weight, effort_weight, completion_weight = _PHASE_WEIGHTS.get(
-        current_phase, _PHASE_WEIGHTS["build"],
-    )
-    # --- Volume adherence (weight 50%) ---
-    planned_weighted = 0.0
-    planned_by_type: Dict[str, float] = defaultdict(float)
-    for workout, sched_date in past_workouts:
-        w = recency_weight_fn(sched_date)
-        dist = workout.baseline_distance_km or workout.distance_km or 0
-        planned_weighted += dist * w
-        wtype = workout.workout_type or "easy"
-        planned_by_type[wtype] += dist * w
-
-    actual_weighted = 0.0
-    actual_by_type: Dict[str, float] = defaultdict(float)
-    for run in all_plan_runs:
-        run_date = _to_date(run.date) if run.date else today
-        w = recency_weight_fn(run_date)
-        dist = run.distance_km or 0
-        actual_weighted += dist * w
-        rtype = run.workout_type or "easy"
-        actual_by_type[rtype] += dist * w
-
-    volume_ratio = max(0.5, min(1.5,
-        actual_weighted / planned_weighted if planned_weighted > 0 else 1.0
-    ))
-
-    # Per-type volume ratios (improvement #5)
-    # P0: Bayesian shrinkage for sparse data — require MIN_RUNS_PER_TYPE runs
-    # before trusting type-specific ratio; shrink toward global volume_ratio
-    per_type_ratios: Dict[str, float] = {}
-    per_type_run_counts: Dict[str, int] = defaultdict(int)
-    for run in all_plan_runs:
-        rtype = run.workout_type or "easy"
-        per_type_run_counts[rtype] += 1
-
-    for wtype in ("easy", "long", "tempo", "interval", "hill"):
-        planned = planned_by_type.get(wtype, 0)
-        actual = actual_by_type.get(wtype, 0)
-        if planned > 0:
-            raw_ratio = max(0.5, min(1.5, actual / planned))
-            n_runs = per_type_run_counts.get(wtype, 0)
-            if n_runs >= _MIN_RUNS_PER_TYPE:
-                # Enough data: partial shrinkage toward global
-                confidence = min(1.0, n_runs * _BAYESIAN_SHRINKAGE_PER_RUN)
-                per_type_ratios[wtype] = round(
-                    confidence * raw_ratio + (1.0 - confidence) * volume_ratio, 2,
-                )
-            else:
-                # Sparse data: strong shrinkage toward global ratio
-                confidence = n_runs * _BAYESIAN_SHRINKAGE_PER_RUN
-                per_type_ratios[wtype] = round(
-                    confidence * raw_ratio + (1.0 - confidence) * volume_ratio, 2,
-                )
-
-    # --- Effort signal (weight 30%) — continuous mapping (improvement #2) ---
-    effort_sum = 0.0
-    effort_weight_sum = 0.0
-    recent_efforts: List[float] = []
-    for run in all_plan_runs:
-        if run.perceived_effort is not None:
-            run_date = _to_date(run.date) if run.date else today
-            w = recency_weight_fn(run_date)
-            effort_sum += run.perceived_effort * w
-            effort_weight_sum += w
-            recent_efforts.append(run.perceived_effort)
-
-    if effort_weight_sum > 0:
-        avg_effort = effort_sum / effort_weight_sum
-        # Continuous linear mapping: effort 1→1.10, effort 10→0.85
-        effort_factor = max(0.85, min(1.10, 1.10 - (avg_effort - 1.0) * (0.25 / 9.0)))
-    else:
-        effort_factor = 1.0
-        avg_effort = None
-
-    # --- Effort trend (improvement #4) ---
-    effort_trend = _compute_effort_trend(recent_efforts)
-    trend_modifier = {
-        "increasing": -0.03,
-        "decreasing": +0.02,
-        "stable": 0.0,
-        "insufficient_data": 0.0,
-    }.get(effort_trend, 0.0)
-
-    # --- Completion rate (weight 20%) ---
-    completed_ids = set()
-    if past_workout_ids:
-        completed_rows = (
-            db.query(RunLog.daily_workout_id)
-            .filter(
-                RunLog.training_plan_id == plan_id,
-                RunLog.daily_workout_id.in_(past_workout_ids),
-            )
-            .all()
-        )
-        completed_ids = {row[0] for row in completed_rows}
-
-    scheduled_weighted = 0.0
-    completed_weighted = 0.0
-    for workout, sched_date in past_workouts:
-        w = recency_weight_fn(sched_date)
-        scheduled_weighted += w
-        if workout.id in completed_ids:
-            completed_weighted += w
-
-    completion_rate = (
-        completed_weighted / scheduled_weighted
-        if scheduled_weighted > 0 else 0.0
-    )
-
-    if completion_rate >= 0.9:
-        completion_factor = 1.05
-    elif completion_rate >= 0.7:
-        completion_factor = 1.00
-    elif completion_rate >= 0.5:
-        completion_factor = 0.95
-    else:
-        completion_factor = 0.90
-
-    # --- Combine signals with phase-aware weights ---
-    raw_multiplier = (
-        (volume_ratio * volume_weight)
-        + (effort_factor * effort_weight)
-        + (completion_factor * completion_weight)
-    )
-
-    # Apply effort trend modifier
-    raw_multiplier += trend_modifier
-
-    # Overreach detection override (improvement #3):
-    # If runner is doing much more than planned AND reporting very high effort,
-    # they're overreaching — force a reduction regardless of weighted formula
-    overreach_detected = False
-    if volume_ratio > 1.2 and avg_effort is not None and avg_effort > 8.0:
-        raw_multiplier = min(raw_multiplier, 0.88)
-        overreach_detected = True
-
-    multiplier = round(max(0.85, min(1.15, raw_multiplier)), 2)
-
-    return {
-        "multiplier": multiplier,
-        "volume_ratio": round(volume_ratio, 2),
-        "effort_factor": round(effort_factor, 2),
-        "avg_effort": round(avg_effort, 1) if avg_effort is not None else None,
-        "effort_trend": effort_trend,
-        "completion_rate": round(completion_rate, 2),
-        "completion_factor": round(completion_factor, 2),
-        "raw_multiplier": round(raw_multiplier, 3),
-        "trend_modifier": round(trend_modifier, 3),
-        "overreach_detected": overreach_detected,
-        "per_type_ratios": {k: round(v, 2) for k, v in per_type_ratios.items()},
-        "phase_weights": {
-            "volume": round(volume_weight, 2),
-            "effort": round(effort_weight, 2),
-            "completion": round(completion_weight, 2),
-        },
-        "current_phase": current_phase,
-    }
-
-
-def _compute_effort_trend(efforts: List[float]) -> str:
-    """Analyze if effort is increasing, decreasing, or stable."""
-    if len(efforts) < 4:
-        return "insufficient_data"
-    mid_point = len(efforts) // 2
-    first_half_avg = sum(efforts[:mid_point]) / mid_point
-    second_half_avg = sum(efforts[mid_point:]) / (len(efforts) - mid_point)
-    diff = second_half_avg - first_half_avg
-    if diff > 1.0:
-        return "increasing"
-    elif diff < -1.0:
-        return "decreasing"
-    return "stable"
-
-
-def _check_vdot_recalibration(
-    training_plan: TrainingPlan,
-    user_id: str,
-    db: Session,
-) -> Optional[Dict[str, Any]]:
-    """Check if VDOT has changed enough to recalibrate pace zones.
-
-    Compares the plan's stored VDOT with the runner's current VDOT
-    (computed from logged runs).  If the delta exceeds the threshold,
-    recomputes pace zones and updates future workouts' pace strings
-    in the plan_data JSON.
-
-    Returns a recalibration summary dict, or None if no recalibration needed.
-    """
-    from app.services.race_predictor_service import RacePredictorService
-
-    plan_vdot = training_plan.vdot
-    if not plan_vdot:
-        return None
-
-    current_vdot = RacePredictorService.get_best_recent_vdot(
-        user_id, weeks=12, db=db,
-    )
-    if not current_vdot:
-        return None
-
-    delta = current_vdot - plan_vdot
-    if abs(delta) < _VDOT_RECALIBRATION_THRESHOLD:
-        return None
-
-    # Recompute pace zones from new VDOT
-    new_zones = VDOTCalculator.get_pace_zones(current_vdot)
-    if not new_zones:
-        return None
-
-    old_zones = VDOTCalculator.get_pace_zones(plan_vdot)
-
-    # Update plan_data JSON: rewrite pace strings in future workout descriptions
-    plan_data, pd_week, pd_workout = parse_plan_data_lookups(training_plan)
-
-    start_date = _to_date(training_plan.start_date)
-    today = today_date()
-    days_elapsed = (today - start_date).days
-    current_week = max(1, days_elapsed // 7 + 1)
-
-    pace_updates = 0
-    for (week_num, day_num), workout in pd_workout.items():
-        if week_num < current_week:
-            continue
-
-        # Update target_pace_formatted if present
-        if workout.get("target_pace") and old_zones:
-            # Find which zone this workout targets and update with new zone pace
-            zone = workout.get("zone", "")
-            zone_map = {
-                "zone_1": "E", "zone_2": "E", "zone_3": "T",
-                "zone_4": "I", "zone_5": "I",
-            }
-            vdot_key = zone_map.get(zone)
-            if vdot_key and vdot_key in new_zones:
-                new_pace = new_zones[vdot_key].get("pace_min_km")
-                if new_pace:
-                    from app.utils import format_pace
-                    workout["target_pace"] = new_pace
-                    workout["target_pace_formatted"] = format_pace(new_pace)
-                    pace_updates += 1
-
-        # Update pace strings in segments
-        for seg in workout.get("segments", []):
-            zone = seg.get("zone", "")
-            zone_map = {
-                "zone_1": "E", "zone_2": "E", "zone_3": "T",
-                "zone_4": "I", "zone_5": "I",
-            }
-            vdot_key = zone_map.get(zone)
-            if vdot_key and vdot_key in new_zones:
-                new_pace = new_zones[vdot_key].get("pace_min_km")
-                if new_pace:
-                    from app.utils import format_pace
-                    seg["pace_raw"] = new_pace
-                    seg["pace_formatted"] = format_pace(new_pace)
-
-    if pace_updates == 0:
-        return None
-
-    training_plan.plan_data = plan_data
-    old_vdot = training_plan.vdot
-    training_plan.vdot = round(current_vdot, 1)
-    db.flush()
-
-    direction = "improved" if delta > 0 else "decreased"
-    logger.info(
-        "VDOT recalibration: plan=%s old=%.1f new=%.1f delta=%.1f pace_updates=%d",
-        training_plan.id, old_vdot, current_vdot, delta, pace_updates,
-    )
-
-    return {
-        "recalibrated": True,
-        "old_vdot": round(old_vdot, 1),
-        "new_vdot": round(current_vdot, 1),
-        "delta": round(delta, 1),
-        "direction": direction,
-        "pace_updates": pace_updates,
-    }
-
-
-def _apply_adjustment_to_future_weeks(
-    training_plan: TrainingPlan,
-    future_weeks: List,
-    multiplier: float,
-    db: Session,
-    *,
-    current_week: int | None = None,
-    current_day_of_week: int | None = None,
-    per_type_ratios: Optional[Dict[str, float]] = None,
-) -> Tuple[int, bool]:
-    """Apply the adjustment multiplier to future weeks.
-
-    Uses per-type ratios (improvement #5) when available, falling back to
-    the blanket multiplier. Enforces quality caps (improvement #1) after
-    all scaling is done.
-
-    Returns (weeks_changed, any_distance_changed).
-    """
-    plan_data, pd_week, pd_workout = parse_plan_data_lookups(training_plan)
-    target_distance = training_plan.target_distance_km
-
-    workouts_by_week = batch_workouts_by_week(
-        [week.id for week in future_weeks], db
-    )
-
-    weeks_changed = 0
-    any_distance_changed = False
-
-    for week in future_weeks:
-        workouts = workouts_by_week.get(week.id, [])
-        week_changed = False
-        phase = pd_week.get(week.week_number, {}).get("phase", "build")
-
-        for workout in workouts:
-            if (
-                workout.workout_type == "rest"
-                or not workout.distance_km
-                or workout.distance_km <= 0
-            ):
-                continue
-
-            if (
-                current_week is not None
-                and current_day_of_week is not None
-                and week.week_number == current_week
-                and workout.day_of_week < current_day_of_week
-            ):
-                continue
-
-            base_distance = workout.baseline_distance_km or workout.distance_km
-
-            # Per-type multiplier: use type-specific ratio when we have enough
-            # data for that type, otherwise fall back to blanket multiplier
-            wtype = workout.workout_type or "easy"
-            type_mult = multiplier
-            if per_type_ratios and wtype in per_type_ratios:
-                type_ratio = per_type_ratios[wtype]
-                type_mult = round(max(0.85, min(1.15, type_ratio)), 2)
-
-            if workout.workout_type == "long" and type_mult < 1.0:
-                new_distance = round(base_distance, 1)
-            elif workout.workout_type in ("interval", "tempo", "hill", "vo2max", "race_pace", "fartlek"):
-                quality_mult = 1.0 + (type_mult - 1.0) * 0.5
-                new_distance = max(1.0, round(base_distance * quality_mult, 1))
-            else:
-                new_distance = max(1.0, round(base_distance * type_mult, 1))
-            old_distance = workout.distance_km
-
-            if new_distance == old_distance:
-                continue
-
-            workout.distance_km = new_distance
-            any_distance_changed = True
-            week_changed = True
-
-            is_protected = workout.workout_type == "long" and type_mult < 1.0
-
-            clean_notes = ANNOTATION_RE.sub("", workout.notes or "").strip()
-            if type_mult != 1.0 and not is_protected:
-                adjust_note = f"(Adjusted: x{type_mult})"
-                workout.notes = (
-                    f"{clean_notes} {adjust_note}".strip()
-                    if clean_notes
-                    else adjust_note
-                )
-            else:
-                workout.notes = clean_notes or None
-
-            pd_wo = pd_workout.get((week.week_number, workout.day_of_week))
-            if pd_wo is not None:
-                pd_wo["distance"] = new_distance
-                if pd_wo.get("steps") and old_distance and old_distance > 0:
-                    step_scale = new_distance / old_distance
-                    pd_wo["steps"] = _steps_mod.scale_steps(pd_wo["steps"], step_scale)
-                pd_clean = ANNOTATION_RE.sub(
-                    "", pd_wo.get("notes", pd_wo.get("description", ""))
-                ).strip()
-                if type_mult != 1.0 and not is_protected:
-                    adjust_note = f"(Adjusted: x{type_mult})"
-                    pd_wo["notes"] = (
-                        f"{pd_clean} {adjust_note}".strip()
-                        if pd_clean
-                        else adjust_note
-                    )
-                else:
-                    pd_wo["notes"] = pd_clean
-
-        # Improvement #1: enforce quality caps after scaling
-        if week_changed and target_distance > 0:
-            enforce_week_caps(workouts, target_distance, phase)
-
-        if week_changed:
-            weeks_changed += 1
-            new_total = round(
-                sum(w.distance_km for w in workouts if w.distance_km), 1
-            )
-            week.total_km = new_total
-            if week.week_number in pd_week:
-                pd_week[week.week_number]["total_km"] = new_total
-                # Sync capped distances back to plan_data
-                for workout in workouts:
-                    pd_wo = pd_workout.get((week.week_number, workout.day_of_week))
-                    if pd_wo is not None:
-                        pd_wo["distance"] = workout.distance_km
-
-    training_plan.plan_data = plan_data
-    return weeks_changed, any_distance_changed
 
 
 def reset_adjustment(

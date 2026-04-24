@@ -32,6 +32,20 @@ DISTANCE_LABELS = {
 }
 
 
+def _verify_triathlon_plan_ownership(
+    plan: TriathlonPlan,
+    current_user: Optional[User],
+    anonymous_user_id: Optional[str],
+) -> None:
+    owner_ok = (
+        plan.user_id is None
+        or (current_user and plan.user_id == current_user.id)
+        or (anonymous_user_id and plan.user_id == anonymous_user_id)
+    )
+    if not owner_ok:
+        raise HTTPException(status_code=403, detail="Access denied")
+
+
 # ---------------------------------------------------------------------------
 # Selection page
 # ---------------------------------------------------------------------------
@@ -129,15 +143,7 @@ async def view_triathlon_plan(
     if not plan:
         raise HTTPException(status_code=404, detail="Plan not found")
 
-    # Basic ownership check: allow if plan is unclaimed, belongs to current user,
-    # or belongs to the anonymous session.
-    owner_ok = (
-        plan.user_id is None
-        or (current_user and plan.user_id == current_user.id)
-        or (anonymous_user_id and plan.user_id == anonymous_user_id)
-    )
-    if not owner_ok:
-        raise HTTPException(status_code=403, detail="Access denied")
+    _verify_triathlon_plan_ownership(plan, current_user, anonymous_user_id)
 
     weeks = plan.plan_data
     distance_info = _generator.get_distance_info(plan.distance)
@@ -183,13 +189,7 @@ async def download_triathlon_pdf(
     if not plan:
         raise HTTPException(status_code=404, detail="Plan not found")
 
-    owner_ok = (
-        plan.user_id is None
-        or (current_user and plan.user_id == current_user.id)
-        or (anonymous_user_id and plan.user_id == anonymous_user_id)
-    )
-    if not owner_ok:
-        raise HTTPException(status_code=403, detail="Access denied")
+    _verify_triathlon_plan_ownership(plan, current_user, anonymous_user_id)
 
     try:
         pdf_path = _pdf_generator.generate_pdf(plan)

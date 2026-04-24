@@ -21,6 +21,7 @@ from app.core.training.quality_caps import (
     MAX_EASY_VS_LONG_RUN,
     get_quality_caps as _get_quality_caps,
 )
+from app.core.training.training_constants import get_hard_ceiling, calculate_week_in_phase
 from app.exceptions import ZeroMileageUnsupportedException
 
 # Re-export for any code that imports PHASE_DISTRIBUTIONS from here
@@ -430,15 +431,7 @@ class TrainingPlanGenerator:
         phase = self._get_phase(week_number, phases)
         is_recovery = self._is_recovery_week(week_number, phase, phases)
 
-        # Calculate week_in_phase for key workout rotation
-        if phase == 'base':
-            week_in_phase = week_number - 1
-        elif phase == 'build':
-            week_in_phase = week_number - phases['base'] - 1
-        elif phase == 'peak':
-            week_in_phase = week_number - phases['base'] - phases['build'] - 1
-        else:
-            week_in_phase = week_number - phases['base'] - phases['build'] - phases['peak'] - 1
+        week_in_phase = calculate_week_in_phase(week_number, phase, phases)
 
         distribution = self._get_workout_distribution(
             total_km, max_runs_per_week, phase,
@@ -482,8 +475,7 @@ class TrainingPlanGenerator:
             # Re-enforce long run hard ceiling after fill-up — the
             # proportional distribution can push long runs past their
             # distance ceiling, especially in low-run weeks.
-            _HARD_CEILINGS = {5.0: 14.0, 10.0: 22.0, 21.1: 24.0, 30.0: 30.0, 42.2: 40.0}
-            hard_ceiling = _HARD_CEILINGS.get(target_distance, target_distance * 0.9)
+            hard_ceiling = get_hard_ceiling(target_distance)
             long_ws = [w for w in workouts if w.get('type') == 'long' and w.get('distance', 0) > 0]
             if long_ws and long_ws[0]['distance'] > hard_ceiling:
                 excess = round(long_ws[0]['distance'] - hard_ceiling, 1)

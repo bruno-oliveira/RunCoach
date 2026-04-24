@@ -1,24 +1,18 @@
 """PDF training plan generator — orchestrator that delegates to page mixins."""
 
-import hashlib
 import json
 import logging
-import os
-import shutil
-import tempfile
-import time
-from pathlib import Path
 from typing import Any, Dict, List
 
 from reportlab.lib import colors
 from reportlab.lib.enums import TA_CENTER, TA_LEFT
-from reportlab.lib.pagesizes import A4
-from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
+from reportlab.lib.styles import ParagraphStyle
 from reportlab.lib.units import cm
-from reportlab.platypus import PageBreak, SimpleDocTemplate, Spacer
+from reportlab.platypus import PageBreak, Spacer
 
 from app.models import TrainingPlan
 
+from .pdf_base import PDFBase
 from .pdf_nutrition_pages import NutritionPagesMixin
 from .pdf_plan_pages import PlanPagesMixin
 from .pdf_supplementary_pages import SupplementaryPagesMixin
@@ -26,26 +20,11 @@ from .pdf_supplementary_pages import SupplementaryPagesMixin
 logger = logging.getLogger(__name__)
 
 
-class PDFGenerator(PlanPagesMixin, NutritionPagesMixin, SupplementaryPagesMixin):
-    CACHE_TTL_SECONDS = 3600
+class PDFGenerator(PDFBase, PlanPagesMixin, NutritionPagesMixin, SupplementaryPagesMixin):
 
     def __init__(self, cache_dir: str | None = None):
-        if cache_dir is None:
-            base = Path(os.environ.get("DATA_DIR", tempfile.gettempdir()))
-            cache_dir = str(base / "pdf_cache")
-        self.cache_dir = Path(cache_dir)
-        self.cache_dir.mkdir(mode=0o700, exist_ok=True)
-        self.styles = getSampleStyleSheet()
+        super().__init__(cache_dir)
         self._setup_custom_styles()
-
-    def _evict_stale_cache(self) -> None:
-        cutoff = time.time() - self.CACHE_TTL_SECONDS
-        try:
-            for entry in self.cache_dir.iterdir():
-                if entry.is_file() and entry.stat().st_mtime < cutoff:
-                    entry.unlink(missing_ok=True)
-        except OSError:
-            pass
 
     def _setup_custom_styles(self):
         self.title_style = ParagraphStyle(
@@ -80,55 +59,30 @@ class PDFGenerator(PlanPagesMixin, NutritionPagesMixin, SupplementaryPagesMixin)
             fontSize=9, leading=11, wordWrap='CJK', alignment=TA_CENTER,
         )
 
-    def _get_cache_key(self, plan_data: list, training_plan) -> str:
-        plan_str = json.dumps(plan_data, sort_keys=True)
-        content_hash = hashlib.md5(plan_str.encode()).hexdigest()
-        return f"{training_plan.id}_{content_hash}.pdf"
-
     def generate_pdf(self, plan_data: List[Dict[str, Any]], training_plan: TrainingPlan) -> str:
         """Generate a professional PDF training plan.
 
         Returns path to generated PDF file.
         """
-        self._evict_stale_cache()
+        plan_str = json.dumps(plan_data, sort_keys=True)
+        cache_key = self._cache_key_from_hash("", training_plan.id, plan_str)
 
-        cache_key = self._get_cache_key(plan_data, training_plan)
-        cache_path = self.cache_dir / cache_key
+        def build(doc, story):
+            is_performance = getattr(training_plan, 'plan_type', 'distance') == 'performance'
 
-        if cache_path.exists():
-            logger.info(f"Using cached PDF: {cache_key}")
-            return str(cache_path)
+            self._add_title_page(story, training_plan, plan_data)
+            self._add_plan_summary(story, training_plan, plan_data)
 
-        logger.info(f"Generating new PDF: {cache_key}")
+            if is_performance:
+                self._build_performance_story(story, training_plan, plan_data)
+            else:
+                self._build_distance_story(story, training_plan, plan_data)
 
-        temp_dir = tempfile.mkdtemp()
-        pdf_path = os.path.join(temp_dir, f"running_plan_{training_plan.id}.pdf")
+            self._add_footer(story)
 
-        doc = SimpleDocTemplate(
-            pdf_path, pagesize=A4,
-            rightMargin=2 * cm, leftMargin=2 * cm,
-            topMargin=2 * cm, bottomMargin=2 * cm,
+        return self._generate_with_cache(
+            cache_key, f"running_plan_{training_plan.id}.pdf", build
         )
-
-        story = []
-        is_performance = getattr(training_plan, 'plan_type', 'distance') == 'performance'
-
-        self._add_title_page(story, training_plan, plan_data)
-        self._add_plan_summary(story, training_plan, plan_data)
-
-        if is_performance:
-            self._build_performance_story(story, training_plan, plan_data)
-        else:
-            self._build_distance_story(story, training_plan, plan_data)
-
-        self._add_footer(story)
-
-        doc.build(story)
-
-        shutil.move(pdf_path, cache_path)
-        shutil.rmtree(temp_dir, ignore_errors=True)
-
-        return str(cache_path)
 
     def _build_performance_story(self, story, training_plan, plan_data):
         story.append(Spacer(1, 0.5 * cm))

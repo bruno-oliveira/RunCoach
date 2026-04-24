@@ -6,6 +6,10 @@ quality workout distance allocation.
 
 from typing import Dict, Optional
 
+from app.core.training.training_constants import (
+    get_hard_ceiling,
+    calculate_week_in_phase,
+)
 from app.core.training.phase_calculator import (
     PHASE_DISTRIBUTIONS,
     calculate_phases,
@@ -89,18 +93,8 @@ def calculate_long_run_ratio(phase: str, week_number: int, phases: Dict[str, int
     """
     min_ratio, max_ratio = get_long_run_ratio_range(phase, target_distance, total_weeks)
 
-    if phase == 'base':
-        week_in_phase = week_number - 1
-        total_in_phase = phases['base']
-    elif phase == 'build':
-        week_in_phase = week_number - phases['base'] - 1
-        total_in_phase = phases['build']
-    elif phase == 'peak':
-        week_in_phase = week_number - phases['base'] - phases['build'] - 1
-        total_in_phase = phases['peak']
-    else:
-        week_in_phase = week_number - phases['base'] - phases['build'] - phases['peak'] - 1
-        total_in_phase = phases['taper']
+    week_in_phase = calculate_week_in_phase(week_number, phase, phases)
+    total_in_phase = phases.get(phase, phases.get('taper', 1))
 
     if total_in_phase > 1:
         progression = week_in_phase / (total_in_phase - 1)
@@ -133,8 +127,6 @@ def _get_long_run_cap(target_distance: float, experience_level: str = 'intermedi
         30.0: {'beginner': 24.0, 'intermediate': 25.5, 'advanced': 27.0},
         42.2: {'beginner': 32.0, 'intermediate': 34.0, 'advanced': 36.0},
     }
-    hard_ceilings = {5.0: 14.0, 10.0: 22.0, 21.1: 24.0, 30.0: 30.0, 42.2: 40.0}
-
     tier = base_caps.get(target_distance)
     if tier:
         base_cap = tier.get(experience_level, tier['intermediate'])
@@ -144,7 +136,7 @@ def _get_long_run_cap(target_distance: float, experience_level: str = 'intermedi
     if weekly_km <= 0:
         return base_cap
 
-    ceiling = hard_ceilings.get(target_distance, target_distance * 0.9)
+    ceiling = get_hard_ceiling(target_distance)
     volume_ratio = weekly_km * 0.30
     if volume_ratio > base_cap:
         return min(round(volume_ratio, 1), ceiling)
