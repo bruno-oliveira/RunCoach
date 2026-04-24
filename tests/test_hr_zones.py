@@ -3,6 +3,7 @@
 import pytest
 
 from app.core.training.hr_zone_calculator import HRZoneCalculator, ZONE_DEFINITIONS
+from app.services.hr_zone_service import get_user_max_hr
 
 
 class TestCalculateZones:
@@ -93,7 +94,7 @@ class TestMaxHREstimation:
             def first(self):
                 return None
 
-        hr, source = HRZoneCalculator.get_user_max_hr("user1", FakeDB())
+        hr, source = get_user_max_hr("user1", FakeDB())
         assert source == "default"
         assert hr == 190
 
@@ -108,6 +109,6 @@ class TestMaxHREstimation:
             def first(self):
                 return None
 
-        hr, source = HRZoneCalculator.get_user_max_hr("user1", FakeDB(), user_age=35)
+        hr, source = get_user_max_hr("user1", FakeDB(), user_age=35)
         assert source == "estimated"
         assert hr == round(208 - 0.7 * 35)

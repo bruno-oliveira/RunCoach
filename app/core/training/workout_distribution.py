@@ -1,10 +1,15 @@
-"""Workout distribution and scheduling logic.
+"""Workout distribution logic.
 
-Determines how many of each workout type per week and assigns
-them to specific days of the week.
+Determines how many of each workout type per week and selects
+quality workout types based on race distance and training phase.
+Day scheduling is handled by week_scheduler; ratio validation by
+distribution_validator.
 """
 
 from typing import Dict, List, Optional
+
+from app.core.training.distribution_validator import validate_polarized_ratio as _validate_polarized_ratio
+from app.core.training.week_scheduler import schedule_workout_types  # noqa: F401
 
 
 def get_workout_distribution(total_km: float, max_runs: int, phase: str = 'build',
@@ -88,6 +93,9 @@ def get_workout_distribution(total_km: float, max_runs: int, phase: str = 'build
         distribution = _validate_polarized_ratio(distribution, phase, target_distance)
 
     return distribution
+
+
+# Re-export kept for backward compatibility — see week_scheduler.py
 
 
 def _profile_for(target_distance: float, terrain: Optional[str]) -> str:
@@ -236,55 +244,6 @@ def _build_quality_distribution(target_distance: float, terrain: Optional[str],
     return distribution
 
 
-def _validate_polarized_ratio(distribution: Dict[str, int], phase: str,
-                              target_distance: float) -> Dict[str, int]:
-    """Validate 80/20 polarized training ratio and adjust if needed.
-
-    Trail gets slightly easier targets (85/15 build, 80/20 peak) because
-    terrain naturally provides intensity through elevation.
-    """
-    is_trail = target_distance == 30.0
-    hard_targets = {
-        'base': 0.10,
-        'build': 0.15 if is_trail else 0.20,
-        'peak': 0.20 if is_trail else 0.25,
-        'taper': 0.10,
-    }
-
-    hard_count = distribution.get('interval', 0) + distribution.get('tempo', 0) + distribution.get('hill', 0)
-    total_runs = hard_count + distribution.get('easy', 0) + distribution.get('long', 0)
-
-    if total_runs == 0:
-        return distribution
-
-    hard_pct = hard_count / total_runs
-    target = hard_targets.get(phase, 0.20)
-
-    # If hard% exceeds target by >5%, reduce quality by 1.
-    # Never reduce below 1 quality in build/peak — with 3-4 total runs the
-    # count-based ratio overstates intensity (one 4km tempo in a 30km week
-    # is only 13% of volume, not the 33% that 1-of-3 suggests).
-    if hard_pct > target + 0.05 and hard_count > 0:
-        if phase == 'base' and hard_count <= 1:
-            pass
-        elif phase in ('build', 'peak') and hard_count <= 1:
-            pass
-        else:
-            for key in ('interval', 'tempo', 'hill'):
-                if distribution.get(key, 0) > 0:
-                    distribution[key] -= 1
-                    distribution['easy'] = distribution.get('easy', 0) + 1
-                    break
-    # If under by >10% in build/peak, increase by 1.
-    # Skip for 2-run weeks: adding quality would displace the only easy run
-    # and leave the week without an aerobic recovery session.
-    elif (phase in ('build', 'peak') and hard_pct < target - 0.10
-          and distribution.get('easy', 0) > 0 and total_runs >= 3):
-        distribution['easy'] -= 1
-        distribution['interval'] = distribution.get('interval', 0) + 1
-
-    return distribution
-
 
 def get_workout_distribution_simple(total_km: float, max_runs: int) -> Dict[str, int]:
     """Simplified version of workout distribution for backward compatibility with tests."""
@@ -322,54 +281,3 @@ def get_workout_distribution_simple(total_km: float, max_runs: int) -> Dict[str,
     }
 
 
-def schedule_workout_types(distribution: Dict[str, int], phase: str,
-                           week_number: int, is_recovery_week: bool) -> List[Optional[str]]:
-    """
-    Assign workout types to specific days.
-    Recovery is always on Day 2 and does NOT count towards max_runs.
-    """
-    workout_types = [None] * 7
-
-    workout_types[1] = 'recovery'
-
-    workout_types[5] = 'long'
-    distribution['long'] -= 1
-
-    if not is_recovery_week:
-        quality_slots = [2, 3, 4]
-        for day_idx in quality_slots:
-            if workout_types[day_idx] is not None:
-                continue
-            if distribution['hill'] > 0:
-                workout_types[day_idx] = 'hill'
-                distribution['hill'] -= 1
-            elif distribution['interval'] > 0:
-                workout_types[day_idx] = 'interval'
-                distribution['interval'] -= 1
-            elif distribution['tempo'] > 0:
-                workout_types[day_idx] = 'tempo'
-                distribution['tempo'] -= 1
-
-    # For busy 2-run weeks (1 easy + 1 long), anchor easy on Wed (day_idx 2)
-    # so it sits ~3 days from the Saturday long on either side. The default
-    # left-to-right fill would put easy on Monday and leave 5 days of no-run,
-    # a lopsided spacing.
-    if distribution['easy'] == 1 and sum(
-        distribution.get(k, 0) for k in ('interval', 'tempo', 'hill')
-    ) == 0 and workout_types[2] is None:
-        workout_types[2] = 'easy'
-        distribution['easy'] -= 1
-
-    for day_idx in range(7):
-        if workout_types[day_idx] is not None:
-            continue
-        if distribution['easy'] > 0:
-            workout_types[day_idx] = 'easy'
-            distribution['easy'] -= 1
-
-    for day_idx in range(7):
-        if workout_types[day_idx] is None:
-            workout_types[day_idx] = 'rest'
-            distribution['rest'] -= 1
-
-    return workout_types

@@ -253,107 +253,20 @@ class VDOTCalculator:
         secs = seconds % 60
         return f"{hours}:{minutes:02d}:{secs:02d}"
 
-    # --- Binary-search constants for predict_time_for_distance ---------
-    # Search window in minutes: covers a 1-minute 400m up to a 10-hour ultra.
-    # No race time of interest falls outside this range.
-    _PREDICT_TIME_LO_MIN = 1.0
-    _PREDICT_TIME_HI_MIN = 600.0
-
-    # Convergence threshold in VDOT points. The user-visible unit is seconds
-    # per km of race pace; 0.01 VDOT is roughly 1 second over a marathon.
-    _PREDICT_VDOT_EPSILON = 0.01
-
-    # Max iterations. log2((600 - 1) / 0.01) ≈ 16, so 100 iterations gives
-    # enormous headroom and guarantees termination for any well-behaved VDOT
-    # curve — if we ever fail to converge in 100 steps the inputs are broken.
-    _PREDICT_MAX_ITERS = 100
+    # -- Race prediction (delegates to race_predictor module) ---------------
 
     @staticmethod
     def predict_time_for_distance(vdot: float, distance_km: float) -> Optional[int]:
-        """Predict race time for a given VDOT and distance.
-
-        Uses binary search to solve: vo2(d/t) / pct_vo2max(t) = VDOT
-        For a fixed distance, increasing time → lower velocity → lower VDOT,
-        so the function is monotonically decreasing in time.
-
-        Args:
-            vdot: Current fitness level (25-85)
-            distance_km: Target race distance
-
-        Returns:
-            Predicted time in seconds, or None if invalid
-        """
-        if vdot < 25 or vdot > 85:
-            return None
-        if distance_km <= 0:
-            return None
-
-        distance_m = distance_km * 1000.0
-        lo, hi = VDOTCalculator._PREDICT_TIME_LO_MIN, VDOTCalculator._PREDICT_TIME_HI_MIN
-
-        converged = False
-        for _ in range(VDOTCalculator._PREDICT_MAX_ITERS):
-            mid = (lo + hi) / 2.0
-            velocity = distance_m / mid
-            vo2 = _vo2_at_velocity(velocity)
-            pct = _pct_vo2max_at_time(mid)
-            if pct <= 0:
-                lo = mid
-                continue
-            calc_vdot = vo2 / pct
-            if abs(calc_vdot - vdot) < VDOTCalculator._PREDICT_VDOT_EPSILON:
-                converged = True
-                break
-            if calc_vdot > vdot:
-                lo = mid  # calculated VDOT too high → need slower pace → more time
-            else:
-                hi = mid  # calculated VDOT too low → need faster pace → less time
-
-        if not converged:
-            import logging
-            logging.getLogger(__name__).warning(
-                f"VDOT binary search did not converge for vdot={vdot}, distance={distance_km}km"
-            )
-
-        return int(round(mid * 60))
+        from app.core.training.race_predictor import predict_time_for_distance
+        return predict_time_for_distance(vdot, distance_km)
 
     @staticmethod
     def get_confidence_range(vdot: float, distance_km: float,
                              target_distance: float = 0.0) -> Dict[str, int]:
-        """Get optimistic and pessimistic time estimates.
-
-        Uses ±1.5 VDOT for road distances and ±2.0 for trail (30km)
-        where terrain/elevation noise makes predictions less precise.
-        """
-        margin = 2.0 if target_distance == 30.0 else 1.5
-        fast_vdot = min(85.0, vdot + margin)
-        slow_vdot = max(25.0, vdot - margin)
-
-        fast_time = VDOTCalculator.predict_time_for_distance(fast_vdot, distance_km)
-        slow_time = VDOTCalculator.predict_time_for_distance(slow_vdot, distance_km)
-
-        base_time = VDOTCalculator.predict_time_for_distance(vdot, distance_km)
-
-        return {
-            "fast": fast_time or base_time,
-            "slow": slow_time or base_time,
-            "base": base_time,
-        }
+        from app.core.training.race_predictor import get_confidence_range
+        return get_confidence_range(vdot, distance_km, target_distance)
 
     @staticmethod
     def predict_times(vdot: float) -> Dict[str, Dict]:
-        """Get predicted times for all standard race distances.
-
-        Returns:
-            Dict with distance keys mapping to time info
-        """
-        predictions = {}
-        for name, distance in STANDARD_RACE_DISTANCES.items():
-            seconds = VDOTCalculator.predict_time_for_distance(vdot, distance)
-            if seconds:
-                predictions[name] = {
-                    "seconds": seconds,
-                    "formatted": VDOTCalculator.format_duration(seconds),
-                    "distance_km": distance,
-                }
-        return predictions
+        from app.core.training.race_predictor import predict_times
+        return predict_times(vdot)

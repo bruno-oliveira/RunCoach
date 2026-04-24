@@ -1,10 +1,9 @@
 """Heart rate zone calculator.
 
+Pure training-zone math — no database or ORM dependencies.
 Computes a 5-zone HR model from max heart rate and provides
 zone classification and workout-level zone prescriptions.
 """
-
-from typing import Optional
 
 # Minimum recorded max HR to trust (lower likely a sensor error)
 MIN_RELIABLE_MAX_HR = 140
@@ -112,59 +111,7 @@ class HRZoneCalculator:
                 return f"Zone {z['zone']} ({z['name']}): {z['min_bpm']}-{z['max_bpm']} bpm"
         return f"Zone {zone_number}"
 
-    # -- Max HR detection / estimation ----------------------------------------
-
-    @staticmethod
-    def detect_max_hr_from_runs(
-        user_id: str,
-        db,  # sqlalchemy.orm.Session
-    ) -> Optional[int]:
-        """Query run_logs for the highest reliable max_heart_rate.
-
-        Returns:
-            Max HR in BPM, or None if no reliable data.
-        """
-        from app.models import RunLog
-
-        result = (
-            db.query(RunLog.max_heart_rate)
-            .filter(
-                RunLog.user_id == user_id,
-                RunLog.max_heart_rate.isnot(None),
-                RunLog.max_heart_rate >= MIN_RELIABLE_MAX_HR,
-            )
-            .order_by(RunLog.max_heart_rate.desc())
-            .first()
-        )
-        return result[0] if result else None
-
     @staticmethod
     def estimate_max_hr_age_based(age: int) -> int:
         """Age-based max HR estimation (Tanaka formula: 208 - 0.7 * age)."""
         return round(208 - 0.7 * age)
-
-    @classmethod
-    def get_user_max_hr(
-        cls,
-        user_id: str,
-        db,
-        user_age: Optional[int] = None,
-    ) -> tuple[int, str]:
-        """Determine max HR from run data, age, or a safe default.
-
-        Args:
-            user_id:  User ID to query run logs for.
-            db:       SQLAlchemy session.
-            user_age: Optional user age for estimation fallback.
-
-        Returns:
-            (max_hr, source) where source is "detected", "estimated", or "default".
-        """
-        detected = cls.detect_max_hr_from_runs(user_id, db)
-        if detected:
-            return detected, "detected"
-
-        if user_age and user_age > 0:
-            return cls.estimate_max_hr_age_based(user_age), "estimated"
-
-        return DEFAULT_MAX_HR, "default"
