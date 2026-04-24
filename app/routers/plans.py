@@ -68,14 +68,14 @@ async def generate_plan(
     max_runs_per_week: int = Form(4),
     terrain: Optional[str] = Form(None),
     body_weight_kg: float = Form(70.0),
-    recent_race_distance_km: Optional[float] = Form(None),
+    recent_race_distance_km: Optional[str] = Form(None),
     recent_race_time: Optional[str] = Form(None),
     goal_time: Optional[str] = Form(None),
     use_profile: Optional[str] = Form(None),
     plan_mode: Optional[str] = Form("distance"),
     goal_time_required: Optional[str] = Form(None),
     current_time: Optional[str] = Form(None),
-    max_heart_rate: Optional[int] = Form(None),
+    max_heart_rate: Optional[str] = Form(None),
     anonymous_user_id: Optional[str] = Cookie(None),
     db: Session = Depends(get_db),
     current_user: Optional[User] = Depends(get_optional_user),
@@ -84,6 +84,9 @@ async def generate_plan(
     plan_service: PlanService = Depends(get_plan_service),
 ) -> HTMLResponse:
     """Generate a personalized training plan."""
+    race_dist = float(recent_race_distance_km) if recent_race_distance_km else None
+    hr_max = int(max_heart_rate) if max_heart_rate else None
+
     if plan_mode == "time":
         return await _generate_time_goal_plan(
             request=request,
@@ -93,7 +96,7 @@ async def generate_plan(
             runs_per_week=max_runs_per_week,
             goal_time=goal_time_required or "",
             current_time=current_time,
-            max_heart_rate=max_heart_rate,
+            max_heart_rate=hr_max,
             current_user=current_user,
             db=db,
             plan_service=plan_service,
@@ -122,7 +125,7 @@ async def generate_plan(
             max_runs_per_week=max_runs_per_week,
             terrain=terrain if float(target_distance) == 30.0 else None,
             body_weight_kg=body_weight_kg,
-            recent_race_distance_km=recent_race_distance_km or None,
+            recent_race_distance_km=race_dist,
             recent_race_time=recent_race_time or None,
             goal_time=goal_time or None,
         )
