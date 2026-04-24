@@ -70,11 +70,38 @@
     </footer>
     {% endblock %}
 
+    <!-- Cookie consent banner -->
+    <div id="cookie-consent" class="cookie-consent" style="display:none;">
+        <div class="cookie-consent-inner">
+            <p>RunCoach uses strictly necessary cookies for authentication and session management, and collects health-related data (training, readiness) to personalize your plans. See our <a href="/privacy">Privacy Policy</a>.</p>
+            <div class="cookie-consent-actions">
+                <button id="cookie-accept" class="btn btn-primary btn-sm">Accept</button>
+                <button id="cookie-decline" class="btn btn-outline btn-sm">Decline non-essential</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Base scripts -->
     <script src="{{ static_url('js/nav.js') }}" defer></script>
     <script src="{{ static_url('js/modal.js') }}" defer></script>
     <script src="{{ static_url('js/api.js') }}" defer></script>
     <script src="{{ static_url('js/auth.js') }}" defer></script>
+
+    <script>
+    (function() {
+        if (!localStorage.getItem('runcoach-cookie-consent')) {
+            var banner = document.getElementById('cookie-consent');
+            if (banner) banner.style.display = 'flex';
+        }
+        document.addEventListener('click', function(e) {
+            if (e.target.id === 'cookie-accept' || e.target.id === 'cookie-decline') {
+                localStorage.setItem('runcoach-cookie-consent', e.target.id === 'cookie-accept' ? 'accepted' : 'declined');
+                var banner = document.getElementById('cookie-consent');
+                if (banner) banner.style.display = 'none';
+            }
+        });
+    })();
+    </script>
 
     <!-- Page-specific scripts -->
     {% block scripts %}{% endblock %}

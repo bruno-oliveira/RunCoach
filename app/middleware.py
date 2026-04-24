@@ -46,8 +46,16 @@ async def request_size_limit(request: Request, call_next):
     return await call_next(request)
 
 
+_COOKIE_REQUIRED_PREFIXES = ("/generate-plan", "/api/")
+
+
 async def set_anonymous_user_id_cookie(request: Request, call_next):
-    """Set anonymous_user_id cookie if not present and add it to request state."""
+    """Set anonymous_user_id cookie if not present and add it to request state.
+
+    The cookie is only created when the user interacts with plan generation
+    or API endpoints — not on first page load — so that the tracking cookie
+    is not set before the user has seen the cookie notice.
+    """
     anonymous_user_id = request.cookies.get("anonymous_user_id")
     generated_new_id = False
 
@@ -61,14 +69,17 @@ async def set_anonymous_user_id_cookie(request: Request, call_next):
     response = await call_next(request)
 
     if generated_new_id:
-        response.set_cookie(
-            key="anonymous_user_id",
-            value=anonymous_user_id,
-            max_age=settings.anonymous_cookie_max_age,
-            httponly=True,
-            samesite="lax",
-            secure=_cookie_secure(),
-        )
+        path = request.url.path
+        needs_cookie = any(path.startswith(p) for p in _COOKIE_REQUIRED_PREFIXES)
+        if needs_cookie:
+            response.set_cookie(
+                key="anonymous_user_id",
+                value=anonymous_user_id,
+                max_age=settings.anonymous_cookie_max_age,
+                httponly=True,
+                samesite="lax",
+                secure=_cookie_secure(),
+            )
 
     return response
 

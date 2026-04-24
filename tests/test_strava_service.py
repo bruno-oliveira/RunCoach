@@ -314,11 +314,12 @@ class TestTokenRefresh:
 
 
 class TestDisconnect:
-    def test_clears_strava_fields(self, strava_service, mock_user, test_db):
+    @pytest.mark.asyncio
+    async def test_clears_strava_fields(self, strava_service, mock_user, test_db):
         test_db.add(mock_user)
         test_db.commit()
 
-        strava_service.disconnect(mock_user, test_db)
+        await strava_service.disconnect(mock_user, test_db)
 
         assert mock_user.strava_athlete_id is None
         assert mock_user.strava_access_token is None

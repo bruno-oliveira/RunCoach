@@ -169,21 +169,17 @@ class TestCookieSecureFlag:
             assert _cookie_secure() is True
 
     def test_anonymous_cookie_secure_flag_in_debug(self, client: TestClient):
-        """In debug mode, the anonymous_user_id cookie should not have secure=True."""
-        # Delete any existing anonymous cookie so the middleware generates a new one
+        """In debug mode, the anonymous_user_id cookie should not have secure=True.
+
+        The anonymous cookie is only set on /api/ or /generate-plan paths (not
+        on the homepage) so we hit an API endpoint to trigger it.
+        """
         client.cookies.clear()
-        response = client.get("/")
-        assert response.status_code == 200
-        # The Set-Cookie header should NOT contain "Secure" when debug=True
+        response = client.get("/api/auth/me")
+        # 401 is fine — we just need the cookie to be set
         set_cookie = response.headers.get("set-cookie", "")
-        # There may be multiple Set-Cookie headers; find the anonymous one
         assert "anonymous_user_id" in set_cookie
-        # In debug mode the cookie should not be marked Secure
-        # (httponly yes, but Secure should be absent)
         cookie_parts = set_cookie.lower()
-        # "secure" as a standalone attribute should not be present
-        # We need to be careful: "httponly" contains no "secure"
-        # Split on semicolons and check for a standalone "secure" token
         tokens = [t.strip() for t in cookie_parts.split(";")]
         assert "secure" not in tokens
 

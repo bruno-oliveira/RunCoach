@@ -441,17 +441,7 @@ This document catalogs security vulnerabilities, data leakage risks, and privacy
 - Enable Fly.io's built-in DDoS protection
 - Add monitoring and alerting (Fly.io metrics, Sentry integration)
 
-### 6.2 Render Configuration
-**Current:** `render.yaml` with free tier, SQLite storage
-
-**Recommendations:**
-- Migrate to PostgreSQL (free tier available for 90 days)
-- Set `SECRET_KEY` and `GOOGLE_CLIENT_ID` as Render secrets (not in YAML)
-- Add health check path to `/health` instead of `/`
-- Enable automatic HTTPS (Render does this by default)
-- Add log drain to external logging service
-
-### 6.3 Docker Image Hardening
+### 6.2 Docker Image Hardening
 **Current:** `python:3.11.12-slim` base image
 
 **Recommendations:**
@@ -462,7 +452,7 @@ This document catalogs security vulnerabilities, data leakage risks, and privacy
 - Scan image with `trivy` or `grype` before deployment
 - Add `--cap-drop=ALL --cap-add=NET_BIND_SERVICE` if running with Docker directly
 
-### 6.4 TLS/SSL Configuration
+### 6.3 TLS/SSL Configuration
 **Current:** Relies on platform (Fly.io/Render) for TLS termination
 
 **Recommendations:**
@@ -507,6 +497,20 @@ This document catalogs security vulnerabilities, data leakage risks, and privacy
 23. ✅ Remove DB seed from image (4.2) — Alembic creates schema on first boot
 24. ✅ Add deployment safety: rolling strategy in fly.toml (6.1)
 25. ✅ Configure TLS/HSTS (6.4) — already in Phase 3 security_headers middleware
+
+### Phase 5 — Privacy Hardening ✅ DONE
+26. ✅ Cookie consent banner (5.4) — banner in base.html, stored in localStorage
+27. ✅ Health data consent via cookie notice (5.1) — consent banner covers health data collection
+28. ✅ Delay anonymous_user_id cookie until user interaction (5.4) — only set on /generate-plan or /api/ paths
+29. ✅ Automated inactive account cleanup on startup (5.2) — cleanup_service.py, runs on deploy
+30. ✅ Strava token revocation via API on disconnect (5.3) — calls /oauth/deauthorize
+31. ✅ Strava token revocation on account deletion (5.3) — revokes before cascading delete
+
+### Phase 6 — Infrastructure Hardening II ✅ DONE
+32. ✅ Pin Docker base image by digest (6.2) — sha256 digest prevents tag mutation
+33. ✅ Add liveness check to fly.toml (6.1) — separate from http_service health check
+34. ✅ Add release_command for pre-deploy migration validation (6.1)
+35. ✅ Update privacy policy with cookie consent details (5.1, 5.4)
 
 ---
 

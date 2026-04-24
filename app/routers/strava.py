@@ -276,14 +276,10 @@ async def strava_status(
 async def strava_disconnect(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
+    strava_service: StravaService = Depends(get_strava_service),
 ):
-    """Disconnect Strava and clear all stored Strava credentials."""
-    current_user.strava_athlete_id = None
-    current_user.strava_access_token = None
-    current_user.strava_refresh_token = None
-    current_user.strava_token_expires_at = None
-    current_user.strava_last_synced_at = None
-    db.commit()
+    """Disconnect Strava: revoke token with Strava API and clear stored credentials."""
+    await strava_service.disconnect(current_user, db)
     logger.info("Strava disconnected for user %s", current_user.id)
     return {"message": "Strava disconnected"}
 

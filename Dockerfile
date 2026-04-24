@@ -1,4 +1,4 @@
-FROM python:3.11.12-slim
+FROM python:3.11.12-slim@sha256:dbf1de478a55d6763afaa39c2f3d7b54b25230614980276de5cacdde79529d0c
 
 # Set working directory
 WORKDIR /app

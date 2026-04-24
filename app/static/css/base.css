@@ -712,3 +712,42 @@ pre code {
   --shadow-glow: 0 0 0 1px var(--color-primary-subtle), 0 4px 16px rgba(79, 131, 240, 0.2);
   --shadow-accent-glow: 0 0 0 1px var(--color-accent-subtle), 0 4px 16px rgba(255, 122, 98, 0.2);
 }
+
+/* ---- Cookie Consent Banner ---- */
+.cookie-consent {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 9999;
+  display: flex;
+  justify-content: center;
+  padding: 1rem;
+  background: var(--color-bg-elevated);
+  border-top: 1px solid var(--color-border);
+  box-shadow: var(--shadow-lg);
+}
+.cookie-consent-inner {
+  max-width: 48rem;
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+  font-size: var(--text-sm);
+  color: var(--color-text-secondary);
+  line-height: var(--leading-normal);
+}
+.cookie-consent-inner a {
+  color: var(--color-primary);
+  text-decoration: underline;
+}
+.cookie-consent-actions {
+  display: flex;
+  gap: 0.5rem;
+  flex-shrink: 0;
+}
+@media (max-width: 640px) {
+  .cookie-consent-inner {
+    flex-direction: column;
+    text-align: center;
+  }
+}

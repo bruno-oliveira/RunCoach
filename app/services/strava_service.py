@@ -20,6 +20,7 @@ logger = logging.getLogger(__name__)
 
 STRAVA_AUTH_URL = "https://www.strava.com/oauth/authorize"
 STRAVA_TOKEN_URL = "https://www.strava.com/oauth/token"
+STRAVA_DEAUTH_URL = "https://www.strava.com/oauth/deauthorize"
 STRAVA_API_BASE = "https://www.strava.com/api/v3"
 
 # Timeout for all Strava API calls (seconds). Without this a hung connection
@@ -322,8 +323,31 @@ class StravaService:
             "last_synced_at": sync_started_at,
         }
 
-    def disconnect(self, user: User, db: Session) -> None:
-        """Clear all Strava fields on the user."""
+    async def revoke_token(self, access_token: str) -> bool:
+        """Revoke an access token via Strava's deauthorize endpoint.
+
+        Returns True if revocation succeeded, False otherwise.
+        """
+        try:
+            async with httpx.AsyncClient(timeout=STRAVA_TIMEOUT) as client:
+                response = await client.post(
+                    STRAVA_DEAUTH_URL,
+                    params={"access_token": access_token},
+                )
+                response.raise_for_status()
+                return True
+        except Exception as e:
+            logger.warning("Strava token revocation failed: %s", e)
+            return False
+
+    async def disconnect(self, user: User, db: Session) -> None:
+        """Revoke access with Strava and clear all stored credentials."""
+        if user.strava_access_token:
+            try:
+                token = await self.ensure_valid_token(user, db)
+                await self.revoke_token(token)
+            except Exception as e:
+                logger.warning("Could not revoke Strava token for user %s: %s", user.id, e)
         user.strava_athlete_id = None
         user.strava_access_token = None
         user.strava_refresh_token = None

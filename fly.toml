@@ -11,6 +11,16 @@ primary_region = 'sjc'
 
 [deploy]
   strategy = 'rolling'
+  release_command = 'python -c "from app.dependencies import engine; from app.migrations import run_alembic_migrations; run_alembic_migrations(engine)"'
+
+[checks.liveness]
+  port = 8000
+  type = "http"
+  interval = "30s"
+  timeout = "5s"
+  grace_period = "15s"
+  method = "GET"
+  path = "/health"
 
 [env]
   DATABASE_URL = 'sqlite:////data/runcoach.db'

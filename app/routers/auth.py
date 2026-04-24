@@ -8,11 +8,12 @@ from sqlalchemy.orm import Session
 
 from app.services.auth_service import AuthService
 from app.config import settings
-from app.dependencies import get_auth_service, get_db, get_current_user
+from app.dependencies import get_auth_service, get_db, get_current_user, get_strava_service
 from app.middleware import _cookie_secure
 from app.models import User
 from app.rate_limit import auth_limiter
 from app.schemas import AuthResponse, GoogleAuthRequest, UserResponse
+from app.services.strava_service import StravaService
 
 logger = logging.getLogger(__name__)
 
@@ -120,9 +121,16 @@ async def delete_account(
     response: Response,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
+    strava_service: StravaService = Depends(get_strava_service),
 ):
     """Delete the current user's account and all associated data."""
     logger.info("Account deletion requested for user %s", current_user.id)
+    if current_user.strava_access_token:
+        try:
+            token = await strava_service.ensure_valid_token(current_user, db)
+            await strava_service.revoke_token(token)
+        except Exception as e:
+            logger.warning("Strava revocation failed during account deletion for user %s: %s", current_user.id, e)
     db.delete(current_user)
     db.commit()
     response.delete_cookie(key=COOKIE_NAME, samesite="lax")
