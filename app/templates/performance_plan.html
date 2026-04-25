@@ -3,6 +3,7 @@
 {% block title %}Performance Training Plan - RunCoach{% endblock %}
 
 {% block styles %}
+<link rel="stylesheet" href="{{ static_url('css/plan-core.css') }}">
 <link rel="stylesheet" href="{{ static_url('css/performance.css') }}">
 {% endblock %}
 
@@ -40,24 +41,26 @@
         <div class="today-description">{{ today_workout.workout.description }}</div>
         {% if today_workout.workout.segments %}
         <div class="today-segments">
-            {% for seg in today_workout.workout.segments %}
-            <div class="segment-row">
-                <div class="segment-type segment-type-{{ seg.type }}">{{ seg.name }}</div>
-                <div class="segment-details">
-                    <span class="segment-distance">{{ '{:.1f}'.format(seg.distance_km) }}km</span>
-                    <span class="segment-pace">{{ seg.pace_formatted }}</span>
-                    {% if seg.zone_label %}
-                    <span class="segment-zone">{{ seg.zone_label }}</span>
-                    {% endif %}
-                </div>
-                {% if seg.intervals %}
-                <div class="segment-intervals">
-                    {{ seg.intervals.reps }}x{{ seg.intervals.interval_m }}m
-                    {% if seg.intervals.recovery_min %}({{ seg.intervals.recovery_min }}min recovery){% endif %}
-                </div>
-                {% endif %}
-            </div>
-            {% endfor %}
+            <ol class="workout-steps" aria-label="Workout segments">
+                {% for seg in today_workout.workout.segments %}
+                <li class="workout-step workout-step-{{ seg.type }}">
+                    <span class="workout-step-dot" aria-hidden="true"></span>
+                    <div class="workout-step-body">
+                        <div class="workout-step-head">
+                            <span class="workout-step-label">{{ seg.name }}</span>
+                            {% if seg.zone_label %}<span class="workout-step-zone">{{ seg.zone_label }}</span>{% endif %}
+                        </div>
+                        {% set meta = [] %}
+                        {% if seg.distance_km %}{% set _ = meta.append('{:.1f}'.format(seg.distance_km) + ' km') %}{% endif %}
+                        {% if seg.pace_formatted %}{% set _ = meta.append(seg.pace_formatted) %}{% endif %}
+                        {% if seg.intervals %}{% set _ = meta.append(seg.intervals.reps ~ 'x' ~ seg.intervals.interval_m ~ 'm' ~ (' (' ~ seg.intervals.recovery_min ~ 'min rec)' if seg.intervals.recovery_min else '')) %}{% endif %}
+                        {% if meta %}
+                        <div class="workout-step-meta">{{ meta | join(' · ') }}</div>
+                        {% endif %}
+                    </div>
+                </li>
+                {% endfor %}
+            </ol>
         </div>
         {% endif %}
         {% if not today_workout.already_logged %}

@@ -640,38 +640,25 @@
     position: relative;
 }
 
-.segment-row {
-    display: flex;
-    align-items: center;
-    gap: var(--space-4);
-    padding: var(--space-3) 0;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-    min-width: 0;
+/* Hero-card overrides for shared step classes */
+.today-segments .workout-steps-wrap {
+    border-top: none;
+    margin-top: 0;
+    padding-top: 0;
 }
-
-.segment-row:last-child { border-bottom: none; }
-
-.segment-type {
-    font-weight: var(--weight-semibold);
-    font-size: var(--text-xs);
-    min-width: 80px;
-    flex-shrink: 0;
-    padding: 3px 8px;
-    border-radius: var(--radius-sm);
-    text-align: center;
-    text-transform: uppercase;
-    letter-spacing: var(--tracking-wide);
+.today-segments .workout-step-dot {
+    border-color: rgba(255, 255, 255, 0.5);
+    background: rgba(255, 255, 255, 0.1);
 }
-
-.segment-type-warmup { background: rgba(74, 222, 128, 0.2); }
-.segment-type-main { background: rgba(251, 146, 60, 0.2); }
-.segment-type-cooldown { background: rgba(96, 165, 250, 0.2); }
-
-.segment-details { display: flex; gap: var(--space-4); align-items: center; flex: 1; min-width: 0; }
-.segment-distance { font-weight: var(--weight-semibold); flex-shrink: 0; }
-.segment-pace { opacity: 0.85; font-size: var(--text-sm); overflow-wrap: break-word; word-break: break-word; min-width: 0; flex-shrink: 1; }
-.segment-zone { font-size: var(--text-xs); opacity: 0.6; flex-shrink: 0; white-space: nowrap; }
-.segment-intervals { font-size: var(--text-sm); opacity: 0.7; margin-top: var(--space-1); padding-left: calc(80px + var(--space-4)); overflow-wrap: break-word; }
+.today-segments .workout-step-warmup .workout-step-dot { border-color: #86efac; }
+.today-segments .workout-step-cooldown .workout-step-dot { border-color: #93c5fd; }
+.today-segments .workout-step-run .workout-step-dot { border-color: #fca5a5; background: rgba(239, 68, 68, 0.2); }
+.today-segments .workout-step-label { color: #fff; }
+.today-segments .workout-step-meta { color: rgba(255, 255, 255, 0.75); }
+.today-segments .workout-step-zone { background: rgba(255, 255, 255, 0.2); }
+.today-segments .workout-steps::before {
+    background: linear-gradient(to bottom, rgba(255, 255, 255, 0.2), rgba(255, 255, 255, 0.2) 50%, transparent);
+}
 
 /* Weekly view segments toggle — matches distance plan's workout-steps-wrap */
 .workout-segments-toggle {
@@ -1037,8 +1024,6 @@
     .today-hero-card { padding: var(--space-5); }
     .progress-stats-row { grid-template-columns: repeat(2, 1fr); }
     .charts-grid { grid-template-columns: 1fr; }
-    .segment-row { flex-wrap: wrap; }
-    .segment-intervals { padding-left: 0; }
 }
 
 @media (max-width: 480px) {
