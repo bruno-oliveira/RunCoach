@@ -265,23 +265,31 @@
                         </div>
 
                         {% if workout.segments and workout.type not in ['rest', 'recovery'] %}
-                        <details class="workout-segments-toggle">
-                            <summary>
-                                <svg class="segments-chevron" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
-                                <span>{{ workout.segments | length }} segment{{ 's' if workout.segments | length != 1 }}</span>
+                        <details class="workout-steps-wrap">
+                            <summary class="workout-steps-toggle">
+                                <svg class="workout-steps-chevron" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+                                <span>Session blocks</span>
+                                <span class="workout-steps-count">{{ workout.segments | length }}</span>
                             </summary>
-                            <div class="workout-segments-list">
+                            <ol class="workout-steps" aria-label="Workout segments">
                                 {% for seg in workout.segments %}
-                                <div class="segment-row-small">
-                                    <span class="seg-name">{{ seg.name }}</span>
-                                    <span class="seg-distance">{{ '{:.1f}'.format(seg.distance_km) }}km</span>
-                                    {% if seg.pace_formatted %}<span class="seg-pace">{{ seg.pace_formatted }}</span>{% endif %}
-                                    {% if seg.intervals %}
-                                    <span class="seg-intervals">{{ seg.intervals.reps }}x{{ seg.intervals.interval_m }}{% if seg.intervals.recovery_min %} ({{ seg.intervals.recovery_min }}min rec){% endif %}</span>
-                                    {% endif %}
-                                </div>
+                                <li class="workout-step workout-step-{{ seg.type }}">
+                                    <span class="workout-step-dot" aria-hidden="true"></span>
+                                    <div class="workout-step-body">
+                                        <div class="workout-step-head">
+                                            <span class="workout-step-label">{{ seg.name }}</span>
+                                        </div>
+                                        {% set meta = [] %}
+                                        {% if seg.distance_km %}{% set _ = meta.append('{:.1f}'.format(seg.distance_km) + ' km') %}{% endif %}
+                                        {% if seg.pace_formatted %}{% set _ = meta.append(seg.pace_formatted) %}{% endif %}
+                                        {% if seg.intervals %}{% set _ = meta.append(seg.intervals.reps ~ 'x' ~ seg.intervals.interval_m ~ 'm' ~ (' (' ~ seg.intervals.recovery_min ~ 'min rec)' if seg.intervals.recovery_min else '')) %}{% endif %}
+                                        {% if meta %}
+                                        <div class="workout-step-meta">{{ meta | join(' · ') }}</div>
+                                        {% endif %}
+                                    </div>
+                                </li>
                                 {% endfor %}
-                            </div>
+                            </ol>
                         </details>
                         {% endif %}
 
