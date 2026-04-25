@@ -18,6 +18,24 @@ _PHASE_WEIGHTS = {
 _MIN_RUNS_PER_TYPE = 3
 _BAYESIAN_SHRINKAGE_PER_RUN = 0.30
 
+_IMPORTANCE_WEIGHTS = {
+    "long": 1.5,
+    "tempo": 1.3,
+    "interval": 1.3,
+    "vo2max": 1.3,
+    "race_pace": 1.3,
+    "hill": 1.2,
+    "fartlek": 1.1,
+    "easy": 1.0,
+    "recovery": 0.5,
+}
+
+_CONSECUTIVE_THRESHOLD = 3
+_EXPANDED_MIN = 0.70
+_EXPANDED_MAX = 1.25
+_STANDARD_MIN = 0.85
+_STANDARD_MAX = 1.15
+
 
 def compute_adjustment_signals(
     all_plan_runs: List,
@@ -29,6 +47,7 @@ def compute_adjustment_signals(
     recency_weight_fn,
     *,
     current_phase: str = "build",
+    adaptation_history: List[Dict[str, Any]] | None = None,
 ) -> Dict[str, Any]:
     volume_weight, effort_weight, completion_weight = _PHASE_WEIGHTS.get(
         current_phase, _PHASE_WEIGHTS["build"],
@@ -38,9 +57,10 @@ def compute_adjustment_signals(
     for workout, sched_date in past_workouts:
         w = recency_weight_fn(sched_date)
         dist = workout.baseline_distance_km or workout.distance_km or 0
-        planned_weighted += dist * w
         wtype = workout.workout_type or "easy"
-        planned_by_type[wtype] += dist * w
+        importance = _IMPORTANCE_WEIGHTS.get(wtype, 1.0)
+        planned_weighted += dist * w * importance
+        planned_by_type[wtype] += dist * w * importance
 
     actual_weighted = 0.0
     actual_by_type: Dict[str, float] = defaultdict(float)
@@ -48,9 +68,10 @@ def compute_adjustment_signals(
         run_date = _to_date(run.date) if run.date else today
         w = recency_weight_fn(run_date)
         dist = run.distance_km or 0
-        actual_weighted += dist * w
         rtype = run.workout_type or "easy"
-        actual_by_type[rtype] += dist * w
+        importance = _IMPORTANCE_WEIGHTS.get(rtype, 1.0)
+        actual_weighted += dist * w * importance
+        actual_by_type[rtype] += dist * w * importance
 
     volume_ratio = max(0.5, min(1.5,
         actual_weighted / planned_weighted if planned_weighted > 0 else 1.0
@@ -124,14 +145,7 @@ def compute_adjustment_signals(
         if scheduled_weighted > 0 else 0.0
     )
 
-    if completion_rate >= 0.9:
-        completion_factor = 1.05
-    elif completion_rate >= 0.7:
-        completion_factor = 1.00
-    elif completion_rate >= 0.5:
-        completion_factor = 0.95
-    else:
-        completion_factor = 0.90
+    completion_factor = 0.90 + 0.15 * completion_rate
 
     raw_multiplier = (
         (volume_ratio * volume_weight)
@@ -146,7 +160,15 @@ def compute_adjustment_signals(
         raw_multiplier = min(raw_multiplier, 0.88)
         overreach_detected = True
 
-    multiplier = round(max(0.85, min(1.15, raw_multiplier)), 2)
+    consecutive_same_direction = _count_consecutive_direction(adaptation_history)
+    if consecutive_same_direction >= _CONSECUTIVE_THRESHOLD:
+        clamp_min = _EXPANDED_MIN
+        clamp_max = _EXPANDED_MAX
+    else:
+        clamp_min = _STANDARD_MIN
+        clamp_max = _STANDARD_MAX
+
+    multiplier = round(max(clamp_min, min(clamp_max, raw_multiplier)), 2)
 
     return {
         "multiplier": multiplier,
@@ -166,6 +188,8 @@ def compute_adjustment_signals(
             "completion": round(completion_weight, 2),
         },
         "current_phase": current_phase,
+        "consecutive_same_direction": consecutive_same_direction,
+        "expanded_range": consecutive_same_direction >= _CONSECUTIVE_THRESHOLD,
     }
 
 
@@ -181,3 +205,23 @@ def _compute_effort_trend(efforts: List[float]) -> str:
     elif diff < -1.0:
         return "decreasing"
     return "stable"
+
+
+def _count_consecutive_direction(adaptation_history: List[Dict[str, Any]] | None) -> int:
+    if not adaptation_history:
+        return 0
+    count = 0
+    last_direction = None
+    for event in reversed(adaptation_history):
+        direction = event.get("direction")
+        if direction in ("increased", "reduced"):
+            if last_direction is None:
+                last_direction = direction
+                count = 1
+            elif direction == last_direction:
+                count += 1
+            else:
+                break
+        elif direction == "kept":
+            break
+    return count

@@ -95,6 +95,7 @@ def adjust_plan(
         all_plan_runs, past_workouts, past_workout_ids,
         today, plan_id, db, _recency_weight,
         current_phase=_get_current_phase(training_plan, current_week),
+        adaptation_history=training_plan.adaptation_history,
     )
     multiplier = signals["multiplier"]
 
