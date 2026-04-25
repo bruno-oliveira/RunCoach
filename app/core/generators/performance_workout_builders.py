@@ -1,6 +1,6 @@
 """Workout builders for performance plans — tempo, VO2max, race pace, fartlek, long, easy."""
 
-from typing import Any, Dict
+from typing import Any, Dict, List
 
 from app.utils import format_pace as _shared_format_pace
 
@@ -11,6 +11,99 @@ def estimate_duration_min(segments: list) -> int:
     for seg in segments:
         total += seg['distance_km'] * seg.get('pace_raw', 6.0)
     return round(total)
+
+
+def reconcile_workout_after_cap(workout: Dict[str, Any]) -> None:
+    """Sync segments and description after enforce_week_caps reduced distance."""
+    segments = workout.get('segments')
+    if not segments:
+        return
+
+    seg_total = round(sum(s['distance_km'] for s in segments), 1)
+    target = workout['distance']
+
+    if abs(seg_total - target) < 0.15:
+        return
+
+    main_segs = [s for s in segments if s['type'] == 'main']
+    non_main_km = sum(s['distance_km'] for s in segments if s['type'] != 'main')
+
+    if not main_segs:
+        return
+
+    remaining = max(0.5, target - non_main_km)
+
+    if len(main_segs) == 1:
+        main_segs[0]['distance_km'] = round(remaining, 1)
+        intervals = main_segs[0].get('intervals')
+        if intervals and isinstance(intervals.get('interval_m'), int):
+            interval_km = intervals['interval_m'] / 1000
+            new_reps = max(2, round(remaining / interval_km))
+            intervals['reps'] = new_reps
+            main_segs[0]['distance_km'] = round(interval_km * new_reps, 1)
+            workout['distance'] = round(non_main_km + main_segs[0]['distance_km'], 1)
+    else:
+        orig_total = sum(s['distance_km'] for s in main_segs) or 1
+        for seg in main_segs:
+            seg['distance_km'] = round(seg['distance_km'] / orig_total * remaining, 1)
+
+    workout['total_duration_est_min'] = estimate_duration_min(segments)
+    _regenerate_description(workout)
+
+
+def _regenerate_description(workout: Dict[str, Any]) -> None:
+    """Rebuild the description string from current segment values."""
+    segments = workout.get('segments', [])
+    total_km = workout['distance']
+    wtype = workout['type']
+
+    warmups = [s for s in segments if s['type'] == 'warmup']
+    mains = [s for s in segments if s['type'] == 'main']
+    cooldowns = [s for s in segments if s['type'] == 'cooldown']
+    wu_km = warmups[0]['distance_km'] if warmups else 0
+    cd_km = cooldowns[0]['distance_km'] if cooldowns else 0
+
+    if not mains:
+        return
+
+    main = mains[0]
+
+    if wtype == 'tempo':
+        workout['description'] = (
+            f"{total_km:.0f}km tempo: {wu_km:.0f}km warmup, "
+            f"{main['distance_km']:.1f}km at {main['pace_formatted']}, "
+            f"{cd_km:.0f}km cooldown"
+        )
+    elif wtype == 'vo2max':
+        ivl = main.get('intervals', {})
+        if ivl and isinstance(ivl.get('interval_m'), int):
+            rec = f" ({ivl['recovery_min']}min recovery)" if ivl.get('recovery_min') else ""
+            workout['description'] = (
+                f"{total_km:.0f}km intervals: {wu_km:.0f}km warmup, "
+                f"{ivl['reps']}x{ivl['interval_m']}m at {main['pace_formatted']}{rec}, "
+                f"{cd_km:.0f}km cooldown"
+            )
+        else:
+            workout['description'] = (
+                f"{total_km:.0f}km intervals: {wu_km:.0f}km warmup, "
+                f"{main['distance_km']:.1f}km at {main['pace_formatted']}, "
+                f"{cd_km:.0f}km cooldown"
+            )
+    elif wtype == 'race_pace':
+        workout['description'] = (
+            f"{total_km:.0f}km race pace: {wu_km:.0f}km warmup, "
+            f"{main['distance_km']:.1f}km at {main['pace_formatted']}, "
+            f"{cd_km:.0f}km cooldown"
+        )
+    elif wtype == 'fartlek':
+        ivl = main.get('intervals', {})
+        pace_parts = main['pace_formatted'].split(' - ')
+        hard_pace = pace_parts[-1] if len(pace_parts) > 1 else main['pace_formatted']
+        reps = ivl.get('reps', 0) if ivl else 0
+        workout['description'] = (
+            f"{total_km}km fartlek: {reps} surges of 1-3min at {hard_pace}, "
+            f"easy running between"
+        )
 
 
 def _warmup_segment(warmup_km: float, pace: float) -> dict:

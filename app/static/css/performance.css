@@ -710,37 +710,33 @@
 
 .segment-row-small {
     display: flex;
-    align-items: center;
-    gap: var(--space-2);
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 0 var(--space-2);
     font-size: var(--text-xs);
-    min-width: 0;
+    padding: var(--space-1) 0;
 }
 
 .seg-name {
     font-weight: var(--weight-semibold);
-    min-width: 70px;
-    flex-shrink: 0;
+    white-space: nowrap;
 }
 
 .seg-distance {
     color: var(--color-text-muted);
     font-variant-numeric: tabular-nums;
-    flex-shrink: 0;
+    white-space: nowrap;
 }
 
 .seg-pace {
     color: var(--color-text-secondary);
     font-variant-numeric: tabular-nums;
-    overflow-wrap: break-word;
-    word-break: break-word;
-    min-width: 0;
-    flex-shrink: 1;
+    white-space: nowrap;
 }
 
 .seg-intervals {
     color: var(--color-text-muted);
     font-size: 10px;
-    flex-shrink: 0;
     white-space: nowrap;
 }
 
@@ -1011,7 +1007,6 @@
     .charts-grid { grid-template-columns: 1fr; }
     .segment-row { flex-wrap: wrap; }
     .segment-intervals { padding-left: 0; }
-    .segment-row-small { flex-wrap: wrap; }
 }
 
 @media (max-width: 480px) {

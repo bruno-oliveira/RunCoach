@@ -19,12 +19,14 @@ from app.core.training.vdot_calculator import VDOTCalculator
 from app.utils import format_pace as _shared_format_pace
 
 from .performance_workout_builders import (
+    _regenerate_description,
     generate_easy_run,
     generate_fartlek_workout,
     generate_long_run,
     generate_race_pace_workout,
     generate_tempo_workout,
     generate_vo2max_workout,
+    reconcile_workout_after_cap,
 )
 
 
@@ -281,8 +283,10 @@ class PerformancePlanGenerator:
             daily_workouts.append(workout)
             total_assigned_km += workout['distance']
 
-        # Apply quality caps against the long run
+        # Apply quality caps against the long run, then sync segments
         enforce_week_caps(daily_workouts, target_distance, phase)
+        for w in daily_workouts:
+            reconcile_workout_after_cap(w)
         total_assigned_km = sum(w['distance'] for w in daily_workouts)
 
         # Fill remaining days with easy runs
@@ -343,6 +347,7 @@ class PerformancePlanGenerator:
                 self._overlay_key_workout(
                     workout, phase, target_distance, week_in_phase, vdot_zones,
                 )
+                _regenerate_description(workout)
             coaching_type = _COACHING_TYPE_MAP.get(workout['type'], workout['type'])
             workout['coaching_rationale'] = generate_coaching_note(
                 coaching_type, phase, week_number, target_distance, is_recovery,
