@@ -5,6 +5,9 @@ from unittest.mock import MagicMock
 from datetime import datetime, timezone
 
 from app.core.coaching.coaching_feedback_engine import CoachingFeedbackEngine
+from app.core.coaching.hr_feedback import hr_zone_feedback
+from app.core.coaching.pace_feedback import pace_feedback
+from app.core.coaching.sentiment_classifier import determine_sentiment
 from app.core.training.hr_zone_calculator import HRZoneCalculator
 
 
@@ -51,7 +54,7 @@ class TestPaceFeedback:
     def test_on_target(self):
         run = _make_run_log(avg_pace_min_km=5.5)
         planned = _make_planned_workout(planned_pace_min_km=5.5)
-        fb = CoachingFeedbackEngine._pace_feedback(run, planned)
+        fb = pace_feedback(run, planned)
         assert fb is not None
         assert "right on target" in fb.lower() or "on target" in fb.lower()
 
@@ -60,26 +63,26 @@ class TestPaceFeedback:
         planned = _make_planned_workout(
             planned_pace_min_km=5.5, workout_type="easy"
         )
-        fb = CoachingFeedbackEngine._pace_feedback(run, planned)
+        fb = pace_feedback(run, planned)
         assert fb is not None
         assert "slow down" in fb.lower() or "faster" in fb.lower()
 
     def test_too_slow(self):
         run = _make_run_log(avg_pace_min_km=6.5)
         planned = _make_planned_workout(planned_pace_min_km=5.5)
-        fb = CoachingFeedbackEngine._pace_feedback(run, planned)
+        fb = pace_feedback(run, planned)
         assert fb is not None
         assert "slower" in fb.lower()
 
     def test_no_planned_pace_returns_none(self):
         run = _make_run_log(avg_pace_min_km=5.5)
         planned = _make_planned_workout(planned_pace_min_km=None)
-        fb = CoachingFeedbackEngine._pace_feedback(run, planned)
+        fb = pace_feedback(run, planned)
         assert fb is None
 
     def test_no_planned_workout_returns_none(self):
         run = _make_run_log(avg_pace_min_km=5.5)
-        fb = CoachingFeedbackEngine._pace_feedback(run, None)
+        fb = pace_feedback(run, None)
         assert fb is None
 
 
@@ -91,7 +94,7 @@ class TestHRZoneFeedback:
         # Zone 2 for easy run: ~114-133 bpm (190 max)
         run = _make_run_log(avg_heart_rate=125, workout_type="easy")
         planned = _make_planned_workout(hr_zone_target=2)
-        fb = CoachingFeedbackEngine._hr_zone_feedback(run, planned, self.zones)
+        fb = hr_zone_feedback(run, planned, self.zones)
         assert fb is not None
         assert "target zone" in fb.lower() or "well paced" in fb.lower()
 
@@ -99,14 +102,14 @@ class TestHRZoneFeedback:
         # HR 175 should be Zone 5 for a 190 max
         run = _make_run_log(avg_heart_rate=175, workout_type="easy")
         planned = _make_planned_workout(hr_zone_target=2)
-        fb = CoachingFeedbackEngine._hr_zone_feedback(run, planned, self.zones)
+        fb = hr_zone_feedback(run, planned, self.zones)
         assert fb is not None
         assert "above" in fb.lower() or "higher" in fb.lower() or "high" in fb.lower()
 
     def test_no_hr_data_returns_none(self):
         run = _make_run_log(avg_heart_rate=None)
         planned = _make_planned_workout(hr_zone_target=2)
-        fb = CoachingFeedbackEngine._hr_zone_feedback(run, planned, self.zones)
+        fb = hr_zone_feedback(run, planned, self.zones)
         assert fb is None
 
 
@@ -144,7 +147,7 @@ class TestSentiment:
             "volume_feedback": None,
             "pattern_feedback": None,
         }
-        assert CoachingFeedbackEngine._determine_sentiment(fb) == "positive"
+        assert determine_sentiment(fb) == "positive"
 
     def test_warning_sentiment(self):
         fb = {
@@ -154,7 +157,7 @@ class TestSentiment:
             "volume_feedback": None,
             "pattern_feedback": "Pattern detected: too fast",
         }
-        assert CoachingFeedbackEngine._determine_sentiment(fb) == "warning"
+        assert determine_sentiment(fb) == "warning"
 
     def test_info_when_empty(self):
         fb = {
@@ -164,7 +167,7 @@ class TestSentiment:
             "volume_feedback": None,
             "pattern_feedback": None,
         }
-        assert CoachingFeedbackEngine._determine_sentiment(fb) == "info"
+        assert determine_sentiment(fb) == "info"
 
 
 class TestFullFeedbackGeneration:

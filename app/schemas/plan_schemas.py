@@ -1,12 +1,11 @@
-"""Pydantic schemas for request/response validation."""
+"""Pydantic schemas for training plan requests and validation."""
 
-from datetime import datetime
-from typing import Any, Dict, List, Optional
+from typing import Optional
 
 from pydantic import BaseModel, Field, field_validator, model_validator
 
 from app.config import settings
-from app.constants import DISTANCE_NAMES, SUPPORTED_DISTANCES, WORKOUT_TYPES
+from app.constants import DISTANCE_NAMES, SUPPORTED_DISTANCES
 from app.exceptions import InadequateBaseException, InsufficientTimeException, ZeroMileageUnsupportedException
 from app.utils import format_pace_bare
 
@@ -221,14 +220,14 @@ class PlanRequest(PlanRequestBase, RaceInfoMixin):
                     f"Starting from zero mileage for a {target_display} requires building a running base first. "
                     f"Consider training for a 5K or 10K first to build your fitness foundation."
                 )
-            
+
             if weeks < 8:
                 raise InsufficientTimeException(
                     "Beginner plans require at least 8 weeks for safe progression.",
                     "Couch to 5K programs need 8+ weeks to build fitness safely. "
                     "Consider extending your training to at least 8 weeks."
                 )
-            
+
             return self
 
         if target in _MILEAGE_CONFIG:
@@ -289,15 +288,6 @@ class PlanRequest(PlanRequestBase, RaceInfoMixin):
         return self
 
 
-# Response schemas
-class HealthResponse(BaseModel):
-    """Health check response."""
-
-    status: str = "healthy"
-    version: str = Field(default_factory=lambda: settings.app_version)
-
-
-# Helper functions for mileage warnings
 def get_mileage_warning(target_distance: float, current_km: float) -> Optional[str]:
     """Get warning message if mileage is unusually high for target distance."""
     if target_distance in _MILEAGE_CONFIG:
@@ -305,111 +295,6 @@ def get_mileage_warning(target_distance: float, current_km: float) -> Optional[s
         if current_km > cfg["max"]:
             return cfg["high_msg"]
     return None
-
-
-# Authentication schemas
-class UserBase(BaseModel):
-    email: Optional[str] = None
-    name: Optional[str] = None
-    picture: Optional[str] = None
-
-
-class UserCreate(UserBase):
-    google_id: str
-
-
-class UserResponse(UserBase):
-    id: str
-    google_id: Optional[str] = None
-    created_at: datetime
-    plans_generated: int
-    strava_connected: bool = False
-
-
-class AuthResponse(BaseModel):
-    message: str = "authenticated"
-    user: UserResponse
-
-
-class Token(BaseModel):
-    access_token: str
-    token_type: str = "bearer"
-    user: UserResponse
-
-
-class GoogleAuthRequest(BaseModel):
-    id_token: str = Field(..., description="Google OAuth ID token")
-
-
-# Run logging schemas
-class RunLogBase(BaseModel):
-    distance_km: float = Field(..., gt=0, description="Distance in kilometers")
-    duration_minutes: float = Field(..., gt=0, description="Duration in minutes")
-    avg_heart_rate: Optional[int] = Field(None, ge=40, le=220, description="Average heart rate")
-    max_heart_rate: Optional[int] = Field(None, ge=40, le=220, description="Maximum heart rate")
-    avg_cadence: Optional[int] = Field(None, ge=100, le=220, description="Average cadence (steps per minute)")
-    elevation_gain_m: Optional[int] = Field(None, ge=0, description="Elevation gain in meters")
-    notes: Optional[str] = Field(None, max_length=1000, description="Run notes")
-    workout_type: Optional[str] = Field(None, description="Workout type: easy, tempo, interval, long, hill")
-    perceived_effort: Optional[int] = Field(None, ge=1, le=10, description="Perceived effort (1-10)")
-
-    @field_validator("workout_type")
-    @classmethod
-    def validate_workout_type(cls, v: Optional[str]) -> Optional[str]:
-        if v is not None:
-            if v not in WORKOUT_TYPES:
-                raise ValueError(f"workout_type must be one of: {', '.join(WORKOUT_TYPES)}")
-        return v
-
-
-class RunLogCreate(RunLogBase):
-    date: Optional[datetime] = Field(None, description="Run date and time (defaults to now)")
-    training_plan_id: Optional[str] = Field(None, description="Associated training plan ID")
-    daily_workout_id: Optional[str] = Field(None, description="Associated daily workout ID")
-
-
-class RunLogUpdate(BaseModel):
-    distance_km: Optional[float] = Field(None, gt=0, le=1000)
-    duration_minutes: Optional[float] = Field(None, gt=0, le=6000)
-    avg_heart_rate: Optional[int] = Field(None, ge=40, le=220)
-    max_heart_rate: Optional[int] = Field(None, ge=40, le=220)
-    avg_cadence: Optional[int] = Field(None, ge=100, le=220)
-    elevation_gain_m: Optional[int] = Field(None, ge=0)
-    notes: Optional[str] = Field(None, max_length=1000)
-    workout_type: Optional[str] = Field(None)
-    perceived_effort: Optional[int] = Field(None, ge=1, le=10)
-    date: Optional[datetime] = None
-
-    @field_validator("workout_type")
-    @classmethod
-    def validate_workout_type(cls, v: Optional[str]) -> Optional[str]:
-        if v is not None:
-            if v not in WORKOUT_TYPES:
-                raise ValueError(f"workout_type must be one of: {', '.join(WORKOUT_TYPES)}")
-        return v
-
-
-class RunLogResponse(RunLogBase):
-    id: str
-    date: datetime
-    avg_pace_min_km: Optional[float] = None
-    strava_activity_id: Optional[str] = None
-    effort_quality_score: Optional[float] = None
-    quality_label: Optional[str] = None
-    vdot: Optional[float] = None
-    predicted_time_seconds: Optional[float] = None
-    created_at: datetime
-    # Dynamically populated fields (not from DB)
-    predictions: Optional[Dict[str, Dict]] = None
-    race_comparison: Optional[Dict[str, Any]] = None
-
-
-class RunLogListResponse(BaseModel):
-    runs: List[RunLogResponse]
-    total: int
-    page: int
-    page_size: int
-
 
 
 class PerformancePlanRequest(BaseModel):
@@ -485,7 +370,6 @@ class PerformancePlanRequest(BaseModel):
             target = self.target_distance
             current_km = self.current_weekly_km
 
-            # Minimum mileage requirements for performance training (higher than beginner plans)
             min_requirements = {
                 5.0: settings.perf_min_mileage_5k,
                 10.0: settings.perf_min_mileage_10k,
@@ -505,23 +389,3 @@ class PerformancePlanRequest(BaseModel):
                     )
 
         return self
-
-
-# Strava integration schemas
-class StravaSyncResponse(BaseModel):
-    """Response for Strava sync operation."""
-
-    synced: int
-    skipped: int
-    errors: List[str] = []
-    total: int = 0
-    last_synced_at: Optional[int] = None
-    adjustment_results: Optional[List[dict]] = None
-
-
-class StravaStatusResponse(BaseModel):
-    """Response for Strava connection status."""
-
-    connected: bool
-    athlete_id: Optional[str] = None
-    last_synced_at: Optional[int] = None

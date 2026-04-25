@@ -11,7 +11,7 @@ from app.config import settings
 from app.dependencies import get_db, get_optional_user
 from app.models import TrainingPlan, User
 from app.models.triathlon_plan import TriathlonPlan
-from app.schemas import DISTANCE_NAMES
+from app.constants import DISTANCE_NAMES
 from app.services.adaptation_service import AdaptationService
 from app.core.training.strength_plan import derive_experience_level
 from app.template_helpers import create_templates
