@@ -41,19 +41,29 @@
     <details class="workout-steps-wrap">
         <summary class="workout-steps-toggle">
             <svg class="workout-steps-chevron" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
-            <span>Segments</span>
+            <span>Session blocks</span>
             <span class="workout-steps-count">{{ workout.segments | length }}</span>
         </summary>
-        <div class="workout-segments">
+        <ol class="workout-steps" aria-label="Workout steps">
             {% for seg in workout.segments %}
-            <div class="segment-row">
-                <span class="segment-name">{{ seg.name }}</span>
-                <span class="segment-distance">{{ '{:.1f}'.format(seg.distance_km) }}km</span>
-                {% if seg.pace_formatted %}<span class="segment-pace">{{ seg.pace_formatted }}</span>{% endif %}
-                {% if seg.zone_label %}<span class="segment-zone-label">{{ seg.zone_label }}</span>{% endif %}
-            </div>
+            <li class="workout-step workout-step-{{ seg.type }}">
+                <span class="workout-step-dot" aria-hidden="true"></span>
+                <div class="workout-step-body">
+                    <div class="workout-step-head">
+                        <span class="workout-step-label">{{ seg.name }}</span>
+                        {% if seg.zone_label %}<span class="workout-step-zone workout-step-zone-{{ seg.zone_label.split(' ')[0] }}">{{ seg.zone_label.split(' ')[-1] }}</span>{% endif %}
+                    </div>
+                    {% set meta = [] %}
+                    {% if seg.distance_km %}{% set _ = meta.append('{:.1f}'.format(seg.distance_km) + ' km') %}{% endif %}
+                    {% if seg.pace_formatted %}{% set _ = meta.append(seg.pace_formatted) %}{% endif %}
+                    {% if seg.intervals %}{% set _ = meta.append(seg.intervals.reps ~ 'x' ~ seg.intervals.interval_m ~ 'm' ~ (' (' ~ seg.intervals.recovery_min ~ 'min rec)' if seg.intervals.recovery_min else '')) %}{% endif %}
+                    {% if meta %}
+                    <div class="workout-step-meta">{{ meta | join(' · ') }}</div>
+                    {% endif %}
+                </div>
+            </li>
             {% endfor %}
-        </div>
+        </ol>
     </details>
     {% endif %}
     {% if workout.key_workout_rationale %}

@@ -271,13 +271,14 @@
                                 <span>Session blocks</span>
                                 <span class="workout-steps-count">{{ workout.segments | length }}</span>
                             </summary>
-                            <ol class="workout-steps" aria-label="Workout segments">
+                            <ol class="workout-steps" aria-label="Workout steps">
                                 {% for seg in workout.segments %}
                                 <li class="workout-step workout-step-{{ seg.type }}">
                                     <span class="workout-step-dot" aria-hidden="true"></span>
                                     <div class="workout-step-body">
                                         <div class="workout-step-head">
                                             <span class="workout-step-label">{{ seg.name }}</span>
+                                            {% if seg.zone_label %}<span class="workout-step-zone workout-step-zone-{{ seg.zone_label.split(' ')[-1] }}">{{ seg.zone_label.split(' ')[-1] }}</span>{% endif %}
                                         </div>
                                         {% set meta = [] %}
                                         {% if seg.distance_km %}{% set _ = meta.append('{:.1f}'.format(seg.distance_km) + ' km') %}{% endif %}
