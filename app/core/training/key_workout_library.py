@@ -19,6 +19,26 @@ from app.core.training.vdot_calculator import VDOTCalculator
 # total_pattern replaces "Run Xkm" / "Run X-Ykm" with the actual distance.
 # splits_pattern is a callable(actual_distance) -> str for proportional splits.
 _DISTANCE_REWRITES: Dict[str, tuple] = {
+    "5k_vo2max_400s": (
+        None,
+        lambda d: f"Warm up 2km easy. Run 10-12 x 400m at 5K pace with 90s easy jog recovery between reps. Cool down 2km easy.",
+    ),
+    "5k_race_pace_3km": (
+        None,
+        lambda d: f"Warm up 2km easy. Run 2 x {round(d * 0.25, 1):.1f}km at 5K goal pace with 3 min easy jog recovery. Cool down 2km easy.",
+    ),
+    "5k_cruise_intervals": (
+        None,
+        lambda d: f"Warm up 2km easy. Run 4 x {round(d * 0.17, 1):.1f}km at threshold pace with 60 seconds easy jog between reps. Cool down 2km easy.",
+    ),
+    "5k_threshold_run": (
+        None,
+        lambda d: f"Warm up 2km easy. Run {round(d * 0.43, 1):.1f}km continuous at threshold pace — comfortably hard, you can speak a few words at a time. Cool down 2km easy.",
+    ),
+    "5k_pyramid": (
+        None,
+        lambda d: f"Warm up 2km easy. Run pyramid: 200m, 400m, 600m, 800m, 600m, 400m, 200m — all at 5K pace with equal-distance recovery jogs. Cool down 2km easy.",
+    ),
     "marathon_mp_long": (
         r"Run 25km total",
         lambda d: f"First {round(d * 0.60, 0):.0f}km at easy pace, then shift to marathon goal pace for the final {round(d * 0.40, 0):.0f}km",

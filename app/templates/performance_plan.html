@@ -264,6 +264,27 @@
                             {{ workout.description }}
                         </div>
 
+                        {% if workout.segments and workout.type not in ['rest', 'recovery'] %}
+                        <details class="workout-segments-toggle">
+                            <summary>
+                                <svg class="segments-chevron" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+                                <span>{{ workout.segments | length }} segment{{ 's' if workout.segments | length != 1 }}</span>
+                            </summary>
+                            <div class="workout-segments-list">
+                                {% for seg in workout.segments %}
+                                <div class="segment-row-small">
+                                    <span class="seg-name">{{ seg.name }}</span>
+                                    <span class="seg-distance">{{ '{:.1f}'.format(seg.distance_km) }}km</span>
+                                    {% if seg.pace_formatted %}<span class="seg-pace">{{ seg.pace_formatted }}</span>{% endif %}
+                                    {% if seg.intervals %}
+                                    <span class="seg-intervals">{{ seg.intervals.reps }}x{{ seg.intervals.interval_m }}{% if seg.intervals.recovery_min %} ({{ seg.intervals.recovery_min }}min rec){% endif %}</span>
+                                    {% endif %}
+                                </div>
+                                {% endfor %}
+                            </div>
+                        </details>
+                        {% endif %}
+
                         <div class="workout-distance">
                             {{ '{:.1f}'.format(workout.distance) }}km total
                         </div>

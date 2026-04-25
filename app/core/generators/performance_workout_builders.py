@@ -52,7 +52,6 @@ def generate_tempo_workout(zones: Dict, weekly_km: float, week: int, phase: str)
 
     warmup_km = 2
     cooldown_km = 2
-    total_km = warmup_km + tempo_km + cooldown_km
     warmup_pace = zones['zone_1_recovery']['pace']
 
     segments = [
@@ -69,14 +68,16 @@ def generate_tempo_workout(zones: Dict, weekly_km: float, week: int, phase: str)
         _cooldown_segment(cooldown_km, warmup_pace),
     ]
 
+    total_km = round(sum(s['distance_km'] for s in segments), 1)
+
     return {
         'type': 'tempo',
         'intensity': 'medium',
         'zone': 'zone_3',
         'target_pace': target_pace,
         'target_pace_formatted': _shared_format_pace(target_pace),
-        'description': f"{total_km:.0f}km tempo: {warmup_km}km warmup, {tempo_km:.0f}km at {_shared_format_pace(target_pace)}, {cooldown_km}km cooldown",
-        'distance': round(total_km, 1),
+        'description': f"{total_km:.0f}km tempo: {warmup_km}km warmup, {round(tempo_km, 1):.1f}km at {_shared_format_pace(target_pace)}, {cooldown_km}km cooldown",
+        'distance': total_km,
         'quality': True,
         'segments': segments,
         'total_duration_est_min': estimate_duration_min(segments),
@@ -106,7 +107,6 @@ def generate_vo2max_workout(zones: Dict, weekly_km: float, week: int, phase: str
     total_interval_km = interval_km * reps
     warmup_km = 2
     cooldown_km = 2
-    total_km = warmup_km + total_interval_km + cooldown_km
     warmup_pace = zones['zone_1_recovery']['pace']
 
     segments = [
@@ -128,6 +128,8 @@ def generate_vo2max_workout(zones: Dict, weekly_km: float, week: int, phase: str
         _cooldown_segment(cooldown_km, warmup_pace),
     ]
 
+    total_km = round(sum(s['distance_km'] for s in segments), 1)
+
     return {
         'type': 'vo2max',
         'intensity': 'high',
@@ -135,7 +137,7 @@ def generate_vo2max_workout(zones: Dict, weekly_km: float, week: int, phase: str
         'target_pace': target_pace,
         'target_pace_formatted': _shared_format_pace(target_pace),
         'description': f"{total_km:.0f}km intervals: {warmup_km}km warmup, {reps}x{interval_m}m at {_shared_format_pace(target_pace)} ({recovery_time}min recovery), {cooldown_km}km cooldown",
-        'distance': round(total_km, 1),
+        'distance': total_km,
         'quality': True,
         'segments': segments,
         'total_duration_est_min': estimate_duration_min(segments),
@@ -157,7 +159,6 @@ def generate_race_pace_workout(zones: Dict, weekly_km: float, week: int, phase: 
 
     warmup_km = 2
     cooldown_km = 2
-    total_km = warmup_km + race_km + cooldown_km
     warmup_pace = zones['zone_1_recovery']['pace']
 
     segments = [
@@ -174,14 +175,16 @@ def generate_race_pace_workout(zones: Dict, weekly_km: float, week: int, phase: 
         _cooldown_segment(cooldown_km, warmup_pace),
     ]
 
+    total_km = round(sum(s['distance_km'] for s in segments), 1)
+
     return {
         'type': 'race_pace',
         'intensity': 'high',
         'zone': 'zone_5',
         'target_pace': target_pace,
         'target_pace_formatted': _shared_format_pace(target_pace),
-        'description': f"{total_km:.0f}km race pace: {warmup_km}km warmup, {race_km:.0f}km at {_shared_format_pace(target_pace)}, {cooldown_km}km cooldown",
-        'distance': round(total_km, 1),
+        'description': f"{total_km:.0f}km race pace: {warmup_km}km warmup, {round(race_km, 1):.1f}km at {_shared_format_pace(target_pace)}, {cooldown_km}km cooldown",
+        'distance': total_km,
         'quality': True,
         'segments': segments,
         'total_duration_est_min': estimate_duration_min(segments),
@@ -225,6 +228,8 @@ def generate_fartlek_workout(zones: Dict, weekly_km: float, week: int, phase: st
         _cooldown_segment(cooldown_km, warmup_pace),
     ]
 
+    total_km = round(sum(s['distance_km'] for s in segments), 1)
+
     return {
         'type': 'fartlek',
         'intensity': 'medium',
@@ -232,7 +237,7 @@ def generate_fartlek_workout(zones: Dict, weekly_km: float, week: int, phase: st
         'target_pace': tempo_pace,
         'target_pace_formatted': f"{_shared_format_pace(tempo_pace)} - {_shared_format_pace(hard_pace)}",
         'description': f"{total_km}km fartlek: {surges} surges of 1-3min at {_shared_format_pace(hard_pace)}, easy running between",
-        'distance': round(total_km, 1),
+        'distance': total_km,
         'quality': True,
         'segments': segments,
         'total_duration_est_min': estimate_duration_min(segments),
@@ -256,7 +261,6 @@ def generate_long_run(zones: Dict, weekly_km: float, week: int, phase: str, dist
     if phase in ['build', 'peak'] and long_run_km >= 12:
         race_pace_km = min(4, distance_km * 0.3)
         easy_km = long_run_km - race_pace_km
-        description = f"{long_run_km:.0f}km long run: {easy_km:.0f}km easy at {_shared_format_pace(easy_pace)}, last {race_pace_km:.0f}km at {_shared_format_pace(race_pace)}"
         segments = [
             {
                 'name': 'Easy',
@@ -277,6 +281,8 @@ def generate_long_run(zones: Dict, weekly_km: float, week: int, phase: str, dist
                 'type': 'main',
             },
         ]
+        long_run_km = round(sum(s['distance_km'] for s in segments), 1)
+        description = f"{long_run_km:.0f}km long run: {segments[0]['distance_km']:.1f}km easy at {_shared_format_pace(easy_pace)}, last {segments[1]['distance_km']:.1f}km at {_shared_format_pace(race_pace)}"
     else:
         description = f"{long_run_km:.0f}km long run at {_shared_format_pace(easy_pace)}"
         segments = [
@@ -309,10 +315,12 @@ def generate_easy_run(zones: Dict, distance_km: float) -> Dict:
     """Generate an easy recovery run."""
     easy_pace = zones['zone_1_recovery']['pace']
 
+    rounded_km = round(distance_km, 1)
+
     segments = [
         {
             'name': 'Easy Run',
-            'distance_km': round(distance_km, 1),
+            'distance_km': rounded_km,
             'pace_formatted': _shared_format_pace(easy_pace),
             'pace_raw': easy_pace,
             'zone': 'zone_1',
@@ -327,8 +335,8 @@ def generate_easy_run(zones: Dict, distance_km: float) -> Dict:
         'zone': 'zone_1',
         'target_pace': easy_pace,
         'target_pace_formatted': _shared_format_pace(easy_pace),
-        'description': f"{distance_km:.0f}km easy at {_shared_format_pace(easy_pace)}",
-        'distance': round(distance_km, 1),
+        'description': f"{rounded_km:.1f}km easy at {_shared_format_pace(easy_pace)}",
+        'distance': rounded_km,
         'quality': False,
         'segments': segments,
         'total_duration_est_min': estimate_duration_min(segments),

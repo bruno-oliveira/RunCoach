@@ -12,7 +12,7 @@ from typing import List, Dict, Any, Optional
 from app.core.coaching.coaching_notes_generator import generate_coaching_note
 from app.core.training import phase_calculator
 from app.core.training import mileage_progression
-from app.core.training.key_workout_library import KeyWorkoutLibrary
+from app.core.training.key_workout_library import KeyWorkoutLibrary, _rewrite_key_workout_description
 from app.core.training.quality_caps import enforce_week_caps
 from app.core.training.training_constants import calculate_week_in_phase
 from app.core.training.vdot_calculator import VDOTCalculator
@@ -217,11 +217,17 @@ class PerformancePlanGenerator:
         if vdot_zones:
             key_wk = KeyWorkoutLibrary.inject_vdot_paces(key_wk, vdot_zones)
 
+        actual_distance = workout.get('distance', target_distance)
+        rewritten_description = _rewrite_key_workout_description(
+            key_wk['description'], key_wk['id'], actual_distance,
+        )
+
         workout['key_workout_id'] = key_wk['id']
         workout['key_workout_name'] = key_wk['name']
         workout['structure'] = key_wk['structure']
         workout['key_workout_rationale'] = key_wk['rationale']
-        workout['key_workout_description'] = key_wk['description']
+        workout['key_workout_description'] = rewritten_description
+        workout['description'] = rewritten_description
 
     # ------------------------------------------------------------------
     # Weekly plan assembly

@@ -646,6 +646,7 @@
     gap: var(--space-4);
     padding: var(--space-3) 0;
     border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    min-width: 0;
 }
 
 .segment-row:last-child { border-bottom: none; }
@@ -654,6 +655,7 @@
     font-weight: var(--weight-semibold);
     font-size: var(--text-xs);
     min-width: 80px;
+    flex-shrink: 0;
     padding: 3px 8px;
     border-radius: var(--radius-sm);
     text-align: center;
@@ -665,11 +667,82 @@
 .segment-type-main { background: rgba(251, 146, 60, 0.2); }
 .segment-type-cooldown { background: rgba(96, 165, 250, 0.2); }
 
-.segment-details { display: flex; gap: var(--space-4); align-items: center; flex: 1; }
-.segment-distance { font-weight: var(--weight-semibold); }
-.segment-pace { opacity: 0.85; font-size: var(--text-sm); }
-.segment-zone { font-size: var(--text-xs); opacity: 0.6; }
-.segment-intervals { font-size: var(--text-sm); opacity: 0.7; margin-top: var(--space-1); padding-left: calc(80px + var(--space-4)); }
+.segment-details { display: flex; gap: var(--space-4); align-items: center; flex: 1; min-width: 0; }
+.segment-distance { font-weight: var(--weight-semibold); flex-shrink: 0; }
+.segment-pace { opacity: 0.85; font-size: var(--text-sm); overflow-wrap: break-word; word-break: break-word; min-width: 0; flex-shrink: 1; }
+.segment-zone { font-size: var(--text-xs); opacity: 0.6; flex-shrink: 0; white-space: nowrap; }
+.segment-intervals { font-size: var(--text-sm); opacity: 0.7; margin-top: var(--space-1); padding-left: calc(80px + var(--space-4)); overflow-wrap: break-word; }
+
+/* Weekly view segments toggle */
+.workout-segments-toggle {
+    margin: var(--space-2) 0;
+    font-size: var(--text-sm);
+}
+
+.workout-segments-toggle summary {
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    color: var(--color-text-muted);
+    font-weight: var(--weight-medium);
+    list-style: none;
+    user-select: none;
+}
+
+.workout-segments-toggle summary::-webkit-details-marker { display: none; }
+
+.segments-chevron {
+    transition: transform 0.2s ease;
+    flex-shrink: 0;
+}
+
+.workout-segments-toggle[open] .segments-chevron {
+    transform: rotate(90deg);
+}
+
+.workout-segments-list {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-1);
+    padding: var(--space-2) 0 0;
+}
+
+.segment-row-small {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    font-size: var(--text-xs);
+    min-width: 0;
+}
+
+.seg-name {
+    font-weight: var(--weight-semibold);
+    min-width: 70px;
+    flex-shrink: 0;
+}
+
+.seg-distance {
+    color: var(--color-text-muted);
+    font-variant-numeric: tabular-nums;
+    flex-shrink: 0;
+}
+
+.seg-pace {
+    color: var(--color-text-secondary);
+    font-variant-numeric: tabular-nums;
+    overflow-wrap: break-word;
+    word-break: break-word;
+    min-width: 0;
+    flex-shrink: 1;
+}
+
+.seg-intervals {
+    color: var(--color-text-muted);
+    font-size: 10px;
+    flex-shrink: 0;
+    white-space: nowrap;
+}
 
 .btn-log-run {
     display: inline-flex;
@@ -938,6 +1011,7 @@
     .charts-grid { grid-template-columns: 1fr; }
     .segment-row { flex-wrap: wrap; }
     .segment-intervals { padding-left: 0; }
+    .segment-row-small { flex-wrap: wrap; }
 }
 
 @media (max-width: 480px) {

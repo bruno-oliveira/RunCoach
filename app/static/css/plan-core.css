@@ -2409,22 +2409,29 @@
     gap: var(--space-2);
     padding: 4px 0;
     font-size: var(--text-xs);
+    min-width: 0;
 }
 
 .segment-name {
     font-weight: var(--weight-semibold);
     min-width: 80px;
+    flex-shrink: 0;
     color: var(--color-text);
 }
 
 .segment-distance {
     color: var(--color-text-muted);
     font-variant-numeric: tabular-nums;
+    flex-shrink: 0;
 }
 
 .segment-pace {
     color: var(--color-text-secondary);
     font-variant-numeric: tabular-nums;
+    overflow-wrap: break-word;
+    word-break: break-word;
+    min-width: 0;
+    flex-shrink: 1;
 }
 
 .segment-zone-label {
@@ -2434,6 +2441,8 @@
     color: var(--color-text-muted);
     font-size: 10px;
     font-weight: var(--weight-medium);
+    flex-shrink: 0;
+    white-space: nowrap;
 }
 
 /* ------------------------------------------------------------------
