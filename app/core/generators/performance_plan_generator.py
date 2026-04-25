@@ -246,15 +246,15 @@ class PerformancePlanGenerator:
 
         workout_schedule = []
 
-        # Long run on Sunday (day 7)
+        # Long run on Saturday (day 6)
         workout_schedule.append({
-            'day': 7,
+            'day': 6,
             'workout_generator': lambda: generate_long_run(zones, weekly_km, week_number, phase, target_distance)
         })
 
         # Quality workouts on Tuesday (day 2) and Friday (day 5)
         if quality_workouts_needed > 0:
-            quality_days = [2, 5] if runs_per_week >= 4 else [2]
+            quality_days = [2, 4] if runs_per_week >= 4 else [2]
             quality_types = self.PHASE_QUALITY_PRIORITY.get(phase, ['tempo', 'vo2max'])
 
             _generators = {
@@ -282,7 +282,13 @@ class PerformancePlanGenerator:
         # Fill remaining days with easy runs
         remaining_km = weekly_km - total_assigned_km
         scheduled_days = {w['day'] for w in daily_workouts}
-        available_days = [d for d in [1, 3, 4, 6] if d not in scheduled_days]
+        available_days = [d for d in [1, 3, 5, 7] if d not in scheduled_days]
+
+        # Sort available days by spacing quality (prefer days with rest on both sides)
+        def _spacing_score(day: int) -> int:
+            return (1 if (day - 1) not in scheduled_days else 0) + \
+                   (1 if (day + 1) not in scheduled_days else 0)
+        available_days.sort(key=_spacing_score, reverse=True)
 
         easy_runs_needed = runs_per_week - len(daily_workouts)
         if easy_runs_needed > 0 and remaining_km > 0:
@@ -291,11 +297,25 @@ class PerformancePlanGenerator:
             long_dist = long_runs[0]['distance'] if long_runs else 0
             min_easy_km = max(3.0, long_dist * 0.20) if long_dist > 0 else 3.0
             easy_run_km = max(easy_run_km, min_easy_km)
+
+            def _would_create_three_consecutive(day: int, current_scheduled: set) -> bool:
+                test = current_scheduled | {day}
+                for d in range(1, 6):
+                    if d in test and (d + 1) in test and (d + 2) in test:
+                        return True
+                return False
+
             for i in range(easy_runs_needed):
-                if i < len(available_days):
+                safe_days = [d for d in available_days if not _would_create_three_consecutive(d, scheduled_days)]
+                if not safe_days:
+                    safe_days = available_days
+                if safe_days:
+                    chosen = safe_days[0]
                     workout = generate_easy_run(zones, easy_run_km)
-                    workout['day'] = available_days[i]
+                    workout['day'] = chosen
                     daily_workouts.append(workout)
+                    scheduled_days.add(chosen)
+                    available_days.remove(chosen)
 
         # Fill unscheduled days with rest
         scheduled_days = {w['day'] for w in daily_workouts}
