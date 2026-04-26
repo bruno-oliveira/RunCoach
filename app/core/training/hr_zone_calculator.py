@@ -32,7 +32,7 @@ WORKOUT_ZONE_MAP: dict[str, int] = {
     "easy": 2,
     "recovery": 1,
     "long": 2,
-    "tempo": 3,
+    "tempo": 4,
     "interval": 5,
     "hill": 5,
     "rest": 1,

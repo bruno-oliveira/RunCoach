@@ -51,6 +51,7 @@ def compute_adjustment_signals(
     adaptation_history: List[Dict[str, Any]] | None = None,
     hr_zones: Optional[list[dict]] = None,
     run_feedback_list: Optional[List] = None,
+    vdot_trend: str = "stable",
 ) -> Dict[str, Any]:
     volume_weight, effort_weight, completion_weight, hr_zone_weight, feedback_weight = _PHASE_WEIGHTS.get(
         current_phase, _PHASE_WEIGHTS["build"],
@@ -254,6 +255,10 @@ def compute_adjustment_signals(
         raw_multiplier = min(raw_multiplier, 0.85)
         overreach_detected = True
 
+    # Declining fitness: VDOT dropping despite maintained workload
+    if vdot_trend == "declining":
+        raw_multiplier = min(raw_multiplier, 0.92)
+
     consecutive_same_direction = _count_consecutive_direction(adaptation_history)
     if consecutive_same_direction >= _CONSECUTIVE_THRESHOLD:
         clamp_min = _EXPANDED_MIN
@@ -293,6 +298,7 @@ def compute_adjustment_signals(
         "warning_ratio": round(warning_ratio, 2),
         "positive_ratio": round(positive_ratio, 2),
         "feedback_factor": round(feedback_factor, 2),
+        "vdot_trend": vdot_trend,
     }
 
 

@@ -7,6 +7,7 @@ from typing import Any, Dict, List, Optional, Tuple
 from sqlalchemy.orm import Session
 
 from app.models import DailyWorkout, RunLog, RunFeedback, TrainingPlan, WeeklyPlan
+from app.services.race_predictor_service import RacePredictorService
 from app.utils import to_date as _to_date
 
 from ._helpers import (
@@ -107,6 +108,15 @@ def adjust_plan(
     if not past_workouts:
         return {"adjusted": False, "reason": "No past workouts to evaluate yet."}
 
+    vdot_trend = "stable"
+    try:
+        vdot_history = RacePredictorService.get_vdot_history(
+            user_id, weeks=8, db=db,
+        )
+        vdot_trend = RacePredictorService.calculate_vdot_trend(vdot_history)
+    except Exception as e:
+        logger.warning("VDOT trend lookup failed (non-fatal): %s", e)
+
     signals = compute_adjustment_signals(
         all_plan_runs, past_workouts, past_workout_ids,
         today, plan_id, db, _recency_weight,
@@ -114,6 +124,7 @@ def adjust_plan(
         adaptation_history=training_plan.adaptation_history,
         hr_zones=hr_zones,
         run_feedback_list=run_feedback_list,
+        vdot_trend=vdot_trend,
     )
     multiplier = signals["multiplier"]
 
@@ -173,6 +184,8 @@ def adjust_plan(
         reason_parts.append(f"Avg effort: {round(avg_effort, 1)}/10 (trend: {effort_trend}).")
     if overreach_detected:
         reason_parts.append("Overreach detected — forced reduction to protect recovery.")
+    if signals.get("vdot_trend") == "declining":
+        reason_parts.append("VDOT declining — capping volume to prevent overtraining.")
     if vdot_result:
         reason_parts.append(
             f"VDOT recalibrated: {vdot_result['old_vdot']} → {vdot_result['new_vdot']} "

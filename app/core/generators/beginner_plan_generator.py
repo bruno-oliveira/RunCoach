@@ -59,7 +59,8 @@ class BeginnerPlanGenerator:
     """Generate Couch to 5K style plans for true beginners."""
 
     def generate_plan(self, target_distance: float, weeks: int,
-                      max_runs_per_week: int = 3) -> List[Dict[str, Any]]:
+                      max_runs_per_week: int = 3,
+                      estimated_pace_min_km: float = 8.0) -> List[Dict[str, Any]]:
         """
         Generate a beginner-friendly training plan.
         
@@ -67,11 +68,13 @@ class BeginnerPlanGenerator:
             target_distance: Race distance in km (5.0 or 10.0)
             weeks: Training duration in weeks (minimum 8)
             max_runs_per_week: Maximum runs per week (capped at 3 for beginners)
-        
+            estimated_pace_min_km: Estimated pace in min/km for distance calculations
+
         Returns:
             List of weekly plan dictionaries
         """
         max_runs = min(max_runs_per_week, 3)
+        self._pace_min_km = max(4.0, min(15.0, estimated_pace_min_km))
         plan = []
 
         c25k_total = len(BEGINNER_WEEKS)  # 10 weeks
@@ -126,8 +129,7 @@ class BeginnerPlanGenerator:
             }
             workouts.append(workout)
 
-        # Estimate total_km from base_duration and assumed beginner pace (~8 min/km)
-        assumed_pace_km_per_min = 1 / 8.0  # 8 min/km
+        assumed_pace_km_per_min = 1 / self._pace_min_km
         estimated_km = round(week_config["total_min"] * assumed_pace_km_per_min * (week_config["run"] / (week_config["run"] + week_config["walk"])) * max_runs, 1) if week_config["run"] > 0 else 0
 
         return {
@@ -150,33 +152,36 @@ class BeginnerPlanGenerator:
         workouts = []
         days = self._get_workout_days(max_runs)
 
+        pace_km_per_min = 1 / self._pace_min_km
         for i, day in enumerate(days):
             if i == 0:
                 workout = {
                     "day": day,
                     "type": "long",
-                    "distance": round(base_duration * 0.1, 1),
+                    "distance": round(base_duration * pace_km_per_min, 1),
                     "intensity": "low",
                     "notes": f"Week {week_number}: Long easy run - {base_duration} minutes continuous.",
                     "duration_min": base_duration,
                 }
             elif i == 1:
+                easy_duration = int(base_duration * 0.6)
                 workout = {
                     "day": day,
                     "type": "easy",
-                    "distance": round(base_duration * 0.06, 1),
+                    "distance": round(easy_duration * pace_km_per_min, 1),
                     "intensity": "low",
-                    "notes": f"Week {week_number}: Easy recovery run - {int(base_duration * 0.6)} minutes.",
-                    "duration_min": int(base_duration * 0.6),
+                    "notes": f"Week {week_number}: Easy recovery run - {easy_duration} minutes.",
+                    "duration_min": easy_duration,
                 }
             else:
+                tempo_duration = int(base_duration * 0.7)
                 workout = {
                     "day": day,
                     "type": "tempo",
-                    "distance": round(base_duration * 0.07, 1),
+                    "distance": round(tempo_duration * pace_km_per_min, 1),
                     "intensity": "medium",
                     "notes": f"Week {week_number}: Run with 5-10 min slightly faster segment.",
-                    "duration_min": int(base_duration * 0.7),
+                    "duration_min": tempo_duration,
                 }
             workouts.append(workout)
 
