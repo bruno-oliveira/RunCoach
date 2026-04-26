@@ -12,22 +12,14 @@ from fit_tool.profile.profile_type import (
     Intensity,
     Manufacturer,
     Sport,
+    SubSport,
     WorkoutStepDuration,
     WorkoutStepTarget,
 )
 
-FIT_EPOCH_MS = 631065600000
-
 
 def _pace_min_km_to_speed_ms(pace_min_km: float) -> float:
-    """Convert pace in min/km to speed in m/s.
-
-    Args:
-        pace_min_km: Pace in minutes per kilometer.
-
-    Returns:
-        Speed in meters per second.
-    """
+    """Convert pace in min/km to speed in m/s."""
     if pace_min_km <= 0:
         return 0.0
     seconds_per_km = pace_min_km * 60.0
@@ -49,15 +41,6 @@ class FITService:
         Each segment becomes a workout step with a 1km distance target and
         a speed range (target +/- 5 seconds/km) so the Garmin watch shows
         ahead/behind alerts during the race.
-
-        Args:
-            segments: List of segment dicts with start_km, end_km, target_pace_min_km.
-            target_time_seconds: Total target race time.
-            target_time_str: Formatted target time string.
-            race_name: Name for the workout.
-
-        Returns:
-            FIT file content as bytes.
         """
         now_ms = int(datetime.datetime.now(datetime.timezone.utc).timestamp() * 1000)
 
@@ -71,13 +54,15 @@ class FITService:
         workout = WorkoutMessage()
         workout.workout_name = f"{race_name} - {target_time_str}"
         workout.sport = Sport.RUNNING
+        workout.sub_sport = SubSport.GENERIC
         workout.num_valid_steps = len(segments)
 
         steps = []
-        for seg in segments:
+        for idx, seg in enumerate(segments):
             step = WorkoutStepMessage()
 
             seg_distance_km = seg["end_km"] - seg["start_km"]
+            seg_distance_m = seg_distance_km * 1000.0
             pace = seg["target_pace_min_km"]
 
             speed_low = _pace_min_km_to_speed_ms(pace + (5.0 / 60.0))
@@ -85,17 +70,20 @@ class FITService:
 
             km_label = f"KM {seg['start_km']:.0f}-{seg['end_km']:.0f}"
             if seg.get("grade_pct", 0) > 0.5:
-                km_label += f" (uphill)"
+                km_label += " (uphill)"
             elif seg.get("grade_pct", 0) < -0.5:
-                km_label += f" (downhill)"
+                km_label += " (downhill)"
 
+            step.message_index = idx
             step.workout_step_name = km_label
             step.intensity = Intensity.ACTIVE
             step.duration_type = WorkoutStepDuration.DISTANCE
-            step.duration_distance = round(seg_distance_km * 1000.0, 1)
+            step.duration_distance = round(seg_distance_m, 1)
+            step.duration_value = round(seg_distance_m, 1)
             step.target_type = WorkoutStepTarget.SPEED
-            step.custom_target_speed_low = round(speed_low, 2)
-            step.custom_target_speed_high = round(speed_high, 2)
+            step.custom_target_speed_low = round(max(0.5, speed_low), 2)
+            step.custom_target_speed_high = round(max(0.5, speed_high), 2)
+            step.target_value = round(_pace_min_km_to_speed_ms(pace), 2)
 
             steps.append(step)
 
