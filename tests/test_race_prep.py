@@ -325,11 +325,53 @@ class TestFITService:
         assert b".FIT" in fit_bytes or fit_bytes[4:8] == b".FIT"
 
     def test_pace_conversion(self):
-        from app.services.fit_service import _pace_min_km_to_speed_ms
-        speed = _pace_min_km_to_speed_ms(5.0)
-        assert abs(speed - 1000.0 / 300.0) < 0.01
-        speed = _pace_min_km_to_speed_ms(0)
-        assert speed == 0.0
+        from app.services.fit_service import _pace_min_km_to_speed_raw
+        speed_raw = _pace_min_km_to_speed_raw(5.0)
+        expected_raw = int(round((1000.0 / 300.0) * 1000))
+        assert speed_raw == expected_raw
+        speed_raw = _pace_min_km_to_speed_raw(0)
+        assert speed_raw == 0
+
+    def test_speed_range_is_valid(self):
+        from app.services.fit_service import _pace_min_km_to_speed_raw
+        pace = 5.0
+        speed_low_raw = _pace_min_km_to_speed_raw(pace + (5.0 / 60.0))
+        speed_high_raw = _pace_min_km_to_speed_raw(max(0.1, pace - (5.0 / 60.0)))
+        assert speed_low_raw < speed_high_raw
+        assert speed_low_raw > 0
+        assert speed_high_raw > 0
+
+    def test_fit_decode_values(self):
+        import fitdecode
+        segments = [
+            {"start_km": 0, "end_km": 1, "target_pace_min_km": 5.0, "grade_pct": 0.0},
+        ]
+        fit_bytes = FITService.generate_race_workout(
+            segments=segments,
+            target_time_seconds=300,
+            target_time_str="5:00",
+        )
+        steps_found = []
+        with fitdecode.FitReader(fit_bytes) as fit:
+            for frame in fit:
+                if hasattr(frame, 'name') and hasattr(frame, 'fields') and frame.name == 'workout_step':
+                    steps_found.append({
+                        'name': frame.get_value('wkt_step_name'),
+                        'intensity': frame.get_value('intensity'),
+                        'duration_type': frame.get_value('duration_type'),
+                        'duration_value': frame.get_value('duration_value'),
+                        'speed_low': frame.get_value('custom_target_speed_low'),
+                        'speed_high': frame.get_value('custom_target_speed_high'),
+                    })
+        assert len(steps_found) == 1
+        assert steps_found[0]['name'] == 'KM 0-1'
+        assert steps_found[0]['intensity'] == 'active'
+        assert abs(steps_found[0]['duration_value'] - 1000.0) < 1.0
+        assert steps_found[0]['speed_low'] is not None
+        assert steps_found[0]['speed_high'] is not None
+        target_speed = 1000.0 / 300.0
+        assert abs(steps_found[0]['speed_low'] - target_speed) < 0.5
+        assert abs(steps_found[0]['speed_high'] - target_speed) < 0.5
 
 
 @pytest.mark.usefixtures("_override_db")
