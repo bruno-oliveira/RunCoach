@@ -13,6 +13,7 @@ import datetime
 from typing import Any
 
 from fit_tool.fit_file_builder import FitFileBuilder
+from fit_tool.fit_file_header import ProtocolVersion
 from fit_tool.profile.messages.file_id_message import FileIdMessage
 from fit_tool.profile.messages.workout_message import WorkoutMessage
 from fit_tool.profile.messages.workout_step_message import WorkoutStepMessage
@@ -21,7 +22,6 @@ from fit_tool.profile.profile_type import (
     Intensity,
     Manufacturer,
     Sport,
-    SubSport,
     WorkoutStepDuration,
     WorkoutStepTarget,
 )
@@ -90,7 +90,6 @@ class FITService:
         workout = WorkoutMessage()
         workout.workout_name = f"{race_name} - {target_time_str}"
         workout.sport = Sport.RUNNING
-        workout.sub_sport = SubSport.GENERIC
         workout.num_valid_steps = total_steps
 
         steps = []
@@ -123,11 +122,13 @@ class FITService:
 
             steps.append(step)
 
-        builder = FitFileBuilder(auto_define=True, min_string_size=80)
+        builder = FitFileBuilder(auto_define=True, min_string_size=50)
         builder.add(file_id)
         builder.add(workout)
         for step in steps:
             builder.add(step)
 
         fit_file = builder.build()
+        fit_file.header.protocol_version = ProtocolVersion(1, 0)
+        fit_file.crc = None
         return fit_file.to_bytes()
