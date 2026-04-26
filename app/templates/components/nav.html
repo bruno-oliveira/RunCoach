@@ -24,6 +24,7 @@
                 {% if user %}
                 <li><a href="/my-plans" class="nav-link {{ 'is-active' if current_page == 'my-plans' else '' }}">My Plans</a></li>
                 <li><a href="/analytics" class="nav-link {{ 'is-active' if current_page == 'analytics' else '' }}">Analytics</a></li>
+                <li><a href="/race-prep" class="nav-link {{ 'is-active' if current_page == 'race-prep' else '' }}">Race Prep</a></li>
                 {% if user.strava_athlete_id %}
                 <li class="nav-item-strava">
                     <button

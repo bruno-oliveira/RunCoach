@@ -14,6 +14,7 @@ from app.routers.analytics_pages import router as analytics_page_router
 from app.routers.strava import strava_router
 from app.routers.triathlon import router as triathlon_router
 from app.routers.triathlon_pages import router as triathlon_page_router
+from app.routers.race_prep import router as race_prep_router
 
 __all__ = [
     "auth_router",
@@ -30,4 +31,5 @@ __all__ = [
     "strava_router",
     "triathlon_router",
     "triathlon_page_router",
+    "race_prep_router",
 ]

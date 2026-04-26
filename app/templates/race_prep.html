@@ -1,0 +1,172 @@
+{% extends "base.html" %}
+
+{% block title %}RunCoach — Race Prep{% endblock %}
+
+{% block styles %}
+<link rel="stylesheet" href="{{ static_url('css/race_prep.css') }}">
+{% endblock %}
+
+{% block content %}
+<div class="race-prep-page">
+    <div class="container">
+        <div class="race-prep-header">
+            <h1 class="race-prep-title">Race Prep</h1>
+            <p class="race-prep-subtitle">Upload your race GPX to get an elevation-adjusted pacing blueprint</p>
+        </div>
+
+        {% if not user %}
+        <div class="race-prep-auth-guard">
+            <div class="auth-guard-icon">🏃</div>
+            <h2>Sign in to use Race Prep</h2>
+            <p>Upload your race GPX and get personalized pacing based on your training data.</p>
+        </div>
+        {% else %}
+
+        {% if current_vdot > 0 %}
+        <div class="vdot-badge">
+            <span class="vdot-badge-label">Your VDOT</span>
+            <span class="vdot-badge-value">{{ current_vdot }}</span>
+            <span class="vdot-badge-meta">based on {{ vdot_run_count }} recent runs ({{ vdot_confidence }} confidence)</span>
+        </div>
+        {% else %}
+        <div class="vdot-badge vdot-badge--no-data">
+            <span class="vdot-badge-label">No VDOT data</span>
+            <span class="vdot-badge-meta">Log some runs to get race predictions</span>
+        </div>
+        {% endif %}
+
+        <!-- Step 1: Upload -->
+        <div class="race-prep-card" id="uploadCard">
+            <div class="race-prep-card-header">
+                <span class="race-prep-step">1</span>
+                <h2>Upload Race GPX</h2>
+            </div>
+            <div class="upload-zone" id="uploadZone">
+                <input type="file" id="gpxFileInput" accept=".gpx" class="upload-input" hidden>
+                <div class="upload-zone-content">
+                    <svg class="upload-icon" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                        <polyline points="17 8 12 3 7 8"/>
+                        <line x1="12" y1="3" x2="12" y2="15"/>
+                    </svg>
+                    <p class="upload-text">Drag & drop your race GPX file here</p>
+                    <p class="upload-subtext">or <button type="button" class="upload-browse-btn" id="browseBtn">browse files</button></p>
+                </div>
+            </div>
+            <div class="upload-loading" id="uploadLoading" style="display:none;">
+                <div class="spinner"></div>
+                <p>Analyzing route...</p>
+            </div>
+            <div class="upload-error" id="uploadError" style="display:none;"></div>
+        </div>
+
+        <!-- Step 2: Route Analysis -->
+        <div class="race-prep-card" id="analysisCard" style="display:none;">
+            <div class="race-prep-card-header">
+                <span class="race-prep-step">2</span>
+                <h2>Route Analysis</h2>
+            </div>
+
+            <div class="route-stats">
+                <div class="route-stat">
+                    <span class="route-stat-value" id="statDistance">--</span>
+                    <span class="route-stat-label">Distance</span>
+                </div>
+                <div class="route-stat">
+                    <span class="route-stat-value" id="statElevation">--</span>
+                    <span class="route-stat-label">Elevation Gain</span>
+                </div>
+                <div class="route-stat">
+                    <span class="route-stat-value" id="statMaxElev">--</span>
+                    <span class="route-stat-label">Max Elevation</span>
+                </div>
+            </div>
+
+            <div class="time-estimates" id="timeEstimates">
+                <div class="time-row">
+                    <span class="time-label">Flat-ground estimate</span>
+                    <span class="time-value" id="flatTime">--</span>
+                </div>
+                <div class="time-row time-row--penalty">
+                    <span class="time-label">Elevation penalty</span>
+                    <span class="time-value" id="elevationPenalty">--</span>
+                </div>
+                <div class="time-row time-row--adjusted">
+                    <span class="time-label">Elevation-adjusted</span>
+                    <span class="time-value" id="adjustedTime">--</span>
+                    <span class="feasibility-badge" id="feasibilityBadge">--</span>
+                </div>
+            </div>
+
+            <div class="elevation-chart-wrap">
+                <canvas id="elevationChart"></canvas>
+            </div>
+
+            <div class="analysis-actions">
+                <button class="btn btn-outline" id="adjustTimeBtn">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+                    </svg>
+                    Adjust target time
+                </button>
+                <button class="btn btn-primary" id="generateBlueprintBtn">Generate Blueprint</button>
+            </div>
+
+            <div class="time-adjust-row" id="timeAdjustRow" style="display:none;">
+                <label for="targetTimeInput">Target time (HH:MM:SS or MM:SS):</label>
+                <input type="text" id="targetTimeInput" class="time-input" placeholder="e.g. 1:52:45 or 24:30">
+                <button class="btn btn-sm" id="applyTimeBtn">Apply</button>
+            </div>
+        </div>
+
+        <!-- Step 3: Blueprint -->
+        <div class="race-prep-card" id="blueprintCard" style="display:none;">
+            <div class="race-prep-card-header">
+                <span class="race-prep-step">3</span>
+                <h2>Race Blueprint — <span id="blueprintTargetTime">--</span></h2>
+            </div>
+
+            <div class="blueprint-chart-wrap">
+                <canvas id="blueprintChart"></canvas>
+            </div>
+
+            <div class="blueprint-table-wrap">
+                <table class="blueprint-table">
+                    <thead>
+                        <tr>
+                            <th>KM</th>
+                            <th>Grade</th>
+                            <th>Elevation</th>
+                            <th>Pace</th>
+                            <th>Split</th>
+                            <th>Cumulative</th>
+                        </tr>
+                    </thead>
+                    <tbody id="blueprintTableBody">
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="blueprint-actions">
+                <button class="btn btn-primary btn-lg" id="downloadGpxBtn">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                        <polyline points="7 10 12 15 17 10"/>
+                        <line x1="12" y1="15" x2="12" y2="3"/>
+                    </svg>
+                    Download Planned GPX for Garmin
+                </button>
+            </div>
+        </div>
+
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+{% if user %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="{{ static_url('js/race_prep.js') }}" defer></script>
+{% endif %}
+{% endblock %}

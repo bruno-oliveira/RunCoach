@@ -25,6 +25,7 @@ from app.routers import (
     performance_router,
     performance_page_router,
     plans_router,
+    race_prep_router,
     readiness_router,
     recipes_router,
     recipes_page_router,
@@ -155,6 +156,7 @@ def create_app(skip_migrations: bool = False) -> FastAPI:
     app.include_router(triathlon_router)
     app.include_router(triathlon_page_router)
     app.include_router(readiness_router)
+    app.include_router(race_prep_router)
 
     templates = create_templates()
 
