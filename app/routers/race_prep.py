@@ -6,7 +6,7 @@ import uuid
 from typing import Any, Optional
 
 from fastapi import APIRouter, Depends, File, HTTPException, Request, UploadFile, status
-from fastapi.responses import HTMLResponse, Response, JSONResponse
+from fastapi.responses import HTMLResponse, Response
 from sqlalchemy.orm import Session
 
 from app.core.training.vdot_calculator import VDOTCalculator
@@ -131,9 +131,12 @@ async def generate_blueprint(
     request: RacePrepRequest,
     db: Session = Depends(get_db),
     current_user: Optional[User] = Depends(get_optional_user),
-) -> RaceBlueprint:
+) -> dict:
     """Generate a segment-by-segment pacing blueprint."""
     elevation_profile = [s.model_dump() for s in request.elevation_profile]
+
+    for idx, seg in enumerate(elevation_profile):
+        seg["segment_number"] = idx + 1
 
     if not elevation_profile:
         raise HTTPException(
@@ -180,7 +183,7 @@ async def generate_blueprint(
 
     blueprint_dict = blueprint.model_dump()
     blueprint_dict["session_id"] = session_id
-    return JSONResponse(content=blueprint_dict)
+    return blueprint_dict
 
 
 @router.get("/api/race-prep/download-gpx/{session_id}")
