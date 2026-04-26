@@ -1,7 +1,7 @@
 """FIT workout file generation for Garmin devices with pace targets.
 
-Uses raw encoded values to work around a fit_tool bug where sub-field
-resolution incorrectly matches the wrong scale factor.
+Encodes FIT binary directly to match the format produced by the official
+Garmin FIT SDK tools (big-endian, 14-byte header with CRC, profile 21.201).
 
 FIT Protocol Scale Factors:
 - Speed: m/s * 1000 (stored as mm/s)
@@ -10,52 +10,122 @@ FIT Protocol Scale Factors:
 """
 
 import datetime
+import struct
 from typing import Any
-
-from fit_tool.fit_file_builder import FitFileBuilder
-from fit_tool.fit_file_header import ProtocolVersion
-from fit_tool.profile.messages.file_id_message import FileIdMessage
-from fit_tool.profile.messages.workout_message import WorkoutMessage
-from fit_tool.profile.messages.workout_step_message import WorkoutStepMessage
-from fit_tool.profile.profile_type import (
-    FileType,
-    Intensity,
-    Manufacturer,
-    Sport,
-    WorkoutStepDuration,
-    WorkoutStepTarget,
-)
 
 SPEED_SCALE = 1000
 DISTANCE_SCALE = 100
 TIME_SCALE = 1000
 
+_CRC_TABLE = [
+    0x0000, 0xCC01, 0xD801, 0x1400, 0xF001, 0x3C00, 0x2800, 0xE401,
+    0xA001, 0x6C00, 0x7800, 0xB401, 0x5000, 0x9C01, 0x8801, 0x4400,
+]
+
+
+def _crc16(data: bytes, crc: int = 0) -> int:
+    for byte in data:
+        tmp = _CRC_TABLE[crc & 0xF]
+        crc = (crc >> 4) & 0x0FFF
+        crc = crc ^ tmp ^ _CRC_TABLE[byte & 0xF]
+        tmp = _CRC_TABLE[crc & 0xF]
+        crc = (crc >> 4) & 0x0FFF
+        crc = crc ^ tmp ^ _CRC_TABLE[(byte >> 4) & 0xF]
+    return crc
+
 
 def _pace_min_km_to_speed_raw(pace_min_km: float) -> int:
-    """Convert pace in min/km to FIT raw speed value (m/s * 1000)."""
     if pace_min_km <= 0:
         return 0
-    seconds_per_km = pace_min_km * 60.0
-    speed_ms = 1000.0 / seconds_per_km
+    speed_ms = 1000.0 / (pace_min_km * 60.0)
     return int(round(speed_ms * SPEED_SCALE))
 
 
-def _set_raw_duration_distance(step: WorkoutStepMessage, meters: float) -> None:
-    """Set duration distance using raw encoded value (meters * 100)."""
-    field = step.get_field(2)
-    field.set_encoded_value(0, int(meters * DISTANCE_SCALE))
+def _encode_string(value: str, size: int) -> bytes:
+    encoded = value.encode("utf-8") + b"\x00"
+    return encoded.ljust(size, b"\x00")[:size]
 
 
-def _set_raw_duration_time(step: WorkoutStepMessage, seconds: float) -> None:
-    """Set duration time using raw encoded value (seconds * 1000)."""
-    field = step.get_field(2)
-    field.set_encoded_value(0, int(seconds * TIME_SCALE))
+class _FITWriter:
+    """Minimal FIT binary writer matching Garmin SDK output format."""
 
+    PROTOCOL_VERSION = 0x20  # 2.0
+    PROFILE_VERSION = 21201  # 21.201
 
-def _set_raw_target_speed(step: WorkoutStepMessage, field_id: int, speed_ms: float) -> None:
-    """Set custom target speed using raw encoded value (m/s * 1000)."""
-    field = step.get_field(field_id)
-    field.set_encoded_value(0, int(speed_ms * SPEED_SCALE))
+    def __init__(self):
+        self._records = bytearray()
+        self._local_counter = 0
+
+    def _write_definition(self, local_id: int, global_id: int, fields: list[tuple[int, int, int]]) -> None:
+        buf = struct.pack(">BBBHB", 0x40 | local_id, 0x00, 0x01, global_id, len(fields))
+        for field_num, size, base_type in fields:
+            buf += struct.pack("BBB", field_num, size, base_type)
+        self._records.extend(buf)
+
+    def _write_data(self, local_id: int, payload: bytes) -> None:
+        self._records.append(local_id)
+        self._records.extend(payload)
+
+    def write_file_id(self, time_created: int, serial_number: int) -> None:
+        fields = [
+            (0, 1, 0x00),   # type: ENUM
+            (1, 2, 0x84),   # manufacturer: UINT16
+            (2, 2, 0x84),   # product: UINT16
+            (3, 4, 0x8C),   # serial_number: UINT32Z
+            (4, 4, 0x86),   # time_created: UINT32
+        ]
+        self._write_definition(0, 0, fields)
+        payload = struct.pack(">BHHII", 5, 255, 0, serial_number, time_created)
+        self._write_data(0, payload)
+
+    def write_workout(self, name: str, num_steps: int, string_size: int = 50) -> None:
+        fields = [
+            (4, 1, 0x00),           # sport: ENUM
+            (6, 2, 0x84),           # num_valid_steps: UINT16
+            (8, string_size, 0x07), # wkt_name: STRING
+        ]
+        self._write_definition(0, 26, fields)
+        payload = struct.pack(">BH", 1, num_steps) + _encode_string(name, string_size)
+        self._write_data(0, payload)
+
+    def write_workout_steps(self, steps: list[dict], string_size: int = 50) -> None:
+        fields = [
+            (254, 2, 0x84),          # message_index: UINT16
+            (0, string_size, 0x07),  # wkt_step_name: STRING
+            (1, 1, 0x00),            # duration_type: ENUM
+            (2, 4, 0x86),            # duration_value: UINT32
+            (3, 1, 0x00),            # target_type: ENUM
+            (4, 4, 0x86),            # target_value: UINT32
+            (5, 4, 0x86),            # custom_target_value_low: UINT32
+            (6, 4, 0x86),            # custom_target_value_high: UINT32
+            (7, 1, 0x00),            # intensity: ENUM
+        ]
+        self._write_definition(0, 27, fields)
+
+        for step in steps:
+            payload = struct.pack(">H", step["message_index"])
+            payload += _encode_string(step["name"], string_size)
+            payload += struct.pack(
+                ">BIBIIIB",
+                step["duration_type"],
+                step["duration_value"],
+                step["target_type"],
+                step["target_value"],
+                step["custom_target_low"],
+                step["custom_target_high"],
+                step["intensity"],
+            )
+            self._write_data(0, payload)
+
+    def build(self) -> bytes:
+        data_size = len(self._records)
+        header = struct.pack("<BbHI4s", 14, self.PROTOCOL_VERSION, self.PROFILE_VERSION, data_size, b".FIT")
+        header_crc = _crc16(header)
+        header += struct.pack("<H", header_crc)
+
+        file_crc = _crc16(header)
+        file_crc = _crc16(bytes(self._records), file_crc)
+        return header + bytes(self._records) + struct.pack("<H", file_crc)
 
 
 class FITService:
@@ -68,41 +138,24 @@ class FITService:
         target_time_str: str,
         race_name: str = "RunCoach Race Plan",
     ) -> bytes:
-        """Create a FIT workout file with distance-based pace targets per km.
+        """Create a FIT workout file with distance-based pace targets per km."""
+        now = datetime.datetime.now(datetime.timezone.utc)
+        garmin_epoch = datetime.datetime(1989, 12, 31, tzinfo=datetime.timezone.utc)
+        time_created = int((now - garmin_epoch).total_seconds())
 
-        Each segment becomes a workout step with a distance target and
-        a speed range (target +/- 5 seconds/km) so the Garmin watch shows
-        ahead/behind alerts during the race.
+        writer = _FITWriter()
+        writer.write_file_id(time_created=time_created, serial_number=0x12345678)
 
-        Structure: Warmup -> Active segments (one per km) -> Cooldown
-        """
-        now_ms = int(datetime.datetime.now(datetime.timezone.utc).timestamp() * 1000)
-
-        file_id = FileIdMessage()
-        file_id.type = FileType.WORKOUT
-        file_id.manufacturer = Manufacturer.DEVELOPMENT.value
-        file_id.product = 0
-        file_id.time_created = now_ms
-        file_id.serial_number = 0x12345678
-
-        total_steps = len(segments)
-
-        workout = WorkoutMessage()
-        workout.workout_name = f"{race_name} - {target_time_str}"
-        workout.sport = Sport.RUNNING
-        workout.num_valid_steps = total_steps
+        workout_name = f"{race_name} - {target_time_str}"
+        writer.write_workout(name=workout_name, num_steps=len(segments))
 
         steps = []
-
         for idx, seg in enumerate(segments):
-            step = WorkoutStepMessage()
-
-            seg_distance_km = seg["end_km"] - seg["start_km"]
-            seg_distance_m = seg_distance_km * 1000.0
+            seg_distance_m = (seg["end_km"] - seg["start_km"]) * 1000.0
             pace = seg["target_pace_min_km"]
 
-            speed_low_raw = _pace_min_km_to_speed_raw(pace + (5.0 / 60.0))
-            speed_high_raw = _pace_min_km_to_speed_raw(max(0.1, pace - (5.0 / 60.0)))
+            speed_low = _pace_min_km_to_speed_raw(pace + (5.0 / 60.0))
+            speed_high = _pace_min_km_to_speed_raw(max(0.1, pace - (5.0 / 60.0)))
 
             km_label = f"KM {seg['start_km']:.0f}-{seg['end_km']:.0f}"
             if seg.get("grade_pct", 0) > 0.5:
@@ -110,25 +163,17 @@ class FITService:
             elif seg.get("grade_pct", 0) < -0.5:
                 km_label += " (downhill)"
 
-            step.message_index = idx
-            step.workout_step_name = km_label
-            step.intensity = Intensity.ACTIVE
-            step.duration_type = WorkoutStepDuration.DISTANCE
-            _set_raw_duration_distance(step, seg_distance_m)
-            step.target_type = WorkoutStepTarget.SPEED
-            step.target_value = 0
-            step.get_field(5).set_encoded_value(0, max(500, speed_low_raw))
-            step.get_field(6).set_encoded_value(0, max(500, speed_high_raw))
+            steps.append({
+                "message_index": idx,
+                "name": km_label,
+                "duration_type": 1,      # DISTANCE
+                "duration_value": int(seg_distance_m * DISTANCE_SCALE),
+                "target_type": 0,        # SPEED
+                "target_value": 0,       # custom range
+                "custom_target_low": max(500, speed_low),
+                "custom_target_high": max(500, speed_high),
+                "intensity": 0,          # ACTIVE
+            })
 
-            steps.append(step)
-
-        builder = FitFileBuilder(auto_define=True, min_string_size=50)
-        builder.add(file_id)
-        builder.add(workout)
-        for step in steps:
-            builder.add(step)
-
-        fit_file = builder.build()
-        fit_file.header.protocol_version = ProtocolVersion(1, 0)
-        fit_file.crc = None
-        return fit_file.to_bytes()
+        writer.write_workout_steps(steps)
+        return writer.build()
