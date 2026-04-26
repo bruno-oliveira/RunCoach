@@ -269,7 +269,7 @@
                 "<td>" + seg.start_km + "-" + seg.end_km + "</td>" +
                 "<td class='" + gradeClass + "'>" + gradeStr + "</td>" +
                 "<td>" + seg.elevation_m + "m</td>" +
-                "<td>" + seg.target_pace_str + "/km</td>" +
+                "<td>" + seg.target_pace_str + "</td>" +
                 "<td>" + formatDuration(seg.target_time_seconds) + "</td>" +
                 "<td>" + formatDuration(seg.cumulative_time_seconds) + "</td>";
 
