@@ -5,6 +5,32 @@ from typing import Optional
 from app.core.training.hr_zone_calculator import HRZoneCalculator
 
 
+def compute_hr_zone_deviation(run_log, planned_workout, hr_zones) -> Optional[int]:
+    """Compute numeric HR zone deviation for a run.
+
+    Returns:
+        Signed integer: actual_zone - target_zone
+        None if HR data or zones unavailable.
+    """
+    if not hr_zones or not run_log.avg_heart_rate:
+        return None
+
+    actual_zone = HRZoneCalculator.classify_hr(
+        run_log.avg_heart_rate, hr_zones
+    )
+
+    target_zone = None
+    if planned_workout and hasattr(planned_workout, "hr_zone_target"):
+        target_zone = planned_workout.hr_zone_target
+    if not target_zone:
+        wtype = (
+            run_log.workout_type or "easy"
+        ).lower()
+        target_zone = HRZoneCalculator.get_workout_zone(wtype)
+
+    return actual_zone - target_zone
+
+
 def hr_zone_feedback(run_log, planned_workout, hr_zones) -> Optional[str]:
     """Compare actual HR zone vs target zone."""
     if not hr_zones or not run_log.avg_heart_rate:

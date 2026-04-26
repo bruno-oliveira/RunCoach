@@ -192,29 +192,30 @@ class TestPhaseWeights:
 
     def test_weights_sum_to_one(self):
         for phase, weights in _PHASE_WEIGHTS.items():
-            v, e, c = weights
-            assert abs(v + e + c - 1.0) < 1e-9, f"{phase} weights don't sum to 1: {v}+{e}+{c}"
+            v, e, c, hr, fb = weights
+            assert abs(v + e + c + hr + fb - 1.0) < 1e-9, f"{phase} weights don't sum to 1: {v}+{e}+{c}+{hr}+{fb}"
 
     def test_base_phase_emphasizes_volume(self):
-        v, e, c = _PHASE_WEIGHTS["base"]
+        v, e, c, hr, fb = _PHASE_WEIGHTS["base"]
         assert v > e and v > c, "Base phase should prioritize volume"
-        assert v == 0.55
+        assert v == 0.40
 
     def test_build_phase_balanced(self):
-        v, e, c = _PHASE_WEIGHTS["build"]
-        assert v == 0.50 and e == 0.30 and c == 0.20
+        v, e, c, hr, fb = _PHASE_WEIGHTS["build"]
+        assert v == 0.35 and e == 0.22 and c == 0.18 and hr == 0.15 and fb == 0.10
 
     def test_peak_phase_emphasizes_effort(self):
-        v, e, c = _PHASE_WEIGHTS["peak"]
-        assert e > c and e > v * 0.8, "Peak phase should weight effort more heavily"
-        assert e == 0.35
-        assert c == 0.25
+        v, e, c, hr, fb = _PHASE_WEIGHTS["peak"]
+        assert e >= c, "Peak phase should weight effort at least as much as completion"
+        assert hr == c, "Peak phase should weight HR zones same as completion"
+        assert e == 0.22
+        assert c == 0.18
 
     def test_taper_phase_emphasizes_completion(self):
-        v, e, c = _PHASE_WEIGHTS["taper"]
-        assert c > v and c > e, "Taper phase should prioritize completion"
-        assert c == 0.50
-        assert v == 0.20
+        v, e, c, hr, fb = _PHASE_WEIGHTS["taper"]
+        assert c > v, "Taper phase should prioritize completion over volume"
+        assert c == 0.25
+        assert v == 0.12
 
 
 class TestGetCurrentPhase:
@@ -312,7 +313,7 @@ class TestComputeAdjustmentSignals:
         return wo
 
     def test_base_phase_uses_correct_weights(self, db):
-        """Base phase should use (0.55, 0.25, 0.20) weights."""
+        """Base phase should use (0.40, 0.20, 0.20, 0.12, 0.08) weights."""
         user, plan = _create_plan_with_phases(
             db, weeks=8, weeks_ago=3,
             phases={1: "base", 2: "base", 3: "base"},
@@ -359,15 +360,23 @@ class TestComputeAdjustmentSignals:
             all_runs, past_workouts, past_workout_ids,
             today, plan.id, db, _recency_weight,
             current_phase="base",
+            hr_zones=[
+                {"zone": 1, "min_bpm": 95, "max_bpm": 114},
+                {"zone": 2, "min_bpm": 114, "max_bpm": 133},
+                {"zone": 3, "min_bpm": 133, "max_bpm": 152},
+                {"zone": 4, "min_bpm": 152, "max_bpm": 171},
+                {"zone": 5, "min_bpm": 171, "max_bpm": 190},
+            ],
         )
 
-        assert signals["phase_weights"]["volume"] == 0.55
-        assert signals["phase_weights"]["effort"] == 0.25
-        assert signals["phase_weights"]["completion"] == 0.20
+        # When no HR data in runs, hr_zone weight redistributes to other signals
+        assert signals["phase_weights"]["hr_zone"] == 0.0
+        assert signals["phase_weights"]["feedback"] >= 0.08
+        assert signals["phase_weights"]["volume"] >= 0.40
         assert signals["current_phase"] == "base"
 
     def test_taper_phase_uses_correct_weights(self, db):
-        """Taper phase should use (0.20, 0.30, 0.50) weights."""
+        """Taper phase should use (0.12, 0.22, 0.25, 0.25, 0.16) weights."""
         user, plan = _create_plan_with_phases(
             db, weeks=12, weeks_ago=10,
             phases={10: "taper", 11: "taper", 12: "taper"},
@@ -414,15 +423,23 @@ class TestComputeAdjustmentSignals:
             all_runs, past_workouts, past_workout_ids,
             today, plan.id, db, _recency_weight,
             current_phase="taper",
+            hr_zones=[
+                {"zone": 1, "min_bpm": 95, "max_bpm": 114},
+                {"zone": 2, "min_bpm": 114, "max_bpm": 133},
+                {"zone": 3, "min_bpm": 133, "max_bpm": 152},
+                {"zone": 4, "min_bpm": 152, "max_bpm": 171},
+                {"zone": 5, "min_bpm": 171, "max_bpm": 190},
+            ],
         )
 
-        assert signals["phase_weights"]["volume"] == 0.20
-        assert signals["phase_weights"]["effort"] == 0.30
-        assert signals["phase_weights"]["completion"] == 0.50
+        # When no HR data in runs, hr_zone weight redistributes to other signals
+        assert signals["phase_weights"]["hr_zone"] == 0.0
+        assert signals["phase_weights"]["feedback"] >= 0.16
+        assert signals["phase_weights"]["completion"] >= 0.25
         assert signals["current_phase"] == "taper"
 
     def test_peak_phase_uses_correct_weights(self, db):
-        """Peak phase should use (0.40, 0.35, 0.25) weights."""
+        """Peak phase should use (0.30, 0.22, 0.18, 0.18, 0.12) weights."""
         user, plan = _create_plan_with_phases(
             db, weeks=12, weeks_ago=6,
             phases={5: "peak", 6: "peak", 7: "peak"},
@@ -469,11 +486,19 @@ class TestComputeAdjustmentSignals:
             all_runs, past_workouts, past_workout_ids,
             today, plan.id, db, _recency_weight,
             current_phase="peak",
+            hr_zones=[
+                {"zone": 1, "min_bpm": 95, "max_bpm": 114},
+                {"zone": 2, "min_bpm": 114, "max_bpm": 133},
+                {"zone": 3, "min_bpm": 133, "max_bpm": 152},
+                {"zone": 4, "min_bpm": 152, "max_bpm": 171},
+                {"zone": 5, "min_bpm": 171, "max_bpm": 190},
+            ],
         )
 
-        assert signals["phase_weights"]["volume"] == 0.40
-        assert signals["phase_weights"]["effort"] == 0.35
-        assert signals["phase_weights"]["completion"] == 0.25
+        # When no HR data in runs, hr_zone weight redistributes to other signals
+        assert signals["phase_weights"]["hr_zone"] == 0.0
+        assert signals["phase_weights"]["feedback"] >= 0.12
+        assert signals["phase_weights"]["volume"] >= 0.30
 
     def test_unknown_phase_defaults_to_build_weights(self, db):
         """An unrecognized phase should fall back to build weights."""
@@ -521,9 +546,10 @@ class TestComputeAdjustmentSignals:
             current_phase="unknown_phase",
         )
 
-        assert signals["phase_weights"]["volume"] == 0.50
-        assert signals["phase_weights"]["effort"] == 0.30
-        assert signals["phase_weights"]["completion"] == 0.20
+        # When no HR data in runs, hr_zone weight redistributes to other signals
+        assert signals["phase_weights"]["hr_zone"] == 0.0
+        assert signals["phase_weights"]["volume"] >= 0.35
+        assert signals["phase_weights"]["effort"] >= 0.22
 
     def test_taper_phase_completion_matters_more_for_multiplier(self, db):
         """In taper phase, low completion should hurt the multiplier more than in base."""

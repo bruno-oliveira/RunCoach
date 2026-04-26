@@ -1,18 +1,19 @@
 """Compute volume, effort, completion, and trend signals for plan adjustment."""
 
 from collections import defaultdict
-from typing import Any, Dict, List, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
 from sqlalchemy.orm import Session
 
-from app.models import RunLog
+from app.models import RunLog, RunFeedback
+from app.services.adaptation.hr_zone_analyzer import HRZoneAnalyzer
 from app.utils import to_date as _to_date
 
 _PHASE_WEIGHTS = {
-    "base":   (0.55, 0.25, 0.20),
-    "build":  (0.50, 0.30, 0.20),
-    "peak":   (0.40, 0.35, 0.25),
-    "taper":  (0.20, 0.30, 0.50),
+    "base":   (0.40, 0.20, 0.20, 0.12, 0.08),
+    "build":  (0.35, 0.22, 0.18, 0.15, 0.10),
+    "peak":   (0.30, 0.22, 0.18, 0.18, 0.12),
+    "taper":  (0.12, 0.22, 0.25, 0.25, 0.16),
 }
 
 _MIN_RUNS_PER_TYPE = 3
@@ -48,8 +49,10 @@ def compute_adjustment_signals(
     *,
     current_phase: str = "build",
     adaptation_history: List[Dict[str, Any]] | None = None,
+    hr_zones: Optional[list[dict]] = None,
+    run_feedback_list: Optional[List] = None,
 ) -> Dict[str, Any]:
-    volume_weight, effort_weight, completion_weight = _PHASE_WEIGHTS.get(
+    volume_weight, effort_weight, completion_weight, hr_zone_weight, feedback_weight = _PHASE_WEIGHTS.get(
         current_phase, _PHASE_WEIGHTS["build"],
     )
     planned_weighted = 0.0
@@ -120,6 +123,90 @@ def compute_adjustment_signals(
         "insufficient_data": 0.0,
     }.get(effort_trend, 0.0)
 
+    # HR Zone Signal
+    hr_result = HRZoneAnalyzer.analyze_runs(
+        all_plan_runs,
+        hr_zones,
+        recency_weight_fn=recency_weight_fn,
+        today=today,
+    )
+
+    avg_zone_deviation = hr_result["avg_deviation"]
+    hr_zone_adherence = hr_result["adherence_rate"]
+    hr_zone_trend = hr_result["trend"]
+
+    # Map deviation to factor
+    if avg_zone_deviation >= 1.5:
+        hr_zone_factor = 0.90
+    elif avg_zone_deviation >= 1.0:
+        hr_zone_factor = 0.95
+    elif avg_zone_deviation <= -1.0:
+        hr_zone_factor = 1.05
+    elif avg_zone_deviation <= -0.5:
+        hr_zone_factor = 1.02
+    else:
+        hr_zone_factor = 1.0
+
+    # If no HR data, distribute weight to other signals
+    if hr_zones is None or hr_result["run_count"] == 0:
+        hr_zone_factor = 1.0
+        original_hr_weight = hr_zone_weight
+        hr_zone_weight = 0.0
+        total_other = volume_weight + effort_weight + completion_weight + feedback_weight
+        if total_other > 0:
+            scale = 1.0 + original_hr_weight / total_other
+            volume_weight *= scale
+            effort_weight *= scale
+            completion_weight *= scale
+            feedback_weight *= scale
+
+    # Feedback Sentiment Signal
+    if run_feedback_list and len(run_feedback_list) > 0:
+        warning_weighted = 0.0
+        positive_weighted = 0.0
+        total_weighted = 0.0
+
+        for fb in run_feedback_list:
+            run_date = None
+            for run in all_plan_runs:
+                if run.id == fb.run_log_id:
+                    run_date = _to_date(run.date) if run.date else today
+                    break
+
+            if run_date:
+                w = recency_weight_fn(run_date)
+            else:
+                w = 1.0
+
+            total_weighted += w
+            if fb.overall_sentiment == "warning":
+                warning_weighted += w
+            elif fb.overall_sentiment == "positive":
+                positive_weighted += w
+
+        if total_weighted > 0:
+            warning_ratio = warning_weighted / total_weighted
+            positive_ratio = positive_weighted / total_weighted
+
+            if warning_ratio > 0.6:
+                feedback_factor = 0.92
+            elif warning_ratio > 0.4:
+                feedback_factor = 0.96
+            elif positive_ratio > 0.6:
+                feedback_factor = 1.05
+            elif positive_ratio > 0.4:
+                feedback_factor = 1.02
+            else:
+                feedback_factor = 1.0
+        else:
+            feedback_factor = 1.0
+            warning_ratio = 0.0
+            positive_ratio = 0.0
+    else:
+        feedback_factor = 1.0
+        warning_ratio = 0.0
+        positive_ratio = 0.0
+
     completed_ids = set()
     if past_workout_ids:
         completed_rows = (
@@ -151,6 +238,8 @@ def compute_adjustment_signals(
         (volume_ratio * volume_weight)
         + (effort_factor * effort_weight)
         + (completion_factor * completion_weight)
+        + (hr_zone_factor * hr_zone_weight)
+        + (feedback_factor * feedback_weight)
     )
 
     raw_multiplier += trend_modifier
@@ -158,6 +247,11 @@ def compute_adjustment_signals(
     overreach_detected = False
     if volume_ratio > 1.2 and avg_effort is not None and avg_effort > 8.0:
         raw_multiplier = min(raw_multiplier, 0.88)
+        overreach_detected = True
+
+    # HR-based overreach detection
+    if hr_zone_adherence < 0.3 and hr_result.get("avg_abs_deviation", 0) > 1.0:
+        raw_multiplier = min(raw_multiplier, 0.85)
         overreach_detected = True
 
     consecutive_same_direction = _count_consecutive_direction(adaptation_history)
@@ -186,10 +280,19 @@ def compute_adjustment_signals(
             "volume": round(volume_weight, 2),
             "effort": round(effort_weight, 2),
             "completion": round(completion_weight, 2),
+            "hr_zone": round(hr_zone_weight, 2),
+            "feedback": round(feedback_weight, 2),
         },
         "current_phase": current_phase,
         "consecutive_same_direction": consecutive_same_direction,
         "expanded_range": consecutive_same_direction >= _CONSECUTIVE_THRESHOLD,
+        "hr_zone_adherence": hr_zone_adherence,
+        "avg_zone_deviation": round(avg_zone_deviation, 2),
+        "hr_zone_trend": hr_zone_trend,
+        "hr_zone_factor": round(hr_zone_factor, 2),
+        "warning_ratio": round(warning_ratio, 2),
+        "positive_ratio": round(positive_ratio, 2),
+        "feedback_factor": round(feedback_factor, 2),
     }
 
 

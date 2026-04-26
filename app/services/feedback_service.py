@@ -61,6 +61,14 @@ class FeedbackService:
             run_log, planned_workout, hr_zones, db
         )
 
+        # Compute and store numeric HR zone deviation on the run log
+        from app.core.coaching.hr_feedback import compute_hr_zone_deviation
+
+        hr_deviation = compute_hr_zone_deviation(run_log, planned_workout, hr_zones)
+        if hr_deviation is not None:
+            run_log.hr_zone_deviation = hr_deviation
+            db.commit()
+
         # Only store if at least one field is populated
         has_content = any(
             fb.get(k) for k in (

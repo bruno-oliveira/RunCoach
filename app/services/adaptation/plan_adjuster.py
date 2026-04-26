@@ -6,7 +6,7 @@ from typing import Any, Dict, List, Optional, Tuple
 
 from sqlalchemy.orm import Session
 
-from app.models import DailyWorkout, RunLog, TrainingPlan, WeeklyPlan
+from app.models import DailyWorkout, RunLog, RunFeedback, TrainingPlan, WeeklyPlan
 from app.utils import to_date as _to_date
 
 from ._helpers import (
@@ -43,6 +43,14 @@ def adjust_plan(
     map_runs_to_plan(plan_id, user_id, db)
     backfill_baselines(training_plan, db)
 
+    # Fetch HR zones from training plan
+    hr_zones = None
+    if training_plan.hr_zones_data:
+        try:
+            hr_zones = training_plan.hr_zones_data.get("zones")
+        except (AttributeError, TypeError):
+            pass
+
     start_date = _to_date(training_plan.start_date)
     today = today_date()
     days_elapsed = (today - start_date).days
@@ -53,6 +61,14 @@ def adjust_plan(
         .filter(RunLog.training_plan_id == plan_id)
         .all()
     )
+
+    # Fetch feedback for all runs
+    run_ids = [run.id for run in all_plan_runs]
+    run_feedback_list = (
+        db.query(RunFeedback)
+        .filter(RunFeedback.run_log_id.in_(run_ids))
+        .all()
+    ) if run_ids else []
 
     if len(all_plan_runs) < 3:
         return {
@@ -96,6 +112,8 @@ def adjust_plan(
         today, plan_id, db, _recency_weight,
         current_phase=_get_current_phase(training_plan, current_week),
         adaptation_history=training_plan.adaptation_history,
+        hr_zones=hr_zones,
+        run_feedback_list=run_feedback_list,
     )
     multiplier = signals["multiplier"]
 
@@ -161,6 +179,19 @@ def adjust_plan(
             f"({vdot_result['direction']})."
         )
     reason_parts.append(f"Phase: {current_phase} (weights: V={phase_weights.get('volume', 0):.0%} E={phase_weights.get('effort', 0):.0%} C={phase_weights.get('completion', 0):.0%}).")
+
+    hr_zone_adherence = signals.get("hr_zone_adherence")
+    if hr_zone_adherence is not None:
+        reason_parts.append(
+            f"HR zone adherence: {round(hr_zone_adherence * 100)}% "
+            f"(trend: {signals.get('hr_zone_trend', 'unknown')})."
+        )
+
+    warning_ratio = signals.get("warning_ratio")
+    if warning_ratio is not None and warning_ratio > 0:
+        reason_parts.append(
+            f"Feedback warnings: {round(warning_ratio * 100)}% of runs."
+        )
 
     logger.info(
         "adjust_plan result: multiplier=%.2f raw=%.3f "
