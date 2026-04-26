@@ -117,6 +117,7 @@ class FITService:
             step.duration_type = WorkoutStepDuration.DISTANCE
             _set_raw_duration_distance(step, seg_distance_m)
             step.target_type = WorkoutStepTarget.SPEED
+            step.target_value = 0
             step.get_field(5).set_encoded_value(0, max(500, speed_low_raw))
             step.get_field(6).set_encoded_value(0, max(500, speed_high_raw))
 
