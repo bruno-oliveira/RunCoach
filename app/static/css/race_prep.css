@@ -423,6 +423,41 @@
     padding-top: 0.5rem;
 }
 
+.download-options {
+    display: flex;
+    gap: 1rem;
+    justify-content: center;
+    flex-wrap: wrap;
+}
+
+.download-options .btn-lg {
+    flex: 1;
+    min-width: 220px;
+    max-width: 320px;
+    text-align: left;
+    padding: 0.85rem 1.25rem;
+}
+
+.download-btn-main {
+    display: block;
+    font-weight: 600;
+}
+
+.download-btn-sub {
+    display: block;
+    font-size: 0.75rem;
+    opacity: 0.8;
+    font-weight: 400;
+}
+
+.btn-primary .download-btn-sub {
+    opacity: 0.85;
+}
+
+.btn-outline .download-btn-sub {
+    color: var(--text-muted, #6b7280);
+}
+
 /* Buttons */
 .btn {
     display: inline-flex;
@@ -556,5 +591,15 @@
     .vdot-badge {
         flex-direction: column;
         gap: 0.25rem;
+    }
+
+    .download-options {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .download-options .btn-lg {
+        max-width: none;
+        justify-content: center;
     }
 }

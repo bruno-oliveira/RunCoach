@@ -24,6 +24,7 @@
     const targetTimeInput = document.getElementById("targetTimeInput");
     const applyTimeBtn = document.getElementById("applyTimeBtn");
     const downloadGpxBtn = document.getElementById("downloadGpxBtn");
+    const downloadFitBtn = document.getElementById("downloadFitBtn");
 
     if (!uploadZone) return;
 
@@ -448,6 +449,37 @@
         }
     }
 
+    async function downloadFit() {
+        if (!blueprintSessionId) {
+            showToast("No blueprint session available. Please regenerate.", "error");
+            return;
+        }
+
+        try {
+            var response = await fetch("/api/race-prep/download-fit/" + blueprintSessionId);
+            if (!response.ok) {
+                var errData = await response.json().catch(function () {
+                    return null;
+                });
+                throw new Error((errData && errData.detail) || "Download failed");
+            }
+
+            var blob = await response.blob();
+            var url = URL.createObjectURL(blob);
+            var a = document.createElement("a");
+            a.href = url;
+            a.download = "race_plan.fit";
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+
+            showToast("FIT workout downloaded! Import into Garmin Connect for pace alerts.", "success");
+        } catch (err) {
+            showToast("Download failed: " + err.message, "error");
+        }
+    }
+
     uploadZone.addEventListener("click", function () {
         gpxFileInput.click();
     });
@@ -506,5 +538,9 @@
 
     if (downloadGpxBtn) {
         downloadGpxBtn.addEventListener("click", downloadGpx);
+    }
+
+    if (downloadFitBtn) {
+        downloadFitBtn.addEventListener("click", downloadFit);
     }
 })();

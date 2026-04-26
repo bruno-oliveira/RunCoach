@@ -13,6 +13,7 @@ from app.core.training.vdot_calculator import VDOTCalculator
 from app.dependencies import get_db, get_optional_user
 from app.models import User
 from app.schemas.race_prep_schemas import GPXAnalysisResponse, RaceBlueprint, RacePrepRequest
+from app.services.fit_service import FITService
 from app.services.gpx_service import GPXService
 from app.services.race_pacing_service import RacePacingService
 from app.template_helpers import create_templates
@@ -226,6 +227,44 @@ async def download_gpx(session_id: str):
         media_type="application/gpx+xml",
         headers={
             "Content-Disposition": f'attachment; filename="race_plan_{target_time}s.gpx"',
+        },
+    )
+
+
+@router.get("/api/race-prep/download-fit/{session_id}")
+async def download_fit(session_id: str):
+    """Download a planned FIT workout file for Garmin watches with pace alerts."""
+    stored = _blueprint_store.get(session_id)
+    if not stored:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Blueprint session expired. Please regenerate your pacing plan.",
+        )
+
+    blueprint_data = stored["blueprint"]
+    segments = blueprint_data.get("segments", [])
+
+    if not segments:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="No pacing data available for FIT generation.",
+        )
+
+    target_time = blueprint_data["target_time_seconds"]
+    target_time_str = blueprint_data["target_time_str"]
+
+    fit_content = FITService.generate_race_workout(
+        segments=segments,
+        target_time_seconds=target_time,
+        target_time_str=target_time_str,
+        race_name="RunCoach Race Plan",
+    )
+
+    return Response(
+        content=fit_content,
+        media_type="application/octet-stream",
+        headers={
+            "Content-Disposition": f'attachment; filename="race_plan_{target_time}s.fit"',
         },
     )
 

@@ -13,6 +13,7 @@ from app.dependencies import get_current_user, get_db, get_optional_user
 from app.main import app
 from app.models.user import User
 from app.routers.race_prep import _blueprint_store
+from app.services.fit_service import FITService
 from app.services.gpx_service import GPXService
 from app.services.race_pacing_service import RacePacingService
 
@@ -296,3 +297,45 @@ class TestRacePrepAPI:
                 json=[{"lat": 0, "lon": 0}],
             )
         assert resp.status_code == 404
+
+
+class TestFITService:
+    def test_generate_race_workout(self):
+        segments = [
+            {
+                "start_km": 0, "end_km": 1, "target_pace_min_km": 5.5,
+                "grade_pct": 1.0,
+            },
+            {
+                "start_km": 1, "end_km": 2, "target_pace_min_km": 5.3,
+                "grade_pct": 0.0,
+            },
+            {
+                "start_km": 2, "end_km": 3, "target_pace_min_km": 5.0,
+                "grade_pct": -0.5,
+            },
+        ]
+        fit_bytes = FITService.generate_race_workout(
+            segments=segments,
+            target_time_seconds=960,
+            target_time_str="16:00",
+            race_name="Test Race",
+        )
+        assert len(fit_bytes) > 50
+        assert b".FIT" in fit_bytes or fit_bytes[4:8] == b".FIT"
+
+    def test_pace_conversion(self):
+        from app.services.fit_service import _pace_min_km_to_speed_ms
+        speed = _pace_min_km_to_speed_ms(5.0)
+        assert abs(speed - 1000.0 / 300.0) < 0.01
+        speed = _pace_min_km_to_speed_ms(0)
+        assert speed == 0.0
+
+
+@pytest.mark.usefixtures("_override_db")
+class TestFITDownloadAPI:
+    def test_download_fit_not_found(self):
+        with TestClient(app) as c:
+            resp = c.get("/api/race-prep/download-fit/nonexistent-session")
+        assert resp.status_code == 404
+
