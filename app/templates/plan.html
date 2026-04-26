@@ -39,7 +39,7 @@
         <div class="tier-badge">
             <span class="badge badge-{{ experience_level }}">{{ experience_level | title }} Plan</span>
             {% if plan and plan[0].is_beginner_plan %}
-            <p>A Couch to 5K program designed for new runners</p>
+            <p>A Couch to {{ target_distance|int }}K program designed for new runners</p>
             {% elif target_distance|string == '30.0' or target_distance|string == '30' %}
             <p>Ready to conquer the trails?</p>
             {% else %}
