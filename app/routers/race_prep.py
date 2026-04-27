@@ -6,14 +6,12 @@ import uuid
 from typing import Any, Optional
 
 from fastapi import APIRouter, Depends, File, HTTPException, Request, UploadFile, status
-from fastapi.responses import HTMLResponse, Response
+from fastapi.responses import HTMLResponse
 from sqlalchemy.orm import Session
 
-from app.core.training.vdot_calculator import VDOTCalculator
 from app.dependencies import get_db, get_optional_user
 from app.models import User
 from app.schemas.race_prep_schemas import GPXAnalysisResponse, RaceBlueprint, RacePrepRequest
-from app.services.fit_service import FITService
 from app.services.gpx_service import GPXService
 from app.services.race_pacing_service import RacePacingService
 from app.template_helpers import create_templates
@@ -185,102 +183,3 @@ async def generate_blueprint(
     blueprint_dict = blueprint.model_dump()
     blueprint_dict["session_id"] = session_id
     return blueprint_dict
-
-
-@router.get("/api/race-prep/download-gpx/{session_id}")
-async def download_gpx(session_id: str):
-    """Download a planned GPX file for Garmin watches."""
-    stored = _blueprint_store.get(session_id)
-    if not stored:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Blueprint session expired. Please regenerate your pacing plan.",
-        )
-
-    blueprint_data = stored["blueprint"]
-    trackpoints = blueprint_data.get("trackpoints", [])
-
-    if not trackpoints:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="No route data available for GPX generation.",
-        )
-
-    pace_plan = []
-    for seg in blueprint_data.get("segments", []):
-        pace_plan.append({
-            "end_km": seg["end_km"],
-            "target_pace_str": seg["target_pace_str"],
-            "cumulative_time_str": VDOTCalculator.format_duration(seg["cumulative_time_seconds"]),
-        })
-
-    target_time = blueprint_data["target_time_seconds"]
-    gpx_content = GPXService.generate_planned_gpx(
-        original_trackpoints=trackpoints,
-        pace_plan=pace_plan,
-        target_time_seconds=target_time,
-        race_name=f"RunCoach {blueprint_data['target_time_str']}",
-    )
-
-    return Response(
-        content=gpx_content,
-        media_type="application/gpx+xml",
-        headers={
-            "Content-Disposition": f'attachment; filename="race_plan_{target_time}s.gpx"',
-        },
-    )
-
-
-@router.get("/api/race-prep/download-fit/{session_id}")
-async def download_fit(session_id: str):
-    """Download a planned FIT workout file for Garmin watches with pace alerts."""
-    stored = _blueprint_store.get(session_id)
-    if not stored:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Blueprint session expired. Please regenerate your pacing plan.",
-        )
-
-    blueprint_data = stored["blueprint"]
-    segments = blueprint_data.get("segments", [])
-
-    if not segments:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="No pacing data available for FIT generation.",
-        )
-
-    target_time = blueprint_data["target_time_seconds"]
-    target_time_str = blueprint_data["target_time_str"]
-
-    fit_content = FITService.generate_race_workout(
-        segments=segments,
-        target_time_seconds=target_time,
-        target_time_str=target_time_str,
-        race_name="RunCoach Race Plan",
-    )
-
-    return Response(
-        content=fit_content,
-        media_type="application/octet-stream",
-        headers={
-            "Content-Disposition": f'attachment; filename="race_plan_{target_time}s.fit"',
-        },
-    )
-
-
-@router.post("/api/race-prep/blueprint/{session_id}/attach-route")
-async def attach_route_to_blueprint(
-    session_id: str,
-    trackpoints: list[dict[str, Any]],
-):
-    """Attach original GPX trackpoints to a blueprint session for download."""
-    stored = _blueprint_store.get(session_id)
-    if not stored:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Blueprint session not found.",
-        )
-
-    stored["blueprint"]["trackpoints"] = trackpoints
-    return {"status": "ok", "session_id": session_id}

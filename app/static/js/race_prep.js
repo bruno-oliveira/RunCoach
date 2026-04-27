@@ -8,8 +8,6 @@
     let elevationChart = null;
     let blueprintChart = null;
     let analysisData = null;
-    let blueprintSessionId = null;
-    let originalTrackpoints = null;
 
     const uploadZone = document.getElementById("uploadZone");
     const gpxFileInput = document.getElementById("gpxFileInput");
@@ -23,8 +21,6 @@
     const timeAdjustRow = document.getElementById("timeAdjustRow");
     const targetTimeInput = document.getElementById("targetTimeInput");
     const applyTimeBtn = document.getElementById("applyTimeBtn");
-    const downloadGpxBtn = document.getElementById("downloadGpxBtn");
-    const downloadFitBtn = document.getElementById("downloadFitBtn");
 
     if (!uploadZone) return;
 
@@ -308,7 +304,6 @@
             }
 
             analysisData = await response.json();
-            originalTrackpoints = analysisData.trackpoints || [];
             renderAnalysis(analysisData);
             showToast("Route analyzed successfully!", "success");
         } catch (err) {
@@ -392,22 +387,13 @@
             }
 
             var blueprint = await response.json();
-            blueprintSessionId = blueprint.session_id || null;
-
-            if (blueprintSessionId && originalTrackpoints) {
-                await fetch("/api/race-prep/blueprint/" + blueprintSessionId + "/attach-route", {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify(originalTrackpoints),
-                });
-            }
 
             document.getElementById("blueprintTargetTime").textContent = blueprint.target_time_str;
             renderBlueprintChart(blueprint.segments);
             renderBlueprintTable(blueprint.segments);
 
             blueprintCard.style.display = "block";
-            showToast("Blueprint generated! Download your GPX below.", "success");
+            showToast("Blueprint generated!", "success");
 
             blueprintCard.scrollIntoView({ behavior: "smooth", block: "start" });
         } catch (err) {
@@ -415,68 +401,6 @@
         } finally {
             generateBlueprintBtn.disabled = false;
             generateBlueprintBtn.textContent = "Generate Blueprint";
-        }
-    }
-
-    async function downloadGpx() {
-        if (!blueprintSessionId) {
-            showToast("No blueprint session available. Please regenerate.", "error");
-            return;
-        }
-
-        try {
-            var response = await fetch("/api/race-prep/download-gpx/" + blueprintSessionId);
-            if (!response.ok) {
-                var errData = await response.json().catch(function () {
-                    return null;
-                });
-                throw new Error((errData && errData.detail) || "Download failed");
-            }
-
-            var blob = await response.blob();
-            var url = URL.createObjectURL(blob);
-            var a = document.createElement("a");
-            a.href = url;
-            a.download = "race_plan.gpx";
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-            URL.revokeObjectURL(url);
-
-            showToast("GPX downloaded! Import it into Garmin Connect.", "success");
-        } catch (err) {
-            showToast("Download failed: " + err.message, "error");
-        }
-    }
-
-    async function downloadFit() {
-        if (!blueprintSessionId) {
-            showToast("No blueprint session available. Please regenerate.", "error");
-            return;
-        }
-
-        try {
-            var response = await fetch("/api/race-prep/download-fit/" + blueprintSessionId);
-            if (!response.ok) {
-                var errData = await response.json().catch(function () {
-                    return null;
-                });
-                throw new Error((errData && errData.detail) || "Download failed");
-            }
-
-            var blob = await response.blob();
-            var url = URL.createObjectURL(blob);
-            var a = document.createElement("a");
-            a.href = url;
-            a.download = "race_plan.fit";
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-            URL.revokeObjectURL(url);
-
-            showToast("FIT workout downloaded! Import into Garmin Connect for pace alerts.", "success");
-        } catch (err) {
-            showToast("Download failed: " + err.message, "error");
         }
     }
 
@@ -534,13 +458,5 @@
 
     if (generateBlueprintBtn) {
         generateBlueprintBtn.addEventListener("click", generateBlueprint);
-    }
-
-    if (downloadGpxBtn) {
-        downloadGpxBtn.addEventListener("click", downloadGpx);
-    }
-
-    if (downloadFitBtn) {
-        downloadFitBtn.addEventListener("click", downloadFit);
     }
 })();

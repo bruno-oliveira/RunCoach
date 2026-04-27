@@ -1,6 +1,6 @@
 """Smoke tests for the Race Prep feature.
 
-Covers page rendering, GPX analysis, blueprint generation, and GPX download.
+Covers page rendering, GPX analysis, and blueprint generation.
 Mostly smoke tests since full integration would require mocking GPX parsing,
 VDOT calculation, and database runs.
 """
@@ -13,7 +13,6 @@ from app.dependencies import get_current_user, get_db, get_optional_user
 from app.main import app
 from app.models.user import User
 from app.routers.race_prep import _blueprint_store
-from app.services.fit_service import FITService
 from app.services.gpx_service import GPXService
 from app.services.race_pacing_service import RacePacingService
 
@@ -285,143 +284,10 @@ class TestRacePrepAPI:
         finally:
             _clear_user()
 
-    def test_download_gpx_not_found(self):
-        with TestClient(app) as c:
-            resp = c.get("/api/race-prep/download-gpx/nonexistent-session")
-        assert resp.status_code == 404
-
-    def test_attach_route_not_found(self):
-        with TestClient(app) as c:
-            resp = c.post(
-                "/api/race-prep/blueprint/nonexistent/attach-route",
-                json=[{"lat": 0, "lon": 0}],
-            )
-        assert resp.status_code == 404
-
-
-class TestFITService:
-    def test_generate_race_workout(self):
-        segments = [
-            {
-                "start_km": 0, "end_km": 1, "target_pace_min_km": 5.5,
-                "grade_pct": 1.0,
-            },
-            {
-                "start_km": 1, "end_km": 2, "target_pace_min_km": 5.3,
-                "grade_pct": 0.0,
-            },
-            {
-                "start_km": 2, "end_km": 3, "target_pace_min_km": 5.0,
-                "grade_pct": -0.5,
-            },
-        ]
-        fit_bytes = FITService.generate_race_workout(
-            segments=segments,
-            target_time_seconds=960,
-            target_time_str="16:00",
-            race_name="Test Race",
-        )
-        assert len(fit_bytes) > 50
-        assert b".FIT" in fit_bytes
-
-    def test_pace_conversion(self):
-        from app.services.fit_service import _pace_min_km_to_speed_ms
-        speed_ms = _pace_min_km_to_speed_ms(5.0)
-        expected_ms = 1000.0 / 300.0
-        assert abs(speed_ms - expected_ms) < 0.001
-        speed_ms = _pace_min_km_to_speed_ms(0)
-        assert speed_ms == 0.0
-
-    def test_speed_range_is_valid(self):
-        from app.services.fit_service import PACE_TOLERANCE_SEC, _pace_min_km_to_speed_ms
-        pace = 5.0
-        target_sec = pace * 60.0
-        slow_sec = target_sec + PACE_TOLERANCE_SEC
-        fast_sec = max(1.0, target_sec - PACE_TOLERANCE_SEC)
-        speed_low_ms = _pace_min_km_to_speed_ms(slow_sec / 60.0)
-        speed_high_ms = _pace_min_km_to_speed_ms(fast_sec / 60.0)
-        assert speed_low_ms < speed_high_ms
-        assert speed_low_ms > 0
-        assert speed_high_ms > 0
-        assert PACE_TOLERANCE_SEC == 15
-
-    def test_fit_decode_values(self):
-        import fitdecode
-        segments = [
-            {"start_km": 0, "end_km": 1, "target_pace_min_km": 5.0, "grade_pct": 0.0},
-        ]
-        fit_bytes = FITService.generate_race_workout(
-            segments=segments,
-            target_time_seconds=300,
-            target_time_str="5:00",
-        )
-        steps_found = []
-        with fitdecode.FitReader(fit_bytes) as fit:
-            for frame in fit:
-                if isinstance(frame, fitdecode.FitDataMessage) and frame.name == 'workout_step':
-                    steps_found.append({
-                        'name': frame.get_value('wkt_step_name'),
-                        'intensity': frame.get_value('intensity'),
-                        'duration_type': frame.get_value('duration_type'),
-                        'duration_distance': frame.get_value('duration_distance'),
-                        'speed_low': frame.get_value('custom_target_speed_low'),
-                        'speed_high': frame.get_value('custom_target_speed_high'),
-                    })
-        assert len(steps_found) == 1
-        assert steps_found[0]['name'] == 'KM 0-1'
-        assert steps_found[0]['intensity'] == 'active'
-        assert abs(steps_found[0]['duration_distance'] - 1000.0) < 1.0
-        assert steps_found[0]['speed_low'] is not None
-        assert steps_found[0]['speed_high'] is not None
-        target_speed = 1000.0 / 300.0
-        assert abs(steps_found[0]['speed_low'] - target_speed) < 0.5
-        assert abs(steps_found[0]['speed_high'] - target_speed) < 0.5
-
-    def test_fit_file_type_is_workout(self):
-        import fitdecode
-        segments = [
-            {"start_km": 0, "end_km": 1, "target_pace_min_km": 5.0, "grade_pct": 0.0},
-        ]
-        fit_bytes = FITService.generate_race_workout(
-            segments=segments,
-            target_time_seconds=300,
-            target_time_str="5:00",
-        )
-        file_types = []
-        with fitdecode.FitReader(fit_bytes) as fit:
-            for frame in fit:
-                if isinstance(frame, fitdecode.FitDataMessage) and frame.name == 'file_id':
-                    file_types.append(frame.get_value('type'))
-        assert len(file_types) >= 1
-        assert file_types[0] == 'workout'
-
-    def test_fit_workout_has_sub_sport(self):
-        import fitdecode
-        segments = [
-            {"start_km": 0, "end_km": 1, "target_pace_min_km": 5.0, "grade_pct": 0.0},
-        ]
-        fit_bytes = FITService.generate_race_workout(
-            segments=segments,
-            target_time_seconds=300,
-            target_time_str="5:00",
-        )
-        with fitdecode.FitReader(fit_bytes) as fit:
-            for frame in fit:
-                if isinstance(frame, fitdecode.FitDataMessage) and frame.name == 'workout':
-                    assert frame.get_value('sport') == 'running'
-                    assert frame.get_value('sub_sport') is not None
-
-
-@pytest.mark.usefixtures("_override_db")
-class TestFITDownloadAPI:
-    def test_download_fit_not_found(self):
-        with TestClient(app) as c:
-            resp = c.get("/api/race-prep/download-fit/nonexistent-session")
-        assert resp.status_code == 404
-
 
 class TestFITValidationLocal:
     def test_validate_generated_fit(self):
+        from app.services.fit_service import FITService
         from app.services.fit_validation_local import validate_fit_bytes
         segments = [
             {"start_km": 0, "end_km": 1, "target_pace_min_km": 5.0, "grade_pct": 0.0},
