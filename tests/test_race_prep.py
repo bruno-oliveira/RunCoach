@@ -333,13 +333,17 @@ class TestFITService:
         assert speed_ms == 0.0
 
     def test_speed_range_is_valid(self):
-        from app.services.fit_service import _pace_min_km_to_speed_ms
+        from app.services.fit_service import PACE_TOLERANCE_SEC, _pace_min_km_to_speed_ms
         pace = 5.0
-        speed_low_ms = _pace_min_km_to_speed_ms(pace + (5.0 / 60.0))
-        speed_high_ms = _pace_min_km_to_speed_ms(max(0.1, pace - (5.0 / 60.0)))
+        target_sec = pace * 60.0
+        slow_sec = target_sec + PACE_TOLERANCE_SEC
+        fast_sec = max(1.0, target_sec - PACE_TOLERANCE_SEC)
+        speed_low_ms = _pace_min_km_to_speed_ms(slow_sec / 60.0)
+        speed_high_ms = _pace_min_km_to_speed_ms(fast_sec / 60.0)
         assert speed_low_ms < speed_high_ms
         assert speed_low_ms > 0
         assert speed_high_ms > 0
+        assert PACE_TOLERANCE_SEC == 15
 
     def test_fit_decode_values(self):
         import fitdecode
@@ -359,14 +363,14 @@ class TestFITService:
                         'name': frame.get_value('wkt_step_name'),
                         'intensity': frame.get_value('intensity'),
                         'duration_type': frame.get_value('duration_type'),
-                        'duration_value': frame.get_value('duration_value'),
+                        'duration_distance': frame.get_value('duration_distance'),
                         'speed_low': frame.get_value('custom_target_speed_low'),
                         'speed_high': frame.get_value('custom_target_speed_high'),
                     })
         assert len(steps_found) == 1
         assert steps_found[0]['name'] == 'KM 0-1'
         assert steps_found[0]['intensity'] == 'active'
-        assert abs(steps_found[0]['duration_value'] - 1000.0) < 1.0
+        assert abs(steps_found[0]['duration_distance'] - 1000.0) < 1.0
         assert steps_found[0]['speed_low'] is not None
         assert steps_found[0]['speed_high'] is not None
         target_speed = 1000.0 / 300.0
