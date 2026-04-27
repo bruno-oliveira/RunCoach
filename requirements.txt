@@ -30,8 +30,9 @@ cachetools==5.5.2
 # GPX parsing and generation
 gpxpy>=1.6.0
 
-# FIT file generation for Garmin workouts (official SDK)
-garmin-fit-sdk>=21.201.0
+# FIT file generation for Garmin workouts
+fit-tool>=0.9.0
+fitdecode>=0.10.0
 
 # Testing (install with: pip install -e ".[test]")
 pytest==8.3.5
