@@ -30,6 +30,8 @@
                 <h3>{{ plan.target_distance_display }} Training Plan</h3>
                 {% if plan.plan_type == 'performance' %}
                 <span class="plan-badge badge-performance">Performance</span>
+                {% elif plan.plan_type == 'fitness' %}
+                <span class="plan-badge badge-fitness">Fitness</span>
                 {% else %}
                 <span class="plan-badge badge-distance">Distance</span>
                 {% endif %}

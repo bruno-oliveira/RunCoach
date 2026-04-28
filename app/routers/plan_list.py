@@ -48,6 +48,8 @@ async def list_my_plans(
                 plan.target_distance_display = DISTANCE_NAMES.get(td, f"{td}km")
             elif plan.plan_type == "performance":
                 plan.target_distance_display = "Performance"
+            elif plan.plan_type == "fitness":
+                plan.target_distance_display = "Fitness"
             else:
                 plan.target_distance_display = f"{td}km"
             plan.experience_level = derive_experience_level(plan.current_weekly_km or 0)

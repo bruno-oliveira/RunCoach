@@ -16,15 +16,23 @@ class PlanPagesMixin:
     """Methods for rendering plan-related PDF pages."""
 
     def _add_title_page(self, story: List, training_plan: TrainingPlan, plan_data: List[Dict]):
-        is_performance = getattr(training_plan, 'plan_type', 'distance') == 'performance'
+        plan_type = getattr(training_plan, 'plan_type', 'distance')
+        is_performance = plan_type == 'performance'
+        is_fitness = plan_type == 'fitness'
 
         if is_performance:
             story.append(Paragraph("⚡ Performance Training Plan", self.title_style))
+        elif is_fitness:
+            story.append(Paragraph("💪 Fitness Training Plan", self.title_style))
         else:
             story.append(Paragraph("🏃‍♂️ Personalized Running Training Plan", self.title_style))
         story.append(Spacer(1, 0.5 * cm))
 
-        subtitle = f"Target: {training_plan.target_distance}km Race | {training_plan.weeks_duration} Weeks"
+        if is_fitness:
+            focus = training_plan.target_distance.replace("fitness_", "").replace("_", " ").title()
+            subtitle = f"Focus: {focus} | {training_plan.weeks_duration} Weeks"
+        else:
+            subtitle = f"Target: {training_plan.target_distance}km Race | {training_plan.weeks_duration} Weeks"
         story.append(Paragraph(subtitle, self.subtitle_style))
         story.append(Spacer(1, 0.3 * cm))
 
@@ -47,7 +55,13 @@ class PlanPagesMixin:
         story.append(Spacer(1, 2 * cm))
 
         target_distance_float = training_plan.target_distance_km
-        target_display = "Trail Running" if target_distance_float == 30.0 else f"{training_plan.target_distance} km"
+        if is_fitness:
+            focus = training_plan.target_distance.replace("fitness_", "").replace("_", " ").title()
+            target_display = focus
+        elif target_distance_float == 30.0:
+            target_display = "Trail Running"
+        else:
+            target_display = f"{training_plan.target_distance} km"
 
         if is_performance and training_plan.current_pace and training_plan.goal_pace:
             improvement = ((training_plan.current_pace - training_plan.goal_pace) / training_plan.current_pace) * 100
@@ -83,10 +97,12 @@ class PlanPagesMixin:
     def _add_plan_summary(self, story: List, training_plan: TrainingPlan, plan_data: List[Dict]):
         story.append(Paragraph("Training Plan Overview", self.section_style))
 
-        is_performance = getattr(training_plan, 'plan_type', 'distance') == 'performance'
+        plan_type = getattr(training_plan, 'plan_type', 'distance')
+        is_performance = plan_type == 'performance'
+        is_fitness = plan_type == 'fitness'
         max_mileage = max(week['total_km'] for week in plan_data)
 
-        if is_performance:
+        if is_performance or is_fitness:
             chart_data = [['Week', 'Phase', 'Mileage (km)', 'Progress']]
             for week in plan_data:
                 progress_bar = self._create_progress_bar(week['total_km'], max_mileage)

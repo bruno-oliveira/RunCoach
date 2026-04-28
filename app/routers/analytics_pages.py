@@ -41,6 +41,8 @@ async def analytics_page(
             label = DISTANCE_NAMES.get(td, f"{td}km")
         elif p.plan_type == "performance":
             label = "Performance"
+        elif p.plan_type == "fitness":
+            label = "Fitness"
         else:
             label = f"{td}km"
         plan_summaries.append({

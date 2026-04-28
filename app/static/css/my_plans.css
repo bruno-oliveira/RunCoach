@@ -167,6 +167,11 @@
     color: var(--color-primary);
 }
 
+.badge-fitness {
+    background: rgba(16, 185, 129, 0.12);
+    color: #059669;
+}
+
 .badge-strava-adapted {
     background: rgba(252, 76, 2, 0.1);
     color: #c43a00;

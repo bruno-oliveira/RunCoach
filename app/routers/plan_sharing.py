@@ -126,6 +126,8 @@ async def view_shared_plan(
         ctx["distance_display"] = DISTANCE_NAMES.get(td, f"{td} km")
     elif training_plan.plan_type == "performance":
         ctx["distance_display"] = "Performance"
+    elif training_plan.plan_type == "fitness":
+        ctx["distance_display"] = "Fitness"
     else:
         ctx["distance_display"] = f"{td} km"
 
