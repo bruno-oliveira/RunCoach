@@ -128,122 +128,163 @@
                             <button type="button" class="mode-btn" id="mode-time-btn" onclick="setPlanMode('time')">Time Goal</button>
                             <button type="button" class="mode-btn" id="mode-fitness-btn" onclick="setPlanMode('fitness')">Fitness Goal</button>
                         </div>
+                        <p class="mode-description" id="mode-description">Build a structured plan to finish a race at a specific distance.</p>
 
+                        <!-- Shared: Weekly mileage (always visible) -->
                         <div class="form-group">
                             <label for="current_km" class="form-label">Weekly mileage</label>
                             <div class="input-with-unit">
                                 <input type="number" id="current_km" name="current_km" class="form-input" step="0.1" min="0" max="200" required placeholder="20">
                                 <span class="input-unit">km</span>
                             </div>
-                            <span class="form-help">Your current weekly running distance. <strong>Enter 0 if just starting out (5K/10K only, 8+ weeks)</strong></span>
+                            <span class="form-help" id="km-help">Your current weekly running distance. <strong>Enter 0 if just starting out (5K/10K only, 8+ weeks)</strong></span>
                         </div>
 
-                        <div class="form-row-2">
-                            <div class="form-group">
-                                <label for="target_distance" class="form-label">Race goal</label>
-                                <div class="select-wrap">
-                                    <select id="target_distance" name="target_distance" class="form-select" required>
-                                        <option value="">Select distance</option>
-                                        <option value="5">5K</option>
-                                        <option value="10">10K</option>
-                                        <option value="21.1">Half Marathon</option>
-                                        <option value="42.2">Marathon</option>
-                                        <option value="30">Trail Running</option>
-                                    </select>
+                        <!-- Distance Goal fields -->
+                        <div id="distance-mode-fields">
+                            <div class="form-row-2">
+                                <div class="form-group">
+                                    <label for="target_distance" class="form-label">Race goal</label>
+                                    <div class="select-wrap">
+                                        <select id="target_distance" name="target_distance" class="form-select" required>
+                                            <option value="">Select distance</option>
+                                            <option value="5">5K</option>
+                                            <option value="10">10K</option>
+                                            <option value="21.1">Half Marathon</option>
+                                            <option value="42.2">Marathon</option>
+                                            <option value="30">Trail Running</option>
+                                        </select>
+                                    </div>
+                                </div>
+
+                                <div class="form-group" id="terrain-group" style="display: none;">
+                                    <label for="terrain" class="form-label">Terrain access</label>
+                                    <div class="select-wrap">
+                                        <select id="terrain" name="terrain" class="form-select">
+                                            <option value="">Hilly (default)</option>
+                                            <option value="flat">Flat / No hills</option>
+                                        </select>
+                                    </div>
+                                </div>
+
+                                <div class="form-group">
+                                    <label for="weeks" class="form-label">Duration</label>
+                                    <div class="input-with-unit">
+                                        <input type="number" id="weeks" name="weeks" class="form-input" min="4" max="24" required placeholder="12">
+                                        <span class="input-unit">weeks</span>
+                                    </div>
                                 </div>
                             </div>
 
-                            <div class="form-group" id="terrain-group" style="display: none;">
-                                <label for="terrain" class="form-label">Terrain access</label>
-                                <div class="select-wrap">
-                                    <select id="terrain" name="terrain" class="form-select">
-                                        <option value="">Hilly (default)</option>
-                                        <option value="flat">Flat / No hills</option>
-                                    </select>
+                            <div class="form-row-2">
+                                <div class="form-group">
+                                    <label for="max_runs_per_week" class="form-label">Runs per week</label>
+                                    <div class="select-wrap">
+                                        <select id="max_runs_per_week" name="max_runs_per_week" class="form-select" required>
+                                            <option value="2">2 runs &mdash; Busy schedule</option>
+                                            <option value="3">3 runs &mdash; Beginner</option>
+                                            <option value="4" selected>4 runs &mdash; Recommended</option>
+                                            <option value="5">5 runs &mdash; Intermediate</option>
+                                            <option value="6">6 runs &mdash; Advanced</option>
+                                        </select>
+                                    </div>
+                                </div>
+
+                                <div class="form-group">
+                                    <label for="body_weight_kg" class="form-label">Body weight</label>
+                                    <div class="input-with-unit">
+                                        <input type="number" id="body_weight_kg" name="body_weight_kg" class="form-input" step="0.1" min="30" max="250" required placeholder="70" value="70">
+                                        <span class="input-unit">kg</span>
+                                    </div>
                                 </div>
                             </div>
 
-                            <div class="form-group">
-                                <label for="weeks" class="form-label">Duration</label>
-                                <div class="input-with-unit">
-                                    <input type="number" id="weeks" name="weeks" class="form-input" min="4" max="24" required placeholder="12">
-                                    <span class="input-unit">weeks</span>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="form-row-2">
-                            <div class="form-group">
-                                <label for="max_runs_per_week" class="form-label">Runs per week</label>
-                                <div class="select-wrap">
-                                    <select id="max_runs_per_week" name="max_runs_per_week" class="form-select" required>
-                                        <option value="2">2 runs &mdash; Busy schedule</option>
-                                        <option value="3">3 runs &mdash; Beginner</option>
-                                        <option value="4" selected>4 runs &mdash; Recommended</option>
-                                        <option value="5">5 runs &mdash; Intermediate</option>
-                                        <option value="6">6 runs &mdash; Advanced</option>
-                                    </select>
-                                </div>
-                            </div>
-
-                            <div class="form-group">
-                                <label for="body_weight_kg" class="form-label">Body weight</label>
-                                <div class="input-with-unit">
-                                    <input type="number" id="body_weight_kg" name="body_weight_kg" class="form-input" step="0.1" min="30" max="250" required placeholder="70" value="70">
-                                    <span class="input-unit">kg</span>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="form-group form-collapsible">
-                            <button type="button" class="form-collapsible-toggle" onclick="toggleRaceFields()">
-                                <span>Got a recent race result? (optional)</span>
-                                <svg class="chevron-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
-                            </button>
-                            <div id="race-fields" class="form-collapsible-content" style="display:none;">
-                                <span class="form-help" style="margin-bottom: 8px; display:block;">We'll calculate your VDOT and set personalised pace zones</span>
-                                <div class="form-row-2">
-                                    <div class="form-group">
-                                        <label for="recent_race_distance_km" class="form-label">Race distance</label>
-                                        <div class="select-wrap">
-                                            <select id="recent_race_distance_km" name="recent_race_distance_km" class="form-select">
-                                                <option value="">Select</option>
-                                                <option value="5">5K</option>
-                                                <option value="10">10K</option>
-                                                <option value="21.1">Half Marathon</option>
-                                                <option value="42.2">Marathon</option>
-                                            </select>
+                            <div class="form-group form-collapsible">
+                                <button type="button" class="form-collapsible-toggle" onclick="toggleRaceFields()">
+                                    <span>Got a recent race result? (optional)</span>
+                                    <svg class="chevron-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+                                </button>
+                                <div id="race-fields" class="form-collapsible-content" style="display:none;">
+                                    <span class="form-help" style="margin-bottom: 8px; display:block;">We'll calculate your VDOT and set personalised pace zones</span>
+                                    <div class="form-row-2">
+                                        <div class="form-group">
+                                            <label for="recent_race_distance_km" class="form-label">Race distance</label>
+                                            <div class="select-wrap">
+                                                <select id="recent_race_distance_km" name="recent_race_distance_km" class="form-select">
+                                                    <option value="">Select</option>
+                                                    <option value="5">5K</option>
+                                                    <option value="10">10K</option>
+                                                    <option value="21.1">Half Marathon</option>
+                                                    <option value="42.2">Marathon</option>
+                                                </select>
+                                            </div>
+                                        </div>
+                                        <div class="form-group">
+                                            <label for="recent_race_time" class="form-label">Finish time</label>
+                                            <input type="text" id="recent_race_time" name="recent_race_time" class="form-input" placeholder="HH:MM:SS or MM:SS">
                                         </div>
                                     </div>
-                                    <div class="form-group">
-                                        <label for="recent_race_time" class="form-label">Finish time</label>
-                                        <input type="text" id="recent_race_time" name="recent_race_time" class="form-input" placeholder="HH:MM:SS or MM:SS">
-                                    </div>
                                 </div>
                             </div>
-                        </div>
 
-                        <div class="form-group form-collapsible" id="goal-collapsible">
-                            <button type="button" class="form-collapsible-toggle" onclick="toggleGoalFields()">
-                                <span>Chasing a goal time? (optional)</span>
-                                <svg class="chevron-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
-                            </button>
-                            <div id="goal-fields" class="form-collapsible-content" style="display:none;">
-                                <span class="form-help" style="margin-bottom: 8px; display:block;">Every quality session will be paced off your goal, not your current fitness</span>
-                                <div class="form-group">
-                                    <label for="goal_time" class="form-label">Goal finish time</label>
-                                    <input type="text" id="goal_time" name="goal_time" class="form-input" placeholder="HH:MM:SS or MM:SS">
+                            <div class="form-group form-collapsible" id="goal-collapsible">
+                                <button type="button" class="form-collapsible-toggle" onclick="toggleGoalFields()">
+                                    <span>Chasing a goal time? (optional)</span>
+                                    <svg class="chevron-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+                                </button>
+                                <div id="goal-fields" class="form-collapsible-content" style="display:none;">
+                                    <span class="form-help" style="margin-bottom: 8px; display:block;">Every quality session will be paced off your goal, not your current fitness</span>
+                                    <div class="form-group">
+                                        <label for="goal_time" class="form-label">Goal finish time</label>
+                                        <input type="text" id="goal_time" name="goal_time" class="form-input" placeholder="HH:MM:SS or MM:SS">
+                                    </div>
                                 </div>
                             </div>
                         </div>
 
                         <!-- Time Goal mode fields (hidden by default) -->
                         <div id="time-mode-fields" style="display:none;">
+                            <div class="form-row-2">
+                                <div class="form-group">
+                                    <label for="target_distance_time" class="form-label">Race goal</label>
+                                    <div class="select-wrap">
+                                        <select id="target_distance_time" name="target_distance" class="form-select" required>
+                                            <option value="">Select distance</option>
+                                            <option value="5">5K</option>
+                                            <option value="10">10K</option>
+                                            <option value="21.1">Half Marathon</option>
+                                            <option value="42.2">Marathon</option>
+                                        </select>
+                                    </div>
+                                </div>
+
+                                <div class="form-group">
+                                    <label for="weeks_time" class="form-label">Duration</label>
+                                    <div class="input-with-unit">
+                                        <input type="number" id="weeks_time" name="weeks" class="form-input" min="6" max="16" required placeholder="10">
+                                        <span class="input-unit">weeks</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="max_runs_per_week_time" class="form-label">Runs per week</label>
+                                <div class="select-wrap">
+                                    <select id="max_runs_per_week_time" name="max_runs_per_week" class="form-select" required>
+                                        <option value="3">3 runs</option>
+                                        <option value="4">4 runs</option>
+                                        <option value="5" selected>5 runs &mdash; Recommended</option>
+                                        <option value="6">6 runs</option>
+                                    </select>
+                                </div>
+                            </div>
+
                             <div class="form-group">
                                 <label for="goal_time_required" class="form-label">Goal finish time</label>
-                                <input type="text" id="goal_time_required" name="goal_time_required" class="form-input" placeholder="HH:MM:SS or MM:SS" pattern="^(\d{1,2}:\d{2}|\d{1,2}:\d{2}:\d{2})$">
+                                <input type="text" id="goal_time_required" name="goal_time_required" class="form-input" placeholder="HH:MM:SS or MM:SS" pattern="^(\d{1,2}:\d{2}|\d{1,2}:\d{2}:\d{2})$" required>
                                 <span class="form-help">Your target race time &mdash; all workouts will be paced from this goal</span>
                             </div>
+
                             <div class="form-row-2">
                                 <div class="form-group">
                                     <label for="current_time" class="form-label">Current finish time <span class="form-optional">(optional)</span></label>
@@ -332,18 +373,13 @@
                                         <span class="input-unit">bpm</span>
                                     </div>
                                 </div>
+
                                 <div class="form-group">
-                                    <label for="focus_distance" class="form-label">Focus distance <span class="form-optional">(optional)</span></label>
-                                    <div class="select-wrap">
-                                        <select id="focus_distance" name="focus_distance" class="form-select">
-                                            <option value="">None</option>
-                                            <option value="5">5K</option>
-                                            <option value="10">10K</option>
-                                            <option value="21.1">Half Marathon</option>
-                                            <option value="42.2">Marathon</option>
-                                        </select>
+                                    <label for="body_weight_kg" class="form-label">Body weight</label>
+                                    <div class="input-with-unit">
+                                        <input type="number" id="body_weight_kg_fitness" name="body_weight_kg" class="form-input" step="0.1" min="30" max="250" required placeholder="70" value="70">
+                                        <span class="input-unit">kg</span>
                                     </div>
-                                    <span class="form-help">Optional — for pacing context only</span>
                                 </div>
                             </div>
                         </div>
@@ -416,15 +452,12 @@ function setPlanMode(mode) {
     var distBtn = document.getElementById('mode-distance-btn');
     var timeBtn = document.getElementById('mode-time-btn');
     var fitnessBtn = document.getElementById('mode-fitness-btn');
+    var distFields = document.getElementById('distance-mode-fields');
     var timeFields = document.getElementById('time-mode-fields');
     var fitnessFields = document.getElementById('fitness-mode-fields');
-    var goalCollapsible = document.getElementById('goal-collapsible');
-    var terrainGroup = document.getElementById('terrain-group');
-    var bodyWeight = document.getElementById('body_weight_kg');
-    var bodyWeightGroup = bodyWeight ? bodyWeight.closest('.form-group') : null;
-    var goalTimeReq = document.getElementById('goal_time_required');
-    var weeksInput = document.getElementById('weeks');
     var form = document.getElementById('plan-form');
+    var submitBtn = document.getElementById('form-submit-btn');
+    var desc = document.getElementById('mode-description');
 
     distBtn.classList.remove('mode-btn-active');
     timeBtn.classList.remove('mode-btn-active');
@@ -432,36 +465,26 @@ function setPlanMode(mode) {
 
     if (mode === 'time') {
         timeBtn.classList.add('mode-btn-active');
+        distFields.style.display = 'none';
         timeFields.style.display = '';
         fitnessFields.style.display = 'none';
-        goalCollapsible.style.display = 'none';
-        if (terrainGroup) terrainGroup.style.display = 'none';
-        if (bodyWeightGroup) bodyWeightGroup.style.display = 'none';
-        if (goalTimeReq) goalTimeReq.required = true;
-        if (weeksInput) { weeksInput.min = '6'; weeksInput.max = '16'; }
-        var runsSelect = document.getElementById('max_runs_per_week');
-        if (runsSelect && !runsSelect.dataset.userChanged) runsSelect.value = '5';
         form.action = '/generate-plan';
+        submitBtn.querySelector('svg').style.display = '';
+        desc.textContent = 'Target a specific finish time — every workout is paced off your goal.';
     } else if (mode === 'fitness') {
         fitnessBtn.classList.add('mode-btn-active');
+        distFields.style.display = 'none';
         timeFields.style.display = 'none';
         fitnessFields.style.display = '';
-        goalCollapsible.style.display = 'none';
-        if (terrainGroup) terrainGroup.style.display = 'none';
-        if (bodyWeightGroup) bodyWeightGroup.style.display = '';
-        if (goalTimeReq) goalTimeReq.required = false;
-        if (weeksInput) { weeksInput.min = '6'; weeksInput.max = '12'; }
         form.action = '/generate-fitness-plan';
+        desc.textContent = 'Get faster and fitter — no race required, with built-in progress tracking.';
     } else {
         distBtn.classList.add('mode-btn-active');
+        distFields.style.display = '';
         timeFields.style.display = 'none';
         fitnessFields.style.display = 'none';
-        goalCollapsible.style.display = '';
-        if (bodyWeightGroup) bodyWeightGroup.style.display = '';
-        if (goalTimeReq) goalTimeReq.required = false;
-        if (weeksInput) { weeksInput.min = '4'; weeksInput.max = '24'; }
-        updateTerrainVisibility();
         form.action = '/generate-plan';
+        desc.textContent = 'Build a structured plan to finish a race at a specific distance.';
     }
 }
 
@@ -478,6 +501,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // Initialize mode from query param
     var initialMode = document.getElementById('plan_mode').value;
     if (initialMode === 'time') setPlanMode('time');
+    if (initialMode === 'fitness') setPlanMode('fitness');
 
     // Disable options in "Runs per week" that aren't viable for the chosen distance.
     // 2 runs → 5K/10K only. 3 runs → anything except marathon/trail.
@@ -507,8 +531,7 @@ document.addEventListener('DOMContentLoaded', function() {
     if (form && submitBtn) {
         form.addEventListener('submit', function(e) {
             const currentKm = document.getElementById('current_km');
-            const targetDistance = document.getElementById('target_distance');
-            const weeks = document.getElementById('weeks');
+            var planMode = document.getElementById('plan_mode').value;
 
             if (!currentKm.value || parseFloat(currentKm.value) < 0) {
                 e.preventDefault();
@@ -516,51 +539,67 @@ document.addEventListener('DOMContentLoaded', function() {
                 return false;
             }
 
-            // Zero mileage validation
-            if (parseFloat(currentKm.value) === 0) {
-                const supportedDistances = [5, 10];
-                const selectedDistance = parseFloat(targetDistance.value);
-                if (!supportedDistances.includes(selectedDistance)) {
+            // Distance mode validation
+            if (planMode === 'distance') {
+                const targetDistance = document.getElementById('target_distance');
+                const weeks = document.getElementById('weeks');
+
+                if (parseFloat(currentKm.value) === 0) {
+                    const supportedDistances = [5, 10];
+                    const selectedDistance = parseFloat(targetDistance.value);
+                    if (!supportedDistances.includes(selectedDistance)) {
+                        e.preventDefault();
+                        alert('Starting from zero mileage is only supported for 5K and 10K goals. Please select a shorter distance or enter your current weekly mileage.');
+                        targetDistance.focus();
+                        return false;
+                    }
+                    if (parseInt(weeks.value) < 8) {
+                        e.preventDefault();
+                        alert('Beginner plans require at least 8 weeks for safe progression. Please extend your training duration.');
+                        weeks.focus();
+                        return false;
+                    }
+                }
+
+                const km = parseFloat(currentKm.value);
+                const dist = parseFloat(targetDistance.value);
+                const minMileage = {5: 5, 10: 10, 21.1: 15, 30: 15, 42.2: 25};
+                const distNames = {5: '5K', 10: '10K', 21.1: 'Half Marathon', 30: 'Trail Running', 42.2: 'Marathon'};
+                if (km > 0 && minMileage[dist] && km < minMileage[dist]) {
                     e.preventDefault();
-                    alert('Starting from zero mileage is only supported for 5K and 10K goals. Please select a shorter distance or enter your current weekly mileage.');
+                    alert(distNames[dist] + ' training requires at least ' + minMileage[dist] + ' km/week. Please build your base before starting.');
+                    currentKm.focus();
+                    return false;
+                }
+
+                if (!targetDistance.value) {
+                    e.preventDefault();
                     targetDistance.focus();
                     return false;
                 }
-                if (parseInt(weeks.value) < 8) {
+                if (!weeks.value || parseInt(weeks.value) < 4) {
                     e.preventDefault();
-                    alert('Beginner plans require at least 8 weeks for safe progression. Please extend your training duration.');
                     weeks.focus();
                     return false;
                 }
             }
 
-            // Minimum mileage per distance
-            const km = parseFloat(currentKm.value);
-            const dist = parseFloat(targetDistance.value);
-            const minMileage = {5: 5, 10: 10, 21.1: 15, 30: 15, 42.2: 25};
-            const distNames = {5: '5K', 10: '10K', 21.1: 'Half Marathon', 30: 'Trail Running', 42.2: 'Marathon'};
-            if (km > 0 && minMileage[dist] && km < minMileage[dist]) {
-                e.preventDefault();
-                alert(distNames[dist] + ' training requires at least ' + minMileage[dist] + ' km/week. Please build your base before starting.');
-                currentKm.focus();
-                return false;
-            }
-
-            if (!targetDistance.value) {
-                e.preventDefault();
-                targetDistance.focus();
-                return false;
-            }
-            if (!weeks.value || parseInt(weeks.value) < 4) {
-                e.preventDefault();
-                weeks.focus();
-                return false;
-            }
-
-            // Time mode: require goal time
-            var planMode = document.getElementById('plan_mode').value;
+            // Time mode validation
             if (planMode === 'time') {
-                var goalTimeReq = document.getElementById('goal_time_required');
+                const targetDistance = document.getElementById('target_distance_time');
+                const weeks = document.getElementById('weeks_time');
+                const goalTimeReq = document.getElementById('goal_time_required');
+
+                if (!targetDistance.value) {
+                    e.preventDefault();
+                    targetDistance.focus();
+                    return false;
+                }
+                if (!weeks.value || parseInt(weeks.value) < 6) {
+                    e.preventDefault();
+                    weeks.focus();
+                    return false;
+                }
                 if (!goalTimeReq.value || !goalTimeReq.value.match(/^\d{1,2}:\d{2}(:\d{2})?$/)) {
                     e.preventDefault();
                     goalTimeReq.focus();
@@ -569,9 +608,9 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
             }
 
-            // Fitness mode: validate min mileage
+            // Fitness mode validation
             if (planMode === 'fitness') {
-                var fitnessKm = parseFloat(currentKm.value);
+                const fitnessKm = parseFloat(currentKm.value);
                 if (fitnessKm < 10) {
                     e.preventDefault();
                     alert('Fitness plans require at least 10 km/week base mileage.');
