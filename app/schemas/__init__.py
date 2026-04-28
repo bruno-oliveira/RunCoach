@@ -4,6 +4,7 @@ from app.schemas.plan_schemas import (
     PlanRequest,
     PlanRequestBase,
     PerformancePlanRequest,
+    FitnessPlanRequest,
     RaceInfoMixin,
     get_mileage_warning,
     parse_target_distance,
@@ -41,6 +42,7 @@ class HealthResponse(BaseModel):
 
 __all__ = [
     "AuthResponse",
+    "FitnessPlanRequest",
     "GoogleAuthRequest",
     "HealthResponse",
     "PlanRequest",

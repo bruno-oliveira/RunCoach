@@ -120,12 +120,13 @@
                     </div>
                     {% endif %}
 
-                    <form method="post" action="/generate-plan" class="plan-form">
+                    <form method="post" action="/generate-plan" class="plan-form" id="plan-form">
                         <!-- Plan mode toggle -->
                         <div class="mode-toggle-wrap">
                             <input type="hidden" id="plan_mode" name="plan_mode" value="{{ request.query_params.get('mode', 'distance') }}">
                             <button type="button" class="mode-btn mode-btn-active" id="mode-distance-btn" onclick="setPlanMode('distance')">Distance Goal</button>
                             <button type="button" class="mode-btn" id="mode-time-btn" onclick="setPlanMode('time')">Time Goal</button>
+                            <button type="button" class="mode-btn" id="mode-fitness-btn" onclick="setPlanMode('fitness')">Fitness Goal</button>
                         </div>
 
                         <div class="form-group">
@@ -252,10 +253,97 @@
                                 <div class="form-group">
                                     <label for="max_heart_rate" class="form-label">Max heart rate <span class="form-optional">(optional)</span></label>
                                     <div class="input-with-unit">
-                                        <input type="number" id="max_heart_rate" name="max_heart_rate" class="form-input" min="120" max="220" step="1" placeholder="185">
+                                        <input type="number" id="max_heart_rate_time" name="max_heart_rate" class="form-input" min="120" max="220" step="1" placeholder="185">
                                         <span class="input-unit">bpm</span>
                                     </div>
                                     <span class="form-help">Enables heart rate zones</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Fitness Goal mode fields (hidden by default) -->
+                        <div id="fitness-mode-fields" style="display:none;">
+                            <div class="form-group">
+                                <label for="focus_area" class="form-label">Training focus</label>
+                                <div class="select-wrap">
+                                    <select id="focus_area" name="focus_area" class="form-select">
+                                        <option value="vo2max">VO2max — Get faster with intervals</option>
+                                        <option value="threshold">Threshold — Build endurance at pace</option>
+                                        <option value="balanced" selected>Balanced — Mix of both</option>
+                                    </select>
+                                </div>
+                                <span class="form-help">Choose your primary physiological focus</span>
+                            </div>
+
+                            <div class="form-row-2">
+                                <div class="form-group">
+                                    <label for="fitness_weeks" class="form-label">Duration</label>
+                                    <div class="input-with-unit">
+                                        <input type="number" id="fitness_weeks" name="weeks" class="form-input" min="6" max="12" value="8" placeholder="8">
+                                        <span class="input-unit">weeks</span>
+                                    </div>
+                                </div>
+
+                                <div class="form-group">
+                                    <label for="fitness_runs" class="form-label">Runs per week</label>
+                                    <div class="select-wrap">
+                                        <select id="fitness_runs" name="runs_per_week" class="form-select">
+                                            <option value="3">3 runs</option>
+                                            <option value="4" selected>4 runs</option>
+                                            <option value="5">5 runs</option>
+                                            <option value="6">6 runs</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="form-group form-collapsible">
+                                <button type="button" class="form-collapsible-toggle" onclick="toggleCollapsibleFields('fitness-race-fields')">
+                                    <span>Recent race result? (for VDOT zones)</span>
+                                    <svg class="chevron-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+                                </button>
+                                <div id="fitness-race-fields" class="form-collapsible-content" style="display:none;">
+                                    <div class="form-row-2">
+                                        <div class="form-group">
+                                            <label for="fitness_race_distance" class="form-label">Race distance</label>
+                                            <div class="select-wrap">
+                                                <select id="fitness_race_distance" name="recent_race_distance_km" class="form-select">
+                                                    <option value="">Select</option>
+                                                    <option value="5">5K</option>
+                                                    <option value="10">10K</option>
+                                                    <option value="21.1">Half Marathon</option>
+                                                    <option value="42.2">Marathon</option>
+                                                </select>
+                                            </div>
+                                        </div>
+                                        <div class="form-group">
+                                            <label for="fitness_race_time" class="form-label">Finish time</label>
+                                            <input type="text" id="fitness_race_time" name="recent_race_time" class="form-input" placeholder="MM:SS or HH:MM:SS">
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="form-row-2">
+                                <div class="form-group">
+                                    <label for="fitness_max_hr" class="form-label">Max heart rate <span class="form-optional">(optional)</span></label>
+                                    <div class="input-with-unit">
+                                        <input type="number" id="fitness_max_hr" name="max_heart_rate" class="form-input" min="120" max="220" step="1" placeholder="185">
+                                        <span class="input-unit">bpm</span>
+                                    </div>
+                                </div>
+                                <div class="form-group">
+                                    <label for="focus_distance" class="form-label">Focus distance <span class="form-optional">(optional)</span></label>
+                                    <div class="select-wrap">
+                                        <select id="focus_distance" name="focus_distance" class="form-select">
+                                            <option value="">None</option>
+                                            <option value="5">5K</option>
+                                            <option value="10">10K</option>
+                                            <option value="21.1">Half Marathon</option>
+                                            <option value="42.2">Marathon</option>
+                                        </select>
+                                    </div>
+                                    <span class="form-help">Optional — for pacing context only</span>
                                 </div>
                             </div>
                         </div>
@@ -275,7 +363,7 @@
                         </div>
                         {% endif %}
 
-                        <button type="submit" class="btn btn-accent btn-lg btn-full form-submit">
+                        <button type="submit" class="btn btn-accent btn-lg btn-full form-submit" id="form-submit-btn">
                             Generate my plan
                             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
                         </button>
@@ -327,36 +415,53 @@ function setPlanMode(mode) {
     document.getElementById('plan_mode').value = mode;
     var distBtn = document.getElementById('mode-distance-btn');
     var timeBtn = document.getElementById('mode-time-btn');
+    var fitnessBtn = document.getElementById('mode-fitness-btn');
     var timeFields = document.getElementById('time-mode-fields');
+    var fitnessFields = document.getElementById('fitness-mode-fields');
     var goalCollapsible = document.getElementById('goal-collapsible');
-    var raceCollapsible = document.querySelector('.form-collapsible:first-of-type');
     var terrainGroup = document.getElementById('terrain-group');
     var bodyWeight = document.getElementById('body_weight_kg');
     var bodyWeightGroup = bodyWeight ? bodyWeight.closest('.form-group') : null;
     var goalTimeReq = document.getElementById('goal_time_required');
     var weeksInput = document.getElementById('weeks');
+    var form = document.getElementById('plan-form');
+
+    distBtn.classList.remove('mode-btn-active');
+    timeBtn.classList.remove('mode-btn-active');
+    fitnessBtn.classList.remove('mode-btn-active');
 
     if (mode === 'time') {
-        distBtn.classList.remove('mode-btn-active');
         timeBtn.classList.add('mode-btn-active');
         timeFields.style.display = '';
+        fitnessFields.style.display = 'none';
         goalCollapsible.style.display = 'none';
         if (terrainGroup) terrainGroup.style.display = 'none';
         if (bodyWeightGroup) bodyWeightGroup.style.display = 'none';
         if (goalTimeReq) goalTimeReq.required = true;
         if (weeksInput) { weeksInput.min = '6'; weeksInput.max = '16'; }
-        // Default runs to 5
         var runsSelect = document.getElementById('max_runs_per_week');
         if (runsSelect && !runsSelect.dataset.userChanged) runsSelect.value = '5';
+        form.action = '/generate-plan';
+    } else if (mode === 'fitness') {
+        fitnessBtn.classList.add('mode-btn-active');
+        timeFields.style.display = 'none';
+        fitnessFields.style.display = '';
+        goalCollapsible.style.display = 'none';
+        if (terrainGroup) terrainGroup.style.display = 'none';
+        if (bodyWeightGroup) bodyWeightGroup.style.display = '';
+        if (goalTimeReq) goalTimeReq.required = false;
+        if (weeksInput) { weeksInput.min = '6'; weeksInput.max = '12'; }
+        form.action = '/generate-fitness-plan';
     } else {
-        timeBtn.classList.remove('mode-btn-active');
         distBtn.classList.add('mode-btn-active');
         timeFields.style.display = 'none';
+        fitnessFields.style.display = 'none';
         goalCollapsible.style.display = '';
         if (bodyWeightGroup) bodyWeightGroup.style.display = '';
         if (goalTimeReq) goalTimeReq.required = false;
         if (weeksInput) { weeksInput.min = '4'; weeksInput.max = '24'; }
         updateTerrainVisibility();
+        form.action = '/generate-plan';
     }
 }
 
@@ -460,6 +565,17 @@ document.addEventListener('DOMContentLoaded', function() {
                     e.preventDefault();
                     goalTimeReq.focus();
                     alert('Please enter a valid goal finish time (MM:SS or HH:MM:SS)');
+                    return false;
+                }
+            }
+
+            // Fitness mode: validate min mileage
+            if (planMode === 'fitness') {
+                var fitnessKm = parseFloat(currentKm.value);
+                if (fitnessKm < 10) {
+                    e.preventDefault();
+                    alert('Fitness plans require at least 10 km/week base mileage.');
+                    currentKm.focus();
                     return false;
                 }
             }

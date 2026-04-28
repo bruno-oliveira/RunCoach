@@ -22,4 +22,10 @@ WORKOUT_TYPES: list[str] = [
     "rest",
     "recovery",
     "race",
+    "vo2max",
+    "vo2max_ladder",
+    "cruise_interval",
+    "fartlek",
+    "time_trial",
+    "race_pace",
 ]

@@ -29,10 +29,11 @@ from app.exceptions import (
     ZeroMileageUnsupportedException,
 )
 from app.models import User
-from app.schemas import PlanRequest
+from app.schemas import PlanRequest, FitnessPlanRequest
 from app.services.performance_service import PerformanceService
 from app.services.plan_helpers import error_response, get_plan_or_404
 from app.services.plan_service import PlanService
+from app.services.fitness_service import FitnessService
 from app.template_helpers import create_templates
 from app.utils import parse_time_to_pace
 
@@ -170,6 +171,94 @@ async def generate_plan(
         )
     except Exception as e:
         logger.exception("Plan generation failed")
+        db.rollback()
+        return error_response(
+            request, current_user, "An unexpected error occurred. Please try again.", "general"
+        )
+
+
+@router.post("/generate-fitness-plan", response_class=HTMLResponse)
+async def generate_fitness_plan(
+    request: Request,
+    response: Response,
+    current_km: float = Form(...),
+    weeks: int = Form(...),
+    runs_per_week: int = Form(...),
+    focus_area: str = Form("vo2max"),
+    focus_distance: Optional[str] = Form(None),
+    body_weight_kg: float = Form(70.0),
+    max_heart_rate: Optional[str] = Form(None),
+    recent_race_distance_km: Optional[str] = Form(None),
+    recent_race_time: Optional[str] = Form(None),
+    anonymous_user_id: Optional[str] = Cookie(None),
+    db: Session = Depends(get_db),
+    current_user: Optional[User] = Depends(get_optional_user),
+    nutrition_engine: NutritionEngine = Depends(get_nutrition_engine),
+    plan_service: PlanService = Depends(get_plan_service),
+) -> HTMLResponse:
+    """Generate a fitness-focused training plan."""
+    race_dist = float(recent_race_distance_km) if recent_race_distance_km else None
+    hr_max = int(max_heart_rate) if max_heart_rate else None
+    focus_dist = float(focus_distance) if focus_distance else None
+
+    if not anonymous_user_id:
+        anonymous_user_id = getattr(request.state, "anonymous_user_id", None)
+
+    try:
+        plan_request = FitnessPlanRequest(
+            current_km=current_km,
+            weeks=weeks,
+            runs_per_week=runs_per_week,
+            focus_area=focus_area,
+            focus_distance=focus_dist,
+            body_weight_kg=body_weight_kg,
+            max_heart_rate=hr_max,
+            recent_race_distance_km=race_dist,
+            recent_race_time=recent_race_time or None,
+        )
+    except ValidationException as e:
+        return error_response(request, current_user, e.user_message, "validation")
+    except Exception as e:
+        logger.exception("Fitness plan request validation failed")
+        return error_response(request, current_user, "Invalid input. Please check your values and try again.", "general")
+
+    if current_user:
+        if plan_service.has_reached_plan_limit(current_user.id, db):
+            return error_response(
+                request,
+                current_user,
+                "You've reached the maximum of 3 active training plans. "
+                "Please delete or complete an existing plan before creating a new one.",
+                "plan_limit",
+            )
+
+    try:
+        user = plan_service.get_or_create_anonymous_user(
+            current_user, anonymous_user_id, db
+        )
+
+        fitness_service = FitnessService(db)
+        training_plan, plan_data = fitness_service.create_fitness_plan(
+            user=user,
+            plan_request=plan_request,
+            nutrition_engine=nutrition_engine,
+        )
+
+        return RedirectResponse(url=f"/plan/{training_plan.id}", status_code=303)
+
+    except ValueError as e:
+        return error_response(request, current_user, str(e), "validation")
+    except RunCoachException as e:
+        db.rollback()
+        return error_response(request, current_user, e.user_message, "validation",
+                              e.suggestion if hasattr(e, "suggestion") else None)
+    except DatabaseException:
+        db.rollback()
+        return error_response(
+            request, current_user, "Database error occurred. Please try again.", "database"
+        )
+    except Exception as e:
+        logger.exception("Fitness plan generation failed")
         db.rollback()
         return error_response(
             request, current_user, "An unexpected error occurred. Please try again.", "general"

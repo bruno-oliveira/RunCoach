@@ -141,7 +141,9 @@
             </div>
             <div class="summary-item">
                 <strong>Target Distance</strong>
-                {% if target_distance|string == '30.0' or target_distance|string == '30' %}
+                {% if training_plan.plan_type == 'fitness' %}
+                    Fitness — {{ fitness_focus_area | title }} Focus
+                {% elif target_distance|string == '30.0' or target_distance|string == '30' %}
                     Trail Running
                 {% else %}
                     {{ target_distance }} km
@@ -260,6 +262,56 @@
                 <div class="hr-zone-bpm">{{ zone.min_bpm }}-{{ zone.max_bpm }}</div>
             </div>
             {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+    {% if training_plan.plan_type == 'fitness' %}
+    <div class="fitness-dashboard">
+        <div class="fitness-dashboard-header">
+            <h3>Fitness Plan — {{ fitness_focus_area | title }} Focus</h3>
+            <p class="fitness-dashboard-subtitle">Physiological development with built-in progress tracking</p>
+        </div>
+
+        {% if vdot %}
+        <div class="fitness-vdot-card">
+            <div class="fitness-vdot-icon">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+            </div>
+            <div class="fitness-vdot-body">
+                <div class="fitness-vdot-value">{{ "%.1f"|format(vdot) }}</div>
+                <div class="fitness-vdot-label">Current VDOT</div>
+                <p class="fitness-vdot-note">Time trials every 3 weeks will help track your VDOT progress</p>
+            </div>
+        </div>
+        {% endif %}
+
+        {% if time_trial_weeks %}
+        <div class="fitness-tt-section">
+            <h4>Time Trial Schedule</h4>
+            <div class="fitness-tt-grid">
+                {% for tt in time_trial_weeks %}
+                <div class="fitness-tt-card">
+                    <div class="fitness-tt-week">Week {{ tt.week }}</div>
+                    <div class="fitness-tt-distance">{{ "%.1f"|format(tt.distance) }}km all-out</div>
+                    <div class="fitness-tt-desc">{{ tt.description }}</div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+
+        <div class="fitness-phases-section">
+            <h4>Training Phases</h4>
+            <div class="fitness-phases-grid">
+                {% for pname, pdata in phases.items() %}
+                <div class="fitness-phase-card">
+                    <div class="fitness-phase-name">{{ pname | title }}</div>
+                    <div class="fitness-phase-weeks">{{ pdata.weeks }} weeks</div>
+                    <div class="fitness-phase-desc">{{ pdata.description }}</div>
+                </div>
+                {% endfor %}
+            </div>
         </div>
     </div>
     {% endif %}

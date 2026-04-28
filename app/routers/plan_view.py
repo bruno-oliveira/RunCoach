@@ -112,6 +112,39 @@ async def view_plan(
             except Exception as e:
                 logger.warning(f"Performance context enrichment failed: {e}")
 
+        if training_plan.plan_type == "fitness":
+            try:
+                from app.core.generators.fitness_plan_generator import FitnessPlanGenerator
+                from app.core.training.vdot_calculator import VDOTCalculator
+                gen = FitnessPlanGenerator()
+                vdot = training_plan.vdot
+                zones = gen.calculate_training_zones(vdot, training_plan.max_heart_rate)
+                for zone_data in zones.values():
+                    zone_data["pace_formatted"] = format_pace(zone_data["pace"])
+                    if "pace_range" in zone_data:
+                        pr = zone_data["pace_range"]
+                        zone_data["pace_range_formatted"] = (
+                            f"{format_pace(pr[0])} - {format_pace(pr[1])}"
+                        )
+                extra["training_zones"] = zones
+                extra["fitness_focus_area"] = training_plan.target_distance.replace("fitness_", "") if training_plan.target_distance.startswith("fitness_") else "vo2max"
+                time_trial_weeks = []
+                for week_data in plan_data:
+                    if week_data.get("is_time_trial_week"):
+                        for dw in week_data.get("daily_workouts", []):
+                            if dw.get("type") == "time_trial":
+                                time_trial_weeks.append({
+                                    "week": week_data["week"],
+                                    "distance": dw.get("distance", 0),
+                                    "description": dw.get("description", ""),
+                                })
+                extra["time_trial_weeks"] = time_trial_weeks
+                if vdot:
+                    vdot_zones = VDOTCalculator.get_pace_zones(vdot)
+                    extra["vdot_zones"] = vdot_zones
+            except Exception as e:
+                logger.warning(f"Fitness context enrichment failed: {e}")
+
         ctx = plan_view_context(
             request, current_user, training_plan, plan_data, nutrition_plan, **extra
         )
