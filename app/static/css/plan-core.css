@@ -3219,3 +3219,157 @@
     font-size: 0.73rem;
     color: var(--color-text-secondary, #64748b);
 }
+
+/* ============================================================================
+   Fitness Dashboard (fitness plan type)
+   ========================================================================= */
+
+.fitness-dashboard {
+    background: var(--color-bg-elevated);
+    border: 1px solid var(--color-border-subtle);
+    border-radius: var(--radius-2xl);
+    padding: var(--space-6);
+    margin-bottom: var(--space-6);
+}
+
+.fitness-dashboard-header h3 {
+    font-size: var(--text-xl);
+    font-weight: var(--weight-bold);
+    color: var(--color-text);
+    margin: 0 0 var(--space-1) 0;
+}
+
+.fitness-dashboard-subtitle {
+    font-size: var(--text-sm);
+    color: var(--color-text-secondary);
+    margin: 0 0 var(--space-5) 0;
+}
+
+.fitness-vdot-card {
+    display: flex;
+    align-items: center;
+    gap: var(--space-4);
+    background: var(--color-primary-subtle);
+    border: 1px solid rgba(29, 78, 216, 0.15);
+    border-radius: var(--radius-xl);
+    padding: var(--space-4) var(--space-5);
+    margin-bottom: var(--space-5);
+}
+
+.fitness-vdot-icon {
+    flex-shrink: 0;
+    color: var(--color-primary);
+}
+
+.fitness-vdot-body {
+    min-width: 0;
+}
+
+.fitness-vdot-value {
+    font-family: var(--font-display);
+    font-size: var(--text-2xl);
+    font-weight: var(--weight-extrabold);
+    color: var(--color-primary);
+    line-height: 1.1;
+}
+
+.fitness-vdot-label {
+    font-size: var(--text-sm);
+    font-weight: var(--weight-semibold);
+    color: var(--color-text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-top: var(--space-1);
+}
+
+.fitness-vdot-note {
+    font-size: var(--text-xs);
+    color: var(--color-text-muted);
+    margin: var(--space-1) 0 0 0;
+}
+
+.fitness-tt-section {
+    margin-bottom: var(--space-5);
+}
+
+.fitness-tt-section h4 {
+    font-size: var(--text-base);
+    font-weight: var(--weight-semibold);
+    color: var(--color-text);
+    margin: 0 0 var(--space-3) 0;
+}
+
+.fitness-tt-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: var(--space-3);
+}
+
+.fitness-tt-card {
+    background: var(--color-bg-sunken);
+    border: 1px solid var(--color-border-subtle);
+    border-radius: var(--radius-lg);
+    padding: var(--space-4);
+}
+
+.fitness-tt-week {
+    font-size: var(--text-xs);
+    font-weight: var(--weight-semibold);
+    color: var(--color-primary);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: var(--space-1);
+}
+
+.fitness-tt-distance {
+    font-size: var(--text-base);
+    font-weight: var(--weight-bold);
+    color: var(--color-text);
+    margin-bottom: var(--space-1);
+}
+
+.fitness-tt-desc {
+    font-size: var(--text-xs);
+    color: var(--color-text-secondary);
+    line-height: var(--leading-normal);
+}
+
+.fitness-phases-section h4 {
+    font-size: var(--text-base);
+    font-weight: var(--weight-semibold);
+    color: var(--color-text);
+    margin: 0 0 var(--space-3) 0;
+}
+
+.fitness-phases-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: var(--space-3);
+}
+
+.fitness-phase-card {
+    background: var(--color-bg-sunken);
+    border: 1px solid var(--color-border-subtle);
+    border-radius: var(--radius-lg);
+    padding: var(--space-4);
+}
+
+.fitness-phase-name {
+    font-size: var(--text-sm);
+    font-weight: var(--weight-bold);
+    color: var(--color-text);
+    margin-bottom: var(--space-1);
+}
+
+.fitness-phase-weeks {
+    font-size: var(--text-xs);
+    font-weight: var(--weight-semibold);
+    color: var(--color-primary);
+    margin-bottom: var(--space-2);
+}
+
+.fitness-phase-desc {
+    font-size: var(--text-xs);
+    color: var(--color-text-secondary);
+    line-height: var(--leading-normal);
+}

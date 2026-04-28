@@ -205,6 +205,12 @@
 
 .mode-btn:hover { background: var(--color-bg-sunken); }
 
+.mode-btn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+.mode-btn:disabled:hover { background: var(--color-bg); }
+
 .mode-btn-active {
     background: var(--color-primary);
     color: white;

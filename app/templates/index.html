@@ -125,7 +125,7 @@
                         <div class="mode-toggle-wrap">
                             <input type="hidden" id="plan_mode" name="plan_mode" value="{{ request.query_params.get('mode', 'distance') }}">
                             <button type="button" class="mode-btn mode-btn-active" id="mode-distance-btn" onclick="setPlanMode('distance')">Distance Goal</button>
-                            <button type="button" class="mode-btn" id="mode-time-btn" onclick="setPlanMode('time')">Time Goal</button>
+                            <button type="button" class="mode-btn" id="mode-time-btn" onclick="setPlanMode('time')" {% if not user %}disabled title="Sign in to use Time Goal"{% endif %}>Time Goal</button>
                             <button type="button" class="mode-btn" id="mode-fitness-btn" onclick="setPlanMode('fitness')">Fitness Goal</button>
                         </div>
                         <p class="mode-description" id="mode-description">Build a structured plan to finish a race at a specific distance.</p>
@@ -502,6 +502,10 @@ function setPlanMode(mode) {
 
     // Initialize mode from query param (always run to disable hidden sections)
     var initialMode = document.getElementById('plan_mode').value || 'distance';
+    var timeBtnInit = document.getElementById('mode-time-btn');
+    if (initialMode === 'time' && timeBtnInit.disabled) {
+        initialMode = 'distance';
+    }
     setPlanMode(initialMode);
 
     // Disable options in "Runs per week" that aren't viable for the chosen distance.
