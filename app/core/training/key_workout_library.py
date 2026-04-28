@@ -4,8 +4,7 @@ Curated workouts that replace generic interval/tempo sessions during
 Build and Peak phases to make training plans feel coached, not generated.
 """
 
-import re
-from typing import Any, Dict, List, Optional
+from typing import Any, Callable, Dict, List, Optional
 
 from app.core.training import workout_steps as _steps_mod
 from app.core.training.hr_zone_calculator import WORKOUT_ZONE_MAP
@@ -13,167 +12,131 @@ from app.core.training.key_workout_data import WORKOUTS
 from app.core.training.vdot_calculator import VDOTCalculator
 
 
-# Key workouts with hardcoded distances that need rewriting when the
-# assigned distance differs from the description's implied distance.
-# Each entry maps a workout id to (total_pattern, splits_pattern).
-# total_pattern replaces "Run Xkm" / "Run X-Ykm" with the actual distance.
-# splits_pattern is a callable(actual_distance) -> str for proportional splits.
-_DISTANCE_REWRITES: Dict[str, tuple] = {
-    "5k_vo2max_400s": (
-        None,
-        lambda d: f"Warm up 2km easy. Run 10-12 x 400m at 5K pace with 90s easy jog recovery between reps. Cool down 2km easy.",
+def _wu_cd(d: float) -> tuple:
+    """Return (warmup_km, cooldown_km) that fit within total distance d."""
+    wu = min(2.0, max(0.5, round(d * 0.25, 1)))
+    return (wu, wu)
+
+
+# Each entry generates a complete description from the actual distance.
+_DISTANCE_REWRITES: Dict[str, Callable[[float], str]] = {
+    "5k_vo2max_400s": lambda d: (
+        f"Warm up {_wu_cd(d)[0]:g}km easy. Run 10-12 x 400m at 5K pace "
+        f"with 90s easy jog recovery between reps. Cool down {_wu_cd(d)[1]:g}km easy."
     ),
-    "5k_race_pace_3km": (
-        None,
-        lambda d: f"Warm up 2km easy. Run 2 x {round(d * 0.25, 1):.1f}km at 5K goal pace with 3 min easy jog recovery. Cool down 2km easy.",
+    "5k_race_pace_3km": lambda d: (
+        f"Warm up {_wu_cd(d)[0]:g}km easy. Run 2 x {round((d - _wu_cd(d)[0] - _wu_cd(d)[1]) / 2, 1):g}km "
+        f"at 5K goal pace with 3 min easy jog recovery. Cool down {_wu_cd(d)[1]:g}km easy."
     ),
-    "5k_cruise_intervals": (
-        None,
-        lambda d: f"Warm up 2km easy. Run 4 x {round(d * 0.17, 1):.1f}km at threshold pace with 60 seconds easy jog between reps. Cool down 2km easy.",
+    "5k_cruise_intervals": lambda d: (
+        f"Warm up {_wu_cd(d)[0]:g}km easy. Run 4 x {round((d - _wu_cd(d)[0] - _wu_cd(d)[1]) / 4, 1):g}km "
+        f"at threshold pace with 60 seconds easy jog between reps. Cool down {_wu_cd(d)[1]:g}km easy."
     ),
-    "5k_threshold_run": (
-        None,
-        lambda d: f"Warm up 2km easy. Run {round(d * 0.43, 1):.1f}km continuous at threshold pace — comfortably hard, you can speak a few words at a time. Cool down 2km easy.",
+    "5k_threshold_run": lambda d: (
+        f"Warm up {_wu_cd(d)[0]:g}km easy. "
+        f"Run {round(d - _wu_cd(d)[0] - _wu_cd(d)[1], 1):g}km continuous at threshold pace "
+        f"— comfortably hard, you can speak a few words at a time. Cool down {_wu_cd(d)[1]:g}km easy."
     ),
-    "5k_pyramid": (
-        None,
-        lambda d: f"Warm up 2km easy. Run pyramid: 200m, 400m, 600m, 800m, 600m, 400m, 200m — all at 5K pace with equal-distance recovery jogs. Cool down 2km easy.",
+    "5k_pyramid": lambda d: (
+        f"Warm up {_wu_cd(d)[0]:g}km easy. Run pyramid: 200m, 400m, 600m, 800m, 600m, 400m, 200m "
+        f"— all at 5K pace with equal-distance recovery jogs. Cool down {_wu_cd(d)[1]:g}km easy."
     ),
-    "marathon_mp_long": (
-        r"Run 25km total",
-        lambda d: f"First {round(d * 0.60, 0):.0f}km at easy pace, then shift to marathon goal pace for the final {round(d * 0.40, 0):.0f}km",
+    "marathon_mp_long": lambda d: (
+        f"Run {round(d):g}km total. First {round(d * 0.60):g}km at easy pace, "
+        f"then shift to marathon goal pace for the final {round(d * 0.40):g}km. "
+        f"Take a gel at {round(d * 0.32):g}km and {round(d * 0.64):g}km to practice race fueling."
     ),
-    "marathon_progressive_long": (
-        r"Run 28-30km\. First 20km",
-        lambda d: f"Run {round(d, 0):.0f}km. First {round(d * 0.67, 0):.0f}km",
+    "marathon_progressive_long": lambda d: (
+        f"Run {round(d):g}km. First {round(d * 0.67):g}km at easy pace. "
+        f"Then run each subsequent 2km segment 5-10s/km faster, finishing the last 2km at marathon pace. "
+        f"Practice fueling every 5km."
     ),
-    "marathon_peak_progressive": (
-        r"Run 28km total\. First 16km",
-        lambda d: f"Run {round(d, 0):.0f}km total. First {round(d * 0.57, 0):.0f}km",
+    "marathon_peak_progressive": lambda d: (
+        f"Run {round(d):g}km total. First {round(d * 0.57):g}km at easy pace. "
+        f"Then run each subsequent 3km segment 5-10s/km faster, finishing the last 3km at marathon pace."
     ),
-    "marathon_easy_long_fueling": (
-        r"Run 30-32km",
-        lambda d: f"Run {round(d, 0):.0f}km",
+    "marathon_easy_long_fueling": lambda d: (
+        f"Run {round(d):g}km at easy conversational pace. "
+        f"Take a gel or fuel every 5km starting at km 10. Practice your exact race-day nutrition strategy. "
+        f"Walk 1 min after each fuel stop if needed."
     ),
-    "marathon_tempo_cutdown": (
-        None,
-        lambda d: f"Warm up {round(d * 0.10, 0):.0f}km easy. Run 2 x {round(d * 0.35, 0):.0f}km at threshold pace with 3 min easy jog recovery. Cool down {round(d * 0.10, 0):.0f}km easy.",
+    "marathon_tempo_cutdown": lambda d: (
+        f"Warm up {round(max(1, d * 0.10)):g}km easy. "
+        f"Run 2 x {round(max(1, d * 0.35)):g}km at threshold pace with 3 min easy jog recovery. "
+        f"Cool down {round(max(1, d * 0.10)):g}km easy."
     ),
-    "marathon_mp_cutdown": (
-        None,
-        lambda d: f"Warm up {round(d * 0.10, 0):.0f}km easy. Run 5 x 2km alternating between marathon pace and threshold pace, with 90s jog recovery between each. Cool down {round(d * 0.10, 0):.0f}km easy.",
+    "marathon_mp_cutdown": lambda d: (
+        f"Warm up {round(max(1, d * 0.10)):g}km easy. "
+        f"Run 5 x 2km alternating between marathon pace and threshold pace, "
+        f"with 90s jog recovery between each. Cool down {round(max(1, d * 0.10)):g}km easy."
     ),
-    "half_progressive_long": (
-        r"Run 14-16km total\. Start at easy pace for 10km",
-        lambda d: f"Run {round(d, 0):.0f}km total. Start at easy pace for {round(d * 0.65, 0):.0f}km",
+    "half_progressive_long": lambda d: (
+        f"Run {round(d):g}km total. Start at easy pace for {round(d * 0.65):g}km, "
+        f"then increase to marathon pace for the final {round(d * 0.35):g}km. "
+        f"No warm-up needed — the easy start IS the warm-up."
     ),
-    "half_cutdown_long": (
-        r"Run 15km in three 5km segments",
-        lambda d: f"Run {round(d, 0):.0f}km in three equal segments",
+    "half_cutdown_long": lambda d: (
+        f"Run {round(d):g}km in three {round(d / 3, 1):g}km segments. "
+        f"Segment 1 at easy pace, segment 2 at 15s/km faster, segment 3 at marathon pace."
     ),
-    "half_race_pace_segments": (
-        None,
-        lambda d: f"Warm up 2km easy. Run 3 x {round(d * 0.25, 0):.0f}km at half marathon goal pace with 2 min easy jog recovery. Cool down 2km easy.",
+    "half_race_pace_segments": lambda d: (
+        f"Warm up {_wu_cd(d)[0]:g}km easy. "
+        f"Run 3 x {round((d - _wu_cd(d)[0] - _wu_cd(d)[1]) / 3, 1):g}km "
+        f"at half marathon goal pace with 2 min easy jog recovery. Cool down {_wu_cd(d)[1]:g}km easy."
     ),
-    "half_threshold_cruise": (
-        None,
-        lambda d: f"Warm up 2km easy. Run 3 x {round(d * 0.20, 0):.0f}km at threshold pace with 90 seconds easy jog recovery. Cool down 2km easy.",
+    "half_threshold_cruise": lambda d: (
+        f"Warm up {_wu_cd(d)[0]:g}km easy. "
+        f"Run 3 x {round((d - _wu_cd(d)[0] - _wu_cd(d)[1]) / 3, 1):g}km "
+        f"at threshold pace with 90 seconds easy jog recovery. Cool down {_wu_cd(d)[1]:g}km easy."
     ),
-    "trail_flat_surge_fartlek": (
-        r"Run 8 x 3 min",
-        lambda d: f"Run 8 x 3 min",
+    "trail_flat_surge_fartlek": lambda d: (
+        f"On varied terrain (grass, dirt path, or trail). Run 8 x 3 min at hill-repeat effort "
+        f"(Zone 4-5) with 2 min easy jog recovery. {_wu_cd(d)[0]:g}km warm-up, {_wu_cd(d)[1]:g}km cool-down."
     ),
-    "trail_flat_soft_surface": (
-        r"Run 2\.5-3 hours",
-        lambda d: f"Run your long-run duration",
+    "trail_flat_soft_surface": lambda d: (
+        f"Find the softest running surface available: grass fields, dirt trails, beach, gravel paths. "
+        f"Run {round(d):g}km at easy effort. The soft surface increases energy cost 10-15% vs pavement. "
+        f"Walk 2 min every 45 min. Practice race fueling."
     ),
-    "trail_time_on_feet": (
-        r"Run 2\.5-3 hours",
-        lambda d: f"Run your long-run duration",
+    "trail_time_on_feet": lambda d: (
+        f"Run {round(d):g}km on trails at easy conversational effort. "
+        f"Walk steep uphills (>15% grade) to conserve energy. Practice race fueling every 30 min."
     ),
-    "trail_back_to_back": (
-        r"Saturday: 20-22km.*?Sunday: 15-18km",
-        lambda d: f"Saturday: {round(d * 0.57, 0):.0f}km trail run at easy effort on hilly terrain. Sunday: {round(d * 0.43, 0):.0f}km trail run at easy effort on fatigued legs",
+    "trail_back_to_back": lambda d: (
+        f"Saturday: {round(d * 0.57):g}km trail run at easy effort on hilly terrain. "
+        f"Sunday: {round(d * 0.43):g}km trail run at easy effort on fatigued legs. "
+        f"Practice race fueling on both days."
     ),
-    "trail_technical_terrain": (
-        r"Run 8km",
-        lambda d: f"Run {round(d * 0.80, 0):.0f}km",
+    "trail_technical_terrain": lambda d: (
+        f"Find a technical trail with rocks, roots, and uneven surface. "
+        f"Run {round(d * 0.80):g}km at moderate effort, focusing on foot placement, "
+        f"quick cadence, and staying light on your feet."
     ),
-    "10k_goal_pace_segments": (
-        None,
-        lambda d: f"Warm up 2km easy. Run 2 x {round(d * 0.25, 0):.0f}km at 10K goal pace with 3 min standing recovery. Cool down 2km easy.",
+    "10k_goal_pace_segments": lambda d: (
+        f"Warm up {_wu_cd(d)[0]:g}km easy. "
+        f"Run 2 x {round((d - _wu_cd(d)[0] - _wu_cd(d)[1]) / 2, 1):g}km "
+        f"at 10K goal pace with 3 min standing recovery. Cool down {_wu_cd(d)[1]:g}km easy."
     ),
-    "10k_tempo_progression": (
-        None,
-        lambda d: f"Warm up 2km easy. Run {round(d * 0.50, 0):.0f}km as a progression: first km at easy pace, each subsequent km 10-15 sec/km faster, finishing last km at 10K goal pace. Cool down 2km easy.",
+    "10k_tempo_progression": lambda d: (
+        f"Warm up {_wu_cd(d)[0]:g}km easy. "
+        f"Run {round(d - _wu_cd(d)[0] - _wu_cd(d)[1], 1):g}km as a progression: "
+        f"first km at easy pace, each subsequent km 10-15 sec/km faster, "
+        f"finishing last km at 10K goal pace. Cool down {_wu_cd(d)[1]:g}km easy."
     ),
-    "10k_fartlek": (
-        None,
-        lambda d: f"Warm up 2km easy. Within a continuous run, alternate 6 x (3 min at 10K pace / 2 min easy jog). Cool down 2km easy.",
+    "10k_fartlek": lambda d: (
+        f"Warm up {_wu_cd(d)[0]:g}km easy. Within a continuous run, "
+        f"alternate 6 x (3 min at 10K pace / 2 min easy jog). Cool down {_wu_cd(d)[1]:g}km easy."
     ),
 }
 
 
 def _rewrite_key_workout_description(description: str, workout_id: str,
                                       actual_distance: float) -> str:
-    """Rewrite hardcoded distances in a key workout description.
-
-    Uses a lookup table of known patterns to replace specific distance
-    references with values proportional to the actual assigned distance.
-    Falls back to the original description if no rewrite rule matches.
-    """
-    rewrite = _DISTANCE_REWRITES.get(workout_id)
-    if not rewrite:
+    """Generate a distance-appropriate description for a key workout."""
+    rewrite_fn = _DISTANCE_REWRITES.get(workout_id)
+    if not rewrite_fn:
         return description
-
-    total_pattern, splits_fn = rewrite
-
-    if total_pattern:
-        description = re.sub(total_pattern, f"Run {round(actual_distance, 0):.0f}km", description)
-
-    if splits_fn:
-        splits_text = splits_fn(actual_distance)
-        description = re.sub(
-            r"(First \d+km.*?(?:final \d+km|last \d+km|descending pace|marathon pace))",
-            splits_text,
-            description,
-            flags=re.DOTALL,
-        )
-        description = re.sub(
-            r"(Warm up \d+km.*?Cool down \d+km.*?)(?:\.)?",
-            splits_text + ".",
-            description,
-            flags=re.DOTALL,
-        )
-        if "Run 2 x" in splits_text or "Run 3 x" in splits_text or "Run 5 x" in splits_text:
-            description = re.sub(
-                r"Run \d+ x \d+km.*?(?:\.|$)",
-                splits_text + ".",
-                description,
-                flags=re.DOTALL,
-            )
-        if "Within a continuous run" in splits_text:
-            description = re.sub(
-                r"Within a continuous run.*?(?:\.|$)",
-                splits_text + ".",
-                description,
-                flags=re.DOTALL,
-            )
-        if "Saturday:" in splits_text:
-            description = re.sub(
-                r"Saturday:.*?(?:fatigued legs)\.",
-                splits_text + ".",
-                description,
-                flags=re.DOTALL,
-            )
-        if "Run your long-run duration" in splits_text:
-            description = re.sub(
-                r"Run \d+(?:\.\d+)?-\d+(?:\.\d+)? hours",
-                "your long-run duration",
-                description,
-            )
-
-    return description
+    return rewrite_fn(actual_distance)
 
 # Backward-compatible alias: tests and internal code import _WORKOUTS.
 _WORKOUTS = WORKOUTS

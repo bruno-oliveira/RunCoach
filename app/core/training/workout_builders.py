@@ -182,19 +182,23 @@ def generate_easy_run(day: int, distance: float, total_km: float,
 def generate_tempo_run(day: int, distance: float, total_km: float,
                        pace_zones: Optional[Dict] = None) -> Dict[str, Any]:
     """Generate tempo run workout, with specific paces if VDOT is available."""
+    warmup = min(2.0, max(0.5, round(distance * 0.25, 1)))
+    cooldown = warmup
+    main_km = round(distance - warmup - cooldown, 1)
+
     if pace_zones:
         t_pace = pace_zones["T"]["pace_str"]
         m_pace = pace_zones["M"]["pace_str"]
         tempo_variations = [
-            f'Tempo run: 2km warmup, {round(distance-2, 1)}km at {t_pace} (T-pace), 2km cooldown.',
-            f'Cruise intervals: 3x{round((distance-2)/3, 1)}km at {t_pace} (T-pace) with 3min recovery.',
-            f'Tempo run with surges: main tempo at {t_pace} (T-pace) with 4x30sec faster surges.',
+            f'Tempo run: {warmup:g}km warmup, {main_km:g}km at {t_pace} (T-pace), {cooldown:g}km cooldown.',
+            f'Cruise intervals: 3x{round(main_km/3, 1):g}km at {t_pace} (T-pace) with 3min recovery.',
+            f'Tempo run with surges: {warmup:g}km warmup, {main_km:g}km at {t_pace} (T-pace) with 4x30sec faster surges, {cooldown:g}km cooldown.',
         ]
     else:
         tempo_variations = [
-            f'Tempo run: 2km warmup, {round(distance-2, 1)}km at threshold pace, 2km cooldown.',
-            f'Cruise intervals: 3x{round((distance-2)/3, 1)}km at tempo pace with 3min recovery.',
-            f'Tempo run with surges: Main tempo with 4x30sec faster surges.',
+            f'Tempo run: {warmup:g}km warmup, {main_km:g}km at threshold pace, {cooldown:g}km cooldown.',
+            f'Cruise intervals: 3x{round(main_km/3, 1):g}km at tempo pace with 3min recovery.',
+            f'Tempo run with surges: {warmup:g}km warmup, {main_km:g}km at threshold effort with 4x30sec faster surges, {cooldown:g}km cooldown.',
         ]
 
     description = VDOTCalculator.inject_paces_into_description(
@@ -227,39 +231,47 @@ def generate_interval_run(day: int, distance: float, total_km: float,
     else:
         i_pace = t_pace = m_pace = r_pace = None
 
+    warmup = min(2.0, max(0.5, round(distance * 0.25, 1)))
+    cooldown = warmup
+    work_km = max(0.5, distance - warmup - cooldown)
+
     # Guardrail: gate long intervals behind sufficient base
     if total_km >= 40:
-        # Full suite including 1000m+ intervals
+        reps_400 = max(4, round(work_km / 0.8))
+        reps_800 = max(4, round(work_km / 1.6))
+        reps_1000 = max(3, round(work_km / 2.0))
         if i_pace:
             interval_workouts = [
-                f'VO\u2082max intervals: 6x400m at {i_pace} (I-pace) with 400m recovery jog.',
+                f'VO\u2082max intervals: {reps_400}x400m at {i_pace} (I-pace) with 400m recovery jog.',
                 f'Pyramid: 400m-800m-1200m-800m-400m at {i_pace} (I-pace) with equal recovery.',
                 f'Hill repeats: 8x45sec at {t_pace} (T-pace) effort with jog-down recovery.',
-                f'Yasso 800s: {max(4, round(distance / 0.8))}x800m at {m_pace} (M-pace).',
-                f'VO\u2082max intervals: 5x1000m at {i_pace} (I-pace) with 400m recovery jog.',
+                f'Yasso 800s: {reps_800}x800m at {m_pace} (M-pace).',
+                f'VO\u2082max intervals: {reps_1000}x1000m at {i_pace} (I-pace) with 400m recovery jog.',
             ]
         else:
             interval_workouts = [
-                f'VO\u2082max intervals: 6x400m at 5K pace with 400m recovery jog.',
+                f'VO\u2082max intervals: {reps_400}x400m at 5K pace with 400m recovery jog.',
                 f'Pyramid intervals: 400m-800m-1200m-800m-400m with equal recovery.',
                 f'Hill repeats: 8x45sec at threshold effort with jog-down recovery.',
-                f'Yasso 800s: {max(4, round(distance / 0.8))}x800m at marathon goal pace.',
-                f'VO\u2082max intervals: 5x1000m at 5K pace with 400m recovery jog.',
+                f'Yasso 800s: {reps_800}x800m at marathon goal pace.',
+                f'VO\u2082max intervals: {reps_1000}x1000m at 5K pace with 400m recovery jog.',
             ]
     else:
-        # Conservative: 400m-800m only; 200m repeats for low-base runners
+        reps_400 = max(4, round(work_km / 0.8))
+        reps_800 = max(3, round(work_km / 1.6))
+        reps_200 = max(6, round(work_km / 0.4))
         if i_pace:
             interval_workouts = [
-                f'Speed intervals: 10x400m at {i_pace} (I-pace) with 400m recovery jog.',
-                f'Cruise intervals: 6x800m at {t_pace} (T-pace) with 90sec rest.',
-                f'Speed work: 12x200m at {r_pace} (R-pace) with 200m recovery jog.',
+                f'Speed intervals: {reps_400}x400m at {i_pace} (I-pace) with 400m recovery jog.',
+                f'Cruise intervals: {reps_800}x800m at {t_pace} (T-pace) with 90sec rest.',
+                f'Speed work: {reps_200}x200m at {r_pace} (R-pace) with 200m recovery jog.',
                 f'Hill repeats: 8x30sec at hard effort with walk-down recovery.',
             ]
         else:
             interval_workouts = [
-                f'Speed intervals: 10x400m at 5K pace with 400m recovery jog.',
-                f'Cruise intervals: 6x800m at 10K pace with 90sec rest.',
-                f'Speed work: 12x200m at fast-but-controlled effort with 200m jog.',
+                f'Speed intervals: {reps_400}x400m at 5K pace with 400m recovery jog.',
+                f'Cruise intervals: {reps_800}x800m at 10K pace with 90sec rest.',
+                f'Speed work: {reps_200}x200m at fast-but-controlled effort with 200m jog.',
                 f'Hill repeats: 8x30sec at hard effort with walk-down recovery.',
             ]
 
