@@ -46,7 +46,7 @@ async def request_size_limit(request: Request, call_next):
     return await call_next(request)
 
 
-_COOKIE_REQUIRED_PREFIXES = ("/generate-plan", "/api/")
+_COOKIE_REQUIRED_PREFIXES = ("/generate-plan", "/generate-fitness-plan", "/api/")
 
 
 async def set_anonymous_user_id_cookie(request: Request, call_next):

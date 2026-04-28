@@ -127,7 +127,16 @@ async def view_plan(
                             f"{format_pace(pr[0])} - {format_pace(pr[1])}"
                         )
                 extra["training_zones"] = zones
-                extra["fitness_focus_area"] = training_plan.target_distance.replace("fitness_", "") if training_plan.target_distance.startswith("fitness_") else "vo2max"
+                focus_area = training_plan.target_distance.replace("fitness_", "") if training_plan.target_distance.startswith("fitness_") else "vo2max"
+                extra["fitness_focus_area"] = focus_area
+                phase_durations = gen._calculate_fitness_phases(
+                    training_plan.weeks_duration, focus_area
+                )
+                from app.core.generators.fitness_plan_generator import _PHASE_METADATA
+                extra["phases"] = {
+                    phase: {"weeks": phase_durations[phase], **_PHASE_METADATA[phase]}
+                    for phase in phase_durations
+                }
                 time_trial_weeks = []
                 for week_data in plan_data:
                     if week_data.get("is_time_trial_week"):
