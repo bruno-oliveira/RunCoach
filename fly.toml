@@ -10,8 +10,7 @@ primary_region = 'sjc'
   dockerfile = 'Dockerfile'
 
 [deploy]
-  strategy = 'rolling'
-  release_command = 'python -c "from app.dependencies import engine; from app.migrations import run_alembic_migrations; run_alembic_migrations(engine)"'
+  strategy = 'immediate'
 
 [checks.liveness]
   port = 8000
