@@ -44,7 +44,12 @@ async def list_my_plans(
         today = date.today()
         for plan in plans:
             td = plan.target_distance_km
-            plan.target_distance_display = DISTANCE_NAMES.get(td, f"{td}km")
+            if td > 0:
+                plan.target_distance_display = DISTANCE_NAMES.get(td, f"{td}km")
+            elif plan.plan_type == "performance":
+                plan.target_distance_display = "Performance"
+            else:
+                plan.target_distance_display = f"{td}km"
             plan.experience_level = derive_experience_level(plan.current_weekly_km or 0)
 
             if plan.start_date:

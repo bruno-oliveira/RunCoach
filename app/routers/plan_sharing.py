@@ -122,7 +122,12 @@ async def view_shared_plan(
     )
     ctx["share_token"] = share_token
     td = training_plan.target_distance_km
-    ctx["distance_display"] = DISTANCE_NAMES.get(td, f"{td} km")
+    if td > 0:
+        ctx["distance_display"] = DISTANCE_NAMES.get(td, f"{td} km")
+    elif training_plan.plan_type == "performance":
+        ctx["distance_display"] = "Performance"
+    else:
+        ctx["distance_display"] = f"{td} km"
 
     return templates.TemplateResponse("plan_shared.html", ctx)
 

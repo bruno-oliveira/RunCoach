@@ -37,7 +37,12 @@ async def analytics_page(
     plan_summaries = []
     for p in plans:
         td = p.target_distance_km
-        label = DISTANCE_NAMES.get(td, f"{td}km")
+        if td > 0:
+            label = DISTANCE_NAMES.get(td, f"{td}km")
+        elif p.plan_type == "performance":
+            label = "Performance"
+        else:
+            label = f"{td}km"
         plan_summaries.append({
             "id": p.id,
             "label": f"{label} — {p.weeks_duration}wk",
