@@ -463,40 +463,27 @@ function setPlanMode(mode) {
     timeBtn.classList.remove('mode-btn-active');
     fitnessBtn.classList.remove('mode-btn-active');
 
-    var distRequired = ['target_distance', 'weeks', 'max_runs_per_week', 'body_weight_kg'];
-    var timeRequired = ['target_distance_time', 'weeks_time', 'max_runs_per_week_time', 'goal_time_required'];
-    var fitnessRequired = ['body_weight_kg_fitness'];
-    var allRequired = distRequired.concat(timeRequired).concat(fitnessRequired);
-    allRequired.forEach(function(id) {
-        var el = document.getElementById(id);
-        if (el) el.removeAttribute('required');
-    });
-    var activeRequired = mode === 'time' ? timeRequired : mode === 'fitness' ? fitnessRequired : distRequired;
-    activeRequired.forEach(function(id) {
-        var el = document.getElementById(id);
-        if (el) el.setAttribute('required', '');
+    var sections = [distFields, timeFields, fitnessFields];
+    var activeSection = mode === 'time' ? timeFields : mode === 'fitness' ? fitnessFields : distFields;
+    sections.forEach(function(section) {
+        var hidden = section !== activeSection;
+        section.style.display = hidden ? 'none' : '';
+        section.querySelectorAll('input, select').forEach(function(el) {
+            el.disabled = hidden;
+        });
     });
 
     if (mode === 'time') {
         timeBtn.classList.add('mode-btn-active');
-        distFields.style.display = 'none';
-        timeFields.style.display = '';
-        fitnessFields.style.display = 'none';
         form.action = '/generate-plan';
         submitBtn.querySelector('svg').style.display = '';
         desc.textContent = 'Target a specific finish time — every workout is paced off your goal.';
     } else if (mode === 'fitness') {
         fitnessBtn.classList.add('mode-btn-active');
-        distFields.style.display = 'none';
-        timeFields.style.display = 'none';
-        fitnessFields.style.display = '';
         form.action = '/generate-fitness-plan';
         desc.textContent = 'Get faster and fitter — no race required, with built-in progress tracking.';
     } else {
         distBtn.classList.add('mode-btn-active');
-        distFields.style.display = '';
-        timeFields.style.display = 'none';
-        fitnessFields.style.display = 'none';
         form.action = '/generate-plan';
         desc.textContent = 'Build a structured plan to finish a race at a specific distance.';
     }
@@ -513,10 +500,9 @@ function setPlanMode(mode) {
     distSelect.addEventListener('change', updateTerrainVisibility);
     updateTerrainVisibility();
 
-    // Initialize mode from query param
-    var initialMode = document.getElementById('plan_mode').value;
-    if (initialMode === 'time') setPlanMode('time');
-    if (initialMode === 'fitness') setPlanMode('fitness');
+    // Initialize mode from query param (always run to disable hidden sections)
+    var initialMode = document.getElementById('plan_mode').value || 'distance';
+    setPlanMode(initialMode);
 
     // Disable options in "Runs per week" that aren't viable for the chosen distance.
     // 2 runs → 5K/10K only. 3 runs → anything except marathon/trail.
