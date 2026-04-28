@@ -463,6 +463,20 @@ function setPlanMode(mode) {
     timeBtn.classList.remove('mode-btn-active');
     fitnessBtn.classList.remove('mode-btn-active');
 
+    var distRequired = ['target_distance', 'weeks', 'max_runs_per_week', 'body_weight_kg'];
+    var timeRequired = ['target_distance_time', 'weeks_time', 'max_runs_per_week_time', 'goal_time_required'];
+    var fitnessRequired = ['body_weight_kg_fitness'];
+    var allRequired = distRequired.concat(timeRequired).concat(fitnessRequired);
+    allRequired.forEach(function(id) {
+        var el = document.getElementById(id);
+        if (el) el.removeAttribute('required');
+    });
+    var activeRequired = mode === 'time' ? timeRequired : mode === 'fitness' ? fitnessRequired : distRequired;
+    activeRequired.forEach(function(id) {
+        var el = document.getElementById(id);
+        if (el) el.setAttribute('required', '');
+    });
+
     if (mode === 'time') {
         timeBtn.classList.add('mode-btn-active');
         distFields.style.display = 'none';
