@@ -210,3 +210,23 @@ class TestPlanCreationAndWorkflow:
         # Should include actual nutrition data, not just nav references
         assert "calorie" in html or "protein" in html, "Response should contain actual nutrition data (calories or protein)"
         assert "meal" in html, "Response should contain meal suggestions"
+
+    def test_anonymous_fitness_plan_no_limit(self, client: TestClient):
+        """Anonymous users should not hit the 3-plan limit on fitness plans."""
+        for i in range(4):
+            response = client.post(
+                "/generate-fitness-plan",
+                data={
+                    "current_km": 20.0,
+                    "weeks": 4,
+                    "runs_per_week": 3,
+                    "focus_area": "vo2max",
+                },
+            )
+            assert response.status_code == 200, (
+                f"Fitness plan #{i + 1} failed with status {response.status_code}. "
+                "Anonymous users must not be limited to 3 plans."
+            )
+            assert "error" not in response.text.lower() or "plan_limit" not in response.text.lower(), (
+                f"Fitness plan #{i + 1} returned a plan-limit error for an anonymous user."
+            )

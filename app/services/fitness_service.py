@@ -32,12 +32,6 @@ class FitnessService:
         nutrition_engine: NutritionEngine,
     ) -> tuple[TrainingPlan, list[dict]]:
         """Create a fitness-focused training plan."""
-        if self._plan_service.has_reached_plan_limit(user.id, self.db):
-            raise ValueError(
-                "You've reached the maximum of 3 active training plans. "
-                "Please delete or complete an existing plan before creating a new one."
-            )
-
         existing = self._find_duplicate(plan_request, user.id)
         if existing:
             logger.info(
