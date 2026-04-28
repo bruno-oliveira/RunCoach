@@ -619,8 +619,11 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
             }
 
-            submitBtn.disabled = true;
-            submitBtn.innerHTML = '<span class="spinner spinner-sm"></span> Generating\u2026';
+            // Disable button after form starts submitting (prevents blocking submission)
+            setTimeout(function() {
+                submitBtn.disabled = true;
+                submitBtn.innerHTML = '<span class="spinner spinner-sm"></span> Generating\u2026';
+            }, 50);
         });
     }
 });
