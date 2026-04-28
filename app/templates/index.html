@@ -502,7 +502,8 @@ function setPlanMode(mode) {
     }
 }
 
-document.addEventListener('DOMContentLoaded', function() {
+    // Execute immediately - script is at end of body so DOM is already ready
+    (function() {
     // Show/hide terrain selector for trail distance
     const distSelect = document.getElementById('target_distance');
     const terrainGroup = document.getElementById('terrain-group');
@@ -640,7 +641,7 @@ document.addEventListener('DOMContentLoaded', function() {
             }, 50);
         });
     }
-});
+    })();
 </script>
 {% endblock %}
 

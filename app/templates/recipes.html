@@ -575,10 +575,10 @@
         });
     }
 
-    // Initialize with search
-    document.addEventListener('DOMContentLoaded', function() {
+    // Execute immediately - script is at end of body so DOM is already ready
+    (function() {
         searchRecipes();
         setupRealTimeSearch();
-    });
+    })();
 </script>
 {% endblock %}
