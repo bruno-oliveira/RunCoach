@@ -100,6 +100,8 @@ def overlay_key_workout(workout: Dict[str, Any], workout_type: str,
         return
     if phase not in ('build', 'peak'):
         return
+    if workout.get('duration_min'):
+        return
     key_wk = KeyWorkoutLibrary.get_for_phase(
         target_distance, phase, week_in_phase, workout_type, terrain=terrain,
     )
@@ -129,7 +131,9 @@ def overlay_key_workout(workout: Dict[str, Any], workout_type: str,
         )
     else:
         workout['steps'] = _steps_mod.parse_key_workout_steps(
-            key_wk['structure'], pace_zones, workout_type
+            description, pace_zones, workout_type,
+            default_zone=key_wk.get('pace_zone'),
+            total_distance_km=actual_distance,
         )
 
 

@@ -374,7 +374,7 @@ WORKOUTS_LONG: List[Dict] = [
         "type": "tempo",
         "terrain": ["hilly"],
         "name": "Time-on-Feet Long Run",
-        "structure": "2.5-3 hours on trails at easy effort, walk steep uphills",
+        "structure": "Trail run at easy effort, walk steep uphills",
         "description": (
             "Run 2.5-3 hours on trails at easy conversational effort. "
             "Walk steep uphills (>15% grade) to conserve energy. "
@@ -439,7 +439,7 @@ WORKOUTS_LONG: List[Dict] = [
         "type": "tempo",
         "terrain": ["hilly"],
         "name": "Back-to-Back Long Runs",
-        "structure": "Saturday 20-22km + Sunday 15-18km, both easy on trails",
+        "structure": "Back-to-back trail runs at easy effort, practice fueling",
         "description": (
             "Saturday: 20-22km trail run at easy effort on hilly terrain. "
             "Sunday: 15-18km trail run at easy effort on fatigued legs. "
@@ -511,7 +511,7 @@ WORKOUTS_LONG: List[Dict] = [
         "type": "tempo",
         "terrain": ["flat"],
         "name": "Soft-Surface Time-on-Feet",
-        "structure": "2.5-3 hours on grass/dirt/sand at easy effort, fuel every 30min",
+        "structure": "Easy run on grass/dirt/sand, fuel every 30min",
         "description": (
             "Find the softest running surface available: grass fields, dirt "
             "trails, beach, gravel paths. Run 2.5-3 hours at easy effort. "
@@ -534,7 +534,7 @@ WORKOUTS_LONG: List[Dict] = [
         "type": "tempo",
         "terrain": ["flat"],
         "name": "Power-Walk Intervals",
-        "structure": "60 min: 5min max-effort power walk / 5min easy run x 6",
+        "structure": "5min power walk / 5min easy run intervals",
         "description": (
             "Alternate 5 min of maximum-effort power walking (pumping arms, "
             "longest possible stride) with 5 min easy running x 6 sets. "

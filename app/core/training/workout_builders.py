@@ -20,8 +20,9 @@ _TIME_THRESHOLD = {'easy': 3.0, 'long': 3.0, 'tempo': 2.0, 'interval': 2.0, 'hil
 _MIN_DURATION = {'easy': 20, 'long': 25, 'tempo': 25, 'interval': 25, 'hill': 25}
 
 
-def _apply_time_based(workout: Dict[str, Any]) -> Dict[str, Any]:
-    """Add duration_min and rewrite description when distance is too short to be meaningful."""
+def _apply_time_based(workout: Dict[str, Any],
+                      pace_zones: Optional[Dict] = None) -> Dict[str, Any]:
+    """Add duration_min and rewrite description+steps when distance is too short to be meaningful."""
     wtype = workout.get('type', '')
     dist = workout.get('distance', 0)
     threshold = _TIME_THRESHOLD.get(wtype)
@@ -38,7 +39,37 @@ def _apply_time_based(workout: Dict[str, Any]) -> Dict[str, Any]:
     }
     if wtype in descs:
         workout['description'] = descs[wtype]
+    workout['steps'] = _time_based_steps(wtype, dur, pace_zones)
     return workout
+
+
+def _time_based_steps(wtype: str, dur: int,
+                      pace_zones: Optional[Dict] = None) -> List[Dict[str, Any]]:
+    _ps = workout_steps._pace_str
+    wu = workout_steps._step("warmup", "5 min warm-up", duration_s=300, pace_zone="E", pace_str=_ps("E", pace_zones), effort="easy")
+    cd = workout_steps._step("cooldown", "5 min cool-down", duration_s=300, pace_zone="E", pace_str=_ps("E", pace_zones), effort="easy")
+    if wtype == 'tempo':
+        main_s = (dur - 10) * 60
+        return [wu, workout_steps._step("run", f"{dur - 10} min tempo", duration_s=main_s, pace_zone="T", pace_str=_ps("T", pace_zones), effort="comfortably hard"), cd]
+    if wtype == 'interval':
+        return [
+            wu,
+            workout_steps._step("run", "6 × 1 min hard", duration_s=60, repeat=6, pace_zone="I", pace_str=_ps("I", pace_zones), effort="hard"),
+            workout_steps._step("recovery", "1 min easy jog", duration_s=60, repeat=6, pace_zone="E", pace_str=_ps("E", pace_zones), effort="jog"),
+            cd,
+        ]
+    if wtype == 'hill':
+        return [
+            wu,
+            workout_steps._step("run", "6 × 30 s uphill", duration_s=30, repeat=6, effort="hard uphill"),
+            workout_steps._step("recovery", "Jog-down recovery", duration_s=60, repeat=6, effort="jog"),
+            cd,
+        ]
+    if wtype == 'easy':
+        return [workout_steps._step("run", f"{dur} min easy", duration_s=dur * 60, pace_zone="E", pace_str=_ps("E", pace_zones), effort="conversational")]
+    if wtype == 'long':
+        return [workout_steps._step("run", f"{dur} min easy", duration_s=dur * 60, pace_zone="E", pace_str=_ps("E", pace_zones), effort="conversational", note="Focus on time on feet")]
+    return []
 
 
 def generate_rest_day(day: int) -> Dict[str, Any]:
@@ -142,7 +173,7 @@ def generate_long_run(day: int, distance: float, total_km: float,
         'intensity': 'medium',
         'description': long_run_notes[day % len(long_run_notes)],
         'steps': workout_steps.build_long_steps(distance, pace_zones, variant=variant),
-    })
+    }, pace_zones)
 
 
 def generate_easy_run(day: int, distance: float, total_km: float,
@@ -176,7 +207,7 @@ def generate_easy_run(day: int, distance: float, total_km: float,
         'steps': workout_steps.build_easy_steps(
             distance, pace_zones, with_strides=(variant_idx == 1)
         ),
-    })
+    }, pace_zones)
 
 
 def generate_tempo_run(day: int, distance: float, total_km: float,
@@ -213,7 +244,7 @@ def generate_tempo_run(day: int, distance: float, total_km: float,
         'intensity': 'medium',
         'description': description,
         'steps': workout_steps.build_tempo_steps(distance, pace_zones, variant=variant_idx),
-    })
+    }, pace_zones)
 
 
 def generate_interval_run(day: int, distance: float, total_km: float,
@@ -293,7 +324,7 @@ def generate_interval_run(day: int, distance: float, total_km: float,
             reps_400=reps_400, reps_800=reps_800,
             reps_1000=reps_1000, reps_200=reps_200,
         ),
-    })
+    }, pace_zones)
 
 
 def generate_hill_workout(day: int, distance: float = 0) -> Dict[str, Any]:
