@@ -185,6 +185,7 @@ def generate_tempo_run(day: int, distance: float, total_km: float,
     warmup = min(2.0, max(0.5, round(distance * 0.25, 1)))
     cooldown = warmup
     main_km = round(distance - warmup - cooldown, 1)
+    variant_idx = day % 3
 
     if pace_zones:
         t_pace = pace_zones["T"]["pace_str"]
@@ -202,7 +203,7 @@ def generate_tempo_run(day: int, distance: float, total_km: float,
         ]
 
     description = VDOTCalculator.inject_paces_into_description(
-        tempo_variations[day % len(tempo_variations)], pace_zones or {}, "tempo"
+        tempo_variations[variant_idx], pace_zones or {}, "tempo"
     )
 
     return _apply_time_based({
@@ -211,7 +212,7 @@ def generate_tempo_run(day: int, distance: float, total_km: float,
         'distance': round(distance, 1),
         'intensity': 'medium',
         'description': description,
-        'steps': workout_steps.build_tempo_steps(distance, pace_zones),
+        'steps': workout_steps.build_tempo_steps(distance, pace_zones, variant=variant_idx),
     })
 
 
@@ -235,11 +236,11 @@ def generate_interval_run(day: int, distance: float, total_km: float,
     cooldown = warmup
     work_km = max(0.5, distance - warmup - cooldown)
 
-    # Guardrail: gate long intervals behind sufficient base
     if total_km >= 40:
         reps_400 = max(4, round(work_km / 0.8))
         reps_800 = max(4, round(work_km / 1.6))
         reps_1000 = max(3, round(work_km / 2.0))
+        reps_200 = 0
         if i_pace:
             interval_workouts = [
                 f'VO\u2082max intervals: {reps_400}x400m at {i_pace} (I-pace) with 400m recovery jog.',
@@ -260,6 +261,7 @@ def generate_interval_run(day: int, distance: float, total_km: float,
         reps_400 = max(4, round(work_km / 0.8))
         reps_800 = max(3, round(work_km / 1.6))
         reps_200 = max(6, round(work_km / 0.4))
+        reps_1000 = 0
         if i_pace:
             interval_workouts = [
                 f'Speed intervals: {reps_400}x400m at {i_pace} (I-pace) with 400m recovery jog.',
@@ -275,8 +277,9 @@ def generate_interval_run(day: int, distance: float, total_km: float,
                 f'Hill repeats: 8x30sec at hard effort with walk-down recovery.',
             ]
 
+    variant_idx = day % len(interval_workouts)
     description = VDOTCalculator.inject_paces_into_description(
-        interval_workouts[day % len(interval_workouts)], pace_zones or {}, "interval"
+        interval_workouts[variant_idx], pace_zones or {}, "interval"
     )
 
     return _apply_time_based({
@@ -285,7 +288,11 @@ def generate_interval_run(day: int, distance: float, total_km: float,
         'distance': round(distance, 1),
         'intensity': 'high',
         'description': description,
-        'steps': workout_steps.build_interval_steps(distance, total_km, pace_zones),
+        'steps': workout_steps.build_interval_steps(
+            distance, total_km, pace_zones, variant=variant_idx,
+            reps_400=reps_400, reps_800=reps_800,
+            reps_1000=reps_1000, reps_200=reps_200,
+        ),
     })
 
 
