@@ -158,6 +158,43 @@ async def dismiss_alert(
     return {"ok": True}
 
 
+@router.get("/api/plan/{plan_id}/pending-recommendation")
+async def get_pending_recommendation(
+    plan_id: str,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Get the current pending adaptation recommendation, if any."""
+    training_plan = get_plan_or_404(
+        plan_id, db, current_user, require_user_match=True
+    )
+    return {"recommendation": training_plan.pending_recommendation}
+
+
+@router.post("/api/plan/{plan_id}/accept-recommendation")
+async def accept_recommendation(
+    plan_id: str,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Accept and apply the pending adaptation recommendation."""
+    get_plan_or_404(plan_id, db, current_user, require_user_match=True)
+    adaptation_service = AdaptationService()
+    return adaptation_service.accept_recommendation(plan_id, current_user.id, db)
+
+
+@router.post("/api/plan/{plan_id}/dismiss-recommendation")
+async def dismiss_recommendation(
+    plan_id: str,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Dismiss the pending recommendation without applying."""
+    get_plan_or_404(plan_id, db, current_user, require_user_match=True)
+    adaptation_service = AdaptationService()
+    return adaptation_service.dismiss_recommendation(plan_id, current_user.id, db)
+
+
 @router.post("/api/plan/{plan_id}/reset-adjustment")
 async def reset_plan_adjustment(
     plan_id: str,

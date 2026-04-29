@@ -749,6 +749,9 @@
         // Adaptation alert banner (defined in plan_adaptation.js)
         if (typeof window._initAdaptationAlert === 'function') window._initAdaptationAlert();
 
+        // Pending recommendation banner (defined in plan_adaptation.js)
+        if (typeof window._initPendingRecommendation === 'function') window._initPendingRecommendation();
+
         // Drag-and-drop (defined in plan_dragdrop.js)
         if (typeof window._initDragAndDrop === 'function') window._initDragAndDrop();
 

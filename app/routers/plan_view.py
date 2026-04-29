@@ -54,6 +54,9 @@ async def view_plan(
                 adaptation_service.check_alerts(
                     plan_id, current_user.id, db
                 )
+                adaptation_service.evaluate_recommendation(
+                    plan_id, current_user.id, db
+                )
             except Exception as e:
                 logger.warning(f"Auto-map/alert on view failed: {e}")
 

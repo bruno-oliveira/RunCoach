@@ -8,7 +8,7 @@ from typing import Any, Dict, List, Optional
 
 from sqlalchemy.orm import Session
 
-from . import alert_checker, plan_adjuster, recalibrator, run_mapper, suggestion_generator, type_swapper
+from . import alert_checker, plan_adjuster, recalibrator, recommendation_evaluator, run_mapper, suggestion_generator, type_swapper
 from .performance_analyzer import analyze_performance as _analyze_performance
 from .skipped_detector import detect_skipped_workouts as _detect_skipped
 
@@ -64,3 +64,20 @@ class AdaptationService:
         self, plan_id: str, user_id: str, db: Session
     ) -> List[Dict[str, Any]]:
         return suggestion_generator.get_weekly_suggestions(plan_id, user_id, db)
+
+    def evaluate_recommendation(
+        self, plan_id: str, user_id: str, db: Session, *, force: bool = False
+    ) -> Optional[Dict[str, Any]]:
+        return recommendation_evaluator.evaluate_weekly_recommendation(
+            plan_id, user_id, db, force=force,
+        )
+
+    def accept_recommendation(
+        self, plan_id: str, user_id: str, db: Session
+    ) -> Dict[str, Any]:
+        return recommendation_evaluator.accept_recommendation(plan_id, user_id, db)
+
+    def dismiss_recommendation(
+        self, plan_id: str, user_id: str, db: Session
+    ) -> Dict[str, Any]:
+        return recommendation_evaluator.dismiss_recommendation(plan_id, user_id, db)

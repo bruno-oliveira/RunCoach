@@ -295,6 +295,78 @@
     };
 
     /* -------------------------------------------------------------- */
+    /*  Pending adaptation recommendations (auto-triggered)            */
+    /* -------------------------------------------------------------- */
+
+    window.acceptRecommendation = function () {
+        var planId = window.APP_CTX && window.APP_CTX.plan_id;
+        if (!planId) return;
+
+        var btn = document.querySelector('#pending-recommendation-banner .btn-primary');
+        if (btn) { btn.disabled = true; btn.textContent = 'Applying…'; }
+
+        fetch('/api/plan/' + planId + '/accept-recommendation', {
+            method: 'POST',
+            headers: window.authHeaders ? window.authHeaders() : { 'Content-Type': 'application/json' },
+            credentials: 'same-origin'
+        })
+        .then(function (res) { return res.json(); })
+        .then(function (data) {
+            if (data.accepted || data.adjusted) {
+                if (typeof ApiClient !== 'undefined' && ApiClient.showSuccess) {
+                    ApiClient.showSuccess(data.reason || 'Recommendation applied.');
+                }
+                setTimeout(function () { window.location.reload(); }, 1200);
+            } else {
+                if (typeof ApiClient !== 'undefined' && ApiClient.showInfo) {
+                    ApiClient.showInfo(data.reason || 'No changes needed.');
+                }
+                _removeRecommendationBanner();
+            }
+        })
+        .catch(function (err) {
+            if (typeof ApiClient !== 'undefined' && ApiClient.showError) {
+                ApiClient.showError('Error: ' + err.message);
+            }
+            if (btn) { btn.disabled = false; btn.textContent = 'Accept'; }
+        });
+    };
+
+    window.dismissRecommendation = function () {
+        var planId = window.APP_CTX && window.APP_CTX.plan_id;
+        if (!planId) return;
+
+        fetch('/api/plan/' + planId + '/dismiss-recommendation', {
+            method: 'POST',
+            headers: window.authHeaders ? window.authHeaders() : { 'Content-Type': 'application/json' },
+            credentials: 'same-origin'
+        })
+        .then(function (res) { return res.json(); })
+        .then(function () { _removeRecommendationBanner(); })
+        .catch(function (err) {
+            console.error('[recommendation] dismiss failed:', err);
+        });
+    };
+
+    function _removeRecommendationBanner() {
+        var banner = document.getElementById('pending-recommendation-banner');
+        if (banner) {
+            banner.style.opacity = '0';
+            banner.style.transition = 'opacity 0.3s ease';
+            setTimeout(function () { banner.remove(); }, 300);
+        }
+    }
+
+    function initPendingRecommendation() {
+        var rec = window.APP_CTX && window.APP_CTX.pending_recommendation;
+        if (!rec) return;
+        var textEl = document.getElementById('recommendation-reason-text');
+        if (textEl) {
+            textEl.textContent = rec.reason || 'We have a training adjustment recommendation for you.';
+        }
+    }
+
+    /* -------------------------------------------------------------- */
     /*  Expose init helpers for plan_core.js DOMContentLoaded          */
     /* -------------------------------------------------------------- */
 
@@ -302,4 +374,5 @@
     window.dismissAdaptationBanner = dismissAdaptationBanner;
     window.viewAdaptationDetails = viewAdaptationDetails;
     window._initAdaptationAlert = initAdaptationAlert;
+    window._initPendingRecommendation = initPendingRecommendation;
 })();

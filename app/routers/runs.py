@@ -100,6 +100,15 @@ async def create_run_log(
         except Exception as e:
             logger.warning(f"Feedback generation failed for run {new_run.id}: {e}")
 
+        if new_run.training_plan_id:
+            try:
+                from app.services.adaptation_service import AdaptationService
+                AdaptationService().evaluate_recommendation(
+                    new_run.training_plan_id, current_user.id, db
+                )
+            except Exception as e:
+                logger.warning(f"Recommendation evaluation failed for run {new_run.id}: {e}")
+
         logger.info(f"Run log created for user {current_user.id}: {run_log.distance_km}km in {run_log.duration_minutes}min")
 
         response_data = run_to_response(new_run)

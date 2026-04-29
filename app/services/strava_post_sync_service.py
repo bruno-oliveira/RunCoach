@@ -46,16 +46,14 @@ def auto_map_and_adjust(
             map_result = adaptation_service.map_runs_to_plan(
                 plan.id, user.id, db
             )
-            adjust_result = adaptation_service.adjust_plan(
+            recommendation = adaptation_service.evaluate_recommendation(
                 plan.id, user.id, db
             )
             alert = adaptation_service.check_alerts(plan.id, user.id, db)
             results.append({
                 "plan_id": plan.id,
                 "runs_mapped": map_result.get("mapped", 0),
-                "adjusted": adjust_result.get("adjusted", False),
-                "multiplier": adjust_result.get("multiplier"),
-                "reason": adjust_result.get("reason", ""),
+                "has_recommendation": recommendation is not None,
                 "alert": alert,
             })
         except Exception as e:

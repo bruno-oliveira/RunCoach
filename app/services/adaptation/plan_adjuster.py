@@ -25,26 +25,30 @@ from .week_adjuster import apply_adjustment_to_future_weeks
 logger = logging.getLogger(__name__)
 
 
-def adjust_plan(
+def gather_signals(
     plan_id: str,
     user_id: str,
     db: Session,
-) -> Dict[str, Any]:
-    """Adjust future plan weeks using full-history weighted signals."""
+    *,
+    run_map: bool = True,
+) -> Optional[Dict[str, Any]]:
+    """Gather runs, workouts, and compute adjustment signals.
+
+    Returns None if insufficient data, otherwise a dict with signals,
+    current_week, all_plan_runs, adjustable_weeks, and training_plan.
+    """
     training_plan = db.query(TrainingPlan).filter(
         TrainingPlan.id == plan_id,
         TrainingPlan.user_id == user_id,
     ).first()
 
-    if not training_plan:
-        return {"adjusted": False, "reason": "Plan not found"}
-    if not training_plan.start_date:
-        return {"adjusted": False, "reason": "Plan has no start date."}
+    if not training_plan or not training_plan.start_date:
+        return None
 
-    map_runs_to_plan(plan_id, user_id, db)
+    if run_map:
+        map_runs_to_plan(plan_id, user_id, db)
     backfill_baselines(training_plan, db)
 
-    # Fetch HR zones from training plan
     hr_zones = None
     if training_plan.hr_zones_data:
         try:
@@ -63,7 +67,6 @@ def adjust_plan(
         .all()
     )
 
-    # Fetch feedback for all runs
     run_ids = [run.id for run in all_plan_runs]
     run_feedback_list = (
         db.query(RunFeedback)
@@ -72,11 +75,7 @@ def adjust_plan(
     ) if run_ids else []
 
     if len(all_plan_runs) < 3:
-        return {
-            "adjusted": False,
-            "reason": "Not enough data (need at least 3 logged runs linked to this plan)",
-            "total_runs": len(all_plan_runs),
-        }
+        return None
 
     half_life_weeks = 3.0
 
@@ -106,7 +105,7 @@ def adjust_plan(
             past_workout_ids.add(workout.id)
 
     if not past_workouts:
-        return {"adjusted": False, "reason": "No past workouts to evaluate yet."}
+        return None
 
     vdot_trend = "stable"
     try:
@@ -126,7 +125,6 @@ def adjust_plan(
         run_feedback_list=run_feedback_list,
         vdot_trend=vdot_trend,
     )
-    multiplier = signals["multiplier"]
 
     current_day_of_week = today.isoweekday()
     adjustable_weeks = (
@@ -137,6 +135,56 @@ def adjust_plan(
         )
         .all()
     )
+
+    return {
+        "training_plan": training_plan,
+        "signals": signals,
+        "all_plan_runs": all_plan_runs,
+        "current_week": current_week,
+        "current_day_of_week": current_day_of_week,
+        "adjustable_weeks": adjustable_weeks,
+    }
+
+
+def adjust_plan(
+    plan_id: str,
+    user_id: str,
+    db: Session,
+) -> Dict[str, Any]:
+    """Adjust future plan weeks using full-history weighted signals."""
+    gathered = gather_signals(plan_id, user_id, db)
+    if gathered is None:
+        training_plan = db.query(TrainingPlan).filter(
+            TrainingPlan.id == plan_id,
+            TrainingPlan.user_id == user_id,
+        ).first()
+        if not training_plan:
+            return {"adjusted": False, "reason": "Plan not found"}
+        if not training_plan.start_date:
+            return {"adjusted": False, "reason": "Plan has no start date."}
+        total_runs = (
+            db.query(RunLog)
+            .filter(RunLog.training_plan_id == plan_id)
+            .count()
+        )
+        if total_runs < 3:
+            return {
+                "adjusted": False,
+                "reason": "Not enough data (need at least 3 logged runs linked to this plan)",
+                "total_runs": total_runs,
+            }
+        return {"adjusted": False, "reason": "No past workouts to evaluate yet."}
+
+    training_plan = gathered["training_plan"]
+    signals = gathered["signals"]
+    all_plan_runs = gathered["all_plan_runs"]
+    current_week = gathered["current_week"]
+    current_day_of_week = gathered["current_day_of_week"]
+    adjustable_weeks = gathered["adjustable_weeks"]
+    multiplier = signals["multiplier"]
+
+    # Clear any pending recommendation since the user is manually adjusting
+    training_plan.pending_recommendation = None
 
     if not adjustable_weeks:
         return {

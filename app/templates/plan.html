@@ -582,6 +582,24 @@
     </div>
     {% endif %}
 
+    {% if user and start_date and training_plan.pending_recommendation and not plan_completed %}
+    <div class="pending-recommendation-banner" id="pending-recommendation-banner">
+        <div class="recommendation-banner-content">
+            <div class="recommendation-banner-icon">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+            </div>
+            <div class="recommendation-banner-text">
+                <strong>Weekly Performance Review</strong>
+                <p id="recommendation-reason-text"></p>
+            </div>
+            <div class="recommendation-banner-actions">
+                <button class="btn btn-small btn-primary" onclick="acceptRecommendation()">Accept</button>
+                <button class="btn btn-small btn-ghost" onclick="dismissRecommendation()">Dismiss</button>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
     {% if user and start_date and not plan_completed %}
     <div class="plan-action-banner recalibrate-banner {% if needs_adjustment %}recalibrate-urgent{% endif %}" id="adjust-banner">
         <div class="banner-content">
@@ -781,7 +799,8 @@
         plan_user_id: {{ training_plan.user_id | tojson }},
         current_user_id: {{ (user.id if user else None) | tojson }},
         share_token: {{ (training_plan.share_token or '') | tojson }},
-        adaptation_alert: {{ (training_plan.adaptation_alert | default('null', true)) | safe }}
+        adaptation_alert: {{ (training_plan.adaptation_alert | default('null', true)) | safe }},
+        pending_recommendation: {{ (training_plan.pending_recommendation | default('null', true)) | safe }}
     };
 
     function showShareToast(msg) {
