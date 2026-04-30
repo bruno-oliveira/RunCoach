@@ -12,7 +12,10 @@ from typing import List, Dict, Any, Optional
 from app.core.coaching.coaching_notes_generator import generate_coaching_note
 from app.core.training import phase_calculator
 from app.core.training import mileage_progression
-from app.core.training.key_workout_library import KeyWorkoutLibrary, _rewrite_key_workout_description
+from app.core.training.key_workout_library import (
+    KeyWorkoutLibrary,
+    overlay_key_workout as _overlay_key_workout_shared,
+)
 from app.core.training.quality_caps import enforce_week_caps
 from app.core.training.training_constants import calculate_week_in_phase
 from app.core.training.vdot_calculator import VDOTCalculator
@@ -198,38 +201,16 @@ class PerformancePlanGenerator:
     def _overlay_key_workout(workout: Dict[str, Any], phase: str,
                              target_distance: float, week_in_phase: int,
                              vdot_zones: Optional[Dict]) -> None:
-        """Attach key workout details for quality sessions in build/peak.
-
-        Keeps the performance-specific description and segments but enriches
-        the workout with curated key workout metadata from the shared library.
-        """
-        if phase not in ('build', 'peak'):
-            return
-
+        """Attach key workout details for quality sessions in build/peak."""
         library_type = _LIBRARY_TYPE_MAP.get(workout['type'])
         if not library_type:
             return
-
-        key_wk = KeyWorkoutLibrary.get_for_phase(
-            target_distance, phase, week_in_phase, library_type,
+        _overlay_key_workout_shared(
+            workout, library_type, phase,
+            target_distance=target_distance,
+            week_in_phase=week_in_phase,
+            pace_zones=vdot_zones,
         )
-        if not key_wk:
-            return
-
-        if vdot_zones:
-            key_wk = KeyWorkoutLibrary.inject_vdot_paces(key_wk, vdot_zones)
-
-        actual_distance = workout.get('distance', target_distance)
-        rewritten_description = _rewrite_key_workout_description(
-            key_wk['description'], key_wk['id'], actual_distance,
-        )
-
-        workout['key_workout_id'] = key_wk['id']
-        workout['key_workout_name'] = key_wk['name']
-        workout['structure'] = key_wk['structure']
-        workout['key_workout_rationale'] = key_wk['rationale']
-        workout['key_workout_description'] = rewritten_description
-        workout['description'] = rewritten_description
 
     # ------------------------------------------------------------------
     # Weekly plan assembly

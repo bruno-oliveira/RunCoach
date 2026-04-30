@@ -7,34 +7,21 @@ for a single week of training.
 from typing import Any, Dict, List, Optional
 
 from app.core.coaching.coaching_notes_generator import generate_coaching_note
-from app.core.training.key_workout_library import KeyWorkoutLibrary
+from app.core.training.key_workout_library import (
+    KeyWorkoutLibrary,
+    overlay_key_workout,
+)
 from app.core.training.quality_caps import (
     MAX_QUALITY_VS_LONG_RUN,
     MAX_EASY_VS_LONG_RUN,
     get_quality_caps as _get_quality_caps,
 )
 from app.core.training.training_constants import get_hard_ceiling, calculate_week_in_phase
-from app.core.training import workout_steps as _steps_mod
 from app.core.training import phase_calculator
 from app.core.training import workout_distribution as workout_dist_mod
 from app.core.training import workout_builders
 from app.core.training import long_run_calculator
 from app.core.generators.plan_validator import validate_week_plan
-
-
-def _inject_pace_into_steps(steps: List[Dict[str, Any]],
-                            pace_zones: Optional[Dict]) -> List[Dict[str, Any]]:
-    """Clone steps and fill in pace_str from pace_zones when missing."""
-    if not pace_zones:
-        return [dict(s) for s in steps]
-    out = []
-    for s in steps:
-        new = dict(s)
-        zone = new.get('pace_zone')
-        if zone and not new.get('pace_str') and zone in pace_zones:
-            new['pace_str'] = pace_zones[zone].get('pace_str')
-        out.append(new)
-    return out
 
 
 def apply_quality_caps(quality_distances: Dict[str, float],
@@ -88,53 +75,6 @@ def build_workout_for_type(workout_type: str, day_number: int,
     if workout_type == 'hill':
         return workout_builders.generate_hill_workout(day_number, distance)
     raise ValueError(f"Unknown workout_type: {workout_type}")
-
-
-def overlay_key_workout(workout: Dict[str, Any], workout_type: str,
-                        phase: str, target_distance: float,
-                        week_in_phase: int,
-                        terrain: Optional[str],
-                        pace_zones: Optional[Dict]) -> None:
-    """Attach a KeyWorkoutLibrary description for quality sessions in build/peak."""
-    if workout_type not in ('interval', 'tempo', 'hill', 'long'):
-        return
-    if phase not in ('build', 'peak'):
-        return
-    if workout.get('duration_min'):
-        return
-    key_wk = KeyWorkoutLibrary.get_for_phase(
-        target_distance, phase, week_in_phase, workout_type, terrain=terrain,
-    )
-    if not key_wk:
-        return
-    if pace_zones:
-        key_wk = KeyWorkoutLibrary.inject_vdot_paces(key_wk, pace_zones)
-
-    actual_distance = workout.get('distance', 0)
-    description = key_wk['description']
-    if actual_distance > 0:
-        from app.core.training.key_workout_library import _rewrite_key_workout_description
-        description = _rewrite_key_workout_description(
-            description, key_wk['id'], actual_distance,
-        )
-    workout['description'] = description
-    workout['key_workout_id'] = key_wk['id']
-    workout['key_workout_name'] = key_wk['name']
-    workout['structure'] = key_wk['structure']
-    workout['key_workout_rationale'] = key_wk['rationale']
-    if key_wk.get('steps'):
-        workout['steps'] = _inject_pace_into_steps(key_wk['steps'], pace_zones)
-    elif key_wk.get('steps_builder'):
-        from app.core.training.key_workout_library import _resolve_long_steps_builder
-        workout['steps'] = _resolve_long_steps_builder(
-            key_wk['steps_builder'], workout.get('distance', 0), pace_zones,
-        )
-    else:
-        workout['steps'] = _steps_mod.parse_key_workout_steps(
-            description, pace_zones, workout_type,
-            default_zone=key_wk.get('pace_zone'),
-            total_distance_km=actual_distance,
-        )
 
 
 def generate_daily_workouts(week_number: int, total_km: float,

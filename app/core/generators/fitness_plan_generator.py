@@ -11,7 +11,10 @@ from typing import Dict, Any, List, Optional
 from app.core.coaching.coaching_notes_generator import generate_coaching_note
 from app.core.training import phase_calculator
 from app.core.training import mileage_progression
-from app.core.training.key_workout_library import KeyWorkoutLibrary
+from app.core.training.key_workout_library import (
+    KeyWorkoutLibrary,
+    overlay_key_workout as _overlay_key_workout_shared,
+)
 from app.core.training.training_constants import calculate_week_in_phase
 from app.core.training.vdot_calculator import VDOTCalculator
 from app.utils import format_pace as _shared_format_pace
@@ -251,26 +254,15 @@ class FitnessPlanGenerator:
         vdot_zones: Optional[Dict],
     ) -> None:
         """Attach key workout details for quality sessions."""
-        if phase not in ("build", "peak"):
-            return
-
         library_type = _LIBRARY_TYPE_MAP.get(workout["type"])
         if not library_type:
             return
-
-        key_wk = KeyWorkoutLibrary.get_for_phase(
-            10.0, phase, week_in_phase, library_type,
+        _overlay_key_workout_shared(
+            workout, library_type, phase,
+            target_distance=10.0,
+            week_in_phase=week_in_phase,
+            pace_zones=vdot_zones,
         )
-        if not key_wk:
-            return
-
-        if vdot_zones:
-            key_wk = KeyWorkoutLibrary.inject_vdot_paces(key_wk, vdot_zones)
-
-        workout["key_workout_id"] = key_wk["id"]
-        workout["key_workout_name"] = key_wk["name"]
-        workout["structure"] = key_wk["structure"]
-        workout["key_workout_rationale"] = key_wk["rationale"]
 
     def _generate_weekly_plan(
         self,
