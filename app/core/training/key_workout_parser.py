@@ -127,6 +127,36 @@ def _try_duration_reps_pattern(
     return steps
 
 
+def _try_fartlek_pattern(
+    structure: str, pace_zones: Optional[Dict],
+    has_wcd: bool, warmup_steps: List, cd_m: Optional[int] = None,
+) -> Optional[List[Dict[str, Any]]]:
+    """Pattern C2: fartlek "N x (Dmin hard / Dmin easy)"."""
+    m = re.search(
+        r"(\d+)\s*[x\xd7]\s*\(\s*(\d+)\s*(min|sec|s)\s+(?:at\s+)?([^/]+?)\s*/\s*(\d+)\s*(min|sec|s)\s+([^)]+?)\s*\)",
+        structure,
+        re.IGNORECASE,
+    )
+    if not m:
+        return None
+    reps = int(m.group(1))
+    on_s = _parse_duration_to_s(m.group(2), m.group(3))
+    on_desc = m.group(4).strip()
+    off_s = _parse_duration_to_s(m.group(5), m.group(6))
+    zone = _infer_zone(on_desc) or "T"
+    on_label = f"{on_s // 60} min" if on_s >= 60 else f"{on_s} s"
+    off_label = f"{off_s // 60} min" if off_s >= 60 else f"{off_s} s"
+    steps = list(warmup_steps)
+    steps.append(
+        _step("run", f"{reps} × {on_label} on / {off_label} off",
+              duration_s=on_s, repeat=reps, pace_zone=zone,
+              pace_str=_pace_str(zone, pace_zones), effort="hard")
+    )
+    if has_wcd:
+        steps.append(_cooldown(pace_zones, cd_m) if cd_m else _cooldown(pace_zones))
+    return steps
+
+
 def _try_continuous_pattern(
     structure: str, pace_zones: Optional[Dict], workout_type: str,
     has_wcd: bool, warmup_steps: List, cd_m: Optional[int] = None,
@@ -181,6 +211,10 @@ def parse_key_workout_steps(
         return result
 
     result = _try_duration_reps_pattern(structure, pace_zones, has_wcd, warmup_steps, wu_m)
+    if result is not None:
+        return result
+
+    result = _try_fartlek_pattern(structure, pace_zones, has_wcd, warmup_steps, wu_m)
     if result is not None:
         return result
 

@@ -4,6 +4,7 @@ Curated workouts that replace generic interval/tempo sessions during
 Build and Peak phases to make training plans feel coached, not generated.
 """
 
+import re
 from typing import Any, Callable, Dict, List, Optional
 
 from app.core.training import workout_steps as _steps_mod
@@ -123,6 +124,10 @@ _DISTANCE_REWRITES: Dict[str, Callable[[float], str]] = {
         f"first km at easy pace, each subsequent km 10-15 sec/km faster, "
         f"finishing last km at 10K goal pace. Cool down {_wu_cd(d)[1]:g}km easy."
     ),
+    "10k_cruise_intervals": lambda d: (
+        f"Warm up {_wu_cd(d)[0]:g}km easy. Run 4 x {round((d - _wu_cd(d)[0] - _wu_cd(d)[1]) / 4, 1):g}km "
+        f"at threshold pace with 60 seconds easy jog between reps. Cool down {_wu_cd(d)[1]:g}km easy."
+    ),
     "10k_fartlek": lambda d: (
         f"Warm up {_wu_cd(d)[0]:g}km easy. Within a continuous run, "
         f"alternate 6 x (3 min at 10K pace / 2 min easy jog). Cool down {_wu_cd(d)[1]:g}km easy."
@@ -137,6 +142,14 @@ def _rewrite_key_workout_description(description: str, workout_id: str,
     if not rewrite_fn:
         return description
     return rewrite_fn(actual_distance)
+
+
+def _derive_structure(description: str) -> str:
+    """Strip warm-up/cool-down sentences to get a structure one-liner."""
+    s = re.sub(r"Warm up [\d.]+km easy\.\s*", "", description)
+    s = re.sub(r"\s*Cool down [\d.]+km easy\.", "", s)
+    s = re.sub(r"^Run\s+", "", s.strip())
+    return s.strip()
 
 # Backward-compatible alias: tests and internal code import _WORKOUTS.
 _WORKOUTS = WORKOUTS
@@ -226,10 +239,14 @@ def overlay_key_workout(
             description, key_wk['id'], actual_distance,
         )
 
+    rewritten = actual_distance > 0 and key_wk['id'] in _DISTANCE_REWRITES
+
     workout['description'] = description
     workout['key_workout_id'] = key_wk['id']
     workout['key_workout_name'] = key_wk['name']
-    workout['structure'] = key_wk['structure']
+    workout['structure'] = (
+        _derive_structure(description) if rewritten else key_wk['structure']
+    )
     workout['key_workout_rationale'] = key_wk['rationale']
 
     if key_wk.get('steps'):
