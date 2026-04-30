@@ -1,0 +1,257 @@
+/* ============================================================================
+   Training Plan Page — Coaching
+   Coaching notes, feedback, weekly summary, tips, strength sessions
+   ========================================================================= */
+
+/* ---- Tips ---- */
+.tips-section {
+    background: var(--color-warning-subtle);
+    border: 1px solid var(--color-warning-border);
+    padding: var(--space-4);
+    border-radius: var(--radius-lg);
+    margin-top: var(--space-4);
+}
+
+.tips-title {
+    font-weight: var(--weight-semibold);
+    margin-bottom: var(--space-2);
+    color: var(--color-warning);
+}
+
+.tips-list { list-style: none; }
+
+.strength-phase-label {
+    font-size: var(--text-xs);
+    font-weight: var(--weight-semibold);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--color-warning);
+    margin: var(--space-3) 0 var(--space-1) var(--space-2);
+}
+
+.strength-phase-list { margin-bottom: 0; }
+
+.strength-session-card {
+    margin-bottom: var(--space-4);
+    padding: var(--space-3);
+    background: var(--color-bg-elevated);
+    border-radius: var(--radius-md);
+    border: 1px solid var(--color-border-subtle);
+}
+
+.strength-session-card:last-child { margin-bottom: 0; }
+
+.strength-session-header {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    flex-wrap: wrap;
+    margin-bottom: var(--space-3);
+}
+
+.strength-focus-badge {
+    font-size: var(--text-xs);
+    font-weight: var(--weight-semibold);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    background: var(--color-warning);
+    color: white;
+    padding: 2px var(--space-2);
+    border-radius: var(--radius-sm);
+}
+
+.strength-duration {
+    font-size: var(--text-sm);
+    color: var(--color-text-muted);
+}
+
+.strength-level {
+    font-size: var(--text-xs);
+    color: var(--color-text-muted);
+    margin-left: auto;
+}
+
+.strength-note {
+    font-size: var(--text-xs);
+    font-style: italic;
+    color: var(--color-text-muted);
+    margin-top: var(--space-2);
+    padding-left: var(--space-2);
+}
+
+.tips-list li {
+    padding: 4px 0 4px var(--space-6);
+    position: relative;
+    font-size: var(--text-sm);
+    color: var(--color-text-secondary);
+}
+
+.tips-list li:before {
+    content: "\2022";
+    position: absolute;
+    left: var(--space-2);
+    color: var(--color-warning);
+    font-weight: bold;
+}
+
+/* ============================================================================
+   Coaching Notes (expandable per workout)
+   ========================================================================= */
+.coaching-note {
+    margin-top: var(--space-2);
+}
+
+.coaching-note-toggle {
+    font-size: var(--text-xs);
+    color: var(--color-primary);
+    cursor: pointer;
+    font-weight: var(--weight-semibold);
+    list-style: none;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.coaching-note-toggle::-webkit-details-marker { display: none; }
+
+.coaching-note-toggle::before {
+    content: "\25B8";
+    font-size: 10px;
+    transition: transform var(--duration-fast) var(--ease-out);
+}
+
+.coaching-note[open] .coaching-note-toggle::before {
+    transform: rotate(90deg);
+}
+
+.coaching-note-content {
+    margin-top: var(--space-2);
+    padding: var(--space-3);
+    background: var(--color-bg-sunken);
+    border-radius: var(--radius-md);
+    font-size: var(--text-xs);
+    color: var(--color-text-secondary);
+    line-height: var(--leading-normal);
+    border-left: 2px solid var(--color-primary);
+    animation: slideDown var(--duration-base) var(--ease-out);
+}
+
+/* ============================================================================
+   Coaching Feedback (post-run)
+   ========================================================================= */
+.coaching-feedback {
+    margin-top: var(--space-2);
+    padding: var(--space-2) var(--space-3);
+    border-radius: var(--radius-md);
+    font-size: var(--text-xs);
+    line-height: var(--leading-normal);
+    border-left: 3px solid;
+}
+
+.coaching-feedback.sentiment-positive {
+    background: var(--color-success-subtle);
+    border-left-color: var(--color-success);
+    color: var(--color-success);
+}
+
+.coaching-feedback.sentiment-warning {
+    background: var(--color-warning-subtle);
+    border-left-color: var(--color-warning);
+    color: var(--color-warning);
+}
+
+.coaching-feedback.sentiment-info {
+    background: var(--color-info-subtle);
+    border-left-color: var(--color-info);
+    color: var(--color-info);
+}
+
+.feedback-item {
+    margin-bottom: 2px;
+}
+
+.feedback-item:last-child {
+    margin-bottom: 0;
+}
+
+/* ============================================================================
+   Weekly Coaching Summary
+   ========================================================================= */
+.weekly-coaching-summary {
+    margin: var(--space-3) var(--space-4);
+    padding: var(--space-3) var(--space-4);
+    border-radius: var(--radius-lg);
+    font-size: var(--text-sm);
+    line-height: 1.5;
+    border-left: 3px solid;
+}
+
+.weekly-coaching-summary.sentiment-positive {
+    background: var(--color-success-subtle);
+    border-left-color: var(--color-success);
+}
+
+.weekly-coaching-summary.sentiment-warning {
+    background: var(--color-warning-subtle);
+    border-left-color: var(--color-warning);
+}
+
+.weekly-coaching-summary.sentiment-info {
+    background: var(--color-info-subtle);
+    border-left-color: var(--color-info);
+}
+
+.weekly-summary-main {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--space-2);
+}
+
+.weekly-summary-icon {
+    flex-shrink: 0;
+    margin-top: 2px;
+}
+
+.sentiment-positive .weekly-summary-icon {
+    color: var(--color-success);
+}
+
+.sentiment-warning .weekly-summary-icon {
+    color: var(--color-warning);
+}
+
+.sentiment-info .weekly-summary-icon {
+    color: var(--color-info);
+}
+
+.weekly-summary-text {
+    font-weight: var(--weight-medium);
+}
+
+.sentiment-positive .weekly-summary-text {
+    color: var(--color-success);
+}
+
+.sentiment-warning .weekly-summary-text {
+    color: var(--color-warning);
+}
+
+.sentiment-info .weekly-summary-text {
+    color: var(--color-info);
+}
+
+.weekly-summary-details {
+    margin: var(--space-2) 0 0 var(--space-6);
+    padding: 0;
+    list-style: disc;
+    font-size: var(--text-xs);
+    color: var(--color-text-secondary, #6b7280);
+}
+
+.weekly-summary-details li {
+    margin-bottom: 2px;
+}
+
+.weekly-summary-details li:last-child {
+    margin-bottom: 0;
+}

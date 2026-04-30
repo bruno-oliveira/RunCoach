@@ -3,7 +3,14 @@
 {% block title %}{{ plan_owner_display_name }}'s {{ distance_display }} Plan - RunCoach{% endblock %}
 
 {% block styles %}
-<link rel="stylesheet" href="{{ static_url('css/plan-core.css') }}">
+<link rel="stylesheet" href="{{ static_url('css/plan/core.css') }}">
+<link rel="stylesheet" href="{{ static_url('css/plan/weeks.css') }}">
+<link rel="stylesheet" href="{{ static_url('css/plan/coaching.css') }}">
+<link rel="stylesheet" href="{{ static_url('css/plan/banners.css') }}">
+<link rel="stylesheet" href="{{ static_url('css/plan/hr-zones.css') }}">
+<link rel="stylesheet" href="{{ static_url('css/plan/structured.css') }}">
+<link rel="stylesheet" href="{{ static_url('css/plan/evolution.css') }}">
+<link rel="stylesheet" href="{{ static_url('css/plan/quality.css') }}">
 <link rel="stylesheet" href="{{ static_url('css/plan_shared.css') }}">
 {% if nutrition_plan %}
 <link rel="stylesheet" href="{{ static_url('css/plan-nutrition.css') }}">

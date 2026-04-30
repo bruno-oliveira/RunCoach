@@ -1,0 +1,117 @@
+/* ============================================================================
+   Training Plan Page — Quality Badges & Tier
+   Quality badges, tier badges, run-walk intervals
+   ========================================================================= */
+
+/* ============================================================================
+   Quality Badges
+   ========================================================================= */
+.quality-badge {
+    display: inline-block;
+    margin-top: var(--space-2);
+    padding: 2px 10px;
+    border-radius: var(--radius-full);
+    font-size: var(--text-xs);
+    font-weight: var(--weight-semibold);
+    text-align: center;
+}
+
+.quality-nailed-it {
+    background: var(--color-success-subtle);
+    color: var(--color-success);
+    border: 1px solid var(--color-success);
+}
+
+.quality-on-track {
+    background: var(--color-info-subtle);
+    color: var(--color-info);
+    border: 1px solid var(--color-info);
+}
+
+.quality-too-easy {
+    background: var(--color-warning-subtle);
+    color: var(--color-warning);
+    border: 1px solid var(--color-warning);
+}
+
+.quality-too-hard {
+    background: var(--color-error-subtle);
+    color: var(--color-error);
+    border: 1px solid var(--color-error);
+}
+
+/* ---- Tier Badge Styles ---- */
+.tier-badge {
+    position: relative;
+    margin-top: var(--space-4);
+}
+
+.tier-badge .badge {
+    display: inline-block;
+    padding: var(--space-2) var(--space-4);
+    border-radius: var(--radius-full);
+    font-size: var(--text-sm);
+    font-weight: var(--weight-semibold);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.tier-badge .badge-beginner {
+    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+    color: white;
+}
+
+.tier-badge .badge-intermediate {
+    background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+    color: white;
+}
+
+.tier-badge .badge-advanced {
+    background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
+    color: white;
+}
+
+.tier-badge p {
+    margin-top: var(--space-2);
+    color: var(--color-text-secondary);
+    font-size: var(--text-sm);
+}
+
+.run-walk-intervals {
+    background: var(--color-primary-subtle);
+    border-radius: var(--radius-md);
+    padding: var(--space-3);
+    margin: var(--space-2) 0;
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-2);
+    align-items: center;
+}
+
+.run-walk-intervals strong {
+    color: var(--color-primary);
+    font-size: var(--text-sm);
+}
+
+.run-walk-intervals .repeats {
+    color: var(--color-text-secondary);
+    font-size: var(--text-xs);
+    background: var(--color-bg-elevated);
+    padding: var(--space-1) var(--space-2);
+    border-radius: var(--radius-sm);
+}
+
+.run-walk-intervals .total-time {
+    color: var(--color-text-secondary);
+    font-size: var(--text-xs);
+    margin-left: auto;
+}
+
+/* Beginner workout card adjustments */
+.workout-item.run_walk {
+    background: linear-gradient(135deg, var(--color-bg-elevated) 0%, var(--color-primary-subtle) 100%);
+}
+
+.workout-item.run_walk .workout-type {
+    color: var(--color-primary);
+}

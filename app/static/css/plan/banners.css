@@ -1,0 +1,241 @@
+/* ============================================================================
+   Training Plan Page — Banners
+   Adaptation banners, action banners, alert banners, suggestion cards
+   ========================================================================= */
+
+/* ---- Adaptation Banner ---- */
+.adaptation-banner {
+    background: var(--color-primary);
+    border-radius: var(--radius-xl);
+    padding: var(--space-5);
+    margin-bottom: var(--space-6);
+    box-shadow: var(--shadow-glow);
+}
+
+.banner-content {
+    display: flex;
+    align-items: center;
+    gap: var(--space-5);
+}
+
+.banner-icon { font-size: 2rem; }
+
+.banner-text { flex: 1; color: white; }
+.banner-text strong { display: block; font-size: var(--text-lg); margin-bottom: var(--space-1); }
+.banner-text p { margin: 0; opacity: 0.9; font-size: var(--text-sm); }
+
+.banner-actions { display: flex; gap: var(--space-3); }
+
+.btn-close {
+    background: none;
+    border: none;
+    color: white;
+    font-size: 1.25rem;
+    cursor: pointer;
+    opacity: 0.7;
+    padding: var(--space-2);
+    border-radius: var(--radius-md);
+    transition: all var(--duration-fast) var(--ease-out);
+}
+
+.btn-close:hover { opacity: 1; background: rgba(255,255,255,0.1); }
+
+/* ---- Plan Action Banners (map runs, recalibrate) ---- */
+.plan-action-banner {
+    border-radius: var(--radius-xl);
+    padding: var(--space-5);
+    margin-bottom: var(--space-6);
+}
+
+.map-runs-banner {
+    background: linear-gradient(135deg, #1e40af, #3b82f6);
+    box-shadow: 0 2px 12px rgba(59, 130, 246, 0.25);
+}
+
+.recalibrate-banner {
+    background: var(--color-bg-elevated);
+    border: 1px solid var(--color-border-subtle);
+    box-shadow: none;
+}
+
+.recalibrate-banner .banner-text { color: var(--color-text); }
+.recalibrate-banner .banner-text strong { color: var(--color-text); }
+.recalibrate-banner .banner-text p { color: var(--color-text-secondary); opacity: 1; }
+
+.recalibrate-banner.recalibrate-urgent {
+    border-color: #f59e0b;
+    box-shadow: 0 0 0 1px rgba(245, 158, 11, 0.3);
+}
+
+.strava-adapted-compact {
+    padding: var(--space-3) var(--space-4);
+}
+
+.plan-action-banner .banner-text { color: white; }
+.plan-action-banner .banner-text strong { display: block; font-size: var(--text-lg); margin-bottom: var(--space-1); }
+.plan-action-banner .banner-text p { margin: 0; opacity: 0.9; font-size: var(--text-sm); }
+
+/* ============================================================================
+   Suggestion Cards (In-plan adaptive suggestions)
+   ========================================================================= */
+
+.suggestion-cards {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+    padding: var(--space-3) var(--space-4);
+}
+
+.suggestion-card {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-3);
+    padding: var(--space-3) var(--space-4);
+    border-radius: var(--radius-lg);
+    font-size: var(--text-sm);
+    line-height: 1.5;
+    border-left: 3px solid var(--color-primary);
+    background: var(--color-primary-subtle, rgba(29, 78, 216, 0.06));
+}
+
+.suggestion-card--exceeding {
+    border-left-color: var(--color-success, #16a34a);
+    background: var(--color-success-subtle, rgba(22, 163, 74, 0.06));
+}
+
+.suggestion-card--deficit,
+.suggestion-card--long_run,
+.suggestion-card--adherence {
+    border-left-color: var(--color-warning, #ca8a04);
+    background: var(--color-warning-subtle, rgba(202, 138, 4, 0.06));
+}
+
+.suggestion-card--effort_high {
+    border-left-color: var(--color-error, #dc2626);
+    background: var(--color-error-subtle, rgba(220, 38, 38, 0.06));
+}
+
+.suggestion-card--effort_recovery {
+    border-left-color: var(--color-success, #16a34a);
+    background: var(--color-success-subtle, rgba(22, 163, 74, 0.06));
+}
+
+.suggestion-message {
+    flex: 1;
+    min-width: 200px;
+    color: var(--color-text);
+}
+
+.suggestion-actions {
+    display: flex;
+    gap: var(--space-2);
+    flex-shrink: 0;
+}
+
+.suggestion-actions .btn-small {
+    font-size: var(--text-xs);
+    padding: 4px 12px;
+}
+
+/* ============================================================================
+   Adaptation Alert Banner
+   ========================================================================= */
+
+.adaptation-alert-banner {
+    margin-bottom: var(--space-4);
+    border-radius: var(--radius-lg);
+    border: 1px solid var(--color-warning, #ca8a04);
+    background: var(--color-warning-subtle, #fef9c3);
+    padding: var(--space-4) var(--space-5);
+}
+
+.alert-banner-content {
+    display: flex;
+    align-items: center;
+    gap: var(--space-4);
+    flex-wrap: wrap;
+}
+
+.alert-banner-icon {
+    flex-shrink: 0;
+    color: var(--color-warning, #ca8a04);
+}
+
+.alert-banner-text {
+    flex: 1;
+    min-width: 200px;
+    font-size: var(--text-sm);
+    color: var(--color-text);
+    line-height: 1.5;
+}
+
+.alert-banner-actions {
+    display: flex;
+    gap: var(--space-2);
+    flex-shrink: 0;
+}
+
+/* ============================================================================
+   Pending Recommendation Banner
+   ========================================================================= */
+
+.pending-recommendation-banner {
+    margin-bottom: var(--space-4);
+    border-radius: var(--radius-lg);
+    border: 1px solid var(--color-primary, #3b82f6);
+    background: linear-gradient(135deg, rgba(59, 130, 246, 0.08), rgba(59, 130, 246, 0.04));
+    padding: var(--space-4) var(--space-5);
+    transition: opacity 0.3s ease;
+}
+
+.recommendation-banner-content {
+    display: flex;
+    align-items: center;
+    gap: var(--space-4);
+    flex-wrap: wrap;
+}
+
+.recommendation-banner-icon {
+    flex-shrink: 0;
+    color: var(--color-primary, #3b82f6);
+}
+
+.recommendation-banner-text {
+    flex: 1;
+    min-width: 200px;
+}
+
+.recommendation-banner-text strong {
+    display: block;
+    font-size: var(--text-sm);
+    color: var(--color-text);
+    margin-bottom: 2px;
+}
+
+.recommendation-banner-text p {
+    font-size: var(--text-sm);
+    color: var(--color-text-secondary);
+    line-height: 1.5;
+    margin: 0;
+}
+
+.recommendation-banner-actions {
+    display: flex;
+    gap: var(--space-2);
+    flex-shrink: 0;
+}
+
+/* ---- Responsive ---- */
+@media (max-width: 768px) {
+    .banner-content { flex-direction: column; gap: var(--space-3); }
+    .banner-actions { flex-direction: row; width: 100%; gap: var(--space-2); }
+    .banner-actions button { flex: 1; }
+    .plan-action-banner { padding: var(--space-4); margin-bottom: var(--space-4); }
+    .adaptation-alert-banner { padding: var(--space-3) var(--space-4); margin-bottom: var(--space-3); }
+    .alert-banner-content { gap: var(--space-3); }
+    .pending-recommendation-banner { padding: var(--space-3) var(--space-4); margin-bottom: var(--space-3); }
+    .recommendation-banner-content { gap: var(--space-3); }
+    .recommendation-banner-actions { width: 100%; }
+    .recommendation-banner-actions button { flex: 1; }
+}

@@ -1,0 +1,201 @@
+/* ============================================================================
+   Training Plan Page — HR Zones
+   HR zones panel, HR zone badges, workout card HR badges
+   ========================================================================= */
+
+/* ============================================================================
+   Heart Rate Zones Panel
+   ========================================================================= */
+.hr-zones-panel {
+    background: var(--color-bg-elevated);
+    border: 1px solid var(--color-border-subtle);
+    border-radius: var(--radius-xl);
+    padding: var(--space-5);
+    margin-bottom: var(--space-6);
+}
+
+.hr-zones-panel h3 {
+    font-family: var(--font-display);
+    font-size: var(--text-base);
+    font-weight: var(--weight-semibold);
+    color: var(--color-text);
+    margin-bottom: var(--space-4);
+}
+
+.hr-zones-bar {
+    display: flex;
+    gap: 2px;
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+}
+
+.hr-zone-segment {
+    padding: var(--space-3) var(--space-2);
+    text-align: center;
+    color: white;
+    min-width: 0;
+    transition: transform var(--duration-fast) var(--ease-out);
+}
+
+.hr-zone-segment:hover {
+    transform: scaleY(1.05);
+}
+
+.hr-zone-number {
+    font-family: var(--font-display);
+    font-weight: var(--weight-bold);
+    font-size: var(--text-sm);
+    margin-bottom: 2px;
+}
+
+.hr-zone-name {
+    font-size: var(--text-xs);
+    opacity: 0.9;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.hr-zone-bpm {
+    font-size: 10px;
+    opacity: 0.75;
+    margin-top: 2px;
+}
+
+/* Zone colors */
+.hr-zone-1 { background: #3b82f6; }
+.hr-zone-2 { background: #22c55e; }
+.hr-zone-3 { background: #eab308; }
+.hr-zone-4 { background: #f97316; }
+.hr-zone-5 { background: #ef4444; }
+
+/* HR source label in summary */
+.hr-source-label {
+    font-size: var(--text-xs);
+    color: var(--color-text-muted);
+    font-weight: var(--weight-normal);
+}
+
+/* ============================================================================
+   Workout Card — HR Zone Badge & Key Workout
+   ========================================================================= */
+.workout-type-row {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    margin-bottom: 2px;
+}
+
+.hr-zone-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 10px;
+    font-weight: var(--weight-bold);
+    padding: 1px 6px;
+    border-radius: var(--radius-sm);
+    color: white;
+    line-height: 1.4;
+    flex-shrink: 0;
+}
+
+.hr-zone-badge.hr-zone-1 { background: #3b82f6; }
+.hr-zone-badge.hr-zone-2 { background: #22c55e; }
+.hr-zone-badge.hr-zone-3 { background: #eab308; color: #422006; }
+.hr-zone-badge.hr-zone-4 { background: #f97316; }
+.hr-zone-badge.hr-zone-5 { background: #ef4444; }
+
+.workout-zone-hint {
+    font-size: 10px;
+    color: var(--color-text-muted);
+    font-weight: var(--weight-normal);
+}
+
+.key-workout-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 10px;
+    font-weight: var(--weight-semibold);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    padding: 2px 8px;
+    border-radius: var(--radius-sm);
+    background: linear-gradient(135deg, rgba(99,102,241,0.15), rgba(139,92,246,0.15));
+    color: var(--color-primary);
+    border: 1px solid rgba(99, 102, 241, 0.3);
+    margin-bottom: 4px;
+}
+.key-workout-badge::before {
+    content: "★";
+    font-size: 10px;
+    color: #f59e0b;
+    text-shadow: 0 1px 2px rgba(245, 158, 11, 0.4);
+}
+
+/* Pinned week: highlight workouts that carry a key-session tag */
+.pinned-week .workout-item:has(.key-workout-badge) {
+    box-shadow:
+        0 0 0 1px rgba(99, 102, 241, 0.18),
+        0 4px 16px -8px rgba(99, 102, 241, 0.25);
+    position: relative;
+}
+.pinned-week .workout-item:has(.key-workout-badge)::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    pointer-events: none;
+    background: linear-gradient(135deg, rgba(99,102,241,0.04), transparent 60%);
+}
+
+/* Readiness → workout nudge */
+.workout-item.readiness-swap-hint {
+    position: relative;
+    animation: swapHintPulse 2s ease-out 1 both;
+}
+.workout-item.readiness-swap-hint::after {
+    content: "Consider dialling back";
+    position: absolute;
+    top: -8px;
+    right: 8px;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    background: linear-gradient(135deg, #f59e0b, #ea580c);
+    color: #fff;
+    padding: 3px 8px;
+    border-radius: var(--radius-full, 999px);
+    box-shadow: 0 4px 10px -3px rgba(245, 158, 11, 0.45);
+    z-index: 2;
+}
+@keyframes swapHintPulse {
+    0%   { box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.35); }
+    50%  { box-shadow: 0 0 0 8px rgba(245, 158, 11, 0.08); }
+    100% { box-shadow: 0 0 0 0 rgba(245, 158, 11, 0); }
+}
+
+.workout-structure {
+    font-size: var(--text-xs);
+    color: var(--color-text-secondary);
+    font-style: italic;
+    margin-bottom: 2px;
+    line-height: var(--leading-snug);
+}
+
+.key-workout-rationale .coaching-note-toggle {
+    color: var(--color-primary);
+}
+
+.key-workout-rationale .coaching-note-content {
+    border-left-color: var(--color-primary);
+}
+
+/* ---- Responsive ---- */
+@media (max-width: 768px) {
+    .hr-zones-panel { padding: var(--space-4); margin-bottom: var(--space-4); }
+    .hr-zones-bar { flex-direction: column; }
+    .hr-zone-segment { padding: var(--space-2) var(--space-3); display: flex; gap: var(--space-2); align-items: center; }
+    .hr-zone-name, .hr-zone-bpm { margin-top: 0; }
+}
