@@ -68,6 +68,30 @@ def _try_progression_pattern(structure: str, pace_zones: Optional[Dict]) -> Opti
     ]
 
 
+def _try_as_progression_pattern(
+    structure: str, pace_zones: Optional[Dict],
+    has_wcd: bool, warmup_steps: List, cd_m: Optional[int] = None,
+) -> Optional[List[Dict[str, Any]]]:
+    """Pattern A2: "Nkm as a progression: ..." (tempo progression runs)."""
+    m = re.search(
+        r"(\d+(?:\.\d+)?)\s*km\s+as\s+a\s+progression",
+        structure,
+        re.IGNORECASE,
+    )
+    if not m:
+        return None
+    dist_m = _parse_distance_to_m(m.group(1), "km")
+    zone = _infer_zone(structure) or "T"
+    steps = list(warmup_steps)
+    steps.append(
+        _step("run", "Tempo progression", distance_m=dist_m, pace_zone=zone,
+              pace_str=_pace_str(zone, pace_zones), effort="build to tempo")
+    )
+    if has_wcd:
+        steps.append(_cooldown(pace_zones, cd_m) if cd_m else _cooldown(pace_zones))
+    return steps
+
+
 def _try_distance_reps_pattern(
     structure: str, pace_zones: Optional[Dict], workout_type: str,
     has_wcd: bool, warmup_steps: List, cd_m: Optional[int] = None,
@@ -203,6 +227,10 @@ def parse_key_workout_steps(
         warmup_steps = [_warmup(pace_zones)] if has_wcd else []
 
     result = _try_progression_pattern(structure, pace_zones)
+    if result is not None:
+        return result
+
+    result = _try_as_progression_pattern(structure, pace_zones, has_wcd, warmup_steps, wu_m)
     if result is not None:
         return result
 

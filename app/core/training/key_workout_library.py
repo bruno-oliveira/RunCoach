@@ -257,7 +257,7 @@ def overlay_key_workout(
         )
     else:
         workout['steps'] = _steps_mod.parse_key_workout_steps(
-            description, pace_zones, workout_type,
+            workout['structure'], pace_zones, workout_type,
             default_zone=key_wk.get('pace_zone'),
             total_distance_km=actual_distance,
         )

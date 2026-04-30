@@ -50,7 +50,7 @@
                     <span class="segment-zone">{{ seg.zone_label }}</span>
                     {% endif %}
                 </div>
-                {% if seg.intervals %}
+                {% if seg.intervals and seg.intervals.interval_m is number %}
                 <div class="segment-intervals">
                     {{ seg.intervals.reps }}x{{ seg.intervals.interval_m }}m
                     {% if seg.intervals.recovery_min %}({{ seg.intervals.recovery_min }}min recovery){% endif %}
@@ -283,7 +283,7 @@
                                         {% set meta = [] %}
                                         {% if seg.distance_km %}{% set _ = meta.append('{:.1f}'.format(seg.distance_km) + ' km') %}{% endif %}
                                         {% if seg.pace_formatted %}{% set _ = meta.append(seg.pace_formatted) %}{% endif %}
-                                        {% if seg.intervals %}{% set _ = meta.append(seg.intervals.reps ~ 'x' ~ seg.intervals.interval_m ~ 'm' ~ (' (' ~ seg.intervals.recovery_min ~ 'min rec)' if seg.intervals.recovery_min else '')) %}{% endif %}
+                                        {% if seg.intervals and seg.intervals.interval_m is number %}{% set _ = meta.append(seg.intervals.reps ~ 'x' ~ seg.intervals.interval_m ~ 'm' ~ (' (' ~ seg.intervals.recovery_min ~ 'min rec)' if seg.intervals.recovery_min else '')) %}{% endif %}
                                         {% if meta %}
                                         <div class="workout-step-meta">{{ meta | join(' · ') }}</div>
                                         {% endif %}
