@@ -42,6 +42,7 @@
   --color-error-subtle: #FEF2F2;
   --color-error-border: #FECACA;
   --color-success: #16A34A;
+  --color-success-dark: #15803D;
   --color-success-subtle: #F0FDF4;
   --color-success-border: #BBF7D0;
   --color-warning: #D97706;
@@ -695,6 +696,7 @@ pre code {
   --color-error-subtle: rgba(255, 107, 107, 0.12);
   --color-error-border: rgba(255, 107, 107, 0.25);
   --color-success: #34D46A;
+  --color-success-dark: #22C55E;
   --color-success-subtle: rgba(52, 212, 106, 0.12);
   --color-success-border: rgba(52, 212, 106, 0.25);
   --color-warning: #FFBA2E;
