@@ -36,6 +36,12 @@ WORKOUT_ZONE_MAP: dict[str, int] = {
     "interval": 5,
     "hill": 5,
     "rest": 1,
+    "vo2max": 5,
+    "vo2max_ladder": 5,
+    "fartlek": 4,
+    "race_pace": 4,
+    "cruise_interval": 4,
+    "time_trial": 5,
 }
 
 
