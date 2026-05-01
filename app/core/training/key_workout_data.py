@@ -219,7 +219,7 @@ _WORKOUTS_SHORT: List[Dict] = [
         "type": "interval",
         "terrain": ["any"],
         "name": "Structured Fartlek",
-        "structure": "6 x (3min hard / 2min easy) within a 7km run",
+        "structure": "6 x (3min at 10K pace / 2min easy) within a 7km run",
         "description": (
             "Warm up 2km easy. Within a continuous run, alternate "
             "6 x (3 min at 10K pace / 2 min easy jog). Cool down 2km easy."
