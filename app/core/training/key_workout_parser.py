@@ -20,7 +20,8 @@ from app.core.training.workout_steps import (
 
 _PACE_ZONE_PATTERNS = [
     (r"\b5K pace\b|\bVO₂max\b|\bVO2max\b|\bI[- ]pace\b", "I"),
-    (r"\bthreshold\b|\btempo pace\b|\b10K pace\b|\bT[- ]pace\b", "T"),
+    (r"\b10[Kk] (?:goal )?pace\b", "10K"),
+    (r"\bthreshold\b|\btempo pace\b|\bT[- ]pace\b", "T"),
     (r"\bmarathon (?:goal )?pace\b|\bMP\b|\bM[- ]pace\b", "M"),
     (r"\beasy(?:\s+(?:pace|effort))\b|\bE[- ]pace\b|\bconversational\b", "E"),
     (r"\brepetition\b|\bR[- ]pace\b|\b5K[- ]?10K sprint\b", "R"),

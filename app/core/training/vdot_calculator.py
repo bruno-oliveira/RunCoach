@@ -114,15 +114,20 @@ class VDOTCalculator:
         return round(max(25.0, min(85.0, vdot)), 1)
 
     @staticmethod
-    def get_pace_zones(vdot: float) -> Dict[str, Dict]:
+    def get_pace_zones(vdot: float, target_distance_km: float = 0.0) -> Dict[str, Dict]:
         """Return training pace zones for a given VDOT.
 
         Args:
             vdot: VDOT value
+            target_distance_km: Optional target race distance for a
+                dedicated "race" zone (ignored for 5K/10K which are
+                always included).
 
         Returns:
             Dict with zone names mapping to pace info
         """
+        from app.core.training.race_predictor import predict_time_for_distance
+
         zones = {}
         for zone, pct in VDOTCalculator.ZONE_PCT.items():
             v = _velocity_at_pct_vdot(vdot, pct)
@@ -144,6 +149,28 @@ class VDOTCalculator:
                 "pace_min_km_fast": round(p_fast, 2),
                 "pace_str": f"{_format_pace(p_slow)}–{_format_pace(p_fast)}",
             }
+
+        # Race-specific pace zones computed from predicted race times
+        race_paces: Dict[str, Dict] = {}
+        for dist_km, label in [(5.0, "5K"), (10.0, "10K")]:
+            race_seconds = predict_time_for_distance(vdot, dist_km)
+            if race_seconds:
+                race_pace = (race_seconds / 60.0) / dist_km
+                race_paces[label] = {
+                    "pace_min_km": round(race_pace, 2),
+                    "pace_str": _format_pace(race_pace),
+                    "description": f"{label} race pace",
+                }
+
+        if target_distance_km > 0 and target_distance_km not in (5.0, 10.0):
+            race_seconds = predict_time_for_distance(vdot, target_distance_km)
+            if race_seconds:
+                race_pace = (race_seconds / 60.0) / target_distance_km
+                race_paces["race"] = {
+                    "pace_min_km": round(race_pace, 2),
+                    "pace_str": _format_pace(race_pace),
+                    "description": f"{target_distance_km}K race pace",
+                }
 
         return {
             "E": {
@@ -186,6 +213,7 @@ class VDOTCalculator:
                 "pace_str": zones["R"]["pace_str"],
                 "description": "Repetition / speed",
             },
+            **race_paces,
         }
 
     @staticmethod
@@ -215,19 +243,21 @@ class VDOTCalculator:
         if not zones:
             return description
 
+        ten_k = zones.get("10K", zones["T"])
         replacements = {
             # Interval cues
             "5K pace": f"{zones['I']['pace_str']} (I-pace)",
             "5k pace": f"{zones['I']['pace_str']} (I-pace)",
             "VO2 max pace": f"{zones['I']['pace_str']} (I-pace)",
             "VO2max pace": f"{zones['I']['pace_str']} (I-pace)",
+            # Race-specific cues
+            "10K pace": f"{ten_k['pace_str']} (10K pace)",
+            "10k pace": f"{ten_k['pace_str']} (10K pace)",
             # Tempo cues
             "threshold pace": f"{zones['T']['pace_str']} (T-pace)",
             "tempo pace": f"{zones['T']['pace_str']} (T-pace)",
             "marathon goal pace": f"{zones['M']['pace_str']} (M-pace)",
             "marathon pace": f"{zones['M']['pace_str']} (M-pace)",
-            "10K pace": f"{zones['T']['pace_str']} (T-pace)",
-            "10k pace": f"{zones['T']['pace_str']} (T-pace)",
         }
 
         enriched = description

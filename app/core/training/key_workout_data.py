@@ -185,7 +185,7 @@ _WORKOUTS_SHORT: List[Dict] = [
         ),
         "intensity": "high",
         "target_zone": 4,
-        "pace_zone": "T",
+        "pace_zone": "10K",
         "rationale": (
             "Practicing sustained race-pace efforts builds the muscular "
             "endurance and mental confidence to hold pace for the full 10K."
@@ -226,7 +226,7 @@ _WORKOUTS_SHORT: List[Dict] = [
         ),
         "intensity": "high",
         "target_zone": 4,
-        "pace_zone": "T",
+        "pace_zone": "10K",
         "rationale": (
             "Fartlek teaches you to surge and recover without stopping — a "
             "crucial skill for handling pace changes in a 10K race."
