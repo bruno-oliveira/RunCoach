@@ -269,7 +269,7 @@ class TestPhaseStructure:
     """Phase distributions must be coherent and distance-appropriate."""
 
     def test_phases_sum_to_total_weeks(self):
-        for weeks in [4, 6, 8, 10, 12, 16, 20, 24]:
+        for weeks in [6, 8, 10, 12, 16, 20, 24]:
             for distance in [5.0, 10.0, 21.1, 30.0, 42.2]:
                 phases = calculate_phases(weeks, distance)
                 assert sum(phases.values()) == weeks, (
@@ -572,9 +572,9 @@ class TestEdgeCases:
     def test_minimum_weeks_5k(self):
         gen = TrainingPlanGenerator()
         plan = gen.generate_plan(
-            current_km=10, target_distance=5.0, weeks=4, max_runs_per_week=3,
+            current_km=10, target_distance=5.0, weeks=6, max_runs_per_week=3,
         )
-        assert len(plan) == 4
+        assert len(plan) == 6
         assert all(w["total_km"] > 0 for w in plan)
 
     def test_minimum_weeks_marathon(self):

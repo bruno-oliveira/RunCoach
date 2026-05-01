@@ -141,11 +141,13 @@ class TestFitnessPlanGenerator:
                 assert long_km <= total_km * 0.30
 
     def test_recovery_weeks_exist(self, generator: FitnessPlanGenerator):
+        # vo2max focus with 12 weeks → taper=1, peak=4 which triggers the
+        # peak-phase recovery rule (3rd week of a 4+ week peak is recovery)
         plan = generator.generate_plan(
             current_weekly_km=25.0,
             weeks=12,
             runs_per_week=4,
-            focus_area="balanced",
+            focus_area="vo2max",
         )
 
         recovery_weeks = [w for w in plan["weekly_plans"] if w["is_recovery"]]

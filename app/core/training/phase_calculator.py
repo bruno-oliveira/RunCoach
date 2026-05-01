@@ -6,6 +6,11 @@ and recovery week determination.
 
 from typing import Dict, Optional
 
+from app.exceptions import InsufficientTimeException
+
+
+MIN_WEEKS_FOR_PHASES = 6
+
 
 # Phase-specific distance distribution percentages by race category.
 # Each dict maps workout types to their share of weekly distance.
@@ -82,6 +87,12 @@ def calculate_phases(weeks: int, target_distance: float = 10.0) -> Dict[str, int
     Returns:
         Dict with phase durations: {'base': int, 'build': int, 'peak': int, 'taper': int}
     """
+    if weeks < MIN_WEEKS_FOR_PHASES:
+        raise InsufficientTimeException(
+            f"Minimum {MIN_WEEKS_FOR_PHASES} weeks required for structured periodization.",
+            suggestion=f"Extend your plan to at least {MIN_WEEKS_FOR_PHASES} weeks for a safe base/build/peak/taper structure.",
+        )
+
     category = get_distance_category(target_distance)
 
     # Distance-specific ideal proportions: (base%, build%, peak%, taper_weeks)
@@ -170,4 +181,7 @@ def is_recovery_week(week_number: int, phase: str, phases: Optional[Dict[str, in
         phase_length = phases.get(phase, 0)
         if phase_length < 4:
             return False
+        phase_start_week = 1 if phase == 'base' else phases['base'] + 1
+        week_in_phase = week_number - phase_start_week
+        return week_in_phase > 0 and week_in_phase % 4 == 0
     return week_number % 4 == 0

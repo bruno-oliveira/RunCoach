@@ -22,7 +22,7 @@ from app.config import settings
 DISTANCE_CONFIG = {
     5.0: {
         "name": "5K",
-        "min_weeks": 4,
+        "min_weeks": 6,
         "max_weeks": 16,
         "min_mileage": 5.0,
         "max_mileage": 40.0,
@@ -132,6 +132,8 @@ class TestPlanRequestSchemaRejections:
 
     @pytest.mark.parametrize("distance,invalid_weeks,reason", [
         (5.0, 3, "below 5K minimum"),
+        (5.0, 4, "below 5K minimum (phase collapse guard)"),
+        (5.0, 5, "below 5K minimum (phase collapse guard)"),
         (5.0, 17, "above 5K maximum"),
         (10.0, 5, "below 10K minimum"),
         (10.0, 17, "above 10K maximum"),
@@ -523,7 +525,7 @@ class TestPlanGenerationAPI:
         return response
 
     @pytest.mark.parametrize("distance,weeks,mileage,runs", [
-        (5.0, 4, 5.0, 2),
+        (5.0, 6, 5.0, 2),
         (5.0, 8, 15.0, 3),
         (5.0, 12, 25.0, 4),
         (5.0, 16, 40.0, 5),

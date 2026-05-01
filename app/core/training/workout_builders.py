@@ -267,7 +267,10 @@ def generate_interval_run(day: int, distance: float, total_km: float,
     cooldown = warmup
     work_km = max(0.5, distance - warmup - cooldown)
 
-    if total_km >= 40:
+    # 50 km/week threshold ensures ~5 weeks of base before 1000 m repeats are
+    # prescribed. The previous 40 km gate was reachable too early (week 8 from a
+    # 24 km base) without adequate cumulative readiness.
+    if total_km >= 50:
         reps_400 = max(4, round(work_km / 0.8))
         reps_800 = max(4, round(work_km / 1.6))
         reps_1000 = max(3, round(work_km / 2.0))

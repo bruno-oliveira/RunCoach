@@ -29,7 +29,7 @@ class Settings(BaseSettings):
     log_level: Literal["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"] = "INFO"
 
     # Training plan constraints
-    min_weeks_5k: int = 4
+    min_weeks_5k: int = 6
     min_weeks_10k: int = 6
     min_weeks_half: int = 8
     min_weeks_30k: int = 6  # Trail running (30km)

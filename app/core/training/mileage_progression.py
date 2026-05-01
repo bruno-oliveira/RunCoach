@@ -122,6 +122,11 @@ def get_peak_mileage(target_distance: float, current_km: float, weeks: int,
     if cap is not None:
         peak = min(peak, cap)
 
+    # Never force more than 10% detraining below the runner's current base.
+    # A high-base runner targeting a shorter race still needs meaningful volume.
+    if current_km > peak:
+        peak = max(current_km * 0.90, peak)
+
     return peak
 
 

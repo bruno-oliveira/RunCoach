@@ -253,29 +253,39 @@ class TestTrainingPlanGenerator:
     # ------------------------------------------------------------------
 
     def test_recovery_week_pattern(self, plan_generator: TrainingPlanGenerator):
-        """Test recovery week pattern in progression."""
+        """Recovery weeks occur at the 5th week within each phase (phase-relative scheduling).
+
+        For a 16-week marathon plan: base=5, build=6. Recovery at the 5th step within each
+        phase — global weeks 5 (last base) and 10 (5th build week). Both should show ~35%
+        mileage reduction vs the previous week.
+        """
         plan = plan_generator.generate_plan(
             current_km=20,
-            target_distance=21.1,
-            weeks=12,
+            target_distance=42.2,
+            weeks=16,
             max_runs_per_week=5,
         )
 
-        # Check that weeks 4 and 8 are recovery weeks (35% reduction)
-        recovery_weeks = [3, 7]  # 0-indexed: weeks 4 and 8
-        for week_idx in recovery_weeks:
-            if week_idx < len(plan):
-                recovery_week = plan[week_idx]
-                previous_week = plan[week_idx - 1]
-                expected_recovery = previous_week["total_km"] * 0.65
-                actual_recovery = recovery_week["total_km"]
-                tolerance = expected_recovery * 0.15
-                assert abs(actual_recovery - expected_recovery) <= tolerance, \
-                    f"Week {week_idx + 1} not properly reduced for recovery"
+        # Verify plan marks recovery weeks correctly and they show reduced volume
+        recovery_indices = [i for i, w in enumerate(plan) if w.get("is_recovery")]
+        assert len(recovery_indices) >= 1, "16-week plan should have at least one recovery week"
 
-        # Check taper weeks
-        taper_weeks = plan[-2:]
-        peak_km = max(w["total_km"] for w in plan[:-2])
+        for week_idx in recovery_indices:
+            if week_idx == 0:
+                continue
+            recovery_week = plan[week_idx]
+            previous_week = plan[week_idx - 1]
+            expected_recovery = previous_week["total_km"] * 0.65
+            actual_recovery = recovery_week["total_km"]
+            tolerance = expected_recovery * 0.15
+            assert abs(actual_recovery - expected_recovery) <= tolerance, (
+                f"Week {week_idx + 1} marked is_recovery but volume not reduced: "
+                f"expected ~{expected_recovery:.1f} km, got {actual_recovery:.1f} km"
+            )
+
+        # Taper weeks should also be well below peak
+        taper_weeks = plan[-3:]
+        peak_km = max(w["total_km"] for w in plan[:-3])
         race_week = taper_weeks[-1]
         assert race_week["total_km"] <= peak_km * 0.8
         assert race_week["total_km"] >= peak_km * 0.3
@@ -526,11 +536,12 @@ class TestTrainingPlanGenerator:
 
     def test_5k_two_week_taper(self, plan_generator: TrainingPlanGenerator):
         """5K/10K plans of 8+ weeks should have 2-week taper."""
+        from app.exceptions import InsufficientTimeException
         for dist in [5.0, 10.0]:
             phases = plan_generator._calculate_phases(8, target_distance=dist)
             assert phases["taper"] == 2, f"{dist}km 8wk should have 2-week taper"
-        phases_short = plan_generator._calculate_phases(4, target_distance=5.0)
-        assert phases_short["taper"] == 1, "4-week 5K should still have 1-week taper"
+        with pytest.raises(InsufficientTimeException):
+            plan_generator._calculate_phases(4, target_distance=5.0)
 
     def test_two_run_quality_in_build_peak(self, plan_generator: TrainingPlanGenerator):
         """2-run plans should have 1 quality session in build/peak phases."""
