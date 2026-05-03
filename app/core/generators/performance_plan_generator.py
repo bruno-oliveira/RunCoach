@@ -322,13 +322,15 @@ class PerformancePlanGenerator:
 
         daily_workouts.sort(key=lambda x: x['day'])
 
-        # Overlay key workouts and coaching rationale
+        # Overlay key workouts and coaching rationale.
+        # _regenerate_description runs first (syncs segments after cap),
+        # then overlay sets the curated key-workout description + steps.
         for workout in daily_workouts:
             if workout.get('quality', False):
+                _regenerate_description(workout)
                 self._overlay_key_workout(
                     workout, phase, target_distance, week_in_phase, vdot_zones,
                 )
-                _regenerate_description(workout)
             coaching_type = _COACHING_TYPE_MAP.get(workout['type'], workout['type'])
             workout['coaching_rationale'] = generate_coaching_note(
                 coaching_type, phase, week_number, target_distance, is_recovery,

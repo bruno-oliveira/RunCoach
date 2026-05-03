@@ -132,6 +132,42 @@ _DISTANCE_REWRITES: Dict[str, Callable[[float], str]] = {
         f"Warm up {_wu_cd(d)[0]:g}km easy. Within a continuous run, "
         f"alternate 6 x (3 min at 10K pace / 2 min easy jog). Cool down {_wu_cd(d)[1]:g}km easy."
     ),
+    "5k_hill_sprints": lambda d: (
+        f"Warm up {_wu_cd(d)[0]:g}km easy. Find a moderate hill (4-6% grade). "
+        f"Run 8-10 x 60 seconds hard uphill with easy jog back down. "
+        f"Cool down {_wu_cd(d)[1]:g}km easy."
+    ),
+    "marathon_yasso_800s": lambda d: (
+        f"Warm up {_wu_cd(d)[0]:g}km easy. "
+        f"Run {max(6, min(10, round((d - _wu_cd(d)[0] - _wu_cd(d)[1]) / 1.6))):g} x 800m "
+        f"at VO2max pace with equal-time recovery jog. Cool down {_wu_cd(d)[1]:g}km easy."
+    ),
+    "trail_elevation_repeats": lambda d: (
+        f"Warm up {_wu_cd(d)[0]:g}km easy on flat. Find a trail hill (6-10% grade). "
+        f"Run 6-8 x 3 min hard uphill, driving arms and shortening stride. "
+        f"Jog back down for recovery. Cool down {_wu_cd(d)[1]:g}km easy."
+    ),
+    "trail_power_hike": lambda d: (
+        f"On a hilly trail loop: power-hike steep uphills for 5 min "
+        f"(arms pumping, long strides), then run the flats and downhills. "
+        f"Repeat 5 times. Run {round(d):g}km total."
+    ),
+    "trail_downhill_technique": lambda d: (
+        f"Warm up {_wu_cd(d)[0]:g}km on flat. "
+        f"Find a trail descent (5-8% grade, 400-600m). Run 6-8 downhill repeats "
+        f"focusing on quick cadence, slight forward lean, and soft landings. "
+        f"Hike back up for recovery. Cool down {_wu_cd(d)[1]:g}km easy."
+    ),
+    "trail_flat_power_walk": lambda d: (
+        f"Alternate 5 min maximum-effort power walking with 5 min easy running "
+        f"x 6 sets. Run {round(d):g}km total. Max-effort power walking at "
+        f"9-10 min/km builds the specific muscular endurance for race-day hiking."
+    ),
+    "trail_flat_proprioception": lambda d: (
+        f"Run {round(d * 0.80):g}km alternating surfaces every 1-2km: pavement, "
+        f"grass, gravel, dirt. Every 2km, stop for a 2-min agility circuit: "
+        f"10 single-leg hops each side, 20m lateral shuffles, 20m backward running."
+    ),
 }
 
 

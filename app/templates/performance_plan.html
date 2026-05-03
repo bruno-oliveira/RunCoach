@@ -37,8 +37,39 @@
             </div>
             {% endif %}
         </div>
+        {% if today_workout.workout.key_workout_name %}
+        <div class="key-workout-badge">{{ today_workout.workout.key_workout_name }}</div>
+        {% endif %}
         <div class="today-description">{{ today_workout.workout.description }}</div>
-        {% if today_workout.workout.segments %}
+        {% if today_workout.workout.structure %}
+        <div class="workout-structure">{{ today_workout.workout.structure }}</div>
+        {% endif %}
+        {% if today_workout.workout.steps %}
+        <div class="today-segments">
+            <ol class="workout-steps" aria-label="Workout steps">
+                {% for step in today_workout.workout.steps %}
+                <li class="workout-step workout-step-{{ step.kind }}">
+                    <span class="workout-step-dot" aria-hidden="true"></span>
+                    <div class="workout-step-body">
+                        <div class="workout-step-head">
+                            <span class="workout-step-label">{{ step.label }}</span>
+                            {% if step.pace_zone %}<span class="workout-step-zone workout-step-zone-{{ step.pace_zone }}">{{ step.pace_zone }}</span>{% endif %}
+                        </div>
+                        {% set meta = [] %}
+                        {% if step.distance_m and step.distance_m >= 1000 %}{% set _ = meta.append((step.distance_m / 1000) | round(1) | string + ' km') %}{% elif step.distance_m %}{% set _ = meta.append(step.distance_m ~ ' m') %}{% endif %}
+                        {% if step.duration_s %}{% if step.duration_s >= 60 %}{% set _ = meta.append((step.duration_s // 60) ~ ':' ~ '%02d'|format(step.duration_s % 60)) %}{% else %}{% set _ = meta.append(step.duration_s ~ ' s') %}{% endif %}{% endif %}
+                        {% if step.pace_str %}{% set _ = meta.append(step.pace_str) %}{% endif %}
+                        {% if step.effort %}{% set _ = meta.append(step.effort) %}{% endif %}
+                        {% if meta %}
+                        <div class="workout-step-meta">{{ meta | join(' · ') }}</div>
+                        {% endif %}
+                        {% if step.note %}<div class="workout-step-note">{{ step.note }}</div>{% endif %}
+                    </div>
+                </li>
+                {% endfor %}
+            </ol>
+        </div>
+        {% elif today_workout.workout.segments %}
         <div class="today-segments">
             {% for seg in today_workout.workout.segments %}
             <div class="segment-row">
@@ -234,6 +265,10 @@
                     </div>
 
                     <div class="workout-content">
+                        {% if workout.key_workout_name %}
+                        <div class="key-workout-badge">{{ workout.key_workout_name }}</div>
+                        {% endif %}
+
                         {% if workout.zone and workout.zone != 'mixed' and workout.zone != 'rest' %}
                         {% set zone_number = workout.zone.split('_')[1] %}
                         {% set zone_map = {
@@ -264,7 +299,20 @@
                             {{ workout.description }}
                         </div>
 
-                        {% if workout.segments and workout.type not in ['rest', 'recovery'] %}
+                        {% if workout.structure %}
+                        <div class="workout-structure">{{ workout.structure }}</div>
+                        {% endif %}
+
+                        {% if workout.steps and workout.type not in ['rest', 'recovery'] %}
+                        <details class="workout-steps-wrap">
+                            <summary class="workout-steps-toggle">
+                                <svg class="workout-steps-chevron" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+                                <span>Session blocks</span>
+                                <span class="workout-steps-count">{{ workout.steps | length }}</span>
+                            </summary>
+                            {% include 'components/workout_steps.html' %}
+                        </details>
+                        {% elif workout.segments and workout.type not in ['rest', 'recovery'] %}
                         <details class="workout-steps-wrap">
                             <summary class="workout-steps-toggle">
                                 <svg class="workout-steps-chevron" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
@@ -291,6 +339,20 @@
                                 </li>
                                 {% endfor %}
                             </ol>
+                        </details>
+                        {% endif %}
+
+                        {% if workout.key_workout_rationale %}
+                        <details class="coaching-note key-workout-rationale">
+                            <summary class="coaching-note-toggle">Why this workout</summary>
+                            <div class="coaching-note-content">{{ workout.key_workout_rationale }}</div>
+                        </details>
+                        {% endif %}
+
+                        {% if workout.coaching_rationale %}
+                        <details class="coaching-note">
+                            <summary class="coaching-note-toggle">Coach says</summary>
+                            <div class="coaching-note-content">{{ workout.coaching_rationale }}</div>
                         </details>
                         {% endif %}
 
