@@ -12,8 +12,8 @@ from sqlalchemy.orm import Session
 from app.dependencies import get_db, get_optional_user
 from app.models import User
 from app.schemas.race_prep_schemas import GPXAnalysisResponse, RaceBlueprint, RacePrepRequest
-from app.services.gpx_service import GPXService
-from app.services.race_pacing_service import RacePacingService
+from app.services.integrations.gpx_service import GPXService
+from app.services.fitness.race_pacing_service import RacePacingService
 from app.template_helpers import create_templates
 
 logger = logging.getLogger(__name__)

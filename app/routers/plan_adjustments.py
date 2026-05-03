@@ -10,11 +10,11 @@ from app.dependencies import get_current_user, get_db
 from app.models import DailyWorkout, User, WeeklyPlan
 from app.services.adaptation import type_swapper
 from app.services.adaptation.missed_week_handler import detect_missed_weeks
-from app.services.adaptation_service import AdaptationService
-from app.services.gap_analysis_service import GapAnalysisService
-from app.services.plan_helpers import get_plan_or_404
-from app.services.readiness_service import ReadinessService
-from app.services.week_adjustment_service import apply_week_action
+from app.services.adaptation import AdaptationService
+from app.services.fitness.gap_analysis_service import GapAnalysisService
+from app.services.plans.plan_helpers import get_plan_or_404
+from app.services.fitness.readiness_service import ReadinessService
+from app.services.plans.week_adjustment_service import apply_week_action
 
 logger = logging.getLogger(__name__)
 
@@ -301,7 +301,7 @@ async def swap_plan_days(
     db: Session = Depends(get_db),
 ):
     """Swap two workouts within the same week."""
-    from app.services.plan_adjustments import swap_days
+    from app.services.plans.plan_adjustments import swap_days
 
     training_plan = get_plan_or_404(
         plan_id, db, current_user, require_user_match=True

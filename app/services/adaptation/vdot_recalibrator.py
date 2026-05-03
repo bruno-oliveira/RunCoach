@@ -21,7 +21,7 @@ def check_vdot_recalibration(
     user_id: str,
     db: Session,
 ) -> Optional[Dict[str, Any]]:
-    from app.services.race_predictor_service import RacePredictorService
+    from app.services.fitness.race_predictor_service import RacePredictorService
 
     plan_vdot = training_plan.vdot
     if not plan_vdot:

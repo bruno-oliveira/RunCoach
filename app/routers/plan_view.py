@@ -15,11 +15,11 @@ from app.dependencies import (
     get_plan_service,
 )
 from app.models import User
-from app.services.adaptation_service import AdaptationService
-from app.services.hr_zone_service import HRZoneService
-from app.services.performance_service import PerformanceService
-from app.services.plan_helpers import get_plan_or_404, plan_view_context
-from app.services.plan_service import PlanService
+from app.services.adaptation import AdaptationService
+from app.services.fitness.hr_zone_service import HRZoneService
+from app.services.fitness.performance_service import PerformanceService
+from app.services.plans.plan_helpers import get_plan_or_404, plan_view_context
+from app.services.plans.plan_service import PlanService
 from app.template_helpers import create_templates
 from app.utils import format_pace
 

@@ -9,17 +9,17 @@ from sqlalchemy import create_engine, event
 from sqlalchemy.orm import Session, sessionmaker
 from sqlalchemy.pool import NullPool
 
-from app.services.auth_service import AuthService
-from app.services.performance_service import PerformanceService
-from app.services.adaptation_service import AdaptationService
+from app.services.auth.auth_service import AuthService
+from app.services.fitness.performance_service import PerformanceService
+from app.services.adaptation import AdaptationService
 from app.config import settings
 from app.models import TrainingPlan, User
 from app.core.nutrition.nutrition_engine import NutritionEngine
 from app.core.export.pdf_generator import PDFGenerator
 from app.core.generators.plan_generator import TrainingPlanGenerator
 from app.core.generators.performance_plan_generator import PerformancePlanGenerator
-from app.services.plan_service import PlanService
-from app.services.strava_service import StravaService
+from app.services.plans.plan_service import PlanService
+from app.services.integrations.strava_service import StravaService
 
 # Cookie name must match the one in auth router
 COOKIE_NAME = "access_token"

@@ -30,10 +30,10 @@ from app.exceptions import (
 )
 from app.models import User
 from app.schemas import PlanRequest, FitnessPlanRequest
-from app.services.performance_service import PerformanceService
-from app.services.plan_helpers import error_response, get_plan_or_404
-from app.services.plan_service import PlanService
-from app.services.fitness_service import FitnessService
+from app.services.fitness.performance_service import PerformanceService
+from app.services.plans.plan_helpers import error_response, get_plan_or_404
+from app.services.plans.plan_service import PlanService
+from app.services.fitness.fitness_service import FitnessService
 from app.template_helpers import create_templates
 from app.utils import parse_time_to_pace
 

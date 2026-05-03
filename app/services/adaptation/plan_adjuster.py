@@ -7,7 +7,7 @@ from typing import Any, Dict, List, Optional, Tuple
 from sqlalchemy.orm import Session
 
 from app.models import DailyWorkout, RunLog, RunFeedback, TrainingPlan, WeeklyPlan
-from app.services.race_predictor_service import RacePredictorService
+from app.services.fitness.race_predictor_service import RacePredictorService
 from app.utils import to_date as _to_date
 
 from ._helpers import (

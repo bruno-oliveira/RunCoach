@@ -6,14 +6,14 @@ from datetime import timedelta
 from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 from sqlalchemy.orm import Session
 
-from app.services.auth_service import AuthService
+from app.services.auth.auth_service import AuthService
 from app.config import settings
 from app.dependencies import get_auth_service, get_db, get_current_user, get_strava_service
 from app.middleware import _cookie_secure
 from app.models import User
 from app.rate_limit import auth_limiter
 from app.schemas import AuthResponse, GoogleAuthRequest, UserResponse
-from app.services.strava_service import StravaService
+from app.services.integrations.strava_service import StravaService
 
 logger = logging.getLogger(__name__)
 

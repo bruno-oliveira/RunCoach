@@ -18,9 +18,9 @@ from app.schemas import (
     RunLogResponse,
     RunLogUpdate,
 )
-from app.services.feedback_service import FeedbackService
-from app.services.race_predictor_service import RacePredictorService
-from app.services.run_enrichment_service import (
+from app.services.fitness.feedback_service import FeedbackService
+from app.services.fitness.race_predictor_service import RacePredictorService
+from app.services.runs.run_enrichment_service import (
     build_race_comparison,
     enrich_vdot_and_prediction,
     run_to_response,
@@ -102,7 +102,7 @@ async def create_run_log(
 
         if new_run.training_plan_id:
             try:
-                from app.services.adaptation_service import AdaptationService
+                from app.services.adaptation import AdaptationService
                 AdaptationService().evaluate_recommendation(
                     new_run.training_plan_id, current_user.id, db
                 )

@@ -11,13 +11,13 @@ from app.models import TrainingPlan, User
 from app.models.run_log import RunLog
 from app.core.training.vdot_calculator import VDOTCalculator
 from app.core.runner_profile import build_profile
-from app.services.adherence_service import compute_adherence_heatmap
-from app.services.gap_analysis_service import GapAnalysisService
-from app.services.insights_service import InsightsService
-from app.services.personal_records_service import PersonalRecordsService
-from app.services.plan_helpers import get_plan_or_404
-from app.services.race_predictor_service import RacePredictorService
-from app.services.training_load_service import TrainingLoadService
+from app.services.fitness.adherence_service import compute_adherence_heatmap
+from app.services.fitness.gap_analysis_service import GapAnalysisService
+from app.services.fitness.insights_service import InsightsService
+from app.services.fitness.personal_records_service import PersonalRecordsService
+from app.services.plans.plan_helpers import get_plan_or_404
+from app.services.fitness.race_predictor_service import RacePredictorService
+from app.services.fitness.training_load_service import TrainingLoadService
 from app.utils import to_date as _to_date
 
 logger = logging.getLogger(__name__)

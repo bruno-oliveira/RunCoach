@@ -12,8 +12,8 @@ from sqlalchemy.orm import Session
 
 from app.core.training.vdot_calculator import VDOTCalculator
 from app.models import RunLog
-from app.services.race_predictor_service import RacePredictorService
-from app.services.training_load_service import TrainingLoadService
+from app.services.fitness.race_predictor_service import RacePredictorService
+from app.services.fitness.training_load_service import TrainingLoadService
 
 
 @dataclass

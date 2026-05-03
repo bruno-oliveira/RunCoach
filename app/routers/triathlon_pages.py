@@ -14,7 +14,7 @@ from app.core.generators.triathlon_plan_generator import TriathlonPlanGenerator
 from app.dependencies import get_db, get_optional_user, get_plan_service
 from app.models.triathlon_plan import TriathlonPlan
 from app.models.user import User
-from app.services.plan_service import PlanService
+from app.services.plans.plan_service import PlanService
 from app.template_helpers import create_templates
 
 logger = logging.getLogger(__name__)

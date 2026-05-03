@@ -21,8 +21,8 @@ from app.dependencies import (
 )
 from app.models import TrainingPlan, User
 from app.constants import DISTANCE_NAMES
-from app.services.plan_helpers import get_plan_or_404, plan_view_context
-from app.services.plan_service import PlanService
+from app.services.plans.plan_helpers import get_plan_or_404, plan_view_context
+from app.services.plans.plan_service import PlanService
 from app.template_helpers import create_templates
 
 logger = logging.getLogger(__name__)

@@ -8,16 +8,16 @@ from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, R
 from fastapi.responses import RedirectResponse
 from sqlalchemy.orm import Session
 
-from app.services.auth_service import AuthService
+from app.services.auth.auth_service import AuthService
 from app.config import settings
 from app.dependencies import get_current_user, get_db, get_auth_service, get_strava_service
 from app.models import TrainingPlan
 from app.models.user import User
 from app.schemas import StravaStatusResponse, StravaSyncResponse
 from app.rate_limit import strava_callback_limiter
-from app.services.strava_service import StravaService
-from app.services.adaptation_service import AdaptationService
-from app.services.strava_post_sync_service import auto_map_and_adjust, initial_sync
+from app.services.integrations.strava_service import StravaService
+from app.services.adaptation import AdaptationService
+from app.services.integrations.strava_post_sync_service import auto_map_and_adjust, initial_sync
 from app.utils import TimestampAdapter
 
 logger = logging.getLogger(__name__)
