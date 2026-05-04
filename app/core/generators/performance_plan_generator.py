@@ -22,7 +22,6 @@ from app.core.training.vdot_calculator import VDOTCalculator
 from app.utils import format_pace as _shared_format_pace
 
 from .performance_workout_builders import (
-    _regenerate_description,
     generate_easy_run,
     generate_fartlek_workout,
     generate_long_run,
@@ -323,11 +322,10 @@ class PerformancePlanGenerator:
         daily_workouts.sort(key=lambda x: x['day'])
 
         # Overlay key workouts and coaching rationale.
-        # _regenerate_description runs first (syncs segments after cap),
-        # then overlay sets the curated key-workout description + steps.
+        # reconcile_workout_after_cap above already synced segments and description;
+        # overlay then replaces description + steps with curated key-workout content.
         for workout in daily_workouts:
             if workout.get('quality', False):
-                _regenerate_description(workout)
                 self._overlay_key_workout(
                     workout, phase, target_distance, week_in_phase, vdot_zones,
                 )

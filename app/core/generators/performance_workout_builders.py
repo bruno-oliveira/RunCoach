@@ -53,6 +53,8 @@ def reconcile_workout_after_cap(workout: Dict[str, Any]) -> None:
 
 def _regenerate_description(workout: Dict[str, Any]) -> None:
     """Rebuild the description string from current segment values."""
+    if workout.get('key_workout_id'):
+        return
     segments = workout.get('segments', [])
     total_km = workout['distance']
     wtype = workout['type']

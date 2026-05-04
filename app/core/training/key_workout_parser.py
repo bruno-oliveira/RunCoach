@@ -48,8 +48,16 @@ def _parse_duration_to_s(value: str, unit: str) -> int:
     return int(round(num))
 
 
-def _try_progression_pattern(structure: str, pace_zones: Optional[Dict]) -> Optional[List[Dict[str, Any]]]:
-    """Pattern A: "Nkm: first Xkm easy, last Ykm at ... pace" (progression runs)."""
+def _try_progression_pattern(
+    structure: str, pace_zones: Optional[Dict],
+    total_distance_km: float = 0,
+) -> Optional[List[Dict[str, Any]]]:
+    """Pattern A: "Nkm: first Xkm easy, last Ykm at ... pace" (progression runs).
+
+    Treats the X/Y values in the structure as ratio hints. When ``total_distance_km``
+    is provided, the easy/finish split is recomputed proportionally so the steps
+    add up to the actual workout distance instead of the hardcoded values.
+    """
     m = re.search(
         r"(\d+(?:-\d+)?)\s*km[^:]*:\s*first\s+(\d+(?:\.\d+)?)\s*km\s+(\w+)[^,]*,\s*(?:last|final)\s+(\d+(?:-\d+)?)\s*km\s+at\s+([^.]+)",
         structure,
@@ -57,10 +65,21 @@ def _try_progression_pattern(structure: str, pace_zones: Optional[Dict]) -> Opti
     )
     if not m:
         return None
-    easy_m = _parse_distance_to_m(m.group(2), "km")
+    easy_km_raw = float(m.group(2))
     last_km = m.group(4).split("-")[-1]
-    finish_m = _parse_distance_to_m(last_km, "km")
+    finish_km_raw = float(last_km)
     finish_zone = _infer_zone(m.group(5)) or "M"
+
+    if total_distance_km > 0 and (easy_km_raw + finish_km_raw) > 0:
+        ratio_total = easy_km_raw + finish_km_raw
+        easy_km = total_distance_km * easy_km_raw / ratio_total
+        finish_km = total_distance_km - easy_km
+    else:
+        easy_km = easy_km_raw
+        finish_km = finish_km_raw
+
+    easy_m = int(round(easy_km * 1000))
+    finish_m = int(round(finish_km * 1000))
     return [
         _step("run", "Easy start", distance_m=easy_m, pace_zone="E",
               pace_str=_pace_str("E", pace_zones), effort="conversational"),
@@ -96,8 +115,14 @@ def _try_as_progression_pattern(
 def _try_distance_reps_pattern(
     structure: str, pace_zones: Optional[Dict], workout_type: str,
     has_wcd: bool, warmup_steps: List, cd_m: Optional[int] = None,
+    total_distance_km: float = 0,
 ) -> Optional[List[Dict[str, Any]]]:
-    """Pattern B: "N x Dm/km at ... with Y recovery"."""
+    """Pattern B: "N x Dm/km at ... with Y recovery".
+
+    Scales rep distance to fit the actual workout volume after warm-up and
+    cool-down. Without this, hardcoded structures (e.g. "5 x 2km") can produce
+    steps whose total exceeds the workout's assigned distance.
+    """
     m = re.search(
         r"(\d+)(?:-\d+)?\s*[x×]\s*(\d+(?:\.\d+)?)\s*(km|m)\s+at\s+([^,]+?)(?:\s+with\s+(\d+(?:\.\d+)?)\s*(min|sec|s)\s+(?:easy\s+jog\s+)?recovery)?(?:\s*\.|$)",
         structure,
@@ -107,6 +132,18 @@ def _try_distance_reps_pattern(
         return None
     reps = int(m.group(1))
     rep_m = _parse_distance_to_m(m.group(2), m.group(3))
+
+    if total_distance_km > 0:
+        wu_cd_m = (cd_m or 0) * (2 if has_wcd else 0)
+        work_m = max(0, int(round(total_distance_km * 1000)) - wu_cd_m)
+        if work_m > 0:
+            scaled_rep_m = max(200, int(round(work_m / reps)))
+            if scaled_rep_m >= 1000:
+                scaled_rep_m = int(round(scaled_rep_m / 100.0)) * 100
+            else:
+                scaled_rep_m = int(round(scaled_rep_m / 50.0)) * 50
+            rep_m = scaled_rep_m
+
     zone = _infer_zone(m.group(4)) or ("T" if workout_type == "tempo" else "I")
     rep_label = f"{reps} × {rep_m / 1000:.1f} km" if rep_m >= 1000 else f"{reps} × {rep_m} m"
     steps = list(warmup_steps)
@@ -227,7 +264,7 @@ def parse_key_workout_steps(
         wu_m = None
         warmup_steps = [_warmup(pace_zones)] if has_wcd else []
 
-    result = _try_progression_pattern(structure, pace_zones)
+    result = _try_progression_pattern(structure, pace_zones, total_distance_km)
     if result is not None:
         return result
 
@@ -235,7 +272,10 @@ def parse_key_workout_steps(
     if result is not None:
         return result
 
-    result = _try_distance_reps_pattern(structure, pace_zones, workout_type, has_wcd, warmup_steps, wu_m)
+    result = _try_distance_reps_pattern(
+        structure, pace_zones, workout_type, has_wcd, warmup_steps, wu_m,
+        total_distance_km=total_distance_km,
+    )
     if result is not None:
         return result
 

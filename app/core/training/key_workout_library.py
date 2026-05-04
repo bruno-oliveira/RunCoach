@@ -57,7 +57,7 @@ _DISTANCE_REWRITES: Dict[str, Callable[[float], str]] = {
         f"Then run each subsequent 3km segment 5-10s/km faster, finishing the last 3km at marathon pace."
     ),
     "marathon_easy_long_fueling": lambda d: (
-        f"Run {round(d):g}km at easy conversational pace. "
+        f"Run {round(d):g}km continuous at easy conversational pace. "
         f"Take a gel or fuel every 5km starting at km 10. Practice your exact race-day nutrition strategy. "
         f"Walk 1 min after each fuel stop if needed."
     ),
@@ -68,17 +68,19 @@ _DISTANCE_REWRITES: Dict[str, Callable[[float], str]] = {
     ),
     "marathon_mp_cutdown": lambda d: (
         f"Warm up {round(max(1, d * 0.10)):g}km easy. "
-        f"Run 5 x 2km alternating between marathon pace and threshold pace, "
+        f"Run {max(3, round(max(2, d - 2 * max(1, d * 0.10)) / 2))} x 2km "
+        f"alternating between marathon pace and threshold pace "
         f"with 90s jog recovery between each. Cool down {round(max(1, d * 0.10)):g}km easy."
     ),
     "half_progressive_long": lambda d: (
-        f"Run {round(d):g}km total. Start at easy pace for {round(d * 0.65):g}km, "
-        f"then increase to marathon pace for the final {round(d * 0.35):g}km. "
+        f"Run {round(d):g}km: first {round(d * 0.65):g}km easy, "
+        f"last {round(d * 0.35):g}km at marathon pace. "
         f"No warm-up needed — the easy start IS the warm-up."
     ),
     "half_cutdown_long": lambda d: (
-        f"Run {round(d):g}km in three {round(d / 3, 1):g}km segments. "
-        f"Segment 1 at easy pace, segment 2 at 15s/km faster, segment 3 at marathon pace."
+        f"Run {round(d):g}km: first {round(d / 3, 1):g}km easy, "
+        f"last {round(d * 2 / 3, 1):g}km at marathon pace. "
+        f"Run as 3 segments, each 15s/km faster than the last."
     ),
     "half_race_pace_segments": lambda d: (
         f"Warm up {_wu_cd(d)[0]:g}km easy. "
@@ -91,12 +93,14 @@ _DISTANCE_REWRITES: Dict[str, Callable[[float], str]] = {
         f"at threshold pace with 90 seconds easy jog recovery. Cool down {_wu_cd(d)[1]:g}km easy."
     ),
     "trail_flat_surge_fartlek": lambda d: (
-        f"On varied terrain (grass, dirt path, or trail). Run 8 x 3 min at hill-repeat effort "
-        f"(Zone 4-5) with 2 min easy jog recovery. {_wu_cd(d)[0]:g}km warm-up, {_wu_cd(d)[1]:g}km cool-down."
+        f"Warm up {_wu_cd(d)[0]:g}km easy. "
+        f"Run 8 x (3 min at hill-repeat effort / 2 min easy jog) on varied terrain "
+        f"(grass, dirt path, or trail). Cool down {_wu_cd(d)[1]:g}km easy."
     ),
     "trail_flat_soft_surface": lambda d: (
-        f"Find the softest running surface available: grass fields, dirt trails, beach, gravel paths. "
-        f"Run {round(d):g}km at easy effort. The soft surface increases energy cost 10-15% vs pavement. "
+        f"Run {round(d):g}km continuous at easy effort on soft surface "
+        f"(grass, dirt trails, beach, or gravel paths). "
+        f"The soft surface increases energy cost 10-15% vs pavement. "
         f"Walk 2 min every 45 min. Practice race fueling."
     ),
     "trail_time_on_feet": lambda d: (
