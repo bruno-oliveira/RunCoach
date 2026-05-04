@@ -65,10 +65,12 @@ def get_distance_category(target_distance: float, terrain: Optional[str] = None)
         return '10K'
     elif target_distance <= 21.1:
         return 'Half'
-    elif target_distance <= 30.0:
+    elif target_distance == 30.0:
         if terrain == 'flat':
             return 'FlatTrail'
         return 'Trail'
+    elif target_distance < 30.0:
+        return 'Half'
     else:
         return 'Marathon'
 
@@ -103,6 +105,7 @@ def calculate_phases(weeks: int, target_distance: float = 10.0) -> Dict[str, int
         '10K':      {'base_pct': 0.35, 'build_pct': 0.30, 'peak_pct': 0.15, 'taper': 2},
         'Half':     {'base_pct': 0.35, 'build_pct': 0.35, 'peak_pct': 0.15, 'taper': 2},
         'Trail':    {'base_pct': 0.35, 'build_pct': 0.35, 'peak_pct': 0.15, 'taper': 2},
+        'FlatTrail': {'base_pct': 0.35, 'build_pct': 0.35, 'peak_pct': 0.15, 'taper': 2},
         'Marathon': {'base_pct': 0.30, 'build_pct': 0.35, 'peak_pct': 0.15, 'taper': 3},
     }
 

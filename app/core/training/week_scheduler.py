@@ -17,7 +17,8 @@ def schedule_workout_types(distribution: Dict[str, int], phase: str,
     workout_types[1] = 'recovery'
 
     workout_types[5] = 'long'
-    distribution['long'] -= 1
+    if distribution.get('long', 0) > 0:
+        distribution['long'] -= 1
 
     if not is_recovery_week:
         quality_slots = [2, 3, 4]

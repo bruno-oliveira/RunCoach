@@ -19,6 +19,51 @@ def _wu_cd(d: float) -> tuple:
     return (wu, wu)
 
 
+def _mp_cutdown_reps(d: float) -> int:
+    """2km-rep count for marathon_mp_cutdown, bucketed by distance.
+
+    Each rep is 2km of work + ~0.3km recovery jog (~2.3km total).
+    Combined with ~10% warmup + ~10% cooldown of d, the buckets ensure
+    the structure fits inside the assigned budget.
+    """
+    if d < 8:
+        return 2
+    if d < 12:
+        return 3
+    if d < 16:
+        return 4
+    if d < 20:
+        return 5
+    return 6
+
+
+def _vo2max_400_reps(d: float) -> int:
+    """Scale 400m VO2max reps to fit distance d.
+
+    Each rep is ~0.4km work + ~0.3km easy jog recovery (~0.7km total).
+    Reps clamped to [4, 12] so the workout stays recognizable.
+    """
+    wu, cd = _wu_cd(d)
+    main_km = max(0.0, d - wu - cd)
+    reps = round(main_km / 0.7)
+    return max(4, min(12, reps))
+
+
+def _pyramid_pattern(d: float) -> str:
+    """Pick a pyramid pattern that fits within distance d.
+
+    Equal-distance recovery jogs roughly double the work-km cost, so a
+    full 3.2km of reps needs ~6.4km of main-set room.
+    """
+    wu, cd = _wu_cd(d)
+    main_km = max(0.0, d - wu - cd)
+    if main_km >= 6.0:
+        return "200m, 400m, 600m, 800m, 600m, 400m, 200m"
+    if main_km >= 3.4:
+        return "200m, 400m, 600m, 400m, 200m"
+    return "200m, 400m, 400m, 200m"
+
+
 def _fartlek_reps(d: float, on_min: int = 3, off_min: int = 2,
                   pace_min_per_km: float = 6.0,
                   default: int = 8, lo: int = 3, hi: int = 10) -> int:
@@ -40,7 +85,7 @@ def _fartlek_reps(d: float, on_min: int = 3, off_min: int = 2,
 # Each entry generates a complete description from the actual distance.
 _DISTANCE_REWRITES: Dict[str, Callable[[float], str]] = {
     "5k_vo2max_400s": lambda d: (
-        f"Warm up {_wu_cd(d)[0]:g}km easy. Run 10-12 x 400m at 5K pace "
+        f"Warm up {_wu_cd(d)[0]:g}km easy. Run {_vo2max_400_reps(d)} x 400m at 5K pace "
         f"with 90s easy jog recovery between reps. Cool down {_wu_cd(d)[1]:g}km easy."
     ),
     "5k_race_pace_3km": lambda d: (
@@ -57,7 +102,7 @@ _DISTANCE_REWRITES: Dict[str, Callable[[float], str]] = {
         f"— comfortably hard, you can speak a few words at a time. Cool down {_wu_cd(d)[1]:g}km easy."
     ),
     "5k_pyramid": lambda d: (
-        f"Warm up {_wu_cd(d)[0]:g}km easy. Run pyramid: 200m, 400m, 600m, 800m, 600m, 400m, 200m "
+        f"Warm up {_wu_cd(d)[0]:g}km easy. Run pyramid: {_pyramid_pattern(d)} "
         f"— all at 5K pace with equal-distance recovery jogs. Cool down {_wu_cd(d)[1]:g}km easy."
     ),
     "marathon_mp_long": lambda d: (
@@ -88,7 +133,7 @@ _DISTANCE_REWRITES: Dict[str, Callable[[float], str]] = {
     ),
     "marathon_mp_cutdown": lambda d: (
         f"Warm up {max(1, d * 0.10):.1f}km easy. "
-        f"Run {max(3, round(max(2, d - 2 * max(1, d * 0.10)) / 2))} x 2km "
+        f"Run {_mp_cutdown_reps(d)} x 2km "
         f"alternating between marathon pace and threshold pace "
         f"with 90s jog recovery between each. Cool down {max(1, d * 0.10):.1f}km easy."
     ),
