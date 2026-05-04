@@ -612,6 +612,61 @@ def build_hill_steps(
 from app.core.training.key_workout_parser import parse_key_workout_steps  # noqa: F401
 
 
+# Default pace estimates (min/km) for time-based workouts when no VDOT data.
+_DEFAULT_PACES = {
+    "E": 8.0,   # Easy pace
+    "T": 6.5,   # Tempo/threshold pace
+    "I": 5.5,   # Interval/VO2max pace
+    "M": 6.0,   # Marathon pace
+    "R": 5.0,   # Repetition/speed pace
+}
+
+
+def _parse_pace_str_to_min_per_km(pace_str: Optional[str], pace_zone: Optional[str] = None) -> Optional[float]:
+    """Parse pace string like '6:22/km' or '7:05-7:55/km' to min/km float.
+
+    For ranges like '5:54-5:16/km' (slow-fast format), uses the slower pace
+    (first value) for conservative distance estimates.
+    """
+    if pace_str:
+        pace_str = pace_str.replace("/km", "").strip()
+        # Handle both en-dash (–) and regular hyphen (-)
+        if "–" in pace_str:
+            pace_str = pace_str.split("–")[0].strip()
+        elif "-" in pace_str:
+            pace_str = pace_str.split("-")[0].strip()
+        parts = pace_str.split(":")
+        if len(parts) == 2:
+            try:
+                return int(parts[0]) + int(parts[1]) / 60.0
+            except ValueError:
+                pass
+    if pace_zone and pace_zone in _DEFAULT_PACES:
+        return _DEFAULT_PACES[pace_zone]
+    return None
+
+
+def _compute_distance_from_steps(steps: List[Dict[str, Any]]) -> float:
+    """Compute total distance in km from workout steps.
+
+    For distance-based steps, uses distance_m directly.
+    For duration-based steps, calculates distance from duration and pace.
+    """
+    total_m = 0
+    for s in steps:
+        if s.get("distance_m"):
+            total_m += s["distance_m"] * s.get("repeat", 1)
+        elif s.get("duration_s"):
+            pace_min_km = _parse_pace_str_to_min_per_km(
+                s.get("pace_str"), s.get("pace_zone")
+            )
+            if pace_min_km and pace_min_km > 0:
+                duration_min = s["duration_s"] / 60.0
+                distance_km = duration_min / pace_min_km
+                total_m += distance_km * 1000 * s.get("repeat", 1)
+    return total_m / 1000.0
+
+
 # ---------------------------------------------------------------------------
 # Scaling — for adaptation
 # ---------------------------------------------------------------------------

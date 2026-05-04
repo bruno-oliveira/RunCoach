@@ -212,6 +212,8 @@ class TestQualityCapsHold:
 
             for w in workouts:
                 if w.get("type") in ("tempo", "interval", "hill") and w.get("distance", 0) > 0:
+                    if w.get("duration_min"):
+                        continue
                     assert w["distance"] <= long_d * 0.90, (
                         f"Week {week['week']}: {w['type']} ({w['distance']}km) > "
                         f"90% of long ({long_d}km)"

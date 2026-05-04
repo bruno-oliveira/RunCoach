@@ -165,7 +165,7 @@ def _scale_down(workouts: List[Dict[str, Any]], total_km: float) -> float:
     if actual_total_km > total_km * 1.03 and actual_total_km > 0:
         scale = total_km / actual_total_km
         for w in workouts:
-            if w.get('distance', 0) > 0:
+            if w.get('distance', 0) > 0 and not w.get('duration_min'):
                 w['distance'] = round(w['distance'] * scale, 1)
         actual_total_km = round(sum(w.get('distance', 0) for w in workouts), 1)
     return actual_total_km
@@ -180,7 +180,10 @@ def _fill_shortfall(workouts: List[Dict[str, Any]], total_km: float,
     deficit = total_km - actual_total_km
     has_easy = any(w.get('type') == 'easy' and w.get('distance', 0) > 0 for w in workouts)
     expandable_types = ('easy', 'long') if has_easy else ('easy', 'long', 'tempo', 'interval', 'hill')
-    expandable = [w for w in workouts if w.get('type') in expandable_types and w.get('distance', 0) > 0]
+    expandable = [w for w in workouts
+                  if w.get('type') in expandable_types
+                  and w.get('distance', 0) > 0
+                  and not w.get('duration_min')]
     if expandable:
         total_expandable = sum(w['distance'] for w in expandable)
         if total_expandable > 0:

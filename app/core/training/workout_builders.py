@@ -40,6 +40,7 @@ def _apply_time_based(workout: Dict[str, Any],
     if wtype in descs:
         workout['description'] = descs[wtype]
     workout['steps'] = _time_based_steps(wtype, dur, pace_zones)
+    workout['distance'] = round(workout_steps._compute_distance_from_steps(workout['steps']), 1)
     return workout
 
 
@@ -61,8 +62,8 @@ def _time_based_steps(wtype: str, dur: int,
     if wtype == 'hill':
         return [
             wu,
-            workout_steps._step("run", "6 × 30 s uphill", duration_s=30, repeat=6, effort="hard uphill"),
-            workout_steps._step("recovery", "Jog-down recovery", duration_s=60, repeat=6, effort="jog"),
+            workout_steps._step("run", "6 × 30 s uphill", duration_s=30, repeat=6, pace_zone="I", pace_str=_ps("I", pace_zones), effort="hard uphill"),
+            workout_steps._step("recovery", "Jog-down recovery", duration_s=60, repeat=6, pace_zone="E", pace_str=_ps("E", pace_zones), effort="jog"),
             cd,
         ]
     if wtype == 'easy':
