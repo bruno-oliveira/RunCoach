@@ -193,6 +193,117 @@ _DISTANCE_REWRITES: Dict[str, Callable[[float], str]] = {
         f"grass, gravel, dirt. Every 2km, stop for a 2-min agility circuit: "
         f"10 single-leg hops each side, 20m lateral shuffles, 20m backward running."
     ),
+
+    # -- Long-run variants (Half Marathon) --
+    "half_long_alternating_mp": lambda d: (
+        f"Run {round(d):g}km alternating 2 km easy and 2 km at "
+        f"marathon pace. No rest between blocks. The switching rehearses "
+        f"race-pace discipline on fatigued legs."
+    ),
+    "half_long_fast_finish": lambda d: (
+        f"Run {round(d):g}km with the first portion at easy pace, "
+        f"then accelerate into the final 3 km at threshold pace. "
+        f"Build effort into the last kilometer."
+    ),
+    "half_long_rolling_hills": lambda d: (
+        f"Run {round(d):g}km on a rolling hills route. "
+        f"Keep effort even — push on the climbs, float on the descents. "
+        f"Do NOT chase pace on the flats."
+    ),
+
+    # -- Long-run variants (Marathon) --
+    "marathon_long_alternating_mp": lambda d: (
+        f"Run {round(d):g}km alternating 3 km easy and 3 km at "
+        f"marathon pace. No stops. The back-to-back pace changes simulate "
+        f"late-race moments where you must hold form."
+    ),
+    "marathon_long_fast_finish": lambda d: (
+        f"Run {round(d):g}km easy, then finish with the last 4 km "
+        f"at threshold pace. Build effort kilometer by kilometer — the "
+        f"last km should be your fastest."
+    ),
+    "marathon_long_depletion": lambda d: (
+        f"Run {round(d):g}km fasted (pre-breakfast). Water only "
+        f"during the run — no carbs. Keep effort conservative; run slower "
+        f"than your normal long-run pace."
+    ),
+    "marathon_long_rolling_hills": lambda d: (
+        f"Run {round(d):g}km on a rolling hills route. Hold even "
+        f"effort throughout — the hills become natural fartlek intervals "
+        f"without breaking rhythm."
+    ),
+
+    # -- Long-run variants (10K) --
+    "10k_long_fast_finish": lambda d: (
+        f"Run {round(d):g}km easy, then finish with the last 2 km "
+        f"at threshold pace. A miniature version of the classic "
+        f"marathon fast-finish long run."
+    ),
+
+    # -- Long-run variants (Trail 30K — hilly) --
+    "trail_long_fast_finish": lambda d: (
+        f"Run {round(d):g}km on trails at easy effort. In the "
+        f"final 3 km, pick up to tempo effort — push the climbs, float "
+        f"the descents. Finish with purpose, not a sprint."
+    ),
+    "trail_long_rolling_hills": lambda d: (
+        f"Run {round(d):g}km on the hilliest trail you can find. "
+        f"Keep effort even throughout — push the climbs at threshold effort, "
+        f"recover on the descents. Walk uphills steeper than 15% grade."
+    ),
+    "trail_long_race_simulation": lambda d: (
+        f"Run {round(d):g}km on trails that approximate race "
+        f"terrain. Run at planned race effort — walk uphills you plan to "
+        f"walk on race day. Practice your exact fueling strategy: take "
+        f"nutrition every 30 min. Treat this as a dress rehearsal."
+    ),
+
+    # -- Long-run variants (Trail 30K — flat) --
+    "trail_flat_long_fast_finish": lambda d: (
+        f"Run {round(d):g}km on the softest surface available "
+        f"(grass, dirt, gravel). In the final 3 km, pick up to tempo "
+        f"effort. The soft surface adds 10-15% metabolic cost, partially "
+        f"compensating for lack of hills."
+    ),
+    "trail_flat_long_fueling": lambda d: (
+        f"Run {round(d):g}km at easy conversational pace. Take "
+        f"your planned race nutrition every 30 min starting at minute 30. "
+        f"Test exactly what you'll eat and drink on race day. Walk 1 min "
+        f"after each fuel stop if needed."
+    ),
+    "trail_flat_long_race_sim": lambda d: (
+        f"Run {round(d):g}km alternating surfaces (grass, dirt, "
+        f"gravel, pavement) every 2-3 km. Run at planned race effort. "
+        f"Practice your exact fueling strategy. Treat this as a dress "
+        f"rehearsal for race day."
+    ),
+}
+
+
+_STRUCTURE_REWRITES: Dict[str, Callable[[float], str]] = {
+    # Half Marathon long runs
+    "half_long_alternating_mp": lambda d: f"{round(d):g}km alternating 2km easy / 2km marathon pace",
+    "half_long_fast_finish": lambda d: f"{round(d):g}km with last 3km at threshold pace",
+    "half_long_rolling_hills": lambda d: f"{round(d):g}km on rolling hills at even effort",
+
+    # Marathon long runs
+    "marathon_long_alternating_mp": lambda d: f"{round(d):g}km alternating 3km easy / 3km marathon pace",
+    "marathon_long_fast_finish": lambda d: f"{round(d):g}km easy with last 4km at threshold pace",
+    "marathon_long_depletion": lambda d: f"{round(d):g}km fasted long run — water only",
+    "marathon_long_rolling_hills": lambda d: f"{round(d):g}km on rolling hills at steady effort",
+
+    # 10K long run
+    "10k_long_fast_finish": lambda d: f"{round(d):g}km easy with last 2km at threshold pace",
+
+    # Trail hilly long runs
+    "trail_long_fast_finish": lambda d: f"{round(d):g}km trail with last 3km at tempo effort",
+    "trail_long_rolling_hills": lambda d: f"{round(d):g}km on hilly trail at even effort",
+    "trail_long_race_simulation": lambda d: f"{round(d):g}km trail at race effort with fueling every 30min",
+
+    # Trail flat long runs
+    "trail_flat_long_fast_finish": lambda d: f"{round(d):g}km soft-surface with last 3km at tempo",
+    "trail_flat_long_fueling": lambda d: f"{round(d):g}km easy with nutrition practice every 30min",
+    "trail_flat_long_race_sim": lambda d: f"{round(d):g}km varied-surface at race effort with fueling",
 }
 
 
@@ -305,9 +416,12 @@ def overlay_key_workout(
     workout['description'] = description
     workout['key_workout_id'] = key_wk['id']
     workout['key_workout_name'] = key_wk['name']
-    workout['structure'] = (
-        _derive_structure(description) if rewritten else key_wk['structure']
-    )
+    if key_wk['id'] in _STRUCTURE_REWRITES:
+        workout['structure'] = _STRUCTURE_REWRITES[key_wk['id']](actual_distance)
+    elif rewritten:
+        workout['structure'] = _derive_structure(description)
+    else:
+        workout['structure'] = key_wk['structure']
     workout['key_workout_rationale'] = key_wk['rationale']
 
     if key_wk.get('steps'):
