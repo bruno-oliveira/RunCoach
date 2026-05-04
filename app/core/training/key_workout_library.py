@@ -19,6 +19,24 @@ def _wu_cd(d: float) -> tuple:
     return (wu, wu)
 
 
+def _fartlek_reps(d: float, on_min: int = 3, off_min: int = 2,
+                  pace_min_per_km: float = 6.0,
+                  default: int = 8, lo: int = 3, hi: int = 10) -> int:
+    """Scale fartlek rep count to fit distance d.
+
+    A "set" of (on_min hard / off_min easy) covers roughly
+    ``(on_min + off_min) / pace_min_per_km`` km. Reps are capped to a sane
+    range so structures stay recognizable across distances.
+    """
+    wu, cd = _wu_cd(d)
+    main_km = max(0.0, d - wu - cd)
+    set_km = (on_min + off_min) / pace_min_per_km
+    if set_km <= 0:
+        return default
+    reps = round(main_km / set_km)
+    return max(lo, min(hi, reps))
+
+
 # Each entry generates a complete description from the actual distance.
 _DISTANCE_REWRITES: Dict[str, Callable[[float], str]] = {
     "5k_vo2max_400s": lambda d: (
@@ -96,7 +114,7 @@ _DISTANCE_REWRITES: Dict[str, Callable[[float], str]] = {
     ),
     "trail_flat_surge_fartlek": lambda d: (
         f"Warm up {_wu_cd(d)[0]:g}km easy. "
-        f"Run 8 x (3 min at hill-repeat effort / 2 min easy jog) on varied terrain "
+        f"Run {_fartlek_reps(d)} x (3 min at hill-repeat effort / 2 min easy jog) on varied terrain "
         f"(grass, dirt path, or trail). Cool down {_wu_cd(d)[1]:g}km easy."
     ),
     "trail_flat_soft_surface": lambda d: (
@@ -136,7 +154,8 @@ _DISTANCE_REWRITES: Dict[str, Callable[[float], str]] = {
     ),
     "10k_fartlek": lambda d: (
         f"Warm up {_wu_cd(d)[0]:g}km easy. Within a continuous run, "
-        f"alternate 6 x (3 min at 10K pace / 2 min easy jog). Cool down {_wu_cd(d)[1]:g}km easy."
+        f"alternate {_fartlek_reps(d, default=6, lo=3, hi=8)} x (3 min at 10K pace / 2 min easy jog). "
+        f"Cool down {_wu_cd(d)[1]:g}km easy."
     ),
     "5k_hill_sprints": lambda d: (
         f"Warm up {_wu_cd(d)[0]:g}km easy. Find a moderate hill (4-6% grade). "

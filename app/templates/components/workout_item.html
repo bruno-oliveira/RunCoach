@@ -20,7 +20,9 @@
     {% if workout.key_workout_name %}
     <div class="key-workout-badge">{{ workout.key_workout_name }}</div>
     {% endif %}
-    {% if workout.distance > 0 %}
+    {% if workout.duration_min %}
+    <div class="workout-distance">{{ workout.duration_min }} min{% if workout.distance > 0 %} <span class="workout-zone-hint">≈ {{ '%.1f'|format(workout.distance) }} km</span>{% endif %}{% if workout.hr_zone_label %} <span class="workout-zone-hint">{{ workout.hr_zone_label }}</span>{% endif %}</div>
+    {% elif workout.distance > 0 %}
     <div class="workout-distance">{{ '%.1f'|format(workout.distance) }} km{% if workout.hr_zone_label %} <span class="workout-zone-hint">{{ workout.hr_zone_label }}</span>{% endif %}{% if workout.baseline_distance and workout.baseline_distance != workout.distance %}<span class="workout-delta {% if workout.distance > workout.baseline_distance %}delta-up{% else %}delta-down{% endif %}">(was {{ workout.baseline_distance }})</span>{% endif %}</div>
     {% endif %}
     {% if workout.structure %}
