@@ -163,7 +163,7 @@ class TestDescriptionRewriting:
         )
         result = _rewrite_key_workout_description(desc, "marathon_mp_long", 30.0)
         assert "25km" not in result
-        assert "30km" in result
+        assert "30.0km" in result
 
     def test_rewrite_half_progressive_long(self):
         desc = (
@@ -173,7 +173,7 @@ class TestDescriptionRewriting:
         )
         result = _rewrite_key_workout_description(desc, "half_progressive_long", 18.0)
         assert "14-16km" not in result
-        assert "18km" in result
+        assert "18.0km" in result
 
     def test_rewrite_unknown_workout_returns_original(self):
         desc = "Some random workout description with 10km in it."

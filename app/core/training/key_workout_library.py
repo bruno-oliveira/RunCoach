@@ -61,45 +61,45 @@ _DISTANCE_REWRITES: Dict[str, Callable[[float], str]] = {
         f"— all at 5K pace with equal-distance recovery jogs. Cool down {_wu_cd(d)[1]:g}km easy."
     ),
     "marathon_mp_long": lambda d: (
-        f"Run {round(d):g}km: first {round(d * 0.60):g}km easy, "
-        f"last {round(d * 0.40):g}km at marathon pace. "
-        f"Take a gel at {round(d * 0.32):g}km and {round(d * 0.64):g}km to practice race fueling."
+        f"Run {d:.1f}km: first {d * 0.60:.1f}km easy, "
+        f"last {d * 0.40:.1f}km at marathon pace. "
+        f"Take a gel at {d * 0.32:.1f}km and {d * 0.64:.1f}km to practice race fueling."
     ),
     "marathon_progressive_long": lambda d: (
-        f"Run {round(d):g}km: first {round(d * 0.67):g}km easy, "
-        f"last {round(d * 0.33):g}km at marathon pace. "
+        f"Run {d:.1f}km: first {d * 0.67:.1f}km easy, "
+        f"last {d * 0.33:.1f}km at marathon pace. "
         f"Run the finish as 2km segments, each 5-10s/km faster than the last. "
         f"Practice fueling every 5km."
     ),
     "marathon_peak_progressive": lambda d: (
-        f"Run {round(d):g}km: first {round(d * 0.57):g}km easy, "
-        f"last {round(d * 0.43):g}km at marathon pace. "
+        f"Run {d:.1f}km: first {d * 0.57:.1f}km easy, "
+        f"last {d * 0.43:.1f}km at marathon pace. "
         f"Run the finish as 3km segments, each 5-10s/km faster than the last."
     ),
     "marathon_easy_long_fueling": lambda d: (
-        f"Run {round(d):g}km continuous at easy conversational pace. "
+        f"Run {d:.1f}km continuous at easy conversational pace. "
         f"Take a gel or fuel every 5km starting at km 10. Practice your exact race-day nutrition strategy. "
         f"Walk 1 min after each fuel stop if needed."
     ),
     "marathon_tempo_cutdown": lambda d: (
-        f"Warm up {round(max(1, d * 0.10)):g}km easy. "
-        f"Run 2 x {round(max(1, d * 0.35)):g}km at threshold pace with 3 min easy jog recovery. "
-        f"Cool down {round(max(1, d * 0.10)):g}km easy."
+        f"Warm up {max(1, d * 0.10):.1f}km easy. "
+        f"Run 2 x {max(1, d * 0.35):.1f}km at threshold pace with 3 min easy jog recovery. "
+        f"Cool down {max(1, d * 0.10):.1f}km easy."
     ),
     "marathon_mp_cutdown": lambda d: (
-        f"Warm up {round(max(1, d * 0.10)):g}km easy. "
+        f"Warm up {max(1, d * 0.10):.1f}km easy. "
         f"Run {max(3, round(max(2, d - 2 * max(1, d * 0.10)) / 2))} x 2km "
         f"alternating between marathon pace and threshold pace "
-        f"with 90s jog recovery between each. Cool down {round(max(1, d * 0.10)):g}km easy."
+        f"with 90s jog recovery between each. Cool down {max(1, d * 0.10):.1f}km easy."
     ),
     "half_progressive_long": lambda d: (
-        f"Run {round(d):g}km: first {round(d * 0.65):g}km easy, "
-        f"last {round(d * 0.35):g}km at marathon pace. "
+        f"Run {d:.1f}km: first {d * 0.65:.1f}km easy, "
+        f"last {d * 0.35:.1f}km at marathon pace. "
         f"No warm-up needed — the easy start IS the warm-up."
     ),
     "half_cutdown_long": lambda d: (
-        f"Run {round(d):g}km: first {round(d / 3, 1):g}km easy, "
-        f"last {round(d * 2 / 3, 1):g}km at marathon pace. "
+        f"Run {d:.1f}km: first {d / 3:.1f}km easy, "
+        f"last {d * 2 / 3:.1f}km at marathon pace. "
         f"Run as 3 segments, each 15s/km faster than the last."
     ),
     "half_race_pace_segments": lambda d: (
@@ -118,23 +118,23 @@ _DISTANCE_REWRITES: Dict[str, Callable[[float], str]] = {
         f"(grass, dirt path, or trail). Cool down {_wu_cd(d)[1]:g}km easy."
     ),
     "trail_flat_soft_surface": lambda d: (
-        f"Run {round(d):g}km continuous at easy effort on soft surface "
+        f"Run {d:.1f}km continuous at easy effort on soft surface "
         f"(grass, dirt trails, beach, or gravel paths). "
         f"The soft surface increases energy cost 10-15% vs pavement. "
         f"Walk 2 min every 45 min. Practice race fueling."
     ),
     "trail_time_on_feet": lambda d: (
-        f"Run {round(d):g}km on trails at easy conversational effort. "
+        f"Run {d:.1f}km on trails at easy conversational effort. "
         f"Walk steep uphills (>15% grade) to conserve energy. Practice race fueling every 30 min."
     ),
     "trail_back_to_back": lambda d: (
-        f"Saturday: {round(d * 0.57):g}km trail run at easy effort on hilly terrain. "
-        f"Sunday: {round(d * 0.43):g}km trail run at easy effort on fatigued legs. "
+        f"Saturday: {d * 0.57:.1f}km trail run at easy effort on hilly terrain. "
+        f"Sunday: {d * 0.43:.1f}km trail run at easy effort on fatigued legs. "
         f"Practice race fueling on both days."
     ),
     "trail_technical_terrain": lambda d: (
         f"Find a technical trail with rocks, roots, and uneven surface. "
-        f"Run {round(d * 0.80):g}km at moderate effort, focusing on foot placement, "
+        f"Run {d * 0.80:.1f}km at moderate effort, focusing on foot placement, "
         f"quick cadence, and staying light on your feet."
     ),
     "10k_goal_pace_segments": lambda d: (
@@ -175,7 +175,7 @@ _DISTANCE_REWRITES: Dict[str, Callable[[float], str]] = {
     "trail_power_hike": lambda d: (
         f"On a hilly trail loop: power-hike steep uphills for 5 min "
         f"(arms pumping, long strides), then run the flats and downhills. "
-        f"Repeat 5 times. Run {round(d):g}km total."
+        f"Repeat 5 times. Run {d:.1f}km total."
     ),
     "trail_downhill_technique": lambda d: (
         f"Warm up {_wu_cd(d)[0]:g}km on flat. "
@@ -185,74 +185,74 @@ _DISTANCE_REWRITES: Dict[str, Callable[[float], str]] = {
     ),
     "trail_flat_power_walk": lambda d: (
         f"Alternate 5 min maximum-effort power walking with 5 min easy running "
-        f"x 6 sets. Run {round(d):g}km total. Max-effort power walking at "
+        f"x 6 sets. Run {d:.1f}km total. Max-effort power walking at "
         f"9-10 min/km builds the specific muscular endurance for race-day hiking."
     ),
     "trail_flat_proprioception": lambda d: (
-        f"Run {round(d * 0.80):g}km alternating surfaces every 1-2km: pavement, "
+        f"Run {d * 0.80:.1f}km alternating surfaces every 1-2km: pavement, "
         f"grass, gravel, dirt. Every 2km, stop for a 2-min agility circuit: "
         f"10 single-leg hops each side, 20m lateral shuffles, 20m backward running."
     ),
 
     # -- Long-run variants (Half Marathon) --
     "half_long_alternating_mp": lambda d: (
-        f"Run {round(d):g}km alternating 2 km easy and 2 km at "
+        f"Run {d:.1f}km alternating 2 km easy and 2 km at "
         f"marathon pace. No rest between blocks. The switching rehearses "
         f"race-pace discipline on fatigued legs."
     ),
     "half_long_fast_finish": lambda d: (
-        f"Run {round(d):g}km with the first portion at easy pace, "
+        f"Run {d:.1f}km with the first portion at easy pace, "
         f"then accelerate into the final 3 km at threshold pace. "
         f"Build effort into the last kilometer."
     ),
     "half_long_rolling_hills": lambda d: (
-        f"Run {round(d):g}km on a rolling hills route. "
+        f"Run {d:.1f}km on a rolling hills route. "
         f"Keep effort even — push on the climbs, float on the descents. "
         f"Do NOT chase pace on the flats."
     ),
 
     # -- Long-run variants (Marathon) --
     "marathon_long_alternating_mp": lambda d: (
-        f"Run {round(d):g}km alternating 3 km easy and 3 km at "
+        f"Run {d:.1f}km alternating 3 km easy and 3 km at "
         f"marathon pace. No stops. The back-to-back pace changes simulate "
         f"late-race moments where you must hold form."
     ),
     "marathon_long_fast_finish": lambda d: (
-        f"Run {round(d):g}km easy, then finish with the last 4 km "
+        f"Run {d:.1f}km easy, then finish with the last 4 km "
         f"at threshold pace. Build effort kilometer by kilometer — the "
         f"last km should be your fastest."
     ),
     "marathon_long_depletion": lambda d: (
-        f"Run {round(d):g}km fasted (pre-breakfast). Water only "
+        f"Run {d:.1f}km fasted (pre-breakfast). Water only "
         f"during the run — no carbs. Keep effort conservative; run slower "
         f"than your normal long-run pace."
     ),
     "marathon_long_rolling_hills": lambda d: (
-        f"Run {round(d):g}km on a rolling hills route. Hold even "
+        f"Run {d:.1f}km on a rolling hills route. Hold even "
         f"effort throughout — the hills become natural fartlek intervals "
         f"without breaking rhythm."
     ),
 
     # -- Long-run variants (10K) --
     "10k_long_fast_finish": lambda d: (
-        f"Run {round(d):g}km easy, then finish with the last 2 km "
+        f"Run {d:.1f}km easy, then finish with the last 2 km "
         f"at threshold pace. A miniature version of the classic "
         f"marathon fast-finish long run."
     ),
 
     # -- Long-run variants (Trail 30K — hilly) --
     "trail_long_fast_finish": lambda d: (
-        f"Run {round(d):g}km on trails at easy effort. In the "
+        f"Run {d:.1f}km on trails at easy effort. In the "
         f"final 3 km, pick up to tempo effort — push the climbs, float "
         f"the descents. Finish with purpose, not a sprint."
     ),
     "trail_long_rolling_hills": lambda d: (
-        f"Run {round(d):g}km on the hilliest trail you can find. "
+        f"Run {d:.1f}km on the hilliest trail you can find. "
         f"Keep effort even throughout — push the climbs at threshold effort, "
         f"recover on the descents. Walk uphills steeper than 15% grade."
     ),
     "trail_long_race_simulation": lambda d: (
-        f"Run {round(d):g}km on trails that approximate race "
+        f"Run {d:.1f}km on trails that approximate race "
         f"terrain. Run at planned race effort — walk uphills you plan to "
         f"walk on race day. Practice your exact fueling strategy: take "
         f"nutrition every 30 min. Treat this as a dress rehearsal."
@@ -260,19 +260,19 @@ _DISTANCE_REWRITES: Dict[str, Callable[[float], str]] = {
 
     # -- Long-run variants (Trail 30K — flat) --
     "trail_flat_long_fast_finish": lambda d: (
-        f"Run {round(d):g}km on the softest surface available "
+        f"Run {d:.1f}km on the softest surface available "
         f"(grass, dirt, gravel). In the final 3 km, pick up to tempo "
         f"effort. The soft surface adds 10-15% metabolic cost, partially "
         f"compensating for lack of hills."
     ),
     "trail_flat_long_fueling": lambda d: (
-        f"Run {round(d):g}km at easy conversational pace. Take "
+        f"Run {d:.1f}km at easy conversational pace. Take "
         f"your planned race nutrition every 30 min starting at minute 30. "
         f"Test exactly what you'll eat and drink on race day. Walk 1 min "
         f"after each fuel stop if needed."
     ),
     "trail_flat_long_race_sim": lambda d: (
-        f"Run {round(d):g}km alternating surfaces (grass, dirt, "
+        f"Run {d:.1f}km alternating surfaces (grass, dirt, "
         f"gravel, pavement) every 2-3 km. Run at planned race effort. "
         f"Practice your exact fueling strategy. Treat this as a dress "
         f"rehearsal for race day."
@@ -282,28 +282,31 @@ _DISTANCE_REWRITES: Dict[str, Callable[[float], str]] = {
 
 _STRUCTURE_REWRITES: Dict[str, Callable[[float], str]] = {
     # Half Marathon long runs
-    "half_long_alternating_mp": lambda d: f"{round(d):g}km alternating 2km easy / 2km marathon pace",
-    "half_long_fast_finish": lambda d: f"{round(d):g}km with last 3km at threshold pace",
-    "half_long_rolling_hills": lambda d: f"{round(d):g}km on rolling hills at even effort",
+    "half_long_alternating_mp": lambda d: f"{d:.1f}km alternating 2km easy / 2km marathon pace",
+    "half_long_fast_finish": lambda d: f"{d:.1f}km with last 3km at threshold pace",
+    "half_long_rolling_hills": lambda d: f"{d:.1f}km on rolling hills at even effort",
 
     # Marathon long runs
-    "marathon_long_alternating_mp": lambda d: f"{round(d):g}km alternating 3km easy / 3km marathon pace",
-    "marathon_long_fast_finish": lambda d: f"{round(d):g}km easy with last 4km at threshold pace",
-    "marathon_long_depletion": lambda d: f"{round(d):g}km fasted long run — water only",
-    "marathon_long_rolling_hills": lambda d: f"{round(d):g}km on rolling hills at steady effort",
+    "marathon_long_alternating_mp": lambda d: f"{d:.1f}km alternating 3km easy / 3km marathon pace",
+    "marathon_long_fast_finish": lambda d: f"{d:.1f}km easy with last 4km at threshold pace",
+    "marathon_long_depletion": lambda d: f"{d:.1f}km fasted long run — water only",
+    "marathon_long_rolling_hills": lambda d: f"{d:.1f}km on rolling hills at steady effort",
 
     # 10K long run
-    "10k_long_fast_finish": lambda d: f"{round(d):g}km easy with last 2km at threshold pace",
+    "10k_long_fast_finish": lambda d: f"{d:.1f}km easy with last 2km at threshold pace",
 
     # Trail hilly long runs
-    "trail_long_fast_finish": lambda d: f"{round(d):g}km trail with last 3km at tempo effort",
-    "trail_long_rolling_hills": lambda d: f"{round(d):g}km on hilly trail at even effort",
-    "trail_long_race_simulation": lambda d: f"{round(d):g}km trail at race effort with fueling every 30min",
+    "trail_long_fast_finish": lambda d: f"{d:.1f}km trail with last 3km at tempo effort",
+    "trail_long_rolling_hills": lambda d: f"{d:.1f}km on hilly trail at even effort",
+    "trail_long_race_simulation": lambda d: f"{d:.1f}km trail at race effort with fueling every 30min",
 
     # Trail flat long runs
-    "trail_flat_long_fast_finish": lambda d: f"{round(d):g}km soft-surface with last 3km at tempo",
-    "trail_flat_long_fueling": lambda d: f"{round(d):g}km easy with nutrition practice every 30min",
-    "trail_flat_long_race_sim": lambda d: f"{round(d):g}km varied-surface at race effort with fueling",
+    "trail_flat_long_fast_finish": lambda d: f"{d:.1f}km soft-surface with last 3km at tempo",
+    "trail_flat_long_fueling": lambda d: f"{d:.1f}km easy with nutrition practice every 30min",
+    "trail_flat_long_race_sim": lambda d: f"{d:.1f}km varied-surface at race effort with fueling",
+
+    # Trail flat tempo (soft surface)
+    "trail_flat_soft_surface": lambda d: f"{d:.1f}km continuous at easy effort on soft surface",
 }
 
 
