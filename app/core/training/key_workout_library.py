@@ -43,18 +43,20 @@ _DISTANCE_REWRITES: Dict[str, Callable[[float], str]] = {
         f"— all at 5K pace with equal-distance recovery jogs. Cool down {_wu_cd(d)[1]:g}km easy."
     ),
     "marathon_mp_long": lambda d: (
-        f"Run {round(d):g}km total. First {round(d * 0.60):g}km at easy pace, "
-        f"then shift to marathon goal pace for the final {round(d * 0.40):g}km. "
+        f"Run {round(d):g}km: first {round(d * 0.60):g}km easy, "
+        f"last {round(d * 0.40):g}km at marathon pace. "
         f"Take a gel at {round(d * 0.32):g}km and {round(d * 0.64):g}km to practice race fueling."
     ),
     "marathon_progressive_long": lambda d: (
-        f"Run {round(d):g}km. First {round(d * 0.67):g}km at easy pace. "
-        f"Then run each subsequent 2km segment 5-10s/km faster, finishing the last 2km at marathon pace. "
+        f"Run {round(d):g}km: first {round(d * 0.67):g}km easy, "
+        f"last {round(d * 0.33):g}km at marathon pace. "
+        f"Run the finish as 2km segments, each 5-10s/km faster than the last. "
         f"Practice fueling every 5km."
     ),
     "marathon_peak_progressive": lambda d: (
-        f"Run {round(d):g}km total. First {round(d * 0.57):g}km at easy pace. "
-        f"Then run each subsequent 3km segment 5-10s/km faster, finishing the last 3km at marathon pace."
+        f"Run {round(d):g}km: first {round(d * 0.57):g}km easy, "
+        f"last {round(d * 0.43):g}km at marathon pace. "
+        f"Run the finish as 3km segments, each 5-10s/km faster than the last."
     ),
     "marathon_easy_long_fueling": lambda d: (
         f"Run {round(d):g}km continuous at easy conversational pace. "

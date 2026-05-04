@@ -59,7 +59,7 @@ def _try_progression_pattern(
     add up to the actual workout distance instead of the hardcoded values.
     """
     m = re.search(
-        r"(\d+(?:-\d+)?)\s*km[^:]*:\s*first\s+(\d+(?:\.\d+)?)\s*km\s+(\w+)[^,]*,\s*(?:last|final)\s+(\d+(?:-\d+)?)\s*km\s+at\s+([^.]+)",
+        r"(\d+(?:\.\d+)?(?:-\d+(?:\.\d+)?)?)\s*km[^:]*:\s*first\s+(\d+(?:\.\d+)?)\s*km\s+(\w+)[^,]*,\s*(?:last|final)\s+(\d+(?:\.\d+)?(?:-\d+(?:\.\d+)?)?)\s*km\s+at\s+([^.]+)",
         structure,
         re.IGNORECASE,
     )
@@ -223,7 +223,11 @@ def _try_continuous_pattern(
     structure: str, pace_zones: Optional[Dict], workout_type: str,
     has_wcd: bool, warmup_steps: List, cd_m: Optional[int] = None,
 ) -> Optional[List[Dict[str, Any]]]:
-    """Pattern D: "Xkm continuous at X pace"."""
+    """Pattern D: "Xkm continuous at X pace".
+
+    Easy-zone continuous runs are self-contained — no separate warm-up or
+    cool-down is added (the run itself is the warm-up).
+    """
     m = re.search(
         r"(\d+(?:\.\d+)?)\s*km\s+continuous\s+at\s+([^,.]+)",
         structure,
@@ -233,6 +237,12 @@ def _try_continuous_pattern(
         return None
     dist_m = _parse_distance_to_m(m.group(1), "km")
     zone = _infer_zone(m.group(2)) or ("T" if workout_type == "tempo" else "M")
+    if zone == "E":
+        return [
+            _step("run", f"{dist_m / 1000:.1f} km continuous", distance_m=dist_m,
+                  pace_zone=zone, pace_str=_pace_str(zone, pace_zones),
+                  effort="conversational"),
+        ]
     steps = list(warmup_steps)
     steps.append(
         _step("run", f"{dist_m / 1000:.1f} km continuous", distance_m=dist_m,

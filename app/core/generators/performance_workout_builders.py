@@ -106,6 +106,21 @@ def _regenerate_description(workout: Dict[str, Any]) -> None:
             f"{total_km}km fartlek: {reps} surges of 1-3min at {hard_pace}, "
             f"easy running between"
         )
+    elif wtype in ('interval', 'hill'):
+        ivl = main.get('intervals', {})
+        if ivl and isinstance(ivl.get('interval_m'), int):
+            rec = f" ({ivl['recovery_min']}min recovery)" if ivl.get('recovery_min') else ""
+            workout['description'] = (
+                f"{total_km:.0f}km {wtype}: {wu_km:.0f}km warmup, "
+                f"{ivl['reps']}x{ivl['interval_m']}m at {main['pace_formatted']}{rec}, "
+                f"{cd_km:.0f}km cooldown"
+            )
+        else:
+            workout['description'] = (
+                f"{total_km:.0f}km {wtype}: {wu_km:.0f}km warmup, "
+                f"{main['distance_km']:.1f}km at {main['pace_formatted']}, "
+                f"{cd_km:.0f}km cooldown"
+            )
 
 
 def _warmup_segment(warmup_km: float, pace: float) -> dict:

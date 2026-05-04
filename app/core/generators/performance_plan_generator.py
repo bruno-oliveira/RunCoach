@@ -7,7 +7,10 @@ and mileage progression, then layers performance-specific pace zones and
 segment-based workout structure.
 """
 
+import logging
 from typing import List, Dict, Any, Optional
+
+logger = logging.getLogger(__name__)
 
 from app.core.coaching.coaching_notes_generator import generate_coaching_note
 from app.core.training import phase_calculator
@@ -366,6 +369,30 @@ class PerformancePlanGenerator:
 
             if workout['type'] == 'easy' and 0 < workout['distance'] < 2.0:
                 return False, f"Easy run too short ({workout['distance']:.1f}km)"
+
+            # Sanity-check that the rendered structure (steps or segments)
+            # totals the workout's distance. Logs at debug; never blocks plan.
+            wdist = workout.get('distance', 0)
+            if wdist > 0:
+                steps = workout.get('steps') or []
+                if steps:
+                    step_total_m = sum(
+                        (s.get('distance_m') or 0) * s.get('repeat', 1) for s in steps
+                    )
+                    if step_total_m > 0 and abs(step_total_m / 1000 - wdist) > 1.0:
+                        logger.debug(
+                            "Step total %.1fkm != workout distance %.1fkm for %s",
+                            step_total_m / 1000, wdist, workout.get('type'),
+                        )
+                else:
+                    segs = workout.get('segments') or []
+                    if segs:
+                        seg_total = sum(s.get('distance_km', 0) for s in segs)
+                        if abs(seg_total - wdist) > 0.5:
+                            logger.debug(
+                                "Segment total %.1fkm != workout distance %.1fkm for %s",
+                                seg_total, wdist, workout.get('type'),
+                            )
 
         tolerance = target_km * 0.15
         if total_km < target_km - tolerance:
