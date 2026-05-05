@@ -15,6 +15,18 @@ from app.models import RunLog
 from app.services.fitness.race_predictor_service import RacePredictorService
 from app.services.fitness.training_load_service import TrainingLoadService
 
+# A run averaging this many meters of climb per km is treated as a trail run.
+TRAIL_ELEVATION_M_PER_KM = 20.0
+
+
+def _is_trail_run(run: RunLog) -> bool:
+    """Heuristic: classify a run as 'trail' from elevation gain density."""
+    if not run.distance_km or run.distance_km <= 0:
+        return False
+    if not run.elevation_gain_m:
+        return False
+    return run.elevation_gain_m / run.distance_km >= TRAIL_ELEVATION_M_PER_KM
+
 
 @dataclass
 class RunnerProfile:
@@ -29,6 +41,12 @@ class RunnerProfile:
     peak_weekly_km: float = 0.0
     longest_run_km: float = 0.0
     runs_per_week: float = 0.0
+
+    # Terrain breakdown (a trail run is one with >=20 m of climb per km)
+    trail_weekly_km: float = 0.0
+    road_weekly_km: float = 0.0
+    trail_runs_count: int = 0
+    trail_total_km: float = 0.0
 
     # Training load & injury risk
     acwr: Optional[float] = None
@@ -123,6 +141,10 @@ def _compute_volume(profile: RunnerProfile, runs: list) -> None:
     """Compute weekly averages, peak week, longest run, runs/week."""
     week_buckets: Dict[str, float] = {}
     week_run_counts: Dict[str, int] = {}
+    trail_week_buckets: Dict[str, float] = {}
+    road_week_buckets: Dict[str, float] = {}
+    trail_runs_count = 0
+    trail_total_km = 0.0
 
     for r in runs:
         if not r.date or not r.distance_km:
@@ -132,6 +154,13 @@ def _compute_volume(profile: RunnerProfile, runs: list) -> None:
         week_buckets[key] = week_buckets.get(key, 0) + r.distance_km
         week_run_counts[key] = week_run_counts.get(key, 0) + 1
 
+        if _is_trail_run(r):
+            trail_week_buckets[key] = trail_week_buckets.get(key, 0) + r.distance_km
+            trail_runs_count += 1
+            trail_total_km += r.distance_km
+        else:
+            road_week_buckets[key] = road_week_buckets.get(key, 0) + r.distance_km
+
     if week_buckets:
         totals = list(week_buckets.values())
         profile.avg_weekly_km = round(sum(totals) / len(totals), 1)
@@ -139,6 +168,14 @@ def _compute_volume(profile: RunnerProfile, runs: list) -> None:
         run_counts = list(week_run_counts.values())
         profile.runs_per_week = round(sum(run_counts) / len(run_counts), 1)
         profile.rest_days_per_week = round(7 - sum(run_counts) / len(run_counts), 1)
+
+        weeks_observed = len(week_buckets)
+        profile.trail_weekly_km = round(
+            sum(trail_week_buckets.values()) / weeks_observed, 1
+        )
+        profile.road_weekly_km = round(
+            sum(road_week_buckets.values()) / weeks_observed, 1
+        )
 
         # Volume trend: compare first half vs second half of weeks
         if len(totals) >= 4:
@@ -151,6 +188,9 @@ def _compute_volume(profile: RunnerProfile, runs: list) -> None:
                     profile.volume_trend = "increasing"
                 elif change_pct < -10:
                     profile.volume_trend = "decreasing"
+
+    profile.trail_runs_count = trail_runs_count
+    profile.trail_total_km = round(trail_total_km, 1)
 
     distances = [r.distance_km for r in runs if r.distance_km]
     if distances:

@@ -20,11 +20,56 @@ _PREDICT_TIME_HI_MIN = 600.0
 _PREDICT_VDOT_EPSILON = 0.01
 _PREDICT_MAX_ITERS = 100
 
+# Linear elevation penalty constants (mirrors RacePacingService).
+# 12 sec/km penalty per 1% average grade; integrating over the course gives
+# 1.2 sec per meter of total elevation gain. Underestimates technical/steep
+# trails but at least removes the zero-penalty-for-1000m-gain absurdity.
+_UPHILL_PENALTY_SEC_PER_M_GAIN = 1.2
 
-def predict_time_for_distance(vdot: float, distance_km: float) -> Optional[int]:
+# Trail-experience penalty: a runner with no logged trail effort is missing
+# stabilizer strength, descent technique, and pacing intuition. Apply a
+# multiplicative penalty that decays linearly to 1.0 once the runner has
+# enough trail volume to be considered experienced.
+_TRAIL_INEXPERIENCE_RUNS_THRESHOLD = 5
+_TRAIL_INEXPERIENCE_MAX_FACTOR = 1.25  # +25% for first trail race
+
+
+def _trail_inexperience_factor(trail_runs_count: Optional[int]) -> float:
+    """Multiplicative time penalty for runners with little trail experience."""
+    if trail_runs_count is None:
+        return 1.0
+    if trail_runs_count >= _TRAIL_INEXPERIENCE_RUNS_THRESHOLD:
+        return 1.0
+    runs = max(0, trail_runs_count)
+    progress = runs / _TRAIL_INEXPERIENCE_RUNS_THRESHOLD
+    return _TRAIL_INEXPERIENCE_MAX_FACTOR - progress * (
+        _TRAIL_INEXPERIENCE_MAX_FACTOR - 1.0
+    )
+
+
+def predict_time_for_distance(
+    vdot: float,
+    distance_km: float,
+    elevation_gain_m: Optional[float] = None,
+    trail_runs_count: Optional[int] = None,
+    endurance_factor: Optional[float] = None,
+) -> Optional[int]:
     """Predict race time for a given VDOT and distance.
 
     Uses binary search to solve: vo2(d/t) / pct_vo2max(t) = VDOT
+
+    Args:
+        vdot: Runner's VDOT.
+        distance_km: Race distance in km.
+        elevation_gain_m: Optional total elevation gain. If provided, adds a
+            linear uphill penalty of ~1.2 s per meter of gain on top of the
+            flat-ground prediction.
+        trail_runs_count: If provided AND elevation_gain_m indicates a trail
+            (>=20m/km on average), apply a trail-inexperience multiplier.
+        endurance_factor: Multiplier (>= 1.0) for runners whose long-run
+            performance lags their VDOT prediction (see
+            RacePredictorService.compute_endurance_factor). Applied after
+            the elevation penalty and before the trail-inexperience factor.
     """
     if vdot < 25 or vdot > 85:
         return None
@@ -58,22 +103,55 @@ def predict_time_for_distance(vdot: float, distance_km: float) -> Optional[int]:
             f"VDOT binary search did not converge for vdot={vdot}, distance={distance_km}km"
         )
 
-    return int(round(mid * 60))
+    flat_seconds = mid * 60
+    elevation_penalty_sec = 0.0
+    is_trail = False
+    if elevation_gain_m and elevation_gain_m > 0:
+        elevation_penalty_sec = _UPHILL_PENALTY_SEC_PER_M_GAIN * elevation_gain_m
+        if elevation_gain_m / max(distance_km, 0.001) >= 20.0:
+            is_trail = True
+
+    total_seconds = flat_seconds + elevation_penalty_sec
+    if endurance_factor and endurance_factor > 1.0:
+        total_seconds *= endurance_factor
+    if is_trail:
+        total_seconds *= _trail_inexperience_factor(trail_runs_count)
+
+    return int(round(total_seconds))
 
 
-def get_confidence_range(vdot: float, distance_km: float,
-                         target_distance: float = 0.0) -> Dict[str, int]:
+def get_confidence_range(
+    vdot: float,
+    distance_km: float,
+    target_distance: float = 0.0,
+    elevation_gain_m: Optional[float] = None,
+    trail_runs_count: Optional[int] = None,
+    endurance_factor: Optional[float] = None,
+) -> Dict[str, int]:
     """Get optimistic and pessimistic time estimates.
 
-    Uses +/-1.5 VDOT for road distances and +/-2.0 for trail (30km).
+    Uses +/-1.5 VDOT for road distances and +/-5.0 for trail (30km or any
+    distance with notable elevation gain). Trail outcomes vary much more
+    than road outcomes -- a tight band gives false confidence.
     """
-    margin = 2.0 if target_distance == 30.0 else 1.5
+    is_trail = target_distance == 30.0 or (
+        elevation_gain_m is not None
+        and distance_km > 0
+        and elevation_gain_m / distance_km >= 20.0
+    )
+    margin = 5.0 if is_trail else 1.5
     fast_vdot = min(85.0, vdot + margin)
     slow_vdot = max(25.0, vdot - margin)
 
-    fast_time = predict_time_for_distance(fast_vdot, distance_km)
-    slow_time = predict_time_for_distance(slow_vdot, distance_km)
-    base_time = predict_time_for_distance(vdot, distance_km)
+    fast_time = predict_time_for_distance(
+        fast_vdot, distance_km, elevation_gain_m, trail_runs_count, endurance_factor
+    )
+    slow_time = predict_time_for_distance(
+        slow_vdot, distance_km, elevation_gain_m, trail_runs_count, endurance_factor
+    )
+    base_time = predict_time_for_distance(
+        vdot, distance_km, elevation_gain_m, trail_runs_count, endurance_factor
+    )
 
     return {
         "fast": fast_time or base_time,
@@ -82,8 +160,16 @@ def get_confidence_range(vdot: float, distance_km: float,
     }
 
 
-def predict_times(vdot: float) -> Dict[str, Dict]:
-    """Get predicted times for all standard race distances."""
+def predict_times(
+    vdot: float,
+    trail_runs_count: Optional[int] = None,
+) -> Dict[str, Dict]:
+    """Get predicted times for all standard race distances.
+
+    The "trail" entry remains a flat-ground equivalent because we don't know
+    the course profile here. Callers that know the elevation gain should
+    call predict_time_for_distance directly with elevation_gain_m.
+    """
     from app.core.training.vdot_calculator import VDOTCalculator
 
     predictions = {}

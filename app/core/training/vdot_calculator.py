@@ -20,6 +20,11 @@ STANDARD_RACE_DISTANCES = {
 # auto-pause artifact.
 MIN_REALISTIC_PACE_MIN_KM = 2.5
 
+# Runs above this elevation gain per km are considered hilly/trail and should
+# not feed into a flat-ground VDOT estimate -- Daniels' formula assumes flat
+# terrain, so a hilly effort produces an artificially low VDOT.
+TRAIL_ELEVATION_M_PER_KM = 20.0
+
 
 def _vo2_at_velocity(v: float) -> float:
     """Oxygen cost at velocity v (m/min)."""
@@ -80,16 +85,25 @@ class VDOTCalculator:
     }
 
     @staticmethod
-    def calculate_vdot(distance_km: float, time_seconds: int) -> Optional[float]:
+    def calculate_vdot(
+        distance_km: float,
+        time_seconds: int,
+        elevation_gain_m: Optional[float] = None,
+    ) -> Optional[float]:
         """Calculate VDOT from a race result.
 
         Args:
             distance_km: Race distance in km (e.g. 5.0, 10.0, 21.1, 42.2)
             time_seconds: Finish time in seconds
+            elevation_gain_m: Total elevation gain in meters. If the run
+                averages more than TRAIL_ELEVATION_M_PER_KM of climb per km,
+                returns None -- VDOT assumes flat ground and a hilly run
+                would otherwise pollute the user's flat-ground fitness estimate.
 
         Returns:
-            VDOT value (rounded to 1 dp), or None if inputs are invalid
-            or the pace is unrealistically fast (GPS glitch / auto-pause artifact).
+            VDOT value (rounded to 1 dp), or None if inputs are invalid,
+            the pace is unrealistically fast (GPS glitch / auto-pause artifact),
+            or the run is too hilly to be a meaningful flat-ground VDOT.
         """
         if distance_km <= 0 or time_seconds <= 0:
             return None
@@ -97,6 +111,12 @@ class VDOTCalculator:
         # Reject unrealistic pace — almost certainly bad data
         pace_min_km = (time_seconds / 60.0) / distance_km
         if pace_min_km < MIN_REALISTIC_PACE_MIN_KM:
+            return None
+
+        if (
+            elevation_gain_m is not None
+            and elevation_gain_m / distance_km > TRAIL_ELEVATION_M_PER_KM
+        ):
             return None
 
         distance_m = distance_km * 1000.0
@@ -286,17 +306,41 @@ class VDOTCalculator:
     # -- Race prediction (delegates to race_predictor module) ---------------
 
     @staticmethod
-    def predict_time_for_distance(vdot: float, distance_km: float) -> Optional[int]:
+    def predict_time_for_distance(
+        vdot: float,
+        distance_km: float,
+        elevation_gain_m: Optional[float] = None,
+        trail_runs_count: Optional[int] = None,
+        endurance_factor: Optional[float] = None,
+    ) -> Optional[int]:
         from app.core.training.race_predictor import predict_time_for_distance
-        return predict_time_for_distance(vdot, distance_km)
+        return predict_time_for_distance(
+            vdot, distance_km, elevation_gain_m, trail_runs_count, endurance_factor
+        )
 
     @staticmethod
-    def get_confidence_range(vdot: float, distance_km: float,
-                             target_distance: float = 0.0) -> Dict[str, int]:
+    def get_confidence_range(
+        vdot: float,
+        distance_km: float,
+        target_distance: float = 0.0,
+        elevation_gain_m: Optional[float] = None,
+        trail_runs_count: Optional[int] = None,
+        endurance_factor: Optional[float] = None,
+    ) -> Dict[str, int]:
         from app.core.training.race_predictor import get_confidence_range
-        return get_confidence_range(vdot, distance_km, target_distance)
+        return get_confidence_range(
+            vdot,
+            distance_km,
+            target_distance,
+            elevation_gain_m,
+            trail_runs_count,
+            endurance_factor,
+        )
 
     @staticmethod
-    def predict_times(vdot: float) -> Dict[str, Dict]:
+    def predict_times(
+        vdot: float,
+        trail_runs_count: Optional[int] = None,
+    ) -> Dict[str, Dict]:
         from app.core.training.race_predictor import predict_times
-        return predict_times(vdot)
+        return predict_times(vdot, trail_runs_count)

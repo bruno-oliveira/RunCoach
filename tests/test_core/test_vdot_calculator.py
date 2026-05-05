@@ -94,6 +94,75 @@ class TestFormatting:
         assert VDOTCalculator.validate_race_distance(0) is False
 
 
+class TestElevationHandling:
+    """Tests for elevation-aware VDOT and predictions."""
+
+    def test_calculate_vdot_skips_hilly_runs(self):
+        """A run with > 20m of climb per km is excluded from VDOT estimation."""
+        # 10 km in 50 min on flat ground -> VDOT 40
+        baseline = VDOTCalculator.calculate_vdot(10.0, 3000)
+        assert baseline is not None
+
+        # Same effort with 250 m of gain over 10 km (25 m/km) is too hilly
+        # to feed back into a flat-ground VDOT.
+        hilly = VDOTCalculator.calculate_vdot(10.0, 3000, elevation_gain_m=250)
+        assert hilly is None
+
+    def test_calculate_vdot_allows_modest_elevation(self):
+        """Runs below the trail threshold still produce VDOT."""
+        result = VDOTCalculator.calculate_vdot(10.0, 3000, elevation_gain_m=150)
+        assert result is not None
+
+    def test_predict_time_applies_elevation_penalty(self):
+        """1000 m of elevation adds ~20 minutes (1.2 sec/m) to a prediction."""
+        flat = VDOTCalculator.predict_time_for_distance(45.0, 22.3)
+        hilly = VDOTCalculator.predict_time_for_distance(
+            45.0, 22.3, elevation_gain_m=1000
+        )
+        assert flat is not None and hilly is not None
+        delta = hilly - flat
+        # Penalty should be roughly 1.2 * 1000 = 1200 sec = 20 min
+        assert 1100 < delta < 1300
+
+    def test_predict_time_trail_inexperience_penalty(self):
+        """A first-time trail runner gets a >1x multiplier on top of elevation."""
+        experienced = VDOTCalculator.predict_time_for_distance(
+            45.0, 22.3, elevation_gain_m=1000, trail_runs_count=10
+        )
+        beginner = VDOTCalculator.predict_time_for_distance(
+            45.0, 22.3, elevation_gain_m=1000, trail_runs_count=0
+        )
+        assert experienced is not None and beginner is not None
+        # Beginner is penalized by ~25% on top of elevation
+        ratio = beginner / experienced
+        assert 1.20 < ratio < 1.30
+
+    def test_predict_time_no_inexperience_penalty_on_road(self):
+        """Trail experience factor only kicks in when elevation is trail-like."""
+        no_count = VDOTCalculator.predict_time_for_distance(45.0, 10.0)
+        beginner_road = VDOTCalculator.predict_time_for_distance(
+            45.0, 10.0, trail_runs_count=0
+        )
+        assert no_count == beginner_road  # No elevation -> no trail penalty
+
+    def test_confidence_range_widens_for_trail_distance(self):
+        """Trail (30 km) confidence range is wider than road."""
+        road = VDOTCalculator.get_confidence_range(50.0, 10.0)
+        trail = VDOTCalculator.get_confidence_range(50.0, 30.0, target_distance=30.0)
+        road_spread = road["slow"] - road["fast"]
+        trail_spread = trail["slow"] - trail["fast"]
+        # Trail margin is ±5 vs road's ±1.5 -> spread should be much wider per km
+        assert trail_spread / 30.0 > road_spread / 10.0
+
+    def test_confidence_range_widens_for_high_elevation_distance(self):
+        """A non-30k distance with significant elevation also gets the wide band."""
+        flat = VDOTCalculator.get_confidence_range(50.0, 22.3)
+        hilly = VDOTCalculator.get_confidence_range(
+            50.0, 22.3, elevation_gain_m=1000
+        )
+        assert (hilly["slow"] - hilly["fast"]) > (flat["slow"] - flat["fast"])
+
+
 class TestRoundTrip:
     """Test that predictions are consistent with VDOT calculation."""
 

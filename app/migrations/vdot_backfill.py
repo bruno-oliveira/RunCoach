@@ -30,7 +30,9 @@ def backfill_vdot(session: Session) -> int:
     updated = 0
     for run in runs:
         vdot = VDOTCalculator.calculate_vdot(
-            run.distance_km, int(run.duration_minutes * 60)
+            run.distance_km,
+            int(run.duration_minutes * 60),
+            elevation_gain_m=run.elevation_gain_m,
         )
         if vdot:
             run.vdot = vdot

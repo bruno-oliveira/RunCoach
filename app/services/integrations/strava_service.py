@@ -270,7 +270,9 @@ class StravaService:
                     # Auto-calculate VDOT for all runs with sufficient distance
                     if run_log.distance_km >= 2.0 and run_log.duration_minutes > 0:
                         vdot = VDOTCalculator.calculate_vdot(
-                            run_log.distance_km, int(run_log.duration_minutes * 60)
+                            run_log.distance_km,
+                            int(run_log.duration_minutes * 60),
+                            elevation_gain_m=run_log.elevation_gain_m,
                         )
                         if vdot:
                             run_log.vdot = vdot

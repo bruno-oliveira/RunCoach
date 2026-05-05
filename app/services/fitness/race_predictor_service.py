@@ -40,17 +40,65 @@ _EFFORT_TYPE_WEIGHT: dict[str, float] = {
 }
 _DEFAULT_EFFORT_WEIGHT = 0.8
 
+# Extreme-outlier filter for VDOT aggregation. Tukey's IQR rule alone is too
+# tight on tightly clustered training paces (a 3-point real PR can fall outside
+# the bound when IQR is < 1). We pair it with a ratio-against-median bound so
+# the filter only triggers when a value is BOTH statistically extreme AND large
+# in absolute terms -- which is what GPS / auto-pause artifacts actually look
+# like (typically >= 1.4x the cluster median). Genuine PBs are rarely > 1.2x.
+_OUTLIER_IQR_K = 3.0
+_OUTLIER_RATIO = 1.35
+_OUTLIER_MIN_SAMPLE = 5
+
+# Endurance calibration: a runner whose flat-ground VDOT is derived from short
+# fast efforts will overshoot at long distances if their training doesn't
+# include long fast runs. We compare predicted-from-VDOT to actual on the
+# runner's recent long runs and apply the median ratio as a multiplier.
+_ENDURANCE_MIN_TARGET_KM = 10.0
+_ENDURANCE_LONG_RUN_FRACTION = 0.7    # candidate runs >= 70% of target distance
+_ENDURANCE_TRAIL_THRESHOLD = 20.0     # m/km gain → counts as trail, excluded
+_ENDURANCE_MIN_SAMPLE = 3
+_ENDURANCE_APPLY_THRESHOLD = 1.05     # ignore <5% gaps as noise
+_ENDURANCE_MAX_FACTOR = 1.5           # cap so calibration can't run away
+
+
+def _vdot_outlier_threshold(vdots: List[float]) -> Optional[float]:
+    """Upper bound above which a VDOT is treated as an artifact, or None.
+
+    Returns the larger of the Tukey IQR bound and a ratio-of-median bound so
+    a single rule fits both tightly clustered training paces and high-variance
+    samples. Returns None when the sample is too small to estimate either.
+    """
+    if len(vdots) < _OUTLIER_MIN_SAMPLE:
+        return None
+    sorted_vdots = sorted(vdots)
+    n = len(sorted_vdots)
+    q1 = sorted_vdots[n // 4]
+    q3 = sorted_vdots[(3 * n) // 4]
+    iqr = q3 - q1
+    if iqr <= 0:
+        return None
+    iqr_bound = q3 + _OUTLIER_IQR_K * iqr
+    ratio_bound = statistics.median(sorted_vdots) * _OUTLIER_RATIO
+    return max(iqr_bound, ratio_bound)
+
 
 class RacePredictorService:
     """Service for race predictions and VDOT trend analysis."""
 
     @staticmethod
     def calculate_vdot_from_run(run: RunLog) -> Optional[float]:
-        """Calculate VDOT from any run with sufficient distance."""
+        """Calculate VDOT from any run with sufficient distance.
+
+        Hilly runs (>20m of elevation gain per km) are skipped -- VDOT assumes
+        flat ground and would otherwise underestimate the runner's true fitness.
+        """
         if run.distance_km < MIN_DISTANCE_KM or run.duration_minutes <= 0:
             return None
         return VDOTCalculator.calculate_vdot(
-            run.distance_km, int(run.duration_minutes * 60)
+            run.distance_km,
+            int(run.duration_minutes * 60),
+            elevation_gain_m=run.elevation_gain_m,
         )
 
     @staticmethod
@@ -93,24 +141,42 @@ class RacePredictorService:
         - Workout type (race/interval > tempo > easy/recovery)
         - Perceived effort (high effort ≥ 7 boosts confidence)
 
+        Extreme outliers (VDOT > Q3 + 3*IQR of the user's window) are dropped
+        before weighting -- they're almost always GPS / auto-pause artifacts.
+
         The top N entries by weight are combined via weighted average.
         """
         cutoff_date = datetime.now(timezone.utc) - timedelta(weeks=weeks)
         cutoff_date_naive = cutoff_date.replace(tzinfo=None)
 
-        candidates = (
-            db.query(
-                RunLog.vdot,
-                RunLog.distance_km,
-                RunLog.workout_type,
-                RunLog.perceived_effort,
-            )
+        all_window_vdots = [
+            v for (v,) in db.query(RunLog.vdot)
             .filter(
                 RunLog.user_id == user_id,
                 RunLog.vdot.isnot(None),
                 RunLog.distance_km >= MIN_DISTANCE_KM,
                 RunLog.date >= cutoff_date_naive,
             )
+            .all()
+        ]
+        outlier_threshold = _vdot_outlier_threshold(all_window_vdots)
+
+        candidate_query = db.query(
+            RunLog.vdot,
+            RunLog.distance_km,
+            RunLog.workout_type,
+            RunLog.perceived_effort,
+        ).filter(
+            RunLog.user_id == user_id,
+            RunLog.vdot.isnot(None),
+            RunLog.distance_km >= MIN_DISTANCE_KM,
+            RunLog.date >= cutoff_date_naive,
+        )
+        if outlier_threshold is not None:
+            candidate_query = candidate_query.filter(RunLog.vdot <= outlier_threshold)
+
+        candidates = (
+            candidate_query
             .order_by(RunLog.vdot.desc())
             .limit(_CANDIDATE_POOL_SIZE)
             .all()
@@ -140,19 +206,107 @@ class RacePredictorService:
         return round(weighted_vdot, 1)
 
     @staticmethod
+    def compute_endurance_factor(
+        user_id: str,
+        target_distance_km: float,
+        db: Session,
+        weeks: int = 12,
+        current_vdot: Optional[float] = None,
+    ) -> float:
+        """Multiplier that calibrates VDOT predictions to the runner's long-run reality.
+
+        VDOT extrapolates from short, fast efforts to long-distance race times under
+        the assumption that the runner trains across distances. For runners whose
+        long runs are slower than what their VDOT predicts, this returns the median
+        of (actual / predicted) on flat long runs; clamped to [1.0, MAX_FACTOR],
+        applied only when ratio >= APPLY_THRESHOLD and at least MIN_SAMPLE long
+        runs are available.
+
+        Returns 1.0 (no correction) for short distances or when sample is too thin.
+        """
+        if target_distance_km < _ENDURANCE_MIN_TARGET_KM:
+            return 1.0
+
+        min_distance = target_distance_km * _ENDURANCE_LONG_RUN_FRACTION
+        cutoff = (datetime.now(timezone.utc) - timedelta(weeks=weeks)).replace(tzinfo=None)
+
+        long_runs = (
+            db.query(RunLog.distance_km, RunLog.duration_minutes, RunLog.elevation_gain_m)
+            .filter(
+                RunLog.user_id == user_id,
+                RunLog.distance_km >= min_distance,
+                RunLog.duration_minutes > 0,
+                RunLog.date >= cutoff,
+            )
+            .all()
+        )
+
+        # Exclude trail runs -- elevation is handled separately by the prediction;
+        # mixing them here would conflate course profile with endurance gap.
+        flat_runs = [
+            (d, m, e) for (d, m, e) in long_runs
+            if not (e and d > 0 and e / d >= _ENDURANCE_TRAIL_THRESHOLD)
+        ]
+        if len(flat_runs) < _ENDURANCE_MIN_SAMPLE:
+            return 1.0
+
+        if current_vdot is None:
+            current_vdot = RacePredictorService.get_best_recent_vdot(
+                user_id, weeks=weeks, db=db
+            )
+        if not current_vdot:
+            return 1.0
+
+        ratios = []
+        for distance_km, duration_minutes, elevation_gain_m in flat_runs:
+            predicted_seconds = VDOTCalculator.predict_time_for_distance(
+                current_vdot, distance_km, elevation_gain_m=elevation_gain_m
+            )
+            if not predicted_seconds:
+                continue
+            actual_seconds = duration_minutes * 60.0
+            ratios.append(actual_seconds / predicted_seconds)
+
+        if len(ratios) < _ENDURANCE_MIN_SAMPLE:
+            return 1.0
+
+        factor = statistics.median(ratios)
+        if factor < _ENDURANCE_APPLY_THRESHOLD:
+            return 1.0
+        return min(factor, _ENDURANCE_MAX_FACTOR)
+
+    @staticmethod
     def get_best_effort(user_id: str, db: Session) -> Optional[Dict]:
         """Get the best genuine effort for a user.
 
-        Uses the median-of-top-N approach to avoid returning a GPS-glitch
-        outlier as the user's "best effort".
+        Uses the median-of-top-N approach plus an IQR outlier filter on
+        all-time VDOTs to avoid returning a GPS-glitch outlier as the
+        user's "best effort".
         """
-        top_runs = (
+        all_vdots = [
+            v for (v,) in db.query(RunLog.vdot)
+            .filter(
+                RunLog.user_id == user_id,
+                RunLog.vdot.isnot(None),
+                RunLog.distance_km >= MIN_DISTANCE_KM,
+            )
+            .all()
+        ]
+        outlier_threshold = _vdot_outlier_threshold(all_vdots)
+
+        top_runs_query = (
             db.query(RunLog)
             .filter(
                 RunLog.user_id == user_id,
                 RunLog.vdot.isnot(None),
                 RunLog.distance_km >= MIN_DISTANCE_KM,
             )
+        )
+        if outlier_threshold is not None:
+            top_runs_query = top_runs_query.filter(RunLog.vdot <= outlier_threshold)
+
+        top_runs = (
+            top_runs_query
             .order_by(RunLog.vdot.desc())
             .limit(TOP_N_VDOTS)
             .all()
@@ -212,14 +366,28 @@ class RacePredictorService:
         trend = RacePredictorService.calculate_vdot_trend(vdot_history)
         best_effort = RacePredictorService.get_best_effort(user_id, db=db)
 
-        predictions = VDOTCalculator.predict_times(current_vdot)
-        for name in predictions:
-            range_data = VDOTCalculator.get_confidence_range(
-                current_vdot, predictions[name]["distance_km"]
+        predictions: Dict[str, Dict[str, Any]] = {}
+        from app.core.training.vdot_calculator import STANDARD_RACE_DISTANCES
+        for name, distance in STANDARD_RACE_DISTANCES.items():
+            endurance_factor = RacePredictorService.compute_endurance_factor(
+                user_id, distance, db, current_vdot=current_vdot
             )
-            predictions[name]["range"] = {
-                "fast": VDOTCalculator.format_duration(range_data["fast"]),
-                "slow": VDOTCalculator.format_duration(range_data["slow"]),
+            seconds = VDOTCalculator.predict_time_for_distance(
+                current_vdot, distance, endurance_factor=endurance_factor
+            )
+            if not seconds:
+                continue
+            range_data = VDOTCalculator.get_confidence_range(
+                current_vdot, distance, endurance_factor=endurance_factor
+            )
+            predictions[name] = {
+                "seconds": seconds,
+                "formatted": VDOTCalculator.format_duration(seconds),
+                "distance_km": distance,
+                "range": {
+                    "fast": VDOTCalculator.format_duration(range_data["fast"]),
+                    "slow": VDOTCalculator.format_duration(range_data["slow"]),
+                },
             }
 
         return {

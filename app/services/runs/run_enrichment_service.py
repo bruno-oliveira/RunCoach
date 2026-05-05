@@ -12,13 +12,38 @@ from app.services.fitness.race_predictor_service import RacePredictorService
 
 logger = logging.getLogger(__name__)
 
+# Average climb per km above which a run counts as a trail run.
+_TRAIL_ELEVATION_M_PER_KM = 20.0
+
+
+def _count_prior_trail_runs(user_id: str, db: Session) -> int:
+    """Count the user's prior runs that average >=20 m of climb per km."""
+    runs = (
+        db.query(RunLog.distance_km, RunLog.elevation_gain_m)
+        .filter(
+            RunLog.user_id == user_id,
+            RunLog.distance_km > 0,
+            RunLog.elevation_gain_m.isnot(None),
+        )
+        .all()
+    )
+    return sum(
+        1
+        for distance_km, gain in runs
+        if distance_km and gain and gain / distance_km >= _TRAIL_ELEVATION_M_PER_KM
+    )
+
 
 def enrich_vdot_and_prediction(
     new_run: RunLog, distance_km: float, duration_minutes: float, user_id: str, db: Session
 ) -> None:
     """Calculate VDOT and snapshot pre-run prediction onto the run."""
     if distance_km >= 2.0 and duration_minutes > 0:
-        vdot = VDOTCalculator.calculate_vdot(distance_km, int(duration_minutes * 60))
+        vdot = VDOTCalculator.calculate_vdot(
+            distance_km,
+            int(duration_minutes * 60),
+            elevation_gain_m=new_run.elevation_gain_m,
+        )
         if vdot:
             new_run.vdot = vdot
 
@@ -26,7 +51,19 @@ def enrich_vdot_and_prediction(
         try:
             pre_race_vdot = RacePredictorService.get_best_recent_vdot(user_id, weeks=12, db=db)
             if pre_race_vdot:
-                predicted_seconds = VDOTCalculator.predict_time_for_distance(pre_race_vdot, distance_km)
+                trail_runs_count = None
+                if new_run.elevation_gain_m and new_run.elevation_gain_m > 0:
+                    trail_runs_count = _count_prior_trail_runs(user_id, db)
+                endurance_factor = RacePredictorService.compute_endurance_factor(
+                    user_id, distance_km, db, current_vdot=pre_race_vdot
+                )
+                predicted_seconds = VDOTCalculator.predict_time_for_distance(
+                    pre_race_vdot,
+                    distance_km,
+                    elevation_gain_m=new_run.elevation_gain_m,
+                    trail_runs_count=trail_runs_count,
+                    endurance_factor=endurance_factor,
+                )
                 if predicted_seconds:
                     new_run.predicted_time_seconds = float(predicted_seconds)
         except Exception as e:
