@@ -4,7 +4,6 @@
 
 {% block styles %}
 <link rel="stylesheet" href="{{ static_url('css/my_plans.css') }}">
-<link rel="stylesheet" href="{{ static_url('css/triathlon.css') }}">
 <link rel="stylesheet" href="{{ static_url('css/plan_shared.css') }}">
 {% endblock %}
 
@@ -148,72 +147,12 @@
     </div>
     {% endif %}
 
-    {% if not active_plans and not completed_plans %}
+    {% if not plans %}
     <div class="no-plans">
         <h2>No Training Plans Yet</h2>
         <p>You haven't created any training plans yet.</p>
         <div style="display:flex;gap:var(--space-3);flex-wrap:wrap;justify-content:center;margin-top:var(--space-4);">
-            <a href="/" class="btn btn-primary">Running Plan</a>
-            <a href="/triathlon" class="btn btn-secondary">Triathlon Plan</a>
-        </div>
-    </div>
-    {% endif %}
-    {% endif %}
-
-    {# ---- Triathlon plans section ---- #}
-    {% if triathlon_plans %}
-    <div class="header" style="margin-top: var(--space-10);">
-        <h2>Triathlon Plans</h2>
-    </div>
-    <div class="plans-grid">
-        {% for tp in triathlon_plans %}
-        <div class="plan-card" id="tri-plan-{{ tp.id }}">
-            <div class="plan-card-header">
-                <h3>{{ tp.distance_label }}</h3>
-                <span class="plan-badge" style="background: var(--tri-brick-light); color: var(--tri-brick-dark);">Triathlon</span>
-            </div>
-            <div class="plan-details">
-                <div class="plan-detail-row">
-                    <span class="plan-detail-label">Distance:</span>
-                    <span class="plan-detail-value">{{ tp.distance_label }}</span>
-                </div>
-                <div class="plan-detail-row">
-                    <span class="plan-detail-label">Duration:</span>
-                    <span class="plan-detail-value">{{ tp.weeks_duration }} weeks</span>
-                </div>
-                <div class="plan-detail-row">
-                    <span class="plan-detail-label">Disciplines:</span>
-                    <span class="plan-detail-value" style="display:flex;gap:6px;align-items:center;">
-                        <span style="width:8px;height:8px;border-radius:50%;background:var(--tri-swim);display:inline-block;"></span>Swim
-                        <span style="width:8px;height:8px;border-radius:50%;background:var(--tri-bike);display:inline-block;margin-left:4px;"></span>Bike
-                        <span style="width:8px;height:8px;border-radius:50%;background:var(--tri-run);display:inline-block;margin-left:4px;"></span>Run
-                    </span>
-                </div>
-            </div>
-            <div class="created-date">
-                Created: {{ tp.created_at.strftime('%B %d, %Y') }}
-            </div>
-            <div class="plan-actions">
-                <a href="/triathlon/plan/{{ tp.id }}" class="btn btn-primary">View Plan</a>
-                <a href="/triathlon/download-pdf/{{ tp.id }}" class="btn btn-secondary">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: -2px;"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-                    PDF
-                </a>
-                <button class="btn btn-danger" onclick="deleteTriPlan('{{ tp.id }}')">Delete</button>
-            </div>
-        </div>
-        {% endfor %}
-    </div>
-    {% endif %}
-
-    {# Show a combined empty state only if both lists are empty #}
-    {% if not plans and not triathlon_plans %}
-    <div class="no-plans">
-        <h2>No Training Plans Yet</h2>
-        <p>You haven't created any training plans yet.</p>
-        <div style="display:flex;gap:var(--space-3);flex-wrap:wrap;justify-content:center;margin-top:var(--space-4);">
-            <a href="/" class="btn btn-primary">Running Plan</a>
-            <a href="/triathlon" class="btn btn-secondary">Triathlon Plan</a>
+            <a href="/" class="btn btn-primary">Create a Running Plan</a>
         </div>
     </div>
     {% endif %}
@@ -286,21 +225,6 @@ async function toggleShare(planId) {
         }
     } catch (e) {
         showToast('Error toggling share');
-    }
-}
-
-async function deleteTriPlan(planId) {
-    if (!confirm('Delete this triathlon plan? This cannot be undone.')) return;
-    try {
-        const response = await fetch(`/api/triathlon/plan/${planId}`, { method: 'DELETE' });
-        if (response.ok) {
-            window.location.reload();
-        } else {
-            const data = await response.json();
-            alert(data.detail || 'Failed to delete plan.');
-        }
-    } catch (err) {
-        alert('An error occurred while deleting the plan.');
     }
 }
 </script>

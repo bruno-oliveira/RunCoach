@@ -167,17 +167,6 @@ def upgrade() -> None:
     )
 
     op.create_table(
-        "triathlon_plans",
-        sa.Column("id", sa.String(), primary_key=True),
-        sa.Column("user_id", sa.String(), sa.ForeignKey("users.id"), nullable=False),
-        sa.Column("distance", sa.String(), nullable=True),
-        sa.Column("weeks_duration", sa.Integer(), nullable=True),
-        sa.Column("plan_data", sa.Text(), nullable=True),
-        sa.Column("created_at", sa.DateTime(), nullable=True),
-    )
-    op.create_index("ix_triathlon_plans_user_id", "triathlon_plans", ["user_id"])
-
-    op.create_table(
         "readiness_logs",
         sa.Column("id", sa.String(), primary_key=True),
         sa.Column("user_id", sa.String(), sa.ForeignKey("users.id"), nullable=False),
@@ -196,7 +185,6 @@ def upgrade() -> None:
 
 def downgrade() -> None:
     op.drop_table("readiness_logs")
-    op.drop_table("triathlon_plans")
     op.drop_table("favorite_recipes")
     op.drop_table("run_feedback")
     op.drop_table("run_logs")

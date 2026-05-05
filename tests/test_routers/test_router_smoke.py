@@ -1,7 +1,7 @@
 """Smoke tests: one authenticated success + one 401 per router.
 
 Covers routers that previously had no test coverage:
-runs, analytics, performance, adaptive, triathlon, recipes.
+runs, analytics, performance, adaptive, recipes.
 """
 
 import time
@@ -140,28 +140,6 @@ class TestPerformanceRouter:
                 "distance": 10.0,
             })
         assert resp.status_code == 200
-
-
-# ---------------------------------------------------------------------------
-# Triathlon router  (/triathlon)
-# ---------------------------------------------------------------------------
-
-
-@pytest.mark.usefixtures("_override_db")
-class TestTriathlonRouter:
-    def test_triathlon_page_renders(self):
-        """Triathlon index uses get_optional_user — should render without auth."""
-        _clear_user()
-        with TestClient(app) as c:
-            resp = c.get("/triathlon")
-        assert resp.status_code == 200
-        assert "text/html" in resp.headers["content-type"]
-
-    def test_delete_nonexistent_plan_404(self, smoke_user):
-        _set_user(smoke_user)
-        with TestClient(app) as c:
-            resp = c.delete("/api/triathlon/plan/nonexistent-id")
-        assert resp.status_code == 404
 
 
 # ---------------------------------------------------------------------------

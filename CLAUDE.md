@@ -50,7 +50,7 @@ app/
 │   │   ├── plan_generator.py        # Main training plan orchestrator
 │   │   ├── beginner_plan_generator.py # Couch-to-5K plans
 │   │   ├── performance_plan_generator.py # VDOT-based plans
-│   │   └── triathlon_plan_generator.py  # Triathlon plans
+│   │   └── performance_plan_generator.py # VDOT-based plans
 │   ���── training/        # Training calculations & workout building
 │   │   ├── phase_calculator.py     # Phase distribution & recovery weeks
 │   │   ├── mileage_progression.py  # Weekly mileage with 10% rule
@@ -72,8 +72,7 @@ app/
 │   ├── race/            # Race-specific logic
 │   │   └── race_protocol_generator.py  # Race day protocols
 │   └── export/          # PDF generation
-│       ├── pdf_generator.py         # Training plan PDF export
-│       └── triathlon_pdf_generator.py # Triathlon plan PDF export
+│       └── pdf_generator.py         # Training plan PDF export
 ├── models/              # SQLAlchemy database models
 │   ├── __init__.py      # Model exports and relationship configuration
 │   ├── base.py          # SQLAlchemy Base class
@@ -92,8 +91,7 @@ app/
 │   ├── analytics.py     # Analytics endpoints and page
 │   ├── performance.py   # Performance plan endpoints
 │   ├── recipes.py       # Recipe endpoints
-│   ├── strava.py        # Strava OAuth + sync
-│   └── triathlon.py     # Triathlon plan endpoints
+│   └── strava.py        # Strava OAuth + sync
 ├── services/
 │   ├── __init__.py
 │   ├── auth_service.py      # Google OAuth, JWT handling

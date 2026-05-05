@@ -31,8 +31,6 @@ from app.routers import (
     recipes_page_router,
     runs_router,
     strava_router,
-    triathlon_router,
-    triathlon_page_router,
 )
 from app.schemas import HealthResponse
 from app.migrations import run_alembic_migrations
@@ -164,8 +162,6 @@ def create_app(skip_migrations: bool = False) -> FastAPI:
     app.include_router(analytics_router)
     app.include_router(analytics_page_router)
     app.include_router(strava_router)
-    app.include_router(triathlon_router)
-    app.include_router(triathlon_page_router)
     app.include_router(readiness_router)
     app.include_router(race_prep_router)
 

@@ -14,7 +14,6 @@ from app.models import (
     TrainingPlan,
     WeeklyPlan,
 )
-from app.models.triathlon_plan import TriathlonPlan
 from .plan_adjustments import (
     adjust_distance,
     adjust_intensity,
@@ -34,8 +33,7 @@ def has_reached_plan_limit(user_id: str, db: Session) -> bool:
         1 for p in training_plans
         if not _is_plan_completed(p, today)
     )
-    triathlon_count = db.query(TriathlonPlan).filter(TriathlonPlan.user_id == user_id).count()
-    return (active_training + triathlon_count) >= MAX_PLANS_PER_USER
+    return active_training >= MAX_PLANS_PER_USER
 
 
 def _is_plan_completed(plan: TrainingPlan, today: date) -> bool:

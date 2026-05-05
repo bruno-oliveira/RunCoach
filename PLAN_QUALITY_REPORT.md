@@ -21,7 +21,7 @@
 
 The plan generation system is well-decomposed into focused modules:
 
-- **4 generators** (standard, beginner, performance, triathlon) with clean entry points
+- **3 generators** (standard, beginner, performance) with clean entry points
 - **7 training calculation modules** each owning a single responsibility (phases, mileage, distribution, workouts, long runs, key workouts, VDOT)
 - **Facade pattern** — `TrainingPlanGenerator` delegates to sub-modules rather than accumulating logic
 - **Validator layer** — Pydantic schemas catch invalid inputs before generation starts
@@ -86,13 +86,6 @@ Genuine Couch-to-5K progression (run/walk intervals) with compressed week sequen
 5-zone training system with VDOT-driven pace zones, phase-quality mapping (30% base → 60% peak), and 3-consecutive-day prevention logic.
 
 ### Flagged Improvements
-
-**P1 — Triathlon plans are static (no personalization)**
-
-`TriathlonPlanGenerator` returns pre-encoded plans with no scaling by current fitness, experience, or available weeks. A sprint triathlon user running 40 km/week gets the exact same plan as one running 10 km/week.
-
-*Impact*: Any triathlon user with non-average fitness gets an inappropriate plan.
-*Suggestion*: At minimum, scale the run portions using the existing mileage progression engine. The swim/bike volumes could use a similar ramp-and-taper approach.
 
 **P2 — Beginner pace assumption is hardcoded at 8.0 min/km**
 
@@ -322,8 +315,6 @@ except Exception as e:
 
 2. **Cross-plan progression** (Generation P4) — carrying fitness context between plans would significantly improve the multi-race-season experience.
 
-3. **Triathlon personalization** (Generation P1) — static plans are a clear gap compared to the sophistication of the running plan generators.
-
 ---
 
 ## Summary of Improvements by Priority
@@ -332,8 +323,7 @@ except Exception as e:
 |---|--------|-------|----------|--------|
 | 1 | Adaptation | No automatic adaptation trigger | P1 | Medium |
 | 2 | Adaptation | Greedy run matching → Hungarian algorithm | P2 | Low |
-| 3 | Generation | Triathlon plans are static | P1 | High |
-| 4 | Adaptation | Scattered weekly total recalculation | P5 | Low |
+| 3 | Adaptation | Scattered weekly total recalculation | P5 | Low |
 | 5 | Generation | Beginner pace hardcoded at 8.0 min/km | P2 | Low |
 | 6 | Generation | 10% rule post-generation only | P3 | Medium |
 | 7 | Adaptation | Effort trend simplistic midpoint split | P3 | Low |

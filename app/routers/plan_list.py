@@ -10,7 +10,6 @@ from sqlalchemy.orm import Session
 from app.config import settings
 from app.dependencies import get_db, get_optional_user
 from app.models import TrainingPlan, User
-from app.models.triathlon_plan import TriathlonPlan
 from app.constants import DISTANCE_NAMES
 from app.services.adaptation import AdaptationService
 from app.core.training.strength_plan import derive_experience_level
@@ -74,21 +73,6 @@ async def list_my_plans(
             else:
                 plan.status_label = None
 
-        triathlon_plans = (
-            db.query(TriathlonPlan)
-            .filter(TriathlonPlan.user_id == current_user.id)
-            .order_by(TriathlonPlan.created_at.desc())
-            .all()
-        )
-
-        _tri_labels = {
-            "sprint": "Sprint Triathlon",
-            "olympic": "Olympic Triathlon",
-            "half_ironman": "Half Ironman (70.3)",
-        }
-        for tp in triathlon_plans:
-            tp.distance_label = _tri_labels.get(tp.distance, tp.distance)
-
         return templates.TemplateResponse(
             "my_plans.html",
             {
@@ -98,7 +82,6 @@ async def list_my_plans(
                 "plans": plans,
                 "plan_count": sum(1 for p in plans if p.status_label != "Completed"),
                 "max_plans": 3,
-                "triathlon_plans": triathlon_plans,
             },
         )
     except Exception as e:

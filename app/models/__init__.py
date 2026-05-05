@@ -7,7 +7,6 @@ from app.models.plan_customization import PlanCustomization
 from app.models.run_log import RunLog
 from app.models.run_feedback import RunFeedback
 from app.models.favorite_recipe import FavoriteRecipe
-from app.models.triathlon_plan import TriathlonPlan
 from app.models.readiness_log import ReadinessLog
 
 __all__ = [
@@ -20,6 +19,5 @@ __all__ = [
     "RunLog",
     "RunFeedback",
     "FavoriteRecipe",
-    "TriathlonPlan",
     "ReadinessLog",
 ]

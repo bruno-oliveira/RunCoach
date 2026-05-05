@@ -28,5 +28,4 @@ class User(Base):
     training_plans: Mapped[list["TrainingPlan"]] = relationship("TrainingPlan", back_populates="user", cascade="all, delete-orphan")
     run_logs: Mapped[list["RunLog"]] = relationship("RunLog", back_populates="user", cascade="all, delete-orphan")
     favorite_recipes: Mapped[list["FavoriteRecipe"]] = relationship("FavoriteRecipe", back_populates="user", cascade="all, delete-orphan")
-    triathlon_plans: Mapped[list["TriathlonPlan"]] = relationship("TriathlonPlan", back_populates="user", cascade="all, delete-orphan")
     readiness_logs: Mapped[list["ReadinessLog"]] = relationship("ReadinessLog", back_populates="user", cascade="all, delete-orphan")
