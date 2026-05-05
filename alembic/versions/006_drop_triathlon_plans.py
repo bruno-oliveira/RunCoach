@@ -17,7 +17,9 @@ depends_on: Union[str, Sequence[str], None] = None
 
 
 def upgrade() -> None:
-    op.drop_index("ix_triathlon_plans_user_id", table_name="triathlon_plans")
+    # SQLite drops associated indexes automatically with the table; skipping
+    # an explicit drop_index avoids failures on DBs bootstrapped via
+    # Base.metadata.create_all() (which never created the named index).
     op.drop_table("triathlon_plans")
 
 
