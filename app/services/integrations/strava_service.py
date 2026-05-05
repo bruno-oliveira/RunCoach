@@ -276,6 +276,23 @@ class StravaService:
                         )
                         if vdot:
                             run_log.vdot = vdot
+                    try:
+                        from app.services.fitness.effort_classifier import classify_effort
+
+                        effort_class = classify_effort(
+                            distance_km=run_log.distance_km,
+                            avg_pace_min_km=run_log.avg_pace_min_km,
+                            perceived_effort=run_log.perceived_effort,
+                            user_id=user.id,
+                            db=db,
+                            exclude_run_id=run_log.id,
+                        )
+                        if effort_class is not None:
+                            run_log.effort_class = effort_class
+                    except Exception as cls_err:
+                        logger.warning(
+                            f"Effort classification failed for Strava run {run_log.id}: {cls_err}"
+                        )
                     db.add(run_log)
                     try:
                         db.flush()

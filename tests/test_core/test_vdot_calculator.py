@@ -114,15 +114,27 @@ class TestElevationHandling:
         assert result is not None
 
     def test_predict_time_applies_elevation_penalty(self):
-        """1000 m of elevation adds ~20 minutes (1.2 sec/m) to a prediction."""
+        """1000 m of elevation over 22.3 km lands in the steep band of the piecewise penalty."""
         flat = VDOTCalculator.predict_time_for_distance(45.0, 22.3)
         hilly = VDOTCalculator.predict_time_for_distance(
             45.0, 22.3, elevation_gain_m=1000
         )
         assert flat is not None and hilly is not None
         delta = hilly - flat
-        # Penalty should be roughly 1.2 * 1000 = 1200 sec = 20 min
-        assert 1100 < delta < 1300
+        # avg grade 4.5% -> effective 8.97% -> rate 24 sec/km/% on 11.15 km
+        # -> ~2400 sec. Allow a band for binary-search jitter.
+        assert 2200 < delta < 2600
+
+    def test_predict_time_low_grade_matches_linear_baseline(self):
+        """Mild rolling terrain still costs ~1.2 sec per meter of gain."""
+        flat = VDOTCalculator.predict_time_for_distance(45.0, 10.0)
+        rolling = VDOTCalculator.predict_time_for_distance(
+            45.0, 10.0, elevation_gain_m=100
+        )
+        assert flat is not None and rolling is not None
+        delta = rolling - flat
+        # 100m / 10km -> 1% avg, 2% effective, rate 12 -> 12*2*5 = 120 sec
+        assert 100 < delta < 140
 
     def test_predict_time_trail_inexperience_penalty(self):
         """A first-time trail runner gets a >1x multiplier on top of elevation."""

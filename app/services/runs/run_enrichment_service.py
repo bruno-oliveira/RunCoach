@@ -8,6 +8,7 @@ from sqlalchemy.orm import Session
 from app.core.training.vdot_calculator import VDOTCalculator
 from app.models import RunLog
 from app.schemas import RunLogResponse
+from app.services.fitness.effort_classifier import classify_effort
 from app.services.fitness.race_predictor_service import RacePredictorService
 
 logger = logging.getLogger(__name__)
@@ -37,7 +38,21 @@ def _count_prior_trail_runs(user_id: str, db: Session) -> int:
 def enrich_vdot_and_prediction(
     new_run: RunLog, distance_km: float, duration_minutes: float, user_id: str, db: Session
 ) -> None:
-    """Calculate VDOT and snapshot pre-run prediction onto the run."""
+    """Calculate VDOT, derive effort class, and snapshot pre-run prediction onto the run."""
+    try:
+        effort_class = classify_effort(
+            distance_km=distance_km,
+            avg_pace_min_km=new_run.avg_pace_min_km,
+            perceived_effort=new_run.perceived_effort,
+            user_id=user_id,
+            db=db,
+            exclude_run_id=new_run.id,
+        )
+        if effort_class is not None:
+            new_run.effort_class = effort_class
+    except Exception as e:
+        logger.warning(f"Failed to classify effort for run: {e}")
+
     if distance_km >= 2.0 and duration_minutes > 0:
         vdot = VDOTCalculator.calculate_vdot(
             distance_km,

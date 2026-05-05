@@ -39,6 +39,7 @@ class RunLog(Base):
     vdot = Column(Float, nullable=True)
     predicted_time_seconds = Column(Float, nullable=True)
     hr_zone_deviation = Column(Integer, nullable=True)
+    effort_class = Column(String(20), nullable=True)
 
     user: Mapped["User"] = relationship("User", back_populates="run_logs")
     training_plan: Mapped["TrainingPlan"] = relationship("TrainingPlan")

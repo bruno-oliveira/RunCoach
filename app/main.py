@@ -93,6 +93,17 @@ def _run_startup_migrations() -> None:
         logger.warning("VDOT backfill failed: %s", e)
 
     try:
+        from app.services.fitness.effort_classifier import backfill_effort_classes
+
+        updated = backfill_effort_classes(session)
+        if updated:
+            session.commit()
+            logger.info("Effort-class backfill updated %d runs", updated)
+    except Exception as e:
+        session.rollback()
+        logger.warning("Effort-class backfill failed: %s", e)
+
+    try:
         cleanup_inactive_accounts(session)
     except Exception as e:
         session.rollback()

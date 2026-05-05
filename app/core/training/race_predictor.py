@@ -20,11 +20,45 @@ _PREDICT_TIME_HI_MIN = 600.0
 _PREDICT_VDOT_EPSILON = 0.01
 _PREDICT_MAX_ITERS = 100
 
-# Linear elevation penalty constants (mirrors RacePacingService).
-# 12 sec/km penalty per 1% average grade; integrating over the course gives
-# 1.2 sec per meter of total elevation gain. Underestimates technical/steep
-# trails but at least removes the zero-penalty-for-1000m-gain absurdity.
-_UPHILL_PENALTY_SEC_PER_M_GAIN = 1.2
+# Piecewise grade penalty: sec/km cost per 1% grade, by grade band.
+# Linear (12 sec/km/%) is fine for rolling courses but underestimates steep
+# climbs because runners stop running and start power-hiking past ~8% grade --
+# vertical speed roughly caps at 800-1000 m/h regardless of horizontal pace.
+# Each tuple is (upper_bound_pct, rate_sec_per_km_per_pct).
+_GRADE_PENALTY_TIERS: tuple[tuple[float, float], ...] = (
+    (4.0, 12.0),
+    (8.0, 16.0),
+    (12.0, 24.0),
+    (float("inf"), 35.0),
+)
+
+
+def _grade_penalty_rate(grade_pct: float) -> float:
+    """Sec/km cost per 1% grade at the given grade."""
+    for cap, rate in _GRADE_PENALTY_TIERS:
+        if grade_pct < cap:
+            return rate
+    return _GRADE_PENALTY_TIERS[-1][1]
+
+
+def _elevation_penalty_seconds(distance_km: float, elevation_gain_m: float) -> float:
+    """Estimate uphill time cost from total gain when only the total is known.
+
+    Path A approximation: real climbs aren't evenly distributed across a course --
+    they concentrate in some fraction of the distance at a steeper effective grade.
+    We assume the climb sits in 50% of the distance at 2x the average grade, then
+    apply the piecewise rate at that effective grade. This matches the linear
+    formula at low grades and compounds correctly when the average gain implies
+    real steepness.
+    """
+    if distance_km <= 0 or elevation_gain_m <= 0:
+        return 0.0
+    avg_grade_pct = (elevation_gain_m / (distance_km * 1000.0)) * 100.0
+    effective_grade_pct = 2.0 * avg_grade_pct
+    effective_distance_km = distance_km / 2.0
+    rate = _grade_penalty_rate(effective_grade_pct)
+    return rate * effective_grade_pct * effective_distance_km
+
 
 # Trail-experience penalty: a runner with no logged trail effort is missing
 # stabilizer strength, descent technique, and pacing intuition. Apply a
@@ -61,9 +95,9 @@ def predict_time_for_distance(
     Args:
         vdot: Runner's VDOT.
         distance_km: Race distance in km.
-        elevation_gain_m: Optional total elevation gain. If provided, adds a
-            linear uphill penalty of ~1.2 s per meter of gain on top of the
-            flat-ground prediction.
+        elevation_gain_m: Optional total elevation gain. If provided, adds an
+            uphill penalty using a piecewise grade rate (steeper grades cost
+            disproportionately more time per km than rolling terrain).
         trail_runs_count: If provided AND elevation_gain_m indicates a trail
             (>=20m/km on average), apply a trail-inexperience multiplier.
         endurance_factor: Multiplier (>= 1.0) for runners whose long-run
@@ -107,7 +141,7 @@ def predict_time_for_distance(
     elevation_penalty_sec = 0.0
     is_trail = False
     if elevation_gain_m and elevation_gain_m > 0:
-        elevation_penalty_sec = _UPHILL_PENALTY_SEC_PER_M_GAIN * elevation_gain_m
+        elevation_penalty_sec = _elevation_penalty_seconds(distance_km, elevation_gain_m)
         if elevation_gain_m / max(distance_km, 0.001) >= 20.0:
             is_trail = True
 

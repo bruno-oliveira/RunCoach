@@ -27,7 +27,8 @@ TOP_N_VDOTS = 3
 # Number of candidate runs to fetch before applying confidence weighting.
 _CANDIDATE_POOL_SIZE = 10
 
-# Confidence multiplier by workout type. Higher = more reliable VDOT indicator.
+# Confidence multiplier by user-tagged workout type. Higher = more reliable
+# VDOT indicator. Used as a fallback when the derived effort_class is unset.
 _EFFORT_TYPE_WEIGHT: dict[str, float] = {
     "race": 1.5,
     "interval": 1.3,
@@ -39,6 +40,22 @@ _EFFORT_TYPE_WEIGHT: dict[str, float] = {
     "rest": 0.3,
 }
 _DEFAULT_EFFORT_WEIGHT = 0.8
+
+# Multiplier by derived effort_class (see effort_classifier). The classifier
+# infers race/tempo/easy from pace percentile and perceived effort because
+# user-tagged workout_type is unreliable in practice (Strava defaults to easy).
+_EFFORT_CLASS_WEIGHT: dict[str, float] = {
+    "race_effort": 1.5,
+    "tempo_effort": 1.2,
+    "easy_effort": 0.7,
+}
+
+
+def _effort_weight(effort_class: Optional[str], workout_type: Optional[str]) -> float:
+    """Resolve confidence weight, preferring derived class over the user tag."""
+    if effort_class and effort_class in _EFFORT_CLASS_WEIGHT:
+        return _EFFORT_CLASS_WEIGHT[effort_class]
+    return _EFFORT_TYPE_WEIGHT.get(workout_type or "", _DEFAULT_EFFORT_WEIGHT)
 
 # Extreme-outlier filter for VDOT aggregation. Tukey's IQR rule alone is too
 # tight on tightly clustered training paces (a 3-point real PR can fall outside
@@ -166,6 +183,7 @@ class RacePredictorService:
             RunLog.distance_km,
             RunLog.workout_type,
             RunLog.perceived_effort,
+            RunLog.effort_class,
         ).filter(
             RunLog.user_id == user_id,
             RunLog.vdot.isnot(None),
@@ -186,11 +204,9 @@ class RacePredictorService:
             return None
 
         weighted_entries = []
-        for vdot, distance_km, workout_type, perceived_effort in candidates:
+        for vdot, distance_km, workout_type, perceived_effort, effort_class in candidates:
             distance_weight = min(distance_km / 10.0, 1.5)
-            effort_weight = _EFFORT_TYPE_WEIGHT.get(
-                workout_type or "", _DEFAULT_EFFORT_WEIGHT
-            )
+            effort_weight = _effort_weight(effort_class, workout_type)
             pe_multiplier = 1.2 if (perceived_effort and perceived_effort >= 7) else 1.0
             total_weight = distance_weight * effort_weight * pe_multiplier
             weighted_entries.append((vdot, total_weight))
