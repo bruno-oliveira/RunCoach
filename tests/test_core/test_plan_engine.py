@@ -205,17 +205,33 @@ class TestWorkoutBuilderDescriptions:
                 f"Tempo at {dist}km has negative segment: {desc}"
             )
 
-    def test_easy_run_time_based_for_short_distance(self):
-        """Easy runs under 3km should use time-based descriptions."""
+    def test_easy_run_short_distance_preserves_distance(self):
+        """Short easy runs keep their planned distance; UX hint added later."""
         workout = generate_easy_run(1, 2.0, 10.0)
-        assert "duration_min" in workout
-        assert "minutes" in workout["description"].lower()
+        assert workout["distance"] == 2.0
+        assert "duration_min" not in workout
 
-    def test_long_run_time_based_for_short_distance(self):
-        """Long runs under 3km should use time-based descriptions."""
+    def test_long_run_short_distance_preserves_distance(self):
+        """Short long runs keep their planned distance; UX hint added later."""
         workout = generate_long_run(1, 2.0, 10.0)
-        assert "duration_min" in workout
-        assert "minutes" in workout["description"].lower()
+        assert workout["distance"] == 2.0
+        assert "duration_min" not in workout
+
+    def test_attach_duration_hints_for_short_workouts(self):
+        """The post-build hint pass adds duration_min for sub-3km workouts."""
+        from app.core.generators.weekly_plan_builder import attach_duration_hints
+
+        workouts = [
+            {"type": "easy", "distance": 2.0},
+            {"type": "long", "distance": 2.5},
+            {"type": "tempo", "distance": 2.5},
+            {"type": "easy", "distance": 5.0},  # >= 3 km, no hint
+        ]
+        attach_duration_hints(workouts)
+        assert "duration_min" in workouts[0]
+        assert "duration_min" in workouts[1]
+        assert "duration_min" in workouts[2]
+        assert "duration_min" not in workouts[3]
 
     def test_interval_run_no_nonsense_reps(self):
         """Interval descriptions should not produce absurd rep counts."""

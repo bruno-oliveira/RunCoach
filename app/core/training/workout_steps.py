@@ -427,7 +427,9 @@ def build_interval_steps(
 ) -> List[Dict[str, Any]]:
     """Interval session — step structure matches the selected description variant.
 
-    <40 km/week base: 400 m reps.  >=40 km/week: 800 m reps.
+    The 50 km/week threshold matches ``generate_interval_run`` so the
+    description variant table and the step variant table are sized
+    identically. Below that, 400 m reps are the default.
     """
     if distance_km <= 0:
         return []
@@ -436,16 +438,14 @@ def build_interval_steps(
     cd_m = wu_m
     work_m = max(1600, total_m - wu_m - cd_m)
 
-    if total_km >= 40:
+    if total_km >= 50:
         default_rep_m = 800
-        default_recovery_s = 180
     else:
         default_rep_m = 400
-        default_recovery_s = 90
 
     default_reps = max(4, work_m // default_rep_m)
 
-    if total_km >= 40:
+    if total_km >= 50:
         return _build_interval_steps_high_base(
             variant, pace_zones, reps_400 or default_reps,
             reps_800 or default_reps, reps_1000 or max(3, work_m // 2000),
@@ -583,8 +583,11 @@ def build_hill_steps(
     distance_km: float,
     pace_zones: Optional[Dict] = None,
 ) -> List[Dict[str, Any]]:
+    total_m = max(0, int(round(distance_km * 1000)))
+    wu_m = _wucd_m(total_m) if total_m > 0 else _WARMUP_M
+    cd_m = wu_m
     return [
-        _warmup(pace_zones),
+        _warmup(pace_zones, wu_m),
         _step(
             "run",
             "10 × 30 s hill",
@@ -601,7 +604,7 @@ def build_hill_steps(
             repeat=10,
             effort="walk",
         ),
-        _cooldown(pace_zones),
+        _cooldown(pace_zones, cd_m),
     ]
 
 

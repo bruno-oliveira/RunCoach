@@ -558,21 +558,20 @@ class TestTrainingPlanGenerator:
                 quality_found = True
         assert quality_found, "Plan should have build/peak weeks with quality"
 
-    def test_low_volume_time_based_description(self, plan_generator: TrainingPlanGenerator):
-        """Very low volume plans should use time-based descriptions."""
+    def test_low_volume_carries_duration_hint(self, plan_generator: TrainingPlanGenerator):
+        """Sub-3km easies must carry a duration_min UX hint after the post-build pass."""
         plan = plan_generator.generate_plan(
             current_km=5.0, target_distance=5.0, weeks=8, max_runs_per_week=3,
         )
-        found_time_based = False
+        found_short_easy = False
         for week in plan:
             for workout in week["daily_workouts"]:
-                if workout["type"] == "easy" and workout.get("distance", 0) < 3.0:
+                if workout["type"] == "easy" and 0 < workout.get("distance", 0) < 3.0:
                     assert "duration_min" in workout, \
-                        f"W{week['week']} D{workout['day']}: low-distance easy should have duration_min"
-                    assert "minutes" in workout["description"].lower(), \
-                        f"W{week['week']} D{workout['day']}: description should mention minutes"
-                    found_time_based = True
-        assert found_time_based, "Low-volume plan should have time-based workouts"
+                        f"W{week['week']} D{workout['day']}: short easy should carry duration_min"
+                    assert workout["duration_min"] > 0
+                    found_short_easy = True
+        assert found_short_easy, "Low-volume plan should have at least one sub-3km easy"
 
     def test_marathon_adequate_peak_and_long_run(self, plan_generator: TrainingPlanGenerator):
         """Marathon plans should reach adequate peak mileage and long run distances."""

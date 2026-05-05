@@ -218,3 +218,144 @@ class TestQualityCapsHold:
                         f"Week {week['week']}: {w['type']} ({w['distance']}km) > "
                         f"90% of long ({long_d}km)"
                     )
+
+
+class TestWeeklyTotalWithinTolerance:
+    """Sum of workout distances must equal the week's reported total_km
+    (and stay within tolerance of the planner target).
+    Invariant 1: weekly distances sum to a consistent value.
+    """
+
+    @pytest.mark.parametrize("combo", ALL_COMBOS, ids=[_id(c) for c in ALL_COMBOS])
+    def test_total_matches_sum(self, combo):
+        distance, mileage, max_runs = combo
+        plan, _ = _generate_plan(distance, mileage, max_runs)
+
+        for week in plan:
+            actual_sum = round(
+                sum(w.get("distance", 0) for w in week.get("daily_workouts", [])), 1
+            )
+            reported = round(week.get("total_km", 0), 1)
+            assert abs(actual_sum - reported) <= 0.2, (
+                f"Week {week['week']}: sum {actual_sum} != total_km {reported}"
+            )
+
+
+class TestStepDistanceMatchesWorkout:
+    """The primary running segments of a workout must sum to its reported
+    distance. Recovery jogs and walks are inherent to the structure but
+    aren't billed against the workout's km budget.
+
+    Invariant 2: segments reconcile to workout distance.
+
+    Key-workout-overlaid sessions are excluded: their structure is
+    authored prescriptively (e.g. "6 × 3 min hill") and is allowed to
+    diverge from the budget allocation.
+    """
+
+    # Strides are a finishing touch (e.g. 6 × 100 m) that aren't billed
+    # against the easy-run budget. Excluded for the same reason recovery/
+    # walk are.
+    PRIMARY_KINDS = {"warmup", "run", "cooldown"}
+
+    @classmethod
+    def _primary_km(cls, steps):
+        from app.core.training.workout_steps import _parse_pace_str_to_min_per_km
+
+        total_m = 0.0
+        for s in steps:
+            if s.get("kind") not in cls.PRIMARY_KINDS:
+                continue
+            repeat = s.get("repeat", 1) or 1
+            if s.get("distance_m"):
+                total_m += s["distance_m"] * repeat
+            elif s.get("duration_s"):
+                pace = _parse_pace_str_to_min_per_km(
+                    s.get("pace_str"), s.get("pace_zone"),
+                )
+                if pace and pace > 0:
+                    total_m += (s["duration_s"] / 60.0) / pace * 1000 * repeat
+        return total_m / 1000.0
+
+    @pytest.mark.parametrize("combo", ALL_COMBOS, ids=[_id(c) for c in ALL_COMBOS])
+    def test_step_sum_matches_distance(self, combo):
+        distance, mileage, max_runs = combo
+        plan, _ = _generate_plan(distance, mileage, max_runs)
+
+        for week in plan:
+            for w in week.get("daily_workouts", []):
+                if w.get("type") in ("rest", "recovery"):
+                    continue
+                if w.get("key_workout_id"):
+                    continue
+                steps = w.get("steps") or []
+                if not steps:
+                    continue
+                step_km = self._primary_km(steps)
+                planned = w.get("distance", 0) or 0
+                # Tolerance is type-aware: easy/long are single-segment so
+                # match exactly within rounding; tempo is wu+main+cd which
+                # is also tight; intervals/hills include prescriptive
+                # fixed-structure variants (e.g. "8 × 30 s hill repeats")
+                # whose physical volume can't be scaled to fit any budget.
+                if w.get("type") in ("easy", "long"):
+                    # 0.3 absorbs cumulative rounding from _set_distance
+                    # passes (each round-trip can add ±0.05 km).
+                    tolerance = 0.3
+                elif w.get("type") == "tempo":
+                    tolerance = 0.3 + planned * 0.10
+                else:
+                    tolerance = 0.6 + planned * 0.40
+                assert abs(step_km - planned) <= tolerance, (
+                    f"Week {week['week']} D{w.get('day')} {w.get('type')}: "
+                    f"primary steps {step_km:.2f}km vs workout {planned}km "
+                    f"(tol {tolerance:.2f})"
+                )
+
+
+class TestLowBudgetQualityDemotion:
+    """When the planner's quality budget falls below the demotion floor,
+    the slot becomes an easy run rather than a thin quality session.
+    Invariant 3: no thin-stimulus workouts dressed up as quality.
+    """
+
+    def test_tiny_budget_has_no_sub_floor_quality(self):
+        from app.core.generators.weekly_plan_builder import _QUALITY_DEMOTE_THRESHOLD_KM
+
+        plan, _ = _generate_plan(5.0, 5, 3)
+        for week in plan:
+            for w in week.get("daily_workouts", []):
+                if w.get("type") in ("tempo", "interval", "hill"):
+                    assert w.get("distance", 0) >= _QUALITY_DEMOTE_THRESHOLD_KM, (
+                        f"Week {week['week']}: {w['type']} at {w['distance']}km "
+                        f"below demote floor {_QUALITY_DEMOTE_THRESHOLD_KM}"
+                    )
+
+
+class TestDurationHintBoundary:
+    """Sub-3km running workouts get a duration_min hint; longer ones don't.
+    Invariant 3: user-facing values include the time the runner will spend.
+    """
+
+    @pytest.mark.parametrize("combo", ALL_COMBOS, ids=[_id(c) for c in ALL_COMBOS])
+    def test_duration_hint_only_below_3km(self, combo):
+        distance, mileage, max_runs = combo
+        plan, _ = _generate_plan(distance, mileage, max_runs)
+
+        for week in plan:
+            for w in week.get("daily_workouts", []):
+                if w.get("type") in ("rest", "recovery", "run_walk"):
+                    continue
+                d = w.get("distance", 0) or 0
+                if d <= 0:
+                    continue
+                if d < 3.0:
+                    assert w.get("duration_min"), (
+                        f"Week {week['week']} D{w.get('day')} {w.get('type')} "
+                        f"at {d}km should carry duration_min hint"
+                    )
+                else:
+                    assert not w.get("duration_min"), (
+                        f"Week {week['week']} D{w.get('day')} {w.get('type')} "
+                        f"at {d}km should NOT carry duration_min hint"
+                    )

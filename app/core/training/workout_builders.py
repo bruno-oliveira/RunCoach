@@ -4,7 +4,6 @@ Creates workout dictionaries for each workout type (rest, recovery, easy,
 long, tempo, interval, hill) with appropriate descriptions and pace zones.
 """
 
-import random
 from typing import Any, Dict, List, Optional
 
 from app.core.training import workout_steps
@@ -14,63 +13,6 @@ from app.core.training.strength_plan import (
 )
 from app.core.training.vdot_calculator import VDOTCalculator
 from app.core.coaching.training_tips import get_tips_for_week
-
-
-_TIME_THRESHOLD = {'easy': 3.0, 'long': 3.0, 'tempo': 2.0, 'interval': 2.0, 'hill': 2.0}
-_MIN_DURATION = {'easy': 20, 'long': 25, 'tempo': 25, 'interval': 25, 'hill': 25}
-
-
-def _apply_time_based(workout: Dict[str, Any],
-                      pace_zones: Optional[Dict] = None) -> Dict[str, Any]:
-    """Add duration_min and rewrite description+steps when distance is too short to be meaningful."""
-    wtype = workout.get('type', '')
-    dist = workout.get('distance', 0)
-    threshold = _TIME_THRESHOLD.get(wtype)
-    if threshold is None or dist >= threshold:
-        return workout
-    dur = _MIN_DURATION[wtype]
-    workout['duration_min'] = dur
-    descs = {
-        'easy': f'Easy run for {dur} minutes at conversational pace.',
-        'long': f'Long run for {dur} minutes at easy pace. Focus on time on feet.',
-        'tempo': f'Tempo session for {dur} minutes: 5min warmup, {dur - 10}min at comfortably hard effort, 5min cooldown.',
-        'interval': f'Interval session for {dur} minutes: warmup, 6x1min hard / 1min easy, cooldown.',
-        'hill': f'Hill session for {dur} minutes: warmup, 6x30sec uphill hard with jog-down recovery, cooldown.',
-    }
-    if wtype in descs:
-        workout['description'] = descs[wtype]
-    workout['steps'] = _time_based_steps(wtype, dur, pace_zones)
-    workout['distance'] = round(workout_steps._compute_distance_from_steps(workout['steps']), 1)
-    return workout
-
-
-def _time_based_steps(wtype: str, dur: int,
-                      pace_zones: Optional[Dict] = None) -> List[Dict[str, Any]]:
-    _ps = workout_steps._pace_str
-    wu = workout_steps._step("warmup", "5 min warm-up", duration_s=300, pace_zone="E", pace_str=_ps("E", pace_zones), effort="easy")
-    cd = workout_steps._step("cooldown", "5 min cool-down", duration_s=300, pace_zone="E", pace_str=_ps("E", pace_zones), effort="easy")
-    if wtype == 'tempo':
-        main_s = (dur - 10) * 60
-        return [wu, workout_steps._step("run", f"{dur - 10} min tempo", duration_s=main_s, pace_zone="T", pace_str=_ps("T", pace_zones), effort="comfortably hard"), cd]
-    if wtype == 'interval':
-        return [
-            wu,
-            workout_steps._step("run", "6 × 1 min hard", duration_s=60, repeat=6, pace_zone="I", pace_str=_ps("I", pace_zones), effort="hard"),
-            workout_steps._step("recovery", "1 min easy jog", duration_s=60, repeat=6, pace_zone="E", pace_str=_ps("E", pace_zones), effort="jog"),
-            cd,
-        ]
-    if wtype == 'hill':
-        return [
-            wu,
-            workout_steps._step("run", "6 × 30 s uphill", duration_s=30, repeat=6, pace_zone="I", pace_str=_ps("I", pace_zones), effort="hard uphill"),
-            workout_steps._step("recovery", "Jog-down recovery", duration_s=60, repeat=6, pace_zone="E", pace_str=_ps("E", pace_zones), effort="jog"),
-            cd,
-        ]
-    if wtype == 'easy':
-        return [workout_steps._step("run", f"{dur} min easy", duration_s=dur * 60, pace_zone="E", pace_str=_ps("E", pace_zones), effort="conversational")]
-    if wtype == 'long':
-        return [workout_steps._step("run", f"{dur} min easy", duration_s=dur * 60, pace_zone="E", pace_str=_ps("E", pace_zones), effort="conversational", note="Focus on time on feet")]
-    return []
 
 
 def generate_rest_day(day: int) -> Dict[str, Any]:
@@ -167,14 +109,14 @@ def generate_long_run(day: int, distance: float, total_km: float,
         ]
 
     variant = 'mp_finish' if (day % 3 == 1) else 'easy'
-    return _apply_time_based({
+    return {
         'day': day,
         'type': 'long',
         'distance': round(distance, 1),
         'intensity': 'medium',
         'description': long_run_notes[day % len(long_run_notes)],
         'steps': workout_steps.build_long_steps(distance, pace_zones, variant=variant),
-    }, pace_zones)
+    }
 
 
 def generate_easy_run(day: int, distance: float, total_km: float,
@@ -199,7 +141,7 @@ def generate_easy_run(day: int, distance: float, total_km: float,
             f'Conversational pace run. Focus on relaxed form and breathing.'
         ]
 
-    return _apply_time_based({
+    return {
         'day': day,
         'type': 'easy',
         'distance': distance,
@@ -208,7 +150,7 @@ def generate_easy_run(day: int, distance: float, total_km: float,
         'steps': workout_steps.build_easy_steps(
             distance, pace_zones, with_strides=(variant_idx == 1)
         ),
-    }, pace_zones)
+    }
 
 
 def generate_tempo_run(day: int, distance: float, total_km: float,
@@ -238,14 +180,14 @@ def generate_tempo_run(day: int, distance: float, total_km: float,
         tempo_variations[variant_idx], pace_zones or {}, "tempo"
     )
 
-    return _apply_time_based({
+    return {
         'day': day,
         'type': 'tempo',
         'distance': round(distance, 1),
         'intensity': 'medium',
         'description': description,
         'steps': workout_steps.build_tempo_steps(distance, pace_zones, variant=variant_idx),
-    }, pace_zones)
+    }
 
 
 def generate_interval_run(day: int, distance: float, total_km: float,
@@ -317,7 +259,7 @@ def generate_interval_run(day: int, distance: float, total_km: float,
         interval_workouts[variant_idx], pace_zones or {}, "interval"
     )
 
-    return _apply_time_based({
+    return {
         'day': day,
         'type': 'interval',
         'distance': round(distance, 1),
@@ -328,7 +270,7 @@ def generate_interval_run(day: int, distance: float, total_km: float,
             reps_400=reps_400, reps_800=reps_800,
             reps_1000=reps_1000, reps_200=reps_200,
         ),
-    }, pace_zones)
+    }
 
 
 def generate_hill_workout(day: int, distance: float = 0) -> Dict[str, Any]:
@@ -339,14 +281,14 @@ def generate_hill_workout(day: int, distance: float = 0) -> Dict[str, Any]:
         f'Hill bounding: 8x20sec explosive uphill bounds with full recovery.'
     ]
 
-    return _apply_time_based({
+    return {
         'day': day,
         'type': 'hill',
         'distance': round(distance, 1) if distance > 0 else 0,
         'intensity': 'high',
         'description': hill_workouts[day % len(hill_workouts)],
         'steps': workout_steps.build_hill_steps(distance, None),
-    })
+    }
 
 
 def generate_training_tips(week_number: int, target_distance: float) -> List[str]:

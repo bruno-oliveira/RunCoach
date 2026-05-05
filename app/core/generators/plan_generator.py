@@ -284,6 +284,7 @@ class TrainingPlanGenerator:
             )
 
             # Enforce 10% cap against actual high-water mark.
+            from app.core.generators.weekly_plan_builder import _set_distance
             is_recovery = weekly_plan.get('is_recovery', False)
             actual_km = weekly_plan['total_km']
             if not is_recovery and actual_high_water > 0:
@@ -292,7 +293,7 @@ class TrainingPlanGenerator:
                     scale = ceiling / actual_km
                     for w in weekly_plan['daily_workouts']:
                         if w.get('distance', 0) > 0:
-                            w['distance'] = round(w['distance'] * scale, 1)
+                            _set_distance(w, w['distance'] * scale)
                     new_total = round(
                         sum(w.get('distance', 0) for w in weekly_plan['daily_workouts']), 1,
                     )
@@ -302,7 +303,7 @@ class TrainingPlanGenerator:
                             (w for w in weekly_plan['daily_workouts'] if w.get('distance', 0) > 0),
                             key=lambda w: w['distance'],
                         )
-                        largest['distance'] = round(largest['distance'] - excess, 1)
+                        _set_distance(largest, largest['distance'] - excess)
                         new_total = round(
                             sum(w.get('distance', 0) for w in weekly_plan['daily_workouts']), 1,
                         )
