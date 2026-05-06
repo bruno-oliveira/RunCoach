@@ -809,8 +809,8 @@
         plan_user_id: {{ training_plan.user_id | tojson }},
         current_user_id: {{ (user.id if user else None) | tojson }},
         share_token: {{ (training_plan.share_token or '') | tojson }},
-        adaptation_alert: {{ (training_plan.adaptation_alert | default('null', true)) | safe }},
-        pending_recommendation: {{ (training_plan.pending_recommendation | default('null', true)) | safe }}
+        adaptation_alert: {{ training_plan.adaptation_alert | tojson }},
+        pending_recommendation: {{ training_plan.pending_recommendation | tojson }}
     };
 
     function showShareToast(msg) {
