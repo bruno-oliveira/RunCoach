@@ -64,11 +64,6 @@ def _validate_production_secrets() -> None:
             "JWTs will be invalidated on every restart. "
             "Set SECRET_KEY as a persistent secret (e.g. `fly secrets set SECRET_KEY=...`)."
         )
-    if not os.environ.get("ENCRYPTION_KEY"):
-        logger.warning(
-            "ENCRYPTION_KEY not set — falling back to SECRET_KEY for data encryption. "
-            "Set a separate ENCRYPTION_KEY for defense-in-depth."
-        )
     if not settings.debug:
         weak_patterns = ["dev-secret", "your-secret", "change-in-production", "placeholder"]
         key = settings.secret_key
@@ -77,6 +72,26 @@ def _validate_production_secrets() -> None:
                 "SECRET_KEY is too weak for production. "
                 "Set a random key of at least 32 characters."
             )
+        if not settings.encryption_key:
+            raise RuntimeError(
+                "ENCRYPTION_KEY is required in production. "
+                "Set a separate key from SECRET_KEY (e.g. `fly secrets set ENCRYPTION_KEY=...`) "
+                "so a JWT-key compromise does not expose data-at-rest."
+            )
+        if len(settings.encryption_key) < 32:
+            raise RuntimeError(
+                "ENCRYPTION_KEY is too weak. Use at least 32 characters of random entropy."
+            )
+        if settings.encryption_key == settings.secret_key:
+            raise RuntimeError(
+                "ENCRYPTION_KEY must differ from SECRET_KEY. "
+                "Reusing the JWT secret for data encryption breaks defense-in-depth."
+            )
+    elif not settings.encryption_key:
+        logger.warning(
+            "ENCRYPTION_KEY not set — falling back to SECRET_KEY for data encryption. "
+            "This is allowed in debug mode only. Set a separate ENCRYPTION_KEY for production."
+        )
 
 
 def _run_startup_migrations() -> None:

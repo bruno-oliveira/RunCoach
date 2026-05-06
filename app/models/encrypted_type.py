@@ -19,9 +19,20 @@ def _derive_fernet_key(secret: str) -> bytes:
 
 
 def _get_encryption_secret() -> str:
-    """Return the encryption key source, preferring ENCRYPTION_KEY over SECRET_KEY."""
+    """Return the data-encryption secret, falling back to SECRET_KEY only in debug.
+
+    In production we require ENCRYPTION_KEY to be set and distinct from SECRET_KEY
+    so a leak of the JWT signing key does not expose Strava tokens at rest.
+    """
     from app.config import settings
-    return settings.encryption_key if settings.encryption_key else settings.secret_key
+    if settings.encryption_key:
+        return settings.encryption_key
+    if not settings.debug:
+        raise RuntimeError(
+            "ENCRYPTION_KEY is required in non-debug mode. "
+            "Set a separate key from SECRET_KEY for data-at-rest encryption."
+        )
+    return settings.secret_key
 
 
 class EncryptedString(TypeDecorator):
@@ -30,7 +41,7 @@ class EncryptedString(TypeDecorator):
     Values are encrypted before writing to the database and decrypted
     when read back. Null values pass through unchanged.
 
-    Uses ENCRYPTION_KEY if set, otherwise falls back to SECRET_KEY.
+    Uses ENCRYPTION_KEY. In debug mode only, falls back to SECRET_KEY.
     """
 
     impl = String

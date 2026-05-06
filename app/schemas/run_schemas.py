@@ -6,6 +6,7 @@ from typing import Any, Dict, List, Optional
 from pydantic import BaseModel, Field, field_validator
 
 from app.constants import WORKOUT_TYPES
+from app.utils import sanitize_user_text
 
 
 class RunLogBase(BaseModel):
@@ -26,6 +27,11 @@ class RunLogBase(BaseModel):
             if v not in WORKOUT_TYPES:
                 raise ValueError(f"workout_type must be one of: {', '.join(WORKOUT_TYPES)}")
         return v
+
+    @field_validator("notes")
+    @classmethod
+    def sanitize_notes(cls, v: Optional[str]) -> Optional[str]:
+        return sanitize_user_text(v)
 
 
 class RunLogCreate(RunLogBase):
@@ -53,6 +59,11 @@ class RunLogUpdate(BaseModel):
             if v not in WORKOUT_TYPES:
                 raise ValueError(f"workout_type must be one of: {', '.join(WORKOUT_TYPES)}")
         return v
+
+    @field_validator("notes")
+    @classmethod
+    def sanitize_notes(cls, v: Optional[str]) -> Optional[str]:
+        return sanitize_user_text(v)
 
 
 class RunLogResponse(RunLogBase):
