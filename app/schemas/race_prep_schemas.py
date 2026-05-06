@@ -39,6 +39,9 @@ class ElevationSegment(BaseModel):
     end_km: float
     avg_elevation: float
     grade_pct: float
+    net_grade_pct: float = 0.0
+    elevation_gain: float = 0.0
+    elevation_loss: float = 0.0
 
 
 class RacePrepRequest(BaseModel):
@@ -57,6 +60,7 @@ class RaceSegment(BaseModel):
     end_km: float
     elevation_m: float
     grade_pct: float
+    net_grade_pct: float = 0.0
     target_pace_min_km: float
     target_pace_str: str
     target_time_seconds: int

@@ -89,6 +89,9 @@
             return s.avg_elevation;
         });
         var grades = profile.map(function (s) {
+            return s.net_grade_pct !== undefined ? s.net_grade_pct : s.grade_pct;
+        });
+        var effectiveGrades = profile.map(function (s) {
             return s.grade_pct;
         });
 
@@ -107,13 +110,26 @@
                         order: 2,
                     },
                     {
-                        label: "Grade (%)",
+                        label: "Net Grade (%)",
                         data: grades,
                         type: "line",
                         borderColor: "rgba(239, 68, 68, 0.8)",
                         backgroundColor: "rgba(239, 68, 68, 0.1)",
                         borderWidth: 2,
                         pointRadius: 2,
+                        tension: 0.3,
+                        yAxisID: "y1",
+                        order: 1,
+                    },
+                    {
+                        label: "Effective Grade (%)",
+                        data: effectiveGrades,
+                        type: "line",
+                        borderColor: "rgba(245, 158, 11, 0.6)",
+                        backgroundColor: "rgba(245, 158, 11, 0.05)",
+                        borderWidth: 1,
+                        borderDash: [5, 3],
+                        pointRadius: 1,
                         tension: 0.3,
                         yAxisID: "y1",
                         order: 1,
@@ -128,6 +144,16 @@
                         position: "top",
                         labels: { font: { size: 11 } },
                     },
+                    tooltip: {
+                        callbacks: {
+                            afterLabel: function(context) {
+                                if (context.dataset.label === "Effective Grade (%)") {
+                                    return "Cumulative climbing effort";
+                                }
+                                return "";
+                            }
+                        }
+                    }
                 },
                 scales: {
                     x: {
@@ -167,7 +193,10 @@
             return s.target_pace_min_km;
         });
         var elevations = segments.map(function (s) {
-            return s.avg_elevation;
+            return s.elevation_m;
+        });
+        var netGrades = segments.map(function (s) {
+            return s.net_grade_pct !== undefined ? s.net_grade_pct : s.grade_pct;
         });
 
         blueprintChart = new Chart(ctx, {
@@ -197,6 +226,18 @@
                         yAxisID: "y1",
                         order: 2,
                     },
+                    {
+                        label: "Net Grade (%)",
+                        data: netGrades,
+                        type: "line",
+                        borderColor: "rgba(239, 68, 68, 0.7)",
+                        backgroundColor: "rgba(239, 68, 68, 0.05)",
+                        borderWidth: 1,
+                        pointRadius: 1,
+                        tension: 0.3,
+                        yAxisID: "y2",
+                        order: 1,
+                    },
                 ],
             },
             options: {
@@ -215,7 +256,7 @@
                                     var secs = Math.round((context.parsed.y - mins) * 60);
                                     return context.dataset.label + ": " + mins + ":" + String(secs).padStart(2, "0") + "/km";
                                 }
-                                return context.dataset.label + ": " + context.parsed.y + "m";
+                                return context.dataset.label + ": " + context.parsed.y + (context.dataset.label.indexOf("Grade") !== -1 ? "%" : "m");
                             },
                         },
                     },
@@ -243,6 +284,12 @@
                         ticks: { font: { size: 10 } },
                         grid: { drawOnChartArea: false },
                     },
+                    y2: {
+                        position: "right",
+                        title: { display: true, text: "Grade (%)", font: { size: 11 } },
+                        ticks: { font: { size: 10 } },
+                        grid: { drawOnChartArea: false },
+                    },
                 },
             },
         });
@@ -256,15 +303,21 @@
         segments.forEach(function (seg) {
             var tr = document.createElement("tr");
 
-            var gradeClass = "grade-flat";
-            if (seg.grade_pct > 0.5) gradeClass = "grade-uphill";
-            else if (seg.grade_pct < -0.5) gradeClass = "grade-downhill";
+            var netGrade = seg.net_grade_pct !== undefined ? seg.net_grade_pct : seg.grade_pct;
+            var effectiveGrade = seg.grade_pct;
 
-            var gradeStr = seg.grade_pct > 0 ? "+" + seg.grade_pct.toFixed(1) + "%" : seg.grade_pct.toFixed(1) + "%";
+            var gradeClass = "grade-flat";
+            if (netGrade > 0.5) gradeClass = "grade-uphill";
+            else if (netGrade < -0.5) gradeClass = "grade-downhill";
+
+            var netGradeStr = netGrade > 0 ? "+" + netGrade.toFixed(1) + "%" : netGrade.toFixed(1) + "%";
+            var gradeDisplay = effectiveGrade > 0.5
+                ? netGradeStr + " <span class='grade-effective'>(+" + effectiveGrade.toFixed(1) + "% eff)</span>"
+                : netGradeStr;
 
             tr.innerHTML =
                 "<td>" + seg.start_km + "-" + seg.end_km + "</td>" +
-                "<td class='" + gradeClass + "'>" + gradeStr + "</td>" +
+                "<td class='" + gradeClass + "'>" + gradeDisplay + "</td>" +
                 "<td>" + seg.elevation_m + "m</td>" +
                 "<td>" + seg.target_pace_str + "</td>" +
                 "<td>" + formatDuration(seg.target_time_seconds) + "</td>" +

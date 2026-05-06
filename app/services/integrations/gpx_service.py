@@ -84,6 +84,12 @@ class GPXService:
     ) -> list[dict[str, Any]]:
         """Segment a race route into 1km chunks with elevation and grade data.
 
+        Uses cumulative elevation gain within each segment (not net change)
+        to compute an effective grade that reflects actual climbing effort.
+        This matters for rolling terrain where a segment may climb 200m and
+        descend 150m — the net is only +50m but the runner still paid for
+        200m of climbing.
+
         Args:
             trackpoints: List of trackpoint dicts from parse_gpx.
             segment_km: Length of each segment in km (default 1.0).
@@ -117,16 +123,29 @@ class GPXService:
             start_elev = segment_points[0]["elevation"]
             end_elev = segment_points[-1]["elevation"]
             distance_m = (seg_end - seg_start) * 1000.0
-            grade_pct = ((end_elev - start_elev) / distance_m * 100.0) if distance_m > 0 else 0.0
+
+            net_elev_change = end_elev - start_elev
+
+            seg_gain = 0.0
+            seg_loss = 0.0
+            for i in range(1, len(segment_points)):
+                diff = segment_points[i]["elevation"] - segment_points[i - 1]["elevation"]
+                if diff > 0:
+                    seg_gain += diff
+                else:
+                    seg_loss += abs(diff)
+
+            effective_grade_pct = (seg_gain / distance_m * 100.0) if distance_m > 0 else 0.0
 
             segments.append({
                 "segment_number": segment_index + 1,
                 "start_km": round(seg_start, 2),
                 "end_km": round(seg_end, 2),
                 "avg_elevation": round(avg_elevation, 1),
-                "grade_pct": round(grade_pct, 2),
-                "elevation_gain": round(max(0, end_elev - start_elev), 1),
-                "elevation_loss": round(max(0, start_elev - end_elev), 1),
+                "grade_pct": round(effective_grade_pct, 2),
+                "net_grade_pct": round((net_elev_change / distance_m * 100.0) if distance_m > 0 else 0.0, 2),
+                "elevation_gain": round(seg_gain, 1),
+                "elevation_loss": round(seg_loss, 1),
             })
             segment_index += 1
 

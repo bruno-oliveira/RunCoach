@@ -125,12 +125,14 @@ class RacePacingService:
         for seg in elevation_profile:
             seg_distance = seg["end_km"] - seg["start_km"]
             grade = seg["grade_pct"]
+            net_grade = seg.get("net_grade_pct", grade)
 
             if grade > 0:
                 penalty = grade * UPHILL_PENALTY_SEC_PER_KM_PER_PCT * seg_distance
                 total_penalty += penalty
-            elif grade < 0:
-                bonus = abs(grade) * DOWNHILL_BONUS_SEC_PER_KM_PER_PCT * seg_distance
+
+            if net_grade < 0:
+                bonus = abs(net_grade) * DOWNHILL_BONUS_SEC_PER_KM_PER_PCT * seg_distance
                 bonus = min(bonus, MAX_DOWNHILL_BONUS_SEC_PER_KM * seg_distance)
                 total_bonus += bonus
 
@@ -224,13 +226,15 @@ class RacePacingService:
         for seg in elevation_profile:
             seg_distance = seg["end_km"] - seg["start_km"]
             grade = seg["grade_pct"]
+            net_grade = seg.get("net_grade_pct", grade)
 
             adjusted_pace = base_pace_sec_per_km
 
             if grade > 0:
                 adjusted_pace += grade * UPHILL_PENALTY_SEC_PER_KM_PER_PCT
-            elif grade < 0:
-                bonus = abs(grade) * DOWNHILL_BONUS_SEC_PER_KM_PER_PCT
+
+            if net_grade < 0:
+                bonus = abs(net_grade) * DOWNHILL_BONUS_SEC_PER_KM_PER_PCT
                 bonus = min(bonus, MAX_DOWNHILL_BONUS_SEC_PER_KM)
                 adjusted_pace -= bonus
 
@@ -252,6 +256,7 @@ class RacePacingService:
                 end_km=seg["end_km"],
                 elevation_m=seg["avg_elevation"],
                 grade_pct=seg["grade_pct"],
+                net_grade_pct=seg.get("net_grade_pct", 0.0),
                 target_pace_min_km=round(pace_min_km, 2),
                 target_pace_str=pace_str,
                 target_time_seconds=segment_time,

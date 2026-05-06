@@ -111,10 +111,13 @@ async def analyze_gpx(
         elevation_penalty = time_data["elevation_penalty"]
 
         trail_runs_count = _count_user_trail_runs(current_user.id, db)
+        total_gain_from_profile = sum(
+            seg.get("elevation_gain", 0) for seg in elevation_profile
+        )
         vdot_enhanced = VDOTCalculator.predict_time_for_distance(
             user_vdot,
             distance_km,
-            elevation_gain_m=parsed["elevation_gain"],
+            elevation_gain_m=total_gain_from_profile,
             trail_runs_count=trail_runs_count,
         )
     else:
@@ -147,6 +150,9 @@ async def analyze_gpx(
                 "end_km": s["end_km"],
                 "avg_elevation": s["avg_elevation"],
                 "grade_pct": s["grade_pct"],
+                "net_grade_pct": s.get("net_grade_pct", 0.0),
+                "elevation_gain": s.get("elevation_gain", 0.0),
+                "elevation_loss": s.get("elevation_loss", 0.0),
             }
             for s in elevation_profile
         ],
@@ -187,10 +193,19 @@ async def generate_blueprint(
     target_time = request.target_time_seconds
 
     if target_time is None or target_time <= 0:
-        time_data = RacePacingService.predict_elevation_adjusted_time(
-            user_vdot, distance_km, elevation_profile
+        trail_runs_count = _count_user_trail_runs(current_user.id, db)
+        total_elevation_gain = sum(
+            seg.get("elevation_gain", 0) for seg in elevation_profile
         )
-        target_time = time_data["elevation_adjusted"]
+        enhanced = VDOTCalculator.predict_time_for_distance(
+            user_vdot,
+            distance_km,
+            elevation_gain_m=total_elevation_gain,
+            trail_runs_count=trail_runs_count,
+        )
+        target_time = enhanced if enhanced else RacePacingService.predict_elevation_adjusted_time(
+            user_vdot, distance_km, elevation_profile
+        )["elevation_adjusted"]
 
     blueprint = RacePacingService.generate_pace_blueprint(
         elevation_profile=elevation_profile,
