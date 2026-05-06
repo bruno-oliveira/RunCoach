@@ -23,7 +23,6 @@ class GPXAnalysisResponse(BaseModel):
     flat_estimate_seconds: int
     elevation_adjusted_seconds: int
     elevation_penalty_seconds: int
-    vdot_enhanced_seconds: int | None = None
     user_vdot: float
     vdot_run_count: int
     vdot_confidence: str

@@ -264,20 +264,6 @@
     color: var(--color-primary);
 }
 
-.time-row--enhanced {
-    padding-top: var(--space-2);
-}
-
-.time-row--enhanced .time-label {
-    color: var(--color-text-secondary);
-    font-style: italic;
-}
-
-.time-row--enhanced .time-value {
-    font-size: var(--text-base);
-    color: var(--color-success);
-}
-
 .feasibility-badge {
     display: inline-block;
     padding: var(--space-1) var(--space-2);

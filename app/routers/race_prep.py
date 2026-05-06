@@ -14,7 +14,6 @@ from app.models import RunLog, User
 from app.schemas.race_prep_schemas import GPXAnalysisResponse, RaceBlueprint, RacePrepRequest
 from app.services.integrations.gpx_service import GPXService
 from app.services.fitness.race_pacing_service import RacePacingService
-from app.core.training.vdot_calculator import VDOTCalculator
 from app.template_helpers import create_templates
 
 logger = logging.getLogger(__name__)
@@ -101,25 +100,16 @@ async def analyze_gpx(
     user_vdot = vdot_info["vdot"]
     distance_km = parsed["distance_km"]
 
-    vdot_enhanced: int | None = None
     if user_vdot > 0:
+        trail_runs_count = (
+            _count_user_trail_runs(current_user.id, db) if current_user else None
+        )
         time_data = RacePacingService.predict_elevation_adjusted_time(
-            user_vdot, distance_km, elevation_profile
+            user_vdot, distance_km, elevation_profile, trail_runs_count=trail_runs_count
         )
         flat_time = time_data["flat_time"]
         elevation_adjusted = time_data["elevation_adjusted"]
         elevation_penalty = time_data["elevation_penalty"]
-
-        trail_runs_count = _count_user_trail_runs(current_user.id, db)
-        total_gain_from_profile = sum(
-            seg.get("elevation_gain", 0) for seg in elevation_profile
-        )
-        vdot_enhanced = VDOTCalculator.predict_time_for_distance(
-            user_vdot,
-            distance_km,
-            elevation_gain_m=total_gain_from_profile,
-            trail_runs_count=trail_runs_count,
-        )
     else:
         flat_time = 0
         elevation_adjusted = 0
@@ -139,7 +129,6 @@ async def analyze_gpx(
         flat_estimate_seconds=flat_time,
         elevation_adjusted_seconds=elevation_adjusted,
         elevation_penalty_seconds=elevation_penalty,
-        vdot_enhanced_seconds=vdot_enhanced,
         user_vdot=user_vdot,
         vdot_run_count=vdot_info["run_count"],
         vdot_confidence=vdot_info["confidence"],
@@ -191,20 +180,12 @@ async def generate_blueprint(
 
     distance_km = request.distance_km or elevation_profile[-1]["end_km"]
     target_time = request.target_time_seconds
+    trail_runs_count = _count_user_trail_runs(current_user.id, db)
 
     if target_time is None or target_time <= 0:
-        trail_runs_count = _count_user_trail_runs(current_user.id, db)
-        total_elevation_gain = sum(
-            seg.get("elevation_gain", 0) for seg in elevation_profile
-        )
-        enhanced = VDOTCalculator.predict_time_for_distance(
-            user_vdot,
-            distance_km,
-            elevation_gain_m=total_elevation_gain,
+        target_time = RacePacingService.predict_elevation_adjusted_time(
+            user_vdot, distance_km, elevation_profile,
             trail_runs_count=trail_runs_count,
-        )
-        target_time = enhanced if enhanced else RacePacingService.predict_elevation_adjusted_time(
-            user_vdot, distance_km, elevation_profile
         )["elevation_adjusted"]
 
     blueprint = RacePacingService.generate_pace_blueprint(
@@ -212,6 +193,7 @@ async def generate_blueprint(
         target_time_seconds=target_time,
         user_vdot=user_vdot,
         distance_km=distance_km,
+        trail_runs_count=trail_runs_count,
     )
 
     session_id = str(uuid.uuid4())

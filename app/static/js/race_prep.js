@@ -384,25 +384,7 @@
         badge.textContent = data.feasibility.label;
         badge.className = "feasibility-badge feasibility-badge--" + color;
 
-        var enhancedRow = document.getElementById("enhancedRow");
-        if (data.vdot_enhanced_seconds && data.vdot_enhanced_seconds > 0) {
-            document.getElementById("enhancedTime").textContent = formatDuration(data.vdot_enhanced_seconds);
-            enhancedRow.style.display = "flex";
-        } else {
-            enhancedRow.style.display = "none";
-        }
-
-        var profile = (data.elevation_profile || []).map(function (seg, idx) {
-            return {
-                segment_number: idx + 1,
-                start_km: seg.start_km,
-                end_km: seg.end_km,
-                avg_elevation: seg.avg_elevation,
-                grade_pct: seg.grade_pct,
-            };
-        });
-
-        renderElevationChart(profile);
+        renderElevationChart(data.elevation_profile || []);
 
         analysisCard.style.display = "block";
         analysisCard.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -421,22 +403,13 @@
         generateBlueprintBtn.textContent = "Generating...";
 
         try {
-            var profile = (analysisData.elevation_profile || []).map(function (seg) {
-                return {
-                    start_km: seg.start_km,
-                    end_km: seg.end_km,
-                    avg_elevation: seg.avg_elevation,
-                    grade_pct: seg.grade_pct,
-                };
-            });
-
             var response = await fetch("/api/race-prep/blueprint", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
                     target_time_seconds: targetTime,
                     distance_km: analysisData.distance_km,
-                    elevation_profile: profile,
+                    elevation_profile: analysisData.elevation_profile || [],
                 }),
             });
 

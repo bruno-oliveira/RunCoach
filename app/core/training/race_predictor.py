@@ -99,6 +99,14 @@ def _ultra_endurance_decay(predicted_seconds: float) -> float:
     return min(factor, _ULTRA_DECAY_MAX_FACTOR)
 
 
+# Public aliases so other modules (notably RacePacingService) share the same
+# elevation/trail/ultra math instead of reimplementing it.
+grade_penalty_rate = _grade_penalty_rate
+trail_inexperience_factor = _trail_inexperience_factor
+ultra_endurance_decay = _ultra_endurance_decay
+TRAIL_ELEVATION_M_PER_KM_THRESHOLD = 20.0
+
+
 def predict_time_for_distance(
     vdot: float,
     distance_km: float,

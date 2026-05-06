@@ -202,6 +202,103 @@ class TestRacePacingService:
         assert blueprint.total_distance_km == 3.0
         assert blueprint.target_time_seconds == 1500
 
+    def test_trail_inexperience_slows_estimate(self):
+        # 30km / 1500m gain = 50 m/km, well above the 20 m/km trail threshold.
+        profile = [
+            {
+                "start_km": float(i),
+                "end_km": float(i + 1),
+                "avg_elevation": 500.0 + i * 5,
+                "grade_pct": 5.0,
+                "net_grade_pct": 5.0,
+                "elevation_gain": 50.0,
+                "elevation_loss": 0.0,
+            }
+            for i in range(30)
+        ]
+        novice = RacePacingService.predict_elevation_adjusted_time(
+            50.0, 30.0, profile, trail_runs_count=0
+        )
+        veteran = RacePacingService.predict_elevation_adjusted_time(
+            50.0, 30.0, profile, trail_runs_count=10
+        )
+        # Novice penalty should be ~30%+ on top of the slope-only number.
+        assert novice["elevation_adjusted"] >= veteran["elevation_adjusted"] * 1.30
+
+    def test_no_trail_factor_on_flat_course(self):
+        # Pure flat course (0 elevation gain) — trail factor must not fire even
+        # for a runner with no logged trail runs.
+        profile = [
+            {
+                "start_km": float(i),
+                "end_km": float(i + 1),
+                "avg_elevation": 100.0,
+                "grade_pct": 0.0,
+                "net_grade_pct": 0.0,
+                "elevation_gain": 0.0,
+                "elevation_loss": 0.0,
+            }
+            for i in range(10)
+        ]
+        result = RacePacingService.predict_elevation_adjusted_time(
+            50.0, 10.0, profile, trail_runs_count=0
+        )
+        assert result["elevation_adjusted"] == result["flat_time"]
+
+    def test_steep_grade_uses_piecewise_rate(self):
+        # A 10% grade should cost more sec/km/% than a 2% grade because the
+        # piecewise tier kicks in at 8%+. Compare the per-km penalty implied
+        # by a single steep segment vs. a single shallow one.
+        steep_profile = [
+            {
+                "start_km": 0.0, "end_km": 1.0, "avg_elevation": 200.0,
+                "grade_pct": 10.0, "net_grade_pct": 10.0,
+                "elevation_gain": 100.0, "elevation_loss": 0.0,
+            }
+        ]
+        shallow_profile = [
+            {
+                "start_km": 0.0, "end_km": 1.0, "avg_elevation": 200.0,
+                "grade_pct": 2.0, "net_grade_pct": 2.0,
+                "elevation_gain": 20.0, "elevation_loss": 0.0,
+            }
+        ]
+        steep = RacePacingService.predict_elevation_adjusted_time(50.0, 1.0, steep_profile)
+        shallow = RacePacingService.predict_elevation_adjusted_time(50.0, 1.0, shallow_profile)
+        # Linear-12 would give 10*12=120s vs 2*12=24s (5x). Piecewise gives
+        # 10*24=240s vs 2*12=24s (10x). Just verify ratio exceeds the linear
+        # 5x to confirm piecewise is in effect.
+        steep_pen = steep["elevation_penalty"]
+        shallow_pen = shallow["elevation_penalty"]
+        assert steep_pen > shallow_pen * 5
+
+    def test_blueprint_segment_sum_matches_target(self):
+        profile = [
+            {
+                "segment_number": i + 1,
+                "start_km": float(i),
+                "end_km": float(i + 1),
+                "avg_elevation": 100.0 + i * 10,
+                "grade_pct": float(i % 5),
+                "net_grade_pct": float(i % 5) - 1.0,
+                "elevation_gain": 10.0,
+                "elevation_loss": 0.0,
+            }
+            for i in range(10)
+        ]
+        target = 3000
+        blueprint = RacePacingService.generate_pace_blueprint(
+            elevation_profile=profile,
+            target_time_seconds=target,
+            user_vdot=50.0,
+            distance_km=10.0,
+            trail_runs_count=2,
+        )
+        total = sum(seg.target_time_seconds for seg in blueprint.segments)
+        # Per-segment rounding may drift up to 1 second per segment.
+        assert abs(total - target) <= len(profile)
+        assert blueprint.segments[-1].cumulative_time_seconds == total
+
 
 @pytest.mark.usefixtures("_override_db")
 class TestRacePrepAPI:

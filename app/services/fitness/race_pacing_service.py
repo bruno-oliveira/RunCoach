@@ -3,20 +3,27 @@
 import logging
 import statistics
 from datetime import datetime, timedelta, timezone
-from typing import Any
+from typing import Any, Optional
 
 from sqlalchemy.orm import Session
 
+from app.core.training import race_predictor
 from app.core.training.vdot_calculator import VDOTCalculator
 from app.models.run_log import RunLog
 from app.schemas.race_prep_schemas import FeasibilityInfo, RaceBlueprint, RaceSegment
 
 logger = logging.getLogger(__name__)
 
-UPHILL_PENALTY_SEC_PER_KM_PER_PCT = 12
 DOWNHILL_BONUS_SEC_PER_KM_PER_PCT = 5
 MAX_DOWNHILL_BONUS_SEC_PER_KM = 15
 PACE_CLAMP_SEC_PER_KM = 30
+
+
+def _is_trail_course(distance_km: float, total_elevation_gain_m: float) -> bool:
+    """Course averages enough climbing to be classified as trail (>=20 m/km)."""
+    if distance_km <= 0:
+        return False
+    return total_elevation_gain_m / distance_km >= race_predictor.TRAIL_ELEVATION_M_PER_KM_THRESHOLD
 
 
 class RacePacingService:
@@ -98,16 +105,14 @@ class RacePacingService:
         vdot: float,
         distance_km: float,
         elevation_profile: list[dict[str, Any]],
+        trail_runs_count: Optional[int] = None,
     ) -> dict[str, int]:
-        """Calculate elevation-adjusted race time.
+        """Calculate a realistic race time from segment-level elevation data.
 
-        Args:
-            vdot: User's VDOT value.
-            distance_km: Race distance.
-            elevation_profile: List of segment dicts with grade_pct.
-
-        Returns:
-            Dict with flat_time, elevation_adjusted, and elevation_penalty.
+        Combines a piecewise grade penalty (12 → 16 → 24 → 35 sec/km/% as the
+        grade gets steeper), a downhill bonus capped at 15 sec/km, an
+        ultra-endurance decay for events beyond 3 hours, and a
+        trail-inexperience multiplier for runners with few logged trail runs.
         """
         flat_time = RacePacingService.predict_flat_time(vdot, distance_km)
         if flat_time == 0:
@@ -117,32 +122,38 @@ class RacePacingService:
                 "elevation_penalty": 0,
             }
 
-        base_pace_sec_per_km = flat_time / distance_km
-
         total_penalty = 0.0
         total_bonus = 0.0
+        total_elevation_gain = 0.0
 
         for seg in elevation_profile:
             seg_distance = seg["end_km"] - seg["start_km"]
             grade = seg["grade_pct"]
             net_grade = seg.get("net_grade_pct", grade)
+            total_elevation_gain += seg.get("elevation_gain", 0.0)
 
             if grade > 0:
-                penalty = grade * UPHILL_PENALTY_SEC_PER_KM_PER_PCT * seg_distance
-                total_penalty += penalty
+                rate = race_predictor.grade_penalty_rate(grade)
+                total_penalty += grade * rate * seg_distance
 
             if net_grade < 0:
                 bonus = abs(net_grade) * DOWNHILL_BONUS_SEC_PER_KM_PER_PCT * seg_distance
                 bonus = min(bonus, MAX_DOWNHILL_BONUS_SEC_PER_KM * seg_distance)
                 total_bonus += bonus
 
-        elevation_penalty = int(total_penalty - total_bonus)
-        elevation_adjusted = flat_time + max(0, elevation_penalty)
+        slope_penalty = total_penalty - total_bonus
+        adjusted = flat_time + max(0.0, slope_penalty)
 
+        adjusted *= race_predictor.ultra_endurance_decay(adjusted)
+
+        if _is_trail_course(distance_km, total_elevation_gain):
+            adjusted *= race_predictor.trail_inexperience_factor(trail_runs_count)
+
+        elevation_adjusted = int(round(adjusted))
         return {
             "flat_time": flat_time,
             "elevation_adjusted": elevation_adjusted,
-            "elevation_penalty": elevation_penalty,
+            "elevation_penalty": int(round(slope_penalty)),
         }
 
     @staticmethod
@@ -201,50 +212,56 @@ class RacePacingService:
         target_time_seconds: int,
         user_vdot: float,
         distance_km: float,
+        trail_runs_count: Optional[int] = None,
     ) -> RaceBlueprint:
         """Generate a segment-by-segment pacing blueprint.
 
-        Args:
-            elevation_profile: List of segment dicts with grade_pct.
-            target_time_seconds: Desired total race time.
-            user_vdot: User's VDOT value.
-            distance_km: Total race distance.
-
-        Returns:
-            RaceBlueprint with paced segments.
+        Per-segment pace = base_pace + piecewise grade penalty - downhill bonus,
+        clamped to ±30 sec/km, then scaled so cumulative segment time equals
+        the target. The scaling absorbs any rounding drift and ensures that
+        when ``target_time_seconds`` itself includes the trail-inexperience
+        multiplier (as is the case for trail courses), each segment's pace
+        carries that slowdown too.
         """
         flat_time = RacePacingService.predict_flat_time(user_vdot, distance_km)
         elevation_data = RacePacingService.predict_elevation_adjusted_time(
-            user_vdot, distance_km, elevation_profile
+            user_vdot, distance_km, elevation_profile, trail_runs_count=trail_runs_count
         )
 
         base_pace_sec_per_km = target_time_seconds / distance_km if distance_km > 0 else 0
 
-        segments = []
-        cumulative_time = 0
-
+        raw_paces: list[float] = []
+        seg_distances: list[float] = []
         for seg in elevation_profile:
             seg_distance = seg["end_km"] - seg["start_km"]
             grade = seg["grade_pct"]
             net_grade = seg.get("net_grade_pct", grade)
 
-            adjusted_pace = base_pace_sec_per_km
-
+            pace = base_pace_sec_per_km
             if grade > 0:
-                adjusted_pace += grade * UPHILL_PENALTY_SEC_PER_KM_PER_PCT
-
+                pace += grade * race_predictor.grade_penalty_rate(grade)
             if net_grade < 0:
                 bonus = abs(net_grade) * DOWNHILL_BONUS_SEC_PER_KM_PER_PCT
                 bonus = min(bonus, MAX_DOWNHILL_BONUS_SEC_PER_KM)
-                adjusted_pace -= bonus
+                pace -= bonus
 
             if base_pace_sec_per_km > 0:
-                diff = adjusted_pace - base_pace_sec_per_km
-                adjusted_pace = base_pace_sec_per_km + max(
+                diff = pace - base_pace_sec_per_km
+                pace = base_pace_sec_per_km + max(
                     -PACE_CLAMP_SEC_PER_KM, min(PACE_CLAMP_SEC_PER_KM, diff)
                 )
 
-            segment_time = int(adjusted_pace * seg_distance)
+            raw_paces.append(pace)
+            seg_distances.append(seg_distance)
+
+        raw_total_time = sum(p * d for p, d in zip(raw_paces, seg_distances))
+        scale = target_time_seconds / raw_total_time if raw_total_time > 0 else 1.0
+
+        segments = []
+        cumulative_time = 0
+        for seg, raw_pace, seg_distance in zip(elevation_profile, raw_paces, seg_distances):
+            adjusted_pace = raw_pace * scale
+            segment_time = int(round(adjusted_pace * seg_distance))
             cumulative_time += segment_time
 
             pace_min_km = adjusted_pace / 60.0
