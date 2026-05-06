@@ -331,6 +331,14 @@
         badge.textContent = data.feasibility.label;
         badge.className = "feasibility-badge feasibility-badge--" + color;
 
+        var enhancedRow = document.getElementById("enhancedRow");
+        if (data.vdot_enhanced_seconds && data.vdot_enhanced_seconds > 0) {
+            document.getElementById("enhancedTime").textContent = formatDuration(data.vdot_enhanced_seconds);
+            enhancedRow.style.display = "flex";
+        } else {
+            enhancedRow.style.display = "none";
+        }
+
         var profile = (data.elevation_profile || []).map(function (seg, idx) {
             return {
                 segment_number: idx + 1,

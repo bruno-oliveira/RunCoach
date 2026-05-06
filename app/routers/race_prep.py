@@ -10,10 +10,11 @@ from fastapi.responses import HTMLResponse
 from sqlalchemy.orm import Session
 
 from app.dependencies import get_db, get_optional_user
-from app.models import User
+from app.models import RunLog, User
 from app.schemas.race_prep_schemas import GPXAnalysisResponse, RaceBlueprint, RacePrepRequest
 from app.services.integrations.gpx_service import GPXService
 from app.services.fitness.race_pacing_service import RacePacingService
+from app.core.training.vdot_calculator import VDOTCalculator
 from app.template_helpers import create_templates
 
 logger = logging.getLogger(__name__)
@@ -22,6 +23,24 @@ router = APIRouter(tags=["race-prep"])
 templates = create_templates()
 
 _blueprint_store: dict[str, dict[str, Any]] = {}
+
+
+def _count_user_trail_runs(user_id: str, db: Session) -> int:
+    """Count the user's prior runs that average >=20 m of climb per km."""
+    runs = (
+        db.query(RunLog.distance_km, RunLog.elevation_gain_m)
+        .filter(
+            RunLog.user_id == user_id,
+            RunLog.distance_km > 0,
+            RunLog.elevation_gain_m.isnot(None),
+        )
+        .all()
+    )
+    return sum(
+        1
+        for distance_km, gain in runs
+        if distance_km and gain and gain / distance_km >= 20.0
+    )
 
 
 @router.get("/race-prep", response_class=HTMLResponse)
@@ -82,6 +101,7 @@ async def analyze_gpx(
     user_vdot = vdot_info["vdot"]
     distance_km = parsed["distance_km"]
 
+    vdot_enhanced: int | None = None
     if user_vdot > 0:
         time_data = RacePacingService.predict_elevation_adjusted_time(
             user_vdot, distance_km, elevation_profile
@@ -89,6 +109,14 @@ async def analyze_gpx(
         flat_time = time_data["flat_time"]
         elevation_adjusted = time_data["elevation_adjusted"]
         elevation_penalty = time_data["elevation_penalty"]
+
+        trail_runs_count = _count_user_trail_runs(current_user.id, db)
+        vdot_enhanced = VDOTCalculator.predict_time_for_distance(
+            user_vdot,
+            distance_km,
+            elevation_gain_m=parsed["elevation_gain"],
+            trail_runs_count=trail_runs_count,
+        )
     else:
         flat_time = 0
         elevation_adjusted = 0
@@ -108,6 +136,7 @@ async def analyze_gpx(
         flat_estimate_seconds=flat_time,
         elevation_adjusted_seconds=elevation_adjusted,
         elevation_penalty_seconds=elevation_penalty,
+        vdot_enhanced_seconds=vdot_enhanced,
         user_vdot=user_vdot,
         vdot_run_count=vdot_info["run_count"],
         vdot_confidence=vdot_info["confidence"],
