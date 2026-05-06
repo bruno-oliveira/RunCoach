@@ -66,7 +66,14 @@ class PlanService:
             TrainingPlan.target_distance == str(plan_request.target_distance),
             TrainingPlan.weeks_duration == plan_request.weeks,
             TrainingPlan.max_runs_per_week == plan_request.max_runs_per_week,
+            TrainingPlan.is_trail == plan_request.is_trail,
         ]
+        if plan_request.target_elevation_gain_m is not None:
+            filters.append(
+                TrainingPlan.target_elevation_gain_m == plan_request.target_elevation_gain_m
+            )
+        else:
+            filters.append(TrainingPlan.target_elevation_gain_m.is_(None))
         if plan_request.body_weight_kg is not None:
             filters.append(TrainingPlan.body_weight_kg == plan_request.body_weight_kg)
         else:

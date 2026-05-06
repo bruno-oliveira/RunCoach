@@ -52,6 +52,8 @@ async def generate_plan(
     weeks: int = Form(...),
     max_runs_per_week: int = Form(4),
     terrain: Optional[str] = Form(None),
+    is_trail: Optional[str] = Form(None),
+    target_elevation_gain_m: Optional[str] = Form(None),
     body_weight_kg: float = Form(70.0),
     recent_race_distance_km: Optional[str] = Form(None),
     recent_race_time: Optional[str] = Form(None),
@@ -102,13 +104,28 @@ async def generate_plan(
     if not anonymous_user_id:
         anonymous_user_id = getattr(request.state, "anonymous_user_id", None)
 
+    target_distance_f = float(target_distance)
+    is_trail_flag = (is_trail or "").lower() in ("on", "true", "1", "yes")
+    elevation_f: Optional[float] = None
+    if target_elevation_gain_m not in (None, ""):
+        try:
+            elevation_f = float(target_elevation_gain_m)
+        except ValueError:
+            return error_response(
+                request, current_user,
+                "Elevation gain must be a number in metres.",
+                "validation",
+            )
+
     try:
         plan_request = PlanRequest(
             current_km=current_km,
-            target_distance=float(target_distance),
+            target_distance=target_distance_f,
             weeks=weeks,
             max_runs_per_week=max_runs_per_week,
-            terrain=terrain if float(target_distance) == 30.0 else None,
+            is_trail=is_trail_flag,
+            target_elevation_gain_m=elevation_f,
+            terrain=terrain,
             body_weight_kg=body_weight_kg,
             recent_race_distance_km=race_dist,
             recent_race_time=recent_race_time or None,

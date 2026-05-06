@@ -45,9 +45,12 @@ DISTANCE_CONFIG = {
         "min_runs": 3,
     },
     30.0: {
+        # Standard-bracket trail under the parameterized profile (8–42.2 km).
+        # Legacy 30 km plans auto-migrate to is_trail=True with default 1000 m
+        # of elevation gain; bracket-aware validators apply 6–22 weeks.
         "name": "Trail 30K",
         "min_weeks": 6,
-        "max_weeks": 20,
+        "max_weeks": 22,
         "min_mileage": 15.0,
         "max_mileage": 60.0,
         "min_runs": 4,
@@ -140,7 +143,7 @@ class TestPlanRequestSchemaRejections:
         (21.1, 7, "below Half minimum"),
         (21.1, 21, "above Half maximum"),
         (30.0, 5, "below Trail minimum"),
-        (30.0, 21, "above Trail maximum"),
+        (30.0, 23, "above Trail maximum"),
         (42.2, 11, "below Marathon minimum"),
         (42.2, 25, "above Marathon maximum"),
     ])

@@ -1,4 +1,4 @@
-from sqlalchemy import Column, String, Float, Integer, DateTime, ForeignKey, Text, Index
+from sqlalchemy import Boolean, Column, String, Float, Integer, DateTime, ForeignKey, Text, Index
 from sqlalchemy.orm import Mapped, relationship
 from sqlalchemy.types import JSON
 from datetime import datetime, timezone
@@ -38,6 +38,10 @@ class TrainingPlan(Base):
     recent_race_distance_km = Column(Float, nullable=True)
     recent_race_time_seconds = Column(Integer, nullable=True)
     vdot = Column(Float, nullable=True)
+
+    # Trail / ultra parameters (replaces the legacy `terrain` request field).
+    is_trail = Column(Boolean, nullable=False, default=False)
+    target_elevation_gain_m = Column(Float, nullable=True)
 
     hr_zones_data = Column(JSON, nullable=True)
     nutrition_phases_data = Column(JSON, nullable=True)

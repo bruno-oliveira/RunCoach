@@ -84,15 +84,33 @@ class PlanRequestBase(BaseModel):
         ..., ge=0, le=200, description="Current weekly mileage in km"
     )
     target_distance: float = Field(
-        ..., description="Target race distance in km (30.0 = Trail Running)"
+        ...,
+        gt=0,
+        le=163.0,
+        description="Target race distance in km (road preset OR custom trail/ultra 8–163 km)",
     )
-    weeks: int = Field(..., ge=4, le=24, description="Training duration in weeks")
+    # Outer envelope — per-distance validators tighten further (road ≤ 24, ultra up to 40).
+    weeks: int = Field(..., ge=4, le=40, description="Training duration in weeks")
     max_runs_per_week: int = Field(default=4, ge=2, le=6, description="Maximum runs per week")
 
-    # Terrain access — only meaningful for trail (30.0)
+    # Trail mode — set by the form when user picks "Trail / Ultra (custom)".
+    # Auto-set in the legacy migration path when target_distance == 30.0.
+    is_trail: bool = Field(
+        default=False,
+        description="True for parameterized trail/ultra plans (distance + elevation).",
+    )
+    target_elevation_gain_m: Optional[float] = Field(
+        default=None,
+        ge=0,
+        le=10000,
+        description="Total race elevation gain in m. Required when is_trail=True.",
+    )
+
+    # Deprecated: superseded by target_elevation_gain_m. Kept for backward
+    # compat with the legacy form and existing DB rows; auto-migrated below.
     terrain: Optional[str] = Field(
         default=None,
-        description="Terrain access: 'hilly' (default for trail) or 'flat' (no hill access)"
+        description="DEPRECATED — legacy 'hilly'/'flat' toggle, migrated to target_elevation_gain_m.",
     )
 
     # Body weight — used for personalised nutrition
@@ -127,21 +145,100 @@ class PlanRequest(PlanRequestBase, RaceInfoMixin):
     goal_pace_min_km: Optional[float] = Field(default=None, exclude=True)
     current_pace_min_km: Optional[float] = Field(default=None, exclude=True)
 
-    @field_validator("target_distance")
+    @model_validator(mode="before")
     @classmethod
-    def validate_target_distance(cls, v: float) -> float:
-        """Validate that target distance is a supported race distance."""
-        if v not in SUPPORTED_DISTANCES:
-            valid_names = [DISTANCE_NAMES[d] for d in SUPPORTED_DISTANCES]
-            raise ValueError(f"Please select a valid distance: {', '.join(valid_names)}")
-        return v
+    def _auto_migrate_legacy_trail(cls, values):
+        """Auto-promote legacy form input to the new trail fields.
+
+        Pre-existing form posts and DB rows used target_distance=30.0 and a
+        ``terrain`` toggle. The new schema models trail goals as
+        (is_trail=True, target_elevation_gain_m). This shim keeps both
+        callsites working until the UI is updated in phase 6.
+        """
+        if not isinstance(values, dict):
+            return values
+
+        target = values.get("target_distance")
+        try:
+            target_f = float(target) if target is not None else None
+        except (TypeError, ValueError):
+            return values  # let downstream validation produce the real error
+
+        is_trail_explicit = "is_trail" in values and bool(values.get("is_trail"))
+        terrain = values.get("terrain")
+
+        # Legacy form path: target=30.0 with no is_trail flag. Auto-promote to
+        # trail mode and derive elevation from the deprecated terrain toggle.
+        # The new form path always sends is_trail explicitly and must supply
+        # target_elevation_gain_m itself — we do not silently default it here.
+        if target_f == 30.0 and not is_trail_explicit:
+            values["is_trail"] = True
+            if values.get("target_elevation_gain_m") is None:
+                values["target_elevation_gain_m"] = 200.0 if terrain == "flat" else 1000.0
+
+        return values
+
+    @model_validator(mode="after")
+    def _validate_trail_or_road_distance(self) -> "PlanRequest":
+        """Branch validation: trail accepts 8–163 km + elevation; road uses presets."""
+        from app.core.training.trail_profile import (
+            TRAIL_DISTANCE_MAX_KM,
+            TRAIL_DISTANCE_MIN_KM,
+        )
+
+        if self.is_trail:
+            if not (TRAIL_DISTANCE_MIN_KM <= self.target_distance <= TRAIL_DISTANCE_MAX_KM):
+                raise ValueError(
+                    f"Trail/ultra distance must be {TRAIL_DISTANCE_MIN_KM:g}–"
+                    f"{TRAIL_DISTANCE_MAX_KM:g} km. For shorter races pick a road preset."
+                )
+            if self.target_elevation_gain_m is None:
+                raise ValueError(
+                    "Trail/ultra plans require an elevation gain in metres "
+                    "(enter 0 for fully flat trails)."
+                )
+        else:
+            if self.target_distance not in SUPPORTED_DISTANCES:
+                road_set = [d for d in SUPPORTED_DISTANCES if d != 30.0]
+                valid_names = [DISTANCE_NAMES[d] for d in road_set]
+                raise ValueError(
+                    f"Please select a valid distance: {', '.join(valid_names)}, "
+                    "or pick Trail/Ultra for a custom trail goal."
+                )
+
+        return self
 
     @model_validator(mode="after")
     def validate_weeks_for_distance(self) -> "PlanRequest":
         """Validate that training duration is appropriate for target distance."""
-        target = self.target_distance
         weeks = self.weeks
 
+        if self.is_trail:
+            from app.core.training.trail_profile import (
+                classify_trail,
+                trail_max_weeks,
+                trail_min_weeks,
+            )
+
+            profile = classify_trail(self.target_distance, self.target_elevation_gain_m or 0.0)
+            min_w = trail_min_weeks(profile)
+            max_w = trail_max_weeks(profile)
+
+            if weeks < min_w:
+                raise InsufficientTimeException(
+                    f"Training for a {self.target_distance:g} km trail/ultra "
+                    f"requires at least {min_w} weeks",
+                    f"This bracket needs {min_w}–{max_w} weeks to build "
+                    "trail-specific strength, time-on-feet, and fueling habits.",
+                )
+            if weeks > max_w:
+                raise ValueError(
+                    f"Training plans for a {self.target_distance:g} km trail/ultra "
+                    f"should not exceed {max_w} weeks. Consider a shorter focused cycle."
+                )
+            return self
+
+        target = self.target_distance
         min_weeks_requirements = {
             5.0: (
                 settings.min_weeks_5k,
@@ -155,26 +252,17 @@ class PlanRequest(PlanRequestBase, RaceInfoMixin):
                 settings.min_weeks_half,
                 "Half marathon training needs time to build endurance safely",
             ),
-            30.0: (
-                settings.min_weeks_30k,
-                "Trail running requires building strength and technical skills over time",
-            ),
             42.2: (
                 settings.min_weeks_marathon,
                 "Marathon training requires adequate time to prevent injury",
             ),
         }
-
         max_weeks_requirements = {
             5.0: (settings.max_weeks_5k, "Training beyond 16 weeks for 5K can lead to burnout"),
             10.0: (settings.max_weeks_10k, "16 weeks is optimal for 10K preparation"),
             21.1: (
                 settings.max_weeks_half,
                 "Half marathon training beyond 20 weeks may cause fatigue",
-            ),
-            30.0: (
-                settings.max_weeks_30k,
-                "Trail running training beyond 20 weeks may cause fatigue",
             ),
             42.2: (
                 settings.max_weeks_marathon,
@@ -198,32 +286,45 @@ class PlanRequest(PlanRequestBase, RaceInfoMixin):
 
         return self
 
-    @field_validator("max_runs_per_week")
-    @classmethod
-    def validate_runs_per_week(cls, v: int, info) -> int:
-        """Validate max runs per week based on target distance.
+    @model_validator(mode="after")
+    def validate_runs_per_week(self) -> "PlanRequest":
+        """Bracket-aware runs-per-week floor.
 
-        Trail/marathon need 4+ runs (high volume can't compress into 3 sessions).
-        Half marathon needs 3+ (long run alone is too big a share of weekly load with 2).
-        5K/10K accept 2 runs — busy-schedule minimum effective dose.
+        Road: 5K/10K accept 2; Half ≥ 3; Marathon ≥ 4.
+        Trail: short ≥ 3, standard ≥ 4, ultra ≥ 5, long_ultra ≥ 6.
         """
-        values = info.data if isinstance(info.data, dict) else {}
-        target_distance = values.get("target_distance")
+        v = self.max_runs_per_week
 
-        if target_distance:
-            if target_distance >= 30.0 and v < 4:
-                distance_name = DISTANCE_NAMES.get(target_distance, f"{target_distance}km")
+        if self.is_trail:
+            from app.core.training.trail_profile import (
+                classify_trail,
+                trail_min_runs_per_week,
+            )
+
+            profile = classify_trail(self.target_distance, self.target_elevation_gain_m or 0.0)
+            min_runs = trail_min_runs_per_week(profile)
+            if v < min_runs:
                 raise ValueError(
-                    f"{distance_name} training typically requires at least 4 runs per week. "
-                    f"Consider 4-5 runs per week for {distance_name.lower()} preparation."
+                    f"A {self.target_distance:g} km trail/ultra plan needs at least "
+                    f"{min_runs} runs per week to absorb the volume safely. "
+                    "Trail-specific stress is harder to compress into fewer sessions."
                 )
-            if target_distance >= 21.1 and v < 3:
-                distance_name = DISTANCE_NAMES.get(target_distance, f"{target_distance}km")
-                raise ValueError(
-                    f"{distance_name} training requires at least 3 runs per week. "
-                    f"The 2-runs option is only available for 5K and 10K plans."
-                )
-        return v
+            return self
+
+        target_distance = self.target_distance
+        if target_distance >= 42.2 and v < 4:
+            distance_name = DISTANCE_NAMES.get(target_distance, f"{target_distance}km")
+            raise ValueError(
+                f"{distance_name} training typically requires at least 4 runs per week. "
+                f"Consider 4-5 runs per week for {distance_name.lower()} preparation."
+            )
+        if target_distance >= 21.1 and v < 3:
+            distance_name = DISTANCE_NAMES.get(target_distance, f"{target_distance}km")
+            raise ValueError(
+                f"{distance_name} training requires at least 3 runs per week. "
+                f"The 2-runs option is only available for 5K and 10K plans."
+            )
+        return self
 
     @model_validator(mode="after")
     def validate_current_mileage(self) -> "PlanRequest":
@@ -234,12 +335,16 @@ class PlanRequest(PlanRequestBase, RaceInfoMixin):
 
         if current_km == 0:
             supported_distances = [5.0, 10.0]
-            if target not in supported_distances:
-                target_display = DISTANCE_NAMES.get(target, f"{target}km")
+            if self.is_trail or target not in supported_distances:
+                target_display = (
+                    f"a {target:g} km trail/ultra"
+                    if self.is_trail
+                    else DISTANCE_NAMES.get(target, f"{target}km")
+                )
                 raise ZeroMileageUnsupportedException(
                     f"Starting from zero for {target_display} is not recommended.",
-                    f"Starting from zero mileage for a {target_display} requires building a running base first. "
-                    f"Consider training for a 5K or 10K first to build your fitness foundation."
+                    f"Starting from zero mileage for {target_display} requires building a running base first. "
+                    "Consider training for a 5K or 10K first to build your fitness foundation.",
                 )
 
             if weeks < 8:
@@ -249,6 +354,23 @@ class PlanRequest(PlanRequestBase, RaceInfoMixin):
                     "Consider extending your training to at least 8 weeks."
                 )
 
+            return self
+
+        if self.is_trail:
+            from app.core.training.trail_profile import (
+                classify_trail,
+                trail_min_weekly_mileage,
+            )
+
+            profile = classify_trail(target, self.target_elevation_gain_m or 0.0)
+            min_km = trail_min_weekly_mileage(profile)
+            if current_km < min_km:
+                raise InadequateBaseException(
+                    f"Current mileage ({current_km:g} km/week) is below the recommended "
+                    f"minimum ({min_km:g} km/week) for a {target:g} km trail/ultra",
+                    "Build a steady base of easy running first — trail-specific volume "
+                    "and elevation work compounds the load quickly.",
+                )
             return self
 
         if target in _MILEAGE_CONFIG:
@@ -293,8 +415,27 @@ class PlanRequest(PlanRequestBase, RaceInfoMixin):
         return self
 
 
-def get_mileage_warning(target_distance: float, current_km: float) -> Optional[str]:
+def get_mileage_warning(
+    target_distance: float,
+    current_km: float,
+    is_trail: bool = False,
+    target_elevation_gain_m: Optional[float] = None,
+) -> Optional[str]:
     """Get warning message if mileage is unusually high for target distance."""
+    if is_trail:
+        from app.core.training.trail_profile import (
+            classify_trail,
+            trail_max_weekly_mileage,
+        )
+
+        profile = classify_trail(target_distance, target_elevation_gain_m or 0.0)
+        if current_km > trail_max_weekly_mileage(profile):
+            return (
+                "High mileage for this trail/ultra distance. "
+                "Focus on time-on-feet, recovery, and consistency rather than chasing volume."
+            )
+        return None
+
     if target_distance in _MILEAGE_CONFIG:
         cfg = _MILEAGE_CONFIG[target_distance]
         if current_km > cfg["max"]:
