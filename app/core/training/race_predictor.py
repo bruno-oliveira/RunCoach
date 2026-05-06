@@ -64,8 +64,8 @@ def _elevation_penalty_seconds(distance_km: float, elevation_gain_m: float) -> f
 # stabilizer strength, descent technique, and pacing intuition. Apply a
 # multiplicative penalty that decays linearly to 1.0 once the runner has
 # enough trail volume to be considered experienced.
-_TRAIL_INEXPERIENCE_RUNS_THRESHOLD = 5
-_TRAIL_INEXPERIENCE_MAX_FACTOR = 1.25  # +25% for first trail race
+_TRAIL_INEXPERIENCE_RUNS_THRESHOLD = 8
+_TRAIL_INEXPERIENCE_MAX_FACTOR = 1.50  # +50% for first trail race
 
 
 def _trail_inexperience_factor(trail_runs_count: Optional[int]) -> float:
@@ -79,6 +79,24 @@ def _trail_inexperience_factor(trail_runs_count: Optional[int]) -> float:
     return _TRAIL_INEXPERIENCE_MAX_FACTOR - progress * (
         _TRAIL_INEXPERIENCE_MAX_FACTOR - 1.0
     )
+
+
+# Ultra-endurance decay: VDOT's %VO2max model was validated for efforts up
+# to ~3.5 hours (marathon). Beyond that, nutrition, fueling breakdown,
+# muscular fatigue, and mental factors dominate. Apply a gradual multiplier.
+_ULTRA_DECAY_ONSET_HOURS = 3.0
+_ULTRA_DECAY_RATE_PER_HOUR = 0.05  # +5% per hour beyond onset
+_ULTRA_DECAY_MAX_FACTOR = 1.20     # cap at +20%
+
+
+def _ultra_endurance_decay(predicted_seconds: float) -> float:
+    """Multiplier for events lasting >3 hours where VDOT loses fidelity."""
+    time_hours = predicted_seconds / 3600.0
+    if time_hours <= _ULTRA_DECAY_ONSET_HOURS:
+        return 1.0
+    excess = time_hours - _ULTRA_DECAY_ONSET_HOURS
+    factor = 1.0 + excess * _ULTRA_DECAY_RATE_PER_HOUR
+    return min(factor, _ULTRA_DECAY_MAX_FACTOR)
 
 
 def predict_time_for_distance(
@@ -146,6 +164,7 @@ def predict_time_for_distance(
             is_trail = True
 
     total_seconds = flat_seconds + elevation_penalty_sec
+    total_seconds *= _ultra_endurance_decay(total_seconds)
     if endurance_factor and endurance_factor > 1.0:
         total_seconds *= endurance_factor
     if is_trail:
@@ -197,18 +216,27 @@ def get_confidence_range(
 def predict_times(
     vdot: float,
     trail_runs_count: Optional[int] = None,
+    elevation_map: Optional[Dict[str, float]] = None,
+    endurance_factor: Optional[float] = None,
 ) -> Dict[str, Dict]:
     """Get predicted times for all standard race distances.
 
-    The "trail" entry remains a flat-ground equivalent because we don't know
-    the course profile here. Callers that know the elevation gain should
-    call predict_time_for_distance directly with elevation_gain_m.
+    The "trail" entry remains a flat-ground equivalent unless the caller
+    provides an elevation_map with per-distance elevation gains.
     """
     from app.core.training.vdot_calculator import VDOTCalculator
 
     predictions = {}
     for name, distance in STANDARD_RACE_DISTANCES.items():
-        seconds = predict_time_for_distance(vdot, distance)
+        elev = None
+        if elevation_map and name in elevation_map:
+            elev = elevation_map[name]
+        seconds = predict_time_for_distance(
+            vdot, distance,
+            elevation_gain_m=elev,
+            trail_runs_count=trail_runs_count,
+            endurance_factor=endurance_factor,
+        )
         if seconds:
             predictions[name] = {
                 "seconds": seconds,

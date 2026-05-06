@@ -115,7 +115,23 @@ async def create_run_log(
 
         response_data = run_to_response(new_run)
         if new_run.vdot:
-            response_data.predictions = VDOTCalculator.predict_times(new_run.vdot)
+            elevation_map = None
+            trail_count = None
+            if (
+                new_run.elevation_gain_m
+                and new_run.distance_km > 0
+                and new_run.elevation_gain_m / new_run.distance_km >= 20.0
+            ):
+                from app.services.runs.run_enrichment_service import (
+                    _count_prior_trail_runs,
+                )
+                trail_count = _count_prior_trail_runs(current_user.id, db)
+                elevation_map = {"trail": new_run.elevation_gain_m}
+            response_data.predictions = VDOTCalculator.predict_times(
+                new_run.vdot,
+                trail_runs_count=trail_count,
+                elevation_map=elevation_map,
+            )
         response_data.race_comparison = build_race_comparison(new_run, run_log.duration_minutes)
         return response_data
     except HTTPException:

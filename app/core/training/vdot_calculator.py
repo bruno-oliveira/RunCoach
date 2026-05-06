@@ -341,6 +341,10 @@ class VDOTCalculator:
     def predict_times(
         vdot: float,
         trail_runs_count: Optional[int] = None,
+        elevation_map: Optional[Dict[str, float]] = None,
+        endurance_factor: Optional[float] = None,
     ) -> Dict[str, Dict]:
         from app.core.training.race_predictor import predict_times
-        return predict_times(vdot, trail_runs_count)
+        return predict_times(
+            vdot, trail_runs_count, elevation_map, endurance_factor
+        )

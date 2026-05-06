@@ -382,19 +382,33 @@ class RacePredictorService:
         trend = RacePredictorService.calculate_vdot_trend(vdot_history)
         best_effort = RacePredictorService.get_best_effort(user_id, db=db)
 
+        trail_profile = RacePredictorService._get_user_trail_elevation_profile(user_id, db)
+
         predictions: Dict[str, Dict[str, Any]] = {}
         from app.core.training.vdot_calculator import STANDARD_RACE_DISTANCES
         for name, distance in STANDARD_RACE_DISTANCES.items():
+            elev = None
+            trail_count = None
+            if name == "trail" and trail_profile["avg_m_per_km"]:
+                elev = trail_profile["avg_m_per_km"] * distance
+                trail_count = trail_profile["count"]
+
             endurance_factor = RacePredictorService.compute_endurance_factor(
                 user_id, distance, db, current_vdot=current_vdot
             )
             seconds = VDOTCalculator.predict_time_for_distance(
-                current_vdot, distance, endurance_factor=endurance_factor
+                current_vdot, distance,
+                elevation_gain_m=elev,
+                trail_runs_count=trail_count,
+                endurance_factor=endurance_factor,
             )
             if not seconds:
                 continue
             range_data = VDOTCalculator.get_confidence_range(
-                current_vdot, distance, endurance_factor=endurance_factor
+                current_vdot, distance,
+                elevation_gain_m=elev,
+                trail_runs_count=trail_count,
+                endurance_factor=endurance_factor,
             )
             predictions[name] = {
                 "seconds": seconds,
@@ -414,6 +428,28 @@ class RacePredictorService:
             "run_count": len(vdot_history),
             "has_sufficient_data": True,
         }
+
+    @staticmethod
+    def _get_user_trail_elevation_profile(user_id: str, db: Session) -> Dict[str, Any]:
+        """Compute user's typical trail elevation per km and trail run count."""
+        trail_runs = (
+            db.query(RunLog.distance_km, RunLog.elevation_gain_m)
+            .filter(
+                RunLog.user_id == user_id,
+                RunLog.distance_km > 0,
+                RunLog.elevation_gain_m.isnot(None),
+            )
+            .all()
+        )
+        trail_entries = [
+            (d, e) for d, e in trail_runs
+            if d and e and e / d >= 20.0
+        ]
+        if not trail_entries:
+            return {"avg_m_per_km": None, "count": 0}
+        count = len(trail_entries)
+        avg_m_per_km = statistics.median([e / d for d, e in trail_entries])
+        return {"avg_m_per_km": avg_m_per_km, "count": count}
 
     @staticmethod
     def get_race_history(
