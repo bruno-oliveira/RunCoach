@@ -81,18 +81,6 @@ class PerformancePlanGenerator:
         'taper':   ['race_pace', 'tempo'],
     }
 
-    def __init__(self):
-        self.workout_types = {
-            'tempo': {'zone': 'zone_3', 'description': 'Tempo run at lactate threshold', 'quality': True},
-            'vo2max': {'zone': 'zone_4', 'description': 'VO2 max intervals', 'quality': True},
-            'race_pace': {'zone': 'zone_5', 'description': 'Race pace efforts', 'quality': True},
-            'fartlek': {'zone': 'mixed', 'description': 'Variable pace play', 'quality': True},
-            'long': {'zone': 'zone_1', 'description': 'Long aerobic run', 'quality': False},
-            'easy': {'zone': 'zone_1', 'description': 'Easy recovery run', 'quality': False},
-            'recovery': {'zone': 'zone_1', 'description': 'Very easy recovery', 'quality': False},
-            'rest': {'zone': None, 'description': 'Rest day', 'quality': False},
-        }
-
     def calculate_training_zones(self, goal_pace: float, max_hr: Optional[int] = None,
                                   vdot_zones: Optional[Dict] = None) -> Dict[str, Dict[str, Any]]:
         """Calculate 5 training zones based on goal pace and optionally max heart rate."""

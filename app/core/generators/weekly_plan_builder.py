@@ -128,22 +128,17 @@ def build_workout_for_type(workout_type: str, day_number: int,
                            distance: float, total_km: float,
                            phase: str,
                            pace_zones: Optional[Dict]) -> Dict[str, Any]:
-    """Dispatch workout creation to the appropriate builder."""
-    if workout_type == 'rest':
-        return workout_builders.generate_rest_day(day_number)
-    if workout_type == 'recovery':
-        return workout_builders.generate_recovery_day(day_number, phase)
-    if workout_type == 'long':
-        return workout_builders.generate_long_run(day_number, distance, total_km, pace_zones=pace_zones)
-    if workout_type == 'easy':
-        return workout_builders.generate_easy_run(day_number, distance, total_km, pace_zones=pace_zones)
-    if workout_type == 'tempo':
-        return workout_builders.generate_tempo_run(day_number, distance, total_km, pace_zones=pace_zones)
-    if workout_type == 'interval':
-        return workout_builders.generate_interval_run(day_number, distance, total_km, pace_zones=pace_zones)
-    if workout_type == 'hill':
-        return workout_builders.generate_hill_workout(day_number, distance)
-    raise ValueError(f"Unknown workout_type: {workout_type}")
+    """Dispatch workout creation to the registered builder."""
+    from app.core.training.workout_registry import build_workout
+
+    return build_workout(
+        workout_type,
+        day=day_number,
+        distance=distance,
+        total_km=total_km,
+        phase=phase,
+        pace_zones=pace_zones,
+    )
 
 
 def generate_daily_workouts(week_number: int, total_km: float,

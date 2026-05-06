@@ -3,6 +3,12 @@
 import pytest
 
 from app.core.generators.plan_generator import TrainingPlanGenerator
+from app.core.training import (
+    long_run_calculator,
+    mileage_progression,
+    phase_calculator,
+    workout_distribution,
+)
 
 
 class TestTrainingPlanGenerator:
@@ -217,7 +223,7 @@ class TestTrainingPlanGenerator:
 
     def test_phase_calculation_8_weeks_10k(self, plan_generator: TrainingPlanGenerator):
         """10K 8-week plan: 2-week taper for smoother volume reduction."""
-        phases = plan_generator._calculate_phases(8, target_distance=10.0)
+        phases = phase_calculator.calculate_phases(8, target_distance=10.0)
         assert sum(phases.values()) == 8
         assert phases["taper"] == 2
         assert phases["base"] >= 2
@@ -225,14 +231,14 @@ class TestTrainingPlanGenerator:
 
     def test_phase_calculation_17_weeks_marathon(self, plan_generator: TrainingPlanGenerator):
         """Marathon 17-week plan: 3-week taper, longer build."""
-        phases = plan_generator._calculate_phases(17, target_distance=42.2)
+        phases = phase_calculator.calculate_phases(17, target_distance=42.2)
         assert sum(phases.values()) == 17
         assert phases["taper"] == 3
         assert phases["build"] >= phases["base"]
 
     def test_phase_calculation_10_weeks_half(self, plan_generator: TrainingPlanGenerator):
         """Half marathon 10-week plan: 2-week taper."""
-        phases = plan_generator._calculate_phases(10, target_distance=21.1)
+        phases = phase_calculator.calculate_phases(10, target_distance=21.1)
         assert sum(phases.values()) == 10
         assert phases["taper"] == 2
         assert phases["base"] >= 2
@@ -240,13 +246,13 @@ class TestTrainingPlanGenerator:
 
     def test_get_phase_base(self, plan_generator: TrainingPlanGenerator):
         phases = {"base": 4, "build": 3, "peak": 1, "taper": 2}
-        assert plan_generator._get_phase(1, phases) == "base"
-        assert plan_generator._get_phase(4, phases) == "base"
+        assert phase_calculator.get_phase(1, phases) == "base"
+        assert phase_calculator.get_phase(4, phases) == "base"
 
     def test_get_phase_build(self, plan_generator: TrainingPlanGenerator):
         phases = {"base": 4, "build": 3, "peak": 1, "taper": 2}
-        assert plan_generator._get_phase(5, phases) == "build"
-        assert plan_generator._get_phase(7, phases) == "build"
+        assert phase_calculator.get_phase(5, phases) == "build"
+        assert phase_calculator.get_phase(7, phases) == "build"
 
     # ------------------------------------------------------------------
     # Recovery weeks and rest-day rules
@@ -427,19 +433,19 @@ class TestTrainingPlanGenerator:
 
     def test_workout_distribution_with_different_max_runs(self, plan_generator: TrainingPlanGenerator):
         """Test _get_workout_distribution() with different max_runs values."""
-        distribution_3 = plan_generator._get_workout_distribution(
+        distribution_3 = workout_distribution.get_workout_distribution(
             10, 3, phase="build", week_number=3, target_distance=10.0,
         )
         assert distribution_3["long"] == 1
         assert sum(v for k, v in distribution_3.items() if k not in ["rest", "recovery"]) <= 3
 
-        distribution_4 = plan_generator._get_workout_distribution(
+        distribution_4 = workout_distribution.get_workout_distribution(
             10, 4, phase="build", week_number=3, target_distance=10.0,
         )
         assert distribution_4["long"] == 1
         assert sum(v for k, v in distribution_4.items() if k not in ["rest", "recovery"]) <= 4
 
-        distribution_6 = plan_generator._get_workout_distribution(
+        distribution_6 = workout_distribution.get_workout_distribution(
             10, 6, phase="build", week_number=3, target_distance=10.0,
         )
         assert distribution_6["long"] == 1
@@ -447,21 +453,21 @@ class TestTrainingPlanGenerator:
 
     def test_get_peak_mileage_with_various_bases(self, plan_generator: TrainingPlanGenerator):
         """Test _get_peak_mileage() with various base/target combinations."""
-        peak_low = plan_generator._get_peak_mileage(10, 10, 12)
+        peak_low = mileage_progression.get_peak_mileage(10, 10, 12)
         assert 20 <= peak_low <= 30
 
-        peak_high = plan_generator._get_peak_mileage(10, 25, 12)
+        peak_high = mileage_progression.get_peak_mileage(10, 25, 12)
         assert 30 <= peak_high <= 75
 
-        peak_marathon = plan_generator._get_peak_mileage(42.2, 40, 16)
+        peak_marathon = mileage_progression.get_peak_mileage(42.2, 40, 16)
         assert 60 <= peak_marathon <= 80
 
     def test_calculate_long_run_distance_caps(self, plan_generator: TrainingPlanGenerator):
         """Test _calculate_long_run_distance() respects hard ceilings."""
-        assert plan_generator._calculate_long_run_distance(50, 5) <= 14
-        assert plan_generator._calculate_long_run_distance(60, 10) <= 22
-        assert plan_generator._calculate_long_run_distance(80, 21.1) <= 28
-        assert plan_generator._calculate_long_run_distance(100, 42.2) <= 38
+        assert long_run_calculator.calculate_long_run_distance(50, 5) <= 14
+        assert long_run_calculator.calculate_long_run_distance(60, 10) <= 22
+        assert long_run_calculator.calculate_long_run_distance(80, 21.1) <= 28
+        assert long_run_calculator.calculate_long_run_distance(100, 42.2) <= 38
 
     # ------------------------------------------------------------------
     # Long run progression and distribution
@@ -497,7 +503,7 @@ class TestTrainingPlanGenerator:
 
         for week in plan:
             phase = week["phase"]
-            min_ratio, max_ratio = plan_generator._get_long_run_ratio_range(phase, 21.1, 16)
+            min_ratio, max_ratio = long_run_calculator.get_long_run_ratio_range(phase, 21.1, 16)
 
             long_run = next((w for w in week["daily_workouts"] if w["type"] == "long"), None)
             if long_run:
@@ -538,10 +544,10 @@ class TestTrainingPlanGenerator:
         """5K/10K plans of 8+ weeks should have 2-week taper."""
         from app.exceptions import InsufficientTimeException
         for dist in [5.0, 10.0]:
-            phases = plan_generator._calculate_phases(8, target_distance=dist)
+            phases = phase_calculator.calculate_phases(8, target_distance=dist)
             assert phases["taper"] == 2, f"{dist}km 8wk should have 2-week taper"
         with pytest.raises(InsufficientTimeException):
-            plan_generator._calculate_phases(4, target_distance=5.0)
+            phase_calculator.calculate_phases(4, target_distance=5.0)
 
     def test_two_run_quality_in_build_peak(self, plan_generator: TrainingPlanGenerator):
         """2-run plans should have 1 quality session in build/peak phases."""
@@ -587,5 +593,5 @@ class TestTrainingPlanGenerator:
 
     def test_marathon_has_multiple_peak_weeks(self, plan_generator: TrainingPlanGenerator):
         """Marathon plans should have at least 2 peak weeks."""
-        phases = plan_generator._calculate_phases(16, target_distance=42.2)
+        phases = phase_calculator.calculate_phases(16, target_distance=42.2)
         assert phases["peak"] >= 2, f"Marathon 16wk has {phases['peak']} peak weeks (need >=2)"

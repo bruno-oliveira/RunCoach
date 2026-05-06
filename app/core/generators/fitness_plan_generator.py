@@ -88,20 +88,6 @@ class FitnessPlanGenerator:
     Includes time trials every 3 weeks for progress tracking.
     """
 
-    def __init__(self):
-        self.workout_types = {
-            "vo2max": {"zone": "zone_4", "description": "VO2max intervals", "quality": True},
-            "vo2max_ladder": {"zone": "zone_4", "description": "VO2max ladder intervals", "quality": True},
-            "cruise_interval": {"zone": "zone_3", "description": "Cruise intervals at threshold", "quality": True},
-            "tempo": {"zone": "zone_3", "description": "Tempo run at lactate threshold", "quality": True},
-            "fartlek": {"zone": "mixed", "description": "Variable pace play", "quality": True},
-            "time_trial": {"zone": "zone_5", "description": "All-out benchmark effort", "quality": True},
-            "long": {"zone": "zone_1", "description": "Long aerobic run", "quality": False},
-            "easy": {"zone": "zone_1", "description": "Easy recovery run", "quality": False},
-            "recovery": {"zone": "zone_1", "description": "Very easy recovery", "quality": False},
-            "rest": {"zone": None, "description": "Rest day", "quality": False},
-        }
-
     def calculate_training_zones(
         self,
         vdot: Optional[float] = None,

@@ -95,10 +95,12 @@ async def create_run_log(
         db.add(new_run)
         db.commit()
 
+        # Best-effort post-commit hooks: never fail the request if these throw,
+        # but capture full traceback so unexpected failures are debuggable.
         try:
             FeedbackService.generate_and_store(new_run, db)
-        except Exception as e:
-            logger.warning(f"Feedback generation failed for run {new_run.id}: {e}")
+        except Exception:
+            logger.warning("Feedback generation failed for run %s", new_run.id, exc_info=True)
 
         if new_run.training_plan_id:
             try:
@@ -106,8 +108,8 @@ async def create_run_log(
                 AdaptationService().evaluate_recommendation(
                     new_run.training_plan_id, current_user.id, db
                 )
-            except Exception as e:
-                logger.warning(f"Recommendation evaluation failed for run {new_run.id}: {e}")
+            except Exception:
+                logger.warning("Recommendation evaluation failed for run %s", new_run.id, exc_info=True)
 
         logger.info(f"Run log created for user {current_user.id}: {run_log.distance_km}km in {run_log.duration_minutes}min")
 
@@ -118,8 +120,8 @@ async def create_run_log(
         return response_data
     except HTTPException:
         raise
-    except SQLAlchemyError as e:
-        logger.error(f"Error creating run log: {e}")
+    except SQLAlchemyError:
+        logger.exception("Database error creating run log for user %s", current_user.id)
         db.rollback()
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -159,8 +161,8 @@ async def get_run_logs(
             page=page,
             page_size=page_size,
         )
-    except Exception as e:
-        logger.error(f"Error fetching run logs: {e}")
+    except SQLAlchemyError:
+        logger.exception("Database error fetching run logs for user %s", current_user.id)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to fetch run logs",

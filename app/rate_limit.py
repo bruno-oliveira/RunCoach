@@ -38,3 +38,5 @@ class RateLimiter:
 
 auth_limiter = RateLimiter(max_requests=10, window_seconds=60)
 strava_callback_limiter = RateLimiter(max_requests=5, window_seconds=60)
+# Account deletion is a destructive op — cap retries from any single IP.
+account_deletion_limiter = RateLimiter(max_requests=3, window_seconds=3600)

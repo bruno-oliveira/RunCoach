@@ -22,6 +22,27 @@ def parse_target_distance(value: str | float) -> float:
     return float(value)
 
 
+def compute_vdot_from_time(
+    distance_km: float, time_str: str, field_name: str = "race time"
+) -> tuple[float, float]:
+    """Parse a finish time and return (VDOT, pace_min_per_km) for the given distance.
+
+    Raises ValueError if the time string is unparseable. Centralised so plan and
+    fitness request schemas share one VDOT-derivation path.
+    """
+    from app.core.training.vdot_calculator import VDOTCalculator
+
+    seconds = VDOTCalculator.parse_time_to_seconds(time_str)
+    if not seconds or seconds <= 0:
+        raise ValueError(
+            f"Could not parse {field_name} '{time_str}'. "
+            "Use HH:MM:SS or MM:SS format (e.g. '42:15' or '1:45:30')."
+        )
+    vdot = VDOTCalculator.calculate_vdot(distance_km, seconds)
+    pace_min_km = (seconds / 60) / distance_km
+    return vdot, pace_min_km
+
+
 _MILEAGE_CONFIG = {
     5.0: {
         "min": settings.min_mileage_5k,
@@ -251,31 +272,15 @@ class PlanRequest(PlanRequestBase, RaceInfoMixin):
         - target_distance + goal_time → goal VDOT (and goal pace)
         - Validates that the goal improvement is plausible (max ~15%).
         """
-        from app.core.training.vdot_calculator import VDOTCalculator
-
         if self.recent_race_distance_km and self.recent_race_time:
-            seconds = VDOTCalculator.parse_time_to_seconds(self.recent_race_time)
-            if not seconds or seconds <= 0:
-                raise ValueError(
-                    f"Could not parse recent_race_time '{self.recent_race_time}'. "
-                    "Use HH:MM:SS or MM:SS format (e.g. '42:15' or '1:45:30')."
-                )
-            self.vdot = VDOTCalculator.calculate_vdot(
-                self.recent_race_distance_km, seconds
+            self.vdot, self.current_pace_min_km = compute_vdot_from_time(
+                self.recent_race_distance_km, self.recent_race_time, "recent_race_time"
             )
-            self.current_pace_min_km = (seconds / 60) / self.recent_race_distance_km
 
         if self.goal_time:
-            goal_seconds = VDOTCalculator.parse_time_to_seconds(self.goal_time)
-            if not goal_seconds or goal_seconds <= 0:
-                raise ValueError(
-                    f"Could not parse goal_time '{self.goal_time}'. "
-                    "Use HH:MM:SS or MM:SS format (e.g. '42:15' or '1:45:30')."
-                )
-            self.goal_vdot = VDOTCalculator.calculate_vdot(
-                self.target_distance, goal_seconds
+            self.goal_vdot, self.goal_pace_min_km = compute_vdot_from_time(
+                self.target_distance, self.goal_time, "goal_time"
             )
-            self.goal_pace_min_km = (goal_seconds / 60) / self.target_distance
 
             if self.vdot and self.goal_vdot and self.goal_vdot > self.vdot:
                 improvement = (self.goal_vdot - self.vdot) / self.vdot
@@ -352,19 +357,10 @@ class FitnessPlanRequest(BaseModel):
 
     @model_validator(mode="after")
     def compute_vdot(self) -> "FitnessPlanRequest":
-        from app.core.training.vdot_calculator import VDOTCalculator
-
         if self.recent_race_distance_km and self.recent_race_time:
-            seconds = VDOTCalculator.parse_time_to_seconds(self.recent_race_time)
-            if not seconds or seconds <= 0:
-                raise ValueError(
-                    f"Could not parse recent_race_time '{self.recent_race_time}'. "
-                    "Use HH:MM:SS or MM:SS format (e.g. '42:15' or '1:45:30')."
-                )
-            self.vdot = VDOTCalculator.calculate_vdot(
-                self.recent_race_distance_km, seconds
+            self.vdot, self.current_pace_min_km = compute_vdot_from_time(
+                self.recent_race_distance_km, self.recent_race_time, "recent_race_time"
             )
-            self.current_pace_min_km = (seconds / 60) / self.recent_race_distance_km
         return self
 
 
