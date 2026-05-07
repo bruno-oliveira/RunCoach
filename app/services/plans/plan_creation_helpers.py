@@ -122,10 +122,15 @@ def attach_nutrition(
     plan_data: list[dict],
     nutrition_engine: NutritionEngine,
 ) -> None:
+    trail_kwargs = {
+        "is_trail": plan_request.is_trail,
+        "target_elevation_gain_m": plan_request.target_elevation_gain_m or 0.0,
+    }
     nutrition_plan = nutrition_engine.generate_weekly_meal_plan(
         plan_request.current_km,
         plan_request.target_distance,
         body_weight=plan_request.body_weight_kg,
+        **trail_kwargs,
     )
     training_plan.nutrition_plan_data = nutrition_plan
 
@@ -134,6 +139,7 @@ def attach_nutrition(
         plan_request.current_km,
         plan_request.target_distance,
         body_weight_kg=plan_request.body_weight_kg,
+        **trail_kwargs,
     )
     training_plan.nutrition_phases_data = nutrition_phases
 
@@ -145,9 +151,17 @@ def attach_race_protocol(
     goal_pace = plan_request.goal_pace_min_km or goal_pace_from_vdot(
         plan_request.vdot, plan_request.target_distance
     )
+    trail_profile = None
+    if plan_request.is_trail:
+        from app.core.training.trail_profile import classify_trail
+        trail_profile = classify_trail(
+            plan_request.target_distance,
+            plan_request.target_elevation_gain_m or 0.0,
+        )
     race_protocol = generate_race_protocol(
         plan_request.target_distance,
         goal_pace,
+        trail_profile=trail_profile,
     )
     training_plan.race_protocol_data = race_protocol
 

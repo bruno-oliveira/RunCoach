@@ -35,18 +35,90 @@ PROTEIN_G_PER_KG = 1.8
 DAILY_FIBER_G = 35
 
 
+# Trail / ultra: continuous boost in distance + elevation, capped at 30%.
+# Calibrated so 30 km / 1000 m sits near the legacy stepped value (~0.10),
+# while 100 km / 5000 m unlocks ~+25% uplift the stepped formula couldn't
+# express and 163 km / 6000 m saturates at the 30% ceiling.
+_TRAIL_BOOST_FLOOR = 0.05
+_TRAIL_BOOST_CEILING = 0.30
+_TRAIL_DISTANCE_DIVISOR = 800.0
+_TRAIL_ELEVATION_DIVISOR = 100000.0
+
+
+def _trail_distance_boost(distance_km: float, elevation_gain_m: float) -> float:
+    raw = (
+        _TRAIL_BOOST_FLOOR
+        + distance_km / _TRAIL_DISTANCE_DIVISOR
+        + max(0.0, elevation_gain_m) / _TRAIL_ELEVATION_DIVISOR
+    )
+    return max(_TRAIL_BOOST_FLOOR, min(_TRAIL_BOOST_CEILING, raw))
+
+
+def build_in_race_fueling_table(
+    distance_km: float, elevation_gain_m: float
+) -> Dict[str, Any]:
+    """Build an in-race fueling table for trail/ultra plans.
+
+    Carbs/h drops as predicted duration grows (longer races shift to mixed
+    real food) and electrolyte cadence tightens. Surfaced in plan view +
+    PDF for any trail plan.
+    """
+    # Crude time estimate without VDOT context: 6 min/km flat baseline plus
+    # ~30 sec/km penalty for every 100 m/km of elevation. Used only to
+    # bucket the carbs-per-hour band; the per-runner goal time, when known,
+    # comes through ``predicted_seconds`` upstream (race protocol generator).
+    pace_min_km = 6.0 + 0.5 * (elevation_gain_m / max(distance_km, 1.0)) / 10.0
+    estimated_hours = (distance_km * pace_min_km) / 60.0
+
+    if estimated_hours < 2:
+        carb_band = "60–90 g/h"
+        food_note = "Gels and chews — no real food needed at this duration."
+    elif estimated_hours < 6:
+        carb_band = "60–80 g/h"
+        food_note = "Mostly gels and chews; introduce dates / banana from hour 3."
+    else:
+        carb_band = "50–70 g/h"
+        food_note = (
+            "Mixed real food at aid stations — boiled potato, rice balls, broth, "
+            "salted nut butter wraps. Sweetness fatigue is real over 6+ hours."
+        )
+
+    if distance_km >= 50.0:
+        electrolyte_note = "1 capsule every 60–90 min, denser if hot or sweaty."
+    else:
+        electrolyte_note = "1 capsule every ~10 km."
+
+    return {
+        "estimated_duration_hours": round(estimated_hours, 1),
+        "carbs_per_hour": carb_band,
+        "fluid_per_hour_ml": "500–800 ml/h (more in heat)",
+        "electrolytes": electrolyte_note,
+        "real_food_strategy": food_note,
+        "rehearsal_advice": (
+            "Practise this exact fueling pattern on your longest training runs. "
+            "Race day is not the place to introduce a new gel brand or food."
+        ),
+    }
+
+
 @lru_cache(maxsize=256)
 def _calculate_nutrition_needs_cached(
     weekly_km: float,
     target_distance: float,
-    body_weight: float
+    body_weight: float,
+    is_trail: bool = False,
+    target_elevation_gain_m: float = 0.0,
 ) -> tuple:
     """Pure function for calculating nutrition needs (cached).
 
     Formula: ``base_kcal = body_weight * BASE_CALORIES_PER_KG``
              ``factor = 1 + (weekly_km / 50) * 0.3 + distance_boost``
              ``daily_kcal = base_kcal * factor``
-    See module constants for the rationale behind each coefficient.
+
+    For trail/ultra plans (``is_trail=True``) the distance boost is a
+    continuous function of distance + elevation, which lets a 100-mile race
+    receive a meaningful caloric uplift the road stepped formula can't
+    express. Road behaviour is unchanged.
     """
     if body_weight <= 0:
         raise ValueError("body_weight must be positive")
@@ -54,7 +126,9 @@ def _calculate_nutrition_needs_cached(
     base_calories = body_weight * BASE_CALORIES_PER_KG
     training_factor = 1.0 + (weekly_km / TRAINING_KM_REFERENCE) * TRAINING_FACTOR_PER_REFERENCE
 
-    if target_distance >= 42.2:
+    if is_trail:
+        training_factor += _trail_distance_boost(target_distance, target_elevation_gain_m)
+    elif target_distance >= 42.2:
         training_factor += DISTANCE_BOOST_MARATHON
     elif target_distance >= 30:
         training_factor += DISTANCE_BOOST_ULTRA_TRAIL
@@ -75,7 +149,14 @@ class NutritionEngine:
         self._rng = random.Random(random_seed)
         self._meal_selector = MealSelector(self._rng)
 
-    def calculate_nutrition_needs(self, weekly_km: float, target_distance: float, body_weight: float = 70) -> Dict[str, float]:
+    def calculate_nutrition_needs(
+        self,
+        weekly_km: float,
+        target_distance: float,
+        body_weight: float = 70,
+        is_trail: bool = False,
+        target_elevation_gain_m: float = 0.0,
+    ) -> Dict[str, float]:
         """
         Calculate daily nutrition needs based on training load
 
@@ -83,12 +164,18 @@ class NutritionEngine:
             weekly_km: Current weekly mileage
             target_distance: Target race distance in km (30.0 = Trail Running)
             body_weight: Athlete's weight in kg (default 70kg)
+            is_trail: True for parameterized trail/ultra plans — switches to
+                the continuous distance + elevation boost formula.
+            target_elevation_gain_m: Total race elevation gain in m (only
+                used when ``is_trail`` is True).
 
         Returns:
             Dictionary with daily nutrition targets
         """
         calories, protein, fiber = _calculate_nutrition_needs_cached(
-            weekly_km, target_distance, body_weight
+            weekly_km, target_distance, body_weight,
+            is_trail=is_trail,
+            target_elevation_gain_m=target_elevation_gain_m,
         )
 
         return {
@@ -99,7 +186,14 @@ class NutritionEngine:
             "carbs": max(0, round((calories - (protein * 4) - (round(calories * 0.25 / 9, 0) * 9)) / 4, 0))
         }
 
-    def generate_weekly_meal_plan(self, weekly_km: float, target_distance: float, body_weight: float = 70) -> Dict[str, Any]:
+    def generate_weekly_meal_plan(
+        self,
+        weekly_km: float,
+        target_distance: float,
+        body_weight: float = 70,
+        is_trail: bool = False,
+        target_elevation_gain_m: float = 0.0,
+    ) -> Dict[str, Any]:
         """
         Generate a meal blueprint with variety options
 
@@ -107,11 +201,17 @@ class NutritionEngine:
             weekly_km: Current weekly mileage
             target_distance: Target race distance in km (30.0 = Trail Running)
             body_weight: Athlete's weight in kg
+            is_trail: Forwarded to nutrition-needs calculator for trail uplift.
+            target_elevation_gain_m: Total race elevation gain in m.
 
         Returns:
             Dictionary with meal blueprint and nutrition targets
         """
-        nutrition_needs = self.calculate_nutrition_needs(weekly_km, target_distance, body_weight)
+        nutrition_needs = self.calculate_nutrition_needs(
+            weekly_km, target_distance, body_weight,
+            is_trail=is_trail,
+            target_elevation_gain_m=target_elevation_gain_m,
+        )
 
         meal_blueprint = {
             "nutrition_targets": nutrition_needs,
@@ -119,6 +219,10 @@ class NutritionEngine:
             "general_tips": generate_general_nutrition_tips(weekly_km, target_distance),
             "hydration_guide": generate_hydration_guide(weekly_km, target_distance),
         }
+        if is_trail:
+            meal_blueprint["in_race_fueling"] = build_in_race_fueling_table(
+                target_distance, target_elevation_gain_m,
+            )
 
         meal_types = ["breakfast", "lunch", "dinner", "snack", "post_workout"]
 
@@ -150,6 +254,8 @@ class NutritionEngine:
         weekly_km: float,
         target_distance: float,
         body_weight_kg: float = 70.0,
+        is_trail: bool = False,
+        target_elevation_gain_m: float = 0.0,
     ) -> Dict[str, Any]:
         """Generate phase-specific nutrition targets for a training plan.
 
@@ -225,7 +331,9 @@ class NutritionEngine:
                 continue
 
             base_needs = self.calculate_nutrition_needs(
-                config["km"], target_distance, body_weight_kg
+                config["km"], target_distance, body_weight_kg,
+                is_trail=is_trail,
+                target_elevation_gain_m=target_elevation_gain_m,
             )
 
             calories = round(base_needs["calories"] * config["cal_multiplier"])

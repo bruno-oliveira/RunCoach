@@ -344,29 +344,60 @@ _DISTANCE_TIPS = {
 }
 
 
-def _get_distance_key(target_distance: float) -> str:
-    """Map target distance to a distance tip key."""
-    if target_distance == 30:
+def _get_distance_key(target_distance: float, trail_profile=None) -> str:
+    """Map target distance (and optional trail context) to a distance tip key."""
+    if trail_profile is not None or target_distance == 30:
         return "trail"
-    elif target_distance <= 5:
+    if target_distance <= 5:
         return "5k"
-    elif target_distance <= 10:
+    if target_distance <= 10:
         return "10k"
-    elif target_distance <= 21.1:
+    if target_distance <= 21.1:
         return "half"
-    else:
-        return "marathon"
+    return "marathon"
 
 
-def get_tips_for_week(week_number: int, target_distance: float) -> List[str]:
+# Bracket-specific tips bolt onto the base "trail" pool — added when the
+# user's plan crosses into ultra / long_ultra territory so the coaching
+# vocabulary matches the race demands.
+_TRAIL_BRACKET_TIPS = {
+    "short": [
+        "Trail isn't road — relax your form on technical sections, eyes 5–10 m ahead.",
+        "Practise descents on tired legs; learn to let go a little on smooth downhills.",
+    ],
+    "standard": [
+        "Power-hike the steepest 10% of your hills in training — it's a race tactic, not a weakness.",
+        "Eat your first gel by minute 30, even if you don't feel hungry. Train the gut.",
+        "Run at least one long run on the actual race terrain, or as close as you can find.",
+    ],
+    "ultra": [
+        "Add a back-to-back long-run weekend during build (Sat long, Sun medium-long).",
+        "Test every gel, chew, and aid-station food in training — not on race day.",
+        "Practise eating real food on the move (potato, banana, rice ball) on long runs.",
+        "Pack a drop-bag dry-run: spare socks, lube, jacket, headlamp batteries, real food.",
+    ],
+    "long_ultra": [
+        "Do at least one night training run with the headlamp + backup torch you'll race with.",
+        "Plan a sleep strategy: brief 10–20 min naps at major aid stations are normal.",
+        "Brief your crew on warning signs (slurred speech, hypothermia, wobble) and the abort plan.",
+        "Practise switching shoes / changing socks mid-run — the dry-shoe reset is a real morale boost.",
+    ],
+}
+
+
+def get_tips_for_week(
+    week_number: int,
+    target_distance: float,
+    trail_profile=None,
+) -> List[str]:
     """Generate diverse and week-specific training tips.
 
     Args:
         week_number: 1-indexed week number in the plan.
         target_distance: Race distance in km.
-
-    Returns:
-        Exactly 4 training tips for the week.
+        trail_profile: Optional ``TrailProfile`` — bracket-aware tips
+            (power hiking, fueling rehearsal, drop bags, night running)
+            replace the generic distance tip when present.
     """
     tips: List[str] = []
 
@@ -385,10 +416,14 @@ def get_tips_for_week(week_number: int, target_distance: float) -> List[str]:
             tip_index = (start_index + i) % len(category_tips)
             tips.append(category_tips[tip_index])
 
-    # Add distance-specific tip
-    dist_key = _get_distance_key(target_distance)
-    dist_tips = _DISTANCE_TIPS[dist_key]
-    tips.append(dist_tips[(week_number - 1) % len(dist_tips)])
+    # Distance-specific or bracket-specific tip.
+    if trail_profile is not None:
+        bracket_tips = _TRAIL_BRACKET_TIPS.get(trail_profile.bracket, _DISTANCE_TIPS["trail"])
+        tips.append(bracket_tips[(week_number - 1) % len(bracket_tips)])
+    else:
+        dist_key = _get_distance_key(target_distance)
+        dist_tips = _DISTANCE_TIPS[dist_key]
+        tips.append(dist_tips[(week_number - 1) % len(dist_tips)])
 
     # Add one rotating motivational tip
     motivational_index = (week_number - 1) % len(_MOTIVATIONAL_TIPS)

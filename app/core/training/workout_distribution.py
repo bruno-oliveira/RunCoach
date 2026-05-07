@@ -9,6 +9,7 @@ distribution_validator.
 from typing import Dict, List, Optional
 
 from app.core.training.distribution_validator import validate_polarized_ratio as _validate_polarized_ratio
+from app.core.training.trail_profile import TrailProfile
 from app.core.training.week_scheduler import schedule_workout_types  # noqa: F401
 
 
@@ -17,7 +18,8 @@ def get_workout_distribution(total_km: float, max_runs: int, phase: str = 'build
                              phases: Dict[str, int] = None,
                              target_distance: float = 10.0,
                              terrain: Optional[str] = None,
-                             profile: Optional[dict] = None) -> Dict[str, int]:
+                             profile: Optional[dict] = None,
+                             trail_profile: Optional[TrailProfile] = None) -> Dict[str, int]:
     """Calculate how many of each workout type per week.
 
     When a RunnerProfile is provided, the runner's actual pace zone
@@ -87,10 +89,13 @@ def get_workout_distribution(total_km: float, max_runs: int, phase: str = 'build
         target_distance, terrain, quality_workouts, phase,
         easy_runs, long_runs, rest_days, week_number,
         profile=profile,
+        trail_profile=trail_profile,
     )
 
     if not is_recovery_week and max_runs > 2:
-        distribution = _validate_polarized_ratio(distribution, phase, target_distance)
+        distribution = _validate_polarized_ratio(
+            distribution, phase, target_distance, trail_profile=trail_profile,
+        )
 
     return distribution
 
@@ -98,8 +103,22 @@ def get_workout_distribution(total_km: float, max_runs: int, phase: str = 'build
 # Re-export kept for backward compatibility — see week_scheduler.py
 
 
-def _profile_for(target_distance: float, terrain: Optional[str]) -> str:
-    """Map (distance, terrain) to a quality-distribution profile name."""
+def _profile_for(
+    target_distance: float,
+    terrain: Optional[str],
+    trail_profile: Optional[TrailProfile] = None,
+) -> str:
+    """Map (distance, terrain, trail_profile) to a quality-distribution profile name.
+
+    Trail dispatch:
+      * ``trail_profile`` wins when present (uses ``elevation_class``).
+      * ``terrain == 'flat'`` selects ``trail_flat``; rolling/hilly/mountainous
+        all use the hill-based ``trail_hilly`` quality pattern (the dominant
+        stimulus is the climb, not the technicality).
+      * Legacy ``target_distance == 30.0`` keeps the historic behavior.
+    """
+    if trail_profile is not None:
+        return 'trail_flat' if trail_profile.elevation_class == 'flat' else 'trail_hilly'
     if target_distance == 30.0:
         return 'trail_flat' if terrain == 'flat' else 'trail_hilly'
     if target_distance <= 5:
@@ -198,7 +217,8 @@ def _build_quality_distribution(target_distance: float, terrain: Optional[str],
                                 quality_workouts: int, phase: str,
                                 easy_runs: int, long_runs: int, rest_days: int,
                                 week_number: int,
-                                profile: Optional[dict] = None) -> Dict[str, int]:
+                                profile: Optional[dict] = None,
+                                trail_profile: Optional[TrailProfile] = None) -> Dict[str, int]:
     """Assign quality workout types based on race distance, terrain, and phase.
 
     Dispatches to a per-profile builder keyed by (distance, terrain).
@@ -218,7 +238,7 @@ def _build_quality_distribution(target_distance: float, terrain: Optional[str],
     if quality_workouts == 0:
         return distribution
 
-    profile_name = _profile_for(target_distance, terrain)
+    profile_name = _profile_for(target_distance, terrain, trail_profile=trail_profile)
 
     # Profile-aware: detect gaps in training history
     if profile:

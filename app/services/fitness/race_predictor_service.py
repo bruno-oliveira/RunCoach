@@ -430,6 +430,16 @@ class RacePredictorService:
         }
 
     @staticmethod
+    def get_trail_runs_count(user_id: str, db: Session) -> int:
+        """How many of the user's logged runs qualify as trail runs.
+
+        Uses the same ≥20 m/km threshold as the VDOT calculator so the
+        signal stays consistent across services. Drives the trail
+        inexperience factor in race-time predictions for ultra plans.
+        """
+        return RacePredictorService._get_user_trail_elevation_profile(user_id, db)["count"]
+
+    @staticmethod
     def _get_user_trail_elevation_profile(user_id: str, db: Session) -> Dict[str, Any]:
         """Compute user's typical trail elevation per km and trail run count."""
         trail_runs = (

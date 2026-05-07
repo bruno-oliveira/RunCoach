@@ -371,8 +371,109 @@ def _derive_structure(description: str) -> str:
     s = re.sub(r"^Run\s+", "", s.strip())
     return s.strip()
 
+# Long-ultra-only template: a short headlamp run during the peak phase to
+# rehearse darkness pacing and gear. Bracketed via ``brackets`` so it never
+# fires for short/standard plans (or road).
+_LONG_ULTRA_NIGHT_RUN: Dict[str, Any] = {
+    "id": "trail_night_run",
+    "distances": [30.0],   # trail-tagged; trail_profile widens this to any bracket
+    "brackets": ["long_ultra"],
+    "phases": ["peak"],
+    "type": "tempo",
+    "terrain": ["any"],
+    "name": "Headlamp Night Run",
+    "structure": "45-60 min easy night run on trails with headlamp and hand torch",
+    "description": (
+        "After dark: 45-60 min easy effort on a familiar trail loop with a "
+        "headlamp (and a backup hand torch). Practice the gear, the depth "
+        "perception, and eating/drinking by feel. Run conservatively — a "
+        "trip in the dark is the goal to avoid, not to recover from."
+    ),
+    "intensity": "low",
+    "target_zone": 2,
+    "pace_zone": "E",
+    "rationale": (
+        "100-mile races run through the night. Rehearsing in the dark "
+        "lets you debug gear, fueling, and pacing while the stakes are low — "
+        "not at 2am during the race."
+    ),
+}
+
 # Backward-compatible alias: tests and internal code import _WORKOUTS.
-_WORKOUTS = WORKOUTS
+_WORKOUTS = list(WORKOUTS) + [_LONG_ULTRA_NIGHT_RUN]
+
+
+# --- Trail bracket gating ---------------------------------------------------
+# A workout's optional ``brackets`` field restricts it to specific trail
+# bracket(s). Without the field the workout is allowed for any trail
+# bracket (and any non-trail distance, when applicable).
+#
+# Existing trail workouts that should NOT fire for short trail plans
+# (15 km / 8-week prep is the wrong place for a 50 km race simulation):
+
+_BRACKET_RESTRICTIONS: Dict[str, list] = {
+    "trail_back_to_back":            ["ultra", "long_ultra"],
+    "trail_long_race_simulation":    ["ultra", "long_ultra"],
+    "trail_flat_long_race_sim":      ["ultra", "long_ultra"],
+    "trail_flat_long_fueling":       ["standard", "ultra", "long_ultra"],
+    "trail_power_hike":              ["standard", "ultra", "long_ultra"],
+    "trail_time_on_feet":            ["standard", "ultra", "long_ultra"],
+}
+
+
+def _bracket_allowed(workout: Dict[str, Any], bracket: str) -> bool:
+    explicit = workout.get("brackets")
+    if explicit is not None:
+        return bracket in explicit
+    restriction = _BRACKET_RESTRICTIONS.get(workout.get("id"))
+    if restriction is not None:
+        return bracket in restriction
+    return True
+
+
+def _trail_aware_distance_filter(
+    target_distance: float, trail_profile,
+) -> List[Dict[str, Any]]:
+    """Return workouts whose ``distances`` list matches the goal.
+
+    For trail/ultra plans, every workout tagged with the legacy 30.0 sentinel
+    is considered eligible (subject to bracket gating below). This unlocks
+    the existing 15+ trail workout templates for 50/80/163 km plans without
+    requiring a per-distance fan-out in every workout entry.
+    """
+    if trail_profile is not None:
+        return [w for w in _WORKOUTS if 30.0 in w["distances"] or target_distance in w["distances"]]
+    return [w for w in _WORKOUTS if target_distance in w["distances"]]
+
+
+def _filter_candidates(
+    workout_type: str,
+    target_distance: float,
+    phase: str,
+    terrain: Optional[str],
+    trail_profile,
+) -> List[Dict[str, Any]]:
+    candidates = [
+        w for w in _trail_aware_distance_filter(target_distance, trail_profile)
+        if phase in w["phases"] and w["type"] == workout_type
+    ]
+
+    # Terrain filter — flat-only or hilly/any otherwise.
+    if terrain == "flat" or (trail_profile and trail_profile.elevation_class == "flat"):
+        candidates = [w for w in candidates if "flat" in w.get("terrain", ["any"])]
+    elif trail_profile is not None or terrain is not None:
+        candidates = [
+            w for w in candidates
+            if "any" in w.get("terrain", ["any"])
+            or "hilly" in w.get("terrain", ["any"])
+        ]
+
+    # Bracket gating — ultra-specific workouts (e.g. back-to-back) only fire
+    # for ultra/long_ultra plans.
+    if trail_profile is not None:
+        candidates = [w for w in candidates if _bracket_allowed(w, trail_profile.bracket)]
+
+    return candidates
 
 
 def _resolve_long_steps_builder(
@@ -431,6 +532,7 @@ def overlay_key_workout(
     week_in_phase: int,
     terrain: Optional[str] = None,
     pace_zones: Optional[Dict] = None,
+    trail_profile=None,
 ) -> None:
     """Attach key workout metadata, description, and steps for quality sessions.
 
@@ -445,7 +547,8 @@ def overlay_key_workout(
         return
 
     key_wk = KeyWorkoutLibrary.get_for_phase(
-        target_distance, phase, week_in_phase, workout_type, terrain=terrain,
+        target_distance, phase, week_in_phase, workout_type,
+        terrain=terrain, trail_profile=trail_profile,
     )
     if not key_wk:
         return
@@ -499,6 +602,7 @@ class KeyWorkoutLibrary:
         week_in_phase: int,
         workout_type: str = "interval",
         terrain: Optional[str] = None,
+        trail_profile=None,
     ) -> Optional[Dict]:
         """Select a key workout for the given distance, phase, and week.
 
@@ -507,8 +611,13 @@ class KeyWorkoutLibrary:
             phase:           Training phase (base, build, peak, taper).
             week_in_phase:   Zero-indexed week within the current phase.
             workout_type:    Requested workout type (interval, tempo, hill).
-            terrain:         Terrain access ('flat' or None/hilly). Only
-                             affects trail (30km) workout selection.
+            terrain:         Terrain access string ('flat' or rolling/hilly/
+                             mountainous). Only affects trail selection.
+            trail_profile:   Preferred input for trail/ultra plans. When
+                             present, trail-tagged workouts (those listing
+                             30.0 in their ``distances``) become eligible
+                             for any trail bracket and are further filtered
+                             by the workout's optional ``brackets`` field.
 
         Returns:
             A workout dict or None if no key workout applies.
@@ -517,23 +626,9 @@ class KeyWorkoutLibrary:
         if phase not in ("build", "peak"):
             return None
 
-        candidates = [
-            w for w in _WORKOUTS
-            if target_distance in w["distances"]
-            and phase in w["phases"]
-            and w["type"] == workout_type
-        ]
-
-        # Filter by terrain for trail workouts
-        if terrain == "flat":
-            candidates = [w for w in candidates if "flat" in w.get("terrain", ["any"])]
-        else:
-            candidates = [
-                w for w in candidates
-                if "any" in w.get("terrain", ["any"])
-                or "hilly" in w.get("terrain", ["any"])
-            ]
-
+        candidates = _filter_candidates(
+            workout_type, target_distance, phase, terrain, trail_profile,
+        )
         if not candidates:
             return None
 
@@ -541,17 +636,20 @@ class KeyWorkoutLibrary:
         return candidates[week_in_phase % len(candidates)]
 
     @classmethod
-    def get_all_for_distance(cls, target_distance: float, terrain: Optional[str] = None) -> List[Dict]:
+    def get_all_for_distance(cls, target_distance: float, terrain: Optional[str] = None,
+                             trail_profile=None) -> List[Dict]:
         """Return all key workouts for a race distance."""
-        workouts = [w for w in _WORKOUTS if target_distance in w["distances"]]
-        if terrain == "flat":
+        workouts = _trail_aware_distance_filter(target_distance, trail_profile)
+        if terrain == "flat" or (trail_profile and trail_profile.elevation_class == "flat"):
             workouts = [w for w in workouts if "flat" in w.get("terrain", ["any"])]
-        elif terrain is not None:
+        elif terrain is not None or trail_profile is not None:
             workouts = [
                 w for w in workouts
                 if "any" in w.get("terrain", ["any"])
                 or "hilly" in w.get("terrain", ["any"])
             ]
+        if trail_profile is not None:
+            workouts = [w for w in workouts if _bracket_allowed(w, trail_profile.bracket)]
         return workouts
 
     @classmethod

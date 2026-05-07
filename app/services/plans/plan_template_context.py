@@ -56,6 +56,8 @@ def plan_view_context(
         "current_km": training_plan.current_weekly_km,
         "experience_level": derive_experience_level(training_plan.current_weekly_km or 0),
         "target_distance": training_plan.target_distance,
+        "is_trail": bool(getattr(training_plan, "is_trail", False)),
+        "target_elevation_gain_m": getattr(training_plan, "target_elevation_gain_m", None),
         "weeks": training_plan.weeks_duration,
         "nutrition_plan": nutrition_plan,
         "nutrition_phases": (

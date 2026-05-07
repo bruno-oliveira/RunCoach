@@ -32,12 +32,40 @@ PHASE_FOCUS_ROTATIONS: Dict[str, List[str]] = {
     "taper": ["core"],
 }
 
-# Trail runners get stability work replacing generic full_body
+# Trail runners get stability work replacing generic full_body. Kept as the
+# default rolling/hilly rotation; flat and mountainous use the elevation-class
+# table below.
 TRAIL_FOCUS_ROTATIONS: Dict[str, List[str]] = {
     "base": ["lower_body", "trail_stability", "core"],
     "build": ["lower_body", "trail_stability", "plyometric"],
     "peak": ["lower_body", "plyometric", "trail_stability"],
     "taper": ["core"],
+}
+
+# Per-elevation-class trail rotations.
+#
+# * Flat trail (no hill access) — addresses the user's flaw #2 directly:
+#   replaces the missing hill-driven power stimulus with plyometric work
+#   (depth jumps, broad jumps, single-leg hops — all bodyweight, no gym).
+# * Rolling / hilly — current trail rotation (terrain itself drives stability
+#   adaptation; gym work supplements with eccentric strength).
+# * Mountainous — emphasises stability + plyometric for descents and steep
+#   climbs; the lower_body rotation prepares quads for the eccentric load.
+TRAIL_ROTATIONS_BY_ELEVATION: Dict[str, Dict[str, List[str]]] = {
+    "flat": {
+        "base":  ["lower_body", "plyometric", "core"],
+        "build": ["lower_body", "plyometric", "plyometric"],
+        "peak":  ["lower_body", "plyometric", "core"],
+        "taper": ["core"],
+    },
+    "rolling":     TRAIL_FOCUS_ROTATIONS,
+    "hilly":       TRAIL_FOCUS_ROTATIONS,
+    "mountainous": {
+        "base":  ["lower_body", "trail_stability", "plyometric"],
+        "build": ["lower_body", "trail_stability", "plyometric"],
+        "peak":  ["lower_body", "trail_stability", "plyometric"],
+        "taper": ["trail_stability"],
+    },
 }
 
 
@@ -385,12 +413,21 @@ _EXERCISES: Dict[str, Dict[str, Dict[str, Any]]] = {
 # ---------------------------------------------------------------------------
 
 
-def get_phase_focus_rotation(phase: str, target_distance: float = 0.0) -> List[str]:
+def get_phase_focus_rotation(
+    phase: str,
+    target_distance: float = 0.0,
+    trail_profile=None,
+) -> List[str]:
     """Return the ordered focus list for a training phase.
 
-    Trail runners (30km) get trail-specific stability work.
-    Falls back to the "build" rotation for unknown phases.
+    Trail / ultra plans dispatch to a per-elevation-class rotation: flat
+    trails get extra plyometric work to replace the missing hill stimulus;
+    mountainous routes get stability + plyometric every phase. Falls back
+    to the "build" rotation for unknown phases.
     """
+    if trail_profile is not None:
+        rotations = TRAIL_ROTATIONS_BY_ELEVATION[trail_profile.elevation_class]
+        return rotations.get(phase, rotations["build"])
     if target_distance == 30.0:
         return TRAIL_FOCUS_ROTATIONS.get(phase, TRAIL_FOCUS_ROTATIONS["build"])
     return PHASE_FOCUS_ROTATIONS.get(phase, PHASE_FOCUS_ROTATIONS["build"])

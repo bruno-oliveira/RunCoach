@@ -55,9 +55,15 @@ class PlanPagesMixin:
         story.append(Spacer(1, 2 * cm))
 
         target_distance_float = training_plan.target_distance_km
+        is_trail_plan = bool(getattr(training_plan, "is_trail", False))
+        elev = getattr(training_plan, "target_elevation_gain_m", None)
         if is_fitness:
             focus = training_plan.target_distance.replace("fitness_", "").replace("_", " ").title()
             target_display = focus
+        elif is_trail_plan:
+            target_display = f"{target_distance_float:g} km Trail"
+            if elev is not None:
+                target_display += f" · {int(elev)} m vert"
         elif target_distance_float == 30.0:
             target_display = "Trail Running"
         else:

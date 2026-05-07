@@ -23,6 +23,7 @@ from app.services.fitness.readiness_scoring import (
     score_volume,
 )
 from app.models import RunLog
+from app.services.fitness.race_predictor_service import RacePredictorService
 from app.utils import to_date as _to_date
 
 logger = logging.getLogger(__name__)
@@ -174,7 +175,14 @@ class ReadinessService:
         ]
 
         target_dist = plan.target_distance_km
-        distance_label = DISTANCE_LABELS.get(target_dist, f"{target_dist}km")
+        if getattr(plan, "is_trail", False):
+            elev = getattr(plan, "target_elevation_gain_m", None)
+            if elev is not None:
+                distance_label = f"{target_dist:g} km Trail · {int(elev)} m vert"
+            else:
+                distance_label = f"{target_dist:g} km Trail"
+        else:
+            distance_label = DISTANCE_LABELS.get(target_dist, f"{target_dist}km")
 
         return {
             "overall_score": int(overall),
@@ -196,7 +204,20 @@ class ReadinessService:
             },
             "predictions": predictions,
             "vdot": vdot_data,
-            "scenarios": build_scenarios(vdot_data, plan.target_distance),
+            "scenarios": build_scenarios(
+                vdot_data,
+                plan.target_distance,
+                target_elevation_gain_m=(
+                    getattr(plan, "target_elevation_gain_m", None)
+                    if getattr(plan, "is_trail", False)
+                    else None
+                ),
+                trail_runs_count=(
+                    RacePredictorService.get_trail_runs_count(plan.user_id, db)
+                    if getattr(plan, "is_trail", False)
+                    else None
+                ),
+            ),
             "volume_comparison": volume_comparison,
             "longest_run_km": round(longest_run_km, 1),
             "peak_planned_long_run_km": round(planned_long_run_km, 1),

@@ -110,6 +110,15 @@ class PlanService:
             return existing, existing.plan_data if existing.plan_data else []
 
         effective_vdot = plan_request.goal_vdot or plan_request.vdot
+
+        trail_profile = None
+        if plan_request.is_trail:
+            from app.core.training.trail_profile import classify_trail
+            trail_profile = classify_trail(
+                plan_request.target_distance,
+                plan_request.target_elevation_gain_m or 0.0,
+            )
+
         plan_data = plan_generator.generate_plan(
             plan_request.current_km,
             plan_request.target_distance,
@@ -118,6 +127,7 @@ class PlanService:
             vdot=effective_vdot,
             profile=profile,
             terrain=plan_request.terrain,
+            trail_profile=trail_profile,
         )
 
         try:

@@ -152,17 +152,7 @@
                                             <option value="10">10K</option>
                                             <option value="21.1">Half Marathon</option>
                                             <option value="42.2">Marathon</option>
-                                            <option value="30">Trail Running</option>
-                                        </select>
-                                    </div>
-                                </div>
-
-                                <div class="form-group" id="terrain-group" style="display: none;">
-                                    <label for="terrain" class="form-label">Terrain access</label>
-                                    <div class="select-wrap">
-                                        <select id="terrain" name="terrain" class="form-select">
-                                            <option value="">Hilly (default)</option>
-                                            <option value="flat">Flat / No hills</option>
+                                            <option value="trail">Trail / Ultra (custom)</option>
                                         </select>
                                     </div>
                                 </div>
@@ -170,9 +160,36 @@
                                 <div class="form-group">
                                     <label for="weeks" class="form-label">Duration</label>
                                     <div class="input-with-unit">
-                                        <input type="number" id="weeks" name="weeks" class="form-input" min="4" max="24" required placeholder="12">
+                                        <input type="number" id="weeks" name="weeks" class="form-input" min="4" max="40" required placeholder="12">
                                         <span class="input-unit">weeks</span>
                                     </div>
+                                </div>
+                            </div>
+
+                            <!-- Trail / ultra panel: distance + elevation. Revealed
+                                 when "Trail / Ultra (custom)" is picked above. -->
+                            <div class="form-row-2" id="trail-group" style="display: none;">
+                                <input type="hidden" id="is_trail" name="is_trail" value="">
+                                <div class="form-group">
+                                    <label for="trail_distance_km" class="form-label">Trail distance</label>
+                                    <div class="input-with-unit">
+                                        <input type="number" id="trail_distance_km" class="form-input"
+                                               step="0.1" min="8" max="163" placeholder="50">
+                                        <span class="input-unit">km</span>
+                                    </div>
+                                    <span class="form-help">8 km up to 163 km (100 mi). Examples: 50, 80, 163.</span>
+                                </div>
+
+                                <div class="form-group">
+                                    <label for="target_elevation_gain_m" class="form-label">Total elevation gain</label>
+                                    <div class="input-with-unit">
+                                        <input type="number" id="target_elevation_gain_m" name="target_elevation_gain_m"
+                                               class="form-input" step="50" min="0" max="10000" placeholder="1500">
+                                        <span class="input-unit">m</span>
+                                    </div>
+                                    <span class="form-help" id="elevation-classifier">
+                                        Enter 0 for fully flat trails. We'll classify the course live.
+                                    </span>
                                 </div>
                             </div>
 
@@ -491,14 +508,84 @@ function setPlanMode(mode) {
 
     // Execute immediately - script is at end of body so DOM is already ready
     (function() {
-    // Show/hide terrain selector for trail distance
+    // Trail / ultra panel — show distance + elevation inputs when the user
+    // picks "Trail / Ultra (custom)". Single source of truth for which
+    // bracket the form is targeting; downstream JS reads `currentBracket()`.
     const distSelect = document.getElementById('target_distance');
-    const terrainGroup = document.getElementById('terrain-group');
-    function updateTerrainVisibility() {
-        terrainGroup.style.display = distSelect.value === '30' ? '' : 'none';
+    const trailGroup = document.getElementById('trail-group');
+    const isTrailField = document.getElementById('is_trail');
+    const trailDistanceField = document.getElementById('trail_distance_km');
+    const elevationField = document.getElementById('target_elevation_gain_m');
+    const elevationHelp = document.getElementById('elevation-classifier');
+
+    function isTrailMode() {
+        return distSelect.value === 'trail';
     }
-    distSelect.addEventListener('change', updateTerrainVisibility);
-    updateTerrainVisibility();
+
+    function effectiveDistance() {
+        if (isTrailMode()) {
+            const v = parseFloat(trailDistanceField.value);
+            return isNaN(v) ? null : v;
+        }
+        const v = parseFloat(distSelect.value);
+        return isNaN(v) ? null : v;
+    }
+
+    function currentBracket() {
+        const d = effectiveDistance();
+        if (d === null || !isTrailMode()) return null;
+        if (d < 21) return 'short';
+        if (d < 42.2) return 'standard';
+        if (d < 80) return 'ultra';
+        return 'long_ultra';
+    }
+
+    function elevationClass(distance, elevation) {
+        if (!distance || distance <= 0) return null;
+        const m_per_km = elevation / distance;
+        if (m_per_km < 10) return 'flat';
+        if (m_per_km < 25) return 'rolling';
+        if (m_per_km < 50) return 'hilly';
+        return 'mountainous';
+    }
+
+    function updateTrailVisibility() {
+        trailGroup.style.display = isTrailMode() ? '' : 'none';
+        // Hidden flag flipped on/off so the backend sees explicit intent.
+        isTrailField.value = isTrailMode() ? 'on' : '';
+    }
+
+    function updateElevationClassifier() {
+        if (!isTrailMode()) return;
+        const d = parseFloat(trailDistanceField.value);
+        const e = parseFloat(elevationField.value);
+        if (isNaN(d) || isNaN(e)) {
+            elevationHelp.textContent = "Enter 0 for fully flat trails. We'll classify the course live.";
+            return;
+        }
+        const cls = elevationClass(d, e);
+        const m_per_km = (e / d).toFixed(1);
+        const labels = {
+            flat: 'Flat trail',
+            rolling: 'Rolling',
+            hilly: 'Hilly',
+            mountainous: 'Mountainous (ITRA-style)',
+        };
+        elevationHelp.textContent =
+            `${m_per_km} m/km — ${labels[cls] || cls}. Bracket: ${currentBracket() || '—'}.`;
+    }
+
+    distSelect.addEventListener('change', () => {
+        updateTrailVisibility();
+        updateRunsOptions();
+        updateElevationClassifier();
+    });
+    trailDistanceField.addEventListener('input', () => {
+        updateRunsOptions();
+        updateElevationClassifier();
+    });
+    elevationField.addEventListener('input', updateElevationClassifier);
+    updateTrailVisibility();
 
     // Initialize mode from query param (always run to disable hidden sections)
     var initialMode = document.getElementById('plan_mode').value || 'distance';
@@ -508,26 +595,39 @@ function setPlanMode(mode) {
     }
     setPlanMode(initialMode);
 
-    // Disable options in "Runs per week" that aren't viable for the chosen distance.
-    // 2 runs → 5K/10K only. 3 runs → anything except marathon/trail.
+    // Bracket-aware runs/week floors:
+    //   road 5K/10K → 2+, half/marathon → 3+
+    //   trail short → 3+, standard → 4+, ultra → 5+, long_ultra → 6+
     const runsSelect = document.getElementById('max_runs_per_week');
+    function trailMinRuns() {
+        switch (currentBracket()) {
+            case 'short': return 3;
+            case 'standard': return 4;
+            case 'ultra': return 5;
+            case 'long_ultra': return 6;
+            default: return 2;
+        }
+    }
     function updateRunsOptions() {
-        const d = parseFloat(distSelect.value);
-        const opts = runsSelect.options;
-        for (const opt of opts) {
+        const trail = isTrailMode();
+        const minRuns = trail ? trailMinRuns() : 2;
+        const d = trail ? null : parseFloat(distSelect.value);
+        for (const opt of runsSelect.options) {
             const v = parseInt(opt.value);
             let disabled = false;
-            if (!isNaN(d)) {
+            if (trail && v < minRuns) {
+                disabled = true;
+            } else if (!trail && !isNaN(d)) {
                 if (v === 2 && d >= 21.1) disabled = true;
-                if (v === 3 && d >= 30.0) disabled = true;
             }
             opt.disabled = disabled;
         }
         if (runsSelect.selectedOptions[0]?.disabled) {
-            runsSelect.value = '4';
+            // Pick the lowest still-allowed option.
+            const fallback = Array.from(runsSelect.options).find(o => !o.disabled);
+            if (fallback) runsSelect.value = fallback.value;
         }
     }
-    distSelect.addEventListener('change', updateRunsOptions);
     updateRunsOptions();
 
     const form = document.querySelector('.plan-form');
@@ -549,32 +649,79 @@ function setPlanMode(mode) {
                 const targetDistance = document.getElementById('target_distance');
                 const weeks = document.getElementById('weeks');
 
-                if (parseFloat(currentKm.value) === 0) {
-                    const supportedDistances = [5, 10];
-                    const selectedDistance = parseFloat(targetDistance.value);
-                    if (!supportedDistances.includes(selectedDistance)) {
+                // Trail/ultra: validate distance + elevation, then rewrite the
+                // target_distance value to the user-entered km so the backend
+                // sees a number rather than the "trail" sentinel.
+                if (isTrailMode()) {
+                    const trailKm = parseFloat(trailDistanceField.value);
+                    if (isNaN(trailKm) || trailKm < 8 || trailKm > 163) {
                         e.preventDefault();
-                        alert('Starting from zero mileage is only supported for 5K and 10K goals. Please select a shorter distance or enter your current weekly mileage.');
-                        targetDistance.focus();
+                        alert('Trail/ultra distance must be between 8 km and 163 km (100 mi).');
+                        trailDistanceField.focus();
                         return false;
                     }
-                    if (parseInt(weeks.value) < 8) {
+                    const elev = parseFloat(elevationField.value);
+                    if (isNaN(elev) || elev < 0 || elev > 10000) {
                         e.preventDefault();
-                        alert('Beginner plans require at least 8 weeks for safe progression. Please extend your training duration.');
-                        weeks.focus();
+                        alert('Enter total elevation gain in metres (0–10000). Use 0 for fully flat trails.');
+                        elevationField.focus();
                         return false;
                     }
-                }
+                    if (parseFloat(currentKm.value) === 0) {
+                        e.preventDefault();
+                        alert('Trail/ultra plans require an existing running base. Build to at least 15 km/week first.');
+                        currentKm.focus();
+                        return false;
+                    }
+                    const minRuns = trailMinRuns();
+                    const runs = parseInt(runsSelect.value);
+                    if (runs < minRuns) {
+                        e.preventDefault();
+                        alert(`Your selected bracket needs at least ${minRuns} runs/week.`);
+                        runsSelect.focus();
+                        return false;
+                    }
+                    // Bracket-aware mileage floor: max(15, 0.35 × distance), +20% mountainous.
+                    const cls = elevationClass(trailKm, elev);
+                    let minKm = Math.max(15, 0.35 * trailKm);
+                    if (cls === 'mountainous') minKm *= 1.20;
+                    const km = parseFloat(currentKm.value);
+                    if (km > 0 && km < Math.round(minKm * 10) / 10) {
+                        e.preventDefault();
+                        alert(`A ${trailKm} km trail/ultra needs at least ${minKm.toFixed(1)} km/week base.`);
+                        currentKm.focus();
+                        return false;
+                    }
+                    // Replace the dropdown sentinel with the actual number.
+                    targetDistance.value = String(trailKm);
+                } else {
+                    if (parseFloat(currentKm.value) === 0) {
+                        const supportedDistances = [5, 10];
+                        const selectedDistance = parseFloat(targetDistance.value);
+                        if (!supportedDistances.includes(selectedDistance)) {
+                            e.preventDefault();
+                            alert('Starting from zero mileage is only supported for 5K and 10K goals. Please select a shorter distance or enter your current weekly mileage.');
+                            targetDistance.focus();
+                            return false;
+                        }
+                        if (parseInt(weeks.value) < 8) {
+                            e.preventDefault();
+                            alert('Beginner plans require at least 8 weeks for safe progression. Please extend your training duration.');
+                            weeks.focus();
+                            return false;
+                        }
+                    }
 
-                const km = parseFloat(currentKm.value);
-                const dist = parseFloat(targetDistance.value);
-                const minMileage = {5: 5, 10: 10, 21.1: 15, 30: 15, 42.2: 25};
-                const distNames = {5: '5K', 10: '10K', 21.1: 'Half Marathon', 30: 'Trail Running', 42.2: 'Marathon'};
-                if (km > 0 && minMileage[dist] && km < minMileage[dist]) {
-                    e.preventDefault();
-                    alert(distNames[dist] + ' training requires at least ' + minMileage[dist] + ' km/week. Please build your base before starting.');
-                    currentKm.focus();
-                    return false;
+                    const km = parseFloat(currentKm.value);
+                    const dist = parseFloat(targetDistance.value);
+                    const minMileage = {5: 5, 10: 10, 21.1: 15, 42.2: 25};
+                    const distNames = {5: '5K', 10: '10K', 21.1: 'Half Marathon', 42.2: 'Marathon'};
+                    if (km > 0 && minMileage[dist] && km < minMileage[dist]) {
+                        e.preventDefault();
+                        alert(distNames[dist] + ' training requires at least ' + minMileage[dist] + ' km/week. Please build your base before starting.');
+                        currentKm.focus();
+                        return false;
+                    }
                 }
 
                 if (!targetDistance.value) {

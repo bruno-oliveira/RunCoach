@@ -150,15 +150,16 @@ def generate_daily_workouts(week_number: int, total_km: float,
                             experience_level: str = "beginner",
                             week_in_phase: int = 0,
                             terrain: Optional[str] = None,
-                            profile: Optional[Dict[str, Any]] = None) -> List[Dict[str, Any]]:
+                            profile: Optional[Dict[str, Any]] = None,
+                            trail_profile=None) -> List[Dict[str, Any]]:
     """Generate daily workouts for one week."""
     long_run_distance = long_run_calculator.calculate_long_run_distance(
         total_km, target_distance, weeks, week_number, phase, is_recovery_week,
-        experience_level, profile=profile,
+        experience_level, profile=profile, trail_profile=trail_profile,
     )
     quality_distances = long_run_calculator.calculate_quality_distances(
         total_km, phase, distribution, is_recovery_week, long_run_distance, target_distance,
-        terrain=terrain,
+        terrain=terrain, trail_profile=trail_profile,
     )
     quality_distances = apply_quality_caps(
         quality_distances, long_run_distance, target_distance, phase,
@@ -204,6 +205,7 @@ def generate_daily_workouts(week_number: int, total_km: float,
         overlay_key_workout(
             workout, workout_type, phase, target_distance,
             week_in_phase, terrain, pace_zones,
+            trail_profile=trail_profile,
         )
 
         if workout_type == 'easy':
@@ -212,6 +214,7 @@ def generate_daily_workouts(week_number: int, total_km: float,
                 session_index=strength_session_idx,
                 experience_level=experience_level,
                 target_distance=target_distance,
+                trail_profile=trail_profile,
             )
             if strength_session:
                 workout['strength_session'] = strength_session
@@ -269,7 +272,8 @@ def _scale_down(workouts: List[Dict[str, Any]], total_km: float) -> float:
 
 
 def _fill_shortfall(workouts: List[Dict[str, Any]], total_km: float,
-                    actual_total_km: float, target_distance: float) -> float:
+                    actual_total_km: float, target_distance: float,
+                    trail_profile=None) -> float:
     """Fill shortfall by expanding easy and long runs proportionally."""
     if actual_total_km >= total_km * 0.97 or actual_total_km <= 0:
         return actual_total_km
@@ -288,7 +292,7 @@ def _fill_shortfall(workouts: List[Dict[str, Any]], total_km: float,
                 share = deficit * (w['distance'] / total_expandable)
                 _set_distance(w, w['distance'] + share)
 
-    hard_ceiling = get_hard_ceiling(target_distance)
+    hard_ceiling = get_hard_ceiling(target_distance, trail_profile=trail_profile)
     long_ws = [w for w in workouts if w.get('type') == 'long' and w.get('distance', 0) > 0]
     if long_ws and long_ws[0]['distance'] > hard_ceiling:
         excess = round(long_ws[0]['distance'] - hard_ceiling, 1)
@@ -324,9 +328,12 @@ def build_weekly_plan(week_number: int, total_km: float, target_distance: float,
                       pace_zones: Optional[Dict] = None,
                       experience_level: str = "beginner",
                       terrain: Optional[str] = None,
-                      profile: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+                      profile: Optional[Dict[str, Any]] = None,
+                      trail_profile=None) -> Dict[str, Any]:
     """Generate a single week's training plan."""
-    phases = phase_calculator.calculate_phases(weeks, target_distance)
+    phases = phase_calculator.calculate_phases(
+        weeks, target_distance, trail_profile=trail_profile,
+    )
     phase = phase_calculator.get_phase(week_number, phases)
     is_recovery = phase_calculator.is_recovery_week(week_number, phase, phases)
 
@@ -336,6 +343,7 @@ def build_weekly_plan(week_number: int, total_km: float, target_distance: float,
         total_km, max_runs_per_week, phase,
         is_recovery, week_number, phases, target_distance,
         terrain=terrain, profile=profile,
+        trail_profile=trail_profile,
     )
 
     workouts = generate_daily_workouts(
@@ -345,16 +353,22 @@ def build_weekly_plan(week_number: int, total_km: float, target_distance: float,
         week_in_phase=week_in_phase,
         terrain=terrain,
         profile=profile,
+        trail_profile=trail_profile,
     )
 
     actual_total_km = _scale_down(workouts, total_km)
-    actual_total_km = _fill_shortfall(workouts, total_km, actual_total_km, target_distance)
+    actual_total_km = _fill_shortfall(
+        workouts, total_km, actual_total_km, target_distance,
+        trail_profile=trail_profile,
+    )
 
     attach_duration_hints(workouts, pace_zones)
 
     is_valid, validation_message = validate_week_plan(workouts, actual_total_km, total_km, phase)
 
-    training_tips = workout_builders.generate_training_tips(week_number, target_distance)
+    training_tips = workout_builders.generate_training_tips(
+        week_number, target_distance, trail_profile=trail_profile,
+    )
 
     return {
         'week': week_number,

@@ -3,17 +3,22 @@
 Validates and adjusts the 80/20 polarized training distribution.
 """
 
-from typing import Dict
+from typing import Dict, Optional
 
 
 def validate_polarized_ratio(distribution: Dict[str, int], phase: str,
-                             target_distance: float) -> Dict[str, int]:
+                             target_distance: float,
+                             trail_profile=None) -> Dict[str, int]:
     """Validate 80/20 polarized training ratio and adjust if needed.
 
     Trail gets slightly easier targets (85/15 build, 80/20 peak) because
-    terrain naturally provides intensity through elevation.
+    terrain naturally provides intensity through elevation. Flat-trail plans
+    keep the road target since they aren't getting hill-driven intensity.
     """
-    is_trail = target_distance == 30.0
+    is_trail = trail_profile is not None or target_distance == 30.0
+    if trail_profile is not None and trail_profile.elevation_class == "flat":
+        # Flat trail: no terrain-driven intensity → use the road polarized target.
+        is_trail = False
     hard_targets = {
         'base': 0.10,
         'build': 0.15 if is_trail else 0.20,

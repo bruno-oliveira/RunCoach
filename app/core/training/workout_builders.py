@@ -62,6 +62,7 @@ def generate_strength_session(
     session_index: int = 0,
     experience_level: str = "beginner",
     target_distance: float = 0.0,
+    trail_profile=None,
 ) -> Optional[Dict[str, Any]]:
     """Generate a periodized strength session to attach to an easy run.
 
@@ -82,7 +83,7 @@ def generate_strength_session(
     if phase == 'taper' and session_index > 0:
         return None
 
-    rotation = get_phase_focus_rotation(phase, target_distance)
+    rotation = get_phase_focus_rotation(phase, target_distance, trail_profile=trail_profile)
     focus = rotation[session_index % len(rotation)]
 
     return _build_strength_session(focus, phase, experience_level, week_number)
@@ -291,6 +292,8 @@ def generate_hill_workout(day: int, distance: float = 0) -> Dict[str, Any]:
     }
 
 
-def generate_training_tips(week_number: int, target_distance: float) -> List[str]:
+def generate_training_tips(
+    week_number: int, target_distance: float, trail_profile=None,
+) -> List[str]:
     """Generate diverse and week-specific training tips."""
-    return get_tips_for_week(week_number, target_distance)
+    return get_tips_for_week(week_number, target_distance, trail_profile=trail_profile)

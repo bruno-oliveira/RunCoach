@@ -160,6 +160,7 @@ class GapAnalysisService:
         pace_gap = _compute_pace_gap(plan, ctx.runs, prediction_data)
         consistency = _compute_consistency(plan, ctx.runs, db, ctx.current_week)
         fitness = _compute_fitness_trajectory(plan, prediction_data)
+        elevation_gap = _compute_elevation_gap(plan, ctx.plan_data, ctx.runs, ctx.current_week)
 
         top_actions = _generate_top_actions(
             volume_gap, long_run_gap, pace_gap, consistency, fitness,
@@ -172,6 +173,7 @@ class GapAnalysisService:
             "pace_gap": pace_gap,
             "consistency": consistency,
             "fitness_trajectory": fitness,
+            "elevation_gap": elevation_gap,
             "top_actions": top_actions,
             "current_week": ctx.current_week,
             "total_weeks": ctx.total_weeks,
@@ -262,6 +264,61 @@ def _compute_volume_gap(
         "planned_weekly_avg_km": round(planned_avg, 1),
         "actual_weekly_avg_km": round(actual_avg, 1),
         "deficit_pct": max(0, deficit_pct),
+        "verdict": verdict,
+    }
+
+
+def _compute_elevation_gap(
+    plan: TrainingPlan,
+    plan_data: List[dict],
+    runs: List[RunLog],
+    current_week: int,
+) -> Optional[Dict[str, Any]]:
+    """Track vertical-gain progress against the race's elevation target.
+
+    Only fires for trail plans (``plan.is_trail``). The weekly target is
+    apportioned by week_km / total_planned_km — i.e., bigger volume weeks
+    own a bigger slice of the race's vert. We compare against actual
+    ``RunLog.elevation_gain_m`` summed across the same weeks.
+    """
+    if not getattr(plan, "is_trail", False):
+        return None
+    target_total = float(getattr(plan, "target_elevation_gain_m", 0) or 0)
+    if target_total <= 0:
+        return None
+
+    total_planned_km = sum(w.get("total_km", 0) for w in plan_data)
+    if total_planned_km <= 0:
+        return None
+
+    expected_so_far = 0.0
+    for week in plan_data:
+        if week.get("week", 0) > current_week:
+            break
+        share = week.get("total_km", 0) / total_planned_km
+        expected_so_far += target_total * share
+
+    actual_so_far = sum((r.elevation_gain_m or 0) for r in runs)
+
+    if expected_so_far <= 0:
+        verdict = "on_track"
+        deficit_pct = 0.0
+    else:
+        deficit_pct = round((1 - actual_so_far / expected_so_far) * 100, 1)
+        if deficit_pct <= 10:
+            verdict = "on_track"
+        elif deficit_pct <= 30:
+            verdict = "close"
+        elif deficit_pct <= 50:
+            verdict = "behind"
+        else:
+            verdict = "far_behind"
+
+    return {
+        "race_target_m": round(target_total, 0),
+        "expected_so_far_m": round(expected_so_far, 0),
+        "actual_so_far_m": round(actual_so_far, 0),
+        "deficit_pct": max(0.0, deficit_pct),
         "verdict": verdict,
     }
 

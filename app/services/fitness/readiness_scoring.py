@@ -259,9 +259,17 @@ def score_vdot(
 
 
 def build_scenarios(
-    vdot_data: Dict, target_distance_str: str
+    vdot_data: Dict, target_distance_str: str,
+    target_elevation_gain_m: Optional[float] = None,
+    trail_runs_count: Optional[int] = None,
 ) -> List[Dict[str, Any]]:
-    """Build Dream/Solid/Tough/Survival race scenarios."""
+    """Build Dream/Solid/Tough/Survival race scenarios.
+
+    For trail/ultra goals, ``target_elevation_gain_m`` and
+    ``trail_runs_count`` flow through the race predictor so the scenarios
+    reflect the actual course difficulty (the predictor already supports
+    both signals — see :mod:`app.core.training.race_predictor`).
+    """
     current_vdot = vdot_data.get("current")
     if not current_vdot:
         return []
@@ -270,7 +278,11 @@ def build_scenarios(
     if target_dist <= 0:
         return []
 
-    base_time = VDOTCalculator.predict_time_for_distance(current_vdot, target_dist)
+    base_time = VDOTCalculator.predict_time_for_distance(
+        current_vdot, target_dist,
+        elevation_gain_m=target_elevation_gain_m,
+        trail_runs_count=trail_runs_count,
+    )
     if not base_time:
         return []
 
@@ -284,7 +296,11 @@ def build_scenarios(
     scenarios = []
     for name, vdot_adj, probability, description in scenario_defs:
         clamped = max(25.0, min(85.0, vdot_adj))
-        time_secs = VDOTCalculator.predict_time_for_distance(clamped, target_dist)
+        time_secs = VDOTCalculator.predict_time_for_distance(
+            clamped, target_dist,
+            elevation_gain_m=target_elevation_gain_m,
+            trail_runs_count=trail_runs_count,
+        )
         if time_secs:
             pace_secs_per_km = time_secs / target_dist
             pace_min = int(pace_secs_per_km // 60)

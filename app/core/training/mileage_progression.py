@@ -7,6 +7,10 @@ with 10% rule enforcement and phase-aware periodization.
 from typing import List, Optional
 
 from app.core.training.phase_calculator import calculate_phases, get_phase, is_recovery_week
+from app.core.training.trail_profile import (
+    TrailProfile,
+    trail_max_weekly_mileage,
+)
 
 
 # --- Progression safety constants ---------------------------------------------
@@ -62,12 +66,36 @@ def _volume_trend_cap(profile: Optional[dict]) -> float:
     return {"decreasing": 1.05, "stable": WEEK_OVER_WEEK_CAP, "increasing": 1.12}.get(trend, WEEK_OVER_WEEK_CAP)
 
 
-def get_ideal_peak(target_distance: float, current_km: float, weeks: int) -> float:
+def _trail_ideal_peak(profile: TrailProfile, current_km: float) -> float:
+    """Bracket-aware target peak weekly mileage for a trail/ultra plan."""
+    bracket_floor = {
+        'short':      (1.5, 30.0),
+        'standard':   (1.5, 35.0),
+        'ultra':      (1.7, 50.0),
+        'long_ultra': (2.0, 70.0),
+    }
+    multiplier, floor = bracket_floor[profile.bracket]
+    return max(floor, current_km * multiplier)
+
+
+def get_ideal_peak(
+    target_distance: float,
+    current_km: float,
+    weeks: int,
+    trail_profile: Optional[TrailProfile] = None,
+) -> float:
     """Get ideal peak mileage based on race distance.
 
     Multipliers are conservative — suitable for recreational runners who
     want to finish strong without needing elite-level weekly volume.
+
+    Trail / ultra plans use a bracket-aware floor and a continuous ceiling
+    in distance × elevation (see ``trail_profile.trail_max_weekly_mileage``).
     """
+    if trail_profile is not None:
+        ideal_peak = _trail_ideal_peak(trail_profile, current_km)
+        return min(ideal_peak, trail_max_weekly_mileage(trail_profile))
+
     if target_distance == 30:
         ideal_peak = max(35, current_km * 1.5)
     elif target_distance <= 5:
@@ -89,7 +117,8 @@ def get_ideal_peak(target_distance: float, current_km: float, weeks: int) -> flo
 
 def get_peak_mileage(target_distance: float, current_km: float, weeks: int,
                      vdot: Optional[float] = None,
-                     profile: Optional[dict] = None) -> float:
+                     profile: Optional[dict] = None,
+                     trail_profile: Optional[TrailProfile] = None) -> float:
     """
     Determine peak weekly mileage with length-based multipliers and optional VDOT adjustment.
     Higher VDOT runners can absorb slightly more volume (better aerobic fitness / recovery).
@@ -97,11 +126,14 @@ def get_peak_mileage(target_distance: float, current_km: float, weeks: int,
     When a RunnerProfile is provided, ACWR injury risk reduces the peak:
     - high risk → 15% lower peak
     - very_high risk → 25% lower peak
+
+    Trail / ultra plans bypass the per-distance ``MAX_PEAK_MILEAGE`` lookup
+    in favour of the continuous ceiling derived from distance + elevation.
     """
     peak_multiplier = 1 + (1.5 * (weeks / 16))
     peak_multiplier = min(peak_multiplier, 2.6)
 
-    ideal_peak = get_ideal_peak(target_distance, current_km, weeks)
+    ideal_peak = get_ideal_peak(target_distance, current_km, weeks, trail_profile=trail_profile)
 
     # VDOT adjustment: VDOT 30 = 0.95x, VDOT 50 = 1.0x, VDOT 65+ = 1.08x
     if vdot:
@@ -118,9 +150,12 @@ def get_peak_mileage(target_distance: float, current_km: float, weeks: int,
 
     # Ensure peak is at least 1.2x base but never exceeds the distance cap
     peak = max(peak, current_km * 1.2)
-    cap = MAX_PEAK_MILEAGE.get(target_distance)
-    if cap is not None:
-        peak = min(peak, cap)
+    if trail_profile is not None:
+        peak = min(peak, trail_max_weekly_mileage(trail_profile))
+    else:
+        cap = MAX_PEAK_MILEAGE.get(target_distance)
+        if cap is not None:
+            peak = min(peak, cap)
 
     # Never force more than 10% detraining below the runner's current base.
     # A high-base runner targeting a shorter race still needs meaningful volume.
@@ -130,15 +165,26 @@ def get_peak_mileage(target_distance: float, current_km: float, weeks: int,
     return peak
 
 
-def _get_taper_curve(taper_weeks: int, target_distance: float) -> list[float]:
-    """Return taper percentage curve scaled to distance and taper length."""
+def _get_taper_curve(
+    taper_weeks: int,
+    target_distance: float,
+    trail_profile: Optional[TrailProfile] = None,
+) -> list[float]:
+    """Return taper percentage curve scaled to distance and taper length.
+
+    Trail / ultra runners get a more aggressive taper (eccentric damage from
+    descents takes longer to clear). Ultra brackets land in the 3-week taper
+    arm and get an even sharper drop than road marathon.
+    """
     if taper_weeks == 1:
         return [0.55]
     elif taper_weeks == 2:
-        if target_distance == 30.0:           # trail: more aggressive
+        if trail_profile is not None or target_distance == 30.0:  # trail: more aggressive
             return [0.72, 0.50]
         return [0.75, 0.55]                   # half marathon
     elif taper_weeks == 3:
+        if trail_profile is not None and trail_profile.is_ultra:
+            return [0.85, 0.65, 0.45]         # ultra: sharper drop than marathon
         return [0.85, 0.70, 0.50]             # marathon
     else:
         return [0.92, 0.82, 0.68, 0.50]       # 4+ week taper
@@ -232,7 +278,8 @@ def _progress_peak_phase(phases: dict, peak_km: float,
 
 
 def _progress_taper_phase(phases: dict, peak_km: float,
-                          target_distance: float) -> list[float]:
+                          target_distance: float,
+                          trail_profile: Optional[TrailProfile] = None) -> list[float]:
     """Progress the taper phase.
 
     Shorter races taper faster; marathon tapers more gradually. Trail tapers
@@ -240,16 +287,32 @@ def _progress_taper_phase(phases: dict, peak_km: float,
     The curve is independent of high_water — it scales straight from peak.
     """
     taper_weeks = phases['taper']
-    curve = _get_taper_curve(taper_weeks, target_distance)
+    curve = _get_taper_curve(taper_weeks, target_distance, trail_profile=trail_profile)
     return [
         round(peak_km * curve[min(week, len(curve) - 1)], 1)
         for week in range(taper_weeks)
     ]
 
 
+def _trail_run_ceilings(profile: TrailProfile) -> tuple[float, float]:
+    """Per-run distance ceilings for a trail profile.
+
+    The single-run ceiling caps the longest run on plans with few runs/week.
+    For ultras the long run plateaus around 35 km — the bulk of long-day
+    volume comes from back-to-back doubles, not a single 50 km grind.
+
+    The quality cap controls per-session intensity work (tempo / interval /
+    hill repeats); it scales with distance but stays runner-friendly.
+    """
+    run_ceiling = min(35.0, max(20.0, 0.40 * profile.distance_km))
+    q_cap = min(15.0, max(8.0, 0.15 * profile.distance_km))
+    return run_ceiling, q_cap
+
+
 def calculate_weekly_progression(current_km: float, target_distance: float, weeks: int,
                                  max_runs: int = 4, vdot: Optional[float] = None,
-                                 profile: Optional[dict] = None) -> List[float]:
+                                 profile: Optional[dict] = None,
+                                 trail_profile: Optional[TrailProfile] = None) -> List[float]:
     """
     Calculate weekly mileage with phase-aware progression and 10% rule enforcement.
 
@@ -272,18 +335,24 @@ def calculate_weekly_progression(current_km: float, target_distance: float, week
     - ACWR risk: reduces peak mileage (high=15%, very_high=25%)
     - Volume trend: adjusts week-over-week cap (decreasing=5%, increasing=12%)
     """
-    phases = calculate_phases(weeks, target_distance)
-    peak_km = get_peak_mileage(target_distance, current_km, weeks, vdot=vdot, profile=profile)
+    phases = calculate_phases(weeks, target_distance, trail_profile=trail_profile)
+    peak_km = get_peak_mileage(
+        target_distance, current_km, weeks,
+        vdot=vdot, profile=profile, trail_profile=trail_profile,
+    )
 
     # Cap peak at what can physically be distributed across max_runs
     # within per-run structural limits (long run ceiling + quality caps).
     # Without this, low-run plans target volumes that force the shortfall
     # fill-up to inflate individual runs past safe distances.
     if max_runs <= 4:
-        _CEILINGS = {5.0: 14.0, 10.0: 22.0, 21.1: 28.0, 30.0: 32.0, 42.2: 38.0}
-        _Q_CAPS = {5.0: 5.0, 10.0: 8.0, 21.1: 10.0, 30.0: 12.0, 42.2: 12.0}
-        run_ceiling = _CEILINGS.get(target_distance, target_distance * 0.9)
-        q_cap = _Q_CAPS.get(target_distance, 8.0)
+        if trail_profile is not None:
+            run_ceiling, q_cap = _trail_run_ceilings(trail_profile)
+        else:
+            _CEILINGS = {5.0: 14.0, 10.0: 22.0, 21.1: 28.0, 30.0: 32.0, 42.2: 38.0}
+            _Q_CAPS = {5.0: 5.0, 10.0: 8.0, 21.1: 10.0, 30.0: 12.0, 42.2: 12.0}
+            run_ceiling = _CEILINGS.get(target_distance, target_distance * 0.9)
+            q_cap = _Q_CAPS.get(target_distance, 8.0)
         quality_slots = 1 if max_runs >= 2 else 0
         distributable = run_ceiling * (max_runs - quality_slots) + q_cap * quality_slots
         peak_km = min(peak_km, distributable)
@@ -330,6 +399,8 @@ def calculate_weekly_progression(current_km: float, target_distance: float, week
                                                       effective_cap=effective_cap)
         weekly_progression.extend(peak_weeks)
 
-    weekly_progression.extend(_progress_taper_phase(phases, peak_km, target_distance))
+    weekly_progression.extend(_progress_taper_phase(
+        phases, peak_km, target_distance, trail_profile=trail_profile,
+    ))
 
     return weekly_progression

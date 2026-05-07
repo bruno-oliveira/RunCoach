@@ -17,6 +17,10 @@ from typing import List, Dict, Any, Optional
 from app.core.generators.beginner_plan_generator import BeginnerPlanGenerator
 from app.core.generators.weekly_plan_builder import build_weekly_plan
 from app.core.training.strength_plan import derive_experience_level
+from app.core.training.trail_profile import (
+    TrailProfile,
+    classify_trail,
+)
 from app.core.training.vdot_calculator import VDOTCalculator
 from app.core.training import mileage_progression
 from app.exceptions import ZeroMileageUnsupportedException
@@ -29,8 +33,18 @@ class TrainingPlanGenerator:
     def generate_plan(self, current_km: float, target_distance: float, weeks: int,
                       max_runs_per_week: int = 4, vdot: Optional[float] = None,
                       profile: Optional[Dict[str, Any]] = None,
-                      terrain: Optional[str] = None) -> List[Dict[str, Any]]:
-        """Generate a comprehensive training plan."""
+                      terrain: Optional[str] = None,
+                      trail_profile: Optional[TrailProfile] = None) -> List[Dict[str, Any]]:
+        """Generate a comprehensive training plan.
+
+        Trail/ultra plans pass ``trail_profile``; legacy callsites that pass
+        ``target_distance=30.0`` (with optional ``terrain``) get a default
+        profile constructed here so back-compat is preserved.
+        """
+        # Back-compat: synthesize a TrailProfile for legacy 30 km callers.
+        if trail_profile is None and target_distance == 30.0:
+            elev = 200.0 if terrain == "flat" else 1000.0
+            trail_profile = classify_trail(target_distance, elev)
         if current_km == 0:
             if target_distance in [5.0, 10.0]:
                 beginner_generator = BeginnerPlanGenerator()
@@ -54,6 +68,14 @@ class TrainingPlanGenerator:
 
         weekly_progression = mileage_progression.calculate_weekly_progression(
             current_km, target_distance, weeks, max_runs_per_week, vdot, profile,
+            trail_profile=trail_profile,
+        )
+
+        # Downstream weekly_plan_builder still keys off the legacy ``terrain``
+        # string; expose the elevation_class so flat/rolling/hilly/mountainous
+        # all dispatch correctly without a wider signature change.
+        downstream_terrain = (
+            trail_profile.elevation_class if trail_profile is not None else terrain
         )
 
         training_plan = []
@@ -64,7 +86,8 @@ class TrainingPlanGenerator:
                 week, week_km, target_distance, max_runs_per_week, weeks,
                 vdot=vdot, pace_zones=pace_zones,
                 experience_level=experience_level,
-                terrain=terrain,
+                terrain=downstream_terrain,
+                trail_profile=trail_profile,
                 profile=profile,
             )
 
