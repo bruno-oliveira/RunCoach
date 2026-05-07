@@ -411,6 +411,21 @@ _WORKOUTS = list(WORKOUTS) + [_LONG_ULTRA_NIGHT_RUN]
 # Existing trail workouts that should NOT fire for short trail plans
 # (15 km / 8-week prep is the wrong place for a 50 km race simulation):
 
+# Minimum workout distance for key workouts whose structure (time-based reps,
+# technical-terrain blocks) doesn't fit the small budget allocated by the
+# phase distribution. Without these floors a 6 × 3-min hill session ends up
+# with a 0.65 km warm-up and a sub-3 km displayed total, even though the
+# actual work covers ~3 km on its own. Apply by bumping ``actual_distance``
+# in :func:`overlay_key_workout` before description / step generation.
+_KEY_WORKOUT_MIN_DISTANCE_KM: Dict[str, float] = {
+    "trail_elevation_repeats": 5.0,
+    "trail_technical_terrain": 4.5,
+    "trail_power_hike":         6.0,
+    "trail_downhill_technique": 5.0,
+    "5k_hill_sprints":          4.0,
+}
+
+
 _BRACKET_RESTRICTIONS: Dict[str, list] = {
     "trail_back_to_back":            ["ultra", "long_ultra"],
     "trail_long_race_simulation":    ["ultra", "long_ultra"],
@@ -556,6 +571,10 @@ def overlay_key_workout(
         key_wk = KeyWorkoutLibrary.inject_vdot_paces(key_wk, pace_zones)
 
     actual_distance = workout.get('distance', 0)
+    floor = _KEY_WORKOUT_MIN_DISTANCE_KM.get(key_wk['id'], 0)
+    if floor > 0:
+        actual_distance = max(actual_distance, floor)
+        workout['distance'] = actual_distance
     description = key_wk['description']
     if actual_distance > 0:
         description = _rewrite_key_workout_description(
@@ -587,6 +606,15 @@ def overlay_key_workout(
             default_zone=key_wk.get('pace_zone'),
             total_distance_km=actual_distance,
         )
+
+    # Reconcile displayed total with what the runner will actually cover —
+    # duration-based reps (e.g. 6 × 3 min hard) contributed nothing to the
+    # phase-allocated budget, so the pre-overlay ``distance`` undercounts
+    # quality work. Recompute from the executable steps (pace × time fills
+    # in for time-based reps) so weekly mileage and the workout card match.
+    steps_total_km = _steps_mod._compute_distance_from_steps(workout['steps'])
+    if steps_total_km > 0:
+        workout['distance'] = round(steps_total_km, 1)
 
     workout.pop('segments', None)
 

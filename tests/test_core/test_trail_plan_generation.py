@@ -14,8 +14,10 @@ from app.core.generators.plan_generator import TrainingPlanGenerator
 from app.core.training import mileage_progression, phase_calculator
 from app.core.training.long_run_calculator import (
     _get_long_run_cap,
+    calculate_long_run_distance,
     get_long_run_ratio_range,
 )
+from app.core.training.workout_steps import _compute_distance_from_steps
 from app.core.training.trail_profile import classify_trail
 
 
@@ -213,3 +215,125 @@ class TestEndToEnd:
         # Should have hill repeats (legacy default elevation=1000m → hilly bucket).
         all_workouts = [w for week in plan for w in week['daily_workouts']]
         assert any(w['type'] == 'hill' for w in all_workouts)
+
+
+class TestPeakLongRunRaceFraction:
+    """Peak long run reaches a race-distance share, not just a weekly slice.
+
+    Coaches prescribe trail long runs as a fraction of race distance (with
+    bracket caps and a weekly safety cap). These regressions guard the floor.
+    """
+
+    def test_standard_30km_at_35wk_advanced_reaches_floor(self):
+        profile = classify_trail(30.0, 1000.0)
+        # Peak phase, mid-progression in a 12-week plan: phases pack peak
+        # near the end, and the floor applies regardless of progression.
+        peak_lr = calculate_long_run_distance(
+            total_km=35, target_distance=30.0, weeks=12, week_number=10,
+            phase='peak', is_recovery_week=False, experience_level='advanced',
+            trail_profile=profile,
+        )
+        # Race floor: 30 * 0.70 = 21 km. Weekly cap: 35 * 0.55 = 19.25 km.
+        # Bracket cap (standard advanced): 27 km. Weekly cap binds → ≥ 19 km.
+        assert peak_lr >= 19.0, f"peak LR was {peak_lr} km — race floor not biting"
+
+    def test_short_15km_at_25wk_intermediate(self):
+        profile = classify_trail(15.0, 400.0)
+        peak_lr = calculate_long_run_distance(
+            total_km=25, target_distance=15.0, weeks=10, week_number=8,
+            phase='peak', is_recovery_week=False, experience_level='intermediate',
+            trail_profile=profile,
+        )
+        # Race floor: 15 * 0.65 = 9.75. Weekly cap: 25 * 0.55 = 13.75.
+        # Bracket cap (short intermediate): 16. Final ≥ 9.75.
+        assert peak_lr >= 9.5
+
+    def test_ultra_50km_at_60wk_advanced(self):
+        profile = classify_trail(50.0, 2000.0)
+        peak_lr = calculate_long_run_distance(
+            total_km=60, target_distance=50.0, weeks=20, week_number=16,
+            phase='peak', is_recovery_week=False, experience_level='advanced',
+            trail_profile=profile,
+        )
+        # Race floor: 50 * 0.55 = 27.5. Bracket cap (ultra advanced): 32.
+        # Weekly cap: 60 * 0.55 = 33. Final ≥ 27.5, ≤ 32.
+        assert peak_lr >= 27.0, f"peak LR was {peak_lr} km — ultra floor missed"
+        assert peak_lr <= 32.0, f"peak LR was {peak_lr} km — bracket cap blown"
+
+    def test_low_volume_runner_gets_safe_long_run(self):
+        # 25 km/wk runner doing a 30 km race shouldn't be pushed past a
+        # 55 % weekly slice even though the race floor is 21 km.
+        profile = classify_trail(30.0, 1000.0)
+        peak_lr = calculate_long_run_distance(
+            total_km=25, target_distance=30.0, weeks=12, week_number=10,
+            phase='peak', is_recovery_week=False, experience_level='intermediate',
+            trail_profile=profile,
+        )
+        # Weekly safety cap is 25 × 0.55 = 13.75, rounded to 1dp → 13.8.
+        assert peak_lr <= 13.8
+
+    def test_long_ultra_cap_still_binds(self):
+        profile = classify_trail(163.0, 6000.0)
+        peak_lr = calculate_long_run_distance(
+            total_km=120, target_distance=163.0, weeks=32, week_number=26,
+            phase='peak', is_recovery_week=False, experience_level='advanced',
+            trail_profile=profile,
+        )
+        # 100-mile prep: bracket cap of 35 must hold even with high volume.
+        assert peak_lr <= 35.5
+
+
+class TestKeyWorkoutDistanceMatchesSteps:
+    """``workout['distance']`` matches the executable session blocks."""
+
+    def _quality_workouts(self, plan):
+        return [
+            w for week in plan
+            if week['phase'] in ('build', 'peak')
+            for w in week['daily_workouts']
+            if w['type'] in ('hill', 'interval', 'tempo') and w.get('steps')
+        ]
+
+    def test_trail_hilly_30km_quality_distances_reconcile(self):
+        plan = _build_plan(30.0, 1200.0, 12, 5, current_km=35.0)
+        for w in self._quality_workouts(plan):
+            steps_total = _compute_distance_from_steps(w['steps'])
+            # Allow rounding to 0.1 km — workout['distance'] is rounded to 1dp.
+            assert abs(w['distance'] - steps_total) <= 0.5, (
+                f"{w.get('key_workout_name', w['type'])}: "
+                f"displayed {w['distance']} km vs steps sum {steps_total:.2f} km"
+            )
+
+    def test_trail_hill_workout_meets_min_floor(self):
+        # Trail hill repeats need enough distance for warm-up + 6×3-min reps
+        # + cool-down — the per-id floor enforces ≥ 5 km.
+        plan = _build_plan(30.0, 1200.0, 12, 5, current_km=35.0)
+        hills = [
+            w for week in plan
+            if week['phase'] in ('build', 'peak')
+            for w in week['daily_workouts']
+            if w['type'] == 'hill' and w.get('key_workout_id') == 'trail_elevation_repeats'
+        ]
+        # If selected, the floor must hold.
+        for w in hills:
+            assert w['distance'] >= 4.5, (
+                f"trail_elevation_repeats was only {w['distance']} km — floor not applied"
+            )
+
+    def test_technical_terrain_step_has_distance(self):
+        # Regression: trail_technical_terrain used to fall through to a
+        # label-only step with no distance_m. New parser emits a
+        # distance-bearing run step.
+        plan = _build_plan(30.0, 1200.0, 14, 5, current_km=35.0)
+        tech = [
+            w for week in plan
+            if week['phase'] in ('build', 'peak')
+            for w in week['daily_workouts']
+            if w.get('key_workout_id') == 'trail_technical_terrain'
+        ]
+        for w in tech:
+            run_steps = [s for s in w['steps'] if s['kind'] == 'run']
+            assert run_steps, f"technical-terrain workout has no run step: {w['steps']}"
+            assert any(s.get('distance_m') for s in run_steps), (
+                f"technical-terrain main block has no distance_m: {run_steps}"
+            )

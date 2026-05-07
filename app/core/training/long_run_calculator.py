@@ -58,13 +58,13 @@ _TRAIL_LONG_RUN_RATIOS = {
     'standard': {
         'base':  (0.30, 0.35),
         'build': (0.40, 0.45),
-        'peak':  (0.45, 0.50),
+        'peak':  (0.50, 0.55),
         'taper': (0.35, 0.40),
     },
     'ultra': {
         'base':  (0.32, 0.38),
         'build': (0.42, 0.50),
-        'peak':  (0.45, 0.55),
+        'peak':  (0.50, 0.58),
         'taper': (0.35, 0.40),
     },
     'long_ultra': {
@@ -73,6 +73,20 @@ _TRAIL_LONG_RUN_RATIOS = {
         'peak':  (0.45, 0.55),
         'taper': (0.35, 0.40),
     },
+}
+
+
+# Peak long run as a minimum fraction of race distance, by trail bracket.
+# Coaches prescribe trail long runs as a share of the race, not just weekly
+# volume. This floor ensures a 30 km racer off a 35 km/wk base gets a 21 km
+# peak long run (not 16 km). Bracket cap and the weekly-safety cap still
+# apply on top — so low-volume runners aren't pushed past what their week
+# can absorb.
+_TRAIL_PEAK_RACE_FRACTION = {
+    'short':      0.65,
+    'standard':   0.70,
+    'ultra':      0.55,
+    'long_ultra': 0.22,
 }
 
 
@@ -181,12 +195,10 @@ def _get_long_run_cap(target_distance: float, experience_level: str = 'intermedi
     for 100-mile prep.
     """
     if trail_profile is not None:
-        base_cap = _trail_long_run_cap(trail_profile, experience_level)
-        if weekly_km <= 0:
-            return base_cap
-        # Allow a 30% slice of weekly volume but never above the bracket cap.
-        volume_ratio = weekly_km * 0.30
-        return min(round(volume_ratio, 1), base_cap) if volume_ratio > base_cap else base_cap
+        # Bracket cap is authoritative for trail. Weekly volume can't push
+        # above it — additional long-day load belongs in back-to-back doubles
+        # rather than ever-bigger single runs.
+        return _trail_long_run_cap(trail_profile, experience_level)
 
     base_caps = {
         5.0:  {'beginner': 7.0,  'intermediate': 8.0,  'advanced': 10.0},
@@ -241,7 +253,20 @@ def calculate_long_run_distance(total_km: float, target_distance: float,
         trail_profile=trail_profile,
     )
 
+    # Trail peak: pull the long run up to a race-distance share when the
+    # weekly-volume ratio would otherwise leave it too short for the race.
+    # Bracket cap and the weekly-safety cap below still bound the result.
+    if trail_profile is not None and phase == 'peak' and not is_recovery_week:
+        race_floor = target_distance * _TRAIL_PEAK_RACE_FRACTION[trail_profile.bracket]
+        long_run_base = max(long_run_base, race_floor)
+
     long_run_base = min(long_run_base, long_run_cap)
+
+    # Trail-only weekly safety cap: even with a generous race-fraction floor,
+    # a single run shouldn't exceed 55 % of the week's volume — that load
+    # belongs spread across back-to-back doubles or higher overall mileage.
+    if trail_profile is not None and total_km > 0 and not is_recovery_week:
+        long_run_base = min(long_run_base, total_km * 0.55)
 
     # Profile-aware: gentle week-1 nudge only (not a hard cap)
     if profile and week_number == 1:

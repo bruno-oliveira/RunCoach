@@ -253,6 +253,37 @@ def _try_continuous_pattern(
     return steps
 
 
+def _try_simple_run_at_pattern(
+    structure: str, pace_zones: Optional[Dict], workout_type: str,
+    has_wcd: bool, warmup_steps: List, cd_m: Optional[int] = None,
+) -> Optional[List[Dict[str, Any]]]:
+    """Pattern E: "Run X.Xkm at <effort>" — single distance-based work block.
+
+    Used by descriptions that don't say "continuous" or include a warm-up
+    sentence (e.g. trail_technical_terrain: "Run 1.6km at moderate effort").
+    Without this pattern the parser fell through to a label-only fallback
+    with no ``distance_m``, so the main block showed no distance in the UI.
+    """
+    m = re.search(
+        r"Run\s+(\d+(?:\.\d+)?)\s*km\s+at\s+([^,.]+)",
+        structure,
+        re.IGNORECASE,
+    )
+    if not m:
+        return None
+    dist_m = _parse_distance_to_m(m.group(1), "km")
+    zone = _infer_zone(m.group(2)) or ("T" if workout_type == "tempo" else "E")
+    effort = "easy" if zone == "E" else "moderate" if zone == "M" else "comfortably hard"
+    steps = list(warmup_steps)
+    steps.append(
+        _step("run", f"{dist_m / 1000:.1f} km", distance_m=dist_m,
+              pace_zone=zone, pace_str=_pace_str(zone, pace_zones), effort=effort)
+    )
+    if has_wcd:
+        steps.append(_cooldown(pace_zones, cd_m) if cd_m else _cooldown(pace_zones))
+    return steps
+
+
 def parse_key_workout_steps(
     structure: str,
     pace_zones: Optional[Dict] = None,
@@ -298,6 +329,10 @@ def parse_key_workout_steps(
         return result
 
     result = _try_continuous_pattern(structure, pace_zones, workout_type, has_wcd, warmup_steps, wu_m)
+    if result is not None:
+        return result
+
+    result = _try_simple_run_at_pattern(structure, pace_zones, workout_type, has_wcd, warmup_steps, wu_m)
     if result is not None:
         return result
 
