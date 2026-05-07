@@ -7,8 +7,7 @@ class TestTrailFormSubmission:
     """POST /generate-plan with is_trail + elevation produces a trail plan."""
 
     def test_custom_50km_trail_creates_trail_plan(self, client, test_db):
-        # The form-on-submit JS rewrites the dropdown sentinel to the km value
-        # before submission, so the server sees target_distance as a number.
+        # Numeric target_distance + is_trail=on is the legacy/transitional shape.
         response = client.post(
             "/generate-plan",
             data={
@@ -32,6 +31,30 @@ class TestTrailFormSubmission:
         assert view.status_code == 200
         assert "50.0 km Trail" in view.text or "50 km Trail" in view.text
         assert "200 m vert" in view.text
+
+    def test_custom_trail_sentinel_resolves_from_trail_distance_km(self, client, test_db):
+        # Current form shape: dropdown stays on "trail", actual km comes from
+        # the trail_distance_km field. Server resolves the sentinel.
+        response = client.post(
+            "/generate-plan",
+            data={
+                "current_km": "40",
+                "target_distance": "trail",
+                "trail_distance_km": "50",
+                "weeks": "16",
+                "max_runs_per_week": "5",
+                "is_trail": "on",
+                "target_elevation_gain_m": "1234",  # non-multiple-of-50
+                "body_weight_kg": "70",
+                "plan_mode": "distance",
+            },
+            follow_redirects=False,
+        )
+        assert response.status_code == 303
+        view = client.get(response.headers["location"])
+        assert view.status_code == 200
+        assert "50.0 km Trail" in view.text or "50 km Trail" in view.text
+        assert "1234 m vert" in view.text or "1,234 m vert" in view.text
 
     def test_custom_100mi_trail_creates_long_ultra_plan(self, client, test_db):
         response = client.post(

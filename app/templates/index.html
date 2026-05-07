@@ -173,7 +173,7 @@
                                 <div class="form-group">
                                     <label for="trail_distance_km" class="form-label">Trail distance</label>
                                     <div class="input-with-unit">
-                                        <input type="number" id="trail_distance_km" class="form-input"
+                                        <input type="number" id="trail_distance_km" name="trail_distance_km" class="form-input"
                                                step="0.1" min="8" max="163" placeholder="50">
                                         <span class="input-unit">km</span>
                                     </div>
@@ -184,7 +184,7 @@
                                     <label for="target_elevation_gain_m" class="form-label">Total elevation gain</label>
                                     <div class="input-with-unit">
                                         <input type="number" id="target_elevation_gain_m" name="target_elevation_gain_m"
-                                               class="form-input" step="50" min="0" max="10000" placeholder="1500">
+                                               class="form-input" step="1" min="0" max="10000" placeholder="1500">
                                         <span class="input-unit">m</span>
                                     </div>
                                     <span class="form-help" id="elevation-classifier">
@@ -649,9 +649,9 @@ function setPlanMode(mode) {
                 const targetDistance = document.getElementById('target_distance');
                 const weeks = document.getElementById('weeks');
 
-                // Trail/ultra: validate distance + elevation, then rewrite the
-                // target_distance value to the user-entered km so the backend
-                // sees a number rather than the "trail" sentinel.
+                // Trail/ultra: validate distance + elevation. The dropdown
+                // keeps its "trail" sentinel value; the backend resolves it
+                // using the trail_distance_km form field.
                 if (isTrailMode()) {
                     const trailKm = parseFloat(trailDistanceField.value);
                     if (isNaN(trailKm) || trailKm < 8 || trailKm > 163) {
@@ -692,8 +692,6 @@ function setPlanMode(mode) {
                         currentKm.focus();
                         return false;
                     }
-                    // Replace the dropdown sentinel with the actual number.
-                    targetDistance.value = String(trailKm);
                 } else {
                     if (parseFloat(currentKm.value) === 0) {
                         const supportedDistances = [5, 10];

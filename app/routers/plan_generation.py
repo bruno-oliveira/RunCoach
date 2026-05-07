@@ -54,6 +54,7 @@ async def generate_plan(
     terrain: Optional[str] = Form(None),
     is_trail: Optional[str] = Form(None),
     target_elevation_gain_m: Optional[str] = Form(None),
+    trail_distance_km: Optional[str] = Form(None),
     body_weight_kg: float = Form(70.0),
     recent_race_distance_km: Optional[str] = Form(None),
     recent_race_time: Optional[str] = Form(None),
@@ -104,8 +105,31 @@ async def generate_plan(
     if not anonymous_user_id:
         anonymous_user_id = getattr(request.state, "anonymous_user_id", None)
 
-    target_distance_f = float(target_distance)
     is_trail_flag = (is_trail or "").lower() in ("on", "true", "1", "yes")
+    if is_trail_flag and target_distance == "trail":
+        if not trail_distance_km:
+            return error_response(
+                request, current_user,
+                "Please enter the trail/ultra distance in kilometres.",
+                "validation",
+            )
+        try:
+            target_distance_f = float(trail_distance_km)
+        except ValueError:
+            return error_response(
+                request, current_user,
+                "Trail/ultra distance must be a number in kilometres.",
+                "validation",
+            )
+    else:
+        try:
+            target_distance_f = float(target_distance)
+        except ValueError:
+            return error_response(
+                request, current_user,
+                "Race goal distance is invalid.",
+                "validation",
+            )
     elevation_f: Optional[float] = None
     if target_elevation_gain_m not in (None, ""):
         try:
