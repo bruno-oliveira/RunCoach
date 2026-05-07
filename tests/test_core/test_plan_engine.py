@@ -205,11 +205,21 @@ class TestWorkoutBuilderDescriptions:
                 f"Tempo at {dist}km has negative segment: {desc}"
             )
 
-    def test_easy_run_short_distance_preserves_distance(self):
-        """Short easy runs keep their planned distance; UX hint added later."""
+    def test_easy_run_short_distance_reflects_actual_coverage(self):
+        """Easy run distance equals what the steps actually cover.
+
+        On strides days the easy block is shortened so easy + strides
+        equals the budget — total distance and step sum match the input.
+        Non-strides days run the full input distance.
+        """
+        # Strides variant (day index 1): easy block is 2.0 - 0.6 = 1.4 km
+        # plus 6 × 100 m strides → total 2.0 km, matching the input.
         workout = generate_easy_run(1, 2.0, 10.0)
         assert workout["distance"] == 2.0
         assert "duration_min" not in workout
+        # Non-strides days preserve the input distance exactly.
+        workout = generate_easy_run(0, 2.0, 10.0)
+        assert workout["distance"] == 2.0
 
     def test_long_run_short_distance_preserves_distance(self):
         """Short long runs keep their planned distance; UX hint added later."""

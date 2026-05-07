@@ -52,12 +52,17 @@ def cap_easy_distance(distance: float, long_run_distance: float) -> float:
     return min(distance, round(max_easy, 1))
 
 
-def enforce_week_caps(workouts: List[Dict], target_distance: float,
+def enforce_week_caps(workouts: List, target_distance: float,
                       phase: str) -> bool:
-    """Enforce quality and easy caps on a list of workout dicts (in place).
+    """Enforce quality and easy caps on a list of workouts (in place).
 
     Works with both plan_data workout dicts (with 'type' and 'distance' keys)
     and DailyWorkout ORM objects (with 'workout_type' and 'distance_km' attrs).
+
+    Key workouts are skipped: their distance is the prescription. Capping
+    them silently would leave the cached description and steps describing a
+    different session than the runner is told to do. If a key workout's
+    distance breaches a cap, that is a planning bug to surface, not to mask.
 
     Returns True if any distance was capped.
     """
@@ -69,6 +74,8 @@ def enforce_week_caps(workouts: List[Dict], target_distance: float,
     quality_types = ('tempo', 'interval', 'hill', 'vo2max', 'race_pace', 'fartlek')
 
     for workout in workouts:
+        if _has_key_workout_id(workout):
+            continue
         wtype = _get_type(workout)
         dist = _get_distance(workout)
         if not dist or dist <= 0:
@@ -86,6 +93,15 @@ def enforce_week_caps(workouts: List[Dict], target_distance: float,
                 any_capped = True
 
     return any_capped
+
+
+def _has_key_workout_id(workout) -> bool:
+    """True if this workout carries a prescriptive key-workout overlay."""
+    if hasattr(workout, 'key_workout_id'):
+        return bool(getattr(workout, 'key_workout_id', None))
+    if isinstance(workout, dict):
+        return bool(workout.get('key_workout_id'))
+    return False
 
 
 def _find_long_run_distance(workouts: List) -> float:

@@ -7,6 +7,7 @@ from sqlalchemy.orm import Session
 
 from app.models import TrainingPlan, WeeklyPlan
 from app.core.training import workout_steps as _steps_mod
+from app.core.training.key_workout_library import reconcile_key_workout_text
 from app.core.training.quality_caps import enforce_week_caps
 
 from ._helpers import ANNOTATION_RE, batch_workouts_by_week, parse_plan_data_lookups
@@ -52,6 +53,18 @@ def apply_adjustment_to_future_weeks(
                 and current_day_of_week is not None
                 and week.week_number == current_week
                 and workout.day_of_week < current_day_of_week
+            ):
+                continue
+
+            # Prescriptive workouts (key overlays + standard tempo / interval
+            # / hill) embed distance fragments in description and steps
+            # (warm-up split, rep count, main_km). Adaptation absorbs ratio
+            # adjustments through flexible workouts (easy, long) instead of
+            # silently mutating a prescribed distance while its description
+            # and step list stay frozen.
+            if (
+                workout.key_workout_id
+                or workout.workout_type in ("tempo", "interval", "hill")
             ):
                 continue
 

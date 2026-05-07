@@ -14,9 +14,15 @@ from app.core.training.vdot_calculator import VDOTCalculator
 
 
 def _wu_cd(d: float) -> tuple:
-    """Return (warmup_km, cooldown_km) that fit within total distance d."""
-    wu = min(2.0, max(0.5, round(d * 0.25, 1)))
-    return (wu, wu)
+    """Return (warmup_km, cooldown_km) matching workout_steps._wucd_m exactly.
+
+    Uses integer-meter rounding so the description-level distances align with
+    the executable steps; rounding to 0.1 km here drifted by ~100 m versus
+    the steps and made displayed totals diverge from descriptions.
+    """
+    total_m = int(round(d * 1000))
+    wu_m = min(2000, max(500, int(round(total_m * 0.25))))
+    return (wu_m / 1000.0, wu_m / 1000.0)
 
 
 def _mp_cutdown_reps(d: float) -> int:
@@ -127,15 +133,15 @@ _DISTANCE_REWRITES: Dict[str, Callable[[float], str]] = {
         f"Walk 1 min after each fuel stop if needed."
     ),
     "marathon_tempo_cutdown": lambda d: (
-        f"Warm up {max(1, d * 0.10):.1f}km easy. "
-        f"Run 2 x {max(1, d * 0.35):.1f}km at threshold pace with 3 min easy jog recovery. "
-        f"Cool down {max(1, d * 0.10):.1f}km easy."
+        f"Warm up {_wu_cd(d)[0]:g}km easy. "
+        f"Run 2 x {round(max(1.0, (d - 2 * _wu_cd(d)[0]) / 2), 1):g}km at threshold pace with 3 min easy jog recovery. "
+        f"Cool down {_wu_cd(d)[1]:g}km easy."
     ),
     "marathon_mp_cutdown": lambda d: (
-        f"Warm up {max(1, d * 0.10):.1f}km easy. "
+        f"Warm up {_wu_cd(d)[0]:g}km easy. "
         f"Run {_mp_cutdown_reps(d)} x 2km "
         f"alternating between marathon pace and threshold pace "
-        f"with 90s jog recovery between each. Cool down {max(1, d * 0.10):.1f}km easy."
+        f"with 90s jog recovery between each. Cool down {_wu_cd(d)[1]:g}km easy."
     ),
     "half_progressive_long": lambda d: (
         f"Run {d:.1f}km: first {d * 0.65:.1f}km easy, "
@@ -220,7 +226,7 @@ _DISTANCE_REWRITES: Dict[str, Callable[[float], str]] = {
     "trail_power_hike": lambda d: (
         f"On a hilly trail loop: power-hike steep uphills for 5 min "
         f"(arms pumping, long strides), then run the flats and downhills. "
-        f"Repeat 5 times. Run {d:.1f}km total."
+        f"Repeat 5 times. Plan for ~60-75 min total."
     ),
     "trail_downhill_technique": lambda d: (
         f"Warm up {_wu_cd(d)[0]:g}km on flat. "
@@ -230,7 +236,7 @@ _DISTANCE_REWRITES: Dict[str, Callable[[float], str]] = {
     ),
     "trail_flat_power_walk": lambda d: (
         f"Alternate 5 min maximum-effort power walking with 5 min easy running "
-        f"x 6 sets. Run {d:.1f}km total. Max-effort power walking at "
+        f"x 6 sets. Plan for ~60 min total. Max-effort power walking at "
         f"9-10 min/km builds the specific muscular endurance for race-day hiking."
     ),
     "trail_flat_proprioception": lambda d: (
@@ -366,10 +372,36 @@ def _rewrite_key_workout_description(description: str, workout_id: str,
 
 def _derive_structure(description: str) -> str:
     """Strip warm-up/cool-down sentences to get a structure one-liner."""
-    s = re.sub(r"Warm up [\d.]+km easy\.\s*", "", description)
-    s = re.sub(r"\s*Cool down [\d.]+km easy\.", "", s)
+    s = re.sub(r"Warm up [\d.]+km easy[^.]*\.\s*", "", description)
+    s = re.sub(r"\s*Cool down [\d.]+km easy[^.]*\.", "", s)
     s = re.sub(r"^Run\s+", "", s.strip())
+    s = re.sub(r"^Find a[^.]*\.\s*", "", s.strip())
     return s.strip()
+
+
+def reconcile_key_workout_text(workout: Dict[str, Any]) -> bool:
+    """Re-render description+structure from current ``workout['distance']``.
+
+    Returns True if the workout had a key-workout overlay and was rewritten,
+    False otherwise. Callers use this after any operation that mutates a
+    key workout's distance (scaling, capping, transfer) so that the
+    description, structure and distance stay in lockstep.
+    """
+    kid = workout.get('key_workout_id')
+    if not kid:
+        return False
+    d = workout.get('distance', 0) or 0
+    if d <= 0:
+        return False
+    if kid in _DISTANCE_REWRITES:
+        workout['description'] = _DISTANCE_REWRITES[kid](d)
+        if kid in _STRUCTURE_REWRITES:
+            workout['structure'] = _STRUCTURE_REWRITES[kid](d)
+        else:
+            workout['structure'] = _derive_structure(workout['description'])
+    elif kid in _STRUCTURE_REWRITES:
+        workout['structure'] = _STRUCTURE_REWRITES[kid](d)
+    return True
 
 # Long-ultra-only template: a short headlamp run during the peak phase to
 # rehearse darkness pacing and gear. Bracketed via ``brackets`` so it never
@@ -612,6 +644,15 @@ def overlay_key_workout(
     # phase-allocated budget, so the pre-overlay ``distance`` undercounts
     # quality work. Recompute from the executable steps (pace × time fills
     # in for time-based reps) so weekly mileage and the workout card match.
+    # ``workout['distance']`` is what the runner will actually cover;
+    # ``actual_distance`` is the budget the description and steps were
+    # rendered/parsed against. They differ when duration-based reps add
+    # mileage on top of the budgeted warm-up + cool-down (e.g. 6 × 3-min
+    # hill repeats). The description and step list stay rendered against
+    # ``actual_distance`` — that's the value baked into the formulas
+    # (warm-up size, main_km splits) and the parser (implicit wu/cd) — so
+    # the cited numbers match the steps. The displayed total reflects
+    # actual coverage so weekly mileage adds up.
     steps_total_km = _steps_mod._compute_distance_from_steps(workout['steps'])
     if steps_total_km > 0:
         workout['distance'] = round(steps_total_km, 1)

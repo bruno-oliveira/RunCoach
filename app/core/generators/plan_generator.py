@@ -92,29 +92,42 @@ class TrainingPlanGenerator:
             )
 
             # Enforce 10% cap against actual high-water mark.
-            from app.core.generators.weekly_plan_builder import _set_distance
+            #
+            # Only flexible workouts (easy, long) absorb the cap. Prescriptive
+            # workouts (key overlays + tempo / interval / hill) keep their
+            # authored distance — silently rescaling them would leave the
+            # description and step list describing a different session than
+            # the runner's distance number says. If flexible headroom is
+            # exhausted, the small overage rides into the next week's budget
+            # rather than corrupting a prescription.
+            from app.core.generators.weekly_plan_builder import (
+                _set_distance, _is_prescriptive,
+            )
             is_recovery = weekly_plan.get('is_recovery', False)
             actual_km = weekly_plan['total_km']
             if not is_recovery and actual_high_water > 0:
                 ceiling = round(actual_high_water * 1.10, 1)
                 if actual_km > ceiling and actual_km > 0:
-                    scale = ceiling / actual_km
-                    for w in weekly_plan['daily_workouts']:
-                        if w.get('distance', 0) > 0:
-                            _set_distance(w, w['distance'] * scale)
+                    flexible = [
+                        w for w in weekly_plan['daily_workouts']
+                        if w.get('type') in ('easy', 'long')
+                        and not _is_prescriptive(w)
+                        and w.get('distance', 0) > 0
+                    ]
+                    fixed_km = sum(
+                        w.get('distance', 0)
+                        for w in weekly_plan['daily_workouts']
+                        if w not in flexible and w.get('distance', 0) > 0
+                    )
+                    flexible_km = sum(w['distance'] for w in flexible)
+                    target_flexible = max(0.0, ceiling - fixed_km)
+                    if flexible and flexible_km > 0 and target_flexible < flexible_km:
+                        scale = target_flexible / flexible_km
+                        for w in flexible:
+                            _set_distance(w, w['distance'] * scale, pace_zones)
                     new_total = round(
                         sum(w.get('distance', 0) for w in weekly_plan['daily_workouts']), 1,
                     )
-                    if new_total > ceiling:
-                        excess = round(new_total - ceiling, 1)
-                        largest = max(
-                            (w for w in weekly_plan['daily_workouts'] if w.get('distance', 0) > 0),
-                            key=lambda w: w['distance'],
-                        )
-                        _set_distance(largest, largest['distance'] - excess)
-                        new_total = round(
-                            sum(w.get('distance', 0) for w in weekly_plan['daily_workouts']), 1,
-                        )
                     weekly_plan['total_km'] = new_total
             if not is_recovery and weekly_plan['total_km'] > actual_high_water:
                 actual_high_water = weekly_plan['total_km']

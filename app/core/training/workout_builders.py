@@ -142,15 +142,23 @@ def generate_easy_run(day: int, distance: float, total_km: float,
             f'Conversational pace run. Focus on relaxed form and breathing.'
         ]
 
+    # Strides add 6 × 100 m = 0.6 km of executable mileage. To keep the
+    # workout's total distance equal to the planner's budget (so weekly
+    # mileage stays at the planned figure and step total matches the
+    # ``distance`` field exactly), we shorten the easy block on strides
+    # days so easy + strides == budget.
+    with_strides = variant_idx == 1
+    strides_km = 0.6 if with_strides else 0.0
+    main_km = max(0.5, round(distance - strides_km, 1)) if with_strides else round(distance, 1)
+    steps = workout_steps.build_easy_steps(main_km, pace_zones, with_strides=with_strides)
+    actual_km = round(workout_steps.total_distance_m(steps) / 1000.0, 1)
     return {
         'day': day,
         'type': 'easy',
-        'distance': distance,
+        'distance': actual_km if actual_km > 0 else round(distance, 1),
         'intensity': 'low',
         'description': easy_variations[variant_idx],
-        'steps': workout_steps.build_easy_steps(
-            distance, pace_zones, with_strides=(variant_idx == 1)
-        ),
+        'steps': steps,
     }
 
 
@@ -260,35 +268,44 @@ def generate_interval_run(day: int, distance: float, total_km: float,
         interval_workouts[variant_idx], pace_zones or {}, "interval"
     )
 
+    steps = workout_steps.build_interval_steps(
+        distance, total_km, pace_zones, variant=variant_idx,
+        reps_400=reps_400, reps_800=reps_800,
+        reps_1000=reps_1000, reps_200=reps_200,
+    )
+    actual_km = round(workout_steps._compute_distance_from_steps(steps), 1)
     return {
         'day': day,
         'type': 'interval',
-        'distance': round(distance, 1),
+        'distance': actual_km if actual_km > 0 else round(distance, 1),
         'intensity': 'high',
         'description': description,
-        'steps': workout_steps.build_interval_steps(
-            distance, total_km, pace_zones, variant=variant_idx,
-            reps_400=reps_400, reps_800=reps_800,
-            reps_1000=reps_1000, reps_200=reps_200,
-        ),
+        'steps': steps,
     }
 
 
 def generate_hill_workout(day: int, distance: float = 0) -> Dict[str, Any]:
-    """Generate hill workout."""
-    hill_workouts = [
-        f'Hill repeats: 10x30sec steep hill repeats with walk down recovery.',
-        f'Long hill climbs: 5x2min moderate grade hills at threshold effort.',
-        f'Hill bounding: 8x20sec explosive uphill bounds with full recovery.'
-    ]
+    """Generate hill workout.
 
+    The hill structure (10 × 30 s reps with walk-down recovery) is a fixed
+    dose: it doesn't stretch to fill an arbitrary km budget. We report
+    ``distance`` as what the steps actually deliver so weekly mileage and
+    the workout card stay in lockstep.
+    """
+    hill_workouts = [
+        'Hill repeats: 10x30sec steep hill repeats with walk down recovery.',
+        'Long hill climbs: 5x2min moderate grade hills at threshold effort.',
+        'Hill bounding: 8x20sec explosive uphill bounds with full recovery.'
+    ]
+    steps = workout_steps.build_hill_steps(distance, None)
+    actual_km = round(workout_steps._compute_distance_from_steps(steps), 1)
     return {
         'day': day,
         'type': 'hill',
-        'distance': round(distance, 1) if distance > 0 else 0,
+        'distance': actual_km if actual_km > 0 else (round(distance, 1) if distance > 0 else 0),
         'intensity': 'high',
         'description': hill_workouts[day % len(hill_workouts)],
-        'steps': workout_steps.build_hill_steps(distance, None),
+        'steps': steps,
     }
 
 
