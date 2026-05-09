@@ -32,7 +32,7 @@ def run_alembic_migrations(engine: Engine) -> None:
             HEAD_REVISION,
         )
         command.stamp(alembic_cfg, HEAD_REVISION)
-    else:
-        command.upgrade(alembic_cfg, "head")
+
+    command.upgrade(alembic_cfg, "head")
 
     logger.info("Alembic migrations applied successfully")
