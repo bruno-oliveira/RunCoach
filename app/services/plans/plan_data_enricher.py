@@ -5,9 +5,117 @@ from typing import Any
 
 from sqlalchemy.orm import Session
 
+from app.core.training.key_workout_data import WORKOUTS
+from app.core.training.key_workout_library import (
+    _KEY_WORKOUT_MIN_DISTANCE_KM,
+    reconcile_key_workout_text,
+)
+from app.core.training.key_workout_parser import parse_key_workout_steps
+from app.core.training.workout_steps import (
+    _compute_distance_from_steps,
+    _parse_pace_str_to_min_per_km,
+)
 from app.models import DailyWorkout, RunLog, WeeklyPlan
 
 logger = logging.getLogger(__name__)
+
+_DURATION_HINT_THRESHOLD_KM = 3.0
+_DEFAULT_PACE_MIN_PER_KM_BY_ZONE = {
+    "E": 8.0,
+    "T": 6.5,
+    "I": 5.5,
+    "M": 6.0,
+    "R": 5.0,
+    "10K": 6.0,
+}
+_DEFAULT_PACE_MIN_PER_KM_BY_TYPE = {
+    "easy": 7.0,
+    "long": 7.0,
+    "tempo": 5.5,
+    "interval": 4.8,
+    "hill": 5.0,
+}
+_KEY_DEFAULT_ZONE_BY_ID = {
+    w["id"]: w.get("pace_zone")
+    for w in WORKOUTS
+}
+
+
+def _has_volume_steps(steps: list[dict]) -> bool:
+    for step in steps:
+        if step.get("kind") in {"warmup", "cooldown", "rest"}:
+            continue
+        if step.get("distance_m") or step.get("duration_s"):
+            return True
+    return False
+
+
+def _repair_key_workout_steps(workout: dict[str, Any]) -> None:
+    key_id = workout.get("key_workout_id")
+    if not key_id:
+        return
+
+    distance_km = workout.get("distance", 0) or 0
+    min_km = _KEY_WORKOUT_MIN_DISTANCE_KM.get(key_id, 0)
+    if min_km > 0 and distance_km < min_km:
+        distance_km = min_km
+        workout["distance"] = distance_km
+
+    reconcile_key_workout_text(workout)
+
+    steps = workout.get("steps")
+    if isinstance(steps, list) and _has_volume_steps(steps):
+        return
+
+    structure = workout.get("structure")
+    if not structure:
+        return
+
+    workout_type = workout.get("type", "interval")
+    default_zone = _KEY_DEFAULT_ZONE_BY_ID.get(key_id)
+    workout["steps"] = parse_key_workout_steps(
+        structure,
+        workout_type=workout_type,
+        default_zone=default_zone,
+        total_distance_km=distance_km,
+    )
+
+
+def _estimate_duration_min_from_steps(
+    steps: list[dict],
+    workout_type: str,
+) -> int | None:
+    total_seconds = 0.0
+    for step in steps:
+        try:
+            repeat = int(step.get("repeat", 1) or 1)
+        except (TypeError, ValueError):
+            repeat = 1
+        repeat = max(1, repeat)
+
+        duration_s = step.get("duration_s")
+        if duration_s:
+            total_seconds += float(duration_s) * repeat
+            continue
+
+        distance_m = step.get("distance_m")
+        if not distance_m:
+            continue
+
+        pace_min_per_km = _parse_pace_str_to_min_per_km(
+            step.get("pace_str"),
+            step.get("pace_zone"),
+        )
+        if not pace_min_per_km:
+            pace_min_per_km = _DEFAULT_PACE_MIN_PER_KM_BY_ZONE.get(
+                step.get("pace_zone")
+            ) or _DEFAULT_PACE_MIN_PER_KM_BY_TYPE.get(workout_type, 7.0)
+
+        total_seconds += (float(distance_m) / 1000.0) * pace_min_per_km * 60.0 * repeat
+
+    if total_seconds <= 0:
+        return None
+    return max(1, int(round(total_seconds / 60.0)))
 
 
 def enrich_plan_data_with_ids(
@@ -35,6 +143,29 @@ def enrich_plan_data_with_ids(
             key = (week_num, workout.get("day"))
             workout["id"] = id_map.get(key)
             bl = baseline_map.get(key)
+
+            _repair_key_workout_steps(workout)
+
+            steps = workout.get("steps")
+            if not isinstance(steps, list) or not steps:
+                continue
+
+            steps_distance_km = _compute_distance_from_steps(steps)
+            if steps_distance_km > 0:
+                rounded_steps_km = round(steps_distance_km, 1)
+                current_distance = workout.get("distance", 0) or 0
+                if current_distance <= 0 or abs(current_distance - rounded_steps_km) > 0.2:
+                    workout["distance"] = rounded_steps_km
+
+            distance = workout.get("distance", 0) or 0
+            if 0 < distance < _DURATION_HINT_THRESHOLD_KM:
+                est_min = _estimate_duration_min_from_steps(
+                    steps,
+                    workout.get("type", "easy"),
+                )
+                if est_min is not None:
+                    workout["duration_min"] = est_min
+
             if bl is not None and bl != workout.get("distance"):
                 workout["baseline_distance"] = bl
 
