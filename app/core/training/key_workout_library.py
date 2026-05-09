@@ -506,7 +506,7 @@ def _filter_candidates(
     ]
 
     # Terrain filter — flat-only or hilly/any otherwise.
-    if terrain == "flat" or (trail_profile and trail_profile.elevation_class == "flat"):
+    if terrain == "flat" or (terrain is None and trail_profile and trail_profile.elevation_class == "flat"):
         candidates = [w for w in candidates if "flat" in w.get("terrain", ["any"])]
     elif trail_profile is not None or terrain is not None:
         candidates = [
@@ -709,7 +709,7 @@ class KeyWorkoutLibrary:
                              trail_profile=None) -> List[Dict]:
         """Return all key workouts for a race distance."""
         workouts = _trail_aware_distance_filter(target_distance, trail_profile)
-        if terrain == "flat" or (trail_profile and trail_profile.elevation_class == "flat"):
+        if terrain == "flat" or (terrain is None and trail_profile and trail_profile.elevation_class == "flat"):
             workouts = [w for w in workouts if "flat" in w.get("terrain", ["any"])]
         elif terrain is not None or trail_profile is not None:
             workouts = [

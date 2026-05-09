@@ -105,6 +105,13 @@ class PlanRequestBase(BaseModel):
         le=10000,
         description="Total race elevation gain in m. Required when is_trail=True.",
     )
+    training_terrain: Optional[str] = Field(
+        default=None,
+        description=(
+            "Terrain available for day-to-day training: flat, rolling, hilly, or "
+            "mountainous. Optional; when omitted we infer from race elevation."
+        ),
+    )
 
     # Deprecated: superseded by target_elevation_gain_m. Kept for backward
     # compat with the legacy form and existing DB rows; auto-migrated below.
@@ -179,6 +186,20 @@ class PlanRequest(PlanRequestBase, RaceInfoMixin):
         return values
 
     @model_validator(mode="after")
+    def validate_training_terrain(self) -> "PlanRequest":
+        """Validate optional training terrain selection."""
+        if self.training_terrain is None:
+            return self
+        allowed = {"flat", "rolling", "hilly", "mountainous"}
+        terrain = self.training_terrain.strip().lower()
+        if terrain not in allowed:
+            raise ValueError(
+                "Training terrain must be one of: flat, rolling, hilly, mountainous."
+            )
+        self.training_terrain = terrain
+        return self
+
+    @model_validator(mode="after")
     def _validate_trail_or_road_distance(self) -> "PlanRequest":
         """Branch validation: trail accepts 8–163 km + elevation; road uses presets."""
         from app.core.training.trail_profile import (
@@ -207,6 +228,28 @@ class PlanRequest(PlanRequestBase, RaceInfoMixin):
                 )
 
         return self
+
+    def resolved_training_terrain(self) -> Optional[str]:
+        """Return the terrain to use for workout selection.
+
+        Priority:
+        1) explicit ``training_terrain``
+        2) legacy ``terrain`` toggle (flat vs non-flat)
+        3) inferred from race elevation profile for trail plans
+        """
+        if not self.is_trail:
+            return None
+
+        if self.training_terrain:
+            return self.training_terrain
+
+        if self.terrain:
+            return "flat" if self.terrain == "flat" else "hilly"
+
+        from app.core.training.trail_profile import classify_trail
+
+        profile = classify_trail(self.target_distance, self.target_elevation_gain_m or 0.0)
+        return profile.elevation_class
 
     @model_validator(mode="after")
     def validate_weeks_for_distance(self) -> "PlanRequest":

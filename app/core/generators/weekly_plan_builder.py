@@ -466,7 +466,10 @@ def build_weekly_plan(week_number: int, total_km: float, target_distance: float,
     is_valid, validation_message = validate_week_plan(workouts, actual_total_km, total_km, phase)
 
     training_tips = workout_builders.generate_training_tips(
-        week_number, target_distance, trail_profile=trail_profile,
+        week_number,
+        target_distance,
+        trail_profile=trail_profile,
+        training_terrain=terrain,
     )
 
     return {

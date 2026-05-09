@@ -68,6 +68,11 @@ class PlanService:
             TrainingPlan.max_runs_per_week == plan_request.max_runs_per_week,
             TrainingPlan.is_trail == plan_request.is_trail,
         ]
+        resolved_training_terrain = plan_request.resolved_training_terrain()
+        if resolved_training_terrain is not None:
+            filters.append(TrainingPlan.training_terrain == resolved_training_terrain)
+        else:
+            filters.append(TrainingPlan.training_terrain.is_(None))
         if plan_request.target_elevation_gain_m is not None:
             filters.append(
                 TrainingPlan.target_elevation_gain_m == plan_request.target_elevation_gain_m
@@ -126,7 +131,7 @@ class PlanService:
             plan_request.max_runs_per_week,
             vdot=effective_vdot,
             profile=profile,
-            terrain=plan_request.terrain,
+            terrain=plan_request.resolved_training_terrain(),
             trail_profile=trail_profile,
         )
 

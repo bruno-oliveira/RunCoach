@@ -94,7 +94,8 @@ def get_workout_distribution(total_km: float, max_runs: int, phase: str = 'build
 
     if not is_recovery_week and max_runs > 2:
         distribution = _validate_polarized_ratio(
-            distribution, phase, target_distance, trail_profile=trail_profile,
+            distribution, phase, target_distance,
+            trail_profile=trail_profile, terrain=terrain,
         )
 
     return distribution
@@ -118,6 +119,10 @@ def _profile_for(
       * Legacy ``target_distance == 30.0`` keeps the historic behavior.
     """
     if trail_profile is not None:
+        if terrain == 'flat':
+            return 'trail_flat'
+        if terrain in ('rolling', 'hilly', 'mountainous'):
+            return 'trail_hilly'
         return 'trail_flat' if trail_profile.elevation_class == 'flat' else 'trail_hilly'
     if target_distance == 30.0:
         return 'trail_flat' if terrain == 'flat' else 'trail_hilly'
@@ -299,5 +304,4 @@ def get_workout_distribution_simple(total_km: float, max_runs: int) -> Dict[str,
         'hill': 0,
         'rest': rest_days
     }
-
 

@@ -384,11 +384,34 @@ _TRAIL_BRACKET_TIPS = {
     ],
 }
 
+_TRAIL_FLAT_ACCESS_TIPS = {
+    "short": [
+        "Use bridge repeats, parking-garage ramps, or treadmill incline to simulate short climbs.",
+        "Do 20-30 min brisk power-walk blocks each week to rehearse race-day hiking muscles.",
+    ],
+    "standard": [
+        "On flat routes, run climbs by effort: 3-6 min hard surges with easy jog recoveries.",
+        "Use soft surfaces (grass, gravel, dirt) for at least one run weekly to mimic trail load.",
+        "If local terrain is flat, add incline treadmill or stairs for vertical-specific strength.",
+    ],
+    "ultra": [
+        "Replace one weekly quality run with incline treadmill or stair climbing to build vertical capacity.",
+        "Stack long-run fatigue with back-to-back days when you cannot access long climbs.",
+        "Keep race fueling rehearsal strict: every 30 min, even on easier flat terrain.",
+    ],
+    "long_ultra": [
+        "When terrain is flat, emphasize time-on-feet and climbing-specific strength over chasing pace.",
+        "Add long incline-hike blocks (10-20 min) to mimic sustained mountain climbs.",
+        "Rehearse gear and fueling under fatigue; flat routes still let you stress-test systems.",
+    ],
+}
+
 
 def get_tips_for_week(
     week_number: int,
     target_distance: float,
     trail_profile=None,
+    training_terrain: str | None = None,
 ) -> List[str]:
     """Generate diverse and week-specific training tips.
 
@@ -398,6 +421,9 @@ def get_tips_for_week(
         trail_profile: Optional ``TrailProfile`` — bracket-aware tips
             (power hiking, fueling rehearsal, drop bags, night running)
             replace the generic distance tip when present.
+        training_terrain: Optional terrain access string for where the runner
+            trains (flat/rolling/hilly/mountainous). When ``flat``, trail tips
+            switch to flat-access alternatives.
     """
     tips: List[str] = []
 
@@ -418,7 +444,14 @@ def get_tips_for_week(
 
     # Distance-specific or bracket-specific tip.
     if trail_profile is not None:
-        bracket_tips = _TRAIL_BRACKET_TIPS.get(trail_profile.bracket, _DISTANCE_TIPS["trail"])
+        if training_terrain == "flat":
+            bracket_tips = _TRAIL_FLAT_ACCESS_TIPS.get(
+                trail_profile.bracket, _DISTANCE_TIPS["trail"],
+            )
+        else:
+            bracket_tips = _TRAIL_BRACKET_TIPS.get(
+                trail_profile.bracket, _DISTANCE_TIPS["trail"],
+            )
         tips.append(bracket_tips[(week_number - 1) % len(bracket_tips)])
     else:
         dist_key = _get_distance_key(target_distance)

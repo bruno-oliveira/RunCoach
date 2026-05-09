@@ -14,13 +14,14 @@ from app.core.training.strength_plan import (
 from app.core.training.trail_profile import classify_trail
 
 
-def _build_plan(distance, elevation, weeks, runs, current_km):
+def _build_plan(distance, elevation, weeks, runs, current_km, terrain=None):
     profile = classify_trail(distance, elevation)
     return TrainingPlanGenerator().generate_plan(
         current_km=current_km,
         target_distance=distance,
         weeks=weeks,
         max_runs_per_week=runs,
+        terrain=terrain,
         trail_profile=profile,
     )
 
@@ -135,6 +136,17 @@ class TestKeyWorkoutBracketGating:
         ids = {w['id'] for w in catalog}
         assert 'trail_elevation_repeats' not in ids
 
+    def test_training_terrain_overrides_race_terrain_for_workout_filtering(self):
+        hilly_race = classify_trail(50.0, 2500.0)
+        catalog = KeyWorkoutLibrary.get_all_for_distance(
+            50.0,
+            terrain="flat",
+            trail_profile=hilly_race,
+        )
+        ids = {w['id'] for w in catalog}
+        assert 'trail_elevation_repeats' not in ids
+        assert 'trail_flat_surge_fartlek' in ids
+
 
 class TestNightRunForLongUltra:
     """The new headlamp night-run template only fires for long_ultra peak weeks."""
@@ -191,3 +203,14 @@ class TestTrailWorkoutsAppearInGeneratedPlans:
             if w.get('key_workout_id', '').startswith('trail_')
         ]
         assert keyed, "Legacy 30km path must still overlay trail key workouts"
+
+    def test_hilly_race_with_flat_training_uses_flat_key_workouts(self):
+        plan = _build_plan(50.0, 2500.0, 16, 5, current_km=35.0, terrain="flat")
+        keyed_ids = {
+            w.get('key_workout_id')
+            for week in plan
+            for w in week['daily_workouts']
+            if w.get('key_workout_id', '').startswith('trail_')
+        }
+        assert 'trail_flat_surge_fartlek' in keyed_ids
+        assert 'trail_elevation_repeats' not in keyed_ids

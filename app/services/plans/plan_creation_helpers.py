@@ -42,6 +42,7 @@ def persist_plan_core(
         current_pace=plan_request.current_pace_min_km,
         is_trail=plan_request.is_trail,
         target_elevation_gain_m=plan_request.target_elevation_gain_m,
+        training_terrain=plan_request.resolved_training_terrain(),
     )
     db.add(training_plan)
     db.flush()

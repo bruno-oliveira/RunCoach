@@ -310,7 +310,15 @@ def generate_hill_workout(day: int, distance: float = 0) -> Dict[str, Any]:
 
 
 def generate_training_tips(
-    week_number: int, target_distance: float, trail_profile=None,
+    week_number: int,
+    target_distance: float,
+    trail_profile=None,
+    training_terrain: Optional[str] = None,
 ) -> List[str]:
     """Generate diverse and week-specific training tips."""
-    return get_tips_for_week(week_number, target_distance, trail_profile=trail_profile)
+    return get_tips_for_week(
+        week_number,
+        target_distance,
+        trail_profile=trail_profile,
+        training_terrain=training_terrain,
+    )

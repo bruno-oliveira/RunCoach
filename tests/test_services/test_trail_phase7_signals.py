@@ -28,6 +28,20 @@ class TestBracketAwareTrainingTips:
         )
         assert "gel" in joined.lower() or "gut" in joined.lower()
 
+    def test_flat_training_tips_avoid_hilly_course_assumptions(self):
+        profile = classify_trail(30.0, 1000.0)
+        joined = " ".join(
+            tip for week in range(1, 5)
+            for tip in get_tips_for_week(
+                week,
+                30.0,
+                trail_profile=profile,
+                training_terrain="flat",
+            )
+        ).lower()
+        assert "actual race terrain" not in joined
+        assert "incline" in joined or "stairs" in joined or "bridge" in joined
+
     def test_ultra_bracket_introduces_back_to_back(self):
         profile = classify_trail(50.0, 1500.0)
         joined = " ".join(

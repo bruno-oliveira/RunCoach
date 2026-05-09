@@ -147,6 +147,9 @@ def get_distance_category(
             wins over the legacy ``terrain`` argument.
     """
     if trail_profile is not None:
+        normalised = _normalise_terrain(terrain)
+        if normalised is not None:
+            return _trail_key(normalised)
         return _trail_key(trail_profile.elevation_class)
 
     if target_distance <= 5:

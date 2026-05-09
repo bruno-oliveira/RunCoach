@@ -193,6 +193,20 @@
                                 </div>
                             </div>
 
+                            <div class="form-group" id="training-terrain-group" style="display: none;">
+                                <label for="training_terrain" class="form-label">Where you train</label>
+                                <div class="select-wrap">
+                                    <select id="training_terrain" name="training_terrain" class="form-select">
+                                        <option value="">Select terrain access</option>
+                                        <option value="flat">Mostly flat (city / canal paths)</option>
+                                        <option value="rolling">Rolling hills available</option>
+                                        <option value="hilly">Regular steep hills available</option>
+                                        <option value="mountainous">Mountain terrain available</option>
+                                    </select>
+                                </div>
+                                <span class="form-help">This adjusts sessions to your local terrain while still preparing for your race profile.</span>
+                            </div>
+
                             <div class="form-row-2">
                                 <div class="form-group">
                                     <label for="max_runs_per_week" class="form-label">Runs per week</label>
@@ -513,6 +527,8 @@ function setPlanMode(mode) {
     // bracket the form is targeting; downstream JS reads `currentBracket()`.
     const distSelect = document.getElementById('target_distance');
     const trailGroup = document.getElementById('trail-group');
+    const trainingTerrainGroup = document.getElementById('training-terrain-group');
+    const trainingTerrainField = document.getElementById('training_terrain');
     const isTrailField = document.getElementById('is_trail');
     const trailDistanceField = document.getElementById('trail_distance_km');
     const elevationField = document.getElementById('target_elevation_gain_m');
@@ -551,6 +567,7 @@ function setPlanMode(mode) {
 
     function updateTrailVisibility() {
         trailGroup.style.display = isTrailMode() ? '' : 'none';
+        trainingTerrainGroup.style.display = isTrailMode() ? '' : 'none';
         // Hidden flag flipped on/off so the backend sees explicit intent.
         isTrailField.value = isTrailMode() ? 'on' : '';
     }
@@ -665,6 +682,12 @@ function setPlanMode(mode) {
                         e.preventDefault();
                         alert('Enter total elevation gain in metres (0–10000). Use 0 for fully flat trails.');
                         elevationField.focus();
+                        return false;
+                    }
+                    if (!trainingTerrainField.value) {
+                        e.preventDefault();
+                        alert('Select the terrain you can train on so we can adapt your trail sessions locally.');
+                        trainingTerrainField.focus();
                         return false;
                     }
                     if (parseFloat(currentKm.value) === 0) {

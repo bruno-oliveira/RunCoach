@@ -8,7 +8,8 @@ from typing import Dict, Optional
 
 def validate_polarized_ratio(distribution: Dict[str, int], phase: str,
                              target_distance: float,
-                             trail_profile=None) -> Dict[str, int]:
+                             trail_profile=None,
+                             terrain: Optional[str] = None) -> Dict[str, int]:
     """Validate 80/20 polarized training ratio and adjust if needed.
 
     Trail gets slightly easier targets (85/15 build, 80/20 peak) because
@@ -16,6 +17,9 @@ def validate_polarized_ratio(distribution: Dict[str, int], phase: str,
     keep the road target since they aren't getting hill-driven intensity.
     """
     is_trail = trail_profile is not None or target_distance == 30.0
+    if terrain == "flat":
+        # Training on flat terrain has no climb-driven intensity.
+        is_trail = False
     if trail_profile is not None and trail_profile.elevation_class == "flat":
         # Flat trail: no terrain-driven intensity → use the road polarized target.
         is_trail = False

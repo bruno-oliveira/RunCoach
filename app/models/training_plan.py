@@ -42,6 +42,7 @@ class TrainingPlan(Base):
     # Trail / ultra parameters (replaces the legacy `terrain` request field).
     is_trail = Column(Boolean, nullable=False, default=False)
     target_elevation_gain_m = Column(Float, nullable=True)
+    training_terrain = Column(String, nullable=True)
 
     hr_zones_data = Column(JSON, nullable=True)
     nutrition_phases_data = Column(JSON, nullable=True)

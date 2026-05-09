@@ -75,7 +75,9 @@ class TrainingPlanGenerator:
         # string; expose the elevation_class so flat/rolling/hilly/mountainous
         # all dispatch correctly without a wider signature change.
         downstream_terrain = (
-            trail_profile.elevation_class if trail_profile is not None else terrain
+            terrain
+            if terrain is not None
+            else (trail_profile.elevation_class if trail_profile is not None else None)
         )
 
         training_plan = []
