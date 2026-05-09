@@ -947,3 +947,114 @@ class TestCountConsecutiveDirection:
             {"type": "recalibrate"},
         ]
         assert _count_consecutive_direction(history) == 2
+
+
+class TestMountainSimulationSignal:
+    """Mountain-from-flat proxy should influence multiplier when provided."""
+
+    def test_low_simulation_score_reduces_multiplier_vs_high_score(self):
+        class MockWorkout:
+            def __init__(self, wid, wtype, dist):
+                self.id = wid
+                self.workout_type = wtype
+                self.distance_km = dist
+                self.baseline_distance_km = dist
+
+        class MockRun:
+            def __init__(self, wid, wtype, dist):
+                self.daily_workout_id = wid
+                self.workout_type = wtype
+                self.distance_km = dist
+                self.perceived_effort = 5.0
+                self.date = _today()
+
+        today = _today()
+
+        def _recency_weight(_scheduled_date):
+            return 1.0
+
+        planned = [
+            (MockWorkout(_uid(), "easy", 8.0), today),
+            (MockWorkout(_uid(), "tempo", 8.0), today),
+            (MockWorkout(_uid(), "long", 14.0), today),
+        ]
+        planned_ids = {w.id for w, _ in planned}
+        runs = [MockRun(w.id, w.workout_type, w.distance_km) for w, _ in planned]
+
+        class MockDB:
+            def query(self, *_args):
+                class MockQuery:
+                    def filter(self, *_args):
+                        return self
+
+                    def all(self):
+                        return [(r.daily_workout_id,) for r in runs]
+
+                return MockQuery()
+
+        base_args = [
+            runs, planned, planned_ids,
+            today, "plan1", MockDB(), _recency_weight,
+        ]
+
+        signals_low = _compute_adjustment_signals(
+            *base_args,
+            current_phase="build",
+            mountain_simulation={"score": 40},
+        )
+        signals_high = _compute_adjustment_signals(
+            *base_args,
+            current_phase="build",
+            mountain_simulation={"score": 90},
+        )
+
+        assert signals_low["mountain_simulation_factor"] < signals_high["mountain_simulation_factor"]
+        assert signals_low["multiplier"] < signals_high["multiplier"]
+
+    def test_missing_simulation_defaults_to_neutral_factor(self):
+        class MockWorkout:
+            def __init__(self, wid, wtype, dist):
+                self.id = wid
+                self.workout_type = wtype
+                self.distance_km = dist
+                self.baseline_distance_km = dist
+
+        class MockRun:
+            def __init__(self, wid, wtype, dist):
+                self.daily_workout_id = wid
+                self.workout_type = wtype
+                self.distance_km = dist
+                self.perceived_effort = 5.0
+                self.date = _today()
+
+        today = _today()
+
+        def _recency_weight(_scheduled_date):
+            return 1.0
+
+        planned = [
+            (MockWorkout(_uid(), "easy", 8.0), today),
+            (MockWorkout(_uid(), "long", 14.0), today),
+        ]
+        planned_ids = {w.id for w, _ in planned}
+        runs = [MockRun(w.id, w.workout_type, w.distance_km) for w, _ in planned]
+
+        class MockDB:
+            def query(self, *_args):
+                class MockQuery:
+                    def filter(self, *_args):
+                        return self
+
+                    def all(self):
+                        return [(r.daily_workout_id,) for r in runs]
+
+                return MockQuery()
+
+        signals = _compute_adjustment_signals(
+            runs, planned, planned_ids,
+            today, "plan1", MockDB(), _recency_weight,
+            current_phase="build",
+        )
+
+        assert signals["mountain_simulation_score"] is None
+        assert signals["mountain_simulation_factor"] == 1.0

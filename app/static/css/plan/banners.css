@@ -226,6 +226,44 @@
     flex-shrink: 0;
 }
 
+/* ---- Mountain race / flat training explanation banner ---- */
+.flat-mountain-sim-banner {
+    margin-bottom: var(--space-4);
+    border-radius: var(--radius-lg);
+    border: 1px solid rgba(14, 116, 144, 0.25);
+    background: linear-gradient(135deg, rgba(14, 116, 144, 0.08), rgba(14, 116, 144, 0.03));
+    padding: var(--space-4) var(--space-5);
+    display: flex;
+    align-items: center;
+    gap: var(--space-4);
+}
+
+.flat-mountain-sim-banner-icon {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    display: grid;
+    place-items: center;
+    font-weight: var(--weight-bold);
+    color: #0e7490;
+    background: rgba(14, 116, 144, 0.12);
+    flex-shrink: 0;
+}
+
+.flat-mountain-sim-banner-text strong {
+    display: block;
+    font-size: var(--text-sm);
+    color: var(--color-text);
+    margin-bottom: 2px;
+}
+
+.flat-mountain-sim-banner-text p {
+    font-size: var(--text-sm);
+    color: var(--color-text-secondary);
+    line-height: 1.5;
+    margin: 0;
+}
+
 /* ---- Responsive ---- */
 @media (max-width: 768px) {
     .banner-content { flex-direction: column; gap: var(--space-3); }
@@ -238,4 +276,5 @@
     .recommendation-banner-content { gap: var(--space-3); }
     .recommendation-banner-actions { width: 100%; }
     .recommendation-banner-actions button { flex: 1; }
+    .flat-mountain-sim-banner { padding: var(--space-3) var(--space-4); gap: var(--space-3); }
 }

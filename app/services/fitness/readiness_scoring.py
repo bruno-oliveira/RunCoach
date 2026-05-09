@@ -258,6 +258,178 @@ def score_vdot(
     return vdot_normalized, detail, formatted_predictions, vdot_info
 
 
+def score_mountain_simulation(
+    plan_data: List[dict],
+    runs: List[RunLog],
+    start_date: date,
+    current_week: int,
+    *,
+    is_trail: bool,
+    training_terrain: Optional[str],
+    target_elevation_gain_m: Optional[float],
+    plan_id: Optional[str] = None,
+) -> Optional[Dict[str, Any]]:
+    """Score mountain-race proxy execution for flat-only training setups.
+
+    The score compares planned weekly flat-access simulation targets
+    (uphill-effort minutes, downhill eccentric minutes, hike/run transitions)
+    against proxies derived from executed runs.
+    """
+    if not is_trail or training_terrain != "flat":
+        return None
+    if (target_elevation_gain_m or 0) <= 0:
+        return None
+    if current_week <= 0:
+        return {
+            "score": 50.0,
+            "detail": "Plan has not started yet",
+            "planned": {
+                "uphill_effort_min": 0,
+                "downhill_eccentric_min": 0,
+                "hike_run_transition_reps": 0,
+            },
+            "actual": {
+                "uphill_effort_min": 0,
+                "downhill_eccentric_min": 0,
+                "hike_run_transition_reps": 0,
+            },
+            "completion_pct": {
+                "uphill": 0,
+                "downhill": 0,
+                "transitions": 0,
+            },
+        }
+
+    planned_uphill = 0
+    planned_downhill = 0
+    planned_transitions = 0
+    for wk in plan_data:
+        week_num = wk.get("week", 0)
+        if week_num <= 0 or week_num > current_week:
+            continue
+        sim = wk.get("vertical_simulation") or {}
+        planned_uphill += int(sim.get("uphill_effort_min", 0) or 0)
+        planned_downhill += int(sim.get("downhill_eccentric_min", 0) or 0)
+        planned_transitions += int(sim.get("hike_run_transition_reps", 0) or 0)
+
+    # Safety fallback for legacy plans without vertical_simulation payload.
+    if planned_uphill <= 0 and planned_downhill <= 0 and planned_transitions <= 0:
+        return {
+            "score": 50.0,
+            "detail": "No simulation targets available in this plan",
+            "planned": {
+                "uphill_effort_min": 0,
+                "downhill_eccentric_min": 0,
+                "hike_run_transition_reps": 0,
+            },
+            "actual": {
+                "uphill_effort_min": 0,
+                "downhill_eccentric_min": 0,
+                "hike_run_transition_reps": 0,
+            },
+            "completion_pct": {
+                "uphill": 0,
+                "downhill": 0,
+                "transitions": 0,
+            },
+        }
+
+    actual_uphill = 0.0
+    actual_downhill = 0.0
+    actual_transitions = 0
+
+    for run in runs:
+        if plan_id is not None and getattr(run, "training_plan_id", None) != plan_id:
+            continue
+
+        run_date = _to_date(run.date)
+        if run_date is None:
+            continue
+        delta = (run_date - start_date).days
+        if delta < 0:
+            continue
+        week_idx = delta // 7 + 1
+        if week_idx > current_week:
+            continue
+
+        duration = float(getattr(run, "duration_minutes", 0) or 0)
+        if duration <= 0:
+            continue
+
+        wtype = (getattr(run, "workout_type", "") or "easy").lower()
+        effort = int(getattr(run, "perceived_effort", 0) or 0)
+        distance = float(getattr(run, "distance_km", 0) or 0)
+        elevation = float(getattr(run, "elevation_gain_m", 0) or 0)
+        m_per_km = (elevation / distance) if distance > 0 else 0.0
+
+        if wtype in ("interval", "tempo", "hill"):
+            uphill_factor = 0.60
+            downhill_factor = 0.45
+            transitions = 2
+        elif wtype == "long":
+            uphill_factor = 0.30
+            downhill_factor = 0.40
+            transitions = 1
+        else:
+            uphill_factor = 0.12
+            downhill_factor = 0.15
+            transitions = 0
+
+        if effort >= 7:
+            uphill_factor += 0.08
+            downhill_factor += 0.05
+            transitions += 1
+
+        if m_per_km >= 20:
+            uphill_factor += 0.10
+            downhill_factor += 0.10
+
+        actual_uphill += duration * uphill_factor
+        actual_downhill += duration * downhill_factor
+        actual_transitions += transitions
+
+    def _ratio(actual: float, planned: float) -> float:
+        if planned <= 0:
+            return 1.0
+        return max(0.0, min(1.2, actual / planned))
+
+    uphill_ratio = _ratio(actual_uphill, planned_uphill)
+    downhill_ratio = _ratio(actual_downhill, planned_downhill)
+    transition_ratio = _ratio(actual_transitions, planned_transitions)
+
+    score = (
+        0.45 * uphill_ratio
+        + 0.35 * downhill_ratio
+        + 0.20 * transition_ratio
+    ) * 100.0
+
+    detail = (
+        f"Uphill {round(actual_uphill):.0f}/{planned_uphill} min, "
+        f"downhill {round(actual_downhill):.0f}/{planned_downhill} min, "
+        f"transitions {actual_transitions}/{planned_transitions}"
+    )
+
+    return {
+        "score": round(min(100.0, max(0.0, score)), 1),
+        "detail": detail,
+        "planned": {
+            "uphill_effort_min": planned_uphill,
+            "downhill_eccentric_min": planned_downhill,
+            "hike_run_transition_reps": planned_transitions,
+        },
+        "actual": {
+            "uphill_effort_min": int(round(actual_uphill)),
+            "downhill_eccentric_min": int(round(actual_downhill)),
+            "hike_run_transition_reps": int(actual_transitions),
+        },
+        "completion_pct": {
+            "uphill": int(round(uphill_ratio * 100)),
+            "downhill": int(round(downhill_ratio * 100)),
+            "transitions": int(round(transition_ratio * 100)),
+        },
+    }
+
+
 def build_scenarios(
     vdot_data: Dict, target_distance_str: str,
     target_elevation_gain_m: Optional[float] = None,

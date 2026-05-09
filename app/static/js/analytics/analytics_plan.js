@@ -65,6 +65,26 @@
         }
         html += '</div>';
 
+        // Mountain simulation proxies (only for trail + flat training setups)
+        if (d.mountain_simulation) {
+            const sim = d.mountain_simulation;
+            const simClass = sim.score >= 75 ? 'sim-strong' : sim.score >= 50 ? 'sim-good' : 'sim-developing';
+            html += `<div class="readiness-mountain ${simClass}">`;
+            html += '<h4>Mountain Simulation (Flat Access)</h4>';
+            html += `<div class="readiness-mountain-head"><span class="readiness-mountain-score">${sim.score}</span><span class="readiness-mountain-label">/ 100</span></div>`;
+            if (sim.detail) html += `<div class="readiness-mountain-detail">${this._esc(sim.detail)}</div>`;
+            html += '<div class="readiness-mountain-grid">';
+            html += `<div class="mountain-metric"><span class="mountain-key">Uphill</span><span class="mountain-val">${sim.actual.uphill_effort_min || 0}/${sim.planned.uphill_effort_min || 0} min</span><span class="mountain-pct">${sim.completion_pct.uphill || 0}%</span></div>`;
+            html += `<div class="mountain-metric"><span class="mountain-key">Downhill</span><span class="mountain-val">${sim.actual.downhill_eccentric_min || 0}/${sim.planned.downhill_eccentric_min || 0} min</span><span class="mountain-pct">${sim.completion_pct.downhill || 0}%</span></div>`;
+            html += `<div class="mountain-metric"><span class="mountain-key">Transitions</span><span class="mountain-val">${sim.actual.hike_run_transition_reps || 0}/${sim.planned.hike_run_transition_reps || 0} reps</span><span class="mountain-pct">${sim.completion_pct.transitions || 0}%</span></div>`;
+            html += '</div>';
+            html += '<details class="readiness-mountain-explainer">';
+            html += '<summary>How this score is computed</summary>';
+            html += '<p>This score tracks how closely your logged runs match your weekly mountain-simulation targets while training on flat terrain. It combines uphill-effort minutes, downhill-eccentric minutes, and hike-run transitions. Higher completion means your flat training is better matching mountain race demands.</p>';
+            html += '</details>';
+            html += '</div>';
+        }
+
         // Scenarios
         if (d.scenarios && d.scenarios.length > 0) {
             html += '<div class="readiness-scenarios"><h4>Race Scenarios</h4><div class="readiness-scenarios-grid">';

@@ -123,4 +123,17 @@
         </ul>
     </div>
     {% endif %}
+
+    {% if week.vertical_simulation and week.vertical_simulation.enabled %}
+    <div class="tips-section">
+        <div class="tips-title">Mountain Simulation Targets (Flat Access)</div>
+        <ul class="tips-list">
+            <li>Simulated uphill load: {{ week.vertical_simulation.simulated_uphill_m }} m (race class: {{ week.vertical_simulation.race_elevation_class }})</li>
+            <li>Uphill-effort target: {{ week.vertical_simulation.uphill_effort_min }} min this week</li>
+            <li>Downhill eccentric target: {{ week.vertical_simulation.downhill_eccentric_min }} min this week</li>
+            <li>Hike-run transitions: {{ week.vertical_simulation.hike_run_transition_reps }} reps</li>
+            <li>{{ week.vertical_simulation.guidance }}</li>
+        </ul>
+    </div>
+    {% endif %}
 </div>

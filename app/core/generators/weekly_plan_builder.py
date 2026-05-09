@@ -43,6 +43,63 @@ _DEFAULT_PACE_MIN_PER_KM = {
 }
 
 
+def _vertical_simulation_targets(
+    week_total_km: float,
+    phase: str,
+    is_recovery_week: bool,
+    distribution: Dict[str, int],
+    training_terrain: Optional[str],
+    trail_profile,
+) -> Optional[Dict[str, Any]]:
+    """Build weekly mountain-load simulation targets for flat-only training.
+
+    Race profile remains the source of mountain demands. When terrain access is
+    flat, we surface executable proxies (uphill-effort minutes, eccentric load,
+    and hike/run transitions) so athletes can prepare specifically.
+    """
+    if trail_profile is None or training_terrain != 'flat':
+        return None
+    if trail_profile.elevation_class == 'flat':
+        return None
+
+    phase_factor = {
+        'base': 0.55,
+        'build': 0.80,
+        'peak': 1.00,
+        'taper': 0.45,
+    }.get(phase, 0.80)
+    if is_recovery_week:
+        phase_factor *= 0.75
+
+    race_m_per_km = max(0.0, trail_profile.m_per_km)
+    simulated_uphill_m = round(week_total_km * race_m_per_km * phase_factor)
+
+    # Convert simulated vertical to uphill-effort minutes using a conservative
+    # vertical ascent rate proxy for sustained trail climbing effort.
+    vertical_rate_m_per_min = 12.0
+    uphill_minutes = int(round(simulated_uphill_m / vertical_rate_m_per_min))
+    downhill_minutes = int(round(uphill_minutes * 0.60))
+
+    quality_sessions = sum(distribution.get(k, 0) for k in ('tempo', 'interval', 'hill'))
+    transitions = max(2, quality_sessions * 2)
+    if phase == 'peak':
+        transitions += 2
+
+    return {
+        'enabled': True,
+        'race_elevation_class': trail_profile.elevation_class,
+        'race_m_per_km': round(race_m_per_km, 1),
+        'simulated_uphill_m': simulated_uphill_m,
+        'uphill_effort_min': max(15, uphill_minutes),
+        'downhill_eccentric_min': max(10, downhill_minutes),
+        'hike_run_transition_reps': transitions,
+        'guidance': (
+            'Use incline treadmill, stairs, brisk power-hike blocks, and '
+            'eccentric quad work to simulate mountain load on flat terrain.'
+        ),
+    }
+
+
 def demote_low_budget_quality(distribution: Dict[str, int],
                               quality_distances: Dict[str, float]) -> None:
     """Demote quality slots whose budget is below the stimulus floor to easy.
@@ -526,6 +583,14 @@ def build_weekly_plan(week_number: int, total_km: float, target_distance: float,
         trail_profile=trail_profile,
         training_terrain=terrain,
     )
+    vertical_simulation = _vertical_simulation_targets(
+        actual_total_km,
+        phase,
+        is_recovery,
+        distribution,
+        training_terrain=terrain,
+        trail_profile=trail_profile,
+    )
 
     return {
         'week': week_number,
@@ -534,6 +599,7 @@ def build_weekly_plan(week_number: int, total_km: float, target_distance: float,
         'total_km': actual_total_km,
         'daily_workouts': workouts,
         'training_tips': training_tips,
+        'vertical_simulation': vertical_simulation,
         'validation': {'valid': is_valid, 'message': validation_message},
         'strength_training': [w['strength_session'] for w in workouts if w.get('strength_session')]
     }

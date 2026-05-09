@@ -8,6 +8,7 @@ from sqlalchemy.orm import Session
 
 from app.models import DailyWorkout, RunLog, RunFeedback, TrainingPlan, WeeklyPlan
 from app.services.fitness.race_predictor_service import RacePredictorService
+from app.services.fitness.readiness_scoring import score_mountain_simulation
 from app.utils import to_date as _to_date
 
 from ._helpers import (
@@ -124,6 +125,16 @@ def gather_signals(
         hr_zones=hr_zones,
         run_feedback_list=run_feedback_list,
         vdot_trend=vdot_trend,
+        mountain_simulation=score_mountain_simulation(
+            training_plan.plan_data or [],
+            all_plan_runs,
+            start_date,
+            current_week,
+            is_trail=getattr(training_plan, "is_trail", False),
+            training_terrain=getattr(training_plan, "training_terrain", None),
+            target_elevation_gain_m=getattr(training_plan, "target_elevation_gain_m", None),
+            plan_id=training_plan.id,
+        ),
     )
 
     current_day_of_week = today.isoweekday()
@@ -252,6 +263,13 @@ def adjust_plan(
     if warning_ratio is not None and warning_ratio > 0:
         reason_parts.append(
             f"Feedback warnings: {round(warning_ratio * 100)}% of runs."
+        )
+
+    mountain_score = signals.get("mountain_simulation_score")
+    if mountain_score is not None:
+        reason_parts.append(
+            "Mountain simulation score: "
+            f"{mountain_score}/100 (factor x{signals.get('mountain_simulation_factor', 1.0)})."
         )
 
     logger.info(

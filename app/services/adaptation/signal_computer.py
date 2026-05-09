@@ -52,6 +52,7 @@ def compute_adjustment_signals(
     hr_zones: Optional[list[dict]] = None,
     run_feedback_list: Optional[List] = None,
     vdot_trend: str = "stable",
+    mountain_simulation: Optional[Dict[str, Any]] = None,
 ) -> Dict[str, Any]:
     volume_weight, effort_weight, completion_weight, hr_zone_weight, feedback_weight = _PHASE_WEIGHTS.get(
         current_phase, _PHASE_WEIGHTS["build"],
@@ -208,6 +209,21 @@ def compute_adjustment_signals(
         warning_ratio = 0.0
         positive_ratio = 0.0
 
+    # Mountain-from-flat simulation signal. Applies only when callers provide
+    # the proxy score (trail race + flat training access).
+    mountain_simulation_score = None
+    mountain_simulation_factor = 1.0
+    if mountain_simulation is not None:
+        mountain_simulation_score = float(mountain_simulation.get("score", 0) or 0)
+        if mountain_simulation_score >= 85:
+            mountain_simulation_factor = 1.03
+        elif mountain_simulation_score >= 70:
+            mountain_simulation_factor = 1.00
+        elif mountain_simulation_score >= 55:
+            mountain_simulation_factor = 0.97
+        else:
+            mountain_simulation_factor = 0.93
+
     completed_ids = set()
     if past_workout_ids:
         completed_rows = (
@@ -244,6 +260,11 @@ def compute_adjustment_signals(
     )
 
     raw_multiplier += trend_modifier
+
+    # Execute the mountain simulation signal as an explicit final adjustment.
+    # This keeps existing phase weights unchanged for non-trail plans and for
+    # trail plans without flat-access simulation targets.
+    raw_multiplier *= mountain_simulation_factor
 
     overreach_detected = False
     if volume_ratio > 1.2 and avg_effort is not None and avg_effort > 8.0:
@@ -298,6 +319,12 @@ def compute_adjustment_signals(
         "warning_ratio": round(warning_ratio, 2),
         "positive_ratio": round(positive_ratio, 2),
         "feedback_factor": round(feedback_factor, 2),
+        "mountain_simulation_score": (
+            round(mountain_simulation_score, 1)
+            if mountain_simulation_score is not None
+            else None
+        ),
+        "mountain_simulation_factor": round(mountain_simulation_factor, 2),
         "vdot_trend": vdot_trend,
     }
 

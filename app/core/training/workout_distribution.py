@@ -112,17 +112,12 @@ def _profile_for(
     """Map (distance, terrain, trail_profile) to a quality-distribution profile name.
 
     Trail dispatch:
-      * ``trail_profile`` wins when present (uses ``elevation_class``).
-      * ``terrain == 'flat'`` selects ``trail_flat``; rolling/hilly/mountainous
-        all use the hill-based ``trail_hilly`` quality pattern (the dominant
-        stimulus is the climb, not the technicality).
+      * ``trail_profile`` wins when present and uses race elevation_class.
+      * ``terrain`` models training constraints and is applied later as workout
+        substitution (e.g., hills -> flat climb-simulation sessions).
       * Legacy ``target_distance == 30.0`` keeps the historic behavior.
     """
     if trail_profile is not None:
-        if terrain == 'flat':
-            return 'trail_flat'
-        if terrain in ('rolling', 'hilly', 'mountainous'):
-            return 'trail_hilly'
         return 'trail_flat' if trail_profile.elevation_class == 'flat' else 'trail_hilly'
     if target_distance == 30.0:
         return 'trail_flat' if terrain == 'flat' else 'trail_hilly'
@@ -225,6 +220,50 @@ _PROFILE_BUILDERS = {
 }
 
 
+def _substitute_hills_for_flat_training(
+    quality_distribution: Dict[str, int],
+    phase: str,
+    week_number: int,
+    terrain: Optional[str],
+    trail_profile: Optional[TrailProfile],
+) -> None:
+    """Convert hill slots to flat-executable quality sessions.
+
+    This supports mountain race prep when the runner only has flat terrain.
+    Race profile still drives how much quality load we prescribe; training
+    terrain only decides executable session type.
+    """
+    if terrain != "flat" or trail_profile is None:
+        return
+    if trail_profile.elevation_class == "flat":
+        return
+
+    hill_slots = quality_distribution.get("hill", 0)
+    if hill_slots <= 0:
+        return
+
+    quality_distribution["hill"] = 0
+
+    if phase == "base":
+        quality_distribution["tempo"] = quality_distribution.get("tempo", 0) + hill_slots
+        return
+
+    if phase in ("build", "peak"):
+        if trail_profile.elevation_class == "mountainous":
+            interval_slots = max(1, round(hill_slots * 0.67))
+        else:
+            interval_slots = hill_slots // 2
+        interval_slots = min(hill_slots, interval_slots)
+        tempo_slots = hill_slots - interval_slots
+        if week_number % 2 == 0 and tempo_slots > 0:
+            interval_slots, tempo_slots = tempo_slots, interval_slots
+        quality_distribution["interval"] = quality_distribution.get("interval", 0) + interval_slots
+        quality_distribution["tempo"] = quality_distribution.get("tempo", 0) + tempo_slots
+        return
+
+    quality_distribution["tempo"] = quality_distribution.get("tempo", 0) + hill_slots
+
+
 def _build_quality_distribution(target_distance: float, terrain: Optional[str],
                                 quality_workouts: int, phase: str,
                                 easy_runs: int, long_runs: int, rest_days: int,
@@ -270,9 +309,15 @@ def _build_quality_distribution(target_distance: float, terrain: Optional[str],
 
     if phase == 'base':
         distribution.update(_BASE_PHASE_QUALITY[profile_name])
+        _substitute_hills_for_flat_training(
+            distribution, phase, week_number, terrain, trail_profile,
+        )
         return distribution
 
     distribution.update(_PROFILE_BUILDERS[profile_name](quality_workouts, week_number, phase))
+    _substitute_hills_for_flat_training(
+        distribution, phase, week_number, terrain, trail_profile,
+    )
     return distribution
 
 

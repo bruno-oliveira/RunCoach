@@ -18,6 +18,7 @@ from app.services.fitness.readiness_scoring import (
     score_consistency,
     score_label,
     score_long_run,
+    score_mountain_simulation,
     score_taper,
     score_vdot,
     score_volume,
@@ -155,6 +156,16 @@ class ReadinessService:
         vdot_score, vdot_detail, predictions, vdot_data = score_vdot(
             user_id, plan.target_distance, db, goal_time=plan.goal_time
         )
+        mountain_simulation = score_mountain_simulation(
+            plan.plan_data or [],
+            runs,
+            start_date,
+            current_week,
+            is_trail=getattr(plan, "is_trail", False),
+            training_terrain=getattr(plan, "training_terrain", None),
+            target_elevation_gain_m=getattr(plan, "target_elevation_gain_m", None),
+            plan_id=plan.id,
+        )
 
         overall = (
             volume_score * ReadinessService.WEIGHT_VOLUME
@@ -202,6 +213,18 @@ class ReadinessService:
                 "consistency": _build_component_dict(consistency_score, ReadinessService.WEIGHT_CONSISTENCY, consistency_detail),
                 "taper": _build_component_dict(taper_score, ReadinessService.WEIGHT_TAPER, taper_detail),
             },
+            "mountain_simulation": (
+                {
+                    "score": round(mountain_simulation["score"]),
+                    "label": score_label(mountain_simulation["score"]),
+                    "detail": mountain_simulation["detail"],
+                    "planned": mountain_simulation["planned"],
+                    "actual": mountain_simulation["actual"],
+                    "completion_pct": mountain_simulation["completion_pct"],
+                }
+                if mountain_simulation
+                else None
+            ),
             "predictions": predictions,
             "vdot": vdot_data,
             "scenarios": build_scenarios(

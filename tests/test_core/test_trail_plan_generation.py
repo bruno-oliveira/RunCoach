@@ -21,13 +21,14 @@ from app.core.training.workout_steps import _compute_distance_from_steps
 from app.core.training.trail_profile import classify_trail
 
 
-def _build_plan(distance, elevation, weeks, runs, current_km):
+def _build_plan(distance, elevation, weeks, runs, current_km, terrain=None):
     profile = classify_trail(distance, elevation)
     return TrainingPlanGenerator().generate_plan(
         current_km=current_km,
         target_distance=distance,
         weeks=weeks,
         max_runs_per_week=runs,
+        terrain=terrain,
         trail_profile=profile,
     )
 
@@ -62,6 +63,13 @@ class TestPhaseDistribution:
         assert mountain['hill'] > hilly['hill']
         # Track-style intervals are partly displaced by hill repeats.
         assert mountain['interval'] <= hilly['interval']
+
+    def test_race_profile_drives_distribution_even_with_flat_training(self):
+        profile = classify_trail(50.0, 2500.0)  # mountainous race profile
+        key = phase_calculator.get_distance_category(
+            50.0, terrain="flat", trail_profile=profile,
+        )
+        assert key == "TrailMountainous"
 
     @pytest.mark.parametrize("elevation_class", ["flat", "rolling", "hilly", "mountainous"])
     def test_distribution_buckets_sum_to_one(self, elevation_class):
@@ -203,6 +211,30 @@ class TestEndToEnd:
         all_workouts = [w for week in plan for w in week['daily_workouts']]
         assert any(w['type'] == 'hill' for w in all_workouts), \
             "Mountainous plan must include hill repeats"
+
+    def test_mountain_race_with_flat_training_substitutes_hills(self):
+        plan = _build_plan(50.0, 2500.0, 16, 5, current_km=35.0, terrain="flat")
+        build_peak = [
+            w for week in plan
+            if week['phase'] in ('build', 'peak')
+            for w in week['daily_workouts']
+        ]
+        assert not any(w['type'] == 'hill' for w in build_peak), \
+            "Flat-access plans should substitute hill sessions"
+        assert any(w['type'] == 'tempo' for w in build_peak)
+        assert any(w['type'] == 'interval' for w in build_peak)
+
+    def test_mountain_race_with_flat_training_has_vertical_sim_targets(self):
+        plan = _build_plan(50.0, 2500.0, 16, 5, current_km=35.0, terrain="flat")
+        build_week = next(w for w in plan if w['phase'] == 'build' and not w['is_recovery'])
+        targets = build_week.get('vertical_simulation')
+        assert targets and targets.get('enabled')
+        assert targets['simulated_uphill_m'] > 0
+        assert targets['uphill_effort_min'] >= 15
+
+    def test_non_flat_training_does_not_emit_vertical_sim_targets(self):
+        plan = _build_plan(50.0, 2500.0, 16, 5, current_km=35.0, terrain="hilly")
+        assert all(week.get('vertical_simulation') is None for week in plan)
 
     def test_100mi_plan_long_run_capped(self):
         plan = _build_plan(163.0, 6000.0, 32, 6, current_km=80.0)

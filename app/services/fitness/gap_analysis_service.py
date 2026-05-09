@@ -15,6 +15,7 @@ from app.models import DailyWorkout, RunLog, TrainingPlan, WeeklyPlan
 from app.core.training.vdot_calculator import VDOTCalculator
 from app.services.adaptation import AdaptationService
 from app.services.fitness.race_predictor_service import RacePredictorService
+from app.services.fitness.readiness_scoring import score_mountain_simulation
 from app.services.fitness.readiness_service import ReadinessService
 from app.utils import parse_race_time_to_seconds, to_date as _to_date
 
@@ -161,9 +162,20 @@ class GapAnalysisService:
         consistency = _compute_consistency(plan, ctx.runs, db, ctx.current_week)
         fitness = _compute_fitness_trajectory(plan, prediction_data)
         elevation_gap = _compute_elevation_gap(plan, ctx.plan_data, ctx.runs, ctx.current_week)
+        mountain_simulation = score_mountain_simulation(
+            ctx.plan_data,
+            ctx.runs,
+            ctx.start_date,
+            ctx.current_week,
+            is_trail=getattr(plan, "is_trail", False),
+            training_terrain=getattr(plan, "training_terrain", None),
+            target_elevation_gain_m=getattr(plan, "target_elevation_gain_m", None),
+            plan_id=plan.id,
+        )
 
         top_actions = _generate_top_actions(
             volume_gap, long_run_gap, pace_gap, consistency, fitness,
+            mountain_simulation,
             ctx.current_week, ctx.total_weeks,
         )
 
@@ -174,6 +186,7 @@ class GapAnalysisService:
             "consistency": consistency,
             "fitness_trajectory": fitness,
             "elevation_gap": elevation_gap,
+            "mountain_simulation_gap": mountain_simulation,
             "top_actions": top_actions,
             "current_week": ctx.current_week,
             "total_weeks": ctx.total_weeks,
@@ -507,6 +520,7 @@ def _generate_top_actions(
     pace: Dict,
     consistency: Dict,
     fitness: Dict,
+    mountain_simulation: Optional[Dict[str, Any]],
     current_week: int,
     total_weeks: int,
 ) -> List[Dict[str, Any]]:
@@ -590,6 +604,21 @@ def _generate_top_actions(
                 ),
                 "action_type": "adjust_plan",
                 "label": "Recalibrate plan",
+            })
+
+    # Mountain-from-flat simulation execution
+    if mountain_simulation is not None:
+        sim_score = mountain_simulation.get("score", 0)
+        if sim_score < 70:
+            comp = mountain_simulation.get("completion_pct", {})
+            actions.append({
+                "message": (
+                    "Mountain simulation execution is behind target "
+                    f"(uphill {comp.get('uphill', 0)}%, "
+                    f"downhill {comp.get('downhill', 0)}%). "
+                    "Prioritize incline/stairs blocks and eccentric downhill prep this week"
+                ),
+                "action_type": None,
             })
 
     # Cap at 3 actions

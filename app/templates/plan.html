@@ -159,6 +159,16 @@
         </div>
     </div>
 
+    {% if is_trail and training_plan.training_terrain == 'flat' and (target_elevation_gain_m or 0) > 0 %}
+    <div class="flat-mountain-sim-banner" role="status" aria-live="polite">
+        <div class="flat-mountain-sim-banner-icon" aria-hidden="true">↗</div>
+        <div class="flat-mountain-sim-banner-text">
+            <strong>Mountain race + flat training detected</strong>
+            <p>Using climb/descent simulation substitutions (incline effort, eccentric downhill prep, and hike-run transitions) to match your race demands.</p>
+        </div>
+    </div>
+    {% endif %}
+
     <div class="plan-summary">
         <div class="summary-grid">
             <div class="summary-item">

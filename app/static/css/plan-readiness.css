@@ -181,6 +181,119 @@
     line-height: 1.4;
 }
 
+/* ---- Mountain simulation block ---- */
+.readiness-mountain {
+    margin-bottom: var(--space-6);
+    background: var(--color-bg-elevated);
+    border: 1px solid var(--color-border-subtle);
+    border-radius: var(--radius-lg);
+    padding: var(--space-4);
+}
+
+.readiness-mountain h3,
+.readiness-mountain h4 {
+    font-size: var(--text-base);
+    font-weight: var(--weight-semibold);
+    margin: 0 0 var(--space-2) 0;
+}
+
+.readiness-mountain-head {
+    display: flex;
+    align-items: baseline;
+    gap: var(--space-1);
+    margin-bottom: var(--space-2);
+}
+
+.readiness-mountain-score {
+    font-family: var(--font-display);
+    font-size: var(--text-2xl);
+    font-weight: var(--weight-bold);
+}
+
+.readiness-mountain-label {
+    font-size: var(--text-xs);
+    color: var(--color-text-secondary);
+}
+
+.readiness-mountain-detail {
+    font-size: var(--text-xs);
+    color: var(--color-text-secondary);
+    margin-bottom: var(--space-3);
+}
+
+.readiness-mountain-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: var(--space-2);
+}
+
+.mountain-metric {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: var(--space-1) var(--space-2);
+    padding: var(--space-2) var(--space-3);
+    border: 1px solid var(--color-border-subtle);
+    border-radius: var(--radius-md);
+    background: var(--color-bg);
+}
+
+.mountain-key {
+    font-size: var(--text-xs);
+    font-weight: var(--weight-semibold);
+    color: var(--color-text);
+}
+
+.mountain-val {
+    grid-column: 1 / span 2;
+    font-size: var(--text-xs);
+    color: var(--color-text-secondary);
+}
+
+.mountain-pct {
+    font-size: var(--text-xs);
+    font-weight: var(--weight-semibold);
+}
+
+.sim-strong .readiness-mountain-score,
+.sim-strong .mountain-pct { color: var(--color-success); }
+.sim-good .readiness-mountain-score,
+.sim-good .mountain-pct { color: var(--color-primary); }
+.sim-developing .readiness-mountain-score,
+.sim-developing .mountain-pct { color: var(--color-warning, #e8a830); }
+
+.readiness-mountain-explainer {
+    margin-top: var(--space-3);
+    border-top: 1px solid var(--color-border-subtle);
+    padding-top: var(--space-2);
+}
+
+.readiness-mountain-explainer summary {
+    list-style: none;
+    cursor: pointer;
+    color: var(--color-primary);
+    font-size: var(--text-xs);
+    font-weight: var(--weight-semibold);
+    user-select: none;
+}
+
+.readiness-mountain-explainer summary::-webkit-details-marker { display: none; }
+
+.readiness-mountain-explainer summary::after {
+    content: ' +';
+    margin-left: 4px;
+}
+
+.readiness-mountain-explainer[open] summary::after {
+    content: ' -';
+}
+
+.readiness-mountain-explainer p {
+    margin: var(--space-2) 0 0 0;
+    font-size: var(--text-xs);
+    color: var(--color-text-secondary);
+    line-height: 1.5;
+}
+
 /* ---- Race predictions ---- */
 .readiness-predictions {
     margin-bottom: var(--space-6);
@@ -450,6 +563,7 @@
     .readiness-volume-chart { height: 100px; padding: var(--space-3); }
 
     .readiness-components,
+    .readiness-mountain,
     .readiness-predictions,
     .readiness-scenarios,
     .readiness-volume {

@@ -344,9 +344,37 @@ def calculate_quality_distances(total_km: float, phase: str,
 
     non_long_pct = max(0.01, 1 - phase_dist['long'])
 
+    # Mountain race + flat training: if hill sessions were substituted away,
+    # keep the race-specific quality load by redistributing hill budget to
+    # flat-executable quality types.
+    effective_pct = {
+        'tempo': phase_dist.get('tempo', 0.0),
+        'interval': phase_dist.get('interval', 0.0),
+        'hill': phase_dist.get('hill', 0.0),
+    }
+    if (
+        terrain == 'flat'
+        and trail_profile is not None
+        and trail_profile.elevation_class != 'flat'
+        and distribution.get('hill', 0) == 0
+        and phase_dist.get('hill', 0) > 0
+    ):
+        hill_budget = phase_dist['hill']
+        effective_pct['hill'] = 0.0
+        has_interval = distribution.get('interval', 0) > 0
+        has_tempo = distribution.get('tempo', 0) > 0
+        if has_interval and has_tempo:
+            interval_share = 0.60 if trail_profile.elevation_class == 'mountainous' else 0.50
+            effective_pct['interval'] += hill_budget * interval_share
+            effective_pct['tempo'] += hill_budget * (1.0 - interval_share)
+        elif has_interval:
+            effective_pct['interval'] += hill_budget
+        elif has_tempo:
+            effective_pct['tempo'] += hill_budget
+
     for qtype in ('tempo', 'interval', 'hill'):
         if distribution.get(qtype, 0) > 0:
-            pct = phase_dist.get(qtype, 0)
+            pct = effective_pct.get(qtype, 0)
             dist = remaining_km * (pct / non_long_pct) if pct > 0 else 0
             quality_distances[qtype] = round(max(dist, 1.0), 1)
 
