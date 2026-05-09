@@ -6,11 +6,13 @@ from typing import Any, Dict, List
 from sqlalchemy.orm import Session
 
 from app.models import TrainingPlan, WeeklyPlan
+from app.core.training import workout_steps as _steps_mod
 from app.utils import to_date as _to_date
 
 from ._helpers import batch_workouts_by_week, parse_plan_data_lookups, today_date
 from .missed_week_handler import detect_missed_weeks, recalibrate_missed_week
 from .recovery_inserter import recalibrate_recovery_insertion
+from .safety import enforce_future_growth_cap, enforce_week_structure
 from .suggestion_generator import get_weekly_suggestions
 
 
@@ -68,7 +70,13 @@ def recalibrate(
         return {"ok": False, "error": f"Unknown strategy: {strategy}"}
 
     weeks_changed = 0
-    for week in weekly_plans.values():
+    ordered_future = [
+        wk for wk in sorted(weekly_plans.keys())
+        if wk > current_week
+    ]
+
+    for wk_num in ordered_future:
+        week = weekly_plans[wk_num]
         if week.week_number <= current_week:
             continue
 
@@ -86,6 +94,11 @@ def recalibrate(
         for workout in workouts:
             if not workout.distance_km or workout.workout_type in ("rest", "recovery"):
                 continue
+            if workout.key_workout_id or workout.workout_type in (
+                "tempo", "interval", "hill", "vo2max", "race_pace", "fartlek",
+            ):
+                continue
+            old_distance = workout.distance_km
             new_dist = round(workout.distance_km * week_factor, 1)
             if abs(new_dist - workout.distance_km) > 0.05:
                 workout.distance_km = new_dist
@@ -93,6 +106,14 @@ def recalibrate(
                 pd_wo = pd_workout.get((week.week_number, workout.day_of_week))
                 if pd_wo:
                     pd_wo["distance"] = new_dist
+                    if pd_wo.get("steps") and old_distance and old_distance > 0:
+                        pd_wo["steps"] = _steps_mod.scale_steps(
+                            pd_wo["steps"], new_dist / old_distance,
+                        )
+
+        phase = pd_week.get(week.week_number, {}).get("phase", "build")
+        if enforce_week_structure(workouts, training_plan.target_distance_km, phase):
+            week_changed = True
 
         if week_changed:
             weeks_changed += 1
@@ -102,6 +123,23 @@ def recalibrate(
             week.total_km = new_total
             if week.week_number in pd_week:
                 pd_week[week.week_number]["total_km"] = new_total
+
+    growth_changed = enforce_future_growth_cap(
+        ordered_future,
+        weekly_plans,
+        workouts_by_week,
+        pd_week,
+        high_water_seed=training_plan.current_weekly_km or 0.0,
+    )
+    if growth_changed > 0:
+        weeks_changed += growth_changed
+
+    for wk_num in ordered_future:
+        workouts = workouts_by_week.get(weekly_plans[wk_num].id, [])
+        for workout in workouts:
+            pd_wo = pd_workout.get((wk_num, workout.day_of_week))
+            if pd_wo:
+                pd_wo["distance"] = workout.distance_km
 
     training_plan.plan_data = plan_data
     training_plan.adaptation_alert = None

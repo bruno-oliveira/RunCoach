@@ -163,14 +163,21 @@ def _quality_for_trail_hilly(quality_workouts: int, week_number: int,
 
 
 def _quality_for_trail_flat(quality_workouts: int, week_number: int,
-                            phase: str) -> Dict[str, int]:
-    """Flat trail: no hill access, tempo replaces the hill stimulus."""
+                             phase: str) -> Dict[str, int]:
+    """Flat trail: replace missing climbs with tempo + interval progression."""
+    if phase == 'base':
+        return {'tempo': 1}
+
     if quality_workouts >= 2:
-        # Weeks 1-2 of the 4-week cycle: mixed quality; weeks 3-4: double tempo.
-        if week_number % 4 in (1, 2):
+        cycle = week_number % 4
+        if cycle in (1, 2):
             return {'tempo': 1, 'interval': 1}
-        return {'tempo': 2}
-    return {'tempo': 1}
+        if cycle == 3:
+            return {'tempo': 2}
+        return {'interval': 2}
+
+    # Single-quality weeks rotate threshold and aerobic-power stimulus.
+    return {'interval': 1} if week_number % 3 == 0 else {'tempo': 1}
 
 
 def _quality_for_road_5k(quality_workouts: int, week_number: int,
@@ -304,4 +311,3 @@ def get_workout_distribution_simple(total_km: float, max_runs: int) -> Dict[str,
         'hill': 0,
         'rest': rest_days
     }
-

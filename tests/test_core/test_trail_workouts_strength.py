@@ -32,14 +32,16 @@ class TestStrengthRotationsByElevationClass:
     def test_flat_trail_build_uses_double_plyometric(self):
         profile = classify_trail(50.0, 100.0)  # flat 50k
         rotation = get_phase_focus_rotation('build', trail_profile=profile)
-        # Flat trail addresses user flaw #2: missing hill stimulus is
-        # replaced with explicit plyometric work in the build/peak rotation.
-        assert rotation.count('plyometric') >= 2
+        # Flat trail now uses dedicated flat-trail strength as the primary
+        # climb-equivalent strength stimulus and keeps one plyometric slot.
+        assert 'flat_trail_strength' in rotation
+        assert rotation.count('plyometric') >= 1
         assert 'trail_stability' not in rotation
 
     def test_flat_trail_base_includes_plyometric(self):
         profile = classify_trail(50.0, 100.0)
         rotation = get_phase_focus_rotation('base', trail_profile=profile)
+        assert 'flat_trail_strength' in rotation
         assert 'plyometric' in rotation
 
     def test_rolling_uses_legacy_trail_rotation(self):
@@ -82,6 +84,8 @@ class TestStrengthRotationsByElevationClass:
         ]
         assert any(f == 'plyometric' for f in focuses_in_build), \
             "Flat 50k build phase should prescribe plyometric strength sessions"
+        assert any(f == 'flat_trail_strength' for f in focuses_in_build), \
+            "Flat 50k build phase should prescribe flat-trail strength sessions"
 
     def test_full_plan_rolling_30km_does_not_use_plyometric_in_base(self):
         # Rolling 30km uses legacy TRAIL_FOCUS_ROTATIONS — base = lower/stability/core
@@ -146,6 +150,7 @@ class TestKeyWorkoutBracketGating:
         ids = {w['id'] for w in catalog}
         assert 'trail_elevation_repeats' not in ids
         assert 'trail_flat_surge_fartlek' in ids
+        assert 'trail_flat_over_under_intervals' in ids
 
 
 class TestNightRunForLongUltra:

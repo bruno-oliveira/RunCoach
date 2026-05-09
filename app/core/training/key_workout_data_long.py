@@ -505,6 +505,27 @@ WORKOUTS_LONG: List[Dict] = [
         ),
     },
     {
+        "id": "trail_flat_over_under_intervals",
+        "distances": [30.0],
+        "phases": ["build", "peak"],
+        "type": "interval",
+        "terrain": ["flat"],
+        "name": "Over-Under Intervals",
+        "structure": "6 x (3min hard / 2min steady) with 2min easy jog between sets",
+        "description": (
+            "Warm up 2km easy. Run 6 sets: 3 min hard (Zone 4-5 effort), "
+            "immediately into 2 min steady (Zone 3-4 effort), then 2 min easy jog. "
+            "Cool down 2km easy."
+        ),
+        "intensity": "high",
+        "target_zone": 4,
+        "pace_zone": "T",
+        "rationale": (
+            "Mimics the changing metabolic demand of climbing and settling "
+            "without needing hills. Builds flat-terrain trail resilience."
+        ),
+    },
+    {
         "id": "trail_flat_soft_surface",
         "distances": [30.0],
         "phases": ["build", "peak"],

@@ -7,9 +7,11 @@ from typing import Any, Dict, List
 from sqlalchemy.orm import Session
 
 from app.models import RunLog, TrainingPlan
+from app.core.training import workout_steps as _steps_mod
 from app.utils import to_date as _to_date
 
 from ._helpers import today_date
+from .safety import enforce_future_growth_cap, enforce_week_structure
 
 
 def detect_missed_weeks(
@@ -90,10 +92,22 @@ def recalibrate_missed_week(
     for workout in ease_workouts:
         if not workout.distance_km or workout.workout_type in ("rest", "recovery"):
             continue
+        if workout.key_workout_id or workout.workout_type in (
+            "tempo", "interval", "hill", "vo2max", "race_pace", "fartlek",
+        ):
+            continue
+        old_distance = workout.distance_km
         workout.distance_km = round(workout.distance_km * ease_factor, 1)
         pd_wo = pd_workout.get((ease_in_week, workout.day_of_week))
         if pd_wo:
             pd_wo["distance"] = workout.distance_km
+            if pd_wo.get("steps") and old_distance and old_distance > 0:
+                pd_wo["steps"] = _steps_mod.scale_steps(
+                    pd_wo["steps"], workout.distance_km / old_distance,
+                )
+
+    phase = pd_week.get(ease_in_week, {}).get("phase", "build")
+    enforce_week_structure(ease_workouts, training_plan.target_distance_km, phase)
 
     new_total = round(sum(w.distance_km for w in ease_workouts if w.distance_km), 1)
     if ease_in_week in weekly_plans:
@@ -110,16 +124,41 @@ def recalibrate_missed_week(
             source_workouts = workouts_by_week.get(weekly_plans[source_wk].id, [])
             source_dists = {w.day_of_week: w.distance_km for w in source_workouts}
             for wo in target_workouts:
+                if wo.key_workout_id or wo.workout_type in (
+                    "tempo", "interval", "hill", "vo2max", "race_pace", "fartlek",
+                ):
+                    continue
                 if wo.day_of_week in source_dists and source_dists[wo.day_of_week]:
+                    old_distance = wo.distance_km or 0
                     wo.distance_km = source_dists[wo.day_of_week]
                     pd_wo = pd_workout.get((target_wk, wo.day_of_week))
                     if pd_wo:
                         pd_wo["distance"] = wo.distance_km
+                        if pd_wo.get("steps") and old_distance > 0:
+                            pd_wo["steps"] = _steps_mod.scale_steps(
+                                pd_wo["steps"], wo.distance_km / old_distance,
+                            )
             wk_total = round(sum(w.distance_km for w in target_workouts if w.distance_km), 1)
             if target_wk in weekly_plans:
                 weekly_plans[target_wk].total_km = wk_total
             if target_wk in pd_week:
                 pd_week[target_wk]["total_km"] = wk_total
+
+    ordered = [wk for wk in future_weeks if wk <= total_weeks]
+    enforce_future_growth_cap(
+        ordered,
+        weekly_plans,
+        workouts_by_week,
+        pd_week,
+        high_water_seed=training_plan.current_weekly_km or 0.0,
+    )
+
+    for wk_num in ordered:
+        week_workouts = workouts_by_week.get(weekly_plans[wk_num].id, [])
+        for wo in week_workouts:
+            pd_wo = pd_workout.get((wk_num, wo.day_of_week))
+            if pd_wo:
+                pd_wo["distance"] = wo.distance_km
 
     training_plan.plan_data = plan_data
     training_plan.adaptation_alert = None

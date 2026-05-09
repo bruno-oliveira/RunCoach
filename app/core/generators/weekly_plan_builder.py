@@ -327,7 +327,7 @@ def _scale_down(workouts: List[Dict[str, Any]],
     than corrupting a prescription.
     """
     actual_total_km = round(sum(w.get('distance', 0) for w in workouts), 1)
-    if actual_total_km <= total_km * 1.03 or actual_total_km <= 0:
+    if actual_total_km <= total_km * 1.01 or actual_total_km <= 0:
         return actual_total_km
 
     flexible = [w for w in workouts
@@ -420,6 +420,57 @@ def _fill_shortfall(workouts: List[Dict[str, Any]], total_km: float,
     return round(sum(w.get('distance', 0) for w in workouts), 1)
 
 
+def _enforce_long_run_ratio_cap(
+    workouts: List[Dict[str, Any]],
+    max_ratio: float = 0.55,
+    min_runs_for_cap: int = 4,
+    pace_zones: Optional[Dict] = None,
+) -> float:
+    """Cap long-run dominance for practical weekly distribution.
+
+    Applies only on 4+ running-day weeks. Excess long-run distance is
+    redistributed to easy runs where possible.
+    """
+    running = [
+        w for w in workouts
+        if w.get('type') not in ('rest', 'recovery') and (w.get('distance', 0) or 0) > 0
+    ]
+    if len(running) < min_runs_for_cap:
+        return round(sum(w.get('distance', 0) for w in workouts), 1)
+
+    long_ws = [w for w in running if w.get('type') == 'long']
+    if not long_ws:
+        return round(sum(w.get('distance', 0) for w in workouts), 1)
+    long_w = long_ws[0]
+
+    total = sum(w.get('distance', 0) for w in running)
+    if total <= 0:
+        return round(sum(w.get('distance', 0) for w in workouts), 1)
+
+    max_long = total * max_ratio
+    long_d = long_w.get('distance', 0)
+    if long_d <= max_long + 0.05:
+        return round(sum(w.get('distance', 0) for w in workouts), 1)
+
+    excess = long_d - max_long
+    _set_distance(long_w, max_long, pace_zones)
+
+    recipients = [w for w in running if w is not long_w and w.get('type') == 'easy']
+    if not recipients:
+        recipients = [w for w in running if w is not long_w]
+    if recipients:
+        per = excess / len(recipients)
+        for w in recipients:
+            _set_distance(w, w.get('distance', 0) + per, pace_zones)
+
+    long_after = long_w.get('distance', 0)
+    for w in workouts:
+        if w.get('type') == 'easy' and w.get('distance', 0) > long_after:
+            _set_distance(w, long_after, pace_zones)
+
+    return round(sum(w.get('distance', 0) for w in workouts), 1)
+
+
 def build_weekly_plan(week_number: int, total_km: float, target_distance: float,
                       max_runs_per_week: int, weeks: int,
                       vdot: Optional[float] = None,
@@ -459,6 +510,10 @@ def build_weekly_plan(week_number: int, total_km: float, target_distance: float,
         workouts, total_km, actual_total_km, target_distance,
         pace_zones=pace_zones,
         trail_profile=trail_profile,
+    )
+    actual_total_km = _enforce_long_run_ratio_cap(
+        workouts,
+        pace_zones=pace_zones,
     )
 
     attach_duration_hints(workouts, pace_zones)

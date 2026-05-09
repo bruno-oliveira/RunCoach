@@ -108,7 +108,7 @@ class TrainingPlanGenerator:
             is_recovery = weekly_plan.get('is_recovery', False)
             actual_km = weekly_plan['total_km']
             if not is_recovery and actual_high_water > 0:
-                ceiling = round(actual_high_water * 1.10, 1)
+                ceiling = actual_high_water * 1.10
                 if actual_km > ceiling and actual_km > 0:
                     flexible = [
                         w for w in weekly_plan['daily_workouts']
@@ -127,6 +127,15 @@ class TrainingPlanGenerator:
                         scale = target_flexible / flexible_km
                         for w in flexible:
                             _set_distance(w, w['distance'] * scale, pace_zones)
+                    # If rounding still leaves a tiny overage, trim from the
+                    # largest flexible workout to respect the 10% cap.
+                    new_total_exact = sum(
+                        w.get('distance', 0) for w in weekly_plan['daily_workouts']
+                    )
+                    if new_total_exact > ceiling + 0.01 and flexible:
+                        largest = max(flexible, key=lambda w: w.get('distance', 0))
+                        trim = new_total_exact - ceiling
+                        _set_distance(largest, max(0.1, largest.get('distance', 0) - trim), pace_zones)
                     new_total = round(
                         sum(w.get('distance', 0) for w in weekly_plan['daily_workouts']), 1,
                     )

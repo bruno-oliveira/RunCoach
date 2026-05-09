@@ -7,10 +7,9 @@ from sqlalchemy.orm import Session
 
 from app.models import TrainingPlan, WeeklyPlan
 from app.core.training import workout_steps as _steps_mod
-from app.core.training.key_workout_library import reconcile_key_workout_text
-from app.core.training.quality_caps import enforce_week_caps
 
 from ._helpers import ANNOTATION_RE, batch_workouts_by_week, parse_plan_data_lookups
+from .safety import enforce_future_growth_cap, enforce_week_structure
 
 logger = logging.getLogger(__name__)
 
@@ -34,6 +33,9 @@ def apply_adjustment_to_future_weeks(
 
     weeks_changed = 0
     any_distance_changed = False
+
+    future_weeks = sorted(future_weeks, key=lambda w: w.week_number)
+    week_by_number = {w.week_number: w for w in future_weeks}
 
     for week in future_weeks:
         workouts = workouts_by_week.get(week.id, [])
@@ -125,7 +127,8 @@ def apply_adjustment_to_future_weeks(
                     pd_wo["notes"] = pd_clean
 
         if week_changed and target_distance > 0:
-            enforce_week_caps(workouts, target_distance, phase)
+            if enforce_week_structure(workouts, target_distance, phase):
+                week_changed = True
 
         if week_changed:
             weeks_changed += 1
@@ -139,6 +142,29 @@ def apply_adjustment_to_future_weeks(
                     pd_wo = pd_workout.get((week.week_number, workout.day_of_week))
                     if pd_wo is not None:
                         pd_wo["distance"] = workout.distance_km
+
+    if future_weeks:
+        first_future_week = future_weeks[0].week_number
+        prev_week = (
+            db.query(WeeklyPlan)
+            .filter(
+                WeeklyPlan.training_plan_id == training_plan.id,
+                WeeklyPlan.week_number < first_future_week,
+            )
+            .order_by(WeeklyPlan.week_number.desc())
+            .first()
+        )
+        seed = prev_week.total_km if prev_week and prev_week.total_km else training_plan.current_weekly_km or 0.0
+        changed_weeks = enforce_future_growth_cap(
+            [w.week_number for w in future_weeks],
+            week_by_number,
+            workouts_by_week,
+            pd_week,
+            high_water_seed=seed,
+        )
+        if changed_weeks > 0:
+            weeks_changed += changed_weeks
+            any_distance_changed = True
 
     training_plan.plan_data = plan_data
     return weeks_changed, any_distance_changed

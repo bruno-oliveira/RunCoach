@@ -53,9 +53,9 @@ TRAIL_FOCUS_ROTATIONS: Dict[str, List[str]] = {
 #   climbs; the lower_body rotation prepares quads for the eccentric load.
 TRAIL_ROTATIONS_BY_ELEVATION: Dict[str, Dict[str, List[str]]] = {
     "flat": {
-        "base":  ["lower_body", "plyometric", "core"],
-        "build": ["lower_body", "plyometric", "plyometric"],
-        "peak":  ["lower_body", "plyometric", "core"],
+        "base":  ["flat_trail_strength", "core", "plyometric"],
+        "build": ["flat_trail_strength", "plyometric", "flat_trail_strength"],
+        "peak":  ["flat_trail_strength", "plyometric", "core"],
         "taper": ["core"],
     },
     "rolling":     TRAIL_FOCUS_ROTATIONS,
@@ -338,6 +338,72 @@ _EXERCISES: Dict[str, Dict[str, Dict[str, Any]]] = {
                 "Pigeon pose — 60 sec each side",
                 "Downward dog — 45 sec",
                 "Ankle circles — 10 each side",
+            ],
+        },
+    },
+
+    # ── Flat-trail specific strength (Amsterdam-style prep) ───────────────
+    # Builds climb-equivalent durability without hill access: calf/soleus,
+    # unilateral leg strength, eccentric quad tolerance, and anti-rotation core.
+    "flat_trail_strength": {
+        "beginner": {
+            "base_duration": "20-30 min",
+            "warm_up": [
+                "5 min brisk walk",
+                "Ankle circles — 10 each side",
+                "Bodyweight split squat — 8 each side",
+            ],
+            "exercises": [
+                {"name": "Split Squat", "sets": 3, "reps": "10 each side"},
+                {"name": "Step-up (controlled eccentric)", "sets": 3, "reps": "8 each side"},
+                {"name": "Calf Raise", "sets": 3, "reps": "15"},
+                {"name": "Tibialis Raise", "sets": 3, "reps": "12"},
+                {"name": "Side Plank", "sets": 2, "reps": "25-30 sec each side"},
+            ],
+            "cool_down": [
+                "Calf stretch — 30 sec each",
+                "Standing quad stretch — 30 sec each",
+                "Hip flexor stretch — 30 sec each",
+            ],
+        },
+        "intermediate": {
+            "base_duration": "25-35 min",
+            "warm_up": [
+                "5 min easy jog",
+                "Leg swings — 10 each side",
+                "A-skips — 2 x 20m",
+            ],
+            "exercises": [
+                {"name": "Bulgarian Split Squat", "sets": 3, "reps": "8 each side"},
+                {"name": "Single-leg RDL (bodyweight)", "sets": 3, "reps": "10 each side"},
+                {"name": "Step-down (3 sec lowering)", "sets": 3, "reps": "8 each side"},
+                {"name": "Single-leg Calf Raise", "sets": 3, "reps": "12 each side"},
+                {"name": "Pallof Press (band)", "sets": 3, "reps": "10 each side"},
+            ],
+            "cool_down": [
+                "Pigeon pose — 45 sec each side",
+                "Calf stretch — 30 sec each",
+                "Ankle mobility rocks — 10 each side",
+            ],
+        },
+        "advanced": {
+            "base_duration": "30-40 min",
+            "warm_up": [
+                "5 min easy jog",
+                "A-skips — 2 x 20m",
+                "Walking lunge with rotation — 8 each side",
+            ],
+            "exercises": [
+                {"name": "Rear-foot Elevated Split Squat", "sets": 3, "reps": "8 each side"},
+                {"name": "Single-leg RDL", "sets": 3, "reps": "8 each side"},
+                {"name": "Eccentric Step-down (4 sec)", "sets": 3, "reps": "8 each side"},
+                {"name": "Seated Soleus Raise", "sets": 3, "reps": "15"},
+                {"name": "Pallof Press + Hold", "sets": 3, "reps": "8 each side"},
+            ],
+            "cool_down": [
+                "Pigeon pose — 60 sec each side",
+                "Calf stretch — 45 sec each",
+                "Thoracic rotation stretch — 30 sec each side",
             ],
         },
     },

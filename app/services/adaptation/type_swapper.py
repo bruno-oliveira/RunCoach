@@ -231,6 +231,12 @@ def apply_swap(
     if not workout:
         return None
 
+    if training_plan.training_terrain == "flat" and to_type == "hill":
+        return {
+            "swapped": False,
+            "reason": "Flat-terrain plans do not allow hill workout substitutions.",
+        }
+
     old_type = workout.workout_type
     workout.workout_type = to_type
 

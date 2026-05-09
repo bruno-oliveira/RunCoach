@@ -188,6 +188,16 @@ class TestEndToEnd:
         assert not any(w['type'] == 'hill' for w in all_workouts), \
             "Flat trail must not prescribe hill repeats"
 
+    def test_50km_flat_plan_includes_interval_stimulus(self):
+        plan = _build_plan(50.0, 200.0, 16, 5, current_km=40.0)
+        build_peak_workouts = [
+            w for week in plan
+            if week['phase'] in ('build', 'peak')
+            for w in week['daily_workouts']
+        ]
+        assert any(w['type'] == 'interval' for w in build_peak_workouts), \
+            "Flat 50k build/peak should include interval stimulus"
+
     def test_80km_mountain_plan_includes_hills(self):
         plan = _build_plan(80.0, 4500.0, 24, 6, current_km=50.0)
         all_workouts = [w for week in plan for w in week['daily_workouts']]
@@ -205,6 +215,21 @@ class TestEndToEnd:
         plan = _build_plan(50.0, 1500.0, 16, 5, current_km=30.0)
         taper_weeks = [w for w in plan if w['phase'] == 'taper']
         assert len(taper_weeks) == 3
+
+    def test_flat_30k_long_run_ratio_capped_for_four_plus_runs(self):
+        plan = _build_plan(30.0, 100.0, 14, 5, current_km=25.0)
+        for week in plan:
+            runs = [
+                w for w in week['daily_workouts']
+                if w['type'] not in ('rest', 'recovery') and w.get('distance', 0) > 0
+            ]
+            if len(runs) < 4:
+                continue
+            total = sum(w['distance'] for w in runs)
+            if total <= 0:
+                continue
+            long_run = max((w['distance'] for w in runs if w['type'] == 'long'), default=0)
+            assert long_run / total <= 0.55 + 0.01
 
     def test_legacy_30km_plan_unchanged_structure(self):
         # No is_trail / no profile passed, but target=30.0 → back-compat path.
