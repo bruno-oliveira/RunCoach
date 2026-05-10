@@ -103,7 +103,7 @@ class TrainingPlanGenerator:
             # exhausted, the small overage rides into the next week's budget
             # rather than corrupting a prescription.
             from app.core.generators.weekly_plan_builder import (
-                _set_distance, _is_prescriptive,
+                _set_distance, _is_prescriptive, attach_duration_hints,
             )
             is_recovery = weekly_plan.get('is_recovery', False)
             actual_km = weekly_plan['total_km']
@@ -140,6 +140,13 @@ class TrainingPlanGenerator:
                         sum(w.get('distance', 0) for w in weekly_plan['daily_workouts']), 1,
                     )
                     weekly_plan['total_km'] = new_total
+
+            # Week-level scaling above can move a workout across the 3 km
+            # display boundary; refresh duration hints from final distances.
+            for w in weekly_plan['daily_workouts']:
+                w.pop('duration_min', None)
+            attach_duration_hints(weekly_plan['daily_workouts'], pace_zones)
+
             if not is_recovery and weekly_plan['total_km'] > actual_high_water:
                 actual_high_water = weekly_plan['total_km']
 

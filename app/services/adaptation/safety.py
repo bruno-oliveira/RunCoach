@@ -12,6 +12,8 @@ from __future__ import annotations
 from typing import Dict, Iterable, List
 
 from app.core.training.quality_caps import enforce_week_caps
+from app.core.training.long_run_calculator import get_weekly_long_run_ratio_cap
+from app.core.training.trail_profile import classify_trail
 
 
 def _running_workouts(workouts: Iterable) -> list:
@@ -23,7 +25,13 @@ def _running_workouts(workouts: Iterable) -> list:
     ]
 
 
-def _apply_long_run_ratio_cap(workouts: List, max_ratio: float = 0.55) -> bool:
+def _apply_long_run_ratio_cap(
+    workouts: List,
+    phase: str,
+    training_terrain: str | None = None,
+    trail_profile=None,
+    max_ratio: float = 0.55,
+) -> bool:
     """Ensure long run does not dominate weekly volume for 4+ run weeks."""
     running = _running_workouts(workouts)
     if len(running) < 4:
@@ -38,7 +46,15 @@ def _apply_long_run_ratio_cap(workouts: List, max_ratio: float = 0.55) -> bool:
     if total <= 0:
         return False
 
-    max_long = total * max_ratio
+    effective_max_ratio = max_ratio
+    if trail_profile is not None:
+        effective_max_ratio = get_weekly_long_run_ratio_cap(
+            phase,
+            trail_profile=trail_profile,
+            training_terrain=training_terrain,
+        )
+
+    max_long = total * effective_max_ratio
     if (long_w.distance_km or 0) <= max_long + 0.05:
         return False
 
@@ -57,12 +73,33 @@ def _apply_long_run_ratio_cap(workouts: List, max_ratio: float = 0.55) -> bool:
     return True
 
 
-def enforce_week_structure(workouts: List, target_distance: float, phase: str) -> bool:
+def enforce_week_structure(
+    workouts: List,
+    target_distance: float,
+    phase: str,
+    *,
+    is_trail: bool = False,
+    target_elevation_gain_m: float | None = None,
+    training_terrain: str | None = None,
+) -> bool:
     """Apply structural safety constraints to one week's ORM workouts."""
     changed = False
+
+    trail_profile = None
+    if is_trail:
+        trail_profile = classify_trail(
+            target_distance,
+            float(target_elevation_gain_m or 0.0),
+        )
+
     if enforce_week_caps(workouts, target_distance, phase):
         changed = True
-    if _apply_long_run_ratio_cap(workouts):
+    if _apply_long_run_ratio_cap(
+        workouts,
+        phase,
+        training_terrain=training_terrain,
+        trail_profile=trail_profile,
+    ):
         changed = True
         # Re-apply easy/quality caps after redistribution.
         enforce_week_caps(workouts, target_distance, phase)

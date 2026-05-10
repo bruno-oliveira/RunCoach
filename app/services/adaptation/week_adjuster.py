@@ -127,7 +127,14 @@ def apply_adjustment_to_future_weeks(
                     pd_wo["notes"] = pd_clean
 
         if week_changed and target_distance > 0:
-            if enforce_week_structure(workouts, target_distance, phase):
+            if enforce_week_structure(
+                workouts,
+                target_distance,
+                phase,
+                is_trail=bool(getattr(training_plan, "is_trail", False)),
+                target_elevation_gain_m=getattr(training_plan, "target_elevation_gain_m", None),
+                training_terrain=getattr(training_plan, "training_terrain", None),
+            ):
                 week_changed = True
 
         if week_changed:

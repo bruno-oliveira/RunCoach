@@ -34,6 +34,29 @@ def test_enforce_week_structure_caps_long_run_dominance():
     assert long_d / total <= 0.55 + 0.01
 
 
+def test_enforce_week_structure_allows_higher_peak_ratio_for_flat_trail():
+    workouts = [
+        _Workout("easy", 5.0),
+        _Workout("easy", 6.0),
+        _Workout("tempo", 1.0),
+        _Workout("long", 20.0),
+    ]
+
+    changed = enforce_week_structure(
+        workouts,
+        target_distance=28.0,
+        phase="peak",
+        is_trail=True,
+        target_elevation_gain_m=1050.0,
+        training_terrain="flat",
+    )
+
+    assert not changed
+    total = sum(w.distance_km for w in workouts)
+    long_d = next(w.distance_km for w in workouts if w.workout_type == "long")
+    assert long_d / total <= 0.65 + 0.01
+
+
 def test_enforce_future_growth_cap_holds_non_recovery_weeks_to_ten_percent():
     weeks = {
         5: _Week(id="w5", total_km=32.0),

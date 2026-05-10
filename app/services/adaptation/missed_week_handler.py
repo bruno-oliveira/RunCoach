@@ -107,7 +107,14 @@ def recalibrate_missed_week(
                 )
 
     phase = pd_week.get(ease_in_week, {}).get("phase", "build")
-    enforce_week_structure(ease_workouts, training_plan.target_distance_km, phase)
+    enforce_week_structure(
+        ease_workouts,
+        training_plan.target_distance_km,
+        phase,
+        is_trail=bool(getattr(training_plan, "is_trail", False)),
+        target_elevation_gain_m=getattr(training_plan, "target_elevation_gain_m", None),
+        training_terrain=getattr(training_plan, "training_terrain", None),
+    )
 
     new_total = round(sum(w.distance_km for w in ease_workouts if w.distance_km), 1)
     if ease_in_week in weekly_plans:

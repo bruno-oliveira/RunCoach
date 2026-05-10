@@ -214,6 +214,7 @@ def generate_daily_workouts(week_number: int, total_km: float,
     long_run_distance = long_run_calculator.calculate_long_run_distance(
         total_km, target_distance, weeks, week_number, phase, is_recovery_week,
         experience_level, profile=profile, trail_profile=trail_profile,
+        training_terrain=terrain,
     )
     quality_distances = long_run_calculator.calculate_quality_distances(
         total_km, phase, distribution, is_recovery_week, long_run_distance, target_distance,
@@ -479,6 +480,9 @@ def _fill_shortfall(workouts: List[Dict[str, Any]], total_km: float,
 
 def _enforce_long_run_ratio_cap(
     workouts: List[Dict[str, Any]],
+    phase: str,
+    training_terrain: Optional[str] = None,
+    trail_profile=None,
     max_ratio: float = 0.55,
     min_runs_for_cap: int = 4,
     pace_zones: Optional[Dict] = None,
@@ -504,7 +508,15 @@ def _enforce_long_run_ratio_cap(
     if total <= 0:
         return round(sum(w.get('distance', 0) for w in workouts), 1)
 
-    max_long = total * max_ratio
+    effective_max_ratio = max_ratio
+    if trail_profile is not None:
+        effective_max_ratio = long_run_calculator.get_weekly_long_run_ratio_cap(
+            phase,
+            trail_profile=trail_profile,
+            training_terrain=training_terrain,
+        )
+
+    max_long = total * effective_max_ratio
     long_d = long_w.get('distance', 0)
     if long_d <= max_long + 0.05:
         return round(sum(w.get('distance', 0) for w in workouts), 1)
@@ -570,6 +582,9 @@ def build_weekly_plan(week_number: int, total_km: float, target_distance: float,
     )
     actual_total_km = _enforce_long_run_ratio_cap(
         workouts,
+        phase,
+        training_terrain=terrain,
+        trail_profile=trail_profile,
         pace_zones=pace_zones,
     )
 

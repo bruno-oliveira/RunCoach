@@ -261,7 +261,11 @@ class TestEndToEnd:
             if total <= 0:
                 continue
             long_run = max((w['distance'] for w in runs if w['type'] == 'long'), default=0)
-            assert long_run / total <= 0.55 + 0.01
+            ratio = long_run / total
+            if week.get('phase') == 'peak':
+                assert ratio <= 0.65 + 0.01
+            else:
+                assert ratio <= 0.55 + 0.01
 
     def test_legacy_30km_plan_unchanged_structure(self):
         # No is_trail / no profile passed, but target=30.0 → back-compat path.
@@ -338,6 +342,24 @@ class TestPeakLongRunRaceFraction:
         )
         # 100-mile prep: bracket cap of 35 must hold even with high volume.
         assert peak_lr <= 35.5
+
+    def test_flat_training_peak_can_reach_85_percent_for_28k(self):
+        profile = classify_trail(28.0, 1050.0)
+        peak_lr = calculate_long_run_distance(
+            total_km=38.0,
+            target_distance=28.0,
+            weeks=18,
+            week_number=15,
+            phase='peak',
+            is_recovery_week=False,
+            experience_level='intermediate',
+            trail_profile=profile,
+            training_terrain='flat',
+        )
+        # Flat-training peak floor: 28 * 0.85 = 23.8 km.
+        # Weekly cap: 38 * 0.65 = 24.7 km. Standard cap: 25.5 km.
+        assert peak_lr >= 23.8
+        assert peak_lr <= 24.7 + 0.1
 
 
 class TestKeyWorkoutDistanceMatchesSteps:

@@ -89,6 +89,41 @@ _TRAIL_PEAK_RACE_FRACTION = {
     'long_ultra': 0.22,
 }
 
+# Flat-only trail prep can underdose long-run specificity unless we let peak
+# long runs reach a higher share of race distance. Apply only to short/standard
+# trail brackets where single long-run sessions are still the primary builder.
+_TRAIL_PEAK_RACE_FRACTION_FLAT = {
+    'short':    0.85,
+    'standard': 0.85,
+}
+
+
+def get_trail_peak_race_fraction(
+    trail_profile: TrailProfile,
+    training_terrain: str | None = None,
+) -> float:
+    """Return the trail peak race-distance floor fraction for long runs."""
+    if training_terrain == 'flat':
+        boosted = _TRAIL_PEAK_RACE_FRACTION_FLAT.get(trail_profile.bracket)
+        if boosted is not None:
+            return boosted
+    return _TRAIL_PEAK_RACE_FRACTION[trail_profile.bracket]
+
+
+def get_weekly_long_run_ratio_cap(
+    phase: str,
+    trail_profile: Optional[TrailProfile] = None,
+    training_terrain: str | None = None,
+) -> float:
+    """Return max long-run share of weekly volume for this context."""
+    if (
+        trail_profile is not None
+        and training_terrain == 'flat'
+        and phase == 'peak'
+    ):
+        return 0.65
+    return 0.55
+
 
 def get_long_run_ratio_range(
     phase: str,
@@ -229,7 +264,8 @@ def calculate_long_run_distance(total_km: float, target_distance: float,
                                 is_recovery_week: bool = False,
                                 experience_level: str = 'intermediate',
                                 profile: Optional[dict] = None,
-                                trail_profile: Optional[TrailProfile] = None) -> float:
+                                trail_profile: Optional[TrailProfile] = None,
+                                training_terrain: str | None = None) -> float:
     """
     Calculate long run distance with proper progression and phase-specific percentage.
     Long run percentage increases with race distance for appropriate endurance building.
@@ -257,7 +293,11 @@ def calculate_long_run_distance(total_km: float, target_distance: float,
     # weekly-volume ratio would otherwise leave it too short for the race.
     # Bracket cap and the weekly-safety cap below still bound the result.
     if trail_profile is not None and phase == 'peak' and not is_recovery_week:
-        race_floor = target_distance * _TRAIL_PEAK_RACE_FRACTION[trail_profile.bracket]
+        race_fraction = get_trail_peak_race_fraction(
+            trail_profile,
+            training_terrain=training_terrain,
+        )
+        race_floor = target_distance * race_fraction
         long_run_base = max(long_run_base, race_floor)
 
     long_run_base = min(long_run_base, long_run_cap)
@@ -266,7 +306,12 @@ def calculate_long_run_distance(total_km: float, target_distance: float,
     # a single run shouldn't exceed 55 % of the week's volume — that load
     # belongs spread across back-to-back doubles or higher overall mileage.
     if trail_profile is not None and total_km > 0 and not is_recovery_week:
-        long_run_base = min(long_run_base, total_km * 0.55)
+        weekly_cap_ratio = get_weekly_long_run_ratio_cap(
+            phase,
+            trail_profile=trail_profile,
+            training_terrain=training_terrain,
+        )
+        long_run_base = min(long_run_base, total_km * weekly_cap_ratio)
 
     # Profile-aware: gentle week-1 nudge only (not a hard cap)
     if profile and week_number == 1:

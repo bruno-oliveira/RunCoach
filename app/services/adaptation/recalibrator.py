@@ -112,7 +112,14 @@ def recalibrate(
                         )
 
         phase = pd_week.get(week.week_number, {}).get("phase", "build")
-        if enforce_week_structure(workouts, training_plan.target_distance_km, phase):
+        if enforce_week_structure(
+            workouts,
+            training_plan.target_distance_km,
+            phase,
+            is_trail=bool(getattr(training_plan, "is_trail", False)),
+            target_elevation_gain_m=getattr(training_plan, "target_elevation_gain_m", None),
+            training_terrain=getattr(training_plan, "training_terrain", None),
+        ):
             week_changed = True
 
         if week_changed:
