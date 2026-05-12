@@ -30,6 +30,19 @@
     {% endif %}
     <div class="workout-notes">{{ workout.notes }}</div>
 
+    {% if workout.treadmill_prescription %}
+    <div class="treadmill-rx" title="Flat-access alternative to build race-specific vertical">
+        <svg class="treadmill-rx-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M3 18l18-13"/><path d="M3 18h18"/><path d="M7 18v-3"/>
+        </svg>
+        <span class="treadmill-rx-headline">
+            Treadmill: <strong>{{ workout.treadmill_prescription.incline_minutes }} min @ {{ workout.treadmill_prescription.incline_pct }}%</strong>
+            <span class="treadmill-rx-gain">≈ {{ workout.treadmill_prescription.simulated_m }} m climb</span>
+        </span>
+        <div class="treadmill-rx-note">{{ workout.treadmill_prescription.note }}</div>
+    </div>
+    {% endif %}
+
     {% if workout.steps and workout.type not in ['rest', 'recovery'] %}
     <details class="workout-steps-wrap">
         <summary class="workout-steps-toggle">

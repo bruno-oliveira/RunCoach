@@ -22,6 +22,7 @@ from app.core.training import phase_calculator
 from app.core.training import workout_distribution as workout_dist_mod
 from app.core.training import workout_builders
 from app.core.training import long_run_calculator
+from app.core.training.vertical_simulation import attach_treadmill_prescriptions
 from app.core.generators.plan_validator import validate_week_plan
 from app.core.training.workout_steps import _parse_pace_str_to_min_per_km
 
@@ -605,6 +606,9 @@ def build_weekly_plan(week_number: int, total_km: float, target_distance: float,
         distribution,
         training_terrain=terrain,
         trail_profile=trail_profile,
+    )
+    attach_treadmill_prescriptions(
+        workouts, vertical_simulation, trail_profile, terrain,
     )
 
     return {

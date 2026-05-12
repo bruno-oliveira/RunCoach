@@ -17,6 +17,7 @@ from app.services.fitness.hr_zone_service import HRZoneService
 from app.services.runs import completion_stats as _cs
 from . import plan_data_enricher as _enricher
 from app.services.runs import week_pulse_generator as _pulse
+from app.core.training.vertical_simulation import compute_weekly_vertical_actuals
 
 logger = logging.getLogger(__name__)
 
@@ -132,6 +133,21 @@ class PlanViewService:
             except Exception as e:
                 logger.warning(f"Weekly feedback summary failed: {e}")
 
+        weekly_vertical_actuals = {}
+        if training_plan.start_date and (training_plan.plan_data or []):
+            from datetime import date as _d3, datetime as _dt3
+            sd3 = training_plan.start_date
+            start_d3 = sd3.date() if isinstance(sd3, _dt3) else sd3
+            try:
+                weekly_vertical_actuals = compute_weekly_vertical_actuals(
+                    training_plan.plan_data,
+                    logged_runs,
+                    start_d3,
+                    training_plan_id=training_plan.id,
+                )
+            except Exception as e:
+                logger.warning(f"Weekly vertical actuals failed: {e}")
+
         return {
             "performance_analysis": performance_analysis,
             "logged_runs": logged_runs_map,
@@ -146,6 +162,7 @@ class PlanViewService:
             "week_evolution": week_evolution,
             "week_pulse": week_pulse,
             "weekly_feedback_summaries": weekly_feedback_summaries,
+            "weekly_vertical_actuals": weekly_vertical_actuals,
         }
 
     def _compute_week_evolution(

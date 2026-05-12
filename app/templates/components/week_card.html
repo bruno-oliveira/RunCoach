@@ -125,15 +125,49 @@
     {% endif %}
 
     {% if week.vertical_simulation and week.vertical_simulation.enabled %}
-    <div class="tips-section">
-        <div class="tips-title">Mountain Simulation Targets (Flat Access)</div>
-        <ul class="tips-list">
-            <li>Simulated uphill load: {{ week.vertical_simulation.simulated_uphill_m }} m (race class: {{ week.vertical_simulation.race_elevation_class }})</li>
-            <li>Uphill-effort target: {{ week.vertical_simulation.uphill_effort_min }} min this week</li>
-            <li>Downhill eccentric target: {{ week.vertical_simulation.downhill_eccentric_min }} min this week</li>
-            <li>Hike-run transitions: {{ week.vertical_simulation.hike_run_transition_reps }} reps</li>
-            <li>{{ week.vertical_simulation.guidance }}</li>
-        </ul>
+    {% set vs = week.vertical_simulation %}
+    {% set vact = (weekly_vertical_actuals if weekly_vertical_actuals is defined else {}).get(week.week, {}) %}
+    {% set actual_up = vact.get('uphill_min', 0) %}
+    {% set actual_dn = vact.get('downhill_min', 0) %}
+    {% set actual_tr = vact.get('transitions', 0) %}
+    {% set up_pct = (100 if vs.uphill_effort_min <= 0 else ((actual_up / vs.uphill_effort_min * 100) | round(0, 'common'))) %}
+    {% set dn_pct = (100 if vs.downhill_eccentric_min <= 0 else ((actual_dn / vs.downhill_eccentric_min * 100) | round(0, 'common'))) %}
+    {% set tr_pct = (100 if vs.hike_run_transition_reps <= 0 else ((actual_tr / vs.hike_run_transition_reps * 100) | round(0, 'common'))) %}
+    {% set up_pct_capped = up_pct if up_pct < 120 else 120 %}
+    {% set dn_pct_capped = dn_pct if dn_pct < 120 else 120 %}
+    {% set tr_pct_capped = tr_pct if tr_pct < 120 else 120 %}
+    <div class="mountain-load-card">
+        <div class="mountain-load-header">
+            <svg class="mountain-load-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M3 20l5-9 4 5 3-6 6 10z"/>
+            </svg>
+            <span class="mountain-load-title">Mountain Load — Week {{ week.week }}</span>
+            <span class="mountain-load-class">{{ vs.race_elevation_class | replace('_', ' ') | title }} ({{ vs.simulated_uphill_m }} m)</span>
+        </div>
+        <div class="mountain-load-gauges">
+            <div class="mountain-load-gauge">
+                <div class="mountain-load-gauge-head">
+                    <span class="mountain-load-gauge-label">Uphill effort</span>
+                    <span class="mountain-load-gauge-value">{{ actual_up }} / {{ vs.uphill_effort_min }} min</span>
+                </div>
+                <div class="mountain-load-bar"><span style="width: {{ up_pct_capped }}%;" class="mountain-load-bar-fill {% if up_pct >= 90 %}is-on-target{% elif up_pct >= 50 %}is-partial{% else %}is-low{% endif %}"></span></div>
+            </div>
+            <div class="mountain-load-gauge">
+                <div class="mountain-load-gauge-head">
+                    <span class="mountain-load-gauge-label">Downhill eccentric</span>
+                    <span class="mountain-load-gauge-value">{{ actual_dn }} / {{ vs.downhill_eccentric_min }} min</span>
+                </div>
+                <div class="mountain-load-bar"><span style="width: {{ dn_pct_capped }}%;" class="mountain-load-bar-fill {% if dn_pct >= 90 %}is-on-target{% elif dn_pct >= 50 %}is-partial{% else %}is-low{% endif %}"></span></div>
+            </div>
+            <div class="mountain-load-gauge">
+                <div class="mountain-load-gauge-head">
+                    <span class="mountain-load-gauge-label">Hike–run transitions</span>
+                    <span class="mountain-load-gauge-value">{{ actual_tr }} / {{ vs.hike_run_transition_reps }}</span>
+                </div>
+                <div class="mountain-load-bar"><span style="width: {{ tr_pct_capped }}%;" class="mountain-load-bar-fill {% if tr_pct >= 90 %}is-on-target{% elif tr_pct >= 50 %}is-partial{% else %}is-low{% endif %}"></span></div>
+            </div>
+        </div>
+        <div class="mountain-load-guidance">{{ vs.guidance }}</div>
     </div>
     {% endif %}
 </div>
