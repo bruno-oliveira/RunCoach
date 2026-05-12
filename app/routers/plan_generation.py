@@ -5,6 +5,7 @@ from typing import Optional
 
 from fastapi import APIRouter, Cookie, Depends, Form, HTTPException, Request, Response
 from fastapi.responses import HTMLResponse, RedirectResponse
+from pydantic import ValidationError
 from sqlalchemy.orm import Session
 
 from app.config import settings
@@ -41,6 +42,25 @@ logger = logging.getLogger(__name__)
 
 router = APIRouter(tags=["plans"])
 templates = create_templates()
+
+
+_VALUE_ERROR_PREFIX = "Value error, "
+
+
+def _extract_validation_message(exc: ValidationError) -> Optional[str]:
+    """Pull the first human-readable message out of a Pydantic ValidationError.
+
+    Our schema validators raise plain ValueError with user-facing text;
+    Pydantic V2 wraps those into ValidationError and prefixes the message
+    with "Value error, ". Strip the prefix so the original text reaches the UI.
+    """
+    for err in exc.errors():
+        msg = err.get("msg") or ""
+        if msg.startswith(_VALUE_ERROR_PREFIX):
+            return msg[len(_VALUE_ERROR_PREFIX):]
+        if msg:
+            return msg
+    return None
 
 
 @router.post("/generate-plan", response_class=HTMLResponse)
@@ -142,6 +162,14 @@ async def generate_plan(
                 "validation",
             )
 
+    # Trail-only fields linger in the form when the user switches back to a
+    # road preset (the inputs are hidden but not disabled). Drop them so the
+    # schema doesn't validate stale values for non-trail plans.
+    if not is_trail_flag:
+        elevation_f = None
+        training_terrain = None
+        terrain = None
+
     try:
         plan_request = PlanRequest(
             current_km=current_km,
@@ -165,7 +193,10 @@ async def generate_plan(
         return error_response(request, current_user, e.user_message, "zero_mileage_unsupported", e.suggestion)
     except ValidationException as e:
         return error_response(request, current_user, e.user_message, "validation")
-    except Exception as e:
+    except ValidationError as e:
+        message = _extract_validation_message(e) or "Please check your values and try again."
+        return error_response(request, current_user, message, "validation")
+    except Exception:
         logger.exception("Plan request validation failed")
         return error_response(request, current_user, "Invalid input. Please check your values and try again.", "general")
 
@@ -261,7 +292,10 @@ async def generate_fitness_plan(
         )
     except ValidationException as e:
         return error_response(request, current_user, e.user_message, "validation")
-    except Exception as e:
+    except ValidationError as e:
+        message = _extract_validation_message(e) or "Please check your values and try again."
+        return error_response(request, current_user, message, "validation")
+    except Exception:
         logger.exception("Fitness plan request validation failed")
         return error_response(request, current_user, "Invalid input. Please check your values and try again.", "general")
 

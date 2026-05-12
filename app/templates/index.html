@@ -566,10 +566,17 @@ function setPlanMode(mode) {
     }
 
     function updateTrailVisibility() {
-        trailGroup.style.display = isTrailMode() ? '' : 'none';
-        trainingTerrainGroup.style.display = isTrailMode() ? '' : 'none';
+        const trail = isTrailMode();
+        trailGroup.style.display = trail ? '' : 'none';
+        trainingTerrainGroup.style.display = trail ? '' : 'none';
         // Hidden flag flipped on/off so the backend sees explicit intent.
-        isTrailField.value = isTrailMode() ? 'on' : '';
+        isTrailField.value = trail ? 'on' : '';
+        // Disable hidden trail inputs so they don't submit stale values and
+        // don't trigger HTML5 validation (e.g. trail distance min=8) while
+        // hidden.
+        [trailDistanceField, elevationField, trainingTerrainField].forEach(function(el) {
+            el.disabled = !trail;
+        });
     }
 
     function updateElevationClassifier() {
