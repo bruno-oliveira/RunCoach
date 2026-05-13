@@ -28,13 +28,17 @@ def get_week_pulse(
     week_start = start_date + timedelta(weeks=current_week - 1)
     prev_week_start = start_date + timedelta(weeks=max(0, current_week - 2))
     today = _date.today()
+    # RunLog.date is a DateTime, so use an exclusive upper bound at tomorrow's
+    # midnight — otherwise a run with a non-zero time component on `today`
+    # compares greater than the date-only bound and gets dropped.
+    tomorrow = today + timedelta(days=1)
 
     current_week_runs = (
         db.query(RunLog)
         .filter(
             RunLog.training_plan_id == training_plan.id,
             RunLog.date >= week_start,
-            RunLog.date <= today,
+            RunLog.date < tomorrow,
         )
         .all()
     )
