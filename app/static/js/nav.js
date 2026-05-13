@@ -273,6 +273,13 @@ async function doStravaSync(forceDays) {
                 const period = periodSel ? periodSel.value : '30';
                 window.AnalyticsDashboard.filterByPeriod(period);
             }
+
+            // On the plan page, server-rendered cards (week pulse, readiness, logged-run
+            // badges) go stale after a sync. Reload so they reflect the new runs.
+            const mappedAny = (data.adjustment_results || []).some(r => (r.runs_mapped || 0) > 0);
+            if ((synced > 0 || mappedAny) && window.location.pathname.startsWith('/plan/')) {
+                setTimeout(() => window.location.reload(), 800);
+            }
         } else {
             const detail = (data && data.detail) ? data.detail : 'Unknown error';
             if (feedback) {
