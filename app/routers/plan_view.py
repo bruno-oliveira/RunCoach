@@ -158,7 +158,7 @@ async def view_plan(
                 logger.warning(f"Fitness context enrichment failed: {e}")
 
         ctx = plan_view_context(
-            request, current_user, training_plan, plan_data, nutrition_plan, **extra
+            request, current_user, training_plan, plan_data, nutrition_plan, db=db, **extra
         )
         return templates.TemplateResponse("plan.html", ctx)
 

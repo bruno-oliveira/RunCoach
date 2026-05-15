@@ -81,3 +81,20 @@ class AdaptationService:
         self, plan_id: str, user_id: str, db: Session
     ) -> Dict[str, Any]:
         return recommendation_evaluator.dismiss_recommendation(plan_id, user_id, db)
+
+    def evaluate_on_run_logged(
+        self, plan_id: str, user_id: str, db: Session
+    ) -> Optional[Dict[str, Any]]:
+        return recommendation_evaluator.evaluate_on_run_logged(plan_id, user_id, db)
+
+    def apply_or_park(
+        self,
+        plan_id: str,
+        user_id: str,
+        db: Session,
+        evaluation: Dict[str, Any],
+        auto_enabled: bool,
+    ) -> Dict[str, Any]:
+        return recommendation_evaluator.apply_or_park(
+            plan_id, user_id, db, evaluation, auto_enabled,
+        )

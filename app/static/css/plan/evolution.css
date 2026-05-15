@@ -44,6 +44,18 @@
     margin: -4px 0 8px 0;
 }
 
+/* Pace-zone refresh badge */
+.week-paces-updated-badge {
+    background: var(--color-success-subtle, #dcfce7);
+    color: var(--color-success, #15803d);
+    font-size: 0.75rem;
+    font-weight: 500;
+    padding: 4px 12px;
+    border-radius: var(--radius-md, 6px);
+    margin: -4px 0 8px 0;
+    display: inline-block;
+}
+
 /* Adaptation timeline panel */
 .adaptation-timeline-panel {
     background: var(--color-bg-elevated, #fff);

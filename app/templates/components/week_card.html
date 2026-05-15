@@ -39,6 +39,12 @@
     <div class="week-recovery-inserted-badge">Recovery week inserted — easy pace only</div>
     {% endif %}
 
+    {% if pace_zones_updated_recent and current_week_number and week.week >= current_week_number %}
+    <div class="week-paces-updated-badge" title="Pace zones refreshed after your latest quality session">
+        {{ pace_zones_updated_recent.label }}
+    </div>
+    {% endif %}
+
     {% if weekly_feedback_summaries is defined and week.week in weekly_feedback_summaries %}
     {% set ws = weekly_feedback_summaries[week.week] %}
     <div class="weekly-coaching-summary sentiment-{{ ws.sentiment }}">

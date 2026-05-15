@@ -65,7 +65,7 @@ async def randomize_meals(
         extra = plan_service.get_plan_view_data(training_plan, current_user, db)
 
         ctx = plan_view_context(
-            request, current_user, training_plan, plan_data, nutrition_plan, **extra
+            request, current_user, training_plan, plan_data, nutrition_plan, db=db, **extra
         )
         ctx["success_message"] = "Generated new meal options with different variety!"
 

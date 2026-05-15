@@ -6,7 +6,7 @@ accept (apply) or dismiss it from the plan page.
 """
 
 import logging
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, Optional
 
 from sqlalchemy.orm import Session
@@ -22,6 +22,12 @@ from .week_adjuster import apply_adjustment_to_future_weeks
 logger = logging.getLogger(__name__)
 
 MIN_RUNS_FOR_RECOMMENDATION = 3
+
+# Minimum spacing between consecutive auto-adjustments. Manual adjustments are unaffected.
+AUTO_ADJUST_THROTTLE = timedelta(hours=24)
+# Confidence thresholds for the auto-adjust decision.
+_HIGH_CONFIDENCE_DELTA = 0.05
+_MED_CONFIDENCE_DELTA = 0.05
 
 
 def evaluate_weekly_recommendation(
@@ -256,3 +262,210 @@ def _record_event(training_plan: TrainingPlan, event: Dict[str, Any]) -> None:
     if len(history) > 20:
         history = history[-20:]
     training_plan.adaptation_history = history
+
+
+def evaluate_on_run_logged(
+    plan_id: str,
+    user_id: str,
+    db: Session,
+) -> Optional[Dict[str, Any]]:
+    """Compute signals after a single run was logged.
+
+    Returns an evaluation dict with confidence ("high", "medium", "low"),
+    multiplier, and the underlying signals — but writes nothing. The caller
+    decides whether to auto-apply or park as a pending recommendation.
+    """
+    gathered = gather_signals(plan_id, user_id, db, run_map=False)
+    if gathered is None:
+        return None
+
+    signals = gathered["signals"]
+    multiplier = signals.get("multiplier", 1.0)
+    delta = abs(multiplier - 1.0)
+
+    if delta < 0.02:
+        return None
+
+    overreach = bool(signals.get("overreach_detected"))
+    readiness_factor = signals.get("readiness_factor", 1.0) or 1.0
+    tsb_form = signals.get("tsb_form")
+
+    if delta >= _HIGH_CONFIDENCE_DELTA and (
+        overreach
+        or readiness_factor < 0.95
+        or tsb_form == "overreached"
+    ):
+        confidence = "high"
+    elif delta >= _MED_CONFIDENCE_DELTA:
+        confidence = "medium"
+    else:
+        confidence = "low"
+
+    return {
+        "plan_id": plan_id,
+        "multiplier": multiplier,
+        "confidence": confidence,
+        "signals": signals,
+        "training_plan": gathered["training_plan"],
+        "current_week": gathered["current_week"],
+        "current_day_of_week": gathered["current_day_of_week"],
+        "adjustable_weeks": gathered["adjustable_weeks"],
+    }
+
+
+def apply_or_park(
+    plan_id: str,
+    user_id: str,
+    db: Session,
+    evaluation: Dict[str, Any],
+    auto_enabled: bool,
+) -> Dict[str, Any]:
+    """Either auto-apply the adjustment or write a pending recommendation.
+
+    - High confidence + auto_enabled (+ not throttled) → apply.
+    - Otherwise → write pending recommendation (existing path).
+    - Low confidence → no-op.
+    """
+    confidence = evaluation.get("confidence")
+    if confidence == "low":
+        return {"action": "skipped", "reason": "low_confidence"}
+
+    training_plan = evaluation.get("training_plan")
+    if training_plan is None:
+        training_plan = (
+            db.query(TrainingPlan)
+            .filter(TrainingPlan.id == plan_id, TrainingPlan.user_id == user_id)
+            .first()
+        )
+        if not training_plan:
+            return {"action": "skipped", "reason": "plan_not_found"}
+
+    # Throttle: avoid auto-adjusting if a recent adjustment already ran.
+    if confidence == "high" and auto_enabled and training_plan.last_adjusted_at:
+        last = training_plan.last_adjusted_at
+        now = datetime.now(timezone.utc).replace(tzinfo=None)
+        if (now - last) < AUTO_ADJUST_THROTTLE:
+            return {"action": "throttled", "reason": "recently_adjusted"}
+
+    if confidence == "high" and auto_enabled:
+        return _apply_auto_adjustment(
+            training_plan=training_plan,
+            user_id=user_id,
+            db=db,
+            evaluation=evaluation,
+        )
+
+    return _park_recommendation(
+        training_plan=training_plan,
+        evaluation=evaluation,
+        db=db,
+    )
+
+
+def _apply_auto_adjustment(
+    training_plan: TrainingPlan,
+    user_id: str,
+    db: Session,
+    evaluation: Dict[str, Any],
+) -> Dict[str, Any]:
+    """High-confidence path: actually mutate the plan."""
+    signals = evaluation["signals"]
+    multiplier = evaluation["multiplier"]
+    current_week = evaluation["current_week"]
+    current_day_of_week = evaluation["current_day_of_week"]
+    adjustable_weeks = evaluation["adjustable_weeks"]
+
+    if not adjustable_weeks:
+        return {"action": "skipped", "reason": "no_remaining_weeks"}
+
+    weeks_changed, any_distance_changed = apply_adjustment_to_future_weeks(
+        training_plan, adjustable_weeks, multiplier, db,
+        current_week=current_week,
+        current_day_of_week=current_day_of_week,
+        per_type_ratios=signals.get("per_type_ratios"),
+    )
+
+    vdot_result = None
+    try:
+        vdot_result = check_vdot_recalibration(training_plan, user_id, db)
+    except Exception as e:
+        logger.warning("VDOT recalibration in auto-adjust failed (non-fatal): %s", e)
+
+    now = datetime.now(timezone.utc).replace(tzinfo=None)
+    training_plan.adjustment_multiplier = multiplier
+    training_plan.last_adjusted_at = now
+    training_plan.pending_recommendation = None
+
+    direction = (
+        "increased" if multiplier > 1.0 else "reduced" if multiplier < 1.0 else "kept"
+    )
+    _record_event(training_plan, {
+        "type": "auto_adjust",
+        "multiplier": multiplier,
+        "direction": direction,
+        "confidence": "high",
+        "reason": "Auto-adjusted after run logged.",
+    })
+
+    db.commit()
+
+    logger.info(
+        "Auto-adjust applied: plan=%s multiplier=%.2f direction=%s",
+        training_plan.id, multiplier, direction,
+    )
+
+    return {
+        "action": "auto_adjusted",
+        "multiplier": multiplier,
+        "direction": direction,
+        "weeks_changed": weeks_changed,
+        "adjusted": any_distance_changed or bool(vdot_result),
+        "vdot_recalibration": vdot_result,
+    }
+
+
+def _park_recommendation(
+    training_plan: TrainingPlan,
+    evaluation: Dict[str, Any],
+    db: Session,
+) -> Dict[str, Any]:
+    """Medium-confidence or auto-disabled path: write pending recommendation."""
+    signals = evaluation["signals"]
+    multiplier = evaluation["multiplier"]
+    direction = "increase" if multiplier > 1.0 else "reduce"
+    pct = abs(round((multiplier - 1.0) * 100))
+
+    reason = (
+        f"Based on your recent runs, we suggest "
+        f"{'increasing' if direction == 'increase' else 'reducing'} "
+        f"your training by {pct}%."
+    )
+
+    recommendation = {
+        "week_evaluated": evaluation["current_week"],
+        "multiplier": multiplier,
+        "direction": direction,
+        "reason": reason,
+        "signals": {
+            k: signals[k]
+            for k in (
+                "multiplier", "volume_ratio", "effort_factor", "avg_effort",
+                "effort_trend", "completion_rate", "completion_factor",
+                "overreach_detected", "current_phase", "per_type_ratios",
+                "readiness_factor", "tsb_form",
+            )
+            if k in signals
+        },
+        "created_at": today_date().isoformat(),
+        "source": "run_logged",
+    }
+
+    training_plan.pending_recommendation = recommendation
+    db.commit()
+
+    return {
+        "action": "parked",
+        "multiplier": multiplier,
+        "direction": direction,
+        "confidence": evaluation.get("confidence"),
+    }

@@ -13,6 +13,7 @@ from app.middleware import _cookie_secure
 from app.models import User
 from app.rate_limit import account_deletion_limiter, auth_limiter
 from app.schemas import AuthResponse, GoogleAuthRequest, UserResponse
+from app.schemas.auth_schemas import UserSettingsUpdate
 from app.services.integrations.strava_service import StravaService
 
 logger = logging.getLogger(__name__)
@@ -82,6 +83,7 @@ async def google_auth(
             created_at=user.created_at,
             plans_generated=user.plans_generated,
             strava_connected=bool(user.strava_athlete_id),
+            auto_adjust_enabled=bool(user.auto_adjust_enabled),
         ),
     )
 
@@ -102,6 +104,31 @@ async def get_current_user_info(current_user: User = Depends(get_current_user)):
         created_at=current_user.created_at,
         plans_generated=current_user.plans_generated,
         strava_connected=bool(current_user.strava_athlete_id),
+        auto_adjust_enabled=bool(current_user.auto_adjust_enabled),
+    )
+
+
+@auth_router.patch("/me/settings", response_model=UserResponse)
+async def update_user_settings(
+    payload: UserSettingsUpdate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Update mutable user settings (currently just auto_adjust_enabled)."""
+    if payload.auto_adjust_enabled is not None:
+        current_user.auto_adjust_enabled = bool(payload.auto_adjust_enabled)
+    db.commit()
+    db.refresh(current_user)
+    return UserResponse(
+        id=current_user.id,
+        google_id=current_user.google_id,
+        email=current_user.email,
+        name=current_user.name,
+        picture=current_user.picture,
+        created_at=current_user.created_at,
+        plans_generated=current_user.plans_generated,
+        strava_connected=bool(current_user.strava_athlete_id),
+        auto_adjust_enabled=bool(current_user.auto_adjust_enabled),
     )
 
 

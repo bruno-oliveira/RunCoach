@@ -10,10 +10,10 @@ from app.services.adaptation.hr_zone_analyzer import HRZoneAnalyzer
 from app.utils import to_date as _to_date
 
 _PHASE_WEIGHTS = {
-    "base":   (0.40, 0.20, 0.20, 0.12, 0.08),
-    "build":  (0.35, 0.22, 0.18, 0.15, 0.10),
-    "peak":   (0.30, 0.22, 0.18, 0.18, 0.12),
-    "taper":  (0.12, 0.22, 0.25, 0.25, 0.16),
+    "base":   (0.38, 0.18, 0.18, 0.11, 0.07, 0.08),
+    "build":  (0.33, 0.20, 0.16, 0.14, 0.09, 0.08),
+    "peak":   (0.28, 0.20, 0.16, 0.16, 0.10, 0.10),
+    "taper":  (0.10, 0.20, 0.22, 0.22, 0.14, 0.12),
 }
 
 _MIN_RUNS_PER_TYPE = 3
@@ -53,10 +53,17 @@ def compute_adjustment_signals(
     run_feedback_list: Optional[List] = None,
     vdot_trend: str = "stable",
     mountain_simulation: Optional[Dict[str, Any]] = None,
+    readiness_logs: Optional[List] = None,
+    training_load: Optional[Dict[str, Any]] = None,
 ) -> Dict[str, Any]:
-    volume_weight, effort_weight, completion_weight, hr_zone_weight, feedback_weight = _PHASE_WEIGHTS.get(
-        current_phase, _PHASE_WEIGHTS["build"],
-    )
+    (
+        volume_weight,
+        effort_weight,
+        completion_weight,
+        hr_zone_weight,
+        feedback_weight,
+        readiness_weight,
+    ) = _PHASE_WEIGHTS.get(current_phase, _PHASE_WEIGHTS["build"])
     planned_weighted = 0.0
     planned_by_type: Dict[str, float] = defaultdict(float)
     for workout, sched_date in past_workouts:
@@ -125,6 +132,10 @@ def compute_adjustment_signals(
         "insufficient_data": 0.0,
     }.get(effort_trend, 0.0)
 
+    quality_drift, quality_drift_modifier = _compute_quality_drift(all_plan_runs, today)
+
+    recent_race_effort_count = _count_recent_race_efforts(all_plan_runs, today)
+
     # HR Zone Signal
     hr_result = HRZoneAnalyzer.analyze_runs(
         all_plan_runs,
@@ -154,13 +165,14 @@ def compute_adjustment_signals(
         hr_zone_factor = 1.0
         original_hr_weight = hr_zone_weight
         hr_zone_weight = 0.0
-        total_other = volume_weight + effort_weight + completion_weight + feedback_weight
+        total_other = volume_weight + effort_weight + completion_weight + feedback_weight + readiness_weight
         if total_other > 0:
             scale = 1.0 + original_hr_weight / total_other
             volume_weight *= scale
             effort_weight *= scale
             completion_weight *= scale
             feedback_weight *= scale
+            readiness_weight *= scale
 
     # Feedback Sentiment Signal
     if run_feedback_list and len(run_feedback_list) > 0:
@@ -208,6 +220,29 @@ def compute_adjustment_signals(
         feedback_factor = 1.0
         warning_ratio = 0.0
         positive_ratio = 0.0
+
+    # Readiness signal — blends daily morning check-ins into the multi-week pipeline.
+    readiness_log_count = len(readiness_logs) if readiness_logs else 0
+    if readiness_log_count >= 3:
+        scores = [getattr(log, "score", 0) or 0 for log in readiness_logs]
+        readiness_pct = (sum(scores) / len(scores)) / 100.0
+        readiness_pct = max(0.0, min(1.0, readiness_pct))
+        readiness_factor = 0.92 + readiness_pct * 0.13
+    else:
+        readiness_factor = 1.0
+        original_readiness_weight = readiness_weight
+        readiness_weight = 0.0
+        total_other = (
+            volume_weight + effort_weight + completion_weight
+            + hr_zone_weight + feedback_weight
+        )
+        if total_other > 0 and original_readiness_weight > 0:
+            scale = 1.0 + original_readiness_weight / total_other
+            volume_weight *= scale
+            effort_weight *= scale
+            completion_weight *= scale
+            hr_zone_weight *= scale
+            feedback_weight *= scale
 
     # Mountain-from-flat simulation signal. Applies only when callers provide
     # the proxy score (trail race + flat training access).
@@ -257,9 +292,11 @@ def compute_adjustment_signals(
         + (completion_factor * completion_weight)
         + (hr_zone_factor * hr_zone_weight)
         + (feedback_factor * feedback_weight)
+        + (readiness_factor * readiness_weight)
     )
 
     raw_multiplier += trend_modifier
+    raw_multiplier += quality_drift_modifier
 
     # Execute the mountain simulation signal as an explicit final adjustment.
     # This keeps existing phase weights unchanged for non-trail plans and for
@@ -276,12 +313,43 @@ def compute_adjustment_signals(
         raw_multiplier = min(raw_multiplier, 0.85)
         overreach_detected = True
 
+    # Repeated race-effort exposure raises overreach risk
+    if recent_race_effort_count >= 2:
+        raw_multiplier = min(raw_multiplier, 0.95)
+        overreach_detected = True
+
     # Declining fitness: VDOT dropping despite maintained workload
     if vdot_trend == "declining":
         raw_multiplier = min(raw_multiplier, 0.92)
 
+    # TSB / Form clamps — incorporate accumulated load from TrainingLoadService.
+    tsb = None
+    ctl = None
+    atl = None
+    tsb_form = None
+    peak_primed = False
+    if training_load and training_load.get("available"):
+        current_load = training_load.get("current") or {}
+        tsb = current_load.get("tsb")
+        ctl = current_load.get("ctl")
+        atl = current_load.get("atl")
+
+    if tsb is not None:
+        if tsb <= -25:
+            raw_multiplier = min(raw_multiplier, 0.92)
+            tsb_form = "overreached"
+        elif tsb >= 10 and current_phase == "peak":
+            tsb_form = "primed"
+            peak_primed = True
+        elif tsb >= 5:
+            tsb_form = "fresh"
+        elif tsb <= -10:
+            tsb_form = "loaded"
+        else:
+            tsb_form = "neutral"
+
     consecutive_same_direction = _count_consecutive_direction(adaptation_history)
-    if consecutive_same_direction >= _CONSECUTIVE_THRESHOLD:
+    if consecutive_same_direction >= _CONSECUTIVE_THRESHOLD or peak_primed:
         clamp_min = _EXPANDED_MIN
         clamp_max = _EXPANDED_MAX
     else:
@@ -308,10 +376,11 @@ def compute_adjustment_signals(
             "completion": round(completion_weight, 2),
             "hr_zone": round(hr_zone_weight, 2),
             "feedback": round(feedback_weight, 2),
+            "readiness": round(readiness_weight, 2),
         },
         "current_phase": current_phase,
         "consecutive_same_direction": consecutive_same_direction,
-        "expanded_range": consecutive_same_direction >= _CONSECUTIVE_THRESHOLD,
+        "expanded_range": consecutive_same_direction >= _CONSECUTIVE_THRESHOLD or peak_primed,
         "hr_zone_adherence": hr_zone_adherence,
         "avg_zone_deviation": round(avg_zone_deviation, 2),
         "hr_zone_trend": hr_zone_trend,
@@ -326,7 +395,66 @@ def compute_adjustment_signals(
         ),
         "mountain_simulation_factor": round(mountain_simulation_factor, 2),
         "vdot_trend": vdot_trend,
+        "quality_drift": round(quality_drift, 2) if quality_drift is not None else None,
+        "quality_drift_modifier": round(quality_drift_modifier, 3),
+        "recent_race_effort_count": recent_race_effort_count,
+        "readiness_factor": round(readiness_factor, 3),
+        "readiness_weight": round(readiness_weight, 3),
+        "readiness_log_count": readiness_log_count,
+        "tsb": round(tsb, 1) if tsb is not None else None,
+        "ctl": round(ctl, 1) if ctl is not None else None,
+        "atl": round(atl, 1) if atl is not None else None,
+        "tsb_form": tsb_form,
     }
+
+
+def _compute_quality_drift(all_plan_runs: List, today) -> Tuple[Optional[float], float]:
+    """Compare effort_quality_score across first/second half of last 8 runs.
+
+    Returns (drift_delta, modifier). Modifier is in {-0.02, 0.0, +0.02}.
+    """
+    runs_with_score = []
+    for run in all_plan_runs:
+        score = getattr(run, "effort_quality_score", None)
+        if score is None:
+            continue
+        run_date = _to_date(run.date) if run.date else today
+        runs_with_score.append((run_date, score))
+
+    if len(runs_with_score) < 4:
+        return None, 0.0
+
+    runs_with_score.sort(key=lambda t: t[0])
+    recent = runs_with_score[-8:]
+    if len(recent) < 4:
+        return None, 0.0
+
+    mid = len(recent) // 2
+    first_half = [s for _, s in recent[:mid]]
+    second_half = [s for _, s in recent[mid:]]
+    if not first_half or not second_half:
+        return None, 0.0
+
+    delta = (sum(second_half) / len(second_half)) - (sum(first_half) / len(first_half))
+    if delta < -10:
+        return delta, -0.02
+    if delta > 10:
+        return delta, 0.02
+    return delta, 0.0
+
+
+def _count_recent_race_efforts(all_plan_runs: List, today) -> int:
+    """Count runs classified as race_effort within the last 14 days."""
+    from datetime import timedelta as _td
+    cutoff = today - _td(days=14)
+    count = 0
+    for run in all_plan_runs:
+        if getattr(run, "effort_class", None) != "race_effort":
+            continue
+        run_date = _to_date(run.date) if run.date else today
+        if run_date >= cutoff:
+            count += 1
+    return count
 
 
 def _compute_effort_trend(efforts: List[float]) -> str:

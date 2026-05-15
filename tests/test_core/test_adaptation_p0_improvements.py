@@ -192,30 +192,33 @@ class TestPhaseWeights:
 
     def test_weights_sum_to_one(self):
         for phase, weights in _PHASE_WEIGHTS.items():
-            v, e, c, hr, fb = weights
-            assert abs(v + e + c + hr + fb - 1.0) < 1e-9, f"{phase} weights don't sum to 1: {v}+{e}+{c}+{hr}+{fb}"
+            v, e, c, hr, fb, rd = weights
+            assert abs(v + e + c + hr + fb + rd - 1.0) < 1e-9, (
+                f"{phase} weights don't sum to 1: {v}+{e}+{c}+{hr}+{fb}+{rd}"
+            )
 
     def test_base_phase_emphasizes_volume(self):
-        v, e, c, hr, fb = _PHASE_WEIGHTS["base"]
+        v, e, c, hr, fb, rd = _PHASE_WEIGHTS["base"]
         assert v > e and v > c, "Base phase should prioritize volume"
-        assert v == 0.40
+        assert v == 0.38
 
     def test_build_phase_balanced(self):
-        v, e, c, hr, fb = _PHASE_WEIGHTS["build"]
-        assert v == 0.35 and e == 0.22 and c == 0.18 and hr == 0.15 and fb == 0.10
+        v, e, c, hr, fb, rd = _PHASE_WEIGHTS["build"]
+        assert v == 0.33 and e == 0.20 and c == 0.16 and hr == 0.14 and fb == 0.09 and rd == 0.08
 
     def test_peak_phase_emphasizes_effort(self):
-        v, e, c, hr, fb = _PHASE_WEIGHTS["peak"]
+        v, e, c, hr, fb, rd = _PHASE_WEIGHTS["peak"]
         assert e >= c, "Peak phase should weight effort at least as much as completion"
         assert hr == c, "Peak phase should weight HR zones same as completion"
-        assert e == 0.22
-        assert c == 0.18
+        assert e == 0.20
+        assert c == 0.16
 
     def test_taper_phase_emphasizes_completion(self):
-        v, e, c, hr, fb = _PHASE_WEIGHTS["taper"]
+        v, e, c, hr, fb, rd = _PHASE_WEIGHTS["taper"]
         assert c > v, "Taper phase should prioritize completion over volume"
-        assert c == 0.25
-        assert v == 0.12
+        assert c == 0.22
+        assert v == 0.10
+        assert rd == 0.12, "Taper should weight readiness highest"
 
 
 class TestGetCurrentPhase:

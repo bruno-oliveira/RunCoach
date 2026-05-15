@@ -90,9 +90,13 @@ async def create_run_log(
             new_run.effort_quality_score = score
             new_run.quality_label = label
 
-        enrich_vdot_and_prediction(new_run, run_log.distance_km, run_log.duration_minutes, current_user.id, db)
-
         db.add(new_run)
+        db.flush()
+
+        vdot_recalibration = enrich_vdot_and_prediction(
+            new_run, run_log.distance_km, run_log.duration_minutes, current_user.id, db,
+        )
+
         db.commit()
 
         # Best-effort post-commit hooks: never fail the request if these throw,
@@ -102,14 +106,27 @@ async def create_run_log(
         except Exception:
             logger.warning("Feedback generation failed for run %s", new_run.id, exc_info=True)
 
+        auto_adjust_result = None
         if new_run.training_plan_id:
             try:
                 from app.services.adaptation import AdaptationService
-                AdaptationService().evaluate_recommendation(
-                    new_run.training_plan_id, current_user.id, db
+                service = AdaptationService()
+                evaluation = service.evaluate_on_run_logged(
+                    new_run.training_plan_id, current_user.id, db,
                 )
+                if evaluation is not None:
+                    auto_adjust_result = service.apply_or_park(
+                        new_run.training_plan_id,
+                        current_user.id,
+                        db,
+                        evaluation,
+                        auto_enabled=bool(current_user.auto_adjust_enabled),
+                    )
             except Exception:
-                logger.warning("Recommendation evaluation failed for run %s", new_run.id, exc_info=True)
+                logger.warning(
+                    "Per-run recommendation evaluation failed for run %s",
+                    new_run.id, exc_info=True,
+                )
 
         logger.info(f"Run log created for user {current_user.id}: {run_log.distance_km}km in {run_log.duration_minutes}min")
 
@@ -133,6 +150,10 @@ async def create_run_log(
                 elevation_map=elevation_map,
             )
         response_data.race_comparison = build_race_comparison(new_run, run_log.duration_minutes)
+        if vdot_recalibration:
+            response_data.vdot_recalibration = vdot_recalibration
+        if auto_adjust_result:
+            response_data.auto_adjust = auto_adjust_result
         return response_data
     except HTTPException:
         raise

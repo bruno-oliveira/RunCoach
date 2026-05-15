@@ -46,15 +46,41 @@ def auto_map_and_adjust(
             map_result = adaptation_service.map_runs_to_plan(
                 plan.id, user.id, db
             )
-            recommendation = adaptation_service.evaluate_recommendation(
-                plan.id, user.id, db
-            )
             alert = adaptation_service.check_alerts(plan.id, user.id, db)
+
+            auto_adjust = None
+            try:
+                evaluation = adaptation_service.evaluate_on_run_logged(
+                    plan.id, user.id, db,
+                )
+                if evaluation is not None:
+                    auto_adjust = adaptation_service.apply_or_park(
+                        plan.id, user.id, db,
+                        evaluation,
+                        auto_enabled=bool(getattr(user, "auto_adjust_enabled", False)),
+                    )
+            except Exception as e:
+                logger.warning(
+                    f"Per-sync recommendation evaluation failed for plan {plan.id}: {e}"
+                )
+
+            vdot_recalibration = None
+            try:
+                from app.services.adaptation.vdot_recalibrator import (
+                    recalibrate_zones_only,
+                )
+                vdot_recalibration = recalibrate_zones_only(plan, user.id, db)
+            except Exception as e:
+                logger.warning(
+                    f"VDOT recalibration after Strava sync failed for plan {plan.id}: {e}"
+                )
+
             results.append({
                 "plan_id": plan.id,
                 "runs_mapped": map_result.get("mapped", 0),
-                "has_recommendation": recommendation is not None,
+                "auto_adjust": auto_adjust,
                 "alert": alert,
+                "vdot_recalibration": vdot_recalibration,
             })
         except Exception as e:
             logger.warning(f"Auto-adjust failed for plan {plan.id}: {e}")

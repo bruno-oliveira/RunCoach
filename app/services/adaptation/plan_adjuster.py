@@ -6,9 +6,10 @@ from typing import Any, Dict, List, Optional, Tuple
 
 from sqlalchemy.orm import Session
 
-from app.models import DailyWorkout, RunLog, RunFeedback, TrainingPlan, WeeklyPlan
+from app.models import DailyWorkout, ReadinessLog, RunLog, RunFeedback, TrainingPlan, WeeklyPlan
 from app.services.fitness.race_predictor_service import RacePredictorService
 from app.services.fitness.readiness_scoring import score_mountain_simulation
+from app.services.fitness.training_load_service import TrainingLoadService
 from app.utils import to_date as _to_date
 
 from ._helpers import (
@@ -75,6 +76,17 @@ def gather_signals(
         .all()
     ) if run_ids else []
 
+    readiness_logs = (
+        db.query(ReadinessLog)
+        .filter(
+            ReadinessLog.user_id == user_id,
+            ReadinessLog.log_date >= today_date() - timedelta(days=14),
+        )
+        .order_by(ReadinessLog.log_date.desc())
+        .limit(14)
+        .all()
+    )
+
     if len(all_plan_runs) < 3:
         return None
 
@@ -117,6 +129,14 @@ def gather_signals(
     except Exception as e:
         logger.warning("VDOT trend lookup failed (non-fatal): %s", e)
 
+    training_load = None
+    try:
+        training_load = TrainingLoadService.get_training_load(
+            user_id, db, lookback_days=42,
+        )
+    except Exception as e:
+        logger.warning("Training load lookup failed (non-fatal): %s", e)
+
     signals = compute_adjustment_signals(
         all_plan_runs, past_workouts, past_workout_ids,
         today, plan_id, db, _recency_weight,
@@ -125,6 +145,8 @@ def gather_signals(
         hr_zones=hr_zones,
         run_feedback_list=run_feedback_list,
         vdot_trend=vdot_trend,
+        readiness_logs=readiness_logs,
+        training_load=training_load,
         mountain_simulation=score_mountain_simulation(
             training_plan.plan_data or [],
             all_plan_runs,
@@ -245,6 +267,9 @@ def adjust_plan(
         reason_parts.append("Overreach detected — forced reduction to protect recovery.")
     if signals.get("vdot_trend") == "declining":
         reason_parts.append("VDOT declining — capping volume to prevent overtraining.")
+    tsb_form = signals.get("tsb_form")
+    if tsb_form:
+        reason_parts.append(f"Form: {tsb_form} (TSB {signals.get('tsb')}).")
     if vdot_result:
         reason_parts.append(
             f"VDOT recalibrated: {vdot_result['old_vdot']} → {vdot_result['new_vdot']} "

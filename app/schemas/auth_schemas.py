@@ -22,6 +22,7 @@ class UserResponse(UserBase):
     created_at: datetime
     plans_generated: int
     strava_connected: bool = False
+    auto_adjust_enabled: bool = False
 
 
 class AuthResponse(BaseModel):
@@ -37,3 +38,7 @@ class Token(BaseModel):
 
 class GoogleAuthRequest(BaseModel):
     id_token: str = Field(..., description="Google OAuth ID token")
+
+
+class UserSettingsUpdate(BaseModel):
+    auto_adjust_enabled: Optional[bool] = None

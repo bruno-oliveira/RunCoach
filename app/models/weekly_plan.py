@@ -1,4 +1,4 @@
-from sqlalchemy import Column, String, Integer, Float, ForeignKey, Index
+from sqlalchemy import Column, DateTime, String, Integer, Float, ForeignKey, Index
 from sqlalchemy.orm import Mapped, relationship
 from sqlalchemy.types import JSON
 import uuid
@@ -17,6 +17,7 @@ class WeeklyPlan(Base):
     week_number = Column(Integer)
     total_km = Column(Float)
     workout_types = Column(JSON)
+    pace_zones_updated_at = Column(DateTime, nullable=True)
 
     training_plan: Mapped["TrainingPlan"] = relationship("TrainingPlan", back_populates="weekly_plans")
     daily_workouts: Mapped[list["DailyWorkout"]] = relationship("DailyWorkout", back_populates="weekly_plan", cascade="all, delete-orphan")

@@ -96,9 +96,17 @@
     {% endif %}
 
     {% if workout.coaching_rationale %}
-    <details class="coaching-note">
-        <summary class="coaching-note-toggle">Coach says</summary>
-        <div class="coaching-note-content">{{ workout.coaching_rationale }}</div>
+    {% set overlay = (today_workout_overlay or {}).get(week.week ~ '-' ~ workout.day) %}
+    <details class="coaching-note{% if overlay and overlay.is_fatigue_softened %} coaching-note-fatigued{% endif %}">
+        <summary class="coaching-note-toggle">
+            Coach says
+            {% if overlay and overlay.is_fatigue_softened %}
+            <span class="fatigue-icon" title="Recent runs have been costly — consider easing this one">⚠️</span>
+            {% endif %}
+        </summary>
+        <div class="coaching-note-content">
+            {% if overlay and overlay.is_fatigue_softened %}Consider easing this one — your last few runs have been costly. {% endif %}{% if overlay and overlay.rationale_prefix %}{{ overlay.rationale_prefix }}{{ workout.coaching_rationale[0]|lower }}{{ workout.coaching_rationale[1:] }}{% else %}{{ workout.coaching_rationale }}{% endif %}
+        </div>
     </details>
     {% endif %}
 

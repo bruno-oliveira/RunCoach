@@ -114,7 +114,7 @@ async def view_shared_plan(
     extra = plan_service.get_plan_view_data(training_plan, owner, db)
 
     ctx = plan_view_context(
-        request, current_user, training_plan, plan_data, nutrition_plan, **extra
+        request, current_user, training_plan, plan_data, nutrition_plan, db=db, **extra
     )
     ctx["shared_view"] = True
     ctx["plan_owner_display_name"] = (

@@ -78,6 +78,8 @@ class RunLogResponse(RunLogBase):
     created_at: datetime
     predictions: Optional[Dict[str, Dict]] = None
     race_comparison: Optional[Dict[str, Any]] = None
+    vdot_recalibration: Optional[Dict[str, Any]] = None
+    auto_adjust: Optional[Dict[str, Any]] = None
 
 
 class RunLogListResponse(BaseModel):
