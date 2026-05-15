@@ -108,7 +108,7 @@ class TrainingPlanGenerator:
             is_recovery = weekly_plan.get('is_recovery', False)
             actual_km = weekly_plan['total_km']
             if not is_recovery and actual_high_water > 0:
-                ceiling = actual_high_water * 1.10
+                ceiling = actual_high_water * mileage_progression.WEEK_OVER_WEEK_CAP
                 if actual_km > ceiling and actual_km > 0:
                     flexible = [
                         w for w in weekly_plan['daily_workouts']

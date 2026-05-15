@@ -278,3 +278,17 @@
     .recommendation-banner-actions button { flex: 1; }
     .flat-mountain-sim-banner { padding: var(--space-3) var(--space-4); gap: var(--space-3); }
 }
+
+/* ---- Partial-errors banner (plan view degradations) ---- */
+.partial-errors-banner {
+    background: var(--color-warning-bg, #fff7e6);
+    border: 1px solid var(--color-warning-border, #f5c97a);
+    color: var(--color-warning-text, #7a5a00);
+    border-radius: var(--radius-md);
+    padding: var(--space-3) var(--space-4);
+    margin-bottom: var(--space-4);
+    font-size: var(--text-sm);
+    line-height: 1.5;
+}
+
+.partial-errors-banner strong { display: block; margin-bottom: 2px; }

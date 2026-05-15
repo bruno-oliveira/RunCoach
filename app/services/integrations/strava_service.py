@@ -293,14 +293,19 @@ class StravaService:
                         logger.warning(
                             f"Effort classification failed for Strava run {run_log.id}: {cls_err}"
                         )
+                    # Each activity flush is wrapped in a SAVEPOINT so an
+                    # IntegrityError (concurrent-sync race past the SELECT above)
+                    # only rolls back THIS activity, not every activity flushed
+                    # earlier in the loop. db.commit() at the end of sync_activities
+                    # covers the entire transaction otherwise.
                     db.add(run_log)
+                    sp = db.begin_nested()
                     try:
                         db.flush()
+                        sp.commit()
                     except IntegrityError:
-                        # Duplicate strava_activity_id — two concurrent sync calls
-                        # raced past the SELECT check above. Roll back the savepoint
-                        # and treat this activity as already synced.
-                        db.rollback()
+                        sp.rollback()
+                        db.expunge(run_log)
                         skipped += 1
                         continue
                     # Generate coaching feedback (non-fatal)

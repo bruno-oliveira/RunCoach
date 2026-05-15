@@ -83,105 +83,18 @@ class PerformancePlanGenerator:
 
     def calculate_training_zones(self, goal_pace: float, max_hr: Optional[int] = None,
                                   vdot_zones: Optional[Dict] = None) -> Dict[str, Dict[str, Any]]:
-        """Calculate 5 training zones based on goal pace and optionally max heart rate."""
-        hr_percentages = {
-            'zone_1_recovery': (0.60, 0.70),
-            'zone_2_aerobic': (0.70, 0.80),
-            'zone_3_tempo': (0.80, 0.88),
-            'zone_4_vo2max': (0.88, 0.95),
-            'zone_5_race': (0.95, 1.00)
-        }
+        """Calculate 5 training zones based on goal pace and optionally max HR.
 
-        if vdot_zones:
-            e_slow = vdot_zones['E']['pace_min_km_slow']
-            e_fast = vdot_zones['E']['pace_min_km_fast']
-            t_pace = vdot_zones['T']['pace_min_km']
-            i_pace = vdot_zones['I']['pace_min_km']
-            m_pace = vdot_zones['M']['pace_min_km']
-            zones = {
-                'zone_1_recovery': {
-                    'pace': e_slow,
-                    'pace_range': (e_slow, e_fast),
-                    'hr_range': '60-70%',
-                    'description': 'Recovery: truly easy, conversational pace',
-                    'color': '#4ade80',
-                },
-                'zone_2_aerobic': {
-                    'pace': e_fast,
-                    'pace_range': (e_fast, t_pace),
-                    'hr_range': '70-80%',
-                    'description': 'Aerobic: moderate effort, can still hold a conversation',
-                    'color': '#60a5fa',
-                },
-                'zone_3_tempo': {
-                    'pace': t_pace,
-                    'pace_range': (t_pace, t_pace * 0.97),
-                    'hr_range': '80-88%',
-                    'description': 'Tempo: comfortably hard, sustainable for 20-40 min',
-                    'color': '#facc15',
-                },
-                'zone_4_vo2max': {
-                    'pace': i_pace,
-                    'pace_range': (i_pace, i_pace * 0.95),
-                    'hr_range': '88-95%',
-                    'description': 'VO2max: hard effort, 3-5 min intervals',
-                    'color': '#f97316',
-                },
-                'zone_5_race': {
-                    'pace': goal_pace,
-                    'pace_range': (goal_pace, goal_pace * 0.98),
-                    'hr_range': '95-100%',
-                    'description': 'Race pace: target effort for race day',
-                    'color': '#ef4444',
-                },
-            }
-        else:
-            zones = {
-                'zone_1_recovery': {
-                    'pace': goal_pace * 1.30,
-                    'pace_range': (goal_pace * 1.35, goal_pace * 1.25),
-                    'hr_range': '60-70%',
-                    'description': 'Recovery: truly easy, conversational pace',
-                    'color': '#4ade80',
-                },
-                'zone_2_aerobic': {
-                    'pace': goal_pace * 1.15,
-                    'pace_range': (goal_pace * 1.25, goal_pace * 1.10),
-                    'hr_range': '70-80%',
-                    'description': 'Aerobic: moderate effort, can still hold a conversation',
-                    'color': '#60a5fa',
-                },
-                'zone_3_tempo': {
-                    'pace': goal_pace * 1.05,
-                    'pace_range': (goal_pace * 1.10, goal_pace * 1.02),
-                    'hr_range': '80-88%',
-                    'description': 'Tempo: comfortably hard, sustainable for 20-40 min',
-                    'color': '#facc15',
-                },
-                'zone_4_vo2max': {
-                    'pace': goal_pace * 0.95,
-                    'pace_range': (goal_pace * 1.00, goal_pace * 0.92),
-                    'hr_range': '88-95%',
-                    'description': 'VO2max: hard effort, 3-5 min intervals',
-                    'color': '#f97316',
-                },
-                'zone_5_race': {
-                    'pace': goal_pace,
-                    'pace_range': (goal_pace * 1.02, goal_pace * 0.98),
-                    'hr_range': '95-100%',
-                    'description': 'Race pace: target effort for race day',
-                    'color': '#ef4444',
-                },
-            }
-
-        # Add BPM ranges if max_hr provided
-        if max_hr:
-            for zone_name, (low_pct, high_pct) in hr_percentages.items():
-                low_bpm = int(max_hr * low_pct)
-                high_bpm = int(max_hr * high_pct)
-                zones[zone_name]['hr_bpm_range'] = f"{low_bpm}-{high_bpm} BPM"
-
-        return zones
+        Delegates to the shared zone_calculator. The performance plan anchors
+        zone 5 to the user's chosen `goal_pace` rather than VDOT-derived
+        marathon pace.
+        """
+        from app.core.training.zone_calculator import calculate_zones
+        return calculate_zones(
+            vdot_zones=vdot_zones,
+            goal_pace=goal_pace,
+            max_hr=max_hr,
+        )
 
     # ------------------------------------------------------------------
     # Key workout overlay

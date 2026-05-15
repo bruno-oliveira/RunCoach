@@ -70,12 +70,18 @@ class PlanViewService:
             training_plan.id, db
         )
 
+        # Collected labels for optional features that failed to load.
+        # Surfaced to the template so the UI can show a banner instead of
+        # silently rendering a partial page.
+        partial_errors: list[str] = []
+
         progress_data = None
         if current_user and logged_runs:
             try:
                 progress_data = PerformanceService(db).get_plan_progress(training_plan)
             except Exception as e:
-                logger.warning(f"Could not compute progress data: {e}")
+                logger.warning("Could not compute progress data: %s", e)
+                partial_errors.append("progress")
 
         hints = {"skipped_count": 0, "rescheduled_count": 0, "needs_adjustment": False}
         if current_user:
@@ -121,7 +127,8 @@ class PlanViewService:
                 try:
                     week_pulse = self.get_week_pulse(training_plan, cw, db)
                 except Exception as e:
-                    logger.warning(f"Week pulse failed: {e}")
+                    logger.warning("Week pulse failed: %s", e)
+                    partial_errors.append("week_pulse")
 
         weekly_feedback_summaries = {}
         if current_user:
@@ -131,7 +138,8 @@ class PlanViewService:
                     training_plan.id, current_user.id, db
                 )
             except Exception as e:
-                logger.warning(f"Weekly feedback summary failed: {e}")
+                logger.warning("Weekly feedback summary failed: %s", e)
+                partial_errors.append("weekly_feedback")
 
         weekly_vertical_actuals = {}
         if training_plan.start_date and (training_plan.plan_data or []):
@@ -146,7 +154,8 @@ class PlanViewService:
                     training_plan_id=training_plan.id,
                 )
             except Exception as e:
-                logger.warning(f"Weekly vertical actuals failed: {e}")
+                logger.warning("Weekly vertical actuals failed: %s", e)
+                partial_errors.append("vertical_actuals")
 
         return {
             "performance_analysis": performance_analysis,
@@ -163,6 +172,7 @@ class PlanViewService:
             "week_pulse": week_pulse,
             "weekly_feedback_summaries": weekly_feedback_summaries,
             "weekly_vertical_actuals": weekly_vertical_actuals,
+            "partial_errors": partial_errors,
         }
 
     def _compute_week_evolution(

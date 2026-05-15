@@ -32,6 +32,22 @@
 
 {% block content %}
 <div class="container">
+    {% if partial_errors %}
+    <div class="partial-errors-banner" role="status" aria-live="polite">
+        <strong>Some plan details didn't load.</strong>
+        <span>
+            We couldn't fetch:
+            {% for label in partial_errors %}
+                {% if label == "progress" %}progress stats
+                {% elif label == "week_pulse" %}this week's pulse
+                {% elif label == "weekly_feedback" %}weekly feedback summary
+                {% elif label == "vertical_actuals" %}elevation actuals
+                {% else %}{{ label }}{% endif %}{% if not loop.last %}, {% endif %}
+            {% endfor %}.
+            Refresh to retry.
+        </span>
+    </div>
+    {% endif %}
     <div class="header{% if plan_completed %} header-completed{% endif %}">
         {% if plan_completed %}
         <div class="header-completed-icon" aria-hidden="true">

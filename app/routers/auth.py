@@ -128,14 +128,27 @@ async def delete_account(
     account_deletion_limiter.check(request)
     logger.info("Account deletion requested for user %s", current_user.id)
     if current_user.strava_access_token:
+        # Best-effort revoke: never block account deletion on Strava reachability,
+        # but escalate failures to ERROR so an operator can manually deauthorize
+        # the dangling token.
+        revoke_ok = False
         try:
             token = await strava_service.ensure_valid_token(current_user, db)
-            await strava_service.revoke_token(token)
+            revoke_ok = await strava_service.revoke_token(token)
         except Exception:
-            logger.warning(
-                "Strava revocation failed during account deletion for user %s",
+            logger.error(
+                "Strava token refresh raised during account deletion "
+                "(user_id=%s, strava_athlete_id=%s) — manual deauthorize required",
                 current_user.id,
+                current_user.strava_athlete_id,
                 exc_info=True,
+            )
+        if not revoke_ok:
+            logger.error(
+                "Strava token revocation failed during account deletion "
+                "(user_id=%s, strava_athlete_id=%s) — manual deauthorize required",
+                current_user.id,
+                current_user.strava_athlete_id,
             )
     db.delete(current_user)
     db.commit()
