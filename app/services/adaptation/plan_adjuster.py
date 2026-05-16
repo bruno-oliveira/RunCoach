@@ -230,7 +230,7 @@ def adjust_plan(
             "reason": "No remaining workouts to adjust.",
         }
 
-    weeks_changed, any_distance_changed = apply_adjustment_to_future_weeks(
+    weeks_changed, any_distance_changed, _counts = apply_adjustment_to_future_weeks(
         training_plan, adjustable_weeks, multiplier, db,
         current_week=current_week,
         current_day_of_week=current_day_of_week,
@@ -338,7 +338,7 @@ def adjust_plan(
 
 def _record_adaptation_event(training_plan: TrainingPlan, event: Dict[str, Any]) -> None:
     event["date"] = today_date().isoformat()
-    history = training_plan.adaptation_history or []
+    history = list(training_plan.adaptation_history or [])
     history.append(event)
     if len(history) > 20:
         history = history[-20:]
@@ -424,6 +424,13 @@ def reset_adjustment(
     training_plan.adjustment_multiplier = None
     training_plan.last_recalibrated_at = None
     training_plan.plan_data = plan_data
+
+    _record_adaptation_event(training_plan, {
+        "type": "reset",
+        "weeks_changed": weeks_changed,
+        "reason": "Plan restored to original baseline distances.",
+    })
+
     db.commit()
 
     return {

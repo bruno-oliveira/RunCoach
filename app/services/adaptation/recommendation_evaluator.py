@@ -182,7 +182,7 @@ def accept_recommendation(
         db.commit()
         return {"accepted": False, "reason": "No remaining workouts to adjust."}
 
-    weeks_changed, any_distance_changed = apply_adjustment_to_future_weeks(
+    weeks_changed, any_distance_changed, counts = apply_adjustment_to_future_weeks(
         training_plan, adjustable_weeks, multiplier, db,
         current_week=current_week,
         current_day_of_week=current_day_of_week,
@@ -201,12 +201,20 @@ def accept_recommendation(
     training_plan.pending_recommendation = None
 
     direction = rec.get("direction", "kept")
+    summary = _build_accept_summary(
+        direction=direction,
+        multiplier=multiplier,
+        weeks_changed=weeks_changed,
+        workouts_changed=counts["workouts_changed"],
+        workouts_skipped_protected=counts["workouts_skipped_protected"],
+    )
+
     _record_event(training_plan, {
         "type": "auto_accept",
         "multiplier": multiplier,
         "direction": direction,
         "week_evaluated": rec.get("week_evaluated"),
-        "reason": rec.get("reason", ""),
+        "reason": summary,
     })
 
     db.commit()
@@ -216,7 +224,9 @@ def accept_recommendation(
         "adjusted": any_distance_changed or bool(vdot_result),
         "multiplier": multiplier,
         "weeks_changed": weeks_changed,
-        "reason": rec.get("reason", "Recommendation applied."),
+        "workouts_changed": counts["workouts_changed"],
+        "workouts_skipped_protected": counts["workouts_skipped_protected"],
+        "reason": summary,
     }
     if vdot_result:
         result["vdot_recalibration"] = vdot_result
@@ -255,9 +265,40 @@ def dismiss_recommendation(
     return {"dismissed": True}
 
 
+def _build_accept_summary(
+    *,
+    direction: str,
+    multiplier: float,
+    weeks_changed: int,
+    workouts_changed: int,
+    workouts_skipped_protected: int,
+) -> str:
+    """Human-readable summary of what an accepted recommendation actually did."""
+    if workouts_changed == 0:
+        if workouts_skipped_protected > 0:
+            return (
+                "No distances changed — every affected workout is a key workout, "
+                "tempo, interval, or hill session and is preserved as prescribed."
+            )
+        return "No distances needed adjustment."
+
+    pct = abs(round((multiplier - 1.0) * 100))
+    verb = "Increased" if direction in ("increase", "increased") else "Reduced"
+    sentence = (
+        f"{verb} {workouts_changed} workout{'s' if workouts_changed != 1 else ''} "
+        f"by ~{pct}% across {weeks_changed} week{'s' if weeks_changed != 1 else ''}."
+    )
+    if workouts_skipped_protected > 0:
+        sentence += (
+            f" {workouts_skipped_protected} key/tempo/interval workout"
+            f"{'s were' if workouts_skipped_protected != 1 else ' was'} preserved."
+        )
+    return sentence
+
+
 def _record_event(training_plan: TrainingPlan, event: Dict[str, Any]) -> None:
     event["date"] = today_date().isoformat()
-    history = training_plan.adaptation_history or []
+    history = list(training_plan.adaptation_history or [])
     history.append(event)
     if len(history) > 20:
         history = history[-20:]
@@ -378,7 +419,7 @@ def _apply_auto_adjustment(
     if not adjustable_weeks:
         return {"action": "skipped", "reason": "no_remaining_weeks"}
 
-    weeks_changed, any_distance_changed = apply_adjustment_to_future_weeks(
+    weeks_changed, any_distance_changed, counts = apply_adjustment_to_future_weeks(
         training_plan, adjustable_weeks, multiplier, db,
         current_week=current_week,
         current_day_of_week=current_day_of_week,
@@ -419,6 +460,7 @@ def _apply_auto_adjustment(
         "multiplier": multiplier,
         "direction": direction,
         "weeks_changed": weeks_changed,
+        "workouts_changed": counts["workouts_changed"],
         "adjusted": any_distance_changed or bool(vdot_result),
         "vdot_recalibration": vdot_result,
     }

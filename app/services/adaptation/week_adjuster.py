@@ -23,7 +23,7 @@ def apply_adjustment_to_future_weeks(
     current_week: int | None = None,
     current_day_of_week: int | None = None,
     per_type_ratios: Optional[Dict[str, float]] = None,
-) -> Tuple[int, bool]:
+) -> Tuple[int, bool, Dict[str, int]]:
     plan_data, pd_week, pd_workout = parse_plan_data_lookups(training_plan)
     target_distance = training_plan.target_distance_km
 
@@ -33,6 +33,8 @@ def apply_adjustment_to_future_weeks(
 
     weeks_changed = 0
     any_distance_changed = False
+    workouts_changed = 0
+    workouts_skipped_protected = 0
 
     future_weeks = sorted(future_weeks, key=lambda w: w.week_number)
     week_by_number = {w.week_number: w for w in future_weeks}
@@ -68,6 +70,7 @@ def apply_adjustment_to_future_weeks(
                 workout.key_workout_id
                 or workout.workout_type in ("tempo", "interval", "hill")
             ):
+                workouts_skipped_protected += 1
                 continue
 
             base_distance = workout.baseline_distance_km or workout.distance_km
@@ -93,6 +96,7 @@ def apply_adjustment_to_future_weeks(
             workout.distance_km = new_distance
             any_distance_changed = True
             week_changed = True
+            workouts_changed += 1
 
             is_protected = workout.workout_type == "long" and type_mult < 1.0
 
@@ -174,4 +178,8 @@ def apply_adjustment_to_future_weeks(
             any_distance_changed = True
 
     training_plan.plan_data = plan_data
-    return weeks_changed, any_distance_changed
+    counts = {
+        "workouts_changed": workouts_changed,
+        "workouts_skipped_protected": workouts_skipped_protected,
+    }
+    return weeks_changed, any_distance_changed, counts

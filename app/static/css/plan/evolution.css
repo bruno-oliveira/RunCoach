@@ -134,6 +134,10 @@
     background: var(--color-warning-subtle, #fef9c3);
     color: var(--color-warning, #ca8a04);
 }
+.timeline-badge-reset {
+    background: var(--color-bg-muted, #f1f5f9);
+    color: var(--color-text-muted, #64748b);
+}
 .timeline-reason {
     font-size: 0.75rem;
     color: var(--color-text-secondary, #64748b);

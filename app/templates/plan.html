@@ -443,6 +443,8 @@
                         <span class="timeline-badge timeline-badge-recalibrate">
                             {% if event.get('strategy') == 'recovery_insertion' %}Recovery inserted{% elif event.get('strategy') == 'missed_week' %}Missed week{% elif event.get('strategy') == 'time_off' %}Time off{% elif event.get('strategy') == 'ahead' %}Ahead of plan{% else %}Recalibrated{% endif %}
                         </span>
+                        {% elif event.type == 'reset' %}
+                        <span class="timeline-badge timeline-badge-reset">Reset to original</span>
                         {% endif %}
                         <div class="timeline-reason">{{ event.reason }}</div>
                     </div>

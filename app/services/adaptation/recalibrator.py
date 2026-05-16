@@ -184,7 +184,7 @@ def _record_recalibration_event(
         "weeks_changed": weeks_changed,
         "reason": reason,
     }
-    history = training_plan.adaptation_history or []
+    history = list(training_plan.adaptation_history or [])
     history.append(event)
     if len(history) > 20:
         history = history[-20:]

@@ -260,6 +260,72 @@ class TestAcceptRecommendation:
         result = accept_recommendation("nonexistent", "nobody", db)
         assert result["accepted"] is False
 
+    def test_accept_actually_changes_easy_distances(self, db):
+        """Accepting a reduce-recommendation must persist a smaller distance
+        on at least one easy workout. Guards against the regression where
+        accept_recommendation updated metadata but no DailyWorkout row.
+        """
+        user, plan = _create_plan(db, weeks_ago=3)
+        _add_runs(db, user, plan, count=5, weeks_ago=1)
+
+        plan.pending_recommendation = {
+            "week_evaluated": 2,
+            "multiplier": 0.85,
+            "direction": "reduce",
+            "reason": "Test reduce",
+            "signals": {"per_type_ratios": {}},
+            "created_at": _today().isoformat(),
+        }
+        db.flush()
+
+        easy_baselines = {
+            dw.id: dw.baseline_distance_km
+            for dw in db.query(DailyWorkout).all()
+            if dw.workout_type == "easy"
+        }
+
+        result = accept_recommendation(plan.id, user.id, db)
+        assert result["accepted"] is True
+        assert result["workouts_changed"] >= 1, (
+            "accept_recommendation reported no workouts changed; "
+            "the multiplier never reached the DailyWorkout rows."
+        )
+
+        reduced = [
+            dw for dw in db.query(DailyWorkout).all()
+            if dw.workout_type == "easy"
+            and dw.distance_km < easy_baselines.get(dw.id, dw.distance_km)
+        ]
+        assert reduced, "No easy workout had its distance reduced after accept."
+
+    def test_accept_then_reset_records_both_events(self, db):
+        """Reset after accept must add a 'reset' event so the timeline is honest."""
+        from app.services.adaptation.plan_adjuster import reset_adjustment
+
+        user, plan = _create_plan(db, weeks_ago=3)
+        _add_runs(db, user, plan, count=5, weeks_ago=1)
+
+        plan.pending_recommendation = {
+            "week_evaluated": 2,
+            "multiplier": 0.85,
+            "direction": "reduce",
+            "reason": "Test reduce",
+            "signals": {"per_type_ratios": {}},
+            "created_at": _today().isoformat(),
+        }
+        db.flush()
+
+        accept_recommendation(plan.id, user.id, db)
+        reset_result = reset_adjustment(plan.id, user.id, db)
+        assert reset_result["reset"] is True
+
+        history = plan.adaptation_history or []
+        types = [e.get("type") for e in history]
+        assert "auto_accept" in types
+        assert "reset" in types
+        assert types.index("reset") > types.index("auto_accept")
+        assert plan.adjustment_multiplier is None
+
 
 class TestDismissRecommendation:
 
