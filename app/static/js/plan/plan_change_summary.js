@@ -380,29 +380,41 @@
         var canApply = cp.would_change;
         configureFooter(overlay, {
             showApply: canApply,
-            showCancel: true,
+            showCancel: canApply,
             showClose: !canApply,
         });
         openModal(overlay);
 
         var applyBtn = overlay.querySelector('[data-change-plan-apply]');
         var cancelBtn = overlay.querySelector('[data-change-plan-cancel]');
+        var closeBtns = overlay.querySelectorAll('[data-change-plan-close]');
+
+        function restoreButton() {
+            if (btn && originalLabel != null) {
+                btn.disabled = false;
+                btn.textContent = originalLabel;
+            }
+        }
 
         function cleanup() {
             if (applyBtn) applyBtn.onclick = null;
             if (cancelBtn) cancelBtn.onclick = null;
+            closeBtns.forEach(function (b) { b.onclick = null; });
+            overlay.onclick = null;
         }
 
-        if (cancelBtn) {
-            cancelBtn.onclick = function () {
-                cleanup();
-                closeModal(overlay);
-                if (btn && originalLabel != null) {
-                    btn.disabled = false;
-                    btn.textContent = originalLabel;
-                }
-            };
+        function dismissPreview() {
+            cleanup();
+            closeModal(overlay);
+            restoreButton();
         }
+
+        if (cancelBtn) cancelBtn.onclick = dismissPreview;
+        closeBtns.forEach(function (b) { b.onclick = dismissPreview; });
+        overlay.onclick = function (event) {
+            if (event.target === overlay) dismissPreview();
+        };
+
         if (applyBtn) {
             applyBtn.onclick = function () {
                 cleanup();
@@ -420,10 +432,7 @@
                     })
                     .catch(function (err) {
                         showError(err.message || 'Apply failed.');
-                        if (btn && originalLabel != null) {
-                            btn.disabled = false;
-                            btn.textContent = originalLabel;
-                        }
+                        restoreButton();
                         closeModal(overlay);
                     })
                     .finally(function () {

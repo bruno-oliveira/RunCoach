@@ -1,8 +1,88 @@
 /* Change-plan modal + persistent panel + inline workout indicator. */
 
-.change-plan-modal.is-open,
-.change-plan-modal.active {
+/* Base modal overlay styles — the global `.modal-overlay` rules live in
+   the Jinja `components/modal.html` macro, which plan.html does not
+   import. Replicate them here so the change-plan modal renders. */
+.change-plan-modal.modal-overlay {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 2000;
+    align-items: center;
+    justify-content: center;
+}
+
+.change-plan-modal.modal-overlay.is-open,
+.change-plan-modal.modal-overlay.active {
     display: flex;
+}
+
+.change-plan-modal .modal {
+    background: var(--color-bg-elevated, #fff);
+    border-radius: 12px;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+    width: 90%;
+    max-height: 90vh;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+}
+
+.change-plan-modal .modal-large { max-width: 760px; }
+
+.change-plan-modal .modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1.25rem 1.5rem;
+    border-bottom: 1px solid var(--color-border, #e5e7eb);
+}
+
+.change-plan-modal .modal-title {
+    margin: 0;
+    font-size: 1.25rem;
+    color: var(--color-text);
+    font-weight: 600;
+}
+
+.change-plan-modal .modal-close {
+    background: none;
+    border: none;
+    font-size: 1.75rem;
+    color: var(--color-text-secondary);
+    cursor: pointer;
+    line-height: 1;
+    padding: 0;
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 4px;
+}
+
+.change-plan-modal .modal-close:hover {
+    background: var(--color-surface);
+    color: var(--color-text);
+}
+
+.change-plan-modal .modal-body {
+    padding: 1.25rem 1.5rem;
+    overflow-y: auto;
+    flex: 1;
+}
+
+.change-plan-modal .modal-footer {
+    padding: 1rem 1.5rem;
+    border-top: 1px solid var(--color-border, #e5e7eb);
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.75rem;
+    flex-wrap: wrap;
 }
 
 .change-plan-modal-inner {
