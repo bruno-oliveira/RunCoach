@@ -358,6 +358,7 @@ function openSettingsModal() {
     const overlay = document.getElementById('settingsOverlay');
     if (!overlay) return;
     overlay.classList.add('is-open');
+    overlay.setAttribute('aria-hidden', 'false');
     document.body.style.overflow = 'hidden';
     const toggle = document.getElementById('autoAdjustToggle');
     if (toggle) toggle.focus();
@@ -367,6 +368,7 @@ function closeSettingsModal() {
     const overlay = document.getElementById('settingsOverlay');
     if (!overlay) return;
     overlay.classList.remove('is-open');
+    overlay.setAttribute('aria-hidden', 'true');
     document.body.style.overflow = '';
     const trigger = document.getElementById('navSettingsBtn');
     if (trigger) trigger.focus();

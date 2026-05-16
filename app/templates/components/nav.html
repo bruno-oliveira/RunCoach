@@ -117,44 +117,6 @@
                 <button class="btn btn-ghost btn-sm nav-signout" onclick="logout()">Sign Out</button>
                 <button class="btn btn-ghost btn-sm nav-delete-account" onclick="deleteAccount()">Delete Account</button>
             </div>
-
-            <div
-                class="settings-overlay"
-                id="settingsOverlay"
-                role="dialog"
-                aria-modal="true"
-                aria-labelledby="settingsModalTitle"
-                onclick="closeSettingsModalOnBackdrop(event)"
-            >
-                <div class="settings-modal">
-                    <div class="settings-modal-header">
-                        <h3 class="settings-modal-title" id="settingsModalTitle">Settings</h3>
-                        <button class="settings-modal-close" onclick="closeSettingsModal()" aria-label="Close settings">&times;</button>
-                    </div>
-                    <div class="settings-modal-body">
-                        <label class="toggle-label" for="autoAdjustToggle">
-                            <span class="toggle-wrap">
-                                <input
-                                    type="checkbox"
-                                    id="autoAdjustToggle"
-                                    class="toggle-input"
-                                    {% if user.auto_adjust_enabled %}checked{% endif %}
-                                    onchange="saveAutoAdjustSetting(this.checked)"
-                                >
-                                <span class="toggle-track"><span class="toggle-thumb"></span></span>
-                            </span>
-                            <span class="toggle-text">
-                                <strong>Auto-adjust my plan after each run</strong>
-                                <span class="toggle-help">When a logged run shows clear overreach or strong fitness signals, RunCoach will reshape your remaining workouts immediately. Lower-confidence changes still wait for your approval.</span>
-                            </span>
-                        </label>
-                    </div>
-                    <div class="settings-modal-footer">
-                        <span class="settings-modal-feedback" id="settingsFeedback" role="status" aria-live="polite"></span>
-                        <button class="btn btn-secondary btn-sm" onclick="closeSettingsModal()">Done</button>
-                    </div>
-                </div>
-            </div>
             {% else %}
             <div class="nav-auth" id="nav-auth-container">
                 <div id="nav-google-signin-button" class="nav-gsi-button"></div>
@@ -175,4 +137,47 @@
 
 <!-- Mobile backdrop: dims content behind the open nav sheet -->
 <div class="nav-backdrop" id="navBackdrop" aria-hidden="true" onclick="toggleMobileNav()"></div>
+
+{% if user %}
+<!-- Settings modal — kept outside <nav> because the navbar's backdrop-filter
+     creates a containing block, which would pin position:fixed to the nav. -->
+<div
+    class="settings-overlay"
+    id="settingsOverlay"
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="settingsModalTitle"
+    aria-hidden="true"
+    onclick="closeSettingsModalOnBackdrop(event)"
+>
+    <div class="settings-modal" role="document">
+        <div class="settings-modal-header">
+            <h3 class="settings-modal-title" id="settingsModalTitle">Settings</h3>
+            <button class="settings-modal-close" onclick="closeSettingsModal()" aria-label="Close settings">&times;</button>
+        </div>
+        <div class="settings-modal-body">
+            <label class="toggle-label" for="autoAdjustToggle">
+                <span class="toggle-wrap">
+                    <input
+                        type="checkbox"
+                        id="autoAdjustToggle"
+                        class="toggle-input"
+                        {% if user.auto_adjust_enabled %}checked{% endif %}
+                        onchange="saveAutoAdjustSetting(this.checked)"
+                    >
+                    <span class="toggle-track"><span class="toggle-thumb"></span></span>
+                </span>
+                <span class="toggle-text">
+                    <strong>Auto-adjust my plan after each run</strong>
+                    <span class="toggle-help">When a logged run shows clear overreach or strong fitness signals, RunCoach reshapes your remaining workouts immediately. Lower-confidence changes still wait for your approval.</span>
+                </span>
+            </label>
+        </div>
+        <div class="settings-modal-footer">
+            <span class="settings-modal-feedback" id="settingsFeedback" role="status" aria-live="polite"></span>
+            <button class="btn btn-secondary btn-sm" onclick="closeSettingsModal()">Done</button>
+        </div>
+    </div>
+</div>
+{% endif %}
 {% endmacro %}
