@@ -125,7 +125,8 @@ class AuthService:
                     google_id=google_id,
                     email=email,
                     name=name,
-                    picture=picture
+                    picture=picture,
+                    auto_adjust_enabled=True,
                 )
                 db.add(user)
 

@@ -813,3 +813,169 @@
     max-height: calc(100vh - var(--space-4));
   }
 }
+
+/* ============================================================================
+   Toggle switch — reusable across pages (settings modal, forms, etc.)
+   ========================================================================= */
+
+.toggle-label {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  cursor: pointer;
+}
+
+.toggle-input {
+  position: absolute;
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.toggle-wrap {
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.toggle-track {
+  display: block;
+  width: 40px;
+  height: 22px;
+  border-radius: 11px;
+  background: var(--color-border);
+  position: relative;
+  transition: background 150ms ease;
+}
+
+.toggle-input:checked + .toggle-track {
+  background: var(--color-primary);
+}
+
+.toggle-input:focus-visible + .toggle-track {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+.toggle-thumb {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #fff;
+  transition: transform 150ms ease;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
+}
+
+.toggle-input:checked + .toggle-track .toggle-thumb {
+  transform: translateX(18px);
+}
+
+.toggle-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.toggle-text strong {
+  font-size: var(--text-sm);
+  font-weight: var(--weight-semibold);
+  color: var(--color-text);
+}
+
+.toggle-text .toggle-help {
+  margin: 0;
+  font-size: var(--text-xs);
+  color: var(--color-text-secondary);
+  line-height: 1.4;
+}
+
+/* ============================================================================
+   Settings modal — minimal overlay used by the nav Settings button
+   ========================================================================= */
+
+.settings-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: var(--z-modal, 2000);
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-4);
+}
+
+.settings-overlay.is-open {
+  display: flex;
+}
+
+.settings-modal {
+  background: var(--color-bg-elevated);
+  border-radius: var(--radius-lg);
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+  width: 100%;
+  max-width: 420px;
+  max-height: 90vh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.settings-modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: var(--space-4) var(--space-5);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.settings-modal-title {
+  margin: 0;
+  font-size: var(--text-lg);
+  font-weight: var(--weight-semibold);
+  color: var(--color-text);
+}
+
+.settings-modal-close {
+  background: none;
+  border: none;
+  font-size: 1.5rem;
+  line-height: 1;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: var(--radius-sm);
+}
+
+.settings-modal-close:hover {
+  background: var(--color-surface);
+  color: var(--color-text);
+}
+
+.settings-modal-body {
+  padding: var(--space-5);
+  overflow-y: auto;
+}
+
+.settings-modal-footer {
+  padding: var(--space-3) var(--space-5);
+  border-top: 1px solid var(--color-border);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  min-height: 28px;
+}
+
+.settings-modal-feedback {
+  font-size: var(--text-xs);
+  color: var(--color-text-secondary);
+}
+
+.settings-modal-feedback.is-saved {
+  color: var(--color-success, var(--color-primary));
+}
+
+.settings-modal-feedback.is-error {
+  color: var(--color-error, var(--color-accent));
+}
