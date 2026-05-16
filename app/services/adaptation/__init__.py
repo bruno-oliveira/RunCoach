@@ -45,10 +45,20 @@ class AdaptationService:
     ) -> Dict[str, Any]:
         return plan_adjuster.adjust_plan(plan_id, user_id, db)
 
+    def preview_adjust_plan(
+        self, plan_id: str, user_id: str, db: Session
+    ) -> Dict[str, Any]:
+        return plan_adjuster.preview_adjust_plan(plan_id, user_id, db)
+
     def reset_adjustment(
         self, plan_id: str, user_id: str, db: Session
     ) -> Dict[str, Any]:
         return plan_adjuster.reset_adjustment(plan_id, user_id, db)
+
+    def preview_reset_adjustment(
+        self, plan_id: str, user_id: str, db: Session
+    ) -> Dict[str, Any]:
+        return plan_adjuster.preview_reset_adjustment(plan_id, user_id, db)
 
     def check_alerts(
         self, plan_id: str, user_id: str, db: Session
@@ -76,6 +86,30 @@ class AdaptationService:
         self, plan_id: str, user_id: str, db: Session
     ) -> Dict[str, Any]:
         return recommendation_evaluator.accept_recommendation(plan_id, user_id, db)
+
+    def preview_accept_recommendation(
+        self, plan_id: str, user_id: str, db: Session
+    ) -> Dict[str, Any]:
+        return recommendation_evaluator.preview_accept_recommendation(plan_id, user_id, db)
+
+    def mark_change_plan_seen(
+        self, plan_id: str, user_id: str, db: Session
+    ) -> Dict[str, Any]:
+        from app.models import TrainingPlan
+        plan = (
+            db.query(TrainingPlan)
+            .filter(TrainingPlan.id == plan_id, TrainingPlan.user_id == user_id)
+            .first()
+        )
+        if not plan or not plan.last_change_plan:
+            return {"ok": True, "noop": True}
+        cp = dict(plan.last_change_plan)
+        if cp.get("seen"):
+            return {"ok": True, "noop": True}
+        cp["seen"] = True
+        plan.last_change_plan = cp
+        db.commit()
+        return {"ok": True}
 
     def dismiss_recommendation(
         self, plan_id: str, user_id: str, db: Session

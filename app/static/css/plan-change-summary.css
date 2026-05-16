@@ -1,0 +1,333 @@
+/* Change-plan modal + persistent panel + inline workout indicator. */
+
+.change-plan-modal.is-open,
+.change-plan-modal.active {
+    display: flex;
+}
+
+.change-plan-modal-inner {
+    max-width: 760px;
+}
+
+.change-plan-modal-footer {
+    flex-wrap: wrap;
+}
+
+/* Outcome chip in the modal header */
+.cp-outcome-row {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    flex-wrap: wrap;
+    margin-bottom: var(--space-4);
+}
+
+.cp-outcome-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.25rem 0.75rem;
+    border-radius: 999px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    border: 1px solid transparent;
+}
+
+.cp-outcome-chip.is-preview {
+    background: var(--color-info-subtle, #e0f2fe);
+    color: var(--color-info, #0369a1);
+    border-color: var(--color-info, #0369a1);
+}
+
+.cp-outcome-chip.is-applied {
+    background: var(--color-success-subtle, #dcfce7);
+    color: var(--color-success, #15803d);
+    border-color: var(--color-success, #15803d);
+}
+
+.cp-outcome-chip.is-nochange {
+    background: var(--color-warning-subtle, #fef9c3);
+    color: var(--color-warning, #a16207);
+    border-color: var(--color-warning, #a16207);
+}
+
+.cp-action-label {
+    font-size: 0.85rem;
+    color: var(--color-text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+
+/* Stat cards row */
+.cp-stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: var(--space-3);
+    margin-bottom: var(--space-5);
+}
+
+.cp-stat {
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: 8px;
+    padding: 0.75rem 1rem;
+}
+
+.cp-stat-label {
+    display: block;
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--color-text-secondary);
+    margin-bottom: 0.25rem;
+}
+
+.cp-stat-value {
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: var(--color-text);
+}
+
+.cp-stat-value.is-up { color: var(--color-success, #15803d); }
+.cp-stat-value.is-down { color: var(--color-error, #b91c1c); }
+.cp-stat-value.is-neutral { color: var(--color-text); }
+
+.cp-stat-sub {
+    display: block;
+    font-size: 0.8rem;
+    color: var(--color-text-secondary);
+    margin-top: 0.15rem;
+}
+
+/* Headline reason / no-change reasons */
+.cp-reason-block {
+    background: var(--color-surface);
+    border-left: 3px solid var(--color-primary);
+    padding: 0.75rem 1rem;
+    border-radius: 0 6px 6px 0;
+    margin-bottom: var(--space-4);
+    font-size: 0.95rem;
+}
+
+.cp-reason-block.is-warning {
+    border-left-color: var(--color-warning, #a16207);
+}
+
+.cp-no-change-list {
+    margin: 0.5rem 0 0 1.25rem;
+    padding: 0;
+}
+
+/* Per-week accordion */
+.cp-weeks {
+    margin-bottom: var(--space-4);
+}
+
+.cp-week {
+    border: 1px solid var(--color-border);
+    border-radius: 8px;
+    margin-bottom: 0.5rem;
+    background: var(--color-bg-elevated);
+    overflow: hidden;
+}
+
+.cp-week summary {
+    list-style: none;
+    cursor: pointer;
+    padding: 0.7rem 1rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-3);
+    font-weight: 600;
+    background: var(--color-surface);
+}
+
+.cp-week summary::-webkit-details-marker {
+    display: none;
+}
+
+.cp-week summary::before {
+    content: '▸';
+    display: inline-block;
+    font-size: 0.85rem;
+    color: var(--color-text-secondary);
+    transition: transform 0.15s;
+    margin-right: 0.35rem;
+}
+
+.cp-week[open] summary::before {
+    transform: rotate(90deg);
+}
+
+.cp-week-week {
+    flex: 1;
+}
+
+.cp-week-delta {
+    font-size: 0.9rem;
+    color: var(--color-text-secondary);
+    font-weight: 500;
+}
+
+.cp-week-delta.is-up { color: var(--color-success, #15803d); }
+.cp-week-delta.is-down { color: var(--color-error, #b91c1c); }
+
+.cp-workout-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+
+.cp-workout-row {
+    display: grid;
+    grid-template-columns: 4rem 6.5rem 1fr auto;
+    align-items: center;
+    gap: var(--space-3);
+    padding: 0.55rem 1rem;
+    border-top: 1px solid var(--color-border);
+    font-size: 0.92rem;
+}
+
+.cp-workout-row:first-child {
+    border-top: none;
+}
+
+.cp-workout-day {
+    font-weight: 600;
+    color: var(--color-text-secondary);
+}
+
+.cp-workout-type {
+    text-transform: capitalize;
+    color: var(--color-text);
+}
+
+.cp-workout-distances {
+    color: var(--color-text);
+    font-variant-numeric: tabular-nums;
+}
+
+.cp-workout-status {
+    font-size: 0.78rem;
+    padding: 0.15rem 0.5rem;
+    border-radius: 999px;
+    border: 1px solid transparent;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+.cp-status-changed {
+    background: var(--color-success-subtle, #dcfce7);
+    color: var(--color-success, #15803d);
+    border-color: var(--color-success, #15803d);
+}
+
+.cp-status-changed.is-down {
+    background: var(--color-error-subtle, #fee2e2);
+    color: var(--color-error, #b91c1c);
+    border-color: var(--color-error, #b91c1c);
+}
+
+.cp-status-protected {
+    background: var(--color-warning-subtle, #fef9c3);
+    color: var(--color-warning, #a16207);
+    border-color: var(--color-warning, #a16207);
+}
+
+.cp-status-unchanged {
+    background: var(--color-surface);
+    color: var(--color-text-secondary);
+    border-color: var(--color-border);
+}
+
+.cp-workout-reason {
+    grid-column: 1 / -1;
+    font-size: 0.85rem;
+    color: var(--color-text-secondary);
+    padding-left: 4.5rem;
+    margin-top: 0.15rem;
+}
+
+/* Signals panel */
+.cp-signals {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 0.5rem 1rem;
+    font-size: 0.88rem;
+    color: var(--color-text-secondary);
+    padding: 0.75rem 1rem;
+    background: var(--color-surface);
+    border-radius: 6px;
+    margin-bottom: var(--space-4);
+}
+
+.cp-signal-key {
+    text-transform: capitalize;
+    color: var(--color-text-secondary);
+    margin-right: 0.4rem;
+}
+
+.cp-signal-value {
+    color: var(--color-text);
+    font-weight: 500;
+}
+
+/* Persistent panel on the plan page */
+.plan-change-plan-panel {
+    margin-bottom: var(--space-6);
+    border: 1px solid var(--color-border);
+    border-radius: 10px;
+    background: var(--color-bg-elevated);
+    padding: 1rem 1.25rem;
+}
+
+.plan-change-plan-panel-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-3);
+    flex-wrap: wrap;
+    margin-bottom: 0.5rem;
+}
+
+.plan-change-plan-panel-title {
+    font-weight: 600;
+    color: var(--color-text);
+    margin: 0;
+}
+
+.plan-change-plan-panel-subtitle {
+    font-size: 0.88rem;
+    color: var(--color-text-secondary);
+}
+
+/* Inline workout indicator chip */
+.workout-adjusted-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    margin-left: 0.5rem;
+    padding: 0.1rem 0.5rem;
+    border-radius: 999px;
+    font-size: 0.72rem;
+    font-weight: 600;
+    border: 1px solid transparent;
+    background: var(--color-success-subtle, #dcfce7);
+    color: var(--color-success, #15803d);
+    border-color: var(--color-success, #15803d);
+    white-space: nowrap;
+    cursor: help;
+}
+
+.workout-adjusted-chip.is-down {
+    background: var(--color-error-subtle, #fee2e2);
+    color: var(--color-error, #b91c1c);
+    border-color: var(--color-error, #b91c1c);
+}
+
+.workout-adjusted-chip-arrow {
+    font-weight: 700;
+}

@@ -8,7 +8,7 @@ from sqlalchemy import Engine, inspect, text
 
 logger = logging.getLogger(__name__)
 
-HEAD_REVISION = "001_initial_schema"
+HEAD_REVISION = "011_add_last_change_plan"
 
 
 def run_alembic_migrations(engine: Engine) -> None:

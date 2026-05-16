@@ -123,6 +123,32 @@ async def adjust_plan(
     return adaptation_service.adjust_plan(plan_id, current_user.id, db)
 
 
+@router.post("/api/plan/{plan_id}/adjust/preview")
+async def preview_adjust_plan(
+    plan_id: str,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Preview what an Adjust Plan would do without committing changes."""
+    get_plan_or_404(plan_id, db, current_user, require_user_match=True)
+
+    adaptation_service = AdaptationService()
+    return adaptation_service.preview_adjust_plan(plan_id, current_user.id, db)
+
+
+@router.post("/api/plan/{plan_id}/change-plan/mark-seen")
+async def mark_change_plan_seen(
+    plan_id: str,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Mark the persisted last_change_plan as seen so the modal stops
+    auto-opening on next page load."""
+    get_plan_or_404(plan_id, db, current_user, require_user_match=True)
+    adaptation_service = AdaptationService()
+    return adaptation_service.mark_change_plan_seen(plan_id, current_user.id, db)
+
+
 class RecalibrateRequest(BaseModel):
     strategy: str
 
@@ -203,6 +229,18 @@ async def accept_recommendation(
     return adaptation_service.accept_recommendation(plan_id, current_user.id, db)
 
 
+@router.post("/api/plan/{plan_id}/accept-recommendation/preview")
+async def preview_accept_recommendation(
+    plan_id: str,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Preview what accepting the pending recommendation would do."""
+    get_plan_or_404(plan_id, db, current_user, require_user_match=True)
+    adaptation_service = AdaptationService()
+    return adaptation_service.preview_accept_recommendation(plan_id, current_user.id, db)
+
+
 @router.post("/api/plan/{plan_id}/dismiss-recommendation")
 async def dismiss_recommendation(
     plan_id: str,
@@ -226,6 +264,19 @@ async def reset_plan_adjustment(
 
     adaptation_service = AdaptationService()
     return adaptation_service.reset_adjustment(plan_id, current_user.id, db)
+
+
+@router.post("/api/plan/{plan_id}/reset-adjustment/preview")
+async def preview_reset_plan_adjustment(
+    plan_id: str,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Preview what resetting the adjustment would do."""
+    get_plan_or_404(plan_id, db, current_user, require_user_match=True)
+
+    adaptation_service = AdaptationService()
+    return adaptation_service.preview_reset_adjustment(plan_id, current_user.id, db)
 
 
 # ---------------------------------------------------------------------------

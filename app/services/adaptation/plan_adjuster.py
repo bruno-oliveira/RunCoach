@@ -12,12 +12,18 @@ from app.services.fitness.readiness_scoring import score_mountain_simulation
 from app.services.fitness.training_load_service import TrainingLoadService
 from app.utils import to_date as _to_date
 
+from . import change_reasons as _reasons
 from ._helpers import (
     ANNOTATION_RE,
     backfill_baselines,
     batch_workouts_by_week,
     parse_plan_data_lookups,
     today_date,
+)
+from .change_plan_builder import (
+    build_change_plan,
+    empty_change_plan,
+    snapshot_workouts,
 )
 from .run_mapper import map_runs_to_plan
 from .signal_computer import compute_adjustment_signals
@@ -185,6 +191,35 @@ def adjust_plan(
     db: Session,
 ) -> Dict[str, Any]:
     """Adjust future plan weeks using full-history weighted signals."""
+    return _run_adjust(plan_id, user_id, db, mode="applied")
+
+
+def preview_adjust_plan(
+    plan_id: str,
+    user_id: str,
+    db: Session,
+) -> Dict[str, Any]:
+    """Compute what an Adjust Plan would do without persisting.
+
+    Performs the same mutations as `adjust_plan` against the SQLAlchemy
+    session, captures the resulting ChangePlan, then rolls back the
+    session and expires loaded ORM objects so no preview state leaks.
+    """
+    try:
+        result = _run_adjust(plan_id, user_id, db, mode="preview")
+    finally:
+        db.rollback()
+        db.expire_all()
+    return result["change_plan"] if "change_plan" in result else result
+
+
+def _run_adjust(
+    plan_id: str,
+    user_id: str,
+    db: Session,
+    *,
+    mode: str,
+) -> Dict[str, Any]:
     gathered = gather_signals(plan_id, user_id, db)
     if gathered is None:
         training_plan = db.query(TrainingPlan).filter(
@@ -192,21 +227,46 @@ def adjust_plan(
             TrainingPlan.user_id == user_id,
         ).first()
         if not training_plan:
-            return {"adjusted": False, "reason": "Plan not found"}
+            cp = empty_change_plan(
+                action="adjust", mode=mode,
+                headline_reason="Plan not found.",
+            )
+            return {"adjusted": False, "reason": "Plan not found", "change_plan": cp}
         if not training_plan.start_date:
-            return {"adjusted": False, "reason": "Plan has no start date."}
+            cp = empty_change_plan(
+                action="adjust", mode=mode,
+                headline_reason=_reasons.NO_CHANGE_PLAN_NOT_STARTED,
+            )
+            return {
+                "adjusted": False,
+                "reason": "Plan has no start date.",
+                "change_plan": cp,
+            }
         total_runs = (
             db.query(RunLog)
             .filter(RunLog.training_plan_id == plan_id)
             .count()
         )
         if total_runs < 3:
+            cp = empty_change_plan(
+                action="adjust", mode=mode,
+                headline_reason=_reasons.NO_CHANGE_INSUFFICIENT_DATA,
+            )
             return {
                 "adjusted": False,
                 "reason": "Not enough data (need at least 3 logged runs linked to this plan)",
                 "total_runs": total_runs,
+                "change_plan": cp,
             }
-        return {"adjusted": False, "reason": "No past workouts to evaluate yet."}
+        cp = empty_change_plan(
+            action="adjust", mode=mode,
+            headline_reason="No past workouts to evaluate yet.",
+        )
+        return {
+            "adjusted": False,
+            "reason": "No past workouts to evaluate yet.",
+            "change_plan": cp,
+        }
 
     training_plan = gathered["training_plan"]
     signals = gathered["signals"]
@@ -217,9 +277,18 @@ def adjust_plan(
     multiplier = signals["multiplier"]
 
     # Clear any pending recommendation since the user is manually adjusting
+    # (preview mode rolls this back).
     training_plan.pending_recommendation = None
 
+    week_numbers = [w.week_number for w in adjustable_weeks]
+
     if not adjustable_weeks:
+        cp = empty_change_plan(
+            action="adjust", mode=mode,
+            headline_reason=_reasons.NO_CHANGE_NO_REMAINING_WORKOUTS,
+        )
+        cp["summary"]["multiplier"] = multiplier
+        cp["signals"] = _build_signals_summary(signals, runs_count=len(all_plan_runs))
         return {
             "adjusted": False,
             **{k: signals[k] for k in (
@@ -227,14 +296,19 @@ def adjust_plan(
             )},
             "total_runs": len(all_plan_runs),
             "weeks_changed": 0,
-            "reason": "No remaining workouts to adjust.",
+            "reason": _reasons.NO_CHANGE_NO_REMAINING_WORKOUTS,
+            "change_plan": cp,
         }
 
+    before = snapshot_workouts(training_plan, db, week_numbers=week_numbers)
+
+    recorder: List[Dict[str, Any]] = []
     weeks_changed, any_distance_changed, _counts = apply_adjustment_to_future_weeks(
         training_plan, adjustable_weeks, multiplier, db,
         current_week=current_week,
         current_day_of_week=current_day_of_week,
         per_type_ratios=signals.get("per_type_ratios"),
+        recorder=recorder,
     )
 
     vdot_result = None
@@ -243,9 +317,7 @@ def adjust_plan(
     except Exception as e:
         logger.warning("VDOT recalibration failed (non-fatal): %s", e)
 
-    training_plan.adjustment_multiplier = multiplier
-    training_plan.last_adjusted_at = datetime.now(timezone.utc).replace(tzinfo=None)
-    db.commit()
+    after = snapshot_workouts(training_plan, db, week_numbers=week_numbers)
 
     volume_ratio = signals["volume_ratio"]
     completion_rate = signals["completion_rate"]
@@ -297,43 +369,95 @@ def adjust_plan(
             f"{mountain_score}/100 (factor x{signals.get('mountain_simulation_factor', 1.0)})."
         )
 
-    logger.info(
-        "adjust_plan result: multiplier=%.2f raw=%.3f "
-        "volume_ratio=%.2f effort_factor=%.2f(avg=%.1f) "
-        "completion_factor=%.2f(rate=%.2f) trend=%s overreach=%s runs=%d phase=%s",
-        multiplier,
-        signals["raw_multiplier"],
-        volume_ratio,
-        signals["effort_factor"],
-        avg_effort if avg_effort is not None else 0,
-        signals["completion_factor"],
-        completion_rate,
-        effort_trend,
-        overreach_detected,
-        len(all_plan_runs),
-        current_phase,
+    headline_reason = " ".join(reason_parts)
+
+    vdot_change_payload = None
+    if vdot_result:
+        vdot_change_payload = {
+            "before": vdot_result.get("old_vdot"),
+            "after": vdot_result.get("new_vdot"),
+            "direction": vdot_result.get("direction"),
+        }
+
+    change_plan = build_change_plan(
+        action="adjust",
+        mode=mode,
+        training_plan=training_plan,
+        before=before,
+        after=after,
+        recorder=recorder,
+        signals=_build_signals_summary(signals, runs_count=len(all_plan_runs)),
+        multiplier=multiplier,
+        vdot_change=vdot_change_payload,
+        headline_reason=headline_reason,
+        current_week=current_week,
+        current_day_of_week=current_day_of_week,
     )
 
-    _record_adaptation_event(training_plan, {
-        "type": "adjust",
-        "multiplier": multiplier,
-        "direction": direction,
-        "effort_trend": effort_trend,
-        "overreach": overreach_detected,
-        "phase": current_phase,
-        "reason": " ".join(reason_parts),
-    })
+    if mode == "applied":
+        training_plan.adjustment_multiplier = multiplier
+        training_plan.last_adjusted_at = datetime.now(timezone.utc).replace(tzinfo=None)
+        training_plan.last_change_plan = change_plan
+        _record_adaptation_event(training_plan, {
+            "type": "adjust",
+            "multiplier": multiplier,
+            "direction": direction,
+            "effort_trend": effort_trend,
+            "overreach": overreach_detected,
+            "phase": current_phase,
+            "reason": headline_reason,
+        })
+        db.commit()
+
+        logger.info(
+            "adjust_plan applied: multiplier=%.2f raw=%.3f "
+            "volume_ratio=%.2f effort_factor=%.2f(avg=%.1f) "
+            "completion_factor=%.2f(rate=%.2f) trend=%s overreach=%s runs=%d phase=%s "
+            "workouts_changed=%d weeks_changed=%d",
+            multiplier,
+            signals["raw_multiplier"],
+            volume_ratio,
+            signals["effort_factor"],
+            avg_effort if avg_effort is not None else 0,
+            signals["completion_factor"],
+            completion_rate,
+            effort_trend,
+            overreach_detected,
+            len(all_plan_runs),
+            current_phase,
+            change_plan["summary"]["workouts_changed_count"],
+            weeks_changed,
+        )
 
     result = {
         "adjusted": any_distance_changed or bool(vdot_result),
         **signals,
         "total_runs": len(all_plan_runs),
         "weeks_changed": weeks_changed,
-        "reason": " ".join(reason_parts),
+        "reason": headline_reason,
+        "change_plan": change_plan,
     }
     if vdot_result:
         result["vdot_recalibration"] = vdot_result
     return result
+
+
+def _build_signals_summary(
+    signals: Dict[str, Any], *, runs_count: Optional[int] = None
+) -> Dict[str, Any]:
+    """Subset of signals safe to expose to the change-plan modal."""
+    out = {
+        "effort_trend": signals.get("effort_trend"),
+        "completion_rate": signals.get("completion_rate"),
+        "volume_ratio": signals.get("volume_ratio"),
+        "phase": signals.get("current_phase"),
+        "avg_effort": signals.get("avg_effort"),
+        "tsb_form": signals.get("tsb_form"),
+        "overreach_detected": signals.get("overreach_detected"),
+    }
+    if runs_count is not None:
+        out["runs_analyzed"] = runs_count
+    return out
 
 
 def _record_adaptation_event(training_plan: TrainingPlan, event: Dict[str, Any]) -> None:
@@ -359,19 +483,54 @@ def reset_adjustment(
     db: Session,
 ) -> Dict[str, Any]:
     """Reset plan to original baseline distances, removing any adjustment."""
+    return _run_reset(plan_id, user_id, db, mode="applied")
+
+
+def preview_reset_adjustment(
+    plan_id: str,
+    user_id: str,
+    db: Session,
+) -> Dict[str, Any]:
+    """Preview the reset action without persisting."""
+    try:
+        result = _run_reset(plan_id, user_id, db, mode="preview")
+    finally:
+        db.rollback()
+        db.expire_all()
+    return result["change_plan"] if "change_plan" in result else result
+
+
+def _run_reset(
+    plan_id: str,
+    user_id: str,
+    db: Session,
+    *,
+    mode: str,
+) -> Dict[str, Any]:
     training_plan = db.query(TrainingPlan).filter(
         TrainingPlan.id == plan_id,
         TrainingPlan.user_id == user_id,
     ).first()
 
     if not training_plan:
-        return {"reset": False, "reason": "Plan not found"}
+        cp = empty_change_plan(
+            action="reset", mode=mode, headline_reason="Plan not found.",
+        )
+        return {"reset": False, "reason": "Plan not found", "change_plan": cp}
 
     has_adjustment = training_plan.adjustment_multiplier is not None
     has_recalibration = training_plan.last_recalibrated_at is not None
 
     if not has_adjustment and not has_recalibration:
-        return {"reset": False, "reason": "Plan has no active adjustment."}
+        cp = empty_change_plan(
+            action="reset", mode=mode,
+            headline_reason=_reasons.NO_CHANGE_NO_ACTIVE_ADJUSTMENT,
+        )
+        return {
+            "reset": False,
+            "reason": "Plan has no active adjustment.",
+            "change_plan": cp,
+        }
 
     plan_data, pd_week, pd_workout = parse_plan_data_lookups(training_plan)
 
@@ -384,6 +543,8 @@ def reset_adjustment(
     workouts_by_week_map = batch_workouts_by_week(
         [week.id for week in all_weeks], db
     )
+
+    before = snapshot_workouts(training_plan, db)
 
     weeks_changed = 0
     for week in all_weeks:
@@ -421,20 +582,37 @@ def reset_adjustment(
             if week.week_number in pd_week:
                 pd_week[week.week_number]["total_km"] = new_total
 
-    training_plan.adjustment_multiplier = None
-    training_plan.last_recalibrated_at = None
     training_plan.plan_data = plan_data
 
-    _record_adaptation_event(training_plan, {
-        "type": "reset",
-        "weeks_changed": weeks_changed,
-        "reason": "Plan restored to original baseline distances.",
-    })
+    after = snapshot_workouts(training_plan, db)
 
-    db.commit()
+    change_plan = build_change_plan(
+        action="reset",
+        mode=mode,
+        training_plan=training_plan,
+        before=before,
+        after=after,
+        recorder=None,
+        signals={},
+        multiplier=None,
+        vdot_change=None,
+        headline_reason="Plan restored to original baseline distances.",
+    )
+
+    if mode == "applied":
+        training_plan.adjustment_multiplier = None
+        training_plan.last_recalibrated_at = None
+        training_plan.last_change_plan = change_plan
+        _record_adaptation_event(training_plan, {
+            "type": "reset",
+            "weeks_changed": weeks_changed,
+            "reason": "Plan restored to original baseline distances.",
+        })
+        db.commit()
 
     return {
         "reset": True,
         "weeks_changed": weeks_changed,
         "reason": "Plan restored to original distances.",
+        "change_plan": change_plan,
     }

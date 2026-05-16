@@ -18,6 +18,7 @@
 <link rel="stylesheet" href="{{ static_url('css/plan-toasts.css') }}">
 <link rel="stylesheet" href="{{ static_url('css/plan-readiness.css') }}">
 <link rel="stylesheet" href="{{ static_url('css/plan-gaps.css') }}">
+<link rel="stylesheet" href="{{ static_url('css/plan-change-summary.css') }}">
 {% if nutrition_plan %}
 <link rel="stylesheet" href="{{ static_url('css/plan-nutrition.css') }}">
 {% endif %}
@@ -421,6 +422,31 @@
         </div>
     </div>
     {% endif %}
+
+    {% if training_plan.last_change_plan and training_plan.last_change_plan.summary %}
+    {% set lcp = training_plan.last_change_plan %}
+    {% set lcp_summary = lcp.summary %}
+    <div class="plan-change-plan-panel" id="latest-changes-panel">
+        <div class="plan-change-plan-panel-header">
+            <div>
+                <p class="plan-change-plan-panel-title">Latest plan changes</p>
+                <p class="plan-change-plan-panel-subtitle">
+                    {% if lcp_summary.workouts_changed_count and lcp_summary.workouts_changed_count > 0 %}
+                        {{ lcp_summary.workouts_changed_count }} workout{{ '' if lcp_summary.workouts_changed_count == 1 else 's' }} changed across {{ lcp_summary.weeks_affected|length }} week{{ '' if lcp_summary.weeks_affected|length == 1 else 's' }}
+                        {% if lcp_summary.workouts_protected_count %} · {{ lcp_summary.workouts_protected_count }} protected{% endif %}
+                        {% if lcp_summary.total_km_delta %} · {{ '+' if lcp_summary.total_km_delta > 0 else '' }}{{ "%.1f"|format(lcp_summary.total_km_delta) }} km total{% endif %}
+                    {% else %}
+                        No distances were changed.
+                        {% if lcp.no_change_reasons %} {{ lcp.no_change_reasons[0] }}{% endif %}
+                    {% endif %}
+                </p>
+            </div>
+            <a href="#" class="btn btn-ghost btn-small" data-change-plan-view>View details</a>
+        </div>
+    </div>
+    {% endif %}
+
+    {% include "components/change_plan_modal.html" %}
 
     {% if adaptation_timeline and adaptation_timeline|length > 0 %}
     <div class="adaptation-timeline-panel" style="margin-bottom: var(--space-6);">
@@ -863,6 +889,8 @@
         recent_auto_adjust: {{ recent_auto_adjust | tojson }}
     };
 
+    window.LAST_CHANGE_PLAN = {{ training_plan.last_change_plan | tojson }};
+
     function showShareToast(msg) {
         var t = document.getElementById('share-toast');
         t.textContent = msg;
@@ -904,6 +932,7 @@
 <script src="{{ static_url('js/plan/plan_tabs.js') }}" defer></script>
 <script src="{{ static_url('js/plan/plan_adaptation.js') }}" defer></script>
 <script src="{{ static_url('js/plan/plan_dragdrop.js') }}" defer></script>
+<script src="{{ static_url('js/plan/plan_change_summary.js') }}" defer></script>
 <script src="{{ static_url('js/plan/plan_core.js') }}" defer></script>
 {% if user %}
 <script src="{{ static_url('js/readiness.js') }}" defer></script>

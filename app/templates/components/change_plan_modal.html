@@ -1,0 +1,19 @@
+{# Shell for the change-plan summary modal. Populated by plan_change_summary.js. #}
+<div class="modal-overlay change-plan-modal" id="change-plan-modal-overlay" role="dialog" aria-modal="true" aria-labelledby="change-plan-modal-title" hidden>
+    <div class="modal modal-large change-plan-modal-inner" onclick="event.stopPropagation()">
+        <div class="modal-header">
+            <h3 class="modal-title" id="change-plan-modal-title">Plan changes</h3>
+            <button type="button" class="modal-close" data-change-plan-close aria-label="Close">&times;</button>
+        </div>
+        <div class="modal-body">
+            <div class="change-plan-summary-host" id="change-plan-summary-host">
+                <!-- rendered by plan_change_summary.js -->
+            </div>
+        </div>
+        <div class="modal-footer change-plan-modal-footer">
+            <button type="button" class="btn btn-ghost" data-change-plan-cancel hidden>Cancel</button>
+            <button type="button" class="btn btn-secondary" data-change-plan-close>Close</button>
+            <button type="button" class="btn btn-primary" data-change-plan-apply hidden>Apply changes</button>
+        </div>
+    </div>
+</div>

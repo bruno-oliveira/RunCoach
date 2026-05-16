@@ -14,7 +14,13 @@ from sqlalchemy.orm import Session
 from app.models import TrainingPlan
 from app.utils import to_date as _to_date
 
+from . import change_reasons as _reasons
 from ._helpers import today_date
+from .change_plan_builder import (
+    build_change_plan,
+    empty_change_plan,
+    snapshot_workouts,
+)
 from .plan_adjuster import gather_signals
 from .vdot_recalibrator import check_vdot_recalibration
 from .week_adjuster import apply_adjustment_to_future_weeks
@@ -146,17 +152,53 @@ def accept_recommendation(
     db: Session,
 ) -> Dict[str, Any]:
     """Accept the pending recommendation and apply the stored multiplier."""
+    return _run_accept(plan_id, user_id, db, mode="applied")
+
+
+def preview_accept_recommendation(
+    plan_id: str,
+    user_id: str,
+    db: Session,
+) -> Dict[str, Any]:
+    """Compute what accepting the pending recommendation would do."""
+    try:
+        result = _run_accept(plan_id, user_id, db, mode="preview")
+    finally:
+        db.rollback()
+        db.expire_all()
+    return result["change_plan"] if "change_plan" in result else result
+
+
+def _run_accept(
+    plan_id: str,
+    user_id: str,
+    db: Session,
+    *,
+    mode: str,
+) -> Dict[str, Any]:
     training_plan = db.query(TrainingPlan).filter(
         TrainingPlan.id == plan_id,
         TrainingPlan.user_id == user_id,
     ).first()
 
     if not training_plan:
-        return {"accepted": False, "reason": "We couldn't find that training plan."}
+        cp = empty_change_plan(
+            action="accept_recommendation", mode=mode,
+            headline_reason="We couldn't find that training plan.",
+        )
+        return {"accepted": False, "reason": "We couldn't find that training plan.", "change_plan": cp}
 
     rec = training_plan.pending_recommendation
     if not rec:
-        return {"accepted": False, "reason": "There's no pending recommendation to apply — it may have already been accepted or dismissed."}
+        cp = empty_change_plan(
+            action="accept_recommendation", mode=mode,
+            headline_reason="There's no pending recommendation to apply.",
+        )
+        return {
+            "accepted": False,
+            "reason": "There's no pending recommendation to apply — it may have already been accepted or dismissed.",
+            "change_plan": cp,
+        }
 
     multiplier = rec.get("multiplier", 1.0)
     per_type_ratios = rec.get("signals", {}).get("per_type_ratios")
@@ -178,18 +220,31 @@ def accept_recommendation(
     )
 
     if not adjustable_weeks:
-        training_plan.pending_recommendation = None
-        db.commit()
+        cp = empty_change_plan(
+            action="accept_recommendation", mode=mode,
+            headline_reason=_reasons.NO_CHANGE_NO_REMAINING_WORKOUTS,
+        )
+        cp["summary"]["multiplier"] = multiplier
+        if mode == "applied":
+            training_plan.pending_recommendation = None
+            training_plan.last_change_plan = cp
+            db.commit()
         return {
             "accepted": False,
             "reason": "All remaining workouts in your plan are already completed or locked — there's nothing left for this recommendation to adjust.",
+            "change_plan": cp,
         }
 
+    week_numbers = [w.week_number for w in adjustable_weeks]
+    before = snapshot_workouts(training_plan, db, week_numbers=week_numbers)
+
+    recorder: list = []
     weeks_changed, any_distance_changed, counts = apply_adjustment_to_future_weeks(
         training_plan, adjustable_weeks, multiplier, db,
         current_week=current_week,
         current_day_of_week=current_day_of_week,
         per_type_ratios=per_type_ratios,
+        recorder=recorder,
     )
 
     vdot_result = None
@@ -198,10 +253,7 @@ def accept_recommendation(
     except Exception as e:
         logger.warning("VDOT recalibration failed (non-fatal): %s", e)
 
-    now = datetime.now(timezone.utc).replace(tzinfo=None)
-    training_plan.adjustment_multiplier = multiplier
-    training_plan.last_adjusted_at = now
-    training_plan.pending_recommendation = None
+    after = snapshot_workouts(training_plan, db, week_numbers=week_numbers)
 
     direction = rec.get("direction", "kept")
     summary = _build_accept_summary(
@@ -212,15 +264,48 @@ def accept_recommendation(
         workouts_skipped_protected=counts["workouts_skipped_protected"],
     )
 
-    _record_event(training_plan, {
-        "type": "auto_accept",
-        "multiplier": multiplier,
-        "direction": direction,
-        "week_evaluated": rec.get("week_evaluated"),
-        "reason": summary,
-    })
+    vdot_change_payload = None
+    if vdot_result:
+        vdot_change_payload = {
+            "before": vdot_result.get("old_vdot"),
+            "after": vdot_result.get("new_vdot"),
+            "direction": vdot_result.get("direction"),
+        }
 
-    db.commit()
+    change_plan = build_change_plan(
+        action="accept_recommendation",
+        mode=mode,
+        training_plan=training_plan,
+        before=before,
+        after=after,
+        recorder=recorder,
+        signals={
+            "effort_trend": rec.get("signals", {}).get("effort_trend"),
+            "completion_rate": rec.get("signals", {}).get("completion_rate"),
+            "volume_ratio": rec.get("signals", {}).get("volume_ratio"),
+            "phase": rec.get("signals", {}).get("current_phase"),
+        },
+        multiplier=multiplier,
+        vdot_change=vdot_change_payload,
+        headline_reason=summary,
+        current_week=current_week,
+        current_day_of_week=current_day_of_week,
+    )
+
+    if mode == "applied":
+        now = datetime.now(timezone.utc).replace(tzinfo=None)
+        training_plan.adjustment_multiplier = multiplier
+        training_plan.last_adjusted_at = now
+        training_plan.pending_recommendation = None
+        training_plan.last_change_plan = change_plan
+        _record_event(training_plan, {
+            "type": "auto_accept",
+            "multiplier": multiplier,
+            "direction": direction,
+            "week_evaluated": rec.get("week_evaluated"),
+            "reason": summary,
+        })
+        db.commit()
 
     result = {
         "accepted": True,
@@ -230,6 +315,7 @@ def accept_recommendation(
         "workouts_changed": counts["workouts_changed"],
         "workouts_skipped_protected": counts["workouts_skipped_protected"],
         "reason": summary,
+        "change_plan": change_plan,
     }
     if vdot_result:
         result["vdot_recalibration"] = vdot_result
@@ -459,12 +545,16 @@ def _apply_auto_adjustment(
         return {"action": "skipped", "reason": "no_remaining_weeks"}
 
     pre_totals = {w.week_number: (w.total_km or 0.0) for w in adjustable_weeks}
+    week_numbers_input = [w.week_number for w in adjustable_weeks]
+    before = snapshot_workouts(training_plan, db, week_numbers=week_numbers_input)
 
+    recorder: list = []
     weeks_changed, any_distance_changed, counts = apply_adjustment_to_future_weeks(
         training_plan, adjustable_weeks, multiplier, db,
         current_week=current_week,
         current_day_of_week=current_day_of_week,
         per_type_ratios=signals.get("per_type_ratios"),
+        recorder=recorder,
     )
 
     changed_week_numbers = sorted(
@@ -483,6 +573,8 @@ def _apply_auto_adjustment(
     except Exception as e:
         logger.warning("VDOT recalibration in auto-adjust failed (non-fatal): %s", e)
 
+    after = snapshot_workouts(training_plan, db, week_numbers=week_numbers_input)
+
     now = datetime.now(timezone.utc).replace(tzinfo=None)
     training_plan.adjustment_multiplier = multiplier
     training_plan.last_adjusted_at = now
@@ -499,6 +591,40 @@ def _apply_auto_adjustment(
         total_km_delta=total_km_delta,
         signals=signals,
     )
+
+    vdot_change_payload = None
+    if vdot_result:
+        vdot_change_payload = {
+            "before": vdot_result.get("old_vdot"),
+            "after": vdot_result.get("new_vdot"),
+            "direction": vdot_result.get("direction"),
+        }
+
+    change_plan = build_change_plan(
+        action="auto_adjust",
+        mode="applied",
+        training_plan=training_plan,
+        before=before,
+        after=after,
+        recorder=recorder,
+        signals={
+            "effort_trend": signals.get("effort_trend"),
+            "completion_rate": signals.get("completion_rate"),
+            "volume_ratio": signals.get("volume_ratio"),
+            "phase": signals.get("current_phase"),
+            "avg_effort": signals.get("avg_effort"),
+            "tsb_form": signals.get("tsb_form"),
+            "overreach_detected": signals.get("overreach_detected"),
+            "confidence": "high",
+        },
+        multiplier=multiplier,
+        vdot_change=vdot_change_payload,
+        headline_reason=reason,
+        current_week=current_week,
+        current_day_of_week=current_day_of_week,
+    )
+    training_plan.last_change_plan = change_plan
+
     _record_event(training_plan, {
         "type": "auto_adjust",
         "multiplier": multiplier,

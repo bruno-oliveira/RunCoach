@@ -8,6 +8,7 @@ from sqlalchemy.orm import Session
 from app.models import TrainingPlan, WeeklyPlan
 from app.core.training import workout_steps as _steps_mod
 
+from . import change_reasons as _reasons
 from ._helpers import ANNOTATION_RE, batch_workouts_by_week, parse_plan_data_lookups
 from .safety import enforce_future_growth_cap, enforce_week_structure
 
@@ -23,6 +24,7 @@ def apply_adjustment_to_future_weeks(
     current_week: int | None = None,
     current_day_of_week: int | None = None,
     per_type_ratios: Optional[Dict[str, float]] = None,
+    recorder: Optional[List[Dict[str, Any]]] = None,
 ) -> Tuple[int, bool, Dict[str, int]]:
     plan_data, pd_week, pd_workout = parse_plan_data_lookups(training_plan)
     target_distance = training_plan.target_distance_km
@@ -58,6 +60,17 @@ def apply_adjustment_to_future_weeks(
                 and week.week_number == current_week
                 and workout.day_of_week < current_day_of_week
             ):
+                if recorder is not None:
+                    recorder.append({
+                        "week": week.week_number,
+                        "day": workout.day_of_week,
+                        "type": workout.workout_type,
+                        "old_distance_km": workout.distance_km,
+                        "new_distance_km": workout.distance_km,
+                        "delta_km": 0.0,
+                        "status": "past",
+                        "reason": None,
+                    })
                 continue
 
             # Prescriptive workouts (key overlays + standard tempo / interval
@@ -71,6 +84,20 @@ def apply_adjustment_to_future_weeks(
                 or workout.workout_type in ("tempo", "interval", "hill")
             ):
                 workouts_skipped_protected += 1
+                if recorder is not None:
+                    recorder.append({
+                        "week": week.week_number,
+                        "day": workout.day_of_week,
+                        "type": workout.workout_type,
+                        "old_distance_km": workout.distance_km,
+                        "new_distance_km": workout.distance_km,
+                        "delta_km": 0.0,
+                        "status": "protected",
+                        "reason": _reasons.protected_reason_for_workout(
+                            workout.workout_type,
+                            bool(workout.key_workout_id),
+                        ),
+                    })
                 continue
 
             base_distance = workout.baseline_distance_km or workout.distance_km
@@ -81,16 +108,30 @@ def apply_adjustment_to_future_weeks(
                 type_ratio = per_type_ratios[wtype]
                 type_mult = round(max(0.85, min(1.15, type_ratio)), 2)
 
+            note_reason = None
             if workout.workout_type == "long" and type_mult < 1.0:
                 new_distance = round(base_distance, 1)
+                note_reason = _reasons.LONG_RUN_FLOOR
             elif workout.workout_type in ("interval", "tempo", "hill", "vo2max", "race_pace", "fartlek"):
                 quality_mult = 1.0 + (type_mult - 1.0) * 0.5
                 new_distance = max(1.0, round(base_distance * quality_mult, 1))
+                note_reason = _reasons.QUALITY_HALF_SCALED
             else:
                 new_distance = max(1.0, round(base_distance * type_mult, 1))
             old_distance = workout.distance_km
 
             if new_distance == old_distance:
+                if recorder is not None:
+                    recorder.append({
+                        "week": week.week_number,
+                        "day": workout.day_of_week,
+                        "type": workout.workout_type,
+                        "old_distance_km": old_distance,
+                        "new_distance_km": new_distance,
+                        "delta_km": 0.0,
+                        "status": "unchanged",
+                        "reason": note_reason,
+                    })
                 continue
 
             workout.distance_km = new_distance
@@ -99,6 +140,18 @@ def apply_adjustment_to_future_weeks(
             workouts_changed += 1
 
             is_protected = workout.workout_type == "long" and type_mult < 1.0
+
+            if recorder is not None:
+                recorder.append({
+                    "week": week.week_number,
+                    "day": workout.day_of_week,
+                    "type": workout.workout_type,
+                    "old_distance_km": old_distance,
+                    "new_distance_km": new_distance,
+                    "delta_km": round(new_distance - old_distance, 2),
+                    "status": "changed",
+                    "reason": note_reason,
+                })
 
             clean_notes = ANNOTATION_RE.sub("", workout.notes or "").strip()
             if type_mult != 1.0 and not is_protected:

@@ -359,42 +359,11 @@
     /* -------------------------------------------------------------- */
 
     window.acceptRecommendation = function () {
-        var planId = window.APP_CTX && window.APP_CTX.plan_id;
-        if (!planId) return;
-
         var btn = document.querySelector('#pending-recommendation-banner .btn-primary');
-        var resetBtn = function () {
-            if (btn) { btn.disabled = false; btn.textContent = 'Accept'; }
-        };
-        if (btn) { btn.disabled = true; btn.textContent = 'Applying…'; }
-
-        fetch('/api/plan/' + planId + '/accept-recommendation', {
-            method: 'POST',
-            headers: window.authHeaders ? window.authHeaders() : { 'Content-Type': 'application/json' },
-            credentials: 'same-origin'
-        })
-        .then(_parseResponse)
-        .then(function (r) {
-            console.log('[acceptRecommendation] response', r);
-            var payload = r.payload || {};
-            if (!r.ok) {
-                _toastError(payload.detail || ('Request failed: ' + r.status));
-                resetBtn();
-                return;
-            }
-            if (payload.accepted || payload.adjusted) {
-                _toastSuccess(payload.reason || 'Recommendation applied.');
-                setTimeout(function () { window.location.reload(); }, 1200);
-                return;
-            }
-            _toastWarning(payload.reason || 'Unable to apply recommendation.');
-            resetBtn();
-        })
-        .catch(function (err) {
-            console.error('[acceptRecommendation] network error', err);
-            _toastError('Error: ' + err.message);
-            resetBtn();
-        });
+        if (window.runChangePlanAction) {
+            return window.runChangePlanAction('accept_recommendation', { button: btn });
+        }
+        _toastError('Change-plan UI unavailable.');
     };
 
     window.dismissRecommendation = function () {

@@ -537,65 +537,27 @@
     /*  Plan adjustment / reset                                        */
     /* -------------------------------------------------------------- */
 
-    window.adjustPlan = async function () {
-        var confirmed = window.confirm(
-            'This will adjust future week distances based on your recent running data.\n\n' +
-            'Past weeks will not be changed.\n\nContinue?'
-        );
-        if (!confirmed) return;
-
+    window.adjustPlan = function () {
         var btn = document.getElementById('adjust-btn');
-        if (btn) { btn.disabled = true; btn.textContent = 'Adjusting...'; }
-
-        try {
-            var response = await fetch('/api/plan/' + window.APP_CTX.plan_id + '/adjust', {
-                method: 'POST',
-                headers: authHeaders(),
-                credentials: 'same-origin',
-            });
-
-            if (response.ok) {
-                var result = await response.json();
-                console.log('[adjustPlan] response', result);
-                if (result.adjusted) {
-                    var msg = result.reason;
-                    if (result.overreach_detected) {
-                        msg = '⚠️ Overreach detected — plan reduced to protect recovery.\n\n' + msg;
-                    }
-                    if (result.effort_trend && result.effort_trend !== 'stable' && result.effort_trend !== 'insufficient_data') {
-                        msg += '\nEffort trend: ' + result.effort_trend + '.';
-                    }
-                    if (result.vdot_recalibration) {
-                        msg += '\nVDOT updated: ' + result.vdot_recalibration.old_vdot + ' → ' + result.vdot_recalibration.new_vdot + ' (' + result.vdot_recalibration.direction + ')';
-                    }
-                    ApiClient.showSuccess(msg);
-                    setTimeout(function () { reloadPlanPage(); }, 2500);
-                } else {
-                    var noopMsg = result.reason || 'No adjustment needed.';
-                    if (ApiClient.showWarning) {
-                        ApiClient.showWarning(noopMsg);
-                    } else {
-                        ApiClient.showInfo(noopMsg);
-                    }
-                    if (btn) { btn.disabled = false; btn.textContent = 'Adjust Plan'; }
-                }
-            } else {
-                var err = await response.json();
-                ApiClient.showError(err.detail || 'Adjustment failed.');
-                if (btn) { btn.disabled = false; btn.textContent = 'Adjust Plan'; }
-            }
-        } catch (error) {
-            ApiClient.showError('Error: ' + error.message);
-            if (btn) { btn.disabled = false; btn.textContent = 'Adjust Plan'; }
+        if (window.runChangePlanAction) {
+            return window.runChangePlanAction('adjust', { button: btn });
         }
+        ApiClient.showError('Change-plan UI unavailable.');
+        return Promise.resolve();
     };
 
-    window.resetAdjustment = async function () {
-        var confirmed = window.confirm(
-            'This will reset all adjusted distances back to the original plan.\n\nContinue?'
-        );
-        if (!confirmed) return;
+    window.resetAdjustment = function () {
+        var btn = document.getElementById('reset-adjust-btn');
+        if (window.runChangePlanAction) {
+            return window.runChangePlanAction('reset', { button: btn });
+        }
+        ApiClient.showError('Change-plan UI unavailable.');
+        return Promise.resolve();
+    };
 
+    // Legacy paths preserved for backwards compatibility if anything
+    // unexpected references them — they're never called from the UI.
+    window._legacyResetAdjustment = async function () {
         var btn = document.getElementById('reset-adjust-btn');
         if (btn) { btn.disabled = true; btn.textContent = 'Resetting...'; }
 

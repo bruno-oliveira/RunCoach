@@ -57,6 +57,7 @@ class TrainingPlan(Base):
     last_recalibrated_at = Column(DateTime, nullable=True)
     pending_recommendation = Column(JSON, nullable=True)
     last_recommendation_week = Column(Integer, nullable=True)
+    last_change_plan = Column(JSON, nullable=True)
     share_token = Column(String, unique=True, nullable=True, index=True)
 
     user: Mapped["User"] = relationship("User", back_populates="training_plans")
