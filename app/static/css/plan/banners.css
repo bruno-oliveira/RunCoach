@@ -40,6 +40,63 @@
 
 .btn-close:hover { opacity: 1; background: rgba(255,255,255,0.1); }
 
+/* ---- Auto-adjust Receipt (passive audit, not a CTA) ---- */
+.auto-adjust-receipt {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--space-3);
+    padding: var(--space-3) var(--space-4);
+    margin-bottom: var(--space-5);
+    background: var(--color-bg-elevated);
+    border: 1px solid var(--color-border-subtle);
+    border-left: 3px solid #10b981;
+    border-radius: var(--radius-md);
+    font-size: var(--text-sm);
+}
+
+.auto-adjust-receipt .receipt-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    flex-shrink: 0;
+    border-radius: 50%;
+    background: rgba(16, 185, 129, 0.12);
+    color: #10b981;
+}
+
+.auto-adjust-receipt .receipt-text { flex: 1; color: var(--color-text); }
+.auto-adjust-receipt .receipt-text strong {
+    display: block;
+    font-size: var(--text-sm);
+    margin-bottom: 2px;
+    color: var(--color-text);
+}
+.auto-adjust-receipt .receipt-text p {
+    margin: 0;
+    color: var(--color-text-secondary);
+    font-size: var(--text-xs);
+    line-height: 1.4;
+}
+
+.auto-adjust-receipt .receipt-dismiss {
+    background: none;
+    border: none;
+    color: var(--color-text-secondary);
+    font-size: 1.25rem;
+    line-height: 1;
+    cursor: pointer;
+    padding: var(--space-1) var(--space-2);
+    border-radius: var(--radius-sm);
+    transition: all var(--duration-fast) var(--ease-out);
+}
+
+.auto-adjust-receipt .receipt-dismiss:hover {
+    color: var(--color-text);
+    background: var(--color-bg-subtle);
+}
+
 /* ---- Plan Action Banners (map runs, recalibrate) ---- */
 .plan-action-banner {
     border-radius: var(--radius-xl);

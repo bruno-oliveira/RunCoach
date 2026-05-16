@@ -158,6 +158,26 @@ async def dismiss_alert(
     return {"ok": True}
 
 
+@router.post("/api/plan/{plan_id}/dismiss-auto-adjust-receipt")
+async def dismiss_auto_adjust_receipt(
+    plan_id: str,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Mark the most recent auto_adjust history event as dismissed."""
+    training_plan = get_plan_or_404(
+        plan_id, db, current_user, require_user_match=True
+    )
+    history = list(training_plan.adaptation_history or [])
+    for event in reversed(history):
+        if event.get("type") == "auto_adjust" and not event.get("dismissed"):
+            event["dismissed"] = True
+            training_plan.adaptation_history = history
+            db.commit()
+            return {"ok": True}
+    return {"ok": True, "noop": True}
+
+
 @router.get("/api/plan/{plan_id}/pending-recommendation")
 async def get_pending_recommendation(
     plan_id: str,

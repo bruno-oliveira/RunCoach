@@ -628,6 +628,19 @@
     </div>
     {% endif %}
 
+    {% if user and recent_auto_adjust and not plan_completed %}
+    <div class="auto-adjust-receipt" id="auto-adjust-receipt">
+        <div class="receipt-icon" aria-hidden="true">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+        </div>
+        <div class="receipt-text">
+            <strong>RunCoach auto-adjusted your plan {{ recent_auto_adjust.relative }}</strong>
+            <p>{{ recent_auto_adjust.reason }}</p>
+        </div>
+        <button class="receipt-dismiss" onclick="dismissAutoAdjustReceipt()" aria-label="Dismiss">&times;</button>
+    </div>
+    {% endif %}
+
     {% if user and start_date and training_plan.pending_recommendation and not plan_completed %}
     <div class="pending-recommendation-banner" id="pending-recommendation-banner">
         <div class="recommendation-banner-content">
@@ -846,7 +859,8 @@
         current_user_id: {{ (user.id if user else None) | tojson }},
         share_token: {{ (training_plan.share_token or '') | tojson }},
         adaptation_alert: {{ training_plan.adaptation_alert | tojson }},
-        pending_recommendation: {{ training_plan.pending_recommendation | tojson }}
+        pending_recommendation: {{ training_plan.pending_recommendation | tojson }},
+        recent_auto_adjust: {{ recent_auto_adjust | tojson }}
     };
 
     function showShareToast(msg) {

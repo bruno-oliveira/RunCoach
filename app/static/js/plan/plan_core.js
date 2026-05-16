@@ -301,12 +301,17 @@
                 var data = await response.json();
                 closeLogModal();
 
+                var autoAdjusted = data.auto_adjust && data.auto_adjust.action === 'auto_adjusted' && data.auto_adjust.adjusted;
+
                 if (data.race_comparison) {
                     showRaceComparisonToast(data);
                     setTimeout(function () { reloadPlanPage(); }, 8000);
                 } else if (data.predictions) {
                     showRacePredictionsToast(data);
                     setTimeout(function () { reloadPlanPage(); }, 6000);
+                } else if (autoAdjusted) {
+                    ApiClient.showSuccess('Run logged. ' + (data.auto_adjust.reason || 'Plan auto-adjusted.'));
+                    setTimeout(function () { reloadPlanPage(); }, 3500);
                 } else {
                     ApiClient.showSuccess('Run logged successfully!');
                     setTimeout(function () { reloadPlanPage(); }, 1500);

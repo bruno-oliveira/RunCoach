@@ -299,8 +299,44 @@ def _build_accept_summary(
     return sentence
 
 
+def _build_auto_adjust_reason(
+    *,
+    direction: str,
+    multiplier: float,
+    workouts_changed: int,
+    week_numbers: list,
+    total_km_delta: float,
+    signals: Dict[str, Any],
+) -> str:
+    """Human-readable summary of what auto-adjust actually changed."""
+    if workouts_changed == 0:
+        return "No distances needed adjustment."
+
+    pct = abs(round((multiplier - 1.0) * 100))
+    verb = "Increased" if direction == "increased" else "Reduced"
+    sign = "+" if total_km_delta > 0 else ""
+
+    if week_numbers:
+        first, last = week_numbers[0], week_numbers[-1]
+        weeks_label = (
+            f"week {first}" if first == last else f"weeks {first}–{last}"
+        )
+    else:
+        weeks_label = "remaining weeks"
+
+    workout_label = "workout" if workouts_changed == 1 else "workouts"
+    return (
+        f"{verb} {workouts_changed} {workout_label} across {weeks_label} "
+        f"by ~{pct}% ({sign}{total_km_delta} km total)."
+    )
+
+
 def _record_event(training_plan: TrainingPlan, event: Dict[str, Any]) -> None:
     event["date"] = today_date().isoformat()
+    event.setdefault(
+        "applied_at",
+        datetime.now(timezone.utc).replace(tzinfo=None).isoformat(),
+    )
     history = list(training_plan.adaptation_history or [])
     history.append(event)
     if len(history) > 20:
@@ -422,11 +458,23 @@ def _apply_auto_adjustment(
     if not adjustable_weeks:
         return {"action": "skipped", "reason": "no_remaining_weeks"}
 
+    pre_totals = {w.week_number: (w.total_km or 0.0) for w in adjustable_weeks}
+
     weeks_changed, any_distance_changed, counts = apply_adjustment_to_future_weeks(
         training_plan, adjustable_weeks, multiplier, db,
         current_week=current_week,
         current_day_of_week=current_day_of_week,
         per_type_ratios=signals.get("per_type_ratios"),
+    )
+
+    changed_week_numbers = sorted(
+        w.week_number
+        for w in adjustable_weeks
+        if (w.total_km or 0.0) != pre_totals.get(w.week_number, 0.0)
+    )
+    total_km_delta = round(
+        sum((w.total_km or 0.0) - pre_totals.get(w.week_number, 0.0) for w in adjustable_weeks),
+        1,
     )
 
     vdot_result = None
@@ -443,12 +491,25 @@ def _apply_auto_adjustment(
     direction = (
         "increased" if multiplier > 1.0 else "reduced" if multiplier < 1.0 else "kept"
     )
+    reason = _build_auto_adjust_reason(
+        direction=direction,
+        multiplier=multiplier,
+        workouts_changed=counts["workouts_changed"],
+        week_numbers=changed_week_numbers,
+        total_km_delta=total_km_delta,
+        signals=signals,
+    )
     _record_event(training_plan, {
         "type": "auto_adjust",
         "multiplier": multiplier,
         "direction": direction,
         "confidence": "high",
-        "reason": "Auto-adjusted after run logged.",
+        "applied_at": now.isoformat(),
+        "week_numbers": changed_week_numbers,
+        "weeks_changed": weeks_changed,
+        "workouts_changed": counts["workouts_changed"],
+        "total_km_delta": total_km_delta,
+        "reason": reason,
     })
 
     db.commit()
@@ -463,7 +524,10 @@ def _apply_auto_adjustment(
         "multiplier": multiplier,
         "direction": direction,
         "weeks_changed": weeks_changed,
+        "week_numbers": changed_week_numbers,
         "workouts_changed": counts["workouts_changed"],
+        "total_km_delta": total_km_delta,
+        "reason": reason,
         "adjusted": any_distance_changed or bool(vdot_result),
         "vdot_recalibration": vdot_result,
     }

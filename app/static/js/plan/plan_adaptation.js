@@ -432,6 +432,29 @@
     }
 
     /* -------------------------------------------------------------- */
+    /*  Auto-adjust receipt (passive audit of silent applies)          */
+    /* -------------------------------------------------------------- */
+
+    window.dismissAutoAdjustReceipt = function () {
+        var planId = window.APP_CTX && window.APP_CTX.plan_id;
+        var card = document.getElementById('auto-adjust-receipt');
+        if (card) {
+            card.style.opacity = '0';
+            card.style.transition = 'opacity 0.3s ease';
+            setTimeout(function () { card.remove(); }, 300);
+        }
+        if (window.APP_CTX) window.APP_CTX.recent_auto_adjust = null;
+        if (!planId) return;
+        fetch('/api/plan/' + planId + '/dismiss-auto-adjust-receipt', {
+            method: 'POST',
+            headers: window.authHeaders ? window.authHeaders() : { 'Content-Type': 'application/json' },
+            credentials: 'same-origin'
+        }).catch(function (err) {
+            console.error('[auto-adjust] dismiss receipt failed:', err);
+        });
+    };
+
+    /* -------------------------------------------------------------- */
     /*  Expose init helpers for plan_core.js DOMContentLoaded          */
     /* -------------------------------------------------------------- */
 

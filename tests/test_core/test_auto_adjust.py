@@ -172,6 +172,23 @@ class TestApplyOrPark:
         user.auto_adjust_enabled = True
         db.commit()
 
+        # Snapshot distances before auto-adjust so we can prove they really changed.
+        future_weeks = list(range(4, 9))
+        pre_distances = {
+            (wp.week_number, wo.day_of_week): wo.distance_km
+            for wp in (
+                db.query(WeeklyPlan)
+                .filter(
+                    WeeklyPlan.training_plan_id == plan.id,
+                    WeeklyPlan.week_number.in_(future_weeks),
+                )
+                .all()
+            )
+            for wo in db.query(DailyWorkout)
+            .filter(DailyWorkout.weekly_plan_id == wp.id)
+            .all()
+        }
+
         evaluation = evaluate_on_run_logged(plan.id, user.id, db)
         if evaluation is None:
             pytest.skip("Signals were not strong enough to trigger evaluation")
@@ -182,13 +199,44 @@ class TestApplyOrPark:
         result = apply_or_park(plan.id, user.id, db, evaluation, auto_enabled=True)
         assert result["action"] == "auto_adjusted"
         assert "multiplier" in result
+        # New return-payload fields surfaced to the run-log response
+        assert "reason" in result and result["reason"]
+        assert "week_numbers" in result
+        assert "total_km_delta" in result
 
         db.refresh(plan)
         assert plan.adjustment_multiplier is not None
         history = plan.adaptation_history or []
-        assert any(e.get("type") == "auto_adjust" for e in history)
+        auto_events = [e for e in history if e.get("type") == "auto_adjust"]
+        assert auto_events, "auto_adjust event missing from history"
+        last_event = auto_events[-1]
+        assert last_event.get("applied_at"), "applied_at not stamped on event"
+        assert "week_numbers" in last_event
+        assert "total_km_delta" in last_event
+        assert last_event.get("reason"), "reason not recorded on event"
         # Pending recommendation should be cleared after auto-apply
         assert plan.pending_recommendation is None
+
+        # Critical: prove that future-week DailyWorkout distances actually moved.
+        post_distances = {
+            (wp.week_number, wo.day_of_week): wo.distance_km
+            for wp in (
+                db.query(WeeklyPlan)
+                .filter(
+                    WeeklyPlan.training_plan_id == plan.id,
+                    WeeklyPlan.week_number.in_(future_weeks),
+                )
+                .all()
+            )
+            for wo in db.query(DailyWorkout)
+            .filter(DailyWorkout.weekly_plan_id == wp.id)
+            .all()
+        }
+        changed = [
+            key for key in pre_distances
+            if post_distances.get(key) != pre_distances[key]
+        ]
+        assert changed, "no future workout distances were mutated"
 
     def test_high_confidence_without_auto_parks(self, db):
         user, plan = _make_plan_with_runs(db, effort=9.0, dist_mult=1.3)
