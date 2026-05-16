@@ -6,6 +6,33 @@
 (function () {
     'use strict';
 
+    function _parseResponse(res) {
+        return res.json().catch(function () { return {}; })
+            .then(function (payload) {
+                return { ok: res.ok, status: res.status, payload: payload };
+            });
+    }
+
+    function _toastError(message) {
+        if (typeof ApiClient !== 'undefined' && ApiClient.showError) {
+            ApiClient.showError(message);
+        }
+    }
+
+    function _toastWarning(message) {
+        if (typeof ApiClient !== 'undefined' && ApiClient.showWarning) {
+            ApiClient.showWarning(message);
+        } else if (typeof ApiClient !== 'undefined' && ApiClient.showError) {
+            ApiClient.showError(message);
+        }
+    }
+
+    function _toastSuccess(message) {
+        if (typeof ApiClient !== 'undefined' && ApiClient.showSuccess) {
+            ApiClient.showSuccess(message);
+        }
+    }
+
     /* -------------------------------------------------------------- */
     /*  Adaptation banner                                              */
     /* -------------------------------------------------------------- */
@@ -128,6 +155,9 @@
         var action = actionMap[suggestionType];
         if (!action) return;
 
+        var resetBtn = function () {
+            if (btn) { btn.disabled = false; btn.textContent = 'Accept'; }
+        };
         if (btn) { btn.disabled = true; btn.textContent = 'Applying...'; }
 
         fetch('/api/plan/' + planId + '/week/' + weekNum + '/override', {
@@ -136,19 +166,27 @@
             credentials: 'same-origin',
             body: JSON.stringify({ action: action })
         })
-        .then(function (res) { return res.json(); })
-        .then(function (data) {
-            if (data.ok) {
-                ApiClient.showSuccess('Suggestion applied. Reloading...');
-                setTimeout(function () { window.reloadPlanPage(); }, 1200);
-            } else {
-                ApiClient.showError(data.detail || 'Failed to apply suggestion.');
-                if (btn) { btn.disabled = false; btn.textContent = 'Accept'; }
+        .then(_parseResponse)
+        .then(function (r) {
+            console.log('[acceptSuggestion] response', r);
+            var payload = r.payload || {};
+            if (!r.ok) {
+                _toastError(payload.detail || ('Request failed: ' + r.status));
+                resetBtn();
+                return;
             }
+            if (payload.ok) {
+                _toastSuccess('Suggestion applied. Reloading...');
+                setTimeout(function () { window.reloadPlanPage(); }, 1200);
+                return;
+            }
+            _toastError(payload.detail || 'Failed to apply suggestion.');
+            resetBtn();
         })
         .catch(function (err) {
-            ApiClient.showError('Error: ' + err.message);
-            if (btn) { btn.disabled = false; btn.textContent = 'Accept'; }
+            console.error('[acceptSuggestion] network error', err);
+            _toastError('Error: ' + err.message);
+            resetBtn();
         });
     };
 
@@ -162,15 +200,24 @@
             credentials: 'same-origin',
             body: JSON.stringify({ action: 'reduce_30' })
         })
-        .then(function (res) { return res.json(); })
-        .then(function (data) {
-            if (data.ok) {
-                ApiClient.showSuccess('Week reduced by 30%. Reloading...');
-                setTimeout(function () { window.reloadPlanPage(); }, 1200);
+        .then(_parseResponse)
+        .then(function (r) {
+            console.log('[reduceWeek] response', r);
+            var payload = r.payload || {};
+            if (!r.ok) {
+                _toastError(payload.detail || ('Request failed: ' + r.status));
+                return;
             }
+            if (payload.ok) {
+                _toastSuccess('Week reduced by 30%. Reloading...');
+                setTimeout(function () { window.reloadPlanPage(); }, 1200);
+                return;
+            }
+            _toastError(payload.detail || 'Failed to reduce week.');
         })
         .catch(function (err) {
-            ApiClient.showError('Error: ' + err.message);
+            console.error('[reduceWeek] network error', err);
+            _toastError('Error: ' + err.message);
         });
     };
 
@@ -184,17 +231,24 @@
             credentials: 'same-origin',
             body: JSON.stringify({ action: 'reset_week' })
         })
-        .then(function (res) { return res.json(); })
-        .then(function (data) {
-            if (data.ok) {
-                ApiClient.showSuccess('Week reset to original distances. Reloading...');
-                setTimeout(function () { window.reloadPlanPage(); }, 1200);
-            } else {
-                ApiClient.showError(data.detail || 'Failed to reset week.');
+        .then(_parseResponse)
+        .then(function (r) {
+            console.log('[resetWeek] response', r);
+            var payload = r.payload || {};
+            if (!r.ok) {
+                _toastError(payload.detail || ('Request failed: ' + r.status));
+                return;
             }
+            if (payload.ok) {
+                _toastSuccess('Week reset to original distances. Reloading...');
+                setTimeout(function () { window.reloadPlanPage(); }, 1200);
+                return;
+            }
+            _toastError(payload.detail || 'Failed to reset week.');
         })
         .catch(function (err) {
-            ApiClient.showError('Error: ' + err.message);
+            console.error('[resetWeek] network error', err);
+            _toastError('Error: ' + err.message);
         });
     };
 
@@ -240,20 +294,26 @@
             credentials: 'same-origin',
             body: JSON.stringify({ strategy: strategy })
         })
-        .then(function (res) { return res.json(); })
-        .then(function (data) {
+        .then(_parseResponse)
+        .then(function (r) {
+            console.log('[recalibratePlan] response', r);
+            var payload = r.payload || {};
             var modal = document.getElementById('recalibrate-modal');
-            if (modal) modal.style.display = 'none';
-
-            if (data.ok) {
-                ApiClient.showSuccess(data.reason || 'Plan recalibrated.');
-                setTimeout(function () { window.reloadPlanPage(); }, 1500);
-            } else {
-                ApiClient.showError(data.error || 'Recalibration failed.');
+            if (!r.ok) {
+                _toastError(payload.detail || ('Request failed: ' + r.status));
+                return;
             }
+            if (payload.ok) {
+                if (modal) modal.style.display = 'none';
+                _toastSuccess(payload.reason || 'Plan recalibrated.');
+                setTimeout(function () { window.reloadPlanPage(); }, 1500);
+                return;
+            }
+            _toastError(payload.error || payload.detail || 'Recalibration failed.');
         })
         .catch(function (err) {
-            ApiClient.showError('Error: ' + err.message);
+            console.error('[recalibratePlan] network error', err);
+            _toastError('Error: ' + err.message);
         });
     };
 
@@ -303,6 +363,9 @@
         if (!planId) return;
 
         var btn = document.querySelector('#pending-recommendation-banner .btn-primary');
+        var resetBtn = function () {
+            if (btn) { btn.disabled = false; btn.textContent = 'Accept'; }
+        };
         if (btn) { btn.disabled = true; btn.textContent = 'Applying…'; }
 
         fetch('/api/plan/' + planId + '/accept-recommendation', {
@@ -310,25 +373,27 @@
             headers: window.authHeaders ? window.authHeaders() : { 'Content-Type': 'application/json' },
             credentials: 'same-origin'
         })
-        .then(function (res) { return res.json(); })
-        .then(function (data) {
-            if (data.accepted || data.adjusted) {
-                if (typeof ApiClient !== 'undefined' && ApiClient.showSuccess) {
-                    ApiClient.showSuccess(data.reason || 'Recommendation applied.');
-                }
-                setTimeout(function () { window.location.reload(); }, 1200);
-            } else {
-                if (typeof ApiClient !== 'undefined' && ApiClient.showInfo) {
-                    ApiClient.showInfo(data.reason || 'No changes needed.');
-                }
-                _removeRecommendationBanner();
+        .then(_parseResponse)
+        .then(function (r) {
+            console.log('[acceptRecommendation] response', r);
+            var payload = r.payload || {};
+            if (!r.ok) {
+                _toastError(payload.detail || ('Request failed: ' + r.status));
+                resetBtn();
+                return;
             }
+            if (payload.accepted || payload.adjusted) {
+                _toastSuccess(payload.reason || 'Recommendation applied.');
+                setTimeout(function () { window.location.reload(); }, 1200);
+                return;
+            }
+            _toastWarning(payload.reason || 'Unable to apply recommendation.');
+            resetBtn();
         })
         .catch(function (err) {
-            if (typeof ApiClient !== 'undefined' && ApiClient.showError) {
-                ApiClient.showError('Error: ' + err.message);
-            }
-            if (btn) { btn.disabled = false; btn.textContent = 'Accept'; }
+            console.error('[acceptRecommendation] network error', err);
+            _toastError('Error: ' + err.message);
+            resetBtn();
         });
     };
 

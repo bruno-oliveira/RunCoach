@@ -551,6 +551,7 @@
 
             if (response.ok) {
                 var result = await response.json();
+                console.log('[adjustPlan] response', result);
                 if (result.adjusted) {
                     var msg = result.reason;
                     if (result.overreach_detected) {
@@ -565,7 +566,12 @@
                     ApiClient.showSuccess(msg);
                     setTimeout(function () { reloadPlanPage(); }, 2500);
                 } else {
-                    ApiClient.showInfo(result.reason || 'No adjustment needed.');
+                    var noopMsg = result.reason || 'No adjustment needed.';
+                    if (ApiClient.showWarning) {
+                        ApiClient.showWarning(noopMsg);
+                    } else {
+                        ApiClient.showInfo(noopMsg);
+                    }
                     if (btn) { btn.disabled = false; btn.textContent = 'Adjust Plan'; }
                 }
             } else {

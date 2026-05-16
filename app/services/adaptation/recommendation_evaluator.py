@@ -152,11 +152,11 @@ def accept_recommendation(
     ).first()
 
     if not training_plan:
-        return {"accepted": False, "reason": "Plan not found"}
+        return {"accepted": False, "reason": "We couldn't find that training plan."}
 
     rec = training_plan.pending_recommendation
     if not rec:
-        return {"accepted": False, "reason": "No pending recommendation"}
+        return {"accepted": False, "reason": "There's no pending recommendation to apply — it may have already been accepted or dismissed."}
 
     multiplier = rec.get("multiplier", 1.0)
     per_type_ratios = rec.get("signals", {}).get("per_type_ratios")
@@ -180,7 +180,10 @@ def accept_recommendation(
     if not adjustable_weeks:
         training_plan.pending_recommendation = None
         db.commit()
-        return {"accepted": False, "reason": "No remaining workouts to adjust."}
+        return {
+            "accepted": False,
+            "reason": "All remaining workouts in your plan are already completed or locked — there's nothing left for this recommendation to adjust.",
+        }
 
     weeks_changed, any_distance_changed, counts = apply_adjustment_to_future_weeks(
         training_plan, adjustable_weeks, multiplier, db,
