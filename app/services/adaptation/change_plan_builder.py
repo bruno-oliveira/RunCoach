@@ -196,24 +196,32 @@ def build_change_plan(
             "reason": reason,
         })
 
-    weeks_list: List[Dict[str, Any]] = []
+    all_weeks: List[Dict[str, Any]] = []
     for week in sorted(week_buckets.keys()):
         bucket = week_buckets[week]
         bucket["total_km_before"] = round(bucket["total_km_before"], 1)
         bucket["total_km_after"] = round(bucket["total_km_after"], 1)
         bucket["workouts"].sort(key=lambda w: w["day_num"])
-        weeks_list.append(bucket)
+        all_weeks.append(bucket)
+
+    # Only show weeks that contain at least one workout the user can see
+    # changed. Weeks where everything is protected/unchanged would otherwise
+    # appear in the modal with a misleading delta chip.
+    weeks_list = [
+        wk for wk in all_weeks
+        if any(w["status"] == "changed" for w in wk["workouts"])
+    ]
 
     total_before = round(sum(w["total_km_before"] for w in weeks_list), 1)
     total_after = round(sum(w["total_km_after"] for w in weeks_list), 1)
 
     no_change_reasons: List[str] = []
-    if not weeks_list:
+    if not all_weeks:
         no_change_reasons.append(_reasons.NO_CHANGE_NO_REMAINING_WORKOUTS)
     elif workouts_changed_count == 0:
         if all(
             wo["status"] == "protected"
-            for wk in weeks_list
+            for wk in all_weeks
             for wo in wk["workouts"]
         ):
             no_change_reasons.append(_reasons.NO_CHANGE_ALL_PROTECTED)

@@ -154,7 +154,42 @@
             + '</details>';
     }
 
+    // Belt-and-suspenders normalisation: a stored ChangePlan written
+    // before the server-side display-precision fix may still tag rows
+    // as 'changed' when the rounded km values are identical, or carry
+    // weeks where every workout is protected/unchanged. Strip both so
+    // the UI never advertises an "Increased"/"Reduced" label that the
+    // user can't actually see in the numbers.
+    function normalizeChangePlan(cp) {
+        if (!cp || !cp.weeks) return cp;
+        var changedCount = 0;
+        var protectedCount = 0;
+        var visibleWeeks = [];
+        cp.weeks.forEach(function (week) {
+            (week.workouts || []).forEach(function (wo) {
+                if (wo.status === 'changed' && wo.old_distance_km === wo.new_distance_km) {
+                    wo.status = 'unchanged';
+                    wo.delta_km = 0;
+                }
+                if (wo.status === 'changed') changedCount++;
+                else if (wo.status === 'protected') protectedCount++;
+            });
+            var hasChange = (week.workouts || []).some(function (wo) {
+                return wo.status === 'changed';
+            });
+            if (hasChange) visibleWeeks.push(week);
+        });
+        cp.weeks = visibleWeeks;
+        if (cp.summary) {
+            cp.summary.workouts_changed_count = changedCount;
+            cp.summary.workouts_protected_count = protectedCount;
+            cp.summary.weeks_affected = visibleWeeks.map(function (w) { return w.week; });
+        }
+        return cp;
+    }
+
     function renderChangePlanBody(cp) {
+        normalizeChangePlan(cp);
         var summary = cp.summary || {};
         var anyChange = summary.workouts_changed_count > 0 || (cp.summary && cp.summary.vdot_change);
 
@@ -478,7 +513,12 @@
     function bootstrap() {
         var data = window.LAST_CHANGE_PLAN;
         if (data && data.summary && data.seen === false) {
-            openChangePlanModalForApplied(data);
+            // Normalize first so a stale plan with no visible changes
+            // doesn't auto-pop an effectively empty modal.
+            normalizeChangePlan(data);
+            if (data.summary && data.summary.workouts_changed_count > 0) {
+                openChangePlanModalForApplied(data);
+            }
         }
         // Hook persistent panel "View details" link
         document.querySelectorAll('[data-change-plan-view]').forEach(function (link) {
