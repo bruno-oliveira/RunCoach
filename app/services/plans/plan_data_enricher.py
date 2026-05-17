@@ -147,25 +147,27 @@ def enrich_plan_data_with_ids(
             _repair_key_workout_steps(workout)
 
             steps = workout.get("steps")
-            if not isinstance(steps, list) or not steps:
-                continue
+            if isinstance(steps, list) and steps:
+                steps_distance_km = _compute_distance_from_steps(steps)
+                if steps_distance_km > 0:
+                    rounded_steps_km = round(steps_distance_km, 1)
+                    current_distance = workout.get("distance", 0) or 0
+                    if current_distance <= 0 or abs(current_distance - rounded_steps_km) > 0.2:
+                        workout["distance"] = rounded_steps_km
 
-            steps_distance_km = _compute_distance_from_steps(steps)
-            if steps_distance_km > 0:
-                rounded_steps_km = round(steps_distance_km, 1)
-                current_distance = workout.get("distance", 0) or 0
-                if current_distance <= 0 or abs(current_distance - rounded_steps_km) > 0.2:
-                    workout["distance"] = rounded_steps_km
+                distance = workout.get("distance", 0) or 0
+                if 0 < distance < _DURATION_HINT_THRESHOLD_KM:
+                    est_min = _estimate_duration_min_from_steps(
+                        steps,
+                        workout.get("type", "easy"),
+                    )
+                    if est_min is not None:
+                        workout["duration_min"] = est_min
 
-            distance = workout.get("distance", 0) or 0
-            if 0 < distance < _DURATION_HINT_THRESHOLD_KM:
-                est_min = _estimate_duration_min_from_steps(
-                    steps,
-                    workout.get("type", "easy"),
-                )
-                if est_min is not None:
-                    workout["duration_min"] = est_min
-
+            # Surface the baseline so workout_item.html can render the
+            # "adjusted from X km" chip. Must run for every workout — easy
+            # runs typically have no `steps`, so the prior early-continue
+            # was hiding the chip on exactly the rows the adjuster touches.
             if bl is not None and bl != workout.get("distance"):
                 workout["baseline_distance"] = bl
 

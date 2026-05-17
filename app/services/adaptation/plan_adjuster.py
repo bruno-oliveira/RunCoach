@@ -328,7 +328,25 @@ def _run_adjust(
     phase_weights = signals.get("phase_weights", {})
 
     direction = "increased" if multiplier > 1.0 else "reduced" if multiplier < 1.0 else "kept"
-    reason_parts = [f"Remaining workouts {direction} (x{multiplier})."]
+    # The user-facing verb has to track the actual net change. A baseline-
+    # relative multiplier below 1.0 can still produce a net increase when a
+    # previous, more aggressive adjustment had pulled distances further down
+    # — so the modal showed "Reduced ... +26 km" until this was decoupled.
+    net_delta_km = round(
+        sum(
+            (after.get(wid, {}).get("distance_km", 0.0)
+             - before.get(wid, {}).get("distance_km", 0.0))
+            for wid in set(before) | set(after)
+        ),
+        1,
+    )
+    if net_delta_km > 0.05:
+        verb = "increased"
+    elif net_delta_km < -0.05:
+        verb = "reduced"
+    else:
+        verb = "kept"
+    reason_parts = [f"Remaining workouts {verb} (x{multiplier})."]
     reason_parts.append(
         f"Volume ratio: {round(volume_ratio, 2)}, "
         f"completion: {round(completion_rate * 100)}%."

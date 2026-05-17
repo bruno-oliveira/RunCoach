@@ -256,13 +256,6 @@ def _run_accept(
     after = snapshot_workouts(training_plan, db, week_numbers=week_numbers)
 
     direction = rec.get("direction", "kept")
-    summary = _build_accept_summary(
-        direction=direction,
-        multiplier=multiplier,
-        weeks_changed=weeks_changed,
-        workouts_changed=counts["workouts_changed"],
-        workouts_skipped_protected=counts["workouts_skipped_protected"],
-    )
 
     vdot_change_payload = None
     if vdot_result:
@@ -272,6 +265,8 @@ def _run_accept(
             "direction": vdot_result.get("direction"),
         }
 
+    # Build change_plan first so the headline reason uses the same
+    # display-rounded counts and net delta the user sees in the modal.
     change_plan = build_change_plan(
         action="accept_recommendation",
         mode=mode,
@@ -287,10 +282,24 @@ def _run_accept(
         },
         multiplier=multiplier,
         vdot_change=vdot_change_payload,
-        headline_reason=summary,
+        headline_reason=None,
         current_week=current_week,
         current_day_of_week=current_day_of_week,
     )
+
+    cp_summary = change_plan.get("summary", {})
+    canonical_workouts_changed = cp_summary.get(
+        "workouts_changed_count", counts["workouts_changed"]
+    )
+    canonical_total_km_delta = cp_summary.get("total_km_delta", 0.0)
+
+    summary = _build_accept_summary(
+        weeks_changed=weeks_changed,
+        workouts_changed=canonical_workouts_changed,
+        workouts_skipped_protected=counts["workouts_skipped_protected"],
+        total_km_delta=canonical_total_km_delta,
+    )
+    change_plan["reason"] = summary
 
     if mode == "applied":
         now = datetime.now(timezone.utc).replace(tzinfo=None)
@@ -312,7 +321,7 @@ def _run_accept(
         "adjusted": any_distance_changed or bool(vdot_result),
         "multiplier": multiplier,
         "weeks_changed": weeks_changed,
-        "workouts_changed": counts["workouts_changed"],
+        "workouts_changed": canonical_workouts_changed,
         "workouts_skipped_protected": counts["workouts_skipped_protected"],
         "reason": summary,
         "change_plan": change_plan,
@@ -354,13 +363,28 @@ def dismiss_recommendation(
     return {"dismissed": True}
 
 
+def _verb_from_delta(total_km_delta: float) -> str:
+    """Pick the user-facing verb from the actual net km change.
+
+    The internal `multiplier` is baseline-relative, so a sub-1.0 multiplier
+    can still produce a net increase when a prior, more aggressive
+    adjustment had pulled distances below baseline. The headline verb has
+    to reflect what the user sees on the row (old → new), not the sign of
+    the multiplier.
+    """
+    if total_km_delta > 0.05:
+        return "Increased"
+    if total_km_delta < -0.05:
+        return "Reduced"
+    return "Adjusted"
+
+
 def _build_accept_summary(
     *,
-    direction: str,
-    multiplier: float,
     weeks_changed: int,
     workouts_changed: int,
     workouts_skipped_protected: int,
+    total_km_delta: float,
 ) -> str:
     """Human-readable summary of what an accepted recommendation actually did."""
     if workouts_changed == 0:
@@ -371,11 +395,12 @@ def _build_accept_summary(
             )
         return "No distances needed adjustment."
 
-    pct = abs(round((multiplier - 1.0) * 100))
-    verb = "Increased" if direction in ("increase", "increased") else "Reduced"
+    verb = _verb_from_delta(total_km_delta)
+    sign = "+" if total_km_delta > 0 else ""
     sentence = (
         f"{verb} {workouts_changed} workout{'s' if workouts_changed != 1 else ''} "
-        f"by ~{pct}% across {weeks_changed} week{'s' if weeks_changed != 1 else ''}."
+        f"across {weeks_changed} week{'s' if weeks_changed != 1 else ''} "
+        f"({sign}{total_km_delta} km total)."
     )
     if workouts_skipped_protected > 0:
         sentence += (
@@ -387,19 +412,15 @@ def _build_accept_summary(
 
 def _build_auto_adjust_reason(
     *,
-    direction: str,
-    multiplier: float,
     workouts_changed: int,
     week_numbers: list,
     total_km_delta: float,
-    signals: Dict[str, Any],
 ) -> str:
     """Human-readable summary of what auto-adjust actually changed."""
     if workouts_changed == 0:
         return "No distances needed adjustment."
 
-    pct = abs(round((multiplier - 1.0) * 100))
-    verb = "Increased" if direction == "increased" else "Reduced"
+    verb = _verb_from_delta(total_km_delta)
     sign = "+" if total_km_delta > 0 else ""
 
     if week_numbers:
@@ -413,7 +434,7 @@ def _build_auto_adjust_reason(
     workout_label = "workout" if workouts_changed == 1 else "workouts"
     return (
         f"{verb} {workouts_changed} {workout_label} across {weeks_label} "
-        f"by ~{pct}% ({sign}{total_km_delta} km total)."
+        f"({sign}{total_km_delta} km total)."
     )
 
 
@@ -583,14 +604,6 @@ def _apply_auto_adjustment(
     direction = (
         "increased" if multiplier > 1.0 else "reduced" if multiplier < 1.0 else "kept"
     )
-    reason = _build_auto_adjust_reason(
-        direction=direction,
-        multiplier=multiplier,
-        workouts_changed=counts["workouts_changed"],
-        week_numbers=changed_week_numbers,
-        total_km_delta=total_km_delta,
-        signals=signals,
-    )
 
     vdot_change_payload = None
     if vdot_result:
@@ -600,6 +613,11 @@ def _apply_auto_adjustment(
             "direction": vdot_result.get("direction"),
         }
 
+    # Build change_plan first so the headline reason references the same
+    # display-rounded counts and net delta the user sees in the stat cards.
+    # Using the raw week_adjuster counter here would let the headline read
+    # "Reduced 38 workouts (+26 km)" while the card shows 32 — and the
+    # multiplier-derived verb would call a net increase a "Reduction".
     change_plan = build_change_plan(
         action="auto_adjust",
         mode="applied",
@@ -619,10 +637,26 @@ def _apply_auto_adjustment(
         },
         multiplier=multiplier,
         vdot_change=vdot_change_payload,
-        headline_reason=reason,
+        headline_reason=None,
         current_week=current_week,
         current_day_of_week=current_day_of_week,
     )
+
+    cp_summary = change_plan.get("summary", {})
+    canonical_workouts_changed = cp_summary.get(
+        "workouts_changed_count", counts["workouts_changed"]
+    )
+    canonical_total_km_delta = cp_summary.get(
+        "total_km_delta", total_km_delta
+    )
+    canonical_weeks = cp_summary.get("weeks_affected") or changed_week_numbers
+
+    reason = _build_auto_adjust_reason(
+        workouts_changed=canonical_workouts_changed,
+        week_numbers=canonical_weeks,
+        total_km_delta=canonical_total_km_delta,
+    )
+    change_plan["reason"] = reason
     training_plan.last_change_plan = change_plan
 
     _record_event(training_plan, {
@@ -631,10 +665,10 @@ def _apply_auto_adjustment(
         "direction": direction,
         "confidence": "high",
         "applied_at": now.isoformat(),
-        "week_numbers": changed_week_numbers,
+        "week_numbers": canonical_weeks,
         "weeks_changed": weeks_changed,
-        "workouts_changed": counts["workouts_changed"],
-        "total_km_delta": total_km_delta,
+        "workouts_changed": canonical_workouts_changed,
+        "total_km_delta": canonical_total_km_delta,
         "reason": reason,
     })
 
@@ -650,9 +684,9 @@ def _apply_auto_adjustment(
         "multiplier": multiplier,
         "direction": direction,
         "weeks_changed": weeks_changed,
-        "week_numbers": changed_week_numbers,
-        "workouts_changed": counts["workouts_changed"],
-        "total_km_delta": total_km_delta,
+        "week_numbers": canonical_weeks,
+        "workouts_changed": canonical_workouts_changed,
+        "total_km_delta": canonical_total_km_delta,
         "reason": reason,
         "adjusted": any_distance_changed or bool(vdot_result),
         "vdot_recalibration": vdot_result,

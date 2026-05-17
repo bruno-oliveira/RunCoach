@@ -414,3 +414,102 @@ class TestFacadeIntegration:
         assert hasattr(svc, "evaluate_recommendation")
         assert hasattr(svc, "accept_recommendation")
         assert hasattr(svc, "dismiss_recommendation")
+
+
+class TestReasonBuilders:
+    """Regression tests for the user-facing reason text.
+
+    The internal multiplier is baseline-relative, so a sub-1.0 multiplier
+    can still produce a net increase when a previous, more aggressive
+    adjustment had pulled distances below baseline. The reason text must
+    track the actual net km delta the user sees on the row, not the sign
+    of the multiplier-vs-1.0.
+    """
+
+    def test_auto_adjust_reason_uses_increased_when_net_delta_positive(self):
+        from app.services.adaptation.recommendation_evaluator import (
+            _build_auto_adjust_reason,
+        )
+
+        reason = _build_auto_adjust_reason(
+            workouts_changed=32,
+            week_numbers=[5, 6, 7, 18],
+            total_km_delta=26.2,
+        )
+
+        assert reason.startswith("Increased")
+        assert "+26.2 km" in reason
+        assert "Reduced" not in reason
+        # We dropped the misleading baseline-relative "~X%" — the user
+        # already sees the net delta and the multiplier card separately.
+        assert "%" not in reason
+
+    def test_auto_adjust_reason_uses_reduced_when_net_delta_negative(self):
+        from app.services.adaptation.recommendation_evaluator import (
+            _build_auto_adjust_reason,
+        )
+
+        reason = _build_auto_adjust_reason(
+            workouts_changed=10,
+            week_numbers=[3, 4],
+            total_km_delta=-12.5,
+        )
+
+        assert reason.startswith("Reduced")
+        assert "-12.5 km" in reason
+
+    def test_accept_summary_uses_increased_when_net_delta_positive(self):
+        from app.services.adaptation.recommendation_evaluator import (
+            _build_accept_summary,
+        )
+
+        summary = _build_accept_summary(
+            weeks_changed=14,
+            workouts_changed=32,
+            workouts_skipped_protected=19,
+            total_km_delta=26.2,
+        )
+
+        assert summary.startswith("Increased")
+        assert "+26.2 km" in summary
+        assert "19 key/tempo/interval" in summary
+
+    def test_accept_summary_uses_reduced_when_net_delta_negative(self):
+        from app.services.adaptation.recommendation_evaluator import (
+            _build_accept_summary,
+        )
+
+        summary = _build_accept_summary(
+            weeks_changed=4,
+            workouts_changed=8,
+            workouts_skipped_protected=0,
+            total_km_delta=-5.5,
+        )
+
+        assert summary.startswith("Reduced")
+        assert "-5.5 km" in summary
+        # No protected workouts means no trailing preservation sentence.
+        assert "preserved" not in summary
+
+    def test_reasons_handle_no_op_zero_delta(self):
+        from app.services.adaptation.recommendation_evaluator import (
+            _build_auto_adjust_reason,
+            _build_accept_summary,
+        )
+
+        reason = _build_auto_adjust_reason(
+            workouts_changed=4,
+            week_numbers=[2],
+            total_km_delta=0.0,
+        )
+        # Sub-0.05 net deltas read as "Adjusted" rather than mislabelling
+        # the change as a reduction or increase.
+        assert reason.startswith("Adjusted")
+
+        summary = _build_accept_summary(
+            weeks_changed=1,
+            workouts_changed=4,
+            workouts_skipped_protected=0,
+            total_km_delta=0.0,
+        )
+        assert summary.startswith("Adjusted")

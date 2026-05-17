@@ -301,7 +301,15 @@
                 var data = await response.json();
                 closeLogModal();
 
-                var autoAdjusted = data.auto_adjust && data.auto_adjust.action === 'auto_adjusted' && data.auto_adjust.adjusted;
+                var aa = data.auto_adjust || {};
+                var autoAdjusted = aa.action === 'auto_adjusted' && aa.adjusted;
+                var parkedRec = aa.action === 'parked';
+                // The engine evaluated the run but did not change the plan.
+                // Surfacing this — instead of silence — answers the
+                // "did anything look at my run?" question without nagging.
+                var reviewedNoChange = aa.action === 'no_change_needed'
+                    || aa.action === 'skipped'
+                    || aa.action === 'throttled';
 
                 if (data.race_comparison) {
                     showRaceComparisonToast(data);
@@ -310,8 +318,14 @@
                     showRacePredictionsToast(data);
                     setTimeout(function () { reloadPlanPage(); }, 6000);
                 } else if (autoAdjusted) {
-                    ApiClient.showSuccess('Run logged. ' + (data.auto_adjust.reason || 'Plan auto-adjusted.'));
+                    ApiClient.showSuccess('Run logged. ' + (aa.reason || 'Plan auto-adjusted.'));
                     setTimeout(function () { reloadPlanPage(); }, 3500);
+                } else if (parkedRec) {
+                    ApiClient.showSuccess('Run logged. Plan reviewed — a suggestion is waiting on your plan.');
+                    setTimeout(function () { reloadPlanPage(); }, 2500);
+                } else if (reviewedNoChange) {
+                    ApiClient.showSuccess('Run logged. Plan reviewed — no change needed.');
+                    setTimeout(function () { reloadPlanPage(); }, 1500);
                 } else {
                     ApiClient.showSuccess('Run logged successfully!');
                     setTimeout(function () { reloadPlanPage(); }, 1500);
