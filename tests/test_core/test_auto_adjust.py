@@ -290,3 +290,207 @@ class TestFacadeExposesAutoAdjust:
         svc = AdaptationService()
         assert hasattr(svc, "evaluate_on_run_logged")
         assert hasattr(svc, "apply_or_park")
+
+
+def _make_week1_plan_with_runs(db, *, runs_in_week_1=3, effort=9.0, dist_mult=1.3):
+    """Same shape as _make_plan_with_runs but the plan started this week.
+
+    With start_date = today, the engine sees current_week == 1 and the
+    last-completed-week run count is 0 (or whatever we explicitly seed
+    into the prior week — which doesn't exist for week 1).
+    """
+    user = User(id=_uid(), email=f"{_uid()[:8]}@test.com")
+    db.add(user)
+    db.flush()
+
+    start = _now()
+    plan_data = []
+    for wk in range(1, 9):
+        plan_data.append({
+            "week": wk,
+            "total_km": 30,
+            "phase": "build",
+            "daily_workouts": [
+                {"day": 1, "type": "easy", "distance": 8.0},
+                {"day": 2, "type": "tempo", "distance": 8.0},
+                {"day": 3, "type": "long", "distance": 14.0},
+            ],
+        })
+
+    plan = TrainingPlan(
+        id=_uid(),
+        user_id=user.id,
+        current_weekly_km=30,
+        target_distance="21.1",
+        weeks_duration=8,
+        vdot=50.0,
+        start_date=start,
+        plan_data=plan_data,
+    )
+    db.add(plan)
+    db.flush()
+
+    for wk in range(1, 9):
+        wp = WeeklyPlan(id=_uid(), training_plan_id=plan.id, week_number=wk, total_km=30)
+        db.add(wp)
+        db.flush()
+        for i, (wtype, dist) in enumerate([("easy", 8.0), ("tempo", 8.0), ("long", 14.0)]):
+            wo = DailyWorkout(
+                id=_uid(),
+                weekly_plan_id=wp.id,
+                day_of_week=i + 1,
+                workout_type=wtype,
+                distance_km=dist,
+                baseline_distance_km=dist,
+            )
+            db.add(wo)
+    db.flush()
+
+    wp1 = db.query(WeeklyPlan).filter(
+        WeeklyPlan.training_plan_id == plan.id,
+        WeeklyPlan.week_number == 1,
+    ).one()
+    week1_workouts = (
+        db.query(DailyWorkout)
+        .filter(DailyWorkout.weekly_plan_id == wp1.id)
+        .order_by(DailyWorkout.day_of_week)
+        .all()
+    )
+    for wo in week1_workouts[:runs_in_week_1]:
+        run_date = start + timedelta(days=wo.day_of_week - 1)
+        db.add(RunLog(
+            id=_uid(),
+            user_id=user.id,
+            training_plan_id=plan.id,
+            daily_workout_id=wo.id,
+            date=run_date,
+            distance_km=(wo.distance_km or 0) * dist_mult,
+            duration_minutes=50,
+            perceived_effort=effort,
+            workout_type=wo.workout_type,
+        ))
+    db.commit()
+    return user, plan
+
+
+class TestEarlyPlanFloor:
+    """The auto-apply gate: don't sweep-mutate a plan from a noisy week-1 sample."""
+
+    def test_week_1_high_confidence_is_parked_not_applied(self, db):
+        user, plan = _make_week1_plan_with_runs(db)
+        user.auto_adjust_enabled = True
+        db.commit()
+
+        evaluation = {
+            "plan_id": plan.id,
+            "confidence": "high",
+            "multiplier": 0.85,
+            "signals": {"overreach_detected": True},
+            "training_plan": plan,
+            "current_week": 1,
+            "current_day_of_week": 4,
+            "adjustable_weeks": [],
+        }
+        result = apply_or_park(plan.id, user.id, db, evaluation, auto_enabled=True)
+        assert result["action"] == "parked"
+        assert result.get("gated_reason") == "early_plan_floor"
+
+        db.refresh(plan)
+        assert plan.adjustment_multiplier is None
+        assert plan.pending_recommendation is not None
+
+    def test_week_2_with_runs_in_week_1_passes_floor(self, db):
+        user, plan = _make_week1_plan_with_runs(db, runs_in_week_1=2)
+        user.auto_adjust_enabled = True
+        # Backdate the plan one week so current_week == 2 and week 1 has runs.
+        plan.start_date = _now() - timedelta(weeks=1)
+        # Backdate the runs that were just inserted, so they fall inside week 1.
+        for run in db.query(RunLog).filter(RunLog.training_plan_id == plan.id).all():
+            run.date = plan.start_date + timedelta(days=run.date.weekday())
+        db.commit()
+
+        evaluation = {
+            "plan_id": plan.id,
+            "confidence": "high",
+            "multiplier": 0.85,
+            "signals": {"overreach_detected": True, "per_type_ratios": {}},
+            "training_plan": plan,
+            "current_week": 2,
+            "current_day_of_week": 1,
+            "adjustable_weeks": list(
+                db.query(WeeklyPlan).filter(
+                    WeeklyPlan.training_plan_id == plan.id,
+                    WeeklyPlan.week_number >= 2,
+                ).all()
+            ),
+        }
+        result = apply_or_park(plan.id, user.id, db, evaluation, auto_enabled=True)
+        assert result["action"] == "auto_adjusted"
+
+    def test_week_2_without_enough_prior_runs_is_parked(self, db):
+        user, plan = _make_week1_plan_with_runs(db, runs_in_week_1=1)
+        user.auto_adjust_enabled = True
+        plan.start_date = _now() - timedelta(weeks=1)
+        for run in db.query(RunLog).filter(RunLog.training_plan_id == plan.id).all():
+            run.date = plan.start_date + timedelta(days=run.date.weekday())
+        db.commit()
+
+        evaluation = {
+            "plan_id": plan.id,
+            "confidence": "high",
+            "multiplier": 0.85,
+            "signals": {"overreach_detected": True},
+            "training_plan": plan,
+            "current_week": 2,
+            "current_day_of_week": 1,
+            "adjustable_weeks": [],
+        }
+        result = apply_or_park(plan.id, user.id, db, evaluation, auto_enabled=True)
+        assert result["action"] == "parked"
+        assert result.get("gated_reason") == "early_plan_floor"
+
+
+class TestPlanDataPersistsAfterAutoAdjust:
+    """Regression: JSON plan_data must reflect new per-day distances on reload.
+
+    The plan grid renders from training_plan.plan_data (JSON column), not
+    from the DailyWorkout rows. SQLAlchemy's default JSON type doesn't track
+    in-place mutations, so without persist_json the per-day distances would
+    silently revert when the row is re-read.
+    """
+
+    def test_plan_data_json_reflects_new_distances_after_commit(self, db):
+        user, plan = _make_plan_with_runs(db, effort=9.0, dist_mult=1.3)
+        user.auto_adjust_enabled = True
+        db.commit()
+
+        # Snapshot the original per-day distances from the JSON column.
+        pre_json = {
+            (w["week"], wo["day"]): wo["distance"]
+            for w in plan.plan_data
+            for wo in w["daily_workouts"]
+        }
+
+        evaluation = evaluate_on_run_logged(plan.id, user.id, db)
+        if evaluation is None:
+            pytest.skip("Signals not strong enough to trigger evaluation")
+        evaluation["confidence"] = "high"
+
+        result = apply_or_park(plan.id, user.id, db, evaluation, auto_enabled=True)
+        assert result["action"] == "auto_adjusted"
+
+        # Expire all in-session state so we read genuinely-fresh data
+        # from the DB — this is what a subsequent page render would see.
+        db.expire_all()
+        refreshed = db.query(TrainingPlan).filter(TrainingPlan.id == plan.id).one()
+        post_json = {
+            (w["week"], wo["day"]): wo["distance"]
+            for w in refreshed.plan_data
+            for wo in w["daily_workouts"]
+        }
+
+        changed = [k for k in pre_json if post_json.get(k) != pre_json[k]]
+        assert changed, (
+            "plan_data JSON did not reflect any auto-adjust distance changes "
+            "after commit — the plan grid would still show stale distances."
+        )

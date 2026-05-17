@@ -15,6 +15,7 @@ from app.services.fitness.gap_analysis_service import GapAnalysisService
 from app.services.plans.plan_helpers import get_plan_or_404
 from app.services.fitness.readiness_service import ReadinessService
 from app.services.plans.week_adjustment_service import apply_week_action
+from app.utils import persist_json
 
 logger = logging.getLogger(__name__)
 
@@ -199,6 +200,7 @@ async def dismiss_auto_adjust_receipt(
         if event.get("type") == "auto_adjust" and not event.get("dismissed"):
             event["dismissed"] = True
             training_plan.adaptation_history = history
+            persist_json(training_plan, "adaptation_history")
             db.commit()
             return {"ok": True}
     return {"ok": True, "noop": True}
@@ -309,6 +311,7 @@ async def override_plan_week(
     apply_week_action(body.action, training_plan, plan_data, week_data, week_number, plan_id, db)
 
     training_plan.plan_data = plan_data
+    persist_json(training_plan, "plan_data")
     db.commit()
 
     return {"ok": True, "action": body.action, "week": week_number}
@@ -415,6 +418,7 @@ async def swap_plan_days(
             )
 
     training_plan.plan_data = plan_data
+    persist_json(training_plan, "plan_data")
     db.commit()
 
     return {"ok": True}

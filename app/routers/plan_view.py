@@ -21,7 +21,7 @@ from app.services.fitness.performance_service import PerformanceService
 from app.services.plans.plan_helpers import get_plan_or_404, plan_view_context
 from app.services.plans.plan_service import PlanService
 from app.template_helpers import create_templates
-from app.utils import format_pace
+from app.utils import format_pace, persist_json
 
 logger = logging.getLogger(__name__)
 
@@ -88,6 +88,7 @@ async def view_plan(
                     )
                     HRZoneService.inject_hr_zones_into_plan_data(plan_data, zones)
                     training_plan.plan_data = plan_data
+                    persist_json(training_plan, "plan_data")
                     db.commit()
             except Exception as e:
                 logger.warning(f"Retroactive HR zone computation failed: {e}")

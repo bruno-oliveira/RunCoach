@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session
 
 from app.models import TrainingPlan, WeeklyPlan
 from app.core.training import workout_steps as _steps_mod
-from app.utils import to_date as _to_date
+from app.utils import persist_json, to_date as _to_date
 
 from ._helpers import batch_workouts_by_week, parse_plan_data_lookups, today_date
 from .missed_week_handler import detect_missed_weeks, recalibrate_missed_week
@@ -149,6 +149,7 @@ def recalibrate(
                 pd_wo["distance"] = workout.distance_km
 
     training_plan.plan_data = plan_data
+    persist_json(training_plan, "plan_data")
     training_plan.adaptation_alert = None
     now = datetime.now(timezone.utc).replace(tzinfo=None)
     training_plan.last_adjusted_at = now

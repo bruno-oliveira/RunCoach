@@ -4,9 +4,20 @@ import re
 from datetime import date, datetime, timedelta, timezone
 from typing import Optional, Union
 
+from sqlalchemy.orm.attributes import flag_modified
+
 
 _TAG_RE = re.compile(r"<[^>]*>")
 _CONTROL_RE = re.compile(r"[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]")
+
+
+def persist_json(instance, attr_name: str) -> None:
+    # SQLAlchemy's default JSON column type doesn't observe in-place
+    # mutations, and reassigning the same Python reference doesn't flag the
+    # column dirty either — so any nested dict/list edit (e.g. mutating
+    # plan_data[w]["daily_workouts"][i]["distance"]) is silently dropped at
+    # commit. Call this after such mutations to force a write.
+    flag_modified(instance, attr_name)
 
 
 def sanitize_user_text(value: Optional[str]) -> Optional[str]:

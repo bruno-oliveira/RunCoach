@@ -6,6 +6,7 @@ from typing import Any, Dict
 from sqlalchemy.orm import Session
 
 from app.models import TrainingPlan
+from app.utils import persist_json
 
 
 def recalibrate_recovery_insertion(
@@ -58,6 +59,7 @@ def recalibrate_recovery_insertion(
         pd_week[target_week_num]["recovery_inserted"] = True
 
     training_plan.plan_data = plan_data
+    persist_json(training_plan, "plan_data")
     training_plan.adaptation_alert = None
     now = datetime.now(timezone.utc).replace(tzinfo=None)
     training_plan.last_adjusted_at = now

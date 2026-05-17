@@ -10,7 +10,7 @@ from app.models import DailyWorkout, ReadinessLog, RunLog, RunFeedback, Training
 from app.services.fitness.race_predictor_service import RacePredictorService
 from app.services.fitness.readiness_scoring import score_mountain_simulation
 from app.services.fitness.training_load_service import TrainingLoadService
-from app.utils import to_date as _to_date
+from app.utils import persist_json, to_date as _to_date
 
 from . import change_reasons as _reasons
 from ._helpers import (
@@ -601,6 +601,7 @@ def _run_reset(
                 pd_week[week.week_number]["total_km"] = new_total
 
     training_plan.plan_data = plan_data
+    persist_json(training_plan, "plan_data")
 
     after = snapshot_workouts(training_plan, db)
 

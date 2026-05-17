@@ -11,7 +11,7 @@ from typing import Any, Dict, Optional
 
 from sqlalchemy.orm import Session
 
-from app.models import TrainingPlan
+from app.models import RunLog, TrainingPlan
 from app.utils import to_date as _to_date
 
 from . import change_reasons as _reasons
@@ -34,6 +34,15 @@ AUTO_ADJUST_THROTTLE = timedelta(hours=24)
 # Confidence thresholds for the auto-adjust decision.
 _HIGH_CONFIDENCE_DELTA = 0.05
 _MED_CONFIDENCE_DELTA = 0.05
+
+# Early-plan floor for high-confidence auto-apply.
+# With only a handful of runs in week 1, per-type ratios are noisy: one rough
+# long run can swing the multiplier enough to sweep-reduce every remaining
+# week. Require at least one fully-completed week with enough runs in it
+# before the engine is allowed to auto-mutate; the same evaluation can still
+# be surfaced as a parked recommendation the user can accept by hand.
+_AUTO_APPLY_MIN_CURRENT_WEEK = 2
+_AUTO_APPLY_MIN_RUNS_LAST_WEEK = 2
 
 
 def evaluate_weekly_recommendation(
@@ -509,7 +518,7 @@ def apply_or_park(
 ) -> Dict[str, Any]:
     """Either auto-apply the adjustment or write a pending recommendation.
 
-    - High confidence + auto_enabled (+ not throttled) → apply.
+    - High confidence + auto_enabled (+ not throttled + past early-plan floor) → apply.
     - Otherwise → write pending recommendation (existing path).
     - Low confidence → no-op.
     """
@@ -535,6 +544,17 @@ def apply_or_park(
             return {"action": "throttled", "reason": "recently_adjusted"}
 
     if confidence == "high" and auto_enabled:
+        if not _passes_early_plan_floor(training_plan, evaluation, db):
+            # Park as a pending recommendation; the user can still accept it
+            # manually, but a noisy week-1 sample won't sweep-mutate the
+            # remaining plan.
+            parked = _park_recommendation(
+                training_plan=training_plan,
+                evaluation=evaluation,
+                db=db,
+            )
+            parked["gated_reason"] = "early_plan_floor"
+            return parked
         return _apply_auto_adjustment(
             training_plan=training_plan,
             user_id=user_id,
@@ -547,6 +567,42 @@ def apply_or_park(
         evaluation=evaluation,
         db=db,
     )
+
+
+def _passes_early_plan_floor(
+    training_plan: TrainingPlan,
+    evaluation: Dict[str, Any],
+    db: Session,
+) -> bool:
+    """Block high-confidence auto-apply until the plan has enough signal.
+
+    Requires the plan to be in week 2+ AND for the most recently completed
+    week to contain at least `_AUTO_APPLY_MIN_RUNS_LAST_WEEK` logged runs.
+    """
+    current_week = evaluation.get("current_week") or 1
+    if current_week < _AUTO_APPLY_MIN_CURRENT_WEEK:
+        return False
+    if not training_plan.start_date:
+        return False
+
+    start_date = _to_date(training_plan.start_date)
+    last_completed_week = current_week - 1
+    week_start = datetime.combine(
+        start_date + timedelta(weeks=last_completed_week - 1),
+        datetime.min.time(),
+    )
+    week_end = week_start + timedelta(days=7)
+
+    runs_in_last_week = (
+        db.query(RunLog)
+        .filter(
+            RunLog.training_plan_id == training_plan.id,
+            RunLog.date >= week_start,
+            RunLog.date < week_end,
+        )
+        .count()
+    )
+    return runs_in_last_week >= _AUTO_APPLY_MIN_RUNS_LAST_WEEK
 
 
 def _apply_auto_adjustment(

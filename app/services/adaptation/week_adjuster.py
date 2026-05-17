@@ -7,6 +7,7 @@ from sqlalchemy.orm import Session
 
 from app.models import TrainingPlan, WeeklyPlan
 from app.core.training import workout_steps as _steps_mod
+from app.utils import persist_json
 
 from . import change_reasons as _reasons
 from ._helpers import ANNOTATION_RE, batch_workouts_by_week, parse_plan_data_lookups
@@ -231,6 +232,7 @@ def apply_adjustment_to_future_weeks(
             any_distance_changed = True
 
     training_plan.plan_data = plan_data
+    persist_json(training_plan, "plan_data")
     counts = {
         "workouts_changed": workouts_changed,
         "workouts_skipped_protected": workouts_skipped_protected,

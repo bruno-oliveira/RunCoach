@@ -15,6 +15,7 @@ from sqlalchemy.orm import Session
 
 from app.dependencies import get_current_user, get_db
 from app.models import DailyWorkout, ReadinessLog, TrainingPlan, User, WeeklyPlan
+from app.utils import persist_json
 
 logger = logging.getLogger(__name__)
 
@@ -247,6 +248,7 @@ def adapt_todays_workout(
 
     # 6. Persist plan_data JSON
     plan.plan_data = plan_data
+    persist_json(plan, "plan_data")
 
     # 7. Also update the DailyWorkout DB row if it exists
     weekly_plan = (
