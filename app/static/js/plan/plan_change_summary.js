@@ -422,46 +422,24 @@
                 postJson(applyUrl)
                     .then(function (applied) {
                         var appliedCp = unwrapChangePlan(applied);
-                        if (!appliedCp) {
-                            showError('Apply succeeded but no detail returned.');
-                            closeModal(overlay);
-                            reloadPlanPage(planId);
-                            return;
+                        var changedCount = appliedCp
+                            && appliedCp.summary
+                            && appliedCp.summary.workouts_changed_count;
+                        if (changedCount > 0) {
+                            showSuccess('Plan updated.');
+                        } else {
+                            showSuccess('No changes needed.');
                         }
-                        showAppliedAndReload(overlay, appliedCp, planId);
+                        closeModal(overlay);
+                        reloadPlanPage(planId);
                     })
                     .catch(function (err) {
                         showError(err.message || 'Apply failed.');
                         restoreButton();
                         closeModal(overlay);
-                    })
-                    .finally(function () {
                         setBusy(overlay, false);
                     });
             };
-        }
-    }
-
-    function showAppliedAndReload(overlay, cp, planId) {
-        renderInto(overlay, cp);
-        configureFooter(overlay, {
-            showApply: false,
-            showCancel: false,
-            showClose: true,
-        });
-        var closeBtn = overlay.querySelector('.modal-footer [data-change-plan-close]');
-        var headerClose = overlay.querySelector('.modal-header [data-change-plan-close]');
-        function onClose() {
-            closeModal(overlay);
-            reloadPlanPage(planId);
-        }
-        if (closeBtn) closeBtn.onclick = onClose;
-        if (headerClose) headerClose.onclick = onClose;
-        overlay.onclick = function (event) {
-            if (event.target === overlay) onClose();
-        };
-        if (cp.summary && cp.summary.workouts_changed_count > 0) {
-            showSuccess('Plan updated.');
         }
     }
 

@@ -131,6 +131,13 @@ def build_change_plan(
         old_dist = float(b["distance_km"]) if b else 0.0
         new_dist = float(a["distance_km"]) if a else 0.0
         delta = round(new_dist - old_dist, 2)
+        # Status must reflect what the user actually sees: distances are
+        # rounded to 1 decimal in the UI, so a sub-0.1 raw delta would
+        # surface as "Increased" on a row whose old/new km display the
+        # same value. Compare the rounded values instead.
+        old_display = round(old_dist, 1)
+        new_display = round(new_dist, 1)
+        display_changed = old_display != new_display
 
         in_window = True
         if (
@@ -142,7 +149,7 @@ def build_change_plan(
             in_window = False
 
         rec = recorder_by_key.get((week, day))
-        if abs(delta) >= 0.05:
+        if display_changed:
             status = "changed"
             reason = rec.get("reason") if rec else None
         elif rec is not None:

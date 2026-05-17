@@ -2,7 +2,7 @@
    Expected context variables: workout, week, logged_run, is_past, day_names,
    workout_date_labels, current_week_number, current_day_of_week, user,
    feedback_map, start_date #}
-<div class="workout-item {{ workout.type }} {% if logged_run %}completed{% elif is_past and workout.type not in ['rest', 'recovery'] %}missed{% endif %}" data-day="{{ day_names[workout.day - 1] }}" data-day-num="{{ workout.day }}" data-week-num="{{ week.week }}" draggable="true">
+<div class="workout-item {{ workout.type }} {% if logged_run %}completed{% elif is_past and workout.type not in ['rest', 'recovery'] %}missed{% endif %}{% if workout.baseline_distance and workout.baseline_distance != workout.distance %} is-adjusted{% if workout.distance < workout.baseline_distance %} is-adjusted-down{% endif %}{% endif %}" data-day="{{ day_names[workout.day - 1] }}" data-day-num="{{ workout.day }}" data-week-num="{{ week.week }}" draggable="true">
     <div class="workout-day-label">{% if workout_date_labels %}{{ workout_date_labels.get((week.week, workout.day), day_names[workout.day - 1]) }}{% else %}{{ day_names[workout.day - 1] }}{% endif %}</div>
     <div class="workout-type-row">
         <div class="workout-type">{{ workout.type | replace('_', ' ') | title }}</div>

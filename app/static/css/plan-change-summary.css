@@ -384,6 +384,24 @@
     color: var(--color-text-secondary);
 }
 
+/* Card-level accent for an adjusted workout — pairs with the chip below */
+.workout-item.is-adjusted {
+    border-left: 3px solid var(--color-success, #15803d);
+    background: linear-gradient(
+        to right,
+        var(--color-success-subtle, #dcfce7) 0%,
+        transparent 32%
+    );
+}
+.workout-item.is-adjusted-down {
+    border-left-color: var(--color-error, #b91c1c);
+    background: linear-gradient(
+        to right,
+        var(--color-error-subtle, #fee2e2) 0%,
+        transparent 32%
+    );
+}
+
 /* Inline workout indicator chip */
 .workout-adjusted-chip {
     display: inline-flex;
