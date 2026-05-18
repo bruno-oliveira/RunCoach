@@ -2,12 +2,12 @@
 
 import re
 from collections import defaultdict
-from datetime import datetime, timezone
+from datetime import date, datetime, timedelta, timezone
 from typing import Dict, List, Tuple
 
 from sqlalchemy.orm import Session
 
-from app.models import DailyWorkout, TrainingPlan, WeeklyPlan
+from app.models import DailyWorkout, RunLog, TrainingPlan, WeeklyPlan
 from app.utils import to_date as _to_date
 
 # Regex to strip legacy adaptation/recalibration notes from workout notes
@@ -62,6 +62,38 @@ def parse_plan_data_lookups(
         for wo in wk.get("daily_workouts", []):
             pd_workout[(wk["week"], wo["day"])] = wo
     return plan_data, pd_week, pd_workout
+
+
+def is_current_week_in_progress(
+    plan_id: str,
+    start_date: date,
+    current_week: int,
+    current_day_of_week: int,
+    db: Session,
+) -> bool:
+    """Whether the user has already started the current week.
+
+    A week is "in progress" once the first day of it has passed (today is
+    past Monday) OR any run inside that week's date range has been logged.
+    Used to decide whether adjustments are allowed to modify the current
+    week: only a fresh, untouched current week (Monday + no logs) is
+    adjustable.
+    """
+    if current_day_of_week > 1:
+        return True
+    start_of_current_week = datetime.combine(
+        start_date + timedelta(weeks=current_week - 1),
+        datetime.min.time(),
+    )
+    has_run = (
+        db.query(RunLog.id)
+        .filter(
+            RunLog.training_plan_id == plan_id,
+            RunLog.date >= start_of_current_week,
+        )
+        .first()
+    )
+    return has_run is not None
 
 
 def batch_workouts_by_week(

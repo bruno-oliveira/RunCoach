@@ -55,25 +55,6 @@ def apply_adjustment_to_future_weeks(
             ):
                 continue
 
-            if (
-                current_week is not None
-                and current_day_of_week is not None
-                and week.week_number == current_week
-                and workout.day_of_week < current_day_of_week
-            ):
-                if recorder is not None:
-                    recorder.append({
-                        "week": week.week_number,
-                        "day": workout.day_of_week,
-                        "type": workout.workout_type,
-                        "old_distance_km": workout.distance_km,
-                        "new_distance_km": workout.distance_km,
-                        "delta_km": 0.0,
-                        "status": "past",
-                        "reason": None,
-                    })
-                continue
-
             # Prescriptive workouts (key overlays + standard tempo / interval
             # / hill) embed distance fragments in description and steps
             # (warm-up split, rep count, main_km). Adaptation absorbs ratio
@@ -237,6 +218,22 @@ def apply_adjustment_to_future_weeks(
         if changed_weeks > 0:
             weeks_changed += changed_weeks
             any_distance_changed = True
+
+    # Final ORM → JSON re-sync. Belt-and-suspenders pass that makes the
+    # JSON plan_data a deterministic projection of the ORM, no matter
+    # which mutator (main loop, enforce_week_structure, growth-cap) last
+    # touched the workouts. Guarantees that the per-workout distances the
+    # template renders sum to the weekly chip.
+    for week in future_weeks:
+        workouts = workouts_by_week.get(week.id, [])
+        if week.week_number in pd_week:
+            pd_week[week.week_number]["total_km"] = round(
+                sum((w.distance_km or 0) for w in workouts), 1
+            )
+        for workout in workouts:
+            pd_wo = pd_workout.get((week.week_number, workout.day_of_week))
+            if pd_wo is not None and pd_wo.get("distance") != workout.distance_km:
+                pd_wo["distance"] = workout.distance_km
 
     training_plan.plan_data = plan_data
     persist_json(training_plan, "plan_data")

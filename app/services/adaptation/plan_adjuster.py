@@ -17,6 +17,7 @@ from ._helpers import (
     ANNOTATION_RE,
     backfill_baselines,
     batch_workouts_by_week,
+    is_current_week_in_progress,
     parse_plan_data_lookups,
     today_date,
 )
@@ -166,11 +167,15 @@ def gather_signals(
     )
 
     current_day_of_week = today.isoweekday()
+    in_progress = is_current_week_in_progress(
+        plan_id, start_date, current_week, current_day_of_week, db,
+    )
+    first_adjustable_week = current_week + 1 if in_progress else current_week
     adjustable_weeks = (
         db.query(WeeklyPlan)
         .filter(
             WeeklyPlan.training_plan_id == plan_id,
-            WeeklyPlan.week_number >= current_week,
+            WeeklyPlan.week_number >= first_adjustable_week,
         )
         .all()
     )
@@ -181,6 +186,8 @@ def gather_signals(
         "all_plan_runs": all_plan_runs,
         "current_week": current_week,
         "current_day_of_week": current_day_of_week,
+        "current_week_in_progress": in_progress,
+        "first_adjustable_week": first_adjustable_week,
         "adjustable_weeks": adjustable_weeks,
     }
 
@@ -274,6 +281,7 @@ def _run_adjust(
     current_week = gathered["current_week"]
     current_day_of_week = gathered["current_day_of_week"]
     adjustable_weeks = gathered["adjustable_weeks"]
+    in_progress = gathered["current_week_in_progress"]
     multiplier = signals["multiplier"]
 
     # Clear any pending recommendation since the user is manually adjusting
@@ -385,6 +393,13 @@ def _run_adjust(
         reason_parts.append(
             "Mountain simulation score: "
             f"{mountain_score}/100 (factor x{signals.get('mountain_simulation_factor', 1.0)})."
+        )
+
+    if in_progress and adjustable_weeks:
+        reason_parts.insert(
+            0,
+            f"Current week {current_week} left in place — adjustments apply "
+            f"from week {current_week + 1}.",
         )
 
     headline_reason = " ".join(reason_parts)

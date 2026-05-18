@@ -16,7 +16,7 @@ from app.models.user import User
 from app.utils import to_date as _to_date
 
 from . import change_reasons as _reasons
-from ._helpers import today_date
+from ._helpers import is_current_week_in_progress, today_date
 from .change_plan_builder import (
     build_change_plan,
     empty_change_plan,
@@ -228,12 +228,22 @@ def _run_accept(
     current_week = max(1, days_elapsed // 7 + 1)
     current_day_of_week = today.isoweekday()
 
+    in_progress = is_current_week_in_progress(
+        plan_id, start_date, current_week, current_day_of_week, db,
+    )
+    min_first = current_week + 1 if in_progress else current_week
+    # Anchor on the recommendation's evaluated week so data from week N
+    # always targets week N+1, regardless of when the user accepts. Clamp
+    # to min_first so we never reach back into a started week.
+    target_first = rec.get("week_evaluated", current_week - 1) + 1
+    first_adjustable_week = max(min_first, target_first)
+
     from app.models import WeeklyPlan
     adjustable_weeks = (
         db.query(WeeklyPlan)
         .filter(
             WeeklyPlan.training_plan_id == plan_id,
-            WeeklyPlan.week_number >= current_week,
+            WeeklyPlan.week_number >= first_adjustable_week,
         )
         .all()
     )
@@ -318,6 +328,11 @@ def _run_accept(
         workouts_skipped_protected=counts["workouts_skipped_protected"],
         total_km_delta=canonical_total_km_delta,
     )
+    if in_progress and adjustable_weeks:
+        summary = (
+            f"Current week {current_week} left in place — adjustments apply "
+            f"from week {current_week + 1}. " + summary
+        )
     change_plan["reason"] = summary
 
     if mode == "applied":
