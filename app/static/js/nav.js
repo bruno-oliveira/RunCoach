@@ -400,8 +400,8 @@ async function saveAutoAdjustSetting(enabled) {
         if (toggle) toggle.checked = !!data.auto_adjust_enabled;
         if (feedback) {
             feedback.textContent = data.auto_adjust_enabled
-                ? 'Auto-adjust on — RunCoach will reshape your plan after qualifying runs.'
-                : 'Auto-adjust off — changes will wait for your approval.';
+                ? 'Auto-adjust on — weekly adjustments will apply automatically.'
+                : 'Auto-adjust off — weekly adjustments will wait for your approval.';
             feedback.classList.add('is-saved');
         }
     } catch (err) {

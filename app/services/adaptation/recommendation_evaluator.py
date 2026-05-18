@@ -12,6 +12,7 @@ from typing import Any, Dict, Optional
 from sqlalchemy.orm import Session
 
 from app.models import TrainingPlan
+from app.models.user import User
 from app.utils import to_date as _to_date
 
 from . import change_reasons as _reasons
@@ -145,7 +146,23 @@ def evaluate_weekly_recommendation(
         plan_id, last_completed_week, direction, pct, multiplier,
     )
 
-    return recommendation
+    # If the user opted into auto-apply, immediately accept the
+    # just-parked recommendation. Weekly cadence + hysteresis still
+    # gate this — we apply at most once per ISO week.
+    user = db.query(User).filter(User.id == user_id).first()
+    if user and user.auto_adjust_enabled:
+        applied = _run_accept(plan_id, user_id, db, mode="applied")
+        return {
+            "action": "auto_adjusted",
+            "adjusted": bool(applied.get("adjusted")),
+            "reason": applied.get("reason"),
+            "multiplier": applied.get("multiplier"),
+            "weeks_changed": applied.get("weeks_changed"),
+            "workouts_changed": applied.get("workouts_changed"),
+            "change_plan": applied.get("change_plan"),
+        }
+
+    return {"action": "parked", "recommendation": recommendation}
 
 
 def accept_recommendation(

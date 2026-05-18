@@ -259,6 +259,46 @@ class TestWeeklyCadence:
 
 
 # ---------------------------------------------------------------------------
+# Auto-apply gate: user.auto_adjust_enabled
+# ---------------------------------------------------------------------------
+
+
+class TestAutoApplyGate:
+    def test_parks_when_flag_off(self, db):
+        """Default flag=False: weekly eval parks a pending recommendation."""
+        user, plan = _make_plan(db, weeks=6, weeks_ago=2)
+        assert user.auto_adjust_enabled is False
+        _log_runs(db, user, plan, week_number=1, distance_km=9.0, effort=5)
+
+        result = evaluate_weekly_recommendation(plan.id, user.id, db)
+        if result is None:
+            # Signal was too weak (sub-2% multiplier) — nothing to assert.
+            return
+        assert result["action"] == "parked"
+        assert plan.pending_recommendation is not None
+        assert plan.last_change_plan is None
+
+    def test_auto_applies_when_flag_on(self, db):
+        """Flag=True: recommendation applies immediately, no pending banner."""
+        user, plan = _make_plan(db, weeks=6, weeks_ago=2)
+        user.auto_adjust_enabled = True
+        db.commit()
+        _log_runs(db, user, plan, week_number=1, distance_km=9.0, effort=5)
+
+        result = evaluate_weekly_recommendation(plan.id, user.id, db)
+        if result is None:
+            return
+        assert result["action"] == "auto_adjusted"
+        assert plan.pending_recommendation is None
+        # The change should be recorded so the "Latest plan changes" panel
+        # can render it on next page load.
+        assert plan.last_change_plan is not None
+        # Auto-apply path bumps the revision (used for If-Match conflict
+        # detection on subsequent client requests).
+        assert (plan.adaptation_revision or 0) >= 1
+
+
+# ---------------------------------------------------------------------------
 # Phase 5: overreach + hysteresis
 # ---------------------------------------------------------------------------
 

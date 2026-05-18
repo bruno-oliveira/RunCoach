@@ -113,14 +113,9 @@ async def create_run_log(
                 service = AdaptationService()
                 # Weekly cadence: only evaluates after a full plan week
                 # has completed, and at most once per ISO week.
-                recommendation = service.evaluate_recommendation(
+                auto_adjust_result = service.evaluate_recommendation(
                     new_run.training_plan_id, current_user.id, db,
-                )
-                auto_adjust_result = (
-                    {"action": "parked", "recommendation": recommendation}
-                    if recommendation
-                    else {"action": "no_change_needed"}
-                )
+                ) or {"action": "no_change_needed"}
             except Exception:
                 logger.warning(
                     "Weekly recommendation evaluation failed for run %s",

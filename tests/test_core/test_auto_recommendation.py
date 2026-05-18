@@ -194,9 +194,11 @@ class TestEvaluateRecommendation:
         result = evaluate_weekly_recommendation(plan.id, user.id, db)
 
         if result is not None:
-            assert result["multiplier"] != 1.0
-            assert result["direction"] in ("increase", "reduce")
-            assert "week" in result["reason"].lower()
+            assert result["action"] == "parked"
+            rec = result["recommendation"]
+            assert rec["multiplier"] != 1.0
+            assert rec["direction"] in ("increase", "reduce")
+            assert "week" in rec["reason"].lower()
             assert plan.pending_recommendation is not None
             assert plan.last_recommendation_week is not None
         else:
@@ -209,7 +211,8 @@ class TestEvaluateRecommendation:
         result = evaluate_weekly_recommendation(plan.id, user.id, db)
 
         if result is not None:
-            assert result["direction"] == "reduce"
+            assert result["action"] == "parked"
+            assert result["recommendation"]["direction"] == "reduce"
             assert plan.pending_recommendation is not None
 
     def test_force_overrides_pending(self, db):
@@ -221,7 +224,7 @@ class TestEvaluateRecommendation:
 
         result = evaluate_weekly_recommendation(plan.id, user.id, db, force=True)
         if result is not None:
-            assert result["reason"] != "old"
+            assert result["recommendation"]["reason"] != "old"
 
 
 class TestAcceptRecommendation:

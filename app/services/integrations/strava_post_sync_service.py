@@ -50,11 +50,9 @@ def auto_map_and_adjust(
 
             auto_adjust = None
             try:
-                recommendation = adaptation_service.evaluate_recommendation(
+                auto_adjust = adaptation_service.evaluate_recommendation(
                     plan.id, user.id, db,
                 )
-                if recommendation is not None:
-                    auto_adjust = {"action": "parked", "recommendation": recommendation}
             except Exception as e:
                 logger.warning(
                     f"Weekly recommendation evaluation failed for plan {plan.id}: {e}"
