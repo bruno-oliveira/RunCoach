@@ -171,6 +171,21 @@ def enrich_plan_data_with_ids(
             if bl is not None and bl != workout.get("distance"):
                 workout["baseline_distance"] = bl
 
+    # Reconcile each week's chip with the daily distances we will actually
+    # render. The per-workout `distance` can be rewritten above (steps-
+    # derived recompute, key-workout minimum bump), and the stored
+    # `total_km` was last written by the adjustment flow against the
+    # pre-rewrite values. Recompute here so the chip is always the sum of
+    # the daily cards beside it.
+    for week in plan_data:
+        week["total_km"] = round(
+            sum(
+                (wo.get("distance") or 0)
+                for wo in week.get("daily_workouts", [])
+            ),
+            1,
+        )
+
     return plan_data
 
 
