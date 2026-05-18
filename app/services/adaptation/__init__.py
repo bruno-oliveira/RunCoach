@@ -8,7 +8,7 @@ from typing import Any, Dict, List, Optional
 
 from sqlalchemy.orm import Session
 
-from . import alert_checker, plan_adjuster, recalibrator, recommendation_evaluator, run_mapper, suggestion_generator, type_swapper
+from . import alert_checker, plan_adjuster, recalibrator, recommendation_evaluator, run_mapper, type_swapper
 from .performance_analyzer import analyze_performance as _analyze_performance
 from .skipped_detector import detect_skipped_workouts as _detect_skipped
 
@@ -70,11 +70,6 @@ class AdaptationService:
     ) -> Dict[str, Any]:
         return recalibrator.recalibrate(plan_id, user_id, strategy, db)
 
-    def get_weekly_suggestions(
-        self, plan_id: str, user_id: str, db: Session
-    ) -> List[Dict[str, Any]]:
-        return suggestion_generator.get_weekly_suggestions(plan_id, user_id, db)
-
     def evaluate_recommendation(
         self, plan_id: str, user_id: str, db: Session, *, force: bool = False
     ) -> Optional[Dict[str, Any]]:
@@ -115,20 +110,3 @@ class AdaptationService:
         self, plan_id: str, user_id: str, db: Session
     ) -> Dict[str, Any]:
         return recommendation_evaluator.dismiss_recommendation(plan_id, user_id, db)
-
-    def evaluate_on_run_logged(
-        self, plan_id: str, user_id: str, db: Session
-    ) -> Optional[Dict[str, Any]]:
-        return recommendation_evaluator.evaluate_on_run_logged(plan_id, user_id, db)
-
-    def apply_or_park(
-        self,
-        plan_id: str,
-        user_id: str,
-        db: Session,
-        evaluation: Dict[str, Any],
-        auto_enabled: bool,
-    ) -> Dict[str, Any]:
-        return recommendation_evaluator.apply_or_park(
-            plan_id, user_id, db, evaluation, auto_enabled,
-        )

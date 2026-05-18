@@ -18,7 +18,6 @@ from .plan_date_utils import (
 
 
 _PACE_BADGE_WINDOW_DAYS = 7
-_AUTO_ADJUST_RECEIPT_WINDOW_DAYS = 7
 
 
 def plan_view_context(
@@ -52,7 +51,7 @@ def plan_view_context(
         workout_date_labels = workout_dates(start_date_val, num_weeks)
 
     pace_zones_updated_recent = _compute_pace_zone_badge(db, training_plan.id)
-    recent_auto_adjust = _compute_recent_auto_adjust(training_plan)
+    adaptation_state = _build_adaptation_state(training_plan)
 
     today_workout_overlay = _build_today_workout_overlay(
         db, current_user, plan_data, start_date_val, today_obj, current_week_number,
@@ -96,58 +95,40 @@ def plan_view_context(
         "next_monday": next_monday(),
         "pace_zones_updated_recent": pace_zones_updated_recent,
         "today_workout_overlay": today_workout_overlay,
-        "recent_auto_adjust": recent_auto_adjust,
+        "adaptation_state": adaptation_state,
+        "adaptation_revision": training_plan.adaptation_revision or 0,
     }
     ctx.update(extra)
     return ctx
 
 
-def _compute_recent_auto_adjust(training_plan: TrainingPlan) -> Optional[dict]:
-    """Find the most recent non-dismissed auto_adjust event within the window."""
-    history = training_plan.adaptation_history or []
-    if not history:
-        return None
+def _build_adaptation_state(training_plan: TrainingPlan) -> dict:
+    """Collapse all adaptation surfaces into one state for the unified card.
 
-    now = datetime.now(timezone.utc).replace(tzinfo=None)
-    cutoff = now - timedelta(days=_AUTO_ADJUST_RECEIPT_WINDOW_DAYS)
-
-    for event in reversed(history):
-        if event.get("type") != "auto_adjust":
-            continue
-        if event.get("dismissed"):
-            continue
-        applied_at_raw = event.get("applied_at")
-        if not applied_at_raw:
-            continue
-        try:
-            applied_at = datetime.fromisoformat(applied_at_raw)
-            if applied_at.tzinfo is not None:
-                applied_at = applied_at.replace(tzinfo=None)
-        except (ValueError, TypeError):
-            continue
-        if applied_at < cutoff:
-            return None
-
-        days_ago = max(0, (now.date() - applied_at.date()).days)
-        if days_ago == 0:
-            relative = "today"
-        elif days_ago == 1:
-            relative = "yesterday"
-        else:
-            relative = f"{days_ago} days ago"
-
+    Precedence: ``alert`` (proactive warning) outranks ``recommendation``
+    (weekly performance review) outranks ``none``.
+    """
+    alert = training_plan.adaptation_alert
+    if alert:
         return {
-            "applied_at": applied_at.isoformat(),
-            "relative": relative,
-            "direction": event.get("direction"),
-            "multiplier": event.get("multiplier"),
-            "week_numbers": event.get("week_numbers") or [],
-            "weeks_changed": event.get("weeks_changed", 0),
-            "workouts_changed": event.get("workouts_changed", 0),
-            "total_km_delta": event.get("total_km_delta", 0.0),
-            "reason": event.get("reason", ""),
+            "kind": "alert",
+            "headline": "Your plan needs attention",
+            "detail": alert.get("message") or "Recent performance suggests recalibrating your plan.",
+            "alert_type": alert.get("type"),
+            "alert_suggestion": alert.get("suggestion"),
         }
-    return None
+    rec = training_plan.pending_recommendation
+    if rec:
+        multiplier = rec.get("multiplier")
+        return {
+            "kind": "recommendation",
+            "headline": "Weekly Performance Review",
+            "detail": rec.get("reason") or "We have a training adjustment to suggest.",
+            "multiplier": multiplier,
+            "direction": rec.get("direction"),
+            "week_evaluated": rec.get("week_evaluated"),
+        }
+    return {"kind": "none"}
 
 
 _QUALITY_WORKOUT_TYPES = frozenset({"tempo", "interval", "vo2max", "hill", "long"})

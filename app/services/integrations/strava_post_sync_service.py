@@ -50,18 +50,14 @@ def auto_map_and_adjust(
 
             auto_adjust = None
             try:
-                evaluation = adaptation_service.evaluate_on_run_logged(
+                recommendation = adaptation_service.evaluate_recommendation(
                     plan.id, user.id, db,
                 )
-                if evaluation is not None:
-                    auto_adjust = adaptation_service.apply_or_park(
-                        plan.id, user.id, db,
-                        evaluation,
-                        auto_enabled=bool(getattr(user, "auto_adjust_enabled", False)),
-                    )
+                if recommendation is not None:
+                    auto_adjust = {"action": "parked", "recommendation": recommendation}
             except Exception as e:
                 logger.warning(
-                    f"Per-sync recommendation evaluation failed for plan {plan.id}: {e}"
+                    f"Weekly recommendation evaluation failed for plan {plan.id}: {e}"
                 )
 
             vdot_recalibration = None

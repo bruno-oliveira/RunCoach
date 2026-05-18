@@ -356,6 +356,15 @@ def compute_adjustment_signals(
         clamp_min = _STANDARD_MIN
         clamp_max = _STANDARD_MAX
 
+    # Whenever overreach is flagged from any branch above, force the final
+    # multiplier into "reduce or hold" territory. Without this, a strong
+    # positive volume contribution could push the multiplier back above 1.0
+    # even after overreach was detected — yielding a banner that says
+    # "increase volume" alongside an overreach alert telling the user the
+    # opposite.
+    if overreach_detected:
+        raw_multiplier = min(raw_multiplier, 0.95)
+
     multiplier = round(max(clamp_min, min(clamp_max, raw_multiplier)), 2)
 
     return {

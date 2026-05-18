@@ -119,6 +119,13 @@ def apply_adjustment_to_future_weeks(
                 note_reason = _reasons.QUALITY_HALF_SCALED
             else:
                 new_distance = max(1.0, round(base_distance * type_mult, 1))
+
+            # Belt-and-suspenders cap: even when per-type ratios + trend
+            # modifiers slip past the global clamp, never push a single
+            # workout above baseline × 1.25.
+            ceiling = round(base_distance * 1.25, 1)
+            if new_distance > ceiling:
+                new_distance = ceiling
             old_distance = workout.distance_km
 
             if new_distance == old_distance:
@@ -233,6 +240,10 @@ def apply_adjustment_to_future_weeks(
 
     training_plan.plan_data = plan_data
     persist_json(training_plan, "plan_data")
+    if any_distance_changed:
+        training_plan.adaptation_revision = (
+            training_plan.adaptation_revision or 0
+        ) + 1
     counts = {
         "workouts_changed": workouts_changed,
         "workouts_skipped_protected": workouts_skipped_protected,

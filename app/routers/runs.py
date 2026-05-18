@@ -111,25 +111,19 @@ async def create_run_log(
             try:
                 from app.services.adaptation import AdaptationService
                 service = AdaptationService()
-                evaluation = service.evaluate_on_run_logged(
+                # Weekly cadence: only evaluates after a full plan week
+                # has completed, and at most once per ISO week.
+                recommendation = service.evaluate_recommendation(
                     new_run.training_plan_id, current_user.id, db,
                 )
-                if evaluation is not None:
-                    auto_adjust_result = service.apply_or_park(
-                        new_run.training_plan_id,
-                        current_user.id,
-                        db,
-                        evaluation,
-                        auto_enabled=bool(current_user.auto_adjust_enabled),
-                    )
-                else:
-                    # `evaluate_on_run_logged` returns None when the
-                    # multiplier is within 2% of neutral. Surface this so
-                    # the UI can confirm the engine actually looked.
-                    auto_adjust_result = {"action": "no_change_needed"}
+                auto_adjust_result = (
+                    {"action": "parked", "recommendation": recommendation}
+                    if recommendation
+                    else {"action": "no_change_needed"}
+                )
             except Exception:
                 logger.warning(
-                    "Per-run recommendation evaluation failed for run %s",
+                    "Weekly recommendation evaluation failed for run %s",
                     new_run.id, exc_info=True,
                 )
 

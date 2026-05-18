@@ -2,12 +2,12 @@
 
 import logging
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, Header, HTTPException, status
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
 from app.dependencies import get_current_user, get_db
-from app.models import DailyWorkout, User, WeeklyPlan
+from app.models import DailyWorkout, TrainingPlan, User, WeeklyPlan
 from app.services.adaptation import type_swapper
 from app.services.adaptation.missed_week_handler import detect_missed_weeks
 from app.services.adaptation import AdaptationService
@@ -20,6 +20,35 @@ from app.utils import persist_json
 logger = logging.getLogger(__name__)
 
 router = APIRouter(tags=["plans"])
+
+
+def _check_revision(training_plan: TrainingPlan, if_match: str | None) -> None:
+    """Reject 409 if the client's revision is stale.
+
+    `If-Match` is optional — a missing header skips the check, so older
+    clients keep working. When present, it must equal the plan's current
+    `adaptation_revision`.
+    """
+    if if_match is None or if_match == "":
+        return
+    try:
+        expected = int(if_match)
+    except (TypeError, ValueError):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="If-Match must be an integer revision.",
+        )
+    current = training_plan.adaptation_revision or 0
+    if expected != current:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail={
+                "error": "revision_conflict",
+                "expected": expected,
+                "current": current,
+                "message": "Your plan was updated elsewhere — refresh to continue.",
+            },
+        )
 
 
 # ---------------------------------------------------------------------------
@@ -78,22 +107,6 @@ async def get_plan_gaps(
     return {"available": True, **gaps}
 
 
-@router.get("/api/plan/{plan_id}/suggestions")
-async def get_plan_suggestions(
-    plan_id: str,
-    current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db),
-):
-    """Get per-week adaptive suggestions for upcoming plan weeks."""
-    get_plan_or_404(plan_id, db, current_user, require_user_match=True)
-
-    adaptation_service = AdaptationService()
-    suggestions = adaptation_service.get_weekly_suggestions(
-        plan_id, current_user.id, db
-    )
-    return {"suggestions": suggestions}
-
-
 @router.get("/api/plan/{plan_id}/missed-weeks")
 async def get_missed_weeks(
     plan_id: str,
@@ -114,11 +127,15 @@ async def get_missed_weeks(
 @router.post("/api/plan/{plan_id}/adjust")
 async def adjust_plan(
     plan_id: str,
+    if_match: str | None = Header(default=None, alias="If-Match"),
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
     """Adjust future plan weeks based on recent performance data."""
-    get_plan_or_404(plan_id, db, current_user, require_user_match=True)
+    training_plan = get_plan_or_404(
+        plan_id, db, current_user, require_user_match=True
+    )
+    _check_revision(training_plan, if_match)
 
     adaptation_service = AdaptationService()
     return adaptation_service.adjust_plan(plan_id, current_user.id, db)
@@ -185,27 +202,6 @@ async def dismiss_alert(
     return {"ok": True}
 
 
-@router.post("/api/plan/{plan_id}/dismiss-auto-adjust-receipt")
-async def dismiss_auto_adjust_receipt(
-    plan_id: str,
-    current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db),
-):
-    """Mark the most recent auto_adjust history event as dismissed."""
-    training_plan = get_plan_or_404(
-        plan_id, db, current_user, require_user_match=True
-    )
-    history = list(training_plan.adaptation_history or [])
-    for event in reversed(history):
-        if event.get("type") == "auto_adjust" and not event.get("dismissed"):
-            event["dismissed"] = True
-            training_plan.adaptation_history = history
-            persist_json(training_plan, "adaptation_history")
-            db.commit()
-            return {"ok": True}
-    return {"ok": True, "noop": True}
-
-
 @router.get("/api/plan/{plan_id}/pending-recommendation")
 async def get_pending_recommendation(
     plan_id: str,
@@ -222,11 +218,15 @@ async def get_pending_recommendation(
 @router.post("/api/plan/{plan_id}/accept-recommendation")
 async def accept_recommendation(
     plan_id: str,
+    if_match: str | None = Header(default=None, alias="If-Match"),
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
     """Accept and apply the pending adaptation recommendation."""
-    get_plan_or_404(plan_id, db, current_user, require_user_match=True)
+    training_plan = get_plan_or_404(
+        plan_id, db, current_user, require_user_match=True
+    )
+    _check_revision(training_plan, if_match)
     adaptation_service = AdaptationService()
     return adaptation_service.accept_recommendation(plan_id, current_user.id, db)
 
@@ -295,6 +295,7 @@ async def override_plan_week(
     plan_id: str,
     week_number: int,
     body: WeekOverrideRequest,
+    if_match: str | None = Header(default=None, alias="If-Match"),
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
@@ -302,19 +303,24 @@ async def override_plan_week(
     training_plan = get_plan_or_404(
         plan_id, db, current_user, require_user_match=True
     )
+    _check_revision(training_plan, if_match)
 
     plan_data = training_plan.plan_data if training_plan.plan_data else []
     week_data = next((w for w in plan_data if w.get("week") == week_number), None)
     if not week_data:
         raise HTTPException(status_code=404, detail="Week not found in plan")
 
-    apply_week_action(body.action, training_plan, plan_data, week_data, week_number, plan_id, db)
-
-    training_plan.plan_data = plan_data
-    persist_json(training_plan, "plan_data")
+    payload = apply_week_action(
+        body.action, training_plan, plan_data, week_data, week_number, plan_id, db,
+    )
     db.commit()
 
-    return {"ok": True, "action": body.action, "week": week_number}
+    return {
+        "ok": True,
+        "action": body.action,
+        "week": week_number,
+        **payload,
+    }
 
 
 # ---------------------------------------------------------------------------

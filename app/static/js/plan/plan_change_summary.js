@@ -306,14 +306,32 @@
         if (close) close.hidden = !opts.showClose;
     }
 
-    function postJson(url) {
+    function postJson(url, opts) {
+        opts = opts || {};
+        var headers = authHeaders();
+        // Attach the page's current revision so the server can reject
+        // stale writes (409) when another tab / a Strava sync has moved
+        // the plan forward.
+        if (opts.sendRevision !== false && window.APP_CTX
+                && typeof window.APP_CTX.adaptation_revision === 'number') {
+            headers['If-Match'] = String(window.APP_CTX.adaptation_revision);
+        }
         return fetch(url, {
             method: 'POST',
-            headers: authHeaders(),
+            headers: headers,
             credentials: 'same-origin',
         }).then(function (res) {
             return res.json().then(function (body) {
                 if (!res.ok) {
+                    if (res.status === 409) {
+                        var err409 = new Error(
+                            (body && body.detail && body.detail.message)
+                                || 'Plan was updated elsewhere — refresh to continue.'
+                        );
+                        err409.body = body;
+                        err409.status = 409;
+                        throw err409;
+                    }
                     var err = new Error(body && body.detail ? body.detail : 'Request failed');
                     err.body = body;
                     err.status = res.status;
@@ -466,7 +484,16 @@
                             showSuccess('No changes needed.');
                         }
                         closeModal(overlay);
-                        reloadPlanPage(planId);
+                        // Patch the page in place from the response so the
+                        // user sees the new totals immediately. Reload only
+                        // if patch is unavailable (older endpoint shapes).
+                        var patch = appliedCp && appliedCp.patch;
+                        if (patch && window.planDomSync) {
+                            window.planDomSync.applyPatch(patch);
+                            markSeen(planId);
+                        } else {
+                            reloadPlanPage(planId);
+                        }
                     })
                     .catch(function (err) {
                         showError(err.message || 'Apply failed.');

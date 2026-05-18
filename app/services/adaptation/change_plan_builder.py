@@ -261,10 +261,43 @@ def build_change_plan(
         "signals": signals or {},
         "reason": headline_reason,
         "no_change_reasons": no_change_reasons if not did_change else [],
+        "patch": _build_patch(training_plan, weeks_list),
     }
     if mode == "applied":
         plan["seen"] = False
     return plan
+
+
+def _build_patch(
+    training_plan: TrainingPlan, weeks_list: List[Dict[str, Any]],
+) -> Dict[str, Any]:
+    """Produce the flat payload the client uses to patch the DOM in place.
+
+    Lives on every change_plan so the same payload works for applied and
+    preview (preview clients ignore it; applied clients refresh from it
+    without a page reload).
+    """
+    from app.services.plans.plan_template_context import _build_adaptation_state
+
+    workout_changes: List[Dict[str, Any]] = []
+    week_totals: List[Dict[str, Any]] = []
+    for wk in weeks_list:
+        week_totals.append({"week": wk["week"], "total_km": wk["total_km_after"]})
+        for wo in wk["workouts"]:
+            if wo.get("status") != "changed":
+                continue
+            workout_changes.append({
+                "week": wk["week"],
+                "day": wo["day_num"],
+                "new_distance_km": wo["new_distance_km"],
+            })
+
+    return {
+        "adaptation_revision": training_plan.adaptation_revision or 0,
+        "week_totals": week_totals,
+        "workout_changes": workout_changes,
+        "adaptation_state": _build_adaptation_state(training_plan),
+    }
 
 
 def empty_change_plan(
@@ -296,6 +329,12 @@ def empty_change_plan(
         "signals": {},
         "reason": headline_reason,
         "no_change_reasons": no_change_reasons or [headline_reason],
+        "patch": {
+            "adaptation_revision": 0,
+            "week_totals": [],
+            "workout_changes": [],
+            "adaptation_state": {"kind": "none"},
+        },
     }
     if mode == "applied":
         plan["seen"] = False

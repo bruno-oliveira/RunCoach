@@ -13,7 +13,6 @@ from ._helpers import batch_workouts_by_week, parse_plan_data_lookups, today_dat
 from .missed_week_handler import detect_missed_weeks, recalibrate_missed_week
 from .recovery_inserter import recalibrate_recovery_insertion
 from .safety import enforce_future_growth_cap, enforce_week_structure
-from .suggestion_generator import get_weekly_suggestions
 
 
 def recalibrate(

@@ -6,12 +6,12 @@ accept (apply) or dismiss it from the plan page.
 """
 
 import logging
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timezone
 from typing import Any, Dict, Optional
 
 from sqlalchemy.orm import Session
 
-from app.models import RunLog, TrainingPlan
+from app.models import TrainingPlan
 from app.utils import to_date as _to_date
 
 from . import change_reasons as _reasons
@@ -28,21 +28,6 @@ from .week_adjuster import apply_adjustment_to_future_weeks
 logger = logging.getLogger(__name__)
 
 MIN_RUNS_FOR_RECOMMENDATION = 3
-
-# Minimum spacing between consecutive auto-adjustments. Manual adjustments are unaffected.
-AUTO_ADJUST_THROTTLE = timedelta(hours=24)
-# Confidence thresholds for the auto-adjust decision.
-_HIGH_CONFIDENCE_DELTA = 0.05
-_MED_CONFIDENCE_DELTA = 0.05
-
-# Early-plan floor for high-confidence auto-apply.
-# With only a handful of runs in week 1, per-type ratios are noisy: one rough
-# long run can swing the multiplier enough to sweep-reduce every remaining
-# week. Require at least one fully-completed week with enough runs in it
-# before the engine is allowed to auto-mutate; the same evaluation can still
-# be surfaced as a parked recommendation the user can accept by hand.
-_AUTO_APPLY_MIN_CURRENT_WEEK = 2
-_AUTO_APPLY_MIN_RUNS_LAST_WEEK = 2
 
 
 def evaluate_weekly_recommendation(
@@ -101,6 +86,14 @@ def evaluate_weekly_recommendation(
 
     direction = "increase" if multiplier > 1.0 else "reduce"
     pct = abs(round((multiplier - 1.0) * 100))
+
+    # Hysteresis: if we'd reverse direction with a small move (< 5%),
+    # hold steady. Prevents week-over-week wobble like "+3% / -3% / +3%"
+    # that erodes user trust.
+    if _is_small_reversal(training_plan.adaptation_history, direction, multiplier):
+        training_plan.last_recommendation_week = last_completed_week
+        db.commit()
+        return None
 
     reason = (
         f"Based on your week {last_completed_week} performance, "
@@ -447,6 +440,38 @@ def _build_auto_adjust_reason(
     )
 
 
+_HYSTERESIS_BAND = 0.05
+
+
+def _is_small_reversal(
+    history: list | None, proposed_direction: str, proposed_multiplier: float,
+) -> bool:
+    """True when the proposal would reverse the last applied direction by < 5%.
+
+    Looks back through ``adaptation_history`` for the most recent applied
+    event (``adjust``, ``auto_adjust``, or ``auto_accept``) and compares
+    its direction against the current proposal.
+    """
+    if not history:
+        return False
+    if abs(proposed_multiplier - 1.0) >= _HYSTERESIS_BAND:
+        return False
+    last_dir: str | None = None
+    for event in reversed(history):
+        if event.get("type") not in ("adjust", "auto_adjust", "auto_accept"):
+            continue
+        d = event.get("direction")
+        if d in ("increased", "increase"):
+            last_dir = "increase"
+            break
+        if d in ("reduced", "reduce"):
+            last_dir = "reduce"
+            break
+    if last_dir is None:
+        return False
+    return last_dir != proposed_direction
+
+
 def _record_event(training_plan: TrainingPlan, event: Dict[str, Any]) -> None:
     event["date"] = today_date().isoformat()
     event.setdefault(
@@ -459,338 +484,3 @@ def _record_event(training_plan: TrainingPlan, event: Dict[str, Any]) -> None:
         history = history[-20:]
     training_plan.adaptation_history = history
 
-
-def evaluate_on_run_logged(
-    plan_id: str,
-    user_id: str,
-    db: Session,
-) -> Optional[Dict[str, Any]]:
-    """Compute signals after a single run was logged.
-
-    Returns an evaluation dict with confidence ("high", "medium", "low"),
-    multiplier, and the underlying signals — but writes nothing. The caller
-    decides whether to auto-apply or park as a pending recommendation.
-    """
-    gathered = gather_signals(plan_id, user_id, db, run_map=False)
-    if gathered is None:
-        return None
-
-    signals = gathered["signals"]
-    multiplier = signals.get("multiplier", 1.0)
-    delta = abs(multiplier - 1.0)
-
-    if delta < 0.02:
-        return None
-
-    overreach = bool(signals.get("overreach_detected"))
-    readiness_factor = signals.get("readiness_factor", 1.0) or 1.0
-    tsb_form = signals.get("tsb_form")
-
-    if delta >= _HIGH_CONFIDENCE_DELTA and (
-        overreach
-        or readiness_factor < 0.95
-        or tsb_form == "overreached"
-    ):
-        confidence = "high"
-    elif delta >= _MED_CONFIDENCE_DELTA:
-        confidence = "medium"
-    else:
-        confidence = "low"
-
-    return {
-        "plan_id": plan_id,
-        "multiplier": multiplier,
-        "confidence": confidence,
-        "signals": signals,
-        "training_plan": gathered["training_plan"],
-        "current_week": gathered["current_week"],
-        "current_day_of_week": gathered["current_day_of_week"],
-        "adjustable_weeks": gathered["adjustable_weeks"],
-    }
-
-
-def apply_or_park(
-    plan_id: str,
-    user_id: str,
-    db: Session,
-    evaluation: Dict[str, Any],
-    auto_enabled: bool,
-) -> Dict[str, Any]:
-    """Either auto-apply the adjustment or write a pending recommendation.
-
-    - High confidence + auto_enabled (+ not throttled + past early-plan floor) → apply.
-    - Otherwise → write pending recommendation (existing path).
-    - Low confidence → no-op.
-    """
-    confidence = evaluation.get("confidence")
-    if confidence == "low":
-        return {"action": "skipped", "reason": "low_confidence"}
-
-    training_plan = evaluation.get("training_plan")
-    if training_plan is None:
-        training_plan = (
-            db.query(TrainingPlan)
-            .filter(TrainingPlan.id == plan_id, TrainingPlan.user_id == user_id)
-            .first()
-        )
-        if not training_plan:
-            return {"action": "skipped", "reason": "plan_not_found"}
-
-    # Throttle: avoid auto-adjusting if a recent adjustment already ran.
-    if confidence == "high" and auto_enabled and training_plan.last_adjusted_at:
-        last = training_plan.last_adjusted_at
-        now = datetime.now(timezone.utc).replace(tzinfo=None)
-        if (now - last) < AUTO_ADJUST_THROTTLE:
-            return {"action": "throttled", "reason": "recently_adjusted"}
-
-    if confidence == "high" and auto_enabled:
-        if not _passes_early_plan_floor(training_plan, evaluation, db):
-            # Park as a pending recommendation; the user can still accept it
-            # manually, but a noisy week-1 sample won't sweep-mutate the
-            # remaining plan.
-            parked = _park_recommendation(
-                training_plan=training_plan,
-                evaluation=evaluation,
-                db=db,
-            )
-            parked["gated_reason"] = "early_plan_floor"
-            return parked
-        return _apply_auto_adjustment(
-            training_plan=training_plan,
-            user_id=user_id,
-            db=db,
-            evaluation=evaluation,
-        )
-
-    return _park_recommendation(
-        training_plan=training_plan,
-        evaluation=evaluation,
-        db=db,
-    )
-
-
-def _passes_early_plan_floor(
-    training_plan: TrainingPlan,
-    evaluation: Dict[str, Any],
-    db: Session,
-) -> bool:
-    """Block high-confidence auto-apply until the plan has enough signal.
-
-    Requires the plan to be in week 2+ AND for the most recently completed
-    week to contain at least `_AUTO_APPLY_MIN_RUNS_LAST_WEEK` logged runs.
-    """
-    current_week = evaluation.get("current_week") or 1
-    if current_week < _AUTO_APPLY_MIN_CURRENT_WEEK:
-        return False
-    if not training_plan.start_date:
-        return False
-
-    start_date = _to_date(training_plan.start_date)
-    last_completed_week = current_week - 1
-    week_start = datetime.combine(
-        start_date + timedelta(weeks=last_completed_week - 1),
-        datetime.min.time(),
-    )
-    week_end = week_start + timedelta(days=7)
-
-    runs_in_last_week = (
-        db.query(RunLog)
-        .filter(
-            RunLog.training_plan_id == training_plan.id,
-            RunLog.date >= week_start,
-            RunLog.date < week_end,
-        )
-        .count()
-    )
-    return runs_in_last_week >= _AUTO_APPLY_MIN_RUNS_LAST_WEEK
-
-
-def _apply_auto_adjustment(
-    training_plan: TrainingPlan,
-    user_id: str,
-    db: Session,
-    evaluation: Dict[str, Any],
-) -> Dict[str, Any]:
-    """High-confidence path: actually mutate the plan."""
-    signals = evaluation["signals"]
-    multiplier = evaluation["multiplier"]
-    current_week = evaluation["current_week"]
-    current_day_of_week = evaluation["current_day_of_week"]
-    adjustable_weeks = evaluation["adjustable_weeks"]
-
-    if not adjustable_weeks:
-        return {"action": "skipped", "reason": "no_remaining_weeks"}
-
-    pre_totals = {w.week_number: (w.total_km or 0.0) for w in adjustable_weeks}
-    week_numbers_input = [w.week_number for w in adjustable_weeks]
-    before = snapshot_workouts(training_plan, db, week_numbers=week_numbers_input)
-
-    recorder: list = []
-    weeks_changed, any_distance_changed, counts = apply_adjustment_to_future_weeks(
-        training_plan, adjustable_weeks, multiplier, db,
-        current_week=current_week,
-        current_day_of_week=current_day_of_week,
-        per_type_ratios=signals.get("per_type_ratios"),
-        recorder=recorder,
-    )
-
-    changed_week_numbers = sorted(
-        w.week_number
-        for w in adjustable_weeks
-        if (w.total_km or 0.0) != pre_totals.get(w.week_number, 0.0)
-    )
-    total_km_delta = round(
-        sum((w.total_km or 0.0) - pre_totals.get(w.week_number, 0.0) for w in adjustable_weeks),
-        1,
-    )
-
-    vdot_result = None
-    try:
-        vdot_result = check_vdot_recalibration(training_plan, user_id, db)
-    except Exception as e:
-        logger.warning("VDOT recalibration in auto-adjust failed (non-fatal): %s", e)
-
-    after = snapshot_workouts(training_plan, db, week_numbers=week_numbers_input)
-
-    now = datetime.now(timezone.utc).replace(tzinfo=None)
-    training_plan.adjustment_multiplier = multiplier
-    training_plan.last_adjusted_at = now
-    training_plan.pending_recommendation = None
-
-    direction = (
-        "increased" if multiplier > 1.0 else "reduced" if multiplier < 1.0 else "kept"
-    )
-
-    vdot_change_payload = None
-    if vdot_result:
-        vdot_change_payload = {
-            "before": vdot_result.get("old_vdot"),
-            "after": vdot_result.get("new_vdot"),
-            "direction": vdot_result.get("direction"),
-        }
-
-    # Build change_plan first so the headline reason references the same
-    # display-rounded counts and net delta the user sees in the stat cards.
-    # Using the raw week_adjuster counter here would let the headline read
-    # "Reduced 38 workouts (+26 km)" while the card shows 32 — and the
-    # multiplier-derived verb would call a net increase a "Reduction".
-    change_plan = build_change_plan(
-        action="auto_adjust",
-        mode="applied",
-        training_plan=training_plan,
-        before=before,
-        after=after,
-        recorder=recorder,
-        signals={
-            "effort_trend": signals.get("effort_trend"),
-            "completion_rate": signals.get("completion_rate"),
-            "volume_ratio": signals.get("volume_ratio"),
-            "phase": signals.get("current_phase"),
-            "avg_effort": signals.get("avg_effort"),
-            "tsb_form": signals.get("tsb_form"),
-            "overreach_detected": signals.get("overreach_detected"),
-            "confidence": "high",
-        },
-        multiplier=multiplier,
-        vdot_change=vdot_change_payload,
-        headline_reason=None,
-        current_week=current_week,
-        current_day_of_week=current_day_of_week,
-    )
-
-    cp_summary = change_plan.get("summary", {})
-    canonical_workouts_changed = cp_summary.get(
-        "workouts_changed_count", counts["workouts_changed"]
-    )
-    canonical_total_km_delta = cp_summary.get(
-        "total_km_delta", total_km_delta
-    )
-    canonical_weeks = cp_summary.get("weeks_affected") or changed_week_numbers
-
-    reason = _build_auto_adjust_reason(
-        workouts_changed=canonical_workouts_changed,
-        week_numbers=canonical_weeks,
-        total_km_delta=canonical_total_km_delta,
-    )
-    change_plan["reason"] = reason
-    training_plan.last_change_plan = change_plan
-
-    _record_event(training_plan, {
-        "type": "auto_adjust",
-        "multiplier": multiplier,
-        "direction": direction,
-        "confidence": "high",
-        "applied_at": now.isoformat(),
-        "week_numbers": canonical_weeks,
-        "weeks_changed": weeks_changed,
-        "workouts_changed": canonical_workouts_changed,
-        "total_km_delta": canonical_total_km_delta,
-        "reason": reason,
-    })
-
-    db.commit()
-
-    logger.info(
-        "Auto-adjust applied: plan=%s multiplier=%.2f direction=%s",
-        training_plan.id, multiplier, direction,
-    )
-
-    return {
-        "action": "auto_adjusted",
-        "multiplier": multiplier,
-        "direction": direction,
-        "weeks_changed": weeks_changed,
-        "week_numbers": canonical_weeks,
-        "workouts_changed": canonical_workouts_changed,
-        "total_km_delta": canonical_total_km_delta,
-        "reason": reason,
-        "adjusted": any_distance_changed or bool(vdot_result),
-        "vdot_recalibration": vdot_result,
-    }
-
-
-def _park_recommendation(
-    training_plan: TrainingPlan,
-    evaluation: Dict[str, Any],
-    db: Session,
-) -> Dict[str, Any]:
-    """Medium-confidence or auto-disabled path: write pending recommendation."""
-    signals = evaluation["signals"]
-    multiplier = evaluation["multiplier"]
-    direction = "increase" if multiplier > 1.0 else "reduce"
-    pct = abs(round((multiplier - 1.0) * 100))
-
-    reason = (
-        f"Based on your recent runs, we suggest "
-        f"{'increasing' if direction == 'increase' else 'reducing'} "
-        f"your training by {pct}%."
-    )
-
-    recommendation = {
-        "week_evaluated": evaluation["current_week"],
-        "multiplier": multiplier,
-        "direction": direction,
-        "reason": reason,
-        "signals": {
-            k: signals[k]
-            for k in (
-                "multiplier", "volume_ratio", "effort_factor", "avg_effort",
-                "effort_trend", "completion_rate", "completion_factor",
-                "overreach_detected", "current_phase", "per_type_ratios",
-                "readiness_factor", "tsb_form",
-            )
-            if k in signals
-        },
-        "created_at": today_date().isoformat(),
-        "source": "run_logged",
-    }
-
-    training_plan.pending_recommendation = recommendation
-    db.commit()
-
-    return {
-        "action": "parked",
-        "multiplier": multiplier,
-        "direction": direction,
-        "confidence": evaluation.get("confidence"),
-    }

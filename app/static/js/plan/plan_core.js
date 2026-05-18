@@ -726,18 +726,8 @@
         // Tab keyboard navigation (defined in plan_tabs.js)
         if (typeof window._initTabKeyboardNav === 'function') window._initTabKeyboardNav();
 
-        // Inline suggestions for upcoming weeks (defined in plan_adaptation.js)
-        if (window.APP_CTX && window.APP_CTX.plan_id && window.APP_CTX.current_user_id) {
-            if (typeof window.loadSuggestions === 'function') window.loadSuggestions();
-        } else {
-            console.log('[suggestions] Not loading — plan_id:', window.APP_CTX && window.APP_CTX.plan_id, 'current_user_id:', window.APP_CTX && window.APP_CTX.current_user_id);
-        }
-
-        // Adaptation alert banner (defined in plan_adaptation.js)
-        if (typeof window._initAdaptationAlert === 'function') window._initAdaptationAlert();
-
-        // Pending recommendation banner (defined in plan_adaptation.js)
-        if (typeof window._initPendingRecommendation === 'function') window._initPendingRecommendation();
+        // Unified adaptation card is fully server-rendered from
+        // adaptation_state — no client-side init pass needed.
 
         // Drag-and-drop (defined in plan_dragdrop.js)
         if (typeof window._initDragAndDrop === 'function') window._initDragAndDrop();
