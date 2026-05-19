@@ -18,6 +18,7 @@ from app.services.adaptation._helpers import (
     today_date,
 )
 from app.services.adaptation.week_adjuster import apply_adjustment_to_future_weeks
+from app.services.plans.plan_date_utils import compute_current_week
 from app.utils import persist_json, to_date as _to_date
 
 
@@ -111,10 +112,10 @@ def _current_week_pos(training_plan: TrainingPlan) -> Tuple[int | None, int | No
         return None, None
     start = _to_date(training_plan.start_date)
     today = today_date()
-    if today < start:
+    week = compute_current_week(start, today, clamp_min=1)
+    if week is None:
         return None, None
-    days = (today - start).days
-    return max(1, days // 7 + 1), today.isoweekday()
+    return week, today.isoweekday()
 
 
 def _multiplier_action(

@@ -19,12 +19,35 @@ def build_week_dates(start_date: date, num_weeks: int) -> list[dict]:
     return week_dates
 
 
-def compute_current_week(start_date: date, today: date) -> Optional[int]:
-    """Compute 1-indexed current week number, or None if plan hasn't started or is over."""
+def compute_current_week(
+    start_date: date,
+    today: date,
+    *,
+    total_weeks: Optional[int] = None,
+    pre_start: Optional[int] = None,
+    clamp_min: Optional[int] = None,
+) -> Optional[int]:
+    """Compute the 1-indexed current week number.
+
+    Args:
+        start_date: Plan start date.
+        today: Reference date (usually today).
+        total_weeks: If set, clamp the result to at most ``total_weeks``.
+        pre_start: Value to return when ``today`` is before ``start_date``.
+            Defaults to ``None`` (plan not yet started).
+        clamp_min: If set, clamp the result to at least this value. Use
+            ``clamp_min=1`` to guarantee a positive week index in callers
+            that don't separately gate on the pre-start case.
+    """
     delta_days = (today - start_date).days
     if delta_days < 0:
-        return None
-    return (delta_days // 7) + 1
+        return pre_start
+    week = (delta_days // 7) + 1
+    if clamp_min is not None:
+        week = max(clamp_min, week)
+    if total_weeks is not None:
+        week = min(week, total_weeks)
+    return week
 
 
 def next_monday() -> str:

@@ -1,6 +1,12 @@
-"""Compute volume, effort, completion, and trend signals for plan adjustment."""
+"""Compute volume, effort, completion, and trend signals for plan adjustment.
+
+Top-level entry point :func:`compute_adjustment_signals` is a thin dispatcher.
+Each independent signal lives in its own ``_*_signal`` helper returning a
+:class:`SignalContribution` so they can evolve in isolation.
+"""
 
 from collections import defaultdict
+from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional, Tuple
 
 from sqlalchemy.orm import Session
@@ -38,6 +44,22 @@ _STANDARD_MIN = 0.85
 _STANDARD_MAX = 1.15
 
 
+@dataclass
+class SignalContribution:
+    """One signal's contribution to the final multiplier.
+
+    ``factor`` is the signal's raw factor (e.g. 0.95, 1.05). ``weight`` is the
+    base phase weight; the orchestrator may redistribute it onto data-bearing
+    signals when ``has_data`` is False. ``extras`` carries signal-specific
+    debug fields merged into the final result dict.
+    """
+
+    factor: float
+    weight: float
+    has_data: bool = True
+    extras: Dict[str, Any] = field(default_factory=dict)
+
+
 def compute_adjustment_signals(
     all_plan_runs: List,
     past_workouts: List[Tuple],
@@ -56,14 +78,99 @@ def compute_adjustment_signals(
     readiness_logs: Optional[List] = None,
     training_load: Optional[Dict[str, Any]] = None,
 ) -> Dict[str, Any]:
-    (
-        volume_weight,
-        effort_weight,
-        completion_weight,
-        hr_zone_weight,
-        feedback_weight,
-        readiness_weight,
-    ) = _PHASE_WEIGHTS.get(current_phase, _PHASE_WEIGHTS["build"])
+    (vw, ew, cw, hw, fw, rw) = _PHASE_WEIGHTS.get(
+        current_phase, _PHASE_WEIGHTS["build"]
+    )
+
+    volume = _volume_signal(past_workouts, all_plan_runs, recency_weight_fn, today, vw)
+    effort = _effort_signal(all_plan_runs, recency_weight_fn, today, ew)
+    completion = _completion_signal(
+        past_workouts, past_workout_ids, plan_id, db, recency_weight_fn, cw,
+    )
+    hr = _hr_signal(all_plan_runs, hr_zones, recency_weight_fn, today, hw)
+    feedback = _feedback_signal(
+        run_feedback_list, all_plan_runs, recency_weight_fn, today, fw,
+    )
+    readiness = _readiness_signal(readiness_logs, rw)
+
+    weights = {
+        "volume": volume.weight,
+        "effort": effort.weight,
+        "completion": completion.weight,
+        "hr_zone": hr.weight,
+        "feedback": feedback.weight,
+        "readiness": readiness.weight,
+    }
+    # Sequential to match legacy ordering: HR weight first folds into the
+    # remaining five (including readiness), then a missing readiness folds
+    # *its* inflated weight onto the remaining four.
+    if not hr.has_data:
+        _redistribute_weight(weights, "hr_zone")
+    if not readiness.has_data:
+        _redistribute_weight(weights, "readiness")
+
+    mountain_factor, mountain_extras = _mountain_factor(mountain_simulation)
+
+    raw_multiplier = (
+        volume.factor * weights["volume"]
+        + effort.factor * weights["effort"]
+        + completion.factor * weights["completion"]
+        + hr.factor * weights["hr_zone"]
+        + feedback.factor * weights["feedback"]
+        + readiness.factor * weights["readiness"]
+    )
+    raw_multiplier += effort.extras["trend_modifier"]
+    raw_multiplier += effort.extras["quality_drift_modifier"]
+    raw_multiplier *= mountain_factor
+
+    raw_multiplier, overreach_detected, tsb_info = _apply_clamps(
+        raw_multiplier,
+        volume_ratio=volume.extras["volume_ratio"],
+        avg_effort=effort.extras["avg_effort"],
+        hr_extras=hr.extras,
+        recent_race_effort_count=effort.extras["recent_race_effort_count"],
+        vdot_trend=vdot_trend,
+        training_load=training_load,
+        current_phase=current_phase,
+    )
+
+    consecutive_same_direction = _count_consecutive_direction(adaptation_history)
+    expanded_range = (
+        consecutive_same_direction >= _CONSECUTIVE_THRESHOLD
+        or tsb_info["peak_primed"]
+    )
+    clamp_min, clamp_max = (
+        (_EXPANDED_MIN, _EXPANDED_MAX) if expanded_range
+        else (_STANDARD_MIN, _STANDARD_MAX)
+    )
+
+    # If any branch flagged overreach, force the multiplier into
+    # "reduce or hold" territory so a strong positive volume contribution
+    # can't produce an "increase" banner alongside an overreach alert.
+    if overreach_detected:
+        raw_multiplier = min(raw_multiplier, 0.95)
+
+    multiplier = round(max(clamp_min, min(clamp_max, raw_multiplier)), 2)
+
+    return _assemble_result(
+        multiplier=multiplier,
+        raw_multiplier=raw_multiplier,
+        weights=weights,
+        current_phase=current_phase,
+        volume=volume, effort=effort, completion=completion,
+        hr=hr, feedback=feedback, readiness=readiness,
+        mountain_extras=mountain_extras,
+        overreach_detected=overreach_detected,
+        tsb_info=tsb_info,
+        vdot_trend=vdot_trend,
+        consecutive_same_direction=consecutive_same_direction,
+        expanded_range=expanded_range,
+    )
+
+
+def _volume_signal(
+    past_workouts, all_plan_runs, recency_weight_fn, today, weight,
+) -> SignalContribution:
     planned_weighted = 0.0
     planned_by_type: Dict[str, float] = defaultdict(float)
     for workout, sched_date in past_workouts:
@@ -85,16 +192,19 @@ def compute_adjustment_signals(
         actual_weighted += dist * w * importance
         actual_by_type[rtype] += dist * w * importance
 
-    volume_ratio = max(0.5, min(1.5,
-        actual_weighted / planned_weighted if planned_weighted > 0 else 1.0
-    ))
+    volume_ratio = max(
+        0.5,
+        min(
+            1.5,
+            actual_weighted / planned_weighted if planned_weighted > 0 else 1.0,
+        ),
+    )
 
-    per_type_ratios: Dict[str, float] = {}
     per_type_run_counts: Dict[str, int] = defaultdict(int)
     for run in all_plan_runs:
-        rtype = run.workout_type or "easy"
-        per_type_run_counts[rtype] += 1
+        per_type_run_counts[run.workout_type or "easy"] += 1
 
+    per_type_ratios: Dict[str, float] = {}
     for wtype in ("easy", "long", "tempo", "interval", "hill"):
         planned = planned_by_type.get(wtype, 0)
         actual = actual_by_type.get(wtype, 0)
@@ -106,6 +216,19 @@ def compute_adjustment_signals(
                 confidence * raw_ratio + (1.0 - confidence) * volume_ratio, 2,
             )
 
+    return SignalContribution(
+        factor=volume_ratio,
+        weight=weight,
+        extras={
+            "volume_ratio": volume_ratio,
+            "per_type_ratios": per_type_ratios,
+        },
+    )
+
+
+def _effort_signal(
+    all_plan_runs, recency_weight_fn, today, weight,
+) -> SignalContribution:
     effort_sum = 0.0
     effort_weight_sum = 0.0
     recent_efforts: List[float] = []
@@ -121,34 +244,48 @@ def compute_adjustment_signals(
         avg_effort = effort_sum / effort_weight_sum
         effort_factor = max(0.85, min(1.10, 1.10 - (avg_effort - 1.0) * (0.25 / 9.0)))
     else:
-        effort_factor = 1.0
         avg_effort = None
+        effort_factor = 1.0
 
     effort_trend = _compute_effort_trend(recent_efforts)
     trend_modifier = {
         "increasing": -0.03,
         "decreasing": +0.02,
-        "stable": 0.0,
-        "insufficient_data": 0.0,
     }.get(effort_trend, 0.0)
 
-    quality_drift, quality_drift_modifier = _compute_quality_drift(all_plan_runs, today)
-
+    quality_drift, quality_drift_modifier = _compute_quality_drift(
+        all_plan_runs, today,
+    )
     recent_race_effort_count = _count_recent_race_efforts(all_plan_runs, today)
 
-    # HR Zone Signal
+    return SignalContribution(
+        factor=effort_factor,
+        weight=weight,
+        extras={
+            "avg_effort": avg_effort,
+            "effort_trend": effort_trend,
+            "effort_factor": effort_factor,
+            "trend_modifier": trend_modifier,
+            "quality_drift": quality_drift,
+            "quality_drift_modifier": quality_drift_modifier,
+            "recent_race_effort_count": recent_race_effort_count,
+        },
+    )
+
+
+def _hr_signal(
+    all_plan_runs, hr_zones, recency_weight_fn, today, weight,
+) -> SignalContribution:
     hr_result = HRZoneAnalyzer.analyze_runs(
         all_plan_runs,
         hr_zones,
         recency_weight_fn=recency_weight_fn,
         today=today,
     )
-
     avg_zone_deviation = hr_result["avg_deviation"]
     hr_zone_adherence = hr_result["adherence_rate"]
     hr_zone_trend = hr_result["trend"]
 
-    # Map deviation to factor
     if avg_zone_deviation >= 1.5:
         hr_zone_factor = 0.90
     elif avg_zone_deviation >= 1.0:
@@ -160,106 +297,139 @@ def compute_adjustment_signals(
     else:
         hr_zone_factor = 1.0
 
-    # If no HR data, distribute weight to other signals
-    if hr_zones is None or hr_result["run_count"] == 0:
+    has_data = hr_zones is not None and hr_result["run_count"] > 0
+    if not has_data:
         hr_zone_factor = 1.0
-        original_hr_weight = hr_zone_weight
-        hr_zone_weight = 0.0
-        total_other = volume_weight + effort_weight + completion_weight + feedback_weight + readiness_weight
-        if total_other > 0:
-            scale = 1.0 + original_hr_weight / total_other
-            volume_weight *= scale
-            effort_weight *= scale
-            completion_weight *= scale
-            feedback_weight *= scale
-            readiness_weight *= scale
 
-    # Feedback Sentiment Signal
-    if run_feedback_list and len(run_feedback_list) > 0:
-        warning_weighted = 0.0
-        positive_weighted = 0.0
-        total_weighted = 0.0
+    return SignalContribution(
+        factor=hr_zone_factor,
+        weight=weight,
+        has_data=has_data,
+        extras={
+            "hr_zone_factor": hr_zone_factor,
+            "hr_zone_adherence": hr_zone_adherence,
+            "avg_zone_deviation": avg_zone_deviation,
+            "hr_zone_trend": hr_zone_trend,
+            "avg_abs_deviation": hr_result.get("avg_abs_deviation", 0),
+        },
+    )
 
-        for fb in run_feedback_list:
-            run_date = None
-            for run in all_plan_runs:
-                if run.id == fb.run_log_id:
-                    run_date = _to_date(run.date) if run.date else today
-                    break
 
-            if run_date:
-                w = recency_weight_fn(run_date)
-            else:
-                w = 1.0
+def _feedback_signal(
+    run_feedback_list, all_plan_runs, recency_weight_fn, today, weight,
+) -> SignalContribution:
+    if not run_feedback_list:
+        return SignalContribution(
+            factor=1.0,
+            weight=weight,
+            extras={
+                "warning_ratio": 0.0,
+                "positive_ratio": 0.0,
+                "feedback_factor": 1.0,
+            },
+        )
 
-            total_weighted += w
-            if fb.overall_sentiment == "warning":
-                warning_weighted += w
-            elif fb.overall_sentiment == "positive":
-                positive_weighted += w
+    warning_weighted = 0.0
+    positive_weighted = 0.0
+    total_weighted = 0.0
+    for fb in run_feedback_list:
+        run_date = None
+        for run in all_plan_runs:
+            if run.id == fb.run_log_id:
+                run_date = _to_date(run.date) if run.date else today
+                break
+        w = recency_weight_fn(run_date) if run_date else 1.0
+        total_weighted += w
+        if fb.overall_sentiment == "warning":
+            warning_weighted += w
+        elif fb.overall_sentiment == "positive":
+            positive_weighted += w
 
-        if total_weighted > 0:
-            warning_ratio = warning_weighted / total_weighted
-            positive_ratio = positive_weighted / total_weighted
-
-            if warning_ratio > 0.6:
-                feedback_factor = 0.92
-            elif warning_ratio > 0.4:
-                feedback_factor = 0.96
-            elif positive_ratio > 0.6:
-                feedback_factor = 1.05
-            elif positive_ratio > 0.4:
-                feedback_factor = 1.02
-            else:
-                feedback_factor = 1.0
+    if total_weighted > 0:
+        warning_ratio = warning_weighted / total_weighted
+        positive_ratio = positive_weighted / total_weighted
+        if warning_ratio > 0.6:
+            feedback_factor = 0.92
+        elif warning_ratio > 0.4:
+            feedback_factor = 0.96
+        elif positive_ratio > 0.6:
+            feedback_factor = 1.05
+        elif positive_ratio > 0.4:
+            feedback_factor = 1.02
         else:
             feedback_factor = 1.0
-            warning_ratio = 0.0
-            positive_ratio = 0.0
     else:
         feedback_factor = 1.0
         warning_ratio = 0.0
         positive_ratio = 0.0
 
-    # Readiness signal — blends daily morning check-ins into the multi-week pipeline.
-    readiness_log_count = len(readiness_logs) if readiness_logs else 0
-    if readiness_log_count >= 3:
+    return SignalContribution(
+        factor=feedback_factor,
+        weight=weight,
+        extras={
+            "warning_ratio": warning_ratio,
+            "positive_ratio": positive_ratio,
+            "feedback_factor": feedback_factor,
+        },
+    )
+
+
+def _readiness_signal(readiness_logs, weight) -> SignalContribution:
+    count = len(readiness_logs) if readiness_logs else 0
+    if count >= 3:
         scores = [getattr(log, "score", 0) or 0 for log in readiness_logs]
         readiness_pct = (sum(scores) / len(scores)) / 100.0
         readiness_pct = max(0.0, min(1.0, readiness_pct))
         readiness_factor = 0.92 + readiness_pct * 0.13
+        has_data = True
     else:
         readiness_factor = 1.0
-        original_readiness_weight = readiness_weight
-        readiness_weight = 0.0
-        total_other = (
-            volume_weight + effort_weight + completion_weight
-            + hr_zone_weight + feedback_weight
-        )
-        if total_other > 0 and original_readiness_weight > 0:
-            scale = 1.0 + original_readiness_weight / total_other
-            volume_weight *= scale
-            effort_weight *= scale
-            completion_weight *= scale
-            hr_zone_weight *= scale
-            feedback_weight *= scale
+        has_data = False
 
-    # Mountain-from-flat simulation signal. Applies only when callers provide
-    # the proxy score (trail race + flat training access).
-    mountain_simulation_score = None
-    mountain_simulation_factor = 1.0
-    if mountain_simulation is not None:
-        mountain_simulation_score = float(mountain_simulation.get("score", 0) or 0)
-        if mountain_simulation_score >= 85:
-            mountain_simulation_factor = 1.03
-        elif mountain_simulation_score >= 70:
-            mountain_simulation_factor = 1.00
-        elif mountain_simulation_score >= 55:
-            mountain_simulation_factor = 0.97
-        else:
-            mountain_simulation_factor = 0.93
+    return SignalContribution(
+        factor=readiness_factor,
+        weight=weight,
+        has_data=has_data,
+        extras={
+            "readiness_factor": readiness_factor,
+            "readiness_log_count": count,
+        },
+    )
 
-    completed_ids = set()
+
+def _mountain_factor(
+    mountain_simulation: Optional[Dict[str, Any]],
+) -> Tuple[float, Dict[str, Any]]:
+    """Compute the mountain-from-flat proxy factor.
+
+    Returns ``(factor, extras)``. The factor is multiplied directly into
+    ``raw_multiplier`` rather than weighted, so it stays out of the linear
+    combination and leaves phase weights unchanged for non-trail plans.
+    """
+    if mountain_simulation is None:
+        return 1.0, {
+            "mountain_simulation_score": None,
+            "mountain_simulation_factor": 1.0,
+        }
+    score = float(mountain_simulation.get("score", 0) or 0)
+    if score >= 85:
+        factor = 1.03
+    elif score >= 70:
+        factor = 1.00
+    elif score >= 55:
+        factor = 0.97
+    else:
+        factor = 0.93
+    return factor, {
+        "mountain_simulation_score": score,
+        "mountain_simulation_factor": factor,
+    }
+
+
+def _completion_signal(
+    past_workouts, past_workout_ids, plan_id, db, recency_weight_fn, weight,
+) -> SignalContribution:
+    completed_ids: set = set()
     if past_workout_ids:
         completed_rows = (
             db.query(RunLog.daily_workout_id)
@@ -283,50 +453,74 @@ def compute_adjustment_signals(
         completed_weighted / scheduled_weighted
         if scheduled_weighted > 0 else 0.0
     )
-
     completion_factor = 0.90 + 0.15 * completion_rate
 
-    raw_multiplier = (
-        (volume_ratio * volume_weight)
-        + (effort_factor * effort_weight)
-        + (completion_factor * completion_weight)
-        + (hr_zone_factor * hr_zone_weight)
-        + (feedback_factor * feedback_weight)
-        + (readiness_factor * readiness_weight)
+    return SignalContribution(
+        factor=completion_factor,
+        weight=weight,
+        extras={
+            "completion_rate": completion_rate,
+            "completion_factor": completion_factor,
+        },
     )
 
-    raw_multiplier += trend_modifier
-    raw_multiplier += quality_drift_modifier
 
-    # Execute the mountain simulation signal as an explicit final adjustment.
-    # This keeps existing phase weights unchanged for non-trail plans and for
-    # trail plans without flat-access simulation targets.
-    raw_multiplier *= mountain_simulation_factor
+def _redistribute_weight(weights: Dict[str, float], dropped: str) -> None:
+    """Zero ``dropped``'s weight and pro-rata redistribute it onto the rest.
 
+    Mutates ``weights`` in place. Matches the legacy sequential ordering: if
+    called twice for two missing signals, the second redistribution sees the
+    already-inflated weights from the first.
+    """
+    original = weights[dropped]
+    weights[dropped] = 0.0
+    total_other = sum(v for k, v in weights.items() if k != dropped)
+    if total_other > 0 and original > 0:
+        scale = 1.0 + original / total_other
+        for k in weights:
+            if k != dropped:
+                weights[k] *= scale
+
+
+def _apply_clamps(
+    raw_multiplier: float,
+    *,
+    volume_ratio: float,
+    avg_effort: Optional[float],
+    hr_extras: Dict[str, Any],
+    recent_race_effort_count: int,
+    vdot_trend: str,
+    training_load: Optional[Dict[str, Any]],
+    current_phase: str,
+) -> Tuple[float, bool, Dict[str, Any]]:
+    """Apply overreach, vdot-trend, and TSB-form clamps.
+
+    Returns ``(clamped_multiplier, overreach_detected, tsb_info)``.
+    ``tsb_info`` carries ``tsb``, ``ctl``, ``atl``, ``tsb_form``, and
+    ``peak_primed`` for downstream use.
+    """
     overreach_detected = False
+
     if volume_ratio > 1.2 and avg_effort is not None and avg_effort > 8.0:
         raw_multiplier = min(raw_multiplier, 0.88)
         overreach_detected = True
 
-    # HR-based overreach detection
-    if hr_zone_adherence < 0.3 and hr_result.get("avg_abs_deviation", 0) > 1.0:
+    if (
+        hr_extras.get("hr_zone_adherence", 1.0) < 0.3
+        and hr_extras.get("avg_abs_deviation", 0) > 1.0
+    ):
         raw_multiplier = min(raw_multiplier, 0.85)
         overreach_detected = True
 
-    # Repeated race-effort exposure raises overreach risk
     if recent_race_effort_count >= 2:
         raw_multiplier = min(raw_multiplier, 0.95)
         overreach_detected = True
 
-    # Declining fitness: VDOT dropping despite maintained workload
     if vdot_trend == "declining":
         raw_multiplier = min(raw_multiplier, 0.92)
 
-    # TSB / Form clamps — incorporate accumulated load from TrainingLoadService.
-    tsb = None
-    ctl = None
-    atl = None
-    tsb_form = None
+    tsb = ctl = atl = None
+    tsb_form: Optional[str] = None
     peak_primed = False
     if training_load and training_load.get("available"):
         current_load = training_load.get("current") or {}
@@ -348,72 +542,88 @@ def compute_adjustment_signals(
         else:
             tsb_form = "neutral"
 
-    consecutive_same_direction = _count_consecutive_direction(adaptation_history)
-    if consecutive_same_direction >= _CONSECUTIVE_THRESHOLD or peak_primed:
-        clamp_min = _EXPANDED_MIN
-        clamp_max = _EXPANDED_MAX
-    else:
-        clamp_min = _STANDARD_MIN
-        clamp_max = _STANDARD_MAX
+    return raw_multiplier, overreach_detected, {
+        "tsb": tsb,
+        "ctl": ctl,
+        "atl": atl,
+        "tsb_form": tsb_form,
+        "peak_primed": peak_primed,
+    }
 
-    # Whenever overreach is flagged from any branch above, force the final
-    # multiplier into "reduce or hold" territory. Without this, a strong
-    # positive volume contribution could push the multiplier back above 1.0
-    # even after overreach was detected — yielding a banner that says
-    # "increase volume" alongside an overreach alert telling the user the
-    # opposite.
-    if overreach_detected:
-        raw_multiplier = min(raw_multiplier, 0.95)
 
-    multiplier = round(max(clamp_min, min(clamp_max, raw_multiplier)), 2)
-
+def _assemble_result(
+    *,
+    multiplier: float,
+    raw_multiplier: float,
+    weights: Dict[str, float],
+    current_phase: str,
+    volume: SignalContribution,
+    effort: SignalContribution,
+    completion: SignalContribution,
+    hr: SignalContribution,
+    feedback: SignalContribution,
+    readiness: SignalContribution,
+    mountain_extras: Dict[str, Any],
+    overreach_detected: bool,
+    tsb_info: Dict[str, Any],
+    vdot_trend: str,
+    consecutive_same_direction: int,
+    expanded_range: bool,
+) -> Dict[str, Any]:
+    quality_drift = effort.extras["quality_drift"]
+    avg_effort = effort.extras["avg_effort"]
+    mountain_score = mountain_extras["mountain_simulation_score"]
     return {
         "multiplier": multiplier,
-        "volume_ratio": round(volume_ratio, 2),
-        "effort_factor": round(effort_factor, 2),
+        "volume_ratio": round(volume.extras["volume_ratio"], 2),
+        "effort_factor": round(effort.extras["effort_factor"], 2),
         "avg_effort": round(avg_effort, 1) if avg_effort is not None else None,
-        "effort_trend": effort_trend,
-        "completion_rate": round(completion_rate, 2),
-        "completion_factor": round(completion_factor, 2),
+        "effort_trend": effort.extras["effort_trend"],
+        "completion_rate": round(completion.extras["completion_rate"], 2),
+        "completion_factor": round(completion.extras["completion_factor"], 2),
         "raw_multiplier": round(raw_multiplier, 3),
-        "trend_modifier": round(trend_modifier, 3),
+        "trend_modifier": round(effort.extras["trend_modifier"], 3),
         "overreach_detected": overreach_detected,
-        "per_type_ratios": {k: round(v, 2) for k, v in per_type_ratios.items()},
+        "per_type_ratios": {
+            k: round(v, 2) for k, v in volume.extras["per_type_ratios"].items()
+        },
         "phase_weights": {
-            "volume": round(volume_weight, 2),
-            "effort": round(effort_weight, 2),
-            "completion": round(completion_weight, 2),
-            "hr_zone": round(hr_zone_weight, 2),
-            "feedback": round(feedback_weight, 2),
-            "readiness": round(readiness_weight, 2),
+            "volume": round(weights["volume"], 2),
+            "effort": round(weights["effort"], 2),
+            "completion": round(weights["completion"], 2),
+            "hr_zone": round(weights["hr_zone"], 2),
+            "feedback": round(weights["feedback"], 2),
+            "readiness": round(weights["readiness"], 2),
         },
         "current_phase": current_phase,
         "consecutive_same_direction": consecutive_same_direction,
-        "expanded_range": consecutive_same_direction >= _CONSECUTIVE_THRESHOLD or peak_primed,
-        "hr_zone_adherence": hr_zone_adherence,
-        "avg_zone_deviation": round(avg_zone_deviation, 2),
-        "hr_zone_trend": hr_zone_trend,
-        "hr_zone_factor": round(hr_zone_factor, 2),
-        "warning_ratio": round(warning_ratio, 2),
-        "positive_ratio": round(positive_ratio, 2),
-        "feedback_factor": round(feedback_factor, 2),
+        "expanded_range": expanded_range,
+        "hr_zone_adherence": hr.extras["hr_zone_adherence"],
+        "avg_zone_deviation": round(hr.extras["avg_zone_deviation"], 2),
+        "hr_zone_trend": hr.extras["hr_zone_trend"],
+        "hr_zone_factor": round(hr.extras["hr_zone_factor"], 2),
+        "warning_ratio": round(feedback.extras["warning_ratio"], 2),
+        "positive_ratio": round(feedback.extras["positive_ratio"], 2),
+        "feedback_factor": round(feedback.extras["feedback_factor"], 2),
         "mountain_simulation_score": (
-            round(mountain_simulation_score, 1)
-            if mountain_simulation_score is not None
-            else None
+            round(mountain_score, 1) if mountain_score is not None else None
         ),
-        "mountain_simulation_factor": round(mountain_simulation_factor, 2),
+        "mountain_simulation_factor": round(
+            mountain_extras["mountain_simulation_factor"], 2,
+        ),
         "vdot_trend": vdot_trend,
-        "quality_drift": round(quality_drift, 2) if quality_drift is not None else None,
-        "quality_drift_modifier": round(quality_drift_modifier, 3),
-        "recent_race_effort_count": recent_race_effort_count,
-        "readiness_factor": round(readiness_factor, 3),
-        "readiness_weight": round(readiness_weight, 3),
-        "readiness_log_count": readiness_log_count,
-        "tsb": round(tsb, 1) if tsb is not None else None,
-        "ctl": round(ctl, 1) if ctl is not None else None,
-        "atl": round(atl, 1) if atl is not None else None,
-        "tsb_form": tsb_form,
+        "quality_drift": (
+            round(quality_drift, 2) if quality_drift is not None else None
+        ),
+        "quality_drift_modifier": round(effort.extras["quality_drift_modifier"], 3),
+        "recent_race_effort_count": effort.extras["recent_race_effort_count"],
+        "readiness_factor": round(readiness.extras["readiness_factor"], 3),
+        "readiness_weight": round(weights["readiness"], 3),
+        "readiness_log_count": readiness.extras["readiness_log_count"],
+        "tsb": round(tsb_info["tsb"], 1) if tsb_info["tsb"] is not None else None,
+        "ctl": round(tsb_info["ctl"], 1) if tsb_info["ctl"] is not None else None,
+        "atl": round(tsb_info["atl"], 1) if tsb_info["atl"] is not None else None,
+        "tsb_form": tsb_info["tsb_form"],
     }
 
 

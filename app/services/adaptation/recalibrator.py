@@ -7,6 +7,7 @@ from sqlalchemy.orm import Session
 
 from app.models import TrainingPlan, WeeklyPlan
 from app.core.training import workout_steps as _steps_mod
+from app.services.plans.plan_date_utils import compute_current_week
 from app.utils import persist_json, to_date as _to_date
 
 from ._helpers import batch_workouts_by_week, parse_plan_data_lookups, today_date
@@ -34,9 +35,11 @@ def recalibrate(
         return {"ok": False, "error": "Plan has no start date"}
 
     today = today_date()
-    current_week = min(
-        ((today - start_date).days // 7) + 1,
-        training_plan.weeks_duration or 0,
+    current_week = compute_current_week(
+        start_date,
+        today,
+        total_weeks=training_plan.weeks_duration or 0,
+        pre_start=1,
     )
 
     plan_data, pd_week, pd_workout = parse_plan_data_lookups(training_plan)

@@ -7,6 +7,7 @@ from sqlalchemy.orm import Session
 
 from app.models import TrainingPlan
 from app.core.training.vdot_calculator import VDOTCalculator
+from app.services.plans.plan_date_utils import compute_current_week
 from app.utils import to_date as _to_date
 
 from ._helpers import parse_plan_data_lookups, today_date
@@ -53,8 +54,7 @@ def recalibrate_zones_only(
 
     start_date = _to_date(training_plan.start_date)
     today = today_date()
-    days_elapsed = (today - start_date).days
-    current_week = max(1, days_elapsed // 7 + 1)
+    current_week = compute_current_week(start_date, today, clamp_min=1, pre_start=1)
 
     pace_updates = 0
     for (week_num, day_num), workout in pd_workout.items():

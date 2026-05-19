@@ -6,6 +6,7 @@ from sqlalchemy.orm import Session
 
 from app.models import DailyWorkout, TrainingPlan, WeeklyPlan
 from app.models.run_log import RunLog
+from app.services.plans.plan_date_utils import compute_current_week
 from app.utils import to_date as _to_date
 
 
@@ -24,7 +25,9 @@ def compute_adherence_heatmap(
 
     today = date.today()
     total_weeks = plan.weeks_duration or 0
-    current_week = min(((today - start_date).days // 7) + 1, total_weeks)
+    current_week = compute_current_week(
+        start_date, today, total_weeks=total_weeks, pre_start=1
+    )
 
     plan_data = plan.plan_data if plan.plan_data else []
 

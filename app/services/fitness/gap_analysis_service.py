@@ -17,6 +17,7 @@ from app.services.adaptation import AdaptationService
 from app.services.fitness.race_predictor_service import RacePredictorService
 from app.services.fitness.readiness_scoring import score_mountain_simulation
 from app.services.fitness.readiness_service import ReadinessService
+from app.services.plans.plan_date_utils import compute_current_week
 from app.utils import parse_race_time_to_seconds, to_date as _to_date
 
 logger = logging.getLogger(__name__)
@@ -60,11 +61,12 @@ def _load_gap_context(
     if total_weeks == 0:
         return None
 
-    delta_days = (date.today() - start_date).days
-    if delta_days < 0:
+    if (date.today() - start_date).days < 0:
         return None  # plan hasn't started
 
-    current_week = min((delta_days // 7) + 1, total_weeks)
+    current_week = compute_current_week(
+        start_date, date.today(), total_weeks=total_weeks
+    )
     if current_week < 1:
         return None
 

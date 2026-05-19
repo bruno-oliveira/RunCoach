@@ -8,6 +8,7 @@ from sqlalchemy.orm import Session
 
 from app.models import RunLog, TrainingPlan
 from app.core.training import workout_steps as _steps_mod
+from app.services.plans.plan_date_utils import compute_current_week
 from app.utils import persist_json, to_date as _to_date
 
 from ._helpers import today_date
@@ -30,7 +31,9 @@ def detect_missed_weeks(
     start_date = _to_date(training_plan.start_date)
     today = today_date()
     total_weeks = training_plan.weeks_duration or 0
-    current_week = min(((today - start_date).days // 7) + 1, total_weeks)
+    current_week = compute_current_week(
+        start_date, today, total_weeks=total_weeks, pre_start=1
+    )
 
     runs = (
         db.query(RunLog)

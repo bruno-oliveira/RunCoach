@@ -12,6 +12,7 @@ from app.dependencies import get_db, get_optional_user
 from app.models import TrainingPlan, User
 from app.constants import DISTANCE_NAMES
 from app.services.adaptation import AdaptationService
+from app.services.plans.plan_date_utils import compute_current_week
 from app.core.training.strength_plan import derive_experience_level
 from app.template_helpers import create_templates
 
@@ -56,8 +57,7 @@ async def list_my_plans(
             if plan.start_date:
                 sd = plan.start_date
                 start_d = sd.date() if isinstance(sd, datetime) else sd
-                delta_days = (today - start_d).days
-                current_wk = (delta_days // 7) + 1 if delta_days >= 0 else 0
+                current_wk = compute_current_week(start_d, today, pre_start=0)
                 if current_wk > plan.weeks_duration:
                     plan.status_label = "Completed"
                 elif current_wk >= 1:

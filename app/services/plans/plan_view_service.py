@@ -16,6 +16,7 @@ from app.services.fitness.hr_zone_service import HRZoneService
 
 from app.services.runs import completion_stats as _cs
 from . import plan_data_enricher as _enricher
+from .plan_date_utils import compute_current_week
 from app.services.runs import week_pulse_generator as _pulse
 from app.core.training.vertical_simulation import compute_weekly_vertical_actuals
 
@@ -95,8 +96,7 @@ class PlanViewService:
             from datetime import date as _date, datetime as _datetime
             sd = training_plan.start_date
             start_d = sd.date() if isinstance(sd, _datetime) else sd
-            delta_days = (_date.today() - start_d).days
-            current_wk = (delta_days // 7) + 1 if delta_days >= 0 else 0
+            current_wk = compute_current_week(start_d, _date.today(), pre_start=0)
             if current_wk > training_plan.weeks_duration:
                 comp_stats = self.get_completion_stats(training_plan, db)
                 next_plan_cta = self.get_next_plan_cta(training_plan.target_distance_km)
@@ -121,8 +121,7 @@ class PlanViewService:
             from datetime import date as _d2, datetime as _dt2
             sd2 = training_plan.start_date
             start_d2 = sd2.date() if isinstance(sd2, _dt2) else sd2
-            delta2 = (_d2.today() - start_d2).days
-            cw = (delta2 // 7) + 1 if delta2 >= 0 else 0
+            cw = compute_current_week(start_d2, _d2.today(), pre_start=0)
             if 1 <= cw <= (training_plan.weeks_duration or 0):
                 try:
                     week_pulse = self.get_week_pulse(training_plan, cw, db)

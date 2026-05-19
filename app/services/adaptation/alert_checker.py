@@ -5,6 +5,7 @@ from typing import Any, Dict, Optional
 from sqlalchemy.orm import Session
 
 from app.models import DailyWorkout, RunLog, TrainingPlan, WeeklyPlan
+from app.services.plans.plan_date_utils import compute_current_week
 from app.utils import to_date as _to_date
 
 from ._helpers import today_date
@@ -36,12 +37,11 @@ def check_alerts(
 
     start_date = _to_date(training_plan.start_date)
     today = today_date()
-    delta_days = (today - start_date).days
-    if delta_days < 0:
+    if (today - start_date).days < 0:
         return None
 
-    current_week = min(
-        (delta_days // 7) + 1, training_plan.weeks_duration or 0
+    current_week = compute_current_week(
+        start_date, today, total_weeks=training_plan.weeks_duration or 0
     )
 
     if current_week < 4:

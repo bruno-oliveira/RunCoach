@@ -13,6 +13,7 @@ from sqlalchemy.orm import Session
 
 from app.models import TrainingPlan
 from app.models.user import User
+from app.services.plans.plan_date_utils import compute_current_week
 from app.utils import to_date as _to_date
 
 from . import change_reasons as _reasons
@@ -55,12 +56,13 @@ def evaluate_weekly_recommendation(
 
     start_date = _to_date(training_plan.start_date)
     today = today_date()
-    days_elapsed = (today - start_date).days
-    if days_elapsed < 0:
+    if (today - start_date).days < 0:
         return None
 
     total_weeks = training_plan.weeks_duration or 0
-    current_week = min(max(1, days_elapsed // 7 + 1), total_weeks)
+    current_week = compute_current_week(
+        start_date, today, clamp_min=1, total_weeks=total_weeks
+    )
 
     last_completed_week = current_week - 1 if current_week > 1 else None
     if last_completed_week is None:
@@ -224,8 +226,7 @@ def _run_accept(
 
     start_date = _to_date(training_plan.start_date)
     today = today_date()
-    days_elapsed = (today - start_date).days
-    current_week = max(1, days_elapsed // 7 + 1)
+    current_week = compute_current_week(start_date, today, clamp_min=1, pre_start=1)
     current_day_of_week = today.isoweekday()
 
     in_progress = is_current_week_in_progress(

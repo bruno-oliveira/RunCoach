@@ -25,6 +25,7 @@ from app.services.fitness.readiness_scoring import (
 )
 from app.models import RunLog
 from app.services.fitness.race_predictor_service import RacePredictorService
+from app.services.plans.plan_date_utils import compute_current_week
 from app.utils import to_date as _to_date
 
 logger = logging.getLogger(__name__)
@@ -117,8 +118,9 @@ class ReadinessService:
         if total_weeks == 0:
             return None
 
-        delta_days = (today - start_date).days
-        current_week = 0 if delta_days < 0 else min((delta_days // 7) + 1, total_weeks)
+        current_week = compute_current_week(
+            start_date, today, total_weeks=total_weeks, pre_start=0
+        )
         weeks_remaining = max(0, total_weeks - current_week)
         race_date = start_date + timedelta(weeks=total_weeks)
 

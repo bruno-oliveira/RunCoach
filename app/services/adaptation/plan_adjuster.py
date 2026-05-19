@@ -10,6 +10,7 @@ from app.models import DailyWorkout, ReadinessLog, RunLog, RunFeedback, Training
 from app.services.fitness.race_predictor_service import RacePredictorService
 from app.services.fitness.readiness_scoring import score_mountain_simulation
 from app.services.fitness.training_load_service import TrainingLoadService
+from app.services.plans.plan_date_utils import compute_current_week
 from app.utils import persist_json, to_date as _to_date
 
 from . import change_reasons as _reasons
@@ -67,8 +68,7 @@ def gather_signals(
 
     start_date = _to_date(training_plan.start_date)
     today = today_date()
-    days_elapsed = (today - start_date).days
-    current_week = max(1, days_elapsed // 7 + 1)
+    current_week = compute_current_week(start_date, today, clamp_min=1, pre_start=1)
 
     all_plan_runs = (
         db.query(RunLog)
