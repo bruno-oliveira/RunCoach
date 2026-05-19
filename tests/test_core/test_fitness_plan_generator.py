@@ -2,7 +2,7 @@
 
 import pytest
 
-from app.core.generators.fitness_plan_generator import FitnessPlanGenerator
+from app.contexts.plan.generators.fitness_plan_generator import FitnessPlanGenerator
 
 
 class TestFitnessPlanGenerator:

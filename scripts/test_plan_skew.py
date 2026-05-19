@@ -8,8 +8,8 @@ volume accuracy.
 import sys
 sys.path.insert(0, '.')
 
-from app.core.generators.performance_plan_generator import PerformancePlanGenerator
-from app.core.generators.plan_generator import TrainingPlanGenerator
+from app.contexts.plan.generators.performance_plan_generator import PerformancePlanGenerator
+from app.contexts.plan.generators.plan_generator import TrainingPlanGenerator
 
 
 def analyze_performance_plan(label, target_distance, current_weekly_km, weeks=8):

@@ -13,8 +13,8 @@ from alembic.config import Config
 
 from app.dependencies import get_db
 from app.models import Base
-from app.core.nutrition.nutrition_engine import NutritionEngine
-from app.core.generators.plan_generator import TrainingPlanGenerator
+from app.contexts.nutrition.nutrition_engine import NutritionEngine
+from app.contexts.plan.generators.plan_generator import TrainingPlanGenerator
 
 
 def _run_alembic_migrations(engine) -> None:

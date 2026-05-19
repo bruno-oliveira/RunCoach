@@ -7,7 +7,7 @@ Two related concerns for flat-only training on a mountain race:
   workout card can offer a concrete treadmill option ("20 min @ 6%").
 * ``compute_weekly_vertical_actuals`` aggregates logged runs into per-week
   uphill/downhill/transition estimates, mirroring the factor model in
-  :mod:`app.services.fitness.readiness_scoring.score_mountain_simulation`
+  :mod:`app.contexts.runner.fitness.readiness_scoring.score_mountain_simulation`
   so the weekly card can render planned-vs-actual gauges.
 
 Pure functions — no DB or HTTP. The caller passes in the data it needs.
@@ -64,7 +64,7 @@ def attach_treadmill_prescriptions(
 
     Only fires when the runner has flat-only access and a non-flat race
     profile -- the same gate as ``_vertical_simulation_targets`` in
-    :mod:`app.core.generators.weekly_plan_builder`.
+    :mod:`app.contexts.plan.generators.weekly_plan_builder`.
     """
     if (
         trail_profile is None

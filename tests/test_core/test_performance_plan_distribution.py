@@ -1,7 +1,7 @@
 """Tests for performance plan day distribution and spacing."""
 
 import pytest
-from app.core.generators.performance_plan_generator import PerformancePlanGenerator
+from app.contexts.plan.generators.performance_plan_generator import PerformancePlanGenerator
 
 
 class TestPerformancePlanDayDistribution:

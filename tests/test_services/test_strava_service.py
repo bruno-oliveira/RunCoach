@@ -8,7 +8,7 @@ import pytest
 
 from app.models.run_log import RunLog
 from app.models.user import User
-from app.services.integrations.strava_service import StravaService, STRAVA_WORKOUT_TYPE_MAP
+from app.infrastructure.integrations.strava_service import StravaService, STRAVA_WORKOUT_TYPE_MAP
 
 
 @pytest.fixture

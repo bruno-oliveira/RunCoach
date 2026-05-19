@@ -29,7 +29,7 @@ from app.schemas.strava_schemas import (
     StravaSyncResponse,
 )
 
-from app.config import settings
+from app.infrastructure.config import settings
 from pydantic import BaseModel, Field
 
 

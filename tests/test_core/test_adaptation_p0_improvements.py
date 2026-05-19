@@ -9,8 +9,8 @@ from sqlalchemy.orm import Session, sessionmaker
 from sqlalchemy.pool import StaticPool
 
 from app.models import Base, User, TrainingPlan, WeeklyPlan, DailyWorkout, RunLog
-from app.services.adaptation.plan_adjuster import _get_current_phase
-from app.services.adaptation.signal_computer import (
+from app.contexts.plan.adaptation.plan_adjuster import _get_current_phase
+from app.contexts.plan.adaptation.signal_computer import (
     _PHASE_WEIGHTS,
     _MIN_RUNS_PER_TYPE,
     _BAYESIAN_SHRINKAGE_PER_RUN,
@@ -868,7 +868,7 @@ class TestPhaseAwareAdjustmentIntegration:
 
     def test_adjust_plan_records_phase_in_signals(self, db):
         """adjust_plan should return phase information in its result."""
-        from app.services.adaptation.plan_adjuster import adjust_plan
+        from app.contexts.plan.adaptation.plan_adjuster import adjust_plan
 
         user, plan = _create_plan_with_phases(
             db, weeks=8, weeks_ago=4,
@@ -884,7 +884,7 @@ class TestPhaseAwareAdjustmentIntegration:
 
     def test_adjust_plan_records_phase_in_history(self, db):
         """Adaptation history should include the phase for each adjustment."""
-        from app.services.adaptation.plan_adjuster import adjust_plan
+        from app.contexts.plan.adaptation.plan_adjuster import adjust_plan
 
         user, plan = _create_plan_with_phases(
             db, weeks=8, weeks_ago=4,

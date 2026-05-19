@@ -3,7 +3,7 @@
 import uuid
 from datetime import datetime, timedelta, timezone
 
-from app.services.adaptation.signal_computer import (
+from app.contexts.plan.adaptation.signal_computer import (
     compute_adjustment_signals,
     _compute_quality_drift,
     _count_recent_race_efforts,

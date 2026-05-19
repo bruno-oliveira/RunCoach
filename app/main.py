@@ -12,12 +12,12 @@ from fastapi import Depends, FastAPI, Request
 from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 
-from app.config import settings, setup_logging
+from app.infrastructure.config import settings, setup_logging
 from app.dependencies import get_db, get_optional_user
-from app.middleware import csrf_protection, request_size_limit, security_headers, set_anonymous_user_id_cookie
+from app.web.middleware import csrf_protection, request_size_limit, security_headers, set_anonymous_user_id_cookie
 from app.models import Base, User
 from app.template_helpers import create_templates
-from app.routers import (
+from app.web.routers import (
     analytics_page_router,
     analytics_router,
     auth_router,
@@ -35,7 +35,7 @@ from app.routers import (
 from app.schemas import HealthResponse
 from app.migrations import run_alembic_migrations
 from app.migrations.vdot_backfill import backfill_vdot
-from app.services.cleanup_service import cleanup_inactive_accounts
+from app.application.cleanup_service import cleanup_inactive_accounts
 from app.dependencies import engine, SessionLocal
 
 setup_logging(settings)
@@ -106,7 +106,7 @@ def _run_startup_migrations() -> None:
         logger.warning("VDOT backfill failed: %s", e)
 
     try:
-        from app.services.fitness.effort_classifier import backfill_effort_classes
+        from app.contexts.runner.fitness.effort_classifier import backfill_effort_classes
 
         updated = backfill_effort_classes(session)
         if updated:
@@ -162,7 +162,7 @@ def create_app(skip_migrations: bool = False) -> FastAPI:
     app.middleware("http")(security_headers)
 
     app.mount("/static", CachedStaticFiles(
-        directory="app/static",
+        directory="app/web/static",
         cache_max_age=86400
     ), name="static")
 

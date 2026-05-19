@@ -35,109 +35,77 @@ Docker build: `docker build -t runcoach .`
 
 ## Architecture
 
+The codebase is organized into **domain-driven bounded contexts** with clean dependency direction (web → application → contexts → core / domain; infrastructure implements interfaces). See `ARCHITECTURAL_IMPROVEMENT.md` for the design rationale.
+
 ### Project Structure
 
 ```
 app/
 ├── __init__.py
-├── main.py              # FastAPI application entry point
-├── config.py            # Centralized configuration (pydantic-settings)
-├── dependencies.py      # FastAPI dependency injection
-├── schemas.py           # Pydantic request/response schemas
+├── main.py              # FastAPI application entry point + factory
+├── dependencies.py      # Per-context DI: lazy service factories + repo factories
 ├── exceptions.py        # Custom exception hierarchy
-├── core/                # Core business logic (domain sub-packages)
-│   ├── generators/      # Plan generation
-│   │   ├── plan_generator.py        # Main training plan orchestrator
-│   │   ├── beginner_plan_generator.py # Couch-to-5K plans
-│   │   ├── performance_plan_generator.py # VDOT-based plans
-│   │   └── performance_plan_generator.py # VDOT-based plans
-│   ���── training/        # Training calculations & workout building
-│   │   ├── phase_calculator.py     # Phase distribution & recovery weeks
-│   │   ├── mileage_progression.py  # Weekly mileage with 10% rule
-│   │   ├── workout_builders.py     # Individual workout generation
-│   │   ├── workout_distribution.py # Workout type scheduling
-│   │   ├── long_run_calculator.py  # Long run distances
-│   │   ├── key_workout_library.py  # Race-specific key workouts
-│   │   ├── vdot_calculator.py      # VDOT & pace zones
-│   │   ├── hr_zone_calculator.py   # Heart rate training zones
-│   │   ├── quality_scorer.py       # Effort quality scoring
-│   │   └── strength_plan.py        # Strength training plans
-│   ├── nutrition/       # Nutrition planning
-│   │   ├── nutrition_engine.py     # Meal plan generation
-│   │   └── meal_database.py        # Meal data management
-│   ├── coaching/        # Coaching & feedback
-│   │   ├── coaching_feedback_engine.py # Post-run coaching feedback
-│   │   ├── coaching_notes_generator.py # Per-workout coaching notes
-│   │   └── training_tips.py        # Weekly training tips
-│   ├── race/            # Race-specific logic
-│   │   └── race_protocol_generator.py  # Race day protocols
-│   └── export/          # PDF generation
-│       └── pdf_generator.py         # Training plan PDF export
-├── models/              # SQLAlchemy database models
-│   ├── __init__.py      # Model exports and relationship configuration
-│   ├── base.py          # SQLAlchemy Base class
-│   ├── user.py          # User model (Google OAuth)
-│   ├── training_plan.py # Training plan model
-│   ├── weekly_plan.py   # Weekly plan model
-│   ├── daily_workout.py # Daily workout model
-│   ├── plan_customization.py  # Plan customization model
-│   └── run_log.py       # Run logging model for performance tracking
-├── routers/
-│   ├── __init__.py
-│   ├── plans.py         # Plan generation endpoints
-│   ├── nutrition.py     # Nutrition endpoints
-│   ├── auth.py          # Authentication endpoints (Google OAuth)
-│   ├── runs.py          # Run logging and adaptive training endpoints
-│   ├── analytics.py     # Analytics endpoints and page
-│   ├── performance.py   # Performance plan endpoints
-│   ├── recipes.py       # Recipe endpoints
-│   └── strava.py        # Strava OAuth + sync
-├── services/
-│   ├── __init__.py
-│   ├── auth_service.py      # Google OAuth, JWT handling
-│   ├── plan_service.py      # Plan business logic
-│   ├── plan_helpers.py      # Plan view context helpers
-│   ├── plan_adjustments.py  # Plan adjustment logic
-│   ├── adaptation_service.py # Plan adaptation based on performance
-│   ├── feedback_service.py  # Coaching feedback service
-│   ├── gap_analysis_service.py # Training gap analysis
-│   ├── hr_zone_service.py   # HR zone management
-│   ├── performance_service.py # Performance analysis
-│   ├���─ race_predictor_service.py # Race time predictions
-│   ├── readiness_service.py # Race readiness assessment
-│   ├── strava_service.py    # Strava API integration
-│   └── merge_service.py     # Plan merge logic
-├── templates/           # Jinja2 HTML templates
-│   ├── base.html        # Base template with common layout
-│   ├── index.html       # Home page with input form
-│   ├── plan.html        # Training plan display
-│   ├── my_plans.html    # User's saved plans
-│   └── components/      # Reusable template components
-│       ├── nav.html     # Navigation component
-│       ├── modal.html   # Modal dialog component
-│       ├── workout_card.html  # Workout card component
-│       └── macros.html  # Jinja2 macros
-├── static/
-│   ├── css/
-│   │   ├── base.css       # Base styles
-│   │   ├── index.css      # Home page styles
-│   │   ├── plan.css       # Plan page styles
-│   │   ├── my_plans.css   # My plans page styles
-│   │   └── components.css # Component styles
-│   └── js/
-│       ├── api.js         # API client utilities
-│       ├── auth.js        # Authentication handling
-│       ├── plan.js        # Plan page interactions
-│       └── modal.js       # Modal functionality
+├── constants.py         # Cross-cutting constants (distances etc.)
+├── utils.py
+├── rate_limit.py
+├── template_helpers.py  # Jinja2 templates + static-URL helpers
+├── domain/              # Pure domain layer (no I/O, no ORM)
+│   ├── events.py        # Domain event dataclasses
+│   └── repositories.py  # Repository protocols (IPlanRepository, IRunRepository, IUserRepository)
+├── core/                # Pure calculation libraries (no I/O)
+│   ├── training/        # VDOT, phases, mileage, workout building
+│   ├── coaching/        # Coaching feedback, notes, pattern analysis
+│   └── race/            # Race protocols
+├── contexts/            # Bounded contexts (application + per-context services)
+│   ├── plan/            # Plan generation, adaptation, view, repositories
+│   │   ├── plan_service.py, plan_view_service.py, plan_lifecycle_service.py
+│   │   ├── repositories.py            # SQLAlchemyPlanRepository
+│   │   ├── plan_type_registry.py
+│   │   ├── generators/                # Plan generators (road, beginner, fitness, performance)
+│   │   └── adaptation/                # Adaptation engine (signals, evaluators, adjusters)
+│   ├── runner/          # Runner profile, fitness, run enrichment
+│   │   ├── repositories.py            # SQLAlchemyRunRepository
+│   │   ├── profile/                   # RunnerProfile dataclass + builder
+│   │   ├── fitness/                   # FitnessService, performance, predictions, HR zones
+│   │   └── enrichment/                # Run enrichment + week pulse
+│   ├── nutrition/       # NutritionEngine, meal database
+│   └── auth/            # AuthService, repositories.py (SQLAlchemyUserRepository)
+├── infrastructure/      # I/O + 3rd-party adapters
+│   ├── config.py        # pydantic-settings (was app/config.py)
+│   ├── database/        # SQLAlchemy engine, SessionLocal, get_db (engine.py)
+│   ├── export/          # PDF generation (ReportLab)
+│   └── integrations/    # Strava, GPX, FIT
+├── application/         # Cross-context orchestration
+│   └── cleanup_service.py  # Inactive-account retention task
+├── web/                 # Web layer
+│   ├── routers/         # FastAPI routers (auth, plans, runs, analytics, strava, etc.)
+│   ├── middleware.py    # CSRF, security headers, anonymous-user cookie, size limits
+│   ├── templates/       # Jinja2 HTML templates
+│   └── static/          # CSS + JS
+├── models/              # SQLAlchemy ORM models (kept centralized for relationship config)
+│   ├── base.py, user.py, training_plan.py, weekly_plan.py, daily_workout.py,
+│   ├── plan_customization.py, run_log.py, run_feedback.py, readiness_log.py,
+│   ├── favorite_recipe.py, encrypted_type.py
+├── schemas/             # Pydantic request/response models
+├── migrations/          # Startup data backfills (vdot, effort classes)
 └── data/
     └── meals.json       # Meal database
+
 tests/
-├── __init__.py
-├── conftest.py          # Pytest fixtures
-├── test_api.py          # API endpoint tests
-├── test_nutrition_engine.py # Nutrition engine tests
-└── test_plan_generator.py   # Plan generator tests
+├── conftest.py
+├── test_core/           # Pure-logic tests
+├── test_services/       # Context-service tests
+├── test_routers/        # API endpoint tests
+└── test_security/       # CSRF, headers, ownership
 ```
+
+### Dependency rule
+
+- `web/routers/` → `application/`, `contexts/`, `schemas/`
+- `application/` → `contexts/`, `core/`, `domain/`
+- `contexts/<X>/` → `core/`, `domain/`, sibling context only via `application/` or events
+- `core/` imports nothing from `contexts/`, `infrastructure/`, or SQLAlchemy
+- `infrastructure/` implements protocols defined in `domain/`
 
 ### Core Components
 
@@ -149,34 +117,33 @@ tests/
 
 - **`app/schemas.py`** - Pydantic models for request/response validation. Includes `PlanRequest`, `GoogleAuthRequest`, `Token`, `UserResponse`, `RunLogCreate`, `RunLogResponse`, `AdaptivePlanRequest`, and various workout/nutrition schemas.
 
-- **`app/services/auth_service.py`** - `AuthService` class for authentication. Handles Google OAuth token verification via Google's public keys, JWT creation/verification using `PyJWT`, and user creation/retrieval.
+- **`app/contexts/auth/auth_service.py`** - `AuthService` class for authentication. Handles Google OAuth token verification, JWT creation/verification (`PyJWT`), and user creation/retrieval (via `SQLAlchemyUserRepository`).
 
-- **`app/routers/plans.py`** - Plan generation and management endpoints: `/generate-plan`, `/customize-plan`, `/plan/{plan_id}`, `/download-pdf/{plan_id}`. Handles form submissions, validation errors, and plan customization.
+- **`app/web/routers/plans.py`** (and the focused split modules `plan_generation.py`, `plan_view.py`, `plan_list.py`, `plan_sharing.py`, `plan_adjustments.py`) - Plan endpoints: generate, view, customize, share, download.
 
-- **`app/routers/nutrition.py`** - Nutrition endpoints: `/randomize-meals`, `/nutrition-plan/{plan_id}`. Supports re-randomizing meal suggestions.
+- **`app/web/routers/nutrition.py`** - Nutrition endpoints: `/randomize-meals`, `/nutrition-plan/{plan_id}`.
 
-- **`app/routers/auth.py`** - Authentication endpoints under `/api/auth`: `POST /google` (Google OAuth login), `GET /me` (current user info), `POST /logout`. Sets HTTP-only cookies for browser navigation.
+- **`app/web/routers/auth.py`** - Authentication endpoints under `/api/auth`: `POST /google`, `GET /me`, `POST /logout`. Sets HTTP-only cookies for browser navigation.
 
-- **`app/routers/runs.py`** - Run logging and adaptive training endpoints:
-  - `/api/runs` - CRUD operations for run logs (distance, duration, heart rate, cadence, elevation, perceived effort)
-  - `/api/adaptive/metrics` - Get user's fitness metrics based on run data
-  - `/api/adaptive/suggestions` - Get personalized training suggestions
-  - `/api/adaptive/performance-gaps` - Analyze gaps vs race requirements
-  - `/api/adaptive/generate-plan` - Generate adaptive plans based on performance
+- **`app/web/routers/runs.py`** - Run logging CRUD (`/api/runs`) plus adaptive endpoints (`/api/adaptive/*`).
 
-- **`app/services/plan_service.py`** - `PlanService` class encapsulating plan creation and retrieval business logic.
+- **`app/contexts/plan/plan_service.py`** - `PlanService` encapsulating plan lifecycle (creation, customization, deletion). Delegates queries to `SQLAlchemyPlanRepository`.
 
-- **`app/services/nutrition_service.py`** - `NutritionService` class for nutrition plan management.
+- **`app/contexts/plan/adaptation/`** - `AdaptationService` facade plus focused modules (signal computation, evaluators, adjusters). Analyzes effort trends, pace consistency, adherence; can auto-adjust future weeks.
 
-- **`app/services/adaptation_service.py`** - `AdaptationService` class for analyzing run performance and adapting training plans. Analyzes effort trends, pace consistency, adherence rates, and can automatically adjust future weeks based on performance.
+- **`app/contexts/plan/generators/plan_generator.py`** - `TrainingPlanGenerator`: weekly training schedule orchestrator. Delegates to `core/training/*` for phases, mileage, workout building.
 
-- **`app/core/generators/plan_generator.py`** - `TrainingPlanGenerator` class that orchestrates weekly training schedules. Delegates to focused modules for phases, mileage progression, workout distribution, and workout building.
+- **`app/contexts/nutrition/nutrition_engine.py`** - `NutritionEngine` for meal blueprints (scoring-based meal selection with seeded variety).
 
-- **`app/core/nutrition/nutrition_engine.py`** - `NutritionEngine` class that generates personalized meal blueprints. Calculates macronutrient needs based on training volume and body weight, uses scoring system to select optimal meals with variety.
+- **`app/infrastructure/export/pdf_generator.py`** - `PDFGenerator` (ReportLab) producing the downloadable plan PDF. Accepts `PlanExportDTO` so it isn't coupled to the ORM.
 
-- **`app/core/export/pdf_generator.py`** - `PDFGenerator` class using ReportLab to create downloadable PDF training plans.
+- **`app/contexts/plan/generators/performance_plan_generator.py`** - `PerformancePlanGenerator` for VDOT-based plans from a user's actual run data.
 
-- **`app/core/generators/performance_plan_generator.py`** - `PerformancePlanGenerator` class that generates VDOT-based plans from user's actual running data.
+- **`app/contexts/plan/repositories.py`** - `SQLAlchemyPlanRepository` (implements `IPlanRepository`).
+- **`app/contexts/runner/repositories.py`** - `SQLAlchemyRunRepository` (implements `IRunRepository`).
+- **`app/contexts/auth/repositories.py`** - `SQLAlchemyUserRepository` (implements `IUserRepository`).
+
+- **`app/infrastructure/database/engine.py`** - SQLAlchemy engine, `SessionLocal`, `get_db` generator dependency. SQLite PRAGMAs (WAL, foreign keys, busy timeout) live here.
 
 - **`app/models/__init__.py`** - Exports all models and configures SQLAlchemy relationships between them.
 
@@ -200,12 +167,9 @@ tests/
 
 ### Templates
 
-- `app/templates/base.html` - Base template with common layout and navigation
-- `app/templates/index.html` - Input form with distance/weeks/mileage selection
-- `app/templates/plan.html` - Training plan display with nutrition blueprint
-- `app/templates/my_plans.html` - User's saved training plans
-- `app/templates/pdf_template.html` - PDF generation template
-- `app/templates/components/` - Reusable components (nav, modal, workout_card, macros)
+Located under `app/web/templates/`:
+- `base.html`, `index.html`, `plan.html`, `my_plans.html`, `plan_shared.html`, `analytics.html`, `recipes.html`, etc.
+- `components/` - Reusable components (nav, modal, workout_card, change_plan_modal, week_card, etc.)
 
 ## Testing
 
@@ -237,7 +201,7 @@ Configuration via environment variables or `.env` file:
 | `SECRET_KEY` | (required) | JWT signing key |
 | `GOOGLE_CLIENT_ID` | (required) | Google OAuth client ID |
 
-Training constraints are configured in `app/config.py`:
+Training constraints are configured in `app/infrastructure/config.py` (settings) and `app/core/training/training_config.py` (`DISTANCE_CONSTRAINTS` registry):
 - Minimum/maximum weeks per distance
 - Minimum mileage requirements per distance
 

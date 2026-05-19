@@ -10,7 +10,7 @@ Verifies that distance + elevation produce structurally different plans:
 
 import pytest
 
-from app.core.generators.plan_generator import TrainingPlanGenerator
+from app.contexts.plan.generators.plan_generator import TrainingPlanGenerator
 from app.core.training import mileage_progression, phase_calculator
 from app.core.training.long_run_calculator import (
     _get_long_run_cap,

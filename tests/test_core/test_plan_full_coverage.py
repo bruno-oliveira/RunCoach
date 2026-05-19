@@ -11,10 +11,10 @@ Also tests schema validation for invalid combinations and API-level plan generat
 
 import pytest
 
-from app.core.generators.plan_generator import TrainingPlanGenerator
+from app.contexts.plan.generators.plan_generator import TrainingPlanGenerator
 from app.schemas import PlanRequest
 from app.constants import SUPPORTED_DISTANCES, DISTANCE_NAMES
-from app.config import settings
+from app.infrastructure.config import settings
 
 
 # ── Configuration: all valid ranges ────────────────────────────────────────

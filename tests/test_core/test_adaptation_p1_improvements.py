@@ -9,7 +9,7 @@ from sqlalchemy.orm import Session, sessionmaker
 from sqlalchemy.pool import StaticPool
 
 from app.models import Base, User, TrainingPlan, WeeklyPlan, DailyWorkout, RunLog
-from app.services.adaptation.signal_computer import (
+from app.contexts.plan.adaptation.signal_computer import (
     _IMPORTANCE_WEIGHTS,
     _CONSECUTIVE_THRESHOLD,
     _EXPANDED_MIN,

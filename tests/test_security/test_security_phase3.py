@@ -156,14 +156,14 @@ class TestCookieSecureFlag:
 
     def test_cookie_secure_returns_false_in_debug(self):
         """With debug=True (test default), _cookie_secure() should return False."""
-        from app.middleware import _cookie_secure
+        from app.web.middleware import _cookie_secure
         # settings.debug is True from .env
         assert _cookie_secure() is False
 
     def test_cookie_secure_returns_true_when_not_debug(self):
         """With debug=False and force_secure_cookies=True, should return True."""
-        from app.middleware import _cookie_secure
-        with patch("app.middleware.settings") as mock_settings:
+        from app.web.middleware import _cookie_secure
+        with patch("app.web.middleware.settings") as mock_settings:
             mock_settings.debug = False
             mock_settings.force_secure_cookies = True
             assert _cookie_secure() is True

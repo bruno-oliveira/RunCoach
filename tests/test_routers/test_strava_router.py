@@ -115,7 +115,7 @@ class TestStravaSync:
     def test_sync_connected_user(self, strava_user):
         _set_user(strava_user)
         with patch(
-            "app.services.integrations.strava_service.StravaService.sync_activities",
+            "app.infrastructure.integrations.strava_service.StravaService.sync_activities",
             new_callable=AsyncMock,
         ) as mock_sync:
             mock_sync.return_value = {"synced": 5, "skipped": 2, "errors": [], "total": 7}

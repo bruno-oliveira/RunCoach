@@ -28,11 +28,11 @@ from app.models import (
     User,
     WeeklyPlan,
 )
-from app.services.adaptation.recommendation_evaluator import (
+from app.contexts.plan.adaptation.recommendation_evaluator import (
     _is_small_reversal,
     evaluate_weekly_recommendation,
 )
-from app.services.plans.week_adjustment_service import apply_week_action
+from app.contexts.plan.week_adjustment_service import apply_week_action
 
 
 def _uid() -> str:
@@ -306,7 +306,7 @@ class TestAutoApplyGate:
 class TestOverreachAndHysteresis:
     def test_overreach_forces_reduction(self):
         """High volume × high effort → multiplier <= 0.95 even with strong positives."""
-        from app.services.adaptation.signal_computer import compute_adjustment_signals
+        from app.contexts.plan.adaptation.signal_computer import compute_adjustment_signals
 
         class _W:
             def __init__(self, dist, effort, dwid):

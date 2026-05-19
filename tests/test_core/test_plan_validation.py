@@ -9,7 +9,7 @@ allocation, quality caps, and weekly scaling.
 
 import pytest
 
-from app.core.generators.plan_generator import TrainingPlanGenerator
+from app.contexts.plan.generators.plan_generator import TrainingPlanGenerator
 from app.constants import SUPPORTED_DISTANCES, DISTANCE_NAMES
 
 
@@ -335,7 +335,7 @@ class TestLowBudgetQualityDemotion:
     """
 
     def test_tiny_budget_has_no_sub_floor_quality(self):
-        from app.core.generators.weekly_plan_builder import _QUALITY_DEMOTE_THRESHOLD_KM
+        from app.contexts.plan.generators.weekly_plan_builder import _QUALITY_DEMOTE_THRESHOLD_KM
 
         plan, _ = _generate_plan(5.0, 5, 3)
         for week in plan:

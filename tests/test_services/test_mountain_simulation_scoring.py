@@ -1,7 +1,7 @@
 from datetime import date, datetime, timedelta
 from types import SimpleNamespace
 
-from app.services.fitness.readiness_scoring import score_mountain_simulation
+from app.contexts.runner.fitness.readiness_scoring import score_mountain_simulation
 
 
 def _run(

@@ -31,7 +31,7 @@ def _derive_fernet_key(secret: str) -> bytes:
 def _get_fernet():
     """Create a Fernet instance using the app's encryption key."""
     from cryptography.fernet import Fernet
-    from app.config import settings
+    from app.infrastructure.config import settings
     key_source = settings.encryption_key if settings.encryption_key else settings.secret_key
     return Fernet(_derive_fernet_key(key_source))
 

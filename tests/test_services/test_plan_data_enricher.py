@@ -1,5 +1,5 @@
 from app.models import DailyWorkout, TrainingPlan, User, WeeklyPlan
-from app.services.plans.plan_data_enricher import enrich_plan_data_with_ids
+from app.contexts.plan.plan_data_enricher import enrich_plan_data_with_ids
 
 
 def _seed_plan(test_db):

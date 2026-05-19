@@ -11,7 +11,7 @@ keep working. New code should depend on this registry rather than touching
 from dataclasses import dataclass
 from typing import Dict, Optional
 
-from app.config import settings
+from app.infrastructure.config import settings
 
 
 @dataclass(frozen=True)

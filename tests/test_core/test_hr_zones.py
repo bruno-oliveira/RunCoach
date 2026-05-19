@@ -3,7 +3,7 @@
 import pytest
 
 from app.core.training.hr_zone_calculator import HRZoneCalculator, ZONE_DEFINITIONS
-from app.services.fitness.hr_zone_service import get_user_max_hr
+from app.contexts.runner.fitness.hr_zone_service import get_user_max_hr
 
 
 class TestCalculateZones:

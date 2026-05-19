@@ -1,0 +1,184 @@
+"""Authentication router with Google OAuth support."""
+
+import logging
+from datetime import timedelta
+
+from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
+from sqlalchemy.orm import Session
+
+from app.contexts.auth.auth_service import AuthService
+from app.infrastructure.config import settings
+from app.dependencies import get_auth_service, get_db, get_current_user, get_strava_service
+from app.web.middleware import _cookie_secure
+from app.models import User
+from app.rate_limit import account_deletion_limiter, auth_limiter
+from app.schemas import AuthResponse, GoogleAuthRequest, UserResponse
+from app.schemas.auth_schemas import UserSettingsUpdate
+from app.infrastructure.integrations.strava_service import StravaService
+
+logger = logging.getLogger(__name__)
+
+auth_router = APIRouter(prefix="/api/auth", tags=["authentication"])
+
+# Cookie settings
+COOKIE_NAME = "access_token"
+COOKIE_MAX_AGE = 24 * 60 * 60  # 1 day in seconds
+
+
+@auth_router.post("/google", response_model=AuthResponse)
+async def google_auth(
+    auth_request: GoogleAuthRequest,
+    request: Request,
+    response: Response,
+    db: Session = Depends(get_db),
+    auth_service: AuthService = Depends(get_auth_service),
+):
+    """Authenticate user using Google OAuth ID token.
+
+    Sets an httponly cookie with the JWT. The token is NOT returned in the
+    response body to prevent XSS exfiltration.
+    """
+    auth_limiter.check(request)
+    logger.info("Attempting Google OAuth authentication")
+
+    google_user_data = await auth_service.verify_google_token(auth_request.id_token)
+
+    if not google_user_data:
+        logger.error("Google token verification failed")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid Google token",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
+    anonymous_user_id = request.cookies.get("anonymous_user_id")
+
+    user = auth_service.get_or_create_user(db, google_user_data, anonymous_user_id)
+
+    logger.info("User authenticated: %s", user.id)
+
+    access_token = auth_service.create_access_token(
+        data={"sub": user.id, "email": user.email},
+        expires_delta=timedelta(days=1),
+    )
+
+    response.set_cookie(
+        key=COOKIE_NAME,
+        value=access_token,
+        max_age=COOKIE_MAX_AGE,
+        httponly=True,
+        samesite="lax",
+        secure=_cookie_secure(),
+    )
+
+    response.delete_cookie(key="anonymous_user_id", samesite="lax")
+
+    return AuthResponse(
+        user=UserResponse(
+            id=user.id,
+            google_id=user.google_id,
+            email=user.email,
+            name=user.name,
+            picture=user.picture,
+            created_at=user.created_at,
+            plans_generated=user.plans_generated,
+            strava_connected=bool(user.strava_athlete_id),
+            auto_adjust_enabled=bool(user.auto_adjust_enabled),
+        ),
+    )
+
+
+@auth_router.get("/me", response_model=UserResponse)
+async def get_current_user_info(current_user: User = Depends(get_current_user)):
+    """
+    Get current authenticated user's information.
+
+    Requires a valid JWT token in Authorization header.
+    """
+    return UserResponse(
+        id=current_user.id,
+        google_id=current_user.google_id,
+        email=current_user.email,
+        name=current_user.name,
+        picture=current_user.picture,
+        created_at=current_user.created_at,
+        plans_generated=current_user.plans_generated,
+        strava_connected=bool(current_user.strava_athlete_id),
+        auto_adjust_enabled=bool(current_user.auto_adjust_enabled),
+    )
+
+
+@auth_router.patch("/me/settings", response_model=UserResponse)
+async def update_user_settings(
+    payload: UserSettingsUpdate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Update mutable user settings (currently just auto_adjust_enabled)."""
+    if payload.auto_adjust_enabled is not None:
+        current_user.auto_adjust_enabled = bool(payload.auto_adjust_enabled)
+    db.commit()
+    db.refresh(current_user)
+    return UserResponse(
+        id=current_user.id,
+        google_id=current_user.google_id,
+        email=current_user.email,
+        name=current_user.name,
+        picture=current_user.picture,
+        created_at=current_user.created_at,
+        plans_generated=current_user.plans_generated,
+        strava_connected=bool(current_user.strava_athlete_id),
+        auto_adjust_enabled=bool(current_user.auto_adjust_enabled),
+    )
+
+
+@auth_router.post("/logout")
+async def logout(response: Response):
+    """
+    Logout endpoint.
+    Clears both authentication and anonymous tracking cookies.
+    """
+    response.delete_cookie(key=COOKIE_NAME, samesite="lax")
+    response.delete_cookie(key="anonymous_user_id", samesite="lax")
+    return {"message": "Successfully logged out"}
+
+
+@auth_router.delete("/account")
+async def delete_account(
+    request: Request,
+    response: Response,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+    strava_service: StravaService = Depends(get_strava_service),
+):
+    """Delete the current user's account and all associated data."""
+    account_deletion_limiter.check(request)
+    logger.info("Account deletion requested for user %s", current_user.id)
+    if current_user.strava_access_token:
+        # Best-effort revoke: never block account deletion on Strava reachability,
+        # but escalate failures to ERROR so an operator can manually deauthorize
+        # the dangling token.
+        revoke_ok = False
+        try:
+            token = await strava_service.ensure_valid_token(current_user, db)
+            revoke_ok = await strava_service.revoke_token(token)
+        except Exception:
+            logger.error(
+                "Strava token refresh raised during account deletion "
+                "(user_id=%s, strava_athlete_id=%s) — manual deauthorize required",
+                current_user.id,
+                current_user.strava_athlete_id,
+                exc_info=True,
+            )
+        if not revoke_ok:
+            logger.error(
+                "Strava token revocation failed during account deletion "
+                "(user_id=%s, strava_athlete_id=%s) — manual deauthorize required",
+                current_user.id,
+                current_user.strava_athlete_id,
+            )
+    db.delete(current_user)
+    db.commit()
+    response.delete_cookie(key=COOKIE_NAME, samesite="lax")
+    response.delete_cookie(key="anonymous_user_id", samesite="lax")
+    return {"message": "Account deleted"}

@@ -11,13 +11,13 @@ from sqlalchemy.orm import Session, sessionmaker
 from sqlalchemy.pool import StaticPool
 
 from app.models import Base, User, TrainingPlan, WeeklyPlan, DailyWorkout, RunLog
-from app.services.adaptation.plan_adjuster import (
+from app.contexts.plan.adaptation.plan_adjuster import (
     adjust_plan,
     preview_adjust_plan,
     preview_reset_adjustment,
     reset_adjustment,
 )
-from app.services.adaptation import AdaptationService
+from app.contexts.plan.adaptation import AdaptationService
 
 
 def _now():

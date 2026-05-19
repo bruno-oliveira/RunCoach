@@ -9,7 +9,7 @@ from sqlalchemy.orm import Session, sessionmaker
 from sqlalchemy.pool import StaticPool
 
 from app.models import Base, User, TrainingPlan, WeeklyPlan, DailyWorkout, RunLog
-from app.services.adaptation.recommendation_evaluator import (
+from app.contexts.plan.adaptation.recommendation_evaluator import (
     evaluate_weekly_recommendation,
     accept_recommendation,
     dismiss_recommendation,
@@ -303,7 +303,7 @@ class TestAcceptRecommendation:
 
     def test_accept_then_reset_records_both_events(self, db):
         """Reset after accept must add a 'reset' event so the timeline is honest."""
-        from app.services.adaptation.plan_adjuster import reset_adjustment
+        from app.contexts.plan.adaptation.plan_adjuster import reset_adjustment
 
         user, plan = _create_plan(db, weeks_ago=3)
         _add_runs(db, user, plan, count=5, weeks_ago=1)
@@ -392,7 +392,7 @@ class TestDebounce:
 class TestManualAdjustClearsRecommendation:
 
     def test_adjust_plan_clears_pending(self, db):
-        from app.services.adaptation.plan_adjuster import adjust_plan
+        from app.contexts.plan.adaptation.plan_adjuster import adjust_plan
 
         user, plan = _create_plan(db, weeks_ago=3)
         _add_runs(db, user, plan, count=5, distance_km=8.0, perceived_effort=5, weeks_ago=1)
@@ -411,7 +411,7 @@ class TestManualAdjustClearsRecommendation:
 class TestFacadeIntegration:
 
     def test_facade_methods_exist(self):
-        from app.services.adaptation import AdaptationService
+        from app.contexts.plan.adaptation import AdaptationService
 
         svc = AdaptationService()
         assert hasattr(svc, "evaluate_recommendation")
@@ -430,7 +430,7 @@ class TestReasonBuilders:
     """
 
     def test_auto_adjust_reason_uses_increased_when_net_delta_positive(self):
-        from app.services.adaptation.recommendation_evaluator import (
+        from app.contexts.plan.adaptation.recommendation_evaluator import (
             _build_auto_adjust_reason,
         )
 
@@ -448,7 +448,7 @@ class TestReasonBuilders:
         assert "%" not in reason
 
     def test_auto_adjust_reason_uses_reduced_when_net_delta_negative(self):
-        from app.services.adaptation.recommendation_evaluator import (
+        from app.contexts.plan.adaptation.recommendation_evaluator import (
             _build_auto_adjust_reason,
         )
 
@@ -462,7 +462,7 @@ class TestReasonBuilders:
         assert "-12.5 km" in reason
 
     def test_accept_summary_uses_increased_when_net_delta_positive(self):
-        from app.services.adaptation.recommendation_evaluator import (
+        from app.contexts.plan.adaptation.recommendation_evaluator import (
             _build_accept_summary,
         )
 
@@ -478,7 +478,7 @@ class TestReasonBuilders:
         assert "19 key/tempo/interval" in summary
 
     def test_accept_summary_uses_reduced_when_net_delta_negative(self):
-        from app.services.adaptation.recommendation_evaluator import (
+        from app.contexts.plan.adaptation.recommendation_evaluator import (
             _build_accept_summary,
         )
 
@@ -495,7 +495,7 @@ class TestReasonBuilders:
         assert "preserved" not in summary
 
     def test_reasons_handle_no_op_zero_delta(self):
-        from app.services.adaptation.recommendation_evaluator import (
+        from app.contexts.plan.adaptation.recommendation_evaluator import (
             _build_auto_adjust_reason,
             _build_accept_summary,
         )

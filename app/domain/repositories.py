@@ -2,7 +2,7 @@
 
 Defined in the domain layer so application code can depend on these protocols
 rather than concrete SQLAlchemy implementations. Concrete implementations live
-in the infrastructure layer (introduced incrementally; not yet implemented).
+in the contexts/ and infrastructure/ layers.
 
 The TYPE_CHECKING guard keeps this module free of ORM imports at runtime —
 the protocols remain importable from anywhere in the codebase, including pure
@@ -11,11 +11,13 @@ core modules.
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, List, Optional, Protocol
+from typing import TYPE_CHECKING, Any, List, Optional, Protocol
 
 if TYPE_CHECKING:
     from app.models.run_log import RunLog
     from app.models.training_plan import TrainingPlan
+    from app.models.user import User
+    from app.schemas import PlanRequest
 
 
 class IPlanRepository(Protocol):
@@ -25,9 +27,19 @@ class IPlanRepository(Protocol):
         self, plan_id: str, *, include_weeks: bool = False
     ) -> Optional["TrainingPlan"]: ...
 
-    def list_by_user(
-        self, user_id: str, *, active_only: bool = True
-    ) -> List["TrainingPlan"]: ...
+    def get_for_user(
+        self, plan_id: str, user_id: str, *, include_weeks: bool = False
+    ) -> Optional["TrainingPlan"]: ...
+
+    def list_by_user(self, user_id: str) -> List["TrainingPlan"]: ...
+
+    def list_by_user_recent_first(self, user_id: str) -> List["TrainingPlan"]: ...
+
+    def get_by_share_token(self, share_token: str) -> Optional["TrainingPlan"]: ...
+
+    def find_duplicate(
+        self, user_id: str, request: "PlanRequest", race_time_seconds: Optional[int]
+    ) -> Optional["TrainingPlan"]: ...
 
     def save(self, plan: "TrainingPlan") -> None: ...
 
@@ -37,10 +49,28 @@ class IPlanRepository(Protocol):
 class IRunRepository(Protocol):
     """Persistence interface for logged runs."""
 
-    def get_recent(self, user_id: str, weeks: int) -> List["RunLog"]: ...
+    def get_by_id(self, run_id: int) -> Optional["RunLog"]: ...
+
+    def get_for_user(self, run_id: int, user_id: str) -> Optional["RunLog"]: ...
 
     def list_by_user(self, user_id: str) -> List["RunLog"]: ...
+
+    def list_recent_for_user(
+        self, user_id: str, *, since: Any | None = None, limit: int | None = None
+    ) -> List["RunLog"]: ...
 
     def save(self, run: "RunLog") -> None: ...
 
     def delete(self, run: "RunLog") -> None: ...
+
+
+class IUserRepository(Protocol):
+    """Persistence interface for application users."""
+
+    def get_by_id(self, user_id: str) -> Optional["User"]: ...
+
+    def get_by_google_id(self, google_id: str) -> Optional["User"]: ...
+
+    def get_by_email(self, email: str) -> Optional["User"]: ...
+
+    def save(self, user: "User") -> None: ...

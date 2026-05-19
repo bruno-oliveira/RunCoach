@@ -2,7 +2,7 @@
 
 import pytest
 
-from app.core.generators.plan_generator import TrainingPlanGenerator
+from app.contexts.plan.generators.plan_generator import TrainingPlanGenerator
 from app.core.training import (
     long_run_calculator,
     mileage_progression,
@@ -18,8 +18,8 @@ class TestTrainingPlanGenerator:
         """plan_generator and fitness_plan_generator must derive the 10% cap
         from mileage_progression.WEEK_OVER_WEEK_CAP, not hardcoded literals."""
         import inspect
-        from app.core.generators import plan_generator as pg
-        from app.core.generators import fitness_plan_generator as fpg
+        from app.contexts.plan.generators import plan_generator as pg
+        from app.contexts.plan.generators import fitness_plan_generator as fpg
 
         for module in (pg, fpg):
             src = inspect.getsource(module)

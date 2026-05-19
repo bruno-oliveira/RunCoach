@@ -1,4 +1,4 @@
-"""Tests for app.core.generators.workout_scaler.
+"""Tests for app.contexts.plan.generators.workout_scaler.
 
 Covers cap-enforcement edge cases that previously lived inline in
 weekly_plan_builder and had no direct test coverage:
@@ -8,7 +8,7 @@ weekly_plan_builder and had no direct test coverage:
 - scale_down respects the prescriptive invariant
 """
 
-from app.core.generators.workout_scaler import (
+from app.contexts.plan.generators.workout_scaler import (
     enforce_long_run_ratio_cap,
     is_prescriptive,
     scale_down,

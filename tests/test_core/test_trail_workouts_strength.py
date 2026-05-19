@@ -3,7 +3,7 @@ selection of trail key workouts."""
 
 import pytest
 
-from app.core.generators.plan_generator import TrainingPlanGenerator
+from app.contexts.plan.generators.plan_generator import TrainingPlanGenerator
 from app.core.training.key_workout_library import KeyWorkoutLibrary
 from app.core.training.strength_plan import (
     PHASE_FOCUS_ROTATIONS,

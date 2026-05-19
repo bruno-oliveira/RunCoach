@@ -2,7 +2,7 @@
 
 import pytest
 
-from app.core.generators.beginner_plan_generator import (
+from app.contexts.plan.generators.beginner_plan_generator import (
     BEGINNER_TIPS,
     BeginnerPlanGenerator,
 )
@@ -137,13 +137,13 @@ class TestIntegrationWithMainGenerator:
     """BeginnerPlanGenerator is invoked via TrainingPlanGenerator for 0km base."""
 
     def test_zero_km_5k_uses_beginner(self):
-        from app.core.generators.plan_generator import TrainingPlanGenerator
+        from app.contexts.plan.generators.plan_generator import TrainingPlanGenerator
         gen = TrainingPlanGenerator()
         plan = gen.generate_plan(0, 5.0, 10)
         assert plan[0].get("is_beginner_plan") is True
 
     def test_zero_km_10k_uses_beginner(self):
-        from app.core.generators.plan_generator import TrainingPlanGenerator
+        from app.contexts.plan.generators.plan_generator import TrainingPlanGenerator
         gen = TrainingPlanGenerator()
         plan = gen.generate_plan(0, 10.0, 10)
         assert plan[0].get("is_beginner_plan") is True

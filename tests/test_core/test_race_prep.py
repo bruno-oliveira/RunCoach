@@ -12,9 +12,9 @@ from sqlalchemy.orm import Session
 from app.dependencies import get_current_user, get_db, get_optional_user
 from app.main import app
 from app.models.user import User
-from app.routers.race_prep import _blueprint_store
-from app.services.integrations.gpx_service import GPXService
-from app.services.fitness.race_pacing_service import RacePacingService
+from app.web.routers.race_prep import _blueprint_store
+from app.infrastructure.integrations.gpx_service import GPXService
+from app.contexts.runner.fitness.race_pacing_service import RacePacingService
 
 
 @pytest.fixture
@@ -384,8 +384,8 @@ class TestRacePrepAPI:
 
 class TestFITValidationLocal:
     def test_validate_generated_fit(self):
-        from app.services.integrations.fit_service import FITService
-        from app.services.integrations.fit_validation_local import validate_fit_bytes
+        from app.infrastructure.integrations.fit_service import FITService
+        from app.infrastructure.integrations.fit_validation_local import validate_fit_bytes
         segments = [
             {"start_km": 0, "end_km": 1, "target_pace_min_km": 5.0, "grade_pct": 0.0},
         ]
@@ -398,7 +398,7 @@ class TestFITValidationLocal:
         assert result.valid, f"Validation failed: {result.errors}"
 
     def test_validate_invalid_fit(self):
-        from app.services.integrations.fit_validation_local import validate_fit_bytes
+        from app.infrastructure.integrations.fit_validation_local import validate_fit_bytes
         result = validate_fit_bytes(b"not a fit file")
         assert not result.valid
 

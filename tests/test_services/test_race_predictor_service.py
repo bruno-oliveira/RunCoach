@@ -6,7 +6,7 @@ from datetime import datetime, timedelta, timezone
 import pytest
 
 from app.models import RunLog, User
-from app.services.fitness.race_predictor_service import RacePredictorService
+from app.contexts.runner.fitness.race_predictor_service import RacePredictorService
 
 
 def _uid() -> str:

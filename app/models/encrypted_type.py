@@ -24,7 +24,7 @@ def _get_encryption_secret() -> str:
     In production we require ENCRYPTION_KEY to be set and distinct from SECRET_KEY
     so a leak of the JWT signing key does not expose Strava tokens at rest.
     """
-    from app.config import settings
+    from app.infrastructure.config import settings
     if settings.encryption_key:
         return settings.encryption_key
     if not settings.debug:

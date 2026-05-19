@@ -10,8 +10,8 @@ import re
 
 import pytest
 
-from app.core.generators.performance_plan_generator import PerformancePlanGenerator
-from app.core.generators.performance_workout_builders import (
+from app.contexts.plan.generators.performance_plan_generator import PerformancePlanGenerator
+from app.contexts.plan.generators.performance_workout_builders import (
     _regenerate_description,
     generate_fartlek_workout,
     generate_race_pace_workout,

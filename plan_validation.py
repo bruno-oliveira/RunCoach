@@ -10,7 +10,7 @@ from typing import Any, Dict, List
 
 sys.path.insert(0, ".")
 
-from app.core.generators.plan_generator import TrainingPlanGenerator
+from app.contexts.plan.generators.plan_generator import TrainingPlanGenerator
 from app.constants import DISTANCE_NAMES, SUPPORTED_DISTANCES
 
 

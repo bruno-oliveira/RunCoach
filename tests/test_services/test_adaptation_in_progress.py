@@ -27,8 +27,8 @@ from app.models import (
     User,
     WeeklyPlan,
 )
-from app.services.adaptation.plan_adjuster import adjust_plan
-from app.services.adaptation.recommendation_evaluator import (
+from app.contexts.plan.adaptation.plan_adjuster import adjust_plan
+from app.contexts.plan.adaptation.recommendation_evaluator import (
     accept_recommendation,
 )
 
@@ -75,13 +75,13 @@ def freeze_today(monkeypatch):
         return holder["value"]
 
     monkeypatch.setattr(
-        "app.services.adaptation._helpers.today_date", fake_today,
+        "app.contexts.plan.adaptation._helpers.today_date", fake_today,
     )
     monkeypatch.setattr(
-        "app.services.adaptation.plan_adjuster.today_date", fake_today,
+        "app.contexts.plan.adaptation.plan_adjuster.today_date", fake_today,
     )
     monkeypatch.setattr(
-        "app.services.adaptation.recommendation_evaluator.today_date",
+        "app.contexts.plan.adaptation.recommendation_evaluator.today_date",
         fake_today,
     )
 

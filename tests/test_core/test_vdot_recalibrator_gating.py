@@ -17,11 +17,11 @@ from app.models import (
     User,
     WeeklyPlan,
 )
-from app.services.adaptation.vdot_recalibrator import (
+from app.contexts.plan.adaptation.vdot_recalibrator import (
     check_vdot_recalibration,
     recalibrate_zones_only,
 )
-from app.services.runs.run_enrichment_service import _maybe_recalibrate_plan_zones
+from app.contexts.runner.enrichment.run_enrichment_service import _maybe_recalibrate_plan_zones
 
 
 def _uid():
@@ -155,7 +155,7 @@ class TestRecalibrationGating:
             duration_minutes=45.0,
         )
         with patch(
-            "app.services.adaptation.vdot_recalibrator.recalibrate_zones_only",
+            "app.contexts.plan.adaptation.vdot_recalibrator.recalibrate_zones_only",
             return_value={"recalibrated": True, "old_vdot": 50.0, "new_vdot": 52.0},
         ) as mock_recal:
             result = _maybe_recalibrate_plan_zones(run, user.id, db)
@@ -174,7 +174,7 @@ class TestRecalibrationGating:
             duration_minutes=45.0,
         )
         with patch(
-            "app.services.adaptation.vdot_recalibrator.recalibrate_zones_only",
+            "app.contexts.plan.adaptation.vdot_recalibrator.recalibrate_zones_only",
             return_value={"recalibrated": True, "old_vdot": 50.0, "new_vdot": 52.0},
         ) as mock_recal:
             result = _maybe_recalibrate_plan_zones(run, user.id, db)
@@ -187,7 +187,7 @@ class TestRecalibrationStampsWeeklyPlans:
         user, plan = _make_plan(db, vdot=50.0)
 
         with patch(
-            "app.services.fitness.race_predictor_service.RacePredictorService.get_best_recent_vdot",
+            "app.contexts.runner.fitness.race_predictor_service.RacePredictorService.get_best_recent_vdot",
             return_value=53.0,
         ):
             result = recalibrate_zones_only(plan, user.id, db)
@@ -207,7 +207,7 @@ class TestBackwardsCompatibleAlias:
     def test_check_vdot_recalibration_delegates(self, db):
         user, plan = _make_plan(db, vdot=50.0)
         with patch(
-            "app.services.fitness.race_predictor_service.RacePredictorService.get_best_recent_vdot",
+            "app.contexts.runner.fitness.race_predictor_service.RacePredictorService.get_best_recent_vdot",
             return_value=50.2,  # delta < threshold
         ):
             result = check_vdot_recalibration(plan, user.id, db)

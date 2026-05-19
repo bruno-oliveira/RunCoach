@@ -2,7 +2,7 @@
 
 import pytest
 
-from app.core.nutrition.nutrition_engine import (
+from app.contexts.nutrition.nutrition_engine import (
     NutritionEngine,
     _trail_distance_boost,
     build_in_race_fueling_table,

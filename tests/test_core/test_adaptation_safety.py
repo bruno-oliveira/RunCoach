@@ -2,7 +2,7 @@
 
 from dataclasses import dataclass
 
-from app.services.adaptation.safety import enforce_future_growth_cap, enforce_week_structure
+from app.contexts.plan.adaptation.safety import enforce_future_growth_cap, enforce_week_structure
 
 
 @dataclass

@@ -38,7 +38,7 @@ class TestGoogleAuth:
         }
 
         with patch(
-            "app.services.auth.auth_service.AuthService.verify_google_token",
+            "app.contexts.auth.auth_service.AuthService.verify_google_token",
             new_callable=AsyncMock,
             return_value=google_data,
         ):
@@ -83,7 +83,7 @@ class TestGoogleAuth:
             "picture": None,
         }
         with patch(
-            "app.services.auth.auth_service.AuthService.verify_google_token",
+            "app.contexts.auth.auth_service.AuthService.verify_google_token",
             new_callable=AsyncMock,
             return_value=google_data,
         ):
@@ -99,7 +99,7 @@ class TestGoogleAuth:
 
     def test_invalid_token_returns_401(self, auth_client):
         with patch(
-            "app.services.auth.auth_service.AuthService.verify_google_token",
+            "app.contexts.auth.auth_service.AuthService.verify_google_token",
             new_callable=AsyncMock,
             return_value=None,
         ):
@@ -126,7 +126,7 @@ class TestGoogleAuth:
         }
 
         with patch(
-            "app.services.auth.auth_service.AuthService.verify_google_token",
+            "app.contexts.auth.auth_service.AuthService.verify_google_token",
             new_callable=AsyncMock,
             return_value=google_data,
         ):

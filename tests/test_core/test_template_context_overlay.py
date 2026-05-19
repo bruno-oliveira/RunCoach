@@ -9,7 +9,7 @@ from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 
 from app.models import Base, RunFeedback, RunLog, User
-from app.services.plans.plan_template_context import (
+from app.contexts.plan.plan_template_context import (
     _build_today_workout_overlay,
     _coaching_prefix,
     _detect_fatigue_softening,

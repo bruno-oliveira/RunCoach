@@ -11,7 +11,7 @@ Covers all six profile integration points:
 
 import pytest
 
-from app.core.generators.plan_generator import TrainingPlanGenerator
+from app.contexts.plan.generators.plan_generator import TrainingPlanGenerator
 from app.core.training.mileage_progression import (
     calculate_weekly_progression,
     get_peak_mileage,

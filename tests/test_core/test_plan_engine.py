@@ -6,7 +6,7 @@ and edge cases. This is the safety net for RunCoach's unique feature.
 
 import pytest
 
-from app.core.generators.plan_generator import TrainingPlanGenerator
+from app.contexts.plan.generators.plan_generator import TrainingPlanGenerator
 from app.core.training.long_run_calculator import (
     calculate_long_run_distance,
     calculate_long_run_ratio,
@@ -229,7 +229,7 @@ class TestWorkoutBuilderDescriptions:
 
     def test_attach_duration_hints_for_short_workouts(self):
         """The post-build hint pass adds duration_min for sub-3km workouts."""
-        from app.core.generators.weekly_plan_builder import attach_duration_hints
+        from app.contexts.plan.generators.weekly_plan_builder import attach_duration_hints
 
         workouts = [
             {"type": "easy", "distance": 2.0},

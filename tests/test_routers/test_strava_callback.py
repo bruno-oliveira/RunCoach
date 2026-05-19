@@ -8,7 +8,7 @@ import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy.orm import Session
 
-from app.services.auth.auth_service import AuthService
+from app.contexts.auth.auth_service import AuthService
 from app.dependencies import get_db
 from app.main import app
 from app.models.user import User
@@ -63,7 +63,7 @@ class TestStravaCallback:
         }
 
         with patch(
-            "app.services.integrations.strava_service.StravaService.exchange_code_for_tokens",
+            "app.infrastructure.integrations.strava_service.StravaService.exchange_code_for_tokens",
             new_callable=AsyncMock,
             return_value=token_data,
         ):
@@ -108,7 +108,7 @@ class TestStravaCallback:
         state = _make_state(callback_user.id)
 
         with patch(
-            "app.services.integrations.strava_service.StravaService.exchange_code_for_tokens",
+            "app.infrastructure.integrations.strava_service.StravaService.exchange_code_for_tokens",
             new_callable=AsyncMock,
             side_effect=Exception("Strava API error"),
         ):

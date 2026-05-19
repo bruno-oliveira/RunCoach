@@ -7,7 +7,7 @@ import pytest
 from sqlalchemy.orm import Session
 
 from app.models import DailyWorkout, RunLog, TrainingPlan, User, WeeklyPlan
-from app.services.adaptation import AdaptationService
+from app.contexts.plan.adaptation import AdaptationService
 
 
 def _make_user(db: Session) -> User:
