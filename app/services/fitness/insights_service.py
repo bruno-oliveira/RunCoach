@@ -10,7 +10,8 @@ from typing import Any, Dict, List, Optional
 
 from sqlalchemy.orm import Session
 
-from app.core.runner_profile import RunnerProfile, build_profile
+from app.core.training.runner_profile import RunnerProfile
+from app.services.runner.profile_builder import build_profile
 
 logger = logging.getLogger(__name__)
 

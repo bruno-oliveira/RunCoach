@@ -4,8 +4,8 @@ from typing import Optional
 
 from pydantic import BaseModel, Field, field_validator, model_validator
 
-from app.config import settings
 from app.constants import DISTANCE_NAMES, SUPPORTED_DISTANCES
+from app.core.training.training_config import DISTANCE_CONSTRAINTS, get_constraints
 from app.exceptions import InadequateBaseException, InsufficientTimeException, ZeroMileageUnsupportedException
 from app.utils import format_pace_bare
 
@@ -44,36 +44,13 @@ def compute_vdot_from_time(
 
 
 _MILEAGE_CONFIG = {
-    5.0: {
-        "min": settings.min_mileage_5k,
-        "max": settings.max_mileage_5k,
-        "low_msg": settings.low_mileage_msg_5k,
-        "high_msg": settings.high_mileage_msg_5k,
-    },
-    10.0: {
-        "min": settings.min_mileage_10k,
-        "max": settings.max_mileage_10k,
-        "low_msg": settings.low_mileage_msg_10k,
-        "high_msg": settings.high_mileage_msg_10k,
-    },
-    21.1: {
-        "min": settings.min_mileage_half,
-        "max": settings.max_mileage_half,
-        "low_msg": settings.low_mileage_msg_half,
-        "high_msg": settings.high_mileage_msg_half,
-    },
-    30.0: {
-        "min": settings.min_mileage_30k,
-        "max": settings.max_mileage_30k,
-        "low_msg": settings.low_mileage_msg_30k,
-        "high_msg": settings.high_mileage_msg_30k,
-    },
-    42.2: {
-        "min": settings.min_mileage_marathon,
-        "max": settings.max_mileage_marathon,
-        "low_msg": settings.low_mileage_msg_marathon,
-        "high_msg": settings.high_mileage_msg_marathon,
-    },
+    distance: {
+        "min": c.min_mileage,
+        "max": c.max_mileage,
+        "low_msg": c.low_mileage_msg,
+        "high_msg": c.high_mileage_msg,
+    }
+    for distance, c in DISTANCE_CONSTRAINTS.items()
 }
 
 
@@ -282,50 +259,21 @@ class PlanRequest(PlanRequestBase, RaceInfoMixin):
             return self
 
         target = self.target_distance
-        min_weeks_requirements = {
-            5.0: (
-                settings.min_weeks_5k,
-                "4 weeks provides a solid foundation for 5K improvement",
-            ),
-            10.0: (
-                settings.min_weeks_10k,
-                "6 weeks allows for proper 10K preparation",
-            ),
-            21.1: (
-                settings.min_weeks_half,
-                "Half marathon training needs time to build endurance safely",
-            ),
-            42.2: (
-                settings.min_weeks_marathon,
-                "Marathon training requires adequate time to prevent injury",
-            ),
-        }
-        max_weeks_requirements = {
-            5.0: (settings.max_weeks_5k, "Training beyond 16 weeks for 5K can lead to burnout"),
-            10.0: (settings.max_weeks_10k, "16 weeks is optimal for 10K preparation"),
-            21.1: (
-                settings.max_weeks_half,
-                "Half marathon training beyond 20 weeks may cause fatigue",
-            ),
-            42.2: (
-                settings.max_weeks_marathon,
-                "24 weeks is the maximum recommended for marathon training",
-            ),
-        }
+        constraints = get_constraints(target)
 
-        if target in min_weeks_requirements:
-            min_weeks, reason = min_weeks_requirements[target]
-            if weeks < min_weeks:
+        if constraints is not None and target != 30.0:
+            # 30k (trail) has bracket-specific handling above and skips week-window enforcement.
+            if weeks < constraints.min_weeks:
                 target_display = DISTANCE_NAMES.get(target, f"{target}km")
                 raise InsufficientTimeException(
-                    f"Training for {target_display} requires at least {min_weeks} weeks",
-                    f"Consider extending your training to {min_weeks} weeks. {reason}",
+                    f"Training for {target_display} requires at least {constraints.min_weeks} weeks",
+                    f"Consider extending your training to {constraints.min_weeks} weeks. "
+                    f"{constraints.insufficient_time_reason}",
                 )
-
-        if target in max_weeks_requirements:
-            max_weeks, reason = max_weeks_requirements[target]
-            if weeks > max_weeks:
-                raise ValueError(f"{reason}. Consider a shorter training period.")
+            if weeks > constraints.max_weeks:
+                raise ValueError(
+                    f"{constraints.excessive_time_reason}. Consider a shorter training period."
+                )
 
         return self
 
@@ -621,15 +569,10 @@ class PerformancePlanRequest(BaseModel):
             target = self.target_distance
             current_km = self.current_weekly_km
 
-            min_requirements = {
-                5.0: settings.perf_min_mileage_5k,
-                10.0: settings.perf_min_mileage_10k,
-                21.1: settings.perf_min_mileage_half,
-                42.2: settings.perf_min_mileage_marathon,
-            }
+            constraints = get_constraints(target)
+            min_required = constraints.perf_min_mileage if constraints else None
 
-            if target in min_requirements:
-                min_required = min_requirements[target]
+            if min_required is not None:
                 if current_km < min_required:
                     target_display = DISTANCE_NAMES.get(target, f"{target}km")
                     raise InadequateBaseException(

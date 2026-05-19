@@ -6,7 +6,7 @@ from reportlab.platypus import Paragraph, Spacer, Table, TableStyle
 from reportlab.lib.units import cm
 from reportlab.lib import colors
 
-from app.models import TrainingPlan
+from app.core.export.plan_export_dto import PlanExportDTO
 
 
 class NutritionPagesMixin:
@@ -117,7 +117,7 @@ class NutritionPagesMixin:
             "During Race: Energy gels every 45 minutes + water",
         ], spacing=1.0)
 
-    def _add_personalized_nutrition_plan(self, story: List, training_plan: TrainingPlan):
+    def _add_personalized_nutrition_plan(self, story: List, training_plan: PlanExportDTO):
         nutrition_plan = training_plan.nutrition_plan_data
         if not nutrition_plan:
             return

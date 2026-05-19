@@ -1,15 +1,16 @@
-"""RunnerProfile — synthesized snapshot of a runner's current fitness and habits.
+"""Assembles a RunnerProfile from persisted run logs and fitness services.
 
-Built from existing services (TrainingLoadService, RacePredictorService, etc.)
-and used to drive personalized insights and data-aware plan generation.
+Lives in the service layer because it depends on the database session and the
+fitness services; the pure ``RunnerProfile`` dataclass stays in
+``app.core.training.runner_profile``.
 """
 
-from dataclasses import dataclass, asdict
-from datetime import date, datetime, timedelta, timezone
-from typing import Any, Dict, List, Optional
+from datetime import datetime, timedelta, timezone
+from typing import Dict, List
 
 from sqlalchemy.orm import Session
 
+from app.core.training.runner_profile import RunnerProfile
 from app.core.training.vdot_calculator import VDOTCalculator
 from app.models import RunLog
 from app.services.fitness.race_predictor_service import RacePredictorService
@@ -18,72 +19,16 @@ from app.services.fitness.training_load_service import TrainingLoadService
 # A run averaging this many meters of climb per km is treated as a trail run.
 TRAIL_ELEVATION_M_PER_KM = 20.0
 
+WEEKS_WINDOW = 12
+
 
 def _is_trail_run(run: RunLog) -> bool:
-    """Heuristic: classify a run as 'trail' from elevation gain density."""
+    """Classify a run as 'trail' from elevation gain density."""
     if not run.distance_km or run.distance_km <= 0:
         return False
     if not run.elevation_gain_m:
         return False
     return run.elevation_gain_m / run.distance_km >= TRAIL_ELEVATION_M_PER_KM
-
-
-@dataclass
-class RunnerProfile:
-    """Snapshot of a runner's current fitness, load, and training habits."""
-
-    # Fitness
-    current_vdot: Optional[float] = None
-    vdot_trend: str = "stable"  # improving / stable / declining
-
-    # Volume (from actual run logs, not self-reported)
-    avg_weekly_km: float = 0.0
-    peak_weekly_km: float = 0.0
-    longest_run_km: float = 0.0
-    runs_per_week: float = 0.0
-
-    # Terrain breakdown (a trail run is one with >=20 m of climb per km)
-    trail_weekly_km: float = 0.0
-    road_weekly_km: float = 0.0
-    trail_runs_count: int = 0
-    trail_total_km: float = 0.0
-
-    # Training load & injury risk
-    acwr: Optional[float] = None
-    acwr_risk: str = "low"  # low / optimal / high / very_high
-
-    # Efficiency
-    avg_efficiency: Optional[float] = None  # speed/HR * 100
-    efficiency_trend_pct: Optional[float] = None  # % change recent vs prior
-
-    # Pace zone distribution (fraction of runs, not distance)
-    easy_pct: float = 0.0
-    moderate_pct: float = 0.0
-    hard_pct: float = 0.0
-
-    # Run characteristics
-    avg_run_km: float = 0.0
-    avg_pace_min_km: Optional[float] = None
-    rest_days_per_week: float = 0.0
-    volume_trend: str = "stable"  # increasing / stable / decreasing
-
-    # Gaps / areas to improve
-    workout_type_counts: Optional[Dict[str, int]] = None
-    total_runs: int = 0
-
-    # Data sufficiency
-    has_sufficient_data: bool = False
-    weeks_of_data: int = 0
-
-    def to_dict(self) -> Dict[str, Any]:
-        return asdict(self)
-
-
-# ---------------------------------------------------------------------------
-# Builder
-# ---------------------------------------------------------------------------
-
-WEEKS_WINDOW = 12
 
 
 def build_profile(user_id: str, db: Session) -> RunnerProfile:
@@ -106,39 +51,28 @@ def build_profile(user_id: str, db: Session) -> RunnerProfile:
     profile.total_runs = len(runs)
     profile.has_sufficient_data = True
 
-    # Weeks of data
     dates = [r.date for r in runs if r.date]
     if dates:
         span_days = (dates[-1] - dates[0]).days
         profile.weeks_of_data = max(span_days // 7, 1)
 
-    # -- VDOT & trend --
     profile.current_vdot = RacePredictorService.get_best_recent_vdot(
         user_id, weeks=WEEKS_WINDOW, db=db
     )
     history = RacePredictorService.get_vdot_history(user_id, weeks=WEEKS_WINDOW, db=db)
     profile.vdot_trend = RacePredictorService.calculate_vdot_trend(history)
 
-    # -- Volume stats --
     _compute_volume(profile, runs)
-
-    # -- Training load --
     _compute_load(profile, user_id, db)
-
-    # -- Efficiency --
     _compute_efficiency(profile, runs)
-
-    # -- Pace zone distribution --
     _compute_pace_zones(profile, runs)
-
-    # -- Workout type counts --
     _compute_workout_types(profile, runs)
 
     return profile
 
 
-def _compute_volume(profile: RunnerProfile, runs: list) -> None:
-    """Compute weekly averages, peak week, longest run, runs/week."""
+def _compute_volume(profile: RunnerProfile, runs: List[RunLog]) -> None:
+    """Weekly averages, peak week, longest run, runs/week, terrain split."""
     week_buckets: Dict[str, float] = {}
     week_run_counts: Dict[str, int] = {}
     trail_week_buckets: Dict[str, float] = {}
@@ -177,7 +111,6 @@ def _compute_volume(profile: RunnerProfile, runs: list) -> None:
             sum(road_week_buckets.values()) / weeks_observed, 1
         )
 
-        # Volume trend: compare first half vs second half of weeks
         if len(totals) >= 4:
             mid = len(totals) // 2
             first_avg = sum(totals[:mid]) / mid
@@ -211,7 +144,7 @@ def _compute_load(profile: RunnerProfile, user_id: str, db: Session) -> None:
         profile.acwr_risk = current.get("risk", "low")
 
 
-def _compute_efficiency(profile: RunnerProfile, runs: list) -> None:
+def _compute_efficiency(profile: RunnerProfile, runs: List[RunLog]) -> None:
     """Aerobic efficiency = (speed km/h) / HR * 100. Compare halves for trend."""
     eff_runs = [
         r for r in runs
@@ -237,7 +170,7 @@ def _compute_efficiency(profile: RunnerProfile, runs: list) -> None:
         )
 
 
-def _compute_pace_zones(profile: RunnerProfile, runs: list) -> None:
+def _compute_pace_zones(profile: RunnerProfile, runs: List[RunLog]) -> None:
     """Classify runs into easy / moderate / hard by pace relative to VDOT zones."""
     if not profile.current_vdot:
         return
@@ -271,7 +204,7 @@ def _compute_pace_zones(profile: RunnerProfile, runs: list) -> None:
         profile.hard_pct = round(hard / total * 100, 1)
 
 
-def _compute_workout_types(profile: RunnerProfile, runs: list) -> None:
+def _compute_workout_types(profile: RunnerProfile, runs: List[RunLog]) -> None:
     """Count runs by workout_type."""
     counts: Dict[str, int] = {}
     for r in runs:

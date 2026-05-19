@@ -10,9 +10,9 @@ from sqlalchemy.orm import Session
 from app.config import settings
 from app.dependencies import get_db, get_optional_user
 from app.models import TrainingPlan, User
-from app.constants import DISTANCE_NAMES
 from app.services.adaptation import AdaptationService
 from app.services.plans.plan_date_utils import compute_current_week
+from app.services.plans.plan_type_registry import display_label as plan_display_label
 from app.core.training.strength_plan import derive_experience_level
 from app.template_helpers import create_templates
 
@@ -43,15 +43,7 @@ async def list_my_plans(
         adaptation_service = AdaptationService()
         today = date.today()
         for plan in plans:
-            td = plan.target_distance_km
-            if td > 0:
-                plan.target_distance_display = DISTANCE_NAMES.get(td, f"{td}km")
-            elif plan.plan_type == "performance":
-                plan.target_distance_display = "Performance"
-            elif plan.plan_type == "fitness":
-                plan.target_distance_display = "Fitness"
-            else:
-                plan.target_distance_display = f"{td}km"
+            plan.target_distance_display = plan_display_label(plan)
             plan.experience_level = derive_experience_level(plan.current_weekly_km or 0)
 
             if plan.start_date:

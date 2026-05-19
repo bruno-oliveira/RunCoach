@@ -10,7 +10,7 @@ from app.dependencies import get_db, get_current_user
 from app.models import TrainingPlan, User
 from app.models.run_log import RunLog
 from app.core.training.vdot_calculator import VDOTCalculator
-from app.core.runner_profile import build_profile
+from app.services.runner.profile_builder import build_profile
 from app.services.fitness.adherence_service import compute_adherence_heatmap
 from app.services.fitness.gap_analysis_service import GapAnalysisService
 from app.services.fitness.insights_service import InsightsService

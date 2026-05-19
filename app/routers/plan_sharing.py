@@ -12,6 +12,7 @@ from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
 from app.core.export.pdf_generator import PDFGenerator
+from app.core.export.plan_export_dto import PlanExportDTO
 from app.dependencies import (
     get_current_user,
     get_db,
@@ -20,9 +21,9 @@ from app.dependencies import (
     get_plan_service,
 )
 from app.models import TrainingPlan, User
-from app.constants import DISTANCE_NAMES
 from app.services.plans.plan_helpers import get_plan_or_404, plan_view_context
 from app.services.plans.plan_service import PlanService
+from app.services.plans.plan_type_registry import display_label as plan_display_label
 from app.template_helpers import create_templates
 
 logger = logging.getLogger(__name__)
@@ -121,15 +122,7 @@ async def view_shared_plan(
         owner.name.split()[0] if owner and owner.name else "A Runner"
     )
     ctx["share_token"] = share_token
-    td = training_plan.target_distance_km
-    if td > 0:
-        ctx["distance_display"] = DISTANCE_NAMES.get(td, f"{td} km")
-    elif training_plan.plan_type == "performance":
-        ctx["distance_display"] = "Performance"
-    elif training_plan.plan_type == "fitness":
-        ctx["distance_display"] = "Fitness"
-    else:
-        ctx["distance_display"] = f"{td} km"
+    ctx["distance_display"] = plan_display_label(training_plan, space_before_km=True)
 
     return templates.TemplateResponse("plan_shared.html", ctx)
 
@@ -211,7 +204,8 @@ async def download_pdf(
         if not plan_data:
             raise HTTPException(status_code=400, detail="Empty training plan data")
 
-        pdf_path = pdf_generator.generate_pdf(plan_data, training_plan)
+        export_dto = PlanExportDTO.from_orm(training_plan, plan_data=plan_data)
+        pdf_path = pdf_generator.generate_pdf(plan_data, export_dto)
 
         if not os.path.exists(pdf_path):
             raise HTTPException(

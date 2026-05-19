@@ -17,11 +17,11 @@ from app.dependencies import (
 from app.models import User
 from app.services.adaptation import AdaptationService
 from app.services.fitness.hr_zone_service import HRZoneService
-from app.services.fitness.performance_service import PerformanceService
 from app.services.plans.plan_helpers import get_plan_or_404, plan_view_context
 from app.services.plans.plan_service import PlanService
+from app.services.plans.plan_type_registry import get_handler_for_plan
 from app.template_helpers import create_templates
-from app.utils import format_pace, persist_json
+from app.utils import persist_json
 
 logger = logging.getLogger(__name__)
 
@@ -94,69 +94,9 @@ async def view_plan(
                 logger.warning(f"Retroactive HR zone computation failed: {e}")
 
         extra = plan_service.get_plan_view_data(training_plan, current_user, db)
-
-        if training_plan.plan_type == "performance":
-            try:
-                perf_service = PerformanceService(db)
-                from app.core.generators.performance_plan_generator import PerformancePlanGenerator
-                gen = PerformancePlanGenerator()
-                zones = gen.calculate_training_zones(
-                    training_plan.goal_pace, training_plan.max_heart_rate
-                )
-                for zone_data in zones.values():
-                    zone_data["pace_formatted"] = format_pace(zone_data["pace"])
-                    if "pace_range" in zone_data:
-                        pr = zone_data["pace_range"]
-                        zone_data["pace_range_formatted"] = (
-                            f"{format_pace(pr[0])} - {format_pace(pr[1])}"
-                        )
-                extra["training_zones"] = zones
-                extra["today_workout"] = perf_service.get_todays_workout(training_plan)
-                extra["perf_progress_data"] = perf_service.get_plan_progress(training_plan)
-            except Exception as e:
-                logger.warning(f"Performance context enrichment failed: {e}")
-
-        if training_plan.plan_type == "fitness":
-            try:
-                from app.core.generators.fitness_plan_generator import FitnessPlanGenerator
-                from app.core.training.vdot_calculator import VDOTCalculator
-                gen = FitnessPlanGenerator()
-                vdot = training_plan.vdot
-                zones = gen.calculate_training_zones(vdot, training_plan.max_heart_rate)
-                for zone_data in zones.values():
-                    zone_data["pace_formatted"] = format_pace(zone_data["pace"])
-                    if "pace_range" in zone_data:
-                        pr = zone_data["pace_range"]
-                        zone_data["pace_range_formatted"] = (
-                            f"{format_pace(pr[0])} - {format_pace(pr[1])}"
-                        )
-                extra["training_zones"] = zones
-                focus_area = training_plan.target_distance.replace("fitness_", "") if training_plan.target_distance.startswith("fitness_") else "vo2max"
-                extra["fitness_focus_area"] = focus_area
-                phase_durations = gen._calculate_fitness_phases(
-                    training_plan.weeks_duration, focus_area
-                )
-                from app.core.generators.fitness_plan_generator import _PHASE_METADATA
-                extra["phases"] = {
-                    phase: {"weeks": phase_durations[phase], **_PHASE_METADATA[phase]}
-                    for phase in phase_durations
-                }
-                time_trial_weeks = []
-                for week_data in plan_data:
-                    if week_data.get("is_time_trial_week"):
-                        for dw in week_data.get("daily_workouts", []):
-                            if dw.get("type") == "time_trial":
-                                time_trial_weeks.append({
-                                    "week": week_data["week"],
-                                    "distance": dw.get("distance", 0),
-                                    "description": dw.get("description", ""),
-                                })
-                extra["time_trial_weeks"] = time_trial_weeks
-                if vdot:
-                    vdot_zones = VDOTCalculator.get_pace_zones(vdot)
-                    extra["vdot_zones"] = vdot_zones
-            except Exception as e:
-                logger.warning(f"Fitness context enrichment failed: {e}")
+        extra = get_handler_for_plan(training_plan).enrich_view_context(
+            training_plan, db, extra, plan_data
+        )
 
         ctx = plan_view_context(
             request, current_user, training_plan, plan_data, nutrition_plan, db=db, **extra

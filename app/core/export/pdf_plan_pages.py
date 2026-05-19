@@ -8,15 +8,15 @@ from reportlab.lib.units import cm
 from reportlab.lib import colors
 from reportlab.lib.enums import TA_CENTER
 
-from app.models import TrainingPlan
+from app.core.export.plan_export_dto import PlanExportDTO
 from app.utils import format_pace as _shared_format_pace
 
 
 class PlanPagesMixin:
     """Methods for rendering plan-related PDF pages."""
 
-    def _add_title_page(self, story: List, training_plan: TrainingPlan, plan_data: List[Dict]):
-        plan_type = getattr(training_plan, 'plan_type', 'distance')
+    def _add_title_page(self, story: List, training_plan: PlanExportDTO, plan_data: List[Dict]):
+        plan_type = training_plan.plan_type
         is_performance = plan_type == 'performance'
         is_fitness = plan_type == 'fitness'
 
@@ -42,8 +42,8 @@ class PlanPagesMixin:
         story.append(Spacer(1, 2 * cm))
 
         target_distance_float = training_plan.target_distance_km
-        is_trail_plan = bool(getattr(training_plan, "is_trail", False))
-        elev = getattr(training_plan, "target_elevation_gain_m", None)
+        is_trail_plan = training_plan.is_trail
+        elev = training_plan.target_elevation_gain_m
         if is_fitness:
             focus = training_plan.target_distance.replace("fitness_", "").replace("_", " ").title()
             target_display = focus
@@ -87,10 +87,10 @@ class PlanPagesMixin:
         story.append(stats_table)
         story.append(Spacer(1, 2 * cm))
 
-    def _add_plan_summary(self, story: List, training_plan: TrainingPlan, plan_data: List[Dict]):
+    def _add_plan_summary(self, story: List, training_plan: PlanExportDTO, plan_data: List[Dict]):
         story.append(Paragraph("Training Plan Overview", self.section_style))
 
-        plan_type = getattr(training_plan, 'plan_type', 'distance')
+        plan_type = training_plan.plan_type
         is_performance = plan_type == 'performance'
         is_fitness = plan_type == 'fitness'
         max_mileage = max(week['total_km'] for week in plan_data)
@@ -308,7 +308,7 @@ class PlanPagesMixin:
         story.append(Paragraph(philosophy_text, self.normal_style))
         story.append(Spacer(1, 0.5 * cm))
 
-    def _add_pace_improvement_summary(self, story: List, training_plan: TrainingPlan):
+    def _add_pace_improvement_summary(self, story: List, training_plan: PlanExportDTO):
         if not training_plan.current_pace or not training_plan.goal_pace:
             return
 
@@ -342,7 +342,7 @@ class PlanPagesMixin:
         story.append(pace_table)
         story.append(Spacer(1, 0.5 * cm))
 
-    def _add_training_zones_page(self, story: List, training_plan: TrainingPlan):
+    def _add_training_zones_page(self, story: List, training_plan: PlanExportDTO):
         from app.core.generators.performance_plan_generator import PerformancePlanGenerator
 
         gen = PerformancePlanGenerator()

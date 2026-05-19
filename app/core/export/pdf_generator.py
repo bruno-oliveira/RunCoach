@@ -10,12 +10,11 @@ from reportlab.lib.styles import ParagraphStyle
 from reportlab.lib.units import cm
 from reportlab.platypus import PageBreak, Spacer
 
-from app.models import TrainingPlan
-
 from .pdf_base import PDFBase
 from .pdf_nutrition_pages import NutritionPagesMixin
 from .pdf_plan_pages import PlanPagesMixin
 from .pdf_supplementary_pages import SupplementaryPagesMixin
+from .plan_export_dto import PlanExportDTO
 
 logger = logging.getLogger(__name__)
 
@@ -59,8 +58,13 @@ class PDFGenerator(PDFBase, PlanPagesMixin, NutritionPagesMixin, SupplementaryPa
             fontSize=9, leading=11, wordWrap='CJK', alignment=TA_CENTER,
         )
 
-    def generate_pdf(self, plan_data: List[Dict[str, Any]], training_plan: TrainingPlan) -> str:
+    def generate_pdf(
+        self, plan_data: List[Dict[str, Any]], training_plan: PlanExportDTO
+    ) -> str:
         """Generate a professional PDF training plan.
+
+        ``training_plan`` is a :class:`PlanExportDTO`. Callers convert from the
+        SQLAlchemy ORM model via ``PlanExportDTO.from_orm(plan)``.
 
         Returns path to generated PDF file.
         """
@@ -68,7 +72,7 @@ class PDFGenerator(PDFBase, PlanPagesMixin, NutritionPagesMixin, SupplementaryPa
         cache_key = self._cache_key_from_hash("", training_plan.id, plan_str)
 
         def build(doc, story):
-            is_performance = getattr(training_plan, 'plan_type', 'distance') == 'performance'
+            is_performance = training_plan.plan_type == 'performance'
 
             self._add_title_page(story, training_plan, plan_data)
             self._add_plan_summary(story, training_plan, plan_data)

@@ -11,7 +11,7 @@ from sqlalchemy.orm import Session
 from app.config import settings
 from app.core.nutrition.nutrition_engine import NutritionEngine
 from app.core.generators.plan_generator import TrainingPlanGenerator
-from app.core.runner_profile import build_profile
+from app.services.runner.profile_builder import build_profile
 from app.dependencies import (
     get_current_user,
     get_db,

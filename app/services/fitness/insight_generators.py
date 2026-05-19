@@ -4,7 +4,7 @@ Each function takes a RunnerProfile and returns an Insight dataclass instance.
 Extracted from insights_service.py for single-responsibility.
 """
 
-from app.core.runner_profile import RunnerProfile
+from app.core.training.runner_profile import RunnerProfile
 from app.services.fitness.insights_service import Insight
 
 

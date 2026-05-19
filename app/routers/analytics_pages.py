@@ -9,7 +9,7 @@ from sqlalchemy.orm import Session
 from app.config import settings
 from app.dependencies import get_db, get_optional_user
 from app.models import TrainingPlan
-from app.constants import DISTANCE_NAMES
+from app.services.plans.plan_type_registry import display_label as plan_display_label
 from app.template_helpers import create_templates
 
 logger = logging.getLogger(__name__)
@@ -36,19 +36,10 @@ async def analytics_page(
 
     plan_summaries = []
     for p in plans:
-        td = p.target_distance_km
-        if td > 0:
-            label = DISTANCE_NAMES.get(td, f"{td}km")
-        elif p.plan_type == "performance":
-            label = "Performance"
-        elif p.plan_type == "fitness":
-            label = "Fitness"
-        else:
-            label = f"{td}km"
         plan_summaries.append({
             "id": p.id,
-            "label": f"{label} — {p.weeks_duration}wk",
-            "target_distance_km": td,
+            "label": f"{plan_display_label(p)} — {p.weeks_duration}wk",
+            "target_distance_km": p.target_distance_km,
         })
 
     return templates.TemplateResponse(
