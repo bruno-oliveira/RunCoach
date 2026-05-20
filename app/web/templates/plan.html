@@ -192,7 +192,13 @@
             </div>
             <div class="summary-item">
                 <strong>Peak Week</strong>
-                {{ plan | map(attribute='total_km') | max | round(1) }} km{% if training_plan.adjustment_multiplier %} <span class="peak-adjusted-label">(adjusted)</span>{% endif %}
+                {% set peak_km = plan | map(attribute='total_km') | max | round(1) %}
+                {% if plan and plan[0].is_beginner_plan and peak_km == 0 %}
+                {{ plan | map(attribute='total_minutes') | max }} min
+                {% else %}
+                {{ peak_km }} km
+                {% endif %}
+                {% if training_plan.adjustment_multiplier %} <span class="peak-adjusted-label">(adjusted)</span>{% endif %}
             </div>
             {% if vdot %}
             <div class="summary-item">

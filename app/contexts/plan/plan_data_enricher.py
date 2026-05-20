@@ -185,6 +185,11 @@ def enrich_plan_data_with_ids(
             ),
             1,
         )
+        week["total_minutes"] = sum(
+            (wo.get("duration_min") or 0)
+            for wo in week.get("daily_workouts", [])
+            if wo.get("type") not in ("rest", "recovery")
+        )
 
     return plan_data
 
