@@ -88,7 +88,8 @@ class PlanService:
         existing = self.find_duplicate(plan_request, user.id, db)
         if existing:
             logger.info(
-                f"Duplicate plan detected for user {user.id} — returning existing plan {existing.id}"
+                "Duplicate plan detected for user %s — returning existing plan %s",
+                user.id, existing.id,
             )
             return existing, existing.plan_data if existing.plan_data else []
 

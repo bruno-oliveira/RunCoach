@@ -114,15 +114,10 @@ async def generate_plan(
         )
 
     logger.info(
-        f"Generate plan - current_user: {current_user.id if current_user else 'None'}"
-    )
-    logger.info(
-        f"Generate plan - anonymous_user_id cookie: "
-        f"{request.cookies.get('anonymous_user_id', 'NO COOKIE')}"
-    )
-    logger.info(
-        f"Generate plan - has_access_token: "
-        f"{bool(request.cookies.get('access_token'))}"
+        "Generate plan - current_user=%s, anon_cookie=%s, has_access_token=%s",
+        current_user.id if current_user else "None",
+        request.cookies.get("anonymous_user_id", "NO COOKIE"),
+        bool(request.cookies.get("access_token")),
     )
 
     if not anonymous_user_id:
@@ -206,7 +201,7 @@ async def generate_plan(
         existing = plan_service.find_duplicate(plan_request, current_user.id, db)
         if existing:
             logger.info(
-                f"Returning existing plan {existing.id} for user {current_user.id}"
+                "Returning existing plan %s for user %s", existing.id, current_user.id,
             )
             return RedirectResponse(url=f"/plan/{existing.id}", status_code=303)
 

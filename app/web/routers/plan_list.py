@@ -55,7 +55,7 @@ async def list_my_plans(
                             plan.id, current_user.id, db
                         )
                     except Exception:
-                        logger.warning(f"Alert check failed for plan {plan.id}", exc_info=True)
+                        logger.warning("Alert check failed for plan %s", plan.id, exc_info=True)
                 else:
                     plan.status_label = f"Starts {start_d.strftime('%b')} {start_d.day}"
             else:
@@ -73,5 +73,5 @@ async def list_my_plans(
             },
         )
     except Exception as e:
-        logger.error(f"Error listing plans: {e}", exc_info=True)
+        logger.error("Error listing plans: %s", e, exc_info=True)
         raise HTTPException(status_code=500, detail="An internal error occurred while listing plans")

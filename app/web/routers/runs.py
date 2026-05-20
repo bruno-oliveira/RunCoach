@@ -9,7 +9,7 @@ from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
 from app.core.training.vdot_calculator import VDOTCalculator
-from app.dependencies import get_db, get_current_user
+from app.dependencies import get_current_user, get_db, get_run_repository
 from app.models import User
 from app.schemas import (
     RunLogCreate,
@@ -55,12 +55,12 @@ async def get_run_logs(
     workout_type: Optional[str] = Query(None, description="Filter by workout type"),
     start_date: Optional[datetime] = Query(None, description="Filter runs after this date"),
     end_date: Optional[datetime] = Query(None, description="Filter runs before this date"),
-    db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
+    run_repo: SQLAlchemyRunRepository = Depends(get_run_repository),
 ):
     """Get paginated list of user's run logs with optional filtering."""
     try:
-        run_logs, total = SQLAlchemyRunRepository(db).list_paginated_for_user(
+        run_logs, total = run_repo.list_paginated_for_user(
             current_user.id,
             page=page,
             page_size=page_size,
@@ -186,11 +186,11 @@ async def get_plan_feedback(
 @runs_router.get("/{run_id}", response_model=RunLogResponse)
 async def get_run_log(
     run_id: str,
-    db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
+    run_repo: SQLAlchemyRunRepository = Depends(get_run_repository),
 ):
     """Get a specific run log by ID."""
-    run = SQLAlchemyRunRepository(db).get_for_user(run_id, current_user.id)
+    run = run_repo.get_for_user(run_id, current_user.id)
 
     if not run:
         raise HTTPException(
@@ -207,9 +207,10 @@ async def update_run_log(
     run_update: RunLogUpdate,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
+    run_repo: SQLAlchemyRunRepository = Depends(get_run_repository),
 ):
     """Update an existing run log."""
-    run = SQLAlchemyRunRepository(db).get_for_user(run_id, current_user.id)
+    run = run_repo.get_for_user(run_id, current_user.id)
 
     if not run:
         raise HTTPException(
@@ -227,7 +228,7 @@ async def update_run_log(
     db.commit()
     db.refresh(run)
 
-    logger.info(f"Run log {run_id} updated for user {current_user.id}")
+    logger.info("Run log %s updated for user %s", run_id, current_user.id)
 
     return run_to_response(run)
 
@@ -237,9 +238,10 @@ async def delete_run_log(
     run_id: str,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
+    run_repo: SQLAlchemyRunRepository = Depends(get_run_repository),
 ):
     """Delete a run log."""
-    run = SQLAlchemyRunRepository(db).get_for_user(run_id, current_user.id)
+    run = run_repo.get_for_user(run_id, current_user.id)
 
     if not run:
         raise HTTPException(
@@ -250,7 +252,7 @@ async def delete_run_log(
     db.delete(run)
     db.commit()
 
-    logger.info(f"Run log {run_id} deleted for user {current_user.id}")
+    logger.info("Run log %s deleted for user %s", run_id, current_user.id)
 
 
 @runs_router.get("/{run_id}/feedback")
@@ -258,9 +260,10 @@ async def get_run_feedback(
     run_id: str,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
+    run_repo: SQLAlchemyRunRepository = Depends(get_run_repository),
 ):
     """Get coaching feedback for a specific run."""
-    run = SQLAlchemyRunRepository(db).get_for_user(run_id, current_user.id)
+    run = run_repo.get_for_user(run_id, current_user.id)
     if not run:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,

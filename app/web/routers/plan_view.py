@@ -59,7 +59,7 @@ async def view_plan(
                     plan_id, current_user.id, db
                 )
             except Exception as e:
-                logger.warning(f"Auto-map/alert on view failed: {e}")
+                logger.warning("Auto-map/alert on view failed: %s", e)
 
         plan_data = training_plan.plan_data
         plan_data = plan_service.enrich_plan_data_with_ids(
@@ -92,7 +92,7 @@ async def view_plan(
                     persist_json(training_plan, "plan_data")
                     db.commit()
             except Exception as e:
-                logger.warning(f"Retroactive HR zone computation failed: {e}")
+                logger.warning("Retroactive HR zone computation failed: %s", e)
 
         extra = plan_service.get_plan_view_data(training_plan, current_user, db)
         extra = get_handler_for_plan(training_plan).enrich_view_context(
@@ -107,5 +107,5 @@ async def view_plan(
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Error generating plan: {e}", exc_info=True)
+        logger.error("Error generating plan: %s", e, exc_info=True)
         raise HTTPException(status_code=500, detail="An internal error occurred while generating the plan")

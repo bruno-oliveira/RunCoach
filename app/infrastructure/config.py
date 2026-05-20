@@ -36,6 +36,11 @@ class Settings(BaseSettings):
     # NOTE: In production, SECRET_KEY must be set as a persistent environment
     # variable (e.g. Fly.io secret) so JWTs survive cold starts.
     # The random default is for local development only.
+    # SECRET_KEY_PREVIOUS lets us rotate the JWT signing key without immediate
+    # logout: new tokens are signed with secret_key; verification falls back
+    # to secret_key_previous so existing sessions keep working through the
+    # rollover window. Clear once all old tokens have expired (24h default).
+    secret_key_previous: str = ""
     google_client_id: str = ""
 
     # Session settings
@@ -51,6 +56,11 @@ class Settings(BaseSettings):
     # Security
     enable_debug_endpoints: bool = False
     encryption_key: str = ""
+    # Previous ENCRYPTION_KEY used during a rotation window. Encryption is
+    # always performed with ``encryption_key``; on decryption we fall back to
+    # ``encryption_key_previous`` so rows encrypted with the old key keep
+    # decoding. Clear once all rows have been re-encrypted under the new key.
+    encryption_key_previous: str = ""
     force_secure_cookies: bool = True
     max_request_body_bytes: int = 1_048_576  # 1 MB
     # CORS allowed origins. Comma-separated env var, e.g.

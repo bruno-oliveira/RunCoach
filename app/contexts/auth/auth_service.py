@@ -46,10 +46,19 @@ class AuthService:
         return pyjwt.encode(to_encode, self.secret_key, algorithm=self.algorithm)
 
     def verify_token(self, token: str) -> Optional[dict]:
+        # Try current key first; fall back to the previous key during a key
+        # rotation window so existing sessions keep working.
         try:
             return pyjwt.decode(token, self.secret_key, algorithms=[self.algorithm])
         except PyJWTError:
-            return None
+            pass
+        previous = settings.secret_key_previous
+        if previous:
+            try:
+                return pyjwt.decode(token, previous, algorithms=[self.algorithm])
+            except PyJWTError:
+                return None
+        return None
 
     def issue_refresh_token(self, db: Session, user: User) -> tuple[str, datetime]:
         """Mint a new refresh token for ``user`` and return (raw_token, expires_at).
@@ -119,7 +128,7 @@ class AuthService:
             response.raise_for_status()
             certs = response.json()
             AuthService._cert_cache_entry = (certs, now)  # single atomic write
-            logger.info(f"Retrieved {len(certs.get('keys', []))} public keys from Google")
+            logger.info("Retrieved %d public keys from Google", len(certs.get("keys", [])))
             return certs
 
     async def verify_google_token(self, id_token: str) -> Optional[dict]:

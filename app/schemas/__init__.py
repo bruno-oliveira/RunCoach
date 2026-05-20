@@ -29,15 +29,9 @@ from app.schemas.strava_schemas import (
     StravaSyncResponse,
 )
 
-from app.infrastructure.config import settings
-from pydantic import BaseModel, Field
-
-
-class HealthResponse(BaseModel):
-    """Health check response."""
-
-    status: str = "healthy"
-    version: str = Field(default_factory=lambda: settings.app_version)
+# HealthResponse moved to app.infrastructure.health to avoid the
+# schemas → infrastructure dependency. Re-exported for backward compat.
+from app.infrastructure.health import HealthResponse
 
 
 __all__ = [

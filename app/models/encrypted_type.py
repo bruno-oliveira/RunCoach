@@ -5,7 +5,7 @@ import hashlib
 import logging
 from typing import Optional
 
-from cryptography.fernet import Fernet, InvalidToken
+from cryptography.fernet import Fernet, InvalidToken, MultiFernet
 from sqlalchemy import String
 from sqlalchemy.types import TypeDecorator
 
@@ -35,6 +35,21 @@ def _get_encryption_secret() -> str:
     return settings.secret_key
 
 
+def _build_multifernet() -> MultiFernet:
+    """Build a Fernet ring [current, previous] supporting decryption fallback.
+
+    Encryption is always performed with the first key (the current
+    ENCRYPTION_KEY); decryption tries each key in order, so values still
+    encrypted under the previous key remain readable during a rotation.
+    """
+    from app.infrastructure.config import settings
+
+    keys = [Fernet(_derive_fernet_key(_get_encryption_secret()))]
+    if settings.encryption_key_previous:
+        keys.append(Fernet(_derive_fernet_key(settings.encryption_key_previous)))
+    return MultiFernet(keys)
+
+
 class EncryptedString(TypeDecorator):
     """Stores string values encrypted with Fernet.
 
@@ -42,13 +57,14 @@ class EncryptedString(TypeDecorator):
     when read back. Null values pass through unchanged.
 
     Uses ENCRYPTION_KEY. In debug mode only, falls back to SECRET_KEY.
+    Supports an ENCRYPTION_KEY_PREVIOUS fallback during key rotation.
     """
 
     impl = String
     cache_ok = True
 
-    def _get_fernet(self) -> Fernet:
-        return Fernet(_derive_fernet_key(_get_encryption_secret()))
+    def _get_fernet(self) -> MultiFernet:
+        return _build_multifernet()
 
     def process_bind_param(self, value: Optional[str], dialect) -> Optional[str]:
         if value is None:

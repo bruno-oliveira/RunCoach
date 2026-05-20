@@ -10,7 +10,7 @@ from fastapi.staticfiles import StaticFiles
 from app.infrastructure.config import settings, setup_logging
 from app.infrastructure.secrets import validate_production_secrets
 from app.migrations.startup import run_startup_migrations
-from app.schemas import HealthResponse
+from app.infrastructure.health import HealthResponse
 from app.web.middleware import (
     csrf_protection,
     request_size_limit,
