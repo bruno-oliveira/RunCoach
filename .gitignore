@@ -44,6 +44,3 @@ Thumbs.db
 
 # Test outputs
 test_*.html
-
-# Garmin FIT SDK tools (download via scripts/download-fit-sdk.sh)
-tools/fit-sdk/*.jar
