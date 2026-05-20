@@ -2,7 +2,7 @@
 
 import logging
 from datetime import datetime, timedelta, timezone
-from typing import Optional
+from typing import Callable, Optional
 
 import httpx
 import jwt as pyjwt
@@ -11,6 +11,7 @@ from jwt.exceptions import PyJWTError
 from sqlalchemy.orm import Session
 
 from app.contexts.auth.repositories import SQLAlchemyUserRepository
+from app.domain.repositories import IUserRepository
 from app.infrastructure.config import settings
 from app.models import User
 from app.models.refresh_token import RefreshToken, _generate_raw_token, hash_token
@@ -23,10 +24,14 @@ class AuthService:
     _cert_cache_entry: Optional[tuple[dict, datetime]] = None  # (certs, fetched_at)
     _cert_cache_ttl = timedelta(hours=1)
 
-    def __init__(self):
+    def __init__(
+        self,
+        user_repo_factory: Callable[[Session], IUserRepository] = SQLAlchemyUserRepository,
+    ):
         self.secret_key = settings.secret_key
         self.algorithm = "HS256"
         self.google_cert_url = "https://www.googleapis.com/oauth2/v3/certs"
+        self._user_repo_factory = user_repo_factory
 
     def create_access_token(self, data: dict, expires_delta: Optional[timedelta] = None) -> str:
         to_encode = data.copy()
@@ -84,7 +89,7 @@ class AuthService:
             return None
         token.revoked_at = now
         db.commit()
-        return SQLAlchemyUserRepository(db).get_by_id(token.user_id)
+        return self._user_repo_factory(db).get_by_id(token.user_id)
 
     def revoke_refresh_token(self, db: Session, raw_token: str) -> None:
         """Mark a refresh token as revoked. No-op if not found."""
@@ -166,7 +171,7 @@ class AuthService:
         name = google_user_data.get("name")
         picture = google_user_data.get("picture")
 
-        users = SQLAlchemyUserRepository(db)
+        users = self._user_repo_factory(db)
         user = users.get_by_google_id(google_id)
 
         if not user:
@@ -200,7 +205,7 @@ class AuthService:
 
     def get_current_user(self, db: Session, user_id: str) -> Optional[User]:
         """Get user by ID from token."""
-        return SQLAlchemyUserRepository(db).get_by_id(user_id)
+        return self._user_repo_factory(db).get_by_id(user_id)
 
     def update_user_activity(self, db: Session, user: User) -> None:
         """Update user's last activity timestamp (throttled to once per 5 minutes)."""

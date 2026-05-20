@@ -1,7 +1,7 @@
 """Plan creation, customization, and deletion business logic."""
 
 import logging
-from typing import Any, Optional
+from typing import Any, Callable, Optional
 
 from sqlalchemy.orm import Session
 
@@ -9,6 +9,7 @@ from app.contexts.auth.repositories import SQLAlchemyUserRepository
 from app.contexts.nutrition.nutrition_engine import NutritionEngine
 from app.contexts.plan.generators.plan_generator import TrainingPlanGenerator
 from app.contexts.plan.repositories import SQLAlchemyPlanRepository
+from app.domain.repositories import IPlanRepository, IUserRepository
 from app.infrastructure.config import settings
 from app.models import TrainingPlan, User
 from app.schemas import PlanRequest
@@ -23,13 +24,23 @@ logger = logging.getLogger(__name__)
 
 
 class PlanService:
-    """Encapsulates plan lifecycle operations."""
+    """Encapsulates plan lifecycle operations.
+
+    Accepts repository factories so tests / non-SQLAlchemy adapters can supply
+    their own implementations of the IPlanRepository / IUserRepository protocols.
+    """
 
     MAX_PLANS_PER_USER = settings.max_plans_per_user
 
-    def __init__(self) -> None:
+    def __init__(
+        self,
+        plan_repo_factory: Callable[[Session], IPlanRepository] = SQLAlchemyPlanRepository,
+        user_repo_factory: Callable[[Session], IUserRepository] = SQLAlchemyUserRepository,
+    ) -> None:
         self._adaptation_service = AdaptationService()
         self._plan_view_service = PlanViewService()
+        self._plan_repo_factory = plan_repo_factory
+        self._user_repo_factory = user_repo_factory
 
     def has_reached_plan_limit(self, user_id: str, db: Session) -> bool:
         return _lifecycle.has_reached_plan_limit(user_id, db)
@@ -43,7 +54,7 @@ class PlanService:
             return current_user
 
         if anonymous_user_id:
-            user = SQLAlchemyUserRepository(db).get_by_id(anonymous_user_id)
+            user = self._user_repo_factory(db).get_by_id(anonymous_user_id)
             if user and not user.google_id and not user.email:
                 return user
 
@@ -62,7 +73,7 @@ class PlanService:
             if plan_request.recent_race_time
             else None
         )
-        return SQLAlchemyPlanRepository(db).find_duplicate(
+        return self._plan_repo_factory(db).find_duplicate(
             user_id, plan_request, race_time_seconds
         )
 
