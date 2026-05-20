@@ -611,6 +611,25 @@ function setPlanMode(mode) {
     elevationField.addEventListener('input', updateElevationClassifier);
     updateTrailVisibility();
 
+    // Beginners (current_km === 0) get a beginner plan, so the "Use my running data"
+    // toggle is meaningless — hide it and uncheck so the backend skips profile use.
+    const currentKmField = document.getElementById('current_km');
+    const profileToggleGroup = document.querySelector('.profile-toggle-group');
+    const useProfileCheckbox = document.getElementById('use_profile');
+    function updateProfileToggleVisibility() {
+        if (!profileToggleGroup || !useProfileCheckbox) return;
+        const km = parseFloat(currentKmField.value);
+        const isBeginner = !isNaN(km) && km === 0;
+        profileToggleGroup.style.display = isBeginner ? 'none' : '';
+        if (isBeginner) {
+            useProfileCheckbox.checked = false;
+        }
+    }
+    if (currentKmField) {
+        currentKmField.addEventListener('input', updateProfileToggleVisibility);
+        updateProfileToggleVisibility();
+    }
+
     // Initialize mode from query param (always run to disable hidden sections)
     var initialMode = document.getElementById('plan_mode').value || 'distance';
     var timeBtnInit = document.getElementById('mode-time-btn');
