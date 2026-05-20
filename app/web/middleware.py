@@ -7,7 +7,7 @@ from fastapi.responses import JSONResponse
 
 from app.infrastructure.config import settings
 
-_CSRF_EXEMPT = {"/api/auth/google", "/api/auth/logout", "/health"}
+_CSRF_EXEMPT = {"/api/auth/google", "/api/auth/logout", "/api/auth/refresh", "/health"}
 _STATE_CHANGING_METHODS = {"POST", "PUT", "PATCH", "DELETE"}
 
 # Inline <script> and style="" blocks exist in templates (theme-init, cookie banner,

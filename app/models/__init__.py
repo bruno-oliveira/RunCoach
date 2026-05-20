@@ -8,6 +8,7 @@ from app.models.run_log import RunLog
 from app.models.run_feedback import RunFeedback
 from app.models.favorite_recipe import FavoriteRecipe
 from app.models.readiness_log import ReadinessLog
+from app.models.refresh_token import RefreshToken
 
 __all__ = [
     "Base",
@@ -20,4 +21,5 @@ __all__ = [
     "RunFeedback",
     "FavoriteRecipe",
     "ReadinessLog",
+    "RefreshToken",
 ]

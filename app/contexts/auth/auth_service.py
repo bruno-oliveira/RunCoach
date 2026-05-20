@@ -13,6 +13,7 @@ from sqlalchemy.orm import Session
 from app.contexts.auth.repositories import SQLAlchemyUserRepository
 from app.infrastructure.config import settings
 from app.models import User
+from app.models.refresh_token import RefreshToken, _generate_raw_token, hash_token
 from app.schemas import UserCreate
 
 logger = logging.getLogger(__name__)
@@ -44,6 +45,59 @@ class AuthService:
             return pyjwt.decode(token, self.secret_key, algorithms=[self.algorithm])
         except PyJWTError:
             return None
+
+    def issue_refresh_token(self, db: Session, user: User) -> tuple[str, datetime]:
+        """Mint a new refresh token for ``user`` and return (raw_token, expires_at).
+
+        Stores only the SHA-256 hash server-side; the raw value is given to
+        the client and never logged.
+        """
+        raw = _generate_raw_token()
+        expires_at = datetime.now(timezone.utc).replace(tzinfo=None) + timedelta(
+            days=settings.refresh_token_days
+        )
+        token = RefreshToken(
+            user_id=user.id,
+            token_hash=hash_token(raw),
+            expires_at=expires_at,
+        )
+        db.add(token)
+        db.commit()
+        return raw, expires_at
+
+    def consume_refresh_token(self, db: Session, raw_token: str) -> Optional[User]:
+        """Validate a refresh token and return the owning user.
+
+        Rotation: marks the presented token as revoked and is expected to be
+        followed by ``issue_refresh_token`` so the client gets a fresh value.
+        """
+        token_hash = hash_token(raw_token)
+        token = (
+            db.query(RefreshToken)
+            .filter(RefreshToken.token_hash == token_hash)
+            .one_or_none()
+        )
+        if token is None:
+            return None
+        now = datetime.now(timezone.utc).replace(tzinfo=None)
+        if token.revoked_at is not None or token.expires_at <= now:
+            return None
+        token.revoked_at = now
+        db.commit()
+        return SQLAlchemyUserRepository(db).get_by_id(token.user_id)
+
+    def revoke_refresh_token(self, db: Session, raw_token: str) -> None:
+        """Mark a refresh token as revoked. No-op if not found."""
+        token_hash = hash_token(raw_token)
+        token = (
+            db.query(RefreshToken)
+            .filter(RefreshToken.token_hash == token_hash)
+            .one_or_none()
+        )
+        if token is None or token.revoked_at is not None:
+            return
+        token.revoked_at = datetime.now(timezone.utc).replace(tzinfo=None)
+        db.commit()
 
     async def _get_google_certs(self) -> dict:
         """Get Google's public keys with 1-hour cache."""

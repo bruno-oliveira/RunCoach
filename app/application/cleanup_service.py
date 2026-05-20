@@ -10,6 +10,7 @@ from app.models.user import User
 logger = logging.getLogger(__name__)
 
 INACTIVE_MONTHS = 24
+ANONYMOUS_RETENTION_DAYS = 90
 
 
 def cleanup_inactive_accounts(db: Session, *, dry_run: bool = False) -> int:
@@ -52,4 +53,48 @@ def cleanup_inactive_accounts(db: Session, *, dry_run: bool = False) -> int:
 
     db.commit()
     logger.info("Deleted %d inactive account(s)", count)
+    return count
+
+
+def cleanup_anonymous_users(db: Session, *, dry_run: bool = False) -> int:
+    """Delete anonymous users (no google_id, no email) older than ANONYMOUS_RETENTION_DAYS.
+
+    Anonymous user records are created by the middleware when a visitor lands
+    on a plan-generation page. They accumulate without ever being claimed by a
+    login. Retention is keyed off ``last_activity`` (falls back to
+    ``created_at`` if last_activity is null).
+
+    Cascade deletes on User → TrainingPlan / RunLog / FavoriteRecipe /
+    ReadinessLog clean up associated rows automatically.
+    """
+    cutoff = (
+        datetime.now(timezone.utc) - timedelta(days=ANONYMOUS_RETENTION_DAYS)
+    ).replace(tzinfo=None)
+
+    candidates = (
+        db.query(User)
+        .filter(User.google_id.is_(None), User.email.is_(None))
+        .all()
+    )
+
+    anonymous = [
+        u for u in candidates
+        if (u.last_activity or u.created_at) and (u.last_activity or u.created_at) < cutoff
+    ]
+
+    count = len(anonymous)
+    if count == 0:
+        logger.info("No stale anonymous users found (cutoff: %s)", cutoff)
+        return 0
+
+    if dry_run:
+        logger.info("Dry run: would delete %d anonymous user(s) (cutoff: %s)", count, cutoff)
+        return count
+
+    for user in anonymous:
+        logger.info("Deleting anonymous user %s", user.id)
+        db.delete(user)
+
+    db.commit()
+    logger.info("Deleted %d anonymous user(s)", count)
     return count

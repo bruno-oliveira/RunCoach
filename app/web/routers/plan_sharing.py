@@ -21,6 +21,7 @@ from app.dependencies import (
     get_plan_service,
 )
 from app.models import TrainingPlan, User
+from app.rate_limit import plan_generation_limiter
 from app.contexts.plan.plan_helpers import get_plan_or_404, plan_view_context
 from app.contexts.auth.repositories import SQLAlchemyUserRepository
 from app.contexts.plan.plan_service import PlanService
@@ -183,12 +184,14 @@ async def delete_plan(
 @router.get("/download-pdf/{plan_id}")
 async def download_pdf(
     plan_id: str,
+    request: Request,
     anonymous_user_id: Optional[str] = Cookie(None),
     db: Session = Depends(get_db),
     current_user: Optional[User] = Depends(get_optional_user),
     pdf_generator: PDFGenerator = Depends(get_pdf_generator),
 ) -> FileResponse:
     """Download training plan as PDF."""
+    plan_generation_limiter.check(request)
     try:
         training_plan = get_plan_or_404(
             plan_id, db, current_user, anonymous_user_id

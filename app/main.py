@@ -9,6 +9,7 @@ from contextlib import asynccontextmanager
 from typing import Optional
 
 from fastapi import Depends, FastAPI, Request
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 
@@ -35,7 +36,7 @@ from app.web.routers import (
 from app.schemas import HealthResponse
 from app.migrations import run_alembic_migrations
 from app.migrations.vdot_backfill import backfill_vdot
-from app.application.cleanup_service import cleanup_inactive_accounts
+from app.application.cleanup_service import cleanup_anonymous_users, cleanup_inactive_accounts
 from app.dependencies import engine, SessionLocal
 
 setup_logging(settings)
@@ -121,6 +122,12 @@ def _run_startup_migrations() -> None:
     except Exception as e:
         session.rollback()
         logger.warning("Inactive account cleanup failed: %s", e)
+
+    try:
+        cleanup_anonymous_users(session)
+    except Exception as e:
+        session.rollback()
+        logger.warning("Anonymous user cleanup failed: %s", e)
     finally:
         session.close()
 
@@ -154,6 +161,14 @@ def create_app(skip_migrations: bool = False) -> FastAPI:
         version=settings.app_version,
         debug=settings.debug,
         lifespan=lifespan,
+    )
+
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=settings.allowed_origins,
+        allow_credentials=True,
+        allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE"],
+        allow_headers=["Authorization", "Content-Type", "X-Requested-With"],
     )
 
     app.middleware("http")(set_anonymous_user_id_cookie)
@@ -222,15 +237,6 @@ def create_app(skip_migrations: bool = False) -> FastAPI:
             "user": current_user,
             "google_client_id": settings.google_client_id or "",
         })
-
-    if settings.enable_debug_endpoints:
-        @app.get("/debug/config", tags=["debug"])
-        async def debug_config():
-            return {
-                "google_client_id_configured": settings.is_google_client_id_configured,
-                "debug_mode": settings.debug,
-                "environment": "development",
-            }
 
     return app
 

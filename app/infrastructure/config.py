@@ -4,7 +4,7 @@ import logging
 from functools import lru_cache
 from typing import Literal
 
-from pydantic import Field
+from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -53,11 +53,48 @@ class Settings(BaseSettings):
     encryption_key: str = ""
     force_secure_cookies: bool = True
     max_request_body_bytes: int = 1_048_576  # 1 MB
+    # CORS allowed origins. Comma-separated env var, e.g.
+    # ``ALLOWED_ORIGINS=https://runcoach.fly.dev,https://example.com``.
+    # Defaults to localhost for development; production must override.
+    allowed_origins: list[str] = Field(
+        default_factory=lambda: ["http://localhost:8000"]
+    )
 
-    # Feature Flags
+    # JWT lifetimes
+    access_token_minutes: int = 15
+    refresh_token_days: int = 30
+
+    # Feature Flags — environment-driven boolean toggles. Look up via
+    # ``settings.is_enabled("flag_name")``. Unknown flags default False.
+    feature_flags: dict[str, bool] = Field(default_factory=dict)
 
     # Plan limits
     max_plans_per_user: int = 3
+
+    @field_validator("allowed_origins", mode="before")
+    @classmethod
+    def _parse_allowed_origins(cls, v):
+        """Allow comma-separated env-var input for allowed_origins."""
+        if isinstance(v, str):
+            return [o.strip() for o in v.split(",") if o.strip()]
+        return v
+
+    @field_validator("feature_flags", mode="before")
+    @classmethod
+    def _parse_feature_flags(cls, v):
+        """Allow comma-separated env-var input like ``FEATURE_FLAGS=a=true,b=false``."""
+        if isinstance(v, str):
+            parsed: dict[str, bool] = {}
+            for item in v.split(","):
+                if "=" in item:
+                    k, val = item.split("=", 1)
+                    parsed[k.strip()] = val.strip().lower() in ("1", "true", "yes", "on")
+            return parsed
+        return v
+
+    def is_enabled(self, flag: str) -> bool:
+        """Return True if the named feature flag is enabled."""
+        return self.feature_flags.get(flag, False)
 
     @property
     def is_google_client_id_configured(self) -> bool:

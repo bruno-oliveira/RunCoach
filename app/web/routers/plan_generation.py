@@ -30,6 +30,7 @@ from app.exceptions import (
     ZeroMileageUnsupportedException,
 )
 from app.models import User
+from app.rate_limit import plan_generation_limiter
 from app.schemas import PlanRequest, FitnessPlanRequest
 from app.contexts.runner.fitness.performance_service import PerformanceService
 from app.contexts.plan.plan_helpers import error_response, get_plan_or_404
@@ -93,6 +94,7 @@ async def generate_plan(
     plan_service: PlanService = Depends(get_plan_service),
 ) -> HTMLResponse:
     """Generate a personalized training plan."""
+    plan_generation_limiter.check(request)
     race_dist = float(recent_race_distance_km) if recent_race_distance_km else None
     hr_max = int(max_heart_rate) if max_heart_rate else None
 
@@ -271,6 +273,7 @@ async def generate_fitness_plan(
     plan_service: PlanService = Depends(get_plan_service),
 ) -> HTMLResponse:
     """Generate a fitness-focused training plan."""
+    plan_generation_limiter.check(request)
     race_dist = float(recent_race_distance_km) if recent_race_distance_km else None
     hr_max = int(max_heart_rate) if max_heart_rate else None
     focus_dist = float(focus_distance) if focus_distance else None

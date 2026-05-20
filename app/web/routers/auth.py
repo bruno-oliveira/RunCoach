@@ -2,8 +2,9 @@
 
 import logging
 from datetime import timedelta
+from typing import Optional
 
-from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
+from fastapi import APIRouter, Cookie, Depends, HTTPException, Request, Response, status
 from sqlalchemy.orm import Session
 
 from app.contexts.auth.auth_service import AuthService
@@ -22,7 +23,34 @@ auth_router = APIRouter(prefix="/api/auth", tags=["authentication"])
 
 # Cookie settings
 COOKIE_NAME = "access_token"
+REFRESH_COOKIE_NAME = "refresh_token"
 COOKIE_MAX_AGE = 24 * 60 * 60  # 1 day in seconds
+
+
+def _set_session_cookies(
+    response: Response,
+    access_token: str,
+    refresh_token: Optional[str] = None,
+) -> None:
+    """Set the access-token cookie, and optionally a refresh-token cookie."""
+    response.set_cookie(
+        key=COOKIE_NAME,
+        value=access_token,
+        max_age=COOKIE_MAX_AGE,
+        httponly=True,
+        samesite="lax",
+        secure=_cookie_secure(),
+    )
+    if refresh_token is not None:
+        response.set_cookie(
+            key=REFRESH_COOKIE_NAME,
+            value=refresh_token,
+            max_age=settings.refresh_token_days * 24 * 60 * 60,
+            httponly=True,
+            samesite="lax",
+            secure=_cookie_secure(),
+            path="/api/auth",
+        )
 
 
 @auth_router.post("/google", response_model=AuthResponse)
@@ -59,18 +87,11 @@ async def google_auth(
 
     access_token = auth_service.create_access_token(
         data={"sub": user.id, "email": user.email},
-        expires_delta=timedelta(days=1),
+        expires_delta=timedelta(minutes=settings.access_token_minutes),
     )
+    refresh_token, _ = auth_service.issue_refresh_token(db, user)
 
-    response.set_cookie(
-        key=COOKIE_NAME,
-        value=access_token,
-        max_age=COOKIE_MAX_AGE,
-        httponly=True,
-        samesite="lax",
-        secure=_cookie_secure(),
-    )
-
+    _set_session_cookies(response, access_token, refresh_token)
     response.delete_cookie(key="anonymous_user_id", samesite="lax")
 
     return AuthResponse(
@@ -132,13 +153,67 @@ async def update_user_settings(
     )
 
 
+@auth_router.post("/refresh", response_model=UserResponse)
+async def refresh_session(
+    request: Request,
+    response: Response,
+    refresh_token: Optional[str] = Cookie(None, alias=REFRESH_COOKIE_NAME),
+    db: Session = Depends(get_db),
+    auth_service: AuthService = Depends(get_auth_service),
+):
+    """Exchange a refresh token for a new access token (and rotate the refresh token)."""
+    auth_limiter.check(request)
+    if not refresh_token:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="No refresh token",
+        )
+
+    user = auth_service.consume_refresh_token(db, refresh_token)
+    if user is None:
+        # Treat any failure (unknown / expired / revoked) uniformly to avoid
+        # leaking whether the token previously existed.
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid refresh token",
+        )
+
+    access_token = auth_service.create_access_token(
+        data={"sub": user.id, "email": user.email},
+        expires_delta=timedelta(minutes=settings.access_token_minutes),
+    )
+    new_refresh, _ = auth_service.issue_refresh_token(db, user)
+    _set_session_cookies(response, access_token, new_refresh)
+
+    return UserResponse(
+        id=user.id,
+        google_id=user.google_id,
+        email=user.email,
+        name=user.name,
+        picture=user.picture,
+        created_at=user.created_at,
+        plans_generated=user.plans_generated,
+        strava_connected=bool(user.strava_athlete_id),
+        auto_adjust_enabled=bool(user.auto_adjust_enabled),
+    )
+
+
 @auth_router.post("/logout")
-async def logout(response: Response):
+async def logout(
+    response: Response,
+    refresh_token: Optional[str] = Cookie(None, alias=REFRESH_COOKIE_NAME),
+    db: Session = Depends(get_db),
+    auth_service: AuthService = Depends(get_auth_service),
+):
     """
     Logout endpoint.
-    Clears both authentication and anonymous tracking cookies.
+    Clears both authentication and anonymous tracking cookies, and revokes
+    the refresh token server-side if one was presented.
     """
+    if refresh_token:
+        auth_service.revoke_refresh_token(db, refresh_token)
     response.delete_cookie(key=COOKIE_NAME, samesite="lax")
+    response.delete_cookie(key=REFRESH_COOKIE_NAME, samesite="lax", path="/api/auth")
     response.delete_cookie(key="anonymous_user_id", samesite="lax")
     return {"message": "Successfully logged out"}
 
@@ -180,5 +255,6 @@ async def delete_account(
     db.delete(current_user)
     db.commit()
     response.delete_cookie(key=COOKIE_NAME, samesite="lax")
+    response.delete_cookie(key=REFRESH_COOKIE_NAME, samesite="lax", path="/api/auth")
     response.delete_cookie(key="anonymous_user_id", samesite="lax")
     return {"message": "Account deleted"}
