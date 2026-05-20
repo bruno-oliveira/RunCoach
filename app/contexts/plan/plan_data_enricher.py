@@ -143,6 +143,12 @@ def enrich_plan_data_with_ids(
             key = (week_num, workout.get("day"))
             workout["id"] = id_map.get(key)
             bl = baseline_map.get(key)
+            # Snapshot the persisted distance before enrichment can rewrite
+            # it. Adaptation diverges `distance_km` from `baseline_distance_km`
+            # in the DB; view-time enrichment only mutates this in-memory
+            # dict. Comparing against the snapshot keeps the chip tied to
+            # real adaptations.
+            original_distance = workout.get("distance")
 
             _repair_key_workout_steps(workout)
 
@@ -164,11 +170,13 @@ def enrich_plan_data_with_ids(
                     if est_min is not None:
                         workout["duration_min"] = est_min
 
-            # Surface the baseline so workout_item.html can render the
-            # "adjusted from X km" chip. Must run for every workout — easy
-            # runs typically have no `steps`, so the prior early-continue
-            # was hiding the chip on exactly the rows the adjuster touches.
-            if bl is not None and bl != workout.get("distance"):
+            # Surface the baseline so workout_item.html renders the
+            # "adjusted from X km" chip. Compare against the pre-enrichment
+            # snapshot — not the (possibly rewritten) current distance — so
+            # the chip only fires when real adaptation diverged the persisted
+            # distance from its baseline. View-time mutations (key-workout
+            # floor bump, steps-derived recompute) must not trigger it.
+            if bl is not None and bl != original_distance:
                 workout["baseline_distance"] = bl
 
     # Reconcile each week's chip with the daily distances we will actually

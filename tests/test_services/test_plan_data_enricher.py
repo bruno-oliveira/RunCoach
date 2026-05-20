@@ -60,7 +60,48 @@ def test_enricher_repairs_hill_key_workout_distance_floor(test_db):
     assert workout["id"] == dw.id
     assert workout["distance"] >= 4.5
     assert "duration_min" not in workout
-    assert workout.get("baseline_distance") == 2.6
+    # The persisted distance matches the baseline (fresh plan), so the
+    # in-memory floor bump must NOT surface a baseline chip.
+    assert "baseline_distance" not in workout
+
+
+def test_enricher_omits_baseline_when_only_enrichment_bumps_distance(test_db):
+    """Regression: on a freshly generated plan, `distance_km` and
+    `baseline_distance_km` are persisted equal. The enricher may bump
+    `workout["distance"]` in memory (key-workout floor, steps-derived
+    recompute) without that being a real adaptation. The "adjusted from
+    X km" chip in workout_item.html must stay off in this case."""
+    plan, week = _seed_plan(test_db)
+    dw = DailyWorkout(
+        weekly_plan_id=week.id,
+        day_of_week=5,
+        workout_type="hill",
+        distance_km=2.0,
+        intensity="high",
+        baseline_distance_km=2.0,
+        key_workout_id="trail_elevation_repeats",
+    )
+    test_db.add(dw)
+    test_db.commit()
+
+    plan_data = [{
+        "week": 1,
+        "daily_workouts": [{
+            "day": 5,
+            "type": "hill",
+            "distance": 2.0,
+            "key_workout_id": "trail_elevation_repeats",
+            "structure": "6 x 3min uphill at hard effort with jog-back recovery",
+        }],
+    }]
+
+    enriched = enrich_plan_data_with_ids(plan_data, plan.id, test_db)
+    workout = enriched[0]["daily_workouts"][0]
+
+    # Floor still applied — that part of enrichment is unchanged.
+    assert workout["distance"] >= 4.5
+    # But no chip, because the persisted distance equals the baseline.
+    assert "baseline_distance" not in workout
 
 
 def test_enricher_sets_short_workout_duration_hint_from_steps(test_db):
