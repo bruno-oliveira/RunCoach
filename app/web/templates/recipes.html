@@ -451,7 +451,7 @@
             const isFavorite = recipe.favorite_id !== undefined;
             const favoriteBtn = isLoggedIn 
                 ? (isFavorite
-                    ? `<button class="favorite-btn favorited" onclick="event.stopPropagation(); removeFavorite(${recipe.favorite_id}, '${recipe.name.replace(/'/g, "\\'")}')">★ Saved</button>`
+                    ? `<button class="favorite-btn favorited" onclick="event.stopPropagation(); removeFavorite('${recipe.favorite_id}', '${recipe.name.replace(/'/g, "\\'")}')">★ Saved</button>`
                     : `<button class="favorite-btn" onclick="event.stopPropagation(); addFavorite(${JSON.stringify(recipe).replace(/"/g, '&quot;')})">☆ Add to Favorites</button>`)
                 : '';
             
