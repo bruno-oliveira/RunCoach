@@ -37,3 +37,4 @@ fitdecode>=0.10.0
 # Testing (install with: pip install -e ".[test]")
 pytest==8.3.5
 pytest-asyncio==0.25.3
+pytest-cov>=5.0.0

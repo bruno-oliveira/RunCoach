@@ -115,35 +115,48 @@ class PlanService:
 
         return training_plan, plan_data
 
-    def customize_plan(self, training_plan, week_number, adjustment_type, adjustment_value, db):
+    def customize_plan(
+        self,
+        training_plan: TrainingPlan,
+        week_number: int,
+        adjustment_type: str,
+        adjustment_value: str,
+        db: Session,
+    ) -> Any:
         return _lifecycle.customize_plan(
             training_plan, week_number, adjustment_type, adjustment_value, db
         )
 
-    def delete_plan(self, training_plan, db):
+    def delete_plan(self, training_plan: TrainingPlan, db: Session) -> None:
         return _lifecycle.delete_plan(training_plan, db)
 
     # Delegation to PlanViewService — kept for backward compatibility
-    def enrich_plan_data_with_ids(self, plan_data, training_plan_id, db):
+    def enrich_plan_data_with_ids(
+        self, plan_data: list[dict], training_plan_id: str, db: Session
+    ) -> list[dict]:
         return self._plan_view_service.enrich_plan_data_with_ids(plan_data, training_plan_id, db)
 
-    def nutrition_for_template(self, nutrition_plan_data):
+    def nutrition_for_template(self, nutrition_plan_data: Any) -> dict:
         return self._plan_view_service.nutrition_for_template(nutrition_plan_data)
 
-    def get_logged_runs_map(self, training_plan_id, db):
+    def get_logged_runs_map(self, training_plan_id: str, db: Session) -> dict:
         return self._plan_view_service.get_logged_runs_map(training_plan_id, db)
 
-    def get_adjustment_hints(self, training_plan, performance_analysis, db):
+    def get_adjustment_hints(
+        self, training_plan: TrainingPlan, performance_analysis: Any, db: Session
+    ) -> Any:
         return self._plan_view_service.get_adjustment_hints(training_plan, performance_analysis, db)
 
-    def get_feedback_map(self, logged_runs, db):
+    def get_feedback_map(self, logged_runs: Any, db: Session) -> dict:
         return self._plan_view_service.get_feedback_map(logged_runs, db)
 
-    def get_completion_stats(self, training_plan, db):
+    def get_completion_stats(self, training_plan: TrainingPlan, db: Session) -> dict:
         return self._plan_view_service.get_completion_stats(training_plan, db)
 
-    def get_next_plan_cta(self, target_distance_km):
+    def get_next_plan_cta(self, target_distance_km: float) -> Optional[dict]:
         return self._plan_view_service.get_next_plan_cta(target_distance_km)
 
-    def get_plan_view_data(self, training_plan, current_user, db):
+    def get_plan_view_data(
+        self, training_plan: TrainingPlan, current_user: Optional[User], db: Session
+    ) -> dict:
         return self._plan_view_service.get_plan_view_data(training_plan, current_user, db)

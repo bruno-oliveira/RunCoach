@@ -2,6 +2,7 @@
 
 from app.web.routers.auth import auth_router
 from app.web.routers.nutrition import router as nutrition_router
+from app.web.routers.pages import router as pages_router
 from app.web.routers.plans import router as plans_router
 from app.web.routers.readiness import router as readiness_router
 from app.web.routers.recipes import router as recipes_router
@@ -18,6 +19,7 @@ __all__ = [
     "auth_router",
     "plans_router",
     "nutrition_router",
+    "pages_router",
     "readiness_router",
     "recipes_router",
     "recipes_page_router",
