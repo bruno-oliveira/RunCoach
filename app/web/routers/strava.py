@@ -11,8 +11,8 @@ from sqlalchemy.orm import Session
 from app.contexts.auth.auth_service import AuthService
 from app.contexts.auth.repositories import SQLAlchemyUserRepository
 from app.infrastructure.config import settings
+from app.contexts.plan.repositories import SQLAlchemyPlanRepository
 from app.dependencies import get_current_user, get_db, get_auth_service, get_strava_service
-from app.models import TrainingPlan
 from app.models.user import User
 from app.schemas import StravaStatusResponse, StravaSyncResponse
 from app.rate_limit import strava_callback_limiter
@@ -118,17 +118,11 @@ async def strava_sync(
     elif current_user.strava_last_synced_at:
         after_timestamp = current_user.strava_last_synced_at - 86400
 
-        earliest_plan_start = (
-            db.query(TrainingPlan.start_date)
-            .filter(
-                TrainingPlan.user_id == current_user.id,
-                TrainingPlan.start_date.isnot(None),
-            )
-            .order_by(TrainingPlan.start_date.asc())
-            .first()
+        earliest_plan_start = SQLAlchemyPlanRepository(db).earliest_start_date(
+            current_user.id
         )
-        if earliest_plan_start and earliest_plan_start[0]:
-            sd = earliest_plan_start[0]
+        if earliest_plan_start:
+            sd = earliest_plan_start
             plan_epoch = int(
                 datetime.combine(
                     sd if not hasattr(sd, "date") else sd.date(),

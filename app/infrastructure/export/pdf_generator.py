@@ -7,12 +7,11 @@ from typing import Any, Dict, List
 from reportlab.lib import colors
 from reportlab.lib.enums import TA_CENTER, TA_LEFT
 from reportlab.lib.styles import ParagraphStyle
-from reportlab.lib.units import cm
-from reportlab.platypus import PageBreak, Spacer
 
 from .pdf_base import PDFBase
 from .pdf_nutrition_pages import NutritionPagesMixin
 from .pdf_plan_pages import PlanPagesMixin
+from .pdf_plan_renderers import get_renderer_for_plan
 from .pdf_supplementary_pages import SupplementaryPagesMixin
 from .plan_export_dto import PlanExportDTO
 
@@ -70,59 +69,14 @@ class PDFGenerator(PDFBase, PlanPagesMixin, NutritionPagesMixin, SupplementaryPa
         """
         plan_str = json.dumps(plan_data, sort_keys=True)
         cache_key = self._cache_key_from_hash("", training_plan.id, plan_str)
+        renderer = get_renderer_for_plan(training_plan)
 
         def build(doc, story):
-            is_performance = training_plan.plan_type == 'performance'
-
-            self._add_title_page(story, training_plan, plan_data)
-            self._add_plan_summary(story, training_plan, plan_data)
-
-            if is_performance:
-                self._build_performance_story(story, training_plan, plan_data)
-            else:
-                self._build_distance_story(story, training_plan, plan_data)
-
+            self._add_title_page(story, training_plan, plan_data, renderer)
+            self._add_plan_summary(story, training_plan, plan_data, renderer)
+            renderer.build_body(self, story, training_plan, plan_data)
             self._add_footer(story)
 
         return self._generate_with_cache(
             cache_key, f"running_plan_{training_plan.id}.pdf", build
         )
-
-    def _build_performance_story(self, story, training_plan, plan_data):
-        story.append(Spacer(1, 0.5 * cm))
-        self._add_performance_philosophy(story)
-
-        story.append(PageBreak())
-        self._add_training_zones_page(story, training_plan)
-        self._add_pace_improvement_summary(story, training_plan)
-
-        for week in plan_data:
-            story.append(PageBreak())
-            self._add_performance_weekly_plan(story, week)
-
-        if training_plan.nutrition_plan_data:
-            story.append(PageBreak())
-            self._add_personalized_nutrition_plan(story, training_plan)
-
-        story.append(PageBreak())
-        self._add_nutrition_guidance(story)
-
-    def _build_distance_story(self, story, training_plan, plan_data):
-        story.append(PageBreak())
-
-        for week in plan_data:
-            self._add_weekly_plan(story, week)
-            story.append(PageBreak())
-
-        if story and isinstance(story[-1], PageBreak):
-            story.pop()
-
-        if training_plan.nutrition_plan_data:
-            story.append(PageBreak())
-            self._add_personalized_nutrition_plan(story, training_plan)
-
-        story.append(PageBreak())
-        self._add_nutrition_guidance(story)
-
-        story.append(PageBreak())
-        self._add_injury_prevention(story)

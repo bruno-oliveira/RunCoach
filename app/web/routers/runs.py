@@ -11,13 +11,14 @@ from sqlalchemy.orm import Session
 from app.core.training.quality_scorer import calculate_quality_score
 from app.core.training.vdot_calculator import VDOTCalculator
 from app.dependencies import get_db, get_current_user, validate_plan_ownership
-from app.models import RunLog, User, DailyWorkout, TrainingPlan, WeeklyPlan
+from app.models import RunLog, User, DailyWorkout
 from app.schemas import (
     RunLogCreate,
     RunLogListResponse,
     RunLogResponse,
     RunLogUpdate,
 )
+from app.contexts.plan.repositories import SQLAlchemyPlanRepository
 from app.contexts.runner.fitness.feedback_service import FeedbackService
 from app.contexts.runner.fitness.race_predictor_service import RacePredictorService
 from app.contexts.runner.repositories import SQLAlchemyRunRepository
@@ -45,15 +46,8 @@ async def create_run_log(
 
         validated_workout: Optional[DailyWorkout] = None
         if run_log.daily_workout_id:
-            validated_workout = (
-                db.query(DailyWorkout)
-                .join(WeeklyPlan, DailyWorkout.weekly_plan_id == WeeklyPlan.id)
-                .join(TrainingPlan, WeeklyPlan.training_plan_id == TrainingPlan.id)
-                .filter(
-                    DailyWorkout.id == run_log.daily_workout_id,
-                    TrainingPlan.user_id == current_user.id,
-                )
-                .first()
+            validated_workout = SQLAlchemyPlanRepository(db).get_user_workout(
+                run_log.daily_workout_id, current_user.id
             )
             if not validated_workout:
                 raise HTTPException(
@@ -173,19 +167,14 @@ async def get_run_logs(
 ):
     """Get paginated list of user's run logs with optional filtering."""
     try:
-        query = db.query(RunLog).filter(RunLog.user_id == current_user.id)
-
-        if workout_type:
-            query = query.filter(RunLog.workout_type == workout_type)
-        if start_date:
-            query = query.filter(RunLog.date >= start_date)
-        if end_date:
-            query = query.filter(RunLog.date <= end_date)
-
-        total = query.count()
-
-        offset = (page - 1) * page_size
-        run_logs = query.order_by(RunLog.date.desc()).offset(offset).limit(page_size).all()
+        run_logs, total = SQLAlchemyRunRepository(db).list_paginated_for_user(
+            current_user.id,
+            page=page,
+            page_size=page_size,
+            workout_type=workout_type,
+            start_date=start_date,
+            end_date=end_date,
+        )
 
         return RunLogListResponse(
             runs=[run_to_response(run) for run in run_logs],

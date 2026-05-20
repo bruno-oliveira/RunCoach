@@ -6,7 +6,7 @@ when the score is low.
 """
 
 import logging
-from datetime import date as date_cls, datetime, timedelta, timezone
+from datetime import date as date_cls, datetime, timezone
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -14,8 +14,9 @@ from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy.orm import Session
 
 from app.contexts.plan.repositories import SQLAlchemyPlanRepository
+from app.contexts.runner.readiness_repository import SQLAlchemyReadinessRepository
 from app.dependencies import get_current_user, get_db
-from app.models import DailyWorkout, ReadinessLog, TrainingPlan, User, WeeklyPlan
+from app.models import ReadinessLog, TrainingPlan, User
 from app.utils import persist_json
 
 logger = logging.getLogger(__name__)
@@ -52,15 +53,9 @@ def create_or_update_readiness(
     db: Session = Depends(get_db),
 ) -> ReadinessResponse:
     """Upsert today's readiness check-in for the current user."""
+    readiness_repo = SQLAlchemyReadinessRepository(db)
     today = date_cls.today()
-    existing = (
-        db.query(ReadinessLog)
-        .filter(
-            ReadinessLog.user_id == current_user.id,
-            ReadinessLog.log_date == today,
-        )
-        .first()
-    )
+    existing = readiness_repo.get_for_date(current_user.id, today)
 
     score = ReadinessLog.compute_score(
         payload.sleep, payload.soreness, payload.energy, payload.stress
@@ -88,7 +83,7 @@ def create_or_update_readiness(
             status=status,
             notes=payload.notes,
         )
-        db.add(log)
+        readiness_repo.save(log)
 
     db.commit()
     db.refresh(log)
@@ -101,16 +96,7 @@ def get_today_readiness(
     db: Session = Depends(get_db),
 ):
     """Return today's readiness if logged, otherwise null."""
-    today = date_cls.today()
-    log = (
-        db.query(ReadinessLog)
-        .filter(
-            ReadinessLog.user_id == current_user.id,
-            ReadinessLog.log_date == today,
-        )
-        .first()
-    )
-    return log
+    return SQLAlchemyReadinessRepository(db).get_today(current_user.id)
 
 
 @router.get("/recent", response_model=list[ReadinessResponse])
@@ -122,17 +108,7 @@ def get_recent_readiness(
     """Return the last N days of readiness logs (most recent first)."""
     if days < 1 or days > 90:
         raise HTTPException(status_code=400, detail="days must be between 1 and 90")
-    cutoff = date_cls.today() - timedelta(days=days - 1)
-    logs = (
-        db.query(ReadinessLog)
-        .filter(
-            ReadinessLog.user_id == current_user.id,
-            ReadinessLog.log_date >= cutoff,
-        )
-        .order_by(ReadinessLog.log_date.desc())
-        .all()
-    )
-    return logs
+    return SQLAlchemyReadinessRepository(db).list_recent(current_user.id, days)
 
 
 # ---------------------------------------------------------------------------
@@ -182,22 +158,15 @@ def adapt_todays_workout(
     * **rest** → convert to rest day (0 km).
     """
     # 1. Today's readiness must exist and not be "ready"
-    today = date_cls.today()
-    readiness = (
-        db.query(ReadinessLog)
-        .filter(
-            ReadinessLog.user_id == current_user.id,
-            ReadinessLog.log_date == today,
-        )
-        .first()
-    )
+    plan_repo = SQLAlchemyPlanRepository(db)
+    readiness = SQLAlchemyReadinessRepository(db).get_today(current_user.id)
     if not readiness:
         raise HTTPException(status_code=400, detail="Complete today's check-in first.")
     if readiness.status == "ready":
         raise HTTPException(status_code=400, detail="Readiness is green — no adjustment needed.")
 
     # 2. Load the plan
-    plan = SQLAlchemyPlanRepository(db).get_for_user(body.plan_id, current_user.id)
+    plan = plan_repo.get_for_user(body.plan_id, current_user.id)
     if not plan:
         raise HTTPException(status_code=404, detail="Plan not found.")
 
@@ -245,23 +214,9 @@ def adapt_todays_workout(
     persist_json(plan, "plan_data")
 
     # 7. Also update the DailyWorkout DB row if it exists
-    weekly_plan = (
-        db.query(WeeklyPlan)
-        .filter(
-            WeeklyPlan.training_plan_id == plan.id,
-            WeeklyPlan.week_number == week_num,
-        )
-        .first()
-    )
+    weekly_plan = plan_repo.get_weekly_plan(plan.id, week_num)
     if weekly_plan:
-        db_workout = (
-            db.query(DailyWorkout)
-            .filter(
-                DailyWorkout.weekly_plan_id == weekly_plan.id,
-                DailyWorkout.day_of_week == day_of_week,
-            )
-            .first()
-        )
+        db_workout = plan_repo.get_daily_workout(weekly_plan.id, day_of_week)
         if db_workout:
             if not db_workout.baseline_distance_km:
                 db_workout.baseline_distance_km = db_workout.distance_km

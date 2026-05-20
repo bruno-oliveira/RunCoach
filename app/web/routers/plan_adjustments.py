@@ -6,8 +6,9 @@ from fastapi import APIRouter, Depends, Header, HTTPException, status
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
+from app.contexts.plan.repositories import SQLAlchemyPlanRepository
 from app.dependencies import get_current_user, get_db
-from app.models import DailyWorkout, TrainingPlan, User, WeeklyPlan
+from app.models import TrainingPlan, User
 from app.contexts.plan.adaptation import type_swapper
 from app.contexts.plan.adaptation.missed_week_handler import detect_missed_weeks
 from app.contexts.plan.adaptation import AdaptationService
@@ -397,20 +398,10 @@ async def swap_plan_days(
 
     plan_data = swap_days(plan_data, week_number, body.source_day, body.target_day)
 
-    weekly_plan = (
-        db.query(WeeklyPlan)
-        .filter(
-            WeeklyPlan.training_plan_id == plan_id,
-            WeeklyPlan.week_number == week_number,
-        )
-        .first()
-    )
+    plan_repo = SQLAlchemyPlanRepository(db)
+    weekly_plan = plan_repo.get_weekly_plan(plan_id, week_number)
     if weekly_plan:
-        db_workouts = (
-            db.query(DailyWorkout)
-            .filter(DailyWorkout.weekly_plan_id == weekly_plan.id)
-            .all()
-        )
+        db_workouts = plan_repo.list_daily_workouts(weekly_plan.id)
         src_db = next(
             (wo for wo in db_workouts if wo.day_of_week == body.source_day), None
         )

@@ -53,6 +53,42 @@ class SQLAlchemyRunRepository:
             q = q.limit(limit)
         return q.all()
 
+    def list_paginated_for_user(
+        self,
+        user_id: str,
+        *,
+        page: int,
+        page_size: int,
+        workout_type: Optional[str] = None,
+        start_date: Optional[datetime] = None,
+        end_date: Optional[datetime] = None,
+    ) -> tuple[List[RunLog], int]:
+        """Return a page of runs (most recent first) and the unfiltered-by-page total."""
+        q = self.session.query(RunLog).filter(RunLog.user_id == user_id)
+        if workout_type:
+            q = q.filter(RunLog.workout_type == workout_type)
+        if start_date:
+            q = q.filter(RunLog.date >= start_date)
+        if end_date:
+            q = q.filter(RunLog.date <= end_date)
+        total = q.count()
+        runs = (
+            q.order_by(RunLog.date.desc())
+            .offset((page - 1) * page_size)
+            .limit(page_size)
+            .all()
+        )
+        return runs, total
+
+    def list_for_analytics(
+        self, user_id: str, *, plan_id: Optional[str] = None, limit: int = 5000
+    ) -> List[RunLog]:
+        """Chronological run history, optionally scoped to a plan."""
+        q = self.session.query(RunLog).filter(RunLog.user_id == user_id)
+        if plan_id is not None:
+            q = q.filter(RunLog.training_plan_id == plan_id)
+        return q.order_by(RunLog.date.asc()).limit(limit).all()
+
     def save(self, run: RunLog) -> None:
         self.session.add(run)
 

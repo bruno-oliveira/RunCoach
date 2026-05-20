@@ -1,17 +1,13 @@
 """Per-distance training constraints and messages.
 
-Replaces the flat `min_mileage_5k`, `max_weeks_marathon`, etc. attributes on
-``Settings`` with a structured registry keyed by target distance (km).
-
-Values are sourced from ``Settings`` so existing environment-variable overrides
-keep working. New code should depend on this registry rather than touching
-``settings`` directly for per-distance values.
+Single source of truth for the bracket of weeks, mileage thresholds, and
+user-facing guidance keyed by target distance (km). New code should depend
+on this registry rather than the (now removed) flat ``settings.min_weeks_*``
+fields.
 """
 
 from dataclasses import dataclass
 from typing import Dict, Optional
-
-from app.infrastructure.config import settings
 
 
 @dataclass(frozen=True)
@@ -31,54 +27,84 @@ class DistanceConstraints:
 
 DISTANCE_CONSTRAINTS: Dict[float, DistanceConstraints] = {
     5.0: DistanceConstraints(
-        min_weeks=settings.min_weeks_5k,
-        max_weeks=settings.max_weeks_5k,
-        min_mileage=settings.min_mileage_5k,
-        max_mileage=settings.max_mileage_5k,
-        low_mileage_msg=settings.low_mileage_msg_5k,
-        high_mileage_msg=settings.high_mileage_msg_5k,
-        perf_min_mileage=settings.perf_min_mileage_5k,
+        min_weeks=6,
+        max_weeks=16,
+        min_mileage=5.0,
+        max_mileage=40,
+        low_mileage_msg=(
+            "Your current mileage is quite low for 5K training. "
+            "Consider building a base with 2-3 weeks of easy running first."
+        ),
+        high_mileage_msg=(
+            "You're already running high mileage for 5K. "
+            "Consider focusing on speed work rather than volume."
+        ),
+        perf_min_mileage=20,
         insufficient_time_reason="4 weeks provides a solid foundation for 5K improvement",
         excessive_time_reason="Training beyond 16 weeks for 5K can lead to burnout",
     ),
     10.0: DistanceConstraints(
-        min_weeks=settings.min_weeks_10k,
-        max_weeks=settings.max_weeks_10k,
-        min_mileage=settings.min_mileage_10k,
-        max_mileage=settings.max_mileage_10k,
-        low_mileage_msg=settings.low_mileage_msg_10k,
-        high_mileage_msg=settings.high_mileage_msg_10k,
-        perf_min_mileage=settings.perf_min_mileage_10k,
+        min_weeks=6,
+        max_weeks=16,
+        min_mileage=10.0,
+        max_mileage=50,
+        low_mileage_msg=(
+            "Your current mileage may be insufficient for 10K training. "
+            "Build to at least 10km/week for 2-3 weeks first."
+        ),
+        high_mileage_msg=(
+            "High mileage for 10K. "
+            "You might benefit from focusing on quality over quantity."
+        ),
+        perf_min_mileage=25,
         insufficient_time_reason="6 weeks allows for proper 10K preparation",
         excessive_time_reason="16 weeks is optimal for 10K preparation",
     ),
     21.1: DistanceConstraints(
-        min_weeks=settings.min_weeks_half,
-        max_weeks=settings.max_weeks_half,
-        min_mileage=settings.min_mileage_half,
-        max_mileage=settings.max_mileage_half,
-        low_mileage_msg=settings.low_mileage_msg_half,
-        high_mileage_msg=settings.high_mileage_msg_half,
-        perf_min_mileage=settings.perf_min_mileage_half,
+        min_weeks=8,
+        max_weeks=20,
+        min_mileage=15.0,
+        max_mileage=70,
+        low_mileage_msg=(
+            "Half marathon training requires a stronger base. "
+            "Build to 15km/week for 3-4 weeks before starting."
+        ),
+        high_mileage_msg=(
+            "Very high mileage for half marathon. "
+            "Ensure adequate recovery and consider periodization."
+        ),
+        perf_min_mileage=35,
         insufficient_time_reason="Half marathon training needs time to build endurance safely",
         excessive_time_reason="Half marathon training beyond 20 weeks may cause fatigue",
     ),
     30.0: DistanceConstraints(
-        min_weeks=settings.min_weeks_30k,
-        max_weeks=settings.max_weeks_30k,
-        min_mileage=settings.min_mileage_30k,
-        max_mileage=settings.max_mileage_30k,
-        low_mileage_msg=settings.low_mileage_msg_30k,
-        high_mileage_msg=settings.high_mileage_msg_30k,
+        min_weeks=6,
+        max_weeks=20,
+        min_mileage=15.0,
+        max_mileage=60,
+        low_mileage_msg=(
+            "Trail running requires a solid base. "
+            "Build to 15km/week with some trail experience first."
+        ),
+        high_mileage_msg=(
+            "High mileage for trail running. "
+            "Focus on time on feet rather than distance."
+        ),
     ),
     42.2: DistanceConstraints(
-        min_weeks=settings.min_weeks_marathon,
-        max_weeks=settings.max_weeks_marathon,
-        min_mileage=settings.min_mileage_marathon,
-        max_mileage=settings.max_mileage_marathon,
-        low_mileage_msg=settings.low_mileage_msg_marathon,
-        high_mileage_msg=settings.high_mileage_msg_marathon,
-        perf_min_mileage=settings.perf_min_mileage_marathon,
+        min_weeks=12,
+        max_weeks=24,
+        min_mileage=25.0,
+        max_mileage=100,
+        low_mileage_msg=(
+            "Marathon training requires significant base fitness. "
+            "Build to 25km/week for 4-6 weeks before beginning."
+        ),
+        high_mileage_msg=(
+            "Extremely high mileage. "
+            "Be cautious about injury risk and ensure proper recovery."
+        ),
+        perf_min_mileage=50,
         insufficient_time_reason="Marathon training requires adequate time to prevent injury",
         excessive_time_reason="24 weeks is the maximum recommended for marathon training",
     ),

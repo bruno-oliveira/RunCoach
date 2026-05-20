@@ -28,25 +28,8 @@ class Settings(BaseSettings):
     # Logging
     log_level: Literal["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"] = "INFO"
 
-    # Training plan constraints
-    min_weeks_5k: int = 6
-    min_weeks_10k: int = 6
-    min_weeks_half: int = 8
-    min_weeks_30k: int = 6  # Trail running (30km)
-    min_weeks_marathon: int = 12
-
-    max_weeks_5k: int = 16
-    max_weeks_10k: int = 16
-    max_weeks_half: int = 20
-    max_weeks_30k: int = 20  # Trail running (30km)
-    max_weeks_marathon: int = 24
-
-    # Mileage constraints
-    min_mileage_5k: float = 5.0
-    min_mileage_10k: float = 10.0
-    min_mileage_half: float = 15.0
-    min_mileage_30k: float = 15.0
-    min_mileage_marathon: float = 25.0
+    # Per-distance training constraints live in
+    # ``app.core.training.training_config.DISTANCE_CONSTRAINTS``.
 
     # OAuth / Authentication
     secret_key: str = Field(default_factory=lambda: __import__("secrets").token_urlsafe(32))
@@ -75,60 +58,6 @@ class Settings(BaseSettings):
 
     # Plan limits
     max_plans_per_user: int = 3
-
-    # Mileage max thresholds and warnings
-    max_mileage_5k: int = 40
-    max_mileage_10k: int = 50
-    max_mileage_half: int = 70
-    max_mileage_30k: int = 60
-    max_mileage_marathon: int = 100
-
-    low_mileage_msg_5k: str = (
-        "Your current mileage is quite low for 5K training. "
-        "Consider building a base with 2-3 weeks of easy running first."
-    )
-    high_mileage_msg_5k: str = (
-        "You're already running high mileage for 5K. "
-        "Consider focusing on speed work rather than volume."
-    )
-    low_mileage_msg_10k: str = (
-        "Your current mileage may be insufficient for 10K training. "
-        "Build to at least 10km/week for 2-3 weeks first."
-    )
-    high_mileage_msg_10k: str = (
-        "High mileage for 10K. "
-        "You might benefit from focusing on quality over quantity."
-    )
-    low_mileage_msg_half: str = (
-        "Half marathon training requires a stronger base. "
-        "Build to 15km/week for 3-4 weeks before starting."
-    )
-    high_mileage_msg_half: str = (
-        "Very high mileage for half marathon. "
-        "Ensure adequate recovery and consider periodization."
-    )
-    low_mileage_msg_30k: str = (
-        "Trail running requires a solid base. "
-        "Build to 15km/week with some trail experience first."
-    )
-    high_mileage_msg_30k: str = (
-        "High mileage for trail running. "
-        "Focus on time on feet rather than distance."
-    )
-    low_mileage_msg_marathon: str = (
-        "Marathon training requires significant base fitness. "
-        "Build to 25km/week for 4-6 weeks before beginning."
-    )
-    high_mileage_msg_marathon: str = (
-        "Extremely high mileage. "
-        "Be cautious about injury risk and ensure proper recovery."
-    )
-
-    # Performance training minimum mileage requirements
-    perf_min_mileage_5k: int = 20
-    perf_min_mileage_10k: int = 25
-    perf_min_mileage_half: int = 35
-    perf_min_mileage_marathon: int = 50
 
     @property
     def is_google_client_id_configured(self) -> bool:

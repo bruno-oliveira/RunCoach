@@ -1,8 +1,8 @@
 """PDF plan content pages — title, summary, weekly plans, zones."""
 
-from typing import Any, Dict, List
+from typing import Any, Dict, List, TYPE_CHECKING
 
-from reportlab.platypus import Paragraph, Spacer, Table, TableStyle, PageBreak
+from reportlab.platypus import Paragraph, Spacer, Table, TableStyle
 from reportlab.lib.styles import ParagraphStyle
 from reportlab.lib.units import cm
 from reportlab.lib import colors
@@ -11,69 +11,31 @@ from reportlab.lib.enums import TA_CENTER
 from app.infrastructure.export.plan_export_dto import PlanExportDTO
 from app.utils import format_pace as _shared_format_pace
 
+if TYPE_CHECKING:
+    from app.infrastructure.export.pdf_plan_renderers import PdfPlanRenderer
+
 
 class PlanPagesMixin:
     """Methods for rendering plan-related PDF pages."""
 
-    def _add_title_page(self, story: List, training_plan: PlanExportDTO, plan_data: List[Dict]):
-        plan_type = training_plan.plan_type
-        is_performance = plan_type == 'performance'
-        is_fitness = plan_type == 'fitness'
-
-        if is_performance:
-            story.append(Paragraph("⚡ Performance Training Plan", self.title_style))
-        elif is_fitness:
-            story.append(Paragraph("💪 Fitness Training Plan", self.title_style))
-        else:
-            story.append(Paragraph("🏃‍♂️ Personalized Running Training Plan", self.title_style))
+    def _add_title_page(
+        self,
+        story: List,
+        training_plan: PlanExportDTO,
+        plan_data: List[Dict],
+        renderer: "PdfPlanRenderer",
+    ):
+        story.append(Paragraph(renderer.title_text(), self.title_style))
         story.append(Spacer(1, 0.5 * cm))
 
-        if is_fitness:
-            focus = training_plan.target_distance.replace("fitness_", "").replace("_", " ").title()
-            subtitle = f"Focus: {focus} | {training_plan.weeks_duration} Weeks"
-        else:
-            subtitle = f"Target: {training_plan.target_distance}km Race | {training_plan.weeks_duration} Weeks"
-        story.append(Paragraph(subtitle, self.subtitle_style))
+        story.append(Paragraph(renderer.subtitle_text(training_plan), self.subtitle_style))
         story.append(Spacer(1, 0.3 * cm))
 
         created_date = training_plan.created_at.strftime('%B %d, %Y')
         story.append(Paragraph(f"Generated on {created_date}", self.normal_style))
-
         story.append(Spacer(1, 2 * cm))
 
-        target_distance_float = training_plan.target_distance_km
-        is_trail_plan = training_plan.is_trail
-        elev = training_plan.target_elevation_gain_m
-        if is_fitness:
-            focus = training_plan.target_distance.replace("fitness_", "").replace("_", " ").title()
-            target_display = focus
-        elif is_trail_plan:
-            target_display = f"{target_distance_float:g} km Trail"
-            if elev is not None:
-                target_display += f" · {int(elev)} m vert"
-        elif target_distance_float == 30.0:
-            target_display = "Trail Running"
-        else:
-            target_display = f"{training_plan.target_distance} km"
-
-        if is_performance and training_plan.current_pace and training_plan.goal_pace:
-            improvement = ((training_plan.current_pace - training_plan.goal_pace) / training_plan.current_pace) * 100
-            stats_data = [
-                ['Target Distance', target_display],
-                ['Current Pace', self._format_pace(training_plan.current_pace)],
-                ['Goal Pace', self._format_pace(training_plan.goal_pace)],
-                ['Target Improvement', f"{improvement:.1f}%"],
-                ['Training Duration', f"{training_plan.weeks_duration} weeks"],
-                ['Weekly Mileage', f"{training_plan.current_weekly_km:.1f} km"]
-            ]
-        else:
-            stats_data = [
-                ['Current Weekly Mileage', f"{training_plan.current_weekly_km} km"],
-                ['Target Distance', target_display],
-                ['Training Duration', f"{training_plan.weeks_duration} weeks"],
-                ['Peak Week Mileage', f"{max(week['total_km'] for week in plan_data):.1f} km"]
-            ]
-
+        stats_data = renderer.stats_table_rows(self, training_plan, plan_data)
         stats_table = Table(stats_data, colWidths=[5 * cm, 3 * cm])
         stats_table.setStyle(TableStyle([
             ('BACKGROUND', (0, 0), (-1, -1), colors.HexColor('#f8f9fa')),
@@ -87,42 +49,15 @@ class PlanPagesMixin:
         story.append(stats_table)
         story.append(Spacer(1, 2 * cm))
 
-    def _add_plan_summary(self, story: List, training_plan: PlanExportDTO, plan_data: List[Dict]):
+    def _add_plan_summary(
+        self,
+        story: List,
+        training_plan: PlanExportDTO,
+        plan_data: List[Dict],
+        renderer: "PdfPlanRenderer",
+    ):
         story.append(Paragraph("Training Plan Overview", self.section_style))
-
-        plan_type = training_plan.plan_type
-        is_performance = plan_type == 'performance'
-        is_fitness = plan_type == 'fitness'
-        max_mileage = max(week['total_km'] for week in plan_data)
-
-        if is_performance or is_fitness:
-            chart_data = [['Week', 'Phase', 'Mileage (km)', 'Progress']]
-            for week in plan_data:
-                progress_bar = self._create_progress_bar(week['total_km'], max_mileage)
-                phase = week.get('phase', '').title()
-                chart_data.append([
-                    f"Week {week['week']}", phase, f"{week['total_km']:.1f}", progress_bar
-                ])
-            chart_table = Table(chart_data, colWidths=[2 * cm, 2 * cm, 2 * cm, 5 * cm])
-        else:
-            chart_data = [['Week', 'Mileage (km)', 'Progress']]
-            for week in plan_data:
-                progress_bar = self._create_progress_bar(week['total_km'], max_mileage)
-                chart_data.append([f"Week {week['week']}", f"{week['total_km']:.1f}", progress_bar])
-            chart_table = Table(chart_data, colWidths=[2 * cm, 2 * cm, 6 * cm])
-
-        chart_table.setStyle(TableStyle([
-            ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#667eea')),
-            ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
-            ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
-            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
-            ('FONTSIZE', (0, 0), (-1, 0), 10),
-            ('FONTNAME', (0, 1), (-1, -1), 'Helvetica'),
-            ('FONTSIZE', (0, 1), (-1, -1), 8),
-            ('GRID', (0, 0), (-1, -1), 1, colors.HexColor('#dee2e6'))
-        ]))
-
-        story.append(chart_table)
+        story.append(renderer.summary_chart(self, plan_data))
         story.append(Spacer(1, 1 * cm))
 
     def _create_progress_bar(self, current: float, maximum: float) -> str:

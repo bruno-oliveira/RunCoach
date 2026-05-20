@@ -7,9 +7,9 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 
 from app.contexts.plan.repositories import SQLAlchemyPlanRepository
+from app.contexts.runner.repositories import SQLAlchemyRunRepository
 from app.dependencies import get_db, get_current_user
-from app.models import TrainingPlan, User
-from app.models.run_log import RunLog
+from app.models import User
 from app.core.training.vdot_calculator import VDOTCalculator
 from app.contexts.runner.profile.profile_builder import build_profile
 from app.contexts.runner.fitness.adherence_service import compute_adherence_heatmap
@@ -34,13 +34,12 @@ async def get_analytics_runs(
 ):
     """Get runs for the analytics dashboard, optionally scoped to a plan."""
     try:
-        query = db.query(RunLog).filter(RunLog.user_id == current_user.id)
-
         plan_info = None
+        scoped_plan_id: Optional[str] = None
         if plan_id:
             plan = SQLAlchemyPlanRepository(db).get_for_user(plan_id, current_user.id)
             if plan:
-                query = query.filter(RunLog.training_plan_id == plan_id)
+                scoped_plan_id = plan_id
                 start_date = _to_date(plan.start_date)
                 plan_info = {
                     "id": plan.id,
@@ -51,7 +50,9 @@ async def get_analytics_runs(
                     "goal_pace": plan.goal_pace,
                 }
 
-        runs = query.order_by(RunLog.date.asc()).limit(5000).all()
+        runs = SQLAlchemyRunRepository(db).list_for_analytics(
+            current_user.id, plan_id=scoped_plan_id
+        )
 
         return {
             "runs": [

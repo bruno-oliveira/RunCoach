@@ -6,7 +6,7 @@ from typing import List, Optional
 
 from sqlalchemy.orm import Session, selectinload
 
-from app.models import TrainingPlan
+from app.models import DailyWorkout, TrainingPlan, WeeklyPlan
 from app.schemas import PlanRequest
 
 
@@ -114,6 +114,65 @@ class SQLAlchemyPlanRepository:
 
     def delete(self, plan: TrainingPlan) -> None:
         self.session.delete(plan)
+
+    # -- Week / workout lookups -------------------------------------------------
+
+    def get_user_workout(
+        self, daily_workout_id: str, user_id: str
+    ) -> Optional[DailyWorkout]:
+        """Fetch a DailyWorkout while enforcing the parent plan belongs to ``user_id``."""
+        return (
+            self.session.query(DailyWorkout)
+            .join(WeeklyPlan, DailyWorkout.weekly_plan_id == WeeklyPlan.id)
+            .join(TrainingPlan, WeeklyPlan.training_plan_id == TrainingPlan.id)
+            .filter(
+                DailyWorkout.id == daily_workout_id,
+                TrainingPlan.user_id == user_id,
+            )
+            .first()
+        )
+
+    def get_weekly_plan(self, plan_id: str, week_number: int) -> Optional[WeeklyPlan]:
+        return (
+            self.session.query(WeeklyPlan)
+            .filter(
+                WeeklyPlan.training_plan_id == plan_id,
+                WeeklyPlan.week_number == week_number,
+            )
+            .first()
+        )
+
+    def get_daily_workout(
+        self, weekly_plan_id: str, day_of_week: int
+    ) -> Optional[DailyWorkout]:
+        return (
+            self.session.query(DailyWorkout)
+            .filter(
+                DailyWorkout.weekly_plan_id == weekly_plan_id,
+                DailyWorkout.day_of_week == day_of_week,
+            )
+            .first()
+        )
+
+    def list_daily_workouts(self, weekly_plan_id: str) -> List[DailyWorkout]:
+        return (
+            self.session.query(DailyWorkout)
+            .filter(DailyWorkout.weekly_plan_id == weekly_plan_id)
+            .all()
+        )
+
+    def earliest_start_date(self, user_id: str):
+        """Earliest non-null start_date across a user's plans, or None."""
+        row = (
+            self.session.query(TrainingPlan.start_date)
+            .filter(
+                TrainingPlan.user_id == user_id,
+                TrainingPlan.start_date.isnot(None),
+            )
+            .order_by(TrainingPlan.start_date.asc())
+            .first()
+        )
+        return row[0] if row else None
 
 
 __all__ = ["SQLAlchemyPlanRepository"]
