@@ -36,9 +36,14 @@ jobs:
           python-version: "3.12"
           cache: pip
       - name: Install dependencies
+        # Install the pinned production deps (what we ship), then the package
+        # itself without re-resolving — so CI type-checks against the same
+        # versions that run in production, not whatever is latest on PyPI.
         run: |
           python -m pip install --upgrade pip
-          pip install -e "." pyright
+          pip install -r requirements.txt
+          pip install -e . --no-deps
+          pip install pyright
       - name: Pyright (pure layers)
         run: pyright
 
@@ -51,13 +56,15 @@ jobs:
           python-version: "3.12"
           cache: pip
       - name: Install dependencies
+        # Pinned production deps (= what we ship) + the package without
+        # re-resolving, so CI exercises the exact versions we deploy.
         run: |
           python -m pip install --upgrade pip
-          pip install -e ".[test]"
+          pip install -r requirements.txt
+          pip install -e . --no-deps
+      # Test config (DEBUG, SECRET_KEY, GOOGLE_CLIENT_ID) is set hermetically
+      # in tests/conftest.py so local and CI runs are identical.
       - name: Run tests with coverage
-        env:
-          SECRET_KEY: test-secret-key-for-ci-only-not-used-in-production
-          GOOGLE_CLIENT_ID: test-client-id.apps.googleusercontent.com
         run: pytest tests/
 
   deploy:

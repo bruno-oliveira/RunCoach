@@ -1,19 +1,31 @@
 """Pytest fixtures for RunCoach tests."""
 
 import os
-import tempfile
 
-import pytest
-from alembic.config import Config
-from fastapi.testclient import TestClient
-from sqlalchemy import create_engine, event
-from sqlalchemy.orm import Session, sessionmaker
+# Hermetic test config — must be set BEFORE any app module imports the
+# settings singleton. Tests run in debug mode: no separate ENCRYPTION_KEY is
+# required (it falls back to SECRET_KEY) and cookies are not Secure-flagged,
+# so the http TestClient round-trips the anonymous-user / CSRF cookies.
+# `setdefault` lets an explicit environment (e.g. CI) still override.
+os.environ.setdefault("DEBUG", "true")
+os.environ.setdefault("SECRET_KEY", "test-secret-key-for-tests-only-not-production")
+os.environ.setdefault("GOOGLE_CLIENT_ID", "test-client-id.apps.googleusercontent.com")
 
-from alembic import command
-from app.contexts.nutrition.nutrition_engine import NutritionEngine
-from app.contexts.plan.generators.plan_generator import TrainingPlanGenerator
-from app.dependencies import get_db
-from app.models import Base
+import tempfile  # noqa: E402
+
+import pytest  # noqa: E402
+from alembic.config import Config  # noqa: E402
+from fastapi.testclient import TestClient  # noqa: E402
+from sqlalchemy import create_engine, event  # noqa: E402
+from sqlalchemy.orm import Session, sessionmaker  # noqa: E402
+
+from alembic import command  # noqa: E402
+from app.contexts.nutrition.nutrition_engine import NutritionEngine  # noqa: E402
+from app.contexts.plan.generators.plan_generator import (  # noqa: E402
+    TrainingPlanGenerator,
+)
+from app.dependencies import get_db  # noqa: E402
+from app.models import Base  # noqa: E402
 
 
 def _run_alembic_migrations(engine) -> None:
