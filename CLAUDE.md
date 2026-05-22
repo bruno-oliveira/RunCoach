@@ -18,13 +18,18 @@ python3 -m pip install -r requirements.txt
 # Run tests
 python3 -m pytest tests/ -v
 
-# Run specific test file
-python3 -m pytest tests/test_api.py -v
-python3 -m pytest tests/test_nutrition_engine.py -v
-python3 -m pytest tests/test_plan_generator.py -v
+# Run a specific test suite (tests are grouped under tests/test_<area>/)
+python3 -m pytest tests/test_routers/ -v      # API endpoint tests
+python3 -m pytest tests/test_services/ -v     # context-service tests
+python3 -m pytest tests/test_core/ -v         # pure-logic tests
 
-# Test PDF generation
-python3 -c "from app.core.export.pdf_generator import PDFGenerator; from app.core.generators.plan_generator import TrainingPlanGenerator; TrainingPlanGenerator().generate_plan(20, 10, 8)"
+# Lint, format, and type-check (enforced in CI)
+ruff check app/ tests/
+ruff format --check app/ tests/
+pyright
+
+# Smoke-test plan generation
+python3 -c "from app.contexts.plan.generators.plan_generator import TrainingPlanGenerator; TrainingPlanGenerator().generate_plan(20, 10, 8)"
 ```
 
 ## Deployment
@@ -109,13 +114,13 @@ tests/
 
 ### Core Components
 
-- **`app/main.py`** - FastAPI application entry point. Sets up logging, creates database tables, mounts static files, and includes routers. Includes health check, home page, and debug endpoints.
+- **`app/main.py`** - FastAPI application entry point (`create_app` factory). Sets up logging, runs startup Alembic migrations, mounts static files, registers middleware, routers, and the global exception handler. Includes the `/health` check.
 
-- **`app/config.py`** - Centralized configuration using `pydantic-settings`. Loads from environment variables and `.env` file. Contains app settings, database URL, logging level, training plan constraints, and OAuth settings (`secret_key`, `google_client_id`).
+- **`app/infrastructure/config.py`** - Centralized configuration using `pydantic-settings`. Loads from environment variables and `.env` file. Contains app settings, database URL, logging level, training plan constraints, and OAuth settings (`secret_key`, `google_client_id`).
 
-- **`app/dependencies.py`** - FastAPI dependency injection. Provides database sessions, `TrainingPlanGenerator`, `NutritionEngine`, `PDFGenerator`, and `AuthService` instances. Includes `get_current_user` and `get_optional_user` dependencies for authentication (supports both Bearer tokens and HTTP-only cookies).
+- **`app/dependencies/`** - FastAPI dependency injection package, split into `database` / `services` / `auth`. Provides database sessions, cached service factories (`TrainingPlanGenerator`, `NutritionEngine`, `PDFGenerator`, `AuthService`, `FavoritesService`, …), repository factories, and `get_current_user` / `get_optional_user` (Bearer tokens or HTTP-only cookies).
 
-- **`app/schemas.py`** - Pydantic models for request/response validation. Includes `PlanRequest`, `GoogleAuthRequest`, `Token`, `UserResponse`, `RunLogCreate`, `RunLogResponse`, `AdaptivePlanRequest`, and various workout/nutrition schemas.
+- **`app/schemas/`** - Pydantic request/response models package. Includes `PlanRequest`, `GoogleAuthRequest`, `Token`, `UserResponse`, `RunLogCreate`, `RunLogResponse`, `AdaptivePlanRequest`, and various workout/nutrition schemas.
 
 - **`app/contexts/auth/auth_service.py`** - `AuthService` class for authentication. Handles Google OAuth token verification, JWT creation/verification (`PyJWT`), and user creation/retrieval (via `SQLAlchemyUserRepository`).
 
@@ -182,10 +187,11 @@ Tests use pytest with fixtures defined in `tests/conftest.py`:
 - **`nutrition_engine_seeded`** - NutritionEngine with fixed seed (42) for reproducibility
 - **Sample parameter fixtures** - `sample_5k_params`, `sample_marathon_params`, `sample_trail_params`
 
-Test files:
-- `test_api.py` - API endpoint tests
-- `test_nutrition_engine.py` - Nutrition engine tests
-- `test_plan_generator.py` - Plan generator tests
+Test layout (grouped by layer):
+- `tests/test_core/` - pure-logic tests (plan generation, nutrition, training math)
+- `tests/test_services/` - context-service tests (adaptation, fitness, favorites, …)
+- `tests/test_routers/` - API endpoint tests
+- `tests/test_security/` - CSRF, security headers, ownership
 
 ## Configuration
 
@@ -218,17 +224,18 @@ Training constraints are configured in `app/infrastructure/config.py` (settings)
 
 ## Key Patterns
 
-- **Router-based architecture**: Endpoints organized in `app/routers/` with `APIRouter`
-- **Core module separation**: Business logic in `app/core/` separate from web layer
+- **Router-based architecture**: Endpoints organized in `app/web/routers/` with `APIRouter`
+- **Core module separation**: Pure calculation logic in `app/core/` (no I/O, no ORM), separate from the web layer
 - **Model separation**: Each SQLAlchemy model in its own file under `app/models/`
 - **Dependency injection**: Services and database sessions via FastAPI `Depends()`
-- **Service layer**: Business logic in `app/services/` separate from routes
+- **Bounded contexts**: Business logic lives in per-context services under `app/contexts/` (plan, runner, nutrition, auth)
+- **Persistence boundary (CQRS-lite)**: Writes go through repositories; read-heavy paths use query modules; routers carry no raw `db.query` (see `ARCHITECTURE_PERSISTENCE.md`)
 - **Centralized config**: Settings loaded via pydantic-settings with environment variable support
-- **Custom exceptions**: Domain exceptions with `user_message` and `suggestion` for UI display
+- **Custom exceptions**: Domain exceptions with `user_message`/`suggestion`, mapped to HTTP by a global handler registered in `create_app`
 - **Google OAuth authentication**: JWT tokens stored in HTTP-only cookies for browser navigation
 - **Adaptive training**: Plans adjust based on logged run performance data
 - **Training plan validation**: Pydantic validators raise custom exceptions caught by routes
 - **Nutrition engine scoring**: Meals scored by protein/fiber contribution with randomness for variety
 - **PDF generation**: ReportLab "story" list of flowables
-- **JSON storage**: Plan and nutrition data stored as JSON strings in SQLite TEXT columns
+- **Normalized relational schema**: Plans are stored as related tables (`training_plans` → `weekly_plans` → `daily_workouts`), Alembic-managed. A denormalized `plan_data` JSON snapshot is also kept for rendering; `favorite_recipes.recipe_data` uses a proper `JSON` column
 - **Seeded randomization**: `NutritionEngine` accepts `random_seed` for reproducible results
