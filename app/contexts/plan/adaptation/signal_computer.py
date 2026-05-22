@@ -12,6 +12,18 @@ from typing import Any, Dict, List, Optional, Tuple
 from sqlalchemy.orm import Session
 
 from app.contexts.plan.adaptation.hr_zone_analyzer import HRZoneAnalyzer
+from app.core.coaching.adaptation_math import (
+    compute_effort_trend as _compute_effort_trend,
+)
+from app.core.coaching.adaptation_math import (
+    compute_quality_drift as _compute_quality_drift,
+)
+from app.core.coaching.adaptation_math import (
+    count_consecutive_direction as _count_consecutive_direction,
+)
+from app.core.coaching.adaptation_math import (
+    count_recent_race_efforts as _count_recent_race_efforts,
+)
 from app.models import RunLog
 from app.utils import to_date as _to_date
 
@@ -664,89 +676,3 @@ def _assemble_result(
         "atl": round(tsb_info["atl"], 1) if tsb_info["atl"] is not None else None,
         "tsb_form": tsb_info["tsb_form"],
     }
-
-
-def _compute_quality_drift(all_plan_runs: List, today) -> Tuple[Optional[float], float]:
-    """Compare effort_quality_score across first/second half of last 8 runs.
-
-    Returns (drift_delta, modifier). Modifier is in {-0.02, 0.0, +0.02}.
-    """
-    runs_with_score = []
-    for run in all_plan_runs:
-        score = getattr(run, "effort_quality_score", None)
-        if score is None:
-            continue
-        run_date = _to_date(run.date) if run.date else today
-        runs_with_score.append((run_date, score))
-
-    if len(runs_with_score) < 4:
-        return None, 0.0
-
-    runs_with_score.sort(key=lambda t: t[0])
-    recent = runs_with_score[-8:]
-    if len(recent) < 4:
-        return None, 0.0
-
-    mid = len(recent) // 2
-    first_half = [s for _, s in recent[:mid]]
-    second_half = [s for _, s in recent[mid:]]
-    if not first_half or not second_half:
-        return None, 0.0
-
-    delta = (sum(second_half) / len(second_half)) - (sum(first_half) / len(first_half))
-    if delta < -10:
-        return delta, -0.02
-    if delta > 10:
-        return delta, 0.02
-    return delta, 0.0
-
-
-def _count_recent_race_efforts(all_plan_runs: List, today) -> int:
-    """Count runs classified as race_effort within the last 14 days."""
-    from datetime import timedelta as _td
-
-    cutoff = today - _td(days=14)
-    count = 0
-    for run in all_plan_runs:
-        if getattr(run, "effort_class", None) != "race_effort":
-            continue
-        run_date = _to_date(run.date) if run.date else today
-        if run_date >= cutoff:
-            count += 1
-    return count
-
-
-def _compute_effort_trend(efforts: List[float]) -> str:
-    if len(efforts) < 4:
-        return "insufficient_data"
-    mid_point = len(efforts) // 2
-    first_half_avg = sum(efforts[:mid_point]) / mid_point
-    second_half_avg = sum(efforts[mid_point:]) / (len(efforts) - mid_point)
-    diff = second_half_avg - first_half_avg
-    if diff > 1.0:
-        return "increasing"
-    elif diff < -1.0:
-        return "decreasing"
-    return "stable"
-
-
-def _count_consecutive_direction(
-    adaptation_history: List[Dict[str, Any]] | None,
-) -> int:
-    if not adaptation_history:
-        return 0
-    count = 0
-    last_direction = None
-    for event in reversed(adaptation_history):
-        direction = event.get("direction")
-        if direction in ("increased", "reduced"):
-            if last_direction is None:
-                last_direction = direction
-                count = 1
-            elif direction == last_direction:
-                count += 1
-            else:
-                break
-        elif direction == "kept":
-            break
-    return count
