@@ -294,3 +294,172 @@ class TestPredictTimeWithEnduranceFactor:
         )
         # endurance multiplies elevation-adjusted time
         assert with_endurance == int(round(elev_only * 1.2))
+
+
+class TestPureHelpers:
+    def test_calculate_vdot_from_run_too_short(self):
+        assert (
+            RacePredictorService.calculate_vdot_from_run(
+                RunLog(distance_km=1.0, duration_minutes=6.0)
+            )
+            is None
+        )
+
+    def test_calculate_vdot_from_run_valid(self):
+        v = RacePredictorService.calculate_vdot_from_run(
+            RunLog(distance_km=5.0, duration_minutes=25.0, elevation_gain_m=0)
+        )
+        assert v is not None and v > 0
+
+    def test_vdot_trend(self):
+        assert RacePredictorService.calculate_vdot_trend([{"vdot": 50}]) == "stable"
+        assert (
+            RacePredictorService.calculate_vdot_trend([{"vdot": 45}, {"vdot": 48}])
+            == "improving"
+        )
+        assert (
+            RacePredictorService.calculate_vdot_trend([{"vdot": 50}, {"vdot": 47}])
+            == "declining"
+        )
+        assert (
+            RacePredictorService.calculate_vdot_trend([{"vdot": 50}, {"vdot": 50.2}])
+            == "stable"
+        )
+
+    def test_closest_distance_name(self):
+        assert RacePredictorService._closest_distance_name(5.0) == "5K"
+        assert RacePredictorService._closest_distance_name(10.0) == "10K"
+        assert RacePredictorService._closest_distance_name(21.1) == "Half Marathon"
+        assert RacePredictorService._closest_distance_name(42.2) == "Marathon"
+        assert "K" in RacePredictorService._closest_distance_name(7.3)
+
+
+class TestVdotQueries:
+    def test_history_returns_runs(self, test_db):
+        user = _make_user(test_db)
+        for i, v in enumerate([44, 45, 46, 47]):
+            _add_run(
+                test_db,
+                user.id,
+                distance_km=8.0,
+                duration_minutes=44,
+                days_ago=20 - i * 4,
+                vdot=v,
+            )
+        test_db.flush()
+        history = RacePredictorService.get_vdot_history(user.id, db=test_db)
+        assert len(history) == 4
+
+    def test_best_recent_none_without_runs(self, test_db):
+        user = _make_user(test_db)
+        assert RacePredictorService.get_best_recent_vdot(user.id, db=test_db) is None
+
+    def test_best_effort(self, test_db):
+        user = _make_user(test_db)
+        for v in (44, 45, 46, 47, 48):
+            _add_run(
+                test_db,
+                user.id,
+                distance_km=10.0,
+                duration_minutes=50,
+                days_ago=10,
+                vdot=v,
+            )
+        test_db.flush()
+        best = RacePredictorService.get_best_effort(user.id, test_db)
+        assert best is not None and best["vdot"] > 0
+
+    def test_best_effort_none(self, test_db):
+        user = _make_user(test_db)
+        assert RacePredictorService.get_best_effort(user.id, test_db) is None
+
+
+class TestPredictionsAndGaps:
+    def test_predictions_no_data(self, test_db):
+        user = _make_user(test_db)
+        result = RacePredictorService.get_predictions_for_user(user.id, test_db)
+        assert result["has_sufficient_data"] is False
+        assert result["predictions"] == {}
+
+    def test_predictions_with_data(self, test_db):
+        user = _make_user(test_db)
+        for i in range(5):
+            _add_run(
+                test_db,
+                user.id,
+                distance_km=10.0,
+                duration_minutes=48,
+                days_ago=20 - i * 3,
+                vdot=47,
+            )
+        test_db.flush()
+        result = RacePredictorService.get_predictions_for_user(user.id, test_db)
+        assert result["has_sufficient_data"] is True
+        assert result["current_vdot"] is not None
+        assert result["predictions"]
+
+    def test_analyze_gap_goal_faster_than_fitness(self, test_db):
+        result = RacePredictorService.analyze_fitness_gap(45.0, 10.0, 1, test_db)
+        assert result["feasible"] is True
+        assert "faster than" in result["gap_label"]
+
+    def test_analyze_gap_goal_slower_than_fitness(self, test_db):
+        from app.core.training.vdot_calculator import VDOTCalculator
+
+        predicted = VDOTCalculator.predict_time_for_distance(45.0, 10.0)
+        # Goal slightly slower than predicted → current fitness already meets
+        # it, so vdot_required resolves to ~current and the goal is feasible.
+        result = RacePredictorService.analyze_fitness_gap(
+            45.0, 10.0, int(predicted * 1.03), test_db
+        )
+        assert result["vdot_required"] is not None
+        assert result["feasible"] is True
+        assert "slower than predicted" in result["gap_label"]
+
+    def test_trail_run_count(self, test_db):
+        user = _make_user(test_db)
+        _add_run(
+            test_db,
+            user.id,
+            distance_km=10.0,
+            duration_minutes=70,
+            days_ago=5,
+            vdot=42,
+            elevation_gain_m=300,
+        )
+        _add_run(
+            test_db,
+            user.id,
+            distance_km=10.0,
+            duration_minutes=55,
+            days_ago=4,
+            vdot=46,
+            elevation_gain_m=20,
+        )
+        test_db.flush()
+        assert RacePredictorService.get_trail_runs_count(user.id, test_db) == 1
+
+    def test_race_history_with_comparison(self, test_db):
+        user = _make_user(test_db)
+        for i in range(4):
+            _add_run(
+                test_db,
+                user.id,
+                distance_km=10.0,
+                duration_minutes=50,
+                days_ago=40 - i * 5,
+                vdot=46,
+            )
+        _add_run(
+            test_db,
+            user.id,
+            distance_km=10.0,
+            duration_minutes=49,
+            days_ago=2,
+            vdot=47,
+        )
+        test_db.flush()
+        result = RacePredictorService.get_race_history(user.id, limit=10, db=test_db)
+        assert result["total"] >= 1
+        assert result["runs_with_predictions"] >= 1
+        assert result["avg_prediction_accuracy"] is not None
