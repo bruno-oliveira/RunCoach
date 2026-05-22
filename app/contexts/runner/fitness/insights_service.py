@@ -6,24 +6,24 @@ Each insight has a category, priority, and recommendation.
 
 import logging
 from dataclasses import dataclass
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict
 
 from sqlalchemy.orm import Session
 
-from app.contexts.runner.profile.runner_profile import RunnerProfile
 from app.contexts.runner.profile.profile_builder import build_profile
+from app.contexts.runner.profile.runner_profile import RunnerProfile
 
 logger = logging.getLogger(__name__)
 
 
 @dataclass
 class Insight:
-    category: str      # volume, intensity, fitness, recovery, consistency, efficiency
+    category: str  # volume, intensity, fitness, recovery, consistency, efficiency
     title: str
     body: str
-    priority: int      # 1 = highest
-    icon: str          # emoji shorthand for the UI
-    sentiment: str     # positive, neutral, warning, negative
+    priority: int  # 1 = highest
+    icon: str  # emoji shorthand for the UI
+    sentiment: str  # positive, neutral, warning, negative
 
 
 class InsightsService:

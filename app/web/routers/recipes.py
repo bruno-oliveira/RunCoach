@@ -2,15 +2,12 @@
 
 import logging
 
-from fastapi import APIRouter, Depends, HTTPException, Query, Request
-from fastapi.responses import HTMLResponse
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
-from app.infrastructure.config import settings
-from app.dependencies import get_current_user, get_db, get_optional_user
-from app.models import User
 from app.contexts.nutrition.meal_database import get_meal_database
-from app.models import FavoriteRecipe
+from app.dependencies import get_current_user, get_db, get_optional_user
+from app.models import FavoriteRecipe, User
 from app.template_helpers import create_templates
 
 logger = logging.getLogger(__name__)
@@ -45,30 +42,42 @@ async def search_recipes(
         Dictionary with paginated recipe list, total count, and page metadata.
     """
     all_recipes = meal_db.meals
-    
+
     # Parse dietary tags from comma-separated string
-    selected_dietary_tags = [tag.strip() for tag in dietary_tags.split(",") if tag.strip()] if dietary_tags else []
-    
+    selected_dietary_tags = (
+        [tag.strip() for tag in dietary_tags.split(",") if tag.strip()]
+        if dietary_tags
+        else []
+    )
+
     filtered_recipes = []
-    
+
     for recipe in all_recipes:
         matches_query = query.lower() in recipe.get("name", "").lower()
         matches_meal_type = not meal_type or recipe.get("meal_type") == meal_type
         matches_protein = recipe.get("protein", 0) >= min_protein
         matches_calories = recipe.get("calories", 0) <= max_calories
-        
+
         # Check dietary tags
         recipe_dietary_tags = recipe.get("dietary_tags", [])
-        matches_dietary_tags = not selected_dietary_tags or all(tag in recipe_dietary_tags for tag in selected_dietary_tags)
-        
-        if matches_query and matches_meal_type and matches_protein and matches_calories and matches_dietary_tags:
+        matches_dietary_tags = not selected_dietary_tags or all(
+            tag in recipe_dietary_tags for tag in selected_dietary_tags
+        )
+
+        if (
+            matches_query
+            and matches_meal_type
+            and matches_protein
+            and matches_calories
+            and matches_dietary_tags
+        ):
             filtered_recipes.append(recipe)
-    
+
     total = len(filtered_recipes)
     total_pages = (total + page_size - 1) // page_size
     start = (page - 1) * page_size
     end = start + page_size
-    
+
     return {
         "recipes": filtered_recipes[start:end],
         "total": total,
@@ -81,7 +90,7 @@ async def search_recipes(
 @router.get("/api/recipes/favorites")
 async def get_favorites(
     db: Session = Depends(get_db),
-    current_user = Depends(get_optional_user),
+    current_user=Depends(get_optional_user),
 ):
     """Get the current user's favorite recipes.
 
@@ -94,20 +103,20 @@ async def get_favorites(
     """
     if not current_user:
         return {"recipes": []}
-    
+
     favorites = (
         db.query(FavoriteRecipe)
         .filter(FavoriteRecipe.user_id == current_user.id)
         .order_by(FavoriteRecipe.created_at.desc())
         .all()
     )
-    
+
     recipes = []
     for fav in favorites:
         recipe_data = fav.recipe_data
         recipe_data["favorite_id"] = fav.id
         recipes.append(recipe_data)
-    
+
     return {"recipes": recipes}
 
 
@@ -129,7 +138,7 @@ async def add_favorite(
     """
     recipe_name = recipe_data.get("name")
     meal_type = recipe_data.get("meal_type")
-    
+
     existing = (
         db.query(FavoriteRecipe)
         .filter(
@@ -138,20 +147,20 @@ async def add_favorite(
         )
         .first()
     )
-    
+
     if existing:
         return {"message": "Recipe already in favorites", "already_exists": True}
-    
+
     favorite = FavoriteRecipe(
         user_id=current_user.id,
         recipe_name=recipe_name,
         meal_type=meal_type,
         recipe_data=recipe_data,
     )
-    
+
     db.add(favorite)
     db.commit()
-    
+
     return {"message": "Recipe added to favorites", "id": favorite.id}
 
 
@@ -182,11 +191,11 @@ async def remove_favorite(
         )
         .first()
     )
-    
+
     if not favorite:
         raise HTTPException(status_code=404, detail="Favorite not found")
-    
+
     db.delete(favorite)
     db.commit()
-    
+
     return {"message": "Recipe removed from favorites"}

@@ -18,43 +18,67 @@ from .plan_export_dto import PlanExportDTO
 logger = logging.getLogger(__name__)
 
 
-class PDFGenerator(PDFBase, PlanPagesMixin, NutritionPagesMixin, SupplementaryPagesMixin):
-
+class PDFGenerator(
+    PDFBase, PlanPagesMixin, NutritionPagesMixin, SupplementaryPagesMixin
+):
     def __init__(self, cache_dir: str | None = None):
         super().__init__(cache_dir)
         self._setup_custom_styles()
 
     def _setup_custom_styles(self):
         self.title_style = ParagraphStyle(
-            'CustomTitle', parent=self.styles['Heading1'],
-            fontSize=24, spaceAfter=30,
-            textColor=colors.HexColor('#667eea'), alignment=TA_CENTER,
+            "CustomTitle",
+            parent=self.styles["Heading1"],
+            fontSize=24,
+            spaceAfter=30,
+            textColor=colors.HexColor("#667eea"),
+            alignment=TA_CENTER,
         )
         self.subtitle_style = ParagraphStyle(
-            'CustomSubtitle', parent=self.styles['Heading2'],
-            fontSize=16, spaceAfter=20,
-            textColor=colors.HexColor('#764ba2'), alignment=TA_CENTER,
+            "CustomSubtitle",
+            parent=self.styles["Heading2"],
+            fontSize=16,
+            spaceAfter=20,
+            textColor=colors.HexColor("#764ba2"),
+            alignment=TA_CENTER,
         )
         self.section_style = ParagraphStyle(
-            'SectionHeader', parent=self.styles['Heading3'],
-            fontSize=14, spaceAfter=12, spaceBefore=20,
-            textColor=colors.HexColor('#667eea'), alignment=TA_LEFT,
+            "SectionHeader",
+            parent=self.styles["Heading3"],
+            fontSize=14,
+            spaceAfter=12,
+            spaceBefore=20,
+            textColor=colors.HexColor("#667eea"),
+            alignment=TA_LEFT,
         )
         self.normal_style = ParagraphStyle(
-            'CustomNormal', parent=self.styles['Normal'],
-            fontSize=10, spaceAfter=6, leading=14,
+            "CustomNormal",
+            parent=self.styles["Normal"],
+            fontSize=10,
+            spaceAfter=6,
+            leading=14,
         )
         self.small_style = ParagraphStyle(
-            'CustomSmall', parent=self.styles['Normal'],
-            fontSize=8, spaceAfter=3, leading=10,
+            "CustomSmall",
+            parent=self.styles["Normal"],
+            fontSize=8,
+            spaceAfter=3,
+            leading=10,
         )
         self.table_cell_style = ParagraphStyle(
-            'TableCell', parent=self.styles['Normal'],
-            fontSize=8, leading=10, wordWrap='CJK',
+            "TableCell",
+            parent=self.styles["Normal"],
+            fontSize=8,
+            leading=10,
+            wordWrap="CJK",
         )
         self.table_header_style = ParagraphStyle(
-            'TableHeader', parent=self.styles['Normal'],
-            fontSize=9, leading=11, wordWrap='CJK', alignment=TA_CENTER,
+            "TableHeader",
+            parent=self.styles["Normal"],
+            fontSize=9,
+            leading=11,
+            wordWrap="CJK",
+            alignment=TA_CENTER,
         )
 
     def generate_pdf(

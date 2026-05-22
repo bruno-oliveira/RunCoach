@@ -60,15 +60,12 @@ def _similar_distance_paces(
     """Return paces (min/km) from the user's prior runs at similar distance."""
     low = distance_km * (1 - _DISTANCE_BAND)
     high = distance_km * (1 + _DISTANCE_BAND)
-    query = (
-        db.query(RunLog.avg_pace_min_km)
-        .filter(
-            RunLog.user_id == user_id,
-            RunLog.distance_km >= low,
-            RunLog.distance_km <= high,
-            RunLog.avg_pace_min_km.isnot(None),
-            RunLog.avg_pace_min_km > 0,
-        )
+    query = db.query(RunLog.avg_pace_min_km).filter(
+        RunLog.user_id == user_id,
+        RunLog.distance_km >= low,
+        RunLog.distance_km <= high,
+        RunLog.avg_pace_min_km.isnot(None),
+        RunLog.avg_pace_min_km > 0,
     )
     if exclude_run_id is not None:
         query = query.filter(RunLog.id != exclude_run_id)
@@ -134,9 +131,7 @@ def backfill_effort_classes(db: Session, *, batch_size: int = 500) -> int:
     distribution. Returns the number of runs updated.
     """
     updated = 0
-    user_ids = [
-        uid for (uid,) in db.query(RunLog.user_id).distinct().all()
-    ]
+    user_ids = [uid for (uid,) in db.query(RunLog.user_id).distinct().all()]
     for user_id in user_ids:
         runs = (
             db.query(RunLog)

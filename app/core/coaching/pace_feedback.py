@@ -4,7 +4,6 @@ from typing import Optional
 
 from app.utils import format_pace_bare
 
-
 PACE_TOLERANCES: dict[str, tuple[float, float]] = {
     "easy": (0.10, -0.08),
     "recovery": (0.15, -0.05),
@@ -25,11 +24,7 @@ def pace_feedback(run_log, planned_workout) -> Optional[str]:
     if not planned_pace or not actual_pace:
         return None
 
-    wtype = (
-        planned_workout.workout_type
-        or run_log.workout_type
-        or "easy"
-    ).lower()
+    wtype = (planned_workout.workout_type or run_log.workout_type or "easy").lower()
     slow_tol, fast_tol = PACE_TOLERANCES.get(wtype, (0.10, -0.08))
 
     diff_pct = (actual_pace - planned_pace) / planned_pace

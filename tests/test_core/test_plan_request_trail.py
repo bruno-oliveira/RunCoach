@@ -54,11 +54,16 @@ class TestNewTrailFormHappyPaths:
     @pytest.mark.parametrize(
         "distance,elev,weeks,runs",
         [
-            (10.0, 0.0, 6, 3),       # short flat trail (10 km road = 10 km trail OK with is_trail)
-            (15.0, 500.0, 8, 3),     # short rolling
-            (30.0, 1000.0, 12, 4),   # standard hilly (legacy default)
-            (50.0, 200.0, 16, 5),    # ultra flat
-            (80.0, 4500.0, 24, 6),   # long_ultra mountainous
+            (
+                10.0,
+                0.0,
+                6,
+                3,
+            ),  # short flat trail (10 km road = 10 km trail OK with is_trail)
+            (15.0, 500.0, 8, 3),  # short rolling
+            (30.0, 1000.0, 12, 4),  # standard hilly (legacy default)
+            (50.0, 200.0, 16, 5),  # ultra flat
+            (80.0, 4500.0, 24, 6),  # long_ultra mountainous
             (163.0, 6000.0, 32, 6),  # 100-mile race
         ],
     )
@@ -137,7 +142,9 @@ class TestNewTrailRejections:
             (100.0, 5, 20, "long_ultra"),
         ],
     )
-    def test_runs_per_week_below_bracket_floor_rejected(self, distance, runs, weeks, bracket):
+    def test_runs_per_week_below_bracket_floor_rejected(
+        self, distance, runs, weeks, bracket
+    ):
         with pytest.raises(ValueError, match="needs at least"):
             PlanRequest(
                 current_km=max(20.0, 0.55 * distance),
@@ -151,8 +158,8 @@ class TestNewTrailRejections:
     @pytest.mark.parametrize(
         "distance,too_few_weeks,floor",
         [
-            (50.0, 11, 12),     # ultra needs 12+ weeks
-            (100.0, 15, 16),    # long_ultra needs 16+ weeks
+            (50.0, 11, 12),  # ultra needs 12+ weeks
+            (100.0, 15, 16),  # long_ultra needs 16+ weeks
         ],
     )
     def test_too_few_weeks_for_ultra_rejected(self, distance, too_few_weeks, floor):

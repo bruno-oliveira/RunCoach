@@ -4,17 +4,16 @@ import os
 import tempfile
 
 import pytest
+from alembic.config import Config
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine, event
 from sqlalchemy.orm import Session, sessionmaker
 
 from alembic import command
-from alembic.config import Config
-
-from app.dependencies import get_db
-from app.models import Base
 from app.contexts.nutrition.nutrition_engine import NutritionEngine
 from app.contexts.plan.generators.plan_generator import TrainingPlanGenerator
+from app.dependencies import get_db
+from app.models import Base
 
 
 def _run_alembic_migrations(engine) -> None:

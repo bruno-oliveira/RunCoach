@@ -14,6 +14,7 @@ from app.models.user import User
 @pytest.fixture
 def auth_client(test_db: Session) -> TestClient:
     """Test client with DB override (no auth override — testing auth itself)."""
+
     def override_get_db():
         try:
             yield test_db
@@ -65,7 +66,9 @@ class TestGoogleAuth:
         assert user.email == "test@example.com"
         assert user.auto_adjust_enabled is True
 
-    def test_existing_user_login_preserves_auto_adjust_choice(self, auth_client, test_db):
+    def test_existing_user_login_preserves_auto_adjust_choice(
+        self, auth_client, test_db
+    ):
         """Returning users keep their stored preference — the new-user default does not overwrite it."""
         existing = User(
             google_id="google-existing",
@@ -175,6 +178,7 @@ class TestUserSettings:
 
         async def _override():
             return user
+
         app.dependency_overrides[get_current_user] = _override
         try:
             res = auth_client.patch(

@@ -12,7 +12,7 @@ logger = logging.getLogger(__name__)
 
 def backfill_vdot(session: Session) -> int:
     """Backfill VDOT for runs that have sufficient distance but no VDOT yet.
-    
+
     Returns the number of runs updated.
     """
     runs = (
@@ -26,7 +26,7 @@ def backfill_vdot(session: Session) -> int:
     )
     if not runs:
         return 0
-    
+
     updated = 0
     for run in runs:
         vdot = VDOTCalculator.calculate_vdot(
@@ -37,7 +37,7 @@ def backfill_vdot(session: Session) -> int:
         if vdot:
             run.vdot = vdot
             updated += 1
-    
+
     session.commit()
     logger.info("VDOT backfill: updated %d/%d runs", updated, len(runs))
     return updated

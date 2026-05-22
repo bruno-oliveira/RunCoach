@@ -1,5 +1,5 @@
-from app.models import DailyWorkout, TrainingPlan, User, WeeklyPlan
 from app.contexts.plan.plan_data_enricher import enrich_plan_data_with_ids
+from app.models import DailyWorkout, TrainingPlan, User, WeeklyPlan
 
 
 def _seed_plan(test_db):
@@ -17,7 +17,9 @@ def _seed_plan(test_db):
     test_db.add(plan)
     test_db.flush()
 
-    week = WeeklyPlan(training_plan_id=plan.id, week_number=1, total_km=20.0, workout_types={})
+    week = WeeklyPlan(
+        training_plan_id=plan.id, week_number=1, total_km=20.0, workout_types={}
+    )
     test_db.add(week)
     test_db.flush()
 
@@ -38,21 +40,40 @@ def test_enricher_repairs_hill_key_workout_distance_floor(test_db):
     test_db.add(dw)
     test_db.commit()
 
-    plan_data = [{
-        "week": 1,
-        "daily_workouts": [{
-            "day": 2,
-            "type": "hill",
-            "distance": 2.6,
-            "key_workout_id": "trail_elevation_repeats",
-            "structure": "6 x 3min uphill at hard effort with jog-back recovery",
-            "steps": [
-                {"kind": "warmup", "distance_m": 650, "repeat": 1, "pace_zone": "E"},
-                {"kind": "run", "duration_s": 180, "repeat": 6, "pace_zone": "I"},
-                {"kind": "cooldown", "distance_m": 650, "repeat": 1, "pace_zone": "E"},
+    plan_data = [
+        {
+            "week": 1,
+            "daily_workouts": [
+                {
+                    "day": 2,
+                    "type": "hill",
+                    "distance": 2.6,
+                    "key_workout_id": "trail_elevation_repeats",
+                    "structure": "6 x 3min uphill at hard effort with jog-back recovery",
+                    "steps": [
+                        {
+                            "kind": "warmup",
+                            "distance_m": 650,
+                            "repeat": 1,
+                            "pace_zone": "E",
+                        },
+                        {
+                            "kind": "run",
+                            "duration_s": 180,
+                            "repeat": 6,
+                            "pace_zone": "I",
+                        },
+                        {
+                            "kind": "cooldown",
+                            "distance_m": 650,
+                            "repeat": 1,
+                            "pace_zone": "E",
+                        },
+                    ],
+                }
             ],
-        }],
-    }]
+        }
+    ]
 
     enriched = enrich_plan_data_with_ids(plan_data, plan.id, test_db)
     workout = enriched[0]["daily_workouts"][0]
@@ -84,16 +105,20 @@ def test_enricher_omits_baseline_when_only_enrichment_bumps_distance(test_db):
     test_db.add(dw)
     test_db.commit()
 
-    plan_data = [{
-        "week": 1,
-        "daily_workouts": [{
-            "day": 5,
-            "type": "hill",
-            "distance": 2.0,
-            "key_workout_id": "trail_elevation_repeats",
-            "structure": "6 x 3min uphill at hard effort with jog-back recovery",
-        }],
-    }]
+    plan_data = [
+        {
+            "week": 1,
+            "daily_workouts": [
+                {
+                    "day": 5,
+                    "type": "hill",
+                    "distance": 2.0,
+                    "key_workout_id": "trail_elevation_repeats",
+                    "structure": "6 x 3min uphill at hard effort with jog-back recovery",
+                }
+            ],
+        }
+    ]
 
     enriched = enrich_plan_data_with_ids(plan_data, plan.id, test_db)
     workout = enriched[0]["daily_workouts"][0]
@@ -117,19 +142,38 @@ def test_enricher_sets_short_workout_duration_hint_from_steps(test_db):
     test_db.add(dw)
     test_db.commit()
 
-    plan_data = [{
-        "week": 1,
-        "daily_workouts": [{
-            "day": 4,
-            "type": "interval",
-            "distance": 2.0,
-            "steps": [
-                {"kind": "warmup", "distance_m": 500, "repeat": 1, "pace_zone": "E"},
-                {"kind": "run", "duration_s": 180, "repeat": 3, "pace_zone": "I"},
-                {"kind": "cooldown", "distance_m": 500, "repeat": 1, "pace_zone": "E"},
+    plan_data = [
+        {
+            "week": 1,
+            "daily_workouts": [
+                {
+                    "day": 4,
+                    "type": "interval",
+                    "distance": 2.0,
+                    "steps": [
+                        {
+                            "kind": "warmup",
+                            "distance_m": 500,
+                            "repeat": 1,
+                            "pace_zone": "E",
+                        },
+                        {
+                            "kind": "run",
+                            "duration_s": 180,
+                            "repeat": 3,
+                            "pace_zone": "I",
+                        },
+                        {
+                            "kind": "cooldown",
+                            "distance_m": 500,
+                            "repeat": 1,
+                            "pace_zone": "E",
+                        },
+                    ],
+                }
             ],
-        }],
-    }]
+        }
+    ]
 
     enriched = enrich_plan_data_with_ids(plan_data, plan.id, test_db)
     workout = enriched[0]["daily_workouts"][0]
@@ -155,15 +199,19 @@ def test_enricher_surfaces_baseline_for_adjusted_easy_run_without_steps(test_db)
     test_db.add(dw)
     test_db.commit()
 
-    plan_data = [{
-        "week": 1,
-        "daily_workouts": [{
-            "day": 1,
-            "type": "easy",
-            "distance": 4.4,
-            # No `steps` — the typical easy-run shape.
-        }],
-    }]
+    plan_data = [
+        {
+            "week": 1,
+            "daily_workouts": [
+                {
+                    "day": 1,
+                    "type": "easy",
+                    "distance": 4.4,
+                    # No `steps` — the typical easy-run shape.
+                }
+            ],
+        }
+    ]
 
     enriched = enrich_plan_data_with_ids(plan_data, plan.id, test_db)
     workout = enriched[0]["daily_workouts"][0]
@@ -187,14 +235,18 @@ def test_enricher_omits_baseline_when_unchanged(test_db):
     test_db.add(dw)
     test_db.commit()
 
-    plan_data = [{
-        "week": 1,
-        "daily_workouts": [{
-            "day": 1,
-            "type": "easy",
-            "distance": 5.0,
-        }],
-    }]
+    plan_data = [
+        {
+            "week": 1,
+            "daily_workouts": [
+                {
+                    "day": 1,
+                    "type": "easy",
+                    "distance": 5.0,
+                }
+            ],
+        }
+    ]
 
     enriched = enrich_plan_data_with_ids(plan_data, plan.id, test_db)
     workout = enriched[0]["daily_workouts"][0]
@@ -216,21 +268,40 @@ def test_enricher_rebuilds_technical_workout_steps_with_distance(test_db):
     test_db.add(dw)
     test_db.commit()
 
-    plan_data = [{
-        "week": 1,
-        "daily_workouts": [{
-            "day": 3,
-            "type": "interval",
-            "distance": 2.0,
-            "key_workout_id": "trail_technical_terrain",
-            "structure": "Run 1.6km at moderate effort, focusing on foot placement",
-            "steps": [
-                {"kind": "warmup", "distance_m": 500, "repeat": 1, "pace_zone": "E"},
-                {"kind": "run", "label": "Find a technical trail", "repeat": 1, "pace_zone": "E"},
-                {"kind": "cooldown", "distance_m": 500, "repeat": 1, "pace_zone": "E"},
+    plan_data = [
+        {
+            "week": 1,
+            "daily_workouts": [
+                {
+                    "day": 3,
+                    "type": "interval",
+                    "distance": 2.0,
+                    "key_workout_id": "trail_technical_terrain",
+                    "structure": "Run 1.6km at moderate effort, focusing on foot placement",
+                    "steps": [
+                        {
+                            "kind": "warmup",
+                            "distance_m": 500,
+                            "repeat": 1,
+                            "pace_zone": "E",
+                        },
+                        {
+                            "kind": "run",
+                            "label": "Find a technical trail",
+                            "repeat": 1,
+                            "pace_zone": "E",
+                        },
+                        {
+                            "kind": "cooldown",
+                            "distance_m": 500,
+                            "repeat": 1,
+                            "pace_zone": "E",
+                        },
+                    ],
+                }
             ],
-        }],
-    }]
+        }
+    ]
 
     enriched = enrich_plan_data_with_ids(plan_data, plan.id, test_db)
     workout = enriched[0]["daily_workouts"][0]
@@ -279,7 +350,10 @@ def test_enricher_reconciles_total_km_to_daily_sum(test_db):
     assert enriched[1]["total_km"] == round(5.0 + 7.0, 1)
     # The reconciliation must not undo the per-workout distances.
     assert [wo["distance"] for wo in enriched[0]["daily_workouts"]] == [
-        8.5, 6.0, 12.0, 0,
+        8.5,
+        6.0,
+        12.0,
+        0,
     ]
 
 
@@ -302,20 +376,39 @@ def test_enricher_total_km_follows_steps_distance_overwrite(test_db):
     # = 2.5 km of distance steps, plus duration steps). The stored
     # `distance` is 2.0 km, which differs by more than the 0.2 km
     # tolerance — so the enricher will overwrite it.
-    plan_data = [{
-        "week": 1,
-        "total_km": 2.0,
-        "daily_workouts": [{
-            "day": 1,
-            "type": "interval",
-            "distance": 2.0,
-            "steps": [
-                {"kind": "warmup", "distance_m": 500, "repeat": 1, "pace_zone": "E"},
-                {"kind": "run", "distance_m": 500, "repeat": 3, "pace_zone": "I"},
-                {"kind": "cooldown", "distance_m": 500, "repeat": 1, "pace_zone": "E"},
+    plan_data = [
+        {
+            "week": 1,
+            "total_km": 2.0,
+            "daily_workouts": [
+                {
+                    "day": 1,
+                    "type": "interval",
+                    "distance": 2.0,
+                    "steps": [
+                        {
+                            "kind": "warmup",
+                            "distance_m": 500,
+                            "repeat": 1,
+                            "pace_zone": "E",
+                        },
+                        {
+                            "kind": "run",
+                            "distance_m": 500,
+                            "repeat": 3,
+                            "pace_zone": "I",
+                        },
+                        {
+                            "kind": "cooldown",
+                            "distance_m": 500,
+                            "repeat": 1,
+                            "pace_zone": "E",
+                        },
+                    ],
+                }
             ],
-        }],
-    }]
+        }
+    ]
 
     enriched = enrich_plan_data_with_ids(plan_data, plan.id, test_db)
     workout = enriched[0]["daily_workouts"][0]

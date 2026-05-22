@@ -42,9 +42,7 @@ class CoachingFeedbackEngine:
         """
         fb: dict[str, Optional[str]] = {
             "pace_feedback": pace_feedback(run_log, planned_workout),
-            "hr_zone_feedback": hr_zone_feedback(
-                run_log, planned_workout, hr_zones
-            ),
+            "hr_zone_feedback": hr_zone_feedback(run_log, planned_workout, hr_zones),
             "effort_feedback": cls._effort_feedback(run_log, planned_workout),
             "volume_feedback": volume_feedback(run_log, db),
             "pattern_feedback": pattern_feedback(run_log, db),
@@ -82,8 +80,7 @@ class CoachingFeedbackEngine:
                 f"(quality score: {score:.0f}/100)."
             ),
             "On track": (
-                f"On track — solid {wtype} session "
-                f"(quality score: {score:.0f}/100)."
+                f"On track — solid {wtype} session (quality score: {score:.0f}/100)."
             ),
             "Too easy": (
                 f"This {wtype} session felt too easy (effort {run_log.perceived_effort}/10). "

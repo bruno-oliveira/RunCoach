@@ -11,8 +11,8 @@ from __future__ import annotations
 
 from typing import Dict, Iterable, List
 
-from app.core.training.quality_caps import enforce_week_caps
 from app.core.training.long_run_calculator import get_weekly_long_run_ratio_cap
+from app.core.training.quality_caps import enforce_week_caps
 from app.core.training.trail_profile import classify_trail
 
 
@@ -61,7 +61,9 @@ def _apply_long_run_ratio_cap(
     excess = (long_w.distance_km or 0) - max_long
     long_w.distance_km = round(max_long, 1)
 
-    recipients = [w for w in running if w is not long_w and (w.workout_type or "") == "easy"]
+    recipients = [
+        w for w in running if w is not long_w and (w.workout_type or "") == "easy"
+    ]
     if not recipients:
         recipients = [w for w in running if w is not long_w]
 

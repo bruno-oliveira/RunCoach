@@ -2,9 +2,10 @@
 
 import logging
 
-from alembic import command
 from alembic.config import Config
-from sqlalchemy import Engine, inspect, text
+from sqlalchemy import Engine, inspect
+
+from alembic import command
 
 logger = logging.getLogger(__name__)
 

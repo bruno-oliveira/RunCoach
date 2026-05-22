@@ -119,7 +119,10 @@ async def csrf_protection(request: Request, call_next):
         has_body = content_length != "0"
         if has_body:
             content_type = request.headers.get("content-type", "")
-            if "application/json" not in content_type and "multipart/form-data" not in content_type:
+            if (
+                "application/json" not in content_type
+                and "multipart/form-data" not in content_type
+            ):
                 return JSONResponse(
                     status_code=403,
                     content={"detail": "Invalid Content-Type"},

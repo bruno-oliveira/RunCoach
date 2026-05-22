@@ -6,19 +6,19 @@ from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 
+from app.contexts.plan.plan_helpers import get_plan_or_404
 from app.contexts.plan.repositories import SQLAlchemyPlanRepository
-from app.contexts.runner.repositories import SQLAlchemyRunRepository
-from app.dependencies import get_db, get_current_user
-from app.models import User
-from app.core.training.vdot_calculator import VDOTCalculator
-from app.contexts.runner.profile.profile_builder import build_profile
 from app.contexts.runner.fitness.adherence_service import compute_adherence_heatmap
 from app.contexts.runner.fitness.gap_analysis_service import GapAnalysisService
 from app.contexts.runner.fitness.insights_service import InsightsService
 from app.contexts.runner.fitness.personal_records_service import PersonalRecordsService
-from app.contexts.plan.plan_helpers import get_plan_or_404
 from app.contexts.runner.fitness.race_predictor_service import RacePredictorService
 from app.contexts.runner.fitness.training_load_service import TrainingLoadService
+from app.contexts.runner.profile.profile_builder import build_profile
+from app.contexts.runner.repositories import SQLAlchemyRunRepository
+from app.core.training.vdot_calculator import VDOTCalculator
+from app.dependencies import get_current_user, get_db
+from app.models import User
 from app.utils import to_date as _to_date
 
 logger = logging.getLogger(__name__)
@@ -96,7 +96,10 @@ async def get_gap_trend(
 
     weekly = GapAnalysisService.analyze_gaps_weekly(plan, current_user.id, db)
     if weekly is None:
-        return {"available": False, "reason": "Set a start date and log some runs first."}
+        return {
+            "available": False,
+            "reason": "Set a start date and log some runs first.",
+        }
 
     return {"available": True, "weeks": weekly}
 
@@ -108,9 +111,7 @@ async def get_vdot_history(
     current_user: User = Depends(get_current_user),
 ):
     """Get VDOT history for progression chart."""
-    history = RacePredictorService.get_vdot_history(
-        current_user.id, weeks=weeks, db=db
-    )
+    history = RacePredictorService.get_vdot_history(current_user.id, weeks=weeks, db=db)
     predictions = RacePredictorService.get_predictions_for_user(current_user.id, db)
 
     return {
@@ -138,7 +139,9 @@ async def get_training_load(
     current_user: User = Depends(get_current_user),
 ):
     """Get ACWR (Acute:Chronic Workload Ratio) and training load history."""
-    return TrainingLoadService.get_training_load(current_user.id, db, lookback_days=days)
+    return TrainingLoadService.get_training_load(
+        current_user.id, db, lookback_days=days
+    )
 
 
 @analytics_router.get("/personal-records")
@@ -156,9 +159,7 @@ async def get_pace_zones(
     current_user: User = Depends(get_current_user),
 ):
     """Get the user's VDOT-derived pace zones for classifying runs."""
-    vdot = RacePredictorService.get_best_recent_vdot(
-        current_user.id, weeks=12, db=db
-    )
+    vdot = RacePredictorService.get_best_recent_vdot(current_user.id, weeks=12, db=db)
     if not vdot:
         return {"available": False}
 

@@ -13,11 +13,11 @@ from __future__ import annotations
 from datetime import datetime, timezone
 from typing import Any, Dict, Iterable, List, Optional
 
-from app.models import DailyWorkout, TrainingPlan, WeeklyPlan
 from sqlalchemy.orm import Session
 
-from . import change_reasons as _reasons
+from app.models import DailyWorkout, TrainingPlan, WeeklyPlan
 
+from . import change_reasons as _reasons
 
 _DAY_NAMES = {
     1: "Mon",
@@ -185,16 +185,18 @@ def build_change_plan(
         )
         bucket["total_km_before"] += old_dist
         bucket["total_km_after"] += new_dist
-        bucket["workouts"].append({
-            "day": _DAY_NAMES.get(day, str(day)),
-            "day_num": day,
-            "type": wtype or "easy",
-            "old_distance_km": round(old_dist, 1),
-            "new_distance_km": round(new_dist, 1),
-            "delta_km": delta,
-            "status": status,
-            "reason": reason,
-        })
+        bucket["workouts"].append(
+            {
+                "day": _DAY_NAMES.get(day, str(day)),
+                "day_num": day,
+                "type": wtype or "easy",
+                "old_distance_km": round(old_dist, 1),
+                "new_distance_km": round(new_dist, 1),
+                "delta_km": delta,
+                "status": status,
+                "reason": reason,
+            }
+        )
 
     all_weeks: List[Dict[str, Any]] = []
     for week in sorted(week_buckets.keys()):
@@ -208,8 +210,7 @@ def build_change_plan(
     # changed. Weeks where everything is protected/unchanged would otherwise
     # appear in the modal with a misleading delta chip.
     weeks_list = [
-        wk for wk in all_weeks
-        if any(w["status"] == "changed" for w in wk["workouts"])
+        wk for wk in all_weeks if any(w["status"] == "changed" for w in wk["workouts"])
     ]
 
     total_before = round(sum(w["total_km_before"] for w in weeks_list), 1)
@@ -220,9 +221,7 @@ def build_change_plan(
         no_change_reasons.append(_reasons.NO_CHANGE_NO_REMAINING_WORKOUTS)
     elif workouts_changed_count == 0:
         if all(
-            wo["status"] == "protected"
-            for wk in all_weeks
-            for wo in wk["workouts"]
+            wo["status"] == "protected" for wk in all_weeks for wo in wk["workouts"]
         ):
             no_change_reasons.append(_reasons.NO_CHANGE_ALL_PROTECTED)
         elif multiplier is not None and abs(multiplier - 1.0) < 0.02:
@@ -269,7 +268,8 @@ def build_change_plan(
 
 
 def _build_patch(
-    training_plan: TrainingPlan, weeks_list: List[Dict[str, Any]],
+    training_plan: TrainingPlan,
+    weeks_list: List[Dict[str, Any]],
 ) -> Dict[str, Any]:
     """Produce the flat payload the client uses to patch the DOM in place.
 
@@ -286,11 +286,13 @@ def _build_patch(
         for wo in wk["workouts"]:
             if wo.get("status") != "changed":
                 continue
-            workout_changes.append({
-                "week": wk["week"],
-                "day": wo["day_num"],
-                "new_distance_km": wo["new_distance_km"],
-            })
+            workout_changes.append(
+                {
+                    "week": wk["week"],
+                    "day": wo["day_num"],
+                    "new_distance_km": wo["new_distance_km"],
+                }
+            )
 
     return {
         "adaptation_revision": training_plan.adaptation_revision or 0,

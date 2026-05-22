@@ -17,7 +17,7 @@ to it; new plan types are added by writing one subclass and prepending to
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from typing import TYPE_CHECKING, Any, Dict, List, Tuple
+from typing import TYPE_CHECKING, Any, Dict, List
 
 from reportlab.lib import colors
 from reportlab.lib.units import cm
@@ -71,16 +71,18 @@ class PdfPlanRenderer(ABC):
 
 
 def _summary_table_style() -> TableStyle:
-    return TableStyle([
-        ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#667eea')),
-        ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
-        ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
-        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
-        ('FONTSIZE', (0, 0), (-1, 0), 10),
-        ('FONTNAME', (0, 1), (-1, -1), 'Helvetica'),
-        ('FONTSIZE', (0, 1), (-1, -1), 8),
-        ('GRID', (0, 0), (-1, -1), 1, colors.HexColor('#dee2e6')),
-    ])
+    return TableStyle(
+        [
+            ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#667eea")),
+            ("TEXTCOLOR", (0, 0), (-1, 0), colors.whitesmoke),
+            ("ALIGN", (0, 0), (-1, -1), "CENTER"),
+            ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
+            ("FONTSIZE", (0, 0), (-1, 0), 10),
+            ("FONTNAME", (0, 1), (-1, -1), "Helvetica"),
+            ("FONTSIZE", (0, 1), (-1, -1), 8),
+            ("GRID", (0, 0), (-1, -1), 1, colors.HexColor("#dee2e6")),
+        ]
+    )
 
 
 class PerformancePdfRenderer(PdfPlanRenderer):
@@ -103,12 +105,12 @@ class PerformancePdfRenderer(PdfPlanRenderer):
         if dto.current_pace and dto.goal_pace:
             improvement = ((dto.current_pace - dto.goal_pace) / dto.current_pace) * 100
             return [
-                ['Target Distance', target],
-                ['Current Pace', pdf._format_pace(dto.current_pace)],
-                ['Goal Pace', pdf._format_pace(dto.goal_pace)],
-                ['Target Improvement', f"{improvement:.1f}%"],
-                ['Training Duration', f"{dto.weeks_duration} weeks"],
-                ['Weekly Mileage', f"{dto.current_weekly_km:.1f} km"],
+                ["Target Distance", target],
+                ["Current Pace", pdf._format_pace(dto.current_pace)],
+                ["Goal Pace", pdf._format_pace(dto.goal_pace)],
+                ["Target Improvement", f"{improvement:.1f}%"],
+                ["Training Duration", f"{dto.weeks_duration} weeks"],
+                ["Weekly Mileage", f"{dto.current_weekly_km:.1f} km"],
             ]
         return _default_stats_rows(dto, plan_data, target)
 
@@ -212,11 +214,13 @@ class DistancePdfRenderer(PdfPlanRenderer):
     def summary_chart(
         self, pdf: "PDFGenerator", plan_data: List[Dict[str, Any]]
     ) -> Table:
-        max_mileage = max(week['total_km'] for week in plan_data)
-        chart_data: List[List[str]] = [['Week', 'Mileage (km)', 'Progress']]
+        max_mileage = max(week["total_km"] for week in plan_data)
+        chart_data: List[List[str]] = [["Week", "Mileage (km)", "Progress"]]
         for week in plan_data:
-            progress = pdf._create_progress_bar(week['total_km'], max_mileage)
-            chart_data.append([f"Week {week['week']}", f"{week['total_km']:.1f}", progress])
+            progress = pdf._create_progress_bar(week["total_km"], max_mileage)
+            chart_data.append(
+                [f"Week {week['week']}", f"{week['total_km']:.1f}", progress]
+            )
         table = Table(chart_data, colWidths=[2 * cm, 2 * cm, 6 * cm])
         table.setStyle(_summary_table_style())
         return table
@@ -235,21 +239,19 @@ def _default_stats_rows(
     dto: PlanExportDTO, plan_data: List[Dict[str, Any]], target_display: str
 ) -> List[List[str]]:
     return [
-        ['Current Weekly Mileage', f"{dto.current_weekly_km} km"],
-        ['Target Distance', target_display],
-        ['Training Duration', f"{dto.weeks_duration} weeks"],
-        ['Peak Week Mileage', f"{max(week['total_km'] for week in plan_data):.1f} km"],
+        ["Current Weekly Mileage", f"{dto.current_weekly_km} km"],
+        ["Target Distance", target_display],
+        ["Training Duration", f"{dto.weeks_duration} weeks"],
+        ["Peak Week Mileage", f"{max(week['total_km'] for week in plan_data):.1f} km"],
     ]
 
 
-def _phase_summary_chart(
-    pdf: "PDFGenerator", plan_data: List[Dict[str, Any]]
-) -> Table:
-    max_mileage = max(week['total_km'] for week in plan_data)
-    chart_data: List[List[str]] = [['Week', 'Phase', 'Mileage (km)', 'Progress']]
+def _phase_summary_chart(pdf: "PDFGenerator", plan_data: List[Dict[str, Any]]) -> Table:
+    max_mileage = max(week["total_km"] for week in plan_data)
+    chart_data: List[List[str]] = [["Week", "Phase", "Mileage (km)", "Progress"]]
     for week in plan_data:
-        progress = pdf._create_progress_bar(week['total_km'], max_mileage)
-        phase = week.get('phase', '').title()
+        progress = pdf._create_progress_bar(week["total_km"], max_mileage)
+        phase = week.get("phase", "").title()
         chart_data.append(
             [f"Week {week['week']}", phase, f"{week['total_km']:.1f}", progress]
         )

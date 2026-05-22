@@ -3,11 +3,10 @@
 import uuid
 from datetime import datetime
 
-import pytest
 from sqlalchemy.orm import Session
 
-from app.models import DailyWorkout, RunLog, TrainingPlan, User, WeeklyPlan
 from app.contexts.plan.adaptation import AdaptationService
+from app.models import DailyWorkout, RunLog, TrainingPlan, User, WeeklyPlan
 
 
 def _make_user(db: Session) -> User:
@@ -114,21 +113,34 @@ class TestRunToPlanMapping:
 
         # Plan starts Monday 2026-01-05
         plan = _make_plan(
-            test_db, user.id,
+            test_db,
+            user.id,
             start_date=datetime(2026, 1, 5, 0, 0),
             weeks_duration=1,
         )
         week = _make_week(test_db, plan.id, week_number=1, total_km=31.0)
 
         # Workouts: Mon easy 5km, Tue tempo 10km, Sat long 16km
-        wo_mon_easy = _make_workout(test_db, week.id, day_of_week=1, workout_type="easy", distance_km=5.0)
-        wo_tue_tempo = _make_workout(test_db, week.id, day_of_week=2, workout_type="tempo", distance_km=10.0)
-        wo_sat_long = _make_workout(test_db, week.id, day_of_week=6, workout_type="long", distance_km=16.0)
+        wo_mon_easy = _make_workout(
+            test_db, week.id, day_of_week=1, workout_type="easy", distance_km=5.0
+        )
+        wo_tue_tempo = _make_workout(
+            test_db, week.id, day_of_week=2, workout_type="tempo", distance_km=10.0
+        )
+        wo_sat_long = _make_workout(
+            test_db, week.id, day_of_week=6, workout_type="long", distance_km=16.0
+        )
 
         # User swapped Mon/Tue: ran 10km Monday (the tempo), 5km Tuesday (the easy)
-        run_mon = _make_run(test_db, user.id, datetime(2026, 1, 5, 7, 30), distance_km=10.0)
-        run_tue = _make_run(test_db, user.id, datetime(2026, 1, 6, 7, 30), distance_km=5.0)
-        run_sat = _make_run(test_db, user.id, datetime(2026, 1, 10, 8, 0), distance_km=16.0)
+        run_mon = _make_run(
+            test_db, user.id, datetime(2026, 1, 5, 7, 30), distance_km=10.0
+        )
+        run_tue = _make_run(
+            test_db, user.id, datetime(2026, 1, 6, 7, 30), distance_km=5.0
+        )
+        run_sat = _make_run(
+            test_db, user.id, datetime(2026, 1, 10, 8, 0), distance_km=16.0
+        )
         test_db.commit()
 
         result = service.map_runs_to_plan(plan.id, user.id, test_db, dry_run=True)
@@ -157,21 +169,34 @@ class TestRunToPlanMapping:
 
         # Plan starts Monday 2026-01-05
         plan = _make_plan(
-            test_db, user.id,
+            test_db,
+            user.id,
             start_date=datetime(2026, 1, 5, 0, 0),
             weeks_duration=1,
         )
         week = _make_week(test_db, plan.id, week_number=1, total_km=13.0)
 
         # Workouts: Mon easy 5km, Tue recovery 0km, Wed tempo 8km
-        wo_mon_easy = _make_workout(test_db, week.id, day_of_week=1, workout_type="easy", distance_km=5.0)
-        wo_tue_recovery = _make_workout(test_db, week.id, day_of_week=2, workout_type="recovery", distance_km=0.0)
-        wo_wed_tempo = _make_workout(test_db, week.id, day_of_week=3, workout_type="tempo", distance_km=8.0)
+        wo_mon_easy = _make_workout(
+            test_db, week.id, day_of_week=1, workout_type="easy", distance_km=5.0
+        )
+        wo_tue_recovery = _make_workout(
+            test_db, week.id, day_of_week=2, workout_type="recovery", distance_km=0.0
+        )
+        wo_wed_tempo = _make_workout(
+            test_db, week.id, day_of_week=3, workout_type="tempo", distance_km=8.0
+        )
 
         # User ran on all three days including the recovery day
-        run_mon = _make_run(test_db, user.id, datetime(2026, 1, 5, 7, 0), distance_km=5.0)
-        run_tue = _make_run(test_db, user.id, datetime(2026, 1, 6, 7, 0), distance_km=6.0)
-        run_wed = _make_run(test_db, user.id, datetime(2026, 1, 7, 7, 0), distance_km=8.0)
+        run_mon = _make_run(
+            test_db, user.id, datetime(2026, 1, 5, 7, 0), distance_km=5.0
+        )
+        run_tue = _make_run(
+            test_db, user.id, datetime(2026, 1, 6, 7, 0), distance_km=6.0
+        )
+        run_wed = _make_run(
+            test_db, user.id, datetime(2026, 1, 7, 7, 0), distance_km=8.0
+        )
         test_db.commit()
 
         result = service.map_runs_to_plan(plan.id, user.id, test_db, dry_run=True)
@@ -200,32 +225,57 @@ class TestRunToPlanMapping:
 
         # Plan starts Monday 2026-01-05, 2 weeks
         plan = _make_plan(
-            test_db, user.id,
+            test_db,
+            user.id,
             start_date=datetime(2026, 1, 5, 0, 0),
             weeks_duration=2,
         )
 
         # Week 1: Mon easy 5km, Wed tempo 8km, Sat long 12km
         week1 = _make_week(test_db, plan.id, week_number=1, total_km=25.0)
-        wo_w1_mon = _make_workout(test_db, week1.id, day_of_week=1, workout_type="easy", distance_km=5.0)
-        wo_w1_wed = _make_workout(test_db, week1.id, day_of_week=3, workout_type="tempo", distance_km=8.0)
-        wo_w1_sat = _make_workout(test_db, week1.id, day_of_week=6, workout_type="long", distance_km=12.0)
+        wo_w1_mon = _make_workout(
+            test_db, week1.id, day_of_week=1, workout_type="easy", distance_km=5.0
+        )
+        wo_w1_wed = _make_workout(
+            test_db, week1.id, day_of_week=3, workout_type="tempo", distance_km=8.0
+        )
+        wo_w1_sat = _make_workout(
+            test_db, week1.id, day_of_week=6, workout_type="long", distance_km=12.0
+        )
 
         # Week 2: Mon easy 5km, Wed tempo 8km, Sat long 12km
         week2 = _make_week(test_db, plan.id, week_number=2, total_km=25.0)
-        wo_w2_mon = _make_workout(test_db, week2.id, day_of_week=1, workout_type="easy", distance_km=5.0)
-        wo_w2_wed = _make_workout(test_db, week2.id, day_of_week=3, workout_type="tempo", distance_km=8.0)
-        wo_w2_sat = _make_workout(test_db, week2.id, day_of_week=6, workout_type="long", distance_km=12.0)
+        wo_w2_mon = _make_workout(
+            test_db, week2.id, day_of_week=1, workout_type="easy", distance_km=5.0
+        )
+        wo_w2_wed = _make_workout(
+            test_db, week2.id, day_of_week=3, workout_type="tempo", distance_km=8.0
+        )
+        wo_w2_sat = _make_workout(
+            test_db, week2.id, day_of_week=6, workout_type="long", distance_km=12.0
+        )
 
         # Week 1 runs
-        run_w1_mon = _make_run(test_db, user.id, datetime(2026, 1, 5, 7, 0), distance_km=5.0)
-        run_w1_wed = _make_run(test_db, user.id, datetime(2026, 1, 7, 7, 0), distance_km=8.0)
-        run_w1_sat = _make_run(test_db, user.id, datetime(2026, 1, 10, 8, 0), distance_km=12.0)
+        run_w1_mon = _make_run(
+            test_db, user.id, datetime(2026, 1, 5, 7, 0), distance_km=5.0
+        )
+        run_w1_wed = _make_run(
+            test_db, user.id, datetime(2026, 1, 7, 7, 0), distance_km=8.0
+        )
+        run_w1_sat = _make_run(
+            test_db, user.id, datetime(2026, 1, 10, 8, 0), distance_km=12.0
+        )
 
         # Week 2 runs
-        run_w2_mon = _make_run(test_db, user.id, datetime(2026, 1, 12, 7, 0), distance_km=5.0)
-        run_w2_wed = _make_run(test_db, user.id, datetime(2026, 1, 14, 7, 0), distance_km=8.0)
-        run_w2_sat = _make_run(test_db, user.id, datetime(2026, 1, 17, 8, 0), distance_km=12.0)
+        run_w2_mon = _make_run(
+            test_db, user.id, datetime(2026, 1, 12, 7, 0), distance_km=5.0
+        )
+        run_w2_wed = _make_run(
+            test_db, user.id, datetime(2026, 1, 14, 7, 0), distance_km=8.0
+        )
+        run_w2_sat = _make_run(
+            test_db, user.id, datetime(2026, 1, 17, 8, 0), distance_km=12.0
+        )
         test_db.commit()
 
         result = service.map_runs_to_plan(plan.id, user.id, test_db, dry_run=True)

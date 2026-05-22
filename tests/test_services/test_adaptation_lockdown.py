@@ -18,6 +18,11 @@ from sqlalchemy import create_engine, event
 from sqlalchemy.orm import Session, sessionmaker
 from sqlalchemy.pool import StaticPool
 
+from app.contexts.plan.adaptation.recommendation_evaluator import (
+    _is_small_reversal,
+    evaluate_weekly_recommendation,
+)
+from app.contexts.plan.week_adjustment_service import apply_week_action
 from app.dependencies import get_current_user, get_db
 from app.main import create_app
 from app.models import (
@@ -28,11 +33,6 @@ from app.models import (
     User,
     WeeklyPlan,
 )
-from app.contexts.plan.adaptation.recommendation_evaluator import (
-    _is_small_reversal,
-    evaluate_weekly_recommendation,
-)
-from app.contexts.plan.week_adjustment_service import apply_week_action
 
 
 def _uid() -> str:
@@ -67,7 +67,10 @@ def db():
 
 
 def _make_plan(
-    db: Session, *, weeks: int = 6, weeks_ago: int = 1,
+    db: Session,
+    *,
+    weeks: int = 6,
+    weeks_ago: int = 1,
 ) -> tuple[User, TrainingPlan]:
     user = User(id=_uid(), email=f"{_uid()[:8]}@test.com")
     db.add(user)
@@ -79,8 +82,7 @@ def _make_plan(
             "week": w + 1,
             "total_km": 30.0,
             "daily_workouts": [
-                {"day": d, "type": "easy", "distance": 7.5}
-                for d in range(1, 5)
+                {"day": d, "type": "easy", "distance": 7.5} for d in range(1, 5)
             ],
         }
         for w in range(weeks)
@@ -107,14 +109,16 @@ def _make_plan(
         db.add(wp)
         db.flush()
         for day in range(1, 5):
-            db.add(DailyWorkout(
-                id=_uid(),
-                weekly_plan_id=wp.id,
-                day_of_week=day,
-                workout_type="easy",
-                distance_km=7.5,
-                baseline_distance_km=7.5,
-            ))
+            db.add(
+                DailyWorkout(
+                    id=_uid(),
+                    weekly_plan_id=wp.id,
+                    day_of_week=day,
+                    workout_type="easy",
+                    distance_km=7.5,
+                    baseline_distance_km=7.5,
+                )
+            )
     db.commit()
     return user, plan
 
@@ -137,23 +141,32 @@ def _week_workouts(db: Session, plan_id: str, week_number: int) -> list[DailyWor
 
 
 def _log_runs(
-    db: Session, user: User, plan: TrainingPlan, week_number: int,
-    *, distance_km: float = 9.0, effort: int = 8,
+    db: Session,
+    user: User,
+    plan: TrainingPlan,
+    week_number: int,
+    *,
+    distance_km: float = 9.0,
+    effort: int = 8,
 ) -> None:
     for wo in _week_workouts(db, plan.id, week_number):
-        db.add(RunLog(
-            id=_uid(),
-            user_id=user.id,
-            training_plan_id=plan.id,
-            daily_workout_id=wo.id,
-            date=plan.start_date + timedelta(
-                weeks=week_number - 1, days=wo.day_of_week - 1,
-            ),
-            distance_km=distance_km,
-            duration_minutes=45,
-            perceived_effort=effort,
-            workout_type="easy",
-        ))
+        db.add(
+            RunLog(
+                id=_uid(),
+                user_id=user.id,
+                training_plan_id=plan.id,
+                daily_workout_id=wo.id,
+                date=plan.start_date
+                + timedelta(
+                    weeks=week_number - 1,
+                    days=wo.day_of_week - 1,
+                ),
+                distance_km=distance_km,
+                duration_minutes=45,
+                perceived_effort=effort,
+                workout_type="easy",
+            )
+        )
     db.commit()
 
 
@@ -207,13 +220,18 @@ class TestSingleMutationPath:
 
         week_data = next(w for w in plan.plan_data if w["week"] == 2)
         apply_week_action(
-            "extend_long_run", plan, plan.plan_data, week_data, 2, plan.id, db,
+            "extend_long_run",
+            plan,
+            plan.plan_data,
+            week_data,
+            2,
+            plan.id,
+            db,
         )
         db.commit()
 
         long_wo = next(
-            wo for wo in _week_workouts(db, plan.id, 2)
-            if wo.workout_type == "long"
+            wo for wo in _week_workouts(db, plan.id, 2) if wo.workout_type == "long"
         )
         # ratio = 1 + 2/5 = 1.4 → clamped to 1.15 per per_type_ratios cap,
         # then per-workout baseline × 1.25 cap = 6.25.
@@ -248,7 +266,7 @@ class TestWeeklyCadence:
         # target should drive the multiplier above 1.0.
         _log_runs(db, user, plan, week_number=1, distance_km=9.0, effort=5)
 
-        first = evaluate_weekly_recommendation(plan.id, user.id, db)
+        evaluate_weekly_recommendation(plan.id, user.id, db)
         second = evaluate_weekly_recommendation(plan.id, user.id, db)
         # First call may or may not park (depends on signal magnitude),
         # but the second one must return None — `last_recommendation_week`
@@ -306,7 +324,9 @@ class TestAutoApplyGate:
 class TestOverreachAndHysteresis:
     def test_overreach_forces_reduction(self):
         """High volume × high effort → multiplier <= 0.95 even with strong positives."""
-        from app.contexts.plan.adaptation.signal_computer import compute_adjustment_signals
+        from app.contexts.plan.adaptation.signal_computer import (
+            compute_adjustment_signals,
+        )
 
         class _W:
             def __init__(self, dist, effort, dwid):
@@ -326,13 +346,9 @@ class TestOverreachAndHysteresis:
 
         today = datetime.now(timezone.utc).date()
         plan_workouts = [
-            (_DW(5.0, f"w{i}"), today - timedelta(days=i + 1))
-            for i in range(10)
+            (_DW(5.0, f"w{i}"), today - timedelta(days=i + 1)) for i in range(10)
         ]
-        runs = [
-            _W(dist=8.0, effort=9, dwid=plan_workouts[i][0].id)
-            for i in range(10)
-        ]
+        runs = [_W(dist=8.0, effort=9, dwid=plan_workouts[i][0].id) for i in range(10)]
 
         class _StubDB:
             def query(self, *_a, **_kw):

@@ -11,12 +11,12 @@ from typing import Any, Dict, List, Optional
 
 from sqlalchemy.orm import Session
 
-from app.models import DailyWorkout, RunLog, TrainingPlan, WeeklyPlan
+from app.contexts.plan.plan_date_utils import compute_current_week
+from app.contexts.plan.repositories import SQLAlchemyPlanRepository
+from app.models import DailyWorkout, RunLog, WeeklyPlan
+from app.utils import to_date as _to_date
 
 from ._helpers import today_date
-from app.contexts.plan.plan_date_utils import compute_current_week
-from app.utils import to_date as _to_date
-from app.contexts.plan.repositories import SQLAlchemyPlanRepository
 
 logger = logging.getLogger(__name__)
 
@@ -134,7 +134,8 @@ def get_swap_proposals(
     )
     if long_runs:
         incomplete_count = sum(
-            1 for run, workout in long_runs
+            1
+            for run, workout in long_runs
             if (run.distance_km or 0) < (workout.distance_km or 0) * 0.70
         )
         if incomplete_count >= _MIN_PATTERN_COUNT:
@@ -147,11 +148,13 @@ def get_swap_proposals(
         condition = rule["condition"]
         count = type_issues.get(from_type, {}).get(condition, 0)
         if count >= _MIN_PATTERN_COUNT:
-            triggered_rules.append({
-                **rule,
-                "count": count,
-                "total": type_totals.get(from_type, 0),
-            })
+            triggered_rules.append(
+                {
+                    **rule,
+                    "count": count,
+                    "total": type_totals.get(from_type, 0),
+                }
+            )
 
     if not triggered_rules:
         return []
@@ -179,22 +182,23 @@ def get_swap_proposals(
             if workout.workout_type != from_type:
                 continue
             # Skip workouts earlier today or in the past within current week
-            if (week_num == current_week
-                    and workout.day_of_week <= current_day_of_week):
+            if week_num == current_week and workout.day_of_week <= current_day_of_week:
                 continue
 
             used_workout_ids.add(workout.id)
-            proposals.append({
-                "workout_id": workout.id,
-                "week": week_num,
-                "day": workout.day_of_week,
-                "from_type": from_type,
-                "to_type": rule["to"],
-                "to_label": rule["to_label"],
-                "reason": rule["reason"],
-                "pattern_count": rule["count"],
-                "pattern_total": rule["total"],
-            })
+            proposals.append(
+                {
+                    "workout_id": workout.id,
+                    "week": week_num,
+                    "day": workout.day_of_week,
+                    "from_type": from_type,
+                    "to_type": rule["to"],
+                    "to_label": rule["to_label"],
+                    "reason": rule["reason"],
+                    "pattern_count": rule["count"],
+                    "pattern_total": rule["total"],
+                }
+            )
             break  # Only propose the next one per rule
 
     return proposals
@@ -220,9 +224,13 @@ def apply_swap(
     if not training_plan:
         return None
 
-    workout = db.query(DailyWorkout).filter(
-        DailyWorkout.id == workout_id,
-    ).first()
+    workout = (
+        db.query(DailyWorkout)
+        .filter(
+            DailyWorkout.id == workout_id,
+        )
+        .first()
+    )
     if not workout:
         return None
 
@@ -243,9 +251,9 @@ def apply_swap(
     # Update plan_data JSON
     try:
         plan_data = training_plan.plan_data if training_plan.plan_data else []
-        week_plan = db.query(WeeklyPlan).filter(
-            WeeklyPlan.id == workout.weekly_plan_id
-        ).first()
+        week_plan = (
+            db.query(WeeklyPlan).filter(WeeklyPlan.id == workout.weekly_plan_id).first()
+        )
         if week_plan:
             for week in plan_data:
                 if week.get("week") != week_plan.week_number:
@@ -263,7 +271,10 @@ def apply_swap(
 
     logger.info(
         "Type swap applied: plan=%s workout=%s %s->%s",
-        plan_id, workout_id, old_type, to_type,
+        plan_id,
+        workout_id,
+        old_type,
+        to_type,
     )
 
     return {

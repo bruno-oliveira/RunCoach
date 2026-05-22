@@ -10,11 +10,11 @@ from typing import Dict, List
 
 from sqlalchemy.orm import Session
 
+from app.contexts.runner.fitness.race_predictor_service import RacePredictorService
+from app.contexts.runner.fitness.training_load_service import TrainingLoadService
 from app.contexts.runner.profile.runner_profile import RunnerProfile
 from app.core.training.vdot_calculator import VDOTCalculator
 from app.models import RunLog
-from app.contexts.runner.fitness.race_predictor_service import RacePredictorService
-from app.contexts.runner.fitness.training_load_service import TrainingLoadService
 
 # A run averaging this many meters of climb per km is treated as a trail run.
 TRAIL_ELEVATION_M_PER_KM = 20.0
@@ -130,7 +130,9 @@ def _compute_volume(profile: RunnerProfile, runs: List[RunLog]) -> None:
         profile.longest_run_km = round(max(distances), 1)
         profile.avg_run_km = round(sum(distances) / len(distances), 1)
 
-    paces = [r.avg_pace_min_km for r in runs if r.avg_pace_min_km and r.avg_pace_min_km > 0]
+    paces = [
+        r.avg_pace_min_km for r in runs if r.avg_pace_min_km and r.avg_pace_min_km > 0
+    ]
     if paces:
         profile.avg_pace_min_km = round(sum(paces) / len(paces), 2)
 
@@ -147,9 +149,12 @@ def _compute_load(profile: RunnerProfile, user_id: str, db: Session) -> None:
 def _compute_efficiency(profile: RunnerProfile, runs: List[RunLog]) -> None:
     """Aerobic efficiency = (speed km/h) / HR * 100. Compare halves for trend."""
     eff_runs = [
-        r for r in runs
-        if r.avg_heart_rate and r.avg_heart_rate > 0
-        and r.avg_pace_min_km and r.avg_pace_min_km > 0
+        r
+        for r in runs
+        if r.avg_heart_rate
+        and r.avg_heart_rate > 0
+        and r.avg_pace_min_km
+        and r.avg_pace_min_km > 0
     ]
     if len(eff_runs) < 4:
         return

@@ -5,8 +5,8 @@ from typing import Any
 
 from sqlalchemy.orm import Session
 
-from app.models import RunLog, TrainingPlan
 from app.contexts.plan.adaptation import AdaptationService
+from app.models import RunLog, TrainingPlan
 
 logger = logging.getLogger(__name__)
 
@@ -57,7 +57,9 @@ def get_adjustment_hints(
         try:
             since = training_plan.last_adjusted_at
             skip_result = adaptation_service.detect_skipped_workouts(
-                training_plan.id, db, since=since,
+                training_plan.id,
+                db,
+                since=since,
             )
             skipped_count = skip_result["skipped"]
             rescheduled_count = skip_result["rescheduled"]
@@ -94,11 +96,7 @@ def get_completion_stats(
     training_plan: TrainingPlan,
     db: Session,
 ) -> dict[str, Any]:
-    runs = (
-        db.query(RunLog)
-        .filter(RunLog.training_plan_id == training_plan.id)
-        .all()
-    )
+    runs = db.query(RunLog).filter(RunLog.training_plan_id == training_plan.id).all()
 
     if not runs:
         return {"has_data": False}
@@ -129,8 +127,11 @@ def get_completion_stats(
 
 
 def get_next_plan_cta(target_distance_km: float) -> dict[str, str]:
-    return _NEXT_PLAN_MAP.get(target_distance_km, {
-        "label": "New Plan",
-        "url": "/",
-        "message": "Keep the momentum going -- start your next training plan.",
-    })
+    return _NEXT_PLAN_MAP.get(
+        target_distance_km,
+        {
+            "label": "New Plan",
+            "url": "/",
+            "message": "Keep the momentum going -- start your next training plan.",
+        },
+    )

@@ -35,10 +35,7 @@ _DEFAULT_PACE_MIN_PER_KM_BY_TYPE = {
     "interval": 4.8,
     "hill": 5.0,
 }
-_KEY_DEFAULT_ZONE_BY_ID = {
-    w["id"]: w.get("pace_zone")
-    for w in WORKOUTS
-}
+_KEY_DEFAULT_ZONE_BY_ID = {w["id"]: w.get("pace_zone") for w in WORKOUTS}
 
 
 def _has_volume_steps(steps: list[dict]) -> bool:
@@ -158,7 +155,10 @@ def enrich_plan_data_with_ids(
                 if steps_distance_km > 0:
                     rounded_steps_km = round(steps_distance_km, 1)
                     current_distance = workout.get("distance", 0) or 0
-                    if current_distance <= 0 or abs(current_distance - rounded_steps_km) > 0.2:
+                    if (
+                        current_distance <= 0
+                        or abs(current_distance - rounded_steps_km) > 0.2
+                    ):
                         workout["distance"] = rounded_steps_km
 
                 distance = workout.get("distance", 0) or 0
@@ -187,10 +187,7 @@ def enrich_plan_data_with_ids(
     # the daily cards beside it.
     for week in plan_data:
         week["total_km"] = round(
-            sum(
-                (wo.get("distance") or 0)
-                for wo in week.get("daily_workouts", [])
-            ),
+            sum((wo.get("distance") or 0) for wo in week.get("daily_workouts", [])),
             1,
         )
         week["total_minutes"] = sum(
@@ -303,9 +300,7 @@ def get_feedback_map(logged_runs: list, db: Session) -> dict[str, Any]:
     try:
         run_ids = [r.id for r in logged_runs]
         feedbacks = (
-            db.query(RunFeedback)
-            .filter(RunFeedback.run_log_id.in_(run_ids))
-            .all()
+            db.query(RunFeedback).filter(RunFeedback.run_log_id.in_(run_ids)).all()
         )
         return {fb.run_log_id: fb for fb in feedbacks}
     except Exception as e:

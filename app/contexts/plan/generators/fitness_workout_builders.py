@@ -1,6 +1,6 @@
 """Workout builders for fitness plans — VO2max, tempo, cruise intervals, ladders, fartlek, time trials, long, easy."""
 
-from typing import Any, Dict, Optional
+from typing import Dict, Optional
 
 from app.core.training.vdot_calculator import VDOTCalculator
 from app.utils import format_pace as _shared_format_pace
@@ -38,7 +38,9 @@ def _cooldown_segment(cooldown_km: float, pace: float) -> dict:
     }
 
 
-def generate_vo2max_workout(zones: Dict, weekly_km: float, week: int, phase: str) -> Dict:
+def generate_vo2max_workout(
+    zones: Dict, weekly_km: float, week: int, phase: str
+) -> Dict:
     """Generate VO2max intervals (800m/1km repeats)."""
     target_pace = zones["zone_4_vo2max"]["pace"]
 
@@ -97,7 +99,9 @@ def generate_vo2max_workout(zones: Dict, weekly_km: float, week: int, phase: str
     }
 
 
-def generate_vo2max_ladder(zones: Dict, weekly_km: float, week: int, phase: str) -> Dict:
+def generate_vo2max_ladder(
+    zones: Dict, weekly_km: float, week: int, phase: str
+) -> Dict:
     """Generate VO2max ladder (e.g., 400-600-800-1000-800-600-400)."""
     target_pace = zones["zone_4_vo2max"]["pace"]
     warmup_pace = zones["zone_1_recovery"]["pace"]
@@ -150,7 +154,9 @@ def generate_vo2max_ladder(zones: Dict, weekly_km: float, week: int, phase: str)
     }
 
 
-def generate_cruise_interval_workout(zones: Dict, weekly_km: float, week: int, phase: str) -> Dict:
+def generate_cruise_interval_workout(
+    zones: Dict, weekly_km: float, week: int, phase: str
+) -> Dict:
     """Generate cruise intervals at threshold pace with short recovery."""
     target_pace = zones["zone_3_tempo"]["pace"]
     warmup_pace = zones["zone_1_recovery"]["pace"]
@@ -202,7 +208,9 @@ def generate_cruise_interval_workout(zones: Dict, weekly_km: float, week: int, p
     }
 
 
-def generate_tempo_workout(zones: Dict, weekly_km: float, week: int, phase: str) -> Dict:
+def generate_tempo_workout(
+    zones: Dict, weekly_km: float, week: int, phase: str
+) -> Dict:
     """Generate a tempo run at threshold pace."""
     target_pace = zones["zone_3_tempo"]["pace"]
 
@@ -249,7 +257,9 @@ def generate_tempo_workout(zones: Dict, weekly_km: float, week: int, phase: str)
     }
 
 
-def generate_fartlek_workout(zones: Dict, weekly_km: float, week: int, phase: str) -> Dict:
+def generate_fartlek_workout(
+    zones: Dict, weekly_km: float, week: int, phase: str
+) -> Dict:
     """Generate a fartlek (speed play) workout."""
     tempo_pace = zones["zone_3_tempo"]["pace"]
     hard_pace = zones["zone_4_vo2max"]["pace"]

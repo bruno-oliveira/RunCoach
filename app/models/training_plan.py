@@ -1,8 +1,18 @@
-from sqlalchemy import Boolean, Column, String, Float, Integer, DateTime, ForeignKey, Text, Index
+import uuid
+from datetime import datetime, timezone
+
+from sqlalchemy import (
+    Boolean,
+    Column,
+    DateTime,
+    Float,
+    ForeignKey,
+    Index,
+    Integer,
+    String,
+)
 from sqlalchemy.orm import Mapped, relationship
 from sqlalchemy.types import JSON
-from datetime import datetime, timezone
-import uuid
 
 from app.models.base import Base
 
@@ -10,8 +20,8 @@ from app.models.base import Base
 class TrainingPlan(Base):
     __tablename__ = "training_plans"
     __table_args__ = (
-        Index('idx_training_plan_user_id', 'user_id'),
-        Index('idx_training_plan_created_at', 'created_at'),
+        Index("idx_training_plan_user_id", "user_id"),
+        Index("idx_training_plan_created_at", "created_at"),
     )
 
     id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
@@ -20,7 +30,9 @@ class TrainingPlan(Base):
     target_distance = Column(String)
     weeks_duration = Column(Integer)
     max_runs_per_week = Column(Integer, default=4)
-    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
+    created_at = Column(
+        DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None)
+    )
     plan_data = Column(JSON)
     nutrition_plan_data = Column(JSON)
 
@@ -64,7 +76,9 @@ class TrainingPlan(Base):
     share_token = Column(String, unique=True, nullable=True, index=True)
 
     user: Mapped["User"] = relationship("User", back_populates="training_plans")
-    weekly_plans: Mapped[list["WeeklyPlan"]] = relationship("WeeklyPlan", back_populates="training_plan", cascade="all, delete-orphan")
+    weekly_plans: Mapped[list["WeeklyPlan"]] = relationship(
+        "WeeklyPlan", back_populates="training_plan", cascade="all, delete-orphan"
+    )
 
     @property
     def target_distance_km(self) -> float:

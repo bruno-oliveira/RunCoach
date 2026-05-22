@@ -5,20 +5,19 @@ and week_pulse_generator.
 """
 
 import logging
-from datetime import datetime, timedelta
 from typing import Any, Optional
 
 from sqlalchemy.orm import Session
 
-from app.models import DailyWorkout, TrainingPlan, User, WeeklyPlan
 from app.contexts.plan.adaptation import AdaptationService
-from app.contexts.runner.fitness.hr_zone_service import HRZoneService
-
 from app.contexts.runner.enrichment import completion_stats as _cs
+from app.contexts.runner.enrichment import week_pulse_generator as _pulse
+from app.contexts.runner.fitness.hr_zone_service import HRZoneService
+from app.core.training.vertical_simulation import compute_weekly_vertical_actuals
+from app.models import DailyWorkout, TrainingPlan, User, WeeklyPlan
+
 from . import plan_data_enricher as _enricher
 from .plan_date_utils import compute_current_week
-from app.contexts.runner.enrichment import week_pulse_generator as _pulse
-from app.core.training.vertical_simulation import compute_weekly_vertical_actuals
 
 logger = logging.getLogger(__name__)
 
@@ -67,9 +66,7 @@ class PlanViewService:
             training_plan.id, db
         )
 
-        logged_runs_map, logged_runs = self.get_logged_runs_map(
-            training_plan.id, db
-        )
+        logged_runs_map, logged_runs = self.get_logged_runs_map(training_plan.id, db)
 
         # Collected labels for optional features that failed to load.
         # Surfaced to the template so the UI can show a banner instead of
@@ -86,14 +83,14 @@ class PlanViewService:
 
         hints = {"skipped_count": 0, "rescheduled_count": 0, "needs_adjustment": False}
         if current_user:
-            hints = self.get_adjustment_hints(
-                training_plan, performance_analysis, db
-            )
+            hints = self.get_adjustment_hints(training_plan, performance_analysis, db)
 
         comp_stats = None
         next_plan_cta = None
         if training_plan.start_date and current_user:
-            from datetime import date as _date, datetime as _datetime
+            from datetime import date as _date
+            from datetime import datetime as _datetime
+
             sd = training_plan.start_date
             start_d = sd.date() if isinstance(sd, _datetime) else sd
             current_wk = compute_current_week(start_d, _date.today(), pre_start=0)
@@ -118,7 +115,9 @@ class PlanViewService:
 
         week_pulse = None
         if current_user and training_plan.start_date:
-            from datetime import date as _d2, datetime as _dt2
+            from datetime import date as _d2
+            from datetime import datetime as _dt2
+
             sd2 = training_plan.start_date
             start_d2 = sd2.date() if isinstance(sd2, _dt2) else sd2
             cw = compute_current_week(start_d2, _d2.today(), pre_start=0)
@@ -133,6 +132,7 @@ class PlanViewService:
         if current_user:
             try:
                 from app.contexts.runner.fitness.feedback_service import FeedbackService
+
                 weekly_feedback_summaries = FeedbackService.get_weekly_feedback_summary(
                     training_plan.id, current_user.id, db
                 )
@@ -142,7 +142,8 @@ class PlanViewService:
 
         weekly_vertical_actuals = {}
         if training_plan.start_date and (training_plan.plan_data or []):
-            from datetime import date as _d3, datetime as _dt3
+            from datetime import datetime as _dt3
+
             sd3 = training_plan.start_date
             start_d3 = sd3.date() if isinstance(sd3, _dt3) else sd3
             try:
@@ -179,7 +180,6 @@ class PlanViewService:
         training_plan: TrainingPlan,
         db: Session,
     ) -> dict[int, dict[str, Any]]:
-        plan_data = training_plan.plan_data or []
 
         weekly_plans = (
             db.query(WeeklyPlan)
@@ -206,7 +206,9 @@ class PlanViewService:
             )
 
             if original_total > 0 and abs(current_total - original_total) > 0.2:
-                delta_pct = round((current_total - original_total) / original_total * 100)
+                delta_pct = round(
+                    (current_total - original_total) / original_total * 100
+                )
                 direction = "up" if delta_pct > 0 else "down"
                 evolution[wp.week_number] = {
                     "direction": direction,

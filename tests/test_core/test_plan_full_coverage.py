@@ -11,11 +11,9 @@ Also tests schema validation for invalid combinations and API-level plan generat
 
 import pytest
 
+from app.constants import DISTANCE_NAMES, SUPPORTED_DISTANCES
 from app.contexts.plan.generators.plan_generator import TrainingPlanGenerator
 from app.schemas import PlanRequest
-from app.constants import SUPPORTED_DISTANCES, DISTANCE_NAMES
-from app.infrastructure.config import settings
-
 
 # ── Configuration: all valid ranges ────────────────────────────────────────
 
@@ -121,10 +119,13 @@ ALL_COMBOS = list(_all_combos())
 
 # ── Schema Validation Tests ───────────────────────────────────────────────
 
+
 class TestPlanRequestSchemaValidation:
     """Test PlanRequest schema accepts all valid combinations."""
 
-    @pytest.mark.parametrize("combo", ALL_COMBOS, ids=[_combo_id(c) for c in ALL_COMBOS])
+    @pytest.mark.parametrize(
+        "combo", ALL_COMBOS, ids=[_combo_id(c) for c in ALL_COMBOS]
+    )
     def test_valid_combos_accepted(self, combo):
         distance, weeks, mileage, runs = combo
         req = PlanRequest(
@@ -142,20 +143,23 @@ class TestPlanRequestSchemaValidation:
 class TestPlanRequestSchemaRejections:
     """Test PlanRequest schema rejects invalid combinations."""
 
-    @pytest.mark.parametrize("distance,invalid_weeks,reason", [
-        (5.0, 3, "below 5K minimum"),
-        (5.0, 4, "below 5K minimum (phase collapse guard)"),
-        (5.0, 5, "below 5K minimum (phase collapse guard)"),
-        (5.0, 17, "above 5K maximum"),
-        (10.0, 5, "below 10K minimum"),
-        (10.0, 17, "above 10K maximum"),
-        (21.1, 7, "below Half minimum"),
-        (21.1, 21, "above Half maximum"),
-        (30.0, 5, "below Trail minimum"),
-        (30.0, 23, "above Trail maximum"),
-        (42.2, 11, "below Marathon minimum"),
-        (42.2, 25, "above Marathon maximum"),
-    ])
+    @pytest.mark.parametrize(
+        "distance,invalid_weeks,reason",
+        [
+            (5.0, 3, "below 5K minimum"),
+            (5.0, 4, "below 5K minimum (phase collapse guard)"),
+            (5.0, 5, "below 5K minimum (phase collapse guard)"),
+            (5.0, 17, "above 5K maximum"),
+            (10.0, 5, "below 10K minimum"),
+            (10.0, 17, "above 10K maximum"),
+            (21.1, 7, "below Half minimum"),
+            (21.1, 21, "above Half maximum"),
+            (30.0, 5, "below Trail minimum"),
+            (30.0, 23, "above Trail maximum"),
+            (42.2, 11, "below Marathon minimum"),
+            (42.2, 25, "above Marathon maximum"),
+        ],
+    )
     def test_invalid_weeks_rejected(self, distance, invalid_weeks, reason):
         with pytest.raises(Exception):
             PlanRequest(
@@ -165,14 +169,17 @@ class TestPlanRequestSchemaRejections:
                 max_runs_per_week=4,
             )
 
-    @pytest.mark.parametrize("distance,invalid_runs,reason", [
-        (5.0, 1, "below minimum 2"),
-        (5.0, 7, "above maximum 6"),
-        (10.0, 1, "below minimum 2"),
-        (21.1, 2, "Half requires 3+"),
-        (30.0, 3, "Trail requires 4+"),
-        (42.2, 3, "Marathon requires 4+"),
-    ])
+    @pytest.mark.parametrize(
+        "distance,invalid_runs,reason",
+        [
+            (5.0, 1, "below minimum 2"),
+            (5.0, 7, "above maximum 6"),
+            (10.0, 1, "below minimum 2"),
+            (21.1, 2, "Half requires 3+"),
+            (30.0, 3, "Trail requires 4+"),
+            (42.2, 3, "Marathon requires 4+"),
+        ],
+    )
     def test_invalid_runs_rejected(self, distance, invalid_runs, reason):
         cfg = DISTANCE_CONFIG[distance]
         with pytest.raises(Exception):
@@ -183,15 +190,19 @@ class TestPlanRequestSchemaRejections:
                 max_runs_per_week=invalid_runs,
             )
 
-    @pytest.mark.parametrize("distance,low_mileage", [
-        (5.0, 4.0),
-        (10.0, 9.0),
-        (21.1, 14.0),
-        (30.0, 14.0),
-        (42.2, 24.0),
-    ])
+    @pytest.mark.parametrize(
+        "distance,low_mileage",
+        [
+            (5.0, 4.0),
+            (10.0, 9.0),
+            (21.1, 14.0),
+            (30.0, 14.0),
+            (42.2, 24.0),
+        ],
+    )
     def test_below_min_mileage_rejected(self, distance, low_mileage):
         from app.exceptions import InadequateBaseException
+
         cfg = DISTANCE_CONFIG[distance]
         with pytest.raises(InadequateBaseException):
             PlanRequest(
@@ -203,6 +214,7 @@ class TestPlanRequestSchemaRejections:
 
     def test_zero_mileage_5k_requires_8_weeks(self):
         from app.exceptions import InsufficientTimeException
+
         with pytest.raises(InsufficientTimeException):
             PlanRequest(
                 current_km=0,
@@ -222,6 +234,7 @@ class TestPlanRequestSchemaRejections:
 
     def test_zero_mileage_10k_requires_8_weeks(self):
         from app.exceptions import InsufficientTimeException
+
         with pytest.raises(InsufficientTimeException):
             PlanRequest(
                 current_km=0,
@@ -232,6 +245,7 @@ class TestPlanRequestSchemaRejections:
 
     def test_zero_mileage_rejected_for_half(self):
         from app.exceptions import ZeroMileageUnsupportedException
+
         with pytest.raises(ZeroMileageUnsupportedException):
             PlanRequest(
                 current_km=0,
@@ -242,6 +256,7 @@ class TestPlanRequestSchemaRejections:
 
     def test_zero_mileage_rejected_for_trail(self):
         from app.exceptions import ZeroMileageUnsupportedException
+
         with pytest.raises(ZeroMileageUnsupportedException):
             PlanRequest(
                 current_km=0,
@@ -252,6 +267,7 @@ class TestPlanRequestSchemaRejections:
 
     def test_zero_mileage_rejected_for_marathon(self):
         from app.exceptions import ZeroMileageUnsupportedException
+
         with pytest.raises(ZeroMileageUnsupportedException):
             PlanRequest(
                 current_km=0,
@@ -272,10 +288,13 @@ class TestPlanRequestSchemaRejections:
 
 # ── Plan Generation: All Combinations ─────────────────────────────────────
 
+
 class TestPlanGenerationAllCombinations:
     """Generate plans for ALL valid distance/weeks/mileage/runs combos."""
 
-    @pytest.mark.parametrize("combo", ALL_COMBOS, ids=[_combo_id(c) for c in ALL_COMBOS])
+    @pytest.mark.parametrize(
+        "combo", ALL_COMBOS, ids=[_combo_id(c) for c in ALL_COMBOS]
+    )
     def test_plan_generates_without_error(self, combo):
         distance, weeks, mileage, runs = combo
         gen = TrainingPlanGenerator()
@@ -287,7 +306,9 @@ class TestPlanGenerationAllCombinations:
         )
         assert len(plan) == weeks
 
-    @pytest.mark.parametrize("combo", ALL_COMBOS, ids=[_combo_id(c) for c in ALL_COMBOS])
+    @pytest.mark.parametrize(
+        "combo", ALL_COMBOS, ids=[_combo_id(c) for c in ALL_COMBOS]
+    )
     def test_plan_has_correct_week_count(self, combo):
         distance, weeks, mileage, runs = combo
         gen = TrainingPlanGenerator()
@@ -300,7 +321,9 @@ class TestPlanGenerationAllCombinations:
         week_numbers = [w["week"] for w in plan]
         assert week_numbers == list(range(1, weeks + 1))
 
-    @pytest.mark.parametrize("combo", ALL_COMBOS, ids=[_combo_id(c) for c in ALL_COMBOS])
+    @pytest.mark.parametrize(
+        "combo", ALL_COMBOS, ids=[_combo_id(c) for c in ALL_COMBOS]
+    )
     def test_plan_has_7_days_per_week(self, combo):
         distance, weeks, mileage, runs = combo
         gen = TrainingPlanGenerator()
@@ -313,7 +336,9 @@ class TestPlanGenerationAllCombinations:
         for week in plan:
             assert len(week["daily_workouts"]) == 7
 
-    @pytest.mark.parametrize("combo", ALL_COMBOS, ids=[_combo_id(c) for c in ALL_COMBOS])
+    @pytest.mark.parametrize(
+        "combo", ALL_COMBOS, ids=[_combo_id(c) for c in ALL_COMBOS]
+    )
     def test_run_count_respected(self, combo):
         distance, weeks, mileage, runs = combo
         gen = TrainingPlanGenerator()
@@ -325,14 +350,17 @@ class TestPlanGenerationAllCombinations:
         )
         for week in plan:
             run_days = [
-                w for w in week["daily_workouts"]
+                w
+                for w in week["daily_workouts"]
                 if w["type"] not in ("rest", "recovery")
             ]
             assert len(run_days) == runs, (
                 f"Week {week['week']}: {len(run_days)} runs, expected {runs}"
             )
 
-    @pytest.mark.parametrize("combo", ALL_COMBOS, ids=[_combo_id(c) for c in ALL_COMBOS])
+    @pytest.mark.parametrize(
+        "combo", ALL_COMBOS, ids=[_combo_id(c) for c in ALL_COMBOS]
+    )
     def test_every_week_has_long_run(self, combo):
         distance, weeks, mileage, runs = combo
         gen = TrainingPlanGenerator()
@@ -346,7 +374,9 @@ class TestPlanGenerationAllCombinations:
             longs = [w for w in week["daily_workouts"] if w["type"] == "long"]
             assert len(longs) == 1, f"Week {week['week']}: {len(longs)} long runs"
 
-    @pytest.mark.parametrize("combo", ALL_COMBOS, ids=[_combo_id(c) for c in ALL_COMBOS])
+    @pytest.mark.parametrize(
+        "combo", ALL_COMBOS, ids=[_combo_id(c) for c in ALL_COMBOS]
+    )
     def test_no_negative_distances(self, combo):
         distance, weeks, mileage, runs = combo
         gen = TrainingPlanGenerator()
@@ -360,7 +390,9 @@ class TestPlanGenerationAllCombinations:
             for w in week["daily_workouts"]:
                 assert w.get("distance", 0) >= 0
 
-    @pytest.mark.parametrize("combo", ALL_COMBOS, ids=[_combo_id(c) for c in ALL_COMBOS])
+    @pytest.mark.parametrize(
+        "combo", ALL_COMBOS, ids=[_combo_id(c) for c in ALL_COMBOS]
+    )
     def test_total_km_matches_workouts(self, combo):
         distance, weeks, mileage, runs = combo
         gen = TrainingPlanGenerator()
@@ -376,7 +408,9 @@ class TestPlanGenerationAllCombinations:
                 f"Week {week['week']}: total={week['total_km']}, sum={actual}"
             )
 
-    @pytest.mark.parametrize("combo", ALL_COMBOS, ids=[_combo_id(c) for c in ALL_COMBOS])
+    @pytest.mark.parametrize(
+        "combo", ALL_COMBOS, ids=[_combo_id(c) for c in ALL_COMBOS]
+    )
     def test_long_run_is_longest(self, combo):
         distance, weeks, mileage, runs = combo
         gen = TrainingPlanGenerator()
@@ -388,7 +422,9 @@ class TestPlanGenerationAllCombinations:
         )
         for week in plan:
             workouts = week["daily_workouts"]
-            longs = [w for w in workouts if w["type"] == "long" and w.get("distance", 0) > 0]
+            longs = [
+                w for w in workouts if w["type"] == "long" and w.get("distance", 0) > 0
+            ]
             if not longs:
                 continue
             long_d = longs[0]["distance"]
@@ -398,7 +434,9 @@ class TestPlanGenerationAllCombinations:
                         continue
                     assert w.get("distance", 0) <= long_d + 0.1
 
-    @pytest.mark.parametrize("combo", ALL_COMBOS, ids=[_combo_id(c) for c in ALL_COMBOS])
+    @pytest.mark.parametrize(
+        "combo", ALL_COMBOS, ids=[_combo_id(c) for c in ALL_COMBOS]
+    )
     def test_phase_assigned(self, combo):
         distance, weeks, mileage, runs = combo
         gen = TrainingPlanGenerator()
@@ -412,7 +450,9 @@ class TestPlanGenerationAllCombinations:
         for week in plan:
             assert week["phase"] in valid_phases
 
-    @pytest.mark.parametrize("combo", ALL_COMBOS, ids=[_combo_id(c) for c in ALL_COMBOS])
+    @pytest.mark.parametrize(
+        "combo", ALL_COMBOS, ids=[_combo_id(c) for c in ALL_COMBOS]
+    )
     def test_taper_week_has_reduced_volume(self, combo):
         distance, weeks, mileage, runs = combo
         gen = TrainingPlanGenerator()
@@ -437,6 +477,7 @@ class TestPlanGenerationAllCombinations:
 
 
 # ── Boundary Condition Tests ──────────────────────────────────────────────
+
 
 class TestBoundaryConditions:
     """Test edge cases at the boundaries of valid ranges."""
@@ -505,7 +546,11 @@ class TestBoundaryConditions:
             max_runs_per_week=cfg["min_runs"],
         )
         for week in plan:
-            run_days = [w for w in week["daily_workouts"] if w["type"] not in ("rest", "recovery")]
+            run_days = [
+                w
+                for w in week["daily_workouts"]
+                if w["type"] not in ("rest", "recovery")
+            ]
             assert len(run_days) == cfg["min_runs"]
 
     @pytest.mark.parametrize("distance", SUPPORTED_DISTANCES)
@@ -520,11 +565,16 @@ class TestBoundaryConditions:
             max_runs_per_week=5,
         )
         for week in plan:
-            run_days = [w for w in week["daily_workouts"] if w["type"] not in ("rest", "recovery")]
+            run_days = [
+                w
+                for w in week["daily_workouts"]
+                if w["type"] not in ("rest", "recovery")
+            ]
             assert len(run_days) == 5
 
 
 # ── API-Level Tests (via FastAPI TestClient) ──────────────────────────────
+
 
 class TestPlanGenerationAPI:
     """Test plan generation through the API endpoint."""
@@ -544,64 +594,82 @@ class TestPlanGenerationAPI:
         )
         return response
 
-    @pytest.mark.parametrize("distance,weeks,mileage,runs", [
-        (5.0, 6, 5.0, 2),
-        (5.0, 8, 15.0, 3),
-        (5.0, 12, 25.0, 4),
-        (5.0, 16, 40.0, 5),
-        (10.0, 6, 10.0, 2),
-        (10.0, 10, 20.0, 3),
-        (10.0, 14, 35.0, 4),
-        (10.0, 16, 50.0, 5),
-        (21.1, 8, 15.0, 3),
-        (21.1, 12, 25.0, 4),
-        (21.1, 16, 45.0, 5),
-        (21.1, 20, 70.0, 5),
-        (30.0, 6, 15.0, 4),
-        (30.0, 12, 30.0, 4),
-        (30.0, 16, 45.0, 5),
-        (30.0, 20, 60.0, 5),
-        (42.2, 12, 25.0, 4),
-        (42.2, 16, 40.0, 4),
-        (42.2, 20, 60.0, 5),
-        (42.2, 24, 100.0, 5),
-    ])
+    @pytest.mark.parametrize(
+        "distance,weeks,mileage,runs",
+        [
+            (5.0, 6, 5.0, 2),
+            (5.0, 8, 15.0, 3),
+            (5.0, 12, 25.0, 4),
+            (5.0, 16, 40.0, 5),
+            (10.0, 6, 10.0, 2),
+            (10.0, 10, 20.0, 3),
+            (10.0, 14, 35.0, 4),
+            (10.0, 16, 50.0, 5),
+            (21.1, 8, 15.0, 3),
+            (21.1, 12, 25.0, 4),
+            (21.1, 16, 45.0, 5),
+            (21.1, 20, 70.0, 5),
+            (30.0, 6, 15.0, 4),
+            (30.0, 12, 30.0, 4),
+            (30.0, 16, 45.0, 5),
+            (30.0, 20, 60.0, 5),
+            (42.2, 12, 25.0, 4),
+            (42.2, 16, 40.0, 4),
+            (42.2, 20, 60.0, 5),
+            (42.2, 24, 100.0, 5),
+        ],
+    )
     def test_api_generates_plan(self, client, distance, weeks, mileage, runs):
         """API should redirect to plan page on successful generation."""
         response = self._generate_via_api(client, mileage, distance, weeks, runs)
-        assert response.status_code == 303, f"Expected redirect, got {response.status_code}"
+        assert response.status_code == 303, (
+            f"Expected redirect, got {response.status_code}"
+        )
         assert "/plan/" in response.headers.get("location", "")
 
-    @pytest.mark.parametrize("distance,weeks,mileage,runs,expected_status", [
-        (5.0, 3, 10.0, 3, 200),
-        (10.0, 5, 15.0, 3, 200),
-        (21.1, 7, 20.0, 3, 200),
-        (30.0, 5, 20.0, 4, 200),
-        (42.2, 11, 30.0, 4, 200),
-    ])
-    def test_api_rejects_invalid_weeks(self, client, distance, weeks, mileage, runs, expected_status):
+    @pytest.mark.parametrize(
+        "distance,weeks,mileage,runs,expected_status",
+        [
+            (5.0, 3, 10.0, 3, 200),
+            (10.0, 5, 15.0, 3, 200),
+            (21.1, 7, 20.0, 3, 200),
+            (30.0, 5, 20.0, 4, 200),
+            (42.2, 11, 30.0, 4, 200),
+        ],
+    )
+    def test_api_rejects_invalid_weeks(
+        self, client, distance, weeks, mileage, runs, expected_status
+    ):
         """API should return error page for invalid weeks."""
         response = self._generate_via_api(client, mileage, distance, weeks, runs)
         assert response.status_code == expected_status
 
-    @pytest.mark.parametrize("distance,weeks,mileage,runs", [
-        (21.1, 12, 20.0, 2),
-        (30.0, 12, 20.0, 3),
-        (42.2, 16, 30.0, 3),
-    ])
-    def test_api_rejects_insufficient_runs(self, client, distance, weeks, mileage, runs):
+    @pytest.mark.parametrize(
+        "distance,weeks,mileage,runs",
+        [
+            (21.1, 12, 20.0, 2),
+            (30.0, 12, 20.0, 3),
+            (42.2, 16, 30.0, 3),
+        ],
+    )
+    def test_api_rejects_insufficient_runs(
+        self, client, distance, weeks, mileage, runs
+    ):
         """API should return error page for insufficient runs per week."""
         response = self._generate_via_api(client, mileage, distance, weeks, runs)
         assert response.status_code == 200
         assert "error" in response.text.lower() or "requires" in response.text.lower()
 
-    @pytest.mark.parametrize("distance,weeks,mileage,runs", [
-        (5.0, 8, 3.0, 3),
-        (10.0, 8, 5.0, 3),
-        (21.1, 12, 10.0, 4),
-        (30.0, 12, 10.0, 4),
-        (42.2, 16, 20.0, 4),
-    ])
+    @pytest.mark.parametrize(
+        "distance,weeks,mileage,runs",
+        [
+            (5.0, 8, 3.0, 3),
+            (10.0, 8, 5.0, 3),
+            (21.1, 12, 10.0, 4),
+            (30.0, 12, 10.0, 4),
+            (42.2, 16, 20.0, 4),
+        ],
+    )
     def test_api_rejects_low_mileage(self, client, distance, weeks, mileage, runs):
         """API should return error page for mileage below minimum."""
         response = self._generate_via_api(client, mileage, distance, weeks, runs)
@@ -611,10 +679,13 @@ class TestPlanGenerationAPI:
 
 # ── Mileage Progression Validation ────────────────────────────────────────
 
+
 class TestMileageProgression:
     """Validate mileage progression across all combinations."""
 
-    @pytest.mark.parametrize("combo", ALL_COMBOS, ids=[_combo_id(c) for c in ALL_COMBOS])
+    @pytest.mark.parametrize(
+        "combo", ALL_COMBOS, ids=[_combo_id(c) for c in ALL_COMBOS]
+    )
     def test_ten_percent_rule(self, combo):
         """No non-recovery week may exceed 12% over previous non-recovery week.
 
@@ -634,7 +705,8 @@ class TestMileageProgression:
 
         for week in plan:
             runs_list = [
-                w for w in week["daily_workouts"]
+                w
+                for w in week["daily_workouts"]
                 if w["type"] not in ("rest", "recovery", "strength", "cross_training")
                 and w.get("distance", 0) > 0
             ]
@@ -651,7 +723,9 @@ class TestMileageProgression:
             if not is_recovery and total > high_water:
                 high_water = total
 
-    @pytest.mark.parametrize("combo", ALL_COMBOS, ids=[_combo_id(c) for c in ALL_COMBOS])
+    @pytest.mark.parametrize(
+        "combo", ALL_COMBOS, ids=[_combo_id(c) for c in ALL_COMBOS]
+    )
     def test_easy_never_exceeds_long_run(self, combo):
         """No easy run may be longer than the long run in the same week."""
         distance, weeks, mileage, runs = combo
@@ -664,7 +738,11 @@ class TestMileageProgression:
         )
         for week in plan:
             workouts = week["daily_workouts"]
-            longs = [w for w in workouts if w.get("type") == "long" and w.get("distance", 0) > 0]
+            longs = [
+                w
+                for w in workouts
+                if w.get("type") == "long" and w.get("distance", 0) > 0
+            ]
             if not longs:
                 continue
             long_d = longs[0]["distance"]
@@ -674,7 +752,9 @@ class TestMileageProgression:
                         continue
                     assert w["distance"] <= long_d + 0.1
 
-    @pytest.mark.parametrize("combo", ALL_COMBOS, ids=[_combo_id(c) for c in ALL_COMBOS])
+    @pytest.mark.parametrize(
+        "combo", ALL_COMBOS, ids=[_combo_id(c) for c in ALL_COMBOS]
+    )
     def test_no_zero_distance_running_workouts(self, combo):
         """Running workouts should not have 0 distance (except final taper week)."""
         distance, weeks, mileage, runs = combo
@@ -696,7 +776,9 @@ class TestMileageProgression:
                         f"Week {week['week']}: {w['type']} has 0 distance"
                     )
 
-    @pytest.mark.parametrize("combo", ALL_COMBOS, ids=[_combo_id(c) for c in ALL_COMBOS])
+    @pytest.mark.parametrize(
+        "combo", ALL_COMBOS, ids=[_combo_id(c) for c in ALL_COMBOS]
+    )
     def test_quality_caps_hold(self, combo):
         """Quality workouts should not exceed 90% of the long run."""
         distance, weeks, mileage, runs = combo
@@ -709,18 +791,26 @@ class TestMileageProgression:
         )
         for week in plan:
             workouts = week["daily_workouts"]
-            longs = [w for w in workouts if w.get("type") == "long" and w.get("distance", 0) > 0]
+            longs = [
+                w
+                for w in workouts
+                if w.get("type") == "long" and w.get("distance", 0) > 0
+            ]
             if not longs:
                 continue
             long_d = longs[0]["distance"]
             for w in workouts:
-                if w.get("type") in ("tempo", "interval", "hill") and w.get("distance", 0) > 0:
+                if (
+                    w.get("type") in ("tempo", "interval", "hill")
+                    and w.get("distance", 0) > 0
+                ):
                     if w.get("duration_min"):
                         continue
                     assert w["distance"] <= long_d * 0.90
 
 
 # ── Distance-Specific Invariants ──────────────────────────────────────────
+
 
 class TestDistanceSpecificInvariants:
     """Test invariants that are specific to certain distances."""
@@ -762,7 +852,10 @@ class TestDistanceSpecificInvariants:
         """Marathon plans should reach adequate peak mileage."""
         gen = TrainingPlanGenerator()
         plan = gen.generate_plan(
-            current_km=25, target_distance=42.2, weeks=16, max_runs_per_week=4,
+            current_km=25,
+            target_distance=42.2,
+            weeks=16,
+            max_runs_per_week=4,
         )
         peak_km = max(w["total_km"] for w in plan if not w.get("is_recovery", False))
         assert peak_km >= 45
@@ -771,7 +864,10 @@ class TestDistanceSpecificInvariants:
         """Trail plans should accept flat terrain."""
         gen = TrainingPlanGenerator()
         plan = gen.generate_plan(
-            current_km=20, target_distance=30.0, weeks=10, max_runs_per_week=4,
+            current_km=20,
+            target_distance=30.0,
+            weeks=10,
+            max_runs_per_week=4,
         )
         assert len(plan) == 10
 
@@ -787,11 +883,16 @@ class TestDistanceSpecificInvariants:
             max_runs_per_week=2,
         )
         for week in plan:
-            run_days = [w for w in week["daily_workouts"] if w["type"] not in ("rest", "recovery")]
+            run_days = [
+                w
+                for w in week["daily_workouts"]
+                if w["type"] not in ("rest", "recovery")
+            ]
             assert len(run_days) == 2
 
 
 # ── Summary Statistics ────────────────────────────────────────────────────
+
 
 class TestCombinationCoverage:
     """Verify the test matrix covers all expected combinations."""

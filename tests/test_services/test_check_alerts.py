@@ -8,8 +8,8 @@ from sqlalchemy import create_engine, event
 from sqlalchemy.orm import Session, sessionmaker
 from sqlalchemy.pool import StaticPool
 
-from app.models import Base, User, TrainingPlan, WeeklyPlan, DailyWorkout, RunLog
 from app.contexts.plan.adaptation import AdaptationService
+from app.models import Base, DailyWorkout, RunLog, TrainingPlan, User, WeeklyPlan
 
 
 def _now():
@@ -104,20 +104,21 @@ def _link_workouts(db: Session, plan: TrainingPlan, user: User, weeks: list[int]
     )
     for wp in weekly_plans:
         workouts = (
-            db.query(DailyWorkout)
-            .filter(DailyWorkout.weekly_plan_id == wp.id)
-            .all()
+            db.query(DailyWorkout).filter(DailyWorkout.weekly_plan_id == wp.id).all()
         )
         for wo in workouts:
-            db.add(RunLog(
-                id=_uid(),
-                user_id=user.id,
-                training_plan_id=plan.id,
-                daily_workout_id=wo.id,
-                date=plan.start_date + timedelta(weeks=wp.week_number - 1, days=wo.day_of_week - 1),
-                distance_km=wo.distance_km,
-                duration_minutes=40,
-            ))
+            db.add(
+                RunLog(
+                    id=_uid(),
+                    user_id=user.id,
+                    training_plan_id=plan.id,
+                    daily_workout_id=wo.id,
+                    date=plan.start_date
+                    + timedelta(weeks=wp.week_number - 1, days=wo.day_of_week - 1),
+                    distance_km=wo.distance_km,
+                    duration_minutes=40,
+                )
+            )
     db.commit()
 
 
@@ -138,15 +139,18 @@ def _link_partial(db: Session, plan: TrainingPlan, user: User, week: int, count:
         .all()
     )
     for wo in workouts:
-        db.add(RunLog(
-            id=_uid(),
-            user_id=user.id,
-            training_plan_id=plan.id,
-            daily_workout_id=wo.id,
-            date=plan.start_date + timedelta(weeks=wp.week_number - 1, days=wo.day_of_week - 1),
-            distance_km=wo.distance_km,
-            duration_minutes=40,
-        ))
+        db.add(
+            RunLog(
+                id=_uid(),
+                user_id=user.id,
+                training_plan_id=plan.id,
+                daily_workout_id=wo.id,
+                date=plan.start_date
+                + timedelta(weeks=wp.week_number - 1, days=wo.day_of_week - 1),
+                distance_km=wo.distance_km,
+                duration_minutes=40,
+            )
+        )
     db.commit()
 
 
@@ -300,7 +304,11 @@ class TestEdgeCases:
             .all()
         )
         for wp in window_wps:
-            for wo in db.query(DailyWorkout).filter(DailyWorkout.weekly_plan_id == wp.id).all():
+            for wo in (
+                db.query(DailyWorkout)
+                .filter(DailyWorkout.weekly_plan_id == wp.id)
+                .all()
+            ):
                 wo.workout_type = "rest"
         db.commit()
 
@@ -346,13 +354,17 @@ class TestResetRecalibration:
         db.commit()
 
         # Manually change a future workout's distance to simulate recalibration
-        wp = db.query(WeeklyPlan).filter(
-            WeeklyPlan.training_plan_id == plan.id,
-            WeeklyPlan.week_number == 8,
-        ).one()
-        workouts = db.query(DailyWorkout).filter(
-            DailyWorkout.weekly_plan_id == wp.id
-        ).all()
+        wp = (
+            db.query(WeeklyPlan)
+            .filter(
+                WeeklyPlan.training_plan_id == plan.id,
+                WeeklyPlan.week_number == 8,
+            )
+            .one()
+        )
+        workouts = (
+            db.query(DailyWorkout).filter(DailyWorkout.weekly_plan_id == wp.id).all()
+        )
         for wo in workouts:
             wo.distance_km = 5.0  # changed from baseline 7.5
         db.commit()

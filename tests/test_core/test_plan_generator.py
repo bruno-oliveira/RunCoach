@@ -18,8 +18,9 @@ class TestTrainingPlanGenerator:
         """plan_generator and fitness_plan_generator must derive the 10% cap
         from mileage_progression.WEEK_OVER_WEEK_CAP, not hardcoded literals."""
         import inspect
-        from app.contexts.plan.generators import plan_generator as pg
+
         from app.contexts.plan.generators import fitness_plan_generator as fpg
+        from app.contexts.plan.generators import plan_generator as pg
 
         for module in (pg, fpg):
             src = inspect.getsource(module)
@@ -132,7 +133,16 @@ class TestTrainingPlanGenerator:
             max_runs_per_week=4,
         )
 
-        valid_types = {"easy", "long", "tempo", "interval", "rest", "hill", "strength", "recovery"}
+        valid_types = {
+            "easy",
+            "long",
+            "tempo",
+            "interval",
+            "rest",
+            "hill",
+            "strength",
+            "recovery",
+        }
 
         for week in plan:
             for workout in week.get("daily_workouts", []):
@@ -153,8 +163,9 @@ class TestTrainingPlanGenerator:
         for week in plan:
             for workout in week["daily_workouts"]:
                 if workout["type"] == "recovery":
-                    assert workout.get("distance", 0) == 0, \
+                    assert workout.get("distance", 0) == 0, (
                         f"Week {week['week']} Day {workout['day']}: Recovery has distance"
+                    )
 
     # ------------------------------------------------------------------
     # Weekly mileage and progression
@@ -168,7 +179,9 @@ class TestTrainingPlanGenerator:
             target = week["total_km"]
             actual = sum(w.get("distance", 0) for w in week["daily_workouts"])
             diff_pct = abs(actual - target) / target if target > 0 else 0
-            assert diff_pct <= 0.05, f"Week {week['week']}: {diff_pct:.1%} difference exceeds 5%"
+            assert diff_pct <= 0.05, (
+                f"Week {week['week']}: {diff_pct:.1%} difference exceeds 5%"
+            )
 
     def test_taper_week(self, plan_generator: TrainingPlanGenerator):
         """Test that the last week has reduced mileage (taper)."""
@@ -210,25 +223,38 @@ class TestTrainingPlanGenerator:
         for i in range(1, len(volumes)):
             if phases[i] != phases[i - 1]:
                 continue
-            prev_change = (volumes[i - 1] - volumes[i - 2]) / volumes[i - 2] if i > 1 else 0
+            prev_change = (
+                (volumes[i - 1] - volumes[i - 2]) / volumes[i - 2] if i > 1 else 0
+            )
             if prev_change < -0.20:
                 continue
             curr_change = (volumes[i] - volumes[i - 1]) / volumes[i - 1]
             if curr_change > 0:
-                assert curr_change <= 0.20, \
+                assert curr_change <= 0.20, (
                     f"Week {i + 1}: {curr_change:.1%} increase exceeds 20% safety limit"
+                )
 
-    def test_peak_mileage_consistent_with_length(self, plan_generator: TrainingPlanGenerator):
+    def test_peak_mileage_consistent_with_length(
+        self, plan_generator: TrainingPlanGenerator
+    ):
         """Peak mileage should scale with plan length."""
-        plan_8 = plan_generator.generate_plan(current_km=10, target_distance=10, weeks=8)
-        plan_12 = plan_generator.generate_plan(current_km=10, target_distance=10, weeks=12)
-        plan_17 = plan_generator.generate_plan(current_km=10, target_distance=10, weeks=17)
+        plan_8 = plan_generator.generate_plan(
+            current_km=10, target_distance=10, weeks=8
+        )
+        plan_12 = plan_generator.generate_plan(
+            current_km=10, target_distance=10, weeks=12
+        )
+        plan_17 = plan_generator.generate_plan(
+            current_km=10, target_distance=10, weeks=17
+        )
 
         peak_8 = max(w["total_km"] for w in plan_8)
         peak_12 = max(w["total_km"] for w in plan_12)
         peak_17 = max(w["total_km"] for w in plan_17)
 
-        assert peak_17 > peak_12 > peak_8, "Peak mileage should increase with longer plans"
+        assert peak_17 > peak_12 > peak_8, (
+            "Peak mileage should increase with longer plans"
+        )
 
     # ------------------------------------------------------------------
     # Phase calculation
@@ -242,14 +268,18 @@ class TestTrainingPlanGenerator:
         assert phases["base"] >= 2
         assert phases["build"] >= 2
 
-    def test_phase_calculation_17_weeks_marathon(self, plan_generator: TrainingPlanGenerator):
+    def test_phase_calculation_17_weeks_marathon(
+        self, plan_generator: TrainingPlanGenerator
+    ):
         """Marathon 17-week plan: 3-week taper, longer build."""
         phases = phase_calculator.calculate_phases(17, target_distance=42.2)
         assert sum(phases.values()) == 17
         assert phases["taper"] == 3
         assert phases["build"] >= phases["base"]
 
-    def test_phase_calculation_10_weeks_half(self, plan_generator: TrainingPlanGenerator):
+    def test_phase_calculation_10_weeks_half(
+        self, plan_generator: TrainingPlanGenerator
+    ):
         """Half marathon 10-week plan: 2-week taper."""
         phases = phase_calculator.calculate_phases(10, target_distance=21.1)
         assert sum(phases.values()) == 10
@@ -287,7 +317,9 @@ class TestTrainingPlanGenerator:
 
         # Verify plan marks recovery weeks correctly and they show reduced volume
         recovery_indices = [i for i, w in enumerate(plan) if w.get("is_recovery")]
-        assert len(recovery_indices) >= 1, "16-week plan should have at least one recovery week"
+        assert len(recovery_indices) >= 1, (
+            "16-week plan should have at least one recovery week"
+        )
 
         for week_idx in recovery_indices:
             if week_idx == 0:
@@ -316,8 +348,9 @@ class TestTrainingPlanGenerator:
             schedule = {w["day"]: w["type"] for w in week["daily_workouts"]}
             long_run_day = next((d for d, t in schedule.items() if t == "long"), None)
             if long_run_day:
-                assert schedule.get(long_run_day - 1) == "rest", \
+                assert schedule.get(long_run_day - 1) == "rest", (
                     f"Week {week['week']}: Long run on day {long_run_day} not preceded by rest"
+                )
 
     def test_long_run_after_recovery(self, plan_generator: TrainingPlanGenerator):
         """Verify long run is followed by recovery rest."""
@@ -326,8 +359,9 @@ class TestTrainingPlanGenerator:
             schedule = {w["day"]: w["type"] for w in week["daily_workouts"]}
             long_run_day = next((d for d, t in schedule.items() if t == "long"), None)
             if long_run_day:
-                assert schedule.get(long_run_day + 1) in ["rest", "recovery"], \
+                assert schedule.get(long_run_day + 1) in ["rest", "recovery"], (
                     f"Week {week['week']}: Long run on day {long_run_day} not followed by rest/recovery"
+                )
 
     def test_recovery_week_ratio_reduction(self, plan_generator: TrainingPlanGenerator):
         """Test that recovery weeks have reduced long run ratios."""
@@ -338,15 +372,22 @@ class TestTrainingPlanGenerator:
             prev_week = plan[week_idx - 1]
 
             if current_week["is_recovery"] and not prev_week["is_recovery"]:
-                prev_long = next((w for w in prev_week["daily_workouts"] if w["type"] == "long"), None)
-                curr_long = next((w for w in current_week["daily_workouts"] if w["type"] == "long"), None)
+                prev_long = next(
+                    (w for w in prev_week["daily_workouts"] if w["type"] == "long"),
+                    None,
+                )
+                curr_long = next(
+                    (w for w in current_week["daily_workouts"] if w["type"] == "long"),
+                    None,
+                )
 
                 if prev_long and curr_long:
                     prev_ratio = prev_long["distance"] / prev_week["total_km"]
                     curr_ratio = curr_long["distance"] / current_week["total_km"]
                     actual_reduction = (prev_ratio - curr_ratio) / prev_ratio
-                    assert 0.03 <= actual_reduction <= 0.25, \
+                    assert 0.03 <= actual_reduction <= 0.25, (
                         f"Week {current_week['week']}: Recovery ratio reduction {actual_reduction:.1%} outside expected range"
+                    )
 
     # ------------------------------------------------------------------
     # Workout-type placement rules
@@ -354,14 +395,18 @@ class TestTrainingPlanGenerator:
 
     def test_limited_quality_in_base(self, plan_generator: TrainingPlanGenerator):
         """Base phase allows at most 1 light quality session (strides/threshold)."""
-        plan = plan_generator.generate_plan(current_km=10, target_distance=10, weeks=12,
-                                            max_runs_per_week=4)
+        plan = plan_generator.generate_plan(
+            current_km=10, target_distance=10, weeks=12, max_runs_per_week=4
+        )
         for week in plan:
             if week["phase"] == "base":
                 workout_types = [w["type"] for w in week["daily_workouts"]]
-                quality_count = sum(1 for t in workout_types if t in ("interval", "tempo", "hill"))
-                assert quality_count <= 1, \
+                quality_count = sum(
+                    1 for t in workout_types if t in ("interval", "tempo", "hill")
+                )
+                assert quality_count <= 1, (
                     f"Week {week['week']}: base phase has {quality_count} quality workouts (max 1)"
+                )
 
     def test_strength_on_easy_days_only(self, plan_generator: TrainingPlanGenerator):
         """Strength training should only be on easy run days."""
@@ -369,8 +414,9 @@ class TestTrainingPlanGenerator:
         for week in plan:
             for workout in week["daily_workouts"]:
                 if workout.get("strength_session"):
-                    assert workout["type"] == "easy", \
+                    assert workout["type"] == "easy", (
                         f"Strength session on {workout['type']} day (should be easy only)"
+                    )
 
     def test_swimming_in_base_build_only(self, plan_generator: TrainingPlanGenerator):
         """Swimming should only be in base/build phases."""
@@ -379,8 +425,9 @@ class TestTrainingPlanGenerator:
             if week["phase"] in ["peak", "taper"]:
                 for workout in week["daily_workouts"]:
                     swimming = workout.get("optional_cross_training", {}).get("type")
-                    assert swimming != "swimming_cross_training", \
+                    assert swimming != "swimming_cross_training", (
                         f"Week {week['week']}: Swimming in {week['phase']} phase"
+                    )
 
     # ------------------------------------------------------------------
     # Training enrichments (tips, strength)
@@ -413,7 +460,10 @@ class TestTrainingPlanGenerator:
     def test_10k_race_with_10km_base(self, plan_generator: TrainingPlanGenerator):
         """Regression test for user feedback scenario."""
         plan = plan_generator.generate_plan(
-            current_km=10, target_distance=10, weeks=12, max_runs_per_week=4,
+            current_km=10,
+            target_distance=10,
+            weeks=12,
+            max_runs_per_week=4,
         )
 
         peak_km = max(week["total_km"] for week in plan)
@@ -428,43 +478,82 @@ class TestTrainingPlanGenerator:
         assert max_long_run <= 15, f"Long run {max_long_run}km too long for 10K race"
 
         for week in plan:
-            run_days = sum(1 for w in week["daily_workouts"] if w["type"] not in ["rest", "recovery"])
+            run_days = sum(
+                1
+                for w in week["daily_workouts"]
+                if w["type"] not in ["rest", "recovery"]
+            )
             assert run_days == 4, f"Week {week['week']} has {run_days} runs, expected 4"
 
     def test_max_runs_per_week_constraint(self, plan_generator: TrainingPlanGenerator):
         """Test that max_runs_per_week constraint is respected for all values."""
         for max_runs in [3, 4, 5, 6]:
             plan = plan_generator.generate_plan(
-                current_km=20.0, target_distance=10, weeks=8, max_runs_per_week=max_runs,
+                current_km=20.0,
+                target_distance=10,
+                weeks=8,
+                max_runs_per_week=max_runs,
             )
             for week in plan:
-                run_days = sum(1 for w in week["daily_workouts"] if w["type"] not in ["rest", "recovery"])
-                assert run_days == max_runs, \
+                run_days = sum(
+                    1
+                    for w in week["daily_workouts"]
+                    if w["type"] not in ["rest", "recovery"]
+                )
+                assert run_days == max_runs, (
                     f"Week {week['week']} has {run_days} runs, expected {max_runs}"
-                long_runs = sum(1 for w in week["daily_workouts"] if w["type"] == "long")
+                )
+                long_runs = sum(
+                    1 for w in week["daily_workouts"] if w["type"] == "long"
+                )
                 assert long_runs >= 1, f"Week {week['week']} has no long run"
 
-    def test_workout_distribution_with_different_max_runs(self, plan_generator: TrainingPlanGenerator):
+    def test_workout_distribution_with_different_max_runs(
+        self, plan_generator: TrainingPlanGenerator
+    ):
         """Test _get_workout_distribution() with different max_runs values."""
         distribution_3 = workout_distribution.get_workout_distribution(
-            10, 3, phase="build", week_number=3, target_distance=10.0,
+            10,
+            3,
+            phase="build",
+            week_number=3,
+            target_distance=10.0,
         )
         assert distribution_3["long"] == 1
-        assert sum(v for k, v in distribution_3.items() if k not in ["rest", "recovery"]) <= 3
+        assert (
+            sum(v for k, v in distribution_3.items() if k not in ["rest", "recovery"])
+            <= 3
+        )
 
         distribution_4 = workout_distribution.get_workout_distribution(
-            10, 4, phase="build", week_number=3, target_distance=10.0,
+            10,
+            4,
+            phase="build",
+            week_number=3,
+            target_distance=10.0,
         )
         assert distribution_4["long"] == 1
-        assert sum(v for k, v in distribution_4.items() if k not in ["rest", "recovery"]) <= 4
+        assert (
+            sum(v for k, v in distribution_4.items() if k not in ["rest", "recovery"])
+            <= 4
+        )
 
         distribution_6 = workout_distribution.get_workout_distribution(
-            10, 6, phase="build", week_number=3, target_distance=10.0,
+            10,
+            6,
+            phase="build",
+            week_number=3,
+            target_distance=10.0,
         )
         assert distribution_6["long"] == 1
-        assert sum(v for k, v in distribution_6.items() if k not in ["rest", "recovery"]) <= 6
+        assert (
+            sum(v for k, v in distribution_6.items() if k not in ["rest", "recovery"])
+            <= 6
+        )
 
-    def test_get_peak_mileage_with_various_bases(self, plan_generator: TrainingPlanGenerator):
+    def test_get_peak_mileage_with_various_bases(
+        self, plan_generator: TrainingPlanGenerator
+    ):
         """Test _get_peak_mileage() with various base/target combinations."""
         peak_low = mileage_progression.get_peak_mileage(10, 10, 12)
         assert 20 <= peak_low <= 30
@@ -475,7 +564,9 @@ class TestTrainingPlanGenerator:
         peak_marathon = mileage_progression.get_peak_mileage(42.2, 40, 16)
         assert 60 <= peak_marathon <= 80
 
-    def test_calculate_long_run_distance_caps(self, plan_generator: TrainingPlanGenerator):
+    def test_calculate_long_run_distance_caps(
+        self, plan_generator: TrainingPlanGenerator
+    ):
         """Test _calculate_long_run_distance() respects hard ceilings."""
         assert long_run_calculator.calculate_long_run_distance(50, 5) <= 14
         assert long_run_calculator.calculate_long_run_distance(60, 10) <= 22
@@ -488,37 +579,51 @@ class TestTrainingPlanGenerator:
 
     def test_long_run_progression(self, plan_generator: TrainingPlanGenerator):
         """Test that long run distances increase progressively through plan."""
-        plan = plan_generator.generate_plan(current_km=20, target_distance=21.1, weeks=12)
+        plan = plan_generator.generate_plan(
+            current_km=20, target_distance=21.1, weeks=12
+        )
 
         long_runs = []
         for week in plan:
             lr = next((w for w in week["daily_workouts"] if w["type"] == "long"), None)
             if lr:
-                long_runs.append({
-                    "week": week["week"],
-                    "phase": week["phase"],
-                    "is_recovery": week["is_recovery"],
-                    "distance": lr["distance"],
-                    "ratio": lr["distance"] / week["total_km"],
-                })
+                long_runs.append(
+                    {
+                        "week": week["week"],
+                        "phase": week["phase"],
+                        "is_recovery": week["is_recovery"],
+                        "distance": lr["distance"],
+                        "ratio": lr["distance"] / week["total_km"],
+                    }
+                )
 
         for phase in ["base", "build", "peak"]:
-            phase_runs = [r for r in long_runs if r["phase"] == phase and not r["is_recovery"]]
+            phase_runs = [
+                r for r in long_runs if r["phase"] == phase and not r["is_recovery"]
+            ]
             if len(phase_runs) > 1:
                 for i in range(1, len(phase_runs)):
-                    assert phase_runs[i]["distance"] >= phase_runs[i - 1]["distance"] * 0.95, \
-                        f"Long run decreased in {phase} phase"
+                    assert (
+                        phase_runs[i]["distance"]
+                        >= phase_runs[i - 1]["distance"] * 0.95
+                    ), f"Long run decreased in {phase} phase"
                     assert phase_runs[i]["ratio"] >= phase_runs[i - 1]["ratio"] - 0.03
 
     def test_phase_distance_distribution(self, plan_generator: TrainingPlanGenerator):
         """Verify progressive long run ratios with phase-appropriate ranges."""
-        plan = plan_generator.generate_plan(current_km=30, target_distance=21.1, weeks=16)
+        plan = plan_generator.generate_plan(
+            current_km=30, target_distance=21.1, weeks=16
+        )
 
         for week in plan:
             phase = week["phase"]
-            min_ratio, max_ratio = long_run_calculator.get_long_run_ratio_range(phase, 21.1, 16)
+            min_ratio, max_ratio = long_run_calculator.get_long_run_ratio_range(
+                phase, 21.1, 16
+            )
 
-            long_run = next((w for w in week["daily_workouts"] if w["type"] == "long"), None)
+            long_run = next(
+                (w for w in week["daily_workouts"] if w["type"] == "long"), None
+            )
             if long_run:
                 long_pct = long_run["distance"] / week["total_km"]
 
@@ -531,31 +636,42 @@ class TestTrainingPlanGenerator:
                 else:
                     tolerance = 0.08
 
-                assert long_pct <= max_ratio + tolerance, \
+                assert long_pct <= max_ratio + tolerance, (
                     f"Week {week['week']} ({phase}): Long run {long_pct:.1%} exceeds maximum {max_ratio:.1%}"
+                )
                 if phase not in ["peak"]:
-                    assert long_pct >= min_ratio - tolerance, \
+                    assert long_pct >= min_ratio - tolerance, (
                         f"Week {week['week']} ({phase}): Long run {long_pct:.1%} below minimum {min_ratio:.1%}"
+                    )
 
     # ------------------------------------------------------------------
     # Improvement verification tests
     # ------------------------------------------------------------------
 
-    def test_base_phase_has_quality_session(self, plan_generator: TrainingPlanGenerator):
+    def test_base_phase_has_quality_session(
+        self, plan_generator: TrainingPlanGenerator
+    ):
         """Base phase should have exactly 1 quality session for 4+ run days."""
-        plan = plan_generator.generate_plan(current_km=25, target_distance=10, weeks=12,
-                                            max_runs_per_week=4)
-        base_non_recovery = [w for w in plan if w["phase"] == "base" and not w["is_recovery"]]
+        plan = plan_generator.generate_plan(
+            current_km=25, target_distance=10, weeks=12, max_runs_per_week=4
+        )
+        base_non_recovery = [
+            w for w in plan if w["phase"] == "base" and not w["is_recovery"]
+        ]
         assert base_non_recovery, "Plan should have non-recovery base weeks"
         for week in base_non_recovery:
             workout_types = [w["type"] for w in week["daily_workouts"]]
-            quality_count = sum(1 for t in workout_types if t in ("interval", "tempo", "hill"))
-            assert quality_count == 1, \
+            quality_count = sum(
+                1 for t in workout_types if t in ("interval", "tempo", "hill")
+            )
+            assert quality_count == 1, (
                 f"Week {week['week']}: base phase has {quality_count} quality (expected 1)"
+            )
 
     def test_5k_two_week_taper(self, plan_generator: TrainingPlanGenerator):
         """5K/10K plans of 8+ weeks should have 2-week taper."""
         from app.exceptions import InsufficientTimeException
+
         for dist in [5.0, 10.0]:
             phases = phase_calculator.calculate_phases(8, target_distance=dist)
             assert phases["taper"] == 2, f"{dist}km 8wk should have 2-week taper"
@@ -565,46 +681,72 @@ class TestTrainingPlanGenerator:
     def test_two_run_quality_in_build_peak(self, plan_generator: TrainingPlanGenerator):
         """2-run plans should have 1 quality session in build/peak phases."""
         plan = plan_generator.generate_plan(
-            current_km=15, target_distance=5.0, weeks=8, max_runs_per_week=2,
+            current_km=15,
+            target_distance=5.0,
+            weeks=8,
+            max_runs_per_week=2,
         )
         quality_found = False
         for week in plan:
             if week["phase"] in ("build", "peak") and not week["is_recovery"]:
                 workout_types = [w["type"] for w in week["daily_workouts"]]
-                quality_count = sum(1 for t in workout_types if t in ("interval", "tempo", "hill"))
-                assert quality_count == 1, \
+                quality_count = sum(
+                    1 for t in workout_types if t in ("interval", "tempo", "hill")
+                )
+                assert quality_count == 1, (
                     f"Week {week['week']} ({week['phase']}): expected 1 quality, got {quality_count}"
+                )
                 quality_found = True
         assert quality_found, "Plan should have build/peak weeks with quality"
 
-    def test_low_volume_carries_duration_hint(self, plan_generator: TrainingPlanGenerator):
+    def test_low_volume_carries_duration_hint(
+        self, plan_generator: TrainingPlanGenerator
+    ):
         """Sub-3km easies must carry a duration_min UX hint after the post-build pass."""
         plan = plan_generator.generate_plan(
-            current_km=5.0, target_distance=5.0, weeks=8, max_runs_per_week=3,
+            current_km=5.0,
+            target_distance=5.0,
+            weeks=8,
+            max_runs_per_week=3,
         )
         found_short_easy = False
         for week in plan:
             for workout in week["daily_workouts"]:
                 if workout["type"] == "easy" and 0 < workout.get("distance", 0) < 3.0:
-                    assert "duration_min" in workout, \
+                    assert "duration_min" in workout, (
                         f"W{week['week']} D{workout['day']}: short easy should carry duration_min"
+                    )
                     assert workout["duration_min"] > 0
                     found_short_easy = True
         assert found_short_easy, "Low-volume plan should have at least one sub-3km easy"
 
-    def test_marathon_adequate_peak_and_long_run(self, plan_generator: TrainingPlanGenerator):
+    def test_marathon_adequate_peak_and_long_run(
+        self, plan_generator: TrainingPlanGenerator
+    ):
         """Marathon plans should reach adequate peak mileage and long run distances."""
         plan = plan_generator.generate_plan(
-            current_km=25, target_distance=42.2, weeks=16, max_runs_per_week=4,
+            current_km=25,
+            target_distance=42.2,
+            weeks=16,
+            max_runs_per_week=4,
         )
         peak_km = max(w["total_km"] for w in plan if not w.get("is_recovery", False))
         assert peak_km >= 45, f"Marathon peak {peak_km}km is too low (need >=45)"
         max_long = max(
-            d["distance"] for w in plan for d in w["daily_workouts"] if d["type"] == "long"
+            d["distance"]
+            for w in plan
+            for d in w["daily_workouts"]
+            if d["type"] == "long"
         )
-        assert max_long >= 25, f"Marathon max long run {max_long}km is too short (need >=25)"
+        assert max_long >= 25, (
+            f"Marathon max long run {max_long}km is too short (need >=25)"
+        )
 
-    def test_marathon_has_multiple_peak_weeks(self, plan_generator: TrainingPlanGenerator):
+    def test_marathon_has_multiple_peak_weeks(
+        self, plan_generator: TrainingPlanGenerator
+    ):
         """Marathon plans should have at least 2 peak weeks."""
         phases = phase_calculator.calculate_phases(16, target_distance=42.2)
-        assert phases["peak"] >= 2, f"Marathon 16wk has {phases['peak']} peak weeks (need >=2)"
+        assert phases["peak"] >= 2, (
+            f"Marathon 16wk has {phases['peak']} peak weeks (need >=2)"
+        )

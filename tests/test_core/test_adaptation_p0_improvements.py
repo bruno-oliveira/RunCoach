@@ -8,14 +8,16 @@ from sqlalchemy import create_engine, event
 from sqlalchemy.orm import Session, sessionmaker
 from sqlalchemy.pool import StaticPool
 
-from app.models import Base, User, TrainingPlan, WeeklyPlan, DailyWorkout, RunLog
 from app.contexts.plan.adaptation.plan_adjuster import _get_current_phase
 from app.contexts.plan.adaptation.signal_computer import (
-    _PHASE_WEIGHTS,
-    _MIN_RUNS_PER_TYPE,
     _BAYESIAN_SHRINKAGE_PER_RUN,
+    _MIN_RUNS_PER_TYPE,
+    _PHASE_WEIGHTS,
+)
+from app.contexts.plan.adaptation.signal_computer import (
     compute_adjustment_signals as _compute_adjustment_signals,
 )
+from app.models import Base, DailyWorkout, RunLog, TrainingPlan, User, WeeklyPlan
 
 
 def _now():
@@ -88,11 +90,13 @@ def _create_plan_with_phases(
             "daily_workouts": [],
         }
         for i, wtype in enumerate(workout_types):
-            week_data["daily_workouts"].append({
-                "day": i + 1,
-                "type": wtype,
-                "distance": 8.0 if wtype != "long" else 14.0,
-            })
+            week_data["daily_workouts"].append(
+                {
+                    "day": i + 1,
+                    "type": wtype,
+                    "distance": 8.0 if wtype != "long" else 14.0,
+                }
+            )
         plan_data.append(week_data)
 
     plan = TrainingPlan(
@@ -170,17 +174,19 @@ def _add_runs_for_weeks(
             run_date = plan.start_date + timedelta(
                 weeks=wp.week_number - 1, days=wo.day_of_week - 1
             )
-            db.add(RunLog(
-                id=_uid(),
-                user_id=user.id,
-                training_plan_id=plan.id,
-                daily_workout_id=wo.id,
-                date=run_date,
-                distance_km=wo.distance_km * distance_multiplier,
-                duration_minutes=40,
-                perceived_effort=effort,
-                workout_type=wo.workout_type,
-            ))
+            db.add(
+                RunLog(
+                    id=_uid(),
+                    user_id=user.id,
+                    training_plan_id=plan.id,
+                    daily_workout_id=wo.id,
+                    date=run_date,
+                    distance_km=wo.distance_km * distance_multiplier,
+                    duration_minutes=40,
+                    perceived_effort=effort,
+                    workout_type=wo.workout_type,
+                )
+            )
     db.commit()
 
 
@@ -204,7 +210,14 @@ class TestPhaseWeights:
 
     def test_build_phase_balanced(self):
         v, e, c, hr, fb, rd = _PHASE_WEIGHTS["build"]
-        assert v == 0.33 and e == 0.20 and c == 0.16 and hr == 0.14 and fb == 0.09 and rd == 0.08
+        assert (
+            v == 0.33
+            and e == 0.20
+            and c == 0.16
+            and hr == 0.14
+            and fb == 0.09
+            and rd == 0.08
+        )
 
     def test_peak_phase_emphasizes_effort(self):
         v, e, c, hr, fb, rd = _PHASE_WEIGHTS["peak"]
@@ -296,6 +309,7 @@ class TestComputeAdjustmentSignals:
     def _make_mock_run(self, distance, effort, workout_type, date):
         class MockRun:
             pass
+
         run = MockRun()
         run.distance_km = distance
         run.perceived_effort = effort
@@ -306,6 +320,7 @@ class TestComputeAdjustmentSignals:
     def _make_mock_workout(self, workout_type, distance, day_of_week, week_number):
         class MockWorkout:
             pass
+
         wo = MockWorkout()
         wo.workout_type = workout_type
         wo.distance_km = distance
@@ -318,14 +333,22 @@ class TestComputeAdjustmentSignals:
     def test_base_phase_uses_correct_weights(self, db):
         """Base phase should use (0.40, 0.20, 0.20, 0.12, 0.08) weights."""
         user, plan = _create_plan_with_phases(
-            db, weeks=8, weeks_ago=3,
+            db,
+            weeks=8,
+            weeks_ago=3,
             phases={1: "base", 2: "base", 3: "base"},
         )
 
-        _add_runs_for_weeks(db, plan, user, [1, 2, 3], effort=5.0, distance_multiplier=1.0)
+        _add_runs_for_weeks(
+            db, plan, user, [1, 2, 3], effort=5.0, distance_multiplier=1.0
+        )
 
         today = _today()
-        start = plan.start_date.date() if hasattr(plan.start_date, 'date') else plan.start_date
+        start = (
+            plan.start_date.date()
+            if hasattr(plan.start_date, "date")
+            else plan.start_date
+        )
 
         past_workouts = []
         past_workout_ids = set()
@@ -353,15 +376,16 @@ class TestComputeAdjustmentSignals:
             weeks_ago = max(0, (today - scheduled_date).days) / 7.0
             return 2.0 ** (-weeks_ago / 3.0)
 
-        all_runs = (
-            db.query(RunLog)
-            .filter(RunLog.training_plan_id == plan.id)
-            .all()
-        )
+        all_runs = db.query(RunLog).filter(RunLog.training_plan_id == plan.id).all()
 
         signals = _compute_adjustment_signals(
-            all_runs, past_workouts, past_workout_ids,
-            today, plan.id, db, _recency_weight,
+            all_runs,
+            past_workouts,
+            past_workout_ids,
+            today,
+            plan.id,
+            db,
+            _recency_weight,
             current_phase="base",
             hr_zones=[
                 {"zone": 1, "min_bpm": 95, "max_bpm": 114},
@@ -381,14 +405,22 @@ class TestComputeAdjustmentSignals:
     def test_taper_phase_uses_correct_weights(self, db):
         """Taper phase should use (0.12, 0.22, 0.25, 0.25, 0.16) weights."""
         user, plan = _create_plan_with_phases(
-            db, weeks=12, weeks_ago=10,
+            db,
+            weeks=12,
+            weeks_ago=10,
             phases={10: "taper", 11: "taper", 12: "taper"},
         )
 
-        _add_runs_for_weeks(db, plan, user, [10, 11, 12], effort=5.0, distance_multiplier=1.0)
+        _add_runs_for_weeks(
+            db, plan, user, [10, 11, 12], effort=5.0, distance_multiplier=1.0
+        )
 
         today = _today()
-        start = plan.start_date.date() if hasattr(plan.start_date, 'date') else plan.start_date
+        start = (
+            plan.start_date.date()
+            if hasattr(plan.start_date, "date")
+            else plan.start_date
+        )
 
         past_workouts = []
         past_workout_ids = set()
@@ -416,15 +448,16 @@ class TestComputeAdjustmentSignals:
             weeks_ago = max(0, (today - scheduled_date).days) / 7.0
             return 2.0 ** (-weeks_ago / 3.0)
 
-        all_runs = (
-            db.query(RunLog)
-            .filter(RunLog.training_plan_id == plan.id)
-            .all()
-        )
+        all_runs = db.query(RunLog).filter(RunLog.training_plan_id == plan.id).all()
 
         signals = _compute_adjustment_signals(
-            all_runs, past_workouts, past_workout_ids,
-            today, plan.id, db, _recency_weight,
+            all_runs,
+            past_workouts,
+            past_workout_ids,
+            today,
+            plan.id,
+            db,
+            _recency_weight,
             current_phase="taper",
             hr_zones=[
                 {"zone": 1, "min_bpm": 95, "max_bpm": 114},
@@ -444,14 +477,22 @@ class TestComputeAdjustmentSignals:
     def test_peak_phase_uses_correct_weights(self, db):
         """Peak phase should use (0.30, 0.22, 0.18, 0.18, 0.12) weights."""
         user, plan = _create_plan_with_phases(
-            db, weeks=12, weeks_ago=6,
+            db,
+            weeks=12,
+            weeks_ago=6,
             phases={5: "peak", 6: "peak", 7: "peak"},
         )
 
-        _add_runs_for_weeks(db, plan, user, [5, 6, 7], effort=5.0, distance_multiplier=1.0)
+        _add_runs_for_weeks(
+            db, plan, user, [5, 6, 7], effort=5.0, distance_multiplier=1.0
+        )
 
         today = _today()
-        start = plan.start_date.date() if hasattr(plan.start_date, 'date') else plan.start_date
+        start = (
+            plan.start_date.date()
+            if hasattr(plan.start_date, "date")
+            else plan.start_date
+        )
 
         past_workouts = []
         past_workout_ids = set()
@@ -479,15 +520,16 @@ class TestComputeAdjustmentSignals:
             weeks_ago = max(0, (today - scheduled_date).days) / 7.0
             return 2.0 ** (-weeks_ago / 3.0)
 
-        all_runs = (
-            db.query(RunLog)
-            .filter(RunLog.training_plan_id == plan.id)
-            .all()
-        )
+        all_runs = db.query(RunLog).filter(RunLog.training_plan_id == plan.id).all()
 
         signals = _compute_adjustment_signals(
-            all_runs, past_workouts, past_workout_ids,
-            today, plan.id, db, _recency_weight,
+            all_runs,
+            past_workouts,
+            past_workout_ids,
+            today,
+            plan.id,
+            db,
+            _recency_weight,
             current_phase="peak",
             hr_zones=[
                 {"zone": 1, "min_bpm": 95, "max_bpm": 114},
@@ -509,7 +551,11 @@ class TestComputeAdjustmentSignals:
         _add_runs_for_weeks(db, plan, user, [1, 2, 3], effort=5.0)
 
         today = _today()
-        start = plan.start_date.date() if hasattr(plan.start_date, 'date') else plan.start_date
+        start = (
+            plan.start_date.date()
+            if hasattr(plan.start_date, "date")
+            else plan.start_date
+        )
 
         past_workouts = []
         past_workout_ids = set()
@@ -537,15 +583,16 @@ class TestComputeAdjustmentSignals:
             weeks_ago = max(0, (today - scheduled_date).days) / 7.0
             return 2.0 ** (-weeks_ago / 3.0)
 
-        all_runs = (
-            db.query(RunLog)
-            .filter(RunLog.training_plan_id == plan.id)
-            .all()
-        )
+        all_runs = db.query(RunLog).filter(RunLog.training_plan_id == plan.id).all()
 
         signals = _compute_adjustment_signals(
-            all_runs, past_workouts, past_workout_ids,
-            today, plan.id, db, _recency_weight,
+            all_runs,
+            past_workouts,
+            past_workout_ids,
+            today,
+            plan.id,
+            db,
+            _recency_weight,
             current_phase="unknown_phase",
         )
 
@@ -557,14 +604,22 @@ class TestComputeAdjustmentSignals:
     def test_taper_phase_completion_matters_more_for_multiplier(self, db):
         """In taper phase, low completion should hurt the multiplier more than in base."""
         user, plan = _create_plan_with_phases(
-            db, weeks=12, weeks_ago=10,
+            db,
+            weeks=12,
+            weeks_ago=10,
             phases={10: "taper", 11: "taper", 12: "taper"},
         )
 
-        _add_runs_for_weeks(db, plan, user, [10, 11], effort=5.0, distance_multiplier=1.0)
+        _add_runs_for_weeks(
+            db, plan, user, [10, 11], effort=5.0, distance_multiplier=1.0
+        )
 
         today = _today()
-        start = plan.start_date.date() if hasattr(plan.start_date, 'date') else plan.start_date
+        start = (
+            plan.start_date.date()
+            if hasattr(plan.start_date, "date")
+            else plan.start_date
+        )
 
         past_workouts = []
         past_workout_ids = set()
@@ -592,27 +647,36 @@ class TestComputeAdjustmentSignals:
             weeks_ago = max(0, (today - scheduled_date).days) / 7.0
             return 2.0 ** (-weeks_ago / 3.0)
 
-        all_runs = (
-            db.query(RunLog)
-            .filter(RunLog.training_plan_id == plan.id)
-            .all()
-        )
+        all_runs = db.query(RunLog).filter(RunLog.training_plan_id == plan.id).all()
 
         signals_taper = _compute_adjustment_signals(
-            all_runs, past_workouts, past_workout_ids,
-            today, plan.id, db, _recency_weight,
+            all_runs,
+            past_workouts,
+            past_workout_ids,
+            today,
+            plan.id,
+            db,
+            _recency_weight,
             current_phase="taper",
         )
 
         signals_base = _compute_adjustment_signals(
-            all_runs, past_workouts, past_workout_ids,
-            today, plan.id, db, _recency_weight,
+            all_runs,
+            past_workouts,
+            past_workout_ids,
+            today,
+            plan.id,
+            db,
+            _recency_weight,
             current_phase="base",
         )
 
         assert signals_taper["current_phase"] == "taper"
         assert signals_base["current_phase"] == "base"
-        assert signals_taper["phase_weights"]["completion"] > signals_base["phase_weights"]["completion"]
+        assert (
+            signals_taper["phase_weights"]["completion"]
+            > signals_base["phase_weights"]["completion"]
+        )
 
 
 class TestPerTypeRatiosBayesianShrinkage:
@@ -621,19 +685,28 @@ class TestPerTypeRatiosBayesianShrinkage:
     def test_zero_runs_of_type_shrinks_fully_to_global(self, db):
         """When no runs of a type exist, its ratio should equal the global volume_ratio."""
         user, plan = _create_plan_with_phases(
-            db, weeks=6, weeks_ago=4,
+            db,
+            weeks=6,
+            weeks_ago=4,
             workout_types=["easy", "easy", "easy", "long"],
         )
 
         _add_runs_for_weeks(
-            db, plan, user, [1, 2, 3, 4],
+            db,
+            plan,
+            user,
+            [1, 2, 3, 4],
             effort=5.0,
             distance_multiplier=1.1,
             workout_types=["easy", "easy", "easy", "long"],
         )
 
         today = _today()
-        start = plan.start_date.date() if hasattr(plan.start_date, 'date') else plan.start_date
+        start = (
+            plan.start_date.date()
+            if hasattr(plan.start_date, "date")
+            else plan.start_date
+        )
 
         past_workouts = []
         past_workout_ids = set()
@@ -661,41 +734,60 @@ class TestPerTypeRatiosBayesianShrinkage:
             weeks_ago = max(0, (today - scheduled_date).days) / 7.0
             return 2.0 ** (-weeks_ago / 3.0)
 
-        all_runs = (
-            db.query(RunLog)
-            .filter(RunLog.training_plan_id == plan.id)
-            .all()
-        )
+        all_runs = db.query(RunLog).filter(RunLog.training_plan_id == plan.id).all()
 
         signals = _compute_adjustment_signals(
-            all_runs, past_workouts, past_workout_ids,
-            today, plan.id, db, _recency_weight,
+            all_runs,
+            past_workouts,
+            past_workout_ids,
+            today,
+            plan.id,
+            db,
+            _recency_weight,
             current_phase="build",
         )
 
         per_type = signals["per_type_ratios"]
         volume_ratio = signals["volume_ratio"]
 
-        assert "tempo" not in per_type or abs(per_type.get("tempo", volume_ratio) - volume_ratio) < 0.01
-        assert "interval" not in per_type or abs(per_type.get("interval", volume_ratio) - volume_ratio) < 0.01
-        assert "hill" not in per_type or abs(per_type.get("hill", volume_ratio) - volume_ratio) < 0.01
+        assert (
+            "tempo" not in per_type
+            or abs(per_type.get("tempo", volume_ratio) - volume_ratio) < 0.01
+        )
+        assert (
+            "interval" not in per_type
+            or abs(per_type.get("interval", volume_ratio) - volume_ratio) < 0.01
+        )
+        assert (
+            "hill" not in per_type
+            or abs(per_type.get("hill", volume_ratio) - volume_ratio) < 0.01
+        )
 
     def test_one_run_of_type_heavily_shrunk(self, db):
         """With only 1 run of a type, the ratio should be mostly global."""
         user, plan = _create_plan_with_phases(
-            db, weeks=6, weeks_ago=4,
+            db,
+            weeks=6,
+            weeks_ago=4,
             workout_types=["easy", "tempo", "easy", "long"],
         )
 
         _add_runs_for_weeks(
-            db, plan, user, [1],
+            db,
+            plan,
+            user,
+            [1],
             effort=5.0,
             distance_multiplier=1.3,
             workout_types=["easy", "tempo", "easy", "long"],
         )
 
         today = _today()
-        start = plan.start_date.date() if hasattr(plan.start_date, 'date') else plan.start_date
+        start = (
+            plan.start_date.date()
+            if hasattr(plan.start_date, "date")
+            else plan.start_date
+        )
 
         past_workouts = []
         past_workout_ids = set()
@@ -723,15 +815,16 @@ class TestPerTypeRatiosBayesianShrinkage:
             weeks_ago = max(0, (today - scheduled_date).days) / 7.0
             return 2.0 ** (-weeks_ago / 3.0)
 
-        all_runs = (
-            db.query(RunLog)
-            .filter(RunLog.training_plan_id == plan.id)
-            .all()
-        )
+        all_runs = db.query(RunLog).filter(RunLog.training_plan_id == plan.id).all()
 
         signals = _compute_adjustment_signals(
-            all_runs, past_workouts, past_workout_ids,
-            today, plan.id, db, _recency_weight,
+            all_runs,
+            past_workouts,
+            past_workout_ids,
+            today,
+            plan.id,
+            db,
+            _recency_weight,
             current_phase="build",
         )
 
@@ -741,25 +834,36 @@ class TestPerTypeRatiosBayesianShrinkage:
         if "tempo" in per_type:
             confidence = 1 * _BAYESIAN_SHRINKAGE_PER_RUN
             raw_ratio = per_type["tempo"]
-            expected = round(confidence * raw_ratio + (1.0 - confidence) * volume_ratio, 2)
+            expected = round(
+                confidence * raw_ratio + (1.0 - confidence) * volume_ratio, 2
+            )
             assert abs(per_type["tempo"] - expected) < 0.02
 
     def test_three_runs_of_type_approaches_raw_ratio(self, db):
         """With 3+ runs of a type, the ratio should be close to the raw ratio."""
         user, plan = _create_plan_with_phases(
-            db, weeks=8, weeks_ago=6,
+            db,
+            weeks=8,
+            weeks_ago=6,
             workout_types=["easy", "tempo", "easy", "long"],
         )
 
         _add_runs_for_weeks(
-            db, plan, user, [1, 2, 3],
+            db,
+            plan,
+            user,
+            [1, 2, 3],
             effort=5.0,
             distance_multiplier=1.4,
             workout_types=["easy", "tempo", "easy", "long"],
         )
 
         today = _today()
-        start = plan.start_date.date() if hasattr(plan.start_date, 'date') else plan.start_date
+        start = (
+            plan.start_date.date()
+            if hasattr(plan.start_date, "date")
+            else plan.start_date
+        )
 
         past_workouts = []
         past_workout_ids = set()
@@ -787,15 +891,16 @@ class TestPerTypeRatiosBayesianShrinkage:
             weeks_ago = max(0, (today - scheduled_date).days) / 7.0
             return 2.0 ** (-weeks_ago / 3.0)
 
-        all_runs = (
-            db.query(RunLog)
-            .filter(RunLog.training_plan_id == plan.id)
-            .all()
-        )
+        all_runs = db.query(RunLog).filter(RunLog.training_plan_id == plan.id).all()
 
         signals = _compute_adjustment_signals(
-            all_runs, past_workouts, past_workout_ids,
-            today, plan.id, db, _recency_weight,
+            all_runs,
+            past_workouts,
+            past_workout_ids,
+            today,
+            plan.id,
+            db,
+            _recency_weight,
             current_phase="build",
         )
 
@@ -807,19 +912,28 @@ class TestPerTypeRatiosBayesianShrinkage:
     def test_per_type_ratios_stay_within_bounds(self, db):
         """All per-type ratios should be clamped to [0.5, 1.5]."""
         user, plan = _create_plan_with_phases(
-            db, weeks=8, weeks_ago=6,
+            db,
+            weeks=8,
+            weeks_ago=6,
             workout_types=["easy", "tempo", "interval", "long"],
         )
 
         _add_runs_for_weeks(
-            db, plan, user, [1, 2, 3, 4, 5, 6],
+            db,
+            plan,
+            user,
+            [1, 2, 3, 4, 5, 6],
             effort=5.0,
             distance_multiplier=2.0,
             workout_types=["easy", "tempo", "interval", "long"],
         )
 
         today = _today()
-        start = plan.start_date.date() if hasattr(plan.start_date, 'date') else plan.start_date
+        start = (
+            plan.start_date.date()
+            if hasattr(plan.start_date, "date")
+            else plan.start_date
+        )
 
         past_workouts = []
         past_workout_ids = set()
@@ -847,15 +961,16 @@ class TestPerTypeRatiosBayesianShrinkage:
             weeks_ago = max(0, (today - scheduled_date).days) / 7.0
             return 2.0 ** (-weeks_ago / 3.0)
 
-        all_runs = (
-            db.query(RunLog)
-            .filter(RunLog.training_plan_id == plan.id)
-            .all()
-        )
+        all_runs = db.query(RunLog).filter(RunLog.training_plan_id == plan.id).all()
 
         signals = _compute_adjustment_signals(
-            all_runs, past_workouts, past_workout_ids,
-            today, plan.id, db, _recency_weight,
+            all_runs,
+            past_workouts,
+            past_workout_ids,
+            today,
+            plan.id,
+            db,
+            _recency_weight,
             current_phase="build",
         )
 
@@ -871,11 +986,15 @@ class TestPhaseAwareAdjustmentIntegration:
         from app.contexts.plan.adaptation.plan_adjuster import adjust_plan
 
         user, plan = _create_plan_with_phases(
-            db, weeks=8, weeks_ago=4,
+            db,
+            weeks=8,
+            weeks_ago=4,
             phases={1: "base", 2: "base", 3: "base", 4: "base", 5: "build"},
         )
 
-        _add_runs_for_weeks(db, plan, user, [1, 2, 3, 4], effort=5.0, distance_multiplier=1.0)
+        _add_runs_for_weeks(
+            db, plan, user, [1, 2, 3, 4], effort=5.0, distance_multiplier=1.0
+        )
 
         result = adjust_plan(plan.id, user.id, db)
 
@@ -887,11 +1006,15 @@ class TestPhaseAwareAdjustmentIntegration:
         from app.contexts.plan.adaptation.plan_adjuster import adjust_plan
 
         user, plan = _create_plan_with_phases(
-            db, weeks=8, weeks_ago=4,
+            db,
+            weeks=8,
+            weeks_ago=4,
             phases={1: "base", 2: "base", 3: "base", 4: "base", 5: "build"},
         )
 
-        _add_runs_for_weeks(db, plan, user, [1, 2, 3, 4], effort=5.0, distance_multiplier=1.0)
+        _add_runs_for_weeks(
+            db, plan, user, [1, 2, 3, 4], effort=5.0, distance_multiplier=1.0
+        )
 
         adjust_plan(plan.id, user.id, db)
 

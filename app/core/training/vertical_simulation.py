@@ -20,7 +20,6 @@ from typing import Any, Dict, Iterable, List, Optional
 
 from app.core.training.trail_profile import TrailProfile
 
-
 _ELIGIBLE_TYPES = ("interval", "hill", "tempo", "long")
 
 # Relative share of the weekly uphill budget assigned to each workout type
@@ -200,8 +199,7 @@ def compute_weekly_vertical_actuals(
     enabled_weeks = {
         wk.get("week"): {"uphill_min": 0, "downhill_min": 0, "transitions": 0}
         for wk in plan_data or []
-        if isinstance(wk, dict)
-        and (wk.get("vertical_simulation") or {}).get("enabled")
+        if isinstance(wk, dict) and (wk.get("vertical_simulation") or {}).get("enabled")
     }
     if not enabled_weeks or start_date is None:
         return {}
@@ -211,7 +209,10 @@ def compute_weekly_vertical_actuals(
     transitions_acc: Dict[int, int] = {wk: 0 for wk in enabled_weeks}
 
     for run in runs:
-        if training_plan_id is not None and getattr(run, "training_plan_id", None) != training_plan_id:
+        if (
+            training_plan_id is not None
+            and getattr(run, "training_plan_id", None) != training_plan_id
+        ):
             continue
         run_date = _to_date(getattr(run, "date", None))
         if run_date is None:
@@ -234,7 +235,8 @@ def compute_weekly_vertical_actuals(
         m_per_km = (elevation / distance) if distance > 0 else 0.0
 
         uphill_factor, downhill_factor, transitions = _RUN_FACTORS.get(
-            wtype, _DEFAULT_FACTORS,
+            wtype,
+            _DEFAULT_FACTORS,
         )
         if effort >= 7:
             uphill_factor += 0.08

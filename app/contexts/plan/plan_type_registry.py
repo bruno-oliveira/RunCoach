@@ -65,7 +65,9 @@ class PerformancePlanHandler(PlanTypeHandler):
         extra: Dict[str, Any],
         plan_data: List[Dict[str, Any]],
     ) -> Dict[str, Any]:
-        from app.contexts.plan.generators.performance_plan_generator import PerformancePlanGenerator
+        from app.contexts.plan.generators.performance_plan_generator import (
+            PerformancePlanGenerator,
+        )
         from app.contexts.runner.fitness.performance_service import PerformanceService
         from app.utils import format_pace
 
@@ -105,8 +107,8 @@ class FitnessPlanHandler(PlanTypeHandler):
         plan_data: List[Dict[str, Any]],
     ) -> Dict[str, Any]:
         from app.contexts.plan.generators.fitness_plan_generator import (
-            FitnessPlanGenerator,
             _PHASE_METADATA,
+            FitnessPlanGenerator,
         )
         from app.core.training.vdot_calculator import VDOTCalculator
         from app.utils import format_pace
@@ -141,11 +143,13 @@ class FitnessPlanHandler(PlanTypeHandler):
                 if week_data.get("is_time_trial_week"):
                     for dw in week_data.get("daily_workouts", []):
                         if dw.get("type") == "time_trial":
-                            time_trial_weeks.append({
-                                "week": week_data["week"],
-                                "distance": dw.get("distance", 0),
-                                "description": dw.get("description", ""),
-                            })
+                            time_trial_weeks.append(
+                                {
+                                    "week": week_data["week"],
+                                    "distance": dw.get("distance", 0),
+                                    "description": dw.get("description", ""),
+                                }
+                            )
             extra["time_trial_weeks"] = time_trial_weeks
             if vdot:
                 extra["vdot_zones"] = VDOTCalculator.get_pace_zones(vdot)
@@ -179,7 +183,9 @@ def get_handler_for_plan(plan: "TrainingPlan") -> PlanTypeHandler:
     for handler in PLAN_TYPE_REGISTRY:
         if handler.matches(plan):
             return handler
-    raise ValueError(f"No handler matched plan with plan_type={getattr(plan, 'plan_type', None)!r}")
+    raise ValueError(
+        f"No handler matched plan with plan_type={getattr(plan, 'plan_type', None)!r}"
+    )
 
 
 def display_label(plan: "TrainingPlan", *, space_before_km: bool = False) -> str:

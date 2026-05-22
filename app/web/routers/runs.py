@@ -8,6 +8,11 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
+from app.contexts.runner.enrichment.run_creation_service import RunCreationService
+from app.contexts.runner.enrichment.run_enrichment_service import run_to_response
+from app.contexts.runner.fitness.feedback_service import FeedbackService
+from app.contexts.runner.fitness.race_predictor_service import RacePredictorService
+from app.contexts.runner.repositories import SQLAlchemyRunRepository
 from app.core.training.vdot_calculator import VDOTCalculator
 from app.dependencies import get_current_user, get_db, get_run_repository
 from app.models import User
@@ -17,18 +22,15 @@ from app.schemas import (
     RunLogResponse,
     RunLogUpdate,
 )
-from app.contexts.runner.enrichment.run_creation_service import RunCreationService
-from app.contexts.runner.enrichment.run_enrichment_service import run_to_response
-from app.contexts.runner.fitness.feedback_service import FeedbackService
-from app.contexts.runner.fitness.race_predictor_service import RacePredictorService
-from app.contexts.runner.repositories import SQLAlchemyRunRepository
 
 logger = logging.getLogger(__name__)
 
 runs_router = APIRouter(prefix="/api/runs", tags=["runs"])
 
 
-@runs_router.post("", response_model=RunLogResponse, status_code=status.HTTP_201_CREATED)
+@runs_router.post(
+    "", response_model=RunLogResponse, status_code=status.HTTP_201_CREATED
+)
 async def create_run_log(
     run_log: RunLogCreate,
     db: Session = Depends(get_db),
@@ -53,8 +55,12 @@ async def get_run_logs(
     page: int = Query(1, ge=1, description="Page number"),
     page_size: int = Query(20, ge=1, le=100, description="Items per page"),
     workout_type: Optional[str] = Query(None, description="Filter by workout type"),
-    start_date: Optional[datetime] = Query(None, description="Filter runs after this date"),
-    end_date: Optional[datetime] = Query(None, description="Filter runs before this date"),
+    start_date: Optional[datetime] = Query(
+        None, description="Filter runs after this date"
+    ),
+    end_date: Optional[datetime] = Query(
+        None, description="Filter runs before this date"
+    ),
     current_user: User = Depends(get_current_user),
     run_repo: SQLAlchemyRunRepository = Depends(get_run_repository),
 ):
@@ -76,7 +82,9 @@ async def get_run_logs(
             page_size=page_size,
         )
     except SQLAlchemyError:
-        logger.exception("Database error fetching run logs for user %s", current_user.id)
+        logger.exception(
+            "Database error fetching run logs for user %s", current_user.id
+        )
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to fetch run logs",
@@ -95,13 +103,19 @@ async def get_race_history(
 
 @runs_router.get("/predictions")
 async def get_race_predictions(
-    target_distance: Optional[float] = Query(None, description="Target race distance in km"),
-    goal_time: Optional[str] = Query(None, description="Goal time in HH:MM:SS or MM:SS"),
+    target_distance: Optional[float] = Query(
+        None, description="Target race distance in km"
+    ),
+    goal_time: Optional[str] = Query(
+        None, description="Goal time in HH:MM:SS or MM:SS"
+    ),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
     """Get race predictions based on user's best recent VDOT from all runs."""
-    predictions_data = RacePredictorService.get_predictions_for_user(current_user.id, db)
+    predictions_data = RacePredictorService.get_predictions_for_user(
+        current_user.id, db
+    )
 
     if not predictions_data.get("has_sufficient_data"):
         return {
@@ -137,9 +151,15 @@ async def get_race_predictions(
                 result["message"] = "Invalid goal_time format"
         else:
             current_vdot = predictions_data["current_vdot"]
-            predicted = VDOTCalculator.predict_time_for_distance(current_vdot, target_distance)
-            range_data = VDOTCalculator.get_confidence_range(current_vdot, target_distance)
-            result["predicted_time"] = VDOTCalculator.format_duration(predicted) if predicted else None
+            predicted = VDOTCalculator.predict_time_for_distance(
+                current_vdot, target_distance
+            )
+            range_data = VDOTCalculator.get_confidence_range(
+                current_vdot, target_distance
+            )
+            result["predicted_time"] = (
+                VDOTCalculator.format_duration(predicted) if predicted else None
+            )
             result["range"] = {
                 "fast": VDOTCalculator.format_duration(range_data["fast"]),
                 "slow": VDOTCalculator.format_duration(range_data["slow"]),
@@ -164,9 +184,7 @@ async def get_plan_feedback(
     current_user: User = Depends(get_current_user),
 ):
     """Get all coaching feedback for runs logged against a plan."""
-    feedbacks = FeedbackService.get_feedback_for_plan(
-        plan_id, current_user.id, db
-    )
+    feedbacks = FeedbackService.get_feedback_for_plan(plan_id, current_user.id, db)
     return [
         {
             "id": fb.id,

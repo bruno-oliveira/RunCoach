@@ -19,7 +19,7 @@ Form zones (TSB):
   - deep        (TSB < -30)   — overreaching, risk of burnout
 """
 
-from datetime import date, datetime, timedelta, timezone
+from datetime import date, datetime, timedelta
 from typing import Any, Dict, List, Optional
 
 from sqlalchemy.orm import Session
@@ -30,7 +30,7 @@ ACUTE_DAYS = 7
 CHRONIC_DAYS = 28
 
 CTL_TAU = 42  # Fitness time constant (days)
-ATL_TAU = 7   # Fatigue time constant (days)
+ATL_TAU = 7  # Fatigue time constant (days)
 
 
 class TrainingLoadService:
@@ -83,13 +83,17 @@ class TrainingLoadService:
             if first_run_date is None or run_date < first_run_date:
                 first_run_date = run_date
             key = run_date.isoformat()
-            daily_loads[key] = daily_loads.get(key, 0) + TrainingLoadService._run_load(run)
+            daily_loads[key] = daily_loads.get(key, 0) + TrainingLoadService._run_load(
+                run
+            )
 
         today = date.today()
         window_start = today - timedelta(days=lookback_days)
         # Start EWMA sweep 60 days before the first run (or window_start, whichever is earlier)
         # so CTL/ATL are properly warmed up by the time they enter the returned window.
-        sweep_start = min(first_run_date or window_start, window_start) - timedelta(days=14)
+        sweep_start = min(first_run_date or window_start, window_start) - timedelta(
+            days=14
+        )
 
         ctl = 0.0
         atl = 0.0
@@ -123,19 +127,21 @@ class TrainingLoadService:
             chronic = chronic_total / CHRONIC_DAYS * ACUTE_DAYS
             acwr = round(acute / chronic, 2) if chronic > 0 else 0
 
-            history.append({
-                "date": d.isoformat(),
-                "daily_load": round(load, 1),
-                "acute": round(acute, 1),
-                "chronic": round(chronic, 1),
-                "acwr": acwr,
-                "risk": _classify_risk(acwr),
-                # Fitness / Fatigue / Form (TrainingPeaks-style)
-                "ctl": round(ctl, 1),
-                "atl": round(atl, 1),
-                "tsb": round(tsb, 1),
-                "form": _classify_form(tsb),
-            })
+            history.append(
+                {
+                    "date": d.isoformat(),
+                    "daily_load": round(load, 1),
+                    "acute": round(acute, 1),
+                    "chronic": round(chronic, 1),
+                    "acwr": acwr,
+                    "risk": _classify_risk(acwr),
+                    # Fitness / Fatigue / Form (TrainingPeaks-style)
+                    "ctl": round(ctl, 1),
+                    "atl": round(atl, 1),
+                    "tsb": round(tsb, 1),
+                    "form": _classify_form(tsb),
+                }
+            )
 
         current = history[-1] if history else None
 

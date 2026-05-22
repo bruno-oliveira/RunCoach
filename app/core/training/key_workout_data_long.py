@@ -78,7 +78,6 @@ WORKOUTS_LONG: List[Dict] = [
         ),
         "steps_builder": "rolling_hills",
     },
-
     # -- Long-run variants (Marathon) --
     {
         "id": "marathon_long_alternating_mp",
@@ -170,7 +169,6 @@ WORKOUTS_LONG: List[Dict] = [
         ),
         "steps_builder": "rolling_hills",
     },
-
     # -- Long-run variants (10K) --
     {
         "id": "10k_long_fast_finish",
@@ -343,7 +341,6 @@ WORKOUTS_LONG: List[Dict] = [
             "marathon pace on deeply fatigued legs."
         ),
     },
-
     # -- Trail (30.0) --
     {
         "id": "trail_elevation_repeats",
@@ -478,7 +475,6 @@ WORKOUTS_LONG: List[Dict] = [
             "prevents race-day blowups on descents."
         ),
     },
-
     # -- Trail Flat-Terrain Alternatives --
     {
         "id": "trail_flat_surge_fartlek",
@@ -594,7 +590,6 @@ WORKOUTS_LONG: List[Dict] = [
             "race day."
         ),
     },
-
     # -- Long-run variants (Trail 30K — hilly) --
     {
         "id": "trail_long_fast_finish",
@@ -666,7 +661,6 @@ WORKOUTS_LONG: List[Dict] = [
         ),
         "steps_builder": "rolling_hills",
     },
-
     # -- Long-run variants (Trail 30K — flat) --
     {
         "id": "trail_flat_long_fast_finish",

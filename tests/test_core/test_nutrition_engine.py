@@ -1,7 +1,5 @@
 """Tests for NutritionEngine."""
 
-import pytest
-
 from app.contexts.nutrition.meal_database import MealDatabase
 from app.contexts.nutrition.nutrition_engine import NutritionEngine
 
@@ -118,7 +116,9 @@ class TestNutritionEngine:
         assert len(all_meals_1) > 0
         assert len(all_meals_2) > 0
         # Different seeds should produce at least one different meal selection
-        assert all_meals_1 != all_meals_2, "Different seeds should produce different meal selections"
+        assert all_meals_1 != all_meals_2, (
+            "Different seeds should produce different meal selections"
+        )
 
     def test_meal_nutritional_info(self, nutrition_engine: NutritionEngine):
         """Test that meals have nutritional information."""

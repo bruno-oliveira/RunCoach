@@ -43,12 +43,7 @@ class ReadinessLog(Base):
         s_sore = (soreness - 1) / 4
         s_energy = (energy - 1) / 4
         s_stress = 1.0 - (stress - 1) / 4
-        weighted = (
-            s_sleep * 0.25
-            + s_sore * 0.30
-            + s_energy * 0.30
-            + s_stress * 0.15
-        )
+        weighted = s_sleep * 0.25 + s_sore * 0.30 + s_energy * 0.30 + s_stress * 0.15
         return int(round(weighted * 100))
 
     @staticmethod

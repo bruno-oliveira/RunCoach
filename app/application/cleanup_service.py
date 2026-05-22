@@ -23,7 +23,9 @@ def cleanup_inactive_accounts(db: Session, *, dry_run: bool = False) -> int:
     Returns the number of accounts deleted (or that would be deleted
     in dry_run mode).
     """
-    cutoff = (datetime.now(timezone.utc) - timedelta(days=INACTIVE_MONTHS * 30)).replace(tzinfo=None)
+    cutoff = (
+        datetime.now(timezone.utc) - timedelta(days=INACTIVE_MONTHS * 30)
+    ).replace(tzinfo=None)
 
     inactive_users = (
         db.query(User)
@@ -40,7 +42,9 @@ def cleanup_inactive_accounts(db: Session, *, dry_run: bool = False) -> int:
         return 0
 
     if dry_run:
-        logger.info("Dry run: would delete %d inactive account(s) (cutoff: %s)", count, cutoff)
+        logger.info(
+            "Dry run: would delete %d inactive account(s) (cutoff: %s)", count, cutoff
+        )
         return count
 
     for user in inactive_users:
@@ -72,14 +76,14 @@ def cleanup_anonymous_users(db: Session, *, dry_run: bool = False) -> int:
     ).replace(tzinfo=None)
 
     candidates = (
-        db.query(User)
-        .filter(User.google_id.is_(None), User.email.is_(None))
-        .all()
+        db.query(User).filter(User.google_id.is_(None), User.email.is_(None)).all()
     )
 
     anonymous = [
-        u for u in candidates
-        if (u.last_activity or u.created_at) and (u.last_activity or u.created_at) < cutoff
+        u
+        for u in candidates
+        if (u.last_activity or u.created_at)
+        and (u.last_activity or u.created_at) < cutoff
     ]
 
     count = len(anonymous)
@@ -88,7 +92,9 @@ def cleanup_anonymous_users(db: Session, *, dry_run: bool = False) -> int:
         return 0
 
     if dry_run:
-        logger.info("Dry run: would delete %d anonymous user(s) (cutoff: %s)", count, cutoff)
+        logger.info(
+            "Dry run: would delete %d anonymous user(s) (cutoff: %s)", count, cutoff
+        )
         return count
 
     for user in anonymous:

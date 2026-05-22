@@ -45,11 +45,15 @@ class TestRegistryRegression:
     def test_marathon_protocol_shape(self):
         protocol = generate_race_protocol(42.2, goal_pace_min_km=5.5)
         assert protocol["distance_name"] == "Marathon"
-        assert "the wall zone".lower() in protocol["pacing_strategy"].lower() \
+        assert (
+            "the wall zone".lower() in protocol["pacing_strategy"].lower()
             or "the hardest discipline" in protocol["pacing_strategy"]
+        )
         assert len(protocol["nutrition_timing"]) == 6
         # Marathon adds 3 week-before extras.
-        assert any("permanent marker" in line for line in protocol["week_before_checklist"])
+        assert any(
+            "permanent marker" in line for line in protocol["week_before_checklist"]
+        )
 
     def test_30k_trail_road_path_shape(self):
         # When called without a trail_profile, 30k goes through the road
@@ -57,7 +61,9 @@ class TestRegistryRegression:
         protocol = generate_race_protocol(30.0, goal_pace_min_km=5.5)
         assert protocol["distance_name"] == "30K Trail"
         # Has trail-specific week_before_extras merged in.
-        assert any("hydration vest" in line for line in protocol["week_before_checklist"])
+        assert any(
+            "hydration vest" in line for line in protocol["week_before_checklist"]
+        )
 
     def test_snap_to_nearest_for_unknown_distance(self):
         # 8 km snaps to 10K profile.

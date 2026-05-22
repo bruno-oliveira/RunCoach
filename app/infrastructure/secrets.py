@@ -17,7 +17,12 @@ def validate_production_secrets() -> None:
             "Set SECRET_KEY as a persistent secret (e.g. `fly secrets set SECRET_KEY=...`)."
         )
     if not settings.debug:
-        weak_patterns = ["dev-secret", "your-secret", "change-in-production", "placeholder"]
+        weak_patterns = [
+            "dev-secret",
+            "your-secret",
+            "change-in-production",
+            "placeholder",
+        ]
         key = settings.secret_key
         if len(key) < 32 or any(p in key.lower() for p in weak_patterns):
             raise RuntimeError(

@@ -2,7 +2,6 @@
 
 import logging
 from datetime import date, datetime, timedelta
-from typing import Optional
 
 from sqlalchemy.orm import Session
 
@@ -14,6 +13,7 @@ from app.models import (
     TrainingPlan,
     WeeklyPlan,
 )
+
 from .plan_adjustments import (
     adjust_distance,
     adjust_intensity,
@@ -30,17 +30,18 @@ MAX_PLANS_PER_USER = settings.max_plans_per_user
 def has_reached_plan_limit(user_id: str, db: Session) -> bool:
     today = date.today()
     training_plans = SQLAlchemyPlanRepository(db).list_by_user(user_id)
-    active_training = sum(
-        1 for p in training_plans
-        if not _is_plan_completed(p, today)
-    )
+    active_training = sum(1 for p in training_plans if not _is_plan_completed(p, today))
     return active_training >= MAX_PLANS_PER_USER
 
 
 def _is_plan_completed(plan: TrainingPlan, today: date) -> bool:
     if not plan.start_date:
         return False
-    start_d = plan.start_date.date() if isinstance(plan.start_date, datetime) else plan.start_date
+    start_d = (
+        plan.start_date.date()
+        if isinstance(plan.start_date, datetime)
+        else plan.start_date
+    )
     end_date = start_d + timedelta(weeks=plan.weeks_duration)
     return today > end_date
 
@@ -88,9 +89,7 @@ def delete_plan(training_plan: TrainingPlan, db: Session) -> None:
     )
 
     weekly_plans = (
-        db.query(WeeklyPlan)
-        .filter(WeeklyPlan.training_plan_id == plan_id)
-        .all()
+        db.query(WeeklyPlan).filter(WeeklyPlan.training_plan_id == plan_id).all()
     )
     workout_ids = []
     for wp in weekly_plans:
@@ -110,12 +109,8 @@ def delete_plan(training_plan: TrainingPlan, db: Session) -> None:
         )
 
     for wp in weekly_plans:
-        db.query(DailyWorkout).filter(
-            DailyWorkout.weekly_plan_id == wp.id
-        ).delete()
-    db.query(WeeklyPlan).filter(
-        WeeklyPlan.training_plan_id == plan_id
-    ).delete()
+        db.query(DailyWorkout).filter(DailyWorkout.weekly_plan_id == wp.id).delete()
+    db.query(WeeklyPlan).filter(WeeklyPlan.training_plan_id == plan_id).delete()
 
     db.query(PlanCustomization).filter(
         PlanCustomization.training_plan_id == plan_id

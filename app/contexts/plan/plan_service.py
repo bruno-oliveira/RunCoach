@@ -7,18 +7,18 @@ from sqlalchemy.orm import Session
 
 from app.contexts.auth.repositories import SQLAlchemyUserRepository
 from app.contexts.nutrition.nutrition_engine import NutritionEngine
+from app.contexts.plan.adaptation import AdaptationService
 from app.contexts.plan.generators.plan_generator import TrainingPlanGenerator
 from app.contexts.plan.repositories import SQLAlchemyPlanRepository
 from app.domain.repositories import IPlanRepository, IUserRepository
 from app.infrastructure.config import settings
 from app.models import TrainingPlan, User
 from app.schemas import PlanRequest
-from app.contexts.plan.adaptation import AdaptationService
-from .plan_view_service import PlanViewService
 from app.utils import parse_race_time_to_seconds
 
 from . import plan_creation_helpers as _create
 from . import plan_lifecycle_service as _lifecycle
+from .plan_view_service import PlanViewService
 
 logger = logging.getLogger(__name__)
 
@@ -34,8 +34,12 @@ class PlanService:
 
     def __init__(
         self,
-        plan_repo_factory: Callable[[Session], IPlanRepository] = SQLAlchemyPlanRepository,
-        user_repo_factory: Callable[[Session], IUserRepository] = SQLAlchemyUserRepository,
+        plan_repo_factory: Callable[
+            [Session], IPlanRepository
+        ] = SQLAlchemyPlanRepository,
+        user_repo_factory: Callable[
+            [Session], IUserRepository
+        ] = SQLAlchemyUserRepository,
     ) -> None:
         self._adaptation_service = AdaptationService()
         self._plan_view_service = PlanViewService()
@@ -45,7 +49,8 @@ class PlanService:
     def has_reached_plan_limit(self, user_id: str, db: Session) -> bool:
         return _lifecycle.has_reached_plan_limit(user_id, db)
 
-    def get_or_create_anonymous_user(self,
+    def get_or_create_anonymous_user(
+        self,
         current_user: Optional[User],
         anonymous_user_id: Optional[str],
         db: Session,
@@ -63,7 +68,8 @@ class PlanService:
         db.flush()
         return user
 
-    def find_duplicate(self,
+    def find_duplicate(
+        self,
         plan_request: PlanRequest,
         user_id: str,
         db: Session,
@@ -77,7 +83,8 @@ class PlanService:
             user_id, plan_request, race_time_seconds
         )
 
-    def create_plan(self,
+    def create_plan(
+        self,
         plan_request: PlanRequest,
         user: User,
         db: Session,
@@ -89,7 +96,8 @@ class PlanService:
         if existing:
             logger.info(
                 "Duplicate plan detected for user %s — returning existing plan %s",
-                user.id, existing.id,
+                user.id,
+                existing.id,
             )
             return existing, existing.plan_data if existing.plan_data else []
 
@@ -98,6 +106,7 @@ class PlanService:
         trail_profile = None
         if plan_request.is_trail:
             from app.core.training.trail_profile import classify_trail
+
             trail_profile = classify_trail(
                 plan_request.target_distance,
                 plan_request.target_elevation_gain_m or 0.0,
@@ -118,7 +127,9 @@ class PlanService:
             training_plan = _create.persist_plan_core(plan_request, user, plan_data, db)
             _create.persist_weekly_workouts(training_plan, plan_data, db)
             _create.attach_hr_zones(training_plan, user, plan_data, db)
-            _create.attach_nutrition(training_plan, plan_request, plan_data, nutrition_engine)
+            _create.attach_nutrition(
+                training_plan, plan_request, plan_data, nutrition_engine
+            )
             _create.attach_race_protocol(training_plan, plan_request)
             db.commit()
         except Exception:
@@ -146,7 +157,9 @@ class PlanService:
     def enrich_plan_data_with_ids(
         self, plan_data: list[dict], training_plan_id: str, db: Session
     ) -> list[dict]:
-        return self._plan_view_service.enrich_plan_data_with_ids(plan_data, training_plan_id, db)
+        return self._plan_view_service.enrich_plan_data_with_ids(
+            plan_data, training_plan_id, db
+        )
 
     def nutrition_for_template(self, nutrition_plan_data: Any) -> dict:
         return self._plan_view_service.nutrition_for_template(nutrition_plan_data)
@@ -157,7 +170,9 @@ class PlanService:
     def get_adjustment_hints(
         self, training_plan: TrainingPlan, performance_analysis: Any, db: Session
     ) -> Any:
-        return self._plan_view_service.get_adjustment_hints(training_plan, performance_analysis, db)
+        return self._plan_view_service.get_adjustment_hints(
+            training_plan, performance_analysis, db
+        )
 
     def get_feedback_map(self, logged_runs: Any, db: Session) -> dict:
         return self._plan_view_service.get_feedback_map(logged_runs, db)
@@ -171,4 +186,6 @@ class PlanService:
     def get_plan_view_data(
         self, training_plan: TrainingPlan, current_user: Optional[User], db: Session
     ) -> dict:
-        return self._plan_view_service.get_plan_view_data(training_plan, current_user, db)
+        return self._plan_view_service.get_plan_view_data(
+            training_plan, current_user, db
+        )

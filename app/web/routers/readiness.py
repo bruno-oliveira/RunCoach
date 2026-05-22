@@ -6,7 +6,8 @@ when the score is low.
 """
 
 import logging
-from datetime import date as date_cls, datetime, timezone
+from datetime import date as date_cls
+from datetime import datetime, timezone
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -115,11 +116,22 @@ def get_recent_readiness(
 # Readiness-based workout adaptation
 # ---------------------------------------------------------------------------
 
+
 class AdaptRequest(BaseModel):
     plan_id: str
 
 
-_HARD_TYPES = {"tempo", "interval", "threshold", "speed", "race", "long", "vo2max", "race_pace", "fartlek"}
+_HARD_TYPES = {
+    "tempo",
+    "interval",
+    "threshold",
+    "speed",
+    "race",
+    "long",
+    "vo2max",
+    "race_pace",
+    "fartlek",
+}
 
 
 def _find_todays_workout(plan: TrainingPlan):
@@ -163,7 +175,9 @@ def adapt_todays_workout(
     if not readiness:
         raise HTTPException(status_code=400, detail="Complete today's check-in first.")
     if readiness.status == "ready":
-        raise HTTPException(status_code=400, detail="Readiness is green — no adjustment needed.")
+        raise HTTPException(
+            status_code=400, detail="Readiness is green — no adjustment needed."
+        )
 
     # 2. Load the plan
     plan = plan_repo.get_for_user(body.plan_id, current_user.id)
@@ -199,10 +213,7 @@ def adapt_todays_workout(
         old_dist = workout.get("distance") or 0
         workout["distance"] = round(old_dist * 0.85, 1)
         workout["intensity"] = "low"
-        workout["notes"] = (
-            "Eased from readiness check-in. "
-            "Keep effort conversational."
-        )
+        workout["notes"] = "Eased from readiness check-in. Keep effort conversational."
 
     # Recompute week total
     week_data["total_km"] = round(

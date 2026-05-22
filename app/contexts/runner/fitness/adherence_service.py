@@ -4,9 +4,9 @@ from datetime import date, timedelta
 
 from sqlalchemy.orm import Session
 
+from app.contexts.plan.plan_date_utils import compute_current_week
 from app.models import DailyWorkout, TrainingPlan, WeeklyPlan
 from app.models.run_log import RunLog
-from app.contexts.plan.plan_date_utils import compute_current_week
 from app.utils import to_date as _to_date
 
 
@@ -80,7 +80,8 @@ def compute_adherence_heatmap(
                 week_start = start_date + timedelta(weeks=wk_num - 1)
                 week_end = week_start + timedelta(days=7)
                 week_runs = [
-                    r for r in runs
+                    r
+                    for r in runs
                     if r.date and week_start <= _to_date(r.date) < week_end
                 ]
                 if week_runs:

@@ -9,11 +9,11 @@ import httpx
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
-from app.infrastructure.config import settings
+from app.contexts.runner.fitness.feedback_service import FeedbackService
 from app.core.training.vdot_calculator import VDOTCalculator
+from app.infrastructure.config import settings
 from app.models.run_log import RunLog
 from app.models.user import User
-from app.contexts.runner.fitness.feedback_service import FeedbackService
 from app.utils import TimestampAdapter
 
 logger = logging.getLogger(__name__)
@@ -146,9 +146,7 @@ class StravaService:
             response.raise_for_status()
             return response.json()
 
-    def map_activity_to_run_log(
-        self, activity: dict[str, Any], user_id: str
-    ) -> RunLog:
+    def map_activity_to_run_log(self, activity: dict[str, Any], user_id: str) -> RunLog:
         """Convert a Strava activity dict to a RunLog instance."""
         # Validate required fields up-front so any problem produces a clear
         # ValueError rather than an opaque KeyError or TypeError deep in the
@@ -277,7 +275,9 @@ class StravaService:
                         if vdot:
                             run_log.vdot = vdot
                     try:
-                        from app.contexts.runner.fitness.effort_classifier import classify_effort
+                        from app.contexts.runner.fitness.effort_classifier import (
+                            classify_effort,
+                        )
 
                         effort_class = classify_effort(
                             distance_km=run_log.distance_km,
@@ -317,9 +317,7 @@ class StravaService:
                         )
                     synced += 1
                 except Exception as e:
-                    logger.error(
-                        f"Error mapping Strava activity {strava_id}: {e}"
-                    )
+                    logger.error(f"Error mapping Strava activity {strava_id}: {e}")
                     errors.append(f"Activity {strava_id}: {str(e)}")
 
             page += 1
@@ -371,7 +369,9 @@ class StravaService:
                 token = await self.ensure_valid_token(user, db)
                 await self.revoke_token(token)
             except Exception as e:
-                logger.warning("Could not revoke Strava token for user %s: %s", user.id, e)
+                logger.warning(
+                    "Could not revoke Strava token for user %s: %s", user.id, e
+                )
         user.strava_athlete_id = None
         user.strava_access_token = None
         user.strava_refresh_token = None

@@ -24,7 +24,13 @@ from __future__ import annotations
 from typing import Any, Dict, List, Optional
 
 STEP_KINDS = (
-    "warmup", "run", "recovery", "cooldown", "strides", "walk", "rest",
+    "warmup",
+    "run",
+    "recovery",
+    "cooldown",
+    "strides",
+    "walk",
+    "rest",
 )
 
 # Default warm-up / cool-down length for quality sessions (meters).
@@ -337,7 +343,9 @@ def _warmup(pace_zones: Optional[Dict], distance_m: int = _WARMUP_M) -> Dict[str
     )
 
 
-def _cooldown(pace_zones: Optional[Dict], distance_m: int = _COOLDOWN_M) -> Dict[str, Any]:
+def _cooldown(
+    pace_zones: Optional[Dict], distance_m: int = _COOLDOWN_M
+) -> Dict[str, Any]:
     label = f"{distance_m / 1000:g} km cool-down"
     return _step(
         "cooldown",
@@ -447,15 +455,23 @@ def build_interval_steps(
 
     if total_km >= 50:
         return _build_interval_steps_high_base(
-            variant, pace_zones, reps_400 or default_reps,
-            reps_800 or default_reps, reps_1000 or max(3, work_m // 2000),
-            wu_m, cd_m,
+            variant,
+            pace_zones,
+            reps_400 or default_reps,
+            reps_800 or default_reps,
+            reps_1000 or max(3, work_m // 2000),
+            wu_m,
+            cd_m,
         )
     return _build_interval_steps_low_base(
-        variant, pace_zones, default_reps,
-        reps_400 or default_reps, reps_800 or max(3, work_m // 1600),
+        variant,
+        pace_zones,
+        default_reps,
+        reps_400 or default_reps,
+        reps_800 or max(3, work_m // 1600),
         reps_200 or max(6, work_m // 400),
-        wu_m, cd_m,
+        wu_m,
+        cd_m,
     )
 
 
@@ -471,16 +487,46 @@ def _build_interval_steps_high_base(
     if variant == 1:
         return [
             _warmup(pace_zones, wu_m),
-            _step("run", "400 m", distance_m=400, pace_zone="I",
-                  pace_str=_pace_str("I", pace_zones), effort="hard"),
-            _step("run", "800 m", distance_m=800, pace_zone="I",
-                  pace_str=_pace_str("I", pace_zones), effort="hard"),
-            _step("run", "1200 m", distance_m=1200, pace_zone="I",
-                  pace_str=_pace_str("I", pace_zones), effort="hard"),
-            _step("run", "800 m", distance_m=800, pace_zone="I",
-                  pace_str=_pace_str("I", pace_zones), effort="hard"),
-            _step("run", "400 m", distance_m=400, pace_zone="I",
-                  pace_str=_pace_str("I", pace_zones), effort="hard"),
+            _step(
+                "run",
+                "400 m",
+                distance_m=400,
+                pace_zone="I",
+                pace_str=_pace_str("I", pace_zones),
+                effort="hard",
+            ),
+            _step(
+                "run",
+                "800 m",
+                distance_m=800,
+                pace_zone="I",
+                pace_str=_pace_str("I", pace_zones),
+                effort="hard",
+            ),
+            _step(
+                "run",
+                "1200 m",
+                distance_m=1200,
+                pace_zone="I",
+                pace_str=_pace_str("I", pace_zones),
+                effort="hard",
+            ),
+            _step(
+                "run",
+                "800 m",
+                distance_m=800,
+                pace_zone="I",
+                pace_str=_pace_str("I", pace_zones),
+                effort="hard",
+            ),
+            _step(
+                "run",
+                "400 m",
+                distance_m=400,
+                pace_zone="I",
+                pace_str=_pace_str("I", pace_zones),
+                effort="hard",
+            ),
             _step("recovery", "Equal-distance recovery jog", effort="jog"),
             _cooldown(pace_zones, cd_m),
         ]
@@ -488,42 +534,86 @@ def _build_interval_steps_high_base(
     if variant == 2:
         return [
             _warmup(pace_zones, wu_m),
-            _step("run", "8 × 45 s hill repeats", duration_s=45, repeat=8,
-                  pace_zone="T", pace_str=_pace_str("T", pace_zones),
-                  effort="hard uphill"),
-            _step("recovery", "Jog-down recovery", duration_s=90, repeat=8,
-                  effort="jog"),
+            _step(
+                "run",
+                "8 × 45 s hill repeats",
+                duration_s=45,
+                repeat=8,
+                pace_zone="T",
+                pace_str=_pace_str("T", pace_zones),
+                effort="hard uphill",
+            ),
+            _step(
+                "recovery", "Jog-down recovery", duration_s=90, repeat=8, effort="jog"
+            ),
             _cooldown(pace_zones, cd_m),
         ]
 
     if variant == 3:
         return [
             _warmup(pace_zones, wu_m),
-            _step("run", f"{reps_800} × 800 m (Yasso)", distance_m=800,
-                  repeat=reps_800, pace_zone="M",
-                  pace_str=_pace_str("M", pace_zones), effort="hard"),
-            _step("recovery", "Equal-time jog recovery", duration_s=180,
-                  repeat=reps_800 - 1, pace_zone="E", effort="jog"),
+            _step(
+                "run",
+                f"{reps_800} × 800 m (Yasso)",
+                distance_m=800,
+                repeat=reps_800,
+                pace_zone="M",
+                pace_str=_pace_str("M", pace_zones),
+                effort="hard",
+            ),
+            _step(
+                "recovery",
+                "Equal-time jog recovery",
+                duration_s=180,
+                repeat=reps_800 - 1,
+                pace_zone="E",
+                effort="jog",
+            ),
             _cooldown(pace_zones, cd_m),
         ]
 
     if variant == 4:
         return [
             _warmup(pace_zones, wu_m),
-            _step("run", f"{reps_1000} × 1000 m", distance_m=1000,
-                  repeat=reps_1000, pace_zone="I",
-                  pace_str=_pace_str("I", pace_zones), effort="hard"),
-            _step("recovery", "400 m jog recovery", distance_m=400,
-                  repeat=reps_1000 - 1, pace_zone="E", effort="jog"),
+            _step(
+                "run",
+                f"{reps_1000} × 1000 m",
+                distance_m=1000,
+                repeat=reps_1000,
+                pace_zone="I",
+                pace_str=_pace_str("I", pace_zones),
+                effort="hard",
+            ),
+            _step(
+                "recovery",
+                "400 m jog recovery",
+                distance_m=400,
+                repeat=reps_1000 - 1,
+                pace_zone="E",
+                effort="jog",
+            ),
             _cooldown(pace_zones, cd_m),
         ]
 
     return [
         _warmup(pace_zones, wu_m),
-        _step("run", f"{reps_400} × 400 m", distance_m=400, repeat=reps_400,
-              pace_zone="I", pace_str=_pace_str("I", pace_zones), effort="hard"),
-        _step("recovery", "400 m jog recovery", distance_m=400,
-              repeat=reps_400 - 1, pace_zone="E", effort="jog"),
+        _step(
+            "run",
+            f"{reps_400} × 400 m",
+            distance_m=400,
+            repeat=reps_400,
+            pace_zone="I",
+            pace_str=_pace_str("I", pace_zones),
+            effort="hard",
+        ),
+        _step(
+            "recovery",
+            "400 m jog recovery",
+            distance_m=400,
+            repeat=reps_400 - 1,
+            pace_zone="E",
+            effort="jog",
+        ),
         _cooldown(pace_zones, cd_m),
     ]
 
@@ -541,40 +631,85 @@ def _build_interval_steps_low_base(
     if variant == 1:
         return [
             _warmup(pace_zones, wu_m),
-            _step("run", f"{reps_800} × 800 m", distance_m=800, repeat=reps_800,
-                  pace_zone="T", pace_str=_pace_str("T", pace_zones),
-                  effort="comfortably hard"),
-            _step("recovery", "90 s rest", duration_s=90,
-                  repeat=reps_800 - 1, pace_zone="E", effort="jog"),
+            _step(
+                "run",
+                f"{reps_800} × 800 m",
+                distance_m=800,
+                repeat=reps_800,
+                pace_zone="T",
+                pace_str=_pace_str("T", pace_zones),
+                effort="comfortably hard",
+            ),
+            _step(
+                "recovery",
+                "90 s rest",
+                duration_s=90,
+                repeat=reps_800 - 1,
+                pace_zone="E",
+                effort="jog",
+            ),
             _cooldown(pace_zones, cd_m),
         ]
 
     if variant == 2:
         return [
             _warmup(pace_zones, wu_m),
-            _step("run", f"{reps_200} × 200 m", distance_m=200, repeat=reps_200,
-                  pace_zone="R", pace_str=_pace_str("R", pace_zones), effort="fast"),
-            _step("recovery", "200 m jog recovery", distance_m=200,
-                  repeat=reps_200 - 1, pace_zone="E", effort="jog"),
+            _step(
+                "run",
+                f"{reps_200} × 200 m",
+                distance_m=200,
+                repeat=reps_200,
+                pace_zone="R",
+                pace_str=_pace_str("R", pace_zones),
+                effort="fast",
+            ),
+            _step(
+                "recovery",
+                "200 m jog recovery",
+                distance_m=200,
+                repeat=reps_200 - 1,
+                pace_zone="E",
+                effort="jog",
+            ),
             _cooldown(pace_zones, cd_m),
         ]
 
     if variant == 3:
         return [
             _warmup(pace_zones, wu_m),
-            _step("run", "8 × 30 s hill repeats", duration_s=30, repeat=8,
-                  pace_zone="R", effort="hard uphill"),
-            _step("recovery", "Walk-down recovery", duration_s=60, repeat=8,
-                  effort="walk"),
+            _step(
+                "run",
+                "8 × 30 s hill repeats",
+                duration_s=30,
+                repeat=8,
+                pace_zone="R",
+                effort="hard uphill",
+            ),
+            _step(
+                "recovery", "Walk-down recovery", duration_s=60, repeat=8, effort="walk"
+            ),
             _cooldown(pace_zones, cd_m),
         ]
 
     return [
         _warmup(pace_zones, wu_m),
-        _step("run", f"{reps_400} × 400 m", distance_m=400, repeat=reps_400,
-              pace_zone="I", pace_str=_pace_str("I", pace_zones), effort="hard"),
-        _step("recovery", "90 s jog recovery", duration_s=90,
-              repeat=reps_400 - 1, pace_zone="E", effort="jog"),
+        _step(
+            "run",
+            f"{reps_400} × 400 m",
+            distance_m=400,
+            repeat=reps_400,
+            pace_zone="I",
+            pace_str=_pace_str("I", pace_zones),
+            effort="hard",
+        ),
+        _step(
+            "recovery",
+            "90 s jog recovery",
+            duration_s=90,
+            repeat=reps_400 - 1,
+            pace_zone="E",
+            effort="jog",
+        ),
         _cooldown(pace_zones, cd_m),
     ]
 
@@ -612,20 +747,23 @@ def build_hill_steps(
 # Key-workout parser — delegated to key_workout_parser module
 # ---------------------------------------------------------------------------
 
-from app.core.training.key_workout_parser import parse_key_workout_steps  # noqa: F401
-
+from app.core.training.key_workout_parser import (  # noqa: E402
+    parse_key_workout_steps,  # noqa: F401
+)
 
 # Default pace estimates (min/km) for time-based workouts when no VDOT data.
 _DEFAULT_PACES = {
-    "E": 8.0,   # Easy pace
-    "T": 6.5,   # Tempo/threshold pace
-    "I": 5.5,   # Interval/VO2max pace
-    "M": 6.0,   # Marathon pace
-    "R": 5.0,   # Repetition/speed pace
+    "E": 8.0,  # Easy pace
+    "T": 6.5,  # Tempo/threshold pace
+    "I": 5.5,  # Interval/VO2max pace
+    "M": 6.0,  # Marathon pace
+    "R": 5.0,  # Repetition/speed pace
 }
 
 
-def _parse_pace_str_to_min_per_km(pace_str: Optional[str], pace_zone: Optional[str] = None) -> Optional[float]:
+def _parse_pace_str_to_min_per_km(
+    pace_str: Optional[str], pace_zone: Optional[str] = None
+) -> Optional[float]:
     """Parse pace string like '6:22/km' or '7:05-7:55/km' to min/km float.
 
     For ranges like '5:54-5:16/km' (slow-fast format), uses the slower pace
@@ -675,9 +813,7 @@ def _compute_distance_from_steps(steps: List[Dict[str, Any]]) -> float:
 # ---------------------------------------------------------------------------
 
 
-def scale_steps(
-    steps: List[Dict[str, Any]], multiplier: float
-) -> List[Dict[str, Any]]:
+def scale_steps(steps: List[Dict[str, Any]], multiplier: float) -> List[Dict[str, Any]]:
     """Scale distance/duration of each step by a multiplier.
 
     Used by adaptation when a week's total distance is adjusted — keeps

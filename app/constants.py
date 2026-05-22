@@ -14,6 +14,8 @@ DISTANCE_NAMES: dict[float, str] = {
 
 # Valid workout types emitted by the plan generator and accepted by run logging.
 # Sourced from the workout registry so adding a new type is one-place.
-from app.core.training.workout_registry import ALL_WORKOUT_TYPE_NAMES as _ALL_WORKOUT_TYPE_NAMES
+from app.core.training.workout_registry import (  # noqa: E402
+    ALL_WORKOUT_TYPE_NAMES as _ALL_WORKOUT_TYPE_NAMES,
+)
 
 WORKOUT_TYPES: list[str] = list(_ALL_WORKOUT_TYPE_NAMES)

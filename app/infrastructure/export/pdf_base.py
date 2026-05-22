@@ -41,6 +41,7 @@ class PDFBase:
     def _cache_key_from_hash(self, prefix: str, plan_id, content) -> str:
         if not isinstance(content, str):
             import json
+
             content = json.dumps(content, sort_keys=True)
         content_hash = hashlib.md5(content.encode()).hexdigest()
         return f"{prefix}{plan_id}_{content_hash}.pdf"
@@ -55,9 +56,7 @@ class PDFBase:
             bottomMargin=2 * cm,
         )
 
-    def _generate_with_cache(
-        self, cache_key: str, filename: str, build_fn
-    ) -> str:
+    def _generate_with_cache(self, cache_key: str, filename: str, build_fn) -> str:
         self._evict_stale_cache()
         cache_path = self.cache_dir / cache_key
 

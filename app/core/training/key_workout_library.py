@@ -8,7 +8,6 @@ import re
 from typing import Any, Callable, Dict, List, Optional
 
 from app.core.training import workout_steps as _steps_mod
-from app.core.training.hr_zone_calculator import WORKOUT_ZONE_MAP
 from app.core.training.key_workout_data import WORKOUTS
 from app.core.training.vdot_calculator import VDOTCalculator
 
@@ -70,9 +69,15 @@ def _pyramid_pattern(d: float) -> str:
     return "200m, 400m, 400m, 200m"
 
 
-def _fartlek_reps(d: float, on_min: int = 3, off_min: int = 2,
-                  pace_min_per_km: float = 6.0,
-                  default: int = 8, lo: int = 3, hi: int = 10) -> int:
+def _fartlek_reps(
+    d: float,
+    on_min: int = 3,
+    off_min: int = 2,
+    pace_min_per_km: float = 6.0,
+    default: int = 8,
+    lo: int = 3,
+    hi: int = 10,
+) -> int:
     """Scale fartlek rep count to fit distance d.
 
     A "set" of (on_min hard / off_min easy) covers roughly
@@ -224,9 +229,9 @@ _DISTANCE_REWRITES: Dict[str, Callable[[float], str]] = {
         f"Jog back down for recovery. Cool down {_wu_cd(d)[1]:g}km easy."
     ),
     "trail_power_hike": lambda d: (
-        f"On a hilly trail loop: power-hike steep uphills for 5 min "
-        f"(arms pumping, long strides), then run the flats and downhills. "
-        f"Repeat 5 times. Plan for ~60-75 min total."
+        "On a hilly trail loop: power-hike steep uphills for 5 min "
+        "(arms pumping, long strides), then run the flats and downhills. "
+        "Repeat 5 times. Plan for ~60-75 min total."
     ),
     "trail_downhill_technique": lambda d: (
         f"Warm up {_wu_cd(d)[0]:g}km on flat. "
@@ -235,16 +240,15 @@ _DISTANCE_REWRITES: Dict[str, Callable[[float], str]] = {
         f"Hike back up for recovery. Cool down {_wu_cd(d)[1]:g}km easy."
     ),
     "trail_flat_power_walk": lambda d: (
-        f"Alternate 5 min maximum-effort power walking with 5 min easy running "
-        f"x 6 sets. Plan for ~60 min total. Max-effort power walking at "
-        f"9-10 min/km builds the specific muscular endurance for race-day hiking."
+        "Alternate 5 min maximum-effort power walking with 5 min easy running "
+        "x 6 sets. Plan for ~60 min total. Max-effort power walking at "
+        "9-10 min/km builds the specific muscular endurance for race-day hiking."
     ),
     "trail_flat_proprioception": lambda d: (
         f"Run {d * 0.80:.1f}km alternating surfaces every 1-2km: pavement, "
         f"grass, gravel, dirt. Every 2km, stop for a 2-min agility circuit: "
         f"10 single-leg hops each side, 20m lateral shuffles, 20m backward running."
     ),
-
     # -- Long-run variants (Half Marathon) --
     "half_long_alternating_mp": lambda d: (
         f"Run {d:.1f}km alternating 2 km easy and 2 km at "
@@ -261,7 +265,6 @@ _DISTANCE_REWRITES: Dict[str, Callable[[float], str]] = {
         f"Keep effort even — push on the climbs, float on the descents. "
         f"Do NOT chase pace on the flats."
     ),
-
     # -- Long-run variants (Marathon) --
     "marathon_long_alternating_mp": lambda d: (
         f"Run {d:.1f}km alternating 3 km easy and 3 km at "
@@ -283,14 +286,12 @@ _DISTANCE_REWRITES: Dict[str, Callable[[float], str]] = {
         f"effort throughout — the hills become natural fartlek intervals "
         f"without breaking rhythm."
     ),
-
     # -- Long-run variants (10K) --
     "10k_long_fast_finish": lambda d: (
         f"Run {d:.1f}km easy, then finish with the last 2 km "
         f"at threshold pace. A miniature version of the classic "
         f"marathon fast-finish long run."
     ),
-
     # -- Long-run variants (Trail 30K — hilly) --
     "trail_long_fast_finish": lambda d: (
         f"Run {d:.1f}km on trails at easy effort. In the "
@@ -308,7 +309,6 @@ _DISTANCE_REWRITES: Dict[str, Callable[[float], str]] = {
         f"walk on race day. Practice your exact fueling strategy: take "
         f"nutrition every 30 min. Treat this as a dress rehearsal."
     ),
-
     # -- Long-run variants (Trail 30K — flat) --
     "trail_flat_long_fast_finish": lambda d: (
         f"Run {d:.1f}km on the softest surface available "
@@ -333,36 +333,52 @@ _DISTANCE_REWRITES: Dict[str, Callable[[float], str]] = {
 
 _STRUCTURE_REWRITES: Dict[str, Callable[[float], str]] = {
     # Half Marathon long runs
-    "half_long_alternating_mp": lambda d: f"{d:.1f}km alternating 2km easy / 2km marathon pace",
+    "half_long_alternating_mp": lambda d: (
+        f"{d:.1f}km alternating 2km easy / 2km marathon pace"
+    ),
     "half_long_fast_finish": lambda d: f"{d:.1f}km with last 3km at threshold pace",
     "half_long_rolling_hills": lambda d: f"{d:.1f}km on rolling hills at even effort",
-
     # Marathon long runs
-    "marathon_long_alternating_mp": lambda d: f"{d:.1f}km alternating 3km easy / 3km marathon pace",
-    "marathon_long_fast_finish": lambda d: f"{d:.1f}km easy with last 4km at threshold pace",
+    "marathon_long_alternating_mp": lambda d: (
+        f"{d:.1f}km alternating 3km easy / 3km marathon pace"
+    ),
+    "marathon_long_fast_finish": lambda d: (
+        f"{d:.1f}km easy with last 4km at threshold pace"
+    ),
     "marathon_long_depletion": lambda d: f"{d:.1f}km fasted long run — water only",
-    "marathon_long_rolling_hills": lambda d: f"{d:.1f}km on rolling hills at steady effort",
-
+    "marathon_long_rolling_hills": lambda d: (
+        f"{d:.1f}km on rolling hills at steady effort"
+    ),
     # 10K long run
     "10k_long_fast_finish": lambda d: f"{d:.1f}km easy with last 2km at threshold pace",
-
     # Trail hilly long runs
-    "trail_long_fast_finish": lambda d: f"{d:.1f}km trail with last 3km at tempo effort",
+    "trail_long_fast_finish": lambda d: (
+        f"{d:.1f}km trail with last 3km at tempo effort"
+    ),
     "trail_long_rolling_hills": lambda d: f"{d:.1f}km on hilly trail at even effort",
-    "trail_long_race_simulation": lambda d: f"{d:.1f}km trail at race effort with fueling every 30min",
-
+    "trail_long_race_simulation": lambda d: (
+        f"{d:.1f}km trail at race effort with fueling every 30min"
+    ),
     # Trail flat long runs
-    "trail_flat_long_fast_finish": lambda d: f"{d:.1f}km soft-surface with last 3km at tempo",
-    "trail_flat_long_fueling": lambda d: f"{d:.1f}km easy with nutrition practice every 30min",
-    "trail_flat_long_race_sim": lambda d: f"{d:.1f}km varied-surface at race effort with fueling",
-
+    "trail_flat_long_fast_finish": lambda d: (
+        f"{d:.1f}km soft-surface with last 3km at tempo"
+    ),
+    "trail_flat_long_fueling": lambda d: (
+        f"{d:.1f}km easy with nutrition practice every 30min"
+    ),
+    "trail_flat_long_race_sim": lambda d: (
+        f"{d:.1f}km varied-surface at race effort with fueling"
+    ),
     # Trail flat tempo (soft surface)
-    "trail_flat_soft_surface": lambda d: f"{d:.1f}km continuous at easy effort on soft surface",
+    "trail_flat_soft_surface": lambda d: (
+        f"{d:.1f}km continuous at easy effort on soft surface"
+    ),
 }
 
 
-def _rewrite_key_workout_description(description: str, workout_id: str,
-                                      actual_distance: float) -> str:
+def _rewrite_key_workout_description(
+    description: str, workout_id: str, actual_distance: float
+) -> str:
     """Generate a distance-appropriate description for a key workout."""
     rewrite_fn = _DISTANCE_REWRITES.get(workout_id)
     if not rewrite_fn:
@@ -387,28 +403,29 @@ def reconcile_key_workout_text(workout: Dict[str, Any]) -> bool:
     key workout's distance (scaling, capping, transfer) so that the
     description, structure and distance stay in lockstep.
     """
-    kid = workout.get('key_workout_id')
+    kid = workout.get("key_workout_id")
     if not kid:
         return False
-    d = workout.get('distance', 0) or 0
+    d = workout.get("distance", 0) or 0
     if d <= 0:
         return False
     if kid in _DISTANCE_REWRITES:
-        workout['description'] = _DISTANCE_REWRITES[kid](d)
+        workout["description"] = _DISTANCE_REWRITES[kid](d)
         if kid in _STRUCTURE_REWRITES:
-            workout['structure'] = _STRUCTURE_REWRITES[kid](d)
+            workout["structure"] = _STRUCTURE_REWRITES[kid](d)
         else:
-            workout['structure'] = _derive_structure(workout['description'])
+            workout["structure"] = _derive_structure(workout["description"])
     elif kid in _STRUCTURE_REWRITES:
-        workout['structure'] = _STRUCTURE_REWRITES[kid](d)
+        workout["structure"] = _STRUCTURE_REWRITES[kid](d)
     return True
+
 
 # Long-ultra-only template: a short headlamp run during the peak phase to
 # rehearse darkness pacing and gear. Bracketed via ``brackets`` so it never
 # fires for short/standard plans (or road).
 _LONG_ULTRA_NIGHT_RUN: Dict[str, Any] = {
     "id": "trail_night_run",
-    "distances": [30.0],   # trail-tagged; trail_profile widens this to any bracket
+    "distances": [30.0],  # trail-tagged; trail_profile widens this to any bracket
     "brackets": ["long_ultra"],
     "phases": ["peak"],
     "type": "tempo",
@@ -452,19 +469,19 @@ _WORKOUTS = list(WORKOUTS) + [_LONG_ULTRA_NIGHT_RUN]
 _KEY_WORKOUT_MIN_DISTANCE_KM: Dict[str, float] = {
     "trail_elevation_repeats": 5.0,
     "trail_technical_terrain": 4.5,
-    "trail_power_hike":         6.0,
+    "trail_power_hike": 6.0,
     "trail_downhill_technique": 5.0,
-    "5k_hill_sprints":          4.0,
+    "5k_hill_sprints": 4.0,
 }
 
 
 _BRACKET_RESTRICTIONS: Dict[str, list] = {
-    "trail_back_to_back":            ["ultra", "long_ultra"],
-    "trail_long_race_simulation":    ["ultra", "long_ultra"],
-    "trail_flat_long_race_sim":      ["ultra", "long_ultra"],
-    "trail_flat_long_fueling":       ["standard", "ultra", "long_ultra"],
-    "trail_power_hike":              ["standard", "ultra", "long_ultra"],
-    "trail_time_on_feet":            ["standard", "ultra", "long_ultra"],
+    "trail_back_to_back": ["ultra", "long_ultra"],
+    "trail_long_race_simulation": ["ultra", "long_ultra"],
+    "trail_flat_long_race_sim": ["ultra", "long_ultra"],
+    "trail_flat_long_fueling": ["standard", "ultra", "long_ultra"],
+    "trail_power_hike": ["standard", "ultra", "long_ultra"],
+    "trail_time_on_feet": ["standard", "ultra", "long_ultra"],
 }
 
 
@@ -479,7 +496,8 @@ def _bracket_allowed(workout: Dict[str, Any], bracket: str) -> bool:
 
 
 def _trail_aware_distance_filter(
-    target_distance: float, trail_profile,
+    target_distance: float,
+    trail_profile,
 ) -> List[Dict[str, Any]]:
     """Return workouts whose ``distances`` list matches the goal.
 
@@ -489,7 +507,11 @@ def _trail_aware_distance_filter(
     requiring a per-distance fan-out in every workout entry.
     """
     if trail_profile is not None:
-        return [w for w in _WORKOUTS if 30.0 in w["distances"] or target_distance in w["distances"]]
+        return [
+            w
+            for w in _WORKOUTS
+            if 30.0 in w["distances"] or target_distance in w["distances"]
+        ]
     return [w for w in _WORKOUTS if target_distance in w["distances"]]
 
 
@@ -501,16 +523,20 @@ def _filter_candidates(
     trail_profile,
 ) -> List[Dict[str, Any]]:
     candidates = [
-        w for w in _trail_aware_distance_filter(target_distance, trail_profile)
+        w
+        for w in _trail_aware_distance_filter(target_distance, trail_profile)
         if phase in w["phases"] and w["type"] == workout_type
     ]
 
     # Terrain filter — flat-only or hilly/any otherwise.
-    if terrain == "flat" or (terrain is None and trail_profile and trail_profile.elevation_class == "flat"):
+    if terrain == "flat" or (
+        terrain is None and trail_profile and trail_profile.elevation_class == "flat"
+    ):
         candidates = [w for w in candidates if "flat" in w.get("terrain", ["any"])]
     elif trail_profile is not None or terrain is not None:
         candidates = [
-            w for w in candidates
+            w
+            for w in candidates
             if "any" in w.get("terrain", ["any"])
             or "hilly" in w.get("terrain", ["any"])
         ]
@@ -518,7 +544,9 @@ def _filter_candidates(
     # Bracket gating — ultra-specific workouts (e.g. back-to-back) only fire
     # for ultra/long_ultra plans.
     if trail_profile is not None:
-        candidates = [w for w in candidates if _bracket_allowed(w, trail_profile.bracket)]
+        candidates = [
+            w for w in candidates if _bracket_allowed(w, trail_profile.bracket)
+        ]
 
     return candidates
 
@@ -556,17 +584,18 @@ def _resolve_long_steps_builder(
     return _steps_mod.build_long_steps(distance_km, pace_zones, variant="easy")
 
 
-def _inject_pace_into_steps(steps: List[Dict[str, Any]],
-                            pace_zones: Optional[Dict]) -> List[Dict[str, Any]]:
+def _inject_pace_into_steps(
+    steps: List[Dict[str, Any]], pace_zones: Optional[Dict]
+) -> List[Dict[str, Any]]:
     """Clone steps and fill in pace_str from pace_zones when missing."""
     if not pace_zones:
         return [dict(s) for s in steps]
     out = []
     for s in steps:
         new = dict(s)
-        zone = new.get('pace_zone')
-        if zone and not new.get('pace_str') and zone in pace_zones:
-            new['pace_str'] = pace_zones[zone].get('pace_str')
+        zone = new.get("pace_zone")
+        if zone and not new.get("pace_str") and zone in pace_zones:
+            new["pace_str"] = pace_zones[zone].get("pace_str")
         out.append(new)
     return out
 
@@ -586,56 +615,66 @@ def overlay_key_workout(
     Replaces any existing ``segments`` with parsed ``steps`` so the template
     always renders session blocks that match the ``structure`` one-liner.
     """
-    if workout_type not in ('interval', 'tempo', 'hill', 'long'):
+    if workout_type not in ("interval", "tempo", "hill", "long"):
         return
-    if phase not in ('build', 'peak'):
+    if phase not in ("build", "peak"):
         return
-    if workout.get('duration_min'):
+    if workout.get("duration_min"):
         return
 
     key_wk = KeyWorkoutLibrary.get_for_phase(
-        target_distance, phase, week_in_phase, workout_type,
-        terrain=terrain, trail_profile=trail_profile,
+        target_distance,
+        phase,
+        week_in_phase,
+        workout_type,
+        terrain=terrain,
+        trail_profile=trail_profile,
     )
     if not key_wk:
         return
     if pace_zones:
         key_wk = KeyWorkoutLibrary.inject_vdot_paces(key_wk, pace_zones)
 
-    actual_distance = workout.get('distance', 0)
-    floor = _KEY_WORKOUT_MIN_DISTANCE_KM.get(key_wk['id'], 0)
+    actual_distance = workout.get("distance", 0)
+    floor = _KEY_WORKOUT_MIN_DISTANCE_KM.get(key_wk["id"], 0)
     if floor > 0:
         actual_distance = max(actual_distance, floor)
-        workout['distance'] = actual_distance
-    description = key_wk['description']
+        workout["distance"] = actual_distance
+    description = key_wk["description"]
     if actual_distance > 0:
         description = _rewrite_key_workout_description(
-            description, key_wk['id'], actual_distance,
+            description,
+            key_wk["id"],
+            actual_distance,
         )
 
-    rewritten = actual_distance > 0 and key_wk['id'] in _DISTANCE_REWRITES
+    rewritten = actual_distance > 0 and key_wk["id"] in _DISTANCE_REWRITES
 
-    workout['description'] = description
-    workout['key_workout_id'] = key_wk['id']
-    workout['key_workout_name'] = key_wk['name']
-    if key_wk['id'] in _STRUCTURE_REWRITES:
-        workout['structure'] = _STRUCTURE_REWRITES[key_wk['id']](actual_distance)
+    workout["description"] = description
+    workout["key_workout_id"] = key_wk["id"]
+    workout["key_workout_name"] = key_wk["name"]
+    if key_wk["id"] in _STRUCTURE_REWRITES:
+        workout["structure"] = _STRUCTURE_REWRITES[key_wk["id"]](actual_distance)
     elif rewritten:
-        workout['structure'] = _derive_structure(description)
+        workout["structure"] = _derive_structure(description)
     else:
-        workout['structure'] = key_wk['structure']
-    workout['key_workout_rationale'] = key_wk['rationale']
+        workout["structure"] = key_wk["structure"]
+    workout["key_workout_rationale"] = key_wk["rationale"]
 
-    if key_wk.get('steps'):
-        workout['steps'] = _inject_pace_into_steps(key_wk['steps'], pace_zones)
-    elif key_wk.get('steps_builder'):
-        workout['steps'] = _resolve_long_steps_builder(
-            key_wk['steps_builder'], workout.get('distance', 0), pace_zones,
+    if key_wk.get("steps"):
+        workout["steps"] = _inject_pace_into_steps(key_wk["steps"], pace_zones)
+    elif key_wk.get("steps_builder"):
+        workout["steps"] = _resolve_long_steps_builder(
+            key_wk["steps_builder"],
+            workout.get("distance", 0),
+            pace_zones,
         )
     else:
-        workout['steps'] = _steps_mod.parse_key_workout_steps(
-            workout['structure'], pace_zones, workout_type,
-            default_zone=key_wk.get('pace_zone'),
+        workout["steps"] = _steps_mod.parse_key_workout_steps(
+            workout["structure"],
+            pace_zones,
+            workout_type,
+            default_zone=key_wk.get("pace_zone"),
             total_distance_km=actual_distance,
         )
 
@@ -653,11 +692,11 @@ def overlay_key_workout(
     # (warm-up size, main_km splits) and the parser (implicit wu/cd) — so
     # the cited numbers match the steps. The displayed total reflects
     # actual coverage so weekly mileage adds up.
-    steps_total_km = _steps_mod._compute_distance_from_steps(workout['steps'])
+    steps_total_km = _steps_mod._compute_distance_from_steps(workout["steps"])
     if steps_total_km > 0:
-        workout['distance'] = round(steps_total_km, 1)
+        workout["distance"] = round(steps_total_km, 1)
 
-    workout.pop('segments', None)
+    workout.pop("segments", None)
 
 
 class KeyWorkoutLibrary:
@@ -696,7 +735,11 @@ class KeyWorkoutLibrary:
             return None
 
         candidates = _filter_candidates(
-            workout_type, target_distance, phase, terrain, trail_profile,
+            workout_type,
+            target_distance,
+            phase,
+            terrain,
+            trail_profile,
         )
         if not candidates:
             return None
@@ -705,20 +748,28 @@ class KeyWorkoutLibrary:
         return candidates[week_in_phase % len(candidates)]
 
     @classmethod
-    def get_all_for_distance(cls, target_distance: float, terrain: Optional[str] = None,
-                             trail_profile=None) -> List[Dict]:
+    def get_all_for_distance(
+        cls, target_distance: float, terrain: Optional[str] = None, trail_profile=None
+    ) -> List[Dict]:
         """Return all key workouts for a race distance."""
         workouts = _trail_aware_distance_filter(target_distance, trail_profile)
-        if terrain == "flat" or (terrain is None and trail_profile and trail_profile.elevation_class == "flat"):
+        if terrain == "flat" or (
+            terrain is None
+            and trail_profile
+            and trail_profile.elevation_class == "flat"
+        ):
             workouts = [w for w in workouts if "flat" in w.get("terrain", ["any"])]
         elif terrain is not None or trail_profile is not None:
             workouts = [
-                w for w in workouts
+                w
+                for w in workouts
                 if "any" in w.get("terrain", ["any"])
                 or "hilly" in w.get("terrain", ["any"])
             ]
         if trail_profile is not None:
-            workouts = [w for w in workouts if _bracket_allowed(w, trail_profile.bracket)]
+            workouts = [
+                w for w in workouts if _bracket_allowed(w, trail_profile.bracket)
+            ]
         return workouts
 
     @classmethod

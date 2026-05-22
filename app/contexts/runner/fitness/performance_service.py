@@ -5,18 +5,19 @@ import uuid
 from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, Optional, Tuple
 
-from sqlalchemy import func
 from sqlalchemy.orm import Session
 
-from app.models import RunLog, TrainingPlan, User, WeeklyPlan, DailyWorkout
 from app.contexts.auth.repositories import SQLAlchemyUserRepository
-from app.contexts.plan.generators.performance_plan_generator import PerformancePlanGenerator
 from app.contexts.nutrition.nutrition_engine import NutritionEngine
+from app.contexts.plan.generators.performance_plan_generator import (
+    PerformancePlanGenerator,
+)
 from app.contexts.runner.fitness.performance_progress import (
     get_plan_progress,
     get_plan_with_data,
     get_todays_workout,
 )
+from app.models import DailyWorkout, RunLog, TrainingPlan, User, WeeklyPlan
 
 logger = logging.getLogger(__name__)
 
@@ -51,10 +52,7 @@ class PerformanceService:
         self.nutrition_engine = nutrition_engine or NutritionEngine()
 
     def calculate_max_heart_rate(
-        self,
-        user_id: str,
-        goal_pace: float,
-        lookback_weeks: int = 8
+        self, user_id: str, goal_pace: float, lookback_weeks: int = 8
     ) -> Dict[str, Any]:
         """
         Calculate maximum heart rate using three-tier fallback strategy.
@@ -68,13 +66,15 @@ class PerformanceService:
             Dictionary with max_hr, confidence, source, and message
         """
         # Strategy 1: Use RunLog data (highest confidence)
-        cutoff_date = datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(weeks=lookback_weeks)
+        cutoff_date = datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(
+            weeks=lookback_weeks
+        )
         runs = (
             self.db.query(RunLog)
             .filter(
                 RunLog.user_id == user_id,
                 RunLog.date >= cutoff_date,
-                RunLog.max_heart_rate.isnot(None)
+                RunLog.max_heart_rate.isnot(None),
             )
             .order_by(RunLog.date.desc())
             .all()
@@ -91,10 +91,10 @@ class PerformanceService:
                 max_hr = hr_values[-2] if len(hr_values) >= 2 else hr_values[-1]
 
             return {
-                'max_hr': max_hr,
-                'confidence': 'high',
-                'source': 'run_data',
-                'message': f'Calculated from {len(runs)} runs with heart rate data (98th percentile)'
+                "max_hr": max_hr,
+                "confidence": "high",
+                "source": "run_data",
+                "message": f"Calculated from {len(runs)} runs with heart rate data (98th percentile)",
             }
 
         # Strategy 2: Age-based formula (medium confidence)
@@ -102,10 +102,10 @@ class PerformanceService:
         if user and user.age:
             max_hr = 220 - user.age
             return {
-                'max_hr': max_hr,
-                'confidence': 'medium',
-                'source': 'age_formula',
-                'message': f'Estimated from age using 220 - {user.age} formula'
+                "max_hr": max_hr,
+                "confidence": "medium",
+                "source": "age_formula",
+                "message": f"Estimated from age using 220 - {user.age} formula",
             }
 
         # Strategy 3: Pace-based estimation (low confidence)
@@ -123,17 +123,14 @@ class PerformanceService:
             pace_desc = "slower"
 
         return {
-            'max_hr': max_hr,
-            'confidence': 'low',
-            'source': 'pace_estimation',
-            'message': f'Rough estimate based on {pace_desc} goal pace (consider testing your actual max HR)'
+            "max_hr": max_hr,
+            "confidence": "low",
+            "source": "pace_estimation",
+            "message": f"Rough estimate based on {pace_desc} goal pace (consider testing your actual max HR)",
         }
 
     def calculate_fitness_from_runs(
-        self,
-        user_id: str,
-        target_distance: float,
-        lookback_weeks: int = 8
+        self, user_id: str, target_distance: float, lookback_weeks: int = 8
     ) -> Dict[str, Any]:
         """
         Calculate current fitness metrics from logged runs.
@@ -147,7 +144,9 @@ class PerformanceService:
             Dictionary with fitness metrics or None if insufficient data
         """
         # Get recent runs
-        cutoff_date = datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(weeks=lookback_weeks)
+        cutoff_date = datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(
+            weeks=lookback_weeks
+        )
 
         runs = (
             self.db.query(RunLog)
@@ -155,7 +154,7 @@ class PerformanceService:
                 RunLog.user_id == user_id,
                 RunLog.date >= cutoff_date,
                 RunLog.distance_km.isnot(None),
-                RunLog.avg_pace_min_km.isnot(None)
+                RunLog.avg_pace_min_km.isnot(None),
             )
             .order_by(RunLog.date.desc())
             .all()
@@ -163,9 +162,9 @@ class PerformanceService:
 
         if len(runs) < 5:
             return {
-                'has_sufficient_data': False,
-                'total_runs': len(runs),
-                'message': f'Need at least 5 logged runs in the last {lookback_weeks} weeks. You have {len(runs)}.',
+                "has_sufficient_data": False,
+                "total_runs": len(runs),
+                "message": f"Need at least 5 logged runs in the last {lookback_weeks} weeks. You have {len(runs)}.",
             }
 
         # Filter runs within target distance range (±30%)
@@ -173,8 +172,7 @@ class PerformanceService:
         distance_max = target_distance * 1.3
 
         relevant_runs = [
-            r for r in runs
-            if distance_min <= r.distance_km <= distance_max
+            r for r in runs if distance_min <= r.distance_km <= distance_max
         ]
 
         if len(relevant_runs) < 2:
@@ -183,7 +181,9 @@ class PerformanceService:
 
         # Calculate metrics
         avg_pace = sum(r.avg_pace_min_km for r in relevant_runs) / len(relevant_runs)
-        recent_pace = sum(r.avg_pace_min_km for r in relevant_runs[:3]) / min(3, len(relevant_runs))
+        recent_pace = sum(r.avg_pace_min_km for r in relevant_runs[:3]) / min(
+            3, len(relevant_runs)
+        )
 
         # Calculate weekly mileage
         weeks_data = {}
@@ -198,11 +198,17 @@ class PerformanceService:
 
         # Analyze improvement trend
         if len(relevant_runs) >= 4:
-            first_half = relevant_runs[len(relevant_runs)//2:]
-            second_half = relevant_runs[:len(relevant_runs)//2]
-            first_half_pace = sum(r.avg_pace_min_km for r in first_half) / len(first_half)
-            second_half_pace = sum(r.avg_pace_min_km for r in second_half) / len(second_half)
-            improvement_trend = ((first_half_pace - second_half_pace) / first_half_pace) * 100
+            first_half = relevant_runs[len(relevant_runs) // 2 :]
+            second_half = relevant_runs[: len(relevant_runs) // 2]
+            first_half_pace = sum(r.avg_pace_min_km for r in first_half) / len(
+                first_half
+            )
+            second_half_pace = sum(r.avg_pace_min_km for r in second_half) / len(
+                second_half
+            )
+            improvement_trend = (
+                (first_half_pace - second_half_pace) / first_half_pace
+            ) * 100
         else:
             improvement_trend = 0
 
@@ -213,15 +219,15 @@ class PerformanceService:
         estimated_time_str = f"{estimated_time_hours}:{estimated_time_mins:02d}:00"
 
         return {
-            'has_sufficient_data': True,
-            'total_runs': len(runs),
-            'relevant_runs': len(relevant_runs),
-            'avg_pace': round(avg_pace, 2),
-            'recent_pace': round(recent_pace, 2),
-            'avg_weekly_km': round(avg_weekly_km, 1),
-            'improvement_trend': round(improvement_trend, 1),
-            'estimated_finish_time': estimated_time_str,
-            'lookback_weeks': lookback_weeks,
+            "has_sufficient_data": True,
+            "total_runs": len(runs),
+            "relevant_runs": len(relevant_runs),
+            "avg_pace": round(avg_pace, 2),
+            "recent_pace": round(recent_pace, 2),
+            "avg_weekly_km": round(avg_weekly_km, 1),
+            "improvement_trend": round(improvement_trend, 1),
+            "estimated_finish_time": estimated_time_str,
+            "lookback_weeks": lookback_weeks,
         }
 
     def create_performance_plan(
@@ -236,7 +242,7 @@ class PerformanceService:
         current_time: str | None = None,
         runs_per_week: int = 5,
         auto_calculate: bool = True,
-        max_heart_rate: int | None = None
+        max_heart_rate: int | None = None,
     ) -> Tuple[TrainingPlan, Dict[str, Any]]:
         """
         Create a performance-focused training plan.
@@ -260,12 +266,12 @@ class PerformanceService:
         # Auto-calculate fitness if not provided and auto_calculate is enabled
         if auto_calculate and (current_pace is None or current_weekly_km is None):
             fitness = self.calculate_fitness_from_runs(user.id, target_distance)
-            if not fitness.get('has_sufficient_data'):
+            if not fitness.get("has_sufficient_data"):
                 raise ValueError(
                     f"Insufficient run data to auto-calculate fitness. {fitness.get('message', '')}"
                 )
-            current_pace = current_pace or fitness['avg_pace']
-            current_weekly_km = current_weekly_km or fitness['avg_weekly_km']
+            current_pace = current_pace or fitness["avg_pace"]
+            current_weekly_km = current_weekly_km or fitness["avg_weekly_km"]
 
         # Validate that we have the required values
         if current_pace is None or current_weekly_km is None:
@@ -281,7 +287,7 @@ class PerformanceService:
             weeks=weeks,
             current_weekly_km=current_weekly_km,
             runs_per_week=runs_per_week,
-            max_heart_rate=max_heart_rate
+            max_heart_rate=max_heart_rate,
         )
 
         # Create training plan record
@@ -290,21 +296,21 @@ class PerformanceService:
             current_weekly_km=current_weekly_km,
             target_distance=str(target_distance),
             weeks_duration=weeks,
-            plan_type='performance',
+            plan_type="performance",
             current_pace=current_pace,
             goal_pace=goal_pace,
             current_time=current_time,
             goal_time=goal_time,
             max_runs_per_week=runs_per_week,
             max_heart_rate=max_heart_rate,
-            plan_data=plan_data['weekly_plans']
+            plan_data=plan_data["weekly_plans"],
         )
 
         self.db.add(training_plan)
         self.db.flush()
 
         # Save weekly plans and daily workouts
-        self._save_weekly_plans(training_plan.id, plan_data['weekly_plans'])
+        self._save_weekly_plans(training_plan.id, plan_data["weekly_plans"])
 
         # Generate and save nutrition plan
         nutrition_plan = self.nutrition_engine.generate_weekly_meal_plan(
@@ -318,9 +324,7 @@ class PerformanceService:
         return training_plan, plan_data
 
     def _save_weekly_plans(
-        self,
-        training_plan_id: str,
-        weekly_plans: list[Dict[str, Any]]
+        self, training_plan_id: str, weekly_plans: list[Dict[str, Any]]
     ) -> None:
         """Save weekly plans and daily workouts to database."""
         weekly_plan_records = []
@@ -328,30 +332,36 @@ class PerformanceService:
 
         for week_data in weekly_plans:
             week_id = str(uuid.uuid4())
-            weekly_plan_records.append({
-                'id': week_id,
-                'training_plan_id': training_plan_id,
-                'week_number': week_data['week'],
-                'total_km': week_data['total_km'],
-                'workout_types': {
-                    'quality_workouts': week_data.get('quality_workouts', 0),
-                    'phase': week_data.get('phase', '')
+            weekly_plan_records.append(
+                {
+                    "id": week_id,
+                    "training_plan_id": training_plan_id,
+                    "week_number": week_data["week"],
+                    "total_km": week_data["total_km"],
+                    "workout_types": {
+                        "quality_workouts": week_data.get("quality_workouts", 0),
+                        "phase": week_data.get("phase", ""),
+                    },
                 }
-            })
+            )
 
-            for workout in week_data.get('daily_workouts', []):
-                dist = workout.get('distance', 0)
-                daily_workout_records.append({
-                    'id': str(uuid.uuid4()),
-                    'weekly_plan_id': week_id,
-                    'day_of_week': workout['day'],
-                    'workout_type': workout['type'],
-                    'distance_km': dist,
-                    'intensity': workout.get('intensity', workout.get('zone', 'zone_1')),
-                    'notes': workout.get('description', ''),
-                    'coaching_rationale': workout.get('coaching_rationale'),
-                    'baseline_distance_km': dist,
-                })
+            for workout in week_data.get("daily_workouts", []):
+                dist = workout.get("distance", 0)
+                daily_workout_records.append(
+                    {
+                        "id": str(uuid.uuid4()),
+                        "weekly_plan_id": week_id,
+                        "day_of_week": workout["day"],
+                        "workout_type": workout["type"],
+                        "distance_km": dist,
+                        "intensity": workout.get(
+                            "intensity", workout.get("zone", "zone_1")
+                        ),
+                        "notes": workout.get("description", ""),
+                        "coaching_rationale": workout.get("coaching_rationale"),
+                        "baseline_distance_km": dist,
+                    }
+                )
 
         self.db.add_all([WeeklyPlan(**r) for r in weekly_plan_records])
         self.db.add_all([DailyWorkout(**r) for r in daily_workout_records])
@@ -361,10 +371,7 @@ class PerformanceService:
         """Get a performance training plan by ID."""
         return (
             self.db.query(TrainingPlan)
-            .filter(
-                TrainingPlan.id == plan_id,
-                TrainingPlan.plan_type == 'performance'
-            )
+            .filter(TrainingPlan.id == plan_id, TrainingPlan.plan_type == "performance")
             .first()
         )
 

@@ -2,10 +2,9 @@
 
 import uuid
 
-from sqlalchemy import Column, ForeignKey, String, DateTime, func
+from sqlalchemy import Column, DateTime, ForeignKey, String, func
 from sqlalchemy.orm import Mapped, relationship
 from sqlalchemy.types import JSON
-import uuid
 
 from app.models.base import Base
 

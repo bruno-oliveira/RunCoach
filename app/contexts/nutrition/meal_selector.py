@@ -22,7 +22,9 @@ class MealSelector:
         """Select a meal with emphasis on variety from already used meals."""
         available_meals = self.meal_db.get_meals_by_type(meal_type)
 
-        remaining_meals = [meal for meal in available_meals if meal["name"] not in used_meals]
+        remaining_meals = [
+            meal for meal in available_meals if meal["name"] not in used_meals
+        ]
 
         if len(remaining_meals) < 2:
             remaining_meals = available_meals
@@ -48,8 +50,8 @@ class MealSelector:
 
         if scored_meals:
             scored_meals.sort(key=lambda x: x[0], reverse=True)
-            top_meals = scored_meals[:min(8, len(scored_meals))]
-            weights = [8, 7, 6, 5, 4, 3, 2, 1][:len(top_meals)]
+            top_meals = scored_meals[: min(8, len(scored_meals))]
+            weights = [8, 7, 6, 5, 4, 3, 2, 1][: len(top_meals)]
             selected = self._rng.choices(top_meals, weights=weights)[0][1]
             return selected
 

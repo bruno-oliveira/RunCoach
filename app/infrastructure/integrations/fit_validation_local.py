@@ -17,7 +17,9 @@ import tempfile
 from dataclasses import dataclass
 from pathlib import Path
 
-FITCSV_TOOL = Path(__file__).parent.parent.parent / "tools" / "fit-sdk" / "FitCSVTool.jar"
+FITCSV_TOOL = (
+    Path(__file__).parent.parent.parent / "tools" / "fit-sdk" / "FitCSVTool.jar"
+)
 
 
 @dataclass
@@ -106,7 +108,11 @@ def generate_test_fit() -> bytes:
 
 def main():
     parser = argparse.ArgumentParser(description="Local FIT file validation tool")
-    parser.add_argument("--generate-test", action="store_true", help="Generate a test FIT file and validate it")
+    parser.add_argument(
+        "--generate-test",
+        action="store_true",
+        help="Generate a test FIT file and validate it",
+    )
     parser.add_argument("--file", type=str, help="Validate an existing .fit file")
     args = parser.parse_args()
 
@@ -115,7 +121,9 @@ def main():
         fit_bytes = generate_test_fit()
         print(f"Generated {len(fit_bytes)} bytes")
 
-        output_path = Path(__file__).parent.parent.parent / "test_output" / "race_plan_test.fit"
+        output_path = (
+            Path(__file__).parent.parent.parent / "test_output" / "race_plan_test.fit"
+        )
         output_path.parent.mkdir(exist_ok=True)
         output_path.write_bytes(fit_bytes)
         print(f"Saved to: {output_path}")

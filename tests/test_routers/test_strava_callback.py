@@ -30,6 +30,7 @@ def callback_user(test_db: Session) -> User:
 @pytest.fixture
 def callback_client(test_db: Session) -> TestClient:
     """Test client with DB override only (callback doesn't use get_current_user)."""
+
     def override_get_db():
         try:
             yield test_db
@@ -52,7 +53,9 @@ def _make_state(user_id: str) -> str:
 
 
 class TestStravaCallback:
-    def test_valid_state_and_code_stores_tokens(self, callback_client, callback_user, test_db):
+    def test_valid_state_and_code_stores_tokens(
+        self, callback_client, callback_user, test_db
+    ):
         state = _make_state(callback_user.id)
 
         token_data = {

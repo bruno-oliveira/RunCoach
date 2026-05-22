@@ -7,33 +7,31 @@ and edge cases. This is the safety net for RunCoach's unique feature.
 import pytest
 
 from app.contexts.plan.generators.plan_generator import TrainingPlanGenerator
+from app.core.training.key_workout_library import (
+    _DISTANCE_REWRITES,
+    _rewrite_key_workout_description,
+)
 from app.core.training.long_run_calculator import (
-    calculate_long_run_distance,
+    _get_long_run_cap,
     calculate_long_run_ratio,
     calculate_phases,
     get_long_run_ratio_range,
-    _get_long_run_cap,
 )
 from app.core.training.quality_caps import (
-    cap_quality_distance,
-    cap_easy_distance,
-    enforce_week_caps,
-    get_quality_caps,
     QUALITY_CAPS_BY_DISTANCE,
-)
-from app.core.training.key_workout_library import (
-    _rewrite_key_workout_description,
-    _DISTANCE_REWRITES,
+    cap_easy_distance,
+    cap_quality_distance,
+    get_quality_caps,
 )
 from app.core.training.workout_builders import (
-    generate_tempo_run,
-    generate_interval_run,
     generate_easy_run,
+    generate_interval_run,
     generate_long_run,
+    generate_tempo_run,
 )
 
-
 # ── Long Run Caps: must be below race distance ─────────────────────────────
+
 
 class TestLongRunCapsBelowRaceDistance:
     """Long run base caps must always be strictly below the race distance
@@ -41,11 +39,11 @@ class TestLongRunCapsBelowRaceDistance:
     than race distance in training."""
 
     CAPS = {
-        5.0:  {'beginner': 7.0,  'intermediate': 8.0,  'advanced': 10.0},
-        10.0: {'beginner': 12.0, 'intermediate': 15.0, 'advanced': 16.0},
-        21.1: {'beginner': 17.0, 'intermediate': 18.0, 'advanced': 19.0},
-        30.0: {'beginner': 24.0, 'intermediate': 25.5, 'advanced': 27.0},
-        42.2: {'beginner': 32.0, 'intermediate': 34.0, 'advanced': 36.0},
+        5.0: {"beginner": 7.0, "intermediate": 8.0, "advanced": 10.0},
+        10.0: {"beginner": 12.0, "intermediate": 15.0, "advanced": 16.0},
+        21.1: {"beginner": 17.0, "intermediate": 18.0, "advanced": 19.0},
+        30.0: {"beginner": 24.0, "intermediate": 25.5, "advanced": 27.0},
+        42.2: {"beginner": 32.0, "intermediate": 34.0, "advanced": 36.0},
     }
     HARD_CEILINGS = {5.0: 14.0, 10.0: 22.0, 21.1: 24.0, 30.0: 30.0, 42.2: 40.0}
 
@@ -53,9 +51,7 @@ class TestLongRunCapsBelowRaceDistance:
     @pytest.mark.parametrize("tier", ["beginner", "intermediate", "advanced"])
     def test_base_cap_below_race(self, distance, tier):
         cap = self.CAPS[distance][tier]
-        assert cap < distance, (
-            f"{distance}km {tier} cap {cap}km >= race distance"
-        )
+        assert cap < distance, f"{distance}km {tier} cap {cap}km >= race distance"
 
     @pytest.mark.parametrize("distance", [21.1, 30.0, 42.2])
     def test_base_cap_at_least_75_percent_of_race(self, distance):
@@ -72,9 +68,7 @@ class TestLongRunCapsBelowRaceDistance:
         """Hard ceiling must be >= the highest tier's base cap."""
         max_cap = max(self.CAPS[distance].values())
         ceiling = self.HARD_CEILINGS[distance]
-        assert ceiling >= max_cap, (
-            f"{distance}km ceiling {ceiling} < max cap {max_cap}"
-        )
+        assert ceiling >= max_cap, f"{distance}km ceiling {ceiling} < max cap {max_cap}"
 
     @pytest.mark.parametrize("distance", [42.2])
     def test_hard_ceiling_below_or_at_race_distance(self, distance):
@@ -102,6 +96,7 @@ class TestLongRunCapsBelowRaceDistance:
 
 
 # ── Generated Plans: Long Run Never Reaches Race Distance ──────────────────
+
 
 class TestGeneratedPlanLongRunBounds:
     """End-to-end: for half marathon and above, no long run should equal
@@ -151,6 +146,7 @@ class TestGeneratedPlanLongRunBounds:
 
 # ── Description Rewriting ──────────────────────────────────────────────────
 
+
 class TestDescriptionRewriting:
     """Key workout descriptions with hardcoded distances must be rewritten
     to match the actual assigned distance."""
@@ -183,6 +179,7 @@ class TestDescriptionRewriting:
     def test_all_rewrites_have_valid_ids(self):
         """Every rewrite rule should reference a real workout id."""
         from app.core.training.key_workout_data import WORKOUTS
+
         valid_ids = {w["id"] for w in WORKOUTS}
         for workout_id in _DISTANCE_REWRITES:
             assert workout_id in valid_ids, (
@@ -191,6 +188,7 @@ class TestDescriptionRewriting:
 
 
 # ── Workout Builder Descriptions: No Negative or Nonsense Distances ────────
+
 
 class TestWorkoutBuilderDescriptions:
     """Generated descriptions must never contain negative distances or
@@ -229,7 +227,9 @@ class TestWorkoutBuilderDescriptions:
 
     def test_attach_duration_hints_for_short_workouts(self):
         """The post-build hint pass adds duration_min for sub-3km workouts."""
-        from app.contexts.plan.generators.weekly_plan_builder import attach_duration_hints
+        from app.contexts.plan.generators.weekly_plan_builder import (
+            attach_duration_hints,
+        )
 
         workouts = [
             {"type": "easy", "distance": 2.0},
@@ -248,12 +248,11 @@ class TestWorkoutBuilderDescriptions:
         for dist in [1.0, 2.0, 3.0, 4.0, 5.0]:
             workout = generate_interval_run(1, dist, 20.0)
             desc = workout["description"]
-            assert "0x" not in desc, (
-                f"Interval at {dist}km has zero reps: {desc}"
-            )
+            assert "0x" not in desc, f"Interval at {dist}km has zero reps: {desc}"
 
 
 # ── Quality Caps ───────────────────────────────────────────────────────────
+
 
 class TestQualityCaps:
     """Quality workout distances must respect physiological ceilings and
@@ -291,6 +290,7 @@ class TestQualityCaps:
 
 # ── Phase Structure ────────────────────────────────────────────────────────
 
+
 class TestPhaseStructure:
     """Phase distributions must be coherent and distance-appropriate."""
 
@@ -315,8 +315,10 @@ class TestPhaseStructure:
         """Marathon plans should emphasize base and build over shorter distances."""
         phases_marathon = calculate_phases(16, 42.2)
         phases_5k = calculate_phases(16, 5.0)
-        assert phases_marathon["base"] + phases_marathon["build"] >= \
-               phases_5k["base"] + phases_5k["build"]
+        assert (
+            phases_marathon["base"] + phases_marathon["build"]
+            >= phases_5k["base"] + phases_5k["build"]
+        )
 
     def test_taper_length_by_distance(self):
         """Marathon gets 3-week taper, others get 2."""
@@ -329,6 +331,7 @@ class TestPhaseStructure:
 
 
 # ── Long Run Ratio Ranges ─────────────────────────────────────────────────
+
 
 class TestLongRunRatioRanges:
     """Long run as % of weekly volume should scale with race distance."""
@@ -355,8 +358,10 @@ class TestLongRunRatioRanges:
 
 # ── Generated Plan: Structural Invariants ──────────────────────────────────
 
+
 class PlanInvariant:
     """Base class for invariant tests across all plan combinations."""
+
     DISTANCES = [5.0, 10.0, 21.1, 30.0, 42.2]
     BASE_KM = {5.0: 15, 10.0: 20, 21.1: 25, 30.0: 25, 42.2: 35}
     WEEKS = {5.0: 8, 10.0: 10, 21.1: 12, 30.0: 12, 42.2: 16}
@@ -392,8 +397,11 @@ class TestRunCountMatchesRequest(PlanInvariant):
     def test_run_count(self, distance, max_runs):
         plan = self._gen(distance, max_runs)
         for week in plan:
-            runs = [w for w in week["daily_workouts"]
-                    if w["type"] not in ("rest", "recovery")]
+            runs = [
+                w
+                for w in week["daily_workouts"]
+                if w["type"] not in ("rest", "recovery")
+            ]
             assert len(runs) == max_runs, (
                 f"W{week['week']} {distance}km: {len(runs)} runs, expected {max_runs}"
             )
@@ -408,8 +416,7 @@ class TestTotalKmMatchesWorkouts(PlanInvariant):
         for week in plan:
             actual = sum(w.get("distance", 0) for w in week["daily_workouts"])
             assert abs(actual - week["total_km"]) <= 0.5, (
-                f"W{week['week']} {distance}km: total={week['total_km']}, "
-                f"sum={actual}"
+                f"W{week['week']} {distance}km: total={week['total_km']}, sum={actual}"
             )
 
 
@@ -449,7 +456,9 @@ class TestLongRunIsAlwaysLongest(PlanInvariant):
         plan = self._gen(distance)
         for week in plan:
             workouts = week["daily_workouts"]
-            longs = [w for w in workouts if w["type"] == "long" and w.get("distance", 0) > 0]
+            longs = [
+                w for w in workouts if w["type"] == "long" and w.get("distance", 0) > 0
+            ]
             if not longs:
                 continue
             long_d = longs[0]["distance"]
@@ -462,6 +471,7 @@ class TestLongRunIsAlwaysLongest(PlanInvariant):
 
 
 # ── Taper Behavior ─────────────────────────────────────────────────────────
+
 
 class TestTaperBehavior:
     """Taper weeks must show progressive reduction in volume."""
@@ -492,7 +502,10 @@ class TestTaperBehavior:
         """The final week (race week) should have the lowest volume."""
         gen = TrainingPlanGenerator()
         plan = gen.generate_plan(
-            current_km=35, target_distance=42.2, weeks=16, max_runs_per_week=4,
+            current_km=35,
+            target_distance=42.2,
+            weeks=16,
+            max_runs_per_week=4,
         )
         race_week = plan[-1]
         pre_taper_km = [w["total_km"] for w in plan if w["phase"] != "taper"]
@@ -501,6 +514,7 @@ class TestTaperBehavior:
 
 
 # ── Recovery Week Behavior ─────────────────────────────────────────────────
+
 
 class TestRecoveryWeeks:
     """Recovery weeks must show ~35% volume reduction."""
@@ -529,6 +543,7 @@ class TestRecoveryWeeks:
 
 # ── Cross-Distance Volume Scaling ──────────────────────────────────────────
 
+
 class TestCrossDistanceScaling:
     """Longer distances should produce higher peak weekly volumes."""
 
@@ -553,14 +568,18 @@ class TestCrossDistanceScaling:
 
 # ── VDOT Integration ───────────────────────────────────────────────────────
 
+
 class TestVDOTIntegration:
     """Plans with VDOT should include pace zones and enriched descriptions."""
 
     def test_vdot_includes_pace_zones(self):
         gen = TrainingPlanGenerator()
         plan = gen.generate_plan(
-            current_km=25, target_distance=21.1, weeks=12,
-            max_runs_per_week=4, vdot=45.0,
+            current_km=25,
+            target_distance=21.1,
+            weeks=12,
+            max_runs_per_week=4,
+            vdot=45.0,
         )
         for week in plan:
             for w in week["daily_workouts"]:
@@ -576,12 +595,18 @@ class TestVDOTIntegration:
         """Higher VDOT runners should get slightly higher peak mileage."""
         gen = TrainingPlanGenerator()
         plan_low = gen.generate_plan(
-            current_km=30, target_distance=42.2, weeks=16,
-            max_runs_per_week=4, vdot=35.0,
+            current_km=30,
+            target_distance=42.2,
+            weeks=16,
+            max_runs_per_week=4,
+            vdot=35.0,
         )
         plan_high = gen.generate_plan(
-            current_km=30, target_distance=42.2, weeks=16,
-            max_runs_per_week=4, vdot=55.0,
+            current_km=30,
+            target_distance=42.2,
+            weeks=16,
+            max_runs_per_week=4,
+            vdot=55.0,
         )
         peak_low = max(w["total_km"] for w in plan_low)
         peak_high = max(w["total_km"] for w in plan_high)
@@ -592,13 +617,17 @@ class TestVDOTIntegration:
 
 # ── Edge Cases ─────────────────────────────────────────────────────────────
 
+
 class TestEdgeCases:
     """Plans at boundary conditions must still be valid."""
 
     def test_minimum_weeks_5k(self):
         gen = TrainingPlanGenerator()
         plan = gen.generate_plan(
-            current_km=10, target_distance=5.0, weeks=6, max_runs_per_week=3,
+            current_km=10,
+            target_distance=5.0,
+            weeks=6,
+            max_runs_per_week=3,
         )
         assert len(plan) == 6
         assert all(w["total_km"] > 0 for w in plan)
@@ -606,7 +635,10 @@ class TestEdgeCases:
     def test_minimum_weeks_marathon(self):
         gen = TrainingPlanGenerator()
         plan = gen.generate_plan(
-            current_km=30, target_distance=42.2, weeks=12, max_runs_per_week=4,
+            current_km=30,
+            target_distance=42.2,
+            weeks=12,
+            max_runs_per_week=4,
         )
         assert len(plan) == 12
         assert all(w["total_km"] > 0 for w in plan)
@@ -614,7 +646,10 @@ class TestEdgeCases:
     def test_high_mileage_experienced_runner(self):
         gen = TrainingPlanGenerator()
         plan = gen.generate_plan(
-            current_km=80, target_distance=42.2, weeks=16, max_runs_per_week=6,
+            current_km=80,
+            target_distance=42.2,
+            weeks=16,
+            max_runs_per_week=6,
         )
         assert len(plan) == 16
         peak = max(w["total_km"] for w in plan)
@@ -623,7 +658,10 @@ class TestEdgeCases:
     def test_just_above_minimum_mileage(self):
         gen = TrainingPlanGenerator()
         plan = gen.generate_plan(
-            current_km=16, target_distance=21.1, weeks=12, max_runs_per_week=4,
+            current_km=16,
+            target_distance=21.1,
+            weeks=12,
+            max_runs_per_week=4,
         )
         assert len(plan) == 12
         for week in plan:
@@ -632,15 +670,22 @@ class TestEdgeCases:
     def test_max_runs_6(self):
         gen = TrainingPlanGenerator()
         plan = gen.generate_plan(
-            current_km=30, target_distance=21.1, weeks=12, max_runs_per_week=6,
+            current_km=30,
+            target_distance=21.1,
+            weeks=12,
+            max_runs_per_week=6,
         )
         for week in plan:
-            runs = [w for w in week["daily_workouts"]
-                    if w["type"] not in ("rest", "recovery")]
+            runs = [
+                w
+                for w in week["daily_workouts"]
+                if w["type"] not in ("rest", "recovery")
+            ]
             assert len(runs) == 6
 
 
 # ── Coaching Rationale ─────────────────────────────────────────────────────
+
 
 class TestCoachingRationale:
     """Every workout should have a coaching rationale."""
@@ -664,6 +709,7 @@ class TestCoachingRationale:
 
 # ── Strength Training ──────────────────────────────────────────────────────
 
+
 class TestStrengthTraining:
     """Strength sessions must only appear on easy run days."""
 
@@ -685,6 +731,7 @@ class TestStrengthTraining:
 
 
 # ── Key Workout Overlay ────────────────────────────────────────────────────
+
 
 class TestKeyWorkoutOverlay:
     """Key workouts should only appear in build/peak phases."""
@@ -727,6 +774,7 @@ class TestKeyWorkoutOverlay:
 
 
 # ── Steps Structure ────────────────────────────────────────────────────────
+
 
 class TestWorkoutSteps:
     """Workouts should have structured steps for guided execution."""

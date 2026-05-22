@@ -33,6 +33,7 @@ def static_url(path: str) -> str:
     """Return a static file URL with a content-hash query param for cache busting."""
     if settings.debug:
         import time
+
         return f"/static/{path}?t={int(time.time())}"
     h = _static_hashes.get(path, "")
     return f"/static/{path}?h={h}" if h else f"/static/{path}"

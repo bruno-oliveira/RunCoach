@@ -47,17 +47,13 @@ def test_clamp_min_floors_result():
     assert compute_current_week(start, date(2026, 1, 5), clamp_min=1) == 1
     # Combined with pre_start=0, clamp_min raises pre-start case too? No —
     # pre_start short-circuits before clamp. Document this.
-    assert (
-        compute_current_week(start, date(2026, 1, 4), pre_start=0, clamp_min=1) == 0
-    )
+    assert compute_current_week(start, date(2026, 1, 4), pre_start=0, clamp_min=1) == 0
 
 
 def test_combined_clamps_within_plan_range():
     start = date(2026, 1, 5)
     # 200 days in, total_weeks=12 → clamped to 12.
     assert (
-        compute_current_week(
-            start, date(2026, 7, 23), total_weeks=12, clamp_min=1
-        )
+        compute_current_week(start, date(2026, 7, 23), total_weeks=12, clamp_min=1)
         == 12
     )

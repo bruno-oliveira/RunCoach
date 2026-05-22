@@ -71,7 +71,11 @@ def pattern_feedback(run_log, db) -> Optional[str]:
     fast_score = weighted_fast / total_weight if total_weight > 0 else 0
     slow_score = weighted_slow / total_weight if total_weight > 0 else 0
 
-    if (fast_score >= 0.6 or max_streak_fast >= 3) and wtype in ("easy", "recovery", "long"):
+    if (fast_score >= 0.6 or max_streak_fast >= 3) and wtype in (
+        "easy",
+        "recovery",
+        "long",
+    ):
         return (
             f"Pattern detected: your recent {wtype} runs "
             "have been consistently faster than planned. Running easy days "

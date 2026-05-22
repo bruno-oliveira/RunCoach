@@ -4,9 +4,9 @@ import uuid
 from datetime import datetime, timedelta, timezone
 
 from app.contexts.plan.adaptation.signal_computer import (
-    compute_adjustment_signals,
     _compute_quality_drift,
     _count_recent_race_efforts,
+    compute_adjustment_signals,
 )
 
 
@@ -55,10 +55,13 @@ class _MockDB:
         class _Q:
             def __init__(self, ids):
                 self._ids = ids
+
             def filter(self, *_):
                 return self
+
             def all(self):
                 return [(i,) for i in self._ids]
+
         return _Q(self._ids)
 
 
@@ -155,14 +158,16 @@ class TestReadinessSignal:
     def _build(self, readiness_logs):
         today = _today()
         runs = [_MockRun(wtype="easy") for _ in range(3)]
-        planned = _build_planned(
-            [_MockWorkout(wtype="easy") for _ in runs], today
-        )
+        planned = _build_planned([_MockWorkout(wtype="easy") for _ in runs], today)
         for r, (w, _) in zip(runs, planned):
             r.daily_workout_id = w.id
         ids = {w.id for w, _ in planned}
         return compute_adjustment_signals(
-            runs, planned, ids, today, "plan1",
+            runs,
+            planned,
+            ids,
+            today,
+            "plan1",
             _MockDB([w.id for w, _ in planned]),
             _recency_one,
             current_phase="build",
@@ -200,14 +205,16 @@ class TestTrainingLoadSignal:
     def _build(self, training_load, current_phase="build", history=None):
         today = _today()
         runs = [_MockRun(wtype="easy") for _ in range(3)]
-        planned = _build_planned(
-            [_MockWorkout(wtype="easy") for _ in runs], today
-        )
+        planned = _build_planned([_MockWorkout(wtype="easy") for _ in runs], today)
         for r, (w, _) in zip(runs, planned):
             r.daily_workout_id = w.id
         ids = {w.id for w, _ in planned}
         return compute_adjustment_signals(
-            runs, planned, ids, today, "plan1",
+            runs,
+            planned,
+            ids,
+            today,
+            "plan1",
             _MockDB([w.id for w, _ in planned]),
             _recency_one,
             current_phase=current_phase,
@@ -216,27 +223,34 @@ class TestTrainingLoadSignal:
         )
 
     def test_overreached_tsb_caps_multiplier(self):
-        signals = self._build({
-            "available": True,
-            "current": {"tsb": -30, "ctl": 60, "atl": 90},
-        })
+        signals = self._build(
+            {
+                "available": True,
+                "current": {"tsb": -30, "ctl": 60, "atl": 90},
+            }
+        )
         assert signals["tsb_form"] == "overreached"
         assert signals["multiplier"] <= 0.92
 
     def test_primed_tsb_in_peak_allows_expanded_range(self):
-        signals = self._build({
-            "available": True,
-            "current": {"tsb": 12, "ctl": 65, "atl": 53},
-        }, current_phase="peak")
+        signals = self._build(
+            {
+                "available": True,
+                "current": {"tsb": 12, "ctl": 65, "atl": 53},
+            },
+            current_phase="peak",
+        )
         assert signals["tsb_form"] == "primed"
         # Expanded range upper bound is 1.25
         assert signals["expanded_range"] is True
 
     def test_neutral_tsb_keeps_standard_range(self):
-        signals = self._build({
-            "available": True,
-            "current": {"tsb": 0, "ctl": 50, "atl": 50},
-        })
+        signals = self._build(
+            {
+                "available": True,
+                "current": {"tsb": 0, "ctl": 50, "atl": 50},
+            }
+        )
         assert signals["tsb_form"] == "neutral"
         assert signals["expanded_range"] is False
 
@@ -255,23 +269,36 @@ class TestSignalIntegration:
     def test_two_race_efforts_caps_multiplier(self):
         today = _today()
         runs = [
-            _MockRun(wtype="tempo", effort_class="race_effort",
-                     date=today - timedelta(days=4)),
-            _MockRun(wtype="tempo", effort_class="race_effort",
-                     date=today - timedelta(days=1)),
+            _MockRun(
+                wtype="tempo",
+                effort_class="race_effort",
+                date=today - timedelta(days=4),
+            ),
+            _MockRun(
+                wtype="tempo",
+                effort_class="race_effort",
+                date=today - timedelta(days=1),
+            ),
             _MockRun(wtype="easy", date=today),
         ]
-        planned = _build_planned([
-            _MockWorkout(runs[0].id, "tempo"),
-            _MockWorkout(runs[1].id, "tempo"),
-            _MockWorkout(runs[2].id, "easy"),
-        ], today)
+        planned = _build_planned(
+            [
+                _MockWorkout(runs[0].id, "tempo"),
+                _MockWorkout(runs[1].id, "tempo"),
+                _MockWorkout(runs[2].id, "easy"),
+            ],
+            today,
+        )
         for r, (w, _) in zip(runs, planned):
             r.daily_workout_id = w.id
         ids = {w.id for w, _ in planned}
 
         signals = compute_adjustment_signals(
-            runs, planned, ids, today, "plan1",
+            runs,
+            planned,
+            ids,
+            today,
+            "plan1",
             _MockDB([w.id for w, _ in planned]),
             _recency_one,
             current_phase="build",
@@ -292,15 +319,16 @@ class TestSignalIntegration:
             )
             runs.append(r)
 
-        planned = _build_planned(
-            [_MockWorkout(r.id, "easy") for r in runs], today
-        )
+        planned = _build_planned([_MockWorkout(r.id, "easy") for r in runs], today)
         for r, (w, _) in zip(runs, planned):
             r.daily_workout_id = w.id
 
         signals = compute_adjustment_signals(
-            runs, planned, {w.id for w, _ in planned},
-            today, "plan1",
+            runs,
+            planned,
+            {w.id for w, _ in planned},
+            today,
+            "plan1",
             _MockDB([w.id for w, _ in planned]),
             _recency_one,
             current_phase="build",

@@ -5,9 +5,10 @@ from typing import Any, Optional
 
 from fastapi import Request
 
-from app.infrastructure.config import settings
 from app.core.training.strength_plan import derive_experience_level
-from app.models import RunLog, RunFeedback, TrainingPlan, User, WeeklyPlan
+from app.infrastructure.config import settings
+from app.models import RunFeedback, RunLog, TrainingPlan, User, WeeklyPlan
+
 from .plan_date_utils import (
     build_week_dates,
     compute_current_week,
@@ -15,7 +16,6 @@ from .plan_date_utils import (
     next_monday,
     workout_dates,
 )
-
 
 _PACE_BADGE_WINDOW_DAYS = 7
 
@@ -41,7 +41,13 @@ def plan_view_context(
     plan_completed = False
     if training_plan.start_date:
         sd = training_plan.start_date
-        start_date_val = sd.date() if isinstance(sd, datetime) else sd if isinstance(sd, date) else sd
+        start_date_val = (
+            sd.date()
+            if isinstance(sd, datetime)
+            else sd
+            if isinstance(sd, date)
+            else sd
+        )
         num_weeks = len(plan_data) if plan_data else training_plan.weeks_duration
         week_dates = build_week_dates(start_date_val, num_weeks)
         current_week_number = compute_current_week(start_date_val, today_obj)
@@ -54,7 +60,12 @@ def plan_view_context(
     adaptation_state = _build_adaptation_state(training_plan)
 
     today_workout_overlay = _build_today_workout_overlay(
-        db, current_user, plan_data, start_date_val, today_obj, current_week_number,
+        db,
+        current_user,
+        plan_data,
+        start_date_val,
+        today_obj,
+        current_week_number,
     )
 
     ctx: dict[str, Any] = {
@@ -65,10 +76,14 @@ def plan_view_context(
         "plan_id": training_plan.id,
         "training_plan": training_plan,
         "current_km": training_plan.current_weekly_km,
-        "experience_level": derive_experience_level(training_plan.current_weekly_km or 0),
+        "experience_level": derive_experience_level(
+            training_plan.current_weekly_km or 0
+        ),
         "target_distance": training_plan.target_distance,
         "is_trail": bool(getattr(training_plan, "is_trail", False)),
-        "target_elevation_gain_m": getattr(training_plan, "target_elevation_gain_m", None),
+        "target_elevation_gain_m": getattr(
+            training_plan, "target_elevation_gain_m", None
+        ),
         "weeks": training_plan.weeks_duration,
         "nutrition_plan": nutrition_plan,
         "nutrition_phases": (
@@ -77,9 +92,7 @@ def plan_view_context(
             else {}
         ),
         "race_protocol": (
-            training_plan.race_protocol_data
-            if training_plan.race_protocol_data
-            else {}
+            training_plan.race_protocol_data if training_plan.race_protocol_data else {}
         ),
         "vdot": training_plan.vdot,
         "logged_runs": {},
@@ -113,7 +126,8 @@ def _build_adaptation_state(training_plan: TrainingPlan) -> dict:
         return {
             "kind": "alert",
             "headline": "Your plan needs attention",
-            "detail": alert.get("message") or "Recent performance suggests recalibrating your plan.",
+            "detail": alert.get("message")
+            or "Recent performance suggests recalibrating your plan.",
             "alert_type": alert.get("type"),
             "alert_suggestion": alert.get("suggestion"),
         }
@@ -222,7 +236,11 @@ def _detect_fatigue_softening(runs: list, db: Any) -> bool:
     """Recent runs averaged ≥8 effort with ≥2 warning feedbacks → soften today."""
     if len(runs) < 3:
         return False
-    efforts = [getattr(r, "perceived_effort", None) for r in runs if getattr(r, "perceived_effort", None) is not None]
+    efforts = [
+        getattr(r, "perceived_effort", None)
+        for r in runs
+        if getattr(r, "perceived_effort", None) is not None
+    ]
     if len(efforts) < 3 or sum(efforts) / len(efforts) < 8:
         return False
     run_ids = [r.id for r in runs]

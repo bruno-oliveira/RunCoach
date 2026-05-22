@@ -12,7 +12,6 @@ from app.main import app
 from app.models import TrainingPlan
 from app.models.user import User
 
-
 # ---------------------------------------------------------------------------
 # Fixtures
 # ---------------------------------------------------------------------------
@@ -54,6 +53,7 @@ def strava_user(test_db: Session) -> User:
 @pytest.fixture
 def _override_db(test_db: Session):
     """Override the DB dependency and clean up after the test."""
+
     def override_get_db():
         try:
             yield test_db
@@ -67,8 +67,10 @@ def _override_db(test_db: Session):
 
 def _set_user(user: User):
     """Set the current user override."""
+
     async def override():
         return user
+
     app.dependency_overrides[get_current_user] = override
 
 
@@ -90,7 +92,10 @@ class TestSecurityHeaders:
         assert response.headers["X-Content-Type-Options"] == "nosniff"
         assert response.headers["X-Frame-Options"] == "DENY"
         assert response.headers["Referrer-Policy"] == "strict-origin-when-cross-origin"
-        assert response.headers["Permissions-Policy"] == "camera=(), microphone=(), geolocation=()"
+        assert (
+            response.headers["Permissions-Policy"]
+            == "camera=(), microphone=(), geolocation=()"
+        )
         assert response.headers["X-XSS-Protection"] == "0"
 
     def test_security_headers_on_html_page(self, client: TestClient):
@@ -99,7 +104,10 @@ class TestSecurityHeaders:
         assert response.headers["X-Content-Type-Options"] == "nosniff"
         assert response.headers["X-Frame-Options"] == "DENY"
         assert response.headers["Referrer-Policy"] == "strict-origin-when-cross-origin"
-        assert response.headers["Permissions-Policy"] == "camera=(), microphone=(), geolocation=()"
+        assert (
+            response.headers["Permissions-Policy"]
+            == "camera=(), microphone=(), geolocation=()"
+        )
         assert response.headers["X-XSS-Protection"] == "0"
 
     def test_hsts_not_set_in_debug_mode(self, client: TestClient):
@@ -157,12 +165,14 @@ class TestCookieSecureFlag:
     def test_cookie_secure_returns_false_in_debug(self):
         """With debug=True (test default), _cookie_secure() should return False."""
         from app.web.middleware import _cookie_secure
+
         # settings.debug is True from .env
         assert _cookie_secure() is False
 
     def test_cookie_secure_returns_true_when_not_debug(self):
         """With debug=False and force_secure_cookies=True, should return True."""
         from app.web.middleware import _cookie_secure
+
         with patch("app.web.middleware.settings") as mock_settings:
             mock_settings.debug = False
             mock_settings.force_secure_cookies = True
@@ -253,7 +263,12 @@ class TestAccountDeletion:
 
         test_db.expire_all()
         assert test_db.query(User).filter(User.id == security_user.id).first() is None
-        assert test_db.query(TrainingPlan).filter(TrainingPlan.id == "plan-to-cascade").first() is None
+        assert (
+            test_db.query(TrainingPlan)
+            .filter(TrainingPlan.id == "plan-to-cascade")
+            .first()
+            is None
+        )
 
 
 # ---------------------------------------------------------------------------

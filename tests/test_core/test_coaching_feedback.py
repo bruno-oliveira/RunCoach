@@ -1,8 +1,7 @@
 """Tests for the coaching feedback engine."""
 
-import pytest
+from datetime import datetime
 from unittest.mock import MagicMock
-from datetime import datetime, timezone
 
 from app.core.coaching.coaching_feedback_engine import CoachingFeedbackEngine
 from app.core.coaching.hr_feedback import hr_zone_feedback
@@ -60,9 +59,7 @@ class TestPaceFeedback:
 
     def test_too_fast_easy_run(self):
         run = _make_run_log(avg_pace_min_km=4.8, workout_type="easy")
-        planned = _make_planned_workout(
-            planned_pace_min_km=5.5, workout_type="easy"
-        )
+        planned = _make_planned_workout(planned_pace_min_km=5.5, workout_type="easy")
         fb = pace_feedback(run, planned)
         assert fb is not None
         assert "slow down" in fb.lower() or "faster" in fb.lower()
@@ -116,18 +113,14 @@ class TestHRZoneFeedback:
 class TestEffortFeedback:
     def test_nailed_it(self):
         run = _make_run_log(perceived_effort=4, avg_pace_min_km=5.5)
-        planned = _make_planned_workout(
-            planned_pace_min_km=5.5, workout_type="easy"
-        )
+        planned = _make_planned_workout(planned_pace_min_km=5.5, workout_type="easy")
         fb = CoachingFeedbackEngine._effort_feedback(run, planned)
         assert fb is not None
         assert "nailed" in fb.lower() or "on track" in fb.lower()
 
     def test_too_hard(self):
         run = _make_run_log(perceived_effort=9, avg_pace_min_km=5.5)
-        planned = _make_planned_workout(
-            planned_pace_min_km=5.5, workout_type="easy"
-        )
+        planned = _make_planned_workout(planned_pace_min_km=5.5, workout_type="easy")
         fb = CoachingFeedbackEngine._effort_feedback(run, planned)
         assert fb is not None
         assert "hard" in fb.lower()
@@ -185,9 +178,7 @@ class TestFullFeedbackGeneration:
         zones = HRZoneCalculator.calculate_zones(190)
         db = MagicMock()
 
-        fb = CoachingFeedbackEngine.generate_feedback(
-            run, planned, zones, db
-        )
+        fb = CoachingFeedbackEngine.generate_feedback(run, planned, zones, db)
 
         assert "pace_feedback" in fb
         assert "hr_zone_feedback" in fb

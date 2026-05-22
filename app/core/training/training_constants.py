@@ -1,6 +1,6 @@
 """Shared training constants used across plan generation modules."""
 
-from typing import Dict, Optional
+from typing import Dict
 
 LONG_RUN_HARD_CEILINGS: Dict[float, float] = {
     5.0: 14.0,
@@ -16,9 +16,9 @@ DEFAULT_HARD_CEILING_RATIO = 0.9
 # ~38 km even for 100-mile prep — the rest of the long-day volume goes into
 # back-to-back doubles, not a single 50 km grind.
 _TRAIL_HARD_CEILINGS: Dict[str, float] = {
-    "short":      20.0,
-    "standard":   32.0,
-    "ultra":      36.0,
+    "short": 20.0,
+    "standard": 32.0,
+    "ultra": 36.0,
     "long_ultra": 38.0,
 }
 
@@ -41,10 +41,4 @@ def calculate_week_in_phase(
     elif phase == "peak":
         return week_number - phases["base"] - phases["build"] - 1
     else:
-        return (
-            week_number
-            - phases["base"]
-            - phases["build"]
-            - phases["peak"]
-            - 1
-        )
+        return week_number - phases["base"] - phases["build"] - phases["peak"] - 1

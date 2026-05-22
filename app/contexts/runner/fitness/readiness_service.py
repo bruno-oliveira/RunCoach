@@ -10,7 +10,8 @@ from typing import Any, Dict, Optional
 
 from sqlalchemy.orm import Session
 
-from app.models import TrainingPlan
+from app.contexts.plan.plan_date_utils import compute_current_week
+from app.contexts.runner.fitness.race_predictor_service import RacePredictorService
 from app.contexts.runner.fitness.readiness_scoring import (
     build_scenarios,
     compute_weekly_volumes,
@@ -23,9 +24,7 @@ from app.contexts.runner.fitness.readiness_scoring import (
     score_vdot,
     score_volume,
 )
-from app.models import RunLog
-from app.contexts.runner.fitness.race_predictor_service import RacePredictorService
-from app.contexts.plan.plan_date_utils import compute_current_week
+from app.models import RunLog, TrainingPlan
 from app.utils import to_date as _to_date
 
 logger = logging.getLogger(__name__)
@@ -56,6 +55,7 @@ _vdot_for_goal_time = None  # re-exported below
 
 try:
     from app.contexts.runner.fitness.readiness_scoring import vdot_for_goal_time
+
     _vdot_for_goal_time = vdot_for_goal_time
 except ImportError:
     pass
@@ -148,12 +148,20 @@ class ReadinessService:
         if not all_runs_in_range:
             return None
 
-        actual_weekly_km = compute_weekly_volumes(all_runs_in_range, start_date, current_week)
+        actual_weekly_km = compute_weekly_volumes(
+            all_runs_in_range, start_date, current_week
+        )
         longest_run_km = max((r.distance_km for r in all_runs_in_range), default=0)
 
-        volume_score, volume_detail = score_volume(actual_weekly_km, planned_weekly_km, current_week)
-        consistency_score, consistency_detail = score_consistency(runs, plan.id, db, current_week)
-        long_run_score, long_run_detail = score_long_run(longest_run_km, planned_long_run_km, plan.target_distance)
+        volume_score, volume_detail = score_volume(
+            actual_weekly_km, planned_weekly_km, current_week
+        )
+        consistency_score, consistency_detail = score_consistency(
+            runs, plan.id, db, current_week
+        )
+        long_run_score, long_run_detail = score_long_run(
+            longest_run_km, planned_long_run_km, plan.target_distance
+        )
         taper_score, taper_detail = score_taper(current_week, total_weeks)
         vdot_score, vdot_detail, predictions, vdot_data = score_vdot(
             user_id, plan.target_distance, db, goal_time=plan.goal_time
@@ -181,8 +189,12 @@ class ReadinessService:
         volume_comparison = [
             {
                 "week": i + 1,
-                "planned": round(planned_weekly_km[i], 1) if i < len(planned_weekly_km) else 0,
-                "actual": round(actual_weekly_km[i], 1) if i < len(actual_weekly_km) else 0,
+                "planned": round(planned_weekly_km[i], 1)
+                if i < len(planned_weekly_km)
+                else 0,
+                "actual": round(actual_weekly_km[i], 1)
+                if i < len(actual_weekly_km)
+                else 0,
             }
             for i in range(min(current_week, len(planned_weekly_km)))
         ]
@@ -209,11 +221,23 @@ class ReadinessService:
             "race_date_display": race_date.strftime("%b %-d, %Y"),
             "days_to_race": (race_date - today).days,
             "components": {
-                "volume": _build_component_dict(volume_score, ReadinessService.WEIGHT_VOLUME, volume_detail),
-                "fitness": _build_component_dict(vdot_score, ReadinessService.WEIGHT_VDOT, vdot_detail),
-                "long_run": _build_component_dict(long_run_score, ReadinessService.WEIGHT_LONG_RUN, long_run_detail),
-                "consistency": _build_component_dict(consistency_score, ReadinessService.WEIGHT_CONSISTENCY, consistency_detail),
-                "taper": _build_component_dict(taper_score, ReadinessService.WEIGHT_TAPER, taper_detail),
+                "volume": _build_component_dict(
+                    volume_score, ReadinessService.WEIGHT_VOLUME, volume_detail
+                ),
+                "fitness": _build_component_dict(
+                    vdot_score, ReadinessService.WEIGHT_VDOT, vdot_detail
+                ),
+                "long_run": _build_component_dict(
+                    long_run_score, ReadinessService.WEIGHT_LONG_RUN, long_run_detail
+                ),
+                "consistency": _build_component_dict(
+                    consistency_score,
+                    ReadinessService.WEIGHT_CONSISTENCY,
+                    consistency_detail,
+                ),
+                "taper": _build_component_dict(
+                    taper_score, ReadinessService.WEIGHT_TAPER, taper_detail
+                ),
             },
             "mountain_simulation": (
                 {

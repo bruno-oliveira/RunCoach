@@ -30,6 +30,7 @@ class RaceProfile:
     `week_before_extras` are the per-section payloads consumed by the
     template.
     """
+
     distance_km: float
     display_name: str
     pacing_strategy: str
@@ -48,16 +49,40 @@ _5K = RaceProfile(
         "A 5K is an aerobic sprint — controlled aggression from the gun."
     ),
     nutrition_timing=[
-        {"icon": "🍌", "when": "2–3 hrs before", "what": "Light carb meal (toast, banana, oats)"},
+        {
+            "icon": "🍌",
+            "when": "2–3 hrs before",
+            "what": "Light carb meal (toast, banana, oats)",
+        },
         {"icon": "💧", "when": "30 min before", "what": "200–300 ml water"},
-        {"icon": "🏃", "when": "During race", "what": "No fueling needed for most runners"},
-        {"icon": "🍫", "when": "Immediately after", "what": "Simple carbs + protein within 30 min"},
+        {
+            "icon": "🏃",
+            "when": "During race",
+            "what": "No fueling needed for most runners",
+        },
+        {
+            "icon": "🍫",
+            "when": "Immediately after",
+            "what": "Simple carbs + protein within 30 min",
+        },
     ],
     mental_checkpoints=[
-        {"distance": "1 km", "message": "Settle in. Ignore the adrenaline — run your pace."},
-        {"distance": "2.5 km", "message": "Halfway. How do you feel? If easy, stay patient. If hard, focus on form."},
-        {"distance": "4 km", "message": "One km left. This is what you trained for — find another gear."},
-        {"distance": "Finish", "message": "Empty the tank. Sprint or try to sprint — leave nothing behind."},
+        {
+            "distance": "1 km",
+            "message": "Settle in. Ignore the adrenaline — run your pace.",
+        },
+        {
+            "distance": "2.5 km",
+            "message": "Halfway. How do you feel? If easy, stay patient. If hard, focus on form.",
+        },
+        {
+            "distance": "4 km",
+            "message": "One km left. This is what you trained for — find another gear.",
+        },
+        {
+            "distance": "Finish",
+            "message": "Empty the tank. Sprint or try to sprint — leave nothing behind.",
+        },
     ],
     morning_timeline=[
         ("2 hrs before", "Wake up and eat pre-race meal"),
@@ -79,15 +104,36 @@ _10K = RaceProfile(
         "The 10K rewards patience in the first half."
     ),
     nutrition_timing=[
-        {"icon": "🍌", "when": "2–3 hrs before", "what": "Light carb meal (toast, banana, oats)"},
+        {
+            "icon": "🍌",
+            "when": "2–3 hrs before",
+            "what": "Light carb meal (toast, banana, oats)",
+        },
         {"icon": "💧", "when": "30 min before", "what": "200–300 ml water"},
-        {"icon": "💧", "when": "At 5 km", "what": "Water at aid station (hot day: take it)"},
-        {"icon": "🍫", "when": "Within 30 min after", "what": "Protein + carbs for recovery"},
+        {
+            "icon": "💧",
+            "when": "At 5 km",
+            "what": "Water at aid station (hot day: take it)",
+        },
+        {
+            "icon": "🍫",
+            "when": "Within 30 min after",
+            "what": "Protein + carbs for recovery",
+        },
     ],
     mental_checkpoints=[
-        {"distance": "2 km", "message": "Resist the urge to race others. Lock into your goal pace."},
-        {"distance": "5 km", "message": "Halfway. Reassess: can you sustain this to the finish?"},
-        {"distance": "8 km", "message": "The real race starts now. Every step matters."},
+        {
+            "distance": "2 km",
+            "message": "Resist the urge to race others. Lock into your goal pace.",
+        },
+        {
+            "distance": "5 km",
+            "message": "Halfway. Reassess: can you sustain this to the finish?",
+        },
+        {
+            "distance": "8 km",
+            "message": "The real race starts now. Every step matters.",
+        },
         {"distance": "9 km", "message": "One km. Trust your training and push."},
     ],
     morning_timeline=[
@@ -110,18 +156,46 @@ _HALF = RaceProfile(
         "Negative splits (faster second half) produce the best results."
     ),
     nutrition_timing=[
-        {"icon": "🍌", "when": "3 hrs before", "what": "Tested pre-race meal (oats, banana, white bread)"},
-        {"icon": "☕", "when": "90 min before", "what": "Optional: coffee if you use it in training"},
+        {
+            "icon": "🍌",
+            "when": "3 hrs before",
+            "what": "Tested pre-race meal (oats, banana, white bread)",
+        },
+        {
+            "icon": "☕",
+            "when": "90 min before",
+            "what": "Optional: coffee if you use it in training",
+        },
         {"icon": "💧", "when": "Every 5 km", "what": "Water at every aid station"},
-        {"icon": "🍬", "when": "At 10 km & 16 km", "what": "Gel or energy chews — use brands you've trained with"},
+        {
+            "icon": "🍬",
+            "when": "At 10 km & 16 km",
+            "what": "Gel or energy chews — use brands you've trained with",
+        },
         {"icon": "🧂", "when": "If hot/humid", "what": "Electrolyte tablet at km 10"},
-        {"icon": "🍫", "when": "Within 30 min after", "what": "Protein shake or chocolate milk + carbs"},
+        {
+            "icon": "🍫",
+            "when": "Within 30 min after",
+            "what": "Protein shake or chocolate milk + carbs",
+        },
     ],
     mental_checkpoints=[
-        {"distance": "5 km", "message": "Feel easy? Good — that's the plan. Stay patient."},
-        {"distance": "10 km", "message": "One quarter done. Find your rhythm and protect it."},
-        {"distance": "16 km", "message": "The halfway point emotionally. This is where half marathons are won."},
-        {"distance": "19 km", "message": "Two km left. Dig in — this discomfort is temporary."},
+        {
+            "distance": "5 km",
+            "message": "Feel easy? Good — that's the plan. Stay patient.",
+        },
+        {
+            "distance": "10 km",
+            "message": "One quarter done. Find your rhythm and protect it.",
+        },
+        {
+            "distance": "16 km",
+            "message": "The halfway point emotionally. This is where half marathons are won.",
+        },
+        {
+            "distance": "19 km",
+            "message": "Two km left. Dig in — this discomfort is temporary.",
+        },
         {"distance": "Finish", "message": "You've earned this. Finish strong."},
     ],
     morning_timeline=[
@@ -145,23 +219,61 @@ _30K_TRAIL = RaceProfile(
         "Eat and drink earlier than you think you need to."
     ),
     nutrition_timing=[
-        {"icon": "🍌", "when": "3 hrs before", "what": "Larger carb meal — you'll need the reserves"},
-        {"icon": "🍬", "when": "Every 5–6 km", "what": "Gel or real food (dates, banana pieces) starting at km 8"},
-        {"icon": "💧", "when": "Every 3–4 km", "what": "Water — more on climbs, trail runs sweat harder"},
-        {"icon": "🧂", "when": "Every 10 km", "what": "Electrolytes — cramps on trails are race-ending"},
-        {"icon": "🍫", "when": "Immediately after", "what": "Real food: protein + substantial carbs"},
+        {
+            "icon": "🍌",
+            "when": "3 hrs before",
+            "what": "Larger carb meal — you'll need the reserves",
+        },
+        {
+            "icon": "🍬",
+            "when": "Every 5–6 km",
+            "what": "Gel or real food (dates, banana pieces) starting at km 8",
+        },
+        {
+            "icon": "💧",
+            "when": "Every 3–4 km",
+            "what": "Water — more on climbs, trail runs sweat harder",
+        },
+        {
+            "icon": "🧂",
+            "when": "Every 10 km",
+            "what": "Electrolytes — cramps on trails are race-ending",
+        },
+        {
+            "icon": "🍫",
+            "when": "Immediately after",
+            "what": "Real food: protein + substantial carbs",
+        },
     ],
     mental_checkpoints=[
-        {"distance": "5 km", "message": "First climb. Power hike if needed — no shame in that."},
-        {"distance": "15 km", "message": "Halfway. How is fueling going? Eat something now if not recently."},
-        {"distance": "22 km", "message": "The hardest part of any trail race. Run your own race, not someone else's."},
-        {"distance": "27 km", "message": "3 km to go. The finish line is real — put your head down."},
+        {
+            "distance": "5 km",
+            "message": "First climb. Power hike if needed — no shame in that.",
+        },
+        {
+            "distance": "15 km",
+            "message": "Halfway. How is fueling going? Eat something now if not recently.",
+        },
+        {
+            "distance": "22 km",
+            "message": "The hardest part of any trail race. Run your own race, not someone else's.",
+        },
+        {
+            "distance": "27 km",
+            "message": "3 km to go. The finish line is real — put your head down.",
+        },
     ],
     morning_timeline=[
-        ("3 hrs before", "Larger pre-race breakfast — you'll burn more than any other distance"),
+        (
+            "3 hrs before",
+            "Larger pre-race breakfast — you'll burn more than any other distance",
+        ),
         ("2 hrs before", "Arrive at venue, gear check (poles if used, hydration vest)"),
         ("60 min before", "Easy hike or jog to warm legs"),
-        ("30 min before", "Confirm nutrition plan, take an early gel if long start queue"),
+        (
+            "30 min before",
+            "Confirm nutrition plan, take an early gel if long start queue",
+        ),
         ("10 min before", "Arrive at start, stay calm"),
     ],
     week_before_extras=[
@@ -182,19 +294,58 @@ _MARATHON = RaceProfile(
         "Final 2.2 km: leave nothing behind."
     ),
     nutrition_timing=[
-        {"icon": "🍌", "when": "3 hrs before", "what": "Tested breakfast: oatmeal + banana + white toast"},
-        {"icon": "☕", "when": "2 hrs before", "what": "Coffee if trained with it; avoid if not"},
-        {"icon": "🍬", "when": "Every 6–7 km from km 8", "what": "Gel every 6–7 km — do NOT skip early gels"},
-        {"icon": "💧", "when": "Every aid station", "what": "Water: walk aid stations to drink efficiently"},
-        {"icon": "🧂", "when": "At km 15 & 30", "what": "Electrolyte drink or tab — critical after km 25"},
-        {"icon": "🍫", "when": "Within 30 min after", "what": "Recovery shake immediately; real meal within 2 hrs"},
+        {
+            "icon": "🍌",
+            "when": "3 hrs before",
+            "what": "Tested breakfast: oatmeal + banana + white toast",
+        },
+        {
+            "icon": "☕",
+            "when": "2 hrs before",
+            "what": "Coffee if trained with it; avoid if not",
+        },
+        {
+            "icon": "🍬",
+            "when": "Every 6–7 km from km 8",
+            "what": "Gel every 6–7 km — do NOT skip early gels",
+        },
+        {
+            "icon": "💧",
+            "when": "Every aid station",
+            "what": "Water: walk aid stations to drink efficiently",
+        },
+        {
+            "icon": "🧂",
+            "when": "At km 15 & 30",
+            "what": "Electrolyte drink or tab — critical after km 25",
+        },
+        {
+            "icon": "🍫",
+            "when": "Within 30 min after",
+            "what": "Recovery shake immediately; real meal within 2 hrs",
+        },
     ],
     mental_checkpoints=[
-        {"distance": "10 km", "message": "One quarter done. Still feeling fresh? Good — stay conservative."},
-        {"distance": "21 km", "message": "Halfway. If you feel great, stay controlled. The race starts at 30 km."},
-        {"distance": "30 km", "message": "The wall zone. This is where your training runs matter most. Hold form."},
-        {"distance": "35 km", "message": "7 km. Count them down. Everything hurts — keep moving."},
-        {"distance": "40 km", "message": "2 km. You will finish. Make these last steps count."},
+        {
+            "distance": "10 km",
+            "message": "One quarter done. Still feeling fresh? Good — stay conservative.",
+        },
+        {
+            "distance": "21 km",
+            "message": "Halfway. If you feel great, stay controlled. The race starts at 30 km.",
+        },
+        {
+            "distance": "30 km",
+            "message": "The wall zone. This is where your training runs matter most. Hold form.",
+        },
+        {
+            "distance": "35 km",
+            "message": "7 km. Count them down. Everything hurts — keep moving.",
+        },
+        {
+            "distance": "40 km",
+            "message": "2 km. You will finish. Make these last steps count.",
+        },
     ],
     morning_timeline=[
         ("3 hrs before", "Eat tested breakfast — this timing is non-negotiable"),
@@ -213,7 +364,7 @@ _MARATHON = RaceProfile(
 
 
 RACE_PROFILES: Dict[float, RaceProfile] = {
-    5.0:  _5K,
+    5.0: _5K,
     10.0: _10K,
     21.1: _HALF,
     30.0: _30K_TRAIL,

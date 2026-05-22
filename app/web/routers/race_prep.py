@@ -9,11 +9,14 @@ from fastapi import APIRouter, Depends, File, HTTPException, Request, UploadFile
 from fastapi.responses import HTMLResponse
 from sqlalchemy.orm import Session
 
-from app.dependencies import get_db, get_optional_user
-from app.models import RunLog, User
-from app.schemas.race_prep_schemas import GPXAnalysisResponse, RaceBlueprint, RacePrepRequest
-from app.infrastructure.integrations.gpx_service import GPXService
 from app.contexts.runner.fitness.race_pacing_service import RacePacingService
+from app.dependencies import get_db, get_optional_user
+from app.infrastructure.integrations.gpx_service import GPXService
+from app.models import RunLog, User
+from app.schemas.race_prep_schemas import (
+    GPXAnalysisResponse,
+    RacePrepRequest,
+)
 from app.template_helpers import create_templates
 
 logger = logging.getLogger(__name__)
@@ -54,13 +57,16 @@ async def race_prep_page(
     if current_user:
         vdot_info = RacePacingService.get_user_vdot(current_user.id, db)
 
-    return templates.TemplateResponse("race_prep.html", {
-        "request": request,
-        "user": current_user,
-        "current_vdot": vdot_info["vdot"],
-        "vdot_run_count": vdot_info["run_count"],
-        "vdot_confidence": vdot_info["confidence"],
-    })
+    return templates.TemplateResponse(
+        "race_prep.html",
+        {
+            "request": request,
+            "user": current_user,
+            "current_vdot": vdot_info["vdot"],
+            "vdot_run_count": vdot_info["run_count"],
+            "vdot_confidence": vdot_info["confidence"],
+        },
+    )
 
 
 @router.post("/api/race-prep/analyze")
@@ -184,7 +190,9 @@ async def generate_blueprint(
 
     if target_time is None or target_time <= 0:
         target_time = RacePacingService.predict_elevation_adjusted_time(
-            user_vdot, distance_km, elevation_profile,
+            user_vdot,
+            distance_km,
+            elevation_profile,
             trail_runs_count=trail_runs_count,
         )["elevation_adjusted"]
 
@@ -203,7 +211,9 @@ async def generate_blueprint(
     }
 
     while len(_blueprint_store) > 100:
-        oldest_key = min(_blueprint_store, key=lambda k: _blueprint_store[k]["created_at"])
+        oldest_key = min(
+            _blueprint_store, key=lambda k: _blueprint_store[k]["created_at"]
+        )
         del _blueprint_store[oldest_key]
 
     blueprint_dict = blueprint.model_dump()

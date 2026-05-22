@@ -4,13 +4,12 @@ Binary-search solver and confidence ranges extracted from VDOTCalculator.
 """
 
 import logging
-import math
 from typing import Dict, Optional
 
 from app.core.training.vdot_calculator import (
     STANDARD_RACE_DISTANCES,
-    _vo2_at_velocity,
     _pct_vo2max_at_time,
+    _vo2_at_velocity,
 )
 
 logger = logging.getLogger(__name__)
@@ -86,7 +85,7 @@ def _trail_inexperience_factor(trail_runs_count: Optional[int]) -> float:
 # muscular fatigue, and mental factors dominate. Apply a gradual multiplier.
 _ULTRA_DECAY_ONSET_HOURS = 3.0
 _ULTRA_DECAY_RATE_PER_HOUR = 0.05  # +5% per hour beyond onset
-_ULTRA_DECAY_MAX_FACTOR = 1.20     # cap at +20%
+_ULTRA_DECAY_MAX_FACTOR = 1.20  # cap at +20%
 
 
 def _ultra_endurance_decay(predicted_seconds: float) -> float:
@@ -167,7 +166,9 @@ def predict_time_for_distance(
     elevation_penalty_sec = 0.0
     is_trail = False
     if elevation_gain_m and elevation_gain_m > 0:
-        elevation_penalty_sec = _elevation_penalty_seconds(distance_km, elevation_gain_m)
+        elevation_penalty_sec = _elevation_penalty_seconds(
+            distance_km, elevation_gain_m
+        )
         if elevation_gain_m / max(distance_km, 0.001) >= 20.0:
             is_trail = True
 
@@ -240,7 +241,8 @@ def predict_times(
         if elevation_map and name in elevation_map:
             elev = elevation_map[name]
         seconds = predict_time_for_distance(
-            vdot, distance,
+            vdot,
+            distance,
             elevation_gain_m=elev,
             trail_runs_count=trail_runs_count,
             endurance_factor=endurance_factor,

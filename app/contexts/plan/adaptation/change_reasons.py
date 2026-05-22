@@ -14,9 +14,7 @@ PROTECTED_INTERVAL = (
     "Interval sessions keep their prescribed distance; load is controlled via pace."
 )
 PROTECTED_HILL = "Hill repeats are kept at the prescribed distance."
-PROTECTED_KEY_WORKOUT = (
-    "Key race-specific workout — preserved to anchor the phase."
-)
+PROTECTED_KEY_WORKOUT = "Key race-specific workout — preserved to anchor the phase."
 
 # Reasons attached to workouts that were changed but with a guardrail.
 LONG_RUN_FLOOR = (
@@ -25,9 +23,7 @@ LONG_RUN_FLOOR = (
 QUALITY_HALF_SCALED = (
     "Quality session scaled at half strength to balance load and recovery."
 )
-GROWTH_CAP = (
-    "Weekly growth capped to keep the 10% rule intact."
-)
+GROWTH_CAP = "Weekly growth capped to keep the 10% rule intact."
 
 # Reasons explaining a plan-wide "no change" outcome.
 NO_CHANGE_MULTIPLIER_NEUTRAL = (
@@ -36,9 +32,7 @@ NO_CHANGE_MULTIPLIER_NEUTRAL = (
 NO_CHANGE_NO_REMAINING_WORKOUTS = (
     "No remaining workouts to adjust — all upcoming sessions are past the cut-off."
 )
-NO_CHANGE_ALL_PROTECTED = (
-    "Every remaining eligible workout is protected (tempo, intervals, hills, or a key workout)."
-)
+NO_CHANGE_ALL_PROTECTED = "Every remaining eligible workout is protected (tempo, intervals, hills, or a key workout)."
 NO_CHANGE_INSUFFICIENT_DATA = (
     "Not enough recent run data to recommend a change (need at least 3 logged runs)."
 )
@@ -53,7 +47,9 @@ NO_CHANGE_DISTANCES_IDENTICAL = (
 )
 
 
-def protected_reason_for_workout(workout_type: str | None, has_key_workout_id: bool) -> str:
+def protected_reason_for_workout(
+    workout_type: str | None, has_key_workout_id: bool
+) -> str:
     """Return the protection reason for a skipped workout."""
     if has_key_workout_id:
         return PROTECTED_KEY_WORKOUT

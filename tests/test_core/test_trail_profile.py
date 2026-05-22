@@ -183,9 +183,9 @@ class TestBracketConstraints:
     @pytest.mark.parametrize(
         "distance_km,expected_min,expected_max",
         [
-            (15.0, 5, 18),    # short
-            (30.0, 6, 22),    # standard
-            (50.0, 12, 32),   # ultra
+            (15.0, 5, 18),  # short
+            (30.0, 6, 22),  # standard
+            (50.0, 12, 32),  # ultra
             (100.0, 16, 40),  # long_ultra
         ],
     )

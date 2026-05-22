@@ -7,14 +7,13 @@ from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import RedirectResponse
 from sqlalchemy.orm import Session
 
-from app.infrastructure.config import settings
-from app.dependencies import get_db, get_optional_user
-from app.models import TrainingPlan, User
 from app.contexts.plan.adaptation import AdaptationService
-from app.contexts.plan.repositories import SQLAlchemyPlanRepository
 from app.contexts.plan.plan_date_utils import compute_current_week
 from app.contexts.plan.plan_type_registry import display_label as plan_display_label
+from app.contexts.plan.repositories import SQLAlchemyPlanRepository
 from app.core.training.strength_plan import derive_experience_level
+from app.dependencies import get_db, get_optional_user
+from app.infrastructure.config import settings
 from app.template_helpers import create_templates
 
 logger = logging.getLogger(__name__)
@@ -51,11 +50,11 @@ async def list_my_plans(
                 elif current_wk >= 1:
                     plan.status_label = f"Week {current_wk} of {plan.weeks_duration}"
                     try:
-                        adaptation_service.check_alerts(
-                            plan.id, current_user.id, db
-                        )
+                        adaptation_service.check_alerts(plan.id, current_user.id, db)
                     except Exception:
-                        logger.warning("Alert check failed for plan %s", plan.id, exc_info=True)
+                        logger.warning(
+                            "Alert check failed for plan %s", plan.id, exc_info=True
+                        )
                 else:
                     plan.status_label = f"Starts {start_d.strftime('%b')} {start_d.day}"
             else:
@@ -74,4 +73,6 @@ async def list_my_plans(
         )
     except Exception as e:
         logger.error("Error listing plans: %s", e, exc_info=True)
-        raise HTTPException(status_code=500, detail="An internal error occurred while listing plans")
+        raise HTTPException(
+            status_code=500, detail="An internal error occurred while listing plans"
+        )

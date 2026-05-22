@@ -12,20 +12,34 @@ from app.utils import sanitize_user_text
 class RunLogBase(BaseModel):
     distance_km: float = Field(..., gt=0, description="Distance in kilometers")
     duration_minutes: float = Field(..., gt=0, description="Duration in minutes")
-    avg_heart_rate: Optional[int] = Field(None, ge=40, le=220, description="Average heart rate")
-    max_heart_rate: Optional[int] = Field(None, ge=40, le=220, description="Maximum heart rate")
-    avg_cadence: Optional[int] = Field(None, ge=100, le=220, description="Average cadence (steps per minute)")
-    elevation_gain_m: Optional[int] = Field(None, ge=0, description="Elevation gain in meters")
+    avg_heart_rate: Optional[int] = Field(
+        None, ge=40, le=220, description="Average heart rate"
+    )
+    max_heart_rate: Optional[int] = Field(
+        None, ge=40, le=220, description="Maximum heart rate"
+    )
+    avg_cadence: Optional[int] = Field(
+        None, ge=100, le=220, description="Average cadence (steps per minute)"
+    )
+    elevation_gain_m: Optional[int] = Field(
+        None, ge=0, description="Elevation gain in meters"
+    )
     notes: Optional[str] = Field(None, max_length=1000, description="Run notes")
-    workout_type: Optional[str] = Field(None, description="Workout type: easy, tempo, interval, long, hill")
-    perceived_effort: Optional[int] = Field(None, ge=1, le=10, description="Perceived effort (1-10)")
+    workout_type: Optional[str] = Field(
+        None, description="Workout type: easy, tempo, interval, long, hill"
+    )
+    perceived_effort: Optional[int] = Field(
+        None, ge=1, le=10, description="Perceived effort (1-10)"
+    )
 
     @field_validator("workout_type")
     @classmethod
     def validate_workout_type(cls, v: Optional[str]) -> Optional[str]:
         if v is not None:
             if v not in WORKOUT_TYPES:
-                raise ValueError(f"workout_type must be one of: {', '.join(WORKOUT_TYPES)}")
+                raise ValueError(
+                    f"workout_type must be one of: {', '.join(WORKOUT_TYPES)}"
+                )
         return v
 
     @field_validator("notes")
@@ -35,9 +49,15 @@ class RunLogBase(BaseModel):
 
 
 class RunLogCreate(RunLogBase):
-    date: Optional[datetime] = Field(None, description="Run date and time (defaults to now)")
-    training_plan_id: Optional[str] = Field(None, description="Associated training plan ID")
-    daily_workout_id: Optional[str] = Field(None, description="Associated daily workout ID")
+    date: Optional[datetime] = Field(
+        None, description="Run date and time (defaults to now)"
+    )
+    training_plan_id: Optional[str] = Field(
+        None, description="Associated training plan ID"
+    )
+    daily_workout_id: Optional[str] = Field(
+        None, description="Associated daily workout ID"
+    )
 
 
 class RunLogUpdate(BaseModel):
@@ -57,7 +77,9 @@ class RunLogUpdate(BaseModel):
     def validate_workout_type(cls, v: Optional[str]) -> Optional[str]:
         if v is not None:
             if v not in WORKOUT_TYPES:
-                raise ValueError(f"workout_type must be one of: {', '.join(WORKOUT_TYPES)}")
+                raise ValueError(
+                    f"workout_type must be one of: {', '.join(WORKOUT_TYPES)}"
+                )
         return v
 
     @field_validator("notes")

@@ -6,7 +6,6 @@ from typing import Optional, Union
 
 from sqlalchemy.orm.attributes import flag_modified
 
-
 _TAG_RE = re.compile(r"<[^>]*>")
 _CONTROL_RE = re.compile(r"[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]")
 
@@ -138,7 +137,7 @@ def parse_race_time_to_seconds(time_str: str | None) -> int | None:
 
 def parse_time_to_pace(time_str: str, distance_km: float) -> float:
     """Parse a time string (MM:SS or HH:MM:SS) and return pace in min/km."""
-    parts = time_str.strip().split(':')
+    parts = time_str.strip().split(":")
     if len(parts) == 2:
         minutes = int(parts[0])
         seconds = int(parts[1])

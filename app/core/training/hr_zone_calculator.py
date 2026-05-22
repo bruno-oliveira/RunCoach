@@ -15,16 +15,41 @@ DEFAULT_MAX_HR = 190
 # -- Zone definitions (percentage of max HR) ----------------------------------
 
 ZONE_DEFINITIONS = [
-    {"zone": 1, "name": "Recovery", "pct_min": 0.50, "pct_max": 0.60,
-     "description": "Very light effort. Active recovery, warm-up, cool-down."},
-    {"zone": 2, "name": "Aerobic", "pct_min": 0.60, "pct_max": 0.70,
-     "description": "Conversational pace. Builds aerobic base and fat-burning efficiency."},
-    {"zone": 3, "name": "Tempo", "pct_min": 0.70, "pct_max": 0.80,
-     "description": "Comfortably hard. Improves lactate clearance and stamina."},
-    {"zone": 4, "name": "Threshold", "pct_min": 0.80, "pct_max": 0.90,
-     "description": "Hard effort. Raises lactate threshold and race-day tolerance."},
-    {"zone": 5, "name": "VO2max", "pct_min": 0.90, "pct_max": 1.00,
-     "description": "Maximum effort. Develops peak oxygen uptake and speed."},
+    {
+        "zone": 1,
+        "name": "Recovery",
+        "pct_min": 0.50,
+        "pct_max": 0.60,
+        "description": "Very light effort. Active recovery, warm-up, cool-down.",
+    },
+    {
+        "zone": 2,
+        "name": "Aerobic",
+        "pct_min": 0.60,
+        "pct_max": 0.70,
+        "description": "Conversational pace. Builds aerobic base and fat-burning efficiency.",
+    },
+    {
+        "zone": 3,
+        "name": "Tempo",
+        "pct_min": 0.70,
+        "pct_max": 0.80,
+        "description": "Comfortably hard. Improves lactate clearance and stamina.",
+    },
+    {
+        "zone": 4,
+        "name": "Threshold",
+        "pct_min": 0.80,
+        "pct_max": 0.90,
+        "description": "Hard effort. Raises lactate threshold and race-day tolerance.",
+    },
+    {
+        "zone": 5,
+        "name": "VO2max",
+        "pct_min": 0.90,
+        "pct_max": 1.00,
+        "description": "Maximum effort. Develops peak oxygen uptake and speed.",
+    },
 ]
 
 # Maps workout_type → target HR zone number (1-5)
@@ -61,15 +86,17 @@ class HRZoneCalculator:
         """
         zones = []
         for defn in ZONE_DEFINITIONS:
-            zones.append({
-                "zone": defn["zone"],
-                "name": defn["name"],
-                "min_bpm": round(max_hr * defn["pct_min"]),
-                "max_bpm": round(max_hr * defn["pct_max"]),
-                "pct_min": defn["pct_min"],
-                "pct_max": defn["pct_max"],
-                "description": defn["description"],
-            })
+            zones.append(
+                {
+                    "zone": defn["zone"],
+                    "name": defn["name"],
+                    "min_bpm": round(max_hr * defn["pct_min"]),
+                    "max_bpm": round(max_hr * defn["pct_max"]),
+                    "pct_min": defn["pct_min"],
+                    "pct_max": defn["pct_max"],
+                    "description": defn["description"],
+                }
+            )
         return zones
 
     @staticmethod
@@ -114,7 +141,9 @@ class HRZoneCalculator:
         """
         for z in zones:
             if z["zone"] == zone_number:
-                return f"Zone {z['zone']} ({z['name']}): {z['min_bpm']}-{z['max_bpm']} bpm"
+                return (
+                    f"Zone {z['zone']} ({z['name']}): {z['min_bpm']}-{z['max_bpm']} bpm"
+                )
         return f"Zone {zone_number}"
 
     @staticmethod

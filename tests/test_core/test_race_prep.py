@@ -9,12 +9,11 @@ import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy.orm import Session
 
+from app.contexts.runner.fitness.race_pacing_service import RacePacingService
 from app.dependencies import get_current_user, get_db, get_optional_user
+from app.infrastructure.integrations.gpx_service import GPXService
 from app.main import app
 from app.models.user import User
-from app.web.routers.race_prep import _blueprint_store
-from app.infrastructure.integrations.gpx_service import GPXService
-from app.contexts.runner.fitness.race_pacing_service import RacePacingService
 
 
 @pytest.fixture
@@ -143,11 +142,13 @@ class TestGPXService:
 
         pace_plan = []
         for seg in profile:
-            pace_plan.append({
-                "end_km": seg["end_km"],
-                "target_pace_str": "5:30",
-                "cumulative_time_str": "10:00",
-            })
+            pace_plan.append(
+                {
+                    "end_km": seg["end_km"],
+                    "target_pace_str": "5:30",
+                    "cumulative_time_str": "10:00",
+                }
+            )
 
         gpx_bytes = GPXService.generate_planned_gpx(
             original_trackpoints=parsed["trackpoints"],
@@ -188,9 +189,27 @@ class TestRacePacingService:
 
     def test_generate_pace_blueprint(self):
         profile = [
-            {"segment_number": 1, "start_km": 0, "end_km": 1, "avg_elevation": 100, "grade_pct": 1.0},
-            {"segment_number": 2, "start_km": 1, "end_km": 2, "avg_elevation": 105, "grade_pct": 0.5},
-            {"segment_number": 3, "start_km": 2, "end_km": 3, "avg_elevation": 102, "grade_pct": -0.5},
+            {
+                "segment_number": 1,
+                "start_km": 0,
+                "end_km": 1,
+                "avg_elevation": 100,
+                "grade_pct": 1.0,
+            },
+            {
+                "segment_number": 2,
+                "start_km": 1,
+                "end_km": 2,
+                "avg_elevation": 105,
+                "grade_pct": 0.5,
+            },
+            {
+                "segment_number": 3,
+                "start_km": 2,
+                "end_km": 3,
+                "avg_elevation": 102,
+                "grade_pct": -0.5,
+            },
         ]
         blueprint = RacePacingService.generate_pace_blueprint(
             elevation_profile=profile,
@@ -251,20 +270,32 @@ class TestRacePacingService:
         # by a single steep segment vs. a single shallow one.
         steep_profile = [
             {
-                "start_km": 0.0, "end_km": 1.0, "avg_elevation": 200.0,
-                "grade_pct": 10.0, "net_grade_pct": 10.0,
-                "elevation_gain": 100.0, "elevation_loss": 0.0,
+                "start_km": 0.0,
+                "end_km": 1.0,
+                "avg_elevation": 200.0,
+                "grade_pct": 10.0,
+                "net_grade_pct": 10.0,
+                "elevation_gain": 100.0,
+                "elevation_loss": 0.0,
             }
         ]
         shallow_profile = [
             {
-                "start_km": 0.0, "end_km": 1.0, "avg_elevation": 200.0,
-                "grade_pct": 2.0, "net_grade_pct": 2.0,
-                "elevation_gain": 20.0, "elevation_loss": 0.0,
+                "start_km": 0.0,
+                "end_km": 1.0,
+                "avg_elevation": 200.0,
+                "grade_pct": 2.0,
+                "net_grade_pct": 2.0,
+                "elevation_gain": 20.0,
+                "elevation_loss": 0.0,
             }
         ]
-        steep = RacePacingService.predict_elevation_adjusted_time(50.0, 1.0, steep_profile)
-        shallow = RacePacingService.predict_elevation_adjusted_time(50.0, 1.0, shallow_profile)
+        steep = RacePacingService.predict_elevation_adjusted_time(
+            50.0, 1.0, steep_profile
+        )
+        shallow = RacePacingService.predict_elevation_adjusted_time(
+            50.0, 1.0, shallow_profile
+        )
         # Linear-12 would give 10*12=120s vs 2*12=24s (5x). Piecewise gives
         # 10*24=240s vs 2*12=24s (10x). Just verify ratio exceeds the linear
         # 5x to confirm piecewise is in effect.
@@ -352,11 +383,36 @@ class TestRacePrepAPI:
                         "target_time_seconds": 2400,
                         "distance_km": 5.0,
                         "elevation_profile": [
-                            {"start_km": 0, "end_km": 1, "avg_elevation": 100, "grade_pct": 1.0},
-                            {"start_km": 1, "end_km": 2, "avg_elevation": 105, "grade_pct": 0.5},
-                            {"start_km": 2, "end_km": 3, "avg_elevation": 102, "grade_pct": -0.5},
-                            {"start_km": 3, "end_km": 4, "avg_elevation": 100, "grade_pct": 0.0},
-                            {"start_km": 4, "end_km": 5, "avg_elevation": 98, "grade_pct": -0.5},
+                            {
+                                "start_km": 0,
+                                "end_km": 1,
+                                "avg_elevation": 100,
+                                "grade_pct": 1.0,
+                            },
+                            {
+                                "start_km": 1,
+                                "end_km": 2,
+                                "avg_elevation": 105,
+                                "grade_pct": 0.5,
+                            },
+                            {
+                                "start_km": 2,
+                                "end_km": 3,
+                                "avg_elevation": 102,
+                                "grade_pct": -0.5,
+                            },
+                            {
+                                "start_km": 3,
+                                "end_km": 4,
+                                "avg_elevation": 100,
+                                "grade_pct": 0.0,
+                            },
+                            {
+                                "start_km": 4,
+                                "end_km": 5,
+                                "avg_elevation": 98,
+                                "grade_pct": -0.5,
+                            },
                         ],
                     },
                 )
@@ -384,7 +440,9 @@ class TestRacePrepAPI:
 
 class TestFITValidationLocal:
     def test_validate_invalid_fit(self):
-        from app.infrastructure.integrations.fit_validation_local import validate_fit_bytes
+        from app.infrastructure.integrations.fit_validation_local import (
+            validate_fit_bytes,
+        )
+
         result = validate_fit_bytes(b"not a fit file")
         assert not result.valid
-

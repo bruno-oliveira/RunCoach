@@ -24,7 +24,6 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Literal
 
-
 # Supported trail distance range. Below 8 km the user picks a road preset
 # (5K / 10K). 163 km ≈ 100 miles, the upper bound the user explicitly named.
 TRAIL_DISTANCE_MIN_KM = 8.0

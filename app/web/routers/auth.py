@@ -8,14 +8,19 @@ from fastapi import APIRouter, Cookie, Depends, HTTPException, Request, Response
 from sqlalchemy.orm import Session
 
 from app.contexts.auth.auth_service import AuthService
+from app.dependencies import (
+    get_auth_service,
+    get_current_user,
+    get_db,
+    get_strava_service,
+)
 from app.infrastructure.config import settings
-from app.dependencies import get_auth_service, get_db, get_current_user, get_strava_service
-from app.web.middleware import _cookie_secure
+from app.infrastructure.integrations.strava_service import StravaService
 from app.models import User
 from app.rate_limit import account_deletion_limiter, auth_limiter
 from app.schemas import AuthResponse, GoogleAuthRequest, UserResponse
 from app.schemas.auth_schemas import UserSettingsUpdate
-from app.infrastructure.integrations.strava_service import StravaService
+from app.web.middleware import _cookie_secure
 
 logger = logging.getLogger(__name__)
 

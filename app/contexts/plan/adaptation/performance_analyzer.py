@@ -1,7 +1,7 @@
 """Performance analysis — read-only metrics from logged runs."""
 
 from collections import defaultdict
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional
 
 from sqlalchemy.orm import Session
 
@@ -57,9 +57,7 @@ def analyze_performance(
     )
 
     adherence_rate = (
-        min(100.0, total_logged / planned_workouts * 100)
-        if planned_workouts > 0
-        else 0
+        min(100.0, total_logged / planned_workouts * 100) if planned_workouts > 0 else 0
     )
 
     efforts = [r.perceived_effort for r in runs if r.perceived_effort is not None]
@@ -105,7 +103,8 @@ def analyze_performance(
 
 
 def _get_paces_by_type(
-    training_plan_id: str, db: Session,
+    training_plan_id: str,
+    db: Session,
 ) -> Dict[str, List[float]]:
     """Get paces grouped by planned workout type."""
     rows = (
@@ -150,7 +149,7 @@ def _calculate_pace_consistency(paces: List[float]) -> Optional[float]:
 
     avg_pace = sum(paces) / len(paces)
     variance = sum((p - avg_pace) ** 2 for p in paces) / (len(paces) - 1)
-    std_dev = variance ** 0.5
+    std_dev = variance**0.5
 
     cv = (std_dev / avg_pace) * 100 if avg_pace > 0 else 100
     return round(cv, 2)
@@ -166,7 +165,9 @@ def _generate_recommendations(
     recommendations = []
 
     if adherence_rate < 50:
-        recommendations.append("Try to complete more planned workouts for better results")
+        recommendations.append(
+            "Try to complete more planned workouts for better results"
+        )
     elif adherence_rate > 90:
         recommendations.append("Excellent adherence! Keep up the great work!")
 
@@ -193,4 +194,8 @@ def _generate_recommendations(
         elif pace_consistency > 15:
             recommendations.append("Work on more consistent pacing across runs")
 
-    return recommendations if recommendations else ["Keep logging runs for personalized insights"]
+    return (
+        recommendations
+        if recommendations
+        else ["Keep logging runs for personalized insights"]
+    )

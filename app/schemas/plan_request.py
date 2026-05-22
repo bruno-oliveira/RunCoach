@@ -28,7 +28,9 @@ class PlanRequestBase(BaseModel):
     )
     # Outer envelope — per-distance validators tighten further (road ≤ 24, ultra up to 40).
     weeks: int = Field(..., ge=4, le=40, description="Training duration in weeks")
-    max_runs_per_week: int = Field(default=4, ge=2, le=6, description="Maximum runs per week")
+    max_runs_per_week: int = Field(
+        default=4, ge=2, le=6, description="Maximum runs per week"
+    )
 
     # Trail mode — set by the form when user picks "Trail / Ultra (custom)".
     # Auto-set in the legacy migration path when target_distance == 30.0.
@@ -76,7 +78,8 @@ class RaceInfoMixin(BaseModel):
     # Optional: goal finish time for the target race — drives aspirational
     # pace zones when present (goal VDOT used in place of current VDOT).
     goal_time: Optional[str] = Field(
-        default=None, description="Goal finish time for the target race (HH:MM:SS or MM:SS)"
+        default=None,
+        description="Goal finish time for the target race (HH:MM:SS or MM:SS)",
     )
 
 
@@ -118,7 +121,9 @@ class PlanRequest(PlanRequestBase, RaceInfoMixin):
         if target_f == 30.0 and not is_trail_explicit:
             values["is_trail"] = True
             if values.get("target_elevation_gain_m") is None:
-                values["target_elevation_gain_m"] = 200.0 if terrain == "flat" else 1000.0
+                values["target_elevation_gain_m"] = (
+                    200.0 if terrain == "flat" else 1000.0
+                )
 
         return values
 
@@ -145,7 +150,9 @@ class PlanRequest(PlanRequestBase, RaceInfoMixin):
         )
 
         if self.is_trail:
-            if not (TRAIL_DISTANCE_MIN_KM <= self.target_distance <= TRAIL_DISTANCE_MAX_KM):
+            if not (
+                TRAIL_DISTANCE_MIN_KM <= self.target_distance <= TRAIL_DISTANCE_MAX_KM
+            ):
                 raise ValueError(
                     f"Trail/ultra distance must be {TRAIL_DISTANCE_MIN_KM:g}–"
                     f"{TRAIL_DISTANCE_MAX_KM:g} km. For shorter races pick a road preset."
@@ -185,7 +192,9 @@ class PlanRequest(PlanRequestBase, RaceInfoMixin):
 
         from app.core.training.trail_profile import classify_trail
 
-        profile = classify_trail(self.target_distance, self.target_elevation_gain_m or 0.0)
+        profile = classify_trail(
+            self.target_distance, self.target_elevation_gain_m or 0.0
+        )
         return profile.elevation_class
 
     @model_validator(mode="after")
@@ -200,7 +209,9 @@ class PlanRequest(PlanRequestBase, RaceInfoMixin):
                 trail_min_weeks,
             )
 
-            profile = classify_trail(self.target_distance, self.target_elevation_gain_m or 0.0)
+            profile = classify_trail(
+                self.target_distance, self.target_elevation_gain_m or 0.0
+            )
             min_w = trail_min_weeks(profile)
             max_w = trail_max_weeks(profile)
 
@@ -252,7 +263,9 @@ class PlanRequest(PlanRequestBase, RaceInfoMixin):
                 trail_min_runs_per_week,
             )
 
-            profile = classify_trail(self.target_distance, self.target_elevation_gain_m or 0.0)
+            profile = classify_trail(
+                self.target_distance, self.target_elevation_gain_m or 0.0
+            )
             min_runs = trail_min_runs_per_week(profile)
             if v < min_runs:
                 raise ValueError(
@@ -302,7 +315,7 @@ class PlanRequest(PlanRequestBase, RaceInfoMixin):
                 raise InsufficientTimeException(
                     "Beginner plans require at least 8 weeks for safe progression.",
                     "Couch to 5K programs need 8+ weeks to build fitness safely. "
-                    "Consider extending your training to at least 8 weeks."
+                    "Consider extending your training to at least 8 weeks.",
                 )
 
             return self

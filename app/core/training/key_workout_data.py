@@ -149,7 +149,6 @@ _WORKOUTS_SHORT: List[Dict] = [
             "varying distances — exactly what you'll need in the final km."
         ),
     },
-
     # -- 10K --
     {
         "id": "10k_cruise_intervals",
@@ -232,7 +231,6 @@ _WORKOUTS_SHORT: List[Dict] = [
             "crucial skill for handling pace changes in a 10K race."
         ),
     },
-
     # -- Half Marathon --
     {
         "id": "half_progressive_long",
@@ -315,7 +313,6 @@ _WORKOUTS_SHORT: List[Dict] = [
             "Each segment teaches your body to run faster on accumulating fatigue."
         ),
     },
-
 ]
 
 # Combined list of all workouts

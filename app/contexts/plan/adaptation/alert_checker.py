@@ -1,16 +1,16 @@
 """Proactive adaptation alerts — detect when a plan needs attention."""
 
+from datetime import timedelta
 from typing import Any, Dict, Optional
 
 from sqlalchemy.orm import Session
 
-from app.models import DailyWorkout, RunLog, TrainingPlan, WeeklyPlan
 from app.contexts.plan.plan_date_utils import compute_current_week
-from app.utils import to_date as _to_date
 from app.contexts.plan.repositories import SQLAlchemyPlanRepository
+from app.models import DailyWorkout, RunLog, TrainingPlan, WeeklyPlan
+from app.utils import to_date as _to_date
 
 from ._helpers import today_date
-from datetime import timedelta
 
 
 def check_alerts(

@@ -4,21 +4,37 @@ import logging
 from datetime import datetime, timedelta, timezone
 from typing import Optional
 
-from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, Request, status
+from fastapi import (
+    APIRouter,
+    BackgroundTasks,
+    Depends,
+    HTTPException,
+    Query,
+    Request,
+    status,
+)
 from fastapi.responses import RedirectResponse
 from sqlalchemy.orm import Session
 
 from app.contexts.auth.auth_service import AuthService
 from app.contexts.auth.repositories import SQLAlchemyUserRepository
-from app.infrastructure.config import settings
-from app.contexts.plan.repositories import SQLAlchemyPlanRepository
-from app.dependencies import get_current_user, get_db, get_auth_service, get_strava_service
-from app.models.user import User
-from app.schemas import StravaStatusResponse, StravaSyncResponse
-from app.rate_limit import strava_callback_limiter
-from app.infrastructure.integrations.strava_service import StravaService
 from app.contexts.plan.adaptation import AdaptationService
-from app.infrastructure.integrations.strava_post_sync_service import auto_map_and_adjust, initial_sync
+from app.contexts.plan.repositories import SQLAlchemyPlanRepository
+from app.dependencies import (
+    get_auth_service,
+    get_current_user,
+    get_db,
+    get_strava_service,
+)
+from app.infrastructure.config import settings
+from app.infrastructure.integrations.strava_post_sync_service import (
+    auto_map_and_adjust,
+    initial_sync,
+)
+from app.infrastructure.integrations.strava_service import StravaService
+from app.models.user import User
+from app.rate_limit import strava_callback_limiter
+from app.schemas import StravaStatusResponse, StravaSyncResponse
 from app.utils import TimestampAdapter
 
 logger = logging.getLogger(__name__)
@@ -133,11 +149,14 @@ async def strava_sync(
             if plan_epoch < after_timestamp:
                 logger.info(
                     "Extending sync window to plan start %s (was %s)",
-                    sd, after_timestamp,
+                    sd,
+                    after_timestamp,
                 )
                 after_timestamp = plan_epoch
     else:
-        after_timestamp = TimestampAdapter.days_ago_utc_epoch(settings.strava_initial_sync_days)
+        after_timestamp = TimestampAdapter.days_ago_utc_epoch(
+            settings.strava_initial_sync_days
+        )
 
     try:
         result = await strava_service.sync_activities(
@@ -151,7 +170,9 @@ async def strava_sync(
         )
 
     adaptation_service = AdaptationService()
-    adjustment_results = auto_map_and_adjust(current_user, db, adaptation_service) or None
+    adjustment_results = (
+        auto_map_and_adjust(current_user, db, adaptation_service) or None
+    )
 
     return StravaSyncResponse(**result, adjustment_results=adjustment_results)
 

@@ -28,9 +28,7 @@ class RunFeedback(Base):
 
     overall_sentiment = Column(String(10), nullable=False, default="info")
 
-    planned_workout_id = Column(
-        String, ForeignKey("daily_workouts.id"), nullable=True
-    )
+    planned_workout_id = Column(String, ForeignKey("daily_workouts.id"), nullable=True)
 
     created_at = Column(
         DateTime,

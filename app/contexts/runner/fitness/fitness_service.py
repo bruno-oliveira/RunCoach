@@ -1,17 +1,17 @@
 """Fitness plan creation and business logic."""
 
 import logging
-from typing import Any, Optional
+from typing import Optional
 
 from sqlalchemy.orm import Session
 
-from app.contexts.plan.generators.fitness_plan_generator import FitnessPlanGenerator
 from app.contexts.nutrition.nutrition_engine import NutritionEngine
+from app.contexts.plan.generators.fitness_plan_generator import FitnessPlanGenerator
+from app.contexts.plan.plan_service import PlanService
+from app.contexts.runner.fitness.hr_zone_service import HRZoneService
 from app.core.training.vdot_calculator import VDOTCalculator
 from app.models import DailyWorkout, TrainingPlan, User, WeeklyPlan
 from app.schemas import FitnessPlanRequest
-from app.contexts.runner.fitness.hr_zone_service import HRZoneService
-from app.contexts.plan.plan_service import PlanService
 from app.utils import parse_race_time_to_seconds
 
 logger = logging.getLogger(__name__)
@@ -40,8 +40,14 @@ class FitnessService:
             return existing, existing.plan_data if existing.plan_data else []
 
         vdot = plan_request.vdot
-        if not vdot and plan_request.recent_race_distance_km and plan_request.recent_race_time:
-            seconds = VDOTCalculator.parse_time_to_seconds(plan_request.recent_race_time)
+        if (
+            not vdot
+            and plan_request.recent_race_distance_km
+            and plan_request.recent_race_time
+        ):
+            seconds = VDOTCalculator.parse_time_to_seconds(
+                plan_request.recent_race_time
+            )
             if seconds:
                 vdot = VDOTCalculator.calculate_vdot(
                     plan_request.recent_race_distance_km, seconds
@@ -65,7 +71,9 @@ class FitnessService:
             )
             self._persist_weekly_workouts(training_plan, plan_data)
             self._attach_hr_zones(training_plan, user, plan_data, plan_result)
-            self._attach_nutrition(training_plan, plan_request, plan_data, nutrition_engine)
+            self._attach_nutrition(
+                training_plan, plan_request, plan_data, nutrition_engine
+            )
             self.db.commit()
         except Exception:
             self.db.rollback()
@@ -90,7 +98,9 @@ class FitnessService:
             TrainingPlan.max_runs_per_week == plan_request.runs_per_week,
         ]
         if plan_request.focus_area:
-            filters.append(TrainingPlan.target_distance == f"fitness_{plan_request.focus_area}")
+            filters.append(
+                TrainingPlan.target_distance == f"fitness_{plan_request.focus_area}"
+            )
         if race_time_seconds is not None:
             filters.append(TrainingPlan.recent_race_time_seconds == race_time_seconds)
         else:
@@ -110,9 +120,6 @@ class FitnessService:
         plan_result: dict,
     ) -> TrainingPlan:
         """Create and persist the TrainingPlan ORM record."""
-        focus_distance_str = (
-            str(plan_request.focus_distance) if plan_request.focus_distance else None
-        )
         training_plan = TrainingPlan(
             user_id=user.id,
             current_weekly_km=plan_request.current_km,
@@ -201,7 +208,9 @@ class FitnessService:
                             dw.key_workout_id = key_wk_id
             training_plan.plan_data = plan_data
         except Exception as e:
-            logger.warning(f"HR zone injection failed for fitness plan {training_plan.id}: {e}")
+            logger.warning(
+                f"HR zone injection failed for fitness plan {training_plan.id}: {e}"
+            )
 
     def _attach_nutrition(
         self,

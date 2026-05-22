@@ -1,14 +1,15 @@
 """Unit tests for StravaService."""
 
 import time
-from datetime import datetime, timezone
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, patch
 
 import pytest
 
+from app.infrastructure.integrations.strava_service import (
+    StravaService,
+)
 from app.models.run_log import RunLog
 from app.models.user import User
-from app.infrastructure.integrations.strava_service import StravaService, STRAVA_WORKOUT_TYPE_MAP
 
 
 @pytest.fixture
@@ -156,11 +157,14 @@ class TestSyncActivities:
         test_db.add(mock_user)
         test_db.commit()
 
-        with patch.object(
-            strava_service, "ensure_valid_token", new_callable=AsyncMock
-        ) as mock_token, patch.object(
-            strava_service, "fetch_activities", new_callable=AsyncMock
-        ) as mock_fetch:
+        with (
+            patch.object(
+                strava_service, "ensure_valid_token", new_callable=AsyncMock
+            ) as mock_token,
+            patch.object(
+                strava_service, "fetch_activities", new_callable=AsyncMock
+            ) as mock_fetch,
+        ):
             mock_token.return_value = "valid-token"
             mock_fetch.side_effect = [[sample_strava_activity], []]
 
@@ -190,11 +194,14 @@ class TestSyncActivities:
         test_db.add(existing)
         test_db.commit()
 
-        with patch.object(
-            strava_service, "ensure_valid_token", new_callable=AsyncMock
-        ) as mock_token, patch.object(
-            strava_service, "fetch_activities", new_callable=AsyncMock
-        ) as mock_fetch:
+        with (
+            patch.object(
+                strava_service, "ensure_valid_token", new_callable=AsyncMock
+            ) as mock_token,
+            patch.object(
+                strava_service, "fetch_activities", new_callable=AsyncMock
+            ) as mock_fetch,
+        ):
             mock_token.return_value = "valid-token"
             mock_fetch.side_effect = [[sample_strava_activity], []]
 
@@ -214,11 +221,14 @@ class TestSyncActivities:
         swim_activity = {**sample_strava_activity, "id": 222, "type": "Swim"}
         trail_run = {**sample_strava_activity, "id": 333, "type": "TrailRun"}
 
-        with patch.object(
-            strava_service, "ensure_valid_token", new_callable=AsyncMock
-        ) as mock_token, patch.object(
-            strava_service, "fetch_activities", new_callable=AsyncMock
-        ) as mock_fetch:
+        with (
+            patch.object(
+                strava_service, "ensure_valid_token", new_callable=AsyncMock
+            ) as mock_token,
+            patch.object(
+                strava_service, "fetch_activities", new_callable=AsyncMock
+            ) as mock_fetch,
+        ):
             mock_token.return_value = "valid-token"
             mock_fetch.side_effect = [
                 [cycling_activity, swim_activity, trail_run, sample_strava_activity],
@@ -252,11 +262,14 @@ class TestSyncActivities:
             "sport_type": "Ride",
         }
 
-        with patch.object(
-            strava_service, "ensure_valid_token", new_callable=AsyncMock
-        ) as mock_token, patch.object(
-            strava_service, "fetch_activities", new_callable=AsyncMock
-        ) as mock_fetch:
+        with (
+            patch.object(
+                strava_service, "ensure_valid_token", new_callable=AsyncMock
+            ) as mock_token,
+            patch.object(
+                strava_service, "fetch_activities", new_callable=AsyncMock
+            ) as mock_fetch,
+        ):
             mock_token.return_value = "valid-token"
             mock_fetch.side_effect = [[sport_type_run, sport_type_ride], []]
 

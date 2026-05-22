@@ -8,12 +8,12 @@ from sqlalchemy import create_engine, event
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 
-from app.models import Base, RunFeedback, RunLog, User
 from app.contexts.plan.plan_template_context import (
     _build_today_workout_overlay,
     _coaching_prefix,
     _detect_fatigue_softening,
 )
+from app.models import Base, RunFeedback, RunLog, User
 
 
 def _uid():
@@ -55,7 +55,9 @@ class _MockRun:
 
 class TestCoachingPrefix:
     def test_hard_workout_yesterday(self):
-        assert _coaching_prefix(_MockRun("tempo", 8)).startswith("After yesterday's hard tempo")
+        assert _coaching_prefix(_MockRun("tempo", 8)).startswith(
+            "After yesterday's hard tempo"
+        )
 
     def test_none_for_easy_high_effort(self):
         assert _coaching_prefix(_MockRun("easy", 8)) is None
@@ -71,7 +73,8 @@ class TestDetectFatigueSoftening:
             run = RunLog(
                 id=_uid(),
                 user_id=user.id,
-                date=datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(days=i),
+                date=datetime.now(timezone.utc).replace(tzinfo=None)
+                - timedelta(days=i),
                 distance_km=10,
                 duration_minutes=50,
                 perceived_effort=e,
@@ -81,12 +84,14 @@ class TestDetectFatigueSoftening:
             runs.append(run)
         db.flush()
         for i in range(warning_count):
-            db.add(RunFeedback(
-                id=_uid(),
-                run_log_id=runs[i].id,
-                user_id=user.id,
-                overall_sentiment="warning",
-            ))
+            db.add(
+                RunFeedback(
+                    id=_uid(),
+                    run_log_id=runs[i].id,
+                    user_id=user.id,
+                    overall_sentiment="warning",
+                )
+            )
         db.commit()
         return user, runs
 
@@ -110,7 +115,12 @@ class TestDetectFatigueSoftening:
 class TestBuildOverlay:
     def test_overlay_empty_when_no_db(self):
         overlay = _build_today_workout_overlay(
-            None, None, [], _today(), _today(), 1,
+            None,
+            None,
+            [],
+            _today(),
+            _today(),
+            1,
         )
         assert overlay == {}
 
@@ -119,27 +129,37 @@ class TestBuildOverlay:
         db.add(user)
         db.commit()
         today = _today()
-        plan_data = [{
-            "week": 1,
-            "daily_workouts": [
-                {"day": today.isoweekday(), "type": "easy"},
-            ],
-        }]
+        plan_data = [
+            {
+                "week": 1,
+                "daily_workouts": [
+                    {"day": today.isoweekday(), "type": "easy"},
+                ],
+            }
+        ]
         # Add a hard tempo from yesterday so the prefix is generated.
-        db.add(RunLog(
-            id=_uid(),
-            user_id=user.id,
-            date=datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(days=1),
-            distance_km=10,
-            duration_minutes=50,
-            perceived_effort=8,
-            workout_type="tempo",
-        ))
+        db.add(
+            RunLog(
+                id=_uid(),
+                user_id=user.id,
+                date=datetime.now(timezone.utc).replace(tzinfo=None)
+                - timedelta(days=1),
+                distance_km=10,
+                duration_minutes=50,
+                perceived_effort=8,
+                workout_type="tempo",
+            )
+        )
         db.commit()
 
         start_date = today - timedelta(days=today.isoweekday() - 1)
         overlay = _build_today_workout_overlay(
-            db, user, plan_data, start_date, today, 1,
+            db,
+            user,
+            plan_data,
+            start_date,
+            today,
+            1,
         )
 
         # The key is "week-day" string
@@ -160,7 +180,8 @@ class TestBuildOverlay:
             run = RunLog(
                 id=_uid(),
                 user_id=user.id,
-                date=datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(days=i + 1),
+                date=datetime.now(timezone.utc).replace(tzinfo=None)
+                - timedelta(days=i + 1),
                 distance_km=10,
                 duration_minutes=50,
                 perceived_effort=e,
@@ -169,17 +190,38 @@ class TestBuildOverlay:
             db.add(run)
             runs.append(run)
         db.flush()
-        db.add(RunFeedback(id=_uid(), run_log_id=runs[0].id, user_id=user.id, overall_sentiment="warning"))
-        db.add(RunFeedback(id=_uid(), run_log_id=runs[1].id, user_id=user.id, overall_sentiment="warning"))
+        db.add(
+            RunFeedback(
+                id=_uid(),
+                run_log_id=runs[0].id,
+                user_id=user.id,
+                overall_sentiment="warning",
+            )
+        )
+        db.add(
+            RunFeedback(
+                id=_uid(),
+                run_log_id=runs[1].id,
+                user_id=user.id,
+                overall_sentiment="warning",
+            )
+        )
         db.commit()
 
-        plan_data = [{
-            "week": 1,
-            "daily_workouts": [{"day": today.isoweekday(), "type": "tempo"}],
-        }]
+        plan_data = [
+            {
+                "week": 1,
+                "daily_workouts": [{"day": today.isoweekday(), "type": "tempo"}],
+            }
+        ]
         start_date = today - timedelta(days=today.isoweekday() - 1)
         overlay = _build_today_workout_overlay(
-            db, user, plan_data, start_date, today, 1,
+            db,
+            user,
+            plan_data,
+            start_date,
+            today,
+            1,
         )
         key = f"1-{today.isoweekday()}"
         assert key in overlay
@@ -196,7 +238,8 @@ class TestBuildOverlay:
             run = RunLog(
                 id=_uid(),
                 user_id=user.id,
-                date=datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(days=i + 1),
+                date=datetime.now(timezone.utc).replace(tzinfo=None)
+                - timedelta(days=i + 1),
                 distance_km=10,
                 duration_minutes=50,
                 perceived_effort=e,
@@ -205,17 +248,38 @@ class TestBuildOverlay:
             db.add(run)
             runs.append(run)
         db.flush()
-        db.add(RunFeedback(id=_uid(), run_log_id=runs[0].id, user_id=user.id, overall_sentiment="warning"))
-        db.add(RunFeedback(id=_uid(), run_log_id=runs[1].id, user_id=user.id, overall_sentiment="warning"))
+        db.add(
+            RunFeedback(
+                id=_uid(),
+                run_log_id=runs[0].id,
+                user_id=user.id,
+                overall_sentiment="warning",
+            )
+        )
+        db.add(
+            RunFeedback(
+                id=_uid(),
+                run_log_id=runs[1].id,
+                user_id=user.id,
+                overall_sentiment="warning",
+            )
+        )
         db.commit()
 
-        plan_data = [{
-            "week": 1,
-            "daily_workouts": [{"day": today.isoweekday(), "type": "easy"}],
-        }]
+        plan_data = [
+            {
+                "week": 1,
+                "daily_workouts": [{"day": today.isoweekday(), "type": "easy"}],
+            }
+        ]
         start_date = today - timedelta(days=today.isoweekday() - 1)
         overlay = _build_today_workout_overlay(
-            db, user, plan_data, start_date, today, 1,
+            db,
+            user,
+            plan_data,
+            start_date,
+            today,
+            1,
         )
         key = f"1-{today.isoweekday()}"
         # Easy workout shouldn't be softened (even if signal would otherwise trigger)

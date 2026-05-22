@@ -45,6 +45,7 @@ def plain_user(test_db: Session) -> User:
 @pytest.fixture
 def _override_db(test_db: Session):
     """Override the DB dependency and clean up after the test."""
+
     def override_get_db():
         try:
             yield test_db
@@ -58,8 +59,10 @@ def _override_db(test_db: Session):
 
 def _set_user(user: User):
     """Set the current user override."""
+
     async def override():
         return user
+
     app.dependency_overrides[get_current_user] = override
 
 
@@ -118,7 +121,12 @@ class TestStravaSync:
             "app.infrastructure.integrations.strava_service.StravaService.sync_activities",
             new_callable=AsyncMock,
         ) as mock_sync:
-            mock_sync.return_value = {"synced": 5, "skipped": 2, "errors": [], "total": 7}
+            mock_sync.return_value = {
+                "synced": 5,
+                "skipped": 2,
+                "errors": [],
+                "total": 7,
+            }
             with TestClient(app) as client:
                 response = client.post("/api/strava/sync")
 
@@ -126,5 +134,3 @@ class TestStravaSync:
         data = response.json()
         assert data["synced"] == 5
         assert data["skipped"] == 2
-
-

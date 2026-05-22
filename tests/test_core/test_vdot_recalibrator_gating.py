@@ -9,6 +9,13 @@ from sqlalchemy import create_engine, event
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 
+from app.contexts.plan.adaptation.vdot_recalibrator import (
+    check_vdot_recalibration,
+    recalibrate_zones_only,
+)
+from app.contexts.runner.enrichment.run_enrichment_service import (
+    _maybe_recalibrate_plan_zones,
+)
 from app.models import (
     Base,
     DailyWorkout,
@@ -17,11 +24,6 @@ from app.models import (
     User,
     WeeklyPlan,
 )
-from app.contexts.plan.adaptation.vdot_recalibrator import (
-    check_vdot_recalibration,
-    recalibrate_zones_only,
-)
-from app.contexts.runner.enrichment.run_enrichment_service import _maybe_recalibrate_plan_zones
 
 
 def _uid():
@@ -89,17 +91,21 @@ def _make_plan(db, vdot=50.0):
     db.flush()
 
     for wk in range(1, 9):
-        wp = WeeklyPlan(id=_uid(), training_plan_id=plan.id, week_number=wk, total_km=30)
+        wp = WeeklyPlan(
+            id=_uid(), training_plan_id=plan.id, week_number=wk, total_km=30
+        )
         db.add(wp)
         db.flush()
-        db.add(DailyWorkout(
-            id=_uid(),
-            weekly_plan_id=wp.id,
-            day_of_week=1,
-            workout_type="tempo",
-            distance_km=8.0,
-            baseline_distance_km=8.0,
-        ))
+        db.add(
+            DailyWorkout(
+                id=_uid(),
+                weekly_plan_id=wp.id,
+                day_of_week=1,
+                workout_type="tempo",
+                distance_km=8.0,
+                baseline_distance_km=8.0,
+            )
+        )
     db.commit()
     return user, plan
 
@@ -198,7 +204,9 @@ class TestRecalibrationStampsWeeklyPlans:
         assert result.get("weekly_plans_updated", 0) > 0
 
         # All future weeks should have pace_zones_updated_at set
-        all_weeks = db.query(WeeklyPlan).filter(WeeklyPlan.training_plan_id == plan.id).all()
+        all_weeks = (
+            db.query(WeeklyPlan).filter(WeeklyPlan.training_plan_id == plan.id).all()
+        )
         future_weeks = [w for w in all_weeks if w.pace_zones_updated_at is not None]
         assert len(future_weeks) >= 1
 

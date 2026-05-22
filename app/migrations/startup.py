@@ -26,7 +26,9 @@ def run_startup_migrations() -> None:
             logger.warning("VDOT backfill failed: %s", e)
 
         try:
-            from app.contexts.runner.fitness.effort_classifier import backfill_effort_classes
+            from app.contexts.runner.fitness.effort_classifier import (
+                backfill_effort_classes,
+            )
 
             updated = backfill_effort_classes(session)
             if updated:

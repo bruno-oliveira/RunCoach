@@ -2,7 +2,7 @@
 
 import pytest
 
-from app.core.training.key_workout_library import KeyWorkoutLibrary, _WORKOUTS
+from app.core.training.key_workout_library import _WORKOUTS, KeyWorkoutLibrary
 
 
 class TestLibraryCompleteness:
@@ -15,9 +15,17 @@ class TestLibraryCompleteness:
 
     def test_all_workouts_have_required_fields(self):
         required = {
-            "id", "distances", "phases", "type", "name",
-            "structure", "description", "intensity", "target_zone",
-            "pace_zone", "rationale",
+            "id",
+            "distances",
+            "phases",
+            "type",
+            "name",
+            "structure",
+            "description",
+            "intensity",
+            "target_zone",
+            "pace_zone",
+            "rationale",
         }
         for w in _WORKOUTS:
             missing = required - set(w.keys())
@@ -70,7 +78,9 @@ class TestVDOTPaceInjection:
 
         enriched = KeyWorkoutLibrary.inject_vdot_paces(workout, zones)
         # Original should not be modified
-        assert enriched is not workout or enriched["description"] != workout["description"]
+        assert (
+            enriched is not workout or enriched["description"] != workout["description"]
+        )
 
     def test_returns_unchanged_when_no_zones(self):
         workout = KeyWorkoutLibrary.get_for_phase(10.0, "build", 0, "tempo")

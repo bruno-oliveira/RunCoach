@@ -1,14 +1,8 @@
 """Pydantic schemas — re-exported from domain-specific modules."""
 
-from app.schemas.plan_schemas import (
-    PlanRequest,
-    PlanRequestBase,
-    PerformancePlanRequest,
-    FitnessPlanRequest,
-    RaceInfoMixin,
-    get_mileage_warning,
-    parse_target_distance,
-)
+# HealthResponse moved to app.infrastructure.health to avoid the
+# schemas → infrastructure dependency. Re-exported for backward compat.
+from app.infrastructure.health import HealthResponse
 from app.schemas.auth_schemas import (
     AuthResponse,
     GoogleAuthRequest,
@@ -16,6 +10,15 @@ from app.schemas.auth_schemas import (
     UserBase,
     UserCreate,
     UserResponse,
+)
+from app.schemas.plan_schemas import (
+    FitnessPlanRequest,
+    PerformancePlanRequest,
+    PlanRequest,
+    PlanRequestBase,
+    RaceInfoMixin,
+    get_mileage_warning,
+    parse_target_distance,
 )
 from app.schemas.run_schemas import (
     RunLogBase,
@@ -28,11 +31,6 @@ from app.schemas.strava_schemas import (
     StravaStatusResponse,
     StravaSyncResponse,
 )
-
-# HealthResponse moved to app.infrastructure.health to avoid the
-# schemas → infrastructure dependency. Re-exported for backward compat.
-from app.infrastructure.health import HealthResponse
-
 
 __all__ = [
     "AuthResponse",

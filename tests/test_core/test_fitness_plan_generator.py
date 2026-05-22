@@ -56,12 +56,16 @@ class TestFitnessPlanGenerator:
             focus_area="vo2max",
         )
 
-        tt_weeks = [w["week"] for w in plan["weekly_plans"] if w.get("is_time_trial_week")]
+        tt_weeks = [
+            w["week"] for w in plan["weekly_plans"] if w.get("is_time_trial_week")
+        ]
         assert 3 in tt_weeks
         assert 6 in tt_weeks
         assert 9 in tt_weeks
 
-    def test_time_trial_week_has_time_trial_workout(self, generator: FitnessPlanGenerator):
+    def test_time_trial_week_has_time_trial_workout(
+        self, generator: FitnessPlanGenerator
+    ):
         plan = generator.generate_plan(
             current_weekly_km=25.0,
             weeks=6,
@@ -72,8 +76,7 @@ class TestFitnessPlanGenerator:
         for week in plan["weekly_plans"]:
             if week.get("is_time_trial_week"):
                 tt_workouts = [
-                    dw for dw in week["daily_workouts"]
-                    if dw["type"] == "time_trial"
+                    dw for dw in week["daily_workouts"] if dw["type"] == "time_trial"
                 ]
                 assert len(tt_workouts) >= 1
                 assert tt_workouts[0].get("is_benchmark") is True
@@ -94,7 +97,9 @@ class TestFitnessPlanGenerator:
 
         assert vo2max_count > 0
 
-    def test_threshold_focus_has_threshold_workouts(self, generator: FitnessPlanGenerator):
+    def test_threshold_focus_has_threshold_workouts(
+        self, generator: FitnessPlanGenerator
+    ):
         plan = generator.generate_plan(
             current_weekly_km=25.0,
             weeks=8,
@@ -155,7 +160,11 @@ class TestFitnessPlanGenerator:
 
         for rw in recovery_weeks:
             recovery_km = rw["total_km"]
-            prev_weeks = [w for w in plan["weekly_plans"] if w["week"] < rw["week"] and not w["is_recovery"]]
+            prev_weeks = [
+                w
+                for w in plan["weekly_plans"]
+                if w["week"] < rw["week"] and not w["is_recovery"]
+            ]
             if prev_weeks:
                 prev_km = prev_weeks[-1]["total_km"]
                 assert recovery_km < prev_km

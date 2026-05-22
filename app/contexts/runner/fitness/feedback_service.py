@@ -1,8 +1,7 @@
 """Feedback service — orchestrates coaching feedback generation and persistence."""
 
 import logging
-from collections import defaultdict
-from datetime import date as _date, datetime as _datetime
+from datetime import datetime as _datetime
 from typing import Optional
 
 from sqlalchemy.orm import Session
@@ -12,7 +11,6 @@ from app.core.coaching.coaching_feedback_engine import CoachingFeedbackEngine
 from app.models.daily_workout import DailyWorkout
 from app.models.run_feedback import RunFeedback
 from app.models.run_log import RunLog
-from app.models.training_plan import TrainingPlan
 
 logger = logging.getLogger(__name__)
 
@@ -68,9 +66,13 @@ class FeedbackService:
 
         # Only store if at least one field is populated
         has_content = any(
-            fb.get(k) for k in (
-                "pace_feedback", "hr_zone_feedback", "effort_feedback",
-                "volume_feedback", "pattern_feedback",
+            fb.get(k)
+            for k in (
+                "pace_feedback",
+                "hr_zone_feedback",
+                "effort_feedback",
+                "volume_feedback",
+                "pattern_feedback",
             )
         )
         if not has_content:
@@ -85,9 +87,7 @@ class FeedbackService:
             volume_feedback=fb.get("volume_feedback"),
             pattern_feedback=fb.get("pattern_feedback"),
             overall_sentiment=fb.get("overall_sentiment", "info"),
-            planned_workout_id=(
-                planned_workout.id if planned_workout else None
-            ),
+            planned_workout_id=(planned_workout.id if planned_workout else None),
         )
         db.add(run_feedback)
         db.commit()
@@ -100,14 +100,10 @@ class FeedbackService:
         return run_feedback
 
     @staticmethod
-    def get_feedback_for_run(
-        run_log_id: str, db: Session
-    ) -> Optional[RunFeedback]:
+    def get_feedback_for_run(run_log_id: str, db: Session) -> Optional[RunFeedback]:
         """Retrieve feedback for a specific run."""
         return (
-            db.query(RunFeedback)
-            .filter(RunFeedback.run_log_id == run_log_id)
-            .first()
+            db.query(RunFeedback).filter(RunFeedback.run_log_id == run_log_id).first()
         )
 
     @staticmethod
@@ -236,8 +232,12 @@ def _build_week_summary(data: dict, week_num: int) -> Optional[dict]:
 
     pace_texts = data["pace_texts"]
     if len(pace_texts) >= 2:
-        fast_count = sum(1 for t in pace_texts if "fast" in t.lower() or "too quick" in t.lower())
-        slow_count = sum(1 for t in pace_texts if "slow" in t.lower() or "slower" in t.lower())
+        fast_count = sum(
+            1 for t in pace_texts if "fast" in t.lower() or "too quick" in t.lower()
+        )
+        slow_count = sum(
+            1 for t in pace_texts if "slow" in t.lower() or "slower" in t.lower()
+        )
         if fast_count >= 2:
             highlights.append(
                 f"{fast_count} of {run_count} runs were too fast — use HR Zone 2 to pace easy runs"
@@ -250,11 +250,13 @@ def _build_week_summary(data: dict, week_num: int) -> Optional[dict]:
     effort_texts = data["effort_texts"]
     if len(effort_texts) >= 2:
         hard_count = sum(
-            1 for t in effort_texts
+            1
+            for t in effort_texts
             if "too hard" in t.lower() or "too high" in t.lower()
         )
         easy_count = sum(
-            1 for t in effort_texts
+            1
+            for t in effort_texts
             if "too easy" in t.lower() or "feels light" in t.lower()
         )
         if hard_count >= 2 and not highlights:
@@ -268,10 +270,16 @@ def _build_week_summary(data: dict, week_num: int) -> Optional[dict]:
 
     volume_texts = data["volume_texts"]
     if volume_texts:
-        behind = sum(1 for t in volume_texts if "behind" in t.lower() or "short" in t.lower())
-        ahead = sum(1 for t in volume_texts if "ahead" in t.lower() or "exceed" in t.lower())
+        behind = sum(
+            1 for t in volume_texts if "behind" in t.lower() or "short" in t.lower()
+        )
+        ahead = sum(
+            1 for t in volume_texts if "ahead" in t.lower() or "exceed" in t.lower()
+        )
         if behind >= 2:
-            highlights.append("Weekly volume falling behind plan — try adding an easy recovery run")
+            highlights.append(
+                "Weekly volume falling behind plan — try adding an easy recovery run"
+            )
         elif ahead >= 2 and not highlights:
             highlights.append("Consistently exceeding weekly volume — great execution")
 

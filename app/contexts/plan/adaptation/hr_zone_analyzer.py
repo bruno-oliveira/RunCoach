@@ -1,8 +1,7 @@
 """HR zone analyzer — aggregate HR zone data for adaptation signals."""
 
-from typing import List, Optional, Dict, Any
-from datetime import date
 from collections import defaultdict
+from typing import Any, Dict, List
 
 from app.core.training.hr_zone_calculator import HRZoneCalculator
 from app.utils import to_date as _to_date
@@ -55,13 +54,11 @@ class HRZoneAnalyzer:
             if not run.avg_heart_rate:
                 continue
 
-            actual_zone = HRZoneCalculator.classify_hr(
-                run.avg_heart_rate, hr_zones
-            )
+            actual_zone = HRZoneCalculator.classify_hr(run.avg_heart_rate, hr_zones)
 
             target_zone = None
-            if hasattr(run, 'daily_workout') and run.daily_workout:
-                if hasattr(run.daily_workout, 'hr_zone_target'):
+            if hasattr(run, "daily_workout") and run.daily_workout:
+                if hasattr(run.daily_workout, "hr_zone_target"):
                     target_zone = run.daily_workout.hr_zone_target
 
             if not target_zone:

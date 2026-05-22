@@ -51,13 +51,15 @@ class GPXService:
                     if prev_elevation is not None and elevation > prev_elevation:
                         total_elevation_gain += elevation - prev_elevation
 
-                    trackpoints.append({
-                        "lat": point.latitude,
-                        "lon": point.longitude,
-                        "elevation": round(elevation, 1),
-                        "distance_km": round(cumulative_distance / 1000.0, 3),
-                        "time": point.time.isoformat() if point.time else None,
-                    })
+                    trackpoints.append(
+                        {
+                            "lat": point.latitude,
+                            "lon": point.longitude,
+                            "elevation": round(elevation, 1),
+                            "distance_km": round(cumulative_distance / 1000.0, 3),
+                            "time": point.time.isoformat() if point.time else None,
+                        }
+                    )
 
                     prev_elevation = elevation
                     prev_point = point
@@ -110,8 +112,7 @@ class GPXService:
                 break
 
             segment_points = [
-                tp for tp in trackpoints
-                if seg_start <= tp["distance_km"] < seg_end
+                tp for tp in trackpoints if seg_start <= tp["distance_km"] < seg_end
             ]
 
             if not segment_points:
@@ -129,24 +130,35 @@ class GPXService:
             seg_gain = 0.0
             seg_loss = 0.0
             for i in range(1, len(segment_points)):
-                diff = segment_points[i]["elevation"] - segment_points[i - 1]["elevation"]
+                diff = (
+                    segment_points[i]["elevation"] - segment_points[i - 1]["elevation"]
+                )
                 if diff > 0:
                     seg_gain += diff
                 else:
                     seg_loss += abs(diff)
 
-            effective_grade_pct = (seg_gain / distance_m * 100.0) if distance_m > 0 else 0.0
+            effective_grade_pct = (
+                (seg_gain / distance_m * 100.0) if distance_m > 0 else 0.0
+            )
 
-            segments.append({
-                "segment_number": segment_index + 1,
-                "start_km": round(seg_start, 2),
-                "end_km": round(seg_end, 2),
-                "avg_elevation": round(avg_elevation, 1),
-                "grade_pct": round(effective_grade_pct, 2),
-                "net_grade_pct": round((net_elev_change / distance_m * 100.0) if distance_m > 0 else 0.0, 2),
-                "elevation_gain": round(seg_gain, 1),
-                "elevation_loss": round(seg_loss, 1),
-            })
+            segments.append(
+                {
+                    "segment_number": segment_index + 1,
+                    "start_km": round(seg_start, 2),
+                    "end_km": round(seg_end, 2),
+                    "avg_elevation": round(avg_elevation, 1),
+                    "grade_pct": round(effective_grade_pct, 2),
+                    "net_grade_pct": round(
+                        (net_elev_change / distance_m * 100.0)
+                        if distance_m > 0
+                        else 0.0,
+                        2,
+                    ),
+                    "elevation_gain": round(seg_gain, 1),
+                    "elevation_loss": round(seg_loss, 1),
+                }
+            )
             segment_index += 1
 
         return segments
@@ -185,7 +197,9 @@ class GPXService:
                 latitude=tp["lat"],
                 longitude=tp["lon"],
                 elevation=tp["elevation"],
-                time=datetime.fromisoformat(tp["time"]) if tp.get("time") else datetime.now(timezone.utc),
+                time=datetime.fromisoformat(tp["time"])
+                if tp.get("time")
+                else datetime.now(timezone.utc),
             )
             segment.points.append(point)
 
@@ -196,7 +210,8 @@ class GPXService:
         for seg in pace_plan:
             km_marker = seg["end_km"]
             matching_points = [
-                tp for tp in original_trackpoints
+                tp
+                for tp in original_trackpoints
                 if abs(tp["distance_km"] - km_marker) < 0.05
             ]
 
@@ -212,7 +227,9 @@ class GPXService:
                 elevation=ref_point["elevation"],
             )
             rtept.name = f"KM {km_marker:.1f}"
-            rtept.description = f"Target: {pace_str}/km | Cum: {seg.get('cumulative_time_str', '')}"
+            rtept.description = (
+                f"Target: {pace_str}/km | Cum: {seg.get('cumulative_time_str', '')}"
+            )
             rtept.type = "Course Point"
             route.points.append(rtept)
 

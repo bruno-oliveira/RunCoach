@@ -6,7 +6,6 @@ quality score (0–100) and a human-readable label.
 
 from typing import Optional, Tuple
 
-
 # Expected perceived-effort (PE) range for each workout type [min, max]
 EXPECTED_EFFORT: dict[str, Tuple[int, int]] = {
     "easy": (3, 5),
@@ -55,7 +54,6 @@ def calculate_quality_score(
     wtype = workout_type.lower() if workout_type else "easy"
     effort_range = EXPECTED_EFFORT.get(wtype, (4, 7))
     lo, hi = effort_range
-    mid = _midpoint(lo, hi)
 
     # Hills use 50/50 weighting (pace unreliable on hills); others use 40/60
     is_hill = wtype == "hill"
@@ -76,7 +74,9 @@ def calculate_quality_score(
     # ── Pace component ────────────────────────────────────────────────
     if planned_pace_min_km and actual_pace_min_km:
         # Allowed tolerance: ±8% of planned pace
-        deviation_pct = abs(actual_pace_min_km - planned_pace_min_km) / planned_pace_min_km
+        deviation_pct = (
+            abs(actual_pace_min_km - planned_pace_min_km) / planned_pace_min_km
+        )
         if deviation_pct <= 0.08:
             pace_score = pace_max
         else:

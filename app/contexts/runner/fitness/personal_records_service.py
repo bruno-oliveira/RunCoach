@@ -4,8 +4,7 @@ Finds best performances across standard race distances, tracks PR
 progression over time, and computes improvement deltas.
 """
 
-import statistics
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List
 
 from sqlalchemy.orm import Session
 
@@ -14,11 +13,29 @@ from app.models import RunLog
 
 # Standard distances with tolerance for GPS drift
 DISTANCE_BUCKETS = [
-    {"name": "1K", "target_km": 1.0, "tolerance": 0.15, "min_km": 0.85, "icon": "sprint"},
+    {
+        "name": "1K",
+        "target_km": 1.0,
+        "tolerance": 0.15,
+        "min_km": 0.85,
+        "icon": "sprint",
+    },
     {"name": "5K", "target_km": 5.0, "tolerance": 0.5, "min_km": 4.5, "icon": "race"},
     {"name": "10K", "target_km": 10.0, "tolerance": 1.0, "min_km": 9.0, "icon": "race"},
-    {"name": "Half Marathon", "target_km": 21.1, "tolerance": 1.5, "min_km": 20.0, "icon": "medal"},
-    {"name": "Marathon", "target_km": 42.195, "tolerance": 2.0, "min_km": 40.0, "icon": "trophy"},
+    {
+        "name": "Half Marathon",
+        "target_km": 21.1,
+        "tolerance": 1.5,
+        "min_km": 20.0,
+        "icon": "medal",
+    },
+    {
+        "name": "Marathon",
+        "target_km": 42.195,
+        "tolerance": 2.0,
+        "min_km": 40.0,
+        "icon": "trophy",
+    },
 ]
 
 
@@ -65,7 +82,8 @@ def _build_distance_records(runs: List[RunLog]) -> List[Dict[str, Any]]:
 
     for bucket in DISTANCE_BUCKETS:
         matching = [
-            r for r in runs
+            r
+            for r in runs
             if abs(r.distance_km - bucket["target_km"]) <= bucket["tolerance"]
             and r.distance_km >= bucket["min_km"]
         ]
@@ -100,15 +118,17 @@ def _build_distance_records(runs: List[RunLog]) -> List[Dict[str, Any]]:
             continue
 
         current_pr = pr_history[-1]
-        records.append({
-            "distance_name": bucket["name"],
-            "target_km": bucket["target_km"],
-            "icon": bucket["icon"],
-            "current_pr": current_pr,
-            "attempts": len(matching),
-            "pr_count": len(pr_history),
-            "history": pr_history,
-        })
+        records.append(
+            {
+                "distance_name": bucket["name"],
+                "target_km": bucket["target_km"],
+                "icon": bucket["icon"],
+                "current_pr": current_pr,
+                "attempts": len(matching),
+                "pr_count": len(pr_history),
+                "history": pr_history,
+            }
+        )
 
     return records
 
@@ -118,39 +138,49 @@ def _build_general_records(runs: List[RunLog]) -> List[Dict[str, Any]]:
     general = []
 
     longest = max(runs, key=lambda r: r.distance_km)
-    general.append({
-        "type": "longest_run",
-        "label": "Longest Run",
-        "value": round(longest.distance_km, 1),
-        "unit": "km",
-        "date": longest.date.isoformat() if longest.date else None,
-        "formatted": f"{round(longest.distance_km, 1)} km",
-    })
+    general.append(
+        {
+            "type": "longest_run",
+            "label": "Longest Run",
+            "value": round(longest.distance_km, 1),
+            "unit": "km",
+            "date": longest.date.isoformat() if longest.date else None,
+            "formatted": f"{round(longest.distance_km, 1)} km",
+        }
+    )
 
-    pace_runs = [r for r in runs if r.avg_pace_min_km and r.avg_pace_min_km > 0 and r.distance_km >= 3.0]
+    pace_runs = [
+        r
+        for r in runs
+        if r.avg_pace_min_km and r.avg_pace_min_km > 0 and r.distance_km >= 3.0
+    ]
     if pace_runs:
         fastest = min(pace_runs, key=lambda r: r.avg_pace_min_km)
-        general.append({
-            "type": "fastest_pace",
-            "label": "Fastest Pace",
-            "value": round(fastest.avg_pace_min_km, 2),
-            "unit": "min/km",
-            "date": fastest.date.isoformat() if fastest.date else None,
-            "formatted": f"{_format_pace(fastest.avg_pace_min_km)}/km",
-            "distance_km": round(fastest.distance_km, 1),
-        })
+        general.append(
+            {
+                "type": "fastest_pace",
+                "label": "Fastest Pace",
+                "value": round(fastest.avg_pace_min_km, 2),
+                "unit": "min/km",
+                "date": fastest.date.isoformat() if fastest.date else None,
+                "formatted": f"{_format_pace(fastest.avg_pace_min_km)}/km",
+                "distance_km": round(fastest.distance_km, 1),
+            }
+        )
 
     vdot_runs = [r for r in runs if r.vdot]
     if vdot_runs:
         best = max(vdot_runs, key=lambda r: r.vdot)
-        general.append({
-            "type": "highest_vdot",
-            "label": "Best VDOT",
-            "value": best.vdot,
-            "unit": "",
-            "date": best.date.isoformat() if best.date else None,
-            "formatted": str(best.vdot),
-        })
+        general.append(
+            {
+                "type": "highest_vdot",
+                "label": "Best VDOT",
+                "value": best.vdot,
+                "unit": "",
+                "date": best.date.isoformat() if best.date else None,
+                "formatted": str(best.vdot),
+            }
+        )
 
     # Best week by total km
     week_buckets: Dict[str, float] = {}
@@ -164,13 +194,15 @@ def _build_general_records(runs: List[RunLog]) -> List[Dict[str, Any]]:
         week_buckets[key] = week_buckets.get(key, 0) + r.distance_km
     if week_buckets:
         best_week_km = max(week_buckets.values())
-        general.append({
-            "type": "best_week",
-            "label": "Best Week",
-            "value": round(best_week_km, 1),
-            "unit": "km",
-            "date": None,
-            "formatted": f"{round(best_week_km, 1)} km",
-        })
+        general.append(
+            {
+                "type": "best_week",
+                "label": "Best Week",
+                "value": round(best_week_km, 1),
+                "unit": "km",
+                "date": None,
+                "formatted": f"{round(best_week_km, 1)} km",
+            }
+        )
 
     return general

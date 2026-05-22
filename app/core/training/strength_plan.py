@@ -10,6 +10,7 @@ from typing import Any, Dict, List
 # Experience level derivation
 # ---------------------------------------------------------------------------
 
+
 def derive_experience_level(current_km: float) -> str:
     """Derive runner experience level from current weekly mileage."""
     if current_km < 20:
@@ -53,17 +54,17 @@ TRAIL_FOCUS_ROTATIONS: Dict[str, List[str]] = {
 #   climbs; the lower_body rotation prepares quads for the eccentric load.
 TRAIL_ROTATIONS_BY_ELEVATION: Dict[str, Dict[str, List[str]]] = {
     "flat": {
-        "base":  ["flat_trail_strength", "core", "plyometric"],
+        "base": ["flat_trail_strength", "core", "plyometric"],
         "build": ["flat_trail_strength", "plyometric", "flat_trail_strength"],
-        "peak":  ["flat_trail_strength", "plyometric", "core"],
+        "peak": ["flat_trail_strength", "plyometric", "core"],
         "taper": ["core"],
     },
-    "rolling":     TRAIL_FOCUS_ROTATIONS,
-    "hilly":       TRAIL_FOCUS_ROTATIONS,
+    "rolling": TRAIL_FOCUS_ROTATIONS,
+    "hilly": TRAIL_FOCUS_ROTATIONS,
     "mountainous": {
-        "base":  ["lower_body", "trail_stability", "plyometric"],
+        "base": ["lower_body", "trail_stability", "plyometric"],
         "build": ["lower_body", "trail_stability", "plyometric"],
-        "peak":  ["lower_body", "trail_stability", "plyometric"],
+        "peak": ["lower_body", "trail_stability", "plyometric"],
         "taper": ["trail_stability"],
     },
 }
@@ -76,8 +77,16 @@ TRAIL_ROTATIONS_BY_ELEVATION: Dict[str, Dict[str, List[str]]] = {
 _PHASE_MODIFIERS: Dict[str, Dict[str, Any]] = {
     "base": {"sets_delta": 0, "duration_delta": 0, "note": None},
     "build": {"sets_delta": 0, "duration_delta": 5, "note": None},
-    "peak": {"sets_delta": 0, "duration_delta": 0, "note": "Explosive tempo — controlled power"},
-    "taper": {"sets_delta": -1, "duration_delta": -10, "note": "Maintenance only — preserve strength, minimise fatigue"},
+    "peak": {
+        "sets_delta": 0,
+        "duration_delta": 0,
+        "note": "Explosive tempo — controlled power",
+    },
+    "taper": {
+        "sets_delta": -1,
+        "duration_delta": -10,
+        "note": "Maintenance only — preserve strength, minimise fatigue",
+    },
 }
 
 
@@ -140,7 +149,11 @@ _EXERCISES: Dict[str, Dict[str, Dict[str, Any]]] = {
             ],
             "exercises": [
                 {"name": "Bulgarian Split Squat", "sets": 3, "reps": "10 each side"},
-                {"name": "Single-leg Deadlift (bodyweight)", "sets": 3, "reps": "10 each side"},
+                {
+                    "name": "Single-leg Deadlift (bodyweight)",
+                    "sets": 3,
+                    "reps": "10 each side",
+                },
                 {"name": "Jump Squat", "sets": 3, "reps": "10"},
                 {"name": "Walking Lunge", "sets": 3, "reps": "12 each side"},
                 {"name": "Single-leg Calf Raise", "sets": 3, "reps": "15 each side"},
@@ -152,7 +165,6 @@ _EXERCISES: Dict[str, Dict[str, Dict[str, Any]]] = {
             ],
         },
     },
-
     # ── Core ──────────────────────────────────────────────────────────────
     "core": {
         "beginner": {
@@ -204,7 +216,11 @@ _EXERCISES: Dict[str, Dict[str, Dict[str, Any]]] = {
             ],
             "exercises": [
                 {"name": "Plank", "sets": 3, "reps": "60 sec hold"},
-                {"name": "Side Plank with Leg Lift", "sets": 3, "reps": "30 sec each side"},
+                {
+                    "name": "Side Plank with Leg Lift",
+                    "sets": 3,
+                    "reps": "30 sec each side",
+                },
                 {"name": "Mountain Climber", "sets": 3, "reps": "20 each side"},
                 {"name": "Hollow Body Hold", "sets": 3, "reps": "30-45 sec"},
                 {"name": "Bird Dog", "sets": 3, "reps": "12 each side"},
@@ -216,7 +232,6 @@ _EXERCISES: Dict[str, Dict[str, Dict[str, Any]]] = {
             ],
         },
     },
-
     # ── Plyometrics (progressive by level) ──────────────────────────────
     "plyometric": {
         "beginner": {
@@ -227,8 +242,16 @@ _EXERCISES: Dict[str, Dict[str, Dict[str, Any]]] = {
                 "Ankle circles — 10 each side",
             ],
             "exercises": [
-                {"name": "Box Step-Down (slow eccentric)", "sets": 3, "reps": "8 each side"},
-                {"name": "Bilateral Landing Drill (jump & stick)", "sets": 3, "reps": "6"},
+                {
+                    "name": "Box Step-Down (slow eccentric)",
+                    "sets": 3,
+                    "reps": "8 each side",
+                },
+                {
+                    "name": "Bilateral Landing Drill (jump & stick)",
+                    "sets": 3,
+                    "reps": "6",
+                },
                 {"name": "Calf Bounce (low amplitude)", "sets": 3, "reps": "15"},
                 {"name": "Squat Jump (quarter depth)", "sets": 2, "reps": "6"},
             ],
@@ -249,7 +272,11 @@ _EXERCISES: Dict[str, Dict[str, Dict[str, Any]]] = {
                 {"name": "Single-Leg Hop (forward)", "sets": 3, "reps": "8 each side"},
                 {"name": "Lateral Bound", "sets": 3, "reps": "8 each side"},
                 {"name": "Low Box Jump", "sets": 3, "reps": "8"},
-                {"name": "Split Squat Jump (alternating)", "sets": 3, "reps": "6 each side"},
+                {
+                    "name": "Split Squat Jump (alternating)",
+                    "sets": 3,
+                    "reps": "6 each side",
+                },
             ],
             "cool_down": [
                 "Pigeon pose — 45 sec each side",
@@ -278,7 +305,6 @@ _EXERCISES: Dict[str, Dict[str, Dict[str, Any]]] = {
             ],
         },
     },
-
     # ── Trail proprioception & lateral stability ─────────────────────────
     "trail_stability": {
         "beginner": {
@@ -289,8 +315,16 @@ _EXERCISES: Dict[str, Dict[str, Dict[str, Any]]] = {
                 "Single-leg stand — 15 sec each",
             ],
             "exercises": [
-                {"name": "Single-Leg Balance (eyes open)", "sets": 3, "reps": "30 sec each side"},
-                {"name": "Lateral Step-Down (from step)", "sets": 3, "reps": "10 each side"},
+                {
+                    "name": "Single-Leg Balance (eyes open)",
+                    "sets": 3,
+                    "reps": "30 sec each side",
+                },
+                {
+                    "name": "Lateral Step-Down (from step)",
+                    "sets": 3,
+                    "reps": "10 each side",
+                },
                 {"name": "Slow Eccentric Step-Down", "sets": 3, "reps": "8 each side"},
                 {"name": "Calf Raise (single-leg)", "sets": 3, "reps": "12 each side"},
             ],
@@ -308,10 +342,18 @@ _EXERCISES: Dict[str, Dict[str, Dict[str, Any]]] = {
                 "Single-leg stand — 20 sec each (eyes closed)",
             ],
             "exercises": [
-                {"name": "Single-Leg Balance (eyes closed)", "sets": 3, "reps": "30 sec each side"},
+                {
+                    "name": "Single-Leg Balance (eyes closed)",
+                    "sets": 3,
+                    "reps": "30 sec each side",
+                },
                 {"name": "Lateral Step-Down (slow)", "sets": 3, "reps": "10 each side"},
                 {"name": "Nordic Curl Negative", "sets": 3, "reps": "5"},
-                {"name": "Lateral Bounds (stick landing)", "sets": 3, "reps": "8 each side"},
+                {
+                    "name": "Lateral Bounds (stick landing)",
+                    "sets": 3,
+                    "reps": "8 each side",
+                },
                 {"name": "Single-Leg Deadlift", "sets": 3, "reps": "10 each side"},
             ],
             "cool_down": [
@@ -328,11 +370,27 @@ _EXERCISES: Dict[str, Dict[str, Dict[str, Any]]] = {
                 "Single-leg stand — 30 sec each (eyes closed, on pillow)",
             ],
             "exercises": [
-                {"name": "Single-Leg Balance on Unstable Surface", "sets": 3, "reps": "30 sec each side"},
+                {
+                    "name": "Single-Leg Balance on Unstable Surface",
+                    "sets": 3,
+                    "reps": "30 sec each side",
+                },
                 {"name": "Nordic Curl", "sets": 3, "reps": "8"},
-                {"name": "Pistol Squat (assisted or full)", "sets": 3, "reps": "6 each side"},
-                {"name": "Lateral Bound to Single-Leg Stick", "sets": 3, "reps": "8 each side"},
-                {"name": "Depth Drop to Single-Leg Land", "sets": 3, "reps": "6 each side"},
+                {
+                    "name": "Pistol Squat (assisted or full)",
+                    "sets": 3,
+                    "reps": "6 each side",
+                },
+                {
+                    "name": "Lateral Bound to Single-Leg Stick",
+                    "sets": 3,
+                    "reps": "8 each side",
+                },
+                {
+                    "name": "Depth Drop to Single-Leg Land",
+                    "sets": 3,
+                    "reps": "6 each side",
+                },
             ],
             "cool_down": [
                 "Pigeon pose — 60 sec each side",
@@ -341,7 +399,6 @@ _EXERCISES: Dict[str, Dict[str, Dict[str, Any]]] = {
             ],
         },
     },
-
     # ── Flat-trail specific strength (Amsterdam-style prep) ───────────────
     # Builds climb-equivalent durability without hill access: calf/soleus,
     # unilateral leg strength, eccentric quad tolerance, and anti-rotation core.
@@ -355,7 +412,11 @@ _EXERCISES: Dict[str, Dict[str, Dict[str, Any]]] = {
             ],
             "exercises": [
                 {"name": "Split Squat", "sets": 3, "reps": "10 each side"},
-                {"name": "Step-up (controlled eccentric)", "sets": 3, "reps": "8 each side"},
+                {
+                    "name": "Step-up (controlled eccentric)",
+                    "sets": 3,
+                    "reps": "8 each side",
+                },
                 {"name": "Calf Raise", "sets": 3, "reps": "15"},
                 {"name": "Tibialis Raise", "sets": 3, "reps": "12"},
                 {"name": "Side Plank", "sets": 2, "reps": "25-30 sec each side"},
@@ -375,8 +436,16 @@ _EXERCISES: Dict[str, Dict[str, Dict[str, Any]]] = {
             ],
             "exercises": [
                 {"name": "Bulgarian Split Squat", "sets": 3, "reps": "8 each side"},
-                {"name": "Single-leg RDL (bodyweight)", "sets": 3, "reps": "10 each side"},
-                {"name": "Step-down (3 sec lowering)", "sets": 3, "reps": "8 each side"},
+                {
+                    "name": "Single-leg RDL (bodyweight)",
+                    "sets": 3,
+                    "reps": "10 each side",
+                },
+                {
+                    "name": "Step-down (3 sec lowering)",
+                    "sets": 3,
+                    "reps": "8 each side",
+                },
                 {"name": "Single-leg Calf Raise", "sets": 3, "reps": "12 each side"},
                 {"name": "Pallof Press (band)", "sets": 3, "reps": "10 each side"},
             ],
@@ -394,9 +463,17 @@ _EXERCISES: Dict[str, Dict[str, Dict[str, Any]]] = {
                 "Walking lunge with rotation — 8 each side",
             ],
             "exercises": [
-                {"name": "Rear-foot Elevated Split Squat", "sets": 3, "reps": "8 each side"},
+                {
+                    "name": "Rear-foot Elevated Split Squat",
+                    "sets": 3,
+                    "reps": "8 each side",
+                },
                 {"name": "Single-leg RDL", "sets": 3, "reps": "8 each side"},
-                {"name": "Eccentric Step-down (4 sec)", "sets": 3, "reps": "8 each side"},
+                {
+                    "name": "Eccentric Step-down (4 sec)",
+                    "sets": 3,
+                    "reps": "8 each side",
+                },
                 {"name": "Seated Soleus Raise", "sets": 3, "reps": "15"},
                 {"name": "Pallof Press + Hold", "sets": 3, "reps": "8 each side"},
             ],
@@ -407,7 +484,6 @@ _EXERCISES: Dict[str, Dict[str, Dict[str, Any]]] = {
             ],
         },
     },
-
     # ── Full body ─────────────────────────────────────────────────────────
     "full_body": {
         "beginner": {
@@ -497,7 +573,6 @@ def get_phase_focus_rotation(
     if target_distance == 30.0:
         return TRAIL_FOCUS_ROTATIONS.get(phase, TRAIL_FOCUS_ROTATIONS["build"])
     return PHASE_FOCUS_ROTATIONS.get(phase, PHASE_FOCUS_ROTATIONS["build"])
-
 
 
 def generate_strength_session(

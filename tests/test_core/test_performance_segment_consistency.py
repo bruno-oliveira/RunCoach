@@ -10,7 +10,9 @@ import re
 
 import pytest
 
-from app.contexts.plan.generators.performance_plan_generator import PerformancePlanGenerator
+from app.contexts.plan.generators.performance_plan_generator import (
+    PerformancePlanGenerator,
+)
 from app.contexts.plan.generators.performance_workout_builders import (
     _regenerate_description,
     generate_fartlek_workout,
@@ -51,8 +53,9 @@ def _all_workouts(plan):
     ids=["5K", "10K", "half", "marathon"],
 )
 class TestSegmentDistanceConsistency:
-
-    def test_segments_sum_to_workout_distance(self, generator, distance, weekly_km, weeks):
+    def test_segments_sum_to_workout_distance(
+        self, generator, distance, weekly_km, weeks
+    ):
         plan = generator.generate_plan(
             target_distance=distance,
             current_pace=5.5,
@@ -118,7 +121,6 @@ class TestSegmentDistanceConsistency:
 
 
 class TestReconcileAfterCap:
-
     def test_reduces_main_segment_when_capped(self, zones):
         workout = generate_tempo_workout(zones, 40, 3, "build")
         original_segs = sum(s["distance_km"] for s in workout["segments"])
@@ -130,14 +132,22 @@ class TestReconcileAfterCap:
 
     def test_warmup_cooldown_preserved(self, zones):
         workout = generate_tempo_workout(zones, 40, 3, "build")
-        wu_before = [s for s in workout["segments"] if s["type"] == "warmup"][0]["distance_km"]
-        cd_before = [s for s in workout["segments"] if s["type"] == "cooldown"][0]["distance_km"]
+        wu_before = [s for s in workout["segments"] if s["type"] == "warmup"][0][
+            "distance_km"
+        ]
+        cd_before = [s for s in workout["segments"] if s["type"] == "cooldown"][0][
+            "distance_km"
+        ]
 
         workout["distance"] = workout["distance"] - 2.0
         reconcile_workout_after_cap(workout)
 
-        wu_after = [s for s in workout["segments"] if s["type"] == "warmup"][0]["distance_km"]
-        cd_after = [s for s in workout["segments"] if s["type"] == "cooldown"][0]["distance_km"]
+        wu_after = [s for s in workout["segments"] if s["type"] == "warmup"][0][
+            "distance_km"
+        ]
+        cd_after = [s for s in workout["segments"] if s["type"] == "cooldown"][0][
+            "distance_km"
+        ]
         assert wu_after == wu_before
         assert cd_after == cd_before
 
@@ -177,7 +187,6 @@ class TestReconcileAfterCap:
 
 
 class TestRegenerateDescription:
-
     def test_tempo_description_format(self, zones):
         workout = generate_tempo_workout(zones, 30, 1, "base")
         workout["description"] = "garbled text"

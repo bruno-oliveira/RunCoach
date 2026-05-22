@@ -48,7 +48,9 @@ class EventBus:
             except Exception:
                 logger.warning(
                     "Event handler %r failed for %s",
-                    handler, type(event).__name__, exc_info=True,
+                    handler,
+                    type(event).__name__,
+                    exc_info=True,
                 )
 
     def _handlers_for(self, event_type: Type[DomainEvent]) -> list[EventHandler]:

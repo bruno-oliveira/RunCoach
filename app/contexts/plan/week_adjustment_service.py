@@ -11,7 +11,6 @@ from typing import Any, Dict, List, Tuple
 from fastapi import HTTPException
 from sqlalchemy.orm import Session
 
-from app.models import DailyWorkout, TrainingPlan, WeeklyPlan
 from app.contexts.plan.adaptation._helpers import (
     ANNOTATION_RE,
     backfill_baselines,
@@ -19,8 +18,9 @@ from app.contexts.plan.adaptation._helpers import (
 )
 from app.contexts.plan.adaptation.week_adjuster import apply_adjustment_to_future_weeks
 from app.contexts.plan.plan_date_utils import compute_current_week
-from app.utils import persist_json, to_date as _to_date
-
+from app.models import DailyWorkout, TrainingPlan, WeeklyPlan
+from app.utils import persist_json
+from app.utils import to_date as _to_date
 
 _BUMP_MULTIPLIER = 1.08
 _REDUCE_MULTIPLIER = 0.70
@@ -63,21 +63,37 @@ def apply_week_action(
     client can patch the DOM without a reload.
     """
     if action == "skip_bump":
-        return _restore_baseline(training_plan, plan_id, week_number, db, clear_baseline=False)
+        return _restore_baseline(
+            training_plan, plan_id, week_number, db, clear_baseline=False
+        )
     if action == "reset_week":
-        return _restore_baseline(training_plan, plan_id, week_number, db, clear_baseline=True)
+        return _restore_baseline(
+            training_plan, plan_id, week_number, db, clear_baseline=True
+        )
     if action == "bump":
         return _multiplier_action(
-            training_plan, plan_id, [week_number], _BUMP_MULTIPLIER, db,
+            training_plan,
+            plan_id,
+            [week_number],
+            _BUMP_MULTIPLIER,
+            db,
         )
     if action == "reduce_30":
         target_weeks = [week_number, week_number + 1]
         return _multiplier_action(
-            training_plan, plan_id, target_weeks, _REDUCE_MULTIPLIER, db,
+            training_plan,
+            plan_id,
+            target_weeks,
+            _REDUCE_MULTIPLIER,
+            db,
         )
     if action == "ease_deficit":
         return _multiplier_action(
-            training_plan, plan_id, [week_number], _EASE_DEFICIT_MULTIPLIER, db,
+            training_plan,
+            plan_id,
+            [week_number],
+            _EASE_DEFICIT_MULTIPLIER,
+            db,
         )
     if action == "extend_long_run":
         return _extend_long_run(training_plan, plan_id, week_number, db)
@@ -90,7 +106,9 @@ def apply_week_action(
 
 
 def _select_weeks(
-    plan_id: str, week_numbers: List[int], db: Session,
+    plan_id: str,
+    week_numbers: List[int],
+    db: Session,
 ) -> List[WeeklyPlan]:
     if not week_numbers:
         return []
@@ -135,7 +153,10 @@ def _multiplier_action(
     current_week, current_dow = _current_week_pos(training_plan)
     recorder: List[Dict[str, Any]] = []
     weeks_changed, any_changed, _counts = apply_adjustment_to_future_weeks(
-        training_plan, weeks, multiplier, db,
+        training_plan,
+        weeks,
+        multiplier,
+        db,
         current_week=current_week,
         current_day_of_week=current_dow,
         recorder=recorder,
@@ -180,7 +201,10 @@ def _extend_long_run(
     current_week, current_dow = _current_week_pos(training_plan)
     recorder: List[Dict[str, Any]] = []
     weeks_changed, any_changed, _counts = apply_adjustment_to_future_weeks(
-        training_plan, weeks, 1.0, db,
+        training_plan,
+        weeks,
+        1.0,
+        db,
         current_week=current_week,
         current_day_of_week=current_dow,
         per_type_ratios={"long": ratio},
@@ -204,14 +228,14 @@ def _restore_baseline(
 
     week_obj = weeks[0]
     workouts = (
-        db.query(DailyWorkout)
-        .filter(DailyWorkout.weekly_plan_id == week_obj.id)
-        .all()
+        db.query(DailyWorkout).filter(DailyWorkout.weekly_plan_id == week_obj.id).all()
     )
 
     plan_data = training_plan.plan_data or []
     pd_week = next((w for w in plan_data if w.get("week") == week_number), None)
-    pd_workouts = {wo.get("day"): wo for wo in (pd_week or {}).get("daily_workouts", [])}
+    pd_workouts = {
+        wo.get("day"): wo for wo in (pd_week or {}).get("daily_workouts", [])
+    }
 
     recorder: List[Dict[str, Any]] = []
     any_changed = False
@@ -224,16 +248,18 @@ def _restore_baseline(
             continue
         old = wo.distance_km
         if old != baseline:
-            recorder.append({
-                "week": week_number,
-                "day": wo.day_of_week,
-                "type": wo.workout_type,
-                "old_distance_km": old,
-                "new_distance_km": baseline,
-                "delta_km": round(baseline - (old or 0), 2),
-                "status": "changed",
-                "reason": None,
-            })
+            recorder.append(
+                {
+                    "week": week_number,
+                    "day": wo.day_of_week,
+                    "type": wo.workout_type,
+                    "old_distance_km": old,
+                    "new_distance_km": baseline,
+                    "delta_km": round(baseline - (old or 0), 2),
+                    "status": "changed",
+                    "reason": None,
+                }
+            )
             wo.distance_km = baseline
             any_changed = True
         clean_notes = ANNOTATION_RE.sub("", wo.notes or "").strip()
@@ -244,7 +270,8 @@ def _restore_baseline(
         if pd_wo is not None:
             pd_wo["distance"] = baseline
             pd_clean = ANNOTATION_RE.sub(
-                "", pd_wo.get("notes", pd_wo.get("description", "")),
+                "",
+                pd_wo.get("notes", pd_wo.get("description", "")),
             ).strip()
             pd_wo["notes"] = pd_clean
 
@@ -255,10 +282,10 @@ def _restore_baseline(
     training_plan.plan_data = plan_data
     persist_json(training_plan, "plan_data")
     if any_changed:
-        training_plan.adaptation_revision = (
-            training_plan.adaptation_revision or 0
-        ) + 1
-    return _build_response(training_plan, weeks, recorder, 1 if any_changed else 0, any_changed)
+        training_plan.adaptation_revision = (training_plan.adaptation_revision or 0) + 1
+    return _build_response(
+        training_plan, weeks, recorder, 1 if any_changed else 0, any_changed
+    )
 
 
 def _build_response(

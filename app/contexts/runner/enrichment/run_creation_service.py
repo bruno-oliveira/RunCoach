@@ -66,7 +66,9 @@ class RunCreationService:
 
         logger.info(
             "Run log created for user %s: %skm in %smin",
-            current_user.id, run_log.distance_km, run_log.duration_minutes,
+            current_user.id,
+            run_log.distance_km,
+            run_log.duration_minutes,
         )
 
         return self._build_response(
@@ -163,7 +165,9 @@ class RunCreationService:
 
             service = AdaptationService()
             return service.evaluate_recommendation(
-                new_run.training_plan_id, current_user.id, db,
+                new_run.training_plan_id,
+                current_user.id,
+                db,
             ) or {"action": "no_change_needed"}
         except Exception:
             logger.warning(
@@ -189,7 +193,8 @@ class RunCreationService:
             if (
                 new_run.elevation_gain_m
                 and new_run.distance_km > 0
-                and new_run.elevation_gain_m / new_run.distance_km >= _TRAIL_ELEVATION_M_PER_KM
+                and new_run.elevation_gain_m / new_run.distance_km
+                >= _TRAIL_ELEVATION_M_PER_KM
             ):
                 trail_count = _count_prior_trail_runs(current_user.id, db)
                 elevation_map = {"trail": new_run.elevation_gain_m}

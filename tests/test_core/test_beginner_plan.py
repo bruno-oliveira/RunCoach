@@ -37,8 +37,9 @@ class TestBeginnerPlanGenerator:
         plan = gen.generate_plan(target_distance=5.0, weeks=8)
 
         for week in plan:
-            assert week["total_km"] > 0, \
+            assert week["total_km"] > 0, (
                 f"Week {week['week']}: total_km should not be zero"
+            )
 
     def test_max_runs_capped_at_3(self):
         gen = BeginnerPlanGenerator()

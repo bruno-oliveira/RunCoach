@@ -6,33 +6,36 @@ that prioritize fitness development over race preparation. Uses VDOT as the
 primary metric and includes built-in time trials for progress tracking.
 """
 
-from typing import Dict, Any, List, Optional
+from typing import Any, Dict, List, Optional
 
 from app.core.coaching.coaching_notes_generator import generate_coaching_note
-from app.core.training import phase_calculator
-from app.core.training import mileage_progression
+from app.core.training import mileage_progression, phase_calculator
 from app.core.training.key_workout_library import (
-    KeyWorkoutLibrary,
     overlay_key_workout as _overlay_key_workout_shared,
 )
 from app.core.training.training_constants import calculate_week_in_phase
 from app.core.training.vdot_calculator import VDOTCalculator
-from app.utils import format_pace as _shared_format_pace
 
 from .fitness_workout_builders import (
-    generate_vo2max_workout,
-    generate_vo2max_ladder,
     generate_cruise_interval_workout,
-    generate_tempo_workout,
-    generate_fartlek_workout,
-    generate_time_trial_workout,
     generate_easy_run,
+    generate_fartlek_workout,
     generate_long_run,
+    generate_tempo_workout,
+    generate_time_trial_workout,
+    generate_vo2max_ladder,
+    generate_vo2max_workout,
 )
 
 _PHASE_METADATA = {
-    "base": {"quality_percent": 25, "description": "Build aerobic foundation and introduce intensity"},
-    "build": {"quality_percent": 45, "description": "Develop VO2max and lactate threshold"},
+    "base": {
+        "quality_percent": 25,
+        "description": "Build aerobic foundation and introduce intensity",
+    },
+    "build": {
+        "quality_percent": 45,
+        "description": "Develop VO2max and lactate threshold",
+    },
     "peak": {"quality_percent": 55, "description": "Peak physiological development"},
     "taper": {"quality_percent": 30, "description": "Consolidate gains and recover"},
 }
@@ -100,11 +103,10 @@ class FitnessPlanGenerator:
         5.5 min/km fallback when VDOT is unavailable).
         """
         from app.core.training.zone_calculator import calculate_zones
+
         return calculate_zones(vdot=vdot, max_hr=max_hr)
 
-    def _calculate_fitness_phases(
-        self, weeks: int, focus_area: str
-    ) -> Dict[str, int]:
+    def _calculate_fitness_phases(self, weeks: int, focus_area: str) -> Dict[str, int]:
         """Calculate phase distribution for fitness plans.
 
         VO2max focus reduces/removes taper; others keep standard taper.
@@ -152,7 +154,9 @@ class FitnessPlanGenerator:
         if not library_type:
             return
         _overlay_key_workout_shared(
-            workout, library_type, phase,
+            workout,
+            library_type,
+            phase,
             target_distance=10.0,
             week_in_phase=week_in_phase,
             pace_zones=vdot_zones,
@@ -187,33 +191,51 @@ class FitnessPlanGenerator:
         long_run_km = min(weekly_km * 0.25, 18.0)
         long_run_km = max(long_run_km, 5.0)
 
-        workout_schedule.append({
-            "day": 6,
-            "workout_generator": lambda: generate_long_run(zones, long_run_km, week_number, phase),
-        })
+        workout_schedule.append(
+            {
+                "day": 6,
+                "workout_generator": lambda: generate_long_run(
+                    zones, long_run_km, week_number, phase
+                ),
+            }
+        )
 
         if is_time_trial_week and not is_recovery:
             tt_distance = min(3.0, weekly_km * 0.15)
             tt_distance = max(tt_distance, 1.5)
-            workout_schedule.append({
-                "day": 3,
-                "workout_generator": lambda: generate_time_trial_workout(
-                    zones, tt_distance, week_number, vdot
-                ),
-            })
+            workout_schedule.append(
+                {
+                    "day": 3,
+                    "workout_generator": lambda: generate_time_trial_workout(
+                        zones, tt_distance, week_number, vdot
+                    ),
+                }
+            )
             quality_workouts_needed = max(0, quality_workouts_needed - 1)
 
         if quality_workouts_needed > 0:
             quality_days = [2, 4] if runs_per_week >= 4 else [2]
-            priority = _FITNESS_QUALITY_PRIORITY.get(focus_area, _FITNESS_QUALITY_PRIORITY["balanced"])
+            priority = _FITNESS_QUALITY_PRIORITY.get(
+                focus_area, _FITNESS_QUALITY_PRIORITY["balanced"]
+            )
             quality_types = priority.get(phase, ["tempo", "vo2max"])
 
             generators = {
-                "vo2max": lambda: generate_vo2max_workout(zones, weekly_km, week_number, phase),
-                "vo2max_ladder": lambda: generate_vo2max_ladder(zones, weekly_km, week_number, phase),
-                "cruise_interval": lambda: generate_cruise_interval_workout(zones, weekly_km, week_number, phase),
-                "tempo": lambda: generate_tempo_workout(zones, weekly_km, week_number, phase),
-                "fartlek": lambda: generate_fartlek_workout(zones, weekly_km, week_number, phase),
+                "vo2max": lambda: generate_vo2max_workout(
+                    zones, weekly_km, week_number, phase
+                ),
+                "vo2max_ladder": lambda: generate_vo2max_ladder(
+                    zones, weekly_km, week_number, phase
+                ),
+                "cruise_interval": lambda: generate_cruise_interval_workout(
+                    zones, weekly_km, week_number, phase
+                ),
+                "tempo": lambda: generate_tempo_workout(
+                    zones, weekly_km, week_number, phase
+                ),
+                "fartlek": lambda: generate_fartlek_workout(
+                    zones, weekly_km, week_number, phase
+                ),
             }
 
             for i, day in enumerate(quality_days[:quality_workouts_needed]):
@@ -233,8 +255,10 @@ class FitnessPlanGenerator:
         available_days = [d for d in [1, 3, 5, 7] if d not in scheduled_days]
 
         def _spacing_score(day: int) -> int:
-            return (1 if (day - 1) not in scheduled_days else 0) + \
-                   (1 if (day + 1) not in scheduled_days else 0)
+            return (1 if (day - 1) not in scheduled_days else 0) + (
+                1 if (day + 1) not in scheduled_days else 0
+            )
+
         available_days.sort(key=_spacing_score, reverse=True)
 
         easy_runs_needed = runs_per_week - len(daily_workouts)
@@ -245,7 +269,9 @@ class FitnessPlanGenerator:
             min_easy_km = max(3.0, long_dist * 0.20) if long_dist > 0 else 3.0
             easy_run_km = max(easy_run_km, min_easy_km)
 
-            def _would_create_three_consecutive(day: int, current_scheduled: set) -> bool:
+            def _would_create_three_consecutive(
+                day: int, current_scheduled: set
+            ) -> bool:
                 test = current_scheduled | {day}
                 for d in range(1, 6):
                     if d in test and (d + 1) in test and (d + 2) in test:
@@ -253,7 +279,11 @@ class FitnessPlanGenerator:
                 return False
 
             for i in range(easy_runs_needed):
-                safe_days = [d for d in available_days if not _would_create_three_consecutive(d, scheduled_days)]
+                safe_days = [
+                    d
+                    for d in available_days
+                    if not _would_create_three_consecutive(d, scheduled_days)
+                ]
                 if not safe_days:
                     safe_days = available_days
                 if safe_days:
@@ -267,24 +297,33 @@ class FitnessPlanGenerator:
         scheduled_days = {w["day"] for w in daily_workouts}
         for d in range(1, 8):
             if d not in scheduled_days:
-                daily_workouts.append({
-                    "day": d,
-                    "type": "rest",
-                    "distance": 0,
-                    "description": "Rest day",
-                    "intensity": "rest",
-                })
+                daily_workouts.append(
+                    {
+                        "day": d,
+                        "type": "rest",
+                        "distance": 0,
+                        "description": "Rest day",
+                        "intensity": "rest",
+                    }
+                )
 
         daily_workouts.sort(key=lambda x: x["day"])
 
         for workout in daily_workouts:
             if workout.get("quality", False):
                 self._overlay_key_workout(
-                    workout, phase, week_in_phase, vdot_zones,
+                    workout,
+                    phase,
+                    week_in_phase,
+                    vdot_zones,
                 )
             coaching_type = _COACHING_TYPE_MAP.get(workout["type"], workout["type"])
             workout["coaching_rationale"] = generate_coaching_note(
-                coaching_type, phase, week_number, 10.0, is_recovery,
+                coaching_type,
+                phase,
+                week_number,
+                10.0,
+                is_recovery,
             )
             if is_time_trial_week and workout["type"] == "time_trial":
                 workout["coaching_rationale"] = (
@@ -301,7 +340,9 @@ class FitnessPlanGenerator:
             "is_recovery": is_recovery,
             "is_time_trial_week": is_time_trial_week,
             "total_km": round(actual_total_km, 1),
-            "quality_workouts": sum(1 for w in daily_workouts if w.get("quality", False)),
+            "quality_workouts": sum(
+                1 for w in daily_workouts if w.get("quality", False)
+            ),
             "daily_workouts": daily_workouts,
         }
 
@@ -341,21 +382,33 @@ class FitnessPlanGenerator:
         weekly_plans = []
         for week_num in range(1, weeks + 1):
             phase = phase_calculator.get_phase(week_num, phase_durations)
-            is_recovery = phase_calculator.is_recovery_week(week_num, phase, phase_durations)
+            is_recovery = phase_calculator.is_recovery_week(
+                week_num, phase, phase_durations
+            )
             week_in_phase = calculate_week_in_phase(week_num, phase, phase_durations)
             is_tt = self._is_time_trial_week(week_num) and not is_recovery
 
             weekly_plan = self._generate_weekly_plan(
-                week_num, phase, phases_rich, zones,
-                km_progression[week_num - 1], runs_per_week,
-                is_recovery, focus_area, vdot, vdot_zones,
-                week_in_phase, is_tt,
+                week_num,
+                phase,
+                phases_rich,
+                zones,
+                km_progression[week_num - 1],
+                runs_per_week,
+                is_recovery,
+                focus_area,
+                vdot,
+                vdot_zones,
+                week_in_phase,
+                is_tt,
             )
             weekly_plans.append(weekly_plan)
 
         total_km = sum(week["total_km"] for week in weekly_plans)
         total_quality = sum(week["quality_workouts"] for week in weekly_plans)
-        time_trial_weeks = [w["week"] for w in weekly_plans if w.get("is_time_trial_week")]
+        time_trial_weeks = [
+            w["week"] for w in weekly_plans if w.get("is_time_trial_week")
+        ]
 
         return {
             "focus_area": focus_area,
@@ -414,7 +467,9 @@ class FitnessPlanGenerator:
                 week_km = peak_km * oscillation
             else:
                 taper_weeks = phases["taper"]
-                week_in_taper = week_num - phases["base"] - phases["build"] - phases["peak"]
+                week_in_taper = (
+                    week_num - phases["base"] - phases["build"] - phases["peak"]
+                )
                 if taper_weeks == 1:
                     week_km = peak_km * 0.55
                 else:
@@ -422,7 +477,11 @@ class FitnessPlanGenerator:
                     week_km = peak_km * curve[min(week_in_taper, len(curve) - 1)]
 
             week_km = min(week_km, high_water * mileage_progression.WEEK_OVER_WEEK_CAP)
-            week_km = max(week_km, high_water * 1.01) if week_num > 1 and phase != "peak" else week_km
+            week_km = (
+                max(week_km, high_water * 1.01)
+                if week_num > 1 and phase != "peak"
+                else week_km
+            )
             high_water = week_km
             weekly_progression.append(round(week_km, 1))
 

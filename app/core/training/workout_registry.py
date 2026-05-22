@@ -52,31 +52,55 @@ def _build_recovery(*, day: int, phase: str, **_: Any) -> Dict[str, Any]:
 
 
 def _build_long(
-    *, day: int, distance: float, total_km: float,
-    pace_zones: Optional[Dict[str, Any]], **_: Any,
+    *,
+    day: int,
+    distance: float,
+    total_km: float,
+    pace_zones: Optional[Dict[str, Any]],
+    **_: Any,
 ) -> Dict[str, Any]:
-    return workout_builders.generate_long_run(day, distance, total_km, pace_zones=pace_zones)
+    return workout_builders.generate_long_run(
+        day, distance, total_km, pace_zones=pace_zones
+    )
 
 
 def _build_easy(
-    *, day: int, distance: float, total_km: float,
-    pace_zones: Optional[Dict[str, Any]], **_: Any,
+    *,
+    day: int,
+    distance: float,
+    total_km: float,
+    pace_zones: Optional[Dict[str, Any]],
+    **_: Any,
 ) -> Dict[str, Any]:
-    return workout_builders.generate_easy_run(day, distance, total_km, pace_zones=pace_zones)
+    return workout_builders.generate_easy_run(
+        day, distance, total_km, pace_zones=pace_zones
+    )
 
 
 def _build_tempo(
-    *, day: int, distance: float, total_km: float,
-    pace_zones: Optional[Dict[str, Any]], **_: Any,
+    *,
+    day: int,
+    distance: float,
+    total_km: float,
+    pace_zones: Optional[Dict[str, Any]],
+    **_: Any,
 ) -> Dict[str, Any]:
-    return workout_builders.generate_tempo_run(day, distance, total_km, pace_zones=pace_zones)
+    return workout_builders.generate_tempo_run(
+        day, distance, total_km, pace_zones=pace_zones
+    )
 
 
 def _build_interval(
-    *, day: int, distance: float, total_km: float,
-    pace_zones: Optional[Dict[str, Any]], **_: Any,
+    *,
+    day: int,
+    distance: float,
+    total_km: float,
+    pace_zones: Optional[Dict[str, Any]],
+    **_: Any,
 ) -> Dict[str, Any]:
-    return workout_builders.generate_interval_run(day, distance, total_km, pace_zones=pace_zones)
+    return workout_builders.generate_interval_run(
+        day, distance, total_km, pace_zones=pace_zones
+    )
 
 
 def _build_hill(*, day: int, distance: float, **_: Any) -> Dict[str, Any]:
@@ -84,13 +108,21 @@ def _build_hill(*, day: int, distance: float, **_: Any) -> Dict[str, Any]:
 
 
 WORKOUT_REGISTRY: Dict[str, WorkoutTypeSpec] = {
-    "rest":     WorkoutTypeSpec("rest",     "rest",     "Rest day",                       _build_rest),
-    "recovery": WorkoutTypeSpec("recovery", "very_low", "Active recovery",                _build_recovery),
-    "easy":     WorkoutTypeSpec("easy",     "low",      "Easy recovery run",              _build_easy),
-    "long":     WorkoutTypeSpec("long",     "medium",   "Long distance run",              _build_long),
-    "tempo":    WorkoutTypeSpec("tempo",    "medium",   "Tempo run at threshold pace",    _build_tempo),
-    "interval": WorkoutTypeSpec("interval", "high",     "High-intensity intervals",       _build_interval),
-    "hill":     WorkoutTypeSpec("hill",     "high",     "Hill repeats and strength training", _build_hill),
+    "rest": WorkoutTypeSpec("rest", "rest", "Rest day", _build_rest),
+    "recovery": WorkoutTypeSpec(
+        "recovery", "very_low", "Active recovery", _build_recovery
+    ),
+    "easy": WorkoutTypeSpec("easy", "low", "Easy recovery run", _build_easy),
+    "long": WorkoutTypeSpec("long", "medium", "Long distance run", _build_long),
+    "tempo": WorkoutTypeSpec(
+        "tempo", "medium", "Tempo run at threshold pace", _build_tempo
+    ),
+    "interval": WorkoutTypeSpec(
+        "interval", "high", "High-intensity intervals", _build_interval
+    ),
+    "hill": WorkoutTypeSpec(
+        "hill", "high", "Hill repeats and strength training", _build_hill
+    ),
 }
 
 # Labels that may appear on ``RunLog.workout_type`` but are not produced by the

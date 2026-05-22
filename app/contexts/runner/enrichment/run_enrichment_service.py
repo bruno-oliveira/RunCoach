@@ -5,12 +5,12 @@ from typing import Any, Dict, Optional
 
 from sqlalchemy.orm import Session
 
-from app.core.training.vdot_calculator import VDOTCalculator
-from app.models import RunLog, TrainingPlan
-from app.schemas import RunLogResponse
 from app.contexts.plan.repositories import SQLAlchemyPlanRepository
 from app.contexts.runner.fitness.effort_classifier import classify_effort
 from app.contexts.runner.fitness.race_predictor_service import RacePredictorService
+from app.core.training.vdot_calculator import VDOTCalculator
+from app.models import RunLog
+from app.schemas import RunLogResponse
 
 logger = logging.getLogger(__name__)
 
@@ -18,7 +18,9 @@ logger = logging.getLogger(__name__)
 _TRAIL_ELEVATION_M_PER_KM = 20.0
 
 # Quality workouts that justify recomputing the user's fitness baseline.
-_RECALIBRATION_WORKOUT_TYPES = frozenset({"tempo", "long", "race", "vo2max", "interval"})
+_RECALIBRATION_WORKOUT_TYPES = frozenset(
+    {"tempo", "long", "race", "vo2max", "interval"}
+)
 
 
 def _count_prior_trail_runs(user_id: str, db: Session) -> int:
@@ -40,7 +42,11 @@ def _count_prior_trail_runs(user_id: str, db: Session) -> int:
 
 
 def enrich_vdot_and_prediction(
-    new_run: RunLog, distance_km: float, duration_minutes: float, user_id: str, db: Session
+    new_run: RunLog,
+    distance_km: float,
+    duration_minutes: float,
+    user_id: str,
+    db: Session,
 ) -> Optional[Dict[str, Any]]:
     """Calculate VDOT, derive effort class, snapshot prediction, and optionally recalibrate plan zones.
 
@@ -71,7 +77,9 @@ def enrich_vdot_and_prediction(
 
     if distance_km >= 2.0:
         try:
-            pre_race_vdot = RacePredictorService.get_best_recent_vdot(user_id, weeks=12, db=db)
+            pre_race_vdot = RacePredictorService.get_best_recent_vdot(
+                user_id, weeks=12, db=db
+            )
             if pre_race_vdot:
                 trail_runs_count = None
                 if new_run.elevation_gain_m and new_run.elevation_gain_m > 0:
@@ -103,14 +111,22 @@ def _maybe_recalibrate_plan_zones(
 
     workout_type = (new_run.workout_type or "").lower()
     effort_class = (new_run.effort_class or "").lower()
-    if workout_type not in _RECALIBRATION_WORKOUT_TYPES and effort_class != "race_effort":
+    if (
+        workout_type not in _RECALIBRATION_WORKOUT_TYPES
+        and effort_class != "race_effort"
+    ):
         return None
 
     try:
-        plan = SQLAlchemyPlanRepository(db).get_for_user(new_run.training_plan_id, user_id)
+        plan = SQLAlchemyPlanRepository(db).get_for_user(
+            new_run.training_plan_id, user_id
+        )
         if not plan:
             return None
-        from app.contexts.plan.adaptation.vdot_recalibrator import recalibrate_zones_only
+        from app.contexts.plan.adaptation.vdot_recalibrator import (
+            recalibrate_zones_only,
+        )
+
         return recalibrate_zones_only(plan, user_id, db)
     except Exception as e:
         logger.warning(f"Per-run VDOT recalibration failed: {e}", exc_info=True)
@@ -150,7 +166,9 @@ def run_to_response(run: RunLog) -> RunLogResponse:
         notes=run.notes,
         workout_type=run.workout_type,
         perceived_effort=run.perceived_effort,
-        effort_quality_score=round(run.effort_quality_score, 1) if run.effort_quality_score else None,
+        effort_quality_score=round(run.effort_quality_score, 1)
+        if run.effort_quality_score
+        else None,
         quality_label=run.quality_label,
         vdot=run.vdot,
         predicted_time_seconds=run.predicted_time_seconds,

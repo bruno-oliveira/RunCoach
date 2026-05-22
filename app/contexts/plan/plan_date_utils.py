@@ -10,12 +10,14 @@ def build_week_dates(start_date: date, num_weeks: int) -> list[dict]:
     for i in range(num_weeks):
         week_start = start_date + timedelta(weeks=i)
         week_end = week_start + timedelta(days=6)
-        week_dates.append({
-            "week": i + 1,
-            "start": f"{week_start.strftime('%b')} {week_start.day}",
-            "end": f"{week_end.strftime('%b')} {week_end.day}",
-            "start_iso": week_start.isoformat(),
-        })
+        week_dates.append(
+            {
+                "week": i + 1,
+                "start": f"{week_start.strftime('%b')} {week_start.day}",
+                "end": f"{week_end.strftime('%b')} {week_end.day}",
+                "start_iso": week_start.isoformat(),
+            }
+        )
     return week_dates
 
 
@@ -78,12 +80,14 @@ def ensure_seven_days(plan_data: list[dict]) -> list[dict]:
         existing_days = {w["day"] for w in workouts}
         for d in range(1, 8):
             if d not in existing_days:
-                workouts.append({
-                    "day": d,
-                    "type": "rest",
-                    "distance": 0,
-                    "intensity": "rest",
-                    "description": "Rest day",
-                })
+                workouts.append(
+                    {
+                        "day": d,
+                        "type": "rest",
+                        "distance": 0,
+                        "intensity": "rest",
+                        "description": "Rest day",
+                    }
+                )
         workouts.sort(key=lambda w: w["day"])
     return plan_data

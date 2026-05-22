@@ -1,16 +1,16 @@
 """Plan persistence helpers — plan core, weekly workouts, HR zones, nutrition, race protocol."""
 
 import logging
-from typing import Any, Optional
+from typing import Optional
 
 from sqlalchemy.orm import Session
 
 from app.contexts.nutrition.nutrition_engine import NutritionEngine
+from app.contexts.runner.fitness.hr_zone_service import HRZoneService
 from app.core.race.race_protocol_generator import generate_race_protocol
 from app.core.training.vdot_calculator import VDOTCalculator
 from app.models import DailyWorkout, TrainingPlan, User, WeeklyPlan
 from app.schemas import PlanRequest
-from app.contexts.runner.fitness.hr_zone_service import HRZoneService
 from app.utils import parse_race_time_to_seconds
 
 logger = logging.getLogger(__name__)
@@ -112,9 +112,7 @@ def attach_hr_zones(
                         dw.key_workout_id = key_wk_id
         training_plan.plan_data = plan_data
     except Exception as e:
-        logger.warning(
-            f"HR zone injection failed for plan {training_plan.id}: {e}"
-        )
+        logger.warning(f"HR zone injection failed for plan {training_plan.id}: {e}")
 
 
 def attach_nutrition(
@@ -155,6 +153,7 @@ def attach_race_protocol(
     trail_profile = None
     if plan_request.is_trail:
         from app.core.training.trail_profile import classify_trail
+
         trail_profile = classify_trail(
             plan_request.target_distance,
             plan_request.target_elevation_gain_m or 0.0,

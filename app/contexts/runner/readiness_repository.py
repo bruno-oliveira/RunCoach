@@ -2,7 +2,8 @@
 
 from __future__ import annotations
 
-from datetime import date as date_cls, timedelta
+from datetime import date as date_cls
+from datetime import timedelta
 from typing import List, Optional
 
 from sqlalchemy.orm import Session

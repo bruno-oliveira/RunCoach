@@ -6,16 +6,15 @@ from fastapi import APIRouter, Depends, Header, HTTPException, status
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
+from app.contexts.plan.adaptation import AdaptationService, type_swapper
+from app.contexts.plan.adaptation.missed_week_handler import detect_missed_weeks
+from app.contexts.plan.plan_helpers import get_plan_or_404
 from app.contexts.plan.repositories import SQLAlchemyPlanRepository
+from app.contexts.plan.week_adjustment_service import apply_week_action
+from app.contexts.runner.fitness.gap_analysis_service import GapAnalysisService
+from app.contexts.runner.fitness.readiness_service import ReadinessService
 from app.dependencies import get_current_user, get_db
 from app.models import TrainingPlan, User
-from app.contexts.plan.adaptation import type_swapper
-from app.contexts.plan.adaptation.missed_week_handler import detect_missed_weeks
-from app.contexts.plan.adaptation import AdaptationService
-from app.contexts.runner.fitness.gap_analysis_service import GapAnalysisService
-from app.contexts.plan.plan_helpers import get_plan_or_404
-from app.contexts.runner.fitness.readiness_service import ReadinessService
-from app.contexts.plan.week_adjustment_service import apply_week_action
 from app.utils import persist_json
 
 logger = logging.getLogger(__name__)
@@ -64,16 +63,15 @@ async def get_plan_readiness(
     db: Session = Depends(get_db),
 ):
     """Get race readiness assessment for a training plan."""
-    training_plan = get_plan_or_404(
-        plan_id, db, current_user, require_user_match=True
-    )
+    training_plan = get_plan_or_404(plan_id, db, current_user, require_user_match=True)
 
-    readiness = ReadinessService.compute_readiness(
-        training_plan, current_user.id, db
-    )
+    readiness = ReadinessService.compute_readiness(training_plan, current_user.id, db)
 
     if readiness is None:
-        return {"available": False, "reason": "Set a start date and log some runs first."}
+        return {
+            "available": False,
+            "reason": "Set a start date and log some runs first.",
+        }
 
     return {"available": True, **readiness}
 
@@ -86,24 +84,26 @@ async def get_plan_gaps(
     db: Session = Depends(get_db),
 ):
     """Get gap analysis report for a training plan."""
-    training_plan = get_plan_or_404(
-        plan_id, db, current_user, require_user_match=True
-    )
+    training_plan = get_plan_or_404(plan_id, db, current_user, require_user_match=True)
 
     if weekly:
         data = GapAnalysisService.analyze_gaps_weekly(
             training_plan, current_user.id, db
         )
         if data is None:
-            return {"available": False, "reason": "Set a start date and log some runs first."}
+            return {
+                "available": False,
+                "reason": "Set a start date and log some runs first.",
+            }
         return {"available": True, "weeks": data}
 
-    gaps = GapAnalysisService.analyze_gaps(
-        training_plan, current_user.id, db
-    )
+    gaps = GapAnalysisService.analyze_gaps(training_plan, current_user.id, db)
 
     if gaps is None:
-        return {"available": False, "reason": "Set a start date and log some runs first."}
+        return {
+            "available": False,
+            "reason": "Set a start date and log some runs first.",
+        }
 
     return {"available": True, **gaps}
 
@@ -133,9 +133,7 @@ async def adjust_plan(
     db: Session = Depends(get_db),
 ):
     """Adjust future plan weeks based on recent performance data."""
-    training_plan = get_plan_or_404(
-        plan_id, db, current_user, require_user_match=True
-    )
+    training_plan = get_plan_or_404(plan_id, db, current_user, require_user_match=True)
     _check_revision(training_plan, if_match)
 
     adaptation_service = AdaptationService()
@@ -183,9 +181,7 @@ async def recalibrate_plan(
     get_plan_or_404(plan_id, db, current_user, require_user_match=True)
 
     adaptation_service = AdaptationService()
-    return adaptation_service.recalibrate(
-        plan_id, current_user.id, body.strategy, db
-    )
+    return adaptation_service.recalibrate(plan_id, current_user.id, body.strategy, db)
 
 
 @router.post("/api/plan/{plan_id}/dismiss-alert")
@@ -195,9 +191,7 @@ async def dismiss_alert(
     db: Session = Depends(get_db),
 ):
     """Dismiss an active adaptation alert."""
-    training_plan = get_plan_or_404(
-        plan_id, db, current_user, require_user_match=True
-    )
+    training_plan = get_plan_or_404(plan_id, db, current_user, require_user_match=True)
     training_plan.adaptation_alert = None
     db.commit()
     return {"ok": True}
@@ -210,9 +204,7 @@ async def get_pending_recommendation(
     db: Session = Depends(get_db),
 ):
     """Get the current pending adaptation recommendation, if any."""
-    training_plan = get_plan_or_404(
-        plan_id, db, current_user, require_user_match=True
-    )
+    training_plan = get_plan_or_404(plan_id, db, current_user, require_user_match=True)
     return {"recommendation": training_plan.pending_recommendation}
 
 
@@ -224,9 +216,7 @@ async def accept_recommendation(
     db: Session = Depends(get_db),
 ):
     """Accept and apply the pending adaptation recommendation."""
-    training_plan = get_plan_or_404(
-        plan_id, db, current_user, require_user_match=True
-    )
+    training_plan = get_plan_or_404(plan_id, db, current_user, require_user_match=True)
     _check_revision(training_plan, if_match)
     adaptation_service = AdaptationService()
     return adaptation_service.accept_recommendation(plan_id, current_user.id, db)
@@ -241,7 +231,9 @@ async def preview_accept_recommendation(
     """Preview what accepting the pending recommendation would do."""
     get_plan_or_404(plan_id, db, current_user, require_user_match=True)
     adaptation_service = AdaptationService()
-    return adaptation_service.preview_accept_recommendation(plan_id, current_user.id, db)
+    return adaptation_service.preview_accept_recommendation(
+        plan_id, current_user.id, db
+    )
 
 
 @router.post("/api/plan/{plan_id}/dismiss-recommendation")
@@ -301,9 +293,7 @@ async def override_plan_week(
     db: Session = Depends(get_db),
 ):
     """Apply a per-week override to the plan."""
-    training_plan = get_plan_or_404(
-        plan_id, db, current_user, require_user_match=True
-    )
+    training_plan = get_plan_or_404(plan_id, db, current_user, require_user_match=True)
     _check_revision(training_plan, if_match)
 
     plan_data = training_plan.plan_data if training_plan.plan_data else []
@@ -312,7 +302,13 @@ async def override_plan_week(
         raise HTTPException(status_code=404, detail="Week not found in plan")
 
     payload = apply_week_action(
-        body.action, training_plan, plan_data, week_data, week_number, plan_id, db,
+        body.action,
+        training_plan,
+        plan_data,
+        week_data,
+        week_number,
+        plan_id,
+        db,
     )
     db.commit()
 
@@ -384,9 +380,7 @@ async def swap_plan_days(
     """Swap two workouts within the same week."""
     from app.contexts.plan.plan_adjustments import swap_days
 
-    training_plan = get_plan_or_404(
-        plan_id, db, current_user, require_user_match=True
-    )
+    training_plan = get_plan_or_404(plan_id, db, current_user, require_user_match=True)
 
     if body.source_day == body.target_day:
         return {"ok": True}

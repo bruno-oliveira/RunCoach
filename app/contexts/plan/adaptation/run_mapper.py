@@ -8,9 +8,9 @@ from typing import Any, Dict
 from sqlalchemy import and_, or_
 from sqlalchemy.orm import Session
 
-from app.models import DailyWorkout, RunLog, TrainingPlan, WeeklyPlan
-from app.utils import to_date as _to_date
 from app.contexts.plan.repositories import SQLAlchemyPlanRepository
+from app.models import DailyWorkout, RunLog, WeeklyPlan
+from app.utils import to_date as _to_date
 
 from ._helpers import today_date
 
@@ -45,7 +45,11 @@ def map_runs_to_plan(
         return {"mapped": 0, "proposals": [], "error": "Plan not found"}
 
     if not training_plan.start_date:
-        return {"mapped": 0, "proposals": [], "error": "Plan has no start date. Set a start date first."}
+        return {
+            "mapped": 0,
+            "proposals": [],
+            "error": "Plan has no start date. Set a start date first.",
+        }
 
     start_date = _to_date(training_plan.start_date)
     today = today_date()
@@ -55,7 +59,10 @@ def map_runs_to_plan(
     upper_bound = min(tomorrow, plan_end_date + timedelta(days=1))
     logger.info(
         "map_runs_to_plan: plan=%s, start_date=%s, today=%s, weeks=%d",
-        plan_id, start_date, today, num_weeks,
+        plan_id,
+        start_date,
+        today,
+        num_weeks,
     )
 
     # 1. Build available workouts by week
@@ -67,8 +74,8 @@ def map_runs_to_plan(
     )
 
     already_linked_ids = set(
-        row[0] for row in
-        db.query(RunLog.daily_workout_id)
+        row[0]
+        for row in db.query(RunLog.daily_workout_id)
         .filter(
             RunLog.training_plan_id == plan_id,
             RunLog.daily_workout_id.isnot(None),
@@ -91,7 +98,8 @@ def map_runs_to_plan(
     logger.info(
         "map_runs_to_plan: %d total workouts, %d already linked, "
         "%d available across %d weeks",
-        len(all_workouts), len(already_linked_ids),
+        len(all_workouts),
+        len(already_linked_ids),
         sum(len(v) for v in workouts_by_week.values()),
         len(workouts_by_week),
     )
@@ -117,7 +125,9 @@ def map_runs_to_plan(
 
     logger.info(
         "map_runs_to_plan: %d unlinked runs in [%s, %s]",
-        len(unlinked_runs), start_date, today,
+        len(unlinked_runs),
+        start_date,
+        today,
     )
 
     if not unlinked_runs:
@@ -172,11 +182,12 @@ def _greedy_match(
             run_date = _to_date(run.date)
             for workout, workout_date in week_workouts:
                 date_penalty = abs((run_date - workout_date).days)
-                dist_diff = abs(
-                    (run.distance_km or 0) - (workout.distance_km or 0)
-                )
+                dist_diff = abs((run.distance_km or 0) - (workout.distance_km or 0))
                 rest_penalty = 0.0
-                if workout.workout_type in ("rest", "recovery") and (run.distance_km or 0) > 1:
+                if (
+                    workout.workout_type in ("rest", "recovery")
+                    and (run.distance_km or 0) > 1
+                ):
                     rest_penalty = 10.0
                 score = _match_score(date_penalty, dist_diff) + rest_penalty
                 edges.append((score, run, workout, workout_date))
@@ -193,36 +204,40 @@ def _greedy_match(
             used_run_ids.add(run.id)
 
             run_date = _to_date(run.date)
-            proposals.append({
-                "run_id": run.id,
-                "workout_id": workout.id,
-                "week": wn,
-                "day": workout.day_of_week,
-                "workout_type": workout.workout_type,
-                "planned_distance": workout.distance_km,
-                "actual_distance": run.distance_km,
-                "run_date": str(run_date),
-                "workout_date": str(workout_date),
-                "match_type": "workout",
-            })
+            proposals.append(
+                {
+                    "run_id": run.id,
+                    "workout_id": workout.id,
+                    "week": wn,
+                    "day": workout.day_of_week,
+                    "workout_type": workout.workout_type,
+                    "planned_distance": workout.distance_km,
+                    "actual_distance": run.distance_km,
+                    "run_date": str(run_date),
+                    "workout_date": str(workout_date),
+                    "match_type": "workout",
+                }
+            )
 
         for run in week_runs:
             if run.id in matched_run_ids or run.id in used_run_ids:
                 continue
             used_run_ids.add(run.id)
             run_date = _to_date(run.date)
-            proposals.append({
-                "run_id": run.id,
-                "workout_id": None,
-                "week": wn,
-                "day": None,
-                "workout_type": None,
-                "planned_distance": None,
-                "actual_distance": run.distance_km,
-                "run_date": str(run_date),
-                "workout_date": None,
-                "match_type": "weekly_volume",
-            })
+            proposals.append(
+                {
+                    "run_id": run.id,
+                    "workout_id": None,
+                    "week": wn,
+                    "day": None,
+                    "workout_type": None,
+                    "planned_distance": None,
+                    "actual_distance": run.distance_km,
+                    "run_date": str(run_date),
+                    "workout_date": None,
+                    "match_type": "weekly_volume",
+                }
+            )
 
     return proposals
 
@@ -231,8 +246,7 @@ def _persist_mappings(proposals: list, plan_id: str, db: Session) -> None:
     """Write run-to-workout mappings to the database."""
     proposal_run_ids = [p["run_id"] for p in proposals]
     runs_by_id = {
-        r.id: r
-        for r in db.query(RunLog).filter(RunLog.id.in_(proposal_run_ids)).all()
+        r.id: r for r in db.query(RunLog).filter(RunLog.id.in_(proposal_run_ids)).all()
     }
     for p in proposals:
         run = runs_by_id.get(p["run_id"])

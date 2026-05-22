@@ -17,13 +17,12 @@ from typing import Any, Dict, Optional
 
 from app.core.training.vdot_calculator import VDOTCalculator
 
-
 _HR_PERCENTAGES = {
     "zone_1_recovery": (0.60, 0.70),
-    "zone_2_aerobic":  (0.70, 0.80),
-    "zone_3_tempo":    (0.80, 0.88),
-    "zone_4_vo2max":   (0.88, 0.95),
-    "zone_5_race":     (0.95, 1.00),
+    "zone_2_aerobic": (0.70, 0.80),
+    "zone_3_tempo": (0.80, 0.88),
+    "zone_4_vo2max": (0.88, 0.95),
+    "zone_5_race": (0.95, 1.00),
 }
 
 _FALLBACK_PACE_MIN_KM = 5.5

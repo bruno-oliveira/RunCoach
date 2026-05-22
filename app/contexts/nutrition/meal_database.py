@@ -46,12 +46,14 @@ class MealDatabase:
                 with open(file_path, "r") as f:
                     type_meals = json.load(f)
                     meals.extend(type_meals)
-                    logger.info(f"Loaded {len(type_meals)} {meal_type} meals from {file_path}")
+                    logger.info(
+                        f"Loaded {len(type_meals)} {meal_type} meals from {file_path}"
+                    )
             except FileNotFoundError:
                 logger.warning(f"Meals file not found: {file_path}")
             except json.JSONDecodeError as e:
                 logger.error(f"Error parsing meals file {file_path}: {e}")
-        
+
         logger.info(f"Loaded {len(meals)} total meals")
         return meals
 

@@ -6,12 +6,15 @@ with 10% rule enforcement and phase-aware periodization.
 
 from typing import List, Optional
 
-from app.core.training.phase_calculator import calculate_phases, get_phase, is_recovery_week
+from app.core.training.phase_calculator import (
+    calculate_phases,
+    get_phase,
+    is_recovery_week,
+)
 from app.core.training.trail_profile import (
     TrailProfile,
     trail_max_weekly_mileage,
 )
-
 
 # --- Progression safety constants ---------------------------------------------
 # Non-recovery weeks can increase at most this fraction above the previous
@@ -42,11 +45,11 @@ PEAK_OSCILLATION_STEP = 0.01
 # Geared toward recreational runners — sufficient to finish strong without
 # requiring elite-level volume.
 MAX_PEAK_MILEAGE = {
-    5.0: 40.0,     # Recreational 5K runners peak around 25-40 km/wk
-    10.0: 50.0,    # Recreational 10K runners ~30-50 km/wk
-    21.1: 65.0,    # Recreational half marathon ~40-65 km/wk
-    30.0: 75.0,    # Recreational trail 30K ~50-75 km/wk
-    42.2: 85.0,    # Recreational marathon ~55-85 km/wk
+    5.0: 40.0,  # Recreational 5K runners peak around 25-40 km/wk
+    10.0: 50.0,  # Recreational 10K runners ~30-50 km/wk
+    21.1: 65.0,  # Recreational half marathon ~40-65 km/wk
+    30.0: 75.0,  # Recreational trail 30K ~50-75 km/wk
+    42.2: 85.0,  # Recreational marathon ~55-85 km/wk
 }
 
 
@@ -63,16 +66,18 @@ def _volume_trend_cap(profile: Optional[dict]) -> float:
     if not profile:
         return WEEK_OVER_WEEK_CAP
     trend = profile.get("volume_trend", "stable")
-    return {"decreasing": 1.05, "stable": WEEK_OVER_WEEK_CAP, "increasing": 1.12}.get(trend, WEEK_OVER_WEEK_CAP)
+    return {"decreasing": 1.05, "stable": WEEK_OVER_WEEK_CAP, "increasing": 1.12}.get(
+        trend, WEEK_OVER_WEEK_CAP
+    )
 
 
 def _trail_ideal_peak(profile: TrailProfile, current_km: float) -> float:
     """Bracket-aware target peak weekly mileage for a trail/ultra plan."""
     bracket_floor = {
-        'short':      (1.5, 30.0),
-        'standard':   (1.5, 35.0),
-        'ultra':      (1.7, 50.0),
-        'long_ultra': (2.0, 70.0),
+        "short": (1.5, 30.0),
+        "standard": (1.5, 35.0),
+        "ultra": (1.7, 50.0),
+        "long_ultra": (2.0, 70.0),
     }
     multiplier, floor = bracket_floor[profile.bracket]
     return max(floor, current_km * multiplier)
@@ -115,10 +120,14 @@ def get_ideal_peak(
     return ideal_peak
 
 
-def get_peak_mileage(target_distance: float, current_km: float, weeks: int,
-                     vdot: Optional[float] = None,
-                     profile: Optional[dict] = None,
-                     trail_profile: Optional[TrailProfile] = None) -> float:
+def get_peak_mileage(
+    target_distance: float,
+    current_km: float,
+    weeks: int,
+    vdot: Optional[float] = None,
+    profile: Optional[dict] = None,
+    trail_profile: Optional[TrailProfile] = None,
+) -> float:
     """
     Determine peak weekly mileage with length-based multipliers and optional VDOT adjustment.
     Higher VDOT runners can absorb slightly more volume (better aerobic fitness / recovery).
@@ -133,7 +142,9 @@ def get_peak_mileage(target_distance: float, current_km: float, weeks: int,
     peak_multiplier = 1 + (1.5 * (weeks / 16))
     peak_multiplier = min(peak_multiplier, 2.6)
 
-    ideal_peak = get_ideal_peak(target_distance, current_km, weeks, trail_profile=trail_profile)
+    ideal_peak = get_ideal_peak(
+        target_distance, current_km, weeks, trail_profile=trail_profile
+    )
 
     # VDOT adjustment: VDOT 30 = 0.95x, VDOT 50 = 1.0x, VDOT 65+ = 1.08x
     if vdot:
@@ -179,20 +190,27 @@ def _get_taper_curve(
     if taper_weeks == 1:
         return [0.55]
     elif taper_weeks == 2:
-        if trail_profile is not None or target_distance == 30.0:  # trail: more aggressive
+        if (
+            trail_profile is not None or target_distance == 30.0
+        ):  # trail: more aggressive
             return [0.72, 0.50]
-        return [0.75, 0.55]                   # half marathon
+        return [0.75, 0.55]  # half marathon
     elif taper_weeks == 3:
         if trail_profile is not None and trail_profile.is_ultra:
-            return [0.85, 0.65, 0.45]         # ultra: sharper drop than marathon
-        return [0.85, 0.70, 0.50]             # marathon
+            return [0.85, 0.65, 0.45]  # ultra: sharper drop than marathon
+        return [0.85, 0.70, 0.50]  # marathon
     else:
-        return [0.92, 0.82, 0.68, 0.50]       # 4+ week taper
+        return [0.92, 0.82, 0.68, 0.50]  # 4+ week taper
 
 
-def _ramp_week_km(start_km: float, end_km: float, step_idx: int,
-                  total_steps: int, high_water: float,
-                  effective_cap: float = WEEK_OVER_WEEK_CAP) -> float:
+def _ramp_week_km(
+    start_km: float,
+    end_km: float,
+    step_idx: int,
+    total_steps: int,
+    high_water: float,
+    effective_cap: float = WEEK_OVER_WEEK_CAP,
+) -> float:
     """Compute one ramp step toward ``end_km``, capped by the 10% rule.
 
     Linear interpolation from ``start_km`` to ``end_km`` across ``total_steps``
@@ -211,10 +229,16 @@ def _ramp_week_km(start_km: float, end_km: float, step_idx: int,
     return capped
 
 
-def _progress_ramp_phase(phase_name: str, phase_weeks: int, phase_start_week: int,
-                         phase_start_km: float, phase_end_km: float,
-                         phases: dict, high_water: float,
-                         effective_cap: float = WEEK_OVER_WEEK_CAP) -> tuple[list[float], float]:
+def _progress_ramp_phase(
+    phase_name: str,
+    phase_weeks: int,
+    phase_start_week: int,
+    phase_start_km: float,
+    phase_end_km: float,
+    phases: dict,
+    high_water: float,
+    effective_cap: float = WEEK_OVER_WEEK_CAP,
+) -> tuple[list[float], float]:
     """Progress a ramp-style phase (base or build) one week at a time.
 
     Returns ``(weeks_km, new_high_water)``. Non-recovery weeks ramp linearly
@@ -223,7 +247,8 @@ def _progress_ramp_phase(phase_name: str, phase_weeks: int, phase_start_week: in
     high-water mark.
     """
     non_recovery_count = sum(
-        1 for i in range(phase_weeks)
+        1
+        for i in range(phase_weeks)
         if not is_recovery_week(phase_start_week + i, phase_name, phases)
     )
 
@@ -236,7 +261,11 @@ def _progress_ramp_phase(phase_name: str, phase_weeks: int, phase_start_week: in
             continue
 
         week_km = _ramp_week_km(
-            phase_start_km, phase_end_km, step_idx, non_recovery_count, high_water,
+            phase_start_km,
+            phase_end_km,
+            step_idx,
+            non_recovery_count,
+            high_water,
             effective_cap=effective_cap,
         )
         high_water = week_km
@@ -246,9 +275,12 @@ def _progress_ramp_phase(phase_name: str, phase_weeks: int, phase_start_week: in
     return weeks_km, high_water
 
 
-def _progress_peak_phase(phases: dict, peak_km: float,
-                         high_water: float,
-                         effective_cap: float = WEEK_OVER_WEEK_CAP) -> tuple[list[float], float]:
+def _progress_peak_phase(
+    phases: dict,
+    peak_km: float,
+    high_water: float,
+    effective_cap: float = WEEK_OVER_WEEK_CAP,
+) -> tuple[list[float], float]:
     """Progress the peak phase.
 
     Peak weeks oscillate slightly around peak_km so the body doesn't sit on
@@ -256,13 +288,13 @@ def _progress_peak_phase(phases: dict, peak_km: float,
     cap to prevent abrupt jumps, especially important for injury-prone runners.
     4+ week peaks include a mid-phase recovery week.
     """
-    peak_weeks = phases['peak']
-    phase_start_week = phases['base'] + phases['build'] + 1
+    peak_weeks = phases["peak"]
+    phase_start_week = phases["base"] + phases["build"] + 1
     weeks_km: list[float] = []
 
     for week_offset in range(peak_weeks):
         week_number = phase_start_week + week_offset
-        if is_recovery_week(week_number, 'peak', phases):
+        if is_recovery_week(week_number, "peak", phases):
             weeks_km.append(round(high_water * RECOVERY_WEEK_RATIO, 1))
             continue
 
@@ -277,16 +309,19 @@ def _progress_peak_phase(phases: dict, peak_km: float,
     return weeks_km, high_water
 
 
-def _progress_taper_phase(phases: dict, peak_km: float,
-                          target_distance: float,
-                          trail_profile: Optional[TrailProfile] = None) -> list[float]:
+def _progress_taper_phase(
+    phases: dict,
+    peak_km: float,
+    target_distance: float,
+    trail_profile: Optional[TrailProfile] = None,
+) -> list[float]:
     """Progress the taper phase.
 
     Shorter races taper faster; marathon tapers more gradually. Trail tapers
     more aggressively than half (eccentric damage needs extra recovery).
     The curve is independent of high_water — it scales straight from peak.
     """
-    taper_weeks = phases['taper']
+    taper_weeks = phases["taper"]
     curve = _get_taper_curve(taper_weeks, target_distance, trail_profile=trail_profile)
     return [
         round(peak_km * curve[min(week, len(curve) - 1)], 1)
@@ -309,10 +344,15 @@ def _trail_run_ceilings(profile: TrailProfile) -> tuple[float, float]:
     return run_ceiling, q_cap
 
 
-def calculate_weekly_progression(current_km: float, target_distance: float, weeks: int,
-                                 max_runs: int = 4, vdot: Optional[float] = None,
-                                 profile: Optional[dict] = None,
-                                 trail_profile: Optional[TrailProfile] = None) -> List[float]:
+def calculate_weekly_progression(
+    current_km: float,
+    target_distance: float,
+    weeks: int,
+    max_runs: int = 4,
+    vdot: Optional[float] = None,
+    profile: Optional[dict] = None,
+    trail_profile: Optional[TrailProfile] = None,
+) -> List[float]:
     """
     Calculate weekly mileage with phase-aware progression and 10% rule enforcement.
 
@@ -337,8 +377,12 @@ def calculate_weekly_progression(current_km: float, target_distance: float, week
     """
     phases = calculate_phases(weeks, target_distance, trail_profile=trail_profile)
     peak_km = get_peak_mileage(
-        target_distance, current_km, weeks,
-        vdot=vdot, profile=profile, trail_profile=trail_profile,
+        target_distance,
+        current_km,
+        weeks,
+        vdot=vdot,
+        profile=profile,
+        trail_profile=trail_profile,
     )
 
     # Cap peak at what can physically be distributed across max_runs
@@ -368,7 +412,7 @@ def calculate_weekly_progression(current_km: float, target_distance: float, week
     if current_km >= peak_km:
         high_water = peak_km
         phase_start_week = 1
-        for week_offset in range(weeks - phases['taper']):
+        for week_offset in range(weeks - phases["taper"]):
             week_number = phase_start_week + week_offset
             phase = get_phase(week_number, phases)
             if is_recovery_week(week_number, phase, phases):
@@ -379,28 +423,42 @@ def calculate_weekly_progression(current_km: float, target_distance: float, week
         high_water = current_km
 
         base_weeks, high_water = _progress_ramp_phase(
-            'base', phases['base'], phase_start_week=1,
-            phase_start_km=current_km, phase_end_km=base_end_target,
-            phases=phases, high_water=high_water,
+            "base",
+            phases["base"],
+            phase_start_week=1,
+            phase_start_km=current_km,
+            phase_end_km=base_end_target,
+            phases=phases,
+            high_water=high_water,
             effective_cap=effective_cap,
         )
         weekly_progression.extend(base_weeks)
 
         build_start = max(high_water, base_end_target)
         build_weeks, high_water = _progress_ramp_phase(
-            'build', phases['build'], phase_start_week=phases['base'] + 1,
-            phase_start_km=build_start, phase_end_km=peak_km,
-            phases=phases, high_water=high_water,
+            "build",
+            phases["build"],
+            phase_start_week=phases["base"] + 1,
+            phase_start_km=build_start,
+            phase_end_km=peak_km,
+            phases=phases,
+            high_water=high_water,
             effective_cap=effective_cap,
         )
         weekly_progression.extend(build_weeks)
 
-        peak_weeks, high_water = _progress_peak_phase(phases, peak_km, high_water,
-                                                      effective_cap=effective_cap)
+        peak_weeks, high_water = _progress_peak_phase(
+            phases, peak_km, high_water, effective_cap=effective_cap
+        )
         weekly_progression.extend(peak_weeks)
 
-    weekly_progression.extend(_progress_taper_phase(
-        phases, peak_km, target_distance, trail_profile=trail_profile,
-    ))
+    weekly_progression.extend(
+        _progress_taper_phase(
+            phases,
+            peak_km,
+            target_distance,
+            trail_profile=trail_profile,
+        )
+    )
 
     return weekly_progression

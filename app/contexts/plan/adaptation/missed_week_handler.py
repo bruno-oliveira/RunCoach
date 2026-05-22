@@ -6,11 +6,12 @@ from typing import Any, Dict, List
 
 from sqlalchemy.orm import Session
 
-from app.models import RunLog, TrainingPlan
-from app.core.training import workout_steps as _steps_mod
 from app.contexts.plan.plan_date_utils import compute_current_week
-from app.utils import persist_json, to_date as _to_date
 from app.contexts.plan.repositories import SQLAlchemyPlanRepository
+from app.core.training import workout_steps as _steps_mod
+from app.models import RunLog, TrainingPlan
+from app.utils import persist_json
+from app.utils import to_date as _to_date
 
 from ._helpers import today_date
 from .safety import enforce_future_growth_cap, enforce_week_structure
@@ -87,14 +88,17 @@ def recalibrate_missed_week(
     phase = pd_week.get(ease_in_week, {}).get("phase", "build")
     ease_factor = _PHASE_EASE_IN.get(phase, 0.70)
 
-    ease_workouts = workouts_by_week.get(
-        weekly_plans[ease_in_week].id, []
-    )
+    ease_workouts = workouts_by_week.get(weekly_plans[ease_in_week].id, [])
     for workout in ease_workouts:
         if not workout.distance_km or workout.workout_type in ("rest", "recovery"):
             continue
         if workout.key_workout_id or workout.workout_type in (
-            "tempo", "interval", "hill", "vo2max", "race_pace", "fartlek",
+            "tempo",
+            "interval",
+            "hill",
+            "vo2max",
+            "race_pace",
+            "fartlek",
         ):
             continue
         old_distance = workout.distance_km
@@ -104,7 +108,8 @@ def recalibrate_missed_week(
             pd_wo["distance"] = workout.distance_km
             if pd_wo.get("steps") and old_distance and old_distance > 0:
                 pd_wo["steps"] = _steps_mod.scale_steps(
-                    pd_wo["steps"], workout.distance_km / old_distance,
+                    pd_wo["steps"],
+                    workout.distance_km / old_distance,
                 )
 
     phase = pd_week.get(ease_in_week, {}).get("phase", "build")
@@ -133,7 +138,12 @@ def recalibrate_missed_week(
             source_dists = {w.day_of_week: w.distance_km for w in source_workouts}
             for wo in target_workouts:
                 if wo.key_workout_id or wo.workout_type in (
-                    "tempo", "interval", "hill", "vo2max", "race_pace", "fartlek",
+                    "tempo",
+                    "interval",
+                    "hill",
+                    "vo2max",
+                    "race_pace",
+                    "fartlek",
                 ):
                     continue
                 if wo.day_of_week in source_dists and source_dists[wo.day_of_week]:
@@ -144,9 +154,12 @@ def recalibrate_missed_week(
                         pd_wo["distance"] = wo.distance_km
                         if pd_wo.get("steps") and old_distance > 0:
                             pd_wo["steps"] = _steps_mod.scale_steps(
-                                pd_wo["steps"], wo.distance_km / old_distance,
+                                pd_wo["steps"],
+                                wo.distance_km / old_distance,
                             )
-            wk_total = round(sum(w.distance_km for w in target_workouts if w.distance_km), 1)
+            wk_total = round(
+                sum(w.distance_km for w in target_workouts if w.distance_km), 1
+            )
             if target_wk in weekly_plans:
                 weekly_plans[target_wk].total_km = wk_total
             if target_wk in pd_week:
@@ -176,11 +189,12 @@ def recalibrate_missed_week(
     training_plan.last_recalibrated_at = now
 
     reason = (
-        f"Plan recalibrated for a missed week: next week eased to {int(ease_factor*100)}% "
+        f"Plan recalibrated for a missed week: next week eased to {int(ease_factor * 100)}% "
         f"({phase} phase), remaining weeks shifted to preserve race date."
     )
 
     from .recalibrator import _record_recalibration_event
+
     _record_recalibration_event(training_plan, "missed_week", len(future_weeks), reason)
     db.commit()
 

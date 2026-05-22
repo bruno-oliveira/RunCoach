@@ -1,9 +1,7 @@
 """Tests for heart rate zone calculator."""
 
-import pytest
-
-from app.core.training.hr_zone_calculator import HRZoneCalculator, ZONE_DEFINITIONS
 from app.contexts.runner.fitness.hr_zone_service import get_user_max_hr
+from app.core.training.hr_zone_calculator import HRZoneCalculator
 
 
 class TestCalculateZones:
@@ -87,10 +85,13 @@ class TestMaxHREstimation:
         class FakeDB:
             def query(self, *a):
                 return self
+
             def filter(self, *a):
                 return self
+
             def order_by(self, *a):
                 return self
+
             def first(self):
                 return None
 
@@ -102,10 +103,13 @@ class TestMaxHREstimation:
         class FakeDB:
             def query(self, *a):
                 return self
+
             def filter(self, *a):
                 return self
+
             def order_by(self, *a):
                 return self
+
             def first(self):
                 return None
 

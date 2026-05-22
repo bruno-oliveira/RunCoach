@@ -6,13 +6,15 @@ long, tempo, interval, hill) with appropriate descriptions and pace zones.
 
 from typing import Any, Dict, List, Optional
 
+from app.core.coaching.training_tips import get_tips_for_week
 from app.core.training import workout_steps
 from app.core.training.strength_plan import (
     generate_strength_session as _build_strength_session,
+)
+from app.core.training.strength_plan import (
     get_phase_focus_rotation,
 )
 from app.core.training.vdot_calculator import VDOTCalculator
-from app.core.coaching.training_tips import get_tips_for_week
 
 
 def generate_rest_day(day: int) -> Dict[str, Any]:
@@ -22,35 +24,35 @@ def generate_rest_day(day: int) -> Dict[str, Any]:
     Note: Swimming/cross-training only on recovery days, not regular rest days.
     """
     rest_descriptions = [
-        'Complete rest day for muscle repair and recovery',
-        'Light stretching and mobility work (15-20 minutes)',
-        'Active recovery with gentle walking (20-30 minutes)',
-        'Rest day with foam rolling focus (15-20 minutes)'
+        "Complete rest day for muscle repair and recovery",
+        "Light stretching and mobility work (15-20 minutes)",
+        "Active recovery with gentle walking (20-30 minutes)",
+        "Rest day with foam rolling focus (15-20 minutes)",
     ]
 
     return {
-        'day': day,
-        'type': 'rest',
-        'distance': 0,
-        'intensity': 'rest',
-        'description': rest_descriptions[day % len(rest_descriptions)]
+        "day": day,
+        "type": "rest",
+        "distance": 0,
+        "intensity": "rest",
+        "description": rest_descriptions[day % len(rest_descriptions)],
     }
 
 
 def generate_recovery_day(day: int, phase: str) -> Dict[str, Any]:
     """Generate active recovery day (swimming or walking)."""
     recovery_descriptions = [
-        'Active recovery: 30-45min swimming OR easy walking',
-        'Active recovery: Light swimming for cardio without impact',
-        'Active recovery: Easy walking to promote blood flow'
+        "Active recovery: 30-45min swimming OR easy walking",
+        "Active recovery: Light swimming for cardio without impact",
+        "Active recovery: Easy walking to promote blood flow",
     ]
 
     return {
-        'day': day,
-        'type': 'recovery',
-        'distance': 0,
-        'intensity': 'very_low',
-        'description': recovery_descriptions[day % len(recovery_descriptions)]
+        "day": day,
+        "type": "recovery",
+        "distance": 0,
+        "intensity": "very_low",
+        "description": recovery_descriptions[day % len(recovery_descriptions)],
     }
 
 
@@ -76,21 +78,24 @@ def generate_strength_session(
         experience_level: beginner / intermediate / advanced
         target_distance: Race distance in km (trail gets stability work)
     """
-    if workout_type != 'easy':
+    if workout_type != "easy":
         return None
 
     # Taper: only one session (the first easy run), reduced volume
-    if phase == 'taper' and session_index > 0:
+    if phase == "taper" and session_index > 0:
         return None
 
-    rotation = get_phase_focus_rotation(phase, target_distance, trail_profile=trail_profile)
+    rotation = get_phase_focus_rotation(
+        phase, target_distance, trail_profile=trail_profile
+    )
     focus = rotation[session_index % len(rotation)]
 
     return _build_strength_session(focus, phase, experience_level, week_number)
 
 
-def generate_long_run(day: int, distance: float, total_km: float,
-                      pace_zones: Optional[Dict] = None) -> Dict[str, Any]:
+def generate_long_run(
+    day: int, distance: float, total_km: float, pace_zones: Optional[Dict] = None
+) -> Dict[str, Any]:
     """Generate long run workout."""
     if pace_zones:
         e_zone = pace_zones["E"]
@@ -98,30 +103,31 @@ def generate_long_run(day: int, distance: float, total_km: float,
         lr_pace = lr_sub["pace_str"] if lr_sub else e_zone["pace_str"]
         m_pace = pace_zones["M"]["pace_str"]
         long_run_notes = [
-            f'Long run at {lr_pace} (long run pace). Focus on endurance and mental toughness.',
-            f'Long run: first {round(distance*0.8, 1)}km at {lr_pace}, final {round(distance*0.2, 1)}km at {m_pace} (M-pace).',
-            f'Long run at {lr_pace} (long run pace). Practice nutrition every 45-60 minutes.',
+            f"Long run at {lr_pace} (long run pace). Focus on endurance and mental toughness.",
+            f"Long run: first {round(distance * 0.8, 1)}km at {lr_pace}, final {round(distance * 0.2, 1)}km at {m_pace} (M-pace).",
+            f"Long run at {lr_pace} (long run pace). Practice nutrition every 45-60 minutes.",
         ]
     else:
         long_run_notes = [
-            f'Long run at conversational pace. Focus on endurance and mental toughness.',
-            f'Long run with race pace finish: first {round(distance*0.8, 1)}km easy, final {round(distance*0.2, 1)}km at goal pace.',
-            f'Long run on varied terrain if possible. Practice nutrition strategy every 45-60 minutes.'
+            "Long run at conversational pace. Focus on endurance and mental toughness.",
+            f"Long run with race pace finish: first {round(distance * 0.8, 1)}km easy, final {round(distance * 0.2, 1)}km at goal pace.",
+            "Long run on varied terrain if possible. Practice nutrition strategy every 45-60 minutes.",
         ]
 
-    variant = 'mp_finish' if (day % 3 == 1) else 'easy'
+    variant = "mp_finish" if (day % 3 == 1) else "easy"
     return {
-        'day': day,
-        'type': 'long',
-        'distance': round(distance, 1),
-        'intensity': 'medium',
-        'description': long_run_notes[day % len(long_run_notes)],
-        'steps': workout_steps.build_long_steps(distance, pace_zones, variant=variant),
+        "day": day,
+        "type": "long",
+        "distance": round(distance, 1),
+        "intensity": "medium",
+        "description": long_run_notes[day % len(long_run_notes)],
+        "steps": workout_steps.build_long_steps(distance, pace_zones, variant=variant),
     }
 
 
-def generate_easy_run(day: int, distance: float, total_km: float,
-                      pace_zones: Optional[Dict] = None) -> Dict[str, Any]:
+def generate_easy_run(
+    day: int, distance: float, total_km: float, pace_zones: Optional[Dict] = None
+) -> Dict[str, Any]:
     """Generate easy run workout."""
     variant_idx = day % 3
     if pace_zones:
@@ -131,15 +137,15 @@ def generate_easy_run(day: int, distance: float, total_km: float,
         easy_pace = easy_sub["pace_str"] if easy_sub else e_zone["pace_str"]
         rec_pace = rec_sub["pace_str"] if rec_sub else e_zone["pace_str"]
         easy_variations = [
-            f'Recovery run at {rec_pace} (recovery pace). Should feel very easy.',
-            f'Easy run at {easy_pace} with strides: 6x100m accelerations at the end.',
-            f'Conversational pace at {easy_pace} (easy pace). Focus on relaxed form.',
+            f"Recovery run at {rec_pace} (recovery pace). Should feel very easy.",
+            f"Easy run at {easy_pace} with strides: 6x100m accelerations at the end.",
+            f"Conversational pace at {easy_pace} (easy pace). Focus on relaxed form.",
         ]
     else:
         easy_variations = [
-            f'Easy recovery run. Should be conversational pace.',
-            f'Easy run with strides: main run easy, finish with 6x100m accelerations.',
-            f'Conversational pace run. Focus on relaxed form and breathing.'
+            "Easy recovery run. Should be conversational pace.",
+            "Easy run with strides: main run easy, finish with 6x100m accelerations.",
+            "Conversational pace run. Focus on relaxed form and breathing.",
         ]
 
     # Strides add 6 × 100 m = 0.6 km of executable mileage. To keep the
@@ -149,21 +155,28 @@ def generate_easy_run(day: int, distance: float, total_km: float,
     # days so easy + strides == budget.
     with_strides = variant_idx == 1
     strides_km = 0.6 if with_strides else 0.0
-    main_km = max(0.5, round(distance - strides_km, 1)) if with_strides else round(distance, 1)
-    steps = workout_steps.build_easy_steps(main_km, pace_zones, with_strides=with_strides)
+    main_km = (
+        max(0.5, round(distance - strides_km, 1))
+        if with_strides
+        else round(distance, 1)
+    )
+    steps = workout_steps.build_easy_steps(
+        main_km, pace_zones, with_strides=with_strides
+    )
     actual_km = round(workout_steps.total_distance_m(steps) / 1000.0, 1)
     return {
-        'day': day,
-        'type': 'easy',
-        'distance': actual_km if actual_km > 0 else round(distance, 1),
-        'intensity': 'low',
-        'description': easy_variations[variant_idx],
-        'steps': steps,
+        "day": day,
+        "type": "easy",
+        "distance": actual_km if actual_km > 0 else round(distance, 1),
+        "intensity": "low",
+        "description": easy_variations[variant_idx],
+        "steps": steps,
     }
 
 
-def generate_tempo_run(day: int, distance: float, total_km: float,
-                       pace_zones: Optional[Dict] = None) -> Dict[str, Any]:
+def generate_tempo_run(
+    day: int, distance: float, total_km: float, pace_zones: Optional[Dict] = None
+) -> Dict[str, Any]:
     """Generate tempo run workout, with specific paces if VDOT is available."""
     warmup = min(2.0, max(0.5, round(distance * 0.25, 1)))
     cooldown = warmup
@@ -172,17 +185,16 @@ def generate_tempo_run(day: int, distance: float, total_km: float,
 
     if pace_zones:
         t_pace = pace_zones["T"]["pace_str"]
-        m_pace = pace_zones["M"]["pace_str"]
         tempo_variations = [
-            f'Tempo run: {warmup:g}km warmup, {main_km:g}km at {t_pace} (T-pace), {cooldown:g}km cooldown.',
-            f'Cruise intervals: 3x{round(main_km/3, 1):g}km at {t_pace} (T-pace) with 3min recovery.',
-            f'Tempo run with surges: {warmup:g}km warmup, {main_km:g}km at {t_pace} (T-pace) with 4x30sec faster surges, {cooldown:g}km cooldown.',
+            f"Tempo run: {warmup:g}km warmup, {main_km:g}km at {t_pace} (T-pace), {cooldown:g}km cooldown.",
+            f"Cruise intervals: 3x{round(main_km / 3, 1):g}km at {t_pace} (T-pace) with 3min recovery.",
+            f"Tempo run with surges: {warmup:g}km warmup, {main_km:g}km at {t_pace} (T-pace) with 4x30sec faster surges, {cooldown:g}km cooldown.",
         ]
     else:
         tempo_variations = [
-            f'Tempo run: {warmup:g}km warmup, {main_km:g}km at threshold pace, {cooldown:g}km cooldown.',
-            f'Cruise intervals: 3x{round(main_km/3, 1):g}km at tempo pace with 3min recovery.',
-            f'Tempo run with surges: {warmup:g}km warmup, {main_km:g}km at threshold effort with 4x30sec faster surges, {cooldown:g}km cooldown.',
+            f"Tempo run: {warmup:g}km warmup, {main_km:g}km at threshold pace, {cooldown:g}km cooldown.",
+            f"Cruise intervals: 3x{round(main_km / 3, 1):g}km at tempo pace with 3min recovery.",
+            f"Tempo run with surges: {warmup:g}km warmup, {main_km:g}km at threshold effort with 4x30sec faster surges, {cooldown:g}km cooldown.",
         ]
 
     description = VDOTCalculator.inject_paces_into_description(
@@ -190,17 +202,20 @@ def generate_tempo_run(day: int, distance: float, total_km: float,
     )
 
     return {
-        'day': day,
-        'type': 'tempo',
-        'distance': round(distance, 1),
-        'intensity': 'medium',
-        'description': description,
-        'steps': workout_steps.build_tempo_steps(distance, pace_zones, variant=variant_idx),
+        "day": day,
+        "type": "tempo",
+        "distance": round(distance, 1),
+        "intensity": "medium",
+        "description": description,
+        "steps": workout_steps.build_tempo_steps(
+            distance, pace_zones, variant=variant_idx
+        ),
     }
 
 
-def generate_interval_run(day: int, distance: float, total_km: float,
-                          pace_zones: Optional[Dict] = None) -> Dict[str, Any]:
+def generate_interval_run(
+    day: int, distance: float, total_km: float, pace_zones: Optional[Dict] = None
+) -> Dict[str, Any]:
     """Generate interval run workout.
 
     Guardrail: 1000m+ intervals are gated behind 40km/week base.
@@ -229,19 +244,19 @@ def generate_interval_run(day: int, distance: float, total_km: float,
         reps_200 = 0
         if i_pace:
             interval_workouts = [
-                f'VO\u2082max intervals: {reps_400}x400m at {i_pace} (I-pace) with 400m recovery jog.',
-                f'Pyramid: 400m-800m-1200m-800m-400m at {i_pace} (I-pace) with equal recovery.',
-                f'Hill repeats: 8x45sec at {t_pace} (T-pace) effort with jog-down recovery.',
-                f'Yasso 800s: {reps_800}x800m at {m_pace} (M-pace).',
-                f'VO\u2082max intervals: {reps_1000}x1000m at {i_pace} (I-pace) with 400m recovery jog.',
+                f"VO\u2082max intervals: {reps_400}x400m at {i_pace} (I-pace) with 400m recovery jog.",
+                f"Pyramid: 400m-800m-1200m-800m-400m at {i_pace} (I-pace) with equal recovery.",
+                f"Hill repeats: 8x45sec at {t_pace} (T-pace) effort with jog-down recovery.",
+                f"Yasso 800s: {reps_800}x800m at {m_pace} (M-pace).",
+                f"VO\u2082max intervals: {reps_1000}x1000m at {i_pace} (I-pace) with 400m recovery jog.",
             ]
         else:
             interval_workouts = [
-                f'VO\u2082max intervals: {reps_400}x400m at 5K pace with 400m recovery jog.',
-                f'Pyramid intervals: 400m-800m-1200m-800m-400m with equal recovery.',
-                f'Hill repeats: 8x45sec at threshold effort with jog-down recovery.',
-                f'Yasso 800s: {reps_800}x800m at marathon goal pace.',
-                f'VO\u2082max intervals: {reps_1000}x1000m at 5K pace with 400m recovery jog.',
+                f"VO\u2082max intervals: {reps_400}x400m at 5K pace with 400m recovery jog.",
+                "Pyramid intervals: 400m-800m-1200m-800m-400m with equal recovery.",
+                "Hill repeats: 8x45sec at threshold effort with jog-down recovery.",
+                f"Yasso 800s: {reps_800}x800m at marathon goal pace.",
+                f"VO\u2082max intervals: {reps_1000}x1000m at 5K pace with 400m recovery jog.",
             ]
     else:
         reps_400 = max(4, round(work_km / 0.8))
@@ -250,17 +265,17 @@ def generate_interval_run(day: int, distance: float, total_km: float,
         reps_1000 = 0
         if i_pace:
             interval_workouts = [
-                f'Speed intervals: {reps_400}x400m at {i_pace} (I-pace) with 400m recovery jog.',
-                f'Cruise intervals: {reps_800}x800m at {t_pace} (T-pace) with 90sec rest.',
-                f'Speed work: {reps_200}x200m at {r_pace} (R-pace) with 200m recovery jog.',
-                f'Hill repeats: 8x30sec at hard effort with walk-down recovery.',
+                f"Speed intervals: {reps_400}x400m at {i_pace} (I-pace) with 400m recovery jog.",
+                f"Cruise intervals: {reps_800}x800m at {t_pace} (T-pace) with 90sec rest.",
+                f"Speed work: {reps_200}x200m at {r_pace} (R-pace) with 200m recovery jog.",
+                "Hill repeats: 8x30sec at hard effort with walk-down recovery.",
             ]
         else:
             interval_workouts = [
-                f'Speed intervals: {reps_400}x400m at 5K pace with 400m recovery jog.',
-                f'Cruise intervals: {reps_800}x800m at 10K pace with 90sec rest.',
-                f'Speed work: {reps_200}x200m at fast-but-controlled effort with 200m jog.',
-                f'Hill repeats: 8x30sec at hard effort with walk-down recovery.',
+                f"Speed intervals: {reps_400}x400m at 5K pace with 400m recovery jog.",
+                f"Cruise intervals: {reps_800}x800m at 10K pace with 90sec rest.",
+                f"Speed work: {reps_200}x200m at fast-but-controlled effort with 200m jog.",
+                "Hill repeats: 8x30sec at hard effort with walk-down recovery.",
             ]
 
     variant_idx = day % len(interval_workouts)
@@ -269,18 +284,23 @@ def generate_interval_run(day: int, distance: float, total_km: float,
     )
 
     steps = workout_steps.build_interval_steps(
-        distance, total_km, pace_zones, variant=variant_idx,
-        reps_400=reps_400, reps_800=reps_800,
-        reps_1000=reps_1000, reps_200=reps_200,
+        distance,
+        total_km,
+        pace_zones,
+        variant=variant_idx,
+        reps_400=reps_400,
+        reps_800=reps_800,
+        reps_1000=reps_1000,
+        reps_200=reps_200,
     )
     actual_km = round(workout_steps._compute_distance_from_steps(steps), 1)
     return {
-        'day': day,
-        'type': 'interval',
-        'distance': actual_km if actual_km > 0 else round(distance, 1),
-        'intensity': 'high',
-        'description': description,
-        'steps': steps,
+        "day": day,
+        "type": "interval",
+        "distance": actual_km if actual_km > 0 else round(distance, 1),
+        "intensity": "high",
+        "description": description,
+        "steps": steps,
     }
 
 
@@ -293,19 +313,21 @@ def generate_hill_workout(day: int, distance: float = 0) -> Dict[str, Any]:
     the workout card stay in lockstep.
     """
     hill_workouts = [
-        'Hill repeats: 10x30sec steep hill repeats with walk down recovery.',
-        'Long hill climbs: 5x2min moderate grade hills at threshold effort.',
-        'Hill bounding: 8x20sec explosive uphill bounds with full recovery.'
+        "Hill repeats: 10x30sec steep hill repeats with walk down recovery.",
+        "Long hill climbs: 5x2min moderate grade hills at threshold effort.",
+        "Hill bounding: 8x20sec explosive uphill bounds with full recovery.",
     ]
     steps = workout_steps.build_hill_steps(distance, None)
     actual_km = round(workout_steps._compute_distance_from_steps(steps), 1)
     return {
-        'day': day,
-        'type': 'hill',
-        'distance': actual_km if actual_km > 0 else (round(distance, 1) if distance > 0 else 0),
-        'intensity': 'high',
-        'description': hill_workouts[day % len(hill_workouts)],
-        'steps': steps,
+        "day": day,
+        "type": "hill",
+        "distance": actual_km
+        if actual_km > 0
+        else (round(distance, 1) if distance > 0 else 0),
+        "intensity": "high",
+        "description": hill_workouts[day % len(hill_workouts)],
+        "steps": steps,
     }
 
 

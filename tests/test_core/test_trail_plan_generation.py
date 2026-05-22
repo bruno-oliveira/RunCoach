@@ -17,8 +17,8 @@ from app.core.training.long_run_calculator import (
     calculate_long_run_distance,
     get_long_run_ratio_range,
 )
-from app.core.training.workout_steps import _compute_distance_from_steps
 from app.core.training.trail_profile import classify_trail
+from app.core.training.workout_steps import _compute_distance_from_steps
 
 
 def _build_plan(distance, elevation, weeks, runs, current_km, terrain=None):
@@ -36,7 +36,9 @@ def _build_plan(distance, elevation, weeks, runs, current_km, terrain=None):
 class TestPhaseDistribution:
     """PHASE_DISTRIBUTIONS keys are derived from elevation class."""
 
-    @pytest.mark.parametrize("elevation_class", ["flat", "rolling", "hilly", "mountainous"])
+    @pytest.mark.parametrize(
+        "elevation_class", ["flat", "rolling", "hilly", "mountainous"]
+    )
     def test_all_trail_buckets_present_per_phase(self, elevation_class):
         key = f"Trail{elevation_class.capitalize()}"
         for phase in ("base", "build", "peak", "taper"):
@@ -44,34 +46,42 @@ class TestPhaseDistribution:
 
     def test_legacy_aliases_resolve(self):
         # 'Trail' and 'FlatTrail' are kept as aliases for unmigrated callsites.
-        assert (phase_calculator.PHASE_DISTRIBUTIONS['build']['Trail'] ==
-                phase_calculator.PHASE_DISTRIBUTIONS['build']['TrailHilly'])
-        assert (phase_calculator.PHASE_DISTRIBUTIONS['build']['FlatTrail'] ==
-                phase_calculator.PHASE_DISTRIBUTIONS['build']['TrailFlat'])
+        assert (
+            phase_calculator.PHASE_DISTRIBUTIONS["build"]["Trail"]
+            == phase_calculator.PHASE_DISTRIBUTIONS["build"]["TrailHilly"]
+        )
+        assert (
+            phase_calculator.PHASE_DISTRIBUTIONS["build"]["FlatTrail"]
+            == phase_calculator.PHASE_DISTRIBUTIONS["build"]["TrailFlat"]
+        )
 
     def test_flat_trail_replaces_hills_with_tempo(self):
-        flat = phase_calculator.PHASE_DISTRIBUTIONS['build']['TrailFlat']
-        hilly = phase_calculator.PHASE_DISTRIBUTIONS['build']['TrailHilly']
+        flat = phase_calculator.PHASE_DISTRIBUTIONS["build"]["TrailFlat"]
+        hilly = phase_calculator.PHASE_DISTRIBUTIONS["build"]["TrailHilly"]
         # Flat: zero hill stimulus, more tempo than hilly baseline.
-        assert flat['hill'] == 0.0
-        assert flat['tempo'] > hilly['tempo']
-        assert flat['interval'] >= hilly['interval']
+        assert flat["hill"] == 0.0
+        assert flat["tempo"] > hilly["tempo"]
+        assert flat["interval"] >= hilly["interval"]
 
     def test_mountainous_intensifies_hill_work(self):
-        mountain = phase_calculator.PHASE_DISTRIBUTIONS['build']['TrailMountainous']
-        hilly = phase_calculator.PHASE_DISTRIBUTIONS['build']['TrailHilly']
-        assert mountain['hill'] > hilly['hill']
+        mountain = phase_calculator.PHASE_DISTRIBUTIONS["build"]["TrailMountainous"]
+        hilly = phase_calculator.PHASE_DISTRIBUTIONS["build"]["TrailHilly"]
+        assert mountain["hill"] > hilly["hill"]
         # Track-style intervals are partly displaced by hill repeats.
-        assert mountain['interval'] <= hilly['interval']
+        assert mountain["interval"] <= hilly["interval"]
 
     def test_race_profile_drives_distribution_even_with_flat_training(self):
         profile = classify_trail(50.0, 2500.0)  # mountainous race profile
         key = phase_calculator.get_distance_category(
-            50.0, terrain="flat", trail_profile=profile,
+            50.0,
+            terrain="flat",
+            trail_profile=profile,
         )
         assert key == "TrailMountainous"
 
-    @pytest.mark.parametrize("elevation_class", ["flat", "rolling", "hilly", "mountainous"])
+    @pytest.mark.parametrize(
+        "elevation_class", ["flat", "rolling", "hilly", "mountainous"]
+    )
     def test_distribution_buckets_sum_to_one(self, elevation_class):
         key = f"Trail{elevation_class.capitalize()}"
         for phase in ("base", "build", "peak", "taper"):
@@ -86,22 +96,22 @@ class TestPhaseLength:
     def test_short_bracket_2_week_taper(self):
         profile = classify_trail(15.0, 500.0)
         phases = phase_calculator.calculate_phases(12, 15.0, trail_profile=profile)
-        assert phases['taper'] == 2
+        assert phases["taper"] == 2
 
     def test_standard_bracket_2_week_taper(self):
         profile = classify_trail(30.0, 1000.0)
         phases = phase_calculator.calculate_phases(14, 30.0, trail_profile=profile)
-        assert phases['taper'] == 2
+        assert phases["taper"] == 2
 
     def test_ultra_bracket_3_week_taper(self):
         profile = classify_trail(50.0, 2000.0)
         phases = phase_calculator.calculate_phases(20, 50.0, trail_profile=profile)
-        assert phases['taper'] == 3
+        assert phases["taper"] == 3
 
     def test_long_ultra_bracket_3_week_taper(self):
         profile = classify_trail(100.0, 4000.0)
         phases = phase_calculator.calculate_phases(28, 100.0, trail_profile=profile)
-        assert phases['taper'] == 3
+        assert phases["taper"] == 3
 
 
 class TestTaperCurve:
@@ -109,7 +119,9 @@ class TestTaperCurve:
 
     def test_ultra_3_week_taper_more_aggressive_than_marathon(self):
         ultra_profile = classify_trail(80.0, 3000.0)
-        ultra_curve = mileage_progression._get_taper_curve(3, 80.0, trail_profile=ultra_profile)
+        ultra_curve = mileage_progression._get_taper_curve(
+            3, 80.0, trail_profile=ultra_profile
+        )
         marathon_curve = mileage_progression._get_taper_curve(3, 42.2)
         # First and last weeks: ultra trims further from peak than marathon.
         assert ultra_curve[0] <= marathon_curve[0]
@@ -122,29 +134,39 @@ class TestPeakMileage:
     def test_peak_scales_continuously_with_distance(self):
         # Larger distance → larger peak ceiling, all else equal.
         small = mileage_progression.get_peak_mileage(
-            30.0, current_km=20, weeks=12,
+            30.0,
+            current_km=20,
+            weeks=12,
             trail_profile=classify_trail(30.0, 500.0),
         )
         big = mileage_progression.get_peak_mileage(
-            80.0, current_km=20, weeks=20,
+            80.0,
+            current_km=20,
+            weeks=20,
             trail_profile=classify_trail(80.0, 500.0),
         )
         assert big > small
 
     def test_peak_scales_with_elevation(self):
         flat = mileage_progression.get_peak_mileage(
-            50.0, current_km=30, weeks=16,
+            50.0,
+            current_km=30,
+            weeks=16,
             trail_profile=classify_trail(50.0, 200.0),
         )
         mountain = mileage_progression.get_peak_mileage(
-            50.0, current_km=30, weeks=16,
+            50.0,
+            current_km=30,
+            weeks=16,
             trail_profile=classify_trail(50.0, 3000.0),
         )
         assert mountain >= flat  # mountain ceiling is higher
 
     def test_peak_clamps_at_140km(self):
         peak = mileage_progression.get_peak_mileage(
-            163.0, current_km=80, weeks=32,
+            163.0,
+            current_km=80,
+            weeks=32,
             trail_profile=classify_trail(163.0, 8000.0),
         )
         assert peak <= 140.0
@@ -155,10 +177,16 @@ class TestLongRunRatios:
 
     def test_ultra_long_run_ratio_higher_than_standard(self):
         std_lo, std_hi = get_long_run_ratio_range(
-            'build', 30.0, 14, trail_profile=classify_trail(30.0, 1000.0),
+            "build",
+            30.0,
+            14,
+            trail_profile=classify_trail(30.0, 1000.0),
         )
         ultra_lo, ultra_hi = get_long_run_ratio_range(
-            'build', 50.0, 20, trail_profile=classify_trail(50.0, 1500.0),
+            "build",
+            50.0,
+            20,
+            trail_profile=classify_trail(50.0, 1500.0),
         )
         assert ultra_hi >= std_hi
 
@@ -168,12 +196,16 @@ class TestLongRunCap:
 
     def test_long_ultra_cap_does_not_blow_past_35km(self):
         profile = classify_trail(163.0, 6000.0)
-        cap = _get_long_run_cap(163.0, 'advanced', weekly_km=120.0, trail_profile=profile)
+        cap = _get_long_run_cap(
+            163.0, "advanced", weekly_km=120.0, trail_profile=profile
+        )
         assert cap <= 35.0
 
     def test_short_bracket_cap_is_modest(self):
         profile = classify_trail(15.0, 500.0)
-        cap = _get_long_run_cap(15.0, 'intermediate', weekly_km=30.0, trail_profile=profile)
+        cap = _get_long_run_cap(
+            15.0, "intermediate", weekly_km=30.0, trail_profile=profile
+        )
         assert cap <= 18.0
 
 
@@ -185,84 +217,99 @@ class TestEndToEnd:
         assert len(plan) == 16
         # Build/peak weeks contain at least one tempo session
         build_peak_workouts = [
-            w for week in plan
-            if week['phase'] in ('build', 'peak')
-            for w in week['daily_workouts']
+            w
+            for week in plan
+            if week["phase"] in ("build", "peak")
+            for w in week["daily_workouts"]
         ]
-        assert any(w['type'] == 'tempo' for w in build_peak_workouts), \
+        assert any(w["type"] == "tempo" for w in build_peak_workouts), (
             "Flat 50k build/peak must include tempo sessions"
+        )
         # And no hill repeats anywhere
-        all_workouts = [w for week in plan for w in week['daily_workouts']]
-        assert not any(w['type'] == 'hill' for w in all_workouts), \
+        all_workouts = [w for week in plan for w in week["daily_workouts"]]
+        assert not any(w["type"] == "hill" for w in all_workouts), (
             "Flat trail must not prescribe hill repeats"
+        )
 
     def test_50km_flat_plan_includes_interval_stimulus(self):
         plan = _build_plan(50.0, 200.0, 16, 5, current_km=40.0)
         build_peak_workouts = [
-            w for week in plan
-            if week['phase'] in ('build', 'peak')
-            for w in week['daily_workouts']
+            w
+            for week in plan
+            if week["phase"] in ("build", "peak")
+            for w in week["daily_workouts"]
         ]
-        assert any(w['type'] == 'interval' for w in build_peak_workouts), \
+        assert any(w["type"] == "interval" for w in build_peak_workouts), (
             "Flat 50k build/peak should include interval stimulus"
+        )
 
     def test_80km_mountain_plan_includes_hills(self):
         plan = _build_plan(80.0, 4500.0, 24, 6, current_km=50.0)
-        all_workouts = [w for week in plan for w in week['daily_workouts']]
-        assert any(w['type'] == 'hill' for w in all_workouts), \
+        all_workouts = [w for week in plan for w in week["daily_workouts"]]
+        assert any(w["type"] == "hill" for w in all_workouts), (
             "Mountainous plan must include hill repeats"
+        )
 
     def test_mountain_race_with_flat_training_substitutes_hills(self):
         plan = _build_plan(50.0, 2500.0, 16, 5, current_km=35.0, terrain="flat")
         build_peak = [
-            w for week in plan
-            if week['phase'] in ('build', 'peak')
-            for w in week['daily_workouts']
+            w
+            for week in plan
+            if week["phase"] in ("build", "peak")
+            for w in week["daily_workouts"]
         ]
-        assert not any(w['type'] == 'hill' for w in build_peak), \
+        assert not any(w["type"] == "hill" for w in build_peak), (
             "Flat-access plans should substitute hill sessions"
-        assert any(w['type'] == 'tempo' for w in build_peak)
-        assert any(w['type'] == 'interval' for w in build_peak)
+        )
+        assert any(w["type"] == "tempo" for w in build_peak)
+        assert any(w["type"] == "interval" for w in build_peak)
 
     def test_mountain_race_with_flat_training_has_vertical_sim_targets(self):
         plan = _build_plan(50.0, 2500.0, 16, 5, current_km=35.0, terrain="flat")
-        build_week = next(w for w in plan if w['phase'] == 'build' and not w['is_recovery'])
-        targets = build_week.get('vertical_simulation')
-        assert targets and targets.get('enabled')
-        assert targets['simulated_uphill_m'] > 0
-        assert targets['uphill_effort_min'] >= 15
+        build_week = next(
+            w for w in plan if w["phase"] == "build" and not w["is_recovery"]
+        )
+        targets = build_week.get("vertical_simulation")
+        assert targets and targets.get("enabled")
+        assert targets["simulated_uphill_m"] > 0
+        assert targets["uphill_effort_min"] >= 15
 
     def test_non_flat_training_does_not_emit_vertical_sim_targets(self):
         plan = _build_plan(50.0, 2500.0, 16, 5, current_km=35.0, terrain="hilly")
-        assert all(week.get('vertical_simulation') is None for week in plan)
+        assert all(week.get("vertical_simulation") is None for week in plan)
 
     def test_100mi_plan_long_run_capped(self):
         plan = _build_plan(163.0, 6000.0, 32, 6, current_km=80.0)
-        long_runs = [w for week in plan for w in week['daily_workouts'] if w['type'] == 'long']
-        max_long = max(w['distance'] for w in long_runs)
+        long_runs = [
+            w for week in plan for w in week["daily_workouts"] if w["type"] == "long"
+        ]
+        max_long = max(w["distance"] for w in long_runs)
         # Long-run cap should keep individual sessions under ~35 km.
         assert max_long <= 36.0, f"Single long run was {max_long} km — cap blown"
 
     def test_ultra_plan_has_3_week_taper(self):
         plan = _build_plan(50.0, 1500.0, 16, 5, current_km=30.0)
-        taper_weeks = [w for w in plan if w['phase'] == 'taper']
+        taper_weeks = [w for w in plan if w["phase"] == "taper"]
         assert len(taper_weeks) == 3
 
     def test_flat_30k_long_run_ratio_capped_for_four_plus_runs(self):
         plan = _build_plan(30.0, 100.0, 14, 5, current_km=25.0)
         for week in plan:
             runs = [
-                w for w in week['daily_workouts']
-                if w['type'] not in ('rest', 'recovery') and w.get('distance', 0) > 0
+                w
+                for w in week["daily_workouts"]
+                if w["type"] not in ("rest", "recovery") and w.get("distance", 0) > 0
             ]
             if len(runs) < 4:
                 continue
-            total = sum(w['distance'] for w in runs)
+            total = sum(w["distance"] for w in runs)
             if total <= 0:
                 continue
-            long_run = max((w['distance'] for w in runs if w['type'] == 'long'), default=0)
+            long_run = max(
+                (w["distance"] for w in runs if w["type"] == "long"), default=0
+            )
             ratio = long_run / total
-            if week.get('phase') == 'peak':
+            if week.get("phase") == "peak":
                 assert ratio <= 0.65 + 0.01
             else:
                 assert ratio <= 0.55 + 0.01
@@ -270,12 +317,15 @@ class TestEndToEnd:
     def test_legacy_30km_plan_unchanged_structure(self):
         # No is_trail / no profile passed, but target=30.0 → back-compat path.
         plan = TrainingPlanGenerator().generate_plan(
-            current_km=25.0, target_distance=30.0, weeks=12, max_runs_per_week=4,
+            current_km=25.0,
+            target_distance=30.0,
+            weeks=12,
+            max_runs_per_week=4,
         )
         assert len(plan) == 12
         # Should have hill repeats (legacy default elevation=1000m → hilly bucket).
-        all_workouts = [w for week in plan for w in week['daily_workouts']]
-        assert any(w['type'] == 'hill' for w in all_workouts)
+        all_workouts = [w for week in plan for w in week["daily_workouts"]]
+        assert any(w["type"] == "hill" for w in all_workouts)
 
 
 class TestPeakLongRunRaceFraction:
@@ -290,8 +340,13 @@ class TestPeakLongRunRaceFraction:
         # Peak phase, mid-progression in a 12-week plan: phases pack peak
         # near the end, and the floor applies regardless of progression.
         peak_lr = calculate_long_run_distance(
-            total_km=35, target_distance=30.0, weeks=12, week_number=10,
-            phase='peak', is_recovery_week=False, experience_level='advanced',
+            total_km=35,
+            target_distance=30.0,
+            weeks=12,
+            week_number=10,
+            phase="peak",
+            is_recovery_week=False,
+            experience_level="advanced",
             trail_profile=profile,
         )
         # Race floor: 30 * 0.70 = 21 km. Weekly cap: 35 * 0.55 = 19.25 km.
@@ -301,8 +356,13 @@ class TestPeakLongRunRaceFraction:
     def test_short_15km_at_25wk_intermediate(self):
         profile = classify_trail(15.0, 400.0)
         peak_lr = calculate_long_run_distance(
-            total_km=25, target_distance=15.0, weeks=10, week_number=8,
-            phase='peak', is_recovery_week=False, experience_level='intermediate',
+            total_km=25,
+            target_distance=15.0,
+            weeks=10,
+            week_number=8,
+            phase="peak",
+            is_recovery_week=False,
+            experience_level="intermediate",
             trail_profile=profile,
         )
         # Race floor: 15 * 0.65 = 9.75. Weekly cap: 25 * 0.55 = 13.75.
@@ -312,8 +372,13 @@ class TestPeakLongRunRaceFraction:
     def test_ultra_50km_at_60wk_advanced(self):
         profile = classify_trail(50.0, 2000.0)
         peak_lr = calculate_long_run_distance(
-            total_km=60, target_distance=50.0, weeks=20, week_number=16,
-            phase='peak', is_recovery_week=False, experience_level='advanced',
+            total_km=60,
+            target_distance=50.0,
+            weeks=20,
+            week_number=16,
+            phase="peak",
+            is_recovery_week=False,
+            experience_level="advanced",
             trail_profile=profile,
         )
         # Race floor: 50 * 0.55 = 27.5. Bracket cap (ultra advanced): 32.
@@ -326,8 +391,13 @@ class TestPeakLongRunRaceFraction:
         # 55 % weekly slice even though the race floor is 21 km.
         profile = classify_trail(30.0, 1000.0)
         peak_lr = calculate_long_run_distance(
-            total_km=25, target_distance=30.0, weeks=12, week_number=10,
-            phase='peak', is_recovery_week=False, experience_level='intermediate',
+            total_km=25,
+            target_distance=30.0,
+            weeks=12,
+            week_number=10,
+            phase="peak",
+            is_recovery_week=False,
+            experience_level="intermediate",
             trail_profile=profile,
         )
         # Weekly safety cap is 25 × 0.55 = 13.75, rounded to 1dp → 13.8.
@@ -336,8 +406,13 @@ class TestPeakLongRunRaceFraction:
     def test_long_ultra_cap_still_binds(self):
         profile = classify_trail(163.0, 6000.0)
         peak_lr = calculate_long_run_distance(
-            total_km=120, target_distance=163.0, weeks=32, week_number=26,
-            phase='peak', is_recovery_week=False, experience_level='advanced',
+            total_km=120,
+            target_distance=163.0,
+            weeks=32,
+            week_number=26,
+            phase="peak",
+            is_recovery_week=False,
+            experience_level="advanced",
             trail_profile=profile,
         )
         # 100-mile prep: bracket cap of 35 must hold even with high volume.
@@ -350,11 +425,11 @@ class TestPeakLongRunRaceFraction:
             target_distance=28.0,
             weeks=18,
             week_number=15,
-            phase='peak',
+            phase="peak",
             is_recovery_week=False,
-            experience_level='intermediate',
+            experience_level="intermediate",
             trail_profile=profile,
-            training_terrain='flat',
+            training_terrain="flat",
         )
         # Flat-training peak floor: 28 * 0.85 = 23.8 km.
         # Weekly cap: 38 * 0.65 = 24.7 km. Standard cap: 25.5 km.
@@ -367,18 +442,19 @@ class TestKeyWorkoutDistanceMatchesSteps:
 
     def _quality_workouts(self, plan):
         return [
-            w for week in plan
-            if week['phase'] in ('build', 'peak')
-            for w in week['daily_workouts']
-            if w['type'] in ('hill', 'interval', 'tempo') and w.get('steps')
+            w
+            for week in plan
+            if week["phase"] in ("build", "peak")
+            for w in week["daily_workouts"]
+            if w["type"] in ("hill", "interval", "tempo") and w.get("steps")
         ]
 
     def test_trail_hilly_30km_quality_distances_reconcile(self):
         plan = _build_plan(30.0, 1200.0, 12, 5, current_km=35.0)
         for w in self._quality_workouts(plan):
-            steps_total = _compute_distance_from_steps(w['steps'])
+            steps_total = _compute_distance_from_steps(w["steps"])
             # Allow rounding to 0.1 km — workout['distance'] is rounded to 1dp.
-            assert abs(w['distance'] - steps_total) <= 0.5, (
+            assert abs(w["distance"] - steps_total) <= 0.5, (
                 f"{w.get('key_workout_name', w['type'])}: "
                 f"displayed {w['distance']} km vs steps sum {steps_total:.2f} km"
             )
@@ -388,14 +464,16 @@ class TestKeyWorkoutDistanceMatchesSteps:
         # + cool-down — the per-id floor enforces ≥ 5 km.
         plan = _build_plan(30.0, 1200.0, 12, 5, current_km=35.0)
         hills = [
-            w for week in plan
-            if week['phase'] in ('build', 'peak')
-            for w in week['daily_workouts']
-            if w['type'] == 'hill' and w.get('key_workout_id') == 'trail_elevation_repeats'
+            w
+            for week in plan
+            if week["phase"] in ("build", "peak")
+            for w in week["daily_workouts"]
+            if w["type"] == "hill"
+            and w.get("key_workout_id") == "trail_elevation_repeats"
         ]
         # If selected, the floor must hold.
         for w in hills:
-            assert w['distance'] >= 4.5, (
+            assert w["distance"] >= 4.5, (
                 f"trail_elevation_repeats was only {w['distance']} km — floor not applied"
             )
 
@@ -405,14 +483,15 @@ class TestKeyWorkoutDistanceMatchesSteps:
         # distance-bearing run step.
         plan = _build_plan(30.0, 1200.0, 14, 5, current_km=35.0)
         tech = [
-            w for week in plan
-            if week['phase'] in ('build', 'peak')
-            for w in week['daily_workouts']
-            if w.get('key_workout_id') == 'trail_technical_terrain'
+            w
+            for week in plan
+            if week["phase"] in ("build", "peak")
+            for w in week["daily_workouts"]
+            if w.get("key_workout_id") == "trail_technical_terrain"
         ]
         for w in tech:
-            run_steps = [s for s in w['steps'] if s['kind'] == 'run']
+            run_steps = [s for s in w["steps"] if s["kind"] == "run"]
             assert run_steps, f"technical-terrain workout has no run step: {w['steps']}"
-            assert any(s.get('distance_m') for s in run_steps), (
+            assert any(s.get("distance_m") for s in run_steps), (
                 f"technical-terrain main block has no distance_m: {run_steps}"
             )

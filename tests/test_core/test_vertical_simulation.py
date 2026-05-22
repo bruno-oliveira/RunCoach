@@ -37,7 +37,9 @@ class TestTreadmillPrescription:
     def test_no_op_when_race_profile_flat(self):
         profile = classify_trail(15.0, 50.0)  # flat trail
         workouts = [_workout("tempo")]
-        attach_treadmill_prescriptions(workouts, _sim(elevation_class="flat"), profile, "flat")
+        attach_treadmill_prescriptions(
+            workouts, _sim(elevation_class="flat"), profile, "flat"
+        )
         assert "treadmill_prescription" not in workouts[0]
 
     def test_no_op_when_simulation_disabled(self):
@@ -70,9 +72,15 @@ class TestTreadmillPrescription:
         mountainous_w = [_workout("interval")]
         attach_treadmill_prescriptions(hilly_w, _sim(), hilly_profile, "flat")
         attach_treadmill_prescriptions(
-            mountainous_w, _sim(elevation_class="mountainous"), mountainous_profile, "flat",
+            mountainous_w,
+            _sim(elevation_class="mountainous"),
+            mountainous_profile,
+            "flat",
         )
-        assert mountainous_w[0]["treadmill_prescription"]["incline_pct"] > hilly_w[0]["treadmill_prescription"]["incline_pct"]
+        assert (
+            mountainous_w[0]["treadmill_prescription"]["incline_pct"]
+            > hilly_w[0]["treadmill_prescription"]["incline_pct"]
+        )
 
     def test_incline_minutes_capped_by_session_duration(self):
         profile = classify_trail(20.0, 1200.0)
@@ -158,7 +166,9 @@ class TestWeeklyVerticalActuals:
                 effort=7,
             ),
         ]
-        result = compute_weekly_vertical_actuals(plan_data, runs, start, training_plan_id="p1")
+        result = compute_weekly_vertical_actuals(
+            plan_data, runs, start, training_plan_id="p1"
+        )
         assert result[1]["uphill_min"] > 0
         assert result[1]["transitions"] >= 2
         assert result[2]["uphill_min"] > 0
@@ -179,6 +189,9 @@ class TestWeeklyVerticalActuals:
             ),
         ]
         result = compute_weekly_vertical_actuals(
-            plan_data, runs, start, training_plan_id="p1",
+            plan_data,
+            runs,
+            start,
+            training_plan_id="p1",
         )
         assert result[1]["uphill_min"] == 0

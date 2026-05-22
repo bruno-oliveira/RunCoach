@@ -11,10 +11,10 @@ import re
 from typing import Any, Dict, List, Optional
 
 from app.core.training.workout_steps import (
-    _step,
-    _pace_str,
-    _warmup,
     _cooldown,
+    _pace_str,
+    _step,
+    _warmup,
     _wucd_m,
 )
 
@@ -49,7 +49,8 @@ def _parse_duration_to_s(value: str, unit: str) -> int:
 
 
 def _try_progression_pattern(
-    structure: str, pace_zones: Optional[Dict],
+    structure: str,
+    pace_zones: Optional[Dict],
     total_distance_km: float = 0,
 ) -> Optional[List[Dict[str, Any]]]:
     """Pattern A: "Nkm: first Xkm easy, last Ykm at ... pace" (progression runs).
@@ -81,16 +82,31 @@ def _try_progression_pattern(
     easy_m = int(round(easy_km * 1000))
     finish_m = int(round(finish_km * 1000))
     return [
-        _step("run", "Easy start", distance_m=easy_m, pace_zone="E",
-              pace_str=_pace_str("E", pace_zones), effort="conversational"),
-        _step("run", "Faster finish", distance_m=finish_m, pace_zone=finish_zone,
-              pace_str=_pace_str(finish_zone, pace_zones), effort="comfortably hard"),
+        _step(
+            "run",
+            "Easy start",
+            distance_m=easy_m,
+            pace_zone="E",
+            pace_str=_pace_str("E", pace_zones),
+            effort="conversational",
+        ),
+        _step(
+            "run",
+            "Faster finish",
+            distance_m=finish_m,
+            pace_zone=finish_zone,
+            pace_str=_pace_str(finish_zone, pace_zones),
+            effort="comfortably hard",
+        ),
     ]
 
 
 def _try_as_progression_pattern(
-    structure: str, pace_zones: Optional[Dict],
-    has_wcd: bool, warmup_steps: List, cd_m: Optional[int] = None,
+    structure: str,
+    pace_zones: Optional[Dict],
+    has_wcd: bool,
+    warmup_steps: List,
+    cd_m: Optional[int] = None,
 ) -> Optional[List[Dict[str, Any]]]:
     """Pattern A2: "Nkm as a progression: ..." (tempo progression runs)."""
     m = re.search(
@@ -104,8 +120,14 @@ def _try_as_progression_pattern(
     zone = _infer_zone(structure) or "T"
     steps = list(warmup_steps)
     steps.append(
-        _step("run", "Tempo progression", distance_m=dist_m, pace_zone=zone,
-              pace_str=_pace_str(zone, pace_zones), effort="build to tempo")
+        _step(
+            "run",
+            "Tempo progression",
+            distance_m=dist_m,
+            pace_zone=zone,
+            pace_str=_pace_str(zone, pace_zones),
+            effort="build to tempo",
+        )
     )
     if has_wcd:
         steps.append(_cooldown(pace_zones, cd_m) if cd_m else _cooldown(pace_zones))
@@ -113,8 +135,12 @@ def _try_as_progression_pattern(
 
 
 def _try_distance_reps_pattern(
-    structure: str, pace_zones: Optional[Dict], workout_type: str,
-    has_wcd: bool, warmup_steps: List, cd_m: Optional[int] = None,
+    structure: str,
+    pace_zones: Optional[Dict],
+    workout_type: str,
+    has_wcd: bool,
+    warmup_steps: List,
+    cd_m: Optional[int] = None,
     total_distance_km: float = 0,
 ) -> Optional[List[Dict[str, Any]]]:
     """Pattern B: "N x Dm/km at ... with Y recovery".
@@ -145,25 +171,43 @@ def _try_distance_reps_pattern(
             rep_m = scaled_rep_m
 
     zone = _infer_zone(m.group(4)) or ("T" if workout_type == "tempo" else "I")
-    rep_label = f"{reps} × {rep_m / 1000:.1f} km" if rep_m >= 1000 else f"{reps} × {rep_m} m"
+    rep_label = (
+        f"{reps} × {rep_m / 1000:.1f} km" if rep_m >= 1000 else f"{reps} × {rep_m} m"
+    )
     steps = list(warmup_steps)
     steps.append(
-        _step("run", rep_label, distance_m=rep_m, repeat=reps, pace_zone=zone,
-              pace_str=_pace_str(zone, pace_zones),
-              effort="hard" if zone in ("I", "R") else "comfortably hard")
+        _step(
+            "run",
+            rep_label,
+            distance_m=rep_m,
+            repeat=reps,
+            pace_zone=zone,
+            pace_str=_pace_str(zone, pace_zones),
+            effort="hard" if zone in ("I", "R") else "comfortably hard",
+        )
     )
     if m.group(5):
         rec_s = _parse_duration_to_s(m.group(5), m.group(6))
-        steps.append(_step("recovery", f"{rec_s} s jog between reps",
-                           duration_s=rec_s, repeat=reps - 1, effort="jog"))
+        steps.append(
+            _step(
+                "recovery",
+                f"{rec_s} s jog between reps",
+                duration_s=rec_s,
+                repeat=reps - 1,
+                effort="jog",
+            )
+        )
     if has_wcd:
         steps.append(_cooldown(pace_zones, cd_m) if cd_m else _cooldown(pace_zones))
     return steps
 
 
 def _try_duration_reps_pattern(
-    structure: str, pace_zones: Optional[Dict],
-    has_wcd: bool, warmup_steps: List, cd_m: Optional[int] = None,
+    structure: str,
+    pace_zones: Optional[Dict],
+    has_wcd: bool,
+    warmup_steps: List,
+    cd_m: Optional[int] = None,
 ) -> Optional[List[Dict[str, Any]]]:
     """Pattern C: "N x Dsec/min uphill/at ..."."""
     m = re.search(
@@ -180,9 +224,15 @@ def _try_duration_reps_pattern(
     cue = desc.split(" ")[0].lower()
     steps = list(warmup_steps)
     steps.append(
-        _step("run", f"{reps} × {dur_s} s {cue}" if cue else f"{reps} × {dur_s} s",
-              duration_s=dur_s, repeat=reps, pace_zone=zone,
-              pace_str=_pace_str(zone, pace_zones), effort="hard")
+        _step(
+            "run",
+            f"{reps} × {dur_s} s {cue}" if cue else f"{reps} × {dur_s} s",
+            duration_s=dur_s,
+            repeat=reps,
+            pace_zone=zone,
+            pace_str=_pace_str(zone, pace_zones),
+            effort="hard",
+        )
     )
     if has_wcd:
         steps.append(_cooldown(pace_zones, cd_m) if cd_m else _cooldown(pace_zones))
@@ -190,8 +240,11 @@ def _try_duration_reps_pattern(
 
 
 def _try_fartlek_pattern(
-    structure: str, pace_zones: Optional[Dict],
-    has_wcd: bool, warmup_steps: List, cd_m: Optional[int] = None,
+    structure: str,
+    pace_zones: Optional[Dict],
+    has_wcd: bool,
+    warmup_steps: List,
+    cd_m: Optional[int] = None,
 ) -> Optional[List[Dict[str, Any]]]:
     """Pattern C2: fartlek "N x (Dmin hard / Dmin easy)"."""
     m = re.search(
@@ -210,9 +263,15 @@ def _try_fartlek_pattern(
     off_label = f"{off_s // 60} min" if off_s >= 60 else f"{off_s} s"
     steps = list(warmup_steps)
     steps.append(
-        _step("run", f"{reps} × {on_label} on / {off_label} off",
-              duration_s=on_s, repeat=reps, pace_zone=zone,
-              pace_str=_pace_str(zone, pace_zones), effort="hard")
+        _step(
+            "run",
+            f"{reps} × {on_label} on / {off_label} off",
+            duration_s=on_s,
+            repeat=reps,
+            pace_zone=zone,
+            pace_str=_pace_str(zone, pace_zones),
+            effort="hard",
+        )
     )
     if has_wcd:
         steps.append(_cooldown(pace_zones, cd_m) if cd_m else _cooldown(pace_zones))
@@ -220,8 +279,12 @@ def _try_fartlek_pattern(
 
 
 def _try_continuous_pattern(
-    structure: str, pace_zones: Optional[Dict], workout_type: str,
-    has_wcd: bool, warmup_steps: List, cd_m: Optional[int] = None,
+    structure: str,
+    pace_zones: Optional[Dict],
+    workout_type: str,
+    has_wcd: bool,
+    warmup_steps: List,
+    cd_m: Optional[int] = None,
 ) -> Optional[List[Dict[str, Any]]]:
     """Pattern D: "Xkm continuous at X pace".
 
@@ -239,14 +302,25 @@ def _try_continuous_pattern(
     zone = _infer_zone(m.group(2)) or ("T" if workout_type == "tempo" else "M")
     if zone == "E":
         return [
-            _step("run", f"{dist_m / 1000:.1f} km continuous", distance_m=dist_m,
-                  pace_zone=zone, pace_str=_pace_str(zone, pace_zones),
-                  effort="conversational"),
+            _step(
+                "run",
+                f"{dist_m / 1000:.1f} km continuous",
+                distance_m=dist_m,
+                pace_zone=zone,
+                pace_str=_pace_str(zone, pace_zones),
+                effort="conversational",
+            ),
         ]
     steps = list(warmup_steps)
     steps.append(
-        _step("run", f"{dist_m / 1000:.1f} km continuous", distance_m=dist_m,
-              pace_zone=zone, pace_str=_pace_str(zone, pace_zones), effort="comfortably hard")
+        _step(
+            "run",
+            f"{dist_m / 1000:.1f} km continuous",
+            distance_m=dist_m,
+            pace_zone=zone,
+            pace_str=_pace_str(zone, pace_zones),
+            effort="comfortably hard",
+        )
     )
     if has_wcd:
         steps.append(_cooldown(pace_zones, cd_m) if cd_m else _cooldown(pace_zones))
@@ -254,8 +328,12 @@ def _try_continuous_pattern(
 
 
 def _try_simple_run_at_pattern(
-    structure: str, pace_zones: Optional[Dict], workout_type: str,
-    has_wcd: bool, warmup_steps: List, cd_m: Optional[int] = None,
+    structure: str,
+    pace_zones: Optional[Dict],
+    workout_type: str,
+    has_wcd: bool,
+    warmup_steps: List,
+    cd_m: Optional[int] = None,
 ) -> Optional[List[Dict[str, Any]]]:
     """Pattern E: "Run X.Xkm at <effort>" — single distance-based work block.
 
@@ -273,11 +351,19 @@ def _try_simple_run_at_pattern(
         return None
     dist_m = _parse_distance_to_m(m.group(1), "km")
     zone = _infer_zone(m.group(2)) or ("T" if workout_type == "tempo" else "E")
-    effort = "easy" if zone == "E" else "moderate" if zone == "M" else "comfortably hard"
+    effort = (
+        "easy" if zone == "E" else "moderate" if zone == "M" else "comfortably hard"
+    )
     steps = list(warmup_steps)
     steps.append(
-        _step("run", f"{dist_m / 1000:.1f} km", distance_m=dist_m,
-              pace_zone=zone, pace_str=_pace_str(zone, pace_zones), effort=effort)
+        _step(
+            "run",
+            f"{dist_m / 1000:.1f} km",
+            distance_m=dist_m,
+            pace_zone=zone,
+            pace_str=_pace_str(zone, pace_zones),
+            effort=effort,
+        )
     )
     if has_wcd:
         steps.append(_cooldown(pace_zones, cd_m) if cd_m else _cooldown(pace_zones))
@@ -309,18 +395,27 @@ def parse_key_workout_steps(
     if result is not None:
         return result
 
-    result = _try_as_progression_pattern(structure, pace_zones, has_wcd, warmup_steps, wu_m)
+    result = _try_as_progression_pattern(
+        structure, pace_zones, has_wcd, warmup_steps, wu_m
+    )
     if result is not None:
         return result
 
     result = _try_distance_reps_pattern(
-        structure, pace_zones, workout_type, has_wcd, warmup_steps, wu_m,
+        structure,
+        pace_zones,
+        workout_type,
+        has_wcd,
+        warmup_steps,
+        wu_m,
         total_distance_km=total_distance_km,
     )
     if result is not None:
         return result
 
-    result = _try_duration_reps_pattern(structure, pace_zones, has_wcd, warmup_steps, wu_m)
+    result = _try_duration_reps_pattern(
+        structure, pace_zones, has_wcd, warmup_steps, wu_m
+    )
     if result is not None:
         return result
 
@@ -328,11 +423,15 @@ def parse_key_workout_steps(
     if result is not None:
         return result
 
-    result = _try_continuous_pattern(structure, pace_zones, workout_type, has_wcd, warmup_steps, wu_m)
+    result = _try_continuous_pattern(
+        structure, pace_zones, workout_type, has_wcd, warmup_steps, wu_m
+    )
     if result is not None:
         return result
 
-    result = _try_simple_run_at_pattern(structure, pace_zones, workout_type, has_wcd, warmup_steps, wu_m)
+    result = _try_simple_run_at_pattern(
+        structure, pace_zones, workout_type, has_wcd, warmup_steps, wu_m
+    )
     if result is not None:
         return result
 
@@ -341,8 +440,13 @@ def parse_key_workout_steps(
     effort = "easy" if zone == "E" else "see description"
     steps = list(warmup_steps)
     steps.append(
-        _step("run", structure[:60], pace_zone=zone,
-              pace_str=_pace_str(zone, pace_zones), effort=effort)
+        _step(
+            "run",
+            structure[:60],
+            pace_zone=zone,
+            pace_str=_pace_str(zone, pace_zones),
+            effort=effort,
+        )
     )
     if has_wcd:
         cd_m = wu_m if wu_m else None

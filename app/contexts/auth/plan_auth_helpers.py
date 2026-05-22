@@ -5,12 +5,11 @@ from typing import Any, Optional
 from fastapi import HTTPException, Request
 from sqlalchemy.orm import Session
 
-from app.infrastructure.config import settings
 from app.contexts.plan.repositories import SQLAlchemyPlanRepository
 from app.dependencies import verify_plan_ownership
+from app.infrastructure.config import settings
 from app.models import TrainingPlan, User
 from app.template_helpers import create_templates
-
 
 templates = create_templates()
 

@@ -1,13 +1,12 @@
-from typing import List, Dict, Any, Optional
 import random
 from functools import lru_cache
+from typing import Any, Dict, List
 
 from app.contexts.nutrition.meal_selector import MealSelector
 from app.contexts.nutrition.nutrition_content import (
     generate_general_nutrition_tips,
     generate_hydration_guide,
 )
-
 
 # --- Nutrition formula constants ----------------------------------------------
 # Resting-metabolism baseline: approx 22 kcal per kg of body weight for a
@@ -124,10 +123,14 @@ def _calculate_nutrition_needs_cached(
         raise ValueError("body_weight must be positive")
 
     base_calories = body_weight * BASE_CALORIES_PER_KG
-    training_factor = 1.0 + (weekly_km / TRAINING_KM_REFERENCE) * TRAINING_FACTOR_PER_REFERENCE
+    training_factor = (
+        1.0 + (weekly_km / TRAINING_KM_REFERENCE) * TRAINING_FACTOR_PER_REFERENCE
+    )
 
     if is_trail:
-        training_factor += _trail_distance_boost(target_distance, target_elevation_gain_m)
+        training_factor += _trail_distance_boost(
+            target_distance, target_elevation_gain_m
+        )
     elif target_distance >= 42.2:
         training_factor += DISTANCE_BOOST_MARATHON
     elif target_distance >= 30:
@@ -173,7 +176,9 @@ class NutritionEngine:
             Dictionary with daily nutrition targets
         """
         calories, protein, fiber = _calculate_nutrition_needs_cached(
-            weekly_km, target_distance, body_weight,
+            weekly_km,
+            target_distance,
+            body_weight,
             is_trail=is_trail,
             target_elevation_gain_m=target_elevation_gain_m,
         )
@@ -183,7 +188,14 @@ class NutritionEngine:
             "protein": protein,
             "fiber": fiber,
             "fat": round(calories * 0.25 / 9, 0),
-            "carbs": max(0, round((calories - (protein * 4) - (round(calories * 0.25 / 9, 0) * 9)) / 4, 0))
+            "carbs": max(
+                0,
+                round(
+                    (calories - (protein * 4) - (round(calories * 0.25 / 9, 0) * 9))
+                    / 4,
+                    0,
+                ),
+            ),
         }
 
     def generate_weekly_meal_plan(
@@ -208,7 +220,9 @@ class NutritionEngine:
             Dictionary with meal blueprint and nutrition targets
         """
         nutrition_needs = self.calculate_nutrition_needs(
-            weekly_km, target_distance, body_weight,
+            weekly_km,
+            target_distance,
+            body_weight,
             is_trail=is_trail,
             target_elevation_gain_m=target_elevation_gain_m,
         )
@@ -221,7 +235,8 @@ class NutritionEngine:
         }
         if is_trail:
             meal_blueprint["in_race_fueling"] = build_in_race_fueling_table(
-                target_distance, target_elevation_gain_m,
+                target_distance,
+                target_elevation_gain_m,
             )
 
         meal_types = ["breakfast", "lunch", "dinner", "snack", "post_workout"]
@@ -235,7 +250,9 @@ class NutritionEngine:
 
             for i in range(4):
                 selected_meal = self._meal_selector.select_varied_meal(
-                    meal_type, nutrition_needs, used_meals,
+                    meal_type,
+                    nutrition_needs,
+                    used_meals,
                 )
                 if selected_meal and selected_meal["name"] not in used_meals:
                     meal_options.append(selected_meal)
@@ -271,7 +288,12 @@ class NutritionEngine:
         Returns:
             Dict mapping phase names to nutrition targets and advice
         """
-        phase_weeks: Dict[str, List[int]] = {"base": [], "build": [], "peak": [], "taper": []}
+        phase_weeks: Dict[str, List[int]] = {
+            "base": [],
+            "build": [],
+            "peak": [],
+            "taper": [],
+        }
         for week in plan_data:
             phase = week.get("phase", "base")
             if phase in phase_weeks:
@@ -279,7 +301,9 @@ class NutritionEngine:
             else:
                 phase_weeks["base"].append(week["week"])
 
-        peak_km = max((w.get("total_km", weekly_km) for w in plan_data), default=weekly_km)
+        peak_km = max(
+            (w.get("total_km", weekly_km) for w in plan_data), default=weekly_km
+        )
 
         phase_configs = {
             "base": {
@@ -314,8 +338,8 @@ class NutritionEngine:
             },
             "taper": {
                 "km": weekly_km * 0.6,
-                "carb_multiplier": 1.05,   # slightly elevated to top up glycogen
-                "cal_multiplier": 0.92,    # overall calories fall with reduced volume
+                "carb_multiplier": 1.05,  # slightly elevated to top up glycogen
+                "cal_multiplier": 0.92,  # overall calories fall with reduced volume
                 "advice": (
                     "Taper phase: volume drops but don't cut carbs. Your muscles are topping up "
                     "glycogen stores for race day. In the final 2–3 days before the race, shift to "
@@ -331,13 +355,15 @@ class NutritionEngine:
                 continue
 
             base_needs = self.calculate_nutrition_needs(
-                config["km"], target_distance, body_weight_kg,
+                config["km"],
+                target_distance,
+                body_weight_kg,
                 is_trail=is_trail,
                 target_elevation_gain_m=target_elevation_gain_m,
             )
 
             calories = round(base_needs["calories"] * config["cal_multiplier"])
-            protein = round(base_needs["protein"])   # protein unchanged between phases
+            protein = round(base_needs["protein"])  # protein unchanged between phases
             carbs = round(base_needs["carbs"] * config["carb_multiplier"])
             fat = round(calories * 0.25 / 9)
 

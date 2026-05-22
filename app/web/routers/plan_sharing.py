@@ -11,8 +11,11 @@ from fastapi.responses import FileResponse, HTMLResponse
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
-from app.infrastructure.export.pdf_generator import PDFGenerator
-from app.infrastructure.export.plan_export_dto import PlanExportDTO
+from app.contexts.auth.repositories import SQLAlchemyUserRepository
+from app.contexts.plan.plan_helpers import get_plan_or_404, plan_view_context
+from app.contexts.plan.plan_service import PlanService
+from app.contexts.plan.plan_type_registry import display_label as plan_display_label
+from app.contexts.plan.repositories import SQLAlchemyPlanRepository
 from app.dependencies import (
     get_current_user,
     get_db,
@@ -20,13 +23,10 @@ from app.dependencies import (
     get_pdf_generator,
     get_plan_service,
 )
-from app.models import TrainingPlan, User
+from app.infrastructure.export.pdf_generator import PDFGenerator
+from app.infrastructure.export.plan_export_dto import PlanExportDTO
+from app.models import User
 from app.rate_limit import plan_generation_limiter
-from app.contexts.plan.plan_helpers import get_plan_or_404, plan_view_context
-from app.contexts.auth.repositories import SQLAlchemyUserRepository
-from app.contexts.plan.plan_service import PlanService
-from app.contexts.plan.plan_type_registry import display_label as plan_display_label
-from app.contexts.plan.repositories import SQLAlchemyPlanRepository
 from app.template_helpers import create_templates
 
 logger = logging.getLogger(__name__)
@@ -52,9 +52,7 @@ async def set_plan_start_date(
     db: Session = Depends(get_db),
 ):
     """Set the start date for a training plan."""
-    training_plan = get_plan_or_404(
-        plan_id, db, current_user, require_user_match=True
-    )
+    training_plan = get_plan_or_404(plan_id, db, current_user, require_user_match=True)
     training_plan.start_date = datetime.combine(body.start_date, datetime.min.time())
     db.commit()
     return {"ok": True, "start_date": body.start_date.isoformat()}
@@ -72,9 +70,7 @@ async def toggle_share_plan(
     db: Session = Depends(get_db),
 ):
     """Generate or revoke a share link for a training plan."""
-    training_plan = get_plan_or_404(
-        plan_id, db, current_user, require_user_match=True
-    )
+    training_plan = get_plan_or_404(plan_id, db, current_user, require_user_match=True)
 
     if training_plan.share_token:
         training_plan.share_token = None
@@ -102,9 +98,7 @@ async def view_shared_plan(
         raise HTTPException(status_code=404, detail="Shared plan not found")
 
     plan_data = training_plan.plan_data
-    plan_data = plan_service.enrich_plan_data_with_ids(
-        plan_data, training_plan.id, db
-    )
+    plan_data = plan_service.enrich_plan_data_with_ids(plan_data, training_plan.id, db)
 
     nutrition_plan = plan_service.nutrition_for_template(
         training_plan.nutrition_plan_data
@@ -146,9 +140,7 @@ async def save_plan_to_account(
 
     plan_owner = SQLAlchemyUserRepository(db).get_by_id(training_plan.user_id)
     if plan_owner and (plan_owner.google_id or plan_owner.email):
-        raise HTTPException(
-            status_code=403, detail="This plan belongs to another user"
-        )
+        raise HTTPException(status_code=403, detail="This plan belongs to another user")
 
     if training_plan.user_id != anonymous_user_id:
         raise HTTPException(
@@ -169,9 +161,7 @@ async def delete_plan(
     plan_service: PlanService = Depends(get_plan_service),
 ):
     """Delete a training plan owned by the current user."""
-    training_plan = get_plan_or_404(
-        plan_id, db, current_user, require_user_match=True
-    )
+    training_plan = get_plan_or_404(plan_id, db, current_user, require_user_match=True)
     plan_service.delete_plan(training_plan, db)
     return {"message": "Plan deleted successfully"}
 
@@ -193,9 +183,7 @@ async def download_pdf(
     """Download training plan as PDF."""
     plan_generation_limiter.check(request)
     try:
-        training_plan = get_plan_or_404(
-            plan_id, db, current_user, anonymous_user_id
-        )
+        training_plan = get_plan_or_404(plan_id, db, current_user, anonymous_user_id)
 
         if not training_plan.plan_data:
             raise HTTPException(status_code=400, detail="No training plan data found")
@@ -227,7 +215,7 @@ async def download_pdf(
 
     except HTTPException:
         raise
-    except Exception as e:
+    except Exception:
         logger.exception("PDF generation error")
         raise HTTPException(
             status_code=500, detail="PDF generation failed. Please try again."

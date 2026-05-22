@@ -11,12 +11,11 @@ from typing import Any, Dict, Optional
 
 from sqlalchemy.orm import Session
 
-from app.models import TrainingPlan
-from app.models.user import User
-from app.contexts.plan.plan_date_utils import compute_current_week
-from app.utils import to_date as _to_date
 from app.contexts.auth.repositories import SQLAlchemyUserRepository
+from app.contexts.plan.plan_date_utils import compute_current_week
 from app.contexts.plan.repositories import SQLAlchemyPlanRepository
+from app.models import TrainingPlan
+from app.utils import to_date as _to_date
 
 from . import change_reasons as _reasons
 from ._helpers import is_current_week_in_progress, today_date
@@ -129,9 +128,16 @@ def evaluate_weekly_recommendation(
         "signals": {
             k: signals[k]
             for k in (
-                "multiplier", "volume_ratio", "effort_factor", "avg_effort",
-                "effort_trend", "completion_rate", "completion_factor",
-                "overreach_detected", "current_phase", "per_type_ratios",
+                "multiplier",
+                "volume_ratio",
+                "effort_factor",
+                "avg_effort",
+                "effort_trend",
+                "completion_rate",
+                "completion_factor",
+                "overreach_detected",
+                "current_phase",
+                "per_type_ratios",
             )
             if k in signals
         },
@@ -144,7 +150,11 @@ def evaluate_weekly_recommendation(
 
     logger.info(
         "Auto-recommendation for plan %s week %d: %s by %d%% (x%.2f)",
-        plan_id, last_completed_week, direction, pct, multiplier,
+        plan_id,
+        last_completed_week,
+        direction,
+        pct,
+        multiplier,
     )
 
     # If the user opted into auto-apply, immediately accept the
@@ -200,15 +210,21 @@ def _run_accept(
 
     if not training_plan:
         cp = empty_change_plan(
-            action="accept_recommendation", mode=mode,
+            action="accept_recommendation",
+            mode=mode,
             headline_reason="We couldn't find that training plan.",
         )
-        return {"accepted": False, "reason": "We couldn't find that training plan.", "change_plan": cp}
+        return {
+            "accepted": False,
+            "reason": "We couldn't find that training plan.",
+            "change_plan": cp,
+        }
 
     rec = training_plan.pending_recommendation
     if not rec:
         cp = empty_change_plan(
-            action="accept_recommendation", mode=mode,
+            action="accept_recommendation",
+            mode=mode,
             headline_reason="There's no pending recommendation to apply.",
         )
         return {
@@ -226,7 +242,11 @@ def _run_accept(
     current_day_of_week = today.isoweekday()
 
     in_progress = is_current_week_in_progress(
-        plan_id, start_date, current_week, current_day_of_week, db,
+        plan_id,
+        start_date,
+        current_week,
+        current_day_of_week,
+        db,
     )
     min_first = current_week + 1 if in_progress else current_week
     # Anchor on the recommendation's evaluated week so data from week N
@@ -236,6 +256,7 @@ def _run_accept(
     first_adjustable_week = max(min_first, target_first)
 
     from app.models import WeeklyPlan
+
     adjustable_weeks = (
         db.query(WeeklyPlan)
         .filter(
@@ -247,7 +268,8 @@ def _run_accept(
 
     if not adjustable_weeks:
         cp = empty_change_plan(
-            action="accept_recommendation", mode=mode,
+            action="accept_recommendation",
+            mode=mode,
             headline_reason=_reasons.NO_CHANGE_NO_REMAINING_WORKOUTS,
         )
         cp["summary"]["multiplier"] = multiplier
@@ -266,7 +288,10 @@ def _run_accept(
 
     recorder: list = []
     weeks_changed, any_distance_changed, counts = apply_adjustment_to_future_weeks(
-        training_plan, adjustable_weeks, multiplier, db,
+        training_plan,
+        adjustable_weeks,
+        multiplier,
+        db,
         current_week=current_week,
         current_day_of_week=current_day_of_week,
         per_type_ratios=per_type_ratios,
@@ -338,13 +363,16 @@ def _run_accept(
         training_plan.last_adjusted_at = now
         training_plan.pending_recommendation = None
         training_plan.last_change_plan = change_plan
-        _record_event(training_plan, {
-            "type": "auto_accept",
-            "multiplier": multiplier,
-            "direction": direction,
-            "week_evaluated": rec.get("week_evaluated"),
-            "reason": summary,
-        })
+        _record_event(
+            training_plan,
+            {
+                "type": "auto_accept",
+                "multiplier": multiplier,
+                "direction": direction,
+                "week_evaluated": rec.get("week_evaluated"),
+                "reason": summary,
+            },
+        )
         db.commit()
 
     result = {
@@ -377,13 +405,16 @@ def dismiss_recommendation(
     if not rec:
         return {"dismissed": False, "reason": "No pending recommendation"}
 
-    _record_event(training_plan, {
-        "type": "auto_dismiss",
-        "multiplier": rec.get("multiplier", 1.0),
-        "direction": rec.get("direction", "kept"),
-        "week_evaluated": rec.get("week_evaluated"),
-        "reason": "User dismissed recommendation.",
-    })
+    _record_event(
+        training_plan,
+        {
+            "type": "auto_dismiss",
+            "multiplier": rec.get("multiplier", 1.0),
+            "direction": rec.get("direction", "kept"),
+            "week_evaluated": rec.get("week_evaluated"),
+            "reason": "User dismissed recommendation.",
+        },
+    )
 
     training_plan.pending_recommendation = None
     db.commit()
@@ -453,9 +484,7 @@ def _build_auto_adjust_reason(
 
     if week_numbers:
         first, last = week_numbers[0], week_numbers[-1]
-        weeks_label = (
-            f"week {first}" if first == last else f"weeks {first}–{last}"
-        )
+        weeks_label = f"week {first}" if first == last else f"weeks {first}–{last}"
     else:
         weeks_label = "remaining weeks"
 
@@ -470,7 +499,9 @@ _HYSTERESIS_BAND = 0.05
 
 
 def _is_small_reversal(
-    history: list | None, proposed_direction: str, proposed_multiplier: float,
+    history: list | None,
+    proposed_direction: str,
+    proposed_multiplier: float,
 ) -> bool:
     """True when the proposal would reverse the last applied direction by < 5%.
 
@@ -509,4 +540,3 @@ def _record_event(training_plan: TrainingPlan, event: Dict[str, Any]) -> None:
     if len(history) > 20:
         history = history[-20:]
     training_plan.adaptation_history = history
-

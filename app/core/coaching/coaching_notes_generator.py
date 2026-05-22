@@ -6,7 +6,6 @@ the training-phase context, and a brief execution tip.
 
 from typing import Any, Dict, Optional
 
-
 # Coaching rationale templates keyed by (workout_type, phase)
 # Each value is a string; {distance_name} and {phase} are interpolated if present.
 _NOTES: Dict[str, str] = {
@@ -34,7 +33,6 @@ _NOTES: Dict[str, str] = {
         "Research shows that even a 50% volume reduction preserves fitness for 2-3 weeks. "
         "Run easy, stay fresh, trust your training."
     ),
-
     # ── Tempo runs ────────────────────────────────────────────────────────
     "tempo_base": (
         "Light introduction to sustained effort. "
@@ -57,7 +55,6 @@ _NOTES: Dict[str, str] = {
         "Short tempo efforts maintain neuromuscular activation without building fatigue. "
         "Keep the volume low but the effort genuine — one or two quality minutes is enough."
     ),
-
     # ── Intervals ─────────────────────────────────────────────────────────
     "interval_base": (
         "Short strides to reinforce running form and leg turnover. "
@@ -82,7 +79,6 @@ _NOTES: Dict[str, str] = {
         "A few fast reps remind your legs of race pace without creating meaningful fatigue. "
         "Short, controlled, and confident."
     ),
-
     # ── Long runs ─────────────────────────────────────────────────────────
     "long_base": (
         "The cornerstone of endurance training. "
@@ -106,7 +102,6 @@ _NOTES: Dict[str, str] = {
         "Your fitness is locked in — this run reinforces it without creating new fatigue. "
         "Think of it as a dress rehearsal: similar route, similar fueling, easy effort."
     ),
-
     # ── Hill workouts ─────────────────────────────────────────────────────
     "hill_base": (
         "Hill strides to build leg strength and power economically. "
@@ -131,7 +126,6 @@ _NOTES: Dict[str, str] = {
         "A few quality repeats keep your fast-twitch fibres awake without accumulating fatigue. "
         "Short, punchy, and relaxed."
     ),
-
     # ── Rest days ─────────────────────────────────────────────────────────
     "rest_base": (
         "Adaptation happens during rest, not during the run. "
@@ -156,7 +150,6 @@ _NOTES: Dict[str, str] = {
         "system is recharging for race day. "
         "Stay off your feet, stay hydrated, and trust the process."
     ),
-
     # ── Recovery (active recovery day — swim/walk) ─────────────────────
     "recovery_base": (
         "Active recovery with zero impact on your joints. "

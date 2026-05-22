@@ -99,14 +99,16 @@ def test_mountain_simulation_scores_execution_from_runs():
 
 def test_mountain_simulation_filters_other_plan_runs():
     start = date(2026, 1, 1)
-    plan_data = [{
-        "week": 1,
-        "vertical_simulation": {
-            "uphill_effort_min": 30,
-            "downhill_eccentric_min": 20,
-            "hike_run_transition_reps": 4,
-        },
-    }]
+    plan_data = [
+        {
+            "week": 1,
+            "vertical_simulation": {
+                "uphill_effort_min": 30,
+                "downhill_eccentric_min": 20,
+                "hike_run_transition_reps": 4,
+            },
+        }
+    ]
     runs = [
         _run(
             when=datetime.combine(start + timedelta(days=1), datetime.min.time()),

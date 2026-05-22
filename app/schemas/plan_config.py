@@ -4,7 +4,6 @@ from typing import Optional
 
 from app.core.training.training_config import DISTANCE_CONSTRAINTS
 
-
 _MILEAGE_CONFIG = {
     distance: {
         "min": c.min_mileage,

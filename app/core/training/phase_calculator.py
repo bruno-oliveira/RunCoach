@@ -19,9 +19,8 @@ next refactor pass.
 
 from typing import Dict, Optional
 
-from app.core.training.trail_profile import TrailProfile, classify_trail
+from app.core.training.trail_profile import TrailProfile
 from app.exceptions import InsufficientTimeException
-
 
 MIN_WEEKS_FOR_PHASES = 6
 
@@ -37,39 +36,39 @@ MIN_WEEKS_FOR_PHASES = 6
 # comparable training stress.
 
 _TRAIL_BASE_DISTRIBUTION = {
-    'base':  {'long': 0.45, 'tempo': 0.0,  'interval': 0.0,  'hill': 0.05},
-    'build': {'long': 0.45, 'tempo': 0.06, 'interval': 0.06, 'hill': 0.08},
-    'peak':  {'long': 0.43, 'tempo': 0.06, 'interval': 0.06, 'hill': 0.08},
-    'taper': {'long': 0.40, 'tempo': 0.06, 'interval': 0.0,  'hill': 0.04},
+    "base": {"long": 0.45, "tempo": 0.0, "interval": 0.0, "hill": 0.05},
+    "build": {"long": 0.45, "tempo": 0.06, "interval": 0.06, "hill": 0.08},
+    "peak": {"long": 0.43, "tempo": 0.06, "interval": 0.06, "hill": 0.08},
+    "taper": {"long": 0.40, "tempo": 0.06, "interval": 0.0, "hill": 0.04},
 }
 
 # Each adjustment dict updates (tempo, interval, hill); flat zeroes hills out
 # entirely (no terrain access). Mountainous shifts intensity from intervals
 # (track-style speed work) toward hill repeats.
 _ELEVATION_ADJUSTMENTS = {
-    'flat':        {'tempo': +0.10, 'interval': +0.05, 'hill_zero': True},
-    'rolling':     {'tempo': +0.04, 'interval': 0.00,  'hill_delta': -0.04},
-    'hilly':       {'tempo': 0.00,  'interval': 0.00,  'hill_delta': 0.00},
-    'mountainous': {'tempo': 0.00,  'interval': -0.02, 'hill_delta': +0.03},
+    "flat": {"tempo": +0.10, "interval": +0.05, "hill_zero": True},
+    "rolling": {"tempo": +0.04, "interval": 0.00, "hill_delta": -0.04},
+    "hilly": {"tempo": 0.00, "interval": 0.00, "hill_delta": 0.00},
+    "mountainous": {"tempo": 0.00, "interval": -0.02, "hill_delta": +0.03},
 }
 
-_TRAIL_ELEVATION_KEYS = ('flat', 'rolling', 'hilly', 'mountainous')
+_TRAIL_ELEVATION_KEYS = ("flat", "rolling", "hilly", "mountainous")
 
 
 def _build_trail_distribution(phase: str, elevation_class: str) -> Dict[str, float]:
     base = dict(_TRAIL_BASE_DISTRIBUTION[phase])
     adj = _ELEVATION_ADJUSTMENTS[elevation_class]
 
-    if adj.get('hill_zero'):
-        base['hill'] = 0.0
+    if adj.get("hill_zero"):
+        base["hill"] = 0.0
     else:
-        base['hill'] = max(0.0, base['hill'] + adj.get('hill_delta', 0.0))
+        base["hill"] = max(0.0, base["hill"] + adj.get("hill_delta", 0.0))
 
-    base['tempo'] = max(0.0, base['tempo'] + adj['tempo'])
-    base['interval'] = max(0.0, base['interval'] + adj['interval'])
+    base["tempo"] = max(0.0, base["tempo"] + adj["tempo"])
+    base["interval"] = max(0.0, base["interval"] + adj["interval"])
 
-    others = base['long'] + base['tempo'] + base['interval'] + base['hill']
-    base['easy'] = round(max(0.0, 1.0 - others), 4)
+    others = base["long"] + base["tempo"] + base["interval"] + base["hill"]
+    base["easy"] = round(max(0.0, 1.0 - others), 4)
     return base
 
 
@@ -79,38 +78,136 @@ def _trail_key(elevation_class: str) -> str:
 
 def _build_phase_distributions() -> Dict[str, Dict[str, Dict[str, float]]]:
     distributions: Dict[str, Dict[str, Dict[str, float]]] = {
-        'base': {
-            '5K':       {'long': 0.35, 'tempo': 0.0,  'interval': 0.05, 'hill': 0.0,  'easy': 0.60},
-            '10K':      {'long': 0.40, 'tempo': 0.0,  'interval': 0.05, 'hill': 0.0,  'easy': 0.55},
-            'Half':     {'long': 0.45, 'tempo': 0.05, 'interval': 0.0,  'hill': 0.0,  'easy': 0.50},
-            'Marathon': {'long': 0.45, 'tempo': 0.05, 'interval': 0.0,  'hill': 0.0,  'easy': 0.50},
+        "base": {
+            "5K": {
+                "long": 0.35,
+                "tempo": 0.0,
+                "interval": 0.05,
+                "hill": 0.0,
+                "easy": 0.60,
+            },
+            "10K": {
+                "long": 0.40,
+                "tempo": 0.0,
+                "interval": 0.05,
+                "hill": 0.0,
+                "easy": 0.55,
+            },
+            "Half": {
+                "long": 0.45,
+                "tempo": 0.05,
+                "interval": 0.0,
+                "hill": 0.0,
+                "easy": 0.50,
+            },
+            "Marathon": {
+                "long": 0.45,
+                "tempo": 0.05,
+                "interval": 0.0,
+                "hill": 0.0,
+                "easy": 0.50,
+            },
         },
-        'build': {
-            '5K':       {'long': 0.35, 'tempo': 0.12, 'interval': 0.10, 'hill': 0.05, 'easy': 0.38},
-            '10K':      {'long': 0.40, 'tempo': 0.12, 'interval': 0.10, 'hill': 0.05, 'easy': 0.33},
-            'Half':     {'long': 0.45, 'tempo': 0.10, 'interval': 0.08, 'hill': 0.04, 'easy': 0.33},
-            'Marathon': {'long': 0.45, 'tempo': 0.10, 'interval': 0.08, 'hill': 0.04, 'easy': 0.33},
+        "build": {
+            "5K": {
+                "long": 0.35,
+                "tempo": 0.12,
+                "interval": 0.10,
+                "hill": 0.05,
+                "easy": 0.38,
+            },
+            "10K": {
+                "long": 0.40,
+                "tempo": 0.12,
+                "interval": 0.10,
+                "hill": 0.05,
+                "easy": 0.33,
+            },
+            "Half": {
+                "long": 0.45,
+                "tempo": 0.10,
+                "interval": 0.08,
+                "hill": 0.04,
+                "easy": 0.33,
+            },
+            "Marathon": {
+                "long": 0.45,
+                "tempo": 0.10,
+                "interval": 0.08,
+                "hill": 0.04,
+                "easy": 0.33,
+            },
         },
-        'peak': {
-            '5K':       {'long': 0.33, 'tempo': 0.12, 'interval': 0.10, 'hill': 0.05, 'easy': 0.40},
-            '10K':      {'long': 0.38, 'tempo': 0.12, 'interval': 0.10, 'hill': 0.05, 'easy': 0.35},
-            'Half':     {'long': 0.43, 'tempo': 0.10, 'interval': 0.08, 'hill': 0.04, 'easy': 0.35},
-            'Marathon': {'long': 0.43, 'tempo': 0.10, 'interval': 0.08, 'hill': 0.04, 'easy': 0.35},
+        "peak": {
+            "5K": {
+                "long": 0.33,
+                "tempo": 0.12,
+                "interval": 0.10,
+                "hill": 0.05,
+                "easy": 0.40,
+            },
+            "10K": {
+                "long": 0.38,
+                "tempo": 0.12,
+                "interval": 0.10,
+                "hill": 0.05,
+                "easy": 0.35,
+            },
+            "Half": {
+                "long": 0.43,
+                "tempo": 0.10,
+                "interval": 0.08,
+                "hill": 0.04,
+                "easy": 0.35,
+            },
+            "Marathon": {
+                "long": 0.43,
+                "tempo": 0.10,
+                "interval": 0.08,
+                "hill": 0.04,
+                "easy": 0.35,
+            },
         },
-        'taper': {
-            '5K':       {'long': 0.30, 'tempo': 0.12, 'interval': 0.0, 'hill': 0.0,  'easy': 0.58},
-            '10K':      {'long': 0.35, 'tempo': 0.12, 'interval': 0.0, 'hill': 0.0,  'easy': 0.53},
-            'Half':     {'long': 0.40, 'tempo': 0.10, 'interval': 0.0, 'hill': 0.0,  'easy': 0.50},
-            'Marathon': {'long': 0.40, 'tempo': 0.10, 'interval': 0.0, 'hill': 0.0,  'easy': 0.50},
+        "taper": {
+            "5K": {
+                "long": 0.30,
+                "tempo": 0.12,
+                "interval": 0.0,
+                "hill": 0.0,
+                "easy": 0.58,
+            },
+            "10K": {
+                "long": 0.35,
+                "tempo": 0.12,
+                "interval": 0.0,
+                "hill": 0.0,
+                "easy": 0.53,
+            },
+            "Half": {
+                "long": 0.40,
+                "tempo": 0.10,
+                "interval": 0.0,
+                "hill": 0.0,
+                "easy": 0.50,
+            },
+            "Marathon": {
+                "long": 0.40,
+                "tempo": 0.10,
+                "interval": 0.0,
+                "hill": 0.0,
+                "easy": 0.50,
+            },
         },
     }
 
     for phase in distributions:
         for elev in _TRAIL_ELEVATION_KEYS:
-            distributions[phase][_trail_key(elev)] = _build_trail_distribution(phase, elev)
+            distributions[phase][_trail_key(elev)] = _build_trail_distribution(
+                phase, elev
+            )
         # Legacy aliases retained so unmigrated callsites keep working.
-        distributions[phase]['Trail'] = distributions[phase][_trail_key('hilly')]
-        distributions[phase]['FlatTrail'] = distributions[phase][_trail_key('flat')]
+        distributions[phase]["Trail"] = distributions[phase][_trail_key("hilly")]
+        distributions[phase]["FlatTrail"] = distributions[phase][_trail_key("flat")]
 
     return distributions
 
@@ -119,6 +216,7 @@ PHASE_DISTRIBUTIONS = _build_phase_distributions()
 
 
 # --- Distance category dispatch --------------------------------------------
+
 
 def _normalise_terrain(terrain: Optional[str]) -> Optional[str]:
     """Map the legacy ``terrain`` parameter onto an elevation_class key."""
@@ -150,17 +248,17 @@ def get_distance_category(
         return _trail_key(trail_profile.elevation_class)
 
     if target_distance <= 5:
-        return '5K'
+        return "5K"
     if target_distance <= 10:
-        return '10K'
+        return "10K"
     if target_distance <= 21.1:
-        return 'Half'
+        return "Half"
     if target_distance == 30.0:
         # Legacy default: 30 km plans without an explicit trail_profile
         # default to the hilly distribution (matches the historic behavior).
-        normalised = _normalise_terrain(terrain) or 'hilly'
+        normalised = _normalise_terrain(terrain) or "hilly"
         return _trail_key(normalised)
-    return 'Marathon'
+    return "Marathon"
 
 
 # --- Phase length profiles --------------------------------------------------
@@ -170,17 +268,17 @@ def get_distance_category(
 # taper); the per-week distribution above depends on the **elevation class**.
 
 _ROAD_PHASE_PROFILES = {
-    '5K':       {'base_pct': 0.35, 'build_pct': 0.30, 'peak_pct': 0.20, 'taper': 2},
-    '10K':      {'base_pct': 0.35, 'build_pct': 0.30, 'peak_pct': 0.15, 'taper': 2},
-    'Half':     {'base_pct': 0.35, 'build_pct': 0.35, 'peak_pct': 0.15, 'taper': 2},
-    'Marathon': {'base_pct': 0.30, 'build_pct': 0.35, 'peak_pct': 0.15, 'taper': 3},
+    "5K": {"base_pct": 0.35, "build_pct": 0.30, "peak_pct": 0.20, "taper": 2},
+    "10K": {"base_pct": 0.35, "build_pct": 0.30, "peak_pct": 0.15, "taper": 2},
+    "Half": {"base_pct": 0.35, "build_pct": 0.35, "peak_pct": 0.15, "taper": 2},
+    "Marathon": {"base_pct": 0.30, "build_pct": 0.35, "peak_pct": 0.15, "taper": 3},
 }
 
 _TRAIL_BRACKET_PROFILES = {
-    'short':      {'base_pct': 0.35, 'build_pct': 0.35, 'peak_pct': 0.15, 'taper': 2},
-    'standard':   {'base_pct': 0.35, 'build_pct': 0.35, 'peak_pct': 0.15, 'taper': 2},
-    'ultra':      {'base_pct': 0.30, 'build_pct': 0.35, 'peak_pct': 0.20, 'taper': 3},
-    'long_ultra': {'base_pct': 0.30, 'build_pct': 0.35, 'peak_pct': 0.20, 'taper': 3},
+    "short": {"base_pct": 0.35, "build_pct": 0.35, "peak_pct": 0.15, "taper": 2},
+    "standard": {"base_pct": 0.35, "build_pct": 0.35, "peak_pct": 0.15, "taper": 2},
+    "ultra": {"base_pct": 0.30, "build_pct": 0.35, "peak_pct": 0.20, "taper": 3},
+    "long_ultra": {"base_pct": 0.30, "build_pct": 0.35, "peak_pct": 0.20, "taper": 3},
 }
 
 
@@ -191,7 +289,7 @@ def _phase_profile_for(target_distance: float, trail_profile: Optional[TrailProf
     if category in _ROAD_PHASE_PROFILES:
         return _ROAD_PHASE_PROFILES[category]
     # Legacy 30 km without trail_profile → standard-bracket trail profile.
-    return _TRAIL_BRACKET_PROFILES['standard']
+    return _TRAIL_BRACKET_PROFILES["standard"]
 
 
 def calculate_phases(
@@ -223,13 +321,13 @@ def calculate_phases(
     profile = _phase_profile_for(target_distance, trail_profile)
 
     # Taper is prescribed by distance (marathon = 3 weeks, 5K = 1 week)
-    taper = min(profile['taper'], max(1, weeks // 4))
+    taper = min(profile["taper"], max(1, weeks // 4))
 
     # Distribute remaining weeks among base/build/peak
     remaining = weeks - taper
-    total_pct = profile['base_pct'] + profile['build_pct'] + profile['peak_pct']
-    base = max(2, round(remaining * profile['base_pct'] / total_pct))
-    build = max(2, round(remaining * profile['build_pct'] / total_pct))
+    total_pct = profile["base_pct"] + profile["build_pct"] + profile["peak_pct"]
+    base = max(2, round(remaining * profile["base_pct"] / total_pct))
+    build = max(2, round(remaining * profile["build_pct"] / total_pct))
     peak = max(1, remaining - base - build)
 
     # Safety: if rounding pushed us over, trim from the largest non-taper phase
@@ -254,7 +352,7 @@ def calculate_phases(
     while base + build + peak + taper < weeks:
         build += 1
 
-    return {'base': base, 'build': build, 'peak': peak, 'taper': taper}
+    return {"base": base, "build": build, "peak": peak, "taper": taper}
 
 
 def get_phase(week_number: int, phases: Dict[str, int]) -> str:
@@ -263,17 +361,19 @@ def get_phase(week_number: int, phases: Dict[str, int]) -> str:
 
     Returns: 'base', 'build', 'peak', or 'taper'
     """
-    if week_number <= phases['base']:
-        return 'base'
-    elif week_number <= phases['base'] + phases['build']:
-        return 'build'
-    elif week_number <= phases['base'] + phases['build'] + phases['peak']:
-        return 'peak'
+    if week_number <= phases["base"]:
+        return "base"
+    elif week_number <= phases["base"] + phases["build"]:
+        return "build"
+    elif week_number <= phases["base"] + phases["build"] + phases["peak"]:
+        return "peak"
     else:
-        return 'taper'
+        return "taper"
 
 
-def is_recovery_week(week_number: int, phase: str, phases: Optional[Dict[str, int]] = None) -> bool:
+def is_recovery_week(
+    week_number: int, phase: str, phases: Optional[Dict[str, int]] = None
+) -> bool:
     """
     Determine if a week is a recovery week.
 
@@ -282,20 +382,20 @@ def is_recovery_week(week_number: int, phase: str, phases: Optional[Dict[str, in
     Peak phases of 4+ weeks get a recovery week in the 3rd week to
     consolidate adaptations before taper. No recovery weeks in taper.
     """
-    if phase == 'taper':
+    if phase == "taper":
         return False
-    if phase == 'peak':
-        if not phases or phases.get('peak', 0) < 4:
+    if phase == "peak":
+        if not phases or phases.get("peak", 0) < 4:
             return False
         # 3rd week of a 4+ week peak is recovery
-        peak_start = phases['base'] + phases['build']
+        peak_start = phases["base"] + phases["build"]
         week_in_peak = week_number - peak_start
         return week_in_peak == 3
     if phases:
         phase_length = phases.get(phase, 0)
         if phase_length < 4:
             return False
-        phase_start_week = 1 if phase == 'base' else phases['base'] + 1
+        phase_start_week = 1 if phase == "base" else phases["base"] + 1
         week_in_phase = week_number - phase_start_week
         return week_in_phase > 0 and week_in_phase % 4 == 0
     return week_number % 4 == 0

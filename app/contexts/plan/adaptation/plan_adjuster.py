@@ -6,13 +6,21 @@ from typing import Any, Dict, List, Optional, Tuple
 
 from sqlalchemy.orm import Session
 
-from app.models import DailyWorkout, ReadinessLog, RunLog, RunFeedback, TrainingPlan, WeeklyPlan
+from app.contexts.plan.plan_date_utils import compute_current_week
+from app.contexts.plan.repositories import SQLAlchemyPlanRepository
 from app.contexts.runner.fitness.race_predictor_service import RacePredictorService
 from app.contexts.runner.fitness.readiness_scoring import score_mountain_simulation
 from app.contexts.runner.fitness.training_load_service import TrainingLoadService
-from app.contexts.plan.plan_date_utils import compute_current_week
-from app.utils import persist_json, to_date as _to_date
-from app.contexts.plan.repositories import SQLAlchemyPlanRepository
+from app.models import (
+    DailyWorkout,
+    ReadinessLog,
+    RunFeedback,
+    RunLog,
+    TrainingPlan,
+    WeeklyPlan,
+)
+from app.utils import persist_json
+from app.utils import to_date as _to_date
 
 from . import change_reasons as _reasons
 from ._helpers import (
@@ -68,18 +76,14 @@ def gather_signals(
     today = today_date()
     current_week = compute_current_week(start_date, today, clamp_min=1, pre_start=1)
 
-    all_plan_runs = (
-        db.query(RunLog)
-        .filter(RunLog.training_plan_id == plan_id)
-        .all()
-    )
+    all_plan_runs = db.query(RunLog).filter(RunLog.training_plan_id == plan_id).all()
 
     run_ids = [run.id for run in all_plan_runs]
     run_feedback_list = (
-        db.query(RunFeedback)
-        .filter(RunFeedback.run_log_id.in_(run_ids))
-        .all()
-    ) if run_ids else []
+        (db.query(RunFeedback).filter(RunFeedback.run_log_id.in_(run_ids)).all())
+        if run_ids
+        else []
+    )
 
     readiness_logs = (
         db.query(ReadinessLog)
@@ -128,7 +132,9 @@ def gather_signals(
     vdot_trend = "stable"
     try:
         vdot_history = RacePredictorService.get_vdot_history(
-            user_id, weeks=8, db=db,
+            user_id,
+            weeks=8,
+            db=db,
         )
         vdot_trend = RacePredictorService.calculate_vdot_trend(vdot_history)
     except Exception as e:
@@ -137,14 +143,21 @@ def gather_signals(
     training_load = None
     try:
         training_load = TrainingLoadService.get_training_load(
-            user_id, db, lookback_days=42,
+            user_id,
+            db,
+            lookback_days=42,
         )
     except Exception as e:
         logger.warning("Training load lookup failed (non-fatal): %s", e)
 
     signals = compute_adjustment_signals(
-        all_plan_runs, past_workouts, past_workout_ids,
-        today, plan_id, db, _recency_weight,
+        all_plan_runs,
+        past_workouts,
+        past_workout_ids,
+        today,
+        plan_id,
+        db,
+        _recency_weight,
         current_phase=_get_current_phase(training_plan, current_week),
         adaptation_history=training_plan.adaptation_history,
         hr_zones=hr_zones,
@@ -159,14 +172,20 @@ def gather_signals(
             current_week,
             is_trail=getattr(training_plan, "is_trail", False),
             training_terrain=getattr(training_plan, "training_terrain", None),
-            target_elevation_gain_m=getattr(training_plan, "target_elevation_gain_m", None),
+            target_elevation_gain_m=getattr(
+                training_plan, "target_elevation_gain_m", None
+            ),
             plan_id=training_plan.id,
         ),
     )
 
     current_day_of_week = today.isoweekday()
     in_progress = is_current_week_in_progress(
-        plan_id, start_date, current_week, current_day_of_week, db,
+        plan_id,
+        start_date,
+        current_week,
+        current_day_of_week,
+        db,
     )
     first_adjustable_week = current_week + 1 if in_progress else current_week
     adjustable_weeks = (
@@ -230,13 +249,15 @@ def _run_adjust(
         training_plan = SQLAlchemyPlanRepository(db).get_for_user(plan_id, user_id)
         if not training_plan:
             cp = empty_change_plan(
-                action="adjust", mode=mode,
+                action="adjust",
+                mode=mode,
                 headline_reason="Plan not found.",
             )
             return {"adjusted": False, "reason": "Plan not found", "change_plan": cp}
         if not training_plan.start_date:
             cp = empty_change_plan(
-                action="adjust", mode=mode,
+                action="adjust",
+                mode=mode,
                 headline_reason=_reasons.NO_CHANGE_PLAN_NOT_STARTED,
             )
             return {
@@ -244,14 +265,11 @@ def _run_adjust(
                 "reason": "Plan has no start date.",
                 "change_plan": cp,
             }
-        total_runs = (
-            db.query(RunLog)
-            .filter(RunLog.training_plan_id == plan_id)
-            .count()
-        )
+        total_runs = db.query(RunLog).filter(RunLog.training_plan_id == plan_id).count()
         if total_runs < 3:
             cp = empty_change_plan(
-                action="adjust", mode=mode,
+                action="adjust",
+                mode=mode,
                 headline_reason=_reasons.NO_CHANGE_INSUFFICIENT_DATA,
             )
             return {
@@ -261,7 +279,8 @@ def _run_adjust(
                 "change_plan": cp,
             }
         cp = empty_change_plan(
-            action="adjust", mode=mode,
+            action="adjust",
+            mode=mode,
             headline_reason="No past workouts to evaluate yet.",
         )
         return {
@@ -287,16 +306,23 @@ def _run_adjust(
 
     if not adjustable_weeks:
         cp = empty_change_plan(
-            action="adjust", mode=mode,
+            action="adjust",
+            mode=mode,
             headline_reason=_reasons.NO_CHANGE_NO_REMAINING_WORKOUTS,
         )
         cp["summary"]["multiplier"] = multiplier
         cp["signals"] = _build_signals_summary(signals, runs_count=len(all_plan_runs))
         return {
             "adjusted": False,
-            **{k: signals[k] for k in (
-                "multiplier", "volume_ratio", "avg_effort", "completion_rate",
-            )},
+            **{
+                k: signals[k]
+                for k in (
+                    "multiplier",
+                    "volume_ratio",
+                    "avg_effort",
+                    "completion_rate",
+                )
+            },
             "total_runs": len(all_plan_runs),
             "weeks_changed": 0,
             "reason": _reasons.NO_CHANGE_NO_REMAINING_WORKOUTS,
@@ -307,7 +333,10 @@ def _run_adjust(
 
     recorder: List[Dict[str, Any]] = []
     weeks_changed, any_distance_changed, _counts = apply_adjustment_to_future_weeks(
-        training_plan, adjustable_weeks, multiplier, db,
+        training_plan,
+        adjustable_weeks,
+        multiplier,
+        db,
         current_week=current_week,
         current_day_of_week=current_day_of_week,
         per_type_ratios=signals.get("per_type_ratios"),
@@ -330,15 +359,19 @@ def _run_adjust(
     current_phase = signals.get("current_phase", "build")
     phase_weights = signals.get("phase_weights", {})
 
-    direction = "increased" if multiplier > 1.0 else "reduced" if multiplier < 1.0 else "kept"
+    direction = (
+        "increased" if multiplier > 1.0 else "reduced" if multiplier < 1.0 else "kept"
+    )
     # The user-facing verb has to track the actual net change. A baseline-
     # relative multiplier below 1.0 can still produce a net increase when a
     # previous, more aggressive adjustment had pulled distances further down
     # — so the modal showed "Reduced ... +26 km" until this was decoupled.
     net_delta_km = round(
         sum(
-            (after.get(wid, {}).get("distance_km", 0.0)
-             - before.get(wid, {}).get("distance_km", 0.0))
+            (
+                after.get(wid, {}).get("distance_km", 0.0)
+                - before.get(wid, {}).get("distance_km", 0.0)
+            )
             for wid in set(before) | set(after)
         ),
         1,
@@ -355,9 +388,13 @@ def _run_adjust(
         f"completion: {round(completion_rate * 100)}%."
     )
     if avg_effort is not None:
-        reason_parts.append(f"Avg effort: {round(avg_effort, 1)}/10 (trend: {effort_trend}).")
+        reason_parts.append(
+            f"Avg effort: {round(avg_effort, 1)}/10 (trend: {effort_trend})."
+        )
     if overreach_detected:
-        reason_parts.append("Overreach detected — forced reduction to protect recovery.")
+        reason_parts.append(
+            "Overreach detected — forced reduction to protect recovery."
+        )
     if signals.get("vdot_trend") == "declining":
         reason_parts.append("VDOT declining — capping volume to prevent overtraining.")
     tsb_form = signals.get("tsb_form")
@@ -368,7 +405,9 @@ def _run_adjust(
             f"VDOT recalibrated: {vdot_result['old_vdot']} → {vdot_result['new_vdot']} "
             f"({vdot_result['direction']})."
         )
-    reason_parts.append(f"Phase: {current_phase} (weights: V={phase_weights.get('volume', 0):.0%} E={phase_weights.get('effort', 0):.0%} C={phase_weights.get('completion', 0):.0%}).")
+    reason_parts.append(
+        f"Phase: {current_phase} (weights: V={phase_weights.get('volume', 0):.0%} E={phase_weights.get('effort', 0):.0%} C={phase_weights.get('completion', 0):.0%})."
+    )
 
     hr_zone_adherence = signals.get("hr_zone_adherence")
     if hr_zone_adherence is not None:
@@ -426,15 +465,18 @@ def _run_adjust(
         training_plan.adjustment_multiplier = multiplier
         training_plan.last_adjusted_at = datetime.now(timezone.utc).replace(tzinfo=None)
         training_plan.last_change_plan = change_plan
-        _record_adaptation_event(training_plan, {
-            "type": "adjust",
-            "multiplier": multiplier,
-            "direction": direction,
-            "effort_trend": effort_trend,
-            "overreach": overreach_detected,
-            "phase": current_phase,
-            "reason": headline_reason,
-        })
+        _record_adaptation_event(
+            training_plan,
+            {
+                "type": "adjust",
+                "multiplier": multiplier,
+                "direction": direction,
+                "effort_trend": effort_trend,
+                "overreach": overreach_detected,
+                "phase": current_phase,
+                "reason": headline_reason,
+            },
+        )
         db.commit()
 
         logger.info(
@@ -488,7 +530,9 @@ def _build_signals_summary(
     return out
 
 
-def _record_adaptation_event(training_plan: TrainingPlan, event: Dict[str, Any]) -> None:
+def _record_adaptation_event(
+    training_plan: TrainingPlan, event: Dict[str, Any]
+) -> None:
     event["date"] = today_date().isoformat()
     history = list(training_plan.adaptation_history or [])
     history.append(event)
@@ -539,7 +583,9 @@ def _run_reset(
 
     if not training_plan:
         cp = empty_change_plan(
-            action="reset", mode=mode, headline_reason="Plan not found.",
+            action="reset",
+            mode=mode,
+            headline_reason="Plan not found.",
         )
         return {"reset": False, "reason": "Plan not found", "change_plan": cp}
 
@@ -548,7 +594,8 @@ def _run_reset(
 
     if not has_adjustment and not has_recalibration:
         cp = empty_change_plan(
-            action="reset", mode=mode,
+            action="reset",
+            mode=mode,
             headline_reason=_reasons.NO_CHANGE_NO_ACTIVE_ADJUSTMENT,
         )
         return {
@@ -560,14 +607,10 @@ def _run_reset(
     plan_data, pd_week, pd_workout = parse_plan_data_lookups(training_plan)
 
     all_weeks = (
-        db.query(WeeklyPlan)
-        .filter(WeeklyPlan.training_plan_id == plan_id)
-        .all()
+        db.query(WeeklyPlan).filter(WeeklyPlan.training_plan_id == plan_id).all()
     )
 
-    workouts_by_week_map = batch_workouts_by_week(
-        [week.id for week in all_weeks], db
-    )
+    workouts_by_week_map = batch_workouts_by_week([week.id for week in all_weeks], db)
 
     before = snapshot_workouts(training_plan, db)
 
@@ -594,15 +637,14 @@ def _run_reset(
             if pd_wo is not None:
                 pd_wo["distance"] = workout.baseline_distance_km
                 pd_clean = ANNOTATION_RE.sub(
-                    "", pd_wo.get("notes", pd_wo.get("description", "")),
+                    "",
+                    pd_wo.get("notes", pd_wo.get("description", "")),
                 ).strip()
                 pd_wo["notes"] = pd_clean
 
         if week_changed:
             weeks_changed += 1
-            new_total = round(
-                sum(w.distance_km for w in workouts if w.distance_km), 1
-            )
+            new_total = round(sum(w.distance_km for w in workouts if w.distance_km), 1)
             week.total_km = new_total
             if week.week_number in pd_week:
                 pd_week[week.week_number]["total_km"] = new_total
@@ -629,11 +671,14 @@ def _run_reset(
         training_plan.adjustment_multiplier = None
         training_plan.last_recalibrated_at = None
         training_plan.last_change_plan = change_plan
-        _record_adaptation_event(training_plan, {
-            "type": "reset",
-            "weeks_changed": weeks_changed,
-            "reason": "Plan restored to original baseline distances.",
-        })
+        _record_adaptation_event(
+            training_plan,
+            {
+                "type": "reset",
+                "weeks_changed": weeks_changed,
+                "reason": "Plan restored to original baseline distances.",
+            },
+        )
         db.commit()
 
     return {

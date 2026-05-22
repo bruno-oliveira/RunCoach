@@ -8,7 +8,6 @@ from typing import Dict, List, Tuple
 from sqlalchemy.orm import Session
 
 from app.models import DailyWorkout, RunLog, TrainingPlan, WeeklyPlan
-from app.utils import to_date as _to_date
 
 # Regex to strip legacy adaptation/recalibration notes from workout notes
 ANNOTATION_RE = re.compile(r"\s*\((Adapted|Recalibrated|Adjusted):[^)]*\)")
@@ -105,9 +104,7 @@ def batch_workouts_by_week(
     Returns {weekly_plan_id: [DailyWorkout, ...]}.
     """
     all_workouts = (
-        db.query(DailyWorkout)
-        .filter(DailyWorkout.weekly_plan_id.in_(week_ids))
-        .all()
+        db.query(DailyWorkout).filter(DailyWorkout.weekly_plan_id.in_(week_ids)).all()
     )
     grouped: Dict[str, list] = defaultdict(list)
     for w in all_workouts:

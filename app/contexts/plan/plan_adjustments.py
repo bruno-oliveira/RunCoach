@@ -12,23 +12,17 @@ def adjust_intensity(
                     workout["intensity"] = intensity_level
                     notes = workout.get("notes") or ""
                     if intensity_level == "low":
-                        workout["notes"] = (
-                            notes
-                            .replace("threshold", "easy")
-                            .replace("tempo", "easy")
+                        workout["notes"] = notes.replace("threshold", "easy").replace(
+                            "tempo", "easy"
                         )
                     elif intensity_level == "high":
-                        workout["notes"] = (
-                            notes
-                            .replace("easy", "tempo")
-                            .replace("recovery", "moderate")
+                        workout["notes"] = notes.replace("easy", "tempo").replace(
+                            "recovery", "moderate"
                         )
     return plan_data
 
 
-def swap_workout(
-    plan_data: list[dict], week_number: int, swap_info: str
-) -> list[dict]:
+def swap_workout(plan_data: list[dict], week_number: int, swap_info: str) -> list[dict]:
     """Swap workout types for a specific week."""
     try:
         day, new_type = swap_info.split(",")
@@ -110,9 +104,7 @@ def apply_ai_suggestions(
                         workout["type"] = "rest"
                         workout["distance"] = 0
                         workout["notes"] = "Additional rest day for recovery"
-                        week["total_km"] = round(
-                            week["total_km"] - removed_distance, 1
-                        )
+                        week["total_km"] = round(week["total_km"] - removed_distance, 1)
                         break
 
             elif preference == "more_speed":
@@ -130,7 +122,7 @@ def apply_ai_suggestions(
                     if workout["type"] == "long":
                         workout["distance"] = round(workout["distance"] * 1.2, 1)
                         workout["notes"] = (
-                            f'Extended long run: {workout["distance"]}km at '
+                            f"Extended long run: {workout['distance']}km at "
                             "conversational pace"
                         )
                         break

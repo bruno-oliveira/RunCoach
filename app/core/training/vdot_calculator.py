@@ -5,7 +5,7 @@ Reference: Daniels' Running Formula (3rd ed.)
 """
 
 import math
-from typing import Dict, Optional, Tuple
+from typing import Dict, Optional
 
 STANDARD_RACE_DISTANCES = {
     "5K": 5.0,
@@ -28,12 +28,14 @@ TRAIL_ELEVATION_M_PER_KM = 20.0
 
 def _vo2_at_velocity(v: float) -> float:
     """Oxygen cost at velocity v (m/min)."""
-    return -4.60 + 0.182258 * v + 0.000104 * v ** 2
+    return -4.60 + 0.182258 * v + 0.000104 * v**2
 
 
 def _pct_vo2max_at_time(t: float) -> float:
     """Fraction of VO2max sustainable for t minutes."""
-    return 0.8 + 0.1894393 * math.exp(-0.012778 * t) + 0.2989558 * math.exp(-0.1932605 * t)
+    return (
+        0.8 + 0.1894393 * math.exp(-0.012778 * t) + 0.2989558 * math.exp(-0.1932605 * t)
+    )
 
 
 def _velocity_at_pct_vdot(vdot: float, pct: float) -> float:
@@ -45,7 +47,7 @@ def _velocity_at_pct_vdot(vdot: float, pct: float) -> float:
     a = 0.000104
     b = 0.182258
     c = -(4.60 + target)
-    discriminant = b ** 2 - 4 * a * c
+    discriminant = b**2 - 4 * a * c
     if discriminant < 0:
         return 0.0
     return (-b + math.sqrt(discriminant)) / (2 * a)
@@ -61,6 +63,7 @@ def _pace_from_velocity(v: float) -> float:
 def _format_pace(pace_min_km: float) -> str:
     """Format decimal min/km as MM:SS/km string."""
     from app.utils import format_pace
+
     return format_pace(pace_min_km)
 
 
@@ -69,19 +72,19 @@ class VDOTCalculator:
 
     # %VO2max for each training zone (midpoints of Daniels' ranges)
     ZONE_PCT = {
-        "E_slow": 0.65,   # Easy run - conversational (recovery end)
-        "E_fast": 0.75,   # Easy run - brisk end of easy range
-        "M": 0.79,        # Marathon pace
-        "T": 0.86,        # Threshold / tempo pace
-        "I": 0.98,        # Interval pace (VO2max work)
-        "R": 1.05,        # Repetition pace (speed / economy work)
+        "E_slow": 0.65,  # Easy run - conversational (recovery end)
+        "E_fast": 0.75,  # Easy run - brisk end of easy range
+        "M": 0.79,  # Marathon pace
+        "T": 0.86,  # Threshold / tempo pace
+        "I": 0.98,  # Interval pace (VO2max work)
+        "R": 1.05,  # Repetition pace (speed / economy work)
     }
 
     # Easy sub-zones: Recovery / Easy / Long Run
     E_SUB_ZONES = {
-        "recovery": (0.59, 0.65),   # very easy, active recovery
-        "easy":     (0.65, 0.72),   # standard easy run
-        "long_run": (0.72, 0.76),   # upper easy, long run pace
+        "recovery": (0.59, 0.65),  # very easy, active recovery
+        "easy": (0.65, 0.72),  # standard easy run
+        "long_run": (0.72, 0.76),  # upper easy, long run pace
     }
 
     @staticmethod
@@ -252,10 +255,13 @@ class VDOTCalculator:
             Total seconds, or None if unparseable
         """
         from app.utils import parse_race_time_to_seconds
+
         return parse_race_time_to_seconds(time_str)
 
     @staticmethod
-    def inject_paces_into_description(description: str, zones: Dict, workout_type: str) -> str:
+    def inject_paces_into_description(
+        description: str, zones: Dict, workout_type: str
+    ) -> str:
         """Enrich a workout description with specific VDOT-based paces.
 
         Replaces generic zone references with specific pace values.
@@ -314,6 +320,7 @@ class VDOTCalculator:
         endurance_factor: Optional[float] = None,
     ) -> Optional[int]:
         from app.core.training.race_predictor import predict_time_for_distance
+
         return predict_time_for_distance(
             vdot, distance_km, elevation_gain_m, trail_runs_count, endurance_factor
         )
@@ -328,6 +335,7 @@ class VDOTCalculator:
         endurance_factor: Optional[float] = None,
     ) -> Dict[str, int]:
         from app.core.training.race_predictor import get_confidence_range
+
         return get_confidence_range(
             vdot,
             distance_km,
@@ -345,6 +353,5 @@ class VDOTCalculator:
         endurance_factor: Optional[float] = None,
     ) -> Dict[str, Dict]:
         from app.core.training.race_predictor import predict_times
-        return predict_times(
-            vdot, trail_runs_count, elevation_map, endurance_factor
-        )
+
+        return predict_times(vdot, trail_runs_count, elevation_map, endurance_factor)

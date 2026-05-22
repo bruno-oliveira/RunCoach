@@ -9,9 +9,8 @@ allocation, quality caps, and weekly scaling.
 
 import pytest
 
+from app.constants import DISTANCE_NAMES, SUPPORTED_DISTANCES
 from app.contexts.plan.generators.plan_generator import TrainingPlanGenerator
-from app.constants import SUPPORTED_DISTANCES, DISTANCE_NAMES
-
 
 # ── Shared fixtures & helpers ──────────────────────────────────────────────
 
@@ -64,13 +63,15 @@ def _valid_combos():
 def _week_runs(week):
     """Extract running workouts (non-rest, non-recovery, positive distance)."""
     return [
-        w for w in week.get("daily_workouts", [])
+        w
+        for w in week.get("daily_workouts", [])
         if w.get("type") not in ("rest", "recovery", "strength", "cross_training")
         and w.get("distance", 0) > 0
     ]
 
 
 # ── Parametrised test IDs ──────────────────────────────────────────────────
+
 
 def _id(combo):
     d, m, r = combo
@@ -81,6 +82,7 @@ ALL_COMBOS = list(_valid_combos())
 
 
 # ── Tests ──────────────────────────────────────────────────────────────────
+
 
 class TestPlanGenerationSucceeds:
     """Every valid input combination must produce a plan without crashing."""
@@ -131,7 +133,11 @@ class TestEasyNeverExceedsLongRun:
 
         for week in plan:
             workouts = week.get("daily_workouts", [])
-            longs = [w for w in workouts if w.get("type") == "long" and w.get("distance", 0) > 0]
+            longs = [
+                w
+                for w in workouts
+                if w.get("type") == "long" and w.get("distance", 0) > 0
+            ]
             if not longs:
                 continue
             long_d = longs[0]["distance"]
@@ -220,13 +226,20 @@ class TestQualityCapsHold:
 
         for week in plan:
             workouts = week.get("daily_workouts", [])
-            longs = [w for w in workouts if w.get("type") == "long" and w.get("distance", 0) > 0]
+            longs = [
+                w
+                for w in workouts
+                if w.get("type") == "long" and w.get("distance", 0) > 0
+            ]
             if not longs:
                 continue
             long_d = longs[0]["distance"]
 
             for w in workouts:
-                if w.get("type") in ("tempo", "interval", "hill") and w.get("distance", 0) > 0:
+                if (
+                    w.get("type") in ("tempo", "interval", "hill")
+                    and w.get("distance", 0) > 0
+                ):
                     if w.get("duration_min"):
                         continue
                     assert w["distance"] <= long_d * 0.90, (
@@ -286,7 +299,8 @@ class TestStepDistanceMatchesWorkout:
                 total_m += s["distance_m"] * repeat
             elif s.get("duration_s"):
                 pace = _parse_pace_str_to_min_per_km(
-                    s.get("pace_str"), s.get("pace_zone"),
+                    s.get("pace_str"),
+                    s.get("pace_zone"),
                 )
                 if pace and pace > 0:
                     total_m += (s["duration_s"] / 60.0) / pace * 1000 * repeat
@@ -335,7 +349,9 @@ class TestLowBudgetQualityDemotion:
     """
 
     def test_tiny_budget_has_no_sub_floor_quality(self):
-        from app.contexts.plan.generators.weekly_plan_builder import _QUALITY_DEMOTE_THRESHOLD_KM
+        from app.contexts.plan.generators.weekly_plan_builder import (
+            _QUALITY_DEMOTE_THRESHOLD_KM,
+        )
 
         plan, _ = _generate_plan(5.0, 5, 3)
         for week in plan:

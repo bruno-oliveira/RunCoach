@@ -1,7 +1,5 @@
 """End-to-end router test for the new trail/ultra form path."""
 
-import pytest
-
 
 class TestTrailFormSubmission:
     """POST /generate-plan with is_trail + elevation produces a trail plan."""
@@ -32,7 +30,9 @@ class TestTrailFormSubmission:
         assert "50.0 km Trail" in view.text or "50 km Trail" in view.text
         assert "200 m vert" in view.text
 
-    def test_custom_trail_sentinel_resolves_from_trail_distance_km(self, client, test_db):
+    def test_custom_trail_sentinel_resolves_from_trail_distance_km(
+        self, client, test_db
+    ):
         # Current form shape: dropdown stays on "trail", actual km comes from
         # the trail_distance_km field. Server resolves the sentinel.
         response = client.post(

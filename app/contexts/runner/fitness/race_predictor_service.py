@@ -57,6 +57,7 @@ def _effort_weight(effort_class: Optional[str], workout_type: Optional[str]) -> 
         return _EFFORT_CLASS_WEIGHT[effort_class]
     return _EFFORT_TYPE_WEIGHT.get(workout_type or "", _DEFAULT_EFFORT_WEIGHT)
 
+
 # Extreme-outlier filter for VDOT aggregation. Tukey's IQR rule alone is too
 # tight on tightly clustered training paces (a 3-point real PR can fall outside
 # the bound when IQR is < 1). We pair it with a ratio-against-median bound so
@@ -72,11 +73,11 @@ _OUTLIER_MIN_SAMPLE = 5
 # include long fast runs. We compare predicted-from-VDOT to actual on the
 # runner's recent long runs and apply the median ratio as a multiplier.
 _ENDURANCE_MIN_TARGET_KM = 10.0
-_ENDURANCE_LONG_RUN_FRACTION = 0.7    # candidate runs >= 70% of target distance
-_ENDURANCE_TRAIL_THRESHOLD = 20.0     # m/km gain → counts as trail, excluded
+_ENDURANCE_LONG_RUN_FRACTION = 0.7  # candidate runs >= 70% of target distance
+_ENDURANCE_TRAIL_THRESHOLD = 20.0  # m/km gain → counts as trail, excluded
 _ENDURANCE_MIN_SAMPLE = 3
-_ENDURANCE_APPLY_THRESHOLD = 1.05     # ignore <5% gaps as noise
-_ENDURANCE_MAX_FACTOR = 1.5           # cap so calibration can't run away
+_ENDURANCE_APPLY_THRESHOLD = 1.05  # ignore <5% gaps as noise
+_ENDURANCE_MAX_FACTOR = 1.5  # cap so calibration can't run away
 
 
 def _vdot_outlier_threshold(vdots: List[float]) -> Optional[float]:
@@ -150,7 +151,9 @@ class RacePredictorService:
         ]
 
     @staticmethod
-    def get_best_recent_vdot(user_id: str, weeks: int = 12, *, db: Session) -> Optional[float]:
+    def get_best_recent_vdot(
+        user_id: str, weeks: int = 12, *, db: Session
+    ) -> Optional[float]:
         """Get a confidence-weighted VDOT estimate from recent runs.
 
         Fetches a pool of top-VDOT candidates and weights each by:
@@ -167,7 +170,8 @@ class RacePredictorService:
         cutoff_date_naive = cutoff_date.replace(tzinfo=None)
 
         all_window_vdots = [
-            v for (v,) in db.query(RunLog.vdot)
+            v
+            for (v,) in db.query(RunLog.vdot)
             .filter(
                 RunLog.user_id == user_id,
                 RunLog.vdot.isnot(None),
@@ -194,8 +198,7 @@ class RacePredictorService:
             candidate_query = candidate_query.filter(RunLog.vdot <= outlier_threshold)
 
         candidates = (
-            candidate_query
-            .order_by(RunLog.vdot.desc())
+            candidate_query.order_by(RunLog.vdot.desc())
             .limit(_CANDIDATE_POOL_SIZE)
             .all()
         )
@@ -204,7 +207,13 @@ class RacePredictorService:
             return None
 
         weighted_entries = []
-        for vdot, distance_km, workout_type, perceived_effort, effort_class in candidates:
+        for (
+            vdot,
+            distance_km,
+            workout_type,
+            perceived_effort,
+            effort_class,
+        ) in candidates:
             distance_weight = min(distance_km / 10.0, 1.5)
             effort_weight = _effort_weight(effort_class, workout_type)
             pe_multiplier = 1.2 if (perceived_effort and perceived_effort >= 7) else 1.0
@@ -244,10 +253,14 @@ class RacePredictorService:
             return 1.0
 
         min_distance = target_distance_km * _ENDURANCE_LONG_RUN_FRACTION
-        cutoff = (datetime.now(timezone.utc) - timedelta(weeks=weeks)).replace(tzinfo=None)
+        cutoff = (datetime.now(timezone.utc) - timedelta(weeks=weeks)).replace(
+            tzinfo=None
+        )
 
         long_runs = (
-            db.query(RunLog.distance_km, RunLog.duration_minutes, RunLog.elevation_gain_m)
+            db.query(
+                RunLog.distance_km, RunLog.duration_minutes, RunLog.elevation_gain_m
+            )
             .filter(
                 RunLog.user_id == user_id,
                 RunLog.distance_km >= min_distance,
@@ -260,7 +273,8 @@ class RacePredictorService:
         # Exclude trail runs -- elevation is handled separately by the prediction;
         # mixing them here would conflate course profile with endurance gap.
         flat_runs = [
-            (d, m, e) for (d, m, e) in long_runs
+            (d, m, e)
+            for (d, m, e) in long_runs
             if not (e and d > 0 and e / d >= _ENDURANCE_TRAIL_THRESHOLD)
         ]
         if len(flat_runs) < _ENDURANCE_MIN_SAMPLE:
@@ -300,7 +314,8 @@ class RacePredictorService:
         user's "best effort".
         """
         all_vdots = [
-            v for (v,) in db.query(RunLog.vdot)
+            v
+            for (v,) in db.query(RunLog.vdot)
             .filter(
                 RunLog.user_id == user_id,
                 RunLog.vdot.isnot(None),
@@ -310,23 +325,15 @@ class RacePredictorService:
         ]
         outlier_threshold = _vdot_outlier_threshold(all_vdots)
 
-        top_runs_query = (
-            db.query(RunLog)
-            .filter(
-                RunLog.user_id == user_id,
-                RunLog.vdot.isnot(None),
-                RunLog.distance_km >= MIN_DISTANCE_KM,
-            )
+        top_runs_query = db.query(RunLog).filter(
+            RunLog.user_id == user_id,
+            RunLog.vdot.isnot(None),
+            RunLog.distance_km >= MIN_DISTANCE_KM,
         )
         if outlier_threshold is not None:
             top_runs_query = top_runs_query.filter(RunLog.vdot <= outlier_threshold)
 
-        top_runs = (
-            top_runs_query
-            .order_by(RunLog.vdot.desc())
-            .limit(TOP_N_VDOTS)
-            .all()
-        )
+        top_runs = top_runs_query.order_by(RunLog.vdot.desc()).limit(TOP_N_VDOTS).all()
 
         if not top_runs:
             return None
@@ -366,7 +373,9 @@ class RacePredictorService:
     @staticmethod
     def get_predictions_for_user(user_id: str, db: Session) -> Dict[str, Any]:
         """Get race predictions based on user's best recent VDOT from all runs."""
-        current_vdot = RacePredictorService.get_best_recent_vdot(user_id, weeks=12, db=db)
+        current_vdot = RacePredictorService.get_best_recent_vdot(
+            user_id, weeks=12, db=db
+        )
 
         if not current_vdot:
             return {
@@ -382,10 +391,13 @@ class RacePredictorService:
         trend = RacePredictorService.calculate_vdot_trend(vdot_history)
         best_effort = RacePredictorService.get_best_effort(user_id, db=db)
 
-        trail_profile = RacePredictorService._get_user_trail_elevation_profile(user_id, db)
+        trail_profile = RacePredictorService._get_user_trail_elevation_profile(
+            user_id, db
+        )
 
         predictions: Dict[str, Dict[str, Any]] = {}
         from app.core.training.vdot_calculator import STANDARD_RACE_DISTANCES
+
         for name, distance in STANDARD_RACE_DISTANCES.items():
             elev = None
             trail_count = None
@@ -397,7 +409,8 @@ class RacePredictorService:
                 user_id, distance, db, current_vdot=current_vdot
             )
             seconds = VDOTCalculator.predict_time_for_distance(
-                current_vdot, distance,
+                current_vdot,
+                distance,
                 elevation_gain_m=elev,
                 trail_runs_count=trail_count,
                 endurance_factor=endurance_factor,
@@ -405,7 +418,8 @@ class RacePredictorService:
             if not seconds:
                 continue
             range_data = VDOTCalculator.get_confidence_range(
-                current_vdot, distance,
+                current_vdot,
+                distance,
                 elevation_gain_m=elev,
                 trail_runs_count=trail_count,
                 endurance_factor=endurance_factor,
@@ -437,7 +451,9 @@ class RacePredictorService:
         signal stays consistent across services. Drives the trail
         inexperience factor in race-time predictions for ultra plans.
         """
-        return RacePredictorService._get_user_trail_elevation_profile(user_id, db)["count"]
+        return RacePredictorService._get_user_trail_elevation_profile(user_id, db)[
+            "count"
+        ]
 
     @staticmethod
     def _get_user_trail_elevation_profile(user_id: str, db: Session) -> Dict[str, Any]:
@@ -451,10 +467,7 @@ class RacePredictorService:
             )
             .all()
         )
-        trail_entries = [
-            (d, e) for d, e in trail_runs
-            if d and e and e / d >= 20.0
-        ]
+        trail_entries = [(d, e) for d, e in trail_runs if d and e and e / d >= 20.0]
         if not trail_entries:
             return {"avg_m_per_km": None, "count": 0}
         count = len(trail_entries)
@@ -492,9 +505,13 @@ class RacePredictorService:
         enriched = []
 
         for run in all_runs:
-            actual_seconds = int(run.duration_minutes * 60) if run.duration_minutes else None
+            actual_seconds = (
+                int(run.duration_minutes * 60) if run.duration_minutes else None
+            )
 
-            run_ts = (run.date - datetime(1970, 1, 1)).total_seconds() if run.date else 0
+            run_ts = (
+                (run.date - datetime(1970, 1, 1)).total_seconds() if run.date else 0
+            )
             cutoff_ts = run_ts - WINDOW_WEEKS * 7 * 86400
             window_vdots = sorted(
                 [v for ts, v in prior_vdots if ts >= cutoff_ts],
@@ -522,7 +539,9 @@ class RacePredictorService:
                 accuracy_pct = round((1 - abs(delta) / predicted_seconds) * 100, 1)
                 comparison = {
                     "predicted_seconds": predicted_seconds,
-                    "predicted_formatted": VDOTCalculator.format_duration(predicted_seconds),
+                    "predicted_formatted": VDOTCalculator.format_duration(
+                        predicted_seconds
+                    ),
                     "actual_seconds": actual_seconds,
                     "actual_formatted": VDOTCalculator.format_duration(actual_seconds),
                     "delta_seconds": delta,
@@ -533,19 +552,25 @@ class RacePredictorService:
 
             distance_name = RacePredictorService._closest_distance_name(run.distance_km)
 
-            enriched.append({
-                "id": run.id,
-                "date": run.date.isoformat() if run.date else None,
-                "distance_km": run.distance_km,
-                "distance_name": distance_name,
-                "workout_type": run.workout_type,
-                "actual_seconds": actual_seconds,
-                "actual_formatted": VDOTCalculator.format_duration(actual_seconds) if actual_seconds else None,
-                "avg_pace_min_km": round(run.avg_pace_min_km, 2) if run.avg_pace_min_km else None,
-                "vdot": run.vdot,
-                "comparison": comparison,
-                "notes": run.notes,
-            })
+            enriched.append(
+                {
+                    "id": run.id,
+                    "date": run.date.isoformat() if run.date else None,
+                    "distance_km": run.distance_km,
+                    "distance_name": distance_name,
+                    "workout_type": run.workout_type,
+                    "actual_seconds": actual_seconds,
+                    "actual_formatted": VDOTCalculator.format_duration(actual_seconds)
+                    if actual_seconds
+                    else None,
+                    "avg_pace_min_km": round(run.avg_pace_min_km, 2)
+                    if run.avg_pace_min_km
+                    else None,
+                    "vdot": run.vdot,
+                    "comparison": comparison,
+                    "notes": run.notes,
+                }
+            )
 
             if run.vdot:
                 prior_vdots.append((run_ts, run.vdot))
@@ -572,9 +597,13 @@ class RacePredictorService:
     def _closest_distance_name(distance_km: float) -> str:
         """Find the closest standard race distance name for a given km."""
         distance_names = {
-            5.0: "5K", 10.0: "10K", 21.1: "Half Marathon",
-            21.0975: "Half Marathon", 30.0: "Trail",
-            42.2: "Marathon", 42.195: "Marathon",
+            5.0: "5K",
+            10.0: "10K",
+            21.1: "Half Marathon",
+            21.0975: "Half Marathon",
+            30.0: "Trail",
+            42.2: "Marathon",
+            42.195: "Marathon",
         }
         for dist, name in distance_names.items():
             if abs(distance_km - dist) < 1.0:
@@ -589,7 +618,9 @@ class RacePredictorService:
         db: Session,
     ) -> Dict[str, Any]:
         """Analyze gap between current fitness and race goal."""
-        predicted_time = VDOTCalculator.predict_time_for_distance(current_vdot, target_distance)
+        predicted_time = VDOTCalculator.predict_time_for_distance(
+            current_vdot, target_distance
+        )
 
         if not predicted_time:
             return {
@@ -605,7 +636,9 @@ class RacePredictorService:
         gap_seconds = goal_time_seconds - predicted_time
 
         if gap_seconds > 0:
-            gap_label = f"{VDOTCalculator.format_duration(gap_seconds)} slower than predicted"
+            gap_label = (
+                f"{VDOTCalculator.format_duration(gap_seconds)} slower than predicted"
+            )
         elif gap_seconds < 0:
             gap_label = f"{VDOTCalculator.format_duration(abs(gap_seconds))} faster than predicted"
         else:
@@ -618,7 +651,9 @@ class RacePredictorService:
         if gap_seconds > 0:
             search_vdot = current_vdot
             for _ in range(100):
-                test_time = VDOTCalculator.predict_time_for_distance(search_vdot, target_distance)
+                test_time = VDOTCalculator.predict_time_for_distance(
+                    search_vdot, target_distance
+                )
                 if test_time and test_time <= goal_time_seconds:
                     vdot_required = round(search_vdot, 1)
                     break

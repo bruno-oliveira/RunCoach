@@ -7,7 +7,13 @@ from fastapi import APIRouter, Cookie, Depends, HTTPException, Request
 from fastapi.responses import HTMLResponse
 from sqlalchemy.orm import Session
 
+from app.contexts.auth.repositories import SQLAlchemyUserRepository
 from app.contexts.nutrition.nutrition_engine import NutritionEngine
+from app.contexts.plan.adaptation import AdaptationService
+from app.contexts.plan.plan_helpers import get_plan_or_404, plan_view_context
+from app.contexts.plan.plan_service import PlanService
+from app.contexts.plan.plan_type_registry import get_handler_for_plan
+from app.contexts.runner.fitness.hr_zone_service import HRZoneService
 from app.dependencies import (
     get_db,
     get_nutrition_engine,
@@ -15,12 +21,6 @@ from app.dependencies import (
     get_plan_service,
 )
 from app.models import User
-from app.contexts.auth.repositories import SQLAlchemyUserRepository
-from app.contexts.plan.adaptation import AdaptationService
-from app.contexts.runner.fitness.hr_zone_service import HRZoneService
-from app.contexts.plan.plan_helpers import get_plan_or_404, plan_view_context
-from app.contexts.plan.plan_service import PlanService
-from app.contexts.plan.plan_type_registry import get_handler_for_plan
 from app.template_helpers import create_templates
 from app.utils import persist_json
 
@@ -42,22 +42,14 @@ async def view_plan(
 ) -> HTMLResponse:
     """View an existing training plan."""
     try:
-        training_plan = get_plan_or_404(
-            plan_id, db, current_user, anonymous_user_id
-        )
+        training_plan = get_plan_or_404(plan_id, db, current_user, anonymous_user_id)
 
         if current_user and training_plan.start_date:
             try:
                 adaptation_service = AdaptationService()
-                adaptation_service.map_runs_to_plan(
-                    plan_id, current_user.id, db
-                )
-                adaptation_service.check_alerts(
-                    plan_id, current_user.id, db
-                )
-                adaptation_service.evaluate_recommendation(
-                    plan_id, current_user.id, db
-                )
+                adaptation_service.map_runs_to_plan(plan_id, current_user.id, db)
+                adaptation_service.check_alerts(plan_id, current_user.id, db)
+                adaptation_service.evaluate_recommendation(plan_id, current_user.id, db)
             except Exception as e:
                 logger.warning("Auto-map/alert on view failed: %s", e)
 
@@ -100,7 +92,13 @@ async def view_plan(
         )
 
         ctx = plan_view_context(
-            request, current_user, training_plan, plan_data, nutrition_plan, db=db, **extra
+            request,
+            current_user,
+            training_plan,
+            plan_data,
+            nutrition_plan,
+            db=db,
+            **extra,
         )
         return templates.TemplateResponse("plan.html", ctx)
 
@@ -108,4 +106,7 @@ async def view_plan(
         raise
     except Exception as e:
         logger.error("Error generating plan: %s", e, exc_info=True)
-        raise HTTPException(status_code=500, detail="An internal error occurred while generating the plan")
+        raise HTTPException(
+            status_code=500,
+            detail="An internal error occurred while generating the plan",
+        )

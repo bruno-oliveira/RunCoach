@@ -4,8 +4,6 @@ Covers routers that previously had no test coverage:
 runs, analytics, performance, adaptive, recipes.
 """
 
-import time
-
 import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy.orm import Session
@@ -13,7 +11,6 @@ from sqlalchemy.orm import Session
 from app.dependencies import get_current_user, get_db, get_optional_user
 from app.main import app
 from app.models.user import User
-
 
 # ---------------------------------------------------------------------------
 # Fixtures
@@ -37,6 +34,7 @@ def smoke_user(test_db: Session) -> User:
 @pytest.fixture
 def _override_db(test_db: Session):
     """Override the DB dependency and clean up after the test."""
+
     def override_get_db():
         try:
             yield test_db
@@ -51,6 +49,7 @@ def _override_db(test_db: Session):
 def _set_user(user: User):
     async def override():
         return user
+
     app.dependency_overrides[get_current_user] = override
 
 
@@ -82,19 +81,25 @@ class TestRunsRouter:
     def test_create_run_authenticated(self, smoke_user):
         _set_user(smoke_user)
         with TestClient(app) as c:
-            resp = c.post("/api/runs", json={
-                "distance_km": 5.0,
-                "duration_minutes": 30.0,
-            })
+            resp = c.post(
+                "/api/runs",
+                json={
+                    "distance_km": 5.0,
+                    "duration_minutes": 30.0,
+                },
+            )
         assert resp.status_code == 201
 
     def test_create_run_unauthenticated(self):
         _clear_user()
         with TestClient(app) as c:
-            resp = c.post("/api/runs", json={
-                "distance_km": 5.0,
-                "duration_minutes": 30.0,
-            })
+            resp = c.post(
+                "/api/runs",
+                json={
+                    "distance_km": 5.0,
+                    "duration_minutes": 30.0,
+                },
+            )
         assert resp.status_code == 401
 
 
@@ -136,9 +141,12 @@ class TestPerformanceRouter:
     def test_calculate_fitness_authenticated(self, smoke_user):
         _set_user(smoke_user)
         with TestClient(app) as c:
-            resp = c.get("/api/performance/calculate-fitness", params={
-                "distance": 10.0,
-            })
+            resp = c.get(
+                "/api/performance/calculate-fitness",
+                params={
+                    "distance": 10.0,
+                },
+            )
         assert resp.status_code == 200
 
 
@@ -187,15 +195,19 @@ class TestTimeGoalPlan:
         app.dependency_overrides[get_optional_user] = lambda: smoke_user
         try:
             with TestClient(app) as c:
-                resp = c.post("/generate-plan", data={
-                    "current_km": 30.0,
-                    "target_distance": "10",
-                    "weeks": 8,
-                    "max_runs_per_week": 4,
-                    "plan_mode": "time",
-                    "goal_time_required": "50:00",
-                    "current_time": "55:00",
-                }, follow_redirects=False)
+                resp = c.post(
+                    "/generate-plan",
+                    data={
+                        "current_km": 30.0,
+                        "target_distance": "10",
+                        "weeks": 8,
+                        "max_runs_per_week": 4,
+                        "plan_mode": "time",
+                        "goal_time_required": "50:00",
+                        "current_time": "55:00",
+                    },
+                    follow_redirects=False,
+                )
             assert resp.status_code == 303
             assert resp.headers["location"].startswith("/plan/")
         finally:
@@ -207,14 +219,17 @@ class TestTimeGoalPlan:
         app.dependency_overrides[get_optional_user] = lambda: None
         try:
             with TestClient(app) as c:
-                resp = c.post("/generate-plan", data={
-                    "current_km": 30.0,
-                    "target_distance": "10",
-                    "weeks": 8,
-                    "max_runs_per_week": 4,
-                    "plan_mode": "time",
-                    "goal_time_required": "50:00",
-                })
+                resp = c.post(
+                    "/generate-plan",
+                    data={
+                        "current_km": 30.0,
+                        "target_distance": "10",
+                        "weeks": 8,
+                        "max_runs_per_week": 4,
+                        "plan_mode": "time",
+                        "goal_time_required": "50:00",
+                    },
+                )
             assert resp.status_code == 200
             assert "logged-in" in resp.text.lower() or "auth" in resp.text.lower()
         finally:

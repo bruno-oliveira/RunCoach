@@ -25,6 +25,7 @@ def _get_encryption_secret() -> str:
     so a leak of the JWT signing key does not expose Strava tokens at rest.
     """
     from app.infrastructure.config import settings
+
     if settings.encryption_key:
         return settings.encryption_key
     if not settings.debug:

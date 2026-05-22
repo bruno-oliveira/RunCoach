@@ -1,14 +1,14 @@
 """Skipped and rescheduled workout detection."""
 
 from collections import defaultdict
-from datetime import timedelta
-from typing import Any, Dict, Optional
+from datetime import datetime, timedelta
+from typing import Dict, Optional
 
 from sqlalchemy.orm import Session
 
-from app.models import DailyWorkout, RunLog, TrainingPlan, WeeklyPlan
-from app.utils import to_date as _to_date
 from app.contexts.plan.repositories import SQLAlchemyPlanRepository
+from app.models import DailyWorkout, RunLog, WeeklyPlan
+from app.utils import to_date as _to_date
 
 from ._helpers import today_date
 
@@ -53,8 +53,8 @@ def detect_skipped_workouts(
 
     # Batch: fetch all linked workout IDs in one query
     linked_workout_ids = set(
-        row[0] for row in
-        db.query(RunLog.daily_workout_id)
+        row[0]
+        for row in db.query(RunLog.daily_workout_id)
         .filter(
             RunLog.training_plan_id == plan_id,
             RunLog.daily_workout_id.isnot(None),
@@ -68,8 +68,7 @@ def detect_skipped_workouts(
 
     for workout, week_number in daily_workouts:
         workout_date = plan_start_date + timedelta(
-            weeks=(week_number - 1),
-            days=(workout.day_of_week - 1)
+            weeks=(week_number - 1), days=(workout.day_of_week - 1)
         )
         if workout_date > today:
             continue

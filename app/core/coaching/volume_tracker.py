@@ -19,8 +19,16 @@ def volume_feedback(run_log, db) -> Optional[str]:
     if not plan or not plan.start_date:
         return None
 
-    run_date = run_log.date.replace(tzinfo=None) if hasattr(run_log.date, 'replace') and run_log.date.tzinfo else run_log.date
-    plan_start = plan.start_date.replace(tzinfo=None) if hasattr(plan.start_date, 'replace') and plan.start_date.tzinfo else plan.start_date
+    run_date = (
+        run_log.date.replace(tzinfo=None)
+        if hasattr(run_log.date, "replace") and run_log.date.tzinfo
+        else run_log.date
+    )
+    plan_start = (
+        plan.start_date.replace(tzinfo=None)
+        if hasattr(plan.start_date, "replace") and plan.start_date.tzinfo
+        else plan.start_date
+    )
     days_since_start = (run_date - plan_start).days
     if days_since_start < 0:
         return None

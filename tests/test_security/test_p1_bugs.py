@@ -8,19 +8,19 @@ P1-D: 1000m repeats require 50 km/week base, not 40 km/week
 
 import pytest
 
-from app.exceptions import InsufficientTimeException
+from app.core.training.mileage_progression import get_peak_mileage
 from app.core.training.phase_calculator import (
     MIN_WEEKS_FOR_PHASES,
     calculate_phases,
     is_recovery_week,
 )
-from app.core.training.mileage_progression import get_peak_mileage
 from app.core.training.workout_builders import generate_interval_run
-
+from app.exceptions import InsufficientTimeException
 
 # ---------------------------------------------------------------------------
 # P1-A: Phase collapse on short plans
 # ---------------------------------------------------------------------------
+
 
 class TestPhaseCollapseGuard:
     def test_raises_for_plans_below_minimum(self):
@@ -41,7 +41,9 @@ class TestPhaseCollapseGuard:
     def test_all_phases_positive_at_minimum(self):
         phases = calculate_phases(MIN_WEEKS_FOR_PHASES, target_distance=21.1)
         for name, weeks in phases.items():
-            assert weeks >= 1, f"Phase '{name}' collapsed to {weeks} at minimum plan length"
+            assert weeks >= 1, (
+                f"Phase '{name}' collapsed to {weeks} at minimum plan length"
+            )
 
     def test_exception_carries_suggestion(self):
         with pytest.raises(InsufficientTimeException) as exc_info:
@@ -53,6 +55,7 @@ class TestPhaseCollapseGuard:
 # ---------------------------------------------------------------------------
 # P1-B: Detraining for high-base runners
 # ---------------------------------------------------------------------------
+
 
 class TestHighBaseDetraining:
     def test_5k_high_base_not_detrained_beyond_10pct(self):
@@ -82,7 +85,9 @@ class TestHighBaseDetraining:
     def test_peak_never_below_90pct_regardless_of_distance(self):
         for dist in [5.0, 10.0, 21.1, 42.2]:
             current_km = 100.0
-            peak = get_peak_mileage(target_distance=dist, current_km=current_km, weeks=16)
+            peak = get_peak_mileage(
+                target_distance=dist, current_km=current_km, weeks=16
+            )
             assert peak >= current_km * 0.90, (
                 f"dist={dist}: peak {peak:.1f} is more than 10% below base {current_km}"
             )
@@ -91,6 +96,7 @@ class TestHighBaseDetraining:
 # ---------------------------------------------------------------------------
 # P1-C: Recovery-week uses week-in-phase, not global week number
 # ---------------------------------------------------------------------------
+
 
 class TestRecoveryWeekPhaseRelative:
     def test_first_week_of_build_is_not_recovery(self):
@@ -106,7 +112,9 @@ class TestRecoveryWeekPhaseRelative:
         phases = {"base": 6, "build": 6, "peak": 2, "taper": 2}
         # Base starts at week 1; week_in_phase = week_number - 1
         # week_in_phase == 4 → week_number == 5
-        assert is_recovery_week(5, "base", phases), "Week 5 should be recovery (4th step in base)"
+        assert is_recovery_week(5, "base", phases), (
+            "Week 5 should be recovery (4th step in base)"
+        )
         assert not is_recovery_week(4, "base", phases), "Week 4 should NOT be recovery"
 
     def test_build_recovery_independent_of_base_length(self):
@@ -116,14 +124,18 @@ class TestRecoveryWeekPhaseRelative:
         build_start = phases["base"] + 1  # 6
         recovery_in_build = build_start + 4  # week 10
 
-        assert not is_recovery_week(build_start, "build", phases), \
+        assert not is_recovery_week(build_start, "build", phases), (
             "Build week 1 should not be recovery"
-        assert not is_recovery_week(build_start + 1, "build", phases), \
+        )
+        assert not is_recovery_week(build_start + 1, "build", phases), (
             "Build week 2 should not be recovery"
-        assert not is_recovery_week(build_start + 3, "build", phases), \
+        )
+        assert not is_recovery_week(build_start + 3, "build", phases), (
             "Build week 4 should not be recovery"
-        assert is_recovery_week(recovery_in_build, "build", phases), \
+        )
+        assert is_recovery_week(recovery_in_build, "build", phases), (
             f"Week {recovery_in_build} (4th step into build) should be recovery"
+        )
 
     def test_global_week_4_not_forced_as_build_recovery(self):
         """If build starts at week 3, global week 4 (build week 2) should not be recovery."""
@@ -152,6 +164,7 @@ class TestRecoveryWeekPhaseRelative:
 # P1-D: 1000m repeat threshold raised from 40 to 50 km/week
 # ---------------------------------------------------------------------------
 
+
 class TestIntervalThreshold:
     def _get_description(self, total_km: float) -> str:
         workout = generate_interval_run(day=2, distance=8.0, total_km=total_km)
@@ -170,22 +183,30 @@ class TestIntervalThreshold:
         """A runner at 50 km/week crosses the threshold — 1000 m is now in the pool."""
         found_1000m = False
         for day in range(1, 8):
-            desc = generate_interval_run(day=day, distance=8.0, total_km=50.0)["description"].lower()
+            desc = generate_interval_run(day=day, distance=8.0, total_km=50.0)[
+                "description"
+            ].lower()
             if "1000m" in desc:
                 found_1000m = True
                 break
-        assert found_1000m, "At 50 km/week, 1000 m repeats should appear in the interval pool"
+        assert found_1000m, (
+            "At 50 km/week, 1000 m repeats should appear in the interval pool"
+        )
 
     def test_60km_runner_gets_harder_intervals(self):
         """High-mileage runners should get the more demanding interval menu (all 7 day variants)."""
         demanding_keywords = ["400m", "800m", "1000m", "pyramid", "yasso", "hill"]
         found = False
         for day in range(1, 8):
-            desc = generate_interval_run(day=day, distance=8.0, total_km=60.0)["description"].lower()
+            desc = generate_interval_run(day=day, distance=8.0, total_km=60.0)[
+                "description"
+            ].lower()
             if any(kw in desc for kw in demanding_keywords):
                 found = True
                 break
-        assert found, "60 km/week runner should get demanding interval formats across day variants"
+        assert found, (
+            "60 km/week runner should get demanding interval formats across day variants"
+        )
 
     def test_low_mileage_runner_gets_shorter_intervals(self):
         """Runners below threshold get 400 m and shorter formats."""

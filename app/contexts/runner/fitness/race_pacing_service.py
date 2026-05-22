@@ -23,7 +23,10 @@ def _is_trail_course(distance_km: float, total_elevation_gain_m: float) -> bool:
     """Course averages enough climbing to be classified as trail (>=20 m/km)."""
     if distance_km <= 0:
         return False
-    return total_elevation_gain_m / distance_km >= race_predictor.TRAIL_ELEVATION_M_PER_KM_THRESHOLD
+    return (
+        total_elevation_gain_m / distance_km
+        >= race_predictor.TRAIL_ELEVATION_M_PER_KM_THRESHOLD
+    )
 
 
 class RacePacingService:
@@ -43,7 +46,9 @@ class RacePacingService:
         Returns:
             Dict with vdot, run_count, and confidence level.
         """
-        cutoff = (datetime.now(timezone.utc) - timedelta(days=days)).replace(tzinfo=None)
+        cutoff = (datetime.now(timezone.utc) - timedelta(days=days)).replace(
+            tzinfo=None
+        )
 
         runs = (
             db.query(RunLog)
@@ -137,7 +142,9 @@ class RacePacingService:
                 total_penalty += grade * rate * seg_distance
 
             if net_grade < 0:
-                bonus = abs(net_grade) * DOWNHILL_BONUS_SEC_PER_KM_PER_PCT * seg_distance
+                bonus = (
+                    abs(net_grade) * DOWNHILL_BONUS_SEC_PER_KM_PER_PCT * seg_distance
+                )
                 bonus = min(bonus, MAX_DOWNHILL_BONUS_SEC_PER_KM * seg_distance)
                 total_bonus += bonus
 
@@ -228,7 +235,9 @@ class RacePacingService:
             user_vdot, distance_km, elevation_profile, trail_runs_count=trail_runs_count
         )
 
-        base_pace_sec_per_km = target_time_seconds / distance_km if distance_km > 0 else 0
+        base_pace_sec_per_km = (
+            target_time_seconds / distance_km if distance_km > 0 else 0
+        )
 
         raw_paces: list[float] = []
         seg_distances: list[float] = []
@@ -259,7 +268,9 @@ class RacePacingService:
 
         segments = []
         cumulative_time = 0
-        for seg, raw_pace, seg_distance in zip(elevation_profile, raw_paces, seg_distances):
+        for seg, raw_pace, seg_distance in zip(
+            elevation_profile, raw_paces, seg_distances
+        ):
             adjusted_pace = raw_pace * scale
             segment_time = int(round(adjusted_pace * seg_distance))
             cumulative_time += segment_time
@@ -267,18 +278,20 @@ class RacePacingService:
             pace_min_km = adjusted_pace / 60.0
             pace_str = VDOTCalculator.format_pace(pace_min_km)
 
-            segments.append(RaceSegment(
-                segment_number=seg["segment_number"],
-                start_km=seg["start_km"],
-                end_km=seg["end_km"],
-                elevation_m=seg["avg_elevation"],
-                grade_pct=seg["grade_pct"],
-                net_grade_pct=seg.get("net_grade_pct", 0.0),
-                target_pace_min_km=round(pace_min_km, 2),
-                target_pace_str=pace_str,
-                target_time_seconds=segment_time,
-                cumulative_time_seconds=cumulative_time,
-            ))
+            segments.append(
+                RaceSegment(
+                    segment_number=seg["segment_number"],
+                    start_km=seg["start_km"],
+                    end_km=seg["end_km"],
+                    elevation_m=seg["avg_elevation"],
+                    grade_pct=seg["grade_pct"],
+                    net_grade_pct=seg.get("net_grade_pct", 0.0),
+                    target_pace_min_km=round(pace_min_km, 2),
+                    target_pace_str=pace_str,
+                    target_time_seconds=segment_time,
+                    cumulative_time_seconds=cumulative_time,
+                )
+            )
 
         feasibility = RacePacingService.validate_feasibility(
             target_time_seconds, flat_time, elevation_data["elevation_adjusted"]

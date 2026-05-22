@@ -11,15 +11,15 @@ from typing import Any, Dict, List, Optional, Tuple
 
 from sqlalchemy.orm import Session
 
-from app.models import RunLog, RunFeedback
 from app.contexts.plan.adaptation.hr_zone_analyzer import HRZoneAnalyzer
+from app.models import RunLog
 from app.utils import to_date as _to_date
 
 _PHASE_WEIGHTS = {
-    "base":   (0.38, 0.18, 0.18, 0.11, 0.07, 0.08),
-    "build":  (0.33, 0.20, 0.16, 0.14, 0.09, 0.08),
-    "peak":   (0.28, 0.20, 0.16, 0.16, 0.10, 0.10),
-    "taper":  (0.10, 0.20, 0.22, 0.22, 0.14, 0.12),
+    "base": (0.38, 0.18, 0.18, 0.11, 0.07, 0.08),
+    "build": (0.33, 0.20, 0.16, 0.14, 0.09, 0.08),
+    "peak": (0.28, 0.20, 0.16, 0.16, 0.10, 0.10),
+    "taper": (0.10, 0.20, 0.22, 0.22, 0.14, 0.12),
 }
 
 _MIN_RUNS_PER_TYPE = 3
@@ -85,11 +85,20 @@ def compute_adjustment_signals(
     volume = _volume_signal(past_workouts, all_plan_runs, recency_weight_fn, today, vw)
     effort = _effort_signal(all_plan_runs, recency_weight_fn, today, ew)
     completion = _completion_signal(
-        past_workouts, past_workout_ids, plan_id, db, recency_weight_fn, cw,
+        past_workouts,
+        past_workout_ids,
+        plan_id,
+        db,
+        recency_weight_fn,
+        cw,
     )
     hr = _hr_signal(all_plan_runs, hr_zones, recency_weight_fn, today, hw)
     feedback = _feedback_signal(
-        run_feedback_list, all_plan_runs, recency_weight_fn, today, fw,
+        run_feedback_list,
+        all_plan_runs,
+        recency_weight_fn,
+        today,
+        fw,
     )
     readiness = _readiness_signal(readiness_logs, rw)
 
@@ -136,11 +145,11 @@ def compute_adjustment_signals(
 
     consecutive_same_direction = _count_consecutive_direction(adaptation_history)
     expanded_range = (
-        consecutive_same_direction >= _CONSECUTIVE_THRESHOLD
-        or tsb_info["peak_primed"]
+        consecutive_same_direction >= _CONSECUTIVE_THRESHOLD or tsb_info["peak_primed"]
     )
     clamp_min, clamp_max = (
-        (_EXPANDED_MIN, _EXPANDED_MAX) if expanded_range
+        (_EXPANDED_MIN, _EXPANDED_MAX)
+        if expanded_range
         else (_STANDARD_MIN, _STANDARD_MAX)
     )
 
@@ -157,8 +166,12 @@ def compute_adjustment_signals(
         raw_multiplier=raw_multiplier,
         weights=weights,
         current_phase=current_phase,
-        volume=volume, effort=effort, completion=completion,
-        hr=hr, feedback=feedback, readiness=readiness,
+        volume=volume,
+        effort=effort,
+        completion=completion,
+        hr=hr,
+        feedback=feedback,
+        readiness=readiness,
         mountain_extras=mountain_extras,
         overreach_detected=overreach_detected,
         tsb_info=tsb_info,
@@ -169,7 +182,11 @@ def compute_adjustment_signals(
 
 
 def _volume_signal(
-    past_workouts, all_plan_runs, recency_weight_fn, today, weight,
+    past_workouts,
+    all_plan_runs,
+    recency_weight_fn,
+    today,
+    weight,
 ) -> SignalContribution:
     planned_weighted = 0.0
     planned_by_type: Dict[str, float] = defaultdict(float)
@@ -213,7 +230,8 @@ def _volume_signal(
             n_runs = per_type_run_counts.get(wtype, 0)
             confidence = min(1.0, n_runs * _BAYESIAN_SHRINKAGE_PER_RUN)
             per_type_ratios[wtype] = round(
-                confidence * raw_ratio + (1.0 - confidence) * volume_ratio, 2,
+                confidence * raw_ratio + (1.0 - confidence) * volume_ratio,
+                2,
             )
 
     return SignalContribution(
@@ -227,7 +245,10 @@ def _volume_signal(
 
 
 def _effort_signal(
-    all_plan_runs, recency_weight_fn, today, weight,
+    all_plan_runs,
+    recency_weight_fn,
+    today,
+    weight,
 ) -> SignalContribution:
     effort_sum = 0.0
     effort_weight_sum = 0.0
@@ -254,7 +275,8 @@ def _effort_signal(
     }.get(effort_trend, 0.0)
 
     quality_drift, quality_drift_modifier = _compute_quality_drift(
-        all_plan_runs, today,
+        all_plan_runs,
+        today,
     )
     recent_race_effort_count = _count_recent_race_efforts(all_plan_runs, today)
 
@@ -274,7 +296,11 @@ def _effort_signal(
 
 
 def _hr_signal(
-    all_plan_runs, hr_zones, recency_weight_fn, today, weight,
+    all_plan_runs,
+    hr_zones,
+    recency_weight_fn,
+    today,
+    weight,
 ) -> SignalContribution:
     hr_result = HRZoneAnalyzer.analyze_runs(
         all_plan_runs,
@@ -316,7 +342,11 @@ def _hr_signal(
 
 
 def _feedback_signal(
-    run_feedback_list, all_plan_runs, recency_weight_fn, today, weight,
+    run_feedback_list,
+    all_plan_runs,
+    recency_weight_fn,
+    today,
+    weight,
 ) -> SignalContribution:
     if not run_feedback_list:
         return SignalContribution(
@@ -427,7 +457,12 @@ def _mountain_factor(
 
 
 def _completion_signal(
-    past_workouts, past_workout_ids, plan_id, db, recency_weight_fn, weight,
+    past_workouts,
+    past_workout_ids,
+    plan_id,
+    db,
+    recency_weight_fn,
+    weight,
 ) -> SignalContribution:
     completed_ids: set = set()
     if past_workout_ids:
@@ -450,8 +485,7 @@ def _completion_signal(
             completed_weighted += w
 
     completion_rate = (
-        completed_weighted / scheduled_weighted
-        if scheduled_weighted > 0 else 0.0
+        completed_weighted / scheduled_weighted if scheduled_weighted > 0 else 0.0
     )
     completion_factor = 0.90 + 0.15 * completion_rate
 
@@ -542,13 +576,17 @@ def _apply_clamps(
         else:
             tsb_form = "neutral"
 
-    return raw_multiplier, overreach_detected, {
-        "tsb": tsb,
-        "ctl": ctl,
-        "atl": atl,
-        "tsb_form": tsb_form,
-        "peak_primed": peak_primed,
-    }
+    return (
+        raw_multiplier,
+        overreach_detected,
+        {
+            "tsb": tsb,
+            "ctl": ctl,
+            "atl": atl,
+            "tsb_form": tsb_form,
+            "peak_primed": peak_primed,
+        },
+    )
 
 
 def _assemble_result(
@@ -609,7 +647,8 @@ def _assemble_result(
             round(mountain_score, 1) if mountain_score is not None else None
         ),
         "mountain_simulation_factor": round(
-            mountain_extras["mountain_simulation_factor"], 2,
+            mountain_extras["mountain_simulation_factor"],
+            2,
         ),
         "vdot_trend": vdot_trend,
         "quality_drift": (
@@ -665,6 +704,7 @@ def _compute_quality_drift(all_plan_runs: List, today) -> Tuple[Optional[float],
 def _count_recent_race_efforts(all_plan_runs: List, today) -> int:
     """Count runs classified as race_effort within the last 14 days."""
     from datetime import timedelta as _td
+
     cutoff = today - _td(days=14)
     count = 0
     for run in all_plan_runs:
@@ -690,7 +730,9 @@ def _compute_effort_trend(efforts: List[float]) -> str:
     return "stable"
 
 
-def _count_consecutive_direction(adaptation_history: List[Dict[str, Any]] | None) -> int:
+def _count_consecutive_direction(
+    adaptation_history: List[Dict[str, Any]] | None,
+) -> int:
     if not adaptation_history:
         return 0
     count = 0

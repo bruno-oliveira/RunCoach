@@ -9,7 +9,7 @@ from sqlalchemy.orm import Session
 
 from app.contexts.auth.auth_service import AuthService
 from app.contexts.plan.repositories import SQLAlchemyPlanRepository
-from app.dependencies.database import get_db, get_plan_repository
+from app.dependencies.database import get_db
 from app.dependencies.services import get_auth_service
 from app.infrastructure.config import settings
 from app.models import TrainingPlan, User
@@ -53,7 +53,9 @@ async def _resolve_user(
         last_activity = user.last_activity
         if last_activity.tzinfo is not None:
             last_activity = last_activity.replace(tzinfo=None)
-        if (datetime.now(timezone.utc).replace(tzinfo=None) - last_activity) > timeout_delta:
+        if (
+            datetime.now(timezone.utc).replace(tzinfo=None) - last_activity
+        ) > timeout_delta:
             return None
 
     auth_service.update_user_activity(db, user)

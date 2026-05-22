@@ -194,15 +194,19 @@ def get_plan_progress(db: Session, plan: TrainingPlan) -> Dict[str, Any]:
     for week_idx in sorted(pace_by_week_data.keys()):
         paces = pace_by_week_data[week_idx]
         avg_pace = round(sum(paces) / len(paces), 2)
-        pace_by_week.append({
-            "week_label": f"W{week_idx + 1}",
-            "avg_pace": avg_pace,
-        })
+        pace_by_week.append(
+            {
+                "week_label": f"W{week_idx + 1}",
+                "avg_pace": avg_pace,
+            }
+        )
 
     completed_count = len(runs)
     total_km_logged = round(sum(r.distance_km or 0 for r in runs), 1)
 
-    completion_pct = round(completed_count / planned_count * 100) if planned_count > 0 else 0
+    completion_pct = (
+        round(completed_count / planned_count * 100) if planned_count > 0 else 0
+    )
 
     today = datetime.now(timezone.utc).replace(tzinfo=None).date()
     days_elapsed = (today - start_date).days
@@ -211,8 +215,7 @@ def get_plan_progress(db: Session, plan: TrainingPlan) -> Dict[str, Any]:
         1
         for week_idx, w in enumerate(plan_data)
         for wo in w.get("daily_workouts", [])
-        if wo.get("type") not in ("rest", "recovery")
-        and week_idx < current_week
+        if wo.get("type") not in ("rest", "recovery") and week_idx < current_week
     )
     missed_count = max(0, past_run_count - completed_count)
 

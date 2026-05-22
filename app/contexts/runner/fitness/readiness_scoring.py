@@ -4,17 +4,17 @@ All _score_* helpers, weekly-volume bucketing, VDOT goal lookup,
 scenario building, and formatting helpers used by ReadinessService.
 """
 
-from datetime import date, datetime
+from datetime import date
 from typing import Any, Dict, List, Optional
 
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
+from app.contexts.runner.fitness.race_predictor_service import RacePredictorService
 from app.core.training.vdot_calculator import VDOTCalculator
 from app.models import DailyWorkout, RunLog, WeeklyPlan
-from app.contexts.runner.fitness.race_predictor_service import RacePredictorService
-from app.utils import parse_race_time_to_seconds, to_date as _to_date
-
+from app.utils import parse_race_time_to_seconds
+from app.utils import to_date as _to_date
 
 # ------------------------------------------------------------------
 # Weekly volume bucketing
@@ -65,7 +65,9 @@ def score_volume(
     score = min(100, ratio * 100)
 
     pct = round(ratio * 100)
-    detail = f"{round(total_actual, 1)} / {round(total_planned, 1)} km ({pct}% of planned)"
+    detail = (
+        f"{round(total_actual, 1)} / {round(total_planned, 1)} km ({pct}% of planned)"
+    )
     return score, detail
 
 
@@ -90,9 +92,7 @@ def score_consistency(
         .scalar()
     ) or 0
 
-    completed_count = len([
-        r for r in plan_runs if r.daily_workout_id is not None
-    ])
+    completed_count = len([r for r in plan_runs if r.daily_workout_id is not None])
 
     if planned_count == 0:
         return 80.0, "No planned workouts found"
@@ -124,7 +124,9 @@ def score_long_run(
         score = 50.0
 
     score = min(100, score)
-    detail = f"Longest: {round(longest_actual, 1)} km (target ~{round(benchmark, 1)} km)"
+    detail = (
+        f"Longest: {round(longest_actual, 1)} km (target ~{round(benchmark, 1)} km)"
+    )
     return score, detail
 
 
@@ -147,7 +149,9 @@ def score_taper(current_week: int, total_weeks: int) -> tuple[float, str]:
         return 55.0, "Base phase -- building foundation"
 
 
-def vdot_for_goal_time(goal_time_str: str, target_distance_km: float) -> Optional[float]:
+def vdot_for_goal_time(
+    goal_time_str: str, target_distance_km: float
+) -> Optional[float]:
     """Find the VDOT needed to achieve a goal time at a given distance."""
     goal_seconds = parse_race_time_to_seconds(goal_time_str)
     if not goal_seconds or target_distance_km <= 0:
@@ -227,7 +231,9 @@ def score_vdot(
                 current_vdot, target_dist
             )
             if predicted_time:
-                vdot_normalized = min(85.0, max(60.0, (current_vdot - 25) / 35 * 25 + 60))
+                vdot_normalized = min(
+                    85.0, max(60.0, (current_vdot - 25) / 35 * 25 + 60)
+                )
             else:
                 vdot_normalized = 50.0
         else:
@@ -398,9 +404,7 @@ def score_mountain_simulation(
     transition_ratio = _ratio(actual_transitions, planned_transitions)
 
     score = (
-        0.45 * uphill_ratio
-        + 0.35 * downhill_ratio
-        + 0.20 * transition_ratio
+        0.45 * uphill_ratio + 0.35 * downhill_ratio + 0.20 * transition_ratio
     ) * 100.0
 
     detail = (
@@ -431,7 +435,8 @@ def score_mountain_simulation(
 
 
 def build_scenarios(
-    vdot_data: Dict, target_distance_str: str,
+    vdot_data: Dict,
+    target_distance_str: str,
     target_elevation_gain_m: Optional[float] = None,
     trail_runs_count: Optional[int] = None,
 ) -> List[Dict[str, Any]]:
@@ -451,7 +456,8 @@ def build_scenarios(
         return []
 
     base_time = VDOTCalculator.predict_time_for_distance(
-        current_vdot, target_dist,
+        current_vdot,
+        target_dist,
         elevation_gain_m=target_elevation_gain_m,
         trail_runs_count=trail_runs_count,
     )
@@ -459,17 +465,38 @@ def build_scenarios(
         return []
 
     scenario_defs = [
-        ("Dream", current_vdot + 2.0, 15, "Everything clicks -- conservative start, strong finish"),
-        ("Solid", current_vdot + 0.5, 50, "Smart race execution -- controlled effort throughout"),
-        ("Tough", current_vdot - 1.0, 25, "Challenging conditions or pacing errors -- grit required"),
-        ("Survival", current_vdot - 3.0, 10, "Worst case -- walk/run to the finish, still get it done"),
+        (
+            "Dream",
+            current_vdot + 2.0,
+            15,
+            "Everything clicks -- conservative start, strong finish",
+        ),
+        (
+            "Solid",
+            current_vdot + 0.5,
+            50,
+            "Smart race execution -- controlled effort throughout",
+        ),
+        (
+            "Tough",
+            current_vdot - 1.0,
+            25,
+            "Challenging conditions or pacing errors -- grit required",
+        ),
+        (
+            "Survival",
+            current_vdot - 3.0,
+            10,
+            "Worst case -- walk/run to the finish, still get it done",
+        ),
     ]
 
     scenarios = []
     for name, vdot_adj, probability, description in scenario_defs:
         clamped = max(25.0, min(85.0, vdot_adj))
         time_secs = VDOTCalculator.predict_time_for_distance(
-            clamped, target_dist,
+            clamped,
+            target_dist,
             elevation_gain_m=target_elevation_gain_m,
             trail_runs_count=trail_runs_count,
         )
@@ -477,13 +504,15 @@ def build_scenarios(
             pace_secs_per_km = time_secs / target_dist
             pace_min = int(pace_secs_per_km // 60)
             pace_sec = int(pace_secs_per_km % 60)
-            scenarios.append({
-                "name": name,
-                "time": VDOTCalculator.format_duration(time_secs),
-                "pace": f"{pace_min}:{pace_sec:02d}/km",
-                "probability": probability,
-                "description": description,
-            })
+            scenarios.append(
+                {
+                    "name": name,
+                    "time": VDOTCalculator.format_duration(time_secs),
+                    "pace": f"{pace_min}:{pace_sec:02d}/km",
+                    "probability": probability,
+                    "description": description,
+                }
+            )
 
     return scenarios
 

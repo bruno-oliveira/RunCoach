@@ -3,10 +3,7 @@
 
 def determine_sentiment(feedback: dict) -> str:
     """Return overall_sentiment based on populated feedback fields."""
-    texts = [
-        v for k, v in feedback.items()
-        if k != "overall_sentiment" and v
-    ]
+    texts = [v for k, v in feedback.items() if k != "overall_sentiment" and v]
     if not texts:
         return "info"
 

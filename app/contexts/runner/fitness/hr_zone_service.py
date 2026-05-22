@@ -6,9 +6,9 @@ from typing import Optional
 from sqlalchemy.orm import Session
 
 from app.core.training.hr_zone_calculator import (
-    HRZoneCalculator,
     DEFAULT_MAX_HR,
     MIN_RELIABLE_MAX_HR,
+    HRZoneCalculator,
 )
 from app.models.training_plan import TrainingPlan
 from app.models.user import User
@@ -82,9 +82,7 @@ class HRZoneService:
         }
         plan.max_heart_rate = max_hr
 
-        logger.info(
-            f"HR zones computed for plan {plan.id}: max_hr={max_hr} ({source})"
-        )
+        logger.info(f"HR zones computed for plan {plan.id}: max_hr={max_hr} ({source})")
         return zones
 
     @staticmethod

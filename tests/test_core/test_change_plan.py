@@ -7,17 +7,17 @@ from datetime import datetime, timedelta, timezone
 
 import pytest
 from sqlalchemy import create_engine, event
-from sqlalchemy.orm import Session, sessionmaker
+from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 
-from app.models import Base, User, TrainingPlan, WeeklyPlan, DailyWorkout, RunLog
+from app.contexts.plan.adaptation import AdaptationService
 from app.contexts.plan.adaptation.plan_adjuster import (
     adjust_plan,
     preview_adjust_plan,
     preview_reset_adjustment,
     reset_adjustment,
 )
-from app.contexts.plan.adaptation import AdaptationService
+from app.models import Base, DailyWorkout, RunLog, TrainingPlan, User, WeeklyPlan
 
 
 def _now():
@@ -62,36 +62,48 @@ def _create_plan(db, *, weeks=8, weeks_ago=4):
 
     plan_data = []
     for wk in range(1, weeks + 1):
-        plan_data.append({
-            "week": wk,
-            "total_km": 35,
-            "phase": "build",
-            "daily_workouts": [
-                {"day": i + 1, "type": t,
-                 "distance": 8.0 if t != "long" else 14.0}
-                for i, t in enumerate(workout_types)
-            ],
-        })
+        plan_data.append(
+            {
+                "week": wk,
+                "total_km": 35,
+                "phase": "build",
+                "daily_workouts": [
+                    {"day": i + 1, "type": t, "distance": 8.0 if t != "long" else 14.0}
+                    for i, t in enumerate(workout_types)
+                ],
+            }
+        )
 
     plan = TrainingPlan(
-        id=_uid(), user_id=user.id, current_weekly_km=30,
-        target_distance="21.1", weeks_duration=weeks, vdot=45.0,
-        start_date=start, plan_data=plan_data,
+        id=_uid(),
+        user_id=user.id,
+        current_weekly_km=30,
+        target_distance="21.1",
+        weeks_duration=weeks,
+        vdot=45.0,
+        start_date=start,
+        plan_data=plan_data,
     )
     db.add(plan)
     db.flush()
 
     for wk in range(1, weeks + 1):
-        wp = WeeklyPlan(id=_uid(), training_plan_id=plan.id, week_number=wk, total_km=35)
+        wp = WeeklyPlan(
+            id=_uid(), training_plan_id=plan.id, week_number=wk, total_km=35
+        )
         db.add(wp)
         db.flush()
         for i, t in enumerate(workout_types):
-            db.add(DailyWorkout(
-                id=_uid(), weekly_plan_id=wp.id, day_of_week=i + 1,
-                workout_type=t,
-                distance_km=8.0 if t != "long" else 14.0,
-                baseline_distance_km=8.0 if t != "long" else 14.0,
-            ))
+            db.add(
+                DailyWorkout(
+                    id=_uid(),
+                    weekly_plan_id=wp.id,
+                    day_of_week=i + 1,
+                    workout_type=t,
+                    distance_km=8.0 if t != "long" else 14.0,
+                    baseline_distance_km=8.0 if t != "long" else 14.0,
+                )
+            )
     db.commit()
     return user, plan
 
@@ -99,38 +111,62 @@ def _create_plan(db, *, weeks=8, weeks_ago=4):
 def _add_runs(db, plan, user, weeks, *, effort=5.0, distance_multiplier=1.0):
     types = ["easy", "tempo", "interval", "long"]
     for wk in weeks:
-        wp = db.query(WeeklyPlan).filter(
-            WeeklyPlan.training_plan_id == plan.id,
-            WeeklyPlan.week_number == wk,
-        ).one()
-        wos = db.query(DailyWorkout).filter(
-            DailyWorkout.weekly_plan_id == wp.id,
-        ).order_by(DailyWorkout.day_of_week).all()
+        wp = (
+            db.query(WeeklyPlan)
+            .filter(
+                WeeklyPlan.training_plan_id == plan.id,
+                WeeklyPlan.week_number == wk,
+            )
+            .one()
+        )
+        wos = (
+            db.query(DailyWorkout)
+            .filter(
+                DailyWorkout.weekly_plan_id == wp.id,
+            )
+            .order_by(DailyWorkout.day_of_week)
+            .all()
+        )
         for i, wo in enumerate(wos):
             if i >= len(types):
                 continue
             run_date = plan.start_date + timedelta(
-                weeks=wp.week_number - 1, days=wo.day_of_week - 1,
+                weeks=wp.week_number - 1,
+                days=wo.day_of_week - 1,
             )
-            db.add(RunLog(
-                id=_uid(), user_id=user.id, training_plan_id=plan.id,
-                daily_workout_id=wo.id, date=run_date,
-                distance_km=wo.distance_km * distance_multiplier,
-                duration_minutes=40, perceived_effort=effort,
-                workout_type=wo.workout_type,
-            ))
+            db.add(
+                RunLog(
+                    id=_uid(),
+                    user_id=user.id,
+                    training_plan_id=plan.id,
+                    daily_workout_id=wo.id,
+                    date=run_date,
+                    distance_km=wo.distance_km * distance_multiplier,
+                    duration_minutes=40,
+                    perceived_effort=effort,
+                    workout_type=wo.workout_type,
+                )
+            )
     db.commit()
 
 
 def _easy_workouts_for_week(db, plan, week):
-    wp = db.query(WeeklyPlan).filter(
-        WeeklyPlan.training_plan_id == plan.id,
-        WeeklyPlan.week_number == week,
-    ).one()
-    return db.query(DailyWorkout).filter(
-        DailyWorkout.weekly_plan_id == wp.id,
-        DailyWorkout.workout_type == "easy",
-    ).all()
+    wp = (
+        db.query(WeeklyPlan)
+        .filter(
+            WeeklyPlan.training_plan_id == plan.id,
+            WeeklyPlan.week_number == week,
+        )
+        .one()
+    )
+    return (
+        db.query(DailyWorkout)
+        .filter(
+            DailyWorkout.weekly_plan_id == wp.id,
+            DailyWorkout.workout_type == "easy",
+        )
+        .all()
+    )
 
 
 # Default future week to inspect (week 5 is "current" for weeks_ago=4 setups).
@@ -188,14 +224,22 @@ class TestEasyRunScaling:
         )
 
         # Look at week 6 (definitely future — week 5 is current)
-        wp6 = db.query(WeeklyPlan).filter(
-            WeeklyPlan.training_plan_id == plan.id,
-            WeeklyPlan.week_number == 6,
-        ).one()
-        easy = db.query(DailyWorkout).filter(
-            DailyWorkout.weekly_plan_id == wp6.id,
-            DailyWorkout.workout_type == "easy",
-        ).one()
+        wp6 = (
+            db.query(WeeklyPlan)
+            .filter(
+                WeeklyPlan.training_plan_id == plan.id,
+                WeeklyPlan.week_number == 6,
+            )
+            .one()
+        )
+        easy = (
+            db.query(DailyWorkout)
+            .filter(
+                DailyWorkout.weekly_plan_id == wp6.id,
+                DailyWorkout.workout_type == "easy",
+            )
+            .one()
+        )
         assert easy.distance_km != easy.baseline_distance_km, (
             "easy run distance_km did not change after adjust_plan"
         )
@@ -204,17 +248,12 @@ class TestEasyRunScaling:
         # global value within the 0.85–1.15 band).
         baseline = easy.baseline_distance_km
         ratio = easy.distance_km / baseline
-        assert 0.85 <= ratio <= 1.15, (
-            f"easy run ratio out of 0.85–1.15 band: {ratio}"
-        )
+        assert 0.85 <= ratio <= 1.15, f"easy run ratio out of 0.85–1.15 band: {ratio}"
 
         cp = result["change_plan"]
-        flat = [
-            wo for week in cp["weeks"] for wo in week["workouts"]
-        ]
+        flat = [wo for week in cp["weeks"] for wo in week["workouts"]]
         easy_changed = [
-            wo for wo in flat
-            if wo["type"] == "easy" and wo["status"] == "changed"
+            wo for wo in flat if wo["type"] == "easy" and wo["status"] == "changed"
         ]
         assert easy_changed, (
             f"no easy workouts marked as 'changed' in ChangePlan: {flat}"

@@ -5,15 +5,15 @@ from datetime import datetime, timedelta, timezone
 
 import pytest
 from sqlalchemy import create_engine, event
-from sqlalchemy.orm import Session, sessionmaker
+from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 
-from app.models import Base, User, TrainingPlan, WeeklyPlan, DailyWorkout, RunLog
 from app.contexts.plan.adaptation.recommendation_evaluator import (
-    evaluate_weekly_recommendation,
     accept_recommendation,
     dismiss_recommendation,
+    evaluate_weekly_recommendation,
 )
+from app.models import Base, DailyWorkout, RunLog, TrainingPlan, User, WeeklyPlan
 
 
 def _now():
@@ -68,11 +68,13 @@ def _create_plan(db, *, weeks=8, weeks_ago=3, runs_per_week=4):
         }
         types = ["easy", "tempo", "long", "easy"][:runs_per_week]
         for i, wtype in enumerate(types):
-            week_data["daily_workouts"].append({
-                "day": i + 1,
-                "type": wtype,
-                "distance": 12.0 if wtype == "long" else 6.0,
-            })
+            week_data["daily_workouts"].append(
+                {
+                    "day": i + 1,
+                    "type": wtype,
+                    "distance": 12.0 if wtype == "long" else 6.0,
+                }
+            )
         plan_data.append(week_data)
 
     plan = TrainingPlan(
@@ -113,7 +115,9 @@ def _create_plan(db, *, weeks=8, weeks_ago=3, runs_per_week=4):
     return user, plan
 
 
-def _add_runs(db, user, plan, count=4, distance_km=6.0, perceived_effort=5, weeks_ago=1):
+def _add_runs(
+    db, user, plan, count=4, distance_km=6.0, perceived_effort=5, weeks_ago=1
+):
     """Add runs linked to a plan."""
     for i in range(count):
         run = RunLog(
@@ -132,14 +136,16 @@ def _add_runs(db, user, plan, count=4, distance_km=6.0, perceived_effort=5, week
 
 
 class TestEvaluateRecommendation:
-
     def test_skips_when_no_start_date(self, db):
         user = User(id=_uid(), email="test@test.com")
         db.add(user)
         db.flush()
         plan = TrainingPlan(
-            id=_uid(), user_id=user.id, target_distance="10",
-            weeks_duration=8, current_weekly_km=20,
+            id=_uid(),
+            user_id=user.id,
+            target_distance="10",
+            weeks_duration=8,
+            current_weekly_km=20,
         )
         db.add(plan)
         db.flush()
@@ -167,7 +173,9 @@ class TestEvaluateRecommendation:
 
         start = plan.start_date
         today = _today()
-        days_elapsed = (today - start.date() if hasattr(start, 'date') else (today - start)).days
+        days_elapsed = (
+            today - start.date() if hasattr(start, "date") else (today - start)
+        ).days
         current_week = min(max(1, days_elapsed // 7 + 1), plan.weeks_duration)
         last_completed = current_week - 1
 
@@ -189,7 +197,9 @@ class TestEvaluateRecommendation:
 
     def test_creates_recommendation_on_volume_surplus(self, db):
         user, plan = _create_plan(db, weeks_ago=3)
-        _add_runs(db, user, plan, count=5, distance_km=10.0, perceived_effort=4, weeks_ago=1)
+        _add_runs(
+            db, user, plan, count=5, distance_km=10.0, perceived_effort=4, weeks_ago=1
+        )
 
         result = evaluate_weekly_recommendation(plan.id, user.id, db)
 
@@ -206,7 +216,9 @@ class TestEvaluateRecommendation:
 
     def test_creates_recommendation_on_volume_deficit(self, db):
         user, plan = _create_plan(db, weeks_ago=3)
-        _add_runs(db, user, plan, count=4, distance_km=2.0, perceived_effort=7, weeks_ago=1)
+        _add_runs(
+            db, user, plan, count=4, distance_km=2.0, perceived_effort=7, weeks_ago=1
+        )
 
         result = evaluate_weekly_recommendation(plan.id, user.id, db)
 
@@ -217,7 +229,9 @@ class TestEvaluateRecommendation:
 
     def test_force_overrides_pending(self, db):
         user, plan = _create_plan(db, weeks_ago=3)
-        _add_runs(db, user, plan, count=5, distance_km=10.0, perceived_effort=4, weeks_ago=1)
+        _add_runs(
+            db, user, plan, count=5, distance_km=10.0, perceived_effort=4, weeks_ago=1
+        )
 
         plan.pending_recommendation = {"multiplier": 1.0, "reason": "old"}
         db.flush()
@@ -228,7 +242,6 @@ class TestEvaluateRecommendation:
 
 
 class TestAcceptRecommendation:
-
     def test_accept_applies_multiplier(self, db):
         user, plan = _create_plan(db, weeks_ago=3)
         _add_runs(db, user, plan, count=5, weeks_ago=1)
@@ -295,7 +308,8 @@ class TestAcceptRecommendation:
         )
 
         reduced = [
-            dw for dw in db.query(DailyWorkout).all()
+            dw
+            for dw in db.query(DailyWorkout).all()
             if dw.workout_type == "easy"
             and dw.distance_km < easy_baselines.get(dw.id, dw.distance_km)
         ]
@@ -331,7 +345,6 @@ class TestAcceptRecommendation:
 
 
 class TestDismissRecommendation:
-
     def test_dismiss_clears_recommendation(self, db):
         user, plan = _create_plan(db, weeks_ago=3)
 
@@ -361,13 +374,16 @@ class TestDismissRecommendation:
 
 
 class TestDebounce:
-
     def test_week_debounce_prevents_reeval(self, db):
         user, plan = _create_plan(db, weeks_ago=4)
-        _add_runs(db, user, plan, count=5, distance_km=10.0, perceived_effort=4, weeks_ago=2)
-        _add_runs(db, user, plan, count=3, distance_km=8.0, perceived_effort=5, weeks_ago=1)
+        _add_runs(
+            db, user, plan, count=5, distance_km=10.0, perceived_effort=4, weeks_ago=2
+        )
+        _add_runs(
+            db, user, plan, count=3, distance_km=8.0, perceived_effort=5, weeks_ago=1
+        )
 
-        result1 = evaluate_weekly_recommendation(plan.id, user.id, db)
+        evaluate_weekly_recommendation(plan.id, user.id, db)
         plan.pending_recommendation = None
         db.flush()
 
@@ -376,26 +392,31 @@ class TestDebounce:
 
     def test_force_bypasses_debounce(self, db):
         user, plan = _create_plan(db, weeks_ago=4)
-        _add_runs(db, user, plan, count=5, distance_km=10.0, perceived_effort=4, weeks_ago=2)
-        _add_runs(db, user, plan, count=3, distance_km=8.0, perceived_effort=5, weeks_ago=1)
+        _add_runs(
+            db, user, plan, count=5, distance_km=10.0, perceived_effort=4, weeks_ago=2
+        )
+        _add_runs(
+            db, user, plan, count=3, distance_km=8.0, perceived_effort=5, weeks_ago=1
+        )
 
         evaluate_weekly_recommendation(plan.id, user.id, db)
         plan.pending_recommendation = None
         db.flush()
 
-        result = evaluate_weekly_recommendation(plan.id, user.id, db, force=True)
+        evaluate_weekly_recommendation(plan.id, user.id, db, force=True)
         # force=True should override the debounce; may still return None
         # if multiplier is ~1.0, but the last_recommendation_week should update
         assert plan.last_recommendation_week is not None
 
 
 class TestManualAdjustClearsRecommendation:
-
     def test_adjust_plan_clears_pending(self, db):
         from app.contexts.plan.adaptation.plan_adjuster import adjust_plan
 
         user, plan = _create_plan(db, weeks_ago=3)
-        _add_runs(db, user, plan, count=5, distance_km=8.0, perceived_effort=5, weeks_ago=1)
+        _add_runs(
+            db, user, plan, count=5, distance_km=8.0, perceived_effort=5, weeks_ago=1
+        )
 
         plan.pending_recommendation = {
             "multiplier": 1.05,
@@ -409,7 +430,6 @@ class TestManualAdjustClearsRecommendation:
 
 
 class TestFacadeIntegration:
-
     def test_facade_methods_exist(self):
         from app.contexts.plan.adaptation import AdaptationService
 
@@ -496,8 +516,8 @@ class TestReasonBuilders:
 
     def test_reasons_handle_no_op_zero_delta(self):
         from app.contexts.plan.adaptation.recommendation_evaluator import (
-            _build_auto_adjust_reason,
             _build_accept_summary,
+            _build_auto_adjust_reason,
         )
 
         reason = _build_auto_adjust_reason(

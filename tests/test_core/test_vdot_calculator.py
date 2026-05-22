@@ -1,6 +1,5 @@
 """Tests for VDOT calculator prediction methods."""
 
-import pytest
 from app.core.training.vdot_calculator import VDOTCalculator
 
 
@@ -168,9 +167,7 @@ class TestElevationHandling:
     def test_confidence_range_widens_for_high_elevation_distance(self):
         """A non-30k distance with significant elevation also gets the wide band."""
         flat = VDOTCalculator.get_confidence_range(50.0, 22.3)
-        hilly = VDOTCalculator.get_confidence_range(
-            50.0, 22.3, elevation_gain_m=1000
-        )
+        hilly = VDOTCalculator.get_confidence_range(50.0, 22.3, elevation_gain_m=1000)
         assert (hilly["slow"] - hilly["fast"]) > (flat["slow"] - flat["fast"])
 
     def test_ultra_endurance_decay_applies_beyond_3h(self):

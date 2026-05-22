@@ -5,8 +5,8 @@ from datetime import datetime, timedelta, timezone
 
 import pytest
 
-from app.models import RunLog, User
 from app.contexts.runner.fitness.race_predictor_service import RacePredictorService
+from app.models import RunLog, User
 
 
 def _uid() -> str:
@@ -56,7 +56,8 @@ class TestVDOTOutlierFilter:
         # Ten realistic runs around VDOT 30
         for i in range(10):
             _add_run(
-                test_db, user.id,
+                test_db,
+                user.id,
                 distance_km=10.0,
                 duration_minutes=65 + i * 0.2,
                 days_ago=i,
@@ -64,7 +65,8 @@ class TestVDOTOutlierFilter:
             )
         # One absurd outlier
         _add_run(
-            test_db, user.id,
+            test_db,
+            user.id,
             distance_km=10.0,
             duration_minutes=33.0,
             days_ago=5,
@@ -82,7 +84,8 @@ class TestVDOTOutlierFilter:
         user = _make_user(test_db)
         for i in range(8):
             _add_run(
-                test_db, user.id,
+                test_db,
+                user.id,
                 distance_km=10.0,
                 duration_minutes=65 + i * 0.2,
                 days_ago=i + 5,
@@ -90,7 +93,8 @@ class TestVDOTOutlierFilter:
             )
         # A genuine PR a few VDOT points above the cluster
         _add_run(
-            test_db, user.id,
+            test_db,
+            user.id,
             distance_km=10.0,
             duration_minutes=55.0,
             days_ago=1,
@@ -106,9 +110,30 @@ class TestVDOTOutlierFilter:
     def test_small_sample_skips_filter(self, test_db):
         """With <5 runs in the window, the IQR filter is bypassed."""
         user = _make_user(test_db)
-        _add_run(test_db, user.id, distance_km=5.0, duration_minutes=25.0, vdot=37.0, days_ago=2)
-        _add_run(test_db, user.id, distance_km=5.0, duration_minutes=27.0, vdot=35.0, days_ago=4)
-        _add_run(test_db, user.id, distance_km=5.0, duration_minutes=28.0, vdot=33.0, days_ago=6)
+        _add_run(
+            test_db,
+            user.id,
+            distance_km=5.0,
+            duration_minutes=25.0,
+            vdot=37.0,
+            days_ago=2,
+        )
+        _add_run(
+            test_db,
+            user.id,
+            distance_km=5.0,
+            duration_minutes=27.0,
+            vdot=35.0,
+            days_ago=4,
+        )
+        _add_run(
+            test_db,
+            user.id,
+            distance_km=5.0,
+            duration_minutes=28.0,
+            vdot=33.0,
+            days_ago=6,
+        )
         test_db.flush()
 
         result = RacePredictorService.get_best_recent_vdot(user.id, db=test_db)
@@ -140,7 +165,8 @@ class TestEnduranceFactor:
         # 4 long flat runs at 7:00/km. VDOT 37.5 predicts ~5:17/km -> actual is ~32% slower.
         for i in range(4):
             _add_run(
-                test_db, user.id,
+                test_db,
+                user.id,
                 distance_km=18.0,
                 duration_minutes=126.0,  # 7:00/km
                 days_ago=i * 5 + 10,
@@ -160,7 +186,8 @@ class TestEnduranceFactor:
         # Extremely slow long runs vs. a high supplied VDOT
         for i in range(5):
             _add_run(
-                test_db, user.id,
+                test_db,
+                user.id,
                 distance_km=18.0,
                 duration_minutes=240.0,  # ~13:20/km -> way slower than VDOT 50 predicts
                 days_ago=i * 4 + 10,
@@ -178,7 +205,8 @@ class TestEnduranceFactor:
         # VDOT 37.5 predicts 18 km in ~1:35 (~95 min). Match it.
         for i in range(4):
             _add_run(
-                test_db, user.id,
+                test_db,
+                user.id,
                 distance_km=18.0,
                 duration_minutes=95.0,
                 days_ago=i * 5 + 10,
@@ -195,7 +223,8 @@ class TestEnduranceFactor:
         user = _make_user(test_db)
         for i in range(3):
             _add_run(
-                test_db, user.id,
+                test_db,
+                user.id,
                 distance_km=5.0,
                 duration_minutes=25.0,
                 days_ago=i * 2 + 1,
@@ -204,18 +233,22 @@ class TestEnduranceFactor:
         # Three trail long runs (44m/km gain) + one flat long run roughly on-prediction
         for i in range(3):
             _add_run(
-                test_db, user.id,
+                test_db,
+                user.id,
                 distance_km=20.0,
                 duration_minutes=200.0,  # very slow due to trail
                 days_ago=i * 4 + 10,
-                elevation_gain_m=900,    # 45 m/km -> trail
+                elevation_gain_m=900,  # 45 m/km -> trail
                 vdot=22.0,
             )
         # Single flat run too few to trigger calibration on its own
         _add_run(
-            test_db, user.id,
-            distance_km=20.0, duration_minutes=120.0,
-            days_ago=8, vdot=30.0,
+            test_db,
+            user.id,
+            distance_km=20.0,
+            duration_minutes=120.0,
+            days_ago=8,
+            vdot=30.0,
         )
         test_db.flush()
 
@@ -231,6 +264,7 @@ class TestPredictTimeWithEnduranceFactor:
 
     def test_factor_one_is_noop(self):
         from app.core.training.vdot_calculator import VDOTCalculator
+
         plain = VDOTCalculator.predict_time_for_distance(40.0, 21.1)
         with_factor = VDOTCalculator.predict_time_for_distance(
             40.0, 21.1, endurance_factor=1.0
@@ -239,6 +273,7 @@ class TestPredictTimeWithEnduranceFactor:
 
     def test_factor_above_one_lengthens_prediction(self):
         from app.core.training.vdot_calculator import VDOTCalculator
+
         plain = VDOTCalculator.predict_time_for_distance(40.0, 21.1)
         slower = VDOTCalculator.predict_time_for_distance(
             40.0, 21.1, endurance_factor=1.2
@@ -250,6 +285,7 @@ class TestPredictTimeWithEnduranceFactor:
 
     def test_factor_applies_after_elevation(self):
         from app.core.training.vdot_calculator import VDOTCalculator
+
         elev_only = VDOTCalculator.predict_time_for_distance(
             40.0, 21.1, elevation_gain_m=500
         )

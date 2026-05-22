@@ -6,10 +6,9 @@ from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import HTMLResponse
 from sqlalchemy.orm import Session
 
-from app.infrastructure.config import settings
-from app.dependencies import get_db, get_optional_user
-from app.models import User
 from app.contexts.nutrition.meal_database import get_meal_database
+from app.dependencies import get_db, get_optional_user
+from app.infrastructure.config import settings
 from app.models import FavoriteRecipe
 from app.template_helpers import create_templates
 
@@ -23,7 +22,7 @@ meal_db = get_meal_database()
 @router.get("/recipes", response_class=HTMLResponse)
 async def recipes_page(
     request: Request,
-    current_user = Depends(get_optional_user),
+    current_user=Depends(get_optional_user),
 ) -> HTMLResponse:
     """Render the recipe search and browse page.
 
@@ -50,7 +49,7 @@ async def recipe_detail(
     request: Request,
     recipe_name: str,
     db: Session = Depends(get_db),
-    current_user = Depends(get_optional_user),
+    current_user=Depends(get_optional_user),
 ) -> HTMLResponse:
     """Render a single recipe detail page with a shareable URL.
 

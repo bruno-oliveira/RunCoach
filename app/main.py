@@ -8,9 +8,9 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
 from app.infrastructure.config import settings, setup_logging
+from app.infrastructure.health import HealthResponse
 from app.infrastructure.secrets import validate_production_secrets
 from app.migrations.startup import run_startup_migrations
-from app.infrastructure.health import HealthResponse
 from app.web.middleware import (
     csrf_protection,
     request_size_limit,
@@ -40,10 +40,20 @@ logger = logging.getLogger(__name__)
 _is_test_mode = "pytest" in __import__("sys").modules
 
 _ROUTERS = (
-    plans_router, nutrition_router, recipes_router, recipes_page_router,
-    auth_router, runs_router, performance_router, performance_page_router,
-    analytics_router, analytics_page_router, strava_router, readiness_router,
-    race_prep_router, pages_router,
+    plans_router,
+    nutrition_router,
+    recipes_router,
+    recipes_page_router,
+    auth_router,
+    runs_router,
+    performance_router,
+    performance_page_router,
+    analytics_router,
+    analytics_page_router,
+    strava_router,
+    readiness_router,
+    race_prep_router,
+    pages_router,
 )
 
 
@@ -71,7 +81,9 @@ def create_app(skip_migrations: bool = False) -> FastAPI:
         if settings.is_google_client_id_configured:
             logger.info("Google Client ID is properly configured")
         else:
-            logger.warning("Google Client ID is not configured — Google Sign-In will not work")
+            logger.warning(
+                "Google Client ID is not configured — Google Sign-In will not work"
+            )
 
         if not effective_skip:
             validate_production_secrets()

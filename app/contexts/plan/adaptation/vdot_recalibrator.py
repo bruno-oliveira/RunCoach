@@ -5,9 +5,9 @@ from typing import Any, Dict, Optional
 
 from sqlalchemy.orm import Session
 
-from app.models import TrainingPlan
-from app.core.training.vdot_calculator import VDOTCalculator
 from app.contexts.plan.plan_date_utils import compute_current_week
+from app.core.training.vdot_calculator import VDOTCalculator
+from app.models import TrainingPlan
 from app.utils import to_date as _to_date
 
 from ._helpers import parse_plan_data_lookups, today_date
@@ -35,7 +35,9 @@ def recalibrate_zones_only(
         return None
 
     current_vdot = RacePredictorService.get_best_recent_vdot(
-        user_id, weeks=12, db=db,
+        user_id,
+        weeks=12,
+        db=db,
     )
     if not current_vdot:
         return None
@@ -64,14 +66,18 @@ def recalibrate_zones_only(
         if workout.get("target_pace") and old_zones:
             zone = workout.get("zone", "")
             zone_map = {
-                "zone_1": "E", "zone_2": "E", "zone_3": "T",
-                "zone_4": "I", "zone_5": "I",
+                "zone_1": "E",
+                "zone_2": "E",
+                "zone_3": "T",
+                "zone_4": "I",
+                "zone_5": "I",
             }
             vdot_key = zone_map.get(zone)
             if vdot_key and vdot_key in new_zones:
                 new_pace = new_zones[vdot_key].get("pace_min_km")
                 if new_pace:
                     from app.utils import format_pace
+
                     workout["target_pace"] = new_pace
                     workout["target_pace_formatted"] = format_pace(new_pace)
                     pace_updates += 1
@@ -79,14 +85,18 @@ def recalibrate_zones_only(
         for seg in workout.get("segments", []):
             zone = seg.get("zone", "")
             zone_map = {
-                "zone_1": "E", "zone_2": "E", "zone_3": "T",
-                "zone_4": "I", "zone_5": "I",
+                "zone_1": "E",
+                "zone_2": "E",
+                "zone_3": "T",
+                "zone_4": "I",
+                "zone_5": "I",
             }
             vdot_key = zone_map.get(zone)
             if vdot_key and vdot_key in new_zones:
                 new_pace = new_zones[vdot_key].get("pace_min_km")
                 if new_pace:
                     from app.utils import format_pace
+
                     seg["pace_raw"] = new_pace
                     seg["pace_formatted"] = format_pace(new_pace)
 
@@ -97,14 +107,21 @@ def recalibrate_zones_only(
     old_vdot = training_plan.vdot
     training_plan.vdot = round(current_vdot, 1)
 
-    weekly_updates = _sync_future_weekly_plans(training_plan, current_week, new_zones, db)
+    weekly_updates = _sync_future_weekly_plans(
+        training_plan, current_week, new_zones, db
+    )
 
     db.flush()
 
     direction = "improved" if delta > 0 else "decreased"
     logger.info(
         "VDOT recalibration: plan=%s old=%.1f new=%.1f delta=%.1f pace_updates=%d weekly_updates=%d",
-        training_plan.id, old_vdot, current_vdot, delta, pace_updates, weekly_updates,
+        training_plan.id,
+        old_vdot,
+        current_vdot,
+        delta,
+        pace_updates,
+        weekly_updates,
     )
 
     return {
@@ -134,7 +151,8 @@ def _sync_future_weekly_plans(
     db: Session,
 ) -> int:
     """Stamp WeeklyPlan.pace_zones_updated_at on future weeks so the UI can badge them."""
-    from datetime import datetime as _dt, timezone as _tz
+    from datetime import datetime as _dt
+    from datetime import timezone as _tz
 
     from app.models import WeeklyPlan
 

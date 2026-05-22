@@ -33,6 +33,7 @@ class SQLAlchemyPlanRepository:
         self, plan_id: str, user_id: str, *, include_weeks: bool = False
     ) -> Optional[TrainingPlan]:
         from sqlalchemy.orm import Query
+
         q: Query = self.session.query(TrainingPlan).filter(
             TrainingPlan.id == plan_id,
             TrainingPlan.user_id == user_id,

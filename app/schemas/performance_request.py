@@ -17,7 +17,10 @@ class PerformancePlanRequest(BaseModel):
         ..., gt=0, le=42.2, description="Target race distance in km"
     )
     current_pace: Optional[float] = Field(
-        None, ge=2.5, le=10.0, description="Current pace in min/km (auto-calculated if not provided)"
+        None,
+        ge=2.5,
+        le=10.0,
+        description="Current pace in min/km (auto-calculated if not provided)",
     )
     goal_pace: float = Field(
         ..., ge=2.5, le=10.0, description="Goal race pace in min/km"
@@ -25,14 +28,15 @@ class PerformancePlanRequest(BaseModel):
     current_time: Optional[str] = Field(
         None, description="Current finish time (HH:MM:SS or MM:SS)"
     )
-    goal_time: str = Field(
-        ..., description="Goal finish time (HH:MM:SS or MM:SS)"
-    )
+    goal_time: str = Field(..., description="Goal finish time (HH:MM:SS or MM:SS)")
     weeks: int = Field(
         ..., ge=6, le=16, description="Training duration in weeks (6-16)"
     )
     current_weekly_km: Optional[float] = Field(
-        None, ge=0, le=200, description="Current weekly mileage in km (auto-calculated if not provided)"
+        None,
+        ge=0,
+        le=200,
+        description="Current weekly mileage in km (auto-calculated if not provided)",
     )
     auto_calculate: bool = Field(
         default=True, description="Auto-calculate fitness from run logs"
@@ -41,7 +45,10 @@ class PerformancePlanRequest(BaseModel):
         default=5, ge=3, le=6, description="Number of runs per week"
     )
     max_heart_rate: Optional[int] = Field(
-        None, ge=120, le=220, description="Maximum heart rate in BPM (optional, auto-calculated if not provided)"
+        None,
+        ge=120,
+        le=220,
+        description="Maximum heart rate in BPM (optional, auto-calculated if not provided)",
     )
 
     @field_validator("target_distance")
@@ -51,7 +58,9 @@ class PerformancePlanRequest(BaseModel):
         valid_distances = [d for d in SUPPORTED_DISTANCES if d != 30.0]
         if v not in valid_distances:
             valid_names = [DISTANCE_NAMES.get(d, f"{d}km") for d in valid_distances]
-            raise ValueError(f"Please select a valid distance: {', '.join(valid_names)}")
+            raise ValueError(
+                f"Please select a valid distance: {', '.join(valid_names)}"
+            )
         return v
 
     @model_validator(mode="after")
@@ -93,7 +102,7 @@ class PerformancePlanRequest(BaseModel):
                         f"Performance training for {target_display} requires at least {min_required}km/week base. "
                         f"You're currently at {current_km}km/week.",
                         f"Build your weekly mileage to {min_required}km for 3-4 weeks before starting performance training. "
-                        "Performance plans focus on speed/quality, so a solid mileage base is essential."
+                        "Performance plans focus on speed/quality, so a solid mileage base is essential.",
                     )
 
         return self

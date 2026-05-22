@@ -8,12 +8,14 @@ from fastapi.responses import HTMLResponse, RedirectResponse
 from pydantic import ValidationError
 from sqlalchemy.orm import Session
 
-from app.infrastructure.config import settings
 from app.contexts.nutrition.nutrition_engine import NutritionEngine
 from app.contexts.plan.generators.plan_generator import TrainingPlanGenerator
+from app.contexts.plan.plan_helpers import error_response, get_plan_or_404
+from app.contexts.plan.plan_service import PlanService
+from app.contexts.runner.fitness.fitness_service import FitnessService
+from app.contexts.runner.fitness.performance_service import PerformanceService
 from app.contexts.runner.profile.profile_builder import build_profile
 from app.dependencies import (
-    get_current_user,
     get_db,
     get_nutrition_engine,
     get_optional_user,
@@ -29,13 +31,10 @@ from app.exceptions import (
     ValidationException,
     ZeroMileageUnsupportedException,
 )
+from app.infrastructure.config import settings
 from app.models import User
 from app.rate_limit import plan_generation_limiter
-from app.schemas import PlanRequest, FitnessPlanRequest
-from app.contexts.runner.fitness.performance_service import PerformanceService
-from app.contexts.plan.plan_helpers import error_response, get_plan_or_404
-from app.contexts.plan.plan_service import PlanService
-from app.contexts.runner.fitness.fitness_service import FitnessService
+from app.schemas import FitnessPlanRequest, PlanRequest
 from app.template_helpers import create_templates
 from app.utils import parse_time_to_pace
 
@@ -58,7 +57,7 @@ def _extract_validation_message(exc: ValidationError) -> Optional[str]:
     for err in exc.errors():
         msg = err.get("msg") or ""
         if msg.startswith(_VALUE_ERROR_PREFIX):
-            return msg[len(_VALUE_ERROR_PREFIX):]
+            return msg[len(_VALUE_ERROR_PREFIX) :]
         if msg:
             return msg
     return None
@@ -127,7 +126,8 @@ async def generate_plan(
     if is_trail_flag and target_distance == "trail":
         if not trail_distance_km:
             return error_response(
-                request, current_user,
+                request,
+                current_user,
                 "Please enter the trail/ultra distance in kilometres.",
                 "validation",
             )
@@ -135,7 +135,8 @@ async def generate_plan(
             target_distance_f = float(trail_distance_km)
         except ValueError:
             return error_response(
-                request, current_user,
+                request,
+                current_user,
                 "Trail/ultra distance must be a number in kilometres.",
                 "validation",
             )
@@ -144,7 +145,8 @@ async def generate_plan(
             target_distance_f = float(target_distance)
         except ValueError:
             return error_response(
-                request, current_user,
+                request,
+                current_user,
                 "Race goal distance is invalid.",
                 "validation",
             )
@@ -154,7 +156,8 @@ async def generate_plan(
             elevation_f = float(target_elevation_gain_m)
         except ValueError:
             return error_response(
-                request, current_user,
+                request,
+                current_user,
                 "Elevation gain must be a number in metres.",
                 "validation",
             )
@@ -183,25 +186,44 @@ async def generate_plan(
             goal_time=goal_time or None,
         )
     except InsufficientTimeException as e:
-        return error_response(request, current_user, e.user_message, "insufficient_time", e.suggestion)
+        return error_response(
+            request, current_user, e.user_message, "insufficient_time", e.suggestion
+        )
     except InadequateBaseException as e:
-        return error_response(request, current_user, e.user_message, "inadequate_base", e.suggestion)
+        return error_response(
+            request, current_user, e.user_message, "inadequate_base", e.suggestion
+        )
     except ZeroMileageUnsupportedException as e:
-        return error_response(request, current_user, e.user_message, "zero_mileage_unsupported", e.suggestion)
+        return error_response(
+            request,
+            current_user,
+            e.user_message,
+            "zero_mileage_unsupported",
+            e.suggestion,
+        )
     except ValidationException as e:
         return error_response(request, current_user, e.user_message, "validation")
     except ValidationError as e:
-        message = _extract_validation_message(e) or "Please check your values and try again."
+        message = (
+            _extract_validation_message(e) or "Please check your values and try again."
+        )
         return error_response(request, current_user, message, "validation")
     except Exception:
         logger.exception("Plan request validation failed")
-        return error_response(request, current_user, "Invalid input. Please check your values and try again.", "general")
+        return error_response(
+            request,
+            current_user,
+            "Invalid input. Please check your values and try again.",
+            "general",
+        )
 
     if current_user:
         existing = plan_service.find_duplicate(plan_request, current_user.id, db)
         if existing:
             logger.info(
-                "Returning existing plan %s for user %s", existing.id, current_user.id,
+                "Returning existing plan %s for user %s",
+                existing.id,
+                current_user.id,
             )
             return RedirectResponse(url=f"/plan/{existing.id}", status_code=303)
 
@@ -226,7 +248,11 @@ async def generate_plan(
                 runner_profile = rp.to_dict()
 
         training_plan, plan_data = plan_service.create_plan(
-            plan_request, user, db, plan_generator, nutrition_engine,
+            plan_request,
+            user,
+            db,
+            plan_generator,
+            nutrition_engine,
             profile=runner_profile,
         )
 
@@ -238,13 +264,19 @@ async def generate_plan(
     except DatabaseException:
         db.rollback()
         return error_response(
-            request, current_user, "Database error occurred. Please try again.", "database"
+            request,
+            current_user,
+            "Database error occurred. Please try again.",
+            "database",
         )
-    except Exception as e:
+    except Exception:
         logger.exception("Plan generation failed")
         db.rollback()
         return error_response(
-            request, current_user, "An unexpected error occurred. Please try again.", "general"
+            request,
+            current_user,
+            "An unexpected error occurred. Please try again.",
+            "general",
         )
 
 
@@ -291,11 +323,18 @@ async def generate_fitness_plan(
     except ValidationException as e:
         return error_response(request, current_user, e.user_message, "validation")
     except ValidationError as e:
-        message = _extract_validation_message(e) or "Please check your values and try again."
+        message = (
+            _extract_validation_message(e) or "Please check your values and try again."
+        )
         return error_response(request, current_user, message, "validation")
     except Exception:
         logger.exception("Fitness plan request validation failed")
-        return error_response(request, current_user, "Invalid input. Please check your values and try again.", "general")
+        return error_response(
+            request,
+            current_user,
+            "Invalid input. Please check your values and try again.",
+            "general",
+        )
 
     if current_user:
         if plan_service.has_reached_plan_limit(current_user.id, db):
@@ -325,18 +364,29 @@ async def generate_fitness_plan(
         return error_response(request, current_user, str(e), "validation")
     except RunCoachException as e:
         db.rollback()
-        return error_response(request, current_user, e.user_message, "validation",
-                              e.suggestion if hasattr(e, "suggestion") else None)
+        return error_response(
+            request,
+            current_user,
+            e.user_message,
+            "validation",
+            e.suggestion if hasattr(e, "suggestion") else None,
+        )
     except DatabaseException:
         db.rollback()
         return error_response(
-            request, current_user, "Database error occurred. Please try again.", "database"
+            request,
+            current_user,
+            "Database error occurred. Please try again.",
+            "database",
         )
-    except Exception as e:
+    except Exception:
         logger.exception("Fitness plan generation failed")
         db.rollback()
         return error_response(
-            request, current_user, "An unexpected error occurred. Please try again.", "general"
+            request,
+            current_user,
+            "An unexpected error occurred. Please try again.",
+            "general",
         )
 
 
@@ -356,14 +406,16 @@ async def _generate_time_goal_plan(
     """Dispatch performance (time-goal) plan creation from the unified form."""
     if not current_user:
         return error_response(
-            request, None,
+            request,
+            None,
             "Time-goal plans require a logged-in account so we can track your progress.",
             "auth_required",
         )
 
     if plan_service.has_reached_plan_limit(current_user.id, db):
         return error_response(
-            request, current_user,
+            request,
+            current_user,
             "You've reached the maximum of 3 active training plans. "
             "Please delete or complete an existing plan before creating a new one.",
             "plan_limit",
@@ -393,14 +445,20 @@ async def _generate_time_goal_plan(
         return RedirectResponse(url=f"/plan/{training_plan.id}", status_code=303)
 
     except RunCoachException as e:
-        return error_response(request, current_user, e.user_message, "validation",
-                              e.suggestion if hasattr(e, "suggestion") else None)
+        return error_response(
+            request,
+            current_user,
+            e.user_message,
+            "validation",
+            e.suggestion if hasattr(e, "suggestion") else None,
+        )
     except ValueError as e:
         return error_response(request, current_user, str(e), "validation")
-    except Exception as e:
+    except Exception:
         logger.exception("Time-goal plan generation failed")
         return error_response(
-            request, current_user,
+            request,
+            current_user,
             "An unexpected error occurred while generating your plan. Please try again.",
             "general",
         )
@@ -421,9 +479,7 @@ async def customize_plan(
     """Handle plan customization with simple interface."""
     training_plan = None
     try:
-        training_plan = get_plan_or_404(
-            plan_id, db, current_user, anonymous_user_id
-        )
+        training_plan = get_plan_or_404(plan_id, db, current_user, anonymous_user_id)
 
         plan_service.customize_plan(
             training_plan, week_number, adjustment_type, adjustment_value, db
@@ -442,10 +498,14 @@ async def customize_plan(
                 "request": request,
                 "user": current_user,
                 "google_client_id": settings.google_client_id,
-                "plan": training_plan.plan_data if training_plan and training_plan.plan_data else [],
+                "plan": training_plan.plan_data
+                if training_plan and training_plan.plan_data
+                else [],
                 "plan_id": plan_id,
                 "nutrition_plan": (
-                    plan_service.nutrition_for_template(training_plan.nutrition_plan_data)
+                    plan_service.nutrition_for_template(
+                        training_plan.nutrition_plan_data
+                    )
                     if training_plan and training_plan.nutrition_plan_data
                     else {}
                 ),

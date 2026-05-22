@@ -21,7 +21,6 @@ import tempfile
 import time
 from typing import Any
 
-from fit_tool.fit_file import FitFile
 from fit_tool.fit_file_builder import FitFileBuilder
 from fit_tool.profile.messages.file_id_message import FileIdMessage
 from fit_tool.profile.messages.workout_message import WorkoutMessage
@@ -98,7 +97,6 @@ class FITService:
             slow_sec = target_sec + tolerance_sec
             fast_sec = max(1.0, target_sec - tolerance_sec)
 
-            target_ms = _pace_min_km_to_speed_ms(pace)
             slow_ms = _pace_min_km_to_speed_ms(slow_sec / 60.0)
             fast_ms = _pace_min_km_to_speed_ms(fast_sec / 60.0)
 

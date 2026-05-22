@@ -32,7 +32,9 @@ class Settings(BaseSettings):
     # ``app.core.training.training_config.DISTANCE_CONSTRAINTS``.
 
     # OAuth / Authentication
-    secret_key: str = Field(default_factory=lambda: __import__("secrets").token_urlsafe(32))
+    secret_key: str = Field(
+        default_factory=lambda: __import__("secrets").token_urlsafe(32)
+    )
     # NOTE: In production, SECRET_KEY must be set as a persistent environment
     # variable (e.g. Fly.io secret) so JWTs survive cold starts.
     # The random default is for local development only.
@@ -98,7 +100,12 @@ class Settings(BaseSettings):
             for item in v.split(","):
                 if "=" in item:
                     k, val = item.split("=", 1)
-                    parsed[k.strip()] = val.strip().lower() in ("1", "true", "yes", "on")
+                    parsed[k.strip()] = val.strip().lower() in (
+                        "1",
+                        "true",
+                        "yes",
+                        "on",
+                    )
             return parsed
         return v
 

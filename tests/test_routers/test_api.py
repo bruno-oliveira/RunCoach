@@ -1,6 +1,5 @@
 """Tests for API endpoints."""
 
-import pytest
 from fastapi.testclient import TestClient
 
 
@@ -208,7 +207,9 @@ class TestPlanCreationAndWorkflow:
         assert response.status_code == 200
         html = response.text.lower()
         # Should include actual nutrition data, not just nav references
-        assert "calorie" in html or "protein" in html, "Response should contain actual nutrition data (calories or protein)"
+        assert "calorie" in html or "protein" in html, (
+            "Response should contain actual nutrition data (calories or protein)"
+        )
         assert "meal" in html, "Response should contain meal suggestions"
 
     def test_anonymous_fitness_plan_no_limit(self, client: TestClient):
@@ -227,6 +228,9 @@ class TestPlanCreationAndWorkflow:
                 f"Fitness plan #{i + 1} failed with status {response.status_code}. "
                 "Anonymous users must not be limited to 3 plans."
             )
-            assert "error" not in response.text.lower() or "plan_limit" not in response.text.lower(), (
+            assert (
+                "error" not in response.text.lower()
+                or "plan_limit" not in response.text.lower()
+            ), (
                 f"Fitness plan #{i + 1} returned a plan-limit error for an anonymous user."
             )

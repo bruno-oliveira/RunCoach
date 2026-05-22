@@ -10,8 +10,8 @@ from app.contexts.nutrition.nutrition_engine import (
 from app.core.race.race_protocol_generator import generate_race_protocol
 from app.core.training.trail_profile import classify_trail
 
-
 # --- Race protocol -----------------------------------------------------------
+
 
 class TestTrailRaceProtocol:
     """Race protocol scales with bracket / elevation when trail_profile is set."""
@@ -26,18 +26,26 @@ class TestTrailRaceProtocol:
 
     def test_trail_distance_name_uses_bracket_label(self):
         # Standard 30km
-        std = generate_race_protocol(30.0, 5.5, trail_profile=classify_trail(30.0, 1000.0))
+        std = generate_race_protocol(
+            30.0, 5.5, trail_profile=classify_trail(30.0, 1000.0)
+        )
         assert "Trail" in std["distance_name"]
         # Ultra 50km
-        ultra = generate_race_protocol(50.0, 6.0, trail_profile=classify_trail(50.0, 1500.0))
+        ultra = generate_race_protocol(
+            50.0, 6.0, trail_profile=classify_trail(50.0, 1500.0)
+        )
         assert "Ultra Trail" in ultra["distance_name"]
         # Long ultra 100mi
-        lu = generate_race_protocol(163.0, 7.0, trail_profile=classify_trail(163.0, 6000.0))
+        lu = generate_race_protocol(
+            163.0, 7.0, trail_profile=classify_trail(163.0, 6000.0)
+        )
         assert "Ultra Trail" in lu["distance_name"]
         assert "163" in lu["distance_name"]
 
     def test_mental_checkpoints_scale_with_distance(self):
-        protocol = generate_race_protocol(50.0, 6.0, trail_profile=classify_trail(50.0, 1500.0))
+        protocol = generate_race_protocol(
+            50.0, 6.0, trail_profile=classify_trail(50.0, 1500.0)
+        )
         # Anchors are at 10/33/50/75/90% of 50km → 5, 16.5, 25, 37.5, 45 km.
         distances = [cp["distance"] for cp in protocol["mental_checkpoints"]]
         assert "5.0 km" in distances
@@ -45,7 +53,9 @@ class TestTrailRaceProtocol:
         assert "45.0 km" in distances
 
     def test_long_ultra_morning_starts_4_hrs_before(self):
-        protocol = generate_race_protocol(163.0, 7.0, trail_profile=classify_trail(163.0, 6000.0))
+        protocol = generate_race_protocol(
+            163.0, 7.0, trail_profile=classify_trail(163.0, 6000.0)
+        )
         first_step = protocol["race_morning_timeline"][0]
         assert "4 hrs before" in first_step["time"]
         # And mentions kit-check / mandatory gear
@@ -53,13 +63,17 @@ class TestTrailRaceProtocol:
         assert "kit" in text.lower() or "mandatory" in text.lower()
 
     def test_ultra_extras_include_drop_bag_and_pacer(self):
-        protocol = generate_race_protocol(80.0, 6.5, trail_profile=classify_trail(80.0, 3000.0))
+        protocol = generate_race_protocol(
+            80.0, 6.5, trail_profile=classify_trail(80.0, 3000.0)
+        )
         text = " ".join(protocol["week_before_checklist"]).lower()
         assert "drop bag" in text or "drop bags" in text
         assert "pacer" in text or "crew" in text
 
     def test_long_ultra_extras_include_sleep_strategy(self):
-        protocol = generate_race_protocol(163.0, 7.0, trail_profile=classify_trail(163.0, 6000.0))
+        protocol = generate_race_protocol(
+            163.0, 7.0, trail_profile=classify_trail(163.0, 6000.0)
+        )
         text = " ".join(protocol["week_before_checklist"]).lower()
         assert "sleep" in text
         assert "headlamp" in text
@@ -68,7 +82,9 @@ class TestTrailRaceProtocol:
         # Base trail extras (any bracket) include a one-line drop-bag reminder.
         # The ultra-only items we want absent: detailed drop-bag packing,
         # crew/pacer hand-offs, sleep strategy.
-        protocol = generate_race_protocol(15.0, 5.5, trail_profile=classify_trail(15.0, 500.0))
+        protocol = generate_race_protocol(
+            15.0, 5.5, trail_profile=classify_trail(15.0, 500.0)
+        )
         text = " ".join(protocol["week_before_checklist"]).lower()
         assert "pacer" not in text
         assert "crew" not in text
@@ -76,12 +92,16 @@ class TestTrailRaceProtocol:
         assert "spare socks" not in text  # belongs to ultra drop-bag packing list
 
     def test_mountainous_extras_mention_descent_grip(self):
-        protocol = generate_race_protocol(50.0, 6.5, trail_profile=classify_trail(50.0, 2700.0))
+        protocol = generate_race_protocol(
+            50.0, 6.5, trail_profile=classify_trail(50.0, 2700.0)
+        )
         text = " ".join(protocol["week_before_checklist"]).lower()
         assert "descent" in text or "deep-lug" in text
 
     def test_nutrition_dense_for_ultra(self):
-        protocol = generate_race_protocol(80.0, 6.5, trail_profile=classify_trail(80.0, 3000.0))
+        protocol = generate_race_protocol(
+            80.0, 6.5, trail_profile=classify_trail(80.0, 3000.0)
+        )
         text = " ".join(item["what"] for item in protocol["nutrition_timing"]).lower()
         # Real food guidance only fires for distance >= 50 km.
         assert "real food" in text
@@ -89,7 +109,9 @@ class TestTrailRaceProtocol:
         assert any("60–90 min" in item["when"] for item in protocol["nutrition_timing"])
 
     def test_short_trail_keeps_simpler_nutrition(self):
-        protocol = generate_race_protocol(15.0, 5.5, trail_profile=classify_trail(15.0, 500.0))
+        protocol = generate_race_protocol(
+            15.0, 5.5, trail_profile=classify_trail(15.0, 500.0)
+        )
         text = " ".join(item["what"] for item in protocol["nutrition_timing"]).lower()
         # No real-food strategy for short trail.
         assert "real food at aid stations" not in text
@@ -97,12 +119,15 @@ class TestTrailRaceProtocol:
 
 # --- Nutrition engine --------------------------------------------------------
 
+
 class TestTrailNutritionFormula:
     """Continuous distance + elevation boost for trail nutrition needs."""
 
     def test_formula_floor_for_short_low_elevation(self):
         # 8 km / 0 m → boost should equal floor (0.05)
-        assert _trail_distance_boost(8.0, 0.0) == pytest.approx(0.05 + 8 / 800, abs=0.001)
+        assert _trail_distance_boost(8.0, 0.0) == pytest.approx(
+            0.05 + 8 / 800, abs=0.001
+        )
 
     def test_formula_clamps_at_ceiling(self):
         # Massive vert + max distance → clamp at 0.30
@@ -123,12 +148,17 @@ class TestTrailNutritionFormula:
         engine = NutritionEngine()
         # Road marathon: stepped boost = 0.10
         marathon_needs = engine.calculate_nutrition_needs(
-            weekly_km=60.0, target_distance=42.2, body_weight=70,
+            weekly_km=60.0,
+            target_distance=42.2,
+            body_weight=70,
         )
         # 100mi mountain: continuous boost ~0.30
         ultra_needs = engine.calculate_nutrition_needs(
-            weekly_km=60.0, target_distance=163.0, body_weight=70,
-            is_trail=True, target_elevation_gain_m=5000.0,
+            weekly_km=60.0,
+            target_distance=163.0,
+            body_weight=70,
+            is_trail=True,
+            target_elevation_gain_m=5000.0,
         )
         # Ultra calories must be ≥ marathon calories (same training volume).
         assert ultra_needs["calories"] > marathon_needs["calories"]
@@ -137,11 +167,15 @@ class TestTrailNutritionFormula:
         engine = NutritionEngine()
         # Road call (no is_trail): legacy stepped formula.
         legacy_30k = engine.calculate_nutrition_needs(
-            weekly_km=40.0, target_distance=30.0, body_weight=70,
+            weekly_km=40.0,
+            target_distance=30.0,
+            body_weight=70,
         )
         # Road 42.2: legacy +0.10 boost.
         marathon = engine.calculate_nutrition_needs(
-            weekly_km=40.0, target_distance=42.2, body_weight=70,
+            weekly_km=40.0,
+            target_distance=42.2,
+            body_weight=70,
         )
         # 30 and 42.2 both get +0.10 → identical calories.
         assert legacy_30k["calories"] == marathon["calories"]
@@ -153,8 +187,11 @@ class TestInRaceFuelingTable:
     def test_table_present_for_trail_meal_plan(self):
         engine = NutritionEngine()
         plan = engine.generate_weekly_meal_plan(
-            weekly_km=40.0, target_distance=50.0, body_weight=70,
-            is_trail=True, target_elevation_gain_m=1500.0,
+            weekly_km=40.0,
+            target_distance=50.0,
+            body_weight=70,
+            is_trail=True,
+            target_elevation_gain_m=1500.0,
         )
         assert "in_race_fueling" in plan
         table = plan["in_race_fueling"]
@@ -165,7 +202,9 @@ class TestInRaceFuelingTable:
     def test_table_absent_for_road_plan(self):
         engine = NutritionEngine()
         plan = engine.generate_weekly_meal_plan(
-            weekly_km=40.0, target_distance=42.2, body_weight=70,
+            weekly_km=40.0,
+            target_distance=42.2,
+            body_weight=70,
         )
         assert "in_race_fueling" not in plan
 
@@ -179,8 +218,10 @@ class TestInRaceFuelingTable:
         # Ultra-duration: 163 km / 6000 m → estimated > 6 h → real-food band.
         ultra = build_in_race_fueling_table(163.0, 6000.0)
         assert "50–70" in ultra["carbs_per_hour"]
-        assert "potato" in ultra["real_food_strategy"].lower() or \
-               "broth" in ultra["real_food_strategy"].lower()
+        assert (
+            "potato" in ultra["real_food_strategy"].lower()
+            or "broth" in ultra["real_food_strategy"].lower()
+        )
 
     def test_table_electrolyte_cadence_tightens_for_50km_plus(self):
         short = build_in_race_fueling_table(15.0, 500.0)

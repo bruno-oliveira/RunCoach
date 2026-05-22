@@ -23,10 +23,15 @@ def recalibrate_recovery_insertion(
 
     history = training_plan.adaptation_history or []
     insertion_count = sum(
-        1 for e in history if e.get("type") == "recalibrate" and e.get("strategy") == "recovery_insertion"
+        1
+        for e in history
+        if e.get("type") == "recalibrate" and e.get("strategy") == "recovery_insertion"
     )
     if insertion_count >= 2:
-        return {"ok": False, "error": "Maximum recovery insertions (2) already used for this plan."}
+        return {
+            "ok": False,
+            "error": "Maximum recovery insertions (2) already used for this plan.",
+        }
 
     target_week_num = None
     for wk_num in sorted(weekly_plans.keys()):
@@ -71,6 +76,7 @@ def recalibrate_recovery_insertion(
     )
 
     from .recalibrator import _record_recalibration_event
+
     _record_recalibration_event(training_plan, "recovery_insertion", 1, reason)
     db.commit()
 

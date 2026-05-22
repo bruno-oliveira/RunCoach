@@ -8,7 +8,9 @@ from sqlalchemy.orm import Session
 from app.contexts.auth.auth_service import AuthService
 from app.contexts.nutrition.nutrition_engine import NutritionEngine
 from app.contexts.plan.adaptation import AdaptationService
-from app.contexts.plan.generators.performance_plan_generator import PerformancePlanGenerator
+from app.contexts.plan.generators.performance_plan_generator import (
+    PerformancePlanGenerator,
+)
 from app.contexts.plan.generators.plan_generator import TrainingPlanGenerator
 from app.contexts.plan.plan_service import PlanService
 from app.contexts.runner.fitness.performance_service import PerformanceService

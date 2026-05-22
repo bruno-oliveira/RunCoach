@@ -1,18 +1,19 @@
 """Recalibration — strategy dispatch and simple time_off/ahead scaling."""
 
 from datetime import datetime, timezone
-from typing import Any, Dict, List
+from typing import Any, Dict
 
 from sqlalchemy.orm import Session
 
-from app.models import TrainingPlan, WeeklyPlan
-from app.core.training import workout_steps as _steps_mod
 from app.contexts.plan.plan_date_utils import compute_current_week
-from app.utils import persist_json, to_date as _to_date
 from app.contexts.plan.repositories import SQLAlchemyPlanRepository
+from app.core.training import workout_steps as _steps_mod
+from app.models import TrainingPlan, WeeklyPlan
+from app.utils import persist_json
+from app.utils import to_date as _to_date
 
 from ._helpers import batch_workouts_by_week, parse_plan_data_lookups, today_date
-from .missed_week_handler import detect_missed_weeks, recalibrate_missed_week
+from .missed_week_handler import recalibrate_missed_week
 from .recovery_inserter import recalibrate_recovery_insertion
 from .safety import enforce_future_growth_cap, enforce_week_structure
 
@@ -54,13 +55,25 @@ def recalibrate(
 
     if strategy == "missed_week":
         return recalibrate_missed_week(
-            training_plan, plan_data, pd_week, pd_workout,
-            weekly_plans, workouts_by_week, current_week, db,
+            training_plan,
+            plan_data,
+            pd_week,
+            pd_workout,
+            weekly_plans,
+            workouts_by_week,
+            current_week,
+            db,
         )
     elif strategy == "recovery_insertion":
         return recalibrate_recovery_insertion(
-            training_plan, plan_data, pd_week, pd_workout,
-            weekly_plans, workouts_by_week, current_week, db,
+            training_plan,
+            plan_data,
+            pd_week,
+            pd_workout,
+            weekly_plans,
+            workouts_by_week,
+            current_week,
+            db,
         )
     elif strategy == "time_off":
         factor = 0.8
@@ -70,10 +83,7 @@ def recalibrate(
         return {"ok": False, "error": f"Unknown strategy: {strategy}"}
 
     weeks_changed = 0
-    ordered_future = [
-        wk for wk in sorted(weekly_plans.keys())
-        if wk > current_week
-    ]
+    ordered_future = [wk for wk in sorted(weekly_plans.keys()) if wk > current_week]
 
     for wk_num in ordered_future:
         week = weekly_plans[wk_num]
@@ -95,7 +105,12 @@ def recalibrate(
             if not workout.distance_km or workout.workout_type in ("rest", "recovery"):
                 continue
             if workout.key_workout_id or workout.workout_type in (
-                "tempo", "interval", "hill", "vo2max", "race_pace", "fartlek",
+                "tempo",
+                "interval",
+                "hill",
+                "vo2max",
+                "race_pace",
+                "fartlek",
             ):
                 continue
             old_distance = workout.distance_km
@@ -108,7 +123,8 @@ def recalibrate(
                     pd_wo["distance"] = new_dist
                     if pd_wo.get("steps") and old_distance and old_distance > 0:
                         pd_wo["steps"] = _steps_mod.scale_steps(
-                            pd_wo["steps"], new_dist / old_distance,
+                            pd_wo["steps"],
+                            new_dist / old_distance,
                         )
 
         phase = pd_week.get(week.week_number, {}).get("phase", "build")
@@ -117,16 +133,16 @@ def recalibrate(
             training_plan.target_distance_km,
             phase,
             is_trail=bool(getattr(training_plan, "is_trail", False)),
-            target_elevation_gain_m=getattr(training_plan, "target_elevation_gain_m", None),
+            target_elevation_gain_m=getattr(
+                training_plan, "target_elevation_gain_m", None
+            ),
             training_terrain=getattr(training_plan, "training_terrain", None),
         ):
             week_changed = True
 
         if week_changed:
             weeks_changed += 1
-            new_total = round(
-                sum(w.distance_km for w in workouts if w.distance_km), 1
-            )
+            new_total = round(sum(w.distance_km for w in workouts if w.distance_km), 1)
             week.total_km = new_total
             if week.week_number in pd_week:
                 pd_week[week.week_number]["total_km"] = new_total

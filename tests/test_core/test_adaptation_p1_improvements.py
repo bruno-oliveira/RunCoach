@@ -8,17 +8,19 @@ from sqlalchemy import create_engine, event
 from sqlalchemy.orm import Session, sessionmaker
 from sqlalchemy.pool import StaticPool
 
-from app.models import Base, User, TrainingPlan, WeeklyPlan, DailyWorkout, RunLog
 from app.contexts.plan.adaptation.signal_computer import (
-    _IMPORTANCE_WEIGHTS,
     _CONSECUTIVE_THRESHOLD,
-    _EXPANDED_MIN,
     _EXPANDED_MAX,
-    _STANDARD_MIN,
+    _EXPANDED_MIN,
+    _IMPORTANCE_WEIGHTS,
     _STANDARD_MAX,
+    _STANDARD_MIN,
     _count_consecutive_direction,
+)
+from app.contexts.plan.adaptation.signal_computer import (
     compute_adjustment_signals as _compute_adjustment_signals,
 )
+from app.models import Base, DailyWorkout, RunLog, TrainingPlan, User, WeeklyPlan
 
 
 def _now():
@@ -85,11 +87,13 @@ def _create_plan_with_phases(
             "daily_workouts": [],
         }
         for i, wtype in enumerate(workout_types):
-            week_data["daily_workouts"].append({
-                "day": i + 1,
-                "type": wtype,
-                "distance": 8.0 if wtype != "long" else 14.0,
-            })
+            week_data["daily_workouts"].append(
+                {
+                    "day": i + 1,
+                    "type": wtype,
+                    "distance": 8.0 if wtype != "long" else 14.0,
+                }
+            )
         plan_data.append(week_data)
 
     plan = TrainingPlan(
@@ -166,29 +170,51 @@ def _add_runs_for_weeks(
             run_date = plan.start_date + timedelta(
                 weeks=wp.week_number - 1, days=wo.day_of_week - 1
             )
-            db.add(RunLog(
-                id=_uid(),
-                user_id=user.id,
-                training_plan_id=plan.id,
-                daily_workout_id=wo.id,
-                date=run_date,
-                distance_km=wo.distance_km * distance_multiplier,
-                duration_minutes=40,
-                perceived_effort=effort,
-                workout_type=wo.workout_type,
-            ))
+            db.add(
+                RunLog(
+                    id=_uid(),
+                    user_id=user.id,
+                    training_plan_id=plan.id,
+                    daily_workout_id=wo.id,
+                    date=run_date,
+                    distance_km=wo.distance_km * distance_multiplier,
+                    duration_minutes=40,
+                    perceived_effort=effort,
+                    workout_type=wo.workout_type,
+                )
+            )
     db.commit()
 
 
-def _build_signals_context(db, plan, user, weeks, *, effort=5.0, distance_multiplier=1.0, current_phase="build", workout_types=None):
+def _build_signals_context(
+    db,
+    plan,
+    user,
+    weeks,
+    *,
+    effort=5.0,
+    distance_multiplier=1.0,
+    current_phase="build",
+    workout_types=None,
+):
     """Helper to build all inputs needed for compute_adjustment_signals."""
     if workout_types is None:
         workout_types = ["easy", "tempo", "interval", "long"]
 
-    _add_runs_for_weeks(db, plan, user, weeks, effort=effort, distance_multiplier=distance_multiplier, workout_types=workout_types)
+    _add_runs_for_weeks(
+        db,
+        plan,
+        user,
+        weeks,
+        effort=effort,
+        distance_multiplier=distance_multiplier,
+        workout_types=workout_types,
+    )
 
     today = _today()
-    start = plan.start_date.date() if hasattr(plan.start_date, 'date') else plan.start_date
+    start = (
+        plan.start_date.date() if hasattr(plan.start_date, "date") else plan.start_date
+    )
 
     past_workouts = []
     past_workout_ids = set()
@@ -202,9 +228,7 @@ def _build_signals_context(db, plan, user, weeks, *, effort=5.0, distance_multip
             .one()
         )
         workouts = (
-            db.query(DailyWorkout)
-            .filter(DailyWorkout.weekly_plan_id == wp.id)
-            .all()
+            db.query(DailyWorkout).filter(DailyWorkout.weekly_plan_id == wp.id).all()
         )
         for wo in workouts:
             sched_date = start + timedelta(weeks=wk - 1, days=wo.day_of_week - 1)
@@ -216,15 +240,16 @@ def _build_signals_context(db, plan, user, weeks, *, effort=5.0, distance_multip
         weeks_ago = max(0, (today - scheduled_date).days) / 7.0
         return 2.0 ** (-weeks_ago / 3.0)
 
-    all_runs = (
-        db.query(RunLog)
-        .filter(RunLog.training_plan_id == plan.id)
-        .all()
-    )
+    all_runs = db.query(RunLog).filter(RunLog.training_plan_id == plan.id).all()
 
     signals = _compute_adjustment_signals(
-        all_runs, past_workouts, past_workout_ids,
-        today, plan.id, db, _recency_weight,
+        all_runs,
+        past_workouts,
+        past_workout_ids,
+        today,
+        plan.id,
+        db,
+        _recency_weight,
         current_phase=current_phase,
     )
     return signals
@@ -234,7 +259,17 @@ class TestImportanceWeights:
     """Verify importance weight constants."""
 
     def test_all_expected_types_present(self):
-        expected = {"long", "tempo", "interval", "vo2max", "race_pace", "hill", "fartlek", "easy", "recovery"}
+        expected = {
+            "long",
+            "tempo",
+            "interval",
+            "vo2max",
+            "race_pace",
+            "hill",
+            "fartlek",
+            "easy",
+            "recovery",
+        }
         assert set(_IMPORTANCE_WEIGHTS.keys()) == expected
 
     def test_long_has_highest_weight(self):
@@ -254,10 +289,18 @@ class TestImportanceWeights:
         assert _IMPORTANCE_WEIGHTS["recovery"] == 0.5
 
     def test_hill_weight_between_easy_and_tempo(self):
-        assert _IMPORTANCE_WEIGHTS["recovery"] < _IMPORTANCE_WEIGHTS["hill"] < _IMPORTANCE_WEIGHTS["tempo"]
+        assert (
+            _IMPORTANCE_WEIGHTS["recovery"]
+            < _IMPORTANCE_WEIGHTS["hill"]
+            < _IMPORTANCE_WEIGHTS["tempo"]
+        )
 
     def test_fartlek_weight_between_easy_and_hill(self):
-        assert _IMPORTANCE_WEIGHTS["easy"] < _IMPORTANCE_WEIGHTS["fartlek"] < _IMPORTANCE_WEIGHTS["hill"]
+        assert (
+            _IMPORTANCE_WEIGHTS["easy"]
+            < _IMPORTANCE_WEIGHTS["fartlek"]
+            < _IMPORTANCE_WEIGHTS["hill"]
+        )
 
 
 class TestContinuousCompletionFactor:
@@ -268,7 +311,11 @@ class TestContinuousCompletionFactor:
         _add_runs_for_weeks(db, plan, user, [1], effort=5.0, distance_multiplier=1.0)
 
         today = _today()
-        start = plan.start_date.date() if hasattr(plan.start_date, 'date') else plan.start_date
+        start = (
+            plan.start_date.date()
+            if hasattr(plan.start_date, "date")
+            else plan.start_date
+        )
 
         past_workouts = []
         past_workout_ids = set()
@@ -296,15 +343,16 @@ class TestContinuousCompletionFactor:
             weeks_ago = max(0, (today - scheduled_date).days) / 7.0
             return 2.0 ** (-weeks_ago / 3.0)
 
-        all_runs = (
-            db.query(RunLog)
-            .filter(RunLog.training_plan_id == plan.id)
-            .all()
-        )
+        all_runs = db.query(RunLog).filter(RunLog.training_plan_id == plan.id).all()
 
         signals = _compute_adjustment_signals(
-            all_runs, past_workouts, past_workout_ids,
-            today, plan.id, db, _recency_weight,
+            all_runs,
+            past_workouts,
+            past_workout_ids,
+            today,
+            plan.id,
+            db,
+            _recency_weight,
             current_phase="build",
         )
 
@@ -318,7 +366,11 @@ class TestContinuousCompletionFactor:
         _add_runs_for_weeks(db, plan, user, [1, 2], effort=5.0, distance_multiplier=1.0)
 
         today = _today()
-        start = plan.start_date.date() if hasattr(plan.start_date, 'date') else plan.start_date
+        start = (
+            plan.start_date.date()
+            if hasattr(plan.start_date, "date")
+            else plan.start_date
+        )
 
         past_workouts = []
         past_workout_ids = set()
@@ -346,15 +398,16 @@ class TestContinuousCompletionFactor:
             weeks_ago = max(0, (today - scheduled_date).days) / 7.0
             return 2.0 ** (-weeks_ago / 3.0)
 
-        all_runs = (
-            db.query(RunLog)
-            .filter(RunLog.training_plan_id == plan.id)
-            .all()
-        )
+        all_runs = db.query(RunLog).filter(RunLog.training_plan_id == plan.id).all()
 
         signals = _compute_adjustment_signals(
-            all_runs, past_workouts, past_workout_ids,
-            today, plan.id, db, _recency_weight,
+            all_runs,
+            past_workouts,
+            past_workout_ids,
+            today,
+            plan.id,
+            db,
+            _recency_weight,
             current_phase="build",
         )
 
@@ -368,7 +421,11 @@ class TestContinuousCompletionFactor:
         user, plan = _create_plan_with_phases(db, weeks=8, weeks_ago=4)
 
         today = _today()
-        start = plan.start_date.date() if hasattr(plan.start_date, 'date') else plan.start_date
+        start = (
+            plan.start_date.date()
+            if hasattr(plan.start_date, "date")
+            else plan.start_date
+        )
 
         past_workouts = []
         past_workout_ids = set()
@@ -397,24 +454,29 @@ class TestContinuousCompletionFactor:
             return 2.0 ** (-weeks_ago / 3.0)
 
         for multiplier in [0.5, 0.7, 0.89]:
-            _add_runs_for_weeks(db, plan, user, [1, 2, 3], effort=5.0, distance_multiplier=multiplier)
-
-            all_runs = (
-                db.query(RunLog)
-                .filter(RunLog.training_plan_id == plan.id)
-                .all()
+            _add_runs_for_weeks(
+                db, plan, user, [1, 2, 3], effort=5.0, distance_multiplier=multiplier
             )
 
+            all_runs = db.query(RunLog).filter(RunLog.training_plan_id == plan.id).all()
+
             signals = _compute_adjustment_signals(
-                all_runs, past_workouts, past_workout_ids,
-                today, plan.id, db, _recency_weight,
+                all_runs,
+                past_workouts,
+                past_workout_ids,
+                today,
+                plan.id,
+                db,
+                _recency_weight,
                 current_phase="build",
             )
 
             rate = signals["completion_rate"]
             factor = signals["completion_factor"]
             expected = round(0.90 + 0.15 * rate, 2)
-            assert abs(factor - expected) < 0.01, f"Failed at multiplier={multiplier}: factor={factor}, expected={expected}"
+            assert abs(factor - expected) < 0.01, (
+                f"Failed at multiplier={multiplier}: factor={factor}, expected={expected}"
+            )
 
     def test_completion_factor_range(self, db):
         """Factor should range from 0.90 (0% completion) to 1.05 (100% completion)."""
@@ -422,7 +484,11 @@ class TestContinuousCompletionFactor:
         _add_runs_for_weeks(db, plan, user, [1], effort=5.0, distance_multiplier=1.0)
 
         today = _today()
-        start = plan.start_date.date() if hasattr(plan.start_date, 'date') else plan.start_date
+        start = (
+            plan.start_date.date()
+            if hasattr(plan.start_date, "date")
+            else plan.start_date
+        )
 
         past_workouts = []
         past_workout_ids = set()
@@ -450,15 +516,16 @@ class TestContinuousCompletionFactor:
             weeks_ago = max(0, (today - scheduled_date).days) / 7.0
             return 2.0 ** (-weeks_ago / 3.0)
 
-        all_runs = (
-            db.query(RunLog)
-            .filter(RunLog.training_plan_id == plan.id)
-            .all()
-        )
+        all_runs = db.query(RunLog).filter(RunLog.training_plan_id == plan.id).all()
 
         signals = _compute_adjustment_signals(
-            all_runs, past_workouts, past_workout_ids,
-            today, plan.id, db, _recency_weight,
+            all_runs,
+            past_workouts,
+            past_workout_ids,
+            today,
+            plan.id,
+            db,
+            _recency_weight,
             current_phase="build",
         )
 
@@ -470,6 +537,7 @@ class TestImportanceWeightedVolume:
 
     def test_missing_long_run_penalizes_more_than_missing_easy(self):
         """When long runs are missed, volume ratio should be lower than when easy runs are missed."""
+
         class MockWorkout:
             def __init__(self, wtype, dist):
                 self.workout_type = wtype
@@ -498,14 +566,20 @@ class TestImportanceWeightedVolume:
         ]
         planned_ids = {wo[0].id for wo in planned_workouts}
 
-        runs_all = [MockRun(wt, dist, wo[0].id) for (wt, dist), wo in zip(
-            [("easy", 8.0), ("tempo", 8.0), ("interval", 8.0), ("long", 14.0)],
-            planned_workouts,
-        )]
-        runs_no_long = [MockRun(wt, dist, wo[0].id) for (wt, dist), wo in zip(
-            [("easy", 8.0), ("tempo", 8.0), ("interval", 8.0)],
-            planned_workouts,
-        )]
+        runs_all = [
+            MockRun(wt, dist, wo[0].id)
+            for (wt, dist), wo in zip(
+                [("easy", 8.0), ("tempo", 8.0), ("interval", 8.0), ("long", 14.0)],
+                planned_workouts,
+            )
+        ]
+        runs_no_long = [
+            MockRun(wt, dist, wo[0].id)
+            for (wt, dist), wo in zip(
+                [("easy", 8.0), ("tempo", 8.0), ("interval", 8.0)],
+                planned_workouts,
+            )
+        ]
 
         def _make_db(completed_runs):
             class MockDB:
@@ -513,22 +587,36 @@ class TestImportanceWeightedVolume:
                     class MockQuery:
                         def __init__(self):
                             self._completed = completed_runs
+
                         def filter(self, *args):
                             return self
+
                         def all(self):
                             return [(r.daily_workout_id,) for r in self._completed]
+
                     return MockQuery()
+
             return MockDB()
 
         signals_all = _compute_adjustment_signals(
-            runs_all, planned_workouts, planned_ids,
-            today, "plan1", _make_db(runs_all), _recency_weight,
+            runs_all,
+            planned_workouts,
+            planned_ids,
+            today,
+            "plan1",
+            _make_db(runs_all),
+            _recency_weight,
             current_phase="build",
         )
 
         signals_no_long = _compute_adjustment_signals(
-            runs_no_long, planned_workouts, planned_ids,
-            today, "plan1", _make_db(runs_no_long), _recency_weight,
+            runs_no_long,
+            planned_workouts,
+            planned_ids,
+            today,
+            "plan1",
+            _make_db(runs_no_long),
+            _recency_weight,
             current_phase="build",
         )
 
@@ -539,14 +627,22 @@ class TestImportanceWeightedVolume:
         user, plan = _create_plan_with_phases(db, weeks=6, weeks_ago=4)
 
         signals_long_boost = _build_signals_context(
-            db, plan, user, [1, 2, 3],
-            effort=5.0, distance_multiplier=1.3,
+            db,
+            plan,
+            user,
+            [1, 2, 3],
+            effort=5.0,
+            distance_multiplier=1.3,
             workout_types=["easy", "tempo", "interval", "long"],
         )
 
         signals_easy_boost = _build_signals_context(
-            db, plan, user, [1, 2, 3],
-            effort=5.0, distance_multiplier=1.3,
+            db,
+            plan,
+            user,
+            [1, 2, 3],
+            effort=5.0,
+            distance_multiplier=1.3,
             workout_types=["easy", "tempo", "interval", "long"],
         )
 
@@ -556,13 +652,19 @@ class TestImportanceWeightedVolume:
     def test_recovery_runs_count_less(self, db):
         """Recovery runs should contribute less to volume signal."""
         user, plan = _create_plan_with_phases(
-            db, weeks=6, weeks_ago=4,
+            db,
+            weeks=6,
+            weeks_ago=4,
             workout_types=["easy", "recovery", "tempo", "long"],
         )
 
-        signals = _build_signals_context(
-            db, plan, user, [1, 2, 3],
-            effort=5.0, distance_multiplier=1.0,
+        _build_signals_context(
+            db,
+            plan,
+            user,
+            [1, 2, 3],
+            effort=5.0,
+            distance_multiplier=1.0,
             workout_types=["easy", "recovery", "tempo", "long"],
         )
 
@@ -583,7 +685,9 @@ class TestDynamicMultiplierRange:
     def test_no_history_uses_standard_range(self, db):
         user, plan = _create_plan_with_phases(db, weeks=4, weeks_ago=2)
 
-        signals = _build_signals_context(db, plan, user, [1, 2, 3], effort=5.0, distance_multiplier=1.0)
+        signals = _build_signals_context(
+            db, plan, user, [1, 2, 3], effort=5.0, distance_multiplier=1.0
+        )
 
         assert signals["consecutive_same_direction"] == 0
         assert signals["expanded_range"] is False
@@ -598,7 +702,11 @@ class TestDynamicMultiplierRange:
         ]
 
         today = _today()
-        start = plan.start_date.date() if hasattr(plan.start_date, 'date') else plan.start_date
+        start = (
+            plan.start_date.date()
+            if hasattr(plan.start_date, "date")
+            else plan.start_date
+        )
 
         past_workouts = []
         past_workout_ids = set()
@@ -626,15 +734,16 @@ class TestDynamicMultiplierRange:
             weeks_ago = max(0, (today - scheduled_date).days) / 7.0
             return 2.0 ** (-weeks_ago / 3.0)
 
-        all_runs = (
-            db.query(RunLog)
-            .filter(RunLog.training_plan_id == plan.id)
-            .all()
-        )
+        all_runs = db.query(RunLog).filter(RunLog.training_plan_id == plan.id).all()
 
         signals = _compute_adjustment_signals(
-            all_runs, past_workouts, past_workout_ids,
-            today, plan.id, db, _recency_weight,
+            all_runs,
+            past_workouts,
+            past_workout_ids,
+            today,
+            plan.id,
+            db,
+            _recency_weight,
             current_phase="build",
             adaptation_history=history,
         )
@@ -652,7 +761,11 @@ class TestDynamicMultiplierRange:
         ]
 
         today = _today()
-        start = plan.start_date.date() if hasattr(plan.start_date, 'date') else plan.start_date
+        start = (
+            plan.start_date.date()
+            if hasattr(plan.start_date, "date")
+            else plan.start_date
+        )
 
         past_workouts = []
         past_workout_ids = set()
@@ -680,15 +793,16 @@ class TestDynamicMultiplierRange:
             weeks_ago = max(0, (today - scheduled_date).days) / 7.0
             return 2.0 ** (-weeks_ago / 3.0)
 
-        all_runs = (
-            db.query(RunLog)
-            .filter(RunLog.training_plan_id == plan.id)
-            .all()
-        )
+        all_runs = db.query(RunLog).filter(RunLog.training_plan_id == plan.id).all()
 
         signals = _compute_adjustment_signals(
-            all_runs, past_workouts, past_workout_ids,
-            today, plan.id, db, _recency_weight,
+            all_runs,
+            past_workouts,
+            past_workout_ids,
+            today,
+            plan.id,
+            db,
+            _recency_weight,
             current_phase="build",
             adaptation_history=history,
         )
@@ -707,7 +821,11 @@ class TestDynamicMultiplierRange:
         ]
 
         today = _today()
-        start = plan.start_date.date() if hasattr(plan.start_date, 'date') else plan.start_date
+        start = (
+            plan.start_date.date()
+            if hasattr(plan.start_date, "date")
+            else plan.start_date
+        )
 
         past_workouts = []
         past_workout_ids = set()
@@ -735,15 +853,16 @@ class TestDynamicMultiplierRange:
             weeks_ago = max(0, (today - scheduled_date).days) / 7.0
             return 2.0 ** (-weeks_ago / 3.0)
 
-        all_runs = (
-            db.query(RunLog)
-            .filter(RunLog.training_plan_id == plan.id)
-            .all()
-        )
+        all_runs = db.query(RunLog).filter(RunLog.training_plan_id == plan.id).all()
 
         signals = _compute_adjustment_signals(
-            all_runs, past_workouts, past_workout_ids,
-            today, plan.id, db, _recency_weight,
+            all_runs,
+            past_workouts,
+            past_workout_ids,
+            today,
+            plan.id,
+            db,
+            _recency_weight,
             current_phase="build",
             adaptation_history=history,
         )
@@ -761,7 +880,11 @@ class TestDynamicMultiplierRange:
         ]
 
         today = _today()
-        start = plan.start_date.date() if hasattr(plan.start_date, 'date') else plan.start_date
+        start = (
+            plan.start_date.date()
+            if hasattr(plan.start_date, "date")
+            else plan.start_date
+        )
 
         past_workouts = []
         past_workout_ids = set()
@@ -789,15 +912,16 @@ class TestDynamicMultiplierRange:
             weeks_ago = max(0, (today - scheduled_date).days) / 7.0
             return 2.0 ** (-weeks_ago / 3.0)
 
-        all_runs = (
-            db.query(RunLog)
-            .filter(RunLog.training_plan_id == plan.id)
-            .all()
-        )
+        all_runs = db.query(RunLog).filter(RunLog.training_plan_id == plan.id).all()
 
         signals = _compute_adjustment_signals(
-            all_runs, past_workouts, past_workout_ids,
-            today, plan.id, db, _recency_weight,
+            all_runs,
+            past_workouts,
+            past_workout_ids,
+            today,
+            plan.id,
+            db,
+            _recency_weight,
             current_phase="build",
             adaptation_history=history,
         )
@@ -827,7 +951,11 @@ class TestDynamicMultiplierRange:
         ]
 
         today = _today()
-        start = plan.start_date.date() if hasattr(plan.start_date, 'date') else plan.start_date
+        start = (
+            plan.start_date.date()
+            if hasattr(plan.start_date, "date")
+            else plan.start_date
+        )
 
         past_workouts = []
         past_workout_ids = set()
@@ -855,15 +983,16 @@ class TestDynamicMultiplierRange:
             weeks_ago = max(0, (today - scheduled_date).days) / 7.0
             return 2.0 ** (-weeks_ago / 3.0)
 
-        all_runs = (
-            db.query(RunLog)
-            .filter(RunLog.training_plan_id == plan.id)
-            .all()
-        )
+        all_runs = db.query(RunLog).filter(RunLog.training_plan_id == plan.id).all()
 
         signals = _compute_adjustment_signals(
-            all_runs, past_workouts, past_workout_ids,
-            today, plan.id, db, _recency_weight,
+            all_runs,
+            past_workouts,
+            past_workout_ids,
+            today,
+            plan.id,
+            db,
+            _recency_weight,
             current_phase="build",
             adaptation_history=history,
         )
@@ -993,8 +1122,13 @@ class TestMountainSimulationSignal:
                 return MockQuery()
 
         base_args = [
-            runs, planned, planned_ids,
-            today, "plan1", MockDB(), _recency_weight,
+            runs,
+            planned,
+            planned_ids,
+            today,
+            "plan1",
+            MockDB(),
+            _recency_weight,
         ]
 
         signals_low = _compute_adjustment_signals(
@@ -1008,7 +1142,10 @@ class TestMountainSimulationSignal:
             mountain_simulation={"score": 90},
         )
 
-        assert signals_low["mountain_simulation_factor"] < signals_high["mountain_simulation_factor"]
+        assert (
+            signals_low["mountain_simulation_factor"]
+            < signals_high["mountain_simulation_factor"]
+        )
         assert signals_low["multiplier"] < signals_high["multiplier"]
 
     def test_missing_simulation_defaults_to_neutral_factor(self):
@@ -1051,8 +1188,13 @@ class TestMountainSimulationSignal:
                 return MockQuery()
 
         signals = _compute_adjustment_signals(
-            runs, planned, planned_ids,
-            today, "plan1", MockDB(), _recency_weight,
+            runs,
+            planned,
+            planned_ids,
+            today,
+            "plan1",
+            MockDB(),
+            _recency_weight,
             current_phase="build",
         )
 

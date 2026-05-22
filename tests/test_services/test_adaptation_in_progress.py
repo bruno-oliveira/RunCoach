@@ -12,13 +12,17 @@ Covers:
 """
 
 import uuid
-from datetime import date, datetime, timedelta, timezone
+from datetime import date, datetime, timedelta
 
 import pytest
 from sqlalchemy import create_engine, event
 from sqlalchemy.orm import Session, sessionmaker
 from sqlalchemy.pool import StaticPool
 
+from app.contexts.plan.adaptation.plan_adjuster import adjust_plan
+from app.contexts.plan.adaptation.recommendation_evaluator import (
+    accept_recommendation,
+)
 from app.models import (
     Base,
     DailyWorkout,
@@ -26,10 +30,6 @@ from app.models import (
     TrainingPlan,
     User,
     WeeklyPlan,
-)
-from app.contexts.plan.adaptation.plan_adjuster import adjust_plan
-from app.contexts.plan.adaptation.recommendation_evaluator import (
-    accept_recommendation,
 )
 
 
@@ -75,10 +75,12 @@ def freeze_today(monkeypatch):
         return holder["value"]
 
     monkeypatch.setattr(
-        "app.contexts.plan.adaptation._helpers.today_date", fake_today,
+        "app.contexts.plan.adaptation._helpers.today_date",
+        fake_today,
     )
     monkeypatch.setattr(
-        "app.contexts.plan.adaptation.plan_adjuster.today_date", fake_today,
+        "app.contexts.plan.adaptation.plan_adjuster.today_date",
+        fake_today,
     )
     monkeypatch.setattr(
         "app.contexts.plan.adaptation.recommendation_evaluator.today_date",
@@ -121,8 +123,7 @@ def _make_plan(
             "total_km": 30.0,
             "phase": "build",
             "daily_workouts": [
-                {"day": d, "type": "easy", "distance": 7.5}
-                for d in range(1, 5)
+                {"day": d, "type": "easy", "distance": 7.5} for d in range(1, 5)
             ],
         }
         for w in range(weeks)
@@ -150,14 +151,16 @@ def _make_plan(
         db.add(wp)
         db.flush()
         for day in range(1, 5):
-            db.add(DailyWorkout(
-                id=_uid(),
-                weekly_plan_id=wp.id,
-                day_of_week=day,
-                workout_type="easy",
-                distance_km=7.5,
-                baseline_distance_km=7.5,
-            ))
+            db.add(
+                DailyWorkout(
+                    id=_uid(),
+                    weekly_plan_id=wp.id,
+                    day_of_week=day,
+                    workout_type="easy",
+                    distance_km=7.5,
+                    baseline_distance_km=7.5,
+                )
+            )
     db.commit()
     return user, plan
 
@@ -193,24 +196,29 @@ def _log_runs_in_week(
     )
     for wo in workouts:
         run_date = plan.start_date + timedelta(
-            weeks=week_number - 1, days=wo.day_of_week - 1,
+            weeks=week_number - 1,
+            days=wo.day_of_week - 1,
         )
-        db.add(RunLog(
-            id=_uid(),
-            user_id=user.id,
-            training_plan_id=plan.id,
-            daily_workout_id=wo.id,
-            date=run_date,
-            distance_km=distance_km,
-            duration_minutes=45,
-            perceived_effort=effort,
-            workout_type=wo.workout_type,
-        ))
+        db.add(
+            RunLog(
+                id=_uid(),
+                user_id=user.id,
+                training_plan_id=plan.id,
+                daily_workout_id=wo.id,
+                date=run_date,
+                distance_km=distance_km,
+                duration_minutes=45,
+                perceived_effort=effort,
+                workout_type=wo.workout_type,
+            )
+        )
     db.commit()
 
 
 def _week_total_and_distances(
-    db: Session, plan_id: str, week_number: int,
+    db: Session,
+    plan_id: str,
+    week_number: int,
 ) -> tuple[float, list[float]]:
     wp = (
         db.query(WeeklyPlan)
@@ -279,21 +287,35 @@ class TestManualAdjustCurrentWeekLock:
         _log_runs_in_week(db, user, plan, 1, distance_km=9.0, effort=8)
         _log_runs_in_week(db, user, plan, 2, distance_km=9.0, effort=8)
         # Single Monday run inside current week → in-progress.
-        wp3 = db.query(WeeklyPlan).filter(
-            WeeklyPlan.training_plan_id == plan.id,
-            WeeklyPlan.week_number == 3,
-        ).one()
-        mon_wo = db.query(DailyWorkout).filter(
-            DailyWorkout.weekly_plan_id == wp3.id,
-            DailyWorkout.day_of_week == 1,
-        ).one()
-        db.add(RunLog(
-            id=_uid(), user_id=user.id, training_plan_id=plan.id,
-            daily_workout_id=mon_wo.id,
-            date=datetime.combine(MON, datetime.min.time()),
-            distance_km=8.0, duration_minutes=40, perceived_effort=7,
-            workout_type="easy",
-        ))
+        wp3 = (
+            db.query(WeeklyPlan)
+            .filter(
+                WeeklyPlan.training_plan_id == plan.id,
+                WeeklyPlan.week_number == 3,
+            )
+            .one()
+        )
+        mon_wo = (
+            db.query(DailyWorkout)
+            .filter(
+                DailyWorkout.weekly_plan_id == wp3.id,
+                DailyWorkout.day_of_week == 1,
+            )
+            .one()
+        )
+        db.add(
+            RunLog(
+                id=_uid(),
+                user_id=user.id,
+                training_plan_id=plan.id,
+                daily_workout_id=mon_wo.id,
+                date=datetime.combine(MON, datetime.min.time()),
+                distance_km=8.0,
+                duration_minutes=40,
+                perceived_effort=7,
+                workout_type="easy",
+            )
+        )
         db.commit()
 
         wk3_before = _week_total_and_distances(db, plan.id, 3)
@@ -309,7 +331,12 @@ class TestManualAdjustCurrentWeekLock:
 
 class TestAcceptRecommendationAnchor:
     def _park_recommendation(
-        self, plan: TrainingPlan, db, *, week_evaluated: int, multiplier: float,
+        self,
+        plan: TrainingPlan,
+        db,
+        *,
+        week_evaluated: int,
+        multiplier: float,
     ) -> None:
         plan.pending_recommendation = {
             "week_evaluated": week_evaluated,
@@ -337,27 +364,43 @@ class TestAcceptRecommendationAnchor:
         )
 
     def test_in_progress_monday_accept_locks_current_week(
-        self, db, freeze_today,
+        self,
+        db,
+        freeze_today,
     ):
         """Monday but a run already logged today: week 3 locked, week 4+ moved."""
         freeze_today(MON)
         user, plan = _make_plan(db, today_value=MON, current_week=3)
 
-        wp3 = db.query(WeeklyPlan).filter(
-            WeeklyPlan.training_plan_id == plan.id,
-            WeeklyPlan.week_number == 3,
-        ).one()
-        mon_wo = db.query(DailyWorkout).filter(
-            DailyWorkout.weekly_plan_id == wp3.id,
-            DailyWorkout.day_of_week == 1,
-        ).one()
-        db.add(RunLog(
-            id=_uid(), user_id=user.id, training_plan_id=plan.id,
-            daily_workout_id=mon_wo.id,
-            date=datetime.combine(MON, datetime.min.time()),
-            distance_km=8.0, duration_minutes=40, perceived_effort=7,
-            workout_type="easy",
-        ))
+        wp3 = (
+            db.query(WeeklyPlan)
+            .filter(
+                WeeklyPlan.training_plan_id == plan.id,
+                WeeklyPlan.week_number == 3,
+            )
+            .one()
+        )
+        mon_wo = (
+            db.query(DailyWorkout)
+            .filter(
+                DailyWorkout.weekly_plan_id == wp3.id,
+                DailyWorkout.day_of_week == 1,
+            )
+            .one()
+        )
+        db.add(
+            RunLog(
+                id=_uid(),
+                user_id=user.id,
+                training_plan_id=plan.id,
+                daily_workout_id=mon_wo.id,
+                date=datetime.combine(MON, datetime.min.time()),
+                distance_km=8.0,
+                duration_minutes=40,
+                perceived_effort=7,
+                workout_type="easy",
+            )
+        )
         db.commit()
 
         self._park_recommendation(plan, db, week_evaluated=2, multiplier=1.10)
@@ -382,7 +425,9 @@ class TestAcceptRecommendationAnchor:
         assert _week_total_and_distances(db, plan.id, 3) == wk3_before
 
     def test_stale_recommendation_does_not_reach_past_weeks(
-        self, db, freeze_today,
+        self,
+        db,
+        freeze_today,
     ):
         """rec.week_evaluated=1 + current_week=5 in-progress → first=6."""
         freeze_today(WED)
@@ -414,7 +459,10 @@ class TestWeeklyTotalReconciliation:
         AND match the ORM, for every adjusted week."""
         freeze_today(WED)
         user, plan = _make_plan(
-            db, today_value=WED, current_week=3, weeks=8,
+            db,
+            today_value=WED,
+            current_week=3,
+            weeks=8,
         )
         _log_runs_in_week(db, user, plan, 1, distance_km=9.0, effort=8)
         _log_runs_in_week(db, user, plan, 2, distance_km=9.0, effort=8)
@@ -428,17 +476,22 @@ class TestWeeklyTotalReconciliation:
         for wk in range(4, 9):  # week 4..8: adjustable
             week_data = next(w for w in plan_data if w["week"] == wk)
             json_sum = round(
-                sum(wo["distance"] for wo in week_data["daily_workouts"]), 1,
+                sum(wo["distance"] for wo in week_data["daily_workouts"]),
+                1,
             )
             assert json_sum == week_data["total_km"], (
                 f"week {wk}: JSON daily sum {json_sum} != total_km "
                 f"{week_data['total_km']}"
             )
 
-            wp = db.query(WeeklyPlan).filter(
-                WeeklyPlan.training_plan_id == plan.id,
-                WeeklyPlan.week_number == wk,
-            ).one()
+            wp = (
+                db.query(WeeklyPlan)
+                .filter(
+                    WeeklyPlan.training_plan_id == plan.id,
+                    WeeklyPlan.week_number == wk,
+                )
+                .one()
+            )
             orm_distances = {
                 wo.day_of_week: wo.distance_km
                 for wo in db.query(DailyWorkout)

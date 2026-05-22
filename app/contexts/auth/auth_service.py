@@ -15,7 +15,6 @@ from app.domain.repositories import IUserRepository
 from app.infrastructure.config import settings
 from app.models import User
 from app.models.refresh_token import RefreshToken, _generate_raw_token, hash_token
-from app.schemas import UserCreate
 
 logger = logging.getLogger(__name__)
 
@@ -26,23 +25,29 @@ class AuthService:
 
     def __init__(
         self,
-        user_repo_factory: Callable[[Session], IUserRepository] = SQLAlchemyUserRepository,
+        user_repo_factory: Callable[
+            [Session], IUserRepository
+        ] = SQLAlchemyUserRepository,
     ):
         self.secret_key = settings.secret_key
         self.algorithm = "HS256"
         self.google_cert_url = "https://www.googleapis.com/oauth2/v3/certs"
         self._user_repo_factory = user_repo_factory
 
-    def create_access_token(self, data: dict, expires_delta: Optional[timedelta] = None) -> str:
+    def create_access_token(
+        self, data: dict, expires_delta: Optional[timedelta] = None
+    ) -> str:
         to_encode = data.copy()
         if expires_delta:
             expire = datetime.now(timezone.utc).replace(tzinfo=None) + expires_delta
         else:
             expire = datetime.now(timezone.utc).replace(tzinfo=None) + timedelta(days=1)
-        to_encode.update({
-            "exp": expire,
-            "iat": datetime.now(timezone.utc).replace(tzinfo=None),
-        })
+        to_encode.update(
+            {
+                "exp": expire,
+                "iat": datetime.now(timezone.utc).replace(tzinfo=None),
+            }
+        )
         return pyjwt.encode(to_encode, self.secret_key, algorithm=self.algorithm)
 
     def verify_token(self, token: str) -> Optional[dict]:
@@ -128,14 +133,18 @@ class AuthService:
             response.raise_for_status()
             certs = response.json()
             AuthService._cert_cache_entry = (certs, now)  # single atomic write
-            logger.info("Retrieved %d public keys from Google", len(certs.get("keys", [])))
+            logger.info(
+                "Retrieved %d public keys from Google", len(certs.get("keys", []))
+            )
             return certs
 
     async def verify_google_token(self, id_token: str) -> Optional[dict]:
         """Verify Google ID token using Google's public keys."""
         try:
             if not settings.google_client_id:
-                logger.error("Google client ID is not configured — refusing to verify token without audience validation")
+                logger.error(
+                    "Google client ID is not configured — refusing to verify token without audience validation"
+                )
                 return None
 
             certs = await self._get_google_certs()
@@ -158,7 +167,9 @@ class AuthService:
                 audience=settings.google_client_id,
                 issuer=["https://accounts.google.com", "accounts.google.com"],
             )
-            logger.debug("Google token verified successfully for sub: %s", payload.get("sub"))
+            logger.debug(
+                "Google token verified successfully for sub: %s", payload.get("sub")
+            )
             return payload
         except PyJWTError as e:
             logger.error("JWT verification failed: %s: %s", type(e).__name__, e)
@@ -167,7 +178,12 @@ class AuthService:
             logger.error("Google token verification error: %s: %s", type(e).__name__, e)
             return None
 
-    def get_or_create_user(self, db: Session, google_user_data: dict, anonymous_user_id: Optional[str] = None) -> User:
+    def get_or_create_user(
+        self,
+        db: Session,
+        google_user_data: dict,
+        anonymous_user_id: Optional[str] = None,
+    ) -> User:
         """Get existing user or create new one from Google data.
 
         Args:
@@ -205,6 +221,7 @@ class AuthService:
 
         if anonymous_user_id and anonymous_user_id != user.id:
             from app.contexts.plan.merge_service import MergeService
+
             MergeService.merge_anonymous_user(db, anonymous_user_id, user.id)
 
         user.last_activity = datetime.now(timezone.utc).replace(tzinfo=None)
