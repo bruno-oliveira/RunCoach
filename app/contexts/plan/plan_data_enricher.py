@@ -5,12 +5,14 @@ from typing import Any
 
 from sqlalchemy.orm import Session
 
+from app.core.training.baseline_recovery import recover_baseline, strip_annotations
 from app.core.training.key_workout_data import WORKOUTS
 from app.core.training.key_workout_library import (
     _KEY_WORKOUT_MIN_DISTANCE_KM,
     reconcile_key_workout_text,
 )
 from app.core.training.key_workout_parser import parse_key_workout_steps
+from app.core.training.quality_caps import cap_easy_distance
 from app.core.training.workout_steps import (
     _compute_distance_from_steps,
     _parse_pace_str_to_min_per_km,
@@ -147,6 +149,25 @@ def enrich_plan_data_with_ids(
             # real adaptations.
             original_distance = workout.get("distance")
 
+            # Self-heal corrupted baselines for display. A lingering
+            # "(Adjusted: xN)" note with baseline == distance means the stored
+            # baseline was frozen to an already-adjusted distance (legacy
+            # backfill). Recover the true original from the note's multiplier
+            # so the card shows the right distance, drops the stale note, and
+            # raises no false "adjusted" chip. In-memory only — no DB write.
+            note_text = workout.get("notes") or workout.get("description")
+            rec_baseline, rec_distance, recovered = recover_baseline(
+                original_distance, bl, note_text
+            )
+            if recovered:
+                workout["distance"] = rec_distance
+                original_distance = rec_distance
+                bl = rec_baseline
+                if workout.get("notes"):
+                    workout["notes"] = strip_annotations(workout["notes"])
+                if workout.get("description"):
+                    workout["description"] = strip_annotations(workout["description"])
+
             _repair_key_workout_steps(workout)
 
             steps = workout.get("steps")
@@ -186,8 +207,27 @@ def enrich_plan_data_with_ids(
     # pre-rewrite values. Recompute here so the chip is always the sum of
     # the daily cards beside it.
     for week in plan_data:
+        daily = week.get("daily_workouts", [])
+        # Structural invariant: an easy run can never display longer than the
+        # week's long run. Adaptation enforces this only on weeks it touches,
+        # so corrupted/legacy past weeks could otherwise show an inversion.
+        long_run_km = next(
+            (
+                (wo.get("distance") or 0)
+                for wo in daily
+                if (wo.get("type") or wo.get("workout_type")) == "long"
+            ),
+            0,
+        )
+        if long_run_km > 0:
+            for wo in daily:
+                if (wo.get("type") or wo.get("workout_type")) != "easy":
+                    continue
+                dist = wo.get("distance") or 0
+                if dist > 0:
+                    wo["distance"] = cap_easy_distance(dist, long_run_km)
         week["total_km"] = round(
-            sum((wo.get("distance") or 0) for wo in week.get("daily_workouts", [])),
+            sum((wo.get("distance") or 0) for wo in daily),
             1,
         )
         week["total_minutes"] = sum(

@@ -357,6 +357,72 @@ def test_enricher_reconciles_total_km_to_daily_sum(test_db):
     ]
 
 
+def test_enricher_recovers_corrupted_baseline_easy_run(test_db):
+    """A legacy backfill can freeze an already-adjusted distance as the
+    baseline, leaving baseline == distance with a lingering "(Adjusted: xN)"
+    note. The enricher must recover the true original from the note, drop the
+    stale note, and raise no false "adjusted" chip."""
+    plan, week = _seed_plan(test_db)
+    # baseline frozen equal to the inflated distance (9.2 = 8.0 * 1.15).
+    dw = DailyWorkout(
+        weekly_plan_id=week.id,
+        day_of_week=1,
+        workout_type="easy",
+        distance_km=9.2,
+        intensity="low",
+        baseline_distance_km=9.2,
+        notes="Easy run (Adjusted: x1.15)",
+    )
+    test_db.add(dw)
+    test_db.commit()
+
+    plan_data = [
+        {
+            "week": 1,
+            "daily_workouts": [
+                {
+                    "day": 1,
+                    "type": "easy",
+                    "distance": 9.2,
+                    "notes": "Easy run (Adjusted: x1.15)",
+                },
+                {"day": 3, "type": "long", "distance": 12.0},
+            ],
+        }
+    ]
+
+    enriched = enrich_plan_data_with_ids(plan_data, plan.id, test_db)
+    easy = enriched[0]["daily_workouts"][0]
+
+    assert easy["distance"] == 8.0
+    assert "baseline_distance" not in easy
+    assert "Adjusted" not in (easy.get("notes") or "")
+
+
+def test_enricher_caps_easy_run_at_long_run(test_db):
+    """Structural invariant: an easy run can never display longer than the
+    week's long run, even on weeks the adjuster never re-capped."""
+    plan, week = _seed_plan(test_db)
+    plan_data = [
+        {
+            "week": 1,
+            "daily_workouts": [
+                {"day": 1, "type": "easy", "distance": 12.0},
+                {"day": 3, "type": "long", "distance": 10.0},
+            ],
+        }
+    ]
+
+    enriched = enrich_plan_data_with_ids(plan_data, plan.id, test_db)
+    easy = enriched[0]["daily_workouts"][0]
+    long_run = enriched[0]["daily_workouts"][1]
+
+    # Capped to 0.95 x long run = 9.5.
+    assert easy["distance"] == 9.5
+    assert easy["distance"] < long_run["distance"]
+    assert enriched[0]["total_km"] == round(9.5 + 10.0, 1)
+
+
 def test_enricher_total_km_follows_steps_distance_overwrite(test_db):
     """When the enricher rewrites a workout's `distance` from its `steps`,
     the new `total_km` reflects the rewritten value, not the original."""

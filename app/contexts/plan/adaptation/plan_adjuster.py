@@ -604,6 +604,13 @@ def _run_reset(
             "change_plan": cp,
         }
 
+    # Reset restores distance = baseline_distance_km, so a baseline frozen to
+    # an already-adjusted value would restore the inflated distance. Normalize
+    # first (recovers true baselines, strips stale notes) so reset returns the
+    # genuine originals. Reset does not go through gather_signals, so this is
+    # the only place the normalize pass runs for this flow.
+    backfill_baselines(training_plan, db)
+
     plan_data, pd_week, pd_workout = parse_plan_data_lookups(training_plan)
 
     all_weeks = (

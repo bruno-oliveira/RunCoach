@@ -1,16 +1,22 @@
 """Shared helpers for the adaptation sub-package."""
 
-import re
 from collections import defaultdict
 from datetime import date, datetime, timedelta, timezone
 from typing import Dict, List, Tuple
 
 from sqlalchemy.orm import Session
 
+from app.core.training.baseline_recovery import (
+    ANNOTATION_RE,
+    parse_adjustment_multiplier,
+    recover_baseline,
+    strip_annotations,
+)
 from app.models import DailyWorkout, RunLog, TrainingPlan, WeeklyPlan
 
-# Regex to strip legacy adaptation/recalibration notes from workout notes
-ANNOTATION_RE = re.compile(r"\s*\((Adapted|Recalibrated|Adjusted):[^)]*\)")
+# ANNOTATION_RE is re-exported from the pure core module (single source of
+# truth) so existing `from ._helpers import ANNOTATION_RE` imports keep working.
+_ = ANNOTATION_RE  # re-export marker
 
 
 def today_date():
@@ -19,28 +25,56 @@ def today_date():
 
 
 def backfill_baselines(training_plan: TrainingPlan, db: Session) -> None:
-    """Ensure every DailyWorkout has a baseline_distance_km.
+    """Ensure every DailyWorkout has a correct baseline_distance_km.
 
-    For plans created before the column existed, sets baseline to
-    current distance_km.
+    For plans created before the column existed, sets the baseline to the
+    current distance_km. Crucially, a current distance that still carries an
+    ``(Adjusted: xN)`` note is *not* a true baseline (it was inflated by an
+    earlier adjustment), so it is back-computed from the note's multiplier
+    rather than frozen as-is.
+
+    Also self-heals already-corrupted rows: when a non-null baseline equals
+    the (annotated) distance, the baseline was frozen to an adjusted value by
+    an earlier backfill — recover the true original and strip the stale note.
     """
-    workouts_needing_backfill = (
+    workouts = (
         db.query(DailyWorkout)
         .join(WeeklyPlan)
         .filter(
             WeeklyPlan.training_plan_id == training_plan.id,
-            DailyWorkout.baseline_distance_km.is_(None),
             DailyWorkout.distance_km.isnot(None),
             DailyWorkout.distance_km > 0,
         )
         .all()
     )
-    if not workouts_needing_backfill:
-        return
 
-    for workout in workouts_needing_backfill:
-        workout.baseline_distance_km = workout.distance_km
-    db.flush()
+    dirty = False
+    for workout in workouts:
+        if workout.baseline_distance_km is None:
+            multiplier = parse_adjustment_multiplier(workout.notes)
+            if multiplier and multiplier != 1.0:
+                true_value = round(workout.distance_km / multiplier, 1)
+                workout.baseline_distance_km = true_value
+                workout.distance_km = true_value
+                workout.notes = strip_annotations(workout.notes)
+            else:
+                workout.baseline_distance_km = workout.distance_km
+            dirty = True
+            continue
+
+        true_baseline, true_distance, recovered = recover_baseline(
+            workout.distance_km,
+            workout.baseline_distance_km,
+            workout.notes,
+        )
+        if recovered:
+            workout.baseline_distance_km = true_baseline
+            workout.distance_km = true_distance
+            workout.notes = strip_annotations(workout.notes)
+            dirty = True
+
+    if dirty:
+        db.flush()
 
 
 def parse_plan_data_lookups(

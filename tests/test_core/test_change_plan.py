@@ -334,3 +334,28 @@ class TestResetAdjustment:
         easy_after = _easy_workouts_for_week(db, plan, week=FUTURE_WEEK)
         for wo in easy_after:
             assert wo.distance_km == wo.baseline_distance_km
+
+    def test_reset_recovers_corrupted_baseline(self, db):
+        """A baseline frozen to an already-adjusted distance (legacy backfill)
+        must not be treated as the true original. Reset normalizes first, so
+        it restores the genuine distance recovered from the "(Adjusted: xN)"
+        note rather than the inflated value."""
+        user, plan = _create_plan(db)
+
+        # Corrupt one easy workout: baseline == inflated distance, stale note.
+        easy = _easy_workouts_for_week(db, plan, week=FUTURE_WEEK)[0]
+        easy.distance_km = 9.2  # 8.0 * 1.15
+        easy.baseline_distance_km = 9.2
+        easy.notes = "Easy run (Adjusted: x1.15)"
+        plan.adjustment_multiplier = 1.15  # so reset is not a no-op
+        db.commit()
+        easy_id = easy.id
+
+        result = reset_adjustment(plan.id, user.id, db)
+        assert result["reset"] is True
+
+        db.expire_all()
+        restored = db.query(DailyWorkout).filter(DailyWorkout.id == easy_id).one()
+        assert restored.distance_km == 8.0
+        assert restored.baseline_distance_km == 8.0
+        assert "Adjusted" not in (restored.notes or "")
