@@ -21,7 +21,7 @@ def get_workout_distribution(
     phase: str = "build",
     is_recovery_week: bool = False,
     week_number: int = 1,
-    phases: Dict[str, int] = None,
+    phases: Optional[Dict[str, int]] = None,
     target_distance: float = 10.0,
     terrain: Optional[str] = None,
     profile: Optional[dict] = None,

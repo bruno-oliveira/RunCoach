@@ -333,7 +333,7 @@ class VDOTCalculator:
         elevation_gain_m: Optional[float] = None,
         trail_runs_count: Optional[int] = None,
         endurance_factor: Optional[float] = None,
-    ) -> Dict[str, int]:
+    ) -> Dict[str, Optional[int]]:
         from app.core.training.race_predictor import get_confidence_range
 
         return get_confidence_range(

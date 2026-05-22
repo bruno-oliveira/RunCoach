@@ -489,7 +489,7 @@ def _bracket_allowed(workout: Dict[str, Any], bracket: str) -> bool:
     explicit = workout.get("brackets")
     if explicit is not None:
         return bracket in explicit
-    restriction = _BRACKET_RESTRICTIONS.get(workout.get("id"))
+    restriction = _BRACKET_RESTRICTIONS.get(workout.get("id", ""))
     if restriction is not None:
         return bracket in restriction
     return True

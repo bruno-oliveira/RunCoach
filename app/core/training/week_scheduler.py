@@ -13,7 +13,7 @@ def schedule_workout_types(
 
     Recovery is always on Day 2 and does NOT count towards max_runs.
     """
-    workout_types = [None] * 7
+    workout_types: List[Optional[str]] = [None] * 7
 
     workout_types[1] = "recovery"
 

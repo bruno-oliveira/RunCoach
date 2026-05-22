@@ -196,10 +196,12 @@ def compute_weekly_vertical_actuals(
         block are included -- this is purely a display companion to that
         block.
     """
-    enabled_weeks = {
-        wk.get("week"): {"uphill_min": 0, "downhill_min": 0, "transitions": 0}
+    enabled_weeks: Dict[int, Dict[str, int]] = {
+        int(wk["week"]): {"uphill_min": 0, "downhill_min": 0, "transitions": 0}
         for wk in plan_data or []
-        if isinstance(wk, dict) and (wk.get("vertical_simulation") or {}).get("enabled")
+        if isinstance(wk, dict)
+        and wk.get("week") is not None
+        and (wk.get("vertical_simulation") or {}).get("enabled")
     }
     if not enabled_weeks or start_date is None:
         return {}

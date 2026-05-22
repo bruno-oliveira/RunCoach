@@ -1,0 +1,10 @@
+{
+  "include": [
+    "app/domain",
+    "app/core"
+  ],
+  "pythonVersion": "3.11",
+  "typeCheckingMode": "basic",
+  "reportMissingImports": true,
+  "reportMissingModuleSource": false
+}

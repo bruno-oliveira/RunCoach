@@ -189,7 +189,7 @@ def get_confidence_range(
     elevation_gain_m: Optional[float] = None,
     trail_runs_count: Optional[int] = None,
     endurance_factor: Optional[float] = None,
-) -> Dict[str, int]:
+) -> Dict[str, Optional[int]]:
     """Get optimistic and pessimistic time estimates.
 
     Uses +/-1.5 VDOT for road distances and +/-5.0 for trail (30km or any
