@@ -8,37 +8,17 @@ from sqlalchemy.orm import Session
 from app.contexts.plan.repositories import SQLAlchemyPlanRepository
 from app.contexts.runner.fitness.effort_classifier import classify_effort
 from app.contexts.runner.fitness.race_predictor_service import RacePredictorService
+from app.contexts.runner.queries import count_prior_trail_runs
 from app.core.training.vdot_calculator import VDOTCalculator
 from app.models import RunLog
 from app.schemas import RunLogResponse
 
 logger = logging.getLogger(__name__)
 
-# Average climb per km above which a run counts as a trail run.
-_TRAIL_ELEVATION_M_PER_KM = 20.0
-
 # Quality workouts that justify recomputing the user's fitness baseline.
 _RECALIBRATION_WORKOUT_TYPES = frozenset(
     {"tempo", "long", "race", "vo2max", "interval"}
 )
-
-
-def _count_prior_trail_runs(user_id: str, db: Session) -> int:
-    """Count the user's prior runs that average >=20 m of climb per km."""
-    runs = (
-        db.query(RunLog.distance_km, RunLog.elevation_gain_m)
-        .filter(
-            RunLog.user_id == user_id,
-            RunLog.distance_km > 0,
-            RunLog.elevation_gain_m.isnot(None),
-        )
-        .all()
-    )
-    return sum(
-        1
-        for distance_km, gain in runs
-        if distance_km and gain and gain / distance_km >= _TRAIL_ELEVATION_M_PER_KM
-    )
 
 
 def enrich_vdot_and_prediction(
@@ -83,7 +63,7 @@ def enrich_vdot_and_prediction(
             if pre_race_vdot:
                 trail_runs_count = None
                 if new_run.elevation_gain_m and new_run.elevation_gain_m > 0:
-                    trail_runs_count = _count_prior_trail_runs(user_id, db)
+                    trail_runs_count = count_prior_trail_runs(user_id, db)
                 endurance_factor = RacePredictorService.compute_endurance_factor(
                     user_id, distance_km, db, current_vdot=pre_race_vdot
                 )

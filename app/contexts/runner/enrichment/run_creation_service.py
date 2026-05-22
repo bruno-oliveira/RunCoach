@@ -13,13 +13,15 @@ from sqlalchemy.orm import Session
 
 from app.contexts.plan.repositories import SQLAlchemyPlanRepository
 from app.contexts.runner.enrichment.run_enrichment_service import (
-    _TRAIL_ELEVATION_M_PER_KM,
-    _count_prior_trail_runs,
     build_race_comparison,
     enrich_vdot_and_prediction,
     run_to_response,
 )
 from app.contexts.runner.fitness.feedback_service import FeedbackService
+from app.contexts.runner.queries import (
+    TRAIL_ELEVATION_M_PER_KM,
+    count_prior_trail_runs,
+)
 from app.core.training.quality_scorer import calculate_quality_score
 from app.core.training.vdot_calculator import VDOTCalculator
 from app.dependencies import validate_plan_ownership
@@ -194,9 +196,9 @@ class RunCreationService:
                 new_run.elevation_gain_m
                 and new_run.distance_km > 0
                 and new_run.elevation_gain_m / new_run.distance_km
-                >= _TRAIL_ELEVATION_M_PER_KM
+                >= TRAIL_ELEVATION_M_PER_KM
             ):
-                trail_count = _count_prior_trail_runs(current_user.id, db)
+                trail_count = count_prior_trail_runs(current_user.id, db)
                 elevation_map = {"trail": new_run.elevation_gain_m}
             response_data.predictions = VDOTCalculator.predict_times(
                 new_run.vdot,

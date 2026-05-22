@@ -10,9 +10,10 @@ from fastapi.responses import HTMLResponse
 from sqlalchemy.orm import Session
 
 from app.contexts.runner.fitness.race_pacing_service import RacePacingService
+from app.contexts.runner.queries import count_prior_trail_runs
 from app.dependencies import get_db, get_optional_user
 from app.infrastructure.integrations.gpx_service import GPXService
-from app.models import RunLog, User
+from app.models import User
 from app.schemas.race_prep_schemas import (
     GPXAnalysisResponse,
     RacePrepRequest,
@@ -25,24 +26,6 @@ router = APIRouter(tags=["race-prep"])
 templates = create_templates()
 
 _blueprint_store: dict[str, dict[str, Any]] = {}
-
-
-def _count_user_trail_runs(user_id: str, db: Session) -> int:
-    """Count the user's prior runs that average >=20 m of climb per km."""
-    runs = (
-        db.query(RunLog.distance_km, RunLog.elevation_gain_m)
-        .filter(
-            RunLog.user_id == user_id,
-            RunLog.distance_km > 0,
-            RunLog.elevation_gain_m.isnot(None),
-        )
-        .all()
-    )
-    return sum(
-        1
-        for distance_km, gain in runs
-        if distance_km and gain and gain / distance_km >= 20.0
-    )
 
 
 @router.get("/race-prep", response_class=HTMLResponse)
@@ -108,7 +91,7 @@ async def analyze_gpx(
 
     if user_vdot > 0:
         trail_runs_count = (
-            _count_user_trail_runs(current_user.id, db) if current_user else None
+            count_prior_trail_runs(current_user.id, db) if current_user else None
         )
         time_data = RacePacingService.predict_elevation_adjusted_time(
             user_vdot, distance_km, elevation_profile, trail_runs_count=trail_runs_count
@@ -186,7 +169,7 @@ def generate_blueprint(
 
     distance_km = request.distance_km or elevation_profile[-1]["end_km"]
     target_time = request.target_time_seconds
-    trail_runs_count = _count_user_trail_runs(current_user.id, db)
+    trail_runs_count = count_prior_trail_runs(current_user.id, db)
 
     if target_time is None or target_time <= 0:
         target_time = RacePacingService.predict_elevation_adjusted_time(
