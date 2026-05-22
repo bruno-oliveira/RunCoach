@@ -61,6 +61,7 @@ def list_my_plans(
                 plan.status_label = None
 
         return templates.TemplateResponse(
+            request,
             "my_plans.html",
             {
                 "request": request,

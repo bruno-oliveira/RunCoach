@@ -100,7 +100,7 @@ def view_plan(
             db=db,
             **extra,
         )
-        return templates.TemplateResponse("plan.html", ctx)
+        return templates.TemplateResponse(request, "plan.html", ctx)
 
     except HTTPException:
         raise

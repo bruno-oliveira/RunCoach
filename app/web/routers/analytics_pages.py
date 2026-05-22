@@ -40,6 +40,7 @@ def analytics_page(
         )
 
     return templates.TemplateResponse(
+        request,
         "analytics.html",
         {
             "request": request,

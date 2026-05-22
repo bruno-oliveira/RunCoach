@@ -24,6 +24,7 @@ def home(
 ) -> HTMLResponse:
     has_profile = bool(current_user) and has_runner_profile(current_user, db)
     return templates.TemplateResponse(
+        request,
         "index.html",
         {
             "request": request,
@@ -40,6 +41,7 @@ def privacy_policy(
     current_user: Optional[User] = Depends(get_optional_user),
 ) -> HTMLResponse:
     return templates.TemplateResponse(
+        request,
         "privacy.html",
         {
             "request": request,

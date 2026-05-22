@@ -31,7 +31,7 @@ def error_response(
     }
     if suggestion:
         ctx["suggestion"] = suggestion
-    return templates.TemplateResponse("index.html", ctx)
+    return templates.TemplateResponse(request, "index.html", ctx)
 
 
 def get_plan_or_404(

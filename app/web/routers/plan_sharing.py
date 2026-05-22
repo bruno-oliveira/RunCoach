@@ -118,7 +118,7 @@ def view_shared_plan(
     ctx["share_token"] = share_token
     ctx["distance_display"] = plan_display_label(training_plan, space_before_km=True)
 
-    return templates.TemplateResponse("plan_shared.html", ctx)
+    return templates.TemplateResponse(request, "plan_shared.html", ctx)
 
 
 # ---------------------------------------------------------------------------

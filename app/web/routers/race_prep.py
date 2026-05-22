@@ -41,6 +41,7 @@ def race_prep_page(
         vdot_info = RacePacingService.get_user_vdot(current_user.id, db)
 
     return templates.TemplateResponse(
+        request,
         "race_prep.html",
         {
             "request": request,

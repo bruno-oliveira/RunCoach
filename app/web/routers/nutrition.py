@@ -84,7 +84,7 @@ def randomize_meals(
         )
         ctx["success_message"] = "Generated new meal options with different variety!"
 
-        return templates.TemplateResponse("plan.html", ctx)
+        return templates.TemplateResponse(request, "plan.html", ctx)
 
     except HTTPException:
         db.rollback()

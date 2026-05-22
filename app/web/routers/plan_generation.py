@@ -493,6 +493,7 @@ def customize_plan(
         db.rollback()
         logger.exception("Error customizing plan")
         return templates.TemplateResponse(
+            request,
             "plan.html",
             {
                 "request": request,

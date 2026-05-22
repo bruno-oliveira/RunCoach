@@ -34,6 +34,7 @@ def recipes_page(
         HTMLResponse with the rendered recipes template.
     """
     return templates.TemplateResponse(
+        request,
         "recipes.html",
         {
             "request": request,
@@ -85,6 +86,7 @@ def recipe_detail(
     is_favorite = favorite_id is not None
 
     return templates.TemplateResponse(
+        request,
         "recipe_detail.html",
         {
             "request": request,
