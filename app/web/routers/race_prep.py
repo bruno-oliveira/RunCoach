@@ -46,7 +46,7 @@ def _count_user_trail_runs(user_id: str, db: Session) -> int:
 
 
 @router.get("/race-prep", response_class=HTMLResponse)
-async def race_prep_page(
+def race_prep_page(
     request: Request,
     current_user: Optional[User] = Depends(get_optional_user),
     db: Session = Depends(get_db),
@@ -156,7 +156,7 @@ async def analyze_gpx(
 
 
 @router.post("/api/race-prep/blueprint")
-async def generate_blueprint(
+def generate_blueprint(
     request: RacePrepRequest,
     db: Session = Depends(get_db),
     current_user: Optional[User] = Depends(get_optional_user),

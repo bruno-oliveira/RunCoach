@@ -17,7 +17,7 @@ templates = create_templates()
 
 
 @router.get("/", response_class=HTMLResponse)
-async def home(
+def home(
     request: Request,
     current_user: Optional[User] = Depends(get_optional_user),
     db: Session = Depends(get_db),
@@ -35,7 +35,7 @@ async def home(
 
 
 @router.get("/privacy", response_class=HTMLResponse)
-async def privacy_policy(
+def privacy_policy(
     request: Request,
     current_user: Optional[User] = Depends(get_optional_user),
 ) -> HTMLResponse:

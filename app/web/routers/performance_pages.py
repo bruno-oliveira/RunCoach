@@ -16,7 +16,7 @@ templates = create_templates()
 
 
 @router.get("/performance-training", response_class=HTMLResponse)
-async def performance_training_page(
+def performance_training_page(
     request: Request,
     current_user: User = Depends(get_optional_user),
 ) -> HTMLResponse:

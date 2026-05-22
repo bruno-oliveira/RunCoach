@@ -27,7 +27,7 @@ analytics_router = APIRouter(prefix="/api/analytics", tags=["analytics"])
 
 
 @analytics_router.get("/runs")
-async def get_analytics_runs(
+def get_analytics_runs(
     plan_id: Optional[str] = Query(None),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
@@ -86,7 +86,7 @@ async def get_analytics_runs(
 
 
 @analytics_router.get("/gap-trend/{plan_id}")
-async def get_gap_trend(
+def get_gap_trend(
     plan_id: str,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
@@ -105,7 +105,7 @@ async def get_gap_trend(
 
 
 @analytics_router.get("/vdot-history")
-async def get_vdot_history(
+def get_vdot_history(
     weeks: int = Query(52, ge=4, le=104),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
@@ -122,7 +122,7 @@ async def get_vdot_history(
 
 
 @analytics_router.get("/workout-adherence/{plan_id}")
-async def get_workout_adherence(
+def get_workout_adherence(
     plan_id: str,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
@@ -133,7 +133,7 @@ async def get_workout_adherence(
 
 
 @analytics_router.get("/training-load")
-async def get_training_load(
+def get_training_load(
     days: int = Query(90, ge=14, le=365),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
@@ -145,7 +145,7 @@ async def get_training_load(
 
 
 @analytics_router.get("/personal-records")
-async def get_personal_records(
+def get_personal_records(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
@@ -154,7 +154,7 @@ async def get_personal_records(
 
 
 @analytics_router.get("/pace-zones")
-async def get_pace_zones(
+def get_pace_zones(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
@@ -172,7 +172,7 @@ async def get_pace_zones(
 
 
 @analytics_router.get("/insights")
-async def get_insights(
+def get_insights(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
@@ -181,7 +181,7 @@ async def get_insights(
 
 
 @analytics_router.get("/profile")
-async def get_runner_profile(
+def get_runner_profile(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):

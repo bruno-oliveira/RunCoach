@@ -19,7 +19,7 @@ templates = create_templates()
 
 
 @router.get("/analytics", response_class=HTMLResponse)
-async def analytics_page(
+def analytics_page(
     request: Request,
     current_user=Depends(get_optional_user),
     db: Session = Depends(get_db),

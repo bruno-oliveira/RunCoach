@@ -26,7 +26,7 @@ templates = create_templates()
 
 
 @router.get("/api/performance/calculate-fitness")
-async def calculate_fitness(
+def calculate_fitness(
     distance: float,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),

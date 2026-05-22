@@ -18,7 +18,7 @@ meal_db = get_meal_database()
 
 
 @router.get("/api/recipes")
-async def search_recipes(
+def search_recipes(
     query: str = "",
     meal_type: str = "",
     min_protein: int = 0,
@@ -88,7 +88,7 @@ async def search_recipes(
 
 
 @router.get("/api/recipes/favorites")
-async def get_favorites(
+def get_favorites(
     db: Session = Depends(get_db),
     current_user=Depends(get_optional_user),
 ):
@@ -121,7 +121,7 @@ async def get_favorites(
 
 
 @router.post("/api/recipes/favorite")
-async def add_favorite(
+def add_favorite(
     recipe_data: dict,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
@@ -165,7 +165,7 @@ async def add_favorite(
 
 
 @router.delete("/api/recipes/favorite/{favorite_id}")
-async def remove_favorite(
+def remove_favorite(
     favorite_id: str,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),

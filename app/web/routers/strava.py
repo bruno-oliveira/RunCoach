@@ -43,7 +43,7 @@ strava_router = APIRouter(prefix="/api/strava", tags=["strava"])
 
 
 @strava_router.get("/connect")
-async def strava_connect(
+def strava_connect(
     current_user: User = Depends(get_current_user),
     auth_service: AuthService = Depends(get_auth_service),
     strava_service: StravaService = Depends(get_strava_service),
@@ -178,7 +178,7 @@ async def strava_sync(
 
 
 @strava_router.get("/status", response_model=StravaStatusResponse)
-async def strava_status(
+def strava_status(
     current_user: User = Depends(get_current_user),
 ):
     """Return Strava connection status for the current user."""

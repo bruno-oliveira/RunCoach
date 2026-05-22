@@ -281,7 +281,7 @@ async def generate_plan(
 
 
 @router.post("/generate-fitness-plan", response_class=HTMLResponse)
-async def generate_fitness_plan(
+def generate_fitness_plan(
     request: Request,
     response: Response,
     current_km: float = Form(...),
@@ -465,7 +465,7 @@ async def _generate_time_goal_plan(
 
 
 @router.post("/customize-plan", response_class=HTMLResponse)
-async def customize_plan(
+def customize_plan(
     request: Request,
     plan_id: str = Form(...),
     week_number: int = Form(...),

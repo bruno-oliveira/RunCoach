@@ -115,7 +115,7 @@ async def google_auth(
 
 
 @auth_router.get("/me", response_model=UserResponse)
-async def get_current_user_info(current_user: User = Depends(get_current_user)):
+def get_current_user_info(current_user: User = Depends(get_current_user)):
     """
     Get current authenticated user's information.
 
@@ -135,7 +135,7 @@ async def get_current_user_info(current_user: User = Depends(get_current_user)):
 
 
 @auth_router.patch("/me/settings", response_model=UserResponse)
-async def update_user_settings(
+def update_user_settings(
     payload: UserSettingsUpdate,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
@@ -159,7 +159,7 @@ async def update_user_settings(
 
 
 @auth_router.post("/refresh", response_model=UserResponse)
-async def refresh_session(
+def refresh_session(
     request: Request,
     response: Response,
     refresh_token: Optional[str] = Cookie(None, alias=REFRESH_COOKIE_NAME),
@@ -204,7 +204,7 @@ async def refresh_session(
 
 
 @auth_router.post("/logout")
-async def logout(
+def logout(
     response: Response,
     refresh_token: Optional[str] = Cookie(None, alias=REFRESH_COOKIE_NAME),
     db: Session = Depends(get_db),

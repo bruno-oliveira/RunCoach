@@ -31,7 +31,7 @@ runs_router = APIRouter(prefix="/api/runs", tags=["runs"])
 @runs_router.post(
     "", response_model=RunLogResponse, status_code=status.HTTP_201_CREATED
 )
-async def create_run_log(
+def create_run_log(
     run_log: RunLogCreate,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
@@ -51,7 +51,7 @@ async def create_run_log(
 
 
 @runs_router.get("", response_model=RunLogListResponse)
-async def get_run_logs(
+def get_run_logs(
     page: int = Query(1, ge=1, description="Page number"),
     page_size: int = Query(20, ge=1, le=100, description="Items per page"),
     workout_type: Optional[str] = Query(None, description="Filter by workout type"),
@@ -92,7 +92,7 @@ async def get_run_logs(
 
 
 @runs_router.get("/race-history")
-async def get_race_history(
+def get_race_history(
     limit: int = Query(20, ge=1, le=100, description="Max results"),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
@@ -102,7 +102,7 @@ async def get_race_history(
 
 
 @runs_router.get("/predictions")
-async def get_race_predictions(
+def get_race_predictions(
     target_distance: Optional[float] = Query(
         None, description="Target race distance in km"
     ),
@@ -178,7 +178,7 @@ async def get_race_predictions(
 
 
 @runs_router.get("/feedback/plan/{plan_id}")
-async def get_plan_feedback(
+def get_plan_feedback(
     plan_id: str,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
@@ -202,7 +202,7 @@ async def get_plan_feedback(
 
 
 @runs_router.get("/{run_id}", response_model=RunLogResponse)
-async def get_run_log(
+def get_run_log(
     run_id: str,
     current_user: User = Depends(get_current_user),
     run_repo: SQLAlchemyRunRepository = Depends(get_run_repository),
@@ -220,7 +220,7 @@ async def get_run_log(
 
 
 @runs_router.put("/{run_id}", response_model=RunLogResponse)
-async def update_run_log(
+def update_run_log(
     run_id: str,
     run_update: RunLogUpdate,
     db: Session = Depends(get_db),
@@ -252,7 +252,7 @@ async def update_run_log(
 
 
 @runs_router.delete("/{run_id}", status_code=status.HTTP_204_NO_CONTENT)
-async def delete_run_log(
+def delete_run_log(
     run_id: str,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
@@ -274,7 +274,7 @@ async def delete_run_log(
 
 
 @runs_router.get("/{run_id}/feedback")
-async def get_run_feedback(
+def get_run_feedback(
     run_id: str,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),

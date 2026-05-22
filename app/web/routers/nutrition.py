@@ -27,7 +27,7 @@ templates = create_templates()
 
 
 @router.post("/randomize-meals", response_class=HTMLResponse)
-async def randomize_meals(
+def randomize_meals(
     request: Request,
     plan_id: str = Form(...),
     anonymous_user_id: Optional[str] = Cookie(None),

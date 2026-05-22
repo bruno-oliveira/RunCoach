@@ -31,7 +31,7 @@ templates = create_templates()
 
 
 @router.get("/plan/{plan_id}", response_class=HTMLResponse)
-async def view_plan(
+def view_plan(
     plan_id: str,
     request: Request,
     anonymous_user_id: Optional[str] = Cookie(None),

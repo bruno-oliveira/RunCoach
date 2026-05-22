@@ -57,7 +57,7 @@ def _check_revision(training_plan: TrainingPlan, if_match: str | None) -> None:
 
 
 @router.get("/api/plan/{plan_id}/readiness")
-async def get_plan_readiness(
+def get_plan_readiness(
     plan_id: str,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
@@ -77,7 +77,7 @@ async def get_plan_readiness(
 
 
 @router.get("/api/plan/{plan_id}/gaps")
-async def get_plan_gaps(
+def get_plan_gaps(
     plan_id: str,
     weekly: bool = False,
     current_user: User = Depends(get_current_user),
@@ -109,7 +109,7 @@ async def get_plan_gaps(
 
 
 @router.get("/api/plan/{plan_id}/missed-weeks")
-async def get_missed_weeks(
+def get_missed_weeks(
     plan_id: str,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
@@ -126,7 +126,7 @@ async def get_missed_weeks(
 
 
 @router.post("/api/plan/{plan_id}/adjust")
-async def adjust_plan(
+def adjust_plan(
     plan_id: str,
     if_match: str | None = Header(default=None, alias="If-Match"),
     current_user: User = Depends(get_current_user),
@@ -141,7 +141,7 @@ async def adjust_plan(
 
 
 @router.post("/api/plan/{plan_id}/adjust/preview")
-async def preview_adjust_plan(
+def preview_adjust_plan(
     plan_id: str,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
@@ -154,7 +154,7 @@ async def preview_adjust_plan(
 
 
 @router.post("/api/plan/{plan_id}/change-plan/mark-seen")
-async def mark_change_plan_seen(
+def mark_change_plan_seen(
     plan_id: str,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
@@ -171,7 +171,7 @@ class RecalibrateRequest(BaseModel):
 
 
 @router.post("/api/plan/{plan_id}/recalibrate")
-async def recalibrate_plan(
+def recalibrate_plan(
     plan_id: str,
     body: RecalibrateRequest,
     current_user: User = Depends(get_current_user),
@@ -185,7 +185,7 @@ async def recalibrate_plan(
 
 
 @router.post("/api/plan/{plan_id}/dismiss-alert")
-async def dismiss_alert(
+def dismiss_alert(
     plan_id: str,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
@@ -198,7 +198,7 @@ async def dismiss_alert(
 
 
 @router.get("/api/plan/{plan_id}/pending-recommendation")
-async def get_pending_recommendation(
+def get_pending_recommendation(
     plan_id: str,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
@@ -209,7 +209,7 @@ async def get_pending_recommendation(
 
 
 @router.post("/api/plan/{plan_id}/accept-recommendation")
-async def accept_recommendation(
+def accept_recommendation(
     plan_id: str,
     if_match: str | None = Header(default=None, alias="If-Match"),
     current_user: User = Depends(get_current_user),
@@ -223,7 +223,7 @@ async def accept_recommendation(
 
 
 @router.post("/api/plan/{plan_id}/accept-recommendation/preview")
-async def preview_accept_recommendation(
+def preview_accept_recommendation(
     plan_id: str,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
@@ -237,7 +237,7 @@ async def preview_accept_recommendation(
 
 
 @router.post("/api/plan/{plan_id}/dismiss-recommendation")
-async def dismiss_recommendation(
+def dismiss_recommendation(
     plan_id: str,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
@@ -249,7 +249,7 @@ async def dismiss_recommendation(
 
 
 @router.post("/api/plan/{plan_id}/reset-adjustment")
-async def reset_plan_adjustment(
+def reset_plan_adjustment(
     plan_id: str,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
@@ -262,7 +262,7 @@ async def reset_plan_adjustment(
 
 
 @router.post("/api/plan/{plan_id}/reset-adjustment/preview")
-async def preview_reset_plan_adjustment(
+def preview_reset_plan_adjustment(
     plan_id: str,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
@@ -284,7 +284,7 @@ class WeekOverrideRequest(BaseModel):
 
 
 @router.post("/api/plan/{plan_id}/week/{week_number}/override")
-async def override_plan_week(
+def override_plan_week(
     plan_id: str,
     week_number: int,
     body: WeekOverrideRequest,
@@ -326,7 +326,7 @@ async def override_plan_week(
 
 
 @router.get("/api/plan/{plan_id}/swap-proposals")
-async def get_swap_proposals(
+def get_swap_proposals(
     plan_id: str,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
@@ -343,7 +343,7 @@ class SwapTypeRequest(BaseModel):
 
 
 @router.post("/api/plan/{plan_id}/swap-type")
-async def apply_type_swap(
+def apply_type_swap(
     plan_id: str,
     body: SwapTypeRequest,
     current_user: User = Depends(get_current_user),
@@ -370,7 +370,7 @@ class SwapDaysRequest(BaseModel):
 
 
 @router.post("/api/plan/{plan_id}/week/{week_number}/swap-days")
-async def swap_plan_days(
+def swap_plan_days(
     plan_id: str,
     week_number: int,
     body: SwapDaysRequest,

@@ -20,7 +20,7 @@ meal_db = get_meal_database()
 
 
 @router.get("/recipes", response_class=HTMLResponse)
-async def recipes_page(
+def recipes_page(
     request: Request,
     current_user=Depends(get_optional_user),
 ) -> HTMLResponse:
@@ -45,7 +45,7 @@ async def recipes_page(
 
 
 @router.get("/recipes/{recipe_name}", response_class=HTMLResponse)
-async def recipe_detail(
+def recipe_detail(
     request: Request,
     recipe_name: str,
     db: Session = Depends(get_db),

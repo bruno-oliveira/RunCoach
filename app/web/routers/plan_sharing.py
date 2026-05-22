@@ -7,6 +7,7 @@ from datetime import date, datetime
 from typing import Optional
 
 from fastapi import APIRouter, Cookie, Depends, HTTPException, Request
+from fastapi.concurrency import run_in_threadpool
 from fastapi.responses import FileResponse, HTMLResponse
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
@@ -45,7 +46,7 @@ class StartDateRequest(BaseModel):
 
 
 @router.post("/api/plan/{plan_id}/start")
-async def set_plan_start_date(
+def set_plan_start_date(
     plan_id: str,
     body: StartDateRequest,
     current_user: User = Depends(get_current_user),
@@ -64,7 +65,7 @@ async def set_plan_start_date(
 
 
 @router.post("/api/plan/{plan_id}/share")
-async def toggle_share_plan(
+def toggle_share_plan(
     plan_id: str,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
@@ -84,7 +85,7 @@ async def toggle_share_plan(
 
 
 @router.get("/shared/{share_token}", response_class=HTMLResponse)
-async def view_shared_plan(
+def view_shared_plan(
     share_token: str,
     request: Request,
     db: Session = Depends(get_db),
@@ -126,7 +127,7 @@ async def view_shared_plan(
 
 
 @router.post("/api/plan/{plan_id}/save")
-async def save_plan_to_account(
+def save_plan_to_account(
     plan_id: str,
     anonymous_user_id: Optional[str] = Cookie(None),
     current_user: User = Depends(get_current_user),
@@ -154,7 +155,7 @@ async def save_plan_to_account(
 
 
 @router.delete("/api/plan/{plan_id}")
-async def delete_plan(
+def delete_plan(
     plan_id: str,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
@@ -194,7 +195,11 @@ async def download_pdf(
             raise HTTPException(status_code=400, detail="Empty training plan data")
 
         export_dto = PlanExportDTO.from_orm(training_plan, plan_data=plan_data)
-        pdf_path = pdf_generator.generate_pdf(plan_data, export_dto)
+        # ReportLab rendering is CPU-bound and synchronous; run it off the
+        # event loop so a PDF render doesn't stall other concurrent requests.
+        pdf_path = await run_in_threadpool(
+            pdf_generator.generate_pdf, plan_data, export_dto
+        )
 
         if not os.path.exists(pdf_path):
             raise HTTPException(

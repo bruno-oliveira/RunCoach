@@ -23,7 +23,7 @@ templates = create_templates()
 
 
 @router.get("/my-plans")
-async def list_my_plans(
+def list_my_plans(
     request: Request,
     current_user=Depends(get_optional_user),
     db: Session = Depends(get_db),
