@@ -7,7 +7,7 @@ and week_pulse_generator.
 import logging
 from typing import Any, Optional
 
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, selectinload
 
 from app.contexts.plan.adaptation import AdaptationService
 from app.contexts.runner.enrichment import completion_stats as _cs
@@ -181,19 +181,18 @@ class PlanViewService:
         db: Session,
     ) -> dict[int, dict[str, Any]]:
 
+        # Eager-load daily_workouts so the per-week loop below doesn't issue a
+        # query per week (N+1) — one extra query fetches all workouts at once.
         weekly_plans = (
             db.query(WeeklyPlan)
             .filter(WeeklyPlan.training_plan_id == training_plan.id)
+            .options(selectinload(WeeklyPlan.daily_workouts))
             .all()
         )
 
         evolution: dict[int, dict[str, Any]] = {}
         for wp in weekly_plans:
-            workouts = (
-                db.query(DailyWorkout)
-                .filter(DailyWorkout.weekly_plan_id == wp.id)
-                .all()
-            )
+            workouts = wp.daily_workouts
             original_total = sum(
                 w.baseline_distance_km or w.distance_km or 0
                 for w in workouts

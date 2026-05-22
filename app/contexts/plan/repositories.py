@@ -26,7 +26,11 @@ class SQLAlchemyPlanRepository:
     ) -> Optional[TrainingPlan]:
         q = self.session.query(TrainingPlan).filter(TrainingPlan.id == plan_id)
         if include_weeks:
-            q = q.options(selectinload(TrainingPlan.weekly_plans))
+            q = q.options(
+                selectinload(TrainingPlan.weekly_plans).selectinload(
+                    WeeklyPlan.daily_workouts
+                )
+            )
         return q.first()
 
     def get_for_user(
@@ -39,7 +43,11 @@ class SQLAlchemyPlanRepository:
             TrainingPlan.user_id == user_id,
         )
         if include_weeks:
-            q = q.options(selectinload(TrainingPlan.weekly_plans))
+            q = q.options(
+                selectinload(TrainingPlan.weekly_plans).selectinload(
+                    WeeklyPlan.daily_workouts
+                )
+            )
         return q.first()
 
     def list_by_user(self, user_id: str) -> List[TrainingPlan]:
