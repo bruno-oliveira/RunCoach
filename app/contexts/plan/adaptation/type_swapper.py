@@ -14,6 +14,7 @@ from sqlalchemy.orm import Session
 from app.contexts.plan.plan_date_utils import compute_current_week
 from app.contexts.plan.repositories import SQLAlchemyPlanRepository
 from app.models import DailyWorkout, RunLog, WeeklyPlan
+from app.utils import persist_json
 from app.utils import to_date as _to_date
 
 from ._helpers import today_date
@@ -264,6 +265,10 @@ def apply_swap(
                         w["description"] = workout.notes
                         break
             training_plan.plan_data = plan_data
+            # In-place JSON mutation + same-reference reassignment is not
+            # flagged dirty by SQLAlchemy; force the column to persist (same
+            # pattern as the adjustment/recalibration flows).
+            persist_json(training_plan, "plan_data")
     except Exception as e:
         logger.warning("Failed to update plan_data JSON for type swap: %s", e)
 
