@@ -121,9 +121,13 @@ class TrainingPlanGenerator:
             # exhausted, the small overage rides into the next week's budget
             # rather than corrupting a prescription.
             from app.contexts.plan.generators.weekly_plan_builder import (
-                _is_prescriptive,
-                _set_distance,
                 attach_duration_hints,
+            )
+            from app.contexts.plan.generators.workout_scaler import (
+                is_prescriptive as _is_prescriptive,
+            )
+            from app.contexts.plan.generators.workout_scaler import (
+                set_distance as _set_distance,
             )
 
             is_recovery = weekly_plan.get("is_recovery", False)
