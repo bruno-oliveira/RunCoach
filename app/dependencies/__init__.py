@@ -24,6 +24,7 @@ from app.dependencies.database import (
 from app.dependencies.services import (
     get_adaptation_service,
     get_auth_service,
+    get_favorites_service,
     get_nutrition_engine,
     get_pdf_generator,
     get_performance_plan_generator,
@@ -41,6 +42,7 @@ __all__ = [
     "get_adaptation_service",
     "get_auth_service",
     "get_current_user",
+    "get_favorites_service",
     "get_db",
     "get_nutrition_engine",
     "get_optional_user",

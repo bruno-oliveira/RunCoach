@@ -6,6 +6,7 @@ from fastapi import Depends
 from sqlalchemy.orm import Session
 
 from app.contexts.auth.auth_service import AuthService
+from app.contexts.nutrition.favorites_service import FavoritesService
 from app.contexts.nutrition.nutrition_engine import NutritionEngine
 from app.contexts.plan.adaptation import AdaptationService
 from app.contexts.plan.generators.performance_plan_generator import (
@@ -54,6 +55,11 @@ def get_adaptation_service() -> AdaptationService:
     return AdaptationService()
 
 
+@lru_cache
+def get_favorites_service() -> FavoritesService:
+    return FavoritesService()
+
+
 def get_nutrition_engine(random_seed: int | None = None) -> NutritionEngine:
     """NutritionEngine is reseedable per-request; do not cache."""
     return NutritionEngine(random_seed=random_seed)
@@ -72,6 +78,7 @@ __all__ = [
     "get_plan_service",
     "get_strava_service",
     "get_adaptation_service",
+    "get_favorites_service",
     "get_nutrition_engine",
     "get_performance_service",
 ]

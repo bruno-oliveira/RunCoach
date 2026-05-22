@@ -14,6 +14,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any, List, Optional, Protocol
 
 if TYPE_CHECKING:
+    from app.models.favorite_recipe import FavoriteRecipe
     from app.models.run_log import RunLog
     from app.models.training_plan import TrainingPlan
     from app.models.user import User
@@ -74,3 +75,21 @@ class IUserRepository(Protocol):
     def get_by_email(self, email: str) -> Optional["User"]: ...
 
     def save(self, user: "User") -> None: ...
+
+
+class IFavoriteRecipeRepository(Protocol):
+    """Persistence interface for a user's favorite recipes."""
+
+    def list_for_user(self, user_id: str) -> List["FavoriteRecipe"]: ...
+
+    def get_for_user(
+        self, favorite_id: str, user_id: str
+    ) -> Optional["FavoriteRecipe"]: ...
+
+    def get_by_user_and_name(
+        self, user_id: str, recipe_name: str
+    ) -> Optional["FavoriteRecipe"]: ...
+
+    def save(self, favorite: "FavoriteRecipe") -> None: ...
+
+    def delete(self, favorite: "FavoriteRecipe") -> None: ...

@@ -5,9 +5,15 @@ import logging
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
+from app.contexts.nutrition.favorites_service import FavoritesService
 from app.contexts.nutrition.meal_database import get_meal_database
-from app.dependencies import get_current_user, get_db, get_optional_user
-from app.models import FavoriteRecipe, User
+from app.dependencies import (
+    get_current_user,
+    get_db,
+    get_favorites_service,
+    get_optional_user,
+)
+from app.models import User
 from app.template_helpers import create_templates
 
 logger = logging.getLogger(__name__)
@@ -91,33 +97,16 @@ def search_recipes(
 def get_favorites(
     db: Session = Depends(get_db),
     current_user=Depends(get_optional_user),
+    favorites_service: FavoritesService = Depends(get_favorites_service),
 ):
     """Get the current user's favorite recipes.
-
-    Args:
-        db: Database session.
-        current_user: The currently authenticated user, if any.
 
     Returns:
         Dictionary with a list of favorited recipe data objects.
     """
     if not current_user:
         return {"recipes": []}
-
-    favorites = (
-        db.query(FavoriteRecipe)
-        .filter(FavoriteRecipe.user_id == current_user.id)
-        .order_by(FavoriteRecipe.created_at.desc())
-        .all()
-    )
-
-    recipes = []
-    for fav in favorites:
-        recipe_data = fav.recipe_data
-        recipe_data["favorite_id"] = fav.id
-        recipes.append(recipe_data)
-
-    return {"recipes": recipes}
+    return {"recipes": favorites_service.list_favorites(current_user.id, db)}
 
 
 @router.post("/api/recipes/favorite")
@@ -125,43 +114,14 @@ def add_favorite(
     recipe_data: dict,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
+    favorites_service: FavoritesService = Depends(get_favorites_service),
 ):
     """Add a recipe to the current user's favorites.
-
-    Args:
-        recipe_data: Dictionary with recipe name, meal_type, and full recipe data.
-        db: Database session.
-        current_user: The authenticated user (required).
 
     Returns:
         Dictionary with success message and favorite ID, or already_exists flag.
     """
-    recipe_name = recipe_data.get("name")
-    meal_type = recipe_data.get("meal_type")
-
-    existing = (
-        db.query(FavoriteRecipe)
-        .filter(
-            FavoriteRecipe.user_id == current_user.id,
-            FavoriteRecipe.recipe_name == recipe_name,
-        )
-        .first()
-    )
-
-    if existing:
-        return {"message": "Recipe already in favorites", "already_exists": True}
-
-    favorite = FavoriteRecipe(
-        user_id=current_user.id,
-        recipe_name=recipe_name,
-        meal_type=meal_type,
-        recipe_data=recipe_data,
-    )
-
-    db.add(favorite)
-    db.commit()
-
-    return {"message": "Recipe added to favorites", "id": favorite.id}
+    return favorites_service.add_favorite(current_user.id, recipe_data, db)
 
 
 @router.delete("/api/recipes/favorite/{favorite_id}")
@@ -169,33 +129,13 @@ def remove_favorite(
     favorite_id: str,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
+    favorites_service: FavoritesService = Depends(get_favorites_service),
 ):
     """Remove a recipe from the current user's favorites.
-
-    Args:
-        favorite_id: ID of the favorite record to remove.
-        db: Database session.
-        current_user: The authenticated user (required).
-
-    Returns:
-        Dictionary with success message.
 
     Raises:
         HTTPException: 404 if the favorite is not found or doesn't belong to the user.
     """
-    favorite = (
-        db.query(FavoriteRecipe)
-        .filter(
-            FavoriteRecipe.id == favorite_id,
-            FavoriteRecipe.user_id == current_user.id,
-        )
-        .first()
-    )
-
-    if not favorite:
+    if not favorites_service.remove_favorite(favorite_id, current_user.id, db):
         raise HTTPException(status_code=404, detail="Favorite not found")
-
-    db.delete(favorite)
-    db.commit()
-
     return {"message": "Recipe removed from favorites"}
