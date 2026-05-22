@@ -15,42 +15,18 @@ from app.core.training.trail_profile import (
     TrailProfile,
     trail_max_weekly_mileage,
 )
-
-# --- Progression safety constants ---------------------------------------------
-# Non-recovery weeks can increase at most this fraction above the previous
-# non-recovery mileage. The classic "10% rule" that prevents overuse injuries.
-WEEK_OVER_WEEK_CAP = 1.10
-
-# Recovery weeks cut mileage to this fraction of the high-water mark.
-# A ~35% reduction gives the body a real absorption window without losing
-# the fitness gained in the preceding load block.
-RECOVERY_WEEK_RATIO = 0.65
-
-# Minimum bump to register a "progressed" non-recovery week — otherwise the
-# week would be flat and look like a plateau.
-MIN_NON_RECOVERY_BUMP = 1.01
-
-# Base phase ends at this fraction of peak mileage; build phase ramps from
-# here to full peak. Gives the runner time to adapt to the eventual peak
-# before quality work layers on.
-BASE_PHASE_END_FRACTION = 0.70
-
-# Small oscillation within peak weeks so the body doesn't sit on an exact
-# ceiling. Cycles 0.97 → 0.98 → 0.99 → repeat.
-PEAK_OSCILLATION_BASE = 0.97
-PEAK_OSCILLATION_STEP = 0.01
-
-
-# Absolute maximum weekly mileage per race distance.
-# Geared toward recreational runners — sufficient to finish strong without
-# requiring elite-level volume.
-MAX_PEAK_MILEAGE = {
-    5.0: 40.0,  # Recreational 5K runners peak around 25-40 km/wk
-    10.0: 50.0,  # Recreational 10K runners ~30-50 km/wk
-    21.1: 65.0,  # Recreational half marathon ~40-65 km/wk
-    30.0: 75.0,  # Recreational trail 30K ~50-75 km/wk
-    42.2: 85.0,  # Recreational marathon ~55-85 km/wk
-}
+from app.core.training.tuning import (
+    ACWR_PEAK_FACTORS,
+    BASE_PHASE_END_FRACTION,
+    MAX_PEAK_MILEAGE,
+    MIN_NON_RECOVERY_BUMP,
+    PEAK_OSCILLATION_BASE,
+    PEAK_OSCILLATION_STEP,
+    RECOVERY_WEEK_RATIO,
+    TRAIL_BRACKET_PEAK_TARGETS,
+    VOLUME_TREND_CAPS,
+    WEEK_OVER_WEEK_CAP,
+)
 
 
 def _acwr_peak_factor(profile: Optional[dict]) -> float:
@@ -58,7 +34,7 @@ def _acwr_peak_factor(profile: Optional[dict]) -> float:
     if not profile:
         return 1.0
     risk = profile.get("acwr_risk", "low")
-    return {"low": 1.0, "optimal": 1.0, "high": 0.85, "very_high": 0.75}.get(risk, 1.0)
+    return ACWR_PEAK_FACTORS.get(risk, 1.0)
 
 
 def _volume_trend_cap(profile: Optional[dict]) -> float:
@@ -66,20 +42,12 @@ def _volume_trend_cap(profile: Optional[dict]) -> float:
     if not profile:
         return WEEK_OVER_WEEK_CAP
     trend = profile.get("volume_trend", "stable")
-    return {"decreasing": 1.05, "stable": WEEK_OVER_WEEK_CAP, "increasing": 1.12}.get(
-        trend, WEEK_OVER_WEEK_CAP
-    )
+    return VOLUME_TREND_CAPS.get(trend, WEEK_OVER_WEEK_CAP)
 
 
 def _trail_ideal_peak(profile: TrailProfile, current_km: float) -> float:
     """Bracket-aware target peak weekly mileage for a trail/ultra plan."""
-    bracket_floor = {
-        "short": (1.5, 30.0),
-        "standard": (1.5, 35.0),
-        "ultra": (1.7, 50.0),
-        "long_ultra": (2.0, 70.0),
-    }
-    multiplier, floor = bracket_floor[profile.bracket]
+    multiplier, floor = TRAIL_BRACKET_PEAK_TARGETS[profile.bracket]
     return max(floor, current_km * multiplier)
 
 

@@ -12,6 +12,12 @@ from app.utils import persist_json
 from . import change_reasons as _reasons
 from ._helpers import ANNOTATION_RE, batch_workouts_by_week, parse_plan_data_lookups
 from .safety import enforce_future_growth_cap, enforce_week_structure
+from .tuning import (
+    PER_TYPE_MAX,
+    PER_TYPE_MIN,
+    QUALITY_HALF_SCALE,
+    WORKOUT_CEILING,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -89,7 +95,7 @@ def apply_adjustment_to_future_weeks(
             type_mult = multiplier
             if per_type_ratios and wtype in per_type_ratios:
                 type_ratio = per_type_ratios[wtype]
-                type_mult = round(max(0.85, min(1.15, type_ratio)), 2)
+                type_mult = round(max(PER_TYPE_MIN, min(PER_TYPE_MAX, type_ratio)), 2)
 
             note_reason = None
             if workout.workout_type == "long" and type_mult < 1.0:
@@ -103,7 +109,7 @@ def apply_adjustment_to_future_weeks(
                 "race_pace",
                 "fartlek",
             ):
-                quality_mult = 1.0 + (type_mult - 1.0) * 0.5
+                quality_mult = 1.0 + (type_mult - 1.0) * QUALITY_HALF_SCALE
                 new_distance = max(1.0, round(base_distance * quality_mult, 1))
                 note_reason = _reasons.QUALITY_HALF_SCALED
             else:
@@ -111,8 +117,8 @@ def apply_adjustment_to_future_weeks(
 
             # Belt-and-suspenders cap: even when per-type ratios + trend
             # modifiers slip past the global clamp, never push a single
-            # workout above baseline × 1.25.
-            ceiling = round(base_distance * 1.25, 1)
+            # workout above baseline × WORKOUT_CEILING.
+            ceiling = round(base_distance * WORKOUT_CEILING, 1)
             if new_distance > ceiling:
                 new_distance = ceiling
             old_distance = workout.distance_km

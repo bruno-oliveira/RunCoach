@@ -28,6 +28,7 @@ from .performance_workout_builders import (
     generate_vo2max_workout,
     reconcile_workout_after_cap,
 )
+from .phase_scaffold import build_phases_rich
 
 logger = logging.getLogger(__name__)
 
@@ -388,10 +389,7 @@ class PerformancePlanGenerator:
 
         # --- Shared modules: phase calculation & mileage progression ---
         phase_durations = phase_calculator.calculate_phases(weeks, target_distance)
-        phases_rich = {
-            phase: {"weeks": phase_durations[phase], **_PHASE_METADATA[phase]}
-            for phase in phase_durations
-        }
+        phases_rich = build_phases_rich(phase_durations, _PHASE_METADATA)
 
         # --- VDOT & pace zones ---
         vdot = None

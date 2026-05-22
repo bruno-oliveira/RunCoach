@@ -16,85 +16,20 @@ from app.core.training.training_constants import (
     calculate_week_in_phase,
     get_hard_ceiling,
 )
-
-_ROAD_LONG_RUN_RATIOS = {
-    "5K": {
-        "base": (0.25, 0.30),
-        "build": (0.28, 0.32),
-        "peak": (0.30, 0.35),
-        "taper": (0.25, 0.30),
-    },
-    "10K": {
-        "base": (0.28, 0.33),
-        "build": (0.31, 0.36),
-        "peak": (0.35, 0.40),
-        "taper": (0.28, 0.33),
-    },
-    "Half": {
-        "base": (0.30, 0.35),
-        "build": (0.33, 0.38),
-        "peak": (0.40, 0.48),
-        "taper": (0.30, 0.35),
-    },
-    "Marathon": {
-        "base": (0.32, 0.38),
-        "build": (0.35, 0.42),
-        "peak": (0.42, 0.50),
-        "taper": (0.32, 0.38),
-    },
-}
-
-# Trail long-run ratios scale with bracket. Ultras and long-ultras pull more
-# of the weekly volume into a single weekend session (or back-to-back) — but
-# the absolute long-run cap (see ``_get_long_run_cap``) keeps them sane.
-_TRAIL_LONG_RUN_RATIOS = {
-    "short": {
-        "base": (0.30, 0.35),
-        "build": (0.35, 0.40),
-        "peak": (0.40, 0.45),
-        "taper": (0.30, 0.35),
-    },
-    "standard": {
-        "base": (0.30, 0.35),
-        "build": (0.40, 0.45),
-        "peak": (0.50, 0.55),
-        "taper": (0.35, 0.40),
-    },
-    "ultra": {
-        "base": (0.32, 0.38),
-        "build": (0.42, 0.50),
-        "peak": (0.50, 0.58),
-        "taper": (0.35, 0.40),
-    },
-    "long_ultra": {
-        "base": (0.35, 0.40),
-        "build": (0.45, 0.52),
-        "peak": (0.45, 0.55),
-        "taper": (0.35, 0.40),
-    },
-}
-
-
-# Peak long run as a minimum fraction of race distance, by trail bracket.
-# Coaches prescribe trail long runs as a share of the race, not just weekly
-# volume. This floor ensures a 30 km racer off a 35 km/wk base gets a 21 km
-# peak long run (not 16 km). Bracket cap and the weekly-safety cap still
-# apply on top — so low-volume runners aren't pushed past what their week
-# can absorb.
-_TRAIL_PEAK_RACE_FRACTION = {
-    "short": 0.65,
-    "standard": 0.70,
-    "ultra": 0.55,
-    "long_ultra": 0.22,
-}
-
-# Flat-only trail prep can underdose long-run specificity unless we let peak
-# long runs reach a higher share of race distance. Apply only to short/standard
-# trail brackets where single long-run sessions are still the primary builder.
-_TRAIL_PEAK_RACE_FRACTION_FLAT = {
-    "short": 0.85,
-    "standard": 0.85,
-}
+from app.core.training.tuning import (
+    FALLBACK_LONG_RUN_CAP_RATIO,
+    LONG_RUN_VOLUME_RATIO,
+    ROAD_LONG_RUN_CAPS,
+    TRAIL_LONG_RUN_CAPS,
+)
+from app.core.training.tuning import ROAD_LONG_RUN_RATIOS as _ROAD_LONG_RUN_RATIOS
+from app.core.training.tuning import TRAIL_LONG_RUN_RATIOS as _TRAIL_LONG_RUN_RATIOS
+from app.core.training.tuning import (
+    TRAIL_PEAK_RACE_FRACTION as _TRAIL_PEAK_RACE_FRACTION,
+)
+from app.core.training.tuning import (
+    TRAIL_PEAK_RACE_FRACTION_FLAT as _TRAIL_PEAK_RACE_FRACTION_FLAT,
+)
 
 
 def get_trail_peak_race_fraction(
@@ -212,13 +147,7 @@ def _trail_long_run_cap(profile: TrailProfile, experience_level: str) -> float:
     long-day volume comes from back-to-back doubles in build/peak weeks
     (added in the workout-builder pass), not a single 50 km grind.
     """
-    bracket_caps = {
-        "short": {"beginner": 14.0, "intermediate": 16.0, "advanced": 18.0},
-        "standard": {"beginner": 24.0, "intermediate": 25.5, "advanced": 27.0},
-        "ultra": {"beginner": 28.0, "intermediate": 30.0, "advanced": 32.0},
-        "long_ultra": {"beginner": 30.0, "intermediate": 32.0, "advanced": 35.0},
-    }
-    tier = bracket_caps[profile.bracket]
+    tier = TRAIL_LONG_RUN_CAPS[profile.bracket]
     return tier.get(experience_level, tier["intermediate"])
 
 
@@ -241,24 +170,17 @@ def _get_long_run_cap(
         # rather than ever-bigger single runs.
         return _trail_long_run_cap(trail_profile, experience_level)
 
-    base_caps = {
-        5.0: {"beginner": 7.0, "intermediate": 8.0, "advanced": 10.0},
-        10.0: {"beginner": 12.0, "intermediate": 15.0, "advanced": 16.0},
-        21.1: {"beginner": 17.0, "intermediate": 18.0, "advanced": 19.0},
-        30.0: {"beginner": 24.0, "intermediate": 25.5, "advanced": 27.0},
-        42.2: {"beginner": 32.0, "intermediate": 34.0, "advanced": 36.0},
-    }
-    tier = base_caps.get(target_distance)
+    tier = ROAD_LONG_RUN_CAPS.get(target_distance)
     if tier:
         base_cap = tier.get(experience_level, tier["intermediate"])
     else:
-        base_cap = target_distance * 0.77
+        base_cap = target_distance * FALLBACK_LONG_RUN_CAP_RATIO
 
     if weekly_km <= 0:
         return base_cap
 
     ceiling = get_hard_ceiling(target_distance)
-    volume_ratio = weekly_km * 0.30
+    volume_ratio = weekly_km * LONG_RUN_VOLUME_RATIO
     if volume_ratio > base_cap:
         return min(round(volume_ratio, 1), ceiling)
     return base_cap

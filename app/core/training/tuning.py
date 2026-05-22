@@ -1,0 +1,223 @@
+"""Centralized tuning surface for plan-generation constants.
+
+Single home for the cross-cutting "magic numbers" that govern how training
+plans are built — progression caps, recovery ratios, peak-mileage ceilings,
+long-run ratios/caps, quality-workout caps, and the 80/20 polarization
+targets. Individual ``core/training`` modules import their constants from here
+so behavior can be tuned in one place rather than hunting literals across
+files.
+
+Values are deliberately unchanged from their previous in-module definitions;
+this module is a relocation, not a re-tuning.
+"""
+
+# =============================================================================
+# Mileage progression (see mileage_progression.py)
+# =============================================================================
+
+# Non-recovery weeks can increase at most this fraction above the previous
+# non-recovery mileage. The classic "10% rule" that prevents overuse injuries.
+WEEK_OVER_WEEK_CAP = 1.10
+
+# Recovery weeks cut mileage to this fraction of the high-water mark.
+# A ~35% reduction gives the body a real absorption window without losing
+# the fitness gained in the preceding load block.
+RECOVERY_WEEK_RATIO = 0.65
+
+# Minimum bump to register a "progressed" non-recovery week — otherwise the
+# week would be flat and look like a plateau.
+MIN_NON_RECOVERY_BUMP = 1.01
+
+# Base phase ends at this fraction of peak mileage; build phase ramps from
+# here to full peak.
+BASE_PHASE_END_FRACTION = 0.70
+
+# Small oscillation within peak weeks so the body doesn't sit on an exact
+# ceiling. Cycles 0.97 -> 0.98 -> 0.99 -> repeat.
+PEAK_OSCILLATION_BASE = 0.97
+PEAK_OSCILLATION_STEP = 0.01
+
+# Absolute maximum weekly mileage per race distance (recreational targets).
+MAX_PEAK_MILEAGE = {
+    5.0: 40.0,
+    10.0: 50.0,
+    21.1: 65.0,
+    30.0: 75.0,
+    42.2: 85.0,
+}
+
+# Peak-mileage multiplier keyed by ACWR injury-risk band.
+ACWR_PEAK_FACTORS = {"low": 1.0, "optimal": 1.0, "high": 0.85, "very_high": 0.75}
+
+# Effective week-over-week cap keyed by recent volume trend. "stable" tracks
+# the global 10% rule; a decreasing trend ramps more gently, an increasing
+# trend is allowed slightly more headroom.
+VOLUME_TREND_CAPS = {
+    "decreasing": 1.05,
+    "stable": WEEK_OVER_WEEK_CAP,
+    "increasing": 1.12,
+}
+
+# Bracket-aware target peak weekly mileage for trail/ultra plans:
+# (current_km multiplier, absolute floor km).
+TRAIL_BRACKET_PEAK_TARGETS = {
+    "short": (1.5, 30.0),
+    "standard": (1.5, 35.0),
+    "ultra": (1.7, 50.0),
+    "long_ultra": (2.0, 70.0),
+}
+
+# =============================================================================
+# Long-run ratios and caps (see long_run_calculator.py)
+# =============================================================================
+
+# Long run as a fraction of weekly volume, by road distance category and phase.
+ROAD_LONG_RUN_RATIOS = {
+    "5K": {
+        "base": (0.25, 0.30),
+        "build": (0.28, 0.32),
+        "peak": (0.30, 0.35),
+        "taper": (0.25, 0.30),
+    },
+    "10K": {
+        "base": (0.28, 0.33),
+        "build": (0.31, 0.36),
+        "peak": (0.35, 0.40),
+        "taper": (0.28, 0.33),
+    },
+    "Half": {
+        "base": (0.30, 0.35),
+        "build": (0.33, 0.38),
+        "peak": (0.40, 0.48),
+        "taper": (0.30, 0.35),
+    },
+    "Marathon": {
+        "base": (0.32, 0.38),
+        "build": (0.35, 0.42),
+        "peak": (0.42, 0.50),
+        "taper": (0.32, 0.38),
+    },
+}
+
+# Long-run ratios for trail, scaling with bracket. Ultras pull more weekly
+# volume into the long session; absolute caps below keep them sane.
+TRAIL_LONG_RUN_RATIOS = {
+    "short": {
+        "base": (0.30, 0.35),
+        "build": (0.35, 0.40),
+        "peak": (0.40, 0.45),
+        "taper": (0.30, 0.35),
+    },
+    "standard": {
+        "base": (0.30, 0.35),
+        "build": (0.40, 0.45),
+        "peak": (0.50, 0.55),
+        "taper": (0.35, 0.40),
+    },
+    "ultra": {
+        "base": (0.32, 0.38),
+        "build": (0.42, 0.50),
+        "peak": (0.50, 0.58),
+        "taper": (0.35, 0.40),
+    },
+    "long_ultra": {
+        "base": (0.35, 0.40),
+        "build": (0.45, 0.52),
+        "peak": (0.45, 0.55),
+        "taper": (0.35, 0.40),
+    },
+}
+
+# Peak long run as a minimum fraction of race distance, by trail bracket.
+TRAIL_PEAK_RACE_FRACTION = {
+    "short": 0.65,
+    "standard": 0.70,
+    "ultra": 0.55,
+    "long_ultra": 0.22,
+}
+
+# Flat-only trail prep can underdose long-run specificity; allow a higher
+# share of race distance for short/standard brackets.
+TRAIL_PEAK_RACE_FRACTION_FLAT = {
+    "short": 0.85,
+    "standard": 0.85,
+}
+
+# Experience-tiered single-long-run distance caps (km) for road races.
+ROAD_LONG_RUN_CAPS = {
+    5.0: {"beginner": 7.0, "intermediate": 8.0, "advanced": 10.0},
+    10.0: {"beginner": 12.0, "intermediate": 15.0, "advanced": 16.0},
+    21.1: {"beginner": 17.0, "intermediate": 18.0, "advanced": 19.0},
+    30.0: {"beginner": 24.0, "intermediate": 25.5, "advanced": 27.0},
+    42.2: {"beginner": 32.0, "intermediate": 34.0, "advanced": 36.0},
+}
+
+# Experience-tiered single-long-run distance caps (km) for trail brackets.
+TRAIL_LONG_RUN_CAPS = {
+    "short": {"beginner": 14.0, "intermediate": 16.0, "advanced": 18.0},
+    "standard": {"beginner": 24.0, "intermediate": 25.5, "advanced": 27.0},
+    "ultra": {"beginner": 28.0, "intermediate": 30.0, "advanced": 32.0},
+    "long_ultra": {"beginner": 30.0, "intermediate": 32.0, "advanced": 35.0},
+}
+
+# Fallback long-run cap as a fraction of race distance when no tier matches.
+FALLBACK_LONG_RUN_CAP_RATIO = 0.77
+
+# Long run can absorb up to this fraction of weekly volume before the static
+# cap scales up toward the hard ceiling.
+LONG_RUN_VOLUME_RATIO = 0.30
+
+# =============================================================================
+# Quality-workout caps (see quality_caps.py)
+# =============================================================================
+
+# Quality workouts (tempo/interval/hill) may not exceed this fraction of the
+# long run distance.
+MAX_QUALITY_VS_LONG_RUN = 0.85
+
+# Individual easy runs may not exceed this fraction of the long run distance.
+MAX_EASY_VS_LONG_RUN = 0.95
+
+# Base phase reduces quality caps by this factor.
+BASE_PHASE_QUALITY_REDUCTION = 0.80
+
+# Distance-scaled physiological quality caps (km).
+QUALITY_CAPS_BY_DISTANCE = {
+    5.0: {"tempo": 6.0, "interval": 5.0, "hill": 5.0},
+    10.0: {"tempo": 10.0, "interval": 8.0, "hill": 6.0},
+    21.1: {"tempo": 14.0, "interval": 10.0, "hill": 8.0},
+    30.0: {"tempo": 12.0, "interval": 8.0, "hill": 12.0},
+    42.2: {"tempo": 18.0, "interval": 12.0, "hill": 10.0},
+}
+
+DEFAULT_QUALITY_CAPS = {"tempo": 12.0, "interval": 10.0, "hill": 8.0}
+
+# =============================================================================
+# Fitness-plan mileage (see fitness_plan_generator.py)
+# =============================================================================
+
+# Fitness plans target a gentler peak than race plans: ramp to this multiple of
+# current volume, capped absolutely, with a floor so low-volume plans still
+# progress.
+FITNESS_PEAK_MULTIPLIER = 1.3
+FITNESS_PEAK_CAP_KM = 60.0
+FITNESS_PEAK_FLOOR_MULTIPLIER = 1.1
+
+# Taper volume as a fraction of peak: single-week taper, or a multi-week curve.
+FITNESS_TAPER_SINGLE = 0.55
+FITNESS_TAPER_CURVE = [0.85, 0.70, 0.50]
+
+# =============================================================================
+# 80/20 polarization (see distribution_validator.py)
+# =============================================================================
+
+# Target fraction of weekly runs that are "hard" (interval/tempo/hill), by
+# phase. Trail gets slightly easier targets because terrain supplies intensity.
+HARD_TARGETS_ROAD = {"base": 0.10, "build": 0.20, "peak": 0.25, "taper": 0.10}
+HARD_TARGETS_TRAIL = {"base": 0.10, "build": 0.15, "peak": 0.20, "taper": 0.10}
+
+# Correction thresholds: shed one quality slot if hard% exceeds target by more
+# than the excess threshold; add one if it falls short by more than the deficit
+# threshold (build/peak only).
+POLARIZED_EXCESS_THRESHOLD = 0.05
+POLARIZED_DEFICIT_THRESHOLD = 0.10

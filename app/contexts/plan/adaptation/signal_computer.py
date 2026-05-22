@@ -12,6 +12,43 @@ from typing import Any, Dict, List, Optional, Tuple
 from sqlalchemy.orm import Session
 
 from app.contexts.plan.adaptation.hr_zone_analyzer import HRZoneAnalyzer
+
+# Tunables live in the centralized adaptation tuning surface; aliased to the
+# historical underscore names so internal usages and tests are unchanged.
+from app.contexts.plan.adaptation.tuning import (
+    BAYESIAN_SHRINKAGE_PER_RUN as _BAYESIAN_SHRINKAGE_PER_RUN,
+)
+from app.contexts.plan.adaptation.tuning import (
+    CONSECUTIVE_THRESHOLD as _CONSECUTIVE_THRESHOLD,
+)
+from app.contexts.plan.adaptation.tuning import EXPANDED_MAX as _EXPANDED_MAX
+from app.contexts.plan.adaptation.tuning import EXPANDED_MIN as _EXPANDED_MIN
+from app.contexts.plan.adaptation.tuning import (
+    HR_OVERREACH_ADHERENCE,
+    HR_OVERREACH_CLAMP,
+    HR_OVERREACH_DEVIATION,
+    OVERREACH_EFFORT_THRESHOLD,
+    OVERREACH_OVERRIDE_CLAMP,
+    OVERREACH_VOLUME_EFFORT_CLAMP,
+    OVERREACH_VOLUME_RATIO,
+    RACE_EFFORT_CLAMP,
+    RACE_EFFORT_COUNT_THRESHOLD,
+    TSB_FRESH,
+    TSB_LOADED,
+    TSB_OVERREACHED,
+    TSB_OVERREACHED_CLAMP,
+    TSB_PRIMED,
+    VDOT_DECLINE_CLAMP,
+)
+from app.contexts.plan.adaptation.tuning import (
+    IMPORTANCE_WEIGHTS as _IMPORTANCE_WEIGHTS,
+)
+from app.contexts.plan.adaptation.tuning import (
+    MIN_RUNS_PER_TYPE as _MIN_RUNS_PER_TYPE,  # noqa: F401  (re-exported for tests)
+)
+from app.contexts.plan.adaptation.tuning import PHASE_WEIGHTS as _PHASE_WEIGHTS
+from app.contexts.plan.adaptation.tuning import STANDARD_MAX as _STANDARD_MAX
+from app.contexts.plan.adaptation.tuning import STANDARD_MIN as _STANDARD_MIN
 from app.core.coaching.adaptation_math import (
     compute_effort_trend as _compute_effort_trend,
 )
@@ -26,34 +63,6 @@ from app.core.coaching.adaptation_math import (
 )
 from app.models import RunLog
 from app.utils import to_date as _to_date
-
-_PHASE_WEIGHTS = {
-    "base": (0.38, 0.18, 0.18, 0.11, 0.07, 0.08),
-    "build": (0.33, 0.20, 0.16, 0.14, 0.09, 0.08),
-    "peak": (0.28, 0.20, 0.16, 0.16, 0.10, 0.10),
-    "taper": (0.10, 0.20, 0.22, 0.22, 0.14, 0.12),
-}
-
-_MIN_RUNS_PER_TYPE = 3
-_BAYESIAN_SHRINKAGE_PER_RUN = 0.30
-
-_IMPORTANCE_WEIGHTS = {
-    "long": 1.5,
-    "tempo": 1.3,
-    "interval": 1.3,
-    "vo2max": 1.3,
-    "race_pace": 1.3,
-    "hill": 1.2,
-    "fartlek": 1.1,
-    "easy": 1.0,
-    "recovery": 0.5,
-}
-
-_CONSECUTIVE_THRESHOLD = 3
-_EXPANDED_MIN = 0.70
-_EXPANDED_MAX = 1.25
-_STANDARD_MIN = 0.85
-_STANDARD_MAX = 1.15
 
 
 @dataclass
@@ -169,7 +178,7 @@ def compute_adjustment_signals(
     # "reduce or hold" territory so a strong positive volume contribution
     # can't produce an "increase" banner alongside an overreach alert.
     if overreach_detected:
-        raw_multiplier = min(raw_multiplier, 0.95)
+        raw_multiplier = min(raw_multiplier, OVERREACH_OVERRIDE_CLAMP)
 
     multiplier = round(max(clamp_min, min(clamp_max, raw_multiplier)), 2)
 
@@ -547,23 +556,27 @@ def _apply_clamps(
     """
     overreach_detected = False
 
-    if volume_ratio > 1.2 and avg_effort is not None and avg_effort > 8.0:
-        raw_multiplier = min(raw_multiplier, 0.88)
+    if (
+        volume_ratio > OVERREACH_VOLUME_RATIO
+        and avg_effort is not None
+        and avg_effort > OVERREACH_EFFORT_THRESHOLD
+    ):
+        raw_multiplier = min(raw_multiplier, OVERREACH_VOLUME_EFFORT_CLAMP)
         overreach_detected = True
 
     if (
-        hr_extras.get("hr_zone_adherence", 1.0) < 0.3
-        and hr_extras.get("avg_abs_deviation", 0) > 1.0
+        hr_extras.get("hr_zone_adherence", 1.0) < HR_OVERREACH_ADHERENCE
+        and hr_extras.get("avg_abs_deviation", 0) > HR_OVERREACH_DEVIATION
     ):
-        raw_multiplier = min(raw_multiplier, 0.85)
+        raw_multiplier = min(raw_multiplier, HR_OVERREACH_CLAMP)
         overreach_detected = True
 
-    if recent_race_effort_count >= 2:
-        raw_multiplier = min(raw_multiplier, 0.95)
+    if recent_race_effort_count >= RACE_EFFORT_COUNT_THRESHOLD:
+        raw_multiplier = min(raw_multiplier, RACE_EFFORT_CLAMP)
         overreach_detected = True
 
     if vdot_trend == "declining":
-        raw_multiplier = min(raw_multiplier, 0.92)
+        raw_multiplier = min(raw_multiplier, VDOT_DECLINE_CLAMP)
 
     tsb = ctl = atl = None
     tsb_form: Optional[str] = None
@@ -575,15 +588,15 @@ def _apply_clamps(
         atl = current_load.get("atl")
 
     if tsb is not None:
-        if tsb <= -25:
-            raw_multiplier = min(raw_multiplier, 0.92)
+        if tsb <= TSB_OVERREACHED:
+            raw_multiplier = min(raw_multiplier, TSB_OVERREACHED_CLAMP)
             tsb_form = "overreached"
-        elif tsb >= 10 and current_phase == "peak":
+        elif tsb >= TSB_PRIMED and current_phase == "peak":
             tsb_form = "primed"
             peak_primed = True
-        elif tsb >= 5:
+        elif tsb >= TSB_FRESH:
             tsb_form = "fresh"
-        elif tsb <= -10:
+        elif tsb <= TSB_LOADED:
             tsb_form = "loaded"
         else:
             tsb_form = "neutral"

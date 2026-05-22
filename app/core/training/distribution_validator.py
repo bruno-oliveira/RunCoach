@@ -5,6 +5,13 @@ Validates and adjusts the 80/20 polarized training distribution.
 
 from typing import Dict, Optional
 
+from app.core.training.tuning import (
+    HARD_TARGETS_ROAD,
+    HARD_TARGETS_TRAIL,
+    POLARIZED_DEFICIT_THRESHOLD,
+    POLARIZED_EXCESS_THRESHOLD,
+)
+
 
 def validate_polarized_ratio(
     distribution: Dict[str, int],
@@ -26,12 +33,7 @@ def validate_polarized_ratio(
     if trail_profile is not None and trail_profile.elevation_class == "flat":
         # Flat trail: no terrain-driven intensity → use the road polarized target.
         is_trail = False
-    hard_targets = {
-        "base": 0.10,
-        "build": 0.15 if is_trail else 0.20,
-        "peak": 0.20 if is_trail else 0.25,
-        "taper": 0.10,
-    }
+    hard_targets = HARD_TARGETS_TRAIL if is_trail else HARD_TARGETS_ROAD
 
     hard_count = (
         distribution.get("interval", 0)
@@ -49,7 +51,7 @@ def validate_polarized_ratio(
     # If hard% exceeds target by >5%, reduce quality by 1.
     # Never reduce below 1 quality in build/peak — with 3-4 total runs the
     # count-based ratio overstates intensity.
-    if hard_pct > target + 0.05 and hard_count > 0:
+    if hard_pct > target + POLARIZED_EXCESS_THRESHOLD and hard_count > 0:
         if phase == "base" and hard_count <= 1:
             pass
         elif phase in ("build", "peak") and hard_count <= 1:
@@ -63,7 +65,7 @@ def validate_polarized_ratio(
     # If under by >10% in build/peak, increase by 1.
     elif (
         phase in ("build", "peak")
-        and hard_pct < target - 0.10
+        and hard_pct < target - POLARIZED_DEFICIT_THRESHOLD
         and distribution.get("easy", 0) > 0
         and total_runs >= 3
     ):

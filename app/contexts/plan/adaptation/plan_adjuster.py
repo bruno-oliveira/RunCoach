@@ -38,6 +38,7 @@ from .change_plan_builder import (
 )
 from .run_mapper import map_runs_to_plan
 from .signal_computer import compute_adjustment_signals
+from .tuning import RECENCY_HALF_LIFE_WEEKS
 from .vdot_recalibrator import check_vdot_recalibration
 from .week_adjuster import apply_adjustment_to_future_weeks
 
@@ -99,7 +100,7 @@ def gather_signals(
     if len(all_plan_runs) < 3:
         return None
 
-    half_life_weeks = 3.0
+    half_life_weeks = RECENCY_HALF_LIFE_WEEKS
 
     def _recency_weight(scheduled_date):
         weeks_ago = max(0, (today - scheduled_date).days) / 7.0

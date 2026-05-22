@@ -7,25 +7,27 @@ truth for those caps.
 
 from typing import Dict, List, Optional
 
-# Quality workouts (tempo/interval/hill) may not exceed this fraction of the
-# long run distance.
-MAX_QUALITY_VS_LONG_RUN = 0.85
+# Tunables live in the centralized tuning surface; re-exported here so existing
+# importers (e.g. weekly_plan_builder, tests) keep their access paths.
+from app.core.training.tuning import (
+    BASE_PHASE_QUALITY_REDUCTION,
+    DEFAULT_QUALITY_CAPS,
+    MAX_EASY_VS_LONG_RUN,
+    MAX_QUALITY_VS_LONG_RUN,
+    QUALITY_CAPS_BY_DISTANCE,
+)
 
-# Individual easy runs may not exceed this fraction of the long run distance.
-MAX_EASY_VS_LONG_RUN = 0.95
-
-# Base phase reduces quality caps by this factor.
-BASE_PHASE_QUALITY_REDUCTION = 0.80
-
-# Distance-scaled physiological quality caps (km).
-QUALITY_CAPS_BY_DISTANCE = {
-    5.0: {"tempo": 6.0, "interval": 5.0, "hill": 5.0},
-    10.0: {"tempo": 10.0, "interval": 8.0, "hill": 6.0},
-    21.1: {"tempo": 14.0, "interval": 10.0, "hill": 8.0},
-    30.0: {"tempo": 12.0, "interval": 8.0, "hill": 12.0},
-    42.2: {"tempo": 18.0, "interval": 12.0, "hill": 10.0},
-}
-DEFAULT_QUALITY_CAPS = {"tempo": 12.0, "interval": 10.0, "hill": 8.0}
+__all__ = [
+    "MAX_QUALITY_VS_LONG_RUN",
+    "MAX_EASY_VS_LONG_RUN",
+    "BASE_PHASE_QUALITY_REDUCTION",
+    "QUALITY_CAPS_BY_DISTANCE",
+    "DEFAULT_QUALITY_CAPS",
+    "get_quality_caps",
+    "cap_quality_distance",
+    "cap_easy_distance",
+    "enforce_week_caps",
+]
 
 
 def get_quality_caps(target_distance: float, phase: str) -> Dict[str, float]:

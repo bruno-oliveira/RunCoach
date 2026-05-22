@@ -9,11 +9,24 @@ primary metric and includes built-in time trials for progress tracking.
 from typing import Any, Dict, List, Optional
 
 from app.core.coaching.coaching_notes_generator import generate_coaching_note
-from app.core.training import mileage_progression, phase_calculator
+from app.core.training import phase_calculator
 from app.core.training.key_workout_library import (
     overlay_key_workout as _overlay_key_workout_shared,
 )
 from app.core.training.training_constants import calculate_week_in_phase
+from app.core.training.tuning import (
+    BASE_PHASE_END_FRACTION,
+    FITNESS_PEAK_CAP_KM,
+    FITNESS_PEAK_FLOOR_MULTIPLIER,
+    FITNESS_PEAK_MULTIPLIER,
+    FITNESS_TAPER_CURVE,
+    FITNESS_TAPER_SINGLE,
+    MIN_NON_RECOVERY_BUMP,
+    PEAK_OSCILLATION_BASE,
+    PEAK_OSCILLATION_STEP,
+    RECOVERY_WEEK_RATIO,
+    WEEK_OVER_WEEK_CAP,
+)
 from app.core.training.vdot_calculator import VDOTCalculator
 
 from .fitness_workout_builders import (
@@ -26,6 +39,7 @@ from .fitness_workout_builders import (
     generate_vo2max_ladder,
     generate_vo2max_workout,
 )
+from .phase_scaffold import build_phases_rich
 
 _PHASE_METADATA = {
     "base": {
@@ -361,10 +375,7 @@ class FitnessPlanGenerator:
         runs_per_week = max(3, min(6, runs_per_week))
 
         phase_durations = self._calculate_fitness_phases(weeks, focus_area)
-        phases_rich = {
-            phase: {"weeks": phase_durations[phase], **_PHASE_METADATA[phase]}
-            for phase in phase_durations
-        }
+        phases_rich = build_phases_rich(phase_durations, _PHASE_METADATA)
 
         zones = self.calculate_training_zones(vdot, max_heart_rate)
 
@@ -372,8 +383,8 @@ class FitnessPlanGenerator:
         if vdot:
             vdot_zones = VDOTCalculator.get_pace_zones(vdot)
 
-        peak_km = min(current_weekly_km * 1.3, 60.0)
-        peak_km = max(peak_km, current_weekly_km * 1.1)
+        peak_km = min(current_weekly_km * FITNESS_PEAK_MULTIPLIER, FITNESS_PEAK_CAP_KM)
+        peak_km = max(peak_km, current_weekly_km * FITNESS_PEAK_FLOOR_MULTIPLIER)
 
         km_progression = self._calculate_fitness_mileage(
             current_weekly_km, weeks, phase_durations, peak_km
@@ -448,22 +459,24 @@ class FitnessPlanGenerator:
             is_recovery = phase_calculator.is_recovery_week(week_num, phase, phases)
 
             if is_recovery:
-                week_km = high_water * 0.65
+                week_km = high_water * RECOVERY_WEEK_RATIO
                 weekly_progression.append(round(week_km, 1))
                 continue
 
             if phase == "base":
-                base_end = peak_km * 0.70
+                base_end = peak_km * BASE_PHASE_END_FRACTION
                 progress = (week_num - 1) / max(1, phases["base"])
                 week_km = current_km + (base_end - current_km) * progress
             elif phase == "build":
-                build_start = peak_km * 0.70
+                build_start = peak_km * BASE_PHASE_END_FRACTION
                 week_in_build = week_num - phases["base"]
                 progress = week_in_build / max(1, phases["build"])
                 week_km = build_start + (peak_km - build_start) * progress
             elif phase == "peak":
                 week_in_peak = week_num - phases["base"] - phases["build"]
-                oscillation = 0.97 + (week_in_peak % 3) * 0.01
+                oscillation = (
+                    PEAK_OSCILLATION_BASE + (week_in_peak % 3) * PEAK_OSCILLATION_STEP
+                )
                 week_km = peak_km * oscillation
             else:
                 taper_weeks = phases["taper"]
@@ -471,14 +484,14 @@ class FitnessPlanGenerator:
                     week_num - phases["base"] - phases["build"] - phases["peak"]
                 )
                 if taper_weeks == 1:
-                    week_km = peak_km * 0.55
+                    week_km = peak_km * FITNESS_TAPER_SINGLE
                 else:
-                    curve = [0.85, 0.70, 0.50]
+                    curve = FITNESS_TAPER_CURVE
                     week_km = peak_km * curve[min(week_in_taper, len(curve) - 1)]
 
-            week_km = min(week_km, high_water * mileage_progression.WEEK_OVER_WEEK_CAP)
+            week_km = min(week_km, high_water * WEEK_OVER_WEEK_CAP)
             week_km = (
-                max(week_km, high_water * 1.01)
+                max(week_km, high_water * MIN_NON_RECOVERY_BUMP)
                 if week_num > 1 and phase != "peak"
                 else week_km
             )

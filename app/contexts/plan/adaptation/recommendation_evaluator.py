@@ -25,6 +25,7 @@ from .change_plan_builder import (
     snapshot_workouts,
 )
 from .plan_adjuster import gather_signals
+from .tuning import HYSTERESIS_BAND as _HYSTERESIS_BAND
 from .vdot_recalibrator import check_vdot_recalibration
 from .week_adjuster import apply_adjustment_to_future_weeks
 
@@ -493,9 +494,6 @@ def _build_auto_adjust_reason(
         f"{verb} {workouts_changed} {workout_label} across {weeks_label} "
         f"({sign}{total_km_delta} km total)."
     )
-
-
-_HYSTERESIS_BAND = 0.05
 
 
 def _is_small_reversal(
