@@ -12,7 +12,6 @@ dependencies = [
     "sqlalchemy>=2.0.41",
     "pydantic>=2.11.3",
     "pydantic-settings>=2.9.1",
-    "requests>=2.32.3",
     "PyJWT[crypto]>=2.12.1",
     "cachetools>=5.5.2",
     "httpx>=0.28.1",
@@ -30,7 +29,7 @@ testpaths = ["tests"]
 python_files = ["test_*.py"]
 python_functions = ["test_*"]
 python_classes = ["Test*"]
-addopts = "-v --tb=short"
+addopts = "-v --tb=short --cov=app --cov-report=term-missing --cov-fail-under=65"
 asyncio_mode = "auto"
 
 [tool.coverage.run]

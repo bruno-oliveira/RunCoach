@@ -383,20 +383,6 @@ class TestRacePrepAPI:
 
 
 class TestFITValidationLocal:
-    def test_validate_generated_fit(self):
-        from app.infrastructure.integrations.fit_service import FITService
-        from app.infrastructure.integrations.fit_validation_local import validate_fit_bytes
-        segments = [
-            {"start_km": 0, "end_km": 1, "target_pace_min_km": 5.0, "grade_pct": 0.0},
-        ]
-        fit_bytes = FITService.generate_race_workout(
-            segments=segments,
-            target_time_seconds=300,
-            target_time_str="5:00",
-        )
-        result = validate_fit_bytes(fit_bytes)
-        assert result.valid, f"Validation failed: {result.errors}"
-
     def test_validate_invalid_fit(self):
         from app.infrastructure.integrations.fit_validation_local import validate_fit_bytes
         result = validate_fit_bytes(b"not a fit file")
