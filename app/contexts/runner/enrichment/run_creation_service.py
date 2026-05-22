@@ -25,8 +25,6 @@ from app.contexts.runner.queries import (
 from app.core.training.quality_scorer import calculate_quality_score
 from app.core.training.vdot_calculator import VDOTCalculator
 from app.dependencies import validate_plan_ownership
-from app.domain.event_bus import event_bus
-from app.domain.events import RunLogged
 from app.models import DailyWorkout, RunLog, User
 from app.schemas import RunLogCreate, RunLogResponse
 
@@ -53,15 +51,6 @@ class RunCreationService:
             db,
         )
         db.commit()
-
-        event_bus.publish_safe(
-            RunLogged(
-                aggregate_id=str(new_run.id),
-                distance_km=run_log.distance_km,
-                duration_min=run_log.duration_minutes,
-                workout_type=run_log.workout_type,
-            )
-        )
 
         self._post_commit_feedback(new_run, db)
         auto_adjust_result = self._post_commit_adaptation(new_run, current_user, db)
