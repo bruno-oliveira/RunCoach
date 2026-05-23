@@ -210,6 +210,30 @@ def gather_signals(
     }
 
 
+def preview_adjust_signals(
+    plan_id: str,
+    user_id: str,
+    db: Session,
+) -> Optional[Dict[str, Any]]:
+    """Read-only: the full adaptation signal breakdown, without any writes.
+
+    Unlike ``preview_adjust_plan`` (which mutates then rolls back), this
+    calls ``gather_signals`` with ``run_map=False`` so no run→workout
+    mapping is committed — safe to call on a GET request. Returns the
+    complete ``compute_adjustment_signals`` dict (every factor, weight,
+    TSB/form, trends) plus ``current_week`` and ``adjustable_week_count``,
+    or ``None`` when there is insufficient data (fewer than 3 linked runs,
+    no start date, or no past workouts to evaluate).
+    """
+    gathered = gather_signals(plan_id, user_id, db, run_map=False)
+    if gathered is None:
+        return None
+    signals = dict(gathered["signals"])
+    signals["current_week"] = gathered["current_week"]
+    signals["adjustable_week_count"] = len(gathered["adjustable_weeks"])
+    return signals
+
+
 def adjust_plan(
     plan_id: str,
     user_id: str,

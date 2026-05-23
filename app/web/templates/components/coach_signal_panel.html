@@ -1,0 +1,15 @@
+{# "What your coach sees" — the 6-signal radar. JS-filled by analytics_coach.js
+   / analytics_signal_chart.js. No server data is bound here. #}
+<div class="analytics-card coach-signal-card">
+    <div class="analytics-card-header">
+        <h3 class="analytics-card-title">What your coach sees</h3>
+        <span class="coach-signal-sub">6 signals &middot; phase-weighted</span>
+    </div>
+    <div class="coach-signal-body">
+        <div class="chart-canvas-wrap coach-signal-chart">
+            <canvas id="coachSignalChart" role="img" aria-label="Radar chart of the six adaptation signals"></canvas>
+        </div>
+        <div id="coachSignalLegend" class="coach-signal-legend"></div>
+    </div>
+    <p class="coach-signal-caption">Each signal nudges your plan up or down. A factor above 1.0 argues for more load; below 1.0 eases off. <strong>Weight</strong> is how much that signal counts in your current training phase &mdash; signals with no data are dimmed and their weight is redistributed.</p>
+</div>
