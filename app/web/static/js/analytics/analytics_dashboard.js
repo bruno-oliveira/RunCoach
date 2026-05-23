@@ -17,7 +17,7 @@ const AnalyticsDashboard = {
     acwrData: null,
     prData: null,
     insightsData: null,
-    activeTab: 'coach',
+    activeTab: 'today',
     evolutionPeriodDays: 90,
     evolutionInitialized: false,
     evolutionCharts: {},
@@ -41,7 +41,7 @@ const AnalyticsDashboard = {
     /*  Init                                                               */
     /* ------------------------------------------------------------------ */
     async init() {
-        const dashboard = document.getElementById('analyticsDashboard');
+        const dashboard = document.getElementById('analyticsProgress');
         const loading   = document.getElementById('analyticsLoading');
         const empty     = document.getElementById('analyticsEmpty');
         if (!dashboard) return;
@@ -65,7 +65,7 @@ const AnalyticsDashboard = {
             if (tabs) tabs.style.display = 'flex';
 
             // Coaching-first default: scope to the most recent plan if one has
-            // runs, so the Coach tab lands with data. Falls back to all-runs.
+            // runs, so the Today tab lands with data. Falls back to all-runs.
             const planSel = document.getElementById('planSelector');
             if (planSel && planSel.options.length > 1) {
                 planSel.value = planSel.options[1].value;
@@ -93,8 +93,8 @@ const AnalyticsDashboard = {
             this.loadInsights();
             if (this.currentPlanId) this.showPlanSection(this.currentPlanId);
 
-            // Charts are now sized (dashboard was visible); lead with Coach.
-            this.switchTab('coach');
+            // Charts are now sized (dashboard was visible); lead with Today.
+            this.switchTab('today');
         } catch (err) {
             console.error('Analytics load error:', err);
             loading.style.display = 'none';
@@ -425,29 +425,32 @@ const AnalyticsDashboard = {
         el.addEventListener('change', async () => {
             this.currentPlanId = el.value || null;
             const loading = document.getElementById('analyticsLoading');
-            const dashboard = document.getElementById('analyticsDashboard');
+            const dashboard = document.getElementById('analyticsProgress');
             const empty = document.getElementById('analyticsEmpty');
             if (loading) loading.style.display = '';
             if (dashboard) dashboard.style.display = 'none';
             if (empty) empty.style.display = 'none';
 
+            // Today and Signals are plan-scoped panels that render their own
+            // prompt/empty states, so they stay visible across a plan change.
+            const planScopedTab = this.activeTab === 'today' || this.activeTab === 'signals';
+
             try {
                 await this.loadRuns();
                 if (loading) loading.style.display = 'none';
 
-                // The Coach tab is plan-scoped: refresh it on every plan change
-                // (even when it is the active panel and the run list is empty).
-                if (this.activeTab === 'coach') {
+                // Refresh the active plan-scoped panel on every plan change.
+                if (planScopedTab) {
                     if (dashboard) dashboard.style.display = 'none';
-                    this.loadCoach(this.currentPlanId);
+                    this.reloadPlanScopedTab();
                 }
 
                 if (this.allRuns.length === 0) {
-                    if (this.activeTab !== 'coach' && empty) empty.style.display = 'block';
+                    if (!planScopedTab && empty) empty.style.display = 'block';
                     if (this.currentPlanId) this.showPlanSection(this.currentPlanId);
                     return;
                 }
-                if (this.activeTab !== 'coach' && dashboard) dashboard.style.display = 'block';
+                if (!planScopedTab && dashboard) dashboard.style.display = 'block';
                 this.filterByPeriod(this.currentPlanId ? 'all' : this.currentPeriodDays);
                 if (this.currentPlanId) {
                     this.showPlanSection(this.currentPlanId);
@@ -460,6 +463,15 @@ const AnalyticsDashboard = {
                 if (empty) empty.style.display = 'block';
             }
         });
+    },
+
+    /** Re-fetch whichever plan-scoped panel (Today / Signals) is active. */
+    reloadPlanScopedTab() {
+        if (this.activeTab === 'today' && this.loadToday) {
+            this.loadToday(this.currentPlanId);
+        } else if (this.activeTab === 'signals' && this.loadSignals) {
+            this.loadSignals(this.currentPlanId);
+        }
     },
 
     showPlanSection(planId) {
@@ -511,8 +523,9 @@ const AnalyticsDashboard = {
             t.tabIndex = active ? 0 : -1;
         });
         const panels = {
-            coach:     document.getElementById('analyticsCoach'),
-            dashboard: document.getElementById('analyticsDashboard'),
+            today:     document.getElementById('analyticsToday'),
+            signals:   document.getElementById('analyticsSignals'),
+            progress:  document.getElementById('analyticsProgress'),
             insights:  document.getElementById('analyticsInsightsTab'),
             evolution: document.getElementById('analyticsEvolutionTab'),
         };
@@ -520,8 +533,11 @@ const AnalyticsDashboard = {
             if (el) el.style.display = name === tabName ? 'block' : 'none';
         }
 
-        if (tabName === 'coach' && this.coachLoadedPlanId !== this.currentPlanId) {
-            this.loadCoach(this.currentPlanId);
+        if (tabName === 'today' && this.todayLoadedPlanId !== this.currentPlanId) {
+            this.loadToday(this.currentPlanId);
+        }
+        if (tabName === 'signals' && this.signalsLoadedPlanId !== this.currentPlanId) {
+            this.loadSignals(this.currentPlanId);
         }
         if (tabName === 'evolution' && !this.evolutionInitialized) {
             this.evolutionInitialized = true;

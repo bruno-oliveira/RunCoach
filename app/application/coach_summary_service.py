@@ -13,8 +13,8 @@ gathers signals with ``run_map=False`` so no run→workout mapping is written
 on a GET request.
 """
 
-from datetime import date
-from typing import Any, Dict, Optional
+from datetime import date, datetime, timedelta
+from typing import Any, Dict, List, Optional
 
 from sqlalchemy.orm import Session
 
@@ -22,9 +22,14 @@ from app.contexts.plan.adaptation import AdaptationService
 from app.contexts.plan.plan_date_utils import compute_current_week
 from app.contexts.runner.enrichment.week_pulse_generator import get_week_pulse
 from app.contexts.runner.fitness.readiness_service import ReadinessService
+from app.contexts.runner.readiness_repository import SQLAlchemyReadinessRepository
 from app.core.coaching.pattern_analyzer import pattern_feedback
-from app.models import RunLog, TrainingPlan
+from app.models import ReadinessLog, RunLog, TrainingPlan
 from app.utils import to_date as _to_date
+
+# Day-of-week labels — plans are 1-indexed Mon..Sun (workout.day) and start on
+# the plan's start_date (conventionally a Monday).
+_DAY_NAMES = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
 
 # Dead-zone around 1.0 below which an adjustment is treated as "hold" — mirrors
 # the ±2% hysteresis the recommendation evaluator uses.
@@ -157,6 +162,266 @@ def build_adaptation_history(plan: TrainingPlan) -> Dict[str, Any]:
         )
     events.reverse()
     return {"available": True, "events": events}
+
+
+def build_signal_history(plan: TrainingPlan) -> Dict[str, Any]:
+    """Per-event signal snapshots for the Signals-tab trend sparklines.
+
+    Reads the ``signals_snapshot`` frozen onto each applied "adjust" event by
+    ``plan_adjuster._build_signal_snapshot``. Returned oldest-first so the
+    client can plot each signal's factor as a left-to-right time series.
+    Older events that predate snapshotting are tolerated (skipped).
+    """
+    raw = plan.adaptation_history or []
+    snapshots: List[Dict[str, Any]] = []
+    for entry in raw:
+        if not isinstance(entry, dict):
+            continue
+        snap = entry.get("signals_snapshot")
+        if not isinstance(snap, dict):
+            continue
+        snapshots.append(
+            {
+                "date": entry.get("date"),
+                "direction": entry.get("direction"),
+                "multiplier": snap.get("multiplier", entry.get("multiplier")),
+                "phase": snap.get("phase", entry.get("phase")),
+                "signals": snap.get("signals", {}),
+                "form": snap.get("form", {}),
+            }
+        )
+    return {"available": len(snapshots) > 0, "snapshots": snapshots}
+
+
+def build_today(plan: TrainingPlan, user_id: str, db: Session) -> Dict[str, Any]:
+    """Current-week execution snapshot for the Coach Hub "Today" tab.
+
+    Returns today's planned workout (if the plan is mid-flight), a 7-day
+    execution strip with per-day completion status, and the week's planned vs
+    actual volume. Day status is derived from pure calendar comparison so it
+    behaves correctly whether the plan is upcoming, in-progress, or finished.
+    """
+    start = _to_date(plan.start_date) if plan.start_date else None
+    plan_data = plan.plan_data or []
+    if not start or not plan_data:
+        return {
+            "available": False,
+            "reason": "Pick a plan with a start date to see today's session.",
+        }
+
+    today = date.today()
+    total_weeks = len(plan_data)
+    current_week = compute_current_week(
+        start, today, clamp_min=1, total_weeks=total_weeks, pre_start=1
+    )
+    week_data = next(
+        (w for w in plan_data if w.get("week") == current_week),
+        plan_data[min(current_week, total_weeks) - 1] if plan_data else None,
+    )
+    if not week_data:
+        return {"available": False, "reason": "No workouts scheduled for this week."}
+
+    week_start = start + timedelta(weeks=current_week - 1)
+
+    runs = (
+        db.query(RunLog)
+        .filter(
+            RunLog.training_plan_id == plan.id,
+            RunLog.date >= week_start,
+            RunLog.date < week_start + timedelta(days=7),
+        )
+        .all()
+    )
+    runs_by_day: Dict[int, List[RunLog]] = {}
+    for run in runs:
+        rd = run.date.date() if isinstance(run.date, datetime) else run.date
+        if rd is None:
+            continue
+        offset = (rd - week_start).days
+        if 0 <= offset <= 6:
+            runs_by_day.setdefault(offset + 1, []).append(run)
+
+    workouts_by_day = {
+        w.get("day"): w for w in week_data.get("daily_workouts", []) if w.get("day")
+    }
+
+    days: List[Dict[str, Any]] = []
+    planned_total = 0.0
+    actual_total = 0.0
+    for d in range(1, 8):
+        w = workouts_by_day.get(d) or {}
+        wtype = w.get("type", "rest")
+        planned_km = round(w.get("distance", 0) or 0, 1)
+        day_runs = runs_by_day.get(d, [])
+        actual_km = round(sum(r.distance_km or 0 for r in day_runs), 1)
+        is_rest = wtype in ("rest", "recovery") and planned_km == 0
+        day_date = week_start + timedelta(days=d - 1)
+
+        if day_date == today:
+            status = "today"
+        elif day_date < today:
+            status = "done" if day_runs else ("rest" if is_rest else "missed")
+        else:
+            status = "rest" if is_rest else "upcoming"
+
+        if not is_rest:
+            planned_total += planned_km
+        actual_total += actual_km
+
+        days.append(
+            {
+                "day": d,
+                "day_name": _DAY_NAMES[d - 1],
+                "workout_type": wtype,
+                "planned_km": planned_km,
+                "actual_km": actual_km,
+                "status": status,
+                "is_today": day_date == today,
+                "logged": bool(day_runs),
+            }
+        )
+
+    today_offset = (today - week_start).days
+    today_block: Optional[Dict[str, Any]] = None
+    if 0 <= today_offset <= 6:
+        tw = workouts_by_day.get(today_offset + 1)
+        if tw:
+            today_block = {
+                "day_name": _DAY_NAMES[today_offset],
+                "workout_type": tw.get("type"),
+                "distance_km": round(tw.get("distance", 0) or 0, 1),
+                "description": tw.get("description"),
+                "hr_zone_target": tw.get("hr_zone_target"),
+                "hr_zone_label": tw.get("hr_zone_label"),
+                "duration_min": tw.get("duration_min"),
+                "logged": bool(runs_by_day.get(today_offset + 1)),
+            }
+
+    pct = round(actual_total / planned_total * 100) if planned_total > 0 else None
+    return {
+        "available": True,
+        "current_week": current_week,
+        "total_weeks": total_weeks,
+        "phase": week_data.get("phase"),
+        "today": today_block,
+        "week": days,
+        "week_planned_km": round(planned_total, 1),
+        "week_actual_km": round(actual_total, 1),
+        "week_pct": pct,
+    }
+
+
+def build_readiness_trend(user_id: str, db: Session, days: int = 30) -> Dict[str, Any]:
+    """Recent daily readiness check-ins + rolling averages and a trend label.
+
+    Logs are returned oldest-first for left-to-right sparkline plotting; the
+    rolling averages and trend are computed on the most recent entries.
+    """
+    logs = SQLAlchemyReadinessRepository(db).list_recent(user_id, days)  # newest-first
+    if not logs:
+        return {
+            "available": False,
+            "logs": [],
+            "avg_7d": None,
+            "avg_14d": None,
+            "trend": None,
+        }
+
+    def _component(log: ReadinessLog) -> Dict[str, Optional[int]]:
+        return {
+            "sleep": log.sleep,
+            "soreness": log.soreness,
+            "energy": log.energy,
+            "stress": log.stress,
+        }
+
+    items = [
+        {
+            "date": log.log_date.isoformat() if log.log_date else None,
+            "score": log.score,
+            "status": log.status,
+            "components": _component(log),
+        }
+        for log in reversed(logs)  # oldest-first for charting
+    ]
+
+    def _avg(vals: List[int]) -> Optional[int]:
+        return round(sum(vals) / len(vals)) if vals else None
+
+    recent_7 = [log.score for log in logs[:7] if log.score is not None]
+    prior_7 = [log.score for log in logs[7:14] if log.score is not None]
+    avg_7d = _avg(recent_7)
+    avg_14d = _avg([log.score for log in logs[:14] if log.score is not None])
+
+    trend = "stable"
+    if recent_7 and prior_7:
+        diff = sum(recent_7) / len(recent_7) - sum(prior_7) / len(prior_7)
+        if diff >= 4:
+            trend = "improving"
+        elif diff <= -4:
+            trend = "declining"
+
+    return {
+        "available": True,
+        "logs": items,
+        "avg_7d": avg_7d,
+        "avg_14d": avg_14d,
+        "trend": trend,
+    }
+
+
+def build_training_age(user_id: str, db: Session) -> Dict[str, Any]:
+    """Training age + consistency streaks aggregated from all logged runs."""
+    runs = (
+        db.query(RunLog)
+        .filter(RunLog.user_id == user_id, RunLog.date.isnot(None))
+        .order_by(RunLog.date.asc())
+        .all()
+    )
+    if not runs:
+        return {"available": False}
+
+    def _monday(d: date) -> date:
+        return d - timedelta(days=d.weekday())
+
+    dates = [(r.date.date() if isinstance(r.date, datetime) else r.date) for r in runs]
+    today = date.today()
+    first = dates[0]
+    first_monday = _monday(first)
+    this_monday = _monday(today)
+    weeks_since = (this_monday - first_monday).days // 7 + 1
+
+    active_mondays = sorted({_monday(d) for d in dates})
+
+    longest_streak = 1
+    run_len = 1
+    for i in range(1, len(active_mondays)):
+        if (active_mondays[i] - active_mondays[i - 1]).days == 7:
+            run_len += 1
+        else:
+            run_len = 1
+        longest_streak = max(longest_streak, run_len)
+
+    current_streak = 0
+    if active_mondays and (this_monday - active_mondays[-1]).days <= 7:
+        current_streak = 1
+        for i in range(len(active_mondays) - 1, 0, -1):
+            if (active_mondays[i] - active_mondays[i - 1]).days == 7:
+                current_streak += 1
+            else:
+                break
+
+    total_runs = len(runs)
+    total_km = round(sum(r.distance_km or 0 for r in runs), 1)
+    return {
+        "available": True,
+        "weeks_since_first_run": weeks_since,
+        "total_runs": total_runs,
+        "total_km": total_km,
+        "current_streak_weeks": current_streak,
+        "longest_streak_weeks": longest_streak,
+        "avg_runs_per_week": round(total_runs / weeks_since, 1) if weeks_since else 0,
+    }
 
 
 def build_coach_patterns(
