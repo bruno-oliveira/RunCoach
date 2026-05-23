@@ -500,6 +500,7 @@ def _run_adjust(
                 "overreach": overreach_detected,
                 "phase": current_phase,
                 "reason": headline_reason,
+                "signals_snapshot": _build_signal_snapshot(signals),
             },
         )
         db.commit()
@@ -535,6 +536,52 @@ def _run_adjust(
     if vdot_result:
         result["vdot_recalibration"] = vdot_result
     return result
+
+
+def _build_signal_snapshot(signals: Dict[str, Any]) -> Dict[str, Any]:
+    """Per-signal factor + weight + form, frozen onto an adaptation event.
+
+    Persisted on each applied "adjust" event so the Coach Hub can chart how
+    the six signals evolved over time without recomputing historical state.
+    Mirrors the ``signals_block`` shape that ``build_coach_summary`` exposes.
+    """
+    weights = signals.get("phase_weights", {})
+    return {
+        "multiplier": signals.get("multiplier"),
+        "phase": signals.get("current_phase"),
+        "signals": {
+            "volume": {
+                "factor": signals.get("volume_ratio"),
+                "weight": weights.get("volume", 0.0),
+            },
+            "effort": {
+                "factor": signals.get("effort_factor"),
+                "weight": weights.get("effort", 0.0),
+            },
+            "completion": {
+                "factor": signals.get("completion_factor"),
+                "weight": weights.get("completion", 0.0),
+            },
+            "hr_zone": {
+                "factor": signals.get("hr_zone_factor"),
+                "weight": weights.get("hr_zone", 0.0),
+            },
+            "feedback": {
+                "factor": signals.get("feedback_factor"),
+                "weight": weights.get("feedback", 0.0),
+            },
+            "readiness": {
+                "factor": signals.get("readiness_factor"),
+                "weight": weights.get("readiness", 0.0),
+            },
+        },
+        "form": {
+            "ctl": signals.get("ctl"),
+            "atl": signals.get("atl"),
+            "tsb": signals.get("tsb"),
+            "tsb_form": signals.get("tsb_form"),
+        },
+    }
 
 
 def _build_signals_summary(

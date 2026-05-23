@@ -159,9 +159,12 @@
     /* ------------------------------------------------------------------ */
     AD.loadInsights = async function() {
         try {
-            const res = await fetch('/api/analytics/insights', { credentials: 'same-origin' });
-            if (!res.ok) return;
-            this.insightsData = await res.json();
+            const [insightsRes, ageRes] = await Promise.all([
+                fetch('/api/analytics/insights', { credentials: 'same-origin' }),
+                fetch('/api/analytics/training-age', { credentials: 'same-origin' }),
+            ]);
+            if (insightsRes.ok) this.insightsData = await insightsRes.json();
+            if (ageRes.ok) this.trainingAge = await ageRes.json();
             this.renderInsightsTab();
         } catch (err) {
             console.error('Insights load error:', err);
@@ -193,8 +196,11 @@
             badge.style.display = actionable > 0 ? 'inline-flex' : 'none';
         }
 
-        // Render profile summary
+        // Render profile summary + the new meta sections
         this.renderProfileSummary(data.profile);
+        this.renderCoachAssessment(data);
+        this.renderTrainingAge();
+        this.renderWorkoutMix();
 
         // Render insight cards
         if (!list) return;
@@ -229,6 +235,110 @@
         set('profileEasyPct', profile.easy_pct ? `${Math.round(profile.easy_pct)}%` : '--');
 
         el.style.display = 'flex';
+    };
+
+    /* ------------------------------------------------------------------ */
+    /*  Coach's Assessment — synthesized paragraph                         */
+    /* ------------------------------------------------------------------ */
+    AD.renderCoachAssessment = function(data) {
+        const card = document.getElementById('coachAssessmentCard');
+        const el = document.getElementById('coachAssessment');
+        if (!el) return;
+
+        const p = (data && data.profile) || {};
+        const ta = this.trainingAge;
+        const parts = [];
+
+        if (ta && ta.available) {
+            parts.push(`You've been training for ${ta.weeks_since_first_run} week${ta.weeks_since_first_run === 1 ? '' : 's'} — ${ta.total_runs} runs and ${ta.total_km.toLocaleString()} km logged, averaging ${ta.avg_runs_per_week} runs a week.`);
+            if (ta.current_streak_weeks >= 2) {
+                parts.push(`You're on a ${ta.current_streak_weeks}-week consistency streak${ta.longest_streak_weeks > ta.current_streak_weeks ? ` (your best is ${ta.longest_streak_weeks})` : ' — your longest yet'}.`);
+            }
+        }
+        if (p.current_vdot) parts.push(`Current fitness sits around VDOT ${p.current_vdot}.`);
+        if (p.easy_pct != null) {
+            const easy = Math.round(p.easy_pct);
+            const aerobicNote = easy >= 75 ? 'a healthy aerobic base' : easy >= 60 ? 'a reasonable easy/hard balance' : 'a fairly hard-skewed mix — protect your easy days';
+            parts.push(`About ${easy}% of your running is easy-paced — ${aerobicNote}.`);
+        }
+        const top = (data && data.insights ? data.insights.slice() : [])
+            .sort((a, b) => (a.priority || 9) - (b.priority || 9))[0];
+        if (top && top.body) parts.push(top.body);
+
+        if (parts.length === 0) {
+            if (card) card.style.display = 'none';
+            return;
+        }
+        el.textContent = parts.join(' ');
+        if (card) card.style.display = '';
+    };
+
+    /* ------------------------------------------------------------------ */
+    /*  Training age strip                                                 */
+    /* ------------------------------------------------------------------ */
+    AD.renderTrainingAge = function() {
+        const grid = document.getElementById('insightsMetaGrid');
+        const strip = document.getElementById('trainingAgeStrip');
+        const ta = this.trainingAge;
+        if (!strip) return;
+        if (!ta || !ta.available) {
+            if (grid) grid.style.display = 'none';
+            return;
+        }
+        const cell = (value, label) =>
+            `<div class="training-age-cell"><span class="training-age-value">${value}</span>` +
+            `<span class="training-age-label">${label}</span></div>`;
+        strip.innerHTML =
+            cell(ta.weeks_since_first_run, 'weeks training') +
+            cell(ta.total_runs, 'total runs') +
+            cell(Math.round(ta.total_km).toLocaleString(), 'total km') +
+            cell(`${ta.longest_streak_weeks}w`, 'longest streak');
+        if (grid) grid.style.display = 'grid';
+    };
+
+    /* ------------------------------------------------------------------ */
+    /*  Workout-type distribution                                          */
+    /* ------------------------------------------------------------------ */
+    AD.WORKOUT_MIX_COLORS = {
+        easy: '#0D9488', recovery: '#5EEAD4', long: '#1D4ED8', tempo: '#F59E0B',
+        threshold: '#F59E0B', interval: '#EF4444', vo2max: '#EF4444',
+        fartlek: '#7C3AED', hill: '#B45309', race_pace: '#DB2777', race: '#DB2777',
+        run_walk: '#0D9488',
+    };
+
+    AD.renderWorkoutMix = function() {
+        const el = document.getElementById('workoutMix');
+        if (!el) return;
+        const counts = {};
+        let total = 0;
+        for (const r of this.allRuns) {
+            const t = r.workout_type;
+            if (!t || t === 'rest') continue;
+            counts[t] = (counts[t] || 0) + 1;
+            total++;
+        }
+        if (total === 0) {
+            el.innerHTML = '<p class="analytics-empty-text">Log runs with a workout type to see your training mix.</p>';
+            return;
+        }
+        const ordered = Object.entries(counts).sort((a, b) => b[1] - a[1]);
+        const seg = ordered.map(([t, n]) => {
+            const pct = (n / total) * 100;
+            const color = this.WORKOUT_MIX_COLORS[t] || '#A09A93';
+            return `<span class="workout-mix-seg" style="width:${pct}%;background:${color}" title="${this._esc(t)}: ${n}"></span>`;
+        }).join('');
+        const legend = ordered.map(([t, n]) => {
+            const pct = Math.round((n / total) * 100);
+            const color = this.WORKOUT_MIX_COLORS[t] || '#A09A93';
+            const label = t.charAt(0).toUpperCase() + t.slice(1).replace(/_/g, ' ');
+            return (
+                '<div class="workout-mix-legend-row">' +
+                `<span class="workout-mix-dot" style="background:${color}"></span>` +
+                `<span class="workout-mix-legend-label">${this._esc(label)}</span>` +
+                `<span class="workout-mix-legend-val">${n} · ${pct}%</span></div>`
+            );
+        }).join('');
+        el.innerHTML = `<div class="workout-mix-bar">${seg}</div><div class="workout-mix-legend">${legend}</div>`;
     };
 
     /* ------------------------------------------------------------------ */

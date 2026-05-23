@@ -125,3 +125,65 @@ class TestCoachEndpoints:
         assert body["available"] is True
         assert isinstance(body["patterns"], list)
         assert "week_pulse" in body
+
+
+@pytest.mark.usefixtures("_override_db")
+class TestCoachHubExtraEndpoints:
+    """today / signal-history (plan-scoped) + readiness-trend / training-age."""
+
+    @pytest.mark.parametrize("path", ("today", "signal-history"))
+    def test_plan_scoped_requires_auth(self, path, plan):
+        app.dependency_overrides.pop(get_current_user, None)
+        with TestClient(app) as client:
+            resp = client.get(f"/api/analytics/{path}/{plan.id}")
+        assert resp.status_code == 401
+
+    @pytest.mark.parametrize("path", ("today", "signal-history"))
+    def test_plan_scoped_foreign_forbidden(self, path, plan, test_db):
+        other = User(id="hub-other", email="ho@example.com")
+        test_db.add(other)
+        test_db.commit()
+        _set_user(other)
+        with TestClient(app) as client:
+            resp = client.get(f"/api/analytics/{path}/{plan.id}")
+        assert resp.status_code == 403
+
+    def test_today_shape(self, plan, owner):
+        _set_user(owner)
+        with TestClient(app) as client:
+            resp = client.get(f"/api/analytics/today/{plan.id}")
+        assert resp.status_code == 200
+        body = resp.json()
+        assert "available" in body
+
+    def test_signal_history_shape(self, plan, owner):
+        _set_user(owner)
+        with TestClient(app) as client:
+            resp = client.get(f"/api/analytics/signal-history/{plan.id}")
+        assert resp.status_code == 200
+        body = resp.json()
+        # The fixture's lone event has no snapshot → not available, well-formed.
+        assert body["available"] is False
+        assert body["snapshots"] == []
+
+    def test_readiness_trend_requires_auth(self):
+        app.dependency_overrides.pop(get_current_user, None)
+        with TestClient(app) as client:
+            resp = client.get("/api/analytics/readiness-trend")
+        assert resp.status_code == 401
+
+    def test_readiness_trend_shape(self, owner):
+        _set_user(owner)
+        with TestClient(app) as client:
+            resp = client.get("/api/analytics/readiness-trend")
+        assert resp.status_code == 200
+        body = resp.json()
+        assert body["available"] is False  # no readiness logs
+        assert body["logs"] == []
+
+    def test_training_age_shape(self, owner):
+        _set_user(owner)
+        with TestClient(app) as client:
+            resp = client.get("/api/analytics/training-age")
+        assert resp.status_code == 200
+        assert resp.json()["available"] is False  # no runs

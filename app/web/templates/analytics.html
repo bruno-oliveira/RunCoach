@@ -11,6 +11,8 @@
 <link rel="stylesheet" href="{{ static_url('css/analytics/insights.css') }}">
 <link rel="stylesheet" href="{{ static_url('css/analytics/evolution.css') }}">
 <link rel="stylesheet" href="{{ static_url('css/analytics/coach.css') }}">
+<link rel="stylesheet" href="{{ static_url('css/analytics/today.css') }}">
+<link rel="stylesheet" href="{{ static_url('css/analytics/signals.css') }}">
 <link rel="stylesheet" href="{{ static_url('css/plan-readiness.css') }}">
 <link rel="stylesheet" href="{{ static_url('css/plan-gaps.css') }}">
 <link rel="stylesheet" href="{{ static_url('css/share.css') }}">
@@ -31,8 +33,8 @@
     <!-- Page Header -->
     <div class="analytics-page-header">
         <div class="analytics-page-header-left">
-            <h1 class="analytics-page-title">Performance</h1>
-            <p class="analytics-page-sub">Your running data at a glance</p>
+            <h1 class="analytics-page-title">Coach Hub</h1>
+            <p class="analytics-page-sub">Your personalized training intelligence</p>
         </div>
         <div class="analytics-page-header-right">
             {% if plans %}
@@ -64,24 +66,24 @@
     </div>
 
     <!-- Tab navigation -->
-    <nav class="analytics-tabs" id="analyticsTabs" role="tablist" aria-label="Analytics views" style="display:none;">
-        <button class="analytics-tab analytics-tab--active" role="tab" aria-selected="true" aria-controls="analyticsCoach" id="atab-coach" data-tab="coach">
+    <nav class="analytics-tabs" id="analyticsTabs" role="tablist" aria-label="Coach Hub views" style="display:none;">
+        <button class="analytics-tab analytics-tab--active" role="tab" aria-selected="true" aria-controls="analyticsToday" id="atab-today" data-tab="today">
             <svg class="analytics-tab-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <circle cx="12" cy="12" r="10"/><polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"/>
+                <circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 15 14"/>
             </svg>
-            <span>Coach</span>
+            <span>Today</span>
         </button>
-        <button class="analytics-tab" role="tab" aria-selected="false" aria-controls="analyticsDashboard" id="atab-dashboard" data-tab="dashboard">
+        <button class="analytics-tab" role="tab" aria-selected="false" aria-controls="analyticsSignals" id="atab-signals" data-tab="signals">
             <svg class="analytics-tab-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/>
+                <polyline points="3 12 7 12 10 5 14 19 17 12 21 12"/>
             </svg>
-            <span>Performance</span>
+            <span>Signals</span>
         </button>
-        <button class="analytics-tab" role="tab" aria-selected="false" aria-controls="analyticsEvolutionTab" id="atab-evolution" data-tab="evolution">
+        <button class="analytics-tab" role="tab" aria-selected="false" aria-controls="analyticsProgress" id="atab-progress" data-tab="progress">
             <svg class="analytics-tab-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
+                <circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4.5"/><circle cx="12" cy="12" r="0.5" fill="currentColor"/>
             </svg>
-            <span>Evolution</span>
+            <span>Progress</span>
         </button>
         <button class="analytics-tab" role="tab" aria-selected="false" aria-controls="analyticsInsightsTab" id="atab-insights" data-tab="insights">
             <svg class="analytics-tab-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -90,75 +92,137 @@
             <span>Insights</span>
             <span class="insights-badge" id="insightsBadge" style="display:none;">0</span>
         </button>
+        <button class="analytics-tab" role="tab" aria-selected="false" aria-controls="analyticsEvolutionTab" id="atab-evolution" data-tab="evolution">
+            <svg class="analytics-tab-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
+            </svg>
+            <span>Evolution</span>
+        </button>
     </nav>
 
-    <!-- Coach tab -->
-    <div id="analyticsCoach" class="analytics-tab-panel" role="tabpanel" aria-labelledby="atab-coach" style="display:none;">
+    <!-- ===================== TODAY tab ===================== -->
+    <div id="analyticsToday" class="analytics-tab-panel" role="tabpanel" aria-labelledby="atab-today" style="display:none;">
 
         <!-- Prompt shown when no plan is selected (All runs scope) -->
-        <div id="coachPrompt" class="coach-prompt" style="display:none;">
+        <div id="todayPrompt" class="coach-prompt" style="display:none;">
             <div class="coach-prompt-icon">&#x1F9ED;</div>
             <h2>Pick a training plan</h2>
-            <p>Choose a plan from the menu above to see what your coach sees &mdash; your adaptation signals, current form, race readiness, and why your plan is evolving.</p>
+            <p>Choose a plan from the menu above to see what your coach thinks about your training right now &mdash; today's session, your form and readiness, and this week's execution.</p>
         </div>
 
-        <!-- Loading -->
-        <div id="coachLoading" class="analytics-loading" style="display:none;">
+        <div id="todayLoading" class="analytics-loading" style="display:none;">
             <div class="analytics-loading-spinner"></div>
             <p>Reading your training&hellip;</p>
         </div>
 
-        <!-- Insufficient-data state -->
-        <div id="coachEmpty" class="analytics-empty" style="display:none;">
+        <div id="todayEmpty" class="analytics-empty" style="display:none;">
             <div class="analytics-empty-icon">&#x1F4CA;</div>
             <h2>Not enough data yet</h2>
-            <p id="coachEmptyText">Log at least 3 runs linked to this plan to unlock your coach view.</p>
+            <p id="todayEmptyText">Log at least 3 runs linked to this plan to unlock your coach view.</p>
         </div>
 
-        <!-- Content -->
-        <div id="coachContent" style="display:none;">
+        <div id="todayContent" style="display:none;">
 
-            <!-- Adaptation-state banner -->
+            <!-- Coach stance banner -->
             <div id="coachBanner" class="coach-banner"></div>
 
-            <!-- Form + readiness strip -->
-            <div class="coach-strip">
-                <div class="analytics-card coach-form-card">
+            <!-- Today's workout + Readiness & Form -->
+            <div class="today-grid">
+                <div class="analytics-card today-workout-card" id="todayWorkoutCard">
                     <div class="analytics-card-header">
-                        <h3 class="analytics-card-title">Current Form</h3>
+                        <h3 class="analytics-card-title">Today's Session</h3>
+                        <span class="today-week-chip" id="todayWeekChip"></span>
+                    </div>
+                    <div id="todayWorkout" class="today-workout-body"></div>
+                </div>
+
+                <div class="analytics-card today-readiness-card">
+                    <div class="analytics-card-header">
+                        <h3 class="analytics-card-title">Readiness &amp; Form</h3>
                         <span id="coachFormBadge" class="coach-form-badge"></span>
                     </div>
                     <div id="coachFormStrip" class="coach-form-strip"></div>
-                    <p class="coach-form-caption">Fitness (CTL) builds slowly; Fatigue (ATL) reacts to recent work; Form (TSB) is the balance &mdash; positive means fresh, deeply negative means digging in.</p>
+                    <div id="todayReadiness" class="today-readiness-block"></div>
                 </div>
-                <div class="analytics-card coach-readiness-card">
-                    <div class="analytics-card-header">
-                        <h3 class="analytics-card-title">Race Readiness</h3>
-                    </div>
-                    <div id="coachReadiness" class="coach-readiness-body"></div>
+            </div>
+
+            <!-- This week's execution strip -->
+            <div class="analytics-card today-week-card">
+                <div class="analytics-card-header">
+                    <h3 class="analytics-card-title">This Week's Execution</h3>
+                    <span class="today-week-volume" id="todayWeekVolume"></span>
                 </div>
+                <div id="todayWeekStrip" class="today-week-strip"></div>
+                <div class="today-week-progress">
+                    <div class="today-week-progress-track"><div class="today-week-progress-fill" id="todayWeekProgressFill"></div></div>
+                </div>
+            </div>
+
+            <!-- Coach's note (week pulse + patterns) -->
+            <div class="analytics-card coach-why-card" id="todayNoteCard">
+                <div class="analytics-card-header">
+                    <h3 class="analytics-card-title">Coach's Note</h3>
+                </div>
+                <div id="coachWeekPulse" class="coach-week-pulse"></div>
+                <div id="coachPatterns" class="coach-patterns"></div>
+            </div>
+
+        </div><!-- /todayContent -->
+    </div><!-- /analyticsToday -->
+
+    <!-- ===================== SIGNALS tab ===================== -->
+    <div id="analyticsSignals" class="analytics-tab-panel" role="tabpanel" aria-labelledby="atab-signals" style="display:none;">
+
+        <div id="signalsPrompt" class="coach-prompt" style="display:none;">
+            <div class="coach-prompt-icon">&#x1F4E1;</div>
+            <h2>Pick a training plan</h2>
+            <p>Choose a plan to see exactly what your coach sees &mdash; the six adaptation signals, how they're weighted in your current phase, and how they combine into your plan adjustment.</p>
+        </div>
+
+        <div id="signalsLoading" class="analytics-loading" style="display:none;">
+            <div class="analytics-loading-spinner"></div>
+            <p>Analyzing your signals&hellip;</p>
+        </div>
+
+        <div id="signalsEmpty" class="analytics-empty" style="display:none;">
+            <div class="analytics-empty-icon">&#x1F4CA;</div>
+            <h2>Not enough data yet</h2>
+            <p id="signalsEmptyText">Log at least 3 runs linked to this plan to unlock your adaptation signals.</p>
+        </div>
+
+        <div id="signalsContent" style="display:none;">
+
+            <!-- Signal overview: stance + table -->
+            <div class="analytics-card signals-overview-card">
+                <div class="analytics-card-header">
+                    <h3 class="analytics-card-title">Signal Overview</h3>
+                    <span id="coachMultiplierChip" class="coach-mult-chip"></span>
+                </div>
+                <p id="coachWhy" class="coach-why-text"></p>
+                <div id="signalsTable" class="signals-table-wrap"></div>
             </div>
 
             <!-- "What your coach sees" — 6-signal radar -->
             {% include "components/coach_signal_panel.html" %}
 
-            <!-- Why your plan is evolving -->
-            <div class="analytics-card coach-why-card">
+            <!-- Expandable signal detail cards -->
+            <div id="signalsDetail" class="signals-detail"></div>
+
+            <!-- How the coach decides — phase weight comparison -->
+            <div class="analytics-card signals-phase-card">
                 <div class="analytics-card-header">
-                    <h3 class="analytics-card-title">Why your plan is evolving</h3>
-                    <span id="coachMultiplierChip" class="coach-mult-chip"></span>
+                    <h3 class="analytics-card-title">How the Coach Decides</h3>
+                    <span class="coach-signal-sub">phase weighting</span>
                 </div>
-                <p id="coachWhy" class="coach-why-text"></p>
-                <div id="coachPatterns" class="coach-patterns"></div>
-                <div id="coachWeekPulse" class="coach-week-pulse"></div>
+                <p class="signals-phase-intro" id="signalsPhaseIntro"></p>
+                <div id="signalsPhaseTable" class="signals-phase-table-wrap"></div>
             </div>
 
             <!-- Adaptation history timeline -->
             {% include "components/adaptation_timeline.html" %}
 
-        </div><!-- /coachContent -->
-
-    </div><!-- /analyticsCoach -->
+        </div><!-- /signalsContent -->
+    </div><!-- /analyticsSignals -->
 
     <!-- Loading state -->
     <div id="analyticsLoading" class="analytics-loading">
@@ -173,8 +237,64 @@
         <p>Log runs manually or connect Strava to see your analytics dashboard.</p>
     </div>
 
-    <!-- Performance tab -->
-    <div id="analyticsDashboard" class="analytics-tab-panel" role="tabpanel" aria-labelledby="atab-dashboard" style="display:none;">
+    <!-- Progress tab -->
+    <div id="analyticsProgress" class="analytics-tab-panel" role="tabpanel" aria-labelledby="atab-progress" style="display:none;">
+
+        <!-- ── Plan-scoped progress (lifted to the top when a plan is selected) ── -->
+        <div id="planScopedSection" style="display:none;">
+
+            <div class="progress-grid">
+                <!-- Race Readiness gauge -->
+                <div class="analytics-card" id="readinessCard">
+                    <div class="analytics-card-header">
+                        <h3 class="analytics-card-title">Race Readiness</h3>
+                    </div>
+                    <div class="readiness-loading" id="analyticsReadinessLoading">
+                        <div class="analytics-loading-spinner"></div>
+                        <p>Analyzing readiness&hellip;</p>
+                    </div>
+                    <div id="analyticsReadinessContent" style="display:none;"></div>
+                    <div id="analyticsReadinessEmpty" style="display:none;">
+                        <p class="analytics-empty-text">Set a start date and log some runs to see readiness.</p>
+                    </div>
+                </div>
+
+                <!-- Gap Analysis -->
+                <div class="analytics-card" id="gapAnalysisCard">
+                    <div class="analytics-card-header">
+                        <h3 class="analytics-card-title">Gap Analysis</h3>
+                    </div>
+                    <div class="readiness-loading" id="analyticsGapLoading">
+                        <div class="analytics-loading-spinner"></div>
+                        <p>Analyzing gaps&hellip;</p>
+                    </div>
+                    <div id="analyticsGapContent" style="display:none;"></div>
+                    <div id="analyticsGapEmpty" style="display:none;">
+                        <p class="analytics-empty-text">Set a start date and log some runs to see gap analysis.</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Gap Trend -->
+            <div class="analytics-card chart-wide" id="gapTrendChartCard" style="display:none;">
+                <div class="analytics-card-header">
+                    <h3 class="analytics-card-title">Gap Trend</h3>
+                </div>
+                <div class="chart-canvas-wrap">
+                    <canvas id="gapTrendChart"></canvas>
+                </div>
+            </div>
+
+            <!-- Workout Adherence Heatmap -->
+            <div class="analytics-card chart-wide" id="adherenceHeatmapCard" style="display:none;">
+                <div class="analytics-card-header">
+                    <h3 class="analytics-card-title">Workout Adherence</h3>
+                </div>
+                <div class="adherence-heatmap-wrap" id="adherenceHeatmap"></div>
+            </div>
+
+            <h2 class="progress-section-heading">Training overview</h2>
+        </div>
 
         <!-- ── Hero Stats ── -->
         <div class="hero-stats-row">
@@ -389,59 +509,6 @@
                 </div>
             </div>
 
-            <!-- ── Plan-scoped section (visible when a plan is selected) ── -->
-            <div id="planScopedSection" style="display:none;">
-
-                <!-- Race Readiness -->
-                <div class="analytics-card chart-wide" id="readinessCard">
-                    <div class="analytics-card-header">
-                        <h3 class="analytics-card-title">Race Readiness</h3>
-                    </div>
-                    <div class="readiness-loading" id="analyticsReadinessLoading">
-                        <div class="analytics-loading-spinner"></div>
-                        <p>Analyzing readiness&hellip;</p>
-                    </div>
-                    <div id="analyticsReadinessContent" style="display:none;"></div>
-                    <div id="analyticsReadinessEmpty" style="display:none;">
-                        <p class="analytics-empty-text">Set a start date and log some runs to see readiness.</p>
-                    </div>
-                </div>
-
-                <!-- Gap Analysis -->
-                <div class="analytics-card chart-wide" id="gapAnalysisCard">
-                    <div class="analytics-card-header">
-                        <h3 class="analytics-card-title">Gap Analysis</h3>
-                    </div>
-                    <div class="readiness-loading" id="analyticsGapLoading">
-                        <div class="analytics-loading-spinner"></div>
-                        <p>Analyzing gaps&hellip;</p>
-                    </div>
-                    <div id="analyticsGapContent" style="display:none;"></div>
-                    <div id="analyticsGapEmpty" style="display:none;">
-                        <p class="analytics-empty-text">Set a start date and log some runs to see gap analysis.</p>
-                    </div>
-                </div>
-
-                <!-- Gap Trend -->
-                <div class="analytics-card chart-wide" id="gapTrendChartCard" style="display:none;">
-                    <div class="analytics-card-header">
-                        <h3 class="analytics-card-title">Gap Trend</h3>
-                    </div>
-                    <div class="chart-canvas-wrap">
-                        <canvas id="gapTrendChart"></canvas>
-                    </div>
-                </div>
-
-                <!-- Workout Adherence Heatmap -->
-                <div class="analytics-card chart-wide" id="adherenceHeatmapCard" style="display:none;">
-                    <div class="analytics-card-header">
-                        <h3 class="analytics-card-title">Workout Adherence</h3>
-                    </div>
-                    <div class="adherence-heatmap-wrap" id="adherenceHeatmap"></div>
-                </div>
-
-            </div><!-- /planScopedSection -->
-
         </div>
 
         <!-- ── Recent Runs ── -->
@@ -453,10 +520,18 @@
             <div id="recentRunsList" class="recent-runs-list"></div>
         </div>
 
-    </div><!-- /analyticsDashboard -->
+    </div><!-- /analyticsProgress -->
 
     <!-- Insights tab -->
     <div id="analyticsInsightsTab" class="analytics-tab-panel" role="tabpanel" aria-labelledby="atab-insights" style="display:none;">
+
+        <!-- Coach's Assessment -->
+        <div class="analytics-card coach-assessment-card" id="coachAssessmentCard" style="display:none;">
+            <div class="analytics-card-header">
+                <h3 class="analytics-card-title">Coach's Assessment</h3>
+            </div>
+            <p id="coachAssessment" class="coach-assessment-text"></p>
+        </div>
 
         <!-- Profile summary strip -->
         <div class="profile-summary" id="profileSummary" style="display:none;">
@@ -479,6 +554,23 @@
             <div class="profile-stat">
                 <span class="profile-stat-value" id="profileEasyPct">--</span>
                 <span class="profile-stat-label">easy %</span>
+            </div>
+        </div>
+
+        <!-- Training age + consistency + workout mix -->
+        <div class="insights-meta-grid" id="insightsMetaGrid" style="display:none;">
+            <div class="analytics-card training-age-card">
+                <div class="analytics-card-header">
+                    <h3 class="analytics-card-title">Training Age</h3>
+                </div>
+                <div class="training-age-strip" id="trainingAgeStrip"></div>
+            </div>
+            <div class="analytics-card workout-mix-card">
+                <div class="analytics-card-header">
+                    <h3 class="analytics-card-title">Workout Mix</h3>
+                    <span class="coach-signal-sub">all logged runs</span>
+                </div>
+                <div class="workout-mix" id="workoutMix"></div>
             </div>
         </div>
 
@@ -605,6 +697,8 @@
 <script src="{{ static_url('js/analytics/analytics_render.js') }}" defer></script>
 <script src="{{ static_url('js/analytics/analytics_signal_chart.js') }}" defer></script>
 <script src="{{ static_url('js/analytics/analytics_coach.js') }}" defer></script>
+<script src="{{ static_url('js/analytics/analytics_today.js') }}" defer></script>
+<script src="{{ static_url('js/analytics/analytics_signals.js') }}" defer></script>
 <script src="{{ static_url('js/analytics/analytics_charts.js') }}" defer></script>
 <script src="{{ static_url('js/analytics/analytics_predictions.js') }}" defer></script>
 <script src="{{ static_url('js/analytics/analytics_records.js') }}" defer></script>
