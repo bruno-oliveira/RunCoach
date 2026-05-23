@@ -751,6 +751,8 @@
 {% endblock %}
 
 {% block scripts %}
+<script src="{{ static_url('js/plan/plan_tabs.js') }}" defer></script>
+<script src="{{ static_url('js/plan/plan_core.js') }}" defer></script>
 <script>
     function switchPlanTab(tabName) {
         document.querySelectorAll('.plan-tab').forEach(function(t) {
