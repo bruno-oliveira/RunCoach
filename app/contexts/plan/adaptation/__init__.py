@@ -53,6 +53,11 @@ class AdaptationService:
     ) -> Dict[str, Any]:
         return plan_adjuster.preview_adjust_plan(plan_id, user_id, db)
 
+    def preview_adjust_signals(
+        self, plan_id: str, user_id: str, db: Session
+    ) -> Optional[Dict[str, Any]]:
+        return plan_adjuster.preview_adjust_signals(plan_id, user_id, db)
+
     def reset_adjustment(
         self, plan_id: str, user_id: str, db: Session
     ) -> Dict[str, Any]:

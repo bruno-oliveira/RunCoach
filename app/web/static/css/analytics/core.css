@@ -1,0 +1,156 @@
+/* ============================================================================
+   Analytics Dashboard — Performance Hub
+   ========================================================================= */
+
+/* ── Page Layout ── */
+.analytics-page {
+    padding: var(--space-6) var(--space-4) var(--space-16);
+    max-width: 1100px;
+    margin: 0 auto;
+}
+
+/* ── Page Header ── */
+.analytics-page-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: var(--space-4);
+    margin-bottom: var(--space-8);
+    padding-bottom: var(--space-6);
+    border-bottom: 1px solid var(--color-border-subtle);
+}
+
+.analytics-page-title {
+    font-family: var(--font-display);
+    font-size: var(--text-3xl);
+    font-weight: var(--weight-extrabold);
+    color: var(--color-text);
+    letter-spacing: var(--tracking-tight);
+    margin: 0 0 var(--space-1);
+    line-height: var(--leading-tight);
+}
+
+.analytics-page-sub {
+    font-size: var(--text-sm);
+    color: var(--color-text-secondary);
+    margin: 0;
+}
+
+.analytics-page-header-right {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    flex-shrink: 0;
+}
+
+/* ── Period Select ── */
+.period-select {
+    padding: 8px 14px;
+    border: 1.5px solid var(--color-border);
+    border-radius: var(--radius-lg);
+    font-size: var(--text-sm);
+    font-family: var(--font-body);
+    font-weight: var(--weight-semibold);
+    color: var(--color-text);
+    background: var(--color-bg-elevated);
+    cursor: pointer;
+    transition: border-color 150ms ease, box-shadow 150ms ease;
+    min-height: 38px;
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%236B6560' stroke-width='1.5' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 10px center;
+    padding-right: 32px;
+}
+
+.period-select:focus {
+    outline: none;
+    border-color: var(--color-primary);
+    box-shadow: 0 0 0 3px var(--color-primary-subtle);
+}
+
+/* ── Custom Days Input ── */
+.custom-days-wrap {
+    display: flex;
+    align-items: center;
+    gap: var(--space-1);
+}
+
+.custom-days-input {
+    width: 72px;
+    padding: 8px 10px;
+    border: 1.5px solid var(--color-border);
+    border-radius: var(--radius-lg);
+    font-size: var(--text-sm);
+    font-family: var(--font-body);
+    font-weight: var(--weight-semibold);
+    color: var(--color-text);
+    background: var(--color-bg-elevated);
+    min-height: 38px;
+    text-align: center;
+    transition: border-color 150ms ease, box-shadow 150ms ease;
+}
+
+.custom-days-input:focus {
+    outline: none;
+    border-color: var(--color-primary);
+    box-shadow: 0 0 0 3px var(--color-primary-subtle);
+}
+
+/* hide browser spin arrows */
+.custom-days-input::-webkit-inner-spin-button,
+.custom-days-input::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+.custom-days-input[type=number] { -moz-appearance: textfield; }
+
+.custom-days-apply {
+    padding: 8px 12px;
+    border: 1.5px solid var(--color-primary);
+    border-radius: var(--radius-lg);
+    font-size: var(--text-sm);
+    font-family: var(--font-body);
+    font-weight: var(--weight-semibold);
+    color: var(--color-primary);
+    background: transparent;
+    cursor: pointer;
+    min-height: 38px;
+    transition: background 150ms ease, color 150ms ease;
+}
+
+.custom-days-apply:hover {
+    background: var(--color-primary);
+    color: #fff;
+}
+
+.custom-days-apply:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+/* ── Strava Sync Indicator ── */
+.strava-sync-indicator {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    padding: 6px 12px;
+    background: var(--color-primary-subtle);
+    border: 1px solid rgba(29, 78, 216, 0.2);
+    border-radius: var(--radius-full);
+}
+
+.strava-sync-spinner {
+    width: 12px;
+    height: 12px;
+    border: 2px solid transparent;
+    border-top-color: var(--color-primary);
+    border-radius: var(--radius-full);
+    animation: spin 0.7s linear infinite;
+    flex-shrink: 0;
+}
+
+.strava-sync-label {
+    font-size: var(--text-xs);
+    font-weight: var(--weight-semibold);
+    color: var(--color-primary);
+    white-space: nowrap;
+}
+

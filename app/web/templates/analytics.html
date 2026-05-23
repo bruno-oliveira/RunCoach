@@ -3,7 +3,14 @@
 {% block title %}RunCoach — Analytics{% endblock %}
 
 {% block styles %}
-<link rel="stylesheet" href="{{ static_url('css/analytics.css') }}">
+<link rel="stylesheet" href="{{ static_url('css/analytics/core.css') }}">
+<link rel="stylesheet" href="{{ static_url('css/analytics/stats.css') }}">
+<link rel="stylesheet" href="{{ static_url('css/analytics/charts.css') }}">
+<link rel="stylesheet" href="{{ static_url('css/analytics/predictions.css') }}">
+<link rel="stylesheet" href="{{ static_url('css/analytics/plan.css') }}">
+<link rel="stylesheet" href="{{ static_url('css/analytics/insights.css') }}">
+<link rel="stylesheet" href="{{ static_url('css/analytics/evolution.css') }}">
+<link rel="stylesheet" href="{{ static_url('css/analytics/coach.css') }}">
 <link rel="stylesheet" href="{{ static_url('css/plan-readiness.css') }}">
 <link rel="stylesheet" href="{{ static_url('css/plan-gaps.css') }}">
 <link rel="stylesheet" href="{{ static_url('css/share.css') }}">
@@ -57,20 +64,26 @@
     </div>
 
     <!-- Tab navigation -->
-    <nav class="analytics-tabs" id="analyticsTabs" style="display:none;">
-        <button class="analytics-tab analytics-tab--active" data-tab="dashboard">
+    <nav class="analytics-tabs" id="analyticsTabs" role="tablist" aria-label="Analytics views" style="display:none;">
+        <button class="analytics-tab analytics-tab--active" role="tab" aria-selected="true" aria-controls="analyticsCoach" id="atab-coach" data-tab="coach">
+            <svg class="analytics-tab-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="10"/><polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"/>
+            </svg>
+            <span>Coach</span>
+        </button>
+        <button class="analytics-tab" role="tab" aria-selected="false" aria-controls="analyticsDashboard" id="atab-dashboard" data-tab="dashboard">
             <svg class="analytics-tab-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                 <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/>
             </svg>
-            <span>Dashboard</span>
+            <span>Performance</span>
         </button>
-        <button class="analytics-tab" data-tab="evolution">
+        <button class="analytics-tab" role="tab" aria-selected="false" aria-controls="analyticsEvolutionTab" id="atab-evolution" data-tab="evolution">
             <svg class="analytics-tab-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                 <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
             </svg>
             <span>Evolution</span>
         </button>
-        <button class="analytics-tab" data-tab="insights">
+        <button class="analytics-tab" role="tab" aria-selected="false" aria-controls="analyticsInsightsTab" id="atab-insights" data-tab="insights">
             <svg class="analytics-tab-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                 <circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/>
             </svg>
@@ -78,6 +91,74 @@
             <span class="insights-badge" id="insightsBadge" style="display:none;">0</span>
         </button>
     </nav>
+
+    <!-- Coach tab -->
+    <div id="analyticsCoach" class="analytics-tab-panel" role="tabpanel" aria-labelledby="atab-coach" style="display:none;">
+
+        <!-- Prompt shown when no plan is selected (All runs scope) -->
+        <div id="coachPrompt" class="coach-prompt" style="display:none;">
+            <div class="coach-prompt-icon">&#x1F9ED;</div>
+            <h2>Pick a training plan</h2>
+            <p>Choose a plan from the menu above to see what your coach sees &mdash; your adaptation signals, current form, race readiness, and why your plan is evolving.</p>
+        </div>
+
+        <!-- Loading -->
+        <div id="coachLoading" class="analytics-loading" style="display:none;">
+            <div class="analytics-loading-spinner"></div>
+            <p>Reading your training&hellip;</p>
+        </div>
+
+        <!-- Insufficient-data state -->
+        <div id="coachEmpty" class="analytics-empty" style="display:none;">
+            <div class="analytics-empty-icon">&#x1F4CA;</div>
+            <h2>Not enough data yet</h2>
+            <p id="coachEmptyText">Log at least 3 runs linked to this plan to unlock your coach view.</p>
+        </div>
+
+        <!-- Content -->
+        <div id="coachContent" style="display:none;">
+
+            <!-- Adaptation-state banner -->
+            <div id="coachBanner" class="coach-banner"></div>
+
+            <!-- Form + readiness strip -->
+            <div class="coach-strip">
+                <div class="analytics-card coach-form-card">
+                    <div class="analytics-card-header">
+                        <h3 class="analytics-card-title">Current Form</h3>
+                        <span id="coachFormBadge" class="coach-form-badge"></span>
+                    </div>
+                    <div id="coachFormStrip" class="coach-form-strip"></div>
+                    <p class="coach-form-caption">Fitness (CTL) builds slowly; Fatigue (ATL) reacts to recent work; Form (TSB) is the balance &mdash; positive means fresh, deeply negative means digging in.</p>
+                </div>
+                <div class="analytics-card coach-readiness-card">
+                    <div class="analytics-card-header">
+                        <h3 class="analytics-card-title">Race Readiness</h3>
+                    </div>
+                    <div id="coachReadiness" class="coach-readiness-body"></div>
+                </div>
+            </div>
+
+            <!-- "What your coach sees" — 6-signal radar -->
+            {% include "components/coach_signal_panel.html" %}
+
+            <!-- Why your plan is evolving -->
+            <div class="analytics-card coach-why-card">
+                <div class="analytics-card-header">
+                    <h3 class="analytics-card-title">Why your plan is evolving</h3>
+                    <span id="coachMultiplierChip" class="coach-mult-chip"></span>
+                </div>
+                <p id="coachWhy" class="coach-why-text"></p>
+                <div id="coachPatterns" class="coach-patterns"></div>
+                <div id="coachWeekPulse" class="coach-week-pulse"></div>
+            </div>
+
+            <!-- Adaptation history timeline -->
+            {% include "components/adaptation_timeline.html" %}
+
+        </div><!-- /coachContent -->
+
+    </div><!-- /analyticsCoach -->
 
     <!-- Loading state -->
     <div id="analyticsLoading" class="analytics-loading">
@@ -92,8 +173,8 @@
         <p>Log runs manually or connect Strava to see your analytics dashboard.</p>
     </div>
 
-    <!-- Dashboard tab -->
-    <div id="analyticsDashboard" class="analytics-tab-panel" style="display:none;">
+    <!-- Performance tab -->
+    <div id="analyticsDashboard" class="analytics-tab-panel" role="tabpanel" aria-labelledby="atab-dashboard" style="display:none;">
 
         <!-- ── Hero Stats ── -->
         <div class="hero-stats-row">
@@ -375,7 +456,7 @@
     </div><!-- /analyticsDashboard -->
 
     <!-- Insights tab -->
-    <div id="analyticsInsightsTab" class="analytics-tab-panel" style="display:none;">
+    <div id="analyticsInsightsTab" class="analytics-tab-panel" role="tabpanel" aria-labelledby="atab-insights" style="display:none;">
 
         <!-- Profile summary strip -->
         <div class="profile-summary" id="profileSummary" style="display:none;">
@@ -420,7 +501,7 @@
     </div><!-- /analyticsInsightsTab -->
 
     <!-- Evolution Over Time tab -->
-    <div id="analyticsEvolutionTab" class="analytics-tab-panel" style="display:none;">
+    <div id="analyticsEvolutionTab" class="analytics-tab-panel" role="tabpanel" aria-labelledby="atab-evolution" style="display:none;">
 
         <!-- Period selector -->
         <div class="evolution-controls">
@@ -522,6 +603,8 @@
 <script src="{{ static_url('js/share/share_renderer.js') }}" defer></script>
 <script src="{{ static_url('js/analytics/analytics_dashboard.js') }}" defer></script>
 <script src="{{ static_url('js/analytics/analytics_render.js') }}" defer></script>
+<script src="{{ static_url('js/analytics/analytics_signal_chart.js') }}" defer></script>
+<script src="{{ static_url('js/analytics/analytics_coach.js') }}" defer></script>
 <script src="{{ static_url('js/analytics/analytics_charts.js') }}" defer></script>
 <script src="{{ static_url('js/analytics/analytics_predictions.js') }}" defer></script>
 <script src="{{ static_url('js/analytics/analytics_records.js') }}" defer></script>

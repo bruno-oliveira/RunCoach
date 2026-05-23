@@ -17,7 +17,7 @@ const AnalyticsDashboard = {
     acwrData: null,
     prData: null,
     insightsData: null,
-    activeTab: 'dashboard',
+    activeTab: 'coach',
     evolutionPeriodDays: 90,
     evolutionInitialized: false,
     evolutionCharts: {},
@@ -64,8 +64,22 @@ const AnalyticsDashboard = {
             const tabs = document.getElementById('analyticsTabs');
             if (tabs) tabs.style.display = 'flex';
 
+            // Coaching-first default: scope to the most recent plan if one has
+            // runs, so the Coach tab lands with data. Falls back to all-runs.
+            const planSel = document.getElementById('planSelector');
+            if (planSel && planSel.options.length > 1) {
+                planSel.value = planSel.options[1].value;
+                this.currentPlanId = planSel.value || null;
+                await this.loadRuns();
+                if (this.allRuns.length === 0) {
+                    planSel.value = '';
+                    this.currentPlanId = null;
+                    await this.loadRuns();
+                }
+            }
+
             dashboard.style.display = 'block';
-            this.filterByPeriod(30);
+            this.filterByPeriod(this.currentPlanId ? 'all' : 30);
             this.bindGroupingControls();
             this.bindPeriodSelector();
             this.bindPlanSelector();
@@ -77,6 +91,10 @@ const AnalyticsDashboard = {
             this.loadTrainingLoad();
             this.loadPersonalRecords();
             this.loadInsights();
+            if (this.currentPlanId) this.showPlanSection(this.currentPlanId);
+
+            // Charts are now sized (dashboard was visible); lead with Coach.
+            this.switchTab('coach');
         } catch (err) {
             console.error('Analytics load error:', err);
             loading.style.display = 'none';
@@ -416,11 +434,20 @@ const AnalyticsDashboard = {
             try {
                 await this.loadRuns();
                 if (loading) loading.style.display = 'none';
+
+                // The Coach tab is plan-scoped: refresh it on every plan change
+                // (even when it is the active panel and the run list is empty).
+                if (this.activeTab === 'coach') {
+                    if (dashboard) dashboard.style.display = 'none';
+                    this.loadCoach(this.currentPlanId);
+                }
+
                 if (this.allRuns.length === 0) {
-                    if (empty) empty.style.display = 'block';
+                    if (this.activeTab !== 'coach' && empty) empty.style.display = 'block';
+                    if (this.currentPlanId) this.showPlanSection(this.currentPlanId);
                     return;
                 }
-                if (dashboard) dashboard.style.display = 'block';
+                if (this.activeTab !== 'coach' && dashboard) dashboard.style.display = 'block';
                 this.filterByPeriod(this.currentPlanId ? 'all' : this.currentPeriodDays);
                 if (this.currentPlanId) {
                     this.showPlanSection(this.currentPlanId);
@@ -453,12 +480,24 @@ const AnalyticsDashboard = {
     /*  Tab Switching                                                      */
     /* ------------------------------------------------------------------ */
     bindTabSwitching() {
-        const tabs = document.querySelectorAll('.analytics-tab');
-        tabs.forEach(tab => {
+        const tabs = Array.from(document.querySelectorAll('.analytics-tab'));
+        tabs.forEach((tab, idx) => {
             tab.addEventListener('click', () => {
                 const target = tab.dataset.tab;
                 if (target === this.activeTab) return;
                 this.switchTab(target);
+            });
+            // Roving-tabindex keyboard support for the tablist (WAI-ARIA).
+            tab.addEventListener('keydown', (e) => {
+                let next = null;
+                if (e.key === 'ArrowRight' || e.key === 'ArrowDown') next = (idx + 1) % tabs.length;
+                else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') next = (idx - 1 + tabs.length) % tabs.length;
+                else if (e.key === 'Home') next = 0;
+                else if (e.key === 'End') next = tabs.length - 1;
+                if (next === null) return;
+                e.preventDefault();
+                tabs[next].focus();
+                this.switchTab(tabs[next].dataset.tab);
             });
         });
     },
@@ -466,15 +505,24 @@ const AnalyticsDashboard = {
     switchTab(tabName) {
         this.activeTab = tabName;
         document.querySelectorAll('.analytics-tab').forEach(t => {
-            t.classList.toggle('analytics-tab--active', t.dataset.tab === tabName);
+            const active = t.dataset.tab === tabName;
+            t.classList.toggle('analytics-tab--active', active);
+            t.setAttribute('aria-selected', active ? 'true' : 'false');
+            t.tabIndex = active ? 0 : -1;
         });
-        const dashboard = document.getElementById('analyticsDashboard');
-        const insights  = document.getElementById('analyticsInsightsTab');
-        const evolution = document.getElementById('analyticsEvolutionTab');
-        if (dashboard) dashboard.style.display = tabName === 'dashboard' ? 'block' : 'none';
-        if (insights)  insights.style.display  = tabName === 'insights'  ? 'block' : 'none';
-        if (evolution) evolution.style.display = tabName === 'evolution' ? 'block' : 'none';
+        const panels = {
+            coach:     document.getElementById('analyticsCoach'),
+            dashboard: document.getElementById('analyticsDashboard'),
+            insights:  document.getElementById('analyticsInsightsTab'),
+            evolution: document.getElementById('analyticsEvolutionTab'),
+        };
+        for (const [name, el] of Object.entries(panels)) {
+            if (el) el.style.display = name === tabName ? 'block' : 'none';
+        }
 
+        if (tabName === 'coach' && this.coachLoadedPlanId !== this.currentPlanId) {
+            this.loadCoach(this.currentPlanId);
+        }
         if (tabName === 'evolution' && !this.evolutionInitialized) {
             this.evolutionInitialized = true;
             this.loadEvolution();

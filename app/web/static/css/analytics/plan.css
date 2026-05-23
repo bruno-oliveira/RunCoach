@@ -1,0 +1,178 @@
+/* ============================================================================
+   Plan-scoped Analytics Section
+   ========================================================================= */
+
+#planScopedSection {
+    display: contents;
+}
+
+.analytics-empty-text {
+    font-size: var(--text-sm);
+    color: var(--color-text-muted);
+    padding: var(--space-4) 0;
+    text-align: center;
+}
+
+/* Readiness inside analytics — reuse plan-readiness.css classes */
+#analyticsReadinessContent .readiness-hero {
+    margin-bottom: var(--space-4);
+}
+
+#analyticsReadinessContent .readiness-components {
+    margin-bottom: var(--space-4);
+}
+
+#analyticsReadinessContent .readiness-scenarios-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: var(--space-3);
+}
+
+#analyticsReadinessContent .readiness-scenario {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding: var(--space-3);
+    background: var(--color-bg-subtle);
+    border-radius: var(--radius-lg);
+    text-align: center;
+}
+
+#analyticsReadinessContent .readiness-scenario-name {
+    font-weight: var(--weight-bold);
+    font-size: var(--text-sm);
+}
+
+#analyticsReadinessContent .readiness-scenario-time {
+    font-family: var(--font-display);
+    font-size: var(--text-lg);
+    font-weight: var(--weight-bold);
+}
+
+#analyticsReadinessContent .readiness-scenario-pace {
+    font-size: var(--text-xs);
+    color: var(--color-text-secondary);
+}
+
+#analyticsReadinessContent .readiness-scenario-prob {
+    font-size: 10px;
+    color: var(--color-text-muted);
+}
+
+/* Gap analysis inside analytics */
+.gap-overall {
+    font-size: var(--text-sm);
+    margin-bottom: var(--space-3);
+}
+
+.gap-verdict {
+    font-weight: var(--weight-bold);
+    padding: 2px 8px;
+    border-radius: var(--radius-full);
+    font-size: var(--text-xs);
+}
+
+.gap-verdict--on_track { color: #065F46; background: #D1FAE5; }
+.gap-verdict--close { color: #92400E; background: #FEF3C7; }
+.gap-verdict--behind { color: #9A3412; background: #FFEDD5; }
+.gap-verdict--far_behind { color: #991B1B; background: #FEE2E2; }
+.gap-verdict--needs_attention { color: #9A3412; background: #FFEDD5; }
+.gap-verdict--insufficient_data { color: var(--color-text-muted); background: var(--color-bg-subtle); }
+
+.gap-dimensions {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+}
+
+.gap-dimension-row {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-1);
+}
+
+.gap-dim-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.gap-dim-label {
+    font-size: var(--text-sm);
+    font-weight: var(--weight-medium);
+}
+
+.gap-bar-track {
+    height: 6px;
+    background: var(--color-bg-subtle);
+    border-radius: var(--radius-full);
+    overflow: hidden;
+}
+
+.gap-bar-fill {
+    height: 100%;
+    border-radius: var(--radius-full);
+    transition: width 0.3s ease;
+}
+
+.gap-dim-detail {
+    font-size: var(--text-xs);
+    color: var(--color-text-muted);
+}
+
+/* ── Analytics Tabs ── */
+.analytics-tabs {
+    display: flex;
+    gap: var(--space-1);
+    margin-bottom: var(--space-6);
+    border-bottom: 2px solid var(--color-border-subtle);
+    padding-bottom: 0;
+}
+
+.analytics-tab {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    padding: var(--space-3) var(--space-4);
+    border: none;
+    background: none;
+    font-family: var(--font-body);
+    font-size: var(--text-sm);
+    font-weight: var(--weight-semibold);
+    color: var(--color-text-muted);
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    margin-bottom: -2px;
+    transition: color 150ms ease, border-color 150ms ease;
+}
+
+.analytics-tab:hover {
+    color: var(--color-text);
+}
+
+.analytics-tab--active {
+    color: var(--color-primary);
+    border-bottom-color: var(--color-primary);
+}
+
+.analytics-tab-icon {
+    width: 18px;
+    height: 18px;
+    flex-shrink: 0;
+}
+
+.insights-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 20px;
+    height: 20px;
+    padding: 0 6px;
+    border-radius: var(--radius-full);
+    background: var(--color-primary);
+    color: #fff;
+    font-size: 11px;
+    font-weight: var(--weight-bold);
+    line-height: 1;
+}
+

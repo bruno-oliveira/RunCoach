@@ -6,6 +6,11 @@ from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 
+from app.application.coach_summary_service import (
+    build_adaptation_history,
+    build_coach_patterns,
+    build_coach_summary,
+)
 from app.contexts.plan.plan_helpers import get_plan_or_404
 from app.contexts.plan.repositories import SQLAlchemyPlanRepository
 from app.contexts.runner.fitness.adherence_service import compute_adherence_heatmap
@@ -188,3 +193,41 @@ def get_runner_profile(
     """Get the runner's synthesized profile for plan generation."""
     profile = build_profile(current_user.id, db)
     return profile.to_dict()
+
+
+# ---------------------------------------------------------------------------
+# Coach hub — plan-scoped, read-only views of the adaptation engine
+# ---------------------------------------------------------------------------
+
+
+@analytics_router.get("/coach-summary/{plan_id}")
+def get_coach_summary(
+    plan_id: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """The 6-signal breakdown, multiplier/direction, form, and readiness."""
+    plan = get_plan_or_404(plan_id, db, current_user, require_user_match=True)
+    return build_coach_summary(plan, current_user.id, db)
+
+
+@analytics_router.get("/adaptation-history/{plan_id}")
+def get_adaptation_history(
+    plan_id: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """The persisted adaptation timeline, normalized newest-first."""
+    plan = get_plan_or_404(plan_id, db, current_user, require_user_match=True)
+    return build_adaptation_history(plan)
+
+
+@analytics_router.get("/coach-patterns/{plan_id}")
+def get_coach_patterns(
+    plan_id: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Recency-weighted pace patterns + the inline week-pulse mood line."""
+    plan = get_plan_or_404(plan_id, db, current_user, require_user_match=True)
+    return build_coach_patterns(plan, current_user.id, db)
