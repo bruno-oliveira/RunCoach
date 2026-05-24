@@ -16,6 +16,9 @@ from app.contexts.plan.generators.workout_scaler import (
 from app.contexts.plan.generators.workout_scaler import (
     scale_down as _scale_down,
 )
+from app.contexts.plan.generators.workout_scaler import (
+    set_distance as _set_distance,
+)
 from app.core.coaching.coaching_notes_generator import generate_coaching_note
 from app.core.training import long_run_calculator, phase_calculator, workout_builders
 from app.core.training import workout_distribution as workout_dist_mod
@@ -362,6 +365,133 @@ def generate_daily_workouts(
     return workouts
 
 
+def apply_intensive_weekend(
+    workouts: List[Dict[str, Any]],
+    phase: str,
+    week_number: int,
+    phases: Dict[str, int],
+    week_in_phase: int,
+    total_km: float,
+    target_distance: float,
+    pace_zones: Optional[Dict],
+    trail_profile,
+    terrain: Optional[str],
+) -> Optional[Dict[str, Any]]:
+    """Reshape one peak week into a trail Intensive Training Weekend (ITW).
+
+    Swaps the Saturday long for a trail-quality session (pyramid/ladder on
+    flat/rolling, elevation repeats on hilly/mountainous) and moves the long
+    run onto Sunday as a hike-run (ultra) or back-to-back fatigued long. The
+    Thu/Fri lead-in easy days are trimmed so the weekend lands on fresher legs.
+
+    Both weekend days carry a ``key_workout_id`` so the downstream scaling
+    passes treat them as prescriptive and leave their distances intact. Runs
+    before ``scale_down`` in :func:`build_weekly_plan`. Returns a week-level
+    summary dict when an ITW was applied, else ``None``.
+    """
+    if not phase_calculator.is_intensive_weekend(
+        week_number, phase, phases, trail_profile
+    ):
+        return None
+
+    sat = next((w for w in workouts if w.get("day") == 6), None)
+    if sat is None or sat.get("type") != "long":
+        return None
+    long_distance = sat.get("distance", 0) or 0
+    if long_distance <= 0:
+        return None
+
+    elev = trail_profile.elevation_class
+
+    # Saturday → trail-quality session.
+    if elev in ("flat", "rolling"):
+        quality_id = (
+            "trail_ladder_intervals" if week_in_phase % 2 else "trail_pyramid_intervals"
+        )
+        quality_type = "interval"
+    else:
+        quality_id = "trail_elevation_repeats"
+        quality_type = "hill"
+    quality_budget = round(min(long_distance * 0.5, 12.0), 1)
+    new_sat = build_workout_for_type(
+        quality_type, 6, quality_budget, total_km, phase, pace_zones
+    )
+    overlay_key_workout(
+        new_sat,
+        quality_type,
+        phase,
+        target_distance,
+        week_in_phase,
+        terrain,
+        pace_zones,
+        trail_profile=trail_profile,
+        force_id=quality_id,
+    )
+    new_sat["intensive_weekend"] = True
+    new_sat["itw_role"] = "quality"
+    new_sat["coaching_rationale"] = (
+        "Intensive weekend — day 1. A focused trail-quality session that "
+        "pre-fatigues the legs for tomorrow's long run."
+    )
+
+    # Sunday → long run on fatigued legs.
+    if trail_profile.bracket in ("ultra", "long_ultra") and elev != "flat":
+        long_id = "trail_hike_run_long"
+    else:
+        long_id = "trail_b2b_day2"
+    new_sun = build_workout_for_type(
+        "long", 7, long_distance, total_km, phase, pace_zones
+    )
+    overlay_key_workout(
+        new_sun,
+        "long",
+        phase,
+        target_distance,
+        week_in_phase,
+        terrain,
+        pace_zones,
+        trail_profile=trail_profile,
+        force_id=long_id,
+    )
+    new_sun["intensive_weekend"] = True
+    new_sun["itw_role"] = "long2"
+    new_sun["coaching_rationale"] = (
+        "Intensive weekend — day 2. The big endurance day on legs already "
+        "tired from yesterday — this back-to-back load is what drives the "
+        "overcompensation."
+    )
+
+    workouts[workouts.index(sat)] = new_sat
+    sun = next((w for w in workouts if w.get("day") == 7), None)
+    if sun is not None:
+        workouts[workouts.index(sun)] = new_sun
+    else:
+        workouts.append(new_sun)
+        workouts.sort(key=lambda w: w.get("day", 0))
+
+    # Soften the Thu/Fri lead-in so the weekend lands on fresher legs.
+    for w in workouts:
+        if (
+            w.get("day") in (4, 5)
+            and w.get("type") == "easy"
+            and not w.get("key_workout_id")
+        ):
+            dist = w.get("distance", 0) or 0
+            if dist > 0:
+                _set_distance(w, round(dist * 0.8, 1), pace_zones)
+            w["coaching_rationale"] = (
+                "Ease back today — you're loading for the intensive weekend ahead."
+            )
+
+    return {
+        "applied": True,
+        "quality_id": quality_id,
+        "quality_name": new_sat.get("key_workout_name"),
+        "long_id": long_id,
+        "long_name": new_sun.get("key_workout_name"),
+    }
+
+
 def build_weekly_plan(
     week_number: int,
     total_km: float,
@@ -374,8 +504,14 @@ def build_weekly_plan(
     terrain: Optional[str] = None,
     profile: Optional[Dict[str, Any]] = None,
     trail_profile=None,
+    intensive_weekend_enabled: bool = False,
 ) -> Dict[str, Any]:
-    """Generate a single week's training plan."""
+    """Generate a single week's training plan.
+
+    ``intensive_weekend_enabled`` opts the plan into a trail Intensive
+    Training Weekend on the final peak week (off by default — it's a
+    distinctive, demanding block the runner chooses to activate).
+    """
     phases = phase_calculator.calculate_phases(
         weeks,
         target_distance,
@@ -415,6 +551,21 @@ def build_weekly_plan(
         profile=profile,
         trail_profile=trail_profile,
     )
+
+    intensive_weekend = None
+    if intensive_weekend_enabled:
+        intensive_weekend = apply_intensive_weekend(
+            workouts,
+            phase,
+            week_number,
+            phases,
+            week_in_phase,
+            total_km,
+            target_distance,
+            pace_zones,
+            trail_profile,
+            terrain,
+        )
 
     actual_total_km = _scale_down(workouts, total_km, pace_zones=pace_zones)
     actual_total_km = _fill_shortfall(
@@ -468,6 +619,7 @@ def build_weekly_plan(
         "daily_workouts": workouts,
         "training_tips": training_tips,
         "vertical_simulation": vertical_simulation,
+        "intensive_weekend": intensive_weekend,
         "validation": {"valid": is_valid, "message": validation_message},
         "strength_training": [
             w["strength_session"] for w in workouts if w.get("strength_session")

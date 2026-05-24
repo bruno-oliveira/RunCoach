@@ -328,6 +328,28 @@ _DISTANCE_REWRITES: Dict[str, Callable[[float], str]] = {
         f"Practice your exact fueling strategy. Treat this as a dress "
         f"rehearsal for race day."
     ),
+    # -- Intensive-Weekend sessions --
+    "trail_pyramid_intervals": lambda d: (
+        f"Warm up {_wu_cd(d)[0]:g}km easy. Run a pyramid — 400m, 800m, 1200m, "
+        f"800m, 400m — at strong trail (threshold) effort with equal-distance "
+        f"jog recovery between reps. Cool down {_wu_cd(d)[1]:g}km easy."
+    ),
+    "trail_ladder_intervals": lambda d: (
+        f"Warm up {_wu_cd(d)[0]:g}km easy. Run an ascending ladder — 400m, "
+        f"800m, 1200m, 1600m — at strong trail (threshold) effort with "
+        f"equal-distance jog recovery between reps. Cool down "
+        f"{_wu_cd(d)[1]:g}km easy."
+    ),
+    "trail_hike_run_long": lambda d: (
+        f"Run {d:.1f}km on trails alternating ~9 min easy running with ~1 min "
+        f"power-hiking — hike the climbs, run the flats and descents. "
+        f"Practice race fueling every 30 min."
+    ),
+    "trail_b2b_day2": lambda d: (
+        f"Run {d:.1f}km at easy conversational effort on legs fatigued from "
+        f"yesterday's quality session. Hold the pace back and fuel every "
+        f"30 min — the second day rehearses late-race fatigue."
+    ),
 }
 
 
@@ -373,6 +395,9 @@ _STRUCTURE_REWRITES: Dict[str, Callable[[float], str]] = {
     "trail_flat_soft_surface": lambda d: (
         f"{d:.1f}km continuous at easy effort on soft surface"
     ),
+    # Intensive-Weekend long sessions (distance-bearing structure one-liners)
+    "trail_hike_run_long": lambda d: f"{d:.1f}km alternating run / power-hike blocks",
+    "trail_b2b_day2": lambda d: f"{d:.1f}km easy on fatigued legs",
 }
 
 
@@ -472,7 +497,15 @@ _KEY_WORKOUT_MIN_DISTANCE_KM: Dict[str, float] = {
     "trail_power_hike": 6.0,
     "trail_downhill_technique": 5.0,
     "5k_hill_sprints": 4.0,
+    "trail_pyramid_intervals": 5.0,
+    "trail_ladder_intervals": 5.0,
 }
+
+# Sessions installed only by the intensive-weekend post-pass (via ``force_id``).
+# They presuppose the weekend context (e.g. "fatigued from yesterday"), so they
+# are excluded from the normal ``week_in_phase`` rotation to avoid appearing as
+# standalone sessions and to keep existing rotation expectations stable.
+_ITW_ONLY_IDS = frozenset({"trail_hike_run_long", "trail_b2b_day2"})
 
 
 _BRACKET_RESTRICTIONS: Dict[str, list] = {
@@ -525,7 +558,9 @@ def _filter_candidates(
     candidates = [
         w
         for w in _trail_aware_distance_filter(target_distance, trail_profile)
-        if phase in w["phases"] and w["type"] == workout_type
+        if phase in w["phases"]
+        and w["type"] == workout_type
+        and w["id"] not in _ITW_ONLY_IDS
     ]
 
     # Terrain filter — flat-only or hilly/any otherwise.
@@ -581,6 +616,19 @@ def _resolve_long_steps_builder(
         return _steps_mod.build_rolling_hills_long_steps(distance_km, pace_zones)
     if builder_key == "depletion":
         return _steps_mod.build_depletion_long_steps(distance_km, pace_zones)
+    if builder_key == "pyramid_trail":
+        return _steps_mod.build_pyramid_steps(distance_km, pace_zones, pace_zone="T")
+    if builder_key == "ladder_trail":
+        return _steps_mod.build_ladder_steps(distance_km, pace_zones, pace_zone="T")
+    if builder_key == "hike_run":
+        return _steps_mod.build_hike_run_steps(distance_km, pace_zones)
+    if builder_key == "b2b_day2":
+        steps = _steps_mod.build_long_steps(distance_km, pace_zones, variant="easy")
+        for s in steps:
+            if s.get("kind") == "run":
+                s["note"] = "On fatigued legs from yesterday — hold easy effort"
+                break
+        return steps
     return _steps_mod.build_long_steps(distance_km, pace_zones, variant="easy")
 
 
@@ -609,11 +657,16 @@ def overlay_key_workout(
     terrain: Optional[str] = None,
     pace_zones: Optional[Dict] = None,
     trail_profile=None,
+    force_id: Optional[str] = None,
 ) -> None:
     """Attach key workout metadata, description, and steps for quality sessions.
 
     Replaces any existing ``segments`` with parsed ``steps`` so the template
     always renders session blocks that match the ``structure`` one-liner.
+
+    When ``force_id`` is given, that specific key workout is installed
+    (bypassing the ``week_in_phase`` rotation and the candidate filters) — used
+    by the intensive-weekend post-pass to pin a chosen session.
     """
     if workout_type not in ("interval", "tempo", "hill", "long"):
         return
@@ -622,14 +675,17 @@ def overlay_key_workout(
     if workout.get("duration_min"):
         return
 
-    key_wk = KeyWorkoutLibrary.get_for_phase(
-        target_distance,
-        phase,
-        week_in_phase,
-        workout_type,
-        terrain=terrain,
-        trail_profile=trail_profile,
-    )
+    if force_id is not None:
+        key_wk = KeyWorkoutLibrary.get_by_id(force_id)
+    else:
+        key_wk = KeyWorkoutLibrary.get_for_phase(
+            target_distance,
+            phase,
+            week_in_phase,
+            workout_type,
+            terrain=terrain,
+            trail_profile=trail_profile,
+        )
     if not key_wk:
         return
     if pace_zones:
@@ -748,11 +804,27 @@ class KeyWorkoutLibrary:
         return candidates[week_in_phase % len(candidates)]
 
     @classmethod
+    def get_by_id(cls, workout_id: str) -> Optional[Dict]:
+        """Return the key workout with the given id, or None.
+
+        Bypasses phase/terrain/bracket filtering and rotation — the caller
+        (intensive-weekend post-pass) has already chosen the session.
+        """
+        for w in _WORKOUTS:
+            if w.get("id") == workout_id:
+                return w
+        return None
+
+    @classmethod
     def get_all_for_distance(
         cls, target_distance: float, terrain: Optional[str] = None, trail_profile=None
     ) -> List[Dict]:
         """Return all key workouts for a race distance."""
-        workouts = _trail_aware_distance_filter(target_distance, trail_profile)
+        workouts = [
+            w
+            for w in _trail_aware_distance_filter(target_distance, trail_profile)
+            if w["id"] not in _ITW_ONLY_IDS
+        ]
         if terrain == "flat" or (
             terrain is None
             and trail_profile

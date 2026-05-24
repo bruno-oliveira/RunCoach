@@ -40,12 +40,16 @@ class TrainingPlanGenerator:
         profile: Optional[Dict[str, Any]] = None,
         terrain: Optional[str] = None,
         trail_profile: Optional[TrailProfile] = None,
+        intensive_weekend_enabled: bool = False,
     ) -> List[Dict[str, Any]]:
         """Generate a comprehensive training plan.
 
         Trail/ultra plans pass ``trail_profile``; legacy callsites that pass
         ``target_distance=30.0`` (with optional ``terrain``) get a default
         profile constructed here so back-compat is preserved.
+
+        ``intensive_weekend_enabled`` opts a trail plan into an Intensive
+        Training Weekend block on its final peak week (off by default).
         """
         # Back-compat: synthesize a TrailProfile for legacy 30 km callers.
         if trail_profile is None and target_distance == 30.0:
@@ -109,6 +113,7 @@ class TrainingPlanGenerator:
                 terrain=downstream_terrain,
                 trail_profile=trail_profile,
                 profile=profile,
+                intensive_weekend_enabled=intensive_weekend_enabled,
             )
 
             # Enforce 10% cap against actual high-water mark.

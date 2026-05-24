@@ -43,6 +43,12 @@
     <div class="week-recovery-inserted-badge">Recovery week inserted — easy pace only</div>
     {% endif %}
 
+    {% if week.intensive_weekend %}
+    <div class="week-intensive-weekend-badge" title="A concentrated overcompensation block — Saturday trail quality + Sunday long on fatigued legs, with lighter lead-in days.">
+        ⛰️ Intensive Training Weekend — Saturday trail quality + Sunday long on fatigued legs
+    </div>
+    {% endif %}
+
     {% if pace_zones_updated_recent and current_week_number and week.week >= current_week_number %}
     <div class="week-paces-updated-badge" title="Pace zones refreshed after your latest quality session">
         {{ pace_zones_updated_recent.label }}

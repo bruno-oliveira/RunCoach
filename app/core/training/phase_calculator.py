@@ -399,3 +399,40 @@ def is_recovery_week(
         week_in_phase = week_number - phase_start_week
         return week_in_phase > 0 and week_in_phase % 4 == 0
     return week_number % 4 == 0
+
+
+# Trail brackets that get an intensive weekend. Short-bracket plans (8-21 km on
+# a compressed prep) are excluded — there isn't room for an overcompensation
+# block before the taper.
+_ITW_BRACKETS = ("standard", "ultra", "long_ultra")
+
+
+def is_intensive_weekend(
+    week_number: int,
+    phase: str,
+    phases: Dict[str, int],
+    trail_profile: Optional[TrailProfile] = None,
+) -> bool:
+    """Whether ``week_number`` should be a trail Intensive Training Weekend.
+
+    An ITW concentrates a Saturday trail-quality session and a Sunday long
+    run on fatigued legs to trigger overcompensation (the RunMotion
+    "intensive weekend" concept). Fires at most once per plan, on the final
+    loading week of the peak phase — the last hard week before the taper,
+    which is naturally 2-3 weeks before the race depending on taper length.
+
+    True only for trail plans (``trail_profile`` set) of a standard/ultra/
+    long_ultra bracket. The peak phase's last week is never the recovery week
+    (recovery falls on week-in-peak 3 of a 4+ week peak), so it is always a
+    valid loading week.
+    """
+    if trail_profile is None:
+        return False
+    if trail_profile.bracket not in _ITW_BRACKETS:
+        return False
+    if phase != "peak":
+        return False
+    peak_end_week = phases["base"] + phases["build"] + phases["peak"]
+    if is_recovery_week(week_number, phase, phases):
+        return False
+    return week_number == peak_end_week

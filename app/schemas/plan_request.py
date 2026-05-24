@@ -59,6 +59,18 @@ class PlanRequestBase(BaseModel):
         description="DEPRECATED — legacy 'hilly'/'flat' toggle, migrated to target_elevation_gain_m.",
     )
 
+    # Trail Intensive Training Weekend — opt-in, eligible trail plans only.
+    # The engine no-ops it for road/short-bracket plans, so it's safe to pass
+    # through unconditionally; the form only surfaces it for trail goals.
+    intensive_weekend_enabled: bool = Field(
+        default=False,
+        description=(
+            "Opt a trail/ultra plan into an Intensive Training Weekend block "
+            "(Saturday trail-quality + Sunday long on fatigued legs) on the "
+            "final peak week. Ignored for road and short-bracket plans."
+        ),
+    )
+
     # Body weight — used for personalised nutrition
     body_weight_kg: float = Field(
         default=70.0, ge=30.0, le=250.0, description="Body weight in kg"

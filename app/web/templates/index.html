@@ -207,6 +207,22 @@
                                 <span class="form-help">This adjusts sessions to your local terrain while still preparing for your race profile.</span>
                             </div>
 
+                            <!-- Intensive Training Weekend — opt-in, eligible trail brackets only
+                                 (standard / ultra / long-ultra). Shown by JS when the trail
+                                 distance qualifies. -->
+                            <div class="form-group" id="intensive-weekend-group" style="display: none;">
+                                <label class="toggle-label" for="intensive_weekend">
+                                    <span class="toggle-wrap">
+                                        <input type="checkbox" id="intensive_weekend" name="intensive_weekend" class="toggle-input" value="on" disabled>
+                                        <span class="toggle-track"><span class="toggle-thumb"></span></span>
+                                    </span>
+                                    <span class="toggle-text">
+                                        <strong>Add an Intensive Training Weekend</strong>
+                                        <span class="form-help">A demanding peak-phase block ~2–3 weeks out: a Saturday trail-quality session plus a Sunday long run on fatigued legs, with lighter lead-in days. Triggers overcompensation. Choose this only if you can absorb a big back-to-back weekend.</span>
+                                    </span>
+                                </label>
+                            </div>
+
                             <div class="form-row-2">
                                 <div class="form-group">
                                     <label for="max_runs_per_week" class="form-label">Runs per week</label>
@@ -529,6 +545,8 @@ function setPlanMode(mode) {
     const trailGroup = document.getElementById('trail-group');
     const trainingTerrainGroup = document.getElementById('training-terrain-group');
     const trainingTerrainField = document.getElementById('training_terrain');
+    const intensiveWeekendGroup = document.getElementById('intensive-weekend-group');
+    const intensiveWeekendField = document.getElementById('intensive_weekend');
     const isTrailField = document.getElementById('is_trail');
     const trailDistanceField = document.getElementById('trail_distance_km');
     const elevationField = document.getElementById('target_elevation_gain_m');
@@ -565,6 +583,18 @@ function setPlanMode(mode) {
         return 'mountainous';
     }
 
+    function updateIntensiveWeekendVisibility() {
+        // The Intensive Weekend is only offered for standard/ultra/long_ultra
+        // trail brackets (short trail and road plans don't get the block).
+        const bracket = currentBracket();
+        const eligible = ['standard', 'ultra', 'long_ultra'].includes(bracket);
+        intensiveWeekendGroup.style.display = eligible ? '' : 'none';
+        intensiveWeekendField.disabled = !eligible;
+        if (!eligible) {
+            intensiveWeekendField.checked = false;
+        }
+    }
+
     function updateTrailVisibility() {
         const trail = isTrailMode();
         trailGroup.style.display = trail ? '' : 'none';
@@ -577,6 +607,7 @@ function setPlanMode(mode) {
         [trailDistanceField, elevationField, trainingTerrainField].forEach(function(el) {
             el.disabled = !trail;
         });
+        updateIntensiveWeekendVisibility();
     }
 
     function updateElevationClassifier() {
@@ -607,6 +638,7 @@ function setPlanMode(mode) {
     trailDistanceField.addEventListener('input', () => {
         updateRunsOptions();
         updateElevationClassifier();
+        updateIntensiveWeekendVisibility();
     });
     elevationField.addEventListener('input', updateElevationClassifier);
     updateTrailVisibility();

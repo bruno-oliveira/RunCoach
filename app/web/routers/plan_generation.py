@@ -76,6 +76,7 @@ async def generate_plan(
     target_elevation_gain_m: Optional[str] = Form(None),
     training_terrain: Optional[str] = Form(None),
     trail_distance_km: Optional[str] = Form(None),
+    intensive_weekend: Optional[str] = Form(None),
     body_weight_kg: float = Form(70.0),
     recent_race_distance_km: Optional[str] = Form(None),
     recent_race_time: Optional[str] = Form(None),
@@ -91,7 +92,7 @@ async def generate_plan(
     plan_generator: TrainingPlanGenerator = Depends(get_plan_generator),
     nutrition_engine: NutritionEngine = Depends(get_nutrition_engine),
     plan_service: PlanService = Depends(get_plan_service),
-) -> HTMLResponse:
+) -> Response:
     """Generate a personalized training plan."""
     plan_generation_limiter.check(request)
     race_dist = float(recent_race_distance_km) if recent_race_distance_km else None
@@ -123,6 +124,12 @@ async def generate_plan(
         anonymous_user_id = getattr(request.state, "anonymous_user_id", None)
 
     is_trail_flag = (is_trail or "").lower() in ("on", "true", "1", "yes")
+    intensive_weekend_flag = (intensive_weekend or "").lower() in (
+        "on",
+        "true",
+        "1",
+        "yes",
+    )
     if is_trail_flag and target_distance == "trail":
         if not trail_distance_km:
             return error_response(
@@ -169,6 +176,7 @@ async def generate_plan(
         elevation_f = None
         training_terrain = None
         terrain = None
+        intensive_weekend_flag = False
 
     try:
         plan_request = PlanRequest(
@@ -180,6 +188,7 @@ async def generate_plan(
             target_elevation_gain_m=elevation_f,
             training_terrain=training_terrain,
             terrain=terrain,
+            intensive_weekend_enabled=intensive_weekend_flag,
             body_weight_kg=body_weight_kg,
             recent_race_distance_km=race_dist,
             recent_race_time=recent_race_time or None,
@@ -218,7 +227,7 @@ async def generate_plan(
         )
 
     if current_user:
-        existing = plan_service.find_duplicate(plan_request, current_user.id, db)
+        existing = plan_service.find_duplicate(plan_request, str(current_user.id), db)
         if existing:
             logger.info(
                 "Returning existing plan %s for user %s",
@@ -228,7 +237,7 @@ async def generate_plan(
             return RedirectResponse(url=f"/plan/{existing.id}", status_code=303)
 
     if current_user:
-        if plan_service.has_reached_plan_limit(current_user.id, db):
+        if plan_service.has_reached_plan_limit(str(current_user.id), db):
             return error_response(
                 request,
                 current_user,
@@ -243,7 +252,7 @@ async def generate_plan(
         )
         runner_profile = None
         if use_profile == "on" and current_user:
-            rp = build_profile(current_user.id, db)
+            rp = build_profile(str(current_user.id), db)
             if rp.has_sufficient_data:
                 runner_profile = rp.to_dict()
 
@@ -298,7 +307,7 @@ def generate_fitness_plan(
     current_user: Optional[User] = Depends(get_optional_user),
     nutrition_engine: NutritionEngine = Depends(get_nutrition_engine),
     plan_service: PlanService = Depends(get_plan_service),
-) -> HTMLResponse:
+) -> Response:
     """Generate a fitness-focused training plan."""
     plan_generation_limiter.check(request)
     race_dist = float(recent_race_distance_km) if recent_race_distance_km else None
@@ -337,7 +346,7 @@ def generate_fitness_plan(
         )
 
     if current_user:
-        if plan_service.has_reached_plan_limit(current_user.id, db):
+        if plan_service.has_reached_plan_limit(str(current_user.id), db):
             return error_response(
                 request,
                 current_user,
@@ -362,15 +371,6 @@ def generate_fitness_plan(
 
     except ValueError as e:
         return error_response(request, current_user, str(e), "validation")
-    except RunCoachException as e:
-        db.rollback()
-        return error_response(
-            request,
-            current_user,
-            e.user_message,
-            "validation",
-            e.suggestion if hasattr(e, "suggestion") else None,
-        )
     except DatabaseException:
         db.rollback()
         return error_response(
@@ -378,6 +378,15 @@ def generate_fitness_plan(
             current_user,
             "Database error occurred. Please try again.",
             "database",
+        )
+    except RunCoachException as e:
+        db.rollback()
+        return error_response(
+            request,
+            current_user,
+            e.user_message,
+            "validation",
+            getattr(e, "suggestion", None),
         )
     except Exception:
         logger.exception("Fitness plan generation failed")
@@ -412,7 +421,7 @@ async def _generate_time_goal_plan(
             "auth_required",
         )
 
-    if plan_service.has_reached_plan_limit(current_user.id, db):
+    if plan_service.has_reached_plan_limit(str(current_user.id), db):
         return error_response(
             request,
             current_user,
@@ -450,7 +459,7 @@ async def _generate_time_goal_plan(
             current_user,
             e.user_message,
             "validation",
-            e.suggestion if hasattr(e, "suggestion") else None,
+            getattr(e, "suggestion", None),
         )
     except ValueError as e:
         return error_response(request, current_user, str(e), "validation")
@@ -475,7 +484,7 @@ def customize_plan(
     db: Session = Depends(get_db),
     current_user: Optional[User] = Depends(get_optional_user),
     plan_service: PlanService = Depends(get_plan_service),
-) -> HTMLResponse:
+) -> Response:
     """Handle plan customization with simple interface."""
     training_plan = None
     try:
@@ -492,6 +501,14 @@ def customize_plan(
     except Exception:
         db.rollback()
         logger.exception("Error customizing plan")
+        # getattr returns Any, side-stepping the SQLAlchemy Column[...] typing
+        # while preserving the original truthiness checks at runtime.
+        plan_data = getattr(training_plan, "plan_data", None) if training_plan else None
+        nutrition_data = (
+            getattr(training_plan, "nutrition_plan_data", None)
+            if training_plan
+            else None
+        )
         return templates.TemplateResponse(
             request,
             "plan.html",
@@ -499,15 +516,11 @@ def customize_plan(
                 "request": request,
                 "user": current_user,
                 "google_client_id": settings.google_client_id,
-                "plan": training_plan.plan_data
-                if training_plan and training_plan.plan_data
-                else [],
+                "plan": plan_data if plan_data else [],
                 "plan_id": plan_id,
                 "nutrition_plan": (
-                    plan_service.nutrition_for_template(
-                        training_plan.nutrition_plan_data
-                    )
-                    if training_plan and training_plan.nutrition_plan_data
+                    plan_service.nutrition_for_template(nutrition_data)
+                    if nutrition_data
                     else {}
                 ),
                 "progress_data": None,

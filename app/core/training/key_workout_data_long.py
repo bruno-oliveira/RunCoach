@@ -734,4 +734,103 @@ WORKOUTS_LONG: List[Dict] = [
         ),
         "steps_builder": "rolling_hills",
     },
+    # -- Intensive-Weekend trail sessions --
+    # Saturday quality (pyramid/ladder, terrain-agnostic) + Sunday long on
+    # fatigued legs (hike-run for ultras, easy back-to-back otherwise). These
+    # are installed by the intensive-weekend post-pass (by id) and also join
+    # the normal trail rotation for build/peak interval weeks.
+    {
+        "id": "trail_pyramid_intervals",
+        "distances": [30.0],
+        "phases": ["build", "peak"],
+        "type": "interval",
+        "terrain": ["any"],
+        "name": "Trail-Pace Pyramid",
+        "structure": "400-800-1200-800-400m pyramid at trail pace",
+        "description": (
+            "Warm up 2km easy. Run a pyramid — 400m, 800m, 1200m, 800m, 400m "
+            "— at strong trail (threshold) effort with equal-distance jog "
+            "recovery between reps. Cool down 2km easy."
+        ),
+        "intensity": "high",
+        "target_zone": 4,
+        "pace_zone": "T",
+        "rationale": (
+            "The ascending/descending structure rehearses surging on the "
+            "climbs and settling after — the exact effort-shifting a trail "
+            "race demands. Trail pace keeps it specific, not track-fast."
+        ),
+        "steps_builder": "pyramid_trail",
+    },
+    {
+        "id": "trail_ladder_intervals",
+        "distances": [30.0],
+        "phases": ["build", "peak"],
+        "type": "interval",
+        "terrain": ["any"],
+        "name": "Trail-Pace Ladder",
+        "structure": "400-800-1200-1600m ascending ladder at trail pace",
+        "description": (
+            "Warm up 2km easy. Run an ascending ladder — 400m, 800m, 1200m, "
+            "1600m — at strong trail (threshold) effort with equal-distance "
+            "jog recovery between reps. Cool down 2km easy."
+        ),
+        "intensity": "high",
+        "target_zone": 4,
+        "pace_zone": "T",
+        "rationale": (
+            "Lengthening reps train you to hold strong effort as fatigue "
+            "builds — the skill of staying composed deep into a climb."
+        ),
+        "steps_builder": "ladder_trail",
+    },
+    {
+        "id": "trail_hike_run_long",
+        "distances": [30.0],
+        "phases": ["build", "peak"],
+        "type": "long",
+        "terrain": ["hilly"],
+        "brackets": ["ultra", "long_ultra"],
+        "name": "Hike-Run Long Session",
+        "structure": "Long run alternating running and power-hiking blocks",
+        "description": (
+            "Long trail session alternating ~9 min easy running with ~1 min "
+            "power-hiking. On real climbs, hike; on flats and descents, run. "
+            "Practice race fueling every 30 min. Build time on feet, not pace."
+        ),
+        "intensity": "medium",
+        "target_zone": 2,
+        "pace_zone": "E",
+        "rationale": (
+            "Ultras are run-hike efforts, not all-run. Rehearsing the "
+            "transition trains efficient power-hiking and the muscular "
+            "endurance for all-day time on feet."
+        ),
+        "steps_builder": "hike_run",
+    },
+    {
+        "id": "trail_b2b_day2",
+        "distances": [30.0],
+        "phases": ["build", "peak"],
+        "type": "long",
+        "terrain": ["any"],
+        "brackets": ["standard", "ultra", "long_ultra"],
+        "name": "Back-to-Back Long (Day 2)",
+        "structure": "Long run at easy effort on legs fatigued from yesterday",
+        "description": (
+            "Run at easy conversational effort on legs already tired from "
+            "yesterday's quality session. Hold back the pace and practice "
+            "race fueling every 30 min. The second day simulates late-race "
+            "fatigue better than any single long run."
+        ),
+        "intensity": "medium",
+        "target_zone": 2,
+        "pace_zone": "E",
+        "rationale": (
+            "Back-to-back running is the hallmark of trail/ultra prep. "
+            "Starting a long run already fatigued is the closest training "
+            "proxy for the final hours of a long trail race."
+        ),
+        "steps_builder": "b2b_day2",
+    },
 ]
