@@ -12,6 +12,7 @@
     const AD = window.AnalyticsDashboard;
 
     AD.todayLoadedPlanId = undefined;
+    AD.coachNoteLoadedPlanId = undefined;
 
     const WORKOUT_ICONS = {
         easy: '🟢', recovery: '🟢', long: '🔵', tempo: '🟠', threshold: '🟠',
@@ -33,6 +34,7 @@
         if (!planId) {
             this.todayLoadedPlanId = null;
             this._show(prompt); this._hide(loading); this._hide(content); this._hide(empty);
+            this._loadCoachNote(null);
             return;
         }
 
@@ -52,11 +54,13 @@
                 const text = document.getElementById('todayEmptyText');
                 if (text && summary && summary.reason) text.textContent = summary.reason;
                 this._show(empty);
+                this._loadCoachNote(null);
                 this.todayLoadedPlanId = planId;
                 return;
             }
 
             this._show(content);
+            this._loadCoachNote(planId);
             this._renderCoachBanner(summary);
             this._renderCoachForm(summary);
             this._renderTodayWorkout(today, planId);
@@ -68,12 +72,52 @@
             console.error('Today load error:', err);
             this._hide(loading);
             this._show(empty);
+            this._loadCoachNote(null);
         }
     };
 
     /* ----- display helpers ----- */
     AD._show = function (el) { if (el) el.style.display = ''; };
     AD._hide = function (el) { if (el) el.style.display = 'none'; };
+
+    /* ----- Coach's Note (recognition-first AI voice; fetched independently of
+       the Promise.all so the rest of the tab renders instantly while the note
+       streams in) ----- */
+    AD._loadCoachNote = async function (planId) {
+        const card = document.getElementById('coachNoteCard');
+        const skel = document.getElementById('coachNoteSkeleton');
+        if (!card) return;
+
+        if (!planId) {
+            this.coachNoteLoadedPlanId = null;
+            this._hide(card); this._hide(skel);
+            return;
+        }
+        // Already rendered for this plan this session — skip the skeleton flash
+        // on tab switches. A full reload re-fetches (and picks up new runs).
+        if (this.coachNoteLoadedPlanId === planId) return;
+
+        this._hide(card); this._show(skel);
+        const data = await this._fetchJson('/api/analytics/coach-note/' + encodeURIComponent(planId));
+        this._hide(skel);
+
+        if (!data || data.available === false || !data.note) {
+            this._hide(card);
+            return;
+        }
+
+        const prose = document.getElementById('coachNoteProse');
+        const chips = document.getElementById('coachNoteChips');
+        if (prose) prose.textContent = data.note;
+        if (chips) {
+            const list = (data.recognition && data.recognition.chips) || [];
+            chips.innerHTML = list
+                .map((c) => `<span class="coach-note-chip">${this._esc(c)}</span>`)
+                .join('');
+        }
+        this._show(card);
+        this.coachNoteLoadedPlanId = planId;
+    };
 
     /* ----- Today's session card ----- */
     AD._renderTodayWorkout = function (today, planId) {

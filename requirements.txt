@@ -20,6 +20,9 @@ pydantic-settings==2.9.1
 # HTTP client
 httpx==0.28.1
 
+# LLM — Coach's Note (optional; feature degrades gracefully without a key)
+anthropic>=0.40.0
+
 # Authentication
 PyJWT[crypto]==2.12.1
 

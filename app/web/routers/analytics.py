@@ -6,6 +6,7 @@ from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 
+from app.application.coach_narrative_service import build_coach_note
 from app.application.coach_summary_service import (
     build_adaptation_history,
     build_coach_patterns,
@@ -26,7 +27,8 @@ from app.contexts.runner.fitness.training_load_service import TrainingLoadServic
 from app.contexts.runner.profile.profile_builder import build_profile
 from app.contexts.runner.repositories import SQLAlchemyRunRepository
 from app.core.training.vdot_calculator import VDOTCalculator
-from app.dependencies import get_current_user, get_db
+from app.dependencies import get_coach_narrator, get_current_user, get_db
+from app.domain.coaching import CoachNarrator
 from app.models import User
 from app.utils import to_date as _to_date
 
@@ -213,6 +215,18 @@ def get_coach_summary(
     """The 6-signal breakdown, multiplier/direction, form, and readiness."""
     plan = get_plan_or_404(plan_id, db, current_user, require_user_match=True)
     return build_coach_summary(plan, current_user.id, db)
+
+
+@analytics_router.get("/coach-note/{plan_id}")
+def get_coach_note(
+    plan_id: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+    narrator: CoachNarrator = Depends(get_coach_narrator),
+):
+    """The recognition-first Coach's Note (AI voice + accurate fact chips)."""
+    plan = get_plan_or_404(plan_id, db, current_user, require_user_match=True)
+    return build_coach_note(plan, current_user.id, db, narrator)
 
 
 @analytics_router.get("/adaptation-history/{plan_id}")
