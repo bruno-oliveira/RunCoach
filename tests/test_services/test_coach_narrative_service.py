@@ -165,9 +165,16 @@ def _log_runs(db, user, plan, weeks=(1, 2)):
     db.commit()
 
 
-def test_coach_note_ai_source(db):
+_SENTINEL_FOCUS = {"kind": "test", "message": "HOLD BACK TODAY."}
+
+
+def test_coach_note_ai_source(db, monkeypatch):
     user, plan = _make_plan(db)
     _log_runs(db, user, plan)
+    monkeypatch.setattr(
+        "app.application.coach_narrative_service.select_today_focus",
+        lambda signals: _SENTINEL_FOCUS,
+    )
     narrator = _FakeNarrator("You're crushing it. Today: easy run.")
 
     result = build_coach_note(plan, user.id, db, narrator)
@@ -176,18 +183,32 @@ def test_coach_note_ai_source(db):
     assert result["source"] == "ai"
     assert result["note"] == "You're crushing it. Today: easy run."
     assert isinstance(result["recognition"]["chips"], list)
-    assert "today" in result
-    # The narrator was handed a structured fact pack.
+    assert result["focus"] == _SENTINEL_FOCUS
+    # The narrator was handed a structured fact pack including the selected focus
+    # and today's purpose rationale.
     assert len(narrator.calls) == 1
     ctx = narrator.calls[0]
-    assert set(ctx) >= {"today", "training_age", "journey", "stance", "week_pulse"}
+    assert set(ctx) >= {
+        "today",
+        "training_age",
+        "journey",
+        "stance",
+        "week_pulse",
+        "focus",
+    }
+    assert ctx["focus"] == _SENTINEL_FOCUS
     assert "current_streak_weeks" in ctx["training_age"]
     assert "vdot_now" in ctx["journey"]
+    assert ctx["today"].get("available") and "purpose" in ctx["today"]
 
 
-def test_coach_note_rules_fallback(db):
+def test_coach_note_rules_fallback_weaves_focus(db, monkeypatch):
     user, plan = _make_plan(db)
     _log_runs(db, user, plan)
+    monkeypatch.setattr(
+        "app.application.coach_narrative_service.select_today_focus",
+        lambda signals: _SENTINEL_FOCUS,
+    )
     narrator = _FakeNarrator(None)  # AI unavailable → deterministic floor
 
     result = build_coach_note(plan, user.id, db, narrator)
@@ -195,6 +216,8 @@ def test_coach_note_rules_fallback(db):
     assert result["available"] is True
     assert result["source"] == "rules"
     assert isinstance(result["note"], str) and result["note"].strip()
+    # The selected focus is woven into the deterministic note.
+    assert "HOLD BACK TODAY." in result["note"]
 
 
 def test_coach_note_insufficient_data_skips_narrator(db):

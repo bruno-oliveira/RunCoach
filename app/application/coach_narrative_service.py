@@ -1,39 +1,46 @@
-"""Coach's Note — the recognition-first, AI-voiced lead of the Today tab.
+"""Coach's Note — a recognition-anchored, signal-aware lead for the Today tab.
 
-Assembles a deterministic fact pack from existing read-only assemblers (today's
-session, training age/streak, adaptation stance, fitness journey), then asks the
-injected ``CoachNarrator`` to voice it. Hard numbers are returned separately as
-recognition chips so what's displayed is always computed, never hallucinated.
-Falls back to a deterministic note when the AI voice is unavailable.
+Assembles a deterministic fact pack from existing read-only assemblers, distils
+the runner's own signals into a single "focus" for today (or none), then asks the
+injected ``CoachNarrator`` to voice it in three beats: a light recognition
+anchor, today's purpose + how to run it, and the focus adjustment when one fires.
 
-Read-only: never commits.
+Hard numbers are returned as recognition chips computed in Python, never from the
+model's prose. Falls back to a deterministic note when the AI voice is
+unavailable. Read-only: never commits.
 """
 
 import logging
-from datetime import date
 from typing import Any, Optional
 
 from sqlalchemy.orm import Session
 
 from app.application.coach_summary_service import (
+    build_coach_patterns,
     build_coach_summary,
+    build_readiness_trend,
     build_today,
     build_training_age,
 )
-from app.contexts.plan.plan_date_utils import compute_current_week
-from app.contexts.runner.enrichment.week_pulse_generator import get_week_pulse
 from app.contexts.runner.fitness.race_predictor_service import RacePredictorService
 from app.contexts.runner.profile.profile_builder import build_profile
-from app.core.coaching.recognition import build_fallback_note, build_recognition
+from app.core.coaching.coaching_notes_generator import generate_coaching_note
+from app.core.coaching.recognition import (
+    build_fallback_note,
+    build_recognition,
+    select_today_focus,
+)
 from app.domain.coaching import CoachNarrator
 from app.models import TrainingPlan
-from app.utils import to_date as _to_date
 
 logger = logging.getLogger(__name__)
 
 # Mirrors the rolling window the runner profile uses, so the "journey start"
 # VDOT comes from the same horizon as the current VDOT.
 _JOURNEY_WEEKS = 12
+
+# build_coach_patterns surfaces a pattern per these logged workout types.
+_PATTERN_TYPES = ("easy", "recovery", "long", "tempo", "interval")
 
 
 def build_coach_note(
@@ -68,6 +75,7 @@ def build_coach_note(
         "source": source,
         "note": note,
         "recognition": recognition,
+        "focus": facts.get("focus"),
         "today": facts.get("today"),
     }
 
@@ -81,6 +89,8 @@ def _assemble_facts(
     today = build_today(plan, user_id, db)
     age = build_training_age(user_id, db)
     profile = build_profile(user_id, db)
+    patterns = build_coach_patterns(plan, user_id, db)
+    readiness = build_readiness_trend(user_id, db)
 
     # Journey: earliest vs current VDOT over the same window the profile uses.
     history = RacePredictorService.get_vdot_history(
@@ -92,10 +102,40 @@ def _assemble_facts(
             vdot_start = entry["vdot"]
             break
 
-    week_pulse_msg = _week_pulse_message(plan, today, db)
+    today_facts = _today_facts(today)
+    if today_facts.get("available"):
+        # Verbose rationale for the AI voice to compress; the rules note derives
+        # its own concise purpose line.
+        today_facts["purpose"] = generate_coaching_note(
+            today_facts.get("workout_type") or "easy",
+            today.get("phase") or "base",
+            today.get("current_week") or 1,
+            0.0,
+        )
+
+    week_pulse_msg = (patterns.get("week_pulse") or {}).get("message")
+    latest_readiness = None
+    if readiness.get("available") and readiness.get("logs"):
+        latest_readiness = readiness["logs"][-1]  # logs are oldest-first
+
+    signals = {
+        "overreach": summary.get("overreach_detected", False),
+        "direction": summary.get("direction"),
+        "tsb_form": (summary.get("form") or {}).get("tsb_form"),
+        "effort_trend": summary.get("effort_trend"),
+        "vdot_trend": summary.get("vdot_trend"),
+        "readiness_status": latest_readiness.get("status")
+        if latest_readiness
+        else None,
+        "readiness_score": latest_readiness.get("score") if latest_readiness else None,
+        "today_is_rest": today_facts.get("is_rest", False),
+        "today_workout_type": today_facts.get("workout_type"),
+        "today_pattern": _today_pattern(patterns, today_facts.get("workout_type")),
+    }
+    focus = select_today_focus(signals)
 
     return {
-        "today": _today_facts(today),
+        "today": today_facts,
         "training_age": {
             k: age.get(k)
             for k in (
@@ -123,21 +163,15 @@ def _assemble_facts(
             "tsb_form": (summary.get("form") or {}).get("tsb_form"),
             "effort_trend": summary.get("effort_trend"),
             "overreach": summary.get("overreach_detected", False),
-            "headline_reason": summary.get("headline_reason"),
         },
         "week_pulse": week_pulse_msg,
+        "focus": focus,
     }
 
 
 def _today_facts(today: dict[str, Any]) -> dict[str, Any]:
     if not today.get("available"):
         return {"available": False}
-
-    week = today.get("week") or []
-    done = sum(1 for d in week if d.get("status") == "done")
-    # "due so far" = sessions whose day has arrived (done / missed / today),
-    # excluding rest days — so "3/3" reads as recognition, not "behind".
-    due = sum(1 for d in week if d.get("status") in ("done", "missed", "today"))
 
     block = today.get("today") or {}
     wtype = block.get("workout_type")
@@ -148,23 +182,22 @@ def _today_facts(today: dict[str, Any]) -> dict[str, Any]:
         "total_weeks": today.get("total_weeks"),
         "workout_type": wtype,
         "distance_km": block.get("distance_km"),
+        "duration_min": block.get("duration_min"),
+        "hr_zone_target": block.get("hr_zone_target"),
+        "hr_zone_label": block.get("hr_zone_label"),
         "description": block.get("description"),
+        # No scheduled session today (block empty) is treated as a rest day.
         "is_rest": wtype in (None, "rest", "recovery") and not block.get("distance_km"),
-        "week_pct": today.get("week_pct"),
-        "week_actual_km": today.get("week_actual_km"),
-        "week_planned_km": today.get("week_planned_km"),
-        "done_this_week": done,
-        "due_this_week": due,
     }
 
 
-def _week_pulse_message(
-    plan: TrainingPlan, today: dict[str, Any], db: Session
+def _today_pattern(
+    patterns: dict[str, Any], workout_type: Optional[str]
 ) -> Optional[str]:
-    if not plan.start_date:
+    """The recency-weighted pace pattern for today's workout type, if any."""
+    if not workout_type or workout_type not in _PATTERN_TYPES:
         return None
-    current_week = today.get("current_week") or compute_current_week(
-        _to_date(plan.start_date), date.today(), clamp_min=1, pre_start=1
-    )
-    pulse = get_week_pulse(plan, current_week, db)
-    return pulse.get("message") if pulse else None
+    for p in patterns.get("patterns") or []:
+        if p.get("workout_type") == workout_type:
+            return p.get("message")
+    return None
