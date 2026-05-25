@@ -70,6 +70,10 @@ class TrainingPlan(Base):
     pending_recommendation = Column(JSON, nullable=True)
     last_recommendation_week = Column(Integer, nullable=True)
     last_change_plan = Column(JSON, nullable=True)
+    # Write-through cache for the AI Coach's Note: {"signature": str, "payload": dict}.
+    # Regenerated only when the run signature changes (a new run is logged), so the
+    # note survives scale-to-zero cold starts instead of being rebuilt each wake.
+    coach_note_cache = Column(JSON, nullable=True)
     # Monotonic counter bumped on every distance-mutating apply. Clients send
     # the revision they rendered with so the server can reject stale writes.
     adaptation_revision = Column(Integer, nullable=False, default=0, server_default="0")

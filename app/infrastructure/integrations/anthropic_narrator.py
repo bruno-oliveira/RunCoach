@@ -1,23 +1,20 @@
 """Anthropic-backed implementation of the CoachNarrator protocol.
 
 Turns the fact pack into 2-4 sentences of warm, grounded coach prose via Claude
-Haiku. Two safety properties matter here:
+Haiku. The model is told to use ONLY the numbers in the fact pack — it never
+invents paces/streaks/VDOT. The displayed hard numbers come from the
+deterministic recognition chips, not from this prose, so accuracy is guaranteed
+regardless. Any failure returns ``None`` so the caller falls back to the
+deterministic note.
 
-- The model is told to use ONLY the numbers in the fact pack — it never invents
-  paces/streaks/VDOT. The displayed hard numbers come from the deterministic
-  recognition chips, not from this prose, so accuracy is guaranteed regardless.
-- Generation is wrapped in a TTL cache keyed by the fact pack's content hash, so
-  a given day's note is generated once and reused until something material
-  changes (a new run, the day rolls over, the adaptation stance shifts). Any
-  failure returns ``None`` so the caller falls back to the deterministic note.
+Caching is the caller's responsibility: ``coach_narrative_service`` persists the
+generated payload on the plan keyed by a run signature, so this adapter just
+generates on demand and is only invoked when the note actually needs rebuilding.
 """
 
-import hashlib
 import json
 import logging
 from typing import Any, Optional
-
-from cachetools import TTLCache
 
 logger = logging.getLogger(__name__)
 
@@ -53,40 +50,22 @@ Output only the note itself."""
 
 
 class AnthropicCoachNarrator:
-    """Generates the Coach's Note via Claude Haiku, with a content-keyed cache."""
+    """Generates the Coach's Note via Claude Haiku (stateless; caller caches)."""
 
-    def __init__(
-        self,
-        api_key: str,
-        model: str,
-        *,
-        cache_ttl_seconds: int = 12 * 3600,
-        cache_maxsize: int = 256,
-    ) -> None:
+    def __init__(self, api_key: str, model: str) -> None:
         # Lazy import so the module (and app startup) never hard-depends on the
         # SDK unless an AI narrator is actually constructed.
         import anthropic
 
         self._client = anthropic.Anthropic(api_key=api_key)
         self._model = model
-        self._cache: TTLCache = TTLCache(maxsize=cache_maxsize, ttl=cache_ttl_seconds)
 
     def generate_note(self, context: dict[str, Any]) -> Optional[str]:
-        key = hashlib.sha256(
-            json.dumps(context, sort_keys=True, default=str).encode("utf-8")
-        ).hexdigest()
-        if key in self._cache:
-            return self._cache[key]
-
         try:
-            note = self._call(context)
+            return self._call(context)
         except Exception:  # never let a coach note break the page
             logger.warning("Coach note generation failed", exc_info=True)
             return None
-
-        if note:
-            self._cache[key] = note
-        return note
 
     def _call(self, context: dict[str, Any]) -> Optional[str]:
         response = self._client.messages.create(

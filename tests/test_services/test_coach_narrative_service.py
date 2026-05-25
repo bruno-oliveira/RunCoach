@@ -249,3 +249,39 @@ def test_coach_note_insufficient_data_skips_narrator(db):
     assert result["available"] is False
     assert "reason" in result
     assert narrator.calls == []
+
+
+def test_coach_note_cached_until_new_run(db):
+    user, plan = _make_plan(db)
+    _log_runs(db, user, plan)
+    narrator = _FakeNarrator("Cached note.")
+
+    r1 = build_coach_note(plan, user.id, db, narrator)
+    assert r1["source"] == "ai"
+    assert r1["note"] == "Cached note."
+    assert len(narrator.calls) == 1
+    assert plan.coach_note_cache and "signature" in plan.coach_note_cache
+
+    # Re-open with no new runs → served from the persisted cache; the narrator
+    # is NOT called again, and the note is frozen even though the fake changed.
+    narrator.note = "DIFFERENT note."
+    r2 = build_coach_note(plan, user.id, db, narrator)
+    assert len(narrator.calls) == 1
+    assert r2["note"] == "Cached note."
+
+    # Logging a new run changes the signature → the note regenerates.
+    db.add(
+        RunLog(
+            id=_uid(),
+            user_id=user.id,
+            training_plan_id=plan.id,
+            date=plan.start_date + timedelta(weeks=2),
+            distance_km=7.0,
+            duration_minutes=35,
+            workout_type="easy",
+        )
+    )
+    db.commit()
+    r3 = build_coach_note(plan, user.id, db, narrator)
+    assert len(narrator.calls) == 2
+    assert r3["note"] == "DIFFERENT note."

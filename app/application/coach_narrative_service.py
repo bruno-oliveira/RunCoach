@@ -13,6 +13,7 @@ unavailable. Read-only: never commits.
 import logging
 from typing import Any, Optional
 
+from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from app.application.coach_summary_service import (
@@ -31,7 +32,7 @@ from app.core.coaching.recognition import (
     select_today_focus,
 )
 from app.domain.coaching import CoachNarrator
-from app.models import TrainingPlan
+from app.models import RunLog, TrainingPlan
 
 logger = logging.getLogger(__name__)
 
@@ -49,7 +50,18 @@ def build_coach_note(
     db: Session,
     narrator: CoachNarrator,
 ) -> dict[str, Any]:
-    """The Coach's Note payload: prose + accurate recognition chips."""
+    """The Coach's Note payload: prose + accurate recognition chips.
+
+    The AI payload is cached on the plan keyed by a *run signature*, so it is
+    regenerated only when a new run is logged — not on every page open, day
+    rollover, or machine wake. (The deterministic rules note is cheap, so it is
+    recomputed live and never cached.)
+    """
+    signature = _run_signature(plan, user_id, db)
+    cache = plan.coach_note_cache or {}
+    if cache.get("signature") == signature and cache.get("payload"):
+        return cache["payload"]  # frozen until a new run changes the signature
+
     # Gate on the same "3 linked runs" threshold the rest of the Coach hub uses.
     summary = build_coach_summary(plan, user_id, db)
     if not summary.get("available"):
@@ -65,12 +77,13 @@ def build_coach_note(
 
     recognition = build_recognition(facts)
     note = narrator.generate_note(facts)
-    source = "ai"
-    if not note:
+    if note:
+        source = "ai"
+    else:
         note = build_fallback_note(facts)
         source = "rules"
 
-    return {
+    payload = {
         "available": True,
         "source": source,
         "note": note,
@@ -78,6 +91,38 @@ def build_coach_note(
         "focus": facts.get("focus"),
         "today": facts.get("today"),
     }
+
+    # Only the (expensive, non-deterministic) AI note is worth persisting.
+    if source == "ai":
+        _persist_cache(plan, db, signature, payload)
+    return payload
+
+
+def _run_signature(plan: TrainingPlan, user_id: str, db: Session) -> str:
+    """A compact signature of the user's logged runs.
+
+    Changes whenever a run is added (count) or a newer/back-dated run appears
+    (max date) — the precise "new runs logged" trigger for cache invalidation.
+    """
+    count, last = (
+        db.query(func.count(RunLog.id), func.max(RunLog.date))
+        .filter(RunLog.user_id == user_id)
+        .one()
+    )
+    last_str = last.isoformat() if last else "none"
+    return f"{plan.id}:{count}:{last_str}"
+
+
+def _persist_cache(
+    plan: TrainingPlan, db: Session, signature: str, payload: dict[str, Any]
+) -> None:
+    """Write-through the AI payload; never let a cache write break the response."""
+    try:
+        plan.coach_note_cache = {"signature": signature, "payload": payload}
+        db.commit()
+    except Exception:
+        db.rollback()
+        logger.warning("Failed to persist coach note cache", exc_info=True)
 
 
 def _assemble_facts(
