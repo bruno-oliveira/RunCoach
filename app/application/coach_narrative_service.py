@@ -11,6 +11,7 @@ unavailable. Read-only: never commits.
 """
 
 import logging
+from datetime import datetime, timezone
 from typing import Any, Optional
 
 from sqlalchemy import func
@@ -56,11 +57,24 @@ def build_coach_note(
     regenerated only when a new run is logged — not on every page open, day
     rollover, or machine wake. (The deterministic rules note is cheap, so it is
     recomputed live and never cached.)
+
+    A hard once-per-calendar-day cap sits on top: the Coach's Note is a daily
+    note, so once an AI note has been generated today it is reused for the rest
+    of the day even if more runs are logged. This bounds spend at, at most, one
+    Anthropic call per plan per day regardless of sync volume.
     """
     signature = _run_signature(plan, user_id, db)
     cache = plan.coach_note_cache or {}
-    if cache.get("signature") == signature and cache.get("payload"):
-        return cache["payload"]  # frozen until a new run changes the signature
+    payload = cache.get("payload")
+    if payload:
+        # Nothing changed since the last note → serve the frozen one.
+        if cache.get("signature") == signature:
+            return payload
+        # A new run changed the signature, but we already spent a generation
+        # today. Reuse today's note; it refreshes on the first new run of the
+        # next calendar day. (Hard cost ceiling.)
+        if _generated_today(cache):
+            return payload
 
     # Gate on the same "3 linked runs" threshold the rest of the Coach hub uses.
     summary = build_coach_summary(plan, user_id, db)
@@ -113,12 +127,35 @@ def _run_signature(plan: TrainingPlan, user_id: str, db: Session) -> str:
     return f"{plan.id}:{count}:{last_str}"
 
 
+def _generated_today(cache: dict[str, Any]) -> bool:
+    """True if the cached AI note was generated earlier this (UTC) calendar day."""
+    gen = cache.get("generated_at")
+    if not gen:
+        return False
+    try:
+        return datetime.fromisoformat(gen).date() == _utcnow().date()
+    except (ValueError, TypeError):
+        return False
+
+
+def _utcnow() -> datetime:
+    return datetime.now(timezone.utc)
+
+
 def _persist_cache(
     plan: TrainingPlan, db: Session, signature: str, payload: dict[str, Any]
 ) -> None:
-    """Write-through the AI payload; never let a cache write break the response."""
+    """Write-through the AI payload; never let a cache write break the response.
+
+    Stores ``generated_at`` so the once-per-day cap can tell whether today's
+    generation budget has already been spent.
+    """
     try:
-        plan.coach_note_cache = {"signature": signature, "payload": payload}
+        plan.coach_note_cache = {
+            "signature": signature,
+            "payload": payload,
+            "generated_at": _utcnow().isoformat(),
+        }
         db.commit()
     except Exception:
         db.rollback()

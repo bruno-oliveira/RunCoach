@@ -251,7 +251,8 @@ def test_coach_note_insufficient_data_skips_narrator(db):
     assert narrator.calls == []
 
 
-def test_coach_note_cached_until_new_run(db):
+def test_coach_note_cached_and_daily_capped(db):
+    """The note is frozen between runs, and capped to one generation per day."""
     user, plan = _make_plan(db)
     _log_runs(db, user, plan)
     narrator = _FakeNarrator("Cached note.")
@@ -261,6 +262,7 @@ def test_coach_note_cached_until_new_run(db):
     assert r1["note"] == "Cached note."
     assert len(narrator.calls) == 1
     assert plan.coach_note_cache and "signature" in plan.coach_note_cache
+    assert "generated_at" in plan.coach_note_cache
 
     # Re-open with no new runs → served from the persisted cache; the narrator
     # is NOT called again, and the note is frozen even though the fake changed.
@@ -269,7 +271,8 @@ def test_coach_note_cached_until_new_run(db):
     assert len(narrator.calls) == 1
     assert r2["note"] == "Cached note."
 
-    # Logging a new run changes the signature → the note regenerates.
+    # A NEW run on the same day changes the signature, but the once-per-day cap
+    # reuses today's note instead of spending another generation.
     db.add(
         RunLog(
             id=_uid(),
@@ -283,5 +286,15 @@ def test_coach_note_cached_until_new_run(db):
     )
     db.commit()
     r3 = build_coach_note(plan, user.id, db, narrator)
-    assert len(narrator.calls) == 2
-    assert r3["note"] == "DIFFERENT note."
+    assert len(narrator.calls) == 1  # capped: same calendar day
+    assert r3["note"] == "Cached note."
+
+    # Simulate the calendar day rolling over: the stale-but-changed signature
+    # now regenerates exactly once on the next day's first open.
+    stale = dict(plan.coach_note_cache)
+    stale["generated_at"] = (datetime.now() - timedelta(days=1)).isoformat()
+    plan.coach_note_cache = stale
+    db.commit()
+    r4 = build_coach_note(plan, user.id, db, narrator)
+    assert len(narrator.calls) == 2  # new day → one regeneration
+    assert r4["note"] == "DIFFERENT note."
