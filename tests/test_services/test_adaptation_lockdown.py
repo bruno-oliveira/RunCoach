@@ -337,6 +337,10 @@ class TestOverreachAndHysteresis:
                 self.date = datetime.now(timezone.utc).date()
                 self.daily_workout_id = dwid
 
+            @property
+            def effective_workout_type(self):
+                return self.workout_type
+
         class _DW:
             def __init__(self, dist, dwid):
                 self.distance_km = dist

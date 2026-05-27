@@ -3,7 +3,9 @@ from datetime import datetime, timezone
 
 from sqlalchemy import Column, DateTime, Float, ForeignKey, Index, Integer, String, Text
 from sqlalchemy.orm import Mapped, relationship
+from sqlalchemy.types import JSON
 
+from app.core.training.workout_inference import resolve_effective_workout_type
 from app.models.base import Base
 
 
@@ -46,9 +48,33 @@ class RunLog(Base):
     hr_zone_deviation = Column(Integer, nullable=True)
     effort_class = Column(String(20), nullable=True)
 
+    # Run type inferred from pace/HR/distance/splits. Kept separate from the
+    # raw `workout_type` (which Strava defaults to "easy") so the user/Strava
+    # tag is never overwritten; reconciled at read time via the property below.
+    inferred_workout_type = Column(String(20), nullable=True)
+    inferred_type_confidence = Column(Float, nullable=True)
+    # Compact per-km splits from Strava: [{km, duration_s, pace_min_km, avg_hr}].
+    splits = Column(JSON, nullable=True)
+
     user: Mapped["User"] = relationship("User", back_populates="run_logs")
     training_plan: Mapped["TrainingPlan"] = relationship("TrainingPlan")
     daily_workout: Mapped["DailyWorkout"] = relationship("DailyWorkout")
     feedback: Mapped["RunFeedback"] = relationship(
         "RunFeedback", uselist=False, back_populates="run_log"
     )
+
+    @property
+    def effective_workout_type(self) -> "str | None":
+        """Best available workout type: explicit tag or inference.
+
+        Strava leaves most runs untagged (defaulted to "easy"); this prefers
+        the inferred type for those while never overriding a deliberate
+        user-entered or Strava (race/long/interval) label. Consumers that
+        bucket logged runs by type should read this, not `workout_type`.
+        """
+        return resolve_effective_workout_type(
+            self.workout_type,
+            self.inferred_workout_type,
+            is_strava=self.strava_activity_id is not None,
+            confidence=self.inferred_type_confidence,
+        )

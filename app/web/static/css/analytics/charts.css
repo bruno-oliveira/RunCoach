@@ -417,11 +417,24 @@
 }
 
 .badge-easy     { background: rgba(13, 148, 136, 0.12); color: var(--color-secondary-dark, #0F766E); }
+.badge-recovery { background: rgba(13, 148, 136, 0.10); color: var(--color-secondary-dark, #0F766E); }
 .badge-tempo    { background: rgba(255, 98, 70, 0.12);  color: var(--color-accent-dark); }
 .badge-interval { background: rgba(124, 58, 237, 0.12); color: #7C3AED; }
 .badge-long     { background: rgba(29, 78, 216, 0.12);  color: var(--color-primary); }
 .badge-hill     { background: rgba(217, 119, 6, 0.12);  color: #B45309; }
 .badge-unknown  { background: var(--color-bg-sunken);   color: var(--color-text-muted); }
+
+/* Marker shown next to a badge whose type was inferred from pace/HR rather
+   than explicitly tagged (most Strava runs arrive untagged). */
+.run-type-inferred {
+    margin-left: 4px;
+    font-size: 9px;
+    font-weight: var(--weight-medium);
+    letter-spacing: var(--tracking-wide);
+    text-transform: uppercase;
+    color: var(--color-text-muted);
+    cursor: help;
+}
 
 .quality-badge {
     display: inline-flex;

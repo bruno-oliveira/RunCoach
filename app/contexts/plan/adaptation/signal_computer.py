@@ -225,7 +225,7 @@ def _volume_signal(
         run_date = _to_date(run.date) if run.date else today
         w = recency_weight_fn(run_date)
         dist = run.distance_km or 0
-        rtype = run.workout_type or "easy"
+        rtype = run.effective_workout_type or "easy"
         importance = _IMPORTANCE_WEIGHTS.get(rtype, 1.0)
         actual_weighted += dist * w * importance
         actual_by_type[rtype] += dist * w * importance
@@ -240,7 +240,7 @@ def _volume_signal(
 
     per_type_run_counts: Dict[str, int] = defaultdict(int)
     for run in all_plan_runs:
-        per_type_run_counts[run.workout_type or "easy"] += 1
+        per_type_run_counts[run.effective_workout_type or "easy"] += 1
 
     per_type_ratios: Dict[str, float] = {}
     for wtype in ("easy", "long", "tempo", "interval", "hill"):

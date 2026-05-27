@@ -39,6 +39,19 @@ def run_startup_migrations() -> None:
             logger.warning("Effort-class backfill failed: %s", e)
 
         try:
+            from app.contexts.runner.fitness.workout_type_classifier import (
+                backfill_inferred_workout_types,
+            )
+
+            updated = backfill_inferred_workout_types(session)
+            if updated:
+                session.commit()
+                logger.info("Workout-type backfill updated %d runs", updated)
+        except Exception as e:
+            session.rollback()
+            logger.warning("Workout-type backfill failed: %s", e)
+
+        try:
             cleanup_inactive_accounts(session)
         except Exception as e:
             session.rollback()

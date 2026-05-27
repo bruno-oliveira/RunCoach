@@ -33,6 +33,12 @@ STRAVA_TIMEOUT = httpx.Timeout(30.0)
 # API ever returns a non-empty page erroneously.
 MAX_SYNC_PAGES = 200
 
+# Per-sync cap on detailed-activity fetches. Each inserted run costs one extra
+# Strava call for per-km splits; cap it well under Strava's 100-requests /
+# 15-minute read limit so a large first sync never exhausts the budget.
+# Runs past the cap are still classified, from summary averages only.
+MAX_DETAIL_FETCHES_PER_SYNC = 50
+
 # Strava workout_type mapping: 0/None→easy, 1→race, 2→long, 3→interval (workout)
 STRAVA_WORKOUT_TYPE_MAP = {
     0: "easy",
@@ -43,6 +49,33 @@ STRAVA_WORKOUT_TYPE_MAP = {
 
 # Activity types considered as runs
 RUN_ACTIVITY_TYPES = {"Run", "TrailRun", "VirtualRun"}
+
+
+def parse_strava_splits(detail: Optional[dict]) -> Optional[list[dict]]:
+    """Compact Strava ``splits_metric`` into per-km dicts for inference/storage.
+
+    Returns ``[{km, duration_s, pace_min_km, avg_hr}, ...]`` or None when the
+    activity detail carries no usable per-km splits.
+    """
+    raw = (detail or {}).get("splits_metric") or []
+    compact: list[dict] = []
+    for split in raw:
+        distance_m = split.get("distance")
+        moving_time = split.get("moving_time") or split.get("elapsed_time")
+        if not distance_m or not moving_time or distance_m <= 0:
+            continue
+        distance_km = distance_m / 1000.0
+        compact.append(
+            {
+                "km": round(distance_km, 2),
+                "duration_s": int(moving_time),
+                "pace_min_km": round((moving_time / 60.0) / distance_km, 2),
+                "avg_hr": int(split["average_heartrate"])
+                if split.get("average_heartrate")
+                else None,
+            }
+        )
+    return compact or None
 
 
 class StravaService:
@@ -146,6 +179,29 @@ class StravaService:
             response.raise_for_status()
             return response.json()
 
+    async def fetch_activity_detail(
+        self, access_token: str, activity_id: str
+    ) -> Optional[dict[str, Any]]:
+        """Fetch a single activity's detail (includes ``splits_metric``, laps).
+
+        Returns the activity dict, or None on any error (rate limit, 404, etc.)
+        so the caller can fall back to summary-only data without failing sync.
+        """
+        try:
+            async with httpx.AsyncClient(timeout=STRAVA_TIMEOUT) as client:
+                response = await client.get(
+                    f"{STRAVA_API_BASE}/activities/{activity_id}",
+                    headers={"Authorization": f"Bearer {access_token}"},
+                    params={"include_all_efforts": "false"},
+                )
+                response.raise_for_status()
+                return response.json()
+        except Exception as e:
+            logger.warning(
+                "Strava activity-detail fetch failed for %s: %s", activity_id, e
+            )
+            return None
+
     def map_activity_to_run_log(self, activity: dict[str, Any], user_id: str) -> RunLog:
         """Convert a Strava activity dict to a RunLog instance."""
         # Validate required fields up-front so any problem produces a clear
@@ -230,6 +286,7 @@ class StravaService:
         synced = 0
         skipped = 0
         errors: list[str] = []
+        detail_fetches = 0
         page = 1
 
         while page <= MAX_SYNC_PAGES:
@@ -274,6 +331,17 @@ class StravaService:
                         )
                         if vdot:
                             run_log.vdot = vdot
+                    # Pull per-km splits (one extra call per inserted run) to
+                    # sharpen the workout-type inference. Bounded per sync to
+                    # respect Strava's rate limit; on failure we fall back to
+                    # summary averages.
+                    if detail_fetches < MAX_DETAIL_FETCHES_PER_SYNC:
+                        detail = await self.fetch_activity_detail(
+                            access_token, strava_id
+                        )
+                        detail_fetches += 1
+                        if detail:
+                            run_log.splits = parse_strava_splits(detail)
                     try:
                         from app.contexts.runner.fitness.effort_classifier import (
                             classify_effort,
@@ -292,6 +360,35 @@ class StravaService:
                     except Exception as cls_err:
                         logger.warning(
                             f"Effort classification failed for Strava run {run_log.id}: {cls_err}"
+                        )
+                    # Infer the real workout type (Strava defaults it to "easy").
+                    try:
+                        from app.contexts.runner.fitness.workout_type_classifier import (
+                            classify_workout_type,
+                        )
+
+                        wt_result = classify_workout_type(
+                            distance_km=run_log.distance_km,
+                            duration_minutes=run_log.duration_minutes,
+                            avg_pace_min_km=run_log.avg_pace_min_km,
+                            avg_heart_rate=run_log.avg_heart_rate,
+                            max_heart_rate=run_log.max_heart_rate,
+                            elevation_gain_m=run_log.elevation_gain_m,
+                            perceived_effort=run_log.perceived_effort,
+                            splits=run_log.splits,
+                            vdot=run_log.vdot,
+                            user_id=user.id,
+                            db=db,
+                            exclude_run_id=run_log.id,
+                        )
+                        if wt_result is not None:
+                            (
+                                run_log.inferred_workout_type,
+                                run_log.inferred_type_confidence,
+                            ) = wt_result
+                    except Exception as cls_err:
+                        logger.warning(
+                            f"Workout-type inference failed for Strava run {run_log.id}: {cls_err}"
                         )
                     # Each activity flush is wrapped in a SAVEPOINT so an
                     # IntegrityError (concurrent-sync race past the SELECT above)

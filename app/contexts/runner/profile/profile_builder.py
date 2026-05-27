@@ -213,6 +213,6 @@ def _compute_workout_types(profile: RunnerProfile, runs: List[RunLog]) -> None:
     """Count runs by workout_type."""
     counts: Dict[str, int] = {}
     for r in runs:
-        wt = r.workout_type or "unknown"
+        wt = r.effective_workout_type or "unknown"
         counts[wt] = counts.get(wt, 0) + 1
     profile.workout_type_counts = counts

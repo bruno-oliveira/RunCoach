@@ -13,27 +13,28 @@ def pattern_feedback(run_log, db) -> Optional[str]:
     if not run_log.avg_pace_min_km or not run_log.planned_pace_min_km:
         return None
 
-    wtype = run_log.workout_type
+    wtype = run_log.effective_workout_type
     if not wtype:
         return None
 
     from app.models import RunLog
 
     cutoff = run_log.date - timedelta(days=45)
-    recent = (
+    # effective_workout_type is a derived property (reconciles the raw tag with
+    # inference), so the type match is applied in Python rather than in SQL.
+    candidates = (
         db.query(RunLog)
         .filter(
             RunLog.user_id == run_log.user_id,
-            RunLog.workout_type == wtype,
             RunLog.avg_pace_min_km.isnot(None),
             RunLog.planned_pace_min_km.isnot(None),
             RunLog.date >= cutoff,
             RunLog.id != run_log.id,
         )
         .order_by(RunLog.date.desc())
-        .limit(6)
         .all()
     )
+    recent = [r for r in candidates if r.effective_workout_type == wtype][:6]
 
     if len(recent) < 2:
         return None

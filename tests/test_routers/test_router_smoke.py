@@ -10,6 +10,7 @@ from sqlalchemy.orm import Session
 
 from app.dependencies import get_current_user, get_db, get_optional_user
 from app.main import app
+from app.models.run_log import RunLog
 from app.models.user import User
 
 # ---------------------------------------------------------------------------
@@ -115,6 +116,43 @@ class TestAnalyticsRouter:
         with TestClient(app) as c:
             resp = c.get("/api/analytics/runs")
         assert resp.status_code == 200
+
+    def test_analytics_runs_exposes_effective_type_and_inferred_flag(
+        self, smoke_user, test_db
+    ):
+        # Strava run that arrived untagged (defaulted "easy") but inferred tempo.
+        test_db.add(
+            RunLog(
+                user_id=smoke_user.id,
+                strava_activity_id="s1",
+                distance_km=8.0,
+                duration_minutes=36.0,
+                avg_pace_min_km=4.5,
+                workout_type="easy",
+                inferred_workout_type="tempo",
+                inferred_type_confidence=0.8,
+            )
+        )
+        # Manually tagged run: the explicit choice stands, not flagged inferred.
+        test_db.add(
+            RunLog(
+                user_id=smoke_user.id,
+                distance_km=10.0,
+                duration_minutes=55.0,
+                avg_pace_min_km=5.5,
+                workout_type="long",
+            )
+        )
+        test_db.commit()
+
+        _set_user(smoke_user)
+        with TestClient(app) as c:
+            resp = c.get("/api/analytics/runs")
+
+        assert resp.status_code == 200
+        by_type = {r["workout_type"]: r for r in resp.json()["runs"]}
+        assert by_type["tempo"]["inferred"] is True  # corrected from Strava "easy"
+        assert by_type["long"]["inferred"] is False  # explicit manual tag
 
     def test_get_analytics_runs_unauthenticated(self):
         _clear_user()

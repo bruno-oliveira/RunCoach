@@ -553,6 +553,10 @@ class TestImportanceWeightedVolume:
                 self.date = _today()
                 self.daily_workout_id = daily_workout_id
 
+            @property
+            def effective_workout_type(self):
+                return self.workout_type
+
         today = _today()
 
         def _recency_weight(scheduled_date):
@@ -1097,6 +1101,10 @@ class TestMountainSimulationSignal:
                 self.perceived_effort = 5.0
                 self.date = _today()
 
+            @property
+            def effective_workout_type(self):
+                return self.workout_type
+
         today = _today()
 
         def _recency_weight(_scheduled_date):
@@ -1163,6 +1171,10 @@ class TestMountainSimulationSignal:
                 self.distance_km = dist
                 self.perceived_effort = 5.0
                 self.date = _today()
+
+            @property
+            def effective_workout_type(self):
+                return self.workout_type
 
         today = _today()
 

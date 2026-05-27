@@ -558,7 +558,7 @@ class RacePredictorService:
                     "date": run.date.isoformat() if run.date else None,
                     "distance_km": run.distance_km,
                     "distance_name": distance_name,
-                    "workout_type": run.workout_type,
+                    "workout_type": run.effective_workout_type,
                     "actual_seconds": actual_seconds,
                     "actual_formatted": VDOTCalculator.format_duration(actual_seconds)
                     if actual_seconds

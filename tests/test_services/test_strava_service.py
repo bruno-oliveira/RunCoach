@@ -7,6 +7,7 @@ import pytest
 
 from app.infrastructure.integrations.strava_service import (
     StravaService,
+    parse_strava_splits,
 )
 from app.models.run_log import RunLog
 from app.models.user import User
@@ -15,6 +16,19 @@ from app.models.user import User
 @pytest.fixture
 def strava_service():
     return StravaService()
+
+
+@pytest.fixture(autouse=True)
+def _stub_activity_detail():
+    """Keep sync hermetic: never hit Strava's activity-detail endpoint unless a
+    test explicitly opts in by re-patching fetch_activity_detail."""
+    with patch.object(
+        StravaService,
+        "fetch_activity_detail",
+        new_callable=AsyncMock,
+        return_value=None,
+    ):
+        yield
 
 
 @pytest.fixture
@@ -282,6 +296,123 @@ class TestSyncActivities:
         logs = test_db.query(RunLog).filter(RunLog.user_id == "user-123").all()
         assert len(logs) == 1
         assert logs[0].strava_activity_id == "444"
+
+    @pytest.mark.asyncio
+    async def test_sync_sets_inferred_workout_type(
+        self, strava_service, mock_user, sample_strava_activity, test_db
+    ):
+        """A synced run gets an inferred type even without splits (HR + VDOT)."""
+        test_db.add(mock_user)
+        test_db.commit()
+
+        with (
+            patch.object(
+                strava_service, "ensure_valid_token", new_callable=AsyncMock
+            ) as mock_token,
+            patch.object(
+                strava_service, "fetch_activities", new_callable=AsyncMock
+            ) as mock_fetch,
+        ):
+            mock_token.return_value = "valid-token"
+            mock_fetch.side_effect = [[sample_strava_activity], []]
+
+            await strava_service.sync_activities(mock_user, test_db)
+
+        run = test_db.query(RunLog).filter(RunLog.user_id == "user-123").first()
+        assert run.inferred_workout_type in {
+            "easy",
+            "recovery",
+            "long",
+            "tempo",
+            "interval",
+        }
+        assert run.inferred_type_confidence is not None
+
+    @pytest.mark.asyncio
+    async def test_sync_stores_parsed_splits(
+        self, strava_service, mock_user, sample_strava_activity, test_db
+    ):
+        """When activity detail is available, per-km splits are parsed + stored."""
+        test_db.add(mock_user)
+        test_db.commit()
+
+        detail = {
+            "splits_metric": [
+                {"distance": 1000.0, "moving_time": 300, "average_heartrate": 150.0},
+                {"distance": 1000.0, "moving_time": 280, "average_heartrate": 160.0},
+            ]
+        }
+        with (
+            patch.object(
+                strava_service, "ensure_valid_token", new_callable=AsyncMock
+            ) as mock_token,
+            patch.object(
+                strava_service, "fetch_activities", new_callable=AsyncMock
+            ) as mock_fetch,
+            patch.object(
+                strava_service,
+                "fetch_activity_detail",
+                new_callable=AsyncMock,
+                return_value=detail,
+            ),
+        ):
+            mock_token.return_value = "valid-token"
+            mock_fetch.side_effect = [[sample_strava_activity], []]
+
+            await strava_service.sync_activities(mock_user, test_db)
+
+        run = test_db.query(RunLog).filter(RunLog.user_id == "user-123").first()
+        assert run.splits is not None
+        assert len(run.splits) == 2
+        assert run.splits[0]["pace_min_km"] == 5.0  # 300s over 1km
+
+    @pytest.mark.asyncio
+    async def test_sync_survives_detail_fetch_failure(
+        self, strava_service, mock_user, sample_strava_activity, test_db
+    ):
+        """A failed detail fetch (None) leaves splits empty but still syncs."""
+        test_db.add(mock_user)
+        test_db.commit()
+
+        with (
+            patch.object(
+                strava_service, "ensure_valid_token", new_callable=AsyncMock
+            ) as mock_token,
+            patch.object(
+                strava_service, "fetch_activities", new_callable=AsyncMock
+            ) as mock_fetch,
+        ):
+            mock_token.return_value = "valid-token"
+            mock_fetch.side_effect = [[sample_strava_activity], []]
+
+            result = await strava_service.sync_activities(mock_user, test_db)
+
+        assert result["synced"] == 1
+        run = test_db.query(RunLog).filter(RunLog.user_id == "user-123").first()
+        assert run.splits is None
+
+
+class TestParseStravaSplits:
+    def test_parses_splits_metric(self):
+        detail = {
+            "splits_metric": [
+                {"distance": 1000.0, "moving_time": 300, "average_heartrate": 150.0},
+                {"distance": 1000.0, "moving_time": 270, "average_heartrate": None},
+            ]
+        }
+        assert parse_strava_splits(detail) == [
+            {"km": 1.0, "duration_s": 300, "pace_min_km": 5.0, "avg_hr": 150},
+            {"km": 1.0, "duration_s": 270, "pace_min_km": 4.5, "avg_hr": None},
+        ]
+
+    def test_no_splits_returns_none(self):
+        assert parse_strava_splits({}) is None
+        assert parse_strava_splits(None) is None
+        assert parse_strava_splits({"splits_metric": []}) is None
+
+    def test_skips_unusable_splits(self):
+        detail = {"splits_metric": [{"distance": 0, "moving_time": 10}]}
+        assert parse_strava_splits(detail) is None
 
 
 class TestTokenRefresh:

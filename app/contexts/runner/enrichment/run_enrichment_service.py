@@ -8,6 +8,7 @@ from sqlalchemy.orm import Session
 from app.contexts.plan.repositories import SQLAlchemyPlanRepository
 from app.contexts.runner.fitness.effort_classifier import classify_effort
 from app.contexts.runner.fitness.race_predictor_service import RacePredictorService
+from app.contexts.runner.fitness.workout_type_classifier import classify_workout_type
 from app.contexts.runner.queries import count_prior_trail_runs
 from app.core.training.vdot_calculator import VDOTCalculator
 from app.models import RunLog
@@ -55,6 +56,26 @@ def enrich_vdot_and_prediction(
         if vdot:
             new_run.vdot = vdot
 
+    try:
+        wt_result = classify_workout_type(
+            distance_km=distance_km,
+            duration_minutes=duration_minutes,
+            avg_pace_min_km=new_run.avg_pace_min_km,
+            avg_heart_rate=new_run.avg_heart_rate,
+            max_heart_rate=new_run.max_heart_rate,
+            elevation_gain_m=new_run.elevation_gain_m,
+            perceived_effort=new_run.perceived_effort,
+            splits=new_run.splits,
+            vdot=new_run.vdot,
+            user_id=user_id,
+            db=db,
+            exclude_run_id=new_run.id,
+        )
+        if wt_result is not None:
+            new_run.inferred_workout_type, new_run.inferred_type_confidence = wt_result
+    except Exception as e:
+        logger.warning(f"Failed to infer workout type for run: {e}")
+
     if distance_km >= 2.0:
         try:
             pre_race_vdot = RacePredictorService.get_best_recent_vdot(
@@ -89,7 +110,7 @@ def _maybe_recalibrate_plan_zones(
     if not new_run.training_plan_id:
         return None
 
-    workout_type = (new_run.workout_type or "").lower()
+    workout_type = (new_run.effective_workout_type or "").lower()
     effort_class = (new_run.effort_class or "").lower()
     if (
         workout_type not in _RECALIBRATION_WORKOUT_TYPES

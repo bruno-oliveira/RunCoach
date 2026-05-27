@@ -38,6 +38,10 @@ class _MockRun:
         self.effort_class = effort_class
         self.daily_workout_id = daily_workout_id
 
+    @property
+    def effective_workout_type(self):
+        return self.workout_type
+
 
 class _MockWorkout:
     def __init__(self, wid=None, wtype="easy", dist=8.0):
