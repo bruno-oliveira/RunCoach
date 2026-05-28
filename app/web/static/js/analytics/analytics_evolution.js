@@ -8,30 +8,21 @@
     const AD = window.AnalyticsDashboard;
 
     /* ------------------------------------------------------------------ */
-    /*  Evolution Controls                                                 */
+    /*  Evolution data window                                              */
+    /*                                                                     */
+    /*  Evolution shares the global period selector (header dropdown).     */
+    /*  We track which period the charts were last rendered for so we can  */
+    /*  re-render lazily when the user changes the period elsewhere.       */
     /* ------------------------------------------------------------------ */
-    AD.bindEvolutionControls = function() {
-        document.querySelectorAll('.evolution-period-btn').forEach(btn => {
-            btn.addEventListener('click', () => {
-                const days = btn.dataset.days;
-                if (days === String(this.evolutionPeriodDays)) return;
-                document.querySelectorAll('.evolution-period-btn')
-                    .forEach(b => b.classList.remove('evolution-period-btn--active'));
-                btn.classList.add('evolution-period-btn--active');
-                this.evolutionPeriodDays = days === 'all' ? 'all' : parseInt(days, 10);
-                this.evolutionInitialized = false;
-                this.loadEvolution();
-            });
-        });
-    };
 
     AD.loadEvolution = async function() {
         const emptyEl = document.getElementById('evolutionEmpty');
         const syncEl  = document.getElementById('evolutionSyncIndicator');
         if (syncEl) syncEl.style.display = 'flex';
+        this.evolutionLoadedForDays = this.currentPeriodDays;
         try {
             if (this.stravaConnected) {
-                const daysBack = this.evolutionPeriodDays === 'all' ? null : this.evolutionPeriodDays;
+                const daysBack = this.currentPeriodDays === 'all' ? null : this.currentPeriodDays;
                 await this.syncStravaPeriod(daysBack);
                 await this.reloadRuns();
             }
@@ -55,9 +46,9 @@
     };
 
     AD._filterEvolutionRuns = function() {
-        if (this.evolutionPeriodDays === 'all') return [...this.allRuns];
+        if (this.currentPeriodDays === 'all') return [...this.allRuns];
         const cutoff = new Date();
-        cutoff.setDate(cutoff.getDate() - this.evolutionPeriodDays);
+        cutoff.setDate(cutoff.getDate() - this.currentPeriodDays);
         return this.allRuns.filter(r => r.date && new Date(r.date) >= cutoff);
     };
 

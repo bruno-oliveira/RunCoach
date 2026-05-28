@@ -18,8 +18,11 @@ const AnalyticsDashboard = {
     prData: null,
     insightsData: null,
     activeTab: 'today',
-    evolutionPeriodDays: 90,
-    evolutionInitialized: false,
+    // Period selector visibility is scoped per tab. Today / Signals are
+    // plan-scoped so the header period filter does not apply.
+    HEADER_SCOPED_TABS: ['progress', 'insights', 'evolution'],
+    PERSIST_KEY: 'runcoach.coachHub.state',
+    evolutionLoadedForDays: null,
     evolutionCharts: {},
     stravaConnected: false,
 
@@ -64,28 +67,46 @@ const AnalyticsDashboard = {
             const tabs = document.getElementById('analyticsTabs');
             if (tabs) tabs.style.display = 'flex';
 
-            // Coaching-first default: scope to the most recent plan if one has
-            // runs, so the Today tab lands with data. Falls back to all-runs.
+            const persisted = this._readPersistedState();
+
+            // Restore the period preference before any data-window calc so the
+            // dropdown value and the actual filter agree on first paint.
+            this._applyPersistedPeriod(persisted.period);
+
+            // Plan selection: prefer the persisted plan when it still exists;
+            // otherwise fall back to the most recent plan with logged runs, so
+            // the Today tab lands with data. Never overwrite an explicit choice.
             const planSel = document.getElementById('planSelector');
-            if (planSel && planSel.options.length > 1) {
-                planSel.value = planSel.options[1].value;
-                this.currentPlanId = planSel.value || null;
-                await this.loadRuns();
-                if (this.allRuns.length === 0) {
+            if (planSel) {
+                const wantsAllRuns = persisted.plan === '';
+                const persistedPlanExists = persisted.plan &&
+                    Array.from(planSel.options).some(o => o.value === persisted.plan);
+                if (persistedPlanExists) {
+                    planSel.value = persisted.plan;
+                    this.currentPlanId = persisted.plan;
+                    await this.loadRuns();
+                } else if (wantsAllRuns) {
                     planSel.value = '';
                     this.currentPlanId = null;
+                } else if (planSel.options.length > 1) {
+                    planSel.value = planSel.options[1].value;
+                    this.currentPlanId = planSel.value || null;
                     await this.loadRuns();
+                    if (this.allRuns.length === 0) {
+                        planSel.value = '';
+                        this.currentPlanId = null;
+                        await this.loadRuns();
+                    }
                 }
             }
 
             dashboard.style.display = 'block';
-            this.filterByPeriod(this.currentPlanId ? 'all' : 30);
+            this.filterByPeriod(this.currentPeriodDays);
             this.bindGroupingControls();
             this.bindPeriodSelector();
             this.bindPlanSelector();
             this.bindPredictionsToggle();
             this.bindTabSwitching();
-            this.bindEvolutionControls();
             this.loadRacePredictions();
             this.loadRaceResults();
             this.loadTrainingLoad();
@@ -93,8 +114,9 @@ const AnalyticsDashboard = {
             this.loadInsights();
             if (this.currentPlanId) this.showPlanSection(this.currentPlanId);
 
-            // Charts are now sized (dashboard was visible); lead with Today.
-            this.switchTab('today');
+            const initialTab = ['today', 'signals', 'progress', 'insights', 'evolution']
+                .includes(persisted.tab) ? persisted.tab : 'today';
+            this.switchTab(initialTab);
         } catch (err) {
             console.error('Analytics load error:', err);
             loading.style.display = 'none';
@@ -126,6 +148,69 @@ const AnalyticsDashboard = {
         this.renderAll();
     },
 
+    /* ------------------------------------------------------------------ */
+    /*  State Persistence                                                  */
+    /*                                                                     */
+    /*  Coach Hub state (active tab, selected plan, period window) is      */
+    /*  mirrored to the URL so reloads and shares land where the user      */
+    /*  left off. localStorage backs the URL on a clean reload.            */
+    /* ------------------------------------------------------------------ */
+    _readPersistedState() {
+        const params = new URLSearchParams(location.search);
+        let tab = params.get('tab');
+        let plan = params.get('plan');
+        let period = params.get('period');
+        if (tab === null && plan === null && period === null) {
+            try {
+                const stored = JSON.parse(localStorage.getItem(this.PERSIST_KEY) || 'null');
+                if (stored) {
+                    tab = stored.tab ?? null;
+                    plan = stored.plan ?? null;
+                    period = stored.period != null ? String(stored.period) : null;
+                }
+            } catch (_) { /* localStorage may be unavailable */ }
+        }
+        return { tab, plan, period };
+    },
+
+    _persistState() {
+        const params = new URLSearchParams();
+        if (this.activeTab && this.activeTab !== 'today') params.set('tab', this.activeTab);
+        if (this.currentPlanId) params.set('plan', String(this.currentPlanId));
+        if (this.currentPeriodDays != null && this.currentPeriodDays !== 30) {
+            params.set('period', String(this.currentPeriodDays));
+        }
+        const qs = params.toString();
+        const url = qs ? `${location.pathname}?${qs}` : location.pathname;
+        try { history.replaceState(null, '', url); } catch (_) { /* ignore */ }
+        try {
+            localStorage.setItem(this.PERSIST_KEY, JSON.stringify({
+                tab: this.activeTab,
+                plan: this.currentPlanId,
+                period: this.currentPeriodDays,
+            }));
+        } catch (_) { /* ignore */ }
+    },
+
+    _applyPersistedPeriod(period) {
+        if (!period) return;
+        const sel = document.getElementById('periodSelector');
+        const customWrap = document.getElementById('customDaysWrap');
+        const customInput = document.getElementById('customDaysInput');
+        if (!sel) return;
+        const standard = ['30', '60', '90', '365', 'all'];
+        if (standard.includes(period)) {
+            sel.value = period;
+            this.currentPeriodDays = period === 'all' ? 'all' : parseInt(period, 10);
+        } else if (/^\d+$/.test(period)) {
+            const n = Math.min(366, Math.max(1, parseInt(period, 10)));
+            sel.value = 'custom';
+            if (customWrap) customWrap.style.display = 'flex';
+            if (customInput) customInput.value = n;
+            this.currentPeriodDays = n;
+        }
+    },
+
     bindPeriodSelector() {
         const el = document.getElementById('periodSelector');
         if (!el) return;
@@ -136,6 +221,10 @@ const AnalyticsDashboard = {
 
         const applyPeriod = async (days) => {
             this.filterByPeriod(days);
+            this._persistState();
+            // Evolution shares this period; if it's the active tab, refresh it.
+            if (this.activeTab === 'evolution') this.loadEvolution();
+            else this.evolutionLoadedForDays = null;
 
             const stravaConnected = await this.checkStravaConnection();
             if (!stravaConnected) return;
@@ -424,6 +513,7 @@ const AnalyticsDashboard = {
         if (!el) return;
         el.addEventListener('change', async () => {
             this.currentPlanId = el.value || null;
+            this._persistState();
             const loading = document.getElementById('analyticsLoading');
             const dashboard = document.getElementById('analyticsProgress');
             const empty = document.getElementById('analyticsEmpty');
@@ -451,7 +541,8 @@ const AnalyticsDashboard = {
                     return;
                 }
                 if (!planScopedTab && dashboard) dashboard.style.display = 'block';
-                this.filterByPeriod(this.currentPlanId ? 'all' : this.currentPeriodDays);
+                this.filterByPeriod(this.currentPeriodDays);
+                this.evolutionLoadedForDays = null;
                 if (this.currentPlanId) {
                     this.showPlanSection(this.currentPlanId);
                 } else {
@@ -533,16 +624,28 @@ const AnalyticsDashboard = {
             if (el) el.style.display = name === tabName ? 'block' : 'none';
         }
 
+        // Scope the header period selector to tabs that actually filter by
+        // window. Today / Signals are plan-scoped and ignore it.
+        const showHeaderPeriod = this.HEADER_SCOPED_TABS.includes(tabName);
+        const periodSel = document.getElementById('periodSelector');
+        const customWrap = document.getElementById('customDaysWrap');
+        if (periodSel) periodSel.style.display = showHeaderPeriod ? '' : 'none';
+        if (customWrap) {
+            const customActive = periodSel && periodSel.value === 'custom';
+            customWrap.style.display = (showHeaderPeriod && customActive) ? 'flex' : 'none';
+        }
+
         if (tabName === 'today' && this.todayLoadedPlanId !== this.currentPlanId) {
             this.loadToday(this.currentPlanId);
         }
         if (tabName === 'signals' && this.signalsLoadedPlanId !== this.currentPlanId) {
             this.loadSignals(this.currentPlanId);
         }
-        if (tabName === 'evolution' && !this.evolutionInitialized) {
-            this.evolutionInitialized = true;
+        if (tabName === 'evolution' && this.evolutionLoadedForDays !== this.currentPeriodDays) {
             this.loadEvolution();
         }
+
+        this._persistState();
     },
 
     /* ------------------------------------------------------------------ */

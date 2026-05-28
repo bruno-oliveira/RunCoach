@@ -1,41 +1,8 @@
 /* ── Evolution Over Time Tab ── */
-.evolution-controls {
-    display: flex;
-    align-items: center;
-    gap: 1rem;
-    margin-bottom: 1.5rem;
-    flex-wrap: wrap;
-}
-.evolution-controls-label {
-    font-size: 0.8125rem;
-    font-weight: 600;
-    color: var(--color-text-muted, #6b7280);
-    white-space: nowrap;
-}
-.evolution-period-group {
-    display: flex;
-    gap: 2px;
-    background: var(--color-bg-sunken, #f3f4f6);
-    border-radius: 10px;
-    padding: 3px;
-}
-.evolution-period-btn {
-    padding: 5px 13px;
-    border: none;
-    border-radius: 7px;
-    font-size: 0.8125rem;
-    font-weight: 600;
-    color: var(--color-text-muted, #6b7280);
-    background: transparent;
-    cursor: pointer;
-    transition: background 140ms, color 140ms, box-shadow 140ms;
-    white-space: nowrap;
-}
-.evolution-period-btn:hover { color: var(--color-text, #111); }
-.evolution-period-btn--active {
-    background: var(--color-bg-elevated, #fff);
-    color: var(--color-primary, #1D4ED8);
-    box-shadow: 0 1px 3px rgba(28,25,23,0.08);
+/* Evolution shares the page-level period selector. A local sync indicator
+   sits in its place so users still see Strava activity during reloads. */
+.evolution-sync {
+    margin-bottom: 1.25rem;
 }
 .evolution-stats-row {
     display: grid;
@@ -101,5 +68,4 @@
 }
 @media (max-width: 640px) {
     .evolution-stats-row { grid-template-columns: repeat(2, 1fr); }
-    .evolution-period-btn { padding: 4px 9px; font-size: 0.75rem; }
 }

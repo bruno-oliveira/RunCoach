@@ -154,3 +154,27 @@
     white-space: nowrap;
 }
 
+/* ── Mobile: stack page header & selectors ── */
+@media (max-width: 640px) {
+    .analytics-page-header {
+        flex-direction: column;
+        align-items: stretch;
+        gap: var(--space-3);
+    }
+    .analytics-page-header-right {
+        flex-direction: column;
+        align-items: stretch;
+        gap: var(--space-2);
+        width: 100%;
+    }
+    .analytics-page-header-right .period-select {
+        width: 100%;
+    }
+    .custom-days-wrap {
+        justify-content: stretch;
+    }
+    .custom-days-input {
+        flex: 1;
+    }
+}
+

@@ -607,19 +607,10 @@
     <!-- Evolution Over Time tab -->
     <div id="analyticsEvolutionTab" class="analytics-tab-panel" role="tabpanel" aria-labelledby="atab-evolution" style="display:none;">
 
-        <!-- Period selector -->
-        <div class="evolution-controls">
-            <div class="evolution-controls-label">Show progress over</div>
-            <div class="evolution-period-group">
-                <button class="evolution-period-btn evolution-period-btn--active" data-days="90">3 months</button>
-                <button class="evolution-period-btn" data-days="180">6 months</button>
-                <button class="evolution-period-btn" data-days="365">1 year</button>
-                <button class="evolution-period-btn" data-days="all">All time</button>
-            </div>
-            <div id="evolutionSyncIndicator" class="strava-sync-indicator" style="display:none;" aria-live="polite">
-                <span class="strava-sync-spinner"></span>
-                <span class="strava-sync-label">Syncing&hellip;</span>
-            </div>
+        <!-- Evolution shares the global period selector in the page header. -->
+        <div id="evolutionSyncIndicator" class="strava-sync-indicator evolution-sync" style="display:none;" aria-live="polite">
+            <span class="strava-sync-spinner"></span>
+            <span class="strava-sync-label">Syncing&hellip;</span>
         </div>
 
         <!-- Summary stat cards -->
