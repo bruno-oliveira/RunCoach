@@ -10,6 +10,7 @@ from sqlalchemy.orm import Session
 
 from app.core.training.vdot_calculator import VDOTCalculator
 from app.models import RunLog
+from app.utils import format_pace, format_pace_bare
 
 # Standard distances with tolerance for GPS drift
 DISTANCE_BUCKETS = [
@@ -37,12 +38,6 @@ DISTANCE_BUCKETS = [
         "icon": "trophy",
     },
 ]
-
-
-def _format_pace(pace_min_km: float) -> str:
-    mins = int(pace_min_km)
-    secs = int((pace_min_km - mins) * 60)
-    return f"{mins}:{secs:02d}"
 
 
 class PersonalRecordsService:
@@ -106,7 +101,7 @@ def _build_distance_records(runs: List[RunLog]) -> List[Dict[str, Any]]:
                     "duration_seconds": total_secs,
                     "duration_formatted": VDOTCalculator.format_duration(total_secs),
                     "pace_min_km": round(pace, 2),
-                    "pace_formatted": _format_pace(pace),
+                    "pace_formatted": format_pace_bare(pace),
                     "vdot": run.vdot,
                 }
                 if prev_pace is not None:
@@ -163,7 +158,7 @@ def _build_general_records(runs: List[RunLog]) -> List[Dict[str, Any]]:
                 "value": round(fastest.avg_pace_min_km, 2),
                 "unit": "min/km",
                 "date": fastest.date.isoformat() if fastest.date else None,
-                "formatted": f"{_format_pace(fastest.avg_pace_min_km)}/km",
+                "formatted": format_pace(fastest.avg_pace_min_km),
                 "distance_km": round(fastest.distance_km, 1),
             }
         )

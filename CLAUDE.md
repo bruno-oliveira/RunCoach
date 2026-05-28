@@ -154,7 +154,7 @@ tests/
 
 - **`app/models/user.py`** - `User` model with Google OAuth fields (`google_id`, `email`, `name`, `picture`) and `plans_generated` counter.
 
-- **`app/models/run_log.py`** - `RunLog` model for tracking runs with fields for distance, duration, pace, heart rate, cadence, elevation, workout type, and perceived effort.
+- **`app/models/run_log.py`** - `RunLog` model for tracking runs with fields for distance, duration, pace, heart rate, cadence, elevation, workout type, and perceived effort. The user-entered/Strava `workout_type` is kept separate from `inferred_workout_type` (+ `inferred_type_confidence`), which is filled in from pace/HR/distance/splits by `app/contexts/runner/fitness/workout_type_classifier.py`. Read via the `effective_workout_type` property — it prefers the explicit label when present and falls back to inference for untagged Strava runs. Backfilled on startup by `app/migrations/startup.py` (`backfill_inferred_workout_types`).
 
 - **`app/exceptions.py`** - Custom exception hierarchy with user-friendly messages: `RunCoachException` (base), `ValidationException`, `UnrealisticGoalException`, `InsufficientTimeException`, `InadequateBaseException`, `PlanGenerationException`, `DatabaseException`.
 

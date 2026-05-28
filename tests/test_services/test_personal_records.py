@@ -8,11 +8,9 @@ from sqlalchemy import create_engine, event
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 
-from app.contexts.runner.fitness.personal_records_service import (
-    PersonalRecordsService,
-    _format_pace,
-)
+from app.contexts.runner.fitness.personal_records_service import PersonalRecordsService
 from app.models import Base, RunLog, User
+from app.utils import format_pace_bare
 
 
 def _uid():
@@ -68,8 +66,8 @@ def _run(db, user, *, days_ago, dist, dur_min, pace=None, vdot=None):
 
 
 def test_format_pace():
-    assert _format_pace(5.5) == "5:30"
-    assert _format_pace(4.0) == "4:00"
+    assert format_pace_bare(5.5) == "5:30"
+    assert format_pace_bare(4.0) == "4:00"
 
 
 def test_no_runs(db):
