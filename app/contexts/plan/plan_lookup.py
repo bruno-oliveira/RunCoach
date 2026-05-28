@@ -1,4 +1,9 @@
-"""Plan fetching with ownership validation."""
+"""Plan fetching with ownership validation.
+
+Lives in the plan context because the primary concern is loading a plan by
+ID and verifying the caller's relationship to it; the auth check is a
+secondary policy applied during that lookup.
+"""
 
 from typing import Any, Optional
 

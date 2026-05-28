@@ -1,4 +1,14 @@
-"""Service for merging anonymous user data to authenticated users."""
+"""Cross-context orchestration for merging anonymous accounts on sign-in.
+
+This sits in the application layer because it spans three contexts:
+- auth   (anonymous user, authenticated user)
+- plan   (training plans owned by the anonymous user)
+- runner (run logs)
+- (also favourite recipes)
+
+Keeping it here means neither the auth nor the plan context needs to import
+the other directly to handle the merge.
+"""
 
 import logging
 from typing import Optional
@@ -12,17 +22,17 @@ from app.models import FavoriteRecipe, RunLog
 logger = logging.getLogger(__name__)
 
 
-class MergeService:
-    """Handle merging anonymous user plans/logs to authenticated users."""
+class AccountMergeService:
+    """Merge an anonymous user's data onto an authenticated user."""
 
     @staticmethod
     def merge_anonymous_user(
         db: Session, anonymous_user_id: Optional[str], authenticated_user_id: str
     ) -> dict:
-        """
-        Merge all data from anonymous user to authenticated user.
+        """Move plans, run logs, and favourite recipes from anonymous to user.
 
-        Returns dict with statistics of what was merged.
+        Returns a stats dict describing what was merged (or why the merge
+        was skipped).
         """
         if not anonymous_user_id:
             return {"merged": False, "reason": "No anonymous_user_id provided"}

@@ -220,9 +220,11 @@ class AuthService:
             db.refresh(user)
 
         if anonymous_user_id and anonymous_user_id != user.id:
-            from app.contexts.plan.merge_service import MergeService
+            from app.application.account_merge_service import AccountMergeService
 
-            MergeService.merge_anonymous_user(db, anonymous_user_id, user.id)
+            AccountMergeService.merge_anonymous_user(
+                db, anonymous_user_id, user.id
+            )
 
         user.last_activity = datetime.now(timezone.utc).replace(tzinfo=None)
         db.commit()
