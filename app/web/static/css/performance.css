@@ -952,8 +952,11 @@
     font-size: var(--text-sm);
 }
 
-/* Modal */
-.modal {
+/* Performance-page log-run modal.
+   Scoped to `.perf-modal` so we don't fight the global `.modal` rules in
+   components.css (which use a `.is-open` class toggle pattern that this
+   modal doesn't use). */
+.perf-modal {
     position: fixed;
     inset: 0;
     background: var(--color-bg-overlay);
@@ -964,7 +967,7 @@
     z-index: var(--z-modal);
 }
 
-.modal-content {
+.perf-modal .modal-content {
     background: var(--color-bg-elevated);
     border: 1px solid var(--color-border-subtle);
     border-radius: var(--radius-2xl);
@@ -975,7 +978,7 @@
     box-shadow: var(--shadow-xl);
 }
 
-.modal-close {
+.perf-modal .modal-close {
     position: absolute;
     top: var(--space-4);
     right: var(--space-4);
@@ -993,18 +996,18 @@
     transition: all var(--duration-fast) var(--ease-out);
 }
 
-.modal-close:hover {
+.perf-modal .modal-close:hover {
     background: var(--color-surface);
     color: var(--color-text);
 }
 
-.modal-content h3 {
+.perf-modal .modal-content h3 {
     font-family: var(--font-display);
     margin-top: 0;
     margin-bottom: var(--space-5);
 }
 
-.modal-content textarea {
+.perf-modal .modal-content textarea {
     width: 100%;
     padding: 10px 14px;
     border: 1.5px solid var(--color-border);
@@ -1017,7 +1020,7 @@
     transition: all var(--duration-fast) var(--ease-out);
 }
 
-.modal-content textarea:focus {
+.perf-modal .modal-content textarea:focus {
     outline: none;
     border-color: var(--color-primary);
     box-shadow: 0 0 0 3px var(--color-primary-subtle);
