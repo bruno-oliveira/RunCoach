@@ -15,14 +15,16 @@
 
     <div class="search-section">
         <div class="search-bar">
-            <input 
-                type="text" 
-                id="searchInput" 
-                placeholder="Search recipes by name..." 
+            <label for="searchInput" class="sr-only">Search recipes</label>
+            <input
+                type="text"
+                id="searchInput"
+                placeholder="Search recipes by name..."
                 autocomplete="off"
+                aria-label="Search recipes by name"
             >
-            <button class="search-btn" onclick="searchRecipes()">
-                🔍 Search
+            <button class="search-btn" onclick="searchRecipes()" type="button">
+                <span aria-hidden="true">🔍</span> Search
             </button>
         </div>
 
@@ -64,9 +66,9 @@
             </div>
 
             <div class="filter-group">
-                <label>&nbsp;</label>
-                <button class="clear-filters-btn" onclick="clearFilters()">
-                    ✕ Clear Filters
+                <span class="filter-group-spacer" aria-hidden="true"></span>
+                <button class="clear-filters-btn" onclick="clearFilters()" type="button">
+                    <span aria-hidden="true">✕</span> Clear Filters
                 </button>
             </div>
         </div>
@@ -74,8 +76,8 @@
         <div class="dietary-filters">
             <div class="dietary-filter-header">
                 <label>Dietary Preferences</label>
-                <button class="toggle-dietary-filters" onclick="toggleDietaryFilters()">
-                    <span id="dietaryToggleIcon">▼</span> Show Filters
+                <button class="toggle-dietary-filters" onclick="toggleDietaryFilters()" type="button" aria-expanded="false" aria-controls="dietaryFilterOptions">
+                    <span id="dietaryToggleIcon" aria-hidden="true">▼</span> Show Filters
                 </button>
             </div>
             <div class="dietary-filter-options" id="dietaryFilterOptions" style="display: none;">
@@ -349,14 +351,12 @@
     window.toggleDietaryFilters = function() {
         const options = document.getElementById('dietaryFilterOptions');
         const icon = document.getElementById('dietaryToggleIcon');
-        
-        if (options.style.display === 'none' || !options.style.display) {
-            options.style.display = 'block';
-            icon.textContent = '▲';
-        } else {
-            options.style.display = 'none';
-            icon.textContent = '▼';
-        }
+        const trigger = document.querySelector('.toggle-dietary-filters');
+
+        const isClosed = options.style.display === 'none' || !options.style.display;
+        options.style.display = isClosed ? 'block' : 'none';
+        icon.textContent = isClosed ? '▲' : '▼';
+        if (trigger) trigger.setAttribute('aria-expanded', isClosed ? 'true' : 'false');
     };
 
     function getSelectedDietaryTags() {

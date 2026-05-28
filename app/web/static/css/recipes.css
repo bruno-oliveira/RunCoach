@@ -109,10 +109,18 @@
     gap: var(--space-2);
 }
 
-.filter-group label {
+.filter-group label,
+.filter-group-spacer {
     font-weight: var(--weight-semibold);
     color: var(--color-text);
     font-size: var(--text-sm);
+    line-height: 1.4;
+}
+
+/* Reserves the label row in columns without a visible label so siblings
+   (e.g. .clear-filters-btn) align with their neighbours. */
+.filter-group-spacer {
+    min-height: 1.4em;
 }
 
 .filter-group select,
