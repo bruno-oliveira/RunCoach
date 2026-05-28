@@ -538,79 +538,12 @@ def _run_adjust(
     return result
 
 
-def _build_signal_snapshot(signals: Dict[str, Any]) -> Dict[str, Any]:
-    """Per-signal factor + weight + form, frozen onto an adaptation event.
-
-    Persisted on each applied "adjust" event so the Coach Hub can chart how
-    the six signals evolved over time without recomputing historical state.
-    Mirrors the ``signals_block`` shape that ``build_coach_summary`` exposes.
-    """
-    weights = signals.get("phase_weights", {})
-    return {
-        "multiplier": signals.get("multiplier"),
-        "phase": signals.get("current_phase"),
-        "signals": {
-            "volume": {
-                "factor": signals.get("volume_ratio"),
-                "weight": weights.get("volume", 0.0),
-            },
-            "effort": {
-                "factor": signals.get("effort_factor"),
-                "weight": weights.get("effort", 0.0),
-            },
-            "completion": {
-                "factor": signals.get("completion_factor"),
-                "weight": weights.get("completion", 0.0),
-            },
-            "hr_zone": {
-                "factor": signals.get("hr_zone_factor"),
-                "weight": weights.get("hr_zone", 0.0),
-            },
-            "feedback": {
-                "factor": signals.get("feedback_factor"),
-                "weight": weights.get("feedback", 0.0),
-            },
-            "readiness": {
-                "factor": signals.get("readiness_factor"),
-                "weight": weights.get("readiness", 0.0),
-            },
-        },
-        "form": {
-            "ctl": signals.get("ctl"),
-            "atl": signals.get("atl"),
-            "tsb": signals.get("tsb"),
-            "tsb_form": signals.get("tsb_form"),
-        },
-    }
-
-
-def _build_signals_summary(
-    signals: Dict[str, Any], *, runs_count: Optional[int] = None
-) -> Dict[str, Any]:
-    """Subset of signals safe to expose to the change-plan modal."""
-    out = {
-        "effort_trend": signals.get("effort_trend"),
-        "completion_rate": signals.get("completion_rate"),
-        "volume_ratio": signals.get("volume_ratio"),
-        "phase": signals.get("current_phase"),
-        "avg_effort": signals.get("avg_effort"),
-        "tsb_form": signals.get("tsb_form"),
-        "overreach_detected": signals.get("overreach_detected"),
-    }
-    if runs_count is not None:
-        out["runs_analyzed"] = runs_count
-    return out
-
-
-def _record_adaptation_event(
-    training_plan: TrainingPlan, event: Dict[str, Any]
-) -> None:
-    event["date"] = today_date().isoformat()
-    history = list(training_plan.adaptation_history or [])
-    history.append(event)
-    if len(history) > 20:
-        history = history[-20:]
-    training_plan.adaptation_history = history
+# Result-shaping helpers live in adjustment_results so this file can focus
+# on the adjustment flow. Aliased to their original underscore names for
+# backward compatibility with internal callers.
+from .adjustment_results import build_signal_snapshot as _build_signal_snapshot
+from .adjustment_results import build_signals_summary as _build_signals_summary
+from .adjustment_results import record_adaptation_event as _record_adaptation_event
 
 
 def _get_current_phase(training_plan: TrainingPlan, current_week: int) -> str:
