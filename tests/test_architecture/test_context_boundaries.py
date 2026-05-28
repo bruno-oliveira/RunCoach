@@ -1,27 +1,23 @@
-"""Architecture guardrail for the plan context's dependency direction.
+"""Architecture guardrails for bounded-context dependency direction.
 
-Enforces the dependency rule from CLAUDE.md: the ``plan`` bounded context must
-not depend on a sibling context (runner / nutrition / auth) at module load time.
-Cross-context collaboration is allowed via the application layer
-(``app/application/``) or via deferred (local / ``TYPE_CHECKING``) imports — so
-this checks only *module-level* (eager) import edges, which are the ones that
-couple the contexts' import graphs.
-
-Scope note: this guards the ``plan`` context specifically (cleaned up in the
-maintainability refactor). The ``runner`` context still has module-level edges
-into ``plan``/``nutrition``/``auth`` — decoupling it is tracked as separate work.
+Enforces the dependency rule from CLAUDE.md: a bounded context must not depend
+on a sibling context at module load time. Cross-context collaboration is allowed
+via the application layer (``app/application/``), or via deferred (local /
+``TYPE_CHECKING``) imports — so this checks only *module-level* (eager) import
+edges, which are the ones that couple the contexts' import graphs.
 """
 
 import ast
 import pathlib
 
 REPO_ROOT = pathlib.Path(__file__).resolve().parents[2]
-PLAN_DIR = REPO_ROOT / "app" / "contexts" / "plan"
-FORBIDDEN_PREFIXES = (
-    "app.contexts.runner",
-    "app.contexts.nutrition",
-    "app.contexts.auth",
-)
+CONTEXTS = REPO_ROOT / "app" / "contexts"
+
+
+def _context_names() -> list[str]:
+    return [
+        p.name for p in CONTEXTS.iterdir() if p.is_dir() and not p.name.startswith("_")
+    ]
 
 
 def _module_level_import_targets(path: pathlib.Path):
@@ -36,15 +32,21 @@ def _module_level_import_targets(path: pathlib.Path):
                 yield alias.name
 
 
-def test_plan_context_has_no_module_level_sibling_imports():
+def test_no_module_level_sibling_context_imports():
+    """No bounded context imports a sibling context eagerly at module scope."""
+    names = _context_names()
     violations: list[str] = []
-    for path in PLAN_DIR.rglob("*.py"):
-        for target in _module_level_import_targets(path):
-            if target.startswith(FORBIDDEN_PREFIXES):
-                violations.append(f"{path.relative_to(REPO_ROOT)}: {target}")
+    for context_dir in CONTEXTS.iterdir():
+        if not context_dir.is_dir() or context_dir.name.startswith("_"):
+            continue
+        forbidden = tuple(f"app.contexts.{n}" for n in names if n != context_dir.name)
+        for path in context_dir.rglob("*.py"):
+            for target in _module_level_import_targets(path):
+                if target.startswith(forbidden):
+                    violations.append(f"{path.relative_to(REPO_ROOT)}: {target}")
 
     assert not violations, (
-        "The plan context must not import sibling contexts at module level "
+        "Bounded contexts must not import sibling contexts at module level "
         "(use app/application/ or a deferred/TYPE_CHECKING import):\n  "
         + "\n  ".join(sorted(violations))
     )

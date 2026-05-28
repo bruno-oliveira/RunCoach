@@ -8,9 +8,9 @@ from fastapi.responses import RedirectResponse
 from sqlalchemy.orm import Session
 
 from app.contexts.plan.adaptation import AdaptationService
-from app.contexts.plan.plan_date_utils import compute_current_week
 from app.contexts.plan.plan_type_registry import display_label as plan_display_label
 from app.contexts.plan.repositories import SQLAlchemyPlanRepository
+from app.core.training.plan_calendar import compute_current_week
 from app.core.training.strength_plan import derive_experience_level
 from app.dependencies import get_db, get_optional_user
 from app.infrastructure.config import settings

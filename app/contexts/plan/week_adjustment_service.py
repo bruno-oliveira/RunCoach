@@ -17,7 +17,7 @@ from app.contexts.plan.adaptation._helpers import (
     today_date,
 )
 from app.contexts.plan.adaptation.week_adjuster import apply_adjustment_to_future_weeks
-from app.contexts.plan.plan_date_utils import compute_current_week
+from app.core.training.plan_calendar import compute_current_week
 from app.models import DailyWorkout, TrainingPlan, WeeklyPlan
 from app.utils import persist_json
 from app.utils import to_date as _to_date

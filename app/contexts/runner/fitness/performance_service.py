@@ -1,23 +1,26 @@
 """Performance training plan service."""
 
+from __future__ import annotations
+
 import logging
 import uuid
 from datetime import datetime, timedelta, timezone
-from typing import Any, Dict, Optional, Tuple
+from typing import TYPE_CHECKING, Any, Dict, Optional, Tuple
 
 from sqlalchemy.orm import Session
 
-from app.contexts.auth.repositories import SQLAlchemyUserRepository
-from app.contexts.nutrition.nutrition_engine import NutritionEngine
-from app.contexts.plan.generators.performance_plan_generator import (
-    PerformancePlanGenerator,
-)
 from app.contexts.runner.fitness.performance_progress import (
     get_plan_progress,
     get_plan_with_data,
     get_todays_workout,
 )
 from app.models import DailyWorkout, RunLog, TrainingPlan, User, WeeklyPlan
+
+if TYPE_CHECKING:
+    from app.contexts.nutrition.nutrition_engine import NutritionEngine
+    from app.contexts.plan.generators.performance_plan_generator import (
+        PerformancePlanGenerator,
+    )
 
 logger = logging.getLogger(__name__)
 
@@ -47,6 +50,13 @@ class PerformanceService:
             performance_generator: Performance plan generator instance
             nutrition_engine: Nutrition engine instance
         """
+        # Deferred imports keep the runner context free of static edges into the
+        # plan and nutrition contexts; injected instances skip them entirely.
+        from app.contexts.nutrition.nutrition_engine import NutritionEngine
+        from app.contexts.plan.generators.performance_plan_generator import (
+            PerformancePlanGenerator,
+        )
+
         self.db = db
         self.performance_generator = performance_generator or PerformancePlanGenerator()
         self.nutrition_engine = nutrition_engine or NutritionEngine()
@@ -98,6 +108,8 @@ class PerformanceService:
             }
 
         # Strategy 2: Age-based formula (medium confidence)
+        from app.contexts.auth.repositories import SQLAlchemyUserRepository
+
         user = SQLAlchemyUserRepository(self.db).get_by_id(user_id)
         if user and user.age:
             max_hr = 220 - user.age

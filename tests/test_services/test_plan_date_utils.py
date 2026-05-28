@@ -2,7 +2,7 @@
 
 from datetime import date
 
-from app.contexts.plan.plan_date_utils import compute_current_week
+from app.core.training.plan_calendar import compute_current_week
 
 
 def test_pre_start_returns_none_by_default():

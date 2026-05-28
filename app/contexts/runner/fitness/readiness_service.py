@@ -10,7 +10,6 @@ from typing import Any, Dict, Optional
 
 from sqlalchemy.orm import Session
 
-from app.contexts.plan.plan_date_utils import compute_current_week
 from app.contexts.runner.fitness.race_predictor_service import RacePredictorService
 from app.contexts.runner.fitness.readiness_scoring import (
     build_scenarios,
@@ -24,6 +23,7 @@ from app.contexts.runner.fitness.readiness_scoring import (
     score_vdot,
     score_volume,
 )
+from app.core.training.plan_calendar import compute_current_week
 from app.models import RunLog, TrainingPlan
 from app.utils import to_date as _to_date
 

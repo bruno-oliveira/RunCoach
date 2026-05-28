@@ -19,12 +19,12 @@ from typing import Any, Dict, List, Optional
 from sqlalchemy.orm import Session
 
 from app.contexts.plan.adaptation import AdaptationService
-from app.contexts.plan.plan_date_utils import compute_current_week
 from app.contexts.runner.enrichment.week_pulse_generator import get_week_pulse
 from app.contexts.runner.fitness.coaching_data import fetch_pattern_candidates
 from app.contexts.runner.fitness.readiness_service import ReadinessService
 from app.contexts.runner.readiness_repository import SQLAlchemyReadinessRepository
 from app.core.coaching.pattern_analyzer import pattern_feedback
+from app.core.training.plan_calendar import compute_current_week
 from app.models import ReadinessLog, RunLog, TrainingPlan
 from app.utils import to_date as _to_date
 

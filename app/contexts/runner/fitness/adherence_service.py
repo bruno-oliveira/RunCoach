@@ -4,7 +4,7 @@ from datetime import date, timedelta
 
 from sqlalchemy.orm import Session
 
-from app.contexts.plan.plan_date_utils import compute_current_week
+from app.core.training.plan_calendar import compute_current_week
 from app.models import DailyWorkout, TrainingPlan, WeeklyPlan
 from app.models.run_log import RunLog
 from app.utils import to_date as _to_date

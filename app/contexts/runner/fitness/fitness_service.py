@@ -1,18 +1,21 @@
 """Fitness plan creation and business logic."""
 
+from __future__ import annotations
+
 import logging
-from typing import Optional
+from typing import TYPE_CHECKING, Optional
 
 from sqlalchemy.orm import Session
 
-from app.contexts.nutrition.nutrition_engine import NutritionEngine
-from app.contexts.plan.generators.fitness_plan_generator import FitnessPlanGenerator
-from app.contexts.plan.plan_service import PlanService
 from app.contexts.runner.fitness.hr_zone_service import HRZoneService
 from app.core.training.vdot_calculator import VDOTCalculator
 from app.models import DailyWorkout, TrainingPlan, User, WeeklyPlan
 from app.schemas import FitnessPlanRequest
 from app.utils import parse_race_time_to_seconds
+
+if TYPE_CHECKING:
+    # Type-only: the engine is injected by the caller.
+    from app.contexts.nutrition.nutrition_engine import NutritionEngine
 
 logger = logging.getLogger(__name__)
 
@@ -21,6 +24,13 @@ class FitnessService:
     """Encapsulates fitness plan lifecycle operations."""
 
     def __init__(self, db: Session) -> None:
+        # Deferred imports keep the runner context free of static edges into the
+        # plan context (cross-context orchestration happens at call time).
+        from app.contexts.plan.generators.fitness_plan_generator import (
+            FitnessPlanGenerator,
+        )
+        from app.contexts.plan.plan_service import PlanService
+
         self.db = db
         self._plan_service = PlanService()
         self._generator = FitnessPlanGenerator()

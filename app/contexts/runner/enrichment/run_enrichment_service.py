@@ -5,7 +5,6 @@ from typing import Any, Dict, Optional
 
 from sqlalchemy.orm import Session
 
-from app.contexts.plan.repositories import SQLAlchemyPlanRepository
 from app.contexts.runner.fitness.effort_classifier import classify_effort
 from app.contexts.runner.fitness.race_predictor_service import RacePredictorService
 from app.contexts.runner.fitness.workout_type_classifier import classify_workout_type
@@ -119,6 +118,8 @@ def _maybe_recalibrate_plan_zones(
         return None
 
     try:
+        from app.contexts.plan.repositories import SQLAlchemyPlanRepository
+
         plan = SQLAlchemyPlanRepository(db).get_for_user(
             new_run.training_plan_id, user_id
         )

@@ -17,10 +17,10 @@ from sqlalchemy.orm import Session, selectinload
 
 from app.contexts.plan import plan_data_enricher as _enricher
 from app.contexts.plan.adaptation import AdaptationService
-from app.contexts.plan.plan_date_utils import compute_current_week
 from app.contexts.runner.enrichment import completion_stats as _cs
 from app.contexts.runner.enrichment import week_pulse_generator as _pulse
 from app.contexts.runner.fitness.hr_zone_service import HRZoneService
+from app.core.training.plan_calendar import compute_current_week
 from app.core.training.vertical_simulation import compute_weekly_vertical_actuals
 from app.models import DailyWorkout, TrainingPlan, User, WeeklyPlan
 

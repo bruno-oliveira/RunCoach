@@ -11,8 +11,8 @@ from typing import Any, Dict, List, Optional
 
 from sqlalchemy.orm import Session
 
-from app.contexts.plan.plan_date_utils import compute_current_week
 from app.contexts.plan.repositories import SQLAlchemyPlanRepository
+from app.core.training.plan_calendar import compute_current_week
 from app.models import DailyWorkout, RunLog, WeeklyPlan
 from app.utils import persist_json
 from app.utils import to_date as _to_date

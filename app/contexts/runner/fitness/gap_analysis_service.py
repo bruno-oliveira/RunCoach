@@ -11,11 +11,10 @@ from typing import Any, Dict, List, Optional
 
 from sqlalchemy.orm import Session
 
-from app.contexts.plan.adaptation import AdaptationService
-from app.contexts.plan.plan_date_utils import compute_current_week
 from app.contexts.runner.fitness.race_predictor_service import RacePredictorService
 from app.contexts.runner.fitness.readiness_scoring import score_mountain_simulation
 from app.core.coaching.verdict import verdict_from_thresholds
+from app.core.training.plan_calendar import compute_current_week
 from app.core.training.vdot_calculator import VDOTCalculator
 from app.models import RunLog, TrainingPlan
 from app.utils import parse_race_time_to_seconds
@@ -446,6 +445,8 @@ def _compute_consistency(
     current_week: int,
 ) -> Dict[str, Any]:
     """Compute workout completion rate and skipped/rescheduled counts."""
+    from app.contexts.plan.adaptation import AdaptationService
+
     adaptation_service = AdaptationService()
     skipped_data = adaptation_service.detect_skipped_workouts(plan.id, db)
 

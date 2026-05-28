@@ -7,7 +7,7 @@ adaptation clock + WeeklyPlan/DailyWorkout setup from the coach-summary tests.
 """
 
 import uuid
-from datetime import date, datetime, timedelta
+from datetime import date, datetime, timedelta, timezone
 
 import pytest
 from sqlalchemy import create_engine, event
@@ -290,9 +290,11 @@ def test_coach_note_cached_and_daily_capped(db):
     assert r3["note"] == "Cached note."
 
     # Simulate the calendar day rolling over: the stale-but-changed signature
-    # now regenerates exactly once on the next day's first open.
+    # now regenerates exactly once on the next day's first open. Use UTC to
+    # match how production stamps generated_at (_utcnow); a naive local
+    # datetime.now() here is flaky when the local date is ahead of UTC.
     stale = dict(plan.coach_note_cache)
-    stale["generated_at"] = (datetime.now() - timedelta(days=1)).isoformat()
+    stale["generated_at"] = (datetime.now(timezone.utc) - timedelta(days=1)).isoformat()
     plan.coach_note_cache = stale
     db.commit()
     r4 = build_coach_note(plan, user.id, db, narrator)

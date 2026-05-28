@@ -11,7 +11,6 @@ from typing import Optional
 from fastapi import HTTPException, status
 from sqlalchemy.orm import Session
 
-from app.contexts.plan.repositories import SQLAlchemyPlanRepository
 from app.contexts.runner.enrichment.run_enrichment_service import (
     build_race_comparison,
     enrich_vdot_and_prediction,
@@ -84,6 +83,8 @@ class RunCreationService:
 
         validated_workout: Optional[DailyWorkout] = None
         if run_log.daily_workout_id:
+            from app.contexts.plan.repositories import SQLAlchemyPlanRepository
+
             validated_workout = SQLAlchemyPlanRepository(db).get_user_workout(
                 run_log.daily_workout_id, current_user.id
             )

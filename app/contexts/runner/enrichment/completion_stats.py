@@ -1,12 +1,16 @@
 """Completion stats, adjustment hints, and next-plan CTA."""
 
+from __future__ import annotations
+
 import logging
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from sqlalchemy.orm import Session
 
-from app.contexts.plan.adaptation import AdaptationService
 from app.models import RunLog, TrainingPlan
+
+if TYPE_CHECKING:
+    from app.contexts.plan.adaptation import AdaptationService
 
 logger = logging.getLogger(__name__)
 
@@ -46,6 +50,8 @@ def get_adjustment_hints(
     adaptation_service: AdaptationService | None = None,
 ) -> dict[str, Any]:
     if adaptation_service is None:
+        from app.contexts.plan.adaptation import AdaptationService
+
         adaptation_service = AdaptationService()
 
     skipped_count = 0

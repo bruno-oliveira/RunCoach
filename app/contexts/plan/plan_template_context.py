@@ -5,17 +5,16 @@ from typing import Any, Optional
 
 from fastapi import Request
 
-from app.core.training.strength_plan import derive_experience_level
-from app.infrastructure.config import settings
-from app.models import RunFeedback, RunLog, TrainingPlan, User, WeeklyPlan
-
-from .plan_date_utils import (
+from app.core.training.plan_calendar import (
     build_week_dates,
     compute_current_week,
     ensure_seven_days,
     next_monday,
     workout_dates,
 )
+from app.core.training.strength_plan import derive_experience_level
+from app.infrastructure.config import settings
+from app.models import RunFeedback, RunLog, TrainingPlan, User, WeeklyPlan
 
 _PACE_BADGE_WINDOW_DAYS = 7
 
