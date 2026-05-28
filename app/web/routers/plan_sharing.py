@@ -12,6 +12,7 @@ from fastapi.responses import FileResponse, HTMLResponse
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
+from app.application.plan_view_service import PlanViewService
 from app.contexts.auth.repositories import SQLAlchemyUserRepository
 from app.contexts.plan.plan_helpers import get_plan_or_404, plan_view_context
 from app.contexts.plan.plan_service import PlanService
@@ -23,6 +24,7 @@ from app.dependencies import (
     get_optional_user,
     get_pdf_generator,
     get_plan_service,
+    get_plan_view_service,
 )
 from app.infrastructure.export.pdf_generator import PDFGenerator
 from app.infrastructure.export.plan_export_dto import PlanExportDTO
@@ -90,7 +92,7 @@ def view_shared_plan(
     request: Request,
     db: Session = Depends(get_db),
     current_user: Optional[User] = Depends(get_optional_user),
-    plan_service: PlanService = Depends(get_plan_service),
+    plan_view_service: PlanViewService = Depends(get_plan_view_service),
 ):
     """View a publicly shared training plan (read-only)."""
 
@@ -99,14 +101,16 @@ def view_shared_plan(
         raise HTTPException(status_code=404, detail="Shared plan not found")
 
     plan_data = training_plan.plan_data
-    plan_data = plan_service.enrich_plan_data_with_ids(plan_data, training_plan.id, db)
+    plan_data = plan_view_service.enrich_plan_data_with_ids(
+        plan_data, training_plan.id, db
+    )
 
-    nutrition_plan = plan_service.nutrition_for_template(
+    nutrition_plan = plan_view_service.nutrition_for_template(
         training_plan.nutrition_plan_data
     )
 
     owner = SQLAlchemyUserRepository(db).get_by_id(training_plan.user_id)
-    extra = plan_service.get_plan_view_data(training_plan, owner, db)
+    extra = plan_view_service.get_plan_view_data(training_plan, owner, db)
 
     ctx = plan_view_context(
         request, current_user, training_plan, plan_data, nutrition_plan, db=db, **extra

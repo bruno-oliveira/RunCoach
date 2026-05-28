@@ -21,6 +21,7 @@ from sqlalchemy.orm import Session
 from app.contexts.plan.adaptation import AdaptationService
 from app.contexts.plan.plan_date_utils import compute_current_week
 from app.contexts.runner.enrichment.week_pulse_generator import get_week_pulse
+from app.contexts.runner.fitness.coaching_data import fetch_pattern_candidates
 from app.contexts.runner.fitness.readiness_service import ReadinessService
 from app.contexts.runner.readiness_repository import SQLAlchemyReadinessRepository
 from app.core.coaching.pattern_analyzer import pattern_feedback
@@ -193,6 +194,30 @@ def build_signal_history(plan: TrainingPlan) -> Dict[str, Any]:
     return {"available": len(snapshots) > 0, "snapshots": snapshots}
 
 
+def _bucket_runs_by_day(
+    runs: List[RunLog], week_start: date
+) -> Dict[int, List[RunLog]]:
+    """Group runs by 1-based day-of-week offset within the week."""
+    by_day: Dict[int, List[RunLog]] = {}
+    for run in runs:
+        rd = run.date.date() if isinstance(run.date, datetime) else run.date
+        if rd is None:
+            continue
+        offset = (rd - week_start).days
+        if 0 <= offset <= 6:
+            by_day.setdefault(offset + 1, []).append(run)
+    return by_day
+
+
+def _day_status(day_date: date, today: date, *, is_rest: bool, has_runs: bool) -> str:
+    """Derive a 7-day-strip day status from a pure calendar comparison."""
+    if day_date == today:
+        return "today"
+    if day_date < today:
+        return "done" if has_runs else ("rest" if is_rest else "missed")
+    return "rest" if is_rest else "upcoming"
+
+
 def build_today(plan: TrainingPlan, user_id: str, db: Session) -> Dict[str, Any]:
     """Current-week execution snapshot for the Coach Hub "Today" tab.
 
@@ -232,14 +257,7 @@ def build_today(plan: TrainingPlan, user_id: str, db: Session) -> Dict[str, Any]
         )
         .all()
     )
-    runs_by_day: Dict[int, List[RunLog]] = {}
-    for run in runs:
-        rd = run.date.date() if isinstance(run.date, datetime) else run.date
-        if rd is None:
-            continue
-        offset = (rd - week_start).days
-        if 0 <= offset <= 6:
-            runs_by_day.setdefault(offset + 1, []).append(run)
+    runs_by_day = _bucket_runs_by_day(runs, week_start)
 
     workouts_by_day = {
         w.get("day"): w for w in week_data.get("daily_workouts", []) if w.get("day")
@@ -257,12 +275,7 @@ def build_today(plan: TrainingPlan, user_id: str, db: Session) -> Dict[str, Any]
         is_rest = wtype in ("rest", "recovery") and planned_km == 0
         day_date = week_start + timedelta(days=d - 1)
 
-        if day_date == today:
-            status = "today"
-        elif day_date < today:
-            status = "done" if day_runs else ("rest" if is_rest else "missed")
-        else:
-            status = "rest" if is_rest else "upcoming"
+        status = _day_status(day_date, today, is_rest=is_rest, has_runs=bool(day_runs))
 
         if not is_rest:
             planned_total += planned_km
@@ -451,7 +464,7 @@ def build_coach_patterns(
         if wtype not in _PATTERN_TYPES or wtype in seen:
             continue
         seen.add(wtype)
-        message = pattern_feedback(run, db)
+        message = pattern_feedback(run, fetch_pattern_candidates(run, db))
         if message:
             patterns.append({"workout_type": wtype, "message": message})
 

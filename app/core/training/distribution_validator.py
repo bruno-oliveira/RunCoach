@@ -5,6 +5,7 @@ Validates and adjusts the 80/20 polarized training distribution.
 
 from typing import Dict, Optional
 
+from app.core.training.trail_profile import is_trail_target
 from app.core.training.tuning import (
     HARD_TARGETS_ROAD,
     HARD_TARGETS_TRAIL,
@@ -26,7 +27,7 @@ def validate_polarized_ratio(
     terrain naturally provides intensity through elevation. Flat-trail plans
     keep the road target since they aren't getting hill-driven intensity.
     """
-    is_trail = trail_profile is not None or target_distance == 30.0
+    is_trail = is_trail_target(target_distance, trail_profile)
     if terrain == "flat":
         # Training on flat terrain has no climb-driven intensity.
         is_trail = False

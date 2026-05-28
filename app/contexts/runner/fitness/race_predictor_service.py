@@ -27,6 +27,41 @@ TOP_N_VDOTS = 3
 # Number of candidate runs to fetch before applying confidence weighting.
 _CANDIDATE_POOL_SIZE = 10
 
+# Trailing window (weeks) for the race-history rolling-VDOT baseline.
+_VDOT_WINDOW_WEEKS = 12
+
+
+def _rolling_window_vdot(run_ts: float, prior_vdots: List[tuple]) -> Optional[float]:
+    """Median of the top-N prior VDOTs within the trailing window, or None.
+
+    ``prior_vdots`` is a list of ``(timestamp, vdot)`` for runs before this one.
+    """
+    cutoff_ts = run_ts - _VDOT_WINDOW_WEEKS * 7 * 86400
+    window_vdots = sorted((v for ts, v in prior_vdots if ts >= cutoff_ts), reverse=True)
+    if not window_vdots:
+        return None
+    return statistics.median(window_vdots[:TOP_N_VDOTS])
+
+
+def _prediction_comparison(
+    actual_seconds: Optional[int], predicted_seconds: Optional[int]
+) -> Optional[Dict[str, Any]]:
+    """Compare an actual finish time against the predicted one, or None."""
+    if not (actual_seconds and predicted_seconds):
+        return None
+    delta = actual_seconds - predicted_seconds
+    return {
+        "predicted_seconds": predicted_seconds,
+        "predicted_formatted": VDOTCalculator.format_duration(predicted_seconds),
+        "actual_seconds": actual_seconds,
+        "actual_formatted": VDOTCalculator.format_duration(actual_seconds),
+        "delta_seconds": delta,
+        "delta_formatted": VDOTCalculator.format_duration(abs(delta)),
+        "faster_than_predicted": delta < 0,
+        "accuracy_pct": round((1 - abs(delta) / predicted_seconds) * 100, 1),
+    }
+
+
 # Confidence multiplier by user-tagged workout type. Higher = more reliable
 # VDOT indicator. Used as a fallback when the derived effort_class is unset.
 _EFFORT_TYPE_WEIGHT: dict[str, float] = {
@@ -499,8 +534,6 @@ class RacePredictorService:
             .all()
         )
 
-        WINDOW_WEEKS = 12
-
         prior_vdots: list[tuple[float, float]] = []  # (date_ts, vdot)
         enriched = []
 
@@ -512,16 +545,7 @@ class RacePredictorService:
             run_ts = (
                 (run.date - datetime(1970, 1, 1)).total_seconds() if run.date else 0
             )
-            cutoff_ts = run_ts - WINDOW_WEEKS * 7 * 86400
-            window_vdots = sorted(
-                [v for ts, v in prior_vdots if ts >= cutoff_ts],
-                reverse=True,
-            )
-            if window_vdots:
-                top_vdots = window_vdots[:TOP_N_VDOTS]
-                rolling_vdot = statistics.median(top_vdots)
-            else:
-                rolling_vdot = None
+            rolling_vdot = _rolling_window_vdot(run_ts, prior_vdots)
 
             predicted_seconds = None
             if run.predicted_time_seconds:
@@ -533,22 +557,7 @@ class RacePredictorService:
                 if pred:
                     predicted_seconds = pred
 
-            comparison = None
-            if actual_seconds and predicted_seconds:
-                delta = actual_seconds - predicted_seconds
-                accuracy_pct = round((1 - abs(delta) / predicted_seconds) * 100, 1)
-                comparison = {
-                    "predicted_seconds": predicted_seconds,
-                    "predicted_formatted": VDOTCalculator.format_duration(
-                        predicted_seconds
-                    ),
-                    "actual_seconds": actual_seconds,
-                    "actual_formatted": VDOTCalculator.format_duration(actual_seconds),
-                    "delta_seconds": delta,
-                    "delta_formatted": VDOTCalculator.format_duration(abs(delta)),
-                    "faster_than_predicted": delta < 0,
-                    "accuracy_pct": accuracy_pct,
-                }
+            comparison = _prediction_comparison(actual_seconds, predicted_seconds)
 
             distance_name = RacePredictorService._closest_distance_name(run.distance_km)
 

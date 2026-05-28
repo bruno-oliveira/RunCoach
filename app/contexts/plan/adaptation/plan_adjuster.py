@@ -442,6 +442,11 @@ def preview_reset_adjustment(
     return result["change_plan"] if "change_plan" in result else result
 
 
+def _strip_annotations(text: Optional[str]) -> str:
+    """Remove adaptation annotations from a notes/description string."""
+    return ANNOTATION_RE.sub("", text or "").strip()
+
+
 def _run_reset(
     plan_id: str,
     user_id: str,
@@ -498,7 +503,7 @@ def _run_reset(
 
         for workout in workouts:
             if not workout.baseline_distance_km:
-                clean = ANNOTATION_RE.sub("", workout.notes or "").strip()
+                clean = _strip_annotations(workout.notes)
                 if clean != (workout.notes or "").strip():
                     workout.notes = clean or None
                 continue
@@ -507,17 +512,14 @@ def _run_reset(
                 workout.distance_km = workout.baseline_distance_km
                 week_changed = True
 
-            clean_notes = ANNOTATION_RE.sub("", workout.notes or "").strip()
-            workout.notes = clean_notes or None
+            workout.notes = _strip_annotations(workout.notes) or None
 
             pd_wo = pd_workout.get((week.week_number, workout.day_of_week))
             if pd_wo is not None:
                 pd_wo["distance"] = workout.baseline_distance_km
-                pd_clean = ANNOTATION_RE.sub(
-                    "",
-                    pd_wo.get("notes", pd_wo.get("description", "")),
-                ).strip()
-                pd_wo["notes"] = pd_clean
+                pd_wo["notes"] = _strip_annotations(
+                    pd_wo.get("notes", pd_wo.get("description", ""))
+                )
 
         if week_changed:
             weeks_changed += 1

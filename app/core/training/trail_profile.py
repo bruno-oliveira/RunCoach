@@ -22,7 +22,13 @@ profile.
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Literal
+from typing import Literal, Optional
+
+# Legacy sentinel: plans created before parameterized trail profiles encoded
+# "this is a trail plan" as a 30 km target distance. New code threads a
+# TrailProfile instead; this constant + ``is_trail_target`` keep the one
+# remaining literal in a single place during the migration.
+TRAIL_SENTINEL_KM = 30.0
 
 # Supported trail distance range. Below 8 km the user picks a road preset
 # (5K / 10K). 163 km ≈ 100 miles, the upper bound the user explicitly named.
@@ -123,6 +129,19 @@ def classify_trail(distance_km: float, elevation_gain_m: float) -> TrailProfile:
         bracket=bracket,
         elevation_class=elevation_class,
     )
+
+
+def is_trail_target(
+    distance_km: float, trail_profile: Optional[TrailProfile] = None
+) -> bool:
+    """True when a plan should be treated as trail.
+
+    Prefers an explicit ``trail_profile``; falls back to the legacy
+    ``TRAIL_SENTINEL_KM`` (30 km) for plans that predate parameterized trail
+    profiles. Single home for the sentinel check that was scattered across the
+    phase, mileage, strength, and distribution modules.
+    """
+    return trail_profile is not None or distance_km == TRAIL_SENTINEL_KM
 
 
 # --- Bracket-aware plan constraints -----------------------------------------

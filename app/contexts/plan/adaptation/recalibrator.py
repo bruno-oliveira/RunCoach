@@ -13,6 +13,7 @@ from app.utils import persist_json
 from app.utils import to_date as _to_date
 
 from ._helpers import batch_workouts_by_week, parse_plan_data_lookups, today_date
+from .adjustment_results import record_adaptation_event
 from .missed_week_handler import recalibrate_missed_week
 from .recovery_inserter import recalibrate_recovery_insertion
 from .safety import enforce_future_growth_cap, enforce_week_structure
@@ -194,15 +195,12 @@ def _record_recalibration_event(
     weeks_changed: int,
     reason: str,
 ) -> None:
-    event = {
-        "date": today_date().isoformat(),
-        "type": "recalibrate",
-        "strategy": strategy,
-        "weeks_changed": weeks_changed,
-        "reason": reason,
-    }
-    history = list(training_plan.adaptation_history or [])
-    history.append(event)
-    if len(history) > 20:
-        history = history[-20:]
-    training_plan.adaptation_history = history
+    record_adaptation_event(
+        training_plan,
+        {
+            "type": "recalibrate",
+            "strategy": strategy,
+            "weeks_changed": weeks_changed,
+            "reason": reason,
+        },
+    )

@@ -11,7 +11,6 @@ from typing import Any, Dict, Optional
 
 from sqlalchemy.orm import Session
 
-from app.contexts.auth.repositories import SQLAlchemyUserRepository
 from app.contexts.plan.plan_date_utils import compute_current_week
 from app.contexts.plan.repositories import SQLAlchemyPlanRepository
 from app.models import TrainingPlan
@@ -19,6 +18,7 @@ from app.utils import to_date as _to_date
 
 from . import change_reasons as _reasons
 from ._helpers import is_current_week_in_progress, today_date
+from .adjustment_results import record_adaptation_event
 from .change_plan_builder import (
     build_change_plan,
     empty_change_plan,
@@ -161,6 +161,10 @@ def evaluate_weekly_recommendation(
     # If the user opted into auto-apply, immediately accept the
     # just-parked recommendation. Weekly cadence + hysteresis still
     # gate this — we apply at most once per ISO week.
+    # Local import keeps the plan-adaptation module free of a static edge to
+    # the auth context's concrete repository.
+    from app.contexts.auth.repositories import SQLAlchemyUserRepository
+
     user = SQLAlchemyUserRepository(db).get_by_id(user_id)
     if user and user.auto_adjust_enabled:
         applied = _run_accept(plan_id, user_id, db, mode="applied")
@@ -200,6 +204,17 @@ def preview_accept_recommendation(
     return result["change_plan"] if "change_plan" in result else result
 
 
+def _accept_rejected(mode: str, *, reason: str, headline: str) -> Dict[str, Any]:
+    """Build a no-op accept result with an empty change plan."""
+    return {
+        "accepted": False,
+        "reason": reason,
+        "change_plan": empty_change_plan(
+            action="accept_recommendation", mode=mode, headline_reason=headline
+        ),
+    }
+
+
 def _run_accept(
     plan_id: str,
     user_id: str,
@@ -210,29 +225,19 @@ def _run_accept(
     training_plan = SQLAlchemyPlanRepository(db).get_for_user(plan_id, user_id)
 
     if not training_plan:
-        cp = empty_change_plan(
-            action="accept_recommendation",
-            mode=mode,
-            headline_reason="We couldn't find that training plan.",
+        return _accept_rejected(
+            mode,
+            reason="We couldn't find that training plan.",
+            headline="We couldn't find that training plan.",
         )
-        return {
-            "accepted": False,
-            "reason": "We couldn't find that training plan.",
-            "change_plan": cp,
-        }
 
     rec = training_plan.pending_recommendation
     if not rec:
-        cp = empty_change_plan(
-            action="accept_recommendation",
-            mode=mode,
-            headline_reason="There's no pending recommendation to apply.",
+        return _accept_rejected(
+            mode,
+            reason="There's no pending recommendation to apply — it may have already been accepted or dismissed.",
+            headline="There's no pending recommendation to apply.",
         )
-        return {
-            "accepted": False,
-            "reason": "There's no pending recommendation to apply — it may have already been accepted or dismissed.",
-            "change_plan": cp,
-        }
 
     multiplier = rec.get("multiplier", 1.0)
     per_type_ratios = rec.get("signals", {}).get("per_type_ratios")
@@ -528,13 +533,9 @@ def _is_small_reversal(
 
 
 def _record_event(training_plan: TrainingPlan, event: Dict[str, Any]) -> None:
-    event["date"] = today_date().isoformat()
     event.setdefault(
         "applied_at",
         datetime.now(timezone.utc).replace(tzinfo=None).isoformat(),
     )
-    history = list(training_plan.adaptation_history or [])
-    history.append(event)
-    if len(history) > 20:
-        history = history[-20:]
-    training_plan.adaptation_history = history
+    # record_adaptation_event stamps ``date`` and handles the append + 20-entry cap.
+    record_adaptation_event(training_plan, event)

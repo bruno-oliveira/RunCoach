@@ -6,6 +6,9 @@ and target race distance.
 
 from typing import List
 
+from app.core.training.road_profile import classify_road
+from app.core.training.trail_profile import is_trail_target
+
 TRAINING_TIP_DATABASE = {
     "foundation": [
         "Establish a consistent training schedule - same time daily builds habit",
@@ -346,15 +349,9 @@ _DISTANCE_TIPS = {
 
 def _get_distance_key(target_distance: float, trail_profile=None) -> str:
     """Map target distance (and optional trail context) to a distance tip key."""
-    if trail_profile is not None or target_distance == 30:
+    if is_trail_target(target_distance, trail_profile):
         return "trail"
-    if target_distance <= 5:
-        return "5k"
-    if target_distance <= 10:
-        return "10k"
-    if target_distance <= 21.1:
-        return "half"
-    return "marathon"
+    return classify_road(target_distance)
 
 
 # Bracket-specific tips bolt onto the base "trail" pool — added when the

@@ -5,7 +5,7 @@ scenario building, and formatting helpers used by ReadinessService.
 """
 
 from datetime import date
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 
 from sqlalchemy import func
 from sqlalchemy.orm import Session
@@ -264,6 +264,55 @@ def score_vdot(
     return vdot_normalized, detail, formatted_predictions, vdot_info
 
 
+# Mountain-simulation proxy factors: turn flat-terrain runs into uphill /
+# downhill / transition proxies. Base by workout type, then boosted for hard
+# efforts and runs with real vertical.
+_SIM_BASE_FACTORS = {
+    "interval": (0.60, 0.45, 2),
+    "tempo": (0.60, 0.45, 2),
+    "hill": (0.60, 0.45, 2),
+    "long": (0.30, 0.40, 1),
+}
+_SIM_DEFAULT_FACTORS = (0.12, 0.15, 0)
+_SIM_HARD_EFFORT_THRESHOLD = 7
+_SIM_HARD_EFFORT_BOOST = (0.08, 0.05, 1)  # (uphill, downhill, transitions)
+_SIM_VERT_M_PER_KM_THRESHOLD = 20
+_SIM_VERT_BOOST = (0.10, 0.10, 0)  # uphill + downhill only
+
+
+def _empty_simulation_result(detail: str) -> Dict[str, Any]:
+    """Neutral (50) mountain-simulation result with zeroed metrics."""
+    zero = {
+        "uphill_effort_min": 0,
+        "downhill_eccentric_min": 0,
+        "hike_run_transition_reps": 0,
+    }
+    return {
+        "score": 50.0,
+        "detail": detail,
+        "planned": dict(zero),
+        "actual": dict(zero),
+        "completion_pct": {"uphill": 0, "downhill": 0, "transitions": 0},
+    }
+
+
+def _simulation_factors(
+    wtype: str, effort: int, m_per_km: float
+) -> Tuple[float, float, int]:
+    """Resolve (uphill, downhill, transitions) proxy factors for one run."""
+    uphill, downhill, transitions = _SIM_BASE_FACTORS.get(wtype, _SIM_DEFAULT_FACTORS)
+    if effort >= _SIM_HARD_EFFORT_THRESHOLD:
+        d_up, d_down, d_trans = _SIM_HARD_EFFORT_BOOST
+        uphill += d_up
+        downhill += d_down
+        transitions += d_trans
+    if m_per_km >= _SIM_VERT_M_PER_KM_THRESHOLD:
+        d_up, d_down, _ = _SIM_VERT_BOOST
+        uphill += d_up
+        downhill += d_down
+    return uphill, downhill, transitions
+
+
 def score_mountain_simulation(
     plan_data: List[dict],
     runs: List[RunLog],
@@ -286,25 +335,7 @@ def score_mountain_simulation(
     if (target_elevation_gain_m or 0) <= 0:
         return None
     if current_week <= 0:
-        return {
-            "score": 50.0,
-            "detail": "Plan has not started yet",
-            "planned": {
-                "uphill_effort_min": 0,
-                "downhill_eccentric_min": 0,
-                "hike_run_transition_reps": 0,
-            },
-            "actual": {
-                "uphill_effort_min": 0,
-                "downhill_eccentric_min": 0,
-                "hike_run_transition_reps": 0,
-            },
-            "completion_pct": {
-                "uphill": 0,
-                "downhill": 0,
-                "transitions": 0,
-            },
-        }
+        return _empty_simulation_result("Plan has not started yet")
 
     planned_uphill = 0
     planned_downhill = 0
@@ -320,25 +351,7 @@ def score_mountain_simulation(
 
     # Safety fallback for legacy plans without vertical_simulation payload.
     if planned_uphill <= 0 and planned_downhill <= 0 and planned_transitions <= 0:
-        return {
-            "score": 50.0,
-            "detail": "No simulation targets available in this plan",
-            "planned": {
-                "uphill_effort_min": 0,
-                "downhill_eccentric_min": 0,
-                "hike_run_transition_reps": 0,
-            },
-            "actual": {
-                "uphill_effort_min": 0,
-                "downhill_eccentric_min": 0,
-                "hike_run_transition_reps": 0,
-            },
-            "completion_pct": {
-                "uphill": 0,
-                "downhill": 0,
-                "transitions": 0,
-            },
-        }
+        return _empty_simulation_result("No simulation targets available in this plan")
 
     actual_uphill = 0.0
     actual_downhill = 0.0
@@ -368,28 +381,9 @@ def score_mountain_simulation(
         elevation = float(getattr(run, "elevation_gain_m", 0) or 0)
         m_per_km = (elevation / distance) if distance > 0 else 0.0
 
-        if wtype in ("interval", "tempo", "hill"):
-            uphill_factor = 0.60
-            downhill_factor = 0.45
-            transitions = 2
-        elif wtype == "long":
-            uphill_factor = 0.30
-            downhill_factor = 0.40
-            transitions = 1
-        else:
-            uphill_factor = 0.12
-            downhill_factor = 0.15
-            transitions = 0
-
-        if effort >= 7:
-            uphill_factor += 0.08
-            downhill_factor += 0.05
-            transitions += 1
-
-        if m_per_km >= 20:
-            uphill_factor += 0.10
-            downhill_factor += 0.10
-
+        uphill_factor, downhill_factor, transitions = _simulation_factors(
+            wtype, effort, m_per_km
+        )
         actual_uphill += duration * uphill_factor
         actual_downhill += duration * downhill_factor
         actual_transitions += transitions

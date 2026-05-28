@@ -32,6 +32,7 @@ from app.dependencies.services import (
     get_performance_service,
     get_plan_generator,
     get_plan_service,
+    get_plan_view_service,
     get_strava_service,
 )
 
@@ -54,6 +55,7 @@ __all__ = [
     "get_plan_generator",
     "get_plan_repository",
     "get_plan_service",
+    "get_plan_view_service",
     "get_run_repository",
     "get_strava_service",
     "get_user_repository",

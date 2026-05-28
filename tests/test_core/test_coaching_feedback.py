@@ -176,9 +176,10 @@ class TestFullFeedbackGeneration:
             hr_zone_target=2,
         )
         zones = HRZoneCalculator.calculate_zones(190)
-        db = MagicMock()
 
-        fb = CoachingFeedbackEngine.generate_feedback(run, planned, zones, db)
+        fb = CoachingFeedbackEngine.generate_feedback(
+            run, planned, zones, volume_inputs=None, pattern_candidates=[]
+        )
 
         assert "pace_feedback" in fb
         assert "hr_zone_feedback" in fb

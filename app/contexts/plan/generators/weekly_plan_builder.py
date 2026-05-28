@@ -47,6 +47,13 @@ _QUALITY_DEMOTE_THRESHOLD_KM = 1.5
 # Workouts shorter than this get an "≈ X min" UX hint alongside the km value.
 _DURATION_HINT_THRESHOLD_KM = 3.0
 
+# Intensive Training Weekend (ITW) shaping: the Saturday trail-quality budget is
+# a fraction of the displaced long run, capped; Thu/Fri easy days are trimmed so
+# the weekend lands on fresher legs.
+_ITW_QUALITY_BUDGET_FRACTION = 0.5
+_ITW_QUALITY_BUDGET_CAP_KM = 12.0
+_ITW_LEADIN_TRIM_FACTOR = 0.8
+
 _PACE_ZONE_FOR_TYPE = {
     "easy": "E",
     "long": "E",
@@ -412,7 +419,10 @@ def apply_intensive_weekend(
     else:
         quality_id = "trail_elevation_repeats"
         quality_type = "hill"
-    quality_budget = round(min(long_distance * 0.5, 12.0), 1)
+    quality_budget = round(
+        min(long_distance * _ITW_QUALITY_BUDGET_FRACTION, _ITW_QUALITY_BUDGET_CAP_KM),
+        1,
+    )
     new_sat = build_workout_for_type(
         quality_type, 6, quality_budget, total_km, phase, pace_zones
     )
@@ -478,7 +488,7 @@ def apply_intensive_weekend(
         ):
             dist = w.get("distance", 0) or 0
             if dist > 0:
-                _set_distance(w, round(dist * 0.8, 1), pace_zones)
+                _set_distance(w, round(dist * _ITW_LEADIN_TRIM_FACTOR, 1), pace_zones)
             w["coaching_rationale"] = (
                 "Ease back today — you're loading for the intensive weekend ahead."
             )

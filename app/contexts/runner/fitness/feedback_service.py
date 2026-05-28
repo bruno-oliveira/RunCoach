@@ -7,6 +7,10 @@ from typing import Optional
 from sqlalchemy.orm import Session
 
 from app.contexts.plan.repositories import SQLAlchemyPlanRepository
+from app.contexts.runner.fitness.coaching_data import (
+    fetch_pattern_candidates,
+    fetch_volume_inputs,
+)
 from app.core.coaching.coaching_feedback_engine import CoachingFeedbackEngine
 from app.models.daily_workout import DailyWorkout
 from app.models.run_feedback import RunFeedback
@@ -51,9 +55,13 @@ class FeedbackService:
                 except (AttributeError, TypeError):
                     pass
 
+        # Resolve history inputs (keeps the core engine pure)
+        volume_inputs = fetch_volume_inputs(run_log, db)
+        pattern_candidates = fetch_pattern_candidates(run_log, db)
+
         # Generate feedback
         fb = CoachingFeedbackEngine.generate_feedback(
-            run_log, planned_workout, hr_zones, db
+            run_log, planned_workout, hr_zones, volume_inputs, pattern_candidates
         )
 
         # Compute and store numeric HR zone deviation on the run log

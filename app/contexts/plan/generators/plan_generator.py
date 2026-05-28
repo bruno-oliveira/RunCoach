@@ -22,6 +22,7 @@ from app.core.training import mileage_progression
 from app.core.training.phase_calculator import PHASE_DISTRIBUTIONS  # noqa: F401
 from app.core.training.strength_plan import derive_experience_level
 from app.core.training.trail_profile import (
+    TRAIL_SENTINEL_KM,
     TrailProfile,
     classify_trail,
 )
@@ -52,7 +53,7 @@ class TrainingPlanGenerator:
         Training Weekend block on its final peak week (off by default).
         """
         # Back-compat: synthesize a TrailProfile for legacy 30 km callers.
-        if trail_profile is None and target_distance == 30.0:
+        if trail_profile is None and target_distance == TRAIL_SENTINEL_KM:
             elev = 200.0 if terrain == "flat" else 1000.0
             trail_profile = classify_trail(target_distance, elev)
         if current_km == 0:

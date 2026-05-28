@@ -6,6 +6,8 @@ so that TrainingPlanGenerator stays dependency-free and fully testable.
 
 from typing import Any, Dict, List
 
+from app.core.training.trail_profile import is_trail_target
+
 # ---------------------------------------------------------------------------
 # Experience level derivation
 # ---------------------------------------------------------------------------
@@ -570,7 +572,7 @@ def get_phase_focus_rotation(
     if trail_profile is not None:
         rotations = TRAIL_ROTATIONS_BY_ELEVATION[trail_profile.elevation_class]
         return rotations.get(phase, rotations["build"])
-    if target_distance == 30.0:
+    if is_trail_target(target_distance, trail_profile):
         return TRAIL_FOCUS_ROTATIONS.get(phase, TRAIL_FOCUS_ROTATIONS["build"])
     return PHASE_FOCUS_ROTATIONS.get(phase, PHASE_FOCUS_ROTATIONS["build"])
 

@@ -1,12 +1,12 @@
 """Plan creation, customization, and deletion business logic."""
 
+from __future__ import annotations
+
 import logging
-from typing import Any, Callable, Optional
+from typing import TYPE_CHECKING, Any, Callable, Optional
 
 from sqlalchemy.orm import Session
 
-from app.contexts.auth.repositories import SQLAlchemyUserRepository
-from app.contexts.nutrition.nutrition_engine import NutritionEngine
 from app.contexts.plan.adaptation import AdaptationService
 from app.contexts.plan.generators.plan_generator import TrainingPlanGenerator
 from app.contexts.plan.repositories import SQLAlchemyPlanRepository
@@ -18,9 +18,21 @@ from app.utils import parse_race_time_to_seconds
 
 from . import plan_creation_helpers as _create
 from . import plan_lifecycle_service as _lifecycle
-from .plan_view_service import PlanViewService
+
+if TYPE_CHECKING:
+    # Type-only: the engine is injected by the caller, so the plan context does
+    # not depend on the nutrition context at runtime.
+    from app.contexts.nutrition.nutrition_engine import NutritionEngine
 
 logger = logging.getLogger(__name__)
+
+
+def _default_user_repo_factory(db: Session) -> IUserRepository:
+    """Lazy default so the plan context carries no static edge to the auth
+    context's concrete repository — the composition root can still override it."""
+    from app.contexts.auth.repositories import SQLAlchemyUserRepository
+
+    return SQLAlchemyUserRepository(db)
 
 
 class PlanService:
@@ -39,10 +51,9 @@ class PlanService:
         ] = SQLAlchemyPlanRepository,
         user_repo_factory: Callable[
             [Session], IUserRepository
-        ] = SQLAlchemyUserRepository,
+        ] = _default_user_repo_factory,
     ) -> None:
         self._adaptation_service = AdaptationService()
-        self._plan_view_service = PlanViewService()
         self._plan_repo_factory = plan_repo_factory
         self._user_repo_factory = user_repo_factory
 
@@ -153,40 +164,3 @@ class PlanService:
 
     def delete_plan(self, training_plan: TrainingPlan, db: Session) -> None:
         return _lifecycle.delete_plan(training_plan, db)
-
-    # Delegation to PlanViewService — kept for backward compatibility
-    def enrich_plan_data_with_ids(
-        self, plan_data: list[dict], training_plan_id: str, db: Session
-    ) -> list[dict]:
-        return self._plan_view_service.enrich_plan_data_with_ids(
-            plan_data, training_plan_id, db
-        )
-
-    def nutrition_for_template(self, nutrition_plan_data: Any) -> dict:
-        return self._plan_view_service.nutrition_for_template(nutrition_plan_data)
-
-    def get_logged_runs_map(self, training_plan_id: str, db: Session) -> dict:
-        return self._plan_view_service.get_logged_runs_map(training_plan_id, db)
-
-    def get_adjustment_hints(
-        self, training_plan: TrainingPlan, performance_analysis: Any, db: Session
-    ) -> Any:
-        return self._plan_view_service.get_adjustment_hints(
-            training_plan, performance_analysis, db
-        )
-
-    def get_feedback_map(self, logged_runs: Any, db: Session) -> dict:
-        return self._plan_view_service.get_feedback_map(logged_runs, db)
-
-    def get_completion_stats(self, training_plan: TrainingPlan, db: Session) -> dict:
-        return self._plan_view_service.get_completion_stats(training_plan, db)
-
-    def get_next_plan_cta(self, target_distance_km: float) -> Optional[dict]:
-        return self._plan_view_service.get_next_plan_cta(target_distance_km)
-
-    def get_plan_view_data(
-        self, training_plan: TrainingPlan, current_user: Optional[User], db: Session
-    ) -> dict:
-        return self._plan_view_service.get_plan_view_data(
-            training_plan, current_user, db
-        )

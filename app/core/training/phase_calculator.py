@@ -19,10 +19,19 @@ next refactor pass.
 
 from typing import Dict, Optional
 
-from app.core.training.trail_profile import TrailProfile
+from app.core.training.road_profile import RoadBand, classify_road
+from app.core.training.trail_profile import TrailProfile, is_trail_target
 from app.exceptions import InsufficientTimeException
 
 MIN_WEEKS_FOR_PHASES = 6
+
+# Road bands map to the capitalized distribution keys used below.
+_ROAD_BAND_TO_KEY: Dict[RoadBand, str] = {
+    "5k": "5K",
+    "10k": "10K",
+    "half": "Half",
+    "marathon": "Marathon",
+}
 
 
 # --- Trail distribution: base × elevation-class adjustments -----------------
@@ -247,18 +256,12 @@ def get_distance_category(
     if trail_profile is not None:
         return _trail_key(trail_profile.elevation_class)
 
-    if target_distance <= 5:
-        return "5K"
-    if target_distance <= 10:
-        return "10K"
-    if target_distance <= 21.1:
-        return "Half"
-    if target_distance == 30.0:
+    if is_trail_target(target_distance, trail_profile):
         # Legacy default: 30 km plans without an explicit trail_profile
         # default to the hilly distribution (matches the historic behavior).
         normalised = _normalise_terrain(terrain) or "hilly"
         return _trail_key(normalised)
-    return "Marathon"
+    return _ROAD_BAND_TO_KEY[classify_road(target_distance)]
 
 
 # --- Phase length profiles --------------------------------------------------

@@ -11,7 +11,8 @@ from typing import Dict, Optional
 from app.core.training.distribution_validator import (
     validate_polarized_ratio as _validate_polarized_ratio,
 )
-from app.core.training.trail_profile import TrailProfile
+from app.core.training.road_profile import classify_road
+from app.core.training.trail_profile import TrailProfile, is_trail_target
 from app.core.training.week_scheduler import schedule_workout_types  # noqa: F401
 
 
@@ -135,21 +136,16 @@ def _profile_for(
       * ``trail_profile`` wins when present and uses race elevation_class.
       * ``terrain`` models training constraints and is applied later as workout
         substitution (e.g., hills -> flat climb-simulation sessions).
-      * Legacy ``target_distance == 30.0`` keeps the historic behavior.
+      * The legacy 30 km sentinel is handled via ``is_trail_target``.
+    Road distances delegate their band to ``classify_road``.
     """
     if trail_profile is not None:
         return (
             "trail_flat" if trail_profile.elevation_class == "flat" else "trail_hilly"
         )
-    if target_distance == 30.0:
+    if is_trail_target(target_distance, trail_profile):
         return "trail_flat" if terrain == "flat" else "trail_hilly"
-    if target_distance <= 5:
-        return "road_5k"
-    if target_distance <= 10:
-        return "road_10k"
-    if target_distance <= 21.1:
-        return "road_half"
-    return "road_marathon"
+    return f"road_{classify_road(target_distance)}"
 
 
 # Base-phase quality: every profile gets exactly one light quality session,

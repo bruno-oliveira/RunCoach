@@ -15,12 +15,22 @@ from app.contexts.plan.adaptation import AdaptationService
 from app.contexts.plan.plan_date_utils import compute_current_week
 from app.contexts.runner.fitness.race_predictor_service import RacePredictorService
 from app.contexts.runner.fitness.readiness_scoring import score_mountain_simulation
+from app.core.coaching.verdict import verdict_from_thresholds
 from app.core.training.vdot_calculator import VDOTCalculator
 from app.models import RunLog, TrainingPlan
 from app.utils import parse_race_time_to_seconds
 from app.utils import to_date as _to_date
 
 logger = logging.getLogger(__name__)
+
+# Ladder thresholds (best→worst) for the on_track/close/behind/far_behind verdict.
+# Deficit/gap ladders are "lower is better"; completion is "higher is better".
+_VOLUME_DEFICIT_THRESHOLDS = (5, 15, 30)  # percent below planned weekly volume
+_LONG_RUN_DEFICIT_THRESHOLDS = (5, 20, 40)  # percent below planned peak long run
+_ELEVATION_DEFICIT_THRESHOLDS = (10, 30, 50)  # percent below expected vert
+_PACE_GAP_THRESHOLDS = (5, 15, 30)  # seconds/km slower than target
+_COMPLETION_RATE_THRESHOLDS = (85, 70, 50)  # percent of workouts completed
+_COMPLETION_LABELS = ("on_track", "close", "needs_attention", "far_behind")
 
 
 class _PlanGapContext:
@@ -293,14 +303,7 @@ def _compute_volume_gap(
         verdict = "on_track"
     else:
         deficit_pct = round((1 - actual_avg / planned_avg) * 100, 1)
-        if deficit_pct <= 5:
-            verdict = "on_track"
-        elif deficit_pct <= 15:
-            verdict = "close"
-        elif deficit_pct <= 30:
-            verdict = "behind"
-        else:
-            verdict = "far_behind"
+        verdict = verdict_from_thresholds(deficit_pct, _VOLUME_DEFICIT_THRESHOLDS)
 
     return {
         "planned_weekly_avg_km": round(planned_avg, 1),
@@ -347,14 +350,7 @@ def _compute_elevation_gap(
         deficit_pct = 0.0
     else:
         deficit_pct = round((1 - actual_so_far / expected_so_far) * 100, 1)
-        if deficit_pct <= 10:
-            verdict = "on_track"
-        elif deficit_pct <= 30:
-            verdict = "close"
-        elif deficit_pct <= 50:
-            verdict = "behind"
-        else:
-            verdict = "far_behind"
+        verdict = verdict_from_thresholds(deficit_pct, _ELEVATION_DEFICIT_THRESHOLDS)
 
     return {
         "race_target_m": round(target_total, 0),
@@ -392,15 +388,7 @@ def _compute_long_run_gap(
         }
 
     deficit_pct = round((1 - actual_longest / planned_long) * 100, 1)
-
-    if deficit_pct <= 5:
-        verdict = "on_track"
-    elif deficit_pct <= 20:
-        verdict = "close"
-    elif deficit_pct <= 40:
-        verdict = "behind"
-    else:
-        verdict = "far_behind"
+    verdict = verdict_from_thresholds(deficit_pct, _LONG_RUN_DEFICIT_THRESHOLDS)
 
     return {
         "target_km": round(planned_long, 1),
@@ -441,15 +429,7 @@ def _compute_pace_gap(
 
     current_pace = sum(r.avg_pace_min_km for r in recent_runs) / len(recent_runs)
     gap_seconds = round((current_pace - target_pace) * 60)
-
-    if gap_seconds <= 5:
-        verdict = "on_track"
-    elif gap_seconds <= 15:
-        verdict = "close"
-    elif gap_seconds <= 30:
-        verdict = "behind"
-    else:
-        verdict = "far_behind"
+    verdict = verdict_from_thresholds(gap_seconds, _PACE_GAP_THRESHOLDS)
 
     return {
         "target_pace_min_km": round(target_pace, 2),
@@ -473,15 +453,12 @@ def _compute_consistency(
     adherence = perf.get("adherence_rate", 0)
 
     completion_rate = round(adherence)
-
-    if completion_rate >= 85:
-        verdict = "on_track"
-    elif completion_rate >= 70:
-        verdict = "close"
-    elif completion_rate >= 50:
-        verdict = "needs_attention"
-    else:
-        verdict = "far_behind"
+    verdict = verdict_from_thresholds(
+        completion_rate,
+        _COMPLETION_RATE_THRESHOLDS,
+        _COMPLETION_LABELS,
+        higher_is_better=True,
+    )
 
     return {
         "completion_rate_pct": completion_rate,

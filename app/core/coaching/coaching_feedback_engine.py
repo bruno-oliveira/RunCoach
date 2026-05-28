@@ -2,10 +2,14 @@
 
 Generates automated post-run coaching feedback by comparing
 a logged run against the planned workout, HR zones, and recent patterns.
+
+Pure: the volume/pattern history queries are performed by the caller (context
+layer) and the results are passed in — see
+``app.contexts.runner.fitness.coaching_data``.
 """
 
 import logging
-from typing import Optional
+from typing import List, Optional, Tuple
 
 from app.core.coaching.hr_feedback import hr_zone_feedback
 from app.core.coaching.pace_feedback import pace_feedback
@@ -26,15 +30,19 @@ class CoachingFeedbackEngine:
         run_log,
         planned_workout,
         hr_zones: Optional[list[dict]],
-        db,
+        volume_inputs: Optional[Tuple[int, float, float]],
+        pattern_candidates: List,
     ) -> dict:
         """Master method — calls all sub-generators and aggregates results.
 
         Args:
-            run_log:         RunLog instance (just committed).
-            planned_workout: DailyWorkout instance, or None.
-            hr_zones:        Zone list from HRZoneService, or None.
-            db:              SQLAlchemy session for history queries.
+            run_log:            RunLog instance (just committed).
+            planned_workout:    DailyWorkout instance, or None.
+            hr_zones:           Zone list from HRZoneService, or None.
+            volume_inputs:      ``(week_num, logged_km, planned_km)`` resolved by
+                                the caller, or None when no plan week applies.
+            pattern_candidates: Same-user runs within 45 days (newest first),
+                                pre-fetched by the caller.
 
         Returns:
             Dict with pace_feedback, hr_zone_feedback, effort_feedback,
@@ -44,8 +52,10 @@ class CoachingFeedbackEngine:
             "pace_feedback": pace_feedback(run_log, planned_workout),
             "hr_zone_feedback": hr_zone_feedback(run_log, planned_workout, hr_zones),
             "effort_feedback": cls._effort_feedback(run_log, planned_workout),
-            "volume_feedback": volume_feedback(run_log, db),
-            "pattern_feedback": pattern_feedback(run_log, db),
+            "volume_feedback": (
+                volume_feedback(*volume_inputs) if volume_inputs else None
+            ),
+            "pattern_feedback": pattern_feedback(run_log, pattern_candidates),
         }
         fb["overall_sentiment"] = determine_sentiment(fb)
         return fb

@@ -6,6 +6,7 @@ Binary-search solver and confidence ranges extracted from VDOTCalculator.
 import logging
 from typing import Dict, Optional
 
+from app.core.training.trail_profile import TRAIL_SENTINEL_KM
 from app.core.training.vdot_calculator import (
     STANDARD_RACE_DISTANCES,
     _pct_vo2max_at_time,
@@ -196,7 +197,7 @@ def get_confidence_range(
     distance with notable elevation gain). Trail outcomes vary much more
     than road outcomes -- a tight band gives false confidence.
     """
-    is_trail = target_distance == 30.0 or (
+    is_trail = target_distance == TRAIL_SENTINEL_KM or (
         elevation_gain_m is not None
         and distance_km > 0
         and elevation_gain_m / distance_km >= 20.0

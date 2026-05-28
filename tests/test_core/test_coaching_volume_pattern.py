@@ -8,6 +8,10 @@ from sqlalchemy import create_engine, event
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 
+from app.contexts.runner.fitness.coaching_data import (
+    fetch_pattern_candidates,
+    fetch_volume_inputs,
+)
 from app.core.coaching.pattern_analyzer import pattern_feedback
 from app.core.coaching.volume_tracker import volume_feedback
 from app.models import Base, RunLog, TrainingPlan, User, WeeklyPlan
@@ -15,6 +19,16 @@ from app.models import Base, RunLog, TrainingPlan, User, WeeklyPlan
 
 def _uid():
     return str(uuid.uuid4())
+
+
+def _volume_msg(run_log, db):
+    """Compose the context fetch + pure messaging (mirrors the engine path)."""
+    inputs = fetch_volume_inputs(run_log, db)
+    return volume_feedback(*inputs) if inputs else None
+
+
+def _pattern_msg(run_log, db):
+    return pattern_feedback(run_log, fetch_pattern_candidates(run_log, db))
 
 
 def _now():
@@ -72,19 +86,19 @@ class TestPatternFeedback:
     def test_missing_pace_returns_none(self, db):
         user = _user(db)
         r = _run(db, user, days_ago=0, wtype="easy", avg=None, planned=6.0)
-        assert pattern_feedback(r, db) is None
+        assert _pattern_msg(r, db) is None
 
     def test_missing_type_returns_none(self, db):
         user = _user(db)
         r = _run(db, user, days_ago=0, wtype=None, avg=5.5, planned=6.0)
-        assert pattern_feedback(r, db) is None
+        assert _pattern_msg(r, db) is None
 
     def test_too_few_recent_returns_none(self, db):
         user = _user(db)
         subject = _run(db, user, days_ago=0, wtype="easy", avg=5.5, planned=6.0)
         _run(db, user, days_ago=2, wtype="easy", avg=5.5, planned=6.0)
         db.commit()
-        assert pattern_feedback(subject, db) is None
+        assert _pattern_msg(subject, db) is None
 
     def test_easy_runs_consistently_fast(self, db):
         user = _user(db)
@@ -92,7 +106,7 @@ class TestPatternFeedback:
         for d in (2, 4, 6):
             _run(db, user, days_ago=d, wtype="easy", avg=5.4, planned=6.0)
         db.commit()
-        msg = pattern_feedback(subject, db)
+        msg = _pattern_msg(subject, db)
         assert msg is not None and "faster than planned" in msg
 
     def test_tempo_runs_consistently_slow(self, db):
@@ -101,7 +115,7 @@ class TestPatternFeedback:
         for d in (2, 4, 6):
             _run(db, user, days_ago=d, wtype="tempo", avg=6.7, planned=6.0)
         db.commit()
-        msg = pattern_feedback(subject, db)
+        msg = _pattern_msg(subject, db)
         assert msg is not None and "slower than target" in msg
 
     def test_on_target_returns_none(self, db):
@@ -110,7 +124,7 @@ class TestPatternFeedback:
         for d in (2, 4, 6):
             _run(db, user, days_ago=d, wtype="easy", avg=6.0, planned=6.0)
         db.commit()
-        assert pattern_feedback(subject, db) is None
+        assert _pattern_msg(subject, db) is None
 
 
 class TestVolumeFeedback:
@@ -139,7 +153,7 @@ class TestVolumeFeedback:
     def test_no_plan_id_returns_none(self, db):
         user = _user(db)
         r = _run(db, user, days_ago=0, wtype="easy", avg=6.0, planned=6.0)
-        assert volume_feedback(r, db) is None
+        assert _volume_msg(r, db) is None
 
     def test_target_reached(self, db):
         user = _user(db)
@@ -155,7 +169,7 @@ class TestVolumeFeedback:
             dist=21.0,
         )
         db.commit()
-        msg = volume_feedback(subject, db)
+        msg = _volume_msg(subject, db)
         assert msg is not None and "target reached" in msg
 
     def test_on_track(self, db):
@@ -172,7 +186,7 @@ class TestVolumeFeedback:
             dist=16.0,
         )
         db.commit()
-        msg = volume_feedback(subject, db)
+        msg = _volume_msg(subject, db)
         assert msg is not None and "on track" in msg
 
     def test_behind(self, db):
@@ -189,7 +203,7 @@ class TestVolumeFeedback:
             dist=5.0,
         )
         db.commit()
-        msg = volume_feedback(subject, db)
+        msg = _volume_msg(subject, db)
         assert msg is not None and "still to go" in msg
 
     def test_no_weekly_plan_returns_none(self, db):
@@ -208,4 +222,4 @@ class TestVolumeFeedback:
             db, user, days_ago=0, wtype="easy", avg=6.0, planned=6.0, plan_id=plan.id
         )
         db.commit()
-        assert volume_feedback(subject, db) is None
+        assert _volume_msg(subject, db) is None

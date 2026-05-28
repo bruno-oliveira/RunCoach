@@ -1,7 +1,13 @@
-"""View-assembly logic for training plan pages.
+"""View-assembly orchestration for training plan pages.
 
-Thin orchestrator delegating to plan_data_enricher, completion_stats,
-and week_pulse_generator.
+Cross-context orchestration: assembles a plan's view payload from the plan
+context (plan data, adaptation timeline) and the runner context (fitness
+progress, HR zones, completion stats, week pulse, feedback). Lives in the
+application layer because it spans bounded contexts — the plan context itself
+must not depend on the runner context.
+
+Thin orchestrator delegating to plan_data_enricher, completion_stats, and
+week_pulse_generator.
 """
 
 import logging
@@ -9,15 +15,14 @@ from typing import Any, Optional
 
 from sqlalchemy.orm import Session, selectinload
 
+from app.contexts.plan import plan_data_enricher as _enricher
 from app.contexts.plan.adaptation import AdaptationService
+from app.contexts.plan.plan_date_utils import compute_current_week
 from app.contexts.runner.enrichment import completion_stats as _cs
 from app.contexts.runner.enrichment import week_pulse_generator as _pulse
 from app.contexts.runner.fitness.hr_zone_service import HRZoneService
 from app.core.training.vertical_simulation import compute_weekly_vertical_actuals
 from app.models import DailyWorkout, TrainingPlan, User, WeeklyPlan
-
-from . import plan_data_enricher as _enricher
-from .plan_date_utils import compute_current_week
 
 logger = logging.getLogger(__name__)
 
@@ -180,7 +185,6 @@ class PlanViewService:
         training_plan: TrainingPlan,
         db: Session,
     ) -> dict[int, dict[str, Any]]:
-
         # Eager-load daily_workouts so the per-week loop below doesn't issue a
         # query per week (N+1) — one extra query fetches all workouts at once.
         weekly_plans = (

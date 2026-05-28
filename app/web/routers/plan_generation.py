@@ -8,6 +8,7 @@ from fastapi.responses import HTMLResponse, RedirectResponse
 from pydantic import ValidationError
 from sqlalchemy.orm import Session
 
+from app.application.plan_view_service import PlanViewService
 from app.contexts.nutrition.nutrition_engine import NutritionEngine
 from app.contexts.plan.generators.plan_generator import TrainingPlanGenerator
 from app.contexts.plan.plan_helpers import error_response, get_plan_or_404
@@ -21,6 +22,7 @@ from app.dependencies import (
     get_optional_user,
     get_plan_generator,
     get_plan_service,
+    get_plan_view_service,
 )
 from app.exceptions import (
     DatabaseException,
@@ -484,6 +486,7 @@ def customize_plan(
     db: Session = Depends(get_db),
     current_user: Optional[User] = Depends(get_optional_user),
     plan_service: PlanService = Depends(get_plan_service),
+    plan_view_service: PlanViewService = Depends(get_plan_view_service),
 ) -> Response:
     """Handle plan customization with simple interface."""
     training_plan = None
@@ -519,7 +522,7 @@ def customize_plan(
                 "plan": plan_data if plan_data else [],
                 "plan_id": plan_id,
                 "nutrition_plan": (
-                    plan_service.nutrition_for_template(nutrition_data)
+                    plan_view_service.nutrition_for_template(nutrition_data)
                     if nutrition_data
                     else {}
                 ),

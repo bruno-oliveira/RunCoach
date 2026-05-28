@@ -7,18 +7,18 @@ from fastapi import APIRouter, Cookie, Depends, HTTPException, Request
 from fastapi.responses import HTMLResponse
 from sqlalchemy.orm import Session
 
+from app.application.plan_view_service import PlanViewService
 from app.contexts.auth.repositories import SQLAlchemyUserRepository
 from app.contexts.nutrition.nutrition_engine import NutritionEngine
 from app.contexts.plan.adaptation import AdaptationService
 from app.contexts.plan.plan_helpers import get_plan_or_404, plan_view_context
-from app.contexts.plan.plan_service import PlanService
 from app.contexts.plan.plan_type_registry import get_handler_for_plan
 from app.contexts.runner.fitness.hr_zone_service import HRZoneService
 from app.dependencies import (
     get_db,
     get_nutrition_engine,
     get_optional_user,
-    get_plan_service,
+    get_plan_view_service,
 )
 from app.models import User
 from app.template_helpers import create_templates
@@ -38,7 +38,7 @@ def view_plan(
     db: Session = Depends(get_db),
     current_user: Optional[User] = Depends(get_optional_user),
     nutrition_engine: NutritionEngine = Depends(get_nutrition_engine),
-    plan_service: PlanService = Depends(get_plan_service),
+    plan_view_service: PlanViewService = Depends(get_plan_view_service),
 ) -> HTMLResponse:
     """View an existing training plan."""
     try:
@@ -54,7 +54,7 @@ def view_plan(
                 logger.warning("Auto-map/alert on view failed: %s", e)
 
         plan_data = training_plan.plan_data
-        plan_data = plan_service.enrich_plan_data_with_ids(
+        plan_data = plan_view_service.enrich_plan_data_with_ids(
             plan_data, training_plan.id, db
         )
 
@@ -66,7 +66,7 @@ def view_plan(
             training_plan.nutrition_plan_data = nutrition_plan_raw
             db.commit()
 
-        nutrition_plan = plan_service.nutrition_for_template(
+        nutrition_plan = plan_view_service.nutrition_for_template(
             training_plan.nutrition_plan_data
         )
 
@@ -86,7 +86,7 @@ def view_plan(
             except Exception as e:
                 logger.warning("Retroactive HR zone computation failed: %s", e)
 
-        extra = plan_service.get_plan_view_data(training_plan, current_user, db)
+        extra = plan_view_service.get_plan_view_data(training_plan, current_user, db)
         extra = get_handler_for_plan(training_plan).enrich_view_context(
             training_plan, db, extra, plan_data
         )

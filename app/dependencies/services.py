@@ -6,6 +6,7 @@ from typing import Any, Optional
 from fastapi import Depends
 from sqlalchemy.orm import Session
 
+from app.application.plan_view_service import PlanViewService
 from app.contexts.auth.auth_service import AuthService
 from app.contexts.nutrition.favorites_service import FavoritesService
 from app.contexts.nutrition.nutrition_engine import NutritionEngine
@@ -46,6 +47,11 @@ def get_auth_service() -> AuthService:
 @lru_cache
 def get_plan_service() -> PlanService:
     return PlanService()
+
+
+@lru_cache
+def get_plan_view_service() -> PlanViewService:
+    return PlanViewService()
 
 
 @lru_cache
@@ -105,6 +111,7 @@ __all__ = [
     "get_performance_plan_generator",
     "get_auth_service",
     "get_plan_service",
+    "get_plan_view_service",
     "get_strava_service",
     "get_adaptation_service",
     "get_favorites_service",

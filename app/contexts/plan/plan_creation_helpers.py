@@ -1,17 +1,23 @@
 """Plan persistence helpers — plan core, weekly workouts, HR zones, nutrition, race protocol."""
 
+from __future__ import annotations
+
 import logging
-from typing import Optional
+from typing import TYPE_CHECKING, Optional
 
 from sqlalchemy.orm import Session
 
-from app.contexts.nutrition.nutrition_engine import NutritionEngine
-from app.contexts.runner.fitness.hr_zone_service import HRZoneService
 from app.core.race.race_protocol_generator import generate_race_protocol
+from app.core.training.road_profile import classify_road
 from app.core.training.vdot_calculator import VDOTCalculator
 from app.models import DailyWorkout, TrainingPlan, User, WeeklyPlan
 from app.schemas import PlanRequest
 from app.utils import parse_race_time_to_seconds
+
+if TYPE_CHECKING:
+    # Type-only: the engine is injected by the caller (PlanService.create_plan),
+    # so the plan context does not depend on the nutrition context at runtime.
+    from app.contexts.nutrition.nutrition_engine import NutritionEngine
 
 logger = logging.getLogger(__name__)
 
@@ -85,6 +91,10 @@ def attach_hr_zones(
     plan_data: list[dict],
     db: Session,
 ) -> None:
+    # Local import keeps the plan context free of a static edge to the runner
+    # context's HR-zone service (cross-context runtime call during creation).
+    from app.contexts.runner.fitness.hr_zone_service import HRZoneService
+
     try:
         zones = HRZoneService.compute_and_store_zones(training_plan, user, db)
         HRZoneService.inject_hr_zones_into_plan_data(plan_data, zones)
@@ -175,10 +185,11 @@ def goal_pace_from_vdot(
     zones = VDOTCalculator.get_pace_zones(vdot)
     if not zones or not all(k in zones for k in ("I", "T", "M")):
         return None
-    if target_distance <= 5.0:
+    band = classify_road(target_distance)
+    if band == "5k":
         return zones["I"]["pace_min_km"]
-    if target_distance <= 10.0:
+    if band == "10k":
         return zones["T"]["pace_min_km"]
-    if target_distance <= 21.1:
+    if band == "half":
         return zones["M"]["pace_min_km"] * 0.95
     return zones["M"]["pace_min_km"]

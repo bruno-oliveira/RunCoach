@@ -67,6 +67,81 @@ class SignalContribution:
     extras: Dict[str, Any] = field(default_factory=dict)
 
 
+@dataclass
+class _SignalContext:
+    """Bundle of inputs shared by the registered signal computers."""
+
+    all_plan_runs: List
+    past_workouts: List[Tuple]
+    past_workout_ids: set
+    today: Any
+    plan_id: str
+    db: Session
+    recency_weight_fn: Any
+    hr_zones: Optional[list[dict]]
+    run_feedback_list: Optional[List]
+    readiness_logs: Optional[List]
+
+
+# Ordered signal registry. Each entry is ``(name, optional, invoke)`` where
+# ``invoke(ctx, weight) -> SignalContribution``. The list order is the
+# canonical signal order: it indexes into the per-phase PHASE_WEIGHTS tuple,
+# fixes the (commutative) weighted-sum order, and sequences weight
+# redistribution. Adding an additive signal = one entry here + its weight slot.
+# ``optional`` signals fold their weight onto the rest when they have no data.
+_SIGNAL_REGISTRY = [
+    (
+        "volume",
+        False,
+        lambda ctx, w: _volume_signal(
+            ctx.past_workouts, ctx.all_plan_runs, ctx.recency_weight_fn, ctx.today, w
+        ),
+    ),
+    (
+        "effort",
+        False,
+        lambda ctx, w: _effort_signal(
+            ctx.all_plan_runs, ctx.recency_weight_fn, ctx.today, w
+        ),
+    ),
+    (
+        "completion",
+        False,
+        lambda ctx, w: _completion_signal(
+            ctx.past_workouts,
+            ctx.past_workout_ids,
+            ctx.plan_id,
+            ctx.db,
+            ctx.recency_weight_fn,
+            w,
+        ),
+    ),
+    (
+        "hr_zone",
+        True,
+        lambda ctx, w: _hr_signal(
+            ctx.all_plan_runs, ctx.hr_zones, ctx.recency_weight_fn, ctx.today, w
+        ),
+    ),
+    (
+        "feedback",
+        False,
+        lambda ctx, w: _feedback_signal(
+            ctx.run_feedback_list,
+            ctx.all_plan_runs,
+            ctx.recency_weight_fn,
+            ctx.today,
+            w,
+        ),
+    ),
+    (
+        "readiness",
+        True,
+        lambda ctx, w: _readiness_signal(ctx.readiness_logs, w),
+    ),
+]
+
+
 def compute_adjustment_signals(
     all_plan_runs: List,
     past_workouts: List[Tuple],
@@ -85,55 +160,47 @@ def compute_adjustment_signals(
     readiness_logs: Optional[List] = None,
     training_load: Optional[Dict[str, Any]] = None,
 ) -> Dict[str, Any]:
-    (vw, ew, cw, hw, fw, rw) = _PHASE_WEIGHTS.get(
-        current_phase, _PHASE_WEIGHTS["build"]
+    phase_weights = _PHASE_WEIGHTS.get(current_phase, _PHASE_WEIGHTS["build"])
+
+    ctx = _SignalContext(
+        all_plan_runs=all_plan_runs,
+        past_workouts=past_workouts,
+        past_workout_ids=past_workout_ids,
+        today=today,
+        plan_id=plan_id,
+        db=db,
+        recency_weight_fn=recency_weight_fn,
+        hr_zones=hr_zones,
+        run_feedback_list=run_feedback_list,
+        readiness_logs=readiness_logs,
     )
 
-    volume = _volume_signal(past_workouts, all_plan_runs, recency_weight_fn, today, vw)
-    effort = _effort_signal(all_plan_runs, recency_weight_fn, today, ew)
-    completion = _completion_signal(
-        past_workouts,
-        past_workout_ids,
-        plan_id,
-        db,
-        recency_weight_fn,
-        cw,
-    )
-    hr = _hr_signal(all_plan_runs, hr_zones, recency_weight_fn, today, hw)
-    feedback = _feedback_signal(
-        run_feedback_list,
-        all_plan_runs,
-        recency_weight_fn,
-        today,
-        fw,
-    )
-    readiness = _readiness_signal(readiness_logs, rw)
-
-    weights = {
-        "volume": volume.weight,
-        "effort": effort.weight,
-        "completion": completion.weight,
-        "hr_zone": hr.weight,
-        "feedback": feedback.weight,
-        "readiness": readiness.weight,
+    # Compute + weight every registered signal in canonical order.
+    contribs: Dict[str, SignalContribution] = {
+        name: invoke(ctx, phase_weights[i])
+        for i, (name, _optional, invoke) in enumerate(_SIGNAL_REGISTRY)
     }
-    # Sequential to match legacy ordering: HR weight first folds into the
-    # remaining five (including readiness), then a missing readiness folds
-    # *its* inflated weight onto the remaining four.
-    if not hr.has_data:
-        _redistribute_weight(weights, "hr_zone")
-    if not readiness.has_data:
-        _redistribute_weight(weights, "readiness")
+    weights = {name: c.weight for name, c in contribs.items()}
+    # Optional signals with no data fold their weight onto the rest, in registry
+    # order (hr_zone before readiness) — preserves the legacy redistribution
+    # sequencing where HR folds first, then a missing readiness folds after.
+    for name, optional, _invoke in _SIGNAL_REGISTRY:
+        if optional and not contribs[name].has_data:
+            _redistribute_weight(weights, name)
+
+    # Named aliases for the clamp/assembly logic that consumes each signal's
+    # specific extras.
+    volume = contribs["volume"]
+    effort = contribs["effort"]
+    completion = contribs["completion"]
+    hr = contribs["hr_zone"]
+    feedback = contribs["feedback"]
+    readiness = contribs["readiness"]
 
     mountain_factor, mountain_extras = _mountain_factor(mountain_simulation)
 
-    raw_multiplier = (
-        volume.factor * weights["volume"]
-        + effort.factor * weights["effort"]
-        + completion.factor * weights["completion"]
-        + hr.factor * weights["hr_zone"]
-        + feedback.factor * weights["feedback"]
-        + readiness.factor * weights["readiness"]
+    raw_multiplier = sum(
+        contribs[name].factor * weights[name] for name, _o, _i in _SIGNAL_REGISTRY
     )
     raw_multiplier += effort.extras["trend_modifier"]
     raw_multiplier += effort.extras["quality_drift_modifier"]

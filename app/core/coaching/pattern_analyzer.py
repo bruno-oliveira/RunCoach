@@ -1,14 +1,28 @@
-"""Pattern feedback — detect repeated pace patterns over recent runs."""
+"""Pattern feedback — detect repeated pace patterns over recent runs (pure).
 
-from datetime import timedelta
-from typing import Optional
+Pure: no I/O, no ORM. The caller (context layer) supplies the candidate runs via
+``app.contexts.runner.fitness.coaching_data.fetch_pattern_candidates``; this
+module only filters by workout type and weights by recency.
+"""
+
+from typing import List, Optional
 
 
-def pattern_feedback(run_log, db) -> Optional[str]:
-    """Detect repeated pace patterns over last 45 days with recency weighting.
+def pattern_feedback(run_log, candidate_runs: List) -> Optional[str]:
+    """Detect repeated pace patterns with 14-day-half-life recency weighting.
 
-    Uses a 14-day half-life: recent deviations matter more than older ones.
-    Also detects 3+ consecutive same-direction deviations (streak trigger).
+    Recent deviations matter more than older ones; 3+ consecutive same-direction
+    deviations also trigger (streak).
+
+    Args:
+        run_log: The run just logged.
+        candidate_runs: Same-user runs within the last 45 days (excluding
+            ``run_log``) that have both planned and actual pace, ordered newest
+            first. The SQL fetch is the caller's responsibility — see module
+            docstring.
+
+    Returns:
+        A coaching message, or None when no pattern is detected.
     """
     if not run_log.avg_pace_min_km or not run_log.planned_pace_min_km:
         return None
@@ -17,24 +31,9 @@ def pattern_feedback(run_log, db) -> Optional[str]:
     if not wtype:
         return None
 
-    from app.models import RunLog
-
-    cutoff = run_log.date - timedelta(days=45)
     # effective_workout_type is a derived property (reconciles the raw tag with
     # inference), so the type match is applied in Python rather than in SQL.
-    candidates = (
-        db.query(RunLog)
-        .filter(
-            RunLog.user_id == run_log.user_id,
-            RunLog.avg_pace_min_km.isnot(None),
-            RunLog.planned_pace_min_km.isnot(None),
-            RunLog.date >= cutoff,
-            RunLog.id != run_log.id,
-        )
-        .order_by(RunLog.date.desc())
-        .all()
-    )
-    recent = [r for r in candidates if r.effective_workout_type == wtype][:6]
+    recent = [r for r in candidate_runs if r.effective_workout_type == wtype][:6]
 
     if len(recent) < 2:
         return None

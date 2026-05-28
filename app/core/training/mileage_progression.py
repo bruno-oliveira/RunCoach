@@ -11,8 +11,10 @@ from app.core.training.phase_calculator import (
     get_phase,
     is_recovery_week,
 )
+from app.core.training.road_profile import classify_road
 from app.core.training.trail_profile import (
     TrailProfile,
+    is_trail_target,
     trail_max_weekly_mileage,
 )
 from app.core.training.tuning import (
@@ -27,6 +29,14 @@ from app.core.training.tuning import (
     VOLUME_TREND_CAPS,
     WEEK_OVER_WEEK_CAP,
 )
+
+# Per road band: (floor_km, multiplier on current_km) for the ideal peak.
+_ROAD_PEAK_PARAMS = {
+    "5k": (20, 1.5),
+    "10k": (25, 1.6),
+    "half": (40, 1.85),
+    "marathon": (55, 2.0),
+}
 
 
 def _acwr_peak_factor(profile: Optional[dict]) -> float:
@@ -69,16 +79,11 @@ def get_ideal_peak(
         ideal_peak = _trail_ideal_peak(trail_profile, current_km)
         return min(ideal_peak, trail_max_weekly_mileage(trail_profile))
 
-    if target_distance == 30:
+    if is_trail_target(target_distance, trail_profile):
         ideal_peak = max(35, current_km * 1.5)
-    elif target_distance <= 5:
-        ideal_peak = max(20, current_km * 1.5)
-    elif target_distance <= 10:
-        ideal_peak = max(25, current_km * 1.6)
-    elif target_distance <= 21.1:
-        ideal_peak = max(40, current_km * 1.85)
     else:
-        ideal_peak = max(55, current_km * 2.0)
+        floor_km, mult = _ROAD_PEAK_PARAMS[classify_road(target_distance)]
+        ideal_peak = max(floor_km, current_km * mult)
 
     # Apply absolute ceiling so high-base runners don't get absurd peaks
     cap = MAX_PEAK_MILEAGE.get(target_distance)
@@ -158,9 +163,7 @@ def _get_taper_curve(
     if taper_weeks == 1:
         return [0.55]
     elif taper_weeks == 2:
-        if (
-            trail_profile is not None or target_distance == 30.0
-        ):  # trail: more aggressive
+        if is_trail_target(target_distance, trail_profile):  # trail: more aggressive
             return [0.72, 0.50]
         return [0.75, 0.55]  # half marathon
     elif taper_weeks == 3:

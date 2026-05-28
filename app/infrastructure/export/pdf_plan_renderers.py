@@ -23,6 +23,7 @@ from reportlab.lib import colors
 from reportlab.lib.units import cm
 from reportlab.platypus import PageBreak, Spacer, Table, TableStyle
 
+from app.core.training.trail_profile import TRAIL_SENTINEL_KM
 from app.infrastructure.export.plan_export_dto import PlanExportDTO
 
 if TYPE_CHECKING:
@@ -202,7 +203,7 @@ class DistancePdfRenderer(PdfPlanRenderer):
             if dto.target_elevation_gain_m is not None:
                 display += f" · {int(dto.target_elevation_gain_m)} m vert"
             return display
-        if target_km == 30.0:
+        if target_km == TRAIL_SENTINEL_KM:
             return "Trail Running"
         return f"{dto.target_distance} km"
 

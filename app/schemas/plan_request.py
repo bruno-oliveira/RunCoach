@@ -5,6 +5,7 @@ from typing import Optional
 from pydantic import BaseModel, Field, model_validator
 
 from app.constants import DISTANCE_NAMES, SUPPORTED_DISTANCES
+from app.core.training.trail_profile import TRAIL_SENTINEL_KM
 from app.core.training.training_config import get_constraints
 from app.exceptions import (
     InadequateBaseException,
@@ -130,7 +131,7 @@ class PlanRequest(PlanRequestBase, RaceInfoMixin):
         # trail mode and derive elevation from the deprecated terrain toggle.
         # The new form path always sends is_trail explicitly and must supply
         # target_elevation_gain_m itself — we do not silently default it here.
-        if target_f == 30.0 and not is_trail_explicit:
+        if target_f == TRAIL_SENTINEL_KM and not is_trail_explicit:
             values["is_trail"] = True
             if values.get("target_elevation_gain_m") is None:
                 values["target_elevation_gain_m"] = (

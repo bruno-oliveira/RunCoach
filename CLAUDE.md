@@ -55,7 +55,7 @@ app/
 ├── rate_limit.py
 ├── template_helpers.py  # Jinja2 templates + static-URL helpers
 ├── domain/              # Pure domain layer (no I/O, no ORM)
-│   ├── events.py        # Domain event dataclasses
+│   ├── coaching.py      # Coaching domain value objects
 │   └── repositories.py  # Repository protocols (IPlanRepository, IRunRepository, IUserRepository)
 ├── core/                # Pure calculation libraries (no I/O)
 │   ├── training/        # VDOT, phases, mileage, workout building

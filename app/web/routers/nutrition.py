@@ -8,14 +8,14 @@ from fastapi import APIRouter, Cookie, Depends, Form, HTTPException, Request
 from fastapi.responses import HTMLResponse
 from sqlalchemy.orm import Session
 
+from app.application.plan_view_service import PlanViewService
 from app.contexts.nutrition.nutrition_engine import NutritionEngine
-from app.contexts.plan.plan_service import PlanService
 from app.contexts.plan.repositories import SQLAlchemyPlanRepository
 from app.dependencies import (
     get_db,
     get_nutrition_engine,
     get_optional_user,
-    get_plan_service,
+    get_plan_view_service,
     verify_plan_ownership,
 )
 from app.template_helpers import create_templates
@@ -33,7 +33,7 @@ def randomize_meals(
     anonymous_user_id: Optional[str] = Cookie(None),
     current_user=Depends(get_optional_user),
     db: Session = Depends(get_db),
-    plan_service: PlanService = Depends(get_plan_service),
+    plan_view_service: PlanViewService = Depends(get_plan_view_service),
     nutrition_engine: NutritionEngine = Depends(get_nutrition_engine),
 ) -> HTMLResponse:
     """Generate different meal suggestions for the nutrition blueprint."""
@@ -65,13 +65,13 @@ def randomize_meals(
         from app.contexts.plan.plan_helpers import plan_view_context
 
         plan_data = training_plan.plan_data if training_plan.plan_data else []
-        plan_data = plan_service.enrich_plan_data_with_ids(
+        plan_data = plan_view_service.enrich_plan_data_with_ids(
             plan_data, training_plan.id, db
         )
-        nutrition_plan = plan_service.nutrition_for_template(
+        nutrition_plan = plan_view_service.nutrition_for_template(
             training_plan.nutrition_plan_data
         )
-        extra = plan_service.get_plan_view_data(training_plan, current_user, db)
+        extra = plan_view_service.get_plan_view_data(training_plan, current_user, db)
 
         ctx = plan_view_context(
             request,
