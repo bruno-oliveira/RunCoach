@@ -24,27 +24,13 @@ from app.contexts.plan.adaptation.tuning import (
 from app.contexts.plan.adaptation.tuning import EXPANDED_MAX as _EXPANDED_MAX
 from app.contexts.plan.adaptation.tuning import EXPANDED_MIN as _EXPANDED_MIN
 from app.contexts.plan.adaptation.tuning import (
-    HR_OVERREACH_ADHERENCE,
-    HR_OVERREACH_CLAMP,
-    HR_OVERREACH_DEVIATION,
-    OVERREACH_EFFORT_THRESHOLD,
-    OVERREACH_OVERRIDE_CLAMP,
-    OVERREACH_VOLUME_EFFORT_CLAMP,
-    OVERREACH_VOLUME_RATIO,
-    RACE_EFFORT_CLAMP,
-    RACE_EFFORT_COUNT_THRESHOLD,
-    TSB_FRESH,
-    TSB_LOADED,
-    TSB_OVERREACHED,
-    TSB_OVERREACHED_CLAMP,
-    TSB_PRIMED,
-    VDOT_DECLINE_CLAMP,
-)
-from app.contexts.plan.adaptation.tuning import (
     IMPORTANCE_WEIGHTS as _IMPORTANCE_WEIGHTS,
 )
 from app.contexts.plan.adaptation.tuning import (
     MIN_RUNS_PER_TYPE as _MIN_RUNS_PER_TYPE,  # noqa: F401  (re-exported for tests)
+)
+from app.contexts.plan.adaptation.tuning import (
+    OVERREACH_OVERRIDE_CLAMP,
 )
 from app.contexts.plan.adaptation.tuning import PHASE_WEIGHTS as _PHASE_WEIGHTS
 from app.contexts.plan.adaptation.tuning import STANDARD_MAX as _STANDARD_MAX

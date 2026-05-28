@@ -26,7 +26,6 @@ from app.contexts.plan.adaptation.tuning import (
     VDOT_DECLINE_CLAMP,
 )
 
-
 # ----------------------------------------------------------------------------
 # _redistribute_weight
 # ----------------------------------------------------------------------------
@@ -62,7 +61,7 @@ def test_redistribute_weight_sequential_inflates_compounding():
     weights = {"a": 0.4, "b": 0.4, "c": 0.2}
     sc._redistribute_weight(weights, "a")
     # After first redistribute, b and c carry all the weight.
-    first_b, first_c = weights["b"], weights["c"]
+    first_c = weights["c"]
     sc._redistribute_weight(weights, "b")
     # b is now zero; c carries everything (compounded onto its inflated value).
     assert weights["b"] == 0.0

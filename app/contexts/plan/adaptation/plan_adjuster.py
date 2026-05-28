@@ -28,6 +28,18 @@ from ._helpers import (
     parse_plan_data_lookups,
     today_date,
 )
+from .adjustment_results import (
+    build_no_adjustable_weeks_result as _build_no_adjustable_weeks_result,
+)
+from .adjustment_results import (
+    build_signal_snapshot as _build_signal_snapshot,
+)
+from .adjustment_results import (
+    build_signals_summary as _build_signals_summary,
+)
+from .adjustment_results import (
+    record_adaptation_event as _record_adaptation_event,
+)
 from .change_plan_builder import (
     build_change_plan,
     empty_change_plan,
@@ -40,6 +52,10 @@ from .run_mapper import map_runs_to_plan
 from .signal_computer import compute_adjustment_signals
 from .tuning import RECENCY_HALF_LIFE_WEEKS
 from .week_adjuster import apply_adjustment_stage
+
+# ``_build_signal_snapshot`` is also imported by tests/test_services
+# and referenced in app/application/coach_summary_service.py — keep the
+# underscore alias here so external callers continue to find it.
 
 logger = logging.getLogger(__name__)
 
@@ -393,17 +409,6 @@ def _run_adjust(
     if applied.vdot_result:
         result["vdot_recalibration"] = applied.vdot_result
     return result
-
-
-# Result-shaping helpers live in adjustment_results so this file can focus
-# on the adjustment flow. Aliased to their original underscore names for
-# backward compatibility with internal callers.
-from .adjustment_results import (
-    build_no_adjustable_weeks_result as _build_no_adjustable_weeks_result,
-    build_signal_snapshot as _build_signal_snapshot,
-    build_signals_summary as _build_signals_summary,
-    record_adaptation_event as _record_adaptation_event,
-)
 
 
 def _get_current_phase(training_plan: TrainingPlan, current_week: int) -> str:
