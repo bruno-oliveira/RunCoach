@@ -1,6 +1,7 @@
 """Apply adjustment multiplier to future weeks' workout distances."""
 
 import logging
+from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional, Tuple
 
 from sqlalchemy.orm import Session
@@ -11,6 +12,7 @@ from app.utils import persist_json
 
 from . import change_reasons as _reasons
 from ._helpers import ANNOTATION_RE, batch_workouts_by_week, parse_plan_data_lookups
+from .change_plan_builder import snapshot_workouts
 from .safety import enforce_future_growth_cap, enforce_week_structure
 from .tuning import (
     PER_TYPE_MAX,
@@ -18,8 +20,75 @@ from .tuning import (
     QUALITY_HALF_SCALE,
     WORKOUT_CEILING,
 )
+from .vdot_recalibrator import check_vdot_recalibration
 
 logger = logging.getLogger(__name__)
+
+
+@dataclass
+class ApplyResult:
+    """Outputs of the apply-mutation stage of ``_run_adjust``."""
+
+    before: Dict[str, Dict[str, Any]]
+    after: Dict[str, Dict[str, Any]]
+    weeks_changed: int
+    any_distance_changed: bool
+    recorder: List[Dict[str, Any]] = field(default_factory=list)
+    vdot_result: Optional[Dict[str, Any]] = None
+
+
+def apply_adjustment_stage(
+    training_plan: TrainingPlan,
+    adjustable_weeks: List[WeeklyPlan],
+    *,
+    multiplier: float,
+    per_type_ratios: Optional[Dict[str, float]],
+    current_week: int,
+    current_day_of_week: int,
+    user_id: str,
+    db: Session,
+    week_numbers: List[int],
+) -> ApplyResult:
+    """Snapshot, apply the multiplier, optionally recalibrate VDOT, snapshot again.
+
+    The VDOT recalibration is wrapped in a try/except so a pace-zone update
+    failure cannot block a successful distance adjustment — matching the
+    pre-refactor behaviour.
+
+    This helper performs ORM mutations but does NOT commit; the orchestrator
+    owns the transaction boundary so applied/preview modes can share the
+    same flow and preview can ``db.rollback()`` cleanly.
+    """
+    before = snapshot_workouts(training_plan, db, week_numbers=week_numbers)
+
+    recorder: List[Dict[str, Any]] = []
+    weeks_changed, any_distance_changed, _counts = apply_adjustment_to_future_weeks(
+        training_plan,
+        adjustable_weeks,
+        multiplier,
+        db,
+        current_week=current_week,
+        current_day_of_week=current_day_of_week,
+        per_type_ratios=per_type_ratios,
+        recorder=recorder,
+    )
+
+    vdot_result: Optional[Dict[str, Any]] = None
+    try:
+        vdot_result = check_vdot_recalibration(training_plan, user_id, db)
+    except Exception as e:
+        logger.warning("VDOT recalibration failed (non-fatal): %s", e)
+
+    after = snapshot_workouts(training_plan, db, week_numbers=week_numbers)
+
+    return ApplyResult(
+        before=before,
+        after=after,
+        weeks_changed=weeks_changed,
+        any_distance_changed=any_distance_changed,
+        recorder=recorder,
+        vdot_result=vdot_result,
+    )
 
 
 def apply_adjustment_to_future_weeks(
