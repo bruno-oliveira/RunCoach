@@ -70,6 +70,13 @@ class Settings(BaseSettings):
     encryption_key_previous: str = ""
     force_secure_cookies: bool = True
     max_request_body_bytes: int = 1_048_576  # 1 MB
+    # Number of trusted reverse-proxy hops in front of the app. The rate
+    # limiter takes the IP at position -trusted_proxy_hops from the
+    # X-Forwarded-For chain (the right-most trusted hop), so a client that
+    # injects spoofed IPs upstream cannot grow its rate-limit budget.
+    # 1 matches Fly.io (single edge proxy); set to 0 on deployments where
+    # the app is reached directly, or higher behind additional proxies.
+    trusted_proxy_hops: int = 1
     # CORS allowed origins. Comma-separated env var, e.g.
     # ``ALLOWED_ORIGINS=https://runcoach.fly.dev,https://example.com``.
     # Defaults to localhost for development; production must override.

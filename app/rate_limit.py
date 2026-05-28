@@ -6,6 +6,8 @@ from threading import Lock
 
 from fastapi import HTTPException, Request, status
 
+from app.infrastructure.config import settings
+
 
 class RateLimiter:
     def __init__(self, max_requests: int, window_seconds: int):
@@ -15,9 +17,23 @@ class RateLimiter:
         self._lock = Lock()
 
     def _client_ip(self, request: Request) -> str:
+        """Resolve the trusted client IP from X-Forwarded-For.
+
+        The header chain reads ``client, hop1, hop2, ...``. With ``hops``
+        trusted reverse-proxies in front of the app, the right-most trusted
+        IP is at position ``-hops``; any IPs further left were sent by the
+        client and must not be trusted (an attacker can inject extra IPs to
+        try to split a rate-limit budget across spoofed entries).
+
+        Falls back to ``request.client.host`` when the header is missing or
+        the chain is shorter than ``hops``.
+        """
+        hops = settings.trusted_proxy_hops
         forwarded = request.headers.get("x-forwarded-for")
-        if forwarded:
-            return forwarded.split(",")[0].strip()
+        if forwarded and hops > 0:
+            chain = [ip.strip() for ip in forwarded.split(",") if ip.strip()]
+            if len(chain) >= hops:
+                return chain[-hops]
         return request.client.host if request.client else "unknown"
 
     def check(self, request: Request) -> None:
