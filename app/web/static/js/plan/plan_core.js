@@ -2,8 +2,9 @@
  * plan_core.js — Core utilities and initialisation for the plan page.
  *
  * Must be loaded FIRST among the plan/* scripts.
- * Exposes helpers on `window` so other plan modules and HTML onclick
- * handlers can use them.
+ * Exposes its public API as `window.PlanModule` (a single namespace) and
+ * keeps bare `window.<name>` aliases for legacy inline onclick handlers;
+ * new code should prefer `PlanModule.X(...)`.
  */
 (function () {
     'use strict';
@@ -764,4 +765,44 @@
             });
         });
     });
+
+    /* -------------------------------------------------------------- */
+    /*  PlanModule namespace                                          */
+    /*                                                                */
+    /*  Single discoverable surface for templates and other modules.  */
+    /*  The window.<fn> aliases above remain so legacy inline onclick */
+    /*  handlers keep working during incremental migration.           */
+    /* -------------------------------------------------------------- */
+    window.PlanModule = {
+        // Utilities
+        escapeHtml: window.escapeHtml,
+        reloadPlanPage: window.reloadPlanPage,
+        authHeaders: window.authHeaders,
+        scrollToTop: window.scrollToTop,
+        // Plan customization
+        adjustIntensity: window.adjustIntensity,
+        adjustDistance: window.adjustDistance,
+        applyAISuggestion: window.applyAISuggestion,
+        swapWorkout: window.swapWorkout,
+        resetCustomization: window.resetCustomization,
+        updateCustomizationWeek: window.updateCustomizationWeek,
+        // Plan lifecycle (start / adjust / reset / save)
+        startPlan: window.startPlan,
+        adjustPlan: window.adjustPlan,
+        resetAdjustment: window.resetAdjustment,
+        savePlanToAccount: window.savePlanToAccount,
+        // Run logging
+        openLogModal: window.openLogModal,
+        closeLogModal: window.closeLogModal,
+        submitRunLog: window.submitRunLog,
+        unlinkRun: window.unlinkRun,
+        // Toasts / coaching surface
+        showRacePredictionsToast: window.showRacePredictionsToast,
+        dismissRaceToast: window.dismissRaceToast,
+        showRaceComparisonToast: window.showRaceComparisonToast,
+        highlightTomorrowSwap: window.highlightTomorrowSwap,
+        // Nutrition / recipes
+        randomizeMeals: window.randomizeMeals,
+        toggleRecipe: window.toggleRecipe,
+    };
 })();

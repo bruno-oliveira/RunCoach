@@ -73,7 +73,7 @@
         <div class="meal-suggestions">
             <div class="meal-suggestions-header">
                 <h3>Sample Meal Plan</h3>
-                <button onclick="randomizeMeals()" class="randomize-meals-btn">
+                <button onclick="PlanModule.randomizeMeals()" class="randomize-meals-btn">
                     🎲 Randomize Meals
                 </button>
             </div>
@@ -96,7 +96,7 @@
                             <span class="nutrient">🍝 {{ meal.carbs }}g</span>
                             <span class="nutrient">🥑 {{ meal.fat }}g</span>
                         </div>
-                        <button class="show-recipe-btn" data-target="recipe-{{ meal_type }}-{{ loop.index }}" onclick="toggleRecipe(this)">Show</button>
+                        <button class="show-recipe-btn" data-target="recipe-{{ meal_type }}-{{ loop.index }}" onclick="PlanModule.toggleRecipe(this)">Show</button>
                         <div class="recipe-details" id="recipe-{{ meal_type }}-{{ loop.index }}" style="display: none;">
                             <div class="recipe-section">
                                 <h5>Ingredients</h5>

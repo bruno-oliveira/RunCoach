@@ -402,7 +402,7 @@
     {% if (training_plan.adjustment_multiplier or training_plan.last_recalibrated_at)
           and not (training_plan.last_change_plan and training_plan.last_change_plan.summary) %}
     <div style="margin-bottom: var(--space-6); display:flex; justify-content:flex-end;">
-        <button onclick="resetAdjustment()" class="btn btn-ghost btn-small" id="reset-adjust-btn">Reset to original</button>
+        <button onclick="PlanModule.resetAdjustment()" class="btn btn-ghost btn-small" id="reset-adjust-btn">Reset to original</button>
     </div>
     {% endif %}
 
@@ -426,7 +426,7 @@
             </div>
             <div style="display:flex;align-items:center;gap:var(--space-2);flex-wrap:wrap;">
                 {% if training_plan.adjustment_multiplier or training_plan.last_recalibrated_at %}
-                <button onclick="resetAdjustment()" class="btn btn-ghost btn-small" id="reset-adjust-btn">Reset to original</button>
+                <button onclick="PlanModule.resetAdjustment()" class="btn btn-ghost btn-small" id="reset-adjust-btn">Reset to original</button>
                 {% endif %}
                 <a href="#" class="btn btn-ghost btn-small" data-change-plan-view>View details</a>
             </div>
@@ -589,7 +589,7 @@
         <p>Set a start date to track your progress against real calendar dates</p>
         <div class="plan-start-banner-controls">
             <input type="date" id="plan-start-date" value="{{ next_monday }}">
-            <button onclick="startPlan()" class="btn btn-primary btn-small">Start Plan</button>
+            <button onclick="PlanModule.startPlan()" class="btn btn-primary btn-small">Start Plan</button>
         </div>
     </div>
     {% else %}
@@ -597,7 +597,7 @@
         <p>Change start date (this will shift all week/day calendar labels)</p>
         <div class="plan-start-banner-controls">
             <input type="date" id="plan-start-date" value="{{ start_date.isoformat() }}">
-            <button onclick="startPlan()" class="btn btn-primary btn-small">Update</button>
+            <button onclick="PlanModule.startPlan()" class="btn btn-primary btn-small">Update</button>
             <button onclick="document.getElementById('edit-start-date-banner').style.display='none'" class="btn btn-ghost btn-small">Cancel</button>
         </div>
     </div>
@@ -663,7 +663,7 @@
                 {% if skipped_count and skipped_count > 0 %}{{ skipped_count }} missed{% endif %}{% if skipped_count and rescheduled_count and skipped_count > 0 and rescheduled_count > 0 %}, {% endif %}{% if rescheduled_count and rescheduled_count > 0 %}{{ rescheduled_count }} rescheduled{% endif %}{% if (skipped_count and skipped_count > 0) or (rescheduled_count and rescheduled_count > 0) %} workout{{ 's' if (skipped_count + rescheduled_count) != 1 else '' }}.{% endif %}</p>
             </div>
             <div class="banner-actions">
-                <button onclick="adjustPlan()" class="btn btn-primary btn-small" id="adjust-btn">Adjust Plan</button>
+                <button onclick="PlanModule.adjustPlan()" class="btn btn-primary btn-small" id="adjust-btn">Adjust Plan</button>
             </div>
         </div>
     </div>
@@ -751,7 +751,7 @@
         </button>
         {% endif %}
         <!-- Save button - shown/hidden by JavaScript based on auth state -->
-        <button onclick="savePlanToAccount()" class="btn btn-primary btn-save" id="save-plan-btn" style="display: none;">
+        <button onclick="PlanModule.savePlanToAccount()" class="btn btn-primary btn-save" id="save-plan-btn" style="display: none;">
             Save to My Plans
         </button>
         <a href="/my-plans" class="btn btn-ghost" id="view-plans-link" style="display: none;">View My Plans</a>
@@ -760,7 +760,7 @@
     <div class="share-toast" id="share-toast"></div>
 </div>
 
-<button class="scroll-to-top" onclick="scrollToTop()" aria-label="Scroll to top">
+<button class="scroll-to-top" onclick="PlanModule.scrollToTop()" aria-label="Scroll to top">
     ↑
 </button>
 
@@ -770,9 +770,9 @@
     <div class="modal-content">
         <div class="modal-header">
             <h2 id="modal-title">Log Run</h2>
-            <span class="close" onclick="closeLogModal()">&times;</span>
+            <span class="close" onclick="PlanModule.closeLogModal()">&times;</span>
         </div>
-        <form id="logRunForm" onsubmit="submitRunLog(event)">
+        <form id="logRunForm" onsubmit="PlanModule.submitRunLog(event)">
             <div class="form-row">
                 <div class="form-group">
                     <label for="distance_km">Distance (km) *</label>
