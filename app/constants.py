@@ -1,21 +1,24 @@
-"""Shared constants for the RunCoach application."""
+"""Shared constants for the RunCoach application.
 
-# Supported race distances in km.
-# Add new distances here; validators, generators, and templates reference this list.
-SUPPORTED_DISTANCES: list[float] = [5.0, 10.0, 21.1, 30.0, 42.2]
+Race distances are sourced from the ``DISTANCE_CONSTRAINTS`` registry in
+``app.core.training.training_config`` — adding a new race distance means
+adding one entry there, and the supported-distance list / display-name map
+fall out automatically.
+"""
 
+from app.core.training.training_config import DISTANCE_CONSTRAINTS
+from app.core.training.workout_registry import (
+    ALL_WORKOUT_TYPE_NAMES as _ALL_WORKOUT_TYPE_NAMES,
+)
+
+# Supported race distances in km, derived from the constraints registry.
+SUPPORTED_DISTANCES: list[float] = list(DISTANCE_CONSTRAINTS.keys())
+
+# Display name per distance, derived from the same source.
 DISTANCE_NAMES: dict[float, str] = {
-    5.0: "5K",
-    10.0: "10K",
-    21.1: "Half Marathon",
-    30.0: "Trail Running",
-    42.2: "Marathon",
+    km: cfg.name for km, cfg in DISTANCE_CONSTRAINTS.items()
 }
 
 # Valid workout types emitted by the plan generator and accepted by run logging.
 # Sourced from the workout registry so adding a new type is one-place.
-from app.core.training.workout_registry import (  # noqa: E402
-    ALL_WORKOUT_TYPE_NAMES as _ALL_WORKOUT_TYPE_NAMES,
-)
-
 WORKOUT_TYPES: list[str] = list(_ALL_WORKOUT_TYPE_NAMES)

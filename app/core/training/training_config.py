@@ -14,6 +14,7 @@ from typing import Dict, Optional
 class DistanceConstraints:
     """Bracket of weeks, mileage, and guidance for a single target distance."""
 
+    name: str
     min_weeks: int
     max_weeks: int
     min_mileage: float
@@ -27,6 +28,7 @@ class DistanceConstraints:
 
 DISTANCE_CONSTRAINTS: Dict[float, DistanceConstraints] = {
     5.0: DistanceConstraints(
+        name="5K",
         min_weeks=6,
         max_weeks=16,
         min_mileage=5.0,
@@ -44,6 +46,7 @@ DISTANCE_CONSTRAINTS: Dict[float, DistanceConstraints] = {
         excessive_time_reason="Training beyond 16 weeks for 5K can lead to burnout",
     ),
     10.0: DistanceConstraints(
+        name="10K",
         min_weeks=6,
         max_weeks=16,
         min_mileage=10.0,
@@ -61,6 +64,7 @@ DISTANCE_CONSTRAINTS: Dict[float, DistanceConstraints] = {
         excessive_time_reason="16 weeks is optimal for 10K preparation",
     ),
     21.1: DistanceConstraints(
+        name="Half Marathon",
         min_weeks=8,
         max_weeks=20,
         min_mileage=15.0,
@@ -78,6 +82,7 @@ DISTANCE_CONSTRAINTS: Dict[float, DistanceConstraints] = {
         excessive_time_reason="Half marathon training beyond 20 weeks may cause fatigue",
     ),
     30.0: DistanceConstraints(
+        name="Trail Running",
         min_weeks=6,
         max_weeks=20,
         min_mileage=15.0,
@@ -92,6 +97,7 @@ DISTANCE_CONSTRAINTS: Dict[float, DistanceConstraints] = {
         ),
     ),
     42.2: DistanceConstraints(
+        name="Marathon",
         min_weeks=12,
         max_weeks=24,
         min_mileage=25.0,
