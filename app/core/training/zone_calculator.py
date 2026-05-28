@@ -15,15 +15,8 @@ from __future__ import annotations
 
 from typing import Any, Dict, Optional
 
+from app.core.training.hr_zone_calculator import TRAINING_ZONE_HR_PERCENTAGES
 from app.core.training.vdot_calculator import VDOTCalculator
-
-_HR_PERCENTAGES = {
-    "zone_1_recovery": (0.60, 0.70),
-    "zone_2_aerobic": (0.70, 0.80),
-    "zone_3_tempo": (0.80, 0.88),
-    "zone_4_vo2max": (0.88, 0.95),
-    "zone_5_race": (0.95, 1.00),
-}
 
 _FALLBACK_PACE_MIN_KM = 5.5
 
@@ -153,7 +146,7 @@ def calculate_zones(
         }
 
     if max_hr:
-        for zone_name, (low_pct, high_pct) in _HR_PERCENTAGES.items():
+        for zone_name, (low_pct, high_pct) in TRAINING_ZONE_HR_PERCENTAGES.items():
             low_bpm = int(max_hr * low_pct)
             high_bpm = int(max_hr * high_pct)
             zones[zone_name]["hr_bpm_range"] = f"{low_bpm}-{high_bpm} BPM"

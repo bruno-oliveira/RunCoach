@@ -52,6 +52,20 @@ ZONE_DEFINITIONS = [
     },
 ]
 
+# HR percentage bands used by the pace-anchored training-zone display
+# (see `zone_calculator.py`). Distinct from `ZONE_DEFINITIONS` above — those
+# describe a user's *personal* HR zones derived from max HR, whereas these
+# annotate the prescribed pace zones with a typical HR-percent target so the
+# UI can show e.g. "Tempo · 80-88% of max HR".
+TRAINING_ZONE_HR_PERCENTAGES: dict[str, tuple[float, float]] = {
+    "zone_1_recovery": (0.60, 0.70),
+    "zone_2_aerobic": (0.70, 0.80),
+    "zone_3_tempo": (0.80, 0.88),
+    "zone_4_vo2max": (0.88, 0.95),
+    "zone_5_race": (0.95, 1.00),
+}
+
+
 # Maps workout_type → target HR zone number (1-5)
 WORKOUT_ZONE_MAP: dict[str, int] = {
     "easy": 2,
