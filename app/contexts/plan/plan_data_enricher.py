@@ -9,6 +9,7 @@ from app.core.training.baseline_recovery import recover_baseline, strip_annotati
 from app.core.training.key_workout_data import WORKOUTS
 from app.core.training.key_workout_library import (
     _KEY_WORKOUT_MIN_DISTANCE_KM,
+    _RUNNING_DISTANCE_FRACTION,
     reconcile_key_workout_text,
 )
 from app.core.training.key_workout_parser import parse_key_workout_steps
@@ -16,6 +17,7 @@ from app.core.training.quality_caps import cap_easy_distance
 from app.core.training.workout_steps import (
     _compute_distance_from_steps,
     _parse_pace_str_to_min_per_km,
+    build_easy_steps,
 )
 from app.models import DailyWorkout, RunLog, WeeklyPlan
 
@@ -64,6 +66,14 @@ def _repair_key_workout_steps(workout: dict[str, Any]) -> None:
 
     steps = workout.get("steps")
     if isinstance(steps, list) and _has_volume_steps(steps):
+        return
+
+    if key_id in _RUNNING_DISTANCE_FRACTION and distance_km > 0:
+        # Mirror generation: continuous prose runs (proprioception circuit,
+        # technical terrain) are modelled as a single run block rather than
+        # round-tripped through the parser, which would bolt on a warm-up /
+        # cool-down the description never prescribes and re-diverge the total.
+        workout["steps"] = build_easy_steps(distance_km)
         return
 
     structure = workout.get("structure")

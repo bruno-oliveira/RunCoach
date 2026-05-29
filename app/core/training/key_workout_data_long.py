@@ -451,6 +451,7 @@ WORKOUTS_LONG: List[Dict] = [
             "Running on tired legs from the previous day simulates the final "
             "hours of a 30km trail race."
         ),
+        "steps_builder": "back_to_back",
     },
     {
         "id": "trail_downhill_technique",

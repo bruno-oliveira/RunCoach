@@ -439,10 +439,20 @@ def parse_key_workout_steps(
     zone = _infer_zone(structure) or default_zone or fallback
     effort = "easy" if zone == "E" else "see description"
     steps = list(warmup_steps)
+    # Give the fallback main block a real distance so the executable steps
+    # total the prescribed distance. Without this, an unparseable prose
+    # structure produced a zero-distance run block, collapsing the displayed
+    # total to just warm-up + cool-down and diverging from the description.
+    main_m: Optional[int] = None
+    if total_distance_km > 0:
+        total_m = int(round(total_distance_km * 1000))
+        reserved = (2 * wu_m) if (has_wcd and wu_m) else 0
+        main_m = max(0, total_m - reserved) or None
     steps.append(
         _step(
             "run",
             structure[:60],
+            distance_m=main_m,
             pace_zone=zone,
             pace_str=_pace_str(zone, pace_zones),
             effort=effort,

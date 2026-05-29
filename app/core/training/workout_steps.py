@@ -852,7 +852,13 @@ def build_hike_run_steps(
     if set_m <= 0:
         return []
     if sets is None:
-        sets = max(1, total_m // set_m)
+        sets = max(1, round(total_m / set_m))
+    # Absorb the set-rounding remainder into the run block so the recomputed
+    # total equals the prescribed distance (blocks stay "~9 min" / "~1 min",
+    # as the description states). Without this, the integer set count dropped
+    # ~0.5 km and the card diverged from the "Run {d}km" description.
+    leftover = total_m - sets * set_m
+    run_block_m = max(0, run_block_m + round(leftover / sets))
     return [
         _step(
             "run",
@@ -873,6 +879,45 @@ def build_hike_run_steps(
             pace_str=_pace_str("E", pace_zones),
             effort="power hike",
             note="Drive the hips, hands on thighs — rehearse race-day climbing",
+        ),
+    ]
+
+
+def build_back_to_back_steps(
+    distance_km: float,
+    pace_zones: Optional[Dict] = None,
+    day1_fraction: float = 0.57,
+) -> List[Dict[str, Any]]:
+    """Two-day back-to-back weekend modelled as two run blocks.
+
+    The card distance is the weekend total; the two blocks (Saturday on fresh
+    legs, Sunday on fatigued legs) carry the split the description cites, so
+    the executable steps sum to the total and the description's per-day numbers
+    resolve to a step.
+    """
+    if distance_km <= 0:
+        return []
+    total_m = int(round(distance_km * 1000))
+    day1_m = int(round(total_m * day1_fraction))
+    day2_m = total_m - day1_m
+    return [
+        _step(
+            "run",
+            "Saturday — hilly trail",
+            distance_m=day1_m,
+            pace_zone="E",
+            pace_str=_pace_str("E", pace_zones),
+            effort="conversational",
+            note="Easy effort on hilly terrain",
+        ),
+        _step(
+            "run",
+            "Sunday — fatigued legs",
+            distance_m=day2_m,
+            pace_zone="E",
+            pace_str=_pace_str("E", pace_zones),
+            effort="conversational",
+            note="On legs fatigued from yesterday — hold easy effort",
         ),
     ]
 

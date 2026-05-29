@@ -18,6 +18,7 @@ import re
 import pytest
 
 from app.contexts.plan.generators.plan_generator import TrainingPlanGenerator
+from app.core.training.key_workout_library import _WORKOUTS, overlay_key_workout
 from app.core.training.trail_profile import classify_trail
 from app.core.training.workout_steps import _compute_distance_from_steps
 
@@ -79,6 +80,7 @@ _PLANS = [
     pytest.param(("road", 21.1, 12, 5, 35.0), id="half-12wk"),
     pytest.param(("road", 42.2, 16, 5, 45.0), id="marathon-16wk"),
     pytest.param(("trail", 30.0, 1200.0, 12, 5, 35.0), id="trail-hilly-30km"),
+    pytest.param(("trail", 30.0, 200.0, 12, 5, 35.0), id="trail-flat-30km"),
     pytest.param(("trail", 50.0, 1500.0, 16, 5, 40.0), id="trail-ultra-50km"),
     pytest.param(("trail", 50.0, 200.0, 16, 5, 40.0), id="trail-flat-50km"),
     pytest.param(("trail", 80.0, 4500.0, 24, 6, 50.0), id="trail-mountain-80km"),
@@ -145,6 +147,62 @@ class TestDescriptionMatchesDistance:
                         f"and step distances are {sorted(step_kms)}\n"
                         f"  desc: {desc[:200]}"
                     )
+
+
+class TestEveryKeyWorkoutAligns:
+    """Force every key workout through the overlay across a range of budgets.
+
+    Plan-level parametrization only exercises whichever key workouts the
+    rotation happens to land on, so a broken template (e.g. the proprioception
+    circuit, whose prose the steps-parser could not decompose) can slip through
+    untested. This pins the distance/description/steps invariant on *every*
+    key workout id directly, regardless of selection.
+    """
+
+    @pytest.mark.parametrize("budget", [1.6, 3.0, 6.0, 10.0, 18.0])
+    @pytest.mark.parametrize(
+        "workout",
+        _WORKOUTS,
+        ids=[w["id"] for w in _WORKOUTS],
+    )
+    def test_key_workout_distance_description_steps_align(self, workout, budget):
+        phases = [p for p in workout["phases"] if p in ("build", "peak")]
+        if not phases:
+            pytest.skip(f"{workout['id']} has no build/peak phase")
+        wtype = workout["type"]
+        if wtype not in ("interval", "tempo", "hill", "long"):
+            pytest.skip(f"{workout['id']} type {wtype} is not overlay-eligible")
+
+        wo = {"distance": budget, "type": wtype}
+        overlay_key_workout(
+            wo,
+            wtype,
+            phases[0],
+            30.0,
+            0,
+            terrain="flat",
+            trail_profile=None,
+            force_id=workout["id"],
+        )
+
+        d = wo.get("distance", 0) or 0
+        steps_total = _compute_distance_from_steps(wo.get("steps", []))
+        if steps_total > 0:
+            assert abs(d - steps_total) <= 0.15, (
+                f"{workout['id']} @ budget {budget}: distance={d} vs "
+                f"steps_sum={steps_total:.2f}"
+            )
+
+        cited = _km_in_text(wo.get("description") or "")
+        if cited:
+            step_kms = _step_distances_km(wo.get("steps", []))
+            resolvable = {round(d, 1)} | {round(x, 1) for x in step_kms}
+            for n in cited:
+                assert any(abs(n - r) <= 0.15 for r in resolvable), (
+                    f"{workout['id']} @ budget {budget}: description cites "
+                    f"{n} km but distance is {d} and step distances are "
+                    f"{sorted(step_kms)}\n  desc: {wo.get('description')[:200]}"
+                )
 
 
 class TestWeeklyTotalAligns:

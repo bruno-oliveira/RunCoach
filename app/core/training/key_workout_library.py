@@ -93,6 +93,20 @@ def _fartlek_reps(
     return max(lo, min(hi, reps))
 
 
+def _proprioception_circuit_cadence(d: float) -> str:
+    """Phrase the agility-circuit cadence so it fits the run distance.
+
+    The canonical session is ~8 km with a circuit every ~2 km. For smaller
+    budgets the cadence scales (dropping to a single mid-run circuit when the
+    run is too short to space several) so the text never contradicts the
+    distance — e.g. no "every 2km" on a 1.3 km run.
+    """
+    circuits = max(1, int(round(d / 2.0)))
+    if circuits == 1:
+        return "Midway, stop for"
+    return f"Every ~{d / circuits:.0f}km, stop for"
+
+
 # Each entry generates a complete description from the actual distance.
 _DISTANCE_REWRITES: Dict[str, Callable[[float], str]] = {
     "5k_vo2max_400s": lambda d: (
@@ -190,7 +204,7 @@ _DISTANCE_REWRITES: Dict[str, Callable[[float], str]] = {
     ),
     "trail_technical_terrain": lambda d: (
         f"Find a technical trail with rocks, roots, and uneven surface. "
-        f"Run {d * 0.80:.1f}km at moderate effort, focusing on foot placement, "
+        f"Run {d:.1f}km at moderate effort, focusing on foot placement, "
         f"quick cadence, and staying light on your feet."
     ),
     "10k_goal_pace_segments": lambda d: (
@@ -245,8 +259,8 @@ _DISTANCE_REWRITES: Dict[str, Callable[[float], str]] = {
         "9-10 min/km builds the specific muscular endurance for race-day hiking."
     ),
     "trail_flat_proprioception": lambda d: (
-        f"Run {d * 0.80:.1f}km alternating surfaces every 1-2km: pavement, "
-        f"grass, gravel, dirt. Every 2km, stop for a 2-min agility circuit: "
+        f"Run {d:.1f}km alternating surfaces (pavement, grass, gravel, dirt). "
+        f"{_proprioception_circuit_cadence(d)} a 2-min agility circuit: "
         f"10 single-leg hops each side, 20m lateral shuffles, 20m backward running."
     ),
     # -- Long-run variants (Half Marathon) --
@@ -420,13 +434,19 @@ def _derive_structure(description: str) -> str:
     return s.strip()
 
 
-def reconcile_key_workout_text(workout: Dict[str, Any]) -> bool:
+def reconcile_key_workout_text(
+    workout: Dict[str, Any], pace_zones: Optional[Dict] = None
+) -> bool:
     """Re-render description+structure from current ``workout['distance']``.
 
     Returns True if the workout had a key-workout overlay and was rewritten,
     False otherwise. Callers use this after any operation that mutates a
-    key workout's distance (scaling, capping, transfer) so that the
-    description, structure and distance stay in lockstep.
+    key workout's distance (scaling, capping, transfer, adaptation) so that
+    the description, structure and distance stay in lockstep.
+
+    When ``pace_zones`` is given, VDOT paces are injected into the regenerated
+    text so the prescription keeps its specific paces (e.g. "5K pace
+    (4:30/km)") rather than degrading to generic labels.
     """
     kid = workout.get("key_workout_id")
     if not kid:
@@ -434,14 +454,88 @@ def reconcile_key_workout_text(workout: Dict[str, Any]) -> bool:
     d = workout.get("distance", 0) or 0
     if d <= 0:
         return False
+
+    def _with_paces(text: str) -> str:
+        if not pace_zones:
+            return text
+        wtype = workout.get("type") or "interval"
+        return VDOTCalculator.inject_paces_into_description(text, pace_zones, wtype)
+
     if kid in _DISTANCE_REWRITES:
-        workout["description"] = _DISTANCE_REWRITES[kid](d)
+        description = _DISTANCE_REWRITES[kid](d)
         if kid in _STRUCTURE_REWRITES:
-            workout["structure"] = _STRUCTURE_REWRITES[kid](d)
+            structure = _STRUCTURE_REWRITES[kid](d)
         else:
-            workout["structure"] = _derive_structure(workout["description"])
+            structure = _derive_structure(description)
+        workout["description"] = _with_paces(description)
+        workout["structure"] = _with_paces(structure)
     elif kid in _STRUCTURE_REWRITES:
-        workout["structure"] = _STRUCTURE_REWRITES[kid](d)
+        workout["structure"] = _with_paces(_STRUCTURE_REWRITES[kid](d))
+    return True
+
+
+def build_key_workout_steps(
+    key_wk: Dict[str, Any],
+    structure: str,
+    distance_km: float,
+    workout_type: str,
+    pace_zones: Optional[Dict] = None,
+) -> List[Dict[str, Any]]:
+    """Build executable steps for a key workout from a single distance source.
+
+    Dispatch order (structured-first): explicit ``steps`` → ``steps_builder``
+    → single continuous block for fractional/prose runs → best-effort prose
+    parser (hardened fallback). Used by both ``overlay_key_workout`` (initial
+    generation) and ``rebuild_key_workout`` (adaptation / repair) so steps are
+    always derived the same way.
+    """
+    if key_wk.get("steps"):
+        return _inject_pace_into_steps(key_wk["steps"], pace_zones)
+    if key_wk.get("steps_builder"):
+        return _resolve_long_steps_builder(
+            key_wk["steps_builder"], distance_km, pace_zones
+        )
+    if key_wk["id"] in _RUNNING_DISTANCE_FRACTION and distance_km > 0:
+        return _steps_mod.build_easy_steps(distance_km, pace_zones)
+    return _steps_mod.parse_key_workout_steps(
+        structure,
+        pace_zones,
+        workout_type,
+        default_zone=key_wk.get("pace_zone"),
+        total_distance_km=distance_km,
+    )
+
+
+def rebuild_key_workout(
+    workout: Dict[str, Any], pace_zones: Optional[Dict] = None
+) -> bool:
+    """Regenerate a key workout's prose, structure, steps and distance from a
+    single source: the current ``workout['distance']``.
+
+    Reconciles the description + structure, rebuilds the steps the same way
+    generation does, then snaps ``distance`` to the executable steps total so
+    the card, the steps and the description always agree. Distance-based
+    sessions track the new distance; duration-defined ones (time-based reps)
+    naturally settle back to their time-defined total. Returns True if the
+    workout had a key overlay.
+    """
+    kid = workout.get("key_workout_id")
+    if not kid:
+        return False
+    d = workout.get("distance", 0) or 0
+    if d <= 0:
+        return False
+    key_wk = KeyWorkoutLibrary.get_by_id(kid)
+    if not key_wk:
+        return False
+    reconcile_key_workout_text(workout, pace_zones)
+    structure = workout.get("structure") or key_wk.get("structure", "")
+    workout_type = workout.get("type") or key_wk.get("type", "interval")
+    steps = build_key_workout_steps(key_wk, structure, d, workout_type, pace_zones)
+    workout["steps"] = steps
+    steps_total = _steps_mod._compute_distance_from_steps(steps)
+    if steps_total > 0:
+        workout["distance"] = round(steps_total, 1)
     return True
 
 
@@ -499,6 +593,18 @@ _KEY_WORKOUT_MIN_DISTANCE_KM: Dict[str, float] = {
     "5k_hill_sprints": 4.0,
     "trail_pyramid_intervals": 5.0,
     "trail_ladder_intervals": 5.0,
+}
+
+# Key workouts whose on-foot running distance is only a fraction of the
+# allocated budget — the remainder is spent on non-running drills (agility
+# circuits, deliberate technical foot-placement work). The fraction is applied
+# once to the distance in ``overlay_key_workout`` so the card distance, the
+# executable steps, and the description (which now cites the distance directly)
+# all agree. Without this the description cited ``d * fraction`` while the card
+# showed the full budget, so the two numbers never matched.
+_RUNNING_DISTANCE_FRACTION: Dict[str, float] = {
+    "trail_flat_proprioception": 0.80,
+    "trail_technical_terrain": 0.80,
 }
 
 # Sessions installed only by the intensive-weekend post-pass (via ``force_id``).
@@ -622,6 +728,8 @@ def _resolve_long_steps_builder(
         return _steps_mod.build_ladder_steps(distance_km, pace_zones, pace_zone="T")
     if builder_key == "hike_run":
         return _steps_mod.build_hike_run_steps(distance_km, pace_zones)
+    if builder_key == "back_to_back":
+        return _steps_mod.build_back_to_back_steps(distance_km, pace_zones)
     if builder_key == "b2b_day2":
         steps = _steps_mod.build_long_steps(distance_km, pace_zones, variant="easy")
         for s in steps:
@@ -695,7 +803,10 @@ def overlay_key_workout(
     floor = _KEY_WORKOUT_MIN_DISTANCE_KM.get(key_wk["id"], 0)
     if floor > 0:
         actual_distance = max(actual_distance, floor)
-        workout["distance"] = actual_distance
+    frac = _RUNNING_DISTANCE_FRACTION.get(key_wk["id"])
+    if frac is not None and actual_distance > 0:
+        actual_distance = round(actual_distance * frac, 1)
+    workout["distance"] = actual_distance
     description = key_wk["description"]
     if actual_distance > 0:
         description = _rewrite_key_workout_description(
@@ -717,22 +828,16 @@ def overlay_key_workout(
         workout["structure"] = key_wk["structure"]
     workout["key_workout_rationale"] = key_wk["rationale"]
 
-    if key_wk.get("steps"):
-        workout["steps"] = _inject_pace_into_steps(key_wk["steps"], pace_zones)
-    elif key_wk.get("steps_builder"):
-        workout["steps"] = _resolve_long_steps_builder(
-            key_wk["steps_builder"],
-            workout.get("distance", 0),
-            pace_zones,
-        )
-    else:
-        workout["steps"] = _steps_mod.parse_key_workout_steps(
-            workout["structure"],
-            pace_zones,
-            workout_type,
-            default_zone=key_wk.get("pace_zone"),
-            total_distance_km=actual_distance,
-        )
+    # Structured-first step generation, shared with rebuild_key_workout. The
+    # fractional/prose runs become a single block; only genuinely unparseable
+    # prose reaches the hardened parser fallback.
+    workout["steps"] = build_key_workout_steps(
+        key_wk,
+        workout["structure"],
+        actual_distance,
+        workout_type,
+        pace_zones,
+    )
 
     # Reconcile displayed total with what the runner will actually cover —
     # duration-based reps (e.g. 6 × 3 min hard) contributed nothing to the
