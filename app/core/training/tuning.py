@@ -192,6 +192,17 @@ QUALITY_CAPS_BY_DISTANCE = {
 
 DEFAULT_QUALITY_CAPS = {"tempo": 12.0, "interval": 10.0, "hill": 8.0}
 
+# Minimum *meaningful* dose for a quality slot (km). Below this, the main set
+# left after a ~1 km warm-up + cool-down is too thin to be worth a quality day.
+# An under-dose slot is floored up to this when the week can afford it (borrowing
+# from the easy budget), otherwise demoted to an easy run — never scheduled as a
+# token quality session. See weekly_plan_builder.resolve_low_budget_quality.
+QUALITY_MIN_DOSE_KM = {"tempo": 4.0, "interval": 3.0, "hill": 3.0}
+
+# Floor a quality slot only if each easy run would still clear this length after
+# the floored km is borrowed from the easy budget; otherwise demote to easy.
+MIN_EASY_PER_RUN_KM = 3.0
+
 # =============================================================================
 # Fitness-plan mileage (see fitness_plan_generator.py)
 # =============================================================================

@@ -883,6 +883,61 @@ def build_hike_run_steps(
     ]
 
 
+def build_meter_rep_steps(
+    distance_km: float,
+    pace_zones: Optional[Dict] = None,
+    *,
+    reps: int,
+    rep_m: int,
+    work_zone: str = "I",
+    recovery_label: str = "easy jog recovery",
+) -> List[Dict[str, Any]]:
+    """Warm-up + N × <rep_m> work reps with jog recovery + cool-down.
+
+    The rep distance is honoured *literally* (e.g. 400 m): the leftover of the
+    work budget after the reps becomes the recovery-jog distance, so the
+    session totals the prescribed distance AND each rep matches the
+    prescription. (The prose parser instead inflated the rep distance to fill
+    the budget — a 400 m rep came out as ~650 m, contradicting the
+    description.)
+    """
+    if distance_km <= 0 or reps <= 0 or rep_m <= 0:
+        return []
+    total_m = int(round(distance_km * 1000))
+    wu_m = _wucd_m(total_m)
+    cd_m = wu_m
+    work_budget = max(0, total_m - wu_m - cd_m)
+    work_total = min(work_budget, reps * rep_m)
+    rec_total = max(0, work_budget - work_total)
+    rec_m = int(round(rec_total / reps))
+    steps = [
+        _warmup(pace_zones, wu_m),
+        _step(
+            "run",
+            f"{reps} × {rep_m} m",
+            distance_m=rep_m,
+            repeat=reps,
+            pace_zone=work_zone,
+            pace_str=_pace_str(work_zone, pace_zones),
+            effort="hard",
+        ),
+    ]
+    if rec_m > 0:
+        steps.append(
+            _step(
+                "recovery",
+                recovery_label,
+                distance_m=rec_m,
+                repeat=reps,
+                pace_zone="E",
+                pace_str=_pace_str("E", pace_zones),
+                effort="easy jog",
+            )
+        )
+    steps.append(_cooldown(pace_zones, cd_m))
+    return steps
+
+
 def build_back_to_back_steps(
     distance_km: float,
     pace_zones: Optional[Dict] = None,

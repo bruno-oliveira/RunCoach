@@ -204,6 +204,19 @@ class TestEveryKeyWorkoutAligns:
                     f"{sorted(step_kms)}\n  desc: {wo.get('description')[:200]}"
                 )
 
+        # Metre-based reps ("N × 400 m") must appear literally in a work step —
+        # the prose parser used to inflate these to fill the budget (a 400 m
+        # rep came out ~650 m), contradicting the prescription.
+        desc = wo.get("description") or ""
+        for rep_match in re.finditer(r"\d+\s*[x×]\s*(\d{2,4})\s*m\b", desc):
+            rep_m = int(rep_match.group(1))
+            step_ms = {s.get("distance_m") for s in wo.get("steps", [])}
+            assert rep_m in step_ms, (
+                f"{workout['id']} @ budget {budget}: description prescribes "
+                f"{rep_m} m reps but no step has that distance; steps={sorted(m for m in step_ms if m)}"
+                f"\n  desc: {desc[:200]}"
+            )
+
 
 class TestWeeklyTotalAligns:
     """week['total_km'] is the rounded sum of daily distances."""

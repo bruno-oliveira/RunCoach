@@ -14,6 +14,7 @@ from typing import Dict, Iterable, List
 from app.core.training.long_run_calculator import get_weekly_long_run_ratio_cap
 from app.core.training.quality_caps import enforce_week_caps
 from app.core.training.trail_profile import classify_trail
+from app.core.training.tuning import WEEK_OVER_WEEK_CAP
 
 
 def _running_workouts(workouts: Iterable) -> list:
@@ -142,7 +143,8 @@ def enforce_future_growth_cap(
                 pd_week[wk_num]["total_km"] = total
             continue
 
-        ceiling = high_water * 1.10
+        # Same week-over-week load ramp as generation (single source of truth).
+        ceiling = high_water * WEEK_OVER_WEEK_CAP
         if total > ceiling + 0.05:
             flexible = [
                 w

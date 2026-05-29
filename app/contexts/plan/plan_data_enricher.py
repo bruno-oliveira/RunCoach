@@ -6,18 +6,16 @@ from typing import Any
 from sqlalchemy.orm import Session
 
 from app.core.training.baseline_recovery import recover_baseline, strip_annotations
-from app.core.training.key_workout_data import WORKOUTS
 from app.core.training.key_workout_library import (
     _KEY_WORKOUT_MIN_DISTANCE_KM,
-    _RUNNING_DISTANCE_FRACTION,
+    KeyWorkoutLibrary,
+    build_key_workout_steps,
     reconcile_key_workout_text,
 )
-from app.core.training.key_workout_parser import parse_key_workout_steps
 from app.core.training.quality_caps import cap_easy_distance
 from app.core.training.workout_steps import (
     _compute_distance_from_steps,
     _parse_pace_str_to_min_per_km,
-    build_easy_steps,
 )
 from app.models import DailyWorkout, RunLog, WeeklyPlan
 
@@ -39,7 +37,6 @@ _DEFAULT_PACE_MIN_PER_KM_BY_TYPE = {
     "interval": 4.8,
     "hill": 5.0,
 }
-_KEY_DEFAULT_ZONE_BY_ID = {w["id"]: w.get("pace_zone") for w in WORKOUTS}
 
 
 def _has_volume_steps(steps: list[dict]) -> bool:
@@ -68,25 +65,16 @@ def _repair_key_workout_steps(workout: dict[str, Any]) -> None:
     if isinstance(steps, list) and _has_volume_steps(steps):
         return
 
-    if key_id in _RUNNING_DISTANCE_FRACTION and distance_km > 0:
-        # Mirror generation: continuous prose runs (proprioception circuit,
-        # technical terrain) are modelled as a single run block rather than
-        # round-tripped through the parser, which would bolt on a warm-up /
-        # cool-down the description never prescribes and re-diverge the total.
-        workout["steps"] = build_easy_steps(distance_km)
-        return
-
     structure = workout.get("structure")
-    if not structure:
+    key_wk = KeyWorkoutLibrary.get_by_id(key_id)
+    if key_wk is None or not structure:
         return
 
+    # Single entry point shared with generation: structured builder →
+    # single-block for prose runs → hardened parser fallback.
     workout_type = workout.get("type", "interval")
-    default_zone = _KEY_DEFAULT_ZONE_BY_ID.get(key_id)
-    workout["steps"] = parse_key_workout_steps(
-        structure,
-        workout_type=workout_type,
-        default_zone=default_zone,
-        total_distance_km=distance_km,
+    workout["steps"] = build_key_workout_steps(
+        key_wk, structure, distance_km, workout_type, None
     )
 
 

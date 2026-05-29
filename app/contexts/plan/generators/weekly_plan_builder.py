@@ -28,6 +28,8 @@ from app.core.training.key_workout_library import (
 from app.core.training.quality_caps import (
     MAX_EASY_VS_LONG_RUN,
     MAX_QUALITY_VS_LONG_RUN,
+    MIN_EASY_PER_RUN_KM,
+    QUALITY_MIN_DOSE_KM,
 )
 from app.core.training.quality_caps import (
     get_quality_caps as _get_quality_caps,
@@ -129,24 +131,71 @@ def _vertical_simulation_targets(
     }
 
 
-def demote_low_budget_quality(
-    distribution: Dict[str, int], quality_distances: Dict[str, float]
+def resolve_low_budget_quality(
+    distribution: Dict[str, int],
+    quality_distances: Dict[str, float],
+    *,
+    remaining_km: float,
+    long_run_distance: float,
+    target_distance: float,
+    phase: str,
 ) -> None:
-    """Demote quality slots whose budget is below the stimulus floor to easy.
+    """Make an under-dose quality slot meaningful — or demote it to easy.
 
-    A 1.5 km tempo is a poor experience: the segment math fits but the
-    physiological dose is too thin to be worth a quality slot. Convert it
-    to an easy run instead — the slot's allocated km flows back into the
-    easy budget automatically when ``quality_distances`` shrinks.
+    A quality slot whose budget is below its meaningful dose
+    (``QUALITY_MIN_DOSE_KM``) leaves a main set too thin to be worth a quality
+    day. Fit the plan around the session rather than squishing the session into
+    the leftover km:
 
-    Mutates both inputs in place.
+    * **Floor** the slot up to that dose when the week can afford it — i.e. the
+      shortfall, borrowed from the easy budget, still leaves each easy run at
+      least ``MIN_EASY_PER_RUN_KM`` and the dose fits the physiological /
+      long-run caps.
+    * If it can't be floored but is still a real session (>= the hard token
+      threshold), **keep it at its budget** — a modest quality day beats none,
+      especially on low-run plans with no easy budget to borrow from.
+    * Only a true token sliver (below the hard threshold) that can't be floored
+      is **demoted** to an easy run (its km flow back to the easy budget).
+
+    Mutates both inputs in place. The weekly total is preserved either way.
+
+    Only applies in build/peak, where quality sessions are meant to be
+    substantial. Base and taper quality are intentionally light (strides, short
+    hill sprints, sharpeners) and are left alone.
     """
+    if phase not in ("build", "peak"):
+        return
+    phys_caps = _get_quality_caps(target_distance, phase)
+    ceiling = long_run_distance * MAX_QUALITY_VS_LONG_RUN
     for qtype in ("tempo", "interval", "hill"):
+        if distribution.get(qtype, 0) <= 0:
+            continue
         budget = quality_distances.get(qtype, 0)
-        if 0 < budget < _QUALITY_DEMOTE_THRESHOLD_KM and distribution.get(qtype, 0) > 0:
+        if budget <= 0:
+            continue
+        dose = QUALITY_MIN_DOSE_KM.get(qtype, 0)
+        if budget >= dose:
+            continue  # already a meaningful dose
+
+        capped_floor = round(min(dose, phys_caps.get(qtype, ceiling), ceiling), 1)
+        easy_count = distribution.get("easy", 0)
+        # Recomputed each iteration so a prior floor/demote is accounted for.
+        quality_total = sum(quality_distances.values())
+        projected_easy_budget = remaining_km - (quality_total - budget + capped_floor)
+
+        can_afford = (
+            capped_floor >= dose
+            and easy_count > 0
+            and projected_easy_budget / easy_count >= MIN_EASY_PER_RUN_KM
+        )
+        if can_afford:
+            quality_distances[qtype] = capped_floor
+        elif budget < _QUALITY_DEMOTE_THRESHOLD_KM:
+            # True token sliver that can't be grown — demote to easy.
             distribution[qtype] -= 1
             distribution["easy"] = distribution.get("easy", 0) + 1
             quality_distances.pop(qtype, None)
+        # else: keep the modest-but-real session at its budget.
 
 
 def attach_duration_hints(
@@ -282,7 +331,14 @@ def generate_daily_workouts(
         phase,
     )
 
-    demote_low_budget_quality(distribution, quality_distances)
+    resolve_low_budget_quality(
+        distribution,
+        quality_distances,
+        remaining_km=total_km - long_run_distance,
+        long_run_distance=long_run_distance,
+        target_distance=target_distance,
+        phase=phase,
+    )
 
     workout_types = workout_dist_mod.schedule_workout_types(
         distribution.copy(),

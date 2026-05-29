@@ -54,6 +54,15 @@ def _vo2max_400_reps(d: float) -> int:
     return max(4, min(12, reps))
 
 
+def _yasso_800_reps(d: float) -> int:
+    """800m rep count for marathon_yasso_800s (each rep ~1.6km incl. recovery).
+
+    Mirrors the description rewrite so steps and prose agree.
+    """
+    wu, cd = _wu_cd(d)
+    return max(6, min(10, round((d - wu - cd) / 1.6)))
+
+
 def _pyramid_pattern(d: float) -> str:
     """Pick a pyramid pattern that fits within distance d.
 
@@ -497,6 +506,9 @@ def build_key_workout_steps(
         )
     if key_wk["id"] in _RUNNING_DISTANCE_FRACTION and distance_km > 0:
         return _steps_mod.build_easy_steps(distance_km, pace_zones)
+    builder = _KEY_WORKOUT_STEP_BUILDERS.get(key_wk["id"])
+    if builder is not None and distance_km > 0:
+        return builder(distance_km, pace_zones)
     return _steps_mod.parse_key_workout_steps(
         structure,
         pace_zones,
@@ -605,6 +617,33 @@ _KEY_WORKOUT_MIN_DISTANCE_KM: Dict[str, float] = {
 _RUNNING_DISTANCE_FRACTION: Dict[str, float] = {
     "trail_flat_proprioception": 0.80,
     "trail_technical_terrain": 0.80,
+}
+
+# Structured-first step builders, keyed by workout id. Where present, steps are
+# generated directly from the distance (mirroring the description rewrite)
+# instead of being reverse-engineered from prose. Currently covers the
+# fixed-distance rep sessions (e.g. N × 400 m), where the prose parser produced
+# rep distances that contradicted the prescription. Other key workouts still
+# fall through to the hardened parser inside build_key_workout_steps.
+_KEY_WORKOUT_STEP_BUILDERS: Dict[
+    str, Callable[[float, Optional[Dict]], List[Dict[str, Any]]]
+] = {
+    "5k_vo2max_400s": lambda d, pz: _steps_mod.build_meter_rep_steps(
+        d,
+        pz,
+        reps=_vo2max_400_reps(d),
+        rep_m=400,
+        work_zone="I",
+        recovery_label="90s easy jog recovery",
+    ),
+    "marathon_yasso_800s": lambda d, pz: _steps_mod.build_meter_rep_steps(
+        d,
+        pz,
+        reps=_yasso_800_reps(d),
+        rep_m=800,
+        work_zone="I",
+        recovery_label="equal-time jog recovery",
+    ),
 }
 
 # Sessions installed only by the intensive-weekend post-pass (via ``force_id``).

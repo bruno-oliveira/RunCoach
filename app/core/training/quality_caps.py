@@ -14,7 +14,9 @@ from app.core.training.tuning import (
     DEFAULT_QUALITY_CAPS,
     MAX_EASY_VS_LONG_RUN,
     MAX_QUALITY_VS_LONG_RUN,
+    MIN_EASY_PER_RUN_KM,
     QUALITY_CAPS_BY_DISTANCE,
+    QUALITY_MIN_DOSE_KM,
 )
 
 __all__ = [
@@ -23,6 +25,8 @@ __all__ = [
     "BASE_PHASE_QUALITY_REDUCTION",
     "QUALITY_CAPS_BY_DISTANCE",
     "DEFAULT_QUALITY_CAPS",
+    "QUALITY_MIN_DOSE_KM",
+    "MIN_EASY_PER_RUN_KM",
     "get_quality_caps",
     "cap_quality_distance",
     "cap_easy_distance",
