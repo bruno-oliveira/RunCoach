@@ -55,14 +55,29 @@ def customize_plan(
 ) -> list[dict]:
     plan_data = training_plan.plan_data if training_plan.plan_data else []
 
+    # Pace zones let the structured builders inject the runner's actual paces
+    # when regenerating a customised workout (falls back to generic cues).
+    pace_zones = None
+    if training_plan.vdot:
+        try:
+            from app.core.training.vdot_calculator import VDOTCalculator
+
+            pace_zones = VDOTCalculator.get_pace_zones(training_plan.vdot)
+        except Exception:  # pragma: no cover - defensive; never block customize
+            pace_zones = None
+
     if adjustment_type == "intensity":
-        plan_data = adjust_intensity(plan_data, week_number, adjustment_value)
+        plan_data = adjust_intensity(
+            plan_data, week_number, adjustment_value, pace_zones
+        )
     elif adjustment_type == "workout_swap":
-        plan_data = swap_workout(plan_data, week_number, adjustment_value)
+        plan_data = swap_workout(plan_data, week_number, adjustment_value, pace_zones)
     elif adjustment_type == "distance":
         plan_data = adjust_distance(plan_data, week_number, float(adjustment_value))
     elif adjustment_type == "ai_suggest":
-        plan_data = apply_ai_suggestions(plan_data, week_number, adjustment_value)
+        plan_data = apply_ai_suggestions(
+            plan_data, week_number, adjustment_value, pace_zones
+        )
 
     customization = PlanCustomization(
         training_plan_id=training_plan.id,

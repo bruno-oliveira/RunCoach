@@ -119,7 +119,7 @@ _SIGNAL_REGISTRY = [
     (
         "readiness",
         True,
-        lambda ctx, w: _readiness_signal(ctx.readiness_logs, w),
+        lambda ctx, w: _readiness_signal(ctx.readiness_logs, ctx.training_load, w),
     ),
 ]
 
@@ -155,6 +155,7 @@ def compute_adjustment_signals(
         hr_zones=hr_zones,
         run_feedback_list=run_feedback_list,
         readiness_logs=readiness_logs,
+        training_load=training_load,
     )
 
     # Compute + weight every registered signal in canonical order.

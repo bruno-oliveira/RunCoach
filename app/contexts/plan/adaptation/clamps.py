@@ -11,6 +11,8 @@ from app.contexts.plan.adaptation.tuning import (
     HR_OVERREACH_ADHERENCE,
     HR_OVERREACH_CLAMP,
     HR_OVERREACH_DEVIATION,
+    OVERREACH_EFFORT_SOLO_CLAMP,
+    OVERREACH_EFFORT_SOLO_THRESHOLD,
     OVERREACH_EFFORT_THRESHOLD,
     OVERREACH_VOLUME_EFFORT_CLAMP,
     OVERREACH_VOLUME_RATIO,
@@ -68,6 +70,14 @@ def apply_clamps(
     ):
         raw_multiplier = min(raw_multiplier, OVERREACH_VOLUME_EFFORT_CLAMP)
         overreach_detected = True
+
+    # Sustained very-high perceived effort on its own → hold, never increase.
+    # Independent of volume, so it tempers an over-effort block several weeks
+    # before volume crosses the overreach line. Holds (does not force a cut or
+    # raise the overreach banner) — the firmer volume+effort branch above owns
+    # the genuine "too much, too hard" reduction.
+    if avg_effort is not None and avg_effort >= OVERREACH_EFFORT_SOLO_THRESHOLD:
+        raw_multiplier = min(raw_multiplier, OVERREACH_EFFORT_SOLO_CLAMP)
 
     if (
         hr_extras.get("hr_zone_adherence", 1.0) < HR_OVERREACH_ADHERENCE

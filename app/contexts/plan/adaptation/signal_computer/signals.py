@@ -15,6 +15,15 @@ from app.contexts.plan.adaptation.tuning import (
 from app.contexts.plan.adaptation.tuning import (
     IMPORTANCE_WEIGHTS as _IMPORTANCE_WEIGHTS,
 )
+from app.contexts.plan.adaptation.tuning import (
+    READINESS_MIN_LOGS,
+    READINESS_TSB_FRESH,
+    READINESS_TSB_FRESH_FACTOR,
+    READINESS_TSB_LOADED,
+    READINESS_TSB_LOADED_FACTOR,
+    READINESS_TSB_OVERLOADED,
+    READINESS_TSB_OVERLOADED_FACTOR,
+)
 from app.core.coaching.adaptation_math import (
     compute_effort_trend as _compute_effort_trend,
 )
@@ -251,17 +260,50 @@ def _feedback_signal(
     )
 
 
-def _readiness_signal(readiness_logs, weight) -> SignalContribution:
+def _tsb_from_training_load(training_load) -> Optional[float]:
+    if training_load and training_load.get("available"):
+        return (training_load.get("current") or {}).get("tsb")
+    return None
+
+
+def _readiness_factor_from_tsb(tsb: float) -> float:
+    """Map training-load form (TSB) to a mild readiness factor.
+
+    Positive form (rested) nudges up; accumulated fatigue nudges down. Bounded
+    to a narrow band so it complements — rather than fights — the firmer
+    extreme-TSB clamp in ``apply_clamps``.
+    """
+    if tsb >= READINESS_TSB_FRESH:
+        return READINESS_TSB_FRESH_FACTOR
+    if tsb <= READINESS_TSB_OVERLOADED:
+        return READINESS_TSB_OVERLOADED_FACTOR
+    if tsb <= READINESS_TSB_LOADED:
+        return READINESS_TSB_LOADED_FACTOR
+    return 1.0
+
+
+def _readiness_signal(readiness_logs, training_load, weight) -> SignalContribution:
     count = len(readiness_logs) if readiness_logs else 0
-    if count >= 3:
+    source = "none"
+    if count >= READINESS_MIN_LOGS:
         scores = [getattr(log, "score", 0) or 0 for log in readiness_logs]
         readiness_pct = (sum(scores) / len(scores)) / 100.0
         readiness_pct = max(0.0, min(1.0, readiness_pct))
         readiness_factor = 0.92 + readiness_pct * 0.13
         has_data = True
+        source = "logs"
     else:
-        readiness_factor = 1.0
-        has_data = False
+        # Fallback: derive readiness from objective training-load form (TSB) so
+        # the signal still contributes for the ~all users who never self-report
+        # readiness, instead of silently folding its weight onto other signals.
+        tsb = _tsb_from_training_load(training_load)
+        if tsb is not None:
+            readiness_factor = _readiness_factor_from_tsb(tsb)
+            has_data = True
+            source = "tsb"
+        else:
+            readiness_factor = 1.0
+            has_data = False
 
     return SignalContribution(
         factor=readiness_factor,
@@ -270,6 +312,7 @@ def _readiness_signal(readiness_logs, weight) -> SignalContribution:
         extras={
             "readiness_factor": readiness_factor,
             "readiness_log_count": count,
+            "readiness_source": source,
         },
     )
 
@@ -326,6 +369,11 @@ def _completion_signal(
     scheduled_weighted = 0.0
     completed_weighted = 0.0
     for workout, sched_date in past_workouts:
+        # Distance-0 days (e.g. a typed "recovery" placeholder) can't be
+        # completed with a logged run, so counting them as scheduled would
+        # structurally cap completion below 1.0 even for a perfect adherent.
+        if not getattr(workout, "distance_km", None) or workout.distance_km <= 0:
+            continue
         w = recency_weight_fn(sched_date)
         scheduled_weighted += w
         if workout.id in completed_ids:

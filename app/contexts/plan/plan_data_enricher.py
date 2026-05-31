@@ -166,6 +166,12 @@ def enrich_plan_data_with_ids(
                 if workout.get("description"):
                     workout["description"] = strip_annotations(workout["description"])
 
+            # `description` is the canonical card prose. Older/beginner plans
+            # stored their summary under `notes`; backfill so every workout
+            # renders a readable line (the card reads `description or notes`).
+            if not workout.get("description") and workout.get("notes"):
+                workout["description"] = strip_annotations(workout["notes"]) or ""
+
             _repair_key_workout_steps(workout)
 
             steps = workout.get("steps")

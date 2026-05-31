@@ -31,7 +31,7 @@
     {% if workout.structure %}
     <div class="workout-structure">{{ workout.structure }}</div>
     {% endif %}
-    <div class="workout-notes">{{ workout.notes }}</div>
+    <div class="workout-notes">{{ workout.description or workout.notes }}</div>
 
     {% if workout.treadmill_prescription %}
     <div class="treadmill-rx" title="Flat-access alternative to build race-specific vertical">

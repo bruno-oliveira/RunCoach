@@ -67,22 +67,17 @@ def snapshot_workouts(
     return snap
 
 
-def _classify_unchanged(
-    workout_type: Optional[str],
-    has_key_workout_id: bool,
-    in_window: bool,
-) -> Dict[str, Optional[str]]:
+def _classify_unchanged(in_window: bool) -> Dict[str, Optional[str]]:
     """Pick a default status/reason for an unchanged workout when no
-    recorder hint is available."""
+    recorder hint is available.
+
+    Quality (tempo/interval/hill) and key workouts used to be flagged
+    "protected" here, but they now adapt via the adjuster (which records an
+    explicit changed/unchanged hint for each), so the fallback is simply
+    "unchanged" within the decision window.
+    """
     if not in_window:
         return {"status": "past", "reason": None}
-    if has_key_workout_id or workout_type in ("tempo", "interval", "hill"):
-        return {
-            "status": "protected",
-            "reason": _reasons.protected_reason_for_workout(
-                workout_type, has_key_workout_id
-            ),
-        }
     return {"status": "unchanged", "reason": None}
 
 
@@ -156,11 +151,7 @@ def build_change_plan(
             status = rec.get("status", "unchanged")
             reason = rec.get("reason")
         else:
-            classification = _classify_unchanged(
-                wtype,
-                bool(ref.get("key_workout_id")),
-                in_window,
-            )
+            classification = _classify_unchanged(in_window)
             status = classification["status"]
             reason = classification["reason"]
 

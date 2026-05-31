@@ -86,6 +86,31 @@ def test_enricher_repairs_hill_key_workout_distance_floor(test_db):
     assert "baseline_distance" not in workout
 
 
+def test_enricher_backfills_description_from_legacy_notes(test_db):
+    # Beginner/legacy plans stored their summary under `notes`; the card now
+    # reads `description`, so the enricher must backfill it (annotation-stripped).
+    plan, week = _seed_plan(test_db)
+    plan_data = [
+        {
+            "week": 1,
+            "total_km": 0.0,
+            "daily_workouts": [
+                {
+                    "day": 1,
+                    "type": "run_walk",
+                    "distance": 0,
+                    "notes": "Week 1: Run 1 min, Walk 1.5 min. Repeat 8x. (Adjusted: x1.1)",
+                }
+            ],
+        }
+    ]
+
+    enriched = enrich_plan_data_with_ids(plan_data, plan.id, test_db)
+    workout = enriched[0]["daily_workouts"][0]
+    assert workout["description"] == "Week 1: Run 1 min, Walk 1.5 min. Repeat 8x."
+    assert "Adjusted" not in workout["description"]
+
+
 def test_enricher_omits_baseline_when_only_enrichment_bumps_distance(test_db):
     """Regression: on a freshly generated plan, `distance_km` and
     `baseline_distance_km` are persisted equal. The enricher may bump

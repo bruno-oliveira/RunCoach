@@ -13,11 +13,16 @@ from app.contexts.plan.adaptation.tuning import (
     HR_OVERREACH_ADHERENCE,
     HR_OVERREACH_CLAMP,
     HR_OVERREACH_DEVIATION,
+    OVERREACH_EFFORT_SOLO_THRESHOLD,
     OVERREACH_EFFORT_THRESHOLD,
     OVERREACH_VOLUME_EFFORT_CLAMP,
     OVERREACH_VOLUME_RATIO,
     RACE_EFFORT_CLAMP,
     RACE_EFFORT_COUNT_THRESHOLD,
+    READINESS_TSB_FRESH,
+    READINESS_TSB_FRESH_FACTOR,
+    READINESS_TSB_OVERLOADED,
+    READINESS_TSB_OVERLOADED_FACTOR,
     TSB_FRESH,
     TSB_LOADED,
     TSB_OVERREACHED,
@@ -127,6 +132,79 @@ def test_apply_clamps_repeated_race_efforts_trip_overreach():
     out, overreach, _ = sc._apply_clamps(**args)
     assert overreach is True
     assert out <= RACE_EFFORT_CLAMP
+
+
+def test_solo_high_effort_holds_without_excess_volume():
+    # Sustained very-high effort alone (on-target volume) caps to a hold so the
+    # engine stops telling a maxed-out runner to do more — but doesn't force a
+    # cut or raise the overreach banner (that's the volume+effort branch).
+    args = _baseline_clamp_args(
+        raw_multiplier=1.10,
+        volume_ratio=1.0,
+        avg_effort=OVERREACH_EFFORT_SOLO_THRESHOLD + 0.5,
+    )
+    out, overreach, _ = sc._apply_clamps(**args)
+    assert out <= 1.0
+    assert overreach is False
+
+
+def test_solo_high_effort_does_not_fire_below_threshold():
+    args = _baseline_clamp_args(
+        raw_multiplier=1.10,
+        volume_ratio=1.0,
+        avg_effort=OVERREACH_EFFORT_SOLO_THRESHOLD - 0.1,
+    )
+    out, _overreach, _ = sc._apply_clamps(**args)
+    assert out == pytest.approx(1.10)  # unclamped
+
+
+# ----------------------------------------------------------------------------
+# _readiness_signal — TSB fallback when self-reported logs are missing
+# ----------------------------------------------------------------------------
+
+
+def _training_load_for_readiness(tsb: float):
+    return {"available": True, "current": {"tsb": tsb}}
+
+
+def test_readiness_folds_without_logs_or_training_load():
+    contrib = sc._readiness_signal([], None, 0.08)
+    assert contrib.has_data is False
+    assert contrib.factor == 1.0
+    assert contrib.extras["readiness_source"] == "none"
+
+
+def test_readiness_uses_tsb_form_when_logs_missing():
+    fresh = sc._readiness_signal([], _training_load_for_readiness(20.0), 0.08)
+    assert fresh.has_data is True  # contributes — no longer folds
+    assert fresh.factor == READINESS_TSB_FRESH_FACTOR
+    assert fresh.extras["readiness_source"] == "tsb"
+
+    fatigued = sc._readiness_signal(
+        [], _training_load_for_readiness(READINESS_TSB_OVERLOADED - 5), 0.08
+    )
+    assert fatigued.factor == READINESS_TSB_OVERLOADED_FACTOR
+
+
+def test_readiness_logs_take_priority_over_tsb():
+    class _Log:
+        def __init__(self, score):
+            self.score = score
+
+    logs = [_Log(80), _Log(80), _Log(80)]
+    contrib = sc._readiness_signal(
+        logs, _training_load_for_readiness(READINESS_TSB_OVERLOADED - 5), 0.08
+    )
+    assert contrib.extras["readiness_source"] == "logs"
+    assert contrib.factor == pytest.approx(0.92 + 0.8 * 0.13)
+
+
+def test_readiness_tsb_stays_in_narrow_band():
+    # Even at extreme fresh/overloaded TSB the proxy stays mild so it
+    # complements rather than fights the firmer extreme-TSB clamp.
+    for tsb in (READINESS_TSB_FRESH + 100, READINESS_TSB_OVERLOADED - 100):
+        f = sc._readiness_signal([], _training_load_for_readiness(tsb), 0.08).factor
+        assert 0.95 <= f <= 1.03
 
 
 def test_apply_clamps_declining_vdot_caps_multiplier_without_overreach_flag():

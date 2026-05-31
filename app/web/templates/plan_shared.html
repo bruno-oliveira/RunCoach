@@ -306,7 +306,7 @@
                     {% if workout.structure %}
                     <div class="workout-structure">{{ workout.structure }}</div>
                     {% endif %}
-                    <div class="workout-notes">{{ workout.notes }}</div>
+                    <div class="workout-notes">{{ workout.description or workout.notes }}</div>
 
                     {% if workout.key_workout_rationale %}
                     <details class="coaching-note key-workout-rationale">

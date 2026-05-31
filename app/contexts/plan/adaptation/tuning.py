@@ -73,6 +73,13 @@ OVERREACH_VOLUME_RATIO = 1.2
 OVERREACH_EFFORT_THRESHOLD = 8.0
 OVERREACH_VOLUME_EFFORT_CLAMP = 0.88
 
+# Sustained very-high perceived effort ALONE (even without excess volume) tempers
+# the multiplier to a hold — don't pile load onto a runner who is consistently
+# maxed out. Fires earlier than the volume+effort branch above (which needs the
+# runner to also be over-distance) and only holds rather than forcing a cut.
+OVERREACH_EFFORT_SOLO_THRESHOLD = 8.5
+OVERREACH_EFFORT_SOLO_CLAMP = 1.0
+
 # Poor HR-zone adherence with large deviation = running too hard.
 HR_OVERREACH_ADHERENCE = 0.3
 HR_OVERREACH_DEVIATION = 1.0
@@ -116,3 +123,22 @@ WORKOUT_CEILING = 1.25
 
 # Exponential decay half-life (weeks) for weighting recent runs more heavily.
 RECENCY_HALF_LIFE_WEEKS = 3.0
+
+# =============================================================================
+# Readiness signal (see signal_computer.signals._readiness_signal)
+# =============================================================================
+
+# Self-reported readiness needs this many recent logs to drive the signal.
+READINESS_MIN_LOGS = 3
+
+# Fallback when too few readiness logs exist: derive a mild readiness factor
+# from training-load form (TSB) so the signal contributes objective recovery
+# information instead of folding to zero for the ~all users who never log
+# readiness. Kept in a narrow band [0.95, 1.03] so it doesn't fight the
+# extreme-TSB clamp in ``apply_clamps``.
+READINESS_TSB_FRESH = 5.0
+READINESS_TSB_LOADED = -10.0
+READINESS_TSB_OVERLOADED = -25.0
+READINESS_TSB_FRESH_FACTOR = 1.03
+READINESS_TSB_LOADED_FACTOR = 0.97
+READINESS_TSB_OVERLOADED_FACTOR = 0.95

@@ -36,3 +36,4 @@ class _SignalContext:
     hr_zones: Optional[list[dict]]
     run_feedback_list: Optional[List]
     readiness_logs: Optional[List]
+    training_load: Optional[Dict[str, Any]] = None

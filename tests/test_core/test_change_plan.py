@@ -259,16 +259,26 @@ class TestEasyRunScaling:
             f"no easy workouts marked as 'changed' in ChangePlan: {flat}"
         )
 
-    def test_protected_workouts_are_listed_with_reason(self, db):
+    def test_quality_workouts_adapt_instead_of_being_protected(self, db):
+        # Quality (tempo/interval/hill) used to be frozen ("protected"); it now
+        # adapts via builder rebuild, so a boost should scale it with a reason
+        # and nothing should be reported as protected anymore.
         user, plan = _create_plan(db)
         _add_runs(db, plan, user, [1, 2, 3], effort=5.0, distance_multiplier=1.4)
         result = adjust_plan(plan.id, user.id, db)
         cp = result["change_plan"]
         flat = [wo for week in cp["weeks"] for wo in week["workouts"]]
-        protected = [wo for wo in flat if wo["status"] == "protected"]
-        assert protected, "expected at least one protected workout entry"
-        for wo in protected:
-            assert wo["reason"], f"protected workout missing reason: {wo}"
+        assert not [wo for wo in flat if wo["status"] == "protected"], (
+            f"quality should no longer be 'protected': {flat}"
+        )
+        changed_quality = [
+            wo
+            for wo in flat
+            if wo["type"] in ("tempo", "interval", "hill") and wo["status"] == "changed"
+        ]
+        assert changed_quality, f"expected quality workouts to adapt: {flat}"
+        for wo in changed_quality:
+            assert wo["reason"], f"adapted quality workout missing reason: {wo}"
 
 
 class TestNoChangePaths:

@@ -9,6 +9,7 @@ from sqlalchemy.orm import Session
 from app.core.training import key_workout_library as _kwlib
 from app.core.training import workout_steps as _steps_mod
 from app.core.training.vdot_calculator import VDOTCalculator
+from app.core.training.workout_registry import build_workout
 from app.models import TrainingPlan, WeeklyPlan
 from app.utils import persist_json
 
@@ -25,6 +26,46 @@ from .tuning import (
 from .vdot_recalibrator import check_vdot_recalibration
 
 logger = logging.getLogger(__name__)
+
+_PLAIN_QUALITY_TYPES = ("tempo", "interval", "hill")
+
+
+def _rebuild_plain_quality(
+    pd_wo: Dict[str, Any],
+    *,
+    distance: float,
+    day: int,
+    total_km: float,
+    phase: str,
+    pace_zones: Optional[Dict[str, Any]],
+) -> float:
+    """Regenerate a non-key tempo/interval/hill workout at ``distance`` in place.
+
+    Re-runs the same plan builder generation used (keyed on the workout's
+    ``day`` so the rotation variant is preserved), then copies the fresh
+    description, steps and intensity onto ``pd_wo``. Returns the builder's
+    authoritative distance (its steps total) so callers can adopt it — keeping
+    the card distance, weekly mileage and structured steps in lockstep, the
+    same contract ``rebuild_key_workout`` provides for curated key workouts.
+
+    Duration-defined sessions (hill) settle back to their fixed time total, so
+    the returned distance simply won't move.
+    """
+    rebuilt = build_workout(
+        pd_wo.get("type") or "easy",
+        day=day,
+        distance=distance,
+        total_km=total_km,
+        phase=phase,
+        pace_zones=pace_zones,
+    )
+    pd_wo["description"] = rebuilt.get("description", pd_wo.get("description"))
+    pd_wo["steps"] = rebuilt.get("steps", [])
+    if rebuilt.get("intensity"):
+        pd_wo["intensity"] = rebuilt["intensity"]
+    authoritative = round(rebuilt.get("distance", distance) or distance, 1)
+    pd_wo["distance"] = authoritative
+    return authoritative
 
 
 @dataclass
@@ -139,35 +180,8 @@ def apply_adjustment_to_future_weeks(
             ):
                 continue
 
-            # Standard (non-key) tempo / interval / hill embed distance
-            # fragments in builder-generated prose we can't regenerate here, so
-            # they stay protected. Key workouts ARE adjustable: they regenerate
-            # cleanly from a single distance via rebuild_key_workout (below),
-            # keeping prose, structure and steps in lockstep.
-            if (
-                workout.workout_type in ("tempo", "interval", "hill")
-                and not workout.key_workout_id
-            ):
-                workouts_skipped_protected += 1
-                if recorder is not None:
-                    recorder.append(
-                        {
-                            "week": week.week_number,
-                            "day": workout.day_of_week,
-                            "type": workout.workout_type,
-                            "old_distance_km": workout.distance_km,
-                            "new_distance_km": workout.distance_km,
-                            "delta_km": 0.0,
-                            "status": "protected",
-                            "reason": _reasons.protected_reason_for_workout(
-                                workout.workout_type,
-                                bool(workout.key_workout_id),
-                            ),
-                        }
-                    )
-                continue
-
             base_distance = workout.baseline_distance_km or workout.distance_km
+            rebuilt_plain = False
 
             wtype = workout.workout_type or "easy"
             type_mult = multiplier
@@ -213,6 +227,23 @@ def apply_adjustment_to_future_weeks(
                     new_distance = round(
                         pd_wo.get("distance", new_distance) or new_distance, 1
                     )
+            elif workout.workout_type in _PLAIN_QUALITY_TYPES and pd_wo is not None:
+                # Builder-generated quality now adapts too: regenerate the
+                # session from a single distance (same builder, same day → same
+                # variant) so description, steps and distance stay in lockstep —
+                # the property that lets key workouts adapt.
+                week_total = (pd_week.get(week.week_number) or {}).get(
+                    "total_km"
+                ) or 0.0
+                new_distance = _rebuild_plain_quality(
+                    pd_wo,
+                    distance=new_distance,
+                    day=workout.day_of_week,
+                    total_km=week_total,
+                    phase=phase,
+                    pace_zones=pace_zones,
+                )
+                rebuilt_plain = True
 
             if new_distance == old_distance:
                 if recorder is not None:
@@ -251,7 +282,12 @@ def apply_adjustment_to_future_weeks(
                     }
                 )
 
-            clean_notes = ANNOTATION_RE.sub("", workout.notes or "").strip()
+            # A rebuilt plain-quality session carries a fresh description; adopt
+            # it as the note so the ORM text matches the regenerated card.
+            if rebuilt_plain and pd_wo is not None:
+                clean_notes = (pd_wo.get("description") or "").strip()
+            else:
+                clean_notes = ANNOTATION_RE.sub("", workout.notes or "").strip()
             if type_mult != 1.0 and not is_protected:
                 adjust_note = f"(Adjusted: x{type_mult})"
                 workout.notes = (
@@ -268,12 +304,30 @@ def apply_adjustment_to_future_weeks(
                 # rebuild_key_workout above; only flexible workouts scale.
                 if (
                     not workout.key_workout_id
+                    and not rebuilt_plain
                     and pd_wo.get("steps")
                     and old_distance
                     and old_distance > 0
                 ):
                     step_scale = new_distance / old_distance
                     pd_wo["steps"] = _steps_mod.scale_steps(pd_wo["steps"], step_scale)
+                    # Refresh the card-visible prose so a long run's embedded
+                    # distances ("first X km / final Y km") track the new
+                    # distance instead of going stale. Easy descriptions are
+                    # pace-only, so this is a no-op there.
+                    week_total = (pd_week.get(week.week_number) or {}).get(
+                        "total_km"
+                    ) or 0.0
+                    rebuilt = build_workout(
+                        workout.workout_type or "easy",
+                        day=workout.day_of_week,
+                        distance=new_distance,
+                        total_km=week_total,
+                        phase=phase,
+                        pace_zones=pace_zones,
+                    )
+                    if rebuilt.get("description"):
+                        pd_wo["description"] = rebuilt["description"]
                 pd_clean = ANNOTATION_RE.sub(
                     "", pd_wo.get("notes", pd_wo.get("description", ""))
                 ).strip()
@@ -343,14 +397,33 @@ def apply_adjustment_to_future_weeks(
     # template renders sum to the weekly chip.
     for week in future_weeks:
         workouts = workouts_by_week.get(week.id, [])
+        for workout in workouts:
+            pd_wo = pd_workout.get((week.week_number, workout.day_of_week))
+            if pd_wo is None or pd_wo.get("distance") == workout.distance_km:
+                continue
+            # A structural cap (enforce_week_caps) moved a non-key quality
+            # distance after its steps were rebuilt — regenerate the session at
+            # the capped distance and adopt the builder's steps total so the
+            # card's distance, steps and description stay in lockstep.
+            if (
+                workout.workout_type in _PLAIN_QUALITY_TYPES
+                and not workout.key_workout_id
+                and (workout.distance_km or 0) > 0
+            ):
+                wk = pd_week.get(week.week_number) or {}
+                workout.distance_km = _rebuild_plain_quality(
+                    pd_wo,
+                    distance=workout.distance_km,
+                    day=workout.day_of_week,
+                    total_km=wk.get("total_km") or 0.0,
+                    phase=wk.get("phase", "build"),
+                    pace_zones=pace_zones,
+                )
+            pd_wo["distance"] = workout.distance_km
         if week.week_number in pd_week:
             pd_week[week.week_number]["total_km"] = round(
                 sum((w.distance_km or 0) for w in workouts), 1
             )
-        for workout in workouts:
-            pd_wo = pd_workout.get((week.week_number, workout.day_of_week))
-            if pd_wo is not None and pd_wo.get("distance") != workout.distance_km:
-                pd_wo["distance"] = workout.distance_km
 
     training_plan.plan_data = plan_data
     persist_json(training_plan, "plan_data")
