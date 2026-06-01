@@ -23,6 +23,7 @@ from sqlalchemy.pool import StaticPool
 from app.contexts.plan.adaptation.week_adjuster import (
     apply_adjustment_to_future_weeks,
 )
+from app.contexts.plan.plan_data_enricher import enrich_plan_data_with_ids
 from app.core.training.key_workout_library import overlay_key_workout
 from app.core.training.vdot_calculator import VDOTCalculator
 from app.core.training.workout_registry import build_workout
@@ -337,6 +338,228 @@ def test_plain_quality_adapts_and_stays_consistent(db, wtype):
     _assert_consistent(pd_wo)
     orm = db.query(DailyWorkout).filter(DailyWorkout.weekly_plan_id == wp.id).one()
     assert abs(orm.distance_km - pd_wo["distance"]) <= 0.01
+
+
+def _build_volume_week_plan(
+    db: Session,
+    *,
+    current_weekly_km: float,
+    target_distance: str,
+    workouts: list[tuple[str, int, float]],
+):
+    """One future week (week 2) holding the given non-key workouts.
+
+    ``workouts`` is a list of ``(type, day_of_week, distance_km)`` tuples built
+    via the real builder so each carries volume steps — the same shape a
+    generated plan stores. Used to exercise the post-main-loop safety guards
+    (growth cap, long-run ratio cap) that move ORM distance without rescaling
+    the cached steps.
+    """
+    user = User(id=_uid(), email=f"{_uid()[:8]}@test.com")
+    db.add(user)
+    db.flush()
+
+    pace_zones = VDOTCalculator.get_pace_zones(45.0)
+    total = sum(d for _, _, d in workouts)
+    daily = []
+    for wtype, day, dist in workouts:
+        wo = build_workout(
+            wtype,
+            day=day,
+            distance=dist,
+            total_km=total,
+            phase="build",
+            pace_zones=pace_zones,
+        )
+        wo["day"] = day
+        assert "key_workout_id" not in wo
+        daily.append(wo)
+
+    week = {
+        "week": 2,
+        "total_km": round(sum(w["distance"] for w in daily), 1),
+        "phase": "build",
+        "daily_workouts": daily,
+    }
+    plan = TrainingPlan(
+        id=_uid(),
+        user_id=user.id,
+        current_weekly_km=current_weekly_km,
+        target_distance=target_distance,
+        weeks_duration=8,
+        vdot=45.0,
+        plan_data=[week],
+    )
+    db.add(plan)
+    db.flush()
+    wp = WeeklyPlan(
+        id=_uid(), training_plan_id=plan.id, week_number=2, total_km=week["total_km"]
+    )
+    db.add(wp)
+    db.flush()
+    for wo in daily:
+        db.add(
+            DailyWorkout(
+                id=_uid(),
+                weekly_plan_id=wp.id,
+                day_of_week=wo["day"],
+                workout_type=wo["type"],
+                distance_km=wo["distance"],
+                baseline_distance_km=wo["distance"],
+            )
+        )
+    db.commit()
+    return plan, wp
+
+
+def _assert_enrich_does_not_revert(plan, db):
+    """View-time enrichment must be a no-op on the adapted per-day distances.
+
+    The enricher recomputes each workout's distance from its steps and rewrites
+    it when they diverge by >0.2 km. If adaptation left steps stale, this is
+    where the weekly cards silently revert to pre-adaptation distances.
+    """
+    before = {
+        (wk["week"], wo["day"]): wo["distance"]
+        for wk in plan.plan_data
+        for wo in wk["daily_workouts"]
+    }
+    enriched = enrich_plan_data_with_ids(plan.plan_data, plan.id, db)
+    after = {
+        (wk["week"], wo["day"]): wo["distance"]
+        for wk in enriched
+        for wo in wk["daily_workouts"]
+    }
+    assert after == before, f"enrichment reverted distances: {before} -> {after}"
+
+
+def test_growth_cap_keeps_easy_and_long_steps_in_lockstep(db):
+    # A boost pushes the week above the 10% week-over-week ceiling, so
+    # enforce_future_growth_cap pulls the easy + long ORM distances back down
+    # AFTER the main loop already scaled their steps. The cards must show the
+    # capped distance, not the stale steps total the enricher recomputes.
+    plan, wp = _build_volume_week_plan(
+        db,
+        current_weekly_km=22,
+        target_distance="21.1",
+        workouts=[("easy", 1, 8.0), ("long", 6, 14.0)],
+    )
+
+    apply_adjustment_to_future_weeks(
+        plan, [wp], 1.20, db, current_week=1, current_day_of_week=1
+    )
+
+    week = plan.plan_data[0]
+    by_day = {wo["day"]: wo for wo in week["daily_workouts"]}
+    # Growth cap fired: the long run was boosted but capped below the raw 1.20
+    # multiplier (14 * 1.20 = 16.8) — proving a guard moved it post-main-loop.
+    assert 14.0 < by_day[6]["distance"] < 16.8
+
+    orm = {
+        d.day_of_week: d
+        for d in db.query(DailyWorkout).filter(DailyWorkout.weekly_plan_id == wp.id)
+    }
+    for wo in week["daily_workouts"]:
+        _assert_consistent(wo)  # distance == steps == cited description
+        assert abs(orm[wo["day"]].distance_km - wo["distance"]) <= 0.01
+
+    _assert_enrich_does_not_revert(plan, db)
+
+
+def test_long_run_ratio_cap_keeps_steps_in_lockstep(db):
+    # On a 4-run week a dominant long run is capped to <=55% of weekly volume
+    # by _apply_long_run_ratio_cap, and the excess is redistributed to the easy
+    # runs — both ORM moves happen after the main loop scaled their steps. This
+    # is the production w15 case (long shows steps-derived 23.3 km vs adapted
+    # 22.4 km). A high current_weekly_km keeps the growth cap out of the picture.
+    plan, wp = _build_volume_week_plan(
+        db,
+        current_weekly_km=40,
+        target_distance="42.2",
+        workouts=[
+            ("easy", 1, 5.0),
+            ("easy", 3, 5.0),
+            ("easy", 5, 5.0),
+            ("long", 6, 20.0),
+        ],
+    )
+
+    apply_adjustment_to_future_weeks(
+        plan, [wp], 1.05, db, current_week=1, current_day_of_week=1
+    )
+
+    week = plan.plan_data[0]
+    by_day = {wo["day"]: wo for wo in week["daily_workouts"]}
+    # Ratio cap pulled the long run below its boosted value (20 * 1.05 = 21).
+    assert by_day[6]["distance"] < 21.0
+
+    orm = {
+        d.day_of_week: d
+        for d in db.query(DailyWorkout).filter(DailyWorkout.weekly_plan_id == wp.id)
+    }
+    for wo in week["daily_workouts"]:
+        _assert_consistent(wo)
+        assert abs(orm[wo["day"]].distance_km - wo["distance"]) <= 0.01
+
+    _assert_enrich_does_not_revert(plan, db)
+
+
+def test_reduction_keeps_long_run_steps_in_lockstep(db):
+    # The same lockstep must hold for reductions: a per-type cut on the easy
+    # runs frees the long run to be re-balanced by the guards. Assert the cards
+    # never render a stale steps total after a downward adjustment.
+    plan, wp = _build_volume_week_plan(
+        db,
+        current_weekly_km=40,
+        target_distance="42.2",
+        workouts=[
+            ("easy", 1, 6.0),
+            ("easy", 3, 6.0),
+            ("easy", 5, 6.0),
+            ("long", 6, 20.0),
+        ],
+    )
+
+    apply_adjustment_to_future_weeks(
+        plan,
+        [wp],
+        0.85,
+        db,
+        current_week=1,
+        current_day_of_week=1,
+        per_type_ratios={"easy": 0.85, "long": 0.85},
+    )
+
+    week = plan.plan_data[0]
+    orm = {
+        d.day_of_week: d
+        for d in db.query(DailyWorkout).filter(DailyWorkout.weekly_plan_id == wp.id)
+    }
+    for wo in week["daily_workouts"]:
+        _assert_consistent(wo)
+        assert abs(orm[wo["day"]].distance_km - wo["distance"]) <= 0.01
+
+    _assert_enrich_does_not_revert(plan, db)
+
+
+def test_key_workout_renders_consistently_after_adaptation(db):
+    # Key workouts are excluded from the new steps re-scale (the guards never
+    # move them — enforce_week_caps skips them and the growth cap excludes
+    # them). Their steps are kept consistent by rebuild_key_workout in the main
+    # loop, so enrichment must not revert them either.
+    plan, wp = _build_key_workout_plan(db, "5k_cruise_intervals", 6.0)
+
+    apply_adjustment_to_future_weeks(
+        plan,
+        [wp],
+        1.15,
+        db,
+        current_week=1,
+        current_day_of_week=1,
+        per_type_ratios={"interval": 1.15},
+    )
+
+    _assert_enrich_does_not_revert(plan, db)
 
 
 def test_time_defined_key_workout_stays_consistent_under_adaptation(db):
