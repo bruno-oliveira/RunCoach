@@ -96,9 +96,14 @@ class TestBuildWeekSummary:
         assert "Effort consistently high" in summary["summary"]
 
     def test_volume_behind_highlight(self):
+        # Use the real vocabulary volume_tracker emits ("still to go"), not the
+        # old behind/short words it never produced (audit B10).
         data = _data(
             sentiments=["info"],
-            volume_texts=["behind plan", "short this week"],
+            volume_texts=[
+                "Week 1: 8.0/30.0 km (27%). 22.0 km still to go.",
+                "Week 1: 9.0/30.0 km (30%). 21.0 km still to go.",
+            ],
             run_count=2,
         )
         summary = _build_week_summary(data, 1)

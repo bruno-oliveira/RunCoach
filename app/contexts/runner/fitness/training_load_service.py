@@ -7,6 +7,7 @@ Computes a simplified TRIMP-style training load per run, then derives:
   - TSB (Training Stress Balance / "Form") — CTL(prev) - ATL(prev)
 
 ACWR zones:
+  - insufficient_data    — < ~3 weeks of history; chronic load not yet trustworthy
   - low       (< 0.8)  — under-training / detraining risk
   - optimal   (0.8-1.3) — sweet spot for adaptation
   - high      (1.3-1.5) — elevated injury risk
@@ -32,6 +33,37 @@ CHRONIC_DAYS = 28
 CTL_TAU = 42  # Fitness time constant (days)
 ATL_TAU = 7  # Fatigue time constant (days)
 
+# ACWR needs ~3 weeks of history before its chronic average is meaningful;
+# below this it is reported as ``insufficient_data`` rather than a false risk
+# flag (audit B6).
+MIN_DAYS_FOR_ACWR = 21
+# CTL (42-day fitness constant) needs ~6 weeks to fully warm up; the load
+# metrics are flagged low-confidence until then (audit B4).
+LOAD_CONFIDENCE_DAYS = 42
+
+# Intensity factors for the load fallback when neither RPE nor HR is logged
+# (common for Strava-imported runs). Keyed on ``effective_workout_type`` so a
+# threshold session and an easy jog of equal duration don't score identically
+# (audit B5).
+_TYPE_INTENSITY = {
+    "recovery": 0.6,
+    "easy": 0.8,
+    "long": 0.9,
+    "tempo": 1.3,
+    "threshold": 1.3,
+    "cruise_interval": 1.4,
+    "fartlek": 1.3,
+    "hill": 1.4,
+    "interval": 1.6,
+    "vo2max": 1.6,
+    "vo2max_ladder": 1.6,
+    "speed": 1.6,
+    "race": 1.5,
+    "race_pace": 1.4,
+    "time_trial": 1.6,
+}
+_DEFAULT_INTENSITY = 1.0
+
 
 class TrainingLoadService:
     """Computes training load metrics and injury risk via ACWR."""
@@ -46,9 +78,15 @@ class TrainingLoadService:
         if run.perceived_effort and run.perceived_effort > 0:
             intensity = 0.5 + (run.perceived_effort / 10) * 1.5
         elif run.avg_heart_rate and run.avg_heart_rate > 0:
-            intensity = run.avg_heart_rate / 150
+            # HR-fraction proxy (threshold HR ~150 bpm), clamped so a stray
+            # reading can't blow up the load.
+            intensity = max(0.5, min(1.8, run.avg_heart_rate / 150))
         else:
-            intensity = 1.0
+            # No RPE/HR (e.g. a Strava import): derive intensity from the run's
+            # workout type instead of a flat 1.0 so a polarized week and an
+            # all-hard week produce different CTL/ATL/TSB/ACWR (audit B5).
+            wtype = (run.effective_workout_type or "").lower()
+            intensity = _TYPE_INTENSITY.get(wtype, _DEFAULT_INTENSITY)
 
         return duration * intensity
 
@@ -60,8 +98,12 @@ class TrainingLoadService:
     ) -> Dict[str, Any]:
         """Return daily loads, ACWR, and fitness/fatigue/form history.
 
-        Fetches the full run history back to the first logged run so the
-        EWMA for CTL/ATL can warm up properly (42+ days of lead-in).
+        Fetches the full run history back to the first logged run. The CTL/ATL
+        EWMAs are seeded from the athlete's mean daily load rather than cold-
+        started at 0, so runners with < ~6 weeks of history get a usable (not
+        cold-start-biased) Form reading; ``load_confidence`` flags the first
+        ~6 weeks as ``low`` and ACWR is reported as ``insufficient_data`` until
+        ~3 weeks of history exist.
         """
         runs = (
             db.query(RunLog)
@@ -89,14 +131,24 @@ class TrainingLoadService:
 
         today = date.today()
         window_start = today - timedelta(days=lookback_days)
-        # Start EWMA sweep 60 days before the first run (or window_start, whichever is earlier)
-        # so CTL/ATL are properly warmed up by the time they enter the returned window.
-        sweep_start = min(first_run_date or window_start, window_start) - timedelta(
-            days=14
-        )
 
-        ctl = 0.0
-        atl = 0.0
+        # Seed CTL/ATL from the athlete's mean daily load instead of cold-
+        # starting at 0. With CTL_TAU=42 a zero start needs ~6 weeks to warm
+        # up, which left short-history runners with an unreliable Form reading.
+        # Seeding at the per-athlete baseline removes that bias; with a long
+        # history the seed is overwritten by real data within a few weeks
+        # (its influence decays as e^(-days/TAU)) so established runners are
+        # unaffected (audit B4).
+        history_span_days = (today - first_run_date).days + 1 if first_run_date else 1
+        seed = sum(daily_loads.values()) / max(1, history_span_days)
+        ctl = seed
+        atl = seed
+
+        # Sweep from the first run forward — there is no real load before it,
+        # so the old pre-first-run "warm-up" was just zeros that decayed the
+        # EWMAs back toward the cold start.
+        sweep_start = first_run_date or window_start
+
         history: List[Dict[str, Any]] = []
         total_days = (today - sweep_start).days + 1
 
@@ -124,8 +176,23 @@ class TrainingLoadService:
                 daily_loads.get((d - timedelta(days=j)).isoformat(), 0)
                 for j in range(CHRONIC_DAYS)
             )
-            chronic = chronic_total / CHRONIC_DAYS * ACUTE_DAYS
+            # Divide the chronic sum by the days actually elapsed (capped at
+            # CHRONIC_DAYS), not a fixed 28 — otherwise a runner with < 28
+            # days of history has chronic load deflated up to ~2.8x (false
+            # high/very_high ACWR). Below MIN_DAYS_FOR_ACWR the ratio is not
+            # trustworthy and is reported as insufficient_data (audit B6).
+            days_elapsed = (
+                (d - first_run_date).days + 1 if first_run_date else CHRONIC_DAYS
+            )
+            chronic_window = min(CHRONIC_DAYS, max(1, days_elapsed))
+            chronic = chronic_total / chronic_window * ACUTE_DAYS
             acwr = round(acute / chronic, 2) if chronic > 0 else 0
+            risk = (
+                _classify_risk(acwr)
+                if days_elapsed >= MIN_DAYS_FOR_ACWR
+                else "insufficient_data"
+            )
+            confidence = "high" if days_elapsed >= LOAD_CONFIDENCE_DAYS else "low"
 
             history.append(
                 {
@@ -134,12 +201,13 @@ class TrainingLoadService:
                     "acute": round(acute, 1),
                     "chronic": round(chronic, 1),
                     "acwr": acwr,
-                    "risk": _classify_risk(acwr),
+                    "risk": risk,
                     # Fitness / Fatigue / Form (TrainingPeaks-style)
                     "ctl": round(ctl, 1),
                     "atl": round(atl, 1),
                     "tsb": round(tsb, 1),
                     "form": _classify_form(tsb),
+                    "load_confidence": confidence,
                 }
             )
 

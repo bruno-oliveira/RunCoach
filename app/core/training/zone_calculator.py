@@ -85,14 +85,17 @@ def calculate_zones(
             },
             "zone_3_tempo": {
                 "pace": t_pace,
-                "pace_range": (t_pace, t_pace * 0.97),
+                # Span T→I so the zones are a contiguous partition: the old
+                # T→T*0.97 band was an 8 s sliver and left the whole
+                # threshold-to-VO2max region (T..I) mapped to no zone (G6).
+                "pace_range": (t_pace, i_pace),
                 "hr_range": "80-88%",
-                "description": "Tempo: comfortably hard, sustainable for 20-40 min",
+                "description": "Tempo: comfortably hard, threshold to cruise effort",
                 "color": "#facc15",
             },
             "zone_4_vo2max": {
                 "pace": i_pace,
-                "pace_range": (i_pace, i_pace * 0.95),
+                "pace_range": (i_pace, r_pace),
                 "hr_range": "88-95%",
                 "description": "VO2max: hard effort, 3-5 min intervals",
                 "color": "#f97316",
@@ -116,38 +119,40 @@ def calculate_zones(
             if goal_pace is not None
             else "Speed: short fast reps at near-max effort"
         )
+        # Adjacent bands share an edge so the table is a contiguous partition
+        # of the pace continuum rather than leaving gaps between zones (G6).
         zones = {
             "zone_1_recovery": {
                 "pace": ref * 1.30,
-                "pace_range": (ref * 1.35, ref * 1.25),
+                "pace_range": (ref * 1.35, ref * 1.15),
                 "hr_range": "60-70%",
                 "description": "Recovery: truly easy, conversational pace",
                 "color": "#4ade80",
             },
             "zone_2_aerobic": {
                 "pace": ref * 1.15,
-                "pace_range": (ref * 1.25, ref * 1.10),
+                "pace_range": (ref * 1.15, ref * 1.05),
                 "hr_range": "70-80%",
                 "description": "Aerobic: moderate effort, can still hold a conversation",
                 "color": "#60a5fa",
             },
             "zone_3_tempo": {
                 "pace": ref * 1.05,
-                "pace_range": (ref * 1.10, ref * 1.02),
+                "pace_range": (ref * 1.05, ref * 0.95),
                 "hr_range": "80-88%",
-                "description": "Tempo: comfortably hard, sustainable for 20-40 min",
+                "description": "Tempo: comfortably hard, threshold to cruise effort",
                 "color": "#facc15",
             },
             "zone_4_vo2max": {
                 "pace": ref * 0.95,
-                "pace_range": (ref * 1.00, ref * 0.92),
+                "pace_range": (ref * 0.95, ref * 0.90),
                 "hr_range": "88-95%",
                 "description": "VO2max: hard effort, 3-5 min intervals",
                 "color": "#f97316",
             },
             "zone_5_race": {
                 "pace": zone_5_anchor,
-                "pace_range": (zone_5_anchor * 1.02, zone_5_anchor * 0.98),
+                "pace_range": (zone_5_anchor, zone_5_anchor * 0.95),
                 "hr_range": "95-100%",
                 "description": zone_5_description,
                 "color": "#ef4444",

@@ -4,6 +4,26 @@ from typing import Optional
 
 from app.core.training.hr_zone_calculator import HRZoneCalculator
 
+# Quality session types where a below-target HR genuinely means "you didn't
+# reach the intended hard effort". On easy / long / recovery runs a low HR is
+# the goal, so the "push harder" cue would contradict the slow-down pace cue.
+_QUALITY_TYPES = frozenset(
+    {
+        "tempo",
+        "threshold",
+        "cruise_interval",
+        "interval",
+        "vo2max",
+        "vo2max_ladder",
+        "hill",
+        "fartlek",
+        "race",
+        "race_pace",
+        "time_trial",
+        "speed",
+    }
+)
+
 
 def compute_hr_zone_deviation(run_log, planned_workout, hr_zones) -> Optional[int]:
     """Compute numeric HR zone deviation for a run.
@@ -58,13 +78,22 @@ def hr_zone_feedback(run_log, planned_workout, hr_zones) -> Optional[str]:
             f"Heart rate was slightly high ({actual_label} vs target "
             f"{target_label}). Try to stay relaxed and ease into the effort."
         )
-    elif diff == -1:
+
+    # diff < 0: HR below target. Only nudge "push harder" on quality sessions —
+    # on easy/long/recovery runs a low HR is exactly right, and telling the
+    # runner to push would contradict the pace cue to keep it easy (audit B11).
+    wtype = (run_log.effective_workout_type or run_log.workout_type or "easy").lower()
+    if wtype not in _QUALITY_TYPES:
+        return (
+            f"Heart rate stayed comfortably easy ({actual_label}) — right where "
+            "an easy aerobic run should be. Nicely controlled."
+        )
+    if diff == -1:
         return (
             f"Heart rate was a bit low ({actual_label} vs target "
             f"{target_label}). You could push a little harder next time."
         )
-    else:
-        return (
-            f"Heart rate averaged {actual_label} — well below target "
-            f"({target_label}). Increase intensity to get more benefit."
-        )
+    return (
+        f"Heart rate averaged {actual_label} — well below target "
+        f"({target_label}). Increase intensity to get more benefit."
+    )

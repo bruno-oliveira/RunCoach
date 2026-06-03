@@ -93,6 +93,24 @@ class TestHighBaseDetraining:
                 f"dist={dist}: peak {peak:.1f} is more than 10% below base {current_km}"
             )
 
+    def test_base_phase_does_not_ramp_down_below_current(self):
+        """G5: a high-base runner's base phase holds (not detrains) — no
+        loading week below ~90% of current volume during base/build."""
+        from app.core.training.mileage_progression import calculate_weekly_progression
+        from app.core.training.phase_calculator import calculate_phases
+
+        current_km = 70.0
+        weeks = 16
+        progression = calculate_weekly_progression(current_km, 42.2, weeks)
+        phases = calculate_phases(weeks, 42.2)
+        base_weeks = progression[: phases["base"]]
+        # Ignore deload weeks (intentional dips); loading weeks must hold base.
+        loading = [km for km in base_weeks if km >= current_km * 0.80]
+        assert loading, "expected loading weeks in base"
+        assert min(loading) >= current_km * 0.95, (
+            f"base loading weeks detrained below current: {base_weeks}"
+        )
+
 
 # ---------------------------------------------------------------------------
 # P1-C: Recovery-week uses week-in-phase, not global week number

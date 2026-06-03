@@ -4,7 +4,7 @@ Generates 2-3 sentence rationales that explain the physiological benefit,
 the training-phase context, and a brief execution tip.
 """
 
-from typing import Any, Dict, Optional
+from typing import Dict, Optional
 
 # Coaching rationale templates keyed by (workout_type, phase)
 # Each value is a string; {distance_name} and {phase} are interpolated if present.
@@ -194,7 +194,6 @@ def generate_coaching_note(
     week_number: int,
     target_distance: float,
     is_recovery_week: bool = False,
-    prev_run: Any = None,
 ) -> Optional[str]:
     """Generate a coaching rationale for a given workout.
 
@@ -204,12 +203,13 @@ def generate_coaching_note(
         week_number: 1-based week number within the plan
         target_distance: Target race distance in km
         is_recovery_week: Whether this is a planned recovery/down week
-        prev_run: Optional RunLog from within the last ~2 days, used to add
-            "after yesterday's…" context at render time. Persisted notes pass
-            None to keep stored rationales stable.
 
     Returns:
         2-3 sentence coaching note, or None for unknown types
+
+    The "after yesterday's…" render-time prefix is applied by the single live
+    implementation in ``plan_template_context._coaching_prefix``; persisted
+    rationales stay stable here (audit B12).
     """
     key = f"{workout_type}_{phase}"
     note = _NOTES.get(key)
@@ -227,28 +227,4 @@ def generate_coaching_note(
             "distances are intentionally reduced to let your body absorb recent training."
         )
 
-    prefix = _build_prev_run_prefix(prev_run)
-    if prefix:
-        note = prefix + note[0].lower() + note[1:]
-
     return note
-
-
-def _build_prev_run_prefix(prev_run: Any) -> Optional[str]:
-    """Return a leading context phrase based on yesterday's logged run."""
-    if prev_run is None:
-        return None
-
-    prev_type = getattr(prev_run, "workout_type", None)
-    prev_effort = getattr(prev_run, "perceived_effort", None)
-    if not prev_type:
-        return None
-
-    prev_type = prev_type.lower()
-    if prev_type in ("tempo", "interval", "vo2max") and (prev_effort or 0) >= 7:
-        return f"After yesterday's hard {prev_type}, "
-    if prev_type == "long" and (prev_effort or 0) >= 6:
-        return "After yesterday's long run, "
-    if prev_type == "easy" and prev_effort is not None and prev_effort <= 4:
-        return "Yesterday was easy and well-controlled — "
-    return None

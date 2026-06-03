@@ -109,6 +109,34 @@ class TestHRZoneFeedback:
         fb = hr_zone_feedback(run, planned, self.zones)
         assert fb is None
 
+    def test_easy_run_low_hr_does_not_say_push_harder(self):
+        """B11: a below-target HR on an easy run is the goal, not a problem —
+        it must not tell the runner to push harder (which would contradict the
+        pace cue to keep it easy)."""
+        run = _make_run_log(
+            avg_heart_rate=90, workout_type="easy", effective_workout_type="easy"
+        )
+        planned = _make_planned_workout(hr_zone_target=2)
+        fb = hr_zone_feedback(run, planned, self.zones)
+        assert fb is not None
+        lower = fb.lower()
+        assert "push" not in lower
+        assert "increase intensity" not in lower
+        assert "easy" in lower or "controlled" in lower
+
+    def test_quality_run_low_hr_still_nudges_harder(self):
+        """B11: on a quality session a below-target HR genuinely means the
+        effort fell short — the push cue is kept."""
+        run = _make_run_log(
+            avg_heart_rate=120,
+            workout_type="interval",
+            effective_workout_type="interval",
+        )
+        planned = _make_planned_workout(hr_zone_target=5, workout_type="interval")
+        fb = hr_zone_feedback(run, planned, self.zones)
+        assert fb is not None
+        assert "increase intensity" in fb.lower() or "push" in fb.lower()
+
 
 class TestEffortFeedback:
     def test_nailed_it(self):

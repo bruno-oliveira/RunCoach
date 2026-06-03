@@ -11,6 +11,10 @@ from app.contexts.runner.fitness.coaching_data import (
     fetch_volume_inputs,
 )
 from app.core.coaching.coaching_feedback_engine import CoachingFeedbackEngine
+from app.core.coaching.volume_tracker import (
+    VOLUME_BEHIND_PHRASE,
+    VOLUME_TARGET_REACHED_PHRASE,
+)
 from app.models.daily_workout import DailyWorkout
 from app.models.run_feedback import RunFeedback
 from app.models.run_log import RunLog
@@ -281,11 +285,11 @@ def _build_week_summary(data: dict, week_num: int) -> Optional[dict]:
 
     volume_texts = data["volume_texts"]
     if volume_texts:
-        behind = sum(
-            1 for t in volume_texts if "behind" in t.lower() or "short" in t.lower()
-        )
+        # Match the vocabulary volume_tracker actually emits (single source of
+        # truth) — the old "behind/ahead/exceed" parse never fired (audit B10).
+        behind = sum(1 for t in volume_texts if VOLUME_BEHIND_PHRASE in t.lower())
         ahead = sum(
-            1 for t in volume_texts if "ahead" in t.lower() or "exceed" in t.lower()
+            1 for t in volume_texts if VOLUME_TARGET_REACHED_PHRASE in t.lower()
         )
         if behind >= 2:
             highlights.append(

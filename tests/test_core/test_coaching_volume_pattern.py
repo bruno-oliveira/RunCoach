@@ -223,3 +223,45 @@ class TestVolumeFeedback:
         )
         db.commit()
         assert _volume_msg(subject, db) is None
+
+
+class TestVolumeHighlightVocabularySync:
+    """B10: the weekly-summary highlight must match the vocabulary
+    volume_tracker actually emits (the old behind/ahead/exceed parse was dead).
+    """
+
+    @staticmethod
+    def _data(volume_texts):
+        return {
+            "sentiments": ["info"] * len(volume_texts),
+            "run_count": len(volume_texts),
+            "pace_texts": [],
+            "hr_texts": [],
+            "effort_texts": [],
+            "volume_texts": volume_texts,
+            "pattern_texts": [],
+        }
+
+    @staticmethod
+    def _all_highlights(summary):
+        return [summary["summary"], *summary["highlights"]]
+
+    def test_behind_messages_drive_falling_behind_highlight(self):
+        from app.contexts.runner.fitness.feedback_service import _build_week_summary
+
+        texts = [volume_feedback(2, 8.0, 30.0), volume_feedback(2, 9.0, 30.0)]
+        summary = _build_week_summary(self._data(texts), 2)
+        assert summary is not None
+        assert any(
+            "falling behind" in h.lower() for h in self._all_highlights(summary)
+        ), f"behind highlight never fired for {texts}"
+
+    def test_target_reached_messages_drive_exceeding_highlight(self):
+        from app.contexts.runner.fitness.feedback_service import _build_week_summary
+
+        texts = [volume_feedback(2, 31.0, 30.0), volume_feedback(2, 32.0, 30.0)]
+        summary = _build_week_summary(self._data(texts), 2)
+        assert summary is not None
+        assert any("exceeding" in h.lower() for h in self._all_highlights(summary)), (
+            f"exceeding highlight never fired for {texts}"
+        )

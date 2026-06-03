@@ -293,14 +293,38 @@ class RacePredictorService:
     def calculate_vdot_trend(vdot_history: List[Dict]) -> str:
         """Calculate VDOT trend from history.
 
+        Per-run VDOTs are noisy, so instead of a fragile first-vs-last two-point
+        comparison (which a single low-VDOT easy run could flip into a load-
+        cutting ``declining`` verdict) this compares the median of the earliest
+        third against the median of the latest third, after dropping artifact
+        outliers with the same IQR rule used elsewhere, and requires at least
+        4 samples (audit B13).
+
         Returns: improving | stable | declining
         """
-        if len(vdot_history) < 2:
+        vdots = [
+            entry["vdot"] for entry in vdot_history if entry.get("vdot") is not None
+        ]
+        if len(vdots) < 4:
             return "stable"
 
-        first_vdot = vdot_history[0]["vdot"]
-        last_vdot = vdot_history[-1]["vdot"]
-        change = last_vdot - first_vdot
+        # Drop a single bad-data point at either end (a low-VDOT easy run or a
+        # GPS-fast artifact) with symmetric Tukey fences before comparing —
+        # history is date-ascending so the surviving order is preserved.
+        srt = sorted(vdots)
+        n = len(srt)
+        q1, q3 = srt[n // 4], srt[(3 * n) // 4]
+        iqr = q3 - q1
+        if iqr > 0:
+            lo, hi = q1 - 1.5 * iqr, q3 + 1.5 * iqr
+            filtered = [v for v in vdots if lo <= v <= hi]
+            if len(filtered) >= 4:
+                vdots = filtered
+
+        third = max(1, len(vdots) // 3)
+        early = statistics.median(vdots[:third])
+        late = statistics.median(vdots[-third:])
+        change = late - early
 
         if change > 0.5:
             return "improving"

@@ -371,7 +371,11 @@ def calculate_weekly_progression(
         quality_slots = 1 if max_runs >= 2 else 0
         distributable = run_ceiling * (max_runs - quality_slots) + q_cap * quality_slots
         peak_km = min(peak_km, distributable)
-    base_end_target = peak_km * BASE_PHASE_END_FRACTION
+    # Floor the base target at the runner's current volume: when current_km
+    # already exceeds peak*0.70 the old ramp sloped DOWN to 0.70*peak, shedding
+    # ~15% of established aerobic volume for the whole base phase. Hold (don't
+    # detrain) an already-adequate base, then build from there (audit G5).
+    base_end_target = max(peak_km * BASE_PHASE_END_FRACTION, current_km)
 
     # Volume-trend-aware week-over-week cap
     effective_cap = _volume_trend_cap(profile)
@@ -379,17 +383,24 @@ def calculate_weekly_progression(
     weekly_progression: List[float] = []
 
     # If runner's base already meets or exceeds the target peak, skip ramping
-    # and hold steady at peak_km with recovery weeks as normal.
+    # and hold around peak_km. Apply a mild week-to-week undulation (and the
+    # normal recovery dips) so the held-volume block reads as real periodization
+    # rather than a dead-flat, unvarying line (audit G5). The wave never exceeds
+    # peak_km, and recovery weeks still dip to RECOVERY_WEEK_RATIO.
     if current_km >= peak_km:
         high_water = peak_km
         phase_start_week = 1
+        _UNDULATION = (1.0, 0.96, 0.98)
+        load_week_idx = 0
         for week_offset in range(weeks - phases["taper"]):
             week_number = phase_start_week + week_offset
             phase = get_phase(week_number, phases)
             if is_recovery_week(week_number, phase, phases):
                 weekly_progression.append(round(high_water * RECOVERY_WEEK_RATIO, 1))
             else:
-                weekly_progression.append(round(high_water, 1))
+                factor = _UNDULATION[load_week_idx % len(_UNDULATION)]
+                weekly_progression.append(round(high_water * factor, 1))
+                load_week_idx += 1
     else:
         high_water = current_km
 

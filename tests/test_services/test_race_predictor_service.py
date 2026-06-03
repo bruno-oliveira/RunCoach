@@ -312,17 +312,33 @@ class TestPureHelpers:
         assert v is not None and v > 0
 
     def test_vdot_trend(self):
-        assert RacePredictorService.calculate_vdot_trend([{"vdot": 50}]) == "stable"
+        def hist(*vals):
+            return [{"vdot": v, "date": None} for v in vals]
+
+        # Fewer than 4 samples is too noisy to call — stable (audit B13).
+        assert RacePredictorService.calculate_vdot_trend(hist(50)) == "stable"
+        assert RacePredictorService.calculate_vdot_trend(hist(45, 48)) == "stable"
+        assert RacePredictorService.calculate_vdot_trend(hist(50, 47, 49)) == "stable"
+
+        # Genuine multi-run trends are detected.
         assert (
-            RacePredictorService.calculate_vdot_trend([{"vdot": 45}, {"vdot": 48}])
+            RacePredictorService.calculate_vdot_trend(hist(45, 46, 47, 48, 49))
             == "improving"
         )
         assert (
-            RacePredictorService.calculate_vdot_trend([{"vdot": 50}, {"vdot": 47}])
+            RacePredictorService.calculate_vdot_trend(hist(52, 51, 50.5, 50, 49))
             == "declining"
         )
         assert (
-            RacePredictorService.calculate_vdot_trend([{"vdot": 50}, {"vdot": 50.2}])
+            RacePredictorService.calculate_vdot_trend(hist(50, 50.1, 49.9, 50, 50.2))
+            == "stable"
+        )
+
+        # A single low-VDOT artifact at an endpoint must NOT flip the verdict.
+        assert (
+            RacePredictorService.calculate_vdot_trend(
+                hist(50, 50.2, 49.8, 50.1, 50, 49.9, 42)
+            )
             == "stable"
         )
 
