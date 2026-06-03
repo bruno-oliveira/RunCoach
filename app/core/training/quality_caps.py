@@ -12,6 +12,7 @@ from typing import Dict, List, Optional
 from app.core.training.tuning import (
     BASE_PHASE_QUALITY_REDUCTION,
     DEFAULT_QUALITY_CAPS,
+    MAX_EASY_RUN_KM,
     MAX_EASY_VS_LONG_RUN,
     MAX_QUALITY_VS_LONG_RUN,
     MIN_EASY_PER_RUN_KM,
@@ -22,6 +23,7 @@ from app.core.training.tuning import (
 __all__ = [
     "MAX_QUALITY_VS_LONG_RUN",
     "MAX_EASY_VS_LONG_RUN",
+    "MAX_EASY_RUN_KM",
     "BASE_PHASE_QUALITY_REDUCTION",
     "QUALITY_CAPS_BY_DISTANCE",
     "DEFAULT_QUALITY_CAPS",
@@ -29,6 +31,7 @@ __all__ = [
     "MIN_EASY_PER_RUN_KM",
     "get_quality_caps",
     "cap_quality_distance",
+    "easy_run_cap",
     "cap_easy_distance",
     "enforce_week_caps",
 ]
@@ -56,10 +59,24 @@ def cap_quality_distance(
     return min(distance, round(cap, 1))
 
 
-def cap_easy_distance(distance: float, long_run_distance: float) -> float:
-    """Cap a single easy run distance against the long run."""
-    max_easy = long_run_distance * MAX_EASY_VS_LONG_RUN
-    return min(distance, round(max_easy, 1))
+def easy_run_cap(
+    long_run_distance: float, max_abs_km: float = MAX_EASY_RUN_KM
+) -> float:
+    """The ceiling for a single easy run (km).
+
+    The smaller of a fraction of the long run (so easy never approaches the
+    long run) and an absolute distance ceiling (so easy runs don't become
+    second long runs on low-run-count / time-crunched plans). Trail callers
+    pass a larger ``max_abs_km`` since back-to-back long days are intentional.
+    """
+    return round(min(long_run_distance * MAX_EASY_VS_LONG_RUN, max_abs_km), 1)
+
+
+def cap_easy_distance(
+    distance: float, long_run_distance: float, max_abs_km: float = MAX_EASY_RUN_KM
+) -> float:
+    """Cap a single easy run distance against the long run and absolute ceiling."""
+    return min(distance, easy_run_cap(long_run_distance, max_abs_km))
 
 
 def enforce_week_caps(workouts: List, target_distance: float, phase: str) -> bool:

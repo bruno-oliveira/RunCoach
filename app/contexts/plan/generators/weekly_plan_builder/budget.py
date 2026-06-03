@@ -8,10 +8,11 @@ attach duration hints. No back-reference to the orchestrator.
 from typing import Any, Dict, List, Optional
 
 from app.core.training.quality_caps import (
-    MAX_EASY_VS_LONG_RUN,
+    MAX_EASY_RUN_KM,
     MAX_QUALITY_VS_LONG_RUN,
     MIN_EASY_PER_RUN_KM,
     QUALITY_MIN_DOSE_KM,
+    cap_easy_distance,
 )
 from app.core.training.quality_caps import (
     get_quality_caps as _get_quality_caps,
@@ -71,11 +72,14 @@ def resolve_low_budget_quality(
 
     Mutates both inputs in place. The weekly total is preserved either way.
 
-    Only applies in build/peak, where quality sessions are meant to be
-    substantial. Base and taper quality are intentionally light (strides, short
-    hill sprints, sharpeners) and are left alone.
+    Build/peak quality is meant to be substantial, so it is floored up to a
+    meaningful dose when affordable. Base quality is left alone (intentionally
+    light strides / short hill sprints). The taper sharpener is also kept short
+    — never floored up — but a token sliver that the week is too small to
+    support is demoted to easy so tiny / low-volume taper weeks don't carry a
+    malformed sub-floor session (audit G2).
     """
-    if phase not in ("build", "peak"):
+    if phase not in ("build", "peak", "taper"):
         return
     phys_caps = _get_quality_caps(target_distance, phase)
     ceiling = long_run_distance * MAX_QUALITY_VS_LONG_RUN
@@ -88,6 +92,16 @@ def resolve_low_budget_quality(
         dose = QUALITY_MIN_DOSE_KM.get(qtype, 0)
         if budget >= dose:
             continue  # already a meaningful dose
+
+        if phase == "taper":
+            # Keep the short sharpener as-is, but demote a token sliver the
+            # week can't support back to easy (no flooring — sharpeners stay
+            # short).
+            if budget < _QUALITY_DEMOTE_THRESHOLD_KM:
+                distribution[qtype] -= 1
+                distribution["easy"] = distribution.get("easy", 0) + 1
+                quality_distances.pop(qtype, None)
+            continue
 
         capped_floor = round(min(dose, phys_caps.get(qtype, ceiling), ceiling), 1)
         easy_count = distribution.get("easy", 0)
@@ -165,15 +179,28 @@ def apply_quality_caps(
 
 
 def allocate_easy_distances(
-    remaining_km: float, quality_total: float, long_run_distance: float, easy_runs: int
+    remaining_km: float,
+    quality_total: float,
+    long_run_distance: float,
+    easy_runs: int,
+    max_easy_abs_km: float = MAX_EASY_RUN_KM,
 ) -> List[float]:
-    """Distribute the easy-run budget evenly across easy days."""
+    """Distribute the easy-run budget evenly across easy days.
+
+    Each easy run is capped by both a fraction of the long run and an absolute
+    ceiling (``cap_easy_distance``), so on low-run-count plans the week falls
+    short of target rather than ballooning easy days into second long runs.
+    Trail callers pass ``max_easy_abs_km=inf`` since back-to-back long days are
+    intentional there.
+    """
     if easy_runs <= 0:
         return []
     easy_budget = remaining_km - quality_total
-    max_easy = long_run_distance * MAX_EASY_VS_LONG_RUN
     per_run = easy_budget / easy_runs
-    return [round(min(per_run, max_easy), 1) for _ in range(easy_runs)]
+    return [
+        cap_easy_distance(per_run, long_run_distance, max_easy_abs_km)
+        for _ in range(easy_runs)
+    ]
 
 
 def build_workout_for_type(

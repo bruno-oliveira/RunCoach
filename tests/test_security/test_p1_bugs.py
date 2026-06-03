@@ -2,7 +2,8 @@
 
 P1-A: Phase collapse on short plans (< 6 weeks now raises InsufficientTimeException)
 P1-B: Detraining for high-base runners (peak never forced > 10% below current base)
-P1-C: Recovery-week assignment uses week-in-phase, not global week number
+P1-C: Recovery-week assignment uses a global ~3:1 loading cadence (audit G1)
+      so 8-12 week plans get mid-plan deloads instead of zero
 P1-D: 1000m repeats require 50 km/week base, not 40 km/week
 """
 
@@ -98,61 +99,60 @@ class TestHighBaseDetraining:
 # ---------------------------------------------------------------------------
 
 
-class TestRecoveryWeekPhaseRelative:
-    def test_first_week_of_build_is_not_recovery(self):
-        """Build starting at week 4 should not have its first week be a recovery week."""
+class TestRecoveryWeekGlobalCadence:
+    """Deloads follow a global ~3:1 loading cadence (audit G1).
+
+    The old per-phase counter reset at every phase boundary, which left the
+    most common 8-12 week plans with zero deloads. Recovery weeks now fall on
+    a continuous every-4th-week cadence across base+build+peak.
+    """
+
+    def test_week_one_is_never_recovery(self):
         phases = {"base": 3, "build": 6, "peak": 2, "taper": 1}
-        build_start = phases["base"] + 1  # week 4
-        assert not is_recovery_week(build_start, "build", phases), (
-            "First week of build phase should never be a recovery week"
+        assert not is_recovery_week(1, "base", phases)
+
+    def test_global_cadence_every_fourth_week(self):
+        """Deloads land on weeks 4, 8, 12... regardless of phase boundaries."""
+        from app.core.training.phase_calculator import get_phase
+
+        phases = {"base": 6, "build": 6, "peak": 3, "taper": 2}
+        recovery = [
+            w for w in range(1, 18) if is_recovery_week(w, get_phase(w, phases), phases)
+        ]
+        assert recovery == [4, 8, 12]
+
+    def test_short_plans_get_a_mid_plan_deload(self):
+        """8-12 week plans must get at least one mid-plan deload (the G1 fix)."""
+        from app.core.training.phase_calculator import (
+            calculate_phases,
+            get_phase,
+            recovery_week_set,
         )
 
-    def test_recovery_falls_at_4th_week_within_phase(self):
-        """Recovery should occur at week_in_phase==4, i.e. the 5th week of a phase."""
-        phases = {"base": 6, "build": 6, "peak": 2, "taper": 2}
-        # Base starts at week 1; week_in_phase = week_number - 1
-        # week_in_phase == 4 → week_number == 5
-        assert is_recovery_week(5, "base", phases), (
-            "Week 5 should be recovery (4th step in base)"
-        )
-        assert not is_recovery_week(4, "base", phases), "Week 4 should NOT be recovery"
+        for weeks in (8, 10, 12):
+            for dist in (5.0, 10.0, 21.0975, 42.195):
+                phases = calculate_phases(weeks, dist)
+                recovery = recovery_week_set(phases)
+                assert recovery, (
+                    f"{weeks}wk/{dist}km plan must have >=1 deload, got none"
+                )
+                # No deload in taper, and not the final loading week.
+                span = phases["base"] + phases["build"] + phases["peak"]
+                assert all(w < span for w in recovery)
+                assert all(get_phase(w, phases) != "taper" for w in recovery)
 
-    def test_build_recovery_independent_of_base_length(self):
-        """Build recovery week is at 4th step into build, regardless of base length."""
-        # Base=5 means build starts at week 6; recovery in build at week 6+4=10
-        phases = {"base": 5, "build": 6, "peak": 2, "taper": 1}
-        build_start = phases["base"] + 1  # 6
-        recovery_in_build = build_start + 4  # week 10
+    def test_final_loading_week_is_never_recovery(self):
+        """The last non-taper (peak) week is preserved as a stimulus week."""
+        phases = {"base": 4, "build": 4, "peak": 4, "taper": 2}
+        span = phases["base"] + phases["build"] + phases["peak"]  # 12
+        assert not is_recovery_week(span, "peak", phases)
 
-        assert not is_recovery_week(build_start, "build", phases), (
-            "Build week 1 should not be recovery"
-        )
-        assert not is_recovery_week(build_start + 1, "build", phases), (
-            "Build week 2 should not be recovery"
-        )
-        assert not is_recovery_week(build_start + 3, "build", phases), (
-            "Build week 4 should not be recovery"
-        )
-        assert is_recovery_week(recovery_in_build, "build", phases), (
-            f"Week {recovery_in_build} (4th step into build) should be recovery"
-        )
+    def test_very_short_non_taper_span_has_no_deload(self):
+        """A non-taper span under 4 loading weeks gets no deload."""
+        phases = {"base": 2, "build": 1, "peak": 0, "taper": 1}
+        from app.core.training.phase_calculator import recovery_week_set
 
-    def test_global_week_4_not_forced_as_build_recovery(self):
-        """If build starts at week 3, global week 4 (build week 2) should not be recovery."""
-        phases = {"base": 2, "build": 7, "peak": 2, "taper": 1}
-        # Build starts at week 3; week 4 is build week 2 (week_in_phase=1) → not recovery
-        assert not is_recovery_week(4, "build", phases), (
-            "Build week 2 (global week 4) should not be recovery just because 4 % 4 == 0"
-        )
-
-    def test_short_phase_has_no_recovery(self):
-        """Phases shorter than 4 weeks should have no recovery weeks."""
-        phases = {"base": 3, "build": 3, "peak": 1, "taper": 1}
-        for week_number in range(1, 8):
-            phase = "base" if week_number <= 3 else "build"
-            assert not is_recovery_week(week_number, phase, phases), (
-                f"Week {week_number}: phase with <4 weeks should have no recovery"
-            )
+        assert recovery_week_set(phases) == frozenset()
 
     def test_taper_never_has_recovery(self):
         phases = {"base": 4, "build": 4, "peak": 2, "taper": 2}

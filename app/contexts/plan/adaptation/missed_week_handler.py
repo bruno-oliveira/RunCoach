@@ -14,6 +14,7 @@ from app.utils import persist_json
 from app.utils import to_date as _to_date
 
 from ._helpers import today_date
+from .reconcile import pace_zones_for, reconcile_plan_data_to_orm
 from .safety import enforce_future_growth_cap, enforce_week_structure
 
 
@@ -148,7 +149,15 @@ def recalibrate_missed_week(
                     continue
                 if wo.day_of_week in source_dists and source_dists[wo.day_of_week]:
                     old_distance = wo.distance_km or 0
-                    wo.distance_km = source_dists[wo.day_of_week]
+                    # Downward-only: the shift-back pulls each week's load from
+                    # the *next* (typically larger) calendar week, so without a
+                    # guard re-entry after illness/travel could land a week
+                    # ABOVE its originally prescribed load. Never exceed this
+                    # workout's own baseline for its calendar slot (audit B9).
+                    baseline = wo.baseline_distance_km or old_distance
+                    wo.distance_km = round(
+                        min(source_dists[wo.day_of_week], baseline), 1
+                    )
                     pd_wo = pd_workout.get((target_wk, wo.day_of_week))
                     if pd_wo:
                         pd_wo["distance"] = wo.distance_km
@@ -174,12 +183,16 @@ def recalibrate_missed_week(
         high_water_seed=training_plan.current_weekly_km or 0.0,
     )
 
-    for wk_num in ordered:
-        week_workouts = workouts_by_week.get(weekly_plans[wk_num].id, [])
-        for wo in week_workouts:
-            pd_wo = pd_workout.get((wk_num, wo.day_of_week))
-            if pd_wo:
-                pd_wo["distance"] = wo.distance_km
+    # Reconcile structured steps + weekly chips to the post-cap ORM distances
+    # (shared with the weekly adjuster) so guard-moved easy/long/quality runs
+    # don't render a stale steps total (audit B7).
+    reconcile_plan_data_to_orm(
+        [weekly_plans[wk] for wk in ordered],
+        workouts_by_week,
+        pd_workout,
+        pd_week,
+        pace_zones_for(training_plan),
+    )
 
     training_plan.plan_data = plan_data
     persist_json(training_plan, "plan_data")

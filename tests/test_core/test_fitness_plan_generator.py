@@ -139,6 +139,12 @@ class TestFitnessPlanGenerator:
         )
 
         for week in plan["weekly_plans"]:
+            # Deload weeks intentionally cut midweek volume while keeping the
+            # long run (standard down-week structure), so the long run is a
+            # larger share of the reduced week. The 30% structural cap applies
+            # to normal loading weeks.
+            if week.get("is_recovery"):
+                continue
             long_runs = [dw for dw in week["daily_workouts"] if dw["type"] == "long"]
             if long_runs:
                 long_km = long_runs[0]["distance"]

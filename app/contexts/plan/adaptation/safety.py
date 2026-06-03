@@ -127,10 +127,15 @@ def enforce_future_growth_cap(
     for wk_num in ordered_week_numbers:
         week_obj = weekly_plans_by_number[wk_num]
         workouts = workouts_by_week_id.get(week_obj.id, [])
-        is_recovery = bool(pd_week.get(wk_num, {}).get("is_recovery", False))
+        wk_pd = pd_week.get(wk_num, {})
+        is_recovery = bool(wk_pd.get("is_recovery", False))
+        is_taper = wk_pd.get("phase") == "taper"
 
         total = round(sum((w.distance_km or 0) for w in workouts), 1)
-        if is_recovery:
+        # Recovery and taper weeks are deliberately low and never set the load
+        # ceiling for the rest of the plan — excluding the taper from the
+        # high-water mark keeps it sacrosanct (audit G2).
+        if is_recovery or is_taper:
             week_obj.total_km = total
             if wk_num in pd_week:
                 pd_week[wk_num]["total_km"] = total

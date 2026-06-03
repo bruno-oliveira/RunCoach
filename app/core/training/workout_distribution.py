@@ -73,6 +73,13 @@ def get_workout_distribution(
             quality_workouts = 2 if max_runs >= 5 else 1
     elif phase == "peak":
         quality_workouts = 2 if max_runs >= 5 else 1
+    elif phase == "taper":
+        # Retain a single short race-pace sharpener through the taper (the
+        # PHASE_DISTRIBUTIONS taper rows budget ~10-12% tempo for exactly this).
+        # Volume drops but intensity is kept — dropping all quality detrains
+        # the runner right before race day (audit G2). max_runs <= 2 already
+        # returned 0 above, so there is room for the sharpener here.
+        quality_workouts = 1
     else:
         quality_workouts = 0
 
@@ -361,6 +368,14 @@ def _build_quality_distribution(
             terrain,
             trail_profile,
         )
+        return distribution
+
+    if phase == "taper":
+        # The single taper sharpener is a short tempo: the taper budget keeps
+        # only tempo (interval/hill are 0%, so any other type would floor to a
+        # token 1 km). A brief race-pace cruise keeps the legs sharp while
+        # volume tapers (audit G2).
+        distribution.update({"tempo": 1})
         return distribution
 
     distribution.update(

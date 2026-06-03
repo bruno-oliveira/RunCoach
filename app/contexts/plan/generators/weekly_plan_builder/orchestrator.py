@@ -26,6 +26,7 @@ from app.core.coaching.coaching_notes_generator import generate_coaching_note
 from app.core.training import long_run_calculator, phase_calculator, workout_builders
 from app.core.training import workout_distribution as workout_dist_mod
 from app.core.training.key_workout_library import overlay_key_workout
+from app.core.training.quality_caps import MAX_EASY_RUN_KM
 from app.core.training.training_constants import calculate_week_in_phase
 from app.core.training.vertical_simulation import attach_treadmill_prescriptions
 
@@ -159,6 +160,7 @@ def generate_daily_workouts(
         quality_total,
         long_run_distance,
         easy_runs,
+        max_easy_abs_km=float("inf") if trail_profile is not None else MAX_EASY_RUN_KM,
     )
 
     easy_run_idx = 0

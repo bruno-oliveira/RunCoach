@@ -99,7 +99,12 @@ def gather_signals(
     today = today_date()
     current_week = compute_current_week(start_date, today, clamp_min=1, pre_start=1)
 
-    all_plan_runs = db.query(RunLog).filter(RunLog.training_plan_id == plan_id).all()
+    all_plan_runs = (
+        db.query(RunLog)
+        .filter(RunLog.training_plan_id == plan_id)
+        .order_by(RunLog.date.asc())
+        .all()
+    )
 
     run_ids = [run.id for run in all_plan_runs]
     run_feedback_list = (

@@ -55,7 +55,11 @@ def validate_polarized_ratio(
     if hard_pct > target + POLARIZED_EXCESS_THRESHOLD and hard_count > 0:
         if phase == "base" and hard_count <= 1:
             pass
-        elif phase in ("build", "peak") and hard_count <= 1:
+        elif phase in ("build", "peak", "taper") and hard_count <= 1:
+            # Keep the single taper sharpener (and the one build/peak quality):
+            # with only 3-4 total runs the count-based ratio overstates
+            # intensity, and the taper deliberately retains one short race-pace
+            # session (audit G2).
             pass
         else:
             for key in ("interval", "tempo", "hill"):

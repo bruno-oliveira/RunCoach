@@ -166,10 +166,21 @@ class TestRunCountRespected:
 
 
 class TestLongRunDominance:
-    """The long run should be ≤ 55% of weekly volume for 3+ run plans.
+    """The long run should not dominate weekly volume.
 
-    2-run plans are exempt: with only 1 long + 1 quality/easy, the long
-    run naturally consumes 60-70% of volume by design.
+    The ceiling is run-count aware because long-run share is structurally
+    bounded by how many days the runner trains:
+
+    - 2-run plans are exempt: with only 1 long + 1 quality/easy the long run
+      naturally consumes 60-70% of volume by design.
+    - 3-run plans allow up to 62%: with a single long + 1 quality + 1 easy,
+      and easy runs now capped by an absolute ceiling so they don't become
+      second long runs (audit G3), the race-distance long run is unavoidably
+      a large share of a frequency-constrained week. The right remedy is to
+      add a day, not to balloon the easy run — so the week is allowed to be
+      long-run-heavy rather than carry a junk second long effort.
+    - 4+ run plans keep the tighter ~58% guard (a touch above 55% to absorb
+      the post-deload supercompensation dip from the ~3:1 cadence, audit G1).
     """
 
     @pytest.mark.parametrize("combo", ALL_COMBOS, ids=[_id(c) for c in ALL_COMBOS])
@@ -177,6 +188,7 @@ class TestLongRunDominance:
         distance, mileage, max_runs = combo
         if max_runs <= 2:
             return
+        ceiling = 0.62 if max_runs <= 3 else 0.58
         plan, _ = _generate_plan(distance, mileage, max_runs)
 
         for week in plan:
@@ -188,9 +200,9 @@ class TestLongRunDominance:
                 continue
             long_d = max(w["distance"] for w in runs)
             ratio = long_d / total
-            assert ratio <= 0.56, (
+            assert ratio <= ceiling, (
                 f"Week {week['week']}: long run is {ratio:.0%} of volume "
-                f"({long_d:.1f}/{total:.1f}km)"
+                f"({long_d:.1f}/{total:.1f}km), ceiling {ceiling:.0%}"
             )
 
 
@@ -361,6 +373,33 @@ class TestLowBudgetQualityDemotion:
                         f"Week {week['week']}: {w['type']} at {w['distance']}km "
                         f"below demote floor {_QUALITY_DEMOTE_THRESHOLD_KM}"
                     )
+
+
+class TestTaperRetainsSharpener:
+    """The taper keeps a short race-pace sharpener — volume drops but intensity
+    is retained, instead of dropping all quality (audit G2). On a plan with
+    enough volume to support it, at least one taper week carries a tempo."""
+
+    @pytest.mark.parametrize(
+        "distance,mileage,max_runs",
+        [(42.2, 50, 4), (21.1, 45, 4), (10.0, 45, 4)],
+    )
+    def test_taper_has_a_sharpener(self, distance, mileage, max_runs):
+        from app.core.training.phase_calculator import calculate_phases, get_phase
+
+        plan, weeks = _generate_plan(distance, mileage, max_runs)
+        phases = calculate_phases(weeks, distance)
+        taper_weeks = [w for w in plan if get_phase(w["week"], phases) == "taper"]
+        assert taper_weeks, "expected taper weeks in plan"
+        has_sharpener = any(
+            dw.get("type") in ("tempo", "interval", "race_pace")
+            for w in taper_weeks
+            for dw in w.get("daily_workouts", [])
+            if (dw.get("distance") or 0) > 0
+        )
+        assert has_sharpener, (
+            "taper dropped all intensity — expected a short race-pace sharpener"
+        )
 
 
 class TestDurationHintBoundary:

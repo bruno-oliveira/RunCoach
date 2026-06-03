@@ -374,34 +374,58 @@ def get_phase(week_number: int, phases: Dict[str, int]) -> str:
         return "taper"
 
 
+# Loading weeks between deloads — a classic 3:1 cycle (3 loading weeks then one
+# recovery/down week). Counted continuously across base+build+peak so the
+# absorption cadence stays even regardless of phase boundaries.
+LOADING_WEEKS_PER_BLOCK = 3
+
+
+def recovery_week_set(phases: Optional[Dict[str, int]]) -> frozenset[int]:
+    """Week numbers that are deload/recovery weeks for a given phase split.
+
+    A recovery week is inserted after every ``LOADING_WEEKS_PER_BLOCK`` loading
+    weeks, counted continuously across the base+build+peak span so the cadence
+    does not reset at phase boundaries (the old per-phase counter left the most
+    common 8-12 week plans with zero deloads). Taper weeks are never recovery
+    weeks, and the final loading week before the taper is always preserved as a
+    peak-stimulus week rather than converted into a deload.
+    """
+    if not phases:
+        return frozenset()
+    loading_span = (
+        phases.get("base", 0) + phases.get("build", 0) + phases.get("peak", 0)
+    )
+    recovery: set[int] = set()
+    loading_streak = 0
+    for week in range(1, loading_span + 1):
+        # Keep the last non-taper week as a loading (peak) week — never deload it.
+        if week == loading_span:
+            break
+        if loading_streak == LOADING_WEEKS_PER_BLOCK:
+            recovery.add(week)
+            loading_streak = 0
+        else:
+            loading_streak += 1
+    return frozenset(recovery)
+
+
 def is_recovery_week(
     week_number: int, phase: str, phases: Optional[Dict[str, int]] = None
 ) -> bool:
     """
-    Determine if a week is a recovery week.
+    Determine if a week is a recovery/deload week.
 
-    Every 4th week in base and build phases is a recovery week,
-    but only if the phase is long enough (>=4 weeks) to justify it.
-    Peak phases of 4+ weeks get a recovery week in the 3rd week to
-    consolidate adaptations before taper. No recovery weeks in taper.
+    Deloads follow a global ~3:1 cadence (a recovery week after every
+    ``LOADING_WEEKS_PER_BLOCK`` loading weeks) spanning base+build+peak, so
+    every plan of ~8 weeks or longer gets at least one mid-plan absorption
+    week. No recovery weeks in taper; the final loading week before the taper
+    is always preserved. See :func:`recovery_week_set`.
     """
     if phase == "taper":
         return False
-    if phase == "peak":
-        if not phases or phases.get("peak", 0) < 4:
-            return False
-        # 3rd week of a 4+ week peak is recovery
-        peak_start = phases["base"] + phases["build"]
-        week_in_peak = week_number - peak_start
-        return week_in_peak == 3
-    if phases:
-        phase_length = phases.get(phase, 0)
-        if phase_length < 4:
-            return False
-        phase_start_week = 1 if phase == "base" else phases["base"] + 1
-        week_in_phase = week_number - phase_start_week
-        return week_in_phase > 0 and week_in_phase % 4 == 0
-    return week_number % 4 == 0
+    if not phases:
+        return week_number % 4 == 0
+    return week_number in recovery_week_set(phases)
 
 
 # Trail brackets that get an intensive weekend. Short-bracket plans (8-21 km on

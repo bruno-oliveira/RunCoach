@@ -28,6 +28,7 @@ from typing import Any, Dict, List, Optional
 
 from app.core.training import long_run_calculator, workout_builders
 from app.core.training.key_workout_library import reconcile_key_workout_text
+from app.core.training.quality_caps import MAX_EASY_RUN_KM, easy_run_cap
 from app.core.training.training_constants import get_hard_ceiling
 
 
@@ -214,18 +215,32 @@ def fill_shortfall(
 
     if long_w:
         long_d = long_w["distance"]
+
+        # On road plans easy runs are capped at an absolute ceiling so they
+        # don't become second long runs; excess volume above the cap spills
+        # into the long run (up to its hard ceiling) and anything beyond that
+        # is dropped — the week falls short rather than prescribing a second
+        # long effort (audit G3). Trail back-to-back days are intentionally
+        # long, so there the easy run is only bounded by the long run itself.
+        def _easy_cap(_long_d: float) -> float:
+            if trail_profile is not None:
+                return _long_d
+            return easy_run_cap(_long_d, MAX_EASY_RUN_KM)
+
+        cap = _easy_cap(long_d)
         for w in workouts:
-            if w.get("type") == "easy" and w.get("distance", 0) > long_d:
+            if w.get("type") == "easy" and w.get("distance", 0) > cap:
                 if not long_is_prescriptive:
-                    transferable = w["distance"] - long_d
+                    transferable = w["distance"] - cap
                     headroom = hard_ceiling - long_d
                     transfer = min(transferable, max(0, headroom))
                     if transfer > 0:
                         set_distance(w, w["distance"] - transfer, pace_zones)
                         set_distance(long_w, long_w["distance"] + transfer, pace_zones)
                         long_d = long_w["distance"]
-                if w["distance"] > long_d + 0.05:
-                    set_distance(w, long_d, pace_zones)
+                        cap = _easy_cap(long_d)
+                if w["distance"] > cap + 0.05:
+                    set_distance(w, cap, pace_zones)
 
     return round(sum(w.get("distance", 0) for w in workouts), 1)
 

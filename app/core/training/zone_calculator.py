@@ -54,14 +54,19 @@ def calculate_zones(
         e_fast = vdot_zones["E"]["pace_min_km_fast"]
         t_pace = vdot_zones["T"]["pace_min_km"]
         i_pace = vdot_zones["I"]["pace_min_km"]
-        m_pace = vdot_zones["M"]["pace_min_km"]
+        r_pace = vdot_zones["R"]["pace_min_km"]
 
         if goal_pace is not None:
             zone_5_anchor = goal_pace
             zone_5_description = "Race pace: target effort for race day"
         else:
-            zone_5_anchor = m_pace
-            zone_5_description = "Race pace: all-out benchmark effort"
+            # Zone 5 is the 95-100% HR / hardest band, so it must be strictly
+            # faster than the zone-4 VO2max band. Anchor it to R-pace
+            # (repetition / short fast reps), which truly sits at this
+            # intensity. Anchoring to marathon pace (slower than I-pace)
+            # inverted the displayed ladder.
+            zone_5_anchor = r_pace
+            zone_5_description = "Speed: short fast reps at near-max effort"
 
         zones: Dict[str, Dict[str, Any]] = {
             "zone_1_recovery": {
@@ -102,10 +107,14 @@ def calculate_zones(
         }
     else:
         ref = goal_pace if goal_pace is not None else _FALLBACK_PACE_MIN_KM
+        # With an explicit goal pace, zone 5 is that race target. Without one,
+        # zone 5 is the hardest (95-100% HR) band, so it must be faster than
+        # the zone-4 VO2max anchor (ref * 0.95) rather than equal to ref.
+        zone_5_anchor = ref if goal_pace is not None else ref * 0.90
         zone_5_description = (
             "Race pace: target effort for race day"
             if goal_pace is not None
-            else "Race pace: all-out benchmark effort"
+            else "Speed: short fast reps at near-max effort"
         )
         zones = {
             "zone_1_recovery": {
@@ -137,8 +146,8 @@ def calculate_zones(
                 "color": "#f97316",
             },
             "zone_5_race": {
-                "pace": ref,
-                "pace_range": (ref * 1.02, ref * 0.98),
+                "pace": zone_5_anchor,
+                "pace_range": (zone_5_anchor * 1.02, zone_5_anchor * 0.98),
                 "hr_range": "95-100%",
                 "description": zone_5_description,
                 "color": "#ef4444",

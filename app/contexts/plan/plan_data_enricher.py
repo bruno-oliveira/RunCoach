@@ -12,7 +12,6 @@ from app.core.training.key_workout_library import (
     build_key_workout_steps,
     reconcile_key_workout_text,
 )
-from app.core.training.quality_caps import cap_easy_distance
 from app.core.training.workout_steps import (
     _compute_distance_from_steps,
     _parse_pace_str_to_min_per_km,
@@ -20,6 +19,13 @@ from app.core.training.workout_steps import (
 from app.models import DailyWorkout, RunLog, WeeklyPlan
 
 logger = logging.getLogger(__name__)
+
+# Display inversion guard: an easy run must render strictly under the week's
+# long run. This is a render-time safety net for legacy/corrupted weeks the
+# adjuster never re-capped — distinct from (and looser than) the generation
+# easy-run cap in quality_caps, so it never retroactively shrinks a correctly
+# stored easy run, only fixes an actual easy>long inversion.
+_EASY_DISPLAY_MAX_VS_LONG = 0.95
 
 _DURATION_HINT_THRESHOLD_KM = 3.0
 _DEFAULT_PACE_MIN_PER_KM_BY_ZONE = {
@@ -229,7 +235,9 @@ def enrich_plan_data_with_ids(
                     continue
                 dist = wo.get("distance") or 0
                 if dist > 0:
-                    wo["distance"] = cap_easy_distance(dist, long_run_km)
+                    wo["distance"] = min(
+                        dist, round(long_run_km * _EASY_DISPLAY_MAX_VS_LONG, 1)
+                    )
         week["total_km"] = round(
             sum((wo.get("distance") or 0) for wo in daily),
             1,

@@ -108,14 +108,20 @@ def _effort_signal(
 ) -> SignalContribution:
     effort_sum = 0.0
     effort_weight_sum = 0.0
-    recent_efforts: List[float] = []
+    dated_efforts: List[tuple] = []
     for run in all_plan_runs:
         if run.perceived_effort is not None:
             run_date = _to_date(run.date) if run.date else today
             w = recency_weight_fn(run_date)
             effort_sum += run.perceived_effort * w
             effort_weight_sum += w
-            recent_efforts.append(run.perceived_effort)
+            dated_efforts.append((run_date, run.perceived_effort))
+
+    # Sort chronologically so the first/second-half trend split is meaningful
+    # regardless of the order the runs were fetched in (DB rowid order, Strava
+    # backfill, and edited dates can otherwise invert the trend).
+    dated_efforts.sort(key=lambda t: t[0])
+    recent_efforts: List[float] = [e for _, e in dated_efforts]
 
     if effort_weight_sum > 0:
         avg_effort = effort_sum / effort_weight_sum

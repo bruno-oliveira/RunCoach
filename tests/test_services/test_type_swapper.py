@@ -198,3 +198,46 @@ class TestApplySwap:
         wk6 = next(w for w in plan.plan_data if w["week"] == 6)
         swapped = next(w for w in wk6["daily_workouts"] if w["day"] == dw.day_of_week)
         assert swapped["type"] == "easy"
+
+    def test_swap_to_buildable_type_regenerates_steps(self, db):
+        """B8: swapping to a buildable type regenerates structured steps so the
+        card no longer renders the old type's reps."""
+        user, plan, workouts = _make_plan(db)
+        dw = workouts[(6, "interval")]
+        # Seed stale interval steps that would otherwise survive the swap.
+        wk6 = next(w for w in plan.plan_data if w["week"] == 6)
+        target = next(w for w in wk6["daily_workouts"] if w["day"] == dw.day_of_week)
+        target["steps"] = [{"label": "interval rep", "distance_m": 400}]
+        plan.plan_data = plan.plan_data
+        db.commit()
+
+        result = apply_swap(dw.id, plan.id, user.id, "easy", db)
+        assert result["swapped"] is True
+
+        plan = db.query(TrainingPlan).filter(TrainingPlan.id == plan.id).one()
+        wk6 = next(w for w in plan.plan_data if w["week"] == 6)
+        swapped = next(w for w in wk6["daily_workouts"] if w["day"] == dw.day_of_week)
+        # Steps were regenerated for the easy run, not left as the 400 m rep.
+        assert swapped.get("steps")
+        assert all(s.get("label") != "interval rep" for s in swapped["steps"])
+
+    def test_swap_to_non_buildable_type_clears_steps(self, db):
+        """B8: swapping to a log-only type (fartlek) with no day-level builder
+        clears the stale steps so the enricher falls back to the stored
+        distance + prose."""
+        user, plan, workouts = _make_plan(db)
+        dw = workouts[(6, "interval")]
+        wk6 = next(w for w in plan.plan_data if w["week"] == 6)
+        target = next(w for w in wk6["daily_workouts"] if w["day"] == dw.day_of_week)
+        target["steps"] = [{"label": "interval rep", "distance_m": 400}]
+        plan.plan_data = plan.plan_data
+        db.commit()
+
+        result = apply_swap(dw.id, plan.id, user.id, "fartlek", db)
+        assert result["swapped"] is True
+
+        plan = db.query(TrainingPlan).filter(TrainingPlan.id == plan.id).one()
+        wk6 = next(w for w in plan.plan_data if w["week"] == 6)
+        swapped = next(w for w in wk6["daily_workouts"] if w["day"] == dw.day_of_week)
+        assert swapped["type"] == "fartlek"
+        assert swapped.get("steps") == []

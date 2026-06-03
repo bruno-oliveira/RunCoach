@@ -120,6 +120,96 @@ def _future_easy(db, plan):
     )
 
 
+def _make_ascending_plan(db, *, weeks=8, weeks_ago=4):
+    """Plan whose easy/long volume rises week over week, so the missed-week
+    shift-back would inherit a *bigger* later week's load without a guard."""
+    user = User(id=_uid(), email=f"{_uid()[:8]}@test.com")
+    db.add(user)
+    db.flush()
+    start = _now() - timedelta(weeks=weeks_ago)
+
+    def _dist(wk, t):
+        # Easy/long climb with the week number; quality held flat.
+        if t == "easy":
+            return 5.0 + wk
+        if t == "long":
+            return 10.0 + wk
+        return 8.0
+
+    plan_data = [
+        {
+            "week": wk,
+            "total_km": 38,
+            "phase": "build",
+            "daily_workouts": [
+                {"day": i + 1, "type": t, "distance": _dist(wk, t)}
+                for i, t in enumerate(_WORKOUT_TYPES)
+            ],
+        }
+        for wk in range(1, weeks + 1)
+    ]
+    plan = TrainingPlan(
+        id=_uid(),
+        user_id=user.id,
+        # High current volume so the week-total growth cap stays permissive and
+        # the per-workout shift-back (not the growth cap) is the binding effect.
+        current_weekly_km=60,
+        target_distance="21.1",
+        weeks_duration=weeks,
+        vdot=45.0,
+        start_date=start,
+        plan_data=plan_data,
+    )
+    db.add(plan)
+    db.flush()
+    for wk in range(1, weeks + 1):
+        wp = WeeklyPlan(
+            id=_uid(), training_plan_id=plan.id, week_number=wk, total_km=38
+        )
+        db.add(wp)
+        db.flush()
+        for i, t in enumerate(_WORKOUT_TYPES):
+            dist = _dist(wk, t)
+            db.add(
+                DailyWorkout(
+                    id=_uid(),
+                    weekly_plan_id=wp.id,
+                    day_of_week=i + 1,
+                    workout_type=t,
+                    distance_km=dist,
+                    baseline_distance_km=dist,
+                )
+            )
+    db.commit()
+    return user, plan
+
+
+class TestMissedWeekDownwardOnly:
+    """B9: re-entry after a missed week must never push a later week ABOVE its
+    originally prescribed (baseline) load."""
+
+    def test_shift_back_never_exceeds_baseline(self, db):
+        user, plan = _make_ascending_plan(db)
+        result = recalibrate(plan.id, user.id, "missed_week", db)
+        assert result["ok"] is True
+
+        db.expire_all()
+        offenders = (
+            db.query(DailyWorkout)
+            .join(WeeklyPlan)
+            .filter(
+                WeeklyPlan.training_plan_id == plan.id,
+                DailyWorkout.workout_type.in_(["easy", "long"]),
+                DailyWorkout.distance_km > DailyWorkout.baseline_distance_km + 0.01,
+            )
+            .all()
+        )
+        assert not offenders, "missed-week recalibration raised " + ", ".join(
+            f"wk-workout {o.id[:6]} {o.distance_km}>{o.baseline_distance_km}"
+            for o in offenders
+        )
+
+
 class TestRecalibrateGuards:
     def test_plan_not_found(self, db):
         result = recalibrate("nope", "nobody", "time_off", db)

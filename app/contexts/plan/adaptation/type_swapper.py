@@ -13,11 +13,13 @@ from sqlalchemy.orm import Session
 
 from app.contexts.plan.repositories import SQLAlchemyPlanRepository
 from app.core.training.plan_calendar import compute_current_week
+from app.core.training.workout_registry import WORKOUT_REGISTRY
 from app.models import DailyWorkout, RunLog, WeeklyPlan
 from app.utils import persist_json
 from app.utils import to_date as _to_date
 
 from ._helpers import today_date
+from .reconcile import pace_zones_for, rebuild_plain_quality
 
 logger = logging.getLogger(__name__)
 
@@ -214,9 +216,11 @@ def apply_swap(
 ) -> Optional[Dict[str, Any]]:
     """Apply a type swap to a specific workout.
 
-    Updates the workout type and description.  Does not regenerate
-    structured content (steps/segments) — the swap is a type and
-    description change that simplifies the next session.
+    Updates the workout type and regenerates its structured content for the
+    new type (or clears the old steps when the target type has no day-level
+    builder, e.g. fartlek) so the card and the view enricher's steps-derived
+    distance reflect the swapped session rather than the old type's reps
+    (audit B8).
 
     Returns:
         Dict with swap details, or None if the workout was not found.
@@ -260,10 +264,31 @@ def apply_swap(
                 if week.get("week") != week_plan.week_number:
                     continue
                 for w in week.get("daily_workouts", []):
-                    if w.get("day") == workout.day_of_week:
-                        w["type"] = to_type
+                    if w.get("day") != workout.day_of_week:
+                        continue
+                    w["type"] = to_type
+                    if to_type in WORKOUT_REGISTRY:
+                        # Regenerate structured steps/description/distance for
+                        # the new type so the card stays in lockstep.
+                        authoritative = rebuild_plain_quality(
+                            w,
+                            distance=workout.distance_km or w.get("distance") or 0.0,
+                            day=int(workout.day_of_week),
+                            total_km=week.get("total_km") or 0.0,
+                            phase=week.get("phase", "build"),
+                            pace_zones=pace_zones_for(training_plan),
+                        )
+                        workout.distance_km = authoritative
+                        w["description"] = (
+                            f"{w.get('description') or ''} {swap_note}".strip()
+                        )
+                    else:
+                        # No day-level builder for the target type — drop the
+                        # old type's steps so the enricher falls back to the
+                        # stored distance + prose instead of stale reps.
+                        w["steps"] = []
                         w["description"] = workout.notes
-                        break
+                    break
             training_plan.plan_data = plan_data
             # In-place JSON mutation + same-reference reassignment is not
             # flagged dirty by SQLAlchemy; force the column to persist (same

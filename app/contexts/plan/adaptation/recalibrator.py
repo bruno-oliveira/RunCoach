@@ -15,6 +15,7 @@ from app.utils import to_date as _to_date
 from ._helpers import batch_workouts_by_week, parse_plan_data_lookups, today_date
 from .adjustment_results import record_adaptation_event
 from .missed_week_handler import recalibrate_missed_week
+from .reconcile import pace_zones_for, reconcile_plan_data_to_orm
 from .recovery_inserter import recalibrate_recovery_insertion
 from .safety import enforce_future_growth_cap, enforce_week_structure
 
@@ -158,12 +159,16 @@ def recalibrate(
     if growth_changed > 0:
         weeks_changed += growth_changed
 
-    for wk_num in ordered_future:
-        workouts = workouts_by_week.get(weekly_plans[wk_num].id, [])
-        for workout in workouts:
-            pd_wo = pd_workout.get((wk_num, workout.day_of_week))
-            if pd_wo:
-                pd_wo["distance"] = workout.distance_km
+    # Reconcile structured steps + weekly chips to the post-cap ORM distances
+    # (shared with the weekly adjuster) so guard-moved easy/long/quality runs
+    # don't render a stale steps total (audit B7).
+    reconcile_plan_data_to_orm(
+        [weekly_plans[wk] for wk in ordered_future],
+        workouts_by_week,
+        pd_workout,
+        pd_week,
+        pace_zones_for(training_plan),
+    )
 
     training_plan.plan_data = plan_data
     persist_json(training_plan, "plan_data")

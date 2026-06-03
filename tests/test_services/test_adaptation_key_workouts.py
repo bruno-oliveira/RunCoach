@@ -585,3 +585,79 @@ def test_time_defined_key_workout_stays_consistent_under_adaptation(db):
     # warm-up/cool-down flexes) rather than the full volume multiplier.
     orm = db.query(DailyWorkout).filter(DailyWorkout.weekly_plan_id == wp.id).one()
     assert abs(orm.distance_km - pd_wo["distance"]) <= 0.01
+
+
+def _build_taper_week_plan(db: Session):
+    """One future taper week (week 2) holding an easy + long run with baselines."""
+    user = User(id=_uid(), email=f"{_uid()[:8]}@test.com")
+    db.add(user)
+    db.flush()
+
+    pace_zones = VDOTCalculator.get_pace_zones(45.0)
+    easy = build_workout(
+        "easy", day=2, distance=8.0, total_km=25.0, phase="taper", pace_zones=pace_zones
+    )
+    long = build_workout(
+        "long",
+        day=6,
+        distance=12.0,
+        total_km=25.0,
+        phase="taper",
+        pace_zones=pace_zones,
+    )
+    week = {
+        "week": 2,
+        "total_km": 20.0,
+        "phase": "taper",
+        "daily_workouts": [easy, long],
+    }
+    plan = TrainingPlan(
+        id=_uid(),
+        user_id=user.id,
+        current_weekly_km=40,
+        target_distance="21.1",
+        weeks_duration=8,
+        vdot=45.0,
+        plan_data=[week],
+    )
+    db.add(plan)
+    db.flush()
+    wp = WeeklyPlan(id=_uid(), training_plan_id=plan.id, week_number=2, total_km=20.0)
+    db.add(wp)
+    db.flush()
+    for wo, day, wtype in ((easy, 2, "easy"), (long, 6, "long")):
+        db.add(
+            DailyWorkout(
+                id=_uid(),
+                weekly_plan_id=wp.id,
+                day_of_week=day,
+                workout_type=wtype,
+                distance_km=wo["distance"],
+                baseline_distance_km=wo["distance"],
+            )
+        )
+    db.commit()
+    return plan, wp
+
+
+def test_positive_adaptation_never_inflates_taper(db):
+    """G2: the taper is sacrosanct — a positive (boost) multiplier must not
+    scale taper easy/long runs above their prescribed distance."""
+    plan, wp = _build_taper_week_plan(db)
+    before = {w["day"]: w["distance"] for w in plan.plan_data[0]["daily_workouts"]}
+
+    apply_adjustment_to_future_weeks(
+        plan,
+        [wp],
+        1.20,  # strong positive signal
+        db,
+        current_week=1,
+        current_day_of_week=1,
+    )
+
+    for w in plan.plan_data[0]["daily_workouts"]:
+        assert w["distance"] <= before[w["day"]] + 0.01, (
+            f"taper {w['type']} inflated {before[w['day']]} -> {w['distance']}"
+        )
+    for orm in db.query(DailyWorkout).filter(DailyWorkout.weekly_plan_id == wp.id):
+        assert orm.distance_km <= before[orm.day_of_week] + 0.01

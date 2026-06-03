@@ -178,6 +178,15 @@ MAX_QUALITY_VS_LONG_RUN = 0.85
 # Individual easy runs may not exceed this fraction of the long run distance.
 MAX_EASY_VS_LONG_RUN = 0.95
 
+# Absolute ceiling on a single easy run (km), ~70-80 min of easy running.
+# This is the primary lever for keeping plans polarized (80/20): a fraction of
+# the long run alone can't stop a 30 km long run from spawning an 18 km "easy"
+# run on low-run-count plans, but an absolute ceiling can. Applied to road
+# plans only (trail back-to-back long days are intentional). When the weekly
+# volume won't fit under this cap, the week intentionally falls short rather
+# than prescribing a second long effort (audit G3).
+MAX_EASY_RUN_KM = 14.0
+
 # Base phase reduces quality caps by this factor.
 BASE_PHASE_QUALITY_REDUCTION = 0.80
 
