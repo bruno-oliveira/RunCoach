@@ -93,6 +93,57 @@ def generate_strength_session(
     return _build_strength_session(focus, phase, experience_level, week_number)
 
 
+def attach_strength_sessions(
+    workouts: List[Dict[str, Any]],
+    week_number: int,
+    phase: str,
+    *,
+    experience_level: str = "beginner",
+    target_distance: float = 0.0,
+    trail_profile=None,
+    attach_types: tuple = ("easy",),
+    max_sessions: Optional[int] = None,
+) -> List[Dict[str, Any]]:
+    """Attach periodized strength sessions to a week's run days.
+
+    Shared by every generator (road / performance / fitness / beginner) so
+    they all get the same phase/experience/trail-aware strength engine
+    instead of only the road plan attaching it (audit G8).
+
+    Strength is hung on the runner's *easy* days by default — the engine
+    treats them as the recovery slot — but ``attach_types`` lets generators
+    with differently-named easy slots (e.g. beginner ``run_walk``) opt those
+    in too. ``max_sessions`` caps how many strength sessions a week gets
+    (beginners get one); taper weeks already self-limit to one.
+
+    Mutates each chosen workout in place (sets ``strength_session``) and
+    returns the list of attached sessions for the week-level
+    ``strength_training`` summary.
+    """
+    attached: List[Dict[str, Any]] = []
+    session_index = 0
+    for workout in workouts:
+        if max_sessions is not None and len(attached) >= max_sessions:
+            break
+        if workout.get("type") not in attach_types:
+            continue
+        session = generate_strength_session(
+            workout.get("day", 0),
+            week_number,
+            phase,
+            "easy",
+            session_index=session_index,
+            experience_level=experience_level,
+            target_distance=target_distance,
+            trail_profile=trail_profile,
+        )
+        if session:
+            workout["strength_session"] = session
+            attached.append(session)
+            session_index += 1
+    return attached
+
+
 def generate_long_run(
     day: int, distance: float, total_km: float, pace_zones: Optional[Dict] = None
 ) -> Dict[str, Any]:

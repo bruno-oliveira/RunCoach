@@ -26,9 +26,26 @@ __all__ = [
     "generate_cruise_interval_workout",
     "generate_tempo_workout",
     "generate_fartlek_workout",
+    "generate_race_pace_workout",
     "generate_time_trial_workout",
     "generate_long_run",
 ]
+
+
+def _race_pace_min_km(
+    zones: Dict, focus_distance: Optional[float], vdot: Optional[float]
+) -> float:
+    """Goal race pace (min/km) for the fitness focus distance.
+
+    Derived from VDOT for the chosen race distance so a 5K focus and a Half
+    focus prescribe genuinely different paces (audit G9). Falls back to the
+    threshold band when VDOT is unavailable.
+    """
+    if vdot and focus_distance and focus_distance > 0:
+        secs = VDOTCalculator.predict_time_for_distance(vdot, focus_distance)
+        if secs:
+            return secs / focus_distance / 60.0
+    return zones["zone_3_tempo"]["pace"]
 
 
 def generate_vo2max_workout(
@@ -284,22 +301,135 @@ def generate_time_trial_workout(
     }
 
 
-def generate_long_run(zones: Dict, distance_km: float, week: int, phase: str) -> Dict:
-    """Generate a long aerobic run (capped at 25% of weekly mileage, max ~18km)."""
+def generate_race_pace_workout(
+    zones: Dict,
+    weekly_km: float,
+    week: int,
+    phase: str,
+    focus_distance: Optional[float] = None,
+    vdot: Optional[float] = None,
+) -> Dict:
+    """Race-specific session at goal pace for the focus distance (audit G9).
+
+    Short races (≤12 km focus) get 1 km reps; longer races get continuous
+    2 km blocks, mirroring how race specificity sharpens toward the goal.
+    """
+    warmup_pace = zones["zone_1_recovery"]["pace"]
+    race_pace = _race_pace_min_km(zones, focus_distance, vdot)
+
+    pct_map = {"base": 0.15, "build": 0.20, "peak": 0.25, "taper": 0.12}
+    target_rp_km = max(2.0, weekly_km * pct_map.get(phase, 0.18))
+
+    short_race = (focus_distance or 10.0) <= 12.0
+    interval_m = 1000 if short_race else 2000
+    recovery_min = 2
+    interval_km = interval_m / 1000
+    reps = max(2, min(6, round(target_rp_km / interval_km)))
+
+    total_interval_km = round(interval_km * reps, 1)
+    warmup_km = 2
+    cooldown_km = 2
+
+    segments = [
+        _warmup_segment(warmup_km, warmup_pace),
+        {
+            "name": "Race-Pace Reps",
+            "distance_km": total_interval_km,
+            "pace_formatted": _shared_format_pace(race_pace),
+            "pace_raw": race_pace,
+            "zone": "zone_3",
+            "zone_label": "Zone 3",
+            "type": "main",
+            "intervals": {
+                "reps": reps,
+                "interval_m": interval_m,
+                "recovery_min": recovery_min,
+            },
+        },
+        _cooldown_segment(cooldown_km, warmup_pace),
+    ]
+
+    total_km = round(sum(s["distance_km"] for s in segments), 1)
+    dist_label = (
+        f"{focus_distance:g}km" if focus_distance and focus_distance > 0 else "race"
+    )
+
+    return {
+        "type": "race_pace",
+        "intensity": "high",
+        "zone": "zone_3",
+        "target_pace": race_pace,
+        "target_pace_formatted": _shared_format_pace(race_pace),
+        "description": (
+            f"{total_km:.0f}km race-pace: {warmup_km}km warmup, "
+            f"{reps}x{interval_m}m at {_shared_format_pace(race_pace)} "
+            f"({dist_label} goal pace, {recovery_min}min jog), {cooldown_km}km cooldown"
+        ),
+        "distance": total_km,
+        "quality": True,
+        "segments": segments,
+        "total_duration_est_min": estimate_duration_min(segments),
+    }
+
+
+def generate_long_run(
+    zones: Dict,
+    distance_km: float,
+    week: int,
+    phase: str,
+    race_pace: Optional[float] = None,
+) -> Dict:
+    """Generate a long aerobic run (capped at 25% of weekly mileage, max ~18km).
+
+    In peak weeks, when a goal ``race_pace`` is known, the final ~25% is run
+    at race pace so the long run rehearses race specificity (audit G9).
+    """
     easy_pace = zones["zone_1_recovery"]["pace"]
     long_run_km = round(distance_km, 1)
 
-    segments = [
-        {
-            "name": "Long Run",
-            "distance_km": long_run_km,
-            "pace_formatted": _shared_format_pace(easy_pace),
-            "pace_raw": easy_pace,
-            "zone": "zone_1",
-            "zone_label": "Zone 1",
-            "type": "main",
-        },
-    ]
+    if race_pace and phase == "peak" and long_run_km >= 8.0:
+        finish_km = round(long_run_km * 0.25, 1)
+        easy_km = round(long_run_km - finish_km, 1)
+        segments = [
+            {
+                "name": "Long Run",
+                "distance_km": easy_km,
+                "pace_formatted": _shared_format_pace(easy_pace),
+                "pace_raw": easy_pace,
+                "zone": "zone_1",
+                "zone_label": "Zone 1",
+                "type": "main",
+            },
+            {
+                "name": "Goal-Pace Finish",
+                "distance_km": finish_km,
+                "pace_formatted": _shared_format_pace(race_pace),
+                "pace_raw": race_pace,
+                "zone": "zone_3",
+                "zone_label": "Zone 3",
+                "type": "main",
+            },
+        ]
+        description = (
+            f"{long_run_km:.0f}km long run: {easy_km:.0f}km easy at "
+            f"{_shared_format_pace(easy_pace)}, final {finish_km:.0f}km at "
+            f"{_shared_format_pace(race_pace)} (goal race pace)"
+        )
+    else:
+        segments = [
+            {
+                "name": "Long Run",
+                "distance_km": long_run_km,
+                "pace_formatted": _shared_format_pace(easy_pace),
+                "pace_raw": easy_pace,
+                "zone": "zone_1",
+                "zone_label": "Zone 1",
+                "type": "main",
+            },
+        ]
+        description = (
+            f"{long_run_km:.0f}km long run at {_shared_format_pace(easy_pace)}"
+        )
 
     return {
         "type": "long",
@@ -307,7 +437,7 @@ def generate_long_run(zones: Dict, distance_km: float, week: int, phase: str) ->
         "zone": "zone_1",
         "target_pace": easy_pace,
         "target_pace_formatted": _shared_format_pace(easy_pace),
-        "description": f"{long_run_km:.0f}km long run at {_shared_format_pace(easy_pace)}",
+        "description": description,
         "distance": long_run_km,
         "quality": False,
         "segments": segments,

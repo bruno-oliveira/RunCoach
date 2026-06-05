@@ -10,6 +10,7 @@ from fastapi.responses import HTMLResponse
 from sqlalchemy.orm import Session
 
 from app.contexts.runner.fitness.race_pacing_service import RacePacingService
+from app.contexts.runner.fitness.race_predictor_service import RacePredictorService
 from app.contexts.runner.queries import count_prior_trail_runs
 from app.dependencies import get_db, get_optional_user
 from app.infrastructure.integrations.gpx_service import GPXService
@@ -94,8 +95,19 @@ async def analyze_gpx(
         trail_runs_count = (
             count_prior_trail_runs(current_user.id, db) if current_user else None
         )
+        endurance_factor = (
+            RacePredictorService.compute_endurance_factor(
+                current_user.id, distance_km, db, current_vdot=user_vdot
+            )
+            if current_user
+            else None
+        )
         time_data = RacePacingService.predict_elevation_adjusted_time(
-            user_vdot, distance_km, elevation_profile, trail_runs_count=trail_runs_count
+            user_vdot,
+            distance_km,
+            elevation_profile,
+            trail_runs_count=trail_runs_count,
+            endurance_factor=endurance_factor,
         )
         flat_time = time_data["flat_time"]
         elevation_adjusted = time_data["elevation_adjusted"]
@@ -162,7 +174,7 @@ def generate_blueprint(
         vdot_info = RacePacingService.get_user_vdot(current_user.id, db)
 
     user_vdot = vdot_info["vdot"]
-    if user_vdot <= 0:
+    if user_vdot <= 0 or current_user is None:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="No VDOT data available. Log some runs first to get race predictions.",
@@ -171,6 +183,9 @@ def generate_blueprint(
     distance_km = request.distance_km or elevation_profile[-1]["end_km"]
     target_time = request.target_time_seconds
     trail_runs_count = count_prior_trail_runs(current_user.id, db)
+    endurance_factor = RacePredictorService.compute_endurance_factor(
+        current_user.id, distance_km, db, current_vdot=user_vdot
+    )
 
     if target_time is None or target_time <= 0:
         target_time = RacePacingService.predict_elevation_adjusted_time(
@@ -178,6 +193,7 @@ def generate_blueprint(
             distance_km,
             elevation_profile,
             trail_runs_count=trail_runs_count,
+            endurance_factor=endurance_factor,
         )["elevation_adjusted"]
 
     blueprint = RacePacingService.generate_pace_blueprint(
@@ -186,6 +202,7 @@ def generate_blueprint(
         user_vdot=user_vdot,
         distance_km=distance_km,
         trail_runs_count=trail_runs_count,
+        endurance_factor=endurance_factor,
     )
 
     session_id = str(uuid.uuid4())

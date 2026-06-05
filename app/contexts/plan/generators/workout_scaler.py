@@ -32,6 +32,55 @@ from app.core.training.quality_caps import MAX_EASY_RUN_KM, easy_run_cap
 from app.core.training.training_constants import get_hard_ceiling
 
 
+def long_run_pace_min_km(pace_zones: Optional[Dict]) -> Optional[float]:
+    """Long-run pace (min/km) from VDOT zones, for the long-run time cap.
+
+    Returns None when no VDOT-derived zones are available so the time cap is
+    skipped rather than guessed (audit E7 time cap).
+    """
+    if not pace_zones:
+        return None
+    e_zone = pace_zones.get("E")
+    if not isinstance(e_zone, dict):
+        return None
+    long_sub = e_zone.get("sub_zones", {}).get("long_run")
+    src = long_sub if isinstance(long_sub, dict) else e_zone
+    # E-zone bands expose slow/fast bounds rather than a single pace_min_km;
+    # the slow bound is the more conservative (longer-time) estimate.
+    return (
+        src.get("pace_min_km")
+        or src.get("pace_min_km_slow")
+        or src.get("pace_min_km_fast")
+    )
+
+
+def enforce_long_run_time_cap(
+    workouts: List[Dict[str, Any]],
+    pace_zones: Optional[Dict] = None,
+    trail_profile=None,
+) -> None:
+    """Final clamp keeping a road long run under ``MAX_LONG_RUN_HOURS``.
+
+    ``fill_shortfall`` can spill capped-easy volume back into the long run, so
+    this runs last: a slow runner's long run never exceeds the time ceiling,
+    even if the week falls a little short as a result. Trail/ultra and
+    prescriptive key long runs are left untouched (audit E7 time cap).
+    """
+    if trail_profile is not None:
+        return
+    pace = long_run_pace_min_km(pace_zones)
+    if not pace or pace <= 0:
+        return
+    time_cap_km = round((long_run_calculator.MAX_LONG_RUN_HOURS * 60.0) / pace, 1)
+    for w in workouts:
+        if (
+            w.get("type") == "long"
+            and not w.get("key_workout_id")
+            and w.get("distance", 0) > time_cap_km
+        ):
+            rebuild_long_run(w, time_cap_km, pace_zones)
+
+
 def is_prescriptive(workout: Dict[str, Any]) -> bool:
     """Workouts whose ``distance``, ``description`` and ``steps`` are tightly
     coupled and must not be rescaled by week-level budget arithmetic.

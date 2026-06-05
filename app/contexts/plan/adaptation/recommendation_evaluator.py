@@ -118,6 +118,26 @@ def evaluate_weekly_recommendation(
         details.append(f"Effort is trending high ({avg_effort:.1f}/10).")
     if signals.get("overreach_detected"):
         details.append("Overreach signals detected — recovery prioritized.")
+
+    # Surface the form (TSB) and readiness context the engine already computes
+    # but previously dropped from the reason string (audit E1).
+    tsb = signals.get("tsb")
+    tsb_form = signals.get("tsb_form")
+    if tsb is not None and tsb_form == "deep":
+        details.append(f"Form is deeply fatigued (TSB {tsb:+.0f}) — easing back.")
+    elif tsb is not None and tsb_form == "fatigued":
+        details.append(f"Form is carrying fatigue (TSB {tsb:+.0f}).")
+    elif tsb is not None and tsb_form == "fresh" and direction == "increase":
+        details.append(f"Form is fresh (TSB {tsb:+.0f}) — room to build.")
+    readiness_count = signals.get("readiness_log_count") or 0
+    readiness_factor = signals.get("readiness_factor")
+    if (
+        readiness_count >= 2
+        and readiness_factor is not None
+        and readiness_factor < 0.97
+    ):
+        details.append("Recent readiness check-ins are trending low.")
+
     if details:
         reason += " " + " ".join(details)
 
@@ -139,6 +159,12 @@ def evaluate_weekly_recommendation(
                 "overreach_detected",
                 "current_phase",
                 "per_type_ratios",
+                "tsb",
+                "tsb_form",
+                "ctl",
+                "atl",
+                "readiness_factor",
+                "readiness_log_count",
             )
             if k in signals
         },

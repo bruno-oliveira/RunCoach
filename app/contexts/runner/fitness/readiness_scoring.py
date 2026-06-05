@@ -130,8 +130,50 @@ def score_long_run(
     return score, detail
 
 
-def score_taper(current_week: int, total_weeks: int) -> tuple[float, str]:
-    """Score taper positioning."""
+def _freshness_from_tsb(tsb: float, in_taper: bool) -> float:
+    """Map TSB (form) to a 0-100 freshness score, contextualized by phase.
+
+    Near the race (taper) you want TSB rising toward positive — lingering
+    fatigue means the taper isn't working, so it scores low. Mid-plan,
+    moderate negative TSB is *productive* fatigue and only deep overreaching
+    is penalized.
+    """
+    if in_taper:
+        if tsb >= 10:
+            return 100.0
+        if tsb >= 5:
+            return 90.0
+        if tsb >= 0:
+            return 75.0
+        if tsb >= -10:
+            return 55.0
+        if tsb >= -20:
+            return 35.0
+        return 20.0
+    # Build / peak: negative TSB expected.
+    if tsb >= 5:
+        return 85.0
+    if tsb >= -10:
+        return 80.0
+    if tsb >= -25:
+        return 70.0
+    if tsb >= -35:
+        return 50.0
+    return 35.0
+
+
+def score_taper(
+    current_week: int,
+    total_weeks: int,
+    tsb: Optional[float] = None,
+    tsb_form: Optional[str] = None,
+) -> tuple[float, str]:
+    """Score taper positioning, reconciled with actual TSB freshness.
+
+    The calendar position sets the base expectation; when a trustworthy TSB
+    is available it blends in (60/40) so an overreached runner two weeks out
+    no longer reads a flat "Strong" purely from the calendar (audit G7).
+    """
     if total_weeks == 0:
         return 50.0, "No plan data"
     if current_week == 0:
@@ -140,13 +182,23 @@ def score_taper(current_week: int, total_weeks: int) -> tuple[float, str]:
     progress_pct = current_week / total_weeks
 
     if progress_pct >= 0.85:
-        return 95.0, "Taper phase -- trust the training"
+        base, detail = 95.0, "Taper phase -- trust the training"
     elif progress_pct >= 0.70:
-        return 85.0, "Peak training phase -- key workouts matter most now"
+        base, detail = 85.0, "Peak training phase -- key workouts matter most now"
     elif progress_pct >= 0.40:
-        return 70.0, "Build phase -- stay consistent"
+        base, detail = 70.0, "Build phase -- stay consistent"
     else:
-        return 55.0, "Base phase -- building foundation"
+        base, detail = 55.0, "Base phase -- building foundation"
+
+    if tsb is None:
+        return base, detail
+
+    freshness = _freshness_from_tsb(tsb, in_taper=progress_pct >= 0.85)
+    final = round(base * 0.6 + freshness * 0.4, 1)
+    detail += f" · Form TSB {tsb:+.0f}"
+    if tsb_form:
+        detail += f" ({tsb_form})"
+    return final, detail
 
 
 def vdot_for_goal_time(

@@ -9,7 +9,15 @@ from sqlalchemy.orm import Session, sessionmaker
 from sqlalchemy.pool import StaticPool
 
 from app.contexts.plan.adaptation import AdaptationService
-from app.models import Base, DailyWorkout, RunLog, TrainingPlan, User, WeeklyPlan
+from app.models import (
+    Base,
+    DailyWorkout,
+    ReadinessLog,
+    RunLog,
+    TrainingPlan,
+    User,
+    WeeklyPlan,
+)
 
 
 def _now():
@@ -405,3 +413,56 @@ class TestResetRecalibration:
 
         result = svc.reset_adjustment(plan.id, user.id, db)
         assert result["reset"] is False
+
+
+def _add_readiness(db, user, *, score, status, days=3):
+    """Add `days` consecutive recent readiness logs at the given score/status."""
+    today = _now().date()
+    for i in range(days):
+        db.add(
+            ReadinessLog(
+                id=_uid(),
+                user_id=user.id,
+                log_date=today - timedelta(days=i),
+                sleep=2 if score < 50 else 4,
+                soreness=2 if score < 50 else 4,
+                energy=2 if score < 50 else 4,
+                stress=4 if score < 50 else 2,
+                score=score,
+                status=status,
+            )
+        )
+    db.commit()
+
+
+class TestIntraWeekReadinessAlert:
+    """Audit E1 — a same-week readiness nudge from recent check-ins."""
+
+    def test_low_readiness_fires_alert(self, db):
+        svc = AdaptationService()
+        user, plan = _create_plan(db, weeks=10, weeks_ago=6)
+        _link_workouts(db, plan, user, [4, 5, 6])  # no missed-workout alert
+        _add_readiness(db, user, score=30, status="rest")
+
+        result = svc.check_alerts(plan.id, user.id, db)
+        assert result is not None
+        assert result["type"] == "readiness_low"
+        assert plan.adaptation_alert["type"] == "readiness_low"
+
+    def test_good_readiness_no_alert(self, db):
+        svc = AdaptationService()
+        user, plan = _create_plan(db, weeks=10, weeks_ago=6)
+        _link_workouts(db, plan, user, [4, 5, 6])
+        _add_readiness(db, user, score=85, status="ready")
+
+        assert svc.check_alerts(plan.id, user.id, db) is None
+
+    def test_readiness_alert_available_before_week_4(self, db):
+        """Intra-week readiness applies even before the missed-workout window."""
+        svc = AdaptationService()
+        user, plan = _create_plan(db, weeks=10, weeks_ago=1)  # current_week ~2
+        _add_readiness(db, user, score=25, status="rest")
+
+        result = svc.check_alerts(plan.id, user.id, db)
+        assert result is not None
+        assert result["type"] == "readiness_low"

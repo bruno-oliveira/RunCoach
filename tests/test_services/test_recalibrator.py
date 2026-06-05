@@ -373,3 +373,65 @@ class TestDetectors:
             "skipped": 0,
             "rescheduled": 0,
         }
+
+
+def _quality_runs(db, user, plan, *, avg_pace, planned_pace, count, wtype="tempo"):
+    """Add `count` recent quality runs with given actual/planned pace."""
+    today = _now()
+    for i in range(count):
+        db.add(
+            RunLog(
+                id=_uid(),
+                user_id=user.id,
+                training_plan_id=plan.id,
+                date=today - timedelta(days=i * 3),
+                distance_km=8.0,
+                duration_minutes=8.0 * avg_pace,
+                avg_pace_min_km=avg_pace,
+                planned_pace_min_km=planned_pace,
+                workout_type=wtype,
+            )
+        )
+    db.commit()
+
+
+class TestPaceHitRecalibration:
+    """Audit E5 — recalibrate VDOT from quality-session pace hit-rate."""
+
+    def test_faster_than_target_implies_higher_vdot(self, db):
+        from app.contexts.plan.adaptation.vdot_recalibrator import (
+            _pace_hit_implied_vdot,
+        )
+
+        user, plan = _make_plan(db)
+        _quality_runs(db, user, plan, avg_pace=3.7, planned_pace=4.0, count=5)
+        implied = _pace_hit_implied_vdot(plan.id, user.id, db, 50.0)
+        assert implied is not None and implied > 50.0
+
+    def test_slower_than_target_implies_lower_vdot(self, db):
+        from app.contexts.plan.adaptation.vdot_recalibrator import (
+            _pace_hit_implied_vdot,
+        )
+
+        user, plan = _make_plan(db)
+        _quality_runs(db, user, plan, avg_pace=4.5, planned_pace=4.0, count=5)
+        implied = _pace_hit_implied_vdot(plan.id, user.id, db, 50.0)
+        assert implied is not None and implied < 50.0
+
+    def test_on_target_returns_none(self, db):
+        from app.contexts.plan.adaptation.vdot_recalibrator import (
+            _pace_hit_implied_vdot,
+        )
+
+        user, plan = _make_plan(db)
+        _quality_runs(db, user, plan, avg_pace=4.0, planned_pace=4.0, count=5)
+        assert _pace_hit_implied_vdot(plan.id, user.id, db, 50.0) is None
+
+    def test_thin_sample_returns_none(self, db):
+        from app.contexts.plan.adaptation.vdot_recalibrator import (
+            _pace_hit_implied_vdot,
+        )
+
+        user, plan = _make_plan(db)
+        _quality_runs(db, user, plan, avg_pace=3.5, planned_pace=4.0, count=2)
+        assert _pace_hit_implied_vdot(plan.id, user.id, db, 50.0) is None

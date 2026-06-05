@@ -13,6 +13,7 @@ from app.core.training import phase_calculator
 from app.core.training.key_workout_library import (
     overlay_key_workout as _overlay_key_workout_shared,
 )
+from app.core.training.strength_plan import derive_experience_level
 from app.core.training.training_constants import calculate_week_in_phase
 from app.core.training.tuning import (
     BASE_PHASE_END_FRACTION,
@@ -28,12 +29,14 @@ from app.core.training.tuning import (
     WEEK_OVER_WEEK_CAP,
 )
 from app.core.training.vdot_calculator import VDOTCalculator
+from app.core.training.workout_builders import attach_strength_sessions
 
 from .fitness_workout_builders import (
     generate_cruise_interval_workout,
     generate_easy_run,
     generate_fartlek_workout,
     generate_long_run,
+    generate_race_pace_workout,
     generate_tempo_workout,
     generate_time_trial_workout,
     generate_vo2max_ladder,
@@ -90,6 +93,7 @@ _COACHING_TYPE_MAP = {
     "vo2max": "interval",
     "vo2max_ladder": "interval",
     "cruise_interval": "tempo",
+    "race_pace": "tempo",
     "time_trial": "interval",
 }
 
@@ -162,6 +166,7 @@ class FitnessPlanGenerator:
         phase: str,
         week_in_phase: int,
         vdot_zones: Optional[Dict],
+        target_distance: float = 10.0,
     ) -> None:
         """Attach key workout details for quality sessions."""
         library_type = _LIBRARY_TYPE_MAP.get(workout["type"])
@@ -171,7 +176,7 @@ class FitnessPlanGenerator:
             workout,
             library_type,
             phase,
-            target_distance=10.0,
+            target_distance=target_distance,
             week_in_phase=week_in_phase,
             pace_zones=vdot_zones,
         )
@@ -190,8 +195,22 @@ class FitnessPlanGenerator:
         vdot_zones: Optional[Dict] = None,
         week_in_phase: int = 0,
         is_time_trial_week: bool = False,
+        focus_distance: Optional[float] = None,
+        experience_level: str = "intermediate",
     ) -> Dict[str, Any]:
         quality_percent = phases_rich[phase]["quality_percent"]
+
+        # Race specificity: a real focus distance threads through overlay,
+        # coaching, race-pace sessions and the goal-pace long-run finish so
+        # a 5K focus and a Half focus produce different plans (audit G9).
+        target_distance = (
+            focus_distance if focus_distance and focus_distance > 0 else 10.0
+        )
+        goal_race_pace = None
+        if vdot and focus_distance and focus_distance > 0:
+            secs = VDOTCalculator.predict_time_for_distance(vdot, focus_distance)
+            if secs:
+                goal_race_pace = secs / focus_distance / 60.0
 
         if is_recovery:
             quality_workouts_needed = 0 if is_time_trial_week else 1
@@ -209,7 +228,7 @@ class FitnessPlanGenerator:
             {
                 "day": 6,
                 "workout_generator": lambda: generate_long_run(
-                    zones, long_run_km, week_number, phase
+                    zones, long_run_km, week_number, phase, race_pace=goal_race_pace
                 ),
             }
         )
@@ -232,7 +251,14 @@ class FitnessPlanGenerator:
             priority = _FITNESS_QUALITY_PRIORITY.get(
                 focus_area, _FITNESS_QUALITY_PRIORITY["balanced"]
             )
-            quality_types = priority.get(phase, ["tempo", "vo2max"])
+            quality_types = list(priority.get(phase, ["tempo", "vo2max"]))
+
+            # Peak weeks get a race-specific session at goal pace when a focus
+            # distance is set, so peak fitness converts into race readiness.
+            if phase == "peak" and focus_distance and focus_distance > 0:
+                quality_types = ["race_pace"] + [
+                    t for t in quality_types if t != "race_pace"
+                ]
 
             generators = {
                 "vo2max": lambda: generate_vo2max_workout(
@@ -249,6 +275,9 @@ class FitnessPlanGenerator:
                 ),
                 "fartlek": lambda: generate_fartlek_workout(
                     zones, weekly_km, week_number, phase
+                ),
+                "race_pace": lambda: generate_race_pace_workout(
+                    zones, weekly_km, week_number, phase, focus_distance, vdot
                 ),
             }
 
@@ -330,20 +359,30 @@ class FitnessPlanGenerator:
                     phase,
                     week_in_phase,
                     vdot_zones,
+                    target_distance,
                 )
             coaching_type = _COACHING_TYPE_MAP.get(workout["type"], workout["type"])
             workout["coaching_rationale"] = generate_coaching_note(
                 coaching_type,
                 phase,
                 week_number,
-                10.0,
+                target_distance,
                 is_recovery,
+                pace_zones=vdot_zones,
             )
             if is_time_trial_week and workout["type"] == "time_trial":
                 workout["coaching_rationale"] = (
                     f"Time Trial Week {week_number}: Give a maximal effort over the prescribed distance. "
                     "Use this result to track your VDOT progress and adjust training paces."
                 )
+
+        strength_sessions = attach_strength_sessions(
+            daily_workouts,
+            week_number,
+            phase,
+            experience_level=experience_level,
+            target_distance=target_distance,
+        )
 
         actual_total_km = sum(w["distance"] for w in daily_workouts)
 
@@ -358,6 +397,7 @@ class FitnessPlanGenerator:
                 1 for w in daily_workouts if w.get("quality", False)
             ),
             "daily_workouts": daily_workouts,
+            "strength_training": strength_sessions,
         }
 
     def generate_plan(
@@ -386,6 +426,8 @@ class FitnessPlanGenerator:
         peak_km = min(current_weekly_km * FITNESS_PEAK_MULTIPLIER, FITNESS_PEAK_CAP_KM)
         peak_km = max(peak_km, current_weekly_km * FITNESS_PEAK_FLOOR_MULTIPLIER)
 
+        experience_level = derive_experience_level(current_weekly_km)
+
         km_progression = self._calculate_fitness_mileage(
             current_weekly_km, weeks, phase_durations, peak_km
         )
@@ -412,6 +454,8 @@ class FitnessPlanGenerator:
                 vdot_zones,
                 week_in_phase,
                 is_tt,
+                focus_distance=focus_distance,
+                experience_level=experience_level,
             )
             weekly_plans.append(weekly_plan)
 

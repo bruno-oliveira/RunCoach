@@ -16,8 +16,10 @@ from app.core.training.key_workout_library import (
     overlay_key_workout as _overlay_key_workout_shared,
 )
 from app.core.training.quality_caps import enforce_week_caps
+from app.core.training.strength_plan import derive_experience_level
 from app.core.training.training_constants import calculate_week_in_phase
 from app.core.training.vdot_calculator import VDOTCalculator
+from app.core.training.workout_builders import attach_strength_sessions
 
 from .performance_workout_builders import (
     generate_easy_run,
@@ -142,6 +144,7 @@ class PerformancePlanGenerator:
         is_recovery: bool,
         vdot_zones: Optional[Dict] = None,
         week_in_phase: int = 0,
+        experience_level: str = "intermediate",
     ) -> Dict[str, Any]:
         quality_percent = phases_rich[phase]["quality_percent"]
 
@@ -284,7 +287,16 @@ class PerformancePlanGenerator:
                 week_number,
                 target_distance,
                 is_recovery,
+                pace_zones=vdot_zones,
             )
+
+        strength_sessions = attach_strength_sessions(
+            daily_workouts,
+            week_number,
+            phase,
+            experience_level=experience_level,
+            target_distance=target_distance,
+        )
 
         actual_total_km = sum(w["distance"] for w in daily_workouts)
         is_valid, validation_msg = self._validate_week_plan(
@@ -301,6 +313,7 @@ class PerformancePlanGenerator:
                 1 for w in daily_workouts if w.get("quality", False)
             ),
             "daily_workouts": daily_workouts,
+            "strength_training": strength_sessions,
             "validation": {"valid": is_valid, "message": validation_msg},
         }
 
@@ -413,6 +426,8 @@ class PerformancePlanGenerator:
             vdot=vdot,
         )
 
+        experience_level = derive_experience_level(current_weekly_km)
+
         weekly_plans = []
         for week_num in range(1, weeks + 1):
             phase = phase_calculator.get_phase(week_num, phase_durations)
@@ -433,6 +448,7 @@ class PerformancePlanGenerator:
                 is_recovery,
                 vdot_zones=vdot_zones,
                 week_in_phase=week_in_phase,
+                experience_level=experience_level,
             )
             weekly_plans.append(weekly_plan)
 

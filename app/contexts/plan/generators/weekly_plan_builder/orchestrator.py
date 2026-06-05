@@ -17,7 +17,13 @@ from app.contexts.plan.generators.workout_scaler import (
     enforce_long_run_ratio_cap as _enforce_long_run_ratio_cap,
 )
 from app.contexts.plan.generators.workout_scaler import (
+    enforce_long_run_time_cap as _enforce_long_run_time_cap,
+)
+from app.contexts.plan.generators.workout_scaler import (
     fill_shortfall as _fill_shortfall,
+)
+from app.contexts.plan.generators.workout_scaler import (
+    long_run_pace_min_km as _long_run_pace_min_km,
 )
 from app.contexts.plan.generators.workout_scaler import (
     scale_down as _scale_down,
@@ -118,6 +124,7 @@ def generate_daily_workouts(
         profile=profile,
         trail_profile=trail_profile,
         training_terrain=terrain,
+        long_run_pace_min_km=_long_run_pace_min_km(pace_zones),
     )
     quality_distances = long_run_calculator.calculate_quality_distances(
         total_km,
@@ -164,7 +171,6 @@ def generate_daily_workouts(
     )
 
     easy_run_idx = 0
-    strength_session_idx = 0
     workouts: List[Dict[str, Any]] = []
 
     for day in range(7):
@@ -207,29 +213,24 @@ def generate_daily_workouts(
             trail_profile=trail_profile,
         )
 
-        if workout_type == "easy":
-            strength_session = workout_builders.generate_strength_session(
-                day_number,
-                week_number,
-                phase,
-                workout_type,
-                session_index=strength_session_idx,
-                experience_level=experience_level,
-                target_distance=target_distance,
-                trail_profile=trail_profile,
-            )
-            if strength_session:
-                workout["strength_session"] = strength_session
-                strength_session_idx += 1
-
         workout["coaching_rationale"] = generate_coaching_note(
             workout_type,
             phase,
             week_number,
             target_distance,
             is_recovery_week,
+            pace_zones=pace_zones,
         )
         workouts.append(workout)
+
+    workout_builders.attach_strength_sessions(
+        workouts,
+        week_number,
+        phase,
+        experience_level=experience_level,
+        target_distance=target_distance,
+        trail_profile=trail_profile,
+    )
 
     return workouts
 
@@ -325,6 +326,11 @@ def build_weekly_plan(
         trail_profile=trail_profile,
         pace_zones=pace_zones,
     )
+
+    # Final word on the long run: clamp to the road time ceiling even after
+    # shortfall-filling may have spilled volume back into it (audit E7).
+    _enforce_long_run_time_cap(workouts, pace_zones, trail_profile=trail_profile)
+    actual_total_km = round(sum(w.get("distance", 0) for w in workouts), 1)
 
     attach_duration_hints(workouts, pace_zones)
 

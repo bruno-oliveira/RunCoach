@@ -1,13 +1,15 @@
 """VDOT recalibration — update pace zones when fitness changes."""
 
 import logging
+import statistics
+from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, Optional
 
 from sqlalchemy.orm import Session
 
 from app.core.training.plan_calendar import compute_current_week
 from app.core.training.vdot_calculator import VDOTCalculator
-from app.models import TrainingPlan
+from app.models import RunLog, TrainingPlan
 from app.utils import to_date as _to_date
 
 from ._helpers import parse_plan_data_lookups, today_date
@@ -15,6 +17,73 @@ from ._helpers import parse_plan_data_lookups, today_date
 logger = logging.getLogger(__name__)
 
 _VDOT_RECALIBRATION_THRESHOLD = 1.0
+
+# Session-hit-rate recalibration (audit E5) — Runna-style "Pace Insights".
+# Pace deviation thresholds mirror the coaching pattern analyzer so the two
+# surfaces agree: consistently faster than target ⇒ fitter than the plan
+# VDOT, consistently slower ⇒ the target is too hot (or the runner is
+# fatigued). Warmup/cooldown dilution biases the average slow, so the
+# "slower" band is wider and its VDOT sensitivity gentler.
+_PACE_HIT_MIN_SAMPLE = 4
+_PACE_HIT_LOOKBACK_WEEKS = 6
+_PACE_HIT_FAST_DEV = -0.05
+_PACE_HIT_SLOW_DEV = 0.08
+_PACE_HIT_FAST_SENSITIVITY = 20.0
+_PACE_HIT_SLOW_SENSITIVITY = 12.0
+_PACE_HIT_MAX_DELTA = 2.0
+_PACE_HIT_QUALITY_TYPES = ("tempo", "interval", "threshold")
+
+
+def _pace_hit_implied_vdot(
+    plan_id: str,
+    user_id: str,
+    db: Session,
+    plan_vdot: float,
+) -> Optional[float]:
+    """VDOT implied by how the runner hits prescribed quality-session paces.
+
+    Beyond the after-races-only signal, this reads completed tempo/interval
+    sessions and compares actual to planned pace. A consistent, multi-session
+    deviation nudges VDOT — letting the plan recalibrate from training even
+    when the runner hasn't raced (audit E5). Returns None when the sample is
+    thin or the deviation sits inside the neutral band.
+    """
+    cutoff = (
+        datetime.now(timezone.utc) - timedelta(weeks=_PACE_HIT_LOOKBACK_WEEKS)
+    ).replace(tzinfo=None)
+
+    runs = (
+        db.query(RunLog)
+        .filter(
+            RunLog.training_plan_id == plan_id,
+            RunLog.user_id == user_id,
+            RunLog.planned_pace_min_km.isnot(None),
+            RunLog.avg_pace_min_km.isnot(None),
+            RunLog.date >= cutoff,
+        )
+        .all()
+    )
+
+    deviations = [
+        (r.avg_pace_min_km - r.planned_pace_min_km) / r.planned_pace_min_km
+        for r in runs
+        if r.effective_workout_type in _PACE_HIT_QUALITY_TYPES
+        and r.planned_pace_min_km
+        and r.avg_pace_min_km
+    ]
+
+    if len(deviations) < _PACE_HIT_MIN_SAMPLE:
+        return None
+
+    median_dev = statistics.median(deviations)
+
+    if median_dev <= _PACE_HIT_FAST_DEV:
+        delta = min(_PACE_HIT_MAX_DELTA, -median_dev * _PACE_HIT_FAST_SENSITIVITY)
+        return round(plan_vdot + delta, 1)
+    if median_dev >= _PACE_HIT_SLOW_DEV:
+        delta = min(_PACE_HIT_MAX_DELTA, median_dev * _PACE_HIT_SLOW_SENSITIVITY)
+        return round(plan_vdot - delta, 1)
+    return None
 
 
 def recalibrate_zones_only(
@@ -34,17 +103,34 @@ def recalibrate_zones_only(
     if not plan_vdot:
         return None
 
-    current_vdot = RacePredictorService.get_best_recent_vdot(
+    # Primary signal: best recent race-like efforts.
+    recent_vdot = RacePredictorService.get_best_recent_vdot(
         user_id,
         weeks=12,
         db=db,
     )
-    if not current_vdot:
+
+    target_vdot: Optional[float] = None
+    source = "recent_efforts"
+    if recent_vdot and abs(recent_vdot - plan_vdot) >= _VDOT_RECALIBRATION_THRESHOLD:
+        target_vdot = recent_vdot
+
+    # Fallback: recalibrate from how the runner hits prescribed quality paces
+    # when there's no race-effort move to act on (audit E5).
+    if target_vdot is None:
+        pace_implied = _pace_hit_implied_vdot(training_plan.id, user_id, db, plan_vdot)
+        if (
+            pace_implied is not None
+            and abs(pace_implied - plan_vdot) >= _VDOT_RECALIBRATION_THRESHOLD
+        ):
+            target_vdot = pace_implied
+            source = "training_paces"
+
+    if target_vdot is None:
         return None
 
+    current_vdot = target_vdot
     delta = current_vdot - plan_vdot
-    if abs(delta) < _VDOT_RECALIBRATION_THRESHOLD:
-        return None
 
     new_zones = VDOTCalculator.get_pace_zones(current_vdot)
     if not new_zones:
@@ -115,11 +201,12 @@ def recalibrate_zones_only(
 
     direction = "improved" if delta > 0 else "decreased"
     logger.info(
-        "VDOT recalibration: plan=%s old=%.1f new=%.1f delta=%.1f pace_updates=%d weekly_updates=%d",
+        "VDOT recalibration: plan=%s old=%.1f new=%.1f delta=%.1f source=%s pace_updates=%d weekly_updates=%d",
         training_plan.id,
         old_vdot,
         current_vdot,
         delta,
+        source,
         pace_updates,
         weekly_updates,
     )
@@ -130,6 +217,7 @@ def recalibrate_zones_only(
         "new_vdot": round(current_vdot, 1),
         "delta": round(delta, 1),
         "direction": direction,
+        "source": source,
         "pace_updates": pace_updates,
         "weekly_plans_updated": weekly_updates,
     }

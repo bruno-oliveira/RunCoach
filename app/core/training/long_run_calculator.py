@@ -31,6 +31,12 @@ from app.core.training.tuning import (
     TRAIL_PEAK_RACE_FRACTION_FLAT as _TRAIL_PEAK_RACE_FRACTION_FLAT,
 )
 
+# Road long-run time ceiling: beyond ~3 hours the injury / recovery cost of a
+# single run outweighs the aerobic benefit, so a slow runner shouldn't be
+# handed a 3.5 h+ long run just because the % cap permits the distance. Trail /
+# ultra is intentionally excluded — time-on-feet is the training goal there.
+MAX_LONG_RUN_HOURS = 3.0
+
 
 def get_trail_peak_race_fraction(
     trail_profile: TrailProfile,
@@ -197,6 +203,7 @@ def calculate_long_run_distance(
     profile: Optional[dict] = None,
     trail_profile: Optional[TrailProfile] = None,
     training_terrain: str | None = None,
+    long_run_pace_min_km: Optional[float] = None,
 ) -> float:
     """
     Calculate long run distance with proper progression and phase-specific percentage.
@@ -251,6 +258,13 @@ def calculate_long_run_distance(
             training_terrain=training_terrain,
         )
         long_run_base = min(long_run_base, total_km * weekly_cap_ratio)
+
+    # Road-only long-run time cap, layered on the % cap (audit E7 time cap).
+    # Applied only when a real pace is known (from VDOT zones) so a fit runner
+    # without logged pace data is never falsely shortened. Trail/ultra opt out.
+    if trail_profile is None and long_run_pace_min_km and long_run_pace_min_km > 0:
+        time_cap_km = (MAX_LONG_RUN_HOURS * 60.0) / long_run_pace_min_km
+        long_run_base = min(long_run_base, time_cap_km)
 
     # Profile-aware: gentle week-1 nudge only (not a hard cap)
     if profile and week_number == 1:

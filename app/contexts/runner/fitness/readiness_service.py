@@ -89,6 +89,31 @@ def _build_component_dict(score: float, weight: int, detail: str) -> Dict[str, A
     }
 
 
+def _current_form(user_id: str, db: Session) -> tuple[Optional[float], Optional[str]]:
+    """Current (TSB, form) for the runner, or (None, None) if not trustworthy.
+
+    Only a high-confidence load reading is used so new runners — whose CTL/ATL
+    are still warming up — don't get a misleading freshness reconciliation
+    (audit B4/G7).
+    """
+    try:
+        from app.contexts.runner.fitness.training_load_service import (
+            TrainingLoadService,
+        )
+
+        load = TrainingLoadService.get_training_load(user_id, db)
+    except Exception as e:  # pragma: no cover - defensive
+        logger.warning("Training-load lookup for readiness failed: %s", e)
+        return None, None
+
+    if not load or not load.get("available"):
+        return None, None
+    current = load.get("current") or {}
+    if current.get("load_confidence") != "high":
+        return None, None
+    return current.get("tsb"), current.get("form")
+
+
 class ReadinessService:
     """Computes race readiness from plan + run log data."""
 
@@ -162,7 +187,13 @@ class ReadinessService:
         long_run_score, long_run_detail = score_long_run(
             longest_run_km, planned_long_run_km, plan.target_distance
         )
-        taper_score, taper_detail = score_taper(current_week, total_weeks)
+
+        # Reconcile the calendar taper score with the runner's actual TSB
+        # freshness, when a trustworthy load reading is available (audit G7).
+        tsb, tsb_form = _current_form(user_id, db)
+        taper_score, taper_detail = score_taper(
+            current_week, total_weeks, tsb=tsb, tsb_form=tsb_form
+        )
         vdot_score, vdot_detail, predictions, vdot_data = score_vdot(
             user_id, plan.target_distance, db, goal_time=plan.goal_time
         )

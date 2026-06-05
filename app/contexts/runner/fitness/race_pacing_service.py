@@ -92,17 +92,27 @@ class RacePacingService:
         }
 
     @staticmethod
-    def predict_flat_time(vdot: float, distance_km: float) -> int:
+    def predict_flat_time(
+        vdot: float,
+        distance_km: float,
+        endurance_factor: Optional[float] = None,
+    ) -> int:
         """Predict flat-ground race time in seconds from VDOT.
 
         Args:
             vdot: User's VDOT value.
             distance_km: Race distance.
+            endurance_factor: Optional personalized endurance multiplier
+                (>= 1.0) so the race-day pacing plan matches the same
+                endurance-adjusted prediction shown on the predictions card
+                (audit E3).
 
         Returns:
             Predicted time in seconds.
         """
-        predicted = VDOTCalculator.predict_time_for_distance(vdot, distance_km)
+        predicted = VDOTCalculator.predict_time_for_distance(
+            vdot, distance_km, endurance_factor=endurance_factor
+        )
         return predicted if predicted else 0
 
     @staticmethod
@@ -111,15 +121,19 @@ class RacePacingService:
         distance_km: float,
         elevation_profile: list[dict[str, Any]],
         trail_runs_count: Optional[int] = None,
+        endurance_factor: Optional[float] = None,
     ) -> dict[str, int]:
         """Calculate a realistic race time from segment-level elevation data.
 
         Combines a piecewise grade penalty (12 → 16 → 24 → 35 sec/km/% as the
         grade gets steeper), a downhill bonus capped at 15 sec/km, an
-        ultra-endurance decay for events beyond 3 hours, and a
-        trail-inexperience multiplier for runners with few logged trail runs.
+        ultra-endurance decay for events beyond 3 hours, a personalized
+        endurance multiplier, and a trail-inexperience multiplier for runners
+        with few logged trail runs.
         """
-        flat_time = RacePacingService.predict_flat_time(vdot, distance_km)
+        flat_time = RacePacingService.predict_flat_time(
+            vdot, distance_km, endurance_factor=endurance_factor
+        )
         if flat_time == 0:
             return {
                 "flat_time": 0,
@@ -220,6 +234,7 @@ class RacePacingService:
         user_vdot: float,
         distance_km: float,
         trail_runs_count: Optional[int] = None,
+        endurance_factor: Optional[float] = None,
     ) -> RaceBlueprint:
         """Generate a segment-by-segment pacing blueprint.
 
@@ -230,9 +245,15 @@ class RacePacingService:
         multiplier (as is the case for trail courses), each segment's pace
         carries that slowdown too.
         """
-        flat_time = RacePacingService.predict_flat_time(user_vdot, distance_km)
+        flat_time = RacePacingService.predict_flat_time(
+            user_vdot, distance_km, endurance_factor=endurance_factor
+        )
         elevation_data = RacePacingService.predict_elevation_adjusted_time(
-            user_vdot, distance_km, elevation_profile, trail_runs_count=trail_runs_count
+            user_vdot,
+            distance_km,
+            elevation_profile,
+            trail_runs_count=trail_runs_count,
+            endurance_factor=endurance_factor,
         )
 
         base_pace_sec_per_km = (

@@ -2,6 +2,12 @@
 
 from typing import Any, Dict, List
 
+from app.core.training.workout_builders import attach_strength_sessions
+
+# Strength is introduced once the running habit is established, not in the
+# first couple of weeks when an absolute beginner is barely running.
+_STRENGTH_START_DISPLAY_WEEK = 3
+
 BEGINNER_WEEKS = {
     1: {
         "run": 1,
@@ -177,7 +183,76 @@ class BeginnerPlanGenerator:
             )
             plan.append(week_plan)
 
+        self._enforce_monotonic_volume(plan, target_distance)
+        self._attach_beginner_strength(plan, target_distance)
+
         return plan
+
+    def _enforce_monotonic_volume(
+        self, plan: List[Dict[str, Any]], target_distance: float
+    ) -> None:
+        """Keep weekly volume non-decreasing across the build (taper may dip).
+
+        A beginner seeing weekly km regress week-over-week is confusing; the
+        run/walk → continuous transition naturally produces dips. We top up a
+        short week proportionally across its running days — not by dumping the
+        whole deficit on one session — and cap any single session at a
+        beginner-safe ceiling so we never invent an unrealistic long run
+        (audit G10). When the cap binds, the week settles on a plateau.
+        """
+        session_cap = round(target_distance * 1.5, 1)
+        prev_total = 0.0
+        for week in plan:
+            if week.get("phase") == "taper":
+                prev_total = week.get("total_km", 0.0)
+                continue
+            total = week.get("total_km", 0.0)
+            runs = [w for w in week["daily_workouts"] if w.get("distance", 0) > 0]
+            if total < prev_total - 0.05 and runs and total > 0:
+                scale = prev_total / total
+                for w in runs:
+                    w["distance"] = round(min(session_cap, w["distance"] * scale), 1)
+                week["total_km"] = round(
+                    sum(w.get("distance", 0) for w in week["daily_workouts"]), 1
+                )
+            prev_total = week.get("total_km", 0.0)
+
+    def _attach_beginner_strength(
+        self, plan: List[Dict[str, Any]], target_distance: float
+    ) -> None:
+        """Hang one light strength session per week once habit is established."""
+        for week in plan:
+            display_week = week.get("week", 0)
+            if display_week < _STRENGTH_START_DISPLAY_WEEK:
+                week.setdefault("strength_training", [])
+                continue
+            sessions = attach_strength_sessions(
+                week["daily_workouts"],
+                display_week,
+                week.get("phase", "base"),
+                experience_level="beginner",
+                target_distance=target_distance,
+                attach_types=("easy", "run_walk", "long"),
+                max_sessions=1,
+            )
+            week["strength_training"] = sessions
+
+    def _session_distance_km(
+        self,
+        run_min: float,
+        walk_min: float,
+        repeats: int,
+        extra_run_min: float = 0.0,
+    ) -> float:
+        """Estimate one session's distance from its *running* minutes.
+
+        Walking recovery doesn't count as training distance, so per-workout
+        km are honest (not 0) and track running capability — which grows far
+        more smoothly than total run+walk time (audit G10).
+        """
+        run_total = run_min * repeats + extra_run_min
+        run_km = run_total / self._pace_min_km if self._pace_min_km else 0.0
+        return round(run_km, 1)
 
     def _generate_couch_to_5k_week(
         self,
@@ -186,48 +261,101 @@ class BeginnerPlanGenerator:
         display_week: int = 0,
         target_distance: float = 5.0,
     ) -> Dict[str, Any]:
-        """Generate a single week for Couch to 5K plan."""
-        week_config = BEGINNER_WEEKS.get(week_number, BEGINNER_WEEKS[10])
+        """Generate a single week for Couch to 5K plan.
+
+        The three weekly sessions are differentiated rather than cloned: the
+        early days run the canonical week structure, while the final day is a
+        slightly longer "endurance" session, and every session carries a real
+        distance derived from its run/walk minutes (audit G10).
+        """
+        cfg = BEGINNER_WEEKS.get(week_number, BEGINNER_WEEKS[10])
         display = display_week or week_number
+        continuous = cfg["walk"] == 0
 
-        workouts = []
         days = self._get_workout_days(max_runs)
+        std_km = self._session_distance_km(cfg["run"], cfg["walk"], cfg["repeats"])
 
-        for i, day in enumerate(days):
-            workout = {
-                "day": day,
-                "type": "easy" if week_config["walk"] == 0 else "run_walk",
-                "distance": 0,
-                "intensity": "low",
-                "notes": week_config["notes"],
-                "duration_min": week_config["total_min"],
-                "run_min": week_config["run"],
-                "walk_min": week_config["walk"],
-                "repeats": week_config["repeats"],
-            }
-            workouts.append(workout)
-
-        assumed_pace_km_per_min = 1 / self._pace_min_km
-        estimated_km = (
-            round(
-                week_config["total_min"]
-                * assumed_pace_km_per_min
-                * (week_config["run"] / (week_config["run"] + week_config["walk"]))
-                * max_runs,
-                1,
-            )
-            if week_config["run"] > 0
-            else 0
+        # The endurance day adds running: one extra interval on run/walk
+        # weeks, or ~25% more running on continuous weeks.
+        if continuous:
+            extra_run_min = round(cfg["run"] * 0.25, 1)
+            endurance_repeats = cfg["repeats"]
+        else:
+            extra_run_min = 0.0
+            endurance_repeats = cfg["repeats"] + 1
+        endurance_km = self._session_distance_km(
+            cfg["run"], cfg["walk"], endurance_repeats, extra_run_min=extra_run_min
         )
+
+        workouts: List[Dict[str, Any]] = []
+        last_idx = len(days) - 1
+        for i, day in enumerate(days):
+            is_endurance = i == last_idx and max_runs >= 2
+            if is_endurance:
+                if continuous:
+                    longer_min = int(round(cfg["run"] + extra_run_min))
+                    notes = (
+                        f"Endurance day — run {longer_min} minutes continuously, "
+                        "a touch longer than your other runs. Keep it easy."
+                    )
+                    duration_min = longer_min
+                else:
+                    notes = (
+                        f"Endurance day — run {cfg['run']:g} min / walk "
+                        f"{cfg['walk']:g} min, {endurance_repeats} times "
+                        "(one extra round). Build the habit of going a little longer."
+                    )
+                    duration_min = int(
+                        round((cfg["run"] + cfg["walk"]) * endurance_repeats)
+                    )
+                workouts.append(
+                    {
+                        "day": day,
+                        "type": "long" if continuous else "run_walk",
+                        "distance": endurance_km,
+                        "intensity": "low",
+                        "notes": notes,
+                        "duration_min": duration_min,
+                        "run_min": cfg["run"],
+                        "walk_min": cfg["walk"],
+                        "repeats": endurance_repeats,
+                    }
+                )
+            else:
+                notes = cfg["notes"]
+                if i == 1:
+                    notes = (
+                        cfg["notes"] + " (Session 2 — same structure; stay relaxed.)"
+                    )
+                workouts.append(
+                    {
+                        "day": day,
+                        "type": "easy" if continuous else "run_walk",
+                        "distance": std_km,
+                        "intensity": "low",
+                        "notes": notes,
+                        "duration_min": cfg["total_min"],
+                        "run_min": cfg["run"],
+                        "walk_min": cfg["walk"],
+                        "repeats": cfg["repeats"],
+                    }
+                )
+
+        total_km = round(sum(w["distance"] for w in workouts), 1)
+        long_count = 1 if (max_runs >= 2 and continuous) else 0
 
         return {
             "week": display,
-            "total_km": estimated_km,
+            "total_km": total_km,
             "phase": "beginner",
             "daily_workouts": workouts,
             "training_tips": self._get_beginner_tips(week_number, target_distance),
             "is_beginner_plan": True,
-            "workout_distribution": {"easy": max_runs, "rest": 7 - max_runs},
+            "workout_distribution": {
+                "long": long_count,
+                "easy": max_runs - long_count,
+                "rest": 7 - max_runs,
+            },
         }
 
     def _generate_10k_extension_week(

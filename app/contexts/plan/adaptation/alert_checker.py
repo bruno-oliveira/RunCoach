@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session
 
 from app.contexts.plan.repositories import SQLAlchemyPlanRepository
 from app.core.training.plan_calendar import compute_current_week
-from app.models import DailyWorkout, RunLog, TrainingPlan, WeeklyPlan
+from app.models import DailyWorkout, ReadinessLog, RunLog, TrainingPlan, WeeklyPlan
 from app.utils import to_date as _to_date
 
 from ._helpers import today_date
@@ -43,7 +43,9 @@ def check_alerts(
     )
 
     if current_week < 4:
-        return None
+        # Before the 3-week missed-workout window has data, the lightweight
+        # intra-week readiness advisory still applies (audit E1).
+        return _check_readiness_alert(training_plan, user_id, db, today)
 
     # Graduated cooldown after recalibration:
     #   Week 1: suppress all alerts
@@ -120,11 +122,79 @@ def check_alerts(
     if fatigue_alert:
         return fatigue_alert
 
+    # Lower-priority intra-week readiness advisory (audit E1).
+    readiness_alert = _check_readiness_alert(training_plan, user_id, db, today)
+    if readiness_alert:
+        return readiness_alert
+
     if training_plan.adaptation_alert is not None:
         training_plan.adaptation_alert = None
         db.commit()
 
     return None
+
+
+def _check_readiness_alert(
+    training_plan: TrainingPlan,
+    user_id: str,
+    db: Session,
+    today,
+) -> Optional[Dict[str, Any]]:
+    """Light intra-week readiness check from recent self-reported check-ins.
+
+    Unlike the weekly recommendation (which only fires after a week
+    completes), this surfaces a same-week nudge when the runner's recent
+    morning readiness logs trend low — so a fatigued athlete is advised to
+    ease the next quality session rather than push through (audit E1).
+    """
+    recent = (
+        db.query(ReadinessLog)
+        .filter(
+            ReadinessLog.user_id == user_id,
+            ReadinessLog.log_date >= today - timedelta(days=4),
+        )
+        .order_by(ReadinessLog.log_date.desc())
+        .limit(4)
+        .all()
+    )
+
+    existing = training_plan.adaptation_alert
+
+    scores = [r.score for r in recent if r.score is not None]
+    if len(scores) < 2:
+        # Not enough signal — clear only a stale readiness advisory.
+        if existing and existing.get("type") == "readiness_low":
+            training_plan.adaptation_alert = None
+            db.commit()
+        return None
+
+    avg = sum(scores) / len(scores)
+    low_statuses = sum(1 for r in recent if r.status in ("rest", "caution"))
+    poor = avg < 45 or low_statuses >= 2
+
+    if not poor:
+        if existing and existing.get("type") == "readiness_low":
+            training_plan.adaptation_alert = None
+            db.commit()
+        return None
+
+    # Never clobber a higher-severity alert already on display.
+    if existing and existing.get("severity") == "high":
+        return None
+
+    alert = {
+        "type": "readiness_low",
+        "severity": "medium",
+        "message": (
+            f"Your recent readiness check-ins are low (avg {round(avg)}/100). "
+            "Ease your next quality session or add a recovery day before pushing on."
+        ),
+        "suggestion": "ease_next_session",
+        "created_at": today.isoformat(),
+    }
+    training_plan.adaptation_alert = alert
+    db.commit()
+    return alert
 
 
 def _check_fatigue_alert(

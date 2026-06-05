@@ -4,7 +4,7 @@ Generates 2-3 sentence rationales that explain the physiological benefit,
 the training-phase context, and a brief execution tip.
 """
 
-from typing import Dict, Optional
+from typing import Any, Dict, Optional
 
 # Coaching rationale templates keyed by (workout_type, phase)
 # Each value is a string; {distance_name} and {phase} are interpolated if present.
@@ -188,12 +188,89 @@ _FALLBACK: Dict[str, str] = {
 }
 
 
+def _band_pace_str(pace_zones: Dict[str, Any], key: str) -> Optional[str]:
+    """Formatted pace for a top-level VDOT band (E/M/T/I/R), if present."""
+    zone = pace_zones.get(key)
+    if isinstance(zone, dict):
+        return zone.get("pace_str")
+    return None
+
+
+def _sub_pace_str(pace_zones: Dict[str, Any], sub: str) -> Optional[str]:
+    """Formatted pace for an E sub-zone (easy / recovery / long_run)."""
+    e = pace_zones.get("E")
+    if isinstance(e, dict):
+        sub_zone = e.get("sub_zones", {}).get(sub)
+        if isinstance(sub_zone, dict):
+            return sub_zone.get("pace_str")
+        return e.get("pace_str")
+    return None
+
+
+def build_pace_cue(
+    workout_type: str,
+    phase: str,
+    pace_zones: Optional[Dict[str, Any]],
+) -> Optional[str]:
+    """One concrete pace/rep cue grounded in the runner's VDOT zones (audit E2).
+
+    Turns the static rationale into something actionable ("Run the reps at
+    3:54/km (I-pace)") and tightens toward race effort in peak. Returns None
+    when paces are unavailable so callers fall back to prose only.
+    """
+    if not pace_zones:
+        return None
+
+    if workout_type == "easy":
+        easy = _sub_pace_str(pace_zones, "easy")
+        return f"Today's target: around {easy} (E-pace)." if easy else None
+
+    if workout_type == "long":
+        long_pace = _sub_pace_str(pace_zones, "long_run")
+        if not long_pace:
+            return None
+        cue = f"Settle in around {long_pace} (long-run pace)."
+        m_pace = _band_pace_str(pace_zones, "M")
+        if phase == "peak" and m_pace:
+            cue += (
+                f" Lift the final stretch to {m_pace} (M-pace) to rehearse race effort."
+            )
+        return cue
+
+    if workout_type == "tempo":
+        t_pace = _band_pace_str(pace_zones, "T")
+        if not t_pace:
+            return None
+        if phase == "peak":
+            return f"Lock into {t_pace} (T-pace) — controlled-hard, race-sharpening."
+        return f"Hold {t_pace} (T-pace) through the threshold portion."
+
+    if workout_type == "interval":
+        i_pace = _band_pace_str(pace_zones, "I")
+        return (
+            f"Run the reps at {i_pace} (I-pace) with full recovery between."
+            if i_pace
+            else None
+        )
+
+    if workout_type == "hill":
+        r_pace = _band_pace_str(pace_zones, "R")
+        return (
+            f"Drive each rep at ~{r_pace} (R-pace) effort; jog down to recover."
+            if r_pace
+            else None
+        )
+
+    return None
+
+
 def generate_coaching_note(
     workout_type: str,
     phase: str,
     week_number: int,
     target_distance: float,
     is_recovery_week: bool = False,
+    pace_zones: Optional[Dict[str, Any]] = None,
 ) -> Optional[str]:
     """Generate a coaching rationale for a given workout.
 
@@ -203,6 +280,8 @@ def generate_coaching_note(
         week_number: 1-based week number within the plan
         target_distance: Target race distance in km
         is_recovery_week: Whether this is a planned recovery/down week
+        pace_zones: Optional VDOT pace zones; when supplied, a concrete
+            pace/rep cue is appended (audit E2)
 
     Returns:
         2-3 sentence coaching note, or None for unknown types
@@ -226,5 +305,9 @@ def generate_coaching_note(
             " Note: this is a planned recovery week — "
             "distances are intentionally reduced to let your body absorb recent training."
         )
+
+    cue = build_pace_cue(workout_type, phase, pace_zones)
+    if cue:
+        note += " " + cue
 
     return note
