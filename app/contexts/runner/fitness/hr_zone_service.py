@@ -7,6 +7,9 @@ from sqlalchemy.orm import Session
 
 from app.core.training.hr_zone_calculator import (
     DEFAULT_MAX_HR,
+    HR_ZONES_VERSION,
+    MAX_HR_SPIKE_TOLERANCE_BPM,
+    MAX_RELIABLE_MAX_HR,
     MIN_RELIABLE_MAX_HR,
     HRZoneCalculator,
 )
@@ -17,20 +20,41 @@ logger = logging.getLogger(__name__)
 
 
 def detect_max_hr_from_runs(user_id: str, db: Session) -> Optional[int]:
-    """Query run_logs for the highest reliable max_heart_rate."""
+    """Estimate max HR from run data, robust to single-sensor spikes.
+
+    Optical wrist sensors routinely glitch 15-30 BPM high (cadence lock,
+    loose strap), and the old "take the single highest reading ever" picked
+    those spikes up permanently, inflating every zone for every future plan.
+
+    Strategy: take the top recorded per-run max values inside the plausible
+    human band; accept the highest only if the second-highest run
+    corroborates it (within MAX_HR_SPIKE_TOLERANCE_BPM), otherwise fall back
+    to the corroborated second reading. A single qualifying run is still
+    accepted - one data point beats an age formula.
+    """
     from app.models import RunLog
 
-    result = (
+    rows = (
         db.query(RunLog.max_heart_rate)
         .filter(
             RunLog.user_id == user_id,
             RunLog.max_heart_rate.isnot(None),
             RunLog.max_heart_rate >= MIN_RELIABLE_MAX_HR,
+            RunLog.max_heart_rate <= MAX_RELIABLE_MAX_HR,
         )
         .order_by(RunLog.max_heart_rate.desc())
-        .first()
+        .limit(5)
+        .all()
     )
-    return result[0] if result else None
+    readings = [r[0] for r in rows]
+    if not readings:
+        return None
+    if len(readings) == 1:
+        return readings[0]
+    top, second = readings[0], readings[1]
+    if top - second > MAX_HR_SPIKE_TOLERANCE_BPM:
+        return second
+    return top
 
 
 def get_user_max_hr(
@@ -79,6 +103,7 @@ class HRZoneService:
             "max_hr": max_hr,
             "source": source,
             "zones": zones,
+            "version": HR_ZONES_VERSION,
         }
         plan.max_heart_rate = max_hr
 
@@ -114,3 +139,11 @@ class HRZoneService:
         if not plan.hr_zones_data:
             return None
         return plan.hr_zones_data
+
+    @staticmethod
+    def zones_are_stale(plan: TrainingPlan) -> bool:
+        """True when the plan carries zones from an older zone model."""
+        data = plan.hr_zones_data
+        if not data:
+            return False  # nothing stored; the "missing" path handles this
+        return data.get("version", 1) < HR_ZONES_VERSION

@@ -21,7 +21,7 @@ PACE_ZONES = {
     "M": {"pace_min_km": 5.0},
     "E": {"pace_min_km_slow": 6.0, "pace_min_km_fast": 5.5},
 }
-HR_ZONES = HRZoneCalculator.calculate_zones(190)  # Z1 95-114 ... Z5 171-190
+HR_ZONES = HRZoneCalculator.calculate_zones(190)  # Z1 114-133 ... Z5 180-190
 
 
 class TestPaceToTier:
@@ -41,11 +41,12 @@ class TestPaceToTier:
 
 class TestHrToTier:
     def test_zones(self):
-        assert hr_to_tier(100, HR_ZONES) == RECOVERY  # Z1
-        assert hr_to_tier(125, HR_ZONES) == EASY  # Z2
-        assert hr_to_tier(145, HR_ZONES) == MODERATE  # Z3
-        assert hr_to_tier(165, HR_ZONES) == TEMPO  # Z4
-        assert hr_to_tier(180, HR_ZONES) == INTERVAL  # Z5
+        assert hr_to_tier(120, HR_ZONES) == RECOVERY  # Z1 (114-133)
+        assert hr_to_tier(140, HR_ZONES) == EASY  # Z2 (133-152)
+        assert hr_to_tier(155, HR_ZONES) == MODERATE  # Z3 lower half
+        assert hr_to_tier(163, HR_ZONES) == TEMPO  # Z3 upper half
+        assert hr_to_tier(172, HR_ZONES) == INTERVAL  # Z4 (167-180)
+        assert hr_to_tier(185, HR_ZONES) == INTERVAL  # Z5 (180-190)
 
     def test_missing_inputs(self):
         assert hr_to_tier(None, HR_ZONES) is None

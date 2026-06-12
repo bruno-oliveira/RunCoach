@@ -14,20 +14,27 @@ class TestCalculateZones:
         for i in range(len(zones) - 1):
             assert zones[i]["max_bpm"] <= zones[i + 1]["min_bpm"]
 
-    def test_zone_1_starts_at_50_pct(self):
+    def test_zone_1_starts_at_60_pct(self):
+        # Running-specific banding: Z1 starts at 60% of max (Daniels' floor
+        # for easy running), not the generic 50% all-sports band.
         zones = HRZoneCalculator.calculate_zones(200)
-        assert zones[0]["min_bpm"] == 100  # 50% of 200
+        assert zones[0]["min_bpm"] == 120  # 60% of 200
 
     def test_zone_5_max_is_max_hr(self):
         zones = HRZoneCalculator.calculate_zones(200)
         assert zones[4]["max_bpm"] == 200
 
     def test_typical_runner_zones(self):
-        """A 30-year-old with max HR ~190 should get realistic zones."""
+        """A runner with max HR ~190 should get *runnable* easy zones.
+
+        Daniels places E pace at 65-79% of max; Zone 2 must sit inside the
+        range an adult can actually run at, not the 114-133 walking band the
+        old 60-70% model prescribed.
+        """
         zones = HRZoneCalculator.calculate_zones(190)
         z2 = next(z for z in zones if z["zone"] == 2)
-        assert 110 <= z2["min_bpm"] <= 120
-        assert 130 <= z2["max_bpm"] <= 140
+        assert z2["min_bpm"] == 133  # 70% of 190
+        assert z2["max_bpm"] == 152  # 80% of 190
 
 
 class TestClassifyHR:
@@ -46,7 +53,7 @@ class TestClassifyHR:
 
     def test_mid_zone_2(self):
         zones = HRZoneCalculator.calculate_zones(200)
-        assert HRZoneCalculator.classify_hr(130, zones) == 2
+        assert HRZoneCalculator.classify_hr(150, zones) == 2  # 75% of 200
 
 
 class TestWorkoutZone:
@@ -56,9 +63,38 @@ class TestWorkoutZone:
     def test_recovery_maps_to_zone_1(self):
         assert HRZoneCalculator.get_workout_zone("recovery") == 1
 
-    def test_interval_and_hill_map_to_zone_5(self):
-        assert HRZoneCalculator.get_workout_zone("interval") == 5
-        assert HRZoneCalculator.get_workout_zone("hill") == 5
+    def test_interval_and_hill_map_to_zone_4(self):
+        # Session targets are judged on *average* run HR: a correctly run
+        # VO2max session averages ~88-93% of max once recoveries are
+        # included. Zone 5 (95-100%) is a classification band no whole run
+        # can average, so it is never a session target.
+        assert HRZoneCalculator.get_workout_zone("interval") == 4
+        assert HRZoneCalculator.get_workout_zone("hill") == 4
+
+    def test_tempo_quality_maps_to_zone_3(self):
+        # Threshold-flavoured sessions live in the 80-88% tempo band, the
+        # same band the plan's pace-zone table labels "Tempo".
+        assert HRZoneCalculator.get_workout_zone("tempo") == 3
+        assert HRZoneCalculator.get_workout_zone("cruise_interval") == 3
+        assert HRZoneCalculator.get_workout_zone("race_pace") == 3
+
+    def test_no_session_targets_zone_5(self):
+        from app.core.training.hr_zone_calculator import WORKOUT_ZONE_MAP
+
+        assert all(z <= 4 for z in WORKOUT_ZONE_MAP.values())
+
+    def test_workout_targets_match_pace_table_bands(self):
+        # The personal HR zones and the pace-zone table must be the same
+        # banding so "Zone 3" means one thing everywhere on the plan page.
+        from app.core.training.hr_zone_calculator import (
+            TRAINING_ZONE_HR_PERCENTAGES,
+            ZONE_DEFINITIONS,
+        )
+
+        for defn, (slug, pcts) in zip(
+            ZONE_DEFINITIONS, TRAINING_ZONE_HR_PERCENTAGES.items()
+        ):
+            assert (defn["pct_min"], defn["pct_max"]) == pcts
 
     def test_unknown_defaults_to_zone_2(self):
         assert HRZoneCalculator.get_workout_zone("unknown") == 2
@@ -92,8 +128,11 @@ class TestMaxHREstimation:
             def order_by(self, *a):
                 return self
 
-            def first(self):
-                return None
+            def limit(self, *a):
+                return self
+
+            def all(self):
+                return []
 
         hr, source = get_user_max_hr("user1", FakeDB())
         assert source == "default"
@@ -110,9 +149,75 @@ class TestMaxHREstimation:
             def order_by(self, *a):
                 return self
 
-            def first(self):
-                return None
+            def limit(self, *a):
+                return self
+
+            def all(self):
+                return []
 
         hr, source = get_user_max_hr("user1", FakeDB(), user_age=35)
         assert source == "estimated"
         assert hr == round(208 - 0.7 * 35)
+
+    def test_spike_rejected_without_corroboration(self):
+        """A lone 212 reading among 186s is a sensor glitch, not a max."""
+
+        class FakeDB:
+            def query(self, *a):
+                return self
+
+            def filter(self, *a):
+                return self
+
+            def order_by(self, *a):
+                return self
+
+            def limit(self, *a):
+                return self
+
+            def all(self):
+                return [(212,), (186,), (184,), (181,)]
+
+        hr, source = get_user_max_hr("user1", FakeDB())
+        assert source == "detected"
+        assert hr == 186
+
+    def test_corroborated_max_accepted(self):
+        class FakeDB:
+            def query(self, *a):
+                return self
+
+            def filter(self, *a):
+                return self
+
+            def order_by(self, *a):
+                return self
+
+            def limit(self, *a):
+                return self
+
+            def all(self):
+                return [(193,), (191,), (188,)]
+
+        hr, source = get_user_max_hr("user1", FakeDB())
+        assert hr == 193
+
+    def test_single_reading_still_accepted(self):
+        class FakeDB:
+            def query(self, *a):
+                return self
+
+            def filter(self, *a):
+                return self
+
+            def order_by(self, *a):
+                return self
+
+            def limit(self, *a):
+                return self
+
+            def all(self):
+                return [(188,)]
+
+        hr, source = get_user_max_hr("user1", FakeDB())
+        assert hr == 188

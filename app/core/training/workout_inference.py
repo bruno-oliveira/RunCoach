@@ -84,13 +84,22 @@ def hr_to_tier(
 ) -> Optional[str]:
     """Map an average HR to an intensity tier via the 5-zone HR model.
 
-    Z5->interval, Z4->tempo, Z3->moderate, Z2->easy, Z1->recovery. Returns None
-    when HR or zones are missing (no HR signal).
+    Under the running-specific bands (Z3 Tempo = 80-88% of max) the tempo
+    zone spans both steady/marathon effort (lower half) and true threshold
+    effort (upper half), so Z3 splits at its midpoint into moderate vs
+    tempo. Z4 (88-95%) and Z5 (95-100%) average HRs only occur in interval
+    work. Returns None when HR or zones are missing (no HR signal).
     """
     if not avg_heart_rate or avg_heart_rate <= 0 or not hr_zones:
         return None
     zone = HRZoneCalculator.classify_hr(avg_heart_rate, hr_zones)
-    return {1: RECOVERY, 2: EASY, 3: MODERATE, 4: TEMPO, 5: INTERVAL}.get(zone, EASY)
+    if zone == 3:
+        z3 = next((z for z in hr_zones if z.get("zone") == 3), None)
+        if z3 is not None:
+            mid = (z3["min_bpm"] + z3["max_bpm"]) / 2
+            return MODERATE if avg_heart_rate < mid else TEMPO
+        return MODERATE
+    return {1: RECOVERY, 2: EASY, 4: INTERVAL, 5: INTERVAL}.get(zone, EASY)
 
 
 def splits_variability(splits: Optional[list]) -> tuple[Optional[float], int]:

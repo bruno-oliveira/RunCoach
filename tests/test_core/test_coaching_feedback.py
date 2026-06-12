@@ -88,16 +88,17 @@ class TestHRZoneFeedback:
         self.zones = HRZoneCalculator.calculate_zones(190)
 
     def test_in_target_zone(self):
-        # Zone 2 for easy run: ~114-133 bpm (190 max)
-        run = _make_run_log(avg_heart_rate=125, workout_type="easy")
+        # Zone 2 for easy run: 133-152 bpm under the running-specific
+        # bands (70-80% of a 190 max)
+        run = _make_run_log(avg_heart_rate=142, workout_type="easy")
         planned = _make_planned_workout(hr_zone_target=2)
         fb = hr_zone_feedback(run, planned, self.zones)
         assert fb is not None
         assert "target zone" in fb.lower() or "well paced" in fb.lower()
 
     def test_too_high(self):
-        # HR 175 should be Zone 5 for a 190 max
-        run = _make_run_log(avg_heart_rate=175, workout_type="easy")
+        # HR 182 is Zone 5 (95-100%) for a 190 max
+        run = _make_run_log(avg_heart_rate=182, workout_type="easy")
         planned = _make_planned_workout(hr_zone_target=2)
         fb = hr_zone_feedback(run, planned, self.zones)
         assert fb is not None

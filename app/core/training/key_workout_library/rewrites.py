@@ -83,7 +83,7 @@ def _fartlek_reps(
     off_min: int = 2,
     pace_min_per_km: float = 6.0,
     default: int = 8,
-    lo: int = 3,
+    lo: int = 2,
     hi: int = 10,
 ) -> int:
     """Scale fartlek rep count to fit distance d.
@@ -232,7 +232,7 @@ _DISTANCE_REWRITES: Dict[str, Callable[[float], str]] = {
     ),
     "10k_fartlek": lambda d: (
         f"Warm up {_wu_cd(d)[0]:g}km easy. Within a continuous run, "
-        f"alternate {_fartlek_reps(d, default=6, lo=3, hi=8)} x (3 min at 10K pace / 2 min easy jog). "
+        f"alternate {_fartlek_reps(d, default=6, lo=2, hi=8)} x (3 min at 10K pace / 2 min easy jog). "
         f"Cool down {_wu_cd(d)[1]:g}km easy."
     ),
     "5k_hill_sprints": lambda d: (

@@ -52,6 +52,7 @@ from app.core.training.workout_steps.metrics import (
     _DEFAULT_PACES,
     _compute_distance_from_steps,
     _parse_pace_str_to_min_per_km,
+    compute_distance_from_steps_checked,
     scale_steps,
     total_distance_m,
 )
@@ -117,5 +118,6 @@ __all__ = [
     "_build_rung_steps",
     "_DEFAULT_PACES",
     "_compute_distance_from_steps",
+    "compute_distance_from_steps_checked",
     "_parse_pace_str_to_min_per_km",
 ]

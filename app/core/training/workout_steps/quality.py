@@ -344,7 +344,12 @@ def _build_interval_steps_low_base(
                 effort="hard uphill",
             ),
             _step(
-                "recovery", "Walk-down recovery", duration_s=60, repeat=8, effort="walk"
+                "recovery",
+                "Walk-down recovery",
+                duration_s=60,
+                repeat=8,
+                pace_zone="WALK",
+                effort="walk",
             ),
             _cooldown(pace_zones, cd_m),
         ]
@@ -395,6 +400,7 @@ def build_hill_steps(
             "Walk down recovery",
             duration_s=60,
             repeat=10,
+            pace_zone="WALK",
             effort="walk",
         ),
         _cooldown(pace_zones, cd_m),
