@@ -1,12 +1,12 @@
 """Week pulse — chatty inline feedback tying recent activity together."""
 
 import logging
-from datetime import date as _date
 from datetime import datetime, timedelta
 from typing import Any, Optional
 
 from sqlalchemy.orm import Session
 
+from app.core.time_utils import local_today
 from app.models import RunLog, TrainingPlan
 
 logger = logging.getLogger(__name__)
@@ -28,7 +28,7 @@ def get_week_pulse(
 
     week_start = start_date + timedelta(weeks=current_week - 1)
     prev_week_start = start_date + timedelta(weeks=max(0, current_week - 2))
-    today = _date.today()
+    today = local_today()
     # RunLog.date is a DateTime, so use an exclusive upper bound at tomorrow's
     # midnight — otherwise a run with a non-zero time component on `today`
     # compares greater than the date-only bound and gets dropped.

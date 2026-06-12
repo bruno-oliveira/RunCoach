@@ -5,6 +5,7 @@ from datetime import date, datetime, timedelta
 
 from sqlalchemy.orm import Session
 
+from app.core.time_utils import local_today
 from app.infrastructure.config import settings
 from app.models import (
     DailyWorkout,
@@ -28,7 +29,7 @@ MAX_PLANS_PER_USER = settings.max_plans_per_user
 
 
 def has_reached_plan_limit(user_id: str, db: Session) -> bool:
-    today = date.today()
+    today = local_today()
     training_plans = SQLAlchemyPlanRepository(db).list_by_user(user_id)
     active_training = sum(1 for p in training_plans if not _is_plan_completed(p, today))
     return active_training >= MAX_PLANS_PER_USER

@@ -47,14 +47,19 @@
             headers: window.authHeaders ? window.authHeaders() : { 'Content-Type': 'application/json' },
             credentials: 'same-origin'
         })
-        .then(function (res) { return res.json(); })
-        .then(function () {
+        .then(_parseResponse)
+        .then(function (r) {
+            if (!r.ok) {
+                _toastError((r.payload && r.payload.detail) || 'Could not dismiss the recommendation. Please try again.');
+                return;
+            }
             if (window.planDomSync) {
                 window.planDomSync.applyAdaptationState({ kind: 'none' });
             }
         })
         .catch(function (err) {
             console.error('[recommendation] dismiss failed:', err);
+            _toastError('Network error - the recommendation was not dismissed.');
         });
     };
 
@@ -71,14 +76,19 @@
             headers: window.authHeaders ? window.authHeaders() : { 'Content-Type': 'application/json' },
             credentials: 'same-origin'
         })
-        .then(function (res) { return res.json(); })
-        .then(function () {
+        .then(_parseResponse)
+        .then(function (r) {
+            if (!r.ok) {
+                _toastError((r.payload && r.payload.detail) || 'Could not dismiss the alert. Please try again.');
+                return;
+            }
             if (window.planDomSync) {
                 window.planDomSync.applyAdaptationState({ kind: 'none' });
             }
         })
         .catch(function (err) {
             console.error('[alert] dismiss failed:', err);
+            _toastError('Network error - the alert was not dismissed.');
         });
     };
 

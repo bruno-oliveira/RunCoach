@@ -43,7 +43,12 @@
      * may not hold a token at all. Sending "Bearer null" breaks cookie fallback.
      */
     function authHeaders(extra) {
-        return Object.assign({}, extra);
+        var headers = Object.assign({}, extra);
+        try {
+            var tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+            if (tz) headers['X-Timezone'] = tz;
+        } catch (e) { /* server falls back to UTC */ }
+        return headers;
     }
 
     /* -------------------------------------------------------------- */

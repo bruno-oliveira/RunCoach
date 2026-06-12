@@ -5,7 +5,7 @@ a single readiness report displayed on the plan view.
 """
 
 import logging
-from datetime import date, datetime, timedelta
+from datetime import datetime, timedelta
 from typing import Any, Dict, Optional
 
 from sqlalchemy.orm import Session
@@ -23,6 +23,7 @@ from app.contexts.runner.fitness.readiness_scoring import (
     score_vdot,
     score_volume,
 )
+from app.core.time_utils import local_today
 from app.core.training.plan_calendar import compute_current_week
 from app.models import RunLog, TrainingPlan
 from app.utils import to_date as _to_date
@@ -138,7 +139,7 @@ class ReadinessService:
         if not start_date:
             return None
 
-        today = date.today()
+        today = local_today()
         total_weeks = plan.weeks_duration or 0
         if total_weeks == 0:
             return None

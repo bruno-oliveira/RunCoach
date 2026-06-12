@@ -22,10 +22,15 @@ const ApiClient = {
    * @returns {Object}
    */
   _buildHeaders(customHeaders = {}) {
-    return {
+    const headers = {
       'Content-Type': 'application/json',
       ...customHeaders
     };
+    try {
+      const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+      if (tz) headers['X-Timezone'] = tz;
+    } catch (e) { /* server falls back to UTC */ }
+    return headers;
   },
   
   /**

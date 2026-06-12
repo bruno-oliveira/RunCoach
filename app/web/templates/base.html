@@ -18,6 +18,16 @@
             if (saved === 'dark') {
                 document.documentElement.setAttribute('data-theme', 'dark');
             }
+            // Timezone cookie: lets the server compute "today" / current week
+            // in the user's local time instead of the server's UTC clock.
+            try {
+                var tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+                if (tz) {
+                    document.cookie = 'rc_tz=' + encodeURIComponent(tz) +
+                        '; path=/; max-age=31536000; SameSite=Lax' +
+                        (location.protocol === 'https:' ? '; Secure' : '');
+                }
+            } catch (e) { /* older browsers: server falls back to UTC */ }
         })();
     </script>
 

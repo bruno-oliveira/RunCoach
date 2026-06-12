@@ -3,6 +3,8 @@
 from datetime import date, timedelta
 from typing import Optional
 
+from app.core.time_utils import local_today
+
 
 def build_week_dates(start_date: date, num_weeks: int) -> list[dict]:
     """Build a list of week date ranges from a start date."""
@@ -54,7 +56,7 @@ def compute_current_week(
 
 def next_monday() -> str:
     """Return the ISO date string of the next Monday."""
-    today = date.today()
+    today = local_today()
     days_ahead = (7 - today.weekday()) % 7
     if days_ahead == 0:
         days_ahead = 7
