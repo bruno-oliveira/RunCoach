@@ -241,3 +241,11 @@ HARD_TARGETS_TRAIL = {"base": 0.10, "build": 0.15, "peak": 0.20, "taper": 0.10}
 # threshold (build/peak only).
 POLARIZED_EXCESS_THRESHOLD = 0.05
 POLARIZED_DEFICIT_THRESHOLD = 0.10
+
+# Minimum weekly volume for a second quality slot. Below this, two floored
+# quality sessions plus easy-run minimums oversubscribe the week: quality is
+# protected during scale-down, so the overage lands on the weekly total and
+# breaks the ~10% progression rule (observed on 26-31 km trail weeks). One
+# quality session is standard coaching at these volumes regardless of run
+# frequency.
+SECOND_QUALITY_MIN_WEEK_KM = 40.0

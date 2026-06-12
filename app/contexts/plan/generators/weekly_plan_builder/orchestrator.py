@@ -32,7 +32,7 @@ from app.core.coaching.coaching_notes_generator import generate_coaching_note
 from app.core.training import long_run_calculator, phase_calculator, workout_builders
 from app.core.training import workout_distribution as workout_dist_mod
 from app.core.training.key_workout_library import overlay_key_workout
-from app.core.training.quality_caps import MAX_EASY_RUN_KM
+from app.core.training.quality_caps import MAX_EASY_RUN_KM, QUALITY_MIN_DOSE_KM
 from app.core.training.training_constants import calculate_week_in_phase
 from app.core.training.vertical_simulation import attach_treadmill_prescriptions
 
@@ -142,6 +142,25 @@ def generate_daily_workouts(
         target_distance,
         phase,
     )
+
+    # Ease into build intensity: base quality is a deliberately light dose,
+    # and jumping straight to the full build budget produced a ~90% week-
+    # over-week leap in quality km (marathon: 4.0 -> 7.6). The first two
+    # build weeks ramp at 75% / 90% of the computed budget; the min-dose
+    # floor below still guarantees each session stays worth running.
+    if phase == "build" and not is_recovery_week and week_in_phase in (0, 1):
+        ramp = 0.75 if week_in_phase == 0 else 0.90
+        quality_distances = {
+            # Already-light sessions ARE the on-ramp: never ramp a dose below
+            # its meaningful floor (which would get it demoted to easy and
+            # strip the slot entirely — observed on 2-run/week plans).
+            qtype: (
+                round(dist * ramp, 1)
+                if dist * ramp >= QUALITY_MIN_DOSE_KM.get(qtype, 0)
+                else dist
+            )
+            for qtype, dist in quality_distances.items()
+        }
 
     resolve_low_budget_quality(
         distribution,
