@@ -606,3 +606,56 @@
         padding: 14px 14px 12px;
     }
 }
+
+/* ---- Unified card details: one expander instead of four ---- */
+.workout-details {
+    margin-top: 6px;
+}
+
+.workout-details-toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    cursor: pointer;
+    list-style: none;
+    font-size: var(--text-xs);
+    font-weight: var(--weight-semibold);
+    color: var(--color-text-secondary);
+    padding: 3px 0;
+    user-select: none;
+}
+
+.workout-details-toggle::-webkit-details-marker {
+    display: none;
+}
+
+.workout-details[open] > .workout-details-toggle .workout-steps-chevron {
+    transform: rotate(180deg);
+}
+
+.workout-details-body {
+    padding-top: 4px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.workout-details-body .workout-notes {
+    margin: 0;
+}
+
+.workout-zone-line {
+    display: block;
+}
+
+.workout-rationale-line,
+.workout-coach-line {
+    font-size: var(--text-sm);
+    color: var(--color-text-secondary);
+    line-height: 1.45;
+}
+
+.workout-rationale-label {
+    font-weight: var(--weight-semibold);
+    color: var(--color-text);
+}
