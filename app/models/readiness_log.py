@@ -1,11 +1,12 @@
 """Daily readiness log — stores user-reported morning wellness signals."""
 
 import uuid
-from datetime import date, datetime, timezone
+from datetime import datetime, timezone
 
 from sqlalchemy import Column, Date, DateTime, ForeignKey, Index, Integer, String, Text
 from sqlalchemy.orm import Mapped, relationship
 
+from app.core.time_utils import local_today
 from app.models.base import Base
 
 
@@ -17,7 +18,7 @@ class ReadinessLog(Base):
 
     id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
     user_id = Column(String, ForeignKey("users.id"), nullable=False)
-    log_date = Column(Date, nullable=False, default=lambda: date.today())
+    log_date = Column(Date, nullable=False, default=lambda: local_today())
 
     sleep = Column(Integer, nullable=False)
     soreness = Column(Integer, nullable=False)

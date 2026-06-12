@@ -5,6 +5,7 @@ from typing import Any, Optional
 
 from fastapi import Request
 
+from app.core.time_utils import local_today
 from app.core.training.plan_calendar import (
     build_week_dates,
     compute_current_week,
@@ -35,7 +36,7 @@ def plan_view_context(
     current_week_number = None
     week_dates = None
     workout_date_labels: dict[tuple[int, int], str] = {}
-    today_obj = date.today()
+    today_obj = local_today()
 
     plan_completed = False
     if training_plan.start_date:

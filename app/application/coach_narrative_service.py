@@ -32,6 +32,7 @@ from app.core.coaching.recognition import (
     build_recognition,
     select_today_focus,
 )
+from app.core.time_utils import local_today, request_timezone
 from app.domain.coaching import CoachNarrator
 from app.models import RunLog, TrainingPlan
 
@@ -128,12 +129,15 @@ def _run_signature(plan: TrainingPlan, user_id: str, db: Session) -> str:
 
 
 def _generated_today(cache: dict[str, Any]) -> bool:
-    """True if the cached AI note was generated earlier this (UTC) calendar day."""
+    """True if the cached AI note was generated earlier today (user-local day)."""
     gen = cache.get("generated_at")
     if not gen:
         return False
     try:
-        return datetime.fromisoformat(gen).date() == _utcnow().date()
+        generated = datetime.fromisoformat(gen)
+        if generated.tzinfo is None:
+            generated = generated.replace(tzinfo=timezone.utc)
+        return generated.astimezone(request_timezone()).date() == local_today()
     except (ValueError, TypeError):
         return False
 

@@ -20,6 +20,7 @@ from app.contexts.plan.adaptation import AdaptationService
 from app.contexts.runner.enrichment import completion_stats as _cs
 from app.contexts.runner.enrichment import week_pulse_generator as _pulse
 from app.contexts.runner.fitness.hr_zone_service import HRZoneService
+from app.core.time_utils import local_today
 from app.core.training.plan_calendar import compute_current_week
 from app.core.training.vertical_simulation import compute_weekly_vertical_actuals
 from app.models import DailyWorkout, TrainingPlan, User, WeeklyPlan
@@ -93,12 +94,11 @@ class PlanViewService:
         comp_stats = None
         next_plan_cta = None
         if training_plan.start_date and current_user:
-            from datetime import date as _date
             from datetime import datetime as _datetime
 
             sd = training_plan.start_date
             start_d = sd.date() if isinstance(sd, _datetime) else sd
-            current_wk = compute_current_week(start_d, _date.today(), pre_start=0)
+            current_wk = compute_current_week(start_d, local_today(), pre_start=0)
             if current_wk > training_plan.weeks_duration:
                 comp_stats = self.get_completion_stats(training_plan, db)
                 next_plan_cta = self.get_next_plan_cta(training_plan.target_distance_km)

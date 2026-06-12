@@ -252,9 +252,17 @@ def overlay_key_workout(
     # (warm-up size, main_km splits) and the parser (implicit wu/cd) — so
     # the cited numbers match the steps. The displayed total reflects
     # actual coverage so weekly mileage adds up.
-    steps_total_km = _steps_mod._compute_distance_from_steps(workout["steps"])
+    steps_total_km, fully_priced = _steps_mod.compute_distance_from_steps_checked(
+        workout["steps"]
+    )
     if steps_total_km > 0:
-        workout["distance"] = round(steps_total_km, 1)
+        if fully_priced:
+            workout["distance"] = round(steps_total_km, 1)
+        else:
+            # Some duration reps couldn't be priced, so the steps total is a
+            # lower bound. Never shrink the session below its budget on
+            # incomplete math (this halved fartleks to warm-up + cool-down).
+            workout["distance"] = round(max(actual_distance, steps_total_km), 1)
 
     workout.pop("segments", None)
 

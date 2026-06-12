@@ -8,79 +8,114 @@ zone classification and workout-level zone prescriptions.
 # Minimum recorded max HR to trust (lower likely a sensor error)
 MIN_RELIABLE_MAX_HR = 140
 
+# Maximum recorded max HR to trust (higher is almost certainly an optical
+# sensor spike / cadence lock, not a human heart)
+MAX_RELIABLE_MAX_HR = 225
+
+# A top reading more than this many BPM above the *second-highest* run max
+# is treated as an uncorroborated spike and discarded in favour of the
+# corroborated value (optical sensors routinely glitch 15-30 BPM high).
+MAX_HR_SPIKE_TOLERANCE_BPM = 8
+
 # Conservative universal default when no age or run data is available
 DEFAULT_MAX_HR = 190
+
+# Version of the zone model below. Bump when ZONE_DEFINITIONS changes so
+# plans carrying zones from an older model are recomputed on next view.
+HR_ZONES_VERSION = 2
 
 
 # -- Zone definitions (percentage of max HR) ----------------------------------
 
+# Running-specific 5-zone model (% of max HR). These are the SAME bands the
+# pace-zone table annotates (zone_calculator.py), so "Zone 3 - Tempo" means
+# one thing everywhere: on the personal HR-zones panel, on each workout's
+# BPM badge, and in the adaptation engine's zone-adherence signal.
+#
+# The previous model used generic 50/60/70/80/90% bands. Two bugs followed:
+# 1. The plan page showed contradictory numbers - a workout badge said
+#    "Zone 2: 60-70% of max" while the zone table said "Aerobic: 70-80%".
+# 2. Easy runs prescribed at 60-70% of max are below most runners' slowest
+#    sustainable running HR (Daniels puts E pace at 65-79% of max), so the
+#    adaptation engine scored correctly-run easy runs as "+1 zone too hard"
+#    and applied an unearned volume penalty - while interval days targeted
+#    at 90-100% *average* HR (unattainable as a run average) scored -1.
 ZONE_DEFINITIONS = [
     {
         "zone": 1,
         "name": "Recovery",
-        "pct_min": 0.50,
-        "pct_max": 0.60,
+        "pct_min": 0.60,
+        "pct_max": 0.70,
         "description": "Very light effort. Active recovery, warm-up, cool-down.",
     },
     {
         "zone": 2,
         "name": "Aerobic",
-        "pct_min": 0.60,
-        "pct_max": 0.70,
-        "description": "Conversational pace. Builds aerobic base and fat-burning efficiency.",
+        "pct_min": 0.70,
+        "pct_max": 0.80,
+        "description": "Conversational pace. Builds aerobic base and endurance.",
     },
     {
         "zone": 3,
         "name": "Tempo",
-        "pct_min": 0.70,
-        "pct_max": 0.80,
-        "description": "Comfortably hard. Improves lactate clearance and stamina.",
+        "pct_min": 0.80,
+        "pct_max": 0.88,
+        "description": "Comfortably hard. Threshold effort - improves lactate clearance and stamina.",
     },
     {
         "zone": 4,
-        "name": "Threshold",
-        "pct_min": 0.80,
-        "pct_max": 0.90,
-        "description": "Hard effort. Raises lactate threshold and race-day tolerance.",
+        "name": "VO2max",
+        "pct_min": 0.88,
+        "pct_max": 0.95,
+        "description": "Hard effort. 3-5 minute intervals that develop peak oxygen uptake.",
     },
     {
         "zone": 5,
-        "name": "VO2max",
-        "pct_min": 0.90,
+        "name": "Speed",
+        "pct_min": 0.95,
         "pct_max": 1.00,
-        "description": "Maximum effort. Develops peak oxygen uptake and speed.",
+        "description": "Near-maximum effort. Short fast reps - only touched briefly within a session.",
     },
 ]
 
 # HR percentage bands used by the pace-anchored training-zone display
-# (see `zone_calculator.py`). Distinct from `ZONE_DEFINITIONS` above — those
-# describe a user's *personal* HR zones derived from max HR, whereas these
-# annotate the prescribed pace zones with a typical HR-percent target so the
-# UI can show e.g. "Tempo · 80-88% of max HR".
+# (see `zone_calculator.py`). Derived from ZONE_DEFINITIONS so the two
+# vocabularies can never diverge again.
+_ZONE_SLUGS = [
+    "zone_1_recovery",
+    "zone_2_aerobic",
+    "zone_3_tempo",
+    "zone_4_vo2max",
+    "zone_5_race",
+]
 TRAINING_ZONE_HR_PERCENTAGES: dict[str, tuple[float, float]] = {
-    "zone_1_recovery": (0.60, 0.70),
-    "zone_2_aerobic": (0.70, 0.80),
-    "zone_3_tempo": (0.80, 0.88),
-    "zone_4_vo2max": (0.88, 0.95),
-    "zone_5_race": (0.95, 1.00),
+    slug: (defn["pct_min"], defn["pct_max"])
+    for slug, defn in zip(_ZONE_SLUGS, ZONE_DEFINITIONS)
 }
 
 
-# Maps workout_type → target HR zone number (1-5)
+# Maps workout_type -> target HR zone number (1-5).
+#
+# Targets are what the *average* HR of a well-executed session should land
+# on (that is what the adaptation engine compares against), not the peak of
+# the hardest rep. Hence interval/VO2max sessions target zone 4 - including
+# their recovery jogs, a correctly run VO2max session averages ~88-93% of
+# max - and zone 5 is reserved as a classification band, not a session
+# target a whole run could ever average.
 WORKOUT_ZONE_MAP: dict[str, int] = {
     "easy": 2,
     "recovery": 1,
     "long": 2,
-    "tempo": 4,
-    "interval": 5,
-    "hill": 5,
+    "tempo": 3,
+    "cruise_interval": 3,
+    "race_pace": 3,
+    "fartlek": 3,
+    "interval": 4,
+    "hill": 4,
+    "vo2max": 4,
+    "vo2max_ladder": 4,
+    "time_trial": 4,
     "rest": 1,
-    "vo2max": 5,
-    "vo2max_ladder": 5,
-    "fartlek": 4,
-    "race_pace": 4,
-    "cruise_interval": 4,
-    "time_trial": 5,
 }
 
 

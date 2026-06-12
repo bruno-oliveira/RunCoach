@@ -24,6 +24,7 @@ from app.contexts.runner.fitness.coaching_data import fetch_pattern_candidates
 from app.contexts.runner.fitness.readiness_service import ReadinessService
 from app.contexts.runner.readiness_repository import SQLAlchemyReadinessRepository
 from app.core.coaching.pattern_analyzer import pattern_feedback
+from app.core.time_utils import local_today
 from app.core.training.plan_calendar import compute_current_week
 from app.models import ReadinessLog, RunLog, TrainingPlan
 from app.utils import to_date as _to_date
@@ -234,7 +235,7 @@ def build_today(plan: TrainingPlan, user_id: str, db: Session) -> Dict[str, Any]
             "reason": "Pick a plan with a start date to see today's session.",
         }
 
-    today = date.today()
+    today = local_today()
     total_weeks = len(plan_data)
     current_week = compute_current_week(
         start, today, clamp_min=1, total_weeks=total_weeks, pre_start=1
@@ -398,7 +399,7 @@ def build_training_age(user_id: str, db: Session) -> Dict[str, Any]:
         return d - timedelta(days=d.weekday())
 
     dates = [(r.date.date() if isinstance(r.date, datetime) else r.date) for r in runs]
-    today = date.today()
+    today = local_today()
     first = dates[0]
     first_monday = _monday(first)
     this_monday = _monday(today)
@@ -472,7 +473,7 @@ def build_coach_patterns(
     if plan.start_date:
         start = _to_date(plan.start_date)
         current_week = compute_current_week(
-            start, date.today(), clamp_min=1, pre_start=1
+            start, local_today(), clamp_min=1, pre_start=1
         )
         week_pulse = get_week_pulse(plan, current_week, db)
 

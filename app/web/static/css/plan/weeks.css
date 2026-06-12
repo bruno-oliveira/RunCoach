@@ -145,12 +145,25 @@
     box-shadow: var(--shadow-md);
 }
 
-.workout-item.easy { background: var(--color-info-subtle); border-left-color: var(--color-info); }
-.workout-item.tempo { background: var(--color-warning-subtle); border-left-color: var(--color-warning); }
-.workout-item.interval { background: var(--color-error-subtle); border-left-color: var(--color-error); }
-.workout-item.long { background: var(--color-primary-subtle); border-left-color: var(--color-primary); }
-.workout-item.rest { background: var(--color-bg-sunken); border-left-color: var(--color-text-muted); }
-.workout-item.strength { background: var(--color-success-subtle); border-left-color: var(--color-success); }
+/* One color = one kind of effort (matches the week-rail dots): teal for
+   easy/recovery, cobalt for the long run, amber for tempo-family, coral
+   for hard reps, purple for hills. */
+.workout-item.easy,
+.workout-item.run_walk,
+.workout-item.main { background: rgba(13, 148, 136, 0.07); border-left-color: var(--wt-easy); }
+.workout-item.recovery { background: rgba(13, 148, 136, 0.05); border-left-color: var(--wt-recovery); }
+.workout-item.tempo,
+.workout-item.cruise_interval,
+.workout-item.race_pace { background: var(--color-warning-subtle); border-left-color: var(--wt-tempo); }
+.workout-item.interval,
+.workout-item.fartlek,
+.workout-item.vo2max,
+.workout-item.vo2max_ladder,
+.workout-item.time_trial { background: var(--color-accent-subtle); border-left-color: var(--wt-interval); }
+.workout-item.hill { background: rgba(124, 58, 237, 0.07); border-left-color: var(--wt-hill); }
+.workout-item.long { background: var(--color-primary-subtle); border-left-color: var(--wt-long); }
+.workout-item.rest { background: var(--color-bg-sunken); border-left-color: var(--wt-rest); }
+.workout-item.strength { background: var(--color-success-subtle); border-left-color: var(--wt-strength); }
 
 .workout-type {
     font-weight: var(--weight-semibold);
@@ -558,4 +571,38 @@
 [data-theme="dark"] .mountain-load-class,
 [data-theme="dark"] .mountain-load-bar {
     background: rgba(255, 255, 255, 0.05);
+}
+
+
+/* ---- Today's workout: the card answers the rail ---- */
+.workout-item.is-today {
+    border: 2px solid var(--color-primary);
+    border-left-width: 4px;
+    box-shadow: 0 2px 12px rgba(29, 78, 216, 0.12);
+}
+
+.workout-today-chip {
+    display: inline-block;
+    margin-left: 4px;
+    padding: 1px 7px 2px;
+    border-radius: 999px;
+    background: var(--color-primary);
+    color: var(--color-text-on-primary);
+    font-size: 0.625rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    vertical-align: 1px;
+}
+
+/* ---- Phones: one comfortable card per row instead of two cramped columns ---- */
+@media (max-width: 520px) {
+    .workout-grid {
+        grid-template-columns: 1fr;
+        gap: var(--space-2, 8px);
+    }
+
+    .workout-item {
+        padding: 14px 14px 12px;
+    }
 }

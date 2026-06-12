@@ -144,9 +144,10 @@ def build_fartlek_steps(
 ) -> List[Dict[str, Any]]:
     """Warm-up + N × duration-based on-reps + cool-down (fartlek / over-under).
 
-    The off interval is part of the rep label ("3 min on / 2 min off") rather
-    than a separate step, so the displayed total counts only the work reps
-    (distance derived from on-rep duration × pace).
+    The off-jogs are explicit recovery steps (the same pattern as
+    ``build_meter_rep_steps``): the runner covers that ground, so it counts
+    toward the session distance, and structured exports get the real
+    on/off alternation instead of back-to-back work reps.
     """
     if distance_km <= 0 or reps <= 0:
         return []
@@ -164,6 +165,15 @@ def build_fartlek_steps(
             pace_zone=on_zone,
             pace_str=_pace_str(on_zone, pace_zones),
             effort=work_effort,
+        ),
+        _step(
+            "recovery",
+            f"{off_label} easy jog between reps",
+            duration_s=off_s,
+            repeat=reps,
+            pace_zone="E",
+            pace_str=_pace_str("E", pace_zones),
+            effort="easy jog",
         ),
         _cooldown(pace_zones, wu_m),
     ]
@@ -255,11 +265,15 @@ def build_duration_rep_steps(
     recovery_kind: str = "recovery",
     recovery_effort: str = "jog",
     recovery_label: Optional[str] = None,
+    recovery_zone: Optional[str] = None,
 ) -> List[Dict[str, Any]]:
     """Warm-up + N × time-based work reps (+ optional recovery) + cool-down.
 
     Distance for the work reps is derived from duration × pace at
     ``work_zone``; an optional recovery block (jog/walk) can follow each rep.
+    Pass ``recovery_zone`` when the recovery is real covered ground (an easy
+    run between power-hike blocks) so it prices into the session distance;
+    leave it None for standing/walk-down recoveries that shouldn't count.
     Used by hill/elevation/technique sessions whose work is defined by time.
     """
     if distance_km <= 0 or reps <= 0 or work_s <= 0:
@@ -288,6 +302,10 @@ def build_duration_rep_steps(
                 recovery_label or f"{recovery_s} s recovery",
                 duration_s=recovery_s,
                 repeat=reps,
+                pace_zone=recovery_zone,
+                pace_str=_pace_str(recovery_zone, pace_zones)
+                if recovery_zone
+                else None,
                 effort=recovery_effort,
             )
         )

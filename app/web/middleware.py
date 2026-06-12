@@ -5,6 +5,7 @@ import uuid
 from fastapi import Request
 from fastapi.responses import JSONResponse
 
+from app.core.time_utils import reset_request_timezone, set_request_timezone
 from app.infrastructure.config import settings
 
 _CSRF_EXEMPT = {"/api/auth/google", "/api/auth/logout", "/api/auth/refresh", "/health"}
@@ -44,6 +45,21 @@ if not settings.debug:
 
 def _cookie_secure() -> bool:
     return settings.force_secure_cookies and not settings.debug
+
+
+async def request_timezone(request: Request, call_next):
+    """Bind the browser's IANA timezone to the request context.
+
+    API calls send ``X-Timezone`` (see api.js / plan_core.js); plain page
+    navigations carry the ``rc_tz`` cookie set by base.html on first load.
+    Invalid or absent values fall back to UTC inside ``local_today()``.
+    """
+    tz_name = request.headers.get("X-Timezone") or request.cookies.get("rc_tz")
+    token = set_request_timezone(tz_name)
+    try:
+        return await call_next(request)
+    finally:
+        reset_request_timezone(token)
 
 
 async def security_headers(request: Request, call_next):

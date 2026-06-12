@@ -15,6 +15,7 @@ from app.web.exception_handlers import register_exception_handlers
 from app.web.middleware import (
     csrf_protection,
     request_size_limit,
+    request_timezone,
     security_headers,
     set_anonymous_user_id_cookie,
 )
@@ -106,12 +107,18 @@ def create_app(skip_migrations: bool = False) -> FastAPI:
         allow_origins=settings.allowed_origins,
         allow_credentials=True,
         allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE"],
-        allow_headers=["Authorization", "Content-Type", "X-Requested-With"],
+        allow_headers=[
+            "Authorization",
+            "Content-Type",
+            "X-Requested-With",
+            "X-Timezone",
+        ],
     )
     app.middleware("http")(set_anonymous_user_id_cookie)
     app.middleware("http")(csrf_protection)
     app.middleware("http")(request_size_limit)
     app.middleware("http")(security_headers)
+    app.middleware("http")(request_timezone)
 
     app.mount(
         "/static",

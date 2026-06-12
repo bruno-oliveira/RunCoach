@@ -70,7 +70,9 @@ def view_plan(
             training_plan.nutrition_plan_data
         )
 
-        if not training_plan.hr_zones_data:
+        if not training_plan.hr_zones_data or HRZoneService.zones_are_stale(
+            training_plan
+        ):
             try:
                 user = current_user or SQLAlchemyUserRepository(db).get_by_id(
                     training_plan.user_id

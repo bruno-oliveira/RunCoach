@@ -1,0 +1,170 @@
+/* ============================================================================
+   Week day rail — tappable Mon–Sun strip above the pinned current week.
+   Mobile-first: 7 equal cells, 44px+ touch targets, type-colored dots.
+   ========================================================================= */
+
+.week-rail {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 6px;
+    margin: var(--space-3, 12px) 0 var(--space-4, 16px);
+}
+
+.week-rail-day {
+    appearance: none;
+    border: 1px solid var(--color-border);
+    background: var(--color-bg-elevated);
+    border-radius: 12px;
+    padding: 8px 2px 7px;
+    min-height: 64px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 3px;
+    cursor: pointer;
+    font-family: var(--font-body);
+    color: var(--color-text);
+    transition: transform 0.12s ease, box-shadow 0.12s ease,
+        border-color 0.12s ease;
+    -webkit-tap-highlight-color: transparent;
+}
+
+.week-rail-day:hover {
+    border-color: var(--color-primary-light);
+}
+
+.week-rail-day:active {
+    transform: scale(0.96);
+}
+
+.week-rail-day:focus-visible {
+    outline: 2px solid var(--color-primary);
+    outline-offset: 2px;
+}
+
+.week-rail-dow {
+    font-family: var(--font-mono);
+    font-size: 0.625rem;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    color: var(--color-text-muted);
+    line-height: 1;
+}
+
+.week-rail-date {
+    font-family: var(--font-display);
+    font-size: var(--text-md);
+    font-weight: 600;
+    line-height: 1.1;
+}
+
+.week-rail-km {
+    font-family: var(--font-mono);
+    font-size: 0.625rem;
+    color: var(--color-text-secondary);
+    line-height: 1;
+}
+
+.week-rail-km--rest {
+    color: var(--color-text-muted);
+}
+
+/* ---- Dot: one color per kind of effort ---- */
+.week-rail-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--color-text-muted);
+    flex-shrink: 0;
+}
+
+.week-rail-dot.wt-easy { background: var(--wt-easy); }
+.week-rail-dot.wt-recovery { background: var(--wt-recovery); }
+.week-rail-dot.wt-long { background: var(--wt-long); }
+.week-rail-dot.wt-tempo { background: var(--wt-tempo); }
+.week-rail-dot.wt-interval,
+.week-rail-dot.wt-fartlek,
+.week-rail-dot.wt-vo2max,
+.week-rail-dot.wt-vo2max_ladder,
+.week-rail-dot.wt-time_trial,
+.week-rail-dot.wt-cruise_interval,
+.week-rail-dot.wt-race_pace { background: var(--wt-interval); }
+.week-rail-dot.wt-hill { background: var(--wt-hill); }
+.week-rail-dot.wt-strength { background: var(--wt-strength); }
+.week-rail-dot.wt-run_walk,
+.week-rail-dot.wt-main { background: var(--wt-easy); }
+
+.week-rail-dot.is-rest-dash {
+    width: 10px;
+    height: 2px;
+    border-radius: 2px;
+    background: var(--color-border);
+}
+
+/* Completed: the dot becomes a tick in the type color */
+.week-rail-dot.is-tick {
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+}
+
+/* Missed (past, no log): hollow dot */
+.week-rail-day.is-missed .week-rail-dot:not(.is-tick) {
+    background: transparent;
+    border: 1.5px solid var(--color-text-muted);
+    opacity: 0.6;
+}
+
+.week-rail-day.is-missed .week-rail-date,
+.week-rail-day.is-rest .week-rail-date {
+    color: var(--color-text-secondary);
+}
+
+/* ---- Today ---- */
+.week-rail-day.is-today {
+    border: 2px solid var(--color-primary);
+    background: var(--color-primary-subtle);
+    padding: 7px 1px 6px;
+}
+
+.week-rail-day.is-today .week-rail-date {
+    color: var(--color-primary);
+}
+
+.week-rail-day.is-today .week-rail-dow {
+    color: var(--color-primary);
+}
+
+/* Flash highlight on the targeted workout card */
+.workout-item.rail-flash {
+    animation: rail-flash 1.2s ease;
+}
+
+@keyframes rail-flash {
+    0% { box-shadow: 0 0 0 3px var(--color-primary); }
+    100% { box-shadow: 0 0 0 0 rgba(29, 78, 216, 0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .week-rail-day,
+    .workout-item.rail-flash {
+        transition: none;
+        animation: none;
+    }
+}
+
+/* Slightly tighter on very narrow screens */
+@media (max-width: 380px) {
+    .week-rail {
+        gap: 4px;
+    }
+
+    .week-rail-day {
+        border-radius: 10px;
+        min-height: 60px;
+    }
+}

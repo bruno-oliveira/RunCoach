@@ -5,6 +5,7 @@
 {% block styles %}
 <link rel="stylesheet" href="{{ static_url('css/plan/core.css') }}">
 <link rel="stylesheet" href="{{ static_url('css/plan/weeks.css') }}">
+<link rel="stylesheet" href="{{ static_url('css/plan/week-rail.css') }}">
 <link rel="stylesheet" href="{{ static_url('css/plan/coaching.css') }}">
 <link rel="stylesheet" href="{{ static_url('css/plan/customization.css') }}">
 <link rel="stylesheet" href="{{ static_url('css/plan/banners.css') }}">
@@ -550,6 +551,7 @@
     {% for week in plan if week.week == current_week_number %}
     <div class="pinned-week" id="pinned-current-week">
         <div class="pinned-week-label">This Week</div>
+        {% include 'components/week_day_rail.html' %}
         {% set css_class = 'current-week week-expanded' %}
         {% include 'components/week_card.html' %}
     </div>
@@ -898,6 +900,7 @@
 <script src="{{ static_url('js/share/share_card.js') }}" defer></script>
 <script src="{{ static_url('js/share/share_renderer.js') }}" defer></script>
 <script src="{{ static_url('js/plan/plan_tabs.js') }}" defer></script>
+<script src="{{ static_url('js/plan/week_rail.js') }}" defer></script>
 <script src="{{ static_url('js/plan/plan_dom_sync.js') }}" defer></script>
 <script src="{{ static_url('js/plan/plan_adaptation.js') }}" defer></script>
 <script src="{{ static_url('js/plan/plan_dragdrop.js') }}" defer></script>

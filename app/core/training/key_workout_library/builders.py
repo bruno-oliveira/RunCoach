@@ -96,7 +96,7 @@ _KEY_WORKOUT_STEP_BUILDERS: Dict[
     "10k_fartlek": lambda d, pz: _steps_mod.build_fartlek_steps(
         d,
         pz,
-        reps=_fartlek_reps(d, default=6, lo=3, hi=8),
+        reps=_fartlek_reps(d, default=6, lo=2, hi=8),
         on_s=180,
         off_s=120,
         on_zone="10K",
@@ -141,6 +141,7 @@ _KEY_WORKOUT_STEP_BUILDERS: Dict[
         recovery_kind="run",
         recovery_effort="run",
         recovery_label="Run flats and descents",
+        recovery_zone="E",
     ),
     "trail_flat_power_walk": lambda d, pz: _steps_mod.build_duration_rep_steps(
         d,
@@ -155,6 +156,7 @@ _KEY_WORKOUT_STEP_BUILDERS: Dict[
         recovery_kind="run",
         recovery_effort="easy run",
         recovery_label="5 min easy run",
+        recovery_zone="E",
     ),
     # -- distance-based downhill / cutdown reps --
     "trail_downhill_technique": lambda d, pz: _steps_mod.build_meter_rep_steps(

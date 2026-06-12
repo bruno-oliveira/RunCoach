@@ -25,6 +25,7 @@ from typing import Any, Dict, List, Optional
 
 from sqlalchemy.orm import Session
 
+from app.core.time_utils import local_today
 from app.models import RunLog
 
 ACUTE_DAYS = 7
@@ -129,7 +130,7 @@ class TrainingLoadService:
                 run
             )
 
-        today = date.today()
+        today = local_today()
         window_start = today - timedelta(days=lookback_days)
 
         # Seed CTL/ATL from the athlete's mean daily load instead of cold-

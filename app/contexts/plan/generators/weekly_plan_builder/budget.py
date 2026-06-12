@@ -73,17 +73,25 @@ def resolve_low_budget_quality(
     Mutates both inputs in place. The weekly total is preserved either way.
 
     Build/peak quality is meant to be substantial, so it is floored up to a
-    meaningful dose when affordable. Base quality is left alone (intentionally
-    light strides / short hill sprints). The taper sharpener is also kept short
-    — never floored up — but a token sliver that the week is too small to
-    support is demoted to easy so tiny / low-volume taper weeks don't carry a
-    malformed sub-floor session (audit G2).
+    meaningful dose when affordable. Base interval/hill slots are left alone
+    (intentionally light strides / short hill sprints — fixed doses, not
+    budget-fillers). Base *tempo* slots are floored like build/peak: a
+    threshold stimulus needs a minimum continuous dose, and the percentage
+    budgeting was emitting 1.3-1.6 km T blocks in half/marathon base weeks —
+    a session that costs a quality day yet delivers no threshold adaptation.
+    Flooring to the min dose (~2-2.5 km at T after warm-up/cool-down) keeps
+    base deliberately light while making the slot worth running. The taper
+    sharpener is kept short — never floored up — but a token sliver that the
+    week is too small to support is demoted to easy so tiny / low-volume
+    taper weeks don't carry a malformed sub-floor session (audit G2).
     """
-    if phase not in ("build", "peak", "taper"):
+    if phase not in ("base", "build", "peak", "taper"):
         return
     phys_caps = _get_quality_caps(target_distance, phase)
     ceiling = long_run_distance * MAX_QUALITY_VS_LONG_RUN
     for qtype in ("tempo", "interval", "hill"):
+        if phase == "base" and qtype != "tempo":
+            continue  # base strides / hill sprints stay intentionally light
         if distribution.get(qtype, 0) <= 0:
             continue
         budget = quality_distances.get(qtype, 0)

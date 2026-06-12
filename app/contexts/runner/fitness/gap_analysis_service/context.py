@@ -5,6 +5,7 @@ from typing import Dict, List, Optional
 
 from sqlalchemy.orm import Session
 
+from app.core.time_utils import local_today
 from app.core.training.plan_calendar import compute_current_week
 from app.models import RunLog, TrainingPlan
 from app.utils import to_date as _to_date
@@ -60,11 +61,11 @@ def _load_gap_context(
     if total_weeks == 0:
         return None
 
-    if (date.today() - start_date).days < 0:
+    if (local_today() - start_date).days < 0:
         return None  # plan hasn't started
 
     current_week = compute_current_week(
-        start_date, date.today(), total_weeks=total_weeks
+        start_date, local_today(), total_weeks=total_weeks
     )
     if current_week < 1:
         return None

@@ -310,9 +310,14 @@ def generate_interval_run(
                 f"VO\u2082max intervals: {reps_1000}x1000m at 5K pace with 400m recovery jog.",
             ]
     else:
-        reps_400 = max(4, round(work_km / 0.8))
-        reps_800 = max(3, round(work_km / 1.6))
-        reps_200 = max(6, round(work_km / 0.4))
+        # Rep counts must FIT the budgeted distance, not inflate past it: a
+        # 10 km/week runner's interval slot is ~2 km, and a hard 4 x 400 m
+        # minimum produced sessions rivalling their long run. Two reps is the
+        # honest floor for a micro-volume week; normal volumes are unaffected
+        # (work_km / 0.8 dominates above ~3 km of work budget).
+        reps_400 = max(2, round(work_km / 0.8))
+        reps_800 = max(2, round(work_km / 1.6))
+        reps_200 = max(4, round(work_km / 0.4))
         reps_1000 = 0
         if i_pace:
             interval_workouts = [
@@ -344,7 +349,13 @@ def generate_interval_run(
         reps_1000=reps_1000,
         reps_200=reps_200,
     )
-    actual_km = round(workout_steps._compute_distance_from_steps(steps), 1)
+    steps_km, fully_priced = workout_steps.compute_distance_from_steps_checked(steps)
+    if fully_priced:
+        actual_km = round(steps_km, 1)
+    else:
+        # Unpriced duration reps make the steps total a lower bound - keep
+        # at least the budgeted distance rather than collapsing the session.
+        actual_km = round(max(distance, steps_km), 1)
     return {
         "day": day,
         "type": "interval",
@@ -369,7 +380,11 @@ def generate_hill_workout(day: int, distance: float = 0) -> Dict[str, Any]:
         "Hill bounding: 8x20sec explosive uphill bounds with full recovery.",
     ]
     steps = workout_steps.build_hill_steps(distance, None)
-    actual_km = round(workout_steps._compute_distance_from_steps(steps), 1)
+    steps_km, fully_priced = workout_steps.compute_distance_from_steps_checked(steps)
+    if fully_priced:
+        actual_km = round(steps_km, 1)
+    else:
+        actual_km = round(max(distance, steps_km), 1)
     return {
         "day": day,
         "type": "hill",

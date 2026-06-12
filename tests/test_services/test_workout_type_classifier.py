@@ -52,10 +52,13 @@ def _classify(test_db, **overrides):
 
 class TestClassifyWorkoutType:
     def test_easy_run(self, test_db, user):
+        # 140 bpm at a 190 max is 74% - squarely in the running-specific
+        # Zone 2 easy band (70-80%); the old 120 fixture sits at 63%, which
+        # the corrected bands rightly classify as recovery effort.
         wt, conf = _classify(
             test_db,
             avg_pace_min_km=EASY_PACE,
-            avg_heart_rate=120,
+            avg_heart_rate=140,
             max_heart_rate=MAX_HR,
         )
         assert wt == "easy"
