@@ -1,0 +1,40 @@
+{# "This Week" day rail — a tappable Mon–Sun strip above the pinned week.
+   One cell per day: weekday letter, date number, and a workout-type dot
+   that becomes a tick when the run is logged. Today is ringed in cobalt.
+   Expected context: week (the current week), logged_runs,
+   workout_date_labels, current_day_of_week. #}
+{% set rail_days = week.daily_workouts | sort(attribute='day') %}
+<div class="week-rail" role="navigation" aria-label="This week's days">
+    {% for workout in rail_days %}
+    {% set is_today = workout.day == current_day_of_week %}
+    {% set is_past = workout.day < current_day_of_week %}
+    {% set done = logged_runs.get(workout.id) %}
+    {% set is_rest = workout.type in ['rest', 'recovery'] and not workout.distance %}
+    {% set label = workout_date_labels.get((week.week, workout.day), '') if workout_date_labels else '' %}
+    <button type="button"
+            class="week-rail-day{% if is_today %} is-today{% endif %}{% if done %} is-done{% elif is_past and not is_rest %} is-missed{% endif %}{% if is_rest %} is-rest{% endif %}"
+            data-rail-week="{{ week.week }}"
+            data-rail-day="{{ workout.day }}"
+            aria-label="{{ label or 'Day ' ~ workout.day }} — {{ workout.type | replace('_', ' ') }}{% if done %}, completed{% endif %}{% if is_today %}, today{% endif %}"
+            {% if is_today %}aria-current="date"{% endif %}>
+        <span class="week-rail-dow">{{ ['M','T','W','T','F','S','S'][workout.day - 1] }}</span>
+        <span class="week-rail-date">{{ label.split(' ')[-1] if label else workout.day }}</span>
+        {% if done %}
+        <span class="week-rail-dot is-tick wt-{{ workout.type }}" aria-hidden="true">
+            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+        </span>
+        {% elif is_rest %}
+        <span class="week-rail-dot is-rest-dash" aria-hidden="true"></span>
+        {% else %}
+        <span class="week-rail-dot wt-{{ workout.type }}" aria-hidden="true"></span>
+        {% endif %}
+        {% if workout.distance and workout.distance > 0 %}
+        <span class="week-rail-km">{{ workout.distance | round | int }}k</span>
+        {% elif workout.duration_min %}
+        <span class="week-rail-km">{{ workout.duration_min }}'</span>
+        {% else %}
+        <span class="week-rail-km week-rail-km--rest">—</span>
+        {% endif %}
+    </button>
+    {% endfor %}
+</div>

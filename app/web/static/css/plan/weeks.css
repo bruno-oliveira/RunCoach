@@ -145,12 +145,25 @@
     box-shadow: var(--shadow-md);
 }
 
-.workout-item.easy { background: var(--color-info-subtle); border-left-color: var(--color-info); }
-.workout-item.tempo { background: var(--color-warning-subtle); border-left-color: var(--color-warning); }
-.workout-item.interval { background: var(--color-error-subtle); border-left-color: var(--color-error); }
-.workout-item.long { background: var(--color-primary-subtle); border-left-color: var(--color-primary); }
-.workout-item.rest { background: var(--color-bg-sunken); border-left-color: var(--color-text-muted); }
-.workout-item.strength { background: var(--color-success-subtle); border-left-color: var(--color-success); }
+/* One color = one kind of effort (matches the week-rail dots): teal for
+   easy/recovery, cobalt for the long run, amber for tempo-family, coral
+   for hard reps, purple for hills. */
+.workout-item.easy,
+.workout-item.run_walk,
+.workout-item.main { background: rgba(13, 148, 136, 0.07); border-left-color: var(--wt-easy); }
+.workout-item.recovery { background: rgba(13, 148, 136, 0.05); border-left-color: var(--wt-recovery); }
+.workout-item.tempo,
+.workout-item.cruise_interval,
+.workout-item.race_pace { background: var(--color-warning-subtle); border-left-color: var(--wt-tempo); }
+.workout-item.interval,
+.workout-item.fartlek,
+.workout-item.vo2max,
+.workout-item.vo2max_ladder,
+.workout-item.time_trial { background: var(--color-accent-subtle); border-left-color: var(--wt-interval); }
+.workout-item.hill { background: rgba(124, 58, 237, 0.07); border-left-color: var(--wt-hill); }
+.workout-item.long { background: var(--color-primary-subtle); border-left-color: var(--wt-long); }
+.workout-item.rest { background: var(--color-bg-sunken); border-left-color: var(--wt-rest); }
+.workout-item.strength { background: var(--color-success-subtle); border-left-color: var(--wt-strength); }
 
 .workout-type {
     font-weight: var(--weight-semibold);

@@ -52,6 +52,19 @@
   --color-info-subtle: #F0F9FF;
   --color-info-border: #BAE6FD;
 
+  /* ---- Workout-type color vocabulary ----
+     One color = one kind of effort, used everywhere a workout type appears
+     (week rail dots, card accents, chips). Derived from semantic vars so
+     dark mode inherits the adjusted values automatically. */
+  --wt-easy: var(--color-secondary);          /* teal — go easy */
+  --wt-recovery: var(--color-secondary-light);
+  --wt-long: var(--color-primary);            /* cobalt — the big day */
+  --wt-tempo: var(--color-warning);           /* amber — comfortably hard */
+  --wt-interval: var(--color-accent);         /* coral — hard reps */
+  --wt-hill: #7C3AED;                         /* purple — climbing work */
+  --wt-strength: var(--color-success);
+  --wt-rest: var(--color-text-muted);
+
   /* ---- Typography ---- */
   --font-display: "Bricolage Grotesque", Georgia, serif;
   --font-body: "DM Sans", -apple-system, BlinkMacSystemFont, sans-serif;
