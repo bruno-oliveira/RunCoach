@@ -572,3 +572,37 @@
 [data-theme="dark"] .mountain-load-bar {
     background: rgba(255, 255, 255, 0.05);
 }
+
+
+/* ---- Today's workout: the card answers the rail ---- */
+.workout-item.is-today {
+    border: 2px solid var(--color-primary);
+    border-left-width: 4px;
+    box-shadow: 0 2px 12px rgba(29, 78, 216, 0.12);
+}
+
+.workout-today-chip {
+    display: inline-block;
+    margin-left: 4px;
+    padding: 1px 7px 2px;
+    border-radius: 999px;
+    background: var(--color-primary);
+    color: var(--color-text-on-primary);
+    font-size: 0.625rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    vertical-align: 1px;
+}
+
+/* ---- Phones: one comfortable card per row instead of two cramped columns ---- */
+@media (max-width: 520px) {
+    .workout-grid {
+        grid-template-columns: 1fr;
+        gap: var(--space-2, 8px);
+    }
+
+    .workout-item {
+        padding: 14px 14px 12px;
+    }
+}
