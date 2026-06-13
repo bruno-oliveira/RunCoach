@@ -2,6 +2,8 @@
     const data = window.PROGRESS_DATA;
     if (!data || data.completed_count === 0) return;
 
+    let _rendered = false;
+
     function formatPace(decimalPace) {
         if (!decimalPace || decimalPace <= 0) return '--';
         var m = Math.floor(decimalPace);
@@ -10,7 +12,12 @@
         return m + ':' + (s < 10 ? '0' : '') + s;
     }
 
-    const weekLabels = data.planned_weekly_km.map((_, i) => 'W' + (i + 1));
+    function renderProgressCharts() {
+        if (_rendered) return;
+        if (typeof Chart === 'undefined') return;
+        _rendered = true;
+
+        const weekLabels = data.planned_weekly_km.map((_, i) => 'W' + (i + 1));
 
     // Weekly Mileage Bar Chart
     const mileageCtx = document.getElementById('weeklyMileageChart');
@@ -127,5 +134,16 @@
                 }
             }
         });
+    }
+
+    // Charts live in the Progress tab, which is hidden by default. Rendering a
+    // Chart.js canvas while its container is display:none sizes it to 0, so we
+    // expose the renderer and let the tab-switch handler call it on first open.
+    window.renderProgressCharts = renderProgressCharts;
+
+    // If the Progress panel happens to be visible at load (e.g. deep-link), draw now.
+    var _pp = document.getElementById('panel-progress');
+    if (_pp && _pp.classList.contains('active')) {
+        renderProgressCharts();
     }
 })();

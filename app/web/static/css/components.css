@@ -44,52 +44,42 @@
   outline-offset: 2px;
 }
 
-/* Primary — cobalt blue */
+/* Primary — lime, dark ink */
 .btn-primary {
   background: var(--color-primary);
   color: var(--color-text-on-primary);
-  box-shadow: var(--shadow-sm), 0 2px 8px rgba(29, 78, 216, 0.15);
 }
 
 .btn-primary:hover:not(:disabled) {
   background: var(--color-primary-dark);
-  box-shadow: var(--shadow-md), 0 4px 16px rgba(29, 78, 216, 0.25);
-  transform: translateY(-1px);
 }
 
 .btn-primary:active:not(:disabled) {
-  transform: translateY(0);
-  box-shadow: var(--shadow-xs);
+  background: var(--color-primary-dark);
 }
 
-/* Accent — warm coral */
+/* Accent — same lime (single-accent system) */
 .btn-accent {
   background: var(--color-accent);
   color: var(--color-text-on-accent);
-  box-shadow: var(--shadow-sm), 0 2px 8px rgba(255, 98, 70, 0.15);
 }
 
 .btn-accent:hover:not(:disabled) {
   background: var(--color-accent-dark);
-  box-shadow: var(--shadow-md), 0 4px 16px rgba(255, 98, 70, 0.25);
-  transform: translateY(-1px);
 }
 
 .btn-accent:active:not(:disabled) {
-  transform: translateY(0);
+  background: var(--color-accent-dark);
 }
 
-/* Secondary */
+/* Secondary — graphite */
 .btn-secondary {
   background: var(--color-secondary);
   color: #ffffff;
-  box-shadow: var(--shadow-sm);
 }
 
 .btn-secondary:hover:not(:disabled) {
   background: var(--color-secondary-dark);
-  box-shadow: var(--shadow-md);
-  transform: translateY(-1px);
 }
 
 /* Danger */
@@ -116,26 +106,27 @@
   border-color: var(--color-text-muted);
 }
 
-/* Outline — primary color border */
+/* Outline — ink border (lime text would be invisible on white) */
 .btn-outline {
   background: transparent;
-  color: var(--color-primary);
-  border: 1.5px solid var(--color-primary);
+  color: var(--color-text);
+  border: 1.5px solid var(--color-text);
 }
 
 .btn-outline:hover:not(:disabled) {
-  background: var(--color-primary-subtle);
+  background: var(--color-text);
+  color: var(--color-bg-elevated);
 }
 
-/* Subtle — soft background */
+/* Subtle — soft lime wash with ink text */
 .btn-subtle {
   background: var(--color-primary-subtle);
-  color: var(--color-primary);
+  color: var(--color-text);
   border: none;
 }
 
 .btn-subtle:hover:not(:disabled) {
-  background: rgba(29, 78, 216, 0.12);
+  background: rgba(168, 219, 46, 0.22);
 }
 
 /* Button sizes */
@@ -337,7 +328,7 @@
 
 .badge-primary {
   background: var(--color-primary-subtle);
-  color: var(--color-primary);
+  color: var(--color-link);
 }
 
 .badge-secondary {

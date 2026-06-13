@@ -89,7 +89,7 @@
 }
 
 .run-walk-intervals strong {
-    color: var(--color-primary);
+    color: var(--color-link);
     font-size: var(--text-sm);
 }
 
@@ -113,5 +113,5 @@
 }
 
 .workout-item.run_walk .workout-type {
-    color: var(--color-primary);
+    color: var(--color-link);
 }

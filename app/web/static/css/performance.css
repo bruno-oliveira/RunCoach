@@ -407,7 +407,7 @@
 .phase-base { background: var(--color-success-subtle); color: var(--color-success); }
 .phase-build { background: var(--color-info-subtle); color: var(--color-info); }
 .phase-sharpen, .phase-peak { background: var(--color-warning-subtle); color: var(--color-warning); }
-.phase-taper { background: var(--color-primary-subtle); color: var(--color-primary); }
+.phase-taper { background: var(--color-primary-subtle); color: var(--color-link); }
 
 .week-stats { display: flex; gap: var(--space-6); }
 .week-stat { text-align: center; }
@@ -541,7 +541,7 @@
 
 .btn-outline {
     background: var(--color-bg-elevated);
-    color: var(--color-primary);
+    color: var(--color-link);
     border: 1.5px solid var(--color-primary);
 }
 
@@ -696,7 +696,7 @@
 .workout-segments-toggle summary::-webkit-details-marker { display: none; }
 
 .workout-segments-toggle summary:hover {
-    color: var(--color-primary);
+    color: var(--color-link);
 }
 
 .segments-chevron {
@@ -778,7 +778,7 @@
     gap: var(--space-2);
     padding: 10px 24px;
     background: white;
-    color: var(--color-primary);
+    color: var(--color-link);
     border: none;
     border-radius: var(--radius-lg);
     font-size: var(--text-base);
@@ -836,7 +836,7 @@
     font-family: var(--font-display);
     font-size: var(--text-2xl);
     font-weight: var(--weight-bold);
-    color: var(--color-primary);
+    color: var(--color-link);
 }
 
 .progress-stat-label {

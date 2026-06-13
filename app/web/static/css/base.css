@@ -5,37 +5,50 @@
    ========================================================================= */
 
 :root {
-  /* ---- Color Tokens ---- */
-  --color-primary: #1D4ED8;
-  --color-primary-light: #3B6EEA;
-  --color-primary-dark: #1639B0;
-  --color-primary-subtle: rgba(29, 78, 216, 0.08);
-  --color-primary-ghost: rgba(29, 78, 216, 0.04);
+  /* ---- Color Tokens ----
+     Single-accent system: one vivid lime carries every primary action and
+     highlight. Everything else is a calm near-neutral grey so the accent
+     never competes. Light surfaces, Runna-style restraint. */
+  --color-primary: #C2F542;          /* lime — the one accent */
+  --color-primary-light: #D2FA6E;
+  --color-primary-dark: #A8DB2E;
+  --color-primary-subtle: rgba(168, 219, 46, 0.14);
+  --color-primary-ghost: rgba(168, 219, 46, 0.07);
 
-  --color-accent: #FF6246;
-  --color-accent-light: #FF8A74;
-  --color-accent-dark: #E04A30;
-  --color-accent-subtle: rgba(255, 98, 70, 0.08);
+  /* Accent maps to the same lime — kept as its own token so the many
+     components referencing --color-accent stay single-accent automatically. */
+  --color-accent: #C2F542;
+  --color-accent-light: #D2FA6E;
+  --color-accent-dark: #A8DB2E;
+  --color-accent-subtle: rgba(168, 219, 46, 0.14);
 
-  --color-secondary: #0D9488;
-  --color-secondary-light: #2DD4BF;
-  --color-secondary-dark: #0F766E;
+  /* Secondary neutralized to graphite — no longer a third brand hue. */
+  --color-secondary: #1C1E21;
+  --color-secondary-light: #3A3D42;
+  --color-secondary-dark: #111315;
 
-  /* Neutrals — warm undertone (light mode) */
-  --color-bg: #FAFAF7;
+  /* Interactive text/links: lime is a fill color and is unreadable as text on
+     light surfaces, so text and links use ink. A darker "olive" lime is
+     available where a hint of the brand is wanted on text. */
+  --color-link: #111315;
+  --color-link-hover: #000000;
+  --color-accent-strong: #5F7A12;     /* darkened lime, AA on white */
+
+  /* Neutrals — cool-neutral grey (light mode) */
+  --color-bg: #FBFBFA;
   --color-bg-elevated: #FFFFFF;
-  --color-bg-sunken: #F3F2EE;
-  --color-bg-overlay: rgba(18, 16, 28, 0.55);
-  --color-surface: #EEEDEA;
-  --color-border: #E7E5E0;
-  --color-border-subtle: #F1F0EC;
+  --color-bg-sunken: #F4F4F2;
+  --color-bg-overlay: rgba(16, 18, 20, 0.55);
+  --color-surface: #EFEFED;
+  --color-border: #E6E6E2;
+  --color-border-subtle: #F0F0ED;
 
   /* Text */
-  --color-text: #1C1917;
-  --color-text-secondary: #6B6560;
-  --color-text-muted: #A09A93;
-  --color-text-on-primary: #FFFFFF;
-  --color-text-on-accent: #FFFFFF;
+  --color-text: #111315;
+  --color-text-secondary: #5E6166;
+  --color-text-muted: #9A9DA2;
+  --color-text-on-primary: #14160A;   /* dark ink reads on lime, not white */
+  --color-text-on-accent: #14160A;
 
   /* Semantic */
   --color-error: #DC2626;
@@ -53,20 +66,20 @@
   --color-info-border: #BAE6FD;
 
   /* ---- Workout-type color vocabulary ----
-     One color = one kind of effort, used everywhere a workout type appears
-     (week rail dots, card accents, chips). Derived from semantic vars so
-     dark mode inherits the adjusted values automatically. */
-  --wt-easy: var(--color-secondary);          /* teal — go easy */
-  --wt-recovery: var(--color-secondary-light);
-  --wt-long: var(--color-primary);            /* cobalt — the big day */
-  --wt-tempo: var(--color-warning);           /* amber — comfortably hard */
-  --wt-interval: var(--color-accent);         /* coral — hard reps */
-  --wt-hill: #7C3AED;                         /* purple — climbing work */
-  --wt-strength: var(--color-success);
+     One color = one kind of effort. Muted, desaturated hues so they read as
+     quiet category tags beside the single lime accent rather than competing
+     brand colors. The accent (lime) is reserved for actions, not categories. */
+  --wt-easy: #3FA9A0;                         /* muted teal — go easy */
+  --wt-recovery: #7FC4BD;
+  --wt-long: #4A72C4;                          /* slate blue — the big day */
+  --wt-tempo: #C98A2E;                         /* ochre — comfortably hard */
+  --wt-interval: #C25B47;                       /* clay — hard reps */
+  --wt-hill: #8467C4;                          /* muted violet — climbing */
+  --wt-strength: #5B9E5B;
   --wt-rest: var(--color-text-muted);
 
   /* ---- Typography ---- */
-  --font-display: "Bricolage Grotesque", Georgia, serif;
+  --font-display: "Space Grotesk", -apple-system, BlinkMacSystemFont, sans-serif;
   --font-body: "DM Sans", -apple-system, BlinkMacSystemFont, sans-serif;
   --font-mono: "JetBrains Mono", "SF Mono", Consolas, monospace;
 
@@ -176,7 +189,6 @@
   /* Backward compat color aliases */
   --color-background: var(--color-bg);
   --color-background-alt: var(--color-bg-sunken);
-  --color-text-on-primary: #FFFFFF;
   --font-primary: var(--font-body);
   --font-heading: var(--font-display);
   --font-size-xs: var(--text-xs);
@@ -231,8 +243,6 @@ body {
   line-height: var(--leading-normal);
   color: var(--color-text);
   background-color: var(--color-bg);
-  /* Subtle noise texture for depth */
-  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n' x='0' y='0'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='256' height='256' filter='url(%23n)' opacity='0.015'/%3E%3C/svg%3E");
 }
 
 img, picture, video, canvas, svg {
@@ -319,7 +329,7 @@ p:last-child {
 }
 
 a {
-  color: var(--color-primary);
+  color: var(--color-link);
   transition: color var(--transition-fast);
 }
 
@@ -446,7 +456,7 @@ pre code {
 .text-2xl { font-size: var(--text-2xl); }
 .text-3xl { font-size: var(--text-3xl); }
 
-.text-primary { color: var(--color-primary); }
+.text-primary { color: var(--color-link); }
 .text-secondary { color: var(--color-text-secondary); }
 .text-muted { color: var(--color-text-muted); }
 .text-error { color: var(--color-error); }
@@ -684,16 +694,24 @@ pre code {
    ========================================================================= */
 
 [data-theme="dark"] {
-  --color-primary: #4F83F0;
-  --color-primary-light: #6B99F5;
-  --color-primary-dark: #3366D0;
-  --color-primary-subtle: rgba(79, 131, 240, 0.12);
-  --color-primary-ghost: rgba(79, 131, 240, 0.06);
+  --color-primary: #C2F542;
+  --color-primary-light: #D2FA6E;
+  --color-primary-dark: #A8DB2E;
+  --color-primary-subtle: rgba(168, 219, 46, 0.16);
+  --color-primary-ghost: rgba(168, 219, 46, 0.08);
 
-  --color-accent: #FF7A62;
-  --color-accent-light: #FF9A86;
-  --color-accent-dark: #E05A42;
-  --color-accent-subtle: rgba(255, 122, 98, 0.12);
+  --color-accent: #C2F542;
+  --color-accent-light: #D2FA6E;
+  --color-accent-dark: #A8DB2E;
+  --color-accent-subtle: rgba(168, 219, 46, 0.16);
+
+  --color-secondary: #F0EDE8;
+  --color-secondary-light: #FFFFFF;
+  --color-secondary-dark: #C9C6C0;
+
+  --color-link: #F0EDE8;
+  --color-link-hover: #FFFFFF;
+  --color-accent-strong: #C2F542;     /* lime reads fine as text on dark */
 
   --color-bg: #0F0E13;
   --color-bg-elevated: #1A1920;
@@ -706,7 +724,8 @@ pre code {
   --color-text: #F0EDE8;
   --color-text-secondary: #9B978F;
   --color-text-muted: #6B6862;
-  --color-text-on-primary: #FFFFFF;
+  --color-text-on-primary: #14160A;   /* ink on lime in dark mode too */
+  --color-text-on-accent: #14160A;
 
   --color-error: #FF6B6B;
   --color-error-subtle: rgba(255, 107, 107, 0.12);
@@ -755,7 +774,7 @@ pre code {
   line-height: var(--leading-normal);
 }
 .cookie-consent-inner a {
-  color: var(--color-primary);
+  color: var(--color-link);
   text-decoration: underline;
 }
 .cookie-consent-actions {

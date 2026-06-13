@@ -84,7 +84,7 @@
     background: var(--color-primary-subtle);
     border-radius: var(--radius-md);
     font-weight: var(--weight-semibold);
-    color: var(--color-primary);
+    color: var(--color-link);
 }
 
 /* Timeline */
@@ -106,7 +106,7 @@
 
 .timeline-time {
     font-weight: var(--weight-semibold);
-    color: var(--color-primary);
+    color: var(--color-link);
 }
 
 .timeline-activity {
@@ -167,7 +167,7 @@
 
 .checkpoint-distance {
     font-weight: var(--weight-bold);
-    color: var(--color-primary);
+    color: var(--color-link);
     font-size: var(--text-sm);
     min-width: 60px;
     flex-shrink: 0;

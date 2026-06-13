@@ -287,7 +287,7 @@
     background: var(--color-primary);
     color: white;
     border-color: var(--color-primary);
-    box-shadow: 0 2px 8px rgba(29, 78, 216, 0.2);
+    box-shadow: 0 2px 8px rgba(168, 219, 46, 0.2);
 }
 
 /* ---- Recipe Grid ---- */
@@ -359,7 +359,7 @@
 
 .meal-type-badge {
     background: var(--color-primary-subtle);
-    color: var(--color-primary);
+    color: var(--color-link);
     padding: 3px 10px;
     border-radius: var(--radius-full);
     font-size: var(--text-xs);
@@ -533,7 +533,7 @@
 
 .dietary-tag {
     background: var(--color-primary-subtle);
-    color: var(--color-primary);
+    color: var(--color-link);
     padding: 3px 10px;
     border-radius: var(--radius-full);
     font-size: var(--text-xs);
