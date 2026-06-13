@@ -274,6 +274,28 @@ ROAD_LONG: List[Dict] = [
         ),
     },
     {
+        "id": "marathon_over_unders",
+        "distances": [42.2],
+        "phases": ["build", "peak"],
+        "type": "tempo",
+        "terrain": ["any"],
+        "name": "Threshold Over-Unders",
+        "structure": "6 x (2 min just over threshold / 3 min just under), continuous",
+        "description": (
+            "Warm up 3km easy. Run a continuous block of 6 x (2 min just over "
+            "threshold / 3 min just under threshold) -- no easy jog between, "
+            "hold the effort throughout. Cool down 3km easy."
+        ),
+        "intensity": "high",
+        "target_zone": 4,
+        "pace_zone": "T",
+        "rationale": (
+            "Over-unders raise the pace you can hold at threshold and teach "
+            "lactate clearance on the move -- so marathon pace settles into a "
+            "comfortable rhythm well below your new ceiling."
+        ),
+    },
+    {
         "id": "marathon_mp_cutdown",
         "distances": [42.2],
         "phases": ["peak"],

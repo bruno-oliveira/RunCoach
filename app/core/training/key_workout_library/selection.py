@@ -177,7 +177,7 @@ def overlay_key_workout(
     """
     if workout_type not in ("interval", "tempo", "hill", "long"):
         return
-    if phase not in ("build", "peak"):
+    if phase not in ("base", "build", "peak"):
         return
     if workout.get("duration_min"):
         return
@@ -298,8 +298,10 @@ class KeyWorkoutLibrary:
         Returns:
             A workout dict or None if no key workout applies.
         """
-        # Key workouts only during build and peak
-        if phase not in ("build", "peak"):
+        # Key workouts fire in base (light strides/fartlek only — the catalog
+        # gates which sessions are base-eligible via their ``phases`` list),
+        # build, and peak. Taper stays sharpener-only via the distribution.
+        if phase not in ("base", "build", "peak"):
             return None
 
         candidates = _filter_candidates(

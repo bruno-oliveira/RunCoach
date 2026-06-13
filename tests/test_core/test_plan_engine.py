@@ -734,10 +734,10 @@ class TestStrengthTraining:
 
 
 class TestKeyWorkoutOverlay:
-    """Key workouts should only appear in build/peak phases."""
+    """Key workouts appear in base (light only), build, and peak phases."""
 
     @pytest.mark.parametrize("distance", [5.0, 10.0, 21.1, 42.2])
-    def test_key_workouts_only_in_build_peak(self, distance):
+    def test_key_workouts_only_in_training_phases(self, distance):
         gen = TrainingPlanGenerator()
         plan = gen.generate_plan(
             current_km={5.0: 15, 10.0: 20, 21.1: 25, 42.2: 35}[distance],
@@ -752,12 +752,14 @@ class TestKeyWorkoutOverlay:
                 if w["type"] not in ("rest", "recovery")
             )
             if has_key:
-                assert week["phase"] in ("build", "peak"), (
+                # Taper must stay sharpener-only (no catalog key workout).
+                assert week["phase"] in ("base", "build", "peak"), (
                     f"W{week['week']}: key workout in {week['phase']} phase"
                 )
 
     @pytest.mark.parametrize("distance", [5.0, 10.0, 21.1, 42.2])
-    def test_base_phase_no_key_workouts(self, distance):
+    def test_base_phase_key_workouts_are_light(self, distance):
+        """Base may carry a key workout, but only a light (base_*) one."""
         gen = TrainingPlanGenerator()
         plan = gen.generate_plan(
             current_km={5.0: 15, 10.0: 20, 21.1: 25, 42.2: 35}[distance],
@@ -768,9 +770,12 @@ class TestKeyWorkoutOverlay:
         for week in plan:
             if week["phase"] == "base":
                 for w in week["daily_workouts"]:
-                    assert not w.get("key_workout_id"), (
-                        f"W{week['week']}: key workout in base phase"
-                    )
+                    kid = w.get("key_workout_id")
+                    if kid:
+                        assert kid.startswith("base_"), (
+                            f"W{week['week']}: non-light key workout "
+                            f"'{kid}' in base phase"
+                        )
 
 
 # ── Steps Structure ────────────────────────────────────────────────────────
