@@ -723,3 +723,80 @@
 [data-theme="dark"] .day-selector select {
     background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='none' stroke='%23A0A0A0' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpath d='M4 6l4 4 4-4'/%3e%3c/svg%3e");
 }
+
+/* ============================================================================
+   Collapsible "Plan details & pace zones" reference section
+   These panels (summary stats, goal pace, training/HR zones) are reference
+   material, not daily-glance content, so they fold away by default to keep
+   the page focused on this week's work. The summary chip keeps the headline
+   numbers visible without expanding.
+   ========================================================================= */
+.plan-reference {
+    margin-bottom: var(--space-6);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-xl);
+    background: var(--color-bg-elevated);
+    overflow: hidden;
+}
+
+.plan-reference-summary {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    padding: var(--space-3) var(--space-4);
+    cursor: pointer;
+    list-style: none;
+    user-select: none;
+    font-size: var(--text-sm);
+    color: var(--color-text);
+    transition: background var(--duration-fast) var(--ease-out);
+}
+.plan-reference-summary::-webkit-details-marker { display: none; }
+.plan-reference-summary:hover { background: var(--color-bg-sunken); }
+
+.plan-reference-icon { color: var(--color-text-muted); flex-shrink: 0; }
+.plan-reference-title { font-weight: var(--weight-semibold); flex-shrink: 0; }
+.plan-reference-chips {
+    color: var(--color-text-muted);
+    font-size: var(--text-xs);
+    margin-left: auto;
+    text-align: right;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.plan-reference-chevron {
+    color: var(--color-text-muted);
+    flex-shrink: 0;
+    transition: transform var(--duration-base) var(--ease-out);
+}
+.plan-reference[open] .plan-reference-chevron { transform: rotate(180deg); }
+
+/* The nested panels carry their own margins; the open body just supplies
+   side/bottom padding and removes the double top margin from the first panel. */
+.plan-reference-body {
+    padding: 0 var(--space-1) var(--space-1);
+    animation: tabFadeIn var(--duration-base) var(--ease-out);
+}
+.plan-reference-body > *:first-child { margin-top: 0; }
+.plan-reference-body .plan-summary,
+.plan-reference-body .goal-pace-panel,
+.plan-reference-body .training-zones-panel,
+.plan-reference-body .hr-zones-panel {
+    margin-bottom: var(--space-3);
+    box-shadow: none;
+}
+.plan-reference-body > *:last-child { margin-bottom: 0; }
+
+/* This-week hero: a touch more lift than the in-list pinned card so it reads
+   as the primary focus of the page. */
+.pinned-week--hero { margin-bottom: var(--space-6); }
+.pinned-week--hero .week-card {
+    box-shadow: 0 0 0 1px var(--color-primary), var(--shadow-lg);
+}
+
+@media (max-width: 480px) {
+    .plan-reference-summary { padding: var(--space-3); }
+    .plan-reference-title { font-size: var(--text-xs); }
+    .plan-reference-chips { font-size: 10px; }
+}

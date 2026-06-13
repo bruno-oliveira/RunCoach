@@ -161,6 +161,35 @@
     </div>
     {% endif %}
 
+    {# ── This Week (page hero) ──────────────────────────────────────────
+       The single most important thing on this page is what to do today, so
+       the current week leads — rail + expanded card — before any reference
+       panels or adaptation banners. Hidden once the plan is complete (the
+       completion hero takes over). #}
+    {% if current_week_number and not plan_completed %}
+    {% if week_pulse %}
+    <div class="week-pulse week-pulse--{{ week_pulse.mood }}">
+        <div class="week-pulse-message">{{ week_pulse.message }}</div>
+        {% if week_pulse.details %}
+        <div class="week-pulse-details">
+            {% for detail in week_pulse.details %}
+            <span class="week-pulse-detail">{{ detail }}</span>
+            {% endfor %}
+        </div>
+        {% endif %}
+    </div>
+    {% endif %}
+
+    {% for week in plan if week.week == current_week_number %}
+    <div class="pinned-week pinned-week--hero" id="pinned-current-week">
+        <div class="pinned-week-label">This Week</div>
+        {% include 'components/week_day_rail.html' %}
+        {% set css_class = 'current-week week-expanded' %}
+        {% include 'components/week_card.html' %}
+    </div>
+    {% endfor %}
+    {% endif %}
+
     {% if is_trail and training_plan.training_terrain == 'flat' and (target_elevation_gain_m or 0) > 0 %}
     <div class="flat-mountain-sim-banner" role="status" aria-live="polite">
         <div class="flat-mountain-sim-banner-icon" aria-hidden="true">↗</div>
@@ -170,6 +199,29 @@
         </div>
     </div>
     {% endif %}
+
+    {# Reference material — plan stats and pace zones. Consulted occasionally,
+       so collapsed by default to keep the page focused on this week's work.
+       The headline numbers (target, weeks, peak) are mirrored in the summary
+       chip below so they stay glanceable without expanding. #}
+    <details class="plan-reference">
+        <summary class="plan-reference-summary">
+            <svg class="plan-reference-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+            <span class="plan-reference-title">Plan details &amp; pace zones</span>
+            <span class="plan-reference-chips">
+                {% if training_plan.plan_type == 'fitness' %}
+                    {{ fitness_focus_area | title }}
+                {% elif is_trail %}
+                    {{ target_distance }} km{% if target_elevation_gain_m %} · {{ target_elevation_gain_m | int }} m{% endif %}
+                {% else %}
+                    {{ target_distance }} km
+                {% endif %}
+                · {{ weeks }} wk
+                {% if training_plan.goal_time %} · {{ training_plan.goal_time }}{% endif %}
+            </span>
+            <svg class="plan-reference-chevron" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+        </summary>
+        <div class="plan-reference-body">
 
     <div class="plan-summary">
         <div class="summary-grid">
@@ -309,6 +361,10 @@
         </div>
     </div>
     {% endif %}
+
+        </div>
+    </details>
+    {# end .plan-reference #}
 
     {% if training_plan.plan_type == 'fitness' %}
     <div class="fitness-dashboard">
@@ -532,31 +588,8 @@
     {% include 'components/daily_readiness_widget.html' %}
     {% endif %}
 
-    <!-- Pinned current week — always visible above tabs -->
-    {% if current_week_number %}
-
-    {% if week_pulse %}
-    <div class="week-pulse week-pulse--{{ week_pulse.mood }}">
-        <div class="week-pulse-message">{{ week_pulse.message }}</div>
-        {% if week_pulse.details %}
-        <div class="week-pulse-details">
-            {% for detail in week_pulse.details %}
-            <span class="week-pulse-detail">{{ detail }}</span>
-            {% endfor %}
-        </div>
-        {% endif %}
-    </div>
-    {% endif %}
-
-    {% for week in plan if week.week == current_week_number %}
-    <div class="pinned-week" id="pinned-current-week">
-        <div class="pinned-week-label">This Week</div>
-        {% include 'components/week_day_rail.html' %}
-        {% set css_class = 'current-week week-expanded' %}
-        {% include 'components/week_card.html' %}
-    </div>
-    {% endfor %}
-    {% endif %}
+    {# The pinned current week now renders as the page hero, just under the
+       header — see the "This Week" hero block above. #}
 
     <!-- Tab Navigation -->
     <nav class="plan-tabs" role="tablist">
