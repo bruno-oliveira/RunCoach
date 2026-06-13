@@ -14,6 +14,11 @@
 <div class="week-card {{ css_class }}" data-week="{{ week.week }}">
     <div class="week-header">
         <div class="week-title">Week {{ week.week }}{% if week_dates %} <span class="week-date-range">{{ week_dates[week.week - 1].start }} – {{ week_dates[week.week - 1].end }}</span>{% endif %}</div>
+        <div class="week-dotrail" aria-hidden="true">
+            {% for workout in week.daily_workouts %}
+            <span class="week-dot wt-{{ workout.type }}{% if logged_runs.get(workout.id) %} is-done{% endif %}"></span>
+            {% endfor %}
+        </div>
         {% if ns.total > 0 %}
         <div class="week-progress-badge {% if ns.completed == ns.total %}all-done{% elif ns.completed > 0 %}in-progress{% endif %}">
             {{ ns.completed }}/{{ ns.total }}

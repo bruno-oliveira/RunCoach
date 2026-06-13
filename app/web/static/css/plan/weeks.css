@@ -17,6 +17,52 @@
     margin-left: var(--space-2);
 }
 
+/* ---- Week dot-rail (at-a-glance week shape on collapsed strips) ---- */
+.week-dotrail {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    margin-left: var(--space-3);
+    margin-right: auto;
+    flex-shrink: 0;
+}
+.week-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: var(--color-border);
+    flex-shrink: 0;
+}
+/* colored by workout type */
+.week-dot.wt-easy      { background: var(--wt-easy); }
+.week-dot.wt-recovery  { background: var(--wt-recovery); }
+.week-dot.wt-run_walk  { background: var(--wt-easy); }
+.week-dot.wt-long      { background: var(--wt-long); }
+.week-dot.wt-tempo     { background: var(--wt-tempo); }
+.week-dot.wt-threshold { background: var(--wt-tempo); }
+.week-dot.wt-interval  { background: var(--wt-interval); }
+.week-dot.wt-hill      { background: var(--wt-hill); }
+.week-dot.wt-race      { background: var(--wt-interval); }
+/* rest days read as hollow */
+.week-dot.wt-rest {
+    background: transparent;
+    box-shadow: inset 0 0 0 1px var(--color-border);
+}
+/* logged runs get a clean accent ring to show completion */
+.week-dot.is-done {
+    box-shadow: 0 0 0 1.5px var(--color-bg-elevated), 0 0 0 3px var(--color-primary);
+}
+/* The dot-rail is a collapsed-strip affordance; once expanded the full
+   workout grid takes over, so hide it to avoid redundancy. */
+.week-card.week-expanded .week-dotrail,
+.week-card.current-week .week-dotrail {
+    display: none;
+}
+@media (max-width: 640px) {
+    /* On narrow screens the strip stacks; keep the rail but let it wrap under */
+    .week-dotrail { margin-left: 0; }
+}
+
 /* ---- Missed Workout ---- */
 .workout-item.missed {
     opacity: 0.5;
@@ -76,12 +122,12 @@
     font-weight: var(--weight-semibold);
     color: var(--color-text);
     flex-shrink: 0;
-    margin-right: auto;
 }
 .week-card.week-expanded .week-title,
 .week-card.current-week .week-title {
     font-size: var(--text-xl);
     font-weight: var(--weight-bold);
+    margin-right: auto;
 }
 
 .week-total {
