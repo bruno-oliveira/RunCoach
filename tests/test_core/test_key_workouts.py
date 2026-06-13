@@ -50,9 +50,7 @@ class TestPhaseGuard:
     )
     def test_base_serves_light_quality_only(self, distance, workout_type):
         """Base phase now serves a workout, but only low-intensity ones."""
-        result = KeyWorkoutLibrary.get_for_phase(
-            distance, "base", 0, workout_type
-        )
+        result = KeyWorkoutLibrary.get_for_phase(distance, "base", 0, workout_type)
         assert result is not None
         # Base sessions must be light: never high-intensity threshold/VO2max.
         assert result["intensity"] in ("low", "medium")

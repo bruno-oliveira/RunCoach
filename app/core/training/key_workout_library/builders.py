@@ -127,8 +127,15 @@ _KEY_WORKOUT_STEP_BUILDERS: Dict[
         d, pz, reps=6, stride_s=20, recovery_s=60
     ),
     "base_hill_strides": lambda d, pz: _steps_mod.build_strides_steps(
-        d, pz, reps=6, stride_s=15, recovery_s=60, work_zone="R",
-        label="6 × 15s hill strides", effort="strong uphill", cue="hill"
+        d,
+        pz,
+        reps=6,
+        stride_s=15,
+        recovery_s=60,
+        work_zone="R",
+        label="6 × 15s hill strides",
+        effort="strong uphill",
+        cue="hill",
     ),
     "base_light_fartlek": lambda d, pz: _steps_mod.build_fartlek_steps(
         d, pz, reps=6, on_s=60, off_s=120, on_zone="10K", work_effort="relaxed-quick"
