@@ -233,6 +233,27 @@ ROAD_LONG: List[Dict] = [
         ),
     },
     {
+        "id": "marathon_km_intervals",
+        "distances": [42.2],
+        "phases": ["build", "peak"],
+        "type": "interval",
+        "terrain": ["any"],
+        "name": "10K-Pace Intervals",
+        "structure": "5-7 x ~1km at 10K pace with 90s jog recovery",
+        "description": (
+            "Warm up 2km easy. Run 6 x 1km at 10K goal pace with 90 sec easy "
+            "jog recovery between reps. Cool down 2km easy."
+        ),
+        "intensity": "high",
+        "target_zone": 4,
+        "pace_zone": "10K",
+        "rationale": (
+            "A speed-reserve session that keeps fast running in the legs "
+            "through a marathon block. Rotated with Yasso 800s, it gives the "
+            "build phase two distinct interval days instead of one repeated."
+        ),
+    },
+    {
         "id": "marathon_progressive_long",
         "distances": [42.2],
         "phases": ["build"],

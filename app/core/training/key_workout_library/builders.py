@@ -14,6 +14,7 @@ from app.core.training.key_workout_library.rewrites import (
     _over_under_reps,
     _pyramid_pattern,
     _vo2max_400_reps,
+    _vo2max_km_reps,
     _yasso_800_reps,
     reconcile_key_workout_text,
 )
@@ -67,6 +68,19 @@ _KEY_WORKOUT_STEP_BUILDERS: Dict[
     ),
     "10k_goal_pace_segments": lambda d, pz: _steps_mod.build_km_rep_steps(
         d, pz, reps=2, work_zone="10K"
+    ),
+    # -- VO2max km-rep interval variants (proportional reps) --
+    "5k_vo2max_1000s": lambda d, pz: _steps_mod.build_km_rep_steps(
+        d, pz, reps=_vo2max_km_reps(d, default=5), work_zone="I", recovery_s=150
+    ),
+    "10k_vo2max_1000s": lambda d, pz: _steps_mod.build_km_rep_steps(
+        d, pz, reps=_vo2max_km_reps(d, default=5), work_zone="I", recovery_s=120
+    ),
+    "half_km_intervals": lambda d, pz: _steps_mod.build_km_rep_steps(
+        d, pz, reps=_vo2max_km_reps(d, default=5), work_zone="10K", recovery_s=90
+    ),
+    "marathon_km_intervals": lambda d, pz: _steps_mod.build_km_rep_steps(
+        d, pz, reps=_vo2max_km_reps(d, default=6), work_zone="10K", recovery_s=90
     ),
     "5k_race_pace_3km": lambda d, pz: _steps_mod.build_km_rep_steps(
         d, pz, reps=2, work_zone="T", recovery_s=180

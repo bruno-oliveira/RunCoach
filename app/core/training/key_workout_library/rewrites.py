@@ -101,6 +101,28 @@ def _fartlek_reps(
     return max(lo, min(hi, reps))
 
 
+def _vo2max_km_reps(
+    d: float,
+    rep_km: float = 1.0,
+    recovery_km: float = 0.4,
+    default: int = 5,
+    lo: int = 3,
+    hi: int = 7,
+) -> int:
+    """Scale the rep count of a km-based VO2max session to the run budget.
+
+    One rep is ``rep_km`` of work plus ``recovery_km`` of jog. Reps are
+    clamped so the session stays a recognisable VO2max set across distances.
+    """
+    wu, cd = _wu_cd(d)
+    main_km = max(0.0, d - wu - cd)
+    set_km = rep_km + recovery_km
+    if set_km <= 0:
+        return default
+    reps = round(main_km / set_km)
+    return max(lo, min(hi, reps))
+
+
 def _over_under_reps(
     d: float,
     over_min: float = 1.5,
@@ -245,6 +267,30 @@ _DISTANCE_REWRITES: Dict[str, Callable[[float], str]] = {
         f"Warm up {_wu_cd(d)[0]:g}km easy. "
         f"Run 2 x {round((d - _wu_cd(d)[0] - _wu_cd(d)[1]) / 2, 1):g}km "
         f"at 10K goal pace with 3 min standing recovery. Cool down {_wu_cd(d)[1]:g}km easy."
+    ),
+    "5k_vo2max_1000s": lambda d: (
+        f"Warm up {_wu_cd(d)[0]:g}km easy. Run {_vo2max_km_reps(d, default=5)} x "
+        f"{round((d - _wu_cd(d)[0] - _wu_cd(d)[1]) / _vo2max_km_reps(d, default=5), 1):g}km "
+        f"at 5K goal pace with 2-3 min easy jog recovery between reps. "
+        f"Cool down {_wu_cd(d)[1]:g}km easy."
+    ),
+    "10k_vo2max_1000s": lambda d: (
+        f"Warm up {_wu_cd(d)[0]:g}km easy. Run {_vo2max_km_reps(d, default=5)} x "
+        f"{round((d - _wu_cd(d)[0] - _wu_cd(d)[1]) / _vo2max_km_reps(d, default=5), 1):g}km "
+        f"at a pace between your 5K and 10K effort, with 2 min easy jog "
+        f"recovery between reps. Cool down {_wu_cd(d)[1]:g}km easy."
+    ),
+    "half_km_intervals": lambda d: (
+        f"Warm up {_wu_cd(d)[0]:g}km easy. Run {_vo2max_km_reps(d, default=5)} x "
+        f"{round((d - _wu_cd(d)[0] - _wu_cd(d)[1]) / _vo2max_km_reps(d, default=5), 1):g}km "
+        f"at 10K goal pace with 90 sec easy jog recovery between reps. "
+        f"Cool down {_wu_cd(d)[1]:g}km easy."
+    ),
+    "marathon_km_intervals": lambda d: (
+        f"Warm up {_wu_cd(d)[0]:g}km easy. Run {_vo2max_km_reps(d, default=6)} x "
+        f"{round((d - _wu_cd(d)[0] - _wu_cd(d)[1]) / _vo2max_km_reps(d, default=6), 1):g}km "
+        f"at 10K goal pace with 90 sec easy jog recovery between reps. "
+        f"Cool down {_wu_cd(d)[1]:g}km easy."
     ),
     "10k_tempo_progression": lambda d: (
         f"Warm up {_wu_cd(d)[0]:g}km easy. "

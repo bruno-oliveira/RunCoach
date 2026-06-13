@@ -147,6 +147,27 @@ _WORKOUTS_SHORT: List[Dict] = [
         ),
     },
     {
+        "id": "5k_vo2max_1000s",
+        "distances": [5.0],
+        "phases": ["build", "peak"],
+        "type": "interval",
+        "terrain": ["any"],
+        "name": "VO2max 1km Repeats",
+        "structure": "5-7 × ~1km at 5K pace with 2-3min jog recovery",
+        "description": (
+            "Warm up 2km easy. Run 5 × 1km at 5K goal pace with 2-3 min easy "
+            "jog recovery between reps. Cool down 2km easy."
+        ),
+        "intensity": "high",
+        "target_zone": 5,
+        "pace_zone": "I",
+        "rationale": (
+            "Longer VO2max reps hold you at maximal aerobic effort for longer "
+            "than 400s do, building the sustained power that 5K racing demands. "
+            "Rotated with the 400m session, it keeps build-phase speed varied."
+        ),
+    },
+    {
         "id": "5k_race_pace_3km",
         "distances": [5.0],
         "phases": ["build", "peak"],
@@ -332,6 +353,28 @@ _WORKOUTS_SHORT: List[Dict] = [
         ),
     },
     {
+        "id": "10k_vo2max_1000s",
+        "distances": [10.0],
+        "phases": ["build", "peak"],
+        "type": "interval",
+        "terrain": ["any"],
+        "name": "VO2max 1km Repeats",
+        "structure": "5-7 × ~1km at 5K-10K pace with 2min jog recovery",
+        "description": (
+            "Warm up 2km easy. Run 5 × 1km at a pace between your 5K and 10K "
+            "effort, with 2 min easy jog recovery between reps. Cool down "
+            "2km easy."
+        ),
+        "intensity": "high",
+        "target_zone": 5,
+        "pace_zone": "I",
+        "rationale": (
+            "Raises the aerobic ceiling that caps 10K pace. Rotated with the "
+            "fartlek, it gives the build phase a true hard-interval day "
+            "alongside the surge-and-float session."
+        ),
+    },
+    {
         "id": "10k_over_unders",
         "distances": [10.0],
         "phases": ["build", "peak"],
@@ -434,6 +477,27 @@ _WORKOUTS_SHORT: List[Dict] = [
         "rationale": (
             "Builds the pacing discipline to run a negative split. "
             "Each segment teaches your body to run faster on accumulating fatigue."
+        ),
+    },
+    {
+        "id": "half_km_intervals",
+        "distances": [21.1],
+        "phases": ["build", "peak"],
+        "type": "interval",
+        "terrain": ["any"],
+        "name": "10K-Pace Intervals",
+        "structure": "5-7 × ~1km at 10K pace with 90s jog recovery",
+        "description": (
+            "Warm up 2km easy. Run 5 × 1km at 10K goal pace with 90 sec easy "
+            "jog recovery between reps. Cool down 2km easy."
+        ),
+        "intensity": "high",
+        "target_zone": 4,
+        "pace_zone": "10K",
+        "rationale": (
+            "Faster-than-race-pace reps lift your speed reserve so half-marathon "
+            "pace feels more comfortable. Gives the build phase a sharp interval "
+            "day to rotate against the cut-down long run."
         ),
     },
     {
