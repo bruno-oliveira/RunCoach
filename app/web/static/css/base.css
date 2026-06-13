@@ -6,33 +6,32 @@
 
 :root {
   /* ---- Color Tokens ----
-     Single-accent system: one vivid lime carries every primary action and
-     highlight. Everything else is a calm near-neutral grey so the accent
-     never competes. Light surfaces, Runna-style restraint. */
-  --color-primary: #C2F542;          /* lime — the one accent */
-  --color-primary-light: #D2FA6E;
-  --color-primary-dark: #A8DB2E;
-  --color-primary-subtle: rgba(168, 219, 46, 0.14);
-  --color-primary-ghost: rgba(168, 219, 46, 0.07);
+     Single-accent system: one emerald carries primary actions and highlights,
+     used sparingly. Everything else is a calm near-neutral grey so the accent
+     never competes. Light surfaces, restrained. */
+  --color-primary: #0E7C5A;          /* emerald — the one accent */
+  --color-primary-light: #15976E;
+  --color-primary-dark: #0A5F45;
+  --color-primary-subtle: rgba(14, 124, 90, 0.10);
+  --color-primary-ghost: rgba(14, 124, 90, 0.05);
 
-  /* Accent maps to the same lime — kept as its own token so the many
+  /* Accent maps to the same emerald — kept as its own token so the many
      components referencing --color-accent stay single-accent automatically. */
-  --color-accent: #C2F542;
-  --color-accent-light: #D2FA6E;
-  --color-accent-dark: #A8DB2E;
-  --color-accent-subtle: rgba(168, 219, 46, 0.14);
+  --color-accent: #0E7C5A;
+  --color-accent-light: #15976E;
+  --color-accent-dark: #0A5F45;
+  --color-accent-subtle: rgba(14, 124, 90, 0.10);
 
   /* Secondary neutralized to graphite — no longer a third brand hue. */
   --color-secondary: #1C1E21;
   --color-secondary-light: #3A3D42;
   --color-secondary-dark: #111315;
 
-  /* Interactive text/links: lime is a fill color and is unreadable as text on
-     light surfaces, so text and links use ink. A darker "olive" lime is
-     available where a hint of the brand is wanted on text. */
+  /* Interactive text/links use ink on light surfaces; the emerald is dark
+     enough to also work as text where a hint of the brand is wanted. */
   --color-link: #111315;
   --color-link-hover: #000000;
-  --color-accent-strong: #5F7A12;     /* darkened lime, AA on white */
+  --color-accent-strong: #0A5F45;     /* emerald, AA on white as text */
 
   /* Neutrals — cool-neutral grey (light mode) */
   --color-bg: #FBFBFA;
@@ -47,8 +46,8 @@
   --color-text: #111315;
   --color-text-secondary: #5E6166;
   --color-text-muted: #9A9DA2;
-  --color-text-on-primary: #14160A;   /* dark ink reads on lime, not white */
-  --color-text-on-accent: #14160A;
+  --color-text-on-primary: #FFFFFF;   /* white reads on emerald */
+  --color-text-on-accent: #FFFFFF;
 
   /* Semantic */
   --color-error: #DC2626;
@@ -694,16 +693,16 @@ pre code {
    ========================================================================= */
 
 [data-theme="dark"] {
-  --color-primary: #C2F542;
-  --color-primary-light: #D2FA6E;
-  --color-primary-dark: #A8DB2E;
-  --color-primary-subtle: rgba(168, 219, 46, 0.16);
-  --color-primary-ghost: rgba(168, 219, 46, 0.08);
+  --color-primary: #2BB888;
+  --color-primary-light: #4ECCA0;
+  --color-primary-dark: #1E9C72;
+  --color-primary-subtle: rgba(43, 184, 136, 0.16);
+  --color-primary-ghost: rgba(43, 184, 136, 0.08);
 
-  --color-accent: #C2F542;
-  --color-accent-light: #D2FA6E;
-  --color-accent-dark: #A8DB2E;
-  --color-accent-subtle: rgba(168, 219, 46, 0.16);
+  --color-accent: #2BB888;
+  --color-accent-light: #4ECCA0;
+  --color-accent-dark: #1E9C72;
+  --color-accent-subtle: rgba(43, 184, 136, 0.16);
 
   --color-secondary: #F0EDE8;
   --color-secondary-light: #FFFFFF;
@@ -711,7 +710,7 @@ pre code {
 
   --color-link: #F0EDE8;
   --color-link-hover: #FFFFFF;
-  --color-accent-strong: #C2F542;     /* lime reads fine as text on dark */
+  --color-accent-strong: #4ECCA0;     /* brighter emerald reads as text on dark */
 
   --color-bg: #0F0E13;
   --color-bg-elevated: #1A1920;
@@ -724,8 +723,8 @@ pre code {
   --color-text: #F0EDE8;
   --color-text-secondary: #9B978F;
   --color-text-muted: #6B6862;
-  --color-text-on-primary: #14160A;   /* ink on lime in dark mode too */
-  --color-text-on-accent: #14160A;
+  --color-text-on-primary: #08130E;   /* near-black on bright emerald */
+  --color-text-on-accent: #08130E;
 
   --color-error: #FF6B6B;
   --color-error-subtle: rgba(255, 107, 107, 0.12);

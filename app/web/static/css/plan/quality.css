@@ -48,27 +48,24 @@
 
 .tier-badge .badge {
     display: inline-block;
-    padding: var(--space-2) var(--space-4);
+    padding: var(--space-1) var(--space-3);
     border-radius: var(--radius-full);
-    font-size: var(--text-sm);
+    font-size: var(--text-xs);
     font-weight: var(--weight-semibold);
     text-transform: uppercase;
     letter-spacing: 0.05em;
+    background: var(--color-bg-sunken);
+    border: 1px solid var(--color-border);
+    color: var(--color-text-secondary);
 }
 
-.tier-badge .badge-beginner {
-    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
-    color: white;
-}
-
-.tier-badge .badge-intermediate {
-    background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
-    color: white;
-}
-
+/* Tier is a label, not a brand color — all three share one quiet chip with a
+   small accent dot to distinguish without introducing competing hues. */
+.tier-badge .badge-beginner,
+.tier-badge .badge-intermediate,
 .tier-badge .badge-advanced {
-    background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
-    color: white;
+    background: var(--color-bg-sunken);
+    color: var(--color-text-secondary);
 }
 
 .tier-badge p {

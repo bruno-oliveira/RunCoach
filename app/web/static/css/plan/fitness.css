@@ -29,7 +29,7 @@
     align-items: center;
     gap: var(--space-4);
     background: var(--color-primary-subtle);
-    border: 1px solid rgba(168, 219, 46, 0.15);
+    border: 1px solid rgba(14, 124, 90, 0.15);
     border-radius: var(--radius-xl);
     padding: var(--space-4) var(--space-5);
     margin-bottom: var(--space-5);
