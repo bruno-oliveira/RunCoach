@@ -18,14 +18,17 @@ EXPECTED_EFFORT: dict[str, Tuple[int, int]] = {
     "rest": (1, 2),
 }
 
-# VDOT zone pace used for each workout type (zone key must match VDOTCalculator output)
+# VDOT zone pace used for each workout type (zone key must match VDOTCalculator output).
+# Hill reps are short (~30 s) uphill efforts built at R-pace effort; average pace
+# on a hill is not a meaningful target, so the scorer treats hills as effort-only
+# (see calculate_quality_score) and this entry is for display/labelling alignment.
 WORKOUT_PACE_ZONE: dict[str, str] = {
     "easy": "E",
     "recovery": "E",
     "long": "E",
     "tempo": "T",
     "interval": "I",
-    "hill": "T",
+    "hill": "R",
 }
 
 
@@ -55,10 +58,17 @@ def calculate_quality_score(
     effort_range = EXPECTED_EFFORT.get(wtype, (4, 7))
     lo, hi = effort_range
 
-    # Hills use 50/50 weighting (pace unreliable on hills); others use 40/60
+    # Hills are short uphill reps where average pace is physically meaningless
+    # (the gradient dominates, GPS pace is noise), so they are scored on effort
+    # alone — 100% effort, no pace component — regardless of any planned pace
+    # that may be attached. Other quality types use 40% effort / 60% pace.
     is_hill = wtype == "hill"
-    effort_max = 50.0 if is_hill else 40.0
-    pace_max = 50.0 if is_hill else 60.0
+    if is_hill:
+        effort_max = 100.0
+        pace_max = 0.0
+    else:
+        effort_max = 40.0
+        pace_max = 60.0
     neutral_effort = effort_max / 2.0
     neutral_pace = pace_max / 2.0
 

@@ -406,6 +406,22 @@ def recovery_week_set(phases: Optional[Dict[str, int]]) -> frozenset[int]:
             loading_streak = 0
         else:
             loading_streak += 1
+
+    # A short peak block (<= 2 weeks) must not lose its opening week to the
+    # cadence: a 16-week marathon split (base 5 / build 6 / peak 2) landed
+    # the wk-12 deload on the first peak week, leaving a single true peak
+    # week. Snap that deload one week earlier (last build week) so the
+    # runner absorbs *before* the peak block and then runs all of it.
+    peak_len = phases.get("peak", 0)
+    first_peak = phases.get("base", 0) + phases.get("build", 0) + 1
+    if (
+        0 < peak_len <= 2
+        and first_peak in recovery
+        and first_peak - 1 >= 1
+        and (first_peak - 1) not in recovery
+    ):
+        recovery.discard(first_peak)
+        recovery.add(first_peak - 1)
     return frozenset(recovery)
 
 

@@ -13,6 +13,7 @@ from app.core.training.distribution_validator import (
 )
 from app.core.training.road_profile import classify_road
 from app.core.training.trail_profile import TrailProfile, is_trail_target
+from app.core.training.tuning import SECOND_QUALITY_MIN_WEEK_KM
 from app.core.training.week_scheduler import schedule_workout_types  # noqa: F401
 
 
@@ -70,9 +71,13 @@ def get_workout_distribution(
         if week_in_build <= 2:
             quality_workouts = 1 if max_runs >= 3 else 0
         else:
-            quality_workouts = 2 if max_runs >= 5 else 1
+            quality_workouts = (
+                2 if max_runs >= 5 and total_km >= SECOND_QUALITY_MIN_WEEK_KM else 1
+            )
     elif phase == "peak":
-        quality_workouts = 2 if max_runs >= 5 else 1
+        quality_workouts = (
+            2 if max_runs >= 5 and total_km >= SECOND_QUALITY_MIN_WEEK_KM else 1
+        )
     elif phase == "taper":
         # Retain a single short race-pace sharpener through the taper (the
         # PHASE_DISTRIBUTIONS taper rows budget ~10-12% tempo for exactly this).
@@ -83,19 +88,24 @@ def get_workout_distribution(
     else:
         quality_workouts = 0
 
-    # Profile-aware: adjust quality count based on actual pace distribution
+    # Profile-aware: adjust quality count based on actual pace distribution.
+    # A profile-driven reduction is a deliberate guardrail for this runner —
+    # the polarized deficit branch must not re-add the slot it removed.
+    profile_reduced = False
     if profile and not is_recovery_week and quality_workouts > 0:
         hard_pct = profile.get("hard_pct", 0)
         easy_pct = profile.get("easy_pct", 0)
         # If runner habitually does too much hard work (>30%), reduce quality
         if hard_pct > 30 and quality_workouts > 1:
             quality_workouts = max(1, quality_workouts - 1)
+            profile_reduced = True
         # If runner does almost no hard work (<10%), ensure at least 1 quality
         elif hard_pct < 10 and quality_workouts == 0 and phase in ("build", "peak"):
             quality_workouts = 1
         # If runner's easy runs are very low (<50%), they may need more recovery
         elif easy_pct < 50 and phase in ("build", "peak") and quality_workouts > 1:
             quality_workouts = max(1, quality_workouts - 1)
+            profile_reduced = True
 
     # Recovery is an additional non-running day, does NOT count towards max_runs
     actual_run_slots = max_runs
@@ -118,12 +128,20 @@ def get_workout_distribution(
     )
 
     if not is_recovery_week and max_runs > 2:
+        in_build_on_ramp = False
+        if phase == "build":
+            wib = week_number - phases["base"] if phases else week_number
+            in_build_on_ramp = wib <= 2
+        too_small_for_second = total_km < SECOND_QUALITY_MIN_WEEK_KM
         distribution = _validate_polarized_ratio(
             distribution,
             phase,
             target_distance,
             trail_profile=trail_profile,
             terrain=terrain,
+            suppress_increase=in_build_on_ramp
+            or profile_reduced
+            or too_small_for_second,
         )
 
     return distribution

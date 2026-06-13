@@ -8,7 +8,7 @@
     <div class="workout-type-row">
         <div class="workout-type">{{ workout.type | replace('_', ' ') | title }}</div>
         {% if workout.hr_zone_label %}
-        <span class="hr-zone-badge hr-zone-{{ workout.hr_zone_target }}">Z{{ workout.hr_zone_target }}</span>
+        <span class="hr-zone-badge hr-zone-{{ workout.hr_zone_target }}" title="{{ workout.hr_zone_label }}">Z{{ workout.hr_zone_target }}</span>
         {% endif %}
     </div>
     {% if workout.type == 'run_walk' and workout.run_min and workout.walk_min %}
@@ -22,17 +22,31 @@
     <div class="key-workout-badge">{{ workout.key_workout_name }}</div>
     {% endif %}
     {% if workout.distance > 0 %}
-    <div class="workout-distance">{{ '%.1f'|format(workout.distance) }} km{% if workout.duration_min and workout.type != 'run_walk' %} <span class="workout-zone-hint">≈ {{ workout.duration_min }} min</span>{% endif %}{% if workout.hr_zone_label %} <span class="workout-zone-hint">{{ workout.hr_zone_label }}</span>{% endif %}{% if workout.baseline_distance and workout.baseline_distance != workout.distance %}<span class="workout-adjusted-chip {% if workout.distance < workout.baseline_distance %}is-down{% endif %}" title="Adjusted from {{ '%.1f'|format(workout.baseline_distance) }} km — open the latest changes panel for the reason">
+    <div class="workout-distance">{{ '%.1f'|format(workout.distance) }} km{% if workout.duration_min and workout.type != 'run_walk' %} <span class="workout-zone-hint">≈ {{ workout.duration_min }} min</span>{% endif %}{% if workout.baseline_distance and workout.baseline_distance != workout.distance %}<span class="workout-adjusted-chip {% if workout.distance < workout.baseline_distance %}is-down{% endif %}" title="Adjusted from {{ '%.1f'|format(workout.baseline_distance) }} km — open the latest changes panel for the reason">
         <span class="workout-adjusted-chip-arrow" aria-hidden="true">{% if workout.distance > workout.baseline_distance %}↑{% else %}↓{% endif %}</span>
         adjusted from {{ '%.1f'|format(workout.baseline_distance) }} km
     </span>{% endif %}</div>
     {% elif workout.duration_min and workout.type != 'run_walk' %}
-    <div class="workout-distance">{{ workout.duration_min }} min{% if workout.hr_zone_label %} <span class="workout-zone-hint">{{ workout.hr_zone_label }}</span>{% endif %}</div>
+    <div class="workout-distance">{{ workout.duration_min }} min</div>
     {% endif %}
     {% if workout.structure %}
     <div class="workout-structure">{{ workout.structure }}</div>
     {% endif %}
+
+    {% set has_details = (workout.description or workout.notes) or workout.treadmill_prescription or (workout.steps and workout.type not in ['rest', 'recovery']) or (workout.segments and workout.type not in ['rest', 'recovery']) or workout.key_workout_rationale or workout.coaching_rationale %}
+    {% if has_details %}
+    <details class="workout-details"{% if is_today_card %} open{% endif %}>
+        <summary class="workout-details-toggle">
+            <svg class="workout-steps-chevron" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+            <span>Details</span>
+        </summary>
+    <div class="workout-details-body">
+    {% if workout.description or workout.notes %}
     <div class="workout-notes">{{ workout.description or workout.notes }}</div>
+    {% endif %}
+    {% if workout.hr_zone_label %}
+    <div class="workout-zone-hint workout-zone-line">{{ workout.hr_zone_label }}</div>
+    {% endif %}
 
     {% if workout.treadmill_prescription %}
     <div class="treadmill-rx" title="Flat-access alternative to build race-specific vertical">
@@ -48,21 +62,11 @@
     {% endif %}
 
     {% if workout.steps and workout.type not in ['rest', 'recovery'] %}
-    <details class="workout-steps-wrap">
-        <summary class="workout-steps-toggle">
-            <svg class="workout-steps-chevron" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
-            <span>Session blocks</span>
-            <span class="workout-steps-count">{{ workout.steps | length }}</span>
-        </summary>
+    <div class="workout-steps-wrap">
         {% include 'components/workout_steps.html' %}
-    </details>
+    </div>
     {% elif workout.segments and workout.type not in ['rest', 'recovery'] %}
-    <details class="workout-steps-wrap">
-        <summary class="workout-steps-toggle">
-            <svg class="workout-steps-chevron" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
-            <span>Session blocks</span>
-            <span class="workout-steps-count">{{ workout.segments | length }}</span>
-        </summary>
+    <div class="workout-steps-wrap">
         <ol class="workout-steps" aria-label="Workout steps">
             {% for seg in workout.segments %}
             <li class="workout-step workout-step-{{ seg.type }}">
@@ -83,12 +87,20 @@
             </li>
             {% endfor %}
         </ol>
-    </details>
+    </div>
     {% endif %}
     {% if workout.key_workout_rationale %}
-    <details class="coaching-note key-workout-rationale">
-        <summary class="coaching-note-toggle">Why this workout</summary>
-        <div class="coaching-note-content">{{ workout.key_workout_rationale }}</div>
+    <div class="workout-rationale-line"><span class="workout-rationale-label">Why:</span> {{ workout.key_workout_rationale }}</div>
+    {% endif %}
+
+    {% if workout.coaching_rationale %}
+    {% set overlay = (today_workout_overlay or {}).get(week.week ~ '-' ~ workout.day) %}
+    <div class="coaching-note-content workout-coach-line{% if overlay and overlay.is_fatigue_softened %} coaching-note-fatigued{% endif %}">
+        <span class="workout-rationale-label">Coach:</span>
+        {% if overlay and overlay.is_fatigue_softened %}<span class="fatigue-icon" title="Recent runs have been costly — consider easing this one">⚠️</span> Consider easing this one — your last few runs have been costly. {% endif %}{% if overlay and overlay.rationale_prefix %}{{ overlay.rationale_prefix }}{{ workout.coaching_rationale[0]|lower }}{{ workout.coaching_rationale[1:] }}{% else %}{{ workout.coaching_rationale }}{% endif %}
+    </div>
+    {% endif %}
+    </div>
     </details>
     {% endif %}
 
@@ -97,21 +109,6 @@
         + {{ (workout.strength_session.focus or workout.strength_session.type) | replace('_', ' ') | title }} Strength
         <span class="workout-strength-duration">{{ workout.strength_session.duration }}</span>
     </div>
-    {% endif %}
-
-    {% if workout.coaching_rationale %}
-    {% set overlay = (today_workout_overlay or {}).get(week.week ~ '-' ~ workout.day) %}
-    <details class="coaching-note{% if overlay and overlay.is_fatigue_softened %} coaching-note-fatigued{% endif %}">
-        <summary class="coaching-note-toggle">
-            Coach says
-            {% if overlay and overlay.is_fatigue_softened %}
-            <span class="fatigue-icon" title="Recent runs have been costly — consider easing this one">⚠️</span>
-            {% endif %}
-        </summary>
-        <div class="coaching-note-content">
-            {% if overlay and overlay.is_fatigue_softened %}Consider easing this one — your last few runs have been costly. {% endif %}{% if overlay and overlay.rationale_prefix %}{{ overlay.rationale_prefix }}{{ workout.coaching_rationale[0]|lower }}{{ workout.coaching_rationale[1:] }}{% else %}{{ workout.coaching_rationale }}{% endif %}
-        </div>
-    </details>
     {% endif %}
 
     {% if logged_run %}
