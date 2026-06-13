@@ -27,8 +27,8 @@
   --color-bg-sunken: #F3F2EE;
   --color-bg-overlay: rgba(18, 16, 28, 0.55);
   --color-surface: #EEEDEA;
-  --color-border: #E2E0DB;
-  --color-border-subtle: #EEEDE9;
+  --color-border: #E7E5E0;
+  --color-border-subtle: #F1F0EC;
 
   /* Text */
   --color-text: #1C1917;
@@ -129,14 +129,17 @@
   --radius-2xl: 20px;
   --radius-full: 9999px;
 
-  /* ---- Shadows ---- */
-  --shadow-xs: 0 1px 2px rgba(28, 25, 23, 0.04);
-  --shadow-sm: 0 1px 3px rgba(28, 25, 23, 0.06), 0 1px 2px rgba(28, 25, 23, 0.04);
-  --shadow-md: 0 4px 8px -1px rgba(28, 25, 23, 0.06), 0 2px 4px -2px rgba(28, 25, 23, 0.04);
-  --shadow-lg: 0 12px 24px -4px rgba(28, 25, 23, 0.08), 0 4px 8px -4px rgba(28, 25, 23, 0.04);
-  --shadow-xl: 0 20px 40px -8px rgba(28, 25, 23, 0.1), 0 8px 16px -8px rgba(28, 25, 23, 0.06);
-  --shadow-glow: 0 0 0 1px var(--color-primary-subtle), 0 4px 16px rgba(29, 78, 216, 0.12);
-  --shadow-accent-glow: 0 0 0 1px var(--color-accent-subtle), 0 4px 16px rgba(255, 98, 70, 0.12);
+  /* ---- Shadows ----
+     Minimal: surfaces rely on hairline borders, not stacked shadows. Only
+     genuine overlays (modals, popovers) get a soft, single-layer shadow.
+     Token names are preserved so components don't need to change. */
+  --shadow-xs: none;
+  --shadow-sm: 0 1px 2px rgba(28, 25, 23, 0.04);
+  --shadow-md: 0 1px 2px rgba(28, 25, 23, 0.04);
+  --shadow-lg: 0 6px 20px -8px rgba(28, 25, 23, 0.10);
+  --shadow-xl: 0 12px 32px -10px rgba(28, 25, 23, 0.12);
+  --shadow-glow: 0 0 0 1px var(--color-primary-subtle);
+  --shadow-accent-glow: 0 0 0 1px var(--color-accent-subtle);
 
   /* ---- Transitions ---- */
   --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
@@ -719,13 +722,13 @@ pre code {
   --color-info-subtle: rgba(75, 168, 255, 0.12);
   --color-info-border: rgba(75, 168, 255, 0.25);
 
-  --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.4);
-  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.5), 0 1px 2px rgba(0, 0, 0, 0.4);
-  --shadow-md: 0 4px 8px rgba(0, 0, 0, 0.5), 0 2px 4px rgba(0, 0, 0, 0.3);
-  --shadow-lg: 0 12px 24px rgba(0, 0, 0, 0.6), 0 4px 8px rgba(0, 0, 0, 0.4);
-  --shadow-xl: 0 20px 40px rgba(0, 0, 0, 0.7), 0 8px 16px rgba(0, 0, 0, 0.5);
-  --shadow-glow: 0 0 0 1px var(--color-primary-subtle), 0 4px 16px rgba(79, 131, 240, 0.2);
-  --shadow-accent-glow: 0 0 0 1px var(--color-accent-subtle), 0 4px 16px rgba(255, 122, 98, 0.2);
+  --shadow-xs: none;
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --shadow-md: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --shadow-lg: 0 6px 20px -8px rgba(0, 0, 0, 0.6);
+  --shadow-xl: 0 12px 32px -10px rgba(0, 0, 0, 0.7);
+  --shadow-glow: 0 0 0 1px var(--color-primary-subtle);
+  --shadow-accent-glow: 0 0 0 1px var(--color-accent-subtle);
 }
 
 /* ---- Cookie Consent Banner ---- */

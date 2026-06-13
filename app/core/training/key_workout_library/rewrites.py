@@ -101,6 +101,54 @@ def _fartlek_reps(
     return max(lo, min(hi, reps))
 
 
+def _vo2max_km_reps(
+    d: float,
+    rep_km: float = 1.0,
+    recovery_km: float = 0.4,
+    default: int = 5,
+    lo: int = 3,
+    hi: int = 7,
+) -> int:
+    """Scale the rep count of a km-based VO2max session to the run budget.
+
+    One rep is ``rep_km`` of work plus ``recovery_km`` of jog. Reps are
+    clamped so the session stays a recognisable VO2max set across distances.
+    """
+    wu, cd = _wu_cd(d)
+    main_km = max(0.0, d - wu - cd)
+    set_km = rep_km + recovery_km
+    if set_km <= 0:
+        return default
+    reps = round(main_km / set_km)
+    return max(lo, min(hi, reps))
+
+
+def _over_under_reps(
+    d: float,
+    over_min: float = 1.5,
+    under_min: float = 2.5,
+    pace_min_per_km: float = 5.5,
+    default: int = 6,
+    lo: int = 4,
+    hi: int = 8,
+) -> int:
+    """Scale over-under rep count to the run's distance budget.
+
+    One rep is one (over + under) couplet covering roughly
+    ``(over_min + under_min) / pace_min_per_km`` km at threshold-ish pace.
+    Reps are clamped so the session stays a recognisable over-under (too few
+    is pointless, too many turns it into a tempo) and never overruns the
+    warm-up/cool-down-adjusted main block.
+    """
+    wu, cd = _wu_cd(d)
+    main_km = max(0.0, d - wu - cd)
+    set_km = (over_min + under_min) / pace_min_per_km
+    if set_km <= 0:
+        return default
+    reps = round(main_km / set_km)
+    return max(lo, min(hi, reps))
+
+
 def _proprioception_circuit_cadence(d: float) -> str:
     """Phrase the agility-circuit cadence so it fits the run distance.
 
@@ -220,6 +268,30 @@ _DISTANCE_REWRITES: Dict[str, Callable[[float], str]] = {
         f"Run 2 x {round((d - _wu_cd(d)[0] - _wu_cd(d)[1]) / 2, 1):g}km "
         f"at 10K goal pace with 3 min standing recovery. Cool down {_wu_cd(d)[1]:g}km easy."
     ),
+    "5k_vo2max_1000s": lambda d: (
+        f"Warm up {_wu_cd(d)[0]:g}km easy. Run {_vo2max_km_reps(d, default=5)} x "
+        f"{round((d - _wu_cd(d)[0] - _wu_cd(d)[1]) / _vo2max_km_reps(d, default=5), 1):g}km "
+        f"at 5K goal pace with 2-3 min easy jog recovery between reps. "
+        f"Cool down {_wu_cd(d)[1]:g}km easy."
+    ),
+    "10k_vo2max_1000s": lambda d: (
+        f"Warm up {_wu_cd(d)[0]:g}km easy. Run {_vo2max_km_reps(d, default=5)} x "
+        f"{round((d - _wu_cd(d)[0] - _wu_cd(d)[1]) / _vo2max_km_reps(d, default=5), 1):g}km "
+        f"at a pace between your 5K and 10K effort, with 2 min easy jog "
+        f"recovery between reps. Cool down {_wu_cd(d)[1]:g}km easy."
+    ),
+    "half_km_intervals": lambda d: (
+        f"Warm up {_wu_cd(d)[0]:g}km easy. Run {_vo2max_km_reps(d, default=5)} x "
+        f"{round((d - _wu_cd(d)[0] - _wu_cd(d)[1]) / _vo2max_km_reps(d, default=5), 1):g}km "
+        f"at 10K goal pace with 90 sec easy jog recovery between reps. "
+        f"Cool down {_wu_cd(d)[1]:g}km easy."
+    ),
+    "marathon_km_intervals": lambda d: (
+        f"Warm up {_wu_cd(d)[0]:g}km easy. Run {_vo2max_km_reps(d, default=6)} x "
+        f"{round((d - _wu_cd(d)[0] - _wu_cd(d)[1]) / _vo2max_km_reps(d, default=6), 1):g}km "
+        f"at 10K goal pace with 90 sec easy jog recovery between reps. "
+        f"Cool down {_wu_cd(d)[1]:g}km easy."
+    ),
     "10k_tempo_progression": lambda d: (
         f"Warm up {_wu_cd(d)[0]:g}km easy. "
         f"Run {round(d - _wu_cd(d)[0] - _wu_cd(d)[1], 1):g}km as a progression: "
@@ -234,6 +306,24 @@ _DISTANCE_REWRITES: Dict[str, Callable[[float], str]] = {
         f"Warm up {_wu_cd(d)[0]:g}km easy. Within a continuous run, "
         f"alternate {_fartlek_reps(d, default=6, lo=2, hi=8)} x (3 min at 10K pace / 2 min easy jog). "
         f"Cool down {_wu_cd(d)[1]:g}km easy."
+    ),
+    "10k_over_unders": lambda d: (
+        f"Warm up {_wu_cd(d)[0]:g}km easy. Run a continuous block of "
+        f"{_over_under_reps(d, default=5)} x (1 min just over threshold / "
+        f"2 min just under) -- no easy jog between, stay working the whole "
+        f"time. Cool down {_wu_cd(d)[1]:g}km easy."
+    ),
+    "half_over_unders": lambda d: (
+        f"Warm up {_wu_cd(d)[0]:g}km easy. Run a continuous block of "
+        f"{_over_under_reps(d, default=6)} x (90 sec just over threshold / "
+        f"2.5 min just under) -- no easy jog between, hold the effort the "
+        f"whole way through. Cool down {_wu_cd(d)[1]:g}km easy."
+    ),
+    "marathon_over_unders": lambda d: (
+        f"Warm up {_wu_cd(d)[0]:g}km easy. Run a continuous block of "
+        f"{_over_under_reps(d, default=6)} x (2 min just over threshold / "
+        f"3 min just under) -- no easy jog between, hold the effort "
+        f"throughout. Cool down {_wu_cd(d)[1]:g}km easy."
     ),
     "5k_hill_sprints": lambda d: (
         f"Warm up {_wu_cd(d)[0]:g}km easy. Find a moderate hill (4-6% grade). "

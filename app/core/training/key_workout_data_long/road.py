@@ -233,6 +233,27 @@ ROAD_LONG: List[Dict] = [
         ),
     },
     {
+        "id": "marathon_km_intervals",
+        "distances": [42.2],
+        "phases": ["build", "peak"],
+        "type": "interval",
+        "terrain": ["any"],
+        "name": "10K-Pace Intervals",
+        "structure": "5-7 x ~1km at 10K pace with 90s jog recovery",
+        "description": (
+            "Warm up 2km easy. Run 6 x 1km at 10K goal pace with 90 sec easy "
+            "jog recovery between reps. Cool down 2km easy."
+        ),
+        "intensity": "high",
+        "target_zone": 4,
+        "pace_zone": "10K",
+        "rationale": (
+            "A speed-reserve session that keeps fast running in the legs "
+            "through a marathon block. Rotated with Yasso 800s, it gives the "
+            "build phase two distinct interval days instead of one repeated."
+        ),
+    },
+    {
         "id": "marathon_progressive_long",
         "distances": [42.2],
         "phases": ["build"],
@@ -271,6 +292,28 @@ ROAD_LONG: List[Dict] = [
         "rationale": (
             "Extended tempo work at threshold pace raises your lactate "
             "clearance ceiling -- the key physiological limiter in a marathon."
+        ),
+    },
+    {
+        "id": "marathon_over_unders",
+        "distances": [42.2],
+        "phases": ["build", "peak"],
+        "type": "tempo",
+        "terrain": ["any"],
+        "name": "Threshold Over-Unders",
+        "structure": "6 x (2 min just over threshold / 3 min just under), continuous",
+        "description": (
+            "Warm up 3km easy. Run a continuous block of 6 x (2 min just over "
+            "threshold / 3 min just under threshold) -- no easy jog between, "
+            "hold the effort throughout. Cool down 3km easy."
+        ),
+        "intensity": "high",
+        "target_zone": 4,
+        "pace_zone": "T",
+        "rationale": (
+            "Over-unders raise the pace you can hold at threshold and teach "
+            "lactate clearance on the move -- so marathon pace settles into a "
+            "comfortable rhythm well below your new ceiling."
         ),
     },
     {

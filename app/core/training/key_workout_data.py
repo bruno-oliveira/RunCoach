@@ -25,6 +25,106 @@ from app.core.training.key_workout_data_long import WORKOUTS_LONG
 
 # Short-distance workouts (5K, 10K, Half Marathon)
 _WORKOUTS_SHORT: List[Dict] = [
+    # -- Base-phase light quality --------------------------------------------
+    # Low-cost neuromuscular / light-aerobic work that maintains leg speed and
+    # form during the aerobic build WITHOUT taxing it. These fill the single
+    # base-phase quality slot the distribution already schedules. They are
+    # deliberately easy: strides and relaxed fartlek, never threshold/VO2max.
+    {
+        "id": "base_strides",
+        "distances": [5.0, 10.0, 21.1, 42.2],
+        "phases": ["base"],
+        "type": "interval",
+        "terrain": ["any"],
+        "name": "Easy Run + Strides",
+        "structure": "easy run + 6 × 20s strides",
+        "description": (
+            "Run easy for the bulk of the session, then finish with 6 × 20 "
+            "second strides: accelerate smoothly to about 5K-mile effort, hold "
+            "relaxed fast form, then walk/jog 60 seconds to full recovery "
+            "between each. Strides are about turnover and form, not lung-burn."
+        ),
+        "intensity": "low",
+        "target_zone": 2,
+        "pace_zone": "E",
+        "rationale": (
+            "Strides keep your legs quick and your form sharp through the "
+            "aerobic base without adding hard aerobic load. A handful of short "
+            "accelerations a week means you don't arrive at the build phase "
+            "flat-footed after weeks of only easy running."
+        ),
+    },
+    {
+        "id": "base_light_fartlek",
+        "distances": [5.0, 10.0, 21.1, 42.2],
+        "phases": ["base"],
+        "type": "interval",
+        "terrain": ["any"],
+        "name": "Relaxed Fartlek",
+        "structure": "easy run with 6 × (1 min relaxed-quick / 2 min easy)",
+        "description": (
+            "Within an easy run, play with 6 × (1 minute relaxed-quick / "
+            "2 minutes easy). 'Relaxed-quick' is comfortably faster than easy "
+            "— think 10K-to-half effort, not a sprint. The long easy floats "
+            "keep the whole session aerobic."
+        ),
+        "intensity": "low",
+        "target_zone": 3,
+        "pace_zone": "10K",
+        "rationale": (
+            "A relaxed fartlek nudges the aerobic system and rehearses changing "
+            "gears, while the generous easy floats keep it base-appropriate. "
+            "It breaks up the monotony of steady base mileage without stealing "
+            "from recovery."
+        ),
+    },
+    {
+        "id": "base_relaxed_cruise",
+        "distances": [21.1, 42.2],
+        "phases": ["base"],
+        "type": "tempo",
+        "terrain": ["any"],
+        "name": "Relaxed Cruise",
+        "structure": "easy run + 2 × 6 min steady (marathon effort)",
+        "description": (
+            "Warm up easy, then run 2 × 6 minutes at steady marathon effort "
+            "with 2 minutes easy between — comfortably controlled, never "
+            "straining. Cool down easy. This is an introduction to sustained "
+            "effort, not a threshold session."
+        ),
+        "intensity": "medium",
+        "target_zone": 3,
+        "pace_zone": "M",
+        "rationale": (
+            "Short steady blocks at marathon effort start building the "
+            "muscular endurance you'll lean on later, while staying gentle "
+            "enough to fit inside the aerobic base without compromising it."
+        ),
+    },
+    {
+        "id": "base_hill_strides",
+        "distances": [5.0, 10.0, 21.1, 42.2],
+        "phases": ["base"],
+        "type": "hill",
+        "terrain": ["any"],
+        "name": "Easy Run + Hill Strides",
+        "structure": "easy run + 6 × 15s hill strides",
+        "description": (
+            "On an easy run, finish with 6 × 15 second hill strides on a "
+            "moderate grade (4-6%): drive up smoothly and powerfully for 15 "
+            "seconds, then walk down fully recovered before the next. Strong "
+            "but never all-out."
+        ),
+        "intensity": "low",
+        "target_zone": 2,
+        "pace_zone": "R",
+        "rationale": (
+            "Hill strides build strength and power with almost no aerobic or "
+            "impact cost — the gradient does the work in a few seconds. A "
+            "perfect base-phase way to prime the legs for the climbing and "
+            "speed work to come."
+        ),
+    },
     # -- 5K --
     {
         "id": "5k_vo2max_400s",
@@ -44,6 +144,27 @@ _WORKOUTS_SHORT: List[Dict] = [
         "rationale": (
             "Develops VO2max and running economy at race-specific speed. "
             "Short reps keep form sharp while accumulating time at intensity."
+        ),
+    },
+    {
+        "id": "5k_vo2max_1000s",
+        "distances": [5.0],
+        "phases": ["build", "peak"],
+        "type": "interval",
+        "terrain": ["any"],
+        "name": "VO2max 1km Repeats",
+        "structure": "5-7 × ~1km at 5K pace with 2-3min jog recovery",
+        "description": (
+            "Warm up 2km easy. Run 5 × 1km at 5K goal pace with 2-3 min easy "
+            "jog recovery between reps. Cool down 2km easy."
+        ),
+        "intensity": "high",
+        "target_zone": 5,
+        "pace_zone": "I",
+        "rationale": (
+            "Longer VO2max reps hold you at maximal aerobic effort for longer "
+            "than 400s do, building the sustained power that 5K racing demands. "
+            "Rotated with the 400m session, it keeps build-phase speed varied."
         ),
     },
     {
@@ -231,6 +352,51 @@ _WORKOUTS_SHORT: List[Dict] = [
             "crucial skill for handling pace changes in a 10K race."
         ),
     },
+    {
+        "id": "10k_vo2max_1000s",
+        "distances": [10.0],
+        "phases": ["build", "peak"],
+        "type": "interval",
+        "terrain": ["any"],
+        "name": "VO2max 1km Repeats",
+        "structure": "5-7 × ~1km at 5K-10K pace with 2min jog recovery",
+        "description": (
+            "Warm up 2km easy. Run 5 × 1km at a pace between your 5K and 10K "
+            "effort, with 2 min easy jog recovery between reps. Cool down "
+            "2km easy."
+        ),
+        "intensity": "high",
+        "target_zone": 5,
+        "pace_zone": "I",
+        "rationale": (
+            "Raises the aerobic ceiling that caps 10K pace. Rotated with the "
+            "fartlek, it gives the build phase a true hard-interval day "
+            "alongside the surge-and-float session."
+        ),
+    },
+    {
+        "id": "10k_over_unders",
+        "distances": [10.0],
+        "phases": ["build", "peak"],
+        "type": "tempo",
+        "terrain": ["any"],
+        "name": "Threshold Over-Unders",
+        "structure": "5 × (1 min just over threshold / 2 min just under), continuous",
+        "description": (
+            "Warm up 2km easy. Run a continuous block of 5 × (1 min just "
+            "over threshold pace / 2 min just under threshold pace) — no easy "
+            "jog between, stay working the whole time. Cool down 2km easy."
+        ),
+        "intensity": "high",
+        "target_zone": 4,
+        "pace_zone": "T",
+        "rationale": (
+            "Over-unders push lactate production during the 'over' and force "
+            "your body to clear it while still running hard during the 'under'. "
+            "This raises the pace you can hold at threshold — the single biggest "
+            "lever for 10K-to-half performance."
+        ),
+    },
     # -- Half Marathon --
     {
         "id": "half_progressive_long",
@@ -311,6 +477,50 @@ _WORKOUTS_SHORT: List[Dict] = [
         "rationale": (
             "Builds the pacing discipline to run a negative split. "
             "Each segment teaches your body to run faster on accumulating fatigue."
+        ),
+    },
+    {
+        "id": "half_km_intervals",
+        "distances": [21.1],
+        "phases": ["build", "peak"],
+        "type": "interval",
+        "terrain": ["any"],
+        "name": "10K-Pace Intervals",
+        "structure": "5-7 × ~1km at 10K pace with 90s jog recovery",
+        "description": (
+            "Warm up 2km easy. Run 5 × 1km at 10K goal pace with 90 sec easy "
+            "jog recovery between reps. Cool down 2km easy."
+        ),
+        "intensity": "high",
+        "target_zone": 4,
+        "pace_zone": "10K",
+        "rationale": (
+            "Faster-than-race-pace reps lift your speed reserve so half-marathon "
+            "pace feels more comfortable. Gives the build phase a sharp interval "
+            "day to rotate against the cut-down long run."
+        ),
+    },
+    {
+        "id": "half_over_unders",
+        "distances": [21.1],
+        "phases": ["build", "peak"],
+        "type": "tempo",
+        "terrain": ["any"],
+        "name": "Threshold Over-Unders",
+        "structure": "6 × (90s just over threshold / 2.5 min just under), continuous",
+        "description": (
+            "Warm up 2km easy. Run a continuous block of 6 × (90 sec just "
+            "over threshold / 2.5 min just under threshold) — no easy jog "
+            "between, hold the effort the whole way through. Cool down 2km easy."
+        ),
+        "intensity": "high",
+        "target_zone": 4,
+        "pace_zone": "T",
+        "rationale": (
+            "At half-marathon distance, the limiter is how long you can sit "
+            "just under threshold. Over-unders teach you to absorb a surge and "
+            "settle back to goal pace without blowing up — exactly what a hilly "
+            "or surging race demands."
         ),
     },
 ]

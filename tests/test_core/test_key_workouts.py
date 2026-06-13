@@ -37,12 +37,26 @@ class TestLibraryCompleteness:
 
 
 class TestPhaseGuard:
-    """Key workouts must not appear in base or taper phases."""
+    """Taper is sharpener-only; base serves light quality (build/peak full)."""
 
-    @pytest.mark.parametrize("phase", ["base", "taper"])
+    @pytest.mark.parametrize("phase", ["taper"])
     def test_returns_none_for_excluded_phases(self, phase):
         result = KeyWorkoutLibrary.get_for_phase(5.0, phase, 0)
         assert result is None
+
+    @pytest.mark.parametrize(
+        "distance,workout_type",
+        [(5.0, "interval"), (10.0, "interval"), (21.1, "tempo"), (42.2, "tempo")],
+    )
+    def test_base_serves_light_quality_only(self, distance, workout_type):
+        """Base phase now serves a workout, but only low-intensity ones."""
+        result = KeyWorkoutLibrary.get_for_phase(
+            distance, "base", 0, workout_type
+        )
+        assert result is not None
+        # Base sessions must be light: never high-intensity threshold/VO2max.
+        assert result["intensity"] in ("low", "medium")
+        assert result["id"].startswith("base_")
 
     @pytest.mark.parametrize("phase", ["build", "peak"])
     def test_returns_workout_for_allowed_phases(self, phase):

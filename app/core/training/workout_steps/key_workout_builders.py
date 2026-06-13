@@ -18,6 +18,16 @@ from app.core.training.workout_steps.primitives import (
 )
 
 
+def _dur_label(seconds: int) -> str:
+    """Human label for a rep duration: '45 s', '1 min', '1.5 min', '2 min'."""
+    if seconds < 60:
+        return f"{seconds} s"
+    minutes = seconds / 60
+    if minutes == int(minutes):
+        return f"{int(minutes)} min"
+    return f"{minutes:g} min"
+
+
 def build_meter_rep_steps(
     distance_km: float,
     pace_zones: Optional[Dict] = None,
@@ -174,6 +184,116 @@ def build_fartlek_steps(
             pace_zone="E",
             pace_str=_pace_str("E", pace_zones),
             effort="easy jog",
+        ),
+        _cooldown(pace_zones, wu_m),
+    ]
+
+
+def build_strides_steps(
+    distance_km: float,
+    pace_zones: Optional[Dict] = None,
+    *,
+    reps: int = 6,
+    stride_s: int = 20,
+    recovery_s: int = 60,
+    work_zone: str = "R",
+    label: Optional[str] = None,
+    effort: str = "relaxed-fast",
+    cue: str = "flat",
+) -> List[Dict[str, Any]]:
+    """Easy bulk run + N short strides with full recovery.
+
+    Strides are a base-phase staple: the bulk of the session is an easy
+    aerobic run, then a handful of short, relaxed accelerations with full
+    walk/jog recovery between. The cost is neuromuscular, not aerobic, so it
+    keeps leg speed and form sharp without compromising the easy week.
+    """
+    if distance_km <= 0 or reps <= 0:
+        return []
+    total_m = int(round(distance_km * 1000))
+    # Strides + their recovery are part of the session, not bolted on top, so
+    # carve a rough allowance out of the easy bulk to keep the total on budget.
+    # ~5 m/s during a stride, recovery jog ~2.8 m/s (E pace) — a small slice.
+    stride_allow_m = int(round(reps * (stride_s * 5.0 + recovery_s * 2.8)))
+    easy_m = max(int(round(total_m * 0.4)), total_m - stride_allow_m)
+    stride_label = label or f"{reps} × {_dur_label(stride_s)} strides"
+    recovery_label = (
+        "walk back down" if cue == "hill" else f"{_dur_label(recovery_s)} walk/jog"
+    )
+    return [
+        _step(
+            "run",
+            "Easy aerobic run",
+            distance_m=easy_m,
+            pace_zone="E",
+            pace_str=_pace_str("E", pace_zones),
+            effort="easy",
+        ),
+        _step(
+            "run",
+            stride_label,
+            duration_s=stride_s,
+            repeat=reps,
+            pace_zone=work_zone,
+            pace_str=_pace_str(work_zone, pace_zones),
+            effort=effort,
+        ),
+        _step(
+            "recovery",
+            recovery_label,
+            duration_s=recovery_s,
+            repeat=reps,
+            pace_zone="E",
+            pace_str=_pace_str("E", pace_zones),
+            effort="full recovery",
+        ),
+    ]
+
+
+def build_over_under_steps(
+    distance_km: float,
+    pace_zones: Optional[Dict] = None,
+    *,
+    reps: int,
+    over_s: int = 60,
+    under_s: int = 120,
+    over_zone: str = "I",
+    under_zone: str = "T",
+) -> List[Dict[str, Any]]:
+    """Warm-up + N × (over-threshold / under-threshold) + cool-down.
+
+    A true over-under, distinct from a fartlek: the "under" segment is run at
+    threshold (not an easy jog), so lactate is produced during the "over" and
+    only partially cleared during the "under". This trains lactate tolerance
+    and clearance at race intensity — the classic "comfortably uncomfortable"
+    session. There is no full recovery between reps; the whole block is
+    continuous work alternating just above and just below threshold.
+    """
+    if distance_km <= 0 or reps <= 0:
+        return []
+    total_m = int(round(distance_km * 1000))
+    wu_m = _wucd_m(total_m)
+    over_label = _dur_label(over_s)
+    under_label = _dur_label(under_s)
+    return [
+        _warmup(pace_zones, wu_m),
+        _step(
+            "run",
+            f"{reps} × {over_label} over",
+            duration_s=over_s,
+            repeat=reps,
+            pace_zone=over_zone,
+            pace_str=_pace_str(over_zone, pace_zones),
+            effort="over threshold",
+        ),
+        _step(
+            "run",
+            f"{reps} × {under_label} under (no jog)",
+            duration_s=under_s,
+            repeat=reps,
+            pace_zone=under_zone,
+            pace_str=_pace_str(under_zone, pace_zones),
+            effort="under threshold — stay on it",
         ),
         _cooldown(pace_zones, wu_m),
     ]

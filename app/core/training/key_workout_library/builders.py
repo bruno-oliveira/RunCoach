@@ -11,8 +11,10 @@ from app.core.training import workout_steps as _steps_mod
 from app.core.training.key_workout_library.rewrites import (
     _fartlek_reps,
     _mp_cutdown_reps,
+    _over_under_reps,
     _pyramid_pattern,
     _vo2max_400_reps,
+    _vo2max_km_reps,
     _yasso_800_reps,
     reconcile_key_workout_text,
 )
@@ -67,6 +69,19 @@ _KEY_WORKOUT_STEP_BUILDERS: Dict[
     "10k_goal_pace_segments": lambda d, pz: _steps_mod.build_km_rep_steps(
         d, pz, reps=2, work_zone="10K"
     ),
+    # -- VO2max km-rep interval variants (proportional reps) --
+    "5k_vo2max_1000s": lambda d, pz: _steps_mod.build_km_rep_steps(
+        d, pz, reps=_vo2max_km_reps(d, default=5), work_zone="I", recovery_s=150
+    ),
+    "10k_vo2max_1000s": lambda d, pz: _steps_mod.build_km_rep_steps(
+        d, pz, reps=_vo2max_km_reps(d, default=5), work_zone="I", recovery_s=120
+    ),
+    "half_km_intervals": lambda d, pz: _steps_mod.build_km_rep_steps(
+        d, pz, reps=_vo2max_km_reps(d, default=5), work_zone="10K", recovery_s=90
+    ),
+    "marathon_km_intervals": lambda d, pz: _steps_mod.build_km_rep_steps(
+        d, pz, reps=_vo2max_km_reps(d, default=6), work_zone="10K", recovery_s=90
+    ),
     "5k_race_pace_3km": lambda d, pz: _steps_mod.build_km_rep_steps(
         d, pz, reps=2, work_zone="T", recovery_s=180
     ),
@@ -106,6 +121,30 @@ _KEY_WORKOUT_STEP_BUILDERS: Dict[
     ),
     "trail_flat_over_under_intervals": lambda d, pz: _steps_mod.build_fartlek_steps(
         d, pz, reps=6, on_s=180, off_s=120, on_zone="T"
+    ),
+    # -- base-phase light quality: strides, relaxed fartlek, relaxed cruise --
+    "base_strides": lambda d, pz: _steps_mod.build_strides_steps(
+        d, pz, reps=6, stride_s=20, recovery_s=60
+    ),
+    "base_hill_strides": lambda d, pz: _steps_mod.build_strides_steps(
+        d, pz, reps=6, stride_s=15, recovery_s=60, work_zone="R",
+        label="6 × 15s hill strides", effort="strong uphill", cue="hill"
+    ),
+    "base_light_fartlek": lambda d, pz: _steps_mod.build_fartlek_steps(
+        d, pz, reps=6, on_s=60, off_s=120, on_zone="10K", work_effort="relaxed-quick"
+    ),
+    "base_relaxed_cruise": lambda d, pz: _steps_mod.build_fartlek_steps(
+        d, pz, reps=2, on_s=360, off_s=120, on_zone="M", work_effort="steady"
+    ),
+    # -- true over-unders: alternating over/under threshold, no easy recovery --
+    "10k_over_unders": lambda d, pz: _steps_mod.build_over_under_steps(
+        d, pz, reps=_over_under_reps(d, default=5), over_s=60, under_s=120
+    ),
+    "half_over_unders": lambda d, pz: _steps_mod.build_over_under_steps(
+        d, pz, reps=_over_under_reps(d, default=6), over_s=90, under_s=150
+    ),
+    "marathon_over_unders": lambda d, pz: _steps_mod.build_over_under_steps(
+        d, pz, reps=_over_under_reps(d, default=6), over_s=120, under_s=180
     ),
     # -- single progressive block --
     "10k_tempo_progression": lambda d, pz: _steps_mod.build_progression_block_steps(
