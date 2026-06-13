@@ -190,6 +190,95 @@
     {% endfor %}
     {% endif %}
 
+    {# Plan-level actions — start date, adaptation alerts/recommendations, and
+       the adjust prompt — sit directly under this week so they are acted on in
+       context, before the reference and tab content. #}
+    {% if user and not plan_completed %}
+    {% if not start_date %}
+    <div class="plan-start-banner">
+        <p>Set a start date to track your progress against real calendar dates</p>
+        <div class="plan-start-banner-controls">
+            <input type="date" id="plan-start-date" value="{{ next_monday }}">
+            <button onclick="PlanModule.startPlan()" class="btn btn-primary btn-small">Start Plan</button>
+        </div>
+    </div>
+    {% else %}
+    <div class="plan-start-banner plan-start-banner-edit" id="edit-start-date-banner" style="display:none;">
+        <p>Change start date (this will shift all week/day calendar labels)</p>
+        <div class="plan-start-banner-controls">
+            <input type="date" id="plan-start-date" value="{{ start_date.isoformat() }}">
+            <button onclick="PlanModule.startPlan()" class="btn btn-primary btn-small">Update</button>
+            <button onclick="document.getElementById('edit-start-date-banner').style.display='none'" class="btn btn-ghost btn-small">Cancel</button>
+        </div>
+    </div>
+    {% endif %}
+    {% endif %}
+
+    {% if user and start_date and adaptation_state and adaptation_state.kind != 'none' and not plan_completed %}
+    <div class="plan-adaptation-card" id="plan-adaptation-card" data-kind="{{ adaptation_state.kind }}">
+        <div class="plan-adaptation-card-icon" aria-hidden="true">
+            {% if adaptation_state.kind == 'alert' %}
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+            {% else %}
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+            {% endif %}
+        </div>
+        <div class="plan-adaptation-card-text">
+            <strong id="plan-adaptation-card-headline">{{ adaptation_state.headline }}</strong>
+            <p id="plan-adaptation-card-detail">{{ adaptation_state.detail }}</p>
+        </div>
+        <div class="plan-adaptation-card-actions" id="plan-adaptation-card-actions">
+            {% if adaptation_state.kind == 'alert' %}
+            <button class="btn btn-small btn-primary" onclick="showRecalibrateModal()">Recalibrate</button>
+            <button class="btn btn-small btn-ghost" onclick="dismissAdaptationAlert()">Dismiss</button>
+            {% elif adaptation_state.kind == 'recommendation' %}
+            <button class="btn btn-small btn-primary" onclick="acceptRecommendation()">Accept</button>
+            <button class="btn btn-small btn-ghost" onclick="dismissRecommendation()">Dismiss</button>
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
+
+    {% if user and start_date and not plan_completed %}
+    <!-- Recalibrate Modal (opened from the adaptation card when kind=alert, or from the recalibrate CTA) -->
+    <div class="recalibrate-modal-overlay" id="recalibrate-modal" style="display:none;" onclick="if(event.target===this)this.style.display='none'">
+        <div class="recalibrate-modal">
+            <h3>Recalibrate Plan</h3>
+            <p class="recalibrate-modal-desc" id="recalibrate-alert-detail"></p>
+            <div class="recalibrate-options">
+                <button class="recalibrate-option" onclick="recalibratePlan('time_off')">
+                    <strong>I took time off</strong>
+                    <span>Rebuild remaining weeks with a gentler ramp from current fitness</span>
+                </button>
+                <button class="recalibrate-option" onclick="recalibratePlan('ahead')">
+                    <strong>I'm ahead of schedule</strong>
+                    <span>Bump up remaining weeks' targets by 10%</span>
+                </button>
+                <button class="recalibrate-option" onclick="recalibratePlan('recovery_insertion')">
+                    <strong>I need extra recovery</strong>
+                    <span>Convert next week to a recovery week (60% volume, easy pace only)</span>
+                </button>
+            </div>
+            <button class="btn btn-ghost btn-small" style="margin-top:12px" onclick="document.getElementById('recalibrate-modal').style.display='none'">Cancel</button>
+        </div>
+    </div>
+    {% endif %}
+
+    {% if user and start_date and not plan_completed %}
+    <div class="plan-action-banner recalibrate-banner {% if needs_adjustment %}recalibrate-urgent{% endif %}" id="adjust-banner">
+        <div class="banner-content">
+            <div class="banner-text">
+                <strong>Adjust Plan</strong>
+                <p>Adjust future weeks based on your recent running data.
+                {% if skipped_count and skipped_count > 0 %}{{ skipped_count }} missed{% endif %}{% if skipped_count and rescheduled_count and skipped_count > 0 and rescheduled_count > 0 %}, {% endif %}{% if rescheduled_count and rescheduled_count > 0 %}{{ rescheduled_count }} rescheduled{% endif %}{% if (skipped_count and skipped_count > 0) or (rescheduled_count and rescheduled_count > 0) %} workout{{ 's' if (skipped_count + rescheduled_count) != 1 else '' }}.{% endif %}</p>
+            </div>
+            <div class="banner-actions">
+                <button onclick="PlanModule.adjustPlan()" class="btn btn-primary btn-small" id="adjust-btn">Adjust Plan</button>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
     {% if is_trail and training_plan.training_terrain == 'flat' and (target_elevation_gain_m or 0) > 0 %}
     <div class="flat-mountain-sim-banner" role="status" aria-live="polite">
         <div class="flat-mountain-sim-banner-icon" aria-hidden="true">↗</div>
@@ -416,50 +505,11 @@
     </div>
     {% endif %}
 
-    {% if performance_analysis and performance_analysis.total_runs > 0 %}
-    <div class="plan-insights plan-insights-data" style="margin-bottom: var(--space-6);">
-        <h3>Performance Analysis</h3>
-        <div class="insight-grid">
-            <div class="insight-item">
-                <div class="insight-content">
-                    <strong>Runs Completed</strong>
-                    <span>{{ performance_analysis.total_runs }} / {{ performance_analysis.planned_workouts }} ({{ performance_analysis.adherence_rate }}%)</span>
-                </div>
-            </div>
-            {% if performance_analysis.avg_effort %}
-            <div class="insight-item">
-                <div class="insight-content">
-                    <strong>Average Effort</strong>
-                    <span>{{ performance_analysis.avg_effort }}/10 — {{ performance_analysis.effort_trend }}</span>
-                </div>
-            </div>
-            {% endif %}
-            {% if performance_analysis.pace_consistency %}
-            <div class="insight-item">
-                <div class="insight-content">
-                    <strong>Pace Consistency</strong>
-                    <span>{{ performance_analysis.pace_consistency }}% variance</span>
-                </div>
-            </div>
-            {% endif %}
-        </div>
-        {% if performance_analysis.recommendations %}
-        <div class="insight-recommendations">
-            <strong>Recommendations</strong>
-            <ul>
-                {% for rec in performance_analysis.recommendations %}
-                <li>{{ rec }}</li>
-                {% endfor %}
-            </ul>
-        </div>
-        {% endif %}
-    </div>
-    {% endif %}
 
     {% if (training_plan.adjustment_multiplier or training_plan.last_recalibrated_at)
           and not (training_plan.last_change_plan and training_plan.last_change_plan.summary) %}
     <div style="margin-bottom: var(--space-6); display:flex; justify-content:flex-end;">
-        <button onclick="PlanModule.resetAdjustment()" class="btn btn-ghost btn-small" id="reset-adjust-btn">Reset to original</button>
+        <button onclick="PlanModule.resetAdjustment()" class="btn btn-ghost btn-small js-reset-adjust" id="reset-adjust-btn">Reset to original</button>
     </div>
     {% endif %}
 
@@ -483,7 +533,7 @@
             </div>
             <div style="display:flex;align-items:center;gap:var(--space-2);flex-wrap:wrap;">
                 {% if training_plan.adjustment_multiplier or training_plan.last_recalibrated_at %}
-                <button onclick="PlanModule.resetAdjustment()" class="btn btn-ghost btn-small" id="reset-adjust-btn">Reset to original</button>
+                <button onclick="PlanModule.resetAdjustment()" class="btn btn-ghost btn-small js-reset-adjust" id="reset-adjust-btn-lcp">Reset to original</button>
                 {% endif %}
                 <a href="#" class="btn btn-ghost btn-small" data-change-plan-view>View details</a>
             </div>
@@ -526,49 +576,6 @@
     </div>
     {% endif %}
 
-    {% if progress_data and progress_data.completed_count > 0 %}
-    <div class="plan-insights" style="margin-bottom: var(--space-6);">
-        <h3>Your Progress</h3>
-        <div class="insight-grid">
-            <div class="insight-item">
-                <div class="insight-content">
-                    <strong>Runs Completed</strong>
-                    <span>{{ progress_data.completed_count }} / {{ progress_data.planned_count }}</span>
-                </div>
-            </div>
-            <div class="insight-item">
-                <div class="insight-content">
-                    <strong>Completion</strong>
-                    <span>{{ progress_data.completion_pct }}%</span>
-                </div>
-            </div>
-            <div class="insight-item">
-                <div class="insight-content">
-                    <strong>Total Logged</strong>
-                    <span>{{ progress_data.total_km_logged }} km</span>
-                </div>
-            </div>
-            <div class="insight-item">
-                <div class="insight-content">
-                    <strong>Streak</strong>
-                    <span>{{ progress_data.streak_days }} day{{ 's' if progress_data.streak_days != 1 else '' }}</span>
-                </div>
-            </div>
-        </div>
-
-        <div class="progress-charts-grid">
-            <div class="progress-chart-card">
-                <canvas id="weeklyMileageChart"></canvas>
-            </div>
-            <div class="progress-chart-card">
-                <canvas id="paceTrendChart"></canvas>
-            </div>
-        </div>
-        <div class="progress-donut-wrap">
-            <canvas id="completionDonutChart"></canvas>
-        </div>
-    </div>
-    {% endif %}
 
     {% if warnings %}
     <div class="warning-container" style="margin-bottom: var(--space-6);">
@@ -618,91 +625,6 @@
         {% endif %}
     </nav>
 
-    {% if user and not plan_completed %}
-    {% if not start_date %}
-    <div class="plan-start-banner">
-        <p>Set a start date to track your progress against real calendar dates</p>
-        <div class="plan-start-banner-controls">
-            <input type="date" id="plan-start-date" value="{{ next_monday }}">
-            <button onclick="PlanModule.startPlan()" class="btn btn-primary btn-small">Start Plan</button>
-        </div>
-    </div>
-    {% else %}
-    <div class="plan-start-banner plan-start-banner-edit" id="edit-start-date-banner" style="display:none;">
-        <p>Change start date (this will shift all week/day calendar labels)</p>
-        <div class="plan-start-banner-controls">
-            <input type="date" id="plan-start-date" value="{{ start_date.isoformat() }}">
-            <button onclick="PlanModule.startPlan()" class="btn btn-primary btn-small">Update</button>
-            <button onclick="document.getElementById('edit-start-date-banner').style.display='none'" class="btn btn-ghost btn-small">Cancel</button>
-        </div>
-    </div>
-    {% endif %}
-    {% endif %}
-
-    {% if user and start_date and adaptation_state and adaptation_state.kind != 'none' and not plan_completed %}
-    <div class="plan-adaptation-card" id="plan-adaptation-card" data-kind="{{ adaptation_state.kind }}">
-        <div class="plan-adaptation-card-icon" aria-hidden="true">
-            {% if adaptation_state.kind == 'alert' %}
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
-            {% else %}
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
-            {% endif %}
-        </div>
-        <div class="plan-adaptation-card-text">
-            <strong id="plan-adaptation-card-headline">{{ adaptation_state.headline }}</strong>
-            <p id="plan-adaptation-card-detail">{{ adaptation_state.detail }}</p>
-        </div>
-        <div class="plan-adaptation-card-actions" id="plan-adaptation-card-actions">
-            {% if adaptation_state.kind == 'alert' %}
-            <button class="btn btn-small btn-primary" onclick="showRecalibrateModal()">Recalibrate</button>
-            <button class="btn btn-small btn-ghost" onclick="dismissAdaptationAlert()">Dismiss</button>
-            {% elif adaptation_state.kind == 'recommendation' %}
-            <button class="btn btn-small btn-primary" onclick="acceptRecommendation()">Accept</button>
-            <button class="btn btn-small btn-ghost" onclick="dismissRecommendation()">Dismiss</button>
-            {% endif %}
-        </div>
-    </div>
-    {% endif %}
-
-    {% if user and start_date and not plan_completed %}
-    <!-- Recalibrate Modal (opened from the adaptation card when kind=alert, or from the recalibrate CTA) -->
-    <div class="recalibrate-modal-overlay" id="recalibrate-modal" style="display:none;" onclick="if(event.target===this)this.style.display='none'">
-        <div class="recalibrate-modal">
-            <h3>Recalibrate Plan</h3>
-            <p class="recalibrate-modal-desc" id="recalibrate-alert-detail"></p>
-            <div class="recalibrate-options">
-                <button class="recalibrate-option" onclick="recalibratePlan('time_off')">
-                    <strong>I took time off</strong>
-                    <span>Rebuild remaining weeks with a gentler ramp from current fitness</span>
-                </button>
-                <button class="recalibrate-option" onclick="recalibratePlan('ahead')">
-                    <strong>I'm ahead of schedule</strong>
-                    <span>Bump up remaining weeks' targets by 10%</span>
-                </button>
-                <button class="recalibrate-option" onclick="recalibratePlan('recovery_insertion')">
-                    <strong>I need extra recovery</strong>
-                    <span>Convert next week to a recovery week (60% volume, easy pace only)</span>
-                </button>
-            </div>
-            <button class="btn btn-ghost btn-small" style="margin-top:12px" onclick="document.getElementById('recalibrate-modal').style.display='none'">Cancel</button>
-        </div>
-    </div>
-    {% endif %}
-
-    {% if user and start_date and not plan_completed %}
-    <div class="plan-action-banner recalibrate-banner {% if needs_adjustment %}recalibrate-urgent{% endif %}" id="adjust-banner">
-        <div class="banner-content">
-            <div class="banner-text">
-                <strong>Adjust Plan</strong>
-                <p>Adjust future weeks based on your recent running data.
-                {% if skipped_count and skipped_count > 0 %}{{ skipped_count }} missed{% endif %}{% if skipped_count and rescheduled_count and skipped_count > 0 and rescheduled_count > 0 %}, {% endif %}{% if rescheduled_count and rescheduled_count > 0 %}{{ rescheduled_count }} rescheduled{% endif %}{% if (skipped_count and skipped_count > 0) or (rescheduled_count and rescheduled_count > 0) %} workout{{ 's' if (skipped_count + rescheduled_count) != 1 else '' }}.{% endif %}</p>
-            </div>
-            <div class="banner-actions">
-                <button onclick="PlanModule.adjustPlan()" class="btn btn-primary btn-small" id="adjust-btn">Adjust Plan</button>
-            </div>
-        </div>
-    </div>
-    {% endif %}
 
     <!-- Training Tab Panel -->
     <div class="plan-tab-panel active" id="panel-training" role="tabpanel" aria-labelledby="tab-training">
@@ -773,6 +695,101 @@
     {% if race_protocol %}
     {% include 'components/raceday_panel.html' %}
     {% endif %}
+
+    {# ── Review: progress & analysis ────────────────────────────────────
+       Charts and adherence stats are review content, not daily-glance, so they
+       sit below the plan/tab content. Kept always-visible (not collapsed) so the
+       Chart.js canvases size correctly. #}
+    {% if (performance_analysis and performance_analysis.total_runs > 0)
+          or (progress_data and progress_data.completed_count > 0) %}
+    <div class="plan-review-section">
+        <h2 class="plan-review-heading">Progress &amp; analysis</h2>
+    {% if performance_analysis and performance_analysis.total_runs > 0 %}
+    <div class="plan-insights plan-insights-data" style="margin-bottom: var(--space-6);">
+        <h3>Performance Analysis</h3>
+        <div class="insight-grid">
+            <div class="insight-item">
+                <div class="insight-content">
+                    <strong>Runs Completed</strong>
+                    <span>{{ performance_analysis.total_runs }} / {{ performance_analysis.planned_workouts }} ({{ performance_analysis.adherence_rate }}%)</span>
+                </div>
+            </div>
+            {% if performance_analysis.avg_effort %}
+            <div class="insight-item">
+                <div class="insight-content">
+                    <strong>Average Effort</strong>
+                    <span>{{ performance_analysis.avg_effort }}/10 — {{ performance_analysis.effort_trend }}</span>
+                </div>
+            </div>
+            {% endif %}
+            {% if performance_analysis.pace_consistency %}
+            <div class="insight-item">
+                <div class="insight-content">
+                    <strong>Pace Consistency</strong>
+                    <span>{{ performance_analysis.pace_consistency }}% variance</span>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+        {% if performance_analysis.recommendations %}
+        <div class="insight-recommendations">
+            <strong>Recommendations</strong>
+            <ul>
+                {% for rec in performance_analysis.recommendations %}
+                <li>{{ rec }}</li>
+                {% endfor %}
+            </ul>
+        </div>
+        {% endif %}
+    </div>
+    {% endif %}
+
+    {% if progress_data and progress_data.completed_count > 0 %}
+    <div class="plan-insights" style="margin-bottom: var(--space-6);">
+        <h3>Your Progress</h3>
+        <div class="insight-grid">
+            <div class="insight-item">
+                <div class="insight-content">
+                    <strong>Runs Completed</strong>
+                    <span>{{ progress_data.completed_count }} / {{ progress_data.planned_count }}</span>
+                </div>
+            </div>
+            <div class="insight-item">
+                <div class="insight-content">
+                    <strong>Completion</strong>
+                    <span>{{ progress_data.completion_pct }}%</span>
+                </div>
+            </div>
+            <div class="insight-item">
+                <div class="insight-content">
+                    <strong>Total Logged</strong>
+                    <span>{{ progress_data.total_km_logged }} km</span>
+                </div>
+            </div>
+            <div class="insight-item">
+                <div class="insight-content">
+                    <strong>Streak</strong>
+                    <span>{{ progress_data.streak_days }} day{{ 's' if progress_data.streak_days != 1 else '' }}</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="progress-charts-grid">
+            <div class="progress-chart-card">
+                <canvas id="weeklyMileageChart"></canvas>
+            </div>
+            <div class="progress-chart-card">
+                <canvas id="paceTrendChart"></canvas>
+            </div>
+        </div>
+        <div class="progress-donut-wrap">
+            <canvas id="completionDonutChart"></canvas>
+        </div>
+    </div>
+    {% endif %}
+    </div>
+    {% endif %}
+
 
 
     <div class="download-section">

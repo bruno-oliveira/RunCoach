@@ -567,7 +567,8 @@
     };
 
     window.resetAdjustment = function () {
-        var btn = document.getElementById('reset-adjust-btn');
+        var btn = document.querySelector('.js-reset-adjust')
+            || document.getElementById('reset-adjust-btn');
         if (window.runChangePlanAction) {
             return window.runChangePlanAction('reset', { button: btn });
         }
@@ -578,7 +579,8 @@
     // Legacy paths preserved for backwards compatibility if anything
     // unexpected references them — they're never called from the UI.
     window._legacyResetAdjustment = async function () {
-        var btn = document.getElementById('reset-adjust-btn');
+        var btn = document.querySelector('.js-reset-adjust')
+            || document.getElementById('reset-adjust-btn');
         if (btn) { btn.disabled = true; btn.textContent = 'Resetting...'; }
 
         try {
