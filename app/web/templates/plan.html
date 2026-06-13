@@ -190,6 +190,58 @@
     {% endfor %}
     {% endif %}
 
+    {# Fitness-plan dashboard is the core content for fitness plans, so it leads
+       (right under the This Week hero) rather than sitting among status panels. #}
+    {% if training_plan.plan_type == 'fitness' %}
+    <div class="fitness-dashboard">
+        <div class="fitness-dashboard-header">
+            <h3>Fitness Plan — {{ fitness_focus_area | title }} Focus</h3>
+            <p class="fitness-dashboard-subtitle">Physiological development with built-in progress tracking</p>
+        </div>
+
+        {% if vdot %}
+        <div class="fitness-vdot-card">
+            <div class="fitness-vdot-icon">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+            </div>
+            <div class="fitness-vdot-body">
+                <div class="fitness-vdot-value">{{ "%.1f"|format(vdot) }}</div>
+                <div class="fitness-vdot-label">Current VDOT</div>
+                <p class="fitness-vdot-note">Time trials every 3 weeks will help track your VDOT progress</p>
+            </div>
+        </div>
+        {% endif %}
+
+        {% if time_trial_weeks %}
+        <div class="fitness-tt-section">
+            <h4>Time Trial Schedule</h4>
+            <div class="fitness-tt-grid">
+                {% for tt in time_trial_weeks %}
+                <div class="fitness-tt-card">
+                    <div class="fitness-tt-week">Week {{ tt.week }}</div>
+                    <div class="fitness-tt-distance">{{ "%.1f"|format(tt.distance) }}km all-out</div>
+                    <div class="fitness-tt-desc">{{ tt.description }}</div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+
+        <div class="fitness-phases-section">
+            <h4>Training Phases</h4>
+            <div class="fitness-phases-grid">
+                {% for pname, pdata in phases.items() %}
+                <div class="fitness-phase-card">
+                    <div class="fitness-phase-name">{{ pname | title }}</div>
+                    <div class="fitness-phase-weeks">{{ pdata.weeks }} weeks</div>
+                    <div class="fitness-phase-desc">{{ pdata.description }}</div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
     {# Plan-level actions — start date, adaptation alerts/recommendations, and
        the adjust prompt — sit directly under this week so they are acted on in
        context, before the reference and tab content. #}
@@ -455,56 +507,31 @@
     </details>
     {# end .plan-reference #}
 
-    {% if training_plan.plan_type == 'fitness' %}
-    <div class="fitness-dashboard">
-        <div class="fitness-dashboard-header">
-            <h3>Fitness Plan — {{ fitness_focus_area | title }} Focus</h3>
-            <p class="fitness-dashboard-subtitle">Physiological development with built-in progress tracking</p>
-        </div>
 
-        {% if vdot %}
-        <div class="fitness-vdot-card">
-            <div class="fitness-vdot-icon">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
-            </div>
-            <div class="fitness-vdot-body">
-                <div class="fitness-vdot-value">{{ "%.1f"|format(vdot) }}</div>
-                <div class="fitness-vdot-label">Current VDOT</div>
-                <p class="fitness-vdot-note">Time trials every 3 weeks will help track your VDOT progress</p>
-            </div>
-        </div>
-        {% endif %}
-
-        {% if time_trial_weeks %}
-        <div class="fitness-tt-section">
-            <h4>Time Trial Schedule</h4>
-            <div class="fitness-tt-grid">
-                {% for tt in time_trial_weeks %}
-                <div class="fitness-tt-card">
-                    <div class="fitness-tt-week">Week {{ tt.week }}</div>
-                    <div class="fitness-tt-distance">{{ "%.1f"|format(tt.distance) }}km all-out</div>
-                    <div class="fitness-tt-desc">{{ tt.description }}</div>
-                </div>
-                {% endfor %}
-            </div>
-        </div>
-        {% endif %}
-
-        <div class="fitness-phases-section">
-            <h4>Training Phases</h4>
-            <div class="fitness-phases-grid">
-                {% for pname, pdata in phases.items() %}
-                <div class="fitness-phase-card">
-                    <div class="fitness-phase-name">{{ pname | title }}</div>
-                    <div class="fitness-phase-weeks">{{ pdata.weeks }} weeks</div>
-                    <div class="fitness-phase-desc">{{ pdata.description }}</div>
-                </div>
-                {% endfor %}
-            </div>
-        </div>
-    </div>
-    {% endif %}
-
+    {# ── Plan status (quiet, collapsed) ─────────────────────────────────
+       Adjustment history, change logs, the adaptation timeline, and warnings
+       are reference/history — useful but not daily-glance. Folded into one
+       collapsed panel so the page stays focused on this week's work. A genuine
+       adaptation *alert* still surfaces inline above (it demands action). #}
+    {% set has_plan_status = (training_plan.adjustment_multiplier or training_plan.last_recalibrated_at)
+        or (training_plan.last_change_plan and training_plan.last_change_plan.summary)
+        or (adaptation_timeline and adaptation_timeline|length > 0)
+        or warnings %}
+    {% if has_plan_status and not plan_completed %}
+    <details class="plan-status">
+        <summary class="plan-status-summary">
+            <svg class="plan-status-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20v-6M6 20V10M18 20V4"/></svg>
+            <span class="plan-status-title">Plan status &amp; history</span>
+            <span class="plan-status-chips">
+                {% if warnings %}{{ warnings|length }} warning{{ 's' if warnings|length != 1 else '' }}{% endif %}
+                {% if warnings and adaptation_timeline and adaptation_timeline|length > 0 %} · {% endif %}
+                {% if adaptation_timeline and adaptation_timeline|length > 0 %}{{ adaptation_timeline|length }} adaptation{{ 's' if adaptation_timeline|length != 1 else '' }}{% endif %}
+                {% if (warnings or (adaptation_timeline and adaptation_timeline|length > 0)) and (training_plan.adjustment_multiplier or training_plan.last_recalibrated_at) %} · {% endif %}
+                {% if training_plan.adjustment_multiplier or training_plan.last_recalibrated_at %}adjusted{% endif %}
+            </span>
+            <svg class="plan-status-chevron" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+        </summary>
+        <div class="plan-status-body">
 
     {% if (training_plan.adjustment_multiplier or training_plan.last_recalibrated_at)
           and not (training_plan.last_change_plan and training_plan.last_change_plan.summary) %}
@@ -540,8 +567,6 @@
         </div>
     </div>
     {% endif %}
-
-    {% include "components/change_plan_modal.html" %}
 
     {% if adaptation_timeline and adaptation_timeline|length > 0 %}
     <div class="adaptation-timeline-panel" style="margin-bottom: var(--space-6);">
@@ -591,6 +616,12 @@
     </div>
     {% endif %}
 
+        </div>{# .plan-status-body #}
+    </details>
+    {% endif %}{# has_plan_status #}
+
+    {% include "components/change_plan_modal.html" %}
+
     {% if user and current_week_number and not plan_completed %}
     {% include 'components/daily_readiness_widget.html' %}
     {% endif %}
@@ -615,6 +646,13 @@
         <button class="plan-tab" role="tab" aria-selected="false" aria-controls="panel-readiness" id="tab-readiness" onclick="switchPlanTab('readiness')">
             <svg class="plan-tab-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
             Race Readiness
+        </button>
+        {% endif %}
+        {% if (performance_analysis and performance_analysis.total_runs > 0)
+              or (progress_data and progress_data.completed_count > 0) %}
+        <button class="plan-tab" role="tab" aria-selected="false" aria-controls="panel-progress" id="tab-progress" onclick="switchPlanTab('progress')">
+            <svg class="plan-tab-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M18.7 8l-5.1 5.2-2.8-2.7L7 14.3"/></svg>
+            Progress
         </button>
         {% endif %}
         {% if race_protocol %}
@@ -696,14 +734,14 @@
     {% include 'components/raceday_panel.html' %}
     {% endif %}
 
-    {# ── Review: progress & analysis ────────────────────────────────────
+    {# ── Progress tab ───────────────────────────────────────────────────
        Charts and adherence stats are review content, not daily-glance, so they
-       sit below the plan/tab content. Kept always-visible (not collapsed) so the
-       Chart.js canvases size correctly. #}
+       live in their own tab. Canvases are rendered lazily on first open (see
+       performance_dashboard.js) because Chart.js can't size a hidden canvas. #}
     {% if (performance_analysis and performance_analysis.total_runs > 0)
           or (progress_data and progress_data.completed_count > 0) %}
-    <div class="plan-review-section">
-        <h2 class="plan-review-heading">Progress &amp; analysis</h2>
+    <div class="plan-tab-panel" id="panel-progress" role="tabpanel" aria-labelledby="tab-progress">
+        <div class="plan-review-section">
     {% if performance_analysis and performance_analysis.total_runs > 0 %}
     <div class="plan-insights plan-insights-data" style="margin-bottom: var(--space-6);">
         <h3>Performance Analysis</h3>
@@ -787,7 +825,8 @@
         </div>
     </div>
     {% endif %}
-    </div>
+        </div>{# .plan-review-section #}
+    </div>{# #panel-progress #}
     {% endif %}
 
 

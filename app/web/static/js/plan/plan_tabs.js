@@ -36,6 +36,12 @@
                 setTimeout(function () { loadGapAnalysis(); }, 100);
             }
         }
+
+        // Charts can only size correctly once their panel is visible.
+        if (tabName === 'progress' && typeof window.renderProgressCharts === 'function') {
+            // next frame, after the panel has been un-hidden
+            requestAnimationFrame(function () { window.renderProgressCharts(); });
+        }
     };
 
     /* -------------------------------------------------------------- */

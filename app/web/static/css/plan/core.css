@@ -788,6 +788,66 @@
 }
 .plan-reference-body > *:last-child { margin-bottom: 0; }
 
+/* ── Plan status (quiet history/warnings collapsible) ──────────────────
+   Same visual language as .plan-reference so the two reference panels read
+   as a consistent pair. Inner panels keep their own internals but lose the
+   outer margins/shadows that made the page feel stacked and busy. */
+.plan-status {
+    margin-bottom: var(--space-6);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-xl);
+    background: var(--color-bg-elevated);
+    overflow: hidden;
+}
+.plan-status-summary {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    padding: var(--space-3) var(--space-4);
+    cursor: pointer;
+    list-style: none;
+    user-select: none;
+    font-size: var(--text-sm);
+    color: var(--color-text);
+    transition: background var(--duration-fast) var(--ease-out);
+}
+.plan-status-summary::-webkit-details-marker { display: none; }
+.plan-status-summary:hover { background: var(--color-bg-sunken); }
+.plan-status-icon { color: var(--color-text-muted); flex-shrink: 0; }
+.plan-status-title { font-weight: var(--weight-semibold); flex-shrink: 0; }
+.plan-status-chips {
+    color: var(--color-text-muted);
+    font-size: var(--text-xs);
+    margin-left: auto;
+    text-align: right;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.plan-status-chevron {
+    color: var(--color-text-muted);
+    flex-shrink: 0;
+    transition: transform var(--duration-base) var(--ease-out);
+}
+.plan-status[open] .plan-status-chevron { transform: rotate(180deg); }
+.plan-status-body {
+    padding: var(--space-2) var(--space-4) var(--space-4);
+    animation: tabFadeIn var(--duration-base) var(--ease-out);
+}
+.plan-status-body > *:first-child { margin-top: 0; }
+.plan-status-body > * { margin-bottom: var(--space-3) !important; }
+.plan-status-body > *:last-child { margin-bottom: 0 !important; }
+/* Inner panels: drop their card chrome so they read as rows within the panel */
+.plan-status-body .plan-change-plan-panel,
+.plan-status-body .adaptation-timeline-panel,
+.plan-status-body .warning-container {
+    box-shadow: none;
+}
+.plan-status-body .adaptation-timeline-panel {
+    border: none;
+    padding: 0;
+}
+
 /* This-week hero: a touch more lift than the in-list pinned card so it reads
    as the primary focus of the page. */
 .pinned-week--hero { margin-bottom: var(--space-6); }
