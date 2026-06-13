@@ -154,7 +154,7 @@
 }
 
 .comp-strong .readiness-comp-score { color: var(--color-success); }
-.comp-good .readiness-comp-score { color: var(--color-primary); }
+.comp-good .readiness-comp-score { color: var(--color-link); }
 .comp-developing .readiness-comp-score { color: var(--color-warning, #e8a830); }
 
 .readiness-comp-bar {
@@ -257,7 +257,7 @@
 .sim-strong .readiness-mountain-score,
 .sim-strong .mountain-pct { color: var(--color-success); }
 .sim-good .readiness-mountain-score,
-.sim-good .mountain-pct { color: var(--color-primary); }
+.sim-good .mountain-pct { color: var(--color-link); }
 .sim-developing .readiness-mountain-score,
 .sim-developing .mountain-pct { color: var(--color-warning, #e8a830); }
 
@@ -270,7 +270,7 @@
 .readiness-mountain-explainer summary {
     list-style: none;
     cursor: pointer;
-    color: var(--color-primary);
+    color: var(--color-link);
     font-size: var(--text-xs);
     font-weight: var(--weight-semibold);
     user-select: none;
@@ -314,7 +314,7 @@
     font-weight: var(--weight-medium);
     padding: var(--space-1) var(--space-3);
     background: var(--color-primary-subtle);
-    color: var(--color-primary);
+    color: var(--color-link);
     border-radius: var(--radius-full);
 }
 
@@ -347,7 +347,7 @@
 }
 
 .prediction-target .prediction-name {
-    color: var(--color-primary);
+    color: var(--color-link);
 }
 
 .prediction-time {
@@ -431,7 +431,7 @@
 }
 
 .scenario-dream .scenario-name strong { color: var(--color-success); }
-.scenario-solid .scenario-name strong { color: var(--color-primary); }
+.scenario-solid .scenario-name strong { color: var(--color-link); }
 .scenario-tough .scenario-name strong { color: var(--color-warning, #e8a830); }
 .scenario-survival .scenario-name strong { color: var(--color-text-secondary); }
 

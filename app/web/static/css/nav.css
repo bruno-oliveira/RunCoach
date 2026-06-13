@@ -67,8 +67,7 @@
     font-size: var(--text-xl);
     font-weight: 700;
     color: var(--color-text);
-    letter-spacing: 0.06em;
-    text-transform: uppercase;
+    letter-spacing: -0.02em;
 }
 
 /* Hamburger toggle */
@@ -130,7 +129,7 @@
 }
 
 .nav-link.is-active {
-    color: var(--color-primary);
+    color: var(--color-link);
     background: var(--color-primary-ghost);
     font-weight: var(--weight-semibold);
 }
@@ -167,7 +166,7 @@
     align-items: center;
     justify-content: center;
     background: var(--color-primary-subtle);
-    color: var(--color-primary);
+    color: var(--color-link);
     font-weight: var(--weight-bold);
     font-size: var(--text-sm);
 }

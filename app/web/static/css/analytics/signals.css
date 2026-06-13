@@ -180,7 +180,7 @@
 .phase-cell { display: flex; align-items: center; gap: var(--space-2); min-width: 0; }
 .phase-row--head .phase-cell { justify-content: flex-start; }
 .phase-cell.is-active { font-weight: 700; }
-.phase-row--head .phase-cell.is-active { color: var(--color-primary); }
+.phase-row--head .phase-cell.is-active { color: var(--color-link); }
 .phase-bar { flex: 1; height: 6px; border-radius: var(--radius-full); background: var(--color-bg-sunken); overflow: hidden; }
 .phase-row:nth-child(even) .phase-bar { background: var(--color-bg-elevated); }
 .phase-bar-fill { height: 100%; border-radius: var(--radius-full); background: var(--color-border); }

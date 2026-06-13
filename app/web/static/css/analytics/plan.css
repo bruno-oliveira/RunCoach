@@ -173,7 +173,7 @@
 }
 
 .analytics-tab--active {
-    color: var(--color-primary);
+    color: var(--color-link);
     border-bottom-color: var(--color-primary);
 }
 

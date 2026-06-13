@@ -26,7 +26,7 @@
 .recipe-meal-type {
     display: inline-block;
     background: var(--color-primary-subtle);
-    color: var(--color-primary);
+    color: var(--color-link);
     padding: 4px 14px;
     border-radius: var(--radius-full);
     font-size: var(--text-xs);
@@ -65,7 +65,7 @@
     font-family: var(--font-display);
     font-size: var(--text-2xl);
     font-weight: var(--weight-bold);
-    color: var(--color-primary);
+    color: var(--color-link);
     display: block;
 }
 
@@ -87,7 +87,7 @@
 
 .dietary-tag {
     background: var(--color-primary-subtle);
-    color: var(--color-primary);
+    color: var(--color-link);
     padding: 4px 12px;
     border-radius: var(--radius-full);
     font-size: var(--text-xs);
@@ -113,7 +113,7 @@
 .section-icon {
     width: 1.25rem;
     height: 1.25rem;
-    color: var(--color-primary);
+    color: var(--color-link);
     flex-shrink: 0;
 }
 

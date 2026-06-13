@@ -101,7 +101,7 @@
     color: var(--color-primary, #1D4ED8);
 }
 .share-format-btn--active {
-    background: var(--color-primary-subtle, rgba(29, 78, 216, 0.08));
+    background: var(--color-primary-subtle, rgba(168, 219, 46, 0.08));
     border-color: var(--color-primary, #1D4ED8);
     color: var(--color-primary, #1D4ED8);
 }
@@ -132,7 +132,7 @@
 .share-theme-btn--active {
     border-color: var(--color-primary, #1D4ED8);
     color: var(--color-primary, #1D4ED8);
-    background: var(--color-primary-subtle, rgba(29, 78, 216, 0.08));
+    background: var(--color-primary-subtle, rgba(168, 219, 46, 0.08));
 }
 .share-theme-swatch {
     display: inline-block;
@@ -215,7 +215,7 @@
     transition: all 0.15s;
 }
 .share-run-btn:hover {
-    background: var(--color-primary-subtle, rgba(29, 78, 216, 0.08));
+    background: var(--color-primary-subtle, rgba(168, 219, 46, 0.08));
     color: var(--color-primary, #1D4ED8);
 }
 .share-run-btn svg {

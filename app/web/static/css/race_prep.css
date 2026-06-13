@@ -159,7 +159,7 @@
 .upload-browse-btn {
     background: none;
     border: none;
-    color: var(--color-primary);
+    color: var(--color-link);
     cursor: pointer;
     text-decoration: underline;
     font-size: inherit;
@@ -261,7 +261,7 @@
 
 .time-row--adjusted .time-value {
     font-size: var(--text-xl);
-    color: var(--color-primary);
+    color: var(--color-link);
 }
 
 .feasibility-badge {

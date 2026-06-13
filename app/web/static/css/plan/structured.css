@@ -28,7 +28,7 @@
 .workout-steps-toggle::-webkit-details-marker { display: none; }
 
 .workout-steps-toggle:hover {
-    color: var(--color-primary);
+    color: var(--color-link);
 }
 
 .workout-steps-chevron {

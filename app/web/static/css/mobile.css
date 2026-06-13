@@ -48,7 +48,7 @@
   .strava-chip:active:not(:disabled) {
     background: var(--color-surface);
     border-color: var(--color-primary);
-    color: var(--color-primary);
+    color: var(--color-link);
   }
 }
 

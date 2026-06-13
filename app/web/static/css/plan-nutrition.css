@@ -181,7 +181,7 @@
 
 .meal-type-count {
     background: var(--color-primary-subtle);
-    color: var(--color-primary);
+    color: var(--color-link);
     padding: 2px 10px;
     border-radius: var(--radius-full);
     font-size: var(--text-xs);
@@ -477,7 +477,7 @@
     content: "\2022";
     position: absolute;
     left: var(--space-2);
-    color: var(--color-primary);
+    color: var(--color-link);
     font-weight: bold;
 }
 
@@ -532,7 +532,7 @@
 .phase-name {
     font-weight: var(--weight-bold);
     font-size: var(--text-sm);
-    color: var(--color-primary);
+    color: var(--color-link);
     text-transform: capitalize;
 }
 
