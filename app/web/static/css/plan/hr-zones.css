@@ -62,12 +62,13 @@
     margin-top: 2px;
 }
 
-/* Zone colors */
-.hr-zone-1 { background: #3b82f6; }
-.hr-zone-2 { background: #22c55e; }
-.hr-zone-3 { background: #eab308; }
-.hr-zone-4 { background: #f97316; }
-.hr-zone-5 { background: #ef4444; }
+/* Zone colors — conventional Z1 (cool) → Z5 (hot) heat ramp, muted to sit
+   coherently with the rest of the palette rather than pure saturated web hues. */
+.hr-zone-1 { background: #4A72C4; }
+.hr-zone-2 { background: #3FA9A0; }
+.hr-zone-3 { background: #C9A22E; }
+.hr-zone-4 { background: #D2762E; }
+.hr-zone-5 { background: #C2503E; }
 
 /* HR source label in summary */
 .hr-source-label {
@@ -99,11 +100,11 @@
     flex-shrink: 0;
 }
 
-.hr-zone-badge.hr-zone-1 { background: #3b82f6; }
-.hr-zone-badge.hr-zone-2 { background: #22c55e; }
-.hr-zone-badge.hr-zone-3 { background: #eab308; color: #422006; }
-.hr-zone-badge.hr-zone-4 { background: #f97316; }
-.hr-zone-badge.hr-zone-5 { background: #ef4444; }
+.hr-zone-badge.hr-zone-1 { background: #4A72C4; }
+.hr-zone-badge.hr-zone-2 { background: #3FA9A0; }
+.hr-zone-badge.hr-zone-3 { background: #C9A22E; color: #2E2406; }
+.hr-zone-badge.hr-zone-4 { background: #D2762E; }
+.hr-zone-badge.hr-zone-5 { background: #C2503E; }
 
 .workout-zone-hint {
     font-size: 10px;
@@ -121,9 +122,9 @@
     letter-spacing: 0.04em;
     padding: 2px 8px;
     border-radius: var(--radius-sm);
-    background: linear-gradient(135deg, rgba(99,102,241,0.15), rgba(139,92,246,0.15));
-    color: var(--color-link);
-    border: 1px solid rgba(99, 102, 241, 0.3);
+    background: var(--color-primary-subtle);
+    color: var(--color-accent-strong);
+    border: 1px solid var(--color-primary);
     margin-bottom: 4px;
 }
 .key-workout-badge::before {
@@ -146,7 +147,7 @@
     inset: 0;
     border-radius: inherit;
     pointer-events: none;
-    background: linear-gradient(135deg, rgba(99,102,241,0.04), transparent 60%);
+    background: linear-gradient(135deg, var(--color-primary-subtle), transparent 60%);
 }
 
 /* Readiness → workout nudge */
@@ -163,11 +164,11 @@
     font-weight: 700;
     letter-spacing: 0.04em;
     text-transform: uppercase;
-    background: linear-gradient(135deg, #f59e0b, #ea580c);
+    background: var(--color-warning);
     color: #fff;
     padding: 3px 8px;
     border-radius: var(--radius-full, 999px);
-    box-shadow: 0 4px 10px -3px rgba(245, 158, 11, 0.45);
+    box-shadow: none;
     z-index: 2;
 }
 @keyframes swapHintPulse {
