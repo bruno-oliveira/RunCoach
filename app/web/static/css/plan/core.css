@@ -175,7 +175,7 @@
     content: '';
     position: absolute;
     inset: 0;
-    background: linear-gradient(135deg, var(--color-primary-subtle) 0%, var(--color-accent-subtle) 100%);
+    background: var(--color-primary-ghost);
     pointer-events: none;
 }
 
@@ -792,7 +792,7 @@
    as the primary focus of the page. */
 .pinned-week--hero { margin-bottom: var(--space-6); }
 .pinned-week--hero .week-card {
-    box-shadow: 0 0 0 1px var(--color-primary), var(--shadow-lg);
+    box-shadow: inset 3px 0 0 var(--color-primary), var(--shadow-sm);
 }
 
 @media (max-width: 480px) {
