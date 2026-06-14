@@ -213,6 +213,242 @@ _KEY_WORKOUT_STEP_BUILDERS: Dict[
         work_zone="E",
         recovery_label="hike back up for recovery",
     ),
+    # -----------------------------------------------------------------------
+    # Workouts that previously fell through to the easy-run defensive default.
+    # Each builder matches the workout's declared type (interval/tempo/hill)
+    # so the step effort, pace zone, and run label are internally consistent
+    # with what the detail page shows as the session header.
+    # -----------------------------------------------------------------------
+
+    # -- 10K road interval variants --
+    "10k_rolling_500s": lambda d, pz: _steps_mod.build_meter_rep_steps(
+        d,
+        pz,
+        reps=8,
+        rep_m=500,
+        work_zone="10K",
+        recovery_label="200m easy jog",
+    ),
+    "10k_broken_miles": lambda d, pz: _steps_mod.build_km_rep_steps(
+        d,
+        pz,
+        reps=_vo2max_km_reps(d, rep_km=1.2, recovery_km=0.4, default=3, lo=2, hi=4),
+        work_zone="I",
+        recovery_s=60,
+    ),
+    "10k_200m_repeats": lambda d, pz: _steps_mod.build_meter_rep_steps(
+        d,
+        pz,
+        reps=_vo2max_400_reps(d),
+        rep_m=200,
+        work_zone="R",
+        recovery_label="200m jog recovery",
+    ),
+    "10k_pyramid_intervals": lambda d, pz: _steps_mod.build_meter_rep_steps(
+        d,
+        pz,
+        reps=7,  # 400-600-800-1000-800-600-400 = 7 reps
+        rep_m=600,  # average rep length
+        work_zone="I",
+        recovery_label="equal-distance jog recovery",
+    ),
+    # -- 10K road tempo variant --
+    "10k_mile_up_overs": lambda d, pz: _steps_mod.build_over_under_steps(
+        d,
+        pz,
+        reps=_over_under_reps(d, over_min=2.0, under_min=2.0, default=4, lo=3, hi=5),
+        over_s=120,
+        under_s=120,
+    ),
+    # -- Trail hilly interval / hill variants --
+    "trail_technical_terrain": lambda d, pz: _steps_mod.build_fartlek_steps(
+        d,
+        pz,
+        reps=_fartlek_reps(d, on_min=3, off_min=2, default=5),
+        on_s=180,
+        off_s=120,
+        on_zone="T",
+        work_effort="moderate",
+    ),
+    "trail_broken_climbs": lambda d, pz: _steps_mod.build_duration_rep_steps(
+        d,
+        pz,
+        reps=6,
+        work_s=90,
+        work_zone="I",
+        cue="hill",
+        work_effort="hard uphill",
+        recovery_s=60,
+        recovery_label="60s easy jog",
+    ),
+    "trail_rolling_500s": lambda d, pz: _steps_mod.build_meter_rep_steps(
+        d,
+        pz,
+        reps=8,
+        rep_m=500,
+        work_zone="T",
+        recovery_label="200m easy jog",
+    ),
+    "trail_downhill_broken_miles": lambda d, pz: _steps_mod.build_meter_rep_steps(
+        d,
+        pz,
+        reps=_vo2max_km_reps(d, rep_km=0.5, recovery_km=0.3, default=4, lo=3, hi=5),
+        rep_m=500,
+        work_zone="I",
+        recovery_label="hike back up to reset",
+    ),
+    "trail_hill_pyramid": lambda d, pz: _steps_mod.build_duration_rep_steps(
+        d,
+        pz,
+        reps=7,  # 1-2-3-4-3-2-1 min = 7 efforts
+        work_s=120,  # average effort length (2 min)
+        work_zone="I",
+        cue="hill",
+        work_effort="hard uphill",
+        recovery_label="jog down recovery",
+        recovery_s=120,
+    ),
+    "trail_base_hike_run": lambda d, pz: _steps_mod.build_duration_rep_steps(
+        d,
+        pz,
+        reps=_fartlek_reps(d, on_min=4, off_min=4, default=6, lo=4, hi=8),
+        work_s=240,
+        work_zone="E",
+        work_kind="walk",
+        label="power-hike uphills",
+        work_effort="power hike",
+        recovery_s=240,
+        recovery_kind="run",
+        recovery_effort="easy run",
+        recovery_label="run flats and descents",
+        recovery_zone="E",
+    ),
+    # -- Trail interval / base surge variants --
+    "trail_base_surges": lambda d, pz: _steps_mod.build_strides_steps(
+        d,
+        pz,
+        reps=6,
+        stride_s=30,
+        recovery_s=90,
+        work_zone="I",
+        label="6 × 30s uphill surges",
+        effort="uphill surge",
+        cue="hill",
+    ),
+    # -- Trail flat interval variants --
+    "trail_flat_rolling_500s": lambda d, pz: _steps_mod.build_meter_rep_steps(
+        d,
+        pz,
+        reps=8,
+        rep_m=500,
+        work_zone="T",
+        recovery_label="200m easy jog",
+    ),
+    "trail_flat_broken_miles": lambda d, pz: _steps_mod.build_km_rep_steps(
+        d,
+        pz,
+        reps=_vo2max_km_reps(d, rep_km=1.2, recovery_km=0.4, default=3, lo=2, hi=4),
+        work_zone="I",
+        recovery_s=60,
+    ),
+    "trail_flat_pyramid": lambda d, pz: _steps_mod.build_meter_rep_steps(
+        d,
+        pz,
+        reps=7,  # short-medium-long-medium-short pyramid
+        rep_m=400,
+        work_zone="I",
+        recovery_label="equal-distance jog",
+    ),
+    "trail_flat_vo2max_intervals": lambda d, pz: _steps_mod.build_duration_rep_steps(
+        d,
+        pz,
+        reps=_fartlek_reps(d, on_min=3, off_min=2, default=5, lo=4, hi=7),
+        work_s=180,
+        work_zone="I",
+        cue="hard",
+        work_effort="hard",
+        recovery_s=120,
+        recovery_label="2min easy jog",
+    ),
+    "trail_flat_proprioception": lambda d, pz: _steps_mod.build_fartlek_steps(
+        d,
+        pz,
+        reps=_fartlek_reps(d, on_min=3, off_min=2, default=4),
+        on_s=180,
+        off_s=120,
+        on_zone="T",
+        work_effort="moderate varied-surface",
+    ),
+    # -- Trail flat tempo variants --
+    "trail_flat_base_strides": lambda d, pz: _steps_mod.build_strides_steps(
+        d,
+        pz,
+        reps=6,
+        stride_s=20,
+        recovery_s=60,
+        work_zone="R",
+        label="6 × 20s fast strides on grass/dirt",
+        effort="relaxed-fast",
+        cue="stride",
+    ),
+    "trail_flat_base_fartlek": lambda d, pz: _steps_mod.build_fartlek_steps(
+        d,
+        pz,
+        reps=6,
+        on_s=120,
+        off_s=180,
+        on_zone="T",
+        work_effort="comfortably hard",
+    ),
+    "trail_flat_threshold_blocks": lambda d, pz: _steps_mod.build_duration_rep_steps(
+        d,
+        pz,
+        reps=_over_under_reps(d, over_min=8, under_min=3, default=3, lo=2, hi=4),
+        work_s=480,
+        work_zone="T",
+        cue="hard",
+        work_effort="threshold",
+        recovery_s=180,
+        recovery_label="3min easy jog",
+    ),
+    "trail_flat_progressive_tempo": lambda d, pz: _steps_mod.build_progression_block_steps(
+        d,
+        pz,
+        block_zone="T",
+    ),
+    "trail_flat_over_unders": lambda d, pz: _steps_mod.build_over_under_steps(
+        d,
+        pz,
+        reps=_over_under_reps(d, over_min=2, under_min=3, default=5, lo=4, hi=7),
+        over_s=120,
+        under_s=180,
+    ),
+    "trail_flat_steady_state": lambda d, pz: _steps_mod.build_continuous_quality_steps(
+        d,
+        pz,
+        zone="T",
+    ),
+    # -- Trail tempo variants --
+    "trail_stacked_efforts": lambda d, pz: _steps_mod.build_duration_rep_steps(
+        d,
+        pz,
+        reps=_over_under_reps(d, over_min=10, under_min=3, default=3, lo=2, hi=4),
+        work_s=600,
+        work_zone="T",
+        cue="hard",
+        work_effort="trail race effort",
+        recovery_s=180,
+        recovery_label="3min easy jog",
+    ),
+    "trail_climb_surge_fartlek": lambda d, pz: _steps_mod.build_fartlek_steps(
+        d,
+        pz,
+        reps=_fartlek_reps(d, on_min=2, off_min=2, default=8, lo=5, hi=12),
+        on_s=120,
+        off_s=120,
+        on_zone="I",
+        work_effort="surge uphill",
+    ),
     "marathon_mp_cutdown": lambda d, pz: _steps_mod.build_meter_rep_steps(
         d,
         pz,
@@ -312,10 +548,14 @@ def build_key_workout_steps(
     """Build executable steps for a key workout from a single distance source.
 
     Dispatch order (structured-first): explicit ``steps`` → ``steps_builder``
-    → single continuous block for fractional/prose runs → per-workout builder
-    in ``_KEY_WORKOUT_STEP_BUILDERS`` → defensive easy-run default. Used by both
-    ``overlay_key_workout`` (initial generation) and ``rebuild_key_workout``
-    (adaptation / repair) so steps are always derived the same way.
+    → per-workout builder in ``_KEY_WORKOUT_STEP_BUILDERS`` → single continuous
+    easy block for fractional/prose runs (``_RUNNING_DISTANCE_FRACTION``) →
+    defensive easy-run default. Explicit builders are checked before the
+    running-fraction fallback so workouts with a registered builder always
+    produce type-consistent steps rather than a generic easy run.
+    Used by both ``overlay_key_workout`` (initial generation) and
+    ``rebuild_key_workout`` (adaptation / repair) so steps are always derived
+    the same way.
     """
     if key_wk.get("steps"):
         return _inject_pace_into_steps(key_wk["steps"], pace_zones)
@@ -323,11 +563,14 @@ def build_key_workout_steps(
         return _resolve_long_steps_builder(
             key_wk["steps_builder"], distance_km, pace_zones
         )
-    if key_wk["id"] in _RUNNING_DISTANCE_FRACTION and distance_km > 0:
-        return _steps_mod.build_easy_steps(distance_km, pace_zones)
+    # Explicit per-workout builder takes priority over the running-fraction
+    # easy-run path so interval/tempo/hill workouts always get type-consistent
+    # steps rather than a generic easy run.
     builder = _KEY_WORKOUT_STEP_BUILDERS.get(key_wk["id"])
     if builder is not None and distance_km > 0:
         return builder(distance_km, pace_zones)
+    if key_wk["id"] in _RUNNING_DISTANCE_FRACTION and distance_km > 0:
+        return _steps_mod.build_easy_steps(distance_km, pace_zones)
     # Every key workout is covered by an explicit builder, a steps_builder, or
     # the running-fraction path above. This defensive default only guards a
     # future workout id added without a builder — it degrades to an easy run

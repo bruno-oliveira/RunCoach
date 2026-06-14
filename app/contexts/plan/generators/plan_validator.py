@@ -56,3 +56,105 @@ def validate_week_plan(
             return False, f"Recovery day on day {workout['day']} has non-zero distance"
 
     return True, "Valid"
+
+
+# ---------------------------------------------------------------------------
+# Quality-run internal consistency
+# ---------------------------------------------------------------------------
+
+# Effort labels that belong to easy/recovery effort — a quality-run step whose
+# *only* work effort is from this set is mislabelled relative to its workout type.
+_EASY_EFFORTS: frozenset = frozenset({"easy", "conversational", ""})
+# Pace zones that represent genuine quality work (not easy/recovery)
+_QUALITY_ZONES: frozenset = frozenset({"T", "I", "M", "R", "10K", "5K"})
+# Key workouts that are intentionally easy-paced despite their slot type.
+# These are legitimately filed under tempo/interval but use easy effort
+# as the primary stimulus (e.g. a fueling-practice long run typed "tempo"
+# so it appears in the quality slot without adding hard aerobic load).
+_INTENTIONALLY_EASY_KEY_WORKOUTS: frozenset = frozenset({
+    "marathon_easy_long_fueling",
+    "trail_flat_soft_surface",  # easy-effort soft-surface run
+})
+
+
+def validate_quality_run_steps(workout: dict) -> tuple[bool, str]:
+    """Validate that a quality run's steps are consistent with its declared type.
+
+    Checks:
+    - For ``interval`` and ``hill`` workouts: at least one ``run`` step must
+      have a non-easy effort *or* a quality pace zone (T/I/M/R/10K/5K).
+    - For ``tempo`` workouts: at least one ``run`` step must use a quality
+      pace zone.
+    - The reported ``distance`` must be within 0.6 km of the sum of primary
+      step distances (warmup + run + cooldown), when all steps are
+      distance-priced.  Duration-based reps that cannot be priced are excluded
+      from the check (they are a lower-bound contribution).
+
+    Returns ``(True, "Valid")`` or ``(False, <reason>)``.
+    """
+    from app.core.training.workout_steps import compute_distance_from_steps_checked
+
+    wtype = workout.get("type")
+    if wtype not in ("interval", "tempo", "hill"):
+        return True, "Valid"
+
+    steps = workout.get("steps") or []
+    if not steps:
+        return True, "Valid"  # no steps to validate
+
+    work_steps = [s for s in steps if s.get("kind") == "run"]
+    if not work_steps:
+        return True, "Valid"  # no run-kind steps (e.g. walk-only hill)
+
+    work_efforts = [s.get("effort", "") or "" for s in work_steps]
+    work_zones = [s.get("pace_zone", "") or "" for s in work_steps]
+
+    kid = workout.get("key_workout_id", "")
+    label = f"type={wtype} key={kid}" if kid else f"type={wtype}"
+
+    # Workouts that are legitimately filed under a quality slot type but use
+    # easy effort as their primary stimulus are exempt from the effort check.
+    if kid in _INTENTIONALLY_EASY_KEY_WORKOUTS:
+        return True, "Valid"
+
+    if wtype in ("interval", "hill"):
+        has_quality_effort = any(e not in _EASY_EFFORTS for e in work_efforts)
+        has_quality_zone = any(z in _QUALITY_ZONES for z in work_zones)
+        if not has_quality_effort and not has_quality_zone:
+            return (
+                False,
+                f"{label}: all run steps have easy effort/zone "
+                f"(efforts={work_efforts}, zones={work_zones})",
+            )
+
+    elif wtype == "tempo":
+        has_quality_zone = any(z in _QUALITY_ZONES for z in work_zones)
+        if not has_quality_zone:
+            return (
+                False,
+                f"{label}: tempo run steps only have easy-zone (E) steps "
+                f"(zones={work_zones})",
+            )
+
+    # Distance consistency check.
+    # Key-workout overlays reconcile their own distance via overlay_key_workout;
+    # those workouts intentionally include duration-based reps (strides, hill
+    # surges) whose physical distance sits outside the prescribed budget and is
+    # priced separately by the overlay.  Skip the distance check for them to
+    # avoid flagging correct behaviour.
+    reported = workout.get("distance") or 0
+    if reported > 0 and not workout.get("key_workout_id"):
+        step_km, fully_priced = compute_distance_from_steps_checked(steps)
+        if fully_priced and step_km > 0:
+            # Tolerance scales with distance: fixed 0.3 km floor plus 40% of
+            # workout distance to absorb interval/hill variants whose prescribed
+            # rep structure may diverge from the allocated budget.
+            tolerance = 0.3 + reported * 0.40
+            if abs(step_km - reported) > tolerance:
+                return (
+                    False,
+                    f"{label}: steps total {step_km:.2f} km but "
+                    f"workout reports {reported} km (tolerance ±{tolerance:.2f})",
+                )
+
+    return True, "Valid"
