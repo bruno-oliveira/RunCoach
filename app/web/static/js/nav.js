@@ -426,4 +426,6 @@ document.addEventListener('keydown', (e) => {
 document.addEventListener('DOMContentLoaded', () => {
     initThemeToggle();
     initStravaPanel();
+    // Initialise language from localStorage and apply translations
+    if (window.RC_I18N) RC_I18N.init();
 });
