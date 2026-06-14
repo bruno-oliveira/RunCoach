@@ -131,8 +131,13 @@
     </div>
 
     {% if week.strength_training %}
-    <div class="tips-section strength-block">
-        <div class="tips-title">Strength Training ({{ week.strength_training | length }} session{{ 's' if week.strength_training | length != 1 else '' }})</div>
+    <details class="tips-section strength-block collapsible-card">
+        <summary class="collapsible-card-summary">
+            <svg class="collapsible-card-chevron" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg>
+            <svg class="collapsible-card-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 4H6a2 2 0 00-2 2v14a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2z"/><path d="M9 9h6M9 13h4"/></svg>
+            <span class="tips-title">Strength Training <span class="collapsible-card-count">{{ week.strength_training | length }} session{{ 's' if week.strength_training | length != 1 else '' }}</span></span>
+        </summary>
+        <div class="collapsible-card-body">
         {% for st in week.strength_training %}
         <div class="strength-session-card">
             <div class="strength-session-header">
@@ -167,18 +172,25 @@
             {% endif %}
         </div>
         {% endfor %}
-    </div>
+        </div>
+    </details>
     {% endif %}
 
     {% if week.training_tips %}
-    <div class="tips-section">
-        <div class="tips-title">Training Tips — Week {{ week.week }}</div>
+    <details class="tips-section collapsible-card">
+        <summary class="collapsible-card-summary">
+            <svg class="collapsible-card-chevron" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg>
+            <svg class="collapsible-card-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+            <span class="tips-title">Training Tips <span class="collapsible-card-count">Week {{ week.week }}</span></span>
+        </summary>
+        <div class="collapsible-card-body">
         <ul class="tips-list">
             {% for tip in week.training_tips %}
             <li>{{ tip }}</li>
             {% endfor %}
         </ul>
-    </div>
+        </div>
+    </details>
     {% endif %}
 
     {% if week.vertical_simulation and week.vertical_simulation.enabled %}
@@ -193,14 +205,16 @@
     {% set up_pct_capped = up_pct if up_pct < 120 else 120 %}
     {% set dn_pct_capped = dn_pct if dn_pct < 120 else 120 %}
     {% set tr_pct_capped = tr_pct if tr_pct < 120 else 120 %}
-    <div class="mountain-load-card">
-        <div class="mountain-load-header">
+    <details class="mountain-load-card collapsible-card mountain-load-collapsible">
+        <summary class="collapsible-card-summary mountain-load-summary">
+            <svg class="collapsible-card-chevron" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg>
             <svg class="mountain-load-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                 <path d="M3 20l5-9 4 5 3-6 6 10z"/>
             </svg>
-            <span class="mountain-load-title">Mountain Load — Week {{ week.week }}</span>
+            <span class="mountain-load-title">Mountain Load</span>
             <span class="mountain-load-class">{{ vs.race_elevation_class | replace('_', ' ') | title }} ({{ vs.simulated_uphill_m }} m)</span>
-        </div>
+        </summary>
+        <div class="collapsible-card-body mountain-load-body">
         <div class="mountain-load-gauges">
             <div class="mountain-load-gauge">
                 <div class="mountain-load-gauge-head">
@@ -225,6 +239,7 @@
             </div>
         </div>
         <div class="mountain-load-guidance">{{ vs.guidance }}</div>
-    </div>
+        </div>
+    </details>
     {% endif %}
 </div>
