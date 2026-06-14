@@ -159,27 +159,27 @@
 }
 
 .race-result-type--race {
-    color: #1D4ED8;
-    background: rgba(14, 124, 90, 0.08);
-    border-color: rgba(14, 124, 90, 0.2);
+    color: var(--wt-interval);
+    background: var(--color-bg-sunken);
+    border-color: var(--color-border);
 }
 
 .race-result-type--tempo {
-    color: #B45309;
-    background: rgba(180, 83, 9, 0.08);
-    border-color: rgba(180, 83, 9, 0.2);
+    color: var(--wt-tempo);
+    background: var(--color-bg-sunken);
+    border-color: var(--color-border);
 }
 
 .race-result-type--interval {
-    color: #7C3AED;
-    background: rgba(124, 58, 237, 0.08);
-    border-color: rgba(124, 58, 237, 0.2);
+    color: var(--wt-interval);
+    background: var(--color-bg-sunken);
+    border-color: var(--color-border);
 }
 
 .race-result-type--long {
-    color: #0D9488;
-    background: rgba(13, 148, 136, 0.08);
-    border-color: rgba(13, 148, 136, 0.2);
+    color: var(--wt-long);
+    background: var(--color-bg-sunken);
+    border-color: var(--color-border);
 }
 
 .race-result-distance {
@@ -231,7 +231,7 @@
 }
 
 .race-time-actual {
-    color: #1D4ED8;
+    color: var(--color-accent-strong);
 }
 
 .race-result-arrow {

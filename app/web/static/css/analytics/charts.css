@@ -156,7 +156,7 @@
 .pr-improvement {
     font-size: 10px;
     font-weight: var(--weight-bold);
-    color: #10B981;
+    color: var(--color-success);
 }
 
 .pr-history-dots {
@@ -248,9 +248,9 @@
     transform: translateY(-1px);
     box-shadow: 0 4px 14px -6px rgba(15, 23, 42, 0.12);
 }
-.ff-stat--ctl { color: #10B981; }
-.ff-stat--atl { color: #F59E0B; }
-.ff-stat--tsb { color: #6366F1; }
+.ff-stat--ctl { color: var(--color-success); }
+.ff-stat--atl { color: var(--color-warning); }
+.ff-stat--tsb { color: var(--wt-long); }
 .ff-stat-label {
     font-size: 10px;
     text-transform: uppercase;
@@ -416,12 +416,12 @@
     white-space: nowrap;
 }
 
-.badge-easy     { background: rgba(13, 148, 136, 0.12); color: var(--color-secondary-dark, #0F766E); }
-.badge-recovery { background: rgba(13, 148, 136, 0.10); color: var(--color-secondary-dark, #0F766E); }
-.badge-tempo    { background: rgba(14, 124, 90, 0.12);  color: var(--color-accent-dark); }
-.badge-interval { background: rgba(124, 58, 237, 0.12); color: #7C3AED; }
-.badge-long     { background: rgba(14, 124, 90, 0.12);  color: var(--color-link); }
-.badge-hill     { background: rgba(217, 119, 6, 0.12);  color: #B45309; }
+.badge-easy     { background: var(--color-bg-sunken); color: var(--wt-easy); }
+.badge-recovery { background: var(--color-bg-sunken); color: var(--wt-recovery); }
+.badge-tempo    { background: var(--color-bg-sunken); color: var(--wt-tempo); }
+.badge-interval { background: var(--color-bg-sunken); color: var(--wt-interval); }
+.badge-long     { background: var(--color-bg-sunken); color: var(--wt-long); }
+.badge-hill     { background: var(--color-bg-sunken); color: var(--wt-hill); }
 .badge-unknown  { background: var(--color-bg-sunken);   color: var(--color-text-muted); }
 
 /* Marker shown next to a badge whose type was inferred from pace/HR rather

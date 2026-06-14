@@ -117,15 +117,15 @@
 }
 
 .insight-card--positive {
-    border-left: 3px solid var(--color-success, #22c55e);
+    border-left: 3px solid var(--color-success);
 }
 
 .insight-card--warning {
-    border-left: 3px solid var(--color-warning, #f59e0b);
+    border-left: 3px solid var(--color-warning);
 }
 
 .insight-card--negative {
-    border-left: 3px solid var(--color-error, #ef4444);
+    border-left: 3px solid var(--color-error);
 }
 
 .insight-card--neutral {
