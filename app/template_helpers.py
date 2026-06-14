@@ -10,7 +10,7 @@ from pathlib import Path
 from fastapi.templating import Jinja2Templates
 
 from app.infrastructure.config import settings
-from app.utils import format_pace
+from app.utils import format_km, format_pace
 
 
 def _build_static_hashes(static_dir: str = "app/web/static") -> dict[str, str]:
@@ -44,4 +44,5 @@ def create_templates(directory: str = "app/web/templates") -> Jinja2Templates:
     tpl = Jinja2Templates(directory=directory)
     tpl.env.globals["static_url"] = static_url
     tpl.env.filters["format_pace"] = format_pace
+    tpl.env.filters["format_km"] = format_km
     return tpl

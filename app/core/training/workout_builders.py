@@ -229,9 +229,16 @@ def generate_tempo_run(
     day: int, distance: float, total_km: float, pace_zones: Optional[Dict] = None
 ) -> Dict[str, Any]:
     """Generate tempo run workout, with specific paces if VDOT is available."""
-    warmup = min(2.0, max(0.5, round(distance * 0.25, 1)))
+    # Derive warm-up / main from the same _wucd_m the step builder uses so the
+    # description's "{warmup}km warmup, {main_km}km" text matches the executable
+    # steps exactly (both snap to whole 100 m). Computing warm-up independently
+    # here (round(distance*0.25, 1)) drifted from the snapped step distance and
+    # made the card claim a different main-set length than the steps prescribed.
+    total_m = int(round(distance * 1000))
+    wu_m = workout_steps._wucd_m(total_m)
+    warmup = wu_m / 1000.0
     cooldown = warmup
-    main_km = round(distance - warmup - cooldown, 1)
+    main_km = round((total_m - 2 * wu_m) / 1000.0, 1)
     variant_idx = day % 3
 
     if pace_zones:
@@ -281,9 +288,13 @@ def generate_interval_run(
     else:
         i_pace = t_pace = m_pace = r_pace = None
 
-    warmup = min(2.0, max(0.5, round(distance * 0.25, 1)))
+    # Same _wucd_m source as the step builder (see generate_tempo_run) so the
+    # warm-up / work-set distances in the description match the executable steps.
+    total_m = int(round(distance * 1000))
+    wu_m = workout_steps._wucd_m(total_m)
+    warmup = wu_m / 1000.0
     cooldown = warmup
-    work_km = max(0.5, distance - warmup - cooldown)
+    work_km = max(0.5, (total_m - 2 * wu_m) / 1000.0)
 
     # 50 km/week threshold ensures ~5 weeks of base before 1000 m repeats are
     # prescribed. The previous 40 km gate was reachable too early (week 8 from a

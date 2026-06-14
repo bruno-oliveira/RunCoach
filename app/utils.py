@@ -120,6 +120,39 @@ def format_pace(pace_min_per_km: float) -> str:
     return bare if bare == "--" else f"{bare}/km"
 
 
+def truncate_km(distance_km: Optional[float]) -> float:
+    """Truncate a distance to one decimal place, WITHOUT rounding.
+
+    This is the single source of truth for how a distance becomes a
+    one-decimal display value across the whole product. A segment computed at
+    0.775 km must show as 0.7 km, never 0.8 km: warm-up / cool-down splits are
+    derived from integer-meter arithmetic (``int(round(total_m * 0.25))``),
+    which routinely yields 3-decimal kilometre values like 1.075 or 1.875. We
+    truncate rather than round so the displayed number can never claim more
+    distance than the workout actually prescribes, and so the figure shown is
+    stable regardless of which code path rendered it.
+
+    Truncation is done in integer space (``int(x * 10) / 10``) to avoid binary
+    floating-point surprises around the rounding boundary.
+    """
+    if not distance_km or distance_km <= 0:
+        return 0.0
+    return int(distance_km * 10) / 10.0
+
+
+def format_km(distance_km: Optional[float]) -> str:
+    """Render a distance as a one-decimal string, truncated (never rounded).
+
+    Always emits exactly one decimal place (e.g. ``"1.0"``, ``"0.7"``,
+    ``"13.0"``) so distances read consistently in the UI. Use this everywhere a
+    kilometre value is shown to the runner — segment cards, workout
+    descriptions, step labels — instead of ad-hoc ``:g`` / ``round(1)`` /
+    ``:.1f`` formatting, which variously rounded, dropped trailing zeros, or
+    exposed 3-decimal noise.
+    """
+    return f"{truncate_km(distance_km):.1f}"
+
+
 def parse_race_time_to_seconds(time_str: str | None) -> int | None:
     """Convert HH:MM:SS or MM:SS string to integer seconds."""
     if not time_str:

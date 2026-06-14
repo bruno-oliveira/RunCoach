@@ -77,7 +77,7 @@
                         {% if seg.zone_label %}<span class="workout-step-zone workout-step-zone-{{ seg.zone_label.split(' ')[0] }}">{{ seg.zone_label.split(' ')[-1] }}</span>{% endif %}
                     </div>
                     {% set meta = [] %}
-                    {% if seg.distance_km %}{% set _ = meta.append('{:.1f}'.format(seg.distance_km) + ' km') %}{% endif %}
+                    {% if seg.distance_km %}{% set _ = meta.append((seg.distance_km | format_km) + ' km') %}{% endif %}
                     {% if seg.pace_formatted %}{% set _ = meta.append(seg.pace_formatted) %}{% endif %}
                     {% if seg.intervals and seg.intervals.interval_m is number %}{% set _ = meta.append(seg.intervals.reps ~ 'x' ~ seg.intervals.interval_m ~ 'm' ~ (' (' ~ seg.intervals.recovery_min ~ 'min rec)' if seg.intervals.recovery_min else '')) %}{% endif %}
                     {% if meta %}

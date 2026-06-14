@@ -8,6 +8,8 @@ from __future__ import annotations
 
 from typing import Any, Dict, Optional
 
+from app.utils import format_km
+
 STEP_KINDS = (
     "warmup",
     "run",
@@ -55,12 +57,22 @@ def _step(
 
 
 def _wucd_m(total_m: int) -> int:
-    """Warmup/cooldown distance that fits within the total workout distance."""
-    return min(_WARMUP_M, max(500, int(round(total_m * 0.25))))
+    """Warm-up / cool-down distance (metres) that fits the workout.
+
+    Snapped to whole 100 m increments so the value, shown as kilometres,
+    already has at most one decimal place (e.g. 700 m -> 0.7 km) and survives
+    one-decimal truncation unchanged. This keeps the executable step distance
+    and the distance cited in the description identical: both are derived from
+    this single helper, and neither can drift to a 3-decimal figure like
+    0.775 km. Floors (rather than rounds) to the 100 m below so the warm-up
+    never claims more distance than 25% of the workout.
+    """
+    raw = min(_WARMUP_M, max(500, int(total_m * 0.25)))
+    return (raw // 100) * 100
 
 
 def _warmup(pace_zones: Optional[Dict], distance_m: int = _WARMUP_M) -> Dict[str, Any]:
-    label = f"{distance_m / 1000:g} km warm-up"
+    label = f"{format_km(distance_m / 1000)} km warm-up"
     return _step(
         "warmup",
         label,
@@ -74,7 +86,7 @@ def _warmup(pace_zones: Optional[Dict], distance_m: int = _WARMUP_M) -> Dict[str
 def _cooldown(
     pace_zones: Optional[Dict], distance_m: int = _COOLDOWN_M
 ) -> Dict[str, Any]:
-    label = f"{distance_m / 1000:g} km cool-down"
+    label = f"{format_km(distance_m / 1000)} km cool-down"
     return _step(
         "cooldown",
         label,
