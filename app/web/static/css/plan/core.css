@@ -604,6 +604,106 @@
     min-width: 4px;
 }
 
+/* ---- Plan total + progress header ----
+   Leads the training panel: the whole plan's distance at a glance, with a
+   single bar tracking how far through that distance the runner is. The big
+   number is the hero; the run count and percentage stay quiet beside it. */
+.plan-total-progress {
+    background: var(--color-bg-elevated);
+    border: 1px solid var(--color-border-subtle);
+    border-radius: var(--radius-xl);
+    padding: var(--space-5) var(--space-5) var(--space-4);
+    margin-bottom: var(--space-5);
+}
+
+.plan-total-progress-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    gap: var(--space-4);
+    margin-bottom: var(--space-4);
+}
+
+.plan-total-distance {
+    display: flex;
+    align-items: baseline;
+    flex-wrap: wrap;
+    gap: 0 var(--space-2);
+    line-height: 1;
+}
+
+.plan-total-distance-value {
+    font-family: var(--font-display);
+    font-weight: var(--weight-bold);
+    font-size: var(--text-4xl);
+    letter-spacing: var(--tracking-tight);
+    color: var(--color-text);
+}
+
+.plan-total-distance-unit {
+    font-family: var(--font-display);
+    font-weight: var(--weight-semibold);
+    font-size: var(--text-lg);
+    color: var(--color-text-secondary);
+}
+
+.plan-total-distance-label {
+    flex-basis: 100%;
+    font-size: var(--text-sm);
+    color: var(--color-text-muted);
+    margin-top: var(--space-2);
+}
+
+.plan-total-progress-meta {
+    flex-shrink: 0;
+    display: flex;
+    align-items: baseline;
+    gap: var(--space-2);
+    font-size: var(--text-sm);
+    color: var(--color-text-secondary);
+    font-weight: var(--weight-medium);
+    white-space: nowrap;
+}
+
+.plan-total-progress-done { color: var(--color-accent-strong); }
+.plan-total-progress-sep { color: var(--color-text-muted); }
+.plan-total-progress-runs { color: var(--color-text-muted); }
+
+.plan-total-progress-track {
+    height: 10px;
+    background: var(--color-bg-sunken);
+    border-radius: var(--radius-full);
+    overflow: hidden;
+    border: 1px solid var(--color-border-subtle);
+}
+
+.plan-total-progress-fill {
+    height: 100%;
+    background: var(--color-primary);
+    border-radius: var(--radius-full);
+    transition: width 0.6s var(--ease-out);
+    min-width: 4px;
+}
+
+.plan-total-progress-caption {
+    margin-top: var(--space-2);
+    font-size: var(--text-xs);
+    font-weight: var(--weight-semibold);
+    letter-spacing: var(--tracking-wide);
+    text-transform: uppercase;
+    color: var(--color-text-muted);
+    text-align: right;
+}
+
+@media (max-width: 600px) {
+    .plan-total-progress-top {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: var(--space-2);
+    }
+    .plan-total-distance-value { font-size: var(--text-3xl); }
+}
+
 /* ---- Download section ---- */
 .download-section {
     text-align: center;

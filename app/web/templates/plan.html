@@ -666,28 +666,55 @@
 
     <!-- Training Tab Panel -->
     <div class="plan-tab-panel active" id="panel-training" role="tabpanel" aria-labelledby="tab-training">
-        {% set ns = namespace(total=0, done=0) %}
+        {# Plan-wide totals: count runs (excluding rest/recovery) and sum planned
+           distance across every week. Completed distance sums the *planned*
+           distance of workouts that have a logged run, so the bar fill lines up
+           with the total shown beside it. #}
+        {% set ns = namespace(total=0, done=0, total_km=0.0, done_km=0.0, is_time_based=false) %}
         {% for week in plan %}
+          {% if week.is_beginner_plan and week.total_km == 0 %}{% set ns.is_time_based = true %}{% endif %}
+          {% set ns.total_km = ns.total_km + (week.total_km or 0) %}
           {% for workout in week.daily_workouts %}
             {% if workout.type not in ['rest', 'recovery'] %}
               {% set ns.total = ns.total + 1 %}
               {% if logged_runs.get(workout.id) %}
                 {% set ns.done = ns.done + 1 %}
+                {% set ns.done_km = ns.done_km + (workout.distance or 0) %}
               {% endif %}
             {% endif %}
           {% endfor %}
         {% endfor %}
-        {% if ns.total > 0 %}
-        <div class="plan-overall-progress">
-            <div class="plan-overall-progress-header">
-                <span class="plan-overall-progress-label">Overall Progress</span>
-                <span class="plan-overall-progress-stats">{{ ns.done }} / {{ ns.total }} runs &middot; {{ (ns.done / ns.total * 100) | round | int }}%</span>
+        {% set km_pct = (ns.done_km / ns.total_km * 100) if ns.total_km > 0 else 0 %}
+        {% set run_pct = (ns.done / ns.total * 100) if ns.total > 0 else 0 %}
+        {% set track_pct = km_pct if (ns.total_km > 0 and not ns.is_time_based) else run_pct %}
+        <div class="plan-total-progress">
+            <div class="plan-total-progress-top">
+                <div class="plan-total-distance">
+                    {% if ns.total_km > 0 and not ns.is_time_based %}
+                    <span class="plan-total-distance-value">{{ '%.0f'|format(ns.total_km) }}</span><span class="plan-total-distance-unit">km</span>
+                    <span class="plan-total-distance-label">total across {{ plan | length }} weeks</span>
+                    {% else %}
+                    <span class="plan-total-distance-value">{{ plan | length }}</span><span class="plan-total-distance-unit">wk</span>
+                    <span class="plan-total-distance-label">training plan</span>
+                    {% endif %}
+                </div>
+                {% if ns.total > 0 %}
+                <div class="plan-total-progress-meta">
+                    {% if ns.done_km > 0 and not ns.is_time_based %}
+                    <span class="plan-total-progress-done">{{ '%.0f'|format(ns.done_km) }} km done</span>
+                    <span class="plan-total-progress-sep">·</span>
+                    {% endif %}
+                    <span class="plan-total-progress-runs">{{ ns.done }}/{{ ns.total }} runs</span>
+                </div>
+                {% endif %}
             </div>
-            <div class="plan-overall-progress-track">
-                <div class="plan-overall-progress-fill" style="width: {{ (ns.done / ns.total * 100) | round(1) }}%"></div>
+            {% if ns.total > 0 %}
+            <div class="plan-total-progress-track" role="progressbar" aria-valuenow="{{ track_pct | round | int }}" aria-valuemin="0" aria-valuemax="100" aria-label="Plan completion">
+                <div class="plan-total-progress-fill" style="width: {{ track_pct | round(1) }}%"></div>
             </div>
+            <div class="plan-total-progress-caption">{{ track_pct | round | int }}% complete</div>
+            {% endif %}
         </div>
-        {% endif %}
         <div class="week-expand-toggle">
             <button class="week-expand-btn" id="expand-all-btn" onclick="toggleAllWeeks()">Expand all</button>
         </div>

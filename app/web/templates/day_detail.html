@@ -1,0 +1,163 @@
+{% extends "base.html" %}
+{% block title %}{{ workout.type | replace('_', ' ') | title }} · Week {{ week_num }} - RunCoach{% endblock %}
+
+{% block styles %}
+<link rel="stylesheet" href="{{ static_url('css/plan/core.css') }}">
+<link rel="stylesheet" href="{{ static_url('css/plan/weeks.css') }}">
+<link rel="stylesheet" href="{{ static_url('css/plan/structured.css') }}">
+<link rel="stylesheet" href="{{ static_url('css/plan/hr-zones.css') }}">
+<link rel="stylesheet" href="{{ static_url('css/day_detail.css') }}">
+{% endblock %}
+
+{% block content %}
+{# Short, plain-language purpose for each effort type — same training
+   vocabulary the rest of the app uses (conversational pace, aerobic base,
+   threshold, VO2max). Keeps the page self-explanatory without backend data. #}
+{% set type_explainer = {
+    'easy': 'An easy run is run at a conversational pace — you should be able to hold a full sentence. It builds your aerobic base and lets your body absorb harder sessions without adding fatigue.',
+    'recovery': 'A recovery run is deliberately very gentle. The goal is blood flow and active recovery, not fitness — keep it slower than easy and stop while it still feels comfortable.',
+    'run_walk': 'A run/walk session alternates short running intervals with walking breaks. The walks keep effort aerobic and protect your legs while you build durability.',
+    'long': 'The long run is the cornerstone of endurance training. Run it relaxed and conversational; time on feet matters more than pace, and it trains both your aerobic system and mental stamina.',
+    'tempo': 'A tempo run sits at "comfortably hard" — around your lactate threshold. Holding this steady effort teaches your body to clear lactate faster, raising the pace you can sustain.',
+    'threshold': 'A threshold session works at the edge of comfortably hard, improving how long you can hold a strong pace before fatigue sets in.',
+    'interval': 'Intervals are hard repeats with recovery between them. They develop your VO2max — your peak ability to take in and use oxygen — and sharpen your top-end speed.',
+    'fartlek': 'Fartlek ("speed play") mixes faster surges into an easy run. It develops speed and pace awareness in a relaxed, unstructured way.',
+    'vo2max': 'A VO2max session holds you at near-maximal aerobic effort in repeated intervals to lift your ceiling for oxygen uptake.',
+    'hill': 'Hill work builds running-specific strength and power. The climb loads your legs like resistance training while keeping impact low.',
+    'race': 'A race or time-trial effort is run close to maximum. Treat it as the test your training has been preparing you for.',
+    'rest': 'Rest is part of the plan. Adaptation happens when you recover — a true rest day lets the work you have already done turn into fitness.'
+} %}
+{% set explainer = type_explainer.get(workout.type, 'A focused session in your training plan.') %}
+
+<div class="container day-detail">
+    <a class="day-back" href="/plan/{{ plan_id }}">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+        <span>Week {{ week_num }}{% if week_dates %} · {{ week_dates[week_num - 1].start }} – {{ week_dates[week_num - 1].end }}{% endif %}</span>
+    </a>
+
+    <header class="day-hero wt-bg-{{ workout.type }}">
+        <div class="day-hero-eyebrow">
+            {% if date_label %}{{ date_label }}{% else %}{{ day_name }}{% endif %}
+            {% if is_today %}<span class="day-today-chip">Today</span>{% endif %}
+        </div>
+        <h1 class="day-hero-title">
+            <span class="day-hero-swatch wt-{{ workout.type }}" aria-hidden="true"></span>
+            {{ workout.type | replace('_', ' ') | title }}
+        </h1>
+        <div class="day-hero-stats">
+            {% if workout.distance and workout.distance > 0 %}
+            <div class="day-stat">
+                <span class="day-stat-value">{{ '%.1f'|format(workout.distance) }}</span>
+                <span class="day-stat-unit">km</span>
+            </div>
+            {% endif %}
+            {% if workout.duration_min %}
+            <div class="day-stat">
+                <span class="day-stat-value">{{ workout.duration_min }}</span>
+                <span class="day-stat-unit">min</span>
+            </div>
+            {% endif %}
+            {% if workout.hr_zone_target %}
+            <div class="day-stat">
+                <span class="hr-zone-badge hr-zone-{{ workout.hr_zone_target }}">Z{{ workout.hr_zone_target }}</span>
+                {% if workout.hr_zone_label %}<span class="day-stat-unit">{{ workout.hr_zone_label }}</span>{% endif %}
+            </div>
+            {% endif %}
+        </div>
+    </header>
+
+    {# What this kind of session is for #}
+    <section class="day-card">
+        <h2 class="day-card-title">What this is</h2>
+        <p class="day-explainer">{{ explainer }}</p>
+    </section>
+
+    {% if workout.run_min and workout.walk_min %}
+    <section class="day-card">
+        <h2 class="day-card-title">Intervals</h2>
+        <p class="day-rw">Run <strong>{{ workout.run_min }} min</strong> / Walk <strong>{{ workout.walk_min }} min</strong>
+            {% if workout.repeats %}× {{ workout.repeats }}{% endif %}
+            {% if workout.duration_min %}<span class="day-muted">— {{ workout.duration_min }} min total</span>{% endif %}
+        </p>
+    </section>
+    {% endif %}
+
+    {% if workout.description or workout.notes %}
+    <section class="day-card">
+        <h2 class="day-card-title">Today's session</h2>
+        <p class="day-notes">{{ workout.description or workout.notes }}</p>
+        {% if workout.structure %}<p class="day-structure">{{ workout.structure }}</p>{% endif %}
+    </section>
+    {% endif %}
+
+    {% if workout.steps and workout.type not in ['rest', 'recovery'] %}
+    <section class="day-card">
+        <h2 class="day-card-title">Step by step</h2>
+        <div class="workout-steps-wrap">
+            {% include 'components/workout_steps.html' %}
+        </div>
+    </section>
+    {% elif workout.segments and workout.type not in ['rest', 'recovery'] %}
+    <section class="day-card">
+        <h2 class="day-card-title">Step by step</h2>
+        <div class="workout-steps-wrap">
+            <ol class="workout-steps" aria-label="Workout steps">
+                {% for seg in workout.segments %}
+                <li class="workout-step workout-step-{{ seg.type }}">
+                    <span class="workout-step-dot" aria-hidden="true"></span>
+                    <div class="workout-step-body">
+                        <div class="workout-step-head">
+                            <span class="workout-step-label">{{ seg.name }}</span>
+                            {% if seg.zone_label %}<span class="workout-step-zone">{{ seg.zone_label.split(' ')[-1] }}</span>{% endif %}
+                        </div>
+                        {% set meta = [] %}
+                        {% if seg.distance_km %}{% set _ = meta.append((seg.distance_km | format_km) + ' km') %}{% endif %}
+                        {% if seg.pace_formatted %}{% set _ = meta.append(seg.pace_formatted) %}{% endif %}
+                        {% if meta %}<div class="workout-step-meta">{{ meta | join(' · ') }}</div>{% endif %}
+                    </div>
+                </li>
+                {% endfor %}
+            </ol>
+        </div>
+    </section>
+    {% endif %}
+
+    {% if workout.key_workout_rationale %}
+    <section class="day-card day-card--why">
+        <h2 class="day-card-title">Why this workout</h2>
+        <p class="day-notes">{{ workout.key_workout_rationale }}</p>
+    </section>
+    {% endif %}
+
+    {% if workout.coaching_rationale %}
+    <section class="day-card day-card--coach">
+        <h2 class="day-card-title">Coach's note</h2>
+        <p class="day-notes">{{ workout.coaching_rationale }}</p>
+    </section>
+    {% endif %}
+
+    {% if workout.strength_session %}
+    <section class="day-card">
+        <h2 class="day-card-title">Paired strength</h2>
+        <p class="day-notes">{{ (workout.strength_session.focus or workout.strength_session.type) | replace('_', ' ') | title }}
+            {% if workout.strength_session.duration %}<span class="day-muted">· {{ workout.strength_session.duration }}</span>{% endif %}
+        </p>
+    </section>
+    {% endif %}
+
+    {% if logged_run %}
+    <section class="day-card day-card--logged">
+        <h2 class="day-card-title">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:4px;"><polyline points="20 6 9 17 4 12"/></svg>
+            Completed
+        </h2>
+        <div class="day-logged-grid">
+            <div class="day-logged-stat"><span class="day-logged-value">{{ '%.1f'|format(logged_run.distance_km) }}</span><span class="day-logged-label">km</span></div>
+            {% if logged_run.duration_minutes %}<div class="day-logged-stat"><span class="day-logged-value">{{ '%.0f'|format(logged_run.duration_minutes) }}</span><span class="day-logged-label">min</span></div>{% endif %}
+            {% if logged_run.avg_pace_min_km %}<div class="day-logged-stat"><span class="day-logged-value">{{ logged_run.avg_pace_min_km | format_pace }}</span><span class="day-logged-label">pace</span></div>{% endif %}
+            {% if logged_run.avg_heart_rate %}<div class="day-logged-stat"><span class="day-logged-value">{{ logged_run.avg_heart_rate }}</span><span class="day-logged-label">bpm</span></div>{% endif %}
+        </div>
+    </section>
+    {% endif %}
+</div>
+{% endblock %}
