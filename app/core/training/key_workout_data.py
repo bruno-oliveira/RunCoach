@@ -397,6 +397,125 @@ _WORKOUTS_SHORT: List[Dict] = [
             "lever for 10K-to-half performance."
         ),
     },
+    {
+        "id": "10k_rolling_500s",
+        "distances": [10.0],
+        "phases": ["build", "peak"],
+        "type": "interval",
+        "terrain": ["any"],
+        "name": "Rolling 500s",
+        "structure": "8 × 0.5km rolling — no full stop, 200m easy jog between each",
+        "description": (
+            "Warm up 2km easy. Run 8 × 0.5km at 10K pace with only 200m easy "
+            "jog recovery between each — keep moving the whole time, no standing "
+            "around. The continuous rolling format accumulates quality work without "
+            "the legs going cold between reps. Cool down 2km easy."
+        ),
+        "intensity": "high",
+        "target_zone": 4,
+        "pace_zone": "10K",
+        "rationale": (
+            "The short recovery keeps lactate elevated between reps, forcing "
+            "adaptation to running at race pace on already-working legs. "
+            "Rolling 500s build the aerobic ceiling and mental toughness "
+            "needed to sustain 10K pace through the back half of the race."
+        ),
+    },
+    {
+        "id": "10k_broken_miles",
+        "distances": [10.0],
+        "phases": ["build", "peak"],
+        "type": "interval",
+        "terrain": ["any"],
+        "name": "Broken Miles",
+        "structure": "3 × broken mile: 3 hard 0.4km efforts, 60s rest within + 3min between miles",
+        "description": (
+            "Warm up 2km easy. Run 3 'broken miles': each mile is 3 hard "
+            "efforts of about 0.4km at 5K pace with 60 seconds rest between "
+            "the efforts. Take 3 minutes easy jog between each broken mile. "
+            "Cool down 2km easy."
+        ),
+        "intensity": "high",
+        "target_zone": 5,
+        "pace_zone": "I",
+        "rationale": (
+            "Broken miles let you accumulate mile-effort work in short chunks, "
+            "so the quality per rep is higher than you could hold for a full "
+            "mile. The within-rep rest teaches economy at speed; the between-set "
+            "rest lets you repeat it three times with full intent."
+        ),
+    },
+    {
+        "id": "10k_200m_repeats",
+        "distances": [10.0],
+        "phases": ["peak"],
+        "type": "interval",
+        "terrain": ["any"],
+        "name": "200m Speed Repeats",
+        "structure": "12-16 × 0.2km at mile pace with 0.2km jog recovery",
+        "description": (
+            "Warm up 2km easy. Run 12-16 short efforts of 0.2km at mile pace — "
+            "fast but controlled — with 0.2km easy jog recovery between each. "
+            "Focus on quick turnover and relaxed mechanics, not white-knuckle "
+            "sprinting. Cool down 2km easy."
+        ),
+        "intensity": "high",
+        "target_zone": 5,
+        "pace_zone": "R",
+        "rationale": (
+            "Short, fast reps close to the race develop neuromuscular efficiency "
+            "and leg speed. In the taper window, these refresh the nervous system "
+            "without adding heavy aerobic load — you arrive at the start line "
+            "sharp and bouncy."
+        ),
+    },
+    {
+        "id": "10k_pyramid_intervals",
+        "distances": [10.0],
+        "phases": ["build", "peak"],
+        "type": "interval",
+        "terrain": ["any"],
+        "name": "Pyramid Intervals",
+        "structure": "400-600-800-1000-800-600-400m at 5K-10K pace",
+        "description": (
+            "Warm up 2km easy. Run a pyramid — 400m, 600m, 800m, 1000m, 800m, "
+            "600m, 400m — at a pace between your 5K and 10K effort, with "
+            "equal-distance jog recovery between reps. Cool down 2km easy."
+        ),
+        "intensity": "high",
+        "target_zone": 5,
+        "pace_zone": "I",
+        "rationale": (
+            "The ascending and descending structure trains you to shift gears "
+            "and maintain quality as fatigue builds — both on the way up and on "
+            "the way down. The 1000m peak rep is the key stimulus; the shorter "
+            "reps around it sharpen speed at the edges."
+        ),
+    },
+    {
+        "id": "10k_mile_up_overs",
+        "distances": [10.0],
+        "phases": ["build", "peak"],
+        "type": "tempo",
+        "terrain": ["any"],
+        "name": "Mile Up & Overs",
+        "structure": "4 × 1.6km — alternate just over / just under 10K pace",
+        "description": (
+            "Warm up 2km easy. Run 4 efforts of 1.6km alternating intensity: "
+            "odd reps (1st, 3rd) just over 10K pace, even reps (2nd, 4th) just "
+            "under 10K pace. 90 seconds easy jog recovery between efforts. "
+            "Cool down 2km easy."
+        ),
+        "intensity": "high",
+        "target_zone": 4,
+        "pace_zone": "10K",
+        "rationale": (
+            "Alternating over and under the target race pace brackets the exact "
+            "race effort so you experience what 10K pace feels like both fast and "
+            "slow — building the internal feel that makes race-day pacing "
+            "automatic rather than a guessing game."
+        ),
+    },
     # -- Half Marathon --
     {
         "id": "half_progressive_long",

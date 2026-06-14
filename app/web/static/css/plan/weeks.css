@@ -555,24 +555,116 @@
 }
 
 /* ---- Collapsible week cards ---- */
-.week-card .workout-grid,
-.week-card .tips-section,
-.week-card .strength-block {
+.week-card .workout-grid {
     display: none;
 }
 .week-card.current-week .workout-grid,
-.week-card.current-week .tips-section,
-.week-card.current-week .strength-block,
-.week-card.week-expanded .workout-grid,
-.week-card.week-expanded .tips-section,
-.week-card.week-expanded .strength-block {
+.week-card.week-expanded .workout-grid {
     display: grid;
+}
+
+/* tips-section and strength-block are now <details> elements — they manage
+   their own open/closed state. Hide them only until the week card is expanded
+   (same as the workout grid), then let the browser's native details behaviour
+   control the inner collapsed/expanded state. */
+.week-card .tips-section,
+.week-card .strength-block,
+.week-card .mountain-load-collapsible {
+    display: none;
 }
 .week-card.current-week .tips-section,
 .week-card.current-week .strength-block,
+.week-card.current-week .mountain-load-collapsible,
 .week-card.week-expanded .tips-section,
-.week-card.week-expanded .strength-block {
+.week-card.week-expanded .strength-block,
+.week-card.week-expanded .mountain-load-collapsible {
     display: block;
+}
+
+/* ---- Collapsible card (details/summary pattern) ----
+   Shared styles for strength, tips, and mountain-load sections rendered as
+   <details> elements so they collapse independently of the week card. */
+.collapsible-card {
+    margin-top: var(--space-3);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-lg);
+    background: var(--color-bg-elevated);
+    overflow: hidden;
+}
+
+.collapsible-card-summary {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    padding: var(--space-3) var(--space-4);
+    cursor: pointer;
+    user-select: none;
+    -webkit-user-select: none;
+    list-style: none; /* remove default triangle in Firefox */
+    font-size: var(--text-sm);
+    color: var(--color-text-secondary);
+    transition: background var(--duration-fast) var(--ease-out),
+                color var(--duration-fast) var(--ease-out);
+}
+.collapsible-card-summary::-webkit-details-marker { display: none; }
+.collapsible-card-summary:hover {
+    background: var(--color-bg-hover, rgba(0,0,0,0.03));
+    color: var(--color-text-primary);
+}
+
+.collapsible-card-chevron {
+    color: var(--color-text-muted);
+    flex-shrink: 0;
+    transition: transform var(--duration-fast) var(--ease-out);
+}
+.collapsible-card[open] .collapsible-card-chevron {
+    transform: rotate(180deg);
+}
+
+.collapsible-card-icon {
+    color: var(--color-text-muted);
+    flex-shrink: 0;
+}
+
+.tips-title {
+    font-weight: var(--weight-semibold);
+    font-size: var(--text-sm);
+    color: inherit;
+    letter-spacing: var(--tracking-wide);
+}
+
+.collapsible-card-count {
+    font-weight: var(--weight-normal);
+    color: var(--color-text-muted);
+    font-size: var(--text-xs);
+    margin-left: var(--space-1);
+}
+
+.collapsible-card-body {
+    padding: 0 var(--space-4) var(--space-4);
+}
+
+/* Mountain load uses its own tinted background — keep the card feel but
+   let the summary row carry the accent via border-left. */
+.mountain-load-collapsible {
+    border-left: 3px solid var(--color-primary);
+    background: var(--color-primary-ghost);
+}
+.mountain-load-summary {
+    color: var(--color-text-primary);
+}
+.mountain-load-body {
+    padding: 0 var(--space-4) var(--space-4);
+}
+.mountain-load-body .mountain-load-gauges {
+    margin-top: 0;
+}
+
+[data-theme="dark"] .collapsible-card {
+    background: var(--color-bg-elevated);
+}
+[data-theme="dark"] .mountain-load-collapsible {
+    background: rgba(14, 124, 90, 0.08);
 }
 
 /* Compact day-list is the inverse: shown while collapsed, hidden once the
@@ -728,22 +820,9 @@ a.week-compact-row:hover {
 }
 
 /* ---- Mountain Load card (flat-access trail prep) ---- */
-.mountain-load-card {
-    margin-top: var(--space-4);
-    padding: var(--space-4);
-    border: 1px solid var(--color-border);
-    border-left: 3px solid var(--color-primary);
-    border-radius: var(--radius-lg);
-    background: var(--color-primary-ghost);
-}
-
-.mountain-load-header {
-    display: flex;
-    align-items: center;
-    gap: var(--space-2);
-    flex-wrap: wrap;
-    margin-bottom: var(--space-3);
-}
+/* The card is now a <details> element (.mountain-load-collapsible).
+   Structural styles live in the shared .collapsible-card rules above;
+   only mountain-load-specific visual props remain here. */
 
 .mountain-load-icon {
     color: var(--color-link);
@@ -765,12 +844,14 @@ a.week-compact-row:hover {
     background: var(--color-bg-elevated);
     border: 1px solid var(--color-border-subtle);
     border-radius: var(--radius-md);
+    white-space: nowrap;
 }
 
 .mountain-load-gauges {
     display: flex;
     flex-direction: column;
     gap: var(--space-3);
+    margin-top: var(--space-2);
 }
 
 .mountain-load-gauge-head {
@@ -832,10 +913,6 @@ a.week-compact-row:hover {
 /* ---- Dark Mode ---- */
 [data-theme="dark"] .run-stats {
     background: rgba(255, 255, 255, 0.07);
-}
-
-[data-theme="dark"] .mountain-load-card {
-    background: rgba(14, 124, 90, 0.08);
 }
 
 [data-theme="dark"] .mountain-load-class,
