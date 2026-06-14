@@ -9,6 +9,7 @@ in exactly one place.
 
 from typing import Dict, Mapping, Tuple
 
+from app.utils import format_km
 from app.utils import format_pace as _shared_format_pace
 
 
@@ -67,7 +68,7 @@ def generate_easy_run(zones: Dict, distance_km: float) -> Dict:
         "zone": "zone_1",
         "target_pace": easy_pace,
         "target_pace_formatted": _shared_format_pace(easy_pace),
-        "description": f"{rounded_km:.1f}km easy at {_shared_format_pace(easy_pace)}",
+        "description": f"{format_km(rounded_km)}km easy at {_shared_format_pace(easy_pace)}",
         "distance": rounded_km,
         "quality": False,
         "segments": segments,
@@ -93,7 +94,7 @@ def build_tempo_workout(
     target_pace = zones["zone_3_tempo"]["pace"]
 
     cap_km, pct = phase_caps.get(phase, default_cap_pct)
-    tempo_km = min(cap_km, weekly_km * pct)
+    tempo_km = round(min(cap_km, weekly_km * pct), 1)
 
     warmup_km = 2
     cooldown_km = 2
@@ -103,7 +104,7 @@ def build_tempo_workout(
         _warmup_segment(warmup_km, warmup_pace),
         {
             "name": "Tempo",
-            "distance_km": round(tempo_km, 1),
+            "distance_km": tempo_km,
             "pace_formatted": _shared_format_pace(target_pace),
             "pace_raw": target_pace,
             "zone": "zone_3",
@@ -121,7 +122,7 @@ def build_tempo_workout(
         "zone": "zone_3",
         "target_pace": target_pace,
         "target_pace_formatted": _shared_format_pace(target_pace),
-        "description": f"{total_km:.0f}km tempo: {warmup_km}km warmup, {round(tempo_km, 1):.1f}km at {_shared_format_pace(target_pace)}, {cooldown_km}km cooldown",
+        "description": f"{format_km(total_km)}km tempo: {format_km(warmup_km)}km warmup, {format_km(tempo_km)}km at {_shared_format_pace(target_pace)}, {format_km(cooldown_km)}km cooldown",
         "distance": total_km,
         "quality": True,
         "segments": segments,
@@ -188,7 +189,7 @@ def build_fartlek_workout(
         "zone": "mixed",
         "target_pace": tempo_pace,
         "target_pace_formatted": f"{_shared_format_pace(tempo_pace)} - {_shared_format_pace(hard_pace)}",
-        "description": f"{total_km}km fartlek: {surges} surges of 1-3min at {_shared_format_pace(hard_pace)}, easy running between",
+        "description": f"{format_km(total_km)}km fartlek: {surges} surges of 1-3min at {_shared_format_pace(hard_pace)}, easy running between",
         "distance": total_km,
         "quality": True,
         "segments": segments,
