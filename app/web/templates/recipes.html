@@ -9,8 +9,8 @@
 {% block content %}
 <div class="container">
     <div class="header">
-        <h1>Recipe Search</h1>
-        <p>Find and save your favorite running meals</p>
+        <h1><span data-i18n="recipes.title">Recipe Search</span></h1>
+        <p><span data-i18n="recipes.subtitle">Find and save your favorite running meals</span></p>
     </div>
 
     <div class="search-section">
@@ -30,19 +30,19 @@
 
         <div class="filters">
             <div class="filter-group">
-                <label for="mealTypeFilter">Meal Type</label>
+                <label for="mealTypeFilter"><span data-i18n="recipes.meal_type">Meal Type</span></label>
                 <select id="mealTypeFilter" onchange="searchRecipes()">
-                    <option value="">All Types</option>
-                    <option value="breakfast">🌅 Breakfast</option>
-                    <option value="lunch">☀️ Lunch</option>
-                    <option value="dinner">🌙 Dinner</option>
-                    <option value="snack">🍿 Snack</option>
-                    <option value="post_workout">💪 Post-Workout</option>
+                    <option value=""><span data-i18n="recipes.all_types">All Types</span></option>
+                    <option value="breakfast"><span data-i18n="recipes.breakfast">🌅 Breakfast</span></option>
+                    <option value="lunch"><span data-i18n="recipes.lunch">☀️ Lunch</span></option>
+                    <option value="dinner"><span data-i18n="recipes.dinner">🌙 Dinner</span></option>
+                    <option value="snack"><span data-i18n="recipes.snack">🍿 Snack</span></option>
+                    <option value="post_workout"><span data-i18n="recipes.post_workout">💪 Post-Workout</span></option>
                 </select>
             </div>
 
             <div class="filter-group">
-                <label for="minProteinFilter">Min Protein (g)</label>
+                <label for="minProteinFilter"><span data-i18n="recipes.min_protein">Min Protein (g)</span></label>
                 <input 
                     type="number" 
                     id="minProteinFilter" 
@@ -54,7 +54,7 @@
             </div>
 
             <div class="filter-group">
-                <label for="maxCaloriesFilter">Max Calories</label>
+                <label for="maxCaloriesFilter"><span data-i18n="recipes.max_cal">Max Calories</span></label>
                 <input 
                     type="number" 
                     id="maxCaloriesFilter" 
@@ -75,7 +75,7 @@
 
         <div class="dietary-filters">
             <div class="dietary-filter-header">
-                <label>Dietary Preferences</label>
+                <label><span data-i18n="recipes.diet_prefs">Dietary Preferences</span></label>
                 <button class="toggle-dietary-filters" onclick="toggleDietaryFilters()" type="button" aria-expanded="false" aria-controls="dietaryFilterOptions">
                     <span id="dietaryToggleIcon" aria-hidden="true">▼</span> Show Filters
                 </button>
@@ -84,11 +84,11 @@
                 <div class="dietary-filter-row">
                     <label class="dietary-checkbox">
                         <input type="checkbox" value="vegetarian" onchange="searchRecipes()">
-                        <span>🥬 Vegetarian</span>
+                        <span><span data-i18n="recipes.vegetarian">🥬 Vegetarian</span></span>
                     </label>
                     <label class="dietary-checkbox">
                         <input type="checkbox" value="vegan" onchange="searchRecipes()">
-                        <span>🌱 Vegan</span>
+                        <span><span data-i18n="recipes.vegan">🌱 Vegan</span></span>
                     </label>
                     <label class="dietary-checkbox">
                         <input type="checkbox" value="gluten_free" onchange="searchRecipes()">
@@ -96,7 +96,7 @@
                     </label>
                     <label class="dietary-checkbox">
                         <input type="checkbox" value="high_protein" onchange="searchRecipes()">
-                        <span>💪 High Protein</span>
+                        <span><span data-i18n="recipes.high_protein">💪 High Protein</span></span>
                     </label>
                 </div>
                 <div class="dietary-filter-row">
@@ -166,18 +166,18 @@
     <div class="recipes-grid" id="recipesGrid">
         <div class="loading" id="loadingSpinner">
             <div class="spinner"></div>
-            <p>Loading recipes...</p>
+            <p><span data-i18n="recipes.loading">Loading recipes...</span></p>
         </div>
     </div>
 
     <div class="pagination" id="pagination" style="display: none;">
-        <button class="page-btn" id="prevBtn" onclick="changePage(-1)">← Previous</button>
+        <button class="page-btn" id="prevBtn" onclick="changePage(-1)"><span data-i18n="recipes.prev">← Previous</span></button>
         <span class="page-info" id="pageInfo"></span>
-        <button class="page-btn" id="nextBtn" onclick="changePage(1)">Next →</button>
+        <button class="page-btn" id="nextBtn" onclick="changePage(1)"><span data-i18n="recipes.next">Next →</span></button>
     </div>
 
     <div class="no-results" id="noResults" style="display: none;">
-        <p>No recipes found. Try adjusting your filters.</p>
+        <p><span data-i18n="recipes.none">No recipes found. Try adjusting your filters.</span></p>
     </div>
 </div>
 {% endblock %}
@@ -519,7 +519,7 @@
         grid.innerHTML = `
             <div class="loading" id="loadingSpinner">
                 <div class="spinner"></div>
-                <p>Loading recipes...</p>
+                <p><span data-i18n="recipes.loading">Loading recipes...</span></p>
             </div>
         `;
     }

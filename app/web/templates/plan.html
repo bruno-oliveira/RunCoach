@@ -55,14 +55,14 @@
         <div class="header-completed-icon" aria-hidden="true">
             <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M8 12l2.5 2.5L16 9"/></svg>
         </div>
-        <h1>Plan Complete!</h1>
+        <h1><span data-i18n="plan.complete_title">Plan Complete!</span></h1>
         {% if is_trail %}
         <p>You conquered {{ weeks }} weeks of trail running. That's something to be proud of.</p>
         {% else %}
         <p>You finished your {{ target_distance }}km plan. {{ weeks }} weeks of work, done.</p>
         {% endif %}
         {% else %}
-        <h1>Your Training Plan</h1>
+        <h1><span data-i18n="plan.your_plan">Your Training Plan</span></h1>
         {% if experience_level %}
         <div class="tier-badge">
             <span class="badge badge-{{ experience_level }}">{{ experience_level | title }} Plan</span>
@@ -104,44 +104,44 @@
         <div class="complete-stats-grid">
             <div class="complete-stat-card">
                 <div class="complete-stat-value">{{ completion_stats.total_runs }}</div>
-                <div class="complete-stat-label">Runs Logged</div>
+                <div class="complete-stat-label"><span data-i18n="plan.runs_logged">Runs Logged</span></div>
             </div>
             <div class="complete-stat-card">
                 <div class="complete-stat-value">{{ "%.1f"|format(completion_stats.total_km) }}</div>
-                <div class="complete-stat-label">Total km</div>
+                <div class="complete-stat-label"><span data-i18n="plan.total_km">Total km</span></div>
             </div>
             <div class="complete-stat-card">
                 <div class="complete-stat-value">{{ "%.1f"|format(completion_stats.longest_run_km) }}</div>
-                <div class="complete-stat-label">Longest Run (km)</div>
+                <div class="complete-stat-label"><span data-i18n="plan.longest_run">Longest Run (km)</span></div>
             </div>
             {% if completion_stats.best_pace_min_km %}
             <div class="complete-stat-card">
                 <div class="complete-stat-value">{{ completion_stats.best_pace_min_km | format_pace }}</div>
-                <div class="complete-stat-label">Best Pace</div>
+                <div class="complete-stat-label"><span data-i18n="plan.best_pace">Best Pace</span></div>
             </div>
             {% endif %}
             {% if completion_stats.avg_effort %}
             <div class="complete-stat-card">
                 <div class="complete-stat-value">{{ completion_stats.avg_effort }}<span class="complete-stat-denom">/10</span></div>
-                <div class="complete-stat-label">Avg Effort</div>
+                <div class="complete-stat-label"><span data-i18n="plan.avg_effort">Avg Effort</span></div>
             </div>
             {% endif %}
         </div>
         {% endif %}
 
         <div class="complete-growth-bar">
-            <div class="complete-growth-label">Weekly Mileage Growth</div>
+            <div class="complete-growth-label"><span data-i18n="plan.weekly_growth">Weekly Mileage Growth</span></div>
             <div class="complete-growth-track">
                 <div class="complete-growth-start">
                     <span class="complete-growth-km">{{ "%.0f"|format(completion_stats.start_km_per_week) }} km</span>
-                    <span class="complete-growth-desc">Starting</span>
+                    <span class="complete-growth-desc"><span data-i18n="plan.starting">Starting</span></span>
                 </div>
                 <div class="complete-growth-arrow">
                     <svg width="32" height="16" viewBox="0 0 32 16" fill="none"><path d="M0 8h28M22 2l8 6-8 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
                 </div>
                 <div class="complete-growth-end">
                     <span class="complete-growth-km">{{ "%.0f"|format(completion_stats.peak_km_per_week) }} km</span>
-                    <span class="complete-growth-desc">Peak Week</span>
+                    <span class="complete-growth-desc"><span data-i18n="plan.peak_week">Peak Week</span></span>
                 </div>
             </div>
         </div>
@@ -149,7 +149,7 @@
         {% if next_plan_cta %}
         <div class="complete-next-cta">
             <div class="complete-next-cta-text">
-                <strong>What's Next?</strong>
+                <strong><span data-i18n="plan.whats_next">What's Next?</span></strong>
                 <p>{{ next_plan_cta.message }}</p>
             </div>
             <a href="{{ next_plan_cta.url }}" class="btn btn-primary">
@@ -182,7 +182,7 @@
 
     {% for week in plan if week.week == current_week_number %}
     <div class="pinned-week pinned-week--hero" id="pinned-current-week">
-        <div class="pinned-week-label">This Week</div>
+        <div class="pinned-week-label"><span data-i18n="plan.this_week">This Week</span></div>
         {% include 'components/week_day_rail.html' %}
         {% set css_class = 'current-week week-expanded' %}
         {% include 'components/week_card.html' %}
@@ -196,7 +196,7 @@
     <div class="fitness-dashboard">
         <div class="fitness-dashboard-header">
             <h3>Fitness Plan — {{ fitness_focus_area | title }} Focus</h3>
-            <p class="fitness-dashboard-subtitle">Physiological development with built-in progress tracking</p>
+            <p class="fitness-dashboard-subtitle"><span data-i18n="plan.fitness_focus">Physiological development with built-in progress tracking</span></p>
         </div>
 
         {% if vdot %}
@@ -206,7 +206,7 @@
             </div>
             <div class="fitness-vdot-body">
                 <div class="fitness-vdot-value">{{ "%.1f"|format(vdot) }}</div>
-                <div class="fitness-vdot-label">Current VDOT</div>
+                <div class="fitness-vdot-label"><span data-i18n="plan.current_vdot">Current VDOT</span></div>
                 <p class="fitness-vdot-note">Time trials every 3 weeks will help track your VDOT progress</p>
             </div>
         </div>
@@ -214,7 +214,7 @@
 
         {% if time_trial_weeks %}
         <div class="fitness-tt-section">
-            <h4>Time Trial Schedule</h4>
+            <h4><span data-i18n="plan.time_trial_sched">Time Trial Schedule</span></h4>
             <div class="fitness-tt-grid">
                 {% for tt in time_trial_weeks %}
                 <div class="fitness-tt-card">
@@ -228,7 +228,7 @@
         {% endif %}
 
         <div class="fitness-phases-section">
-            <h4>Training Phases</h4>
+            <h4><span data-i18n="plan.training_phases">Training Phases</span></h4>
             <div class="fitness-phases-grid">
                 {% for pname, pdata in phases.items() %}
                 <div class="fitness-phase-card">
@@ -251,7 +251,7 @@
         <p>Set a start date to track your progress against real calendar dates</p>
         <div class="plan-start-banner-controls">
             <input type="date" id="plan-start-date" value="{{ next_monday }}">
-            <button onclick="PlanModule.startPlan()" class="btn btn-primary btn-small">Start Plan</button>
+            <button onclick="PlanModule.startPlan()" class="btn btn-primary btn-small"><span data-i18n="plan.start_plan">Start Plan</span></button>
         </div>
     </div>
     {% else %}
@@ -259,7 +259,7 @@
         <p>Change start date (this will shift all week/day calendar labels)</p>
         <div class="plan-start-banner-controls">
             <input type="date" id="plan-start-date" value="{{ start_date.isoformat() }}">
-            <button onclick="PlanModule.startPlan()" class="btn btn-primary btn-small">Update</button>
+            <button onclick="PlanModule.startPlan()" class="btn btn-primary btn-small"><span data-i18n="plan.update">Update</span></button>
             <button onclick="document.getElementById('edit-start-date-banner').style.display='none'" class="btn btn-ghost btn-small">Cancel</button>
         </div>
     </div>
@@ -282,10 +282,10 @@
         <div class="plan-adaptation-card-actions" id="plan-adaptation-card-actions">
             {% if adaptation_state.kind == 'alert' %}
             <button class="btn btn-small btn-primary" onclick="showRecalibrateModal()">Recalibrate</button>
-            <button class="btn btn-small btn-ghost" onclick="dismissAdaptationAlert()">Dismiss</button>
+            <button class="btn btn-small btn-ghost" onclick="dismissAdaptationAlert()"><span data-i18n="plan.dismiss">Dismiss</span></button>
             {% elif adaptation_state.kind == 'recommendation' %}
-            <button class="btn btn-small btn-primary" onclick="acceptRecommendation()">Accept</button>
-            <button class="btn btn-small btn-ghost" onclick="dismissRecommendation()">Dismiss</button>
+            <button class="btn btn-small btn-primary" onclick="acceptRecommendation()"><span data-i18n="plan.accept">Accept</span></button>
+            <button class="btn btn-small btn-ghost" onclick="dismissRecommendation()"><span data-i18n="plan.dismiss">Dismiss</span></button>
             {% endif %}
         </div>
     </div>
@@ -295,19 +295,19 @@
     <!-- Recalibrate Modal (opened from the adaptation card when kind=alert, or from the recalibrate CTA) -->
     <div class="recalibrate-modal-overlay" id="recalibrate-modal" style="display:none;" onclick="if(event.target===this)this.style.display='none'">
         <div class="recalibrate-modal">
-            <h3>Recalibrate Plan</h3>
+            <h3><span data-i18n="plan.recalibrate_plan">Recalibrate Plan</span></h3>
             <p class="recalibrate-modal-desc" id="recalibrate-alert-detail"></p>
             <div class="recalibrate-options">
                 <button class="recalibrate-option" onclick="recalibratePlan('time_off')">
-                    <strong>I took time off</strong>
+                    <strong><span data-i18n="plan.took_time_off">I took time off</span></strong>
                     <span>Rebuild remaining weeks with a gentler ramp from current fitness</span>
                 </button>
                 <button class="recalibrate-option" onclick="recalibratePlan('ahead')">
-                    <strong>I'm ahead of schedule</strong>
+                    <strong><span data-i18n="plan.ahead_schedule">I'm ahead of schedule</span></strong>
                     <span>Bump up remaining weeks' targets by 10%</span>
                 </button>
                 <button class="recalibrate-option" onclick="recalibratePlan('recovery_insertion')">
-                    <strong>I need extra recovery</strong>
+                    <strong><span data-i18n="plan.extra_recovery">I need extra recovery</span></strong>
                     <span>Convert next week to a recovery week (60% volume, easy pace only)</span>
                 </button>
             </div>
@@ -320,12 +320,12 @@
     <div class="plan-action-banner recalibrate-banner {% if needs_adjustment %}recalibrate-urgent{% endif %}" id="adjust-banner">
         <div class="banner-content">
             <div class="banner-text">
-                <strong>Adjust Plan</strong>
+                <strong><span data-i18n="plan.adjust_plan">Adjust Plan</span></strong>
                 <p>Adjust future weeks based on your recent running data.
                 {% if skipped_count and skipped_count > 0 %}{{ skipped_count }} missed{% endif %}{% if skipped_count and rescheduled_count and skipped_count > 0 and rescheduled_count > 0 %}, {% endif %}{% if rescheduled_count and rescheduled_count > 0 %}{{ rescheduled_count }} rescheduled{% endif %}{% if (skipped_count and skipped_count > 0) or (rescheduled_count and rescheduled_count > 0) %} workout{{ 's' if (skipped_count + rescheduled_count) != 1 else '' }}.{% endif %}</p>
             </div>
             <div class="banner-actions">
-                <button onclick="PlanModule.adjustPlan()" class="btn btn-primary btn-small" id="adjust-btn">Adjust Plan</button>
+                <button onclick="PlanModule.adjustPlan()" class="btn btn-primary btn-small" id="adjust-btn"><span data-i18n="plan.adjust_plan">Adjust Plan</span></button>
             </div>
         </div>
     </div>
@@ -367,11 +367,11 @@
     <div class="plan-summary">
         <div class="summary-grid">
             <div class="summary-item">
-                <strong>Current Mileage</strong>
+                <strong><span data-i18n="plan.current_mileage">Current Mileage</span></strong>
                 {{ current_km }} km/week
             </div>
             <div class="summary-item">
-                <strong>Target Distance</strong>
+                <strong><span data-i18n="plan.target_distance">Target Distance</span></strong>
                 {% if training_plan.plan_type == 'fitness' %}
                     Fitness — {{ fitness_focus_area | title }} Focus
                 {% elif is_trail %}
@@ -385,7 +385,7 @@
                 {{ weeks }} weeks
             </div>
             <div class="summary-item">
-                <strong>Peak Week</strong>
+                <strong><span data-i18n="plan.peak_week">Peak Week</span></strong>
                 {% set peak_km = plan | map(attribute='total_km') | max | round(1) %}
                 {% if plan and plan[0].is_beginner_plan and peak_km == 0 %}
                 {{ plan | map(attribute='total_minutes') | max }} min
@@ -402,20 +402,20 @@
             {% endif %}
             {% if training_plan.goal_time %}
             <div class="summary-item goal-time-summary">
-                <strong>Goal Time</strong>
+                <strong><span data-i18n="plan.goal_time">Goal Time</span></strong>
                 {{ training_plan.goal_time }}
             </div>
             {% endif %}
             {% if hr_zones %}
             <div class="summary-item">
-                <strong>Max HR</strong>
+                <strong><span data-i18n="plan.max_hr">Max HR</span></strong>
                 {{ hr_zones.max_hr }} bpm
                 <span class="hr-source-label">({{ hr_zones.source }})</span>
             </div>
             {% endif %}
             {% if start_date and user %}
             <div class="summary-item">
-                <strong>Started</strong>
+                <strong><span data-i18n="plan.started">Started</span></strong>
                 {{ start_date.strftime('%b %-d, %Y') }}
                 <a href="#" onclick="event.preventDefault();document.getElementById('edit-start-date-banner').style.display=''" class="edit-start-link">change</a>
             </div>
@@ -433,13 +433,13 @@
             <div class="goal-pace-row">
                 {% if training_plan.current_pace %}
                 <div class="goal-pace-stat">
-                    <span class="goal-pace-label">Current</span>
+                    <span class="goal-pace-label"><span data-i18n="plan.current">Current</span></span>
                     <span class="goal-pace-value">{{ training_plan.current_pace | format_pace }}</span>
                 </div>
                 <svg class="goal-pace-arrow" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
                 {% endif %}
                 <div class="goal-pace-stat goal-pace-stat-target">
-                    <span class="goal-pace-label">Goal</span>
+                    <span class="goal-pace-label"><span data-i18n="plan.goal">Goal</span></span>
                     <span class="goal-pace-value">{{ training_plan.goal_pace | format_pace }}</span>
                 </div>
             </div>
@@ -450,8 +450,8 @@
 
     {% if training_zones %}
     <div class="training-zones-panel">
-        <h3>Training Zones</h3>
-        <p class="zones-subtitle">All workouts are based on these pace zones</p>
+        <h3><span data-i18n="plan.training_zones">Training Zones</span></h3>
+        <p class="zones-subtitle"><span data-i18n="plan.zones_based">All workouts are based on these pace zones</span></p>
         <div class="zones-grid">
             {% for zone_name, zone_data in training_zones.items() %}
             <div class="zone-card" style="border-left: 4px solid {{ zone_data.color }};">
@@ -464,17 +464,17 @@
                 </div>
                 <div class="zone-metrics">
                     <div class="zone-metric">
-                        <div class="zone-metric-label">Pace</div>
+                        <div class="zone-metric-label"><span data-i18n="plan.pace">Pace</span></div>
                         <div class="zone-metric-value">{{ zone_data.pace_formatted }}</div>
                     </div>
                     {% if zone_data.pace_range_formatted %}
                     <div class="zone-metric">
-                        <div class="zone-metric-label">Range</div>
+                        <div class="zone-metric-label"><span data-i18n="plan.range">Range</span></div>
                         <div class="zone-metric-value zone-metric-sm">{{ zone_data.pace_range_formatted }}</div>
                     </div>
                     {% endif %}
                     <div class="zone-metric">
-                        <div class="zone-metric-label">Heart Rate</div>
+                        <div class="zone-metric-label"><span data-i18n="plan.heart_rate">Heart Rate</span></div>
                         {% if zone_data.hr_bpm_range %}
                         <div class="zone-metric-value">{{ zone_data.hr_bpm_range }}</div>
                         {% else %}
@@ -490,7 +490,7 @@
 
     {% if hr_zones and hr_zones.zones %}
     <div class="hr-zones-panel">
-        <h3>Your Heart Rate Training Zones</h3>
+        <h3><span data-i18n="plan.hr_zones">Your Heart Rate Training Zones</span></h3>
         <div class="hr-zones-bar">
             {% for zone in hr_zones.zones %}
             <div class="hr-zone-segment hr-zone-{{ zone.zone }}" style="flex: 1;">
@@ -536,7 +536,7 @@
     {% if (training_plan.adjustment_multiplier or training_plan.last_recalibrated_at)
           and not (training_plan.last_change_plan and training_plan.last_change_plan.summary) %}
     <div style="margin-bottom: var(--space-6); display:flex; justify-content:flex-end;">
-        <button onclick="PlanModule.resetAdjustment()" class="btn btn-ghost btn-small js-reset-adjust" id="reset-adjust-btn">Reset to original</button>
+        <button onclick="PlanModule.resetAdjustment()" class="btn btn-ghost btn-small js-reset-adjust" id="reset-adjust-btn"><span data-i18n="plan.reset_original">Reset to original</span></button>
     </div>
     {% endif %}
 
@@ -546,7 +546,7 @@
     <div class="plan-change-plan-panel" id="latest-changes-panel">
         <div class="plan-change-plan-panel-header">
             <div>
-                <p class="plan-change-plan-panel-title">Latest plan changes</p>
+                <p class="plan-change-plan-panel-title"><span data-i18n="plan.latest_changes">Latest plan changes</span></p>
                 <p class="plan-change-plan-panel-subtitle">
                     {% if lcp_summary.workouts_changed_count and lcp_summary.workouts_changed_count > 0 %}
                         {{ lcp_summary.workouts_changed_count }} workout{{ '' if lcp_summary.workouts_changed_count == 1 else 's' }} changed across {{ lcp_summary.weeks_affected|length }} week{{ '' if lcp_summary.weeks_affected|length == 1 else 's' }}
@@ -560,9 +560,9 @@
             </div>
             <div style="display:flex;align-items:center;gap:var(--space-2);flex-wrap:wrap;">
                 {% if training_plan.adjustment_multiplier or training_plan.last_recalibrated_at %}
-                <button onclick="PlanModule.resetAdjustment()" class="btn btn-ghost btn-small js-reset-adjust" id="reset-adjust-btn-lcp">Reset to original</button>
+                <button onclick="PlanModule.resetAdjustment()" class="btn btn-ghost btn-small js-reset-adjust" id="reset-adjust-btn-lcp"><span data-i18n="plan.reset_original">Reset to original</span></button>
                 {% endif %}
-                <a href="#" class="btn btn-ghost btn-small" data-change-plan-view>View details</a>
+                <a href="#" class="btn btn-ghost btn-small" data-change-plan-view><span data-i18n="plan.view_details">View details</span></a>
             </div>
         </div>
     </div>
@@ -590,7 +590,7 @@
                             {% if event.get('strategy') == 'recovery_insertion' %}Recovery inserted{% elif event.get('strategy') == 'missed_week' %}Missed week{% elif event.get('strategy') == 'time_off' %}Time off{% elif event.get('strategy') == 'ahead' %}Ahead of plan{% else %}Recalibrated{% endif %}
                         </span>
                         {% elif event.type == 'reset' %}
-                        <span class="timeline-badge timeline-badge-reset">Reset to original</span>
+                        <span class="timeline-badge timeline-badge-reset"><span data-i18n="plan.reset_original">Reset to original</span></span>
                         {% endif %}
                         <div class="timeline-reason">{{ event.reason }}</div>
                     </div>
@@ -716,7 +716,7 @@
             {% endif %}
         </div>
         <div class="week-expand-toggle">
-            <button class="week-expand-btn" id="expand-all-btn" onclick="toggleAllWeeks()">Expand all</button>
+            <button class="week-expand-btn" id="expand-all-btn" onclick="toggleAllWeeks()"><span data-i18n="plan.expand_all">Expand all</span></button>
         </div>
         {% for week in plan %}
         {% if current_week_number and week.week == current_week_number %}
@@ -742,7 +742,7 @@
             <div id="readiness-content" style="display:none;"></div>
             <div id="readiness-empty" class="readiness-empty-state" style="display:none;">
                 <div style="font-size:2rem; margin-bottom:12px;">&#x1F3C1;</div>
-                <h3>Not enough data yet</h3>
+                <h3><span data-i18n="plan.not_enough_data">Not enough data yet</span></h3>
                 <p>Set a start date and log runs to see your race readiness score.</p>
             </div>
         </div>
@@ -771,11 +771,11 @@
         <div class="plan-review-section">
     {% if performance_analysis and performance_analysis.total_runs > 0 %}
     <div class="plan-insights plan-insights-data" style="margin-bottom: var(--space-6);">
-        <h3>Performance Analysis</h3>
+        <h3><span data-i18n="plan.perf_analysis">Performance Analysis</span></h3>
         <div class="insight-grid">
             <div class="insight-item">
                 <div class="insight-content">
-                    <strong>Runs Completed</strong>
+                    <strong><span data-i18n="plan.runs_completed">Runs Completed</span></strong>
                     <span>{{ performance_analysis.total_runs }} / {{ performance_analysis.planned_workouts }} ({{ performance_analysis.adherence_rate }}%)</span>
                 </div>
             </div>
@@ -790,7 +790,7 @@
             {% if performance_analysis.pace_consistency %}
             <div class="insight-item">
                 <div class="insight-content">
-                    <strong>Pace Consistency</strong>
+                    <strong><span data-i18n="plan.pace_consistency">Pace Consistency</span></strong>
                     <span>{{ performance_analysis.pace_consistency }}% variance</span>
                 </div>
             </div>
@@ -798,7 +798,7 @@
         </div>
         {% if performance_analysis.recommendations %}
         <div class="insight-recommendations">
-            <strong>Recommendations</strong>
+            <strong><span data-i18n="plan.recommendations">Recommendations</span></strong>
             <ul>
                 {% for rec in performance_analysis.recommendations %}
                 <li>{{ rec }}</li>
@@ -811,29 +811,29 @@
 
     {% if progress_data and progress_data.completed_count > 0 %}
     <div class="plan-insights" style="margin-bottom: var(--space-6);">
-        <h3>Your Progress</h3>
+        <h3><span data-i18n="plan.your_progress">Your Progress</span></h3>
         <div class="insight-grid">
             <div class="insight-item">
                 <div class="insight-content">
-                    <strong>Runs Completed</strong>
+                    <strong><span data-i18n="plan.runs_completed">Runs Completed</span></strong>
                     <span>{{ progress_data.completed_count }} / {{ progress_data.planned_count }}</span>
                 </div>
             </div>
             <div class="insight-item">
                 <div class="insight-content">
-                    <strong>Completion</strong>
+                    <strong><span data-i18n="plan.completion">Completion</span></strong>
                     <span>{{ progress_data.completion_pct }}%</span>
                 </div>
             </div>
             <div class="insight-item">
                 <div class="insight-content">
-                    <strong>Total Logged</strong>
+                    <strong><span data-i18n="plan.total_logged">Total Logged</span></strong>
                     <span>{{ progress_data.total_km_logged }} km</span>
                 </div>
             </div>
             <div class="insight-item">
                 <div class="insight-content">
-                    <strong>Streak</strong>
+                    <strong><span data-i18n="plan.streak">Streak</span></strong>
                     <span>{{ progress_data.streak_days }} day{{ 's' if progress_data.streak_days != 1 else '' }}</span>
                 </div>
             </div>
@@ -872,8 +872,8 @@
         <button onclick="PlanModule.savePlanToAccount()" class="btn btn-primary btn-save" id="save-plan-btn" style="display: none;">
             Save to My Plans
         </button>
-        <a href="/my-plans" class="btn btn-ghost" id="view-plans-link" style="display: none;">View My Plans</a>
-        <a href="/" class="btn btn-ghost">New Plan</a>
+        <a href="/my-plans" class="btn btn-ghost" id="view-plans-link" style="display: none;"><span data-i18n="plan.view_my_plans">View My Plans</span></a>
+        <a href="/" class="btn btn-ghost"><span data-i18n="plan.new_plan">New Plan</span></a>
     </div>
     <div class="share-toast" id="share-toast"></div>
 </div>
@@ -887,32 +887,32 @@
 <div id="logRunModal" class="modal">
     <div class="modal-content">
         <div class="modal-header">
-            <h2 id="modal-title">Log Run</h2>
+            <h2 id="modal-title"><span data-i18n="plan.log_run">Log Run</span></h2>
             <span class="close" onclick="PlanModule.closeLogModal()">&times;</span>
         </div>
         <form id="logRunForm" onsubmit="PlanModule.submitRunLog(event)">
             <div class="form-row">
                 <div class="form-group">
-                    <label for="distance_km">Distance (km) *</label>
+                    <label for="distance_km"><span data-i18n="plan.distance_km">Distance (km) *</span></label>
                     <input type="number" id="distance_km" step="0.1" min="0" required>
                 </div>
                 <div class="form-group">
-                    <label for="duration_minutes">Duration (min) *</label>
+                    <label for="duration_minutes"><span data-i18n="plan.duration_min">Duration (min) *</span></label>
                     <input type="number" id="duration_minutes" step="0.1" min="0" required>
                 </div>
             </div>
             
             <div class="form-group">
-                <label for="workout_type">Workout Type</label>
+                <label for="workout_type"><span data-i18n="plan.workout_type">Workout Type</span></label>
                 <select id="workout_type">
                     <option value="easy">Easy</option>
-                    <option value="recovery">Recovery</option>
-                    <option value="run_walk">Run/Walk</option>
-                    <option value="tempo">Tempo</option>
-                    <option value="interval">Interval</option>
-                    <option value="long">Long</option>
-                    <option value="hill">Hill</option>
-                    <option value="race">Race</option>
+                    <option value="recovery"><span data-i18n="plan.recovery">Recovery</span></option>
+                    <option value="run_walk"><span data-i18n="plan.run_walk">Run/Walk</span></option>
+                    <option value="tempo"><span data-i18n="plan.tempo">Tempo</span></option>
+                    <option value="interval"><span data-i18n="plan.interval">Interval</span></option>
+                    <option value="long"><span data-i18n="plan.long">Long</span></option>
+                    <option value="hill"><span data-i18n="plan.hill">Hill</span></option>
+                    <option value="race"><span data-i18n="plan.race">Race</span></option>
                 </select>
             </div>
             
@@ -948,11 +948,11 @@
             </div>
             
             <div class="form-group">
-                <label for="notes">Notes</label>
+                <label for="notes"><span data-i18n="plan.notes">Notes</span></label>
                 <textarea id="notes" rows="3" placeholder="How did the run feel?"></textarea>
             </div>
             
-            <button type="submit" class="submit-btn">Log Run</button>
+            <button type="submit" class="submit-btn"><span data-i18n="plan.log_run">Log Run</span></button>
         </form>
     </div>
 </div>

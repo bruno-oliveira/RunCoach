@@ -20,16 +20,16 @@
             <div class="hero-content stagger">
                 <div class="hero-badge">
                     <span class="hero-badge-dot"></span>
-                    Free personalized training
+                    <span data-i18n="home.badge">Free personalized training</span>
                 </div>
 
                 <h1 class="hero-title">
-                    Train smarter.<br>
-                    <span class="hero-title-accent">Run stronger.</span>
+                    <span data-i18n="home.title1">Train smarter.</span><br>
+                    <span class="hero-title-accent"><span data-i18n="home.title2">Run stronger.</span></span>
                 </h1>
 
                 <p class="hero-subtitle">
-                    Get a training plan built around your fitness level, race goal, and schedule. Backed by proven progression principles.
+                    <span data-i18n="home.subtitle">Get a training plan built around your fitness level, race goal, and schedule. Backed by proven progression principles.</span>
                 </p>
 
                 <div class="hero-features">
@@ -37,25 +37,25 @@
                         <div class="hero-feature-icon">
                             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
                         </div>
-                        <span>Progressive weekly mileage</span>
+                        <span><span data-i18n="home.feat_mileage">Progressive weekly mileage</span></span>
                     </div>
                     <div class="hero-feature">
                         <div class="hero-feature-icon">
                             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
                         </div>
-                        <span>Nutrition & strength guidance</span>
+                        <span><span data-i18n="home.feat_nutrition">Nutrition & strength guidance</span></span>
                     </div>
                     <div class="hero-feature">
                         <div class="hero-feature-icon">
                             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
                         </div>
-                        <span>Adaptive to your performance</span>
+                        <span><span data-i18n="home.feat_adaptive">Adaptive to your performance</span></span>
                     </div>
                     <div class="hero-feature">
                         <div class="hero-feature-icon">
                             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
                         </div>
-                        <span>Download as PDF</span>
+                        <span><span data-i18n="home.feat_pdf">Download as PDF</span></span>
                     </div>
                 </div>
             </div>
@@ -64,8 +64,8 @@
             <div class="hero-form-wrap">
                 <div class="form-card">
                     <div class="form-card-header">
-                        <h2 class="form-card-title">Create your plan</h2>
-                        <p class="form-card-desc">Fill in your details to get started</p>
+                        <h2 class="form-card-title"><span data-i18n="home.form_title">Create your plan</span></h2>
+                        <p class="form-card-desc"><span data-i18n="home.form_desc">Fill in your details to get started</span></p>
                     </div>
 
                     {% if error %}
@@ -124,27 +124,27 @@
                         <!-- Plan mode toggle -->
                         <div class="mode-toggle-wrap">
                             <input type="hidden" id="plan_mode" name="plan_mode" value="{{ request.query_params.get('mode', 'distance') }}">
-                            <button type="button" class="mode-btn mode-btn-active" id="mode-distance-btn" onclick="setPlanMode('distance')">Distance Goal</button>
-                            <button type="button" class="mode-btn" id="mode-time-btn" onclick="setPlanMode('time')" {% if not user %}disabled title="Sign in to use Time Goal"{% endif %}>Time Goal</button>
-                            <button type="button" class="mode-btn" id="mode-fitness-btn" onclick="setPlanMode('fitness')">Fitness Goal</button>
+                            <button type="button" class="mode-btn mode-btn-active" id="mode-distance-btn" onclick="setPlanMode('distance')"><span data-i18n="home.goal_distance">Distance Goal</span></button>
+                            <button type="button" class="mode-btn" id="mode-time-btn" onclick="setPlanMode('time')" {% if not user %}disabled title="Sign in to use Time Goal"{% endif %}><span data-i18n="home.goal_time">Time Goal</span></button>
+                            <button type="button" class="mode-btn" id="mode-fitness-btn" onclick="setPlanMode('fitness')"><span data-i18n="home.goal_fitness">Fitness Goal</span></button>
                         </div>
-                        <p class="mode-description" id="mode-description">Build a structured plan to finish a race at a specific distance.</p>
+                        <p class="mode-description" id="mode-description"><span data-i18n="home.goal_distance_desc">Build a structured plan to finish a race at a specific distance.</span></p>
 
                         <!-- Shared: Weekly mileage (always visible) -->
                         <div class="form-group">
-                            <label for="current_km" class="form-label">Weekly mileage</label>
+                            <label for="current_km" class="form-label"><span data-i18n="home.weekly_mileage">Weekly mileage</span></label>
                             <div class="input-with-unit">
                                 <input type="number" id="current_km" name="current_km" class="form-input" step="0.1" min="0" max="200" required placeholder="20">
                                 <span class="input-unit">km</span>
                             </div>
-                            <span class="form-help" id="km-help">Your current weekly running distance. <strong>Enter 0 if just starting out (5K/10K only, 8+ weeks)</strong></span>
+                            <span class="form-help" id="km-help"><span data-i18n="home.weekly_mileage_desc">Your current weekly running distance.</span> <strong><span data-i18n="home.weekly_mileage_hint">Enter 0 if just starting out (5K/10K only, 8+ weeks)</span></strong></span>
                         </div>
 
                         <!-- Distance Goal fields -->
                         <div id="distance-mode-fields">
                             <div class="form-row-2">
                                 <div class="form-group">
-                                    <label for="target_distance" class="form-label">Race goal</label>
+                                    <label for="target_distance" class="form-label"><span data-i18n="home.race_goal">Race goal</span></label>
                                     <div class="select-wrap">
                                         <select id="target_distance" name="target_distance" class="form-select" required>
                                             <option value="">Select distance</option>
@@ -158,7 +158,7 @@
                                 </div>
 
                                 <div class="form-group">
-                                    <label for="weeks" class="form-label">Duration</label>
+                                    <label for="weeks" class="form-label"><span data-i18n="home.duration">Duration</span></label>
                                     <div class="input-with-unit">
                                         <input type="number" id="weeks" name="weeks" class="form-input" min="4" max="40" required placeholder="12">
                                         <span class="input-unit">weeks</span>
@@ -171,7 +171,7 @@
                             <div class="form-row-2" id="trail-group" style="display: none;">
                                 <input type="hidden" id="is_trail" name="is_trail" value="">
                                 <div class="form-group">
-                                    <label for="trail_distance_km" class="form-label">Trail distance</label>
+                                    <label for="trail_distance_km" class="form-label"><span data-i18n="home.trail_distance">Trail distance</span></label>
                                     <div class="input-with-unit">
                                         <input type="number" id="trail_distance_km" name="trail_distance_km" class="form-input"
                                                step="0.1" min="8" max="163" placeholder="50">
@@ -181,7 +181,7 @@
                                 </div>
 
                                 <div class="form-group">
-                                    <label for="target_elevation_gain_m" class="form-label">Total elevation gain</label>
+                                    <label for="target_elevation_gain_m" class="form-label"><span data-i18n="home.elevation_gain">Total elevation gain</span></label>
                                     <div class="input-with-unit">
                                         <input type="number" id="target_elevation_gain_m" name="target_elevation_gain_m"
                                                class="form-input" step="1" min="0" max="10000" placeholder="1500">
@@ -194,7 +194,7 @@
                             </div>
 
                             <div class="form-group" id="training-terrain-group" style="display: none;">
-                                <label for="training_terrain" class="form-label">Where you train</label>
+                                <label for="training_terrain" class="form-label"><span data-i18n="home.where_train">Where you train</span></label>
                                 <div class="select-wrap">
                                     <select id="training_terrain" name="training_terrain" class="form-select">
                                         <option value="">Select terrain access</option>
@@ -225,7 +225,7 @@
 
                             <div class="form-row-2">
                                 <div class="form-group">
-                                    <label for="max_runs_per_week" class="form-label">Runs per week</label>
+                                    <label for="max_runs_per_week" class="form-label"><span data-i18n="home.runs_per_week">Runs per week</span></label>
                                     <div class="select-wrap">
                                         <select id="max_runs_per_week" name="max_runs_per_week" class="form-select" required>
                                             <option value="2">2 runs &mdash; Busy schedule</option>
@@ -238,7 +238,7 @@
                                 </div>
 
                                 <div class="form-group">
-                                    <label for="body_weight_kg" class="form-label">Body weight</label>
+                                    <label for="body_weight_kg" class="form-label"><span data-i18n="home.body_weight">Body weight</span></label>
                                     <div class="input-with-unit">
                                         <input type="number" id="body_weight_kg" name="body_weight_kg" class="form-input" step="0.1" min="30" max="250" required placeholder="70" value="70">
                                         <span class="input-unit">kg</span>
@@ -255,7 +255,7 @@
                                     <span class="form-help" style="margin-bottom: 8px; display:block;">We'll calculate your VDOT and set personalised pace zones</span>
                                     <div class="form-row-2">
                                         <div class="form-group">
-                                            <label for="recent_race_distance_km" class="form-label">Race distance</label>
+                                            <label for="recent_race_distance_km" class="form-label"><span data-i18n="home.race_distance">Race distance</span></label>
                                             <div class="select-wrap">
                                                 <select id="recent_race_distance_km" name="recent_race_distance_km" class="form-select">
                                                     <option value="">Select</option>
@@ -267,7 +267,7 @@
                                             </div>
                                         </div>
                                         <div class="form-group">
-                                            <label for="recent_race_time" class="form-label">Finish time</label>
+                                            <label for="recent_race_time" class="form-label"><span data-i18n="home.finish_time">Finish time</span></label>
                                             <input type="text" id="recent_race_time" name="recent_race_time" class="form-input" placeholder="HH:MM:SS or MM:SS">
                                         </div>
                                     </div>
@@ -282,7 +282,7 @@
                                 <div id="goal-fields" class="form-collapsible-content" style="display:none;">
                                     <span class="form-help" style="margin-bottom: 8px; display:block;">Every quality session will be paced off your goal, not your current fitness</span>
                                     <div class="form-group">
-                                        <label for="goal_time" class="form-label">Goal finish time</label>
+                                        <label for="goal_time" class="form-label"><span data-i18n="home.goal_finish_time">Goal finish time</span></label>
                                         <input type="text" id="goal_time" name="goal_time" class="form-input" placeholder="HH:MM:SS or MM:SS">
                                     </div>
                                 </div>
@@ -334,12 +334,12 @@
 
                             <div class="form-row-2">
                                 <div class="form-group">
-                                    <label for="current_time" class="form-label">Current finish time <span class="form-optional">(optional)</span></label>
+                                    <label for="current_time" class="form-label"><span data-i18n="home.current_finish">Current finish time</span> <span class="form-optional"><span data-i18n="home.optional">(optional)</span></span></label>
                                     <input type="text" id="current_time" name="current_time" class="form-input" placeholder="HH:MM:SS or MM:SS" pattern="^(\d{1,2}:\d{2}|\d{1,2}:\d{2}:\d{2})$">
                                     <span class="form-help">{% if has_profile %}Auto-calculated from your runs{% else %}Your current race time at this distance{% endif %}</span>
                                 </div>
                                 <div class="form-group">
-                                    <label for="max_heart_rate" class="form-label">Max heart rate <span class="form-optional">(optional)</span></label>
+                                    <label for="max_heart_rate" class="form-label"><span data-i18n="home.max_hr">Max heart rate</span> <span class="form-optional"><span data-i18n="home.optional">(optional)</span></span></label>
                                     <div class="input-with-unit">
                                         <input type="number" id="max_heart_rate_time" name="max_heart_rate" class="form-input" min="120" max="220" step="1" placeholder="185">
                                         <span class="input-unit">bpm</span>
@@ -352,7 +352,7 @@
                         <!-- Fitness Goal mode fields (hidden by default) -->
                         <div id="fitness-mode-fields" style="display:none;">
                             <div class="form-group">
-                                <label for="focus_area" class="form-label">Training focus</label>
+                                <label for="focus_area" class="form-label"><span data-i18n="home.training_focus">Training focus</span></label>
                                 <div class="select-wrap">
                                     <select id="focus_area" name="focus_area" class="form-select">
                                         <option value="vo2max">VO2max — Get faster with intervals</option>
@@ -414,7 +414,7 @@
 
                             <div class="form-row-2">
                                 <div class="form-group">
-                                    <label for="fitness_max_hr" class="form-label">Max heart rate <span class="form-optional">(optional)</span></label>
+                                    <label for="fitness_max_hr" class="form-label"><span data-i18n="home.max_hr">Max heart rate</span> <span class="form-optional"><span data-i18n="home.optional">(optional)</span></span></label>
                                     <div class="input-with-unit">
                                         <input type="number" id="fitness_max_hr" name="max_heart_rate" class="form-input" min="120" max="220" step="1" placeholder="185">
                                         <span class="input-unit">bpm</span>
@@ -439,7 +439,7 @@
                                     <span class="toggle-track"><span class="toggle-thumb"></span></span>
                                 </span>
                                 <span class="toggle-text">
-                                    <strong>Use my running data</strong>
+                                    <strong><span data-i18n="home.use_strava">Use my running data</span></strong>
                                     <span class="form-help">Tailors the plan to your actual fitness, VDOT, and training load</span>
                                 </span>
                             </label>
@@ -447,7 +447,7 @@
                         {% endif %}
 
                         <button type="submit" class="btn btn-accent btn-lg btn-full form-submit" id="form-submit-btn">
-                            Generate my plan
+                            <span data-i18n="home.generate">Generate my plan</span>
                             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
                         </button>
                     </form>
@@ -463,15 +463,15 @@
         <div class="stats-grid stagger">
             <div class="stat-card">
                 <span class="stat-card-value">5K &ndash; 42K</span>
-                <span class="stat-card-label">Supported distances</span>
+                <span class="stat-card-label"><span data-i18n="home.stat_dist_label">Supported distances</span></span>
             </div>
             <div class="stat-card">
                 <span class="stat-card-value">4 &ndash; 24</span>
-                <span class="stat-card-label">Weeks of structured training</span>
+                <span class="stat-card-label"><span data-i18n="home.stat_weeks_label">Weeks of structured training</span></span>
             </div>
             <div class="stat-card">
-                <span class="stat-card-value">Adaptive</span>
-                <span class="stat-card-label">Plans adjust to your progress</span>
+                <span class="stat-card-value"><span data-i18n="home.stat_adaptive">Adaptive</span></span>
+                <span class="stat-card-label"><span data-i18n="home.stat_adaptive_label">Plans adjust to your progress</span></span>
             </div>
         </div>
     </div>

@@ -10,7 +10,7 @@
 {% block content %}
 <div class="container">
     <div class="header">
-        <h1>My Training Plans</h1>
+        <h1><span data-i18n="myplans.title">My Training Plans</span></h1>
         <p class="plan-counter">{{ plan_count }} of {{ max_plans }} plans used</p>
         <a href="/" class="back-link">&larr; Back to Home</a>
     </div>
@@ -43,25 +43,25 @@
             </div>
             <div class="plan-details">
                 <div class="plan-detail-row">
-                    <span class="plan-detail-label">Target Distance:</span>
+                    <span class="plan-detail-label"><span data-i18n="myplans.target_dist">Target Distance:</span></span>
                     <span class="plan-detail-value">{{ plan.target_distance_display }}</span>
                 </div>
                 {% if plan.plan_type == 'performance' and plan.goal_time %}
                 <div class="plan-detail-row">
-                    <span class="plan-detail-label">Goal Time:</span>
+                    <span class="plan-detail-label"><span data-i18n="myplans.goal_time">Goal Time:</span></span>
                     <span class="plan-detail-value">{{ plan.goal_time }}</span>
                 </div>
                 {% endif %}
                 <div class="plan-detail-row">
-                    <span class="plan-detail-label">Starting Mileage:</span>
+                    <span class="plan-detail-label"><span data-i18n="myplans.start_mileage">Starting Mileage:</span></span>
                     <span class="plan-detail-value">{{ "%.1f"|format(plan.current_weekly_km) }} km/week</span>
                 </div>
                 <div class="plan-detail-row">
-                    <span class="plan-detail-label">Duration:</span>
+                    <span class="plan-detail-label"><span data-i18n="myplans.duration">Duration:</span></span>
                     <span class="plan-detail-value">{{ plan.weeks_duration }} weeks</span>
                 </div>
                 <div class="plan-detail-row">
-                    <span class="plan-detail-label">Runs per Week:</span>
+                    <span class="plan-detail-label"><span data-i18n="myplans.runs_per_week">Runs per Week:</span></span>
                     <span class="plan-detail-value">Up to {{ plan.max_runs_per_week }} runs</span>
                 </div>
             </div>
@@ -70,14 +70,14 @@
                 {% if plan.status_label %}
                 <span class="plan-status-badge">{{ plan.status_label }}</span>
                 {% else %}
-                <span class="plan-status-badge plan-status-not-started">Not started</span>
+                <span class="plan-status-badge plan-status-not-started"><span data-i18n="myplans.not_started">Not started</span></span>
                 {% endif %}
                 {% if plan.adaptation_alert %}
-                <span class="plan-alert-badge" title="Plan needs attention">Needs Attention</span>
+                <span class="plan-alert-badge" title="Plan needs attention"><span data-i18n="myplans.needs_attention">Needs Attention</span></span>
                 {% endif %}
             </div>
             <div class="plan-actions">
-                <a href="/plan/{{ plan.id }}" class="btn btn-primary">View Plan</a>
+                <a href="/plan/{{ plan.id }}" class="btn btn-primary"><span data-i18n="myplans.view_plan">View Plan</span></a>
                 <a href="/download-pdf/{{ plan.id }}" class="btn btn-secondary">
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: -2px;"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
                     PDF
@@ -86,7 +86,7 @@
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
                     <span id="share-label-{{ plan.id }}">{% if plan.share_token %}Shared{% else %}Share{% endif %}</span>
                 </button>
-                <button class="btn btn-danger" onclick="deletePlan('{{ plan.id }}')">Delete</button>
+                <button class="btn btn-danger" onclick="deletePlan('{{ plan.id }}')"><span data-i18n="myplans.delete">Delete</span></button>
             </div>
         </div>
         {% endfor %}
@@ -113,21 +113,21 @@
             </div>
             <div class="plan-details">
                 <div class="plan-detail-row">
-                    <span class="plan-detail-label">Target Distance:</span>
+                    <span class="plan-detail-label"><span data-i18n="myplans.target_dist">Target Distance:</span></span>
                     <span class="plan-detail-value">{{ plan.target_distance_display }}</span>
                 </div>
                 {% if plan.plan_type == 'performance' and plan.goal_time %}
                 <div class="plan-detail-row">
-                    <span class="plan-detail-label">Goal Time:</span>
+                    <span class="plan-detail-label"><span data-i18n="myplans.goal_time">Goal Time:</span></span>
                     <span class="plan-detail-value">{{ plan.goal_time }}</span>
                 </div>
                 {% endif %}
                 <div class="plan-detail-row">
-                    <span class="plan-detail-label">Duration:</span>
+                    <span class="plan-detail-label"><span data-i18n="myplans.duration">Duration:</span></span>
                     <span class="plan-detail-value">{{ plan.weeks_duration }} weeks</span>
                 </div>
                 <div class="plan-detail-row">
-                    <span class="plan-detail-label">Started:</span>
+                    <span class="plan-detail-label"><span data-i18n="myplans.started">Started:</span></span>
                     <span class="plan-detail-value">{{ plan.start_date.strftime('%b %d, %Y') if plan.start_date else '—' }}</span>
                 </div>
             </div>
@@ -135,12 +135,12 @@
                 Created: {{ plan.created_at.strftime('%B %d, %Y') }}
             </div>
             <div class="plan-actions">
-                <a href="/plan/{{ plan.id }}" class="btn btn-secondary">View Summary</a>
+                <a href="/plan/{{ plan.id }}" class="btn btn-secondary"><span data-i18n="myplans.view_summary">View Summary</span></a>
                 <a href="/download-pdf/{{ plan.id }}" class="btn btn-secondary">
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: -2px;"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
                     PDF
                 </a>
-                <button class="btn btn-danger" onclick="deletePlan('{{ plan.id }}')">Delete</button>
+                <button class="btn btn-danger" onclick="deletePlan('{{ plan.id }}')"><span data-i18n="myplans.delete">Delete</span></button>
             </div>
         </div>
         {% endfor %}
@@ -150,10 +150,10 @@
 
     {% if not plans %}
     <div class="no-plans">
-        <h2>No Training Plans Yet</h2>
-        <p>You haven't created any training plans yet.</p>
+        <h2><span data-i18n="myplans.none_title">No Training Plans Yet</span></h2>
+        <p><span data-i18n="myplans.none_desc">You haven't created any training plans yet.</span></p>
         <div style="display:flex;gap:var(--space-3);flex-wrap:wrap;justify-content:center;margin-top:var(--space-4);">
-            <a href="/" class="btn btn-primary">Create a Running Plan</a>
+            <a href="/" class="btn btn-primary"><span data-i18n="myplans.create">Create a Running Plan</span></a>
         </div>
     </div>
     {% endif %}

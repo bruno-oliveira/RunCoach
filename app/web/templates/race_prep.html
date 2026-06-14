@@ -10,27 +10,27 @@
 <div class="race-prep-page">
     <div class="container">
         <div class="race-prep-header">
-            <h1 class="race-prep-title">Race Prep</h1>
-            <p class="race-prep-subtitle">Upload your race GPX to get an elevation-adjusted pacing blueprint</p>
+            <h1 class="race-prep-title"><span data-i18n="raceprep.title">Race Prep</span></h1>
+            <p class="race-prep-subtitle"><span data-i18n="raceprep.subtitle">Upload your race GPX to get an elevation-adjusted pacing blueprint</span></p>
         </div>
 
         {% if not user %}
         <div class="race-prep-auth-guard">
             <div class="auth-guard-icon">🏃</div>
-            <h2>Sign in to use Race Prep</h2>
+            <h2><span data-i18n="raceprep.signin">Sign in to use Race Prep</span></h2>
             <p>Upload your race GPX and get personalized pacing based on your training data.</p>
         </div>
         {% else %}
 
         {% if current_vdot > 0 %}
         <div class="vdot-badge">
-            <span class="vdot-badge-label">Your VDOT</span>
+            <span class="vdot-badge-label"><span data-i18n="raceprep.your_vdot">Your VDOT</span></span>
             <span class="vdot-badge-value">{{ current_vdot }}</span>
             <span class="vdot-badge-meta">based on {{ vdot_run_count }} recent runs ({{ vdot_confidence }} confidence)</span>
         </div>
         {% else %}
         <div class="vdot-badge vdot-badge--no-data">
-            <span class="vdot-badge-label">No VDOT data</span>
+            <span class="vdot-badge-label"><span data-i18n="raceprep.no_vdot">No VDOT data</span></span>
             <span class="vdot-badge-meta">Log some runs to get race predictions</span>
         </div>
         {% endif %}
@@ -39,7 +39,7 @@
         <div class="race-prep-card" id="uploadCard">
             <div class="race-prep-card-header">
                 <span class="race-prep-step">1</span>
-                <h2>Upload Race GPX</h2>
+                <h2><span data-i18n="raceprep.upload_gpx">Upload Race GPX</span></h2>
             </div>
             <div class="upload-zone" id="uploadZone">
                 <input type="file" id="gpxFileInput" accept=".gpx" class="upload-input" hidden>
@@ -49,13 +49,13 @@
                         <polyline points="17 8 12 3 7 8"/>
                         <line x1="12" y1="3" x2="12" y2="15"/>
                     </svg>
-                    <p class="upload-text">Drag & drop your race GPX file here</p>
-                    <p class="upload-subtext">or <button type="button" class="upload-browse-btn" id="browseBtn">browse files</button></p>
+                    <p class="upload-text"><span data-i18n="raceprep.drop_gpx">Drag & drop your race GPX file here</span></p>
+                    <p class="upload-subtext">or <button type="button" class="upload-browse-btn" id="browseBtn"><span data-i18n="raceprep.browse">browse files</span></button></p>
                 </div>
             </div>
             <div class="upload-loading" id="uploadLoading" style="display:none;">
                 <div class="spinner"></div>
-                <p>Analyzing route...</p>
+                <p><span data-i18n="raceprep.analyzing">Analyzing route...</span></p>
             </div>
             <div class="upload-error" id="uploadError" style="display:none;"></div>
         </div>
@@ -64,35 +64,35 @@
         <div class="race-prep-card" id="analysisCard" style="display:none;">
             <div class="race-prep-card-header">
                 <span class="race-prep-step">2</span>
-                <h2>Route Analysis</h2>
+                <h2><span data-i18n="raceprep.route_analysis">Route Analysis</span></h2>
             </div>
 
             <div class="route-stats">
                 <div class="route-stat">
                     <span class="route-stat-value" id="statDistance">--</span>
-                    <span class="route-stat-label">Distance</span>
+                    <span class="route-stat-label"><span data-i18n="raceprep.distance">Distance</span></span>
                 </div>
                 <div class="route-stat">
                     <span class="route-stat-value" id="statElevation">--</span>
-                    <span class="route-stat-label">Elevation Gain</span>
+                    <span class="route-stat-label"><span data-i18n="raceprep.elev_gain">Elevation Gain</span></span>
                 </div>
                 <div class="route-stat">
                     <span class="route-stat-value" id="statMaxElev">--</span>
-                    <span class="route-stat-label">Max Elevation</span>
+                    <span class="route-stat-label"><span data-i18n="raceprep.max_elev">Max Elevation</span></span>
                 </div>
             </div>
 
             <div class="time-estimates" id="timeEstimates">
                 <div class="time-row">
-                    <span class="time-label">Flat-ground estimate</span>
+                    <span class="time-label"><span data-i18n="raceprep.flat_est">Flat-ground estimate</span></span>
                     <span class="time-value" id="flatTime">--</span>
                 </div>
                 <div class="time-row time-row--penalty">
-                    <span class="time-label">Elevation penalty</span>
+                    <span class="time-label"><span data-i18n="raceprep.elev_penalty">Elevation penalty</span></span>
                     <span class="time-value" id="elevationPenalty">--</span>
                 </div>
                 <div class="time-row time-row--adjusted">
-                    <span class="time-label">Realistic estimate</span>
+                    <span class="time-label"><span data-i18n="raceprep.realistic_est">Realistic estimate</span></span>
                     <span class="time-value" id="adjustedTime">--</span>
                     <span class="feasibility-badge" id="feasibilityBadge">--</span>
                 </div>
@@ -109,13 +109,13 @@
                     </svg>
                     Adjust target time
                 </button>
-                <button class="btn btn-primary" id="generateBlueprintBtn">Generate Blueprint</button>
+                <button class="btn btn-primary" id="generateBlueprintBtn"><span data-i18n="raceprep.gen_blueprint">Generate Blueprint</span></button>
             </div>
 
             <div class="time-adjust-row" id="timeAdjustRow" style="display:none;">
                 <label for="targetTimeInput">Target time (HH:MM:SS or MM:SS):</label>
                 <input type="text" id="targetTimeInput" class="time-input" placeholder="e.g. 1:52:45 or 24:30">
-                <button class="btn btn-sm" id="applyTimeBtn">Apply</button>
+                <button class="btn btn-sm" id="applyTimeBtn"><span data-i18n="raceprep.apply">Apply</span></button>
             </div>
         </div>
 
@@ -135,11 +135,11 @@
                     <thead>
                         <tr>
                             <th>KM</th>
-                            <th>Grade</th>
-                            <th>Elevation</th>
-                            <th>Pace</th>
-                            <th>Split</th>
-                            <th>Cumulative</th>
+                            <th><span data-i18n="raceprep.grade">Grade</span></th>
+                            <th><span data-i18n="raceprep.elevation">Elevation</span></th>
+                            <th><span data-i18n="raceprep.pace">Pace</span></th>
+                            <th><span data-i18n="raceprep.split">Split</span></th>
+                            <th><span data-i18n="raceprep.cumulative">Cumulative</span></th>
                         </tr>
                     </thead>
                     <tbody id="blueprintTableBody">
