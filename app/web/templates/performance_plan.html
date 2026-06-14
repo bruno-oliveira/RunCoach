@@ -56,7 +56,7 @@
                             {% if step.pace_zone %}<span class="workout-step-zone workout-step-zone-{{ step.pace_zone }}">{{ step.pace_zone }}</span>{% endif %}
                         </div>
                         {% set meta = [] %}
-                        {% if step.distance_m and step.distance_m >= 1000 %}{% set _ = meta.append((step.distance_m / 1000) | round(1) | string + ' km') %}{% elif step.distance_m %}{% set _ = meta.append(step.distance_m ~ ' m') %}{% endif %}
+                        {% if step.distance_m and step.distance_m >= 1000 %}{% set _ = meta.append((step.distance_m / 1000) | format_km + ' km') %}{% elif step.distance_m %}{% set _ = meta.append(step.distance_m ~ ' m') %}{% endif %}
                         {% if step.duration_s %}{% if step.duration_s >= 60 %}{% set _ = meta.append((step.duration_s // 60) ~ ':' ~ '%02d'|format(step.duration_s % 60)) %}{% else %}{% set _ = meta.append(step.duration_s ~ ' s') %}{% endif %}{% endif %}
                         {% if step.pace_str %}{% set _ = meta.append(step.pace_str) %}{% endif %}
                         {% if step.effort %}{% set _ = meta.append(step.effort) %}{% endif %}
@@ -75,7 +75,7 @@
             <div class="segment-row">
                 <div class="segment-type segment-type-{{ seg.type }}">{{ seg.name }}</div>
                 <div class="segment-details">
-                    <span class="segment-distance">{{ '{:.1f}'.format(seg.distance_km) }}km</span>
+                    <span class="segment-distance">{{ seg.distance_km | format_km }}km</span>
                     <span class="segment-pace">{{ seg.pace_formatted }}</span>
                     {% if seg.zone_label %}
                     <span class="segment-zone">{{ seg.zone_label }}</span>
@@ -329,7 +329,7 @@
                                             {% if seg.zone_label %}<span class="workout-step-zone workout-step-zone-{{ seg.zone_label.split(' ')[-1] }}">{{ seg.zone_label.split(' ')[-1] }}</span>{% endif %}
                                         </div>
                                         {% set meta = [] %}
-                                        {% if seg.distance_km %}{% set _ = meta.append('{:.1f}'.format(seg.distance_km) + ' km') %}{% endif %}
+                                        {% if seg.distance_km %}{% set _ = meta.append((seg.distance_km | format_km) + ' km') %}{% endif %}
                                         {% if seg.pace_formatted %}{% set _ = meta.append(seg.pace_formatted) %}{% endif %}
                                         {% if seg.intervals and seg.intervals.interval_m is number %}{% set _ = meta.append(seg.intervals.reps ~ 'x' ~ seg.intervals.interval_m ~ 'm' ~ (' (' ~ seg.intervals.recovery_min ~ 'min rec)' if seg.intervals.recovery_min else '')) %}{% endif %}
                                         {% if meta %}

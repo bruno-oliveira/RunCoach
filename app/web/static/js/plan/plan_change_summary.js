@@ -63,7 +63,10 @@
         if (value === null || value === undefined) return '—';
         var num = Number(value);
         if (!isFinite(num)) return '—';
-        return num.toFixed(1) + ' km';
+        if (num <= 0) return '0.0 km';
+        // Truncate to one decimal (no rounding) to match the server-side
+        // format_km() so a workout never displays more distance than prescribed.
+        return (Math.floor(num * 10) / 10).toFixed(1) + ' km';
     }
 
     function formatDelta(value) {

@@ -17,6 +17,7 @@ from typing import Any, Dict, Optional
 
 from app.core.training.hr_zone_calculator import TRAINING_ZONE_HR_PERCENTAGES
 from app.core.training.vdot_calculator import VDOTCalculator
+from app.utils import format_pace, format_pace_bare
 
 _FALLBACK_PACE_MIN_KM = 5.5
 
@@ -164,5 +165,28 @@ def calculate_zones(
             low_bpm = int(max_hr * low_pct)
             high_bpm = int(max_hr * high_pct)
             zones[zone_name]["hr_bpm_range"] = f"{low_bpm}-{high_bpm} BPM"
+
+    # Attach display strings for the pace anchor and the pace band. The zone
+    # table in the performance plan renders `pace_formatted` /
+    # `pace_range_formatted`; without these the whole "your training paces"
+    # panel showed blanks. Deriving them here (rather than in each zone literal
+    # above) guarantees every zone — VDOT-based or fallback — carries them.
+    for zone in zones.values():
+        zone["pace_formatted"] = format_pace(zone["pace"])
+        pace_range = zone.get("pace_range")
+        if pace_range and len(pace_range) == 2:
+            slow, fast = pace_range
+            slow_str = format_pace_bare(slow)
+            fast_str = format_pace_bare(fast)
+            if slow_str == "--" or fast_str == "--":
+                zone["pace_range_formatted"] = format_pace(zone["pace"])
+            elif slow_str == fast_str:
+                # A degenerate band (e.g. a pinned race-pace zone) reads as a
+                # single pace rather than "5:00-5:00/km".
+                zone["pace_range_formatted"] = f"{slow_str}/km"
+            else:
+                zone["pace_range_formatted"] = f"{fast_str}-{slow_str}/km"
+        else:
+            zone["pace_range_formatted"] = format_pace(zone["pace"])
 
     return zones

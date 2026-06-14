@@ -11,8 +11,11 @@
 
     function _formatKm(value) {
         var n = Number(value);
-        if (!isFinite(n)) return '0.0';
-        return n.toFixed(1);
+        if (!isFinite(n) || n <= 0) return '0.0';
+        // Truncate to one decimal (no rounding) so the displayed distance
+        // never claims more than the workout prescribes and matches the
+        // server-side format_km() exactly.
+        return (Math.floor(n * 10) / 10).toFixed(1);
     }
 
     function applyWeekTotals(weekTotals) {
