@@ -159,9 +159,7 @@ class TestPerformanceZonesCarryFormattedPaces:
                 pf = zone.get("pace_formatted")
                 prf = zone.get("pace_range_formatted")
                 assert pf and pf != "--", f"{zone_name} missing pace_formatted"
-                assert prf and prf != "--", (
-                    f"{zone_name} missing pace_range_formatted"
-                )
+                assert prf and prf != "--", f"{zone_name} missing pace_range_formatted"
 
 
 class TestKeyWorkoutOverlayRendering:
@@ -214,4 +212,3 @@ class TestKeyWorkoutOverlayRendering:
         assert not offenders, (
             f"overlay produced multi-decimal distances: {offenders[:10]}"
         )
-

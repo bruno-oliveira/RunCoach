@@ -7,8 +7,8 @@ user-tagged `workout_type` so we don't overwrite their input -- and because
 """
 
 import sqlalchemy as sa
-from alembic import op
 
+from alembic import op
 
 revision = "005_add_effort_class"
 down_revision = "004_add_pending_recommendation"

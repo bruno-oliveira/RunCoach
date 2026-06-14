@@ -15,9 +15,9 @@ Create Date: 2026-05-20
 """
 from typing import Sequence, Union
 
-from alembic import op
 import sqlalchemy as sa
 
+from alembic import op
 
 revision: str = "014_fix_favorite_recipes_id"
 down_revision: Union[str, Sequence[str], None] = "013_add_refresh_tokens"

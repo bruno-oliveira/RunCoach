@@ -8,8 +8,8 @@ Create Date: 2026-05-09
 from typing import Sequence, Union
 
 import sqlalchemy as sa
-from alembic import op
 
+from alembic import op
 
 revision: str = "008_add_training_terrain"
 down_revision: Union[str, Sequence[str], None] = "007_add_trail_profile"

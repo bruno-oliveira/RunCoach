@@ -4,6 +4,7 @@ Stores a JSON array of adaptation events for the plan evolution timeline.
 """
 
 import sqlalchemy as sa
+
 from alembic import op
 
 revision = "002_add_adaptation_history"

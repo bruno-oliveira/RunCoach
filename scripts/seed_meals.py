@@ -9,10 +9,9 @@ Usage: python3 scripts/seed_meals.py [--dry-run] [--stats]
 """
 
 import json
-import os
 import sys
 from pathlib import Path
-from typing import Dict, List, Any, Set
+from typing import Any, Dict, List, Set
 
 # Project root directory
 PROJECT_ROOT = Path(__file__).parent.parent
@@ -58,13 +57,13 @@ def deduplicate_recipes(recipes: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
 
 def get_all_seed_recipes() -> Dict[str, List[Dict[str, Any]]]:
     """Extract all recipes from the consolidated seed data.
-    
+
     This function contains all recipe data that was previously spread across
     15 individual seed scripts.
     """
     # Import seed scripts to extract their recipe data
     sys.path.insert(0, str(PROJECT_ROOT))
-    
+
     all_recipes: Dict[str, List[Dict[str, Any]]] = {
         "breakfast": [],
         "lunch": [],
@@ -72,7 +71,7 @@ def get_all_seed_recipes() -> Dict[str, List[Dict[str, Any]]]:
         "snack": [],
         "post_workout": [],
     }
-    
+
     # 1. Bean recipes
     try:
         from add_bean_recipes import BeanRecipeAdder
@@ -82,7 +81,7 @@ def get_all_seed_recipes() -> Dict[str, List[Dict[str, Any]]]:
                 all_recipes[meal_type].extend(recipes)
     except ImportError:
         print("Warning: Could not import add_bean_recipes")
-    
+
     # 2. Extra bean recipes
     try:
         from add_extra_bean_recipes import ExtraBeanRecipeAdder
@@ -92,7 +91,7 @@ def get_all_seed_recipes() -> Dict[str, List[Dict[str, Any]]]:
                 all_recipes[meal_type].extend(recipes)
     except ImportError:
         print("Warning: Could not import add_extra_bean_recipes")
-    
+
     # 3. International recipes
     try:
         from add_international_recipes import InternationalRecipeAdder
@@ -103,29 +102,13 @@ def get_all_seed_recipes() -> Dict[str, List[Dict[str, Any]]]:
                 all_recipes[meal_type].extend(recipes)
     except ImportError:
         print("Warning: Could not import add_international_recipes")
-    
-    # 4. Mediterranean performance recipes
-    try:
-        from add_mediterranean_performance_recipes import add_mediterranean_performance_recipes
-        # This script directly modifies files, so we need to extract data differently
-        pass
-    except ImportError:
-        print("Warning: Could not import add_mediterranean_performance_recipes")
-    
-    # 5. More beef chicken recipes
-    try:
-        from add_more_beef_chicken_recipes import add_more_beef_chicken_recipes
-        pass
-    except ImportError:
-        print("Warning: Could not import add_more_beef_chicken_recipes")
-    
-    # 6. More Mediterranean recipes
-    try:
-        from add_more_mediterranean_recipes import add_more_mediterranean_recipes
-        pass
-    except ImportError:
-        print("Warning: Could not import add_more_mediterranean_recipes")
-    
+
+    # 4. Mediterranean performance recipes (no extractable data from this script)
+
+    # 5. More beef chicken recipes (no extractable data from this script)
+
+    # 6. More Mediterranean recipes (no extractable data from this script)
+
     # 7. More recipes
     try:
         from add_more_recipes import AdditionalRecipeAdder
@@ -136,7 +119,7 @@ def get_all_seed_recipes() -> Dict[str, List[Dict[str, Any]]]:
                 all_recipes[meal_type].extend(recipes)
     except ImportError:
         print("Warning: Could not import add_more_recipes")
-    
+
     # 8. More stew recipes
     try:
         from add_more_stew_recipes import StewRecipeAdder
@@ -147,21 +130,11 @@ def get_all_seed_recipes() -> Dict[str, List[Dict[str, Any]]]:
                 all_recipes[meal_type].extend(recipes)
     except ImportError:
         print("Warning: Could not import add_more_stew_recipes")
-    
-    # 9. NL Mediterranean recipes
-    try:
-        from add_nl_mediterranean_recipes import add_nl_mediterranean_recipes
-        pass
-    except ImportError:
-        print("Warning: Could not import add_nl_mediterranean_recipes")
-    
-    # 10. Performance recipes
-    try:
-        from add_performance_recipes import add_performance_recipes
-        pass
-    except ImportError:
-        print("Warning: Could not import add_performance_recipes")
-    
+
+    # 9. NL Mediterranean recipes (no extractable data from this script)
+
+    # 10. Performance recipes (no extractable data from this script)
+
     # 11. Stew recipes
     try:
         from add_stew_recipes import StewRecipeAdder
@@ -172,21 +145,11 @@ def get_all_seed_recipes() -> Dict[str, List[Dict[str, Any]]]:
                 all_recipes[meal_type].extend(recipes)
     except ImportError:
         print("Warning: Could not import add_stew_recipes")
-    
-    # 12. Unique healthy recipes
-    try:
-        from add_unique_healthy_recipes import add_unique_healthy_recipes
-        pass
-    except ImportError:
-        print("Warning: Could not import add_unique_healthy_recipes")
-    
-    # 13. Unique recipes
-    try:
-        from add_unique_recipes import add_unique_recipes
-        pass
-    except ImportError:
-        print("Warning: Could not import add_unique_recipes")
-    
+
+    # 12. Unique healthy recipes (no extractable data from this script)
+
+    # 13. Unique recipes (no extractable data from this script)
+
     # 14. Enhance recipes (adds new recipes + enhances existing)
     try:
         from enhance_recipes import RecipeEnhancer
@@ -197,7 +160,7 @@ def get_all_seed_recipes() -> Dict[str, List[Dict[str, Any]]]:
                 all_recipes[meal_type].extend(recipes)
     except ImportError:
         print("Warning: Could not import enhance_recipes")
-    
+
     return all_recipes
 
 
@@ -206,7 +169,7 @@ def seed_meals(dry_run: bool = False, show_stats: bool = False):
     print("=" * 60)
     print("RunCoach Consolidated Meal Seed Script")
     print("=" * 60)
-    
+
     # Load existing recipes
     print("\nLoading existing recipes...")
     existing_recipes = {}
@@ -217,7 +180,7 @@ def seed_meals(dry_run: bool = False, show_stats: bool = False):
         total_existing += len(recipes)
         print(f"  {meal_type}: {len(recipes)} recipes")
     print(f"Total existing: {total_existing}")
-    
+
     # Get all seed recipes
     print("\nExtracting recipes from seed data...")
     seed_recipes = get_all_seed_recipes()
@@ -225,7 +188,7 @@ def seed_meals(dry_run: bool = False, show_stats: bool = False):
     for meal_type, recipes in seed_recipes.items():
         print(f"  {meal_type}: {len(recipes)} seed recipes")
     print(f"Total seed recipes: {total_seed}")
-    
+
     # Combine and deduplicate
     print("\nCombining and deduplicating...")
     final_recipes = {}
@@ -237,53 +200,53 @@ def seed_meals(dry_run: bool = False, show_stats: bool = False):
         added = len(unique) - len(existing_recipes.get(meal_type, []))
         print(f"  {meal_type}: {len(existing_recipes.get(meal_type, []))} -> {len(unique)} (+{added})")
         total_final += len(unique)
-    
+
     print(f"Total unique recipes: {total_final}")
-    
+
     if dry_run:
         print("\n[DRY RUN] No files were modified.")
         return
-    
+
     # Save updated recipes
     print("\nSaving updated recipes...")
     for meal_type, recipes in final_recipes.items():
         save_recipes(meal_type, recipes)
         print(f"  ✓ Saved {len(recipes)} {meal_type} recipes")
-    
+
     # Update consolidated meals.json
     print("\nUpdating consolidated meals.json...")
     all_recipes = []
     for meal_type in MEAL_FILES.keys():
         all_recipes.extend(final_recipes[meal_type])
-    
+
     all_recipes.sort(key=lambda x: (x.get("meal_type", ""), x.get("name", "")))
-    
+
     consolidated_path = DATA_DIR / "meals.json"
     with open(consolidated_path, "w") as f:
         json.dump(all_recipes, f, indent=2)
     print(f"  ✓ Saved consolidated meals.json with {len(all_recipes)} recipes")
-    
+
     # Show stats if requested
     if show_stats:
         print("\n" + "=" * 60)
         print("MEAL DATABASE STATISTICS")
         print("=" * 60)
         print(f"Total unique recipes: {len(all_recipes)}")
-        
+
         for meal_type in MEAL_FILES.keys():
             count = sum(1 for r in all_recipes if r.get("meal_type") == meal_type)
             print(f"  {meal_type}: {count}")
-        
+
         print("\nBy dietary tags (top 15):")
         tag_counts = {}
         for recipe in all_recipes:
             for tag in recipe.get("dietary_tags", []):
                 tag_counts[tag] = tag_counts.get(tag, 0) + 1
-        
+
         sorted_tags = sorted(tag_counts.items(), key=lambda x: x[1], reverse=True)
         for tag, count in sorted_tags[:15]:
             print(f"  {tag}: {count}")
-    
+
     print("\n✅ Meal seeding completed successfully!")
 
 
