@@ -292,8 +292,6 @@ def generate_interval_run(
     # warm-up / work-set distances in the description match the executable steps.
     total_m = int(round(distance * 1000))
     wu_m = workout_steps._wucd_m(total_m)
-    warmup = wu_m / 1000.0
-    cooldown = warmup
     work_km = max(0.5, (total_m - 2 * wu_m) / 1000.0)
 
     # 50 km/week threshold ensures ~5 weeks of base before 1000 m repeats are
