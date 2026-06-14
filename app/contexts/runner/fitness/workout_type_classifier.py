@@ -31,6 +31,7 @@ from app.core.training.workout_inference import (
     combine,
     hr_to_tier,
     pace_to_tier,
+    quality_block_fraction,
     splits_variability,
 )
 from app.models import RunLog
@@ -127,16 +128,17 @@ def classify_workout_type(
 
     # Pace zones: prefer this run's own VDOT, fall back to the recent best.
     pace_tier = None
+    pace_zones = None
     resolved_vdot = vdot
     if resolved_vdot is None:
         try:
             resolved_vdot = RacePredictorService.get_best_recent_vdot(user_id, db=db)
         except Exception:  # pragma: no cover - defensive
             resolved_vdot = None
-    if resolved_vdot and avg_pace_min_km:
-        pace_tier = pace_to_tier(
-            avg_pace_min_km, VDOTCalculator.get_pace_zones(resolved_vdot)
-        )
+    if resolved_vdot:
+        pace_zones = VDOTCalculator.get_pace_zones(resolved_vdot)
+    if pace_zones and avg_pace_min_km:
+        pace_tier = pace_to_tier(avg_pace_min_km, pace_zones)
 
     # HR zones from the runner's max HR.
     hr_tier = None
@@ -154,11 +156,17 @@ def classify_workout_type(
     )
     is_long = _is_long_run(distance_km, duration_minutes, user_id, db, exclude_run_id)
     splits_cv = splits_variability(splits)[0] if splits else None
+    # Recover an embedded quality block the whole-run average would bury as
+    # easy (tempo/interval sessions diluted by easy warm-up + cool-down).
+    splits_quality = (
+        quality_block_fraction(splits, pace_zones) if splits and pace_zones else None
+    )
 
     return combine(
         pace_tier,
         hr_tier,
         splits_cv=splits_cv,
+        splits_quality=splits_quality,
         is_long=is_long,
         hilly=hilly,
         perceived_effort=perceived_effort,

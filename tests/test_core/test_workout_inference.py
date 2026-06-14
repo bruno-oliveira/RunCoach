@@ -10,6 +10,7 @@ from app.core.training.workout_inference import (
     combine,
     hr_to_tier,
     pace_to_tier,
+    quality_block_fraction,
     resolve_effective_workout_type,
     splits_variability,
 )
@@ -70,6 +71,49 @@ class TestSplitsVariability:
         assert splits_variability(None) == (None, 0)
 
 
+class TestQualityBlockFraction:
+    """The embedded-quality-block detector that rescues diluted tempo/interval
+    sessions whose easy warm-up + cool-down drag the whole-run average down."""
+
+    def _splits(self, paces):
+        return [{"pace_min_km": p} for p in paces]
+
+    def test_tempo_block_detected(self):
+        # 2 km easy + 4 km @ T + 2 km easy: average reads easy, but the block
+        # is clearly threshold.
+        splits = self._splits([6.0, 6.0, 4.5, 4.5, 4.5, 4.5, 6.0, 6.0])
+        fraction, tier = quality_block_fraction(splits, PACE_ZONES)
+        assert tier == TEMPO
+        assert fraction == 0.5
+
+    def test_interval_block_detected(self):
+        # Easy warm-up/cool-down with reps at I pace -> interval block.
+        splits = self._splits([6.0, 6.0, 4.0, 6.0, 4.0, 6.0, 4.0, 6.0, 6.0])
+        fraction, tier = quality_block_fraction(splits, PACE_ZONES)
+        assert tier == INTERVAL
+
+    def test_true_easy_run_no_block(self):
+        # Nothing at/under marathon pace -> no quality block.
+        splits = self._splits([6.0, 5.9, 6.1, 6.0, 5.95, 6.0, 6.05, 6.0])
+        fraction, tier = quality_block_fraction(splits, PACE_ZONES)
+        assert fraction is None and tier is None
+
+    def test_single_quick_km_is_not_a_block(self):
+        # One quickish km doesn't make a session a quality day.
+        splits = self._splits([6.0, 6.0, 4.9, 6.0, 6.0, 6.0, 6.0, 6.0])
+        fraction, tier = quality_block_fraction(splits, PACE_ZONES)
+        assert fraction is None and tier is None
+
+    def test_missing_inputs(self):
+        assert quality_block_fraction(None, PACE_ZONES) == (None, None)
+        assert quality_block_fraction([{"pace_min_km": 4.5}] * 4, None) == (None, None)
+        # No marathon pace -> can't define the easy/quality boundary.
+        assert quality_block_fraction([{"pace_min_km": 4.5}] * 4, {"E": {}}) == (
+            None,
+            None,
+        )
+
+
 class TestCombine:
     def test_no_signal_returns_none(self):
         assert combine(None, None) is None
@@ -105,6 +149,36 @@ class TestCombine:
         # Both signals say interval, but the splits are flat -> threshold effort.
         wt, _ = combine(INTERVAL, INTERVAL, splits_cv=0.02)
         assert wt == "tempo"
+
+    def test_embedded_tempo_block_rescues_easy_average(self):
+        # Average pace+HR read easy (diluted by warm-up/cool-down), but the
+        # splits expose a sustained threshold block -> classify as tempo, and
+        # confident enough to displace the unreliable raw "easy" tag.
+        wt, conf = combine(EASY, EASY, splits_cv=0.05, splits_quality=(0.5, TEMPO))
+        assert wt == "tempo"
+        assert conf >= 0.5
+
+    def test_embedded_interval_block_rescues_easy_average(self):
+        wt, _ = combine(EASY, None, splits_quality=(0.4, INTERVAL))
+        assert wt == "interval"
+
+    def test_rescue_only_lifts_never_demotes(self):
+        # A genuine interval read is never pulled DOWN by a weaker block tier.
+        wt, _ = combine(INTERVAL, INTERVAL, splits_quality=(0.5, TEMPO))
+        assert wt == "interval"
+
+    def test_rescue_ignored_when_no_block(self):
+        # No block detected -> easy stays easy.
+        assert combine(EASY, EASY, splits_quality=(None, None))[0] == "easy"
+
+    def test_rescue_suppressed_on_hilly(self):
+        # Hilly pace is unreliable; the rescue must not fire there.
+        wt, _ = combine(EASY, EASY, hilly=True, splits_quality=(0.5, TEMPO))
+        assert wt == "easy"
+
+    def test_rescue_below_fraction_threshold_ignored(self):
+        # A block tier present but too small a share -> not a quality day.
+        assert combine(EASY, EASY, splits_quality=(0.1, TEMPO))[0] == "easy"
 
     def test_long_overrides_easy(self):
         assert combine(EASY, EASY, is_long=True)[0] == "long"

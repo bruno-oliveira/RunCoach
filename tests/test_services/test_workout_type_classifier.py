@@ -75,6 +75,48 @@ class TestClassifyWorkoutType:
         )
         assert wt == "tempo"
 
+    def test_diluted_tempo_block_not_buried_as_easy(self, test_db, user):
+        # The user-reported bug: a real tempo session (easy warm-up + threshold
+        # block + easy cool-down) whose WHOLE-RUN average pace lands in the easy
+        # band. Without the embedded-block rescue the average buried it as
+        # "easy"; the splits expose the threshold block, so it must read tempo.
+        easy = PZ["E"]["pace_min_km_slow"]
+        splits = [
+            {"pace_min_km": p}
+            for p in [
+                easy,
+                easy,
+                TEMPO_PACE,
+                TEMPO_PACE,
+                TEMPO_PACE,
+                TEMPO_PACE,
+                easy,
+                easy,
+            ]
+        ]
+        avg = sum(s["pace_min_km"] for s in splits) / len(splits)
+        wt, conf = _classify(
+            test_db,
+            avg_pace_min_km=avg,
+            avg_heart_rate=None,
+            splits=splits,
+        )
+        assert wt == "tempo", f"diluted tempo classified as {wt} (avg pace {avg:.2f})"
+        assert conf >= 0.5
+
+    def test_genuine_easy_with_diluting_avg_stays_easy(self, test_db, user):
+        # Counterpart guard: a true easy run (no quality block) must NOT be
+        # lifted by the rescue.
+        easy = PZ["E"]["pace_min_km_slow"]
+        splits = [{"pace_min_km": easy + 0.05 * (i % 3 - 1)} for i in range(8)]
+        wt, _ = _classify(
+            test_db,
+            avg_pace_min_km=easy,
+            avg_heart_rate=None,
+            splits=splits,
+        )
+        assert wt in ("easy", "recovery", "long")
+
     def test_interval_surging_splits_same_averages(self, test_db, user):
         """Same average pace/HR as a tempo, but surging splits -> interval."""
         surging = [{"pace_min_km": p} for p in [3.9, 5.5, 3.8, 5.6, 3.9, 5.5, 3.8, 5.6]]
