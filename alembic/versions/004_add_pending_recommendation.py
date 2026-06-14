@@ -5,6 +5,7 @@ notifications rather than auto-applying adjustments.
 """
 
 import sqlalchemy as sa
+
 from alembic import op
 
 revision = "004_add_pending_recommendation"

@@ -5,6 +5,7 @@ that were run in main.py into a proper Alembic migration.
 """
 
 import sqlalchemy as sa
+
 from alembic import op
 
 revision = "001_initial_schema"

@@ -17,8 +17,8 @@ Create Date: 2026-05-06
 from typing import Sequence, Union
 
 import sqlalchemy as sa
-from alembic import op
 
+from alembic import op
 
 revision: str = "007_add_trail_profile"
 down_revision: Union[str, Sequence[str], None] = "006_drop_triathlon_plans"

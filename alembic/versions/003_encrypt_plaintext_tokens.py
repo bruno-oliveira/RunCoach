@@ -9,8 +9,9 @@ This migration finds any plaintext tokens and re-encrypts them in-place.
 
 import logging
 
-from alembic import op
 import sqlalchemy as sa
+
+from alembic import op
 
 revision = "003_encrypt_plaintext_tokens"
 down_revision = "002_add_adaptation_history"
@@ -31,6 +32,7 @@ def _derive_fernet_key(secret: str) -> bytes:
 def _get_fernet():
     """Create a Fernet instance using the app's encryption key."""
     from cryptography.fernet import Fernet
+
     from app.infrastructure.config import settings
     key_source = settings.encryption_key if settings.encryption_key else settings.secret_key
     return Fernet(_derive_fernet_key(key_source))

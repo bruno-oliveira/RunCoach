@@ -6,9 +6,9 @@ Create Date: 2026-05-18
 """
 from typing import Sequence, Union
 
-from alembic import op
 import sqlalchemy as sa
 
+from alembic import op
 
 revision: str = "012_add_adaptation_revision"
 down_revision: Union[str, Sequence[str], None] = "011_add_last_change_plan"

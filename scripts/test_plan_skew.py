@@ -6,9 +6,12 @@ volume accuracy.
 """
 
 import sys
+
 sys.path.insert(0, '.')
 
-from app.contexts.plan.generators.performance_plan_generator import PerformancePlanGenerator
+from app.contexts.plan.generators.performance_plan_generator import (
+    PerformancePlanGenerator,
+)
 from app.contexts.plan.generators.plan_generator import TrainingPlanGenerator
 
 
@@ -74,7 +77,6 @@ def analyze_regular_plan(label, current_km, target_distance, weeks=8):
     issues = []
     worst_ratio = 0
     shortest_easy = 999
-    total_target = 0
     total_actual = 0
 
     for week in weekly_plans:
@@ -181,8 +183,8 @@ def main():
     print("=" * 80)
     print("SUMMARY")
     print("=" * 80)
-    print(f"Performance plans: {sum(1 for l, d, k in perf_scenarios if not analyze_performance_plan(l, d, k)['issues'])}/{len(perf_scenarios)} clean")
-    print(f"Regular plans:     {sum(1 for l, k, d in reg_scenarios if not analyze_regular_plan(l, k, d)['issues'])}/{len(reg_scenarios)} clean")
+    print(f"Performance plans: {sum(1 for level, d, k in perf_scenarios if not analyze_performance_plan(level, d, k)['issues'])}/{len(perf_scenarios)} clean")
+    print(f"Regular plans:     {sum(1 for level, k, d in reg_scenarios if not analyze_regular_plan(level, k, d)['issues'])}/{len(reg_scenarios)} clean")
     print()
     print("Target: Quality/Long ratio <= 1.0, Shortest easy >= 3.0km")
 
