@@ -13,6 +13,7 @@ from app.core.training.workout_steps.primitives import (
     _warmup,
     _wucd_m,
 )
+from app.utils import format_km
 
 
 def build_tempo_steps(
@@ -28,12 +29,20 @@ def build_tempo_steps(
     main_m = max(500, total_m - wu_m - cd_m)
 
     if variant == 1:
-        rep_m = main_m // 3
+        rep_m_raw = main_m // 3
+        # Snap to the same 100 m (at/above 1 km) or 50 m (below) boundaries
+        # that build_km_rep_steps uses, so format_km is lossless and the step
+        # label matches the description precisely.
+        if rep_m_raw >= 1000:
+            rep_m = int(round(rep_m_raw / 100.0)) * 100
+        else:
+            rep_m = int(round(rep_m_raw / 50.0)) * 50
+        rep_m = max(200, rep_m)
         return [
             _warmup(pace_zones, wu_m),
             _step(
                 "run",
-                f"3 × {rep_m / 1000:.1f} km",
+                f"3 × {format_km(rep_m / 1000.0)} km",
                 distance_m=rep_m,
                 repeat=3,
                 pace_zone="T",
@@ -56,7 +65,7 @@ def build_tempo_steps(
             _warmup(pace_zones, wu_m),
             _step(
                 "run",
-                f"{main_m / 1000:.1f} km tempo with surges",
+                f"{format_km(main_m / 1000.0)} km tempo with surges",
                 distance_m=main_m,
                 pace_zone="T",
                 pace_str=_pace_str("T", pace_zones),
@@ -70,7 +79,7 @@ def build_tempo_steps(
         _warmup(pace_zones, wu_m),
         _step(
             "run",
-            f"{main_m / 1000:.1f} km tempo",
+            f"{format_km(main_m / 1000.0)} km tempo",
             distance_m=main_m,
             pace_zone="T",
             pace_str=_pace_str("T", pace_zones),

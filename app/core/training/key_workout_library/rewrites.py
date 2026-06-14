@@ -208,7 +208,7 @@ _DISTANCE_REWRITES: Dict[str, Callable[[float], str]] = {
         f"at 5K goal pace with 3 min easy jog recovery. Cool down {format_km(_wu_cd(d)[1])}km easy."
     ),
     "5k_cruise_intervals": lambda d: (
-        f"Warm up {format_km(_wu_cd(d)[0])}km easy. Run 4 x {format_km((d - _wu_cd(d)[0] - _wu_cd(d)[1]) / 4)}km "
+        f"Warm up {format_km(_wu_cd(d)[0])}km easy. Run 4 x {format_km(_km_rep_distance(d, 4))}km "
         f"at threshold pace with 60 seconds easy jog between reps. Cool down {format_km(_wu_cd(d)[1])}km easy."
     ),
     "5k_threshold_run": lambda d: (
@@ -269,7 +269,7 @@ _DISTANCE_REWRITES: Dict[str, Callable[[float], str]] = {
     ),
     "half_threshold_cruise": lambda d: (
         f"Warm up {format_km(_wu_cd(d)[0])}km easy. "
-        f"Run 3 x {format_km((d - _wu_cd(d)[0] - _wu_cd(d)[1]) / 3)}km "
+        f"Run 3 x {format_km(_km_rep_distance(d, 3))}km "
         f"at threshold pace with 90 seconds easy jog recovery. Cool down {format_km(_wu_cd(d)[1])}km easy."
     ),
     "trail_flat_surge_fartlek": lambda d: (
@@ -299,30 +299,30 @@ _DISTANCE_REWRITES: Dict[str, Callable[[float], str]] = {
     ),
     "10k_goal_pace_segments": lambda d: (
         f"Warm up {format_km(_wu_cd(d)[0])}km easy. "
-        f"Run 2 x {format_km((d - _wu_cd(d)[0] - _wu_cd(d)[1]) / 2)}km "
+        f"Run 2 x {format_km(_km_rep_distance(d, 2))}km "
         f"at 10K goal pace with 3 min standing recovery. Cool down {format_km(_wu_cd(d)[1])}km easy."
     ),
     "5k_vo2max_1000s": lambda d: (
         f"Warm up {format_km(_wu_cd(d)[0])}km easy. Run {_vo2max_km_reps(d, default=5)} x "
-        f"{format_km((d - _wu_cd(d)[0] - _wu_cd(d)[1]) / _vo2max_km_reps(d, default=5))}km "
+        f"{format_km(_km_rep_distance(d, _vo2max_km_reps(d, default=5)))}km "
         f"at 5K goal pace with 2-3 min easy jog recovery between reps. "
         f"Cool down {format_km(_wu_cd(d)[1])}km easy."
     ),
     "10k_vo2max_1000s": lambda d: (
         f"Warm up {format_km(_wu_cd(d)[0])}km easy. Run {_vo2max_km_reps(d, default=5)} x "
-        f"{format_km((d - _wu_cd(d)[0] - _wu_cd(d)[1]) / _vo2max_km_reps(d, default=5))}km "
+        f"{format_km(_km_rep_distance(d, _vo2max_km_reps(d, default=5)))}km "
         f"at a pace between your 5K and 10K effort, with 2 min easy jog "
         f"recovery between reps. Cool down {format_km(_wu_cd(d)[1])}km easy."
     ),
     "half_km_intervals": lambda d: (
         f"Warm up {format_km(_wu_cd(d)[0])}km easy. Run {_vo2max_km_reps(d, default=5)} x "
-        f"{format_km((d - _wu_cd(d)[0] - _wu_cd(d)[1]) / _vo2max_km_reps(d, default=5))}km "
+        f"{format_km(_km_rep_distance(d, _vo2max_km_reps(d, default=5)))}km "
         f"at 10K goal pace with 90 sec easy jog recovery between reps. "
         f"Cool down {format_km(_wu_cd(d)[1])}km easy."
     ),
     "marathon_km_intervals": lambda d: (
         f"Warm up {format_km(_wu_cd(d)[0])}km easy. Run {_vo2max_km_reps(d, default=6)} x "
-        f"{format_km((d - _wu_cd(d)[0] - _wu_cd(d)[1]) / _vo2max_km_reps(d, default=6))}km "
+        f"{format_km(_km_rep_distance(d, _vo2max_km_reps(d, default=6)))}km "
         f"at 10K goal pace with 90 sec easy jog recovery between reps. "
         f"Cool down {format_km(_wu_cd(d)[1])}km easy."
     ),
@@ -333,7 +333,7 @@ _DISTANCE_REWRITES: Dict[str, Callable[[float], str]] = {
         f"finishing last km at 10K goal pace. Cool down {format_km(_wu_cd(d)[1])}km easy."
     ),
     "10k_cruise_intervals": lambda d: (
-        f"Warm up {format_km(_wu_cd(d)[0])}km easy. Run 4 x {format_km((d - _wu_cd(d)[0] - _wu_cd(d)[1]) / 4)}km "
+        f"Warm up {format_km(_wu_cd(d)[0])}km easy. Run 4 x {format_km(_km_rep_distance(d, 4))}km "
         f"at threshold pace with 60 seconds easy jog between reps. Cool down {format_km(_wu_cd(d)[1])}km easy."
     ),
     "10k_fartlek": lambda d: (

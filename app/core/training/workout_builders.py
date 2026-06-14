@@ -15,6 +15,7 @@ from app.core.training.strength_plan import (
     get_phase_focus_rotation,
 )
 from app.core.training.vdot_calculator import VDOTCalculator
+from app.utils import format_km
 
 
 def generate_rest_day(day: int) -> Dict[str, Any]:
@@ -155,13 +156,13 @@ def generate_long_run(
         m_pace = pace_zones["M"]["pace_str"]
         long_run_notes = [
             f"Long run at {lr_pace} (long run pace). Focus on endurance and mental toughness.",
-            f"Long run: first {round(distance * 0.8, 1)}km at {lr_pace}, final {round(distance * 0.2, 1)}km at {m_pace} (M-pace).",
+            f"Long run: first {format_km(distance * 0.8)}km at {lr_pace}, final {format_km(distance * 0.2)}km at {m_pace} (M-pace).",
             f"Long run at {lr_pace} (long run pace). Practice nutrition every 45-60 minutes.",
         ]
     else:
         long_run_notes = [
             "Long run at conversational pace. Focus on endurance and mental toughness.",
-            f"Long run with race pace finish: first {round(distance * 0.8, 1)}km easy, final {round(distance * 0.2, 1)}km at goal pace.",
+            f"Long run with race pace finish: first {format_km(distance * 0.8)}km easy, final {format_km(distance * 0.2)}km at goal pace.",
             "Long run on varied terrain if possible. Practice nutrition strategy every 45-60 minutes.",
         ]
 
@@ -241,18 +242,31 @@ def generate_tempo_run(
     main_km = round((total_m - 2 * wu_m) / 1000.0, 1)
     variant_idx = day % 3
 
+    # Cruise intervals (variant 1): each rep distance must match build_tempo_steps
+    # which snaps rep_m to 100m (≥1km) or 50m (<1km) boundaries so format_km
+    # is lossless. Mirror that snapping here so the description cites the exact
+    # per-rep distance the steps execute — raw main_m // 3 diverges on most budgets.
+    main_m = max(500, total_m - wu_m - wu_m)
+    rep_m_raw = main_m // 3
+    if rep_m_raw >= 1000:
+        rep_m_cruise = int(round(rep_m_raw / 100.0)) * 100
+    else:
+        rep_m_cruise = int(round(rep_m_raw / 50.0)) * 50
+    rep_m_cruise = max(200, rep_m_cruise)
+    rep_km_cruise = format_km(rep_m_cruise / 1000.0)
+
     if pace_zones:
         t_pace = pace_zones["T"]["pace_str"]
         tempo_variations = [
-            f"Tempo run: {warmup:g}km warmup, {main_km:g}km at {t_pace} (T-pace), {cooldown:g}km cooldown.",
-            f"Cruise intervals: 3x{round(main_km / 3, 1):g}km at {t_pace} (T-pace) with 3min recovery.",
-            f"Tempo run with surges: {warmup:g}km warmup, {main_km:g}km at {t_pace} (T-pace) with 4x30sec faster surges, {cooldown:g}km cooldown.",
+            f"Tempo run: {format_km(warmup)}km warmup, {format_km(main_km)}km at {t_pace} (T-pace), {format_km(cooldown)}km cooldown.",
+            f"Cruise intervals: 3x{rep_km_cruise}km at {t_pace} (T-pace) with 3min recovery.",
+            f"Tempo run with surges: {format_km(warmup)}km warmup, {format_km(main_km)}km at {t_pace} (T-pace) with 4x30sec faster surges, {format_km(cooldown)}km cooldown.",
         ]
     else:
         tempo_variations = [
-            f"Tempo run: {warmup:g}km warmup, {main_km:g}km at threshold pace, {cooldown:g}km cooldown.",
-            f"Cruise intervals: 3x{round(main_km / 3, 1):g}km at tempo pace with 3min recovery.",
-            f"Tempo run with surges: {warmup:g}km warmup, {main_km:g}km at threshold effort with 4x30sec faster surges, {cooldown:g}km cooldown.",
+            f"Tempo run: {format_km(warmup)}km warmup, {format_km(main_km)}km at threshold pace, {format_km(cooldown)}km cooldown.",
+            f"Cruise intervals: 3x{rep_km_cruise}km at tempo pace with 3min recovery.",
+            f"Tempo run with surges: {format_km(warmup)}km warmup, {format_km(main_km)}km at threshold effort with 4x30sec faster surges, {format_km(cooldown)}km cooldown.",
         ]
 
     description = VDOTCalculator.inject_paces_into_description(
