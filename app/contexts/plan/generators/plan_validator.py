@@ -71,10 +71,12 @@ _QUALITY_ZONES: frozenset = frozenset({"T", "I", "M", "R", "10K", "5K"})
 # These are legitimately filed under tempo/interval but use easy effort
 # as the primary stimulus (e.g. a fueling-practice long run typed "tempo"
 # so it appears in the quality slot without adding hard aerobic load).
-_INTENTIONALLY_EASY_KEY_WORKOUTS: frozenset = frozenset({
-    "marathon_easy_long_fueling",
-    "trail_flat_soft_surface",  # easy-effort soft-surface run
-})
+_INTENTIONALLY_EASY_KEY_WORKOUTS: frozenset = frozenset(
+    {
+        "marathon_easy_long_fueling",
+        "trail_flat_soft_surface",  # easy-effort soft-surface run
+    }
+)
 
 
 def validate_quality_run_steps(workout: dict) -> tuple[bool, str]:

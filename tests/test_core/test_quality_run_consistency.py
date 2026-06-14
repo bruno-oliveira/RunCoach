@@ -131,16 +131,38 @@ class TestValidateQualityRunSteps:
     def test_valid_interval_with_hard_steps_passes(self):
         steps = [
             {"kind": "warmup", "effort": "easy", "pace_zone": "E", "distance_m": 1000},
-            {"kind": "run", "effort": "hard", "pace_zone": "I", "distance_m": 400, "repeat": 6},
-            {"kind": "recovery", "effort": "jog", "pace_zone": "E", "duration_s": 90, "repeat": 5},
-            {"kind": "cooldown", "effort": "easy", "pace_zone": "E", "distance_m": 1000},
+            {
+                "kind": "run",
+                "effort": "hard",
+                "pace_zone": "I",
+                "distance_m": 400,
+                "repeat": 6,
+            },
+            {
+                "kind": "recovery",
+                "effort": "jog",
+                "pace_zone": "E",
+                "duration_s": 90,
+                "repeat": 5,
+            },
+            {
+                "kind": "cooldown",
+                "effort": "easy",
+                "pace_zone": "E",
+                "distance_m": 1000,
+            },
         ]
         ok, msg = validate_quality_run_steps(self._make_workout("interval", steps, 5.0))
         assert ok, msg
 
     def test_interval_with_only_easy_steps_fails(self):
         steps = [
-            {"kind": "run", "effort": "conversational", "pace_zone": "E", "distance_m": 5000},
+            {
+                "kind": "run",
+                "effort": "conversational",
+                "pace_zone": "E",
+                "distance_m": 5000,
+            },
         ]
         ok, msg = validate_quality_run_steps(self._make_workout("interval", steps, 5.0))
         assert not ok
@@ -149,8 +171,18 @@ class TestValidateQualityRunSteps:
     def test_valid_tempo_with_T_zone_passes(self):
         steps = [
             {"kind": "warmup", "effort": "easy", "pace_zone": "E", "distance_m": 1000},
-            {"kind": "run", "effort": "comfortably hard", "pace_zone": "T", "distance_m": 3000},
-            {"kind": "cooldown", "effort": "easy", "pace_zone": "E", "distance_m": 1000},
+            {
+                "kind": "run",
+                "effort": "comfortably hard",
+                "pace_zone": "T",
+                "distance_m": 3000,
+            },
+            {
+                "kind": "cooldown",
+                "effort": "easy",
+                "pace_zone": "E",
+                "distance_m": 1000,
+            },
         ]
         ok, msg = validate_quality_run_steps(self._make_workout("tempo", steps, 5.0))
         assert ok, msg
@@ -165,10 +197,34 @@ class TestValidateQualityRunSteps:
 
     def test_hill_with_hard_uphill_effort_passes(self):
         steps = [
-            {"kind": "warmup", "effort": "easy", "pace_zone": "E", "distance_m": 1000, "repeat": 1},
-            {"kind": "run", "effort": "hard uphill", "pace_zone": "R", "duration_s": 30, "repeat": 10},
-            {"kind": "recovery", "effort": "walk", "pace_zone": "WALK", "duration_s": 60, "repeat": 10},
-            {"kind": "cooldown", "effort": "easy", "pace_zone": "E", "distance_m": 1000, "repeat": 1},
+            {
+                "kind": "warmup",
+                "effort": "easy",
+                "pace_zone": "E",
+                "distance_m": 1000,
+                "repeat": 1,
+            },
+            {
+                "kind": "run",
+                "effort": "hard uphill",
+                "pace_zone": "R",
+                "duration_s": 30,
+                "repeat": 10,
+            },
+            {
+                "kind": "recovery",
+                "effort": "walk",
+                "pace_zone": "WALK",
+                "duration_s": 60,
+                "repeat": 10,
+            },
+            {
+                "kind": "cooldown",
+                "effort": "easy",
+                "pace_zone": "E",
+                "distance_m": 1000,
+                "repeat": 1,
+            },
         ]
         # No key_workout_id → distance check applies.
         # Duration-based reps are priced at default pace: 10 × 30s at R-pace (5 min/km)
@@ -179,19 +235,31 @@ class TestValidateQualityRunSteps:
 
     def test_easy_workout_is_skipped(self):
         """validate_quality_run_steps should not flag non-quality workout types."""
-        steps = [{"kind": "run", "effort": "easy", "pace_zone": "E", "distance_m": 5000}]
-        ok, msg = validate_quality_run_steps({"type": "easy", "steps": steps, "distance": 5.0})
+        steps = [
+            {"kind": "run", "effort": "easy", "pace_zone": "E", "distance_m": 5000}
+        ]
+        ok, msg = validate_quality_run_steps(
+            {"type": "easy", "steps": steps, "distance": 5.0}
+        )
         assert ok, msg
 
     def test_distance_mismatch_fails(self):
         """A large discrepancy between steps total and reported distance should fail."""
         steps = [
             {"kind": "warmup", "effort": "easy", "pace_zone": "E", "distance_m": 500},
-            {"kind": "run", "effort": "hard", "pace_zone": "I", "distance_m": 400, "repeat": 4},
+            {
+                "kind": "run",
+                "effort": "hard",
+                "pace_zone": "I",
+                "distance_m": 400,
+                "repeat": 4,
+            },
             {"kind": "cooldown", "effort": "easy", "pace_zone": "E", "distance_m": 500},
         ]
         # Reported 10 km but steps only total ~2.6 km
-        ok, msg = validate_quality_run_steps(self._make_workout("interval", steps, 10.0))
+        ok, msg = validate_quality_run_steps(
+            self._make_workout("interval", steps, 10.0)
+        )
         assert not ok
         assert "km" in msg
 
@@ -229,7 +297,7 @@ class TestPlanGenerationQualityRunConsistency:
                 if not ok:
                     violations.append(
                         f"Week {week['week']} Day {w.get('day')} "
-                        f"kid={w.get('key_workout_id','—')}: {reason}"
+                        f"kid={w.get('key_workout_id', '—')}: {reason}"
                     )
 
         assert not violations, (

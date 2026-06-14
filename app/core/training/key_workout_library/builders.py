@@ -219,7 +219,6 @@ _KEY_WORKOUT_STEP_BUILDERS: Dict[
     # so the step effort, pace zone, and run label are internally consistent
     # with what the detail page shows as the session header.
     # -----------------------------------------------------------------------
-
     # -- 10K road interval variants --
     "10k_rolling_500s": lambda d, pz: _steps_mod.build_meter_rep_steps(
         d,
@@ -411,10 +410,12 @@ _KEY_WORKOUT_STEP_BUILDERS: Dict[
         recovery_s=180,
         recovery_label="3min easy jog",
     ),
-    "trail_flat_progressive_tempo": lambda d, pz: _steps_mod.build_progression_block_steps(
-        d,
-        pz,
-        block_zone="T",
+    "trail_flat_progressive_tempo": lambda d, pz: (
+        _steps_mod.build_progression_block_steps(
+            d,
+            pz,
+            block_zone="T",
+        )
     ),
     "trail_flat_over_unders": lambda d, pz: _steps_mod.build_over_under_steps(
         d,
