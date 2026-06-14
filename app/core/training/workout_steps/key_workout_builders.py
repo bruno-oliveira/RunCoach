@@ -115,7 +115,9 @@ def build_km_rep_steps(
     else:
         rep_m = int(round(rep_m / 50.0)) * 50
     rep_label = (
-        f"{reps} × {format_km(rep_m / 1000.0)} km" if rep_m >= 1000 else f"{reps} × {rep_m} m"
+        f"{reps} × {format_km(rep_m / 1000.0)} km"
+        if rep_m >= 1000
+        else f"{reps} × {rep_m} m"
     )
     steps = [
         _warmup(pace_zones, wu_m),
