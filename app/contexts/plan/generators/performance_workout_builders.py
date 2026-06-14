@@ -11,6 +11,7 @@ from app.contexts.plan.generators.workout_builder_base import (
     generate_easy_run,
 )
 from app.core.training.road_profile import classify_road
+from app.utils import format_km
 from app.utils import format_pace as _shared_format_pace
 
 # Long-run distance cap (km) per road band.
@@ -42,7 +43,12 @@ def reconcile_workout_after_cap(workout: Dict[str, Any]) -> None:
     seg_total = round(sum(s["distance_km"] for s in segments), 1)
     target = workout["distance"]
 
-    if abs(seg_total - target) < 0.15:
+    # Reconcile on any drift beyond the one-decimal grid. A looser tolerance
+    # (the old 0.15) let a sub-0.15 cap silently leave the header/segments at
+    # the pre-cap value while ``distance`` moved — so the card showed e.g.
+    # "6.6km race pace" with distance 6.5. Distance, segments, and description
+    # must always cite the identical one-decimal figure.
+    if abs(seg_total - target) < 0.05:
         return
 
     main_segs = [s for s in segments if s["type"] == "main"]
@@ -92,9 +98,9 @@ def _regenerate_description(workout: Dict[str, Any]) -> None:
 
     if wtype == "tempo":
         workout["description"] = (
-            f"{total_km:.0f}km tempo: {wu_km:.0f}km warmup, "
-            f"{main['distance_km']:.1f}km at {main['pace_formatted']}, "
-            f"{cd_km:.0f}km cooldown"
+            f"{format_km(total_km)}km tempo: {format_km(wu_km)}km warmup, "
+            f"{format_km(main['distance_km'])}km at {main['pace_formatted']}, "
+            f"{format_km(cd_km)}km cooldown"
         )
     elif wtype == "vo2max":
         ivl = main.get("intervals", {})
@@ -105,21 +111,21 @@ def _regenerate_description(workout: Dict[str, Any]) -> None:
                 else ""
             )
             workout["description"] = (
-                f"{total_km:.0f}km intervals: {wu_km:.0f}km warmup, "
+                f"{format_km(total_km)}km intervals: {format_km(wu_km)}km warmup, "
                 f"{ivl['reps']}x{ivl['interval_m']}m at {main['pace_formatted']}{rec}, "
-                f"{cd_km:.0f}km cooldown"
+                f"{format_km(cd_km)}km cooldown"
             )
         else:
             workout["description"] = (
-                f"{total_km:.0f}km intervals: {wu_km:.0f}km warmup, "
-                f"{main['distance_km']:.1f}km at {main['pace_formatted']}, "
-                f"{cd_km:.0f}km cooldown"
+                f"{format_km(total_km)}km intervals: {format_km(wu_km)}km warmup, "
+                f"{format_km(main['distance_km'])}km at {main['pace_formatted']}, "
+                f"{format_km(cd_km)}km cooldown"
             )
     elif wtype == "race_pace":
         workout["description"] = (
-            f"{total_km:.0f}km race pace: {wu_km:.0f}km warmup, "
-            f"{main['distance_km']:.1f}km at {main['pace_formatted']}, "
-            f"{cd_km:.0f}km cooldown"
+            f"{format_km(total_km)}km race pace: {format_km(wu_km)}km warmup, "
+            f"{format_km(main['distance_km'])}km at {main['pace_formatted']}, "
+            f"{format_km(cd_km)}km cooldown"
         )
     elif wtype == "fartlek":
         ivl = main.get("intervals", {})
@@ -127,7 +133,7 @@ def _regenerate_description(workout: Dict[str, Any]) -> None:
         hard_pace = pace_parts[-1] if len(pace_parts) > 1 else main["pace_formatted"]
         reps = ivl.get("reps", 0) if ivl else 0
         workout["description"] = (
-            f"{total_km}km fartlek: {reps} surges of 1-3min at {hard_pace}, "
+            f"{format_km(total_km)}km fartlek: {reps} surges of 1-3min at {hard_pace}, "
             f"easy running between"
         )
     elif wtype in ("interval", "hill"):
@@ -139,15 +145,15 @@ def _regenerate_description(workout: Dict[str, Any]) -> None:
                 else ""
             )
             workout["description"] = (
-                f"{total_km:.0f}km {wtype}: {wu_km:.0f}km warmup, "
+                f"{format_km(total_km)}km {wtype}: {format_km(wu_km)}km warmup, "
                 f"{ivl['reps']}x{ivl['interval_m']}m at {main['pace_formatted']}{rec}, "
-                f"{cd_km:.0f}km cooldown"
+                f"{format_km(cd_km)}km cooldown"
             )
         else:
             workout["description"] = (
-                f"{total_km:.0f}km {wtype}: {wu_km:.0f}km warmup, "
-                f"{main['distance_km']:.1f}km at {main['pace_formatted']}, "
-                f"{cd_km:.0f}km cooldown"
+                f"{format_km(total_km)}km {wtype}: {format_km(wu_km)}km warmup, "
+                f"{format_km(main['distance_km'])}km at {main['pace_formatted']}, "
+                f"{format_km(cd_km)}km cooldown"
             )
 
 
@@ -218,7 +224,7 @@ def generate_vo2max_workout(
         "zone": "zone_4",
         "target_pace": target_pace,
         "target_pace_formatted": _shared_format_pace(target_pace),
-        "description": f"{total_km:.0f}km intervals: {warmup_km}km warmup, {reps}x{interval_m}m at {_shared_format_pace(target_pace)} ({recovery_time}min recovery), {cooldown_km}km cooldown",
+        "description": f"{format_km(total_km)}km intervals: {format_km(warmup_km)}km warmup, {reps}x{interval_m}m at {_shared_format_pace(target_pace)} ({recovery_time}min recovery), {format_km(cooldown_km)}km cooldown",
         "distance": total_km,
         "quality": True,
         "segments": segments,
@@ -240,6 +246,9 @@ def generate_race_pace_workout(
         race_km = min(12, weekly_km * 0.25)
     else:
         race_km = min(3, weekly_km * 0.10)
+    # Round once so the segment, the description, and the total all use the
+    # identical one-decimal value (format_km truncates; round() does not).
+    race_km = round(race_km, 1)
 
     warmup_km = 2
     cooldown_km = 2
@@ -249,7 +258,7 @@ def generate_race_pace_workout(
         _warmup_segment(warmup_km, warmup_pace),
         {
             "name": "Race Pace",
-            "distance_km": round(race_km, 1),
+            "distance_km": race_km,
             "pace_formatted": _shared_format_pace(target_pace),
             "pace_raw": target_pace,
             "zone": "zone_5",
@@ -267,7 +276,7 @@ def generate_race_pace_workout(
         "zone": "zone_5",
         "target_pace": target_pace,
         "target_pace_formatted": _shared_format_pace(target_pace),
-        "description": f"{total_km:.0f}km race pace: {warmup_km}km warmup, {round(race_km, 1):.1f}km at {_shared_format_pace(target_pace)}, {cooldown_km}km cooldown",
+        "description": f"{format_km(total_km)}km race pace: {format_km(warmup_km)}km warmup, {format_km(race_km)}km at {_shared_format_pace(target_pace)}, {format_km(cooldown_km)}km cooldown",
         "distance": total_km,
         "quality": True,
         "segments": segments,
@@ -299,14 +308,19 @@ def generate_long_run(
 
     long_run_km = weekly_km * 0.30
     long_run_km = min(long_run_km, _LONG_RUN_CAP_KM[classify_road(distance_km)])
+    # Round once, up front: the segment distance, the description header, and
+    # the stored ``distance`` must all derive from the SAME one-decimal value.
+    # Formatting the raw float separately let format_km (which truncates) and
+    # round() disagree by 0.1 (e.g. 7.65 -> header "7.5km" but distance 7.6).
+    long_run_km = round(long_run_km, 1)
 
     if phase in ["build", "peak"] and long_run_km >= 12:
-        race_pace_km = min(4, distance_km * 0.3)
-        easy_km = long_run_km - race_pace_km
+        race_pace_km = round(min(4, distance_km * 0.3), 1)
+        easy_km = round(long_run_km - race_pace_km, 1)
         segments = [
             {
                 "name": "Easy",
-                "distance_km": round(easy_km, 1),
+                "distance_km": easy_km,
                 "pace_formatted": _shared_format_pace(easy_pace),
                 "pace_raw": easy_pace,
                 "zone": "zone_1",
@@ -315,7 +329,7 @@ def generate_long_run(
             },
             {
                 "name": "Race Pace Finish",
-                "distance_km": round(race_pace_km, 1),
+                "distance_km": race_pace_km,
                 "pace_formatted": _shared_format_pace(race_pace),
                 "pace_raw": race_pace,
                 "zone": "zone_5",
@@ -324,15 +338,15 @@ def generate_long_run(
             },
         ]
         long_run_km = round(sum(s["distance_km"] for s in segments), 1)
-        description = f"{long_run_km:.0f}km long run: {segments[0]['distance_km']:.1f}km easy at {_shared_format_pace(easy_pace)}, last {segments[1]['distance_km']:.1f}km at {_shared_format_pace(race_pace)}"
+        description = f"{format_km(long_run_km)}km long run: {format_km(segments[0]['distance_km'])}km easy at {_shared_format_pace(easy_pace)}, last {format_km(segments[1]['distance_km'])}km at {_shared_format_pace(race_pace)}"
     else:
         description = (
-            f"{long_run_km:.0f}km long run at {_shared_format_pace(easy_pace)}"
+            f"{format_km(long_run_km)}km long run at {_shared_format_pace(easy_pace)}"
         )
         segments = [
             {
                 "name": "Easy Long Run",
-                "distance_km": round(long_run_km, 1),
+                "distance_km": long_run_km,
                 "pace_formatted": _shared_format_pace(easy_pace),
                 "pace_raw": easy_pace,
                 "zone": "zone_1",

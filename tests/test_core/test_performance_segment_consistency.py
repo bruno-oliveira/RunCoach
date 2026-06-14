@@ -97,7 +97,42 @@ class TestSegmentDistanceConsistency:
                 f"description says {desc_km}km but distance is {w['distance']}"
             )
 
-    def test_no_garbled_descriptions(self, generator, distance, weekly_km, weeks):
+    def test_description_distances_are_one_decimal(
+        self, generator, distance, weekly_km, weeks
+    ):
+        """Every distance quantity in a description is exactly one decimal place,
+        and the leading header equals the stored distance exactly.
+
+        Guards the user-reported bug where ``:.0f`` headers rounded an 8.8 km
+        tempo to "9km" and contradicted the segment breakdown. Distance,
+        segments, and description header must all cite the identical
+        one-decimal figure.
+        """
+        plan = generator.generate_plan(
+            target_distance=distance,
+            current_pace=5.5,
+            goal_pace=5.0,
+            weeks=weeks,
+            current_weekly_km=weekly_km,
+            runs_per_week=5,
+        )
+        for week, w in _all_workouts(plan):
+            desc = w.get("description", "")
+            # Leading "<n.d>km" header must match distance exactly (<= grid).
+            m = re.match(r"(\d+\.\d)km", desc)
+            if m:
+                assert abs(float(m.group(1)) - round(w["distance"], 1)) <= 0.05, (
+                    f"Week {week['week']} {w['type']}: header {m.group(1)}km != "
+                    f"distance {w['distance']} :: {desc}"
+                )
+            # Segment sum must match distance exactly (one-decimal grid).
+            segs = w.get("segments") or []
+            if segs:
+                seg_total = round(sum(s["distance_km"] for s in segs), 1)
+                assert abs(seg_total - round(w["distance"], 1)) <= 0.05, (
+                    f"Week {week['week']} {w['type']}: segments {seg_total} != "
+                    f"distance {w['distance']}"
+                )
         """Descriptions must not contain duplicated warmup/cooldown phrases."""
         plan = generator.generate_plan(
             target_distance=distance,
