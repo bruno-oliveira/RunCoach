@@ -317,44 +317,51 @@
 .workout-type-row { margin-bottom: 0; }
 
 .workout-item > .key-workout-badge,
+/* Upcoming-day controls break onto their own full-width line */
 .workout-item > .run-walk-intervals,
 .workout-item > .workout-structure,
 .workout-item > .workout-details,
 .workout-item > .workout-strength-tag,
-.workout-item > .run-stats-details,
 .workout-item > .coaching-feedback,
-.workout-item > .quality-badge,
-.workout-item > .log-run-btn,
-.workout-item > .undo-log-btn {
+.workout-item > .log-run-btn {
     flex-basis: 100%;
     margin-top: var(--space-1);
 }
 
-/* Quiet text-style action buttons in the list. flex-basis:100% forces a line
-   break; max-width:max-content keeps the control sized to its label. */
+/* Key-workout chip and log button sized to content on their own line */
 .workout-item > .log-run-btn,
-.workout-item > .undo-log-btn,
-.workout-item > .key-workout-badge,
-.workout-item > .run-stats-details,
-.workout-item > .quality-badge {
+.workout-item > .key-workout-badge {
     flex-basis: 100%;
     max-width: max-content;
     align-self: flex-start;
     width: auto;
 }
 
-/* Share button: a small icon control on the row, not a stray inline glyph */
-.workout-item > .workout-share-corner {
-    order: 5;
-    flex-basis: 100%;
-    margin-top: var(--space-1);
+/* Completed-run metadata flows as one tight trailing group (quality · stats ·
+   share · undo · check) rather than each element stacking full-width. The
+   coaching-feedback above already breaks the line, so these wrap together
+   beneath the primary day line. */
+.workout-item > .quality-badge,
+.workout-item > .run-stats-details,
+.workout-item > .workout-share-corner,
+.workout-item > .undo-log-btn {
+    flex-basis: auto;
+    width: auto;
+    max-width: max-content;
+    align-self: center;
+    margin-top: var(--space-2);
 }
+.workout-item > .quality-badge   { order: 6; }
+.workout-item > .run-stats-details { order: 7; }
+.workout-item > .workout-share-corner { order: 8; }
+.workout-item > .undo-log-btn    { order: 9; }
+
 .share-run-btn {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    width: 30px;
-    height: 30px;
+    width: 28px;
+    height: 28px;
     padding: 0;
     border: 1px solid var(--color-border);
     background: transparent;
@@ -362,7 +369,7 @@
     color: var(--color-text-muted);
     cursor: pointer;
 }
-.share-run-btn svg { width: 14px; height: 14px; }
+.share-run-btn svg { width: 13px; height: 13px; }
 .share-run-btn:hover { color: var(--color-text); border-color: var(--color-text-muted); }
 
 .workout-strength-tag {
