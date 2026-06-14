@@ -16,6 +16,7 @@ from app.core.training.workout_steps.primitives import (
     _warmup,
     _wucd_m,
 )
+from app.utils import format_km
 
 
 def _dur_label(seconds: int) -> str:
@@ -114,7 +115,7 @@ def build_km_rep_steps(
     else:
         rep_m = int(round(rep_m / 50.0)) * 50
     rep_label = (
-        f"{reps} × {rep_m / 1000:.1f} km" if rep_m >= 1000 else f"{reps} × {rep_m} m"
+        f"{reps} × {format_km(rep_m / 1000.0)} km" if rep_m >= 1000 else f"{reps} × {rep_m} m"
     )
     steps = [
         _warmup(pace_zones, wu_m),
@@ -347,7 +348,7 @@ def build_continuous_quality_steps(
         return [
             _step(
                 "run",
-                f"{total_m / 1000:.1f} km continuous",
+                f"{format_km(total_m / 1000.0)} km continuous",
                 distance_m=total_m,
                 pace_zone="E",
                 pace_str=_pace_str("E", pace_zones),
@@ -360,7 +361,7 @@ def build_continuous_quality_steps(
         _warmup(pace_zones, wu_m),
         _step(
             "run",
-            f"{block_m / 1000:.1f} km continuous",
+            f"{format_km(block_m / 1000.0)} km continuous",
             distance_m=block_m,
             pace_zone=zone,
             pace_str=_pace_str(zone, pace_zones),

@@ -227,6 +227,14 @@ def overlay_key_workout(
         workout["structure"] = key_wk["structure"]
     workout["key_workout_rationale"] = key_wk["rationale"]
 
+    # Propagate the key workout's own intensity so the card classification
+    # matches the session — without this the registry default (e.g. "high" for
+    # interval/hill, "medium" for tempo) is kept even when the key workout is
+    # intentionally lighter (base-phase strides have intensity="low" but were
+    # shown as "high" because the overlay never overwrote the builder default).
+    if "intensity" in key_wk:
+        workout["intensity"] = key_wk["intensity"]
+
     # Structured-first step generation, shared with rebuild_key_workout. The
     # fractional/prose runs become a single block; only genuinely unparseable
     # prose reaches the hardened parser fallback.
