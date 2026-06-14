@@ -529,6 +529,25 @@ _DISTANCE_REWRITES: Dict[str, Callable[[float], str]] = {
         f"each mile is 3 fast controlled downhill efforts with a hike-back between "
         f"them, then 3 minutes easy between miles. Easy cool-down."
     ),
+    # Flat-terrain workouts — descriptions avoid hardcoded rep distances
+    "trail_flat_rolling_500s": lambda d: (
+        f"Easy warm-up. On flat terrain, run "
+        f"{_fartlek_reps(d, on_min=2, off_min=1, pace_min_per_km=6.0, default=8, lo=5, hi=12)} "
+        f"efforts at trail race effort with a short easy jog between each — "
+        f"keep moving, no stopping. Easy cool-down."
+    ),
+    "trail_flat_broken_miles": lambda d: (
+        f"Easy warm-up. Run "
+        f"{_fartlek_reps(d, on_min=4, off_min=2, pace_min_per_km=6.0, default=3, lo=2, hi=5)} broken miles: "
+        f"each is 3 hard efforts at strong trail pace with 60 seconds rest between, "
+        f"then 3 minutes easy jog between miles. Easy cool-down."
+    ),
+    "trail_flat_vo2max_intervals": lambda d: (
+        f"Easy warm-up. Run "
+        f"{_fartlek_reps(d, on_min=3, off_min=2, pace_min_per_km=6.0, default=5, lo=3, hi=8)} "
+        f"× 3 minutes at hard effort (Zone 4-5) with 2 minutes easy jog recovery. "
+        f"Easy cool-down."
+    ),
 }
 
 
