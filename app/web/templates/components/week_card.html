@@ -86,6 +86,42 @@
     {% endif %}
 
     {% set day_names = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'] %}
+
+    {# Compact day-list — the at-a-glance view shown while the card is collapsed.
+       One tight row per day: a color swatch keyed to the effort type, the day,
+       and a one-line summary. Hidden once the card expands (the full workout
+       grid below takes over). Rest days are dropped to keep the card short. #}
+    <div class="week-compact" aria-hidden="false">
+        {% for workout in week.daily_workouts if workout.type not in ['rest', 'recovery'] %}
+        {% set logged_run = logged_runs.get(workout.id) %}
+        <a class="week-compact-row{% if logged_run %} is-done{% endif %}"
+           {% if workout.id %}href="/plan/{{ plan_id }}/day/{{ workout.id }}"{% endif %}>
+            <span class="week-compact-swatch wt-{{ workout.type }}" aria-hidden="true"></span>
+            <span class="week-compact-day">{{ day_names[workout.day - 1] }}</span>
+            <span class="week-compact-detail">
+                <span class="week-compact-main">{{ workout.type | replace('_', ' ') | title }}{% if workout.distance and workout.distance > 0 %} <span class="week-compact-dot">·</span> {{ '%.1f'|format(workout.distance) }}km{% elif workout.duration_min %} <span class="week-compact-dot">·</span> {{ workout.duration_min }}m{% endif %}{% if workout.structure and 'hill' in workout.structure | lower %} <span class="week-compact-dot">·</span> Hilly{% elif workout.type == 'hill' %} <span class="week-compact-dot">·</span> Hilly{% endif %}</span>
+                {% if workout.strength_session %}
+                <span class="week-compact-strength">+ {{ (workout.strength_session.focus or workout.strength_session.type) | replace('_', ' ') | title }} <span class="week-compact-dot">·</span> {{ workout.strength_session.duration }}</span>
+                {% endif %}
+            </span>
+            {% if logged_run %}
+            <svg class="week-compact-check" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-label="Completed"><polyline points="20 6 9 17 4 12"/></svg>
+            {% endif %}
+        </a>
+        {% endfor %}
+        {% if week.strength_training %}
+        {% for st in week.strength_training %}
+        <div class="week-compact-row week-compact-row--strength">
+            <span class="week-compact-swatch wt-strength" aria-hidden="true"></span>
+            <span class="week-compact-day">Gym</span>
+            <span class="week-compact-detail">
+                <span class="week-compact-main">{{ (st.focus or st.type) | replace('_', ' ') | title }}{% if st.duration %} <span class="week-compact-dot">·</span> {{ st.duration }}{% endif %}</span>
+            </span>
+        </div>
+        {% endfor %}
+        {% endif %}
+    </div>
+
     <div class="workout-grid">
         {% for workout in week.daily_workouts %}
         {% set logged_run = logged_runs.get(workout.id) %}

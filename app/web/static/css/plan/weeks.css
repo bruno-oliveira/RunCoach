@@ -574,6 +574,13 @@
 .week-card.week-expanded .strength-block {
     display: block;
 }
+
+/* Compact day-list is the inverse: shown while collapsed, hidden once the
+   full grid is revealed (expanded card or the pinned current week). */
+.week-card.current-week .week-compact,
+.week-card.week-expanded .week-compact {
+    display: none;
+}
 .week-header {
     cursor: pointer;
     user-select: none;
@@ -592,6 +599,94 @@
 .week-card.current-week .week-header::after,
 .week-card.week-expanded .week-header::after {
     transform: rotate(180deg);
+}
+
+/* ---- Compact day-list (collapsed week view) ----
+   The Runna-style at-a-glance list: a small rounded color swatch keyed to the
+   effort type, the day, and a one-line summary. Tight vertical rhythm keeps a
+   full week to a short card. Each row links to that day's detail page. */
+.week-compact {
+    display: flex;
+    flex-direction: column;
+    margin-top: var(--space-3);
+}
+
+.week-compact-row {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    padding: var(--space-2) 0;
+    text-decoration: none;
+    color: inherit;
+    border-radius: var(--radius-sm);
+    transition: background var(--duration-fast) var(--ease-out);
+}
+a.week-compact-row { cursor: pointer; }
+a.week-compact-row:hover {
+    background: var(--color-bg-sunken);
+}
+.week-compact-row + .week-compact-row {
+    border-top: 1px solid var(--color-border-subtle);
+}
+
+.week-compact-swatch {
+    flex-shrink: 0;
+    width: 22px;
+    height: 22px;
+    border-radius: var(--radius-sm);
+    background: var(--wt-rest);
+}
+/* One color = one kind of effort — same vocabulary as the dot-rail. */
+.week-compact-swatch.wt-easy,
+.week-compact-swatch.wt-run_walk { background: var(--wt-easy); }
+.week-compact-swatch.wt-recovery { background: var(--wt-recovery); }
+.week-compact-swatch.wt-long { background: var(--wt-long); }
+.week-compact-swatch.wt-tempo,
+.week-compact-swatch.wt-threshold { background: var(--wt-tempo); }
+.week-compact-swatch.wt-interval,
+.week-compact-swatch.wt-fartlek,
+.week-compact-swatch.wt-vo2max,
+.week-compact-swatch.wt-race { background: var(--wt-interval); }
+.week-compact-swatch.wt-hill { background: var(--wt-hill); }
+.week-compact-swatch.wt-strength { background: var(--wt-strength); }
+
+.week-compact-day {
+    flex-shrink: 0;
+    width: 2.5rem;
+    font-size: var(--text-sm);
+    font-weight: var(--weight-semibold);
+    color: var(--color-text-secondary);
+}
+
+.week-compact-detail {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+    min-width: 0;
+}
+.week-compact-main {
+    font-size: var(--text-base);
+    color: var(--color-text);
+    line-height: var(--leading-snug);
+}
+.week-compact-strength {
+    font-size: var(--text-xs);
+    color: var(--color-text-muted);
+}
+.week-compact-dot { color: var(--color-text-muted); }
+
+.week-compact-check {
+    margin-left: auto;
+    flex-shrink: 0;
+    color: var(--color-primary);
+}
+.week-compact-row.is-done .week-compact-main {
+    color: var(--color-text-secondary);
+}
+
+@media (max-width: 480px) {
+    .week-compact-main { font-size: var(--text-sm); }
+    .week-compact-swatch { width: 20px; height: 20px; }
 }
 
 /* Expand-all toggle */
