@@ -38,7 +38,7 @@
     <header class="day-hero wt-bg-{{ workout.type }}">
         <div class="day-hero-eyebrow">
             {% if date_label %}{{ date_label }}{% else %}{{ day_name }}{% endif %}
-            {% if is_today %}<span class="day-today-chip">Today</span>{% endif %}
+            {% if is_today %}<span class="day-today-chip"><span data-i18n="day.today">Today</span></span>{% endif %}
         </div>
         <h1 class="day-hero-title">
             <span class="day-hero-swatch wt-{{ workout.type }}" aria-hidden="true"></span>
@@ -68,7 +68,7 @@
 
     {# What this kind of session is for #}
     <section class="day-card">
-        <h2 class="day-card-title">What this is</h2>
+        <h2 class="day-card-title"><span data-i18n="day.what_this_is">What this is</span></h2>
         <p class="day-explainer">{{ explainer }}</p>
     </section>
 
@@ -84,7 +84,7 @@
 
     {% if workout.description or workout.notes %}
     <section class="day-card">
-        <h2 class="day-card-title">Today's session</h2>
+        <h2 class="day-card-title"><span data-i18n="day.todays_session">Today's session</span></h2>
         <p class="day-notes">{{ workout.description or workout.notes }}</p>
         {% if workout.structure %}<p class="day-structure">{{ workout.structure }}</p>{% endif %}
     </section>
@@ -92,14 +92,14 @@
 
     {% if workout.steps and workout.type not in ['rest', 'recovery'] %}
     <section class="day-card">
-        <h2 class="day-card-title">Step by step</h2>
+        <h2 class="day-card-title"><span data-i18n="day.step_by_step">Step by step</span></h2>
         <div class="workout-steps-wrap">
             {% include 'components/workout_steps.html' %}
         </div>
     </section>
     {% elif workout.segments and workout.type not in ['rest', 'recovery'] %}
     <section class="day-card">
-        <h2 class="day-card-title">Step by step</h2>
+        <h2 class="day-card-title"><span data-i18n="day.step_by_step">Step by step</span></h2>
         <div class="workout-steps-wrap">
             <ol class="workout-steps" aria-label="Workout steps">
                 {% for seg in workout.segments %}
@@ -124,21 +124,21 @@
 
     {% if workout.key_workout_rationale %}
     <section class="day-card day-card--why">
-        <h2 class="day-card-title">Why this workout</h2>
+        <h2 class="day-card-title"><span data-i18n="day.why_workout">Why this workout</span></h2>
         <p class="day-notes">{{ workout.key_workout_rationale }}</p>
     </section>
     {% endif %}
 
     {% if workout.coaching_rationale %}
     <section class="day-card day-card--coach">
-        <h2 class="day-card-title">Coach's note</h2>
+        <h2 class="day-card-title"><span data-i18n="day.coaches_note">Coach's note</span></h2>
         <p class="day-notes">{{ workout.coaching_rationale }}</p>
     </section>
     {% endif %}
 
     {% if workout.strength_session %}
     <section class="day-card">
-        <h2 class="day-card-title">Paired strength</h2>
+        <h2 class="day-card-title"><span data-i18n="day.paired_strength">Paired strength</span></h2>
         <p class="day-notes">{{ (workout.strength_session.focus or workout.strength_session.type) | replace('_', ' ') | title }}
             {% if workout.strength_session.duration %}<span class="day-muted">· {{ workout.strength_session.duration }}</span>{% endif %}
         </p>

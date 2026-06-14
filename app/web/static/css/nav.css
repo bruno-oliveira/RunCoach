@@ -279,10 +279,6 @@
         width: 100%;
     }
 
-    .nav-theme-toggle {
-        align-self: flex-start;
-    }
-
     .nav-user {
         flex-direction: column;
         align-items: stretch;
@@ -617,6 +613,14 @@
    Language toggle widget (flag buttons)
    ========================================================================= */
 
+/* Controls group: flags + theme toggle always sit side-by-side */
+.nav-controls {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    flex-shrink: 0;
+}
+
 .lang-toggle {
     display: flex;
     align-items: center;
@@ -685,9 +689,9 @@
     box-shadow: 0 1px 4px rgba(0, 0, 0, 0.3);
 }
 
-/* Mobile: keep widget visible and slightly larger touch target */
+/* Mobile: keep controls widget visible and slightly larger touch target */
 @media (max-width: 768px) {
-    .lang-toggle {
+    .nav-controls {
         align-self: flex-start;
     }
 

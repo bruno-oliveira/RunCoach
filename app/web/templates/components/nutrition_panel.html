@@ -2,7 +2,7 @@
 <div class="plan-tab-panel" id="panel-nutrition" role="tabpanel" aria-labelledby="tab-nutrition">
     <div class="nutrition-section">
         <div class="section-header">
-            <h2>Personalized Nutrition Plan</h2>
+            <h2><span data-i18n="nutrition.title">Personalized Nutrition Plan</span></h2>
             <p>Optimized for your {{ target_distance }}km goal</p>
         </div>
 
@@ -11,7 +11,7 @@
                 <div class="nutrition-stat">
                     <span class="stat-icon">🔥</span>
                     <div class="stat-content">
-                        <div class="stat-label">Daily Calories</div>
+                        <div class="stat-label"><span data-i18n="nutrition.daily_cal">Daily Calories</span></div>
                         <div class="stat-value">{{ nutrition_plan.daily_calories }}</div>
                         <div class="stat-detail">kcal/day</div>
                     </div>
@@ -19,7 +19,7 @@
                 <div class="nutrition-stat">
                     <span class="stat-icon">🍗</span>
                     <div class="stat-content">
-                        <div class="stat-label">Protein</div>
+                        <div class="stat-label"><span data-i18n="nutrition.protein">Protein</span></div>
                         <div class="stat-value">{{ nutrition_plan.protein_g }}</div>
                         <div class="stat-detail">g/day</div>
                     </div>
@@ -27,7 +27,7 @@
                 <div class="nutrition-stat">
                     <span class="stat-icon">🍝</span>
                     <div class="stat-content">
-                        <div class="stat-label">Carbs</div>
+                        <div class="stat-label"><span data-i18n="nutrition.carbs">Carbs</span></div>
                         <div class="stat-value">{{ nutrition_plan.carbs_g }}</div>
                         <div class="stat-detail">g/day</div>
                     </div>
@@ -35,7 +35,7 @@
                 <div class="nutrition-stat">
                     <span class="stat-icon">🥑</span>
                     <div class="stat-content">
-                        <div class="stat-label">Fats</div>
+                        <div class="stat-label"><span data-i18n="nutrition.fats">Fats</span></div>
                         <div class="stat-value">{{ nutrition_plan.fats_g }}</div>
                         <div class="stat-detail">g/day</div>
                     </div>
@@ -45,8 +45,8 @@
 
         {% if nutrition_phases and nutrition_phases|length > 0 %}
         <div class="phase-nutrition">
-            <h3>Nutrition by Training Phase</h3>
-            <p class="phase-nutrition-desc">Your macro targets adjust as training intensity changes</p>
+            <h3><span data-i18n="nutrition.by_phase">Nutrition by Training Phase</span></h3>
+            <p class="phase-nutrition-desc"><span data-i18n="nutrition.macro_desc">Your macro targets adjust as training intensity changes</span></p>
             <div class="phase-nutrition-grid">
                 {% for phase_name, phase in nutrition_phases.items() %}
                 <div class="phase-card">
@@ -72,7 +72,7 @@
         {% if nutrition_plan.meal_suggestions and nutrition_plan.meal_suggestions|length > 0 %}
         <div class="meal-suggestions">
             <div class="meal-suggestions-header">
-                <h3>Sample Meal Plan</h3>
+                <h3><span data-i18n="nutrition.sample_meal">Sample Meal Plan</span></h3>
                 <button onclick="PlanModule.randomizeMeals()" class="randomize-meals-btn">
                     🎲 Randomize Meals
                 </button>
@@ -96,10 +96,10 @@
                             <span class="nutrient">🍝 {{ meal.carbs }}g</span>
                             <span class="nutrient">🥑 {{ meal.fat }}g</span>
                         </div>
-                        <button class="show-recipe-btn" data-target="recipe-{{ meal_type }}-{{ loop.index }}" onclick="PlanModule.toggleRecipe(this)">Show</button>
+                        <button class="show-recipe-btn" data-target="recipe-{{ meal_type }}-{{ loop.index }}" onclick="PlanModule.toggleRecipe(this)"><span data-i18n="nutrition.show">Show</span></button>
                         <div class="recipe-details" id="recipe-{{ meal_type }}-{{ loop.index }}" style="display: none;">
                             <div class="recipe-section">
-                                <h5>Ingredients</h5>
+                                <h5><span data-i18n="nutrition.ingredients">Ingredients</span></h5>
                                 <ul class="recipe-list">
                                     {% for ingredient in meal.ingredients %}
                                     <li>{{ ingredient }}</li>
@@ -107,7 +107,7 @@
                                 </ul>
                             </div>
                             <div class="recipe-section">
-                                <h5>Instructions</h5>
+                                <h5><span data-i18n="nutrition.instructions">Instructions</span></h5>
                                 <p class="recipe-instructions">{{ meal.instructions }}</p>
                             </div>
                         </div>
@@ -122,7 +122,7 @@
         <div class="nutrition-details">
             {% if nutrition_plan.pre_run_meal %}
             <div class="nutrition-guide-card">
-                <h3>Pre-Run Nutrition</h3>
+                <h3><span data-i18n="nutrition.pre_run">Pre-Run Nutrition</span></h3>
                 <div class="nutrition-guide-content">
                     <div class="guide-item">
                         <strong>Timing:</strong> {{ nutrition_plan.pre_run_meal.timing }}
@@ -146,7 +146,7 @@
 
             {% if nutrition_plan.post_run_meal %}
             <div class="nutrition-guide-card">
-                <h3>Post-Run Recovery</h3>
+                <h3><span data-i18n="nutrition.post_run">Post-Run Recovery</span></h3>
                 <div class="nutrition-guide-content">
                     <div class="guide-item">
                         <strong>Timing:</strong> {{ nutrition_plan.post_run_meal.timing }}
@@ -170,10 +170,10 @@
 
             {% if nutrition_plan.hydration_guide %}
             <div class="hydration-guide-section">
-                <h3>Hydration Guide</h3>
+                <h3><span data-i18n="nutrition.hydration">Hydration Guide</span></h3>
                 <div class="hydration-grid">
                     <div class="hydration-item">
-                        <div class="hydration-label">Daily Target</div>
+                        <div class="hydration-label"><span data-i18n="nutrition.daily_target">Daily Target</span></div>
                         <div class="hydration-value">{{ nutrition_plan.hydration_guide.daily_target }}</div>
                     </div>
                     <div class="hydration-item">
@@ -181,7 +181,7 @@
                         <div class="hydration-value">{{ nutrition_plan.hydration_guide.pre_run }}</div>
                     </div>
                     <div class="hydration-item">
-                        <div class="hydration-label">During Run</div>
+                        <div class="hydration-label"><span data-i18n="nutrition.during_run">During Run</span></div>
                         <div class="hydration-value">{{ nutrition_plan.hydration_guide.during_run }}</div>
                     </div>
                     <div class="hydration-item">

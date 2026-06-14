@@ -29,15 +29,15 @@
     <div class="nutrition-grid">
         <div class="nutrition-item">
             <div class="nutrition-value">{{ recipe.calories }}</div>
-            <div class="nutrition-label">Calories</div>
+            <div class="nutrition-label"><span data-i18n="recipe.calories">Calories</span></div>
         </div>
         <div class="nutrition-item">
             <div class="nutrition-value">{{ recipe.protein }}g</div>
-            <div class="nutrition-label">Protein</div>
+            <div class="nutrition-label"><span data-i18n="recipe.protein">Protein</span></div>
         </div>
         <div class="nutrition-item">
             <div class="nutrition-value">{{ recipe.carbs }}g</div>
-            <div class="nutrition-label">Carbs</div>
+            <div class="nutrition-label"><span data-i18n="recipe.carbs">Carbs</span></div>
         </div>
         <div class="nutrition-item">
             <div class="nutrition-value">{{ recipe.fat }}g</div>
@@ -93,7 +93,7 @@
 
     <!-- Share Section -->
     <div class="share-section">
-        <h3 class="share-title">Share this recipe</h3>
+        <h3 class="share-title"><span data-i18n="recipe.share">Share this recipe</span></h3>
         <div class="share-buttons">
             <a href="https://twitter.com/intent/tweet?text={{ recipe.name }}&url={{ request.url }}" target="_blank" class="share-btn share-twitter">
                 Twitter

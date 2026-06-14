@@ -25,32 +25,32 @@
     <!-- Auth guard -->
     <div class="analytics-auth-guard">
         <div class="auth-guard-icon">&#x1F3C3;</div>
-        <h2>Sign in to view your analytics</h2>
-        <p>Analytics are based on your logged runs and require authentication.</p>
+        <h2><span data-i18n="analytics.signin">Sign in to view your analytics</span></h2>
+        <p><span data-i18n="analytics.signin_desc">Analytics are based on your logged runs and require authentication.</span></p>
     </div>
     {% else %}
 
     <!-- Page Header -->
     <div class="analytics-page-header">
         <div class="analytics-page-header-left">
-            <h1 class="analytics-page-title">Coach Hub</h1>
-            <p class="analytics-page-sub">Your personalized training intelligence</p>
+            <h1 class="analytics-page-title"><span data-i18n="analytics.title">Coach Hub</span></h1>
+            <p class="analytics-page-sub"><span data-i18n="analytics.subtitle">Your personalized training intelligence</span></p>
         </div>
         <div class="analytics-page-header-right">
             {% if plans %}
             <select id="planSelector" class="period-select">
-                <option value="">All runs</option>
+                <option value=""><span data-i18n="analytics.all_runs">All runs</span></option>
                 {% for p in plans %}
                 <option value="{{ p.id }}">{{ p.label }}</option>
                 {% endfor %}
             </select>
             {% endif %}
             <select id="periodSelector" class="period-select">
-                <option value="30" selected>Last 30 days</option>
-                <option value="60">Last 60 days</option>
-                <option value="90">Last 90 days</option>
-                <option value="365">Last year</option>
-                <option value="all">All time</option>
+                <option value="30" selected><span data-i18n="analytics.last30">Last 30 days</span></option>
+                <option value="60"><span data-i18n="analytics.last60">Last 60 days</span></option>
+                <option value="90"><span data-i18n="analytics.last90">Last 90 days</span></option>
+                <option value="365"><span data-i18n="analytics.last_year">Last year</span></option>
+                <option value="all"><span data-i18n="analytics.all_time">All time</span></option>
                 <option value="custom">Custom days…</option>
             </select>
             <div id="customDaysWrap" class="custom-days-wrap" style="display:none;">
@@ -71,32 +71,32 @@
             <svg class="analytics-tab-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                 <circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 15 14"/>
             </svg>
-            <span>Today</span>
+            <span><span data-i18n="analytics.today">Today</span></span>
         </button>
         <button class="analytics-tab" role="tab" aria-selected="false" aria-controls="analyticsSignals" id="atab-signals" data-tab="signals">
             <svg class="analytics-tab-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                 <polyline points="3 12 7 12 10 5 14 19 17 12 21 12"/>
             </svg>
-            <span>Signals</span>
+            <span><span data-i18n="analytics.signals">Signals</span></span>
         </button>
         <button class="analytics-tab" role="tab" aria-selected="false" aria-controls="analyticsProgress" id="atab-progress" data-tab="progress">
             <svg class="analytics-tab-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                 <circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4.5"/><circle cx="12" cy="12" r="0.5" fill="currentColor"/>
             </svg>
-            <span>Progress</span>
+            <span><span data-i18n="analytics.progress">Progress</span></span>
         </button>
         <button class="analytics-tab" role="tab" aria-selected="false" aria-controls="analyticsInsightsTab" id="atab-insights" data-tab="insights">
             <svg class="analytics-tab-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                 <circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/>
             </svg>
-            <span>Insights</span>
+            <span><span data-i18n="analytics.insights">Insights</span></span>
             <span class="insights-badge" id="insightsBadge" style="display:none;">0</span>
         </button>
         <button class="analytics-tab" role="tab" aria-selected="false" aria-controls="analyticsEvolutionTab" id="atab-evolution" data-tab="evolution">
             <svg class="analytics-tab-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                 <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
             </svg>
-            <span>Evolution</span>
+            <span><span data-i18n="analytics.evolution">Evolution</span></span>
         </button>
     </nav>
 
@@ -106,7 +106,7 @@
         <!-- Prompt shown when no plan is selected (All runs scope) -->
         <div id="todayPrompt" class="coach-prompt" style="display:none;">
             <div class="coach-prompt-icon">&#x1F9ED;</div>
-            <h2>Pick a training plan</h2>
+            <h2><span data-i18n="analytics.pick_plan">Pick a training plan</span></h2>
             <p>Choose a plan from the menu above to see what your coach thinks about your training right now &mdash; today's session, your form and readiness, and this week's execution.</p>
         </div>
 
@@ -117,7 +117,7 @@
 
         <div id="todayEmpty" class="analytics-empty" style="display:none;">
             <div class="analytics-empty-icon">&#x1F4CA;</div>
-            <h2>Not enough data yet</h2>
+            <h2><span data-i18n="analytics.not_enough">Not enough data yet</span></h2>
             <p id="todayEmptyText">Log at least 3 runs linked to this plan to unlock your coach view.</p>
         </div>
 
@@ -130,7 +130,7 @@
                 <div class="coach-note-shimmer coach-note-shimmer--short"></div>
             </div>
             <div id="coachNoteCard" class="coach-note-card" style="display:none;">
-                <span class="coach-note-eyebrow">A note from your coach</span>
+                <span class="coach-note-eyebrow"><span data-i18n="analytics.coach_note">A note from your coach</span></span>
                 <p id="coachNoteProse" class="coach-note-prose"></p>
                 <div id="coachNoteChips" class="coach-note-chips"></div>
             </div>
@@ -142,7 +142,7 @@
             <div class="today-grid">
                 <div class="analytics-card today-workout-card" id="todayWorkoutCard">
                     <div class="analytics-card-header">
-                        <h3 class="analytics-card-title">Today's Session</h3>
+                        <h3 class="analytics-card-title"><span data-i18n="analytics.todays_session">Today's Session</span></h3>
                         <span class="today-week-chip" id="todayWeekChip"></span>
                     </div>
                     <div id="todayWorkout" class="today-workout-body"></div>
@@ -150,7 +150,7 @@
 
                 <div class="analytics-card today-readiness-card">
                     <div class="analytics-card-header">
-                        <h3 class="analytics-card-title">Readiness &amp; Form</h3>
+                        <h3 class="analytics-card-title"><span data-i18n="analytics.readiness_form">Readiness &amp; Form</span></h3>
                         <span id="coachFormBadge" class="coach-form-badge"></span>
                     </div>
                     <div id="coachFormStrip" class="coach-form-strip"></div>
@@ -161,7 +161,7 @@
             <!-- This week's execution strip -->
             <div class="analytics-card today-week-card">
                 <div class="analytics-card-header">
-                    <h3 class="analytics-card-title">This Week's Execution</h3>
+                    <h3 class="analytics-card-title"><span data-i18n="analytics.weeks_exec">This Week's Execution</span></h3>
                     <span class="today-week-volume" id="todayWeekVolume"></span>
                 </div>
                 <div id="todayWeekStrip" class="today-week-strip"></div>
@@ -173,7 +173,7 @@
             <!-- Coach's note (week pulse + patterns) -->
             <div class="analytics-card coach-why-card" id="todayNoteCard">
                 <div class="analytics-card-header">
-                    <h3 class="analytics-card-title">Coach's Note</h3>
+                    <h3 class="analytics-card-title"><span data-i18n="analytics.coaches_note">Coach's Note</span></h3>
                 </div>
                 <div id="coachWeekPulse" class="coach-week-pulse"></div>
                 <div id="coachPatterns" class="coach-patterns"></div>
@@ -187,7 +187,7 @@
 
         <div id="signalsPrompt" class="coach-prompt" style="display:none;">
             <div class="coach-prompt-icon">&#x1F4E1;</div>
-            <h2>Pick a training plan</h2>
+            <h2><span data-i18n="analytics.pick_plan">Pick a training plan</span></h2>
             <p>Choose a plan to see exactly what your coach sees &mdash; the six adaptation signals, how they're weighted in your current phase, and how they combine into your plan adjustment.</p>
         </div>
 
@@ -198,7 +198,7 @@
 
         <div id="signalsEmpty" class="analytics-empty" style="display:none;">
             <div class="analytics-empty-icon">&#x1F4CA;</div>
-            <h2>Not enough data yet</h2>
+            <h2><span data-i18n="analytics.not_enough">Not enough data yet</span></h2>
             <p id="signalsEmptyText">Log at least 3 runs linked to this plan to unlock your adaptation signals.</p>
         </div>
 
@@ -207,7 +207,7 @@
             <!-- Signal overview: stance + table -->
             <div class="analytics-card signals-overview-card">
                 <div class="analytics-card-header">
-                    <h3 class="analytics-card-title">Signal Overview</h3>
+                    <h3 class="analytics-card-title"><span data-i18n="analytics.signal_ovw">Signal Overview</span></h3>
                     <span id="coachMultiplierChip" class="coach-mult-chip"></span>
                 </div>
                 <p id="coachWhy" class="coach-why-text"></p>
@@ -223,7 +223,7 @@
             <!-- How the coach decides — phase weight comparison -->
             <div class="analytics-card signals-phase-card">
                 <div class="analytics-card-header">
-                    <h3 class="analytics-card-title">How the Coach Decides</h3>
+                    <h3 class="analytics-card-title"><span data-i18n="analytics.how_coach">How the Coach Decides</span></h3>
                     <span class="coach-signal-sub">phase weighting</span>
                 </div>
                 <p class="signals-phase-intro" id="signalsPhaseIntro"></p>
@@ -245,7 +245,7 @@
     <!-- Empty state -->
     <div id="analyticsEmpty" class="analytics-empty" style="display:none;">
         <div class="analytics-empty-icon">&#x1F3C3;</div>
-        <h2>No runs yet</h2>
+        <h2><span data-i18n="analytics.no_runs">No runs yet</span></h2>
         <p>Log runs manually or connect Strava to see your analytics dashboard.</p>
     </div>
 
@@ -259,7 +259,7 @@
                 <!-- Race Readiness gauge -->
                 <div class="analytics-card" id="readinessCard">
                     <div class="analytics-card-header">
-                        <h3 class="analytics-card-title">Race Readiness</h3>
+                        <h3 class="analytics-card-title"><span data-i18n="analytics.race_readiness">Race Readiness</span></h3>
                     </div>
                     <div class="readiness-loading" id="analyticsReadinessLoading">
                         <div class="analytics-loading-spinner"></div>
@@ -274,7 +274,7 @@
                 <!-- Gap Analysis -->
                 <div class="analytics-card" id="gapAnalysisCard">
                     <div class="analytics-card-header">
-                        <h3 class="analytics-card-title">Gap Analysis</h3>
+                        <h3 class="analytics-card-title"><span data-i18n="analytics.gap_analysis">Gap Analysis</span></h3>
                     </div>
                     <div class="readiness-loading" id="analyticsGapLoading">
                         <div class="analytics-loading-spinner"></div>
@@ -290,7 +290,7 @@
             <!-- Gap Trend -->
             <div class="analytics-card chart-wide" id="gapTrendChartCard" style="display:none;">
                 <div class="analytics-card-header">
-                    <h3 class="analytics-card-title">Gap Trend</h3>
+                    <h3 class="analytics-card-title"><span data-i18n="analytics.gap_trend">Gap Trend</span></h3>
                 </div>
                 <div class="chart-canvas-wrap">
                     <canvas id="gapTrendChart"></canvas>
@@ -300,12 +300,12 @@
             <!-- Workout Adherence Heatmap -->
             <div class="analytics-card chart-wide" id="adherenceHeatmapCard" style="display:none;">
                 <div class="analytics-card-header">
-                    <h3 class="analytics-card-title">Workout Adherence</h3>
+                    <h3 class="analytics-card-title"><span data-i18n="analytics.adherence">Workout Adherence</span></h3>
                 </div>
                 <div class="adherence-heatmap-wrap" id="adherenceHeatmap"></div>
             </div>
 
-            <h2 class="progress-section-heading">Training overview</h2>
+            <h2 class="progress-section-heading"><span data-i18n="analytics.training_ovw">Training overview</span></h2>
         </div>
 
         <!-- ── Hero Stats ── -->
@@ -315,7 +315,7 @@
                     <span class="hero-stat-value" id="statTotalKm">--</span>
                     <span class="hero-stat-unit">km</span>
                 </div>
-                <span class="hero-stat-label">Total Distance</span>
+                <span class="hero-stat-label"><span data-i18n="analytics.total_dist">Total Distance</span></span>
                 <span class="hero-stat-trend" id="trendTotalKm"></span>
             </div>
             <div class="hero-stat hero-stat--accent">
@@ -323,7 +323,7 @@
                     <span class="hero-stat-value" id="statAvgPace">--</span>
                     <span class="hero-stat-unit">min/km</span>
                 </div>
-                <span class="hero-stat-label">Avg Pace</span>
+                <span class="hero-stat-label"><span data-i18n="analytics.avg_pace">Avg Pace</span></span>
                 <span class="hero-stat-trend" id="trendAvgPace"></span>
             </div>
             <div class="hero-stat">
@@ -331,7 +331,7 @@
                     <span class="hero-stat-value" id="statTotalRuns">--</span>
                     <span class="hero-stat-unit">runs</span>
                 </div>
-                <span class="hero-stat-label">Activities</span>
+                <span class="hero-stat-label"><span data-i18n="analytics.activities">Activities</span></span>
                 <span class="hero-stat-trend" id="trendTotalRuns"></span>
             </div>
             <div class="hero-stat">
@@ -339,7 +339,7 @@
                     <span class="hero-stat-value" id="statTotalHours">--</span>
                     <span class="hero-stat-unit">hrs</span>
                 </div>
-                <span class="hero-stat-label">Time on Feet</span>
+                <span class="hero-stat-label"><span data-i18n="analytics.time_feet">Time on Feet</span></span>
                 <span class="hero-stat-trend" id="trendTotalHours"></span>
             </div>
         </div>
@@ -347,15 +347,15 @@
         <!-- ── Activity Heatmap ── -->
         <div class="analytics-card heatmap-card">
             <div class="analytics-card-header">
-                <h3 class="analytics-card-title">Activity Heatmap</h3>
+                <h3 class="analytics-card-title"><span data-i18n="analytics.heatmap">Activity Heatmap</span></h3>
                 <div class="heatmap-legend">
-                    <span class="heatmap-legend-label">Less</span>
+                    <span class="heatmap-legend-label"><span data-i18n="analytics.less">Less</span></span>
                     <span class="heatmap-swatch heatmap-swatch--0"></span>
                     <span class="heatmap-swatch heatmap-swatch--1"></span>
                     <span class="heatmap-swatch heatmap-swatch--2"></span>
                     <span class="heatmap-swatch heatmap-swatch--3"></span>
                     <span class="heatmap-swatch heatmap-swatch--4"></span>
-                    <span class="heatmap-legend-label">More</span>
+                    <span class="heatmap-legend-label"><span data-i18n="analytics.more">More</span></span>
                 </div>
             </div>
             <div class="heatmap-scroll-wrap">
@@ -376,7 +376,7 @@
             <!-- Race Predictions (collapsible) -->
             <div class="analytics-card predictions-card" id="predictionsCard" style="display:none;">
                 <div class="analytics-card-header">
-                    <h3 class="analytics-card-title">Race Predictions</h3>
+                    <h3 class="analytics-card-title"><span data-i18n="analytics.race_pred">Race Predictions</span></h3>
                     <button class="predictions-toggle" id="predictionsToggle" aria-label="Toggle predictions">
                         <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
                             <path d="M4 6l4 4 4-4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
@@ -396,7 +396,7 @@
             <!-- Predicted vs Actual (collapsible) -->
             <div class="analytics-card race-results-card" id="raceResultsCard" style="display:none;">
                 <div class="analytics-card-header">
-                    <h3 class="analytics-card-title">Predicted vs Actual</h3>
+                    <h3 class="analytics-card-title"><span data-i18n="analytics.pred_actual">Predicted vs Actual</span></h3>
                     <div style="display:flex;align-items:center;gap:8px;">
                         <span class="race-results-accuracy" id="raceResultsAccuracy"></span>
                         <button class="predictions-toggle" id="raceResultsToggle" aria-label="Toggle predicted vs actual">
@@ -417,10 +417,10 @@
             <!-- Weekly Volume (wide) -->
             <div class="analytics-card chart-wide" id="distanceChartCard">
                 <div class="analytics-card-header">
-                    <h3 class="analytics-card-title">Weekly Volume</h3>
+                    <h3 class="analytics-card-title"><span data-i18n="analytics.weekly_vol">Weekly Volume</span></h3>
                     <select class="grouping-select" id="distanceGrouping">
-                        <option value="weekly">Weekly</option>
-                        <option value="monthly">Monthly</option>
+                        <option value="weekly"><span data-i18n="analytics.weekly">Weekly</span></option>
+                        <option value="monthly"><span data-i18n="analytics.monthly">Monthly</span></option>
                     </select>
                 </div>
                 <div class="chart-canvas-wrap">
@@ -431,8 +431,8 @@
             <!-- Personal Records -->
             <div class="analytics-card records-card" id="recordsCard">
                 <div class="analytics-card-header">
-                    <h3 class="analytics-card-title">Personal Records</h3>
-                    <span class="records-badge">All time</span>
+                    <h3 class="analytics-card-title"><span data-i18n="analytics.records">Personal Records</span></h3>
+                    <span class="records-badge"><span data-i18n="analytics.all_time">All time</span></span>
                 </div>
                 <div id="recordsList" class="records-list">
                     <div class="records-loading">Loading records&hellip;</div>
@@ -442,10 +442,10 @@
             <!-- Pace Trends -->
             <div class="analytics-card" id="paceChartCard">
                 <div class="analytics-card-header">
-                    <h3 class="analytics-card-title">Pace Trend</h3>
+                    <h3 class="analytics-card-title"><span data-i18n="analytics.pace_trend">Pace Trend</span></h3>
                     <select class="grouping-select" id="paceGrouping">
-                        <option value="weekly">Weekly</option>
-                        <option value="monthly">Monthly</option>
+                        <option value="weekly"><span data-i18n="analytics.weekly">Weekly</span></option>
+                        <option value="monthly"><span data-i18n="analytics.monthly">Monthly</span></option>
                     </select>
                 </div>
                 <div class="chart-canvas-wrap">
@@ -456,10 +456,10 @@
             <!-- Aerobic Efficiency -->
             <div class="analytics-card" id="efficiencyChartCard">
                 <div class="analytics-card-header">
-                    <h3 class="analytics-card-title">Aerobic Efficiency</h3>
+                    <h3 class="analytics-card-title"><span data-i18n="analytics.aero_eff">Aerobic Efficiency</span></h3>
                     <select class="grouping-select" id="efficiencyGrouping">
-                        <option value="weekly">Weekly</option>
-                        <option value="monthly">Monthly</option>
+                        <option value="weekly"><span data-i18n="analytics.weekly">Weekly</span></option>
+                        <option value="monthly"><span data-i18n="analytics.monthly">Monthly</span></option>
                     </select>
                 </div>
                 <div class="chart-canvas-wrap">
@@ -470,10 +470,10 @@
             <!-- Training Load -->
             <div class="analytics-card" id="trainingLoadChartCard">
                 <div class="analytics-card-header">
-                    <h3 class="analytics-card-title">Training Load</h3>
+                    <h3 class="analytics-card-title"><span data-i18n="analytics.training_load">Training Load</span></h3>
                     <select class="grouping-select" id="loadGrouping">
-                        <option value="weekly">Weekly</option>
-                        <option value="monthly">Monthly</option>
+                        <option value="weekly"><span data-i18n="analytics.weekly">Weekly</span></option>
+                        <option value="monthly"><span data-i18n="analytics.monthly">Monthly</span></option>
                     </select>
                 </div>
                 <div class="chart-canvas-wrap">
@@ -513,7 +513,7 @@
             <!-- Pace Zone Distribution -->
             <div class="analytics-card" id="paceZonesCard">
                 <div class="analytics-card-header">
-                    <h3 class="analytics-card-title">Pace Zones</h3>
+                    <h3 class="analytics-card-title"><span data-i18n="analytics.pace_zones">Pace Zones</span></h3>
                     <span class="records-badge" id="paceZonesBadge"></span>
                 </div>
                 <div class="chart-canvas-wrap">
@@ -526,7 +526,7 @@
         <!-- ── Recent Runs ── -->
         <div class="analytics-card recent-runs-card">
             <div class="analytics-card-header">
-                <h3 class="analytics-card-title">Recent Runs</h3>
+                <h3 class="analytics-card-title"><span data-i18n="analytics.recent_runs">Recent Runs</span></h3>
                 <span class="recent-runs-count" id="recentRunsCount"></span>
             </div>
             <div id="recentRunsList" class="recent-runs-list"></div>
@@ -540,7 +540,7 @@
         <!-- Coach's Assessment -->
         <div class="analytics-card coach-assessment-card" id="coachAssessmentCard" style="display:none;">
             <div class="analytics-card-header">
-                <h3 class="analytics-card-title">Coach's Assessment</h3>
+                <h3 class="analytics-card-title"><span data-i18n="analytics.assessment">Coach's Assessment</span></h3>
             </div>
             <p id="coachAssessment" class="coach-assessment-text"></p>
         </div>
@@ -573,13 +573,13 @@
         <div class="insights-meta-grid" id="insightsMetaGrid" style="display:none;">
             <div class="analytics-card training-age-card">
                 <div class="analytics-card-header">
-                    <h3 class="analytics-card-title">Training Age</h3>
+                    <h3 class="analytics-card-title"><span data-i18n="analytics.training_age">Training Age</span></h3>
                 </div>
                 <div class="training-age-strip" id="trainingAgeStrip"></div>
             </div>
             <div class="analytics-card workout-mix-card">
                 <div class="analytics-card-header">
-                    <h3 class="analytics-card-title">Workout Mix</h3>
+                    <h3 class="analytics-card-title"><span data-i18n="analytics.workout_mix">Workout Mix</span></h3>
                     <span class="coach-signal-sub">all logged runs</span>
                 </div>
                 <div class="workout-mix" id="workoutMix"></div>
@@ -592,7 +592,7 @@
         <!-- Insights empty -->
         <div id="insightsEmpty" class="analytics-empty" style="display:none;">
             <div class="analytics-empty-icon">&#x1F4A1;</div>
-            <h2>Not enough data yet</h2>
+            <h2><span data-i18n="analytics.not_enough">Not enough data yet</span></h2>
             <p>Log at least 3 runs to unlock personalized training insights.</p>
         </div>
 
@@ -616,25 +616,25 @@
         <!-- Summary stat cards -->
         <div class="evolution-stats-row">
             <div class="evolution-stat">
-                <span class="evolution-stat-label">Pace Change</span>
+                <span class="evolution-stat-label"><span data-i18n="analytics.pace_change">Pace Change</span></span>
                 <span class="evolution-stat-value" id="evoStatPaceChange">--</span>
                 <span class="evolution-stat-badge" id="evoStatPaceBadge"></span>
                 <span class="evolution-stat-sub" id="evoStatPaceSub"></span>
             </div>
             <div class="evolution-stat">
-                <span class="evolution-stat-label">VDOT Change</span>
+                <span class="evolution-stat-label"><span data-i18n="analytics.vdot_change">VDOT Change</span></span>
                 <span class="evolution-stat-value" id="evoStatVdotChange">--</span>
                 <span class="evolution-stat-badge" id="evoStatVdotBadge"></span>
                 <span class="evolution-stat-sub" id="evoStatVdotSub"></span>
             </div>
             <div class="evolution-stat">
-                <span class="evolution-stat-label">Aerobic Efficiency</span>
+                <span class="evolution-stat-label"><span data-i18n="analytics.aero_eff">Aerobic Efficiency</span></span>
                 <span class="evolution-stat-value" id="evoStatEffChange">--</span>
                 <span class="evolution-stat-badge" id="evoStatEffBadge"></span>
                 <span class="evolution-stat-sub" id="evoStatEffSub"></span>
             </div>
             <div class="evolution-stat">
-                <span class="evolution-stat-label">Total Runs</span>
+                <span class="evolution-stat-label"><span data-i18n="analytics.total_runs">Total Runs</span></span>
                 <span class="evolution-stat-value" id="evoStatTotalRuns">--</span>
                 <span class="evolution-stat-badge" id="evoStatRunsBadge"></span>
                 <span class="evolution-stat-sub" id="evoStatRunsSub"></span>
@@ -644,7 +644,7 @@
         <!-- Charts -->
         <div class="analytics-card chart-wide" id="evoPaceChartCard">
             <div class="analytics-card-header">
-                <h3 class="analytics-card-title">Pace Evolution</h3>
+                <h3 class="analytics-card-title"><span data-i18n="analytics.pace_evol">Pace Evolution</span></h3>
                 <span class="evolution-trend-badge" id="evoPaceTrendBadge"></span>
             </div>
             <p class="evolution-chart-annotation" id="evoPaceAnnotation"></p>
@@ -662,7 +662,7 @@
 
         <div class="analytics-card chart-wide" id="evoEffChartCard">
             <div class="analytics-card-header">
-                <h3 class="analytics-card-title">Aerobic Efficiency</h3>
+                <h3 class="analytics-card-title"><span data-i18n="analytics.aero_eff">Aerobic Efficiency</span></h3>
                 <span class="evolution-trend-badge" id="evoEffTrendBadge"></span>
             </div>
             <p class="evolution-chart-annotation" id="evoEffAnnotation"></p>
@@ -671,7 +671,7 @@
 
         <div class="analytics-card chart-wide" id="evoVolumeChartCard">
             <div class="analytics-card-header">
-                <h3 class="analytics-card-title">Weekly Volume</h3>
+                <h3 class="analytics-card-title"><span data-i18n="analytics.weekly_vol">Weekly Volume</span></h3>
                 <span class="evolution-trend-badge" id="evoVolumeTrendBadge"></span>
             </div>
             <div class="chart-canvas-wrap"><canvas id="evoVolumeChart"></canvas></div>
@@ -680,7 +680,7 @@
         <!-- Empty state -->
         <div id="evolutionEmpty" class="analytics-empty" style="display:none;">
             <div class="analytics-empty-icon">&#x1F4C8;</div>
-            <h2>Not enough data</h2>
+            <h2><span data-i18n="analytics.not_enough_evol">Not enough data</span></h2>
             <p>Log at least 2 weeks of runs to see your evolution over time.</p>
         </div>
 

@@ -4,7 +4,7 @@
    feedback_map, start_date #}
 {% set is_today_card = current_week_number and week.week == current_week_number and current_day_of_week and workout.day == current_day_of_week %}
 <div class="workout-item {{ workout.type }} {% if is_today_card %}is-today{% endif %} {% if logged_run %}completed{% elif is_past and workout.type not in ['rest', 'recovery'] %}missed{% endif %}{% if workout.baseline_distance and workout.baseline_distance != workout.distance %} is-adjusted{% if workout.distance < workout.baseline_distance %} is-adjusted-down{% endif %}{% endif %}" data-day="{{ day_names[workout.day - 1] }}" data-day-num="{{ workout.day }}" data-week-num="{{ week.week }}" draggable="true">
-    <div class="workout-day-label">{% if workout_date_labels %}{{ workout_date_labels.get((week.week, workout.day), day_names[workout.day - 1]) }}{% else %}{{ day_names[workout.day - 1] }}{% endif %}{% if is_today_card %} <span class="workout-today-chip">Today</span>{% endif %}</div>
+    <div class="workout-day-label">{% if workout_date_labels %}{{ workout_date_labels.get((week.week, workout.day), day_names[workout.day - 1]) }}{% else %}{{ day_names[workout.day - 1] }}{% endif %}{% if is_today_card %} <span class="workout-today-chip"><span data-i18n="workout.today">Today</span></span>{% endif %}</div>
     <div class="workout-type-row">
         <div class="workout-type">{{ workout.type | replace('_', ' ') | title }}</div>
         {% if workout.hr_zone_label %}
@@ -38,7 +38,7 @@
     <details class="workout-details">
         <summary class="workout-details-toggle">
             <svg class="workout-steps-chevron" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
-            <span>Details</span>
+            <span><span data-i18n="workout.details">Details</span></span>
         </summary>
     <div class="workout-details-body">
     {% if workout.description or workout.notes %}
@@ -90,13 +90,13 @@
     </div>
     {% endif %}
     {% if workout.key_workout_rationale %}
-    <div class="workout-rationale-line"><span class="workout-rationale-label">Why:</span> {{ workout.key_workout_rationale }}</div>
+    <div class="workout-rationale-line"><span class="workout-rationale-label"><span data-i18n="workout.why">Why:</span></span> {{ workout.key_workout_rationale }}</div>
     {% endif %}
 
     {% if workout.coaching_rationale %}
     {% set overlay = (today_workout_overlay or {}).get(week.week ~ '-' ~ workout.day) %}
     <div class="coaching-note-content workout-coach-line{% if overlay and overlay.is_fatigue_softened %} coaching-note-fatigued{% endif %}">
-        <span class="workout-rationale-label">Coach:</span>
+        <span class="workout-rationale-label"><span data-i18n="workout.coach">Coach:</span></span>
         {% if overlay and overlay.is_fatigue_softened %}<span class="fatigue-icon" title="Recent runs have been costly — consider easing this one">⚠️</span> Consider easing this one — your last few runs have been costly. {% endif %}{% if overlay and overlay.rationale_prefix %}{{ overlay.rationale_prefix }}{{ workout.coaching_rationale[0]|lower }}{{ workout.coaching_rationale[1:] }}{% else %}{{ workout.coaching_rationale }}{% endif %}
     </div>
     {% endif %}
@@ -128,25 +128,25 @@
         <div class="run-stats">
             {% if logged_run.avg_pace_min_km %}
             <div class="run-stats-row">
-                <span>Pace:</span>
+                <span><span data-i18n="workout.pace">Pace:</span></span>
                 <span>{{ logged_run.avg_pace_min_km|format_pace }}</span>
             </div>
             {% endif %}
             {% if logged_run.perceived_effort %}
             <div class="run-stats-row">
-                <span>Effort:</span>
+                <span><span data-i18n="workout.effort">Effort:</span></span>
                 <span>{{ logged_run.perceived_effort }}/10</span>
             </div>
             {% endif %}
             {% if logged_run.avg_heart_rate %}
             <div class="run-stats-row">
-                <span>Avg HR:</span>
+                <span><span data-i18n="workout.avg_hr">Avg HR:</span></span>
                 <span>{{ logged_run.avg_heart_rate }} bpm</span>
             </div>
             {% endif %}
             {% if logged_run.effort_quality_score %}
             <div class="run-stats-row">
-                <span>Quality:</span>
+                <span><span data-i18n="workout.quality">Quality:</span></span>
                 <span>{{ "%.0f"|format(logged_run.effort_quality_score) }}/100</span>
             </div>
             {% endif %}
@@ -172,8 +172,8 @@
         {% endif %}
     </div>
     {% endif %}
-    <button class="undo-log-btn" onclick="PlanModule.unlinkRun('{{ logged_run.id }}')">Undo</button>
+    <button class="undo-log-btn" onclick="PlanModule.unlinkRun('{{ logged_run.id }}')"><span data-i18n="workout.undo">Undo</span></button>
     {% elif workout.type != 'rest' and user and not user.strava_athlete_id %}
-    <button class="log-run-btn" data-workout-id="{{ workout.id }}" data-workout-type="{{ workout.type }}" data-distance="{{ workout.distance }}" data-day-name="{{ day_names[workout.day - 1] }}" data-week-num="{{ week.week }}">Log This Run</button>
+    <button class="log-run-btn" data-workout-id="{{ workout.id }}" data-workout-type="{{ workout.type }}" data-distance="{{ workout.distance }}" data-day-name="{{ day_names[workout.day - 1] }}" data-week-num="{{ week.week }}"><span data-i18n="workout.log_run">Log This Run</span></button>
     {% endif %}
 </div>

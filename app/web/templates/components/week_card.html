@@ -41,11 +41,11 @@
         <div class="week-total">{{ '%.1f'|format(week.total_km) }} km</div>
         {% endif %}
         {% if user and overridden_weeks is defined and week.week in overridden_weeks %}
-        <button class="reset-week-btn" onclick="resetWeek({{ week.week }})" title="Reset to original distances">Reset week</button>
+        <button class="reset-week-btn" onclick="resetWeek({{ week.week }})" title="Reset to original distances"><span data-i18n="week.reset">Reset week</span></button>
         {% endif %}
     </div>
     {% if week.recovery_inserted %}
-    <div class="week-recovery-inserted-badge">Recovery week inserted — easy pace only</div>
+    <div class="week-recovery-inserted-badge"><span data-i18n="week.recovery_badge">Recovery week inserted — easy pace only</span></div>
     {% endif %}
 
     {% if week.intensive_weekend %}
@@ -146,12 +146,12 @@
                 {% if st.level %}<span class="strength-level">{{ st.level | title }}</span>{% endif %}
             </div>
             {% if st.warm_up %}
-            <div class="strength-phase-label">Warm-up</div>
+            <div class="strength-phase-label"><span data-i18n="week.warmup">Warm-up</span></div>
             <ul class="tips-list strength-phase-list">
                 {% for item in st.warm_up %}<li>{{ item }}</li>{% endfor %}
             </ul>
             {% endif %}
-            <div class="strength-phase-label">Exercises</div>
+            <div class="strength-phase-label"><span data-i18n="week.exercises">Exercises</span></div>
             <ul class="tips-list strength-phase-list">
                 {% for ex in st.exercises %}
                 {% if ex is mapping %}
@@ -162,7 +162,7 @@
                 {% endfor %}
             </ul>
             {% if st.cool_down %}
-            <div class="strength-phase-label">Cool-down</div>
+            <div class="strength-phase-label"><span data-i18n="week.cooldown">Cool-down</span></div>
             <ul class="tips-list strength-phase-list">
                 {% for item in st.cool_down %}<li>{{ item }}</li>{% endfor %}
             </ul>
@@ -211,28 +211,28 @@
             <svg class="mountain-load-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                 <path d="M3 20l5-9 4 5 3-6 6 10z"/>
             </svg>
-            <span class="mountain-load-title">Mountain Load</span>
+            <span class="mountain-load-title"><span data-i18n="week.mountain_load">Mountain Load</span></span>
             <span class="mountain-load-class">{{ vs.race_elevation_class | replace('_', ' ') | title }} ({{ vs.simulated_uphill_m }} m)</span>
         </summary>
         <div class="collapsible-card-body mountain-load-body">
         <div class="mountain-load-gauges">
             <div class="mountain-load-gauge">
                 <div class="mountain-load-gauge-head">
-                    <span class="mountain-load-gauge-label">Uphill effort</span>
+                    <span class="mountain-load-gauge-label"><span data-i18n="week.uphill">Uphill effort</span></span>
                     <span class="mountain-load-gauge-value">{{ actual_up }} / {{ vs.uphill_effort_min }} min</span>
                 </div>
                 <div class="mountain-load-bar"><span style="width: {{ up_pct_capped }}%;" class="mountain-load-bar-fill {% if up_pct >= 90 %}is-on-target{% elif up_pct >= 50 %}is-partial{% else %}is-low{% endif %}"></span></div>
             </div>
             <div class="mountain-load-gauge">
                 <div class="mountain-load-gauge-head">
-                    <span class="mountain-load-gauge-label">Downhill eccentric</span>
+                    <span class="mountain-load-gauge-label"><span data-i18n="week.downhill">Downhill eccentric</span></span>
                     <span class="mountain-load-gauge-value">{{ actual_dn }} / {{ vs.downhill_eccentric_min }} min</span>
                 </div>
                 <div class="mountain-load-bar"><span style="width: {{ dn_pct_capped }}%;" class="mountain-load-bar-fill {% if dn_pct >= 90 %}is-on-target{% elif dn_pct >= 50 %}is-partial{% else %}is-low{% endif %}"></span></div>
             </div>
             <div class="mountain-load-gauge">
                 <div class="mountain-load-gauge-head">
-                    <span class="mountain-load-gauge-label">Hike–run transitions</span>
+                    <span class="mountain-load-gauge-label"><span data-i18n="week.hike_run">Hike–run transitions</span></span>
                     <span class="mountain-load-gauge-value">{{ actual_tr }} / {{ vs.hike_run_transition_reps }}</span>
                 </div>
                 <div class="mountain-load-bar"><span style="width: {{ tr_pct_capped }}%;" class="mountain-load-bar-fill {% if tr_pct >= 90 %}is-on-target{% elif tr_pct >= 50 %}is-partial{% else %}is-low{% endif %}"></span></div>
