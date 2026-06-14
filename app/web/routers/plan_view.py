@@ -189,16 +189,12 @@ def view_workout_day(
             week_dates = build_week_dates(start_d, num_weeks)
             current_week_number = compute_current_week(start_d, local_today())
             current_day = local_today().isoweekday()
-            is_today = (
-                current_week_number == week_num and current_day == day_num
-            )
+            is_today = current_week_number == week_num and current_day == day_num
         else:
             week_dates = None
 
         # Surface a logged run for this workout, if one is mapped.
-        logged_runs_map, _ = plan_view_service.get_logged_runs_map(
-            training_plan.id, db
-        )
+        logged_runs_map, _ = plan_view_service.get_logged_runs_map(training_plan.id, db)
         logged_run = logged_runs_map.get(workout_id)
 
         ctx = {

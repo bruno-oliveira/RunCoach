@@ -504,8 +504,12 @@ _STRUCTURE_REWRITES: Dict[str, Callable[[float], str]] = {
     "half_long_alternating_mp": lambda d: (
         f"{format_km(d)}km alternating 2km easy / 2km marathon pace"
     ),
-    "half_long_fast_finish": lambda d: f"{format_km(d)}km with last 3km at threshold pace",
-    "half_long_rolling_hills": lambda d: f"{format_km(d)}km on rolling hills at even effort",
+    "half_long_fast_finish": lambda d: (
+        f"{format_km(d)}km with last 3km at threshold pace"
+    ),
+    "half_long_rolling_hills": lambda d: (
+        f"{format_km(d)}km on rolling hills at even effort"
+    ),
     # Marathon long runs
     "marathon_long_alternating_mp": lambda d: (
         f"{format_km(d)}km alternating 3km easy / 3km marathon pace"
@@ -513,17 +517,23 @@ _STRUCTURE_REWRITES: Dict[str, Callable[[float], str]] = {
     "marathon_long_fast_finish": lambda d: (
         f"{format_km(d)}km easy with last 4km at threshold pace"
     ),
-    "marathon_long_depletion": lambda d: f"{format_km(d)}km fasted long run — water only",
+    "marathon_long_depletion": lambda d: (
+        f"{format_km(d)}km fasted long run — water only"
+    ),
     "marathon_long_rolling_hills": lambda d: (
         f"{format_km(d)}km on rolling hills at steady effort"
     ),
     # 10K long run
-    "10k_long_fast_finish": lambda d: f"{format_km(d)}km easy with last 2km at threshold pace",
+    "10k_long_fast_finish": lambda d: (
+        f"{format_km(d)}km easy with last 2km at threshold pace"
+    ),
     # Trail hilly long runs
     "trail_long_fast_finish": lambda d: (
         f"{format_km(d)}km trail with last 3km at tempo effort"
     ),
-    "trail_long_rolling_hills": lambda d: f"{format_km(d)}km on hilly trail at even effort",
+    "trail_long_rolling_hills": lambda d: (
+        f"{format_km(d)}km on hilly trail at even effort"
+    ),
     "trail_long_race_simulation": lambda d: (
         f"{format_km(d)}km trail at race effort with fueling every 30min"
     ),
@@ -542,7 +552,9 @@ _STRUCTURE_REWRITES: Dict[str, Callable[[float], str]] = {
         f"{format_km(d)}km continuous at easy effort on soft surface"
     ),
     # Intensive-Weekend long sessions (distance-bearing structure one-liners)
-    "trail_hike_run_long": lambda d: f"{format_km(d)}km alternating run / power-hike blocks",
+    "trail_hike_run_long": lambda d: (
+        f"{format_km(d)}km alternating run / power-hike blocks"
+    ),
     "trail_b2b_day2": lambda d: f"{format_km(d)}km easy on fatigued legs",
 }
 
