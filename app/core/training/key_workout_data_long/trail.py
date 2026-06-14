@@ -499,4 +499,204 @@ TRAIL_LONG: List[Dict] = [
         ),
         "steps_builder": "b2b_day2",
     },
+    # ---- New named workouts: hilly terrain --------------------------------
+    {
+        "id": "trail_broken_climbs",
+        "distances": [30.0],
+        "phases": ["build", "peak"],
+        "type": "hill",
+        "terrain": ["hilly"],
+        "name": "Broken Climbs",
+        "structure": "6 × broken climb: 3 × 90s hard uphill, 60s easy between, 3min jog between sets",
+        "description": (
+            "Warm up 2km easy on flat or gentle terrain. Find a sustained hill "
+            "(6-10% grade). Run 6 sets of broken climbs: within each set, run "
+            "3 × 90 seconds hard uphill with 60 seconds easy power-hike or jog "
+            "between the reps; then take 3 minutes easy jog between sets. "
+            "Cool down 2km easy."
+        ),
+        "intensity": "high",
+        "target_zone": 5,
+        "pace_zone": "T",
+        "rationale": (
+            "Broken climbs accumulate high-intensity uphill work in short "
+            "chunks, pushing each rep to full effort without the drop-off that "
+            "comes from sustained all-out climbing. The short recovery within "
+            "each set keeps lactate elevated; the longer rest between sets "
+            "allows enough recovery to keep the quality honest rep after rep."
+        ),
+    },
+    {
+        "id": "trail_rolling_500s",
+        "distances": [30.0],
+        "phases": ["build", "peak"],
+        "type": "interval",
+        "terrain": ["hilly"],
+        "name": "Rolling 500s",
+        "structure": "8 × 0.5km at trail race effort, 0.2km easy jog recovery",
+        "description": (
+            "Warm up 2km easy. On a rolling trail loop, run 8 efforts of 0.5km "
+            "at trail race effort — push hard uphill within the effort, hold "
+            "pace on flats, float the brief descents — with 0.2km easy jog "
+            "recovery between each. Keep moving between reps, no standing. "
+            "Cool down 2km easy."
+        ),
+        "intensity": "high",
+        "target_zone": 4,
+        "pace_zone": "T",
+        "rationale": (
+            "Trail races don't have flat, uniform reps — effort shifts "
+            "constantly with the terrain. Rolling efforts on varied ground train "
+            "you to manage pace and effort through micro-climbs and descents, "
+            "which is exactly what race day demands."
+        ),
+    },
+    {
+        "id": "trail_stacked_efforts",
+        "distances": [30.0],
+        "phases": ["build", "peak"],
+        "type": "tempo",
+        "terrain": ["hilly"],
+        "name": "Stacked Efforts",
+        "structure": "3 × 10min at trail race effort with 3min easy jog recovery",
+        "description": (
+            "Warm up 2km easy. Run 3 × 10 minutes at trail race effort on "
+            "hilly terrain — let the gradient dictate pace, keep effort "
+            "constant through climbs and descents. Take 3 minutes easy jog "
+            "recovery between efforts. Cool down 2km easy."
+        ),
+        "intensity": "high",
+        "target_zone": 4,
+        "pace_zone": "T",
+        "rationale": (
+            "Ten-minute efforts at race intensity on real terrain are the "
+            "closest training proxy to race day. They build the mental and "
+            "muscular endurance to sustain effort through climbing sections "
+            "without blowing up — the key skill for hilly trail racing."
+        ),
+    },
+    {
+        "id": "trail_climb_surge_fartlek",
+        "distances": [30.0],
+        "phases": ["build", "peak"],
+        "type": "tempo",
+        "terrain": ["hilly"],
+        "name": "Climb Surge Fartlek",
+        "structure": "60-75min: surge every climb, float every descent",
+        "description": (
+            "Go out for 60-75 minutes on hilly trails. Every time you hit a "
+            "climb, surge to Zone 4 effort (hard but not all-out). Every time "
+            "you hit a descent or flat, float back to easy Zone 2. Alternate "
+            "naturally with the terrain — this is fartlek, not a structured "
+            "rep session. The longer and steeper the climb, the harder you push."
+        ),
+        "intensity": "high",
+        "target_zone": 4,
+        "pace_zone": "T",
+        "rationale": (
+            "Trail fartlek on actual climbs teaches you to surge when it's "
+            "hard and recover on the relief — the natural rhythm of a well-run "
+            "trail race. It builds specific uphill power and the aerobic "
+            "capacity to absorb repeated surges without compounding fatigue."
+        ),
+    },
+    {
+        "id": "trail_downhill_broken_miles",
+        "distances": [30.0],
+        "phases": ["build"],
+        "type": "interval",
+        "terrain": ["hilly"],
+        "name": "Broken Downhill Miles",
+        "structure": "4 × broken mile descent: 3 fast downhill efforts, hike up to reset",
+        "description": (
+            "Find a descent of 0.4-0.6km at 5-8% grade. Run 4 broken miles: "
+            "each broken mile is 3 fast downhill efforts (controlled but "
+            "moving, quick cadence, soft landings), hiking back up between "
+            "each effort. Take 3 minutes easy between broken miles. "
+            "Warm up 2km easy, cool down 2km easy."
+        ),
+        "intensity": "medium",
+        "target_zone": 3,
+        "pace_zone": "E",
+        "rationale": (
+            "Controlled fast descents build the eccentric quad strength and "
+            "the technical confidence to pass people on the way down — the "
+            "biggest time-saver in trail racing. The broken format allows "
+            "more total volume of quality descending than a continuous "
+            "downhill segment would."
+        ),
+    },
+    {
+        "id": "trail_hill_pyramid",
+        "distances": [30.0],
+        "phases": ["build", "peak"],
+        "type": "hill",
+        "terrain": ["hilly"],
+        "name": "Hill Pyramid",
+        "structure": "Uphill pyramid: 1-2-3-4-3-2-1 min at hard effort, jog down",
+        "description": (
+            "Warm up 2km easy. Find a hill (6-10% grade). Run an uphill "
+            "pyramid — 1, 2, 3, 4, 3, 2, 1 minutes hard — jogging back down "
+            "to the start between each rep. Drive arms, shorten stride, stay "
+            "upright. Cool down 2km easy."
+        ),
+        "intensity": "high",
+        "target_zone": 5,
+        "pace_zone": "T",
+        "rationale": (
+            "The ascending rep length forces you to manage effort over "
+            "progressively longer climbs; the descending half builds confidence "
+            "and repetition after already-tired legs. The 4-minute peak rep "
+            "matches a typical major climb in a 30K trail race."
+        ),
+    },
+    # ---- New named workouts: base phase trail -----------------------------
+    {
+        "id": "trail_base_hike_run",
+        "distances": [30.0],
+        "phases": ["base"],
+        "type": "hill",
+        "terrain": ["hilly"],
+        "name": "Easy Hike-Run on Hills",
+        "structure": "60min alternating: run flats, power-hike uphills",
+        "description": (
+            "Go out for 60 minutes on hilly terrain at easy effort. Run the "
+            "flats and gentle slopes; power-hike anything steeper than about "
+            "8%. Keep heart rate in Zone 1-2 the whole session. This is "
+            "deliberate and unhurried — build the habit before the load arrives."
+        ),
+        "intensity": "low",
+        "target_zone": 2,
+        "pace_zone": "E",
+        "rationale": (
+            "Establishing the run-hike rhythm early in base training means "
+            "it's automatic by race day. The hilly terrain builds structural "
+            "resilience in the ankles, quads, and connective tissue at a "
+            "load the aerobic system can handle without stress."
+        ),
+    },
+    {
+        "id": "trail_base_surges",
+        "distances": [30.0],
+        "phases": ["base"],
+        "type": "interval",
+        "terrain": ["any"],
+        "name": "Easy Run with Trail Surges",
+        "structure": "easy run + 6 × 30s uphill surges",
+        "description": (
+            "Run easy for the bulk of the session on trails or roads. Finish "
+            "with 6 × 30 second uphill surges on any available gradient — "
+            "accelerate smoothly to a strong but not all-out effort, then "
+            "walk or jog easy back down. Focus on smooth mechanics, not speed."
+        ),
+        "intensity": "low",
+        "target_zone": 2,
+        "pace_zone": "E",
+        "rationale": (
+            "A handful of uphill surges keeps the legs awake through base "
+            "phase aerobic building without adding meaningful fatigue. "
+            "They prime the neuromuscular patterns for the hill work to come "
+            "and stop the legs going stale from pure easy running."
+        ),
+    },
 ]

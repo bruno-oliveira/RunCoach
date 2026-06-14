@@ -496,6 +496,39 @@ _DISTANCE_REWRITES: Dict[str, Callable[[float], str]] = {
         f"yesterday's quality session. Hold the pace back and fuel every "
         f"30 min — the second day rehearses late-race fatigue."
     ),
+    # -- New named workouts --
+    "10k_rolling_500s": lambda d: (
+        f"Easy warm-up, then run {_fartlek_reps(d, on_min=2, off_min=1, pace_min_per_km=5.5, default=8, lo=5, hi=12)} rolling efforts at 10K pace, "
+        f"keeping only a short easy jog between each — no standing around. "
+        f"Easy cool-down to finish."
+    ),
+    "10k_broken_miles": lambda d: (
+        f"Easy warm-up, then run {_fartlek_reps(d, on_min=4, off_min=2, pace_min_per_km=5.5, default=3, lo=2, hi=5)} broken miles: "
+        f"within each, run 3 hard efforts at 5K pace with 60 seconds rest between "
+        f"them, then 3 minutes easy jog between miles. Easy cool-down."
+    ),
+    "10k_200m_repeats": lambda d: (
+        f"Easy warm-up, then run {_vo2max_400_reps(d)} short fast efforts "
+        f"at mile pace with equal easy jog recovery between each. "
+        f"Focus on quick turnover and relaxed mechanics. Easy cool-down."
+    ),
+    "10k_mile_up_overs": lambda d: (
+        f"Easy warm-up, then run {_fartlek_reps(d, on_min=8, off_min=2, pace_min_per_km=5.5, default=4, lo=3, hi=6)} efforts alternating "
+        f"just over 10K pace and just under 10K pace, with 90 seconds easy jog "
+        f"recovery between efforts. Easy cool-down."
+    ),
+    "trail_rolling_500s": lambda d: (
+        f"Easy warm-up on trail terrain. Run "
+        f"{_fartlek_reps(d, on_min=2, off_min=1, pace_min_per_km=6.5, default=8, lo=5, hi=12)} efforts at trail race effort "
+        f"with a short easy jog between each — keep moving, no stopping. "
+        f"Easy cool-down."
+    ),
+    "trail_downhill_broken_miles": lambda d: (
+        f"Easy warm-up, then run "
+        f"{_fartlek_reps(d, on_min=4, off_min=3, pace_min_per_km=6.5, default=4, lo=2, hi=6)} broken miles on a moderate descent: "
+        f"each mile is 3 fast controlled downhill efforts with a hike-back between "
+        f"them, then 3 minutes easy between miles. Easy cool-down."
+    ),
 }
 
 
