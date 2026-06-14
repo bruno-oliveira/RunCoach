@@ -73,7 +73,7 @@
         <div class="container">
             <div class="footer-inner">
                 <span class="footer-brand">RunCoach</span>
-                <a href="/privacy" class="footer-link">Privacy</a>
+                <a href="/privacy" class="footer-link" data-i18n="footer.privacy">Privacy</a>
                 <span class="footer-copy">&copy; 2026</span>
             </div>
         </div>
@@ -83,15 +83,16 @@
     <!-- Cookie consent banner -->
     <div id="cookie-consent" class="cookie-consent" style="display:none;">
         <div class="cookie-consent-inner">
-            <p>RunCoach uses strictly necessary cookies for authentication and session management, and collects health-related data (training, readiness) to personalize your plans. See our <a href="/privacy">Privacy Policy</a>.</p>
+            <p><span data-i18n="cookie.text">RunCoach uses strictly necessary cookies for authentication and session management, and collects health-related data (training, readiness) to personalize your plans. See our</span> <a href="/privacy" data-i18n="cookie.privacy_link">Privacy Policy</a>.</p>
             <div class="cookie-consent-actions">
-                <button id="cookie-accept" class="btn btn-primary btn-sm">Accept</button>
-                <button id="cookie-decline" class="btn btn-outline btn-sm">Decline non-essential</button>
+                <button id="cookie-accept" class="btn btn-primary btn-sm" data-i18n="cookie.accept">Accept</button>
+                <button id="cookie-decline" class="btn btn-outline btn-sm" data-i18n="cookie.decline">Decline non-essential</button>
             </div>
         </div>
     </div>
 
     <!-- Base scripts -->
+    <script src="{{ static_url('js/i18n.js') }}" defer></script>
     <script src="{{ static_url('js/nav.js') }}" defer></script>
     <script src="{{ static_url('js/modal.js') }}" defer></script>
     <script src="{{ static_url('js/api.js') }}" defer></script>

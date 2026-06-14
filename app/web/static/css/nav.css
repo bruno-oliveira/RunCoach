@@ -612,3 +612,88 @@
         width: 100%;
     }
 }
+
+/* ============================================================================
+   Language toggle widget (flag buttons)
+   ========================================================================= */
+
+.lang-toggle {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-lg);
+    padding: 2px;
+    flex-shrink: 0;
+}
+
+.lang-flag {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 30px;
+    height: 30px;
+    border: none;
+    border-radius: var(--radius-md);
+    background: transparent;
+    cursor: pointer;
+    font-size: 18px;
+    line-height: 1;
+    /* Prevent text-select on quick double-click */
+    user-select: none;
+    -webkit-user-select: none;
+    transition: background var(--duration-fast) var(--ease-out),
+                transform var(--duration-fast) var(--ease-out),
+                opacity var(--duration-fast) var(--ease-out);
+    opacity: 0.45;
+    position: relative;
+}
+
+.lang-flag:hover {
+    background: var(--color-bg);
+    opacity: 0.75;
+    transform: scale(1.08);
+}
+
+.lang-flag--active {
+    background: var(--color-bg);
+    opacity: 1;
+    transform: scale(1.05);
+    box-shadow: 0 1px 4px rgba(28, 25, 23, 0.10);
+}
+
+.lang-flag--active::after {
+    content: '';
+    position: absolute;
+    bottom: 2px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 4px;
+    height: 4px;
+    border-radius: var(--radius-full);
+    background: var(--color-primary);
+}
+
+[data-theme="dark"] .lang-toggle {
+    background: var(--color-surface);
+    border-color: var(--color-border);
+}
+
+[data-theme="dark"] .lang-flag--active {
+    background: rgba(255, 255, 255, 0.08);
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.3);
+}
+
+/* Mobile: keep widget visible and slightly larger touch target */
+@media (max-width: 768px) {
+    .lang-toggle {
+        align-self: flex-start;
+    }
+
+    .lang-flag {
+        width: 36px;
+        height: 36px;
+        font-size: 20px;
+    }
+}

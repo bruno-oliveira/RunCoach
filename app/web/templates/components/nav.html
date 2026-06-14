@@ -18,12 +18,12 @@
 
         <div class="nav-menu" id="navMenu">
             <ul class="nav-links">
-                <li><a href="/" class="nav-link {{ 'is-active' if current_page == 'home' else '' }}">Home</a></li>
-                <li><a href="/recipes" class="nav-link {{ 'is-active' if current_page == 'recipes' else '' }}">Recipes</a></li>
+                <li><a href="/" class="nav-link {{ 'is-active' if current_page == 'home' else '' }}" data-i18n="nav.home">Home</a></li>
+                <li><a href="/recipes" class="nav-link {{ 'is-active' if current_page == 'recipes' else '' }}" data-i18n="nav.recipes">Recipes</a></li>
                 {% if user %}
-                <li><a href="/my-plans" class="nav-link {{ 'is-active' if current_page == 'my-plans' else '' }}">My Plans</a></li>
-                <li><a href="/analytics" class="nav-link {{ 'is-active' if current_page == 'analytics' else '' }}">Coach Hub</a></li>
-                <li><a href="/race-prep" class="nav-link {{ 'is-active' if current_page == 'race-prep' else '' }}">Race Prep</a></li>
+                <li><a href="/my-plans" class="nav-link {{ 'is-active' if current_page == 'my-plans' else '' }}" data-i18n="nav.my_plans">My Plans</a></li>
+                <li><a href="/analytics" class="nav-link {{ 'is-active' if current_page == 'analytics' else '' }}" data-i18n="nav.coach_hub">Coach Hub</a></li>
+                <li><a href="/race-prep" class="nav-link {{ 'is-active' if current_page == 'race-prep' else '' }}" data-i18n="nav.race_prep">Race Prep</a></li>
                 {% if user.strava_athlete_id %}
                 <li class="nav-item-strava">
                     <button
@@ -45,7 +45,7 @@
                     <div class="strava-panel" id="stravaPanel" role="region" aria-label="Strava sync options" data-ts="{{ user.strava_last_synced_at or '' }}">
                         <div class="strava-status">
                             <span class="strava-dot" aria-hidden="true"></span>
-                            <span class="strava-status-text">Connected</span>
+                            <span class="strava-status-text" data-i18n="nav.connected">Connected</span>
                             <span class="strava-sep" aria-hidden="true">&middot;</span>
                             <span class="strava-last-synced" id="stravaLastSynced">Loading…</span>
                         </div>
@@ -63,28 +63,29 @@
                             <svg class="strava-spinner" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true" style="display:none">
                                 <path d="M12 2a10 10 0 1 0 10 10" stroke-linecap="round"/>
                             </svg>
-                            <span class="strava-primary-label">Sync new runs</span>
+                            <span class="strava-primary-label" data-i18n="nav.sync_runs">Sync new runs</span>
                         </button>
 
                         <div class="strava-divider">
-                            <span class="strava-divider-label">Fetch older runs</span>
+                            <span class="strava-divider-label" data-i18n="nav.fetch_older">Fetch older runs</span>
                         </div>
 
                         <div class="strava-chips">
-                            <button class="strava-chip" onclick="syncStravaForDays(1)" aria-label="Fetch runs from yesterday">Yesterday</button>
-                            <button class="strava-chip" onclick="syncStravaForDays(7)" aria-label="Fetch runs from the last 7 days">Last 7 days</button>
-                            <button class="strava-chip" onclick="syncStravaForDays(30)" aria-label="Fetch runs from the last 30 days">Last 30 days</button>
+                            <button class="strava-chip" onclick="syncStravaForDays(1)" aria-label="Fetch runs from yesterday" data-i18n="nav.yesterday">Yesterday</button>
+                            <button class="strava-chip" onclick="syncStravaForDays(7)" aria-label="Fetch runs from the last 7 days" data-i18n="nav.last_7">Last 7 days</button>
+                            <button class="strava-chip" onclick="syncStravaForDays(30)" aria-label="Fetch runs from the last 30 days" data-i18n="nav.last_30">Last 30 days</button>
                         </div>
 
                         <div class="strava-feedback" id="stravaFeedback" role="status" aria-live="polite" style="display:none"></div>
 
                         <div class="strava-divider">
-                            <span class="strava-divider-label">Connection</span>
+                            <span class="strava-divider-label" data-i18n="nav.connection">Connection</span>
                         </div>
                         <button
                             class="strava-disconnect-btn"
                             id="stravaDisconnectBtn"
                             onclick="disconnectStrava()"
+                            data-i18n="nav.disconnect_strava"
                         >Disconnect Strava</button>
                     </div>
                 </li>
@@ -93,6 +94,28 @@
                 {% endif %}
                 {% endif %}
             </ul>
+
+            <!-- Language toggle: PT 🇵🇹 / EN 🇬🇧 -->
+            <div class="lang-toggle" role="group" aria-label="Language selector">
+                <button
+                    class="lang-flag"
+                    id="langFlagPT"
+                    onclick="RC_I18N.setLang('pt')"
+                    aria-label="Mudar para Português"
+                    data-i18n-aria="lang.toggle_pt"
+                    aria-pressed="false"
+                    title="Português"
+                >🇵🇹</button>
+                <button
+                    class="lang-flag"
+                    id="langFlagEN"
+                    onclick="RC_I18N.setLang('en')"
+                    aria-label="Switch to English"
+                    data-i18n-aria="lang.toggle_en"
+                    aria-pressed="true"
+                    title="English"
+                >🇬🇧</button>
+            </div>
 
             <button class="nav-theme-toggle" id="themeToggle" aria-label="Toggle dark mode" title="Toggle dark mode">
                 <svg class="icon-sun" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
@@ -113,9 +136,10 @@
                     onclick="openSettingsModal()"
                     aria-haspopup="dialog"
                     aria-controls="settingsOverlay"
+                    data-i18n="nav.settings"
                 >Settings</button>
-                <button class="btn btn-ghost btn-sm nav-signout" onclick="logout()">Sign Out</button>
-                <button class="btn btn-ghost btn-sm nav-delete-account" onclick="deleteAccount()">Delete Account</button>
+                <button class="btn btn-ghost btn-sm nav-signout" onclick="logout()" data-i18n="nav.sign_out">Sign Out</button>
+                <button class="btn btn-ghost btn-sm nav-delete-account" onclick="deleteAccount()" data-i18n="nav.delete_account">Delete Account</button>
             </div>
             {% else %}
             <div class="nav-auth" id="nav-auth-container">
@@ -152,7 +176,7 @@
 >
     <div class="settings-modal" role="document">
         <div class="settings-modal-header">
-            <h3 class="settings-modal-title" id="settingsModalTitle">Settings</h3>
+            <h3 class="settings-modal-title" id="settingsModalTitle" data-i18n="settings.title">Settings</h3>
             <button class="settings-modal-close" onclick="closeSettingsModal()" aria-label="Close settings">&times;</button>
         </div>
         <div class="settings-modal-body">
@@ -175,7 +199,7 @@
         </div>
         <div class="settings-modal-footer">
             <span class="settings-modal-feedback" id="settingsFeedback" role="status" aria-live="polite"></span>
-            <button class="btn btn-secondary btn-sm" onclick="closeSettingsModal()">Done</button>
+            <button class="btn btn-secondary btn-sm" onclick="closeSettingsModal()" data-i18n="settings.done">Done</button>
         </div>
     </div>
 </div>
