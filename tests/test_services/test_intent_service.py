@@ -235,3 +235,20 @@ def test_unknown_intent_is_a_safe_noop(db, freeze_today):
     result = intent_service.apply_intent(plan.id, user.id, "nonsense", {}, db)
     assert result["would_change"] is False
     assert _workout(db, plan, 3, 3).distance_km == 8.0
+
+
+def test_sick_rests_window_then_ramps_without_reinflating_rest(db, freeze_today):
+    user, plan = _make_plan(db, today_value=WED)
+    # 7 days from Wed → rests wk3 d3,d4 and wk4 d1,d2.
+    intent_service.apply_intent(plan.id, user.id, "sick_injured", {"days": 7}, db)
+
+    # Rested days stay rest — the return ramp must not re-inflate them.
+    assert _workout(db, plan, 3, 3).workout_type == "rest"
+    assert _workout(db, plan, 3, 3).distance_km == 0
+    assert _workout(db, plan, 4, 1).workout_type == "rest"
+    assert _workout(db, plan, 4, 1).distance_km == 0
+
+    # A non-rested future session is ramped *below* baseline (gentle return).
+    wk4_long = _workout(db, plan, 4, 4)
+    assert wk4_long.workout_type == "long"
+    assert 0 < wk4_long.distance_km < 12.0

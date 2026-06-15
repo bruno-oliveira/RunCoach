@@ -506,9 +506,12 @@
                         closeModal(overlay);
                         // Patch the page in place from the response so the
                         // user sees the new totals immediately. Reload only
-                        // if patch is unavailable (older endpoint shapes).
+                        // if patch is unavailable (older endpoint shapes), or
+                        // for intents — those can change a workout's *type*
+                        // (skip → rest, tempo → easy) which the in-place patch
+                        // doesn't repaint, so a reload keeps the card honest.
                         var patch = appliedCp && appliedCp.patch;
-                        if (patch && window.planDomSync) {
+                        if (action !== 'intent' && patch && window.planDomSync) {
                             window.planDomSync.applyPatch(patch);
                             markSeen(planId);
                         } else {
