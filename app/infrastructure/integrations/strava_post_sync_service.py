@@ -45,19 +45,6 @@ def auto_map_and_adjust(
 
         try:
             map_result = adaptation_service.map_runs_to_plan(plan.id, user.id, db)
-            alert = adaptation_service.check_alerts(plan.id, user.id, db)
-
-            auto_adjust = None
-            try:
-                auto_adjust = adaptation_service.evaluate_recommendation(
-                    plan.id,
-                    user.id,
-                    db,
-                )
-            except Exception as e:
-                logger.warning(
-                    f"Weekly recommendation evaluation failed for plan {plan.id}: {e}"
-                )
 
             vdot_recalibration = None
             try:
@@ -75,8 +62,6 @@ def auto_map_and_adjust(
                 {
                     "plan_id": plan.id,
                     "runs_mapped": map_result.get("mapped", 0),
-                    "auto_adjust": auto_adjust,
-                    "alert": alert,
                     "vdot_recalibration": vdot_recalibration,
                 }
             )

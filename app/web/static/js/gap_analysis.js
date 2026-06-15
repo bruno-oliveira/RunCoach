@@ -126,9 +126,9 @@ function renderGapAnalysis(d) {
         html += '</div>';
     }
 
-    // ── Adjust plan button ──
+    // ── Adjust plan button — opens the unified intent menu ──
     html += '<div class="gap-adjust-cta">';
-    html += '<button class="btn btn-primary" onclick="adjustPlanFromGaps()">Adjust Plan</button>';
+    html += '<button class="btn btn-primary" onclick="PlanIntentMenu && PlanIntentMenu.open()">Adjust my plan</button>';
     html += '</div>';
 
     return html;
@@ -228,9 +228,6 @@ window.applyGapAction = function (btn) {
         if (!weekNumber) return;
         url = '/api/plan/' + planId + '/week/' + weekNumber + '/override';
         body = payload;
-    } else if (actionType === 'adjust_plan') {
-        url = '/api/plan/' + planId + '/adjust';
-        body = {};
     } else if (actionType === 'view_swap_proposals') {
         // Switch to adaptations tab / trigger swap modal
         var tab = document.querySelector('[data-tab="adaptations"]');
@@ -264,26 +261,3 @@ window.applyGapAction = function (btn) {
         });
 };
 
-window.adjustPlanFromGaps = function () {
-    var planId = window.APP_CTX && window.APP_CTX.plan_id;
-    if (!planId) return;
-
-    fetch('/api/plan/' + planId + '/adjust', {
-        method: 'POST',
-        headers: authHeaders({'Content-Type': 'application/json'}),
-        credentials: 'same-origin'
-    })
-        .then(function (res) { return res.json(); })
-        .then(function (data) {
-            if (data.adjusted_weeks || data.message) {
-                gapLoaded = false;
-                loadGapAnalysis();
-                if (window.showToast) {
-                    window.showToast('Plan adjusted based on your performance data');
-                }
-            }
-        })
-        .catch(function (err) {
-            console.error('[gap-analysis] adjust failed:', err);
-        });
-};

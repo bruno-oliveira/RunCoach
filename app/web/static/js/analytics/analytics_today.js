@@ -2,11 +2,10 @@
  * analytics_today.js — the Coach Hub "Today" tab (plan-scoped lead view).
  *
  * Answers "what does my coach think about my training right now?" by
- * combining the coach stance banner, current form (CTL/ATL/TSB), daily
- * readiness + trend, today's planned session, this week's execution strip,
- * and a coach's note (week pulse + pace patterns). Reuses the banner/form
- * renderers and fetch/escape helpers defined on AnalyticsDashboard by
- * analytics_coach.js.
+ * combining the coach stance banner, current form (CTL/ATL/TSB), today's
+ * planned session, this week's execution strip, and a coach's note (week
+ * pulse + pace patterns). Reuses the banner/form renderers and fetch/escape
+ * helpers defined on AnalyticsDashboard by analytics_coach.js.
  */
 (function () {
     const AD = window.AnalyticsDashboard;
@@ -41,11 +40,10 @@
         this._hide(prompt); this._hide(empty); this._hide(content); this._show(loading);
 
         try {
-            const [summary, patterns, today, readinessTrend] = await Promise.all([
+            const [summary, patterns, today] = await Promise.all([
                 this._fetchJson('/api/analytics/coach-summary/' + encodeURIComponent(planId)),
                 this._fetchJson('/api/analytics/coach-patterns/' + encodeURIComponent(planId)),
                 this._fetchJson('/api/analytics/today/' + encodeURIComponent(planId)),
-                this._fetchJson('/api/analytics/readiness-trend'),
             ]);
 
             this._hide(loading);
@@ -64,7 +62,6 @@
             this._renderCoachBanner(summary);
             this._renderCoachForm(summary);
             this._renderTodayWorkout(today, planId);
-            this._renderTodayReadiness(summary, readinessTrend, planId);
             this._renderTodayWeek(today);
             this._renderTodayNote(patterns);
             this.todayLoadedPlanId = planId;
@@ -170,38 +167,6 @@
             `<a class="today-workout-link" href="/plan/${encodeURIComponent(planId)}">Open plan →</a>`;
     };
 
-    /* ----- Daily readiness + trend sparkline ----- */
-    AD._renderTodayReadiness = function (summary, trend, planId) {
-        const el = document.getElementById('todayReadiness');
-        if (!el) return;
-
-        const logs = (trend && trend.logs) || [];
-        const latest = logs.length ? logs[logs.length - 1] : null;
-        const cta = `<a class="today-readiness-cta" href="/plan/${encodeURIComponent(planId)}">Log check-in</a>`;
-
-        if (!latest) {
-            el.innerHTML =
-                '<div class="today-readiness-empty">' +
-                '<span class="today-readiness-empty-text">No readiness check-ins yet — log how you feel each morning and your coach factors it into your plan.</span>' +
-                cta + '</div>';
-            return;
-        }
-
-        const scoreClass = latest.score >= 70 ? 'ready' : latest.score >= 45 ? 'caution' : 'rest';
-        const trendArrow = trend.trend === 'improving' ? '↗' : trend.trend === 'declining' ? '↘' : '→';
-        const spark = this._sparkline(logs.map((l) => l.score), 70);
-
-        el.innerHTML =
-            '<div class="today-readiness-head">' +
-            `<div class="today-readiness-score today-readiness-score--${scoreClass}">` +
-            `<span class="today-readiness-num">${latest.score}</span><span class="today-readiness-den">/100</span></div>` +
-            '<div class="today-readiness-meta">' +
-            `<span class="today-readiness-status today-readiness-status--${scoreClass}">${this._esc(this._titleCase(latest.status || ''))}</span>` +
-            `<span class="today-readiness-trend">7-day avg ${trend.avg_7d != null ? trend.avg_7d : '—'} <span class="today-readiness-trend-arrow today-readiness-trend--${this._esc(trend.trend || 'stable')}">${trendArrow}</span></span>` +
-            `</div>${cta}</div>` +
-            `<div class="today-readiness-spark">${spark}</div>`;
-    };
-
     /**
      * Inline SVG sparkline. `values` left-to-right (oldest→newest); `baseline`
      * draws a faint reference line. Returns an empty string for <2 points.
@@ -220,7 +185,7 @@
         const baseLine = baseline != null
             ? `<line x1="${pad}" y1="${y(baseline).toFixed(1)}" x2="${w - pad}" y2="${y(baseline).toFixed(1)}" class="spark-baseline"/>` : '';
         const last = pts[pts.length - 1];
-        return `<svg class="spark" viewBox="0 0 ${w} ${h}" preserveAspectRatio="none" role="img" aria-label="Readiness trend">` +
+        return `<svg class="spark" viewBox="0 0 ${w} ${h}" preserveAspectRatio="none" role="img" aria-label="Trend">` +
             `<path class="spark-area" d="${area}"/>${baseLine}` +
             `<path class="spark-line" d="${line}"/>` +
             `<circle class="spark-dot" cx="${x(pts.length - 1).toFixed(1)}" cy="${y(last).toFixed(1)}" r="2.5"/></svg>`;

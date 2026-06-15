@@ -20,7 +20,6 @@ from sqlalchemy.orm import Session
 from app.application.coach_summary_service import (
     build_coach_patterns,
     build_coach_summary,
-    build_readiness_trend,
     build_today,
     build_training_age,
 )
@@ -176,7 +175,6 @@ def _assemble_facts(
     age = build_training_age(user_id, db)
     profile = build_profile(user_id, db)
     patterns = build_coach_patterns(plan, user_id, db)
-    readiness = build_readiness_trend(user_id, db)
 
     # Journey: earliest vs current VDOT over the same window the profile uses.
     history = RacePredictorService.get_vdot_history(
@@ -200,9 +198,6 @@ def _assemble_facts(
         )
 
     week_pulse_msg = (patterns.get("week_pulse") or {}).get("message")
-    latest_readiness = None
-    if readiness.get("available") and readiness.get("logs"):
-        latest_readiness = readiness["logs"][-1]  # logs are oldest-first
 
     signals = {
         "overreach": summary.get("overreach_detected", False),
@@ -210,10 +205,6 @@ def _assemble_facts(
         "tsb_form": (summary.get("form") or {}).get("tsb_form"),
         "effort_trend": summary.get("effort_trend"),
         "vdot_trend": summary.get("vdot_trend"),
-        "readiness_status": latest_readiness.get("status")
-        if latest_readiness
-        else None,
-        "readiness_score": latest_readiness.get("score") if latest_readiness else None,
         "today_is_rest": today_facts.get("is_rest", False),
         "today_workout_type": today_facts.get("workout_type"),
         "today_pattern": _today_pattern(patterns, today_facts.get("workout_type")),

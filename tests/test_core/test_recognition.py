@@ -154,21 +154,6 @@ def test_focus_rest_day_otherwise_none():
     )
 
 
-def test_focus_low_readiness():
-    assert (
-        select_today_focus({"readiness_status": "rest", "today_workout_type": "easy"})[
-            "kind"
-        ]
-        == "readiness_low"
-    )
-    assert (
-        select_today_focus({"readiness_score": 40, "today_workout_type": "easy"})[
-            "kind"
-        ]
-        == "readiness_low"
-    )
-
-
 def test_focus_execution_easy_hold_back():
     f = select_today_focus(
         {"today_workout_type": "easy", "today_pattern": "faster than planned"}

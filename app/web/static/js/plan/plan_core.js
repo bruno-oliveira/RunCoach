@@ -554,17 +554,8 @@
     }
 
     /* -------------------------------------------------------------- */
-    /*  Plan adjustment / reset                                        */
+    /*  Plan reset                                                     */
     /* -------------------------------------------------------------- */
-
-    window.adjustPlan = function () {
-        var btn = document.getElementById('adjust-btn');
-        if (window.runChangePlanAction) {
-            return window.runChangePlanAction('adjust', { button: btn });
-        }
-        ApiClient.showError('Change-plan UI unavailable.');
-        return Promise.resolve();
-    };
 
     window.resetAdjustment = function () {
         var btn = document.querySelector('.js-reset-adjust')
@@ -780,9 +771,8 @@
         swapWorkout: window.swapWorkout,
         resetCustomization: window.resetCustomization,
         updateCustomizationWeek: window.updateCustomizationWeek,
-        // Plan lifecycle (start / adjust / reset / save)
+        // Plan lifecycle (start / reset / save)
         startPlan: window.startPlan,
-        adjustPlan: window.adjustPlan,
         resetAdjustment: window.resetAdjustment,
         savePlanToAccount: window.savePlanToAccount,
         // Run logging

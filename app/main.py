@@ -29,7 +29,6 @@ from app.web.routers import (
     performance_router,
     plans_router,
     race_prep_router,
-    readiness_router,
     recipes_page_router,
     recipes_router,
     runs_router,
@@ -53,7 +52,6 @@ _ROUTERS = (
     analytics_router,
     analytics_page_router,
     strava_router,
-    readiness_router,
     race_prep_router,
     pages_router,
 )

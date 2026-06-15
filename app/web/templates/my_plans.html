@@ -72,9 +72,6 @@
                 {% else %}
                 <span class="plan-status-badge plan-status-not-started"><span data-i18n="myplans.not_started">Not started</span></span>
                 {% endif %}
-                {% if plan.adaptation_alert %}
-                <span class="plan-alert-badge" title="Plan needs attention"><span data-i18n="myplans.needs_attention">Needs Attention</span></span>
-                {% endif %}
             </div>
             <div class="plan-actions">
                 <a href="/plan/{{ plan.id }}" class="btn btn-primary"><span data-i18n="myplans.view_plan">View Plan</span></a>

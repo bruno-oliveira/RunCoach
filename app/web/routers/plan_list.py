@@ -7,7 +7,6 @@ from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import RedirectResponse
 from sqlalchemy.orm import Session
 
-from app.contexts.plan.adaptation import AdaptationService
 from app.contexts.plan.plan_type_registry import display_label as plan_display_label
 from app.contexts.plan.repositories import SQLAlchemyPlanRepository
 from app.core.time_utils import local_today
@@ -36,7 +35,6 @@ def list_my_plans(
     try:
         plans = SQLAlchemyPlanRepository(db).list_by_user_recent_first(current_user.id)
 
-        adaptation_service = AdaptationService()
         today = local_today()
         for plan in plans:
             plan.target_distance_display = plan_display_label(plan)
@@ -50,12 +48,6 @@ def list_my_plans(
                     plan.status_label = "Completed"
                 elif current_wk >= 1:
                     plan.status_label = f"Week {current_wk} of {plan.weeks_duration}"
-                    try:
-                        adaptation_service.check_alerts(plan.id, current_user.id, db)
-                    except Exception:
-                        logger.warning(
-                            "Alert check failed for plan %s", plan.id, exc_info=True
-                        )
                 else:
                     plan.status_label = f"Starts {start_d.strftime('%b')} {start_d.day}"
             else:

@@ -9,7 +9,6 @@ from app.web.routers.performance import router as performance_router
 from app.web.routers.performance_pages import router as performance_page_router
 from app.web.routers.plans import router as plans_router
 from app.web.routers.race_prep import router as race_prep_router
-from app.web.routers.readiness import router as readiness_router
 from app.web.routers.recipes import router as recipes_router
 from app.web.routers.recipes_pages import router as recipes_page_router
 from app.web.routers.runs import runs_router
@@ -20,7 +19,6 @@ __all__ = [
     "plans_router",
     "nutrition_router",
     "pages_router",
-    "readiness_router",
     "recipes_router",
     "recipes_page_router",
     "runs_router",

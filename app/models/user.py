@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime, timezone
 
-from sqlalchemy import Boolean, Column, DateTime, Integer, String
+from sqlalchemy import Column, DateTime, Integer, String
 from sqlalchemy.orm import Mapped, relationship
 
 from app.models.base import Base
@@ -34,9 +34,6 @@ class User(Base):
     strava_refresh_token = Column(EncryptedString, nullable=True)
     strava_token_expires_at = Column(Integer, nullable=True)
     strava_last_synced_at = Column(Integer, nullable=True)
-    auto_adjust_enabled = Column(
-        Boolean, default=False, nullable=False, server_default="0"
-    )
 
     training_plans: Mapped[list["TrainingPlan"]] = relationship(
         "TrainingPlan", back_populates="user", cascade="all, delete-orphan"
@@ -46,9 +43,6 @@ class User(Base):
     )
     favorite_recipes: Mapped[list["FavoriteRecipe"]] = relationship(
         "FavoriteRecipe", back_populates="user", cascade="all, delete-orphan"
-    )
-    readiness_logs: Mapped[list["ReadinessLog"]] = relationship(
-        "ReadinessLog", back_populates="user", cascade="all, delete-orphan"
     )
     refresh_tokens: Mapped[list["RefreshToken"]] = relationship(
         "RefreshToken", back_populates="user", cascade="all, delete-orphan"

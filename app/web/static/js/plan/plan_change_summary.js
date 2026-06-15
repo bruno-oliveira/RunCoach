@@ -6,7 +6,7 @@
  * Public entry points exposed on `window`:
  *   - runChangePlanAction(action, options)
  *       Initiates the preview → apply flow for a given action.
- *       action ∈ "adjust" | "accept_recommendation" | "reset" | "auto_adjust"
+ *       action ∈ "intent" | "reset"
  *       options.planId is optional (defaults to window.APP_CTX.plan_id).
  *       options.skipPreview=true bypasses preview and applies immediately
  *         (used internally for actions without a preview endpoint).
@@ -19,10 +19,10 @@
     'use strict';
 
     var ACTION_TITLES = {
+        // "adjust" retained only so a previously-persisted change plan from the
+        // retired data-driven adjuster still renders a sensible title.
         adjust: 'Adjust plan',
-        accept_recommendation: 'Apply recommendation',
         reset: 'Reset to original',
-        auto_adjust: 'RunCoach auto-adjustment',
         // Intent actions — the change_plan returns the intent name as its action.
         feeling_tired: 'Feeling tired',
         feeling_strong: 'Feeling strong',
@@ -33,14 +33,6 @@
     };
 
     var ENDPOINTS = {
-        adjust: {
-            preview: '/api/plan/{id}/adjust/preview',
-            apply: '/api/plan/{id}/adjust',
-        },
-        accept_recommendation: {
-            preview: '/api/plan/{id}/accept-recommendation/preview',
-            apply: '/api/plan/{id}/accept-recommendation',
-        },
         reset: {
             preview: '/api/plan/{id}/reset-adjustment/preview',
             apply: '/api/plan/{id}/reset-adjustment',

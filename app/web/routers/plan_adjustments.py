@@ -121,36 +121,8 @@ def get_missed_weeks(
 
 
 # ---------------------------------------------------------------------------
-# Adjustment / recalibration
+# Intent-driven adaptation + change-plan lifecycle
 # ---------------------------------------------------------------------------
-
-
-@router.post("/api/plan/{plan_id}/adjust")
-def adjust_plan(
-    plan_id: str,
-    if_match: str | None = Header(default=None, alias="If-Match"),
-    current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db),
-):
-    """Adjust future plan weeks based on recent performance data."""
-    training_plan = get_plan_or_404(plan_id, db, current_user, require_user_match=True)
-    _check_revision(training_plan, if_match)
-
-    adaptation_service = AdaptationService()
-    return adaptation_service.adjust_plan(plan_id, current_user.id, db)
-
-
-@router.post("/api/plan/{plan_id}/adjust/preview")
-def preview_adjust_plan(
-    plan_id: str,
-    current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db),
-):
-    """Preview what an Adjust Plan would do without committing changes."""
-    get_plan_or_404(plan_id, db, current_user, require_user_match=True)
-
-    adaptation_service = AdaptationService()
-    return adaptation_service.preview_adjust_plan(plan_id, current_user.id, db)
 
 
 @router.post("/api/plan/{plan_id}/change-plan/mark-seen")
@@ -202,88 +174,6 @@ def apply_plan_intent(
     return adaptation_service.apply_intent(
         plan_id, current_user.id, body.intent, body.params, db
     )
-
-
-class RecalibrateRequest(BaseModel):
-    strategy: str
-
-
-@router.post("/api/plan/{plan_id}/recalibrate")
-def recalibrate_plan(
-    plan_id: str,
-    body: RecalibrateRequest,
-    current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db),
-):
-    """Recalibrate remaining plan weeks based on user-chosen strategy."""
-    get_plan_or_404(plan_id, db, current_user, require_user_match=True)
-
-    adaptation_service = AdaptationService()
-    return adaptation_service.recalibrate(plan_id, current_user.id, body.strategy, db)
-
-
-@router.post("/api/plan/{plan_id}/dismiss-alert")
-def dismiss_alert(
-    plan_id: str,
-    current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db),
-):
-    """Dismiss an active adaptation alert."""
-    training_plan = get_plan_or_404(plan_id, db, current_user, require_user_match=True)
-    training_plan.adaptation_alert = None
-    db.commit()
-    return {"ok": True}
-
-
-@router.get("/api/plan/{plan_id}/pending-recommendation")
-def get_pending_recommendation(
-    plan_id: str,
-    current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db),
-):
-    """Get the current pending adaptation recommendation, if any."""
-    training_plan = get_plan_or_404(plan_id, db, current_user, require_user_match=True)
-    return {"recommendation": training_plan.pending_recommendation}
-
-
-@router.post("/api/plan/{plan_id}/accept-recommendation")
-def accept_recommendation(
-    plan_id: str,
-    if_match: str | None = Header(default=None, alias="If-Match"),
-    current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db),
-):
-    """Accept and apply the pending adaptation recommendation."""
-    training_plan = get_plan_or_404(plan_id, db, current_user, require_user_match=True)
-    _check_revision(training_plan, if_match)
-    adaptation_service = AdaptationService()
-    return adaptation_service.accept_recommendation(plan_id, current_user.id, db)
-
-
-@router.post("/api/plan/{plan_id}/accept-recommendation/preview")
-def preview_accept_recommendation(
-    plan_id: str,
-    current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db),
-):
-    """Preview what accepting the pending recommendation would do."""
-    get_plan_or_404(plan_id, db, current_user, require_user_match=True)
-    adaptation_service = AdaptationService()
-    return adaptation_service.preview_accept_recommendation(
-        plan_id, current_user.id, db
-    )
-
-
-@router.post("/api/plan/{plan_id}/dismiss-recommendation")
-def dismiss_recommendation(
-    plan_id: str,
-    current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db),
-):
-    """Dismiss the pending recommendation without applying."""
-    get_plan_or_404(plan_id, db, current_user, require_user_match=True)
-    adaptation_service = AdaptationService()
-    return adaptation_service.dismiss_recommendation(plan_id, current_user.id, db)
 
 
 @router.post("/api/plan/{plan_id}/reset-adjustment")

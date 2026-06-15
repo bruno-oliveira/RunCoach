@@ -3,8 +3,8 @@
  *
  * The transparent view of the adaptation engine: the six signals with their
  * factors, phase weights, and trend sparklines; expandable detail cards
- * (per-type volume, effort/quality drift, HR-zone adherence, readiness
- * components); a phase-weight comparison; and the adaptation timeline.
+ * (per-type volume, effort/quality drift, HR-zone adherence); a phase-weight
+ * comparison; and the adaptation timeline.
  * Reuses renderSignalChart, _renderAdaptationHistory, and the fetch/escape
  * helpers attached to AnalyticsDashboard by analytics_signal_chart.js /
  * analytics_coach.js.
@@ -51,11 +51,10 @@
         this._hide(prompt); this._hide(empty); this._hide(content); this._show(loading);
 
         try {
-            const [summary, history, signalHistory, readinessTrend] = await Promise.all([
+            const [summary, history, signalHistory] = await Promise.all([
                 this._fetchJson('/api/analytics/coach-summary/' + encodeURIComponent(planId)),
                 this._fetchJson('/api/analytics/adaptation-history/' + encodeURIComponent(planId)),
                 this._fetchJson('/api/analytics/signal-history/' + encodeURIComponent(planId)),
-                this._fetchJson('/api/analytics/readiness-trend'),
             ]);
 
             this._hide(loading);
@@ -71,7 +70,7 @@
             this._show(content);
             this._renderSignalsOverview(summary, signalHistory);
             if (this.renderSignalChart) this.renderSignalChart(summary.signals || {});
-            this._renderSignalsDetail(summary, readinessTrend);
+            this._renderSignalsDetail(summary);
             this._renderPhaseWeights(summary.current_phase);
             this._renderAdaptationHistory(history);
             this.signalsLoadedPlanId = planId;
@@ -175,7 +174,7 @@
     };
 
     /* ----- Expandable detail cards ----- */
-    AD._renderSignalsDetail = function (summary, readinessTrend) {
+    AD._renderSignalsDetail = function (summary) {
         const wrap = document.getElementById('signalsDetail');
         if (!wrap) return;
 
@@ -183,7 +182,6 @@
             this._volumeDetail(summary),
             this._effortDetail(summary),
             this._hrDetail(summary),
-            this._readinessDetail(summary, readinessTrend),
         ];
         wrap.innerHTML = cards.join('');
     };
@@ -268,39 +266,6 @@
         }
         return this._detailCard('HR Zone', summary.signals?.hr_zone?.factor,
             'How well you stay in your target heart-rate zones', body, false);
-    };
-
-    AD._readinessDetail = function (summary, readinessTrend) {
-        const logs = (readinessTrend && readinessTrend.logs) || [];
-        const latest = logs.length ? logs[logs.length - 1] : null;
-        let body;
-        if (!latest || !latest.components) {
-            body = '<p class="signal-detail-empty">Log daily check-ins (sleep, soreness, energy, stress) to feed this signal.</p>';
-        } else {
-            const c = latest.components;
-            const rows = [
-                ['Sleep', c.sleep, false],
-                ['Soreness', c.soreness, true],
-                ['Energy', c.energy, false],
-                ['Stress', c.stress, true],
-            ].map(([label, val, inverse]) => {
-                if (val == null) return '';
-                const pct = (val / 5) * 100;
-                const good = inverse ? val <= 2 : val >= 4;
-                const bad = inverse ? val >= 4 : val <= 2;
-                const tone = good ? 'up' : bad ? 'down' : 'flat';
-                return (
-                    '<div class="readiness-comp-row">' +
-                    `<span class="readiness-comp-label">${this._esc(label)}${inverse ? ' <span class="readiness-comp-hint">(lower is better)</span>' : ''}</span>` +
-                    `<div class="readiness-comp-track"><div class="readiness-comp-fill readiness-comp-fill--${tone}" style="width:${pct}%"></div></div>` +
-                    `<span class="readiness-comp-val">${val}/5</span></div>`
-                );
-            }).join('');
-            const avg = readinessTrend.avg_7d != null ? `<p class="signal-detail-note">7-day average score: ${readinessTrend.avg_7d}/100 · trend ${this._esc(readinessTrend.trend || 'stable')}.</p>` : '';
-            body = `<div class="readiness-comp-list">${rows}</div>${avg}`;
-        }
-        return this._detailCard('Readiness', summary.signals?.readiness?.factor,
-            'Daily wellness check-ins feeding the plan', body, false);
     };
 
     /* ----- Phase weight comparison ----- */

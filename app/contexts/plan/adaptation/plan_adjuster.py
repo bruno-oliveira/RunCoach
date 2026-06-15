@@ -1,7 +1,7 @@
 """Plan adjustment — scale future workout distances based on performance."""
 
 import logging
-from datetime import datetime, timedelta, timezone
+from datetime import timedelta
 from typing import Any, Dict, List, Optional, Tuple
 
 from sqlalchemy.orm import Session
@@ -10,7 +10,6 @@ from app.contexts.plan.repositories import SQLAlchemyPlanRepository
 from app.core.training.plan_calendar import compute_current_week
 from app.models import (
     DailyWorkout,
-    ReadinessLog,
     RunFeedback,
     RunLog,
     TrainingPlan,
@@ -29,15 +28,6 @@ from ._helpers import (
     today_date,
 )
 from .adjustment_results import (
-    build_no_adjustable_weeks_result as _build_no_adjustable_weeks_result,
-)
-from .adjustment_results import (
-    build_signal_snapshot as _build_signal_snapshot,
-)
-from .adjustment_results import (
-    build_signals_summary as _build_signals_summary,
-)
-from .adjustment_results import (
     record_adaptation_event as _record_adaptation_event,
 )
 from .change_plan_builder import (
@@ -46,16 +36,9 @@ from .change_plan_builder import (
     snapshot_workouts,
 )
 from .fitness_signals import FitnessSignalsProvider, default_provider
-from .precondition_guards import check_preconditions_or_gather
-from .reason_builder import build_headline_reason, compute_net_delta_km
 from .run_mapper import map_runs_to_plan
 from .signal_computer import compute_adjustment_signals
 from .tuning import RECENCY_HALF_LIFE_WEEKS
-from .week_adjuster import apply_adjustment_stage
-
-# ``_build_signal_snapshot`` is also imported by tests/test_services
-# and referenced in app/application/coach_summary_service.py — keep the
-# underscore alias here so external callers continue to find it.
 
 logger = logging.getLogger(__name__)
 
@@ -111,17 +94,6 @@ def gather_signals(
         (db.query(RunFeedback).filter(RunFeedback.run_log_id.in_(run_ids)).all())
         if run_ids
         else []
-    )
-
-    readiness_logs = (
-        db.query(ReadinessLog)
-        .filter(
-            ReadinessLog.user_id == user_id,
-            ReadinessLog.log_date >= today_date() - timedelta(days=14),
-        )
-        .order_by(ReadinessLog.log_date.desc())
-        .limit(14)
-        .all()
     )
 
     if len(all_plan_runs) < 3:
@@ -183,7 +155,6 @@ def gather_signals(
         hr_zones=hr_zones,
         run_feedback_list=run_feedback_list,
         vdot_trend=vdot_trend,
-        readiness_logs=readiness_logs,
         training_load=training_load,
         mountain_simulation=provider.score_mountain_simulation(
             training_plan.plan_data or [],
@@ -251,169 +222,6 @@ def preview_adjust_signals(
     signals["current_week"] = gathered["current_week"]
     signals["adjustable_week_count"] = len(gathered["adjustable_weeks"])
     return signals
-
-
-def adjust_plan(
-    plan_id: str,
-    user_id: str,
-    db: Session,
-) -> Dict[str, Any]:
-    """Adjust future plan weeks using full-history weighted signals."""
-    return _run_adjust(plan_id, user_id, db, mode="applied")
-
-
-def preview_adjust_plan(
-    plan_id: str,
-    user_id: str,
-    db: Session,
-) -> Dict[str, Any]:
-    """Compute what an Adjust Plan would do without persisting.
-
-    Performs the same mutations as `adjust_plan` against the SQLAlchemy
-    session, captures the resulting ChangePlan, then rolls back the
-    session and expires loaded ORM objects so no preview state leaks.
-    """
-    try:
-        result = _run_adjust(plan_id, user_id, db, mode="preview")
-    finally:
-        db.rollback()
-        db.expire_all()
-    return result["change_plan"] if "change_plan" in result else result
-
-
-def _run_adjust(
-    plan_id: str,
-    user_id: str,
-    db: Session,
-    *,
-    mode: str,
-) -> Dict[str, Any]:
-    early, gathered = check_preconditions_or_gather(plan_id, user_id, db, mode=mode)
-    if early is not None:
-        return early
-    assert gathered is not None  # narrows for type checkers; tuple invariant
-
-    training_plan = gathered["training_plan"]
-    signals = gathered["signals"]
-    all_plan_runs = gathered["all_plan_runs"]
-    current_week = gathered["current_week"]
-    current_day_of_week = gathered["current_day_of_week"]
-    adjustable_weeks = gathered["adjustable_weeks"]
-    in_progress = gathered["current_week_in_progress"]
-    multiplier = signals["multiplier"]
-
-    # Clear any pending recommendation since the user is manually adjusting
-    # (preview mode rolls this back).
-    training_plan.pending_recommendation = None
-
-    week_numbers = [w.week_number for w in adjustable_weeks]
-
-    if not adjustable_weeks:
-        return _build_no_adjustable_weeks_result(
-            mode=mode,
-            signals=signals,
-            runs_count=len(all_plan_runs),
-        )
-
-    applied = apply_adjustment_stage(
-        training_plan,
-        adjustable_weeks,
-        multiplier=multiplier,
-        per_type_ratios=signals.get("per_type_ratios"),
-        current_week=current_week,
-        current_day_of_week=current_day_of_week,
-        user_id=user_id,
-        db=db,
-        week_numbers=week_numbers,
-    )
-
-    direction = (
-        "increased" if multiplier > 1.0 else "reduced" if multiplier < 1.0 else "kept"
-    )
-    headline_reason = build_headline_reason(
-        signals=signals,
-        vdot_result=applied.vdot_result,
-        net_delta_km=compute_net_delta_km(applied.before, applied.after),
-        multiplier=multiplier,
-        in_progress=in_progress,
-        current_week=current_week,
-        has_adjustable_weeks=bool(adjustable_weeks),
-    )
-
-    vdot_change_payload = None
-    if applied.vdot_result:
-        vdot_change_payload = {
-            "before": applied.vdot_result.get("old_vdot"),
-            "after": applied.vdot_result.get("new_vdot"),
-            "direction": applied.vdot_result.get("direction"),
-        }
-
-    change_plan = build_change_plan(
-        action="adjust",
-        mode=mode,
-        training_plan=training_plan,
-        before=applied.before,
-        after=applied.after,
-        recorder=applied.recorder,
-        signals=_build_signals_summary(signals, runs_count=len(all_plan_runs)),
-        multiplier=multiplier,
-        vdot_change=vdot_change_payload,
-        headline_reason=headline_reason,
-        current_week=current_week,
-        current_day_of_week=current_day_of_week,
-    )
-
-    if mode == "applied":
-        training_plan.adjustment_multiplier = multiplier
-        training_plan.last_adjusted_at = datetime.now(timezone.utc).replace(tzinfo=None)
-        training_plan.last_change_plan = change_plan
-        _record_adaptation_event(
-            training_plan,
-            {
-                "type": "adjust",
-                "multiplier": multiplier,
-                "direction": direction,
-                "effort_trend": signals.get("effort_trend", "stable"),
-                "overreach": signals.get("overreach_detected", False),
-                "phase": signals.get("current_phase", "build"),
-                "reason": headline_reason,
-                "signals_snapshot": _build_signal_snapshot(signals),
-            },
-        )
-        db.commit()
-
-        avg_effort = signals["avg_effort"]
-        logger.info(
-            "adjust_plan applied: multiplier=%.2f raw=%.3f "
-            "volume_ratio=%.2f effort_factor=%.2f(avg=%.1f) "
-            "completion_factor=%.2f(rate=%.2f) trend=%s overreach=%s runs=%d phase=%s "
-            "workouts_changed=%d weeks_changed=%d",
-            multiplier,
-            signals["raw_multiplier"],
-            signals["volume_ratio"],
-            signals["effort_factor"],
-            avg_effort if avg_effort is not None else 0,
-            signals["completion_factor"],
-            signals["completion_rate"],
-            signals.get("effort_trend", "stable"),
-            signals.get("overreach_detected", False),
-            len(all_plan_runs),
-            signals.get("current_phase", "build"),
-            change_plan["summary"]["workouts_changed_count"],
-            applied.weeks_changed,
-        )
-
-    result = {
-        "adjusted": applied.any_distance_changed or bool(applied.vdot_result),
-        **signals,
-        "total_runs": len(all_plan_runs),
-        "weeks_changed": applied.weeks_changed,
-        "reason": headline_reason,
-        "change_plan": change_plan,
-    }
-    if applied.vdot_result:
-        result["vdot_recalibration"] = applied.vdot_result
-    return result
 
 
 def _get_current_phase(training_plan: TrainingPlan, current_week: int) -> str:

@@ -171,19 +171,7 @@ def select_today_focus(signals: dict[str, Any]) -> Optional[dict[str, str]]:
     if is_rest:
         return None  # nothing else applies to a rest day
 
-    # 2. Low morning readiness — today-specific.
-    status = signals.get("readiness_status")
-    score = signals.get("readiness_score")
-    if status == "rest" or (isinstance(score, (int, float)) and score < 45):
-        return {
-            "kind": "readiness_low",
-            "message": (
-                "Your check-in this morning is low — treat today as truly easy, and "
-                "don't hesitate to cut it short or swap for rest if your body's asking."
-            ),
-        }
-
-    # 3. Execution drift on today's session type (the most actionable cue).
+    # 2. Execution drift on today's session type (the most actionable cue).
     wtype = signals.get("today_workout_type")
     if signals.get("today_pattern"):
         if wtype in ("easy", "recovery", "long"):

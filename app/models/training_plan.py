@@ -63,12 +63,9 @@ class TrainingPlan(Base):
     CURRENT_SCHEMA_VERSION = 1
     plan_data_version = Column(Integer, default=CURRENT_SCHEMA_VERSION)
 
-    adaptation_alert = Column(JSON, nullable=True)
     adaptation_history = Column(JSON, nullable=True)
     last_adjusted_at = Column(DateTime, nullable=True)
     last_recalibrated_at = Column(DateTime, nullable=True)
-    pending_recommendation = Column(JSON, nullable=True)
-    last_recommendation_week = Column(Integer, nullable=True)
     last_change_plan = Column(JSON, nullable=True)
     # Write-through cache for the AI Coach's Note: {"signature": str, "payload": dict}.
     # Regenerated only when the run signature changes (a new run is logged), so the

@@ -22,17 +22,17 @@ from app.application.coach_summary_service import (
     build_adaptation_history,
     build_coach_patterns,
     build_coach_summary,
-    build_readiness_trend,
     build_signal_history,
     build_today,
     build_training_age,
 )
 from app.contexts.plan.adaptation import AdaptationService
-from app.contexts.plan.adaptation.plan_adjuster import _build_signal_snapshot
+from app.contexts.plan.adaptation.adjustment_results import (
+    build_signal_snapshot as _build_signal_snapshot,
+)
 from app.models import (
     Base,
     DailyWorkout,
-    ReadinessLog,
     RunLog,
     TrainingPlan,
     User,
@@ -464,52 +464,6 @@ def test_build_signal_history_reads_snapshots(db):
 def test_build_signal_history_empty(db):
     user, plan = _make_plan(db)
     assert build_signal_history(plan) == {"available": False, "snapshots": []}
-
-
-# --------------------------------------------------------------------------
-# build_readiness_trend
-# --------------------------------------------------------------------------
-
-
-def test_build_readiness_trend(db):
-    user, plan = _make_plan(db)
-    real_today = date.today()
-    for i in range(8):
-        db.add(
-            ReadinessLog(
-                id=_uid(),
-                user_id=user.id,
-                log_date=real_today - timedelta(days=i),
-                sleep=4,
-                soreness=2,
-                energy=4,
-                stress=2,
-                score=75 - i,
-                status="ready",
-            )
-        )
-    db.commit()
-
-    trend = build_readiness_trend(user.id, db, days=30)
-    assert trend["available"] is True
-    assert len(trend["logs"]) == 8
-    # logs are oldest-first for charting
-    assert trend["logs"][0]["date"] <= trend["logs"][-1]["date"]
-    assert trend["avg_7d"] is not None
-    assert trend["trend"] in {"improving", "declining", "stable"}
-    assert set(trend["logs"][0]["components"]) == {
-        "sleep",
-        "soreness",
-        "energy",
-        "stress",
-    }
-
-
-def test_build_readiness_trend_empty(db):
-    user, plan = _make_plan(db)
-    trend = build_readiness_trend(user.id, db)
-    assert trend["available"] is False
-    assert trend["logs"] == []
 
 
 # --------------------------------------------------------------------------
