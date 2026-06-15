@@ -192,14 +192,32 @@ class TestLongRunRatios:
 
 
 class TestLongRunCap:
-    """Long-run cap stays sane for ultras (≤ 35 km even for 100mi)."""
+    """Long-run cap scales with race distance but stays within a sane ceiling."""
 
-    def test_long_ultra_cap_does_not_blow_past_35km(self):
+    def test_long_ultra_cap_scales_up_but_stays_bounded(self):
+        # 100-mile prep gets a genuinely long peak run, but the continuous
+        # curve is clamped at the absolute ceiling (48 km).
         profile = classify_trail(163.0, 6000.0)
         cap = _get_long_run_cap(
             163.0, "advanced", weekly_km=120.0, trail_profile=profile
         )
-        assert cap <= 35.0
+        assert 40.0 <= cap <= 48.0
+
+    def test_cap_scales_continuously_with_distance(self):
+        # A longer race earns a longer single-run cap, all else equal.
+        short = _get_long_run_cap(
+            30.0,
+            "intermediate",
+            weekly_km=60.0,
+            trail_profile=classify_trail(30.0, 900.0),
+        )
+        ultra = _get_long_run_cap(
+            70.0,
+            "intermediate",
+            weekly_km=60.0,
+            trail_profile=classify_trail(70.0, 2100.0),
+        )
+        assert ultra > short
 
     def test_short_bracket_cap_is_modest(self):
         profile = classify_trail(15.0, 500.0)
@@ -284,8 +302,12 @@ class TestEndToEnd:
             w for week in plan for w in week["daily_workouts"] if w["type"] == "long"
         ]
         max_long = max(w["distance"] for w in long_runs)
-        # Long-run cap should keep individual sessions under ~35 km.
-        assert max_long <= 36.0, f"Single long run was {max_long} km — cap blown"
+        # 100-mile prep earns a long peak run, but the continuous cap is
+        # clamped at the 48 km absolute ceiling.
+        assert max_long <= 48.0, f"Single long run was {max_long} km — cap blown"
+        assert max_long >= 38.0, (
+            f"Single long run was only {max_long} km — should scale up for 100mi"
+        )
 
     def test_ultra_plan_has_3_week_taper(self):
         plan = _build_plan(50.0, 1500.0, 16, 5, current_km=30.0)
@@ -349,8 +371,8 @@ class TestPeakLongRunRaceFraction:
             experience_level="advanced",
             trail_profile=profile,
         )
-        # Race floor: 30 * 0.70 = 21 km. Weekly cap: 35 * 0.55 = 19.25 km.
-        # Bracket cap (standard advanced): 27 km. Weekly cap binds → ≥ 19 km.
+        # Race floor: 30 * 0.72 = 21.6 km. Weekly cap: 35 * 0.55 = 19.25 km.
+        # Continuous cap (30 km advanced): ~27.3 km. Weekly cap binds → ≥ 19 km.
         assert peak_lr >= 19.0, f"peak LR was {peak_lr} km — race floor not biting"
 
     def test_short_15km_at_25wk_intermediate(self):
@@ -381,10 +403,10 @@ class TestPeakLongRunRaceFraction:
             experience_level="advanced",
             trail_profile=profile,
         )
-        # Race floor: 50 * 0.55 = 27.5. Bracket cap (ultra advanced): 32.
-        # Weekly cap: 60 * 0.55 = 33. Final ≥ 27.5, ≤ 32.
-        assert peak_lr >= 27.0, f"peak LR was {peak_lr} km — ultra floor missed"
-        assert peak_lr <= 32.0, f"peak LR was {peak_lr} km — bracket cap blown"
+        # Race floor: 50 * 0.60 = 30. Continuous cap (50 km advanced): ~34.4.
+        # Weekly cap: 60 * 0.55 = 33. Final ≥ 30, ≤ 33.
+        assert peak_lr >= 30.0, f"peak LR was {peak_lr} km — ultra floor missed"
+        assert peak_lr <= 33.5, f"peak LR was {peak_lr} km — cap/weekly bound blown"
 
     def test_low_volume_runner_gets_safe_long_run(self):
         # 25 km/wk runner doing a 30 km race shouldn't be pushed past a
@@ -415,8 +437,9 @@ class TestPeakLongRunRaceFraction:
             experience_level="advanced",
             trail_profile=profile,
         )
-        # 100-mile prep: bracket cap of 35 must hold even with high volume.
-        assert peak_lr <= 35.5
+        # 100-mile prep: the continuous cap is clamped at 48 km, so even a
+        # 120 km/wk runner's long run tops out at the ceiling.
+        assert peak_lr <= 48.0
 
     def test_flat_training_peak_can_reach_85_percent_for_28k(self):
         profile = classify_trail(28.0, 1050.0)

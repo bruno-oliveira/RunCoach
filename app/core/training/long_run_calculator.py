@@ -4,6 +4,7 @@ Handles long run ratio progression, distance caps, and phase-based
 quality workout distance allocation.
 """
 
+import math
 from typing import Dict, Optional
 
 from app.core.training.phase_calculator import (
@@ -20,7 +21,11 @@ from app.core.training.tuning import (
     FALLBACK_LONG_RUN_CAP_RATIO,
     LONG_RUN_VOLUME_RATIO,
     ROAD_LONG_RUN_CAPS,
-    TRAIL_LONG_RUN_CAPS,
+    TRAIL_LR_CAP_EXPERIENCE,
+    TRAIL_LR_CAP_LOG_A,
+    TRAIL_LR_CAP_LOG_B,
+    TRAIL_LR_CAP_MAX_KM,
+    TRAIL_LR_CAP_MIN_KM,
 )
 from app.core.training.tuning import ROAD_LONG_RUN_RATIOS as _ROAD_LONG_RUN_RATIOS
 from app.core.training.tuning import TRAIL_LONG_RUN_RATIOS as _TRAIL_LONG_RUN_RATIOS
@@ -147,14 +152,24 @@ def calculate_long_run_ratio(
 
 
 def _trail_long_run_cap(profile: TrailProfile, experience_level: str) -> float:
-    """Long-run cap for a trail profile.
+    """Long-run cap for a trail profile, scaled continuously with distance.
 
-    For ultras the single long run plateaus around 35 km — additional
-    long-day volume comes from back-to-back doubles in build/peak weeks
-    (added in the workout-builder pass), not a single 50 km grind.
+    Uses a log curve (``A·ln(d) + B``) so the single long run grows smoothly
+    with race distance — ~25 km for a 30 km race, ~32 km for a 55 km ultra,
+    ~46 km for 100-mile prep — rather than stepping between coarse brackets.
+    An experience multiplier nudges the curve up/down, and the result is
+    clamped to a sane absolute range. Additional long-day volume beyond the cap
+    comes from back-to-back doubles in build/peak weeks (added in the
+    workout-builder pass), not a single 50 km+ grind.
     """
-    tier = TRAIL_LONG_RUN_CAPS[profile.bracket]
-    return tier.get(experience_level, tier["intermediate"])
+    distance_km = max(profile.distance_km, 1.0)
+    base_cap = TRAIL_LR_CAP_LOG_A * math.log(distance_km) + TRAIL_LR_CAP_LOG_B
+    multiplier = TRAIL_LR_CAP_EXPERIENCE.get(
+        experience_level, TRAIL_LR_CAP_EXPERIENCE["intermediate"]
+    )
+    cap = base_cap * multiplier
+    cap = max(TRAIL_LR_CAP_MIN_KM, min(TRAIL_LR_CAP_MAX_KM, cap))
+    return round(cap, 1)
 
 
 def _get_long_run_cap(
@@ -167,8 +182,8 @@ def _get_long_run_cap(
 
     When weekly volume is high enough that the static cap would prevent
     filling target volume, the cap scales up to a hard ceiling. Trail /
-    ultra plans use a bracket-aware cap that does not blow past 35 km even
-    for 100-mile prep.
+    ultra plans use a bracket-aware cap that scales with race distance,
+    topping out around 46 km for 100-mile prep.
     """
     if trail_profile is not None:
         # Bracket cap is authoritative for trail. Weekly volume can't push
