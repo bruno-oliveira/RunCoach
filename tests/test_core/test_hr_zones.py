@@ -4,6 +4,7 @@ from types import SimpleNamespace
 
 from app.contexts.runner.fitness.hr_zone_service import (
     detect_resting_hr_from_runs,
+    gather_pace_hr_samples,
     get_user_max_hr,
     get_user_resting_hr,
 )
@@ -323,3 +324,42 @@ class TestRestingHRDetection:
         resting, source = get_user_resting_hr(user, _FakeDB([]))
         assert resting is None
         assert source == "none"
+
+
+class TestGatherPaceHRSamples:
+    """Rows are (avg_pace_min_km, avg_heart_rate, splits)."""
+
+    def test_prefers_splits_when_present(self):
+        splits = [
+            {"km": 1, "pace_min_km": 5.5, "avg_hr": 140},
+            {"km": 2, "pace_min_km": 5.0, "avg_hr": 150},
+            {"km": 3, "pace_min_km": 4.5, "avg_hr": 162},
+        ]
+        db = _FakeDB([(5.0, 150, splits)])
+        samples = gather_pace_hr_samples("u1", db)
+        # All three splits used; the run average is NOT added on top.
+        assert len(samples) == 3
+        assert {round(s.pace_min_km, 1) for s in samples} == {5.5, 5.0, 4.5}
+
+    def test_falls_back_to_run_average_without_splits(self):
+        db = _FakeDB([(5.2, 148, None)])
+        samples = gather_pace_hr_samples("u1", db)
+        assert len(samples) == 1
+        assert samples[0].pace_min_km == 5.2
+        assert samples[0].hr == 148
+
+    def test_skips_runs_missing_pace_or_hr(self):
+        db = _FakeDB([(None, 150, None), (5.0, None, None), (5.0, 150, None)])
+        samples = gather_pace_hr_samples("u1", db)
+        assert len(samples) == 1
+
+    def test_ignores_incomplete_splits(self):
+        splits = [
+            {"km": 1, "pace_min_km": 5.0},  # no hr
+            {"km": 2, "avg_hr": 150},  # no pace
+            {"km": 3, "pace_min_km": 4.8, "avg_hr": 155},  # usable
+        ]
+        db = _FakeDB([(5.0, 150, splits)])
+        samples = gather_pace_hr_samples("u1", db)
+        assert len(samples) == 1
+        assert samples[0].pace_min_km == 4.8
