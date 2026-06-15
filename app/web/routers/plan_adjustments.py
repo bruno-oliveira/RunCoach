@@ -166,6 +166,44 @@ def mark_change_plan_seen(
     return adaptation_service.mark_change_plan_seen(plan_id, current_user.id, db)
 
 
+class IntentRequest(BaseModel):
+    intent: str
+    params: dict | None = None
+
+
+@router.post("/api/plan/{plan_id}/intent/preview")
+def preview_plan_intent(
+    plan_id: str,
+    body: IntentRequest,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Preview how a declared intent (e.g. feeling tired, away, skip) would
+    reshape the plan, without committing."""
+    get_plan_or_404(plan_id, db, current_user, require_user_match=True)
+    adaptation_service = AdaptationService()
+    return adaptation_service.preview_intent(
+        plan_id, current_user.id, body.intent, body.params, db
+    )
+
+
+@router.post("/api/plan/{plan_id}/intent")
+def apply_plan_intent(
+    plan_id: str,
+    body: IntentRequest,
+    if_match: str | None = Header(default=None, alias="If-Match"),
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Apply a declared intent to the plan and persist the change."""
+    training_plan = get_plan_or_404(plan_id, db, current_user, require_user_match=True)
+    _check_revision(training_plan, if_match)
+    adaptation_service = AdaptationService()
+    return adaptation_service.apply_intent(
+        plan_id, current_user.id, body.intent, body.params, db
+    )
+
+
 class RecalibrateRequest(BaseModel):
     strategy: str
 

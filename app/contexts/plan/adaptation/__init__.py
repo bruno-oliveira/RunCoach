@@ -10,6 +10,7 @@ from sqlalchemy.orm import Session
 
 from . import (
     alert_checker,
+    intent_service,
     plan_adjuster,
     recalibrator,
     recommendation_evaluator,
@@ -120,3 +121,25 @@ class AdaptationService:
         self, plan_id: str, user_id: str, db: Session
     ) -> Dict[str, Any]:
         return recommendation_evaluator.dismiss_recommendation(plan_id, user_id, db)
+
+    # ------------------------------------------------------------------ intents
+
+    def preview_intent(
+        self,
+        plan_id: str,
+        user_id: str,
+        intent: str,
+        params: Optional[Dict[str, Any]],
+        db: Session,
+    ) -> Dict[str, Any]:
+        return intent_service.preview_intent(plan_id, user_id, intent, params, db)
+
+    def apply_intent(
+        self,
+        plan_id: str,
+        user_id: str,
+        intent: str,
+        params: Optional[Dict[str, Any]],
+        db: Session,
+    ) -> Dict[str, Any]:
+        return intent_service.apply_intent(plan_id, user_id, intent, params, db)
