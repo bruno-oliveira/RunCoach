@@ -3,6 +3,7 @@
 import pytest
 
 from app.contexts.nutrition.nutrition_content import (
+    TRAIL_FUEL_PHASES,
     generate_trail_fuel_ideas,
     generate_trail_nutrition_tips,
 )
@@ -246,19 +247,37 @@ class TestTrailFuelContent:
             assert item["carbs"]
             assert item["note"]
             assert item["category"] in {"sweet", "savoury", "drink"}
+            assert item["phase"] in {"before", "during", "after"}
 
     def test_fuel_ideas_cover_sweet_savoury_and_drink(self):
         categories = {item["category"] for item in generate_trail_fuel_ideas()}
         assert {"sweet", "savoury", "drink"} <= categories
 
-    def test_trail_tips_are_actionable_strings(self):
+    def test_fuel_ideas_span_all_race_phases(self):
+        phases = {item["phase"] for item in generate_trail_fuel_ideas()}
+        assert {"before", "during", "after"} <= phases
+
+    def test_fuel_phase_keys_match_fuel_idea_phases(self):
+        phase_keys = {p["key"] for p in TRAIL_FUEL_PHASES}
+        idea_phases = {item["phase"] for item in generate_trail_fuel_ideas()}
+        # Every idea's phase must have a corresponding phase header to render under.
+        assert idea_phases <= phase_keys
+        for phase in TRAIL_FUEL_PHASES:
+            assert phase["label"]
+
+    def test_trail_tips_are_topic_tagged(self):
         tips = generate_trail_nutrition_tips()
-        assert len(tips) >= 5
-        assert all(isinstance(t, str) and t.strip() for t in tips)
-        joined = " ".join(tips).lower()
+        assert len(tips) >= 8
+        for tip in tips:
+            assert isinstance(tip["topic"], str) and tip["topic"].strip()
+            assert isinstance(tip["text"], str) and tip["text"].strip()
+        joined = " ".join(t["text"] for t in tips).lower()
         assert "caffeine" in joined
         assert "sodium" in joined
         assert "nothing new on race day" in joined
+        topics = {t["topic"] for t in tips}
+        # Filter chips need more than one topic to be meaningful.
+        assert len(topics) >= 4
 
     def test_blueprint_includes_trail_content_for_trail_plan(self):
         engine = NutritionEngine()
@@ -294,6 +313,7 @@ class TestTrailFuelContent:
         ctx = nutrition_for_template(plan)
         assert ctx["in_race_fueling"]["carbs_per_hour"]
         assert ctx["trail_fuel_ideas"]
+        assert ctx["trail_fuel_phases"]
         assert ctx["trail_tips"]
 
     def test_nutrition_for_template_defaults_trail_content_for_road(self):
@@ -306,4 +326,5 @@ class TestTrailFuelContent:
         ctx = nutrition_for_template(plan)
         assert ctx["in_race_fueling"] is None
         assert ctx["trail_fuel_ideas"] == []
+        assert ctx["trail_fuel_phases"] == []
         assert ctx["trail_tips"] == []

@@ -425,6 +425,32 @@
     margin-bottom: var(--space-4);
 }
 
+.trail-fuel-phase { margin-bottom: var(--space-5); }
+.trail-fuel-phase:last-child { margin-bottom: 0; }
+
+.trail-fuel-phase-head {
+    display: flex;
+    align-items: baseline;
+    gap: var(--space-2);
+    flex-wrap: wrap;
+    margin-bottom: var(--space-3);
+    padding-bottom: var(--space-2);
+    border-bottom: 1px solid var(--color-border-subtle);
+}
+
+.trail-fuel-phase-label {
+    font-weight: var(--weight-bold);
+    color: var(--color-text);
+    font-size: var(--text-base);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+
+.trail-fuel-phase-blurb {
+    color: var(--color-text-muted);
+    font-size: var(--text-sm);
+}
+
 .trail-fuel-grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
@@ -463,6 +489,44 @@
 .trail-fuel-badge-drink {
     background: var(--color-info-subtle);
     color: var(--color-info);
+}
+
+/* Trail tip filter chips */
+.trail-tips-filters {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-2);
+    margin-bottom: var(--space-4);
+}
+
+.trail-tips-chip {
+    background: var(--color-bg-elevated);
+    color: var(--color-text-secondary);
+    border: 1px solid var(--color-border-subtle);
+    border-radius: var(--radius-full);
+    padding: 4px 12px;
+    font-size: var(--text-xs);
+    font-weight: var(--weight-semibold);
+    cursor: pointer;
+    transition: all var(--duration-fast) var(--ease-out);
+}
+
+.trail-tips-chip:hover { border-color: var(--color-success); color: var(--color-text); }
+
+.trail-tips-chip.active {
+    background: var(--color-success);
+    color: #fff;
+    border-color: var(--color-success);
+}
+
+.trail-tip-topic {
+    display: inline-block;
+    font-size: var(--text-xs);
+    font-weight: var(--weight-bold);
+    color: var(--color-success);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    margin-right: var(--space-2);
 }
 
 @media (max-width: 640px) {

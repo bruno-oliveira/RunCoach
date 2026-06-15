@@ -661,6 +661,22 @@
         }
     };
 
+    window.filterTrailTips = function (button, topic) {
+        var container = document.getElementById('trail-tips');
+        if (!container) return;
+
+        var chips = container.querySelectorAll('.trail-tips-chip');
+        for (var i = 0; i < chips.length; i++) {
+            chips[i].classList.toggle('active', chips[i] === button);
+        }
+
+        var tips = container.querySelectorAll('.trail-tip');
+        for (var j = 0; j < tips.length; j++) {
+            var show = topic === 'all' || tips[j].getAttribute('data-topic') === topic;
+            tips[j].style.display = show ? '' : 'none';
+        }
+    };
+
     /* -------------------------------------------------------------- */
     /*  bfcache detection                                              */
     /* -------------------------------------------------------------- */
@@ -811,5 +827,6 @@
         // Nutrition / recipes
         randomizeMeals: window.randomizeMeals,
         toggleRecipe: window.toggleRecipe,
+        filterTrailTips: window.filterTrailTips,
     };
 })();
