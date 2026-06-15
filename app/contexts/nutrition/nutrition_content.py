@@ -98,18 +98,83 @@ def generate_hydration_guide(
     }
 
 
-def generate_trail_fuel_ideas() -> List[Dict[str, Any]]:
-    """Portable, trail-ready fuel ideas for long runs and race day.
+# Race-phase metadata for grouping trail fuel in the UI. Order matters —
+# the template renders phases in this sequence (the natural race timeline).
+TRAIL_FUEL_PHASES: List[Dict[str, str]] = [
+    {
+        "key": "before",
+        "label": "Before",
+        "blurb": "Carb-loading the night before and topping up race morning.",
+    },
+    {
+        "key": "during",
+        "label": "During",
+        "blurb": "Portable fuel that travels in a vest and stays easy to stomach.",
+    },
+    {
+        "key": "after",
+        "label": "After",
+        "blurb": "Recovery fuel to refill glycogen and repair within the hour.",
+    },
+]
 
-    Curated real-food options that travel well in a vest and stay palatable
-    over many hours, when sweet gels start to turn the stomach. Each entry
-    carries an approximate carb count and a category so the UI can group
-    sweet, savoury and drink options. Carb figures are per-piece estimates
-    for a typical home recipe — treat them as a starting point, not gospel.
+
+def generate_trail_fuel_ideas() -> List[Dict[str, Any]]:
+    """Portable, trail-ready fuel ideas across the race timeline.
+
+    Curated real-food options spanning the night before, the race itself and
+    recovery. Each entry carries a ``phase`` (before / during / after) so the
+    UI can group ideas by *when* you eat them, an approximate carb count, and
+    a ``category`` (sweet / savoury / drink) used as a badge. Carb figures are
+    per-serving estimates for a typical home recipe — a starting point, not
+    gospel.
     """
     return [
+        # --- Before: carb-load + race morning -------------------------------
+        {
+            "name": "Tomato rice, carb-load edition",
+            "phase": "before",
+            "category": "savoury",
+            "carbs": "~70 g per bowl",
+            "note": (
+                "A slightly soupy tomato rice the night before. Easy to digest "
+                "and tops up glycogen without sitting heavy."
+            ),
+        },
+        {
+            "name": "Beetroot & feta pre-race rice",
+            "phase": "before",
+            "category": "savoury",
+            "carbs": "~65 g per bowl",
+            "note": (
+                "Nitrate-rich beetroot stirred through rice the night before — "
+                "carbs plus a small endurance edge from the beets."
+            ),
+        },
+        {
+            "name": "Race-morning overnight oats",
+            "phase": "before",
+            "category": "sweet",
+            "carbs": "~60 g per bowl",
+            "note": (
+                "Mixed the night before so there's nothing to cook at 4 a.m. "
+                "Eat 2.5–3 hours before the start to settle the gut."
+            ),
+        },
+        {
+            "name": "Honey & salt toast",
+            "phase": "before",
+            "category": "sweet",
+            "carbs": "~40 g per serving",
+            "note": (
+                "Quick race-morning carbs with a little salt; add banana "
+                "slices if you can stomach more. Simple and reliable."
+            ),
+        },
+        # --- During: on the move --------------------------------------------
         {
             "name": "Date & cocoa trail balls",
+            "phase": "during",
             "category": "sweet",
             "carbs": "~25 g each",
             "note": (
@@ -119,6 +184,7 @@ def generate_trail_fuel_ideas() -> List[Dict[str, Any]]:
         },
         {
             "name": "Salted maple rice cakes",
+            "phase": "during",
             "category": "sweet",
             "carbs": "~30 g each",
             "note": (
@@ -128,6 +194,7 @@ def generate_trail_fuel_ideas() -> List[Dict[str, Any]]:
         },
         {
             "name": "Peanut butter & honey pinwheels",
+            "phase": "during",
             "category": "sweet",
             "carbs": "~20 g each",
             "note": (
@@ -137,6 +204,7 @@ def generate_trail_fuel_ideas() -> List[Dict[str, Any]]:
         },
         {
             "name": "Salted banana bread bites",
+            "phase": "during",
             "category": "sweet",
             "carbs": "~22 g each",
             "note": (
@@ -146,6 +214,7 @@ def generate_trail_fuel_ideas() -> List[Dict[str, Any]]:
         },
         {
             "name": "Apricot & almond energy bars",
+            "phase": "during",
             "category": "sweet",
             "carbs": "~28 g each",
             "note": (
@@ -155,6 +224,7 @@ def generate_trail_fuel_ideas() -> List[Dict[str, Any]]:
         },
         {
             "name": "Salty boiled potato bites",
+            "phase": "during",
             "category": "savoury",
             "carbs": "~15 g each",
             "note": (
@@ -164,6 +234,7 @@ def generate_trail_fuel_ideas() -> List[Dict[str, Any]]:
         },
         {
             "name": "Savoury mini wraps",
+            "phase": "during",
             "category": "savoury",
             "carbs": "~25 g each",
             "note": (
@@ -173,6 +244,7 @@ def generate_trail_fuel_ideas() -> List[Dict[str, Any]]:
         },
         {
             "name": "Homemade sports drink",
+            "phase": "during",
             "category": "drink",
             "carbs": "~60 g per bottle",
             "note": (
@@ -183,6 +255,7 @@ def generate_trail_fuel_ideas() -> List[Dict[str, Any]]:
         },
         {
             "name": "Maple espresso gel",
+            "phase": "during",
             "category": "drink",
             "carbs": "~25 g each",
             "note": (
@@ -191,31 +264,138 @@ def generate_trail_fuel_ideas() -> List[Dict[str, Any]]:
                 "half and rehearse the dose in training first."
             ),
         },
+        # --- After: recovery ------------------------------------------------
+        {
+            "name": "Recovery smoothie",
+            "phase": "after",
+            "category": "drink",
+            "carbs": "~50 g per glass",
+            "note": (
+                "Roughly a 3:1 carbs-to-protein blend within ~45 minutes of "
+                "finishing — milk or yoghurt, banana, oats and berries."
+            ),
+        },
+        {
+            "name": "Protein rice pudding",
+            "phase": "after",
+            "category": "sweet",
+            "carbs": "~55 g per bowl",
+            "note": (
+                "A warm recovery dessert that pairs comforting carbs with "
+                "protein when a cold smoothie doesn't appeal post-race."
+            ),
+        },
+        {
+            "name": "Cottage cheese & berry bowl",
+            "phase": "after",
+            "category": "sweet",
+            "carbs": "~25 g per bowl",
+            "note": (
+                "Slow-digesting casein with berries before bed — supports "
+                "overnight repair after a long day on the trails."
+            ),
+        },
     ]
 
 
-def generate_trail_nutrition_tips() -> List[str]:
-    """Trail- and ultra-specific fuelling golden rules.
+def generate_trail_nutrition_tips() -> List[Dict[str, str]]:
+    """Trail- and ultra-specific fuelling golden rules, tagged by topic.
 
     Higher-level strategy that complements the daily macros and the in-race
     fuelling table: gut training, sodium, caffeine timing and the hard-won
     race-day rules that keep runners moving when sweet fuel stops working.
+    Each tip carries a ``topic`` so the UI can offer filter chips.
     """
     return [
-        "Train your gut like a muscle — practise 60–90 g of carbs per hour on "
-        "your long runs for weeks before race day, not just once.",
-        "Nothing new on race day: every gel, bar and home recipe should be "
-        "tested on training runs first.",
-        "In the heat or on efforts over four hours, aim for roughly "
-        "300–600 mg of sodium per hour to stay ahead of cramps.",
-        "Save caffeine for the second half — about 2–3 mg per kg of body "
-        "weight, and rehearse the dose in training.",
-        "Eat before you decide: most dark patches after two hours are a "
-        "calorie deficit talking, not your legs giving up.",
-        "Switch to savoury food when sweet fuel turns your stomach — usually "
-        "somewhere around hour four.",
-        "Walk the aid stations with purpose rather than stopping dead; it "
-        "keeps the legs moving and the gut settled.",
-        "Soft flasks beat a bladder for trail — you can see what's left and "
-        "refill them fast at aid stations.",
+        {
+            "topic": "Fueling",
+            "text": (
+                "Train your gut like a muscle — practise 60–90 g of carbs per "
+                "hour on your long runs for weeks before race day, not once."
+            ),
+        },
+        {
+            "topic": "Strategy",
+            "text": (
+                "Nothing new on race day: every gel, bar and home recipe should "
+                "be tested on training runs first."
+            ),
+        },
+        {
+            "topic": "Sodium",
+            "text": (
+                "In the heat or on efforts over four hours, aim for roughly "
+                "300–600 mg of sodium per hour to stay ahead of cramps."
+            ),
+        },
+        {
+            "topic": "Caffeine",
+            "text": (
+                "Save caffeine for the second half — about 2–3 mg per kg of "
+                "body weight, and rehearse the dose in training."
+            ),
+        },
+        {
+            "topic": "Mind",
+            "text": (
+                "Eat before you decide: most dark patches after two hours are a "
+                "calorie deficit talking, not your legs giving up."
+            ),
+        },
+        {
+            "topic": "Fueling",
+            "text": (
+                "Switch to savoury food when sweet fuel turns your stomach — "
+                "usually somewhere around hour four."
+            ),
+        },
+        {
+            "topic": "Strategy",
+            "text": (
+                "Walk the aid stations with purpose rather than stopping dead; "
+                "it keeps the legs moving and the gut settled."
+            ),
+        },
+        {
+            "topic": "Gear",
+            "text": (
+                "Soft flasks beat a bladder for trail — you can see what's left "
+                "and refill them fast at aid stations."
+            ),
+        },
+        {
+            "topic": "Heat",
+            "text": (
+                "Use ice like fuel on hot days: stash it at aid stations to "
+                "cool your core and reset before the next climb."
+            ),
+        },
+        {
+            "topic": "Fueling",
+            "text": (
+                "Start eating before the big climbs, while your stomach is calm "
+                "— it's harder to take food in once the effort spikes."
+            ),
+        },
+        {
+            "topic": "Recovery",
+            "text": (
+                "Get a 3:1 carb-to-protein hit in within ~45 minutes of "
+                "finishing to kick-start glycogen and muscle repair."
+            ),
+        },
+        {
+            "topic": "Recovery",
+            "text": (
+                "Move, don't stretch, after a race — easy walking beats static "
+                "stretching for quads battered by long descents."
+            ),
+        },
+        {
+            "topic": "Gear",
+            "text": (
+                "Anti-chafe balm is mandatory kit: apply before long runs, not "
+                "after the hotspots have already started."
+            ),
+        },
     ]

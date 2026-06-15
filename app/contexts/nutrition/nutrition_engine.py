@@ -4,6 +4,7 @@ from typing import Any, Dict, List
 
 from app.contexts.nutrition.meal_selector import MealSelector
 from app.contexts.nutrition.nutrition_content import (
+    TRAIL_FUEL_PHASES,
     generate_general_nutrition_tips,
     generate_hydration_guide,
     generate_trail_fuel_ideas,
@@ -241,6 +242,7 @@ class NutritionEngine:
                 target_elevation_gain_m,
             )
             meal_blueprint["trail_fuel_ideas"] = generate_trail_fuel_ideas()
+            meal_blueprint["trail_fuel_phases"] = TRAIL_FUEL_PHASES
             meal_blueprint["trail_tips"] = generate_trail_nutrition_tips()
 
         meal_types = ["breakfast", "lunch", "dinner", "snack", "post_workout"]
