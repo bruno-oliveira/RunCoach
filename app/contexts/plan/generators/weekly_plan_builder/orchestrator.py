@@ -34,6 +34,7 @@ from app.core.training import workout_distribution as workout_dist_mod
 from app.core.training.key_workout_library import overlay_key_workout
 from app.core.training.quality_caps import MAX_EASY_RUN_KM, QUALITY_MIN_DOSE_KM
 from app.core.training.training_constants import calculate_week_in_phase
+from app.core.training.tuning import MAX_KEY_WORKOUT_VS_LONG_RUN
 from app.core.training.vertical_simulation import attach_treadmill_prescriptions
 
 
@@ -221,6 +222,14 @@ def generate_daily_workouts(
             pace_zones,
         )
 
+        # The key-workout ceiling caps a *quality* session against the long run;
+        # the long run itself (also overlaid) must not be clamped against its
+        # own length, so only quality slots carry a ceiling.
+        quality_ceiling = (
+            long_run_distance * MAX_KEY_WORKOUT_VS_LONG_RUN
+            if workout_type in ("tempo", "interval", "hill")
+            else None
+        )
         overlay_key_workout(
             workout,
             workout_type,
@@ -230,6 +239,7 @@ def generate_daily_workouts(
             terrain,
             pace_zones,
             trail_profile=trail_profile,
+            max_distance=quality_ceiling,
         )
 
         workout["coaching_rationale"] = generate_coaching_note(

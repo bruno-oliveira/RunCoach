@@ -780,7 +780,15 @@ class TestMileageProgression:
         "combo", ALL_COMBOS, ids=[_combo_id(c) for c in ALL_COMBOS]
     )
     def test_quality_caps_hold(self, combo):
-        """Quality workouts should not exceed 90% of the long run."""
+        """Quality workouts must stay below the long run.
+
+        The per-week quality *budget* is capped at 85% of the long run, but a
+        prescriptive key workout (a fixed library session like 8 × 500 m) is
+        allowed up to ``MAX_KEY_WORKOUT_VS_LONG_RUN`` (95%) of the long run so
+        it keeps its full, recognizable structure on low-mileage plans instead
+        of collapsing to a token run. The invariant that still holds for every
+        session is that a quality day never reaches the long run itself.
+        """
         distance, weeks, mileage, runs = combo
         gen = TrainingPlanGenerator()
         plan = gen.generate_plan(
@@ -806,7 +814,7 @@ class TestMileageProgression:
                 ):
                     if w.get("duration_min"):
                         continue
-                    assert w["distance"] <= long_d * 0.90
+                    assert w["distance"] <= long_d * 0.95 + 0.1
 
 
 # ── Distance-Specific Invariants ──────────────────────────────────────────

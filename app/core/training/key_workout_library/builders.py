@@ -260,14 +260,11 @@ _KEY_WORKOUT_STEP_BUILDERS: Dict[
         under_s=120,
     ),
     # -- Trail hilly interval / hill variants --
-    "trail_technical_terrain": lambda d, pz: _steps_mod.build_fartlek_steps(
+    "trail_technical_terrain": lambda d, pz: _steps_mod.build_continuous_quality_steps(
         d,
         pz,
-        reps=_fartlek_reps(d, on_min=3, off_min=2, default=5),
-        on_s=180,
-        off_s=120,
-        on_zone="T",
-        work_effort="moderate",
+        zone="T",
+        effort="moderate, deliberate foot placement",
     ),
     "trail_broken_climbs": lambda d, pz: _steps_mod.build_duration_rep_steps(
         d,
@@ -279,6 +276,7 @@ _KEY_WORKOUT_STEP_BUILDERS: Dict[
         work_effort="hard uphill",
         recovery_s=60,
         recovery_label="60s easy jog",
+        recovery_zone="E",
     ),
     "trail_rolling_500s": lambda d, pz: _steps_mod.build_meter_rep_steps(
         d,
@@ -306,6 +304,7 @@ _KEY_WORKOUT_STEP_BUILDERS: Dict[
         work_effort="hard uphill",
         recovery_label="jog down recovery",
         recovery_s=120,
+        recovery_zone="E",
     ),
     "trail_base_hike_run": lambda d, pz: _steps_mod.build_duration_rep_steps(
         d,
@@ -368,15 +367,15 @@ _KEY_WORKOUT_STEP_BUILDERS: Dict[
         work_effort="hard",
         recovery_s=120,
         recovery_label="2min easy jog",
+        recovery_zone="E",
     ),
-    "trail_flat_proprioception": lambda d, pz: _steps_mod.build_fartlek_steps(
-        d,
-        pz,
-        reps=_fartlek_reps(d, on_min=3, off_min=2, default=4),
-        on_s=180,
-        off_s=120,
-        on_zone="T",
-        work_effort="moderate varied-surface",
+    "trail_flat_proprioception": lambda d, pz: (
+        _steps_mod.build_continuous_quality_steps(
+            d,
+            pz,
+            zone="T",
+            effort="moderate, varied-surface foot placement",
+        )
     ),
     # -- Trail flat tempo variants --
     "trail_flat_base_strides": lambda d, pz: _steps_mod.build_strides_steps(
@@ -409,6 +408,7 @@ _KEY_WORKOUT_STEP_BUILDERS: Dict[
         work_effort="threshold",
         recovery_s=180,
         recovery_label="3min easy jog",
+        recovery_zone="E",
     ),
     "trail_flat_progressive_tempo": lambda d, pz: (
         _steps_mod.build_progression_block_steps(
@@ -440,6 +440,7 @@ _KEY_WORKOUT_STEP_BUILDERS: Dict[
         work_effort="trail race effort",
         recovery_s=180,
         recovery_label="3min easy jog",
+        recovery_zone="E",
     ),
     "trail_climb_surge_fartlek": lambda d, pz: _steps_mod.build_fartlek_steps(
         d,

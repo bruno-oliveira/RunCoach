@@ -28,7 +28,11 @@ from typing import Any, Dict, List, Optional
 
 from app.core.training import long_run_calculator, workout_builders
 from app.core.training.key_workout_library import reconcile_key_workout_text
-from app.core.training.quality_caps import MAX_EASY_RUN_KM, easy_run_cap
+from app.core.training.quality_caps import (
+    MAX_EASY_RUN_KM,
+    MIN_EASY_PER_RUN_KM,
+    easy_run_cap,
+)
 from app.core.training.training_constants import get_hard_ceiling
 
 
@@ -181,6 +185,12 @@ def scale_down(
     description and steps stay in lockstep with the new distance. If the
     flexible budget is exhausted, the small overage is accepted rather
     than corrupting a prescription.
+
+    The long run is the week's anchor, so it is protected: the overage is
+    drained from the easy runs first (down to a per-run floor) and the long run
+    is only shrunk when the easy budget cannot absorb it. This keeps a large
+    prescriptive quality day from eating into the long run — trim the filler,
+    keep the anchor — rather than scaling every run down in lockstep.
     """
     actual_total_km = round(sum(w.get("distance", 0) for w in workouts), 1)
     if actual_total_km <= total_km * 1.01 or actual_total_km <= 0:
@@ -204,9 +214,24 @@ def scale_down(
         return actual_total_km
     target_flexible = max(target_flexible, 0)
 
-    scale = target_flexible / flexible_km
-    for w in flexible:
-        set_distance(w, w["distance"] * scale, pace_zones)
+    overage = flexible_km - target_flexible
+    easy_runs = [w for w in flexible if w.get("type") == "easy"]
+    has_long = any(w.get("type") == "long" for w in flexible)
+    easy_km = sum(w["distance"] for w in easy_runs)
+    easy_absorbable = max(0.0, easy_km - len(easy_runs) * MIN_EASY_PER_RUN_KM)
+
+    if has_long and easy_runs and overage <= easy_absorbable:
+        # Protect the long run: the easy runs alone can soak up the overage
+        # while staying above their per-run floor, so leave the long run intact.
+        scale_easy = (easy_km - overage) / easy_km
+        for w in easy_runs:
+            set_distance(w, w["distance"] * scale_easy, pace_zones)
+    else:
+        # The easy budget can't absorb it (or there's no long run to protect):
+        # scale every flexible run proportionally rather than decimating one.
+        scale = target_flexible / flexible_km
+        for w in flexible:
+            set_distance(w, w["distance"] * scale, pace_zones)
     return round(sum(w.get("distance", 0) for w in workouts), 1)
 
 

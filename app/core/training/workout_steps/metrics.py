@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 from typing import Any, Dict, List, Optional
 
 # Default pace estimates (min/km) for time-based workouts when no VDOT data.
@@ -86,6 +87,97 @@ def _compute_distance_from_steps(steps: List[Dict[str, Any]]) -> float:
     used to overwrite a budgeted workout distance.
     """
     return compute_distance_from_steps_checked(steps)[0]
+
+
+_REP_LABEL_RE = re.compile(r"^\s*(\d+)(\s*[×x]\s*)(.+)$")
+
+
+def _relabel_rep_count(label: Optional[str], new_count: int) -> Optional[str]:
+    """Rewrite the leading ``N ×`` count in a step label (e.g. '8 × 500 m')."""
+    if not label:
+        return label
+    m = _REP_LABEL_RE.match(label)
+    if not m:
+        return label
+    return f"{new_count}{m.group(2)}{m.group(3)}"
+
+
+def fit_steps_to_distance(
+    steps: List[Dict[str, Any]], max_km: float
+) -> List[Dict[str, Any]]:
+    """Trim an over-long key-workout step list so its priced total fits ``max_km``.
+
+    A key workout's fixed prescription (e.g. ``8 × 500 m``, or a 60-minute
+    hike-run) can run longer than the runner's physiological ceiling — for a
+    low-mileage plan an interval session must not exceed the long run. Rather
+    than rewrite every rep shorter (which would contradict the rep distance
+    cited in the label), reps are *dropped* until the total fits, so the
+    session stays a recognizable shorter version of itself (``7 × 500 m``
+    instead of ``8 × 270 m``). Reps are only trimmed as far as needed; a
+    session already within ``max_km`` is returned unchanged, so workouts keep
+    their full prescribed length whenever the ceiling allows.
+
+    As a last resort — a single rep plus warm-up/cool-down still overruns — the
+    variable blocks are scaled by magnitude so the total never exceeds the
+    ceiling.
+    """
+    if max_km <= 0 or not steps:
+        return steps
+    total, _ = compute_distance_from_steps_checked(steps)
+    if total <= max_km:
+        return steps
+
+    work_kinds = ("run", "walk", "strides")
+    work_counts = [
+        s.get("repeat", 1)
+        for s in steps
+        if s.get("kind") in work_kinds and s.get("repeat", 1) > 1
+    ]
+    if work_counts:
+        n = max(work_counts)
+        for m in range(n - 1, 0, -1):
+            factor = m / n
+            candidate = []
+            for s in steps:
+                cs = dict(s)
+                if s.get("repeat", 1) > 1:
+                    nr = max(1, round(s["repeat"] * factor))
+                    cs["repeat"] = nr
+                    cs["label"] = _relabel_rep_count(s.get("label"), nr)
+                candidate.append(cs)
+            if compute_distance_from_steps_checked(candidate)[0] <= max_km:
+                return candidate
+
+    # One rep each still overruns (warm-up + cool-down + a single rep): collapse
+    # repeats to one and scale the variable blocks by magnitude onto the ceiling.
+    singles = []
+    for s in steps:
+        cs = dict(s)
+        if s.get("repeat", 1) > 1:
+            cs["repeat"] = 1
+            cs["label"] = _relabel_rep_count(s.get("label"), 1)
+        singles.append(cs)
+    fixed_m = sum(
+        (s.get("distance_m") or 0) * s.get("repeat", 1)
+        for s in singles
+        if s.get("kind") in ("warmup", "cooldown")
+    )
+    single_total_m = compute_distance_from_steps_checked(singles)[0] * 1000
+    variable_m = single_total_m - fixed_m
+    target_variable_m = max_km * 1000 - fixed_m
+    if variable_m <= 0 or target_variable_m <= 0:
+        return singles
+    mult = target_variable_m / variable_m
+    out = []
+    for s in singles:
+        cs = dict(s)
+        if s.get("kind") not in ("warmup", "cooldown"):
+            if s.get("distance_m"):
+                cs["distance_m"] = int(round(s["distance_m"] * mult))
+            if s.get("duration_s"):
+                cs["duration_s"] = int(round(s["duration_s"] * mult))
+        out.append(cs)
+    return out
 
 
 def scale_steps(steps: List[Dict[str, Any]], multiplier: float) -> List[Dict[str, Any]]:

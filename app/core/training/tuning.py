@@ -172,8 +172,18 @@ LONG_RUN_VOLUME_RATIO = 0.30
 # =============================================================================
 
 # Quality workouts (tempo/interval/hill) may not exceed this fraction of the
-# long run distance.
+# long run distance. Drives the per-week quality *budget* allocation.
 MAX_QUALITY_VS_LONG_RUN = 0.85
+
+# A prescriptive key workout (a fixed library session such as 8 × 500 m) is
+# allowed a little more headroom than the budget allocation: its structure is
+# the prescription, so it keeps its full prescribed length whenever that fits
+# under this (higher) fraction of the long run, and is only trimmed — by
+# dropping reps, never by rewriting them shorter — when it would otherwise
+# approach the long run. This keeps real, recognizable sessions on low-mileage
+# plans instead of collapsing them to a token budget-sized run, while still
+# guaranteeing a quality day never reaches the long run itself.
+MAX_KEY_WORKOUT_VS_LONG_RUN = 0.95
 
 # Individual easy runs may not exceed this fraction of the long run distance.
 MAX_EASY_VS_LONG_RUN = 0.95
