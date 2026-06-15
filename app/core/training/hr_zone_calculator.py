@@ -27,11 +27,18 @@ DEFAULT_MAX_HR = 190
 MIN_RELIABLE_RESTING_HR = 30
 MAX_RELIABLE_RESTING_HR = 100
 
+# Lactate-threshold HR is plausible only as a fraction of max within this band.
+# Below ~70% it's not a threshold (more like easy-run HR mislabelled); above
+# ~95% it's a VO2max/peak reading, not a sustainable threshold.
+MIN_LTHR_FRACTION_OF_MAX = 0.70
+MAX_LTHR_FRACTION_OF_MAX = 0.95
+
 # Version of the zone model below. Bump when ZONE_DEFINITIONS changes -- or when
-# the zone *math* changes (e.g. %max HR -> Heart Rate Reserve, or attaching the
-# data-calibrated pace each zone maps to) -- so plans carrying zones from an
-# older model are recomputed on next view.
-HR_ZONES_VERSION = 4
+# the zone *math* changes (e.g. %max HR -> Heart Rate Reserve, attaching the
+# data-calibrated pace each zone maps to, or re-anchoring the band boundaries to
+# a measured lactate-threshold HR) -- so plans carrying zones from an older
+# model are recomputed on next view.
+HR_ZONES_VERSION = 5
 
 
 # -- Zone definitions (percentage of max HR) ----------------------------------
@@ -138,6 +145,56 @@ def _resting_hr_is_usable(max_hr: int, resting_hr: object) -> bool:
     )
 
 
+def _lthr_is_usable(max_hr: int, lthr: object) -> bool:
+    """True when ``lthr`` is a plausible threshold HR for this ``max_hr``."""
+    if not isinstance(lthr, (int, float)):
+        return False
+    return (
+        MIN_LTHR_FRACTION_OF_MAX * max_hr <= lthr <= MAX_LTHR_FRACTION_OF_MAX * max_hr
+    )
+
+
+def _reanchor_zones_to_lthr(zones: list[dict], max_hr: int, lthr: int) -> list[dict]:
+    """Re-anchor zone boundaries so the threshold edge equals the measured LTHR.
+
+    The formula model places the Zone 3/4 (threshold) boundary at a fixed 88%
+    of max -- a population average that is often several BPM off for a given
+    runner. When we can measure the runner's actual lactate-threshold HR from
+    their threshold-effort runs, we slide the internal boundaries onto it while
+    pinning the recovery floor (Zone 1 min) and the ceiling (max HR) so the band
+    stays a valid, monotonic partition.
+
+    Two linear segments are remapped:
+        - below threshold: [floor .. baseline_threshold] -> [floor .. lthr]
+        - above threshold: [baseline_threshold .. max] -> [lthr .. max]
+
+    Returns the zones unchanged if the anchor points are degenerate.
+    """
+    floor = zones[0]["min_bpm"]
+    baseline_threshold = zones[2]["max_bpm"]  # 88% boundary in the formula model
+    ceiling = max_hr
+
+    # Guard against degenerate / non-monotonic anchoring.
+    if not (floor < lthr < ceiling and floor < baseline_threshold < ceiling):
+        return zones
+
+    def remap(bpm: int) -> int:
+        if bpm <= baseline_threshold:
+            shifted = floor + (bpm - floor) * (lthr - floor) / (
+                baseline_threshold - floor
+            )
+        else:
+            shifted = lthr + (bpm - baseline_threshold) * (ceiling - lthr) / (
+                ceiling - baseline_threshold
+            )
+        return round(shifted)
+
+    for zone in zones:
+        zone["min_bpm"] = remap(zone["min_bpm"])
+        zone["max_bpm"] = remap(zone["max_bpm"])
+    return zones
+
+
 def _zone_bpm(pct: float, max_hr: int, resting_hr: Optional[int]) -> int:
     """Absolute BPM for a zone fraction.
 
@@ -156,7 +213,11 @@ class HRZoneCalculator:
     """Compute and classify heart rate training zones."""
 
     @staticmethod
-    def calculate_zones(max_hr: int, resting_hr: Optional[int] = None) -> list[dict]:
+    def calculate_zones(
+        max_hr: int,
+        resting_hr: Optional[int] = None,
+        lthr: Optional[int] = None,
+    ) -> list[dict]:
         """Return 5-zone model with absolute BPM ranges.
 
         Args:
@@ -164,6 +225,10 @@ class HRZoneCalculator:
             resting_hr: Optional resting heart rate. When provided (and
                 plausible) zones are computed via Heart Rate Reserve
                 (Karvonen); otherwise the %max HR mapping is used.
+            lthr: Optional measured lactate-threshold HR. When provided (and
+                plausible) the band boundaries are re-anchored so the threshold
+                (Zone 3/4) edge equals it, correcting the formula's fixed-88%
+                assumption against the runner's real data.
 
         Returns:
             List of zone dicts, each with zone, name, min_bpm, max_bpm,
@@ -185,6 +250,9 @@ class HRZoneCalculator:
                     "description": defn["description"],
                 }
             )
+
+        if lthr is not None and _lthr_is_usable(max_hr, lthr):
+            zones = _reanchor_zones_to_lthr(zones, max_hr, int(lthr))
         return zones
 
     @staticmethod

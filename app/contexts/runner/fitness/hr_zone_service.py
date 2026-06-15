@@ -19,6 +19,7 @@ from app.core.training.hr_zone_calculator import (
     MIN_RELIABLE_MAX_HR,
     MIN_RELIABLE_RESTING_HR,
     HRZoneCalculator,
+    _lthr_is_usable,
 )
 from app.models.training_plan import TrainingPlan
 from app.models.user import User
@@ -38,6 +39,14 @@ MIN_EASY_RUNS_FOR_RESTING = 5
 # runner gets faster) and stays cheap; per-km splits within these runs supply
 # the bulk of the intensity spread the fit needs.
 MAX_RUNS_FOR_CALIBRATION = 60
+
+# Effort types whose average HR sits at lactate threshold. Used to measure the
+# runner's threshold HR (LTHR) for re-anchoring the zone boundaries.
+THRESHOLD_WORKOUT_TYPES = ("tempo", "cruise_interval", "race_pace", "fartlek")
+# Need a few threshold sessions before trusting a derived LTHR.
+MIN_THRESHOLD_RUNS_FOR_LTHR = 3
+# Only the most recent threshold runs, so LTHR tracks current fitness.
+MAX_RUNS_FOR_LTHR = 60
 
 
 def detect_max_hr_from_runs(user_id: str, db: Session) -> Optional[int]:
@@ -154,6 +163,59 @@ def get_user_resting_hr(
     return None, "none"
 
 
+def detect_threshold_hr_from_runs(user_id: str, db: Session) -> Optional[int]:
+    """Estimate lactate-threshold HR from recent threshold-effort runs.
+
+    A tempo / cruise-interval / race-pace run is run at (or very near) lactate
+    threshold, so the average HR across a handful of them is a solid LTHR proxy
+    -- and one measured from the runner's own physiology rather than assumed to
+    be 88% of max. We read the *effective* workout type (so untagged Strava
+    runs inferred as tempo count) and take the median to shrug off the odd hot
+    or under-warmed-up session. Returns None below a minimum sample count.
+    """
+    from statistics import median
+
+    from app.models import RunLog
+
+    runs = (
+        db.query(RunLog)
+        .filter(
+            RunLog.user_id == user_id,
+            RunLog.avg_heart_rate.isnot(None),
+        )
+        .order_by(RunLog.date.desc())
+        .limit(MAX_RUNS_FOR_LTHR)
+        .all()
+    )
+    hrs = [
+        run.avg_heart_rate
+        for run in runs
+        if run.avg_heart_rate and run.effective_workout_type in THRESHOLD_WORKOUT_TYPES
+    ]
+    if len(hrs) < MIN_THRESHOLD_RUNS_FOR_LTHR:
+        return None
+    return int(round(median(hrs)))
+
+
+def get_user_threshold_hr(user: User, db: Session) -> tuple[Optional[int], str]:
+    """Determine threshold HR, preferring a user override over an estimate.
+
+    Returns:
+        (lthr, source) where source is "user", "estimated", or "none".
+        ``lthr`` is None when nothing usable is available, leaving zones on the
+        max/resting-HR formula bands.
+    """
+    override = getattr(user, "threshold_hr", None)
+    if override and override > 0:
+        return int(override), "user"
+
+    estimated = detect_threshold_hr_from_runs(user.id, db)
+    if estimated:
+        return estimated, "estimated"
+
+    return None, "none"
+
+
 def gather_pace_hr_samples(user_id: str, db: Session) -> list[PaceHRSample]:
     """Collect ``(pace, heart rate)`` observations from a user's recent runs.
 
@@ -214,8 +276,12 @@ class HRZoneService:
         """
         max_hr, source = get_user_max_hr(user.id, db, user_age=user.age)
         resting_hr, resting_source = get_user_resting_hr(user, db)
-        zones = HRZoneCalculator.calculate_zones(max_hr, resting_hr=resting_hr)
+        lthr, lthr_source = get_user_threshold_hr(user, db)
+        zones = HRZoneCalculator.calculate_zones(
+            max_hr, resting_hr=resting_hr, lthr=lthr
+        )
         method = "hrr" if resting_hr is not None else "pct_max"
+        lthr_anchored = lthr is not None and _lthr_is_usable(max_hr, lthr)
 
         # Calibrate each zone's BPM band to the pace this runner actually holds
         # there, fitted from their own logged pace<->HR data. Falls back
@@ -228,6 +294,9 @@ class HRZoneService:
             "source": source,
             "resting_hr": resting_hr,
             "resting_source": resting_source,
+            "lthr": lthr if lthr_anchored else None,
+            "lthr_source": lthr_source,
+            "lthr_anchored": lthr_anchored,
             "method": method,
             "zones": zones,
             "pace_calibration": calibration,
@@ -238,6 +307,7 @@ class HRZoneService:
         logger.info(
             f"HR zones computed for plan {plan.id}: max_hr={max_hr} ({source}), "
             f"resting_hr={resting_hr} ({resting_source}), method={method}, "
+            f"lthr={lthr} ({lthr_source}), lthr_anchored={lthr_anchored}, "
             f"pace_calibrated={calibration is not None}"
         )
         return zones
