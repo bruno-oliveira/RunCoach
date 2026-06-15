@@ -264,6 +264,70 @@ def generate_trail_fuel_ideas() -> List[Dict[str, Any]]:
                 "half and rehearse the dose in training first."
             ),
         },
+        {
+            "name": "Salted rice balls (onigiri)",
+            "phase": "during",
+            "category": "savoury",
+            "carbs": "~35 g each",
+            "note": (
+                "Sushi rice pressed around a little miso or umeboshi and rolled "
+                "in salt. Cook a batch the night before — they hold their shape "
+                "in a vest and go down easily late in a race."
+            ),
+        },
+        {
+            "name": "Maple oat flapjacks",
+            "phase": "during",
+            "category": "sweet",
+            "carbs": "~35 g each",
+            "note": (
+                "Baked oats bound with maple and butter, cut into bars. Dense, "
+                "chewy carbs that travel well and don't crumble in a pocket."
+            ),
+        },
+        {
+            "name": "Sweet potato & salt mash pouch",
+            "phase": "during",
+            "category": "savoury",
+            "carbs": "~30 g per pouch",
+            "note": (
+                "Roast and mash sweet potato with salt, then squeeze into a "
+                "reusable pouch. Real-food carbs you can take on the move "
+                "without chewing when the effort is high."
+            ),
+        },
+        {
+            "name": "Pretzel & nut butter bites",
+            "phase": "during",
+            "category": "savoury",
+            "carbs": "~20 g each",
+            "note": (
+                "Mini pretzels sandwiched with salted nut butter. Crunchy, "
+                "salty carbs that cut through sweetness fatigue and add a "
+                "little protein and fat."
+            ),
+        },
+        {
+            "name": "Fig & sea-salt rolls",
+            "phase": "during",
+            "category": "sweet",
+            "carbs": "~24 g each",
+            "note": (
+                "Blended dried figs and oats rolled in sesame and flaky salt. "
+                "Naturally sweet, fibre-light and gentle on a tired stomach."
+            ),
+        },
+        {
+            "name": "Coconut & cocoa rice squares",
+            "phase": "during",
+            "category": "sweet",
+            "carbs": "~28 g each",
+            "note": (
+                "Sticky rice pressed with coconut, cocoa and a pinch of salt, "
+                "cut into squares. A no-bake change of flavour for hour three "
+                "onwards."
+            ),
+        },
         # --- After: recovery ------------------------------------------------
         {
             "name": "Recovery smoothie",
@@ -396,6 +460,43 @@ def generate_trail_nutrition_tips() -> List[Dict[str, str]]:
             "text": (
                 "Anti-chafe balm is mandatory kit: apply before long runs, not "
                 "after the hotspots have already started."
+            ),
+        },
+        {
+            "topic": "Pacing",
+            "text": (
+                "Fuel on a timer, not on hunger — set a beep every 30–40 "
+                "minutes so you keep eating before energy dips, not after."
+            ),
+        },
+        {
+            "topic": "Fueling",
+            "text": (
+                "Alternate liquid and solid carbs through the race; spreading "
+                "the load across both is easier on the gut than either alone."
+            ),
+        },
+        {
+            "topic": "Strategy",
+            "text": (
+                "Carry one 'bonk backup' — a high-carb item you don't touch "
+                "unless you crash. Knowing it's there is half the battle."
+            ),
+        },
+        {
+            "topic": "Cold",
+            "text": (
+                "In the cold, keep gels and bars in an inner pocket so they "
+                "stay soft, and sip warm broth at aid stations to fuel and "
+                "warm up at once."
+            ),
+        },
+        {
+            "topic": "Gear",
+            "text": (
+                "Pre-open wrappers and repack fuel into easy-tear baggies "
+                "before the start — fiddly packaging costs you food when your "
+                "hands are cold or tired."
             ),
         },
     ]
