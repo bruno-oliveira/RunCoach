@@ -2,11 +2,16 @@
 
 import pytest
 
+from app.contexts.nutrition.nutrition_content import (
+    generate_trail_fuel_ideas,
+    generate_trail_nutrition_tips,
+)
 from app.contexts.nutrition.nutrition_engine import (
     NutritionEngine,
     _trail_distance_boost,
     build_in_race_fueling_table,
 )
+from app.contexts.plan.plan_data_enricher import nutrition_for_template
 from app.core.race.race_protocol_generator import generate_race_protocol
 from app.core.training.trail_profile import classify_trail
 
@@ -228,3 +233,77 @@ class TestInRaceFuelingTable:
         long = build_in_race_fueling_table(80.0, 3000.0)
         assert "10 km" in short["electrolytes"]
         assert "60–90 min" in long["electrolytes"]
+
+
+class TestTrailFuelContent:
+    """Curated trail-ready fuel ideas and fuelling tips."""
+
+    def test_fuel_ideas_have_required_fields(self):
+        ideas = generate_trail_fuel_ideas()
+        assert len(ideas) >= 5
+        for item in ideas:
+            assert item["name"]
+            assert item["carbs"]
+            assert item["note"]
+            assert item["category"] in {"sweet", "savoury", "drink"}
+
+    def test_fuel_ideas_cover_sweet_savoury_and_drink(self):
+        categories = {item["category"] for item in generate_trail_fuel_ideas()}
+        assert {"sweet", "savoury", "drink"} <= categories
+
+    def test_trail_tips_are_actionable_strings(self):
+        tips = generate_trail_nutrition_tips()
+        assert len(tips) >= 5
+        assert all(isinstance(t, str) and t.strip() for t in tips)
+        joined = " ".join(tips).lower()
+        assert "caffeine" in joined
+        assert "sodium" in joined
+        assert "nothing new on race day" in joined
+
+    def test_blueprint_includes_trail_content_for_trail_plan(self):
+        engine = NutritionEngine()
+        plan = engine.generate_weekly_meal_plan(
+            weekly_km=40.0,
+            target_distance=50.0,
+            body_weight=70,
+            is_trail=True,
+            target_elevation_gain_m=1500.0,
+        )
+        assert plan["trail_fuel_ideas"]
+        assert plan["trail_tips"]
+
+    def test_blueprint_omits_trail_content_for_road_plan(self):
+        engine = NutritionEngine()
+        plan = engine.generate_weekly_meal_plan(
+            weekly_km=40.0,
+            target_distance=42.2,
+            body_weight=70,
+        )
+        assert "trail_fuel_ideas" not in plan
+        assert "trail_tips" not in plan
+
+    def test_nutrition_for_template_passes_trail_content_through(self):
+        engine = NutritionEngine()
+        plan = engine.generate_weekly_meal_plan(
+            weekly_km=40.0,
+            target_distance=50.0,
+            body_weight=70,
+            is_trail=True,
+            target_elevation_gain_m=1500.0,
+        )
+        ctx = nutrition_for_template(plan)
+        assert ctx["in_race_fueling"]["carbs_per_hour"]
+        assert ctx["trail_fuel_ideas"]
+        assert ctx["trail_tips"]
+
+    def test_nutrition_for_template_defaults_trail_content_for_road(self):
+        engine = NutritionEngine()
+        plan = engine.generate_weekly_meal_plan(
+            weekly_km=40.0,
+            target_distance=42.2,
+            body_weight=70,
+        )
+        ctx = nutrition_for_template(plan)
+        assert ctx["in_race_fueling"] is None
+        assert ctx["trail_fuel_ideas"] == []
+        assert ctx["trail_tips"] == []

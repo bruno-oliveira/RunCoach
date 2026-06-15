@@ -69,6 +69,81 @@
         </div>
         {% endif %}
 
+        {% if nutrition_plan.in_race_fueling or (nutrition_plan.trail_fuel_ideas and nutrition_plan.trail_fuel_ideas|length > 0) %}
+        <div class="trail-fuel">
+            <div class="section-subheader">
+                <h3>⛰️ <span data-i18n="nutrition.trail_fuel">Trail Race Fuelling</span></h3>
+                <p class="trail-fuel-desc">Portable fuel and on-the-move strategy for long days on the trails.</p>
+            </div>
+
+            {% if nutrition_plan.in_race_fueling %}
+            {% set fuel = nutrition_plan.in_race_fueling %}
+            <div class="hydration-guide-section in-race-fueling">
+                <h3><span data-i18n="nutrition.in_race">In-Race Fuelling</span></h3>
+                <div class="hydration-grid">
+                    {% if fuel.estimated_duration_hours %}
+                    <div class="hydration-item">
+                        <div class="hydration-label">Est. Duration</div>
+                        <div class="hydration-value">~{{ fuel.estimated_duration_hours }} h</div>
+                    </div>
+                    {% endif %}
+                    <div class="hydration-item">
+                        <div class="hydration-label">Carbs / Hour</div>
+                        <div class="hydration-value">{{ fuel.carbs_per_hour }}</div>
+                    </div>
+                    <div class="hydration-item">
+                        <div class="hydration-label">Fluid / Hour</div>
+                        <div class="hydration-value">{{ fuel.fluid_per_hour_ml }}</div>
+                    </div>
+                    <div class="hydration-item">
+                        <div class="hydration-label">Electrolytes</div>
+                        <div class="hydration-value">{{ fuel.electrolytes }}</div>
+                    </div>
+                </div>
+                <div class="hydration-tips">
+                    {% if fuel.real_food_strategy %}
+                    <div class="hydration-tip">{{ fuel.real_food_strategy }}</div>
+                    {% endif %}
+                    {% if fuel.rehearsal_advice %}
+                    <div class="hydration-tip">{{ fuel.rehearsal_advice }}</div>
+                    {% endif %}
+                </div>
+            </div>
+            {% endif %}
+
+            {% if nutrition_plan.trail_fuel_ideas and nutrition_plan.trail_fuel_ideas|length > 0 %}
+            <div class="trail-fuel-ideas">
+                <h3><span data-i18n="nutrition.trail_ready_meals">Trail-Ready Fuel</span></h3>
+                <div class="trail-fuel-grid">
+                    {% for item in nutrition_plan.trail_fuel_ideas %}
+                    <div class="meal-option-card trail-fuel-card">
+                        <div class="trail-fuel-card-top">
+                            <div class="meal-option-name">{{ item.name }}</div>
+                            <span class="trail-fuel-badge trail-fuel-badge-{{ item.category }}">{{ item.category }}</span>
+                        </div>
+                        <div class="meal-option-nutrition">
+                            <span class="nutrition-badge">🍝 {{ item.carbs }}</span>
+                        </div>
+                        <div class="meal-option-description">{{ item.note }}</div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+
+            {% if nutrition_plan.trail_tips and nutrition_plan.trail_tips|length > 0 %}
+            <div class="nutrition-guide-section trail-tips-section">
+                <h3><span data-i18n="nutrition.trail_tips">Trail Fuelling Tips</span></h3>
+                <ul class="nutrition-guide-list">
+                    {% for tip in nutrition_plan.trail_tips %}
+                    <li>{{ tip }}</li>
+                    {% endfor %}
+                </ul>
+            </div>
+            {% endif %}
+        </div>
+        {% endif %}
+
         {% if nutrition_plan.meal_suggestions and nutrition_plan.meal_suggestions|length > 0 %}
         <div class="meal-suggestions">
             <div class="meal-suggestions-header">
