@@ -1,7 +1,35 @@
 """Tests for heart rate zone calculator."""
 
-from app.contexts.runner.fitness.hr_zone_service import get_user_max_hr
+from types import SimpleNamespace
+
+from app.contexts.runner.fitness.hr_zone_service import (
+    detect_resting_hr_from_runs,
+    get_user_max_hr,
+    get_user_resting_hr,
+)
 from app.core.training.hr_zone_calculator import HRZoneCalculator
+
+
+class _FakeDB:
+    """Minimal query-chain stub returning a fixed ``all()`` payload."""
+
+    def __init__(self, rows):
+        self._rows = rows
+
+    def query(self, *a):
+        return self
+
+    def filter(self, *a):
+        return self
+
+    def order_by(self, *a):
+        return self
+
+    def limit(self, *a):
+        return self
+
+    def all(self):
+        return self._rows
 
 
 class TestCalculateZones:
@@ -221,3 +249,77 @@ class TestMaxHREstimation:
 
         hr, source = get_user_max_hr("user1", FakeDB())
         assert hr == 188
+
+
+class TestHeartRateReserve:
+    def test_none_resting_matches_pct_max(self):
+        assert HRZoneCalculator.calculate_zones(
+            190
+        ) == HRZoneCalculator.calculate_zones(190, resting_hr=None)
+
+    def test_hrr_math(self):
+        # max 190, resting 50 -> reserve 140. Aerobic band 70-80% HRR:
+        #   50 + 0.70*140 = 148 ; 50 + 0.80*140 = 162
+        zones = HRZoneCalculator.calculate_zones(190, resting_hr=50)
+        z2 = zones[1]
+        assert z2["min_bpm"] == 148
+        assert z2["max_bpm"] == 162
+
+    def test_hrr_sits_above_pct_max_for_low_resting(self):
+        pct_max = HRZoneCalculator.calculate_zones(190)
+        hrr = HRZoneCalculator.calculate_zones(190, resting_hr=50)
+        # Karvonen lifts the easy band above the naive %max band.
+        assert hrr[1]["min_bpm"] > pct_max[1]["min_bpm"]
+
+    def test_top_of_zone_5_is_max_hr(self):
+        zones = HRZoneCalculator.calculate_zones(190, resting_hr=50)
+        assert zones[4]["max_bpm"] == 190
+
+    def test_zones_ascending_under_hrr(self):
+        zones = HRZoneCalculator.calculate_zones(195, resting_hr=45)
+        for i in range(len(zones) - 1):
+            assert zones[i]["max_bpm"] <= zones[i + 1]["min_bpm"]
+
+    def test_implausible_resting_falls_back_to_pct_max(self):
+        # Resting >= max, or out of the reliable band, is ignored.
+        assert HRZoneCalculator.calculate_zones(
+            190, resting_hr=200
+        ) == HRZoneCalculator.calculate_zones(190)
+        assert HRZoneCalculator.calculate_zones(
+            190, resting_hr=10
+        ) == HRZoneCalculator.calculate_zones(190)
+
+
+class TestRestingHRDetection:
+    def test_none_without_enough_easy_runs(self):
+        db = _FakeDB([(130,), (128,)])  # fewer than the required minimum
+        assert detect_resting_hr_from_runs("u1", db) is None
+
+    def test_estimate_from_easy_floor_minus_offset(self):
+        # Lowest easy-run avg 120 -> 120 - 25 offset = 95 -> clamped to 95.
+        db = _FakeDB([(120,), (125,), (130,), (132,), (135,)])
+        assert detect_resting_hr_from_runs("u1", db) == 95
+
+    def test_estimate_clamped_to_floor(self):
+        db = _FakeDB([(50,), (52,), (55,), (58,), (60,)])
+        # 50 - 25 = 25 -> clamped up to the 30 BPM reliability floor.
+        assert detect_resting_hr_from_runs("u1", db) == 30
+
+    def test_user_value_preferred_over_estimate(self):
+        user = SimpleNamespace(id="u1", resting_hr=48)
+        resting, source = get_user_resting_hr(user, _FakeDB([]))
+        assert resting == 48
+        assert source == "user"
+
+    def test_falls_back_to_estimate(self):
+        user = SimpleNamespace(id="u1", resting_hr=None)
+        db = _FakeDB([(120,), (125,), (130,), (132,), (135,)])
+        resting, source = get_user_resting_hr(user, db)
+        assert source == "estimated"
+        assert resting == 95
+
+    def test_none_when_no_data(self):
+        user = SimpleNamespace(id="u1", resting_hr=None)
+        resting, source = get_user_resting_hr(user, _FakeDB([]))
+        assert resting is None
+        assert source == "none"

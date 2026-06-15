@@ -998,6 +998,41 @@
   color: var(--color-text-secondary);
 }
 
+.settings-field {
+  margin-top: var(--space-5);
+  padding-top: var(--space-5);
+  border-top: 1px solid var(--color-border);
+}
+
+.settings-field-label strong {
+  font-size: var(--text-base);
+  line-height: 1.35;
+  display: block;
+  margin-bottom: 4px;
+}
+
+.settings-field-label .toggle-help {
+  font-size: var(--text-sm);
+  line-height: 1.5;
+  color: var(--color-text-secondary);
+  display: block;
+}
+
+.settings-field-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  margin-top: var(--space-3);
+}
+
+.settings-number-input {
+  width: 110px;
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  font-size: var(--text-sm);
+}
+
 .settings-modal-footer {
   padding: var(--space-3) var(--space-5);
   border-top: 1px solid var(--color-border);
