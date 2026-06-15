@@ -314,6 +314,14 @@ def nutrition_for_template(nutrition_plan_data) -> dict[str, Any]:
     if not isinstance(hydration_guide, dict):
         hydration_guide = {}
 
+    trail_fuel_ideas = nutrition_plan.get("trail_fuel_ideas", [])
+    if not isinstance(trail_fuel_ideas, list):
+        trail_fuel_ideas = []
+
+    trail_tips = nutrition_plan.get("trail_tips", [])
+    if not isinstance(trail_tips, list):
+        trail_tips = []
+
     return {
         "daily_calories": targets.get("calories", 0),
         "protein_g": targets.get("protein", 0),
@@ -324,6 +332,9 @@ def nutrition_for_template(nutrition_plan_data) -> dict[str, Any]:
         "hydration_guide": hydration_guide,
         "pre_run_meal": nutrition_plan.get("pre_run_meal"),
         "post_run_meal": nutrition_plan.get("post_run_meal"),
+        "in_race_fueling": nutrition_plan.get("in_race_fueling"),
+        "trail_fuel_ideas": trail_fuel_ideas,
+        "trail_tips": trail_tips,
     }
 
 

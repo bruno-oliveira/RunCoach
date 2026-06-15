@@ -6,6 +6,8 @@ from app.contexts.nutrition.meal_selector import MealSelector
 from app.contexts.nutrition.nutrition_content import (
     generate_general_nutrition_tips,
     generate_hydration_guide,
+    generate_trail_fuel_ideas,
+    generate_trail_nutrition_tips,
 )
 
 # --- Nutrition formula constants ----------------------------------------------
@@ -238,6 +240,8 @@ class NutritionEngine:
                 target_distance,
                 target_elevation_gain_m,
             )
+            meal_blueprint["trail_fuel_ideas"] = generate_trail_fuel_ideas()
+            meal_blueprint["trail_tips"] = generate_trail_nutrition_tips()
 
         meal_types = ["breakfast", "lunch", "dinner", "snack", "post_workout"]
 
