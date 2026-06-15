@@ -304,13 +304,14 @@ def _trail_run_ceilings(profile: TrailProfile) -> tuple[float, float]:
     """Per-run distance ceilings for a trail profile.
 
     The single-run ceiling caps the longest run on plans with few runs/week.
-    For ultras the long run plateaus around 35 km — the bulk of long-day
-    volume comes from back-to-back doubles, not a single 50 km grind.
+    It scales with race distance so ultra prep gets a genuinely long peak run,
+    topping out around 46 km for 100-mile distances — beyond that the remaining
+    long-day volume comes from back-to-back doubles, not a single 50 km grind.
 
     The quality cap controls per-session intensity work (tempo / interval /
     hill repeats); it scales with distance but stays runner-friendly.
     """
-    run_ceiling = min(35.0, max(20.0, 0.40 * profile.distance_km))
+    run_ceiling = min(46.0, max(20.0, 0.45 * profile.distance_km))
     q_cap = min(15.0, max(8.0, 0.15 * profile.distance_km))
     return run_ceiling, q_cap
 

@@ -129,11 +129,15 @@ TRAIL_LONG_RUN_RATIOS = {
 }
 
 # Peak long run as a minimum fraction of race distance, by trail bracket.
+# The fraction necessarily shrinks as race distance grows — nobody runs an
+# entire 100-miler in training — but the longer brackets still need a far
+# bigger absolute long run than the old 0.22 floor produced. The bracket caps
+# below bound the result for the biggest races.
 TRAIL_PEAK_RACE_FRACTION = {
     "short": 0.65,
-    "standard": 0.70,
-    "ultra": 0.55,
-    "long_ultra": 0.22,
+    "standard": 0.72,
+    "ultra": 0.60,
+    "long_ultra": 0.30,
 }
 
 # Flat-only trail prep can underdose long-run specificity; allow a higher
@@ -152,12 +156,31 @@ ROAD_LONG_RUN_CAPS = {
     42.2: {"beginner": 32.0, "intermediate": 34.0, "advanced": 36.0},
 }
 
-# Experience-tiered single-long-run distance caps (km) for trail brackets.
-TRAIL_LONG_RUN_CAPS = {
-    "short": {"beginner": 14.0, "intermediate": 16.0, "advanced": 18.0},
-    "standard": {"beginner": 24.0, "intermediate": 25.5, "advanced": 27.0},
-    "ultra": {"beginner": 28.0, "intermediate": 30.0, "advanced": 32.0},
-    "long_ultra": {"beginner": 30.0, "intermediate": 32.0, "advanced": 35.0},
+# Single-long-run distance cap (km) for trail/ultra, as a *continuous* function
+# of race distance rather than coarse per-bracket tiers. Coarse brackets gave
+# a 30 km race the same ~26 km cap as a 42 km race (so the long run sat at the
+# full race distance), while a 160 km race was pinned to the same ceiling as a
+# 50 km one. A log curve scales smoothly instead:
+#
+#     cap_km(d) = TRAIL_LR_CAP_LOG_A * ln(d) + TRAIL_LR_CAP_LOG_B
+#
+# tuned so an intermediate runner gets ~16 km @ 15 km, ~25 km @ 30 km,
+# ~32 km @ 55 km, ~40 km @ 100 km, and ~46 km @ 160 km. The fraction of race
+# distance necessarily falls as the race grows — nobody runs a whole 100-miler
+# in training — and the remaining long-day load comes from back-to-back doubles
+# (the Intensive Training Weekend), not one ever-bigger grind.
+TRAIL_LR_CAP_LOG_A = 12.67
+TRAIL_LR_CAP_LOG_B = -18.3
+
+# Absolute clamp on the continuous cap (km), and per-experience multipliers
+# applied to the curve so beginners stay conservative and advanced runners get
+# a longer peak run.
+TRAIL_LR_CAP_MIN_KM = 12.0
+TRAIL_LR_CAP_MAX_KM = 48.0
+TRAIL_LR_CAP_EXPERIENCE = {
+    "beginner": 0.90,
+    "intermediate": 1.0,
+    "advanced": 1.10,
 }
 
 # Fallback long-run cap as a fraction of race distance when no tier matches.
