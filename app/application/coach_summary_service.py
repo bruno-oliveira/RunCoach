@@ -22,11 +22,10 @@ from app.contexts.plan.adaptation import AdaptationService
 from app.contexts.runner.enrichment.week_pulse_generator import get_week_pulse
 from app.contexts.runner.fitness.coaching_data import fetch_pattern_candidates
 from app.contexts.runner.fitness.readiness_service import ReadinessService
-from app.contexts.runner.readiness_repository import SQLAlchemyReadinessRepository
 from app.core.coaching.pattern_analyzer import pattern_feedback
 from app.core.time_utils import local_today
 from app.core.training.plan_calendar import compute_current_week
-from app.models import ReadinessLog, RunLog, TrainingPlan
+from app.models import RunLog, TrainingPlan
 from app.utils import to_date as _to_date
 
 # Day-of-week labels — plans are 1-indexed Mon..Sun (workout.day) and start on
@@ -322,65 +321,6 @@ def build_today(plan: TrainingPlan, user_id: str, db: Session) -> Dict[str, Any]
         "week_planned_km": round(planned_total, 1),
         "week_actual_km": round(actual_total, 1),
         "week_pct": pct,
-    }
-
-
-def build_readiness_trend(user_id: str, db: Session, days: int = 30) -> Dict[str, Any]:
-    """Recent daily readiness check-ins + rolling averages and a trend label.
-
-    Logs are returned oldest-first for left-to-right sparkline plotting; the
-    rolling averages and trend are computed on the most recent entries.
-    """
-    logs = SQLAlchemyReadinessRepository(db).list_recent(user_id, days)  # newest-first
-    if not logs:
-        return {
-            "available": False,
-            "logs": [],
-            "avg_7d": None,
-            "avg_14d": None,
-            "trend": None,
-        }
-
-    def _component(log: ReadinessLog) -> Dict[str, Optional[int]]:
-        return {
-            "sleep": log.sleep,
-            "soreness": log.soreness,
-            "energy": log.energy,
-            "stress": log.stress,
-        }
-
-    items = [
-        {
-            "date": log.log_date.isoformat() if log.log_date else None,
-            "score": log.score,
-            "status": log.status,
-            "components": _component(log),
-        }
-        for log in reversed(logs)  # oldest-first for charting
-    ]
-
-    def _avg(vals: List[int]) -> Optional[int]:
-        return round(sum(vals) / len(vals)) if vals else None
-
-    recent_7 = [log.score for log in logs[:7] if log.score is not None]
-    prior_7 = [log.score for log in logs[7:14] if log.score is not None]
-    avg_7d = _avg(recent_7)
-    avg_14d = _avg([log.score for log in logs[:14] if log.score is not None])
-
-    trend = "stable"
-    if recent_7 and prior_7:
-        diff = sum(recent_7) / len(recent_7) - sum(prior_7) / len(prior_7)
-        if diff >= 4:
-            trend = "improving"
-        elif diff <= -4:
-            trend = "declining"
-
-    return {
-        "available": True,
-        "logs": items,
-        "avg_7d": avg_7d,
-        "avg_14d": avg_14d,
-        "trend": trend,
     }
 
 

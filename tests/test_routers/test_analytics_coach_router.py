@@ -129,7 +129,7 @@ class TestCoachEndpoints:
 
 @pytest.mark.usefixtures("_override_db")
 class TestCoachHubExtraEndpoints:
-    """today / signal-history (plan-scoped) + readiness-trend / training-age."""
+    """today / signal-history (plan-scoped) + training-age."""
 
     @pytest.mark.parametrize("path", ("today", "signal-history"))
     def test_plan_scoped_requires_auth(self, path, plan):
@@ -165,21 +165,6 @@ class TestCoachHubExtraEndpoints:
         # The fixture's lone event has no snapshot → not available, well-formed.
         assert body["available"] is False
         assert body["snapshots"] == []
-
-    def test_readiness_trend_requires_auth(self):
-        app.dependency_overrides.pop(get_current_user, None)
-        with TestClient(app) as client:
-            resp = client.get("/api/analytics/readiness-trend")
-        assert resp.status_code == 401
-
-    def test_readiness_trend_shape(self, owner):
-        _set_user(owner)
-        with TestClient(app) as client:
-            resp = client.get("/api/analytics/readiness-trend")
-        assert resp.status_code == 200
-        body = resp.json()
-        assert body["available"] is False  # no readiness logs
-        assert body["logs"] == []
 
     def test_training_age_shape(self, owner):
         _set_user(owner)

@@ -212,7 +212,6 @@ class AuthService:
                     email=email,
                     name=name,
                     picture=picture,
-                    auto_adjust_enabled=True,
                 )
                 db.add(user)
 

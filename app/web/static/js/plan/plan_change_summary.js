@@ -6,7 +6,7 @@
  * Public entry points exposed on `window`:
  *   - runChangePlanAction(action, options)
  *       Initiates the preview → apply flow for a given action.
- *       action ∈ "adjust" | "accept_recommendation" | "reset" | "auto_adjust"
+ *       action ∈ "intent" | "reset"
  *       options.planId is optional (defaults to window.APP_CTX.plan_id).
  *       options.skipPreview=true bypasses preview and applies immediately
  *         (used internally for actions without a preview endpoint).
@@ -19,24 +19,29 @@
     'use strict';
 
     var ACTION_TITLES = {
+        // "adjust" retained only so a previously-persisted change plan from the
+        // retired data-driven adjuster still renders a sensible title.
         adjust: 'Adjust plan',
-        accept_recommendation: 'Apply recommendation',
         reset: 'Reset to original',
-        auto_adjust: 'RunCoach auto-adjustment',
+        // Intent actions — the change_plan returns the intent name as its action.
+        feeling_tired: 'Feeling tired',
+        feeling_strong: 'Feeling strong',
+        skip_run: 'Skip a run',
+        away: 'Away / travelling',
+        sick_injured: 'Sick or injured',
+        busy_week: 'Busy week',
     };
 
     var ENDPOINTS = {
-        adjust: {
-            preview: '/api/plan/{id}/adjust/preview',
-            apply: '/api/plan/{id}/adjust',
-        },
-        accept_recommendation: {
-            preview: '/api/plan/{id}/accept-recommendation/preview',
-            apply: '/api/plan/{id}/accept-recommendation',
-        },
         reset: {
             preview: '/api/plan/{id}/reset-adjustment/preview',
             apply: '/api/plan/{id}/reset-adjustment',
+        },
+        // Single endpoint pair for every life-event intent; the chosen
+        // intent + params travel in the request body.
+        intent: {
+            preview: '/api/plan/{id}/intent/preview',
+            apply: '/api/plan/{id}/intent',
         },
     };
 
@@ -319,11 +324,15 @@
                 && typeof window.APP_CTX.adaptation_revision === 'number') {
             headers['If-Match'] = String(window.APP_CTX.adaptation_revision);
         }
-        return fetch(url, {
+        var fetchOpts = {
             method: 'POST',
             headers: headers,
             credentials: 'same-origin',
-        }).then(function (res) {
+        };
+        if (opts.body !== undefined) {
+            fetchOpts.body = JSON.stringify(opts.body);
+        }
+        return fetch(url, fetchOpts).then(function (res) {
             return res.json().then(function (body) {
                 if (!res.ok) {
                     if (res.status === 409) {
@@ -415,7 +424,7 @@
             }
         }
 
-        return postJson(previewUrl)
+        return postJson(previewUrl, { body: options.body })
             .then(function (preview) {
                 var cp = unwrapChangePlan(preview);
                 if (!cp) {
@@ -423,7 +432,7 @@
                     resetButton();
                     return;
                 }
-                openPreview(overlay, cp, action, applyUrl, planId, btn, originalLabel);
+                openPreview(overlay, cp, action, applyUrl, planId, btn, originalLabel, options.body);
             })
             .catch(function (err) {
                 showError(err.message || 'Preview failed.');
@@ -431,7 +440,7 @@
             });
     }
 
-    function openPreview(overlay, cp, action, applyUrl, planId, btn, originalLabel) {
+    function openPreview(overlay, cp, action, applyUrl, planId, btn, originalLabel, applyBody) {
         renderInto(overlay, cp);
         var canApply = cp.would_change;
         configureFooter(overlay, {
@@ -475,7 +484,7 @@
             applyBtn.onclick = function () {
                 cleanup();
                 setBusy(overlay, true);
-                postJson(applyUrl)
+                postJson(applyUrl, { body: applyBody })
                     .then(function (applied) {
                         var appliedCp = unwrapChangePlan(applied);
                         var changedCount = appliedCp
@@ -489,9 +498,12 @@
                         closeModal(overlay);
                         // Patch the page in place from the response so the
                         // user sees the new totals immediately. Reload only
-                        // if patch is unavailable (older endpoint shapes).
+                        // if patch is unavailable (older endpoint shapes), or
+                        // for intents — those can change a workout's *type*
+                        // (skip → rest, tempo → easy) which the in-place patch
+                        // doesn't repaint, so a reload keeps the card honest.
                         var patch = appliedCp && appliedCp.patch;
-                        if (patch && window.planDomSync) {
+                        if (action !== 'intent' && patch && window.planDomSync) {
                             window.planDomSync.applyPatch(patch);
                             markSeen(planId);
                         } else {

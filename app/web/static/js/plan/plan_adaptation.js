@@ -1,8 +1,11 @@
 /**
- * plan_adaptation.js — single unified adaptation card + recalibration.
+ * plan_adaptation.js — per-week reset wired from the week card header.
  *
- * Depends on plan_core.js (authHeaders, escapeHtml, runChangePlanAction).
- * Depends on plan_dom_sync.js for in-place DOM patches.
+ * The old recommendation/alert/recalibrate surfaces have been replaced by the
+ * "Adjust my plan" intent menu (plan_intent_menu.js). Per-week reset stays:
+ * it reverts a single manually-adjusted week to its baseline distances.
+ *
+ * Depends on plan_core.js (authHeaders) and plan_dom_sync.js.
  */
 (function () {
     'use strict';
@@ -25,76 +28,6 @@
             ApiClient.showSuccess(message);
         }
     }
-
-    /* -------------------------------------------------------------- */
-    /*  Pending recommendation — accept / dismiss                      */
-    /* -------------------------------------------------------------- */
-
-    window.acceptRecommendation = function () {
-        var btn = document.querySelector('#plan-adaptation-card .btn-primary');
-        if (window.runChangePlanAction) {
-            return window.runChangePlanAction('accept_recommendation', { button: btn });
-        }
-        _toastError('Change-plan UI unavailable.');
-    };
-
-    window.dismissRecommendation = function () {
-        var planId = window.APP_CTX && window.APP_CTX.plan_id;
-        if (!planId) return;
-
-        fetch('/api/plan/' + planId + '/dismiss-recommendation', {
-            method: 'POST',
-            headers: window.authHeaders ? window.authHeaders() : { 'Content-Type': 'application/json' },
-            credentials: 'same-origin'
-        })
-        .then(_parseResponse)
-        .then(function (r) {
-            if (!r.ok) {
-                _toastError((r.payload && r.payload.detail) || 'Could not dismiss the recommendation. Please try again.');
-                return;
-            }
-            if (window.planDomSync) {
-                window.planDomSync.applyAdaptationState({ kind: 'none' });
-            }
-        })
-        .catch(function (err) {
-            console.error('[recommendation] dismiss failed:', err);
-            _toastError('Network error - the recommendation was not dismissed.');
-        });
-    };
-
-    /* -------------------------------------------------------------- */
-    /*  Adaptation alert — dismiss                                     */
-    /* -------------------------------------------------------------- */
-
-    window.dismissAdaptationAlert = function () {
-        var planId = window.APP_CTX && window.APP_CTX.plan_id;
-        if (!planId) return;
-
-        fetch('/api/plan/' + planId + '/dismiss-alert', {
-            method: 'POST',
-            headers: window.authHeaders ? window.authHeaders() : { 'Content-Type': 'application/json' },
-            credentials: 'same-origin'
-        })
-        .then(_parseResponse)
-        .then(function (r) {
-            if (!r.ok) {
-                _toastError((r.payload && r.payload.detail) || 'Could not dismiss the alert. Please try again.');
-                return;
-            }
-            if (window.planDomSync) {
-                window.planDomSync.applyAdaptationState({ kind: 'none' });
-            }
-        })
-        .catch(function (err) {
-            console.error('[alert] dismiss failed:', err);
-            _toastError('Network error - the alert was not dismissed.');
-        });
-    };
-
-    /* -------------------------------------------------------------- */
-    /*  Per-week reset (called from the week card header)              */
-    /* -------------------------------------------------------------- */
 
     window.resetWeek = function (weekNum) {
         var planId = window.APP_CTX && window.APP_CTX.plan_id;
@@ -134,52 +67,6 @@
         })
         .catch(function (err) {
             console.error('[resetWeek] network error', err);
-            _toastError('Error: ' + err.message);
-        });
-    };
-
-    /* -------------------------------------------------------------- */
-    /*  Recalibrate — user-initiated, not part of the banner stack     */
-    /* -------------------------------------------------------------- */
-
-    window.showRecalibrateModal = function () {
-        var modal = document.getElementById('recalibrate-modal');
-        if (modal) modal.style.display = 'flex';
-    };
-
-    window.recalibratePlan = function (strategy) {
-        var planId = window.APP_CTX && window.APP_CTX.plan_id;
-        if (!planId) return;
-
-        fetch('/api/plan/' + planId + '/recalibrate', {
-            method: 'POST',
-            headers: window.authHeaders ? window.authHeaders({ 'Content-Type': 'application/json' }) : { 'Content-Type': 'application/json' },
-            credentials: 'same-origin',
-            body: JSON.stringify({ strategy: strategy })
-        })
-        .then(_parseResponse)
-        .then(function (r) {
-            var payload = r.payload || {};
-            var modal = document.getElementById('recalibrate-modal');
-            if (!r.ok) {
-                _toastError(payload.detail || ('Request failed: ' + r.status));
-                return;
-            }
-            if (payload.ok) {
-                if (modal) modal.style.display = 'none';
-                _toastSuccess(payload.reason || 'Plan recalibrated.');
-                // Recalibrate is a heavier mutation that may rewrite many
-                // weeks — fall back to reload here since we don't get a
-                // patch payload back.
-                if (typeof window.reloadPlanPage === 'function') {
-                    window.reloadPlanPage();
-                }
-                return;
-            }
-            _toastError(payload.error || payload.detail || 'Recalibration failed.');
-        })
-        .catch(function (err) {
-            console.error('[recalibratePlan] network error', err);
             _toastError('Error: ' + err.message);
         });
     };

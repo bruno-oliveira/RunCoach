@@ -116,32 +116,10 @@ def plan_view_context(
 
 
 def _build_adaptation_state(training_plan: TrainingPlan) -> dict:
-    """Collapse all adaptation surfaces into one state for the unified card.
-
-    Precedence: ``alert`` (proactive warning) outranks ``recommendation``
-    (weekly performance review) outranks ``none``.
-    """
-    alert = training_plan.adaptation_alert
-    if alert:
-        return {
-            "kind": "alert",
-            "headline": "Your plan needs attention",
-            "detail": alert.get("message")
-            or "Recent performance suggests recalibrating your plan.",
-            "alert_type": alert.get("type"),
-            "alert_suggestion": alert.get("suggestion"),
-        }
-    rec = training_plan.pending_recommendation
-    if rec:
-        multiplier = rec.get("multiplier")
-        return {
-            "kind": "recommendation",
-            "headline": "Weekly Performance Review",
-            "detail": rec.get("reason") or "We have a training adjustment to suggest.",
-            "multiplier": multiplier,
-            "direction": rec.get("direction"),
-            "week_evaluated": rec.get("week_evaluated"),
-        }
+    """Adaptation is now fully user-driven via the "Adjust my plan" intent
+    menu, so there is no passive alert/recommendation surface. Retained as a
+    stable ``{"kind": "none"}`` payload for the client (APP_CTX + change-plan
+    patch) so existing JS keeps working without special-casing."""
     return {"kind": "none"}
 
 

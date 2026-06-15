@@ -11,7 +11,6 @@ from app.application.coach_summary_service import (
     build_adaptation_history,
     build_coach_patterns,
     build_coach_summary,
-    build_readiness_trend,
     build_signal_history,
     build_today,
     build_training_age,
@@ -277,16 +276,6 @@ def get_signal_history(
     """Per-event adaptation signal snapshots for trend sparklines."""
     plan = get_plan_or_404(plan_id, db, current_user, require_user_match=True)
     return build_signal_history(plan)
-
-
-@analytics_router.get("/readiness-trend")
-def get_readiness_trend(
-    days: int = Query(30, ge=7, le=90),
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
-):
-    """Recent readiness check-ins with rolling averages and a trend label."""
-    return build_readiness_trend(current_user.id, db, days=days)
 
 
 @analytics_router.get("/training-age")

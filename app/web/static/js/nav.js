@@ -360,8 +360,8 @@ function openSettingsModal() {
     overlay.classList.add('is-open');
     overlay.setAttribute('aria-hidden', 'false');
     document.body.style.overflow = 'hidden';
-    const toggle = document.getElementById('autoAdjustToggle');
-    if (toggle) toggle.focus();
+    const firstField = document.getElementById('restingHrInput');
+    if (firstField) firstField.focus();
 }
 
 function closeSettingsModal() {
@@ -377,41 +377,6 @@ function closeSettingsModal() {
 function closeSettingsModalOnBackdrop(evt) {
     if (evt.target && evt.target.id === 'settingsOverlay') {
         closeSettingsModal();
-    }
-}
-
-async function saveAutoAdjustSetting(enabled) {
-    const toggle = document.getElementById('autoAdjustToggle');
-    const feedback = document.getElementById('settingsFeedback');
-    if (feedback) {
-        feedback.textContent = 'Saving…';
-        feedback.classList.remove('is-saved', 'is-error');
-    }
-    if (toggle) toggle.disabled = true;
-    try {
-        const res = await fetch('/api/auth/me/settings', {
-            method: 'PATCH',
-            credentials: 'same-origin',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ auto_adjust_enabled: !!enabled }),
-        });
-        if (!res.ok) throw new Error('save_failed');
-        const data = await res.json();
-        if (toggle) toggle.checked = !!data.auto_adjust_enabled;
-        if (feedback) {
-            feedback.textContent = data.auto_adjust_enabled
-                ? 'Auto-adjust on — weekly adjustments will apply automatically.'
-                : 'Auto-adjust off — weekly adjustments will wait for your approval.';
-            feedback.classList.add('is-saved');
-        }
-    } catch (err) {
-        if (toggle) toggle.checked = !enabled;
-        if (feedback) {
-            feedback.textContent = 'Could not save. Please try again.';
-            feedback.classList.add('is-error');
-        }
-    } finally {
-        if (toggle) toggle.disabled = false;
     }
 }
 

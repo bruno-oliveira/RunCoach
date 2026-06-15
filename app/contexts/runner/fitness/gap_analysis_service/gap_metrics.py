@@ -364,7 +364,8 @@ def _generate_top_actions(
             }
         )
 
-    # Fitness trajectory
+    # Fitness trajectory — advisory only (no one-click action; volume changes
+    # are user-driven via the "Adjust my plan" intent menu now).
     if fitness.get("on_track") is False:
         needed = fitness.get("needed_vdot_for_goal")
         current = fitness.get("current_vdot")
@@ -375,8 +376,8 @@ def _generate_top_actions(
                         f"VDOT gap: {current} vs {needed} needed — "
                         "include quality speed work to improve fitness"
                     ),
-                    "action_type": "adjust_plan",
-                    "label": "Recalibrate plan",
+                    "action_type": "note",
+                    "label": None,
                 }
             )
 

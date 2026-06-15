@@ -11,7 +11,7 @@
 <link rel="stylesheet" href="{{ static_url('css/plan/banners.css') }}">
 <link rel="stylesheet" href="{{ static_url('css/plan/hr-zones.css') }}">
 <link rel="stylesheet" href="{{ static_url('css/plan/structured.css') }}">
-<link rel="stylesheet" href="{{ static_url('css/plan/readiness-widget.css') }}">
+<link rel="stylesheet" href="{{ static_url('css/plan/intent-menu.css') }}">
 <link rel="stylesheet" href="{{ static_url('css/plan/fitness.css') }}">
 <link rel="stylesheet" href="{{ static_url('css/plan/evolution.css') }}">
 <link rel="stylesheet" href="{{ static_url('css/plan/quality.css') }}">
@@ -266,70 +266,10 @@
     {% endif %}
     {% endif %}
 
-    {% if user and start_date and adaptation_state and adaptation_state.kind != 'none' and not plan_completed %}
-    <div class="plan-adaptation-card" id="plan-adaptation-card" data-kind="{{ adaptation_state.kind }}">
-        <div class="plan-adaptation-card-icon" aria-hidden="true">
-            {% if adaptation_state.kind == 'alert' %}
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
-            {% else %}
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
-            {% endif %}
-        </div>
-        <div class="plan-adaptation-card-text">
-            <strong id="plan-adaptation-card-headline">{{ adaptation_state.headline }}</strong>
-            <p id="plan-adaptation-card-detail">{{ adaptation_state.detail }}</p>
-        </div>
-        <div class="plan-adaptation-card-actions" id="plan-adaptation-card-actions">
-            {% if adaptation_state.kind == 'alert' %}
-            <button class="btn btn-small btn-primary" onclick="showRecalibrateModal()">Recalibrate</button>
-            <button class="btn btn-small btn-ghost" onclick="dismissAdaptationAlert()"><span data-i18n="plan.dismiss">Dismiss</span></button>
-            {% elif adaptation_state.kind == 'recommendation' %}
-            <button class="btn btn-small btn-primary" onclick="acceptRecommendation()"><span data-i18n="plan.accept">Accept</span></button>
-            <button class="btn btn-small btn-ghost" onclick="dismissRecommendation()"><span data-i18n="plan.dismiss">Dismiss</span></button>
-            {% endif %}
-        </div>
-    </div>
-    {% endif %}
-
-    {% if user and start_date and not plan_completed %}
-    <!-- Recalibrate Modal (opened from the adaptation card when kind=alert, or from the recalibrate CTA) -->
-    <div class="recalibrate-modal-overlay" id="recalibrate-modal" style="display:none;" onclick="if(event.target===this)this.style.display='none'">
-        <div class="recalibrate-modal">
-            <h3><span data-i18n="plan.recalibrate_plan">Recalibrate Plan</span></h3>
-            <p class="recalibrate-modal-desc" id="recalibrate-alert-detail"></p>
-            <div class="recalibrate-options">
-                <button class="recalibrate-option" onclick="recalibratePlan('time_off')">
-                    <strong><span data-i18n="plan.took_time_off">I took time off</span></strong>
-                    <span>Rebuild remaining weeks with a gentler ramp from current fitness</span>
-                </button>
-                <button class="recalibrate-option" onclick="recalibratePlan('ahead')">
-                    <strong><span data-i18n="plan.ahead_schedule">I'm ahead of schedule</span></strong>
-                    <span>Bump up remaining weeks' targets by 10%</span>
-                </button>
-                <button class="recalibrate-option" onclick="recalibratePlan('recovery_insertion')">
-                    <strong><span data-i18n="plan.extra_recovery">I need extra recovery</span></strong>
-                    <span>Convert next week to a recovery week (60% volume, easy pace only)</span>
-                </button>
-            </div>
-            <button class="btn btn-ghost btn-small" style="margin-top:12px" onclick="document.getElementById('recalibrate-modal').style.display='none'">Cancel</button>
-        </div>
-    </div>
-    {% endif %}
-
-    {% if user and start_date and not plan_completed %}
-    <div class="plan-action-banner recalibrate-banner {% if needs_adjustment %}recalibrate-urgent{% endif %}" id="adjust-banner">
-        <div class="banner-content">
-            <div class="banner-text">
-                <strong><span data-i18n="plan.adjust_plan">Adjust Plan</span></strong>
-                <p>Adjust future weeks based on your recent running data.
-                {% if skipped_count and skipped_count > 0 %}{{ skipped_count }} missed{% endif %}{% if skipped_count and rescheduled_count and skipped_count > 0 and rescheduled_count > 0 %}, {% endif %}{% if rescheduled_count and rescheduled_count > 0 %}{{ rescheduled_count }} rescheduled{% endif %}{% if (skipped_count and skipped_count > 0) or (rescheduled_count and rescheduled_count > 0) %} workout{{ 's' if (skipped_count + rescheduled_count) != 1 else '' }}.{% endif %}</p>
-            </div>
-            <div class="banner-actions">
-                <button onclick="PlanModule.adjustPlan()" class="btn btn-primary btn-small" id="adjust-btn"><span data-i18n="plan.adjust_plan">Adjust Plan</span></button>
-            </div>
-        </div>
-    </div>
-    {% endif %}
+    {# Single life-event entry point for adapting the plan. Replaces the old
+       adaptation alert/recommendation card, the recalibrate modal, and the
+       data-driven "Adjust Plan" banner. #}
+    {% include 'components/intent_menu.html' %}
 
     {% if is_trail and training_plan.training_terrain == 'flat' and (target_elevation_gain_m or 0) > 0 %}
     <div class="flat-mountain-sim-banner" role="status" aria-live="polite">
@@ -628,10 +568,6 @@
     {% endif %}{# has_plan_status #}
 
     {% include "components/change_plan_modal.html" %}
-
-    {% if user and current_week_number and not plan_completed %}
-    {% include 'components/daily_readiness_widget.html' %}
-    {% endif %}
 
     {# The pinned current week now renders as the page hero, just under the
        header — see the "This Week" hero block above. #}
@@ -1028,10 +964,10 @@
 <script src="{{ static_url('js/plan/plan_adaptation.js') }}" defer></script>
 <script src="{{ static_url('js/plan/plan_dragdrop.js') }}" defer></script>
 <script src="{{ static_url('js/plan/plan_change_summary.js') }}" defer></script>
+<script src="{{ static_url('js/plan/plan_intent_menu.js') }}" defer></script>
 <script src="{{ static_url('js/plan/plan_core.js') }}" defer></script>
 {% if user %}
 <script src="{{ static_url('js/readiness.js') }}" defer></script>
-<script src="{{ static_url('js/plan/plan_readiness_daily.js') }}" defer></script>
 <script src="{{ static_url('js/gap_analysis.js') }}" defer></script>
 {% endif %}
 {% if progress_data and progress_data.completed_count > 0 %}

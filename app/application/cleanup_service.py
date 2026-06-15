@@ -68,8 +68,8 @@ def cleanup_anonymous_users(db: Session, *, dry_run: bool = False) -> int:
     login. Retention is keyed off ``last_activity`` (falls back to
     ``created_at`` if last_activity is null).
 
-    Cascade deletes on User → TrainingPlan / RunLog / FavoriteRecipe /
-    ReadinessLog clean up associated rows automatically.
+    Cascade deletes on User → TrainingPlan / RunLog / FavoriteRecipe
+    clean up associated rows automatically.
     """
     cutoff = (
         datetime.now(timezone.utc) - timedelta(days=ANONYMOUS_RETENTION_DAYS)

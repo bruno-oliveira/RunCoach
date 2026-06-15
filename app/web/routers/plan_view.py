@@ -48,10 +48,8 @@ def view_plan(
             try:
                 adaptation_service = AdaptationService()
                 adaptation_service.map_runs_to_plan(plan_id, current_user.id, db)
-                adaptation_service.check_alerts(plan_id, current_user.id, db)
-                adaptation_service.evaluate_recommendation(plan_id, current_user.id, db)
             except Exception as e:
-                logger.warning("Auto-map/alert on view failed: %s", e)
+                logger.warning("Auto-map on view failed: %s", e)
 
         plan_data = training_plan.plan_data
         plan_data = plan_view_service.enrich_plan_data_with_ids(

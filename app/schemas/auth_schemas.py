@@ -22,7 +22,6 @@ class UserResponse(UserBase):
     created_at: datetime
     plans_generated: int
     strava_connected: bool = False
-    auto_adjust_enabled: bool = False
     resting_hr: Optional[int] = None
 
 
@@ -42,7 +41,6 @@ class GoogleAuthRequest(BaseModel):
 
 
 class UserSettingsUpdate(BaseModel):
-    auto_adjust_enabled: Optional[bool] = None
     # Resting heart rate (BPM) for Heart Rate Reserve zone math. Send 0/null to
     # clear and revert to the data-derived estimate.
     resting_hr: Optional[int] = Field(default=None, ge=0, le=120)
