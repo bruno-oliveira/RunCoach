@@ -295,6 +295,32 @@
         });
     }
 
+    function readRaceConditions() {
+        function num(id) {
+            var el = document.getElementById(id);
+            if (!el || el.value === "") return null;
+            var v = parseFloat(el.value);
+            return isNaN(v) ? null : v;
+        }
+        return {
+            temp_c: num("raceTempInput"),
+            humidity_pct: num("raceHumidityInput"),
+            altitude_m: num("raceAltitudeInput"),
+        };
+    }
+
+    function renderConditionsNote(note) {
+        var el = document.getElementById("blueprintConditionsNote");
+        if (!el) return;
+        if (note) {
+            el.textContent = note;
+            el.style.display = "block";
+        } else {
+            el.textContent = "";
+            el.style.display = "none";
+        }
+    }
+
     function renderBlueprintTable(segments) {
         var tbody = document.getElementById("blueprintTableBody");
         if (!tbody) return;
@@ -402,6 +428,8 @@
         generateBlueprintBtn.disabled = true;
         generateBlueprintBtn.textContent = "Generating...";
 
+        var conditions = readRaceConditions();
+
         try {
             var response = await fetch("/api/race-prep/blueprint", {
                 method: "POST",
@@ -410,6 +438,9 @@
                     target_time_seconds: targetTime,
                     distance_km: analysisData.distance_km,
                     elevation_profile: analysisData.elevation_profile || [],
+                    race_temp_c: conditions.temp_c,
+                    race_humidity_pct: conditions.humidity_pct,
+                    race_altitude_m: conditions.altitude_m,
                 }),
             });
 
@@ -425,6 +456,7 @@
             document.getElementById("blueprintTargetTime").textContent = blueprint.target_time_str;
             renderBlueprintChart(blueprint.segments);
             renderBlueprintTable(blueprint.segments);
+            renderConditionsNote(blueprint.conditions_note);
 
             blueprintCard.style.display = "block";
             showToast("Blueprint generated!", "success");

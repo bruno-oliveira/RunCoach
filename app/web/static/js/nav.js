@@ -415,6 +415,55 @@ async function saveAutoAdjustSetting(enabled) {
     }
 }
 
+async function saveRestingHr() {
+    const input = document.getElementById('restingHrInput');
+    const feedback = document.getElementById('settingsFeedback');
+    if (!input) return;
+    const raw = input.value.trim();
+    // Empty clears the override (send 0); otherwise validate the range.
+    let value = 0;
+    if (raw !== '') {
+        value = parseInt(raw, 10);
+        if (isNaN(value) || value < 30 || value > 120) {
+            if (feedback) {
+                feedback.textContent = 'Enter a resting HR between 30 and 120, or leave blank.';
+                feedback.classList.remove('is-saved');
+                feedback.classList.add('is-error');
+            }
+            return;
+        }
+    }
+    if (feedback) {
+        feedback.textContent = 'Saving…';
+        feedback.classList.remove('is-saved', 'is-error');
+    }
+    input.disabled = true;
+    try {
+        const res = await fetch('/api/auth/me/settings', {
+            method: 'PATCH',
+            credentials: 'same-origin',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ resting_hr: value }),
+        });
+        if (!res.ok) throw new Error('save_failed');
+        const data = await res.json();
+        input.value = data.resting_hr ? String(data.resting_hr) : '';
+        if (feedback) {
+            feedback.textContent = data.resting_hr
+                ? 'Resting HR saved — zones now use Heart Rate Reserve.'
+                : 'Resting HR cleared — RunCoach will estimate it from your runs.';
+            feedback.classList.add('is-saved');
+        }
+    } catch (err) {
+        if (feedback) {
+            feedback.textContent = 'Could not save. Please try again.';
+            feedback.classList.add('is-error');
+        }
+    } finally {
+        input.disabled = false;
+    }
+}
+
 document.addEventListener('keydown', (e) => {
     if (e.key !== 'Escape') return;
     const overlay = document.getElementById('settingsOverlay');

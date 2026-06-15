@@ -6,6 +6,7 @@ Binary-search solver and confidence ranges extracted from VDOTCalculator.
 import logging
 from typing import Dict, Optional
 
+from app.core.training.environment import EnvironmentalConditions, adjust_seconds
 from app.core.training.trail_profile import TRAIL_SENTINEL_KM
 from app.core.training.vdot_calculator import (
     STANDARD_RACE_DISTANCES,
@@ -113,6 +114,7 @@ def predict_time_for_distance(
     elevation_gain_m: Optional[float] = None,
     trail_runs_count: Optional[int] = None,
     endurance_factor: Optional[float] = None,
+    conditions: Optional[EnvironmentalConditions] = None,
 ) -> Optional[int]:
     """Predict race time for a given VDOT and distance.
 
@@ -130,11 +132,19 @@ def predict_time_for_distance(
             performance lags their VDOT prediction (see
             RacePredictorService.compute_endurance_factor). Applied after
             the elevation penalty and before the trail-inexperience factor.
+        conditions: Optional race-day heat/altitude conditions. Altitude lowers
+            the effective VDOT used for the solve (an aerobic-capacity loss);
+            heat applies a multiplicative pace penalty to the final time (a
+            thermoregulatory pacing tax). See
+            :mod:`app.core.training.environment`.
     """
     if vdot < 25 or vdot > 85:
         return None
     if distance_km <= 0:
         return None
+
+    # Altitude reduces aerobic capacity, so we solve against a deflated VDOT.
+    effective_vdot = conditions.vdot_factor() * vdot if conditions else vdot
 
     distance_m = distance_km * 1000.0
     lo, hi = _PREDICT_TIME_LO_MIN, _PREDICT_TIME_HI_MIN
@@ -150,17 +160,18 @@ def predict_time_for_distance(
             lo = mid
             continue
         calc_vdot = vo2 / pct
-        if abs(calc_vdot - vdot) < _PREDICT_VDOT_EPSILON:
+        if abs(calc_vdot - effective_vdot) < _PREDICT_VDOT_EPSILON:
             converged = True
             break
-        if calc_vdot > vdot:
+        if calc_vdot > effective_vdot:
             lo = mid
         else:
             hi = mid
 
     if not converged:
         logger.warning(
-            f"VDOT binary search did not converge for vdot={vdot}, distance={distance_km}km"
+            f"VDOT binary search did not converge for vdot={effective_vdot}, "
+            f"distance={distance_km}km"
         )
 
     flat_seconds = mid * 60
@@ -179,6 +190,9 @@ def predict_time_for_distance(
         total_seconds *= endurance_factor
     if is_trail:
         total_seconds *= _trail_inexperience_factor(trail_runs_count)
+    # Heat is a per-km pacing tax applied last, mirroring how a runner fades
+    # against the same fitness on a hot day.
+    total_seconds = adjust_seconds(total_seconds, conditions)
 
     return int(round(total_seconds))
 
@@ -190,6 +204,7 @@ def get_confidence_range(
     elevation_gain_m: Optional[float] = None,
     trail_runs_count: Optional[int] = None,
     endurance_factor: Optional[float] = None,
+    conditions: Optional[EnvironmentalConditions] = None,
 ) -> Dict[str, Optional[int]]:
     """Get optimistic and pessimistic time estimates.
 
@@ -207,13 +222,28 @@ def get_confidence_range(
     slow_vdot = max(25.0, vdot - margin)
 
     fast_time = predict_time_for_distance(
-        fast_vdot, distance_km, elevation_gain_m, trail_runs_count, endurance_factor
+        fast_vdot,
+        distance_km,
+        elevation_gain_m,
+        trail_runs_count,
+        endurance_factor,
+        conditions,
     )
     slow_time = predict_time_for_distance(
-        slow_vdot, distance_km, elevation_gain_m, trail_runs_count, endurance_factor
+        slow_vdot,
+        distance_km,
+        elevation_gain_m,
+        trail_runs_count,
+        endurance_factor,
+        conditions,
     )
     base_time = predict_time_for_distance(
-        vdot, distance_km, elevation_gain_m, trail_runs_count, endurance_factor
+        vdot,
+        distance_km,
+        elevation_gain_m,
+        trail_runs_count,
+        endurance_factor,
+        conditions,
     )
 
     return {
@@ -228,6 +258,7 @@ def predict_times(
     trail_runs_count: Optional[int] = None,
     elevation_map: Optional[Dict[str, float]] = None,
     endurance_factor: Optional[float] = None,
+    conditions: Optional[EnvironmentalConditions] = None,
 ) -> Dict[str, Dict]:
     """Get predicted times for all standard race distances.
 
@@ -247,6 +278,7 @@ def predict_times(
             elevation_gain_m=elev,
             trail_runs_count=trail_runs_count,
             endurance_factor=endurance_factor,
+            conditions=conditions,
         )
         if seconds:
             predictions[name] = {

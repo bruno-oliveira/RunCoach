@@ -26,6 +26,9 @@ class User(Base):
     )
     plans_generated = Column(Integer, default=0)
     age = Column(Integer, nullable=True)
+    # Optional resting heart rate (BPM). Enables Heart Rate Reserve (Karvonen)
+    # zone math; when null we estimate from run data or fall back to %max HR.
+    resting_hr = Column(Integer, nullable=True)
     strava_athlete_id = Column(String, unique=True, nullable=True, index=True)
     strava_access_token = Column(EncryptedString, nullable=True)
     strava_refresh_token = Column(EncryptedString, nullable=True)

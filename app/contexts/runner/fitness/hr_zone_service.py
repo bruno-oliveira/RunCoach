@@ -10,13 +10,23 @@ from app.core.training.hr_zone_calculator import (
     HR_ZONES_VERSION,
     MAX_HR_SPIKE_TOLERANCE_BPM,
     MAX_RELIABLE_MAX_HR,
+    MAX_RELIABLE_RESTING_HR,
     MIN_RELIABLE_MAX_HR,
+    MIN_RELIABLE_RESTING_HR,
     HRZoneCalculator,
 )
 from app.models.training_plan import TrainingPlan
 from app.models.user import User
 
 logger = logging.getLogger(__name__)
+
+# Easy-run average HR sits well above true resting HR. We approximate the gap
+# with a fixed offset when estimating resting HR from the lowest easy-run
+# average. Deliberately conservative (small) so an over-estimate keeps the
+# Karvonen zones close to the %max-HR fallback rather than skewing them low.
+EASY_RUN_TO_RESTING_OFFSET_BPM = 25
+# Require at least this many easy-effort runs before trusting a derived value.
+MIN_EASY_RUNS_FOR_RESTING = 5
 
 
 def detect_max_hr_from_runs(user_id: str, db: Session) -> Optional[int]:
@@ -77,6 +87,62 @@ def get_user_max_hr(
     return DEFAULT_MAX_HR, "default"
 
 
+def detect_resting_hr_from_runs(user_id: str, db: Session) -> Optional[int]:
+    """Estimate resting HR from the lowest easy-effort run averages.
+
+    We don't ingest per-second streams, so true resting HR isn't directly
+    available. The lowest *average* HR on genuinely easy/recovery runs is the
+    best aerobic-floor proxy we have; subtracting a conservative offset
+    approximates the gap down to true resting. Requires a handful of easy runs
+    before trusting the estimate, and clamps to a plausible band. Returns None
+    when there isn't enough data -- callers then fall back to %max HR.
+    """
+    from app.models import RunLog
+
+    rows = (
+        db.query(RunLog.avg_heart_rate)
+        .filter(
+            RunLog.user_id == user_id,
+            RunLog.avg_heart_rate.isnot(None),
+            RunLog.avg_heart_rate > 0,
+            RunLog.workout_type.in_(("easy", "recovery", "long")),
+        )
+        .order_by(RunLog.avg_heart_rate.asc())
+        .limit(MIN_EASY_RUNS_FOR_RESTING)
+        .all()
+    )
+    readings = [r[0] for r in rows if r[0]]
+    if len(readings) < MIN_EASY_RUNS_FOR_RESTING:
+        return None
+
+    easy_floor = min(readings)
+    estimate = easy_floor - EASY_RUN_TO_RESTING_OFFSET_BPM
+    estimate = max(MIN_RELIABLE_RESTING_HR, min(MAX_RELIABLE_RESTING_HR, estimate))
+    return int(round(estimate))
+
+
+def get_user_resting_hr(
+    user: User,
+    db: Session,
+) -> tuple[Optional[int], str]:
+    """Determine resting HR, preferring the user's own value over an estimate.
+
+    Returns:
+        (resting_hr, source) where source is "user", "estimated", or "none".
+        ``resting_hr`` is None when nothing usable is available, in which case
+        zones fall back to the %max HR model.
+    """
+    override = getattr(user, "resting_hr", None)
+    if override and override > 0:
+        return int(override), "user"
+
+    estimated = detect_resting_hr_from_runs(user.id, db)
+    if estimated:
+        return estimated, "estimated"
+
+    return None, "none"
+
+
 class HRZoneService:
     """Compute, persist, and inject HR zones into training plans."""
 
@@ -97,17 +163,25 @@ class HRZoneService:
             List of zone dicts with BPM ranges.
         """
         max_hr, source = get_user_max_hr(user.id, db, user_age=user.age)
-        zones = HRZoneCalculator.calculate_zones(max_hr)
+        resting_hr, resting_source = get_user_resting_hr(user, db)
+        zones = HRZoneCalculator.calculate_zones(max_hr, resting_hr=resting_hr)
+        method = "hrr" if resting_hr is not None else "pct_max"
 
         plan.hr_zones_data = {
             "max_hr": max_hr,
             "source": source,
+            "resting_hr": resting_hr,
+            "resting_source": resting_source,
+            "method": method,
             "zones": zones,
             "version": HR_ZONES_VERSION,
         }
         plan.max_heart_rate = max_hr
 
-        logger.info(f"HR zones computed for plan {plan.id}: max_hr={max_hr} ({source})")
+        logger.info(
+            f"HR zones computed for plan {plan.id}: max_hr={max_hr} ({source}), "
+            f"resting_hr={resting_hr} ({resting_source}), method={method}"
+        )
         return zones
 
     @staticmethod

@@ -412,6 +412,13 @@
                 {{ hr_zones.max_hr }} bpm
                 <span class="hr-source-label">({{ hr_zones.source }})</span>
             </div>
+            {% if hr_zones.method == 'hrr' and hr_zones.resting_hr %}
+            <div class="summary-item">
+                <strong><span data-i18n="plan.resting_hr">Resting HR</span></strong>
+                {{ hr_zones.resting_hr }} bpm
+                <span class="hr-source-label">({{ hr_zones.resting_source }}, Karvonen)</span>
+            </div>
+            {% endif %}
             {% endif %}
             {% if start_date and user %}
             <div class="summary-item">

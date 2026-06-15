@@ -110,6 +110,7 @@ async def google_auth(
             plans_generated=user.plans_generated,
             strava_connected=bool(user.strava_athlete_id),
             auto_adjust_enabled=bool(user.auto_adjust_enabled),
+            resting_hr=user.resting_hr,
         ),
     )
 
@@ -131,6 +132,7 @@ def get_current_user_info(current_user: User = Depends(get_current_user)):
         plans_generated=current_user.plans_generated,
         strava_connected=bool(current_user.strava_athlete_id),
         auto_adjust_enabled=bool(current_user.auto_adjust_enabled),
+        resting_hr=current_user.resting_hr,
     )
 
 
@@ -140,9 +142,12 @@ def update_user_settings(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    """Update mutable user settings (currently just auto_adjust_enabled)."""
+    """Update mutable user settings (auto-adjust toggle, resting HR)."""
     if payload.auto_adjust_enabled is not None:
         current_user.auto_adjust_enabled = bool(payload.auto_adjust_enabled)
+    if payload.resting_hr is not None:
+        # 0 clears the override and reverts to the data-derived estimate.
+        current_user.resting_hr = payload.resting_hr or None
     db.commit()
     db.refresh(current_user)
     return UserResponse(
@@ -155,6 +160,7 @@ def update_user_settings(
         plans_generated=current_user.plans_generated,
         strava_connected=bool(current_user.strava_athlete_id),
         auto_adjust_enabled=bool(current_user.auto_adjust_enabled),
+        resting_hr=current_user.resting_hr,
     )
 
 
@@ -200,6 +206,7 @@ def refresh_session(
         plans_generated=user.plans_generated,
         strava_connected=bool(user.strava_athlete_id),
         auto_adjust_enabled=bool(user.auto_adjust_enabled),
+        resting_hr=user.resting_hr,
     )
 
 

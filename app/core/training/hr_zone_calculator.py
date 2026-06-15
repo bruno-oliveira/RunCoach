@@ -5,6 +5,8 @@ Computes a 5-zone HR model from max heart rate and provides
 zone classification and workout-level zone prescriptions.
 """
 
+from typing import Optional
+
 # Minimum recorded max HR to trust (lower likely a sensor error)
 MIN_RELIABLE_MAX_HR = 140
 
@@ -20,9 +22,15 @@ MAX_HR_SPIKE_TOLERANCE_BPM = 8
 # Conservative universal default when no age or run data is available
 DEFAULT_MAX_HR = 190
 
-# Version of the zone model below. Bump when ZONE_DEFINITIONS changes so
-# plans carrying zones from an older model are recomputed on next view.
-HR_ZONES_VERSION = 2
+# Plausible resting-HR band. Below ~30 is almost certainly noise; above ~100 is
+# not a true resting value (likely an easy-run average mislabelled as resting).
+MIN_RELIABLE_RESTING_HR = 30
+MAX_RELIABLE_RESTING_HR = 100
+
+# Version of the zone model below. Bump when ZONE_DEFINITIONS changes -- or when
+# the zone *math* changes (e.g. %max HR -> Heart Rate Reserve) -- so plans
+# carrying zones from an older model are recomputed on next view.
+HR_ZONES_VERSION = 3
 
 
 # -- Zone definitions (percentage of max HR) ----------------------------------
@@ -119,28 +127,58 @@ WORKOUT_ZONE_MAP: dict[str, int] = {
 }
 
 
+def _resting_hr_is_usable(max_hr: int, resting_hr: object) -> bool:
+    """True when ``resting_hr`` is a plausible value below ``max_hr``."""
+    if not isinstance(resting_hr, (int, float)):
+        return False
+    return (
+        MIN_RELIABLE_RESTING_HR <= resting_hr <= MAX_RELIABLE_RESTING_HR
+        and resting_hr < max_hr
+    )
+
+
+def _zone_bpm(pct: float, max_hr: int, resting_hr: Optional[int]) -> int:
+    """Absolute BPM for a zone fraction.
+
+    When a usable resting HR is supplied we use the Heart Rate Reserve
+    (Karvonen) method -- ``resting + pct * (max - resting)`` -- which reflects
+    metabolic intensity far better than a flat %max HR for runners, whose low
+    resting HR otherwise pushes every band several BPM too low. Without a
+    resting HR we fall back to the historical %max HR mapping unchanged.
+    """
+    if resting_hr is not None and _resting_hr_is_usable(max_hr, resting_hr):
+        return round(resting_hr + pct * (max_hr - resting_hr))
+    return round(max_hr * pct)
+
+
 class HRZoneCalculator:
     """Compute and classify heart rate training zones."""
 
     @staticmethod
-    def calculate_zones(max_hr: int) -> list[dict]:
+    def calculate_zones(max_hr: int, resting_hr: Optional[int] = None) -> list[dict]:
         """Return 5-zone model with absolute BPM ranges.
 
         Args:
             max_hr: Maximum heart rate in BPM.
+            resting_hr: Optional resting heart rate. When provided (and
+                plausible) zones are computed via Heart Rate Reserve
+                (Karvonen); otherwise the %max HR mapping is used.
 
         Returns:
             List of zone dicts, each with zone, name, min_bpm, max_bpm,
             pct_min, pct_max, and description.
         """
+        usable_resting = (
+            resting_hr if _resting_hr_is_usable(max_hr, resting_hr) else None
+        )
         zones = []
         for defn in ZONE_DEFINITIONS:
             zones.append(
                 {
                     "zone": defn["zone"],
                     "name": defn["name"],
-                    "min_bpm": round(max_hr * defn["pct_min"]),
-                    "max_bpm": round(max_hr * defn["pct_max"]),
+                    "min_bpm": _zone_bpm(defn["pct_min"], max_hr, usable_resting),
+                    "max_bpm": _zone_bpm(defn["pct_max"], max_hr, usable_resting),
                     "pct_min": defn["pct_min"],
                     "pct_max": defn["pct_max"],
                     "description": defn["description"],
