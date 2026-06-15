@@ -55,6 +55,7 @@ from app.core.training.workout_steps.metrics import (
     _compute_distance_from_steps,
     _parse_pace_str_to_min_per_km,
     compute_distance_from_steps_checked,
+    fit_steps_to_distance,
     scale_steps,
     total_distance_m,
 )
@@ -109,6 +110,7 @@ __all__ = [
     "build_back_to_back_steps",
     "scale_steps",
     "total_distance_m",
+    "fit_steps_to_distance",
     # Internal helpers re-exported for cross-module and test use.
     "_step",
     "_pace_str",

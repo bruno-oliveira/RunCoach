@@ -165,6 +165,7 @@ def overlay_key_workout(
     pace_zones: Optional[Dict] = None,
     trail_profile=None,
     force_id: Optional[str] = None,
+    max_distance: Optional[float] = None,
 ) -> None:
     """Attach key workout metadata, description, and steps for quality sessions.
 
@@ -174,6 +175,12 @@ def overlay_key_workout(
     When ``force_id`` is given, that specific key workout is installed
     (bypassing the ``week_in_phase`` rotation and the candidate filters) — used
     by the intensive-weekend post-pass to pin a chosen session.
+
+    ``max_distance`` is the physiological ceiling (km) the resulting session may
+    occupy — typically ``MAX_KEY_WORKOUT_VS_LONG_RUN * long_run``. A fixed
+    library prescription whose steps would exceed it is trimmed (reps dropped,
+    not rewritten short) so quality work never reaches the long run; sessions
+    already within the ceiling keep their full prescribed length.
     """
     if workout_type not in ("interval", "tempo", "hill", "long"):
         return
@@ -245,6 +252,16 @@ def overlay_key_workout(
         workout_type,
         pace_zones,
     )
+
+    # Physiological ceiling: a fixed prescription (e.g. 8 × 500 m, or a
+    # time-defined hike-run) can run longer than the runner's long run on a
+    # low-mileage plan. Trim it to ``max_distance`` by dropping reps so the
+    # quality day never reaches the long run, while leaving sessions that
+    # already fit at their full prescribed length.
+    if max_distance and max_distance > 0:
+        workout["steps"] = _steps_mod.fit_steps_to_distance(
+            workout["steps"], max_distance
+        )
 
     # Reconcile displayed total with what the runner will actually cover —
     # duration-based reps (e.g. 6 × 3 min hard) contributed nothing to the

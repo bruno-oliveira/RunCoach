@@ -228,8 +228,14 @@ class TestNoZeroDistanceRunningWorkouts:
 
 
 class TestQualityCapsHold:
-    """Quality workouts should not exceed 90% of the long run (allowing 5%
-    rounding slack over the 85% structural cap)."""
+    """Quality workouts must stay below the long run.
+
+    The per-week quality *budget* is capped at 85% of the long run, but a
+    prescriptive key workout (a fixed library session such as 8 × 500 m) may
+    use up to ``MAX_KEY_WORKOUT_VS_LONG_RUN`` (95%) of the long run so it keeps
+    its full, recognizable structure on low-mileage plans rather than
+    collapsing to a token budget-sized run. A quality day still never reaches
+    the long run itself."""
 
     @pytest.mark.parametrize("combo", ALL_COMBOS, ids=[_id(c) for c in ALL_COMBOS])
     def test_quality_le_long(self, combo):
@@ -254,9 +260,9 @@ class TestQualityCapsHold:
                 ):
                     if w.get("duration_min"):
                         continue
-                    assert w["distance"] <= long_d * 0.90, (
+                    assert w["distance"] <= long_d * 0.95 + 0.1, (
                         f"Week {week['week']}: {w['type']} ({w['distance']}km) > "
-                        f"90% of long ({long_d}km)"
+                        f"95% of long ({long_d}km)"
                     )
 
 

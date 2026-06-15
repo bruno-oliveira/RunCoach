@@ -364,7 +364,16 @@ class TestTrainingPlanGenerator:
                 )
 
     def test_recovery_week_ratio_reduction(self, plan_generator: TrainingPlanGenerator):
-        """Test that recovery weeks have reduced long run ratios."""
+        """Recovery weeks genuinely deload the long run and the weekly volume.
+
+        The earlier form of this check compared the long run's *share* of the
+        weekly total (long / total). That share is confounded once a week
+        carries a substantial prescriptive quality session: recovery weeks drop
+        the quality day, so the long run's share of the (smaller) recovery week
+        can rise even though the long run itself is deloaded. The real invariant
+        is the absolute deload — both the weekly volume and the long run shrink
+        in a recovery week — so that is asserted directly here.
+        """
         plan = plan_generator.generate_plan(current_km=25, target_distance=30, weeks=12)
 
         for week_idx in range(1, len(plan)):
@@ -381,12 +390,19 @@ class TestTrainingPlanGenerator:
                     None,
                 )
 
-                if prev_long and curr_long:
-                    prev_ratio = prev_long["distance"] / prev_week["total_km"]
-                    curr_ratio = curr_long["distance"] / current_week["total_km"]
-                    actual_reduction = (prev_ratio - curr_ratio) / prev_ratio
-                    assert 0.03 <= actual_reduction <= 0.25, (
-                        f"Week {current_week['week']}: Recovery ratio reduction {actual_reduction:.1%} outside expected range"
+                assert current_week["total_km"] < prev_week["total_km"], (
+                    f"Week {current_week['week']}: recovery week volume "
+                    f"({current_week['total_km']}km) not below previous "
+                    f"({prev_week['total_km']}km)"
+                )
+
+                if prev_long and curr_long and prev_long["distance"] > 0:
+                    long_reduction = (
+                        prev_long["distance"] - curr_long["distance"]
+                    ) / prev_long["distance"]
+                    assert 0.03 <= long_reduction <= 0.55, (
+                        f"Week {current_week['week']}: long-run deload "
+                        f"{long_reduction:.1%} outside expected range"
                     )
 
     # ------------------------------------------------------------------
