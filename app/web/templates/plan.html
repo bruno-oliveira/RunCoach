@@ -444,9 +444,20 @@
                 <div class="hr-zone-number">Z{{ zone.zone }}</div>
                 <div class="hr-zone-name">{{ zone.name }}</div>
                 <div class="hr-zone-bpm">{{ zone.min_bpm }}-{{ zone.max_bpm }}</div>
+                {% if zone.pace_range_formatted %}
+                <div class="hr-zone-pace"{% if zone.pace_extrapolated %} title="Estimated beyond your logged pace range"{% endif %}>
+                    {{ zone.pace_range_formatted }}{% if zone.pace_extrapolated %}*{% endif %}
+                </div>
+                {% endif %}
             </div>
             {% endfor %}
         </div>
+        {% if hr_zones.pace_calibration %}
+        <p class="hr-zones-note">
+            <span data-i18n="plan.hr_pace_calibrated">Paces calibrated from your logged runs</span>
+            ({{ hr_zones.pace_calibration.samples }} samples).
+        </p>
+        {% endif %}
     </div>
     {% endif %}
 

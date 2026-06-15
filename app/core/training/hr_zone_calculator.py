@@ -28,9 +28,10 @@ MIN_RELIABLE_RESTING_HR = 30
 MAX_RELIABLE_RESTING_HR = 100
 
 # Version of the zone model below. Bump when ZONE_DEFINITIONS changes -- or when
-# the zone *math* changes (e.g. %max HR -> Heart Rate Reserve) -- so plans
-# carrying zones from an older model are recomputed on next view.
-HR_ZONES_VERSION = 3
+# the zone *math* changes (e.g. %max HR -> Heart Rate Reserve, or attaching the
+# data-calibrated pace each zone maps to) -- so plans carrying zones from an
+# older model are recomputed on next view.
+HR_ZONES_VERSION = 4
 
 
 # -- Zone definitions (percentage of max HR) ----------------------------------

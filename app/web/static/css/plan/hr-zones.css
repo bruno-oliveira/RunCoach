@@ -62,6 +62,19 @@
     margin-top: 2px;
 }
 
+.hr-zone-pace {
+    font-size: 10px;
+    font-weight: var(--weight-semibold);
+    opacity: 0.95;
+    margin-top: 3px;
+}
+
+.hr-zones-note {
+    font-size: var(--text-xs);
+    color: var(--color-text-muted);
+    margin-top: var(--space-3);
+}
+
 /* Zone colors — conventional Z1 (cool) → Z5 (hot) heat ramp, muted to sit
    coherently with the rest of the palette rather than pure saturated web hues. */
 .hr-zone-1 { background: #4A72C4; }
@@ -198,5 +211,5 @@
     .hr-zones-panel { padding: var(--space-4); margin-bottom: var(--space-4); }
     .hr-zones-bar { flex-direction: column; }
     .hr-zone-segment { padding: var(--space-2) var(--space-3); display: flex; gap: var(--space-2); align-items: center; }
-    .hr-zone-name, .hr-zone-bpm { margin-top: 0; }
+    .hr-zone-name, .hr-zone-bpm, .hr-zone-pace { margin-top: 0; }
 }

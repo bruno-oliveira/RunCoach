@@ -5,6 +5,11 @@ from typing import Optional
 
 from sqlalchemy.orm import Session
 
+from app.core.training.hr_pace_calibration import (
+    PaceHRSample,
+    attach_calibrated_paces,
+    fit_pace_hr_model,
+)
 from app.core.training.hr_zone_calculator import (
     DEFAULT_MAX_HR,
     HR_ZONES_VERSION,
@@ -27,6 +32,12 @@ logger = logging.getLogger(__name__)
 EASY_RUN_TO_RESTING_OFFSET_BPM = 25
 # Require at least this many easy-effort runs before trusting a derived value.
 MIN_EASY_RUNS_FOR_RESTING = 5
+
+# How many recent runs to sample when calibrating the pace<->HR relationship.
+# Bounded so the fit reflects *current* fitness (the mapping shifts as the
+# runner gets faster) and stays cheap; per-km splits within these runs supply
+# the bulk of the intensity spread the fit needs.
+MAX_RUNS_FOR_CALIBRATION = 60
 
 
 def detect_max_hr_from_runs(user_id: str, db: Session) -> Optional[int]:
@@ -143,6 +154,45 @@ def get_user_resting_hr(
     return None, "none"
 
 
+def gather_pace_hr_samples(user_id: str, db: Session) -> list[PaceHRSample]:
+    """Collect ``(pace, heart rate)`` observations from a user's recent runs.
+
+    Per-km splits are preferred when present: a single run's splits span easy
+    warm-up to hard reps, giving the intensity spread the linear fit needs. When
+    a run has no usable splits we fall back to its overall average pace / HR.
+    """
+    from app.models import RunLog
+
+    rows = (
+        db.query(
+            RunLog.avg_pace_min_km,
+            RunLog.avg_heart_rate,
+            RunLog.splits,
+        )
+        .filter(RunLog.user_id == user_id)
+        .order_by(RunLog.date.desc())
+        .limit(MAX_RUNS_FOR_CALIBRATION)
+        .all()
+    )
+
+    samples: list[PaceHRSample] = []
+    for avg_pace, avg_hr, splits in rows:
+        used_splits = False
+        if isinstance(splits, list):
+            for split in splits:
+                if not isinstance(split, dict):
+                    continue
+                pace = split.get("pace_min_km")
+                hr = split.get("avg_hr")
+                if pace and hr:
+                    samples.append(PaceHRSample(pace_min_km=pace, hr=hr))
+                    used_splits = True
+        if not used_splits and avg_pace and avg_hr:
+            samples.append(PaceHRSample(pace_min_km=avg_pace, hr=avg_hr))
+
+    return samples
+
+
 class HRZoneService:
     """Compute, persist, and inject HR zones into training plans."""
 
@@ -167,6 +217,12 @@ class HRZoneService:
         zones = HRZoneCalculator.calculate_zones(max_hr, resting_hr=resting_hr)
         method = "hrr" if resting_hr is not None else "pct_max"
 
+        # Calibrate each zone's BPM band to the pace this runner actually holds
+        # there, fitted from their own logged pace<->HR data. Falls back
+        # silently to the formula bands (no pace) when there isn't enough
+        # consistent data to trust a fit.
+        calibration = HRZoneService._calibrate_zone_paces(user.id, db, zones)
+
         plan.hr_zones_data = {
             "max_hr": max_hr,
             "source": source,
@@ -174,15 +230,44 @@ class HRZoneService:
             "resting_source": resting_source,
             "method": method,
             "zones": zones,
+            "pace_calibration": calibration,
             "version": HR_ZONES_VERSION,
         }
         plan.max_heart_rate = max_hr
 
         logger.info(
             f"HR zones computed for plan {plan.id}: max_hr={max_hr} ({source}), "
-            f"resting_hr={resting_hr} ({resting_source}), method={method}"
+            f"resting_hr={resting_hr} ({resting_source}), method={method}, "
+            f"pace_calibrated={calibration is not None}"
         )
         return zones
+
+    @staticmethod
+    def _calibrate_zone_paces(
+        user_id: str,
+        db: Session,
+        zones: list[dict],
+    ) -> Optional[dict]:
+        """Fit pace<->HR from run data and annotate ``zones`` with their paces.
+
+        Returns calibration metadata (slope, correlation, sample count) when a
+        trustworthy fit is found and the zones were annotated in place, else
+        None. Never raises: a calibration failure must not block zone storage.
+        """
+        try:
+            samples = gather_pace_hr_samples(user_id, db)
+            model = fit_pace_hr_model(samples)
+            if model is None:
+                return None
+            attach_calibrated_paces(zones, model)
+            return {
+                "slope_bpm_per_kmh": round(model.slope, 2),
+                "correlation": round(model.r, 3),
+                "samples": model.n,
+            }
+        except Exception as e:  # pragma: no cover - defensive
+            logger.warning("Pace<->HR calibration failed: %s", e)
+            return None
 
     @staticmethod
     def inject_hr_zones_into_plan_data(
