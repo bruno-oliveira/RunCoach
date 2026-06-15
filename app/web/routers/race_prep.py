@@ -186,6 +186,7 @@ def generate_blueprint(
     endurance_factor = RacePredictorService.compute_endurance_factor(
         current_user.id, distance_km, db, current_vdot=user_vdot
     )
+    conditions = request.race_conditions()
 
     if target_time is None or target_time <= 0:
         target_time = RacePacingService.predict_elevation_adjusted_time(
@@ -194,6 +195,7 @@ def generate_blueprint(
             elevation_profile,
             trail_runs_count=trail_runs_count,
             endurance_factor=endurance_factor,
+            conditions=conditions,
         )["elevation_adjusted"]
 
     blueprint = RacePacingService.generate_pace_blueprint(
@@ -203,6 +205,7 @@ def generate_blueprint(
         distance_km=distance_km,
         trail_runs_count=trail_runs_count,
         endurance_factor=endurance_factor,
+        conditions=conditions,
     )
 
     session_id = str(uuid.uuid4())

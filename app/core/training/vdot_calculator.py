@@ -5,7 +5,10 @@ Reference: Daniels' Running Formula (3rd ed.)
 """
 
 import math
-from typing import Dict, Optional
+from typing import TYPE_CHECKING, Dict, Optional
+
+if TYPE_CHECKING:
+    from app.core.training.environment import EnvironmentalConditions
 
 STANDARD_RACE_DISTANCES = {
     "5K": 5.0,
@@ -318,11 +321,17 @@ class VDOTCalculator:
         elevation_gain_m: Optional[float] = None,
         trail_runs_count: Optional[int] = None,
         endurance_factor: Optional[float] = None,
+        conditions: Optional["EnvironmentalConditions"] = None,
     ) -> Optional[int]:
         from app.core.training.race_predictor import predict_time_for_distance
 
         return predict_time_for_distance(
-            vdot, distance_km, elevation_gain_m, trail_runs_count, endurance_factor
+            vdot,
+            distance_km,
+            elevation_gain_m,
+            trail_runs_count,
+            endurance_factor,
+            conditions,
         )
 
     @staticmethod
@@ -333,6 +342,7 @@ class VDOTCalculator:
         elevation_gain_m: Optional[float] = None,
         trail_runs_count: Optional[int] = None,
         endurance_factor: Optional[float] = None,
+        conditions: Optional["EnvironmentalConditions"] = None,
     ) -> Dict[str, Optional[int]]:
         from app.core.training.race_predictor import get_confidence_range
 
@@ -343,6 +353,7 @@ class VDOTCalculator:
             elevation_gain_m,
             trail_runs_count,
             endurance_factor,
+            conditions,
         )
 
     @staticmethod
@@ -351,7 +362,10 @@ class VDOTCalculator:
         trail_runs_count: Optional[int] = None,
         elevation_map: Optional[Dict[str, float]] = None,
         endurance_factor: Optional[float] = None,
+        conditions: Optional["EnvironmentalConditions"] = None,
     ) -> Dict[str, Dict]:
         from app.core.training.race_predictor import predict_times
 
-        return predict_times(vdot, trail_runs_count, elevation_map, endurance_factor)
+        return predict_times(
+            vdot, trail_runs_count, elevation_map, endurance_factor, conditions
+        )

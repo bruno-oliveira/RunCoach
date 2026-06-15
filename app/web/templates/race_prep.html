@@ -117,6 +117,16 @@
                 <input type="text" id="targetTimeInput" class="time-input" placeholder="e.g. 1:52:45 or 24:30">
                 <button class="btn btn-sm" id="applyTimeBtn"><span data-i18n="raceprep.apply">Apply</span></button>
             </div>
+
+            <div class="race-conditions-row" id="raceConditionsRow">
+                <span class="race-conditions-label" data-i18n="raceprep.conditions">Race-day conditions (optional):</span>
+                <label for="raceTempInput">Temp °C</label>
+                <input type="number" id="raceTempInput" class="conditions-input" min="-30" max="55" step="1" placeholder="e.g. 24">
+                <label for="raceHumidityInput">Humidity %</label>
+                <input type="number" id="raceHumidityInput" class="conditions-input" min="0" max="100" step="1" placeholder="e.g. 80">
+                <label for="raceAltitudeInput">Altitude m</label>
+                <input type="number" id="raceAltitudeInput" class="conditions-input" min="0" max="6000" step="50" placeholder="e.g. 1800">
+            </div>
         </div>
 
         <!-- Step 3: Blueprint -->
@@ -125,6 +135,8 @@
                 <span class="race-prep-step">3</span>
                 <h2>Race Blueprint — <span id="blueprintTargetTime">--</span></h2>
             </div>
+
+            <div class="blueprint-conditions-note" id="blueprintConditionsNote" style="display:none;"></div>
 
             <div class="blueprint-chart-wrap">
                 <canvas id="blueprintChart"></canvas>

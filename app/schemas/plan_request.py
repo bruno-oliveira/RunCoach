@@ -1,8 +1,11 @@
 """PlanRequest schema with validators for the main road/trail plan flow."""
 
-from typing import Optional
+from typing import TYPE_CHECKING, Optional
 
 from pydantic import BaseModel, Field, model_validator
+
+if TYPE_CHECKING:
+    from app.core.training.environment import EnvironmentalConditions
 
 from app.constants import DISTANCE_NAMES, SUPPORTED_DISTANCES
 from app.core.training.trail_profile import TRAIL_SENTINEL_KM
@@ -76,6 +79,41 @@ class PlanRequestBase(BaseModel):
     body_weight_kg: float = Field(
         default=70.0, ge=30.0, le=250.0, description="Body weight in kg"
     )
+
+    # Optional race-day conditions — feed heat/altitude-aware predictions.
+    # All optional; when omitted predictions behave exactly as before.
+    race_temp_c: Optional[float] = Field(
+        default=None,
+        ge=-30.0,
+        le=55.0,
+        description="Expected race-day air temperature in °C (for heat-adjusted pacing).",
+    )
+    race_humidity_pct: Optional[float] = Field(
+        default=None,
+        ge=0.0,
+        le=100.0,
+        description="Expected race-day relative humidity (%) (combined with temp via dew point).",
+    )
+    race_altitude_m: Optional[float] = Field(
+        default=None,
+        ge=0.0,
+        le=6000.0,
+        description="Race elevation above sea level in m (for altitude-adjusted VDOT).",
+    )
+
+    def race_conditions(self) -> Optional["EnvironmentalConditions"]:
+        """Build :class:`EnvironmentalConditions` from the optional race inputs.
+
+        Returns ``None`` when nothing actionable was supplied so callers can
+        treat "no conditions" uniformly.
+        """
+        from app.core.training.environment import EnvironmentalConditions
+
+        return EnvironmentalConditions.from_inputs(
+            temp_c=self.race_temp_c,
+            humidity_pct=self.race_humidity_pct,
+            altitude_m=self.race_altitude_m,
+        )
 
 
 class RaceInfoMixin(BaseModel):

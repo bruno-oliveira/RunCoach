@@ -8,6 +8,7 @@ from typing import Any, Optional
 from sqlalchemy.orm import Session
 
 from app.core.training import race_predictor
+from app.core.training.environment import EnvironmentalConditions
 from app.core.training.vdot_calculator import VDOTCalculator
 from app.models.run_log import RunLog
 from app.schemas.race_prep_schemas import FeasibilityInfo, RaceBlueprint, RaceSegment
@@ -96,6 +97,7 @@ class RacePacingService:
         vdot: float,
         distance_km: float,
         endurance_factor: Optional[float] = None,
+        conditions: Optional[EnvironmentalConditions] = None,
     ) -> int:
         """Predict flat-ground race time in seconds from VDOT.
 
@@ -106,12 +108,16 @@ class RacePacingService:
                 (>= 1.0) so the race-day pacing plan matches the same
                 endurance-adjusted prediction shown on the predictions card
                 (audit E3).
+            conditions: Optional race-day heat/altitude conditions.
 
         Returns:
             Predicted time in seconds.
         """
         predicted = VDOTCalculator.predict_time_for_distance(
-            vdot, distance_km, endurance_factor=endurance_factor
+            vdot,
+            distance_km,
+            endurance_factor=endurance_factor,
+            conditions=conditions,
         )
         return predicted if predicted else 0
 
@@ -122,23 +128,30 @@ class RacePacingService:
         elevation_profile: list[dict[str, Any]],
         trail_runs_count: Optional[int] = None,
         endurance_factor: Optional[float] = None,
+        conditions: Optional[EnvironmentalConditions] = None,
     ) -> dict[str, int]:
         """Calculate a realistic race time from segment-level elevation data.
 
         Combines a piecewise grade penalty (12 → 16 → 24 → 35 sec/km/% as the
         grade gets steeper), a downhill bonus capped at 15 sec/km, an
         ultra-endurance decay for events beyond 3 hours, a personalized
-        endurance multiplier, and a trail-inexperience multiplier for runners
-        with few logged trail runs.
+        endurance multiplier, a trail-inexperience multiplier for runners with
+        few logged trail runs, and -- when ``conditions`` is supplied -- an
+        altitude VDOT reduction (folded into ``flat_time``) plus a heat pace
+        penalty applied to the elevation-adjusted total.
         """
         flat_time = RacePacingService.predict_flat_time(
-            vdot, distance_km, endurance_factor=endurance_factor
+            vdot,
+            distance_km,
+            endurance_factor=endurance_factor,
+            conditions=conditions,
         )
         if flat_time == 0:
             return {
                 "flat_time": 0,
                 "elevation_adjusted": 0,
                 "elevation_penalty": 0,
+                "heat_penalty": 0,
             }
 
         total_penalty = 0.0
@@ -170,11 +183,20 @@ class RacePacingService:
         if _is_trail_course(distance_km, total_elevation_gain):
             adjusted *= race_predictor.trail_inexperience_factor(trail_runs_count)
 
+        # Heat is a per-km pacing tax applied to the whole effort. ``flat_time``
+        # already carries any altitude VDOT reduction, so only the heat factor
+        # is applied here (and surfaced separately for display).
+        pre_heat = adjusted
+        if conditions is not None:
+            adjusted *= conditions.pace_factor()
+        heat_penalty = adjusted - pre_heat
+
         elevation_adjusted = int(round(adjusted))
         return {
             "flat_time": flat_time,
             "elevation_adjusted": elevation_adjusted,
             "elevation_penalty": int(round(slope_penalty)),
+            "heat_penalty": int(round(heat_penalty)),
         }
 
     @staticmethod
@@ -235,6 +257,7 @@ class RacePacingService:
         distance_km: float,
         trail_runs_count: Optional[int] = None,
         endurance_factor: Optional[float] = None,
+        conditions: Optional[EnvironmentalConditions] = None,
     ) -> RaceBlueprint:
         """Generate a segment-by-segment pacing blueprint.
 
@@ -244,9 +267,15 @@ class RacePacingService:
         when ``target_time_seconds`` itself includes the trail-inexperience
         multiplier (as is the case for trail courses), each segment's pace
         carries that slowdown too.
+
+        When ``conditions`` is supplied the heat/altitude-adjusted estimate and
+        a runner-facing ``conditions_note`` are surfaced on the blueprint.
         """
         flat_time = RacePacingService.predict_flat_time(
-            user_vdot, distance_km, endurance_factor=endurance_factor
+            user_vdot,
+            distance_km,
+            endurance_factor=endurance_factor,
+            conditions=conditions,
         )
         elevation_data = RacePacingService.predict_elevation_adjusted_time(
             user_vdot,
@@ -254,6 +283,7 @@ class RacePacingService:
             elevation_profile,
             trail_runs_count=trail_runs_count,
             endurance_factor=endurance_factor,
+            conditions=conditions,
         )
 
         base_pace_sec_per_km = (
@@ -326,4 +356,6 @@ class RacePacingService:
             estimated_time_seconds=elevation_data["elevation_adjusted"],
             user_vdot=user_vdot,
             feasibility=feasibility,
+            heat_penalty_seconds=elevation_data.get("heat_penalty", 0),
+            conditions_note=conditions.coaching_note() if conditions else None,
         )
