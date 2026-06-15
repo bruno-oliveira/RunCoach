@@ -183,23 +183,6 @@
             <button class="settings-modal-close" onclick="closeSettingsModal()" aria-label="Close settings">&times;</button>
         </div>
         <div class="settings-modal-body">
-            <label class="toggle-label" for="autoAdjustToggle">
-                <span class="toggle-wrap">
-                    <input
-                        type="checkbox"
-                        id="autoAdjustToggle"
-                        class="toggle-input"
-                        {% if user.auto_adjust_enabled %}checked{% endif %}
-                        onchange="saveAutoAdjustSetting(this.checked)"
-                    >
-                    <span class="toggle-track"><span class="toggle-thumb"></span></span>
-                </span>
-                <span class="toggle-text">
-                    <strong>Apply weekly adjustments automatically</strong>
-                    <span class="toggle-help">Once per week, after a training week wraps up, RunCoach evaluates your runs and reshapes the remaining weeks. With this on, the change is applied immediately. With it off, you'll see a recommendation and decide.</span>
-                </span>
-            </label>
-
             <div class="settings-field">
                 <label class="settings-field-label" for="restingHrInput">
                     <strong>Resting heart rate (BPM)</strong>

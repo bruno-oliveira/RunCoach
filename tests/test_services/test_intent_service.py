@@ -143,9 +143,7 @@ def _workout(db, plan, week, day) -> DailyWorkout:
     )
     return (
         db.query(DailyWorkout)
-        .filter(
-            DailyWorkout.weekly_plan_id == wp.id, DailyWorkout.day_of_week == day
-        )
+        .filter(DailyWorkout.weekly_plan_id == wp.id, DailyWorkout.day_of_week == day)
         .one()
     )
 

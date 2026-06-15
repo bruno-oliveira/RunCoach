@@ -23,6 +23,13 @@
         accept_recommendation: 'Apply recommendation',
         reset: 'Reset to original',
         auto_adjust: 'RunCoach auto-adjustment',
+        // Intent actions — the change_plan returns the intent name as its action.
+        feeling_tired: 'Feeling tired',
+        feeling_strong: 'Feeling strong',
+        skip_run: 'Skip a run',
+        away: 'Away / travelling',
+        sick_injured: 'Sick or injured',
+        busy_week: 'Busy week',
     };
 
     var ENDPOINTS = {
@@ -37,6 +44,12 @@
         reset: {
             preview: '/api/plan/{id}/reset-adjustment/preview',
             apply: '/api/plan/{id}/reset-adjustment',
+        },
+        // Single endpoint pair for every life-event intent; the chosen
+        // intent + params travel in the request body.
+        intent: {
+            preview: '/api/plan/{id}/intent/preview',
+            apply: '/api/plan/{id}/intent',
         },
     };
 
@@ -319,11 +332,15 @@
                 && typeof window.APP_CTX.adaptation_revision === 'number') {
             headers['If-Match'] = String(window.APP_CTX.adaptation_revision);
         }
-        return fetch(url, {
+        var fetchOpts = {
             method: 'POST',
             headers: headers,
             credentials: 'same-origin',
-        }).then(function (res) {
+        };
+        if (opts.body !== undefined) {
+            fetchOpts.body = JSON.stringify(opts.body);
+        }
+        return fetch(url, fetchOpts).then(function (res) {
             return res.json().then(function (body) {
                 if (!res.ok) {
                     if (res.status === 409) {
@@ -415,7 +432,7 @@
             }
         }
 
-        return postJson(previewUrl)
+        return postJson(previewUrl, { body: options.body })
             .then(function (preview) {
                 var cp = unwrapChangePlan(preview);
                 if (!cp) {
@@ -423,7 +440,7 @@
                     resetButton();
                     return;
                 }
-                openPreview(overlay, cp, action, applyUrl, planId, btn, originalLabel);
+                openPreview(overlay, cp, action, applyUrl, planId, btn, originalLabel, options.body);
             })
             .catch(function (err) {
                 showError(err.message || 'Preview failed.');
@@ -431,7 +448,7 @@
             });
     }
 
-    function openPreview(overlay, cp, action, applyUrl, planId, btn, originalLabel) {
+    function openPreview(overlay, cp, action, applyUrl, planId, btn, originalLabel, applyBody) {
         renderInto(overlay, cp);
         var canApply = cp.would_change;
         configureFooter(overlay, {
@@ -475,7 +492,7 @@
             applyBtn.onclick = function () {
                 cleanup();
                 setBusy(overlay, true);
-                postJson(applyUrl)
+                postJson(applyUrl, { body: applyBody })
                     .then(function (applied) {
                         var appliedCp = unwrapChangePlan(applied);
                         var changedCount = appliedCp

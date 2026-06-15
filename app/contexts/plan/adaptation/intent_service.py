@@ -223,11 +223,11 @@ def _run_intent(
 def _handle_feeling_tired(
     ctx: _IntentContext, params: Dict[str, Any], recorder: List[Dict[str, Any]]
 ) -> str:
-    edits = _ease_rest_of_week(
-        ctx, _TIRED_FACTOR, "Eased — you're feeling tired."
-    )
+    edits = _ease_rest_of_week(ctx, _TIRED_FACTOR, "Eased — you're feeling tired.")
     _edit_workouts(ctx, edits, recorder)
-    return "Eased the rest of this week and dropped hard sessions to easy — recover well."
+    return (
+        "Eased the rest of this week and dropped hard sessions to easy — recover well."
+    )
 
 
 def _handle_busy_week(
@@ -410,13 +410,17 @@ def _edit_workouts(
             edit = edits.get((wk_num, workout.day_of_week))
             if edit is None:
                 continue
-            if _apply_single_edit(workout, edit, pd_workout.get((wk_num, workout.day_of_week)), wk_num, recorder):
+            if _apply_single_edit(
+                workout,
+                edit,
+                pd_workout.get((wk_num, workout.day_of_week)),
+                wk_num,
+                recorder,
+            ):
                 week_changed = True
                 any_changed = True
         if week_changed:
-            new_total = round(
-                sum(w.distance_km or 0 for w in workouts), 1
-            )
+            new_total = round(sum(w.distance_km or 0 for w in workouts), 1)
             weekly_plan.total_km = new_total
             if wk_num in pd_week:
                 pd_week[wk_num]["total_km"] = new_total

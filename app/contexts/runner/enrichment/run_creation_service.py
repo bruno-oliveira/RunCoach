@@ -150,24 +150,12 @@ class RunCreationService:
     def _post_commit_adaptation(
         self, new_run: RunLog, current_user: User, db: Session
     ) -> Optional[dict]:
-        if not new_run.training_plan_id:
-            return None
-        try:
-            from app.contexts.plan.adaptation import AdaptationService
-
-            service = AdaptationService()
-            return service.evaluate_recommendation(
-                new_run.training_plan_id,
-                current_user.id,
-                db,
-            ) or {"action": "no_change_needed"}
-        except Exception:
-            logger.warning(
-                "Weekly recommendation evaluation failed for run %s",
-                new_run.id,
-                exc_info=True,
-            )
-            return None
+        """Volume adaptation is now user-driven via the "Adjust my plan"
+        intent menu, so logging a run no longer parks or auto-applies a
+        weekly recommendation. Silent pace/VDOT recalibration still runs as
+        its own step (``vdot_recalibration``). Kept as a no-op so the run
+        creation flow and response shape stay intact."""
+        return None
 
     def _build_response(
         self,
