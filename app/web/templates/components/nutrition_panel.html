@@ -181,7 +181,9 @@
                         {% if meal_type == 'breakfast' %}Breakfast
                         {% elif meal_type == 'lunch' %}Lunch
                         {% elif meal_type == 'dinner' %}Dinner
-                        {% elif meal_type == 'snacks' %}Snacks
+                        {% elif meal_type in ['snack', 'snacks'] %}Snacks
+                        {% elif meal_type == 'post_workout' %}Post-Workout
+                        {% else %}{{ meal_type | replace('_', ' ') | title }}
                         {% endif %}
                     </h4>
                     {% for meal in meals %}
