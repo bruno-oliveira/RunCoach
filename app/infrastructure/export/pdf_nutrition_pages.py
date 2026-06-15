@@ -1,6 +1,7 @@
 """PDF nutrition content pages — general guidance and personalized plans."""
 
 from typing import List
+from xml.sax.saxutils import escape
 
 from reportlab.lib import colors
 from reportlab.lib.units import cm
@@ -174,6 +175,9 @@ class NutritionPagesMixin:
         if "meal_options" in nutrition_plan:
             self._add_meal_options(story, nutrition_plan["meal_options"])
 
+        if training_plan.is_trail:
+            self._add_trail_fuelling(story, nutrition_plan)
+
         if "general_tips" in nutrition_plan:
             story.append(
                 Paragraph("💡 Your Personalized Nutrition Tips", self.normal_style)
@@ -288,6 +292,110 @@ class NutritionPagesMixin:
 
             story.append(meal_table)
             story.append(Spacer(1, 0.5 * cm))
+
+    def _add_trail_fuelling(self, story: List, nutrition_plan: dict):
+        """Render the trail/ultra fuelling section (mirrors the web Nutrition tab).
+
+        Covers the in-race fuelling table, portable trail-ready fuel grouped by
+        race phase, and topic-tagged fuelling tips. Only called for trail plans.
+        """
+        in_race = nutrition_plan.get("in_race_fueling")
+        fuel_ideas = nutrition_plan.get("trail_fuel_ideas") or []
+        phases = nutrition_plan.get("trail_fuel_phases") or []
+        tips = nutrition_plan.get("trail_tips") or []
+        if not (in_race or fuel_ideas or tips):
+            return
+
+        story.append(Paragraph("⛰️ Trail Race Fuelling", self.section_style))
+
+        if in_race:
+            self._add_in_race_fueling_table(story, in_race)
+
+        if fuel_ideas:
+            self._add_trail_fuel_ideas(story, fuel_ideas, phases)
+
+        if tips:
+            story.append(Paragraph("💡 Trail Fuelling Tips", self.normal_style))
+            for tip in tips:
+                topic = escape(str(tip.get("topic", "")))
+                text = escape(str(tip.get("text", "")))
+                story.append(Paragraph(f"• <b>{topic}:</b> {text}", self.small_style))
+            story.append(Spacer(1, 0.5 * cm))
+
+        story.append(Spacer(1, 0.5 * cm))
+
+    def _add_in_race_fueling_table(self, story: List, in_race: dict):
+        story.append(Paragraph("🎯 In-Race Fuelling", self.normal_style))
+
+        rows = [["Metric", "Target"]]
+        if in_race.get("estimated_duration_hours"):
+            rows.append(["Est. Duration", f"~{in_race['estimated_duration_hours']} h"])
+        rows.append(["Carbs / Hour", in_race.get("carbs_per_hour", "—")])
+        rows.append(["Fluid / Hour", in_race.get("fluid_per_hour_ml", "—")])
+        rows.append(["Electrolytes", in_race.get("electrolytes", "—")])
+
+        table = Table(rows, colWidths=[4 * cm, 9 * cm])
+        table.setStyle(
+            TableStyle(
+                [
+                    ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#2e7d32")),
+                    ("TEXTCOLOR", (0, 0), (-1, 0), colors.whitesmoke),
+                    ("ALIGN", (0, 0), (-1, -1), "LEFT"),
+                    ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
+                    ("FONTSIZE", (0, 0), (-1, 0), 9),
+                    ("FONTNAME", (0, 1), (-1, -1), "Helvetica"),
+                    ("FONTSIZE", (0, 1), (-1, -1), 8),
+                    ("GRID", (0, 0), (-1, -1), 1, colors.HexColor("#dee2e6")),
+                    ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+                ]
+            )
+        )
+        story.append(table)
+        story.append(Spacer(1, 0.3 * cm))
+
+        for key in ("real_food_strategy", "rehearsal_advice"):
+            note = in_race.get(key)
+            if note:
+                story.append(Paragraph(f"• {escape(str(note))}", self.small_style))
+        story.append(Spacer(1, 0.4 * cm))
+
+    def _add_trail_fuel_ideas(self, story: List, fuel_ideas: list, phases: list):
+        story.append(Paragraph("🥨 Trail-Ready Fuel", self.normal_style))
+
+        # Group ideas by race phase. Fall back to a single untitled group when
+        # the phase metadata is missing so nothing is silently dropped.
+        phase_order = phases or [{"key": None, "label": ""}]
+        seen_keys = {p.get("key") for p in phase_order}
+        for phase in phase_order:
+            key = phase.get("key")
+            items = [i for i in fuel_ideas if i.get("phase") == key]
+            self._add_trail_fuel_phase(story, phase.get("label", ""), items)
+
+        # Any ideas whose phase isn't in the known order still get rendered.
+        leftovers = [i for i in fuel_ideas if i.get("phase") not in seen_keys]
+        if leftovers:
+            self._add_trail_fuel_phase(story, "Other", leftovers)
+
+        story.append(Spacer(1, 0.2 * cm))
+
+    def _add_trail_fuel_phase(self, story: List, label: str, items: list):
+        if not items:
+            return
+        if label:
+            story.append(Paragraph(f"<b>{escape(label)}</b>", self.small_style))
+        for item in items:
+            name = escape(str(item.get("name", "")))
+            category = escape(str(item.get("category", "")))
+            carbs = escape(str(item.get("carbs", "")))
+            note = escape(str(item.get("note", "")))
+            meta = " · ".join(p for p in (category, carbs) if p)
+            line = f"• <b>{name}</b>"
+            if meta:
+                line += f" ({meta})"
+            if note:
+                line += f" — {note}"
+            story.append(Paragraph(line, self.small_style))
+        story.append(Spacer(1, 0.2 * cm))
 
     def _add_hydration_guide(self, story: List, hydration: dict):
         story.append(
