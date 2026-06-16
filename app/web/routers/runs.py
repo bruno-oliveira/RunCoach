@@ -127,13 +127,18 @@ def get_race_predictions(
             "message": "Log some runs to get predictions",
         }
 
+    calibration = predictions_data.get("calibration_factor", 1.0)
     result = {
         "current_vdot": predictions_data["current_vdot"],
         "vdot_trend": predictions_data["vdot_trend"],
         "predictions": {},
         "best_effort": predictions_data["best_effort"],
+        "calibration_factor": calibration,
         "has_sufficient_data": True,
     }
+
+    def _calibrated(seconds: Optional[int]) -> Optional[int]:
+        return int(round(seconds * calibration)) if seconds else seconds
 
     if target_distance:
         result["target_distance"] = target_distance
@@ -145,14 +150,15 @@ def get_race_predictions(
                     target_distance,
                     goal_seconds,
                     db,
+                    calibration_factor=calibration,
                 )
                 result.update(gap_analysis)
             else:
                 result["message"] = "Invalid goal_time format"
         else:
             current_vdot = predictions_data["current_vdot"]
-            predicted = VDOTCalculator.predict_time_for_distance(
-                current_vdot, target_distance
+            predicted = _calibrated(
+                VDOTCalculator.predict_time_for_distance(current_vdot, target_distance)
             )
             range_data = VDOTCalculator.get_confidence_range(
                 current_vdot, target_distance
@@ -161,8 +167,8 @@ def get_race_predictions(
                 VDOTCalculator.format_duration(predicted) if predicted else None
             )
             result["range"] = {
-                "fast": VDOTCalculator.format_duration(range_data["fast"]),
-                "slow": VDOTCalculator.format_duration(range_data["slow"]),
+                "fast": VDOTCalculator.format_duration(_calibrated(range_data["fast"])),
+                "slow": VDOTCalculator.format_duration(_calibrated(range_data["slow"])),
             }
             result["message"] = "Log a goal time to see gap analysis"
     else:

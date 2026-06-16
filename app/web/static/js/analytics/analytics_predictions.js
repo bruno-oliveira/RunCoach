@@ -74,10 +74,30 @@
             }).join('');
         }
 
-        if (footerEl && data.best_effort) {
-            const effort = data.best_effort;
-            const date = effort.date ? new Date(effort.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : '';
-            footerEl.textContent = `Based on: ${effort.distance_km}K run on ${date} (${effort.time})`;
+        if (footerEl) {
+            const tr = (key, fallback) => (window.RC_I18N ? RC_I18N.t(key) : fallback);
+            const lines = [];
+
+            if (data.best_effort) {
+                const effort = data.best_effort;
+                const date = effort.date ? new Date(effort.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : '';
+                const basedOn = tr('analytics.pred_based_on', 'Based on');
+                lines.push(`${basedOn}: ${effort.distance_km}K run on ${date} (${effort.time})`);
+            }
+
+            // Surface the predicted-vs-actual feedback loop: when the runner's
+            // own races have nudged predictions away from the raw VDOT estimate.
+            const cal = data.calibration_factor;
+            if (cal && Math.abs(cal - 1.0) >= 0.01) {
+                const pct = Math.round(Math.abs(cal - 1.0) * 100);
+                const dir = cal > 1.0
+                    ? tr('analytics.calib_slower', 'slower')
+                    : tr('analytics.calib_faster', 'faster');
+                const label = tr('analytics.calibrated_from_races', 'Calibrated from your races');
+                lines.push(`${label}: ${pct}% ${dir}`);
+            }
+
+            footerEl.innerHTML = lines.map((line) => `<div>${line}</div>`).join('');
         }
     };
 
