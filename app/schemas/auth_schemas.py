@@ -22,6 +22,8 @@ class UserResponse(UserBase):
     created_at: datetime
     plans_generated: int
     strava_connected: bool = False
+    age: Optional[int] = None
+    max_hr: Optional[int] = None
     resting_hr: Optional[int] = None
     threshold_hr: Optional[int] = None
 
@@ -42,9 +44,14 @@ class GoogleAuthRequest(BaseModel):
 
 
 class UserSettingsUpdate(BaseModel):
-    # Resting heart rate (BPM) for Heart Rate Reserve zone math. Send 0/null to
-    # clear and revert to the data-derived estimate.
+    # Age (years), used to estimate max HR when none is detected or supplied.
+    # Send 0/null to clear.
+    age: Optional[int] = Field(default=None, ge=0, le=120)
+    # Max heart rate (BPM). Anchors the top of the zones directly. Send 0/null to
+    # clear and revert to detection / the age formula.
+    max_hr: Optional[int] = Field(default=None, ge=0, le=230)
+    # Resting heart rate (BPM). Raises the Zone 1 floor. Send 0/null to clear.
     resting_hr: Optional[int] = Field(default=None, ge=0, le=120)
-    # Lactate-threshold heart rate (BPM) for re-anchoring the zone bands. Send
-    # 0/null to clear and revert to the data-derived estimate.
+    # Lactate-threshold heart rate (BPM), the primary zone anchor. Send 0/null to
+    # clear and revert to the data-derived estimate.
     threshold_hr: Optional[int] = Field(default=None, ge=0, le=220)

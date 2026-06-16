@@ -3,7 +3,6 @@
 from types import SimpleNamespace
 
 from app.contexts.runner.fitness.hr_zone_service import (
-    detect_resting_hr_from_runs,
     detect_threshold_hr_from_runs,
     gather_pace_hr_samples,
     get_user_max_hr,
@@ -254,36 +253,43 @@ class TestMaxHREstimation:
         assert hr == 188
 
 
-class TestHeartRateReserve:
-    def test_none_resting_matches_pct_max(self):
+class TestRestingHRFloor:
+    """Resting HR no longer drives the band math (that path caused the zone
+    collapse); it only raises the Zone 1 (recovery) floor when genuinely low
+    bands would otherwise dip below it."""
+
+    def test_none_resting_unchanged(self):
         assert HRZoneCalculator.calculate_zones(
             190
         ) == HRZoneCalculator.calculate_zones(190, resting_hr=None)
 
-    def test_hrr_math(self):
-        # max 190, resting 50 -> reserve 140. Aerobic band 70-80% HRR:
-        #   50 + 0.70*140 = 148 ; 50 + 0.80*140 = 162
-        zones = HRZoneCalculator.calculate_zones(190, resting_hr=50)
-        z2 = zones[1]
-        assert z2["min_bpm"] == 148
-        assert z2["max_bpm"] == 162
+    def test_resting_does_not_touch_upper_zones(self):
+        # A plausible resting HR (50) sits far below every band for a max of
+        # 190, so Zones 2-5 are identical with or without it.
+        base = HRZoneCalculator.calculate_zones(190)
+        with_resting = HRZoneCalculator.calculate_zones(190, resting_hr=50)
+        assert [z["min_bpm"] for z in base[1:]] == [
+            z["min_bpm"] for z in with_resting[1:]
+        ]
 
-    def test_hrr_sits_above_pct_max_for_low_resting(self):
-        pct_max = HRZoneCalculator.calculate_zones(190)
-        hrr = HRZoneCalculator.calculate_zones(190, resting_hr=50)
-        # Karvonen lifts the easy band above the naive %max band.
-        assert hrr[1]["min_bpm"] > pct_max[1]["min_bpm"]
+    def test_resting_raises_zone1_floor_when_above_it(self):
+        # max 150 -> anchor 132 -> Z1 is 90-105. A resting HR of 100 lifts the
+        # Zone 1 floor to 100 (recovery should not dip below true resting).
+        base = HRZoneCalculator.calculate_zones(150)
+        assert base[0]["min_bpm"] == 90
+        floored = HRZoneCalculator.calculate_zones(150, resting_hr=100)
+        assert floored[0]["min_bpm"] == 100
 
     def test_top_of_zone_5_is_max_hr(self):
         zones = HRZoneCalculator.calculate_zones(190, resting_hr=50)
         assert zones[4]["max_bpm"] == 190
 
-    def test_zones_ascending_under_hrr(self):
+    def test_zones_ascending_with_resting(self):
         zones = HRZoneCalculator.calculate_zones(195, resting_hr=45)
         for i in range(len(zones) - 1):
             assert zones[i]["max_bpm"] <= zones[i + 1]["min_bpm"]
 
-    def test_implausible_resting_falls_back_to_pct_max(self):
+    def test_implausible_resting_ignored(self):
         # Resting >= max, or out of the reliable band, is ignored.
         assert HRZoneCalculator.calculate_zones(
             190, resting_hr=200
@@ -293,59 +299,59 @@ class TestHeartRateReserve:
         ) == HRZoneCalculator.calculate_zones(190)
 
 
-class TestRestingHRDetection:
-    def test_none_without_enough_easy_runs(self):
-        db = _FakeDB([(130,), (128,)])  # fewer than the required minimum
-        assert detect_resting_hr_from_runs("u1", db) is None
+class TestRestingHR:
+    """Resting HR is a user-supplied value only -- the unreliable easy-run
+    estimate was removed (it fed the Karvonen path that collapsed the zones)."""
 
-    def test_estimate_from_easy_floor_minus_offset(self):
-        # Lowest easy-run avg 120 -> 120 - 25 offset = 95 -> clamped to 95.
-        db = _FakeDB([(120,), (125,), (130,), (132,), (135,)])
-        assert detect_resting_hr_from_runs("u1", db) == 95
-
-    def test_estimate_clamped_to_floor(self):
-        db = _FakeDB([(50,), (52,), (55,), (58,), (60,)])
-        # 50 - 25 = 25 -> clamped up to the 30 BPM reliability floor.
-        assert detect_resting_hr_from_runs("u1", db) == 30
-
-    def test_user_value_preferred_over_estimate(self):
+    def test_user_value_used(self):
         user = SimpleNamespace(id="u1", resting_hr=48)
-        resting, source = get_user_resting_hr(user, _FakeDB([]))
+        resting, source = get_user_resting_hr(user)
         assert resting == 48
         assert source == "user"
 
-    def test_falls_back_to_estimate(self):
+    def test_none_when_not_supplied(self):
         user = SimpleNamespace(id="u1", resting_hr=None)
-        db = _FakeDB([(120,), (125,), (130,), (132,), (135,)])
-        resting, source = get_user_resting_hr(user, db)
-        assert source == "estimated"
-        assert resting == 95
+        resting, source = get_user_resting_hr(user)
+        assert resting is None
+        assert source == "none"
 
-    def test_none_when_no_data(self):
-        user = SimpleNamespace(id="u1", resting_hr=None)
-        resting, source = get_user_resting_hr(user, _FakeDB([]))
+    def test_zero_treated_as_unset(self):
+        user = SimpleNamespace(id="u1", resting_hr=0)
+        resting, source = get_user_resting_hr(user)
         assert resting is None
         assert source == "none"
 
 
 class TestLTHRAnchoring:
-    def test_none_lthr_matches_no_lthr(self):
+    def test_none_lthr_matches_derived_default(self):
+        # No LTHR -> derive one at 88% of max; same as passing None.
         assert HRZoneCalculator.calculate_zones(
             190
         ) == HRZoneCalculator.calculate_zones(190, lthr=None)
 
     def test_threshold_boundary_equals_measured_lthr(self):
-        # The Z3/Z4 boundary should land exactly on the measured LTHR rather
-        # than the formula's 88% of max (= 167 for max 190).
+        # The Z3/Z4 boundary lands exactly on the measured LTHR rather than the
+        # population-average 88% of max (= 167 for max 190).
         zones = HRZoneCalculator.calculate_zones(190, lthr=172)
         assert zones[2]["max_bpm"] == 172  # top of Zone 3 (Tempo)
         assert zones[3]["min_bpm"] == 172  # bottom of Zone 4 (VO2max)
 
-    def test_floor_and_ceiling_are_pinned(self):
-        baseline = HRZoneCalculator.calculate_zones(190)
-        anchored = HRZoneCalculator.calculate_zones(190, lthr=172)
-        assert anchored[0]["min_bpm"] == baseline[0]["min_bpm"]  # Z1 floor
-        assert anchored[4]["max_bpm"] == 190  # ceiling = max HR
+    def test_ceiling_is_max_hr_and_floor_scales_with_lthr(self):
+        # The whole partition is a fraction of LTHR: the recovery floor moves
+        # *with* the threshold (unlike the old model that pinned it and so
+        # crushed Zones 1-3). The ceiling stays at max HR.
+        low = HRZoneCalculator.calculate_zones(190, lthr=150)
+        high = HRZoneCalculator.calculate_zones(190, lthr=172)
+        assert high[0]["min_bpm"] > low[0]["min_bpm"]
+        assert low[4]["max_bpm"] == 190
+        assert high[4]["max_bpm"] == 190
+
+    def test_zones_stay_well_separated_for_low_lthr(self):
+        # Regression guard for the reported bug: even a low LTHR must leave the
+        # lower zones several BPM wide, never collapsed to 1-2 BPM.
+        zones = HRZoneCalculator.calculate_zones(190, lthr=150)
+        for z in zones[:3]:
+            assert z["max_bpm"] - z["min_bpm"] >= 5
 
     def test_anchored_zones_remain_ascending(self):
         zones = HRZoneCalculator.calculate_zones(195, resting_hr=50, lthr=170)
@@ -355,12 +361,13 @@ class TestLTHRAnchoring:
     def test_lower_lthr_pulls_subthreshold_bands_down(self):
         baseline = HRZoneCalculator.calculate_zones(190)
         # 88% of 190 = 167; a measured LTHR of 160 is lower, so the aerobic
-        # band top should drop relative to the formula model.
+        # band top should drop relative to the default-anchored model.
         anchored = HRZoneCalculator.calculate_zones(190, lthr=160)
         assert anchored[1]["max_bpm"] < baseline[1]["max_bpm"]
 
     def test_implausible_lthr_ignored(self):
-        # Below 70% (= 133) or above 95% (= 180) of max is not a threshold.
+        # Below 70% (= 133) or above 92% (= 175) of max is not a threshold, so
+        # it is ignored and the 88%-of-max default is used instead.
         assert HRZoneCalculator.calculate_zones(
             190, lthr=120
         ) == HRZoneCalculator.calculate_zones(190)
@@ -368,7 +375,7 @@ class TestLTHRAnchoring:
             190, lthr=188
         ) == HRZoneCalculator.calculate_zones(190)
 
-    def test_anchoring_composes_with_karvonen(self):
+    def test_composes_with_resting_floor(self):
         zones = HRZoneCalculator.calculate_zones(190, resting_hr=50, lthr=168)
         assert zones[2]["max_bpm"] == 168
         assert zones[4]["max_bpm"] == 190
