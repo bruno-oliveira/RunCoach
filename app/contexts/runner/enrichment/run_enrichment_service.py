@@ -5,7 +5,10 @@ from typing import Any, Dict, Optional
 
 from sqlalchemy.orm import Session
 
-from app.contexts.runner.fitness.effort_classifier import classify_effort
+from app.contexts.runner.fitness.effort_classifier import (
+    classify_effort,
+    resolve_user_max_hr,
+)
 from app.contexts.runner.fitness.race_predictor_service import RacePredictorService
 from app.contexts.runner.fitness.workout_type_classifier import classify_workout_type
 from app.contexts.runner.queries import count_prior_trail_runs
@@ -40,6 +43,8 @@ def enrich_vdot_and_prediction(
             user_id=user_id,
             db=db,
             exclude_run_id=new_run.id,
+            avg_heart_rate=new_run.avg_heart_rate,
+            user_max_hr=resolve_user_max_hr(user_id, db),
         )
         if effort_class is not None:
             new_run.effort_class = effort_class

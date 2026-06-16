@@ -8,6 +8,9 @@ distinction VDOT estimation cares about (race vs. easy effort) is collapsed.
 
 This classifier ignores the tag and infers an `effort_class` from:
   * pace percentile against the user's own distribution at similar distance
+  * heart rate sustained relative to the runner's max (a direct, distance-
+    independent effort signal -- it flags a race even on a first-ever distance
+    where pace percentile has nothing to compare against)
   * perceived effort, when the user supplied it
 
 Returns one of `race_effort`, `tempo_effort`, `easy_effort`, or None when
@@ -22,7 +25,7 @@ from typing import Optional
 
 from sqlalchemy.orm import Session
 
-from app.models import RunLog
+from app.models import RunLog, User
 
 logger = logging.getLogger(__name__)
 
@@ -48,6 +51,66 @@ _TEMPO_PACE_PERCENTILE = 0.25  # top 25% fastest -> tempo_effort
 # harder", >= 7 reads as a tempo-grade hard effort.
 _RACE_PE_THRESHOLD = 9
 _TEMPO_PE_THRESHOLD = 7
+
+# HR ceiling proximity. Average HR sustained near the runner's max marks a
+# near-maximal effort; this is what catches trail/hilly races where the pace
+# isn't in the runner's top 10% (the climbs slow them down) but the
+# cardiovascular cost was every bit a race. Fractions are of max HR.
+_RACE_HR_FRACTION = 0.92
+_TEMPO_HR_FRACTION = 0.85
+# Guard against junk HR (chest-strap dropout, cadence lock) manufacturing a
+# race classification, and bound the age estimate.
+_MIN_PLAUSIBLE_MAX_HR = 120
+_MAX_PLAUSIBLE_MAX_HR = 230
+_AGE_MAX_HR_BASE = 220
+_MIN_AGE = 10
+_MAX_AGE = 100
+
+
+def estimate_max_hr(max_hr: Optional[int], age: Optional[int]) -> Optional[int]:
+    """Resolve a usable max HR: the explicit profile value, else an age estimate.
+
+    Returns None when neither a plausible profile max nor a usable age is
+    available, in which case the HR signal is simply skipped.
+    """
+    if max_hr and _MIN_PLAUSIBLE_MAX_HR <= max_hr <= _MAX_PLAUSIBLE_MAX_HR:
+        return max_hr
+    if age and _MIN_AGE <= age <= _MAX_AGE:
+        return _AGE_MAX_HR_BASE - age
+    return None
+
+
+def resolve_user_max_hr(user_id: str, db: Session) -> Optional[int]:
+    """Look up a runner's usable max HR (profile value or age estimate)."""
+    row = db.query(User.max_hr, User.age).filter(User.id == user_id).first()
+    if not row:
+        return None
+    return estimate_max_hr(row[0], row[1])
+
+
+def _hr_effort_class(
+    avg_heart_rate: Optional[int], user_max_hr: Optional[int]
+) -> Optional[str]:
+    """Effort class implied by sustained HR relative to max, or None."""
+    if not avg_heart_rate or not user_max_hr or user_max_hr <= 0:
+        return None
+    fraction = avg_heart_rate / user_max_hr
+    if fraction >= _RACE_HR_FRACTION:
+        return EFFORT_RACE
+    if fraction >= _TEMPO_HR_FRACTION:
+        return EFFORT_TEMPO
+    return None
+
+
+def _fallback_effort(
+    hr_class: Optional[str], perceived_effort: Optional[int]
+) -> Optional[str]:
+    """Effort when pace is missing/insufficient: lean on HR, then perceived effort."""
+    if hr_class == EFFORT_TEMPO:
+        return EFFORT_TEMPO
+    if perceived_effort is not None and perceived_effort >= _TEMPO_PE_THRESHOLD:
+        return EFFORT_TEMPO
+    return None
 
 
 def _similar_distance_paces(
@@ -80,35 +143,43 @@ def classify_effort(
     user_id: str,
     db: Session,
     exclude_run_id: Optional[str] = None,
+    avg_heart_rate: Optional[int] = None,
+    user_max_hr: Optional[int] = None,
 ) -> Optional[str]:
     """Classify a run's effort class.
 
     Strategy:
-      1. If perceived_effort >= 9, return race_effort directly. The user told us.
+      1. Outright race signals that override pace: perceived_effort >= 9 (the
+         user told us) or HR sustained near max (a near-maximal effort even if
+         the pace isn't a personal best -- e.g. a hilly race).
       2. Otherwise, look at pace percentile vs. similar-distance history.
       3. If there's no pace or fewer than _MIN_SAMPLE prior runs at similar
-         distance, fall back to perceived effort (>=7 -> tempo) or return None.
+         distance, fall back to HR (tempo-grade) then perceived effort
+         (>=7 -> tempo), or return None.
 
     Args:
         exclude_run_id: when re-classifying an existing run, exclude it from
             its own distribution so it isn't compared against itself.
+        avg_heart_rate: the run's average HR, if recorded.
+        user_max_hr: the runner's max HR (profile value or age estimate); see
+            :func:`resolve_user_max_hr`. When absent the HR signal is skipped.
     """
     if perceived_effort is not None and perceived_effort >= _RACE_PE_THRESHOLD:
         return EFFORT_RACE
 
+    hr_class = _hr_effort_class(avg_heart_rate, user_max_hr)
+    if hr_class == EFFORT_RACE:
+        return EFFORT_RACE
+
     if avg_pace_min_km is None or avg_pace_min_km <= 0:
-        if perceived_effort is not None and perceived_effort >= _TEMPO_PE_THRESHOLD:
-            return EFFORT_TEMPO
-        return None
+        return _fallback_effort(hr_class, perceived_effort)
 
     prior_paces = _similar_distance_paces(
         user_id, distance_km, db, exclude_run_id=exclude_run_id
     )
     if len(prior_paces) < _MIN_SAMPLE:
-        # Pace alone isn't enough; lean on PE if it's strong.
-        if perceived_effort is not None and perceived_effort >= _TEMPO_PE_THRESHOLD:
-            return EFFORT_TEMPO
-        return None
+        # Pace alone isn't enough; lean on HR, then PE.
+        return _fallback_effort(hr_class, perceived_effort)
 
     sorted_paces = sorted(prior_paces)
     rank = sum(1 for p in sorted_paces if p < avg_pace_min_km)
@@ -120,7 +191,10 @@ def classify_effort(
         return EFFORT_TEMPO
 
     # Anything slower than the top quartile against the user's own pace
-    # distribution at this distance is, by definition, an easy/steady run.
+    # distribution at this distance is an easy/steady run -- unless HR shows it
+    # was at least a tempo-grade cardiovascular effort (heat, fatigue, hills).
+    if hr_class == EFFORT_TEMPO:
+        return EFFORT_TEMPO
     return EFFORT_EASY
 
 
@@ -128,11 +202,18 @@ def backfill_effort_classes(db: Session, *, batch_size: int = 500) -> int:
     """Populate effort_class for existing runs that don't have one.
 
     Iterates user-by-user so each run is classified against its user's own
-    distribution. Returns the number of runs updated.
+    distribution. A second pass promotes already-classified runs to
+    `race_effort` when HR shows a near-maximal effort the earlier pace-only
+    classification missed (typically hilly races, where the pace isn't a PB but
+    the cardiovascular cost was a race). The promotion only ever upgrades to
+    race_effort, so it's safe to re-run and idempotent once everything is
+    promoted. Returns the number of runs updated.
     """
     updated = 0
     user_ids = [uid for (uid,) in db.query(RunLog.user_id).distinct().all()]
     for user_id in user_ids:
+        user_max_hr = resolve_user_max_hr(user_id, db)
+
         runs = (
             db.query(RunLog)
             .filter(
@@ -151,11 +232,34 @@ def backfill_effort_classes(db: Session, *, batch_size: int = 500) -> int:
                 user_id=user_id,
                 db=db,
                 exclude_run_id=run.id,
+                avg_heart_rate=run.avg_heart_rate,
+                user_max_hr=user_max_hr,
             )
             if effort is not None:
                 run.effort_class = effort
                 updated += 1
             if updated % batch_size == 0 and updated > 0:
                 db.flush()
+
+        # Retroactive HR promotion: catch races a pace-only pass classified as
+        # tempo/easy before the HR signal existed. Bounded to runs with HR that
+        # aren't already race_effort.
+        if user_max_hr:
+            promotable = (
+                db.query(RunLog)
+                .filter(
+                    RunLog.user_id == user_id,
+                    RunLog.effort_class.isnot(None),
+                    RunLog.effort_class != EFFORT_RACE,
+                    RunLog.avg_heart_rate.isnot(None),
+                )
+                .all()
+            )
+            for run in promotable:
+                if _hr_effort_class(run.avg_heart_rate, user_max_hr) == EFFORT_RACE:
+                    run.effort_class = EFFORT_RACE
+                    updated += 1
+                    if updated % batch_size == 0 and updated > 0:
+                        db.flush()
     db.flush()
     return updated
