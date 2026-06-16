@@ -9,7 +9,12 @@ opening week to the deload cadence.
 
 from app.contexts.plan.generators.plan_generator import TrainingPlanGenerator
 from app.core.training.distribution_validator import hard_volume_share
+from app.core.training.mileage_progression import (
+    _runs_per_week_factor,
+    calculate_weekly_progression,
+)
 from app.core.training.phase_calculator import recovery_week_set
+from app.core.training.tuning import MAX_PEAK_MILEAGE, RUNS_PER_WEEK_REFERENCE
 
 _QUALITY = ("tempo", "interval", "hill")
 
@@ -162,3 +167,42 @@ class TestPeakBoundaryDeload:
             wk for wk in plan if wk.get("phase") == "peak" and not wk.get("is_recovery")
         ]
         assert len(peak_loading) == 2
+
+
+class TestRunsPerWeekVolumeScaling:
+    """Peak weekly volume tracks training frequency.
+
+    A 3-run and a 6-run plan for the same race and fitness used to land on
+    identical weekly km — cramming the low-frequency plan into oversized runs
+    while the high-frequency plan stayed under-loaded. Volume now scales around
+    a neutral reference frequency, bounded by the absolute peak ceiling.
+    """
+
+    def _peak(self, runs, *, current=30.0, distance=10.0, weeks=12):
+        return max(
+            calculate_weekly_progression(current, distance, weeks, max_runs=runs)
+        )
+
+    def test_peak_is_non_decreasing_in_frequency(self):
+        peaks = [self._peak(r) for r in range(2, 7)]
+        assert peaks == sorted(peaks), f"peak should not fall as runs rise: {peaks}"
+
+    def test_high_and_low_frequency_diverge(self):
+        """The old bug: these were equal. A 6-run plan now carries more than a
+        3-run plan for the same race and fitness."""
+        assert self._peak(6) > self._peak(3)
+
+    def test_reference_frequency_factor_is_neutral(self):
+        """4 runs/week is the anchor, so the most common default plans — and the
+        minimum-viable 4-run marathon — keep their full, unscaled peak."""
+        assert _runs_per_week_factor(RUNS_PER_WEEK_REFERENCE) == 1.0
+
+    def test_factor_is_monotonic_and_clamped(self):
+        factors = [_runs_per_week_factor(r) for r in range(2, 7)]
+        assert factors == sorted(factors)
+        assert all(0.85 <= f <= 1.10 for f in factors)
+
+    def test_high_frequency_stays_under_absolute_ceiling(self):
+        """Extra easy days can't push volume past the recreational safety cap."""
+        peak = self._peak(6, current=50.0, distance=42.2, weeks=16)
+        assert peak <= MAX_PEAK_MILEAGE[42.2]
