@@ -1,5 +1,6 @@
 """PerformancePlanRequest schema for VDOT/time-goal performance plans."""
 
+import math
 from typing import Optional
 
 from pydantic import BaseModel, Field, field_validator, model_validator
@@ -87,22 +88,61 @@ class PerformancePlanRequest(BaseModel):
 
     @model_validator(mode="after")
     def validate_sufficient_base(self) -> "PerformancePlanRequest":
-        """Validate that current mileage is sufficient for performance training."""
-        if self.current_weekly_km is not None:
-            target = self.target_distance
-            current_km = self.current_weekly_km
+        """Validate that current mileage is sufficient for performance training.
 
-            constraints = get_constraints(target)
-            min_required = constraints.perf_min_mileage if constraints else None
+        Performance plans front-load speed/threshold work, so they assume an
+        established aerobic base. When the runner is below it we don't just
+        reject — we quantify the gap, estimate how long a safe (10%/week) build
+        would take to bridge it, and route them to the plan they *can* start
+        today (a distance-goal plan for the same race needs far less base).
+        """
+        if self.current_weekly_km is None:
+            return self
 
-            if min_required is not None:
-                if current_km < min_required:
-                    target_display = DISTANCE_NAMES.get(target, f"{target}km")
-                    raise InadequateBaseException(
-                        f"Performance training for {target_display} requires at least {min_required}km/week base. "
-                        f"You're currently at {current_km}km/week.",
-                        f"Build your weekly mileage to {min_required}km for 3-4 weeks before starting performance training. "
-                        "Performance plans focus on speed/quality, so a solid mileage base is essential.",
-                    )
+        target = self.target_distance
+        current_km = self.current_weekly_km
+        constraints = get_constraints(target)
+        min_required = constraints.perf_min_mileage if constraints else None
 
-        return self
+        if min_required is None or current_km >= min_required:
+            return self
+
+        target_display = DISTANCE_NAMES.get(target, f"{target:g}km")
+        shortfall = round(min_required - current_km, 1)
+
+        # Weeks to safely bridge the gap under the 10%/week progression rule.
+        bridge_weeks = None
+        if current_km > 0:
+            bridge_weeks = math.ceil(
+                math.log(min_required / current_km) / math.log(1.10)
+            )
+        bridge = (
+            f" At a safe 10%/week build that's about {bridge_weeks} week(s) away."
+            if bridge_weeks
+            else ""
+        )
+
+        # A distance-goal plan for the same race needs much less base. If the
+        # runner already clears that floor, point them to the plan they can
+        # start now rather than leaving them at a dead end.
+        distance_min = constraints.min_mileage if constraints else None
+        if distance_min is not None and current_km >= distance_min:
+            alternative = (
+                f" You already meet the base for a {target_display} distance plan "
+                f"(min {distance_min:g} km/week) — start that now to train for "
+                f"{target_display}, then move to a performance plan once your "
+                "mileage is there."
+            )
+        else:
+            alternative = (
+                " Build toward it with easy aerobic running first, or pick a "
+                "shorter race to target a time on your current base."
+            )
+
+        raise InadequateBaseException(
+            f"Performance training for {target_display} needs at least "
+            f"{min_required:g} km/week; you're at {current_km:g} km/week "
+            f"({shortfall:g} km short).",
+            f"Performance plans front-load speed and threshold work, so a solid "
+            f"aerobic base is essential.{bridge}{alternative}",
+        )

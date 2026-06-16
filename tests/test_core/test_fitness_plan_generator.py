@@ -258,3 +258,35 @@ class TestFitnessPlanGenerator:
         )
 
         assert plan["focus_distance"] == 10.0
+
+    def test_frequency_drives_peak_volume(self, generator: FitnessPlanGenerator):
+        """Higher training frequency must target more weekly volume.
+
+        Regression: the fitness peak ignored ``runs_per_week`` entirely, so a
+        3x and a 6x plan landed on identical weekly km — the frequency knob
+        only re-sliced a fixed volume into more (smaller) runs. Below the
+        FITNESS_PEAK_CAP_KM ceiling, peak volume should rise with frequency.
+        """
+        peaks = {
+            freq: generator.generate_plan(
+                current_weekly_km=30.0,
+                weeks=12,
+                runs_per_week=freq,
+                focus_area="balanced",
+            )["summary"]["peak_weekly_km"]
+            for freq in (3, 4, 5, 6)
+        }
+
+        assert peaks[3] < peaks[4] < peaks[5] < peaks[6], peaks
+        # The reference frequency (4) keeps the original 1.3x target.
+        assert peaks[4] == pytest.approx(30.0 * 1.3, abs=0.5)
+
+    def test_frequency_never_detrains_below_base(self, generator: FitnessPlanGenerator):
+        """Even the lowest frequency holds at least the runner's current base."""
+        plan = generator.generate_plan(
+            current_weekly_km=30.0,
+            weeks=12,
+            runs_per_week=3,
+            focus_area="balanced",
+        )
+        assert plan["summary"]["peak_weekly_km"] >= 30.0

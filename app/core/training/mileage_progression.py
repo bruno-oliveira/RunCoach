@@ -64,7 +64,7 @@ def _volume_trend_cap(profile: Optional[dict]) -> float:
     return VOLUME_TREND_CAPS.get(trend, WEEK_OVER_WEEK_CAP)
 
 
-def _runs_per_week_factor(max_runs: int) -> float:
+def runs_per_week_volume_factor(max_runs: int) -> float:
     """Nudge the peak-mileage target around the reference training frequency.
 
     ``RUNS_PER_WEEK_REFERENCE`` runs/week is the neutral anchor (factor 1.0);
@@ -73,9 +73,16 @@ def _runs_per_week_factor(max_runs: int) -> float:
     no longer land on identical km regardless of how many days the runner
     trains. The swing is clamped to stay modest; the absolute peak ceilings
     applied by the caller still bound the result.
+
+    Public so other plan families (e.g. the fitness generator) can share the
+    same frequency→volume relationship rather than re-deriving it.
     """
     factor = 1.0 + RUNS_PER_WEEK_VOLUME_STEP * (max_runs - RUNS_PER_WEEK_REFERENCE)
     return max(RUNS_PER_WEEK_FACTOR_MIN, min(RUNS_PER_WEEK_FACTOR_MAX, factor))
+
+
+# Backwards-compatible private alias for in-module callers.
+_runs_per_week_factor = runs_per_week_volume_factor
 
 
 def _trail_ideal_peak(profile: TrailProfile, current_km: float) -> float:
