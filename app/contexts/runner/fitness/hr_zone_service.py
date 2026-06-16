@@ -15,9 +15,7 @@ from app.core.training.hr_zone_calculator import (
     HR_ZONES_VERSION,
     MAX_HR_SPIKE_TOLERANCE_BPM,
     MAX_RELIABLE_MAX_HR,
-    MAX_RELIABLE_RESTING_HR,
     MIN_RELIABLE_MAX_HR,
-    MIN_RELIABLE_RESTING_HR,
     HRZoneCalculator,
     _lthr_is_usable,
 )
@@ -25,14 +23,6 @@ from app.models.training_plan import TrainingPlan
 from app.models.user import User
 
 logger = logging.getLogger(__name__)
-
-# Easy-run average HR sits well above true resting HR. We approximate the gap
-# with a fixed offset when estimating resting HR from the lowest easy-run
-# average. Deliberately conservative (small) so an over-estimate keeps the
-# Karvonen zones close to the %max-HR fallback rather than skewing them low.
-EASY_RUN_TO_RESTING_OFFSET_BPM = 25
-# Require at least this many easy-effort runs before trusting a derived value.
-MIN_EASY_RUNS_FOR_RESTING = 5
 
 # How many recent runs to sample when calibrating the pace<->HR relationship.
 # Bounded so the fit reflects *current* fitness (the mapping shifts as the
@@ -91,12 +81,22 @@ def get_user_max_hr(
     user_id: str,
     db: Session,
     user_age: Optional[int] = None,
+    user_max_hr: Optional[int] = None,
 ) -> tuple[int, str]:
-    """Determine max HR from run data, age, or a safe default.
+    """Determine max HR from a user override, run data, age, or a safe default.
+
+    A user-supplied max HR wins: someone who has seen their true max in a race
+    knows it better than detection, which can only ever observe efforts the
+    runner has actually logged. We then fall back to spike-filtered run data,
+    an age formula, and finally a conservative default.
 
     Returns:
-        (max_hr, source) where source is "detected", "estimated", or "default".
+        (max_hr, source) where source is "user", "detected", "estimated", or
+        "default".
     """
+    if user_max_hr and user_max_hr > 0:
+        return int(user_max_hr), "user"
+
     detected = detect_max_hr_from_runs(user_id, db)
     if detected:
         return detected, "detected"
@@ -107,59 +107,21 @@ def get_user_max_hr(
     return DEFAULT_MAX_HR, "default"
 
 
-def detect_resting_hr_from_runs(user_id: str, db: Session) -> Optional[int]:
-    """Estimate resting HR from the lowest easy-effort run averages.
+def get_user_resting_hr(user: User) -> tuple[Optional[int], str]:
+    """Determine resting HR from the user's own value, if supplied.
 
-    We don't ingest per-second streams, so true resting HR isn't directly
-    available. The lowest *average* HR on genuinely easy/recovery runs is the
-    best aerobic-floor proxy we have; subtracting a conservative offset
-    approximates the gap down to true resting. Requires a handful of easy runs
-    before trusting the estimate, and clamps to a plausible band. Returns None
-    when there isn't enough data -- callers then fall back to %max HR.
-    """
-    from app.models import RunLog
-
-    rows = (
-        db.query(RunLog.avg_heart_rate)
-        .filter(
-            RunLog.user_id == user_id,
-            RunLog.avg_heart_rate.isnot(None),
-            RunLog.avg_heart_rate > 0,
-            RunLog.workout_type.in_(("easy", "recovery", "long")),
-        )
-        .order_by(RunLog.avg_heart_rate.asc())
-        .limit(MIN_EASY_RUNS_FOR_RESTING)
-        .all()
-    )
-    readings = [r[0] for r in rows if r[0]]
-    if len(readings) < MIN_EASY_RUNS_FOR_RESTING:
-        return None
-
-    easy_floor = min(readings)
-    estimate = easy_floor - EASY_RUN_TO_RESTING_OFFSET_BPM
-    estimate = max(MIN_RELIABLE_RESTING_HR, min(MAX_RELIABLE_RESTING_HR, estimate))
-    return int(round(estimate))
-
-
-def get_user_resting_hr(
-    user: User,
-    db: Session,
-) -> tuple[Optional[int], str]:
-    """Determine resting HR, preferring the user's own value over an estimate.
+    In the LTHR-anchored model resting HR no longer drives the band math (only
+    an optional Zone 1 floor), so we no longer *estimate* it from easy-run
+    averages -- that proxy (easy floor minus a fixed offset) was unreliable and,
+    via the old Karvonen path, compressed the lower zones. We use it only when
+    the runner has entered a genuine value.
 
     Returns:
-        (resting_hr, source) where source is "user", "estimated", or "none".
-        ``resting_hr`` is None when nothing usable is available, in which case
-        zones fall back to the %max HR model.
+        (resting_hr, source) where source is "user" or "none".
     """
     override = getattr(user, "resting_hr", None)
     if override and override > 0:
         return int(override), "user"
-
-    estimated = detect_resting_hr_from_runs(user.id, db)
-    if estimated:
-        return estimated, "estimated"
-
     return None, "none"
 
 
@@ -274,13 +236,19 @@ class HRZoneService:
         Returns:
             List of zone dicts with BPM ranges.
         """
-        max_hr, source = get_user_max_hr(user.id, db, user_age=user.age)
-        resting_hr, resting_source = get_user_resting_hr(user, db)
+        max_hr, source = get_user_max_hr(
+            user.id, db, user_age=user.age, user_max_hr=getattr(user, "max_hr", None)
+        )
+        resting_hr, resting_source = get_user_resting_hr(user)
         lthr, lthr_source = get_user_threshold_hr(user, db)
         zones = HRZoneCalculator.calculate_zones(
             max_hr, resting_hr=resting_hr, lthr=lthr
         )
-        method = "hrr" if resting_hr is not None else "pct_max"
+        # Zones are always anchored on a threshold now; "lthr_anchored" records
+        # whether that threshold came from the runner's real data (a measured or
+        # supplied LTHR) rather than the population-average fallback derived from
+        # max HR.
+        method = "lthr"
         lthr_anchored = lthr is not None and _lthr_is_usable(max_hr, lthr)
 
         # Calibrate each zone's BPM band to the pace this runner actually holds

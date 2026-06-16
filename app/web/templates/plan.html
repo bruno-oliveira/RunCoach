@@ -352,18 +352,18 @@
                 {{ hr_zones.max_hr }} bpm
                 <span class="hr-source-label">({{ hr_zones.source }})</span>
             </div>
-            {% if hr_zones.method == 'hrr' and hr_zones.resting_hr %}
-            <div class="summary-item">
-                <strong><span data-i18n="plan.resting_hr">Resting HR</span></strong>
-                {{ hr_zones.resting_hr }} bpm
-                <span class="hr-source-label">({{ hr_zones.resting_source }}, Karvonen)</span>
-            </div>
-            {% endif %}
             {% if hr_zones.lthr_anchored and hr_zones.lthr %}
             <div class="summary-item">
                 <strong><span data-i18n="plan.threshold_hr">Threshold HR</span></strong>
                 {{ hr_zones.lthr }} bpm
-                <span class="hr-source-label">({{ hr_zones.lthr_source }})</span>
+                <span class="hr-source-label">({{ hr_zones.lthr_source }}, anchor)</span>
+            </div>
+            {% endif %}
+            {% if hr_zones.resting_hr %}
+            <div class="summary-item">
+                <strong><span data-i18n="plan.resting_hr">Resting HR</span></strong>
+                {{ hr_zones.resting_hr }} bpm
+                <span class="hr-source-label">({{ hr_zones.resting_source }})</span>
             </div>
             {% endif %}
             {% endif %}

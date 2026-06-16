@@ -26,12 +26,16 @@ class User(Base):
     )
     plans_generated = Column(Integer, default=0)
     age = Column(Integer, nullable=True)
-    # Optional resting heart rate (BPM). Enables Heart Rate Reserve (Karvonen)
-    # zone math; when null we estimate from run data or fall back to %max HR.
+    # Optional max heart rate (BPM). When set it anchors the top of the HR
+    # zones directly; otherwise we detect it from run data, then fall back to an
+    # age formula and a conservative default.
+    max_hr = Column(Integer, nullable=True)
+    # Optional resting heart rate (BPM). In the LTHR-anchored model it only
+    # raises the Zone 1 (recovery) floor; left null we omit that refinement.
     resting_hr = Column(Integer, nullable=True)
-    # Optional lactate-threshold heart rate (BPM). When set, the zone bands are
-    # re-anchored so the threshold (Zone 3/4) edge equals it; when null we
-    # estimate it from threshold-effort runs or leave the formula bands as-is.
+    # Optional lactate-threshold heart rate (BPM). The primary zone anchor: the
+    # Zone 3/4 edge sits on it. When null we estimate it from threshold-effort
+    # runs, and failing that derive it from max HR (population-average 88%).
     threshold_hr = Column(Integer, nullable=True)
     strava_athlete_id = Column(String, unique=True, nullable=True, index=True)
     strava_access_token = Column(EncryptedString, nullable=True)

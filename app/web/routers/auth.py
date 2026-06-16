@@ -109,6 +109,8 @@ async def google_auth(
             created_at=user.created_at,
             plans_generated=user.plans_generated,
             strava_connected=bool(user.strava_athlete_id),
+            age=user.age,
+            max_hr=user.max_hr,
             resting_hr=user.resting_hr,
             threshold_hr=user.threshold_hr,
         ),
@@ -131,6 +133,8 @@ def get_current_user_info(current_user: User = Depends(get_current_user)):
         created_at=current_user.created_at,
         plans_generated=current_user.plans_generated,
         strava_connected=bool(current_user.strava_athlete_id),
+        age=current_user.age,
+        max_hr=current_user.max_hr,
         resting_hr=current_user.resting_hr,
         threshold_hr=current_user.threshold_hr,
     )
@@ -142,9 +146,15 @@ def update_user_settings(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    """Update mutable user settings (resting HR, threshold HR)."""
+    """Update mutable user settings (age, max HR, resting HR, threshold HR)."""
+    if payload.age is not None:
+        # 0 clears the override.
+        current_user.age = payload.age or None
+    if payload.max_hr is not None:
+        # 0 clears the override and reverts to detection / the age formula.
+        current_user.max_hr = payload.max_hr or None
     if payload.resting_hr is not None:
-        # 0 clears the override and reverts to the data-derived estimate.
+        # 0 clears the override.
         current_user.resting_hr = payload.resting_hr or None
     if payload.threshold_hr is not None:
         # 0 clears the override and reverts to the data-derived estimate.
@@ -160,6 +170,8 @@ def update_user_settings(
         created_at=current_user.created_at,
         plans_generated=current_user.plans_generated,
         strava_connected=bool(current_user.strava_athlete_id),
+        age=current_user.age,
+        max_hr=current_user.max_hr,
         resting_hr=current_user.resting_hr,
         threshold_hr=current_user.threshold_hr,
     )

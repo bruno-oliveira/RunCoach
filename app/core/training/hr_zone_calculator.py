@@ -29,39 +29,64 @@ MAX_RELIABLE_RESTING_HR = 100
 
 # Lactate-threshold HR is plausible only as a fraction of max within this band.
 # Below ~70% it's not a threshold (more like easy-run HR mislabelled); above
-# ~95% it's a VO2max/peak reading, not a sustainable threshold.
+# ~95% it's a VO2max/peak reading, not a sustainable threshold. The same band
+# clamps a measured-or-derived LTHR before it anchors the zones, so a noisy
+# estimate can never place the threshold somewhere physiologically impossible.
 MIN_LTHR_FRACTION_OF_MAX = 0.70
-MAX_LTHR_FRACTION_OF_MAX = 0.95
+MAX_LTHR_FRACTION_OF_MAX = 0.92
+
+# When no LTHR is measured we derive one from max HR at this fraction. 88% of max
+# is the population-average lactate threshold for runners, and it makes the
+# LTHR-anchored model fall back to (essentially) the historical %max bands so a
+# data-less runner sees no regression.
+DEFAULT_LTHR_FRACTION_OF_MAX = 0.88
+
+# No zone may be narrower than this after the bands are built. A safety net: the
+# %LTHR partition is monotonic by construction, but capping the top band at max
+# HR (or an extreme clamped anchor) could otherwise leave a sliver of a zone.
+MIN_ZONE_WIDTH_BPM = 3
 
 # Version of the zone model below. Bump when ZONE_DEFINITIONS changes -- or when
-# the zone *math* changes (e.g. %max HR -> Heart Rate Reserve, attaching the
-# data-calibrated pace each zone maps to, or re-anchoring the band boundaries to
-# a measured lactate-threshold HR) -- so plans carrying zones from an older
-# model are recomputed on next view.
-HR_ZONES_VERSION = 5
+# the zone *math* changes (e.g. %max HR -> Heart Rate Reserve -> %LTHR anchoring,
+# or attaching the data-calibrated pace each zone maps to) -- so plans carrying
+# zones from an older model are recomputed on next view.
+HR_ZONES_VERSION = 6
 
 
 # -- Zone definitions (percentage of max HR) ----------------------------------
 
-# Running-specific 5-zone model (% of max HR). These are the SAME bands the
-# pace-zone table annotates (zone_calculator.py), so "Zone 3 - Tempo" means
-# one thing everywhere: on the personal HR-zones panel, on each workout's
-# BPM badge, and in the adaptation engine's zone-adherence signal.
+# Running-specific 5-zone model. The Zone 3/4 boundary is the runner's lactate
+# threshold (LTHR), so each band is expressed as a fraction *of LTHR* (Friel's
+# running-zone method) -- the most reliable anchor for runners, whose zones
+# track threshold far better than a flat %max HR. The top of Zone 5 is capped at
+# max HR.
 #
-# The previous model used generic 50/60/70/80/90% bands. Two bugs followed:
-# 1. The plan page showed contradictory numbers - a workout badge said
-#    "Zone 2: 60-70% of max" while the zone table said "Aerobic: 70-80%".
-# 2. Easy runs prescribed at 60-70% of max are below most runners' slowest
-#    sustainable running HR (Daniels puts E pace at 65-79% of max), so the
-#    adaptation engine scored correctly-run easy runs as "+1 zone too hard"
-#    and applied an unearned volume penalty - while interval days targeted
-#    at 90-100% *average* HR (unattainable as a run average) scored -1.
+# `lthr_min` / `lthr_max` are the band edges as fractions of LTHR; `lthr_max`
+# is None for the top zone, which is capped at max HR. The `pct_min` / `pct_max`
+# (% of max HR) are kept as a reference vocabulary: they are the SAME bands the
+# pace-zone table annotates (zone_calculator.py via TRAINING_ZONE_HR_PERCENTAGES)
+# so "Zone 3 - Tempo" means one thing everywhere -- the personal HR-zones panel,
+# each workout's BPM badge, and the adaptation engine's zone-adherence signal.
+#
+# The %LTHR fractions are chosen so that when LTHR sits at the population-average
+# 88% of max, the BPM bands reproduce the previous %max model (Z1 60-70%, Z2
+# 70-80%, Z3 80-88%, Z4 88-95%, Z5 95-100%). A *measured* LTHR then slides every
+# band onto the runner's real physiology while keeping each band a sane width --
+# fixing the prior model, where Karvonen (from an unreliable resting-HR estimate)
+# compounded with a separate LTHR re-anchor and collapsed Zones 1-3 to 1-2 BPM.
+#
+# Why these zone numbers: easy runs prescribed below ~68% of LTHR are below most
+# runners' slowest sustainable running HR, and a correctly run VO2max session
+# averages ~Zone 4 once recoveries are included -- Zone 5 is a classification
+# band no whole run can average, never a session target.
 ZONE_DEFINITIONS = [
     {
         "zone": 1,
         "name": "Recovery",
         "pct_min": 0.60,
         "pct_max": 0.70,
+        "lthr_min": 0.682,
+        "lthr_max": 0.795,
         "description": "Very light effort. Active recovery, warm-up, cool-down.",
     },
     {
@@ -69,6 +94,8 @@ ZONE_DEFINITIONS = [
         "name": "Aerobic",
         "pct_min": 0.70,
         "pct_max": 0.80,
+        "lthr_min": 0.795,
+        "lthr_max": 0.909,
         "description": "Conversational pace. Builds aerobic base and endurance.",
     },
     {
@@ -76,6 +103,8 @@ ZONE_DEFINITIONS = [
         "name": "Tempo",
         "pct_min": 0.80,
         "pct_max": 0.88,
+        "lthr_min": 0.909,
+        "lthr_max": 1.000,
         "description": "Comfortably hard. Threshold effort - improves lactate clearance and stamina.",
     },
     {
@@ -83,6 +112,8 @@ ZONE_DEFINITIONS = [
         "name": "VO2max",
         "pct_min": 0.88,
         "pct_max": 0.95,
+        "lthr_min": 1.000,
+        "lthr_max": 1.079,
         "description": "Hard effort. 3-5 minute intervals that develop peak oxygen uptake.",
     },
     {
@@ -90,6 +121,8 @@ ZONE_DEFINITIONS = [
         "name": "Speed",
         "pct_min": 0.95,
         "pct_max": 1.00,
+        "lthr_min": 1.079,
+        "lthr_max": None,
         "description": "Near-maximum effort. Short fast reps - only touched briefly within a session.",
     },
 ]
@@ -154,59 +187,36 @@ def _lthr_is_usable(max_hr: int, lthr: object) -> bool:
     )
 
 
-def _reanchor_zones_to_lthr(zones: list[dict], max_hr: int, lthr: int) -> list[dict]:
-    """Re-anchor zone boundaries so the threshold edge equals the measured LTHR.
+def resolve_lthr_anchor(max_hr: int, lthr: Optional[int]) -> int:
+    """Return the LTHR the zones will anchor on.
 
-    The formula model places the Zone 3/4 (threshold) boundary at a fixed 88%
-    of max -- a population average that is often several BPM off for a given
-    runner. When we can measure the runner's actual lactate-threshold HR from
-    their threshold-effort runs, we slide the internal boundaries onto it while
-    pinning the recovery floor (Zone 1 min) and the ceiling (max HR) so the band
-    stays a valid, monotonic partition.
-
-    Two linear segments are remapped:
-        - below threshold: [floor .. baseline_threshold] -> [floor .. lthr]
-        - above threshold: [baseline_threshold .. max] -> [lthr .. max]
-
-    Returns the zones unchanged if the anchor points are degenerate.
+    Uses the supplied ``lthr`` when it is a plausible fraction of max HR;
+    otherwise (missing, or out of the ``[MIN..MAX]_LTHR_FRACTION_OF_MAX`` band, so
+    likely a mislabelled easy run or a VO2max peak) derives one from max HR at
+    the population-average fraction. This keeps a noisy measurement from placing
+    the threshold somewhere physiologically impossible.
     """
-    floor = zones[0]["min_bpm"]
-    baseline_threshold = zones[2]["max_bpm"]  # 88% boundary in the formula model
-    ceiling = max_hr
+    if lthr is not None and _lthr_is_usable(max_hr, lthr):
+        return int(lthr)
+    return round(DEFAULT_LTHR_FRACTION_OF_MAX * max_hr)
 
-    # Guard against degenerate / non-monotonic anchoring.
-    if not (floor < lthr < ceiling and floor < baseline_threshold < ceiling):
-        return zones
 
-    def remap(bpm: int) -> int:
-        if bpm <= baseline_threshold:
-            shifted = floor + (bpm - floor) * (lthr - floor) / (
-                baseline_threshold - floor
-            )
-        else:
-            shifted = lthr + (bpm - baseline_threshold) * (ceiling - lthr) / (
-                ceiling - baseline_threshold
-            )
-        return round(shifted)
+def _enforce_min_widths(zones: list[dict], ceiling: int) -> list[dict]:
+    """Guarantee a strictly-ascending partition with no band thinner than
+    ``MIN_ZONE_WIDTH_BPM``.
 
-    for zone in zones:
-        zone["min_bpm"] = remap(zone["min_bpm"])
-        zone["max_bpm"] = remap(zone["max_bpm"])
+    Walks top-down so capping the final band at max HR can never leave a sliver:
+    a too-thin zone has its lower edge pushed down, and the zone below it follows.
+    A no-op for healthy anchors, where the %LTHR bands are already wide.
+    """
+    zones[-1]["max_bpm"] = ceiling
+    for i in range(len(zones) - 1, -1, -1):
+        zone = zones[i]
+        if zone["max_bpm"] - zone["min_bpm"] < MIN_ZONE_WIDTH_BPM:
+            zone["min_bpm"] = zone["max_bpm"] - MIN_ZONE_WIDTH_BPM
+        if i > 0:
+            zones[i - 1]["max_bpm"] = zone["min_bpm"]
     return zones
-
-
-def _zone_bpm(pct: float, max_hr: int, resting_hr: Optional[int]) -> int:
-    """Absolute BPM for a zone fraction.
-
-    When a usable resting HR is supplied we use the Heart Rate Reserve
-    (Karvonen) method -- ``resting + pct * (max - resting)`` -- which reflects
-    metabolic intensity far better than a flat %max HR for runners, whose low
-    resting HR otherwise pushes every band several BPM too low. Without a
-    resting HR we fall back to the historical %max HR mapping unchanged.
-    """
-    if resting_hr is not None and _resting_hr_is_usable(max_hr, resting_hr):
-        return round(resting_hr + pct * (max_hr - resting_hr))
-    return round(max_hr * pct)
 
 
 class HRZoneCalculator:
@@ -218,42 +228,54 @@ class HRZoneCalculator:
         resting_hr: Optional[int] = None,
         lthr: Optional[int] = None,
     ) -> list[dict]:
-        """Return 5-zone model with absolute BPM ranges.
+        """Return the 5-zone model with absolute BPM ranges.
+
+        Zones are anchored on the runner's lactate-threshold HR: each band is a
+        fraction of LTHR (Friel's running-zone method), with the Zone 3/4 edge
+        sitting exactly on LTHR and the top of Zone 5 capped at max HR. When no
+        LTHR is supplied one is derived from max HR (population-average 88%), so
+        a data-less runner gets bands equivalent to the historical %max model.
 
         Args:
             max_hr: Maximum heart rate in BPM.
-            resting_hr: Optional resting heart rate. When provided (and
-                plausible) zones are computed via Heart Rate Reserve
-                (Karvonen); otherwise the %max HR mapping is used.
-            lthr: Optional measured lactate-threshold HR. When provided (and
-                plausible) the band boundaries are re-anchored so the threshold
-                (Zone 3/4) edge equals it, correcting the formula's fixed-88%
-                assumption against the runner's real data.
+            resting_hr: Optional resting heart rate. When supplied and plausible
+                it raises the Zone 1 floor (a runner's recovery band should not
+                dip below their resting HR); it no longer drives the band math.
+            lthr: Optional lactate-threshold HR (measured or supplied). Anchors
+                the whole partition; ignored (the 88%-of-max default is used) if
+                it falls outside a plausible fraction of max HR.
 
         Returns:
             List of zone dicts, each with zone, name, min_bpm, max_bpm,
             pct_min, pct_max, and description.
         """
-        usable_resting = (
-            resting_hr if _resting_hr_is_usable(max_hr, resting_hr) else None
-        )
+        anchor = resolve_lthr_anchor(max_hr, lthr)
         zones = []
         for defn in ZONE_DEFINITIONS:
+            min_bpm = round(anchor * defn["lthr_min"])
+            if defn["lthr_max"] is None:
+                max_bpm = max_hr
+            else:
+                max_bpm = min(round(anchor * defn["lthr_max"]), max_hr)
             zones.append(
                 {
                     "zone": defn["zone"],
                     "name": defn["name"],
-                    "min_bpm": _zone_bpm(defn["pct_min"], max_hr, usable_resting),
-                    "max_bpm": _zone_bpm(defn["pct_max"], max_hr, usable_resting),
+                    "min_bpm": min_bpm,
+                    "max_bpm": max_bpm,
                     "pct_min": defn["pct_min"],
                     "pct_max": defn["pct_max"],
                     "description": defn["description"],
                 }
             )
 
-        if lthr is not None and _lthr_is_usable(max_hr, lthr):
-            zones = _reanchor_zones_to_lthr(zones, max_hr, int(lthr))
-        return zones
+        # Resting HR (when genuinely known) only lifts the recovery floor.
+        if _resting_hr_is_usable(max_hr, resting_hr):
+            floor = int(resting_hr)  # type: ignore[arg-type]
+            if floor > zones[0]["min_bpm"] and floor < zones[0]["max_bpm"]:
+                zones[0]["min_bpm"] = floor
+
+        return _enforce_min_widths(zones, max_hr)
 
     @staticmethod
     def classify_hr(hr_bpm: int, zones: list[dict]) -> int:

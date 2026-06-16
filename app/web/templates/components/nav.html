@@ -184,28 +184,47 @@
         </div>
         <div class="settings-modal-body">
             <div class="settings-field">
-                <label class="settings-field-label" for="restingHrInput">
-                    <strong>Resting heart rate (BPM)</strong>
-                    <span class="toggle-help">Used for more accurate Heart Rate Reserve training zones. Leave blank to let RunCoach estimate it from your runs.</span>
+                <label class="settings-field-label" for="ageInput">
+                    <strong>Age (years)</strong>
+                    <span class="toggle-help">Used to estimate your max heart rate when none is detected from your runs. Leave blank to skip.</span>
                 </label>
                 <div class="settings-field-row">
                     <input
                         type="number"
-                        id="restingHrInput"
+                        id="ageInput"
                         class="settings-number-input"
-                        min="30"
+                        min="10"
                         max="120"
                         step="1"
-                        placeholder="e.g. 52"
-                        value="{{ user.resting_hr if user and user.resting_hr else '' }}"
+                        placeholder="e.g. 35"
+                        value="{{ user.age if user and user.age else '' }}"
                     >
-                    <button class="btn btn-secondary btn-sm" type="button" onclick="saveRestingHr()" data-i18n="settings.save">Save</button>
+                    <button class="btn btn-secondary btn-sm" type="button" onclick="saveAge()" data-i18n="settings.save">Save</button>
+                </div>
+            </div>
+            <div class="settings-field">
+                <label class="settings-field-label" for="maxHrInput">
+                    <strong>Max heart rate (BPM)</strong>
+                    <span class="toggle-help">Anchors the top of your training zones. If you know your true max (e.g. from a race), enter it here. Leave blank to let RunCoach detect it from your runs.</span>
+                </label>
+                <div class="settings-field-row">
+                    <input
+                        type="number"
+                        id="maxHrInput"
+                        class="settings-number-input"
+                        min="120"
+                        max="230"
+                        step="1"
+                        placeholder="e.g. 190"
+                        value="{{ user.max_hr if user and user.max_hr else '' }}"
+                    >
+                    <button class="btn btn-secondary btn-sm" type="button" onclick="saveMaxHr()" data-i18n="settings.save">Save</button>
                 </div>
             </div>
             <div class="settings-field">
                 <label class="settings-field-label" for="thresholdHrInput">
                     <strong>Threshold heart rate (BPM)</strong>
-                    <span class="toggle-help">Your lactate-threshold HR. Re-anchors the zone bands to your real threshold. Leave blank to let RunCoach estimate it from your tempo runs.</span>
+                    <span class="toggle-help">Your lactate-threshold HR &mdash; the main anchor for your zones (the Zone 3/4 edge sits on it). Leave blank to let RunCoach estimate it from your tempo runs.</span>
                 </label>
                 <div class="settings-field-row">
                     <input
@@ -219,6 +238,25 @@
                         value="{{ user.threshold_hr if user and user.threshold_hr else '' }}"
                     >
                     <button class="btn btn-secondary btn-sm" type="button" onclick="saveThresholdHr()" data-i18n="settings.save">Save</button>
+                </div>
+            </div>
+            <div class="settings-field">
+                <label class="settings-field-label" for="restingHrInput">
+                    <strong>Resting heart rate (BPM)</strong>
+                    <span class="toggle-help">Optional &mdash; raises your Zone 1 (recovery) floor. Leave blank to skip.</span>
+                </label>
+                <div class="settings-field-row">
+                    <input
+                        type="number"
+                        id="restingHrInput"
+                        class="settings-number-input"
+                        min="30"
+                        max="120"
+                        step="1"
+                        placeholder="e.g. 52"
+                        value="{{ user.resting_hr if user and user.resting_hr else '' }}"
+                    >
+                    <button class="btn btn-secondary btn-sm" type="button" onclick="saveRestingHr()" data-i18n="settings.save">Save</button>
                 </div>
             </div>
         </div>

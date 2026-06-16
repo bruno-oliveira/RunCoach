@@ -360,7 +360,7 @@ function openSettingsModal() {
     overlay.classList.add('is-open');
     overlay.setAttribute('aria-hidden', 'false');
     document.body.style.overflow = 'hidden';
-    const firstField = document.getElementById('restingHrInput');
+    const firstField = document.getElementById('ageInput');
     if (firstField) firstField.focus();
 }
 
@@ -431,6 +431,30 @@ async function saveHrSetting({
     }
 }
 
+function saveAge() {
+    return saveHrSetting({
+        inputId: 'ageInput',
+        fieldKey: 'age',
+        min: 10,
+        max: 120,
+        rangeMsg: 'Enter an age between 10 and 120, or leave blank.',
+        savedMsg: 'Age saved — used to estimate max HR when none is detected.',
+        clearedMsg: 'Age cleared.',
+    });
+}
+
+function saveMaxHr() {
+    return saveHrSetting({
+        inputId: 'maxHrInput',
+        fieldKey: 'max_hr',
+        min: 120,
+        max: 230,
+        rangeMsg: 'Enter a max HR between 120 and 230, or leave blank.',
+        savedMsg: 'Max HR saved — zones anchored to it.',
+        clearedMsg: 'Max HR cleared — RunCoach will detect it from your runs.',
+    });
+}
+
 function saveRestingHr() {
     return saveHrSetting({
         inputId: 'restingHrInput',
@@ -438,8 +462,8 @@ function saveRestingHr() {
         min: 30,
         max: 120,
         rangeMsg: 'Enter a resting HR between 30 and 120, or leave blank.',
-        savedMsg: 'Resting HR saved — zones now use Heart Rate Reserve.',
-        clearedMsg: 'Resting HR cleared — RunCoach will estimate it from your runs.',
+        savedMsg: 'Resting HR saved — raises your Zone 1 floor.',
+        clearedMsg: 'Resting HR cleared.',
     });
 }
 
