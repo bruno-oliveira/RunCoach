@@ -35,11 +35,16 @@ from app.core.training.tuning import (
 )
 
 # Per road band: (floor_km, multiplier on current_km) for the ideal peak.
+# Floors and multipliers raised toward modern training-app prescriptions:
+# weekly volume is the primary driver of endurance adaptation, so the target
+# peak pulls runners with modest bases up to genuinely productive mileage
+# rather than parking them just above where they started. The week-over-week
+# cap and absolute MAX_PEAK_MILEAGE ceilings still bound the ramp.
 _ROAD_PEAK_PARAMS = {
-    "5k": (20, 1.5),
-    "10k": (25, 1.6),
-    "half": (40, 1.85),
-    "marathon": (55, 2.0),
+    "5k": (24, 1.7),
+    "10k": (32, 1.85),
+    "half": (48, 2.1),
+    "marathon": (64, 2.25),
 }
 
 
@@ -98,7 +103,7 @@ def get_ideal_peak(
         return min(ideal_peak, trail_max_weekly_mileage(trail_profile))
 
     if is_trail_target(target_distance, trail_profile):
-        ideal_peak = max(35, current_km * 1.5)
+        ideal_peak = max(45, current_km * 1.8)
     else:
         floor_km, mult = _ROAD_PEAK_PARAMS[classify_road(target_distance)]
         ideal_peak = max(floor_km, current_km * mult)

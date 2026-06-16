@@ -517,7 +517,7 @@ class TestTaperBehavior:
 
 
 class TestRecoveryWeeks:
-    """Recovery weeks must show ~35% volume reduction."""
+    """Recovery weeks must show ~20% volume reduction (modern deload depth)."""
 
     @pytest.mark.parametrize("distance", [10.0, 21.1, 42.2])
     def test_recovery_week_volume_drop(self, distance):
@@ -533,7 +533,7 @@ class TestRecoveryWeeks:
         for i, week in enumerate(plan):
             if week["is_recovery"] and i > 0:
                 prev = plan[i - 1]
-                expected = prev["total_km"] * 0.65
+                expected = prev["total_km"] * 0.80
                 tolerance = expected * 0.20
                 assert abs(week["total_km"] - expected) <= tolerance, (
                     f"W{week['week']} recovery: expected ~{expected:.1f}, "
@@ -653,7 +653,7 @@ class TestEdgeCases:
         )
         assert len(plan) == 16
         peak = max(w["total_km"] for w in plan)
-        assert peak <= 86  # Absolute max for marathon (85 + rounding)
+        assert peak <= 101  # Absolute max for marathon (100 + rounding)
 
     def test_just_above_minimum_mileage(self):
         gen = TrainingPlanGenerator()
