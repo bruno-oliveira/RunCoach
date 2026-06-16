@@ -105,7 +105,9 @@ class TestHighBaseDetraining:
         phases = calculate_phases(weeks, 42.2)
         base_weeks = progression[: phases["base"]]
         # Ignore deload weeks (intentional dips); loading weeks must hold base.
-        loading = [km for km in base_weeks if km >= current_km * 0.80]
+        # Deloads now sit at 80% of the high-water mark, so the loading filter
+        # uses a 0.90 cutoff to exclude them cleanly.
+        loading = [km for km in base_weeks if km >= current_km * 0.90]
         assert loading, "expected loading weeks in base"
         assert min(loading) >= current_km * 0.95, (
             f"base loading weeks detrained below current: {base_weeks}"

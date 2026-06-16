@@ -305,8 +305,8 @@ class TestTrainingPlanGenerator:
         """Recovery weeks occur at the 5th week within each phase (phase-relative scheduling).
 
         For a 16-week marathon plan: base=5, build=6. Recovery at the 5th step within each
-        phase — global weeks 5 (last base) and 10 (5th build week). Both should show ~35%
-        mileage reduction vs the previous week.
+        phase — global weeks 5 (last base) and 10 (5th build week). Both should show ~20%
+        mileage reduction vs the previous week (modern deload depth).
         """
         plan = plan_generator.generate_plan(
             current_km=20,
@@ -326,7 +326,7 @@ class TestTrainingPlanGenerator:
                 continue
             recovery_week = plan[week_idx]
             previous_week = plan[week_idx - 1]
-            expected_recovery = previous_week["total_km"] * 0.65
+            expected_recovery = previous_week["total_km"] * 0.80
             actual_recovery = recovery_week["total_km"]
             tolerance = expected_recovery * 0.15
             assert abs(actual_recovery - expected_recovery) <= tolerance, (
@@ -578,7 +578,7 @@ class TestTrainingPlanGenerator:
         assert 30 <= peak_high <= 75
 
         peak_marathon = mileage_progression.get_peak_mileage(42.2, 40, 16)
-        assert 60 <= peak_marathon <= 80
+        assert 80 <= peak_marathon <= 100
 
     def test_calculate_long_run_distance_caps(
         self, plan_generator: TrainingPlanGenerator

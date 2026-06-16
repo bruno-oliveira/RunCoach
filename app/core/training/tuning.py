@@ -20,9 +20,12 @@ this module is a relocation, not a re-tuning.
 WEEK_OVER_WEEK_CAP = 1.10
 
 # Recovery weeks cut mileage to this fraction of the high-water mark.
-# A ~35% reduction gives the body a real absorption window without losing
-# the fitness gained in the preceding load block.
-RECOVERY_WEEK_RATIO = 0.65
+# A ~20% reduction is the modern periodization standard (Runna, Pfitzinger,
+# Daniels): it gives the body a genuine absorption window while preserving the
+# aerobic stimulus built in the preceding block. The previous ~35% cut dragged
+# total training volume down sharply and left plans looking jagged; a gentler
+# deload keeps weekly mileage productive without compromising recovery.
+RECOVERY_WEEK_RATIO = 0.80
 
 # Minimum bump to register a "progressed" non-recovery week — otherwise the
 # week would be flat and look like a plateau.
@@ -37,13 +40,19 @@ BASE_PHASE_END_FRACTION = 0.70
 PEAK_OSCILLATION_BASE = 0.97
 PEAK_OSCILLATION_STEP = 0.01
 
-# Absolute maximum weekly mileage per race distance (recreational targets).
+# Absolute maximum weekly mileage per race distance. Raised toward the volume
+# ceilings used by modern training apps (Runna et al.) and evidence-based
+# coaching: weekly mileage is the single strongest predictor of endurance
+# performance, so even sub-marathon runners chasing real improvement benefit
+# from more aerobic volume than the old, very conservative caps allowed. The
+# 10% week-over-week rule, ACWR injury-risk reductions, and per-run structural
+# ceilings still bound how quickly and how high any individual plan ramps.
 MAX_PEAK_MILEAGE = {
-    5.0: 40.0,
-    10.0: 50.0,
-    21.1: 65.0,
-    30.0: 75.0,
-    42.2: 85.0,
+    5.0: 50.0,
+    10.0: 64.0,
+    21.1: 82.0,
+    30.0: 90.0,
+    42.2: 100.0,
 }
 
 # Peak-mileage multiplier keyed by ACWR injury-risk band.
@@ -76,10 +85,10 @@ RUNS_PER_WEEK_FACTOR_MAX = 1.10
 # Bracket-aware target peak weekly mileage for trail/ultra plans:
 # (current_km multiplier, absolute floor km).
 TRAIL_BRACKET_PEAK_TARGETS = {
-    "short": (1.5, 30.0),
-    "standard": (1.5, 35.0),
-    "ultra": (1.7, 50.0),
-    "long_ultra": (2.0, 70.0),
+    "short": (1.7, 38.0),
+    "standard": (1.85, 48.0),
+    "ultra": (1.9, 60.0),
+    "long_ultra": (2.1, 82.0),
 }
 
 # =============================================================================
