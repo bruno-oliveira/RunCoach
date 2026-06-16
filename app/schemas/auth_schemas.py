@@ -23,6 +23,7 @@ class UserResponse(UserBase):
     plans_generated: int
     strava_connected: bool = False
     resting_hr: Optional[int] = None
+    threshold_hr: Optional[int] = None
 
 
 class AuthResponse(BaseModel):
@@ -44,3 +45,6 @@ class UserSettingsUpdate(BaseModel):
     # Resting heart rate (BPM) for Heart Rate Reserve zone math. Send 0/null to
     # clear and revert to the data-derived estimate.
     resting_hr: Optional[int] = Field(default=None, ge=0, le=120)
+    # Lactate-threshold heart rate (BPM) for re-anchoring the zone bands. Send
+    # 0/null to clear and revert to the data-derived estimate.
+    threshold_hr: Optional[int] = Field(default=None, ge=0, le=220)

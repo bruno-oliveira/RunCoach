@@ -202,6 +202,25 @@
                     <button class="btn btn-secondary btn-sm" type="button" onclick="saveRestingHr()" data-i18n="settings.save">Save</button>
                 </div>
             </div>
+            <div class="settings-field">
+                <label class="settings-field-label" for="thresholdHrInput">
+                    <strong>Threshold heart rate (BPM)</strong>
+                    <span class="toggle-help">Your lactate-threshold HR. Re-anchors the zone bands to your real threshold. Leave blank to let RunCoach estimate it from your tempo runs.</span>
+                </label>
+                <div class="settings-field-row">
+                    <input
+                        type="number"
+                        id="thresholdHrInput"
+                        class="settings-number-input"
+                        min="100"
+                        max="210"
+                        step="1"
+                        placeholder="e.g. 172"
+                        value="{{ user.threshold_hr if user and user.threshold_hr else '' }}"
+                    >
+                    <button class="btn btn-secondary btn-sm" type="button" onclick="saveThresholdHr()" data-i18n="settings.save">Save</button>
+                </div>
+            </div>
         </div>
         <div class="settings-modal-footer">
             <span class="settings-modal-feedback" id="settingsFeedback" role="status" aria-live="polite"></span>
