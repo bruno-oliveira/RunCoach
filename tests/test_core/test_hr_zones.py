@@ -4,9 +4,11 @@ from types import SimpleNamespace
 
 from app.contexts.runner.fitness.hr_zone_service import (
     detect_resting_hr_from_runs,
+    detect_threshold_hr_from_runs,
     gather_pace_hr_samples,
     get_user_max_hr,
     get_user_resting_hr,
+    get_user_threshold_hr,
 )
 from app.core.training.hr_zone_calculator import HRZoneCalculator
 
@@ -323,6 +325,107 @@ class TestRestingHRDetection:
         user = SimpleNamespace(id="u1", resting_hr=None)
         resting, source = get_user_resting_hr(user, _FakeDB([]))
         assert resting is None
+        assert source == "none"
+
+
+class TestLTHRAnchoring:
+    def test_none_lthr_matches_no_lthr(self):
+        assert HRZoneCalculator.calculate_zones(
+            190
+        ) == HRZoneCalculator.calculate_zones(190, lthr=None)
+
+    def test_threshold_boundary_equals_measured_lthr(self):
+        # The Z3/Z4 boundary should land exactly on the measured LTHR rather
+        # than the formula's 88% of max (= 167 for max 190).
+        zones = HRZoneCalculator.calculate_zones(190, lthr=172)
+        assert zones[2]["max_bpm"] == 172  # top of Zone 3 (Tempo)
+        assert zones[3]["min_bpm"] == 172  # bottom of Zone 4 (VO2max)
+
+    def test_floor_and_ceiling_are_pinned(self):
+        baseline = HRZoneCalculator.calculate_zones(190)
+        anchored = HRZoneCalculator.calculate_zones(190, lthr=172)
+        assert anchored[0]["min_bpm"] == baseline[0]["min_bpm"]  # Z1 floor
+        assert anchored[4]["max_bpm"] == 190  # ceiling = max HR
+
+    def test_anchored_zones_remain_ascending(self):
+        zones = HRZoneCalculator.calculate_zones(195, resting_hr=50, lthr=170)
+        for i in range(len(zones) - 1):
+            assert zones[i]["max_bpm"] <= zones[i + 1]["min_bpm"]
+
+    def test_lower_lthr_pulls_subthreshold_bands_down(self):
+        baseline = HRZoneCalculator.calculate_zones(190)
+        # 88% of 190 = 167; a measured LTHR of 160 is lower, so the aerobic
+        # band top should drop relative to the formula model.
+        anchored = HRZoneCalculator.calculate_zones(190, lthr=160)
+        assert anchored[1]["max_bpm"] < baseline[1]["max_bpm"]
+
+    def test_implausible_lthr_ignored(self):
+        # Below 70% (= 133) or above 95% (= 180) of max is not a threshold.
+        assert HRZoneCalculator.calculate_zones(
+            190, lthr=120
+        ) == HRZoneCalculator.calculate_zones(190)
+        assert HRZoneCalculator.calculate_zones(
+            190, lthr=188
+        ) == HRZoneCalculator.calculate_zones(190)
+
+    def test_anchoring_composes_with_karvonen(self):
+        zones = HRZoneCalculator.calculate_zones(190, resting_hr=50, lthr=168)
+        assert zones[2]["max_bpm"] == 168
+        assert zones[4]["max_bpm"] == 190
+
+
+class TestThresholdHRDetection:
+    def _run(self, wtype, hr):
+        return SimpleNamespace(effective_workout_type=wtype, avg_heart_rate=hr)
+
+    def test_none_below_minimum_runs(self):
+        db = _FakeDB([self._run("tempo", 165), self._run("tempo", 167)])
+        assert detect_threshold_hr_from_runs("u1", db) is None
+
+    def test_median_of_threshold_runs(self):
+        db = _FakeDB(
+            [
+                self._run("tempo", 165),
+                self._run("cruise_interval", 170),
+                self._run("race_pace", 168),
+            ]
+        )
+        assert detect_threshold_hr_from_runs("u1", db) == 168
+
+    def test_ignores_non_threshold_efforts(self):
+        db = _FakeDB(
+            [
+                self._run("easy", 130),
+                self._run("long", 135),
+                self._run("interval", 185),
+                self._run("tempo", 166),  # only one threshold run -> below min
+            ]
+        )
+        assert detect_threshold_hr_from_runs("u1", db) is None
+
+    def test_user_override_preferred(self):
+        user = SimpleNamespace(id="u1", threshold_hr=171)
+        lthr, source = get_user_threshold_hr(user, _FakeDB([]))
+        assert lthr == 171
+        assert source == "user"
+
+    def test_falls_back_to_estimate(self):
+        user = SimpleNamespace(id="u1", threshold_hr=None)
+        db = _FakeDB(
+            [
+                self._run("tempo", 165),
+                self._run("tempo", 170),
+                self._run("tempo", 168),
+            ]
+        )
+        lthr, source = get_user_threshold_hr(user, db)
+        assert source == "estimated"
+        assert lthr == 168
+
+    def test_none_when_no_data(self):
+        user = SimpleNamespace(id="u1", threshold_hr=None)
+        lthr, source = get_user_threshold_hr(user, _FakeDB([]))
+        assert lthr is None
         assert source == "none"
 
 

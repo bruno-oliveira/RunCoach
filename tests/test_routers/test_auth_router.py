@@ -164,6 +164,41 @@ class TestUserSettings:
         finally:
             app.dependency_overrides.pop(get_current_user, None)
 
+    def test_update_threshold_hr_round_trip(self, auth_client, test_db):
+        user = User(
+            google_id="threshold-user",
+            email="threshold@example.com",
+            name="Threshold User",
+        )
+        test_db.add(user)
+        test_db.commit()
+
+        async def _override():
+            return user
+
+        app.dependency_overrides[get_current_user] = _override
+        try:
+            res = auth_client.patch(
+                "/api/auth/me/settings",
+                json={"threshold_hr": 172},
+            )
+            assert res.status_code == 200
+            assert res.json()["threshold_hr"] == 172
+            test_db.refresh(user)
+            assert user.threshold_hr == 172
+
+            # 0 clears the override back to the data-derived estimate.
+            res = auth_client.patch(
+                "/api/auth/me/settings",
+                json={"threshold_hr": 0},
+            )
+            assert res.status_code == 200
+            assert res.json()["threshold_hr"] is None
+            test_db.refresh(user)
+            assert user.threshold_hr is None
+        finally:
+            app.dependency_overrides.pop(get_current_user, None)
+
     def test_settings_requires_auth(self, auth_client):
         res = auth_client.patch(
             "/api/auth/me/settings",

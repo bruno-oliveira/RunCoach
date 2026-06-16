@@ -380,18 +380,21 @@ function closeSettingsModalOnBackdrop(evt) {
     }
 }
 
-async function saveRestingHr() {
-    const input = document.getElementById('restingHrInput');
+// Shared PATCH for the numeric HR overrides in the settings modal. Empty input
+// clears the override (sends 0); otherwise the value is range-validated.
+async function saveHrSetting({
+    inputId, fieldKey, min, max, rangeMsg, savedMsg, clearedMsg,
+}) {
+    const input = document.getElementById(inputId);
     const feedback = document.getElementById('settingsFeedback');
     if (!input) return;
     const raw = input.value.trim();
-    // Empty clears the override (send 0); otherwise validate the range.
     let value = 0;
     if (raw !== '') {
         value = parseInt(raw, 10);
-        if (isNaN(value) || value < 30 || value > 120) {
+        if (isNaN(value) || value < min || value > max) {
             if (feedback) {
-                feedback.textContent = 'Enter a resting HR between 30 and 120, or leave blank.';
+                feedback.textContent = rangeMsg;
                 feedback.classList.remove('is-saved');
                 feedback.classList.add('is-error');
             }
@@ -408,15 +411,14 @@ async function saveRestingHr() {
             method: 'PATCH',
             credentials: 'same-origin',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ resting_hr: value }),
+            body: JSON.stringify({ [fieldKey]: value }),
         });
         if (!res.ok) throw new Error('save_failed');
         const data = await res.json();
-        input.value = data.resting_hr ? String(data.resting_hr) : '';
+        input.value = data[fieldKey] ? String(data[fieldKey]) : '';
         if (feedback) {
-            feedback.textContent = data.resting_hr
-                ? 'Resting HR saved — zones now use Heart Rate Reserve.'
-                : 'Resting HR cleared — RunCoach will estimate it from your runs.';
+            feedback.textContent = data[fieldKey] ? savedMsg : clearedMsg;
+            feedback.classList.remove('is-error');
             feedback.classList.add('is-saved');
         }
     } catch (err) {
@@ -427,6 +429,30 @@ async function saveRestingHr() {
     } finally {
         input.disabled = false;
     }
+}
+
+function saveRestingHr() {
+    return saveHrSetting({
+        inputId: 'restingHrInput',
+        fieldKey: 'resting_hr',
+        min: 30,
+        max: 120,
+        rangeMsg: 'Enter a resting HR between 30 and 120, or leave blank.',
+        savedMsg: 'Resting HR saved — zones now use Heart Rate Reserve.',
+        clearedMsg: 'Resting HR cleared — RunCoach will estimate it from your runs.',
+    });
+}
+
+function saveThresholdHr() {
+    return saveHrSetting({
+        inputId: 'thresholdHrInput',
+        fieldKey: 'threshold_hr',
+        min: 100,
+        max: 210,
+        rangeMsg: 'Enter a threshold HR between 100 and 210, or leave blank.',
+        savedMsg: 'Threshold HR saved — zone bands re-anchored to it.',
+        clearedMsg: 'Threshold HR cleared — RunCoach will estimate it from your tempo runs.',
+    });
 }
 
 document.addEventListener('keydown', (e) => {

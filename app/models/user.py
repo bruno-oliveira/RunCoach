@@ -29,6 +29,10 @@ class User(Base):
     # Optional resting heart rate (BPM). Enables Heart Rate Reserve (Karvonen)
     # zone math; when null we estimate from run data or fall back to %max HR.
     resting_hr = Column(Integer, nullable=True)
+    # Optional lactate-threshold heart rate (BPM). When set, the zone bands are
+    # re-anchored so the threshold (Zone 3/4) edge equals it; when null we
+    # estimate it from threshold-effort runs or leave the formula bands as-is.
+    threshold_hr = Column(Integer, nullable=True)
     strava_athlete_id = Column(String, unique=True, nullable=True, index=True)
     strava_access_token = Column(EncryptedString, nullable=True)
     strava_refresh_token = Column(EncryptedString, nullable=True)

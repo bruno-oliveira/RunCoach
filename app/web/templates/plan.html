@@ -359,6 +359,13 @@
                 <span class="hr-source-label">({{ hr_zones.resting_source }}, Karvonen)</span>
             </div>
             {% endif %}
+            {% if hr_zones.lthr_anchored and hr_zones.lthr %}
+            <div class="summary-item">
+                <strong><span data-i18n="plan.threshold_hr">Threshold HR</span></strong>
+                {{ hr_zones.lthr }} bpm
+                <span class="hr-source-label">({{ hr_zones.lthr_source }})</span>
+            </div>
+            {% endif %}
             {% endif %}
             {% if start_date and user %}
             <div class="summary-item">
