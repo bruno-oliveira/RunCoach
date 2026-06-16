@@ -251,96 +251,88 @@ def enrich_plan_data_with_ids(
     return plan_data
 
 
-def nutrition_for_template(nutrition_plan_data) -> dict[str, Any]:
-    if not nutrition_plan_data:
-        return {}
-
-    nutrition_plan = nutrition_plan_data
-
-    if isinstance(nutrition_plan, list):
-        if not nutrition_plan:
-            return {}
-        first_day = nutrition_plan[0]
-        if not isinstance(first_day, dict):
-            return {}
-        targets = first_day.get("nutrition_targets", {})
-        if not isinstance(targets, dict):
-            targets = {}
-        blueprint: dict[str, Any] = {
-            "daily_calories": targets.get("calories", 0),
-            "protein_g": targets.get("protein", 0),
-            "carbs_g": targets.get("carbs", 0),
-            "fats_g": targets.get("fat", 0),
-            "meal_suggestions": {},
-            "general_tips": first_day.get("nutrition_tips", []),
-            "hydration_guide": {
-                "daily_target": "2000ml",
-                "pre_run": "300-500ml, 2 hours before",
-                "during_run": "200-400ml per hour",
-                "post_run": "150% of fluid lost",
-                "tips": ["Stay hydrated throughout the day"],
-            },
-        }
-
-        for daily_plan in nutrition_plan:
-            if not isinstance(daily_plan, dict):
-                continue
-            meals = daily_plan.get("meals", {})
-            if not isinstance(meals, dict):
-                continue
-            for meal_type, meal_data in meals.items():
-                if meal_type not in blueprint["meal_suggestions"]:
-                    blueprint["meal_suggestions"][meal_type] = []
-                blueprint["meal_suggestions"][meal_type].append(meal_data)
-
-        return blueprint
-
-    if not isinstance(nutrition_plan, dict):
-        return {}
-
-    targets = nutrition_plan.get("nutrition_targets", {})
-    if not isinstance(targets, dict):
-        targets = {}
-
-    meal_options = nutrition_plan.get("meal_options", {})
-    if not isinstance(meal_options, dict):
-        meal_options = {}
-
-    general_tips = nutrition_plan.get("general_tips", [])
-    if not isinstance(general_tips, list):
-        general_tips = []
-
-    hydration_guide = nutrition_plan.get("hydration_guide", {})
-    if not isinstance(hydration_guide, dict):
-        hydration_guide = {}
-
-    trail_fuel_ideas = nutrition_plan.get("trail_fuel_ideas", [])
-    if not isinstance(trail_fuel_ideas, list):
-        trail_fuel_ideas = []
-
-    trail_fuel_phases = nutrition_plan.get("trail_fuel_phases", [])
-    if not isinstance(trail_fuel_phases, list):
-        trail_fuel_phases = []
-
-    trail_tips = nutrition_plan.get("trail_tips", [])
-    if not isinstance(trail_tips, list):
-        trail_tips = []
-
+def _macro_summary(targets: dict) -> dict[str, Any]:
+    """Map raw nutrition targets to the template's macro keys."""
     return {
         "daily_calories": targets.get("calories", 0),
         "protein_g": targets.get("protein", 0),
         "carbs_g": targets.get("carbs", 0),
         "fats_g": targets.get("fat", 0),
-        "meal_suggestions": meal_options,
-        "general_tips": general_tips,
-        "hydration_guide": hydration_guide,
-        "pre_run_meal": nutrition_plan.get("pre_run_meal"),
-        "post_run_meal": nutrition_plan.get("post_run_meal"),
-        "in_race_fueling": nutrition_plan.get("in_race_fueling"),
-        "trail_fuel_ideas": trail_fuel_ideas,
-        "trail_fuel_phases": trail_fuel_phases,
-        "trail_tips": trail_tips,
     }
+
+
+def _default_hydration_guide() -> dict[str, Any]:
+    """Fresh fallback hydration guide for per-day nutrition lists."""
+    return {
+        "daily_target": "2000ml",
+        "pre_run": "300-500ml, 2 hours before",
+        "during_run": "200-400ml per hour",
+        "post_run": "150% of fluid lost",
+        "tips": ["Stay hydrated throughout the day"],
+    }
+
+
+def _nutrition_from_daily_list(daily_plans: list) -> dict[str, Any]:
+    """Build the template view-model from a per-day nutrition list."""
+    first_day = daily_plans[0]
+    if not isinstance(first_day, dict):
+        return {}
+    targets = first_day.get("nutrition_targets", {})
+    if not isinstance(targets, dict):
+        targets = {}
+
+    meal_suggestions: dict[str, Any] = {}
+    blueprint: dict[str, Any] = {
+        **_macro_summary(targets),
+        "meal_suggestions": meal_suggestions,
+        "general_tips": first_day.get("nutrition_tips", []),
+        "hydration_guide": _default_hydration_guide(),
+    }
+    for daily_plan in daily_plans:
+        if not isinstance(daily_plan, dict):
+            continue
+        meals = daily_plan.get("meals", {})
+        if not isinstance(meals, dict):
+            continue
+        for meal_type, meal_data in meals.items():
+            meal_suggestions.setdefault(meal_type, []).append(meal_data)
+    return blueprint
+
+
+def _nutrition_from_blueprint_dict(plan: dict) -> dict[str, Any]:
+    """Build the template view-model from a single blueprint dict."""
+
+    def as_dict(key: str) -> dict:
+        value = plan.get(key, {})
+        return value if isinstance(value, dict) else {}
+
+    def as_list(key: str) -> list:
+        value = plan.get(key, [])
+        return value if isinstance(value, list) else []
+
+    return {
+        **_macro_summary(as_dict("nutrition_targets")),
+        "meal_suggestions": as_dict("meal_options"),
+        "general_tips": as_list("general_tips"),
+        "hydration_guide": as_dict("hydration_guide"),
+        "pre_run_meal": plan.get("pre_run_meal"),
+        "post_run_meal": plan.get("post_run_meal"),
+        "in_race_fueling": plan.get("in_race_fueling"),
+        "trail_fuel_ideas": as_list("trail_fuel_ideas"),
+        "trail_fuel_phases": as_list("trail_fuel_phases"),
+        "trail_tips": as_list("trail_tips"),
+    }
+
+
+def nutrition_for_template(nutrition_plan_data) -> dict[str, Any]:
+    """Normalize stored nutrition data (list- or dict-shaped) for the template."""
+    if not nutrition_plan_data:
+        return {}
+    if isinstance(nutrition_plan_data, list):
+        return _nutrition_from_daily_list(nutrition_plan_data)
+    if isinstance(nutrition_plan_data, dict):
+        return _nutrition_from_blueprint_dict(nutrition_plan_data)
+    return {}
 
 
 def get_logged_runs_map(

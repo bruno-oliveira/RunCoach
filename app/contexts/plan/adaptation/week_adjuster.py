@@ -34,6 +34,9 @@ from .vdot_recalibrator import check_vdot_recalibration
 
 logger = logging.getLogger(__name__)
 
+# Quality sessions move at half scale (see ``_tentative_distance``).
+_QUALITY_TYPES = ("interval", "tempo", "hill", "vo2max", "race_pace", "fartlek")
+
 
 @dataclass
 class ApplyResult:
@@ -101,6 +104,358 @@ def apply_adjustment_stage(
     )
 
 
+def _resolve_pace_zones(training_plan: TrainingPlan) -> Optional[Dict[str, Any]]:
+    """Pace zones for regenerating adapted key workouts with their paces.
+
+    Falls back to ``None`` (generic labels) when VDOT is unknown or lookup
+    fails — never blocks an adjustment.
+    """
+    if not training_plan.vdot:
+        return None
+    try:
+        return VDOTCalculator.get_pace_zones(training_plan.vdot)
+    except Exception:  # pragma: no cover - defensive; never block adjust
+        return None
+
+
+def _resolve_type_multiplier(
+    workout_type: Optional[str],
+    multiplier: float,
+    per_type_ratios: Optional[Dict[str, float]],
+    phase: str,
+) -> float:
+    """Per-type multiplier, clamped to bounds and never inflating a taper.
+
+    Taper is sacrosanct: positive adaptation must never inflate it. A
+    fatigue/overreach signal may still ease it (downward-only), but the
+    multiplier can never scale a taper session above its prescribed distance
+    (audit G2).
+    """
+    wtype = workout_type or "easy"
+    type_mult = multiplier
+    if per_type_ratios and wtype in per_type_ratios:
+        type_ratio = per_type_ratios[wtype]
+        type_mult = round(max(PER_TYPE_MIN, min(PER_TYPE_MAX, type_ratio)), 2)
+    if phase == "taper":
+        type_mult = min(type_mult, 1.0)
+    return type_mult
+
+
+def _tentative_distance(
+    workout_type: Optional[str], base_distance: float, type_mult: float
+) -> Tuple[float, Optional[str]]:
+    """New distance + change reason before key/plain-quality rebuild.
+
+    Long runs hold a floor (never scaled below baseline on a down-adjust),
+    quality sessions move at half scale, everything else scales directly. The
+    result is capped at ``base_distance × WORKOUT_CEILING`` — a belt-and-
+    suspenders guard for when per-type ratios slip past the global clamp.
+    """
+    note_reason: Optional[str] = None
+    if workout_type == "long" and type_mult < 1.0:
+        new_distance = round(base_distance, 1)
+        note_reason = _reasons.LONG_RUN_FLOOR
+    elif workout_type in _QUALITY_TYPES:
+        quality_mult = 1.0 + (type_mult - 1.0) * QUALITY_HALF_SCALE
+        new_distance = max(1.0, round(base_distance * quality_mult, 1))
+        note_reason = _reasons.QUALITY_HALF_SCALED
+    else:
+        new_distance = max(1.0, round(base_distance * type_mult, 1))
+
+    ceiling = round(base_distance * WORKOUT_CEILING, 1)
+    if new_distance > ceiling:
+        new_distance = ceiling
+    return new_distance, note_reason
+
+
+def _rebuild_session_distance(
+    workout,
+    pd_wo: Optional[Dict[str, Any]],
+    new_distance: float,
+    *,
+    week_number: int,
+    phase: str,
+    pace_zones: Optional[Dict[str, Any]],
+    pd_week: Dict[int, Dict[str, Any]],
+) -> Tuple[float, bool]:
+    """Regenerate key / plain-quality sessions from a single distance.
+
+    Key workouts rebuild prose, structure and steps at the tentative distance,
+    then adopt the rebuilt steps total as authoritative. Builder-generated
+    plain quality regenerates the same way (same builder, same day → same
+    variant) so description, steps and distance stay in lockstep. Returns the
+    (possibly adjusted) distance and whether a plain-quality session rebuilt.
+    """
+    if pd_wo is None:
+        return new_distance, False
+    if workout.key_workout_id:
+        pd_wo["distance"] = new_distance
+        if _kwlib.rebuild_key_workout(pd_wo, pace_zones):
+            new_distance = round(pd_wo.get("distance", new_distance) or new_distance, 1)
+        return new_distance, False
+    if workout.workout_type in _PLAIN_QUALITY_TYPES:
+        week_total = (pd_week.get(week_number) or {}).get("total_km") or 0.0
+        new_distance = _rebuild_plain_quality(
+            pd_wo,
+            distance=new_distance,
+            day=workout.day_of_week,
+            total_km=week_total,
+            phase=phase,
+            pace_zones=pace_zones,
+        )
+        return new_distance, True
+    return new_distance, False
+
+
+def _record_workout(
+    recorder: Optional[List[Dict[str, Any]]],
+    week_number: int,
+    workout,
+    old_distance: float,
+    new_distance: float,
+    status: str,
+    note_reason: Optional[str],
+) -> None:
+    """Append a per-workout change record (no-op when no recorder is supplied)."""
+    if recorder is None:
+        return
+    delta = round(new_distance - old_distance, 2) if status == "changed" else 0.0
+    recorder.append(
+        {
+            "week": week_number,
+            "day": workout.day_of_week,
+            "type": workout.workout_type,
+            "old_distance_km": old_distance,
+            "new_distance_km": new_distance,
+            "delta_km": delta,
+            "status": status,
+            "reason": note_reason,
+        }
+    )
+
+
+def _sync_workout_notes_and_steps(
+    workout,
+    pd_wo: Optional[Dict[str, Any]],
+    *,
+    old_distance: float,
+    new_distance: float,
+    type_mult: float,
+    is_protected: bool,
+    rebuilt_plain: bool,
+    week_number: int,
+    phase: str,
+    pace_zones: Optional[Dict[str, Any]],
+    pd_week: Dict[int, Dict[str, Any]],
+) -> None:
+    """Reconcile the ORM notes and plan_data steps/prose after a distance change."""
+    # A rebuilt plain-quality session carries a fresh description; adopt it as
+    # the note so the ORM text matches the regenerated card.
+    if rebuilt_plain and pd_wo is not None:
+        clean_notes = (pd_wo.get("description") or "").strip()
+    else:
+        clean_notes = ANNOTATION_RE.sub("", workout.notes or "").strip()
+    if type_mult != 1.0 and not is_protected:
+        adjust_note = f"(Adjusted: x{type_mult})"
+        workout.notes = (
+            f"{clean_notes} {adjust_note}".strip() if clean_notes else adjust_note
+        )
+    else:
+        workout.notes = clean_notes or None
+
+    if pd_wo is None:
+        return
+
+    pd_wo["distance"] = new_distance
+    # Key workouts already had their steps regenerated by rebuild_key_workout;
+    # only flexible workouts scale.
+    if (
+        not workout.key_workout_id
+        and not rebuilt_plain
+        and pd_wo.get("steps")
+        and old_distance
+        and old_distance > 0
+    ):
+        step_scale = new_distance / old_distance
+        pd_wo["steps"] = _steps_mod.scale_steps(pd_wo["steps"], step_scale)
+        # Refresh the card-visible prose so a long run's embedded distances
+        # ("first X km / final Y km") track the new distance instead of going
+        # stale. Easy descriptions are pace-only, so this is a no-op there.
+        week_total = (pd_week.get(week_number) or {}).get("total_km") or 0.0
+        rebuilt = build_workout(
+            workout.workout_type or "easy",
+            day=workout.day_of_week,
+            distance=new_distance,
+            total_km=week_total,
+            phase=phase,
+            pace_zones=pace_zones,
+        )
+        if rebuilt.get("description"):
+            pd_wo["description"] = rebuilt["description"]
+    pd_clean = ANNOTATION_RE.sub(
+        "", pd_wo.get("notes", pd_wo.get("description", ""))
+    ).strip()
+    if type_mult != 1.0 and not is_protected:
+        adjust_note = f"(Adjusted: x{type_mult})"
+        pd_wo["notes"] = (
+            f"{pd_clean} {adjust_note}".strip() if pd_clean else adjust_note
+        )
+    else:
+        pd_wo["notes"] = pd_clean
+
+
+def _adjust_one_workout(
+    workout,
+    *,
+    multiplier: float,
+    per_type_ratios: Optional[Dict[str, float]],
+    phase: str,
+    pace_zones: Optional[Dict[str, Any]],
+    pd_week: Dict[int, Dict[str, Any]],
+    pd_workout: Dict[Tuple[int, int], Dict[str, Any]],
+    week_number: int,
+    recorder: Optional[List[Dict[str, Any]]],
+) -> bool:
+    """Adjust a single workout's distance in place. Returns True if it changed."""
+    if (
+        workout.workout_type == "rest"
+        or not workout.distance_km
+        or workout.distance_km <= 0
+    ):
+        return False
+
+    base_distance = workout.baseline_distance_km or workout.distance_km
+    type_mult = _resolve_type_multiplier(
+        workout.workout_type, multiplier, per_type_ratios, phase
+    )
+    new_distance, note_reason = _tentative_distance(
+        workout.workout_type, base_distance, type_mult
+    )
+    old_distance = workout.distance_km
+
+    pd_wo = pd_workout.get((week_number, workout.day_of_week))
+    new_distance, rebuilt_plain = _rebuild_session_distance(
+        workout,
+        pd_wo,
+        new_distance,
+        week_number=week_number,
+        phase=phase,
+        pace_zones=pace_zones,
+        pd_week=pd_week,
+    )
+
+    if new_distance == old_distance:
+        _record_workout(
+            recorder,
+            week_number,
+            workout,
+            old_distance,
+            new_distance,
+            "unchanged",
+            note_reason,
+        )
+        return False
+
+    workout.distance_km = new_distance
+    is_protected = workout.workout_type == "long" and type_mult < 1.0
+    _record_workout(
+        recorder,
+        week_number,
+        workout,
+        old_distance,
+        new_distance,
+        "changed",
+        note_reason,
+    )
+    _sync_workout_notes_and_steps(
+        workout,
+        pd_wo,
+        old_distance=old_distance,
+        new_distance=new_distance,
+        type_mult=type_mult,
+        is_protected=is_protected,
+        rebuilt_plain=rebuilt_plain,
+        week_number=week_number,
+        phase=phase,
+        pace_zones=pace_zones,
+        pd_week=pd_week,
+    )
+    return True
+
+
+def _finalize_week(
+    week,
+    workouts: List,
+    *,
+    week_changed: bool,
+    phase: str,
+    target_distance: float,
+    training_plan: TrainingPlan,
+    pd_week: Dict[int, Dict[str, Any]],
+    pd_workout: Dict[Tuple[int, int], Dict[str, Any]],
+) -> bool:
+    """Enforce week structure and re-total a changed week. Returns whether changed."""
+    if week_changed and target_distance > 0:
+        enforce_week_structure(
+            workouts,
+            target_distance,
+            phase,
+            is_trail=bool(getattr(training_plan, "is_trail", False)),
+            target_elevation_gain_m=getattr(
+                training_plan, "target_elevation_gain_m", None
+            ),
+            training_terrain=getattr(training_plan, "training_terrain", None),
+        )
+
+    if not week_changed:
+        return False
+
+    new_total = round(sum(w.distance_km for w in workouts if w.distance_km), 1)
+    week.total_km = new_total
+    if week.week_number in pd_week:
+        pd_week[week.week_number]["total_km"] = new_total
+        for workout in workouts:
+            pd_wo = pd_workout.get((week.week_number, workout.day_of_week))
+            if pd_wo is not None:
+                pd_wo["distance"] = workout.distance_km
+    return True
+
+
+def _apply_future_growth_cap(
+    training_plan: TrainingPlan,
+    future_weeks: List,
+    week_by_number: Dict[int, Any],
+    workouts_by_week: Dict[Any, List],
+    pd_week: Dict[int, Dict[str, Any]],
+    db: Session,
+) -> int:
+    """Clamp week-over-week growth across the future weeks. Returns weeks changed."""
+    if not future_weeks:
+        return 0
+    first_future_week = future_weeks[0].week_number
+    prev_week = (
+        db.query(WeeklyPlan)
+        .filter(
+            WeeklyPlan.training_plan_id == training_plan.id,
+            WeeklyPlan.week_number < first_future_week,
+        )
+        .order_by(WeeklyPlan.week_number.desc())
+        .first()
+    )
+    seed = (
+        prev_week.total_km
+        if prev_week and prev_week.total_km
+        else training_plan.current_weekly_km or 0.0
+    )
+    return enforce_future_growth_cap(
+        [w.week_number for w in future_weeks],
+        week_by_number,
+        workouts_by_week,
+        pd_week,
+        high_water_seed=seed,
+    )
+
+
 def apply_adjustment_to_future_weeks(
     training_plan: TrainingPlan,
     future_weeks: List,
@@ -114,255 +469,56 @@ def apply_adjustment_to_future_weeks(
 ) -> Tuple[int, bool, Dict[str, int]]:
     plan_data, pd_week, pd_workout = parse_plan_data_lookups(training_plan)
     target_distance = training_plan.target_distance_km
-
-    # Pace zones for regenerating adapted key workouts with their specific
-    # paces preserved (falls back to generic labels when VDOT is unknown).
-    pace_zones: Optional[Dict[str, Any]] = None
-    if training_plan.vdot:
-        try:
-            pace_zones = VDOTCalculator.get_pace_zones(training_plan.vdot)
-        except Exception:  # pragma: no cover - defensive; never block adjust
-            pace_zones = None
+    pace_zones = _resolve_pace_zones(training_plan)
 
     workouts_by_week = batch_workouts_by_week([week.id for week in future_weeks], db)
 
     weeks_changed = 0
     any_distance_changed = False
     workouts_changed = 0
-    workouts_skipped_protected = 0
 
     future_weeks = sorted(future_weeks, key=lambda w: w.week_number)
     week_by_number = {w.week_number: w for w in future_weeks}
 
     for week in future_weeks:
         workouts = workouts_by_week.get(week.id, [])
-        week_changed = False
         phase = pd_week.get(week.week_number, {}).get("phase", "build")
+        week_changed = False
 
         for workout in workouts:
-            if (
-                workout.workout_type == "rest"
-                or not workout.distance_km
-                or workout.distance_km <= 0
-            ):
-                continue
-
-            base_distance = workout.baseline_distance_km or workout.distance_km
-            rebuilt_plain = False
-
-            wtype = workout.workout_type or "easy"
-            type_mult = multiplier
-            if per_type_ratios and wtype in per_type_ratios:
-                type_ratio = per_type_ratios[wtype]
-                type_mult = round(max(PER_TYPE_MIN, min(PER_TYPE_MAX, type_ratio)), 2)
-
-            # Taper is sacrosanct: positive adaptation must never inflate it.
-            # A fatigue/overreach signal may still ease it (downward-only), but
-            # the multiplier can never scale a taper session above its
-            # prescribed distance (audit G2).
-            if phase == "taper":
-                type_mult = min(type_mult, 1.0)
-
-            note_reason = None
-            if workout.workout_type == "long" and type_mult < 1.0:
-                new_distance = round(base_distance, 1)
-                note_reason = _reasons.LONG_RUN_FLOOR
-            elif workout.workout_type in (
-                "interval",
-                "tempo",
-                "hill",
-                "vo2max",
-                "race_pace",
-                "fartlek",
-            ):
-                quality_mult = 1.0 + (type_mult - 1.0) * QUALITY_HALF_SCALE
-                new_distance = max(1.0, round(base_distance * quality_mult, 1))
-                note_reason = _reasons.QUALITY_HALF_SCALED
-            else:
-                new_distance = max(1.0, round(base_distance * type_mult, 1))
-
-            # Belt-and-suspenders cap: even when per-type ratios + trend
-            # modifiers slip past the global clamp, never push a single
-            # workout above baseline × WORKOUT_CEILING.
-            ceiling = round(base_distance * WORKOUT_CEILING, 1)
-            if new_distance > ceiling:
-                new_distance = ceiling
-            old_distance = workout.distance_km
-
-            # Key workouts regenerate from a single distance: rebuild prose,
-            # structure and steps at the tentative distance, then adopt the
-            # rebuilt steps total as the authoritative new distance. Distance-
-            # based sessions track the change; duration-defined ones settle
-            # back to their time total and simply won't move.
-            pd_wo = pd_workout.get((week.week_number, workout.day_of_week))
-            if workout.key_workout_id and pd_wo is not None:
-                pd_wo["distance"] = new_distance
-                if _kwlib.rebuild_key_workout(pd_wo, pace_zones):
-                    new_distance = round(
-                        pd_wo.get("distance", new_distance) or new_distance, 1
-                    )
-            elif workout.workout_type in _PLAIN_QUALITY_TYPES and pd_wo is not None:
-                # Builder-generated quality now adapts too: regenerate the
-                # session from a single distance (same builder, same day → same
-                # variant) so description, steps and distance stay in lockstep —
-                # the property that lets key workouts adapt.
-                week_total = (pd_week.get(week.week_number) or {}).get(
-                    "total_km"
-                ) or 0.0
-                new_distance = _rebuild_plain_quality(
-                    pd_wo,
-                    distance=new_distance,
-                    day=workout.day_of_week,
-                    total_km=week_total,
-                    phase=phase,
-                    pace_zones=pace_zones,
-                )
-                rebuilt_plain = True
-
-            if new_distance == old_distance:
-                if recorder is not None:
-                    recorder.append(
-                        {
-                            "week": week.week_number,
-                            "day": workout.day_of_week,
-                            "type": workout.workout_type,
-                            "old_distance_km": old_distance,
-                            "new_distance_km": new_distance,
-                            "delta_km": 0.0,
-                            "status": "unchanged",
-                            "reason": note_reason,
-                        }
-                    )
-                continue
-
-            workout.distance_km = new_distance
-            any_distance_changed = True
-            week_changed = True
-            workouts_changed += 1
-
-            is_protected = workout.workout_type == "long" and type_mult < 1.0
-
-            if recorder is not None:
-                recorder.append(
-                    {
-                        "week": week.week_number,
-                        "day": workout.day_of_week,
-                        "type": workout.workout_type,
-                        "old_distance_km": old_distance,
-                        "new_distance_km": new_distance,
-                        "delta_km": round(new_distance - old_distance, 2),
-                        "status": "changed",
-                        "reason": note_reason,
-                    }
-                )
-
-            # A rebuilt plain-quality session carries a fresh description; adopt
-            # it as the note so the ORM text matches the regenerated card.
-            if rebuilt_plain and pd_wo is not None:
-                clean_notes = (pd_wo.get("description") or "").strip()
-            else:
-                clean_notes = ANNOTATION_RE.sub("", workout.notes or "").strip()
-            if type_mult != 1.0 and not is_protected:
-                adjust_note = f"(Adjusted: x{type_mult})"
-                workout.notes = (
-                    f"{clean_notes} {adjust_note}".strip()
-                    if clean_notes
-                    else adjust_note
-                )
-            else:
-                workout.notes = clean_notes or None
-
-            if pd_wo is not None:
-                pd_wo["distance"] = new_distance
-                # Key workouts already had their steps regenerated by
-                # rebuild_key_workout above; only flexible workouts scale.
-                if (
-                    not workout.key_workout_id
-                    and not rebuilt_plain
-                    and pd_wo.get("steps")
-                    and old_distance
-                    and old_distance > 0
-                ):
-                    step_scale = new_distance / old_distance
-                    pd_wo["steps"] = _steps_mod.scale_steps(pd_wo["steps"], step_scale)
-                    # Refresh the card-visible prose so a long run's embedded
-                    # distances ("first X km / final Y km") track the new
-                    # distance instead of going stale. Easy descriptions are
-                    # pace-only, so this is a no-op there.
-                    week_total = (pd_week.get(week.week_number) or {}).get(
-                        "total_km"
-                    ) or 0.0
-                    rebuilt = build_workout(
-                        workout.workout_type or "easy",
-                        day=workout.day_of_week,
-                        distance=new_distance,
-                        total_km=week_total,
-                        phase=phase,
-                        pace_zones=pace_zones,
-                    )
-                    if rebuilt.get("description"):
-                        pd_wo["description"] = rebuilt["description"]
-                pd_clean = ANNOTATION_RE.sub(
-                    "", pd_wo.get("notes", pd_wo.get("description", ""))
-                ).strip()
-                if type_mult != 1.0 and not is_protected:
-                    adjust_note = f"(Adjusted: x{type_mult})"
-                    pd_wo["notes"] = (
-                        f"{pd_clean} {adjust_note}".strip() if pd_clean else adjust_note
-                    )
-                else:
-                    pd_wo["notes"] = pd_clean
-
-        if week_changed and target_distance > 0:
-            if enforce_week_structure(
-                workouts,
-                target_distance,
-                phase,
-                is_trail=bool(getattr(training_plan, "is_trail", False)),
-                target_elevation_gain_m=getattr(
-                    training_plan, "target_elevation_gain_m", None
-                ),
-                training_terrain=getattr(training_plan, "training_terrain", None),
+            if _adjust_one_workout(
+                workout,
+                multiplier=multiplier,
+                per_type_ratios=per_type_ratios,
+                phase=phase,
+                pace_zones=pace_zones,
+                pd_week=pd_week,
+                pd_workout=pd_workout,
+                week_number=week.week_number,
+                recorder=recorder,
             ):
                 week_changed = True
+                any_distance_changed = True
+                workouts_changed += 1
 
-        if week_changed:
+        if _finalize_week(
+            week,
+            workouts,
+            week_changed=week_changed,
+            phase=phase,
+            target_distance=target_distance,
+            training_plan=training_plan,
+            pd_week=pd_week,
+            pd_workout=pd_workout,
+        ):
             weeks_changed += 1
-            new_total = round(sum(w.distance_km for w in workouts if w.distance_km), 1)
-            week.total_km = new_total
-            if week.week_number in pd_week:
-                pd_week[week.week_number]["total_km"] = new_total
-                for workout in workouts:
-                    pd_wo = pd_workout.get((week.week_number, workout.day_of_week))
-                    if pd_wo is not None:
-                        pd_wo["distance"] = workout.distance_km
 
-    if future_weeks:
-        first_future_week = future_weeks[0].week_number
-        prev_week = (
-            db.query(WeeklyPlan)
-            .filter(
-                WeeklyPlan.training_plan_id == training_plan.id,
-                WeeklyPlan.week_number < first_future_week,
-            )
-            .order_by(WeeklyPlan.week_number.desc())
-            .first()
-        )
-        seed = (
-            prev_week.total_km
-            if prev_week and prev_week.total_km
-            else training_plan.current_weekly_km or 0.0
-        )
-        changed_weeks = enforce_future_growth_cap(
-            [w.week_number for w in future_weeks],
-            week_by_number,
-            workouts_by_week,
-            pd_week,
-            high_water_seed=seed,
-        )
-        if changed_weeks > 0:
-            weeks_changed += changed_weeks
-            any_distance_changed = True
+    changed_weeks = _apply_future_growth_cap(
+        training_plan, future_weeks, week_by_number, workouts_by_week, pd_week, db
+    )
+    if changed_weeks > 0:
+        weeks_changed += changed_weeks
+        any_distance_changed = True
 
     # Final ORM → JSON re-sync: make plan_data a deterministic projection of
     # the ORM regardless of which mutator last touched the workouts. Shared
@@ -381,6 +537,6 @@ def apply_adjustment_to_future_weeks(
         training_plan.adaptation_revision = (training_plan.adaptation_revision or 0) + 1
     counts = {
         "workouts_changed": workouts_changed,
-        "workouts_skipped_protected": workouts_skipped_protected,
+        "workouts_skipped_protected": 0,
     }
     return weeks_changed, any_distance_changed, counts

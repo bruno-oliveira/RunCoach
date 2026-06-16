@@ -213,7 +213,7 @@ Training constraints are configured in `app/infrastructure/config.py` (settings)
 
 ## Code Style
 
-- **Imports**: Standard library, third-party, then local (relative imports for app modules)
+- **Imports**: Standard library, third-party, then local. Use absolute imports for app modules (`from app.contexts... import ...`) — the dominant convention across the codebase
 - **Types**: Type hints on all function signatures using `Union[type, type]` or `type | type` syntax
 - **Naming**: snake_case for functions/variables, PascalCase for classes
 - **Line length**: 88 characters max (configured in pyproject.toml via ruff)
