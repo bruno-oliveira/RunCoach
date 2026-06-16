@@ -13,6 +13,7 @@ from app.core.training import phase_calculator
 from app.core.training.key_workout_library import (
     overlay_key_workout as _overlay_key_workout_shared,
 )
+from app.core.training.mileage_progression import runs_per_week_volume_factor
 from app.core.training.strength_plan import derive_experience_level
 from app.core.training.training_constants import calculate_week_in_phase
 from app.core.training.tuning import (
@@ -423,8 +424,21 @@ class FitnessPlanGenerator:
         if vdot:
             vdot_zones = VDOTCalculator.get_pace_zones(vdot)
 
-        peak_km = min(current_weekly_km * FITNESS_PEAK_MULTIPLIER, FITNESS_PEAK_CAP_KM)
-        peak_km = max(peak_km, current_weekly_km * FITNESS_PEAK_FLOOR_MULTIPLIER)
+        # Weekly volume tracks training frequency: a runner training 5-6x/week
+        # can absorb more aerobic load than one training 3x, so the chosen
+        # frequency must move the peak target rather than just re-slicing a
+        # fixed volume into more (smaller) runs. Reuse the same frequency→volume
+        # relationship as the race/performance plans for one consistent model.
+        # The downward nudge never detrains below the established base; the
+        # FITNESS_PEAK_CAP_KM ceiling still bounds high-frequency, high-base
+        # plans (where the cap, not the knob, is the binding constraint).
+        runs_factor = runs_per_week_volume_factor(runs_per_week)
+        peak_km = min(
+            current_weekly_km * FITNESS_PEAK_MULTIPLIER * runs_factor,
+            FITNESS_PEAK_CAP_KM,
+        )
+        floor_multiplier = FITNESS_PEAK_FLOOR_MULTIPLIER if runs_factor >= 1.0 else 1.0
+        peak_km = max(peak_km, current_weekly_km * floor_multiplier)
 
         experience_level = derive_experience_level(current_weekly_km)
 
