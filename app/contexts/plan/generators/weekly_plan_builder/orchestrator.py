@@ -230,17 +230,28 @@ def generate_daily_workouts(
             if workout_type in ("tempo", "interval", "hill")
             else None
         )
-        overlay_key_workout(
-            workout,
-            workout_type,
-            phase,
-            target_distance,
-            week_in_phase,
-            terrain,
-            pace_zones,
-            trail_profile=trail_profile,
-            max_distance=quality_ceiling,
-        )
+        # Volume-carrier guard: when the week has no easy run, the long run is
+        # the only flexible slot that can absorb the week's volume budget.
+        # Overlaying a prescriptive key workout (e.g. a fast-finish long) pins
+        # its distance, so ``fill_shortfall`` has nowhere to place the
+        # remaining km. At low training frequencies (2 runs/week) a quality
+        # session plus a pinned long run collapses build/peak weeks far below
+        # their target — a 30 km/week runner can crater to ~12 km mid-plan.
+        # Keep the long run flexible in that case; the week's dedicated quality
+        # session still supplies the intensity.
+        skip_overlay = workout_type == "long" and easy_runs == 0
+        if not skip_overlay:
+            overlay_key_workout(
+                workout,
+                workout_type,
+                phase,
+                target_distance,
+                week_in_phase,
+                terrain,
+                pace_zones,
+                trail_profile=trail_profile,
+                max_distance=quality_ceiling,
+            )
 
         workout["coaching_rationale"] = generate_coaching_note(
             workout_type,
