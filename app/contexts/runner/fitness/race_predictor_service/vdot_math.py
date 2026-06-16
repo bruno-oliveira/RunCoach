@@ -111,3 +111,43 @@ def _vdot_outlier_threshold(vdots: List[float]) -> Optional[float]:
     iqr_bound = q3 + _OUTLIER_IQR_K * iqr
     ratio_bound = statistics.median(sorted_vdots) * _OUTLIER_RATIO
     return max(iqr_bound, ratio_bound)
+
+
+# --- Prediction calibration (the predicted-vs-actual feedback loop) ----------
+# VDOT estimated from training runs tends to over-predict race performance:
+# training paces, GPS spikes, and downhill-aided segments inflate the estimate,
+# and most runners don't sustain their best-effort VDOT across a full race. For
+# runners who have actually raced we learn a correction from their own results --
+# the median (actual / predicted) ratio over genuine maximal efforts -- and
+# scale future predictions by it. Every race logged tightens the next
+# prediction, so the loop self-corrects toward reality instead of staying
+# optimistic. The clamp keeps one anomalous day (a blow-up or a perfect race)
+# from distorting every future prediction.
+_CALIBRATION_MIN_FACTOR = 0.95
+_CALIBRATION_MAX_FACTOR = 1.30
+_CALIBRATION_MIN_SAMPLE = 1
+
+
+def calibration_factor_from_samples(samples: List[tuple]) -> float:
+    """Median (actual / predicted) ratio over race efforts, clamped to a band.
+
+    Args:
+        samples: ``(predicted_seconds, actual_seconds)`` pairs from the runner's
+            genuine maximal efforts, where ``predicted_seconds`` is the race
+            prediction snapshotted from their fitness *before* that effort.
+
+    Returns:
+        A multiplier to apply to future predictions. ``> 1.0`` means past
+        predictions ran optimistic (actual finishes were slower); ``< 1.0``
+        means pessimistic. Returns ``1.0`` (no correction) when there isn't
+        enough evidence yet.
+    """
+    ratios = [
+        actual / predicted
+        for predicted, actual in samples
+        if predicted and predicted > 0 and actual and actual > 0
+    ]
+    if len(ratios) < _CALIBRATION_MIN_SAMPLE:
+        return 1.0
+    factor = statistics.median(ratios)
+    return round(max(_CALIBRATION_MIN_FACTOR, min(factor, _CALIBRATION_MAX_FACTOR)), 3)

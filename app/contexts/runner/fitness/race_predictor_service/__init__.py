@@ -16,6 +16,7 @@ from app.contexts.runner.fitness.race_predictor_service.vdot_math import (
     _prediction_comparison,
     _rolling_window_vdot,
     _vdot_outlier_threshold,
+    calibration_factor_from_samples,
 )
 from app.core.training.vdot_calculator import VDOTCalculator
 from app.models import RunLog
@@ -37,6 +38,20 @@ _ENDURANCE_TRAIL_THRESHOLD = 20.0  # m/km gain → counts as trail, excluded
 _ENDURANCE_MIN_SAMPLE = 3
 _ENDURANCE_APPLY_THRESHOLD = 1.05  # ignore <5% gaps as noise
 _ENDURANCE_MAX_FACTOR = 1.5  # cap so calibration can't run away
+
+# Prediction calibration: learn a correction from the runner's own race results
+# (see vdot_math.calibration_factor_from_samples). Races are infrequent, so we
+# look back ~18 months and only count genuine maximal efforts -- easy/long runs
+# are run far below race pace and would make the correction nonsensically slow.
+_CALIBRATION_WEEKS = 78
+_CALIBRATION_PERCEIVED_MIN = 9
+
+
+def _apply_calibration(seconds: Optional[int], factor: float) -> Optional[int]:
+    """Scale a predicted time by the calibration factor (no-op when unset)."""
+    if not seconds:
+        return seconds
+    return int(round(seconds * factor))
 
 
 class RacePredictorService:
@@ -244,6 +259,58 @@ class RacePredictorService:
         return min(factor, _ENDURANCE_MAX_FACTOR)
 
     @staticmethod
+    def _is_race_effort(run: RunLog) -> bool:
+        """Whether a logged run reflects a genuine maximal (raceable) effort.
+
+        Calibration must learn only from efforts run at race pace; easy and long
+        runs are deliberately slower than the predicted *race* time and would
+        skew the correction. We trust, in order: the derived ``effort_class``,
+        the effective workout type (user tag or inference), and a very high
+        perceived effort.
+        """
+        if (run.effort_class or "") == "race_effort":
+            return True
+        if (run.effective_workout_type or "").lower() == "race":
+            return True
+        return bool(
+            run.perceived_effort and run.perceived_effort >= _CALIBRATION_PERCEIVED_MIN
+        )
+
+    @staticmethod
+    def compute_calibration_factor(
+        user_id: str, db: Session, weeks: int = _CALIBRATION_WEEKS
+    ) -> float:
+        """Prediction-correction multiplier learned from the runner's own races.
+
+        Compares the race prediction we snapshotted before each effort
+        (``RunLog.predicted_time_seconds``, computed from prior fitness) against
+        the actual finish on genuine maximal efforts, and returns the clamped
+        median ratio. ``> 1.0`` nudges future predictions slower (past
+        predictions were optimistic); ``1.0`` means there's no race evidence yet
+        -- the common case for runners who only log easy runs. This is the
+        feedback half of the predict → race → recalibrate loop.
+        """
+        cutoff = (datetime.now(timezone.utc) - timedelta(weeks=weeks)).replace(
+            tzinfo=None
+        )
+        runs = (
+            db.query(RunLog)
+            .filter(
+                RunLog.user_id == user_id,
+                RunLog.predicted_time_seconds.isnot(None),
+                RunLog.duration_minutes > 0,
+                RunLog.date >= cutoff,
+            )
+            .all()
+        )
+        samples = [
+            (float(run.predicted_time_seconds), run.duration_minutes * 60.0)
+            for run in runs
+            if RacePredictorService._is_race_effort(run)
+        ]
+        return calibration_factor_from_samples(samples)
+
+    @staticmethod
     def get_best_effort(user_id: str, db: Session) -> Optional[Dict]:
         """Get the best genuine effort for a user.
 
@@ -346,6 +413,7 @@ class RacePredictorService:
                 "predictions": {},
                 "best_effort": None,
                 "run_count": 0,
+                "calibration_factor": 1.0,
                 "has_sufficient_data": False,
             }
 
@@ -356,6 +424,9 @@ class RacePredictorService:
         trail_profile = RacePredictorService._get_user_trail_elevation_profile(
             user_id, db
         )
+
+        # Pull future predictions toward the runner's own race reality.
+        calibration = RacePredictorService.compute_calibration_factor(user_id, db)
 
         predictions: Dict[str, Dict[str, Any]] = {}
         from app.core.training.vdot_calculator import STANDARD_RACE_DISTANCES
@@ -386,13 +457,18 @@ class RacePredictorService:
                 trail_runs_count=trail_count,
                 endurance_factor=endurance_factor,
             )
+            seconds = _apply_calibration(seconds, calibration)
             predictions[name] = {
                 "seconds": seconds,
                 "formatted": VDOTCalculator.format_duration(seconds),
                 "distance_km": distance,
                 "range": {
-                    "fast": VDOTCalculator.format_duration(range_data["fast"]),
-                    "slow": VDOTCalculator.format_duration(range_data["slow"]),
+                    "fast": VDOTCalculator.format_duration(
+                        _apply_calibration(range_data["fast"], calibration)
+                    ),
+                    "slow": VDOTCalculator.format_duration(
+                        _apply_calibration(range_data["slow"], calibration)
+                    ),
                 },
             }
 
@@ -402,6 +478,7 @@ class RacePredictorService:
             "predictions": predictions,
             "best_effort": best_effort,
             "run_count": len(vdot_history),
+            "calibration_factor": calibration,
             "has_sufficient_data": True,
         }
 
@@ -552,10 +629,18 @@ class RacePredictorService:
         target_distance: float,
         goal_time_seconds: int,
         db: Session,
+        calibration_factor: float = 1.0,
     ) -> Dict[str, Any]:
-        """Analyze gap between current fitness and race goal."""
-        predicted_time = VDOTCalculator.predict_time_for_distance(
-            current_vdot, target_distance
+        """Analyze gap between current fitness and race goal.
+
+        ``calibration_factor`` scales the raw VDOT prediction toward the
+        runner's own race reality (see ``compute_calibration_factor``) so the
+        gap and the required VDOT are measured against a realistic prediction
+        rather than the optimistic raw one.
+        """
+        predicted_time = _apply_calibration(
+            VDOTCalculator.predict_time_for_distance(current_vdot, target_distance),
+            calibration_factor,
         )
 
         if not predicted_time:
@@ -587,8 +672,11 @@ class RacePredictorService:
         if gap_seconds > 0:
             search_vdot = current_vdot
             for _ in range(100):
-                test_time = VDOTCalculator.predict_time_for_distance(
-                    search_vdot, target_distance
+                test_time = _apply_calibration(
+                    VDOTCalculator.predict_time_for_distance(
+                        search_vdot, target_distance
+                    ),
+                    calibration_factor,
                 )
                 if test_time and test_time <= goal_time_seconds:
                     vdot_required = round(search_vdot, 1)

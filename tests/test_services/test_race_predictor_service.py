@@ -33,6 +33,10 @@ def _add_run(
     days_ago: int = 0,
     elevation_gain_m: int | None = None,
     vdot: float | None = None,
+    predicted_time_seconds: float | None = None,
+    workout_type: str | None = None,
+    effort_class: str | None = None,
+    perceived_effort: int | None = None,
 ):
     run = RunLog(
         id=_uid(),
@@ -43,6 +47,10 @@ def _add_run(
         avg_pace_min_km=duration_minutes / distance_km if distance_km else None,
         elevation_gain_m=elevation_gain_m,
         vdot=vdot,
+        predicted_time_seconds=predicted_time_seconds,
+        workout_type=workout_type,
+        effort_class=effort_class,
+        perceived_effort=perceived_effort,
     )
     db.add(run)
     return run
@@ -479,3 +487,130 @@ class TestPredictionsAndGaps:
         assert result["total"] >= 1
         assert result["runs_with_predictions"] >= 1
         assert result["avg_prediction_accuracy"] is not None
+
+
+class TestCalibrationFactorPure:
+    """Pure (actual / predicted) ratio math, independent of the DB."""
+
+    def test_no_samples_returns_neutral(self):
+        from app.contexts.runner.fitness.race_predictor_service.vdot_math import (
+            calibration_factor_from_samples,
+        )
+
+        assert calibration_factor_from_samples([]) == 1.0
+
+    def test_optimistic_predictions_pull_factor_above_one(self):
+        from app.contexts.runner.fitness.race_predictor_service.vdot_math import (
+            calibration_factor_from_samples,
+        )
+
+        # Predicted 1:50:00 but actually finished 2:00:00 -> ~1.09 slower.
+        factor = calibration_factor_from_samples([(6600.0, 7200.0), (3000.0, 3300.0)])
+        assert factor > 1.0
+
+    def test_factor_is_clamped(self):
+        from app.contexts.runner.fitness.race_predictor_service.vdot_math import (
+            calibration_factor_from_samples,
+        )
+
+        # Catastrophic blow-up (2x) must be clamped, not applied literally.
+        assert calibration_factor_from_samples([(3600.0, 7200.0)]) <= 1.30
+        # An impossibly fast result is clamped on the low side too.
+        assert calibration_factor_from_samples([(7200.0, 3600.0)]) >= 0.95
+
+    def test_garbage_pairs_ignored(self):
+        from app.contexts.runner.fitness.race_predictor_service.vdot_math import (
+            calibration_factor_from_samples,
+        )
+
+        assert calibration_factor_from_samples([(0.0, 3600.0), (3600.0, 0.0)]) == 1.0
+
+
+class TestCalibrationFactorService:
+    """Calibration learns only from genuine race efforts."""
+
+    def test_no_race_efforts_is_neutral(self, test_db):
+        user = _make_user(test_db)
+        # Easy runs, much slower than their predictions -> must NOT calibrate.
+        for i in range(4):
+            _add_run(
+                test_db,
+                user.id,
+                distance_km=10.0,
+                duration_minutes=70,
+                days_ago=i * 5,
+                predicted_time_seconds=3000.0,  # 50:00 predicted vs 70:00 easy
+                workout_type="easy",
+            )
+        test_db.flush()
+        factor = RacePredictorService.compute_calibration_factor(user.id, test_db)
+        assert factor == 1.0
+
+    def test_optimistic_race_results_raise_factor(self, test_db):
+        user = _make_user(test_db)
+        for i in range(2):
+            _add_run(
+                test_db,
+                user.id,
+                distance_km=21.1,
+                duration_minutes=120,  # actual 2:00:00
+                days_ago=30 * (i + 1),
+                predicted_time_seconds=6600.0,  # predicted 1:50:00
+                workout_type="race",
+            )
+        test_db.flush()
+        factor = RacePredictorService.compute_calibration_factor(user.id, test_db)
+        assert factor > 1.0
+
+    def test_perceived_effort_marks_race_effort(self, test_db):
+        user = _make_user(test_db)
+        _add_run(
+            test_db,
+            user.id,
+            distance_km=10.0,
+            duration_minutes=55,  # actual 55:00
+            days_ago=10,
+            predicted_time_seconds=3000.0,  # predicted 50:00
+            perceived_effort=10,
+        )
+        test_db.flush()
+        factor = RacePredictorService.compute_calibration_factor(user.id, test_db)
+        assert factor > 1.0
+
+    def test_calibration_makes_predictions_slower(self, test_db):
+        """A history of optimistic races slows the surfaced predictions."""
+        user = _make_user(test_db)
+        # A spread of efforts so get_best_recent_vdot has data to work with.
+        for i in range(6):
+            _add_run(
+                test_db,
+                user.id,
+                distance_km=10.0,
+                duration_minutes=50 + i * 0.2,
+                days_ago=i * 3,
+                vdot=46.0 + (i % 2) * 0.2,
+            )
+        # Two races that came in slower than predicted.
+        for i in range(2):
+            _add_run(
+                test_db,
+                user.id,
+                distance_km=10.0,
+                duration_minutes=55,
+                days_ago=20 + i * 10,
+                vdot=46.0,
+                predicted_time_seconds=3000.0,
+                workout_type="race",
+            )
+        test_db.flush()
+
+        factor = RacePredictorService.compute_calibration_factor(user.id, test_db)
+        assert factor > 1.0
+
+        data = RacePredictorService.get_predictions_for_user(user.id, test_db)
+        assert data["calibration_factor"] == factor
+        # The 10K prediction should be slower than the same VDOT predicts raw.
+        from app.core.training.vdot_calculator import VDOTCalculator
+
+        raw = VDOTCalculator.predict_time_for_distance(data["current_vdot"], 10.0)
+        assert data["predictions"]["10K"]["seconds"] > raw
