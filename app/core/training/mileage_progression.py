@@ -135,8 +135,15 @@ def get_peak_mileage(
     Trail / ultra plans bypass the per-distance ``MAX_PEAK_MILEAGE`` lookup
     in favour of the continuous ceiling derived from distance + elevation.
     """
-    peak_multiplier = 1 + (1.5 * (weeks / 16))
-    peak_multiplier = min(peak_multiplier, 2.6)
+    # How far above the current base the peak target may sit. This is the
+    # binding constraint for runners starting from a modest base: with the old
+    # 1.5/2.6 envelope a 20 km/wk runner on a 12-week plan was throttled to
+    # 20 * 2.125 ≈ 42 km regardless of the race's ideal peak, so raising the
+    # per-distance ceilings alone never reached them. A more generous envelope
+    # lets a low-base runner ramp toward the race-appropriate ideal peak; the
+    # 10% week-over-week rule still governs how fast they actually get there.
+    peak_multiplier = 1 + (1.9 * (weeks / 16))
+    peak_multiplier = min(peak_multiplier, 2.8)
 
     ideal_peak = get_ideal_peak(
         target_distance, current_km, weeks, trail_profile=trail_profile
@@ -305,7 +312,7 @@ def _progress_peak_phase(
 
 def _progress_taper_phase(
     phases: dict,
-    peak_km: float,
+    taper_base_km: float,
     target_distance: float,
     trail_profile: Optional[TrailProfile] = None,
 ) -> list[float]:
@@ -313,12 +320,18 @@ def _progress_taper_phase(
 
     Shorter races taper faster; marathon tapers more gradually. Trail tapers
     more aggressively than half (eccentric damage needs extra recovery).
-    The curve is independent of high_water — it scales straight from peak.
+
+    The curve scales from ``taper_base_km`` — the *realized* peak (high-water
+    mark) reached by the loading phases, not the theoretical peak target. On
+    short plans a low-base runner may run out of weeks to ramp all the way to
+    the target peak under the 10% rule; scaling the taper from the unrealized
+    target would make the first taper week *exceed* the actual peak. Anchoring
+    to the realized high-water mark guarantees the taper always descends.
     """
     taper_weeks = phases["taper"]
     curve = _get_taper_curve(taper_weeks, target_distance, trail_profile=trail_profile)
     return [
-        round(peak_km * curve[min(week, len(curve) - 1)], 1)
+        round(taper_base_km * curve[min(week, len(curve) - 1)], 1)
         for week in range(taper_weeks)
     ]
 
@@ -480,10 +493,13 @@ def calculate_weekly_progression(
         )
         weekly_progression.extend(peak_weeks)
 
+    # Taper descends from the realized peak (high_water), which on short or
+    # low-base plans can sit below the theoretical peak_km target — anchoring
+    # to it keeps the first taper week from overshooting the actual peak.
     weekly_progression.extend(
         _progress_taper_phase(
             phases,
-            peak_km,
+            high_water,
             target_distance,
             trail_profile=trail_profile,
         )

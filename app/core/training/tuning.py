@@ -20,12 +20,13 @@ this module is a relocation, not a re-tuning.
 WEEK_OVER_WEEK_CAP = 1.10
 
 # Recovery weeks cut mileage to this fraction of the high-water mark.
-# A ~20% reduction is the modern periodization standard (Runna, Pfitzinger,
-# Daniels): it gives the body a genuine absorption window while preserving the
-# aerobic stimulus built in the preceding block. The previous ~35% cut dragged
-# total training volume down sharply and left plans looking jagged; a gentler
-# deload keeps weekly mileage productive without compromising recovery.
-RECOVERY_WEEK_RATIO = 0.80
+# A ~15% reduction keeps recovery weeks genuinely restorative while preserving
+# most of the aerobic stimulus from the preceding block — important on shorter
+# plans where the older, deeper cuts (35%, then 20%) shaved meaningful volume
+# off the total and pulled prescriptions below those of peer apps. The
+# high-water mark is tracked separately, so the post-recovery ramp resumes from
+# the pre-dip level rather than recalculating from the reduced week.
+RECOVERY_WEEK_RATIO = 0.85
 
 # Minimum bump to register a "progressed" non-recovery week — otherwise the
 # week would be flat and look like a plateau.
