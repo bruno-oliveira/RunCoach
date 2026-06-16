@@ -1,5 +1,7 @@
 """Fitness & performance analysis services."""
 
+import importlib
+
 __all__ = [
     "FitnessService",
     "PerformanceService",
@@ -15,60 +17,28 @@ __all__ = [
     "InsightsService",
 ]
 
+# Public name → (submodule, attribute). Imports stay lazy so importing this
+# package doesn't pull in every service (and avoids import cycles).
+_LAZY_EXPORTS = {
+    "FitnessService": ("fitness_service", "FitnessService"),
+    "PerformanceService": ("performance_service", "PerformanceService"),
+    "GapAnalysisService": ("gap_analysis_service", "GapAnalysisService"),
+    "RacePredictorService": ("race_predictor_service", "RacePredictorService"),
+    "RacePacingService": ("race_pacing_service", "RacePacingService"),
+    "ReadinessService": ("readiness_service", "ReadinessService"),
+    "PersonalRecordsService": ("personal_records_service", "PersonalRecordsService"),
+    "TrainingLoadService": ("training_load_service", "TrainingLoadService"),
+    "AdherenceService": ("adherence_service", "AdherenceService"),
+    "HRZoneService": ("hr_zone_service", "HRZoneService"),
+    "FeedbackService": ("feedback_service", "FeedbackService"),
+    "InsightsService": ("insights_service", "InsightsService"),
+}
+
 
 def __getattr__(name: str):
-    if name == "FitnessService":
-        from app.contexts.runner.fitness.fitness_service import FitnessService
-
-        return FitnessService
-    if name == "PerformanceService":
-        from app.contexts.runner.fitness.performance_service import PerformanceService
-
-        return PerformanceService
-    if name == "GapAnalysisService":
-        from app.contexts.runner.fitness.gap_analysis_service import GapAnalysisService
-
-        return GapAnalysisService
-    if name == "RacePredictorService":
-        from app.contexts.runner.fitness.race_predictor_service import (
-            RacePredictorService,
-        )
-
-        return RacePredictorService
-    if name == "RacePacingService":
-        from app.contexts.runner.fitness.race_pacing_service import RacePacingService
-
-        return RacePacingService
-    if name == "ReadinessService":
-        from app.contexts.runner.fitness.readiness_service import ReadinessService
-
-        return ReadinessService
-    if name == "PersonalRecordsService":
-        from app.contexts.runner.fitness.personal_records_service import (
-            PersonalRecordsService,
-        )
-
-        return PersonalRecordsService
-    if name == "TrainingLoadService":
-        from app.contexts.runner.fitness.training_load_service import (
-            TrainingLoadService,
-        )
-
-        return TrainingLoadService
-    if name == "AdherenceService":
-        from app.contexts.runner.fitness.adherence_service import AdherenceService
-
-        return AdherenceService
-    if name == "HRZoneService":
-        from app.contexts.runner.fitness.hr_zone_service import HRZoneService
-
-        return HRZoneService
-    if name == "FeedbackService":
-        from app.contexts.runner.fitness.feedback_service import FeedbackService
-
-        return FeedbackService
-    if name == "InsightsService":
-        from app.contexts.runner.fitness.insights_service import InsightsService
-
-        return InsightsService
-    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
+    try:
+        module_name, attr = _LAZY_EXPORTS[name]
+    except KeyError:
+        raise AttributeError(f"module {__name__!r} has no attribute {name!r}") from None
+    module = importlib.import_module(f"{__name__}.{module_name}")
+    return getattr(module, attr)

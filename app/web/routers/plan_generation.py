@@ -73,73 +73,40 @@ def _extract_validation_message(exc: ValidationError) -> Optional[str]:
     return None
 
 
-@router.post("/generate-plan", response_class=HTMLResponse)
-async def generate_plan(
+def _is_truthy(value: Optional[str]) -> bool:
+    """Interpret an HTML form/checkbox value as a boolean."""
+    return (value or "").lower() in ("on", "true", "1", "yes")
+
+
+def _plan_request_from_form(
     request: Request,
-    response: Response,
-    current_km: float = Form(...),
-    target_distance: str = Form(...),
-    weeks: int = Form(...),
-    max_runs_per_week: int = Form(4),
-    terrain: Optional[str] = Form(None),
-    is_trail: Optional[str] = Form(None),
-    target_elevation_gain_m: Optional[str] = Form(None),
-    training_terrain: Optional[str] = Form(None),
-    trail_distance_km: Optional[str] = Form(None),
-    intensive_weekend: Optional[str] = Form(None),
-    body_weight_kg: float = Form(70.0),
-    recent_race_distance_km: Optional[str] = Form(None),
-    recent_race_time: Optional[str] = Form(None),
-    goal_time: Optional[str] = Form(None),
-    use_profile: Optional[str] = Form(None),
-    plan_mode: Optional[str] = Form("distance"),
-    goal_time_required: Optional[str] = Form(None),
-    current_time: Optional[str] = Form(None),
-    max_heart_rate: Optional[str] = Form(None),
-    anonymous_user_id: Optional[str] = Cookie(None),
-    db: Session = Depends(get_db),
-    current_user: Optional[User] = Depends(get_optional_user),
-    plan_generator: TrainingPlanGenerator = Depends(get_plan_generator),
-    nutrition_engine: NutritionEngine = Depends(get_nutrition_engine),
-    plan_service: PlanService = Depends(get_plan_service),
-) -> Response:
-    """Generate a personalized training plan."""
-    plan_generation_limiter.check(request)
+    current_user: Optional[User],
+    *,
+    current_km: float,
+    target_distance: str,
+    weeks: int,
+    max_runs_per_week: int,
+    terrain: Optional[str],
+    is_trail: Optional[str],
+    target_elevation_gain_m: Optional[str],
+    training_terrain: Optional[str],
+    trail_distance_km: Optional[str],
+    intensive_weekend: Optional[str],
+    body_weight_kg: float,
+    recent_race_distance_km: Optional[str],
+    recent_race_time: Optional[str],
+    goal_time: Optional[str],
+) -> "PlanRequest | Response":
+    """Coerce distance-mode form fields into a validated ``PlanRequest``.
+
+    Returns an :class:`error_response` (a ``Response``) on any parse or
+    validation failure so the caller can short-circuit; otherwise the built
+    ``PlanRequest``.
+    """
     race_dist = float(recent_race_distance_km) if recent_race_distance_km else None
-    hr_max = int(max_heart_rate) if max_heart_rate else None
+    is_trail_flag = _is_truthy(is_trail)
+    intensive_weekend_flag = _is_truthy(intensive_weekend)
 
-    if plan_mode == "time":
-        return await _generate_time_goal_plan(
-            request=request,
-            current_km=current_km,
-            target_distance=float(target_distance),
-            weeks=weeks,
-            runs_per_week=max_runs_per_week,
-            goal_time=goal_time_required or "",
-            current_time=current_time,
-            max_heart_rate=hr_max,
-            current_user=current_user,
-            db=db,
-            plan_service=plan_service,
-        )
-
-    logger.info(
-        "Generate plan - current_user=%s, anon_cookie=%s, has_access_token=%s",
-        current_user.id if current_user else "None",
-        request.cookies.get("anonymous_user_id", "NO COOKIE"),
-        bool(request.cookies.get("access_token")),
-    )
-
-    if not anonymous_user_id:
-        anonymous_user_id = getattr(request.state, "anonymous_user_id", None)
-
-    is_trail_flag = (is_trail or "").lower() in ("on", "true", "1", "yes")
-    intensive_weekend_flag = (intensive_weekend or "").lower() in (
-        "on",
-        "true",
-        "1",
-        "yes",
-    )
     if is_trail_flag and target_distance == "trail":
         if not trail_distance_km:
             return error_response(
@@ -167,6 +134,7 @@ async def generate_plan(
                 "Race goal distance is invalid.",
                 "validation",
             )
+
     elevation_f: Optional[float] = None
     if target_elevation_gain_m not in (None, ""):
         try:
@@ -189,7 +157,7 @@ async def generate_plan(
         intensive_weekend_flag = False
 
     try:
-        plan_request = PlanRequest(
+        return PlanRequest(
             current_km=current_km,
             target_distance=target_distance_f,
             weeks=weeks,
@@ -235,6 +203,87 @@ async def generate_plan(
             "Invalid input. Please check your values and try again.",
             "general",
         )
+
+
+@router.post("/generate-plan", response_class=HTMLResponse)
+async def generate_plan(
+    request: Request,
+    response: Response,
+    current_km: float = Form(...),
+    target_distance: str = Form(...),
+    weeks: int = Form(...),
+    max_runs_per_week: int = Form(4),
+    terrain: Optional[str] = Form(None),
+    is_trail: Optional[str] = Form(None),
+    target_elevation_gain_m: Optional[str] = Form(None),
+    training_terrain: Optional[str] = Form(None),
+    trail_distance_km: Optional[str] = Form(None),
+    intensive_weekend: Optional[str] = Form(None),
+    body_weight_kg: float = Form(70.0),
+    recent_race_distance_km: Optional[str] = Form(None),
+    recent_race_time: Optional[str] = Form(None),
+    goal_time: Optional[str] = Form(None),
+    use_profile: Optional[str] = Form(None),
+    plan_mode: Optional[str] = Form("distance"),
+    goal_time_required: Optional[str] = Form(None),
+    current_time: Optional[str] = Form(None),
+    max_heart_rate: Optional[str] = Form(None),
+    anonymous_user_id: Optional[str] = Cookie(None),
+    db: Session = Depends(get_db),
+    current_user: Optional[User] = Depends(get_optional_user),
+    plan_generator: TrainingPlanGenerator = Depends(get_plan_generator),
+    nutrition_engine: NutritionEngine = Depends(get_nutrition_engine),
+    plan_service: PlanService = Depends(get_plan_service),
+) -> Response:
+    """Generate a personalized training plan."""
+    plan_generation_limiter.check(request)
+    hr_max = int(max_heart_rate) if max_heart_rate else None
+
+    if plan_mode == "time":
+        return await _generate_time_goal_plan(
+            request=request,
+            current_km=current_km,
+            target_distance=float(target_distance),
+            weeks=weeks,
+            runs_per_week=max_runs_per_week,
+            goal_time=goal_time_required or "",
+            current_time=current_time,
+            max_heart_rate=hr_max,
+            current_user=current_user,
+            db=db,
+            plan_service=plan_service,
+        )
+
+    logger.info(
+        "Generate plan - current_user=%s, anon_cookie=%s, has_access_token=%s",
+        current_user.id if current_user else "None",
+        request.cookies.get("anonymous_user_id", "NO COOKIE"),
+        bool(request.cookies.get("access_token")),
+    )
+
+    if not anonymous_user_id:
+        anonymous_user_id = getattr(request.state, "anonymous_user_id", None)
+
+    plan_request = _plan_request_from_form(
+        request,
+        current_user,
+        current_km=current_km,
+        target_distance=target_distance,
+        weeks=weeks,
+        max_runs_per_week=max_runs_per_week,
+        terrain=terrain,
+        is_trail=is_trail,
+        target_elevation_gain_m=target_elevation_gain_m,
+        training_terrain=training_terrain,
+        trail_distance_km=trail_distance_km,
+        intensive_weekend=intensive_weekend,
+        body_weight_kg=body_weight_kg,
+        recent_race_distance_km=recent_race_distance_km,
+        recent_race_time=recent_race_time,
+        goal_time=goal_time,
+    )
+    if isinstance(plan_request, Response):
+        return plan_request
 
     if current_user:
         existing = plan_service.find_duplicate(plan_request, str(current_user.id), db)
