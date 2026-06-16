@@ -44,6 +44,9 @@ from app.contexts.plan.adaptation.tuning import (
     EXPANDED_MIN as _EXPANDED_MIN,
 )
 from app.contexts.plan.adaptation.tuning import (
+    HOLD_DEADBAND as _HOLD_DEADBAND,
+)
+from app.contexts.plan.adaptation.tuning import (
     IMPORTANCE_WEIGHTS as _IMPORTANCE_WEIGHTS,
 )
 from app.contexts.plan.adaptation.tuning import (
@@ -217,6 +220,13 @@ def compute_adjustment_signals(
         raw_multiplier = min(raw_multiplier, OVERREACH_OVERRIDE_CLAMP)
 
     multiplier = round(max(clamp_min, min(clamp_max, raw_multiplier)), 2)
+
+    # Hold deadband: snap a near-neutral multiplier to exactly 1.0 so isolated
+    # blips (a single skipped/short run) don't ripple a small cut across every
+    # remaining week. Skipped when overreach fired — that is a deliberate safety
+    # reduction, not noise — so a genuine fatigue signal still eases the plan.
+    if not overreach_detected and abs(multiplier - 1.0) <= _HOLD_DEADBAND:
+        multiplier = 1.0
 
     return _assemble_result(
         multiplier=multiplier,

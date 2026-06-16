@@ -193,9 +193,13 @@ def _get_taper_curve(
     if taper_weeks == 1:
         return [0.55]
     elif taper_weeks == 2:
-        if is_trail_target(target_distance, trail_profile):  # trail: more aggressive
-            return [0.72, 0.50]
-        return [0.75, 0.55]  # half marathon
+        # Sub-marathon races don't need a deep two-week drawdown: the first
+        # taper week stays closer to peak (only race week falls away sharply),
+        # which preserves fitness and recovers a little weekly volume. Trail
+        # still tapers a touch more than road (descent damage clears slower).
+        if is_trail_target(target_distance, trail_profile):
+            return [0.80, 0.52]
+        return [0.82, 0.55]  # half marathon
     elif taper_weeks == 3:
         if trail_profile is not None and trail_profile.is_ultra:
             return [0.85, 0.65, 0.45]  # ultra: sharper drop than marathon

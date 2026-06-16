@@ -65,8 +65,17 @@ _HARD_TYPES = {
 _TIRED_FACTOR = 0.85
 _BUSY_FACTOR = 0.70
 _STRONG_FACTOR = 1.08
-_SICK_RAMP_FLOOR = 0.70  # gentlest week right after returning
-_SICK_RAMP_SPAN = 0.30  # builds back to baseline by the final week
+
+# Gentle return ramp after illness/injury: only the first couple of weeks back
+# are eased, then training resumes at its original prescription. Each entry is
+# the multiplier for one week after the rest window (week 1 back, week 2 back);
+# every week beyond the window is left untouched at baseline.
+#
+# The previous ramp spread 0.70 -> 1.0 across *every* remaining week, so a few
+# sick days in week 3 of a 14-week plan quietly shaved volume off all 11
+# following weeks. A short, fixed easing window matches how recovery actually
+# works — rest, ease back over a week or two, then carry on as planned.
+_SICK_RETURN_RAMP = (0.70, 0.85)
 
 VALID_INTENTS = (
     "feeling_tired",
@@ -492,20 +501,23 @@ def _apply_single_edit(
 
 
 def _ramp_future_weeks(ctx: _IntentContext, recorder: List[Dict[str, Any]]) -> None:
-    """Rebuild future weeks with a gentle return ramp (mirrors time_off)."""
+    """Ease only the first weeks back, then leave the rest of the plan intact.
+
+    Weeks within the short return window are scaled down by
+    ``_SICK_RETURN_RAMP``; every later week keeps its original prescription
+    (no adjustment), so an illness no longer suppresses the entire plan.
+    """
     weeks = _future_week_rows(ctx)
     if not weeks:
         return
-    total_weeks = ctx.plan.weeks_duration or ctx.current_week
-    total_remaining = max(total_weeks - ctx.current_week, 1)
     for week in weeks:
-        weeks_from_now = week.week_number - ctx.current_week
-        ramp = min(weeks_from_now / total_remaining, 1.0)
-        factor = _SICK_RAMP_FLOOR + _SICK_RAMP_SPAN * ramp
+        idx = week.week_number - ctx.current_week - 1  # 0 = first week back
+        if idx < 0 or idx >= len(_SICK_RETURN_RAMP):
+            continue  # outside the easing window — leave at baseline
         apply_adjustment_to_future_weeks(
             ctx.plan,
             [week],
-            round(factor, 2),
+            _SICK_RETURN_RAMP[idx],
             ctx.db,
             current_week=ctx.current_week,
             current_day_of_week=ctx.current_dow,

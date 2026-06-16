@@ -64,6 +64,15 @@ STANDARD_MAX = 1.15
 # 1.0 and would only reverse a recent change (anti-wobble hysteresis).
 HYSTERESIS_BAND = 0.05
 
+# Neutral "hold" deadband: a computed multiplier this close to 1.0 is snapped to
+# exactly 1.0 (no change) unless a genuine overreach signal fired. A single
+# skipped or short run nudges the volume/completion signals only slightly, which
+# previously produced a ~3-5% cut applied across *every* remaining week — so one
+# missed easy run quietly rewrote the whole plan. Treating small moves as "stay
+# the course" keeps isolated blips from rippling, while real, sustained
+# deviations (which push the multiplier well past the band) still adjust the plan.
+HOLD_DEADBAND = 0.05
+
 # =============================================================================
 # Overreach + training-load clamps (see signal_computer._apply_clamps)
 # =============================================================================
