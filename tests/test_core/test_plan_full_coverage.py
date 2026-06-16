@@ -898,6 +898,49 @@ class TestDistanceSpecificInvariants:
             ]
             assert len(run_days) == 2
 
+    @pytest.mark.parametrize("distance", [5.0, 10.0])
+    def test_two_run_weeks_do_not_collapse_mid_plan(self, distance):
+        """Regression: 2-run build/peak weeks must not crater far below peak.
+
+        Previously, build/peak weeks at 2 runs/week put a prescriptive key
+        workout on both the quality session AND the long run, leaving no
+        flexible slot to absorb the week's volume budget — the shortfall was
+        silently dropped and a 30 km/week runner could fall to ~12 km mid-plan.
+        The long run must stay flexible when the week has no easy run so it can
+        carry the volume; loading weeks should hold a sensible fraction of peak.
+        """
+        gen = TrainingPlanGenerator()
+        plan = gen.generate_plan(
+            current_km=30,
+            target_distance=distance,
+            weeks=12,
+            max_runs_per_week=2,
+        )
+        peak = max(w["total_km"] for w in plan if not w.get("is_recovery", False))
+
+        for week in plan:
+            if week.get("is_recovery") or week["phase"] == "taper":
+                continue
+            running = [
+                w
+                for w in week["daily_workouts"]
+                if w["type"] not in ("rest", "recovery") and w.get("distance", 0) > 0
+            ]
+            has_easy = any(w["type"] == "easy" for w in running)
+            longs = [w for w in running if w["type"] == "long"]
+            # When the long run is the sole volume carrier (no easy run), it
+            # must remain flexible (no pinned key-workout distance).
+            if not has_easy and longs:
+                assert not longs[0].get("key_workout_id"), (
+                    f"week {week['week']} long run pinned with no easy run "
+                    "to carry volume"
+                )
+            # No loading week should collapse to a small fraction of peak.
+            assert week["total_km"] >= 0.6 * peak, (
+                f"week {week['week']} ({week['phase']}) collapsed to "
+                f"{week['total_km']} km vs peak {peak} km"
+            )
+
 
 # ── Summary Statistics ────────────────────────────────────────────────────
 
