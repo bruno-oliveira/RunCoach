@@ -1,6 +1,6 @@
 import random
 from functools import lru_cache
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 
 from app.contexts.nutrition.meal_selector import MealSelector
 from app.contexts.nutrition.nutrition_content import (
@@ -35,6 +35,13 @@ PROTEIN_G_PER_KG = 1.8
 
 # Daily fiber: USDA recommended minimum for adults.
 DAILY_FIBER_G = 35
+
+# Macronutrient energy density (kcal per gram) and the share of daily calories
+# allocated to fat. Carbohydrate fills whatever remains after protein and fat.
+KCAL_PER_GRAM_FAT = 9
+KCAL_PER_GRAM_PROTEIN = 4
+KCAL_PER_GRAM_CARB = 4
+FAT_CALORIE_FRACTION = 0.25
 
 
 # Trail / ultra: continuous boost in distance + elevation, capped at 30%.
@@ -149,9 +156,13 @@ def _calculate_nutrition_needs_cached(
 
 
 class NutritionEngine:
-    """Smart nutrition engine for runners focused on protein and fiber"""
+    """Meal-blueprint engine for runners, optimized for protein and fiber.
 
-    def __init__(self, random_seed: int = None):
+    Scores candidate meals by their protein/fiber contribution against
+    training-load-derived daily targets, with seeded randomness for variety.
+    """
+
+    def __init__(self, random_seed: Optional[int] = None):
         self._rng = random.Random(random_seed)
         self._meal_selector = MealSelector(self._rng)
 
@@ -186,19 +197,20 @@ class NutritionEngine:
             target_elevation_gain_m=target_elevation_gain_m,
         )
 
+        fat_grams = round(calories * FAT_CALORIE_FRACTION / KCAL_PER_GRAM_FAT, 0)
+        protein_calories = protein * KCAL_PER_GRAM_PROTEIN
+        fat_calories = fat_grams * KCAL_PER_GRAM_FAT
+        carb_grams = max(
+            0,
+            round((calories - protein_calories - fat_calories) / KCAL_PER_GRAM_CARB, 0),
+        )
+
         return {
             "calories": calories,
             "protein": protein,
             "fiber": fiber,
-            "fat": round(calories * 0.25 / 9, 0),
-            "carbs": max(
-                0,
-                round(
-                    (calories - (protein * 4) - (round(calories * 0.25 / 9, 0) * 9))
-                    / 4,
-                    0,
-                ),
-            ),
+            "fat": fat_grams,
+            "carbs": carb_grams,
         }
 
     def generate_weekly_meal_plan(

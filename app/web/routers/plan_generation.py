@@ -48,6 +48,14 @@ templates = create_templates()
 
 _VALUE_ERROR_PREFIX = "Value error, "
 
+# Kept in sync with the configured limit so the copy never drifts from the
+# enforced ``settings.max_plans_per_user``.
+_PLAN_LIMIT_MESSAGE = (
+    f"You've reached the maximum of {settings.max_plans_per_user} active "
+    "training plans. Please delete or complete an existing plan before "
+    "creating a new one."
+)
+
 
 def _extract_validation_message(exc: ValidationError) -> Optional[str]:
     """Pull the first human-readable message out of a Pydantic ValidationError.
@@ -243,8 +251,7 @@ async def generate_plan(
             return error_response(
                 request,
                 current_user,
-                "You've reached the maximum of 3 active training plans. "
-                "Please delete or complete an existing plan before creating a new one.",
+                _PLAN_LIMIT_MESSAGE,
                 "plan_limit",
             )
 
@@ -352,8 +359,7 @@ def generate_fitness_plan(
             return error_response(
                 request,
                 current_user,
-                "You've reached the maximum of 3 active training plans. "
-                "Please delete or complete an existing plan before creating a new one.",
+                _PLAN_LIMIT_MESSAGE,
                 "plan_limit",
             )
 
@@ -427,8 +433,7 @@ async def _generate_time_goal_plan(
         return error_response(
             request,
             current_user,
-            "You've reached the maximum of 3 active training plans. "
-            "Please delete or complete an existing plan before creating a new one.",
+            _PLAN_LIMIT_MESSAGE,
             "plan_limit",
         )
 

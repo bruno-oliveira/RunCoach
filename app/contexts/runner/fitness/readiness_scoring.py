@@ -130,36 +130,31 @@ def score_long_run(
     return score, detail
 
 
+# TSB (Training Stress Balance / "form") → freshness score, as ordered
+# (min_tsb, score) bands evaluated high-to-low, plus a floor for anything below
+# the lowest band. Taper and build/peak read TSB differently: near the race
+# lingering fatigue (negative TSB) is penalized, whereas mid-plan moderate
+# negative TSB is *productive* and only deep overreaching scores low.
+_TAPER_FRESHNESS_BANDS = ((10, 100.0), (5, 90.0), (0, 75.0), (-10, 55.0), (-20, 35.0))
+_TAPER_FRESHNESS_FLOOR = 20.0
+_BUILD_FRESHNESS_BANDS = ((5, 85.0), (-10, 80.0), (-25, 70.0), (-35, 50.0))
+_BUILD_FRESHNESS_FLOOR = 35.0
+
+
 def _freshness_from_tsb(tsb: float, in_taper: bool) -> float:
     """Map TSB (form) to a 0-100 freshness score, contextualized by phase.
 
-    Near the race (taper) you want TSB rising toward positive — lingering
-    fatigue means the taper isn't working, so it scores low. Mid-plan,
-    moderate negative TSB is *productive* fatigue and only deep overreaching
-    is penalized.
+    See ``_TAPER_FRESHNESS_BANDS`` / ``_BUILD_FRESHNESS_BANDS`` for the bands.
     """
-    if in_taper:
-        if tsb >= 10:
-            return 100.0
-        if tsb >= 5:
-            return 90.0
-        if tsb >= 0:
-            return 75.0
-        if tsb >= -10:
-            return 55.0
-        if tsb >= -20:
-            return 35.0
-        return 20.0
-    # Build / peak: negative TSB expected.
-    if tsb >= 5:
-        return 85.0
-    if tsb >= -10:
-        return 80.0
-    if tsb >= -25:
-        return 70.0
-    if tsb >= -35:
-        return 50.0
-    return 35.0
+    bands, floor = (
+        (_TAPER_FRESHNESS_BANDS, _TAPER_FRESHNESS_FLOOR)
+        if in_taper
+        else (_BUILD_FRESHNESS_BANDS, _BUILD_FRESHNESS_FLOOR)
+    )
+    for min_tsb, score in bands:
+        if tsb >= min_tsb:
+            return score
+    return floor
 
 
 def score_taper(
@@ -568,7 +563,7 @@ def build_scenarios(
 # ------------------------------------------------------------------
 
 
-def parse_float(val) -> float:
+def parse_float(val: Any) -> float:
     """Safely parse a string/float target distance."""
     try:
         return float(val)
