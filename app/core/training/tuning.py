@@ -58,6 +58,21 @@ VOLUME_TREND_CAPS = {
     "increasing": 1.12,
 }
 
+# Weekly volume scales with training frequency. Previously a 3-run and a 6-run
+# plan for the same race and fitness targeted identical weekly km — forcing the
+# low-frequency plan into oversized individual runs while the high-frequency
+# plan was left under-loaded. The peak target is nudged around a reference
+# frequency: ``RUNS_PER_WEEK_REFERENCE`` runs/week is the neutral anchor (the
+# common default and the marathon minimum, so standard plans are unchanged),
+# each run/week above it adds ``RUNS_PER_WEEK_VOLUME_STEP`` of headroom and each
+# run below it trims the same amount. The factor is clamped to keep the swing
+# modest, and the absolute MAX_PEAK_MILEAGE ceilings still cap the result so a
+# high-frequency runner is never pushed past recreational safety limits.
+RUNS_PER_WEEK_REFERENCE = 4
+RUNS_PER_WEEK_VOLUME_STEP = 0.04
+RUNS_PER_WEEK_FACTOR_MIN = 0.85
+RUNS_PER_WEEK_FACTOR_MAX = 1.10
+
 # Bracket-aware target peak weekly mileage for trail/ultra plans:
 # (current_km multiplier, absolute floor km).
 TRAIL_BRACKET_PEAK_TARGETS = {

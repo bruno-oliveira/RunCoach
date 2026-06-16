@@ -25,6 +25,10 @@ from app.core.training.tuning import (
     PEAK_OSCILLATION_BASE,
     PEAK_OSCILLATION_STEP,
     RECOVERY_WEEK_RATIO,
+    RUNS_PER_WEEK_FACTOR_MAX,
+    RUNS_PER_WEEK_FACTOR_MIN,
+    RUNS_PER_WEEK_REFERENCE,
+    RUNS_PER_WEEK_VOLUME_STEP,
     TRAIL_BRACKET_PEAK_TARGETS,
     VOLUME_TREND_CAPS,
     WEEK_OVER_WEEK_CAP,
@@ -53,6 +57,20 @@ def _volume_trend_cap(profile: Optional[dict]) -> float:
         return WEEK_OVER_WEEK_CAP
     trend = profile.get("volume_trend", "stable")
     return VOLUME_TREND_CAPS.get(trend, WEEK_OVER_WEEK_CAP)
+
+
+def _runs_per_week_factor(max_runs: int) -> float:
+    """Nudge the peak-mileage target around the reference training frequency.
+
+    ``RUNS_PER_WEEK_REFERENCE`` runs/week is the neutral anchor (factor 1.0);
+    higher-frequency schedules can absorb a little more weekly volume and
+    lower-frequency ones a little less, so plans for the same race and fitness
+    no longer land on identical km regardless of how many days the runner
+    trains. The swing is clamped to stay modest; the absolute peak ceilings
+    applied by the caller still bound the result.
+    """
+    factor = 1.0 + RUNS_PER_WEEK_VOLUME_STEP * (max_runs - RUNS_PER_WEEK_REFERENCE)
+    return max(RUNS_PER_WEEK_FACTOR_MIN, min(RUNS_PER_WEEK_FACTOR_MAX, factor))
 
 
 def _trail_ideal_peak(profile: TrailProfile, current_km: float) -> float:
@@ -357,21 +375,43 @@ def calculate_weekly_progression(
         trail_profile=trail_profile,
     )
 
+    # Frequency scaling: weekly volume tracks training frequency, so a plan with
+    # fewer runs/week targets a lower peak than a higher-frequency plan for the
+    # same race and fitness. Without this, a 3-run and a 6-run plan landed on
+    # identical weekly km — forcing the low-frequency plan into oversized
+    # individual runs while the high-frequency plan stayed under-loaded. A
+    # downward nudge never detrains a runner below ~90% of their established
+    # base; an upward nudge is re-clamped to the absolute peak ceiling so a
+    # high-frequency schedule is never pushed past recreational safety limits.
+    runs_factor = _runs_per_week_factor(max_runs)
+    if runs_factor != 1.0:
+        peak_km *= runs_factor
+        if runs_factor < 1.0 and current_km > 0:
+            peak_km = max(peak_km, current_km * 0.90)
+        elif runs_factor > 1.0:
+            if trail_profile is not None:
+                peak_km = min(peak_km, trail_max_weekly_mileage(trail_profile))
+            else:
+                cap = MAX_PEAK_MILEAGE.get(target_distance)
+                if cap is not None:
+                    peak_km = min(peak_km, cap)
+
     # Cap peak at what can physically be distributed across max_runs
     # within per-run structural limits (long run ceiling + quality caps).
     # Without this, low-run plans target volumes that force the shortfall
-    # fill-up to inflate individual runs past safe distances.
-    if max_runs <= 4:
-        if trail_profile is not None:
-            run_ceiling, q_cap = _trail_run_ceilings(trail_profile)
-        else:
-            _CEILINGS = {5.0: 14.0, 10.0: 22.0, 21.1: 28.0, 30.0: 32.0, 42.2: 38.0}
-            _Q_CAPS = {5.0: 5.0, 10.0: 8.0, 21.1: 10.0, 30.0: 12.0, 42.2: 12.0}
-            run_ceiling = _CEILINGS.get(target_distance, target_distance * 0.9)
-            q_cap = _Q_CAPS.get(target_distance, 8.0)
-        quality_slots = 1 if max_runs >= 2 else 0
-        distributable = run_ceiling * (max_runs - quality_slots) + q_cap * quality_slots
-        peak_km = min(peak_km, distributable)
+    # fill-up to inflate individual runs past safe distances. Applied across
+    # all run counts so per-run distances stay bounded regardless of frequency
+    # (at higher run counts the ceiling is generous and rarely binds).
+    if trail_profile is not None:
+        run_ceiling, q_cap = _trail_run_ceilings(trail_profile)
+    else:
+        _CEILINGS = {5.0: 14.0, 10.0: 22.0, 21.1: 28.0, 30.0: 32.0, 42.2: 38.0}
+        _Q_CAPS = {5.0: 5.0, 10.0: 8.0, 21.1: 10.0, 30.0: 12.0, 42.2: 12.0}
+        run_ceiling = _CEILINGS.get(target_distance, target_distance * 0.9)
+        q_cap = _Q_CAPS.get(target_distance, 8.0)
+    quality_slots = 1 if max_runs >= 2 else 0
+    distributable = run_ceiling * (max_runs - quality_slots) + q_cap * quality_slots
+    peak_km = min(peak_km, distributable)
     # Floor the base target at the runner's current volume: when current_km
     # already exceeds peak*0.70 the old ramp sloped DOWN to 0.70*peak, shedding
     # ~15% of established aerobic volume for the whole base phase. Hold (don't
