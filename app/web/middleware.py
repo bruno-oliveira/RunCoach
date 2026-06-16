@@ -1,6 +1,7 @@
 """Application middleware configuration."""
 
 import uuid
+from urllib.parse import urlparse
 
 from fastapi import Request
 from fastapi.responses import JSONResponse
@@ -119,18 +120,57 @@ async def set_anonymous_user_id_cookie(request: Request, call_next):
     return response
 
 
-async def csrf_protection(request: Request, call_next):
-    """Reject state-changing API requests without application/json Content-Type.
+def _request_origin_allowed(request: Request) -> bool:
+    """Validate the Origin/Referer of a state-changing request.
 
-    Browsers cannot send application/json cross-origin without a CORS preflight,
-    so requiring this header on POST/PUT/PATCH/DELETE prevents cross-site form
-    submissions from reaching cookie-authenticated endpoints.
+    Browsers always attach an ``Origin`` header to cross-origin state-changing
+    requests and cannot forge or omit it, so this is a reliable CSRF signal:
+
+    * Same-origin (the Origin's host matches the request ``Host``) is always
+      allowed — this is the normal first-party path and must not depend on
+      ``allowed_origins`` being configured correctly in production.
+    * A different origin is only allowed if explicitly whitelisted in
+      ``settings.allowed_origins``.
+    * No Origin/Referer at all (non-browser API clients using Bearer tokens)
+      is allowed — those are not subject to browser-driven CSRF.
+    """
+    source = request.headers.get("origin")
+    if not source:
+        referer = request.headers.get("referer")
+        if referer:
+            parsed = urlparse(referer)
+            if parsed.scheme and parsed.netloc:
+                source = f"{parsed.scheme}://{parsed.netloc}"
+    if not source:
+        return True
+
+    host = request.headers.get("host")
+    if host and urlparse(source).netloc == host:
+        return True
+    return source in settings.allowed_origins
+
+
+async def csrf_protection(request: Request, call_next):
+    """Block cross-site state-changing requests to cookie-authenticated APIs.
+
+    Two complementary checks on POST/PUT/PATCH/DELETE under ``/api/``:
+
+    * The Origin/Referer must be same-origin or explicitly allow-listed
+      (see ``_request_origin_allowed``) — the primary CSRF defense.
+    * The Content-Type must be ``application/json`` or ``multipart/form-data``,
+      rejecting the simple form encodings a cross-site ``<form>`` would use.
     """
     if (
         request.method in _STATE_CHANGING_METHODS
         and request.url.path.startswith("/api/")
         and request.url.path not in _CSRF_EXEMPT
     ):
+        if not _request_origin_allowed(request):
+            return JSONResponse(
+                status_code=403,
+                content={"detail": "Cross-origin request blocked"},
+            )
+
         content_length = request.headers.get("content-length", "0")
         has_body = content_length != "0"
         if has_body:

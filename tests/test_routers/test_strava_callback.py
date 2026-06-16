@@ -43,11 +43,11 @@ def callback_client(test_db: Session) -> TestClient:
     app.dependency_overrides.clear()
 
 
-def _make_state(user_id: str) -> str:
-    """Create a valid state JWT for the Strava callback."""
+def _make_state(user_id: str, nonce: str = "test-nonce") -> str:
+    """Create a valid state JWT (with nonce) for the Strava callback."""
     auth = AuthService()
     return auth.create_access_token(
-        {"sub": user_id, "purpose": "strava_oauth"},
+        {"sub": user_id, "purpose": "strava_oauth", "nonce": nonce},
         expires_delta=timedelta(minutes=5),
     )
 
@@ -56,7 +56,7 @@ class TestStravaCallback:
     def test_valid_state_and_code_stores_tokens(
         self, callback_client, callback_user, test_db
     ):
-        state = _make_state(callback_user.id)
+        state = _make_state(callback_user.id, nonce="nonce-abc")
 
         token_data = {
             "access_token": "strava-access-123",
@@ -65,6 +65,7 @@ class TestStravaCallback:
             "athlete": {"id": 99999},
         }
 
+        callback_client.cookies.set("strava_oauth_state", "nonce-abc")
         with patch(
             "app.infrastructure.integrations.strava_service.StravaService.exchange_code_for_tokens",
             new_callable=AsyncMock,
@@ -93,6 +94,19 @@ class TestStravaCallback:
         assert response.status_code == 400
         assert "Invalid or expired state" in response.json()["detail"]
 
+    def test_missing_nonce_cookie_returns_400(self, callback_client, callback_user):
+        """A valid state without the matching single-use cookie is rejected."""
+        state = _make_state(callback_user.id, nonce="nonce-abc")
+        callback_client.cookies.clear()
+
+        response = callback_client.get(
+            "/api/strava/callback",
+            params={"code": "some-code", "state": state},
+        )
+
+        assert response.status_code == 400
+        assert "Invalid or expired state" in response.json()["detail"]
+
     def test_expired_state_returns_400(self, callback_client, callback_user):
         auth = AuthService()
         expired_state = auth.create_access_token(
@@ -108,7 +122,8 @@ class TestStravaCallback:
         assert response.status_code == 400
 
     def test_strava_exchange_failure_returns_502(self, callback_client, callback_user):
-        state = _make_state(callback_user.id)
+        state = _make_state(callback_user.id, nonce="nonce-xyz")
+        callback_client.cookies.set("strava_oauth_state", "nonce-xyz")
 
         with patch(
             "app.infrastructure.integrations.strava_service.StravaService.exchange_code_for_tokens",

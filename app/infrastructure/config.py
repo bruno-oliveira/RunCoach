@@ -1,10 +1,11 @@
 """Centralized configuration for RunCoach application."""
 
 import logging
+import secrets
 from functools import lru_cache
 from typing import Literal
 
-from pydantic import Field, field_validator
+from pydantic import Field, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -32,12 +33,11 @@ class Settings(BaseSettings):
     # ``app.core.training.training_config.DISTANCE_CONSTRAINTS``.
 
     # OAuth / Authentication
-    secret_key: str = Field(
-        default_factory=lambda: __import__("secrets").token_urlsafe(32)
-    )
+    secret_key: str = ""
     # NOTE: In production, SECRET_KEY must be set as a persistent environment
-    # variable (e.g. Fly.io secret) so JWTs survive cold starts.
-    # The random default is for local development only.
+    # variable (e.g. Fly.io secret) so JWTs survive cold starts. When unset,
+    # ``_require_secret_key`` raises in production and generates an ephemeral
+    # development key only when DEBUG is enabled.
     # SECRET_KEY_PREVIOUS lets us rotate the JWT signing key without immediate
     # logout: new tokens are signed with secret_key; verification falls back
     # to secret_key_previous so existing sessions keep working through the
@@ -94,6 +94,25 @@ class Settings(BaseSettings):
 
     # Plan limits
     max_plans_per_user: int = 3
+
+    @model_validator(mode="after")
+    def _require_secret_key(self) -> "Settings":
+        """Fail fast in production when no persistent SECRET_KEY is configured.
+
+        Mirrors the ``encryption_key`` guard: an unset signing key would
+        silently rotate on every cold start (logging everyone out) and differ
+        between workers. In development we tolerate an ephemeral random key.
+        """
+        if not self.secret_key:
+            if self.debug:
+                self.secret_key = secrets.token_urlsafe(32)
+            else:
+                raise ValueError(
+                    "SECRET_KEY must be set in production (DEBUG=False). "
+                    "Configure it as a persistent secret so JWTs survive "
+                    "restarts and are consistent across workers."
+                )
+        return self
 
     @field_validator("allowed_origins", mode="before")
     @classmethod

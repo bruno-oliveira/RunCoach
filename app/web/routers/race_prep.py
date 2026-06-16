@@ -67,8 +67,17 @@ async def analyze_gpx(
             detail="Please upload a valid .gpx file",
         )
 
-    content = await file.read()
-    if len(content) > 10 * 1024 * 1024:
+    max_bytes = 10 * 1024 * 1024
+    # Reject early on the declared size, then read at most one byte past the
+    # cap so a chunked upload (no Content-Length) can't slip past the size
+    # middleware and force us to buffer an unbounded body into memory.
+    if file.size is not None and file.size > max_bytes:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="GPX file too large (max 10MB)",
+        )
+    content = await file.read(max_bytes + 1)
+    if len(content) > max_bytes:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="GPX file too large (max 10MB)",

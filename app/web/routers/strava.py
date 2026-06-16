@@ -1,6 +1,7 @@
 """Strava OAuth and sync endpoints."""
 
 import logging
+import secrets
 from datetime import datetime, timedelta, timezone
 from typing import Optional
 
@@ -11,6 +12,7 @@ from fastapi import (
     HTTPException,
     Query,
     Request,
+    Response,
     status,
 )
 from fastapi.responses import RedirectResponse
@@ -36,22 +38,42 @@ from app.models.user import User
 from app.rate_limit import strava_callback_limiter
 from app.schemas import StravaStatusResponse, StravaSyncResponse
 from app.utils import TimestampAdapter
+from app.web.middleware import _cookie_secure
 
 logger = logging.getLogger(__name__)
 
 strava_router = APIRouter(prefix="/api/strava", tags=["strava"])
 
+_OAUTH_STATE_COOKIE = "strava_oauth_state"
+_OAUTH_STATE_TTL_SECONDS = 300
+
 
 @strava_router.get("/connect")
 def strava_connect(
+    response: Response,
     current_user: User = Depends(get_current_user),
     auth_service: AuthService = Depends(get_auth_service),
     strava_service: StravaService = Depends(get_strava_service),
 ):
-    """Return Strava OAuth authorization URL."""
+    """Return Strava OAuth authorization URL.
+
+    A random nonce is embedded in the signed ``state`` token and mirrored in a
+    short-lived, HTTP-only cookie. The callback only proceeds when the two
+    match, binding the flow to this browser and making the ``state`` single-use
+    (the cookie is cleared on callback).
+    """
+    nonce = secrets.token_urlsafe(16)
     state = auth_service.create_access_token(
-        {"sub": current_user.id, "purpose": "strava_oauth"},
+        {"sub": current_user.id, "purpose": "strava_oauth", "nonce": nonce},
         expires_delta=timedelta(minutes=5),
+    )
+    response.set_cookie(
+        key=_OAUTH_STATE_COOKIE,
+        value=nonce,
+        max_age=_OAUTH_STATE_TTL_SECONDS,
+        httponly=True,
+        samesite="lax",
+        secure=_cookie_secure(),
     )
     authorize_url = strava_service.get_authorization_url(state)
     return {"authorize_url": authorize_url}
@@ -71,6 +93,18 @@ async def strava_callback(
     strava_callback_limiter.check(request)
     payload = auth_service.verify_token(state)
     if not payload or payload.get("purpose") != "strava_oauth":
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid or expired state parameter",
+        )
+
+    # Single-use binding: the nonce in the signed state must match the cookie
+    # set when the flow started, proving the callback lands in the same browser
+    # and that this state has not been replayed.
+    cookie_nonce = request.cookies.get(_OAUTH_STATE_COOKIE)
+    if not cookie_nonce or not secrets.compare_digest(
+        cookie_nonce, str(payload.get("nonce", ""))
+    ):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Invalid or expired state parameter",
@@ -101,7 +135,9 @@ async def strava_callback(
 
     background_tasks.add_task(initial_sync, user.id, strava_service)
 
-    return RedirectResponse(url="/my-plans", status_code=status.HTTP_302_FOUND)
+    redirect = RedirectResponse(url="/my-plans", status_code=status.HTTP_302_FOUND)
+    redirect.delete_cookie(_OAUTH_STATE_COOKIE)
+    return redirect
 
 
 @strava_router.post("/sync", response_model=StravaSyncResponse)
