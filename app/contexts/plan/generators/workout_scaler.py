@@ -30,6 +30,7 @@ from app.core.training import long_run_calculator, workout_builders
 from app.core.training.key_workout_library import reconcile_key_workout_text
 from app.core.training.quality_caps import (
     MAX_EASY_RUN_KM,
+    MAX_EASY_VS_LONG_RUN,
     MIN_EASY_PER_RUN_KM,
     easy_run_cap,
 )
@@ -174,7 +175,10 @@ def set_distance(
 
 
 def scale_down(
-    workouts: List[Dict[str, Any]], total_km: float, pace_zones: Optional[Dict] = None
+    workouts: List[Dict[str, Any]],
+    total_km: float,
+    pace_zones: Optional[Dict] = None,
+    protect_long: bool = True,
 ) -> float:
     """Bring the week's total down to budget by shrinking flexible workouts.
 
@@ -186,11 +190,15 @@ def scale_down(
     flexible budget is exhausted, the small overage is accepted rather
     than corrupting a prescription.
 
-    The long run is the week's anchor, so it is protected: the overage is
-    drained from the easy runs first (down to a per-run floor) and the long run
-    is only shrunk when the easy budget cannot absorb it. This keeps a large
-    prescriptive quality day from eating into the long run — trim the filler,
-    keep the anchor — rather than scaling every run down in lockstep.
+    With ``protect_long`` (the default), the long run is the week's anchor and is
+    protected: the overage is drained from the easy runs first (down to a per-run
+    floor) and the long run is only shrunk when the easy budget cannot absorb it.
+    This keeps a large prescriptive quality day from eating into the long run —
+    trim the filler, keep the anchor — rather than scaling every run down in
+    lockstep. Taper weeks pass ``protect_long=False`` so the long run tapers down
+    in proportion with the rest of the week rather than being held large while
+    the easy runs collapse (which would leave the long run dominating a
+    deliberately light week).
     """
     actual_total_km = round(sum(w.get("distance", 0) for w in workouts), 1)
     if actual_total_km <= total_km * 1.01 or actual_total_km <= 0:
@@ -220,7 +228,7 @@ def scale_down(
     easy_km = sum(w["distance"] for w in easy_runs)
     easy_absorbable = max(0.0, easy_km - len(easy_runs) * MIN_EASY_PER_RUN_KM)
 
-    if has_long and easy_runs and overage <= easy_absorbable:
+    if protect_long and has_long and easy_runs and overage <= easy_absorbable:
         # Protect the long run: the easy runs alone can soak up the overage
         # while staying above their per-run floor, so leave the long run intact.
         scale_easy = (easy_km - overage) / easy_km
@@ -242,6 +250,7 @@ def fill_shortfall(
     target_distance: float,
     pace_zones: Optional[Dict] = None,
     trail_profile=None,
+    easy_vs_long_ratio: float = MAX_EASY_VS_LONG_RUN,
 ) -> float:
     """Fill shortfall by expanding easy runs; reshape long run when its
     distance must change for safety (hard ceiling) or balance against easy.
@@ -249,6 +258,14 @@ def fill_shortfall(
     Prescriptive workouts are never expanded — their distance is the
     prescription. Long-run mutations rebuild description + steps via
     ``rebuild_long_run`` so the workout stays internally consistent.
+
+    ``easy_vs_long_ratio`` bounds each easy run as a fraction of the long run.
+    Low-frequency road plans pass a tighter ratio than the default so the
+    single easy slot can't grow into a *second* long effort alongside the long
+    run (the documented 3-run artifact: long 14 km + "easy" 13 km for a 5K).
+    The long run keeps carrying the week's volume; the overflow the tighter
+    easy cap can't hold is dropped, so the week falls slightly short rather
+    than prescribing two near-equal long runs (audit G3).
     """
     if actual_total_km >= total_km * 0.97 or actual_total_km <= 0:
         actual_total_km = round(sum(w.get("distance", 0) for w in workouts), 1)
@@ -299,7 +316,9 @@ def fill_shortfall(
         def _easy_cap(_long_d: float) -> float:
             if trail_profile is not None:
                 return _long_d
-            return easy_run_cap(_long_d, MAX_EASY_RUN_KM)
+            return easy_run_cap(
+                _long_d, MAX_EASY_RUN_KM, max_vs_long=easy_vs_long_ratio
+            )
 
         cap = _easy_cap(long_d)
         for w in workouts:

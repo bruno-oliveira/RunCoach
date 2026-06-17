@@ -59,6 +59,7 @@ def plan_view_context(
     pace_zones_updated_recent = _compute_pace_zone_badge(db, training_plan.id)
     adaptation_state = _build_adaptation_state(training_plan)
     long_run_warning = _build_long_run_warning(training_plan, plan_data)
+    frequency_warning = _build_frequency_warning(training_plan, plan_data)
 
     today_workout_overlay = _build_today_workout_overlay(
         db,
@@ -112,6 +113,7 @@ def plan_view_context(
         "adaptation_state": adaptation_state,
         "adaptation_revision": training_plan.adaptation_revision or 0,
         "long_run_warning": long_run_warning,
+        "frequency_warning": frequency_warning,
     }
     ctx.update(extra)
     return ctx
@@ -162,6 +164,47 @@ def _build_long_run_warning(
         experience_level=derive_experience_level(training_plan.current_weekly_km or 0),
         trail_profile=trail_profile,
         training_terrain=getattr(training_plan, "training_terrain", None),
+        weeks=training_plan.weeks_duration,
+    )
+
+
+def _build_frequency_warning(
+    training_plan: TrainingPlan, plan_data: list[dict]
+) -> Optional[dict]:
+    """Non-blocking advisory when a low run frequency caps weekly volume below
+    the runner's established base (they could add a day and keep their mileage).
+
+    Race plans only; fitness plans target a gentler peak by design. Pure read of
+    the stored plan, so it also applies retroactively to existing plans.
+    """
+    if getattr(training_plan, "plan_type", "distance") not in ("distance",):
+        return None
+
+    max_runs = getattr(training_plan, "max_runs_per_week", None)
+    current_km = training_plan.current_weekly_km or 0
+    if not max_runs or current_km <= 0:
+        return None
+
+    realized_peak = 0.0
+    for week in plan_data or []:
+        if week.get("is_recovery"):
+            continue
+        total = sum(
+            (w.get("distance", 0) or 0) for w in week.get("daily_workouts", []) or []
+        )
+        realized_peak = max(realized_peak, total)
+
+    if realized_peak <= 0:
+        return None
+
+    from app.core.training.long_run_calculator import (
+        assess_frequency_volume_adequacy,
+    )
+
+    return assess_frequency_volume_adequacy(
+        current_km,
+        realized_peak,
+        max_runs,
         weeks=training_plan.weeks_duration,
     )
 

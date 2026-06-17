@@ -13,6 +13,7 @@ from app.core.training.tuning import (
     BASE_PHASE_QUALITY_REDUCTION,
     BASE_QUALITY_MIN_DOSE_KM,
     DEFAULT_QUALITY_CAPS,
+    LOW_FREQ_EASY_VS_LONG_RUN,
     MAX_EASY_RUN_KM,
     MAX_EASY_VS_LONG_RUN,
     MAX_QUALITY_VS_LONG_RUN,
@@ -24,6 +25,7 @@ from app.core.training.tuning import (
 __all__ = [
     "MAX_QUALITY_VS_LONG_RUN",
     "MAX_EASY_VS_LONG_RUN",
+    "LOW_FREQ_EASY_VS_LONG_RUN",
     "MAX_EASY_RUN_KM",
     "BASE_PHASE_QUALITY_REDUCTION",
     "QUALITY_CAPS_BY_DISTANCE",
@@ -62,7 +64,9 @@ def cap_quality_distance(
 
 
 def easy_run_cap(
-    long_run_distance: float, max_abs_km: float = MAX_EASY_RUN_KM
+    long_run_distance: float,
+    max_abs_km: float = MAX_EASY_RUN_KM,
+    max_vs_long: float = MAX_EASY_VS_LONG_RUN,
 ) -> float:
     """The ceiling for a single easy run (km).
 
@@ -70,15 +74,22 @@ def easy_run_cap(
     long run) and an absolute distance ceiling (so easy runs don't become
     second long runs on low-run-count / time-crunched plans). Trail callers
     pass a larger ``max_abs_km`` since back-to-back long days are intentional.
+
+    ``max_vs_long`` is the long-run fraction; low-frequency road plans pass a
+    tighter value than the default so the single easy slot stays clearly
+    shorter than the long run rather than growing into a second long effort.
     """
-    return round(min(long_run_distance * MAX_EASY_VS_LONG_RUN, max_abs_km), 1)
+    return round(min(long_run_distance * max_vs_long, max_abs_km), 1)
 
 
 def cap_easy_distance(
-    distance: float, long_run_distance: float, max_abs_km: float = MAX_EASY_RUN_KM
+    distance: float,
+    long_run_distance: float,
+    max_abs_km: float = MAX_EASY_RUN_KM,
+    max_vs_long: float = MAX_EASY_VS_LONG_RUN,
 ) -> float:
     """Cap a single easy run distance against the long run and absolute ceiling."""
-    return min(distance, easy_run_cap(long_run_distance, max_abs_km))
+    return min(distance, easy_run_cap(long_run_distance, max_abs_km, max_vs_long))
 
 
 def enforce_week_caps(workouts: List, target_distance: float, phase: str) -> bool:

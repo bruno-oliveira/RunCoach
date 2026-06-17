@@ -32,7 +32,12 @@ from app.core.coaching.coaching_notes_generator import generate_coaching_note
 from app.core.training import long_run_calculator, phase_calculator, workout_builders
 from app.core.training import workout_distribution as workout_dist_mod
 from app.core.training.key_workout_library import overlay_key_workout
-from app.core.training.quality_caps import MAX_EASY_RUN_KM, QUALITY_MIN_DOSE_KM
+from app.core.training.quality_caps import (
+    LOW_FREQ_EASY_VS_LONG_RUN,
+    MAX_EASY_RUN_KM,
+    MAX_EASY_VS_LONG_RUN,
+    QUALITY_MIN_DOSE_KM,
+)
 from app.core.training.training_constants import calculate_week_in_phase
 from app.core.training.tuning import MAX_KEY_WORKOUT_VS_LONG_RUN
 from app.core.training.vertical_simulation import attach_treadmill_prescriptions
@@ -95,6 +100,19 @@ def _vertical_simulation_targets(
             "eccentric quad work to simulate mountain load on flat terrain."
         ),
     }
+
+
+def low_freq_easy_vs_long_ratio(max_runs: Optional[int], trail_profile) -> float:
+    """Easy-vs-long fraction: tighter for low-frequency road plans.
+
+    At <= 3 runs/week on the road, the long run carries most of the week; a
+    loose easy ceiling lets the single easy slot become a second long effort
+    (long 14 km + "easy" 13 km for a 5K). Trail keeps the default — back-to-back
+    long days are intentional there.
+    """
+    if trail_profile is None and max_runs is not None and max_runs <= 3:
+        return LOW_FREQ_EASY_VS_LONG_RUN
+    return MAX_EASY_VS_LONG_RUN
 
 
 def generate_daily_workouts(
@@ -192,6 +210,7 @@ def generate_daily_workouts(
         long_run_distance,
         easy_runs,
         max_easy_abs_km=float("inf") if trail_profile is not None else MAX_EASY_RUN_KM,
+        easy_vs_long_ratio=low_freq_easy_vs_long_ratio(max_runs, trail_profile),
     )
 
     easy_run_idx = 0
@@ -357,6 +376,7 @@ def build_weekly_plan(
             terrain,
         )
 
+    easy_vs_long_ratio = low_freq_easy_vs_long_ratio(max_runs_per_week, trail_profile)
     actual_total_km = _scale_down(workouts, total_km, pace_zones=pace_zones)
     actual_total_km = _fill_shortfall(
         workouts,
@@ -365,6 +385,7 @@ def build_weekly_plan(
         target_distance,
         pace_zones=pace_zones,
         trail_profile=trail_profile,
+        easy_vs_long_ratio=easy_vs_long_ratio,
     )
     actual_total_km = _enforce_long_run_ratio_cap(
         workouts,

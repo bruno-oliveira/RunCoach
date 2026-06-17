@@ -296,6 +296,38 @@ def test_long_run_adequacy_quiet_for_short_races():
     assert long_run_calculator.assess_long_run_adequacy(18.0, 21.1) is None
 
 
+def test_frequency_warns_when_low_freq_caps_volume():
+    # A 60 km/week runner on 3 runs can only peak near 33 km — frequency, not
+    # fitness, is capping volume, so the plan should advise adding a day.
+    warning = long_run_calculator.assess_frequency_volume_adequacy(
+        60.0, 33.0, max_runs=3, weeks=12
+    )
+    assert warning is not None
+    assert warning["pct_of_base"] == 55
+    assert warning["max_runs"] == 3
+    assert "add a training day" in warning["suggestion"].lower()
+
+
+def test_frequency_quiet_when_volume_holds():
+    # A low-base runner whose 3-run peak meets their base isn't detraining.
+    assert (
+        long_run_calculator.assess_frequency_volume_adequacy(
+            20.0, 24.0, max_runs=3, weeks=12
+        )
+        is None
+    )
+
+
+def test_frequency_quiet_for_four_plus_runs():
+    # At 4+ runs/week frequency isn't the binding constraint — never warns.
+    assert (
+        long_run_calculator.assess_frequency_volume_adequacy(
+            60.0, 45.0, max_runs=4, weeks=12
+        )
+        is None
+    )
+
+
 def test_long_run_adequacy_trail_uses_race_fraction():
     from app.core.training.trail_profile import classify_trail
 

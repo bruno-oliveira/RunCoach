@@ -209,8 +209,72 @@ class TrainingPlanGenerator:
             training_plan.append(weekly_plan)
 
         _smooth_recovery_dips(training_plan, pace_zones)
+        _smooth_taper(
+            training_plan,
+            target_distance,
+            weeks,
+            pace_zones,
+            trail_profile=trail_profile,
+        )
 
         return training_plan
+
+
+def _smooth_taper(
+    training_plan: List[Dict[str, Any]],
+    target_distance: float,
+    weeks: int,
+    pace_zones: Optional[Dict],
+    trail_profile: Optional[TrailProfile] = None,
+) -> None:
+    """Re-anchor the taper to the *realized* peak so it always descends (in place).
+
+    The taper curve is computed inside ``calculate_weekly_progression`` from the
+    progression's high-water mark. But on capped plans (low base / low frequency)
+    the week-level 10% pass scales the loading weeks *down* below that high-water
+    target, so a taper scaled from the unrealized peak lands too high relative to
+    the weeks the runner actually ran — race week sitting at ~70% of the displayed
+    peak instead of the intended ~50-55%. This pass rescales each taper week to
+    ``taper_curve_fraction × realized_peak`` (the max loading-week total actually
+    delivered), draining the excess from the flexible (easy/long) runs. Weeks
+    already at or below target are untouched, so well-resourced plans are
+    unaffected.
+    """
+    from app.contexts.plan.generators.weekly_plan_builder import attach_duration_hints
+    from app.contexts.plan.generators.workout_scaler import scale_down as _scale_down
+    from app.core.training.mileage_progression import _get_taper_curve
+    from app.core.training.phase_calculator import calculate_phases
+
+    phases = calculate_phases(weeks, target_distance, trail_profile=trail_profile)
+    taper_weeks = phases.get("taper", 0)
+    if taper_weeks <= 0 or taper_weeks >= len(training_plan):
+        return
+
+    loading = training_plan[: len(training_plan) - taper_weeks]
+    realized_peak = max(
+        (w["total_km"] for w in loading if not w.get("is_recovery")),
+        default=0.0,
+    )
+    if realized_peak <= 0:
+        return
+
+    curve = _get_taper_curve(taper_weeks, target_distance, trail_profile=trail_profile)
+    taper_plans = training_plan[len(training_plan) - taper_weeks :]
+    for i, weekly_plan in enumerate(taper_plans):
+        fraction = curve[min(i, len(curve) - 1)]
+        target = round(realized_peak * fraction, 1)
+        if weekly_plan["total_km"] > target + 0.05:
+            workouts = weekly_plan["daily_workouts"]
+            # Taper the long run down in proportion too (protect_long=False) so a
+            # deliberately light race-week isn't left with a dominant long run
+            # while its easy runs collapse to the floor.
+            _scale_down(workouts, target, pace_zones=pace_zones, protect_long=False)
+            weekly_plan["total_km"] = round(
+                sum(w.get("distance", 0) for w in workouts), 1
+            )
+            for w in workouts:
+                w.pop("duration_min", None)
+            attach_duration_hints(workouts, pace_zones)
 
 
 def _smooth_recovery_dips(
