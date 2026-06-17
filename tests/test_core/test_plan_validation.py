@@ -227,6 +227,62 @@ class TestNoZeroDistanceRunningWorkouts:
                     )
 
 
+class TestLowFreqNoSecondLongEffort:
+    """On low-frequency road plans the easy run must stay clearly below the long
+    run — not balloon into a second near-equal long effort.
+
+    Regression (audit #3): a 5K/3-run week produced ``long 14 + "easy" 13`` — two
+    ~equal long runs and a token quality slot. The easy ceiling on <= 3-run road
+    weeks is now a tighter fraction of the long run, so one clear long run plus a
+    genuinely easier support run.
+    """
+
+    @pytest.mark.parametrize("combo", ALL_COMBOS, ids=[_id(c) for c in ALL_COMBOS])
+    def test_easy_clearly_below_long_low_freq(self, combo):
+        distance, mileage, max_runs = combo
+        if max_runs > 3:
+            return
+        plan, _ = _generate_plan(distance, mileage, max_runs)
+
+        for week in plan:
+            if week.get("is_recovery"):
+                continue
+            runs = _week_runs(week)
+            longs = [w for w in runs if w.get("type") == "long"]
+            easies = [w for w in runs if w.get("type") == "easy"]
+            if not longs or not easies:
+                continue
+            long_d = longs[0]["distance"]
+            max_easy = max(w["distance"] for w in easies)
+            # The tighter low-freq ceiling is 0.68; allow rounding slack.
+            assert max_easy <= long_d * 0.72 + 0.2, (
+                f"Week {week['week']}: easy {max_easy:.1f}km is a second long "
+                f"effort next to long {long_d:.1f}km"
+            )
+
+
+class TestTaperDescends:
+    """The taper must descend from the realized peak to a genuine race-week
+    drawdown — not sit at ~70% of peak because it was scaled from an unrealized
+    high-water target (audit #8)."""
+
+    @pytest.mark.parametrize("combo", ALL_COMBOS, ids=[_id(c) for c in ALL_COMBOS])
+    def test_race_week_is_a_real_drawdown(self, combo):
+        distance, mileage, max_runs = combo
+        plan, _ = _generate_plan(distance, mileage, max_runs)
+        totals = [w["total_km"] for w in plan if not w.get("is_recovery")]
+        if len(totals) < 3:
+            return
+        peak = max(totals)
+        race_week = plan[-1]["total_km"]
+        # 5K/10K taper to ~55%, marathon to ~50%; allow generous slack but the
+        # race week must be a clear reduction (well under two-thirds of peak).
+        assert race_week <= peak * 0.66, (
+            f"{_id(combo)}: race week {race_week:.1f}km is "
+            f"{race_week / peak:.0%} of peak {peak:.1f}km — taper too shallow"
+        )
+
+
 class TestQualityCapsHold:
     """Quality workouts must stay below the long run.
 

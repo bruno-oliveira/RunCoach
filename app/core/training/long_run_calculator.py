@@ -149,6 +149,72 @@ def assess_long_run_adequacy(
     }
 
 
+# A plan whose realized peak weekly volume falls below this fraction of the
+# runner's established base means the chosen training frequency — not their
+# fitness — is the binding constraint: the volume simply can't be distributed
+# across so few runs without oversizing each one, so the plan holds below the
+# base rather than detraining via unsafe single-run distances. Surface that so
+# the runner can add a day instead of silently losing established volume.
+FREQUENCY_DETRAINING_THRESHOLD = 0.90
+
+# Only low-frequency schedules are flagged: at 4+ runs/week weekly volume is
+# governed by the race/fitness target and the 10% ramp, not by how much fits
+# into each run.
+FREQUENCY_WARNING_MAX_RUNS = 3
+
+
+def assess_frequency_volume_adequacy(
+    current_km: float,
+    realized_peak_km: float,
+    max_runs: Optional[int],
+    weeks: Optional[int] = None,
+) -> Optional[dict]:
+    """Flag when a low run frequency caps weekly volume below the runner's base.
+
+    At 2-3 runs/week a high-volume runner can't spread their established mileage
+    across so few sessions without each run ballooning past safe single-run
+    distances, so the plan is held below their base (e.g. a 60 km/week runner on
+    3 runs peaks near 33 km). That's a deliberate safety trade-off, not a fitness
+    judgement — surface it so the runner can add a training day and keep their
+    volume instead of silently detraining.
+
+    Returns ``None`` when frequency isn't the binding constraint (4+ runs/week,
+    or the plan already holds the runner's base), otherwise a structured,
+    non-blocking advisory mirroring :func:`assess_long_run_adequacy`.
+    """
+    if current_km <= 0 or realized_peak_km <= 0 or not max_runs:
+        return None
+    if max_runs > FREQUENCY_WARNING_MAX_RUNS:
+        return None
+    if realized_peak_km >= current_km * FREQUENCY_DETRAINING_THRESHOLD:
+        return None
+
+    realized_peak_km = round(realized_peak_km, 1)
+    current_km = round(current_km, 1)
+    pct = round(realized_peak_km / current_km * 100)
+    message = (
+        f"On {max_runs} runs/week your plan peaks at {realized_peak_km:g} km — "
+        f"about {pct}% of your current {current_km:g} km/week. That volume can't "
+        f"be split across {max_runs} runs without making each one too long to be "
+        "safe, so the plan holds below your base rather than ramping single runs "
+        "dangerously high."
+    )
+    suggestion = (
+        "Add a training day (4-5 runs/week) so the same weekly volume spreads "
+        "across more, shorter runs — your peak mileage will track your fitness "
+        "instead of being capped by how much fits into each run."
+    )
+    return {
+        "realized_peak_km": realized_peak_km,
+        "current_km": current_km,
+        "pct_of_base": pct,
+        "max_runs": max_runs,
+        "weeks": weeks,
+        "message": message,
+        "suggestion": suggestion,
+    }
+
+
 def get_weekly_long_run_ratio_cap(
     phase: str,
     trail_profile: Optional[TrailProfile] = None,

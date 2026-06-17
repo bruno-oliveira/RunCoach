@@ -290,3 +290,70 @@ class TestFitnessPlanGenerator:
             focus_area="balanced",
         )
         assert plan["summary"]["peak_weekly_km"] >= 30.0
+
+    @pytest.mark.parametrize("focus", ["vo2max", "threshold", "balanced"])
+    @pytest.mark.parametrize("base", [20.0, 35.0, 50.0])
+    def test_taper_descends_below_peak(self, generator, focus, base):
+        """Regression: the MIN_NON_RECOVERY_BUMP floor was applied to taper weeks,
+        lifting the final week back above the peak (the taper was inverted — the
+        last week was the plan's biggest). The taper must descend."""
+        plan = generator.generate_plan(
+            current_weekly_km=base,
+            weeks=10,
+            runs_per_week=4,
+            vdot=45,
+            focus_area=focus,
+            focus_distance=10.0,
+        )
+        totals = [w["total_km"] for w in plan["weekly_plans"]]
+        peak = max(totals)
+        # Final (taper) week must be a genuine drawdown, not >= peak.
+        assert totals[-1] < peak * 0.85, (
+            f"{focus} base{base}: taper week {totals[-1]} not below peak {peak}"
+        )
+
+    @pytest.mark.parametrize("base", [35.0, 50.0])
+    def test_long_run_tracks_volume_not_token(self, generator, base):
+        """Regression: the long-run ceiling was focus*0.7 (≈8 km for a 10 km
+        focus), collapsing the long run to ~13% of the week at higher volume.
+        It should now scale to a real endurance share."""
+        plan = generator.generate_plan(
+            current_weekly_km=base,
+            weeks=10,
+            runs_per_week=4,
+            vdot=45,
+            focus_area="balanced",
+            focus_distance=10.0,
+        )
+        peak_long = 0.0
+        peak_week_total = 0.0
+        for w in plan["weekly_plans"]:
+            if w.get("is_recovery"):
+                continue
+            longs = [d["distance"] for d in w["daily_workouts"] if d["type"] == "long"]
+            if longs and w["total_km"] > peak_week_total:
+                peak_week_total = w["total_km"]
+            peak_long = max(peak_long, max(longs, default=0.0))
+        assert peak_long >= 10.0, f"long run {peak_long} too short for base {base}"
+
+    def test_run_count_honoured_on_time_trial_weeks(self, generator):
+        """Regression: easy runs only used days [1,3,5,7], so a day-3 time trial
+        starved a 6-run week of a slot. With enough volume the frequency holds."""
+        plan = generator.generate_plan(
+            current_weekly_km=45.0,
+            weeks=10,
+            runs_per_week=6,
+            vdot=45,
+            focus_area="vo2max",
+            focus_distance=10.0,
+        )
+        for w in plan["weekly_plans"]:
+            if w.get("is_recovery"):
+                continue
+            run_count = sum(
+                1
+                for d in w["daily_workouts"]
+                if d.get("type") not in ("rest", "recovery")
+                and d.get("distance", 0) > 0
+            )
+            assert run_count == 6, f"week {w['week']} has {run_count} runs, expected 6"

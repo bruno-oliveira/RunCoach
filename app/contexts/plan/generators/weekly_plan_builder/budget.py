@@ -10,6 +10,7 @@ from typing import Any, Dict, List, Optional
 from app.core.training.quality_caps import (
     BASE_QUALITY_MIN_DOSE_KM,
     MAX_EASY_RUN_KM,
+    MAX_EASY_VS_LONG_RUN,
     MAX_QUALITY_VS_LONG_RUN,
     MIN_EASY_PER_RUN_KM,
     QUALITY_MIN_DOSE_KM,
@@ -195,6 +196,7 @@ def allocate_easy_distances(
     long_run_distance: float,
     easy_runs: int,
     max_easy_abs_km: float = MAX_EASY_RUN_KM,
+    easy_vs_long_ratio: float = MAX_EASY_VS_LONG_RUN,
 ) -> List[float]:
     """Distribute the easy-run budget evenly across easy days.
 
@@ -202,14 +204,18 @@ def allocate_easy_distances(
     ceiling (``cap_easy_distance``), so on low-run-count plans the week falls
     short of target rather than ballooning easy days into second long runs.
     Trail callers pass ``max_easy_abs_km=inf`` since back-to-back long days are
-    intentional there.
+    intentional there. Low-frequency road callers pass a tighter
+    ``easy_vs_long_ratio`` so the single easy slot stays clearly below the long
+    run instead of becoming a second long effort.
     """
     if easy_runs <= 0:
         return []
     easy_budget = remaining_km - quality_total
     per_run = easy_budget / easy_runs
     return [
-        cap_easy_distance(per_run, long_run_distance, max_easy_abs_km)
+        cap_easy_distance(
+            per_run, long_run_distance, max_easy_abs_km, easy_vs_long_ratio
+        )
         for _ in range(easy_runs)
     ]
 

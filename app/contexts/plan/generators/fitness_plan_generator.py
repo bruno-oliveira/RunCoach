@@ -124,8 +124,15 @@ def _fitness_long_run_km(
     if runs_per_week <= 3:
         ratio += 0.04
 
+    # The ceiling tracks the focus distance but stays generous enough that the
+    # ratio-driven endurance dose isn't throttled to a token run at higher
+    # weekly volume. The old ``focus * 0.7`` collapsed a 10 km-focus long run to
+    # an 8 km ceiling — so a 50 km/week plan's "long run" was 13% of the week
+    # (no real endurance session). Scaling at ``focus * 1.3`` lets the long run
+    # breathe (a 10 km focus reaches ~13 km, ~24% of a 55 km week) while still
+    # staying well below a race-specific long run, which a fitness plan is not.
     if focus_distance and focus_distance > 0:
-        cap = max(8.0, min(focus_distance * 0.7, 26.0))
+        cap = max(10.0, min(focus_distance * 1.3, 26.0))
     else:
         cap = 18.0
 
@@ -520,12 +527,21 @@ class FitnessPlanGenerator(BasePlanGenerator):
                     week_km = peak_km * curve[min(week_in_taper, len(curve) - 1)]
 
             week_km = min(week_km, high_water * WEEK_OVER_WEEK_CAP)
+            # The min-bump floor keeps loading weeks progressing, but it must not
+            # apply to the taper: ``max(taper_km, high_water * 1.01)`` would lift
+            # the taper week back above the peak it is meant to descend from,
+            # inverting the taper (the final week became the plan's biggest). The
+            # peak phase is also excluded (it oscillates around the ceiling).
             week_km = (
                 max(week_km, high_water * MIN_NON_RECOVERY_BUMP)
-                if week_num > 1 and phase != "peak"
+                if week_num > 1 and phase not in ("peak", "taper")
                 else week_km
             )
-            high_water = week_km
+            # The taper descends, so it must never raise the high-water mark used
+            # to anchor later weeks (there are none after taper, but keep the
+            # invariant clean and avoid feeding an inflated value forward).
+            if phase != "taper":
+                high_water = week_km
             weekly_progression.append(round(week_km, 1))
 
         return weekly_progression

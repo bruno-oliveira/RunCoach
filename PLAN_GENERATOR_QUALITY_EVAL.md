@@ -192,3 +192,51 @@ To regenerate, instantiate the three generators and call `generate_plan(...)` ov
 parameter grids, then read `total_km` / `daily_workouts[*].{type,distance,quality}` /
 `is_recovery` off each weekly dict (distance returns a list of weeks; performance/fitness
 return a dict with `weekly_plans`).
+
+---
+
+# Part II — Fixes Applied (2026-06-17)
+
+All nine items were worked. Seven were code-fixed; two were **revised on deeper inspection**
+— the original audit over-called them, and the corrected reasoning is recorded below rather
+than forcing a change that would have made the plans *worse*. The full suite stays green
+(33k+ tests) and CI pyright/ruff are clean.
+
+> **Side question — is a 21.6 km long run for a 28 km trail race OK?** **Yes — that's good.**
+> 77% of race distance is right in the intended band for a *standard*-bracket trail race
+> (`TRAIL_PEAK_RACE_FRACTION["standard"] = 0.72` targets ~20 km; the log-curve cap allows a
+> bit more). Trail long runs are dosed higher than road as a fraction of race distance
+> because they're run slower, on time-on-feet with vert. Hand it to the athlete unedited.
+
+## Disposition by issue
+
+| # | Sev | Status | What changed |
+|---|-----|--------|--------------|
+| 1 | High | **Fixed** | Fitness taper no longer inverted — the `MIN_NON_RECOVERY_BUMP` floor is excluded from taper weeks, and taper weeks no longer raise the high-water mark. Race week now descends to 50–67% of peak. |
+| 2 | High | **Fixed** | Fitness long-run ceiling changed from `focus×0.7` (≈8 km hard cap) to `focus×1.3` — long run now 11–13 km / 22–28% of week at higher volume instead of a token 13%. |
+| 3 | High | **Fixed (reframed)** | The real artifact was a *second* near-equal long effort (long 14 + "easy" 13), not the long run itself (5K/10K long > race distance is intended — see the engine tests). Added `LOW_FREQ_EASY_VS_LONG_RUN = 0.68`: on ≤3-run road weeks the easy slot is held clearly below the long run, so one long run + a genuinely easier support run instead of two ~equal grinds. The long run still carries the week's volume. |
+| 4 | Med | **Resolved via #9** | The genuinely jagged ramps were the *fitness* family, and their dips were dropped-run artifacts on time-trial weeks — fixed by #9. Remaining cross-family >10% steps are **deload→resume** jumps, which are correct periodization (see #5). |
+| 5 | Med | **Revised — intentionally not changed** | The audit's "re-anchor the 10% rule to the previous week, not the high-water mark" would be **coaching-wrong**: high-water anchoring is what lets a plan *resume* to ~pre-deload load after a recovery week. Re-anchoring to the (low) deload week would waste 2–3 weeks re-climbing every cycle. The high-water resume is a feature; the "27% jump" it shows when measured deload-to-resume is expected and safe. |
+| 6 | Med | **Fixed** | New `assess_frequency_volume_adequacy` + a non-blocking plan-view banner: when ≤3 runs cap the realized peak below 90% of the runner's base (silent detraining — e.g. 60 km base → 33 km peak), the plan now says so and suggests adding a day. |
+| 7 | Low | **Reviewed — working as intended** | 88–93% easy-*volume* for 5K/10K is the **correct** consequence of physiologically-short 5K/10K quality sessions (raising it means prescribing unrealistically long intervals or stripping easy volume). Session-count polarisation is already on target (~20% hard), and the engine's *upper* ceiling test caps hard-volume at 28%. No change — changing it would degrade specificity for a subjective gain. |
+| 8 | Low | **Fixed** | New `_smooth_taper` re-anchors taper weeks to the **realized** peak (not the progression's unrealized high-water), so race week lands at the intended ~50–55% instead of ~70%. The taper scale-down uses `protect_long=False` so the long run tapers down in proportion rather than dominating a light race week. |
+| 9 | Low | **Fixed** | Easy-run scheduling now considers all open days (not just `[1,3,5,7]`), so a day-3 time trial no longer starves a 6-run week of a slot. Run counts are stable except where weekly *volume* genuinely can't support the frequency (correct). |
+
+## Files touched
+- `app/contexts/plan/generators/fitness_plan_generator.py` — taper floor + high-water (#1), long-run cap (#2)
+- `app/contexts/plan/generators/base_plan_generator.py` — easy-day candidates (#9)
+- `app/core/training/tuning.py` — `LOW_FREQ_EASY_VS_LONG_RUN` (#3)
+- `app/core/training/quality_caps.py` — `easy_run_cap`/`cap_easy_distance` accept a long-run ratio (#3)
+- `app/contexts/plan/generators/weekly_plan_builder/{orchestrator,budget}.py` — thread the low-freq easy ratio (#3)
+- `app/contexts/plan/generators/workout_scaler.py` — `fill_shortfall` easy ratio (#3); `scale_down` `protect_long` flag (#8)
+- `app/contexts/plan/generators/plan_generator.py` — `_smooth_taper` pass (#8)
+- `app/core/training/long_run_calculator.py` — `assess_frequency_volume_adequacy` (#6)
+- `app/contexts/plan/plan_template_context.py` + `app/web/templates/plan.html` — frequency-warning banner (#6)
+
+## Revised verdict
+
+| Family | Was | Now |
+|--------|-----|-----|
+| Distance | B / B+ | **A−** — clean ramps & deloads, correct tapers across all cells, sane low-frequency distribution, and an honest "add a day" advisory instead of silent detraining. |
+| Performance | B | **B+** — unchanged engine (its ramp jumps are legitimate deload-resumes); benefits from the shared taper/long-run scaler fixes. |
+| Fitness | C− | **B** — real taper, a real long run, and a smooth ramp; still a deliberately gentler peak than race prep. |

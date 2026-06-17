@@ -75,7 +75,12 @@ class BasePlanGenerator:
         three consecutive run days when possible.
         """
         scheduled_days = {w["day"] for w in daily_workouts}
-        available_days = [d for d in [1, 3, 5, 7] if d not in scheduled_days]
+        # Prefer the well-spaced odd days, but fall back to any open day so the
+        # requested run frequency can still be met when a fixed session (e.g. a
+        # day-3 time trial) consumes one of the odd slots. Without the even-day
+        # fallback a 6-run week could only ever place easy runs on days
+        # {1,5,7} once day 3 was taken, capping the week a run short of target.
+        available_days = [d for d in range(1, 8) if d not in scheduled_days]
         available_days.sort(
             key=lambda d: self._spacing_score(d, scheduled_days), reverse=True
         )

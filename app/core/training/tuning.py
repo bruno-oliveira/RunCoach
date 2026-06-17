@@ -268,6 +268,17 @@ MAX_KEY_WORKOUT_VS_LONG_RUN = 0.95
 # Individual easy runs may not exceed this fraction of the long run distance.
 MAX_EASY_VS_LONG_RUN = 0.95
 
+# Tighter easy-vs-long fraction for low-frequency road plans (<= 3 runs/week).
+# At low frequency the long run legitimately carries a large share of the
+# week's volume (and on short races may exceed race distance — by design), but
+# without a tighter easy ceiling the *single* easy slot absorbs the same
+# leftover volume and becomes a near-equal second long effort (the documented
+# 3-run artifact: a 5K week of long 14 km + "easy" 13 km + a token interval).
+# Holding easy runs to ~two-thirds of the long run keeps one clear long run and
+# one genuinely easier supporting run; the volume the tighter cap can't place is
+# dropped (the week falls slightly short) rather than spawning a second long run.
+LOW_FREQ_EASY_VS_LONG_RUN = 0.68
+
 # Absolute ceiling on a single easy run (km), ~70-80 min of easy running.
 # This is the primary lever for keeping plans polarized (80/20): a fraction of
 # the long run alone can't stop a 30 km long run from spawning an 18 km "easy"
