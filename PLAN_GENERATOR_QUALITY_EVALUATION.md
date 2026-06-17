@@ -375,9 +375,23 @@ back-calculate from the goal date):
 
 A low base on a short timeline genuinely cannot reach a race-specific long run
 safely; the plan now falls short *honestly* (the ramp is the limit) instead of
-papering over it with a single dangerous jump. Surfacing a "timeline is
-aggressive — your long run will reach only N km" warning is the natural next
-step (a product/validation feature, not a generator change).
+papering over it with a single dangerous jump.
+
+### Long-run adequacy warning (delivered)
+
+A non-blocking banner now tells the runner when their base × timeline left the
+long run short of race specificity. `assess_long_run_adequacy` compares the
+plan's realized peak long run against the race-appropriate target
+(`recommended_peak_long_run` — a race-distance fraction bounded by the bracket
+cap for trail, the experience-tiered cap for road) and fires below 85 % of it.
+It is computed at view time (`_build_long_run_warning` → `plan.html`), so it is
+pure, needs no migration, and applies retroactively to existing plans. Race
+plans only (fitness plans have no race to be specific for). Calibrated to stay
+quiet on healthy plans and fire exactly on the under-resourced ones, e.g.:
+
+- 28 km trail, base 15 / 8 wk → ⚠️ "peaks at 13 km, ~66 % of the ~20 km target".
+- Marathon, base 25 / 12 wk → ⚠️ "peaks at 22 km, ~64 % of the ~34 km target".
+- 28 km trail base 20 / 12 wk, marathon base 40 / 16 wk, all 10K/half → quiet.
 
 ### Still open (lower priority / out of this change set)
 

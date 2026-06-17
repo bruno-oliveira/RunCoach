@@ -58,6 +58,97 @@ def get_trail_peak_race_fraction(
     return _TRAIL_PEAK_RACE_FRACTION[trail_profile.bracket]
 
 
+# A plan whose realized peak long run is below this fraction of the
+# race-appropriate target has too little runway (base × weeks) to build race
+# specificity safely — surface a non-blocking warning rather than papering over
+# it with a dangerous single-week jump.
+LONG_RUN_ADEQUACY_THRESHOLD = 0.85
+
+
+def recommended_peak_long_run(
+    target_distance: float,
+    experience_level: str = "intermediate",
+    trail_profile: Optional[TrailProfile] = None,
+    training_terrain: str | None = None,
+) -> float:
+    """The race-appropriate peak long run a well-resourced plan would reach.
+
+    This is the *target* the long-run progression aims for given ample runway —
+    a race-distance fraction (bounded by the bracket cap) for trail, and the
+    experience-tiered cap for road. Comparing the plan's realized peak long run
+    against this surfaces when the base + timeline left it short of race
+    specificity (see ``assess_long_run_adequacy``).
+    """
+    if trail_profile is not None:
+        frac = get_trail_peak_race_fraction(trail_profile, training_terrain)
+        cap = _trail_long_run_cap(trail_profile, experience_level)
+        return round(min(target_distance * frac, cap), 1)
+    tier = ROAD_LONG_RUN_CAPS.get(target_distance)
+    if tier:
+        return float(tier.get(experience_level, tier["intermediate"]))
+    return round(target_distance * FALLBACK_LONG_RUN_CAP_RATIO, 1)
+
+
+def assess_long_run_adequacy(
+    achieved_peak_long_run_km: float,
+    target_distance: float,
+    experience_level: str = "intermediate",
+    trail_profile: Optional[TrailProfile] = None,
+    training_terrain: str | None = None,
+    weeks: Optional[int] = None,
+) -> Optional[dict]:
+    """Flag when a plan's peak long run falls short of race specificity.
+
+    Returns ``None`` when the long run reaches a race-appropriate distance, or a
+    structured warning when the base + timeline didn't allow a safe ramp to it.
+    The long run is bounded by the week-over-week growth cap, so from a low base
+    on a short timeline it *correctly* falls short rather than spiking — this
+    surfaces that trade-off to the runner so they can add weeks or build a
+    bigger base instead of being silently under-prepared.
+    """
+    if achieved_peak_long_run_km <= 0 or target_distance <= 0:
+        return None
+    recommended = recommended_peak_long_run(
+        target_distance,
+        experience_level,
+        trail_profile=trail_profile,
+        training_terrain=training_terrain,
+    )
+    if recommended <= 0:
+        return None
+    if achieved_peak_long_run_km >= recommended * LONG_RUN_ADEQUACY_THRESHOLD:
+        return None
+
+    achieved = round(achieved_peak_long_run_km, 1)
+    recommended = round(recommended, 1)
+    pct = round(achieved / recommended * 100)
+    race_label = (
+        f"{target_distance:g} km trail race"
+        if trail_profile is not None
+        else f"{target_distance:g} km race"
+    )
+    message = (
+        f"Your longest run peaks at {achieved:g} km — about {pct}% of the "
+        f"~{recommended:g} km we'd aim for before a {race_label}. With this "
+        "starting base and number of weeks there isn't enough runway to build "
+        "the long run that far without ramping it dangerously fast, so the plan "
+        "holds it to a safe progression instead."
+    )
+    suggestion = (
+        "Add 2-4 weeks to the plan, or build a higher weekly base before "
+        "starting, to reach a more race-specific long run safely."
+    )
+    return {
+        "achieved_km": achieved,
+        "recommended_km": recommended,
+        "pct_of_recommended": pct,
+        "race_distance_km": target_distance,
+        "weeks": weeks,
+        "message": message,
+        "suggestion": suggestion,
+    }
+
+
 def get_weekly_long_run_ratio_cap(
     phase: str,
     trail_profile: Optional[TrailProfile] = None,

@@ -285,3 +285,64 @@ class TestBuildOverlay:
         # Easy workout shouldn't be softened (even if signal would otherwise trigger)
         if key in overlay:
             assert overlay[key]["is_fatigue_softened"] is False
+
+
+# ── long-run adequacy warning wiring ───────────────────────────────────────
+
+
+def _fake_plan(**kw):
+    from types import SimpleNamespace
+
+    defaults = dict(
+        plan_type="distance",
+        target_distance="42.2",
+        is_trail=False,
+        target_elevation_gain_m=None,
+        current_weekly_km=25.0,
+        training_terrain=None,
+        weeks_duration=12,
+    )
+    defaults.update(kw)
+    tp = SimpleNamespace(**defaults)
+    # mirror the model's target_distance_km property
+    tp.target_distance_km = float(tp.target_distance) if tp.target_distance else 0.0
+    return tp
+
+
+def _plan_data_with_peak_long(peak_long_km):
+    return [
+        {
+            "week": 1,
+            "is_recovery": False,
+            "daily_workouts": [
+                {"day": 6, "type": "long", "distance": peak_long_km},
+                {"day": 3, "type": "easy", "distance": 6.0},
+            ],
+        }
+    ]
+
+
+def test_build_long_run_warning_fires_for_underbuilt_marathon():
+    from app.contexts.plan.plan_template_context import _build_long_run_warning
+
+    warning = _build_long_run_warning(_fake_plan(), _plan_data_with_peak_long(22.0))
+    assert warning is not None
+    assert warning["pct_of_recommended"] < 85
+
+
+def test_build_long_run_warning_quiet_when_adequate():
+    from app.contexts.plan.plan_template_context import _build_long_run_warning
+
+    warning = _build_long_run_warning(
+        _fake_plan(weeks_duration=18), _plan_data_with_peak_long(33.0)
+    )
+    assert warning is None
+
+
+def test_build_long_run_warning_skips_fitness_plans():
+    from app.contexts.plan.plan_template_context import _build_long_run_warning
+
+    warning = _build_long_run_warning(
+        _fake_plan(plan_type="fitness"), _plan_data_with_peak_long(10.0)
+    )
+    assert warning is None
