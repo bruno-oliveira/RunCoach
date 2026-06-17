@@ -259,12 +259,28 @@ QUALITY_CAPS_BY_DISTANCE = {
 
 DEFAULT_QUALITY_CAPS = {"tempo": 12.0, "interval": 10.0, "hill": 8.0}
 
-# Minimum *meaningful* dose for a quality slot (km). Below this, the main set
-# left after a ~1 km warm-up + cool-down is too thin to be worth a quality day.
-# An under-dose slot is floored up to this when the week can afford it (borrowing
-# from the easy budget), otherwise demoted to an easy run — never scheduled as a
-# token quality session. See weekly_plan_builder.resolve_low_budget_quality.
-QUALITY_MIN_DOSE_KM = {"tempo": 4.0, "interval": 3.0, "hill": 3.0}
+# Minimum *meaningful* dose for a quality slot (km) in build/peak — the phases
+# whose quality work is meant to be substantial. The session total has to clear
+# this so that, after the warm-up + cool-down bookends, the working set is a
+# real stimulus. Tempo floors at ~6 km, leaving ~4 km of continuous threshold
+# (~20 min) — Daniels' threshold floor and the low end of Runna's 20-40 min
+# tempo progression. Interval / hill floors stay lower: VO2max work is more
+# taxing and is prescribed in short, fast reps, so a ~3 km slot (≈2 km of work,
+# e.g. 5 × 400 m) is a complete session even on low-volume weeks — the working
+# set still grows with the lighter warm-up/cool-down split and with budget on
+# higher-volume plans. An under-dose slot is floored up to its dose when the
+# week can afford it (borrowing from the easy budget), otherwise demoted to an
+# easy run — never scheduled as a token quality session. See
+# weekly_plan_builder.resolve_low_budget_quality.
+QUALITY_MIN_DOSE_KM = {"tempo": 6.0, "interval": 3.0, "hill": 3.0}
+
+# Base phase keeps a deliberately lighter threshold dose: base tempo is an
+# introductory stimulus, not a peak-grade session, so it floors only to a level
+# that guarantees a meaningful-but-modest continuous block (~6 km would push it
+# to a build-grade 20-min effort, which is too hard for base). Base interval /
+# hill slots are intentionally left untouched (light strides / short sprints),
+# so only the tempo dose is overridden here.
+BASE_QUALITY_MIN_DOSE_KM = {"tempo": 4.0}
 
 # Floor a quality slot only if each easy run would still clear this length after
 # the floored km is borrowed from the easy budget; otherwise demote to easy.

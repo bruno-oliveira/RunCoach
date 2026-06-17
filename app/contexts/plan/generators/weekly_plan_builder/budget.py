@@ -8,6 +8,7 @@ attach duration hints. No back-reference to the orchestrator.
 from typing import Any, Dict, List, Optional
 
 from app.core.training.quality_caps import (
+    BASE_QUALITY_MIN_DOSE_KM,
     MAX_EASY_RUN_KM,
     MAX_QUALITY_VS_LONG_RUN,
     MIN_EASY_PER_RUN_KM,
@@ -75,18 +76,20 @@ def resolve_low_budget_quality(
     Build/peak quality is meant to be substantial, so it is floored up to a
     meaningful dose when affordable. Base interval/hill slots are left alone
     (intentionally light strides / short hill sprints — fixed doses, not
-    budget-fillers). Base *tempo* slots are floored like build/peak: a
-    threshold stimulus needs a minimum continuous dose, and the percentage
-    budgeting was emitting 1.3-1.6 km T blocks in half/marathon base weeks —
-    a session that costs a quality day yet delivers no threshold adaptation.
-    Flooring to the min dose (~2-2.5 km at T after warm-up/cool-down) keeps
-    base deliberately light while making the slot worth running. The taper
-    sharpener is kept short — never floored up — but a token sliver that the
-    week is too small to support is demoted to easy so tiny / low-volume
-    taper weeks don't carry a malformed sub-floor session (audit G2).
+    budget-fillers). Base *tempo* slots are floored too, but to a lighter dose
+    (``BASE_QUALITY_MIN_DOSE_KM``): a threshold stimulus needs a minimum
+    continuous block, and the percentage budgeting was emitting 1.3-1.6 km T
+    blocks in half/marathon base weeks — a session that costs a quality day yet
+    delivers no threshold adaptation. Flooring to the lighter base dose keeps
+    the slot worth running while staying introductory, rather than the
+    build-grade ~20-min effort the full dose would produce. The taper sharpener
+    is kept short — never floored up — but a token sliver that the week is too
+    small to support is demoted to easy so tiny / low-volume taper weeks don't
+    carry a malformed sub-floor session (audit G2).
     """
     if phase not in ("base", "build", "peak", "taper"):
         return
+    doses = BASE_QUALITY_MIN_DOSE_KM if phase == "base" else QUALITY_MIN_DOSE_KM
     phys_caps = _get_quality_caps(target_distance, phase)
     ceiling = long_run_distance * MAX_QUALITY_VS_LONG_RUN
     for qtype in ("tempo", "interval", "hill"):
@@ -97,7 +100,7 @@ def resolve_low_budget_quality(
         budget = quality_distances.get(qtype, 0)
         if budget <= 0:
             continue
-        dose = QUALITY_MIN_DOSE_KM.get(qtype, 0)
+        dose = doses.get(qtype, 0)
         if budget >= dose:
             continue  # already a meaningful dose
 

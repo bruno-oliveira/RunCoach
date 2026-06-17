@@ -59,15 +59,24 @@ def _step(
 def _wucd_m(total_m: int) -> int:
     """Warm-up / cool-down distance (metres) that fits the workout.
 
+    A warm-up and cool-down are bookends, not the session: at 25% each they
+    consumed half of every sub-8 km quality workout, leaving a sub-Daniels
+    working set (a 4 km tempo became 2 km of threshold, ~10 min). Capping the
+    share at 18% (and the absolute length at 1.6 km, ~10 min of easy running)
+    redirects that distance into the working set without changing the session's
+    total distance — so weekly mileage and the structural caps are untouched,
+    the threshold/interval dose simply grows. A larger session's bookends stay
+    bounded by the absolute cap rather than scaling indefinitely.
+
     Snapped to whole 100 m increments so the value, shown as kilometres,
     already has at most one decimal place (e.g. 700 m -> 0.7 km) and survives
     one-decimal truncation unchanged. This keeps the executable step distance
     and the distance cited in the description identical: both are derived from
     this single helper, and neither can drift to a 3-decimal figure like
     0.775 km. Floors (rather than rounds) to the 100 m below so the warm-up
-    never claims more distance than 25% of the workout.
+    never claims more distance than 18% of the workout.
     """
-    raw = min(_WARMUP_M, max(500, int(total_m * 0.25)))
+    raw = min(1600, max(500, int(total_m * 0.18)))
     return (raw // 100) * 100
 
 
