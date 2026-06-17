@@ -20,6 +20,7 @@ from app.core.training.training_constants import (
 from app.core.training.tuning import (
     FALLBACK_LONG_RUN_CAP_RATIO,
     LONG_RUN_VOLUME_RATIO,
+    LOW_FREQ_LONG_RUN_RATIO_FLOOR,
     ROAD_LONG_RUN_CAPS,
     TRAIL_LR_CAP_EXPERIENCE,
     TRAIL_LR_CAP_LOG_A,
@@ -59,10 +60,26 @@ def get_weekly_long_run_ratio_cap(
     phase: str,
     trail_profile: Optional[TrailProfile] = None,
     training_terrain: str | None = None,
+    max_runs: Optional[int] = None,
 ) -> float:
-    """Return max long-run share of weekly volume for this context."""
+    """Return max long-run share of weekly volume for this context.
+
+    Road plans get a frequency-aware ceiling: a low-frequency schedule has few
+    runs to spread volume across, so the long run is *legitimately* a bigger
+    slice of the week (a 2-run week is essentially one long + one quality/easy),
+    but it must never become the whole week. Without a cap at low frequency the
+    long run absorbs all the volume the shortfall-fill couldn't place elsewhere,
+    cratering quality work to a token sliver and pushing the long run to 85-90 %
+    of the week — a classic overuse pattern. The 4+ run ceiling (0.55) is left
+    unchanged so the production-quality higher-frequency plans are untouched.
+    """
     if trail_profile is not None and training_terrain == "flat" and phase == "peak":
         return 0.65
+    if trail_profile is None and max_runs is not None:
+        if max_runs <= 2:
+            return 0.62
+        if max_runs == 3:
+            return 0.55
     return 0.55
 
 
@@ -71,6 +88,7 @@ def get_long_run_ratio_range(
     target_distance: float,
     weeks: int,
     trail_profile: Optional[TrailProfile] = None,
+    max_runs: Optional[int] = None,
 ) -> tuple[float, float]:
     """
     Get the long run ratio range (min, max) for a phase.
@@ -81,6 +99,8 @@ def get_long_run_ratio_range(
         weeks: Total weeks in plan (for adjusting ratios in short plans).
         trail_profile: Optional trail profile — its bracket selects the
             trail ratio table (ultras pull a higher long-run share).
+        max_runs: Runs/week. Low-frequency road plans raise the long-run
+            floor so the few runs can carry the prescribed weekly volume.
     """
     if trail_profile is not None:
         min_ratio, max_ratio = _TRAIL_LONG_RUN_RATIOS[trail_profile.bracket][phase]
@@ -97,6 +117,14 @@ def get_long_run_ratio_range(
         min_ratio = max(0.25, min_ratio - adjustment)
         max_ratio = max(min_ratio + 0.02, max_ratio - adjustment)
 
+    # Low-frequency road plans: lift the long-run floor so 2-3 runs can hold
+    # the week's volume (the other runs are bounded relative to the long run).
+    if trail_profile is None and max_runs is not None:
+        floor = LOW_FREQ_LONG_RUN_RATIO_FLOOR.get(max_runs, {}).get(phase)
+        if floor is not None:
+            min_ratio = max(min_ratio, floor)
+            max_ratio = max(max_ratio, floor + 0.04)
+
     return (min_ratio, max_ratio)
 
 
@@ -108,6 +136,7 @@ def calculate_long_run_ratio(
     is_recovery_week: bool,
     total_weeks: int,
     trail_profile: Optional[TrailProfile] = None,
+    max_runs: Optional[int] = None,
 ) -> float:
     """
     Calculate long run ratio with progression within phase.
@@ -120,6 +149,7 @@ def calculate_long_run_ratio(
         is_recovery_week: Whether this is a recovery week
         total_weeks: Total weeks in plan
         trail_profile: Optional trail profile — bracket-aware ratios.
+        max_runs: Runs/week — lifts the long-run floor on low-frequency plans.
 
     Returns:
         Long run ratio as a decimal (e.g., 0.35 for 35%)
@@ -129,6 +159,7 @@ def calculate_long_run_ratio(
         target_distance,
         total_weeks,
         trail_profile=trail_profile,
+        max_runs=max_runs,
     )
 
     week_in_phase = calculate_week_in_phase(week_number, phase, phases)
@@ -219,6 +250,7 @@ def calculate_long_run_distance(
     trail_profile: Optional[TrailProfile] = None,
     training_terrain: str | None = None,
     long_run_pace_min_km: Optional[float] = None,
+    max_runs: Optional[int] = None,
 ) -> float:
     """
     Calculate long run distance with proper progression and phase-specific percentage.
@@ -239,6 +271,7 @@ def calculate_long_run_distance(
         is_recovery_week,
         weeks,
         trail_profile=trail_profile,
+        max_runs=max_runs,
     )
 
     long_run_base = total_km * long_run_ratio
@@ -272,6 +305,23 @@ def calculate_long_run_distance(
             trail_profile=trail_profile,
             training_terrain=training_terrain,
         )
+        long_run_base = min(long_run_base, total_km * weekly_cap_ratio)
+
+    # Low-frequency road weekly-share cap, applied upfront so the remaining
+    # volume flows to the quality/easy budget instead of the long run absorbing
+    # it all. Mirrors the trail safety cap above. 4+ run road plans are left to
+    # the post-pass (enforce_long_run_ratio_cap), which can redistribute excess
+    # to their easy runs; low-frequency weeks often have no easy run to receive
+    # it, so bounding the long run before sizing quality is what keeps both
+    # sessions substantial.
+    if (
+        trail_profile is None
+        and max_runs is not None
+        and max_runs <= 3
+        and total_km > 0
+        and not is_recovery_week
+    ):
+        weekly_cap_ratio = get_weekly_long_run_ratio_cap(phase, max_runs=max_runs)
         long_run_base = min(long_run_base, total_km * weekly_cap_ratio)
 
     # Road-only long-run time cap, layered on the % cap (audit E7 time cap).

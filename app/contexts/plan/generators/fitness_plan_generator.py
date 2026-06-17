@@ -96,6 +96,42 @@ _COACHING_TYPE_MAP = {
 }
 
 
+def _fitness_long_run_km(
+    weekly_km: float,
+    runs_per_week: int,
+    focus_distance: Optional[float],
+) -> float:
+    """Long-run distance for a fitness week, responsive to focus and frequency.
+
+    The previous flat ``min(weekly_km * 0.25, 18)`` made the endurance dose
+    blind to both the focus distance and how often the runner trains: a 5K
+    focus and a marathon focus produced nearly identical long runs, and a
+    low-frequency plan leaned no harder on its single long session than a
+    high-frequency one (audit recommendation #3). Here the long-run *share*
+    grows with the focus distance (a marathon focus earns a bigger endurance
+    session than a 5K focus) and with low training frequency (fewer runs each
+    carry more of the week), while an absolute cap that also tracks the focus
+    distance keeps it sane. Fitness plans are not race prep, so the cap stays
+    well below a full marathon-specific long run.
+    """
+    if focus_distance and focus_distance >= 30:
+        ratio = 0.32
+    elif focus_distance and focus_distance >= 18:
+        ratio = 0.28
+    else:
+        ratio = 0.25
+    # Fewer runs → the long run is a larger slice of the week.
+    if runs_per_week <= 3:
+        ratio += 0.04
+
+    if focus_distance and focus_distance > 0:
+        cap = max(8.0, min(focus_distance * 0.7, 26.0))
+    else:
+        cap = 18.0
+
+    return round(max(5.0, min(weekly_km * ratio, cap)), 1)
+
+
 class FitnessPlanGenerator(BasePlanGenerator):
     """Generates fitness-focused training plans with VDOT-driven zones.
 
@@ -203,8 +239,7 @@ class FitnessPlanGenerator(BasePlanGenerator):
         total_assigned_km = 0.0
         workout_schedule = []
 
-        long_run_km = min(weekly_km * 0.25, 18.0)
-        long_run_km = max(long_run_km, 5.0)
+        long_run_km = _fitness_long_run_km(weekly_km, runs_per_week, focus_distance)
 
         workout_schedule.append(
             {

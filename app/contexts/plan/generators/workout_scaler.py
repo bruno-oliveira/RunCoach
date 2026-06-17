@@ -325,13 +325,20 @@ def enforce_long_run_ratio_cap(
     training_terrain: Optional[str] = None,
     trail_profile=None,
     max_ratio: float = 0.55,
-    min_runs_for_cap: int = 4,
+    min_runs_for_cap: int = 2,
     pace_zones: Optional[Dict] = None,
+    max_runs: Optional[int] = None,
 ) -> float:
     """Cap long-run dominance for practical weekly distribution.
 
-    Applies only on 4+ running-day weeks. Excess long-run distance is
-    redistributed to easy runs where possible.
+    Applies on 2+ running-day weeks. On 4+ run weeks excess long-run distance
+    is redistributed to the (capped) easy runs. On low-frequency weeks (2-3
+    runs) there is often no easy run to receive it — the week is one long plus
+    one quality session — so the excess is simply trimmed: the week falls a
+    little short of its volume target rather than carrying a long run that is
+    85-90 % of the week. The frequency-aware ceiling (looser for 2-run weeks,
+    which are inherently long-run-centric) comes from
+    ``get_weekly_long_run_ratio_cap``.
     """
     running = [
         w
@@ -356,6 +363,12 @@ def enforce_long_run_ratio_cap(
             phase,
             trail_profile=trail_profile,
             training_terrain=training_terrain,
+        )
+    elif max_runs is not None:
+        effective_max_ratio = long_run_calculator.get_weekly_long_run_ratio_cap(
+            phase,
+            training_terrain=training_terrain,
+            max_runs=max_runs,
         )
 
     max_long = total * effective_max_ratio

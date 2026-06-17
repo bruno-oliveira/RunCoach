@@ -294,3 +294,60 @@ Ordered by impact-to-effort. **No code is changed in this document.**
 | **Performance** | ✅ Best-in-class within RunCoach; use as the template. |
 | **Fitness** | 🟡 Safe but generic; endurance dose is frequency/-focus-blind. |
 | **Beginner** | 🟡 Sound ramp; fix the 5K taper and the late-plan plateau. |
+
+---
+
+## 7. Improvements applied — low-frequency (2-3 runs/week) robustness
+
+This change set hardens the **2-3 runs/week** regime across every road distance
+(and makes the fitness long run focus-aware). All changes are gated to low
+frequency, so the production-quality **4-6 run** plans are byte-for-byte
+unchanged (verified: deload-never-above-load, long-run share 33-50 %). A
+measurement harness lives at `scripts/eval_lowfreq.py`.
+
+### What changed
+
+1. **Frequency-aware long-run share cap** (`get_weekly_long_run_ratio_cap`,
+   `enforce_long_run_ratio_cap`). The long-run dominance cap now applies down to
+   2 runs/week (was 4+) with a frequency-scaled ceiling (0.62 at 2 runs, 0.55 at
+   3, 0.55 at 4+). A 2-run week is one long + one quality, so the long run used
+   to absorb every km the rest of the week couldn't hold.
+2. **Frequency-aware long-run floor** (`LOW_FREQ_LONG_RUN_RATIO_FLOOR`). At low
+   frequency the other runs are each bounded relative to the long run, so the
+   long run must anchor a *bigger* share or the few runs sum to less than the
+   target volume. Floors lift the early-build long run so 2-3 runs can actually
+   carry the prescribed mileage. Plus an upfront road weekly-share cap so the
+   quality session gets a real budget instead of the leftover sliver.
+3. **Accurate low-frequency `distributable` peak cap**. The peak target counted
+   *every* slot at the generous long-run ceiling, but a 2-3 run week has at most
+   one easy run (bounded by the absolute easy cap) and one quality session. The
+   over-estimate let the peak target sit above what the week could hold, so the
+   deload (taken from the inflated high-water mark) landed *above* the loading
+   weeks. Now each slot is sized at its true cap.
+4. **Recovery-dip smoothing** (`_smooth_recovery_dips`). A final pass guarantees
+   a deload week is a genuine dip below the loading week that precedes it.
+5. **Focus/frequency-aware fitness long run** (`_fitness_long_run_km`). Replaces
+   the flat `min(weekly × 0.25, 18)` so a marathon focus earns a longer endurance
+   session than a 5K focus (5K → 8 km, Half → 15 km, Marathon → 18 km).
+
+### Before → after (representative)
+
+| Case | Metric | Before | After |
+|------|--------|:------:|:-----:|
+| 2-run plans (all distances) | peak long-run share | **85-91 %** | **≤ 62 %** |
+| 5K base35, 2 runs | long-run share | 85 % | 56 % |
+| 10K base20, 3 runs | 10 %-rule violations / worst jump | 3 / **+25 %** | **0** |
+| 10K base40, 3 runs | 10 %-rule violations | 3 | **0** |
+| Half base50, 3 runs | deload-above-load stumbles | 2 | **0** |
+| Marathon base60, 3 runs | 10 %-rule violations | 1 | **0** |
+| Fitness, marathon focus | peak long run | ~16.5 km (focus-blind) | 18 km (focus-scaled) |
+
+### Still open (lower priority / out of this change set)
+
+- **Beginner 5K taper + plateau** (recommendation #5) — untouched.
+- **High-base + low-frequency** (e.g. 60 km base on 2-3 runs) still shows honest
+  "below base" weeks: 2-3 runs genuinely cannot hold that volume. The plan is now
+  *well-shaped* at the volume those runs can carry; steering such users toward a
+  fitness plan (recommendation #1, last bullet) remains a product decision.
+- A residual single ~12-15 % jump remains on a couple of 3-run plans — this is
+  the legitimate post-deload resumption toward the high-water mark, not a defect.

@@ -191,4 +191,44 @@ class TrainingPlanGenerator:
 
             training_plan.append(weekly_plan)
 
+        _smooth_recovery_dips(training_plan, pace_zones)
+
         return training_plan
+
+
+def _smooth_recovery_dips(
+    training_plan: List[Dict[str, Any]],
+    pace_zones: Optional[Dict],
+) -> None:
+    """Keep deload weeks a genuine dip below the surrounding load (in place).
+
+    A recovery week's target is ``RECOVERY_WEEK_RATIO`` of the progression's
+    high-water mark. On low-frequency plans for a high base the loading weeks
+    fall short of that high-water mark (a 2-3 run week can't physically hold the
+    volume), so a deload anchored to the unrealized high-water can land *above*
+    the loading weeks around it — a recovery week harder than the work weeks,
+    which reads as a broken curve. This pass shrinks any recovery week back to
+    ``RECOVERY_WEEK_RATIO`` of the loading week that precedes it, draining the
+    excess from its flexible (easy/long) runs. Loading weeks are never touched.
+    """
+    from app.contexts.plan.generators.weekly_plan_builder import attach_duration_hints
+    from app.contexts.plan.generators.workout_scaler import scale_down as _scale_down
+
+    prev_load_total: Optional[float] = None
+    for weekly_plan in training_plan:
+        if weekly_plan.get("is_recovery"):
+            if prev_load_total is not None:
+                target = round(
+                    prev_load_total * mileage_progression.RECOVERY_WEEK_RATIO, 1
+                )
+                if weekly_plan["total_km"] > target + 0.05:
+                    workouts = weekly_plan["daily_workouts"]
+                    _scale_down(workouts, target, pace_zones=pace_zones)
+                    weekly_plan["total_km"] = round(
+                        sum(w.get("distance", 0) for w in workouts), 1
+                    )
+                    for w in workouts:
+                        w.pop("duration_min", None)
+                    attach_duration_hints(workouts, pace_zones)
+        else:
+            prev_load_total = weekly_plan["total_km"]

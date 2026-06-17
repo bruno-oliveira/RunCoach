@@ -96,6 +96,24 @@ TRAIL_BRACKET_PEAK_TARGETS = {
 # Long-run ratios and caps (see long_run_calculator.py)
 # =============================================================================
 
+# Minimum long-run share of the week for low-frequency road plans, by phase.
+#
+# At 2-3 runs/week the non-long runs are each bounded relative to the long run
+# (easy <= ~0.95x long, quality <= ~0.85x long), so the week's *structural*
+# capacity is roughly ``ratio x (1 + 0.95 + 0.85)`` of the long run. With the
+# standard 4+ run ratios (~0.31 in early build) three runs sum to only ~0.86 of
+# the volume target, so the week craters below its target and then jumps as the
+# long run grows through the block — breaking the 10% rule and detraining the
+# runner. Anchoring the long run to a higher floor lets the few runs actually
+# carry the prescribed volume. A 2-run week is one long + one quality, so it
+# needs an even bigger long-run anchor. The weekly-share *cap*
+# (get_weekly_long_run_ratio_cap) still bounds the top so the long run never
+# dominates. Taper is excluded — volume is intentionally low there.
+LOW_FREQ_LONG_RUN_RATIO_FLOOR = {
+    2: {"base": 0.46, "build": 0.50, "peak": 0.52},
+    3: {"base": 0.34, "build": 0.38, "peak": 0.40},
+}
+
 # Long run as a fraction of weekly volume, by road distance category and phase.
 ROAD_LONG_RUN_RATIOS = {
     "5K": {
