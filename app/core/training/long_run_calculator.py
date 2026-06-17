@@ -19,6 +19,8 @@ from app.core.training.training_constants import (
 )
 from app.core.training.tuning import (
     FALLBACK_LONG_RUN_CAP_RATIO,
+    LONG_RUN_GROWTH_ABS_KM,
+    LONG_RUN_GROWTH_PCT,
     LONG_RUN_VOLUME_RATIO,
     LOW_FREQ_LONG_RUN_RATIO_FLOOR,
     ROAD_LONG_RUN_CAPS,
@@ -251,6 +253,7 @@ def calculate_long_run_distance(
     training_terrain: str | None = None,
     long_run_pace_min_km: Optional[float] = None,
     max_runs: Optional[int] = None,
+    prev_long_run_km: Optional[float] = None,
 ) -> float:
     """
     Calculate long run distance with proper progression and phase-specific percentage.
@@ -330,6 +333,27 @@ def calculate_long_run_distance(
     if trail_profile is None and long_run_pace_min_km and long_run_pace_min_km > 0:
         time_cap_km = (MAX_LONG_RUN_HOURS * 60.0) / long_run_pace_min_km
         long_run_base = min(long_run_base, time_cap_km)
+
+    # Week-over-week growth ceiling for the long run itself, relative to the
+    # previous *loading* week's long run (deloads are passed through unchanged
+    # and skipped here — they dip by design). The weekly 10% rule bounds total
+    # volume but says nothing about how fast the single longest, highest-risk
+    # run may grow. On trail plans the peak phase introduces a race-distance
+    # floor (a fraction of *race distance*, not weekly volume) only once the
+    # peak phase starts, so without this the long run could jump ~30% in a
+    # single step at the build→peak boundary while the weekly total still ramped
+    # smoothly. The long run may grow by the larger of a percentage or a fixed
+    # absolute step, so short-race long runs add a sensible few km while ultra
+    # long runs (large absolute values) still step up proportionally. The
+    # race-distance floor is still reached — just ramped into across the peak
+    # weeks. The km trimmed here flow to the week's easy runs downstream, so
+    # weekly volume is preserved.
+    if prev_long_run_km and prev_long_run_km > 0 and not is_recovery_week:
+        growth_ceiling = max(
+            prev_long_run_km * LONG_RUN_GROWTH_PCT,
+            prev_long_run_km + LONG_RUN_GROWTH_ABS_KM,
+        )
+        long_run_base = min(long_run_base, growth_ceiling)
 
     # Profile-aware: gentle week-1 nudge only (not a hard cap)
     if profile and week_number == 1:

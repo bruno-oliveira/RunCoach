@@ -342,6 +342,43 @@ measurement harness lives at `scripts/eval_lowfreq.py`.
 | Marathon base60, 3 runs | 10 %-rule violations | 1 | **0** |
 | Fitness, marathon focus | peak long run | ~16.5 km (focus-blind) | 18 km (focus-scaled) |
 
+### Long-run week-over-week growth cap (trail spike fix)
+
+The weekly 10 % rule bounds *total* volume but nothing bounded how fast the
+single **long run** grew. On trail plans the peak phase introduces a
+race-distance floor (a fraction of *race distance*, not weekly volume) only once
+the peak phase starts, so the long run could jump ~30 % in one step at the
+build→peak boundary while the weekly total still ramped smoothly — a
+coach-unfriendly spike in the highest-injury-risk session (e.g. a 28 km trail
+race: long run 15 → 20-23 km in a single step).
+
+`calculate_long_run_distance` now accepts the previous *loading* week's long run
+(`prev_long_run_km`, threaded from the generator loop, deloads skipped) and caps
+growth to the **larger of +18 % or +3 km**. Short-race long runs add a sensible
+few km; ultra long runs (large absolute values) still step up proportionally.
+The race-distance floor is still reached — *ramped into* across the peak weeks
+rather than cliff-jumped — and the trimmed km flow to the week's easy runs, so
+weekly volume is preserved. Result for 28 km / base 20 / 12 wk: build→peak long
+run goes 15 → 18 → 22 km instead of 15 → 20 → 23, reaching a *higher*, smoother
+peak (77 % of race) without the spike.
+
+How far the long run reaches now scales honestly with base **and** timeline (the
++3 km/week step is the standard coaching progression — see how peer apps
+back-calculate from the goal date):
+
+| 28 km race | 8 wk | 12 wk | 16 wk |
+|------------|:----:|:-----:|:-----:|
+| base 15 km | 13 km (48 %) | 17 km (62 %) | 21 km (77 %) |
+| base 20 km | 16 km (56 %) | 22 km (77 %) | 24 km (85 %) |
+| base 30 km | 21 km (74 %) | 24 km (85 %) | 24 km (85 %) |
+| base 40 km | 23 km (83 %) | 26 km (94 %) | 26 km (94 %) |
+
+A low base on a short timeline genuinely cannot reach a race-specific long run
+safely; the plan now falls short *honestly* (the ramp is the limit) instead of
+papering over it with a single dangerous jump. Surfacing a "timeline is
+aggressive — your long run will reach only N km" warning is the natural next
+step (a product/validation feature, not a generator change).
+
 ### Still open (lower priority / out of this change set)
 
 - **Beginner 5K taper + plateau** (recommendation #5) — untouched.

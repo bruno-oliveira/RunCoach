@@ -173,6 +173,77 @@ def test_long_run_time_cap_skipped_without_pace():
     assert uncapped > capped
 
 
+# ── long-run week-over-week growth cap ─────────────────────────────────────
+
+
+def test_long_run_growth_cap_bounds_single_week_jump():
+    from app.core.training.trail_profile import classify_trail
+
+    tp = classify_trail(28.0, 1000.0)
+    prev = 15.3
+    capped = long_run_calculator.calculate_long_run_distance(
+        39, 28.0, 12, 9, "peak", False, "intermediate",
+        trail_profile=tp, prev_long_run_km=prev,
+    )
+    # May grow by the larger of +18% or +3 km, never the old ~+32% spike.
+    ceiling = max(prev * 1.18, prev + 3.0)
+    assert capped <= ceiling + 0.05
+
+
+def test_long_run_growth_cap_skipped_on_recovery_week():
+    # Recovery weeks dip by design and must not be bounded by the growth cap.
+    from app.core.training.trail_profile import classify_trail
+
+    tp = classify_trail(28.0, 1000.0)
+    rec = long_run_calculator.calculate_long_run_distance(
+        30, 28.0, 12, 8, "peak", True, "intermediate",
+        trail_profile=tp, prev_long_run_km=15.3,
+    )
+    no_prev = long_run_calculator.calculate_long_run_distance(
+        30, 28.0, 12, 8, "peak", True, "intermediate", trail_profile=tp,
+    )
+    assert rec == no_prev
+
+
+def test_long_run_growth_cap_small_runs_allow_absolute_step():
+    # A short long run may add the absolute step (+3 km) even though that
+    # exceeds +18% — i.e. the looser of the two bounds applies. With a high
+    # weekly volume the ratio-based long run wants ~14 km, so the cap binds and
+    # lands at the +3 km step (12 km), above the +18% bound (10.6 km).
+    capped = long_run_calculator.calculate_long_run_distance(
+        40, 10.0, 12, 6, "build", False, "advanced", prev_long_run_km=9.0
+    )
+    assert 9.0 * 1.18 < capped <= 9.0 + 3.0 + 0.05
+
+
+def test_trail_plan_has_no_long_run_spike():
+    from app.contexts.plan.generators.plan_generator import TrainingPlanGenerator
+    from app.core.training.trail_profile import classify_trail
+
+    tp = classify_trail(28.0, 1000.0)
+    plan = TrainingPlanGenerator().generate_plan(
+        20, 28.0, 12, max_runs_per_week=4, vdot=42.0, trail_profile=tp
+    )
+    longs, recs = [], []
+    for wk in plan:
+        lr = next(
+            (w["distance"] for w in wk["daily_workouts"] if w["type"] == "long"), 0
+        )
+        longs.append(lr)
+        recs.append(wk.get("is_recovery", False))
+
+    prev = None
+    for lr, rec in zip(longs, recs):
+        if rec:
+            continue
+        if prev is not None and prev > 0:
+            ceiling = max(prev * 1.18, prev + 3.0)
+            assert lr <= ceiling + 0.3, f"long-run spike {prev}->{lr}"
+        prev = lr
+    # Still reaches a race-specific peak (>= 65% of race distance).
+    assert max(longs) >= 28.0 * 0.65
+
+
 def test_full_plan_long_run_respects_time_cap_for_slow_runner():
     vdot = 32
     plan = TrainingPlanGenerator().generate_plan(60, 42.2, 16, vdot=vdot)
