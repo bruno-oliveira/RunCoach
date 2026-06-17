@@ -1,18 +1,26 @@
 """Workout builders for performance plans — tempo, VO2max, race pace, fartlek, long, easy."""
 
-from typing import Any, Dict
+from typing import Dict
 
 from app.contexts.plan.generators.workout_builder_base import (
     _cooldown_segment,
+    _regenerate_description,
     _warmup_segment,
     build_fartlek_workout,
     build_tempo_workout,
     estimate_duration_min,
     generate_easy_run,
+    reconcile_workout_after_cap,
 )
 from app.core.training.road_profile import classify_road
 from app.utils import format_km
 from app.utils import format_pace as _shared_format_pace
+
+# ``reconcile_workout_after_cap`` / ``_regenerate_description`` now live in
+# workout_builder_base so the fitness generator can share them; re-exported
+# here for back-compat (tests and the performance generator import them from
+# this module).
+__all_reexport__ = (reconcile_workout_after_cap, _regenerate_description)
 
 # Long-run distance cap (km) per road band.
 _LONG_RUN_CAP_KM = {"5k": 15, "10k": 15, "half": 22, "marathon": 32}
@@ -32,129 +40,6 @@ __all__ = [
     "generate_fartlek_workout",
     "generate_long_run",
 ]
-
-
-def reconcile_workout_after_cap(workout: Dict[str, Any]) -> None:
-    """Sync segments and description after enforce_week_caps reduced distance."""
-    segments = workout.get("segments")
-    if not segments:
-        return
-
-    seg_total = round(sum(s["distance_km"] for s in segments), 1)
-    target = workout["distance"]
-
-    # Reconcile on any drift beyond the one-decimal grid. A looser tolerance
-    # (the old 0.15) let a sub-0.15 cap silently leave the header/segments at
-    # the pre-cap value while ``distance`` moved — so the card showed e.g.
-    # "6.6km race pace" with distance 6.5. Distance, segments, and description
-    # must always cite the identical one-decimal figure.
-    if abs(seg_total - target) < 0.05:
-        return
-
-    main_segs = [s for s in segments if s["type"] == "main"]
-    non_main_km = sum(s["distance_km"] for s in segments if s["type"] != "main")
-
-    if not main_segs:
-        return
-
-    remaining = max(0.5, target - non_main_km)
-
-    if len(main_segs) == 1:
-        main_segs[0]["distance_km"] = round(remaining, 1)
-        intervals = main_segs[0].get("intervals")
-        if intervals and isinstance(intervals.get("interval_m"), int):
-            interval_km = intervals["interval_m"] / 1000
-            new_reps = max(2, round(remaining / interval_km))
-            intervals["reps"] = new_reps
-            main_segs[0]["distance_km"] = round(interval_km * new_reps, 1)
-            workout["distance"] = round(non_main_km + main_segs[0]["distance_km"], 1)
-    else:
-        orig_total = sum(s["distance_km"] for s in main_segs) or 1
-        for seg in main_segs:
-            seg["distance_km"] = round(seg["distance_km"] / orig_total * remaining, 1)
-
-    workout["total_duration_est_min"] = estimate_duration_min(segments)
-    _regenerate_description(workout)
-
-
-def _regenerate_description(workout: Dict[str, Any]) -> None:
-    """Rebuild the description string from current segment values."""
-    if workout.get("key_workout_id"):
-        return
-    segments = workout.get("segments", [])
-    total_km = workout["distance"]
-    wtype = workout["type"]
-
-    warmups = [s for s in segments if s["type"] == "warmup"]
-    mains = [s for s in segments if s["type"] == "main"]
-    cooldowns = [s for s in segments if s["type"] == "cooldown"]
-    wu_km = warmups[0]["distance_km"] if warmups else 0
-    cd_km = cooldowns[0]["distance_km"] if cooldowns else 0
-
-    if not mains:
-        return
-
-    main = mains[0]
-
-    if wtype == "tempo":
-        workout["description"] = (
-            f"{format_km(total_km)}km tempo: {format_km(wu_km)}km warmup, "
-            f"{format_km(main['distance_km'])}km at {main['pace_formatted']}, "
-            f"{format_km(cd_km)}km cooldown"
-        )
-    elif wtype == "vo2max":
-        ivl = main.get("intervals", {})
-        if ivl and isinstance(ivl.get("interval_m"), int):
-            rec = (
-                f" ({ivl['recovery_min']}min recovery)"
-                if ivl.get("recovery_min")
-                else ""
-            )
-            workout["description"] = (
-                f"{format_km(total_km)}km intervals: {format_km(wu_km)}km warmup, "
-                f"{ivl['reps']}x{ivl['interval_m']}m at {main['pace_formatted']}{rec}, "
-                f"{format_km(cd_km)}km cooldown"
-            )
-        else:
-            workout["description"] = (
-                f"{format_km(total_km)}km intervals: {format_km(wu_km)}km warmup, "
-                f"{format_km(main['distance_km'])}km at {main['pace_formatted']}, "
-                f"{format_km(cd_km)}km cooldown"
-            )
-    elif wtype == "race_pace":
-        workout["description"] = (
-            f"{format_km(total_km)}km race pace: {format_km(wu_km)}km warmup, "
-            f"{format_km(main['distance_km'])}km at {main['pace_formatted']}, "
-            f"{format_km(cd_km)}km cooldown"
-        )
-    elif wtype == "fartlek":
-        ivl = main.get("intervals", {})
-        pace_parts = main["pace_formatted"].split(" - ")
-        hard_pace = pace_parts[-1] if len(pace_parts) > 1 else main["pace_formatted"]
-        reps = ivl.get("reps", 0) if ivl else 0
-        workout["description"] = (
-            f"{format_km(total_km)}km fartlek: {reps} surges of 1-3min at {hard_pace}, "
-            f"easy running between"
-        )
-    elif wtype in ("interval", "hill"):
-        ivl = main.get("intervals", {})
-        if ivl and isinstance(ivl.get("interval_m"), int):
-            rec = (
-                f" ({ivl['recovery_min']}min recovery)"
-                if ivl.get("recovery_min")
-                else ""
-            )
-            workout["description"] = (
-                f"{format_km(total_km)}km {wtype}: {format_km(wu_km)}km warmup, "
-                f"{ivl['reps']}x{ivl['interval_m']}m at {main['pace_formatted']}{rec}, "
-                f"{format_km(cd_km)}km cooldown"
-            )
-        else:
-            workout["description"] = (
-                f"{format_km(total_km)}km {wtype}: {format_km(wu_km)}km warmup, "
-                f"{format_km(main['distance_km'])}km at {main['pace_formatted']}, "
-                f"{format_km(cd_km)}km cooldown"
-            )
 
 
 def generate_tempo_workout(
