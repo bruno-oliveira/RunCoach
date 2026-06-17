@@ -100,6 +100,10 @@ class TrainingPlanGenerator:
 
         training_plan = []
         actual_high_water = current_km
+        # Previous *loading* week's long run, used to bound how fast the single
+        # long run grows week to week (deloads are skipped so the post-deload
+        # ramp resumes from the pre-dip long run, not the reduced one).
+        prev_long_run_km: Optional[float] = None
         for week in range(1, weeks + 1):
             week_km = weekly_progression[week - 1]
             weekly_plan = build_weekly_plan(
@@ -115,6 +119,7 @@ class TrainingPlanGenerator:
                 trail_profile=trail_profile,
                 profile=profile,
                 intensive_weekend_enabled=intensive_weekend_enabled,
+                prev_long_run_km=prev_long_run_km,
             )
 
             # Enforce 10% cap against actual high-water mark.
@@ -188,6 +193,18 @@ class TrainingPlanGenerator:
 
             if not is_recovery and weekly_plan["total_km"] > actual_high_water:
                 actual_high_water = weekly_plan["total_km"]
+
+            if not is_recovery:
+                long_w = next(
+                    (
+                        w
+                        for w in weekly_plan["daily_workouts"]
+                        if w.get("type") == "long" and (w.get("distance", 0) or 0) > 0
+                    ),
+                    None,
+                )
+                if long_w is not None:
+                    prev_long_run_km = long_w["distance"]
 
             training_plan.append(weekly_plan)
 

@@ -58,6 +58,7 @@ def plan_view_context(
 
     pace_zones_updated_recent = _compute_pace_zone_badge(db, training_plan.id)
     adaptation_state = _build_adaptation_state(training_plan)
+    long_run_warning = _build_long_run_warning(training_plan, plan_data)
 
     today_workout_overlay = _build_today_workout_overlay(
         db,
@@ -110,9 +111,59 @@ def plan_view_context(
         "today_workout_overlay": today_workout_overlay,
         "adaptation_state": adaptation_state,
         "adaptation_revision": training_plan.adaptation_revision or 0,
+        "long_run_warning": long_run_warning,
     }
     ctx.update(extra)
     return ctx
+
+
+def _build_long_run_warning(
+    training_plan: TrainingPlan, plan_data: list[dict]
+) -> Optional[dict]:
+    """Non-blocking warning when the plan's peak long run falls short of race
+    specificity (too little base × timeline to ramp safely).
+
+    Only race plans (distance/trail) are assessed — fitness plans have no race
+    distance to be specific for. Pure read of the stored plan, so it also
+    applies retroactively to plans created before the check existed.
+    """
+    if getattr(training_plan, "plan_type", "distance") not in ("distance",):
+        return None
+
+    target_distance = training_plan.target_distance_km
+    if not target_distance or target_distance <= 0:
+        return None
+
+    peak_long_run = 0.0
+    for week in plan_data or []:
+        if week.get("is_recovery"):
+            continue
+        for workout in week.get("daily_workouts", []) or []:
+            if workout.get("type") == "long":
+                peak_long_run = max(peak_long_run, workout.get("distance", 0) or 0)
+
+    if peak_long_run <= 0:
+        return None
+
+    trail_profile = None
+    if bool(getattr(training_plan, "is_trail", False)):
+        from app.core.training.trail_profile import classify_trail
+
+        trail_profile = classify_trail(
+            target_distance,
+            getattr(training_plan, "target_elevation_gain_m", None) or 0.0,
+        )
+
+    from app.core.training.long_run_calculator import assess_long_run_adequacy
+
+    return assess_long_run_adequacy(
+        peak_long_run,
+        target_distance,
+        experience_level=derive_experience_level(training_plan.current_weekly_km or 0),
+        trail_profile=trail_profile,
+        training_terrain=getattr(training_plan, "training_terrain", None),
+        weeks=training_plan.weeks_duration,
+    )
 
 
 def _build_adaptation_state(training_plan: TrainingPlan) -> dict:

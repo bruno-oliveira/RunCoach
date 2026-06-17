@@ -113,6 +113,7 @@ def generate_daily_workouts(
     profile: Optional[Dict[str, Any]] = None,
     trail_profile=None,
     max_runs: Optional[int] = None,
+    prev_long_run_km: Optional[float] = None,
 ) -> List[Dict[str, Any]]:
     """Generate daily workouts for one week."""
     long_run_distance = long_run_calculator.calculate_long_run_distance(
@@ -128,6 +129,7 @@ def generate_daily_workouts(
         training_terrain=terrain,
         long_run_pace_min_km=_long_run_pace_min_km(pace_zones),
         max_runs=max_runs,
+        prev_long_run_km=prev_long_run_km,
     )
     quality_distances = long_run_calculator.calculate_quality_distances(
         total_km,
@@ -290,6 +292,7 @@ def build_weekly_plan(
     profile: Optional[Dict[str, Any]] = None,
     trail_profile=None,
     intensive_weekend_enabled: bool = False,
+    prev_long_run_km: Optional[float] = None,
 ) -> Dict[str, Any]:
     """Generate a single week's training plan.
 
@@ -336,6 +339,7 @@ def build_weekly_plan(
         profile=profile,
         trail_profile=trail_profile,
         max_runs=max_runs_per_week,
+        prev_long_run_km=prev_long_run_km,
     )
 
     intensive_weekend = None

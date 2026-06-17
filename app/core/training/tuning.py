@@ -32,6 +32,20 @@ RECOVERY_WEEK_RATIO = 0.85
 # week would be flat and look like a plateau.
 MIN_NON_RECOVERY_BUMP = 1.01
 
+# Week-over-week growth ceiling for the single *long run* (vs the previous
+# loading week's long run, deloads skipped). The weekly 10% rule bounds total
+# volume but says nothing about how fast the longest, highest-injury-risk
+# session may grow. On trail plans the peak phase applies a race-distance floor
+# (a fraction of race distance, not weekly volume) only once the peak phase
+# starts, so the long run could jump ~30%+ in a single step at the build→peak
+# boundary while the weekly total still looked smooth. The long run may grow by
+# the larger of this percentage or a fixed absolute step, so short-race long
+# runs ramp by a sensible few km while ultra long runs (large absolute values)
+# can still step up proportionally. The race-distance floor is still reached —
+# just ramped into over the peak weeks instead of cliff-jumped.
+LONG_RUN_GROWTH_PCT = 1.18
+LONG_RUN_GROWTH_ABS_KM = 3.0
+
 # Base phase ends at this fraction of peak mileage; build phase ramps from
 # here to full peak.
 BASE_PHASE_END_FRACTION = 0.70

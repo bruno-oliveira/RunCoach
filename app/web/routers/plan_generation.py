@@ -529,6 +529,73 @@ async def _generate_time_goal_plan(
         )
 
 
+@router.get("/assess-long-run")
+def assess_long_run(
+    current_km: float,
+    target_distance: float,
+    weeks: int,
+    max_runs_per_week: int = 4,
+    is_trail: bool = False,
+    target_elevation_gain_m: Optional[float] = None,
+    training_terrain: Optional[str] = None,
+    plan_generator: TrainingPlanGenerator = Depends(get_plan_generator),
+) -> Response:
+    """Pre-submit estimate of whether the long run will reach race specificity.
+
+    A pure calculator (no DB, no persistence): it generates the plan, measures
+    the peak long run, and runs the *same* adequacy check the plan view shows,
+    so the live form hint matches the banner the runner sees after generating.
+    Any bad/edge input simply yields ``{"long_run_warning": null}`` (no hint)
+    rather than an error — this is advisory, never blocking.
+    """
+    from fastapi.responses import JSONResponse
+
+    from app.core.training.long_run_calculator import assess_long_run_adequacy
+    from app.core.training.strength_plan import derive_experience_level
+
+    try:
+        if current_km <= 0 or target_distance <= 0 or weeks <= 0:
+            return JSONResponse({"long_run_warning": None})
+
+        trail_profile = None
+        if is_trail:
+            from app.core.training.trail_profile import classify_trail
+
+            trail_profile = classify_trail(
+                target_distance, target_elevation_gain_m or 0.0
+            )
+
+        plan_data = plan_generator.generate_plan(
+            current_km,
+            target_distance,
+            weeks,
+            max_runs_per_week,
+            terrain=training_terrain,
+            trail_profile=trail_profile,
+        )
+
+        peak_long_run = 0.0
+        for week in plan_data:
+            if week.get("is_recovery"):
+                continue
+            for workout in week.get("daily_workouts", []) or []:
+                if workout.get("type") == "long":
+                    peak_long_run = max(peak_long_run, workout.get("distance", 0) or 0)
+
+        warning = assess_long_run_adequacy(
+            peak_long_run,
+            target_distance,
+            experience_level=derive_experience_level(current_km),
+            trail_profile=trail_profile,
+            training_terrain=training_terrain,
+            weeks=weeks,
+        )
+        return JSONResponse({"long_run_warning": warning})
+    except Exception:
+        logger.debug("assess-long-run estimate failed", exc_info=True)
+        return JSONResponse({"long_run_warning": None})
+
+
 @router.post("/customize-plan", response_class=HTMLResponse)
 def customize_plan(
     request: Request,

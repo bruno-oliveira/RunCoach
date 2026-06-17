@@ -281,6 +281,17 @@
     </div>
     {% endif %}
 
+    {% if long_run_warning %}
+    <div class="long-run-warning-banner" role="status" aria-live="polite">
+        <div class="long-run-warning-banner-icon" aria-hidden="true">⚠</div>
+        <div class="long-run-warning-banner-text">
+            <strong>Heads up: your long run won't reach full race distance specificity</strong>
+            <p>{{ long_run_warning.message }}</p>
+            <p class="long-run-warning-suggestion">{{ long_run_warning.suggestion }}</p>
+        </div>
+    </div>
+    {% endif %}
+
     {# Reference material — plan stats and pace zones. Consulted occasionally,
        so collapsed by default to keep the page focused on this week's work.
        The headline numbers (target, weeks, peak) are mirrored in the summary

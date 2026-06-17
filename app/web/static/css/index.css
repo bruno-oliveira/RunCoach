@@ -533,3 +533,29 @@
 .toggle-text .form-help {
     margin: 0;
 }
+
+/* Live long-run reach hint (pre-submit advisory) */
+.long-run-hint {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--space-2);
+    margin-bottom: var(--space-4);
+    padding: var(--space-3) var(--space-4);
+    border-radius: var(--radius-lg);
+    border: 1px solid var(--color-warning, #b45309);
+    background: var(--color-warning-subtle, #fef3c7);
+    font-size: var(--text-sm);
+    line-height: 1.5;
+    color: var(--color-text-secondary);
+}
+
+.long-run-hint-icon {
+    color: var(--color-warning, #b45309);
+    font-weight: var(--weight-bold);
+    flex-shrink: 0;
+}
+
+.long-run-hint-text strong {
+    color: var(--color-text);
+    font-weight: var(--weight-semibold, 600);
+}
