@@ -393,6 +393,13 @@ quiet on healthy plans and fire exactly on the under-resourced ones, e.g.:
 - Marathon, base 25 / 12 wk → ⚠️ "peaks at 22 km, ~64 % of the ~34 km target".
 - 28 km trail base 20 / 12 wk, marathon base 40 / 16 wk, all 10K/half → quiet.
 
+The same check also runs **live on the plan form before submitting**
+(`GET /assess-long-run` → JS hint in `index.html`): it generates the plan
+server-side and runs the identical assessment, so the runner sees "this base +
+timeline only reaches ~N km" *before* committing and can bump the weeks or base.
+The pre-submit hint and the post-generation banner share `assess_long_run_adequacy`,
+so they never disagree.
+
 ### Still open (lower priority / out of this change set)
 
 - **Beginner 5K taper + plateau** (recommendation #5) — untouched.
