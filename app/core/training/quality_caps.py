@@ -11,6 +11,7 @@ from typing import Dict, List, Optional
 # importers (e.g. weekly_plan_builder, tests) keep their access paths.
 from app.core.training.tuning import (
     BASE_PHASE_QUALITY_REDUCTION,
+    BASE_QUALITY_MIN_DOSE_KM,
     DEFAULT_QUALITY_CAPS,
     MAX_EASY_RUN_KM,
     MAX_EASY_VS_LONG_RUN,
@@ -28,6 +29,7 @@ __all__ = [
     "QUALITY_CAPS_BY_DISTANCE",
     "DEFAULT_QUALITY_CAPS",
     "QUALITY_MIN_DOSE_KM",
+    "BASE_QUALITY_MIN_DOSE_KM",
     "MIN_EASY_PER_RUN_KM",
     "get_quality_caps",
     "cap_quality_distance",
