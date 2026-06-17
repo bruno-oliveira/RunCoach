@@ -17,7 +17,7 @@ from app.utils import parse_race_time_to_seconds
 if TYPE_CHECKING:
     # Type-only: the engine is injected by the caller (PlanService.create_plan),
     # so the plan context does not depend on the nutrition context at runtime.
-    from app.contexts.nutrition.nutrition_engine import NutritionEngine
+    from app.application.ports import NutritionEngine
 
 logger = logging.getLogger(__name__)
 
@@ -93,7 +93,7 @@ def attach_hr_zones(
 ) -> None:
     # Local import keeps the plan context free of a static edge to the runner
     # context's HR-zone service (cross-context runtime call during creation).
-    from app.contexts.runner.fitness.hr_zone_service import HRZoneService
+    from app.application.ports import HRZoneService
 
     try:
         zones = HRZoneService.compute_and_store_zones(training_plan, user, db)

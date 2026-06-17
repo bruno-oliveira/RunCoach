@@ -22,7 +22,7 @@ from . import plan_lifecycle_service as _lifecycle
 if TYPE_CHECKING:
     # Type-only: the engine is injected by the caller, so the plan context does
     # not depend on the nutrition context at runtime.
-    from app.contexts.nutrition.nutrition_engine import NutritionEngine
+    from app.application.ports import NutritionEngine
 
 logger = logging.getLogger(__name__)
 
@@ -30,7 +30,7 @@ logger = logging.getLogger(__name__)
 def _default_user_repo_factory(db: Session) -> IUserRepository:
     """Lazy default so the plan context carries no static edge to the auth
     context's concrete repository — the composition root can still override it."""
-    from app.contexts.auth.repositories import SQLAlchemyUserRepository
+    from app.application.ports import SQLAlchemyUserRepository
 
     return SQLAlchemyUserRepository(db)
 

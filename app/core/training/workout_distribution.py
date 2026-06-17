@@ -50,62 +50,12 @@ def get_workout_distribution(
 
     long_runs = 1
 
-    # At 2 runs/week (minimum effective dose for busy schedules), the week is
-    # always 1 long + 1 easy — quality workouts need a third running day to
-    # keep the weekly 80/20 easy/hard balance intact.
-    if is_recovery_week:
-        quality_workouts = 0
-    elif max_runs <= 2:
-        quality_workouts = 1 if phase in ("build", "peak") else 0
-    elif phase == "base":
-        base_quality_km = total_km * 0.05
-        if max_runs >= 4 and base_quality_km >= 1.0:
-            quality_workouts = 1
-        else:
-            quality_workouts = 0
-    elif phase == "build":
-        if phases:
-            week_in_build = week_number - phases["base"]
-        else:
-            week_in_build = week_number
-        if week_in_build <= 2:
-            quality_workouts = 1 if max_runs >= 3 else 0
-        else:
-            quality_workouts = (
-                2 if max_runs >= 5 and total_km >= SECOND_QUALITY_MIN_WEEK_KM else 1
-            )
-    elif phase == "peak":
-        quality_workouts = (
-            2 if max_runs >= 5 and total_km >= SECOND_QUALITY_MIN_WEEK_KM else 1
-        )
-    elif phase == "taper":
-        # Retain a single short race-pace sharpener through the taper (the
-        # PHASE_DISTRIBUTIONS taper rows budget ~10-12% tempo for exactly this).
-        # Volume drops but intensity is kept — dropping all quality detrains
-        # the runner right before race day (audit G2). max_runs <= 2 already
-        # returned 0 above, so there is room for the sharpener here.
-        quality_workouts = 1
-    else:
-        quality_workouts = 0
-
-    # Profile-aware: adjust quality count based on actual pace distribution.
-    # A profile-driven reduction is a deliberate guardrail for this runner —
-    # the polarized deficit branch must not re-add the slot it removed.
-    profile_reduced = False
-    if profile and not is_recovery_week and quality_workouts > 0:
-        hard_pct = profile.get("hard_pct", 0)
-        easy_pct = profile.get("easy_pct", 0)
-        # If runner habitually does too much hard work (>30%), reduce quality
-        if hard_pct > 30 and quality_workouts > 1:
-            quality_workouts = max(1, quality_workouts - 1)
-            profile_reduced = True
-        # If runner does almost no hard work (<10%), ensure at least 1 quality
-        elif hard_pct < 10 and quality_workouts == 0 and phase in ("build", "peak"):
-            quality_workouts = 1
-        # If runner's easy runs are very low (<50%), they may need more recovery
-        elif easy_pct < 50 and phase in ("build", "peak") and quality_workouts > 1:
-            quality_workouts = max(1, quality_workouts - 1)
-            profile_reduced = True
+    quality_workouts = _phase_quality_count(
+        phase, max_runs, total_km, week_number, phases, is_recovery_week
+    )
+    quality_workouts, profile_reduced = _apply_profile_quality_adjustment(
+        quality_workouts, phase, profile, is_recovery_week
+    )
 
     # Recovery is an additional non-running day, does NOT count towards max_runs
     actual_run_slots = max_runs
@@ -145,6 +95,79 @@ def get_workout_distribution(
         )
 
     return distribution
+
+
+def _phase_quality_count(
+    phase: str,
+    max_runs: int,
+    total_km: float,
+    week_number: int,
+    phases: Optional[Dict[str, int]],
+    is_recovery_week: bool,
+) -> int:
+    """Number of quality sessions for the week, before profile tuning.
+
+    Encodes the phase/frequency policy: none on recovery weeks; at 2 runs/week
+    (1 long + 1 easy) quality only in build/peak; base stays mostly aerobic; a
+    second quality slot appears only in late build / peak for high-frequency,
+    sufficient-volume weeks; and the taper keeps one short sharpener.
+    """
+    if is_recovery_week:
+        return 0
+    # At 2 runs/week (minimum effective dose for busy schedules), the week is
+    # always 1 long + 1 easy — quality workouts need a third running day to
+    # keep the weekly 80/20 easy/hard balance intact.
+    if max_runs <= 2:
+        return 1 if phase in ("build", "peak") else 0
+    if phase == "base":
+        base_quality_km = total_km * 0.05
+        return 1 if (max_runs >= 4 and base_quality_km >= 1.0) else 0
+    if phase == "build":
+        week_in_build = week_number - phases["base"] if phases else week_number
+        if week_in_build <= 2:
+            return 1 if max_runs >= 3 else 0
+        return 2 if (max_runs >= 5 and total_km >= SECOND_QUALITY_MIN_WEEK_KM) else 1
+    if phase == "peak":
+        return 2 if (max_runs >= 5 and total_km >= SECOND_QUALITY_MIN_WEEK_KM) else 1
+    if phase == "taper":
+        # Retain a single short race-pace sharpener through the taper (the
+        # PHASE_DISTRIBUTIONS taper rows budget ~10-12% tempo for exactly this).
+        # Volume drops but intensity is kept — dropping all quality detrains
+        # the runner right before race day (audit G2). max_runs <= 2 already
+        # returned 0 above, so there is room for the sharpener here.
+        return 1
+    return 0
+
+
+def _apply_profile_quality_adjustment(
+    quality_workouts: int,
+    phase: str,
+    profile: Optional[dict],
+    is_recovery_week: bool,
+) -> tuple[int, bool]:
+    """Tune the quality count from the runner's actual pace distribution.
+
+    Returns ``(quality_workouts, profile_reduced)``. A profile-driven reduction
+    is a deliberate guardrail for this runner — the caller's polarized-deficit
+    check must not re-add the slot it removed, hence the ``profile_reduced``
+    flag.
+    """
+    profile_reduced = False
+    if profile and not is_recovery_week and quality_workouts > 0:
+        hard_pct = profile.get("hard_pct", 0)
+        easy_pct = profile.get("easy_pct", 0)
+        # If runner habitually does too much hard work (>30%), reduce quality
+        if hard_pct > 30 and quality_workouts > 1:
+            quality_workouts = max(1, quality_workouts - 1)
+            profile_reduced = True
+        # If runner does almost no hard work (<10%), ensure at least 1 quality
+        elif hard_pct < 10 and quality_workouts == 0 and phase in ("build", "peak"):
+            quality_workouts = 1
+        # If runner's easy runs are very low (<50%), they may need more recovery
+        elif easy_pct < 50 and phase in ("build", "peak") and quality_workouts > 1:
+            quality_workouts = max(1, quality_workouts - 1)
+            profile_reduced = True
+    return quality_workouts, profile_reduced
 
 
 # Re-export kept for backward compatibility — see week_scheduler.py

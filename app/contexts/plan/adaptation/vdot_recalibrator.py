@@ -97,7 +97,7 @@ def recalibrate_zones_only(
     from the full plan-adjust flow. Returns the recalibration result dict if
     pace zones were updated, or None if nothing changed.
     """
-    from app.contexts.runner.fitness.race_predictor_service import RacePredictorService
+    from app.application.ports import RacePredictorService
 
     plan_vdot = training_plan.vdot
     if not plan_vdot:

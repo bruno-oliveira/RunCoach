@@ -10,9 +10,6 @@ from typing import Any, Dict, List, Optional
 
 from app.core.coaching.coaching_notes_generator import generate_coaching_note
 from app.core.training import phase_calculator
-from app.core.training.key_workout_library import (
-    overlay_key_workout as _overlay_key_workout_shared,
-)
 from app.core.training.mileage_progression import runs_per_week_volume_factor
 from app.core.training.strength_plan import derive_experience_level
 from app.core.training.training_constants import calculate_week_in_phase
@@ -32,9 +29,9 @@ from app.core.training.tuning import (
 from app.core.training.vdot_calculator import VDOTCalculator
 from app.core.training.workout_builders import attach_strength_sessions
 
+from .base_plan_generator import BasePlanGenerator
 from .fitness_workout_builders import (
     generate_cruise_interval_workout,
-    generate_easy_run,
     generate_fartlek_workout,
     generate_long_run,
     generate_race_pace_workout,
@@ -99,7 +96,7 @@ _COACHING_TYPE_MAP = {
 }
 
 
-class FitnessPlanGenerator:
+class FitnessPlanGenerator(BasePlanGenerator):
     """Generates fitness-focused training plans with VDOT-driven zones.
 
     Supports three focus areas:
@@ -108,7 +105,12 @@ class FitnessPlanGenerator:
     - balanced: Mix of VO2max and threshold work
 
     Includes time trials every 3 weeks for progress tracking.
+
+    Shared weekly-assembly machinery (easy-run scheduling, rest padding, key
+    workout overlay, and quality structural caps) lives in BasePlanGenerator.
     """
+
+    LIBRARY_TYPE_MAP = _LIBRARY_TYPE_MAP
 
     def calculate_training_zones(
         self,
@@ -160,27 +162,6 @@ class FitnessPlanGenerator:
     def _is_time_trial_week(self, week_number: int) -> bool:
         """Determine if a week should include a time trial."""
         return week_number % _TIME_TRIAL_INTERVAL == 0
-
-    def _overlay_key_workout(
-        self,
-        workout: Dict[str, Any],
-        phase: str,
-        week_in_phase: int,
-        vdot_zones: Optional[Dict],
-        target_distance: float = 10.0,
-    ) -> None:
-        """Attach key workout details for quality sessions."""
-        library_type = _LIBRARY_TYPE_MAP.get(workout["type"])
-        if not library_type:
-            return
-        _overlay_key_workout_shared(
-            workout,
-            library_type,
-            phase,
-            target_distance=target_distance,
-            week_in_phase=week_in_phase,
-            pace_zones=vdot_zones,
-        )
 
     def _generate_weekly_plan(
         self,
@@ -294,73 +275,29 @@ class FitnessPlanGenerator:
             daily_workouts.append(workout)
             total_assigned_km += workout["distance"]
 
+        # Cap formulaic quality against the long run before filling easy volume,
+        # so a single tempo/VO2max day can't approach or exceed the long run
+        # (parity with the performance and road generators).
+        self._enforce_quality_caps(daily_workouts, target_distance, phase)
+        total_assigned_km = sum(w["distance"] for w in daily_workouts)
+
+        # Fill remaining days with well-spaced easy runs, then rest
         remaining_km = weekly_km - total_assigned_km
-        scheduled_days = {w["day"] for w in daily_workouts}
-        available_days = [d for d in [1, 3, 5, 7] if d not in scheduled_days]
+        self._fill_easy_runs(daily_workouts, zones, runs_per_week, remaining_km)
+        self._fill_rest_days(daily_workouts)
 
-        def _spacing_score(day: int) -> int:
-            return (1 if (day - 1) not in scheduled_days else 0) + (
-                1 if (day + 1) not in scheduled_days else 0
-            )
-
-        available_days.sort(key=_spacing_score, reverse=True)
-
-        easy_runs_needed = runs_per_week - len(daily_workouts)
-        if easy_runs_needed > 0 and remaining_km > 0:
-            easy_run_km = remaining_km / easy_runs_needed
-            long_runs = [w for w in daily_workouts if w["type"] == "long"]
-            long_dist = long_runs[0]["distance"] if long_runs else 0
-            min_easy_km = max(3.0, long_dist * 0.20) if long_dist > 0 else 3.0
-            easy_run_km = max(easy_run_km, min_easy_km)
-
-            def _would_create_three_consecutive(
-                day: int, current_scheduled: set
-            ) -> bool:
-                test = current_scheduled | {day}
-                for d in range(1, 6):
-                    if d in test and (d + 1) in test and (d + 2) in test:
-                        return True
-                return False
-
-            for i in range(easy_runs_needed):
-                safe_days = [
-                    d
-                    for d in available_days
-                    if not _would_create_three_consecutive(d, scheduled_days)
-                ]
-                if not safe_days:
-                    safe_days = available_days
-                if safe_days:
-                    chosen = safe_days[0]
-                    workout = generate_easy_run(zones, easy_run_km)
-                    workout["day"] = chosen
-                    daily_workouts.append(workout)
-                    scheduled_days.add(chosen)
-                    available_days.remove(chosen)
-
-        scheduled_days = {w["day"] for w in daily_workouts}
-        for d in range(1, 8):
-            if d not in scheduled_days:
-                daily_workouts.append(
-                    {
-                        "day": d,
-                        "type": "rest",
-                        "distance": 0,
-                        "description": "Rest day",
-                        "intensity": "rest",
-                    }
-                )
-
-        daily_workouts.sort(key=lambda x: x["day"])
-
+        # Overlay curated key workouts, bounded to a long-run-relative ceiling
+        # so a fixed library prescription never balloons past the long run.
+        quality_ceiling = self._key_workout_ceiling(daily_workouts)
         for workout in daily_workouts:
             if workout.get("quality", False):
                 self._overlay_key_workout(
                     workout,
                     phase,
+                    target_distance,
                     week_in_phase,
                     vdot_zones,
-                    target_distance,
+                    max_distance=quality_ceiling,
                 )
             coaching_type = _COACHING_TYPE_MAP.get(workout["type"], workout["type"])
             workout["coaching_rationale"] = generate_coaching_note(

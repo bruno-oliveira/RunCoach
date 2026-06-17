@@ -260,6 +260,155 @@ class StravaService:
             notes=activity.get("name"),
         )
 
+    @staticmethod
+    def _apply_vdot(run_log: RunLog) -> None:
+        """Auto-calculate VDOT for runs with sufficient distance/duration."""
+        if run_log.distance_km >= 2.0 and run_log.duration_minutes > 0:
+            vdot = VDOTCalculator.calculate_vdot(
+                run_log.distance_km,
+                int(run_log.duration_minutes * 60),
+                elevation_gain_m=run_log.elevation_gain_m,
+            )
+            if vdot:
+                run_log.vdot = vdot
+
+    @staticmethod
+    def _classify_effort_and_type(run_log: RunLog, user: User, db: Session) -> None:
+        """Best-effort effort-class and workout-type inference (non-fatal).
+
+        Strava defaults workout_type to "easy"; these classifiers infer the
+        real effort class and workout type from pace/HR/distance/splits. Each
+        is wrapped independently so one failing never blocks the other or the
+        sync itself.
+        """
+        try:
+            from app.contexts.runner.fitness.effort_classifier import classify_effort
+
+            effort_class = classify_effort(
+                distance_km=run_log.distance_km,
+                avg_pace_min_km=run_log.avg_pace_min_km,
+                perceived_effort=run_log.perceived_effort,
+                user_id=user.id,
+                db=db,
+                exclude_run_id=run_log.id,
+            )
+            if effort_class is not None:
+                run_log.effort_class = effort_class
+        except Exception as cls_err:
+            logger.warning(
+                f"Effort classification failed for Strava run {run_log.id}: {cls_err}"
+            )
+        try:
+            from app.contexts.runner.fitness.workout_type_classifier import (
+                classify_workout_type,
+            )
+
+            wt_result = classify_workout_type(
+                distance_km=run_log.distance_km,
+                duration_minutes=run_log.duration_minutes,
+                avg_pace_min_km=run_log.avg_pace_min_km,
+                avg_heart_rate=run_log.avg_heart_rate,
+                max_heart_rate=run_log.max_heart_rate,
+                elevation_gain_m=run_log.elevation_gain_m,
+                perceived_effort=run_log.perceived_effort,
+                splits=run_log.splits,
+                vdot=run_log.vdot,
+                user_id=user.id,
+                db=db,
+                exclude_run_id=run_log.id,
+            )
+            if wt_result is not None:
+                (
+                    run_log.inferred_workout_type,
+                    run_log.inferred_type_confidence,
+                ) = wt_result
+        except Exception as cls_err:
+            logger.warning(
+                f"Workout-type inference failed for Strava run {run_log.id}: {cls_err}"
+            )
+
+    async def _ingest_activity(
+        self,
+        activity: dict[str, Any],
+        user: User,
+        db: Session,
+        access_token: str,
+        detail_fetches: int,
+    ) -> tuple[str, int, Optional[str]]:
+        """Ingest one Strava activity into a RunLog.
+
+        Returns ``(outcome, detail_fetches, error)`` where outcome is one of
+        ``"filtered"`` (not a run), ``"skipped"`` (duplicate), ``"synced"``,
+        or ``"error"`` (mapping failed; ``error`` carries the message). The
+        per-sync detail-fetch budget is threaded through and returned so the
+        caller's cap stays accurate.
+        """
+        # Filter to run activity types only. Check both `type` (deprecated)
+        # and `sport_type` (current) because Strava's v3 API may return
+        # `type=null` for newer activities that only set `sport_type`, and
+        # Garmin-synced activities in particular can arrive with no `type`.
+        if (
+            activity.get("type") not in RUN_ACTIVITY_TYPES
+            and activity.get("sport_type") not in RUN_ACTIVITY_TYPES
+        ):
+            return "filtered", detail_fetches, None
+
+        strava_id = str(activity["id"])
+
+        # Deduplicate by strava_activity_id
+        existing = (
+            db.query(RunLog).filter(RunLog.strava_activity_id == strava_id).first()
+        )
+        if existing:
+            return "skipped", detail_fetches, None
+
+        try:
+            run_log = self.map_activity_to_run_log(activity, user.id)
+            self._apply_vdot(run_log)
+            # Pull per-km splits (one extra call per inserted run) to sharpen
+            # the workout-type inference. Bounded per sync to respect Strava's
+            # rate limit; on failure we fall back to summary averages.
+            if detail_fetches < MAX_DETAIL_FETCHES_PER_SYNC:
+                detail = await self.fetch_activity_detail(access_token, strava_id)
+                detail_fetches += 1
+                if detail:
+                    run_log.splits = parse_strava_splits(detail)
+            self._classify_effort_and_type(run_log, user, db)
+            if not self._persist_with_savepoint(run_log, db):
+                return "skipped", detail_fetches, None
+            # Generate coaching feedback (non-fatal)
+            try:
+                FeedbackService.generate_and_store(run_log, db)
+            except Exception as fb_err:
+                logger.warning(
+                    f"Feedback generation failed for Strava run {run_log.id}: {fb_err}"
+                )
+            return "synced", detail_fetches, None
+        except Exception as e:
+            logger.error(f"Error mapping Strava activity {strava_id}: {e}")
+            return "error", detail_fetches, f"Activity {strava_id}: {str(e)}"
+
+    @staticmethod
+    def _persist_with_savepoint(run_log: RunLog, db: Session) -> bool:
+        """Flush one run inside a SAVEPOINT.
+
+        Wrapping each activity flush in a nested transaction means an
+        IntegrityError (a concurrent-sync race past the dedup SELECT) only
+        rolls back THIS activity, not every activity flushed earlier in the
+        loop. Returns ``False`` when the run was a duplicate and got rolled
+        back, ``True`` when it flushed cleanly.
+        """
+        db.add(run_log)
+        sp = db.begin_nested()
+        try:
+            db.flush()
+            sp.commit()
+            return True
+        except IntegrityError:
+            sp.rollback()
+            db.expunge(run_log)
+            return False
+
     async def sync_activities(
         self, user: User, db: Session, after_timestamp: Optional[int] = None
     ) -> dict[str, Any]:
@@ -297,125 +446,16 @@ class StravaService:
                 break
 
             for activity in activities:
-                # Filter to run activity types only.
-                # Check both `type` (deprecated) and `sport_type` (current) because
-                # Strava's v3 API may return `type=null` for newer activities that
-                # only set `sport_type`, and Garmin-synced activities in particular
-                # can arrive with no `type` value.
-                if (
-                    activity.get("type") not in RUN_ACTIVITY_TYPES
-                    and activity.get("sport_type") not in RUN_ACTIVITY_TYPES
-                ):
-                    continue
-
-                strava_id = str(activity["id"])
-
-                # Deduplicate by strava_activity_id
-                existing = (
-                    db.query(RunLog)
-                    .filter(RunLog.strava_activity_id == strava_id)
-                    .first()
+                outcome, detail_fetches, error = await self._ingest_activity(
+                    activity, user, db, access_token, detail_fetches
                 )
-                if existing:
-                    skipped += 1
-                    continue
-
-                try:
-                    run_log = self.map_activity_to_run_log(activity, user.id)
-                    # Auto-calculate VDOT for all runs with sufficient distance
-                    if run_log.distance_km >= 2.0 and run_log.duration_minutes > 0:
-                        vdot = VDOTCalculator.calculate_vdot(
-                            run_log.distance_km,
-                            int(run_log.duration_minutes * 60),
-                            elevation_gain_m=run_log.elevation_gain_m,
-                        )
-                        if vdot:
-                            run_log.vdot = vdot
-                    # Pull per-km splits (one extra call per inserted run) to
-                    # sharpen the workout-type inference. Bounded per sync to
-                    # respect Strava's rate limit; on failure we fall back to
-                    # summary averages.
-                    if detail_fetches < MAX_DETAIL_FETCHES_PER_SYNC:
-                        detail = await self.fetch_activity_detail(
-                            access_token, strava_id
-                        )
-                        detail_fetches += 1
-                        if detail:
-                            run_log.splits = parse_strava_splits(detail)
-                    try:
-                        from app.contexts.runner.fitness.effort_classifier import (
-                            classify_effort,
-                        )
-
-                        effort_class = classify_effort(
-                            distance_km=run_log.distance_km,
-                            avg_pace_min_km=run_log.avg_pace_min_km,
-                            perceived_effort=run_log.perceived_effort,
-                            user_id=user.id,
-                            db=db,
-                            exclude_run_id=run_log.id,
-                        )
-                        if effort_class is not None:
-                            run_log.effort_class = effort_class
-                    except Exception as cls_err:
-                        logger.warning(
-                            f"Effort classification failed for Strava run {run_log.id}: {cls_err}"
-                        )
-                    # Infer the real workout type (Strava defaults it to "easy").
-                    try:
-                        from app.contexts.runner.fitness.workout_type_classifier import (
-                            classify_workout_type,
-                        )
-
-                        wt_result = classify_workout_type(
-                            distance_km=run_log.distance_km,
-                            duration_minutes=run_log.duration_minutes,
-                            avg_pace_min_km=run_log.avg_pace_min_km,
-                            avg_heart_rate=run_log.avg_heart_rate,
-                            max_heart_rate=run_log.max_heart_rate,
-                            elevation_gain_m=run_log.elevation_gain_m,
-                            perceived_effort=run_log.perceived_effort,
-                            splits=run_log.splits,
-                            vdot=run_log.vdot,
-                            user_id=user.id,
-                            db=db,
-                            exclude_run_id=run_log.id,
-                        )
-                        if wt_result is not None:
-                            (
-                                run_log.inferred_workout_type,
-                                run_log.inferred_type_confidence,
-                            ) = wt_result
-                    except Exception as cls_err:
-                        logger.warning(
-                            f"Workout-type inference failed for Strava run {run_log.id}: {cls_err}"
-                        )
-                    # Each activity flush is wrapped in a SAVEPOINT so an
-                    # IntegrityError (concurrent-sync race past the SELECT above)
-                    # only rolls back THIS activity, not every activity flushed
-                    # earlier in the loop. db.commit() at the end of sync_activities
-                    # covers the entire transaction otherwise.
-                    db.add(run_log)
-                    sp = db.begin_nested()
-                    try:
-                        db.flush()
-                        sp.commit()
-                    except IntegrityError:
-                        sp.rollback()
-                        db.expunge(run_log)
-                        skipped += 1
-                        continue
-                    # Generate coaching feedback (non-fatal)
-                    try:
-                        FeedbackService.generate_and_store(run_log, db)
-                    except Exception as fb_err:
-                        logger.warning(
-                            f"Feedback generation failed for Strava run {run_log.id}: {fb_err}"
-                        )
+                if outcome == "synced":
                     synced += 1
-                except Exception as e:
-                    logger.error(f"Error mapping Strava activity {strava_id}: {e}")
-                    errors.append(f"Activity {strava_id}: {str(e)}")
+                elif outcome == "skipped":
+                    skipped += 1
+                elif outcome == "error" and error:
+                    errors.append(error)
+                # "filtered" (non-run activity) is ignored entirely.
 
             page += 1
 

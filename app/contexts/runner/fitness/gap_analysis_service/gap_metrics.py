@@ -203,7 +203,7 @@ def _compute_consistency(
     current_week: int,
 ) -> Dict[str, Any]:
     """Compute workout completion rate and skipped/rescheduled counts."""
-    from app.contexts.plan.adaptation import AdaptationService
+    from app.application.ports import AdaptationService
 
     adaptation_service = AdaptationService()
     skipped_data = adaptation_service.detect_skipped_workouts(plan.id, db)

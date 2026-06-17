@@ -10,7 +10,7 @@ from sqlalchemy.orm import Session
 from app.models import RunLog, TrainingPlan
 
 if TYPE_CHECKING:
-    from app.contexts.plan.adaptation import AdaptationService
+    from app.application.ports import AdaptationService
 
 logger = logging.getLogger(__name__)
 
@@ -50,7 +50,7 @@ def get_adjustment_hints(
     adaptation_service: AdaptationService | None = None,
 ) -> dict[str, Any]:
     if adaptation_service is None:
-        from app.contexts.plan.adaptation import AdaptationService
+        from app.application.ports import AdaptationService
 
         adaptation_service = AdaptationService()
 

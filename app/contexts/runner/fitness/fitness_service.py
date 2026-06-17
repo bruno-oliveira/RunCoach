@@ -15,7 +15,7 @@ from app.utils import parse_race_time_to_seconds
 
 if TYPE_CHECKING:
     # Type-only: the engine is injected by the caller.
-    from app.contexts.nutrition.nutrition_engine import NutritionEngine
+    from app.application.ports import NutritionEngine
 
 logger = logging.getLogger(__name__)
 
@@ -26,10 +26,10 @@ class FitnessService:
     def __init__(self, db: Session) -> None:
         # Deferred imports keep the runner context free of static edges into the
         # plan context (cross-context orchestration happens at call time).
-        from app.contexts.plan.generators.fitness_plan_generator import (
+        from app.application.ports import (
             FitnessPlanGenerator,
+            PlanService,
         )
-        from app.contexts.plan.plan_service import PlanService
 
         self.db = db
         self._plan_service = PlanService()

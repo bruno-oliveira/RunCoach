@@ -81,6 +81,69 @@ def _classify_unchanged(in_window: bool) -> Dict[str, Optional[str]]:
     return {"status": "unchanged", "reason": None}
 
 
+def _classify_workout_change(
+    b: Optional[Dict[str, Any]],
+    a: Optional[Dict[str, Any]],
+    *,
+    week: int,
+    day: int,
+    recorder_by_key: Dict[tuple, Dict[str, Any]],
+    current_week: Optional[int],
+    current_day_of_week: Optional[int],
+) -> tuple[str, Optional[str], float, float]:
+    """Resolve ``(status, reason, old_dist, new_dist)`` for one workout.
+
+    Prefers the user-visible (1-decimal) distance delta over the raw delta so a
+    sub-0.1 km change isn't surfaced as "Increased" on a row whose displayed
+    km are identical. Falls back to the recorder hint, then to the
+    in/out-of-window default.
+    """
+    old_dist = float(b["distance_km"]) if b else 0.0
+    new_dist = float(a["distance_km"]) if a else 0.0
+    display_changed = round(old_dist, 1) != round(new_dist, 1)
+
+    rec = recorder_by_key.get((week, day))
+    if display_changed:
+        return "changed", (rec.get("reason") if rec else None), old_dist, new_dist
+    if rec is not None:
+        return rec.get("status", "unchanged"), rec.get("reason"), old_dist, new_dist
+
+    in_window = not (
+        current_week is not None
+        and current_day_of_week is not None
+        and week == current_week
+        and day < current_day_of_week
+    )
+    classification = _classify_unchanged(in_window)
+    return classification["status"], classification["reason"], old_dist, new_dist
+
+
+def _compute_no_change_reasons(
+    all_weeks: List[Dict[str, Any]],
+    workouts_changed_count: int,
+    multiplier: Optional[float],
+    extra_no_change_reasons: Optional[List[str]],
+) -> List[str]:
+    """Explain why nothing changed (empty plan, all protected, neutral
+    multiplier, or identical distances), plus any caller-supplied extras."""
+    no_change_reasons: List[str] = []
+    if not all_weeks:
+        no_change_reasons.append(_reasons.NO_CHANGE_NO_REMAINING_WORKOUTS)
+    elif workouts_changed_count == 0:
+        if all(
+            wo["status"] == "protected" for wk in all_weeks for wo in wk["workouts"]
+        ):
+            no_change_reasons.append(_reasons.NO_CHANGE_ALL_PROTECTED)
+        elif multiplier is not None and abs(multiplier - 1.0) < 0.02:
+            no_change_reasons.append(_reasons.NO_CHANGE_MULTIPLIER_NEUTRAL)
+        else:
+            no_change_reasons.append(_reasons.NO_CHANGE_DISTANCES_IDENTICAL)
+    for extra in extra_no_change_reasons or []:
+        if extra not in no_change_reasons:
+            no_change_reasons.append(extra)
+    return no_change_reasons
+
+
 def build_change_plan(
     *,
     action: str,
@@ -123,37 +186,16 @@ def build_change_plan(
         day = ref["day"]
         wtype = ref["type"]
 
-        old_dist = float(b["distance_km"]) if b else 0.0
-        new_dist = float(a["distance_km"]) if a else 0.0
+        status, reason, old_dist, new_dist = _classify_workout_change(
+            b,
+            a,
+            week=week,
+            day=day,
+            recorder_by_key=recorder_by_key,
+            current_week=current_week,
+            current_day_of_week=current_day_of_week,
+        )
         delta = round(new_dist - old_dist, 2)
-        # Status must reflect what the user actually sees: distances are
-        # rounded to 1 decimal in the UI, so a sub-0.1 raw delta would
-        # surface as "Increased" on a row whose old/new km display the
-        # same value. Compare the rounded values instead.
-        old_display = round(old_dist, 1)
-        new_display = round(new_dist, 1)
-        display_changed = old_display != new_display
-
-        in_window = True
-        if (
-            current_week is not None
-            and current_day_of_week is not None
-            and week == current_week
-            and day < current_day_of_week
-        ):
-            in_window = False
-
-        rec = recorder_by_key.get((week, day))
-        if display_changed:
-            status = "changed"
-            reason = rec.get("reason") if rec else None
-        elif rec is not None:
-            status = rec.get("status", "unchanged")
-            reason = rec.get("reason")
-        else:
-            classification = _classify_unchanged(in_window)
-            status = classification["status"]
-            reason = classification["reason"]
 
         if status == "changed":
             workouts_changed_count += 1
@@ -207,21 +249,9 @@ def build_change_plan(
     total_before = round(sum(w["total_km_before"] for w in weeks_list), 1)
     total_after = round(sum(w["total_km_after"] for w in weeks_list), 1)
 
-    no_change_reasons: List[str] = []
-    if not all_weeks:
-        no_change_reasons.append(_reasons.NO_CHANGE_NO_REMAINING_WORKOUTS)
-    elif workouts_changed_count == 0:
-        if all(
-            wo["status"] == "protected" for wk in all_weeks for wo in wk["workouts"]
-        ):
-            no_change_reasons.append(_reasons.NO_CHANGE_ALL_PROTECTED)
-        elif multiplier is not None and abs(multiplier - 1.0) < 0.02:
-            no_change_reasons.append(_reasons.NO_CHANGE_MULTIPLIER_NEUTRAL)
-        else:
-            no_change_reasons.append(_reasons.NO_CHANGE_DISTANCES_IDENTICAL)
-    for extra in extra_no_change_reasons or []:
-        if extra not in no_change_reasons:
-            no_change_reasons.append(extra)
+    no_change_reasons = _compute_no_change_reasons(
+        all_weeks, workouts_changed_count, multiplier, extra_no_change_reasons
+    )
 
     did_change = workouts_changed_count > 0 or bool(vdot_change)
     if mode == "preview":

@@ -17,8 +17,8 @@ from app.contexts.runner.fitness.performance_progress import (
 from app.models import DailyWorkout, RunLog, TrainingPlan, User, WeeklyPlan
 
 if TYPE_CHECKING:
-    from app.contexts.nutrition.nutrition_engine import NutritionEngine
-    from app.contexts.plan.generators.performance_plan_generator import (
+    from app.application.ports import (
+        NutritionEngine,
         PerformancePlanGenerator,
     )
 
@@ -52,8 +52,8 @@ class PerformanceService:
         """
         # Deferred imports keep the runner context free of static edges into the
         # plan and nutrition contexts; injected instances skip them entirely.
-        from app.contexts.nutrition.nutrition_engine import NutritionEngine
-        from app.contexts.plan.generators.performance_plan_generator import (
+        from app.application.ports import (
+            NutritionEngine,
             PerformancePlanGenerator,
         )
 
@@ -108,7 +108,7 @@ class PerformanceService:
             }
 
         # Strategy 2: Age-based formula (medium confidence)
-        from app.contexts.auth.repositories import SQLAlchemyUserRepository
+        from app.application.ports import SQLAlchemyUserRepository
 
         user = SQLAlchemyUserRepository(self.db).get_by_id(user_id)
         if user and user.age:
