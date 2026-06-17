@@ -20,6 +20,62 @@ def get_week_pulse(
     if not training_plan.start_date:
         return None
 
+    loaded = _load_week_runs(training_plan, current_week, db)
+    if loaded is None:
+        return None
+    current_week_runs, prev_week_runs = loaded
+
+    current_km = sum(r.distance_km or 0 for r in current_week_runs)
+    prev_km = sum(r.distance_km or 0 for r in prev_week_runs)
+    runs_this_week = len(current_week_runs)
+
+    avg_effort_now = _avg_effort(current_week_runs)
+    avg_effort_prev = _avg_effort(prev_week_runs)
+
+    plan_data = training_plan.plan_data or []
+    week_data = next((w for w in plan_data if w.get("week") == current_week), None)
+    planned_km = week_data.get("total_km", 0) if week_data else 0
+
+    messages: list[str] = []
+    details: list[str] = []
+    mood = "neutral"
+
+    if runs_this_week > 0:
+        details.append(
+            f"{runs_this_week} run{'s' if runs_this_week != 1 else ''} logged this week ({current_km:.1f} km)"
+        )
+
+    mood = _volume_feedback(
+        messages, details, planned_km, current_km, prev_km, runs_this_week, mood
+    )
+    mood = _effort_feedback(messages, details, avg_effort_now, avg_effort_prev, mood)
+
+    if not messages and runs_this_week == 0 and prev_km > 0:
+        messages.append("No runs logged yet this week. Ready to get started?")
+        mood = "neutral"
+
+    if not messages:
+        messages.append("Keep it up — consistency builds fitness.")
+
+    return {
+        "message": messages[0] if messages else None,
+        "mood": mood,
+        "details": details[:3],
+        "runs_this_week": runs_this_week,
+        "km_this_week": round(current_km, 1),
+    }
+
+
+def _load_week_runs(
+    training_plan: TrainingPlan,
+    current_week: int,
+    db: Session,
+) -> Optional[tuple[list[RunLog], list[RunLog]]]:
+    """Load this week's and the previous week's runs for the plan.
+
+    Returns ``(current_week_runs, prev_week_runs)``, or ``None`` when neither
+    week has any logged runs (nothing to pulse on).
+    """
     start_date = (
         training_plan.start_date.date()
         if isinstance(training_plan.start_date, datetime)
@@ -56,33 +112,25 @@ def get_week_pulse(
 
     if not current_week_runs and not prev_week_runs:
         return None
+    return current_week_runs, prev_week_runs
 
-    current_km = sum(r.distance_km or 0 for r in current_week_runs)
-    prev_km = sum(r.distance_km or 0 for r in prev_week_runs)
-    current_efforts = [
-        r.perceived_effort for r in current_week_runs if r.perceived_effort
-    ]
-    prev_efforts = [r.perceived_effort for r in prev_week_runs if r.perceived_effort]
 
-    avg_effort_now = (
-        sum(current_efforts) / len(current_efforts) if current_efforts else None
-    )
-    avg_effort_prev = sum(prev_efforts) / len(prev_efforts) if prev_efforts else None
+def _avg_effort(runs: list[RunLog]) -> Optional[float]:
+    """Mean perceived effort over runs that recorded one, or None."""
+    efforts = [r.perceived_effort for r in runs if r.perceived_effort]
+    return sum(efforts) / len(efforts) if efforts else None
 
-    plan_data = training_plan.plan_data or []
-    week_data = next((w for w in plan_data if w.get("week") == current_week), None)
-    planned_km = week_data.get("total_km", 0) if week_data else 0
 
-    messages = []
-    details = []
-    mood = "neutral"
-
-    runs_this_week = len(current_week_runs)
-    if runs_this_week > 0:
-        details.append(
-            f"{runs_this_week} run{'s' if runs_this_week != 1 else ''} logged this week ({current_km:.1f} km)"
-        )
-
+def _volume_feedback(
+    messages: list[str],
+    details: list[str],
+    planned_km: float,
+    current_km: float,
+    prev_km: float,
+    runs_this_week: int,
+    mood: str,
+) -> str:
+    """Append volume-vs-plan and volume-vs-last-week notes; return new mood."""
     if planned_km > 0 and current_km > 0:
         pct = current_km / planned_km * 100
         if pct >= 90:
@@ -104,39 +152,35 @@ def get_week_pulse(
             details.append(
                 f"Lower volume than last week ({prev_km:.0f} km) — intentional rest?"
             )
+    return mood
 
-    if avg_effort_now is not None:
-        if avg_effort_now <= 5:
-            details.append(f"Avg effort: {avg_effort_now:.1f}/10 — feeling fresh")
-        elif avg_effort_now <= 7:
-            details.append(f"Avg effort: {avg_effort_now:.1f}/10 — good working range")
-        else:
-            details.append(
-                f"Avg effort: {avg_effort_now:.1f}/10 — running hard this week"
+
+def _effort_feedback(
+    messages: list[str],
+    details: list[str],
+    avg_effort_now: Optional[float],
+    avg_effort_prev: Optional[float],
+    mood: str,
+) -> str:
+    """Append average-effort and effort-trend notes; return new mood."""
+    if avg_effort_now is None:
+        return mood
+
+    if avg_effort_now <= 5:
+        details.append(f"Avg effort: {avg_effort_now:.1f}/10 — feeling fresh")
+    elif avg_effort_now <= 7:
+        details.append(f"Avg effort: {avg_effort_now:.1f}/10 — good working range")
+    else:
+        details.append(f"Avg effort: {avg_effort_now:.1f}/10 — running hard this week")
+        mood = "caution"
+
+    if avg_effort_prev is not None:
+        if avg_effort_now > avg_effort_prev + 1.5:
+            messages.append(
+                "Effort is climbing compared to last week. Watch for fatigue."
             )
             mood = "caution"
-
-        if avg_effort_prev is not None:
-            if avg_effort_now > avg_effort_prev + 1.5:
-                messages.append(
-                    "Effort is climbing compared to last week. Watch for fatigue."
-                )
-                mood = "caution"
-            elif avg_effort_now < avg_effort_prev - 1.5:
-                messages.append("Runs are feeling easier — your fitness is adapting!")
-                mood = "positive"
-
-    if not messages and runs_this_week == 0 and prev_km > 0:
-        messages.append("No runs logged yet this week. Ready to get started?")
-        mood = "neutral"
-
-    if not messages:
-        messages.append("Keep it up — consistency builds fitness.")
-
-    return {
-        "message": messages[0] if messages else None,
-        "mood": mood,
-        "details": details[:3],
-        "runs_this_week": runs_this_week,
-        "km_this_week": round(current_km, 1),
-    }
+        elif avg_effort_now < avg_effort_prev - 1.5:
+            messages.append("Runs are feeling easier — your fitness is adapting!")
+            mood = "positive"
+    return mood
