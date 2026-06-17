@@ -102,18 +102,32 @@ class TestEnforceLongRunRatioCap:
         # Total should be preserved (excess redistributed, not deleted).
         assert abs(new_total - total_before) < 0.5
 
-    def test_cap_skipped_below_min_runs(self):
-        # 3 running days < min_runs_for_cap=4, so cap is not applied.
+    def test_cap_applies_at_low_frequency(self):
+        # Low-frequency plans (2-3 runs) now get the long-run cap too: an
+        # uncapped long run absorbs all the volume the week can't place
+        # elsewhere, pushing it to 85-90% of the week. With one easy run to
+        # receive the excess, the long run is brought back under the ratio.
         workouts = [
-            {"type": "easy", "distance": 5.0, "steps": []},
             {"type": "easy", "distance": 5.0, "steps": []},
             {"type": "long", "distance": 30.0, "steps": []},
         ]
-        long_w_before = next(w for w in workouts if w["type"] == "long")
-        original_long_km = long_w_before["distance"]
-        enforce_long_run_ratio_cap(workouts, phase="build")
+        total_before = sum(w["distance"] for w in workouts)
+        enforce_long_run_ratio_cap(workouts, phase="build", max_runs=2)
         long_w_after = next(w for w in workouts if w["type"] == "long")
-        assert long_w_after["distance"] == original_long_km
+        # 2-run weeks are inherently long-run-centric, so the ceiling is looser.
+        assert long_w_after["distance"] <= total_before * 0.62 + 0.05
+
+    def test_low_frequency_ratio_looser_than_high_frequency(self):
+        # A 2-run week tolerates a bigger long-run share than a 3-run week,
+        # which in turn is no looser than the 4+ run default.
+        from app.core.training.long_run_calculator import (
+            get_weekly_long_run_ratio_cap,
+        )
+
+        two = get_weekly_long_run_ratio_cap("build", max_runs=2)
+        three = get_weekly_long_run_ratio_cap("build", max_runs=3)
+        four = get_weekly_long_run_ratio_cap("build", max_runs=4)
+        assert two > three >= four == 0.55
 
     def test_cap_skipped_when_already_below_ratio(self):
         # Long is 40% of total — well below 55% cap, no change expected.

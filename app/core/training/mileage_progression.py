@@ -20,6 +20,7 @@ from app.core.training.trail_profile import (
 from app.core.training.tuning import (
     ACWR_PEAK_FACTORS,
     BASE_PHASE_END_FRACTION,
+    MAX_EASY_RUN_KM,
     MAX_PEAK_MILEAGE,
     MIN_NON_RECOVERY_BUMP,
     PEAK_OSCILLATION_BASE,
@@ -439,7 +440,25 @@ def calculate_weekly_progression(
         run_ceiling = _CEILINGS.get(target_distance, target_distance * 0.9)
         q_cap = _Q_CAPS.get(target_distance, 8.0)
     quality_slots = 1 if max_runs >= 2 else 0
-    distributable = run_ceiling * (max_runs - quality_slots) + q_cap * quality_slots
+    if trail_profile is None and max_runs <= 3:
+        # Low-frequency accuracy: a 2-3 run week is one long run, at most one
+        # easy run, and one quality session. The long run can occupy the
+        # generous ``run_ceiling`` (a low-frequency runner has ample recovery
+        # between sessions for a substantial long run), but the easy slot is
+        # bounded by the absolute easy-run cap and quality by its own cap.
+        # Using ``run_ceiling`` for *every* slot over-estimated capacity, so the
+        # peak target sat above what the week could hold: loading weeks cratered
+        # to their real ceiling while the deload — taken from the inflated
+        # high-water mark — landed *above* them. Sizing the easy/quality slots
+        # at their true caps keeps the peak realistic and the curve monotonic.
+        # Higher-frequency plans keep the generous formula (the absolute
+        # MAX_PEAK_MILEAGE ceiling binds there instead).
+        easy_slots = max(0, max_runs - quality_slots - 1)
+        distributable = (
+            run_ceiling + MAX_EASY_RUN_KM * easy_slots + q_cap * quality_slots
+        )
+    else:
+        distributable = run_ceiling * (max_runs - quality_slots) + q_cap * quality_slots
     peak_km = min(peak_km, distributable)
     # Floor the base target at the runner's current volume: when current_km
     # already exceeds peak*0.70 the old ramp sloped DOWN to 0.70*peak, shedding

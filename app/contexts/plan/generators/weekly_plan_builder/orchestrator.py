@@ -112,6 +112,7 @@ def generate_daily_workouts(
     terrain: Optional[str] = None,
     profile: Optional[Dict[str, Any]] = None,
     trail_profile=None,
+    max_runs: Optional[int] = None,
 ) -> List[Dict[str, Any]]:
     """Generate daily workouts for one week."""
     long_run_distance = long_run_calculator.calculate_long_run_distance(
@@ -126,6 +127,7 @@ def generate_daily_workouts(
         trail_profile=trail_profile,
         training_terrain=terrain,
         long_run_pace_min_km=_long_run_pace_min_km(pace_zones),
+        max_runs=max_runs,
     )
     quality_distances = long_run_calculator.calculate_quality_distances(
         total_km,
@@ -333,6 +335,7 @@ def build_weekly_plan(
         terrain=terrain,
         profile=profile,
         trail_profile=trail_profile,
+        max_runs=max_runs_per_week,
     )
 
     intensive_weekend = None
@@ -365,6 +368,7 @@ def build_weekly_plan(
         training_terrain=terrain,
         trail_profile=trail_profile,
         pace_zones=pace_zones,
+        max_runs=max_runs_per_week,
     )
 
     # Final word on the long run: clamp to the road time ceiling even after
