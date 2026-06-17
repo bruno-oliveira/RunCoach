@@ -66,10 +66,10 @@ class PerformancePlanHandler(PlanTypeHandler):
         extra: Dict[str, Any],
         plan_data: List[Dict[str, Any]],
     ) -> Dict[str, Any]:
+        from app.application.ports import PerformanceService
         from app.contexts.plan.generators.performance_plan_generator import (
             PerformancePlanGenerator,
         )
-        from app.contexts.runner.fitness.performance_service import PerformanceService
         from app.utils import format_pace
 
         try:

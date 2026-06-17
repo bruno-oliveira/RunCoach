@@ -123,14 +123,14 @@ def _maybe_recalibrate_plan_zones(
         return None
 
     try:
-        from app.contexts.plan.repositories import SQLAlchemyPlanRepository
+        from app.application.ports import SQLAlchemyPlanRepository
 
         plan = SQLAlchemyPlanRepository(db).get_for_user(
             new_run.training_plan_id, user_id
         )
         if not plan:
             return None
-        from app.contexts.plan.adaptation.vdot_recalibrator import (
+        from app.application.ports import (
             recalibrate_zones_only,
         )
 

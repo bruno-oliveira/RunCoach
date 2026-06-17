@@ -83,7 +83,7 @@ class RunCreationService:
 
         validated_workout: Optional[DailyWorkout] = None
         if run_log.daily_workout_id:
-            from app.contexts.plan.repositories import SQLAlchemyPlanRepository
+            from app.application.ports import SQLAlchemyPlanRepository
 
             validated_workout = SQLAlchemyPlanRepository(db).get_user_workout(
                 run_log.daily_workout_id, current_user.id

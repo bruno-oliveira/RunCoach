@@ -48,7 +48,7 @@ class FeedbackService:
             )
 
         # Resolve HR zones from the linked training plan
-        from app.contexts.plan.repositories import SQLAlchemyPlanRepository
+        from app.application.ports import SQLAlchemyPlanRepository
 
         hr_zones = None
         if run_log.training_plan_id:
@@ -150,7 +150,7 @@ class FeedbackService:
 
         Returns {week_number: {summary, sentiment, run_count, highlights}}.
         """
-        from app.contexts.plan.repositories import SQLAlchemyPlanRepository
+        from app.application.ports import SQLAlchemyPlanRepository
 
         training_plan = SQLAlchemyPlanRepository(db).get_for_user(plan_id, user_id)
         if not training_plan or not training_plan.start_date:

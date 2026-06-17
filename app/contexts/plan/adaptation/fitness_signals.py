@@ -34,11 +34,11 @@ def default_provider() -> FitnessSignalsProvider:
     module-load time. Resolution is fast — Python caches the import after
     the first call.
     """
-    from app.contexts.runner.fitness.race_predictor_service import RacePredictorService
-    from app.contexts.runner.fitness.readiness_scoring import (
+    from app.application.ports import (
+        RacePredictorService,
+        TrainingLoadService,
         score_mountain_simulation,
     )
-    from app.contexts.runner.fitness.training_load_service import TrainingLoadService
 
     return FitnessSignalsProvider(
         get_vdot_history=RacePredictorService.get_vdot_history,
