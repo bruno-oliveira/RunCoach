@@ -28,6 +28,7 @@ def calculate_zones(
     vdot_zones: Optional[Dict[str, Dict[str, Any]]] = None,
     goal_pace: Optional[float] = None,
     max_hr: Optional[int] = None,
+    race_distance_km: Optional[float] = None,
 ) -> Dict[str, Dict[str, Any]]:
     """Build the 5-zone training table.
 
@@ -40,6 +41,11 @@ def calculate_zones(
             zone 5 to this pace and shifts the description to a race-target tone.
         max_hr: Maximum heart rate. If provided, attaches `hr_bpm_range` to
             each zone.
+        race_distance_km: Target race distance. When given alongside
+            `goal_pace`, the race-pace band's HR label is corrected to the
+            effort that distance is actually run at (a marathon goal pace is a
+            sustained aerobic effort, not the 95-100% the band would otherwise
+            imply), rather than always reading as max effort.
 
     Returns:
         Dict keyed by zone slug, each value containing pace, pace_range,
@@ -160,11 +166,39 @@ def calculate_zones(
             },
         }
 
+    # Distance-aware race-pace effort: the zone-5 band is pinned to the goal
+    # pace, but the *effort* that pace represents depends on the race. A 5K is
+    # run near VO2max; a marathon at a sustained aerobic effort. Re-label the
+    # band's HR/percentage to the matching training zone so the panel doesn't
+    # claim every goal pace is a 95-100% max-HR effort. The pace itself is left
+    # untouched (the runner's literal target).
+    if goal_pace is not None and race_distance_km:
+        from app.core.training.goal_pace_model import race_pace_zone_label
+
+        # Daniels pace zone closest to race pace -> the display band whose HR
+        # range best describes that effort.
+        _label_to_hr_slug = {
+            "I": "zone_4_vo2max",
+            "T": "zone_4_vo2max",
+            "M": "zone_3_tempo",
+            "E": "zone_2_aerobic",
+        }
+        hr_slug = _label_to_hr_slug.get(
+            race_pace_zone_label(race_distance_km), "zone_4_vo2max"
+        )
+        zones["zone_5_race"]["hr_range"] = zones[hr_slug]["hr_range"]
+        zones["zone_5_race"]["race_hr_slug"] = hr_slug
+
     if max_hr:
         for zone_name, (low_pct, high_pct) in TRAINING_ZONE_HR_PERCENTAGES.items():
             low_bpm = int(max_hr * low_pct)
             high_bpm = int(max_hr * high_pct)
             zones[zone_name]["hr_bpm_range"] = f"{low_bpm}-{high_bpm} BPM"
+        # The race-pace band borrows its effort cousin's BPM range too, so the
+        # numeric band matches the corrected percentage label above.
+        race = zones["zone_5_race"]
+        if race.get("race_hr_slug"):
+            race["hr_bpm_range"] = zones[race["race_hr_slug"]]["hr_bpm_range"]
 
     # Attach display strings for the pace anchor and the pace band. The zone
     # table in the performance plan renders `pace_formatted` /

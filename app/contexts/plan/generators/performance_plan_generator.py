@@ -12,6 +12,11 @@ from typing import Any, Dict, List, Optional
 
 from app.core.coaching.coaching_notes_generator import generate_coaching_note
 from app.core.training import mileage_progression, phase_calculator
+from app.core.training.goal_pace_model import (
+    GoalPaceContext,
+    goal_vdot_from_time,
+    progressive_pace_zones,
+)
 from app.core.training.strength_plan import derive_experience_level
 from app.core.training.training_constants import calculate_week_in_phase
 from app.core.training.vdot_calculator import VDOTCalculator
@@ -88,12 +93,14 @@ class PerformancePlanGenerator(BasePlanGenerator):
         goal_pace: float,
         max_hr: Optional[int] = None,
         vdot_zones: Optional[Dict] = None,
+        race_distance_km: Optional[float] = None,
     ) -> Dict[str, Dict[str, Any]]:
         """Calculate 5 training zones based on goal pace and optionally max HR.
 
         Delegates to the shared zone_calculator. The performance plan anchors
         zone 5 to the user's chosen `goal_pace` rather than VDOT-derived
-        marathon pace.
+        marathon pace; `race_distance_km` lets the race-pace band carry the HR
+        effort that distance is actually run at.
         """
         from app.core.training.zone_calculator import calculate_zones
 
@@ -101,6 +108,7 @@ class PerformancePlanGenerator(BasePlanGenerator):
             vdot_zones=vdot_zones,
             goal_pace=goal_pace,
             max_hr=max_hr,
+            race_distance_km=race_distance_km,
         )
 
     # ------------------------------------------------------------------
@@ -324,7 +332,13 @@ class PerformancePlanGenerator(BasePlanGenerator):
         phase_durations = phase_calculator.calculate_phases(weeks, target_distance)
         phases_rich = build_phases_rich(phase_durations, _PHASE_METADATA)
 
-        # --- VDOT & pace zones ---
+        # --- VDOT & pace zones (goal-aware, progressive) ---
+        # Current fitness anchors the early weeks; a goal VDOT (implied by the
+        # goal pace at the target distance) anchors race weeks. Each week trains
+        # off a VDOT blended between the two, so every training pace — easy,
+        # threshold, interval — sharpens toward the goal across the block rather
+        # than sitting at the runner's current fitness. Race-pace work stays
+        # pinned to the exact goal pace (handled in calculate_training_zones).
         vdot = None
         vdot_zones = None
         if current_pace:
@@ -333,9 +347,24 @@ class PerformancePlanGenerator(BasePlanGenerator):
             if vdot:
                 vdot_zones = VDOTCalculator.get_pace_zones(vdot)
 
-        zones = self.calculate_training_zones(
-            goal_pace, max_heart_rate, vdot_zones=vdot_zones
+        goal_seconds = int(goal_pace * target_distance * 60)
+        goal_vdot = goal_vdot_from_time(target_distance, goal_seconds)
+        goal_ctx = GoalPaceContext(
+            current_vdot=vdot,
+            goal_vdot=goal_vdot,
+            goal_pace_min_km=goal_pace,
+            target_distance_km=target_distance,
         )
+
+        def _zones_for_week(week_num: int):
+            """Blended VDOT zones (and 5-band table) for a given plan week."""
+            week_vdot_zones = (
+                progressive_pace_zones(goal_ctx, week_num, weeks) or vdot_zones
+            )
+            week_zones = self.calculate_training_zones(
+                goal_pace, max_heart_rate, vdot_zones=week_vdot_zones
+            )
+            return week_zones, week_vdot_zones
 
         # Shared mileage progression (10% rule, recovery weeks, VDOT-adjusted peak)
         km_progression = mileage_progression.calculate_weekly_progression(
@@ -357,20 +386,25 @@ class PerformancePlanGenerator(BasePlanGenerator):
 
             week_in_phase = calculate_week_in_phase(week_num, phase, phase_durations)
 
+            week_zones, week_vdot_zones = _zones_for_week(week_num)
             weekly_plan = self._generate_weekly_plan(
                 week_num,
                 phase,
                 phases_rich,
-                zones,
+                week_zones,
                 km_progression[week_num - 1],
                 target_distance,
                 runs_per_week,
                 is_recovery,
-                vdot_zones=vdot_zones,
+                vdot_zones=week_vdot_zones,
                 week_in_phase=week_in_phase,
                 experience_level=experience_level,
             )
             weekly_plans.append(weekly_plan)
+
+        # Representative zone table for the generate-response / summary: the
+        # final week's zones, i.e. paces at full goal fitness.
+        zones, _ = _zones_for_week(weeks)
 
         total_km = sum(week["total_km"] for week in weekly_plans)
         total_quality_workouts = sum(week["quality_workouts"] for week in weekly_plans)
