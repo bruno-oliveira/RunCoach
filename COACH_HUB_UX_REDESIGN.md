@@ -1,7 +1,16 @@
 # Coach Hub & Surrounding-UX Redesign Proposal
 
-> Status: **APPROVED — implementing Phases 0–2.** Decisions locked (see §8).
-> This document is the agreed plan; §8 records the owner's calls.
+> Status: **Phases 0–2 IMPLEMENTED.** Decisions locked (see §8). Phase 3 (real
+> trail recipes) deferred as agreed. This document is the agreed plan; §8 records
+> the owner's calls.
+>
+> Shipped:
+> - **Phase 0** — "Trail-Ready Fuel" → "Trail Fuel Ideas" + clarifying caption.
+> - **Phase 1** — Coach Hub collapsed 5 tabs → Coach + Progress (declarative tab
+>   model; Evolution deleted; Signals demoted to a "Why this call?" explainer;
+>   Progress trimmed to the keep-list; nav split into Coach + Progress).
+> - **Phase 2** — trail fuel ideas + tips consolidated onto Race Prep; plan
+>   nutrition tab keeps the in-race table + a callout link.
 
 ## 0. Locked decisions
 
