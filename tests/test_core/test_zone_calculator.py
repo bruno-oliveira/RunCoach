@@ -60,3 +60,24 @@ def test_goal_pace_anchors_zone_5_and_is_left_intact():
     z = calculate_zones(vdot=50, goal_pace=4.5)
     assert z["zone_5_race"]["pace"] == 4.5
     assert "target effort" in z["zone_5_race"]["description"]
+
+
+def test_race_pace_hr_label_is_distance_aware():
+    """Race pace is pinned to the goal, but its HR effort label tracks the race
+    distance: a 5K goal is a high-HR effort, a marathon goal a sustained
+    aerobic one — not always the band's nominal 95-100%."""
+    short = calculate_zones(vdot=50, goal_pace=4.5, max_hr=190, race_distance_km=5.0)
+    long = calculate_zones(vdot=50, goal_pace=4.5, max_hr=190, race_distance_km=42.195)
+    # Pace is the literal goal in both.
+    assert short["zone_5_race"]["pace"] == 4.5
+    assert long["zone_5_race"]["pace"] == 4.5
+    # 5K borrows the VO2max band's HR; marathon the tempo band's (lower).
+    assert short["zone_5_race"]["hr_range"] == short["zone_4_vo2max"]["hr_range"]
+    assert long["zone_5_race"]["hr_range"] == long["zone_3_tempo"]["hr_range"]
+    assert short["zone_5_race"]["hr_range"] != long["zone_5_race"]["hr_range"]
+
+
+def test_race_pace_hr_label_untouched_without_distance():
+    """Omitting race_distance_km leaves the legacy zone-5 HR label intact."""
+    z = calculate_zones(vdot=50, goal_pace=4.5, max_hr=190)
+    assert z["zone_5_race"]["hr_range"] == "95-100%"

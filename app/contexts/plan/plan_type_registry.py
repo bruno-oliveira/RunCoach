@@ -70,12 +70,32 @@ class PerformancePlanHandler(PlanTypeHandler):
         from app.contexts.plan.generators.performance_plan_generator import (
             PerformancePlanGenerator,
         )
+        from app.core.training.goal_pace_model import goal_vdot_from_time
+        from app.core.training.vdot_calculator import VDOTCalculator
         from app.utils import format_pace
 
         try:
             perf_service = PerformanceService(db)
             gen = PerformancePlanGenerator()
-            zones = gen.calculate_training_zones(plan.goal_pace, plan.max_heart_rate)
+            # Display the runner's goal-fitness Daniels zones (the paces they
+            # are training toward), not a crude goal-pace×multiplier fallback.
+            target_km = plan.target_distance_km
+            goal_vdot = None
+            if plan.goal_pace and target_km:
+                goal_vdot = goal_vdot_from_time(
+                    target_km, int(plan.goal_pace * target_km * 60)
+                )
+            goal_vdot_zones = (
+                VDOTCalculator.get_pace_zones(goal_vdot, target_km)
+                if goal_vdot
+                else None
+            )
+            zones = gen.calculate_training_zones(
+                plan.goal_pace,
+                plan.max_heart_rate,
+                vdot_zones=goal_vdot_zones,
+                race_distance_km=target_km or None,
+            )
             for zone_data in zones.values():
                 zone_data["pace_formatted"] = format_pace(zone_data["pace"])
                 if "pace_range" in zone_data:
