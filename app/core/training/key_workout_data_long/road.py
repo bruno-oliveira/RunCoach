@@ -212,6 +212,28 @@ ROAD_LONG: List[Dict] = [
         ),
     },
     {
+        "id": "marathon_mp_blocks",
+        "distances": [42.2],
+        "phases": ["build", "peak"],
+        "type": "tempo",
+        "terrain": ["any"],
+        "name": "Marathon-Pace Blocks",
+        "structure": "3-5 × 3km at marathon pace with 2min recovery",
+        "description": (
+            "Warm up 3km easy. Run 3-5 × 3km at marathon goal pace with "
+            "2 minutes easy jog recovery between blocks. Cool down 2km easy."
+        ),
+        "intensity": "medium",
+        "target_zone": 3,
+        "pace_zone": "M",
+        "rationale": (
+            "Breaking marathon pace into repeated blocks lets you rehearse race "
+            "rhythm and fueling at goal effort while the short floats keep the "
+            "session controlled — a sharper, more repeatable way to bank "
+            "marathon-pace volume than one long continuous block on a hard day."
+        ),
+    },
+    {
         "id": "marathon_yasso_800s",
         "distances": [42.2],
         "phases": ["build", "peak"],

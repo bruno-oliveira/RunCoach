@@ -21,6 +21,7 @@ from app.contexts.plan.generators.performance_workout_builders import (
     generate_vo2max_workout,
     reconcile_workout_after_cap,
 )
+from app.core.training.workout_steps.metrics import _compute_distance_from_steps
 
 
 @pytest.fixture
@@ -53,9 +54,15 @@ def _all_workouts(plan):
     ids=["5K", "10K", "half", "marathon"],
 )
 class TestSegmentDistanceConsistency:
-    def test_segments_sum_to_workout_distance(
-        self, generator, distance, weekly_km, weeks
-    ):
+    def test_steps_sum_to_workout_distance(self, generator, distance, weekly_km, weeks):
+        """Stored workouts use the unified steps model, and the steps total
+        agrees with the workout distance.
+
+        The performance engine projects its settled segment-based sessions onto
+        the same structured ``steps`` the road generator and key-workout overlay
+        emit, so no stored workout keeps ``segments`` and the steps total is the
+        authoritative distance.
+        """
         plan = generator.generate_plan(
             target_distance=distance,
             current_pace=5.5,
@@ -65,13 +72,23 @@ class TestSegmentDistanceConsistency:
             runs_per_week=5,
         )
         for week, w in _all_workouts(plan):
-            segments = w.get("segments", [])
-            if not segments:
+            assert not w.get("segments"), (
+                f"Week {week['week']} {w['type']} still carries segments "
+                "after unification"
+            )
+            if w["type"] == "rest":
                 continue
-            seg_total = round(sum(s["distance_km"] for s in segments), 1)
-            assert abs(w["distance"] - seg_total) < 0.2, (
+            steps = w.get("steps") or []
+            assert steps, f"Week {week['week']} {w['type']}: no steps"
+            # Curated key-workout overlays are prescriptive (e.g. fixed-rep
+            # ladders) and allowed to diverge from the budget — only the
+            # formulaic conversions must total their distance exactly.
+            if w.get("key_workout_id"):
+                continue
+            steps_total = round(_compute_distance_from_steps(steps), 1)
+            assert abs(w["distance"] - steps_total) <= 0.1, (
                 f"Week {week['week']} {w['type']}: "
-                f"distance={w['distance']} but segments sum to {seg_total}"
+                f"distance={w['distance']} but steps sum to {steps_total}"
             )
 
     def test_description_matches_distance(self, generator, distance, weekly_km, weeks):
@@ -125,12 +142,15 @@ class TestSegmentDistanceConsistency:
                     f"Week {week['week']} {w['type']}: header {m.group(1)}km != "
                     f"distance {w['distance']} :: {desc}"
                 )
-            # Segment sum must match distance exactly (one-decimal grid).
-            segs = w.get("segments") or []
-            if segs:
-                seg_total = round(sum(s["distance_km"] for s in segs), 1)
-                assert abs(seg_total - round(w["distance"], 1)) <= 0.05, (
-                    f"Week {week['week']} {w['type']}: segments {seg_total} != "
+            # Steps sum must match distance on the one-decimal grid (the
+            # warm-up/cool-down and working distances are copied verbatim from
+            # the settled segments, and interval recovery is unpriced).
+            # Curated overlays are prescriptive and excluded.
+            steps = w.get("steps") or []
+            if steps and not w.get("key_workout_id"):
+                steps_total = round(_compute_distance_from_steps(steps), 1)
+                assert abs(steps_total - round(w["distance"], 1)) <= 0.05, (
+                    f"Week {week['week']} {w['type']}: steps {steps_total} != "
                     f"distance {w['distance']}"
                 )
         """Descriptions must not contain duplicated warmup/cooldown phrases."""

@@ -17,7 +17,7 @@ from typing import Any, Dict, Optional
 
 from app.core.training import workout_steps as _steps_mod
 from app.core.training.vdot_calculator import VDOTCalculator
-from app.core.training.workout_registry import build_workout
+from app.core.training.workout_registry import WORKOUT_REGISTRY, build_workout
 
 _PLAIN_QUALITY_TYPES = ("tempo", "interval", "hill")
 
@@ -136,16 +136,20 @@ def reconcile_plan_data_to_orm(
             # their steps are re-derived from `distance` at enrich time.
             elif not is_key and steps_drift and target > 0:
                 pd_wo["steps"] = _steps_mod.scale_steps(steps, target / steps_km)
-                rebuilt = build_workout(
-                    wtype,
-                    day=day,
-                    distance=target,
-                    total_km=wk.get("total_km") or 0.0,
-                    phase=wk.get("phase", "build"),
-                    pace_zones=pace_zones,
-                )
-                if rebuilt.get("description"):
-                    pd_wo["description"] = rebuilt["description"]
+                # Performance log-only types (vo2max / race_pace / fartlek) have
+                # no day-level builder; their scaled steps stay authoritative and
+                # the existing prose is kept rather than rebuilt.
+                if wtype in WORKOUT_REGISTRY:
+                    rebuilt = build_workout(
+                        wtype,
+                        day=day,
+                        distance=target,
+                        total_km=wk.get("total_km") or 0.0,
+                        phase=wk.get("phase", "build"),
+                        pace_zones=pace_zones,
+                    )
+                    if rebuilt.get("description"):
+                        pd_wo["description"] = rebuilt["description"]
             pd_wo["distance"] = workout.distance_km
         if week.week_number in pd_week:
             pd_week[week.week_number]["total_km"] = round(

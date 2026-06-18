@@ -113,8 +113,8 @@ def _pyramid_pattern(d: float) -> str:
 
 def _fartlek_reps(
     d: float,
-    on_min: int = 3,
-    off_min: int = 2,
+    on_min: float = 3,
+    off_min: float = 2,
     pace_min_per_km: float = 6.0,
     default: int = 8,
     lo: int = 2,
@@ -155,6 +155,39 @@ def _vo2max_km_reps(
         return default
     reps = round(main_km / set_km)
     return max(lo, min(hi, reps))
+
+
+def _thirty_thirty_reps(d: float) -> int:
+    """Rep count for a 30s-on / 30s-off VO2max session, scaled to distance.
+
+    Each 60s couplet covers ~0.17km (30s at VO2max + 30s easy). Clamped to a
+    classic 30-30 range so the block stays a recognisable VO2max session
+    rather than collapsing to a handful of reps or ballooning past 20.
+    """
+    return _fartlek_reps(d, on_min=0.5, off_min=0.5, default=14, lo=10, hi=20)
+
+
+def _mile_rep_reps(d: float) -> int:
+    """1600m (mile) rep count that fits the warm-up-adjusted work budget.
+
+    ``build_meter_rep_steps`` honours the rep distance literally, so the rep
+    count must be chosen so ``reps × 1600 m`` fits inside the budget (leaving a
+    slice for jog recovery) — otherwise the executed reps overrun the assigned
+    distance. Deriving the count from the same budget the step builder uses
+    keeps the prose and the steps cite-for-cite identical, and clamps it to a
+    recognisable 2-6 mile-rep set.
+    """
+    total_m = int(round(d * 1000))
+    wu_m = _wucd_m(total_m)
+    work_budget = max(0, total_m - 2 * wu_m)
+    # Reserve ~15% of the work budget for jog recovery between reps.
+    reps = int((work_budget * 0.85) // 1600)
+    return max(2, min(6, reps))
+
+
+def _mp_block_reps(d: float) -> int:
+    """Marathon-pace block count scaled to the run budget (each ~3km + float)."""
+    return _vo2max_km_reps(d, rep_km=3.0, recovery_km=0.4, default=3, lo=2, hi=5)
 
 
 def _over_under_reps(
@@ -362,6 +395,32 @@ _DISTANCE_REWRITES: Dict[str, Callable[[float], str]] = {
     "5k_hill_sprints": lambda d: (
         f"Warm up {format_km(_wu_cd(d)[0])}km easy. Find a moderate hill (4-6% grade). "
         f"Run 8-10 x 60 seconds hard uphill with easy jog back down. "
+        f"Cool down {format_km(_wu_cd(d)[1])}km easy."
+    ),
+    "5k_thirty_thirties": lambda d: (
+        f"Warm up {format_km(_wu_cd(d)[0])}km easy. Run {_thirty_thirty_reps(d)} x "
+        f"(30 sec hard at VO2max effort / 30 sec easy jog) as one continuous block. "
+        f"Cool down {format_km(_wu_cd(d)[1])}km easy."
+    ),
+    "10k_thirty_thirties": lambda d: (
+        f"Warm up {format_km(_wu_cd(d)[0])}km easy. Run {_thirty_thirty_reps(d)} x "
+        f"(30 sec hard at VO2max effort / 30 sec easy jog) as one continuous block. "
+        f"Cool down {format_km(_wu_cd(d)[1])}km easy."
+    ),
+    "10k_mile_repeats": lambda d: (
+        f"Warm up {format_km(_wu_cd(d)[0])}km easy. Run {_mile_rep_reps(d)} x 1600m "
+        f"(1 mile) at threshold pace with 90 sec easy jog recovery between reps. "
+        f"Cool down {format_km(_wu_cd(d)[1])}km easy."
+    ),
+    "half_mile_repeats": lambda d: (
+        f"Warm up {format_km(_wu_cd(d)[0])}km easy. Run {_mile_rep_reps(d)} x 1600m "
+        f"(1 mile) at 10K goal pace with 90 sec easy jog recovery between reps. "
+        f"Cool down {format_km(_wu_cd(d)[1])}km easy."
+    ),
+    "marathon_mp_blocks": lambda d: (
+        f"Warm up {format_km(_wu_cd(d)[0])}km easy. Run {_mp_block_reps(d)} x "
+        f"{format_km(_km_rep_distance(d, _mp_block_reps(d)))}km at marathon pace "
+        f"with 2 min easy jog recovery between blocks. "
         f"Cool down {format_km(_wu_cd(d)[1])}km easy."
     ),
     "marathon_yasso_800s": lambda d: (

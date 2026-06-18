@@ -270,6 +270,28 @@ _WORKOUTS_SHORT: List[Dict] = [
             "varying distances — exactly what you'll need in the final km."
         ),
     },
+    {
+        "id": "5k_thirty_thirties",
+        "distances": [5.0],
+        "phases": ["build", "peak"],
+        "type": "interval",
+        "terrain": ["any"],
+        "name": "30-30 Intervals",
+        "structure": "14-20 × (30s hard / 30s easy)",
+        "description": (
+            "Warm up 2km easy. Run 14-20 × (30 seconds hard at VO2max effort / "
+            "30 seconds easy jog) as one continuous block. Cool down 2km easy."
+        ),
+        "intensity": "high",
+        "target_zone": 5,
+        "pace_zone": "I",
+        "rationale": (
+            "The short, frequent surges let you accumulate a big chunk of time "
+            "at VO2max while the 30-second floats keep the legs turning over — "
+            "you bank far more high-end aerobic work than a few long reps allow, "
+            "with less of the form breakdown that comes from grinding."
+        ),
+    },
     # -- 10K --
     {
         "id": "10k_cruise_intervals",
@@ -516,6 +538,50 @@ _WORKOUTS_SHORT: List[Dict] = [
             "automatic rather than a guessing game."
         ),
     },
+    {
+        "id": "10k_thirty_thirties",
+        "distances": [10.0],
+        "phases": ["build", "peak"],
+        "type": "interval",
+        "terrain": ["any"],
+        "name": "30-30 Intervals",
+        "structure": "14-20 × (30s hard / 30s easy)",
+        "description": (
+            "Warm up 2km easy. Run 14-20 × (30 seconds hard at VO2max effort / "
+            "30 seconds easy jog) as one continuous block. Cool down 2km easy."
+        ),
+        "intensity": "high",
+        "target_zone": 5,
+        "pace_zone": "I",
+        "rationale": (
+            "Frequent short surges pile up time at VO2max while the 30-second "
+            "floats keep your turnover quick and your form intact — a high "
+            "aerobic-power dose that complements the longer 10K rep sessions "
+            "without grinding you down."
+        ),
+    },
+    {
+        "id": "10k_mile_repeats",
+        "distances": [10.0],
+        "phases": ["build", "peak"],
+        "type": "tempo",
+        "terrain": ["any"],
+        "name": "Threshold Mile Repeats",
+        "structure": "3-5 × 1600m at threshold with 90s recovery",
+        "description": (
+            "Warm up 2km easy. Run 3-5 × 1600m (1 mile) at threshold pace with "
+            "90 seconds easy jog recovery between reps. Cool down 2km easy."
+        ),
+        "intensity": "high",
+        "target_zone": 4,
+        "pace_zone": "T",
+        "rationale": (
+            "Mile-long reps at threshold accumulate a large volume of "
+            "lactate-clearance work in pieces just long enough to be specific to "
+            "10K racing, while the short recoveries keep the overall effort "
+            "honest — raising the pace you can hold before fatigue bites."
+        ),
+    },
     # -- Half Marathon --
     {
         "id": "half_progressive_long",
@@ -640,6 +706,28 @@ _WORKOUTS_SHORT: List[Dict] = [
             "just under threshold. Over-unders teach you to absorb a surge and "
             "settle back to goal pace without blowing up — exactly what a hilly "
             "or surging race demands."
+        ),
+    },
+    {
+        "id": "half_mile_repeats",
+        "distances": [21.1],
+        "phases": ["build", "peak"],
+        "type": "interval",
+        "terrain": ["any"],
+        "name": "Mile Repeats at 10K Pace",
+        "structure": "3-6 × 1600m at 10K pace with 90s recovery",
+        "description": (
+            "Warm up 2km easy. Run 3-6 × 1600m (1 mile) at 10K goal pace with "
+            "90 seconds easy jog recovery between reps. Cool down 2km easy."
+        ),
+        "intensity": "high",
+        "target_zone": 4,
+        "pace_zone": "10K",
+        "rationale": (
+            "Reps a touch faster than half-marathon pace stretch your speed "
+            "reserve, so goal pace settles in as comfortable rather than "
+            "threatening. The mile length makes the work specific without the "
+            "neuromuscular cost of short, sharp intervals."
         ),
     },
 ]

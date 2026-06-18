@@ -31,6 +31,7 @@ from .performance_workout_builders import (
     generate_vo2max_workout,
 )
 from .phase_scaffold import build_phases_rich
+from .segment_steps import apply_steps_model
 
 logger = logging.getLogger(__name__)
 
@@ -217,6 +218,13 @@ class PerformancePlanGenerator(BasePlanGenerator):
                 is_recovery,
                 pace_zones=vdot_zones,
             )
+
+        # Unify the representation: the formulaic base/easy/long/fartlek
+        # sessions are still segment-based at this point (caps and prose were
+        # reconciled against segments above); project them onto the same
+        # structured steps model the curated overlay and road generator emit so
+        # every stored workout renders, enriches, and adapts identically.
+        apply_steps_model(daily_workouts)
 
         strength_sessions = attach_strength_sessions(
             daily_workouts,

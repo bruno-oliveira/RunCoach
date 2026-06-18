@@ -10,9 +10,12 @@ from typing import Any, Callable, Dict, List, Optional
 from app.core.training import workout_steps as _steps_mod
 from app.core.training.key_workout_library.rewrites import (
     _fartlek_reps,
+    _mile_rep_reps,
+    _mp_block_reps,
     _mp_cutdown_reps,
     _over_under_reps,
     _pyramid_pattern,
+    _thirty_thirty_reps,
     _vo2max_400_reps,
     _vo2max_km_reps,
     _yasso_800_reps,
@@ -106,6 +109,34 @@ _KEY_WORKOUT_STEP_BUILDERS: Dict[
     ),
     "half_cutdown_long": lambda d, pz: _steps_mod.build_split_long_steps(
         d, pz, easy_mult=1.0 / 3.0, finish_mult=2.0 / 3.0
+    ),
+    # -- 30/30 VO2max intervals (short on/off couplets) --
+    "5k_thirty_thirties": lambda d, pz: _steps_mod.build_fartlek_steps(
+        d, pz, reps=_thirty_thirty_reps(d), on_s=30, off_s=30, on_zone="I"
+    ),
+    "10k_thirty_thirties": lambda d, pz: _steps_mod.build_fartlek_steps(
+        d, pz, reps=_thirty_thirty_reps(d), on_s=30, off_s=30, on_zone="I"
+    ),
+    # -- mile (1600 m) repeats --
+    "10k_mile_repeats": lambda d, pz: _steps_mod.build_meter_rep_steps(
+        d,
+        pz,
+        reps=_mile_rep_reps(d),
+        rep_m=1600,
+        work_zone="T",
+        recovery_label="90s easy jog recovery",
+    ),
+    "half_mile_repeats": lambda d, pz: _steps_mod.build_meter_rep_steps(
+        d,
+        pz,
+        reps=_mile_rep_reps(d),
+        rep_m=1600,
+        work_zone="10K",
+        recovery_label="90s easy jog recovery",
+    ),
+    # -- marathon-pace blocks --
+    "marathon_mp_blocks": lambda d, pz: _steps_mod.build_km_rep_steps(
+        d, pz, reps=_mp_block_reps(d), work_zone="M", recovery_s=120
     ),
     # -- fartlek / over-under (duration on-reps) --
     "10k_fartlek": lambda d, pz: _steps_mod.build_fartlek_steps(
