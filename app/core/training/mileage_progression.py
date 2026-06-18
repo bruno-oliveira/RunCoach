@@ -18,7 +18,6 @@ from app.core.training.trail_profile import (
     trail_max_weekly_mileage,
 )
 from app.core.training.tuning import (
-    ACWR_PEAK_FACTORS,
     BASE_PHASE_END_FRACTION,
     MAX_EASY_RUN_KM,
     MAX_PEAK_MILEAGE,
@@ -31,7 +30,6 @@ from app.core.training.tuning import (
     RUNS_PER_WEEK_REFERENCE,
     RUNS_PER_WEEK_VOLUME_STEP,
     TRAIL_BRACKET_PEAK_TARGETS,
-    VOLUME_TREND_CAPS,
     WEEK_OVER_WEEK_CAP,
 )
 
@@ -47,22 +45,6 @@ _ROAD_PEAK_PARAMS = {
     "half": (48, 2.1),
     "marathon": (64, 2.25),
 }
-
-
-def _acwr_peak_factor(profile: Optional[dict]) -> float:
-    """Return a peak-mileage multiplier based on ACWR injury risk."""
-    if not profile:
-        return 1.0
-    risk = profile.get("acwr_risk", "low")
-    return ACWR_PEAK_FACTORS.get(risk, 1.0)
-
-
-def _volume_trend_cap(profile: Optional[dict]) -> float:
-    """Return the effective week-over-week cap based on volume trend."""
-    if not profile:
-        return WEEK_OVER_WEEK_CAP
-    trend = profile.get("volume_trend", "stable")
-    return VOLUME_TREND_CAPS.get(trend, WEEK_OVER_WEEK_CAP)
 
 
 def runs_per_week_volume_factor(max_runs: int) -> float:
@@ -129,16 +111,11 @@ def get_peak_mileage(
     current_km: float,
     weeks: int,
     vdot: Optional[float] = None,
-    profile: Optional[dict] = None,
     trail_profile: Optional[TrailProfile] = None,
 ) -> float:
     """
     Determine peak weekly mileage with length-based multipliers and optional VDOT adjustment.
     Higher VDOT runners can absorb slightly more volume (better aerobic fitness / recovery).
-
-    When a RunnerProfile is provided, ACWR injury risk reduces the peak:
-    - high risk → 15% lower peak
-    - very_high risk → 25% lower peak
 
     Trail / ultra plans bypass the per-distance ``MAX_PEAK_MILEAGE`` lookup
     in favour of the continuous ceiling derived from distance + elevation.
@@ -161,9 +138,6 @@ def get_peak_mileage(
     if vdot:
         vdot_factor = 0.95 + min(0.13, (vdot - 30) / 350)
         ideal_peak = ideal_peak * vdot_factor
-
-    # ACWR injury-risk adjustment
-    ideal_peak *= _acwr_peak_factor(profile)
 
     if current_km == 0:
         return ideal_peak
@@ -370,7 +344,6 @@ def calculate_weekly_progression(
     weeks: int,
     max_runs: int = 4,
     vdot: Optional[float] = None,
-    profile: Optional[dict] = None,
     trail_profile: Optional[TrailProfile] = None,
 ) -> List[float]:
     """
@@ -390,10 +363,6 @@ def calculate_weekly_progression(
     When the runner's base already meets or exceeds the target peak (common for
     high-mileage runners training for shorter distances), the ramp phases are
     skipped and weekly mileage is held flat at the capped peak.
-
-    Profile-aware adjustments:
-    - ACWR risk: reduces peak mileage (high=15%, very_high=25%)
-    - Volume trend: adjusts week-over-week cap (decreasing=5%, increasing=12%)
     """
     phases = calculate_phases(weeks, target_distance, trail_profile=trail_profile)
     peak_km = get_peak_mileage(
@@ -401,7 +370,6 @@ def calculate_weekly_progression(
         current_km,
         weeks,
         vdot=vdot,
-        profile=profile,
         trail_profile=trail_profile,
     )
 
@@ -466,8 +434,7 @@ def calculate_weekly_progression(
     # detrain) an already-adequate base, then build from there (audit G5).
     base_end_target = max(peak_km * BASE_PHASE_END_FRACTION, current_km)
 
-    # Volume-trend-aware week-over-week cap
-    effective_cap = _volume_trend_cap(profile)
+    effective_cap = WEEK_OVER_WEEK_CAP
 
     weekly_progression: List[float] = []
 

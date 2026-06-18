@@ -348,21 +348,6 @@
                             </div>
                         </div>
 
-                        {% if has_profile %}
-                        <div class="form-group profile-toggle-group">
-                            <label class="toggle-label" for="use_profile">
-                                <span class="toggle-wrap">
-                                    <input type="checkbox" id="use_profile" name="use_profile" class="toggle-input" checked>
-                                    <span class="toggle-track"><span class="toggle-thumb"></span></span>
-                                </span>
-                                <span class="toggle-text">
-                                    <strong><span data-i18n="home.use_strava">Use my running data</span></strong>
-                                    <span class="form-help">Tailors the plan to your actual fitness, VDOT, and training load</span>
-                                </span>
-                            </label>
-                        </div>
-                        {% endif %}
-
                         <div id="long-run-hint" class="long-run-hint" role="status" aria-live="polite" style="display:none;">
                             <span class="long-run-hint-icon" aria-hidden="true">⚠</span>
                             <span class="long-run-hint-text"></span>
@@ -558,24 +543,7 @@ function setPlanMode(mode) {
     elevationField.addEventListener('input', updateElevationClassifier);
     updateTrailVisibility();
 
-    // Beginners (current_km === 0) get a beginner plan, so the "Use my running data"
-    // toggle is meaningless — hide it and uncheck so the backend skips profile use.
     const currentKmField = document.getElementById('current_km');
-    const profileToggleGroup = document.querySelector('.profile-toggle-group');
-    const useProfileCheckbox = document.getElementById('use_profile');
-    function updateProfileToggleVisibility() {
-        if (!profileToggleGroup || !useProfileCheckbox) return;
-        const km = parseFloat(currentKmField.value);
-        const isBeginner = !isNaN(km) && km === 0;
-        profileToggleGroup.style.display = isBeginner ? 'none' : '';
-        if (isBeginner) {
-            useProfileCheckbox.checked = false;
-        }
-    }
-    if (currentKmField) {
-        currentKmField.addEventListener('input', updateProfileToggleVisibility);
-        updateProfileToggleVisibility();
-    }
 
     // Initialize mode from query param (always run to disable hidden sections)
     var initialMode = document.getElementById('plan_mode').value || 'distance';

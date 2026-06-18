@@ -38,7 +38,6 @@ class TrainingPlanGenerator:
         weeks: int,
         max_runs_per_week: int = 4,
         vdot: Optional[float] = None,
-        profile: Optional[Dict[str, Any]] = None,
         terrain: Optional[str] = None,
         trail_profile: Optional[TrailProfile] = None,
         intensive_weekend_enabled: bool = False,
@@ -68,13 +67,6 @@ class TrainingPlanGenerator:
                 suggestion="Try a 5K or 10K plan with 0 km/week to get started.",
             )
 
-        if profile:
-            if profile.get("current_vdot") and not vdot:
-                vdot = profile["current_vdot"]
-            actual_km = profile.get("avg_weekly_km", 0)
-            if actual_km > current_km:
-                current_km = actual_km
-
         pace_zones = VDOTCalculator.get_pace_zones(vdot) if vdot else None
 
         experience_level = derive_experience_level(current_km)
@@ -85,7 +77,6 @@ class TrainingPlanGenerator:
             weeks,
             max_runs_per_week,
             vdot,
-            profile,
             trail_profile=trail_profile,
         )
 
@@ -117,7 +108,6 @@ class TrainingPlanGenerator:
                 experience_level=experience_level,
                 terrain=downstream_terrain,
                 trail_profile=trail_profile,
-                profile=profile,
                 intensive_weekend_enabled=intensive_weekend_enabled,
                 prev_long_run_km=prev_long_run_km,
             )

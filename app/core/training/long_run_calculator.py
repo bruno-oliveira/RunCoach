@@ -405,7 +405,6 @@ def calculate_long_run_distance(
     phase: str = "build",
     is_recovery_week: bool = False,
     experience_level: str = "intermediate",
-    profile: Optional[dict] = None,
     trail_profile: Optional[TrailProfile] = None,
     training_terrain: str | None = None,
     long_run_pace_min_km: Optional[float] = None,
@@ -415,12 +414,6 @@ def calculate_long_run_distance(
     """
     Calculate long run distance with proper progression and phase-specific percentage.
     Long run percentage increases with race distance for appropriate endurance building.
-
-    When a RunnerProfile is provided, the runner's historical longest_run_km is used
-    only as a gentle nudge in week 1 — if the calculated long run would be more than
-    50% above their historical max, it's pulled back slightly to avoid a jarring first
-    session. After week 1, normal progression takes over and the runner builds fitness
-    freely through the plan's 10%-rule ramp.
     """
     phases = calculate_phases(weeks, target_distance, trail_profile=trail_profile)
     long_run_ratio = calculate_long_run_ratio(
@@ -511,16 +504,6 @@ def calculate_long_run_distance(
             prev_long_run_km + LONG_RUN_GROWTH_ABS_KM,
         )
         long_run_base = min(long_run_base, growth_ceiling)
-
-    # Profile-aware: gentle week-1 nudge only (not a hard cap)
-    if profile and week_number == 1:
-        longest_run = profile.get("longest_run_km", 0)
-        if longest_run > 0:
-            # If the planned long run is >50% above historical max, pull it back
-            # to longest_run * 1.30 as a gentle starting point
-            gentle_start = longest_run * 1.30
-            if long_run_base > gentle_start * 1.50:
-                long_run_base = gentle_start
 
     # Floor: at least 25% of target race distance, but never more than total
     # weekly volume (a single run cannot exceed the week's total mileage)

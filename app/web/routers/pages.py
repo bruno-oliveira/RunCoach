@@ -11,7 +11,6 @@ from app.contexts.nutrition.nutrition_content import (
     generate_trail_fuel_ideas,
     generate_trail_nutrition_tips,
 )
-from app.contexts.runner.dashboard_service import has_runner_profile
 from app.dependencies import get_db, get_optional_user
 from app.infrastructure.config import settings
 from app.models import User
@@ -27,7 +26,6 @@ def home(
     current_user: Optional[User] = Depends(get_optional_user),
     db: Session = Depends(get_db),
 ) -> HTMLResponse:
-    has_profile = bool(current_user) and has_runner_profile(current_user, db)
     return templates.TemplateResponse(
         request,
         "index.html",
@@ -35,7 +33,6 @@ def home(
             "request": request,
             "user": current_user,
             "google_client_id": settings.google_client_id or "",
-            "has_profile": has_profile,
         },
     )
 

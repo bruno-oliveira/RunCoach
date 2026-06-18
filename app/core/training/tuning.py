@@ -70,18 +70,6 @@ MAX_PEAK_MILEAGE = {
     42.2: 100.0,
 }
 
-# Peak-mileage multiplier keyed by ACWR injury-risk band.
-ACWR_PEAK_FACTORS = {"low": 1.0, "optimal": 1.0, "high": 0.85, "very_high": 0.75}
-
-# Effective week-over-week cap keyed by recent volume trend. "stable" tracks
-# the global 10% rule; a decreasing trend ramps more gently, an increasing
-# trend is allowed slightly more headroom.
-VOLUME_TREND_CAPS = {
-    "decreasing": 1.05,
-    "stable": WEEK_OVER_WEEK_CAP,
-    "increasing": 1.12,
-}
-
 # Weekly volume scales with training frequency. Previously a 3-run and a 6-run
 # plan for the same race and fitness targeted identical weekly km — forcing the
 # low-frequency plan into oversized individual runs while the high-frequency

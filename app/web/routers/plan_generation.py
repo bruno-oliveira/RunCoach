@@ -14,7 +14,6 @@ from app.contexts.plan.generators.plan_generator import TrainingPlanGenerator
 from app.contexts.plan.plan_helpers import error_response, get_plan_or_404
 from app.contexts.plan.plan_service import PlanService
 from app.contexts.runner.fitness.performance_service import PerformanceService
-from app.contexts.runner.profile.profile_builder import build_profile
 from app.dependencies import (
     get_db,
     get_nutrition_engine,
@@ -222,7 +221,6 @@ async def generate_plan(
     recent_race_distance_km: Optional[str] = Form(None),
     recent_race_time: Optional[str] = Form(None),
     goal_time: Optional[str] = Form(None),
-    use_profile: Optional[str] = Form(None),
     plan_mode: Optional[str] = Form("distance"),
     goal_time_required: Optional[str] = Form(None),
     current_time: Optional[str] = Form(None),
@@ -307,11 +305,6 @@ async def generate_plan(
         user = plan_service.get_or_create_anonymous_user(
             current_user, anonymous_user_id, db
         )
-        runner_profile = None
-        if use_profile == "on" and current_user:
-            rp = build_profile(str(current_user.id), db)
-            if rp.has_sufficient_data:
-                runner_profile = rp.to_dict()
 
         training_plan, plan_data = plan_service.create_plan(
             plan_request,
@@ -319,7 +312,6 @@ async def generate_plan(
             db,
             plan_generator,
             nutrition_engine,
-            profile=runner_profile,
         )
 
         return RedirectResponse(url=f"/plan/{training_plan.id}", status_code=303)
