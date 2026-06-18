@@ -113,7 +113,8 @@
 
             {% if nutrition_plan.trail_fuel_ideas and nutrition_plan.trail_fuel_ideas|length > 0 %}
             <div class="trail-fuel-ideas">
-                <h3><span data-i18n="nutrition.trail_ready_meals">Trail-Ready Fuel</span></h3>
+                <h3><span data-i18n="nutrition.trail_ready_meals">Trail Fuel Ideas</span></h3>
+                <p class="trail-fuel-ideas-desc"><span data-i18n="nutrition.trail_ready_desc">Quick-reference fuel to carry and eat on the move — no cooking required. For full recipes, see the Recipes page.</span></p>
                 {% set phases = nutrition_plan.trail_fuel_phases or [{'key': 'during', 'label': 'During', 'blurb': ''}] %}
                 {% for phase in phases %}
                 {% set items = nutrition_plan.trail_fuel_ideas | selectattr('phase', 'equalto', phase.key) | list %}

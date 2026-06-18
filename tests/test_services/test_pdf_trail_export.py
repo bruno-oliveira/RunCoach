@@ -37,7 +37,7 @@ def test_trail_fuelling_appends_all_three_blocks():
     text = _paragraph_texts(story)
     assert "Trail Race Fuelling" in text
     assert "In-Race Fuelling" in text
-    assert "Trail-Ready Fuel" in text
+    assert "Trail Fuel Ideas" in text
     assert "Trail Fuelling Tips" in text
     # Phase headers from the grouped fuel ideas.
     assert "Before" in text

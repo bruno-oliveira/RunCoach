@@ -1,8 +1,14 @@
 # Coach Hub & Surrounding-UX Redesign Proposal
 
-> Status: **DRAFT for review** — no code changes yet. This document is the plan
-> to react to. Decisions marked **[NEEDS DECISION]** are product calls for the
-> owner before implementation begins.
+> Status: **APPROVED — implementing Phases 0–2.** Decisions locked (see §8).
+> This document is the agreed plan; §8 records the owner's calls.
+
+## 0. Locked decisions
+
+1. **Nav naming** → Two entries: **Coach** + **Progress** (§4.3).
+2. **Trail meals** → Relabel to "Trail Fuel Ideas" now; real recipes later (§6 Option B).
+3. **Scope** → **Phases 0–2** (IA fixes). Phase 3 (real trail recipes) deferred.
+4. **Progress charts** → Proceed with the recommended ~6 keep-list (§4.2).
 
 ## 1. Diagnosis
 

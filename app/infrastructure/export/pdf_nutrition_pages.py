@@ -360,7 +360,7 @@ class NutritionPagesMixin:
         story.append(Spacer(1, 0.4 * cm))
 
     def _add_trail_fuel_ideas(self, story: List, fuel_ideas: list, phases: list):
-        story.append(Paragraph("🥨 Trail-Ready Fuel", self.normal_style))
+        story.append(Paragraph("🥨 Trail Fuel Ideas", self.normal_style))
 
         # Group ideas by race phase. Fall back to a single untitled group when
         # the phase metadata is missing so nothing is silently dropped.
