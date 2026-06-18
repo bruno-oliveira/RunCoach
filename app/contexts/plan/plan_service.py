@@ -101,7 +101,6 @@ class PlanService:
         db: Session,
         plan_generator: TrainingPlanGenerator,
         nutrition_engine: NutritionEngine,
-        profile: Optional[dict] = None,
     ) -> tuple[TrainingPlan, list[dict]]:
         existing = self.find_duplicate(plan_request, user.id, db)
         if existing:
@@ -129,7 +128,6 @@ class PlanService:
             plan_request.weeks,
             plan_request.max_runs_per_week,
             vdot=effective_vdot,
-            profile=profile,
             terrain=plan_request.resolved_training_terrain(),
             trail_profile=trail_profile,
             intensive_weekend_enabled=plan_request.intensive_weekend_enabled,

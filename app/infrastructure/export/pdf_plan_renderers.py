@@ -146,44 +146,6 @@ class PerformancePdfRenderer(PdfPlanRenderer):
         pdf._add_nutrition_guidance(story)
 
 
-class FitnessPdfRenderer(PdfPlanRenderer):
-    def matches(self, dto: PlanExportDTO) -> bool:
-        return dto.plan_type == "fitness"
-
-    def title_text(self) -> str:
-        return "💪 Fitness Training Plan"
-
-    def subtitle_text(self, dto: PlanExportDTO) -> str:
-        focus = self._focus(dto)
-        return f"Focus: {focus} | {dto.weeks_duration} Weeks"
-
-    def target_display(self, dto: PlanExportDTO) -> str:
-        return self._focus(dto)
-
-    @staticmethod
-    def _focus(dto: PlanExportDTO) -> str:
-        return dto.target_distance.replace("fitness_", "").replace("_", " ").title()
-
-    def stats_table_rows(
-        self, pdf: "PDFGenerator", dto: PlanExportDTO, plan_data: List[Dict[str, Any]]
-    ) -> List[List[str]]:
-        return _default_stats_rows(dto, plan_data, self.target_display(dto))
-
-    def summary_chart(
-        self, pdf: "PDFGenerator", plan_data: List[Dict[str, Any]]
-    ) -> Table:
-        return _phase_summary_chart(pdf, plan_data)
-
-    def build_body(
-        self,
-        pdf: "PDFGenerator",
-        story: List,
-        dto: PlanExportDTO,
-        plan_data: List[Dict[str, Any]],
-    ) -> None:
-        _distance_body(pdf, story, dto, plan_data)
-
-
 class DistancePdfRenderer(PdfPlanRenderer):
     """Fallback renderer for traditional distance-based plans."""
 
@@ -289,7 +251,6 @@ def _distance_body(
 
 PLAN_PDF_RENDERERS: List[PdfPlanRenderer] = [
     PerformancePdfRenderer(),
-    FitnessPdfRenderer(),
     DistancePdfRenderer(),
 ]
 

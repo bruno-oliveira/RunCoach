@@ -461,14 +461,6 @@
     animation: slideDown var(--duration-base) var(--ease-out);
 }
 
-/* ── Profile Toggle ── */
-.profile-toggle-group {
-    padding: var(--space-3) var(--space-4);
-    background: var(--color-bg-subtle);
-    border-radius: var(--radius-lg);
-    border: 1.5px solid var(--color-border-subtle);
-}
-
 .toggle-label {
     display: flex;
     align-items: flex-start;

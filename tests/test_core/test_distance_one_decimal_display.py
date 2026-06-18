@@ -24,7 +24,6 @@ import re
 
 import pytest
 
-from app.contexts.plan.generators.fitness_plan_generator import FitnessPlanGenerator
 from app.contexts.plan.generators.performance_plan_generator import (
     PerformancePlanGenerator,
 )
@@ -87,29 +86,6 @@ def _performance_plans():
     return plans
 
 
-def _fitness_plans():
-    gen = FitnessPlanGenerator()
-    plans = []
-    for wk_km in (12.0, 35.0, 75.0):
-        for rpw in (3, 5):
-            for vdot in (None, 45, 55):
-                for focus in ("general_fitness", "5k", "half_marathon", "marathon"):
-                    try:
-                        plans.append(
-                            gen.generate_plan(
-                                current_weekly_km=wk_km,
-                                weeks=12,
-                                runs_per_week=rpw,
-                                vdot=vdot,
-                                max_heart_rate=185,
-                                focus_area=focus,
-                            )
-                        )
-                    except Exception:
-                        continue
-    return plans
-
-
 def _iter_workouts(plan):
     for week in plan.get("weekly_plans", []):
         for w in week.get("daily_workouts", []):
@@ -136,14 +112,6 @@ class TestNoMultiDecimalDistances:
     def test_performance_plans_have_one_decimal_distances(self):
         plans = _performance_plans()
         assert plans, "expected at least one performance plan to generate"
-        offenders = []
-        for plan in plans:
-            offenders.extend(_multi_decimal_offenders(plan))
-        assert not offenders, f"multi-decimal distances found: {offenders[:10]}"
-
-    def test_fitness_plans_have_one_decimal_distances(self):
-        plans = _fitness_plans()
-        assert plans, "expected at least one fitness plan to generate"
         offenders = []
         for plan in plans:
             offenders.extend(_multi_decimal_offenders(plan))

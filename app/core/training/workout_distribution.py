@@ -26,17 +26,9 @@ def get_workout_distribution(
     phases: Optional[Dict[str, int]] = None,
     target_distance: float = 10.0,
     terrain: Optional[str] = None,
-    profile: Optional[dict] = None,
     trail_profile: Optional[TrailProfile] = None,
 ) -> Dict[str, int]:
-    """Calculate how many of each workout type per week.
-
-    When a RunnerProfile is provided, the runner's actual pace zone
-    distribution and workout history are used to correct imbalances:
-    - Too much hard work (>30%) → reduce quality slots
-    - Almost no hard work (<10%) → ensure at least 1 quality in build/peak
-    - Missing workout types → prioritize gaps in quality selection
-    """
+    """Calculate how many of each workout type per week."""
     is_backward_compatible_call = (
         phase == "build"
         and not is_recovery_week
@@ -52,9 +44,6 @@ def get_workout_distribution(
 
     quality_workouts = _phase_quality_count(
         phase, max_runs, total_km, week_number, phases, is_recovery_week
-    )
-    quality_workouts, profile_reduced = _apply_profile_quality_adjustment(
-        quality_workouts, phase, profile, is_recovery_week
     )
 
     # Recovery is an additional non-running day, does NOT count towards max_runs
@@ -73,7 +62,6 @@ def get_workout_distribution(
         long_runs,
         rest_days,
         week_number,
-        profile=profile,
         trail_profile=trail_profile,
     )
 
@@ -89,9 +77,7 @@ def get_workout_distribution(
             target_distance,
             trail_profile=trail_profile,
             terrain=terrain,
-            suppress_increase=in_build_on_ramp
-            or profile_reduced
-            or too_small_for_second,
+            suppress_increase=in_build_on_ramp or too_small_for_second,
         )
 
     return distribution
@@ -137,37 +123,6 @@ def _phase_quality_count(
         # returned 0 above, so there is room for the sharpener here.
         return 1
     return 0
-
-
-def _apply_profile_quality_adjustment(
-    quality_workouts: int,
-    phase: str,
-    profile: Optional[dict],
-    is_recovery_week: bool,
-) -> tuple[int, bool]:
-    """Tune the quality count from the runner's actual pace distribution.
-
-    Returns ``(quality_workouts, profile_reduced)``. A profile-driven reduction
-    is a deliberate guardrail for this runner — the caller's polarized-deficit
-    check must not re-add the slot it removed, hence the ``profile_reduced``
-    flag.
-    """
-    profile_reduced = False
-    if profile and not is_recovery_week and quality_workouts > 0:
-        hard_pct = profile.get("hard_pct", 0)
-        easy_pct = profile.get("easy_pct", 0)
-        # If runner habitually does too much hard work (>30%), reduce quality
-        if hard_pct > 30 and quality_workouts > 1:
-            quality_workouts = max(1, quality_workouts - 1)
-            profile_reduced = True
-        # If runner does almost no hard work (<10%), ensure at least 1 quality
-        elif hard_pct < 10 and quality_workouts == 0 and phase in ("build", "peak"):
-            quality_workouts = 1
-        # If runner's easy runs are very low (<50%), they may need more recovery
-        elif easy_pct < 50 and phase in ("build", "peak") and quality_workouts > 1:
-            quality_workouts = max(1, quality_workouts - 1)
-            profile_reduced = True
-    return quality_workouts, profile_reduced
 
 
 # Re-export kept for backward compatibility — see week_scheduler.py
@@ -351,7 +306,6 @@ def _build_quality_distribution(
     long_runs: int,
     rest_days: int,
     week_number: int,
-    profile: Optional[dict] = None,
     trail_profile: Optional[TrailProfile] = None,
 ) -> Dict[str, int]:
     """Assign quality workout types based on race distance, terrain, and phase.
@@ -359,10 +313,6 @@ def _build_quality_distribution(
     Dispatches to a per-profile builder keyed by (distance, terrain).
     Base phase always returns a single light quality session;
     build/peak use the profile's full quality pattern.
-
-    When a RunnerProfile is provided, workout type gaps are filled:
-    - No speed work history → start with tempo in base phase
-    - No tempo history → prioritize tempo over intervals
     """
     distribution = {
         "easy": easy_runs,
@@ -377,28 +327,6 @@ def _build_quality_distribution(
         return distribution
 
     profile_name = _profile_for(target_distance, terrain, trail_profile=trail_profile)
-
-    # Profile-aware: detect gaps in training history
-    if profile:
-        counts = profile.get("workout_type_counts", {}) or {}
-        has_speed = (
-            counts.get("interval", 0) + counts.get("speed", 0) + counts.get("track", 0)
-            > 0
-        )
-        has_tempo = counts.get("tempo", 0) + counts.get("threshold", 0) > 0
-
-        # If runner has never done speed work, use tempo-focused profile in base
-        if (
-            not has_speed
-            and phase == "base"
-            and profile_name in ("road_5k", "road_10k")
-        ):
-            profile_name = "road_half"  # tempo-focused instead of interval
-        # If runner has never done tempo, prioritize it in early build
-        if not has_tempo and phase == "base":
-            # Keep the base quality as tempo instead of interval
-            distribution.update({"tempo": 1})
-            return distribution
 
     if phase == "base":
         distribution.update(_BASE_PHASE_QUALITY[profile_name])

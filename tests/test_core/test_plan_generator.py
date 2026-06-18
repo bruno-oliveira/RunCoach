@@ -15,18 +15,16 @@ class TestTrainingPlanGenerator:
     """Tests for TrainingPlanGenerator class."""
 
     def test_weekly_cap_uses_single_constant(self):
-        """plan_generator and fitness_plan_generator must derive the 10% cap
-        from mileage_progression.WEEK_OVER_WEEK_CAP, not hardcoded literals."""
+        """plan_generator must derive the 10% cap from
+        mileage_progression.WEEK_OVER_WEEK_CAP, not hardcoded literals."""
         import inspect
 
-        from app.contexts.plan.generators import fitness_plan_generator as fpg
         from app.contexts.plan.generators import plan_generator as pg
 
-        for module in (pg, fpg):
-            src = inspect.getsource(module)
-            assert "WEEK_OVER_WEEK_CAP" in src, (
-                f"{module.__name__} should reference WEEK_OVER_WEEK_CAP"
-            )
+        src = inspect.getsource(pg)
+        assert "WEEK_OVER_WEEK_CAP" in src, (
+            f"{pg.__name__} should reference WEEK_OVER_WEEK_CAP"
+        )
 
     # ------------------------------------------------------------------
     # Basic plan generation per distance

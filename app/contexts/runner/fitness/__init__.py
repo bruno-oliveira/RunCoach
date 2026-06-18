@@ -3,7 +3,6 @@
 import importlib
 
 __all__ = [
-    "FitnessService",
     "PerformanceService",
     "GapAnalysisService",
     "RacePredictorService",
@@ -20,7 +19,6 @@ __all__ = [
 # Public name → (submodule, attribute). Imports stay lazy so importing this
 # package doesn't pull in every service (and avoids import cycles).
 _LAZY_EXPORTS = {
-    "FitnessService": ("fitness_service", "FitnessService"),
     "PerformanceService": ("performance_service", "PerformanceService"),
     "GapAnalysisService": ("gap_analysis_service", "GapAnalysisService"),
     "RacePredictorService": ("race_predictor_service", "RacePredictorService"),

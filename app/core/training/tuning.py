@@ -70,18 +70,6 @@ MAX_PEAK_MILEAGE = {
     42.2: 100.0,
 }
 
-# Peak-mileage multiplier keyed by ACWR injury-risk band.
-ACWR_PEAK_FACTORS = {"low": 1.0, "optimal": 1.0, "high": 0.85, "very_high": 0.75}
-
-# Effective week-over-week cap keyed by recent volume trend. "stable" tracks
-# the global 10% rule; a decreasing trend ramps more gently, an increasing
-# trend is allowed slightly more headroom.
-VOLUME_TREND_CAPS = {
-    "decreasing": 1.05,
-    "stable": WEEK_OVER_WEEK_CAP,
-    "increasing": 1.12,
-}
-
 # Weekly volume scales with training frequency. Previously a 3-run and a 6-run
 # plan for the same race and fitness targeted identical weekly km — forcing the
 # low-frequency plan into oversized individual runs while the high-frequency
@@ -328,21 +316,6 @@ BASE_QUALITY_MIN_DOSE_KM = {"tempo": 4.0}
 # Floor a quality slot only if each easy run would still clear this length after
 # the floored km is borrowed from the easy budget; otherwise demote to easy.
 MIN_EASY_PER_RUN_KM = 3.0
-
-# =============================================================================
-# Fitness-plan mileage (see fitness_plan_generator.py)
-# =============================================================================
-
-# Fitness plans target a gentler peak than race plans: ramp to this multiple of
-# current volume, capped absolutely, with a floor so low-volume plans still
-# progress.
-FITNESS_PEAK_MULTIPLIER = 1.3
-FITNESS_PEAK_CAP_KM = 60.0
-FITNESS_PEAK_FLOOR_MULTIPLIER = 1.1
-
-# Taper volume as a fraction of peak: single-week taper, or a multi-week curve.
-FITNESS_TAPER_SINGLE = 0.55
-FITNESS_TAPER_CURVE = [0.85, 0.70, 0.50]
 
 # =============================================================================
 # 80/20 polarization (see distribution_validator.py)
