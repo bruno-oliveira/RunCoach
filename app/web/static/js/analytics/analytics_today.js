@@ -81,25 +81,30 @@
        the Promise.all so the rest of the tab renders instantly while the note
        streams in) ----- */
     AD._loadCoachNote = async function (planId) {
-        const card = document.getElementById('coachNoteCard');
         const skel = document.getElementById('coachNoteSkeleton');
-        if (!card) return;
+        const proseBlock = document.getElementById('coachNoteProseBlock');
+        if (!proseBlock) return;
 
         if (!planId) {
             this.coachNoteLoadedPlanId = null;
-            this._hide(card); this._hide(skel);
+            this._hasCoachNote = false;
+            proseBlock.style.display = 'none';
+            this._hide(skel);
+            this._syncCoachNoteCard();
             return;
         }
         // Already rendered for this plan this session — skip the skeleton flash
         // on tab switches. A full reload re-fetches (and picks up new runs).
         if (this.coachNoteLoadedPlanId === planId) return;
 
-        this._hide(card); this._show(skel);
+        proseBlock.style.display = 'none';
+        this._show(skel);
         const data = await this._fetchJson('/api/analytics/coach-note/' + encodeURIComponent(planId));
         this._hide(skel);
 
         if (!data || data.available === false || !data.note) {
-            this._hide(card);
+            this._hasCoachNote = false;
+            this._syncCoachNoteCard();
             return;
         }
 
@@ -112,8 +117,19 @@
                 .map((c) => `<span class="coach-note-chip">${this._esc(c)}</span>`)
                 .join('');
         }
-        this._show(card);
+        proseBlock.style.display = '';
+        this._hasCoachNote = true;
         this.coachNoteLoadedPlanId = planId;
+        this._syncCoachNoteCard();
+    };
+
+    /* The Coach's Note card holds two independently-fetched pieces — the AI
+       note (prose block) and this week's pulse + pace patterns. Show the card
+       when either has content so neither half can hide the other. */
+    AD._syncCoachNoteCard = function () {
+        const card = document.getElementById('coachNoteCard');
+        if (!card) return;
+        card.style.display = (this._hasCoachNote || this._hasCoachWeekNote) ? '' : 'none';
     };
 
     /* ----- Today's session card ----- */
@@ -230,14 +246,13 @@
 
     /* ----- Coach's note (week pulse + pace patterns) ----- */
     AD._renderTodayNote = function (patterns) {
-        const card = document.getElementById('todayNoteCard');
         const pulse = document.getElementById('coachWeekPulse');
         const pat = document.getElementById('coachPatterns');
 
         const wp = patterns && patterns.week_pulse;
         const list = (patterns && patterns.patterns) || [];
-        const hasContent = (wp && wp.message) || list.length > 0;
-        if (card) card.style.display = hasContent ? '' : 'none';
+        this._hasCoachWeekNote = (wp && wp.message) || list.length > 0;
+        this._syncCoachNoteCard();
 
         if (pulse) {
             if (wp && wp.message) {

@@ -1,0 +1,59 @@
+/* Tips page — trail fuelling & racing tips, promoted to a top-level surface. */
+
+.tips-page {
+    padding: var(--space-8) var(--space-4) var(--space-16);
+    min-height: calc(100vh - 200px);
+}
+
+.tips-header {
+    text-align: center;
+    margin-bottom: var(--space-8);
+    max-width: 640px;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+.tips-title {
+    font-family: var(--font-display);
+    font-size: var(--text-3xl);
+    font-weight: var(--weight-bold);
+    margin-bottom: var(--space-2);
+}
+
+.tips-subtitle {
+    color: var(--color-text-muted);
+    font-size: var(--text-base);
+}
+
+.tips-card {
+    background: var(--color-bg-elevated);
+    border-radius: var(--radius-xl);
+    box-shadow: var(--shadow-sm);
+    padding: var(--space-6);
+    margin-bottom: var(--space-6);
+    max-width: 800px;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+.tips-card-header {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    margin-bottom: var(--space-4);
+}
+
+.tips-card-header h2 {
+    font-size: var(--text-lg);
+    font-weight: var(--weight-semibold);
+    margin: 0;
+}
+
+/* Card chrome already supplied by .tips-card; drop the nested elevation the
+   trail-fuel block carries when it sits inside the plan's nutrition tab. */
+.tips-card .trail-fuel {
+    background: none;
+    box-shadow: none;
+    padding: 0;
+    margin: 0;
+}

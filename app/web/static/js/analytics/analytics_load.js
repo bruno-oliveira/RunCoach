@@ -2,7 +2,7 @@
  * analytics_load.js - Training load and race results for AnalyticsDashboard
  *
  * Handles: Training Load + ACWR chart, and Predicted vs Actual (race results).
- * Plan-scoped features (readiness, gaps, adherence) are in analytics_plan.js.
+ * Race readiness and gap analysis live on the plan's Race Readiness tab.
  */
 (function() {
     const AD = window.AnalyticsDashboard;

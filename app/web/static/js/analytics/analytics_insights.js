@@ -230,7 +230,6 @@
 
         set('profileVdot', profile.current_vdot || '--');
         set('profileWeeklyKm', profile.avg_weekly_km || '--');
-        set('profileRunsWeek', profile.runs_per_week || '--');
         set('profileAcwr', profile.acwr != null ? profile.acwr.toFixed(2) : '--');
         set('profileEasyPct', profile.easy_pct ? `${Math.round(profile.easy_pct)}%` : '--');
 

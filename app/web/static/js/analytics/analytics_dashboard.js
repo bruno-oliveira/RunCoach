@@ -123,7 +123,6 @@ const AnalyticsDashboard = {
             this.loadTrainingLoad();
             this.loadPersonalRecords();
             this.loadInsights();
-            if (this.currentPlanId) this.showPlanSection(this.currentPlanId);
 
             const wanted = this.LEGACY_TAB_MAP[persisted.tab] || persisted.tab;
             this.switchTab(this._tabConfig(wanted) ? wanted : this.DEFAULT_TAB);
@@ -287,7 +286,6 @@ const AnalyticsDashboard = {
         this.renderSummary();
         this.renderHeatmap();
         this.renderInsights();
-        this.renderRecentRuns();
         this.renderCurrentCharts();
         this.renderEfficiencyChart('weekly');
         this.renderTrainingLoadChart('weekly');
@@ -545,16 +543,10 @@ const AnalyticsDashboard = {
 
                 if (this.allRuns.length === 0) {
                     if (!planScopedTab && empty) empty.style.display = 'block';
-                    if (this.currentPlanId) this.showPlanSection(this.currentPlanId);
                     return;
                 }
                 if (!planScopedTab && dashboard) dashboard.style.display = 'block';
                 this.filterByPeriod(this.currentPeriodDays);
-                if (this.currentPlanId) {
-                    this.showPlanSection(this.currentPlanId);
-                } else {
-                    this.hidePlanSection();
-                }
             } catch (err) {
                 console.error('Plan switch error:', err);
                 if (loading) loading.style.display = 'none';
@@ -568,20 +560,6 @@ const AnalyticsDashboard = {
         if (this.activeTab !== 'coach') return;
         if (this.loadToday) this.loadToday(this.currentPlanId);
         if (this.loadSignals) this.loadSignals(this.currentPlanId);
-    },
-
-    showPlanSection(planId) {
-        const section = document.getElementById('planScopedSection');
-        if (section) section.style.display = '';
-        this.loadReadiness(planId);
-        this.loadGapAnalysis(planId);
-        this.loadGapTrend(planId);
-        this.loadAdherenceHeatmap(planId);
-    },
-
-    hidePlanSection() {
-        const section = document.getElementById('planScopedSection');
-        if (section) section.style.display = 'none';
     },
 
     /* ------------------------------------------------------------------ */
@@ -631,8 +609,6 @@ const AnalyticsDashboard = {
             if (el) el.style.display = t.key === tabName ? 'block' : 'none';
         });
 
-        this._syncNavHighlight(tabName);
-
         // Scope the header period selector to tabs that filter by window. The
         // Coach surface is plan-scoped and ignores it.
         const showHeaderPeriod = !!(this._tabConfig(tabName) || {}).headerPeriod;
@@ -657,13 +633,6 @@ const AnalyticsDashboard = {
         if (this.signalsLoadedPlanId !== this.currentPlanId && this.loadSignals) {
             this.loadSignals(this.currentPlanId);
         }
-    },
-
-    /** Mirror the active surface onto the two nav entries (Coach / Progress). */
-    _syncNavHighlight(tabName) {
-        document.querySelectorAll('[data-nav-tab]').forEach(link => {
-            link.classList.toggle('is-active', link.dataset.navTab === tabName);
-        });
     },
 
     /* ------------------------------------------------------------------ */
