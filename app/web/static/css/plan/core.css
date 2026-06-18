@@ -874,6 +874,9 @@
     overflow: hidden;
     text-overflow: ellipsis;
 }
+/* The chip is a collapsed-state preview; once open, the summary grid below
+   repeats the same distance/weeks/goal, so drop the chip to avoid a double. */
+.plan-reference[open] .plan-reference-chips { display: none; }
 .plan-reference-chevron {
     color: var(--color-text-muted);
     flex-shrink: 0;

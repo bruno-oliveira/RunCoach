@@ -4,8 +4,7 @@
  * Fetches the read-only coach endpoints and renders the adaptation-state
  * banner, form/readiness strip, 6-signal radar (delegated to
  * analytics_signal_chart.js), the "why your plan is evolving" block, pace
- * patterns + week pulse, and the adaptation-history timeline. Reuses
- * _renderReadiness from analytics_plan.js for the readiness body.
+ * patterns + week pulse, and the adaptation-history timeline.
  */
 (function () {
     const AD = window.AnalyticsDashboard;
@@ -64,7 +63,6 @@
             content.style.display = '';
             this._renderCoachBanner(summary);
             this._renderCoachForm(summary);
-            this._renderCoachReadiness(summary);
             if (this.renderSignalChart) this.renderSignalChart(summary.signals || {});
             this._renderCoachWhy(summary, patterns);
             this._renderAdaptationHistory(history);
@@ -149,17 +147,6 @@
             cell('Fitness', f.ctl != null ? f.ctl : null, 'CTL · 42-day', 'ctl') +
             cell('Fatigue', f.atl != null ? f.atl : null, 'ATL · 7-day', 'atl') +
             cell('Form', f.tsb != null ? f.tsb : null, 'TSB · CTL−ATL', 'tsb');
-    };
-
-    /* ----- Readiness (reuse analytics_plan.js renderer) ----- */
-    AD._renderCoachReadiness = function (s) {
-        const el = document.getElementById('coachReadiness');
-        if (!el) return;
-        if (s.readiness && s.readiness.overall_score != null && this._renderReadiness) {
-            el.innerHTML = this._renderReadiness(s.readiness);
-        } else {
-            el.innerHTML = '<p class="analytics-empty-text">Set a race date and log runs to see readiness.</p>';
-        }
     };
 
     /* ----- Why your plan is evolving ----- */
