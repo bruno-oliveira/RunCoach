@@ -218,15 +218,6 @@
     padding: var(--space-1) var(--space-3);
 }
 
-/* ---- Adjust button ---- */
-.gap-adjust-cta {
-    text-align: center;
-}
-
-.gap-adjust-cta .btn {
-    min-width: 200px;
-}
-
 /* ---- VDOT trajectory ---- */
 .gap-vdot-section {
     background: var(--color-bg-elevated);

@@ -126,11 +126,6 @@ function renderGapAnalysis(d) {
         html += '</div>';
     }
 
-    // ── Adjust plan button — opens the unified intent menu ──
-    html += '<div class="gap-adjust-cta">';
-    html += '<button class="btn btn-primary" onclick="PlanIntentMenu && PlanIntentMenu.open()">Adjust my plan</button>';
-    html += '</div>';
-
     return html;
 }
 

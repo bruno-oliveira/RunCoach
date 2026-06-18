@@ -1,0 +1,233 @@
+/* ============================================================================
+   RunCoach — Terrain Identity Layer  (trail + road)
+   A thin, additive layer that gives the app a "running, anywhere" character.
+   RunCoach coaches both road races (5K → Marathon) and trail/ultra, so the
+   visual language pairs two motifs:
+       • mountain ridgelines + topographic contours  → trail
+       • dashed centerlines / route markers          → road
+   They share one "route" idea, so the app feels like one thing. Purely
+   decorative + typographic — safe to remove.
+   ========================================================================= */
+
+/* ---------------------------------------------------------------------------
+   1. Topographic texture — app-wide, behind everything
+   Concentric contour rings (pure CSS) read like a faint map of the terrain.
+   Kept whisper-faint; solid card surfaces sit cleanly on top.
+   --------------------------------------------------------------------------- */
+body::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
+    background-color: var(--color-bg);
+    background-image:
+        repeating-radial-gradient(circle at 12% 18%,
+            transparent 0 26px, var(--terrain-line) 26px 27px, transparent 27px 56px),
+        repeating-radial-gradient(circle at 88% 12%,
+            transparent 0 30px, var(--terrain-line) 30px 31px, transparent 31px 64px),
+        repeating-radial-gradient(circle at 72% 88%,
+            transparent 0 34px, var(--terrain-line) 34px 35px, transparent 35px 72px);
+    background-attachment: fixed;
+}
+
+/* Respect reduced-motion / low-distraction preferences by easing off texture. */
+@media (prefers-reduced-motion: reduce) {
+    body::before { opacity: 0.5; }
+}
+
+/* ---------------------------------------------------------------------------
+   2. Hero — elevation ridgeline + terrain wash
+   Repurposes the (previously hidden) .hero-bg and its three orbs into soft
+   terrain glows, then lays a layered mountain ridgeline across the base.
+   --------------------------------------------------------------------------- */
+.hero { background: var(--color-bg); }
+
+.hero .hero-bg {
+    display: block;
+    position: absolute;
+    inset: 0;
+    overflow: hidden;
+    pointer-events: none;
+    z-index: 0;
+    background:
+        var(--terrain-wash),
+        repeating-radial-gradient(circle at 78% 24%,
+            transparent 0 38px, var(--terrain-line-strong) 38px 39px, transparent 39px 84px);
+}
+
+/* Dashed road route — winds up toward the ridgeline like a run heading out.
+   The road counterpart to the mountains: a centerline-dashed path + start pin. */
+.hero .hero-bg::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background-repeat: no-repeat;
+    background-position: center;
+    background-size: 100% 100%;
+    opacity: 0.4;
+    background-image:
+        url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='1440' height='600' viewBox='0 0 1440 600' preserveAspectRatio='none'%3E%3Cpath fill='none' stroke='%234A72C4' stroke-width='3' stroke-linecap='round' stroke-dasharray='16 13' d='M-40 525 C 240 545 345 360 565 360 C 770 360 825 200 1045 182 C 1225 167 1325 92 1485 72'/%3E%3Ccircle cx='58' cy='520' r='7' fill='%234A72C4'/%3E%3Ccircle cx='58' cy='520' r='13' fill='none' stroke='%234A72C4' stroke-width='2'/%3E%3C/svg%3E");
+}
+[data-theme="dark"] .hero .hero-bg::before { opacity: 0.5; filter: brightness(1.5); }
+
+/* The three orbs become diffuse atmosphere — pine canopy + dusty sun. */
+.hero .hero-orb {
+    display: block;
+    position: absolute;
+    border-radius: 50%;
+    filter: blur(60px);
+    opacity: 0.35;
+}
+.hero .hero-orb-1 {
+    width: 420px; height: 420px; top: -120px; right: -80px;
+    background: radial-gradient(circle, var(--color-primary) 0%, transparent 70%);
+}
+.hero .hero-orb-2 {
+    width: 360px; height: 360px; top: 30%; left: -140px;
+    background: radial-gradient(circle, var(--color-sky) 0%, transparent 70%);
+    opacity: 0.22;
+}
+.hero .hero-orb-3 {
+    width: 300px; height: 300px; bottom: 18%; right: 22%;
+    background: radial-gradient(circle, var(--color-ochre) 0%, transparent 70%);
+    opacity: 0.18;
+}
+
+/* Layered ridgeline silhouette along the bottom of the hero. */
+.hero::after {
+    content: "";
+    position: absolute;
+    left: 0; right: 0; bottom: 0;
+    height: 190px;
+    pointer-events: none;
+    z-index: 0;
+    background-repeat: no-repeat;
+    background-position: bottom center;
+    background-size: 100% 100%, 100% 100%;
+    /* Two ridge bands: a far moss ridge and a near pine ridge. */
+    background-image:
+        url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='1440' height='190' viewBox='0 0 1440 190' preserveAspectRatio='none'%3E%3Cpath fill='%233F6B43' fill-opacity='0.12' d='M0 120 L160 70 L320 110 L480 55 L640 100 L800 60 L960 105 L1120 65 L1280 100 L1440 75 L1440 190 L0 190 Z'/%3E%3C/svg%3E"),
+        url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='1440' height='190' viewBox='0 0 1440 190' preserveAspectRatio='none'%3E%3Cpath fill='%2314533B' fill-opacity='0.16' d='M0 160 L120 120 L260 150 L400 100 L560 150 L720 110 L880 155 L1040 115 L1200 150 L1340 120 L1440 145 L1440 190 L0 190 Z'/%3E%3C/svg%3E");
+    opacity: 0.9;
+}
+
+/* Keep hero content above the decoration. */
+.hero .container { position: relative; z-index: 1; }
+
+/* Trail-flavored badge: a faint pine tint + dot reads as a "you are here" pin. */
+.hero-badge {
+    background: linear-gradient(135deg, var(--color-primary-subtle), transparent);
+    backdrop-filter: blur(2px);
+}
+
+@media (max-width: 768px) {
+    .hero::after { height: 130px; }
+    .hero .hero-orb-1 { width: 280px; height: 280px; }
+}
+
+/* ---------------------------------------------------------------------------
+   3. Brand mark — a small summit instead of a flat tile
+   --------------------------------------------------------------------------- */
+.nav-brand-mark {
+    background: linear-gradient(150deg, var(--color-pine) 0%, var(--color-primary) 100%);
+    position: relative;
+    overflow: hidden;
+    color: transparent;          /* hide the "RC" glyph; show a peak instead */
+}
+.nav-brand-mark::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background-image:
+        url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='32' height='32' viewBox='0 0 32 32'%3E%3Cpath fill='none' stroke='%23ffffff' stroke-width='2.2' stroke-linejoin='round' stroke-linecap='round' d='M5 23 L13 11 L18 18 L21 14 L27 23 Z'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: center;
+    opacity: 0.95;
+}
+
+/* ---------------------------------------------------------------------------
+   4. Numbers — crisp, aligned, athletic
+   Tabular figures so stat columns line up; display face for the big numbers.
+   --------------------------------------------------------------------------- */
+.hero-stat-value,
+.profile-stat-value,
+.training-age-value,
+.gap-card-value,
+.stat-value,
+.ff-stat-value {
+    font-family: var(--font-display);
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -0.01em;
+}
+
+.hero-stat-value {
+    background: linear-gradient(135deg, var(--color-text) 0%, var(--color-pine) 140%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+
+/* ---------------------------------------------------------------------------
+   5. Page headers — a "trail-to-road" spectrum accent
+   Every page header gets a thin bottom rule that runs pine → emerald → route:
+   the terrain spectrum the app covers, in one stroke. A faint contour sits in
+   the corner so the header feels like part of the map.
+   --------------------------------------------------------------------------- */
+.header,
+.tips-header,
+.race-prep-header,
+.analytics-page-header { position: relative; }
+
+.header::after,
+.tips-header::after,
+.race-prep-header::after,
+.analytics-page-header::after {
+    content: "";
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    height: 3px;
+    z-index: 2;
+    pointer-events: none;
+    background: linear-gradient(90deg,
+        var(--color-pine) 0%,
+        var(--color-primary) 45%,
+        var(--color-route) 100%);
+}
+
+/* ---------------------------------------------------------------------------
+   6. Plan cards — terrain-aware
+   Trail plans wear a pine ridge edge; road plans wear a cobalt dashed edge.
+   A matching terrain tag in the header names it outright (the app does both).
+   --------------------------------------------------------------------------- */
+.plan-card { position: relative; overflow: hidden; }
+.plan-card::before {
+    content: "";
+    position: absolute;
+    top: 0; left: 0; bottom: 0;
+    width: 4px;
+}
+.plan-card--trail::before {
+    background: linear-gradient(180deg, var(--color-pine), var(--color-moss));
+}
+.plan-card--road::before {
+    /* dashed centerline edge — the road read */
+    background-image: repeating-linear-gradient(180deg,
+        var(--color-route) 0 9px, transparent 9px 18px);
+}
+
+/* Terrain tag chips, styled like the existing plan badges */
+.badge-trail {
+    background: rgba(20, 83, 59, 0.12);
+    color: var(--color-pine);
+}
+.badge-road {
+    background: rgba(74, 114, 196, 0.12);
+    color: var(--color-route-deep);
+}
+[data-theme="dark"] .badge-trail { color: var(--color-moss); }
+[data-theme="dark"] .badge-road { color: var(--color-route); }
+.badge-trail svg,
+.badge-road svg { vertical-align: -2px; margin-right: 4px; }

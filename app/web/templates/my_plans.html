@@ -24,9 +24,14 @@
     <div class="plans-grid">
         {% for plan in active_plans %}
         {% set is_completed = plan.status_label == 'Completed' %}
-        <div class="plan-card" id="plan-{{ plan.id }}">
+        <div class="plan-card {% if plan.is_trail %}plan-card--trail{% else %}plan-card--road{% endif %}" id="plan-{{ plan.id }}">
             <div class="plan-card-header">
                 <h3>{{ plan.target_distance_display }} Training Plan</h3>
+                {% if plan.is_trail %}
+                <span class="plan-badge badge-trail" title="Trail / Ultra"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"><path d="M3 20 L9 8 L13 14 L16 9 L21 20 Z"/></svg>Trail</span>
+                {% else %}
+                <span class="plan-badge badge-road" title="Road"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3 L5 21 M16 3 L19 21 M12 5 v3 M12 11 v3 M12 17 v2"/></svg>Road</span>
+                {% endif %}
                 {% if plan.plan_type == 'performance' %}
                 <span class="plan-badge badge-performance">Performance</span>
                 {% elif plan.plan_type == 'fitness' %}
@@ -100,9 +105,14 @@
     </div>
     <div class="plans-grid" id="completed-plans-grid">
         {% for plan in completed_plans %}
-        <div class="plan-card plan-card-completed" id="plan-{{ plan.id }}">
+        <div class="plan-card plan-card-completed {% if plan.is_trail %}plan-card--trail{% else %}plan-card--road{% endif %}" id="plan-{{ plan.id }}">
             <div class="plan-card-header">
                 <h3>{{ plan.target_distance_display }} Training Plan</h3>
+                {% if plan.is_trail %}
+                <span class="plan-badge badge-trail" title="Trail / Ultra"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"><path d="M3 20 L9 8 L13 14 L16 9 L21 20 Z"/></svg>Trail</span>
+                {% else %}
+                <span class="plan-badge badge-road" title="Road"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3 L5 21 M16 3 L19 21 M12 5 v3 M12 11 v3 M12 17 v2"/></svg>Road</span>
+                {% endif %}
                 <span class="plan-badge badge-completed">
                     <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-1px;margin-right:3px;"><path d="M20 6L9 17l-5-5"/></svg>
                     Done

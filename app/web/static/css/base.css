@@ -77,6 +77,35 @@
   --wt-strength: #5B9E5B;
   --wt-rest: var(--color-text-muted);
 
+  /* ---- Trail / terrain palette ----
+     An earthy supporting cast for the "trail running" identity: deep pine for
+     depth, clay/ochre dirt tones, alpine stone, and a faint contour-line color
+     used for the topographic texture. These never replace the emerald accent —
+     they give the surfaces a sense of terrain underfoot. */
+  --color-pine: #14533B;            /* deep forest — hero depth, ridgelines */
+  --color-pine-deep: #0C3A29;
+  --color-moss: #3F6B43;
+  --color-clay: #B5612F;            /* trail dirt */
+  --color-ochre: #C98A2E;           /* dusty sun */
+  --color-stone: #8A8780;           /* alpine rock */
+  --color-sky: #2E6E7E;             /* high-altitude teal */
+  --terrain-line: rgba(14, 83, 59, 0.07);   /* contour stroke on light */
+  --terrain-line-strong: rgba(14, 83, 59, 0.13);
+  --terrain-wash: linear-gradient(180deg, rgba(14, 124, 90, 0.04), transparent 55%);
+
+  /* ---- Road palette ----
+     The app coaches road races (5K → Marathon) as well as trail, so the
+     identity pairs the earthy terrain set with a cooler, urban "road" set:
+     asphalt greys, a slate-cobalt route line, and the dashed centerline that
+     reads instantly as tarmac. Ridgelines = trail; dashed lines = road. */
+  --color-route: #4A72C4;           /* slate-cobalt — the road line */
+  --color-route-deep: #2F4F8F;
+  --color-asphalt: #5E6166;         /* mid tarmac */
+  --color-tarmac: #3A3D42;          /* dark asphalt */
+  --color-lane: #D9A23A;            /* road centerline, used sparingly */
+  --road-dash: rgba(74, 114, 196, 0.16);    /* dashed stroke on light */
+  --road-dash-strong: rgba(74, 114, 196, 0.28);
+
   /* ---- Typography ---- */
   --font-display: "Space Grotesk", -apple-system, BlinkMacSystemFont, sans-serif;
   --font-body: "DM Sans", -apple-system, BlinkMacSystemFont, sans-serif;
@@ -747,6 +776,27 @@ pre code {
   --shadow-xl: 0 12px 32px -10px rgba(0, 0, 0, 0.7);
   --shadow-glow: 0 0 0 1px var(--color-primary-subtle);
   --shadow-accent-glow: 0 0 0 1px var(--color-accent-subtle);
+
+  /* Trail palette — brighter, cooler under the dark theme */
+  --color-pine: #1E9C72;
+  --color-pine-deep: #0C3A29;
+  --color-moss: #5BA86A;
+  --color-clay: #D08A4F;
+  --color-ochre: #E0A94B;
+  --color-stone: #6B6862;
+  --color-sky: #5BB3C4;
+  --terrain-line: rgba(78, 204, 160, 0.06);
+  --terrain-line-strong: rgba(78, 204, 160, 0.11);
+  --terrain-wash: linear-gradient(180deg, rgba(43, 184, 136, 0.06), transparent 55%);
+
+  /* Road palette — cooler, brighter under the dark theme */
+  --color-route: #6E92E0;
+  --color-route-deep: #4A72C4;
+  --color-asphalt: #9B978F;
+  --color-tarmac: #C9C6C0;
+  --color-lane: #E0B45A;
+  --road-dash: rgba(110, 146, 224, 0.14);
+  --road-dash-strong: rgba(110, 146, 224, 0.26);
 }
 
 /* ---- Cookie Consent Banner ---- */

@@ -198,7 +198,6 @@
 
         // Render profile summary + the new meta sections
         this.renderProfileSummary(data.profile);
-        this.renderCoachAssessment(data);
         this.renderTrainingAge();
         this.renderWorkoutMix();
 
@@ -234,42 +233,6 @@
         set('profileEasyPct', profile.easy_pct ? `${Math.round(profile.easy_pct)}%` : '--');
 
         el.style.display = 'flex';
-    };
-
-    /* ------------------------------------------------------------------ */
-    /*  Coach's Assessment — synthesized paragraph                         */
-    /* ------------------------------------------------------------------ */
-    AD.renderCoachAssessment = function(data) {
-        const card = document.getElementById('coachAssessmentCard');
-        const el = document.getElementById('coachAssessment');
-        if (!el) return;
-
-        const p = (data && data.profile) || {};
-        const ta = this.trainingAge;
-        const parts = [];
-
-        if (ta && ta.available) {
-            parts.push(`You've been training for ${ta.weeks_since_first_run} week${ta.weeks_since_first_run === 1 ? '' : 's'} — ${ta.total_runs} runs and ${ta.total_km.toLocaleString()} km logged, averaging ${ta.avg_runs_per_week} runs a week.`);
-            if (ta.current_streak_weeks >= 2) {
-                parts.push(`You're on a ${ta.current_streak_weeks}-week consistency streak${ta.longest_streak_weeks > ta.current_streak_weeks ? ` (your best is ${ta.longest_streak_weeks})` : ' — your longest yet'}.`);
-            }
-        }
-        if (p.current_vdot) parts.push(`Current fitness sits around VDOT ${p.current_vdot}.`);
-        if (p.easy_pct != null) {
-            const easy = Math.round(p.easy_pct);
-            const aerobicNote = easy >= 75 ? 'a healthy aerobic base' : easy >= 60 ? 'a reasonable easy/hard balance' : 'a fairly hard-skewed mix — protect your easy days';
-            parts.push(`About ${easy}% of your running is easy-paced — ${aerobicNote}.`);
-        }
-        const top = (data && data.insights ? data.insights.slice() : [])
-            .sort((a, b) => (a.priority || 9) - (b.priority || 9))[0];
-        if (top && top.body) parts.push(top.body);
-
-        if (parts.length === 0) {
-            if (card) card.style.display = 'none';
-            return;
-        }
-        el.textContent = parts.join(' ');
-        if (card) card.style.display = '';
     };
 
     /* ------------------------------------------------------------------ */
