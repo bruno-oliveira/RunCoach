@@ -589,9 +589,15 @@
     .header h1 { font-size: var(--text-2xl); }
     .search-section { padding: var(--space-4); }
     .search-bar { flex-direction: column; }
+    .search-btn { width: 100%; min-height: 48px; }
     .filters { grid-template-columns: 1fr 1fr; }
     .recipes-grid { grid-template-columns: 1fr; }
     .recipe-macros { grid-template-columns: repeat(2, 1fr); }
+
+    /* Comfortable touch targets for filter controls */
+    .filter-group select,
+    .filter-group input,
+    .clear-filters-btn { min-height: 44px; }
 
     .show-details-btn,
     .view-recipe-btn {
