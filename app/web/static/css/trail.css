@@ -1,9 +1,12 @@
 /* ============================================================================
-   RunCoach — Trail Identity Layer
-   A thin, additive layer that gives the app a "trail running" character:
-   a whisper-faint topographic contour texture underfoot, an elevation
-   ridgeline hero, an earthy-but-restrained accent vocabulary, and crisp
-   tabular numbers. Purely decorative + typographic — safe to remove.
+   RunCoach — Terrain Identity Layer  (trail + road)
+   A thin, additive layer that gives the app a "running, anywhere" character.
+   RunCoach coaches both road races (5K → Marathon) and trail/ultra, so the
+   visual language pairs two motifs:
+       • mountain ridgelines + topographic contours  → trail
+       • dashed centerlines / route markers          → road
+   They share one "route" idea, so the app feels like one thing. Purely
+   decorative + typographic — safe to remove.
    ========================================================================= */
 
 /* ---------------------------------------------------------------------------
@@ -52,6 +55,21 @@ body::before {
         repeating-radial-gradient(circle at 78% 24%,
             transparent 0 38px, var(--terrain-line-strong) 38px 39px, transparent 39px 84px);
 }
+
+/* Dashed road route — winds up toward the ridgeline like a run heading out.
+   The road counterpart to the mountains: a centerline-dashed path + start pin. */
+.hero .hero-bg::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background-repeat: no-repeat;
+    background-position: center;
+    background-size: 100% 100%;
+    opacity: 0.4;
+    background-image:
+        url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='1440' height='600' viewBox='0 0 1440 600' preserveAspectRatio='none'%3E%3Cpath fill='none' stroke='%234A72C4' stroke-width='3' stroke-linecap='round' stroke-dasharray='16 13' d='M-40 525 C 240 545 345 360 565 360 C 770 360 825 200 1045 182 C 1225 167 1325 92 1485 72'/%3E%3Ccircle cx='58' cy='520' r='7' fill='%234A72C4'/%3E%3Ccircle cx='58' cy='520' r='13' fill='none' stroke='%234A72C4' stroke-width='2'/%3E%3C/svg%3E");
+}
+[data-theme="dark"] .hero .hero-bg::before { opacity: 0.5; filter: brightness(1.5); }
 
 /* The three orbs become diffuse atmosphere — pine canopy + dusty sun. */
 .hero .hero-orb {
@@ -149,3 +167,67 @@ body::before {
     background-clip: text;
     -webkit-text-fill-color: transparent;
 }
+
+/* ---------------------------------------------------------------------------
+   5. Page headers — a "trail-to-road" spectrum accent
+   Every page header gets a thin bottom rule that runs pine → emerald → route:
+   the terrain spectrum the app covers, in one stroke. A faint contour sits in
+   the corner so the header feels like part of the map.
+   --------------------------------------------------------------------------- */
+.header,
+.tips-header,
+.race-prep-header,
+.analytics-page-header { position: relative; }
+
+.header::after,
+.tips-header::after,
+.race-prep-header::after,
+.analytics-page-header::after {
+    content: "";
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    height: 3px;
+    z-index: 2;
+    pointer-events: none;
+    background: linear-gradient(90deg,
+        var(--color-pine) 0%,
+        var(--color-primary) 45%,
+        var(--color-route) 100%);
+}
+
+/* ---------------------------------------------------------------------------
+   6. Plan cards — terrain-aware
+   Trail plans wear a pine ridge edge; road plans wear a cobalt dashed edge.
+   A matching terrain tag in the header names it outright (the app does both).
+   --------------------------------------------------------------------------- */
+.plan-card { position: relative; overflow: hidden; }
+.plan-card::before {
+    content: "";
+    position: absolute;
+    top: 0; left: 0; bottom: 0;
+    width: 4px;
+}
+.plan-card--trail::before {
+    background: linear-gradient(180deg, var(--color-pine), var(--color-moss));
+}
+.plan-card--road::before {
+    /* dashed centerline edge — the road read */
+    background-image: repeating-linear-gradient(180deg,
+        var(--color-route) 0 9px, transparent 9px 18px);
+}
+
+/* Terrain tag chips, styled like the existing plan badges */
+.badge-trail {
+    background: rgba(20, 83, 59, 0.12);
+    color: var(--color-pine);
+}
+.badge-road {
+    background: rgba(74, 114, 196, 0.12);
+    color: var(--color-route-deep);
+}
+[data-theme="dark"] .badge-trail { color: var(--color-moss); }
+[data-theme="dark"] .badge-road { color: var(--color-route); }
+.badge-trail svg,
+.badge-road svg { vertical-align: -2px; margin-right: 4px; }
