@@ -103,3 +103,18 @@ class TestProgressivePaceZones:
     def test_empty_without_any_anchor(self):
         ctx = GoalPaceContext(None, None, None, 5.0)
         assert progressive_pace_zones(ctx, 1, 12) == {}
+
+    def test_target_distance_label_pinned_to_goal_every_week(self):
+        # A 10K goal at 4.80 min/km: the "10K" race-pace label (used by goal-pace
+        # rehearsal sessions) must read the exact goal pace in every week, even
+        # though the blended VDOT only converges to it by the final week.
+        ctx = GoalPaceContext(
+            current_vdot=goal_vdot_from_time(10.0, int(5.4 * 10 * 60)),
+            goal_vdot=goal_vdot_from_time(10.0, int(4.8 * 10 * 60)),
+            goal_pace_min_km=4.8,
+            target_distance_km=10.0,
+        )
+        early = progressive_pace_zones(ctx, 1, 12)
+        late = progressive_pace_zones(ctx, 12, 12)
+        assert early["10K"]["pace_min_km"] == 4.8
+        assert late["10K"]["pace_min_km"] == 4.8

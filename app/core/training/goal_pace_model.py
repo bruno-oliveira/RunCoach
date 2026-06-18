@@ -134,10 +134,29 @@ def progressive_pace_zones(
     zones = VDOTCalculator.get_pace_zones(vdot, ctx.target_distance_km)
 
     if ctx.goal_pace_min_km:
-        zones["race"] = {
+        goal_entry = {
             "pace_min_km": round(ctx.goal_pace_min_km, 2),
             "pace_str": VDOTCalculator.format_pace(ctx.goal_pace_min_km),
             "description": "Goal race pace",
             "zone_label": race_pace_zone_label(ctx.target_distance_km),
         }
+        zones["race"] = goal_entry
+        # Pin the target distance's race-pace label to the *exact* goal pace so
+        # goal-pace REHEARSAL sessions (e.g. "10K goal pace segments") render
+        # the runner's literal target every week, not the blended-VDOT predicted
+        # race pace which only converges to the goal in the final week. Other
+        # distance labels (a 10K plan's "5K" reference) stay predicted.
+        label = _target_distance_label(ctx.target_distance_km)
+        if label and label in zones:
+            zones[label] = {**zones[label], **goal_entry}
     return zones
+
+
+def _target_distance_label(target_distance_km: float) -> Optional[str]:
+    """Race-pace dict key that names the plan's target distance, if standard."""
+    if abs(target_distance_km - 5.0) < 0.5:
+        return "5K"
+    if abs(target_distance_km - 10.0) < 0.5:
+        return "10K"
+    # Non-5K/10K targets are keyed "race" by VDOTCalculator.get_pace_zones.
+    return "race"
