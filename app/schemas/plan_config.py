@@ -1,4 +1,4 @@
-"""Plan-schema helpers shared across PlanRequest / FitnessPlanRequest / PerformancePlanRequest."""
+"""Plan-schema helpers shared across PlanRequest / PerformancePlanRequest."""
 
 from typing import Optional
 

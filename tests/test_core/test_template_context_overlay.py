@@ -339,10 +339,10 @@ def test_build_long_run_warning_quiet_when_adequate():
     assert warning is None
 
 
-def test_build_long_run_warning_skips_fitness_plans():
+def test_build_long_run_warning_skips_non_distance_plans():
     from app.contexts.plan.plan_template_context import _build_long_run_warning
 
     warning = _build_long_run_warning(
-        _fake_plan(plan_type="fitness"), _plan_data_with_peak_long(10.0)
+        _fake_plan(plan_type="performance"), _plan_data_with_peak_long(10.0)
     )
     assert warning is None

@@ -13,7 +13,6 @@ from app.contexts.nutrition.nutrition_engine import NutritionEngine
 from app.contexts.plan.generators.plan_generator import TrainingPlanGenerator
 from app.contexts.plan.plan_helpers import error_response, get_plan_or_404
 from app.contexts.plan.plan_service import PlanService
-from app.contexts.runner.fitness.fitness_service import FitnessService
 from app.contexts.runner.fitness.performance_service import PerformanceService
 from app.contexts.runner.profile.profile_builder import build_profile
 from app.dependencies import (
@@ -36,7 +35,7 @@ from app.exceptions import (
 from app.infrastructure.config import settings
 from app.models import User
 from app.rate_limit import plan_generation_limiter
-from app.schemas import FitnessPlanRequest, PlanRequest
+from app.schemas import PlanRequest
 from app.template_helpers import create_templates
 from app.utils import parse_time_to_pace
 
@@ -347,115 +346,6 @@ async def generate_plan(
         )
 
 
-@router.post("/generate-fitness-plan", response_class=HTMLResponse)
-def generate_fitness_plan(
-    request: Request,
-    response: Response,
-    current_km: float = Form(...),
-    weeks: int = Form(...),
-    runs_per_week: int = Form(...),
-    focus_area: str = Form("vo2max"),
-    focus_distance: Optional[str] = Form(None),
-    body_weight_kg: float = Form(70.0),
-    max_heart_rate: Optional[str] = Form(None),
-    recent_race_distance_km: Optional[str] = Form(None),
-    recent_race_time: Optional[str] = Form(None),
-    anonymous_user_id: Optional[str] = Cookie(None),
-    db: Session = Depends(get_db),
-    current_user: Optional[User] = Depends(get_optional_user),
-    nutrition_engine: NutritionEngine = Depends(get_nutrition_engine),
-    plan_service: PlanService = Depends(get_plan_service),
-) -> Response:
-    """Generate a fitness-focused training plan."""
-    plan_generation_limiter.check(request)
-    race_dist = float(recent_race_distance_km) if recent_race_distance_km else None
-    hr_max = int(max_heart_rate) if max_heart_rate else None
-    focus_dist = float(focus_distance) if focus_distance else None
-
-    if not anonymous_user_id:
-        anonymous_user_id = getattr(request.state, "anonymous_user_id", None)
-
-    try:
-        plan_request = FitnessPlanRequest(
-            current_km=current_km,
-            weeks=weeks,
-            runs_per_week=runs_per_week,
-            focus_area=focus_area,
-            focus_distance=focus_dist,
-            body_weight_kg=body_weight_kg,
-            max_heart_rate=hr_max,
-            recent_race_distance_km=race_dist,
-            recent_race_time=recent_race_time or None,
-        )
-    except ValidationException as e:
-        return error_response(request, current_user, e.user_message, "validation")
-    except ValidationError as e:
-        message = (
-            _extract_validation_message(e) or "Please check your values and try again."
-        )
-        return error_response(request, current_user, message, "validation")
-    except Exception:
-        logger.exception("Fitness plan request validation failed")
-        return error_response(
-            request,
-            current_user,
-            "Invalid input. Please check your values and try again.",
-            "general",
-        )
-
-    if current_user:
-        if plan_service.has_reached_plan_limit(str(current_user.id), db):
-            return error_response(
-                request,
-                current_user,
-                _PLAN_LIMIT_MESSAGE,
-                "plan_limit",
-            )
-
-    try:
-        user = plan_service.get_or_create_anonymous_user(
-            current_user, anonymous_user_id, db
-        )
-
-        fitness_service = FitnessService(db)
-        training_plan, plan_data = fitness_service.create_fitness_plan(
-            user=user,
-            plan_request=plan_request,
-            nutrition_engine=nutrition_engine,
-        )
-
-        return RedirectResponse(url=f"/plan/{training_plan.id}", status_code=303)
-
-    except ValueError as e:
-        return error_response(request, current_user, str(e), "validation")
-    except DatabaseException:
-        db.rollback()
-        return error_response(
-            request,
-            current_user,
-            "Database error occurred. Please try again.",
-            "database",
-        )
-    except RunCoachException as e:
-        db.rollback()
-        return error_response(
-            request,
-            current_user,
-            e.user_message,
-            "validation",
-            getattr(e, "suggestion", None),
-        )
-    except Exception:
-        logger.exception("Fitness plan generation failed")
-        db.rollback()
-        return error_response(
-            request,
-            current_user,
-            "An unexpected error occurred. Please try again.",
-            "general",
-        )
-
-
 async def _generate_time_goal_plan(
     request: Request,
     current_km: float,
@@ -486,11 +376,18 @@ async def _generate_time_goal_plan(
             "plan_limit",
         )
 
+    if not current_time:
+        return error_response(
+            request,
+            current_user,
+            "Please enter your current finish time at this distance so we can "
+            "pace your plan.",
+            "validation",
+        )
+
     try:
         goal_pace = parse_time_to_pace(goal_time, target_distance)
-        current_pace = None
-        if current_time:
-            current_pace = parse_time_to_pace(current_time, target_distance)
+        current_pace = parse_time_to_pace(current_time, target_distance)
 
         service = PerformanceService(db)
         training_plan, _ = service.create_performance_plan(
@@ -503,7 +400,6 @@ async def _generate_time_goal_plan(
             goal_time=goal_time,
             current_time=current_time,
             runs_per_week=runs_per_week,
-            auto_calculate=current_km == 0,
             max_heart_rate=max_heart_rate,
         )
 

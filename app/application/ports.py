@@ -41,9 +41,6 @@ if TYPE_CHECKING:
     from app.contexts.plan.adaptation.vdot_recalibrator import (
         recalibrate_zones_only as recalibrate_zones_only,
     )
-    from app.contexts.plan.generators.fitness_plan_generator import (
-        FitnessPlanGenerator as FitnessPlanGenerator,
-    )
     from app.contexts.plan.generators.performance_plan_generator import (
         PerformancePlanGenerator as PerformancePlanGenerator,
     )
@@ -83,10 +80,6 @@ _LAZY: dict[str, tuple[str, str]] = {
     "recalibrate_zones_only": (
         "app.contexts.plan.adaptation.vdot_recalibrator",
         "recalibrate_zones_only",
-    ),
-    "FitnessPlanGenerator": (
-        "app.contexts.plan.generators.fitness_plan_generator",
-        "FitnessPlanGenerator",
     ),
     "PerformancePlanGenerator": (
         "app.contexts.plan.generators.performance_plan_generator",

@@ -12,7 +12,6 @@ from app.schemas.auth_schemas import (
     UserResponse,
 )
 from app.schemas.plan_schemas import (
-    FitnessPlanRequest,
     PerformancePlanRequest,
     PlanRequest,
     PlanRequestBase,
@@ -34,7 +33,6 @@ from app.schemas.strava_schemas import (
 
 __all__ = [
     "AuthResponse",
-    "FitnessPlanRequest",
     "GoogleAuthRequest",
     "HealthResponse",
     "PlanRequest",

@@ -91,74 +91,6 @@ class PerformancePlanHandler(PlanTypeHandler):
         return extra
 
 
-class FitnessPlanHandler(PlanTypeHandler):
-    kind = "fitness"
-
-    def matches(self, plan: "TrainingPlan") -> bool:
-        return getattr(plan, "plan_type", "") == "fitness"
-
-    def display_label(self, plan: "TrainingPlan") -> str:
-        return "Fitness"
-
-    def enrich_view_context(
-        self,
-        plan: "TrainingPlan",
-        db: Session,
-        extra: Dict[str, Any],
-        plan_data: List[Dict[str, Any]],
-    ) -> Dict[str, Any]:
-        from app.contexts.plan.generators.fitness_plan_generator import (
-            _PHASE_METADATA,
-            FitnessPlanGenerator,
-        )
-        from app.core.training.vdot_calculator import VDOTCalculator
-        from app.utils import format_pace
-
-        try:
-            gen = FitnessPlanGenerator()
-            vdot = plan.vdot
-            zones = gen.calculate_training_zones(vdot, plan.max_heart_rate)
-            for zone_data in zones.values():
-                zone_data["pace_formatted"] = format_pace(zone_data["pace"])
-                if "pace_range" in zone_data:
-                    pr = zone_data["pace_range"]
-                    zone_data["pace_range_formatted"] = (
-                        f"{format_pace(pr[0])} - {format_pace(pr[1])}"
-                    )
-            extra["training_zones"] = zones
-            focus_area = (
-                plan.target_distance.replace("fitness_", "")
-                if plan.target_distance.startswith("fitness_")
-                else "vo2max"
-            )
-            extra["fitness_focus_area"] = focus_area
-            phase_durations = gen._calculate_fitness_phases(
-                plan.weeks_duration, focus_area
-            )
-            extra["phases"] = {
-                phase: {"weeks": phase_durations[phase], **_PHASE_METADATA[phase]}
-                for phase in phase_durations
-            }
-            time_trial_weeks: List[Dict[str, Any]] = []
-            for week_data in plan_data or []:
-                if week_data.get("is_time_trial_week"):
-                    for dw in week_data.get("daily_workouts", []):
-                        if dw.get("type") == "time_trial":
-                            time_trial_weeks.append(
-                                {
-                                    "week": week_data["week"],
-                                    "distance": dw.get("distance", 0),
-                                    "description": dw.get("description", ""),
-                                }
-                            )
-            extra["time_trial_weeks"] = time_trial_weeks
-            if vdot:
-                extra["vdot_zones"] = VDOTCalculator.get_pace_zones(vdot)
-        except Exception as e:
-            logger.warning(f"Fitness context enrichment failed: {e}")
-        return extra
-
-
 class DistancePlanHandler(PlanTypeHandler):
     """Fallback handler for traditional distance-based plans."""
 
@@ -174,7 +106,6 @@ class DistancePlanHandler(PlanTypeHandler):
 
 PLAN_TYPE_REGISTRY: List[PlanTypeHandler] = [
     PerformancePlanHandler(),
-    FitnessPlanHandler(),
     DistancePlanHandler(),
 ]
 
@@ -193,7 +124,7 @@ def display_label(plan: "TrainingPlan", *, space_before_km: bool = False) -> str
     """Resolve the user-facing label for a plan.
 
     Distance-bearing plans (target_distance_km > 0) always render the distance
-    name regardless of plan_type. Special-purpose plans (performance/fitness)
+    name regardless of plan_type. Special-purpose plans (performance)
     fall through to their handler's label.
     """
     td = plan.target_distance_km

@@ -21,7 +21,7 @@ class PerformancePlanRequest(BaseModel):
         None,
         ge=2.5,
         le=10.0,
-        description="Current pace in min/km (auto-calculated if not provided)",
+        description="Current pace in min/km",
     )
     goal_pace: float = Field(
         ..., ge=2.5, le=10.0, description="Goal race pace in min/km"
@@ -37,10 +37,7 @@ class PerformancePlanRequest(BaseModel):
         None,
         ge=0,
         le=200,
-        description="Current weekly mileage in km (auto-calculated if not provided)",
-    )
-    auto_calculate: bool = Field(
-        default=True, description="Auto-calculate fitness from run logs"
+        description="Current weekly mileage in km",
     )
     runs_per_week: int = Field(
         default=5, ge=3, le=6, description="Number of runs per week"

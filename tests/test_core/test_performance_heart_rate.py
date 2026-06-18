@@ -277,7 +277,6 @@ class TestIntegrationPerformancePlan:
             goal_time="50:00",
             current_time="55:00",
             runs_per_week=5,
-            auto_calculate=False,
             max_heart_rate=180,
         )
 
@@ -309,7 +308,6 @@ class TestIntegrationPerformancePlan:
             goal_time="50:00",
             current_time="55:00",
             runs_per_week=5,
-            auto_calculate=False,
             max_heart_rate=None,
         )
 
@@ -338,7 +336,6 @@ class TestIntegrationPerformancePlan:
             current_weekly_km=40,
             goal_time="50:00",
             runs_per_week=5,
-            auto_calculate=False,
             max_heart_rate=185,
         )
 

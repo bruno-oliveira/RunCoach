@@ -1,16 +1,13 @@
 """Regression tests for the LATER tranche of the plan-quality audit.
 
-Covers: strength across generators (G8), fitness race specificity (G9),
-beginner C25K rework (G10), per-session pace cues (E2), readiness↔TSB (G7),
-the long-run time cap (E7), and the session-hit-rate recalibration (E5).
+Covers: strength across generators (G8), beginner C25K rework (G10),
+per-session pace cues (E2), readiness↔TSB (G7), the long-run time cap (E7),
+and the session-hit-rate recalibration (E5).
 """
-
-import json
 
 import pytest
 
 from app.contexts.plan.generators.beginner_plan_generator import BeginnerPlanGenerator
-from app.contexts.plan.generators.fitness_plan_generator import FitnessPlanGenerator
 from app.contexts.plan.generators.performance_plan_generator import (
     PerformancePlanGenerator,
 )
@@ -56,43 +53,12 @@ def test_performance_generator_attaches_strength():
     assert len(weeks_with_strength) == len(plan["weekly_plans"])
 
 
-def test_fitness_generator_attaches_strength():
-    plan = FitnessPlanGenerator().generate_plan(40, 10, 5, vdot=50)
-    assert all(w.get("strength_training") for w in plan["weekly_plans"])
-
-
 def test_beginner_strength_starts_after_habit_established():
     plan = BeginnerPlanGenerator().generate_plan(5.0, 10, 3)
     # Weeks 1-2 stay strength-free; later weeks get exactly one session.
     assert plan[0]["strength_training"] == []
     assert plan[1]["strength_training"] == []
     assert len(plan[2]["strength_training"]) == 1
-
-
-# ── G9 — fitness race specificity ──────────────────────────────────────────
-
-
-def test_fitness_focus_distance_changes_plan():
-    g = FitnessPlanGenerator()
-    p5 = g.generate_plan(40, 10, 5, vdot=50, focus_area="balanced", focus_distance=5.0)
-    p21 = g.generate_plan(
-        40, 10, 5, vdot=50, focus_area="balanced", focus_distance=21.1
-    )
-    assert json.dumps(p5["weekly_plans"]) != json.dumps(p21["weekly_plans"])
-
-
-def test_fitness_peak_has_race_pace_session():
-    plan = FitnessPlanGenerator().generate_plan(
-        40, 10, 5, vdot=50, focus_area="balanced", focus_distance=5.0
-    )
-    race_pace = [
-        d
-        for w in plan["weekly_plans"]
-        if w["phase"] == "peak"
-        for d in w["daily_workouts"]
-        if d.get("type") == "race_pace"
-    ]
-    assert race_pace, "peak weeks should include a race-pace session"
 
 
 # ── G10 — beginner C25K rework ─────────────────────────────────────────────

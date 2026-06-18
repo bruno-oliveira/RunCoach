@@ -176,17 +176,6 @@ class TestPerformanceRouter:
         assert resp.status_code == 200
         assert "text/html" in resp.headers["content-type"]
 
-    def test_calculate_fitness_authenticated(self, smoke_user):
-        _set_user(smoke_user)
-        with TestClient(app) as c:
-            resp = c.get(
-                "/api/performance/calculate-fitness",
-                params={
-                    "distance": 10.0,
-                },
-            )
-        assert resp.status_code == 200
-
 
 # ---------------------------------------------------------------------------
 # Recipes router  (/api/recipes, /recipes)

@@ -126,7 +126,6 @@
                             <input type="hidden" id="plan_mode" name="plan_mode" value="{{ request.query_params.get('mode', 'distance') }}">
                             <button type="button" class="mode-btn mode-btn-active" id="mode-distance-btn" onclick="setPlanMode('distance')"><span data-i18n="home.goal_distance">Distance Goal</span></button>
                             <button type="button" class="mode-btn" id="mode-time-btn" onclick="setPlanMode('time')" {% if not user %}disabled title="Sign in to use Time Goal"{% endif %}><span data-i18n="home.goal_time">Time Goal</span></button>
-                            <button type="button" class="mode-btn" id="mode-fitness-btn" onclick="setPlanMode('fitness')"><span data-i18n="home.goal_fitness">Fitness Goal</span></button>
                         </div>
                         <p class="mode-description" id="mode-description"><span data-i18n="home.goal_distance_desc">Build a structured plan to finish a race at a specific distance.</span></p>
 
@@ -334,9 +333,9 @@
 
                             <div class="form-row-2">
                                 <div class="form-group">
-                                    <label for="current_time" class="form-label"><span data-i18n="home.current_finish">Current finish time</span> <span class="form-optional"><span data-i18n="home.optional">(optional)</span></span></label>
-                                    <input type="text" id="current_time" name="current_time" class="form-input" placeholder="HH:MM:SS or MM:SS" pattern="^(\d{1,2}:\d{2}|\d{1,2}:\d{2}:\d{2})$">
-                                    <span class="form-help">{% if has_profile %}Auto-calculated from your runs{% else %}Your current race time at this distance{% endif %}</span>
+                                    <label for="current_time" class="form-label"><span data-i18n="home.current_finish">Current finish time</span></label>
+                                    <input type="text" id="current_time" name="current_time" class="form-input" placeholder="HH:MM:SS or MM:SS" pattern="^(\d{1,2}:\d{2}|\d{1,2}:\d{2}:\d{2})$" required>
+                                    <span class="form-help">Your current race time at this distance</span>
                                 </div>
                                 <div class="form-group">
                                     <label for="max_heart_rate" class="form-label"><span data-i18n="home.max_hr">Max heart rate</span> <span class="form-optional"><span data-i18n="home.optional">(optional)</span></span></label>
@@ -345,88 +344,6 @@
                                         <span class="input-unit">bpm</span>
                                     </div>
                                     <span class="form-help">Enables heart rate zones</span>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Fitness Goal mode fields (hidden by default) -->
-                        <div id="fitness-mode-fields" style="display:none;">
-                            <div class="form-group">
-                                <label for="focus_area" class="form-label"><span data-i18n="home.training_focus">Training focus</span></label>
-                                <div class="select-wrap">
-                                    <select id="focus_area" name="focus_area" class="form-select">
-                                        <option value="vo2max">VO2max — Get faster with intervals</option>
-                                        <option value="threshold">Threshold — Build endurance at pace</option>
-                                        <option value="balanced" selected>Balanced — Mix of both</option>
-                                    </select>
-                                </div>
-                                <span class="form-help">Choose your primary physiological focus</span>
-                            </div>
-
-                            <div class="form-row-2">
-                                <div class="form-group">
-                                    <label for="fitness_weeks" class="form-label">Duration</label>
-                                    <div class="input-with-unit">
-                                        <input type="number" id="fitness_weeks" name="weeks" class="form-input" min="6" max="12" value="8" placeholder="8">
-                                        <span class="input-unit">weeks</span>
-                                    </div>
-                                </div>
-
-                                <div class="form-group">
-                                    <label for="fitness_runs" class="form-label">Runs per week</label>
-                                    <div class="select-wrap">
-                                        <select id="fitness_runs" name="runs_per_week" class="form-select">
-                                            <option value="3">3 runs</option>
-                                            <option value="4" selected>4 runs</option>
-                                            <option value="5">5 runs</option>
-                                            <option value="6">6 runs</option>
-                                        </select>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div class="form-group form-collapsible">
-                                <button type="button" class="form-collapsible-toggle" onclick="toggleCollapsibleFields('fitness-race-fields')">
-                                    <span>Recent race result? (for VDOT zones)</span>
-                                    <svg class="chevron-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
-                                </button>
-                                <div id="fitness-race-fields" class="form-collapsible-content" style="display:none;">
-                                    <div class="form-row-2">
-                                        <div class="form-group">
-                                            <label for="fitness_race_distance" class="form-label">Race distance</label>
-                                            <div class="select-wrap">
-                                                <select id="fitness_race_distance" name="recent_race_distance_km" class="form-select">
-                                                    <option value="">Select</option>
-                                                    <option value="5">5K</option>
-                                                    <option value="10">10K</option>
-                                                    <option value="21.1">Half Marathon</option>
-                                                    <option value="42.2">Marathon</option>
-                                                </select>
-                                            </div>
-                                        </div>
-                                        <div class="form-group">
-                                            <label for="fitness_race_time" class="form-label">Finish time</label>
-                                            <input type="text" id="fitness_race_time" name="recent_race_time" class="form-input" placeholder="MM:SS or HH:MM:SS">
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div class="form-row-2">
-                                <div class="form-group">
-                                    <label for="fitness_max_hr" class="form-label"><span data-i18n="home.max_hr">Max heart rate</span> <span class="form-optional"><span data-i18n="home.optional">(optional)</span></span></label>
-                                    <div class="input-with-unit">
-                                        <input type="number" id="fitness_max_hr" name="max_heart_rate" class="form-input" min="120" max="220" step="1" placeholder="185">
-                                        <span class="input-unit">bpm</span>
-                                    </div>
-                                </div>
-
-                                <div class="form-group">
-                                    <label for="body_weight_kg" class="form-label">Body weight</label>
-                                    <div class="input-with-unit">
-                                        <input type="number" id="body_weight_kg_fitness" name="body_weight_kg" class="form-input" step="0.1" min="30" max="250" required placeholder="70" value="70">
-                                        <span class="input-unit">kg</span>
-                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -503,20 +420,17 @@ function setPlanMode(mode) {
     document.getElementById('plan_mode').value = mode;
     var distBtn = document.getElementById('mode-distance-btn');
     var timeBtn = document.getElementById('mode-time-btn');
-    var fitnessBtn = document.getElementById('mode-fitness-btn');
     var distFields = document.getElementById('distance-mode-fields');
     var timeFields = document.getElementById('time-mode-fields');
-    var fitnessFields = document.getElementById('fitness-mode-fields');
     var form = document.getElementById('plan-form');
     var submitBtn = document.getElementById('form-submit-btn');
     var desc = document.getElementById('mode-description');
 
     distBtn.classList.remove('mode-btn-active');
     timeBtn.classList.remove('mode-btn-active');
-    fitnessBtn.classList.remove('mode-btn-active');
 
-    var sections = [distFields, timeFields, fitnessFields];
-    var activeSection = mode === 'time' ? timeFields : mode === 'fitness' ? fitnessFields : distFields;
+    var sections = [distFields, timeFields];
+    var activeSection = mode === 'time' ? timeFields : distFields;
     sections.forEach(function(section) {
         var hidden = section !== activeSection;
         section.style.display = hidden ? 'none' : '';
@@ -530,10 +444,6 @@ function setPlanMode(mode) {
         form.action = '/generate-plan';
         submitBtn.querySelector('svg').style.display = '';
         desc.textContent = 'Target a specific finish time — every workout is paced off your goal.';
-    } else if (mode === 'fitness') {
-        fitnessBtn.classList.add('mode-btn-active');
-        form.action = '/generate-fitness-plan';
-        desc.textContent = 'Get faster and fitter — no race required, with built-in progress tracking.';
     } else {
         distBtn.classList.add('mode-btn-active');
         form.action = '/generate-plan';
@@ -844,17 +754,6 @@ function setPlanMode(mode) {
                 }
             }
 
-            // Fitness mode validation
-            if (planMode === 'fitness') {
-                const fitnessKm = parseFloat(currentKm.value);
-                if (fitnessKm < 10) {
-                    e.preventDefault();
-                    alert('Fitness plans require at least 10 km/week base mileage.');
-                    currentKm.focus();
-                    return false;
-                }
-            }
-
             // Disable button after form starts submitting (prevents blocking submission)
             setTimeout(function() {
                 submitBtn.disabled = true;
@@ -932,7 +831,7 @@ function setPlanMode(mode) {
             el.addEventListener('input', scheduleLongRunHint);
             el.addEventListener('change', scheduleLongRunHint);
         });
-        ['mode-distance-btn', 'mode-time-btn', 'mode-fitness-btn'].forEach(function(id) {
+        ['mode-distance-btn', 'mode-time-btn'].forEach(function(id) {
             const btn = document.getElementById(id);
             if (btn) btn.addEventListener('click', scheduleLongRunHint);
         });
