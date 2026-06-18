@@ -1,0 +1,103 @@
+{% extends "base.html" %}
+
+{% block title %}RunCoach — Tips{% endblock %}
+
+{% block styles %}
+<link rel="stylesheet" href="{{ static_url('css/tips.css') }}">
+<link rel="stylesheet" href="{{ static_url('css/plan-nutrition.css') }}">
+{% endblock %}
+
+{% block content %}
+<div class="tips-page">
+    <div class="container">
+        <div class="tips-header">
+            <h1 class="tips-title">⛰️ <span data-i18n="tips.title">Trail Fuelling &amp; Racing Tips</span></h1>
+            <p class="tips-subtitle"><span data-i18n="tips.subtitle">Portable fuel and on-the-move strategy for long days on the trails — gut-training, sodium, caffeine and pacing, all in one place.</span></p>
+        </div>
+
+        {% if trail_fuel_ideas %}
+        <div class="tips-card">
+            <div class="tips-card-header">
+                <h2><span data-i18n="nutrition.trail_ready_meals">Trail Fuel Ideas</span></h2>
+            </div>
+            <p class="trail-fuel-desc"><span data-i18n="nutrition.trail_ready_desc">Quick-reference fuel to carry and eat on the move — no cooking required. For full recipes, see the Recipes page.</span></p>
+            <a href="/recipes?meal_type=trail" class="btn btn-secondary btn-sm trail-recipes-link">
+                <span data-i18n="nutrition.trail_recipes_link">Browse trail fuel recipes</span> →
+            </a>
+            <div class="trail-fuel-ideas">
+                {% set phases = trail_fuel_phases or [{'key': 'during', 'label': 'During', 'blurb': ''}] %}
+                {% for phase in phases %}
+                {% set items = trail_fuel_ideas | selectattr('phase', 'equalto', phase.key) | list %}
+                {% if items %}
+                <div class="trail-fuel-phase">
+                    <div class="trail-fuel-phase-head">
+                        <span class="trail-fuel-phase-label">{{ phase.label }}</span>
+                        {% if phase.blurb %}<span class="trail-fuel-phase-blurb">{{ phase.blurb }}</span>{% endif %}
+                    </div>
+                    <div class="trail-fuel-grid">
+                        {% for item in items %}
+                        <div class="meal-option-card trail-fuel-card">
+                            <div class="trail-fuel-card-top">
+                                <div class="meal-option-name">{{ item.name }}</div>
+                                <span class="trail-fuel-badge trail-fuel-badge-{{ item.category }}">{{ item.category }}</span>
+                            </div>
+                            <div class="meal-option-nutrition">
+                                <span class="nutrition-badge">🍝 {{ item.carbs }}</span>
+                            </div>
+                            <div class="meal-option-description">{{ item.note }}</div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+                {% endif %}
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+
+        {% if trail_tips %}
+        <div class="tips-card">
+            <div class="tips-card-header">
+                <h2><span data-i18n="nutrition.trail_tips">Trail Fuelling Tips</span></h2>
+            </div>
+            <div class="nutrition-guide-section trail-tips-section" id="trail-tips">
+                {% set topics = trail_tips | map(attribute='topic') | unique | list %}
+                <div class="trail-tips-filters" role="group" aria-label="Filter tips by topic">
+                    <button type="button" class="trail-tips-chip active" data-topic="all" onclick="filterTrailTips(this, 'all')">All</button>
+                    {% for topic in topics %}
+                    <button type="button" class="trail-tips-chip" data-topic="{{ topic }}" onclick="filterTrailTips(this, '{{ topic }}')">{{ topic }}</button>
+                    {% endfor %}
+                </div>
+                <ul class="nutrition-guide-list trail-tips-list">
+                    {% for tip in trail_tips %}
+                    <li class="trail-tip" data-topic="{{ tip.topic }}">
+                        <span class="trail-tip-topic">{{ tip.topic }}</span>
+                        {{ tip.text }}
+                    </li>
+                    {% endfor %}
+                </ul>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // Self-contained topic filter for the Trail Fuelling Tips list.
+    window.filterTrailTips = function (button, topic) {
+        var container = document.getElementById('trail-tips');
+        if (!container) return;
+        var chips = container.querySelectorAll('.trail-tips-chip');
+        for (var i = 0; i < chips.length; i++) {
+            chips[i].classList.toggle('active', chips[i] === button);
+        }
+        var tips = container.querySelectorAll('.trail-tip');
+        for (var j = 0; j < tips.length; j++) {
+            var show = topic === 'all' || tips[j].getAttribute('data-topic') === topic;
+            tips[j].style.display = show ? '' : 'none';
+        }
+    };
+</script>
+{% endblock %}

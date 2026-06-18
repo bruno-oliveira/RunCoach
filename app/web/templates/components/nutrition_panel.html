@@ -117,8 +117,8 @@
                     <strong><span data-i18n="nutrition.trail_callout_title">Trail fuel ideas &amp; fuelling tips</span></strong>
                     <span data-i18n="nutrition.trail_callout_body">now live with your race-day prep — portable fuel for before, during and after, plus gut-training, sodium and caffeine strategy, all in one place.</span>
                 </p>
-                <a href="/race-prep#trail-tips" class="btn btn-secondary btn-sm">
-                    <span data-i18n="nutrition.trail_callout_link">See full trail fuelling in Race Prep</span> →
+                <a href="/tips#trail-tips" class="btn btn-secondary btn-sm">
+                    <span data-i18n="nutrition.trail_callout_link">See full trail fuelling in Tips</span> →
                 </a>
             </div>
             {% endif %}
@@ -129,9 +129,6 @@
         <div class="meal-suggestions">
             <div class="meal-suggestions-header">
                 <h3><span data-i18n="nutrition.sample_meal">Sample Meal Plan</span></h3>
-                <button onclick="PlanModule.randomizeMeals()" class="randomize-meals-btn">
-                    🎲 Randomize Meals
-                </button>
             </div>
             <div class="meals-grid">
                 {% for meal_type, meals in nutrition_plan.meal_suggestions.items() %}

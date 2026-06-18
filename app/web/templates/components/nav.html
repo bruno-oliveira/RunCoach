@@ -20,10 +20,10 @@
             <ul class="nav-links">
                 <li><a href="/" class="nav-link {{ 'is-active' if current_page == 'home' else '' }}" data-i18n="nav.home">Home</a></li>
                 <li><a href="/recipes" class="nav-link {{ 'is-active' if current_page == 'recipes' else '' }}" data-i18n="nav.recipes">Recipes</a></li>
+                <li><a href="/tips" class="nav-link {{ 'is-active' if current_page == 'tips' else '' }}" data-i18n="nav.tips">Tips</a></li>
                 {% if user %}
                 <li><a href="/my-plans" class="nav-link {{ 'is-active' if current_page == 'my-plans' else '' }}" data-i18n="nav.my_plans">My Plans</a></li>
-                <li><a href="/analytics" data-nav-tab="coach" class="nav-link {{ 'is-active' if current_page == 'analytics' else '' }}" data-i18n="nav.coach">Coach</a></li>
-                <li><a href="/analytics?tab=progress" data-nav-tab="progress" class="nav-link" data-i18n="nav.progress">Progress</a></li>
+                <li><a href="/analytics" class="nav-link {{ 'is-active' if current_page == 'analytics' else '' }}" data-i18n="nav.coach">Coach</a></li>
                 <li><a href="/race-prep" class="nav-link {{ 'is-active' if current_page == 'race-prep' else '' }}" data-i18n="nav.race_prep">Race Prep</a></li>
                 {% if user.strava_athlete_id %}
                 <li class="nav-item-strava">

@@ -287,7 +287,6 @@ const AnalyticsDashboard = {
         this.renderSummary();
         this.renderHeatmap();
         this.renderInsights();
-        this.renderRecentRuns();
         this.renderCurrentCharts();
         this.renderEfficiencyChart('weekly');
         this.renderTrainingLoadChart('weekly');
@@ -631,8 +630,6 @@ const AnalyticsDashboard = {
             if (el) el.style.display = t.key === tabName ? 'block' : 'none';
         });
 
-        this._syncNavHighlight(tabName);
-
         // Scope the header period selector to tabs that filter by window. The
         // Coach surface is plan-scoped and ignores it.
         const showHeaderPeriod = !!(this._tabConfig(tabName) || {}).headerPeriod;
@@ -657,13 +654,6 @@ const AnalyticsDashboard = {
         if (this.signalsLoadedPlanId !== this.currentPlanId && this.loadSignals) {
             this.loadSignals(this.currentPlanId);
         }
-    },
-
-    /** Mirror the active surface onto the two nav entries (Coach / Progress). */
-    _syncNavHighlight(tabName) {
-        document.querySelectorAll('[data-nav-tab]').forEach(link => {
-            link.classList.toggle('is-active', link.dataset.navTab === tabName);
-        });
     },
 
     /* ------------------------------------------------------------------ */
