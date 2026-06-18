@@ -173,6 +173,9 @@
             <div class="trail-fuel-ideas">
                 <h3><span data-i18n="nutrition.trail_ready_meals">Trail Fuel Ideas</span></h3>
                 <p class="trail-fuel-ideas-desc"><span data-i18n="nutrition.trail_ready_desc">Quick-reference fuel to carry and eat on the move — no cooking required. For full recipes, see the Recipes page.</span></p>
+                <a href="/recipes?meal_type=trail" class="btn btn-secondary btn-sm trail-recipes-link">
+                    <span data-i18n="nutrition.trail_recipes_link">Browse trail fuel recipes</span> →
+                </a>
                 {% set phases = trail_fuel_phases or [{'key': 'during', 'label': 'During', 'blurb': ''}] %}
                 {% for phase in phases %}
                 {% set items = trail_fuel_ideas | selectattr('phase', 'equalto', phase.key) | list %}

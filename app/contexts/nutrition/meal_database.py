@@ -21,6 +21,7 @@ MEAL_TYPE_FILES = {
     "dinner": "meals_dinner.json",
     "snack": "meals_snack.json",
     "post_workout": "meals_post_workout.json",
+    "trail": "meals_trail.json",
 }
 
 
