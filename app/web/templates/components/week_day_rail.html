@@ -15,7 +15,7 @@
             class="week-rail-day{% if is_today %} is-today{% endif %}{% if done %} is-done{% elif is_past and not is_rest %} is-missed{% endif %}{% if is_rest %} is-rest{% endif %}"
             data-rail-week="{{ week.week }}"
             data-rail-day="{{ workout.day }}"
-            aria-label="{{ label or 'Day ' ~ workout.day }} — {{ workout.type | replace('_', ' ') }}{% if done %}, completed{% endif %}{% if is_today %}, today{% endif %}"
+            aria-label="{{ label or 'Day ' ~ workout.day }} — {{ workout.key_workout_name or (workout.type | replace('_', ' ')) }}{% if done %}, completed{% endif %}{% if is_today %}, today{% endif %}"
             {% if is_today %}aria-current="date"{% endif %}>
         <span class="week-rail-dow">{{ ['M','T','W','T','F','S','S'][workout.day - 1] }}</span>
         <span class="week-rail-date">{{ label.split(' ')[-1] if label else workout.day }}</span>

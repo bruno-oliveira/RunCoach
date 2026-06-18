@@ -292,13 +292,13 @@
                 <div class="workout-item {{ workout.type }} {% if logged_run %}completed{% elif is_past and workout.type not in ['rest', 'recovery'] %}missed{% endif %}" data-day="{{ day_names[workout.day - 1] }}">
                     <div class="workout-day-label">{% if workout_date_labels %}{{ workout_date_labels.get((week.week, workout.day), day_names[workout.day - 1]) }}{% else %}{{ day_names[workout.day - 1] }}{% endif %}</div>
                     <div class="workout-type-row">
-                        <div class="workout-type">{{ workout.type | replace('_', ' ') | title }}</div>
+                        <div class="workout-type">{{ workout.key_workout_name or (workout.type | replace('_', ' ') | title) }}</div>
                         {% if workout.hr_zone_label %}
                         <span class="hr-zone-badge hr-zone-{{ workout.hr_zone_target }}">Z{{ workout.hr_zone_target }}</span>
                         {% endif %}
                     </div>
                     {% if workout.key_workout_name %}
-                    <div class="key-workout-badge">{{ workout.key_workout_name }}</div>
+                    <div class="key-workout-badge">{{ workout.type | replace('_', ' ') | title }}</div>
                     {% endif %}
                     {% if workout.distance > 0 %}
                     <div class="workout-distance">{{ workout.distance }} km{% if workout.hr_zone_label %} <span class="workout-zone-hint">{{ workout.hr_zone_label }}</span>{% endif %}</div>

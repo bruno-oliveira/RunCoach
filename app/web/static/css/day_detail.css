@@ -78,6 +78,17 @@
     background: var(--wt-rest);
 }
 
+/* Generic effort category shown under a named key session
+   (e.g. "Tempo" beneath "Threshold Over-Unders"). */
+.day-hero-kind {
+    margin: calc(-1 * var(--space-3)) 0 var(--space-4);
+    font-size: var(--text-sm);
+    font-weight: var(--weight-semibold);
+    letter-spacing: var(--tracking-wide);
+    text-transform: uppercase;
+    color: var(--color-text-muted);
+}
+
 .day-hero-stats {
     display: flex;
     flex-wrap: wrap;

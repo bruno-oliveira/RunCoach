@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}{{ workout.type | replace('_', ' ') | title }} · Week {{ week_num }} - RunCoach{% endblock %}
+{% block title %}{{ workout.key_workout_name or (workout.type | replace('_', ' ') | title) }} · Week {{ week_num }} - RunCoach{% endblock %}
 
 {% block styles %}
 <link rel="stylesheet" href="{{ static_url('css/plan/core.css') }}">
@@ -42,8 +42,11 @@
         </div>
         <h1 class="day-hero-title">
             <span class="day-hero-swatch wt-{{ workout.type }}" aria-hidden="true"></span>
-            {{ workout.type | replace('_', ' ') | title }}
+            {{ workout.key_workout_name or (workout.type | replace('_', ' ') | title) }}
         </h1>
+        {% if workout.key_workout_name %}
+        <div class="day-hero-kind">{{ workout.type | replace('_', ' ') | title }}</div>
+        {% endif %}
         <div class="day-hero-stats">
             {% if workout.distance and workout.distance > 0 %}
             <div class="day-stat">

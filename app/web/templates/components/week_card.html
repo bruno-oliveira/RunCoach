@@ -99,7 +99,7 @@
             <span class="week-compact-swatch wt-{{ workout.type }}" aria-hidden="true"></span>
             <span class="week-compact-day">{{ day_names[workout.day - 1] }}</span>
             <span class="week-compact-detail">
-                <span class="week-compact-main">{{ workout.type | replace('_', ' ') | title }}{% if workout.distance and workout.distance > 0 %} <span class="week-compact-dot">·</span> {{ '%.1f'|format(workout.distance) }}km{% elif workout.duration_min %} <span class="week-compact-dot">·</span> {{ workout.duration_min }}m{% endif %}{% if workout.structure and 'hill' in workout.structure | lower %} <span class="week-compact-dot">·</span> Hilly{% elif workout.type == 'hill' %} <span class="week-compact-dot">·</span> Hilly{% endif %}</span>
+                <span class="week-compact-main">{{ workout.key_workout_name or (workout.type | replace('_', ' ') | title) }}{% if workout.distance and workout.distance > 0 %} <span class="week-compact-dot">·</span> {{ '%.1f'|format(workout.distance) }}km{% elif workout.duration_min %} <span class="week-compact-dot">·</span> {{ workout.duration_min }}m{% endif %}{% if workout.structure and 'hill' in workout.structure | lower %} <span class="week-compact-dot">·</span> Hilly{% elif workout.type == 'hill' %} <span class="week-compact-dot">·</span> Hilly{% endif %}</span>
                 {% if workout.strength_session %}
                 <span class="week-compact-strength">+ {{ (workout.strength_session.focus or workout.strength_session.type) | replace('_', ' ') | title }} <span class="week-compact-dot">·</span> {{ workout.strength_session.duration }}</span>
                 {% endif %}

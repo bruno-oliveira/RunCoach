@@ -6,7 +6,7 @@
 <div class="workout-item {{ workout.type }} {% if is_today_card %}is-today{% endif %} {% if logged_run %}completed{% elif is_past and workout.type not in ['rest', 'recovery'] %}missed{% endif %}{% if workout.baseline_distance and workout.baseline_distance != workout.distance %} is-adjusted{% if workout.distance < workout.baseline_distance %} is-adjusted-down{% endif %}{% endif %}" data-day="{{ day_names[workout.day - 1] }}" data-day-num="{{ workout.day }}" data-week-num="{{ week.week }}" draggable="true">
     <div class="workout-day-label">{% if workout_date_labels %}{{ workout_date_labels.get((week.week, workout.day), day_names[workout.day - 1]) }}{% else %}{{ day_names[workout.day - 1] }}{% endif %}{% if is_today_card %} <span class="workout-today-chip"><span data-i18n="workout.today">Today</span></span>{% endif %}</div>
     <div class="workout-type-row">
-        <div class="workout-type">{{ workout.type | replace('_', ' ') | title }}</div>
+        <div class="workout-type">{{ workout.key_workout_name or (workout.type | replace('_', ' ') | title) }}</div>
         {% if workout.hr_zone_label %}
         <span class="hr-zone-badge hr-zone-{{ workout.hr_zone_target }}" title="{{ workout.hr_zone_label }}">Z{{ workout.hr_zone_target }}</span>
         {% endif %}
@@ -19,7 +19,7 @@
     </div>
     {% endif %}
     {% if workout.key_workout_name %}
-    <div class="key-workout-badge">{{ workout.key_workout_name }}</div>
+    <div class="key-workout-badge">{{ workout.type | replace('_', ' ') | title }}</div>
     {% endif %}
     {% if workout.distance > 0 %}
     <div class="workout-distance">{{ '%.1f'|format(workout.distance) }} km{% if workout.duration_min and workout.type != 'run_walk' %} <span class="workout-zone-hint">≈ {{ workout.duration_min }} min</span>{% endif %}{% if workout.baseline_distance and workout.baseline_distance != workout.distance %}<span class="workout-adjusted-chip {% if workout.distance < workout.baseline_distance %}is-down{% endif %}" title="Adjusted from {{ '%.1f'|format(workout.baseline_distance) }} km — open the latest changes panel for the reason">
