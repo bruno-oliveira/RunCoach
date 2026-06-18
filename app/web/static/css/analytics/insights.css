@@ -1,12 +1,3 @@
-/* ── Coach's Assessment ── */
-.coach-assessment-card { border-left: 3px solid var(--color-primary); }
-.coach-assessment-text {
-    margin: 0;
-    font-size: var(--text-base);
-    line-height: 1.65;
-    color: var(--color-text-secondary);
-}
-
 /* ── Training age + workout mix grid ── */
 .insights-meta-grid {
     display: grid;
