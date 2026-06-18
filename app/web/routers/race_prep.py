@@ -9,6 +9,11 @@ from fastapi import APIRouter, Depends, File, HTTPException, Request, UploadFile
 from fastapi.responses import HTMLResponse
 from sqlalchemy.orm import Session
 
+from app.contexts.nutrition.nutrition_content import (
+    TRAIL_FUEL_PHASES,
+    generate_trail_fuel_ideas,
+    generate_trail_nutrition_tips,
+)
 from app.contexts.runner.fitness.race_pacing_service import RacePacingService
 from app.contexts.runner.fitness.race_predictor_service import RacePredictorService
 from app.contexts.runner.queries import count_prior_trail_runs
@@ -50,6 +55,11 @@ def race_prep_page(
             "current_vdot": vdot_info["vdot"],
             "vdot_run_count": vdot_info["run_count"],
             "vdot_confidence": vdot_info["confidence"],
+            # Trail fuelling reference, consolidated here from the plan's
+            # nutrition tab so race-day fuelling lives in one place.
+            "trail_fuel_ideas": generate_trail_fuel_ideas(),
+            "trail_fuel_phases": TRAIL_FUEL_PHASES,
+            "trail_tips": generate_trail_nutrition_tips(),
         },
     )
 

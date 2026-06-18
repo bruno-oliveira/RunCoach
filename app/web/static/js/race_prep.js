@@ -341,13 +341,15 @@
                 ? netGradeStr + " <span class='grade-effective'>(+" + effectiveGrade.toFixed(1) + "% eff)</span>"
                 : netGradeStr;
 
+            // data-label drives the stacked "label: value" card layout on mobile
+            // (see .blueprint-table responsive rules in race_prep.css).
             tr.innerHTML =
-                "<td>" + seg.start_km + "-" + seg.end_km + "</td>" +
-                "<td class='" + gradeClass + "'>" + gradeDisplay + "</td>" +
-                "<td>" + seg.elevation_m + "m</td>" +
-                "<td>" + seg.target_pace_str + "</td>" +
-                "<td>" + formatDuration(seg.target_time_seconds) + "</td>" +
-                "<td>" + formatDuration(seg.cumulative_time_seconds) + "</td>";
+                "<td data-label='KM'>" + seg.start_km + "-" + seg.end_km + "</td>" +
+                "<td data-label='Grade' class='" + gradeClass + "'>" + gradeDisplay + "</td>" +
+                "<td data-label='Elevation'>" + seg.elevation_m + "m</td>" +
+                "<td data-label='Pace'>" + seg.target_pace_str + "</td>" +
+                "<td data-label='Split'>" + formatDuration(seg.target_time_seconds) + "</td>" +
+                "<td data-label='Cumulative'>" + formatDuration(seg.cumulative_time_seconds) + "</td>";
 
             tbody.appendChild(tr);
         });

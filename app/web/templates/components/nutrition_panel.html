@@ -111,56 +111,15 @@
             </div>
             {% endif %}
 
-            {% if nutrition_plan.trail_fuel_ideas and nutrition_plan.trail_fuel_ideas|length > 0 %}
-            <div class="trail-fuel-ideas">
-                <h3><span data-i18n="nutrition.trail_ready_meals">Trail-Ready Fuel</span></h3>
-                {% set phases = nutrition_plan.trail_fuel_phases or [{'key': 'during', 'label': 'During', 'blurb': ''}] %}
-                {% for phase in phases %}
-                {% set items = nutrition_plan.trail_fuel_ideas | selectattr('phase', 'equalto', phase.key) | list %}
-                {% if items %}
-                <div class="trail-fuel-phase">
-                    <div class="trail-fuel-phase-head">
-                        <span class="trail-fuel-phase-label">{{ phase.label }}</span>
-                        {% if phase.blurb %}<span class="trail-fuel-phase-blurb">{{ phase.blurb }}</span>{% endif %}
-                    </div>
-                    <div class="trail-fuel-grid">
-                        {% for item in items %}
-                        <div class="meal-option-card trail-fuel-card">
-                            <div class="trail-fuel-card-top">
-                                <div class="meal-option-name">{{ item.name }}</div>
-                                <span class="trail-fuel-badge trail-fuel-badge-{{ item.category }}">{{ item.category }}</span>
-                            </div>
-                            <div class="meal-option-nutrition">
-                                <span class="nutrition-badge">🍝 {{ item.carbs }}</span>
-                            </div>
-                            <div class="meal-option-description">{{ item.note }}</div>
-                        </div>
-                        {% endfor %}
-                    </div>
-                </div>
-                {% endif %}
-                {% endfor %}
-            </div>
-            {% endif %}
-
-            {% if nutrition_plan.trail_tips and nutrition_plan.trail_tips|length > 0 %}
-            <div class="nutrition-guide-section trail-tips-section" id="trail-tips">
-                <h3><span data-i18n="nutrition.trail_tips">Trail Fuelling Tips</span></h3>
-                {% set topics = nutrition_plan.trail_tips | map(attribute='topic') | unique | list %}
-                <div class="trail-tips-filters" role="group" aria-label="Filter tips by topic">
-                    <button type="button" class="trail-tips-chip active" data-topic="all" onclick="PlanModule.filterTrailTips(this, 'all')">All</button>
-                    {% for topic in topics %}
-                    <button type="button" class="trail-tips-chip" data-topic="{{ topic }}" onclick="PlanModule.filterTrailTips(this, '{{ topic }}')">{{ topic }}</button>
-                    {% endfor %}
-                </div>
-                <ul class="nutrition-guide-list trail-tips-list">
-                    {% for tip in nutrition_plan.trail_tips %}
-                    <li class="trail-tip" data-topic="{{ tip.topic }}">
-                        <span class="trail-tip-topic">{{ tip.topic }}</span>
-                        {{ tip.text }}
-                    </li>
-                    {% endfor %}
-                </ul>
+            {% if (nutrition_plan.trail_fuel_ideas and nutrition_plan.trail_fuel_ideas|length > 0) or (nutrition_plan.trail_tips and nutrition_plan.trail_tips|length > 0) %}
+            <div class="trail-fuel-callout">
+                <p>
+                    <strong><span data-i18n="nutrition.trail_callout_title">Trail fuel ideas &amp; fuelling tips</span></strong>
+                    <span data-i18n="nutrition.trail_callout_body">now live with your race-day prep — portable fuel for before, during and after, plus gut-training, sodium and caffeine strategy, all in one place.</span>
+                </p>
+                <a href="/race-prep#trail-tips" class="btn btn-secondary btn-sm">
+                    <span data-i18n="nutrition.trail_callout_link">See full trail fuelling in Race Prep</span> →
+                </a>
             </div>
             {% endif %}
         </div>

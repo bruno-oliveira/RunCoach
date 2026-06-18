@@ -17,13 +17,26 @@ const AnalyticsDashboard = {
     acwrData: null,
     prData: null,
     insightsData: null,
-    activeTab: 'today',
-    // Period selector visibility is scoped per tab. Today / Signals are
-    // plan-scoped so the header period filter does not apply.
-    HEADER_SCOPED_TABS: ['progress', 'insights', 'evolution'],
+    activeTab: 'coach',
+    // Declarative tab model. The Coach Hub is two surfaces: a narrated "Coach"
+    // view and a "Progress" reference view. Adding/removing a surface is a
+    // one-line change here — init, switchTab, persistence and plan-scoping all
+    // derive from this table.
+    //   planScoped   → panel renders its own prompt/empty per selected plan and
+    //                  ignores the header period filter.
+    //   headerPeriod → panel filters by the header period window.
+    TABS: [
+        { key: 'coach',    panel: 'analyticsCoach',    planScoped: true,  headerPeriod: false },
+        { key: 'progress', panel: 'analyticsProgress', planScoped: false, headerPeriod: true  },
+    ],
+    // Legacy tab keys (pre-collapse) mapped onto the current surfaces so old
+    // bookmarks and persisted state still land somewhere sensible.
+    LEGACY_TAB_MAP: {
+        today: 'coach', signals: 'coach', insights: 'coach',
+        progress: 'progress', evolution: 'progress',
+    },
+    DEFAULT_TAB: 'coach',
     PERSIST_KEY: 'runcoach.coachHub.state',
-    evolutionLoadedForDays: null,
-    evolutionCharts: {},
     stravaConnected: false,
 
     COLORS: {
@@ -107,16 +120,13 @@ const AnalyticsDashboard = {
             this.bindPlanSelector();
             this.bindPredictionsToggle();
             this.bindTabSwitching();
-            this.loadRacePredictions();
-            this.loadRaceResults();
             this.loadTrainingLoad();
             this.loadPersonalRecords();
             this.loadInsights();
             if (this.currentPlanId) this.showPlanSection(this.currentPlanId);
 
-            const initialTab = ['today', 'signals', 'progress', 'insights', 'evolution']
-                .includes(persisted.tab) ? persisted.tab : 'today';
-            this.switchTab(initialTab);
+            const wanted = this.LEGACY_TAB_MAP[persisted.tab] || persisted.tab;
+            this.switchTab(this._tabConfig(wanted) ? wanted : this.DEFAULT_TAB);
         } catch (err) {
             console.error('Analytics load error:', err);
             loading.style.display = 'none';
@@ -175,7 +185,7 @@ const AnalyticsDashboard = {
 
     _persistState() {
         const params = new URLSearchParams();
-        if (this.activeTab && this.activeTab !== 'today') params.set('tab', this.activeTab);
+        if (this.activeTab && this.activeTab !== this.DEFAULT_TAB) params.set('tab', this.activeTab);
         if (this.currentPlanId) params.set('plan', String(this.currentPlanId));
         if (this.currentPeriodDays != null && this.currentPeriodDays !== 30) {
             params.set('period', String(this.currentPeriodDays));
@@ -222,9 +232,6 @@ const AnalyticsDashboard = {
         const applyPeriod = async (days) => {
             this.filterByPeriod(days);
             this._persistState();
-            // Evolution shares this period; if it's the active tab, refresh it.
-            if (this.activeTab === 'evolution') this.loadEvolution();
-            else this.evolutionLoadedForDays = null;
 
             const stravaConnected = await this.checkStravaConnection();
             if (!stravaConnected) return;
@@ -521,9 +528,10 @@ const AnalyticsDashboard = {
             if (dashboard) dashboard.style.display = 'none';
             if (empty) empty.style.display = 'none';
 
-            // Today and Signals are plan-scoped panels that render their own
-            // prompt/empty states, so they stay visible across a plan change.
-            const planScopedTab = this.activeTab === 'today' || this.activeTab === 'signals';
+            // The Coach surface is plan-scoped: it renders its own prompt/empty
+            // states, so it stays visible across a plan change.
+            const cfg = this._tabConfig(this.activeTab);
+            const planScopedTab = !!(cfg && cfg.planScoped);
 
             try {
                 await this.loadRuns();
@@ -542,7 +550,6 @@ const AnalyticsDashboard = {
                 }
                 if (!planScopedTab && dashboard) dashboard.style.display = 'block';
                 this.filterByPeriod(this.currentPeriodDays);
-                this.evolutionLoadedForDays = null;
                 if (this.currentPlanId) {
                     this.showPlanSection(this.currentPlanId);
                 } else {
@@ -556,13 +563,11 @@ const AnalyticsDashboard = {
         });
     },
 
-    /** Re-fetch whichever plan-scoped panel (Today / Signals) is active. */
+    /** Re-fetch the plan-scoped Coach panel (today narrative + signals). */
     reloadPlanScopedTab() {
-        if (this.activeTab === 'today' && this.loadToday) {
-            this.loadToday(this.currentPlanId);
-        } else if (this.activeTab === 'signals' && this.loadSignals) {
-            this.loadSignals(this.currentPlanId);
-        }
+        if (this.activeTab !== 'coach') return;
+        if (this.loadToday) this.loadToday(this.currentPlanId);
+        if (this.loadSignals) this.loadSignals(this.currentPlanId);
     },
 
     showPlanSection(planId) {
@@ -605,28 +610,32 @@ const AnalyticsDashboard = {
         });
     },
 
+    _tabConfig(key) {
+        return this.TABS.find(t => t.key === key) || null;
+    },
+
     switchTab(tabName) {
+        if (!this._tabConfig(tabName)) tabName = this.DEFAULT_TAB;
         this.activeTab = tabName;
+
         document.querySelectorAll('.analytics-tab').forEach(t => {
             const active = t.dataset.tab === tabName;
             t.classList.toggle('analytics-tab--active', active);
             t.setAttribute('aria-selected', active ? 'true' : 'false');
             t.tabIndex = active ? 0 : -1;
         });
-        const panels = {
-            today:     document.getElementById('analyticsToday'),
-            signals:   document.getElementById('analyticsSignals'),
-            progress:  document.getElementById('analyticsProgress'),
-            insights:  document.getElementById('analyticsInsightsTab'),
-            evolution: document.getElementById('analyticsEvolutionTab'),
-        };
-        for (const [name, el] of Object.entries(panels)) {
-            if (el) el.style.display = name === tabName ? 'block' : 'none';
-        }
 
-        // Scope the header period selector to tabs that actually filter by
-        // window. Today / Signals are plan-scoped and ignore it.
-        const showHeaderPeriod = this.HEADER_SCOPED_TABS.includes(tabName);
+        // Show the active panel, hide the rest — driven by the tab model.
+        this.TABS.forEach(t => {
+            const el = document.getElementById(t.panel);
+            if (el) el.style.display = t.key === tabName ? 'block' : 'none';
+        });
+
+        this._syncNavHighlight(tabName);
+
+        // Scope the header period selector to tabs that filter by window. The
+        // Coach surface is plan-scoped and ignores it.
+        const showHeaderPeriod = !!(this._tabConfig(tabName) || {}).headerPeriod;
         const periodSel = document.getElementById('periodSelector');
         const customWrap = document.getElementById('customDaysWrap');
         if (periodSel) periodSel.style.display = showHeaderPeriod ? '' : 'none';
@@ -635,17 +644,26 @@ const AnalyticsDashboard = {
             customWrap.style.display = (showHeaderPeriod && customActive) ? 'flex' : 'none';
         }
 
-        if (tabName === 'today' && this.todayLoadedPlanId !== this.currentPlanId) {
-            this.loadToday(this.currentPlanId);
-        }
-        if (tabName === 'signals' && this.signalsLoadedPlanId !== this.currentPlanId) {
-            this.loadSignals(this.currentPlanId);
-        }
-        if (tabName === 'evolution' && this.evolutionLoadedForDays !== this.currentPeriodDays) {
-            this.loadEvolution();
-        }
+        if (tabName === 'coach') this._activateCoach();
 
         this._persistState();
+    },
+
+    /** Lazy-load the plan-scoped Coach panels (today narrative + signals). */
+    _activateCoach() {
+        if (this.todayLoadedPlanId !== this.currentPlanId && this.loadToday) {
+            this.loadToday(this.currentPlanId);
+        }
+        if (this.signalsLoadedPlanId !== this.currentPlanId && this.loadSignals) {
+            this.loadSignals(this.currentPlanId);
+        }
+    },
+
+    /** Mirror the active surface onto the two nav entries (Coach / Progress). */
+    _syncNavHighlight(tabName) {
+        document.querySelectorAll('[data-nav-tab]').forEach(link => {
+            link.classList.toggle('is-active', link.dataset.navTab === tabName);
+        });
     },
 
     /* ------------------------------------------------------------------ */

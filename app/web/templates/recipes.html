@@ -38,6 +38,7 @@
                     <option value="dinner"><span data-i18n="recipes.dinner">🌙 Dinner</span></option>
                     <option value="snack"><span data-i18n="recipes.snack">🍿 Snack</span></option>
                     <option value="post_workout"><span data-i18n="recipes.post_workout">💪 Post-Workout</span></option>
+                    <option value="trail"><span data-i18n="recipes.trail">⛰️ Trail Fuel</span></option>
                 </select>
             </div>
 
@@ -538,6 +539,7 @@
             dinner: '🌙',
             snack: '🍿',
             post_workout: '💪',
+            trail: '⛰️',
         };
         return emojis[mealType] || '🍽️';
     }
@@ -575,8 +577,21 @@
         });
     }
 
+    // Preselect a meal-type category from the URL (e.g. /recipes?meal_type=trail)
+    // so links into a specific category land on a filtered view.
+    function applyCategoryFromUrl() {
+        const params = new URLSearchParams(window.location.search);
+        const requested = params.get('meal_type') || params.get('category');
+        if (!requested) return;
+        const filter = document.getElementById('mealTypeFilter');
+        if (filter && [...filter.options].some(o => o.value === requested)) {
+            filter.value = requested;
+        }
+    }
+
     // Execute immediately - script is at end of body so DOM is already ready
     (function() {
+        applyCategoryFromUrl();
         searchRecipes();
         setupRealTimeSearch();
     })();

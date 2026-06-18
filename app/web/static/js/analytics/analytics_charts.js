@@ -23,7 +23,9 @@
         this._renderEfficiencyBadge(validValues);
 
         this.destroyChart('efficiencyChart');
-        const ctx = document.getElementById('efficiencyChart').getContext('2d');
+        const canvas = document.getElementById('efficiencyChart');
+        if (!canvas) return;
+        const ctx = canvas.getContext('2d');
         const opts = this._baseChartOptions(2.2, {
             ticks: { callback: v => v != null ? v.toFixed(2) : '', font: { size: 11 }, color: this.COLORS.tick },
             grid: { color: this.COLORS.grid },
