@@ -171,7 +171,9 @@
         }
 
         this.destroyChart('trainingLoadChart');
-        const ctx = document.getElementById('trainingLoadChart').getContext('2d');
+        const loadCanvas = document.getElementById('trainingLoadChart');
+        if (!loadCanvas) return;
+        const ctx = loadCanvas.getContext('2d');
         const opts = this._baseChartOptions(2.2, {
             ticks: { font: { size: 11 }, color: this.COLORS.tick },
             grid: { color: this.COLORS.grid },
