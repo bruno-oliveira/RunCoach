@@ -87,6 +87,27 @@ _BRACKET_RESTRICTIONS: Dict[str, list] = {
 }
 
 
+# Deterministic rotation-start weighting. Build and peak get distinct offsets so
+# one plan showcases different sessions in each phase; the type weighting keeps
+# the two quality slots in a week from locking onto parallel positions.
+_PHASE_ROTATION_WEIGHT = {"base": 0, "build": 1, "peak": 2}
+_TYPE_ROTATION_WEIGHT = {"interval": 0, "tempo": 1, "hill": 2, "long": 3}
+
+
+def _rotation_offset(target_distance: float, phase: str, workout_type: str) -> int:
+    """Stable rotation-start offset for the candidate list.
+
+    A pure function of the selection inputs — same inputs always yield the same
+    offset — so plan generation stays reproducible while the starting window
+    varies by distance, phase, and workout type.
+    """
+    return (
+        int(round(target_distance))
+        + _PHASE_ROTATION_WEIGHT.get(phase, 0) * 3
+        + _TYPE_ROTATION_WEIGHT.get(workout_type, 0)
+    )
+
+
 def _bracket_allowed(workout: Dict[str, Any], bracket: str) -> bool:
     explicit = workout.get("brackets")
     if explicit is not None:
@@ -339,8 +360,15 @@ class KeyWorkoutLibrary:
         if not candidates:
             return None
 
-        # Rotate through candidates using week_in_phase
-        return candidates[week_in_phase % len(candidates)]
+        # Rotate through candidates, but start the rotation at a deterministic
+        # per-(distance, phase, type) offset rather than always at index 0.
+        # Walking the catalog from a fixed front meant freshly-appended sessions
+        # (which land at the tail) only surfaced in long phases; a varied start
+        # window spreads the catalog so build and peak — and different race
+        # distances — showcase different sessions, while staying fully
+        # reproducible (a pure function of the inputs, no salted hashing).
+        offset = _rotation_offset(target_distance, phase, workout_type)
+        return candidates[(week_in_phase + offset) % len(candidates)]
 
     @classmethod
     def get_by_id(cls, workout_id: str) -> Optional[Dict]:
