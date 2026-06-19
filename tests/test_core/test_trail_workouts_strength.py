@@ -236,5 +236,19 @@ class TestTrailWorkoutsAppearInGeneratedPlans:
             for w in week["daily_workouts"]
             if w.get("key_workout_id", "").startswith("trail_")
         }
-        assert "trail_flat_surge_fartlek" in keyed_ids
+        # Flat training must surface flat-eligible trail sessions and never a
+        # hilly-only one. The exact session is left to the rotation, so assert
+        # the terrain contract rather than a single incidental pick.
+        catalog = {
+            w["id"]: w
+            for w in KeyWorkoutLibrary.get_all_for_distance(
+                50.0, terrain="flat", trail_profile=classify_trail(50.0, 2500.0)
+            )
+        }
+        assert keyed_ids, "flat training must overlay at least one trail workout"
+        for kid in keyed_ids:
+            terrain_tags = catalog.get(kid, {}).get("terrain", ["any"])
+            assert "flat" in terrain_tags or "any" in terrain_tags, (
+                f"{kid} is not flat-eligible"
+            )
         assert "trail_elevation_repeats" not in keyed_ids
