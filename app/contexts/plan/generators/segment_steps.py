@@ -23,20 +23,42 @@ from app.core.training.workout_steps.primitives import _step
 
 # Performance zone identifier -> canonical pace-zone badge letter (E/M/T/I/R),
 # matching the road generator's structured steps so the same zone colours and
-# legend apply. "mixed" (fartlek) deliberately maps to no letter.
+# legend apply. "mixed" (fartlek) deliberately maps to no letter. zone_5 (race
+# pace) is resolved per goal distance — see ``_race_pace_badge``.
 _ZONE_LETTER: Dict[str, str] = {
     "zone_1": "E",
     "zone_2": "E",
     "zone_3": "T",
     "zone_4": "I",
-    "zone_5": "M",
 }
 
 _KIND_BY_SEGMENT_TYPE = {"warmup": "warmup", "cooldown": "cooldown"}
 
 
-def _letter(seg: Dict[str, Any]) -> Optional[str]:
-    return _ZONE_LETTER.get(seg.get("zone") or "")
+def _race_pace_badge(target_distance: Optional[float]) -> str:
+    """Badge for the goal-race-pace block, scaled to the target distance.
+
+    Race pace means very different efforts across distances, so a single fixed
+    letter (the old "M") mislabels a 5K/10K time-goal session. These reuse the
+    distance-specific badge keys the step legend already styles (5K / 10K / T /
+    M), so the colour and label match the effort the runner is actually at.
+    """
+    if not target_distance:
+        return "M"
+    if target_distance <= 6:
+        return "5K"
+    if target_distance <= 12:
+        return "10K"
+    if target_distance <= 30:
+        return "T"
+    return "M"
+
+
+def _letter(seg: Dict[str, Any], race_pace_badge: str) -> Optional[str]:
+    zone = seg.get("zone") or ""
+    if zone == "zone_5":
+        return race_pace_badge
+    return _ZONE_LETTER.get(zone)
 
 
 def _distance_m(seg: Dict[str, Any]) -> Optional[int]:
@@ -44,11 +66,13 @@ def _distance_m(seg: Dict[str, Any]) -> Optional[int]:
     return int(round(km * 1000)) if km > 0 else None
 
 
-def _segment_to_steps(seg: Dict[str, Any]) -> List[Dict[str, Any]]:
+def _segment_to_steps(
+    seg: Dict[str, Any], race_pace_badge: str
+) -> List[Dict[str, Any]]:
     """Convert one segment into one or more canonical step dicts."""
     seg_type = seg.get("type", "main")
     kind = _KIND_BY_SEGMENT_TYPE.get(seg_type, "run")
-    letter = _letter(seg)
+    letter = _letter(seg, race_pace_badge)
     pace_str = seg.get("pace_formatted")
     name = seg.get("name") or kind.title()
     intervals = seg.get("intervals")
@@ -115,7 +139,9 @@ def _segment_to_steps(seg: Dict[str, Any]) -> List[Dict[str, Any]]:
     ]
 
 
-def segments_to_steps(workout: Dict[str, Any]) -> None:
+def segments_to_steps(
+    workout: Dict[str, Any], target_distance: Optional[float] = None
+) -> None:
     """Replace a workout's ``segments`` with canonical ``steps`` in place.
 
     No-op when the workout already carries steps (a key-workout overlay) or has
@@ -127,14 +153,17 @@ def segments_to_steps(workout: Dict[str, Any]) -> None:
     segments = workout.get("segments")
     if not segments:
         return
+    race_pace_badge = _race_pace_badge(target_distance)
     steps: List[Dict[str, Any]] = []
     for seg in segments:
-        steps.extend(_segment_to_steps(seg))
+        steps.extend(_segment_to_steps(seg, race_pace_badge))
     workout["steps"] = steps
     workout.pop("segments", None)
 
 
-def apply_steps_model(daily_workouts: List[Dict[str, Any]]) -> None:
+def apply_steps_model(
+    daily_workouts: List[Dict[str, Any]], target_distance: Optional[float] = None
+) -> None:
     """Project every segment-based workout in a week onto the steps model."""
     for workout in daily_workouts:
-        segments_to_steps(workout)
+        segments_to_steps(workout, target_distance)

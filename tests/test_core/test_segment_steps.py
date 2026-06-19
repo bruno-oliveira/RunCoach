@@ -128,6 +128,44 @@ def test_already_stepped_workout_is_untouched():
     assert workout["steps"] == existing
 
 
+def _race_pace_workout():
+    return {
+        "type": "race_pace",
+        "distance": 7.0,
+        "segments": [
+            _warmup_seg(),
+            {
+                "name": "Race Pace",
+                "distance_km": 3.0,
+                "pace_formatted": "4:00/km",
+                "pace_raw": 4.0,
+                "zone": "zone_5",
+                "zone_label": "Zone 5",
+                "type": "main",
+            },
+            _cooldown_seg(),
+        ],
+    }
+
+
+def test_race_pace_badge_scales_with_goal_distance():
+    cases = {5.0: "5K", 10.0: "10K", 21.1: "T", 42.2: "M"}
+    for target, expected in cases.items():
+        wo = _race_pace_workout()
+        segments_to_steps(wo, target_distance=target)
+        main = next(s for s in wo["steps"] if s["label"] == "Race Pace")
+        assert main["pace_zone"] == expected, (
+            f"goal {target}km -> {main['pace_zone']}, expected {expected}"
+        )
+
+
+def test_race_pace_badge_defaults_to_marathon_when_unknown():
+    wo = _race_pace_workout()
+    segments_to_steps(wo)  # no target distance
+    main = next(s for s in wo["steps"] if s["label"] == "Race Pace")
+    assert main["pace_zone"] == "M"
+
+
 def test_rest_day_without_segments_is_noop():
     workout = {"type": "rest", "distance": 0}
     segments_to_steps(workout)
