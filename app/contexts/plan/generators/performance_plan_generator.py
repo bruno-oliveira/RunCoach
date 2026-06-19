@@ -209,7 +209,8 @@ class PerformancePlanGenerator(BasePlanGenerator):
                     vdot_zones,
                     max_distance=quality_ceiling,
                 )
-            coaching_type = _COACHING_TYPE_MAP.get(workout["type"], workout["type"])
+            wtype = str(workout["type"])
+            coaching_type = _COACHING_TYPE_MAP.get(wtype, wtype)
             workout["coaching_rationale"] = generate_coaching_note(
                 coaching_type,
                 phase,
@@ -224,7 +225,7 @@ class PerformancePlanGenerator(BasePlanGenerator):
         # reconciled against segments above); project them onto the same
         # structured steps model the curated overlay and road generator emit so
         # every stored workout renders, enriches, and adapts identically.
-        apply_steps_model(daily_workouts)
+        apply_steps_model(daily_workouts, target_distance)
 
         strength_sessions = attach_strength_sessions(
             daily_workouts,
