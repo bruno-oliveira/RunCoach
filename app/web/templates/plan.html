@@ -901,6 +901,9 @@
 <script src="{{ static_url('js/plan/plan_dragdrop.js') }}" defer></script>
 <script src="{{ static_url('js/plan/plan_change_summary.js') }}" defer></script>
 <script src="{{ static_url('js/plan/plan_intent_menu.js') }}" defer></script>
+{% if user %}
+<script src="{{ static_url('js/plan/plan_proactive_nudge.js') }}" defer></script>
+{% endif %}
 <script src="{{ static_url('js/plan/plan_core.js') }}" defer></script>
 {% if user %}
 <script src="{{ static_url('js/readiness.js') }}" defer></script>

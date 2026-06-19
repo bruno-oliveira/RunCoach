@@ -67,6 +67,11 @@ class TrainingPlan(Base):
     last_adjusted_at = Column(DateTime, nullable=True)
     last_recalibrated_at = Column(DateTime, nullable=True)
     last_change_plan = Column(JSON, nullable=True)
+    # Last proactive adaptation nudge surfaced to the user (suggest-only). Shape:
+    # {"signature": str, "kind": str, "dismissed": bool, ...}. A nudge is only
+    # re-shown when its signature changes, so a dismissed suggestion stays quiet
+    # until the underlying situation materially moves.
+    last_proactive_nudge = Column(JSON, nullable=True)
     # Write-through cache for the AI Coach's Note: {"signature": str, "payload": dict}.
     # Regenerated only when the run signature changes (a new run is logged), so the
     # note survives scale-to-zero cold starts instead of being rebuilt each wake.

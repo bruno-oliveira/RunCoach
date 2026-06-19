@@ -11,6 +11,7 @@ from sqlalchemy.orm import Session
 from . import (
     intent_service,
     plan_adjuster,
+    proactive_nudge,
     run_mapper,
     type_swapper,  # noqa: F401  (re-exported for callers: adaptation.type_swapper)
 )
@@ -73,6 +74,22 @@ class AdaptationService:
         plan.last_change_plan = cp
         db.commit()
         return {"ok": True}
+
+    # -------------------------------------------------------- proactive nudges
+
+    def get_proactive_nudge(
+        self, plan_id: str, user_id: str, db: Session
+    ) -> Optional[Dict[str, Any]]:
+        return proactive_nudge.get_nudge(plan_id, user_id, db)
+
+    def dismiss_proactive_nudge(
+        self,
+        plan_id: str,
+        user_id: str,
+        signature: Optional[str],
+        db: Session,
+    ) -> Dict[str, Any]:
+        return proactive_nudge.dismiss_nudge(plan_id, user_id, signature, db)
 
     # ------------------------------------------------------------------ intents
 
