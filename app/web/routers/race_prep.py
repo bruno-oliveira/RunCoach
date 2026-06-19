@@ -1,9 +1,7 @@
 """Race Prep feature - API endpoints and page rendering."""
 
 import logging
-import time
-import uuid
-from typing import Any, Optional
+from typing import Optional
 
 from fastapi import APIRouter, Depends, File, HTTPException, Request, UploadFile, status
 from fastapi.responses import HTMLResponse
@@ -25,8 +23,6 @@ logger = logging.getLogger(__name__)
 
 router = APIRouter(tags=["race-prep"])
 templates = create_templates()
-
-_blueprint_store: dict[str, dict[str, Any]] = {}
 
 
 @router.get("/race-prep", response_class=HTMLResponse)
@@ -217,18 +213,4 @@ def generate_blueprint(
         conditions=conditions,
     )
 
-    session_id = str(uuid.uuid4())
-    _blueprint_store[session_id] = {
-        "blueprint": blueprint.model_dump(),
-        "created_at": time.time(),
-    }
-
-    while len(_blueprint_store) > 100:
-        oldest_key = min(
-            _blueprint_store, key=lambda k: _blueprint_store[k]["created_at"]
-        )
-        del _blueprint_store[oldest_key]
-
-    blueprint_dict = blueprint.model_dump()
-    blueprint_dict["session_id"] = session_id
-    return blueprint_dict
+    return blueprint.model_dump()

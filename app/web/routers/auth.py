@@ -32,6 +32,25 @@ REFRESH_COOKIE_NAME = "refresh_token"
 COOKIE_MAX_AGE = 24 * 60 * 60  # 1 day in seconds
 
 
+def _user_response(user: User) -> UserResponse:
+    """Build the API view of a user. Single source of truth so every auth
+    endpoint returns the same shape (and the same fields)."""
+    return UserResponse(
+        id=user.id,
+        google_id=user.google_id,
+        email=user.email,
+        name=user.name,
+        picture=user.picture,
+        created_at=user.created_at,
+        plans_generated=user.plans_generated,
+        strava_connected=bool(user.strava_athlete_id),
+        age=user.age,
+        max_hr=user.max_hr,
+        resting_hr=user.resting_hr,
+        threshold_hr=user.threshold_hr,
+    )
+
+
 def _set_session_cookies(
     response: Response,
     access_token: str,
@@ -99,22 +118,7 @@ async def google_auth(
     _set_session_cookies(response, access_token, refresh_token)
     response.delete_cookie(key="anonymous_user_id", samesite="lax")
 
-    return AuthResponse(
-        user=UserResponse(
-            id=user.id,
-            google_id=user.google_id,
-            email=user.email,
-            name=user.name,
-            picture=user.picture,
-            created_at=user.created_at,
-            plans_generated=user.plans_generated,
-            strava_connected=bool(user.strava_athlete_id),
-            age=user.age,
-            max_hr=user.max_hr,
-            resting_hr=user.resting_hr,
-            threshold_hr=user.threshold_hr,
-        ),
-    )
+    return AuthResponse(user=_user_response(user))
 
 
 @auth_router.get("/me", response_model=UserResponse)
@@ -124,20 +128,7 @@ def get_current_user_info(current_user: User = Depends(get_current_user)):
 
     Requires a valid JWT token in Authorization header.
     """
-    return UserResponse(
-        id=current_user.id,
-        google_id=current_user.google_id,
-        email=current_user.email,
-        name=current_user.name,
-        picture=current_user.picture,
-        created_at=current_user.created_at,
-        plans_generated=current_user.plans_generated,
-        strava_connected=bool(current_user.strava_athlete_id),
-        age=current_user.age,
-        max_hr=current_user.max_hr,
-        resting_hr=current_user.resting_hr,
-        threshold_hr=current_user.threshold_hr,
-    )
+    return _user_response(current_user)
 
 
 @auth_router.patch("/me/settings", response_model=UserResponse)
@@ -161,20 +152,7 @@ def update_user_settings(
         current_user.threshold_hr = payload.threshold_hr or None
     db.commit()
     db.refresh(current_user)
-    return UserResponse(
-        id=current_user.id,
-        google_id=current_user.google_id,
-        email=current_user.email,
-        name=current_user.name,
-        picture=current_user.picture,
-        created_at=current_user.created_at,
-        plans_generated=current_user.plans_generated,
-        strava_connected=bool(current_user.strava_athlete_id),
-        age=current_user.age,
-        max_hr=current_user.max_hr,
-        resting_hr=current_user.resting_hr,
-        threshold_hr=current_user.threshold_hr,
-    )
+    return _user_response(current_user)
 
 
 @auth_router.post("/refresh", response_model=UserResponse)
@@ -209,18 +187,7 @@ def refresh_session(
     new_refresh, _ = auth_service.issue_refresh_token(db, user)
     _set_session_cookies(response, access_token, new_refresh)
 
-    return UserResponse(
-        id=user.id,
-        google_id=user.google_id,
-        email=user.email,
-        name=user.name,
-        picture=user.picture,
-        created_at=user.created_at,
-        plans_generated=user.plans_generated,
-        strava_connected=bool(user.strava_athlete_id),
-        resting_hr=user.resting_hr,
-        threshold_hr=user.threshold_hr,
-    )
+    return _user_response(user)
 
 
 @auth_router.post("/logout")

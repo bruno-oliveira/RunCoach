@@ -151,18 +151,23 @@ def _request_origin_allowed(request: Request) -> bool:
 
 
 async def csrf_protection(request: Request, call_next):
-    """Block cross-site state-changing requests to cookie-authenticated APIs.
+    """Block cross-site state-changing requests to cookie-authenticated routes.
 
-    Two complementary checks on POST/PUT/PATCH/DELETE under ``/api/``:
+    Two complementary checks on POST/PUT/PATCH/DELETE:
 
     * The Origin/Referer must be same-origin or explicitly allow-listed
-      (see ``_request_origin_allowed``) — the primary CSRF defense.
-    * The Content-Type must be ``application/json`` or ``multipart/form-data``,
-      rejecting the simple form encodings a cross-site ``<form>`` would use.
+      (see ``_request_origin_allowed``) — the primary CSRF defense. This
+      applies to *every* state-changing route, including the HTML ``<form>``
+      endpoints outside ``/api/`` (``/generate-plan``, ``/customize-plan``,
+      ``/randomize-meals``), which are equally cookie-authenticated.
+    * For JSON APIs under ``/api/`` the Content-Type must additionally be
+      ``application/json`` or ``multipart/form-data``, rejecting the simple
+      form encodings a cross-site ``<form>`` would use. The HTML form routes
+      legitimately post ``application/x-www-form-urlencoded``, so this stricter
+      check stays scoped to ``/api/``.
     """
     if (
         request.method in _STATE_CHANGING_METHODS
-        and request.url.path.startswith("/api/")
         and request.url.path not in _CSRF_EXEMPT
     ):
         if not _request_origin_allowed(request):
@@ -171,17 +176,18 @@ async def csrf_protection(request: Request, call_next):
                 content={"detail": "Cross-origin request blocked"},
             )
 
-        content_length = request.headers.get("content-length", "0")
-        has_body = content_length != "0"
-        if has_body:
-            content_type = request.headers.get("content-type", "")
-            if (
-                "application/json" not in content_type
-                and "multipart/form-data" not in content_type
-            ):
-                return JSONResponse(
-                    status_code=403,
-                    content={"detail": "Invalid Content-Type"},
-                )
+        if request.url.path.startswith("/api/"):
+            content_length = request.headers.get("content-length", "0")
+            has_body = content_length != "0"
+            if has_body:
+                content_type = request.headers.get("content-type", "")
+                if (
+                    "application/json" not in content_type
+                    and "multipart/form-data" not in content_type
+                ):
+                    return JSONResponse(
+                        status_code=403,
+                        content={"detail": "Invalid Content-Type"},
+                    )
 
     return await call_next(request)
