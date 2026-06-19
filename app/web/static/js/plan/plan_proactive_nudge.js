@@ -45,8 +45,9 @@
     }
 
     function render(host, nudge) {
+        var tone = nudge.tone === 'caution' ? 'caution' : 'positive';
         host.innerHTML =
-            '<div class="proactive-nudge" role="status">'
+            '<div class="proactive-nudge is-' + tone + '" role="status">'
             + '<span class="proactive-nudge-flag">RunCoach noticed</span>'
             + '<div class="proactive-nudge-body">'
             + '<strong class="proactive-nudge-headline">'
