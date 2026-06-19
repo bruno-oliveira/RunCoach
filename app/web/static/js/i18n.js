@@ -65,6 +65,7 @@ window.RC_I18N = (function () {
 
             /* ── Footer / cookie ── */
             'footer.privacy':         'Privacy',
+            'footer.coffee':          '☕ Buy me a coffee',
             'cookie.text':            'RunCoach uses strictly necessary cookies for authentication and session management, and collects health-related data (training, readiness) to personalize your plans. See our',
             'cookie.privacy_link':    'Privacy Policy',
             'cookie.accept':          'Accept',
@@ -615,6 +616,7 @@ window.RC_I18N = (function () {
 
             /* ── Footer / cookie ── */
             'footer.privacy':         'Privacidade',
+            'footer.coffee':          '☕ Paga-me um café',
             'cookie.text':            'O RunCoach utiliza cookies estritamente necessários para autenticação e gestão de sessão, e recolhe dados relacionados com saúde (treino, prontidão) para personalizar os seus planos. Consulte a nossa',
             'cookie.privacy_link':    'Política de Privacidade',
             'cookie.accept':          'Aceitar',
