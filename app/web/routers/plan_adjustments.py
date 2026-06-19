@@ -121,6 +121,48 @@ def get_missed_weeks(
 
 
 # ---------------------------------------------------------------------------
+# Proactive adaptation nudges (suggest-only)
+# ---------------------------------------------------------------------------
+
+
+@router.get("/api/plan/{plan_id}/proactive-nudge")
+def get_proactive_nudge(
+    plan_id: str,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Surface a proactive, clearly-flagged adaptation suggestion, if any.
+
+    Read-only: detects fitness improvements from logged runs and proposes a
+    bump the user can review through the shared change-plan modal. The plan is
+    never mutated here — the user stays in control.
+    """
+    get_plan_or_404(plan_id, db, current_user, require_user_match=True)
+    nudge = AdaptationService().get_proactive_nudge(plan_id, current_user.id, db)
+    if nudge is None:
+        return {"available": False}
+    return {"available": True, "nudge": nudge}
+
+
+class DismissNudgeRequest(BaseModel):
+    signature: str | None = None
+
+
+@router.post("/api/plan/{plan_id}/proactive-nudge/dismiss")
+def dismiss_proactive_nudge(
+    plan_id: str,
+    body: DismissNudgeRequest,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Dismiss a proactive nudge so it isn't shown again until it changes."""
+    get_plan_or_404(plan_id, db, current_user, require_user_match=True)
+    return AdaptationService().dismiss_proactive_nudge(
+        plan_id, current_user.id, body.signature, db
+    )
+
+
+# ---------------------------------------------------------------------------
 # Intent-driven adaptation + change-plan lifecycle
 # ---------------------------------------------------------------------------
 

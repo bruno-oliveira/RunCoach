@@ -4,6 +4,11 @@
    standing readiness widget). The user declares what's going on and the plan
    adapts, previewed through the shared change-plan modal. #}
 {% if user and start_date and not plan_completed %}
+{# Proactive, clearly-flagged adaptation suggestion. Filled in by
+   plan_proactive_nudge.js after a read-only check of logged-run signals;
+   stays empty (and invisible) when there's nothing worth suggesting. #}
+<div id="proactive-nudge-host" hidden></div>
+
 <div class="intent-bar">
     <button type="button" class="intent-trigger" onclick="PlanIntentMenu.open()">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4 12.5-12.5z"/></svg>
