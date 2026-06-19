@@ -132,16 +132,7 @@
 }
 
 /* ---------------------------------------------------------------------------
-   7. Hide the footer on mobile — footers are a web pattern, not an app pattern
-   --------------------------------------------------------------------------- */
-@media (max-width: 768px) {
-  .site-footer {
-    display: none;
-  }
-}
-
-/* ---------------------------------------------------------------------------
-   8. Hide nav brand text on very small phones — keeps the bar uncluttered
+   7. Hide nav brand text on very small phones — keeps the bar uncluttered
    --------------------------------------------------------------------------- */
 @media (max-width: 359px) {
   .nav-brand-text {
@@ -150,7 +141,7 @@
 }
 
 /* ---------------------------------------------------------------------------
-   9. Mobile nav sheet polish
+   8. Mobile nav sheet polish
       Rounded bottom corners + extra bottom padding so content doesn't
       sit hard against the home indicator bar.
    --------------------------------------------------------------------------- */
@@ -176,7 +167,7 @@
 }
 
 /* ---------------------------------------------------------------------------
-   10. Inputs: lock font-size to 16px to prevent iOS auto-zoom on focus
+   9. Inputs: lock font-size to 16px to prevent iOS auto-zoom on focus
        (already in base.css for common types; this catches edge cases)
    --------------------------------------------------------------------------- */
 @media (max-width: 768px) {
