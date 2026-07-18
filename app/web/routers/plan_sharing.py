@@ -8,7 +8,7 @@ from typing import Optional
 
 from fastapi import APIRouter, Cookie, Depends, HTTPException, Request
 from fastapi.concurrency import run_in_threadpool
-from fastapi.responses import FileResponse, HTMLResponse
+from fastapi.responses import FileResponse, HTMLResponse, Response
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
@@ -28,6 +28,7 @@ from app.dependencies import (
 )
 from app.infrastructure.export.pdf_generator import PDFGenerator
 from app.infrastructure.export.plan_export_dto import PlanExportDTO
+from app.infrastructure.integrations.fit_service import FITService
 from app.models import User
 from app.rate_limit import plan_generation_limiter
 from app.template_helpers import create_templates
@@ -229,3 +230,53 @@ async def download_pdf(
         raise HTTPException(
             status_code=500, detail="PDF generation failed. Please try again."
         )
+
+
+# ---------------------------------------------------------------------------
+# FIT workout download (Garmin/watch import)
+# ---------------------------------------------------------------------------
+
+
+@router.get("/download-fit/{plan_id}/{week}/{day}")
+def download_fit(
+    plan_id: str,
+    week: int,
+    day: int,
+    request: Request,
+    anonymous_user_id: Optional[str] = Cookie(None),
+    db: Session = Depends(get_db),
+    current_user: Optional[User] = Depends(get_optional_user),
+) -> Response:
+    """Download a single workout as a Garmin-compatible .fit file."""
+    plan_generation_limiter.check(request)
+    training_plan = get_plan_or_404(plan_id, db, current_user, anonymous_user_id)
+
+    plan_data = training_plan.plan_data or []
+    week_data = next((w for w in plan_data if w.get("week") == week), None)
+    if week_data is None:
+        raise HTTPException(status_code=404, detail="Week not found")
+
+    day_data = next(
+        (d for d in week_data.get("daily_workouts", []) if d.get("day") == day),
+        None,
+    )
+    if day_data is None:
+        raise HTTPException(status_code=404, detail="Day not found")
+
+    try:
+        fit_bytes = FITService.generate_daily_workout(day_data)
+    except ValueError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except Exception:
+        logger.exception("FIT generation error")
+        raise HTTPException(
+            status_code=500, detail="FIT file generation failed. Please try again."
+        )
+
+    return Response(
+        content=fit_bytes,
+        media_type="application/octet-stream",
+        headers={
+            "Content-Disposition": (f'attachment; filename="workout_w{week}d{day}.fit"')
+        },
+    )

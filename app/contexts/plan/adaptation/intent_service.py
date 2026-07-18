@@ -11,6 +11,7 @@ the user declares *what's going on* and the plan reshapes itself:
     away            – mark a date range as rest (travel, etc.)
     sick_injured    – rest the next few days, then ramp back gently
     busy_week       – trim the rest of this week's volume
+    missed_today    – recover a single missed run: reschedule / lighten / skip
 
 Every intent produces a ``ChangePlan`` and rides the existing preview → apply
 modal, so the UX is identical regardless of intent. Intents are *repeatable
@@ -66,6 +67,13 @@ _TIRED_FACTOR = 0.85
 _BUSY_FACTOR = 0.70
 _STRONG_FACTOR = 1.08
 
+# "Lighter version" factor for a single missed-today workout (steeper than the
+# whole-week _TIRED_FACTOR since it's covering for a run that didn't happen at
+# all, not just easing a day that's still going ahead).
+_MISSED_EASE_FACTOR = 0.6
+
+_DAY_NAMES = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
+
 # Gentle return ramp after illness/injury: only the first couple of weeks back
 # are eased, then training resumes at its original prescription. Each entry is
 # the multiplier for one week after the rest window (week 1 back, week 2 back);
@@ -84,6 +92,7 @@ VALID_INTENTS = (
     "away",
     "sick_injured",
     "busy_week",
+    "missed_today",
 )
 
 
@@ -259,6 +268,96 @@ def _handle_skip_run(
     return "Marked that run as skipped — no need to make it up."
 
 
+def _handle_missed_today(
+    ctx: _IntentContext, params: Dict[str, Any], recorder: List[Dict[str, Any]]
+) -> str:
+    target = _resolve_day(ctx, params.get("date"))
+    if target is None:
+        return "That day isn't in your plan — nothing to change."
+    week, day = target
+    choice = params.get("choice")
+
+    if choice == "reschedule":
+        return _reschedule_missed_workout(ctx, week, day, recorder)
+
+    if choice == "ease":
+        edits = {
+            (week, day): _EaseEdit(
+                _MISSED_EASE_FACTOR, "Lightened — you missed this run."
+            )
+        }
+        _edit_workouts(ctx, edits, recorder)
+        return "Swapped in a lighter version of that run — pick up from here."
+
+    edits = {(week, day): _RestEdit("Skipped — you missed this run.")}
+    _edit_workouts(ctx, edits, recorder)
+    return "Marked that run as skipped — no need to make it up."
+
+
+def _reschedule_missed_workout(
+    ctx: _IntentContext, week: int, day: int, recorder: List[Dict[str, Any]]
+) -> str:
+    """Move a missed workout onto the nearest upcoming rest day this week.
+
+    Falls back to a lighter version in place when no rest day is left this
+    week to move it to.
+    """
+    weekly_plan = (
+        ctx.db.query(WeeklyPlan)
+        .filter(
+            WeeklyPlan.training_plan_id == ctx.plan.id,
+            WeeklyPlan.week_number == week,
+        )
+        .first()
+    )
+    if weekly_plan is None:
+        return "That day isn't in your plan — nothing to change."
+
+    workouts = {
+        w.day_of_week: w
+        for w in ctx.db.query(DailyWorkout)
+        .filter(DailyWorkout.weekly_plan_id == weekly_plan.id)
+        .all()
+    }
+    missed = workouts.get(day)
+    if (
+        missed is None
+        or missed.workout_type == "rest"
+        or not (missed.distance_km or 0) > 0
+    ):
+        return "There's nothing scheduled that day to reschedule."
+
+    rest_day = next(
+        (
+            d
+            for d in range(day + 1, 8)
+            if d in workouts and workouts[d].workout_type == "rest"
+        ),
+        None,
+    )
+    if rest_day is None:
+        edits = {
+            (week, day): _EaseEdit(
+                _MISSED_EASE_FACTOR, "Lightened — no rest day free to reschedule to."
+            )
+        }
+        _edit_workouts(ctx, edits, recorder)
+        return "No free day left this week, so we lightened this run instead."
+
+    to_name = _DAY_NAMES[rest_day - 1]
+    from_name = _DAY_NAMES[day - 1]
+    edits: Dict[Tuple[int, int], Any] = {
+        (week, day): _RestEdit(f"Rescheduled to {to_name}."),
+        (week, rest_day): _SetEdit(
+            distance_km=float(missed.distance_km or 0),
+            workout_type=str(missed.workout_type),
+            reason=f"Moved from {from_name} — you missed that run.",
+        ),
+    }
+    _edit_workouts(ctx, edits, recorder)
+    return f"Moved that run to {to_name} — the rest of your week shifts to fit."
+
+
 def _handle_away(
     ctx: _IntentContext, params: Dict[str, Any], recorder: List[Dict[str, Any]]
 ) -> str:
@@ -345,6 +444,7 @@ _HANDLERS: Dict[
     "away": _handle_away,
     "sick_injured": _handle_sick_injured,
     "feeling_strong": _handle_feeling_strong,
+    "missed_today": _handle_missed_today,
 }
 
 
@@ -368,6 +468,18 @@ class _EaseEdit:
     factor: float
     reason: str
     kind: str = "ease"
+
+
+@dataclass
+class _SetEdit:
+    """Set a workout to an explicit distance/type — used to move a workout
+    (e.g. a missed run rescheduled) onto a day that previously had none."""
+
+    distance_km: float
+    workout_type: str
+    reason: str
+    intensity: str = "low"
+    kind: str = "set"
 
 
 def _ease_rest_of_week(
@@ -460,6 +572,10 @@ def _apply_single_edit(
         new_dist = 0.0
         new_type = "rest"
         new_intensity = "low"
+    elif edit.kind == "set":
+        new_dist = edit.distance_km
+        new_type = edit.workout_type
+        new_intensity = edit.intensity
     else:  # ease
         base = workout.baseline_distance_km or workout.distance_km or 0.0
         if base <= 0 or old_type == "rest":

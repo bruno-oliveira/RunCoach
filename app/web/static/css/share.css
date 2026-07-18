@@ -223,6 +223,26 @@
     height: 16px;
 }
 
+/* ── FIT download icon (inline in the workout type row) ── */
+.download-fit-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 22px;
+    height: 22px;
+    border-radius: var(--radius-sm, 6px);
+    background: transparent;
+    color: var(--color-text-muted, #A09A93);
+    flex-shrink: 0;
+    margin-left: auto;
+    transition: all 0.15s;
+}
+.download-fit-btn:hover,
+.download-fit-btn:focus-visible {
+    background: var(--color-primary-subtle, rgba(14, 124, 90, 0.08));
+    color: var(--color-primary, #1D4ED8);
+}
+
 /* ── Plan page: corner widget on completed workouts ── */
 /* Sits left of the green checkmark (::after at right:8px, 20px wide) */
 .workout-share-corner {

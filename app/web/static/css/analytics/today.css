@@ -86,6 +86,19 @@
   text-decoration: none;
 }
 .today-workout-link:hover { text-decoration: underline; }
+.today-workout-missed-cta {
+  align-self: flex-start;
+  margin-top: var(--space-2);
+  padding: var(--space-1) var(--space-3);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--color-error);
+  background: var(--color-error-subtle);
+  border: 1px solid transparent;
+  border-radius: var(--radius-full);
+  cursor: pointer;
+}
+.today-workout-missed-cta:hover { border-color: var(--color-error); }
 
 .today-workout-rest { display: flex; align-items: center; gap: var(--space-4); }
 .today-workout-rest-icon { font-size: 1.75rem; line-height: 1; }
@@ -139,6 +152,16 @@
 .today-day-status--today { background: var(--color-primary); color: #fff; border-color: transparent; }
 .today-day-status--missed { background: var(--color-error); color: #fff; border-color: transparent; }
 .today-day-km { font-size: var(--text-xs); color: var(--color-text); font-variant-numeric: tabular-nums; margin-top: auto; }
+.today-day-missed-cta {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--color-error);
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  text-decoration: underline;
+}
 
 .today-week-progress { margin-top: var(--space-4); }
 .today-week-progress-track {

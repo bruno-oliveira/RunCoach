@@ -30,6 +30,7 @@
         away: 'Away / travelling',
         sick_injured: 'Sick or injured',
         busy_week: 'Busy week',
+        missed_today: 'Missed a run',
     };
 
     var ENDPOINTS = {

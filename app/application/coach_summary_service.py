@@ -285,6 +285,7 @@ def build_today(plan: TrainingPlan, user_id: str, db: Session) -> Dict[str, Any]
             {
                 "day": d,
                 "day_name": _DAY_NAMES[d - 1],
+                "date": day_date.isoformat(),
                 "workout_type": wtype,
                 "planned_km": planned_km,
                 "actual_km": actual_km,
@@ -301,6 +302,7 @@ def build_today(plan: TrainingPlan, user_id: str, db: Session) -> Dict[str, Any]
         if tw:
             today_block = {
                 "day_name": _DAY_NAMES[today_offset],
+                "date": today.isoformat(),
                 "workout_type": tw.get("type"),
                 "distance_km": round(tw.get("distance", 0) or 0, 1),
                 "description": tw.get("description"),

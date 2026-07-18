@@ -62,7 +62,7 @@
             this._renderCoachBanner(summary);
             this._renderCoachForm(summary);
             this._renderTodayWorkout(today, planId);
-            this._renderTodayWeek(today);
+            this._renderTodayWeek(today, planId);
             this._renderTodayNote(patterns);
             this.todayLoadedPlanId = planId;
         } catch (err) {
@@ -170,6 +170,9 @@
             : '';
         const logged = w.logged
             ? '<span class="today-workout-logged">✓ Logged</span>' : '';
+        const missedCta = (!w.logged && w.date)
+            ? '<button type="button" class="today-workout-missed-cta" data-missed-cta>Missed it?</button>'
+            : '';
 
         body.innerHTML =
             '<div class="today-workout-main">' +
@@ -180,7 +183,15 @@
             `</div>${logged}</div>` +
             (zone ? `<div class="today-workout-zone-row">${zone}</div>` : '') +
             (w.description ? `<p class="today-workout-desc">${this._esc(w.description)}</p>` : '') +
-            `<a class="today-workout-link" href="/plan/${encodeURIComponent(planId)}">Open plan →</a>`;
+            `<a class="today-workout-link" href="/plan/${encodeURIComponent(planId)}">Open plan →</a>` +
+            missedCta;
+
+        const ctaBtn = body.querySelector('[data-missed-cta]');
+        if (ctaBtn) {
+            ctaBtn.onclick = function () {
+                if (window.MissedTodayChooser) window.MissedTodayChooser.open(planId, w.date);
+            };
+        }
     };
 
     /**
@@ -208,7 +219,7 @@
     };
 
     /* ----- This week's execution strip ----- */
-    AD._renderTodayWeek = function (today) {
+    AD._renderTodayWeek = function (today, planId) {
         const strip = document.getElementById('todayWeekStrip');
         const vol = document.getElementById('todayWeekVolume');
         const fill = document.getElementById('todayWeekProgressFill');
@@ -227,15 +238,25 @@
             const kmPlanned = d.planned_km > 0 ? `${d.planned_km.toFixed(1)}` : '';
             const km = d.status === 'done' && kmActual ? kmActual : kmPlanned;
             const typeShort = d.workout_type === 'rest' ? 'Rest' : this._titleCase((d.workout_type || '').replace(/_/g, ' ')).slice(0, 8);
+            const missedCta = d.status === 'missed'
+                ? `<button type="button" class="today-day-missed-cta" data-missed-cta data-date="${this._esc(d.date)}">Missed it?</button>`
+                : '';
             return (
                 `<div class="today-day today-day--${this._esc(d.status)}${d.is_today ? ' is-today' : ''}">` +
                 `<span class="today-day-name">${this._esc(d.day_name)}</span>` +
                 `<span class="today-day-type">${this._esc(typeShort)}</span>` +
                 `<span class="today-day-status today-day-status--${this._esc(d.status)}">${glyph}</span>` +
                 `<span class="today-day-km">${km ? this._esc(km) + ' km' : '—'}</span>` +
+                missedCta +
                 '</div>'
             );
         }).join('');
+
+        strip.querySelectorAll('[data-missed-cta]').forEach((btn) => {
+            btn.onclick = function () {
+                if (window.MissedTodayChooser) window.MissedTodayChooser.open(planId, btn.getAttribute('data-date'));
+            };
+        });
 
         if (vol) {
             const pct = today.week_pct != null ? ` (${today.week_pct}%)` : '';

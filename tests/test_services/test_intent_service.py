@@ -237,6 +237,153 @@ def test_unknown_intent_is_a_safe_noop(db, freeze_today):
     assert _workout(db, plan, 3, 3).distance_km == 8.0
 
 
+def _make_full_week_plan(
+    db: Session, *, today_value: date, current_week: int = 3, weeks: int = 8
+) -> tuple[User, TrainingPlan]:
+    """Plan with a full 7-day week (including rest days), so the
+    missed_today "reschedule" path has a real rest day to swap onto.
+
+    Mon/Tue easy 6, Wed tempo 8 (today), Thu long 12, Fri rest, Sat easy 5,
+    Sun rest.
+    """
+    user = User(id=_uid(), email=f"{_uid()[:8]}@test.com")
+    db.add(user)
+    db.flush()
+
+    days_into_week = today_value.isoweekday() - 1
+    days_elapsed = (current_week - 1) * 7 + days_into_week
+    start_date = datetime.combine(
+        today_value - timedelta(days=days_elapsed), datetime.min.time()
+    )
+
+    layout = [
+        (1, "easy", 6.0),
+        (2, "easy", 6.0),
+        (3, "tempo", 8.0),
+        (4, "long", 12.0),
+        (5, "rest", 0.0),
+        (6, "easy", 5.0),
+        (7, "rest", 0.0),
+    ]
+    plan_data = [
+        {
+            "week": w + 1,
+            "total_km": 37.0,
+            "phase": "build",
+            "daily_workouts": [
+                {"day": d, "type": t, "distance": dist} for (d, t, dist) in layout
+            ],
+        }
+        for w in range(weeks)
+    ]
+    plan = TrainingPlan(
+        id=_uid(),
+        user_id=user.id,
+        current_weekly_km=37,
+        target_distance="10",
+        weeks_duration=weeks,
+        vdot=45.0,
+        start_date=start_date,
+        plan_data=plan_data,
+    )
+    db.add(plan)
+    db.flush()
+
+    for wk in range(1, weeks + 1):
+        wp = WeeklyPlan(
+            id=_uid(), training_plan_id=plan.id, week_number=wk, total_km=37.0
+        )
+        db.add(wp)
+        db.flush()
+        for d, t, dist in layout:
+            db.add(
+                DailyWorkout(
+                    id=_uid(),
+                    weekly_plan_id=wp.id,
+                    day_of_week=d,
+                    workout_type=t,
+                    distance_km=dist,
+                    baseline_distance_km=dist if t != "rest" else None,
+                )
+            )
+    db.commit()
+    return user, plan
+
+
+def test_missed_today_ease_lightens_and_demotes_todays_run(db, freeze_today):
+    user, plan = _make_plan(db, today_value=WED)
+
+    result = intent_service.apply_intent(
+        plan.id, user.id, "missed_today", {"choice": "ease"}, db
+    )
+
+    assert result["action"] == "missed_today"
+    assert result["summary"]["workouts_changed_count"] == 1
+    wo = _workout(db, plan, 3, 3)  # today = Wed, week 3, tempo 8
+    assert wo.workout_type == "easy"
+    assert wo.distance_km == pytest.approx(4.8, abs=0.05)
+
+
+def test_missed_today_skip_rests_the_workout(db, freeze_today):
+    user, plan = _make_plan(db, today_value=WED)
+
+    result = intent_service.apply_intent(
+        plan.id, user.id, "missed_today", {"choice": "skip"}, db
+    )
+
+    assert result["summary"]["workouts_changed_count"] == 1
+    wo = _workout(db, plan, 3, 3)
+    assert wo.distance_km == 0
+    assert wo.workout_type == "rest"
+
+
+def test_missed_today_reschedule_falls_back_to_ease_without_rest_day(db, freeze_today):
+    # Default fixture only has days 1-4, so there's no rest day left this
+    # week to reschedule onto — must fall back to the ease primitive.
+    user, plan = _make_plan(db, today_value=WED)
+
+    result = intent_service.apply_intent(
+        plan.id, user.id, "missed_today", {"choice": "reschedule"}, db
+    )
+
+    assert result["summary"]["workouts_changed_count"] == 1
+    wo = _workout(db, plan, 3, 3)
+    assert wo.workout_type == "easy"
+    assert wo.distance_km == pytest.approx(4.8, abs=0.05)
+
+
+def test_missed_today_reschedule_moves_to_nearest_rest_day(db, freeze_today):
+    user, plan = _make_full_week_plan(db, today_value=WED)
+
+    result = intent_service.apply_intent(
+        plan.id, user.id, "missed_today", {"choice": "reschedule"}, db
+    )
+
+    assert result["summary"]["workouts_changed_count"] == 2
+    wed = _workout(db, plan, 3, 3)  # vacated
+    assert wed.workout_type == "rest"
+    assert wed.distance_km == 0
+    fri = _workout(db, plan, 3, 5)  # nearest rest day this week
+    assert fri.workout_type == "tempo"
+    assert fri.distance_km == 8.0
+    # Thu (day 4) untouched by the swap.
+    assert _workout(db, plan, 3, 4).distance_km == 12.0
+
+
+def test_missed_today_unresolvable_day_is_a_safe_noop(db, freeze_today):
+    user, plan = _make_plan(db, today_value=WED)
+
+    result = intent_service.apply_intent(
+        plan.id,
+        user.id,
+        "missed_today",
+        {"choice": "skip", "date": "1999-01-01"},
+        db,
+    )
+
+    assert result["would_change"] is False
+
+
 def test_sick_rests_window_then_ramps_without_reinflating_rest(db, freeze_today):
     user, plan = _make_plan(db, today_value=WED)
     # 7 days from Wed → rests wk3 d3,d4 and wk4 d1,d2.

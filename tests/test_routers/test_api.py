@@ -153,6 +153,50 @@ class TestPDFDownload:
         assert response.status_code == 404
 
 
+class TestFITDownload:
+    """Tests for the Garmin .fit workout download endpoint."""
+
+    def test_download_fit_nonexistent_plan(self, client: TestClient):
+        """Test downloading a FIT workout for a nonexistent plan."""
+        response = client.get("/download-fit/nonexistent-plan-id/1/1")
+
+        assert response.status_code == 404
+
+    def test_download_fit_week_out_of_range(self, client: TestClient):
+        """Test downloading a FIT workout for a week that doesn't exist."""
+        create_response = client.post(
+            "/generate-plan",
+            data={"current_km": 25.0, "target_distance": 10, "weeks": 8},
+        )
+        plan_id = str(create_response.url).rstrip("/").split("/")[-1]
+
+        response = client.get(f"/download-fit/{plan_id}/999/1")
+
+        assert response.status_code == 404
+
+    def test_download_fit_valid_workout(self, client: TestClient):
+        """Test downloading a FIT file for an actual training day."""
+        create_response = client.post(
+            "/generate-plan",
+            data={"current_km": 25.0, "target_distance": 10, "weeks": 8},
+        )
+        plan_id = str(create_response.url).rstrip("/").split("/")[-1]
+
+        # Week 1 always has at least one non-rest day; find it rather than
+        # assuming a fixed day index.
+        found = False
+        for day in range(1, 8):
+            response = client.get(f"/download-fit/{plan_id}/1/{day}")
+            if response.status_code == 200:
+                found = True
+                assert response.headers["content-type"] == "application/octet-stream"
+                assert "workout_w1d" in response.headers["content-disposition"]
+                assert response.content[8:12] == b".FIT"
+                break
+
+        assert found, "Expected at least one downloadable (non-rest) day in week 1"
+
+
 class TestNutritionEndpoints:
     """Tests for nutrition-related endpoints."""
 

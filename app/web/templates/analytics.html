@@ -13,6 +13,8 @@
 <link rel="stylesheet" href="{{ static_url('css/analytics/today.css') }}">
 <link rel="stylesheet" href="{{ static_url('css/analytics/signals.css') }}">
 <link rel="stylesheet" href="{{ static_url('css/share.css') }}">
+<link rel="stylesheet" href="{{ static_url('css/plan/intent-menu.css') }}">
+<link rel="stylesheet" href="{{ static_url('css/plan-change-summary.css') }}">
 {% endblock %}
 
 {% block content %}
@@ -425,6 +427,8 @@
 
     </div><!-- /analyticsProgress -->
 
+    {% include "components/missed_today_menu.html" %}
+    {% include "components/change_plan_modal.html" %}
     {% endif %}
 </div>
 {% endblock %}
@@ -446,5 +450,7 @@
 <script src="{{ static_url('js/analytics/analytics_records.js') }}" defer></script>
 <script src="{{ static_url('js/analytics/analytics_insights.js') }}" defer></script>
 <script src="{{ static_url('js/analytics/analytics_load.js') }}" defer></script>
+<script src="{{ static_url('js/plan/plan_change_summary.js') }}" defer></script>
+<script src="{{ static_url('js/plan/plan_missed_today.js') }}" defer></script>
 {% endif %}
 {% endblock %}

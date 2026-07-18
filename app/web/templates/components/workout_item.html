@@ -7,6 +7,11 @@
     <div class="workout-day-label">{% if workout_date_labels %}{{ workout_date_labels.get((week.week, workout.day), day_names[workout.day - 1]) }}{% else %}{{ day_names[workout.day - 1] }}{% endif %}{% if is_today_card %} <span class="workout-today-chip"><span data-i18n="workout.today">Today</span></span>{% endif %}</div>
     <div class="workout-type-row">
         <div class="workout-type">{{ workout.key_workout_name or (workout.type | replace('_', ' ') | title) }}</div>
+        {% if workout.type != 'rest' and workout.distance and workout.distance > 0 %}
+        <a class="download-fit-btn" href="/download-fit/{{ plan_id }}/{{ week.week }}/{{ workout.day }}" title="Download for Garmin (.fit)" aria-label="Download workout as a Garmin .fit file">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        </a>
+        {% endif %}
         {% if workout.hr_zone_label %}
         <span class="hr-zone-badge hr-zone-{{ workout.hr_zone_target }}" title="{{ workout.hr_zone_label }}">Z{{ workout.hr_zone_target }}</span>
         {% endif %}
