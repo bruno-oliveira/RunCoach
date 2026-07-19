@@ -54,11 +54,15 @@ def compute_distance_from_steps_checked(
     """Compute total km from steps, reporting whether every step was priced.
 
     Returns ``(km, complete)``. ``complete`` is False when any
-    duration-based step (other than a deliberate ``rest``) had no resolvable
-    pace and therefore contributed zero distance. Callers that reconcile a
-    workout's displayed distance against its steps must treat an incomplete
-    total as a lower bound - never as license to shrink the session below
-    its budgeted distance.
+    duration-based *work* step had no resolvable pace and therefore
+    contributed zero distance. A duration-based ``rest`` or ``recovery``
+    step that carries no pace zone is a deliberate zero: the builders omit
+    the zone exactly when the pause is standing/near-standing ground that
+    must not count toward the session (e.g. the 60-90 s between cruise
+    reps), so it doesn't make the total incomplete. Callers that reconcile
+    a workout's displayed distance against its steps must treat an
+    incomplete total as a lower bound - never as license to shrink the
+    session below its budgeted distance.
     """
     total_m = 0.0
     complete = True
@@ -73,7 +77,7 @@ def compute_distance_from_steps_checked(
                 duration_min = s["duration_s"] / 60.0
                 distance_km = duration_min / pace_min_km
                 total_m += distance_km * 1000 * s.get("repeat", 1)
-            elif s.get("kind") != "rest":
+            elif s.get("kind") not in ("rest", "recovery"):
                 complete = False
     return total_m / 1000.0, complete
 

@@ -5,6 +5,7 @@
 and steps onto a generated workout slot.
 """
 
+import logging
 from typing import Any, Dict, List, Optional
 
 from app.core.training import workout_steps as _steps_mod
@@ -22,6 +23,8 @@ from app.core.training.key_workout_library.rewrites import (
 from app.core.training.road_profile import classify_road
 from app.core.training.trail_profile import is_trail_target
 from app.core.training.vdot_calculator import VDOTCalculator
+
+_logger = logging.getLogger(__name__)
 
 # Long-ultra-only template: a short headlamp run during the peak phase to
 # rehearse darkness pacing and gear. Bracketed via ``brackets`` so it never
@@ -90,6 +93,22 @@ _KEY_WORKOUT_MIN_BUDGET_KM: Dict[str, float] = {
     # 2 × 1600 m + bookends.
     "10k_mile_repeats": 5.5,
     "half_mile_repeats": 5.5,
+    # Fixed prescriptions whose priced steps overflow smaller slots by
+    # kilometres (rep-count floors, fixed rep sets, or fixed session times).
+    # Floor ≈ the smallest budget where the built session prices at ~budget.
+    "marathon_yasso_800s": 7.0,
+    "marathon_mp_cutdown": 6.5,
+    "10k_pyramid_intervals": 6.5,
+    "10k_rolling_500s": 6.5,
+    "trail_rolling_500s": 6.5,
+    "trail_flat_rolling_500s": 6.5,
+    "trail_pyramid_intervals": 10.0,
+    "trail_ladder_intervals": 10.0,
+    "trail_power_hike": 7.0,
+    "trail_flat_power_walk": 9.0,
+    "trail_base_hike_run": 6.0,
+    "trail_hill_pyramid": 6.5,
+    "trail_flat_over_under_intervals": 6.5,
 }
 
 
@@ -375,6 +394,14 @@ def overlay_key_workout(
             # Some duration reps couldn't be priced, so the steps total is a
             # lower bound. Never shrink the session below its budget on
             # incomplete math (this halved fartleks to warm-up + cool-down).
+            # This path should be rare (every builder is expected to emit
+            # priceable steps) — log it so pricing regressions surface.
+            _logger.warning(
+                "key workout %s not fully priced: steps=%.1f km, budget=%.1f km",
+                key_wk["id"],
+                steps_total_km,
+                actual_distance,
+            )
             workout["distance"] = round(max(actual_distance, steps_total_km), 1)
 
     workout.pop("segments", None)
