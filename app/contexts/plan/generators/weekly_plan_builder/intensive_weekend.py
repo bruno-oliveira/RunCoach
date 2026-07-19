@@ -83,6 +83,7 @@ def apply_intensive_weekend(
         pace_zones,
         trail_profile=trail_profile,
         force_id=quality_id,
+        weekly_km=total_km,
     )
     new_sat["intensive_weekend"] = True
     new_sat["itw_role"] = "quality"

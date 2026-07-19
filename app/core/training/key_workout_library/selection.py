@@ -22,6 +22,7 @@ from app.core.training.key_workout_library.rewrites import (
 )
 from app.core.training.road_profile import classify_road
 from app.core.training.trail_profile import is_trail_target
+from app.core.training.tuning import MAX_QUALITY_DAY_SHARE, MIN_QUALITY_DAY_CAP_KM
 from app.core.training.vdot_calculator import VDOTCalculator
 
 _logger = logging.getLogger(__name__)
@@ -261,6 +262,7 @@ def overlay_key_workout(
     force_id: Optional[str] = None,
     max_distance: Optional[float] = None,
     slot_index: int = 0,
+    weekly_km: Optional[float] = None,
 ) -> None:
     """Attach key workout metadata, description, and steps for quality sessions.
 
@@ -281,6 +283,12 @@ def overlay_key_workout(
     filled this week. Without it, a week granted two slots of one type
     (e.g. marathon peak's ``{"tempo": 2}``) selects the identical session
     twice — same inputs, same rotation index.
+
+    ``weekly_km`` enables the Daniels intensity-volume caps: a session's
+    I/R/T work set is trimmed to its weekly-share ceiling, and an
+    intensity-led session's total is bounded by ``MAX_QUALITY_DAY_SHARE`` of
+    the week (M/E-dominated sessions — MP long runs, fueling runs — are
+    exempt from the day-share bound).
     """
     if workout_type not in ("interval", "tempo", "hill", "long"):
         return
@@ -369,6 +377,21 @@ def overlay_key_workout(
         workout["steps"] = _steps_mod.fit_steps_to_distance(
             workout["steps"], max_distance
         )
+
+    # Intensity-volume safety caps (Daniels): bound the I/R/T work set by its
+    # weekly share, then bound an intensity-led session's total by the
+    # quality-day share. Sessions whose work is predominantly M/E-pace (MP
+    # long runs, race rehearsals) keep their size — the big day is the point.
+    if weekly_km and weekly_km > 0:
+        workout["steps"] = _steps_mod.fit_steps_to_intensity_caps(
+            workout["steps"], weekly_km
+        )
+        capped_work = sum(_steps_mod.work_km_by_group(workout["steps"]).values())
+        if capped_work > _steps_mod.exempt_work_km(workout["steps"]):
+            day_cap = max(MIN_QUALITY_DAY_CAP_KM, weekly_km * MAX_QUALITY_DAY_SHARE)
+            workout["steps"] = _steps_mod.fit_steps_to_distance(
+                workout["steps"], round(day_cap, 1)
+            )
 
     # Reconcile displayed total with what the runner will actually cover —
     # duration-based reps (e.g. 6 × 3 min hard) contributed nothing to the

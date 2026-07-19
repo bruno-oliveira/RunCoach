@@ -184,6 +184,98 @@ def fit_steps_to_distance(
     return out
 
 
+def _priced_step_km(s: Dict[str, Any]) -> float:
+    """Priced km for one step (distance, or duration × zone pace), all reps."""
+    reps = s.get("repeat", 1)
+    if s.get("distance_m"):
+        return s["distance_m"] * reps / 1000.0
+    if s.get("duration_s"):
+        pace = _parse_pace_str_to_min_per_km(s.get("pace_str"), s.get("pace_zone"))
+        if pace and pace > 0:
+            return (s["duration_s"] / 60.0) / pace * reps
+    return 0.0
+
+
+def work_km_by_group(steps: List[Dict[str, Any]]) -> Dict[str, float]:
+    """Priced *work-set* km per capped intensity group (I / R / T).
+
+    Only run/strides steps count as work; warm-up, cool-down, recoveries and
+    walks are bookkeeping. Zones map onto groups via
+    :data:`app.core.training.tuning.WORK_ZONE_GROUP`; zones with no group
+    entry (M, E) are exempt from intensity caps and excluded here.
+    """
+    from app.core.training.tuning import WORK_ZONE_GROUP
+
+    out: Dict[str, float] = {}
+    for s in steps:
+        if s.get("kind") not in ("run", "strides"):
+            continue
+        group = WORK_ZONE_GROUP.get(s.get("pace_zone") or "")
+        if not group:
+            continue
+        km = _priced_step_km(s)
+        if km > 0:
+            out[group] = out.get(group, 0.0) + km
+    return out
+
+
+def exempt_work_km(steps: List[Dict[str, Any]]) -> float:
+    """Priced work km at cap-exempt intensities (M-pace and easy)."""
+    from app.core.training.tuning import WORK_ZONE_GROUP
+
+    total = 0.0
+    for s in steps:
+        if s.get("kind") not in ("run", "strides"):
+            continue
+        zone = s.get("pace_zone") or ""
+        if zone in WORK_ZONE_GROUP:
+            continue
+        total += _priced_step_km(s)
+    return total
+
+
+def fit_steps_to_intensity_caps(
+    steps: List[Dict[str, Any]], weekly_km: float
+) -> List[Dict[str, Any]]:
+    """Drop reps until each intensity group's work fits its weekly-share cap.
+
+    Enforces Daniels' intensity-volume guidelines (I ≤ 8%, R ≤ 5%, T ≤ 10% of
+    weekly volume per session, with absolute ceilings) by reusing
+    :func:`fit_steps_to_distance`'s drop-reps strategy: the total is walked
+    down by the current overshoot until every group fits, so reps stay their
+    prescribed length and the session remains recognizable. A floor
+    (``MIN_CAPPED_WORK_KM``) guarantees a minimal complete stimulus on very
+    low-volume weeks.
+    """
+    from app.core.training.tuning import (
+        MAX_WORK_ABS_KM_BY_ZONE,
+        MAX_WORK_SHARE_BY_ZONE,
+        MIN_CAPPED_WORK_KM,
+    )
+
+    if weekly_km <= 0 or not steps:
+        return steps
+    for _ in range(6):
+        excess = 0.0
+        for group, km in work_km_by_group(steps).items():
+            allowed = max(
+                MIN_CAPPED_WORK_KM,
+                min(
+                    weekly_km * MAX_WORK_SHARE_BY_ZONE[group],
+                    MAX_WORK_ABS_KM_BY_ZONE[group],
+                ),
+            )
+            excess = max(excess, km - allowed)
+        if excess <= 0.05:
+            break
+        total, _ = compute_distance_from_steps_checked(steps)
+        trimmed = fit_steps_to_distance(steps, max(0.1, total - excess))
+        if trimmed is steps:
+            break
+        steps = trimmed
+    return steps
+
+
 def scale_steps(steps: List[Dict[str, Any]], multiplier: float) -> List[Dict[str, Any]]:
     """Scale distance/duration of each step by a multiplier.
 

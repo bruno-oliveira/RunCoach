@@ -318,6 +318,42 @@ BASE_QUALITY_MIN_DOSE_KM = {"tempo": 4.0}
 MIN_EASY_PER_RUN_KM = 3.0
 
 # =============================================================================
+# Intensity-volume safety caps (Daniels)
+# =============================================================================
+
+# A single session's *work set* (excluding warm-up/cool-down/recoveries) at a
+# given intensity may not exceed this fraction of the weekly volume. Daniels'
+# guidelines: interval (I) work ≤ 8% of weekly mileage, repetition (R) work
+# ≤ 5%, threshold (T) work ≤ 10% per session. Marathon-pace (M) and easy work
+# are exempt — long MP blocks are legitimately big. Step pace zones map onto
+# these groups via WORK_ZONE_GROUP.
+MAX_WORK_SHARE_BY_ZONE = {"I": 0.08, "R": 0.05, "T": 0.10}
+
+# Absolute ceilings (km) for the same work groups — the share rule alone would
+# let a 120 km/week runner schedule 12 km of VO2max reps.
+MAX_WORK_ABS_KM_BY_ZONE = {"I": 10.0, "R": 6.0, "T": 15.0}
+
+# Never cap a work set below this (km): a session that survived selection and
+# the min-dose floor keeps at least a minimal complete stimulus (≈ 5-6 × 400 m
+# or a 15-min threshold block) even on very low weekly volume.
+MIN_CAPPED_WORK_KM = 2.4
+
+# Map of step pace zones onto the capped work groups. 5K-pace work stresses
+# the same system as I; 10K-pace work sits with threshold. M and E are exempt
+# (no entry).
+WORK_ZONE_GROUP = {"I": "I", "5K": "I", "R": "R", "T": "T", "10K": "T"}
+
+# A single quality day (total, including bookends) may not exceed this share
+# of the weekly volume. Sessions whose work is predominantly M/E-pace (MP
+# long runs, race rehearsals, fueling runs) are exempt — those are long-run
+# flavoured days where a large share is the point.
+MAX_QUALITY_DAY_SHARE = 0.25
+
+# The day-share cap never squeezes a session below this total (km): bookends
+# plus a minimal work set need this much room regardless of weekly volume.
+MIN_QUALITY_DAY_CAP_KM = 6.0
+
+# =============================================================================
 # 80/20 polarization (see distribution_validator.py)
 # =============================================================================
 

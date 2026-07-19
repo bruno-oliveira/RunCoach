@@ -167,6 +167,7 @@ class BasePlanGenerator:
         vdot_zones: Optional[Dict],
         max_distance: Optional[float] = None,
         slot_index: int = 0,
+        weekly_km: Optional[float] = None,
     ) -> None:
         """Install a curated key workout for a quality session.
 
@@ -200,6 +201,7 @@ class BasePlanGenerator:
             pace_zones=vdot_zones,
             max_distance=max_distance,
             slot_index=slot_index,
+            weekly_km=weekly_km,
         )
 
     def _key_workout_ceiling(

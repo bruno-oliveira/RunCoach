@@ -168,9 +168,10 @@ def _thirty_thirty_reps(d: float) -> int:
 
     Each 60s couplet covers ~0.17km (30s at VO2max + 30s easy). Clamped to a
     classic 30-30 range so the block stays a recognisable VO2max session
-    rather than collapsing to a handful of reps or ballooning past 20.
+    rather than collapsing to a handful of reps or ballooning past a
+    Billat-style 16-rep ceiling.
     """
-    return _fartlek_reps(d, on_min=0.5, off_min=0.5, default=14, lo=10, hi=20)
+    return _fartlek_reps(d, on_min=0.5, off_min=0.5, default=12, lo=10, hi=16)
 
 
 def _mile_rep_reps(d: float) -> int:
@@ -243,7 +244,7 @@ def _on_off_k_reps(d: float) -> int:
 
 def _rolling_400_reps(d: float) -> int:
     """Rolling-400 couplets (400 m surge + 600 m float = 1 km per rep)."""
-    return max(4, min(10, _main_m(d) // 1000))
+    return max(4, min(8, _main_m(d) // 1000))
 
 
 def _compound_400_200_reps(d: float) -> tuple:

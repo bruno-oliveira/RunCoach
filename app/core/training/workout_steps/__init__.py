@@ -58,9 +58,12 @@ from app.core.training.workout_steps.metrics import (
     _compute_distance_from_steps,
     _parse_pace_str_to_min_per_km,
     compute_distance_from_steps_checked,
+    exempt_work_km,
     fit_steps_to_distance,
+    fit_steps_to_intensity_caps,
     scale_steps,
     total_distance_m,
+    work_km_by_group,
 )
 from app.core.training.workout_steps.primitives import (
     _COOLDOWN_M,
@@ -126,6 +129,9 @@ __all__ = [
     "scale_steps",
     "total_distance_m",
     "fit_steps_to_distance",
+    "fit_steps_to_intensity_caps",
+    "work_km_by_group",
+    "exempt_work_km",
     "wucd_profile",
     "HARD_SESSION_TYPES",
     # Internal helpers re-exported for cross-module and test use.

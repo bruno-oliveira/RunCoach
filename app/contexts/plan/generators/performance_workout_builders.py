@@ -26,10 +26,33 @@ __all_reexport__ = (reconcile_workout_after_cap, _regenerate_description)
 # Long-run distance cap (km) per road band.
 _LONG_RUN_CAP_KM = {"5k": 15, "10k": 15, "half": 22, "marathon": 32}
 
-# Performance-plan tempo/fartlek tuning (segment shape lives in workout_builder_base).
-_TEMPO_PHASE_CAPS = {"base": (6, 0.20), "build": (10, 0.25), "peak": (12, 0.30)}
-_TEMPO_DEFAULT_CAP_PCT = (5, 0.15)
-_FARTLEK_PCT_MAP = {"base": 0.20, "build": 0.25, "peak": 0.28, "taper": 0.15}
+# Performance-plan tempo/fartlek tuning (segment shape lives in
+# workout_builder_base). The (cap_km, pct) pairs bound the *work block* to
+# Daniels' per-session guideline of ~10% of weekly volume at threshold — the
+# old 25-30% shares prescribed 10-12 km of continuous T on a 40 km/week
+# runner, triple the sustainable dose.
+_TEMPO_PHASE_CAPS = {"base": (5, 0.08), "build": (8, 0.10), "peak": (10, 0.10)}
+_TEMPO_DEFAULT_CAP_PCT = (4, 0.08)
+# Fartlek totals (incl. bookends) stay within the quality-day share of the
+# week (MAX_QUALITY_DAY_SHARE).
+_FARTLEK_PCT_MAP = {"base": 0.18, "build": 0.22, "peak": 0.25, "taper": 0.15}
+
+# Race-pace work-block bounds per phase: (cap_km, pct of weekly volume).
+# Marathon goal pace is M-intensity — long blocks are the point — so it gets
+# roomier bounds; shorter race distances run their goal pace at
+# threshold-or-faster, where Daniels' ~10%-per-session guideline applies.
+_RACE_PACE_PHASE_CAPS = {
+    "base": (4, 0.08),
+    "build": (8, 0.10),
+    "peak": (8, 0.10),
+    "taper": (3, 0.08),
+}
+_RACE_PACE_MARATHON_CAPS = {
+    "base": (6, 0.12),
+    "build": (10, 0.16),
+    "peak": (14, 0.20),
+    "taper": (5, 0.10),
+}
 
 __all__ = [
     "estimate_duration_min",
@@ -59,11 +82,18 @@ def generate_tempo_workout(
 def generate_vo2max_workout(
     zones: Dict, weekly_km: float, week: int, phase: str
 ) -> Dict:
-    """Generate a VO2 max interval workout scaled to weekly volume."""
+    """Generate a VO2 max interval workout scaled to weekly volume.
+
+    The interval work is bounded by Daniels' I-pace guideline — at most ~8%
+    of weekly volume in one session (10 km absolute ceiling) — with a small
+    floor so low-volume weeks still get a complete minimal session. The old
+    15-20% shares put 8-9 km of VO2max reps on a 40 km/week runner.
+    """
     target_pace = zones["zone_4_vo2max"]["pace"]
 
-    pct_map = {"base": 0.15, "build": 0.20, "peak": 0.18, "taper": 0.12}
-    target_interval_km = weekly_km * pct_map.get(phase, 0.15)
+    pct_map = {"base": 0.06, "build": 0.08, "peak": 0.08, "taper": 0.05}
+    target_interval_km = weekly_km * pct_map.get(phase, 0.06)
+    target_interval_km = max(2.4, min(10.0, target_interval_km))
 
     if target_interval_km <= 3:
         interval_m = 400
@@ -121,22 +151,26 @@ def generate_vo2max_workout(
 
 
 def generate_race_pace_workout(
-    zones: Dict, weekly_km: float, week: int, phase: str
+    zones: Dict, weekly_km: float, week: int, phase: str, target_distance: float = 10.0
 ) -> Dict:
-    """Generate a race pace workout scaled to weekly volume."""
+    """Generate a race pace workout scaled to weekly volume.
+
+    Work-block bounds depend on the goal distance: marathon goal pace is
+    M-intensity (long blocks are the point), while 5K-half goal pace sits at
+    threshold-or-faster where Daniels' ~10%-per-session guideline applies.
+    """
     target_pace = zones["zone_5_race"]["pace"]
 
-    if phase == "base":
-        race_km = min(4, weekly_km * 0.15)
-    elif phase == "build":
-        race_km = min(8, weekly_km * 0.20)
-    elif phase == "peak":
-        race_km = min(12, weekly_km * 0.25)
-    else:
-        race_km = min(3, weekly_km * 0.10)
+    caps = (
+        _RACE_PACE_MARATHON_CAPS
+        if classify_road(target_distance) == "marathon"
+        else _RACE_PACE_PHASE_CAPS
+    )
+    cap_km, pct = caps.get(phase, caps["base"])
+    race_km = min(cap_km, weekly_km * pct)
     # Round once so the segment, the description, and the total all use the
     # identical one-decimal value (format_km truncates; round() does not).
-    race_km = round(race_km, 1)
+    race_km = round(max(2.0, race_km), 1)
 
     warmup_km = _wucd_m_for_work(int(round(race_km * 1000)), hard=True) / 1000
     cooldown_km = warmup_km

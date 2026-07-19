@@ -166,7 +166,7 @@ class PerformancePlanGenerator(BasePlanGenerator):
                     zones, weekly_km, week_number, phase
                 ),
                 "race_pace": lambda: generate_race_pace_workout(
-                    zones, weekly_km, week_number, phase
+                    zones, weekly_km, week_number, phase, target_distance
                 ),
                 "fartlek": lambda: generate_fartlek_workout(
                     zones, weekly_km, week_number, phase
@@ -215,6 +215,7 @@ class PerformancePlanGenerator(BasePlanGenerator):
                     vdot_zones,
                     max_distance=quality_ceiling,
                     slot_index=slot_index,
+                    weekly_km=weekly_km,
                 )
             wtype = str(workout["type"])
             coaching_type = _COACHING_TYPE_MAP.get(wtype, wtype)

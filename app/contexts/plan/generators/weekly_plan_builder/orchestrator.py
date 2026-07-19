@@ -283,6 +283,7 @@ def generate_daily_workouts(
                 trail_profile=trail_profile,
                 max_distance=quality_ceiling,
                 slot_index=slot_index,
+                weekly_km=total_km,
             )
 
         workout["coaching_rationale"] = generate_coaching_note(
