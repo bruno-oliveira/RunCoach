@@ -636,23 +636,27 @@ def build_key_workout_steps(
     """
     if key_wk.get("steps"):
         return _inject_pace_into_steps(key_wk["steps"], pace_zones)
-    if key_wk.get("steps_builder"):
-        return _resolve_long_steps_builder(
-            key_wk["steps_builder"], distance_km, pace_zones
-        )
-    # Explicit per-workout builder takes priority over the running-fraction
-    # easy-run path so interval/tempo/hill workouts always get type-consistent
-    # steps rather than a generic easy run.
-    builder = _KEY_WORKOUT_STEP_BUILDERS.get(key_wk["id"])
-    if builder is not None and distance_km > 0:
-        return builder(distance_km, pace_zones)
-    if key_wk["id"] in _RUNNING_DISTANCE_FRACTION and distance_km > 0:
+    # Scope the warm-up/cool-down profile to the session's type so the step
+    # builders (and the rep-count helpers they call) size bookends with the
+    # same hard/tempo profile the prose rewrites use.
+    with _steps_mod.wucd_profile(key_wk.get("type") or workout_type):
+        if key_wk.get("steps_builder"):
+            return _resolve_long_steps_builder(
+                key_wk["steps_builder"], distance_km, pace_zones
+            )
+        # Explicit per-workout builder takes priority over the running-fraction
+        # easy-run path so interval/tempo/hill workouts always get
+        # type-consistent steps rather than a generic easy run.
+        builder = _KEY_WORKOUT_STEP_BUILDERS.get(key_wk["id"])
+        if builder is not None and distance_km > 0:
+            return builder(distance_km, pace_zones)
+        if key_wk["id"] in _RUNNING_DISTANCE_FRACTION and distance_km > 0:
+            return _steps_mod.build_easy_steps(distance_km, pace_zones)
+        # Every key workout is covered by an explicit builder, a steps_builder,
+        # or the running-fraction path above. This defensive default only
+        # guards a future workout id added without a builder — it degrades to
+        # an easy run rather than crashing.
         return _steps_mod.build_easy_steps(distance_km, pace_zones)
-    # Every key workout is covered by an explicit builder, a steps_builder, or
-    # the running-fraction path above. This defensive default only guards a
-    # future workout id added without a builder — it degrades to an easy run
-    # rather than crashing.
-    return _steps_mod.build_easy_steps(distance_km, pace_zones)
 
 
 def rebuild_key_workout(

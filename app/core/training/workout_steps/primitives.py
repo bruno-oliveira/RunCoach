@@ -6,7 +6,9 @@ See the package ``__init__`` for the step-dict schema.
 
 from __future__ import annotations
 
-from typing import Any, Dict, Optional
+from contextlib import contextmanager
+from contextvars import ContextVar
+from typing import Any, Dict, Iterator, Optional
 
 from app.utils import format_km
 
@@ -23,6 +25,40 @@ STEP_KINDS = (
 # Default warm-up / cool-down length for quality sessions (meters).
 _WARMUP_M = 2000
 _COOLDOWN_M = 2000
+
+# Session types whose work is at interval intensity or faster (VO2max reps,
+# hill repeats, race-pace efforts at 10K-or-faster). These earn the longer
+# warm-up profile: starting 400 m reps off a 500 m jog is an injury risk, not
+# a time saving.
+HARD_SESSION_TYPES = frozenset({"interval", "hill", "vo2max", "race_pace"})
+
+# Ambient warm-up/cool-down profile for the current workout. Key-workout
+# entry points (overlay, reconcile, step building) set this from the
+# workout's type so every helper that sizes a warm-up — the step builders
+# AND the prose-rewrite arithmetic in rewrites.py — reads the same profile
+# without threading a flag through every rep-count helper and lambda.
+# Generic builders (tempo/interval/hill in quality.py) know their own type
+# and pass ``hard`` explicitly instead.
+_WUCD_HARD: ContextVar[bool] = ContextVar("wucd_hard", default=False)
+
+
+@contextmanager
+def wucd_profile(workout_type: Optional[str]) -> Iterator[None]:
+    """Scope the warm-up/cool-down profile to ``workout_type``.
+
+    Wrap any region that renders a key workout's prose or steps so
+    :func:`_wucd_m` picks the hard or tempo profile matching the session.
+    """
+    token = _WUCD_HARD.set(workout_type in HARD_SESSION_TYPES)
+    try:
+        yield
+    finally:
+        _WUCD_HARD.reset(token)
+
+
+# Warm-up/cool-down profiles: (floor_m, share_of_session, cap_m).
+_WUCD_TEMPO_PROFILE = (800, 0.18, 1600)
+_WUCD_HARD_PROFILE = (1000, 0.22, 2000)
 
 
 def _pace_str(zone_key: Optional[str], pace_zones: Optional[Dict]) -> Optional[str]:
@@ -56,17 +92,22 @@ def _step(
     }
 
 
-def _wucd_m(total_m: int) -> int:
+def _wucd_m(total_m: int, hard: Optional[bool] = None) -> int:
     """Warm-up / cool-down distance (metres) that fits the workout.
 
     A warm-up and cool-down are bookends, not the session: at 25% each they
     consumed half of every sub-8 km quality workout, leaving a sub-Daniels
-    working set (a 4 km tempo became 2 km of threshold, ~10 min). Capping the
-    share at 18% (and the absolute length at 1.6 km, ~10 min of easy running)
-    redirects that distance into the working set without changing the session's
-    total distance — so weekly mileage and the structural caps are untouched,
-    the threshold/interval dose simply grows. A larger session's bookends stay
-    bounded by the absolute cap rather than scaling indefinitely.
+    working set (a 4 km tempo became 2 km of threshold, ~10 min). The share
+    caps at 18% for tempo-grade work and 22% for hard sessions, with the
+    absolute length bounded so bigger sessions' bookends stop scaling.
+
+    Hard sessions (interval/hill/VO2max/race-pace — see
+    :data:`HARD_SESSION_TYPES`) floor at 1 km: a runner should never open
+    400 m reps at 5K pace off a 500 m jog. Tempo-grade sessions floor at
+    800 m. Either way the two bookends combined never claim more than half
+    the session, so the working set stays the majority of the day even on
+    tiny slots. ``hard=None`` reads the ambient :func:`wucd_profile` scope
+    (default: tempo profile).
 
     Snapped to whole 100 m increments so the value, shown as kilometres,
     already has at most one decimal place (e.g. 700 m -> 0.7 km) and survives
@@ -74,10 +115,32 @@ def _wucd_m(total_m: int) -> int:
     and the distance cited in the description identical: both are derived from
     this single helper, and neither can drift to a 3-decimal figure like
     0.775 km. Floors (rather than rounds) to the 100 m below so the warm-up
-    never claims more distance than 18% of the workout.
+    never claims more distance than its share of the workout.
     """
-    raw = min(1600, max(500, int(total_m * 0.18)))
-    return (raw // 100) * 100
+    if hard is None:
+        hard = _WUCD_HARD.get()
+    floor_m, share, cap_m = _WUCD_HARD_PROFILE if hard else _WUCD_TEMPO_PROFILE
+    raw = min(cap_m, max(floor_m, int(total_m * share)))
+    raw = min(raw, total_m // 4)
+    return max(0, (raw // 100) * 100)
+
+
+def _wucd_m_for_work(work_m: int, hard: Optional[bool] = None) -> int:
+    """Bookend length for a session defined bottom-up by its work size.
+
+    The performance-family builders pick the work distance first (e.g. "8 km
+    of threshold") and wrap bookends around it, so the session total isn't
+    known yet. Estimate it by inverting the profile share (work is what's
+    left after two bookends) and delegate to :func:`_wucd_m` so both
+    construction directions apply the identical policy.
+    """
+    if hard is None:
+        hard = _WUCD_HARD.get()
+    _, share, _ = _WUCD_HARD_PROFILE if hard else _WUCD_TEMPO_PROFILE
+    if work_m <= 0:
+        return 0
+    est_total = int(work_m / (1.0 - 2.0 * share))
+    return _wucd_m(est_total, hard)
 
 
 def _warmup(pace_zones: Optional[Dict], distance_m: int = _WARMUP_M) -> Dict[str, Any]:

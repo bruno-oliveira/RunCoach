@@ -73,6 +73,25 @@ _KEY_WORKOUT_MIN_DISTANCE_KM: Dict[str, float] = {
     "time_trial_5k": 7.0,
 }
 
+# Minimum day budget (km) a slot must offer before these sessions are eligible
+# for selection. Unlike ``_KEY_WORKOUT_MIN_DISTANCE_KM`` (which bumps the
+# session up to a workable size), a budget floor rejects the candidate: a
+# km-rep session on a slot that can't hold its reps plus real bookends would
+# have its identity rewritten away ("3 x 1 km" shrinking to "3 x 0.5 km"),
+# and bumping it instead would blow up a low-volume week. Undersized slots
+# fall through to the next candidate in rotation (typically a duration-based
+# session, which fits small budgets by design).
+_KEY_WORKOUT_MIN_BUDGET_KM: Dict[str, float] = {
+    # 3 × 1 km reps + ~1 km warm-up/cool-down each.
+    "5k_vo2max_1000s": 5.0,
+    "10k_vo2max_1000s": 5.0,
+    "half_km_intervals": 5.0,
+    "marathon_km_intervals": 5.0,
+    # 2 × 1600 m + bookends.
+    "10k_mile_repeats": 5.5,
+    "half_mile_repeats": 5.5,
+}
+
 
 # Sessions installed only by the intensive-weekend post-pass (via ``force_id``).
 # They presuppose the weekend context (e.g. "fatigued from yesterday"), so they
@@ -167,6 +186,7 @@ def _filter_candidates(
     phase: str,
     terrain: Optional[str],
     trail_profile,
+    budget_km: Optional[float] = None,
 ) -> List[Dict[str, Any]]:
     candidates = [
         w
@@ -175,6 +195,17 @@ def _filter_candidates(
         and w["type"] == workout_type
         and w["id"] not in _ITW_ONLY_IDS
     ]
+
+    # Budget gating — sessions whose fixed reps can't fit the day's allocation
+    # are skipped rather than shrunk past recognition (see
+    # _KEY_WORKOUT_MIN_BUDGET_KM). Only applied when the caller knows the
+    # budget; catalog-browsing callers pass None and see everything.
+    if budget_km is not None and budget_km > 0:
+        candidates = [
+            w
+            for w in candidates
+            if budget_km >= _KEY_WORKOUT_MIN_BUDGET_KM.get(w["id"], 0.0)
+        ]
 
     # Terrain filter — flat-only or hilly/any otherwise.
     if terrain == "flat" or (
@@ -250,6 +281,7 @@ def overlay_key_workout(
             terrain=terrain,
             trail_profile=trail_profile,
             slot_index=slot_index,
+            budget_km=workout.get("distance") or None,
         )
     if not key_wk:
         return
@@ -264,25 +296,30 @@ def overlay_key_workout(
     if frac is not None and actual_distance > 0:
         actual_distance = round(actual_distance * frac, 1)
     workout["distance"] = actual_distance
-    description = key_wk["description"]
-    if actual_distance > 0:
-        description = _rewrite_key_workout_description(
-            description,
-            key_wk["id"],
-            actual_distance,
-        )
+    # The rewrite lambdas size warm-ups through _wucd_m; scope the hard/tempo
+    # profile to the session type so the prose cites the same bookends the
+    # step builders produce (build_key_workout_steps scopes itself the same
+    # way).
+    with _steps_mod.wucd_profile(key_wk.get("type")):
+        description = key_wk["description"]
+        if actual_distance > 0:
+            description = _rewrite_key_workout_description(
+                description,
+                key_wk["id"],
+                actual_distance,
+            )
 
-    rewritten = actual_distance > 0 and key_wk["id"] in _DISTANCE_REWRITES
+        rewritten = actual_distance > 0 and key_wk["id"] in _DISTANCE_REWRITES
 
-    workout["description"] = description
-    workout["key_workout_id"] = key_wk["id"]
-    workout["key_workout_name"] = key_wk["name"]
-    if key_wk["id"] in _STRUCTURE_REWRITES:
-        workout["structure"] = _STRUCTURE_REWRITES[key_wk["id"]](actual_distance)
-    elif rewritten:
-        workout["structure"] = _derive_structure(description)
-    else:
-        workout["structure"] = key_wk["structure"]
+        workout["description"] = description
+        workout["key_workout_id"] = key_wk["id"]
+        workout["key_workout_name"] = key_wk["name"]
+        if key_wk["id"] in _STRUCTURE_REWRITES:
+            workout["structure"] = _STRUCTURE_REWRITES[key_wk["id"]](actual_distance)
+        elif rewritten:
+            workout["structure"] = _derive_structure(description)
+        else:
+            workout["structure"] = key_wk["structure"]
     workout["key_workout_rationale"] = key_wk["rationale"]
 
     # Propagate the key workout's own intensity so the card classification
@@ -356,6 +393,7 @@ class KeyWorkoutLibrary:
         terrain: Optional[str] = None,
         trail_profile=None,
         slot_index: int = 0,
+        budget_km: Optional[float] = None,
     ) -> Optional[Dict]:
         """Select a key workout for the given distance, phase, and week.
 
@@ -387,6 +425,7 @@ class KeyWorkoutLibrary:
             phase,
             terrain,
             trail_profile,
+            budget_km=budget_km,
         )
         if not candidates:
             return None

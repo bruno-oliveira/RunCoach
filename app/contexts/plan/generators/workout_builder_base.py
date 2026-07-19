@@ -9,6 +9,7 @@ in exactly one place.
 
 from typing import Any, Dict, Mapping, Tuple
 
+from app.core.training.workout_steps import _wucd_m, _wucd_m_for_work
 from app.utils import format_km
 from app.utils import format_pace as _shared_format_pace
 
@@ -96,8 +97,11 @@ def build_tempo_workout(
     cap_km, pct = phase_caps.get(phase, default_cap_pct)
     tempo_km = round(min(cap_km, weekly_km * pct), 1)
 
-    warmup_km = 2
-    cooldown_km = 2
+    # Bookends come from the shared warm-up/cool-down policy (sized from the
+    # work block, since the session total isn't known yet) so performance
+    # plans and road plans prescribe identical warm-ups for identical work.
+    warmup_km = _wucd_m_for_work(int(round(tempo_km * 1000)), hard=False) / 1000
+    cooldown_km = warmup_km
     warmup_pace = zones["zone_1_recovery"]["pace"]
 
     segments = [
@@ -156,8 +160,8 @@ def build_fartlek_workout(
 
     surges = max(surge_min, min(surge_max, round((total_km - 4) * surge_multiplier)))
 
-    warmup_km = 2
-    cooldown_km = 2
+    warmup_km = _wucd_m(int(round(total_km * 1000)), hard=False) / 1000
+    cooldown_km = warmup_km
     main_km = max(1, total_km - warmup_km - cooldown_km)
     warmup_pace = zones["zone_1_recovery"]["pace"]
     fartlek_avg_pace = (tempo_pace + hard_pace) / 2

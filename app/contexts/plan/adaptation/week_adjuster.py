@@ -195,14 +195,34 @@ def _rebuild_session_distance(
         return new_distance, False
     if workout.workout_type in _PLAIN_QUALITY_TYPES:
         week_total = (pd_week.get(week_number) or {}).get("total_km") or 0.0
+        old_distance = round(workout.distance_km or 0.0, 1)
+        requested = new_distance
         new_distance = _rebuild_plain_quality(
             pd_wo,
-            distance=new_distance,
+            distance=requested,
             day=workout.day_of_week,
             total_km=week_total,
             phase=phase,
             pace_zones=pace_zones,
         )
+        # Rep quantization can make the rebuilt card land back on (or below)
+        # the pre-adaptation distance even though the adjuster asked for more —
+        # the builder rounds the budget down to whole reps, so a small boost
+        # rebuilds to the same rep count and the session never grows. Walk the
+        # rebuild target upward past the quantization gap (bounded, so a
+        # structurally fixed session like hill repeats just keeps its dose).
+        if requested > old_distance > 0:
+            bump = requested
+            while new_distance <= old_distance and bump < requested + 2.0:
+                bump = round(bump + 0.4, 1)
+                new_distance = _rebuild_plain_quality(
+                    pd_wo,
+                    distance=bump,
+                    day=workout.day_of_week,
+                    total_km=week_total,
+                    phase=phase,
+                    pace_zones=pace_zones,
+                )
         return new_distance, True
     return new_distance, False
 

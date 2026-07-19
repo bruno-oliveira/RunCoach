@@ -236,7 +236,7 @@ def generate_tempo_run(
     # here (round(distance*0.25, 1)) drifted from the snapped step distance and
     # made the card claim a different main-set length than the steps prescribed.
     total_m = int(round(distance * 1000))
-    wu_m = workout_steps._wucd_m(total_m)
+    wu_m = workout_steps._wucd_m(total_m, hard=False)
     warmup = wu_m / 1000.0
     cooldown = warmup
     main_km = round((total_m - 2 * wu_m) / 1000.0, 1)
@@ -312,58 +312,49 @@ def generate_interval_run(
     else:
         i_pace = t_pace = m_pace = r_pace = None
 
-    # Same _wucd_m source as the step builder (see generate_tempo_run) so the
-    # warm-up / work-set distances in the description match the executable steps.
-    total_m = int(round(distance * 1000))
-    wu_m = workout_steps._wucd_m(total_m)
-    work_km = max(0.5, (total_m - 2 * wu_m) / 1000.0)
+    # Rep counts, jog recoveries, and the warm-up all come from the same
+    # interval_session_plan the step builder uses, so the description and the
+    # executable steps cite identical numbers (including the budget-filling
+    # recovery distances).
+    plan = workout_steps.interval_session_plan(distance, total_km)
+    reps_400, rec_400 = plan["reps_400"], plan["rec_400"]
+    reps_800 = plan["reps_800"]
+    reps_1000, rec_1000 = plan["reps_1000"], plan["rec_1000"]
+    reps_200, rec_200 = plan["reps_200"], plan["rec_200"]
 
     # 50 km/week threshold ensures ~5 weeks of base before 1000 m repeats are
     # prescribed. The previous 40 km gate was reachable too early (week 8 from a
     # 24 km base) without adequate cumulative readiness.
     if total_km >= 50:
-        reps_400 = max(4, round(work_km / 0.8))
-        reps_800 = max(4, round(work_km / 1.6))
-        reps_1000 = max(3, round(work_km / 2.0))
-        reps_200 = 0
         if i_pace:
             interval_workouts = [
-                f"VO\u2082max intervals: {reps_400}x400m at {i_pace} (I-pace) with 400m recovery jog.",
+                f"VO\u2082max intervals: {reps_400}x400m at {i_pace} (I-pace) with {rec_400}m recovery jog.",
                 f"Pyramid: 400m-800m-1200m-800m-400m at {i_pace} (I-pace) with equal recovery.",
                 f"Hill repeats: 8x45sec at {t_pace} (T-pace) effort with jog-down recovery.",
                 f"Yasso 800s: {reps_800}x800m at {m_pace} (M-pace).",
-                f"VO\u2082max intervals: {reps_1000}x1000m at {i_pace} (I-pace) with 400m recovery jog.",
+                f"VO\u2082max intervals: {reps_1000}x1000m at {i_pace} (I-pace) with {rec_1000}m recovery jog.",
             ]
         else:
             interval_workouts = [
-                f"VO\u2082max intervals: {reps_400}x400m at 5K pace with 400m recovery jog.",
+                f"VO\u2082max intervals: {reps_400}x400m at 5K pace with {rec_400}m recovery jog.",
                 "Pyramid intervals: 400m-800m-1200m-800m-400m with equal recovery.",
                 "Hill repeats: 8x45sec at threshold effort with jog-down recovery.",
                 f"Yasso 800s: {reps_800}x800m at marathon goal pace.",
-                f"VO\u2082max intervals: {reps_1000}x1000m at 5K pace with 400m recovery jog.",
+                f"VO\u2082max intervals: {reps_1000}x1000m at 5K pace with {rec_1000}m recovery jog.",
             ]
     else:
-        # Rep counts must FIT the budgeted distance, not inflate past it: a
-        # 10 km/week runner's interval slot is ~2 km, and a hard 4 x 400 m
-        # minimum produced sessions rivalling their long run. Two reps is the
-        # honest floor for a micro-volume week; normal volumes are unaffected
-        # (work_km / 0.8 dominates above ~3 km of work budget).
-        reps_400 = max(2, round(work_km / 0.8))
-        reps_800 = max(2, round(work_km / 1.6))
-        reps_200 = max(4, round(work_km / 0.4))
-        reps_1000 = 0
         if i_pace:
             interval_workouts = [
-                f"Speed intervals: {reps_400}x400m at {i_pace} (I-pace) with 400m recovery jog.",
+                f"Speed intervals: {reps_400}x400m at {i_pace} (I-pace) with {rec_400}m recovery jog.",
                 f"Cruise intervals: {reps_800}x800m at {t_pace} (T-pace) with 90sec rest.",
-                f"Speed work: {reps_200}x200m at {r_pace} (R-pace) with 200m recovery jog.",
+                f"Speed work: {reps_200}x200m at {r_pace} (R-pace) with {rec_200}m recovery jog.",
                 "Hill repeats: 8x30sec at hard effort with walk-down recovery.",
             ]
         else:
             interval_workouts = [
-                f"Speed intervals: {reps_400}x400m at 5K pace with 400m recovery jog.",
+                f"Speed intervals: {reps_400}x400m at 5K pace with {rec_400}m recovery jog.",
                 f"Cruise intervals: {reps_800}x800m at 10K pace with 90sec rest.",
-                f"Speed work: {reps_200}x200m at fast-but-controlled effort with 200m jog.",
+                f"Speed work: {reps_200}x200m at fast-but-controlled effort with {rec_200}m jog.",
                 "Hill repeats: 8x30sec at hard effort with walk-down recovery.",
             ]
 
@@ -377,10 +368,6 @@ def generate_interval_run(
         total_km,
         pace_zones,
         variant=variant_idx,
-        reps_400=reps_400,
-        reps_800=reps_800,
-        reps_1000=reps_1000,
-        reps_200=reps_200,
     )
     steps_km, fully_priced = workout_steps.compute_distance_from_steps_checked(steps)
     if fully_priced:

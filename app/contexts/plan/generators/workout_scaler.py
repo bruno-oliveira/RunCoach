@@ -86,6 +86,42 @@ def enforce_long_run_time_cap(
             rebuild_long_run(w, time_cap_km, pace_zones)
 
 
+def reclamp_quality_to_long_run(workouts: List[Dict[str, Any]]) -> None:
+    """Re-fit key quality sessions against the *final* long-run distance.
+
+    ``overlay_key_workout`` fits a session under the long run known at overlay
+    time, but ``fill_shortfall`` / the ratio and time caps can shrink the long
+    run afterwards — leaving a quality day above the ceiling it was fitted to.
+    Runs after the long-run clamps as the last word: reps are dropped (never
+    shortened) until the session fits, and the card re-adopts the priced step
+    total. A session whose steps can't be priced is clamped to the ceiling
+    directly.
+    """
+    from app.core.training import workout_steps as _steps_mod
+    from app.core.training.tuning import MAX_KEY_WORKOUT_VS_LONG_RUN
+
+    long_km = max(
+        (w.get("distance") or 0 for w in workouts if w.get("type") == "long"),
+        default=0,
+    )
+    ceiling = round(long_km * MAX_KEY_WORKOUT_VS_LONG_RUN, 1)
+    if ceiling <= 0:
+        return
+    for w in workouts:
+        if (
+            w.get("type") in ("tempo", "interval", "hill")
+            and w.get("key_workout_id")
+            and (w.get("distance") or 0) > ceiling
+            and w.get("steps")
+        ):
+            w["steps"] = _steps_mod.fit_steps_to_distance(w["steps"], ceiling)
+            km, priced = _steps_mod.compute_distance_from_steps_checked(w["steps"])
+            if priced and km > 0:
+                w["distance"] = round(km, 1)
+            else:
+                w["distance"] = min(w["distance"], ceiling)
+
+
 def is_prescriptive(workout: Dict[str, Any]) -> bool:
     """Workouts whose ``distance``, ``description`` and ``steps`` are tightly
     coupled and must not be rescaled by week-level budget arithmetic.

@@ -65,12 +65,15 @@ from app.core.training.workout_steps.metrics import (
 from app.core.training.workout_steps.primitives import (
     _COOLDOWN_M,
     _WARMUP_M,
+    HARD_SESSION_TYPES,
     STEP_KINDS,
     _cooldown,
     _pace_str,
     _step,
     _warmup,
     _wucd_m,
+    _wucd_m_for_work,
+    wucd_profile,
 )
 from app.core.training.workout_steps.quality import (
     _build_interval_steps_high_base,
@@ -79,6 +82,8 @@ from app.core.training.workout_steps.quality import (
     build_interval_steps,
     build_tempo_steps,
     cruise_recovery_m,
+    interval_rep_plan,
+    interval_session_plan,
 )
 from app.core.training.workout_steps.trail import (
     _build_rung_steps,
@@ -99,6 +104,8 @@ __all__ = [
     "build_split_long_steps",
     "build_tempo_steps",
     "cruise_recovery_m",
+    "interval_rep_plan",
+    "interval_session_plan",
     "build_interval_steps",
     "build_hill_steps",
     "build_meter_rep_steps",
@@ -119,12 +126,15 @@ __all__ = [
     "scale_steps",
     "total_distance_m",
     "fit_steps_to_distance",
+    "wucd_profile",
+    "HARD_SESSION_TYPES",
     # Internal helpers re-exported for cross-module and test use.
     "_step",
     "_pace_str",
     "_warmup",
     "_cooldown",
     "_wucd_m",
+    "_wucd_m_for_work",
     "_WARMUP_M",
     "_COOLDOWN_M",
     "_build_interval_steps_high_base",

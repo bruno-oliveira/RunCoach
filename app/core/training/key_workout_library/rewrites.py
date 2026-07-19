@@ -8,9 +8,15 @@ the prose never drift apart.
 import re
 from typing import Any, Callable, Dict, Optional
 
+from app.core.training.key_workout_data import WORKOUTS as _CATALOG
 from app.core.training.vdot_calculator import VDOTCalculator
-from app.core.training.workout_steps.primitives import _wucd_m
+from app.core.training.workout_steps.primitives import _wucd_m, wucd_profile
 from app.utils import format_km, truncate_km
+
+# Catalog type per workout id, for scoping the warm-up/cool-down profile when
+# a rewrite is invoked with only the id at hand (see
+# _rewrite_key_workout_description).
+_TYPE_BY_ID: Dict[str, str] = {w["id"]: w.get("type", "") for w in _CATALOG}
 
 
 def _wu_cd(d: float) -> tuple:
@@ -780,11 +786,17 @@ _STRUCTURE_REWRITES: Dict[str, Callable[[float], str]] = {
 def _rewrite_key_workout_description(
     description: str, workout_id: str, actual_distance: float
 ) -> str:
-    """Generate a distance-appropriate description for a key workout."""
+    """Generate a distance-appropriate description for a key workout.
+
+    Scopes the warm-up/cool-down profile to the workout's catalog type so the
+    prose cites the same bookends (and derived rep counts) the step builders
+    produce — even when called outside an existing :func:`wucd_profile` scope.
+    """
     rewrite_fn = _DISTANCE_REWRITES.get(workout_id)
     if not rewrite_fn:
         return description
-    return rewrite_fn(actual_distance)
+    with wucd_profile(_TYPE_BY_ID.get(workout_id)):
+        return rewrite_fn(actual_distance)
 
 
 def _derive_structure(description: str) -> str:
@@ -823,14 +835,21 @@ def reconcile_key_workout_text(
         wtype = workout.get("type") or "interval"
         return VDOTCalculator.inject_paces_into_description(text, pace_zones, wtype)
 
-    if kid in _DISTANCE_REWRITES:
-        description = _DISTANCE_REWRITES[kid](d)
-        if kid in _STRUCTURE_REWRITES:
-            structure = _STRUCTURE_REWRITES[kid](d)
-        else:
-            structure = _derive_structure(description)
-        workout["description"] = _with_paces(description)
-        workout["structure"] = _with_paces(structure)
-    elif kid in _STRUCTURE_REWRITES:
-        workout["structure"] = _with_paces(_STRUCTURE_REWRITES[kid](d))
+    # The rewrite lambdas size warm-ups (and everything derived from them:
+    # main-set budgets, rep counts) through _wucd_m, which must use the same
+    # hard/tempo profile the step builders used for this workout. The catalog
+    # type is the authority (build_key_workout_steps scopes by it); the stored
+    # slot type can differ (a cruise-interval session on an "interval" slot)
+    # and would silently size a different warm-up than the steps execute.
+    with wucd_profile(_TYPE_BY_ID.get(kid) or workout.get("type")):
+        if kid in _DISTANCE_REWRITES:
+            description = _DISTANCE_REWRITES[kid](d)
+            if kid in _STRUCTURE_REWRITES:
+                structure = _STRUCTURE_REWRITES[kid](d)
+            else:
+                structure = _derive_structure(description)
+            workout["description"] = _with_paces(description)
+            workout["structure"] = _with_paces(structure)
+        elif kid in _STRUCTURE_REWRITES:
+            workout["structure"] = _with_paces(_STRUCTURE_REWRITES[kid](d))
     return True

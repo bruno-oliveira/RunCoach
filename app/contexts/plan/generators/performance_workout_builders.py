@@ -13,6 +13,7 @@ from app.contexts.plan.generators.workout_builder_base import (
     reconcile_workout_after_cap,
 )
 from app.core.training.road_profile import classify_road
+from app.core.training.workout_steps import _wucd_m_for_work
 from app.utils import format_km
 from app.utils import format_pace as _shared_format_pace
 
@@ -78,8 +79,10 @@ def generate_vo2max_workout(
 
     recovery_time = int(interval_km * 2)
     total_interval_km = interval_km * reps
-    warmup_km = 2
-    cooldown_km = 2
+    # Shared warm-up/cool-down policy, hard profile: interval work earns the
+    # longer bookends (sized from the work block — see _wucd_m_for_work).
+    warmup_km = _wucd_m_for_work(int(round(total_interval_km * 1000)), hard=True) / 1000
+    cooldown_km = warmup_km
     warmup_pace = zones["zone_1_recovery"]["pace"]
 
     segments = [
@@ -135,8 +138,8 @@ def generate_race_pace_workout(
     # identical one-decimal value (format_km truncates; round() does not).
     race_km = round(race_km, 1)
 
-    warmup_km = 2
-    cooldown_km = 2
+    warmup_km = _wucd_m_for_work(int(round(race_km * 1000)), hard=True) / 1000
+    cooldown_km = warmup_km
     warmup_pace = zones["zone_1_recovery"]["pace"]
 
     segments = [

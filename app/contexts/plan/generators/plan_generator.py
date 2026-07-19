@@ -175,6 +175,23 @@ class TrainingPlanGenerator:
                     )
                     weekly_plan["total_km"] = new_total
 
+            # The 10% cap above shrinks flexible workouts — including the
+            # long run — after the weekly builder fitted key quality sessions
+            # against the original long run. Re-fit them here, before this
+            # week's total becomes the next week's high-water baseline, so a
+            # quality day never rivals the final long run. (The later
+            # smoothing passes only rescale recovery/taper weeks, which carry
+            # no key quality overlays.)
+            from app.contexts.plan.generators.workout_scaler import (
+                reclamp_quality_to_long_run as _reclamp_quality,
+            )
+
+            _reclamp_quality(weekly_plan["daily_workouts"])
+            weekly_plan["total_km"] = round(
+                sum(w.get("distance", 0) or 0 for w in weekly_plan["daily_workouts"]),
+                1,
+            )
+
             # Week-level scaling above can move a workout across the 3 km
             # display boundary; refresh duration hints from final distances.
             for w in weekly_plan["daily_workouts"]:

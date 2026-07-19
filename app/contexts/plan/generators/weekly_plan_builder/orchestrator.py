@@ -26,6 +26,9 @@ from app.contexts.plan.generators.workout_scaler import (
     long_run_pace_min_km as _long_run_pace_min_km,
 )
 from app.contexts.plan.generators.workout_scaler import (
+    reclamp_quality_to_long_run as _reclamp_quality_to_long_run,
+)
+from app.contexts.plan.generators.workout_scaler import (
     scale_down as _scale_down,
 )
 from app.core.coaching.coaching_notes_generator import generate_coaching_note
@@ -402,6 +405,9 @@ def build_weekly_plan(
     # Final word on the long run: clamp to the road time ceiling even after
     # shortfall-filling may have spilled volume back into it (audit E7).
     _enforce_long_run_time_cap(workouts, pace_zones, trail_profile=trail_profile)
+    # ... and re-fit key quality sessions against the long run's final length,
+    # which the ratio/time caps above may have shrunk since overlay time.
+    _reclamp_quality_to_long_run(workouts)
     actual_total_km = round(sum(w.get("distance", 0) for w in workouts), 1)
 
     attach_duration_hints(workouts, pace_zones)
