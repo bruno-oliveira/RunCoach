@@ -25,6 +25,7 @@ def _derive_fernet_key(secret: str) -> bytes:
     """Derive a 32-byte Fernet key from an arbitrary-length secret string."""
     import base64
     import hashlib
+
     digest = hashlib.sha256(secret.encode()).digest()
     return base64.urlsafe_b64encode(digest)
 
@@ -34,7 +35,10 @@ def _get_fernet():
     from cryptography.fernet import Fernet
 
     from app.infrastructure.config import settings
-    key_source = settings.encryption_key if settings.encryption_key else settings.secret_key
+
+    key_source = (
+        settings.encryption_key if settings.encryption_key else settings.secret_key
+    )
     return Fernet(_derive_fernet_key(key_source))
 
 
@@ -58,19 +62,21 @@ def upgrade() -> None:
 
         access_token = row.strava_access_token
         if access_token and not access_token.startswith("gAAAAA"):
-            update_values["strava_access_token"] = fernet.encrypt(access_token.encode()).decode()
+            update_values["strava_access_token"] = fernet.encrypt(
+                access_token.encode()
+            ).decode()
             needs_update = True
 
         refresh_token = row.strava_refresh_token
         if refresh_token and not refresh_token.startswith("gAAAAA"):
-            update_values["strava_refresh_token"] = fernet.encrypt(refresh_token.encode()).decode()
+            update_values["strava_refresh_token"] = fernet.encrypt(
+                refresh_token.encode()
+            ).decode()
             needs_update = True
 
         if needs_update:
             conn.execute(
-                sa.update(users)
-                .where(users.c.id == row.id)
-                .values(**update_values)
+                sa.update(users).where(users.c.id == row.id).values(**update_values)
             )
             updated += 1
 

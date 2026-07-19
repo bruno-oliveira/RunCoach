@@ -4,6 +4,7 @@ Revision ID: 013_add_refresh_tokens
 Revises: 012_add_adaptation_revision
 Create Date: 2026-05-20
 """
+
 from typing import Sequence, Union
 
 import sqlalchemy as sa
@@ -31,9 +32,7 @@ def upgrade() -> None:
         sa.Column("expires_at", sa.DateTime(), nullable=False),
         sa.Column("revoked_at", sa.DateTime(), nullable=True),
     )
-    op.create_index(
-        "ix_refresh_tokens_user_id", "refresh_tokens", ["user_id"]
-    )
+    op.create_index("ix_refresh_tokens_user_id", "refresh_tokens", ["user_id"])
     op.create_index(
         "ix_refresh_tokens_token_hash", "refresh_tokens", ["token_hash"], unique=True
     )

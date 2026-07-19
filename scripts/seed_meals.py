@@ -75,6 +75,7 @@ def get_all_seed_recipes() -> Dict[str, List[Dict[str, Any]]]:
     # 1. Bean recipes
     try:
         from add_bean_recipes import BeanRecipeAdder
+
         bean_recipes = BeanRecipeAdder().get_bean_recipes()
         for meal_type, recipes in bean_recipes.items():
             if meal_type in all_recipes:
@@ -85,6 +86,7 @@ def get_all_seed_recipes() -> Dict[str, List[Dict[str, Any]]]:
     # 2. Extra bean recipes
     try:
         from add_extra_bean_recipes import ExtraBeanRecipeAdder
+
         extra_bean = ExtraBeanRecipeAdder().get_extra_bean_recipes()
         for meal_type, recipes in extra_bean.items():
             if meal_type in all_recipes:
@@ -95,6 +97,7 @@ def get_all_seed_recipes() -> Dict[str, List[Dict[str, Any]]]:
     # 3. International recipes
     try:
         from add_international_recipes import InternationalRecipeAdder
+
         adder = InternationalRecipeAdder()
         for meal_type in adder.meal_files.keys():
             recipes = adder.get_international_recipes(meal_type)
@@ -112,6 +115,7 @@ def get_all_seed_recipes() -> Dict[str, List[Dict[str, Any]]]:
     # 7. More recipes
     try:
         from add_more_recipes import AdditionalRecipeAdder
+
         adder = AdditionalRecipeAdder()
         for meal_type in adder.meal_files.keys():
             recipes = adder.get_additional_recipes(meal_type)
@@ -123,6 +127,7 @@ def get_all_seed_recipes() -> Dict[str, List[Dict[str, Any]]]:
     # 8. More stew recipes
     try:
         from add_more_stew_recipes import StewRecipeAdder
+
         adder = StewRecipeAdder()
         stew_recipes = adder.get_stew_recipes()
         for meal_type, recipes in stew_recipes.items():
@@ -138,6 +143,7 @@ def get_all_seed_recipes() -> Dict[str, List[Dict[str, Any]]]:
     # 11. Stew recipes
     try:
         from add_stew_recipes import StewRecipeAdder
+
         adder = StewRecipeAdder()
         stew_recipes = adder.get_stew_recipes()
         for meal_type, recipes in stew_recipes.items():
@@ -153,6 +159,7 @@ def get_all_seed_recipes() -> Dict[str, List[Dict[str, Any]]]:
     # 14. Enhance recipes (adds new recipes + enhances existing)
     try:
         from enhance_recipes import RecipeEnhancer
+
         enhancer = RecipeEnhancer()
         for meal_type in enhancer.meal_files.keys():
             recipes = enhancer.get_new_recipes(meal_type)
@@ -198,7 +205,9 @@ def seed_meals(dry_run: bool = False, show_stats: bool = False):
         unique = deduplicate_recipes(combined)
         final_recipes[meal_type] = unique
         added = len(unique) - len(existing_recipes.get(meal_type, []))
-        print(f"  {meal_type}: {len(existing_recipes.get(meal_type, []))} -> {len(unique)} (+{added})")
+        print(
+            f"  {meal_type}: {len(existing_recipes.get(meal_type, []))} -> {len(unique)} (+{added})"
+        )
         total_final += len(unique)
 
     print(f"Total unique recipes: {total_final}")

@@ -15,9 +15,7 @@ depends_on = None
 
 def upgrade() -> None:
     with op.batch_alter_table("training_plans") as batch_op:
-        batch_op.add_column(
-            sa.Column("adaptation_history", sa.Text(), nullable=True)
-        )
+        batch_op.add_column(sa.Column("adaptation_history", sa.Text(), nullable=True))
 
 
 def downgrade() -> None:

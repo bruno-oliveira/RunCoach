@@ -70,22 +70,36 @@ def upgrade() -> None:
     )
     op.create_index("idx_training_plan_user_id", "training_plans", ["user_id"])
     op.create_index("idx_training_plan_created_at", "training_plans", ["created_at"])
-    op.create_index("idx_training_plan_share_token", "training_plans", ["share_token"], unique=True)
+    op.create_index(
+        "idx_training_plan_share_token", "training_plans", ["share_token"], unique=True
+    )
 
     op.create_table(
         "weekly_plans",
         sa.Column("id", sa.String(), primary_key=True),
-        sa.Column("training_plan_id", sa.String(), sa.ForeignKey("training_plans.id"), nullable=False),
+        sa.Column(
+            "training_plan_id",
+            sa.String(),
+            sa.ForeignKey("training_plans.id"),
+            nullable=False,
+        ),
         sa.Column("week_number", sa.Integer(), nullable=True),
         sa.Column("total_km", sa.Float(), nullable=True),
         sa.Column("workout_types", sa.Text(), nullable=True),
     )
-    op.create_index("idx_weekly_plan_training_plan_id", "weekly_plans", ["training_plan_id"])
+    op.create_index(
+        "idx_weekly_plan_training_plan_id", "weekly_plans", ["training_plan_id"]
+    )
 
     op.create_table(
         "daily_workouts",
         sa.Column("id", sa.String(), primary_key=True),
-        sa.Column("weekly_plan_id", sa.String(), sa.ForeignKey("weekly_plans.id"), nullable=False),
+        sa.Column(
+            "weekly_plan_id",
+            sa.String(),
+            sa.ForeignKey("weekly_plans.id"),
+            nullable=False,
+        ),
         sa.Column("day_of_week", sa.Integer(), nullable=True),
         sa.Column("workout_type", sa.String(), nullable=True),
         sa.Column("distance_km", sa.Float(), nullable=True),
@@ -96,25 +110,46 @@ def upgrade() -> None:
         sa.Column("hr_zone_target", sa.Integer(), nullable=True),
         sa.Column("key_workout_id", sa.String(), nullable=True),
     )
-    op.create_index("idx_daily_workout_weekly_plan_id", "daily_workouts", ["weekly_plan_id"])
+    op.create_index(
+        "idx_daily_workout_weekly_plan_id", "daily_workouts", ["weekly_plan_id"]
+    )
 
     op.create_table(
         "plan_customizations",
         sa.Column("id", sa.String(), primary_key=True),
-        sa.Column("training_plan_id", sa.String(), sa.ForeignKey("training_plans.id"), nullable=False),
+        sa.Column(
+            "training_plan_id",
+            sa.String(),
+            sa.ForeignKey("training_plans.id"),
+            nullable=False,
+        ),
         sa.Column("week_number", sa.Integer(), nullable=False),
         sa.Column("adjustment_type", sa.String(), nullable=False),
         sa.Column("adjustment_value", sa.String(), nullable=False),
         sa.Column("created_at", sa.DateTime(), nullable=True),
     )
-    op.create_index("ix_plan_customizations_training_plan_id", "plan_customizations", ["training_plan_id"])
+    op.create_index(
+        "ix_plan_customizations_training_plan_id",
+        "plan_customizations",
+        ["training_plan_id"],
+    )
 
     op.create_table(
         "run_logs",
         sa.Column("id", sa.String(), primary_key=True),
         sa.Column("user_id", sa.String(), sa.ForeignKey("users.id"), nullable=False),
-        sa.Column("training_plan_id", sa.String(), sa.ForeignKey("training_plans.id"), nullable=True),
-        sa.Column("daily_workout_id", sa.String(), sa.ForeignKey("daily_workouts.id"), nullable=True),
+        sa.Column(
+            "training_plan_id",
+            sa.String(),
+            sa.ForeignKey("training_plans.id"),
+            nullable=True,
+        ),
+        sa.Column(
+            "daily_workout_id",
+            sa.String(),
+            sa.ForeignKey("daily_workouts.id"),
+            nullable=True,
+        ),
         sa.Column("date", sa.DateTime(), nullable=True),
         sa.Column("distance_km", sa.Float(), nullable=True),
         sa.Column("duration_minutes", sa.Float(), nullable=True),
@@ -138,12 +173,16 @@ def upgrade() -> None:
     op.create_index("idx_run_log_date", "run_logs", ["date"])
     op.create_index("idx_run_log_user_date", "run_logs", ["user_id", "date"])
     op.create_index("idx_run_log_training_plan", "run_logs", ["training_plan_id"])
-    op.create_index("ix_run_logs_strava_activity_id", "run_logs", ["strava_activity_id"])
+    op.create_index(
+        "ix_run_logs_strava_activity_id", "run_logs", ["strava_activity_id"]
+    )
 
     op.create_table(
         "run_feedback",
         sa.Column("id", sa.String(), primary_key=True),
-        sa.Column("run_log_id", sa.String(), sa.ForeignKey("run_logs.id"), nullable=False),
+        sa.Column(
+            "run_log_id", sa.String(), sa.ForeignKey("run_logs.id"), nullable=False
+        ),
         sa.Column("user_id", sa.String(), sa.ForeignKey("users.id"), nullable=False),
         sa.Column("pace_feedback", sa.Text(), nullable=True),
         sa.Column("hr_zone_feedback", sa.Text(), nullable=True),
@@ -151,7 +190,12 @@ def upgrade() -> None:
         sa.Column("volume_feedback", sa.Text(), nullable=True),
         sa.Column("pattern_feedback", sa.Text(), nullable=True),
         sa.Column("overall_sentiment", sa.String(10), nullable=False),
-        sa.Column("planned_workout_id", sa.String(), sa.ForeignKey("daily_workouts.id"), nullable=True),
+        sa.Column(
+            "planned_workout_id",
+            sa.String(),
+            sa.ForeignKey("daily_workouts.id"),
+            nullable=True,
+        ),
         sa.Column("created_at", sa.DateTime(), nullable=True),
     )
     op.create_index("idx_run_feedback_run_log_id", "run_feedback", ["run_log_id"])
@@ -164,7 +208,9 @@ def upgrade() -> None:
         sa.Column("recipe_name", sa.String(), nullable=False),
         sa.Column("meal_type", sa.String(), nullable=False),
         sa.Column("recipe_data", sa.Text(), nullable=False),
-        sa.Column("created_at", sa.DateTime(), server_default=sa.text("CURRENT_TIMESTAMP")),
+        sa.Column(
+            "created_at", sa.DateTime(), server_default=sa.text("CURRENT_TIMESTAMP")
+        ),
     )
 
     op.create_table(
@@ -192,7 +238,12 @@ def upgrade() -> None:
         sa.Column("notes", sa.Text(), nullable=True),
         sa.Column("created_at", sa.DateTime(), nullable=True),
     )
-    op.create_index("idx_readiness_user_date", "readiness_logs", ["user_id", "log_date"], unique=True)
+    op.create_index(
+        "idx_readiness_user_date",
+        "readiness_logs",
+        ["user_id", "log_date"],
+        unique=True,
+    )
 
 
 def downgrade() -> None:

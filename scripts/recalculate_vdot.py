@@ -19,7 +19,9 @@ from app.core.training.vdot_calculator import VDOTCalculator
 from app.dependencies import SessionLocal
 from app.models import RunLog
 
-logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
+logging.basicConfig(
+    level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
+)
 logger = logging.getLogger(__name__)
 
 
@@ -45,7 +47,9 @@ def recalculate_all_vdots(dry_run: bool = True):
             )
 
             if new_vdot is None and old_vdot is not None:
-                pace = run.duration_minutes / run.distance_km if run.distance_km > 0 else 0
+                pace = (
+                    run.duration_minutes / run.distance_km if run.distance_km > 0 else 0
+                )
                 logger.info(
                     f"NULLIFY run {run.id}: {run.distance_km}km in {run.duration_minutes:.1f}min "
                     f"(pace {pace:.2f} min/km) — old VDOT {old_vdot} → NULL  "

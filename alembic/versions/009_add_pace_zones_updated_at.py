@@ -4,6 +4,7 @@ Revision ID: 009_add_pace_zones_updated_at
 Revises: 008_add_training_terrain
 Create Date: 2026-05-15
 """
+
 from typing import Sequence, Union
 
 import sqlalchemy as sa

@@ -13,6 +13,7 @@ Revision ID: 014_fix_favorite_recipes_id
 Revises: 013_add_refresh_tokens
 Create Date: 2026-05-20
 """
+
 from typing import Sequence, Union
 
 import sqlalchemy as sa
@@ -34,7 +35,9 @@ def upgrade() -> None:
         sa.Column("recipe_name", sa.String(), nullable=False),
         sa.Column("meal_type", sa.String(), nullable=False),
         sa.Column("recipe_data", sa.JSON(), nullable=False),
-        sa.Column("created_at", sa.DateTime(), server_default=sa.text("CURRENT_TIMESTAMP")),
+        sa.Column(
+            "created_at", sa.DateTime(), server_default=sa.text("CURRENT_TIMESTAMP")
+        ),
     )
 
 
@@ -47,5 +50,7 @@ def downgrade() -> None:
         sa.Column("recipe_name", sa.String(), nullable=False),
         sa.Column("meal_type", sa.String(), nullable=False),
         sa.Column("recipe_data", sa.String(), nullable=False),
-        sa.Column("created_at", sa.DateTime(), server_default=sa.text("CURRENT_TIMESTAMP")),
+        sa.Column(
+            "created_at", sa.DateTime(), server_default=sa.text("CURRENT_TIMESTAMP")
+        ),
     )

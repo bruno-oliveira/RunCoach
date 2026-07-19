@@ -78,10 +78,15 @@ class TestFitStepsToIntensityCaps:
     def _interval_steps(self, reps: int):
         return [
             _step("warmup", "wu", distance_m=1500),
-            _step("run", f"{reps} × 1000 m", distance_m=1000, repeat=reps,
-                  pace_zone="I", effort="hard"),
-            _step("recovery", "jog", distance_m=400, repeat=reps - 1,
-                  pace_zone="E"),
+            _step(
+                "run",
+                f"{reps} × 1000 m",
+                distance_m=1000,
+                repeat=reps,
+                pace_zone="I",
+                effort="hard",
+            ),
+            _step("recovery", "jog", distance_m=400, repeat=reps - 1, pace_zone="E"),
             _step("cooldown", "cd", distance_m=1500),
         ]
 

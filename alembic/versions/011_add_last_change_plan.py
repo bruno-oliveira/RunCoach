@@ -4,6 +4,7 @@ Revision ID: 011_add_last_change_plan
 Revises: 010_add_auto_adjust_enabled
 Create Date: 2026-05-16
 """
+
 from typing import Sequence, Union
 
 import sqlalchemy as sa

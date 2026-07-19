@@ -4,6 +4,7 @@ Revision ID: 010_add_auto_adjust_enabled
 Revises: 009_add_pace_zones_updated_at
 Create Date: 2026-05-15
 """
+
 from typing import Sequence, Union
 
 import sqlalchemy as sa

@@ -4,6 +4,7 @@ Revision ID: 006_drop_triathlon_plans
 Revises: 005_add_effort_class
 Create Date: 2026-05-05
 """
+
 from typing import Sequence, Union
 
 import sqlalchemy as sa

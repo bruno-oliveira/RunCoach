@@ -46,8 +46,12 @@ def upgrade() -> None:
 
 def downgrade() -> None:
     with op.batch_alter_table("training_plans") as batch_op:
-        batch_op.add_column(sa.Column("last_recommendation_week", sa.Integer(), nullable=True))
-        batch_op.add_column(sa.Column("pending_recommendation", sa.JSON(), nullable=True))
+        batch_op.add_column(
+            sa.Column("last_recommendation_week", sa.Integer(), nullable=True)
+        )
+        batch_op.add_column(
+            sa.Column("pending_recommendation", sa.JSON(), nullable=True)
+        )
         batch_op.add_column(sa.Column("adaptation_alert", sa.JSON(), nullable=True))
 
     with op.batch_alter_table("users") as batch_op:
@@ -70,7 +74,9 @@ def downgrade() -> None:
         sa.Column("energy", sa.Integer(), nullable=False),
         sa.Column("stress", sa.Integer(), nullable=False),
         sa.Column("score", sa.Integer(), nullable=False, server_default="50"),
-        sa.Column("status", sa.String(length=16), nullable=False, server_default="ready"),
+        sa.Column(
+            "status", sa.String(length=16), nullable=False, server_default="ready"
+        ),
         sa.Column("notes", sa.Text(), nullable=True),
         sa.Column("created_at", sa.DateTime(), nullable=True),
     )

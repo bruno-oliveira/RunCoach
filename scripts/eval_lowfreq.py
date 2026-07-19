@@ -23,7 +23,9 @@ CASES = [
 
 
 def week_metrics(week):
-    runs = [w for w in week["daily_workouts"] if w.get("type") not in ("rest", "recovery")]
+    runs = [
+        w for w in week["daily_workouts"] if w.get("type") not in ("rest", "recovery")
+    ]
     long = next((w for w in runs if w.get("type") == "long"), None)
     long_km = long.get("distance", 0) if long else 0
     q = sum(1 for w in runs if w.get("type") in ("tempo", "interval", "hill"))
@@ -78,11 +80,14 @@ def analyze(label, dist, base, weeks, runs):
     print(
         f"[{label:4} base{base:>3} {runs}r wk{weeks}] "
         f"peak{peak:>5.0f} total{sum(totals):>5.0f} peakLR{peak_lr:>5.1f} "
-        f"LRshare{lr_share*100:>3.0f}% maxLRshare{max_lr_share*100:>3.0f}% "
-        f"viol{violations} worst{worst_jump*100:>3.0f}% "
+        f"LRshare{lr_share * 100:>3.0f}% maxLRshare{max_lr_share * 100:>3.0f}% "
+        f"viol{violations} worst{worst_jump * 100:>3.0f}% "
         f"belowbase{below_base} min{min_load:>4.0f} stumble{stumbles}"
     )
-    print("   km: " + " ".join(f"{t:>4.0f}{'r' if rr else ' '}" for t, rr in zip(totals, recs)))
+    print(
+        "   km: "
+        + " ".join(f"{t:>4.0f}{'r' if rr else ' '}" for t, rr in zip(totals, recs))
+    )
     print("   LR: " + " ".join(f"{lr:>4.1f} " for lr in longs))
 
 

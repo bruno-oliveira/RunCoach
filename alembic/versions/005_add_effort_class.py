@@ -18,7 +18,9 @@ depends_on = None
 
 def upgrade() -> None:
     with op.batch_alter_table("run_logs") as batch_op:
-        batch_op.add_column(sa.Column("effort_class", sa.String(length=20), nullable=True))
+        batch_op.add_column(
+            sa.Column("effort_class", sa.String(length=20), nullable=True)
+        )
 
 
 def downgrade() -> None:

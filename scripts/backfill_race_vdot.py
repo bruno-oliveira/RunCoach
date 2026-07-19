@@ -17,7 +17,9 @@ from app.core.training.vdot_calculator import VDOTCalculator
 from app.dependencies import SessionLocal
 from app.models import RunLog
 
-logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
+logging.basicConfig(
+    level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
+)
 logger = logging.getLogger(__name__)
 
 
@@ -79,7 +81,9 @@ def backfill_race_vdot():
         for run in races_to_update:
             try:
                 if run.distance_km <= 0 or run.duration_minutes <= 0:
-                    logger.warning(f"Skipping run {run.id}: invalid distance or duration")
+                    logger.warning(
+                        f"Skipping run {run.id}: invalid distance or duration"
+                    )
                     skipped += 1
                     continue
 

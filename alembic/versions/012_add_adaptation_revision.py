@@ -4,6 +4,7 @@ Revision ID: 012_add_adaptation_revision
 Revises: 011_add_last_change_plan
 Create Date: 2026-05-18
 """
+
 from typing import Sequence, Union
 
 import sqlalchemy as sa
