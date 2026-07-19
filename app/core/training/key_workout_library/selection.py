@@ -19,6 +19,8 @@ from app.core.training.key_workout_library.rewrites import (
     _derive_structure,
     _rewrite_key_workout_description,
 )
+from app.core.training.road_profile import classify_road
+from app.core.training.trail_profile import is_trail_target
 from app.core.training.vdot_calculator import VDOTCalculator
 
 # Long-ultra-only template: a short headlamp run during the peak phase to
@@ -67,6 +69,8 @@ _KEY_WORKOUT_MIN_DISTANCE_KM: Dict[str, float] = {
     "5k_hill_sprints": 4.0,
     "trail_pyramid_intervals": 5.0,
     "trail_ladder_intervals": 5.0,
+    # 5 km of continuous work plus warm-up/cool-down never fits a smaller slot.
+    "time_trial_5k": 7.0,
 }
 
 
@@ -118,6 +122,11 @@ def _bracket_allowed(workout: Dict[str, Any], bracket: str) -> bool:
     return True
 
 
+# Canonical catalog distance per road band — non-canonical road targets
+# (e.g. a 28 km race) draw their band's catalog instead of matching nothing.
+_ROAD_BAND_CATALOG_KM = {"5k": 5.0, "10k": 10.0, "half": 21.1, "marathon": 42.2}
+
+
 def _trail_aware_distance_filter(
     target_distance: float,
     trail_profile,
@@ -128,6 +137,11 @@ def _trail_aware_distance_filter(
     is considered eligible (subject to bracket gating below). This unlocks
     the existing 15+ trail workout templates for 50/80/163 km plans without
     requiring a per-distance fan-out in every workout entry.
+
+    Road plans bucket the target into its :func:`classify_road` band and use
+    the band's canonical distance: catalog entries list exact floats
+    (5/10/21.1/42.2), so a 28 km road race would otherwise match zero key
+    workouts and every quality slot would fall back to the generic builders.
     """
     if trail_profile is not None:
         return [
@@ -135,7 +149,16 @@ def _trail_aware_distance_filter(
             for w in _WORKOUTS
             if 30.0 in w["distances"] or target_distance in w["distances"]
         ]
-    return [w for w in _WORKOUTS if target_distance in w["distances"]]
+    if is_trail_target(target_distance, trail_profile):
+        # Legacy 30 km trail sentinel: exact matching only — bucketing it
+        # into the marathon road band would leak road sessions into trail.
+        return [w for w in _WORKOUTS if target_distance in w["distances"]]
+    catalog_km = _ROAD_BAND_CATALOG_KM[classify_road(target_distance)]
+    return [
+        w
+        for w in _WORKOUTS
+        if target_distance in w["distances"] or catalog_km in w["distances"]
+    ]
 
 
 def _filter_candidates(

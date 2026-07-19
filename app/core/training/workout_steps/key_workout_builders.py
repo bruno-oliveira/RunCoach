@@ -145,6 +145,144 @@ def build_km_rep_steps(
     return steps
 
 
+def _snap_rep_m(rep_m: int) -> int:
+    """Snap a rep distance to 100 m (≥1 km) or 50 m (<1 km) boundaries."""
+    if rep_m >= 1000:
+        return int(round(rep_m / 100.0)) * 100
+    return max(50, int(round(rep_m / 50.0)) * 50)
+
+
+def build_distance_ladder_steps(
+    distance_km: float,
+    pace_zones: Optional[Dict] = None,
+    *,
+    pattern_m: tuple = (2000, 1000, 1000),
+    work_zone: str = "T",
+    float_m: int = 500,
+    work_effort: str = "comfortably hard",
+) -> List[Dict[str, Any]]:
+    """Warm-up + unequal work reps (e.g. 2-1-1 km) with steady floats + cool-down.
+
+    The pattern is scaled down proportionally (snapped, 400 m floor) when the
+    warm-up/cool-down-adjusted budget can't hold it, so a small week still
+    gets a recognisable ladder instead of an overrunning session.
+    """
+    if distance_km <= 0 or not pattern_m:
+        return []
+    total_m = int(round(distance_km * 1000))
+    wu_m = _wucd_m(total_m)
+    cd_m = wu_m
+    floats_total = float_m * (len(pattern_m) - 1)
+    work_budget = max(0, total_m - wu_m - cd_m - floats_total)
+    pattern_total = sum(pattern_m)
+    scale = min(1.0, work_budget / pattern_total) if pattern_total else 0.0
+    reps = [max(400, _snap_rep_m(int(round(m * scale)))) for m in pattern_m]
+
+    steps: List[Dict[str, Any]] = [_warmup(pace_zones, wu_m)]
+    for i, rep_m in enumerate(reps):
+        steps.append(
+            _step(
+                "run",
+                f"{format_km(rep_m / 1000.0)} km",
+                distance_m=rep_m,
+                pace_zone=work_zone,
+                pace_str=_pace_str(work_zone, pace_zones),
+                effort=work_effort,
+            )
+        )
+        if i < len(reps) - 1:
+            steps.append(
+                _step(
+                    "recovery",
+                    f"{float_m} m easy float",
+                    distance_m=float_m,
+                    pace_zone="E",
+                    pace_str=_pace_str("E", pace_zones),
+                    effort="easy float",
+                )
+            )
+    steps.append(_cooldown(pace_zones, cd_m))
+    return steps
+
+
+def build_compound_rep_steps(
+    distance_km: float,
+    pace_zones: Optional[Dict] = None,
+    *,
+    blocks: List[tuple],
+    rec_m: int = 200,
+) -> List[Dict[str, Any]]:
+    """Warm-up + sequential rep blocks (e.g. 4 × 400 m then 4 × 200 m) + cool-down.
+
+    ``blocks`` is a list of ``(reps, rep_m, zone, effort)`` tuples run in
+    order, each rep followed by a ``rec_m`` jog. The caller sizes the rep
+    counts from the distance budget (see the ``_compound_*`` helpers in
+    rewrites.py) so the blocks fit the session.
+    """
+    if distance_km <= 0 or not blocks:
+        return []
+    total_m = int(round(distance_km * 1000))
+    wu_m = _wucd_m(total_m)
+    steps: List[Dict[str, Any]] = [_warmup(pace_zones, wu_m)]
+    for reps, rep_m, zone, effort in blocks:
+        if reps <= 0 or rep_m <= 0:
+            continue
+        steps.append(
+            _step(
+                "run",
+                f"{reps} × {rep_m} m",
+                distance_m=rep_m,
+                repeat=reps,
+                pace_zone=zone,
+                pace_str=_pace_str(zone, pace_zones),
+                effort=effort,
+            )
+        )
+        steps.append(
+            _step(
+                "recovery",
+                f"{rec_m} m easy jog between reps",
+                distance_m=rec_m,
+                repeat=reps,
+                pace_zone="E",
+                pace_str=_pace_str("E", pace_zones),
+                effort="easy jog",
+            )
+        )
+    steps.append(_cooldown(pace_zones, wu_m))
+    return steps
+
+
+def build_time_trial_steps(
+    distance_km: float,
+    pace_zones: Optional[Dict] = None,
+    *,
+    tt_m: int = 5000,
+) -> List[Dict[str, Any]]:
+    """Warm-up + a fixed-distance time trial + cool-down.
+
+    The trial distance is honoured literally; whatever budget remains splits
+    evenly into warm-up and cool-down (400 m floor each — the min-distance
+    floor in selection.py keeps the session large enough to hold that).
+    """
+    if distance_km <= 0 or tt_m <= 0:
+        return []
+    total_m = int(round(distance_km * 1000))
+    wu_m = max(400, (total_m - tt_m) // 2)
+    return [
+        _warmup(pace_zones, wu_m),
+        _step(
+            "run",
+            f"{format_km(tt_m / 1000.0)} km time trial",
+            distance_m=tt_m,
+            pace_zone="10K",
+            pace_str=_pace_str("10K", pace_zones),
+            effort="even, honest max effort",
+        ),
+        _cooldown(pace_zones, wu_m),
+    ]
+
+
 def build_fartlek_steps(
     distance_km: float,
     pace_zones: Optional[Dict] = None,

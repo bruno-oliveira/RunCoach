@@ -9,12 +9,16 @@ from typing import Any, Callable, Dict, List, Optional
 
 from app.core.training import workout_steps as _steps_mod
 from app.core.training.key_workout_library.rewrites import (
+    _compound_400_200_reps,
+    _compound_800_400_reps,
     _fartlek_reps,
     _mile_rep_reps,
     _mp_block_reps,
     _mp_cutdown_reps,
+    _on_off_k_reps,
     _over_under_reps,
     _pyramid_pattern,
+    _rolling_400_reps,
     _thirty_thirty_reps,
     _vo2max_400_reps,
     _vo2max_km_reps,
@@ -137,6 +141,48 @@ _KEY_WORKOUT_STEP_BUILDERS: Dict[
     # -- marathon-pace blocks --
     "marathon_mp_blocks": lambda d, pz: _steps_mod.build_km_rep_steps(
         d, pz, reps=_mp_block_reps(d), work_zone="M", recovery_s=120
+    ),
+    # -- Runna-inspired build/peak sessions --
+    "half_on_off_ks": lambda d, pz: _steps_mod.build_meter_rep_steps(
+        d,
+        pz,
+        reps=_on_off_k_reps(d),
+        rep_m=1000,
+        work_zone="T",
+        recovery_label="~1 km easy float between",
+    ),
+    "rolling_400s": lambda d, pz: _steps_mod.build_meter_rep_steps(
+        d,
+        pz,
+        reps=_rolling_400_reps(d),
+        rep_m=400,
+        work_zone="10K",
+        recovery_label="steady float between surges",
+    ),
+    "tempo_2_1_1": lambda d, pz: _steps_mod.build_distance_ladder_steps(
+        d, pz, pattern_m=(2000, 1000, 1000), work_zone="T", float_m=500
+    ),
+    "intervals_400s_into_200s": lambda d, pz: _steps_mod.build_compound_rep_steps(
+        d,
+        pz,
+        blocks=[
+            (_compound_400_200_reps(d)[0], 400, "I", "hard"),
+            (_compound_400_200_reps(d)[1], 200, "R", "fast and relaxed"),
+        ],
+    ),
+    "intervals_800s_into_400s": lambda d, pz: _steps_mod.build_compound_rep_steps(
+        d,
+        pz,
+        blocks=[
+            (_compound_800_400_reps(d)[0], 800, "I", "hard"),
+            (_compound_800_400_reps(d)[1], 400, "I", "quicker — shift gears"),
+        ],
+    ),
+    "time_trial_5k": lambda d, pz: _steps_mod.build_time_trial_steps(
+        d, pz, tt_m=5000
+    ),
+    "race_practice_long": lambda d, pz: _steps_mod.build_split_long_steps(
+        d, pz, easy_mult=0.60, finish_mult=0.40
     ),
     # -- fartlek / over-under (duration on-reps) --
     "10k_fartlek": lambda d, pz: _steps_mod.build_fartlek_steps(

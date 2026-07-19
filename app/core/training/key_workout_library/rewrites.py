@@ -216,6 +216,65 @@ def _over_under_reps(
     return max(lo, min(hi, reps))
 
 
+def _snap_rep_m(rep_m: int) -> int:
+    """Snap a rep distance to 100 m (≥1 km) or 50 m (<1 km) boundaries."""
+    if rep_m >= 1000:
+        return int(round(rep_m / 100.0)) * 100
+    return max(50, int(round(rep_m / 50.0)) * 50)
+
+
+def _main_m(d: float) -> int:
+    """Warm-up/cool-down-adjusted work budget in metres."""
+    total_m = int(round(d * 1000))
+    wu_m = _wucd_m(total_m)
+    return max(0, total_m - 2 * wu_m)
+
+
+def _on_off_k_reps(d: float) -> int:
+    """On-off kilometre couplets (1 km on + 1 km float = 2 km per rep)."""
+    return max(2, min(5, _main_m(d) // 2000))
+
+
+def _rolling_400_reps(d: float) -> int:
+    """Rolling-400 couplets (400 m surge + 600 m float = 1 km per rep)."""
+    return max(4, min(10, _main_m(d) // 1000))
+
+
+def _compound_400_200_reps(d: float) -> tuple:
+    """(400m-rep count, 200m-rep count) for the 400s-into-200s compound set.
+
+    ~60% of the work budget goes to the 400 m block (400 m + 200 m jog per
+    rep), the rest to the 200 m block (200 m + 200 m jog per rep).
+    """
+    main = _main_m(d)
+    return (
+        max(3, min(8, round(main * 0.6 / 600))),
+        max(4, min(8, round(main * 0.4 / 400))),
+    )
+
+
+def _compound_800_400_reps(d: float) -> tuple:
+    """(800m-rep count, 400m-rep count) for the 800s-into-400s compound set."""
+    main = _main_m(d)
+    return (
+        max(2, min(5, round(main * 0.6 / 1000))),
+        max(3, min(6, round(main * 0.4 / 600))),
+    )
+
+
+def _ladder_2_1_1_m(d: float) -> list:
+    """Scaled 2-1-1 km ladder rep distances (m), mirroring the step builder.
+
+    Must reproduce ``build_distance_ladder_steps``'s arithmetic exactly
+    (2 × 500 m floats, proportional scale-down, snapping, 400 m floor) so the
+    description cites the distances the steps execute.
+    """
+    pattern = (2000, 1000, 1000)
+    work_budget = max(0, _main_m(d) - 500 * (len(pattern) - 1))
+    scale = min(1.0, work_budget / sum(pattern))
+    return [max(400, _snap_rep_m(int(round(m * scale)))) for m in pattern]
+
+
 def _proprioception_circuit_cadence(d: float) -> str:
     """Phrase the agility-circuit cadence so it fits the run distance.
 
@@ -453,6 +512,54 @@ _DISTANCE_REWRITES: Dict[str, Callable[[float], str]] = {
         f"Run {format_km(d)}km alternating surfaces (pavement, grass, gravel, dirt). "
         f"{_proprioception_circuit_cadence(d)} a 2-min agility circuit: "
         f"10 single-leg hops each side, 20m lateral shuffles, 20m backward running."
+    ),
+    # -- Runna-inspired build/peak sessions --
+    "half_on_off_ks": lambda d: (
+        f"Warm up {format_km(_wu_cd(d)[0])}km easy. Run {_on_off_k_reps(d)} x "
+        f"(1 km at threshold pace / 1 km easy float) as one continuous block — "
+        f"the float is genuinely easy, reset and go again. "
+        f"Cool down {format_km(_wu_cd(d)[1])}km easy."
+    ),
+    "rolling_400s": lambda d: (
+        f"Warm up {format_km(_wu_cd(d)[0])}km easy. Run {_rolling_400_reps(d)} x "
+        f"(400 m surge at 10K effort / 600 m steady float) with no full stops — "
+        f"keep the float honest, not a jog-recovery. "
+        f"Cool down {format_km(_wu_cd(d)[1])}km easy."
+    ),
+    "tempo_2_1_1": lambda d: (
+        f"Warm up {format_km(_wu_cd(d)[0])}km easy. Run "
+        f"{format_km(_ladder_2_1_1_m(d)[0] / 1000.0)}km, "
+        f"{format_km(_ladder_2_1_1_m(d)[1] / 1000.0)}km, then "
+        f"{format_km(_ladder_2_1_1_m(d)[2] / 1000.0)}km at threshold pace "
+        f"with 500 m easy floats between. The shrinking reps let you finish "
+        f"strong. Cool down {format_km(_wu_cd(d)[1])}km easy."
+    ),
+    "intervals_400s_into_200s": lambda d: (
+        f"Warm up {format_km(_wu_cd(d)[0])}km easy. Run "
+        f"{_compound_400_200_reps(d)[0]} x 400m at 5K effort with 200 m jog, "
+        f"then {_compound_400_200_reps(d)[1]} x 200m fast-and-relaxed with "
+        f"200 m jog. The 200s should feel quicker than the 400s — finish the "
+        f"session faster than you started. "
+        f"Cool down {format_km(_wu_cd(d)[1])}km easy."
+    ),
+    "intervals_800s_into_400s": lambda d: (
+        f"Warm up {format_km(_wu_cd(d)[0])}km easy. Run "
+        f"{_compound_800_400_reps(d)[0]} x 800m at 5K-10K effort with 200 m "
+        f"jog, then {_compound_800_400_reps(d)[1]} x 400m slightly quicker "
+        f"with 200 m jog. Shifting gears when already tired is the point. "
+        f"Cool down {format_km(_wu_cd(d)[1])}km easy."
+    ),
+    "time_trial_5k": lambda d: (
+        f"Warm up {format_km(max(0.4, (d - 5.0) / 2))}km easy with a few "
+        f"strides. Run a 5 km time trial: even, honest max effort — start "
+        f"controlled, empty the tank over the final kilometre. Note your "
+        f"time. Cool down {format_km(max(0.4, (d - 5.0) / 2))}km very easy."
+    ),
+    "race_practice_long": lambda d: (
+        f"Race rehearsal: run {format_km(d)}km with the first "
+        f"{format_km(d * 0.60)}km easy and the final "
+        f"{format_km(d * 0.40)}km at goal race pace. Wear your race "
+        f"kit and shoes, and fuel exactly as you will on race day."
     ),
     # -- Long-run variants (Half Marathon) --
     "half_long_alternating_mp": lambda d: (

@@ -730,6 +730,162 @@ _WORKOUTS_SHORT: List[Dict] = [
             "neuromuscular cost of short, sharp intervals."
         ),
     },
+    # -- Runna-inspired sessions (on-off ks, rolling surges, ladders,
+    #    compound sets, time trial, race rehearsal) ---------------------------
+    {
+        "id": "half_on_off_ks",
+        "distances": [21.1, 42.2],
+        "phases": ["build", "peak"],
+        "type": "tempo",
+        "terrain": ["any"],
+        "name": "On-Off Kilometers",
+        "structure": "3-5 × (1 km at threshold / 1 km easy float), continuous",
+        "description": (
+            "Warm up 1km easy. Run 3-5 × (1 km at threshold pace / 1 km easy "
+            "float) as one continuous block — the float is genuinely easy, "
+            "reset and go again. Cool down 1km easy."
+        ),
+        "intensity": "medium",
+        "target_zone": 4,
+        "pace_zone": "T",
+        "rationale": (
+            "Alternating full kilometres on and off teaches you to relax "
+            "between efforts without stopping — the metronome for holding "
+            "goal pace through a race's surges and recoveries."
+        ),
+    },
+    {
+        "id": "rolling_400s",
+        "distances": [10.0, 21.1, 42.2],
+        "phases": ["build"],
+        "type": "tempo",
+        "terrain": ["any"],
+        "name": "Rolling 400s",
+        "structure": "4-10 × (400 m surge at 10K effort / 600 m steady float)",
+        "description": (
+            "Warm up 1km easy. Run 4-10 × (400 m surge at 10K effort / 600 m "
+            "steady float) with no full stops — keep the float honest, not a "
+            "jog-recovery. Cool down 1km easy."
+        ),
+        "intensity": "medium",
+        "target_zone": 4,
+        "pace_zone": "10K",
+        "rationale": (
+            "Rolling surges inside a continuous run build gear-changing "
+            "without the full cost of a track session — the steady floats "
+            "keep the aerobic engine loaded the whole way."
+        ),
+    },
+    {
+        "id": "tempo_2_1_1",
+        "distances": [21.1, 42.2],
+        "phases": ["build", "peak"],
+        "type": "tempo",
+        "terrain": ["any"],
+        "name": "Tempo 2-1-1",
+        "structure": "2 km + 1 km + 1 km at threshold with 500 m floats",
+        "description": (
+            "Warm up 1km easy. Run 2 km, 1 km, then 1 km at threshold pace "
+            "with 500 m easy floats between. The shrinking reps let you "
+            "finish strong. Cool down 1km easy."
+        ),
+        "intensity": "medium",
+        "target_zone": 4,
+        "pace_zone": "T",
+        "rationale": (
+            "A descending ladder front-loads the longest rep while you're "
+            "fresh and rewards you with shorter ones as fatigue builds — "
+            "threshold volume that ends on a win, not a grind."
+        ),
+    },
+    {
+        "id": "intervals_400s_into_200s",
+        "distances": [5.0, 10.0],
+        "phases": ["build", "peak"],
+        "type": "interval",
+        "terrain": ["any"],
+        "name": "400s into 200s",
+        "structure": "3-8 × 400m at 5K effort, then 4-8 × 200m fast, 200m jogs",
+        "description": (
+            "Warm up 1km easy. Run 3-8 × 400m at 5K effort with 200 m jog, "
+            "then 4-8 × 200m fast-and-relaxed with 200 m jog. The 200s should "
+            "feel quicker than the 400s — finish the session faster than you "
+            "started. Cool down 1km easy."
+        ),
+        "intensity": "high",
+        "target_zone": 5,
+        "pace_zone": "I",
+        "rationale": (
+            "Dropping to faster, shorter reps once the 400s have loaded the "
+            "legs trains a finishing kick on tired legs — the compound set "
+            "does what neither block alone can."
+        ),
+    },
+    {
+        "id": "intervals_800s_into_400s",
+        "distances": [10.0, 21.1],
+        "phases": ["build", "peak"],
+        "type": "interval",
+        "terrain": ["any"],
+        "name": "800s into 400s",
+        "structure": "2-5 × 800m at 5K-10K effort, then 3-6 × 400m quicker",
+        "description": (
+            "Warm up 1km easy. Run 2-5 × 800m at 5K-10K effort with 200 m "
+            "jog, then 3-6 × 400m slightly quicker with 200 m jog. Shifting "
+            "gears when already tired is the point. Cool down 1km easy."
+        ),
+        "intensity": "high",
+        "target_zone": 5,
+        "pace_zone": "I",
+        "rationale": (
+            "The 800s accumulate VO2max time; the closing 400s ask for a "
+            "gear change on fatigued legs — the exact demand of the last "
+            "kilometre of a 10K or a half's finishing push."
+        ),
+    },
+    {
+        "id": "time_trial_5k",
+        "distances": [10.0, 21.1, 42.2],
+        "phases": ["build"],
+        "type": "tempo",
+        "terrain": ["any"],
+        "name": "5K Time Trial",
+        "structure": "5 km time trial at even, honest max effort",
+        "description": (
+            "Warm up easy with a few strides. Run a 5 km time trial: even, "
+            "honest max effort — start controlled, empty the tank over the "
+            "final kilometre. Note your time. Cool down very easy."
+        ),
+        "intensity": "high",
+        "target_zone": 4,
+        "pace_zone": "10K",
+        "rationale": (
+            "A mid-plan benchmark: the time tells you whether training "
+            "paces still match your fitness, and racing solo rehearses "
+            "pacing discipline no interval session can."
+        ),
+    },
+    {
+        "id": "race_practice_long",
+        "distances": [21.1, 42.2],
+        "phases": ["peak"],
+        "type": "long",
+        "terrain": ["any"],
+        "name": "Race Practice Long Run",
+        "structure": "60% easy, final 40% at goal race pace — full race rehearsal",
+        "description": (
+            "Race rehearsal: run the first 60% easy and the final 40% at "
+            "goal race pace. Wear your race kit and shoes, and fuel exactly "
+            "as you will on race day."
+        ),
+        "intensity": "medium",
+        "target_zone": 3,
+        "pace_zone": "M",
+        "rationale": (
+            "Everything gets tested — kit, shoes, fueling, and holding goal "
+            "pace on tired legs. Come race day, nothing is new."
+        ),
+    },
 ]
 
 # Combined list of all workouts
