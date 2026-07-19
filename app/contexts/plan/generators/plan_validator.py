@@ -138,20 +138,15 @@ def validate_quality_run_steps(workout: dict) -> tuple[bool, str]:
                 f"(zones={work_zones})",
             )
 
-    # Distance consistency check.
-    # Key-workout overlays reconcile their own distance via overlay_key_workout;
-    # those workouts intentionally include duration-based reps (strides, hill
-    # surges) whose physical distance sits outside the prescribed budget and is
-    # priced separately by the overlay.  Skip the distance check for them to
-    # avoid flagging correct behaviour.
+    # Distance consistency check. Cards are reconciled from priced steps for
+    # both generic builders and key-workout overlays, so the reported distance
+    # must track the step total closely; the small band absorbs one-decimal
+    # rounding and the snap-to-50/100 m grid.
     reported = workout.get("distance") or 0
-    if reported > 0 and not workout.get("key_workout_id"):
+    if reported > 0:
         step_km, fully_priced = compute_distance_from_steps_checked(steps)
         if fully_priced and step_km > 0:
-            # Tolerance scales with distance: fixed 0.3 km floor plus 40% of
-            # workout distance to absorb interval/hill variants whose prescribed
-            # rep structure may diverge from the allocated budget.
-            tolerance = 0.3 + reported * 0.40
+            tolerance = 0.3 + reported * 0.10
             if abs(step_km - reported) > tolerance:
                 return (
                     False,
