@@ -243,11 +243,13 @@ def generate_tempo_run(
     variant_idx = day % 3
 
     # Cruise intervals (variant 1): each rep distance must match build_tempo_steps
-    # which snaps rep_m to 100m (≥1km) or 50m (<1km) boundaries so format_km
-    # is lossless. Mirror that snapping here so the description cites the exact
-    # per-rep distance the steps execute — raw main_m // 3 diverges on most budgets.
+    # which budgets 2 jog recoveries (scaled to the session) and snaps rep_m to
+    # 100m (≥1km) or 50m (<1km) boundaries so format_km is lossless. Mirror
+    # that math here so the description cites the exact distances the steps
+    # execute.
     main_m = max(500, total_m - wu_m - wu_m)
-    rep_m_raw = main_m // 3
+    rec_m_cruise = workout_steps.cruise_recovery_m(main_m)
+    rep_m_raw = max(600, main_m - 2 * rec_m_cruise) // 3
     if rep_m_raw >= 1000:
         rep_m_cruise = int(round(rep_m_raw / 100.0)) * 100
     else:
@@ -259,13 +261,13 @@ def generate_tempo_run(
         t_pace = pace_zones["T"]["pace_str"]
         tempo_variations = [
             f"Tempo run: {format_km(warmup)}km warmup, {format_km(main_km)}km at {t_pace} (T-pace), {format_km(cooldown)}km cooldown.",
-            f"Cruise intervals: 3x{rep_km_cruise}km at {t_pace} (T-pace) with 3min recovery.",
+            f"Cruise intervals: 3x{rep_km_cruise}km at {t_pace} (T-pace) with {rec_m_cruise}m jog recovery.",
             f"Tempo run with surges: {format_km(warmup)}km warmup, {format_km(main_km)}km at {t_pace} (T-pace) with 4x30sec faster surges, {format_km(cooldown)}km cooldown.",
         ]
     else:
         tempo_variations = [
             f"Tempo run: {format_km(warmup)}km warmup, {format_km(main_km)}km at threshold pace, {format_km(cooldown)}km cooldown.",
-            f"Cruise intervals: 3x{rep_km_cruise}km at tempo pace with 3min recovery.",
+            f"Cruise intervals: 3x{rep_km_cruise}km at tempo pace with {rec_m_cruise}m jog recovery.",
             f"Tempo run with surges: {format_km(warmup)}km warmup, {format_km(main_km)}km at threshold effort with 4x30sec faster surges, {format_km(cooldown)}km cooldown.",
         ]
 
@@ -273,15 +275,23 @@ def generate_tempo_run(
         tempo_variations[variant_idx], pace_zones or {}, "tempo"
     )
 
+    steps = workout_steps.build_tempo_steps(distance, pace_zones, variant=variant_idx)
+    # Cruise intervals (variant 1) add jog recoveries on top of the distance
+    # budget, so reconcile the displayed total from the executable steps —
+    # same policy as generate_interval_run: the card shows what the runner
+    # actually covers.
+    steps_km, fully_priced = workout_steps.compute_distance_from_steps_checked(steps)
+    if fully_priced and steps_km > 0:
+        actual_km = round(steps_km, 1)
+    else:
+        actual_km = round(max(distance, steps_km), 1)
     return {
         "day": day,
         "type": "tempo",
-        "distance": round(distance, 1),
+        "distance": actual_km if actual_km > 0 else round(distance, 1),
         "intensity": "medium",
         "description": description,
-        "steps": workout_steps.build_tempo_steps(
-            distance, pace_zones, variant=variant_idx
-        ),
+        "steps": steps,
     }
 
 

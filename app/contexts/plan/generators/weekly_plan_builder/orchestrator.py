@@ -212,6 +212,7 @@ def generate_daily_workouts(
     )
 
     easy_run_idx = 0
+    quality_slot_counts: Dict[str, int] = {}
     workouts: List[Dict[str, Any]] = []
 
     for day in range(7):
@@ -262,6 +263,12 @@ def generate_daily_workouts(
         # session still supplies the intensity.
         skip_overlay = workout_type == "long" and easy_runs == 0
         if not skip_overlay:
+            # 0-based count of same-type quality slots already overlaid this
+            # week: a second tempo/interval slot must rotate to a different
+            # library session instead of duplicating the first.
+            slot_index = quality_slot_counts.get(workout_type, 0)
+            if workout_type in ("tempo", "interval", "hill"):
+                quality_slot_counts[workout_type] = slot_index + 1
             overlay_key_workout(
                 workout,
                 workout_type,
@@ -272,6 +279,7 @@ def generate_daily_workouts(
                 pace_zones,
                 trail_profile=trail_profile,
                 max_distance=quality_ceiling,
+                slot_index=slot_index,
             )
 
         workout["coaching_rationale"] = generate_coaching_note(

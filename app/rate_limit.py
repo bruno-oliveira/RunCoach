@@ -58,3 +58,6 @@ strava_callback_limiter = RateLimiter(max_requests=5, window_seconds=60)
 account_deletion_limiter = RateLimiter(max_requests=3, window_seconds=3600)
 # Plan generation / PDF download are CPU-intensive; cap per-IP to avoid resource exhaustion.
 plan_generation_limiter = RateLimiter(max_requests=5, window_seconds=60)
+# FIT files are cheap to build and downloaded in batches (a week of workouts
+# at a time), so they get their own, more generous budget than PDF/plan gen.
+fit_download_limiter = RateLimiter(max_requests=30, window_seconds=60)

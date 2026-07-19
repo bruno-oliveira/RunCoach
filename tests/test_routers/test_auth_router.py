@@ -108,6 +108,69 @@ class TestGoogleAuth:
         user = test_db.query(User).filter(User.google_id == "google-merge-123").first()
         assert user is not None
 
+    def test_verified_email_links_existing_account(self, auth_client, test_db):
+        """A verified Google email links to the existing account with that email."""
+        existing = User(id="email-owner-1", email="owner@example.com")
+        test_db.add(existing)
+        test_db.commit()
+
+        google_data = {
+            "sub": "google-link-123",
+            "email": "owner@example.com",
+            "email_verified": True,
+            "name": "Owner",
+            "picture": None,
+        }
+
+        with patch(
+            "app.contexts.auth.auth_service.AuthService.verify_google_token",
+            new_callable=AsyncMock,
+            return_value=google_data,
+        ):
+            response = auth_client.post(
+                "/api/auth/google",
+                json={"id_token": "valid-google-token"},
+            )
+
+        assert response.status_code == 200
+        test_db.refresh(existing)
+        assert existing.google_id == "google-link-123"
+
+    def test_unverified_email_collision_is_rejected(self, auth_client, test_db):
+        """An unverified Google email must not take over an existing account."""
+        existing = User(id="email-owner-2", email="victim@example.com")
+        test_db.add(existing)
+        test_db.commit()
+
+        google_data = {
+            "sub": "google-attacker-123",
+            "email": "victim@example.com",
+            "email_verified": False,
+            "name": "Attacker",
+            "picture": None,
+        }
+
+        with patch(
+            "app.contexts.auth.auth_service.AuthService.verify_google_token",
+            new_callable=AsyncMock,
+            return_value=google_data,
+        ):
+            response = auth_client.post(
+                "/api/auth/google",
+                json={"id_token": "valid-google-token"},
+            )
+
+        assert response.status_code == 403
+        test_db.refresh(existing)
+        assert existing.google_id is None
+        # No new account was minted for the attacker's identity either.
+        attacker = (
+            test_db.query(User)
+            .filter(User.google_id == "google-attacker-123")
+            .first()
+        )
+        assert attacker is None
+
 
 class TestGetMe:
     """Tests for GET /api/auth/me."""

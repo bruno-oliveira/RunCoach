@@ -22,7 +22,21 @@ def schedule_workout_types(
         distribution["long"] -= 1
 
     if not is_recovery_week:
-        quality_slots = [2, 3, 4]
+        quality_count = sum(
+            distribution.get(t, 0) for t in ("hill", "interval", "tempo")
+        )
+        # Space hard days apart. A single quality session sits mid-week
+        # (day 4). Two sessions go on days 1 and 4: the recovery day and an
+        # easy day separate them, and an easy day always buffers the long
+        # run — filling consecutive slots put interval + tempo on
+        # back-to-back days. Three (defensive; the distribution caps at
+        # two) alternate hard/easy across the week.
+        if quality_count >= 3:
+            quality_slots = [0, 2, 4]
+        elif quality_count == 2:
+            quality_slots = [0, 3]
+        else:
+            quality_slots = [3]
         for day_idx in quality_slots:
             if workout_types[day_idx] is not None:
                 continue

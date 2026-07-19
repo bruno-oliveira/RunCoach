@@ -187,6 +187,7 @@ def overlay_key_workout(
     trail_profile=None,
     force_id: Optional[str] = None,
     max_distance: Optional[float] = None,
+    slot_index: int = 0,
 ) -> None:
     """Attach key workout metadata, description, and steps for quality sessions.
 
@@ -202,6 +203,11 @@ def overlay_key_workout(
     library prescription whose steps would exceed it is trimmed (reps dropped,
     not rewritten short) so quality work never reaches the long run; sessions
     already within the ceiling keep their full prescribed length.
+
+    ``slot_index`` is the 0-based count of same-type quality slots already
+    filled this week. Without it, a week granted two slots of one type
+    (e.g. marathon peak's ``{"tempo": 2}``) selects the identical session
+    twice — same inputs, same rotation index.
     """
     if workout_type not in ("interval", "tempo", "hill", "long"):
         return
@@ -220,6 +226,7 @@ def overlay_key_workout(
             workout_type,
             terrain=terrain,
             trail_profile=trail_profile,
+            slot_index=slot_index,
         )
     if not key_wk:
         return
@@ -325,6 +332,7 @@ class KeyWorkoutLibrary:
         workout_type: str = "interval",
         terrain: Optional[str] = None,
         trail_profile=None,
+        slot_index: int = 0,
     ) -> Optional[Dict]:
         """Select a key workout for the given distance, phase, and week.
 
@@ -367,8 +375,10 @@ class KeyWorkoutLibrary:
         # window spreads the catalog so build and peak — and different race
         # distances — showcase different sessions, while staying fully
         # reproducible (a pure function of the inputs, no salted hashing).
+        # ``slot_index`` advances the rotation for a second same-type slot in
+        # the same week so it lands on a different candidate than the first.
         offset = _rotation_offset(target_distance, phase, workout_type)
-        return candidates[(week_in_phase + offset) % len(candidates)]
+        return candidates[(week_in_phase + offset + slot_index) % len(candidates)]
 
     @classmethod
     def get_by_id(cls, workout_id: str) -> Optional[Dict]:

@@ -70,6 +70,7 @@ from app.core.training.workout_steps.primitives import (
     _wucd_m,
 )
 from app.core.training.workout_steps.quality import (
+    cruise_recovery_m,
     _build_interval_steps_high_base,
     _build_interval_steps_low_base,
     build_hill_steps,
@@ -94,6 +95,7 @@ __all__ = [
     "build_depletion_long_steps",
     "build_split_long_steps",
     "build_tempo_steps",
+    "cruise_recovery_m",
     "build_interval_steps",
     "build_hill_steps",
     "build_meter_rep_steps",

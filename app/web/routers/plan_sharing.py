@@ -30,7 +30,7 @@ from app.infrastructure.export.pdf_generator import PDFGenerator
 from app.infrastructure.export.plan_export_dto import PlanExportDTO
 from app.infrastructure.integrations.fit_service import FITService
 from app.models import User
-from app.rate_limit import plan_generation_limiter
+from app.rate_limit import fit_download_limiter, plan_generation_limiter
 from app.template_helpers import create_templates
 
 logger = logging.getLogger(__name__)
@@ -248,7 +248,7 @@ def download_fit(
     current_user: Optional[User] = Depends(get_optional_user),
 ) -> Response:
     """Download a single workout as a Garmin-compatible .fit file."""
-    plan_generation_limiter.check(request)
+    fit_download_limiter.check(request)
     training_plan = get_plan_or_404(plan_id, db, current_user, anonymous_user_id)
 
     plan_data = training_plan.plan_data or []

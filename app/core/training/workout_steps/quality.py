@@ -15,6 +15,17 @@ from app.core.training.workout_steps.primitives import (
 )
 from app.utils import format_km
 
+def cruise_recovery_m(main_m: int) -> int:
+    """Jog recovery per cruise-interval rep (variant 1), scaled to the budget.
+
+    Distance-based so the whole session is priced inside the budget
+    (duration-based recoveries added distance on top of it and the card and
+    steps disagreed). Capped at 300 m and scaled down on micro budgets so
+    the two recoveries never dominate the reps. Mirrored by
+    ``generate_tempo_run``'s description text.
+    """
+    return min(300, max(100, (main_m // 10) // 50 * 50))
+
 
 def build_tempo_steps(
     distance_km: float,
@@ -29,7 +40,8 @@ def build_tempo_steps(
     main_m = max(500, total_m - wu_m - cd_m)
 
     if variant == 1:
-        rep_m_raw = main_m // 3
+        rec_m = cruise_recovery_m(main_m)
+        rep_m_raw = max(600, main_m - 2 * rec_m) // 3
         # Snap to the same 100 m (at/above 1 km) or 50 m (below) boundaries
         # that build_km_rep_steps uses, so format_km is lossless and the step
         # label matches the description precisely.
@@ -51,8 +63,8 @@ def build_tempo_steps(
             ),
             _step(
                 "recovery",
-                "3 min jog recovery",
-                duration_s=180,
+                f"{rec_m} m jog recovery",
+                distance_m=rec_m,
                 repeat=2,
                 pace_zone="E",
                 effort="jog",

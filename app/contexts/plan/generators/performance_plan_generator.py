@@ -199,8 +199,14 @@ class PerformancePlanGenerator(BasePlanGenerator):
         # content, bounded to a long-run-relative ceiling so a fixed
         # prescription never balloons past the week's long run.
         quality_ceiling = self._key_workout_ceiling(daily_workouts)
+        quality_slot_counts: Dict[str, int] = {}
         for workout in daily_workouts:
             if workout.get("quality", False):
+                # Second same-type quality slot in a week rotates to a
+                # different library session instead of duplicating the first.
+                wtype = str(workout["type"])
+                slot_index = quality_slot_counts.get(wtype, 0)
+                quality_slot_counts[wtype] = slot_index + 1
                 self._overlay_key_workout(
                     workout,
                     phase,
@@ -208,6 +214,7 @@ class PerformancePlanGenerator(BasePlanGenerator):
                     week_in_phase,
                     vdot_zones,
                     max_distance=quality_ceiling,
+                    slot_index=slot_index,
                 )
             wtype = str(workout["type"])
             coaching_type = _COACHING_TYPE_MAP.get(wtype, wtype)

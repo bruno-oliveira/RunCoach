@@ -11,6 +11,7 @@ from jwt.exceptions import PyJWTError
 from sqlalchemy.orm import Session
 
 from app.contexts.auth.repositories import SQLAlchemyUserRepository
+from app.exceptions import UnverifiedEmailException
 from app.domain.repositories import IUserRepository
 from app.infrastructure.config import settings
 from app.models import User
@@ -195,12 +196,24 @@ class AuthService:
         email = google_user_data.get("email")
         name = google_user_data.get("name")
         picture = google_user_data.get("picture")
+        email_verified = google_user_data.get("email_verified") in (True, "true")
 
         users = self._user_repo_factory(db)
         user = users.get_by_google_id(google_id)
 
         if not user:
-            user = users.get_by_email(email)
+            # Only link to an existing account by email when Google vouches
+            # for the address (``email_verified``). Some Workspace/federated
+            # identities carry unverified emails; linking on those would let
+            # an attacker claim another user's account by asserting their
+            # address. An unverified email that collides with an existing
+            # account can't safely link *or* create (unique constraint), so
+            # refuse the sign-in outright.
+            user = users.get_by_email(email) if email else None
+            if user and not email_verified:
+                raise UnverifiedEmailException(
+                    f"Unverified Google email collides with existing account: {email}",
+                )
 
             if user:
                 user.google_id = google_id

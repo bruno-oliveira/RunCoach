@@ -17,6 +17,7 @@ from app.exceptions import (
     DatabaseException,
     PlanGenerationException,
     RunCoachException,
+    UnverifiedEmailException,
     ValidationException,
 )
 
@@ -25,6 +26,8 @@ logger = logging.getLogger(__name__)
 
 def _status_for(exc: RunCoachException) -> int:
     """Map a domain exception to an HTTP status code."""
+    if isinstance(exc, UnverifiedEmailException):
+        return 403
     if isinstance(exc, ValidationException):
         return 400
     if isinstance(exc, (DatabaseException, PlanGenerationException)):
