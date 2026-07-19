@@ -178,9 +178,7 @@ _KEY_WORKOUT_STEP_BUILDERS: Dict[
             (_compound_800_400_reps(d)[1], 400, "I", "quicker — shift gears"),
         ],
     ),
-    "time_trial_5k": lambda d, pz: _steps_mod.build_time_trial_steps(
-        d, pz, tt_m=5000
-    ),
+    "time_trial_5k": lambda d, pz: _steps_mod.build_time_trial_steps(d, pz, tt_m=5000),
     "race_practice_long": lambda d, pz: _steps_mod.build_split_long_steps(
         d, pz, easy_mult=0.60, finish_mult=0.40
     ),

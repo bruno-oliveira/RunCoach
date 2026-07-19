@@ -11,8 +11,8 @@ from jwt.exceptions import PyJWTError
 from sqlalchemy.orm import Session
 
 from app.contexts.auth.repositories import SQLAlchemyUserRepository
-from app.exceptions import UnverifiedEmailException
 from app.domain.repositories import IUserRepository
+from app.exceptions import UnverifiedEmailException
 from app.infrastructure.config import settings
 from app.models import User
 from app.models.refresh_token import RefreshToken, _generate_raw_token, hash_token

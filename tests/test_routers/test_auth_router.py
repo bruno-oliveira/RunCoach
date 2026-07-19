@@ -165,9 +165,7 @@ class TestGoogleAuth:
         assert existing.google_id is None
         # No new account was minted for the attacker's identity either.
         attacker = (
-            test_db.query(User)
-            .filter(User.google_id == "google-attacker-123")
-            .first()
+            test_db.query(User).filter(User.google_id == "google-attacker-123").first()
         )
         assert attacker is None
 

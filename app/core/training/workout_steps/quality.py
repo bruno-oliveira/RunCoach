@@ -15,6 +15,7 @@ from app.core.training.workout_steps.primitives import (
 )
 from app.utils import format_km
 
+
 def cruise_recovery_m(main_m: int) -> int:
     """Jog recovery per cruise-interval rep (variant 1), scaled to the budget.
 
