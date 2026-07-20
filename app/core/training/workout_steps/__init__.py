@@ -51,6 +51,7 @@ from app.core.training.workout_steps.key_workout_builders import (
     build_meter_rep_steps,
     build_over_under_steps,
     build_progression_block_steps,
+    build_sharpener_steps,
     build_strides_steps,
     build_time_trial_steps,
 )
@@ -117,6 +118,7 @@ __all__ = [
     "build_meter_rep_steps",
     "build_km_rep_steps",
     "build_fartlek_steps",
+    "build_sharpener_steps",
     "build_over_under_steps",
     "build_strides_steps",
     "build_progression_block_steps",

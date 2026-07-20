@@ -34,7 +34,10 @@ from app.contexts.plan.generators.workout_scaler import (
 from app.core.coaching.coaching_notes_generator import generate_coaching_note
 from app.core.training import long_run_calculator, phase_calculator, workout_builders
 from app.core.training import workout_distribution as workout_dist_mod
-from app.core.training.key_workout_library import overlay_key_workout
+from app.core.training.key_workout_library import (
+    KeyWorkoutRotationState,
+    overlay_key_workout,
+)
 from app.core.training.quality_caps import (
     LOW_FREQ_EASY_VS_LONG_RUN,
     MAX_EASY_RUN_KM,
@@ -42,7 +45,11 @@ from app.core.training.quality_caps import (
     QUALITY_MIN_DOSE_KM,
 )
 from app.core.training.training_constants import calculate_week_in_phase
-from app.core.training.tuning import MAX_KEY_WORKOUT_VS_LONG_RUN
+from app.core.training.tuning import (
+    MAX_KEY_WORKOUT_VS_LONG_RUN,
+    QUALITY_PROGRESSION_MAX,
+    QUALITY_PROGRESSION_STEP,
+)
 from app.core.training.vertical_simulation import attach_treadmill_prescriptions
 
 
@@ -134,8 +141,15 @@ def generate_daily_workouts(
     trail_profile=None,
     max_runs: Optional[int] = None,
     prev_long_run_km: Optional[float] = None,
+    rotation_state: Optional[KeyWorkoutRotationState] = None,
 ) -> List[Dict[str, Any]]:
-    """Generate daily workouts for one week."""
+    """Generate daily workouts for one week.
+
+    ``rotation_state`` is the plan-level key-workout memory (one instance per
+    generated plan): it powers the no-repeat selection window, the per-plan
+    use cap, and the peak-vs-build interval work-set invariant. ``None`` (the
+    default, kept for direct callers/tests) degrades to stateless selection.
+    """
     long_run_distance = long_run_calculator.calculate_long_run_distance(
         total_km,
         target_distance,
@@ -160,6 +174,21 @@ def generate_daily_workouts(
         terrain=terrain,
         trail_profile=trail_profile,
     )
+    # In-phase progressive overload: within build and peak, the quality-day
+    # budget grows a step per week in the phase, so rep counts derived from
+    # the budget rise monotonically instead of oscillating with rotation.
+    # Applied before the caps below (which bound it) and compounding with the
+    # 2-week build on-ramp further down (which still eases weeks 0-1 in).
+    if phase in ("build", "peak") and not is_recovery_week and week_in_phase > 0:
+        progression = min(
+            QUALITY_PROGRESSION_MAX,
+            1.0 + QUALITY_PROGRESSION_STEP * week_in_phase,
+        )
+        quality_distances = {
+            qtype: round(dist * progression, 1)
+            for qtype, dist in quality_distances.items()
+        }
+
     quality_distances = apply_quality_caps(
         quality_distances,
         long_run_distance,
@@ -284,6 +313,8 @@ def generate_daily_workouts(
                 max_distance=quality_ceiling,
                 slot_index=slot_index,
                 weekly_km=total_km,
+                state=rotation_state,
+                week_number=week_number,
             )
 
         workout["coaching_rationale"] = generate_coaching_note(
@@ -321,12 +352,16 @@ def build_weekly_plan(
     trail_profile=None,
     intensive_weekend_enabled: bool = False,
     prev_long_run_km: Optional[float] = None,
+    rotation_state: Optional[KeyWorkoutRotationState] = None,
 ) -> Dict[str, Any]:
     """Generate a single week's training plan.
 
     ``intensive_weekend_enabled`` opts the plan into a trail Intensive
     Training Weekend on the final peak week (off by default — it's a
     distinctive, demanding block the runner chooses to activate).
+
+    ``rotation_state`` is the plan-level key-workout memory shared across the
+    weeks of one plan (see :func:`generate_daily_workouts`).
     """
     phases = phase_calculator.calculate_phases(
         weeks,
@@ -366,6 +401,7 @@ def build_weekly_plan(
         trail_profile=trail_profile,
         max_runs=max_runs_per_week,
         prev_long_run_km=prev_long_run_km,
+        rotation_state=rotation_state,
     )
 
     intensive_weekend = None

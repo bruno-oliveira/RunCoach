@@ -22,10 +22,91 @@ from app.core.training.key_workout_library.rewrites import (
 )
 from app.core.training.road_profile import classify_road
 from app.core.training.trail_profile import is_trail_target
-from app.core.training.tuning import MAX_QUALITY_DAY_SHARE, MIN_QUALITY_DAY_CAP_KM
+from app.core.training.tuning import (
+    KEY_WORKOUT_MAX_USES_PER_PLAN,
+    KEY_WORKOUT_NO_REPEAT_WINDOW_WEEKS,
+    MAX_QUALITY_DAY_SHARE,
+    MIN_QUALITY_DAY_CAP_KM,
+    PEAK_WORK_FLOOR_TOLERANCE_KM,
+)
 from app.core.training.vdot_calculator import VDOTCalculator
 
 _logger = logging.getLogger(__name__)
+
+
+class KeyWorkoutRotationState:
+    """Plan-level memory for key-workout variety and progression.
+
+    The weekly builder assembles weeks sequentially but statelessly, so the
+    rotation used to be a pure function of (distance, phase, week) — which let
+    the same session repeat in consecutive weeks whenever the candidate pool
+    and offsets lined up. The generator creates one instance per plan and
+    threads it through ``overlay_key_workout`` so selection can (a) skip
+    recently-used sessions, (b) cap per-plan reuse, and (c) keep the peak
+    interval work set from regressing below the last build week's.
+
+    Purely deterministic — no RNG — so plan generation stays reproducible.
+    """
+
+    def __init__(self) -> None:
+        # id -> absolute week number the session was last installed.
+        self.last_used_week: Dict[str, int] = {}
+        # id -> number of times the session has been installed in this plan.
+        self.use_counts: Dict[str, int] = {}
+        # Largest interval work-set (km) of the most recent build week; the
+        # floor peak interval selection must not dip below.
+        self.build_interval_work_km: float = 0.0
+        self._build_work_week: Optional[int] = None
+
+    def record_use(self, workout_id: str, week_number: int) -> None:
+        self.last_used_week[workout_id] = week_number
+        self.use_counts[workout_id] = self.use_counts.get(workout_id, 0) + 1
+
+    def record_build_interval_work(self, week_number: int, work_km: float) -> None:
+        """Track the interval work-set of the most recent build week.
+
+        Overwrites when a new week starts; takes the max within a week so a
+        lighter second interval slot doesn't lower the recorded floor.
+        """
+        if week_number != self._build_work_week:
+            self._build_work_week = week_number
+            self.build_interval_work_km = work_km
+        else:
+            self.build_interval_work_km = max(self.build_interval_work_km, work_km)
+
+
+def _apply_variety_filter(
+    candidates: List[Dict[str, Any]],
+    state: Optional[KeyWorkoutRotationState],
+    week_number: Optional[int],
+) -> List[Dict[str, Any]]:
+    """Drop recently-used / over-used candidates while alternatives remain.
+
+    Two soft filters, each applied only when it leaves at least one candidate
+    (a pool of one is always allowed to repeat — no filter can conjure
+    variety the catalog doesn't have):
+
+    * no-repeat window: skip anything used within the last
+      ``KEY_WORKOUT_NO_REPEAT_WINDOW_WEEKS`` weeks;
+    * per-plan cap: skip anything already used
+      ``KEY_WORKOUT_MAX_USES_PER_PLAN`` times.
+    """
+    if state is None or week_number is None or len(candidates) < 2:
+        return candidates
+    fresh = [
+        w
+        for w in candidates
+        if week_number - state.last_used_week.get(w["id"], -(10**9))
+        > KEY_WORKOUT_NO_REPEAT_WINDOW_WEEKS
+    ]
+    pool = fresh or candidates
+    under_cap = [
+        w
+        for w in pool
+        if state.use_counts.get(w["id"], 0) < KEY_WORKOUT_MAX_USES_PER_PLAN
+    ]
+    return under_cap or pool
+
 
 # Long-ultra-only template: a short headlamp run during the peak phase to
 # rehearse darkness pacing and gear. Bracketed via ``brackets`` so it never
@@ -116,6 +197,13 @@ _KEY_WORKOUT_MIN_BUDGET_KM: Dict[str, float] = {
     "trail_base_hike_run": 6.0,
     "trail_hill_pyramid": 6.5,
     "trail_flat_over_under_intervals": 6.5,
+    # Taper sharpeners: the easy bulk + touches price well past a token slot,
+    # which would push the sharpener to (or past) the shrunken race-week long
+    # run on very low-volume plans. Undersized slots keep the generic
+    # sharpener instead.
+    "taper_5k10k_sharpener": 3.0,
+    "taper_half_sharpener": 3.0,
+    "taper_marathon_sharpener": 3.5,
 }
 
 
@@ -269,6 +357,8 @@ def overlay_key_workout(
     max_distance: Optional[float] = None,
     slot_index: int = 0,
     weekly_km: Optional[float] = None,
+    state: Optional[KeyWorkoutRotationState] = None,
+    week_number: Optional[int] = None,
 ) -> None:
     """Attach key workout metadata, description, and steps for quality sessions.
 
@@ -295,18 +385,61 @@ def overlay_key_workout(
     intensity-led session's total is bounded by ``MAX_QUALITY_DAY_SHARE`` of
     the week (M/E-dominated sessions — MP long runs, fueling runs — are
     exempt from the day-share bound).
+
+    ``state`` + ``week_number`` (both plan-generator supplied) enable the
+    variety/progression pass: the no-repeat window and per-plan use cap on
+    selection, and the peak-phase invariant that an interval day's work set
+    never drops below the last build week's (a rotation that would regress —
+    e.g. 4 × 400 in build followed by 3 × 500 in peak — advances to the next
+    candidate instead).
     """
     if workout_type not in ("interval", "tempo", "hill", "long"):
         return
-    if phase not in ("base", "build", "peak"):
+    if phase not in ("base", "build", "peak", "taper"):
         return
     if workout.get("duration_min"):
         return
 
     if force_id is not None:
-        key_wk = KeyWorkoutLibrary.get_by_id(force_id)
+        forced = KeyWorkoutLibrary.get_by_id(force_id)
+        candidates = [forced] if forced else []
     else:
-        key_wk = KeyWorkoutLibrary.get_for_phase(
+        candidates = KeyWorkoutLibrary.ordered_candidates(
+            target_distance,
+            phase,
+            week_in_phase,
+            workout_type,
+            terrain=terrain,
+            trail_profile=trail_profile,
+            slot_index=slot_index,
+            budget_km=workout.get("distance") or None,
+            state=state,
+            week_number=week_number,
+        )
+    if not candidates:
+        return
+
+    # Peak interval days must not regress below the last build week's work
+    # set. When the first rotation candidate would, walk the remaining
+    # candidates (still deterministic — rotation order) and install the first
+    # that holds the line; if none can, keep the biggest available session.
+    work_floor_km = 0.0
+    if (
+        state is not None
+        and force_id is None
+        and phase == "peak"
+        and workout_type == "interval"
+    ):
+        work_floor_km = state.build_interval_work_km
+
+    key_wk = candidates[0]
+    if work_floor_km > 0 and state is not None:
+        # The variety filter can leave only intrinsically-small sessions in
+        # the pool (e.g. every big peak session was just used in late build),
+        # so when the filtered pool can't hold the line, widen the retry to
+        # the unfiltered rotation — still refusing an immediate repeat of
+        # last week's session, which outranks the work floor.
+        widened = KeyWorkoutLibrary.ordered_candidates(
             target_distance,
             phase,
             week_in_phase,
@@ -316,8 +449,56 @@ def overlay_key_workout(
             slot_index=slot_index,
             budget_km=workout.get("distance") or None,
         )
-    if not key_wk:
-        return
+        seen = {c["id"] for c in candidates}
+        last_week_ids = {
+            wid
+            for wid, wk in state.last_used_week.items()
+            if week_number is not None and wk == week_number - 1
+        }
+        pool = candidates + [
+            c for c in widened if c["id"] not in seen and c["id"] not in last_week_ids
+        ]
+        best_wk, best_work = None, -1.0
+        for candidate in pool:
+            trial = dict(workout)
+            _install_key_workout(
+                trial, candidate, workout_type, pace_zones, max_distance, weekly_km
+            )
+            work = sum(_steps_mod.work_km_by_group(trial["steps"]).values())
+            if work >= work_floor_km - PEAK_WORK_FLOOR_TOLERANCE_KM:
+                best_wk = candidate
+                break
+            if work > best_work:
+                best_wk, best_work = candidate, work
+        key_wk = best_wk or key_wk
+
+    _install_key_workout(
+        workout, key_wk, workout_type, pace_zones, max_distance, weekly_km
+    )
+
+    if state is not None and week_number is not None:
+        state.record_use(key_wk["id"], week_number)
+        if phase == "build" and workout_type == "interval":
+            state.record_build_interval_work(
+                week_number,
+                sum(_steps_mod.work_km_by_group(workout["steps"]).values()),
+            )
+
+
+def _install_key_workout(
+    workout: Dict[str, Any],
+    key_wk: Dict[str, Any],
+    workout_type: str,
+    pace_zones: Optional[Dict],
+    max_distance: Optional[float],
+    weekly_km: Optional[float],
+) -> None:
+    """Install one chosen key workout onto a slot (prose, steps, caps).
+
+    The build/trim/reconcile pipeline shared by the normal overlay path and
+    the peak-invariant candidate loop (which builds trial installs on dict
+    copies before committing one).
+    """
     if pace_zones:
         key_wk = KeyWorkoutLibrary.inject_vdot_paces(key_wk, pace_zones)
 
@@ -450,6 +631,8 @@ class KeyWorkoutLibrary:
         trail_profile=None,
         slot_index: int = 0,
         budget_km: Optional[float] = None,
+        state: Optional[KeyWorkoutRotationState] = None,
+        week_number: Optional[int] = None,
     ) -> Optional[Dict]:
         """Select a key workout for the given distance, phase, and week.
 
@@ -465,15 +648,54 @@ class KeyWorkoutLibrary:
                              30.0 in their ``distances``) become eligible
                              for any trail bracket and are further filtered
                              by the workout's optional ``brackets`` field.
+            state:           Optional plan-level rotation state; enables the
+                             no-repeat window and the per-plan use cap.
+            week_number:     Absolute plan week (1-based), required for the
+                             window arithmetic when ``state`` is passed.
 
         Returns:
             A workout dict or None if no key workout applies.
         """
+        ordered = cls.ordered_candidates(
+            target_distance,
+            phase,
+            week_in_phase,
+            workout_type,
+            terrain=terrain,
+            trail_profile=trail_profile,
+            slot_index=slot_index,
+            budget_km=budget_km,
+            state=state,
+            week_number=week_number,
+        )
+        return ordered[0] if ordered else None
+
+    @classmethod
+    def ordered_candidates(
+        cls,
+        target_distance: float,
+        phase: str,
+        week_in_phase: int,
+        workout_type: str = "interval",
+        terrain: Optional[str] = None,
+        trail_profile=None,
+        slot_index: int = 0,
+        budget_km: Optional[float] = None,
+        state: Optional[KeyWorkoutRotationState] = None,
+        week_number: Optional[int] = None,
+    ) -> List[Dict]:
+        """Rotation-ordered candidate list for a slot (best pick first).
+
+        Same filtering as :meth:`get_for_phase`; callers that may need to
+        reject the first pick (the peak work-set invariant) walk the rest in
+        order so retries stay deterministic.
+        """
         # Key workouts fire in base (light strides/fartlek only — the catalog
         # gates which sessions are base-eligible via their ``phases`` list),
-        # build, and peak. Taper stays sharpener-only via the distribution.
-        if phase not in ("base", "build", "peak"):
-            return None
+        # build, peak, and taper (race-distance-specific sharpeners tagged
+        # ``taper``; everything else is gated out by its ``phases`` list).
+        if phase not in ("base", "build", "peak", "taper"):
+            return []
 
         candidates = _filter_candidates(
             workout_type,
@@ -483,8 +705,9 @@ class KeyWorkoutLibrary:
             trail_profile,
             budget_km=budget_km,
         )
+        candidates = _apply_variety_filter(candidates, state, week_number)
         if not candidates:
-            return None
+            return []
 
         # Rotate through candidates, but start the rotation at a deterministic
         # per-(distance, phase, type) offset rather than always at index 0.
@@ -496,7 +719,8 @@ class KeyWorkoutLibrary:
         # ``slot_index`` advances the rotation for a second same-type slot in
         # the same week so it lands on a different candidate than the first.
         offset = _rotation_offset(target_distance, phase, workout_type)
-        return candidates[(week_in_phase + offset + slot_index) % len(candidates)]
+        start = (week_in_phase + offset + slot_index) % len(candidates)
+        return candidates[start:] + candidates[:start]
 
     @classmethod
     def get_by_id(cls, workout_id: str) -> Optional[Dict]:

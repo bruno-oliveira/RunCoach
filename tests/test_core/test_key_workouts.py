@@ -37,12 +37,16 @@ class TestLibraryCompleteness:
 
 
 class TestPhaseGuard:
-    """Taper is sharpener-only; base serves light quality (build/peak full)."""
+    """Taper serves only tempo sharpeners; base light quality (build/peak full)."""
 
     @pytest.mark.parametrize("phase", ["taper"])
-    def test_returns_none_for_excluded_phases(self, phase):
+    def test_taper_serves_no_interval_or_hill_sessions(self, phase):
+        # The taper catalog holds tempo-typed sharpeners only; the default
+        # interval request must come back empty so hard VO2max work never
+        # leaks into race week.
         result = KeyWorkoutLibrary.get_for_phase(5.0, phase, 0)
         assert result is None
+        assert KeyWorkoutLibrary.get_for_phase(5.0, phase, 0, "hill") is None
 
     @pytest.mark.parametrize(
         "distance,workout_type",

@@ -234,6 +234,27 @@ _KEY_WORKOUT_STEP_BUILDERS: Dict[
     "base_relaxed_cruise": lambda d, pz: _steps_mod.build_fartlek_steps(
         d, pz, reps=2, on_s=360, off_s=120, on_zone="M", work_effort="steady"
     ),
+    # -- taper sharpeners: easy bulk + race-effort touches (+ strides) --
+    "taper_5k10k_sharpener": lambda d, pz: _steps_mod.build_sharpener_steps(
+        d, pz, touches=4, touch_s=60, touch_zone="10K", strides=4
+    ),
+    "taper_half_sharpener": lambda d, pz: _steps_mod.build_sharpener_steps(
+        d,
+        pz,
+        touches=2,
+        touch_s=300,
+        touch_zone="T",
+        touch_effort="half-marathon effort",
+    ),
+    "taper_marathon_sharpener": lambda d, pz: _steps_mod.build_sharpener_steps(
+        d,
+        pz,
+        touches=2,
+        touch_s=360,
+        touch_zone="M",
+        touch_effort="marathon effort",
+        strides=4,
+    ),
     # -- true over-unders: alternating over/under threshold, no easy recovery --
     "10k_over_unders": lambda d, pz: _steps_mod.build_over_under_steps(
         d, pz, reps=_over_under_reps(d, default=5), over_s=60, under_s=120

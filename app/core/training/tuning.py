@@ -362,6 +362,32 @@ MAX_QUALITY_DAY_SHARE = 0.25
 MIN_QUALITY_DAY_CAP_KM = 6.0
 
 # =============================================================================
+# Variety & progression (see key_workout_library/selection.py and the weekly
+# orchestrator)
+# =============================================================================
+
+# A key workout used within this many weeks is skipped by selection when the
+# candidate pool offers an alternative, so back-to-back weeks never repeat the
+# same session while a fresh one exists.
+KEY_WORKOUT_NO_REPEAT_WINDOW_WEEKS = 3
+
+# Ceiling on how often a single key workout appears in one plan — again only
+# enforced while the pool has under-used alternatives to rotate onto.
+KEY_WORKOUT_MAX_USES_PER_PLAN = 2
+
+# In-phase progressive overload: build/peak quality-day budgets grow by this
+# fraction per week within the phase (bounded by the multiplier ceiling and by
+# the physiological/long-run caps applied afterwards), so rep counts derived
+# from the budget rise monotonically instead of oscillating with rotation.
+QUALITY_PROGRESSION_STEP = 0.05
+QUALITY_PROGRESSION_MAX = 1.25
+
+# Tolerance (km) for the peak-vs-build interval work-set invariant: a peak
+# rotation candidate whose work set falls more than this below the last build
+# week's work set is passed over for the next candidate.
+PEAK_WORK_FLOOR_TOLERANCE_KM = 0.1
+
+# =============================================================================
 # 80/20 polarization (see distribution_validator.py)
 # =============================================================================
 

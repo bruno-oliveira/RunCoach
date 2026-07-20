@@ -734,7 +734,7 @@ class TestStrengthTraining:
 
 
 class TestKeyWorkoutOverlay:
-    """Key workouts appear in base (light only), build, and peak phases."""
+    """Key workouts appear in base (light), build, peak, and taper (sharpener)."""
 
     @pytest.mark.parametrize("distance", [5.0, 10.0, 21.1, 42.2])
     def test_key_workouts_only_in_training_phases(self, distance):
@@ -746,15 +746,19 @@ class TestKeyWorkoutOverlay:
             max_runs_per_week=4,
         )
         for week in plan:
-            has_key = any(
-                w.get("key_workout_id")
+            key_ids = [
+                w["key_workout_id"]
                 for w in week["daily_workouts"]
-                if w["type"] not in ("rest", "recovery")
-            )
-            if has_key:
-                # Taper must stay sharpener-only (no catalog key workout).
-                assert week["phase"] in ("base", "build", "peak"), (
-                    f"W{week['week']}: key workout in {week['phase']} phase"
+                if w.get("key_workout_id") and w["type"] not in ("rest", "recovery")
+            ]
+            if week["phase"] == "taper":
+                # Taper only carries the race-distance sharpener entries.
+                assert all(kid.startswith("taper_") for kid in key_ids), (
+                    f"W{week['week']}: non-sharpener key workout in taper: {key_ids}"
+                )
+            else:
+                assert not any(kid.startswith("taper_") for kid in key_ids), (
+                    f"W{week['week']}: taper sharpener outside taper: {key_ids}"
                 )
 
     @pytest.mark.parametrize("distance", [5.0, 10.0, 21.1, 42.2])

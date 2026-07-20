@@ -125,6 +125,82 @@ _WORKOUTS_SHORT: List[Dict] = [
             "speed work to come."
         ),
     },
+    # -- Taper sharpeners ----------------------------------------------------
+    # One per race-distance family so the taper isn't the same generic cruise
+    # template for every plan. Deliberately duration-based (no literal
+    # distances in the prose) so they fit any race-week slot: the easy bulk
+    # absorbs the budget, the touches keep the legs primed without fatigue.
+    {
+        "id": "taper_5k10k_sharpener",
+        "distances": [5.0, 10.0],
+        "phases": ["taper"],
+        "type": "tempo",
+        "terrain": ["any"],
+        "name": "Race-Pace Touches + Strides",
+        "structure": "easy run + 4 × 1 min at goal race effort + 4 × 20-second strides",
+        "description": (
+            "Run easy for most of the session, then touch goal race effort "
+            "4 times for 1 minute each, with 2 minutes very easy between. "
+            "Finish with 4 × 20-second relaxed strides, walking or jogging a "
+            "minute between each. Crisp but never taxing — you should end "
+            "feeling springy, not worked."
+        ),
+        "intensity": "medium",
+        "target_zone": 3,
+        "pace_zone": "10K",
+        "rationale": (
+            "The taper's job is freshness without flatness. A minute at race "
+            "effort is long enough to rehearse the rhythm and short enough to "
+            "cost nothing, and strides keep turnover sharp for race day."
+        ),
+    },
+    {
+        "id": "taper_half_sharpener",
+        "distances": [21.1],
+        "phases": ["taper"],
+        "type": "tempo",
+        "terrain": ["any"],
+        "name": "Half-Marathon Pace Touches",
+        "structure": "easy run + 2 × 5 min at half-marathon effort",
+        "description": (
+            "Run easy for most of the session, then settle into half-marathon "
+            "effort twice for 5 minutes each, with 2 minutes very easy "
+            "between. Lock in goal rhythm — smooth, controlled, exactly the "
+            "effort you plan to race — then cruise home easy."
+        ),
+        "intensity": "medium",
+        "target_zone": 3,
+        "pace_zone": "T",
+        "rationale": (
+            "Two short blocks at goal effort keep the race rhythm calibrated "
+            "through the taper while the volume drop does its work. Long "
+            "enough to feel the pace, short enough to leave nothing behind."
+        ),
+    },
+    {
+        "id": "taper_marathon_sharpener",
+        "distances": [42.2],
+        "phases": ["taper"],
+        "type": "tempo",
+        "terrain": ["any"],
+        "name": "Marathon-Pace Blocks + Strides",
+        "structure": "easy run + 2 × 6 min at marathon effort + 4 × 20-second strides",
+        "description": (
+            "Run easy for most of the session, then run 2 × 6 minutes at "
+            "marathon effort with 2 minutes very easy between — dial in the "
+            "exact rhythm you'll hold on race day. Finish with 4 × 20-second "
+            "relaxed strides with a minute of walking or jogging between "
+            "each."
+        ),
+        "intensity": "medium",
+        "target_zone": 3,
+        "pace_zone": "M",
+        "rationale": (
+            "Marathon pace should feel automatic by race week. Short MP "
+            "blocks rehearse it without meaningful fatigue, and a few strides "
+            "keep the legs elastic while overall volume winds down."
+        ),
+    },
     # -- 5K --
     {
         "id": "5k_vo2max_400s",

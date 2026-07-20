@@ -17,6 +17,7 @@ from typing import Any, Dict, List, Optional
 from app.contexts.plan.generators.beginner_plan_generator import BeginnerPlanGenerator
 from app.contexts.plan.generators.weekly_plan_builder import build_weekly_plan
 from app.core.training import mileage_progression
+from app.core.training.key_workout_library import KeyWorkoutRotationState
 
 # Re-export for any code that imports PHASE_DISTRIBUTIONS from here
 from app.core.training.phase_calculator import PHASE_DISTRIBUTIONS  # noqa: F401
@@ -91,6 +92,9 @@ class TrainingPlanGenerator:
 
         training_plan = []
         actual_high_water = current_km
+        # Plan-level key-workout memory: no-repeat window, per-plan use cap,
+        # and the peak-vs-build interval work-set invariant all live here.
+        rotation_state = KeyWorkoutRotationState()
         # Previous *loading* week's long run, used to bound how fast the single
         # long run grows week to week (deloads are skipped so the post-deload
         # ramp resumes from the pre-dip long run, not the reduced one).
@@ -110,6 +114,7 @@ class TrainingPlanGenerator:
                 trail_profile=trail_profile,
                 intensive_weekend_enabled=intensive_weekend_enabled,
                 prev_long_run_km=prev_long_run_km,
+                rotation_state=rotation_state,
             )
 
             # Enforce 10% cap against actual high-water mark.

@@ -39,11 +39,13 @@ from app.core.training.key_workout_library.selection import (
     _LONG_ULTRA_NIGHT_RUN,
     _WORKOUTS,
     KeyWorkoutLibrary,
+    KeyWorkoutRotationState,
     overlay_key_workout,
 )
 
 __all__ = [
     "KeyWorkoutLibrary",
+    "KeyWorkoutRotationState",
     "overlay_key_workout",
     "build_key_workout_steps",
     "rebuild_key_workout",

@@ -397,6 +397,92 @@ def build_strides_steps(
     ]
 
 
+def build_sharpener_steps(
+    distance_km: float,
+    pace_zones: Optional[Dict] = None,
+    *,
+    touches: int,
+    touch_s: int,
+    touch_zone: str,
+    touch_effort: str = "goal race effort",
+    touch_recovery_s: int = 120,
+    strides: int = 0,
+    stride_s: int = 20,
+) -> List[Dict[str, Any]]:
+    """Easy bulk + short race-effort touches + optional strides (taper).
+
+    The taper sharpener: mostly easy running, a few brief touches of race
+    effort to keep the legs primed, and optionally a handful of relaxed
+    strides to finish. Like ``build_strides_steps``, the quality blocks are
+    carved out of the easy bulk (not bolted on top) so the session lands on
+    its budget even in a small race-week slot.
+    """
+    if distance_km <= 0 or touches <= 0:
+        return []
+    total_m = int(round(distance_km * 1000))
+    # Rough speeds to size the easy bulk: a race-effort touch ~3.7 m/s, a
+    # stride ~5 m/s, recovery jogs ~2.8 m/s (E pace). Same estimation policy
+    # as build_strides_steps — the easy block absorbs the difference.
+    touch_allow_m = touches * (touch_s * 3.7 + touch_recovery_s * 2.8)
+    stride_allow_m = strides * (stride_s * 5.0 + 60 * 2.8)
+    easy_m = max(
+        int(round(total_m * 0.4)),
+        total_m - int(round(touch_allow_m + stride_allow_m)),
+    )
+    steps = [
+        _step(
+            "run",
+            "Easy aerobic run",
+            distance_m=easy_m,
+            pace_zone="E",
+            pace_str=_pace_str("E", pace_zones),
+            effort="easy",
+        ),
+        _step(
+            "run",
+            f"{touches} × {_dur_label(touch_s)} at {touch_effort}",
+            duration_s=touch_s,
+            repeat=touches,
+            pace_zone=touch_zone,
+            pace_str=_pace_str(touch_zone, pace_zones),
+            effort=touch_effort,
+        ),
+        _step(
+            "recovery",
+            f"{_dur_label(touch_recovery_s)} easy jog between",
+            duration_s=touch_recovery_s,
+            repeat=touches,
+            pace_zone="E",
+            pace_str=_pace_str("E", pace_zones),
+            effort="easy jog",
+        ),
+    ]
+    if strides > 0:
+        steps.extend(
+            [
+                _step(
+                    "run",
+                    f"{strides} × {_dur_label(stride_s)} strides",
+                    duration_s=stride_s,
+                    repeat=strides,
+                    pace_zone="R",
+                    pace_str=_pace_str("R", pace_zones),
+                    effort="relaxed-fast",
+                ),
+                _step(
+                    "recovery",
+                    "1 min walk/jog",
+                    duration_s=60,
+                    repeat=strides,
+                    pace_zone="E",
+                    pace_str=_pace_str("E", pace_zones),
+                    effort="full recovery",
+                ),
+            ]
+        )
+    return steps
+
+
 def build_over_under_steps(
     distance_km: float,
     pace_zones: Optional[Dict] = None,
