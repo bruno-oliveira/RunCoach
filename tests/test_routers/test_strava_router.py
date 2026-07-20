@@ -8,6 +8,9 @@ from fastapi.testclient import TestClient
 from sqlalchemy.orm import Session
 
 from app.dependencies import get_current_user, get_db
+from app.infrastructure.integrations.strava_service import (
+    StravaApplicationInactiveError,
+)
 from app.main import app
 from app.models.user import User
 
@@ -134,3 +137,16 @@ class TestStravaSync:
         data = response.json()
         assert data["synced"] == 5
         assert data["skipped"] == 2
+
+    def test_sync_reports_inactive_strava_application(self, strava_user):
+        _set_user(strava_user)
+        with patch(
+            "app.infrastructure.integrations.strava_service.StravaService.sync_activities",
+            new_callable=AsyncMock,
+            side_effect=StravaApplicationInactiveError,
+        ):
+            with TestClient(app) as client:
+                response = client.post("/api/strava/sync")
+
+        assert response.status_code == 503
+        assert "Strava API access is inactive" in response.json()["detail"]

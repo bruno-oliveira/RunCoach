@@ -2,7 +2,7 @@ import uuid
 from datetime import datetime, timezone
 
 from sqlalchemy import Column, DateTime, Integer, String
-from sqlalchemy.orm import Mapped, relationship
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models.base import Base
 from app.models.encrypted_type import EncryptedString
@@ -42,6 +42,13 @@ class User(Base):
     strava_refresh_token = Column(EncryptedString, nullable=True)
     strava_token_expires_at = Column(Integer, nullable=True)
     strava_last_synced_at = Column(Integer, nullable=True)
+    intervals_athlete_id: Mapped[str | None] = mapped_column(
+        String, unique=True, nullable=True, index=True
+    )
+    intervals_access_token: Mapped[str | None] = mapped_column(
+        EncryptedString(), nullable=True
+    )
+    intervals_last_synced_at: Mapped[int | None] = mapped_column(Integer, nullable=True)
 
     training_plans: Mapped[list["TrainingPlan"]] = relationship(
         "TrainingPlan", back_populates="user", cascade="all, delete-orphan"

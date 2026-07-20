@@ -3,11 +3,14 @@
 import time
 from unittest.mock import AsyncMock, patch
 
+import httpx
 import pytest
 
 from app.infrastructure.integrations.strava_service import (
+    StravaApplicationInactiveError,
     StravaService,
     parse_strava_splits,
+    raise_for_strava_status,
 )
 from app.models.run_log import RunLog
 from app.models.user import User
@@ -70,6 +73,37 @@ class TestGetAuthorizationUrl:
         assert "scope=read%2Cactivity%3Aread_all" in url
         assert "state=test-state" in url
         assert "response_type=code" in url
+
+
+class TestStravaResponseHandling:
+    def test_inactive_application_has_specific_error(self):
+        response = httpx.Response(
+            403,
+            request=httpx.Request("GET", "https://www.strava.com/api/v3/athlete"),
+            json={
+                "message": "Forbidden",
+                "errors": [
+                    {
+                        "resource": "Application",
+                        "field": "Status",
+                        "code": "Inactive",
+                    }
+                ],
+            },
+        )
+
+        with pytest.raises(StravaApplicationInactiveError):
+            raise_for_strava_status(response)
+
+    def test_other_http_errors_remain_http_status_errors(self):
+        response = httpx.Response(
+            403,
+            request=httpx.Request("GET", "https://www.strava.com/api/v3/athlete"),
+            json={"message": "Forbidden"},
+        )
+
+        with pytest.raises(httpx.HTTPStatusError):
+            raise_for_strava_status(response)
 
 
 class TestMapActivityToRunLog:

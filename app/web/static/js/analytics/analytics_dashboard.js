@@ -37,7 +37,7 @@ const AnalyticsDashboard = {
     },
     DEFAULT_TAB: 'coach',
     PERSIST_KEY: 'runcoach.coachHub.state',
-    stravaConnected: false,
+    activityProvider: null,
 
     COLORS: {
         primary:       '#1D4ED8',
@@ -63,9 +63,9 @@ const AnalyticsDashboard = {
         if (!dashboard) return;
 
         try {
-            this.stravaConnected = await this.checkStravaConnection();
-            if (this.stravaConnected) {
-                await this.syncStravaPeriod(30);
+            this.activityProvider = await this.getActivityProvider();
+            if (this.activityProvider) {
+                await this.syncActivityPeriod(30);
             }
 
             await this.loadRuns();
@@ -232,18 +232,18 @@ const AnalyticsDashboard = {
             this.filterByPeriod(days);
             this._persistState();
 
-            const stravaConnected = await this.checkStravaConnection();
-            if (!stravaConnected) return;
+            this.activityProvider = await this.getActivityProvider();
+            if (!this.activityProvider) return;
 
             this.showSyncIndicator();
             el.disabled = true;
             if (customApply) customApply.disabled = true;
             try {
                 const daysBack = days !== 'all' ? parseInt(days) : null;
-                const syncOk = await this.syncStravaPeriod(daysBack);
+                const syncOk = await this.syncActivityPeriod(daysBack);
                 await this.reloadRuns();
                 this.filterByPeriod(days);
-                if (!syncOk) this.showSyncError('Strava sync failed — showing cached data');
+                if (!syncOk) this.showSyncError('Activity sync failed — showing cached data');
             } finally {
                 this.hideSyncIndicator();
                 el.disabled = false;
@@ -477,21 +477,24 @@ const AnalyticsDashboard = {
     /* ------------------------------------------------------------------ */
     /*  Strava Integration                                                 */
     /* ------------------------------------------------------------------ */
-    async checkStravaConnection() {
-        try {
-            const res = await fetch('/api/strava/status', { credentials: 'same-origin' });
-            if (!res.ok) return false;
-            return (await res.json()).connected;
-        } catch { return false; }
+    async getActivityProvider() {
+        for (const provider of ['intervals', 'strava']) {
+            try {
+                const res = await fetch(`/api/${provider}/status`, { credentials: 'same-origin' });
+                if (res.ok && (await res.json()).connected) return provider;
+            } catch { /* Try the next provider. */ }
+        }
+        return null;
     },
 
-    async syncStravaPeriod(daysBack) {
+    async syncActivityPeriod(daysBack) {
+        if (!this.activityProvider) return false;
         try {
-            const params = daysBack !== null ? `?force_days=${daysBack}` : '?full_sync=true';
-            const res = await fetch(`/api/strava/sync${params}`, { method: 'POST', credentials: 'same-origin' });
-            if (!res.ok) { console.warn('Strava sync failed:', await res.text()); return false; }
+            const params = daysBack !== null ? `?force_days=${daysBack}` : '?force_days=3650';
+            const res = await fetch(`/api/${this.activityProvider}/sync${params}`, { method: 'POST', credentials: 'same-origin' });
+            if (!res.ok) { console.warn('Activity sync failed:', await res.text()); return false; }
             const data = await res.json();
-            console.log(`Strava sync: ${data.synced} new, ${data.skipped} skipped`);
+            console.log(`Activity sync: ${data.synced} new, ${data.skipped} skipped`);
             if (data.errors?.length) console.warn('Mapping errors:', data.errors);
             return true;
         } catch (err) { console.error('Strava sync error:', err); return false; }

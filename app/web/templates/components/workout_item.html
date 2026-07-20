@@ -178,7 +178,7 @@
     </div>
     {% endif %}
     <button class="undo-log-btn" onclick="PlanModule.unlinkRun('{{ logged_run.id }}')"><span data-i18n="workout.undo">Undo</span></button>
-    {% elif workout.type != 'rest' and user and not user.strava_athlete_id %}
+    {% elif workout.type != 'rest' and user and not user.strava_athlete_id and not user.intervals_athlete_id %}
     <button class="log-run-btn" data-workout-id="{{ workout.id }}" data-workout-type="{{ workout.type }}" data-distance="{{ workout.distance }}" data-day-name="{{ day_names[workout.day - 1] }}" data-week-num="{{ week.week }}"><span data-i18n="workout.log_run">Log This Run</span></button>
     {% endif %}
 </div>

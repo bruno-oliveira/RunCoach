@@ -11,6 +11,10 @@ from app.schemas.auth_schemas import (
     UserCreate,
     UserResponse,
 )
+from app.schemas.intervals_schemas import (
+    IntervalsStatusResponse,
+    IntervalsSyncResponse,
+)
 from app.schemas.plan_schemas import (
     PerformancePlanRequest,
     PlanRequest,
@@ -35,6 +39,8 @@ __all__ = [
     "AuthResponse",
     "GoogleAuthRequest",
     "HealthResponse",
+    "IntervalsStatusResponse",
+    "IntervalsSyncResponse",
     "PlanRequest",
     "PlanRequestBase",
     "PerformancePlanRequest",

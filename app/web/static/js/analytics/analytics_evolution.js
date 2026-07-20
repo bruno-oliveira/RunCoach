@@ -21,9 +21,9 @@
         if (syncEl) syncEl.style.display = 'flex';
         this.evolutionLoadedForDays = this.currentPeriodDays;
         try {
-            if (this.stravaConnected) {
+            if (this.activityProvider) {
                 const daysBack = this.currentPeriodDays === 'all' ? null : this.currentPeriodDays;
-                await this.syncStravaPeriod(daysBack);
+                await this.syncActivityPeriod(daysBack);
                 await this.reloadRuns();
             }
             const evoRuns = this._filterEvolutionRuns();

@@ -2,7 +2,7 @@ import uuid
 from datetime import datetime, timezone
 
 from sqlalchemy import Column, DateTime, Float, ForeignKey, Index, Integer, String, Text
-from sqlalchemy.orm import Mapped, relationship
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.types import JSON
 
 from app.core.training.workout_inference import resolve_effective_workout_type
@@ -36,6 +36,9 @@ class RunLog(Base):
     workout_type = Column(String, nullable=True)
     perceived_effort = Column(Integer, nullable=True)
     strava_activity_id = Column(String, unique=True, nullable=True, index=True)
+    intervals_activity_id: Mapped[str | None] = mapped_column(
+        String, unique=True, nullable=True, index=True
+    )
     created_at = Column(
         DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None)
     )
@@ -75,6 +78,9 @@ class RunLog(Base):
         return resolve_effective_workout_type(
             self.workout_type,
             self.inferred_workout_type,
-            is_strava=self.strava_activity_id is not None,
+            is_strava=(
+                self.strava_activity_id is not None
+                or self.intervals_activity_id is not None
+            ),
             confidence=self.inferred_type_confidence,
         )

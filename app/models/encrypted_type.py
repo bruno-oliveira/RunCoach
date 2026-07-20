@@ -22,7 +22,7 @@ def _get_encryption_secret() -> str:
     """Return the data-encryption secret, falling back to SECRET_KEY only in debug.
 
     In production we require ENCRYPTION_KEY to be set and distinct from SECRET_KEY
-    so a leak of the JWT signing key does not expose Strava tokens at rest.
+    so a leak of the JWT signing key does not expose provider tokens at rest.
     """
     from app.infrastructure.config import settings
 

@@ -33,7 +33,10 @@ from app.infrastructure.integrations.strava_post_sync_service import (
     auto_map_and_adjust,
     initial_sync,
 )
-from app.infrastructure.integrations.strava_service import StravaService
+from app.infrastructure.integrations.strava_service import (
+    StravaApplicationInactiveError,
+    StravaService,
+)
 from app.models.user import User
 from app.rate_limit import strava_callback_limiter
 from app.schemas import StravaStatusResponse, StravaSyncResponse
@@ -197,6 +200,15 @@ async def strava_sync(
     try:
         result = await strava_service.sync_activities(
             current_user, db, after_timestamp=after_timestamp
+        )
+    except StravaApplicationInactiveError:
+        logger.error("Strava sync unavailable: configured API application is inactive")
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=(
+                "Strava sync is unavailable because this app's Strava API access "
+                "is inactive. The app administrator must reactivate it."
+            ),
         )
     except Exception as e:
         logger.error(f"Strava sync failed for user {current_user.id}: {e}")

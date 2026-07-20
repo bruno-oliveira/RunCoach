@@ -51,6 +51,29 @@ STRAVA_WORKOUT_TYPE_MAP = {
 RUN_ACTIVITY_TYPES = {"Run", "TrailRun", "VirtualRun"}
 
 
+class StravaApplicationInactiveError(RuntimeError):
+    """Raised when Strava has disabled the configured API application."""
+
+
+def raise_for_strava_status(response: httpx.Response) -> None:
+    """Raise a specific error when Strava reports an inactive application."""
+    if response.status_code == httpx.codes.FORBIDDEN:
+        try:
+            errors = response.json().get("errors", [])
+        except (TypeError, ValueError):
+            errors = []
+        if any(
+            error.get("resource") == "Application"
+            and error.get("field") == "Status"
+            and error.get("code") == "Inactive"
+            for error in errors
+        ):
+            raise StravaApplicationInactiveError(
+                "The configured Strava API application is inactive"
+            )
+    response.raise_for_status()
+
+
 def parse_strava_splits(detail: Optional[dict]) -> Optional[list[dict]]:
     """Compact Strava ``splits_metric`` into per-km dicts for inference/storage.
 
@@ -108,7 +131,7 @@ class StravaService:
                     "grant_type": "authorization_code",
                 },
             )
-            response.raise_for_status()
+            raise_for_strava_status(response)
             return response.json()
 
     async def refresh_access_token(self, refresh_token: str) -> dict[str, Any]:
@@ -127,7 +150,7 @@ class StravaService:
                     "grant_type": "refresh_token",
                 },
             )
-            response.raise_for_status()
+            raise_for_strava_status(response)
             return response.json()
 
     async def ensure_valid_token(self, user: User, db: Session) -> str:
@@ -176,7 +199,7 @@ class StravaService:
                 headers={"Authorization": f"Bearer {access_token}"},
                 params=params,
             )
-            response.raise_for_status()
+            raise_for_strava_status(response)
             return response.json()
 
     async def fetch_activity_detail(
@@ -194,7 +217,7 @@ class StravaService:
                     headers={"Authorization": f"Bearer {access_token}"},
                     params={"include_all_efforts": "false"},
                 )
-                response.raise_for_status()
+                raise_for_strava_status(response)
                 return response.json()
         except Exception as e:
             logger.warning(
@@ -493,7 +516,7 @@ class StravaService:
                     STRAVA_DEAUTH_URL,
                     params={"access_token": access_token},
                 )
-                response.raise_for_status()
+                raise_for_strava_status(response)
                 return True
         except Exception as e:
             logger.warning("Strava token revocation failed: %s", e)

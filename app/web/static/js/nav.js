@@ -116,16 +116,26 @@ document.addEventListener('keydown', e => {
     }, { passive: true });
 })();
 
-async function connectStrava() {
+async function connectActivityProvider(provider, label) {
     try {
-        const response = await fetch('/api/strava/connect');
+        const response = await fetch('/api/' + provider + '/connect');
         const data = await response.json();
         if (data.authorize_url) {
             window.location.href = data.authorize_url;
+        } else {
+            alert(data.detail || ('Failed to connect to ' + label + '.'));
         }
     } catch (err) {
-        alert('Failed to connect to Strava. Please try again.');
+        alert('Failed to connect to ' + label + '. Please try again.');
     }
+}
+
+function connectStrava() {
+    connectActivityProvider('strava', 'Strava');
+}
+
+function connectIntervals() {
+    connectActivityProvider('intervals', 'Intervals.icu');
 }
 
 // ---- Strava panel ----
@@ -199,13 +209,16 @@ function initStravaPanel() {
     });
 }
 
-async function doStravaSync(forceDays) {
+async function doActivitySync(forceDays) {
     const syncBtn = document.getElementById('stravaSyncBtn');
     const chips = document.querySelectorAll('.strava-chip');
     const feedback = document.getElementById('stravaFeedback');
     const refreshIcon = syncBtn ? syncBtn.querySelector('.strava-refresh-icon') : null;
     const spinner = syncBtn ? syncBtn.querySelector('.strava-spinner') : null;
     const label = syncBtn ? syncBtn.querySelector('.strava-primary-label') : null;
+    const panel = document.getElementById('stravaPanel');
+    const provider = panel ? panel.dataset.provider : 'strava';
+    const providerLabel = panel ? panel.dataset.providerLabel : 'Strava';
 
     // Set loading state
     if (syncBtn) syncBtn.disabled = true;
@@ -216,7 +229,7 @@ async function doStravaSync(forceDays) {
     if (feedback) feedback.style.display = 'none';
 
     try {
-        let url = '/api/strava/sync';
+        let url = '/api/' + provider + '/sync';
         if (forceDays !== null && forceDays !== undefined) {
             url += '?force_days=' + encodeURIComponent(forceDays);
         }
@@ -228,8 +241,7 @@ async function doStravaSync(forceDays) {
             // Update "last synced" text to now
             const lastSyncedEl = document.getElementById('stravaLastSynced');
             if (lastSyncedEl) lastSyncedEl.textContent = 'just now';
-            const panelEl = document.getElementById('stravaPanel');
-            if (panelEl) panelEl.setAttribute('data-ts', String(Math.floor(Date.now() / 1000)));
+            if (panel) panel.setAttribute('data-ts', String(Math.floor(Date.now() / 1000)));
 
             // Show success feedback
             const synced = data.synced || 0;
@@ -290,7 +302,7 @@ async function doStravaSync(forceDays) {
         }
     } catch (err) {
         if (feedback) {
-            feedback.textContent = 'Failed to reach Strava. Please try again.';
+            feedback.textContent = 'Failed to reach ' + providerLabel + '. Please try again.';
             feedback.className = 'strava-feedback is-error';
             feedback.style.display = '';
         }
@@ -305,21 +317,28 @@ async function doStravaSync(forceDays) {
 }
 
 function syncStrava() {
-    doStravaSync(null);
+    doActivitySync(null);
 }
 
 function syncStravaForDays(days) {
-    doStravaSync(days);
+    doActivitySync(days);
 }
 
-async function disconnectStrava() {
-    if (!confirm('Disconnect Strava? This removes all stored Strava credentials. Your synced runs will be kept.')) return;
+function syncActivityProvider(days) {
+    doActivitySync(days === undefined ? null : days);
+}
+
+async function disconnectActivityProvider() {
+    const panel = document.getElementById('stravaPanel');
+    const provider = panel ? panel.dataset.provider : 'strava';
+    const providerLabel = panel ? panel.dataset.providerLabel : 'Strava';
+    if (!confirm('Disconnect ' + providerLabel + '? Your synced runs will be kept.')) return;
 
     const btn = document.getElementById('stravaDisconnectBtn');
     if (btn) { btn.disabled = true; btn.textContent = 'Disconnecting…'; }
 
     try {
-        const res = await fetch('/api/strava/disconnect', {
+        const res = await fetch('/api/' + provider + '/disconnect', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             credentials: 'same-origin'
@@ -327,13 +346,17 @@ async function disconnectStrava() {
         if (res.ok) {
             window.location.reload();
         } else {
-            alert('Failed to disconnect Strava. Please try again.');
-            if (btn) { btn.disabled = false; btn.textContent = 'Disconnect Strava'; }
+            alert('Failed to disconnect ' + providerLabel + '. Please try again.');
+            if (btn) { btn.disabled = false; btn.textContent = 'Disconnect ' + providerLabel; }
         }
     } catch (err) {
-        alert('Failed to disconnect Strava. Please try again.');
-        if (btn) { btn.disabled = false; btn.textContent = 'Disconnect Strava'; }
+        alert('Failed to disconnect ' + providerLabel + '. Please try again.');
+        if (btn) { btn.disabled = false; btn.textContent = 'Disconnect ' + providerLabel; }
     }
+}
+
+function disconnectStrava() {
+    disconnectActivityProvider();
 }
 
 async function deleteAccount() {

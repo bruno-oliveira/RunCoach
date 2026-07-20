@@ -44,6 +44,7 @@ def _user_response(user: User) -> UserResponse:
         created_at=user.created_at,
         plans_generated=user.plans_generated,
         strava_connected=bool(user.strava_athlete_id),
+        intervals_connected=bool(user.intervals_athlete_id),
         age=user.age,
         max_hr=user.max_hr,
         resting_hr=user.resting_hr,

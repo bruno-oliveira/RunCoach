@@ -21,6 +21,7 @@ from app.domain.coaching import CoachNarrator
 from app.infrastructure.config import settings
 from app.infrastructure.database import get_db
 from app.infrastructure.export.pdf_generator import PDFGenerator
+from app.infrastructure.integrations.intervals_service import IntervalsService
 from app.infrastructure.integrations.strava_service import StravaService
 
 
@@ -57,6 +58,11 @@ def get_plan_view_service() -> PlanViewService:
 @lru_cache
 def get_strava_service() -> StravaService:
     return StravaService()
+
+
+@lru_cache
+def get_intervals_service() -> IntervalsService:
+    return IntervalsService()
 
 
 @lru_cache
@@ -113,6 +119,7 @@ __all__ = [
     "get_plan_service",
     "get_plan_view_service",
     "get_strava_service",
+    "get_intervals_service",
     "get_adaptation_service",
     "get_favorites_service",
     "get_nutrition_engine",

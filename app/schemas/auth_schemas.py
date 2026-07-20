@@ -22,6 +22,7 @@ class UserResponse(UserBase):
     created_at: datetime
     plans_generated: int
     strava_connected: bool = False
+    intervals_connected: bool = False
     age: Optional[int] = None
     max_hr: Optional[int] = None
     resting_hr: Optional[int] = None

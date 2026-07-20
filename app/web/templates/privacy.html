@@ -40,13 +40,13 @@
 {% block content %}
 <div class="privacy-container">
     <h1><span data-i18n="privacy.title">Privacy Policy</span></h1>
-    <p class="last-updated">Last updated: April 2026</p>
+    <p class="last-updated">Last updated: July 2026</p>
 
     <h2>1. What We Collect</h2>
     <p>RunCoach collects the following data when you use the application:</p>
     <ul>
         <li><strong>Account information:</strong> Name, email address, and profile picture from Google Sign-In.</li>
-        <li><strong>Training data:</strong> Running distance, duration, pace, heart rate, cadence, elevation, and perceived effort from manually logged runs or Strava sync.</li>
+        <li><strong>Training data:</strong> Running distance, duration, pace, heart rate, cadence, elevation, and perceived effort from manually logged runs or connected activity providers.</li>
         <li><strong>Health-related data:</strong> Body weight (if provided for nutrition planning), sleep quality, energy levels, soreness, and stress levels (if provided via daily readiness check-ins).</li>
         <li><strong>Training plans:</strong> Generated plans including target distances, weekly mileage, and workout schedules.</li>
     </ul>
@@ -63,6 +63,7 @@
     <ul>
         <li><strong>Google Sign-In:</strong> We use Google OAuth for authentication. Google receives your sign-in request; we receive your name, email, and profile picture.</li>
         <li><strong>Strava:</strong> If you connect Strava, we access your activity data (runs) via the Strava API. You can disconnect Strava at any time from your account settings, which removes all stored Strava credentials.</li>
+        <li><strong>Intervals.icu:</strong> If you connect Intervals.icu, we access read-only activity data that you have synced from Garmin or another original source. You can disconnect it at any time, which removes the stored OAuth credential.</li>
     </ul>
 
     <h2>4. Cookies &amp; Consent</h2>
@@ -73,13 +74,14 @@
     <p>RunCoach does not use analytics or advertising cookies. A cookie notice is displayed on your first visit to inform you about cookie usage. By using RunCoach's plan generation and health tracking features, you consent to the collection and processing of the health-related data described in section 1.</p>
 
     <h2>5. Data Storage &amp; Security</h2>
-    <p>Your data is stored in an encrypted database. Sensitive credentials (such as Strava tokens) are encrypted at rest using Fernet symmetric encryption. All connections to RunCoach are served over HTTPS.</p>
+    <p>Your data is stored in an encrypted database. Sensitive provider credentials are encrypted at rest using Fernet symmetric encryption. All connections to RunCoach are served over HTTPS.</p>
 
     <h2>6. Your Rights</h2>
     <ul>
         <li><strong>Access:</strong> You can view all your data through the application (plans, runs, analytics).</li>
-        <li><strong>Deletion:</strong> You can delete your account and all associated data at any time. Go to your account settings or send a request to the contact below. Account deletion is permanent and removes all plans, run logs, readiness logs, saved recipes, and Strava credentials.</li>
+        <li><strong>Deletion:</strong> You can delete your account and all associated data at any time. Go to your account settings or send a request to the contact below. Account deletion is permanent and removes all plans, run logs, readiness logs, saved recipes, and provider credentials.</li>
         <li><strong>Strava disconnect:</strong> You can disconnect Strava at any time, which clears all stored Strava tokens and credentials.</li>
+        <li><strong>Intervals.icu disconnect:</strong> You can disconnect Intervals.icu at any time, which clears its stored OAuth token.</li>
     </ul>
 
     <h2>7. Data Retention</h2>

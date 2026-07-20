@@ -55,6 +55,12 @@ class Settings(BaseSettings):
     strava_redirect_uri: str = "http://localhost:8000/api/strava/callback"
     strava_initial_sync_days: int = 365
 
+    # Intervals.icu OAuth
+    intervals_client_id: str = ""
+    intervals_client_secret: str = ""
+    intervals_redirect_uri: str = "http://localhost:8000/api/intervals/callback"
+    intervals_initial_sync_days: int = 365
+
     # Coach AI — the LLM-voiced "Coach's Note". When the API key is unset the
     # feature degrades to a deterministic, rules-based note (no network).
     anthropic_api_key: str = ""

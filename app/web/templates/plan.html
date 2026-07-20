@@ -26,7 +26,7 @@
 {% if race_protocol %}
 <link rel="stylesheet" href="{{ static_url('css/plan-raceday.css') }}">
 {% endif %}
-{% if user and not user.strava_athlete_id %}
+{% if user and not user.strava_athlete_id and not user.intervals_athlete_id %}
 <link rel="stylesheet" href="{{ static_url('css/plan-modal.css') }}">
 {% endif %}
 <link rel="stylesheet" href="{{ static_url('css/share.css') }}">
@@ -761,7 +761,7 @@
     ↑
 </button>
 
-{% if user and not user.strava_athlete_id %}
+{% if user and not user.strava_athlete_id and not user.intervals_athlete_id %}
 <!-- Run Logging Modal -->
 <div id="logRunModal" class="modal">
     <div class="modal-content">
