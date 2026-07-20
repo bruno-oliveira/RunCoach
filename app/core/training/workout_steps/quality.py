@@ -28,6 +28,40 @@ def cruise_recovery_m(main_m: int) -> int:
     return min(300, max(100, (main_m // 10) // 50 * 50))
 
 
+def tempo_cruise_plan(distance_km: float) -> Dict[str, Any]:
+    """Shared arithmetic for the cruise-interval tempo variant.
+
+    Both ``build_tempo_steps`` (the executable steps) and
+    ``generate_tempo_run`` (the prose) read the warm-up, rep distance and jog
+    recovery from this one plan so they can never cite different numbers.
+    ``rep_m`` snaps to 100 m (≥ 1 km) or 50 m (below) so ``format_km`` is
+    lossless, exactly like ``build_km_rep_steps``.
+
+    ``sharpener`` flags a budget too small for honest cruise reps (< 800 m per
+    rep): dividing such a slot into three produced degenerate taper sessions
+    ("3 × 0.2 km with 100 m jog"). Below the floor the session is emitted as a
+    strides-based sharpener instead — easy running finished with relaxed
+    strides, the standard taper practice.
+    """
+    total_m = max(0, int(round(distance_km * 1000)))
+    wu_m = _wucd_m(total_m, hard=False) if total_m > 0 else _WARMUP_M
+    main_m = max(500, total_m - 2 * wu_m)
+    rec_m = cruise_recovery_m(main_m)
+    rep_m_raw = max(600, main_m - 2 * rec_m) // 3
+    if rep_m_raw >= 1000:
+        rep_m = int(round(rep_m_raw / 100.0)) * 100
+    else:
+        rep_m = int(round(rep_m_raw / 50.0)) * 50
+    rep_m = max(200, rep_m)
+    return {
+        "wu_m": wu_m,
+        "main_m": main_m,
+        "rec_m": rec_m,
+        "rep_m": rep_m,
+        "sharpener": rep_m < 800,
+    }
+
+
 def interval_rep_plan(
     work_m: int, rep_m: int, *, min_reps: int = 2, work_share: float = 0.6
 ) -> tuple:
@@ -102,16 +136,36 @@ def build_tempo_steps(
     main_m = max(500, total_m - wu_m - cd_m)
 
     if variant == 1:
-        rec_m = cruise_recovery_m(main_m)
-        rep_m_raw = max(600, main_m - 2 * rec_m) // 3
-        # Snap to the same 100 m (at/above 1 km) or 50 m (below) boundaries
-        # that build_km_rep_steps uses, so format_km is lossless and the step
-        # label matches the description precisely.
-        if rep_m_raw >= 1000:
-            rep_m = int(round(rep_m_raw / 100.0)) * 100
-        else:
-            rep_m = int(round(rep_m_raw / 50.0)) * 50
-        rep_m = max(200, rep_m)
+        plan = tempo_cruise_plan(distance_km)
+        if plan["sharpener"]:
+            # The slot can't hold honest 800 m cruise reps (taper sharpeners,
+            # tiny weeks): emit easy running finished with relaxed strides
+            # instead of a degenerate "3 × 0.2 km" set. Same structure as the
+            # easy-run-with-strides day: the easy block is shortened so easy +
+            # strides equal the budget.
+            strides_m = 4 * 100
+            return [
+                _step(
+                    "run",
+                    "Easy run",
+                    distance_m=max(500, total_m - strides_m),
+                    pace_zone="E",
+                    pace_str=_pace_str("E", pace_zones),
+                    effort="conversational",
+                ),
+                _step(
+                    "strides",
+                    "4 × 100 m strides",
+                    distance_m=100,
+                    repeat=4,
+                    pace_zone="R",
+                    pace_str=_pace_str("R", pace_zones),
+                    effort="fast, controlled",
+                    note="Walk/jog back full recovery",
+                ),
+            ]
+        rec_m = plan["rec_m"]
+        rep_m = plan["rep_m"]
         return [
             _warmup(pace_zones, wu_m),
             _step(

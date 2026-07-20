@@ -19,11 +19,13 @@ def _build_rung_steps(
     pace_zone: str,
     wu_m: int,
     cd_m: int,
+    recovery_frac: float = 1.0,
 ) -> List[Dict[str, Any]]:
-    """Warm-up → (rep + equal-distance jog recovery) per rung → cool-down.
+    """Warm-up → (rep + jog recovery) per rung → cool-down.
 
     Shared by :func:`build_pyramid_steps` and :func:`build_ladder_steps`.
-    Each rep is followed by an equal-distance recovery jog, except the last.
+    Each rep is followed by a recovery jog of ``recovery_frac`` × the rung
+    just run (snapped to 50 m), except the last.
     """
     steps: List[Dict[str, Any]] = [_warmup(pace_zones, wu_m)]
     last = len(rungs) - 1
@@ -39,11 +41,12 @@ def _build_rung_steps(
             )
         )
         if i < last:
+            rec_m = max(50, int(round(rung_m * recovery_frac / 50.0)) * 50)
             steps.append(
                 _step(
                     "recovery",
-                    f"{rung_m} m jog recovery",
-                    distance_m=rung_m,
+                    f"{rec_m} m jog recovery",
+                    distance_m=rec_m,
                     pace_zone="E",
                     pace_str=_pace_str("E", pace_zones),
                     effort="jog",
@@ -58,11 +61,13 @@ def build_pyramid_steps(
     pace_zones: Optional[Dict] = None,
     pattern: Optional[List[int]] = None,
     pace_zone: str = "T",
+    recovery_frac: float = 1.0,
 ) -> List[Dict[str, Any]]:
     """Symmetric pyramid (e.g. 400-800-1200-800-400) at trail/threshold pace.
 
-    Recovery jogs are equal-distance to the rep just run. Defaults to a
-    trail-pace pyramid suited to a Saturday intensive-weekend quality session.
+    Recovery jogs default to equal-distance to the rep just run
+    (``recovery_frac`` shortens them, e.g. 0.5 for half-distance). Defaults
+    to a trail-pace pyramid suited to a Saturday intensive-weekend session.
     """
     if distance_km <= 0:
         return []
@@ -70,7 +75,9 @@ def build_pyramid_steps(
         pattern = [400, 800, 1200, 800, 400]
     total_m = int(round(distance_km * 1000))
     wu_m = _wucd_m(total_m)
-    return _build_rung_steps(pattern, pace_zones, pace_zone, wu_m, wu_m)
+    return _build_rung_steps(
+        pattern, pace_zones, pace_zone, wu_m, wu_m, recovery_frac=recovery_frac
+    )
 
 
 def build_ladder_steps(

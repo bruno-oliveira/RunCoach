@@ -86,14 +86,19 @@ _KEY_WORKOUT_MIN_DISTANCE_KM: Dict[str, float] = {
 # fall through to the next candidate in rotation (typically a duration-based
 # session, which fits small budgets by design).
 _KEY_WORKOUT_MIN_BUDGET_KM: Dict[str, float] = {
-    # 3 × 1 km reps + ~1 km warm-up/cool-down each.
-    "5k_vo2max_1000s": 5.0,
-    "10k_vo2max_1000s": 5.0,
-    "half_km_intervals": 5.0,
-    "marathon_km_intervals": 5.0,
+    # Canonical 3 × 1 km reps + the hard-profile bookends (a 5.0 km slot only
+    # leaves ~2.8 km of work — two reps — so the floor sits where three fit).
+    "5k_vo2max_1000s": 5.5,
+    "10k_vo2max_1000s": 5.5,
+    "half_km_intervals": 5.5,
+    "marathon_km_intervals": 5.5,
     # 2 × 1600 m + bookends.
     "10k_mile_repeats": 5.5,
     "half_mile_repeats": 5.5,
+    "10k_broken_miles": 6.0,
+    "trail_flat_broken_miles": 6.0,
+    # 2 × 2 km canonical MP blocks + tempo bookends.
+    "marathon_mp_blocks": 6.5,
     # Fixed prescriptions whose priced steps overflow smaller slots by
     # kilometres (rep-count floors, fixed rep sets, or fixed session times).
     # Floor ≈ the smallest budget where the built session prices at ~budget.
@@ -105,6 +110,7 @@ _KEY_WORKOUT_MIN_BUDGET_KM: Dict[str, float] = {
     "trail_flat_rolling_500s": 6.5,
     "trail_pyramid_intervals": 10.0,
     "trail_ladder_intervals": 10.0,
+    "trail_flat_pyramid": 5.5,
     "trail_power_hike": 7.0,
     "trail_flat_power_walk": 9.0,
     "trail_base_hike_run": 6.0,

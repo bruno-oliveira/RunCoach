@@ -108,6 +108,16 @@ def validate_quality_run_steps(workout: dict) -> tuple[bool, str]:
     if not work_steps:
         return True, "Valid"  # no run-kind steps (e.g. walk-only hill)
 
+    # A strides sharpener (easy run finished with fast strides) is a
+    # legitimate occupant of a small tempo slot — taper weeks emit it instead
+    # of degenerate sub-800 m cruise reps. Its quality stimulus lives in the
+    # ``strides`` step, which the run-step zone checks below can't see.
+    if any(
+        s.get("kind") == "strides" and s.get("pace_zone") in _QUALITY_ZONES
+        for s in steps
+    ):
+        return True, "Valid"
+
     work_efforts = [s.get("effort", "") or "" for s in work_steps]
     work_zones = [s.get("pace_zone", "") or "" for s in work_steps]
 

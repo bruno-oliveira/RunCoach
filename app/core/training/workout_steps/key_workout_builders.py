@@ -37,6 +37,7 @@ def build_meter_rep_steps(
     rep_m: int,
     work_zone: str = "I",
     recovery_label: str = "easy jog recovery",
+    work_effort: str = "comfortably hard",
 ) -> List[Dict[str, Any]]:
     """Warm-up + N × <rep_m> work reps with jog recovery + cool-down.
 
@@ -56,16 +57,21 @@ def build_meter_rep_steps(
     work_total = min(work_budget, reps * rep_m)
     rec_total = max(0, work_budget - work_total)
     rec_m = int(round(rec_total / reps))
+    rep_label = (
+        f"{reps} × {format_km(rep_m / 1000.0)} km"
+        if rep_m >= 1000
+        else f"{reps} × {rep_m} m"
+    )
     steps = [
         _warmup(pace_zones, wu_m),
         _step(
             "run",
-            f"{reps} × {rep_m} m",
+            rep_label,
             distance_m=rep_m,
             repeat=reps,
             pace_zone=work_zone,
             pace_str=_pace_str(work_zone, pace_zones),
-            effort="hard",
+            effort="hard" if work_zone in ("I", "R") else work_effort,
         ),
     ]
     if rec_m > 0:
@@ -570,5 +576,56 @@ def build_duration_rep_steps(
                 effort=recovery_effort,
             )
         )
+    steps.append(_cooldown(pace_zones, wu_m))
+    return steps
+
+
+def build_duration_pyramid_steps(
+    distance_km: float,
+    pace_zones: Optional[Dict] = None,
+    *,
+    pattern_s: List[int],
+    work_zone: str = "I",
+    work_effort: str = "hard",
+    cue: str = "",
+    recovery_label: str = "easy jog recovery",
+) -> List[Dict[str, Any]]:
+    """Warm-up + duration rungs (e.g. 1-2-3-4-3-2-1 min) + cool-down.
+
+    Each rung is a distinct step with an equal-duration easy-jog recovery
+    after it (except the last), so structured exports carry the real ladder
+    shape instead of averaged flat reps. The caller scales ``pattern_s`` to
+    the budget (see the pyramid-pattern helpers in rewrites.py) so prose and
+    steps cite the same rungs.
+    """
+    if distance_km <= 0 or not pattern_s:
+        return []
+    total_m = int(round(distance_km * 1000))
+    wu_m = _wucd_m(total_m)
+    steps: List[Dict[str, Any]] = [_warmup(pace_zones, wu_m)]
+    last = len(pattern_s) - 1
+    for i, secs in enumerate(pattern_s):
+        label = f"{_dur_label(secs)} {cue}".rstrip() if cue else _dur_label(secs)
+        steps.append(
+            _step(
+                "run",
+                label,
+                duration_s=secs,
+                pace_zone=work_zone,
+                pace_str=_pace_str(work_zone, pace_zones),
+                effort=work_effort,
+            )
+        )
+        if i < last:
+            steps.append(
+                _step(
+                    "recovery",
+                    recovery_label,
+                    duration_s=secs,
+                    pace_zone="E",
+                    pace_str=_pace_str("E", pace_zones),
+                    effort="jog",
+                )
+            )
     steps.append(_cooldown(pace_zones, wu_m))
     return steps

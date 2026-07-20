@@ -103,6 +103,31 @@ class TestQualityMinimumDose:
                         f"but fully-priced steps deliver {priced_km:.2f} km"
                     )
 
+    def test_quality_day_meets_minimum_day_floor(self, plan):
+        """No quality day worth lacing up for is under ~4 km at real volumes.
+
+        Phase 2c: every non-taper quality *day* (base strides days included —
+        their easy bulk absorbs the floor) budgets at least
+        ``MIN_QUALITY_DAY_KM``. Cards snap to the priced step total, which can
+        settle slightly under the budget, hence the small slack. Taper
+        sharpeners are deliberately short and recovery weeks trade volume for
+        freshness, so both are excluded.
+        """
+        for week in plan:
+            if week.get("phase") == "taper" or week.get("is_recovery"):
+                continue
+            for w in week.get("daily_workouts", []):
+                if w.get("type") not in _QUALITY_TYPES:
+                    continue
+                d = w.get("distance", 0) or 0
+                if d <= 0:
+                    continue
+                assert d >= 3.4, (
+                    f"week {week['week']} ({week.get('phase')}): "
+                    f"{w.get('type')} day is only {d} km — below the "
+                    f"meaningful-day floor"
+                )
+
     def test_base_road_tempo_is_a_real_threshold_dose(self, plan):
         """Base tempo slots carry >= ~2 km at T (4 km total), not 1.3 km."""
         for week in plan:

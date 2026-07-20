@@ -317,6 +317,14 @@ BASE_QUALITY_MIN_DOSE_KM = {"tempo": 4.0}
 # the floored km is borrowed from the easy budget; otherwise demote to easy.
 MIN_EASY_PER_RUN_KM = 3.0
 
+# Minimum total (km) for any non-taper quality *day* — warm-up, work, easy bulk
+# and cool-down included. A 30 km/week plan was shipping 1.9 km "sessions":
+# the slot cost a quality day yet wasn't worth lacing up for. Base strides /
+# hill-sprint days stay intentionally light in *intensity*; the floor grows
+# their easy bulk, not their fast work. Taper sharpeners are exempt
+# (deliberately short) and beginner plans use their own generator.
+MIN_QUALITY_DAY_KM = 4.0
+
 # =============================================================================
 # Intensity-volume safety caps (Daniels)
 # =============================================================================

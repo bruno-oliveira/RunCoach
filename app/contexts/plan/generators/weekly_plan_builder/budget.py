@@ -19,6 +19,7 @@ from app.core.training.quality_caps import (
 from app.core.training.quality_caps import (
     get_quality_caps as _get_quality_caps,
 )
+from app.core.training.tuning import MAX_QUALITY_DAY_SHARE, MIN_QUALITY_DAY_KM
 from app.core.training.workout_steps import _parse_pace_str_to_min_per_km
 
 # Quality slots with capped distance below this floor are demoted to easy
@@ -75,9 +76,12 @@ def resolve_low_budget_quality(
     Mutates both inputs in place. The weekly total is preserved either way.
 
     Build/peak quality is meant to be substantial, so it is floored up to a
-    meaningful dose when affordable. Base interval/hill slots are left alone
-    (intentionally light strides / short hill sprints — fixed doses, not
-    budget-fillers). Base *tempo* slots are floored too, but to a lighter dose
+    meaningful dose when affordable — never below ``MIN_QUALITY_DAY_KM``, the
+    smallest day worth spending a quality slot on. Base interval/hill slots
+    keep their intentionally light *work* (strides / short hill sprints) but
+    their day total is floored to ``MIN_QUALITY_DAY_KM`` as well: the easy
+    bulk around the strides absorbs the growth. Base *tempo* slots are
+    floored too, but to a lighter dose
     (``BASE_QUALITY_MIN_DOSE_KM``): a threshold stimulus needs a minimum
     continuous block, and the percentage budgeting was emitting 1.3-1.6 km T
     blocks in half/marathon base weeks — a session that costs a quality day yet
@@ -93,15 +97,33 @@ def resolve_low_budget_quality(
     doses = BASE_QUALITY_MIN_DOSE_KM if phase == "base" else QUALITY_MIN_DOSE_KM
     phys_caps = _get_quality_caps(target_distance, phase)
     ceiling = long_run_distance * MAX_QUALITY_VS_LONG_RUN
+    # The quality-day floor only applies when the week can actually support a
+    # day that size (≤ the day-share cap): on very low-volume plans a 4 km
+    # floor would steal its km from the long run instead of the easy budget.
+    week_km = remaining_km + long_run_distance
+    day_floor = (
+        MIN_QUALITY_DAY_KM
+        if MIN_QUALITY_DAY_KM <= week_km * MAX_QUALITY_DAY_SHARE
+        else 0.0
+    )
     for qtype in ("tempo", "interval", "hill"):
-        if phase == "base" and qtype != "tempo":
+        if phase == "base" and qtype != "tempo" and day_floor <= 0:
             continue  # base strides / hill sprints stay intentionally light
         if distribution.get(qtype, 0) <= 0:
             continue
         budget = quality_distances.get(qtype, 0)
         if budget <= 0:
             continue
-        dose = doses.get(qtype, 0)
+        if phase == "base" and qtype != "tempo":
+            # Base strides / hill sprints stay intentionally light in
+            # intensity, but the *day* still has to be worth lacing up for —
+            # the easy bulk around the strides absorbs the floored km, so a
+            # 30 km/week runner never sees a 1.9 km "session".
+            dose = day_floor
+        else:
+            dose = doses.get(qtype, 0)
+            if phase != "taper":
+                dose = max(dose, day_floor)
         if budget >= dose:
             continue  # already a meaningful dose
 

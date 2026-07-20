@@ -9,20 +9,24 @@ from typing import Any, Callable, Dict, List, Optional
 
 from app.core.training import workout_steps as _steps_mod
 from app.core.training.key_workout_library.rewrites import (
+    _FLAT_PYRAMID_PATTERNS,
+    _HILL_PYRAMID_PATTERNS,
     _compound_400_200_reps,
     _compound_800_400_reps,
+    _duration_pyramid_min,
     _fartlek_reps,
     _mile_rep_reps,
-    _mp_block_reps,
     _mp_cutdown_reps,
     _on_off_k_reps,
     _over_under_reps,
     _pyramid_pattern,
+    _road_pyramid_pattern_m,
     _rolling_400_reps,
     _thirty_thirty_reps,
     _vo2max_400_reps,
     _vo2max_km_reps,
     _yasso_800_reps,
+    canonical_plan,
     reconcile_key_workout_text,
 )
 
@@ -37,6 +41,34 @@ _RUNNING_DISTANCE_FRACTION: Dict[str, float] = {
     "trail_flat_proprioception": 0.80,
     "trail_technical_terrain": 0.80,
 }
+
+
+def _canonical_meter_reps(
+    wid: str,
+    work_zone: str,
+    recovery_label: str = "easy jog recovery",
+) -> Callable[[float, Optional[Dict]], List[Dict[str, Any]]]:
+    """Step builder for canonical-rep sessions.
+
+    ``canonical_plan`` (shared with the prose rewrites) picks a round-number
+    rep distance and a count that fills the budget; the leftover becomes the
+    recovery jogs, so the session prices to its assigned distance while each
+    rep stays canonical ("4 × 1 km", never "4 × 1.7 km").
+    """
+
+    def _build(d: float, pz: Optional[Dict]) -> List[Dict[str, Any]]:
+        rep_m, count = canonical_plan(wid, d)
+        return _steps_mod.build_meter_rep_steps(
+            d,
+            pz,
+            reps=count,
+            rep_m=rep_m,
+            work_zone=work_zone,
+            recovery_label=recovery_label,
+        )
+
+    return _build
+
 
 # Structured-first step builders, keyed by workout id. Where present, steps are
 # generated directly from the distance (mirroring the description rewrite)
@@ -63,41 +95,19 @@ _KEY_WORKOUT_STEP_BUILDERS: Dict[
         work_zone="I",
         recovery_label="equal-time jog recovery",
     ),
-    # -- km-rep cruise / segment / cutdown sessions --
-    "5k_cruise_intervals": lambda d, pz: _steps_mod.build_km_rep_steps(
-        d, pz, reps=4, work_zone="T"
-    ),
-    "10k_cruise_intervals": lambda d, pz: _steps_mod.build_km_rep_steps(
-        d, pz, reps=4, work_zone="T"
-    ),
-    "half_threshold_cruise": lambda d, pz: _steps_mod.build_km_rep_steps(
-        d, pz, reps=3, work_zone="T"
-    ),
-    "10k_goal_pace_segments": lambda d, pz: _steps_mod.build_km_rep_steps(
-        d, pz, reps=2, work_zone="10K"
-    ),
-    # -- VO2max km-rep interval variants (proportional reps) --
-    "5k_vo2max_1000s": lambda d, pz: _steps_mod.build_km_rep_steps(
-        d, pz, reps=_vo2max_km_reps(d, default=5), work_zone="I", recovery_s=150
-    ),
-    "10k_vo2max_1000s": lambda d, pz: _steps_mod.build_km_rep_steps(
-        d, pz, reps=_vo2max_km_reps(d, default=5), work_zone="I", recovery_s=120
-    ),
-    "half_km_intervals": lambda d, pz: _steps_mod.build_km_rep_steps(
-        d, pz, reps=_vo2max_km_reps(d, default=5), work_zone="10K", recovery_s=90
-    ),
-    "marathon_km_intervals": lambda d, pz: _steps_mod.build_km_rep_steps(
-        d, pz, reps=_vo2max_km_reps(d, default=6), work_zone="10K", recovery_s=90
-    ),
-    "5k_race_pace_3km": lambda d, pz: _steps_mod.build_km_rep_steps(
-        d, pz, reps=2, work_zone="T", recovery_s=180
-    ),
-    "half_race_pace_segments": lambda d, pz: _steps_mod.build_km_rep_steps(
-        d, pz, reps=3, work_zone="M", recovery_s=120
-    ),
-    "marathon_tempo_cutdown": lambda d, pz: _steps_mod.build_km_rep_steps(
-        d, pz, reps=2, work_zone="T", recovery_s=180
-    ),
+    # -- km-rep cruise / segment / cutdown sessions (canonical reps) --
+    "5k_cruise_intervals": _canonical_meter_reps("5k_cruise_intervals", "T"),
+    "10k_cruise_intervals": _canonical_meter_reps("10k_cruise_intervals", "T"),
+    "half_threshold_cruise": _canonical_meter_reps("half_threshold_cruise", "T"),
+    "10k_goal_pace_segments": _canonical_meter_reps("10k_goal_pace_segments", "10K"),
+    # -- VO2max km-rep interval variants (canonical 1000 m reps) --
+    "5k_vo2max_1000s": _canonical_meter_reps("5k_vo2max_1000s", "I"),
+    "10k_vo2max_1000s": _canonical_meter_reps("10k_vo2max_1000s", "I"),
+    "half_km_intervals": _canonical_meter_reps("half_km_intervals", "10K"),
+    "marathon_km_intervals": _canonical_meter_reps("marathon_km_intervals", "10K"),
+    "5k_race_pace_3km": _canonical_meter_reps("5k_race_pace_3km", "T"),
+    "half_race_pace_segments": _canonical_meter_reps("half_race_pace_segments", "M"),
+    "marathon_tempo_cutdown": _canonical_meter_reps("marathon_tempo_cutdown", "T"),
     # -- easy-start / faster-finish split long runs --
     "marathon_mp_long": lambda d, pz: _steps_mod.build_split_long_steps(
         d, pz, easy_mult=0.60, finish_mult=0.40
@@ -138,9 +148,9 @@ _KEY_WORKOUT_STEP_BUILDERS: Dict[
         work_zone="10K",
         recovery_label="90s easy jog recovery",
     ),
-    # -- marathon-pace blocks --
-    "marathon_mp_blocks": lambda d, pz: _steps_mod.build_km_rep_steps(
-        d, pz, reps=_mp_block_reps(d), work_zone="M", recovery_s=120
+    # -- marathon-pace blocks (canonical 2-5 km blocks) --
+    "marathon_mp_blocks": _canonical_meter_reps(
+        "marathon_mp_blocks", "M", recovery_label="easy jog between blocks"
     ),
     # -- Runna-inspired build/peak sessions --
     "half_on_off_ks": lambda d, pz: _steps_mod.build_meter_rep_steps(
@@ -194,8 +204,14 @@ _KEY_WORKOUT_STEP_BUILDERS: Dict[
     "trail_flat_surge_fartlek": lambda d, pz: _steps_mod.build_fartlek_steps(
         d, pz, reps=_fartlek_reps(d), on_s=180, off_s=120, on_zone="T"
     ),
-    "trail_flat_over_under_intervals": lambda d, pz: _steps_mod.build_fartlek_steps(
-        d, pz, reps=6, on_s=180, off_s=120, on_zone="T"
+    "trail_flat_over_under_intervals": lambda d, pz: _steps_mod.build_over_under_steps(
+        d,
+        pz,
+        reps=_fartlek_reps(
+            d, on_min=3, off_min=2, pace_min_per_km=6.0, default=6, lo=4, hi=8
+        ),
+        over_s=180,
+        under_s=120,
     ),
     # -- base-phase light quality: strides, relaxed fartlek, relaxed cruise --
     "base_strides": lambda d, pz: _steps_mod.build_strides_steps(
@@ -303,12 +319,8 @@ _KEY_WORKOUT_STEP_BUILDERS: Dict[
         work_zone="10K",
         recovery_label="200m easy jog",
     ),
-    "10k_broken_miles": lambda d, pz: _steps_mod.build_km_rep_steps(
-        d,
-        pz,
-        reps=_vo2max_km_reps(d, rep_km=1.2, recovery_km=0.4, default=3, lo=2, hi=4),
-        work_zone="I",
-        recovery_s=60,
+    "10k_broken_miles": _canonical_meter_reps(
+        "10k_broken_miles", "I", recovery_label="easy jog between miles"
     ),
     "10k_200m_repeats": lambda d, pz: _steps_mod.build_meter_rep_steps(
         d,
@@ -318,13 +330,12 @@ _KEY_WORKOUT_STEP_BUILDERS: Dict[
         work_zone="R",
         recovery_label="200m jog recovery",
     ),
-    "10k_pyramid_intervals": lambda d, pz: _steps_mod.build_meter_rep_steps(
+    "10k_pyramid_intervals": lambda d, pz: _steps_mod.build_pyramid_steps(
         d,
         pz,
-        reps=7,  # 400-600-800-1000-800-600-400 = 7 reps
-        rep_m=600,  # average rep length
-        work_zone="I",
-        recovery_label="equal-distance jog recovery",
+        pattern=_road_pyramid_pattern_m(d),
+        pace_zone="I",
+        recovery_frac=0.5,
     ),
     # -- 10K road tempo variant --
     "10k_mile_up_overs": lambda d, pz: _steps_mod.build_over_under_steps(
@@ -344,7 +355,9 @@ _KEY_WORKOUT_STEP_BUILDERS: Dict[
     "trail_broken_climbs": lambda d, pz: _steps_mod.build_duration_rep_steps(
         d,
         pz,
-        reps=6,
+        reps=_fartlek_reps(
+            d, on_min=1.5, off_min=1.0, pace_min_per_km=6.5, default=6, lo=4, hi=8
+        ),
         work_s=90,
         work_zone="I",
         cue="hill",
@@ -369,17 +382,14 @@ _KEY_WORKOUT_STEP_BUILDERS: Dict[
         work_zone="I",
         recovery_label="hike back up to reset",
     ),
-    "trail_hill_pyramid": lambda d, pz: _steps_mod.build_duration_rep_steps(
+    "trail_hill_pyramid": lambda d, pz: _steps_mod.build_duration_pyramid_steps(
         d,
         pz,
-        reps=7,  # 1-2-3-4-3-2-1 min = 7 efforts
-        work_s=120,  # average effort length (2 min)
+        pattern_s=[m * 60 for m in _duration_pyramid_min(d, _HILL_PYRAMID_PATTERNS)],
         work_zone="I",
-        cue="hill",
         work_effort="hard uphill",
+        cue="hill",
         recovery_label="jog down recovery",
-        recovery_s=120,
-        recovery_zone="E",
     ),
     "trail_base_hike_run": lambda d, pz: _steps_mod.build_duration_rep_steps(
         d,
@@ -417,20 +427,16 @@ _KEY_WORKOUT_STEP_BUILDERS: Dict[
         work_zone="T",
         recovery_label="200m easy jog",
     ),
-    "trail_flat_broken_miles": lambda d, pz: _steps_mod.build_km_rep_steps(
-        d,
-        pz,
-        reps=_vo2max_km_reps(d, rep_km=1.2, recovery_km=0.4, default=3, lo=2, hi=4),
-        work_zone="I",
-        recovery_s=60,
+    "trail_flat_broken_miles": _canonical_meter_reps(
+        "trail_flat_broken_miles", "I", recovery_label="easy jog between miles"
     ),
-    "trail_flat_pyramid": lambda d, pz: _steps_mod.build_meter_rep_steps(
+    "trail_flat_pyramid": lambda d, pz: _steps_mod.build_duration_pyramid_steps(
         d,
         pz,
-        reps=7,  # short-medium-long-medium-short pyramid
-        rep_m=400,
+        pattern_s=[m * 60 for m in _duration_pyramid_min(d, _FLAT_PYRAMID_PATTERNS)],
         work_zone="I",
-        recovery_label="equal-distance jog",
+        work_effort="trail race effort",
+        recovery_label="equal-duration easy jog",
     ),
     "trail_flat_vo2max_intervals": lambda d, pz: _steps_mod.build_duration_rep_steps(
         d,

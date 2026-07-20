@@ -44,6 +44,7 @@ from app.core.training.workout_steps.key_workout_builders import (
     build_compound_rep_steps,
     build_continuous_quality_steps,
     build_distance_ladder_steps,
+    build_duration_pyramid_steps,
     build_duration_rep_steps,
     build_fartlek_steps,
     build_km_rep_steps,
@@ -87,6 +88,7 @@ from app.core.training.workout_steps.quality import (
     cruise_recovery_m,
     interval_rep_plan,
     interval_session_plan,
+    tempo_cruise_plan,
 )
 from app.core.training.workout_steps.trail import (
     _build_rung_steps,
@@ -109,6 +111,7 @@ __all__ = [
     "cruise_recovery_m",
     "interval_rep_plan",
     "interval_session_plan",
+    "tempo_cruise_plan",
     "build_interval_steps",
     "build_hill_steps",
     "build_meter_rep_steps",
@@ -122,6 +125,7 @@ __all__ = [
     "build_distance_ladder_steps",
     "build_time_trial_steps",
     "build_duration_rep_steps",
+    "build_duration_pyramid_steps",
     "build_pyramid_steps",
     "build_ladder_steps",
     "build_hike_run_steps",

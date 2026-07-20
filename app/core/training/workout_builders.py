@@ -242,20 +242,13 @@ def generate_tempo_run(
     main_km = round((total_m - 2 * wu_m) / 1000.0, 1)
     variant_idx = day % 3
 
-    # Cruise intervals (variant 1): each rep distance must match build_tempo_steps
-    # which budgets 2 jog recoveries (scaled to the session) and snaps rep_m to
-    # 100m (≥1km) or 50m (<1km) boundaries so format_km is lossless. Mirror
-    # that math here so the description cites the exact distances the steps
-    # execute.
-    main_m = max(500, total_m - wu_m - wu_m)
-    rec_m_cruise = workout_steps.cruise_recovery_m(main_m)
-    rep_m_raw = max(600, main_m - 2 * rec_m_cruise) // 3
-    if rep_m_raw >= 1000:
-        rep_m_cruise = int(round(rep_m_raw / 100.0)) * 100
-    else:
-        rep_m_cruise = int(round(rep_m_raw / 50.0)) * 50
-    rep_m_cruise = max(200, rep_m_cruise)
-    rep_km_cruise = format_km(rep_m_cruise / 1000.0)
+    # Cruise intervals (variant 1): rep distance and jog recovery come from the
+    # same tempo_cruise_plan the step builder uses, so the description cites
+    # the exact distances the steps execute (including the strides-sharpener
+    # fallback when the slot is too small for honest cruise reps).
+    cruise = workout_steps.tempo_cruise_plan(distance)
+    rec_m_cruise = cruise["rec_m"]
+    rep_km_cruise = format_km(cruise["rep_m"] / 1000.0)
 
     if pace_zones:
         t_pace = pace_zones["T"]["pace_str"]
@@ -270,6 +263,14 @@ def generate_tempo_run(
             f"Cruise intervals: 3x{rep_km_cruise}km at tempo pace with {rec_m_cruise}m jog recovery.",
             f"Tempo run with surges: {format_km(warmup)}km warmup, {format_km(main_km)}km at threshold effort with 4x30sec faster surges, {format_km(cooldown)}km cooldown.",
         ]
+
+    if variant_idx == 1 and cruise["sharpener"]:
+        # Mirrors build_tempo_steps: below the 800 m rep floor the cruise
+        # variant becomes a strides sharpener (standard taper practice).
+        tempo_variations[1] = (
+            "Sharpener: run easy, then finish with 4x100m relaxed strides "
+            "with full walk/jog recovery between each."
+        )
 
     description = VDOTCalculator.inject_paces_into_description(
         tempo_variations[variant_idx], pace_zones or {}, "tempo"

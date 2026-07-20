@@ -54,31 +54,138 @@ def _mp_cutdown_reps(d: float) -> int:
     return 6
 
 
-def _km_rep_distance(d: float, reps: int) -> float:
-    """Per-rep work distance (km) for the km-rep family, mirroring the steps.
+# Canonical rep distances (m) per work family. A rep session's identity is a
+# round-number rep ("4 × 1 km", "3 × 1.6 km"); dividing the budget across a
+# fixed rep count instead produced noise like "4 × 1.7 km" — or, on small
+# slots, "3 × 0.5 km" for a session literally named "1000s". Both the step
+# builders and the prose rewrites pick (rep, count) through
+# :func:`canonical_reps`, so they cite identical figures; the budget leftover
+# becomes the recovery jogs between reps (``build_meter_rep_steps`` prices
+# it), so the session still totals its assigned distance.
+_CANONICAL_REP_LADDERS: Dict[str, tuple] = {
+    "vo2max": (400, 600, 800, 1000, 1200),
+    "cruise": (800, 1000, 1200, 1600, 2000),
+    "marathon": (2000, 3000, 4000, 5000),
+}
 
-    ``build_km_rep_steps`` is the executable source of truth: it strips the
-    warm-up / cool-down, divides the remaining budget across ``reps`` (with a
-    200 m floor), then snaps to 100 m at/above 1 km or 50 m below. The prose
-    rewrites for this family (``marathon_tempo_cutdown``,
-    ``5k_race_pace_3km``, ``half_race_pace_segments``) must cite that exact
-    figure, otherwise the description claims a different rep distance than the
-    runner is told to execute. This helper reproduces that arithmetic so the
-    two never diverge — replacing the old per-description ``(d - wu - cd) /
-    reps`` expressions, which skipped the 50/100 m snapping (and, for the
-    cutdown, applied a cosmetic ``max(1.0, …)`` floor the steps never honoured).
+
+def canonical_reps(
+    work_m: int,
+    family: str,
+    *,
+    rep_m: Optional[int] = None,
+    min_reps: int = 2,
+    max_reps: int = 8,
+) -> tuple:
+    """Pick ``(rep_m, count)`` filling ``work_m`` with canonical rep distances.
+
+    ``rep_m`` pins the rep for sessions named after it (a "1000s" session
+    prescribes 1000 m reps at any budget — the selector's budget floors keep
+    it off slots that can't hold ``min_reps`` of them). Otherwise the largest
+    rep in the family's ladder that still yields ``min_reps`` reps wins:
+    fewer, longer reps read as the classic session. The count fills the work
+    budget (clamped to ``max_reps``); the remainder becomes recovery-jog
+    ground rather than a stretched rep.
     """
-    total_m = int(round(d * 1000))
-    wu_m = _wucd_m(total_m)
-    work_m = max(0, total_m - 2 * wu_m)
-    if work_m <= 0 or reps <= 0:
-        return 0.0
-    rep_m = max(200, int(round(work_m / reps)))
+    if rep_m is not None:
+        if rep_m <= 0:
+            return (rep_m, min_reps)
+        return (rep_m, max(min_reps, min(max_reps, work_m // rep_m)))
+    ladder = _CANONICAL_REP_LADDERS[family]
+    for rep in reversed(ladder):
+        if work_m // rep >= min_reps:
+            return (rep, min(max_reps, work_m // rep))
+    return (ladder[0], min_reps)
+
+
+# Canonical-rep spec per converted session: the family (or pinned rep, for
+# sessions named after one) and the count clamp that keeps the session
+# recognisable. Shared by the prose rewrites below and the step-builder
+# registry so both always cite the same (rep, count) pair.
+_CANONICAL_SPECS: Dict[str, Dict[str, Any]] = {
+    # VO2max / interval km reps — pinned where the name is the rep.
+    "5k_vo2max_1000s": {
+        "family": "vo2max",
+        "rep_m": 1000,
+        "min_reps": 3,
+        "max_reps": 6,
+    },
+    "10k_vo2max_1000s": {
+        "family": "vo2max",
+        "rep_m": 1000,
+        "min_reps": 3,
+        "max_reps": 6,
+    },
+    "half_km_intervals": {
+        "family": "vo2max",
+        "rep_m": 1000,
+        "min_reps": 3,
+        "max_reps": 6,
+    },
+    "marathon_km_intervals": {
+        "family": "vo2max",
+        "rep_m": 1000,
+        "min_reps": 3,
+        "max_reps": 7,
+    },
+    "10k_broken_miles": {
+        "family": "vo2max",
+        "rep_m": 1600,
+        "min_reps": 2,
+        "max_reps": 4,
+    },
+    "trail_flat_broken_miles": {
+        "family": "vo2max",
+        "rep_m": 1600,
+        "min_reps": 2,
+        "max_reps": 4,
+    },
+    # Cruise / threshold / race-pace segments — canonical 800-2000 m ladder.
+    "5k_cruise_intervals": {"family": "cruise", "min_reps": 3, "max_reps": 6},
+    "10k_cruise_intervals": {"family": "cruise", "min_reps": 3, "max_reps": 6},
+    "half_threshold_cruise": {"family": "cruise", "min_reps": 3, "max_reps": 5},
+    "10k_goal_pace_segments": {"family": "cruise", "min_reps": 2, "max_reps": 3},
+    "5k_race_pace_3km": {"family": "cruise", "min_reps": 2, "max_reps": 2},
+    "marathon_tempo_cutdown": {"family": "cruise", "min_reps": 2, "max_reps": 3},
+    "half_race_pace_segments": {"family": "cruise", "min_reps": 2, "max_reps": 4},
+    # Marathon-pace blocks — long canonical blocks.
+    "marathon_mp_blocks": {"family": "marathon", "min_reps": 2, "max_reps": 4},
+}
+
+
+def canonical_plan(workout_id: str, d: float) -> tuple:
+    """Canonical ``(rep_m, count)`` for a converted session at distance ``d``."""
+    return canonical_reps(_main_m(d), **_CANONICAL_SPECS[workout_id])
+
+
+def _rep_txt(rep_m: int) -> str:
+    """Cite a rep distance the way runners say it: '800m' or '1.6km'."""
     if rep_m >= 1000:
-        rep_m = int(round(rep_m / 100.0)) * 100
-    else:
-        rep_m = int(round(rep_m / 50.0)) * 50
-    return rep_m / 1000.0
+        return f"{format_km(rep_m / 1000.0)}km"
+    return f"{rep_m}m"
+
+
+def _canonical_rep_desc(
+    workout_id: str,
+    work_phrase: str,
+    recovery_phrase: str = "an easy jog recovery between reps",
+) -> Callable[[float], str]:
+    """Description factory for canonical-rep sessions.
+
+    Cites the same (rep, count) pair the step builder executes, plus the
+    shared warm-up/cool-down numbers, so prose and steps cannot diverge.
+    """
+
+    def _desc(d: float) -> str:
+        rep_m, count = canonical_plan(workout_id, d)
+        wu, cd = _wu_cd(d)
+        return (
+            f"Warm up {format_km(wu)}km easy. "
+            f"Run {count} x {_rep_txt(rep_m)} {work_phrase} "
+            f"with {recovery_phrase}. Cool down {format_km(cd)}km easy."
+        )
+
+    return _desc
 
 
 def _vo2max_400_reps(d: float) -> int:
@@ -115,6 +222,49 @@ def _pyramid_pattern(d: float) -> str:
     if main_km >= 3.4:
         return "200m, 400m, 600m, 400m, 200m"
     return "200m, 400m, 400m, 200m"
+
+
+def _road_pyramid_pattern_m(d: float) -> list:
+    """Rung distances (m) for the 10K pyramid, scaled to the work budget.
+
+    Recovery jogs are half the rung just run (see the ``recovery_frac=0.5``
+    the step builder passes), so a pattern's cost is its rung total plus half
+    of every rung but the last. The largest canonical ladder that fits the
+    warm-up/cool-down-adjusted budget wins, so the session keeps a real
+    pyramid shape at every size instead of degrading to averaged flat reps.
+    """
+    main_m = _main_m(d)
+    patterns = (
+        [400, 600, 800, 1000, 800, 600, 400],
+        [400, 600, 800, 600, 400],
+        [200, 400, 600, 400, 200],
+        [200, 400, 400, 200],
+    )
+    for pattern in patterns:
+        cost = sum(pattern) + sum(p // 2 for p in pattern[:-1])
+        if main_m >= cost:
+            return pattern
+    return patterns[-1]
+
+
+# Effort-minute pyramids for the duration-based trail sessions, largest first.
+_HILL_PYRAMID_PATTERNS = ([1, 2, 3, 4, 3, 2, 1], [1, 2, 3, 2, 1], [1, 2, 2, 1])
+_FLAT_PYRAMID_PATTERNS = ([2, 4, 6, 4, 2], [2, 3, 4, 3, 2], [1, 2, 3, 2, 1])
+
+
+def _duration_pyramid_min(d: float, patterns: tuple) -> list:
+    """Largest effort-minute pyramid whose work + jogs fit the budget.
+
+    Priced the same way the steps are priced downstream: hard efforts at the
+    default I pace (~5.5 min/km) and equal-duration easy jog recoveries at
+    the default E pace (~8 min/km).
+    """
+    main_km = _main_m(d) / 1000.0
+    for pattern in patterns:
+        cost_km = sum(pattern) / 5.5 + sum(pattern[:-1]) / 8.0
+        if main_km >= cost_km:
+            return list(pattern)
+    return list(patterns[-1])
 
 
 def _fartlek_reps(
@@ -190,11 +340,6 @@ def _mile_rep_reps(d: float) -> int:
     # Reserve ~15% of the work budget for jog recovery between reps.
     reps = int((work_budget * 0.85) // 1600)
     return max(2, min(6, reps))
-
-
-def _mp_block_reps(d: float) -> int:
-    """Marathon-pace block count scaled to the run budget (each ~3km + float)."""
-    return _vo2max_km_reps(d, rep_km=3.0, recovery_km=0.4, default=3, lo=2, hi=5)
 
 
 def _over_under_reps(
@@ -302,13 +447,13 @@ _DISTANCE_REWRITES: Dict[str, Callable[[float], str]] = {
         f"Warm up {format_km(_wu_cd(d)[0])}km easy. Run {_vo2max_400_reps(d)} x 400m at 5K pace "
         f"with 90s easy jog recovery between reps. Cool down {format_km(_wu_cd(d)[1])}km easy."
     ),
-    "5k_race_pace_3km": lambda d: (
-        f"Warm up {format_km(_wu_cd(d)[0])}km easy. Run 2 x {format_km(_km_rep_distance(d, 2))}km "
-        f"at 5K goal pace with 3 min easy jog recovery. Cool down {format_km(_wu_cd(d)[1])}km easy."
+    "5k_race_pace_3km": _canonical_rep_desc(
+        "5k_race_pace_3km",
+        "at 5K goal pace",
+        "an easy jog recovery between reps",
     ),
-    "5k_cruise_intervals": lambda d: (
-        f"Warm up {format_km(_wu_cd(d)[0])}km easy. Run 4 x {format_km(_km_rep_distance(d, 4))}km "
-        f"at threshold pace with 60 seconds easy jog between reps. Cool down {format_km(_wu_cd(d)[1])}km easy."
+    "5k_cruise_intervals": _canonical_rep_desc(
+        "5k_cruise_intervals", "at threshold pace"
     ),
     "5k_threshold_run": lambda d: (
         f"Warm up {format_km(_wu_cd(d)[0])}km easy. "
@@ -340,10 +485,8 @@ _DISTANCE_REWRITES: Dict[str, Callable[[float], str]] = {
         f"Take a gel or fuel every 5km starting at km 10. Practice your exact race-day nutrition strategy. "
         f"Walk 1 min after each fuel stop if needed."
     ),
-    "marathon_tempo_cutdown": lambda d: (
-        f"Warm up {format_km(_wu_cd(d)[0])}km easy. "
-        f"Run 2 x {format_km(_km_rep_distance(d, 2))}km at threshold pace with 3 min easy jog recovery. "
-        f"Cool down {format_km(_wu_cd(d)[1])}km easy."
+    "marathon_tempo_cutdown": _canonical_rep_desc(
+        "marathon_tempo_cutdown", "at threshold pace"
     ),
     "marathon_mp_cutdown": lambda d: (
         f"Warm up {format_km(_wu_cd(d)[0])}km easy. "
@@ -361,15 +504,11 @@ _DISTANCE_REWRITES: Dict[str, Callable[[float], str]] = {
         f"last {format_km(d * 2 / 3)}km at marathon pace. "
         f"Run as 3 segments, each 15s/km faster than the last."
     ),
-    "half_race_pace_segments": lambda d: (
-        f"Warm up {format_km(_wu_cd(d)[0])}km easy. "
-        f"Run 3 x {format_km(_km_rep_distance(d, 3))}km "
-        f"at half marathon goal pace with 2 min easy jog recovery. Cool down {format_km(_wu_cd(d)[1])}km easy."
+    "half_race_pace_segments": _canonical_rep_desc(
+        "half_race_pace_segments", "at half marathon goal pace"
     ),
-    "half_threshold_cruise": lambda d: (
-        f"Warm up {format_km(_wu_cd(d)[0])}km easy. "
-        f"Run 3 x {format_km(_km_rep_distance(d, 3))}km "
-        f"at threshold pace with 90 seconds easy jog recovery. Cool down {format_km(_wu_cd(d)[1])}km easy."
+    "half_threshold_cruise": _canonical_rep_desc(
+        "half_threshold_cruise", "at threshold pace"
     ),
     "trail_flat_surge_fartlek": lambda d: (
         f"Warm up {format_km(_wu_cd(d)[0])}km easy. "
@@ -396,34 +535,16 @@ _DISTANCE_REWRITES: Dict[str, Callable[[float], str]] = {
         f"Run {format_km(d)}km at moderate effort, focusing on foot placement, "
         f"quick cadence, and staying light on your feet."
     ),
-    "10k_goal_pace_segments": lambda d: (
-        f"Warm up {format_km(_wu_cd(d)[0])}km easy. "
-        f"Run 2 x {format_km(_km_rep_distance(d, 2))}km "
-        f"at 10K goal pace with 3 min standing recovery. Cool down {format_km(_wu_cd(d)[1])}km easy."
+    "10k_goal_pace_segments": _canonical_rep_desc(
+        "10k_goal_pace_segments", "at 10K goal pace"
     ),
-    "5k_vo2max_1000s": lambda d: (
-        f"Warm up {format_km(_wu_cd(d)[0])}km easy. Run {_vo2max_km_reps(d, default=5)} x "
-        f"{format_km(_km_rep_distance(d, _vo2max_km_reps(d, default=5)))}km "
-        f"at 5K goal pace with 2-3 min easy jog recovery between reps. "
-        f"Cool down {format_km(_wu_cd(d)[1])}km easy."
+    "5k_vo2max_1000s": _canonical_rep_desc("5k_vo2max_1000s", "at 5K goal pace"),
+    "10k_vo2max_1000s": _canonical_rep_desc(
+        "10k_vo2max_1000s", "at a pace between your 5K and 10K effort"
     ),
-    "10k_vo2max_1000s": lambda d: (
-        f"Warm up {format_km(_wu_cd(d)[0])}km easy. Run {_vo2max_km_reps(d, default=5)} x "
-        f"{format_km(_km_rep_distance(d, _vo2max_km_reps(d, default=5)))}km "
-        f"at a pace between your 5K and 10K effort, with 2 min easy jog "
-        f"recovery between reps. Cool down {format_km(_wu_cd(d)[1])}km easy."
-    ),
-    "half_km_intervals": lambda d: (
-        f"Warm up {format_km(_wu_cd(d)[0])}km easy. Run {_vo2max_km_reps(d, default=5)} x "
-        f"{format_km(_km_rep_distance(d, _vo2max_km_reps(d, default=5)))}km "
-        f"at 10K goal pace with 90 sec easy jog recovery between reps. "
-        f"Cool down {format_km(_wu_cd(d)[1])}km easy."
-    ),
-    "marathon_km_intervals": lambda d: (
-        f"Warm up {format_km(_wu_cd(d)[0])}km easy. Run {_vo2max_km_reps(d, default=6)} x "
-        f"{format_km(_km_rep_distance(d, _vo2max_km_reps(d, default=6)))}km "
-        f"at 10K goal pace with 90 sec easy jog recovery between reps. "
-        f"Cool down {format_km(_wu_cd(d)[1])}km easy."
+    "half_km_intervals": _canonical_rep_desc("half_km_intervals", "at 10K goal pace"),
+    "marathon_km_intervals": _canonical_rep_desc(
+        "marathon_km_intervals", "at 10K goal pace"
     ),
     "10k_tempo_progression": lambda d: (
         f"Warm up {format_km(_wu_cd(d)[0])}km easy. "
@@ -431,9 +552,8 @@ _DISTANCE_REWRITES: Dict[str, Callable[[float], str]] = {
         f"first km at easy pace, each subsequent km 10-15 sec/km faster, "
         f"finishing last km at 10K goal pace. Cool down {format_km(_wu_cd(d)[1])}km easy."
     ),
-    "10k_cruise_intervals": lambda d: (
-        f"Warm up {format_km(_wu_cd(d)[0])}km easy. Run 4 x {format_km(_km_rep_distance(d, 4))}km "
-        f"at threshold pace with 60 seconds easy jog between reps. Cool down {format_km(_wu_cd(d)[1])}km easy."
+    "10k_cruise_intervals": _canonical_rep_desc(
+        "10k_cruise_intervals", "at threshold pace"
     ),
     "10k_fartlek": lambda d: (
         f"Warm up {format_km(_wu_cd(d)[0])}km easy. Within a continuous run, "
@@ -483,11 +603,10 @@ _DISTANCE_REWRITES: Dict[str, Callable[[float], str]] = {
         f"(1 mile) at 10K goal pace with 90 sec easy jog recovery between reps. "
         f"Cool down {format_km(_wu_cd(d)[1])}km easy."
     ),
-    "marathon_mp_blocks": lambda d: (
-        f"Warm up {format_km(_wu_cd(d)[0])}km easy. Run {_mp_block_reps(d)} x "
-        f"{format_km(_km_rep_distance(d, _mp_block_reps(d)))}km at marathon pace "
-        f"with 2 min easy jog recovery between blocks. "
-        f"Cool down {format_km(_wu_cd(d)[1])}km easy."
+    "marathon_mp_blocks": _canonical_rep_desc(
+        "marathon_mp_blocks",
+        "at marathon pace",
+        "an easy jog recovery between blocks",
     ),
     "marathon_yasso_800s": lambda d: (
         f"Warm up {format_km(_wu_cd(d)[0])}km easy. "
@@ -676,9 +795,9 @@ _DISTANCE_REWRITES: Dict[str, Callable[[float], str]] = {
         f"Easy cool-down to finish."
     ),
     "10k_broken_miles": lambda d: (
-        f"Easy warm-up, then run {_fartlek_reps(d, on_min=4, off_min=2, pace_min_per_km=5.5, default=3, lo=2, hi=5)} broken miles: "
-        f"within each, run 3 hard efforts at 5K pace with 60 seconds rest between "
-        f"them, then 3 minutes easy jog between miles. Easy cool-down."
+        f"Easy warm-up, then run {canonical_plan('10k_broken_miles', d)[1]} broken "
+        f"miles (1600m): within each, run 3 hard efforts at 5K pace with a short "
+        f"rest between them, then an easy jog between miles. Easy cool-down."
     ),
     "10k_200m_repeats": lambda d: (
         f"Easy warm-up, then run {_vo2max_400_reps(d)} short fast efforts "
@@ -702,6 +821,52 @@ _DISTANCE_REWRITES: Dict[str, Callable[[float], str]] = {
         f"each mile is 3 fast controlled downhill efforts with a hike-back between "
         f"them, then 3 minutes easy between miles. Easy cool-down."
     ),
+    # -- Pyramid / set-based sessions whose prose previously hardcoded 2 km
+    # bookends (and, for the pyramids, promised a shape the steps flattened) --
+    "10k_pyramid_intervals": lambda d: (
+        f"Warm up {format_km(_wu_cd(d)[0])}km easy. Run a pyramid — "
+        f"{', '.join(f'{m}m' for m in _road_pyramid_pattern_m(d))} — at a pace "
+        f"between your 5K and 10K effort, with half-distance jog recovery "
+        f"between reps. Cool down {format_km(_wu_cd(d)[1])}km easy."
+    ),
+    "trail_hill_pyramid": lambda d: (
+        f"Warm up {format_km(_wu_cd(d)[0])}km easy. Find a hill (6-10% grade). "
+        f"Run an uphill pyramid — "
+        f"{', '.join(str(m) for m in _duration_pyramid_min(d, _HILL_PYRAMID_PATTERNS))}"
+        f" minutes hard — jogging back down to the start between each rep. "
+        f"Drive arms, shorten stride, stay upright. "
+        f"Cool down {format_km(_wu_cd(d)[1])}km easy."
+    ),
+    "trail_flat_pyramid": lambda d: (
+        f"Warm up {format_km(_wu_cd(d)[0])}km easy. Run a pyramid of efforts at "
+        f"trail race effort: "
+        f"{', '.join(str(m) for m in _duration_pyramid_min(d, _FLAT_PYRAMID_PATTERNS))}"
+        f" minutes — with equal-duration easy jog recovery between each. Keep "
+        f"the effort level consistent throughout; don't sprint the short reps "
+        f"or sandbag the long one. Cool down {format_km(_wu_cd(d)[1])}km easy."
+    ),
+    "trail_broken_climbs": lambda d: (
+        f"Warm up {format_km(_wu_cd(d)[0])}km easy on flat or gentle terrain. "
+        f"Find a sustained hill (6-10% grade). Run "
+        f"{_fartlek_reps(d, on_min=1.5, off_min=1.0, pace_min_per_km=6.5, default=6, lo=4, hi=8)}"
+        f" x 90 seconds hard uphill with 60 seconds easy power-hike or jog "
+        f"between reps. Cool down {format_km(_wu_cd(d)[1])}km easy."
+    ),
+    "trail_stacked_efforts": lambda d: (
+        f"Warm up {format_km(_wu_cd(d)[0])}km easy. Run "
+        f"{_over_under_reps(d, over_min=10, under_min=3, default=3, lo=2, hi=4)}"
+        f" x 10 minutes at trail race effort on hilly terrain — let the "
+        f"gradient dictate pace, keep effort constant through climbs and "
+        f"descents. Take 3 minutes easy jog recovery between efforts. "
+        f"Cool down {format_km(_wu_cd(d)[1])}km easy."
+    ),
+    "trail_flat_over_under_intervals": lambda d: (
+        f"Warm up {format_km(_wu_cd(d)[0])}km easy. Run "
+        f"{_fartlek_reps(d, on_min=3, off_min=2, pace_min_per_km=6.0, default=6, lo=4, hi=8)}"
+        f" sets of 3 min hard (Zone 4-5 effort) straight into 2 min steady "
+        f"(Zone 3-4 effort) — no full recovery, stay working the whole block. "
+        f"Cool down {format_km(_wu_cd(d)[1])}km easy."
+    ),
     # Flat-terrain workouts — descriptions avoid hardcoded rep distances
     "trail_flat_rolling_500s": lambda d: (
         f"Easy warm-up. On flat terrain, run "
@@ -710,10 +875,9 @@ _DISTANCE_REWRITES: Dict[str, Callable[[float], str]] = {
         f"keep moving, no stopping. Easy cool-down."
     ),
     "trail_flat_broken_miles": lambda d: (
-        f"Easy warm-up. Run "
-        f"{_fartlek_reps(d, on_min=4, off_min=2, pace_min_per_km=6.0, default=3, lo=2, hi=5)} broken miles: "
-        f"each is 3 hard efforts at strong trail pace with 60 seconds rest between, "
-        f"then 3 minutes easy jog between miles. Easy cool-down."
+        f"Easy warm-up. Run {canonical_plan('trail_flat_broken_miles', d)[1]} broken "
+        f"miles (1600m): each is 3 hard efforts at strong trail pace with a short "
+        f"rest between, then an easy jog between miles. Easy cool-down."
     ),
     "trail_flat_vo2max_intervals": lambda d: (
         f"Easy warm-up. Run "
