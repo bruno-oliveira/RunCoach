@@ -24,12 +24,12 @@
                 </div>
 
                 <h1 class="hero-title">
-                    <span data-i18n="home.title1">Train smarter.</span><br>
-                    <span class="hero-title-accent"><span data-i18n="home.title2">Run stronger.</span></span>
+                    <span data-i18n="home.title1">A coach that</span><br>
+                    <span class="hero-title-accent"><span data-i18n="home.title2">explains every run.</span></span>
                 </h1>
 
                 <p class="hero-subtitle">
-                    <span data-i18n="home.subtitle">Get a training plan built around your fitness level, race goal, and schedule. Backed by proven progression principles.</span>
+                    <span data-i18n="home.subtitle">Tell us your race and your weekly mileage. We build a week-by-week plan paced off your real fitness, tell you why each session matters, and reshape it as you log your runs.</span>
                 </p>
 
                 <div class="hero-features">
@@ -37,25 +37,25 @@
                         <div class="hero-feature-icon">
                             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
                         </div>
-                        <span><span data-i18n="home.feat_mileage">Progressive weekly mileage</span></span>
+                        <span><span data-i18n="home.feat_mileage">Paces set from your own fitness</span></span>
                     </div>
                     <div class="hero-feature">
                         <div class="hero-feature-icon">
                             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
                         </div>
-                        <span><span data-i18n="home.feat_nutrition">Nutrition & strength guidance</span></span>
+                        <span><span data-i18n="home.feat_nutrition">Every session explains its purpose</span></span>
                     </div>
                     <div class="hero-feature">
                         <div class="hero-feature-icon">
                             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
                         </div>
-                        <span><span data-i18n="home.feat_adaptive">Adaptive to your performance</span></span>
+                        <span><span data-i18n="home.feat_adaptive">Reshapes itself as you log runs</span></span>
                     </div>
                     <div class="hero-feature">
                         <div class="hero-feature-icon">
                             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
                         </div>
-                        <span><span data-i18n="home.feat_pdf">Download as PDF</span></span>
+                        <span><span data-i18n="home.feat_pdf">Take it anywhere — PDF or watch</span></span>
                     </div>
                 </div>
             </div>
@@ -370,15 +370,15 @@
         <div class="stats-grid stagger">
             <div class="stat-card">
                 <span class="stat-card-value">5K &ndash; 42K</span>
-                <span class="stat-card-label"><span data-i18n="home.stat_dist_label">Supported distances</span></span>
+                <span class="stat-card-label"><span data-i18n="home.stat_dist_label">5K to marathon, plus trail & ultra</span></span>
             </div>
             <div class="stat-card">
                 <span class="stat-card-value">4 &ndash; 24</span>
-                <span class="stat-card-label"><span data-i18n="home.stat_weeks_label">Weeks of structured training</span></span>
+                <span class="stat-card-label"><span data-i18n="home.stat_weeks_label">Weeks, base through taper</span></span>
             </div>
             <div class="stat-card">
-                <span class="stat-card-value"><span data-i18n="home.stat_adaptive">Adaptive</span></span>
-                <span class="stat-card-label"><span data-i18n="home.stat_adaptive_label">Plans adjust to your progress</span></span>
+                <span class="stat-card-value"><span data-i18n="home.stat_adaptive">VDOT-paced</span></span>
+                <span class="stat-card-label"><span data-i18n="home.stat_adaptive_label">Real Daniels math, not a lookup table</span></span>
             </div>
         </div>
     </div>
@@ -614,26 +614,26 @@ function setPlanMode(mode) {
                     const trailKm = parseFloat(trailDistanceField.value);
                     if (isNaN(trailKm) || trailKm < 8 || trailKm > 163) {
                         e.preventDefault();
-                        alert('Trail/ultra distance must be between 8 km and 163 km (100 mi).');
+                        notify('Pick a trail distance between 8 km and 163 km (100 mi).', { type: 'error' });
                         trailDistanceField.focus();
                         return false;
                     }
                     const elev = parseFloat(elevationField.value);
                     if (isNaN(elev) || elev < 0 || elev > 10000) {
                         e.preventDefault();
-                        alert('Enter total elevation gain in metres (0–10000). Use 0 for fully flat trails.');
+                        notify('Enter total elevation gain in metres (0–10000). Use 0 for fully flat trails.', { type: 'error' });
                         elevationField.focus();
                         return false;
                     }
                     if (!trainingTerrainField.value) {
                         e.preventDefault();
-                        alert('Select the terrain you can train on so we can adapt your trail sessions locally.');
+                        notify('Tell us the terrain you can train on so we can shape your trail sessions to it.', { type: 'error' });
                         trainingTerrainField.focus();
                         return false;
                     }
                     if (parseFloat(currentKm.value) === 0) {
                         e.preventDefault();
-                        alert('Trail/ultra plans require an existing running base. Build to at least 15 km/week first.');
+                        notify('Trail and ultra plans build on an existing base — get to about 15 km/week first, then come back.', { type: 'error' });
                         currentKm.focus();
                         return false;
                     }
@@ -641,7 +641,7 @@ function setPlanMode(mode) {
                     const runs = parseInt(runsSelect.value);
                     if (runs < minRuns) {
                         e.preventDefault();
-                        alert(`Your selected bracket needs at least ${minRuns} runs/week.`);
+                        notify(`This bracket needs at least ${minRuns} runs/week to work — bump up your runs or pick a shorter race.`, { type: 'error' });
                         runsSelect.focus();
                         return false;
                     }
@@ -652,7 +652,7 @@ function setPlanMode(mode) {
                     const km = parseFloat(currentKm.value);
                     if (km > 0 && km < Math.round(minKm * 10) / 10) {
                         e.preventDefault();
-                        alert(`A ${trailKm} km trail/ultra needs at least ${minKm.toFixed(1)} km/week base.`);
+                        notify(`A ${trailKm} km trail/ultra needs about ${minKm.toFixed(1)} km/week of base to train safely.`, { type: 'error' });
                         currentKm.focus();
                         return false;
                     }
@@ -662,13 +662,13 @@ function setPlanMode(mode) {
                         const selectedDistance = parseFloat(targetDistance.value);
                         if (!supportedDistances.includes(selectedDistance)) {
                             e.preventDefault();
-                            alert('Starting from zero mileage is only supported for 5K and 10K goals. Please select a shorter distance or enter your current weekly mileage.');
+                            notify('Starting from zero works for 5K and 10K goals. For longer races, pick a shorter distance or tell us your current weekly mileage.', { type: 'error' });
                             targetDistance.focus();
                             return false;
                         }
                         if (parseInt(weeks.value) < 8) {
                             e.preventDefault();
-                            alert('Beginner plans require at least 8 weeks for safe progression. Please extend your training duration.');
+                            notify('Starting from scratch needs at least 8 weeks to progress safely — give yourself a little more runway.', { type: 'error' });
                             weeks.focus();
                             return false;
                         }
@@ -680,7 +680,7 @@ function setPlanMode(mode) {
                     const distNames = {5: '5K', 10: '10K', 21.1: 'Half Marathon', 42.2: 'Marathon'};
                     if (km > 0 && minMileage[dist] && km < minMileage[dist]) {
                         e.preventDefault();
-                        alert(distNames[dist] + ' training requires at least ' + minMileage[dist] + ' km/week. Please build your base before starting.');
+                        notify(distNames[dist] + ' training needs about ' + minMileage[dist] + ' km/week to start from — build your base a bit more first.', { type: 'error' });
                         currentKm.focus();
                         return false;
                     }
@@ -717,7 +717,7 @@ function setPlanMode(mode) {
                 if (!goalTimeReq.value || !goalTimeReq.value.match(/^\d{1,2}:\d{2}(:\d{2})?$/)) {
                     e.preventDefault();
                     goalTimeReq.focus();
-                    alert('Please enter a valid goal finish time (MM:SS or HH:MM:SS)');
+                    notify('Enter your goal finish time as MM:SS or HH:MM:SS (e.g. 1:45:00).', { type: 'error' });
                     return false;
                 }
             }

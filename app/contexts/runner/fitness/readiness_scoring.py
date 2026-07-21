@@ -177,13 +177,13 @@ def score_taper(
     progress_pct = current_week / total_weeks
 
     if progress_pct >= 0.85:
-        base, detail = 95.0, "Taper phase -- trust the training"
+        base, detail = 95.0, "Taper phase — trust the training"
     elif progress_pct >= 0.70:
-        base, detail = 85.0, "Peak training phase -- key workouts matter most now"
+        base, detail = 85.0, "Peak training phase — key workouts matter most now"
     elif progress_pct >= 0.40:
-        base, detail = 70.0, "Build phase -- stay consistent"
+        base, detail = 70.0, "Build phase — stay consistent"
     else:
-        base, detail = 55.0, "Base phase -- building foundation"
+        base, detail = 55.0, "Base phase — building foundation"
 
     if tsb is None:
         return base, detail
@@ -270,7 +270,7 @@ def score_vdot(
 
         gap_dir = "above" if current_vdot >= needed_vdot else "below"
         gap_val = abs(current_vdot - needed_vdot)
-        detail = f"VDOT {current_vdot} ({trend_str}) -- {gap_val:.1f} {gap_dir} goal VDOT {needed_vdot}"
+        detail = f"VDOT {current_vdot} ({trend_str}) — {gap_val:.1f} {gap_dir} goal VDOT {needed_vdot}"
     else:
         # Fallback: distance-relative assessment
         if target_dist > 0:
@@ -510,25 +510,25 @@ def build_scenarios(
             "Dream",
             current_vdot + 2.0,
             15,
-            "Everything clicks -- conservative start, strong finish",
+            "Everything clicks — conservative start, strong finish",
         ),
         (
             "Solid",
             current_vdot + 0.5,
             50,
-            "Smart race execution -- controlled effort throughout",
+            "Smart race execution — controlled effort throughout",
         ),
         (
             "Tough",
             current_vdot - 1.0,
             25,
-            "Challenging conditions or pacing errors -- grit required",
+            "Challenging conditions or pacing errors — grit required",
         ),
         (
             "Survival",
             current_vdot - 3.0,
             10,
-            "Worst case -- walk/run to the finish, still get it done",
+            "Worst case — walk/run to the finish, still get it done",
         ),
     ]
 

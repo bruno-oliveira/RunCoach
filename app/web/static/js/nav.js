@@ -123,10 +123,10 @@ async function connectActivityProvider(provider, label) {
         if (data.authorize_url) {
             window.location.href = data.authorize_url;
         } else {
-            alert(data.detail || ('Failed to connect to ' + label + '.'));
+            notify(data.detail || ("Couldn't reach " + label + ' — please try again.'), { type: 'error' });
         }
     } catch (err) {
-        alert('Failed to connect to ' + label + '. Please try again.');
+        notify("Couldn't reach " + label + ' — please try again.', { type: 'error' });
     }
 }
 
@@ -332,7 +332,12 @@ async function disconnectActivityProvider() {
     const panel = document.getElementById('stravaPanel');
     const provider = panel ? panel.dataset.provider : 'strava';
     const providerLabel = panel ? panel.dataset.providerLabel : 'Strava';
-    if (!confirm('Disconnect ' + providerLabel + '? Your synced runs will be kept.')) return;
+    const ok = await confirmDialog({
+        title: 'Disconnect ' + providerLabel + '?',
+        body: "We'll stop syncing new activities. The runs you've already imported stay in your log.",
+        confirmLabel: 'Disconnect'
+    });
+    if (!ok) return;
 
     const btn = document.getElementById('stravaDisconnectBtn');
     if (btn) { btn.disabled = true; btn.textContent = 'Disconnecting…'; }
@@ -346,11 +351,11 @@ async function disconnectActivityProvider() {
         if (res.ok) {
             window.location.reload();
         } else {
-            alert('Failed to disconnect ' + providerLabel + '. Please try again.');
+            notify("Couldn't disconnect " + providerLabel + ' — give it another try in a moment.', { type: 'error' });
             if (btn) { btn.disabled = false; btn.textContent = 'Disconnect ' + providerLabel; }
         }
     } catch (err) {
-        alert('Failed to disconnect ' + providerLabel + '. Please try again.');
+        notify("Couldn't disconnect " + providerLabel + ' — give it another try in a moment.', { type: 'error' });
         if (btn) { btn.disabled = false; btn.textContent = 'Disconnect ' + providerLabel; }
     }
 }
@@ -360,7 +365,14 @@ function disconnectStrava() {
 }
 
 async function deleteAccount() {
-    if (!confirm('Delete your account? This permanently removes all your data including plans, runs, and recipes. This cannot be undone.')) return;
+    const ok = await confirmDialog({
+        title: 'Delete your account?',
+        body: 'This permanently erases everything — your plans, logged runs, and saved recipes. There is no undo.',
+        confirmLabel: 'Delete everything',
+        cancelLabel: 'Keep my account',
+        danger: true
+    });
+    if (!ok) return;
 
     try {
         const res = await fetch('/api/auth/account', {
@@ -370,10 +382,10 @@ async function deleteAccount() {
         if (res.ok) {
             window.location.href = '/';
         } else {
-            alert('Failed to delete account. Please try again.');
+            notify("Couldn't delete your account — please try again.", { type: 'error' });
         }
     } catch (err) {
-        alert('Failed to delete account. Please try again.');
+        notify("Couldn't delete your account — please try again.", { type: 'error' });
     }
 }
 

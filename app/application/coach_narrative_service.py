@@ -83,7 +83,7 @@ def build_coach_note(
             "available": False,
             "reason": summary.get(
                 "reason",
-                "Log a few runs linked to this plan to unlock your coach's note.",
+                "Log a few runs linked to this plan and your coach's note will show up here.",
             ),
         }
 

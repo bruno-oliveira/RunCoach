@@ -69,31 +69,31 @@
             {% if plan and plan[0].is_beginner_plan %}
             <p>A Couch to {{ target_distance|int }}K program designed for new runners</p>
             {% elif is_trail %}
-            <p>Ready to conquer the trails?
+            <p>Built for the climbing — your week-by-week build for
                 <span class="trail-profile-badge">
                     {{ target_distance }} km{% if target_elevation_gain_m is not none %} · {{ target_elevation_gain_m | int }} m vert{% endif %}
                 </span>
             </p>
             {% elif training_plan.plan_type == 'fitness' %}
-            <p>Ready to level up your fitness?</p>
+            <p>No race on the calendar — just steady gains, paced off your current fitness.</p>
             {% elif training_plan.plan_type == 'performance' %}
-            <p>Ready to crush your time goal?</p>
+            <p>Every session below is paced off your goal time, not just your current fitness.</p>
             {% else %}
-            <p>Ready to crush your {{ target_distance }}km goal?</p>
+            <p>Your week-by-week build to {{ target_distance }}K — every session here has a reason.</p>
             {% endif %}
         </div>
         {% elif training_plan.plan_type == 'fitness' %}
-            <p>Ready to level up your fitness?</p>
+            <p>No race on the calendar — just steady gains, paced off your current fitness.</p>
         {% elif training_plan.plan_type == 'performance' %}
-            <p>Ready to crush your time goal?</p>
+            <p>Every session below is paced off your goal time, not just your current fitness.</p>
         {% elif is_trail %}
-            <p>Ready to conquer the trails?
+            <p>Built for the climbing — your week-by-week build for
                 <span class="trail-profile-badge">
                     {{ target_distance }} km{% if target_elevation_gain_m is not none %} · {{ target_elevation_gain_m | int }} m vert{% endif %}
                 </span>
             </p>
         {% else %}
-            <p>Ready to crush your {{ target_distance }}km goal?</p>
+            <p>Your week-by-week build to {{ target_distance }}K — every session here has a reason.</p>
         {% endif %}
         {% endif %}
     </div>
@@ -248,7 +248,7 @@
     {% if user and not plan_completed %}
     {% if not start_date %}
     <div class="plan-start-banner">
-        <p>Set a start date to track your progress against real calendar dates</p>
+        <p>Set a start date and I'll track your plan against real calendar dates.</p>
         <div class="plan-start-banner-controls">
             <input type="date" id="plan-start-date" value="{{ next_monday }}">
             <button onclick="PlanModule.startPlan()" class="btn btn-primary btn-small"><span data-i18n="plan.start_plan">Start Plan</span></button>
@@ -719,7 +719,7 @@
             <div id="readiness-empty" class="readiness-empty-state" style="display:none;">
                 <div style="font-size:2rem; margin-bottom:12px;">&#x1F3C1;</div>
                 <h3><span data-i18n="plan.not_enough_data">Not enough data yet</span></h3>
-                <p>Set a start date and log runs to see your race readiness score.</p>
+                <p>Set a start date and log a few runs, and I'll score how ready you are for race day.</p>
             </div>
         </div>
         <div class="gap-section" style="margin-top: var(--space-6);">

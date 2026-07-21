@@ -187,7 +187,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
             if (!distance || !goalTime) {
                 e.preventDefault();
-                alert('Please fill in all required fields');
+                notify('Add your race distance and goal time to build a performance plan.', { type: 'error' });
                 return;
             }
 
@@ -199,20 +199,25 @@ document.addEventListener('DOMContentLoaded', function() {
                 if (currentPace && goalPace) {
                     if (goalPace.decimal >= currentPace.decimal) {
                         e.preventDefault();
-                        alert('Goal pace must be faster than current pace for performance training');
+                        notify('Your goal pace needs to be faster than your current pace — that gap is what we train toward.', { type: 'error' });
                         return;
                     }
 
                     const improvement = ((currentPace.decimal - goalPace.decimal) / currentPace.decimal) * 100;
-                    if (improvement > 15) {
-                        const confirm = window.confirm(
-                            `Your goal represents a ${improvement.toFixed(1)}% improvement, which may be unrealistic. ` +
-                            'Performance plans work best with improvements under 15%. Continue anyway?'
-                        );
-                        if (!confirm) {
-                            e.preventDefault();
-                            return;
-                        }
+                    if (improvement > 15 && !form.dataset.aggressiveConfirmed) {
+                        // Async confirm: hold the submit, then re-submit if the runner accepts.
+                        e.preventDefault();
+                        confirmDialog({
+                            title: "That's an aggressive goal",
+                            body: `A ${improvement.toFixed(1)}% improvement is a big ask — performance plans tend to work best under 15%. Want to build it anyway?`,
+                            confirmLabel: 'Build it anyway'
+                        }).then(function (ok) {
+                            if (ok) {
+                                form.dataset.aggressiveConfirmed = '1';
+                                form.submit();
+                            }
+                        });
+                        return;
                     }
                 }
             }

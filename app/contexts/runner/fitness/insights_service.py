@@ -35,7 +35,7 @@ class InsightsService:
         if not profile.has_sufficient_data:
             return {
                 "available": False,
-                "reason": "Log at least 3 runs to unlock personalized insights.",
+                "reason": "Log 3 runs and I'll start spotting patterns — how your paces and effort are trending.",
                 "profile": profile.to_dict(),
             }
 

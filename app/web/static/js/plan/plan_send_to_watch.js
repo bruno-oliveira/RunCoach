@@ -21,8 +21,8 @@
     function toast(kind, message) {
         if (window.api && typeof window.api['show' + kind] === 'function') {
             window.api['show' + kind](message);
-        } else {
-            alert(message);
+        } else if (typeof window.notify === 'function') {
+            window.notify(message, { type: (kind || 'Info').toLowerCase() });
         }
     }
 

@@ -278,30 +278,33 @@
             });
             
             const data = await response.json();
-            
+
             if (!data.already_exists) {
-                alert('Recipe added to favorites! ⭐');
+                notify('Saved to your favorites.', { type: 'success' });
             }
         } catch (error) {
             if (error.message && error.message.includes('401')) {
-                alert('Please sign in to save favorites');
+                notify('Sign in to save recipes to your favorites.', { type: 'info' });
             } else {
                 console.error('Error adding favorite:', error);
-                alert('Error adding recipe to favorites');
+                notify("Couldn't save that recipe — please try again.", { type: 'error' });
             }
         }
     };
 
     window.removeFavorite = async function(favoriteId, recipeName) {
-        if (!confirm(`Remove "${recipeName}" from favorites?`)) {
-            return;
-        }
-        
+        const ok = await confirmDialog({
+            title: 'Remove this recipe?',
+            body: `"${recipeName}" will drop out of your favorites. You can always add it back later.`,
+            confirmLabel: 'Remove'
+        });
+        if (!ok) return;
+
         try {
             const response = await fetch(`/api/recipes/favorite/${favoriteId}`, {
                 method: 'DELETE',
             });
-            
+
             if (response.ok) {
                 if (currentView === 'favorites') {
                     favoriteRecipes = favoriteRecipes.filter(r => r.favorite_id !== favoriteId);
@@ -313,11 +316,11 @@
                         btn.onclick = () => addFavorite(getRecipeFromCard(btn));
                     }
                 }
-                alert('Recipe removed from favorites');
+                notify('Removed from your favorites.', { type: 'success' });
             }
         } catch (error) {
             console.error('Error removing favorite:', error);
-            alert('Error removing recipe from favorites');
+            notify("Couldn't remove that recipe — please try again.", { type: 'error' });
         }
     };
 

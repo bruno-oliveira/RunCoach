@@ -55,7 +55,7 @@ def build_coach_summary(
     if signals is None:
         return {
             "available": False,
-            "reason": "Log at least 3 runs linked to this plan to unlock your coach summary.",
+            "reason": "Log 3 runs linked to this plan and I'll start reading your training — pace discipline, fatigue, and where you're gaining.",
         }
 
     weights = signals.get("phase_weights", {})

@@ -104,10 +104,14 @@
         submitCustomization('workout_swap', swapInfo);
     };
 
-    window.resetCustomization = function () {
-        if (confirm('Are you sure you want to reset to the original plan? This will undo all customizations.')) {
-            submitCustomization('reset', 'original');
-        }
+    window.resetCustomization = async function () {
+        var ok = await confirmDialog({
+            title: 'Reset to the original plan?',
+            body: "This undoes every change you've made and restores the plan exactly as it was first generated.",
+            confirmLabel: 'Reset plan',
+            danger: true
+        });
+        if (ok) submitCustomization('reset', 'original');
     };
 
     window.updateCustomizationWeek = function () {
@@ -472,7 +476,13 @@
     /* -------------------------------------------------------------- */
 
     window.unlinkRun = async function (runId) {
-        if (!confirm('Remove this logged run?')) return;
+        var ok = await confirmDialog({
+            title: 'Remove this run?',
+            body: "It'll be unlinked from this plan and removed from your log.",
+            confirmLabel: 'Remove run',
+            danger: true
+        });
+        if (!ok) return;
         try {
             var response = await fetch('/api/runs/' + runId, {
                 method: 'DELETE',

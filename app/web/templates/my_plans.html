@@ -157,8 +157,8 @@
 
     {% if not plans %}
     <div class="no-plans">
-        <h2><span data-i18n="myplans.none_title">No Training Plans Yet</span></h2>
-        <p><span data-i18n="myplans.none_desc">You haven't created any training plans yet.</span></p>
+        <h2><span data-i18n="myplans.none_title">No plans yet</span></h2>
+        <p><span data-i18n="myplans.none_desc">Create your first plan and it'll live here — every week and every workout in one place.</span></p>
         <div style="display:flex;gap:var(--space-3);flex-wrap:wrap;justify-content:center;margin-top:var(--space-4);">
             <a href="/" class="btn btn-primary"><span data-i18n="myplans.create">Create a Running Plan</span></a>
         </div>
@@ -176,9 +176,13 @@ function toggleCompletedPlans(btn) {
 }
 
 async function deletePlan(planId) {
-    if (!confirm('Are you sure you want to delete this training plan? This action cannot be undone.')) {
-        return;
-    }
+    const ok = await confirmDialog({
+        title: 'Delete this plan?',
+        body: "It'll be gone for good, along with its weeks and workouts. There's no undo.",
+        confirmLabel: 'Delete plan',
+        danger: true
+    });
+    if (!ok) return;
 
     try {
         const response = await fetch(`/api/plan/${planId}`, {
@@ -190,10 +194,10 @@ async function deletePlan(planId) {
             window.location.reload();
         } else {
             const data = await response.json();
-            alert(data.detail || 'Failed to delete plan.');
+            notify(data.detail || "Couldn't delete that plan — please try again.", { type: 'error' });
         }
     } catch (err) {
-        alert('An error occurred while deleting the plan.');
+        notify("Something went wrong deleting the plan — please try again.", { type: 'error' });
     }
 }
 
