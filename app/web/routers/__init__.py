@@ -1,5 +1,6 @@
 """API routers for RunCoach application."""
 
+from app.web.routers.admin import admin_router
 from app.web.routers.analytics import analytics_router
 from app.web.routers.analytics_pages import router as analytics_page_router
 from app.web.routers.auth import auth_router
@@ -15,6 +16,7 @@ from app.web.routers.runs import runs_router
 from app.web.routers.strava import strava_router
 
 __all__ = [
+    "admin_router",
     "auth_router",
     "intervals_router",
     "plans_router",

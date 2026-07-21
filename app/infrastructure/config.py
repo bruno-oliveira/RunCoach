@@ -61,6 +61,10 @@ class Settings(BaseSettings):
     intervals_redirect_uri: str = "http://localhost:8000/api/intervals/callback"
     intervals_initial_sync_days: int = 365
 
+    # Admin console — the single operator email allowed to reach /admin and the
+    # /api/admin/* endpoints (used to test integrations like send-to-watch).
+    admin_email: str = "olivbruno8@gmail.com"
+
     # Coach AI — the LLM-voiced "Coach's Note". When the API key is unset the
     # feature degrades to a deterministic, rules-based note (no network).
     anthropic_api_key: str = ""

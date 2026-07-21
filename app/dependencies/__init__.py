@@ -8,6 +8,7 @@
 from app.dependencies.auth import (
     ANONYMOUS_USER_COOKIE,
     COOKIE_NAME,
+    get_admin_user,
     get_current_user,
     get_optional_user,
     validate_plan_ownership,
@@ -45,6 +46,7 @@ __all__ = [
     "get_adaptation_service",
     "get_auth_service",
     "get_coach_narrator",
+    "get_admin_user",
     "get_current_user",
     "get_favorites_service",
     "get_intervals_service",

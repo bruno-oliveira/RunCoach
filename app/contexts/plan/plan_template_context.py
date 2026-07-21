@@ -114,6 +114,7 @@ def plan_view_context(
         "adaptation_revision": training_plan.adaptation_revision or 0,
         "long_run_warning": long_run_warning,
         "frequency_warning": frequency_warning,
+        "intervals_connected": bool(current_user and current_user.intervals_athlete_id),
     }
     ctx.update(extra)
     return ctx

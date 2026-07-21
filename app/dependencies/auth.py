@@ -94,6 +94,24 @@ async def get_optional_user(
     return await _resolve_user(request, db, auth_service)
 
 
+async def get_admin_user(
+    current_user: User = Depends(get_current_user),
+) -> User:
+    """Require the authenticated user to be the configured admin operator.
+
+    Gated by ``settings.admin_email`` (case-insensitive). Returns 403 for any
+    other user, and for everyone when no admin email is configured.
+    """
+    admin_email = (settings.admin_email or "").strip().lower()
+    user_email = (current_user.email or "").strip().lower()
+    if not admin_email or user_email != admin_email:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Admin access required",
+        )
+    return current_user
+
+
 def verify_plan_ownership(
     plan: TrainingPlan,
     current_user: Optional[User],
@@ -133,6 +151,7 @@ __all__ = [
     "ANONYMOUS_USER_COOKIE",
     "get_current_user",
     "get_optional_user",
+    "get_admin_user",
     "verify_plan_ownership",
     "validate_plan_ownership",
 ]

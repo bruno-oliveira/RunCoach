@@ -20,6 +20,7 @@ from app.web.middleware import (
     set_anonymous_user_id_cookie,
 )
 from app.web.routers import (
+    admin_router,
     analytics_page_router,
     analytics_router,
     auth_router,
@@ -53,6 +54,7 @@ _ROUTERS = (
     strava_router,
     intervals_router,
     race_prep_router,
+    admin_router,
     pages_router,
 )
 

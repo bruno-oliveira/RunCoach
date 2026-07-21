@@ -1,0 +1,142 @@
+{% extends "base.html" %}
+
+{% block title %}RunCoach — Admin{% endblock %}
+
+{% block styles %}
+<style>
+    .admin-page { max-width: 760px; margin: 0 auto; padding: 24px 16px 64px; }
+    .admin-page h1 { margin-bottom: 4px; }
+    .admin-sub { color: var(--color-text-muted, #6b7280); margin-bottom: 24px; }
+    .admin-card {
+        border: 1px solid var(--color-border, #e5e7eb);
+        border-radius: 12px;
+        padding: 20px;
+        margin-bottom: 20px;
+        background: var(--color-surface, #fff);
+    }
+    .admin-card h2 { font-size: 1.05rem; margin-bottom: 12px; }
+    .admin-status { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+    .admin-dot { width: 9px; height: 9px; border-radius: 50%; background: #d1d5db; }
+    .admin-dot.on { background: #16a34a; }
+    .admin-grid { display: grid; grid-template-columns: 1fr 90px 90px; gap: 10px; align-items: end; }
+    .admin-field label { display: block; font-size: 0.8rem; color: var(--color-text-muted, #6b7280); margin-bottom: 4px; }
+    .admin-field select, .admin-field input {
+        width: 100%; padding: 8px; border: 1px solid var(--color-border, #e5e7eb);
+        border-radius: 8px; background: var(--color-surface, #fff); color: inherit;
+    }
+    .admin-actions { display: flex; gap: 10px; margin-top: 14px; }
+    .admin-out {
+        margin-top: 16px; white-space: pre-wrap; font-family: ui-monospace, monospace;
+        font-size: 0.85rem; background: var(--color-bg-subtle, #f9fafb);
+        border: 1px solid var(--color-border, #e5e7eb); border-radius: 8px;
+        padding: 12px; min-height: 40px; overflow-x: auto;
+    }
+    .admin-hint { font-size: 0.8rem; color: var(--color-text-muted, #6b7280); margin-top: 10px; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="admin-page">
+    <h1>Admin console</h1>
+    <p class="admin-sub">Operator tools · {{ user.email }}</p>
+
+    <div class="admin-card">
+        <h2>Send to watch (Intervals.icu)</h2>
+        <div class="admin-status">
+            <span class="admin-dot {% if intervals_connected %}on{% endif %}"></span>
+            <span>{% if intervals_connected %}Intervals.icu connected{% else %}Not connected{% endif %}</span>
+            {% if not intervals_connected %}
+            <button class="btn btn-sm btn-secondary" type="button" id="adminConnectBtn">Connect</button>
+            {% endif %}
+        </div>
+
+        {% if plan_options %}
+        <div class="admin-grid">
+            <div class="admin-field">
+                <label for="adminPlan">Plan</label>
+                <select id="adminPlan">
+                    {% for opt in plan_options %}
+                    <option value="{{ opt.id }}">{{ opt.label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="admin-field">
+                <label for="adminWeek">Week</label>
+                <input id="adminWeek" type="number" min="1" value="1">
+            </div>
+            <div class="admin-field">
+                <label for="adminDay">Day</label>
+                <input id="adminDay" type="number" min="1" max="7" value="3">
+            </div>
+        </div>
+        <div class="admin-actions">
+            <button class="btn btn-secondary" type="button" id="adminPreviewBtn">Preview workout</button>
+            <button class="btn btn-primary" type="button" id="adminSendBtn">Send to watch</button>
+        </div>
+        <div class="admin-out" id="adminOut">Pick a plan day, then Preview to see the Intervals.icu workout text.</div>
+        <p class="admin-hint">Preview builds the workout text with no side effects. Send pushes it to your Intervals.icu calendar — it reaches the watch only if you've linked Garmin and enabled "Upload planned workouts" in Intervals.icu settings.</p>
+        {% else %}
+        <p class="admin-hint">No plans found for this account. Generate a plan first.</p>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function () {
+    'use strict';
+    var out = document.getElementById('adminOut');
+    function show(text) { if (out) out.textContent = text; }
+    function body() {
+        return {
+            plan_id: document.getElementById('adminPlan').value,
+            week: parseInt(document.getElementById('adminWeek').value, 10),
+            day: parseInt(document.getElementById('adminDay').value, 10),
+        };
+    }
+    async function post(url) {
+        var resp = await fetch(url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'same-origin',
+            body: JSON.stringify(body()),
+        });
+        var data = {};
+        try { data = await resp.json(); } catch (e) {}
+        return { ok: resp.ok, status: resp.status, data: data };
+    }
+
+    var previewBtn = document.getElementById('adminPreviewBtn');
+    if (previewBtn) previewBtn.addEventListener('click', async function () {
+        show('Building…');
+        var r = await post('/api/admin/intervals/preview');
+        if (!r.ok) { show('Error ' + r.status + ': ' + (r.data.detail || 'failed')); return; }
+        var d = r.data;
+        show(
+            'Name: ' + d.name + '\n' +
+            'Type: ' + (d.key_workout_name || d.workout_type) + '  ·  ' +
+            (d.distance_km || '?') + ' km  ·  ~' + Math.round((d.moving_time || 0) / 60) + ' min\n' +
+            '\n' + d.description
+        );
+    });
+
+    var sendBtn = document.getElementById('adminSendBtn');
+    if (sendBtn) sendBtn.addEventListener('click', async function () {
+        show('Sending…');
+        var r = await post('/api/intervals/push-workout');
+        if (!r.ok) { show('Error ' + r.status + ': ' + (r.data.detail || 'failed')); return; }
+        show('✓ ' + (r.data.message || 'Sent') + '\nevent_id: ' + (r.data.event_id || '—'));
+    });
+
+    var connectBtn = document.getElementById('adminConnectBtn');
+    if (connectBtn) connectBtn.addEventListener('click', async function () {
+        try {
+            var resp = await fetch('/api/intervals/connect', { credentials: 'same-origin' });
+            var data = await resp.json();
+            if (data.authorize_url) { window.location.href = data.authorize_url; }
+        } catch (e) { show('Could not start Intervals.icu connection.'); }
+    });
+})();
+</script>
+{% endblock %}

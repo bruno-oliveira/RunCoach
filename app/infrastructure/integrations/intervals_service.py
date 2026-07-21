@@ -61,7 +61,9 @@ class IntervalsService:
         params = {
             "client_id": settings.intervals_client_id,
             "redirect_uri": settings.intervals_redirect_uri,
-            "scope": "ACTIVITY:READ",
+            # ACTIVITY:READ powers the activity import; CALENDAR:WRITE lets us
+            # push planned workouts to the athlete's calendar (send to watch).
+            "scope": "ACTIVITY:READ,CALENDAR:WRITE",
             "state": state,
         }
         return f"{INTERVALS_AUTH_URL}?{urlencode(params)}"
@@ -97,6 +99,42 @@ class IntervalsService:
             )
             raise_for_intervals_status(response)
             return response.json()
+
+    async def push_workout(
+        self,
+        access_token: str,
+        athlete_id: str,
+        event: dict[str, Any],
+    ) -> dict[str, Any]:
+        """Upsert a single planned workout onto the athlete's calendar.
+
+        Uses the bulk-events endpoint with ``upsert=true`` so re-sending the
+        same workout (matched by ``external_id``) updates it rather than
+        creating a duplicate. Once the athlete has linked Garmin Connect and
+        enabled planned-workout upload in Intervals.icu, the event is pushed to
+        Garmin automatically.
+
+        Args:
+            access_token: The athlete's Intervals.icu OAuth token (needs
+                CALENDAR:WRITE — old tokens without it raise
+                IntervalsAuthorizationError via a 403).
+            athlete_id: The athlete's Intervals.icu id.
+            event: A single calendar event dict (category/type/start_date_local/
+                name/description/external_id/...).
+
+        Returns:
+            The created/updated event dict from Intervals.icu.
+        """
+        async with httpx.AsyncClient(timeout=INTERVALS_TIMEOUT) as client:
+            response = await client.post(
+                f"{INTERVALS_API_BASE}/athlete/{athlete_id}/events/bulk",
+                headers={"Authorization": f"Bearer {access_token}"},
+                params={"upsert": "true"},
+                json=[event],
+            )
+            raise_for_intervals_status(response)
+            created = response.json()
+            return created[0] if isinstance(created, list) and created else {}
 
     @staticmethod
     def map_activity_to_run_log(activity: dict[str, Any], user_id: str) -> RunLog:

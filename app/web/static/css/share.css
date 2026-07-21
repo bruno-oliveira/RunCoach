@@ -243,6 +243,43 @@
     color: var(--color-primary, #1D4ED8);
 }
 
+/* ── Send-to-watch icon (Garmin push via Intervals.icu) ── */
+.send-to-watch-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 22px;
+    height: 22px;
+    padding: 0;
+    border: none;
+    border-radius: var(--radius-sm, 6px);
+    background: transparent;
+    color: var(--color-text-muted, #A09A93);
+    flex-shrink: 0;
+    margin-left: auto;
+    cursor: pointer;
+    transition: all 0.15s;
+}
+/* The FIT button sits right after the send button; keep them adjacent. */
+.send-to-watch-btn + .download-fit-btn {
+    margin-left: 4px;
+}
+.send-to-watch-btn:hover,
+.send-to-watch-btn:focus-visible {
+    background: var(--color-primary-subtle, rgba(14, 124, 90, 0.08));
+    color: var(--color-primary, #1D4ED8);
+}
+.send-to-watch-btn.is-sending {
+    opacity: 0.55;
+    pointer-events: none;
+}
+.send-to-watch-btn.is-disconnected {
+    opacity: 0.7;
+}
+.send-to-watch-btn.is-sent {
+    color: var(--color-primary, #1D4ED8);
+}
+
 /* ── Plan page: corner widget on completed workouts ── */
 /* Sits left of the green checkmark (::after at right:8px, 20px wide) */
 .workout-share-corner {

@@ -2,7 +2,7 @@
 
 from typing import List, Optional
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 class IntervalsSyncResponse(BaseModel):
@@ -12,6 +12,20 @@ class IntervalsSyncResponse(BaseModel):
     total: int = 0
     last_synced_at: Optional[int] = None
     adjustment_results: Optional[List[dict]] = None
+
+
+class IntervalsPushRequest(BaseModel):
+    """Identify one workout to push (mirrors the .fit download addressing)."""
+
+    plan_id: str
+    week: int = Field(ge=1)
+    day: int = Field(ge=1, le=7)
+
+
+class IntervalsPushResponse(BaseModel):
+    ok: bool
+    event_id: Optional[int] = None
+    message: str
 
 
 class IntervalsStatusResponse(BaseModel):
