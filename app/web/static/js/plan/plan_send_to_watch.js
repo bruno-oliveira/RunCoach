@@ -11,6 +11,13 @@
 (function () {
     'use strict';
 
+    // Show the Garmin setup tip only once per page load, not on every send.
+    var setupHintShown = false;
+    var SETUP_HINT =
+        ' First time? In Intervals.icu, link Garmin + enable "Upload planned' +
+        ' workouts", and set a Run threshold pace — without it the watch shows' +
+        ' "No target".';
+
     function toast(kind, message) {
         if (window.api && typeof window.api['show' + kind] === 'function') {
             window.api['show' + kind](message);
@@ -68,10 +75,13 @@
             }
             if (resp.ok) {
                 btn.classList.add('is-sent');
-                toast(
-                    'Success',
-                    data.message || 'Sent to your watch — syncing to Garmin shortly.'
-                );
+                var msg =
+                    data.message || 'Sent to your watch — syncing to Garmin shortly.';
+                if (!setupHintShown) {
+                    setupHintShown = true;
+                    msg += SETUP_HINT;
+                }
+                toast('Success', msg);
             } else if (resp.status === 401) {
                 toast(
                     'Error',
