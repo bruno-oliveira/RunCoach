@@ -12,42 +12,28 @@ so it is unit-testable and reused by the push endpoint.
 Syntax notes (Intervals.icu workout builder):
   * ``m`` means MINUTES, not meters. Distance must use ``km``/``mi``
     (``0.4km`` for 400 m); seconds use ``s`` (``90s``).
-  * Running pace targets are expressed against the athlete's threshold pace,
-    as a zone (``Z4 Pace``) or a percentage band (``78-82% pace``). Absolute
-    paces (``4:30/km``) are not part of the formal step syntax, so we target
-    zones and surface the RunCoach pace only in the workout name.
+  * Pace targets are written as an ABSOLUTE pace with the ``Pace`` keyword:
+    ``- 10m 5:15/km Pace`` (single) or ``- 10m 5:00/km-5:15/km Pace`` (range,
+    fast-slow). Absolute pace is independent of the athlete's threshold, so the
+    watch shows the exact target RunCoach prescribed (the same approach Runna
+    uses). We take the pace straight from each step's ``pace_str``; when a plan
+    was generated without VDOT and a step has only a ``pace_zone``, we fall back
+    to a default pace for that zone so a concrete target is always emitted.
   * A repeated block is a ``Nx`` header followed by its indented ``- `` steps.
-
-Spike before relying on this: post a sample workout to a real Intervals.icu
-account and confirm the pace targets survive the push to Garmin. If zone-based
-targets read poorly on the watch, switch ``_ZONE_TO_PACE_ZONE`` mapping to the
-percentage form (both are valid Intervals.icu syntax).
 """
 
 from __future__ import annotations
 
 from typing import Any, Optional
 
-from app.core.training.workout_steps.metrics import _parse_pace_str_to_min_per_km
-
-# RunCoach pace zone -> Intervals.icu pace zone (relative to threshold pace).
-# Daniels E/M/T/I/R map onto Intervals' Z2..Z6; warm-up/recovery sit at Z1.
-_ZONE_TO_PACE_ZONE = {
-    "E": "Z2",
-    "M": "Z3",
-    "T": "Z4",
-    "I": "Z5",
-    "R": "Z6",
-    "5K": "Z5",
-    "10K": "Z4",
-}
-
-# Easy-effort kinds always target the recovery zone regardless of pace_zone.
-_EASY_KINDS = {"warmup", "cooldown", "recovery", "walk"}
+from app.core.training.workout_steps.metrics import (
+    _DEFAULT_PACES,
+    _parse_pace_str_to_min_per_km,
+)
 
 # Fallback for legacy plans whose workouts carry no ``steps`` list: map the
 # day's coarse type to a pace zone so a single continuous step still targets
-# a sensible effort on the watch.
+# a sensible pace on the watch.
 _TYPE_TO_ZONE = {
     "easy": "E",
     "recovery": "E",
@@ -59,15 +45,6 @@ _TYPE_TO_ZONE = {
     "vo2max": "I",
     "hill": "I",
     "speed": "R",
-}
-
-# Short trailing step names Intervals.icu accepts (single token, no spaces).
-_KIND_LABELS = {
-    "warmup": "Warmup",
-    "cooldown": "Cooldown",
-    "recovery": "Recovery",
-    "strides": "Strides",
-    "walk": "Walk",
 }
 
 
@@ -85,16 +62,56 @@ def _format_duration(duration_s: int) -> str:
     return f"{duration_s}s"
 
 
-def _pace_target(step: dict[str, Any]) -> str:
-    """Intervals.icu pace target for a step ('Z4 Pace'), by kind then zone."""
-    if step.get("kind") in _EASY_KINDS:
-        return "Z1 Pace"
-    zone = _ZONE_TO_PACE_ZONE.get(step.get("pace_zone") or "")
-    return f"{zone} Pace" if zone else "Z2 Pace"
+def _fmt_pace(min_per_km: float) -> str:
+    """min/km float -> Intervals.icu absolute pace token ('5:15/km')."""
+    total_s = int(round(min_per_km * 60))
+    return f"{total_s // 60}:{total_s % 60:02d}/km"
+
+
+def _parse_pace_bounds(pace_str: Optional[str]) -> list[float]:
+    """Parse a pace_str into 1 or 2 min/km values ('7:05-7:55/km' -> [7.08, 7.92])."""
+    if not pace_str:
+        return []
+    cleaned = pace_str.replace("/km", "").replace("–", "-").strip()
+    bounds: list[float] = []
+    for part in cleaned.split("-"):
+        mm_ss = part.strip().split(":")
+        if len(mm_ss) == 2:
+            try:
+                bounds.append(int(mm_ss[0]) + int(mm_ss[1]) / 60.0)
+            except ValueError:
+                pass
+    return bounds
+
+
+def _fallback_pace(step: dict[str, Any]) -> Optional[float]:
+    """Default min/km for a step with no pace_str (pre-VDOT plans)."""
+    zone = step.get("pace_zone")
+    if zone and zone in _DEFAULT_PACES:
+        return _DEFAULT_PACES[zone]
+    kind = step.get("kind")
+    if kind == "walk":
+        return _DEFAULT_PACES["WALK"]
+    if kind in ("warmup", "cooldown", "recovery"):
+        return _DEFAULT_PACES["E"]
+    return None
+
+
+def _pace_target(step: dict[str, Any]) -> Optional[str]:
+    """Absolute Intervals.icu pace target for a step, or None for an open step."""
+    bounds = _parse_pace_bounds(step.get("pace_str"))
+    if not bounds:
+        fallback = _fallback_pace(step)
+        if fallback is None:
+            return None
+        bounds = [fallback]
+    if len(bounds) == 1:
+        return f"{_fmt_pace(bounds[0])} Pace"
+    return f"{_fmt_pace(min(bounds))}-{_fmt_pace(max(bounds))} Pace"
 
 
 def _step_line(step: dict[str, Any]) -> Optional[str]:
-    """Render one step as a ``- <amount> <target> [Name]`` line.
+    """Render one step as a ``- <amount> [<pace> Pace]`` line.
 
     Returns None for open steps (no distance and no duration), which have no
     Intervals.icu duration token and are skipped.
@@ -105,11 +122,8 @@ def _step_line(step: dict[str, Any]) -> Optional[str]:
         amount = _format_duration(int(step["duration_s"]))
     else:
         return None
-    line = f"- {amount} {_pace_target(step)}"
-    label = _KIND_LABELS.get(step.get("kind") or "")
-    if label:
-        line += f" {label}"
-    return line
+    target = _pace_target(step)
+    return f"- {amount} {target}" if target else f"- {amount}"
 
 
 def _blocks(steps: list[dict[str, Any]]) -> list[str]:

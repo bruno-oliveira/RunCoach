@@ -14,21 +14,28 @@ Usage:
     # Print the generated workout text only (no network):
     python scripts/send_to_watch_spike.py --dry-run
 
-    # Push a built-in sample interval workout to your calendar (tomorrow):
+    # Push a built-in sample interval workout to your calendar (today):
     python scripts/send_to_watch_spike.py --apply
 
     # Push a real plan day pulled from the local DB:
     python scripts/send_to_watch_spike.py --plan <PLAN_ID> --week 3 --day 3 --apply
 
-Once it appears on your Intervals.icu calendar, check it lands on the watch
-(requires Garmin linked + "Upload planned workouts" enabled in Intervals.icu).
+Once it appears on your Intervals.icu calendar, check it lands on the watch.
+Requirements for pace targets to reach Garmin:
+  * Garmin linked + "Upload planned workouts" enabled in Intervals.icu.
+  * A Run **threshold pace** set in Intervals.icu (Settings -> sport settings).
+    Without it, Intervals silently drops per-step pace targets from the Garmin
+    export and the watch shows "No target".
+This script deletes any existing event with the same external_id before
+recreating it, because updating a planned workout in place does not re-trigger
+the Garmin export.
 """
 
 import argparse
 import logging
 import os
 import sys
-from datetime import date, timedelta
+from datetime import date
 from pathlib import Path
 
 import httpx
@@ -99,9 +106,7 @@ def main() -> None:
     parser.add_argument("--plan", help="Plan id to pull the workout from (local DB)")
     parser.add_argument("--week", type=int, default=1)
     parser.add_argument("--day", type=int, default=3)
-    parser.add_argument(
-        "--date", help="start_date_local (YYYY-MM-DD); default tomorrow"
-    )
+    parser.add_argument("--date", help="start_date_local (YYYY-MM-DD); default today")
     parser.add_argument(
         "--apply", action="store_true", help="Actually POST to Intervals.icu"
     )
@@ -121,7 +126,7 @@ def main() -> None:
     except ValueError as exc:
         sys.exit(f"Cannot build workout: {exc}")
 
-    start_date = args.date or (date.today() + timedelta(days=1)).isoformat()
+    start_date = args.date or date.today().isoformat()
     event = {
         "category": "WORKOUT",
         "type": "Run",
@@ -144,17 +149,27 @@ def main() -> None:
         return
 
     api_key = os.environ.get("INTERVALS_API_KEY")
-    athlete_id = os.environ.get("INTERVALS_ATHLETE_ID")
-    if not api_key or not athlete_id:
-        sys.exit("Set INTERVALS_API_KEY and INTERVALS_ATHLETE_ID env vars to --apply")
+    athlete_id = os.environ.get("INTERVALS_ATHLETE_ID", "0")
+    if not api_key:
+        sys.exit(
+            "Set INTERVALS_API_KEY to --apply "
+            "(INTERVALS_ATHLETE_ID is optional; defaults to 0 = the key owner)."
+        )
 
-    resp = httpx.post(
-        f"{INTERVALS_API_BASE}/athlete/{athlete_id}/events/bulk",
-        params={"upsert": "true"},
-        json=[event],
-        auth=httpx.BasicAuth("API_KEY", api_key),
-        timeout=30.0,
-    )
+    base = f"{INTERVALS_API_BASE}/athlete/{athlete_id}/events"
+    with httpx.Client(timeout=30.0, auth=httpx.BasicAuth("API_KEY", api_key)) as client:
+        # Delete any existing event with this external_id first. Updating a
+        # planned workout in place does NOT re-trigger the Garmin export, so a
+        # clean delete + recreate is required to (re)send pace targets to Garmin.
+        existing = client.get(base, params={"oldest": start_date, "newest": start_date})
+        if existing.status_code < 400:
+            for ev in existing.json():
+                if ev.get("external_id") == event["external_id"]:
+                    client.delete(f"{base}/{ev['id']}")
+                    print(f"Deleted existing event {ev['id']} to force re-export.")
+
+        resp = client.post(f"{base}/bulk", params={"upsert": "true"}, json=[event])
+
     print(f"HTTP {resp.status_code}")
     if resp.status_code >= 400:
         print(resp.text)
@@ -163,6 +178,10 @@ def main() -> None:
     event_id = created[0].get("id") if isinstance(created, list) and created else None
     print(f"✓ Pushed. event_id={event_id}")
     print("Check your Intervals.icu calendar, then your watch after the next sync.")
+    print(
+        "If pace shows 'No target' on the watch: set a Run threshold pace in "
+        "Intervals.icu (Settings -> sport settings), then re-run this script."
+    )
 
 
 if __name__ == "__main__":

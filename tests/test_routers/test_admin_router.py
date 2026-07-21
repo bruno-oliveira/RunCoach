@@ -127,7 +127,8 @@ def test_preview_returns_workout_text(admin_client, admin_user, admin_plan):
     assert resp.status_code == 200
     data = resp.json()
     assert "4x" in data["description"]
-    assert "- 1km Z5 Pace" in data["description"]
+    # Run step has no pace_str -> I-zone default (5:30/km) as absolute target.
+    assert "- 1km 5:30/km Pace" in data["description"]
     assert data["moving_time"] > 0
 
 

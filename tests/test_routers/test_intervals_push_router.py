@@ -120,7 +120,7 @@ def test_push_success_sends_structured_event(push_client, owner, plan):
     assert event["type"] == "Run"
     assert event["external_id"] == "runcoach-push-plan-1-1-3"
     assert "4x" in event["description"]
-    assert "- 1km Z5 Pace" in event["description"]
+    assert "- 1km 4:00/km Pace" in event["description"]
 
 
 def test_push_requires_connection(push_client, plain_user, plan):
