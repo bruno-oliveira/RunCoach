@@ -14,7 +14,9 @@ from app.core.training.hr_zone_calculator import (
     DEFAULT_MAX_HR,
     HR_ZONES_VERSION,
     MAX_HR_SPIKE_TOLERANCE_BPM,
+    MAX_LTHR_FRACTION_OF_MAX,
     MAX_RELIABLE_MAX_HR,
+    MIN_LTHR_FRACTION_OF_MAX,
     MIN_RELIABLE_MAX_HR,
     HRZoneCalculator,
     _lthr_is_usable,
@@ -29,14 +31,6 @@ logger = logging.getLogger(__name__)
 # runner gets faster) and stays cheap; per-km splits within these runs supply
 # the bulk of the intensity spread the fit needs.
 MAX_RUNS_FOR_CALIBRATION = 60
-
-# Effort types whose average HR sits at lactate threshold. Used to measure the
-# runner's threshold HR (LTHR) for re-anchoring the zone boundaries.
-THRESHOLD_WORKOUT_TYPES = ("tempo", "cruise_interval", "race_pace", "fartlek")
-# Need a few threshold sessions before trusting a derived LTHR.
-MIN_THRESHOLD_RUNS_FOR_LTHR = 3
-# Only the most recent threshold runs, so LTHR tracks current fitness.
-MAX_RUNS_FOR_LTHR = 60
 
 
 def detect_max_hr_from_runs(user_id: str, db: Session) -> Optional[int]:
@@ -154,47 +148,72 @@ def get_user_resting_hr(user: User) -> tuple[Optional[int], str]:
     return None, "none"
 
 
-def detect_threshold_hr_from_runs(user_id: str, db: Session) -> Optional[int]:
-    """Estimate lactate-threshold HR from recent threshold-effort runs.
+def estimate_threshold_hr_from_pace_hr_fit(user_id: str, db: Session) -> Optional[int]:
+    """Estimate LTHR non-circularly by reading the runner's pace<->HR fit at
+    their threshold pace.
 
-    A tempo / cruise-interval / race-pace run is run at (or very near) lactate
-    threshold, so the average HR across a handful of them is a solid LTHR proxy
-    -- and one measured from the runner's own physiology rather than assumed to
-    be 88% of max. We read the *effective* workout type (so untagged Strava
-    runs inferred as tempo count) and take the median to shrug off the odd hot
-    or under-warmed-up session. Returns None below a minimum sample count.
+    The prior estimator averaged the HR of runs *labelled* tempo/cruise/race --
+    but that label is inferred from the very HR zones we're building here
+    (``workout_type_classifier`` -> ``get_user_threshold_hr``). A low LTHR
+    mislabelled easy runs as tempo, and their easy HR then fed back an equally
+    low LTHR: a self-reinforcing loop that collapsed Zone 2 and made genuinely
+    easy running read as "hard".
+
+    This breaks the loop by anchoring on two things that carry no HR-zone input:
+
+    * **Threshold pace** -- a demonstrated performance from the runner's VDOT
+      (``get_best_recent_vdot`` -> ``get_pace_zones``), not an HR-derived label.
+    * **The pace<->HR fit** -- ``fit_pace_hr_model`` over raw ``(pace, HR)``
+      samples, gated on correlation, with no notion of zones or workout types.
+
+    Evaluating the fit at threshold pace therefore yields an LTHR that cannot
+    feed back on itself. The result is clamped to a plausible fraction of max HR
+    and accepted only when the fit is trustworthy and the threshold pace falls
+    within the observed data (extrapolating the line past the runner's logged
+    efforts would be a guess). Returns None -- deferring to the 88%-of-max
+    default anchor -- whenever any of those conditions fails.
     """
-    from statistics import median
-
-    from app.models import RunLog
-
-    runs = (
-        db.query(RunLog)
-        .filter(
-            RunLog.user_id == user_id,
-            RunLog.avg_heart_rate.isnot(None),
-        )
-        .order_by(RunLog.date.desc())
-        .limit(MAX_RUNS_FOR_LTHR)
-        .all()
+    from app.contexts.runner.fitness.race_predictor_service import (
+        RacePredictorService,
     )
-    hrs = [
-        run.avg_heart_rate
-        for run in runs
-        if run.avg_heart_rate and run.effective_workout_type in THRESHOLD_WORKOUT_TYPES
-    ]
-    if len(hrs) < MIN_THRESHOLD_RUNS_FOR_LTHR:
+    from app.core.training.vdot_calculator import VDOTCalculator
+
+    vdot = RacePredictorService.get_best_recent_vdot(user_id, db=db)
+    if not vdot:
         return None
-    return int(round(median(hrs)))
+    pace_zones = VDOTCalculator.get_pace_zones(vdot)
+    threshold_zone = pace_zones.get("T") if pace_zones else None
+    threshold_pace = threshold_zone.get("pace_min_km") if threshold_zone else None
+    if not threshold_pace or threshold_pace <= 0:
+        return None
+
+    model = fit_pace_hr_model(gather_pace_hr_samples(user_id, db))
+    if model is None:
+        return None
+
+    # Only trust the mapping where the runner has actually logged efforts;
+    # extrapolating the line beyond the observed speed span is a guess.
+    threshold_speed_kmh = 60.0 / threshold_pace
+    if not (model.speed_min_kmh <= threshold_speed_kmh <= model.speed_max_kmh):
+        return None
+
+    predicted = model.predict_hr(threshold_pace)
+    max_hr, _ = get_user_max_hr(user_id, db)
+    low = MIN_LTHR_FRACTION_OF_MAX * max_hr
+    high = MAX_LTHR_FRACTION_OF_MAX * max_hr
+    return int(round(max(low, min(high, predicted))))
 
 
 def get_user_threshold_hr(user: User, db: Session) -> tuple[Optional[int], str]:
     """Determine threshold HR, preferring a user override over an estimate.
 
+    Resolution order: a manual RunCoach entry -> the value synced from the
+    watch (Intervals.icu) -> a non-circular pace<->HR-at-threshold estimate ->
+    None (which leaves the zones on the 88%-of-max default anchor).
+
     Returns:
         (lthr, source) where source is "user", "intervals", "estimated", or
-        "none". ``lthr`` is None when nothing usable is available, leaving zones
-        on the 88%-of-max default anchor.
+        "none". ``lthr`` is None when nothing usable is available.
     """
     override = getattr(user, "threshold_hr", None)
     if override and override > 0:
@@ -204,7 +223,7 @@ def get_user_threshold_hr(user: User, db: Session) -> tuple[Optional[int], str]:
     if synced and synced > 0:
         return int(synced), "intervals"
 
-    estimated = detect_threshold_hr_from_runs(user.id, db)
+    estimated = estimate_threshold_hr_from_pace_hr_fit(user.id, db)
     if estimated:
         return estimated, "estimated"
 

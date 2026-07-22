@@ -10,9 +10,16 @@ from sqlalchemy.orm import Session
 from app.core.race.race_protocol_generator import generate_race_protocol
 from app.core.training.road_profile import classify_road
 from app.core.training.vdot_calculator import VDOTCalculator
-from app.models import DailyWorkout, TrainingPlan, User, WeeklyPlan
+from app.models import DailyWorkout, RunLog, TrainingPlan, User, WeeklyPlan
 from app.schemas import PlanRequest
 from app.utils import parse_race_time_to_seconds
+
+# Half a minute of tolerance when matching an already-persisted race effort, so
+# regenerating a plan with the same stated race never stacks up duplicate runs.
+_RACE_DUP_SECONDS_TOLERANCE = 30.0
+# The stated race is a genuine maximal effort; label it so the VDOT weighting
+# (``_effort_weight``) and race-calibration paths treat it as one.
+_RACE_EFFORT_CLASS = "race_effort"
 
 if TYPE_CHECKING:
     # Type-only: the engine is injected by the caller (PlanService.create_plan),
@@ -53,6 +60,82 @@ def persist_plan_core(
     db.add(training_plan)
     db.flush()
     return training_plan
+
+
+def persist_race_effort_run(
+    plan_request: PlanRequest,
+    user: User,
+    db: Session,
+) -> None:
+    """Persist the onboarding "recent race" as a race-effort ``RunLog``.
+
+    The signup form captures a recent hard effort ("5 km in 22:30") only to
+    VDOT-pace the plan being generated, then discards it -- throwing away the
+    single most trustworthy fitness number the runner has handed us. Without it
+    persisted, ``get_best_recent_vdot`` (and through it the pace<->HR-at-
+    threshold LTHR estimate and every race prediction) has to infer fitness
+    passively from whatever runs happen to be logged.
+
+    Storing it as a ``race_effort`` run folds the stated number into all of that
+    machinery with no special-casing. It carries no heart rate (so it never
+    lands in the HR-zone trend) and a ``race_effort`` class (so it never
+    pollutes the easy-pace trend), and it is idempotent -- regenerating a plan
+    with the same race does not stack up duplicates.
+    """
+    distance_km = plan_request.recent_race_distance_km
+    vdot = plan_request.vdot
+    if not distance_km or distance_km <= 0 or not vdot:
+        return
+
+    seconds = (
+        parse_race_time_to_seconds(plan_request.recent_race_time)
+        if plan_request.recent_race_time
+        else None
+    )
+    if not seconds or seconds <= 0:
+        return
+
+    duration_minutes = seconds / 60.0
+    if _race_effort_already_logged(user.id, distance_km, duration_minutes, db):
+        return
+
+    db.add(
+        RunLog(
+            user_id=user.id,
+            distance_km=distance_km,
+            duration_minutes=duration_minutes,
+            avg_pace_min_km=(
+                plan_request.current_pace_min_km or duration_minutes / distance_km
+            ),
+            workout_type="race",
+            effort_class=_RACE_EFFORT_CLASS,
+            vdot=vdot,
+            notes="Recent race entered when generating a plan.",
+        )
+    )
+
+
+def _race_effort_already_logged(
+    user_id: str,
+    distance_km: float,
+    duration_minutes: float,
+    db: Session,
+) -> bool:
+    """Whether a matching race-effort run is already logged for this user."""
+    tolerance_min = _RACE_DUP_SECONDS_TOLERANCE / 60.0
+    existing = (
+        db.query(RunLog.id)
+        .filter(
+            RunLog.user_id == user_id,
+            RunLog.workout_type == "race",
+            RunLog.distance_km >= distance_km - 0.1,
+            RunLog.distance_km <= distance_km + 0.1,
+            RunLog.duration_minutes >= duration_minutes - tolerance_min,
+            RunLog.duration_minutes <= duration_minutes + tolerance_min,
+        )
+        .first()
+    )
+    return existing is not None
 
 
 def persist_weekly_workouts(

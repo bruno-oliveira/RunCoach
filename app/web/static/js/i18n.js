@@ -57,7 +57,7 @@ window.RC_I18N = (function () {
             'settings.max_hr_label':  'Max heart rate (BPM)',
             'settings.max_hr_help':   'Anchors the top of your training zones. If you know your true max (e.g. from a race), enter it here. Leave blank to let RunCoach detect it from your runs.',
             'settings.threshold_hr_label': 'Threshold heart rate (BPM)',
-            'settings.threshold_hr_help':  'Your lactate-threshold HR — the main anchor for your zones (the Zone 3/4 edge sits on it). Leave blank to let RunCoach estimate it from your tempo runs.',
+            'settings.threshold_hr_help':  "The heart rate you can hold hard for about an hour — the main anchor for your zones (the Zone 3/4 edge sits on it). Tip: it's roughly 10–15 bpm above the top of your watch's Zone 2. Leave blank and RunCoach works it out from your runs.",
             'settings.resting_hr_label':   'Resting heart rate (BPM)',
             'settings.resting_hr_help':    'Optional — raises your Zone 1 (recovery) floor. Leave blank to skip.',
 
@@ -656,7 +656,7 @@ window.RC_I18N = (function () {
             'settings.max_hr_label':  'Frequência cardíaca máxima (BPM)',
             'settings.max_hr_help':   'Define o topo das suas zonas de treino. Se souber a sua máxima real (por exemplo, de uma corrida), introduza-a aqui. Deixe em branco para o RunCoach a detetar a partir das suas corridas.',
             'settings.threshold_hr_label': 'Frequência cardíaca de limiar (BPM)',
-            'settings.threshold_hr_help':  'A sua FC de limiar de lactato — a principal âncora das suas zonas (o limite entre a Zona 3/4 assenta nela). Deixe em branco para o RunCoach a estimar a partir das suas corridas de tempo.',
+            'settings.threshold_hr_help':  'A frequência cardíaca que consegue manter em esforço forte durante cerca de uma hora — a principal âncora das suas zonas (o limite entre a Zona 3/4 assenta nela). Dica: fica cerca de 10–15 bpm acima do topo da Zona 2 do seu relógio. Deixe em branco e o RunCoach calcula-a a partir das suas corridas.',
             'settings.resting_hr_label':   'Frequência cardíaca em repouso (BPM)',
             'settings.resting_hr_help':    'Opcional — eleva o piso da sua Zona 1 (recuperação). Deixe em branco para ignorar.',
 

@@ -49,8 +49,11 @@ MIN_ZONE_WIDTH_BPM = 3
 # Version of the zone model below. Bump when ZONE_DEFINITIONS changes -- or when
 # the zone *math* changes (e.g. %max HR -> Heart Rate Reserve -> %LTHR anchoring,
 # or attaching the data-calibrated pace each zone maps to) -- so plans carrying
-# zones from an older model are recomputed on next view.
-HR_ZONES_VERSION = 7
+# zones from an older model are recomputed on next view. v8: the LTHR estimate
+# switched from a circular tempo-run HR median to a non-circular pace<->HR-at-
+# threshold derivation, moving the anchor for runners without a manual/synced
+# threshold.
+HR_ZONES_VERSION = 8
 
 
 # -- Zone definitions (percentage of max HR) ----------------------------------
