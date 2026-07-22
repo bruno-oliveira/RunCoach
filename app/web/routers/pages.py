@@ -11,6 +11,9 @@ from app.contexts.nutrition.nutrition_content import (
     generate_trail_fuel_ideas,
     generate_trail_nutrition_tips,
 )
+from app.contexts.plan.plan_helpers import current_active_plan, decorate_plan_status
+from app.contexts.plan.repositories import SQLAlchemyPlanRepository
+from app.core.time_utils import local_today
 from app.dependencies import get_db, get_optional_user
 from app.infrastructure.config import settings
 from app.models import User
@@ -26,6 +29,18 @@ def home(
     current_user: Optional[User] = Depends(get_optional_user),
     db: Session = Depends(get_db),
 ) -> HTMLResponse:
+    # Signed-in runners get a training-status hero instead of the first-time
+    # pitch, driven by their current plan. Anonymous visitors skip the query.
+    current_plan = None
+    plan_count = 0
+    if current_user is not None:
+        plans = SQLAlchemyPlanRepository(db).list_by_user_recent_first(current_user.id)
+        today = local_today()
+        for plan in plans:
+            decorate_plan_status(plan, today)
+        current_plan = current_active_plan(plans)
+        plan_count = sum(1 for p in plans if p.status_label != "Completed")
+
     return templates.TemplateResponse(
         request,
         "index.html",
@@ -33,6 +48,8 @@ def home(
             "request": request,
             "user": current_user,
             "google_client_id": settings.google_client_id or "",
+            "current_plan": current_plan,
+            "plan_count": plan_count,
         },
     )
 
