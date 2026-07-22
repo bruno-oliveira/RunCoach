@@ -20,6 +20,7 @@
 <link rel="stylesheet" href="{{ static_url('css/plan-readiness.css') }}">
 <link rel="stylesheet" href="{{ static_url('css/plan-gaps.css') }}">
 <link rel="stylesheet" href="{{ static_url('css/plan-change-summary.css') }}">
+<link rel="stylesheet" href="{{ static_url('css/plan-onboarding.css') }}">
 {% if nutrition_plan %}
 <link rel="stylesheet" href="{{ static_url('css/plan-nutrition.css') }}">
 {% endif %}
@@ -158,6 +159,60 @@
             </a>
         </div>
         {% endif %}
+    </div>
+    {% endif %}
+
+    {# ── "What now" onboarding strip ─────────────────────────────────────
+       Hands over the next magical step a PDF can't: push this week to the
+       watch, connect for auto-adaptation, or log how you feel. State-aware
+       (signed out / connected-nothing / connected) and dismissible per-plan. #}
+    {% if not plan_completed %}
+    <div class="whatnow-strip" id="whatnow-strip" data-plan-id="{{ training_plan.id }}" role="region" aria-label="Next steps" hidden>
+        <div class="whatnow-strip-head">
+            <span class="whatnow-strip-eyebrow" data-i18n="plan.whatnow_eyebrow">Make this plan yours</span>
+            <button type="button" class="whatnow-strip-dismiss" onclick="dismissWhatNow()" aria-label="Dismiss" data-i18n-aria="plan.whatnow_dismiss">&times;</button>
+        </div>
+        <div class="whatnow-strip-actions">
+            {% if not user %}
+            <button type="button" class="whatnow-card" onclick="connectWatch()">
+                <span class="whatnow-card-icon" aria-hidden="true"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="6" width="12" height="12" rx="3"/><path d="M9 6l.5-3h5l.5 3"/><path d="M9 18l.5 3h5l.5-3"/><path d="M12 10v2.5l1.5 1"/></svg></span>
+                <span class="whatnow-card-body">
+                    <strong data-i18n="plan.whatnow_signin_title">Sign in to send this to your watch</strong>
+                    <span data-i18n="plan.whatnow_signin_desc">Connect your runs and the plan re-paces and adapts to you.</span>
+                </span>
+            </button>
+            {% elif not user.intervals_athlete_id and not user.strava_athlete_id %}
+            <button type="button" class="whatnow-card" onclick="connectWatch()">
+                <span class="whatnow-card-icon" aria-hidden="true"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg></span>
+                <span class="whatnow-card-body">
+                    <strong data-i18n="plan.whatnow_connect_title">Connect to auto-adapt</strong>
+                    <span data-i18n="plan.whatnow_connect_desc">We re-pace every week off your real runs.</span>
+                </span>
+            </button>
+            <button type="button" class="whatnow-card" onclick="scrollToThisWeek()">
+                <span class="whatnow-card-icon" aria-hidden="true"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="6" width="12" height="12" rx="3"/><path d="M9 6l.5-3h5l.5 3"/><path d="M9 18l.5 3h5l.5-3"/><path d="M12 10v2.5l1.5 1"/></svg></span>
+                <span class="whatnow-card-body">
+                    <strong data-i18n="plan.whatnow_send_title">Send this week to your watch</strong>
+                    <span data-i18n="plan.whatnow_send_desc">Push each session to Garmin via Intervals.icu.</span>
+                </span>
+            </button>
+            {% else %}
+            <button type="button" class="whatnow-card" onclick="scrollToThisWeek()">
+                <span class="whatnow-card-icon" aria-hidden="true"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="6" width="12" height="12" rx="3"/><path d="M9 6l.5-3h5l.5 3"/><path d="M9 18l.5 3h5l.5-3"/><path d="M12 10v2.5l1.5 1"/></svg></span>
+                <span class="whatnow-card-body">
+                    <strong data-i18n="plan.whatnow_send_title">Send this week to your watch</strong>
+                    <span data-i18n="plan.whatnow_send_desc">Push each session to Garmin via Intervals.icu.</span>
+                </span>
+            </button>
+            <a class="whatnow-card" href="/analytics?plan={{ training_plan.id }}&amp;tab=today">
+                <span class="whatnow-card-icon" aria-hidden="true"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg></span>
+                <span class="whatnow-card-body">
+                    <strong data-i18n="plan.whatnow_checkin_title">Tell us how you feel</strong>
+                    <span data-i18n="plan.whatnow_checkin_desc">A 15-second check-in tunes today's session.</span>
+                </span>
+            </a>
+            {% endif %}
+        </div>
     </div>
     {% endif %}
 
@@ -889,6 +944,33 @@
         } catch (e) {
             showShareToast('Error toggling share');
         }
+    }
+
+    // ── "What now" onboarding strip ──────────────────────────────────────
+    // Reveal unless the user dismissed it for this plan (client-only, matching
+    // the app's other localStorage nudges).
+    (function () {
+        var strip = document.getElementById('whatnow-strip');
+        if (!strip) return;
+        var planId = strip.dataset.planId;
+        var key = 'rc_whatnow_dismissed_' + planId;
+        var dismissed = false;
+        try { dismissed = localStorage.getItem(key) === '1'; } catch (e) { /* ignore */ }
+        if (!dismissed) strip.hidden = false;
+
+        window.dismissWhatNow = function () {
+            strip.hidden = true;
+            try { localStorage.setItem(key, '1'); } catch (e) { /* ignore */ }
+        };
+    })();
+
+    // "Send this week to your watch" hands off to the This Week hero, where the
+    // per-workout send-to-watch buttons live. Falls back to the first week card.
+    function scrollToThisWeek() {
+        var target = document.getElementById('pinned-current-week')
+            || document.querySelector('[data-week-num]')
+            || document.querySelector('.download-section');
+        if (target) target.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
 </script>
 <script src="{{ static_url('js/share/share_themes.js') }}" defer></script>

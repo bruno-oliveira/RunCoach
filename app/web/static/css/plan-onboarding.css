@@ -1,0 +1,122 @@
+/* ============================================================================
+   Plan "what now" onboarding strip
+   The dismissible next-steps strip near the top of the plan view. Hands over
+   the capabilities a PDF can't: push to watch, connect to auto-adapt, check in.
+   ========================================================================= */
+
+.whatnow-strip {
+    margin: 0 0 var(--space-6);
+    padding: var(--space-4) var(--space-5);
+    background: var(--color-bg-elevated);
+    border: 1px solid var(--color-border);
+    border-left: 3px solid var(--color-primary);
+    border-radius: var(--radius-xl);
+    box-shadow: var(--shadow-sm);
+}
+
+.whatnow-strip[hidden] { display: none; }
+
+.whatnow-strip-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-3);
+    margin-bottom: var(--space-3);
+}
+
+.whatnow-strip-eyebrow {
+    font-size: var(--text-xs);
+    font-weight: var(--weight-bold);
+    letter-spacing: var(--tracking-wide);
+    text-transform: uppercase;
+    color: var(--color-link);
+}
+
+.whatnow-strip-dismiss {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    padding: 0;
+    background: none;
+    border: none;
+    border-radius: var(--radius-md);
+    font-size: 22px;
+    line-height: 1;
+    color: var(--color-text-muted);
+    cursor: pointer;
+    transition: background var(--duration-fast) var(--ease-out),
+                color var(--duration-fast) var(--ease-out);
+}
+
+.whatnow-strip-dismiss:hover {
+    background: var(--color-bg-sunken);
+    color: var(--color-text);
+}
+
+.whatnow-strip-actions {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: var(--space-3);
+}
+
+.whatnow-card {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--space-3);
+    width: 100%;
+    padding: var(--space-3) var(--space-4);
+    background: var(--color-bg);
+    border: 1px solid var(--color-border-subtle);
+    border-radius: var(--radius-lg);
+    text-align: left;
+    text-decoration: none;
+    cursor: pointer;
+    transition: border-color var(--duration-fast) var(--ease-out),
+                box-shadow var(--duration-fast) var(--ease-out),
+                transform var(--duration-fast) var(--ease-out);
+}
+
+.whatnow-card:hover {
+    border-color: var(--color-primary);
+    box-shadow: var(--shadow-glow);
+    transform: translateY(-1px);
+}
+
+.whatnow-card-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    width: 36px;
+    height: 36px;
+    border-radius: var(--radius-md);
+    background: var(--color-primary-subtle);
+    color: var(--color-link);
+}
+
+.whatnow-card-body {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.whatnow-card-body strong {
+    font-size: var(--text-sm);
+    font-weight: var(--weight-semibold);
+    color: var(--color-text);
+    line-height: var(--leading-snug);
+}
+
+.whatnow-card-body span {
+    font-size: var(--text-xs);
+    color: var(--color-text-muted);
+    line-height: var(--leading-normal);
+}
+
+@media (max-width: 640px) {
+    .whatnow-strip-actions {
+        grid-template-columns: 1fr;
+    }
+}

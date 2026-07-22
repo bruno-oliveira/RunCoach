@@ -16,7 +16,7 @@
 
     <div class="container">
         <div class="hero-layout">
-            <!-- Left: headline + features -->
+            <!-- Left: the loop (thesis) + CTAs -->
             <div class="hero-content stagger">
                 <div class="hero-badge">
                     <span class="hero-badge-dot"></span>
@@ -24,49 +24,104 @@
                 </div>
 
                 <h1 class="hero-title">
-                    <span data-i18n="home.title1">A coach that</span><br>
-                    <span class="hero-title-accent"><span data-i18n="home.title2">explains every run.</span></span>
+                    <span data-i18n="home.hero_title1">Your watch knows your fitness.</span><br>
+                    <span class="hero-title-accent"><span data-i18n="home.hero_title2">We turn it into a plan.</span></span>
                 </h1>
 
                 <p class="hero-subtitle">
-                    <span data-i18n="home.subtitle">Tell us your race and your weekly mileage. We build a week-by-week plan paced off your real fitness, tell you why each session matters, and reshape it as you log your runs.</span>
+                    <span data-i18n="home.hero_sub">Connect your runs and RunCoach reads your real fitness, sets every pace, and pushes each session back to your watch — then reshapes the plan as you run.</span>
                 </p>
 
-                <div class="hero-features">
-                    <div class="hero-feature">
-                        <div class="hero-feature-icon">
-                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
-                        </div>
-                        <span><span data-i18n="home.feat_mileage">Paces set from your own fitness</span></span>
-                    </div>
-                    <div class="hero-feature">
-                        <div class="hero-feature-icon">
-                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
-                        </div>
-                        <span><span data-i18n="home.feat_nutrition">Every session explains its purpose</span></span>
-                    </div>
-                    <div class="hero-feature">
-                        <div class="hero-feature-icon">
-                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
-                        </div>
-                        <span><span data-i18n="home.feat_adaptive">Reshapes itself as you log runs</span></span>
-                    </div>
-                    <div class="hero-feature">
-                        <div class="hero-feature-icon">
-                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
-                        </div>
-                        <span><span data-i18n="home.feat_pdf">Take it anywhere — PDF or watch</span></span>
+                <!-- The loop: watch in → real paces → plan out → back to watch → adapts -->
+                <ol class="hero-loop" aria-label="How RunCoach works">
+                    <li class="hero-loop-step">
+                        <span class="hero-loop-num">1</span>
+                        <span class="hero-loop-text" data-i18n="home.loop_runs">Your runs come in from your watch</span>
+                    </li>
+                    <li class="hero-loop-step">
+                        <span class="hero-loop-num">2</span>
+                        <span class="hero-loop-text" data-i18n="home.loop_paces">Every pace is set from your real fitness</span>
+                    </li>
+                    <li class="hero-loop-step">
+                        <span class="hero-loop-num">3</span>
+                        <span class="hero-loop-text" data-i18n="home.loop_plan">You get a week-by-week plan</span>
+                    </li>
+                    <li class="hero-loop-step">
+                        <span class="hero-loop-num">4</span>
+                        <span class="hero-loop-text" data-i18n="home.loop_watch">Each session pushes back to your watch</span>
+                    </li>
+                    <li class="hero-loop-step hero-loop-step--cycle">
+                        <span class="hero-loop-num" aria-hidden="true">↻</span>
+                        <span class="hero-loop-text" data-i18n="home.loop_adapts">And it adapts as you keep running</span>
+                    </li>
+                </ol>
+
+                <div class="hero-cta-row">
+                    <button type="button" class="btn btn-accent btn-lg hero-cta-primary" onclick="connectWatch()">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="6" width="12" height="12" rx="3"/><path d="M9 6l.5-3h5l.5 3"/><path d="M9 18l.5 3h5l.5-3"/><path d="M12 10v2.5l1.5 1"/></svg>
+                        <span data-i18n="home.cta_connect">Connect your watch</span>
+                    </button>
+                    <button type="button" class="btn btn-ghost btn-lg hero-cta-secondary" onclick="scrollToBuild()">
+                        <span data-i18n="home.cta_build">Build a plan now</span>
+                    </button>
+                </div>
+                <p class="hero-cta-note" data-i18n="home.cta_nowatch">No watch? The manual plan takes three questions.</p>
+            </div>
+
+            <!-- Right: connect card (Start here → bring your runs in) -->
+            <div class="hero-form-wrap">
+                <div class="connect-card">
+                    <span class="connect-card-eyebrow" data-i18n="home.connect_eyebrow">Start here</span>
+                    <h2 class="connect-card-title" data-i18n="home.connect_title">Bring your runs in</h2>
+                    <p class="connect-card-desc" data-i18n="home.connect_desc">Connect Intervals.icu once. RunCoach reads your fitness to set your paces — and can send each workout to your Garmin.</p>
+
+                    <button type="button" class="btn btn-accent btn-full connect-card-btn" onclick="connectWatch()">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+                        <span data-i18n="home.connect_intervals_btn">Connect Intervals.icu</span>
+                    </button>
+                    <button type="button" class="connect-card-manual" onclick="scrollToBuild()">
+                        <span data-i18n="home.connect_manual">I'll enter it myself</span>
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+                    </button>
+
+                    <!-- Intervals → Garmin prerequisite checklist (Workstream 5) -->
+                    <div class="connect-checklist">
+                        <span class="connect-checklist-title" data-i18n="home.check_title">To connect, you'll need</span>
+                        <ul class="connect-checklist-list">
+                            <li class="connect-checklist-item">
+                                <svg class="connect-check-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>
+                                <span data-i18n="home.check_1">A free Intervals.icu account</span>
+                            </li>
+                            <li class="connect-checklist-item">
+                                <svg class="connect-check-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>
+                                <span data-i18n-html="home.check_2">Garmin linked inside Intervals.icu <em>(only to send workouts back)</em></span>
+                            </li>
+                            <li class="connect-checklist-item">
+                                <svg class="connect-check-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>
+                                <span data-i18n-html="home.check_3">Planned-workout upload enabled <em>(only to send workouts back)</em></span>
+                            </li>
+                        </ul>
+                        <p class="connect-checklist-note" data-i18n="home.check_note">Importing your runs works with just the connection — sending workouts to Garmin is the delightful next step.</p>
                     </div>
                 </div>
             </div>
+        </div>
+    </div>
+</div>
 
-            <!-- Right: form card -->
-            <div class="hero-form-wrap">
-                <div class="form-card">
-                    <div class="form-card-header">
-                        <h2 class="form-card-title"><span data-i18n="home.form_title">Create your plan</span></h2>
-                        <p class="form-card-desc"><span data-i18n="home.form_desc">Fill in your details to get started</span></p>
-                    </div>
+<!-- Build-a-plan section: the manual, anonymous-friendly form (moved below the hero) -->
+<section class="build-section" id="build-plan">
+    <div class="container">
+        <div class="build-section-header">
+            <h2 class="build-section-title" data-i18n="home.build_title">Or build a plan from three questions</h2>
+            <p class="build-section-desc" data-i18n="home.build_desc">No connection needed. Answer three questions and get a full plan — connect later to make it adapt to your runs.</p>
+        </div>
+        <div class="hero-form-wrap build-form-wrap">
+            <div class="form-card">
+                <div class="form-card-header">
+                    <h2 class="form-card-title"><span data-i18n="home.form_title">Create your plan</span></h2>
+                    <p class="form-card-desc"><span data-i18n="home.form_desc">Fill in your details to get started</span></p>
+                </div>
 
                     {% if error %}
                     <div class="form-alert">
@@ -222,25 +277,37 @@
                                 </label>
                             </div>
 
-                            <div class="form-row-2">
-                                <div class="form-group">
-                                    <label for="max_runs_per_week" class="form-label"><span data-i18n="home.runs_per_week">Runs per week</span></label>
-                                    <div class="select-wrap">
-                                        <select id="max_runs_per_week" name="max_runs_per_week" class="form-select" required>
-                                            <option value="2">2 runs &mdash; Busy schedule</option>
-                                            <option value="3">3 runs &mdash; Beginner</option>
-                                            <option value="4" selected>4 runs &mdash; Recommended</option>
-                                            <option value="5">5 runs &mdash; Intermediate</option>
-                                            <option value="6">6 runs &mdash; Advanced</option>
-                                        </select>
-                                    </div>
-                                </div>
+                            <!-- Progressive disclosure: both fields have safe
+                                 server defaults (runs=4, weight=70kg), so they
+                                 start collapsed. Trail selection auto-opens this
+                                 so the runs/week floor stays visible. -->
+                            <div class="form-group form-collapsible" id="more-options-collapsible">
+                                <button type="button" class="form-collapsible-toggle" onclick="toggleMoreOptions()" aria-expanded="false" aria-controls="more-options-fields">
+                                    <span data-i18n="home.more_options">More options (runs per week, body weight)</span>
+                                    <svg class="chevron-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+                                </button>
+                                <div id="more-options-fields" class="form-collapsible-content" style="display:none;">
+                                    <div class="form-row-2">
+                                        <div class="form-group">
+                                            <label for="max_runs_per_week" class="form-label"><span data-i18n="home.runs_per_week">Runs per week</span></label>
+                                            <div class="select-wrap">
+                                                <select id="max_runs_per_week" name="max_runs_per_week" class="form-select">
+                                                    <option value="2">2 runs &mdash; Busy schedule</option>
+                                                    <option value="3">3 runs &mdash; Beginner</option>
+                                                    <option value="4" selected>4 runs &mdash; Recommended</option>
+                                                    <option value="5">5 runs &mdash; Intermediate</option>
+                                                    <option value="6">6 runs &mdash; Advanced</option>
+                                                </select>
+                                            </div>
+                                        </div>
 
-                                <div class="form-group">
-                                    <label for="body_weight_kg" class="form-label"><span data-i18n="home.body_weight">Body weight</span></label>
-                                    <div class="input-with-unit">
-                                        <input type="number" id="body_weight_kg" name="body_weight_kg" class="form-input" step="0.1" min="30" max="250" required placeholder="70" value="70">
-                                        <span class="input-unit">kg</span>
+                                        <div class="form-group">
+                                            <label for="body_weight_kg" class="form-label"><span data-i18n="home.body_weight">Body weight</span></label>
+                                            <div class="input-with-unit">
+                                                <input type="number" id="body_weight_kg" name="body_weight_kg" class="form-input" step="0.1" min="30" max="250" placeholder="70" value="70">
+                                                <span class="input-unit">kg</span>
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -362,7 +429,7 @@
             </div>
         </div>
     </div>
-</div>
+</section>
 
 <!-- Social proof / stats strip -->
 <section class="stats-strip">
@@ -387,19 +454,34 @@
 
 {% block scripts %}
 <script>
+function setCollapsibleOpen(fieldsId, open) {
+    const fields = document.getElementById(fieldsId);
+    if (!fields) return;
+    const toggle = fields.previousElementSibling;
+    fields.style.display = open ? 'block' : 'none';
+    if (toggle) {
+        toggle.classList.toggle('open', open);
+        if (toggle.hasAttribute('aria-expanded')) {
+            toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+        }
+    }
+}
 function toggleCollapsibleFields(fieldsId) {
     const fields = document.getElementById(fieldsId);
-    const toggle = fields.previousElementSibling;
-    if (fields.style.display === 'none' || !fields.style.display) {
-        fields.style.display = 'block';
-        toggle.classList.add('open');
-    } else {
-        fields.style.display = 'none';
-        toggle.classList.remove('open');
-    }
+    if (!fields) return;
+    const isOpen = !(fields.style.display === 'none' || !fields.style.display);
+    setCollapsibleOpen(fieldsId, !isOpen);
 }
 function toggleRaceFields() { toggleCollapsibleFields('race-fields'); }
 function toggleGoalFields() { toggleCollapsibleFields('goal-fields'); }
+function toggleMoreOptions() { toggleCollapsibleFields('more-options-fields'); }
+function openMoreOptions() { setCollapsibleOpen('more-options-fields', true); }
+
+// Smooth-scroll from the hero CTAs / connect card to the manual plan form.
+function scrollToBuild() {
+    const el = document.getElementById('build-plan');
+    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
 
 function setPlanMode(mode) {
     document.getElementById('plan_mode').value = mode;
@@ -499,6 +581,9 @@ function setPlanMode(mode) {
         const trail = isTrailMode();
         trailGroup.style.display = trail ? '' : 'none';
         trainingTerrainGroup.style.display = trail ? '' : 'none';
+        // Trail brackets carry stricter runs/week floors, so surface the
+        // (otherwise collapsed) runs/week control when trail is picked.
+        if (trail) openMoreOptions();
         // Hidden flag flipped on/off so the backend sees explicit intent.
         isTrailField.value = trail ? 'on' : '';
         // Disable hidden trail inputs so they don't submit stale values and

@@ -88,8 +88,10 @@
                     </div>
                 </li>
                 {% else %}
-                <li><a href="#" onclick="connectIntervals(); return false;" class="nav-link nav-link-strava">Connect activities</a></li>
+                <li><a href="#" onclick="connectWatch(); return false;" class="nav-link nav-link-strava" data-i18n="nav.connect_activities">Connect activities</a></li>
                 {% endif %}
+                {% else %}
+                <li><a href="#" onclick="connectWatch(); return false;" class="nav-link nav-link-strava" data-i18n="nav.connect_activities">Connect activities</a></li>
                 {% endif %}
             </ul>
 

@@ -138,6 +138,26 @@ function connectIntervals() {
     connectActivityProvider('intervals', 'Intervals.icu');
 }
 
+/**
+ * Entry point for the "connect your watch" affordances surfaced before login
+ * (landing hero, connect card, logged-out nav link, plan-page "what now" strip).
+ *
+ * Authed  → jump straight into the Intervals.icu OAuth flow.
+ * Anon    → remember the intent and open Google sign-in; auth.js continues into
+ *           the Intervals connect once the credential comes back, so the whole
+ *           thing is a single click → sign-in → watch-connect chain.
+ */
+function connectWatch() {
+    if (document.body.dataset.authed === 'true') {
+        connectIntervals();
+    } else {
+        try {
+            sessionStorage.setItem('pendingConnect', 'intervals');
+        } catch (e) { /* private mode — fall back to plain sign-in */ }
+        triggerGoogleSignIn();
+    }
+}
+
 // ---- Strava panel ----
 
 function toggleStravaPanel() {

@@ -48,6 +48,32 @@
                 throw new Error('Invalid response from server');
             }
 
+            // Chained connect: if the user clicked a "connect your watch"
+            // affordance while logged out, we stashed the intent before sign-in.
+            // Continue straight into the Intervals.icu OAuth flow instead of a
+            // plain reload, so it reads as one uninterrupted action.
+            let pendingConnect = null;
+            try {
+                pendingConnect = sessionStorage.getItem('pendingConnect');
+                if (pendingConnect) sessionStorage.removeItem('pendingConnect');
+            } catch (e) { /* private mode — no pending intent */ }
+
+            if (pendingConnect === 'intervals') {
+                try {
+                    const connectRes = await fetch('/api/intervals/connect', {
+                        credentials: 'same-origin'
+                    });
+                    const connectData = await connectRes.json();
+                    if (connectData && connectData.authorize_url) {
+                        window.location.href = connectData.authorize_url;
+                        return;
+                    }
+                } catch (e) {
+                    // Fall through to a reload — they land logged in and can
+                    // connect from the nav.
+                }
+            }
+
             // Reload page to get server-rendered authenticated state
             window.location.reload();
 
