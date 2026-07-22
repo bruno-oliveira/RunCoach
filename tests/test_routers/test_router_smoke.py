@@ -4,13 +4,17 @@ Covers routers that previously had no test coverage:
 runs, analytics, performance, adaptive, recipes.
 """
 
+from datetime import timedelta
+
 import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy.orm import Session
 
+from app.core.time_utils import local_today
 from app.dependencies import get_current_user, get_db, get_optional_user
 from app.main import app
 from app.models.run_log import RunLog
+from app.models.training_plan import TrainingPlan
 from app.models.user import User
 
 # ---------------------------------------------------------------------------
@@ -259,5 +263,65 @@ class TestTimeGoalPlan:
                 )
             assert resp.status_code == 200
             assert "logged-in" in resp.text.lower() or "auth" in resp.text.lower()
+        finally:
+            app.dependency_overrides.pop(get_optional_user, None)
+
+
+# ---------------------------------------------------------------------------
+# Home page  (/)  — auth-aware hero
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.usefixtures("_override_db")
+class TestHomeHero:
+    def test_anonymous_home_shows_marketing_hero(self):
+        """Anonymous visitors see the connect card, not a training-status hero."""
+        app.dependency_overrides[get_optional_user] = lambda: None
+        try:
+            with TestClient(app) as c:
+                resp = c.get("/")
+            assert resp.status_code == 200
+            assert "hero--status" not in resp.text
+            # Single action surface: the connect card is present.
+            assert "connect-card" in resp.text
+        finally:
+            app.dependency_overrides.pop(get_optional_user, None)
+
+    def test_signed_in_with_plan_shows_status_hero(self, smoke_user, test_db):
+        """A runner mid-plan gets the status hero + a link to their plan."""
+        plan = TrainingPlan(
+            id="home-hero-plan-1",
+            user_id=smoke_user.id,
+            current_weekly_km=30,
+            target_distance="10",
+            weeks_duration=8,
+            start_date=local_today() - timedelta(weeks=3),
+        )
+        test_db.add(plan)
+        test_db.commit()
+
+        app.dependency_overrides[get_optional_user] = lambda: smoke_user
+        try:
+            with TestClient(app) as c:
+                resp = c.get("/")
+            assert resp.status_code == 200
+            assert "hero--status" in resp.text
+            assert "Week 4 of 8" in resp.text
+            assert "/plan/home-hero-plan-1" in resp.text
+            # The first-time marketing loop should not render for them.
+            assert "hero-loop" not in resp.text
+        finally:
+            app.dependency_overrides.pop(get_optional_user, None)
+
+    def test_signed_in_without_plan_shows_next_step(self, smoke_user):
+        """A fresh signup with no plan gets a build/connect prompt, no plan card."""
+        app.dependency_overrides[get_optional_user] = lambda: smoke_user
+        try:
+            with TestClient(app) as c:
+                resp = c.get("/")
+            assert resp.status_code == 200
+            assert "hero--status" in resp.text
+            assert "back_noplan_title" in resp.text
+            assert "status-pill" not in resp.text
         finally:
             app.dependency_overrides.pop(get_optional_user, None)

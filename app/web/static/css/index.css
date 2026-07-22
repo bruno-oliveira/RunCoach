@@ -321,6 +321,149 @@
     color: var(--color-text-muted);
 }
 
+/* ---- Connect card: mechanism line + "or" + manual note ---- */
+.connect-card-mechanism {
+    margin: var(--space-3) 0 0;
+    font-size: var(--text-xs);
+    line-height: var(--leading-normal);
+    color: var(--color-text-muted);
+    text-align: center;
+}
+
+.connect-card-or {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    margin: var(--space-5) 0 var(--space-2);
+    font-size: var(--text-xs);
+    font-weight: var(--weight-semibold);
+    letter-spacing: var(--tracking-wide);
+    text-transform: uppercase;
+    color: var(--color-text-muted);
+}
+.connect-card-or::before,
+.connect-card-or::after {
+    content: "";
+    flex: 1;
+    height: 1px;
+    background: var(--color-border-subtle);
+}
+
+.connect-card-manual-note {
+    margin: var(--space-2) 0 0;
+    font-size: var(--text-xs);
+    line-height: var(--leading-normal);
+    color: var(--color-text-muted);
+    text-align: center;
+}
+
+/* ---- Prerequisites: collapsed by default (only for send-to-watch) ---- */
+.connect-prereqs {
+    margin-top: var(--space-5);
+    padding-top: var(--space-5);
+    border-top: 1px solid var(--color-border-subtle);
+}
+
+.connect-prereqs-toggle {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-2);
+    cursor: pointer;
+    list-style: none;
+    font-size: var(--text-xs);
+    font-weight: var(--weight-semibold);
+    letter-spacing: var(--tracking-wide);
+    text-transform: uppercase;
+    color: var(--color-text-muted);
+    transition: color var(--duration-fast) var(--ease-out);
+}
+.connect-prereqs-toggle::-webkit-details-marker { display: none; }
+.connect-prereqs-toggle:hover { color: var(--color-text-secondary); }
+.connect-prereqs-toggle .chevron-icon {
+    flex-shrink: 0;
+    transition: transform var(--duration-base) var(--ease-out);
+}
+.connect-prereqs[open] .connect-prereqs-toggle .chevron-icon {
+    transform: rotate(180deg);
+}
+.connect-prereqs-body { margin-top: var(--space-3); }
+
+/* ---- Logged-in training-status hero ---- */
+.status-hero {
+    max-width: 640px;
+    padding: var(--space-4) 0;
+}
+
+.status-hero-title {
+    margin-top: var(--space-3);
+}
+
+.status-plan {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: var(--space-3);
+    margin: var(--space-4) 0 var(--space-6);
+}
+
+.status-plan-distance {
+    font-family: var(--font-display);
+    font-size: var(--text-lg);
+    font-weight: var(--weight-semibold);
+    color: var(--color-text);
+}
+
+.status-pill {
+    display: inline-flex;
+    align-items: center;
+    padding: var(--space-1) var(--space-3);
+    border-radius: var(--radius-full);
+    background: var(--color-primary-subtle, var(--color-bg-sunken));
+    border: 1px solid var(--color-border);
+    font-size: var(--text-sm);
+    font-weight: var(--weight-medium);
+    color: var(--color-link);
+}
+
+.status-hero-actions {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: var(--space-3) var(--space-4);
+}
+
+.status-hero-cta { gap: var(--space-2); }
+
+.status-conn {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-2);
+    font-size: var(--text-sm);
+    color: var(--color-text-secondary);
+}
+.status-conn-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: var(--radius-full);
+    background: var(--color-success);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-success) 22%, transparent);
+}
+.status-conn-sync { color: var(--color-text-muted); }
+
+.status-hero-note {
+    margin: var(--space-6) 0 0;
+    font-size: var(--text-sm);
+    color: var(--color-text-muted);
+}
+.status-hero-link {
+    color: var(--color-text-secondary);
+    text-decoration: none;
+    transition: color var(--duration-fast) var(--ease-out);
+}
+.status-hero-link:hover { color: var(--color-link); }
+.status-hero-sep { margin: 0 var(--space-2); }
+
 /* ---- Build-a-plan section (moved form) ---- */
 .build-section {
     padding: var(--space-12) 0;
