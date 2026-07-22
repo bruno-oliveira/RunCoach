@@ -42,7 +42,11 @@ from app.infrastructure.integrations.strava_post_sync_service import (
     auto_map_and_adjust,
 )
 from app.models.user import User
-from app.rate_limit import intervals_callback_limiter, intervals_push_limiter
+from app.rate_limit import (
+    intervals_callback_limiter,
+    intervals_push_limiter,
+    intervals_sync_limiter,
+)
 from app.schemas import (
     IntervalsPushRequest,
     IntervalsPushResponse,
@@ -166,12 +170,14 @@ async def intervals_callback(
 
 @intervals_router.post("/sync", response_model=IntervalsSyncResponse)
 async def intervals_sync(
+    request: Request,
     force_days: Optional[int] = Query(default=None, ge=1, le=3650),
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
     intervals_service: IntervalsService = Depends(get_intervals_service),
 ):
     """Import new runs, overlapping the previous cursor by one day."""
+    intervals_sync_limiter.check(request)
     if not current_user.intervals_athlete_id:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,

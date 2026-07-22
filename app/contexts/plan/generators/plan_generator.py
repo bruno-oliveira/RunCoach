@@ -12,9 +12,11 @@ Callers should import those modules directly for low-level helpers; this class
 exposes only the high-level ``generate_plan`` orchestration.
 """
 
+import logging
 from typing import Any, Dict, List, Optional
 
 from app.contexts.plan.generators.beginner_plan_generator import BeginnerPlanGenerator
+from app.contexts.plan.generators.plan_structure_guard import check_plan_structure
 from app.contexts.plan.generators.weekly_plan_builder import build_weekly_plan
 from app.core.training import mileage_progression
 from app.core.training.key_workout_library import KeyWorkoutRotationState
@@ -28,7 +30,29 @@ from app.core.training.trail_profile import (
     classify_trail,
 )
 from app.core.training.vdot_calculator import VDOTCalculator
-from app.exceptions import ZeroMileageUnsupportedException
+from app.exceptions import PlanGenerationException, ZeroMileageUnsupportedException
+
+logger = logging.getLogger(__name__)
+
+# Below this per-run distance a plan reads as unrealistic (trivially short runs);
+# the generator drops running frequency rather than emit such runs.
+MIN_VIABLE_RUN_KM = 2.5
+# Floor on running days: a real training week still wants a long run, a quality
+# session, and an easy run, so frequency is never reduced below this.
+MIN_RUNNING_DAYS = 3
+
+
+def _viable_run_frequency(current_km: float, max_runs: int) -> int:
+    """Reduce running frequency when the weekly budget can't fill every run.
+
+    Keeps each run at or above :data:`MIN_VIABLE_RUN_KM` where possible, without
+    ever dropping below :data:`MIN_RUNNING_DAYS`. Returns ``max_runs`` unchanged
+    for any adequately-resourced plan.
+    """
+    runs = max_runs
+    while runs > MIN_RUNNING_DAYS and current_km / runs < MIN_VIABLE_RUN_KM:
+        runs -= 1
+    return runs
 
 
 class TrainingPlanGenerator:
@@ -71,6 +95,15 @@ class TrainingPlanGenerator:
         pace_zones = VDOTCalculator.get_pace_zones(vdot) if vdot else None
 
         experience_level = derive_experience_level(current_km)
+
+        # Don't shatter a very low weekly budget into trivially short runs.
+        # Below ~2.5 km/run a plan reads as unrealistic (four 1.3 km runs for a
+        # 5 km/week base), so drop the running frequency until each run carries
+        # a viable dose — a deliberately more "templated" shape at the low end.
+        # Floored at MIN_RUNNING_DAYS so the long + quality + easy structure
+        # survives. (This is the same realism line the plan test-grid draws when
+        # it skips combos under 2.5 km/run.)
+        max_runs_per_week = _viable_run_frequency(current_km, max_runs_per_week)
 
         weekly_progression = mileage_progression.calculate_weekly_progression(
             current_km,
@@ -228,6 +261,35 @@ class TrainingPlanGenerator:
             pace_zones,
             trail_profile=trail_profile,
         )
+
+        # Plan-level safety net: catch a week that composed into something
+        # unrunnable before it ever reaches the runner. Fatal issues fail the
+        # generation loudly; softer inconsistencies are logged for telemetry.
+        issues = check_plan_structure(training_plan)
+        if issues["warnings"]:
+            logger.warning(
+                "Plan structure warnings (%.0f km base, %.1f km target, %d wks): %s",
+                current_km,
+                target_distance,
+                weeks,
+                "; ".join(issues["warnings"]),
+            )
+        if issues["fatal"]:
+            logger.error(
+                "Degenerate plan (%.0f km base, %.1f km target, %d wks): %s",
+                current_km,
+                target_distance,
+                weeks,
+                "; ".join(issues["fatal"]),
+            )
+            raise PlanGenerationException(
+                "Plan generation produced an unusable week: "
+                + "; ".join(issues["fatal"]),
+                user_message=(
+                    "We couldn't build a sound plan from these inputs. Try a "
+                    "slightly higher current mileage or a longer training window."
+                ),
+            )
 
         return training_plan
 
