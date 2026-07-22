@@ -38,7 +38,8 @@ from typing import Any, Dict, List, Optional
 from sqlalchemy.orm import Session
 
 from app.contexts.plan.repositories import SQLAlchemyPlanRepository
-from app.models import DailyWorkout, TrainingPlan
+from app.core.coaching.readiness_checkin import ReadinessAssessment, score_checkin
+from app.models import DailyWorkout, ReadinessLog, TrainingPlan
 
 from ._helpers import today_date
 from .intent_service import _HARD_TYPES
@@ -100,9 +101,13 @@ def get_nudge(plan_id: str, user_id: str, db: Session) -> Optional[Dict[str, Any
     remaining = _current_week_remaining(plan_id, current_week, current_dow, db)
     remaining_hard = [w for w in remaining if (w.workout_type or "") in _HARD_TYPES]
 
-    # Priority: safety guards (ease back) before the opportunistic bump.
+    # Priority: safety guards (ease back) before the opportunistic bump. A
+    # wrecked morning is the most immediate, session-specific reason to ease,
+    # so it's checked first.
+    readiness = _today_readiness(user_id, db)
     nudge = (
-        _detect_overtraining(signals, current_week, bool(remaining))
+        _detect_low_readiness(readiness, current_week, remaining_hard)
+        or _detect_overtraining(signals, current_week, bool(remaining))
         or _detect_missed_session(signals, current_week, remaining_hard)
         or _detect_fitness_jump(signals, current_week, has_future_weeks)
     )
@@ -146,6 +151,88 @@ def dismiss_nudge(
 # ---------------------------------------------------------------------------
 # Detectors — each returns a nudge dict or None
 # ---------------------------------------------------------------------------
+
+
+def _today_readiness(user_id: str, db: Session) -> Optional[ReadinessAssessment]:
+    """This morning's readiness assessment, or ``None`` if not checked in today.
+
+    Queries the model directly (like the rest of ``gather_signals``) and re-scores
+    via the pure core helper, staying within the plan context's allowed deps
+    (core + models) rather than importing the runner context.
+    """
+    log = (
+        db.query(ReadinessLog)
+        .filter(
+            ReadinessLog.user_id == user_id,
+            ReadinessLog.date == today_date(),
+            ReadinessLog.score.isnot(None),
+        )
+        .first()
+    )
+    if log is None:
+        return None
+    return score_checkin(
+        sleep_hours=log.sleep_hours,
+        sleep_quality=log.sleep_quality,
+        energy=log.energy,
+        soreness=log.soreness,
+        stress=log.stress,
+    )
+
+
+def _detect_low_readiness(
+    readiness: Optional[ReadinessAssessment],
+    current_week: Optional[int],
+    remaining_hard: List[DailyWorkout],
+) -> Optional[Dict[str, Any]]:
+    """A wrecked morning with a hard session still ahead this week → ease it.
+
+    The flagship "adapts to how you feel" beat: when the runner reports a
+    genuinely rough morning (run-down/depleted) and there's a hard session left
+    to soften, offer to down-shift the rest of the week. Gated on a remaining
+    hard session so easing would actually change something.
+    """
+    if readiness is None or not readiness.is_low:
+        return None
+    if not remaining_hard:
+        return None
+
+    reason = _readiness_reason(readiness.drivers)
+    return {
+        "kind": "low_readiness",
+        "intent": _INTENT_TIRED,
+        "signature": _signature(
+            "low_readiness",
+            current_week,
+            readiness.band,
+            _bucket(readiness.score),
+            len(remaining_hard),
+        ),
+        "headline": "Rough morning — ease today",
+        "detail": (
+            f"{reason} With a hard session still on the plan this week, forcing "
+            "it now risks more than it builds. Want to ease the rest of this "
+            "week and turn that session easy so you recover and come back sharp?"
+        ),
+        "cta": "Review the ease-off",
+        "tone": "caution",
+        "evidence": {
+            "readiness_band": readiness.band,
+            "readiness_score": readiness.score,
+            "hard_sessions_remaining": len(remaining_hard),
+        },
+    }
+
+
+def _readiness_reason(drivers: List[str]) -> str:
+    """Turn readiness drivers into a sentence for the nudge detail."""
+    if not drivers:
+        return "Your check-in this morning came in low."
+    if len(drivers) == 1:
+        joined = drivers[0]
+    else:
+        joined = ", ".join(drivers[:-1]) + " and " + drivers[-1]
+    return joined[0].upper() + joined[1:] + "."
 
 
 def _detect_overtraining(

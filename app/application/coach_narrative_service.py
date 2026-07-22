@@ -25,6 +25,7 @@ from app.application.coach_summary_service import (
 )
 from app.contexts.runner.fitness.race_predictor_service import RacePredictorService
 from app.contexts.runner.profile.profile_builder import build_profile
+from app.contexts.runner.wellness.checkin_service import CheckInService
 from app.core.coaching.coaching_notes_generator import generate_coaching_note
 from app.core.coaching.recognition import (
     build_fallback_note,
@@ -113,10 +114,12 @@ def build_coach_note(
 
 
 def _run_signature(plan: TrainingPlan, user_id: str, db: Session) -> str:
-    """A compact signature of the user's logged runs.
+    """A compact signature of the inputs the note is built from.
 
     Changes whenever a run is added (count) or a newer/back-dated run appears
-    (max date) — the precise "new runs logged" trigger for cache invalidation.
+    (max date) — the precise "new runs logged" trigger for cache invalidation —
+    and also when today's readiness check-in changes, so logging how you feel
+    this morning refreshes the note rather than serving yesterday's stance.
     """
     count, last = (
         db.query(func.count(RunLog.id), func.max(RunLog.date))
@@ -124,7 +127,11 @@ def _run_signature(plan: TrainingPlan, user_id: str, db: Session) -> str:
         .one()
     )
     last_str = last.isoformat() if last else "none"
-    return f"{plan.id}:{count}:{last_str}"
+    readiness = CheckInService(db).get_today(user_id)
+    readiness_str = (
+        f"{readiness.date.isoformat()}:{readiness.score}" if readiness else "none"
+    )
+    return f"{plan.id}:{count}:{last_str}:{readiness_str}"
 
 
 def _generated_today(cache: dict[str, Any]) -> bool:
@@ -199,6 +206,8 @@ def _assemble_facts(
 
     week_pulse_msg = (patterns.get("week_pulse") or {}).get("message")
 
+    readiness_facts = _today_readiness_facts(user_id, db)
+
     signals = {
         "overreach": summary.get("overreach_detected", False),
         "direction": summary.get("direction"),
@@ -208,6 +217,9 @@ def _assemble_facts(
         "today_is_rest": today_facts.get("is_rest", False),
         "today_workout_type": today_facts.get("workout_type"),
         "today_pattern": _today_pattern(patterns, today_facts.get("workout_type")),
+        "today_readiness_band": readiness_facts.get("band"),
+        "today_readiness_score": readiness_facts.get("score"),
+        "today_readiness_drivers": readiness_facts.get("drivers"),
     }
     focus = select_today_focus(signals)
 
@@ -242,7 +254,27 @@ def _assemble_facts(
             "overreach": summary.get("overreach_detected", False),
         },
         "week_pulse": week_pulse_msg,
+        "readiness": readiness_facts,
         "focus": focus,
+    }
+
+
+def _today_readiness_facts(user_id: str, db: Session) -> dict[str, Any]:
+    """Today's self-reported readiness, distilled for the focus logic + AI voice.
+
+    Returns an empty-ish dict when the runner hasn't checked in today, so the
+    readiness beat simply doesn't fire.
+    """
+    log = CheckInService(db).get_today(user_id)
+    if log is None or log.score is None:
+        return {"available": False, "band": None, "score": None, "drivers": []}
+    assessment = CheckInService.assess(log)
+    return {
+        "available": True,
+        "band": assessment.band,
+        "label": assessment.label,
+        "score": assessment.score,
+        "drivers": assessment.drivers,
     }
 
 

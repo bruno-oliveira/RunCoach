@@ -14,7 +14,10 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any, List, Optional, Protocol
 
 if TYPE_CHECKING:
+    from datetime import date as date_cls
+
     from app.models.favorite_recipe import FavoriteRecipe
+    from app.models.readiness_log import ReadinessLog
     from app.models.run_log import RunLog
     from app.models.training_plan import TrainingPlan
     from app.models.user import User
@@ -75,6 +78,20 @@ class IUserRepository(Protocol):
     def get_by_email(self, email: str) -> Optional["User"]: ...
 
     def save(self, user: "User") -> None: ...
+
+
+class IReadinessRepository(Protocol):
+    """Persistence interface for daily readiness check-ins."""
+
+    def get_for_user_on(
+        self, user_id: str, on_date: "date_cls"
+    ) -> Optional["ReadinessLog"]: ...
+
+    def list_recent_for_user(
+        self, user_id: str, *, since: "date_cls | None" = None, limit: int | None = None
+    ) -> List["ReadinessLog"]: ...
+
+    def save(self, log: "ReadinessLog") -> None: ...
 
 
 class IFavoriteRecipeRepository(Protocol):

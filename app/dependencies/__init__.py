@@ -19,6 +19,7 @@ from app.dependencies.database import (
     engine,
     get_db,
     get_plan_repository,
+    get_readiness_repository,
     get_run_repository,
     get_user_repository,
 )
@@ -60,6 +61,7 @@ __all__ = [
     "get_plan_repository",
     "get_plan_service",
     "get_plan_view_service",
+    "get_readiness_repository",
     "get_run_repository",
     "get_strava_service",
     "get_user_repository",

@@ -34,10 +34,14 @@
             this.todayLoadedPlanId = null;
             this._show(prompt); this._hide(loading); this._hide(content); this._hide(empty);
             this._loadCoachNote(null);
+            if (window.ReadinessCheckIn) window.ReadinessCheckIn.load(null);
             return;
         }
 
         this._hide(prompt); this._hide(empty); this._hide(content); this._show(loading);
+        // The morning check-in is plan-scoped but not gated on the 3-run
+        // threshold — a runner can log how they feel from day one.
+        if (window.ReadinessCheckIn) window.ReadinessCheckIn.load(planId);
 
         try {
             const [summary, patterns, today] = await Promise.all([

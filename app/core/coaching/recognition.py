@@ -136,6 +136,93 @@ def today_purpose_line(today: dict[str, Any]) -> Optional[str]:
     return base
 
 
+# Workout types intense enough that a rough morning should down-shift them.
+_HARD_TODAY_TYPES = {
+    "tempo",
+    "interval",
+    "threshold",
+    "vo2max",
+    "hill",
+    "fartlek",
+    "race_pace",
+    "race",
+}
+
+
+def _join_drivers(drivers: list[str]) -> str:
+    """Join readiness drivers into a sentence-leading clause.
+
+    ``["you slept 5h", "your legs are heavy"]`` → ``"You slept 5h and your legs
+    are heavy"``. Falls back to a generic clause when nothing specific crossed a
+    threshold.
+    """
+    if not drivers:
+        return "Your check-in this morning was on the low side"
+    if len(drivers) == 1:
+        joined = drivers[0]
+    else:
+        joined = ", ".join(drivers[:-1]) + " and " + drivers[-1]
+    return joined[0].upper() + joined[1:]
+
+
+def _select_readiness_focus(signals: dict[str, Any]) -> Optional[dict[str, str]]:
+    """Today's self-reported readiness beat, or None when it shouldn't speak.
+
+    Only a genuinely rough morning (``run_down``/``depleted``) or a genuinely
+    fresh one (``primed``) produces a beat; middling mornings fall through to the
+    rest of the focus logic so the note never nags about an ordinary day.
+    """
+    band = signals.get("today_readiness_band")
+    if band not in ("run_down", "depleted", "primed"):
+        return None
+
+    is_rest = signals.get("today_is_rest", False)
+    wtype = signals.get("today_workout_type")
+    drivers = signals.get("today_readiness_drivers") or []
+
+    if band in ("run_down", "depleted"):
+        reason = _join_drivers(drivers)
+        if is_rest:
+            return {
+                "kind": "readiness_ease",
+                "message": (
+                    f"{reason} — so today's rest lands at exactly the right time. "
+                    "Let your body take it; the work you've done needs a morning "
+                    "like this to stick."
+                ),
+            }
+        if wtype in _HARD_TODAY_TYPES:
+            label = str(wtype).replace("_", " ")
+            return {
+                "kind": "readiness_ease",
+                "message": (
+                    f"{reason} — I'd turn today's {label} into an easy 30–40 "
+                    "minutes and we'll get the quality work back later this week. "
+                    "Hammering a hard session on a morning like this is how you "
+                    "end up hurt, not fitter."
+                ),
+            }
+        return {
+            "kind": "readiness_ease",
+            "message": (
+                f"{reason} — keep today genuinely easy and short. The fitness is "
+                "already banked; today is about letting your body catch up."
+            ),
+        }
+
+    # band == "primed"
+    if wtype in _HARD_TODAY_TYPES:
+        return {
+            "kind": "readiness_push",
+            "message": (
+                "Your check-in says you're primed this morning — sleep, energy, "
+                "and freshness all line up. It's a great day to commit fully to "
+                "today's session and get the most out of it."
+            ),
+        }
+    return None
+
+
 def select_today_focus(signals: dict[str, Any]) -> Optional[dict[str, str]]:
     """Pick the single most important coaching adjustment for today, or None.
 
@@ -144,6 +231,12 @@ def select_today_focus(signals: dict[str, Any]) -> Optional[dict[str, str]]:
     note stays recognition + purpose and never nags.
     """
     is_rest = signals.get("today_is_rest", False)
+
+    # 0. How the runner *feels* this morning — the most immediate, session-
+    # specific signal. Speaks only on a clearly rough or clearly primed morning.
+    readiness_focus = _select_readiness_focus(signals)
+    if readiness_focus is not None:
+        return readiness_focus
 
     overreach = signals.get("overreach")
     direction = signals.get("direction")

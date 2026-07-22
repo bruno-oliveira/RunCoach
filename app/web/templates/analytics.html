@@ -12,6 +12,7 @@
 <link rel="stylesheet" href="{{ static_url('css/analytics/coach.css') }}">
 <link rel="stylesheet" href="{{ static_url('css/analytics/today.css') }}">
 <link rel="stylesheet" href="{{ static_url('css/analytics/signals.css') }}">
+<link rel="stylesheet" href="{{ static_url('css/analytics/readiness-checkin.css') }}">
 <link rel="stylesheet" href="{{ static_url('css/share.css') }}">
 <link rel="stylesheet" href="{{ static_url('css/plan/intent-menu.css') }}">
 <link rel="stylesheet" href="{{ static_url('css/plan-change-summary.css') }}">
@@ -96,6 +97,10 @@
             <div class="analytics-loading-spinner"></div>
             <p>Reading your training&hellip;</p>
         </div>
+
+        <!-- Morning check-in — the 15-second capture that lets the plan adapt to
+             how you feel. Rendered/managed by readiness_checkin.js. -->
+        <div id="readinessCheckinCard" class="readiness-checkin" style="display:none;"></div>
 
         <div id="todayEmpty" class="analytics-empty" style="display:none;">
             <div class="analytics-empty-icon">&#x1F4CA;</div>
@@ -444,6 +449,7 @@
 <script src="{{ static_url('js/analytics/analytics_signal_chart.js') }}" defer></script>
 <script src="{{ static_url('js/analytics/analytics_coach.js') }}" defer></script>
 <script src="{{ static_url('js/analytics/analytics_today.js') }}" defer></script>
+<script src="{{ static_url('js/analytics/readiness_checkin.js') }}" defer></script>
 <script src="{{ static_url('js/analytics/analytics_signals.js') }}" defer></script>
 <script src="{{ static_url('js/analytics/analytics_charts.js') }}" defer></script>
 <script src="{{ static_url('js/analytics/analytics_predictions.js') }}" defer></script>

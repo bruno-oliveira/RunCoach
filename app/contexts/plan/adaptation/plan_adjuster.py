@@ -10,6 +10,7 @@ from app.contexts.plan.repositories import SQLAlchemyPlanRepository
 from app.core.training.plan_calendar import compute_current_week
 from app.models import (
     DailyWorkout,
+    ReadinessLog,
     RunFeedback,
     RunLog,
     TrainingPlan,
@@ -142,6 +143,8 @@ def gather_signals(
     except Exception as e:
         logger.warning("Training load lookup failed (non-fatal): %s", e)
 
+    readiness_logs = _recent_readiness_logs(user_id, today, db)
+
     signals = compute_adjustment_signals(
         all_plan_runs,
         past_workouts,
@@ -156,6 +159,7 @@ def gather_signals(
         run_feedback_list=run_feedback_list,
         vdot_trend=vdot_trend,
         training_load=training_load,
+        readiness_logs=readiness_logs,
         mountain_simulation=provider.score_mountain_simulation(
             training_plan.plan_data or [],
             all_plan_runs,
@@ -198,6 +202,32 @@ def gather_signals(
         "first_adjustable_week": first_adjustable_week,
         "adjustable_weeks": adjustable_weeks,
     }
+
+
+# How far back the readiness signal looks for self-reported check-ins. Matches
+# the recency horizon the other signals weight over, so a stale week-old morning
+# doesn't keep dragging the plan.
+_READINESS_LOOKBACK_DAYS = 21
+
+
+def _recent_readiness_logs(user_id: str, today, db: Session) -> List[ReadinessLog]:
+    """Recent scored readiness check-ins feeding the adaptation readiness signal.
+
+    Only logs with a derived ``score`` count — a check-in with no scorable input
+    contributes nothing. Returns [] when the user has never checked in, in which
+    case the signal falls back to its objective TSB proxy.
+    """
+    since = today - timedelta(days=_READINESS_LOOKBACK_DAYS)
+    return (
+        db.query(ReadinessLog)
+        .filter(
+            ReadinessLog.user_id == user_id,
+            ReadinessLog.date >= since,
+            ReadinessLog.score.isnot(None),
+        )
+        .order_by(ReadinessLog.date.desc())
+        .all()
+    )
 
 
 def preview_adjust_signals(

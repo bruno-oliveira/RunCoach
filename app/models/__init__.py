@@ -2,6 +2,7 @@ from app.models.base import Base
 from app.models.daily_workout import DailyWorkout
 from app.models.favorite_recipe import FavoriteRecipe
 from app.models.plan_customization import PlanCustomization
+from app.models.readiness_log import ReadinessLog
 from app.models.refresh_token import RefreshToken
 from app.models.run_feedback import RunFeedback
 from app.models.run_log import RunLog
@@ -18,6 +19,7 @@ __all__ = [
     "PlanCustomization",
     "RunLog",
     "RunFeedback",
+    "ReadinessLog",
     "FavoriteRecipe",
     "RefreshToken",
 ]

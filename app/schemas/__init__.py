@@ -25,6 +25,10 @@ from app.schemas.plan_schemas import (
     get_mileage_warning,
     parse_target_distance,
 )
+from app.schemas.readiness_schemas import (
+    ReadinessCheckInCreate,
+    ReadinessCheckInResponse,
+)
 from app.schemas.run_schemas import (
     RunLogBase,
     RunLogCreate,
@@ -49,6 +53,8 @@ __all__ = [
     "PlanRequestBase",
     "PerformancePlanRequest",
     "RaceInfoMixin",
+    "ReadinessCheckInCreate",
+    "ReadinessCheckInResponse",
     "RunLogBase",
     "RunLogCreate",
     "RunLogListResponse",
