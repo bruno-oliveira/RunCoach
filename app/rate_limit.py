@@ -65,3 +65,7 @@ fit_download_limiter = RateLimiter(max_requests=30, window_seconds=60)
 # Pushing a workout to Intervals.icu hits their API; keep it generous enough to
 # send a week of workouts one tap at a time, but capped to avoid abuse.
 intervals_push_limiter = RateLimiter(max_requests=30, window_seconds=60)
+# Syncing pulls from Intervals.icu's API. Each sync is a couple of calls, and a
+# real "check for new runs" tap happens a handful of times a day at most — cap
+# per-IP so an accidental polling loop (or abuse) can't hammer their API.
+intervals_sync_limiter = RateLimiter(max_requests=12, window_seconds=60)

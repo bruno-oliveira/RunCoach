@@ -23,6 +23,14 @@ STANDARD_RACE_DISTANCES = {
 # auto-pause artifact.
 MIN_REALISTIC_PACE_MIN_KM = 2.5
 
+# Realistic VDOT band: 25 is a very-beginner runner, 85 is world class. Any VDOT
+# outside this range is either bad data or an unusable extrapolation, so we clamp
+# both the calculator's own output and any VDOT handed to ``get_pace_zones`` from
+# another source (performance predictor, HR-pace calibration) — degenerate input
+# there would otherwise yield nonsensical (e.g. 99:00/km) training paces.
+VDOT_FLOOR = 25.0
+VDOT_CEILING = 85.0
+
 # Runs above this elevation gain per km are considered hilly/trail and should
 # not feed into a flat-ground VDOT estimate -- Daniels' formula assumes flat
 # terrain, so a hilly effort produces an artificially low VDOT.
@@ -137,7 +145,7 @@ class VDOTCalculator:
 
         vdot = vo2 / pct
         # Clamp to realistic range (25 = very beginner, 85 = world-class)
-        return round(max(25.0, min(85.0, vdot)), 1)
+        return round(max(VDOT_FLOOR, min(VDOT_CEILING, vdot)), 1)
 
     @staticmethod
     def get_pace_zones(vdot: float, target_distance_km: float = 0.0) -> Dict[str, Dict]:
@@ -153,6 +161,10 @@ class VDOTCalculator:
             Dict with zone names mapping to pace info
         """
         from app.core.training.race_predictor import predict_time_for_distance
+
+        # Floor/ceiling the input so a degenerate VDOT from a non-calculator
+        # source can never produce nonsensical training paces downstream.
+        vdot = max(VDOT_FLOOR, min(VDOT_CEILING, vdot))
 
         zones = {}
         for zone, pct in VDOTCalculator.ZONE_PCT.items():

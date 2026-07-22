@@ -12,7 +12,10 @@ Also tests schema validation for invalid combinations and API-level plan generat
 import pytest
 
 from app.constants import DISTANCE_NAMES, SUPPORTED_DISTANCES
-from app.contexts.plan.generators.plan_generator import TrainingPlanGenerator
+from app.contexts.plan.generators.plan_generator import (
+    TrainingPlanGenerator,
+    _viable_run_frequency,
+)
 from app.schemas import PlanRequest
 
 # ── Configuration: all valid ranges ────────────────────────────────────────
@@ -555,7 +558,16 @@ class TestBoundaryConditions:
 
     @pytest.mark.parametrize("distance", SUPPORTED_DISTANCES)
     def test_five_runs_per_week(self, distance):
-        """Plan generation at 5 runs/week for each distance."""
+        """Plan generation at 5 runs/week for each distance.
+
+        The generator honours the requested frequency only while each run
+        clears the viable-dose floor (~2.5 km/run). At a distance's
+        *minimum* mileage, 5 runs would mean trivially short sessions (e.g. a
+        5 km/week 5K would give five 1 km runs), so the generator deliberately
+        drops the frequency to keep every run substantial — a more templated
+        shape at the low end. The realised count is stable across the plan and
+        equals that viable frequency.
+        """
         cfg = DISTANCE_CONFIG[distance]
         gen = TrainingPlanGenerator()
         plan = gen.generate_plan(
@@ -564,13 +576,14 @@ class TestBoundaryConditions:
             weeks=cfg["min_weeks"],
             max_runs_per_week=5,
         )
+        expected_runs = _viable_run_frequency(cfg["min_mileage"], 5)
         for week in plan:
             run_days = [
                 w
                 for w in week["daily_workouts"]
                 if w["type"] not in ("rest", "recovery")
             ]
-            assert len(run_days) == 5
+            assert len(run_days) == expected_runs
 
 
 # ── API-Level Tests (via FastAPI TestClient) ──────────────────────────────
