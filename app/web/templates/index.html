@@ -17,6 +17,7 @@
     </div>
 
     <div class="container">
+        <div class="status-layout" id="statusLayout">
         <div class="status-hero stagger">
             {% if current_plan %}
             <div class="hero-badge">
@@ -77,6 +78,8 @@
                 </button>
             </div>
             {% endif %}
+        </div>
+        <aside class="home-stats" id="homeStats" aria-label="Your recent training trends" hidden></aside>
         </div>
     </div>
 </div>
@@ -978,6 +981,12 @@ function setPlanMode(mode) {
     }
     })();
 </script>
+{% if user %}
+<!-- Discreet home stats: pace + HR-zone evolution. Chart.js first (defer keeps
+     order), then our renderer, which no-ops when there's nothing to show. -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4" defer></script>
+<script src="{{ static_url('js/home_stats.js') }}" defer></script>
+{% endif %}
 {% endblock %}
 
 {% block footer %}

@@ -95,13 +95,17 @@ class PerformancePlanGenerator(BasePlanGenerator):
         max_hr: Optional[int] = None,
         vdot_zones: Optional[Dict] = None,
         race_distance_km: Optional[float] = None,
+        resting_hr: Optional[int] = None,
+        lthr: Optional[int] = None,
     ) -> Dict[str, Dict[str, Any]]:
         """Calculate 5 training zones based on goal pace and optionally max HR.
 
         Delegates to the shared zone_calculator. The performance plan anchors
         zone 5 to the user's chosen `goal_pace` rather than VDOT-derived
         marathon pace; `race_distance_km` lets the race-pace band carry the HR
-        effort that distance is actually run at.
+        effort that distance is actually run at. `resting_hr`/`lthr` (the same
+        anchors the stored HR zones used) keep the pace panel's BPM bands
+        identical to the HR-zones panel.
         """
         from app.core.training.zone_calculator import calculate_zones
 
@@ -109,6 +113,8 @@ class PerformancePlanGenerator(BasePlanGenerator):
             vdot_zones=vdot_zones,
             goal_pace=goal_pace,
             max_hr=max_hr,
+            resting_hr=resting_hr,
+            lthr=lthr,
             race_distance_km=race_distance_km,
         )
 

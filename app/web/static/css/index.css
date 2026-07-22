@@ -464,6 +464,80 @@
 .status-hero-link:hover { color: var(--color-link); }
 .status-hero-sep { margin: 0 var(--space-2); }
 
+/* ---- Home stats rail (pace + HR-zone evolution) ---- */
+/* Single column by default so the hero is unchanged for runners with no data.
+   The stats renderer adds `has-stats` only once it has something to show, which
+   is what opens the second column — no reserved empty gutter otherwise. */
+.status-layout {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--space-10);
+    align-items: start;
+}
+.status-layout.has-stats {
+    grid-template-columns: minmax(0, 1fr) 340px;
+}
+
+.home-stats {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-4);
+    /* A quiet enhancement that must never out-shout the primary CTA. */
+    padding-top: var(--space-2);
+    animation: home-stats-in var(--duration-base) var(--ease-out);
+}
+@keyframes home-stats-in {
+    from { opacity: 0; transform: translateY(6px); }
+    to { opacity: 1; transform: none; }
+}
+.home-stats-eyebrow {
+    font-size: var(--text-xs);
+    font-weight: var(--weight-semibold);
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--color-text-muted);
+}
+
+.home-stat-card {
+    padding: var(--space-4);
+    border: 1px solid var(--color-border-subtle);
+    border-radius: var(--radius-lg);
+    background: var(--color-bg-elevated, var(--color-bg-sunken));
+}
+.home-stat-card + .home-stat-card { margin-top: 0; }
+
+.home-stat-card-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: var(--space-2);
+    margin-bottom: var(--space-2);
+}
+.home-stat-card-title {
+    font-size: var(--text-sm);
+    font-weight: var(--weight-semibold);
+    color: var(--color-text);
+}
+.home-stat-card-basis {
+    font-size: var(--text-xs);
+    color: var(--color-text-muted);
+}
+.home-stat-takeaway {
+    margin: 0 0 var(--space-3);
+    font-size: var(--text-sm);
+    line-height: 1.45;
+    color: var(--color-text-secondary);
+}
+.home-stat-chart {
+    position: relative;
+    height: 128px;
+}
+.home-stat-empty {
+    margin: 0;
+    font-size: var(--text-sm);
+    color: var(--color-text-muted);
+}
+
 /* ---- Build-a-plan section (moved form) ---- */
 .build-section {
     padding: var(--space-12) 0;
@@ -704,6 +778,15 @@
     .hero-layout {
         grid-template-columns: 1fr;
         gap: var(--space-10);
+    }
+
+    /* Stats rail drops below the hero rather than squeezing beside it. */
+    .status-layout.has-stats {
+        grid-template-columns: 1fr;
+        gap: var(--space-8);
+    }
+    .home-stats {
+        max-width: 480px;
     }
 
     .hero {

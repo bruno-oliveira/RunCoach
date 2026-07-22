@@ -152,6 +152,9 @@ class TestMaxHREstimation:
             def query(self, *a):
                 return self
 
+            def first(self):
+                return None
+
             def filter(self, *a):
                 return self
 
@@ -172,6 +175,9 @@ class TestMaxHREstimation:
         class FakeDB:
             def query(self, *a):
                 return self
+
+            def first(self):
+                return None
 
             def filter(self, *a):
                 return self
@@ -196,6 +202,9 @@ class TestMaxHREstimation:
             def query(self, *a):
                 return self
 
+            def first(self):
+                return None
+
             def filter(self, *a):
                 return self
 
@@ -217,6 +226,9 @@ class TestMaxHREstimation:
             def query(self, *a):
                 return self
 
+            def first(self):
+                return None
+
             def filter(self, *a):
                 return self
 
@@ -236,6 +248,9 @@ class TestMaxHREstimation:
         class FakeDB:
             def query(self, *a):
                 return self
+
+            def first(self):
+                return None
 
             def filter(self, *a):
                 return self

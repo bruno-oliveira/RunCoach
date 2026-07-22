@@ -19,6 +19,7 @@ from app.contexts.plan.plan_helpers import get_plan_or_404
 from app.contexts.plan.repositories import SQLAlchemyPlanRepository
 from app.contexts.runner.fitness.adherence_service import compute_adherence_heatmap
 from app.contexts.runner.fitness.gap_analysis_service import GapAnalysisService
+from app.contexts.runner.fitness.home_stats_service import HomeStatsService
 from app.contexts.runner.fitness.insights_service import InsightsService
 from app.contexts.runner.fitness.personal_records_service import PersonalRecordsService
 from app.contexts.runner.fitness.race_predictor_service import RacePredictorService
@@ -118,6 +119,22 @@ def get_gap_trend(
         }
 
     return {"available": True, "weeks": weekly}
+
+
+@analytics_router.get("/home-stats")
+def get_home_stats(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Pace + HR-zone evolution for the signed-in home page's discreet panel."""
+    try:
+        return HomeStatsService.build(current_user, db)
+    except Exception as e:
+        logger.error(f"Error building home stats: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to build home stats",
+        )
 
 
 @analytics_router.get("/vdot-history")

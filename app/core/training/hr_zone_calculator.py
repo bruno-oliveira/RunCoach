@@ -50,7 +50,7 @@ MIN_ZONE_WIDTH_BPM = 3
 # the zone *math* changes (e.g. %max HR -> Heart Rate Reserve -> %LTHR anchoring,
 # or attaching the data-calibrated pace each zone maps to) -- so plans carrying
 # zones from an older model are recomputed on next view.
-HR_ZONES_VERSION = 6
+HR_ZONES_VERSION = 7
 
 
 # -- Zone definitions (percentage of max HR) ----------------------------------

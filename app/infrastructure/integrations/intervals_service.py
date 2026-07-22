@@ -54,6 +54,87 @@ def raise_for_intervals_status(response: httpx.Response) -> None:
     response.raise_for_status()
 
 
+# Coarse plausibility bounds for HR values read from Intervals.icu. Deliberately
+# wider than the zone calculator's "reliable" bands — this only filters out
+# obvious junk (nulls, zeros, sensor garbage); the calculator clamps LTHR
+# relative to max HR when it builds the zones.
+_MIN_PLAUSIBLE_HR = 90
+_MAX_PLAUSIBLE_HR = 230
+_MIN_PLAUSIBLE_RESTING_HR = 25
+_MAX_PLAUSIBLE_RESTING_HR = 110
+
+
+def _plausible(value: Any, low: int, high: int) -> "int | None":
+    """Return ``value`` as an int when it is a number within ``[low, high]``."""
+    if isinstance(value, bool) or not isinstance(value, (int, float)):
+        return None
+    ivalue = int(value)
+    return ivalue if low <= ivalue <= high else None
+
+
+def parse_athlete_hr_settings(athlete: dict[str, Any]) -> dict[str, "int | None"]:
+    """Extract max HR / LTHR / resting HR from an Intervals.icu athlete object.
+
+    Intervals stores per-sport HR settings in ``sportSettings`` (each entry
+    lists the ``types`` it applies to); resting HR is an athlete-level value.
+    We prefer the Run sport's settings, falling back to the first entry that
+    carries HR values. Every field is plausibility-checked, so a missing or junk
+    value simply comes back as ``None`` rather than poisoning the zones.
+    """
+    sport_settings = athlete.get("sportSettings")
+    run_settings: dict[str, Any] = {}
+    fallback_settings: dict[str, Any] = {}
+    if isinstance(sport_settings, list):
+        for entry in sport_settings:
+            if not isinstance(entry, dict):
+                continue
+            types = entry.get("types") or []
+            has_hr = entry.get("max_hr") is not None or entry.get("lthr") is not None
+            if isinstance(types, list) and "Run" in types:
+                run_settings = entry
+                break
+            if has_hr and not fallback_settings:
+                fallback_settings = entry
+    settings_entry = run_settings or fallback_settings
+
+    resting = athlete.get("icu_resting_hr")
+    if resting is None:
+        resting = athlete.get("restingHR")
+
+    return {
+        "max_hr": _plausible(
+            settings_entry.get("max_hr"), _MIN_PLAUSIBLE_HR, _MAX_PLAUSIBLE_HR
+        ),
+        "lthr": _plausible(
+            settings_entry.get("lthr"), _MIN_PLAUSIBLE_HR, _MAX_PLAUSIBLE_HR
+        ),
+        "resting_hr": _plausible(
+            resting, _MIN_PLAUSIBLE_RESTING_HR, _MAX_PLAUSIBLE_RESTING_HR
+        ),
+    }
+
+
+def apply_hr_settings_to_user(user: User, hr_settings: dict[str, "int | None"]) -> bool:
+    """Store synced Intervals HR anchors on the user's ``intervals_*`` columns.
+
+    Writes only the ``intervals_*`` provenance columns — never the manual
+    ``max_hr`` / ``threshold_hr`` / ``resting_hr`` a runner may have typed in —
+    so a manual entry always wins in zone resolution. Returns True when any value
+    changed (so the caller can decide whether a commit is worthwhile).
+    """
+    changed = False
+    for source_key, column in (
+        ("max_hr", "intervals_max_hr"),
+        ("lthr", "intervals_lthr"),
+        ("resting_hr", "intervals_resting_hr"),
+    ):
+        value = hr_settings.get(source_key)
+        if value is not None and getattr(user, column) != value:
+            setattr(user, column, value)
+            changed = True
+    return changed
+
+
 class IntervalsService:
     """Service for one-time OAuth connection and incremental activity imports."""
 
@@ -99,6 +180,27 @@ class IntervalsService:
             )
             raise_for_intervals_status(response)
             return response.json()
+
+    async def fetch_athlete_settings(
+        self,
+        access_token: str,
+        athlete_id: str,
+    ) -> dict[str, Any]:
+        """Fetch the athlete's HR settings (max HR / LTHR / resting HR).
+
+        Reads the Intervals.icu athlete object and pulls the Run sport's
+        ``max_hr`` and ``lthr`` plus the athlete's resting HR, so RunCoach's HR
+        zones can anchor on the exact values the runner already configured on
+        their connected platform. Returns a dict with ``max_hr`` / ``lthr`` /
+        ``resting_hr`` (any of which may be ``None`` when Intervals has no value).
+        """
+        async with httpx.AsyncClient(timeout=INTERVALS_TIMEOUT) as client:
+            response = await client.get(
+                f"{INTERVALS_API_BASE}/athlete/{athlete_id}",
+                headers={"Authorization": f"Bearer {access_token}"},
+            )
+            raise_for_intervals_status(response)
+            return parse_athlete_hr_settings(response.json())
 
     async def push_workout(
         self,
@@ -206,6 +308,22 @@ class IntervalsService:
             raise IntervalsAuthorizationError("User has no Intervals.icu access token")
 
         sync_started_at = int(time.time())
+        # Refresh the runner's HR anchors from their Intervals.icu settings so
+        # RunCoach's zones stay faithful to the connected platform. Best-effort:
+        # a settings-fetch failure must never block the activity import.
+        if user.intervals_athlete_id:
+            try:
+                hr_settings = await self.fetch_athlete_settings(
+                    user.intervals_access_token, user.intervals_athlete_id
+                )
+                apply_hr_settings_to_user(user, hr_settings)
+            except Exception as settings_error:
+                logger.warning(
+                    "Intervals.icu HR settings fetch failed for user %s: %s",
+                    user.id,
+                    settings_error,
+                )
+
         oldest = datetime.fromtimestamp(after_timestamp, timezone.utc).strftime(
             "%Y-%m-%dT%H:%M:%S"
         )

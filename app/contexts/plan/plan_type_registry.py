@@ -90,11 +90,17 @@ class PerformancePlanHandler(PlanTypeHandler):
                 if goal_vdot
                 else None
             )
+            # Anchor the pace panel's HR bands on the SAME resting/LTHR the
+            # stored canonical zones used, so the "your training paces" BPM band
+            # matches the "Heart Rate Training Zones" panel exactly.
+            stored_zones = plan.hr_zones_data or {}
             zones = gen.calculate_training_zones(
                 plan.goal_pace,
                 plan.max_heart_rate,
                 vdot_zones=goal_vdot_zones,
                 race_distance_km=target_km or None,
+                resting_hr=stored_zones.get("resting_hr"),
+                lthr=stored_zones.get("lthr"),
             )
             for zone_data in zones.values():
                 zone_data["pace_formatted"] = format_pace(zone_data["pace"])

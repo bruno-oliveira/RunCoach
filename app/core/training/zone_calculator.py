@@ -15,11 +15,19 @@ from __future__ import annotations
 
 from typing import Any, Dict, Optional
 
-from app.core.training.hr_zone_calculator import TRAINING_ZONE_HR_PERCENTAGES
+from app.core.training.hr_zone_calculator import (
+    TRAINING_ZONE_HR_PERCENTAGES,
+    HRZoneCalculator,
+)
 from app.core.training.vdot_calculator import VDOTCalculator
 from app.utils import format_pace, format_pace_bare
 
 _FALLBACK_PACE_MIN_KM = 5.5
+
+# The pace-zone slugs in zone order (1-5). The keys of
+# TRAINING_ZONE_HR_PERCENTAGES are these slugs in order, so canonical HR zones
+# (a list, zone 1..5) map onto the pace-zone table 1:1.
+_ZONE_SLUGS_ORDER = list(TRAINING_ZONE_HR_PERCENTAGES.keys())
 
 
 def calculate_zones(
@@ -28,6 +36,8 @@ def calculate_zones(
     vdot_zones: Optional[Dict[str, Dict[str, Any]]] = None,
     goal_pace: Optional[float] = None,
     max_hr: Optional[int] = None,
+    resting_hr: Optional[int] = None,
+    lthr: Optional[int] = None,
     race_distance_km: Optional[float] = None,
 ) -> Dict[str, Dict[str, Any]]:
     """Build the 5-zone training table.
@@ -40,7 +50,13 @@ def calculate_zones(
         goal_pace: User's target race pace in min/km. If provided, anchors
             zone 5 to this pace and shifts the description to a race-target tone.
         max_hr: Maximum heart rate. If provided, attaches `hr_bpm_range` to
-            each zone.
+            each zone, sourced from the one HR-zone authority.
+        resting_hr: Optional resting HR, threaded to the canonical calculator
+            (raises only the Zone 1 floor).
+        lthr: Optional lactate-threshold HR. Threaded to the canonical
+            calculator so the BPM bands match the runner's real threshold —
+            i.e. identical to the "Heart Rate Training Zones" panel. When absent
+            the calculator falls back to the 88%-of-max default.
         race_distance_km: Target race distance. When given alongside
             `goal_pace`, the race-pace band's HR label is corrected to the
             effort that distance is actually run at (a marathon goal pace is a
@@ -190,15 +206,24 @@ def calculate_zones(
         zones["zone_5_race"]["race_hr_slug"] = hr_slug
 
     if max_hr:
-        for zone_name, (low_pct, high_pct) in TRAINING_ZONE_HR_PERCENTAGES.items():
-            low_bpm = int(max_hr * low_pct)
-            high_bpm = int(max_hr * high_pct)
-            zones[zone_name]["hr_bpm_range"] = f"{low_bpm}-{high_bpm} BPM"
+        # BPM bands come from the single HR-zone authority (LTHR-anchored),
+        # never a second flat-%max computation. This is what makes the "your
+        # training paces" panel's BPM band identical to the "Heart Rate Training
+        # Zones" panel for the same runner — the divergence we set out to kill.
+        canonical = HRZoneCalculator.calculate_zones(
+            max_hr, resting_hr=resting_hr, lthr=lthr
+        )
+        slug_to_band = {
+            slug: f"{z['min_bpm']}-{z['max_bpm']} BPM"
+            for slug, z in zip(_ZONE_SLUGS_ORDER, canonical)
+        }
+        for slug, band in slug_to_band.items():
+            zones[slug]["hr_bpm_range"] = band
         # The race-pace band borrows its effort cousin's BPM range too, so the
         # numeric band matches the corrected percentage label above.
         race = zones["zone_5_race"]
         if race.get("race_hr_slug"):
-            race["hr_bpm_range"] = zones[race["race_hr_slug"]]["hr_bpm_range"]
+            race["hr_bpm_range"] = slug_to_band[race["race_hr_slug"]]
 
     # Attach display strings for the pace anchor and the pace band. The zone
     # table in the performance plan renders `pace_formatted` /

@@ -9,7 +9,6 @@ from app.contexts.runner.fitness.effort_classifier import (
     EFFORT_TEMPO,
     backfill_effort_classes,
     classify_effort,
-    estimate_max_hr,
     resolve_user_max_hr,
 )
 from app.models import RunLog, User
@@ -53,20 +52,6 @@ def _add_run(
     )
     db.add(run)
     return run
-
-
-class TestEstimateMaxHr:
-    def test_prefers_explicit_profile_value(self):
-        assert estimate_max_hr(190, 40) == 190
-
-    def test_age_estimate_when_no_profile_max(self):
-        assert estimate_max_hr(None, 30) == 190  # 220 - 30
-
-    def test_implausible_profile_max_falls_back_to_age(self):
-        assert estimate_max_hr(40, 30) == 190
-
-    def test_none_when_no_signal(self):
-        assert estimate_max_hr(None, None) is None
 
 
 class TestHrClassification:
@@ -172,9 +157,24 @@ class TestResolveUserMaxHr:
         user = _make_user(test_db, max_hr=185)
         assert resolve_user_max_hr(user.id, test_db) == 185
 
-    def test_from_age(self, test_db):
+    def test_from_age_uses_tanaka(self, test_db):
+        # Delegates to the single anchor resolver: Tanaka 208 - 0.7*age, not the
+        # old 220 - age. For age 25 that's round(190.5) == 190.
         user = _make_user(test_db, age=25)
-        assert resolve_user_max_hr(user.id, test_db) == 195
+        assert resolve_user_max_hr(user.id, test_db) == 190
+
+    def test_none_when_no_signal(self, test_db):
+        # No manual value, no synced value, no runs, no age -> only the bare
+        # default is available, so the HR signal is skipped (None).
+        user = _make_user(test_db)
+        assert resolve_user_max_hr(user.id, test_db) is None
+
+    def test_synced_intervals_value_used_when_no_manual(self, test_db):
+        # A value synced from the watch anchors when the runner set none manually.
+        user = _make_user(test_db)
+        user.intervals_max_hr = 188
+        test_db.flush()
+        assert resolve_user_max_hr(user.id, test_db) == 188
 
 
 class TestBackfillHrPromotion:

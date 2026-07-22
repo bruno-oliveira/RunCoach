@@ -25,7 +25,7 @@ from typing import Optional
 
 from sqlalchemy.orm import Session
 
-from app.models import RunLog, User
+from app.models import RunLog
 
 logger = logging.getLogger(__name__)
 
@@ -58,34 +58,20 @@ _TEMPO_PE_THRESHOLD = 7
 # cardiovascular cost was every bit a race. Fractions are of max HR.
 _RACE_HR_FRACTION = 0.92
 _TEMPO_HR_FRACTION = 0.85
-# Guard against junk HR (chest-strap dropout, cadence lock) manufacturing a
-# race classification, and bound the age estimate.
-_MIN_PLAUSIBLE_MAX_HR = 120
-_MAX_PLAUSIBLE_MAX_HR = 230
-_AGE_MAX_HR_BASE = 220
-_MIN_AGE = 10
-_MAX_AGE = 100
-
-
-def estimate_max_hr(max_hr: Optional[int], age: Optional[int]) -> Optional[int]:
-    """Resolve a usable max HR: the explicit profile value, else an age estimate.
-
-    Returns None when neither a plausible profile max nor a usable age is
-    available, in which case the HR signal is simply skipped.
-    """
-    if max_hr and _MIN_PLAUSIBLE_MAX_HR <= max_hr <= _MAX_PLAUSIBLE_MAX_HR:
-        return max_hr
-    if age and _MIN_AGE <= age <= _MAX_AGE:
-        return _AGE_MAX_HR_BASE - age
-    return None
 
 
 def resolve_user_max_hr(user_id: str, db: Session) -> Optional[int]:
-    """Look up a runner's usable max HR (profile value or age estimate)."""
-    row = db.query(User.max_hr, User.age).filter(User.id == user_id).first()
-    if not row:
-        return None
-    return estimate_max_hr(row[0], row[1])
+    """Look up a runner's usable max HR, or None to skip the HR signal.
+
+    Delegates to the single anchor resolver (``hr_zone_service``) so effort
+    classification reasons against the very same max HR the zones do — manual
+    entry → value synced from the watch → detection → Tanaka age estimate. The
+    "reliable" variant returns None when only the bare default is available, so a
+    guessed ceiling never manufactures a race classification.
+    """
+    from app.contexts.runner.fitness.hr_zone_service import get_reliable_max_hr
+
+    return get_reliable_max_hr(user_id, db)
 
 
 def _hr_effort_class(

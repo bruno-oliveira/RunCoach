@@ -23,7 +23,11 @@ from typing import Optional
 
 from sqlalchemy.orm import Session
 
-from app.contexts.runner.fitness.hr_zone_service import get_user_max_hr
+from app.contexts.runner.fitness.hr_zone_service import (
+    get_user_max_hr,
+    get_user_resting_hr,
+    get_user_threshold_hr,
+)
 from app.contexts.runner.fitness.race_predictor_service import RacePredictorService
 from app.core.training.hr_zone_calculator import HRZoneCalculator
 from app.core.training.vdot_calculator import TRAIL_ELEVATION_M_PER_KM, VDOTCalculator
@@ -99,6 +103,26 @@ def _resolve_max_hr(
     return run_max_heart_rate or None
 
 
+def _resolve_hr_anchors(
+    user_id: str, db: Session
+) -> tuple[Optional[int], Optional[int]]:
+    """Resting HR and LTHR for this runner, or (None, None) when unavailable.
+
+    Threaded into the zone calculator so run classification uses the SAME
+    LTHR-anchored bands as the stored plan zones and the HR-zones panel — one
+    definition everywhere. Falls back cleanly to (None, None), which yields the
+    88%-of-max default anchor identical to the prior max-only behaviour.
+    """
+    from app.models import User
+
+    user = db.query(User).filter(User.id == user_id).first()
+    if user is None:
+        return None, None
+    resting_hr, _ = get_user_resting_hr(user)
+    lthr, _ = get_user_threshold_hr(user, db)
+    return resting_hr, lthr
+
+
 def classify_workout_type(
     *,
     distance_km: Optional[float],
@@ -145,8 +169,12 @@ def classify_workout_type(
     if avg_heart_rate:
         max_hr = _resolve_max_hr(avg_heart_rate, max_heart_rate, user_id, db)
         if max_hr:
+            resting_hr, lthr = _resolve_hr_anchors(user_id, db)
             hr_tier = hr_to_tier(
-                avg_heart_rate, HRZoneCalculator.calculate_zones(max_hr)
+                avg_heart_rate,
+                HRZoneCalculator.calculate_zones(
+                    max_hr, resting_hr=resting_hr, lthr=lthr
+                ),
             )
 
     hilly = bool(

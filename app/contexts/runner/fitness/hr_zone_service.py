@@ -83,45 +83,74 @@ def get_user_max_hr(
     user_age: Optional[int] = None,
     user_max_hr: Optional[int] = None,
 ) -> tuple[int, str]:
-    """Determine max HR from a user override, run data, age, or a safe default.
+    """Determine max HR from the single anchor-resolution order.
 
-    A user-supplied max HR wins: someone who has seen their true max in a race
-    knows it better than detection, which can only ever observe efforts the
-    runner has actually logged. We then fall back to spike-filtered run data,
-    an age formula, and finally a conservative default.
+    Priority, so every caller agrees on one number: a manual RunCoach entry (the
+    runner has seen their true max in a race and knows it best) → the value
+    synced from their connected watch (Intervals.icu) → spike-filtered run data
+    → the Tanaka age formula → a conservative default. Manual and synced anchors
+    are read straight from the user row, so the answer is the same whether or not
+    the caller pre-loaded them.
 
     Returns:
-        (max_hr, source) where source is "user", "detected", "estimated", or
-        "default".
+        (max_hr, source) where source is "user", "intervals", "detected",
+        "estimated", or "default".
     """
-    if user_max_hr and user_max_hr > 0:
-        return int(user_max_hr), "user"
+    row = (
+        db.query(User.max_hr, User.intervals_max_hr, User.age)
+        .filter(User.id == user_id)
+        .first()
+    )
+    manual = (
+        user_max_hr if (user_max_hr and user_max_hr > 0) else (row[0] if row else None)
+    )
+    synced = row[1] if row else None
+    age = user_age if (user_age and user_age > 0) else (row[2] if row else None)
+
+    if manual and manual > 0:
+        return int(manual), "user"
+    if synced and synced > 0:
+        return int(synced), "intervals"
 
     detected = detect_max_hr_from_runs(user_id, db)
     if detected:
         return detected, "detected"
 
-    if user_age and user_age > 0:
-        return HRZoneCalculator.estimate_max_hr_age_based(user_age), "estimated"
+    if age and age > 0:
+        return HRZoneCalculator.estimate_max_hr_age_based(age), "estimated"
 
     return DEFAULT_MAX_HR, "default"
 
 
+def get_reliable_max_hr(user_id: str, db: Session) -> Optional[int]:
+    """Max HR only when it rests on real data — None when it's the bare default.
+
+    The shared resolver for consumers that must *skip* the HR signal rather than
+    reason against a guessed ceiling (e.g. effort classification): returns the
+    resolved max HR unless the only thing available was the universal default.
+    """
+    max_hr, source = get_user_max_hr(user_id, db)
+    return None if source == "default" else max_hr
+
+
 def get_user_resting_hr(user: User) -> tuple[Optional[int], str]:
-    """Determine resting HR from the user's own value, if supplied.
+    """Determine resting HR: manual entry, then the value synced from the watch.
 
     In the LTHR-anchored model resting HR no longer drives the band math (only
-    an optional Zone 1 floor), so we no longer *estimate* it from easy-run
-    averages -- that proxy (easy floor minus a fixed offset) was unreliable and,
-    via the old Karvonen path, compressed the lower zones. We use it only when
-    the runner has entered a genuine value.
+    an optional Zone 1 floor), so we never *estimate* it from easy-run averages
+    -- that proxy was unreliable and, via the old Karvonen path, compressed the
+    lower zones. We use a genuine value only: the runner's own entry, else the
+    resting HR synced from Intervals.icu.
 
     Returns:
-        (resting_hr, source) where source is "user" or "none".
+        (resting_hr, source) where source is "user", "intervals", or "none".
     """
     override = getattr(user, "resting_hr", None)
     if override and override > 0:
         return int(override), "user"
+    synced = getattr(user, "intervals_resting_hr", None)
+    if synced and synced > 0:
+        return int(synced), "intervals"
     return None, "none"
 
 
@@ -163,19 +192,53 @@ def get_user_threshold_hr(user: User, db: Session) -> tuple[Optional[int], str]:
     """Determine threshold HR, preferring a user override over an estimate.
 
     Returns:
-        (lthr, source) where source is "user", "estimated", or "none".
-        ``lthr`` is None when nothing usable is available, leaving zones on the
-        max/resting-HR formula bands.
+        (lthr, source) where source is "user", "intervals", "estimated", or
+        "none". ``lthr`` is None when nothing usable is available, leaving zones
+        on the 88%-of-max default anchor.
     """
     override = getattr(user, "threshold_hr", None)
     if override and override > 0:
         return int(override), "user"
+
+    synced = getattr(user, "intervals_lthr", None)
+    if synced and synced > 0:
+        return int(synced), "intervals"
 
     estimated = detect_threshold_hr_from_runs(user.id, db)
     if estimated:
         return estimated, "estimated"
 
     return None, "none"
+
+
+def resolve_zone_anchors(
+    user: User, db: Session
+) -> tuple[int, Optional[int], Optional[int]]:
+    """Resolve the ``(max_hr, resting_hr, lthr)`` a user's zones anchor on.
+
+    The single entry point for "what are this runner's HR anchors right now",
+    applying the same provenance order everywhere (manual → synced from watch →
+    detected/estimated). Callers that need the BPM bands should prefer
+    :func:`resolve_zones_for_user`; this is for the rarer case of needing the raw
+    anchors (e.g. to thread into the pace-zone table).
+    """
+    max_hr, _ = get_user_max_hr(
+        user.id, db, user_age=user.age, user_max_hr=getattr(user, "max_hr", None)
+    )
+    resting_hr, _ = get_user_resting_hr(user)
+    lthr, _ = get_user_threshold_hr(user, db)
+    return max_hr, resting_hr, lthr
+
+
+def resolve_zones_for_user(user: User, db: Session) -> list[dict]:
+    """The runner's canonical HR zones — the one source of truth for BPM bands.
+
+    Resolves the anchors and hands them to ``HRZoneCalculator.calculate_zones``
+    so any surface that needs zones for a user (analytics, run classification)
+    gets exactly the bands the stored plan zones and the HR-zones panel show.
+    """
+    max_hr, resting_hr, lthr = resolve_zone_anchors(user, db)
+    return HRZoneCalculator.calculate_zones(max_hr, resting_hr=resting_hr, lthr=lthr)
 
 
 def gather_pace_hr_samples(user_id: str, db: Session) -> list[PaceHRSample]:

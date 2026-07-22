@@ -49,6 +49,14 @@ class User(Base):
         EncryptedString(), nullable=True
     )
     intervals_last_synced_at: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    # HR anchors as configured in Intervals.icu, refreshed on every sync. Kept
+    # separate from the manual ``max_hr`` / ``threshold_hr`` / ``resting_hr``
+    # above so a runner's own entry always wins and a re-sync never clobbers it;
+    # these are the second source in the anchor-resolution order (see
+    # ``hr_zone_service`` resolvers).
+    intervals_max_hr: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    intervals_lthr: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    intervals_resting_hr: Mapped[int | None] = mapped_column(Integer, nullable=True)
 
     training_plans: Mapped[list["TrainingPlan"]] = relationship(
         "TrainingPlan", back_populates="user", cascade="all, delete-orphan"

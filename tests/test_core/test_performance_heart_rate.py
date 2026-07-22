@@ -49,11 +49,14 @@ class TestHeartRateZoneCalculation:
         # Zone 3: 80-88% of 180 = 144-158 BPM
         assert zones["zone_3_tempo"]["hr_bpm_range"] == "144-158 BPM"
 
-        # Zone 4: 88-95% of 180 = 158-171 BPM
-        assert zones["zone_4_vo2max"]["hr_bpm_range"] == "158-171 BPM"
+        # BPM bands now come from the single HR-zone authority (LTHR-anchored,
+        # here the 88%-of-max default), not a separate flat-%max truncation, so
+        # the upper bands differ by ~1 BPM from the old computation.
+        # Zone 4: 158-170 BPM
+        assert zones["zone_4_vo2max"]["hr_bpm_range"] == "158-170 BPM"
 
-        # Zone 5: 95-100% of 180 = 171-180 BPM
-        assert zones["zone_5_race"]["hr_bpm_range"] == "171-180 BPM"
+        # Zone 5: 170-180 BPM (top capped at max HR)
+        assert zones["zone_5_race"]["hr_bpm_range"] == "170-180 BPM"
 
         # Verify percentage ranges are still present
         assert zones["zone_1_recovery"]["hr_range"] == "60-70%"
@@ -102,7 +105,8 @@ class TestHeartRateZoneCalculation:
         # Verify training zones include BPM ranges
         zones = plan["training_zones"]
         assert "hr_bpm_range" in zones["zone_1_recovery"]
-        assert zones["zone_1_recovery"]["hr_bpm_range"] == "111-129 BPM"
+        # LTHR-anchored (88%-of-max default) canonical band for max 185.
+        assert zones["zone_1_recovery"]["hr_bpm_range"] == "111-130 BPM"
 
     def test_generate_plan_without_max_hr(self):
         """Test that generate_plan works without max_hr (backwards compatible)."""
