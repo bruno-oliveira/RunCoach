@@ -136,6 +136,9 @@ class PlanService:
         try:
             training_plan = _create.persist_plan_core(plan_request, user, plan_data, db)
             _create.persist_weekly_workouts(training_plan, plan_data, db)
+            # Persist the stated race before zones so the LTHR estimate and the
+            # stored HR zones are grounded on the number the runner gave us.
+            _create.persist_race_effort_run(plan_request, user, db)
             _create.attach_hr_zones(training_plan, user, plan_data, db)
             _create.attach_nutrition(
                 training_plan, plan_request, plan_data, nutrition_engine

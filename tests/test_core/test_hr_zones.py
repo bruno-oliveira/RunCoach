@@ -3,7 +3,6 @@
 from types import SimpleNamespace
 
 from app.contexts.runner.fitness.hr_zone_service import (
-    detect_threshold_hr_from_runs,
     gather_pace_hr_samples,
     get_user_max_hr,
     get_user_resting_hr,
@@ -396,59 +395,50 @@ class TestLTHRAnchoring:
         assert zones[4]["max_bpm"] == 190
 
 
-class TestThresholdHRDetection:
-    def _run(self, wtype, hr):
-        return SimpleNamespace(effective_workout_type=wtype, avg_heart_rate=hr)
-
-    def test_none_below_minimum_runs(self):
-        db = _FakeDB([self._run("tempo", 165), self._run("tempo", 167)])
-        assert detect_threshold_hr_from_runs("u1", db) is None
-
-    def test_median_of_threshold_runs(self):
-        db = _FakeDB(
-            [
-                self._run("tempo", 165),
-                self._run("cruise_interval", 170),
-                self._run("race_pace", 168),
-            ]
-        )
-        assert detect_threshold_hr_from_runs("u1", db) == 168
-
-    def test_ignores_non_threshold_efforts(self):
-        db = _FakeDB(
-            [
-                self._run("easy", 130),
-                self._run("long", 135),
-                self._run("interval", 185),
-                self._run("tempo", 166),  # only one threshold run -> below min
-            ]
-        )
-        assert detect_threshold_hr_from_runs("u1", db) is None
+class TestThresholdHRResolution:
+    """Provenance order of ``get_user_threshold_hr``. The pace<->HR-at-threshold
+    estimate (the "estimated" source) needs a real DB and is covered in
+    ``tests/test_services/test_threshold_hr_estimate.py``."""
 
     def test_user_override_preferred(self):
-        user = SimpleNamespace(id="u1", threshold_hr=171)
+        # A manual entry wins outright, without touching the DB estimate.
+        user = SimpleNamespace(id="u1", threshold_hr=171, intervals_lthr=None)
         lthr, source = get_user_threshold_hr(user, _FakeDB([]))
         assert lthr == 171
         assert source == "user"
 
-    def test_falls_back_to_estimate(self):
-        user = SimpleNamespace(id="u1", threshold_hr=None)
-        db = _FakeDB(
-            [
-                self._run("tempo", 165),
-                self._run("tempo", 170),
-                self._run("tempo", 168),
-            ]
-        )
-        lthr, source = get_user_threshold_hr(user, db)
-        assert source == "estimated"
-        assert lthr == 168
+    def test_intervals_used_when_no_manual(self):
+        user = SimpleNamespace(id="u1", threshold_hr=None, intervals_lthr=170)
+        lthr, source = get_user_threshold_hr(user, _FakeDB([]))
+        assert lthr == 170
+        assert source == "intervals"
 
     def test_none_when_no_data(self):
-        user = SimpleNamespace(id="u1", threshold_hr=None)
+        # No manual, no synced value, and no runs to fit -> the zones fall back
+        # to the 88%-of-max default anchor.
+        user = SimpleNamespace(id="u1", threshold_hr=None, intervals_lthr=None)
         lthr, source = get_user_threshold_hr(user, _FakeDB([]))
         assert lthr is None
         assert source == "none"
+
+
+class TestZoneSnapshotAndRegression:
+    def test_z2_snapshot_max_191_default_anchor(self):
+        # max 191, no measured LTHR -> the 88%-of-max anchor. Z2 is the runnable
+        # 134-153 band that matches the runner's Garmin ~150 Zone 2 ceiling.
+        zones = HRZoneCalculator.calculate_zones(191, lthr=None)
+        z2 = next(z for z in zones if z["zone"] == 2)
+        assert (z2["min_bpm"], z2["max_bpm"]) == (134, 153)
+
+    def test_circular_low_lthr_collapsed_z2_default_does_not(self):
+        # Regression for the reported bug: the old circular tempo-run median
+        # produced LTHR ~154 (the runner's own easy-run HR), which pushed
+        # genuinely easy 150 bpm running up into Zone 3. The non-circular
+        # fallback (lthr=None) keeps that same 150 bpm in Zone 2.
+        collapsed = HRZoneCalculator.calculate_zones(191, lthr=154)
+        assert HRZoneCalculator.classify_hr(150, collapsed) == 3  # the bug
+        healthy = HRZoneCalculator.calculate_zones(191, lthr=None)
+        assert HRZoneCalculator.classify_hr(150, healthy) == 2  # the fix
 
 
 class TestGatherPaceHRSamples:
