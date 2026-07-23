@@ -62,16 +62,42 @@ intervals_router = APIRouter(prefix="/api/intervals", tags=["intervals"])
 
 _OAUTH_STATE_COOKIE = "intervals_oauth_state"
 _OAUTH_STATE_TTL_SECONDS = 300
+_DEFAULT_POST_CONNECT_REDIRECT = "/my-plans"
+
+
+def _safe_return_to(raw: Optional[str]) -> Optional[str]:
+    """Return ``raw`` only if it is a safe same-site relative path, else None.
+
+    Guards the post-OAuth redirect against open-redirect abuse: we accept a
+    path that starts with a single ``/`` (so it stays on this site) and carries
+    no scheme, protocol-relative ``//`` prefix, or backslash. Anything else
+    falls back to the default landing page.
+    """
+    if not raw or not isinstance(raw, str):
+        return None
+    if len(raw) > 512:
+        return None
+    if not raw.startswith("/") or raw.startswith("//"):
+        return None
+    if "\\" in raw or "://" in raw or "\n" in raw or "\r" in raw:
+        return None
+    return raw
 
 
 @intervals_router.get("/connect")
 def intervals_connect(
     response: Response,
+    return_to: Optional[str] = Query(default=None),
     current_user: User = Depends(get_current_user),
     auth_service: AuthService = Depends(get_auth_service),
     intervals_service: IntervalsService = Depends(get_intervals_service),
 ):
-    """Return a one-time Intervals.icu OAuth authorization URL."""
+    """Return a one-time Intervals.icu OAuth authorization URL.
+
+    An optional ``return_to`` (validated same-site path) is carried through the
+    signed ``state`` so the callback can send the user back to where they
+    started the connect from, rather than the default landing page.
+    """
     if not settings.intervals_client_id or not settings.intervals_client_secret:
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
@@ -79,8 +105,16 @@ def intervals_connect(
         )
 
     nonce = secrets.token_urlsafe(16)
+    state_claims = {
+        "sub": current_user.id,
+        "purpose": "intervals_oauth",
+        "nonce": nonce,
+    }
+    safe_return = _safe_return_to(return_to)
+    if safe_return:
+        state_claims["return_to"] = safe_return
     state = auth_service.create_access_token(
-        {"sub": current_user.id, "purpose": "intervals_oauth", "nonce": nonce},
+        state_claims,
         expires_delta=timedelta(minutes=5),
     )
     response.set_cookie(
@@ -163,7 +197,12 @@ async def intervals_callback(
         ) from conflict
 
     background_tasks.add_task(initial_intervals_sync, str(user.id), intervals_service)
-    redirect = RedirectResponse(url="/my-plans", status_code=status.HTTP_302_FOUND)
+    # Re-validate the return path from the signed state (never trust it raw) and
+    # fall back to the default landing page.
+    redirect_to = _safe_return_to(payload.get("return_to")) or (
+        _DEFAULT_POST_CONNECT_REDIRECT
+    )
+    redirect = RedirectResponse(url=redirect_to, status_code=status.HTTP_302_FOUND)
     redirect.delete_cookie(_OAUTH_STATE_COOKIE)
     return redirect
 

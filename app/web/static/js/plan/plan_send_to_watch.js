@@ -11,12 +11,37 @@
 (function () {
     'use strict';
 
-    // Show the Garmin setup tip only once per page load, not on every send.
-    var setupHintShown = false;
-    var SETUP_HINT =
-        ' First time? In Intervals.icu, link Garmin + enable "Upload planned' +
-        ' workouts", and set a Run threshold pace — without it the watch shows' +
-        ' "No target".';
+    // The Intervals connection is one click, but forwarding to Garmin needs two
+    // toggles inside Intervals.icu we can't automate. We reveal the setup
+    // checklist (#watch-setup) once, the first time a send succeeds — that's
+    // when "will this actually reach my watch?" is top of mind. Persisted so it
+    // doesn't nag on every visit; re-openable via window.showWatchSetup().
+    var SETUP_SEEN_KEY = 'rc_watch_setup_seen';
+
+    function setupSeen() {
+        try { return localStorage.getItem(SETUP_SEEN_KEY) === '1'; } catch (e) { return false; }
+    }
+
+    function markSetupSeen() {
+        try { localStorage.setItem(SETUP_SEEN_KEY, '1'); } catch (e) { /* ignore */ }
+    }
+
+    // Reveal the checklist and bring it into view. `force` re-opens it even if
+    // the user has seen (and dismissed) it before.
+    window.showWatchSetup = function (force) {
+        var panel = document.getElementById('watch-setup');
+        if (!panel) return;
+        if (!force && setupSeen()) return;
+        panel.hidden = false;
+        panel.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        markSetupSeen();
+    };
+
+    window.dismissWatchSetup = function () {
+        var panel = document.getElementById('watch-setup');
+        if (panel) panel.hidden = true;
+        markSetupSeen();
+    };
 
     function toast(kind, message) {
         if (window.api && typeof window.api['show' + kind] === 'function') {
@@ -75,13 +100,14 @@
             }
             if (resp.ok) {
                 btn.classList.add('is-sent');
-                var msg =
-                    data.message || 'Sent to your watch — syncing to Garmin shortly.';
-                if (!setupHintShown) {
-                    setupHintShown = true;
-                    msg += SETUP_HINT;
-                }
-                toast('Success', msg);
+                toast(
+                    'Success',
+                    data.message || 'Sent to your watch — syncing to Garmin shortly.'
+                );
+                // First successful send: show the one-time Garmin setup checklist
+                // so the two Intervals toggles land before they wonder why the
+                // watch is empty. No-ops on later sends.
+                window.showWatchSetup();
             } else if (resp.status === 401) {
                 toast(
                     'Error',

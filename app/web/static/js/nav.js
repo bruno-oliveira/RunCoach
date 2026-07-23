@@ -118,7 +118,13 @@ document.addEventListener('keydown', e => {
 
 async function connectActivityProvider(provider, label) {
     try {
-        const response = await fetch('/api/' + provider + '/connect');
+        // Carry where the user is now so the OAuth callback can bring them back
+        // here (e.g. the plan page with its send-to-watch buttons) instead of
+        // the default landing page. The server re-validates this path.
+        const returnTo = window.location.pathname + window.location.search;
+        const response = await fetch(
+            '/api/' + provider + '/connect?return_to=' + encodeURIComponent(returnTo)
+        );
         const data = await response.json();
         if (data.authorize_url) {
             window.location.href = data.authorize_url;

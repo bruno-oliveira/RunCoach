@@ -216,6 +216,35 @@
     </div>
     {% endif %}
 
+    {# ── One-time "finish watch setup" checklist ─────────────────────────
+       The Intervals connection is one click, but forwarding workouts to a
+       Garmin needs two toggles inside Intervals.icu that we can't automate.
+       Revealed once (by plan_send_to_watch.js) after the first successful
+       send, so the guidance lands exactly when "will it reach my watch?"
+       matters — with the account-free .fit download as the fallback. #}
+    {% if user %}
+    <div class="watch-setup" id="watch-setup" role="region" aria-label="Finish watch setup" hidden>
+        <div class="watch-setup-head">
+            <span class="watch-setup-eyebrow" data-i18n="watchsetup.eyebrow">Send to your watch</span>
+            <button type="button" class="watch-setup-dismiss" onclick="dismissWatchSetup()" aria-label="Dismiss" data-i18n-aria="watchsetup.dismiss">&times;</button>
+        </div>
+        <h3 class="watch-setup-title" data-i18n="watchsetup.title">Two toggles and every session lands on your Garmin</h3>
+        <p class="watch-setup-intro" data-i18n="watchsetup.intro">Your workout is on your Intervals.icu calendar. To make it flow to the watch automatically, set these once inside Intervals.icu:</p>
+        <ol class="watch-setup-steps">
+            <li class="watch-setup-step">
+                <span class="watch-setup-step-num">1</span>
+                <span class="watch-setup-step-body" data-i18n-html="watchsetup.step1">Open <a href="https://intervals.icu/settings" target="_blank" rel="noopener">Settings &rarr; Connections</a> and link Garmin Connect.</span>
+            </li>
+            <li class="watch-setup-step">
+                <span class="watch-setup-step-num">2</span>
+                <span class="watch-setup-step-body" data-i18n-html="watchsetup.step2">In that Garmin connection, tick <strong>&ldquo;Upload planned workouts&rdquo;</strong>.</span>
+            </li>
+        </ol>
+        <p class="watch-setup-tip" data-i18n-html="watchsetup.tip">Tip: set a <strong>Run threshold pace</strong> in Intervals.icu too &mdash; without it the watch shows &ldquo;No target&rdquo; for paced steps.</p>
+        <p class="watch-setup-fallback" data-i18n-html="watchsetup.fallback">No Garmin link &mdash; or don&rsquo;t want the Intervals step? Use the <strong>&darr; .fit</strong> button on any workout and import the file in Garmin Connect. No account needed.</p>
+    </div>
+    {% endif %}
+
     {# ── This Week (page hero) ──────────────────────────────────────────
        The single most important thing on this page is what to do today, so
        the current week leads — rail + expanded card — before any reference
