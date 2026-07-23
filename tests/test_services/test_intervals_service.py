@@ -117,6 +117,107 @@ async def test_sync_creates_and_deduplicates_run(
     assert intervals_user.intervals_last_synced_at is not None
 
 
+class _FakeResp:
+    """Minimal stand-in for httpx.Response used by push_workout tests."""
+
+    def __init__(self, status_code=200, payload=None):
+        self.status_code = status_code
+        self._payload = payload if payload is not None else []
+
+    def json(self):
+        return self._payload
+
+    def raise_for_status(self):
+        if self.status_code >= 400:
+            raise httpx.HTTPStatusError("err", request=None, response=None)  # type: ignore[arg-type]
+
+
+class _FakeAsyncClient:
+    """Records GET/DELETE/POST calls so we can assert the delete-then-create order."""
+
+    def __init__(self, get_resp, post_resp):
+        self._get_resp = get_resp
+        self._post_resp = post_resp
+        self.deleted: list[str] = []
+        self.get_calls: list[tuple] = []
+        self.posted = None
+
+    async def __aenter__(self):
+        return self
+
+    async def __aexit__(self, *_):
+        return False
+
+    async def get(self, url, headers=None, params=None):
+        self.get_calls.append((url, params))
+        return self._get_resp
+
+    async def delete(self, url, headers=None):
+        self.deleted.append(url)
+        return _FakeResp(200)
+
+    async def post(self, url, headers=None, params=None, json=None):
+        self.posted = (url, params, json)
+        return self._post_resp
+
+
+_CLIENT_PATH = "app.infrastructure.integrations.intervals_service.httpx.AsyncClient"
+
+
+@pytest.mark.asyncio
+async def test_push_workout_deletes_matching_event_then_creates(intervals_service):
+    # Two events on the date; only the one matching our external_id must be
+    # deleted before the fresh create (delete re-triggers the Garmin export).
+    fake = _FakeAsyncClient(
+        _FakeResp(
+            200,
+            [
+                {"id": 42, "external_id": "runcoach-1-2-3"},
+                {"id": 43, "external_id": "someone-else"},
+            ],
+        ),
+        _FakeResp(200, [{"id": 99}]),
+    )
+    event = {
+        "category": "WORKOUT",
+        "type": "Run",
+        "start_date_local": "2026-07-25T00:00:00",
+        "name": "Cruise Intervals",
+        "description": "- 1km 4:00/km Pace",
+        "external_id": "runcoach-1-2-3",
+    }
+
+    with patch(_CLIENT_PATH, return_value=fake):
+        created = await intervals_service.push_workout("tok", "i123", event)
+
+    assert created == {"id": 99}
+    assert fake.deleted == ["https://intervals.icu/api/v1/athlete/i123/events/42"]
+    assert fake.get_calls[0][1] == {"oldest": "2026-07-25", "newest": "2026-07-25"}
+    assert fake.posted[0].endswith("/events/bulk")
+    assert fake.posted[1] == {"upsert": "true"}
+    assert fake.posted[2] == [event]
+
+
+@pytest.mark.asyncio
+async def test_push_workout_survives_lookup_failure(intervals_service):
+    # A failed pre-delete lookup must not block the create (degrades to the old
+    # update-in-place behaviour, never worse).
+    fake = _FakeAsyncClient(_FakeResp(500, []), _FakeResp(200, [{"id": 7}]))
+    event = {
+        "start_date_local": "2026-07-25T00:00:00",
+        "external_id": "runcoach-9-9-9",
+        "name": "X",
+        "description": "- 1km 4:00/km Pace",
+    }
+
+    with patch(_CLIENT_PATH, return_value=fake):
+        created = await intervals_service.push_workout("tok", "i123", event)
+
+    assert created == {"id": 7}
+    assert fake.deleted == []
+    assert fake.posted is not None
+
+
 @pytest.mark.asyncio
 async def test_sync_ignores_strava_stubs_and_non_runs(
     intervals_service, intervals_user, intervals_activity, test_db

@@ -330,6 +330,23 @@
     text-align: center;
 }
 
+.connect-card-signup {
+    margin: var(--space-2) 0 0;
+    font-size: var(--text-xs);
+    line-height: var(--leading-normal);
+    text-align: center;
+}
+.connect-card-signup a {
+    color: var(--color-text-muted);
+    text-decoration: underline;
+    text-underline-offset: 2px;
+    text-decoration-color: var(--color-border);
+}
+.connect-card-signup a:hover {
+    color: var(--color-text-secondary);
+    text-decoration-color: currentColor;
+}
+
 .connect-card-or {
     display: flex;
     align-items: center;
