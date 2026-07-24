@@ -41,9 +41,7 @@ def upgrade() -> None:
         sa.Column("updated_at", sa.DateTime(), nullable=True),
         sa.UniqueConstraint("user_id", "date", name="uq_readiness_user_date"),
     )
-    op.create_index(
-        "idx_readiness_user_date", "readiness_logs", ["user_id", "date"]
-    )
+    op.create_index("idx_readiness_user_date", "readiness_logs", ["user_id", "date"])
 
 
 def downgrade() -> None:

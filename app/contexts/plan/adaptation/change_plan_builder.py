@@ -317,9 +317,7 @@ def _build_patch(
     true_totals: Dict[int, float] = {}
     if affected:
         for wp in (
-            training_plan.weekly_plans
-            if training_plan.weekly_plans is not None
-            else []
+            training_plan.weekly_plans if training_plan.weekly_plans is not None else []
         ):
             if wp.week_number in affected and wp.total_km is not None:
                 true_totals[wp.week_number] = round(float(wp.total_km), 1)
