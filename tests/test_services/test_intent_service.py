@@ -399,3 +399,78 @@ def test_sick_rests_window_then_ramps_without_reinflating_rest(db, freeze_today)
     wk4_long = _workout(db, plan, 4, 4)
     assert wk4_long.workout_type == "long"
     assert 0 < wk4_long.distance_km < 12.0
+
+
+def test_undo_restores_full_prior_state(db, freeze_today):
+    user, plan = _make_plan(db, today_value=WED)
+
+    # Feeling tired: eases the rest of week 3 and demotes Wed's tempo → easy.
+    intent_service.apply_intent(plan.id, user.id, "feeling_tired", {}, db)
+    wed = _workout(db, plan, 3, 3)
+    assert wed.workout_type == "easy"  # demoted from tempo
+    assert wed.distance_km < 8.0  # eased from baseline
+
+    result = intent_service.undo_last_change(plan.id, user.id, db)
+
+    assert result["action"] == "undo"
+    wed = _workout(db, plan, 3, 3)
+    assert wed.workout_type == "tempo"  # type restored
+    assert wed.distance_km == 8.0  # distance restored
+    # Week total returns to the original prescription.
+    wp = (
+        db.query(WeeklyPlan)
+        .filter(WeeklyPlan.training_plan_id == plan.id, WeeklyPlan.week_number == 3)
+        .one()
+    )
+    assert wp.total_km == 32.0
+    # The change is cleared and leaves no timeline trace.
+    db.refresh(plan)
+    assert plan.last_change_plan is None
+    assert not (plan.adaptation_history or [])
+
+
+def test_undo_with_no_prior_change_is_a_noop(db, freeze_today):
+    user, plan = _make_plan(db, today_value=WED)
+
+    result = intent_service.undo_last_change(plan.id, user.id, db)
+
+    assert result["would_change"] is False
+    assert _workout(db, plan, 3, 3).distance_km == 8.0
+
+
+def test_undo_restores_a_skipped_run(db, freeze_today):
+    user, plan = _make_plan(db, today_value=WED)
+
+    intent_service.apply_intent(plan.id, user.id, "skip_run", {}, db)
+    assert _workout(db, plan, 3, 3).workout_type == "rest"
+
+    intent_service.undo_last_change(plan.id, user.id, db)
+    restored = _workout(db, plan, 3, 3)
+    assert restored.workout_type == "tempo"
+    assert restored.distance_km == 8.0
+
+
+def test_apply_patch_week_total_is_full_week_not_just_in_window(db, freeze_today):
+    # Regression: the change-plan buckets omit past days, so an in-place patch
+    # must still report the *whole* week's mileage, not only the eased days.
+    user, plan = _make_plan(db, today_value=WED)  # today = Wed → Mon/Tue are past
+
+    cp = intent_service.apply_intent(plan.id, user.id, "feeling_tired", {}, db)
+
+    totals = {t["week"]: t["total_km"] for t in cp["patch"]["week_totals"]}
+    # Week 3: Mon 6 + Tue 6 (past, untouched) + Wed 6.8 + Thu 10.2 = 29.0
+    assert totals[3] == 29.0
+
+
+def test_undo_patch_carries_the_incremented_revision(db, freeze_today):
+    # The undo patch must advertise the *new* revision so the client's
+    # optimistic-concurrency token stays in sync (else its next write 409s).
+    user, plan = _make_plan(db, today_value=WED)
+    applied = intent_service.apply_intent(plan.id, user.id, "feeling_tired", {}, db)
+    rev_after_apply = applied["patch"]["adaptation_revision"]
+
+    undone = intent_service.undo_last_change(plan.id, user.id, db)
+
+    assert undone["patch"]["adaptation_revision"] == rev_after_apply + 1
+    db.refresh(plan)
+    assert plan.adaptation_revision == undone["patch"]["adaptation_revision"]

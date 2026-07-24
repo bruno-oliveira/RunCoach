@@ -59,11 +59,7 @@ def tips_page(
     request: Request,
     current_user: Optional[User] = Depends(get_optional_user),
 ) -> HTMLResponse:
-    """Trail fuelling & racing tips — a public, top-level reference surface.
-
-    Promoted out of the Race Prep page so the guidance is discoverable on its
-    own rather than buried beside the GPX pacing tool.
-    """
+    """Trail fuelling & racing tips — a public, top-level reference surface."""
     return templates.TemplateResponse(
         request,
         "tips.html",

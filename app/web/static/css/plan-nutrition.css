@@ -720,7 +720,7 @@
 }
 
 /* Trail fuel callout — points from the plan's nutrition tab to the full
-   trail fuelling reference, now consolidated on the Race Prep page. */
+   trail fuelling reference on the Tips page. */
 .trail-fuel-callout {
     display: flex;
     flex-direction: column;

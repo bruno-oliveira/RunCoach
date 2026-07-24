@@ -186,3 +186,36 @@ class TestMissedTodayIntentEndpoints:
         body = resp.json()
         assert body["action"] == "missed_today"
         assert body["summary"]["workouts_changed_count"] == 1
+
+    def test_undo_reverts_last_applied_intent(self, plan, owner, test_db):
+        _set_user(owner)
+        with TestClient(app) as client:
+            applied = client.post(
+                f"/api/plan/{plan.id}/intent",
+                json={"intent": "skip_run", "params": {}},
+            )
+            assert applied.status_code == 200
+            wo = test_db.get(DailyWorkout, "missed-today-wo-1-3")
+            test_db.refresh(wo)
+            assert wo.workout_type == "rest"
+
+            undone = client.post(f"/api/plan/{plan.id}/intent/undo")
+
+        assert undone.status_code == 200
+        assert undone.json()["action"] == "undo"
+        test_db.refresh(wo)
+        assert wo.workout_type == "tempo"
+        assert wo.distance_km == 8.0
+
+    def test_undo_with_nothing_to_revert_is_noop(self, plan, owner):
+        _set_user(owner)
+        with TestClient(app) as client:
+            resp = client.post(f"/api/plan/{plan.id}/intent/undo")
+        assert resp.status_code == 200
+        assert resp.json()["would_change"] is False
+
+    def test_undo_requires_auth(self, plan):
+        app.dependency_overrides.pop(get_current_user, None)
+        with TestClient(app) as client:
+            resp = client.post(f"/api/plan/{plan.id}/intent/undo")
+        assert resp.status_code == 401

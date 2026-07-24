@@ -552,17 +552,11 @@
         });
     }
 
-    // Auto-open unseen ChangePlan on page load.
+    // Wire the persistent panel's read-only "View details" link. Unseen
+    // ChangePlans are no longer auto-popped as a modal on load — plan_inline_
+    // adapt.js surfaces them as the calm bar instead, so the page never opens
+    // with an interrupting diff dialog.
     function bootstrap() {
-        var data = window.LAST_CHANGE_PLAN;
-        if (data && data.summary && data.seen === false) {
-            // Normalize first so a stale plan with no visible changes
-            // doesn't auto-pop an effectively empty modal.
-            normalizeChangePlan(data);
-            if (data.summary && data.summary.workouts_changed_count > 0) {
-                openChangePlanModalForApplied(data);
-            }
-        }
         // Hook persistent panel "View details" link
         document.querySelectorAll('[data-change-plan-view]').forEach(function (link) {
             link.addEventListener('click', function (e) {

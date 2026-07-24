@@ -135,6 +135,140 @@ def apply_intent(
     return _run_intent(plan_id, user_id, intent, params or {}, db, mode="applied")
 
 
+def _build_undo_records(
+    before: Dict[str, Dict[str, Any]],
+    after: Dict[str, Dict[str, Any]],
+) -> List[Dict[str, Any]]:
+    """Pre-image of every workout the intent actually changed.
+
+    Keyed by workout id and holding the fields an undo must restore. Only
+    genuinely-mutated workouts are recorded so undo touches nothing else.
+    """
+    records: List[Dict[str, Any]] = []
+    for wid, b in before.items():
+        a = after.get(wid)
+        if a is None:
+            continue
+        if b["distance_km"] == a["distance_km"] and b["type"] == a["type"]:
+            continue
+        records.append(
+            {
+                "id": wid,
+                "distance_km": b["distance_km"],
+                "workout_type": b["type"],
+                "intensity": b["intensity"],
+                "notes": b["notes"],
+            }
+        )
+    return records
+
+
+def undo_last_change(plan_id: str, user_id: str, db: Session) -> Dict[str, Any]:
+    """Revert the most recently applied intent, restoring each touched
+    workout to its exact prior state (distance, type, intensity, note)."""
+    repo = SQLAlchemyPlanRepository(db)
+    plan = repo.get_for_user(plan_id, user_id)
+    if not plan:
+        return empty_change_plan(
+            action="undo", mode="applied", headline_reason="Plan not found."
+        )
+
+    cp = plan.last_change_plan or {}
+    records = cp.get("undo") if isinstance(cp, dict) else None
+    if not records:
+        return empty_change_plan(
+            action="undo",
+            mode="applied",
+            headline_reason="There's no recent change to undo.",
+        )
+
+    by_id = {r["id"]: r for r in records}
+    workouts = (
+        db.query(DailyWorkout, WeeklyPlan.week_number)
+        .join(WeeklyPlan)
+        .filter(
+            WeeklyPlan.training_plan_id == plan.id,
+            DailyWorkout.id.in_(list(by_id.keys())),
+        )
+        .all()
+    )
+    if not workouts:
+        return empty_change_plan(
+            action="undo",
+            mode="applied",
+            headline_reason="There's no recent change to undo.",
+        )
+
+    affected_weeks = sorted({wk for (_wo, wk) in workouts})
+    before = snapshot_workouts(plan, db, week_numbers=affected_weeks)
+
+    plan_data, pd_week, pd_workout = parse_plan_data_lookups(plan)
+    for workout, week_number in workouts:
+        rec = by_id.get(workout.id)
+        if rec is None:
+            continue
+        workout.distance_km = rec["distance_km"]
+        workout.workout_type = rec["workout_type"]
+        workout.intensity = rec["intensity"]
+        workout.notes = rec["notes"]
+        pd_wo = pd_workout.get((week_number, workout.day_of_week))
+        if pd_wo is not None:
+            pd_wo["distance"] = rec["distance_km"]
+            pd_wo["type"] = rec["workout_type"]
+            pd_wo["intensity"] = rec["intensity"]
+            pd_wo["notes"] = rec["notes"]
+
+    # Recompute totals for every touched week from the restored distances.
+    week_rows = {
+        wp.week_number: wp
+        for wp in db.query(WeeklyPlan)
+        .filter(
+            WeeklyPlan.training_plan_id == plan.id,
+            WeeklyPlan.week_number.in_(affected_weeks),
+        )
+        .all()
+    }
+    workouts_by_week = batch_workouts_by_week([wp.id for wp in week_rows.values()], db)
+    for wk_num, weekly_plan in week_rows.items():
+        rows = workouts_by_week.get(weekly_plan.id, [])
+        new_total = round(sum(w.distance_km or 0 for w in rows), 1)
+        weekly_plan.total_km = new_total
+        if wk_num in pd_week:
+            pd_week[wk_num]["total_km"] = new_total
+
+    plan.plan_data = plan_data
+    persist_json(plan, "plan_data")
+    # Bump before building the change plan so the patch carries the new
+    # revision — otherwise the client keeps a stale revision and its next
+    # action 409s against the now-incremented server value.
+    plan.adaptation_revision = (plan.adaptation_revision or 0) + 1
+
+    after = snapshot_workouts(plan, db, week_numbers=affected_weeks)
+    change_plan = build_change_plan(
+        action="undo",
+        mode="applied",
+        training_plan=plan,
+        before=before,
+        after=after,
+        headline_reason="Reverted the last change — back to where you were.",
+    )
+
+    plan.last_change_plan = None
+    plan.last_adjusted_at = None
+    _pop_last_intent_event(plan)
+    db.commit()
+
+    return change_plan
+
+
+def _pop_last_intent_event(plan: TrainingPlan) -> None:
+    """Drop the trailing intent entry from the adaptation timeline so an
+    undone change leaves no trace in Plan Evolution."""
+    history = list(plan.adaptation_history or [])
+    if history and history[-1].get("type") == "intent":
+        plan.adaptation_history = history[:-1]
+
+
 # ---------------------------------------------------------------------------
 # Orchestration
 # ---------------------------------------------------------------------------
@@ -214,6 +348,10 @@ def _run_intent(
     if mode == "applied":
         changed = change_plan["summary"]["workouts_changed_count"] > 0
         if changed:
+            # Capture the pre-mutation state of every workout this intent
+            # touched so a one-tap Undo can restore it exactly (distance, type,
+            # intensity and note), rather than the coarser reset-to-baseline.
+            change_plan["undo"] = _build_undo_records(before, after)
             plan.last_adjusted_at = datetime.now(timezone.utc).replace(tzinfo=None)
             plan.last_change_plan = change_plan
             record_adaptation_event(

@@ -3,13 +3,12 @@
  *
  * On plan load, asks the server whether the runner's logged data warrants a
  * proactive suggestion (currently: a fitness-jump bump). If so, renders a
- * single clearly-flagged banner. "Review" opens the *existing* preview → apply
- * change-plan modal for the suggested intent (feeling_strong) via
- * window.runChangePlanAction — the plan never changes without the user's
- * confirmation. "Dismiss" tells the server to keep quiet until the situation
- * materially changes.
+ * single clearly-flagged banner. "Review" applies the suggested intent
+ * (feeling_strong) through the calm in-place flow — the days morph and an Undo
+ * bar appears — via window.PlanInlineAdapt. "Dismiss" tells the server to keep
+ * quiet until the situation materially changes.
  *
- * Depends on plan_change_summary.js (runChangePlanAction).
+ * Depends on plan_inline_adapt.js (PlanInlineAdapt).
  */
 (function () {
     'use strict';
@@ -69,16 +68,17 @@
 
         if (reviewBtn) {
             reviewBtn.addEventListener('click', function () {
-                if (typeof window.runChangePlanAction !== 'function') {
-                    console.warn('[proactive_nudge] change-plan modal unavailable');
+                if (!window.PlanInlineAdapt) {
+                    console.warn('[proactive_nudge] inline adapt unavailable');
                     return;
                 }
-                // Reuse the same preview → apply flow every intent uses. The
-                // user reviews the diff and confirms; applying reloads the page.
-                window.runChangePlanAction('intent', {
-                    body: { intent: nudge.intent, params: {} },
-                    button: reviewBtn
-                });
+                // Same calm in-place flow every intent uses: apply immediately,
+                // morph the affected days, offer Undo. The nudge banner clears
+                // once its suggestion has been acted on.
+                window.PlanInlineAdapt.applyIntent(nudge.intent, {}, { button: reviewBtn });
+                dismiss(nudge.signature);
+                host.hidden = true;
+                host.innerHTML = '';
             });
         }
 

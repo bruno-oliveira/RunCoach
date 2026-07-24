@@ -30,6 +30,82 @@
         });
     }
 
+    // Every workout-type class the card can carry, so a type change can strip
+    // the old one before adding the new (keeps the card's colour honest).
+    var TYPE_CLASSES = [
+        'easy', 'recovery', 'long', 'tempo', 'threshold', 'interval', 'speed',
+        'vo2max', 'race_pace', 'marathon_pace', 'goal_pace', 'fartlek', 'hill',
+        'progression', 'run_walk', 'cross_train', 'strength', 'rest'
+    ];
+
+    function _titleCase(type) {
+        return String(type || '')
+            .replace(/_/g, ' ')
+            .replace(/\b\w/g, function (m) { return m.toUpperCase(); });
+    }
+
+    function _setDistanceText(distEl, km) {
+        // The km text is a bare text node followed by optional spans (zone
+        // hint, adjusted chip). Replace the first numeric text node so the
+        // spans survive.
+        var children = distEl.childNodes;
+        for (var i = 0; i < children.length; i++) {
+            var node = children[i];
+            if (node.nodeType === 3 && /\d/.test(node.nodeValue)) {
+                node.nodeValue = _formatKm(km) + ' km';
+                return;
+            }
+        }
+        // No numeric node yet (was a rest/duration line) — prepend one.
+        distEl.insertBefore(
+            document.createTextNode(_formatKm(km) + ' km'), distEl.firstChild
+        );
+    }
+
+    function _updateAdjustedChip(item, distEl, km, baselineKm) {
+        var chip = distEl.querySelector('.workout-adjusted-chip');
+        var isAdjusted = baselineKm != null && Math.abs(baselineKm - km) >= 0.05;
+        item.classList.toggle('is-adjusted', isAdjusted);
+        item.classList.toggle('is-adjusted-down', isAdjusted && km < baselineKm);
+        if (chip) chip.remove();  // repaint fresh below to avoid stale arrows
+        if (!isAdjusted) return;
+        var down = km < baselineKm;
+        var span = document.createElement('span');
+        span.className = 'workout-adjusted-chip' + (down ? ' is-down' : '');
+        span.title = 'Adjusted from ' + _formatKm(baselineKm)
+            + ' km — open the latest changes panel for the reason';
+        span.innerHTML = '<span class="workout-adjusted-chip-arrow" aria-hidden="true">'
+            + (down ? '↓' : '↑') + '</span> adjusted from ' + _formatKm(baselineKm) + ' km';
+        distEl.appendChild(span);
+    }
+
+    function _becomeRest(item) {
+        // Turning a run into a rest day: drop the distance line and the
+        // action controls the template omits for rest workouts.
+        var distEl = item.querySelector('.workout-distance');
+        if (distEl) distEl.remove();
+        ['.send-to-watch-btn', '.download-fit-btn', '.log-run-btn',
+            '.key-workout-badge', '.workout-structure', '.workout-details',
+            '.run-walk-intervals'].forEach(function (sel) {
+            var el = item.querySelector(sel);
+            if (el) el.remove();
+        });
+    }
+
+    function _repaintType(item, newType) {
+        TYPE_CLASSES.forEach(function (t) { item.classList.remove(t); });
+        item.classList.add(newType);
+        var typeEl = item.querySelector('.workout-type');
+        if (typeEl) typeEl.textContent = _titleCase(newType);
+        // A demoted session no longer carries its key-workout structure.
+        ['.key-workout-badge', '.workout-structure', '.workout-details'].forEach(
+            function (sel) {
+                var el = item.querySelector(sel);
+                if (el) el.remove();
+            }
+        );
+    }
+
     function applyWorkoutChanges(changes) {
         if (!Array.isArray(changes)) return;
         changes.forEach(function (c) {
@@ -37,21 +113,34 @@
                 '.workout-item[data-week-num="' + c.week + '"][data-day-num="' + c.day + '"]'
             );
             if (!item) return;
+
+            if (c.is_rest) {
+                _repaintCardClasses(item, 'rest');
+                _becomeRest(item);
+                var typeEl = item.querySelector('.workout-type');
+                if (typeEl) typeEl.textContent = 'Rest';
+                item.classList.remove('is-adjusted', 'is-adjusted-down');
+                return;
+            }
+
+            if (c.type_changed && c.new_type) {
+                _repaintType(item, c.new_type);
+            }
+
             var distEl = item.querySelector('.workout-distance');
-            if (!distEl) return;
-            // The original markup embeds the km text directly inside
-            // .workout-distance, followed by optional spans (zone hint,
-            // adjusted chip). Walk text nodes and replace the first
-            // numeric one so the spans survive.
-            var children = distEl.childNodes;
-            for (var i = 0; i < children.length; i++) {
-                var node = children[i];
-                if (node.nodeType === 3 && /\d/.test(node.nodeValue)) {
-                    node.nodeValue = _formatKm(c.new_distance_km) + ' km';
-                    break;
+            if (distEl) {
+                _setDistanceText(distEl, c.new_distance_km);
+                if ('baseline_distance_km' in c) {
+                    _updateAdjustedChip(item, distEl, c.new_distance_km,
+                        c.baseline_distance_km);
                 }
             }
         });
+    }
+
+    function _repaintCardClasses(item, newType) {
+        TYPE_CLASSES.forEach(function (t) { item.classList.remove(t); });
+        item.classList.add(newType);
     }
 
     function applyAdaptationState(state) {
