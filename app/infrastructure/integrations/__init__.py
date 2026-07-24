@@ -1,10 +1,9 @@
-"""External integration services (Strava, FIT, GPX)."""
+"""External integration services (Strava, FIT)."""
 
 __all__ = [
     "StravaService",
     "StravaPostSyncService",
     "FitService",
-    "GpxService",
 ]
 
 
@@ -23,8 +22,4 @@ def __getattr__(name: str):
         from app.infrastructure.integrations.fit_service import FitService
 
         return FitService
-    if name == "GpxService":
-        from app.infrastructure.integrations.gpx_service import GpxService
-
-        return GpxService
     raise AttributeError(f"module {__name__!r} has no attribute {name!r}")

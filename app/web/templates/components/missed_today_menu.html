@@ -1,7 +1,7 @@
 {# Focused "Missed it?" chooser — a 3-option scoped variant of intent_menu.html
    for a single missed/not-yet-logged workout. Populated by
-   plan_missed_today.js, which then drives the shared change-plan preview →
-   apply modal via window.runChangePlanAction('intent', ...). #}
+   plan_missed_today.js, which applies the chosen option through the calm
+   in-place flow via window.PlanInlineAdapt.applyIntent('missed_today', ...). #}
 <div class="intent-menu-overlay" id="missed-today-overlay" hidden>
     <div class="intent-menu" role="dialog" aria-modal="true" aria-labelledby="missed-today-title">
         <div class="intent-menu-header">

@@ -176,12 +176,10 @@ body::before {
    --------------------------------------------------------------------------- */
 .header,
 .tips-header,
-.race-prep-header,
 .analytics-page-header { position: relative; }
 
 .header::after,
 .tips-header::after,
-.race-prep-header::after,
 .analytics-page-header::after {
     content: "";
     position: absolute;

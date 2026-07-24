@@ -158,7 +158,7 @@
             + fields
             + '<div class="intent-form-actions">'
             + '<button type="button" class="btn btn-ghost btn-small" data-intent-back>Cancel</button>'
-            + '<button type="button" class="btn btn-primary btn-small" id="intent-confirm">Preview change</button>'
+            + '<button type="button" class="btn btn-primary btn-small" id="intent-confirm">Adjust my plan</button>'
             + '</div></div>';
         b.querySelectorAll('[data-intent-back]').forEach(function (x) {
             x.onclick = renderList;
@@ -183,8 +183,8 @@
 
     function run(id, params) {
         close();
-        if (window.runChangePlanAction) {
-            window.runChangePlanAction('intent', { body: { intent: id, params: params } });
+        if (window.PlanInlineAdapt) {
+            window.PlanInlineAdapt.applyIntent(id, params);
         } else if (window.ApiClient && window.ApiClient.showError) {
             window.ApiClient.showError('Adaptation UI unavailable — refresh and try again.');
         }

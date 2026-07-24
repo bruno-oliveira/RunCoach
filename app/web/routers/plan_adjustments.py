@@ -218,6 +218,20 @@ def apply_plan_intent(
     )
 
 
+@router.post("/api/plan/{plan_id}/intent/undo")
+def undo_plan_intent(
+    plan_id: str,
+    if_match: str | None = Header(default=None, alias="If-Match"),
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Revert the most recently applied intent to its prior state."""
+    training_plan = get_plan_or_404(plan_id, db, current_user, require_user_match=True)
+    _check_revision(training_plan, if_match)
+    adaptation_service = AdaptationService()
+    return adaptation_service.undo_last_change(plan_id, current_user.id, db)
+
+
 @router.post("/api/plan/{plan_id}/reset-adjustment")
 def reset_plan_adjustment(
     plan_id: str,

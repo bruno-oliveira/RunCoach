@@ -112,3 +112,8 @@ class AdaptationService:
         db: Session,
     ) -> Dict[str, Any]:
         return intent_service.apply_intent(plan_id, user_id, intent, params, db)
+
+    def undo_last_change(
+        self, plan_id: str, user_id: str, db: Session
+    ) -> Dict[str, Any]:
+        return intent_service.undo_last_change(plan_id, user_id, db)

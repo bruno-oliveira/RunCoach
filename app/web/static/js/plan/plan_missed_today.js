@@ -4,9 +4,9 @@
  *
  * A scoped sibling of plan_intent_menu.js: instead of the general life-event
  * list, presents exactly the missed_today choices (reschedule / lighter
- * version / skip it) for one (planId, date) pair, then rides the same
- * preview → apply change-plan modal via
- * window.runChangePlanAction('intent', { body: { intent: 'missed_today', params } }).
+ * version / skip it) for one (planId, date) pair, then applies the choice
+ * through the calm in-place flow via
+ * window.PlanInlineAdapt.applyIntent('missed_today', params, { planId }).
  */
 (function () {
     'use strict';
@@ -74,11 +74,10 @@
             btn.onclick = function () {
                 var choice = btn.getAttribute('data-choice');
                 close();
-                if (window.runChangePlanAction) {
-                    window.runChangePlanAction('intent', {
-                        planId: planId,
-                        body: { intent: 'missed_today', params: { choice: choice, date: dateIso } },
-                    });
+                if (window.PlanInlineAdapt) {
+                    window.PlanInlineAdapt.applyIntent(
+                        'missed_today', { choice: choice, date: dateIso }, { planId: planId }
+                    );
                 } else if (window.ApiClient && window.ApiClient.showError) {
                     window.ApiClient.showError('Adaptation UI unavailable — refresh and try again.');
                 }

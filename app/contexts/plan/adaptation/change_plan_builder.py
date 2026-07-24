@@ -63,6 +63,11 @@ def snapshot_workouts(
                 else None
             ),
             "key_workout_id": workout.key_workout_id,
+            # Captured so an undo can restore a workout's full prior state,
+            # not just its distance (an ease flips hard sessions to easy and
+            # rewrites the coaching note).
+            "intensity": workout.intensity,
+            "notes": workout.notes,
         }
     return snap
 
@@ -223,6 +228,8 @@ def build_change_plan(
                 "day": _DAY_NAMES.get(day, str(day)),
                 "day_num": day,
                 "type": wtype or "easy",
+                "old_type": (b["type"] if b else None),
+                "baseline_distance_km": ref.get("baseline_distance_km"),
                 "old_distance_km": round(old_dist, 1),
                 "new_distance_km": round(new_dist, 1),
                 "delta_km": delta,
@@ -302,16 +309,46 @@ def _build_patch(
 
     workout_changes: List[Dict[str, Any]] = []
     week_totals: List[Dict[str, Any]] = []
+    # The change-plan buckets omit past workouts, so their per-week totals only
+    # cover the in-window days. The card patch needs the *whole* week's mileage,
+    # so read the authoritative WeeklyPlan.total_km the mutation already
+    # recomputed rather than the partial bucket sum.
+    affected = [wk["week"] for wk in weeks_list]
+    true_totals: Dict[int, float] = {}
+    if affected:
+        for wp in (
+            training_plan.weekly_plans
+            if training_plan.weekly_plans is not None
+            else []
+        ):
+            if wp.week_number in affected and wp.total_km is not None:
+                true_totals[wp.week_number] = round(float(wp.total_km), 1)
+    # A day that gained a workout where there was none (a rest day now carrying
+    # a rescheduled run) can't be repainted from a flat patch — its card has no
+    # distance/type/steps markup to update — so the client reloads instead.
+    reload_recommended = False
     for wk in weeks_list:
-        week_totals.append({"week": wk["week"], "total_km": wk["total_km_after"]})
+        week_totals.append(
+            {
+                "week": wk["week"],
+                "total_km": true_totals.get(wk["week"], wk["total_km_after"]),
+            }
+        )
         for wo in wk["workouts"]:
             if wo.get("status") != "changed":
                 continue
+            new_type = wo["type"]
+            if wo["old_distance_km"] <= 0 and wo["new_distance_km"] > 0:
+                reload_recommended = True
             workout_changes.append(
                 {
                     "week": wk["week"],
                     "day": wo["day_num"],
                     "new_distance_km": wo["new_distance_km"],
+                    "new_type": new_type,
+                    "type_changed": new_type != wo.get("old_type"),
+                    "is_rest": new_type == "rest" or wo["new_distance_km"] <= 0,
+                    "baseline_distance_km": wo.get("baseline_distance_km"),
                 }
             )
 
@@ -319,6 +356,7 @@ def _build_patch(
         "adaptation_revision": training_plan.adaptation_revision or 0,
         "week_totals": week_totals,
         "workout_changes": workout_changes,
+        "reload_recommended": reload_recommended,
         "adaptation_state": _build_adaptation_state(training_plan),
     }
 
@@ -356,6 +394,7 @@ def empty_change_plan(
             "adaptation_revision": 0,
             "week_totals": [],
             "workout_changes": [],
+            "reload_recommended": False,
             "adaptation_state": {"kind": "none"},
         },
     }

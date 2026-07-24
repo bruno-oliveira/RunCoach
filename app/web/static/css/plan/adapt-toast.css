@@ -1,0 +1,149 @@
+/* adapt-toast.css — the calm, in-place adaptation bar and the gentle
+   highlight a workout card gets when it morphs to its new state.
+
+   This is the emotional centre of the redesigned adjust flow: no diff
+   spreadsheet, no Apply button — just a quiet confirmation with an Undo. */
+
+.adapt-toast-host {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: var(--space-5);
+    display: flex;
+    justify-content: center;
+    padding: 0 var(--space-4);
+    pointer-events: none;
+    z-index: 1200;
+}
+
+.adapt-toast {
+    pointer-events: auto;
+    display: flex;
+    align-items: center;
+    gap: var(--space-4);
+    max-width: 640px;
+    width: 100%;
+    padding: var(--space-3) var(--space-4);
+    background: var(--color-bg-elevated, var(--color-surface));
+    border: 1px solid var(--color-border);
+    border-left: 3px solid var(--color-primary);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-lg);
+    /* Enter/exit transition state. */
+    opacity: 0;
+    transform: translateY(12px);
+    transition: opacity 0.24s var(--ease-out, ease), transform 0.24s var(--ease-out, ease);
+}
+
+.adapt-toast.is-in {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+.adapt-toast.is-out {
+    opacity: 0;
+    transform: translateY(12px);
+}
+
+.adapt-toast.is-reverted {
+    border-left-color: var(--color-text-muted);
+}
+
+.adapt-toast-msg {
+    flex: 1 1 auto;
+    margin: 0;
+    font-size: var(--text-sm);
+    line-height: var(--leading-normal, 1.5);
+    color: var(--color-text);
+}
+
+.adapt-toast-actions {
+    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+}
+
+.adapt-toast-link {
+    border: none;
+    background: none;
+    padding: var(--space-1) var(--space-2);
+    font-size: var(--text-sm);
+    color: var(--color-text-secondary);
+    cursor: pointer;
+    border-radius: var(--radius-md);
+    white-space: nowrap;
+}
+
+.adapt-toast-link:hover {
+    color: var(--color-text);
+    background: var(--color-primary-ghost, transparent);
+}
+
+.adapt-toast-undo {
+    border: 1px solid var(--color-primary);
+    background: var(--color-primary-subtle, transparent);
+    color: var(--color-primary-dark, var(--color-primary));
+    padding: var(--space-1) var(--space-3);
+    font-size: var(--text-sm);
+    font-weight: 600;
+    border-radius: var(--radius-md);
+    cursor: pointer;
+    white-space: nowrap;
+}
+
+.adapt-toast-undo:hover {
+    background: var(--color-primary);
+    color: #fff;
+}
+
+.adapt-toast-undo:disabled {
+    opacity: 0.5;
+    cursor: default;
+}
+
+.adapt-toast-close {
+    border: none;
+    background: none;
+    color: var(--color-text-muted);
+    font-size: var(--text-lg);
+    line-height: 1;
+    padding: 0 var(--space-1);
+    cursor: pointer;
+}
+
+.adapt-toast-close:hover {
+    color: var(--color-text);
+}
+
+/* The morph highlight: a soft, self-dissolving wash that draws the eye to a
+   card that just changed, then fades so the plan reads calm again. */
+@keyframes adapt-card-settle {
+    0% {
+        box-shadow: 0 0 0 2px var(--color-primary);
+        background-color: var(--color-primary-ghost, transparent);
+    }
+    100% {
+        box-shadow: 0 0 0 0 transparent;
+        background-color: transparent;
+    }
+}
+
+.workout-item.adapt-just-changed {
+    animation: adapt-card-settle 1.5s var(--ease-out, ease) forwards;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .adapt-toast { transition: opacity 0.01s; transform: none; }
+    .adapt-toast.is-in { transform: none; }
+    .workout-item.adapt-just-changed { animation: none; }
+}
+
+@media (max-width: 640px) {
+    .adapt-toast {
+        flex-wrap: wrap;
+        gap: var(--space-2);
+    }
+    .adapt-toast-msg { flex-basis: 100%; }
+    .adapt-toast-actions { width: 100%; justify-content: flex-end; }
+}

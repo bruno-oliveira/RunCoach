@@ -44,7 +44,7 @@ _BRACKET_SHORT_MAX_KM = 21.0
 _BRACKET_STANDARD_MAX_KM = 42.2
 _BRACKET_ULTRA_MAX_KM = 80.0
 
-# Elevation-class cutoffs in m/km. Aligned with race_pacing_service /
+# Elevation-class cutoffs in m/km. Aligned with
 # vdot_calculator.TRAIL_ELEVATION_M_PER_KM (20 m/km) — our ``rolling``
 # band straddles that historical threshold rather than replacing it.
 _ELEV_FLAT_MAX_M_PER_KM = 10.0
