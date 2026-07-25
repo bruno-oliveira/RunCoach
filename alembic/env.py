@@ -18,6 +18,10 @@ if config.config_file_name is not None:
 
 target_metadata = Base.metadata
 
+# alembic.ini leaves sqlalchemy.url empty on purpose, so the CLI lands here and
+# picks up DATABASE_URL via settings. Programmatic callers
+# (app/migrations/__init__.py, tests/conftest.py) set the option before invoking
+# a command, and that explicit choice still wins.
 if not config.get_main_option("sqlalchemy.url"):
     config.set_main_option("sqlalchemy.url", settings.database_url)
 

@@ -30,7 +30,31 @@ pyright
 
 # Smoke-test plan generation
 python3 -c "from app.contexts.plan.generators.plan_generator import TrainingPlanGenerator; TrainingPlanGenerator().generate_plan(20, 10, 8)"
+
+# Browser-verify a UI change (signed-in user + live plan, on a DISPOSABLE db copy)
+python3 scripts/verify_ui.py        # copies runcoach.db, migrates it, prints a session cookie
+python3 scripts/dev_verify.py       # serves :8011 against the copy
+python3 scripts/verify_ui.py --check  # hash of the real db, to prove it never changed
 ```
+
+### Never write to `runcoach.db`
+
+`runcoach.db` holds real dev data, and there is **no seed file and no WAL backup
+beside it** — an `UPDATE` without a preceding `SELECT` is unrecoverable. It has
+already cost a developer their local Intervals connection.
+
+Use `scripts/verify_ui.py` to get a signed-in user and a live plan on a throwaway
+copy. If you must touch a real row, `SELECT` and record the current values first.
+
+Two related traps worth knowing:
+
+- **`last_activity`** — `_resolve_user` rejects a session whose user has a stale
+  `last_activity`, so a hand-minted JWT 403s every page for no visible reason.
+  `verify_ui.py` sets it.
+- **`alembic.ini` leaves `sqlalchemy.url` empty on purpose** so the `alembic` CLI
+  honours `DATABASE_URL`. Do not hardcode a value back into it: a literal there
+  silently wins over the environment, so `DATABASE_URL=... alembic upgrade head`
+  would migrate `./runcoach.db` instead of your scratch database.
 
 ## Deployment
 

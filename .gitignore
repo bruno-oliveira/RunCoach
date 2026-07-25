@@ -5,6 +5,9 @@
 *.db
 *.db.backup
 
+# Throwaway DB copy + server for UI verification (scripts/verify_ui.py)
+.verify/
+
 # Python
 __pycache__/
 *.py[cod]
