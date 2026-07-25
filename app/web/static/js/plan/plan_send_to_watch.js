@@ -129,6 +129,58 @@
         }
     }
 
+    // Whole-week push. One bulk request server-side, so a five-run week costs a
+    // single round trip instead of five presses. Rest days are skipped there.
+    async function sendWeek(btn) {
+        var planId = window.APP_CTX && window.APP_CTX.plan_id;
+        var week = parseInt(btn.dataset.week, 10);
+        if (!planId || !week) {
+            toast('Error', 'Could not identify this week.');
+            return;
+        }
+
+        btn.classList.add('is-sending');
+        try {
+            var resp = await fetch('/api/intervals/push-week', {
+                method: 'POST',
+                headers: headers(),
+                credentials: 'same-origin',
+                body: JSON.stringify({ plan_id: planId, week: week }),
+            });
+            var data = {};
+            try {
+                data = await resp.json();
+            } catch (e) {
+                /* non-JSON error body */
+            }
+            if (resp.ok) {
+                btn.classList.add('is-sent');
+                toast('Success', data.message || 'Week sent to your watch.');
+                // Mark the week's per-workout buttons so the card matches what
+                // actually went out.
+                var card = btn.closest('.week-card');
+                if (card) {
+                    card.querySelectorAll('.send-to-watch-btn').forEach(function (b) {
+                        b.classList.add('is-sent');
+                    });
+                }
+                window.showWatchSetup();
+            } else if (resp.status === 401) {
+                toast('Error', data.detail || 'Reconnect Intervals.icu (grant calendar access) to send.');
+                startConnect();
+            } else if (resp.status === 400) {
+                toast('Info', data.detail || 'Connect Intervals.icu to send workouts.');
+                if (btn.classList.contains('is-disconnected')) startConnect();
+            } else {
+                toast('Error', data.detail || "Couldn't send this week.");
+            }
+        } catch (e) {
+            toast('Error', 'Network error sending to your watch. Try again.');
+        } finally {
+            btn.classList.remove('is-sending');
+        }
+    }
+
     function onClick(e) {
         e.preventDefault();
         e.stopPropagation();
@@ -138,11 +190,16 @@
             startConnect();
             return;
         }
+        if (btn.classList.contains('send-week-btn')) {
+            sendWeek(btn);
+            return;
+        }
         sendWorkout(btn);
     }
 
     function bind() {
-        document.querySelectorAll('.send-to-watch-btn').forEach(function (btn) {
+        var selector = '.send-to-watch-btn, .send-week-btn';
+        document.querySelectorAll(selector).forEach(function (btn) {
             if (btn.dataset.stwBound) return;
             btn.dataset.stwBound = '1';
             btn.addEventListener('click', onClick);

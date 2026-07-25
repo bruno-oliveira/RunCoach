@@ -202,23 +202,27 @@ class IntervalsService:
             raise_for_intervals_status(response)
             return parse_athlete_hr_settings(response.json())
 
-    async def _delete_existing_event(
+    async def _delete_existing_events(
         self,
         client: httpx.AsyncClient,
         athlete_id: str,
         access_token: str,
-        date_str: str,
-        external_id: str,
+        oldest: str,
+        newest: str,
+        external_ids: set[str],
     ) -> None:
-        """Delete any planned event with ``external_id`` on ``date_str``.
+        """Delete planned events matching ``external_ids`` in a date range.
 
         Intervals.icu only re-triggers the Garmin export when an event is
         *created*, not when an existing one is updated in place. So re-sending a
         workout must delete the old event first, otherwise the watch keeps the
         stale copy (or never receives pace targets set after the first send).
-        Best-effort: a lookup/delete failure must not block the create below —
-        it degrades to the old update-in-place behaviour, never worse. A genuine
-        auth failure surfaces on the create's ``raise_for_intervals_status``.
+
+        One range query covers the whole batch, so pushing a week costs a single
+        lookup rather than one per day. Best-effort: a lookup/delete failure must
+        not block the create below — it degrades to the old update-in-place
+        behaviour, never worse. A genuine auth failure surfaces on the create's
+        ``raise_for_intervals_status``.
         """
         base = f"{INTERVALS_API_BASE}/athlete/{athlete_id}/events"
         headers = {"Authorization": f"Bearer {access_token}"}
@@ -226,19 +230,70 @@ class IntervalsService:
             existing = await client.get(
                 base,
                 headers=headers,
-                params={"oldest": date_str, "newest": date_str},
+                params={"oldest": oldest, "newest": newest},
             )
             if existing.status_code >= 400:
                 return
             for ev in existing.json():
-                if isinstance(ev, dict) and ev.get("external_id") == external_id:
+                if isinstance(ev, dict) and ev.get("external_id") in external_ids:
                     await client.delete(f"{base}/{ev['id']}", headers=headers)
         except Exception as delete_error:
             logger.warning(
                 "Intervals.icu pre-delete of %s failed (will still create): %s",
-                external_id,
+                sorted(external_ids),
                 delete_error,
             )
+
+    async def push_workouts(
+        self,
+        access_token: str,
+        athlete_id: str,
+        events: list[dict[str, Any]],
+    ) -> list[dict[str, Any]]:
+        """Create planned workouts on the athlete's calendar in one request.
+
+        Deletes any prior events carrying the same ``external_id``s across the
+        batch's date span, then creates them fresh (bulk endpoint,
+        ``upsert=true``). The delete is what makes re-sends actually reach the
+        watch: Intervals.icu re-triggers the Garmin export on create but not on
+        in-place update. Once the athlete has linked their watch platform and
+        enabled planned-workout upload in Intervals.icu, the created events are
+        forwarded automatically.
+
+        Args:
+            access_token: The athlete's Intervals.icu OAuth token (needs
+                CALENDAR:WRITE — old tokens without it raise
+                IntervalsAuthorizationError via a 403).
+            athlete_id: The athlete's Intervals.icu id.
+            events: Calendar event dicts (category/type/start_date_local/name/
+                description/external_id/...).
+
+        Returns:
+            The created event dicts from Intervals.icu, or [] when ``events`` is
+            empty.
+        """
+        if not events:
+            return []
+        dates = sorted(
+            d for d in (str(e.get("start_date_local", ""))[:10] for e in events) if d
+        )
+        external_ids = {
+            str(e["external_id"]) for e in events if e.get("external_id") is not None
+        }
+        async with httpx.AsyncClient(timeout=INTERVALS_TIMEOUT) as client:
+            if dates and external_ids:
+                await self._delete_existing_events(
+                    client, athlete_id, access_token, dates[0], dates[-1], external_ids
+                )
+            response = await client.post(
+                f"{INTERVALS_API_BASE}/athlete/{athlete_id}/events/bulk",
+                headers={"Authorization": f"Bearer {access_token}"},
+                params={"upsert": "true"},
+                json=events,
+            )
+            raise_for_intervals_status(response)
+            created = response.json()
+            return created if isinstance(created, list) else []
 
     async def push_workout(
         self,
@@ -246,42 +301,9 @@ class IntervalsService:
         athlete_id: str,
         event: dict[str, Any],
     ) -> dict[str, Any]:
-        """Create a single planned workout on the athlete's calendar.
-
-        Deletes any prior event with the same ``external_id`` on that date, then
-        creates the workout fresh (bulk endpoint, ``upsert=true``). The delete is
-        what makes re-sends actually reach the watch: Intervals.icu re-triggers
-        the Garmin export on create but not on in-place update. Once the athlete
-        has linked Garmin Connect and enabled planned-workout upload in
-        Intervals.icu, the created event is pushed to Garmin automatically.
-
-        Args:
-            access_token: The athlete's Intervals.icu OAuth token (needs
-                CALENDAR:WRITE — old tokens without it raise
-                IntervalsAuthorizationError via a 403).
-            athlete_id: The athlete's Intervals.icu id.
-            event: A single calendar event dict (category/type/start_date_local/
-                name/description/external_id/...).
-
-        Returns:
-            The created event dict from Intervals.icu.
-        """
-        external_id = event.get("external_id")
-        date_str = str(event.get("start_date_local", ""))[:10]
-        async with httpx.AsyncClient(timeout=INTERVALS_TIMEOUT) as client:
-            if external_id and date_str:
-                await self._delete_existing_event(
-                    client, athlete_id, access_token, date_str, external_id
-                )
-            response = await client.post(
-                f"{INTERVALS_API_BASE}/athlete/{athlete_id}/events/bulk",
-                headers={"Authorization": f"Bearer {access_token}"},
-                params={"upsert": "true"},
-                json=[event],
-            )
-            raise_for_intervals_status(response)
-            created = response.json()
-            return created[0] if isinstance(created, list) and created else {}
+        """Create a single planned workout — see :meth:`push_workouts`."""
+        created = await self.push_workouts(access_token, athlete_id, [event])
+        return created[0] if created else {}
 
     @staticmethod
     def map_activity_to_run_log(activity: dict[str, Any], user_id: str) -> RunLog:

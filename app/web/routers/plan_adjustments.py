@@ -2,10 +2,18 @@
 
 import logging
 
-from fastapi import APIRouter, Depends, Header, HTTPException, status
+from fastapi import (
+    APIRouter,
+    BackgroundTasks,
+    Depends,
+    Header,
+    HTTPException,
+    status,
+)
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
+from app.application.watch_sync_service import resync_plan_to_watch
 from app.contexts.plan.adaptation import AdaptationService, type_swapper
 from app.contexts.plan.adaptation.missed_week_handler import detect_missed_weeks
 from app.contexts.plan.plan_helpers import get_plan_or_404
@@ -13,7 +21,7 @@ from app.contexts.plan.repositories import SQLAlchemyPlanRepository
 from app.contexts.plan.week_adjustment_service import apply_week_action
 from app.contexts.runner.fitness.gap_analysis_service import GapAnalysisService
 from app.contexts.runner.fitness.readiness_service import ReadinessService
-from app.dependencies import get_current_user, get_db
+from app.dependencies import get_current_user, get_db, get_intervals_service
 from app.models import TrainingPlan, User
 from app.utils import persist_json
 
@@ -49,6 +57,23 @@ def _check_revision(training_plan: TrainingPlan, if_match: str | None) -> None:
                 "message": "Your plan was updated elsewhere — refresh to continue.",
             },
         )
+
+
+def _resync_watch(
+    background_tasks: BackgroundTasks,
+    plan_id: str,
+    user_id: str,
+    intervals_service,
+) -> None:
+    """Queue a watch re-push after a change to the plan's workouts.
+
+    Runs after the response so the in-place morph and Undo stay instant, and so
+    an Intervals.icu hiccup can never fail an adaptation the runner already saw
+    applied. No-ops for plans that were never sent to a watch.
+    """
+    background_tasks.add_task(
+        resync_plan_to_watch, plan_id, str(user_id), intervals_service
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -205,44 +230,56 @@ def preview_plan_intent(
 def apply_plan_intent(
     plan_id: str,
     body: IntentRequest,
+    background_tasks: BackgroundTasks,
     if_match: str | None = Header(default=None, alias="If-Match"),
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
+    intervals_service=Depends(get_intervals_service),
 ):
     """Apply a declared intent to the plan and persist the change."""
     training_plan = get_plan_or_404(plan_id, db, current_user, require_user_match=True)
     _check_revision(training_plan, if_match)
     adaptation_service = AdaptationService()
-    return adaptation_service.apply_intent(
+    result = adaptation_service.apply_intent(
         plan_id, current_user.id, body.intent, body.params, db
     )
+    _resync_watch(background_tasks, plan_id, current_user.id, intervals_service)
+    return result
 
 
 @router.post("/api/plan/{plan_id}/intent/undo")
 def undo_plan_intent(
     plan_id: str,
+    background_tasks: BackgroundTasks,
     if_match: str | None = Header(default=None, alias="If-Match"),
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
+    intervals_service=Depends(get_intervals_service),
 ):
     """Revert the most recently applied intent to its prior state."""
     training_plan = get_plan_or_404(plan_id, db, current_user, require_user_match=True)
     _check_revision(training_plan, if_match)
     adaptation_service = AdaptationService()
-    return adaptation_service.undo_last_change(plan_id, current_user.id, db)
+    result = adaptation_service.undo_last_change(plan_id, current_user.id, db)
+    _resync_watch(background_tasks, plan_id, current_user.id, intervals_service)
+    return result
 
 
 @router.post("/api/plan/{plan_id}/reset-adjustment")
 def reset_plan_adjustment(
     plan_id: str,
+    background_tasks: BackgroundTasks,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
+    intervals_service=Depends(get_intervals_service),
 ):
     """Reset plan adjustment, restoring original baseline distances."""
     get_plan_or_404(plan_id, db, current_user, require_user_match=True)
 
     adaptation_service = AdaptationService()
-    return adaptation_service.reset_adjustment(plan_id, current_user.id, db)
+    result = adaptation_service.reset_adjustment(plan_id, current_user.id, db)
+    _resync_watch(background_tasks, plan_id, current_user.id, intervals_service)
+    return result
 
 
 @router.post("/api/plan/{plan_id}/reset-adjustment/preview")
@@ -272,9 +309,11 @@ def override_plan_week(
     plan_id: str,
     week_number: int,
     body: WeekOverrideRequest,
+    background_tasks: BackgroundTasks,
     if_match: str | None = Header(default=None, alias="If-Match"),
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
+    intervals_service=Depends(get_intervals_service),
 ):
     """Apply a per-week override to the plan."""
     training_plan = get_plan_or_404(plan_id, db, current_user, require_user_match=True)
@@ -295,6 +334,7 @@ def override_plan_week(
         db,
     )
     db.commit()
+    _resync_watch(background_tasks, plan_id, current_user.id, intervals_service)
 
     return {
         "ok": True,
@@ -330,8 +370,10 @@ class SwapTypeRequest(BaseModel):
 def apply_type_swap(
     plan_id: str,
     body: SwapTypeRequest,
+    background_tasks: BackgroundTasks,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
+    intervals_service=Depends(get_intervals_service),
 ):
     """Apply an accepted workout type swap to a specific workout."""
     get_plan_or_404(plan_id, db, current_user, require_user_match=True)
@@ -340,6 +382,7 @@ def apply_type_swap(
     )
     if result is None:
         raise HTTPException(status_code=404, detail="Workout not found")
+    _resync_watch(background_tasks, plan_id, current_user.id, intervals_service)
     return result
 
 
@@ -358,8 +401,10 @@ def swap_plan_days(
     plan_id: str,
     week_number: int,
     body: SwapDaysRequest,
+    background_tasks: BackgroundTasks,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
+    intervals_service=Depends(get_intervals_service),
 ):
     """Swap two workouts within the same week."""
     from app.contexts.plan.plan_adjustments import swap_days
@@ -395,5 +440,6 @@ def swap_plan_days(
     training_plan.plan_data = plan_data
     persist_json(training_plan, "plan_data")
     db.commit()
+    _resync_watch(background_tasks, plan_id, current_user.id, intervals_service)
 
     return {"ok": True}

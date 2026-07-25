@@ -79,6 +79,11 @@ class TrainingPlan(Base):
     # Monotonic counter bumped on every distance-mutating apply. Clients send
     # the revision they rendered with so the server can reject stale writes.
     adaptation_revision = Column(Integer, nullable=False, default=0, server_default="0")
+    # Set the first time any workout from this plan is pushed to the athlete's
+    # Intervals.icu calendar. Its presence — not its value — is what marks the
+    # plan as "on the watch", which is how we know a later adaptation has to be
+    # re-pushed rather than silently diverging from what the runner will run.
+    watch_synced_at = Column(DateTime, nullable=True)
     share_token = Column(String, unique=True, nullable=True, index=True)
 
     user: Mapped["User"] = relationship("User", back_populates="training_plans")

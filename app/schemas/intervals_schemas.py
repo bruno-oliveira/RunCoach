@@ -28,6 +28,20 @@ class IntervalsPushResponse(BaseModel):
     message: str
 
 
+class IntervalsPushWeekRequest(BaseModel):
+    """Identify one plan week to push in full."""
+
+    plan_id: str
+    week: int = Field(ge=1)
+
+
+class IntervalsPushWeekResponse(BaseModel):
+    ok: bool
+    sent: int
+    skipped: int
+    message: str
+
+
 class IntervalsStatusResponse(BaseModel):
     connected: bool
     athlete_id: Optional[str] = None

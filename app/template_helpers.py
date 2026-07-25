@@ -9,6 +9,7 @@ from pathlib import Path
 
 from fastapi.templating import Jinja2Templates
 
+from app.core.training.plan_calendar import next_monday
 from app.infrastructure.config import settings
 from app.utils import format_km, format_pace
 
@@ -43,6 +44,10 @@ def create_templates(directory: str = "app/web/templates") -> Jinja2Templates:
     """Create a Jinja2Templates instance with common globals and filters."""
     tpl = Jinja2Templates(directory=directory)
     tpl.env.globals["static_url"] = static_url
+    # Exposed as a global (not per-route context) because the plan form is
+    # rendered from several places — the home route and every validation-error
+    # re-render — and each of them needs the same default start date.
+    tpl.env.globals["next_monday"] = next_monday
     tpl.env.filters["format_pace"] = format_pace
     tpl.env.filters["format_km"] = format_km
     return tpl

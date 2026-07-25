@@ -1,19 +1,23 @@
 """FIT workout file generation for Garmin devices with pace targets.
 
-Uses the fit-tool library to generate FIT binary files that are fully
-compatible with Garmin watches and Garmin Connect.
+Uses the fit-tool library to generate FIT binary files in the format Garmin
+devices read directly off their own filesystem.
 
 Each km becomes a workout step with a pace alert range. The watch will
 beep if you go outside the pace band for that km, giving real-time
 pacing feedback during your race.
 
-Import Instructions:
-- Garmin Connect Web: Training > Workouts > Import > Select .fit file
-- Garmin Connect Mobile: Training & Planning > Workouts > Import
-- USB Transfer: Copy to GARMIN/NewFiles/ on device (some devices support this)
+How a runner actually gets one of these onto a watch:
+- USB transfer: plug the watch in and copy the file into ``GARMIN/NewFiles/``
+  (or ``GARMIN/Workouts/`` on Edge units). Supported on most devices that
+  mount as mass storage.
 
-Note: Workout files must be imported through Garmin Connect or supported devices.
-Not all Garmin devices support direct workout file imports.
+Garmin Connect — web and mobile — has NO workout-file import. There is no
+"Training > Workouts > Import" menu; an earlier version of this docstring
+claimed one and the UI copy repeated it. Do not re-introduce that promise:
+the supported, no-sideload route is the Intervals.icu calendar push in
+``app/web/routers/intervals.py``, which reaches Garmin, COROS, Wahoo and
+Suunto. This file stays as an offline/power-user escape hatch.
 """
 
 import os

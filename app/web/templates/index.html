@@ -65,6 +65,24 @@
             <h1 class="hero-title status-hero-title">
                 <span data-i18n="home.back_noplan_title">Let's build your first plan.</span>
             </h1>
+            {% if user.intervals_athlete_id %}
+            {# Already connected, still no plan — the only thing left to do is
+               build one, so don't offer the connect button they just used. #}
+            <p class="hero-subtitle">
+                <span data-i18n="home.back_noplan_connected_sub">Your watch is connected — we'll set every pace from your real fitness. Three questions and your plan is ready.</span>
+            </p>
+            <div class="status-hero-actions">
+                <button type="button" class="btn btn-accent btn-lg status-hero-cta" onclick="scrollToBuild()">
+                    <span data-i18n="home.back_noplan_build">Build my plan</span>
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+                </button>
+                <span class="status-conn status-conn--ok"{% if user.intervals_last_synced_at %} data-ts="{{ user.intervals_last_synced_at }}"{% endif %}>
+                    <span class="status-conn-dot" aria-hidden="true"></span>
+                    <span data-i18n="home.back_connected">Connected</span>
+                    <span class="status-conn-sync" id="statusConnSync"></span>
+                </span>
+            </div>
+            {% else %}
             <p class="hero-subtitle">
                 <span data-i18n="home.back_noplan_sub">Connect your watch so every pace comes from your real fitness — or build a plan from three questions right now.</span>
             </p>
@@ -77,6 +95,7 @@
                     <span data-i18n="home.connect_build">Build a plan without connecting</span>
                 </button>
             </div>
+            {% endif %}
             {% endif %}
         </div>
         <aside class="home-stats" id="homeStats" aria-label="Your recent training trends" hidden></aside>
@@ -493,6 +512,16 @@
                                     <span class="form-help">Enables heart rate zones</span>
                                 </div>
                             </div>
+                        </div>
+
+                        <!-- Shared across both plan modes. Asked here rather than
+                             from a banner after the fact: without a start date a
+                             plan has no calendar at all — no "This Week", no run
+                             mapping, no adaptation, and nothing to put on a watch. -->
+                        <div class="form-group">
+                            <label for="start_date" class="form-label"><span data-i18n="home.start_date">Start date</span></label>
+                            <input type="date" id="start_date" name="start_date" class="form-input" value="{{ next_monday() }}">
+                            <span class="form-help" data-i18n="home.start_date_help">Week 1 begins here. You can move it later.</span>
                         </div>
 
                         <div id="long-run-hint" class="long-run-hint" role="status" aria-live="polite" style="display:none;">

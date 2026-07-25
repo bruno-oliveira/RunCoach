@@ -60,9 +60,15 @@
 
             if (pendingConnect === 'intervals') {
                 try {
-                    const connectRes = await fetch('/api/intervals/connect', {
-                        credentials: 'same-origin'
-                    });
+                    // Carry where they started from so the OAuth callback brings
+                    // them back here. Without it the callback falls through to
+                    // /my-plans, which for a brand-new runner is an empty page —
+                    // they'd have linked two accounts to reach "No plans yet".
+                    const returnTo = window.location.pathname + window.location.search;
+                    const connectRes = await fetch(
+                        '/api/intervals/connect?return_to=' + encodeURIComponent(returnTo),
+                        { credentials: 'same-origin' }
+                    );
                     const connectData = await connectRes.json();
                     if (connectData && connectData.authorize_url) {
                         window.location.href = connectData.authorize_url;

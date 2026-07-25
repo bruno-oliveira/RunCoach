@@ -19,11 +19,15 @@ from fastapi.responses import RedirectResponse
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
+from app.application.watch_sync_service import (
+    build_event,
+    mark_plan_pushed,
+    resync_plan_to_watch,
+)
 from app.contexts.auth.auth_service import AuthService
 from app.contexts.auth.repositories import SQLAlchemyUserRepository
 from app.contexts.plan.adaptation import AdaptationService
 from app.contexts.plan.plan_helpers import get_plan_or_404
-from app.core.training.workout_steps.intervals_export import build_intervals_workout
 from app.dependencies import (
     get_auth_service,
     get_current_user,
@@ -50,6 +54,8 @@ from app.rate_limit import (
 from app.schemas import (
     IntervalsPushRequest,
     IntervalsPushResponse,
+    IntervalsPushWeekRequest,
+    IntervalsPushWeekResponse,
     IntervalsStatusResponse,
     IntervalsSyncResponse,
 )
@@ -210,6 +216,7 @@ async def intervals_callback(
 @intervals_router.post("/sync", response_model=IntervalsSyncResponse)
 async def intervals_sync(
     request: Request,
+    background_tasks: BackgroundTasks,
     force_days: Optional[int] = Query(default=None, ge=1, le=3650),
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
@@ -258,32 +265,39 @@ async def intervals_sync(
     adjustment_results = (
         auto_map_and_adjust(current_user, db, AdaptationService()) or None
     )
+    # An auto-adjustment rewrites future weeks without the runner asking, so the
+    # watch has to follow — otherwise the session they run is the one we just
+    # decided was wrong. No-ops for plans never sent to a watch.
+    for adjusted in adjustment_results or []:
+        adjusted_plan_id = adjusted.get("plan_id")
+        if adjusted_plan_id:
+            background_tasks.add_task(
+                resync_plan_to_watch,
+                str(adjusted_plan_id),
+                str(current_user.id),
+                intervals_service,
+            )
     return IntervalsSyncResponse(
         **result,
         adjustment_results=adjustment_results,
     )
 
 
-def _workout_start_date_local(training_plan, week: int, day: int) -> str:
-    """ISO ``start_date_local`` for the (week, day) workout on the plan calendar.
+def _require_connected(current_user: User) -> None:
+    """400 unless the runner has a usable Intervals.icu connection."""
+    if not current_user.intervals_athlete_id or not current_user.intervals_access_token:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Connect Intervals.icu first to send workouts to your watch.",
+        )
 
-    Falls back to today as the week-1 anchor when the plan has no start date so
-    the event still lands on a sensible relative day.
-    """
-    from datetime import datetime as _dt
-    from datetime import timedelta
 
-    from app.core.time_utils import local_today
-
-    sd = training_plan.start_date
-    if isinstance(sd, _dt):
-        base = sd.date()
-    elif sd is not None:
-        base = sd
-    else:
-        base = local_today()
-    workout_date = base + timedelta(weeks=week - 1, days=day - 1)
-    return f"{workout_date.isoformat()}T00:00:00"
+def _week_data(training_plan, week: int) -> dict:
+    """The ``plan_data`` entry for ``week``, or 404."""
+    for entry in training_plan.plan_data or []:
+        if entry.get("week") == week:
+            return entry
+    raise HTTPException(status_code=404, detail="Week not found")
 
 
 @intervals_router.post("/push-workout", response_model=IntervalsPushResponse)
@@ -301,20 +315,13 @@ async def intervals_push_workout(
     app's "send to watch" action.
     """
     intervals_push_limiter.check(request)
-    if not current_user.intervals_athlete_id or not current_user.intervals_access_token:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Connect Intervals.icu first to send workouts to your watch.",
-        )
+    _require_connected(current_user)
 
     training_plan = get_plan_or_404(
         payload.plan_id, db, current_user, require_user_match=True
     )
 
-    plan_data = training_plan.plan_data or []
-    week_data = next((w for w in plan_data if w.get("week") == payload.week), None)
-    if week_data is None:
-        raise HTTPException(status_code=404, detail="Week not found")
+    week_data = _week_data(training_plan, payload.week)
     day_data = next(
         (d for d in week_data.get("daily_workouts", []) if d.get("day") == payload.day),
         None,
@@ -323,21 +330,9 @@ async def intervals_push_workout(
         raise HTTPException(status_code=404, detail="Day not found")
 
     try:
-        workout = build_intervals_workout(day_data)
+        event = build_event(training_plan, payload.week, payload.day, day_data)
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
-
-    event = {
-        "category": "WORKOUT",
-        "type": "Run",
-        "start_date_local": _workout_start_date_local(
-            training_plan, payload.week, payload.day
-        ),
-        "name": workout["name"],
-        "description": workout["description"],
-        "moving_time": workout["moving_time"],
-        "external_id": f"runcoach-{training_plan.id}-{payload.week}-{payload.day}",
-    }
 
     try:
         created = await intervals_service.push_workout(
@@ -363,11 +358,94 @@ async def intervals_push_workout(
             detail="Couldn't send to Intervals.icu. Please try again.",
         ) from push_error
 
+    mark_plan_pushed(training_plan, db)
     event_id = created.get("id") if isinstance(created, dict) else None
     return IntervalsPushResponse(
         ok=True,
         event_id=event_id,
         message="Sent to your watch — it will sync to Garmin shortly.",
+    )
+
+
+@intervals_router.post("/push-week", response_model=IntervalsPushWeekResponse)
+async def intervals_push_week(
+    payload: IntervalsPushWeekRequest,
+    request: Request,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+    intervals_service: IntervalsService = Depends(get_intervals_service),
+):
+    """Push every sendable workout in one plan week to the athlete's calendar.
+
+    The whole week goes up in a single bulk request, so a five-run week costs one
+    round trip instead of five button presses. Days with nothing to send (rest,
+    or no structured steps and no distance) are skipped rather than failing the
+    batch — a week is normally a mix of both.
+    """
+    intervals_push_limiter.check(request)
+    _require_connected(current_user)
+
+    training_plan = get_plan_or_404(
+        payload.plan_id, db, current_user, require_user_match=True
+    )
+    week_data = _week_data(training_plan, payload.week)
+
+    events: list[dict] = []
+    skipped = 0
+    for day_data in week_data.get("daily_workouts", []):
+        day = day_data.get("day")
+        if not isinstance(day, int):
+            skipped += 1
+            continue
+        try:
+            events.append(build_event(training_plan, payload.week, day, day_data))
+        except ValueError:
+            skipped += 1
+
+    if not events:
+        return IntervalsPushWeekResponse(
+            ok=True,
+            sent=0,
+            skipped=skipped,
+            message="Nothing to send this week — it's all rest days.",
+        )
+
+    try:
+        created = await intervals_service.push_workouts(
+            current_user.intervals_access_token,
+            current_user.intervals_athlete_id,
+            events,
+        )
+    except IntervalsAuthorizationError as authorization_error:
+        logger.warning(
+            "Intervals.icu week push unauthorized for user %s", current_user.id
+        )
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=(
+                "Reconnect Intervals.icu and grant calendar access to send "
+                "workouts to your watch."
+            ),
+        ) from authorization_error
+    except Exception as push_error:
+        logger.error(
+            "Intervals.icu week push failed for user %s: %s",
+            current_user.id,
+            push_error,
+        )
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail="Couldn't send to Intervals.icu. Please try again.",
+        ) from push_error
+
+    mark_plan_pushed(training_plan, db)
+    sent = len(created) or len(events)
+    session_word = "session" if sent == 1 else "sessions"
+    return IntervalsPushWeekResponse(
+        ok=True,
+        sent=sent,
+        skipped=skipped,
+        message=f"{sent} {session_word} sent — syncing to your watch shortly.",
     )
 
 

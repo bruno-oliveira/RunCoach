@@ -1,6 +1,7 @@
 """Plan generation and customization endpoints."""
 
 import logging
+from datetime import date, datetime
 from typing import Optional
 
 from fastapi import APIRouter, Cookie, Depends, Form, HTTPException, Request, Response
@@ -32,7 +33,7 @@ from app.exceptions import (
     ZeroMileageUnsupportedException,
 )
 from app.infrastructure.config import settings
-from app.models import User
+from app.models import TrainingPlan, User
 from app.rate_limit import plan_generation_limiter
 from app.schemas import PlanRequest
 from app.template_helpers import create_templates
@@ -74,6 +75,32 @@ def _extract_validation_message(exc: ValidationError) -> Optional[str]:
 def _is_truthy(value: Optional[str]) -> bool:
     """Interpret an HTML form/checkbox value as a boolean."""
     return (value or "").lower() in ("on", "true", "1", "yes")
+
+
+def _apply_start_date(
+    training_plan: TrainingPlan, raw: Optional[str], db: Session
+) -> None:
+    """Set the plan's start date from the creation form's ``start_date`` field.
+
+    A plan without a start date has no calendar: no "This Week", no run-to-workout
+    mapping, no adaptation, and no correct dates to put on a watch. Collecting it
+    at creation means every plan is born on the calendar instead of waiting for
+    the runner to notice the banner on the plan page.
+
+    Deliberately forgiving — a missing or unparseable value simply leaves the
+    plan dateless, which is the pre-existing state the banner already handles.
+    An existing date is never overwritten, so returning a duplicate plan keeps
+    the schedule the runner is already training against.
+    """
+    if not raw or training_plan.start_date is not None:
+        return
+    try:
+        parsed = date.fromisoformat(raw.strip())
+    except (AttributeError, ValueError):
+        logger.info("Ignoring unparseable start_date %r on plan creation", raw)
+        return
+    training_plan.start_date = datetime.combine(parsed, datetime.min.time())
+    db.commit()
 
 
 def _plan_request_from_form(
@@ -225,6 +252,7 @@ async def generate_plan(
     goal_time_required: Optional[str] = Form(None),
     current_time: Optional[str] = Form(None),
     max_heart_rate: Optional[str] = Form(None),
+    start_date: Optional[str] = Form(None),
     anonymous_user_id: Optional[str] = Cookie(None),
     db: Session = Depends(get_db),
     current_user: Optional[User] = Depends(get_optional_user),
@@ -246,6 +274,7 @@ async def generate_plan(
             goal_time=goal_time_required or "",
             current_time=current_time,
             max_heart_rate=hr_max,
+            start_date=start_date,
             current_user=current_user,
             db=db,
             plan_service=plan_service,
@@ -313,6 +342,7 @@ async def generate_plan(
             plan_generator,
             nutrition_engine,
         )
+        _apply_start_date(training_plan, start_date, db)
 
         return RedirectResponse(url=f"/plan/{training_plan.id}", status_code=303)
 
@@ -347,6 +377,7 @@ async def _generate_time_goal_plan(
     goal_time: str,
     current_time: Optional[str],
     max_heart_rate: Optional[int],
+    start_date: Optional[str],
     current_user: Optional[User],
     db: Session,
     plan_service: PlanService,
@@ -394,6 +425,7 @@ async def _generate_time_goal_plan(
             runs_per_week=runs_per_week,
             max_heart_rate=max_heart_rate,
         )
+        _apply_start_date(training_plan, start_date, db)
 
         return RedirectResponse(url=f"/plan/{training_plan.id}", status_code=303)
 

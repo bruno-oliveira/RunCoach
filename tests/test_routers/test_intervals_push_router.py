@@ -1,4 +1,4 @@
-"""Endpoint tests for POST /api/intervals/push-workout (send to watch)."""
+"""Endpoint tests for the send-to-watch push endpoints."""
 
 from unittest.mock import AsyncMock, patch
 
@@ -12,6 +12,9 @@ from app.models import TrainingPlan, User
 
 _PUSH_PATH = (
     "app.infrastructure.integrations.intervals_service.IntervalsService.push_workout"
+)
+_PUSH_MANY_PATH = (
+    "app.infrastructure.integrations.intervals_service.IntervalsService.push_workouts"
 )
 
 
@@ -158,6 +161,86 @@ def test_push_unknown_day_is_404(push_client, owner, plan):
     response = push_client.post(
         "/api/intervals/push-workout",
         json={"plan_id": plan.id, "week": 1, "day": 5},
+    )
+    assert response.status_code == 404
+
+
+def test_push_marks_plan_as_on_the_watch(push_client, test_db, owner, plan):
+    # watch_synced_at is what later authorises an automatic re-push after an
+    # adaptation, so a successful send has to set it.
+    _set_user(owner)
+    assert plan.watch_synced_at is None
+    with patch(_PUSH_PATH, new_callable=AsyncMock, return_value={"id": 1}):
+        push_client.post(
+            "/api/intervals/push-workout",
+            json={"plan_id": plan.id, "week": 1, "day": 3},
+        )
+    test_db.refresh(plan)
+    assert plan.watch_synced_at is not None
+
+
+def test_push_week_sends_every_sendable_day_in_one_call(push_client, owner, plan):
+    _set_user(owner)
+    with patch(
+        _PUSH_MANY_PATH, new_callable=AsyncMock, return_value=[{"id": 1}]
+    ) as mock:
+        response = push_client.post(
+            "/api/intervals/push-week",
+            json={"plan_id": plan.id, "week": 1},
+        )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["ok"] is True
+    assert body["sent"] == 1
+    # The rest day is skipped rather than failing the batch.
+    assert body["skipped"] == 1
+
+    mock.assert_awaited_once()
+    _, _, events = mock.await_args.args
+    assert [e["external_id"] for e in events] == ["runcoach-push-plan-1-1-3"]
+
+
+def test_push_week_all_rest_sends_nothing(push_client, test_db, owner):
+    rest_only = TrainingPlan(
+        id="push-plan-rest",
+        user_id=owner.id,
+        current_weekly_km=10,
+        target_distance="10",
+        weeks_duration=4,
+        plan_data=[
+            {"week": 1, "daily_workouts": [{"day": 1, "type": "rest", "distance": 0}]}
+        ],
+    )
+    test_db.add(rest_only)
+    test_db.commit()
+
+    _set_user(owner)
+    with patch(_PUSH_MANY_PATH, new_callable=AsyncMock) as mock:
+        response = push_client.post(
+            "/api/intervals/push-week",
+            json={"plan_id": rest_only.id, "week": 1},
+        )
+
+    assert response.status_code == 200
+    assert response.json()["sent"] == 0
+    mock.assert_not_called()
+
+
+def test_push_week_requires_connection(push_client, plain_user, plan):
+    _set_user(plain_user)
+    response = push_client.post(
+        "/api/intervals/push-week",
+        json={"plan_id": plan.id, "week": 1},
+    )
+    assert response.status_code == 400
+
+
+def test_push_week_unknown_week_is_404(push_client, owner, plan):
+    _set_user(owner)
+    response = push_client.post(
+        "/api/intervals/push-week",
+        json={"plan_id": plan.id, "week": 99},
     )
     assert response.status_code == 404
 
