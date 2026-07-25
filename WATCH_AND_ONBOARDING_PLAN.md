@@ -2,6 +2,14 @@
 
 Follow-on to `c7cd422` (the Now lane). Written 2026-07-25.
 
+**Reading order for someone picking this up cold:** this doc is self-contained
+for *what to build*. The reasoning behind it — the cold onboarding walkthrough,
+the full evaluation of every route from a plan onto a wrist, and the vendor
+sources for the ruled-out options — is in the product audit that produced it.
+Sources for every external claim are cited there; nothing below rests on a
+sentence I couldn't attribute to Garmin, Intervals.icu, COROS or Runna's own
+documentation.
+
 The Now lane stopped the bleeding: adaptations now reach the watch, a week goes
 up in one press, the `.fit` button no longer promises an import Garmin doesn't
 have, and a plan is born with a calendar. What it did **not** do is change the
@@ -25,6 +33,49 @@ This document covers the rest.
 | Runs imported | manual button | **still manual** |
 
 The three bolded rows are what Next fixes.
+
+---
+
+## Where things live
+
+Everything watch-related, so nobody has to grep for it.
+
+| Concern | File |
+|---|---|
+| Mirror logic (window, event building, re-sync) | `app/application/watch_sync_service.py` |
+| Intervals HTTP client (`push_workouts`, pre-delete, OAuth, activity sync) | `app/infrastructure/integrations/intervals_service.py` |
+| Push endpoints (`push-workout`, `push-week`, connect, callback, status) | `app/web/routers/intervals.py` |
+| Plan-mutation call sites that trigger a re-sync | `app/web/routers/plan_adjustments.py` (`_resync_watch`) |
+| Auto-adjust after a sync | `app/infrastructure/integrations/strava_post_sync_service.py` (`auto_map_and_adjust`) |
+| Step model → Intervals workout text | `app/core/training/workout_steps/intervals_export.py` |
+| `.fit` generation (sideload escape hatch) | `app/infrastructure/integrations/fit_service.py` |
+| Per-workout ⌚ button | `app/web/templates/components/workout_item.html` |
+| Per-week send button | `app/web/templates/components/week_card.html` |
+| Watch-setup checklist + "what now" strip | `app/web/templates/plan.html` |
+| Landing hero, connect card, plan form | `app/web/templates/index.html` |
+| Button wiring (single + week) | `app/web/static/js/plan/plan_send_to_watch.js` |
+| Connect flow (`connectWatch`, sync panel) | `app/web/static/js/nav.js`, `app/web/static/js/auth.js` |
+| Button styles | `app/web/static/css/share.css` |
+| Tests | `tests/test_services/test_watch_sync_service.py`, `tests/test_routers/test_intervals_push_router.py`, `tests/test_services/test_intervals_service.py` |
+
+**Copy lives in three places and drifts easily.** Every user-facing string
+appears once inline in the template (the no-JS fallback) and once per locale in
+`app/web/static/js/i18n.js`, which carries an `en` and a `pt` block. Change one
+and you must change three, or the Portuguese silently keeps the old promise.
+This is most of why N3 is three hours rather than twenty minutes — find the
+keys with `grep -n "'watchsetup\.\|'week\.send_week'" app/web/static/js/i18n.js`.
+
+**Migrations.** Alembic, `alembic/versions/`, convention `NNN_short_name.py`,
+each declaring `down_revision` explicitly. Latest is `026_add_plan_watch_synced_at`,
+so N1's is `027`. They run at startup from `app/main.py` — no manual step in
+deploy, but a bad migration takes the boot down with it. Check with
+`python3 -m alembic heads`.
+
+**Exercising it against real Intervals.** `/admin` (`app/web/routers/admin.py`,
+gated by `settings.admin_email`) already previews the workout text a plan day
+produces and pushes it through the normal endpoint. That is the surface for
+answering the open questions below — extend it rather than building throwaway
+scripts.
 
 ---
 
@@ -59,10 +110,29 @@ to a real reconciliation.
    - missing → create
    - hash changed → delete + create (the delete is what re-triggers the Garmin
      export; `_delete_existing_events` already does this correctly — preserve it)
-   - present in Intervals, absent from the plan → **delete**. This is the ghost
-     fix: a day that becomes rest, or moves Thursday→Saturday, currently leaves
-     its old event behind forever.
+   - **ours**, present in Intervals, absent from the plan → delete. This is the
+     ghost fix: a day that becomes rest, or moves Thursday→Saturday, currently
+     leaves its old event behind forever.
 3. Nightly pass rolls the window forward. Depends on N4.
+
+> ### ⚠️ Read this before writing the delete branch
+>
+> The runner's Intervals calendar is **theirs**, not ours. It holds their own
+> workouts, their coach's, and events from every other app they've connected.
+>
+> **Only ever delete an event whose `external_id` starts with
+> `runcoach-{plan_id}-`.** Never "delete everything in the window that isn't in
+> the plan" — that reads naturally from the rule above and would wipe a
+> stranger's training week. The current `_delete_existing_events` is safe
+> because it matches against an explicit set of our own ids; any rewrite must
+> keep that property.
+>
+> Two events can also legitimately share a date, and a runner may have manually
+> edited one of our events in Intervals — deleting that is acceptable (we own
+> the id), deleting the one next to it is not.
+>
+> Make this a test before it's a feature: seed a foreign `external_id` in the
+> window and assert the reconciler leaves it untouched.
 
 **Failure surface.** One banner on the plan — *"Your watch is 2 sessions behind"*
 with a Retry — not a toast that vanishes. A revoked token becomes *"Reconnect to
@@ -70,6 +140,19 @@ keep your watch in sync"*, not a 401 in the log.
 
 **Watch for:** Intervals rate limits are undocumented. The content hash is the
 mitigation; measure before the nightly job goes wide.
+
+**Done when**
+
+- A foreign `external_id` seeded in the window survives a reconcile. *(Write
+  this test first — see the hazard note.)*
+- Turning a scheduled day into rest removes its event; no assertion on the
+  runner's other events changes.
+- Moving a workout Thursday→Saturday leaves exactly one event, on Saturday.
+- Reconciling an unchanged plan twice issues **zero** writes the second time
+  (the hash check works).
+- A plan with `watch_sync_enabled = false` is never touched.
+- Extend `tests/test_services/test_watch_sync_service.py` — the fixtures
+  (`pushed_plan`, `_FakeIntervals`, `use_test_session`) already cover the setup.
 
 ---
 
@@ -92,9 +175,18 @@ toast on a *calendar write*, which is not the same as reaching the watch.
   whether it's on the wrist and at which revision. The current `is-sent` class is
   browser-session-only and lost on reload.
 
-**Spike first:** we already `GET /athlete/{id}` for HR settings. Log the full
-payload once — if it exposes Garmin/COROS link state, the wizard can verify
-outright instead of asking.
+**Spike first:** we already `GET /athlete/{id}` for HR settings
+(`IntervalsService.fetch_athlete_settings`). Log the full payload once — if it
+exposes Garmin/COROS link state, the wizard can verify outright instead of asking.
+
+**Done when**
+
+- The plan page states a count read back from Intervals, not a count of button
+  presses — and it survives a page reload.
+- A revoked token produces "Reconnect to keep your watch in sync" in the UI, not
+  a silent 401. *(Reproduce by clearing `intervals_access_token` on the user.)*
+- A new runner cannot reach a "sent!" toast without having passed the verify
+  step.
 
 ---
 
@@ -186,14 +278,20 @@ Not worth pursuing while Intervals covers five ecosystems for free.
 
 ## Open questions to settle before building
 
-1. **Retro-push on enable.** When a runner ticks "Upload planned workouts" *after*
-   we've written events, does Intervals push the existing ones or only new ones?
-   Design defensively either way: always re-mirror once the N2 wizard completes.
-2. **Intervals rate limits.** Undocumented. Measure before the nightly job.
-3. **Connected-service visibility.** Does `/athlete/{id}` expose Garmin/COROS link
-   state? Determines whether N2 can verify or must ask.
-4. **Non-Garmin parity.** Confirm the ~7-day window and create-vs-update export
-   behaviour hold for COROS, Wahoo and Suunto before N3 promises them in the UI.
+Each of these needs a real answer from the platform, not a guess. All four are
+answerable from `/admin` plus one Garmin account — budget half a day.
+
+| # | Question | How to answer it | Blocks |
+|---|---|---|---|
+| 1 | **Retro-push on enable.** When a runner ticks "Upload planned workouts" *after* we've written events, does Intervals forward the existing ones or only new ones? | Untick the toggle in Intervals settings, push a week from `/admin`, re-tick it, and watch whether Garmin Connect receives the existing events. | N2's wizard ordering |
+| 2 | **Rate limits.** Undocumented for third-party OAuth apps. | Push a 21-day window repeatedly from `/admin` and watch for 429s / throttling headers. Ask on the Intervals forum — the maintainer answers directly. | N1's nightly job |
+| 3 | **Connected-service visibility.** Does `/athlete/{id}` expose Garmin/COROS link state or the upload toggle? | Log the full payload in `fetch_athlete_settings` once (it's already called on every sync) and read it. | Whether N2 verifies or asks |
+| 4 | **Non-Garmin parity.** Do the ~7-day window and create-vs-update export behaviour hold for COROS, Wahoo and Suunto? | No hardware needed for the negative case: check the Intervals forum and settings UI for per-platform options. A borrowed COROS would confirm. | N3's claims in the UI |
+
+**If a question can't be answered, design defensively rather than blocking:**
+always re-mirror after the wizard (covers #1), keep the content hash so volume
+stays low (covers #2), ask the runner instead of verifying (covers #3), and name
+only Garmin until confirmed (covers #4).
 
 ---
 
