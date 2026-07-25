@@ -202,6 +202,73 @@ class IntervalsService:
             raise_for_intervals_status(response)
             return parse_athlete_hr_settings(response.json())
 
+    async def fetch_events(
+        self,
+        access_token: str,
+        athlete_id: str,
+        oldest: str,
+        newest: str,
+    ) -> list[dict[str, Any]]:
+        """List the athlete's calendar events between two ISO dates.
+
+        The reconciler's read half. Knowing what is *actually* on the calendar is
+        what separates "we pushed this once" from "this is on the runner's
+        watch" — and it is how we find our own stale events to clean up.
+        """
+        async with httpx.AsyncClient(timeout=INTERVALS_TIMEOUT) as client:
+            response = await client.get(
+                f"{INTERVALS_API_BASE}/athlete/{athlete_id}/events",
+                headers={"Authorization": f"Bearer {access_token}"},
+                params={"oldest": oldest, "newest": newest},
+            )
+            raise_for_intervals_status(response)
+            events = response.json()
+            return events if isinstance(events, list) else []
+
+    async def delete_events(
+        self,
+        access_token: str,
+        athlete_id: str,
+        event_ids: list[Any],
+    ) -> int:
+        """Delete calendar events by Intervals.icu id; returns how many went.
+
+        This deletes whatever it is given. The calendar belongs to the runner —
+        it holds their own workouts, their coach's, and events from every other
+        app they have connected — so establishing that an id is RunCoach's is
+        the *caller's* job. See ``watch_sync_service.owns_event``, which is the
+        only thing standing between this method and a stranger's training week.
+
+        A dead token fails the whole batch fast (nothing else would work
+        either); any other per-event failure is logged and skipped, since a
+        calendar we can't fully tidy is better than one we abandon halfway.
+        """
+        if not event_ids:
+            return 0
+        base = f"{INTERVALS_API_BASE}/athlete/{athlete_id}/events"
+        headers = {"Authorization": f"Bearer {access_token}"}
+        deleted = 0
+        async with httpx.AsyncClient(timeout=INTERVALS_TIMEOUT) as client:
+            for event_id in event_ids:
+                response = await client.delete(f"{base}/{event_id}", headers=headers)
+                if response.status_code in (
+                    httpx.codes.UNAUTHORIZED,
+                    httpx.codes.FORBIDDEN,
+                ):
+                    raise IntervalsAuthorizationError(
+                        "Intervals.icu authorization is invalid or missing "
+                        "CALENDAR:WRITE"
+                    )
+                if response.status_code >= 400:
+                    logger.warning(
+                        "Intervals.icu delete of event %s failed with %s",
+                        event_id,
+                        response.status_code,
+                    )
+                    continue
+                deleted += 1
+        return deleted
+
     async def _delete_existing_events(
         self,
         client: httpx.AsyncClient,
@@ -249,6 +316,7 @@ class IntervalsService:
         access_token: str,
         athlete_id: str,
         events: list[dict[str, Any]],
+        pre_delete: bool = True,
     ) -> list[dict[str, Any]]:
         """Create planned workouts on the athlete's calendar in one request.
 
@@ -267,6 +335,11 @@ class IntervalsService:
             athlete_id: The athlete's Intervals.icu id.
             events: Calendar event dicts (category/type/start_date_local/name/
                 description/external_id/...).
+            pre_delete: Look up and remove same-``external_id`` events first.
+                Leave it on for one-off sends. The reconciler turns it off
+                because it has already fetched the window and deleted precisely
+                what changed — repeating that here would cost a second lookup
+                per push and delete events it deliberately kept.
 
         Returns:
             The created event dicts from Intervals.icu, or [] when ``events`` is
@@ -281,7 +354,7 @@ class IntervalsService:
             str(e["external_id"]) for e in events if e.get("external_id") is not None
         }
         async with httpx.AsyncClient(timeout=INTERVALS_TIMEOUT) as client:
-            if dates and external_ids:
+            if pre_delete and dates and external_ids:
                 await self._delete_existing_events(
                     client, athlete_id, access_token, dates[0], dates[-1], external_ids
                 )

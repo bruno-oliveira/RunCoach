@@ -243,7 +243,7 @@
     color: var(--color-primary, #1D4ED8);
 }
 
-/* ── Send-to-watch icon (Garmin push via Intervals.icu) ── */
+/* ── Send-to-watch icon (Garmin/COROS/Wahoo/Suunto/Zwift via Intervals.icu) ── */
 .send-to-watch-btn {
     display: inline-flex;
     align-items: center;

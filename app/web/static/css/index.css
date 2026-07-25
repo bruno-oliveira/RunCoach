@@ -267,7 +267,7 @@
 .connect-card-manual svg { transition: transform var(--duration-base) var(--ease-out); }
 .connect-card-manual:hover svg { transform: translateX(3px); }
 
-/* ---- Intervals → Garmin prerequisite checklist ---- */
+/* ---- Intervals → watch prerequisite checklist ---- */
 .connect-checklist {
     margin-top: var(--space-5);
     padding-top: var(--space-5);

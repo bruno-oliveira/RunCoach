@@ -14,6 +14,7 @@ from app.core.training.plan_calendar import (
     workout_dates,
 )
 from app.core.training.strength_plan import derive_experience_level
+from app.core.training.watch_mirror import sessions_behind, synced_day_keys
 from app.infrastructure.config import settings
 from app.models import RunFeedback, RunLog, TrainingPlan, User, WeeklyPlan
 
@@ -115,6 +116,15 @@ def plan_view_context(
         "long_run_warning": long_run_warning,
         "frequency_warning": frequency_warning,
         "intervals_connected": bool(current_user and current_user.intervals_athlete_id),
+        # Watch-mirror state, read from what we last put on the calendar rather
+        # than from a browser flag, so it survives a reload.
+        "watch_sync_enabled": bool(training_plan.watch_sync_enabled),
+        "watch_sessions_behind": sessions_behind(training_plan, today=today_obj),
+        "watch_sync_error": training_plan.watch_sync_error,
+        "watch_synced_days": synced_day_keys(training_plan),
+        "watch_setup_confirmed": bool(
+            current_user and current_user.watch_setup_confirmed_at
+        ),
     }
     ctx.update(extra)
     return ctx

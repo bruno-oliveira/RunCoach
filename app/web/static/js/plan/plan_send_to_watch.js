@@ -1,46 +1,60 @@
 /**
  * Send-to-watch button wiring.
  *
- * Each workout card carries a `.send-to-watch-btn` (next to the .fit download
- * button). Clicking it POSTs the workout to the user's Intervals.icu calendar,
- * which forwards it to Garmin Connect automatically. When the user hasn't
- * connected Intervals.icu yet, the button kicks off the OAuth connect flow.
+ * Each workout card carries a `.send-to-watch-btn` and each week card a
+ * `.send-week-btn`. Clicking one POSTs to the user's Intervals.icu calendar,
+ * which forwards planned workouts on to Garmin, COROS, Wahoo, Suunto or Zwift.
+ * When the user hasn't connected Intervals.icu yet, the button kicks off the
+ * OAuth connect flow.
+ *
+ * The setup gate: two toggles inside Intervals.icu decide whether a planned
+ * workout ever leaves the calendar, and they live on a platform whose state we
+ * can't read. So the checklist is shown *before* the first send and the send
+ * waits behind it — previously it appeared afterwards, which meant the first
+ * thing a runner with an unconfigured Intervals account saw was a "sent!" toast
+ * for a workout that was never going to reach their wrist.
  *
  * Auth is cookie-based (credentials: 'same-origin'); there is no CSRF token.
  */
 (function () {
     'use strict';
 
-    // The Intervals connection is one click, but forwarding to Garmin needs two
-    // toggles inside Intervals.icu we can't automate. We reveal the setup
-    // checklist (#watch-setup) once, the first time a send succeeds — that's
-    // when "will this actually reach my watch?" is top of mind. Persisted so it
-    // doesn't nag on every visit; re-openable via window.showWatchSetup().
-    var SETUP_SEEN_KEY = 'rc_watch_setup_seen';
+    // The send the runner asked for, held while the setup wizard is up.
+    var pendingSend = null;
 
-    function setupSeen() {
-        try { return localStorage.getItem(SETUP_SEEN_KEY) === '1'; } catch (e) { return false; }
+    function t(key, fallback) {
+        if (window.RC_I18N && typeof window.RC_I18N.t === 'function') {
+            var value = window.RC_I18N.t(key);
+            if (value && value !== key) return value;
+        }
+        return fallback;
     }
 
-    function markSetupSeen() {
-        try { localStorage.setItem(SETUP_SEEN_KEY, '1'); } catch (e) { /* ignore */ }
+    function mirrorPanel() {
+        return document.getElementById('watch-mirror');
     }
 
-    // Reveal the checklist and bring it into view. `force` re-opens it even if
-    // the user has seen (and dismissed) it before.
-    window.showWatchSetup = function (force) {
+    // Server-rendered from `User.watch_setup_confirmed_at`, so it survives a
+    // reload and a new device — unlike the localStorage flag this replaced.
+    // Absent panel (a completed plan) means we have nothing to check, so don't
+    // stand in the runner's way.
+    function setupConfirmed() {
+        var el = mirrorPanel();
+        return !el || el.dataset.setupConfirmed === '1';
+    }
+
+    // Reveal the checklist and bring it into view.
+    window.showWatchSetup = function () {
         var panel = document.getElementById('watch-setup');
         if (!panel) return;
-        if (!force && setupSeen()) return;
         panel.hidden = false;
         panel.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        markSetupSeen();
     };
 
     window.dismissWatchSetup = function () {
         var panel = document.getElementById('watch-setup');
         if (panel) panel.hidden = true;
-        markSetupSeen();
+        pendingSend = null;
     };
 
     function toast(kind, message) {
@@ -75,6 +89,39 @@
         }
     }
 
+    // Records the runner's word that both Intervals.icu toggles are set, then
+    // releases the send that was waiting on it. A failed record keeps the wizard
+    // up rather than proceeding: otherwise the gate would silently reappear on
+    // their next visit with no explanation.
+    window.confirmWatchSetup = async function () {
+        try {
+            var resp = await fetch('/api/intervals/watch-setup-confirm', {
+                method: 'POST',
+                headers: headers(),
+                credentials: 'same-origin',
+            });
+            if (!resp.ok) throw new Error('confirm failed');
+        } catch (e) {
+            toast('Error', t('watchsetup.confirm_failed', "Couldn't save that. Try again."));
+            return;
+        }
+
+        var el = mirrorPanel();
+        if (el) el.dataset.setupConfirmed = '1';
+        var queued = pendingSend;
+        window.dismissWatchSetup();
+        if (queued) queued.run(queued.btn);
+    };
+
+    // Returns true when the send may proceed; otherwise queues it behind the
+    // setup wizard.
+    function gateOnSetup(run, btn) {
+        if (setupConfirmed()) return true;
+        pendingSend = { run: run, btn: btn };
+        window.showWatchSetup();
+        return false;
+    }
+
     async function sendWorkout(btn) {
         var planId = window.APP_CTX && window.APP_CTX.plan_id;
         var week = parseInt(btn.dataset.week, 10);
@@ -102,12 +149,11 @@
                 btn.classList.add('is-sent');
                 toast(
                     'Success',
-                    data.message || 'Sent to your watch — syncing to Garmin shortly.'
+                    data.message || t('watchmirror.sent', 'Sent — syncing to your watch shortly.')
                 );
-                // First successful send: show the one-time Garmin setup checklist
-                // so the two Intervals toggles land before they wonder why the
-                // watch is empty. No-ops on later sends.
-                window.showWatchSetup();
+                if (typeof window.refreshWatchStatus === 'function') {
+                    window.refreshWatchStatus();
+                }
             } else if (resp.status === 401) {
                 toast(
                     'Error',
@@ -155,7 +201,7 @@
             }
             if (resp.ok) {
                 btn.classList.add('is-sent');
-                toast('Success', data.message || 'Week sent to your watch.');
+                toast('Success', data.message || t('week.sent', 'Week sent to your watch.'));
                 // Mark the week's per-workout buttons so the card matches what
                 // actually went out.
                 var card = btn.closest('.week-card');
@@ -164,7 +210,9 @@
                         b.classList.add('is-sent');
                     });
                 }
-                window.showWatchSetup();
+                if (typeof window.refreshWatchStatus === 'function') {
+                    window.refreshWatchStatus();
+                }
             } else if (resp.status === 401) {
                 toast('Error', data.detail || 'Reconnect Intervals.icu (grant calendar access) to send.');
                 startConnect();
@@ -190,11 +238,9 @@
             startConnect();
             return;
         }
-        if (btn.classList.contains('send-week-btn')) {
-            sendWeek(btn);
-            return;
-        }
-        sendWorkout(btn);
+        var run = btn.classList.contains('send-week-btn') ? sendWeek : sendWorkout;
+        if (!gateOnSetup(run, btn)) return;
+        run(btn);
     }
 
     function bind() {

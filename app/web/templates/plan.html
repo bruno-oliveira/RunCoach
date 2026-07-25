@@ -194,7 +194,7 @@
                 <span class="whatnow-card-icon" aria-hidden="true"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="6" width="12" height="12" rx="3"/><path d="M9 6l.5-3h5l.5 3"/><path d="M9 18l.5 3h5l.5-3"/><path d="M12 10v2.5l1.5 1"/></svg></span>
                 <span class="whatnow-card-body">
                     <strong data-i18n="plan.whatnow_send_title">Send this week to your watch</strong>
-                    <span data-i18n="plan.whatnow_send_desc">Push each session to Garmin via Intervals.icu.</span>
+                    <span data-i18n="plan.whatnow_send_desc">Push each session to your watch via Intervals.icu.</span>
                 </span>
             </button>
             {% else %}
@@ -202,7 +202,7 @@
                 <span class="whatnow-card-icon" aria-hidden="true"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="6" width="12" height="12" rx="3"/><path d="M9 6l.5-3h5l.5 3"/><path d="M9 18l.5 3h5l.5-3"/><path d="M12 10v2.5l1.5 1"/></svg></span>
                 <span class="whatnow-card-body">
                     <strong data-i18n="plan.whatnow_send_title">Send this week to your watch</strong>
-                    <span data-i18n="plan.whatnow_send_desc">Push each session to Garmin via Intervals.icu.</span>
+                    <span data-i18n="plan.whatnow_send_desc">Push each session to your watch via Intervals.icu.</span>
                 </span>
             </button>
             <a class="whatnow-card" href="/analytics?plan={{ training_plan.id }}&amp;tab=today">
@@ -217,32 +217,93 @@
     </div>
     {% endif %}
 
-    {# ── One-time "finish watch setup" checklist ─────────────────────────
-       The Intervals connection is one click, but forwarding workouts to a
-       Garmin needs two toggles inside Intervals.icu that we can't automate.
-       Revealed once (by plan_send_to_watch.js) after the first successful
-       send, so the guidance lands exactly when "will it reach my watch?"
-       matters — with the account-free .fit download as the fallback. #}
+    {# ── Watch mirror status ─────────────────────────────────────────────
+       A calendar write is not the same event as a workout reaching the wrist,
+       so this reports what is actually on the runner's Intervals.icu calendar
+       rather than how many times a button was pressed. Rendered from the
+       stored mirror state (correct on first paint, survives a reload), then
+       plan_watch_sync.js swaps in the count it reads back. #}
+    {% if user and not plan_completed %}
+    <div class="watch-mirror" id="watch-mirror"
+         data-plan-id="{{ training_plan.id }}"
+         data-connected="{{ '1' if intervals_connected else '0' }}"
+         data-sync-enabled="{{ '1' if watch_sync_enabled else '0' }}"
+         data-setup-confirmed="{{ '1' if watch_setup_confirmed else '0' }}"
+         data-behind="{{ watch_sessions_behind }}"
+         data-error="{{ watch_sync_error or '' }}"
+         data-synced-at="{{ training_plan.watch_synced_at.isoformat() if training_plan.watch_synced_at else '' }}"
+         role="region" aria-label="Watch sync">
+        {% if watch_sync_error == 'auth' %}
+        <div class="watch-mirror-row is-warning">
+            <span class="watch-mirror-icon" aria-hidden="true">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+            </span>
+            <span class="watch-mirror-text" data-i18n="watchmirror.reconnect">Reconnect to keep your watch in sync</span>
+            <button type="button" class="watch-mirror-action" onclick="connectWatch()" data-i18n="watchmirror.reconnect_cta">Reconnect</button>
+        </div>
+        {% elif watch_sync_enabled and (watch_sessions_behind > 0 or watch_sync_error) %}
+        <div class="watch-mirror-row is-warning">
+            <span class="watch-mirror-icon" aria-hidden="true">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+            </span>
+            <span class="watch-mirror-text" id="watch-mirror-behind">
+                {% if watch_sessions_behind == 1 %}<span data-i18n="watchmirror.behind_one">Your watch is 1 session behind</span>
+                {% else %}Your watch is {{ watch_sessions_behind }} sessions behind{% endif %}
+            </span>
+            <button type="button" class="watch-mirror-action" onclick="retryWatchSync()" data-i18n="watchmirror.retry">Retry</button>
+        </div>
+        {% elif watch_sync_enabled %}
+        <div class="watch-mirror-row is-ok">
+            <span class="watch-mirror-icon" aria-hidden="true">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+            </span>
+            <span class="watch-mirror-text" id="watch-mirror-status" data-i18n="watchmirror.keeping">Keeping your watch in sync</span>
+            <a class="watch-mirror-link" href="https://intervals.icu/calendar" target="_blank" rel="noopener" data-i18n="watchmirror.view_calendar">View calendar</a>
+            <button type="button" class="watch-mirror-off" onclick="setWatchSync(false)" data-i18n="watchmirror.turn_off">Turn off</button>
+        </div>
+        {% elif intervals_connected %}
+        <div class="watch-mirror-row">
+            <span class="watch-mirror-icon" aria-hidden="true">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="6" width="12" height="12" rx="3"/><path d="M9 6l.5-3h5l.5 3"/><path d="M9 18l.5 3h5l.5-3"/><path d="M12 10v2.5l1.5 1"/></svg>
+            </span>
+            <span class="watch-mirror-text" data-i18n="watchmirror.offer">Keep my watch in sync &mdash; every session, updated when the plan changes</span>
+            <button type="button" class="watch-mirror-action" onclick="setWatchSync(true)" data-i18n="watchmirror.turn_on">Turn on</button>
+        </div>
+        {% endif %}
+    </div>
+    {% endif %}
+
+    {# ── Watch setup gate ────────────────────────────────────────────────
+       Two toggles inside Intervals.icu decide whether a planned workout ever
+       leaves the calendar, and they live on a platform we can't inspect. So
+       this is shown *before* the first send rather than after it: a "sent!"
+       toast to someone whose watch will stay empty is worse than one extra
+       screen. Opened by plan_send_to_watch.js when setup is unconfirmed. #}
     {% if user %}
     <div class="watch-setup" id="watch-setup" role="region" aria-label="Finish watch setup" hidden>
         <div class="watch-setup-head">
             <span class="watch-setup-eyebrow" data-i18n="watchsetup.eyebrow">Send to your watch</span>
             <button type="button" class="watch-setup-dismiss" onclick="dismissWatchSetup()" aria-label="Dismiss" data-i18n-aria="watchsetup.dismiss">&times;</button>
         </div>
-        <h3 class="watch-setup-title" data-i18n="watchsetup.title">Two toggles and every session lands on your Garmin</h3>
-        <p class="watch-setup-intro" data-i18n="watchsetup.intro">Your workout is on your Intervals.icu calendar. To make it flow to the watch automatically, set these once inside Intervals.icu:</p>
+        <h3 class="watch-setup-title" data-i18n="watchsetup.title">Two toggles and every session lands on your watch</h3>
+        <p class="watch-setup-intro" data-i18n="watchsetup.intro">Intervals.icu forwards planned workouts to your watch, but only once you&rsquo;ve told it where to send them. Set these two once:</p>
         <ol class="watch-setup-steps">
             <li class="watch-setup-step">
                 <span class="watch-setup-step-num">1</span>
-                <span class="watch-setup-step-body" data-i18n-html="watchsetup.step1">Open <a href="https://intervals.icu/settings" target="_blank" rel="noopener">Settings &rarr; Connections</a> and link Garmin Connect.</span>
+                <span class="watch-setup-step-body" data-i18n-html="watchsetup.step1">Open <a href="https://intervals.icu/settings" target="_blank" rel="noopener">Settings &rarr; Connections</a> and link your watch platform &mdash; Garmin, COROS, Wahoo, Suunto or Zwift.</span>
             </li>
             <li class="watch-setup-step">
                 <span class="watch-setup-step-num">2</span>
-                <span class="watch-setup-step-body" data-i18n-html="watchsetup.step2">In that Garmin connection, tick <strong>&ldquo;Upload planned workouts&rdquo;</strong>.</span>
+                <span class="watch-setup-step-body" data-i18n-html="watchsetup.step2">In that connection, tick <strong>&ldquo;Upload planned workouts&rdquo;</strong>.</span>
             </li>
         </ol>
+        <div class="watch-setup-confirm">
+            <button type="button" class="watch-setup-confirm-btn" onclick="confirmWatchSetup()" data-i18n="watchsetup.confirm">I&rsquo;ve done both &mdash; send my sessions</button>
+            <button type="button" class="watch-setup-later" onclick="dismissWatchSetup()" data-i18n="watchsetup.later">Not now</button>
+        </div>
         <p class="watch-setup-tip" data-i18n-html="watchsetup.tip">Tip: set a <strong>Run threshold pace</strong> in Intervals.icu too &mdash; without it the watch shows &ldquo;No target&rdquo; for paced steps.</p>
-        <p class="watch-setup-fallback" data-i18n-html="watchsetup.fallback">Don&rsquo;t want to link Garmin? The <strong>&darr; .fit</strong> button downloads a session you can copy onto the watch over USB, into its <code>GARMIN/NewFiles</code> folder. Garmin Connect can&rsquo;t import workout files, so that route means a cable every time &mdash; the two steps above are the ones that keep working on their own.</p>
+        <p class="watch-setup-limit" data-i18n="watchsetup.limit">Polar and Apple Watch can&rsquo;t receive planned workouts from any app &mdash; you&rsquo;ll still get every session here in RunCoach.</p>
+        <p class="watch-setup-fallback" data-i18n-html="watchsetup.fallback">Prefer not to link anything? The <strong>&darr; .fit</strong> button downloads a session you can copy onto a Garmin over USB, into its <code>GARMIN/NewFiles</code> folder. Garmin Connect can&rsquo;t import workout files, so that route means a cable every time &mdash; the two steps above are the ones that keep working on their own.</p>
     </div>
     {% endif %}
 
@@ -1019,6 +1080,7 @@
 {% endif %}
 <script src="{{ static_url('js/plan/plan_core.js') }}" defer></script>
 <script src="{{ static_url('js/plan/plan_send_to_watch.js') }}" defer></script>
+<script src="{{ static_url('js/plan/plan_watch_sync.js') }}" defer></script>
 {% if user %}
 <script src="{{ static_url('js/readiness.js') }}" defer></script>
 <script src="{{ static_url('js/gap_analysis.js') }}" defer></script>

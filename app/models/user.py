@@ -57,6 +57,13 @@ class User(Base):
     intervals_max_hr: Mapped[int | None] = mapped_column(Integer, nullable=True)
     intervals_lthr: Mapped[int | None] = mapped_column(Integer, nullable=True)
     intervals_resting_hr: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    # When the runner confirmed they finished the two Intervals.icu toggles that
+    # forward planned workouts to their watch. Those toggles live on a platform
+    # we can't inspect, so this records what they told us — which is still far
+    # better than firing a "sent!" toast at someone whose watch will stay empty.
+    watch_setup_confirmed_at: Mapped[datetime | None] = mapped_column(
+        DateTime, nullable=True
+    )
 
     training_plans: Mapped[list["TrainingPlan"]] = relationship(
         "TrainingPlan", back_populates="user", cascade="all, delete-orphan"

@@ -46,7 +46,7 @@
         {# Whole-week push. The per-workout buttons stay for one-off re-sends,
            but this is the action a runner actually wants on a Sunday evening. #}
         {% if user %}
-        <button type="button" class="send-week-btn{% if not intervals_connected %} is-disconnected{% endif %}" data-week="{{ week.week }}" title="Send every session this week to your watch">
+        <button type="button" class="send-week-btn{% if not intervals_connected %} is-disconnected{% endif %}" data-week="{{ week.week }}" title="Send every session this week to your watch (Garmin, COROS, Wahoo, Suunto or Zwift via Intervals.icu)">
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="6" y="6" width="12" height="12" rx="3"/><path d="M9 6l.5-3h5l.5 3"/><path d="M9 18l.5 3h5l.5-3"/><path d="M12 10v2.5l1.5 1"/></svg>
             <span data-i18n="week.send_week">Send week to watch</span>
         </button>

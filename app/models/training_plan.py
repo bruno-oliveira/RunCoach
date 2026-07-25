@@ -79,11 +79,25 @@ class TrainingPlan(Base):
     # Monotonic counter bumped on every distance-mutating apply. Clients send
     # the revision they rendered with so the server can reject stale writes.
     adaptation_revision = Column(Integer, nullable=False, default=0, server_default="0")
-    # Set the first time any workout from this plan is pushed to the athlete's
-    # Intervals.icu calendar. Its presence — not its value — is what marks the
-    # plan as "on the watch", which is how we know a later adaptation has to be
-    # re-pushed rather than silently diverging from what the runner will run.
+    # When we last mirrored this plan onto the athlete's Intervals.icu calendar.
+    # Display only — `watch_sync_enabled` is what authorises a mirror.
     watch_synced_at = Column(DateTime, nullable=True)
+    # The runner's standing "keep my watch in sync" opt-in, set on the first
+    # send. It authorises the reconciler to create *and delete* events on their
+    # calendar, so an adaptation reaches the wrist instead of leaving the watch
+    # beeping out a session we've since changed.
+    watch_sync_enabled = Column(
+        Boolean, nullable=False, default=False, server_default="0"
+    )
+    # {external_id: hash of the event body we last pushed}. Two jobs: it makes
+    # re-mirroring idempotent (unchanged days cost no API writes), and it is our
+    # record of which calendar events are ours — the only events the reconciler
+    # is ever allowed to delete.
+    watch_event_hashes = Column(JSON, nullable=True)
+    # Why the last mirror failed ("auth" | "provider"), or None when it worked.
+    # The mirror runs in the background, so without this a revoked token is just
+    # a log line and a watch that quietly stops updating.
+    watch_sync_error = Column(String, nullable=True)
     share_token = Column(String, unique=True, nullable=True, index=True)
 
     user: Mapped["User"] = relationship("User", back_populates="training_plans")

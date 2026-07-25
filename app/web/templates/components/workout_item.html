@@ -8,10 +8,13 @@
     <div class="workout-type-row">
         <div class="workout-type">{{ workout.key_workout_name or (workout.type | replace('_', ' ') | title) }}</div>
         {% if workout.type != 'rest' and workout.distance and workout.distance > 0 %}
-        <button type="button" class="send-to-watch-btn{% if not intervals_connected %} is-disconnected{% endif %}" data-week="{{ week.week }}" data-day="{{ workout.day }}" title="Send to watch (Garmin via Intervals.icu)" aria-label="Send this workout to your Garmin watch">
+        {# is-sent comes from the stored content hash, not a click, so it stays
+           true across a reload and goes false again when the plan changes. #}
+        {% set on_watch = watch_synced_days is defined and watch_synced_days and (week.week, workout.day) in watch_synced_days %}
+        <button type="button" class="send-to-watch-btn{% if not intervals_connected %} is-disconnected{% endif %}{% if on_watch %} is-sent{% endif %}" data-week="{{ week.week }}" data-day="{{ workout.day }}" title="{% if on_watch %}On your watch — send again to refresh it{% else %}Send to your watch (via Intervals.icu){% endif %}" aria-label="{% if on_watch %}This workout is on your watch. Send again to refresh it.{% else %}Send this workout to your watch{% endif %}">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="6" width="12" height="12" rx="3"/><path d="M9 6l.5-3h5l.5 3"/><path d="M9 18l.5 3h5l.5-3"/><path d="M12 10v2.5l1.5 1"/></svg>
         </button>
-        <a class="download-fit-btn" href="/download-fit/{{ plan_id }}/{{ week.week }}/{{ workout.day }}" title="Download .fit — copy it to your watch over USB (Garmin Connect can't import workout files)" aria-label="Download this workout as a .fit file to copy onto your watch over USB">
+        <a class="download-fit-btn" href="/download-fit/{{ plan_id }}/{{ week.week }}/{{ workout.day }}" title="Download .fit — copy it to a Garmin over USB (Garmin Connect can't import workout files)" aria-label="Download this workout as a .fit file to copy onto your watch over USB">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
         </a>
         {% endif %}

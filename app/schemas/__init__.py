@@ -18,6 +18,9 @@ from app.schemas.intervals_schemas import (
     IntervalsPushWeekResponse,
     IntervalsStatusResponse,
     IntervalsSyncResponse,
+    WatchPlanRequest,
+    WatchStatusResponse,
+    WatchSyncToggleRequest,
 )
 from app.schemas.plan_schemas import (
     PerformancePlanRequest,
@@ -53,6 +56,9 @@ __all__ = [
     "IntervalsPushWeekResponse",
     "IntervalsStatusResponse",
     "IntervalsSyncResponse",
+    "WatchPlanRequest",
+    "WatchStatusResponse",
+    "WatchSyncToggleRequest",
     "PlanRequest",
     "PlanRequestBase",
     "PerformancePlanRequest",

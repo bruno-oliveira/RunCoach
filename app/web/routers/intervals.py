@@ -2,7 +2,7 @@
 
 import logging
 import secrets
-from datetime import timedelta
+from datetime import datetime, timedelta
 from typing import Optional
 
 from fastapi import (
@@ -20,14 +20,21 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.application.watch_sync_service import (
-    build_event,
-    mark_plan_pushed,
+    ERROR_AUTH,
+    record_pushed_events,
     resync_plan_to_watch,
 )
 from app.contexts.auth.auth_service import AuthService
 from app.contexts.auth.repositories import SQLAlchemyUserRepository
 from app.contexts.plan.adaptation import AdaptationService
 from app.contexts.plan.plan_helpers import get_plan_or_404
+from app.core.time_utils import local_today
+from app.core.training.watch_mirror import (
+    WINDOW_DAYS,
+    build_event,
+    owns_event,
+    sessions_behind,
+)
 from app.dependencies import (
     get_auth_service,
     get_current_user,
@@ -58,6 +65,9 @@ from app.schemas import (
     IntervalsPushWeekResponse,
     IntervalsStatusResponse,
     IntervalsSyncResponse,
+    WatchPlanRequest,
+    WatchStatusResponse,
+    WatchSyncToggleRequest,
 )
 from app.utils import TimestampAdapter
 from app.web.middleware import _cookie_secure
@@ -358,7 +368,7 @@ async def intervals_push_workout(
             detail="Couldn't send to Intervals.icu. Please try again.",
         ) from push_error
 
-    mark_plan_pushed(training_plan, db)
+    record_pushed_events(training_plan, [event], db)
     event_id = created.get("id") if isinstance(created, dict) else None
     return IntervalsPushResponse(
         ok=True,
@@ -438,7 +448,7 @@ async def intervals_push_week(
             detail="Couldn't send to Intervals.icu. Please try again.",
         ) from push_error
 
-    mark_plan_pushed(training_plan, db)
+    record_pushed_events(training_plan, events, db)
     sent = len(created) or len(events)
     session_word = "session" if sent == 1 else "sessions"
     return IntervalsPushWeekResponse(
@@ -447,6 +457,156 @@ async def intervals_push_week(
         skipped=skipped,
         message=f"{sent} {session_word} sent — syncing to your watch shortly.",
     )
+
+
+@intervals_router.post("/watch-sync")
+async def intervals_set_watch_sync(
+    payload: WatchSyncToggleRequest,
+    background_tasks: BackgroundTasks,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+    intervals_service: IntervalsService = Depends(get_intervals_service),
+):
+    """Turn the standing "keep my watch in sync" mirror on or off for a plan.
+
+    Switching it on mirrors immediately, so the runner sees the effect rather
+    than being told it will happen eventually. Switching it off only stops
+    future mirroring — the sessions already on the calendar stay, because
+    silently clearing someone's upcoming week off their watch is not what
+    "stop syncing" means.
+    """
+    training_plan = get_plan_or_404(
+        payload.plan_id, db, current_user, require_user_match=True
+    )
+    if payload.enabled:
+        _require_connected(current_user)
+
+    training_plan.watch_sync_enabled = payload.enabled
+    if not payload.enabled:
+        training_plan.watch_sync_error = None
+    db.commit()
+
+    if payload.enabled:
+        background_tasks.add_task(
+            resync_plan_to_watch,
+            str(training_plan.id),
+            str(current_user.id),
+            intervals_service,
+        )
+    return {"ok": True, "sync_enabled": payload.enabled}
+
+
+@intervals_router.post("/watch-setup-confirm")
+def intervals_confirm_watch_setup(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Record that the runner finished the two toggles inside Intervals.icu.
+
+    Those toggles live on a platform whose link state we cannot read (see the
+    open question about ``/athlete/{id}`` visibility), so this is the runner's
+    word rather than a verification. That is still the honest order: ask before
+    the first send, instead of firing a "sent!" toast at someone whose watch is
+    about to stay empty.
+    """
+    current_user.watch_setup_confirmed_at = datetime.utcnow()
+    db.commit()
+    return {"ok": True, "confirmed": True}
+
+
+@intervals_router.post("/watch-resync")
+async def intervals_watch_resync(
+    payload: WatchPlanRequest,
+    request: Request,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+    intervals_service: IntervalsService = Depends(get_intervals_service),
+):
+    """Re-run the mirror now — the Retry behind the "watch is behind" banner.
+
+    Awaited rather than backgrounded: a runner who presses Retry is owed an
+    answer about whether it worked.
+    """
+    intervals_push_limiter.check(request)
+    _require_connected(current_user)
+    training_plan = get_plan_or_404(
+        payload.plan_id, db, current_user, require_user_match=True
+    )
+    if not training_plan.watch_sync_enabled:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Watch sync is off for this plan.",
+        )
+
+    written = await resync_plan_to_watch(
+        str(training_plan.id), str(current_user.id), intervals_service
+    )
+    db.refresh(training_plan)
+    behind = sessions_behind(training_plan)
+    return {
+        "ok": training_plan.watch_sync_error is None,
+        "written": written,
+        "sessions_behind": behind,
+        "error": training_plan.watch_sync_error,
+    }
+
+
+@intervals_router.get("/watch-status", response_model=WatchStatusResponse)
+async def intervals_watch_status(
+    plan_id: str = Query(...),
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+    intervals_service: IntervalsService = Depends(get_intervals_service),
+):
+    """What is actually on the runner's calendar for this plan's window.
+
+    Reads the window back from Intervals.icu rather than reporting how many
+    times a button was pressed. A calendar write is not the same event as a
+    workout reaching the watch, and the runner deserves the difference.
+    """
+    training_plan = get_plan_or_404(plan_id, db, current_user, require_user_match=True)
+    connected = bool(
+        current_user.intervals_athlete_id and current_user.intervals_access_token
+    )
+    synced_at = training_plan.watch_synced_at
+    base = WatchStatusResponse(
+        connected=connected,
+        sync_enabled=bool(training_plan.watch_sync_enabled),
+        sessions_behind=sessions_behind(training_plan),
+        last_synced_at=synced_at.isoformat() if synced_at else None,
+        error=training_plan.watch_sync_error,
+    )
+    if not connected or not training_plan.watch_sync_enabled:
+        return base
+
+    today = local_today()
+    try:
+        remote = await intervals_service.fetch_events(
+            current_user.intervals_access_token,
+            current_user.intervals_athlete_id,
+            today.isoformat(),
+            (today + timedelta(days=WINDOW_DAYS)).isoformat(),
+        )
+    except IntervalsAuthorizationError:
+        training_plan.watch_sync_error = ERROR_AUTH
+        db.commit()
+        return base.model_copy(update={"error": ERROR_AUTH})
+    except Exception as read_error:
+        logger.warning(
+            "Could not read back the watch calendar for plan %s: %s",
+            plan_id,
+            read_error,
+        )
+        # Deliberately leaves events_on_calendar as None so the UI says
+        # "couldn't check" rather than showing a made-up count.
+        return base
+
+    ours = sum(
+        1
+        for event in remote
+        if isinstance(event, dict) and owns_event(plan_id, event.get("external_id"))
+    )
+    return base.model_copy(update={"events_on_calendar": ours})
 
 
 @intervals_router.get("/status", response_model=IntervalsStatusResponse)
