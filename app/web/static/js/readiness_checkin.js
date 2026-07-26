@@ -7,7 +7,10 @@
  * the morning. One check-in per calendar day (the API upserts).
  *
  * Self-contained (window.ReadinessCheckIn); reuses no framework. Lives inside
- * #readinessCheckinCard on the Coach "Today" tab.
+ * #readinessCheckinCard — on the Coach "Today" tab, and folded into the Today
+ * card at the head of the plan. Host pages can set `ReadinessCheckIn.onSaved`
+ * to react to a fresh check-in (the plan page re-reads the advisory under
+ * today's session, which is the whole reason the capture moved there).
  */
 (function () {
     const CARD_ID = 'readinessCheckinCard';
@@ -40,6 +43,10 @@
 
     const RC = {
         planId: null,
+        // Optional host hook: called with the saved check-in after a successful
+        // POST. Set by whichever page embeds the card; null on pages that
+        // don't need to react.
+        onSaved: null,
         _values: {},
 
         _esc(s) {
@@ -174,6 +181,9 @@
                 const checkin = await res.json();
                 this._renderLogged(checkin, true);
                 this._refreshCoachNote();
+                if (typeof this.onSaved === 'function') {
+                    try { this.onSaved(checkin); } catch (e) { console.error('[checkin] onSaved', e); }
+                }
             } catch (e) {
                 if (err) err.textContent = 'Could not save your check-in. Try again.';
                 if (submit) { submit.disabled = false; submit.textContent = 'Log check-in'; }
@@ -215,6 +225,12 @@
             });
         },
 
+        /* One line under the verdict. Two constraints, both learned by putting
+           this card next to today's session in the Today card: it must not
+           claim the plan already moved (nothing changes without the runner
+           going through Adjust my plan), and it must not point "below" — the
+           session sits above the card on the plan page and below it on the
+           Coach hub. */
         _verdictHint(checkin) {
             switch (checkin.band) {
                 case 'primed':
@@ -225,7 +241,7 @@
                     return 'A little flat — keep an honest eye on effort today.';
                 case 'run_down':
                 case 'depleted':
-                    return "Rough morning — your coach has eased today's guidance below.";
+                    return "Rough morning — ease today's session back, or move it with Adjust my plan.";
                 default:
                     return 'Logged. Your coach will factor this into today.';
             }

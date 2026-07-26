@@ -4,7 +4,10 @@ from datetime import date, datetime, timedelta, timezone
 from typing import Any, Optional
 
 from fastapi import Request
+from sqlalchemy import func
 
+from app.core.coaching.readiness_checkin import score_checkin
+from app.core.coaching.today_card import TodayCard, build_today_card
 from app.core.time_utils import local_today
 from app.core.training.plan_calendar import (
     build_week_dates,
@@ -16,7 +19,14 @@ from app.core.training.plan_calendar import (
 from app.core.training.strength_plan import derive_experience_level
 from app.core.training.watch_mirror import sessions_behind, synced_day_keys
 from app.infrastructure.config import settings
-from app.models import RunFeedback, RunLog, TrainingPlan, User, WeeklyPlan
+from app.models import (
+    ReadinessLog,
+    RunFeedback,
+    RunLog,
+    TrainingPlan,
+    User,
+    WeeklyPlan,
+)
 
 _PACE_BADGE_WINDOW_DAYS = 7
 
@@ -71,6 +81,16 @@ def plan_view_context(
         current_week_number,
     )
 
+    today_card = _build_today_card(
+        db,
+        current_user,
+        plan_data,
+        start_date_val,
+        today_obj,
+        current_week_number,
+        today_workout_overlay,
+    )
+
     ctx: dict[str, Any] = {
         "request": request,
         "user": current_user,
@@ -111,6 +131,7 @@ def plan_view_context(
         "next_monday": next_monday(),
         "pace_zones_updated_recent": pace_zones_updated_recent,
         "today_workout_overlay": today_workout_overlay,
+        "today_card": today_card,
         "adaptation_state": adaptation_state,
         "adaptation_revision": training_plan.adaptation_revision or 0,
         "long_run_warning": long_run_warning,
@@ -226,6 +247,131 @@ def _build_adaptation_state(training_plan: TrainingPlan) -> dict:
     stable ``{"kind": "none"}`` payload for the client (APP_CTX + change-plan
     patch) so existing JS keeps working without special-casing."""
     return {"kind": "none"}
+
+
+def today_card_for_plan(
+    db: Any, current_user: Optional[User], training_plan: TrainingPlan
+) -> Optional[TodayCard]:
+    """Build just the Today card for a plan, from the plan alone.
+
+    The page gets its card as part of :func:`plan_view_context`; this is the
+    entry point for re-reading it after a check-in, so the advisory under
+    today's session has exactly one implementation rather than a Python copy
+    and a JavaScript one that drift.
+
+    ``plan_data`` is not id-enriched here, so ``session.workout_id`` is ``None``
+    — callers that need the link should render the page.
+    """
+    if not training_plan.start_date:
+        return None
+
+    plan_data = ensure_seven_days(training_plan.plan_data or [])
+    sd = training_plan.start_date
+    start_date_val = sd.date() if isinstance(sd, datetime) else sd
+    today_obj = local_today()
+    num_weeks = len(plan_data) if plan_data else training_plan.weeks_duration
+    current_week_number = compute_current_week(start_date_val, today_obj)
+    if not current_week_number or current_week_number > num_weeks:
+        return None
+
+    overlay = _build_today_workout_overlay(
+        db, current_user, plan_data, start_date_val, today_obj, current_week_number
+    )
+    return _build_today_card(
+        db,
+        current_user,
+        plan_data,
+        start_date_val,
+        today_obj,
+        current_week_number,
+        overlay,
+    )
+
+
+def _build_today_card(
+    db: Any,
+    current_user: Optional[User],
+    plan_data: list[dict],
+    start_date_val: Optional[date],
+    today_obj: date,
+    current_week_number: Optional[int],
+    overlay: dict[str, dict],
+) -> Optional[TodayCard]:
+    """Resolve today's session + this morning's check-in into one view model.
+
+    Returns ``None`` for anyone the card can't speak to — a signed-out visitor
+    on a shared plan, or a plan with no start date and therefore no "today".
+    The pure assembly lives in ``core.coaching.today_card``; this is the I/O.
+    """
+    if db is None or current_user is None or start_date_val is None:
+        return None
+    if current_week_number is None:
+        return None
+
+    week = next(
+        (w for w in plan_data if w.get("week") == current_week_number),
+        None,
+    )
+    if week is None:
+        return None
+
+    day_of_week = today_obj.isoweekday()
+    workout = next(
+        (
+            w
+            for w in week.get("daily_workouts", []) or []
+            if w.get("day") == day_of_week
+        ),
+        None,
+    )
+
+    logged_km = (
+        db.query(func.sum(RunLog.distance_km))
+        .filter(
+            RunLog.user_id == current_user.id,
+            RunLog.date >= today_obj,
+            RunLog.date < today_obj + timedelta(days=1),
+        )
+        .scalar()
+    )
+
+    readiness = (
+        db.query(ReadinessLog)
+        .filter(
+            ReadinessLog.user_id == current_user.id,
+            ReadinessLog.date == today_obj,
+        )
+        .first()
+    )
+    assessment = (
+        score_checkin(
+            sleep_hours=readiness.sleep_hours,
+            sleep_quality=readiness.sleep_quality,
+            energy=readiness.energy,
+            soreness=readiness.soreness,
+            stress=readiness.stress,
+        )
+        if readiness is not None
+        else None
+    )
+
+    return build_today_card(
+        today=today_obj,
+        workout=workout,
+        week_number=current_week_number,
+        total_weeks=len(plan_data) or None,
+        phase=week.get("phase"),
+        logged_km=logged_km,
+        readiness_band=assessment.band if assessment else None,
+        readiness_score=assessment.score if assessment else None,
+        readiness_label=assessment.label if assessment else None,
+        readiness_drivers=assessment.drivers if assessment else None,
+        fatigue_softened=bool(
+            overlay.get(f"{current_week_number}-{day_of_week}", {}).get(
+                "is_fatigue_softened"
+            )
+        ),
+    )
 
 
 _QUALITY_WORKOUT_TYPES = frozenset({"tempo", "interval", "vo2max", "hill", "long"})

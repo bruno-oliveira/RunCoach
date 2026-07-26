@@ -1,8 +1,11 @@
 /* ──────────────────────────────────────────────────────────────────────────
    readiness-checkin.css — the morning check-in card (capture + verdict).
 
-   Sits at the top of the Coach "Today" tab. Matches the coach-note-card shell
-   (elevated surface, left accent rail) so it reads as part of the same voice.
+   Two homes: standalone at the top of the Coach "Today" tab, where it matches
+   the coach-note-card shell (elevated surface, left accent rail); and folded
+   into the Today card at the head of the plan, where
+   `.readiness-checkin--embedded` (plan/today-card.css) strips that shell so it
+   reads as one section of a bigger card rather than a card inside a card.
    ────────────────────────────────────────────────────────────────────────── */
 
 .readiness-checkin {

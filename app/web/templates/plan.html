@@ -12,6 +12,8 @@
 <link rel="stylesheet" href="{{ static_url('css/plan/hr-zones.css') }}">
 <link rel="stylesheet" href="{{ static_url('css/plan/structured.css') }}">
 <link rel="stylesheet" href="{{ static_url('css/plan/intent-menu.css') }}">
+<link rel="stylesheet" href="{{ static_url('css/plan/today-card.css') }}">
+<link rel="stylesheet" href="{{ static_url('css/readiness-checkin.css') }}">
 <link rel="stylesheet" href="{{ static_url('css/plan/adapt-toast.css') }}">
 <link rel="stylesheet" href="{{ static_url('css/plan/fitness.css') }}">
 <link rel="stylesheet" href="{{ static_url('css/plan/evolution.css') }}">
@@ -205,72 +207,25 @@
                     <span data-i18n="plan.whatnow_send_desc">Push each session to your watch via Intervals.icu.</span>
                 </span>
             </button>
-            <a class="whatnow-card" href="/analytics?plan={{ training_plan.id }}&amp;tab=today">
-                <span class="whatnow-card-icon" aria-hidden="true"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg></span>
-                <span class="whatnow-card-body">
-                    <strong data-i18n="plan.whatnow_checkin_title">Tell us how you feel</strong>
-                    <span data-i18n="plan.whatnow_checkin_desc">A 15-second check-in tunes today's session.</span>
-                </span>
-            </a>
+            {# The check-in used to live here as a link to /analytics?tab=today.
+               It is now the middle of the Today card above, so a card pointing
+               at it would be a detour past the thing itself. #}
             {% endif %}
         </div>
     </div>
     {% endif %}
 
-    {# ── Watch mirror status ─────────────────────────────────────────────
-       A calendar write is not the same event as a workout reaching the wrist,
-       so this reports what is actually on the runner's Intervals.icu calendar
-       rather than how many times a button was pressed. Rendered from the
-       stored mirror state (correct on first paint, survives a reload), then
-       plan_watch_sync.js swaps in the count it reads back. #}
+    {# ── Today ───────────────────────────────────────────────────────────
+       The runner's morning in one card: today's session, how they feel, and
+       whether it reached the wrist. Falls back to the bare watch-mirror row
+       when there is no "today" to fold it into (no start date, or a plan
+       that has run out). #}
     {% if user and not plan_completed %}
-    <div class="watch-mirror" id="watch-mirror"
-         data-plan-id="{{ training_plan.id }}"
-         data-connected="{{ '1' if intervals_connected else '0' }}"
-         data-sync-enabled="{{ '1' if watch_sync_enabled else '0' }}"
-         data-setup-confirmed="{{ '1' if watch_setup_confirmed else '0' }}"
-         data-behind="{{ watch_sessions_behind }}"
-         data-error="{{ watch_sync_error or '' }}"
-         data-synced-at="{{ training_plan.watch_synced_at.isoformat() if training_plan.watch_synced_at else '' }}"
-         role="region" aria-label="Watch sync">
-        {% if watch_sync_error == 'auth' %}
-        <div class="watch-mirror-row is-warning">
-            <span class="watch-mirror-icon" aria-hidden="true">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
-            </span>
-            <span class="watch-mirror-text" data-i18n="watchmirror.reconnect">Reconnect to keep your watch in sync</span>
-            <button type="button" class="watch-mirror-action" onclick="connectWatch()" data-i18n="watchmirror.reconnect_cta">Reconnect</button>
-        </div>
-        {% elif watch_sync_enabled and (watch_sessions_behind > 0 or watch_sync_error) %}
-        <div class="watch-mirror-row is-warning">
-            <span class="watch-mirror-icon" aria-hidden="true">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-            </span>
-            <span class="watch-mirror-text" id="watch-mirror-behind">
-                {% if watch_sessions_behind == 1 %}<span data-i18n="watchmirror.behind_one">Your watch is 1 session behind</span>
-                {% else %}Your watch is {{ watch_sessions_behind }} sessions behind{% endif %}
-            </span>
-            <button type="button" class="watch-mirror-action" onclick="retryWatchSync()" data-i18n="watchmirror.retry">Retry</button>
-        </div>
-        {% elif watch_sync_enabled %}
-        <div class="watch-mirror-row is-ok">
-            <span class="watch-mirror-icon" aria-hidden="true">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
-            </span>
-            <span class="watch-mirror-text" id="watch-mirror-status" data-i18n="watchmirror.keeping">Keeping your watch in sync</span>
-            <a class="watch-mirror-link" href="https://intervals.icu/calendar" target="_blank" rel="noopener" data-i18n="watchmirror.view_calendar">View calendar</a>
-            <button type="button" class="watch-mirror-off" onclick="setWatchSync(false)" data-i18n="watchmirror.turn_off">Turn off</button>
-        </div>
-        {% elif intervals_connected %}
-        <div class="watch-mirror-row">
-            <span class="watch-mirror-icon" aria-hidden="true">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="6" width="12" height="12" rx="3"/><path d="M9 6l.5-3h5l.5 3"/><path d="M9 18l.5 3h5l.5-3"/><path d="M12 10v2.5l1.5 1"/></svg>
-            </span>
-            <span class="watch-mirror-text" data-i18n="watchmirror.offer">Keep my watch in sync &mdash; every session, updated when the plan changes</span>
-            <button type="button" class="watch-mirror-action" onclick="setWatchSync(true)" data-i18n="watchmirror.turn_on">Turn on</button>
-        </div>
+        {% if today_card %}
+        {% include 'components/today_card.html' %}
+        {% else %}
+        {% include 'components/watch_mirror.html' %}
         {% endif %}
-    </div>
     {% endif %}
 
     {# ── Watch setup gate ────────────────────────────────────────────────
@@ -416,6 +371,12 @@
        adaptation alert/recommendation card, the recalibrate modal, and the
        data-driven "Adjust Plan" banner. #}
     {% include 'components/intent_menu.html' %}
+
+    {# Scoped 3-option chooser behind the Today card's "Missed it?" — same
+       component the Coach hub uses. #}
+    {% if user %}
+    {% include 'components/missed_today_menu.html' %}
+    {% endif %}
 
     {% if is_trail and training_plan.training_terrain == 'flat' and (target_elevation_gain_m or 0) > 0 %}
     <div class="flat-mountain-sim-banner" role="status" aria-live="polite">
@@ -997,7 +958,8 @@
         current_user_id: {{ (user.id if user else None) | tojson }},
         share_token: {{ (training_plan.share_token or '') | tojson }},
         adaptation_state: {{ adaptation_state | tojson }},
-        adaptation_revision: {{ adaptation_revision | tojson }}
+        adaptation_revision: {{ adaptation_revision | tojson }},
+        today_iso: {{ today_iso | tojson }}
     };
 
     window.LAST_CHANGE_PLAN = {{ training_plan.last_change_plan | tojson }};
@@ -1077,6 +1039,9 @@
 <script src="{{ static_url('js/plan/plan_intent_menu.js') }}" defer></script>
 {% if user %}
 <script src="{{ static_url('js/plan/plan_proactive_nudge.js') }}" defer></script>
+<script src="{{ static_url('js/plan/plan_missed_today.js') }}" defer></script>
+<script src="{{ static_url('js/readiness_checkin.js') }}" defer></script>
+<script src="{{ static_url('js/plan/plan_today_card.js') }}" defer></script>
 {% endif %}
 <script src="{{ static_url('js/plan/plan_core.js') }}" defer></script>
 <script src="{{ static_url('js/plan/plan_send_to_watch.js') }}" defer></script>

@@ -115,4 +115,9 @@
     } else {
         load();
     }
+
+    // Exposed so the Today card can re-ask after a check-in: a run-down
+    // morning is one of the guards, so the banner should appear the moment
+    // the runner says so rather than on the next page load.
+    window.PlanProactiveNudge = { load: load };
 })();

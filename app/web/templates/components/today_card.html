@@ -1,0 +1,80 @@
+{# ── The Today card ──────────────────────────────────────────────────────
+   Check-in, today's session and watch status are one moment in a runner's
+   morning, but they used to live in three places — the check-in behind
+   /analytics?tab=today, where nobody found it. This folds them into a single
+   card at the head of the plan, in the order the morning actually asks them:
+
+       what am I doing  →  how do I feel  →  is it on my wrist
+
+   Everything above the check-in slot is server-rendered, so the card is
+   correct on first paint and survives a reload. plan_today_card.js fills the
+   slot (reusing readiness_checkin.js) and re-reads the advisory after a
+   check-in, since how you feel is exactly what should change the line under
+   today's session. Callers own the `user and today_card` guard. #}
+<section class="today-card" id="today-card" aria-labelledby="today-card-heading"
+         data-plan-id="{{ training_plan.id }}"
+         data-band="{{ today_card.readiness_band or '' }}">
+    <header class="today-card-head">
+        <h2 class="today-card-date" id="today-card-heading">
+            <span data-i18n="today.eyebrow">Today</span>
+            <span class="today-card-date-sep" aria-hidden="true">·</span>
+            <span class="today-card-date-value">{{ today_card.date_label }}</span>
+        </h2>
+        {% if today_card.week_number and today_card.total_weeks %}
+        <span class="today-card-week">Week {{ today_card.week_number }} of {{ today_card.total_weeks }}{% if today_card.phase %} &middot; {{ today_card.phase | replace('_', ' ') | title }}{% endif %}</span>
+        {% endif %}
+    </header>
+
+    {% set session = today_card.session %}
+    {% if session %}
+    <div class="today-session {{ session.workout_type }}{% if session.is_rest %} is-rest{% endif %}{% if session.logged %} is-logged{% endif %}">
+        <div class="today-session-main">
+            <span class="today-session-rail" aria-hidden="true"></span>
+            <div class="today-session-body">
+                <div class="today-session-title-row">
+                    <span class="today-session-title">{{ session.title }}</span>
+                    {% if session.detail %}<span class="today-session-detail">{{ session.detail }}</span>{% endif %}
+                    {% if session.hr_zone_target %}
+                    <span class="hr-zone-badge hr-zone-{{ session.hr_zone_target }}" title="{{ session.hr_zone_label or '' }}">Z{{ session.hr_zone_target }}</span>
+                    {% endif %}
+                </div>
+                {% if session.description %}
+                <p class="today-session-desc">{{ session.description }}</p>
+                {% endif %}
+            </div>
+            {% if session.logged %}
+            <span class="today-session-logged" data-i18n-title="today.logged_title" title="Logged from your runs">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>
+                {{ '%.1f'|format(session.logged_km) }} km
+            </span>
+            {% endif %}
+        </div>
+
+        {# The advisory is the whole point of folding the check-in in here: a
+           rough morning changes how you should run today. It never claims the
+           plan already moved — that only happens through Adjust my plan. #}
+        <p class="today-session-advisory" id="today-session-advisory"{% if not today_card.advisory %} hidden{% endif %}>{{ today_card.advisory or '' }}</p>
+
+        <div class="today-session-actions">
+            {% if session.workout_id %}
+            <a class="today-session-action is-primary" href="/plan/{{ training_plan.id }}/day/{{ session.workout_id }}" data-i18n="today.open_session">Open session</a>
+            {% endif %}
+            <button type="button" class="today-session-action" onclick="scrollToThisWeek()" data-i18n="today.see_week">See the week</button>
+            {% if not session.is_rest and not session.logged %}
+            <button type="button" class="today-session-action" id="today-missed-cta" data-i18n="today.missed">Missed it?</button>
+            {% endif %}
+        </div>
+    </div>
+    {% else %}
+    <div class="today-session is-empty">
+        <p class="today-session-desc" data-i18n="today.nothing">Nothing scheduled for today.</p>
+    </div>
+    {% endif %}
+
+    {# Filled by readiness_checkin.js — the same module the Coach hub uses, so
+       there is one check-in implementation, not two. #}
+    <div class="today-card-checkin readiness-checkin readiness-checkin--embedded"
+         id="readinessCheckinCard" style="display:none;"></div>
+
+    {% include 'components/watch_mirror.html' %}
+</section>

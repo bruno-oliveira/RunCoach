@@ -5,7 +5,7 @@ Re-exports from focused sub-modules for backward compatibility.
 
 from .plan_lookup import error_response, get_plan_or_404
 from .plan_status import current_active_plan, decorate_plan_status
-from .plan_template_context import plan_view_context
+from .plan_template_context import plan_view_context, today_card_for_plan
 
 __all__ = [
     "current_active_plan",
@@ -13,4 +13,5 @@ __all__ = [
     "error_response",
     "get_plan_or_404",
     "plan_view_context",
+    "today_card_for_plan",
 ]

@@ -1,0 +1,234 @@
+/* ──────────────────────────────────────────────────────────────────────────
+   today-card.css — the head-of-plan Today card.
+
+   One surface holding three things that used to be three surfaces: today's
+   session, this morning's check-in, and watch status. They are stacked in the
+   order the morning asks them, separated by hairlines rather than gaps, so the
+   card reads as one moment rather than three widgets that happen to be
+   adjacent.
+
+   The two folded-in pieces (readiness-checkin.css, plan-onboarding.css's
+   watch-mirror) bring their own card shells for their standalone homes; the
+   `--embedded` / in-card overrides at the bottom strip those so nothing is a
+   card inside a card.
+   ────────────────────────────────────────────────────────────────────────── */
+
+.today-card {
+    margin: 0 0 var(--space-6);
+    background: var(--color-bg-elevated);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+}
+
+/* ---- head: date + where you are in the plan ---- */
+.today-card-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: var(--space-2);
+    padding: var(--space-4) var(--space-5);
+    border-bottom: 1px solid var(--color-border-subtle);
+}
+
+.today-card-date {
+    margin: 0;
+    font-size: var(--text-sm);
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--color-text);
+}
+
+.today-card-date-sep { color: var(--color-text-muted); margin: 0 0.15em; }
+.today-card-date-value {
+    text-transform: none;
+    letter-spacing: 0;
+    font-weight: var(--weight-medium);
+    color: var(--color-text-secondary);
+}
+
+.today-card-week {
+    font-size: var(--text-xs);
+    color: var(--color-text-muted);
+}
+
+/* ---- today's session ---- */
+.today-session {
+    padding: var(--space-5);
+}
+
+.today-session-main {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--space-4);
+}
+
+/* One colour = one kind of effort, same mapping as the week rows. */
+.today-session-rail {
+    flex-shrink: 0;
+    width: 4px;
+    align-self: stretch;
+    min-height: 2.25rem;
+    border-radius: 2px;
+    background: var(--wt-easy);
+}
+
+.today-session.easy .today-session-rail,
+.today-session.run_walk .today-session-rail,
+.today-session.main .today-session-rail { background: var(--wt-easy); }
+.today-session.recovery .today-session-rail { background: var(--wt-recovery); }
+.today-session.tempo .today-session-rail,
+.today-session.cruise_interval .today-session-rail,
+.today-session.race_pace .today-session-rail { background: var(--wt-tempo); }
+.today-session.interval .today-session-rail,
+.today-session.fartlek .today-session-rail,
+.today-session.vo2max .today-session-rail,
+.today-session.vo2max_ladder .today-session-rail,
+.today-session.time_trial .today-session-rail { background: var(--wt-interval); }
+.today-session.hill .today-session-rail { background: var(--wt-hill); }
+.today-session.long .today-session-rail { background: var(--wt-long); }
+.today-session.strength .today-session-rail { background: var(--wt-strength); }
+.today-session.is-rest .today-session-rail {
+    background: transparent;
+    box-shadow: inset 0 0 0 1px var(--color-border);
+}
+
+.today-session-body { flex: 1 1 auto; min-width: 0; }
+
+.today-session-title-row {
+    display: flex;
+    align-items: baseline;
+    flex-wrap: wrap;
+    gap: var(--space-2) var(--space-3);
+}
+
+.today-session-title {
+    font-size: var(--text-lg);
+    font-weight: 700;
+    color: var(--color-text);
+}
+
+.today-session.is-rest .today-session-title {
+    font-weight: var(--weight-medium);
+    color: var(--color-text-muted);
+}
+
+.today-session-detail {
+    font-size: var(--text-sm);
+    color: var(--color-text-secondary);
+    font-variant-numeric: tabular-nums;
+}
+
+.today-session-desc {
+    margin: var(--space-2) 0 0;
+    font-size: var(--text-sm);
+    line-height: var(--leading-normal);
+    color: var(--color-text-secondary);
+}
+
+.today-session-logged {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-1);
+    flex-shrink: 0;
+    padding: var(--space-1) var(--space-2);
+    border-radius: var(--radius-md);
+    background: var(--color-success-subtle);
+    color: var(--color-success);
+    font-size: var(--text-xs);
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+}
+
+/* ---- the coaching line: the reason the check-in was folded in here ---- */
+.today-session-advisory {
+    margin: var(--space-3) 0 0;
+    padding-left: calc(4px + var(--space-4));
+    font-size: var(--text-sm);
+    line-height: var(--leading-normal);
+    color: var(--color-text);
+}
+
+.today-session-advisory[hidden] { display: none; }
+
+.today-card[data-band="run_down"] .today-session-advisory,
+.today-card[data-band="depleted"] .today-session-advisory {
+    color: var(--color-warning);
+    font-weight: var(--weight-medium);
+}
+
+.today-session-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-2);
+    margin-top: var(--space-4);
+    padding-left: calc(4px + var(--space-4));
+}
+
+.today-session-action {
+    padding: var(--space-1) var(--space-3);
+    background: var(--color-bg-sunken);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    font-size: var(--text-xs);
+    font-weight: 600;
+    color: var(--color-text-secondary);
+    text-decoration: none;
+    cursor: pointer;
+    transition: background var(--transition-fast);
+}
+
+.today-session-action:hover {
+    background: var(--color-border-subtle);
+    color: var(--color-text);
+}
+
+.today-session-action.is-primary {
+    background: var(--color-accent-subtle);
+    border-color: transparent;
+    color: var(--color-accent-strong);
+}
+
+.today-session.is-empty .today-session-desc { margin: 0; }
+
+/* ---- folded-in check-in: strip its standalone card shell ----
+   Scoped through .today-card rather than relying on this file loading after
+   readiness-checkin.css — same specificity would make the override a matter of
+   <link> order, which is exactly the kind of thing that breaks silently. */
+.today-card .readiness-checkin--embedded {
+    margin: 0;
+    padding: var(--space-5);
+    border: 0;
+    border-top: 1px solid var(--color-border-subtle);
+    border-radius: 0;
+    background: transparent;
+}
+
+/* ---- folded-in watch mirror: a hairline row, not a bordered strip ---- */
+.today-card .watch-mirror { margin: 0; }
+
+.today-card .watch-mirror-row {
+    border: 0;
+    border-top: 1px solid var(--color-border-subtle);
+    border-radius: 0;
+    background: transparent;
+    padding: var(--space-3) var(--space-5);
+}
+
+/* The standalone strip carries its status in a left border; inside the card
+   that reads as a stray tick, so the icon colour carries it instead. */
+.today-card .watch-mirror-row.is-ok,
+.today-card .watch-mirror-row.is-warning { border-left: 0; }
+
+@media (max-width: 640px) {
+    .today-card-head,
+    .today-session,
+    .today-card .readiness-checkin--embedded { padding: var(--space-4); }
+
+    .today-card .watch-mirror-row { padding: var(--space-3) var(--space-4); }
+
+    .today-session-advisory,
+    .today-session-actions { padding-left: 0; }
+}

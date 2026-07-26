@@ -11,10 +11,15 @@ from app.application.plan_view_service import PlanViewService
 from app.contexts.auth.repositories import SQLAlchemyUserRepository
 from app.contexts.nutrition.nutrition_engine import NutritionEngine
 from app.contexts.plan.adaptation import AdaptationService
-from app.contexts.plan.plan_helpers import get_plan_or_404, plan_view_context
+from app.contexts.plan.plan_helpers import (
+    get_plan_or_404,
+    plan_view_context,
+    today_card_for_plan,
+)
 from app.contexts.plan.plan_type_registry import get_handler_for_plan
 from app.contexts.runner.fitness.hr_zone_service import HRZoneService
 from app.dependencies import (
+    get_current_user,
     get_db,
     get_nutrition_engine,
     get_optional_user,
@@ -110,6 +115,30 @@ def view_plan(
             status_code=500,
             detail="An internal error occurred while generating the plan",
         )
+
+
+@router.get("/api/plan/{plan_id}/today-card")
+def get_today_card(
+    plan_id: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> dict:
+    """Re-read the Today card's coaching line after a morning check-in.
+
+    Only the parts that a check-in can change: the plan page renders the
+    session itself server-side and never needs it back.
+    """
+    training_plan = get_plan_or_404(plan_id, db, current_user, None)
+    card = today_card_for_plan(db, current_user, training_plan)
+    if card is None:
+        return {"available": False}
+    return {
+        "available": True,
+        "advisory": card.advisory,
+        "readiness_band": card.readiness_band,
+        "readiness_label": card.readiness_label,
+        "readiness_score": card.readiness_score,
+    }
 
 
 def _find_workout_in_plan(
