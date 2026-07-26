@@ -128,9 +128,21 @@ def seed(target: Path, weeks_in: int) -> str:
     # out and every page 403s — the least obvious part of this setup.
     conn.execute("delete from training_plans where id = ?", (PLAN_ID,))
     conn.execute("delete from users where id = ?", (USER_ID,))
+    # created_at / plans_generated are NOT NULL as far as ``UserResponse`` is
+    # concerned even though the columns allow null — leaving them unset makes
+    # every /api/auth/me and settings save 500 on validation, which looks like a
+    # bug in whatever you're verifying rather than in this fixture.
     conn.execute(
-        "insert into users (id, email, name, last_activity) values (?, ?, ?, ?)",
-        (USER_ID, USER_EMAIL, "Verify User", now.isoformat(sep=" ")),
+        "insert into users (id, email, name, last_activity, created_at, "
+        "plans_generated) values (?, ?, ?, ?, ?, ?)",
+        (
+            USER_ID,
+            USER_EMAIL,
+            "Verify User",
+            now.isoformat(sep=" "),
+            now.isoformat(sep=" "),
+            1,
+        ),
     )
 
     plan = dict(template)
