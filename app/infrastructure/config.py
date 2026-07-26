@@ -105,6 +105,27 @@ class Settings(BaseSettings):
     # Plan limits
     max_plans_per_user: int = 3
 
+    # Outbound nudges — the only surface that can reach a runner who hasn't
+    # opened the app. Everything here is off by default: with no SMTP host the
+    # mailer refuses to send rather than pretending it did, and with no cron
+    # secret the trigger endpoint 404s, so a fresh deploy mails nobody.
+    smtp_host: str = ""
+    smtp_port: int = 587
+    smtp_username: str = ""
+    smtp_password: str = ""
+    smtp_from: str = ""
+    smtp_starttls: bool = True
+    smtp_timeout_seconds: int = 15
+    # Shared secret the scheduler presents as ``X-Cron-Secret``. Unset disables
+    # the endpoint entirely.
+    cron_secret: str = ""
+    # Absolute origin for links inside emails — a relative path is useless in
+    # an inbox. Must be overridden in production.
+    public_base_url: str = "http://localhost:8000"
+    # Floor between two nudge emails to the same runner. A coach who mails
+    # daily is spam, not a coach.
+    nudge_min_interval_days: int = 4
+
     @model_validator(mode="after")
     def _require_secret_key(self) -> "Settings":
         """Fail fast in production when no persistent SECRET_KEY is configured.

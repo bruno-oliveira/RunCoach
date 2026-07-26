@@ -1033,6 +1033,24 @@
   font-size: var(--text-sm);
 }
 
+/* Checkbox settings (coaching emails). The numeric fields save on a button;
+   a toggle saves on change, so there is no button to line up with. */
+.settings-toggle {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--text-sm);
+  color: var(--color-text);
+  cursor: pointer;
+}
+
+.settings-toggle input {
+  width: 1.05rem;
+  height: 1.05rem;
+  accent-color: var(--color-accent);
+  cursor: pointer;
+}
+
 .settings-modal-footer {
   padding: var(--space-3) var(--space-5);
   border-top: 1px solid var(--color-border);

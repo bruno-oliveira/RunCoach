@@ -25,6 +25,7 @@ from app.web.routers import (
     analytics_router,
     auth_router,
     intervals_router,
+    notifications_router,
     nutrition_router,
     pages_router,
     performance_page_router,
@@ -55,6 +56,7 @@ _ROUTERS = (
     strava_router,
     intervals_router,
     admin_router,
+    notifications_router,
     pages_router,
 )
 

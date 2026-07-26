@@ -2,12 +2,20 @@
 
 Follow-on to `c7cd422` (the Now lane). Written 2026-07-25.
 
-> **Status, 2026-07-25: N1, N2 and N3 are built.** The mirror is a real
-> reconciler, watch status is read back from Intervals, and the copy names all
-> five ecosystems. **N4 and the whole Later lane are still open** — N4 needs the
-> webhooks-vs-cron decision below before anyone starts. Per-item notes are inline;
-> the four open questions at the bottom were *not* answered, so the defensive
-> fallbacks were built instead.
+> **Status, 2026-07-26: N1, N2, N3, L1 and L2 are built.** The mirror is a real
+> reconciler, watch status is read back from Intervals, the copy names all five
+> ecosystems, the Today card folds check-in + session + watch status into one
+> surface, and outbound nudges can reach a runner who hasn't opened the app.
+> **N4, L3 and L4 are still open.** Per-item notes are inline; the four open
+> questions at the bottom were *not* answered, so the defensive fallbacks were
+> built instead.
+>
+> **L2 settled half of N4 by necessity.** An outbound nudge needs a scheduled
+> trigger, so `POST /api/notifications/run` exists and is driven by an external
+> cron (the webhooks-vs-cron decision, resolved as cron — see
+> `docs/outbound-nudges-setup.md`). N4's remaining half is pointing the same
+> trigger at `resync_plan_to_watch` and `auto_map_and_adjust`, which is now a
+> small change rather than a design question.
 
 **Reading order for someone picking this up cold:** this doc is self-contained
 for *what to build*. The reasoning behind it — the cold onboarding walkthrough,
@@ -40,6 +48,13 @@ This document covers the rest.
 | Repeat mirrors of an unchanged plan | — | full re-push every time | zero API writes |
 | Runs imported | manual button | still manual | **still manual — N4** |
 
+| | After N1–N3 | After L1–L2 |
+|---|---|---|
+| Check-in, session, watch status | three surfaces, one behind `/analytics?tab=today` | one card at the head of the plan |
+| Does the check-in change what I see? | a coach's note, on another page | a line under today's session, live |
+| Can the coach reach me at all? | only if I open the app | email, when a guard genuinely fires |
+| Who gets emailed by default | — | nobody: opt-in, rate-limited, unsubscribable |
+
 ---
 
 ## Where things live
@@ -48,6 +63,14 @@ Everything watch-related, so nobody has to grep for it.
 
 | Concern | File |
 |---|---|
+| Today card view model + the advisory (pure) | `app/core/coaching/today_card.py` |
+| Today card I/O — resolve today's session + this morning's check-in | `app/contexts/plan/plan_template_context.py` (`_build_today_card`, `today_card_for_plan`) |
+| Today card markup / styles / wiring | `app/web/templates/components/today_card.html`, `app/web/static/css/plan/today-card.css`, `app/web/static/js/plan/plan_today_card.js` |
+| Morning check-in (shared by the plan page and the Coach hub) | `app/web/static/js/readiness_checkin.js`, `app/web/static/css/readiness-checkin.css` |
+| Outbound nudge guards + email copy (pure) | `app/core/coaching/outbound_nudge.py` |
+| Outbound nudge I/O — candidates, signals, rate limit, unsubscribe tokens | `app/application/outbound_nudge_service.py` |
+| Mailer port / SMTP adapter | `app/domain/notifications.py`, `app/infrastructure/notifications/mailer.py` |
+| Cron trigger + unsubscribe | `app/web/routers/notifications.py`, `docs/outbound-nudges-setup.md` |
 | Mirror decisions — window, ownership, hashing, diff (pure) | `app/core/training/watch_mirror.py` |
 | Mirror I/O — fetch, write, record the outcome | `app/application/watch_sync_service.py` |
 | Intervals HTTP client (`fetch_events`, `delete_events`, `push_workouts`, OAuth, activity sync) | `app/infrastructure/integrations/intervals_service.py` |
@@ -58,13 +81,16 @@ Everything watch-related, so nobody has to grep for it.
 | `.fit` generation (sideload escape hatch) | `app/infrastructure/integrations/fit_service.py` |
 | Per-workout ⌚ button | `app/web/templates/components/workout_item.html` |
 | Per-week send button | `app/web/templates/components/week_card.html` |
+| Watch mirror status strip (included twice — in the Today card, and standalone) | `app/web/templates/components/watch_mirror.html` |
 | Watch-setup checklist + "what now" strip | `app/web/templates/plan.html` |
 | Landing hero, connect card, plan form | `app/web/templates/index.html` |
 | Button wiring + setup gate | `app/web/static/js/plan/plan_send_to_watch.js` |
 | Mirror panel (toggle, retry, status read-back) | `app/web/static/js/plan/plan_watch_sync.js` |
 | Connect flow (`connectWatch`, sync panel) | `app/web/static/js/nav.js`, `app/web/static/js/auth.js` |
 | Button styles | `app/web/static/css/share.css` |
-| Tests | `tests/test_core/test_watch_mirror.py` (pure diff + ownership), `tests/test_services/test_watch_sync_service.py` (reconciler), `tests/test_routers/test_intervals_watch_sync_router.py` (endpoints), `tests/test_routers/test_intervals_push_router.py`, `tests/test_services/test_intervals_service.py` |
+| Tests — watch | `tests/test_core/test_watch_mirror.py` (pure diff + ownership), `tests/test_services/test_watch_sync_service.py` (reconciler), `tests/test_routers/test_intervals_watch_sync_router.py` (endpoints), `tests/test_routers/test_intervals_push_router.py`, `tests/test_services/test_intervals_service.py` |
+| Tests — Today card | `tests/test_core/test_today_card.py` (advisory rules), `tests/test_routers/test_today_card_router.py` (render + re-read) |
+| Tests — outbound nudges | `tests/test_core/test_outbound_nudge.py` (guards + copy), `tests/test_services/test_outbound_nudge_service.py` (consent, rate limit, honest bookkeeping), `tests/test_routers/test_notifications_router.py` (trigger + unsubscribe) |
 
 **Copy lives in three places and drifts easily.** Every user-facing string
 appears once inline in the template (the no-JS fallback) and once per locale in
@@ -284,7 +310,7 @@ Either way, N1's nightly window roll can ride the same trigger.
 
 ## Later lane
 
-### L1 — The Today card
+### L1 — The Today card — ✅ BUILT
 
 **~1 week.** Check-in, today's session, and watch status are one moment in the
 runner's day and currently live in three places — the last one behind
@@ -293,7 +319,29 @@ runner's day and currently live in three places — the last one behind
 
 Fold them into a single card at the head of the plan.
 
-### L2 — Outbound nudges
+> **As built.** `components/today_card.html`, in the order the morning asks:
+> *what am I doing → how do I feel → is it on my wrist.*
+>
+> - **The session block is server-rendered**, so the card is right on first
+>   paint and survives a reload — the same rule N2 established for watch status.
+> - **The check-in is the existing module, not a second one.**
+>   `readiness_checkin.js` and its CSS moved out of `analytics/` to the shared
+>   root and now have two homes; `--embedded` strips their standalone card shell
+>   so nothing is a card inside a card.
+> - **The payoff is one line.** `core/coaching/today_card.py` decides an
+>   advisory from the readiness band and the session type, and stays silent by
+>   default. `GET /api/plan/{id}/today-card` re-reads it after a check-in rather
+>   than recomputing it in JS — one implementation, no drift.
+> - **The advisory never claims the plan moved.** It points at *Adjust my plan*,
+>   because that is still the only thing that reshapes a session.
+> - The watch mirror moved into `components/watch_mirror.html` and is included
+>   twice: folded into the card, and standalone when there is no "today".
+>
+> Putting the check-in verdict next to the session immediately exposed a lie in
+> the old copy — *"your coach has eased today's guidance below"*, which was
+> neither true nor, on this page, below. Fixed.
+
+### L2 — Outbound nudges — ✅ BUILT
 
 Once sync is ambient (N4) and status is trustworthy (N2), a low-readiness or
 missed-week signal is worth a push notification or an email. That's the
@@ -302,6 +350,38 @@ difference between a plan you check and a coach you have.
 Today every surface is pull: the proactive nudge is computed on page load, so it
 can't reach someone who hasn't opened the app in four days — exactly when it
 matters most.
+
+> **As built.** Email over web push: push needs a granted browser permission,
+> which the drifting runner is exactly the person who won't have granted.
+> stdlib `smtplib` behind a port in `domain/notifications.py`, so no new
+> dependency and any provider's SMTP works. Full setup:
+> `docs/outbound-nudges-setup.md`.
+>
+> Three guards in `core/coaching/outbound_nudge.py`, highest first:
+> **gone_quiet** (5+ days silent *and* ≥2 scheduled sessions passed — the only
+> signal the app genuinely cannot deliver itself), **low_readiness** (3+
+> consecutive check-ins ≤45), **adaptation** (the in-app nudge, forwarded rather
+> than re-derived). A runner who has *never* logged a run is never told they
+> went quiet — far more likely they track nowhere.
+>
+> **Three things stop it becoming a mailing list**, all in
+> `application/outbound_nudge_service.py`: consent (`nudge_email_enabled`,
+> default false, filtered in the query), a floor between emails
+> (`NUDGE_MIN_INTERVAL_DAYS`, stored so it survives restarts), and a repeat
+> guard (the same situation in the same words doesn't re-send).
+>
+> ### ⚠️ The boolean has to be honest
+>
+> `Mailer.send` returns whether the message was **delivered**, and the service
+> records `last_nudge_email_at` only on `True`. A mailer that swallowed a
+> failure and reported success would mark everyone as emailed and silence the
+> real message that follows. `NullMailer` — what you get with no `SMTP_HOST` —
+> returns `False` and logs at WARNING, so an unconfigured deploy mails nobody
+> *and says so*. Any future adapter must keep that property.
+>
+> Every email carries `/unsubscribe?u=…&t=<hmac>`. The `GET` only offers; the
+> `POST` acts — inboxes and scanners prefetch links, and a prefetch that
+> silently flipped a preference is a bug the runner never sees.
 
 ### L3 — One consistent "what changed and why"
 
@@ -368,16 +448,23 @@ only Garmin until confirmed (covers #4).
 ## Suggested order
 
 ```
-N1 ✅ ────────────► N2 ✅ ─► L1 ──► L2
-      │                       ▲
-      └──► N4 ⬜ ─────────────┘
+N1 ✅ ────────────► N2 ✅ ─► L1 ✅ ─► L2 ✅ ─► L3 ⬜
+      │                                ▲
+      └──► N4 ⬜ (half done) ───────────┘
 N3 ✅ (independent — it was copy)
 ```
 
 N1 first because the ghosts and the 8-day ceiling were the remaining correctness
-gaps. N4 in parallel because L2 is blocked on it. N3 whenever — it's copy, and
-it quadruples the addressable watch market.
+gaps. N3 whenever — it's copy, and it quadruples the addressable watch market.
+L2 turned out not to need N4 first: it brought its own scheduled trigger, and
+that trigger is the thing N4 was blocked on.
 
-**Next up: N4**, then L1. N4 is the only thing standing between the current
-pull-only app and anything proactive, and it needs the webhooks-vs-cron call
-before code.
+**Next up: N4**, and it is now small. The cron machine exists (see
+`docs/outbound-nudges-setup.md`); what's left is calling `resync_plan_to_watch`
+and `auto_map_and_adjust` from the same schedule. N1's reconciler is already
+idempotent — an unchanged plan costs zero API writes — so nothing needs
+revisiting. **Measure Intervals rate limits before it goes wide** (open question
+#2 below).
+
+Then L3, which is now more visible than it was: the Today card gave "what
+changed and why" an obvious home it didn't have before.

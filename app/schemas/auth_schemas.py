@@ -27,6 +27,7 @@ class UserResponse(UserBase):
     max_hr: Optional[int] = None
     resting_hr: Optional[int] = None
     threshold_hr: Optional[int] = None
+    nudge_email_enabled: bool = False
 
 
 class AuthResponse(BaseModel):
@@ -56,3 +57,7 @@ class UserSettingsUpdate(BaseModel):
     # Lactate-threshold heart rate (BPM), the primary zone anchor. Send 0/null to
     # clear and revert to the data-derived estimate.
     threshold_hr: Optional[int] = Field(default=None, ge=0, le=220)
+    # Consent for outbound coaching emails. Unlike the numeric fields above,
+    # null means "leave it alone" rather than "clear it" — this is a boolean,
+    # so false is a real value the runner can choose.
+    nudge_email_enabled: Optional[bool] = None

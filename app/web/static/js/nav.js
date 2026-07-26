@@ -528,6 +528,49 @@ function saveRestingHr() {
     });
 }
 
+/* Coaching-email consent. A checkbox, so it saves on change rather than on a
+   button — and reverts visibly if the save fails, because leaving it looking
+   "on" while the server has it off is how someone ends up expecting emails
+   that never arrive. */
+async function saveNudgeEmail() {
+    const toggle = document.getElementById('nudgeEmailToggle');
+    const feedback = document.getElementById('settingsFeedback');
+    if (!toggle) return;
+    const wanted = toggle.checked;
+
+    if (feedback) {
+        feedback.textContent = 'Saving…';
+        feedback.classList.remove('is-saved', 'is-error');
+    }
+    toggle.disabled = true;
+    try {
+        const res = await fetch('/api/auth/me/settings', {
+            method: 'PATCH',
+            credentials: 'same-origin',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ nudge_email_enabled: wanted }),
+        });
+        if (!res.ok) throw new Error('save_failed');
+        const data = await res.json();
+        toggle.checked = !!data.nudge_email_enabled;
+        if (feedback) {
+            feedback.textContent = data.nudge_email_enabled
+                ? "Coaching emails on — we'll only write when it matters."
+                : 'Coaching emails off.';
+            feedback.classList.remove('is-error');
+            feedback.classList.add('is-saved');
+        }
+    } catch (err) {
+        toggle.checked = !wanted;
+        if (feedback) {
+            feedback.textContent = 'Could not save. Please try again.';
+            feedback.classList.add('is-error');
+        }
+    } finally {
+        toggle.disabled = false;
+    }
+}
+
 function saveThresholdHr() {
     return saveHrSetting({
         inputId: 'thresholdHrInput',

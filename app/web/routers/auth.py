@@ -49,6 +49,7 @@ def _user_response(user: User) -> UserResponse:
         max_hr=user.max_hr,
         resting_hr=user.resting_hr,
         threshold_hr=user.threshold_hr,
+        nudge_email_enabled=bool(user.nudge_email_enabled),
     )
 
 
@@ -138,7 +139,7 @@ def update_user_settings(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    """Update mutable user settings (age, max HR, resting HR, threshold HR)."""
+    """Update mutable user settings (age, HR anchors, coaching-email consent)."""
     if payload.age is not None:
         # 0 clears the override.
         current_user.age = payload.age or None
@@ -151,6 +152,10 @@ def update_user_settings(
     if payload.threshold_hr is not None:
         # 0 clears the override and reverts to the data-derived estimate.
         current_user.threshold_hr = payload.threshold_hr or None
+    if payload.nudge_email_enabled is not None:
+        # A boolean, so false is a choice rather than "unset" — assigned
+        # directly instead of going through the ``or None`` clearing idiom.
+        current_user.nudge_email_enabled = payload.nudge_email_enabled
     db.commit()
     db.refresh(current_user)
     return _user_response(current_user)

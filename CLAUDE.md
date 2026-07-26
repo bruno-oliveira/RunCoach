@@ -230,6 +230,15 @@ Configuration via environment variables or `.env` file:
 | `LOG_LEVEL` | INFO | Logging level |
 | `SECRET_KEY` | (required) | JWT signing key |
 | `GOOGLE_CLIENT_ID` | (required) | Google OAuth client ID |
+| `SMTP_HOST` | (empty) | Outbound-nudge mail host. **Empty means send nothing** — the null mailer logs and reports failure rather than pretending |
+| `SMTP_PORT` / `SMTP_USERNAME` / `SMTP_PASSWORD` / `SMTP_FROM` | 587 / empty | SMTP credentials. Port 465 switches to implicit TLS; otherwise STARTTLS unless `SMTP_STARTTLS=false` |
+| `CRON_SECRET` | (empty) | Shared secret for `POST /api/notifications/run`. Empty makes the endpoint 404 |
+| `PUBLIC_BASE_URL` | http://localhost:8000 | Absolute origin for links inside emails. Must be set in production |
+| `NUDGE_MIN_INTERVAL_DAYS` | 4 | Floor between two nudge emails to the same runner |
+
+Outbound coaching nudges are off in every direction until configured — see
+`docs/outbound-nudges-setup.md` for the guards, the schedule, and how to check
+who *would* be mailed before anything goes out.
 
 Training constraints are configured in `app/infrastructure/config.py` (settings) and `app/core/training/training_config.py` (`DISTANCE_CONSTRAINTS` registry):
 - Minimum/maximum weeks per distance

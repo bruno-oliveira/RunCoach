@@ -258,6 +258,26 @@
                     <button class="btn btn-secondary btn-sm" type="button" onclick="saveRestingHr()" data-i18n="settings.save">Save</button>
                 </div>
             </div>
+            {# The only surface that can reach a runner who hasn't opened the
+               app. Off unless they say otherwise, and every email carries the
+               same switch as a one-click link. #}
+            <div class="settings-field">
+                <label class="settings-field-label" for="nudgeEmailToggle">
+                    <strong data-i18n="settings.nudge_email_label">Coaching emails</strong>
+                    <span class="toggle-help" data-i18n="settings.nudge_email_help">Off by default. Turn this on and RunCoach will email you when your training genuinely needs a word &mdash; a run of rough mornings, or a week that quietly slipped. At most one every few days, never a newsletter.</span>
+                </label>
+                <div class="settings-field-row">
+                    <label class="settings-toggle">
+                        <input
+                            type="checkbox"
+                            id="nudgeEmailToggle"
+                            onchange="saveNudgeEmail()"
+                            {% if user and user.nudge_email_enabled %}checked{% endif %}
+                        >
+                        <span data-i18n="settings.nudge_email_on">Email me when it matters</span>
+                    </label>
+                </div>
+            </div>
         </div>
         <div class="settings-modal-footer">
             <span class="settings-modal-feedback" id="settingsFeedback" role="status" aria-live="polite"></span>

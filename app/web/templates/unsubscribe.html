@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+{% block title %}Coaching emails — RunCoach{% endblock %}
+
+{% block styles %}
+<style>
+.unsub {
+    max-width: 34rem;
+    margin: 4rem auto;
+    padding: 0 1.5rem;
+    line-height: var(--leading-normal);
+    text-align: center;
+}
+.unsub h1 { font-size: var(--text-2xl); margin-bottom: var(--space-3); }
+.unsub p { color: var(--color-text-secondary); margin-bottom: var(--space-5); }
+.unsub form { display: inline; }
+.unsub .unsub-note {
+    font-size: var(--text-sm);
+    color: var(--color-text-muted);
+    margin-top: var(--space-6);
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="unsub">
+    {% if done %}
+    <h1>Done — no more coaching emails</h1>
+    <p>You won't hear from RunCoach by email again. Your plan, your runs and
+       everything else are untouched.</p>
+    <a class="btn btn-secondary" href="/">Back to RunCoach</a>
+    <p class="unsub-note">Changed your mind? Settings &rarr; Coaching emails
+       turns them back on.</p>
+    {% elif not valid %}
+    <h1>That link didn't work</h1>
+    <p>It may have been copied incomplete. You can always turn coaching emails
+       off from Settings &rarr; Coaching emails.</p>
+    <a class="btn btn-secondary" href="/">Back to RunCoach</a>
+    {% else %}
+    {# A GET must not unsubscribe: inboxes and security scanners prefetch links,
+       and a prefetch that silently changes a preference is a bug the runner
+       never sees. The confirm posts. #}
+    <h1>Stop coaching emails?</h1>
+    <p>RunCoach will stop emailing {{ email }} when your training needs a word.
+       Nothing else changes.</p>
+    <form method="post" action="/unsubscribe">
+        <input type="hidden" name="u" value="{{ user_id }}">
+        <input type="hidden" name="t" value="{{ token }}">
+        <button type="submit" class="btn btn-primary">Yes, stop these emails</button>
+    </form>
+    <p class="unsub-note"><a href="/">No, keep them</a></p>
+    {% endif %}
+</div>
+{% endblock %}

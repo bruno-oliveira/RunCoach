@@ -59,6 +59,9 @@ window.RC_I18N = (function () {
             'settings.threshold_hr_help':  "The heart rate you can hold hard for about an hour — the main anchor for your zones (the Zone 3/4 edge sits on it). Tip: it's roughly 10–15 bpm above the top of your watch's Zone 2. Leave blank and RunCoach works it out from your runs.",
             'settings.resting_hr_label':   'Resting heart rate (BPM)',
             'settings.resting_hr_help':    'Optional — raises your Zone 1 (recovery) floor. Leave blank to skip.',
+            'settings.nudge_email_label':  'Coaching emails',
+            'settings.nudge_email_help':   'Off by default. Turn this on and RunCoach will email you when your training genuinely needs a word — a run of rough mornings, or a week that quietly slipped. At most one every few days, never a newsletter.',
+            'settings.nudge_email_on':     'Email me when it matters',
 
             /* ── Lang toggle ── */
             'lang.toggle_pt':         'Switch to Portuguese',
@@ -676,6 +679,9 @@ window.RC_I18N = (function () {
             'settings.threshold_hr_help':  'A frequência cardíaca que consegue manter em esforço forte durante cerca de uma hora — a principal âncora das suas zonas (o limite entre a Zona 3/4 assenta nela). Dica: fica cerca de 10–15 bpm acima do topo da Zona 2 do seu relógio. Deixe em branco e o RunCoach calcula-a a partir das suas corridas.',
             'settings.resting_hr_label':   'Frequência cardíaca em repouso (BPM)',
             'settings.resting_hr_help':    'Opcional — eleva o piso da sua Zona 1 (recuperação). Deixe em branco para ignorar.',
+            'settings.nudge_email_label':  'E-mails do treinador',
+            'settings.nudge_email_help':   'Desligado por omissão. Ative e o RunCoach envia-lhe um e-mail quando o seu treino precisar mesmo de uma palavra — uma série de manhãs difíceis, ou uma semana que passou ao lado. No máximo um de poucos em poucos dias, nunca uma newsletter.',
+            'settings.nudge_email_on':     'Avisem-me quando importar',
 
             /* ── Lang toggle ── */
             'lang.toggle_pt':         'Mudar para Português',

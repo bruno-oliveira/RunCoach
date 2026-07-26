@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime, timezone
 
-from sqlalchemy import Column, DateTime, Integer, String
+from sqlalchemy import Boolean, Column, DateTime, Integer, String, text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models.base import Base
@@ -63,6 +63,20 @@ class User(Base):
     # better than firing a "sent!" toast at someone whose watch will stay empty.
     watch_setup_confirmed_at: Mapped[datetime | None] = mapped_column(
         DateTime, nullable=True
+    )
+    # Outbound coaching nudges — the only surface that can reach a runner who
+    # hasn't opened the app. Opt-in: these people signed up for a plan
+    # generator, not a mailing list. The timestamp and signature are the rate
+    # limit and the repeat guard; both live here rather than in memory so they
+    # survive a restart and hold across however many machines run the job.
+    nudge_email_enabled: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False, server_default=text("0")
+    )
+    last_nudge_email_at: Mapped[datetime | None] = mapped_column(
+        DateTime, nullable=True
+    )
+    last_nudge_email_signature: Mapped[str | None] = mapped_column(
+        String, nullable=True
     )
 
     training_plans: Mapped[list["TrainingPlan"]] = relationship(
