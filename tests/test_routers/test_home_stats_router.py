@@ -1,7 +1,7 @@
 """HTTP contract for GET /api/analytics/home-stats."""
 
 import uuid
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timezone
 
 import pytest
 from fastapi.testclient import TestClient
@@ -10,6 +10,20 @@ from sqlalchemy.orm import Session
 from app.dependencies import get_current_user, get_db
 from app.main import app
 from app.models import RunLog, User
+
+
+def _in_month(months_ago: int, *, day: int = 15) -> datetime:
+    """A fixed datetime ``months_ago`` calendar months back.
+
+    The service buckets by *calendar month*, so fixtures have to pin a month
+    rather than a day count. Offsets like "150 and 148 days ago" land in one
+    bucket most of the year and in two whenever that pair happens to straddle a
+    month boundary — which left this suite failing on a handful of dates a year,
+    for a reason that looks nothing like the assertion that breaks.
+    """
+    now = _now()
+    index = now.year * 12 + (now.month - 1) - months_ago
+    return datetime(index // 12, index % 12 + 1, day)
 
 
 def _uid() -> str:
@@ -24,18 +38,19 @@ def _now() -> datetime:
 def owner(test_db: Session) -> User:
     user = User(id=_uid(), email=f"{_uid()[:8]}@t.com", name="Runner", max_hr=190)
     test_db.add(user)
-    # Two months of easy runs with HR so both series have data.
-    for days_ago, pace, hr in (
-        (150, 6.0, 150),
-        (148, 6.0, 150),
-        (10, 5.5, 140),
-        (8, 5.5, 140),
+    # Two months of easy runs with HR so both series have data. Pinned to
+    # calendar months, not day offsets — see _in_month.
+    for when, pace, hr in (
+        (_in_month(5), 6.0, 150),
+        (_in_month(5), 6.0, 150),
+        (_in_month(0, day=1), 5.5, 140),
+        (_in_month(0, day=1), 5.5, 140),
     ):
         test_db.add(
             RunLog(
                 id=_uid(),
                 user_id=user.id,
-                date=_now() - timedelta(days=days_ago),
+                date=when,
                 distance_km=10.0,
                 duration_minutes=55.0,
                 avg_pace_min_km=pace,

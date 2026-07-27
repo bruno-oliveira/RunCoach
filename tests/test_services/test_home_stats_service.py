@@ -1,7 +1,7 @@
 """Tests for the home-page pace + HR-zone evolution aggregation."""
 
 import uuid
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timezone
 
 from app.contexts.runner.fitness.home_stats_service import HomeStatsService
 from app.models import RunLog, User
@@ -15,6 +15,20 @@ def _now() -> datetime:
     return datetime.now(timezone.utc).replace(tzinfo=None)
 
 
+def _in_month(months_ago: int, *, day: int = 15) -> datetime:
+    """A fixed datetime ``months_ago`` calendar months back.
+
+    The service buckets by *calendar month*, so fixtures have to pin a month
+    rather than a day count. Offsets like "150 and 148 days ago" land in one
+    bucket most of the year and in two whenever that pair happens to straddle a
+    month boundary — which left this suite failing on a handful of dates a year,
+    for a reason that looks nothing like the assertion that breaks.
+    """
+    now = _now()
+    index = now.year * 12 + (now.month - 1) - months_ago
+    return datetime(index // 12, index % 12 + 1, day)
+
+
 def _make_user(db, **kwargs) -> User:
     user = User(id=_uid(), email=f"{_uid()[:8]}@t.com", **kwargs)
     db.add(user)
@@ -26,7 +40,7 @@ def _add_run(
     db,
     user_id,
     *,
-    days_ago,
+    when,
     pace=None,
     hr=None,
     duration=50.0,
@@ -35,7 +49,7 @@ def _add_run(
     run = RunLog(
         id=_uid(),
         user_id=user_id,
-        date=_now() - timedelta(days=days_ago),
+        date=when,
         distance_km=10.0,
         duration_minutes=duration,
         avg_pace_min_km=pace,
@@ -50,10 +64,10 @@ class TestPaceEvolution:
     def test_faster_easy_pace_reads_as_a_trend(self, test_db):
         user = _make_user(test_db, max_hr=190)
         # ~5 months ago: slower easy pace; recent: quicker. 2 runs/month.
-        for d in (150, 148):
-            _add_run(test_db, user.id, days_ago=d, pace=6.0)
-        for d in (12, 9):
-            _add_run(test_db, user.id, days_ago=d, pace=5.5)
+        for _ in range(2):
+            _add_run(test_db, user.id, when=_in_month(5), pace=6.0)
+        for _ in range(2):
+            _add_run(test_db, user.id, when=_in_month(0, day=1), pace=5.5)
         test_db.flush()
 
         stats = HomeStatsService.build(user, test_db)
@@ -69,10 +83,13 @@ class TestPaceEvolution:
     def test_falls_back_to_all_runs_when_easy_too_sparse(self, test_db):
         user = _make_user(test_db)
         # Only tempo/race runs, no easy_effort -> easy filter is empty.
-        for d in (120, 118, 20, 18):
-            _add_run(
-                test_db, user.id, days_ago=d, pace=5.0, effort_class="tempo_effort"
-            )
+        for when in (
+            _in_month(4),
+            _in_month(4),
+            _in_month(0, day=1),
+            _in_month(0, day=1),
+        ):
+            _add_run(test_db, user.id, when=when, pace=5.0, effort_class="tempo_effort")
         test_db.flush()
 
         pace = HomeStatsService.build(user, test_db)["pace_evolution"]
@@ -81,8 +98,8 @@ class TestPaceEvolution:
 
     def test_empty_when_under_two_months(self, test_db):
         user = _make_user(test_db)
-        for d in (9, 7):
-            _add_run(test_db, user.id, days_ago=d, pace=5.5)
+        for _ in range(2):
+            _add_run(test_db, user.id, when=_in_month(0, day=1), pace=5.5)
         test_db.flush()
 
         pace = HomeStatsService.build(user, test_db)["pace_evolution"]
@@ -95,10 +112,10 @@ class TestHrZoneEvolution:
         user = _make_user(test_db, max_hr=190)
         # Early month mostly hard (high HR); recent month mostly easy (low HR):
         # easy-zone share rises -> "aerobic base is deepening".
-        for d in (150, 148):
-            _add_run(test_db, user.id, days_ago=d, pace=5.0, hr=178)
-        for d in (12, 9):
-            _add_run(test_db, user.id, days_ago=d, pace=6.0, hr=125)
+        for _ in range(2):
+            _add_run(test_db, user.id, when=_in_month(5), pace=5.0, hr=178)
+        for _ in range(2):
+            _add_run(test_db, user.id, when=_in_month(0, day=1), pace=6.0, hr=125)
         test_db.flush()
 
         hr = HomeStatsService.build(user, test_db)["hr_zone_evolution"]
@@ -112,8 +129,13 @@ class TestHrZoneEvolution:
 
     def test_empty_when_no_heart_rate(self, test_db):
         user = _make_user(test_db, max_hr=190)
-        for d in (120, 118, 20, 18):
-            _add_run(test_db, user.id, days_ago=d, pace=5.5, hr=None)
+        for when in (
+            _in_month(4),
+            _in_month(4),
+            _in_month(0, day=1),
+            _in_month(0, day=1),
+        ):
+            _add_run(test_db, user.id, when=when, pace=5.5, hr=None)
         test_db.flush()
 
         hr = HomeStatsService.build(user, test_db)["hr_zone_evolution"]
