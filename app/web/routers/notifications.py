@@ -4,7 +4,8 @@ Two surfaces, deliberately unlike each other:
 
 * ``POST /api/notifications/run`` is for a scheduler, not a browser. It carries
   a shared secret in a header and is invisible (404) until ``CRON_SECRET`` is
-  configured, so a fresh deploy has no reachable way to mail anyone.
+  configured, so a fresh deploy has no reachable way to mail anyone. It runs
+  *after* ``/api/scheduled/sync`` — see that module for why the order matters.
 * ``/unsubscribe`` is for a runner holding an email, who has no session and
   shouldn't need one. It is authenticated by an HMAC of their user id, and the
   GET only *offers* to unsubscribe — mail clients and security scanners
@@ -13,11 +14,10 @@ Two surfaces, deliberately unlike each other:
 
 from __future__ import annotations
 
-import hmac
 import logging
 from typing import Optional
 
-from fastapi import APIRouter, Depends, Form, Header, HTTPException, Request
+from fastapi import APIRouter, Depends, Form, Request
 from fastapi.responses import HTMLResponse
 from sqlalchemy.orm import Session
 
@@ -25,8 +25,7 @@ from app.application.outbound_nudge_service import (
     OutboundNudgeService,
     verify_unsubscribe_token,
 )
-from app.dependencies import get_db
-from app.infrastructure.config import settings
+from app.dependencies import get_db, require_cron_secret
 from app.infrastructure.notifications import get_mailer
 from app.models import User
 from app.template_helpers import create_templates
@@ -37,31 +36,23 @@ notifications_router = APIRouter(tags=["notifications"])
 templates = create_templates()
 
 
-def _require_cron_secret(secret: Optional[str]) -> None:
-    """Gate the scheduled trigger on the shared secret.
-
-    404 rather than 401 when unconfigured: an endpoint that mails real people
-    should not advertise its own existence to someone probing for it.
-    """
-    if not settings.cron_secret:
-        raise HTTPException(status_code=404, detail="Not found")
-    if not secret or not hmac.compare_digest(secret, settings.cron_secret):
-        raise HTTPException(status_code=403, detail="Invalid cron secret")
-
-
-@notifications_router.post("/api/notifications/run")
+@notifications_router.post(
+    "/api/notifications/run", dependencies=[Depends(require_cron_secret)]
+)
 def run_outbound_nudges(
     dry_run: bool = False,
     limit: Optional[int] = None,
-    x_cron_secret: Optional[str] = Header(default=None),
     db: Session = Depends(get_db),
 ) -> dict:
     """Evaluate every opted-in runner and send at most one nudge each.
 
     Idempotent enough to be safe on a schedule: the stored rate limit and
     signature mean a second run minutes later sends nothing.
+
+    **Run `/api/scheduled/sync` first.** The `gone_quiet` guard reads how long
+    it has been since a logged run, so nudging before importing can tell a
+    runner they have gone quiet when they came back yesterday.
     """
-    _require_cron_secret(x_cron_secret)
     service = OutboundNudgeService(db, get_mailer())
     summary = service.run(dry_run=dry_run, limit=limit)
     logger.info("Outbound nudge run: %s", summary)

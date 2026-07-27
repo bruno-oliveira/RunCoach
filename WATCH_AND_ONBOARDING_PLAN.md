@@ -2,20 +2,20 @@
 
 Follow-on to `c7cd422` (the Now lane). Written 2026-07-25.
 
-> **Status, 2026-07-26: N1, N2, N3, L1 and L2 are built.** The mirror is a real
-> reconciler, watch status is read back from Intervals, the copy names all five
-> ecosystems, the Today card folds check-in + session + watch status into one
-> surface, and outbound nudges can reach a runner who hasn't opened the app.
-> **N4, L3 and L4 are still open.** Per-item notes are inline; the four open
-> questions at the bottom were *not* answered, so the defensive fallbacks were
-> built instead.
+> **Status, 2026-07-28: the whole Next lane and L1–L2 are built.** The mirror is
+> a real reconciler, watch status is read back from Intervals, the copy names all
+> five ecosystems, sync is ambient, the Today card folds check-in + session +
+> watch status into one surface, and the coach can reach a runner who hasn't
+> opened the app. **L3 and L4 are what's left.** Per-item notes are inline; the
+> four open questions at the bottom were *not* answered, so the defensive
+> fallbacks were built instead — and #2 (rate limits) now has a daily job
+> pointed at it, so it is the one worth measuring first.
 >
-> **L2 settled half of N4 by necessity.** An outbound nudge needs a scheduled
-> trigger, so `POST /api/notifications/run` exists and is driven by an external
-> cron (the webhooks-vs-cron decision, resolved as cron — see
-> `docs/outbound-nudges-setup.md`). N4's remaining half is pointing the same
-> trigger at `resync_plan_to_watch` and `auto_map_and_adjust`, which is now a
-> small change rather than a design question.
+> **The webhooks-vs-cron question was answered as neither: GitHub Actions.**
+> `.github/workflows/ambient-sync.yml` drives both scheduled jobs with one
+> authenticated HTTP call each — no always-on machine, no dependency on an
+> Intervals webhook capability nobody confirmed. See
+> `docs/scheduled-jobs-setup.md`.
 
 **Reading order for someone picking this up cold:** this doc is self-contained
 for *what to build*. The reasoning behind it — the cold onboarding walkthrough,
@@ -46,7 +46,8 @@ This document covers the rest.
 | Beyond the 8-day window | not pushed | still not pushed | pushed out to 21d |
 | "Is it on my watch?" | unanswerable | still unanswerable | read back from the calendar |
 | Repeat mirrors of an unchanged plan | — | full re-push every time | zero API writes |
-| Runs imported | manual button | still manual | **still manual — N4** |
+| Runs imported | manual button | still manual | daily, unprompted (N4) |
+| Window beyond 21 days | — | never reached | rolled forward nightly (N4) |
 
 | | After N1–N3 | After L1–L2 |
 |---|---|---|
@@ -70,7 +71,9 @@ Everything watch-related, so nobody has to grep for it.
 | Outbound nudge guards + email copy (pure) | `app/core/coaching/outbound_nudge.py` |
 | Outbound nudge I/O — candidates, signals, rate limit, unsubscribe tokens | `app/application/outbound_nudge_service.py` |
 | Mailer port / SMTP adapter | `app/domain/notifications.py`, `app/infrastructure/notifications/mailer.py` |
-| Cron trigger + unsubscribe | `app/web/routers/notifications.py`, `docs/outbound-nudges-setup.md` |
+| Nudge trigger + unsubscribe | `app/web/routers/notifications.py` |
+| Ambient sweep — import, adapt, roll the window | `app/application/ambient_sync_service.py`, `app/web/routers/scheduled.py` |
+| The schedule + the shared-secret gate | `.github/workflows/ambient-sync.yml`, `app/dependencies/cron.py`, `docs/scheduled-jobs-setup.md` |
 | Mirror decisions — window, ownership, hashing, diff (pure) | `app/core/training/watch_mirror.py` |
 | Mirror I/O — fetch, write, record the outcome | `app/application/watch_sync_service.py` |
 | Intervals HTTP client (`fetch_events`, `delete_events`, `push_workouts`, OAuth, activity sync) | `app/infrastructure/integrations/intervals_service.py` |
@@ -91,6 +94,7 @@ Everything watch-related, so nobody has to grep for it.
 | Tests — watch | `tests/test_core/test_watch_mirror.py` (pure diff + ownership), `tests/test_services/test_watch_sync_service.py` (reconciler), `tests/test_routers/test_intervals_watch_sync_router.py` (endpoints), `tests/test_routers/test_intervals_push_router.py`, `tests/test_services/test_intervals_service.py` |
 | Tests — Today card | `tests/test_core/test_today_card.py` (advisory rules), `tests/test_routers/test_today_card_router.py` (render + re-read) |
 | Tests — outbound nudges | `tests/test_core/test_outbound_nudge.py` (guards + copy), `tests/test_services/test_outbound_nudge_service.py` (consent, rate limit, honest bookkeeping), `tests/test_routers/test_notifications_router.py` (trigger + unsubscribe) |
+| Tests — ambient sync | `tests/test_services/test_ambient_sync_service.py` (containment, cursors, window roll), `tests/test_routers/test_scheduled_router.py` (the gate) |
 
 **Copy lives in three places and drifts easily.** Every user-facing string
 appears once inline in the template (the no-JS fallback) and once per locale in
@@ -281,15 +285,9 @@ bridge would solve.
 
 ---
 
-### N4 — Ambient sync — ⬜ NOT STARTED (needs a decision first)
+### N4 — Ambient sync — ✅ BUILT
 
 **~2 days.** The precondition for everything proactive.
-
-> **Blocked on a choice, not on code.** Webhooks vs. a Fly cron machine is a
-> deployment and cost decision. N1's reconciler is already idempotent and safe to
-> call on a schedule — the content hash means a nightly pass over an unchanged
-> plan issues zero API writes — so whichever trigger wins can just call
-> `resync_plan_to_watch`. Nothing in N1 needs revisiting.
 
 There is no webhook and no scheduler. `auto_map_and_adjust()` — the adaptive
 engine's only trigger — runs inside the manual `/api/intervals/sync` and
@@ -305,6 +303,41 @@ Two options:
   scaled-to-zero web machine.
 
 Either way, N1's nightly window roll can ride the same trigger.
+
+> **As built — a third option: GitHub Actions.** Neither of the two above.
+> `.github/workflows/ambient-sync.yml` is one authenticated HTTP call on a
+> daily cron, which needs no always-on machine (the Fly option's real cost is a
+> second machine running 24h to make one request) and no answer from Intervals
+> about webhook support for third-party OAuth apps. If webhooks ever turn out to
+> be available, they replace the trigger and nothing else.
+>
+> `POST /api/scheduled/sync` (`app/application/ambient_sync_service.py`) runs in
+> two phases: import activities for every connected runner and hand anything new
+> to `auto_map_and_adjust`; then reconcile **every** plan with the mirror on.
+> Two phases rather than one loop because `resync_plan_to_watch` opens its own
+> session — committing the first phase means the second reads the adaptation
+> rather than racing it.
+>
+> **The workflow's step order is load-bearing.** Sync, *then* nudges. The
+> `gone_quiet` guard asks how long it has been since a logged run; ask that
+> before importing and you email someone about a silence they ended yesterday.
+> Step 2 inherits GitHub's default "skip if the previous step failed", which is
+> the behaviour we want — don't add `if: always()`.
+>
+> ### ⚠️ The numbers to watch
+>
+> - **`watch_plans_rolled`** is one Intervals.icu *read* per mirrored plan per
+>   day. The content hash keeps writes at zero for an unchanged plan, but the
+>   read is unavoidable, and the rate limit is still undocumented — open
+>   question #2, still unanswered, now with a daily job pointed at it.
+> - **`reconnect_needed`** counts runners whose token is expired *or missing*.
+>   A row whose token stopped decrypting after a key rotation still shows as
+>   connected in the UI; without this counter its sync is a silent daily no-op.
+>
+> **`last_activity` is deliberately not touched.** It means "the human showed
+> up", and both session expiry and the 24-month retention sweep key off it. A
+> background job that refreshed it would keep every connected account alive
+> forever and quietly disable `cleanup_inactive_accounts`.
 
 ---
 
@@ -355,7 +388,7 @@ matters most.
 > which the drifting runner is exactly the person who won't have granted.
 > stdlib `smtplib` behind a port in `domain/notifications.py`, so no new
 > dependency and any provider's SMTP works. Full setup:
-> `docs/outbound-nudges-setup.md`.
+> `docs/scheduled-jobs-setup.md`.
 >
 > Three guards in `core/coaching/outbound_nudge.py`, highest first:
 > **gone_quiet** (5+ days silent *and* ≥2 scheduled sessions passed — the only
@@ -448,9 +481,9 @@ only Garmin until confirmed (covers #4).
 ## Suggested order
 
 ```
-N1 ✅ ────────────► N2 ✅ ─► L1 ✅ ─► L2 ✅ ─► L3 ⬜
+N1 ✅ ────────────► N2 ✅ ─► L1 ✅ ─► L2 ✅ ─► L3 ⬜ ──► L4 ⬜
       │                                ▲
-      └──► N4 ⬜ (half done) ───────────┘
+      └──► N4 ✅ ──────────────────────┘
 N3 ✅ (independent — it was copy)
 ```
 
@@ -459,12 +492,14 @@ gaps. N3 whenever — it's copy, and it quadruples the addressable watch market.
 L2 turned out not to need N4 first: it brought its own scheduled trigger, and
 that trigger is the thing N4 was blocked on.
 
-**Next up: N4**, and it is now small. The cron machine exists (see
-`docs/outbound-nudges-setup.md`); what's left is calling `resync_plan_to_watch`
-and `auto_map_and_adjust` from the same schedule. N1's reconciler is already
-idempotent — an unchanged plan costs zero API writes — so nothing needs
-revisiting. **Measure Intervals rate limits before it goes wide** (open question
-#2 below).
+**Next up: L3.** It is more tractable than it was — the Today card gave "what
+changed and why" an obvious home it didn't have before, and N4 made the thing
+it has to announce (an adaptation nobody asked for, arriving overnight) a real
+event rather than a hypothetical one. That is also what makes it *necessary*:
+a plan that reshapes itself while you sleep and says nothing is worse than one
+that never reshapes at all.
 
-Then L3, which is now more visible than it was: the Today card gave "what
-changed and why" an obvious home it didn't have before.
+**Before L3, measure open question #2.** The nightly window roll costs one
+Intervals.icu read per mirrored plan per day, and the rate limit is still
+undocumented. It is cheap now and it is the first thing that will break quietly
+as the plan count grows.

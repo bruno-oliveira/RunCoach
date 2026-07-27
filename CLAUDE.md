@@ -232,13 +232,29 @@ Configuration via environment variables or `.env` file:
 | `GOOGLE_CLIENT_ID` | (required) | Google OAuth client ID |
 | `SMTP_HOST` | (empty) | Outbound-nudge mail host. **Empty means send nothing** — the null mailer logs and reports failure rather than pretending |
 | `SMTP_PORT` / `SMTP_USERNAME` / `SMTP_PASSWORD` / `SMTP_FROM` | 587 / empty | SMTP credentials. Port 465 switches to implicit TLS; otherwise STARTTLS unless `SMTP_STARTTLS=false` |
-| `CRON_SECRET` | (empty) | Shared secret for `POST /api/notifications/run`. Empty makes the endpoint 404 |
+| `CRON_SECRET` | (empty) | Shared secret for both scheduled endpoints. Empty makes them 404 |
 | `PUBLIC_BASE_URL` | http://localhost:8000 | Absolute origin for links inside emails. Must be set in production |
 | `NUDGE_MIN_INTERVAL_DAYS` | 4 | Floor between two nudge emails to the same runner |
 
-Outbound coaching nudges are off in every direction until configured — see
-`docs/outbound-nudges-setup.md` for the guards, the schedule, and how to check
-who *would* be mailed before anything goes out.
+### Scheduled jobs
+
+Two daily jobs, driven by `.github/workflows/ambient-sync.yml`, **in this
+order**:
+
+1. `POST /api/scheduled/sync` — import everyone's activities, hand new ones to
+   the adaptive engine, roll every mirrored plan's watch window forward.
+2. `POST /api/notifications/run` — email at most one coaching nudge per
+   opted-in runner.
+
+The order is load-bearing: the `gone_quiet` guard reads how long it has been
+since a logged run, so nudging before importing can tell a runner they've gone
+quiet when they came back yesterday. Step 2 inherits GitHub's default "skip if
+the previous step failed" — do not add `if: always()`.
+
+Both are off in every direction until configured (no `CRON_SECRET` → 404 and
+the workflow skips itself; no `SMTP_HOST` → the mailer refuses and says so).
+See `docs/scheduled-jobs-setup.md` for the guards, the setup, and how to check
+what *would* happen with `?dry_run=true` before anything goes out.
 
 Training constraints are configured in `app/infrastructure/config.py` (settings) and `app/core/training/training_config.py` (`DISTANCE_CONSTRAINTS` registry):
 - Minimum/maximum weeks per distance

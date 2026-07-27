@@ -1,0 +1,104 @@
+name: Ambient sync
+
+# The scheduler RunCoach doesn't have anywhere else. The web machine runs with
+# `auto_stop_machines = 'stop'`, so it is asleep most of the day and an
+# in-process scheduler would only fire while somebody happened to be browsing —
+# which defeats the point of reaching a runner who isn't browsing.
+#
+# Two steps, and the ORDER IS LOAD-BEARING:
+#
+#   1. import activities, adapt plans, roll every mirrored watch window
+#   2. send at most one coaching nudge per runner
+#
+# The `gone_quiet` guard behind step 2 asks how long it has been since a logged
+# run. Ask that before importing and you email someone about a silence they
+# ended yesterday. Step 2 only runs if step 1 succeeded, which is the default
+# behaviour — do not add `if: always()`.
+#
+# Setup, and what each number in the output means: docs/scheduled-jobs-setup.md
+
+on:
+  schedule:
+    # 07:00 America/Los_Angeles (the app's region). GitHub cron is UTC and does
+    # not follow DST, so this drifts an hour in summer; the guards are measured
+    # in days, so that is fine. Scheduled runs are queued rather than punctual
+    # and can land minutes-to-hours late at peak times — nothing here should
+    # depend on the exact minute.
+    #
+    # GitHub also disables scheduled workflows after 60 days with no commits to
+    # the repository. If nudges quietly stop, check that before the app.
+    - cron: "0 15 * * *"
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Resolve every signal, call no provider, send no mail"
+        type: boolean
+        default: true
+
+concurrency:
+  # Never let a slow run overlap the next day's. Both endpoints are idempotent,
+  # but two concurrent sweeps would double the Intervals.icu API reads for no
+  # benefit.
+  group: ambient-sync
+  cancel-in-progress: false
+
+jobs:
+  sweep:
+    runs-on: ubuntu-latest
+    env:
+      CRON_SECRET: ${{ secrets.CRON_SECRET }}
+      # A var rather than a secret: the base URL is public, and it belongs in
+      # the log so a failed run says which deployment it was talking to.
+      BASE_URL: ${{ vars.PUBLIC_BASE_URL || 'https://runcoach.fly.dev' }}
+      DRY_RUN: ${{ github.event_name == 'workflow_dispatch' && inputs.dry_run || false }}
+    steps:
+      # Without this the workflow would go red every morning on a deployment
+      # that simply hasn't turned the feature on yet — noise that trains you to
+      # ignore the one failure that matters.
+      - name: Check the schedule is configured
+        if: env.CRON_SECRET == ''
+        run: |
+          echo "CRON_SECRET is not set for this repository."
+          echo "Ambient sync and coaching nudges are off; nothing was called."
+          echo "See docs/scheduled-jobs-setup.md to switch them on."
+
+      - name: Import activities, adapt plans, roll watch windows
+        if: env.CRON_SECRET != ''
+        run: |
+          set -euo pipefail
+          # --fail-with-body: a 4xx/5xx must fail the step *and* show the body,
+          # or a 404 from a mismatched secret reads as a silent success.
+          # --retry with a long --max-time because the first request of the day
+          # wakes a scaled-to-zero machine, boot migrations included.
+          curl -sS --fail-with-body \
+            --retry 3 --retry-all-errors --retry-delay 10 \
+            --max-time 300 \
+            -X POST "$BASE_URL/api/scheduled/sync?dry_run=$DRY_RUN" \
+            -H "X-Cron-Secret: $CRON_SECRET" \
+            | tee sync.json
+          echo
+
+      - name: Send coaching nudges
+        if: env.CRON_SECRET != ''
+        run: |
+          set -euo pipefail
+          curl -sS --fail-with-body \
+            --retry 3 --retry-all-errors --retry-delay 10 \
+            --max-time 300 \
+            -X POST "$BASE_URL/api/notifications/run?dry_run=$DRY_RUN" \
+            -H "X-Cron-Secret: $CRON_SECRET" \
+            | tee nudges.json
+          echo
+
+      - name: Summary
+        if: always() && env.CRON_SECRET != ''
+        run: |
+          {
+            echo "### Ambient sync — \`$BASE_URL\` (dry_run=$DRY_RUN)"
+            echo
+            echo '```json'
+            cat sync.json 2>/dev/null || echo '{"error":"sync step did not complete"}'
+            echo
+            cat nudges.json 2>/dev/null || echo '{"error":"nudge step did not run"}'
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"

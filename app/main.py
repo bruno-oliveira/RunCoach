@@ -34,6 +34,7 @@ from app.web.routers import (
     recipes_page_router,
     recipes_router,
     runs_router,
+    scheduled_router,
     strava_router,
 )
 
@@ -57,6 +58,7 @@ _ROUTERS = (
     intervals_router,
     admin_router,
     notifications_router,
+    scheduled_router,
     pages_router,
 )
 

@@ -3,6 +3,7 @@
 - ``app.dependencies.database`` — engine, session, repo factories
 - ``app.dependencies.services`` — cached service factories
 - ``app.dependencies.auth``     — user resolution + ownership helpers
+- ``app.dependencies.cron``     — the shared-secret gate on scheduled endpoints
 """
 
 from app.dependencies.auth import (
@@ -14,6 +15,7 @@ from app.dependencies.auth import (
     validate_plan_ownership,
     verify_plan_ownership,
 )
+from app.dependencies.cron import require_cron_secret
 from app.dependencies.database import (
     SessionLocal,
     engine,
@@ -58,6 +60,7 @@ __all__ = [
     "get_performance_plan_generator",
     "get_performance_service",
     "get_plan_generator",
+    "require_cron_secret",
     "get_plan_repository",
     "get_plan_service",
     "get_plan_view_service",
