@@ -1,6 +1,7 @@
 """Unit tests for IntervalsService."""
 
 import time
+from datetime import datetime
 from unittest.mock import AsyncMock, patch
 
 import httpx
@@ -115,6 +116,49 @@ async def test_sync_creates_and_deduplicates_run(
     assert len(runs) == 1
     assert runs[0].intervals_activity_id == "i987654"
     assert intervals_user.intervals_last_synced_at is not None
+
+
+@pytest.mark.asyncio
+async def test_sync_skips_a_run_already_imported_from_strava(
+    intervals_service, intervals_user, intervals_activity, test_db
+):
+    """A watch feeding both platforms must not produce two rows.
+
+    Intervals.icu only marks an activity ``source: STRAVA`` when Strava was the
+    one that fed it. A Garmin activity that reached Strava independently arrives
+    here looking brand new, so the match has to be on the run itself.
+    """
+    test_db.add(intervals_user)
+    test_db.add(
+        RunLog(
+            user_id="intervals-user",
+            strava_activity_id="9876543210",
+            date=datetime(2026, 7, 18, 7, 30),
+            distance_km=10.0,
+            duration_minutes=50.0,
+            avg_pace_min_km=5.0,
+        )
+    )
+    test_db.commit()
+
+    with patch.object(
+        intervals_service,
+        "fetch_activities",
+        new_callable=AsyncMock,
+        return_value=[intervals_activity],
+    ):
+        result = await intervals_service.sync_activities(
+            intervals_user, test_db, after_timestamp=int(time.time()) - 86400
+        )
+
+    assert result["synced"] == 0
+    assert result["skipped"] == 1
+    runs = test_db.query(RunLog).filter(RunLog.user_id == "intervals-user").all()
+    assert len(runs) == 1
+    # The id lands on the row we kept, so the next sync stops at the cheap
+    # provider-id lookup instead of re-deriving the match.
+    assert runs[0].strava_activity_id == "9876543210"
+    assert runs[0].intervals_activity_id == "i987654"
 
 
 class _FakeResp:

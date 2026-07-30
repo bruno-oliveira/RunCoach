@@ -12,6 +12,7 @@ from sqlalchemy.orm import Session
 from app.contexts.runner.fitness.feedback_service import FeedbackService
 from app.core.training.vdot_calculator import VDOTCalculator
 from app.infrastructure.config import settings
+from app.infrastructure.integrations.activity_dedup import find_duplicate_run
 from app.models.run_log import RunLog
 from app.models.user import User
 from app.utils import TimestampAdapter
@@ -387,6 +388,16 @@ class StravaService:
 
         try:
             run_log = self.map_activity_to_run_log(activity, user.id)
+            duplicate = find_duplicate_run(
+                db, user.id, run_log.date, run_log.distance_km
+            )
+            if duplicate is not None:
+                # Already imported from Intervals.icu — the watch feeds both.
+                # Keep the id on the row we have so the next sync short-circuits
+                # on the cheap lookup above instead of re-deriving this.
+                if duplicate.strava_activity_id is None:
+                    duplicate.strava_activity_id = strava_id
+                return "skipped", detail_fetches, None
             self._apply_vdot(run_log)
             # Pull per-km splits (one extra call per inserted run) to sharpen
             # the workout-type inference. Bounded per sync to respect Strava's

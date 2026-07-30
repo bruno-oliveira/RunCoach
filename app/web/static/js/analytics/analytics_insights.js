@@ -63,7 +63,7 @@
 
         // 3. Consistency: unique days with runs
         const runDays = new Set(runs.map(r => r.date ? r.date.slice(0, 10) : null)).size;
-        const periodLen = this.currentPeriodDays === 'all' ? null : Number(this.currentPeriodDays);
+        const periodLen = this.periodSyncDays(this.currentPeriodDays);
         if (periodLen) {
             const weeks = Math.max(1, Math.floor(periodLen / 7));
             const runsPerWeek = (runs.length / weeks).toFixed(1);

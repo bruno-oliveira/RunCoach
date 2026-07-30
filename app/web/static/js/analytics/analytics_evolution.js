@@ -22,8 +22,7 @@
         this.evolutionLoadedForDays = this.currentPeriodDays;
         try {
             if (this.activityProvider) {
-                const daysBack = this.currentPeriodDays === 'all' ? null : this.currentPeriodDays;
-                await this.syncActivityPeriod(daysBack);
+                await this.syncActivityPeriod(this.periodSyncDays(this.currentPeriodDays));
                 await this.reloadRuns();
             }
             const evoRuns = this._filterEvolutionRuns();
@@ -46,10 +45,9 @@
     };
 
     AD._filterEvolutionRuns = function() {
-        if (this.currentPeriodDays === 'all') return [...this.allRuns];
-        const cutoff = new Date();
-        cutoff.setDate(cutoff.getDate() - this.currentPeriodDays);
-        return this.allRuns.filter(r => r.date && new Date(r.date) >= cutoff);
+        const window = this.periodWindow(this.currentPeriodDays);
+        if (!window) return [...this.allRuns];
+        return this.allRuns.filter(r => r.date && new Date(r.date) >= window.start);
     };
 
     AD._groupEvolutionByWeek = function(runs) {

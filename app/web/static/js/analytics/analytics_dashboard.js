@@ -136,21 +136,48 @@ const AnalyticsDashboard = {
     /* ------------------------------------------------------------------ */
     /*  Period Filtering                                                    */
     /* ------------------------------------------------------------------ */
+    /**
+     * The window a period selection covers, and the one it is compared against.
+     *
+     * "Last 30 days" means today and the 29 days before it — 30 days of runs,
+     * not 32. The comparison window is the same number of days immediately
+     * before, so a trend badge never measures a long stretch against a short
+     * one. Returns null for the unbounded "all time" selection.
+     */
+    periodWindow(days) {
+        if (days === 'all') return null;
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+
+        const start = days === 'ytd'
+            ? new Date(today.getFullYear(), 0, 1)
+            : new Date(today.getFullYear(), today.getMonth(), today.getDate() - (Number(days) - 1));
+
+        // Round rather than truncate: a DST change makes a whole number of days
+        // measure 23 or 25 hours.
+        const span = Math.round((today - start) / 86400000) + 1;
+        const prevStart = new Date(start.getFullYear(), start.getMonth(), start.getDate() - span);
+        return { start, prevStart, span };
+    },
+
+    /** Days of history a period needs from the activity provider. */
+    periodSyncDays(days) {
+        const window = this.periodWindow(days);
+        return window ? window.span : null;
+    },
+
     filterByPeriod(days) {
         this.currentPeriodDays = days;
+        const window = this.periodWindow(days);
 
-        if (days === 'all') {
+        if (!window) {
             this.runs = [...this.allRuns];
             this.prevRuns = [];
         } else {
-            const n = Number(days);
-            const now = new Date();
-            const cutoffCurrent = new Date(now.getFullYear(), now.getMonth(), now.getDate() - n - 1);
-            const cutoffPrev    = new Date(now.getFullYear(), now.getMonth(), now.getDate() - n * 2 - 1);
-            this.runs     = this.allRuns.filter(r => new Date(r.date) >= cutoffCurrent);
+            this.runs = this.allRuns.filter(r => new Date(r.date) >= window.start);
             this.prevRuns = this.allRuns.filter(r => {
                 const d = new Date(r.date);
-                return d >= cutoffPrev && d < cutoffCurrent;
+                return d >= window.prevStart && d < window.start;
             });
         }
 
@@ -207,10 +234,10 @@ const AnalyticsDashboard = {
         const customWrap = document.getElementById('customDaysWrap');
         const customInput = document.getElementById('customDaysInput');
         if (!sel) return;
-        const standard = ['30', '60', '90', '365', 'all'];
+        const standard = ['30', '60', '90', '365', 'ytd', 'all'];
         if (standard.includes(period)) {
             sel.value = period;
-            this.currentPeriodDays = period === 'all' ? 'all' : parseInt(period, 10);
+            this.currentPeriodDays = /^\d+$/.test(period) ? parseInt(period, 10) : period;
         } else if (/^\d+$/.test(period)) {
             const n = Math.min(366, Math.max(1, parseInt(period, 10)));
             sel.value = 'custom';
@@ -239,8 +266,7 @@ const AnalyticsDashboard = {
             el.disabled = true;
             if (customApply) customApply.disabled = true;
             try {
-                const daysBack = days !== 'all' ? parseInt(days) : null;
-                const syncOk = await this.syncActivityPeriod(daysBack);
+                const syncOk = await this.syncActivityPeriod(this.periodSyncDays(days));
                 await this.reloadRuns();
                 this.filterByPeriod(days);
                 if (!syncOk) this.showSyncError('Activity sync failed — showing cached data');

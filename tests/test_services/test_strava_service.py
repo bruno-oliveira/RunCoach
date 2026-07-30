@@ -1,6 +1,7 @@
 """Unit tests for StravaService."""
 
 import time
+from datetime import datetime
 from unittest.mock import AsyncMock, patch
 
 import httpx
@@ -259,6 +260,46 @@ class TestSyncActivities:
         assert result["skipped"] == 1
 
     @pytest.mark.asyncio
+    async def test_sync_skips_a_run_already_imported_from_intervals(
+        self, strava_service, mock_user, sample_strava_activity, test_db
+    ):
+        """A watch feeding both platforms must not produce two rows."""
+        test_db.add(mock_user)
+        test_db.add(
+            RunLog(
+                user_id="user-123",
+                intervals_activity_id="i987654",
+                date=datetime(2026, 2, 15, 7, 30),
+                distance_km=10.0,
+                duration_minutes=50.0,
+                avg_pace_min_km=5.0,
+            )
+        )
+        test_db.commit()
+
+        with (
+            patch.object(
+                strava_service, "ensure_valid_token", new_callable=AsyncMock
+            ) as mock_token,
+            patch.object(
+                strava_service, "fetch_activities", new_callable=AsyncMock
+            ) as mock_fetch,
+        ):
+            mock_token.return_value = "valid-token"
+            mock_fetch.side_effect = [[sample_strava_activity], []]
+
+            result = await strava_service.sync_activities(mock_user, test_db)
+
+        assert result["synced"] == 0
+        assert result["skipped"] == 1
+        logs = test_db.query(RunLog).filter(RunLog.user_id == "user-123").all()
+        assert len(logs) == 1
+        # The id lands on the row we kept, so the next sync stops at the cheap
+        # provider-id lookup instead of re-deriving the match.
+        assert logs[0].strava_activity_id == "9876543210"
+        assert logs[0].intervals_activity_id == "i987654"
+
+    @pytest.mark.asyncio
     async def test_sync_filters_non_run_activities(
         self, strava_service, mock_user, sample_strava_activity, test_db
     ):
@@ -267,7 +308,15 @@ class TestSyncActivities:
 
         cycling_activity = {**sample_strava_activity, "id": 111, "type": "Ride"}
         swim_activity = {**sample_strava_activity, "id": 222, "type": "Swim"}
-        trail_run = {**sample_strava_activity, "id": 333, "type": "TrailRun"}
+        # A separate outing, not a second copy of the sample run: two activities
+        # sharing a start time and a distance are treated as one run.
+        trail_run = {
+            **sample_strava_activity,
+            "id": 333,
+            "type": "TrailRun",
+            "start_date_local": "2026-02-16T09:00:00",
+            "distance": 15000.0,
+        }
 
         with (
             patch.object(
