@@ -92,7 +92,6 @@ class RunLogResponse(RunLogBase):
     id: str
     date: datetime
     avg_pace_min_km: Optional[float] = None
-    strava_activity_id: Optional[str] = None
     effort_quality_score: Optional[float] = None
     quality_label: Optional[str] = None
     vdot: Optional[float] = None

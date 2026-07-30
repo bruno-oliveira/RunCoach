@@ -501,10 +501,10 @@ const AnalyticsDashboard = {
     },
 
     /* ------------------------------------------------------------------ */
-    /*  Strava Integration                                                 */
+    /*  Activity Provider Integration                                      */
     /* ------------------------------------------------------------------ */
     async getActivityProvider() {
-        for (const provider of ['intervals', 'strava']) {
+        for (const provider of ['intervals']) {
             try {
                 const res = await fetch(`/api/${provider}/status`, { credentials: 'same-origin' });
                 if (res.ok && (await res.json()).connected) return provider;
@@ -523,7 +523,7 @@ const AnalyticsDashboard = {
             console.log(`Activity sync: ${data.synced} new, ${data.skipped} skipped`);
             if (data.errors?.length) console.warn('Mapping errors:', data.errors);
             return true;
-        } catch (err) { console.error('Strava sync error:', err); return false; }
+        } catch (err) { console.error('Activity sync error:', err); return false; }
     },
 
     async loadRuns() {
@@ -668,18 +668,18 @@ const AnalyticsDashboard = {
     /*  Sync Indicators                                                    */
     /* ------------------------------------------------------------------ */
     showSyncIndicator() {
-        const el = document.getElementById('stravaSyncIndicator');
+        const el = document.getElementById('syncIndicator');
         if (el) el.style.display = 'flex';
     },
     hideSyncIndicator() {
-        const el = document.getElementById('stravaSyncIndicator');
+        const el = document.getElementById('syncIndicator');
         if (el) el.style.display = 'none';
     },
     showSyncError(message) {
-        const el = document.getElementById('stravaSyncIndicator');
+        const el = document.getElementById('syncIndicator');
         if (!el) return;
-        const label = el.querySelector('.strava-sync-label');
-        const spinner = el.querySelector('.strava-sync-spinner');
+        const label = el.querySelector('.sync-label');
+        const spinner = el.querySelector('.sync-spinner');
         if (spinner) spinner.style.display = 'none';
         if (label) label.textContent = message;
         el.style.display = 'flex';

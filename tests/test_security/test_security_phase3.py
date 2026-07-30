@@ -1,6 +1,5 @@
-"""Tests for Phase 3 security hardening: headers, request size, cookies, privacy, account deletion, Strava disconnect."""
+"""Tests for Phase 3 security hardening: headers, request size, cookies, privacy, account deletion."""
 
-import time
 from unittest.mock import patch
 
 import pytest
@@ -25,25 +24,6 @@ def security_user(test_db: Session) -> User:
         email="sec@example.com",
         name="Security Test",
         google_id="google-sec-1",
-    )
-    test_db.add(user)
-    test_db.commit()
-    return user
-
-
-@pytest.fixture
-def strava_user(test_db: Session) -> User:
-    """Create a user with Strava fields populated."""
-    user = User(
-        id="strava-sec-1",
-        email="strava-sec@example.com",
-        name="Strava Security Test",
-        google_id="google-strava-sec-1",
-        strava_athlete_id="99999",
-        strava_access_token="access-tok",
-        strava_refresh_token="refresh-tok",
-        strava_token_expires_at=int(time.time()) + 3600,
-        strava_last_synced_at=int(time.time()),
     )
     test_db.add(user)
     test_db.commit()
@@ -269,42 +249,3 @@ class TestAccountDeletion:
             .first()
             is None
         )
-
-
-# ---------------------------------------------------------------------------
-# Strava Disconnect
-# ---------------------------------------------------------------------------
-
-
-@pytest.mark.usefixtures("_override_db")
-class TestStravaDisconnect:
-    """Verify POST /api/strava/disconnect clears Strava credentials."""
-
-    def test_disconnect_requires_auth(self):
-        _clear_user()
-        with TestClient(app) as c:
-            response = c.post("/api/strava/disconnect")
-        assert response.status_code == 401
-
-    def test_disconnect_clears_strava_fields(self, strava_user, test_db):
-        _set_user(strava_user)
-        with TestClient(app) as c:
-            response = c.post("/api/strava/disconnect")
-        assert response.status_code == 200
-        assert response.json()["message"] == "Strava disconnected"
-
-        test_db.expire_all()
-        refreshed = test_db.query(User).filter(User.id == strava_user.id).first()
-        assert refreshed.strava_athlete_id is None
-        assert refreshed.strava_access_token is None
-        assert refreshed.strava_refresh_token is None
-        assert refreshed.strava_token_expires_at is None
-        assert refreshed.strava_last_synced_at is None
-
-    def test_disconnect_already_disconnected(self, security_user):
-        """A user without Strava connected can still call disconnect successfully."""
-        _set_user(security_user)
-        with TestClient(app) as c:
-            response = c.post("/api/strava/disconnect")
-        assert response.status_code == 200
-        assert response.json()["message"] == "Strava disconnected"

@@ -35,7 +35,6 @@ from app.web.routers import (
     recipes_router,
     runs_router,
     scheduled_router,
-    strava_router,
 )
 
 setup_logging(settings)
@@ -54,7 +53,6 @@ _ROUTERS = (
     performance_page_router,
     analytics_router,
     analytics_page_router,
-    strava_router,
     intervals_router,
     admin_router,
     notifications_router,

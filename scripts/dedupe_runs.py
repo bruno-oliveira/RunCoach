@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
-"""Remove runs imported twice, once from Strava and once from Intervals.icu.
+"""Remove runs stored twice under two different provider ids.
 
 Until ``app/infrastructure/integrations/activity_dedup.py`` existed, each
-importer only deduplicated against its own provider id. A runner whose watch
-feeds both platforms got two rows for every run, so every distance total counted
-those runs twice.
+importer only deduplicated against its own provider id, so a run offered by two
+platforms got a row from each and every distance total counted it twice. The
+importers dedupe on the activity now; this stays as the way to clean up
+anything that slipped through before they did.
 
 This collapses each duplicate pair onto one row. The surviving row is the one
 carrying the most context (plan link, then splits, then the earliest import);
@@ -87,7 +88,6 @@ def find_duplicate_pairs(db: Session) -> List[Tuple[RunLog, RunLog]]:
 
 
 CARRIED_FIELDS = (
-    "strava_activity_id",
     "intervals_activity_id",
     "training_plan_id",
     "daily_workout_id",
@@ -139,8 +139,8 @@ def main(argv: Optional[List[str]] = None) -> int:
         for keep, drop in pairs:
             print(
                 f"  {drop.date}  {drop.distance_km:>6} km"
-                f"   keep {keep.id[:8]} [{keep.strava_activity_id or keep.intervals_activity_id}]"
-                f"   drop {drop.id[:8]} [{drop.strava_activity_id or drop.intervals_activity_id}]"
+                f"   keep {keep.id[:8]} [{keep.intervals_activity_id or keep.source}]"
+                f"   drop {drop.id[:8]} [{drop.intervals_activity_id or drop.source}]"
             )
 
         if not args.apply:

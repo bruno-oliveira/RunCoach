@@ -5,7 +5,6 @@ from datetime import datetime, timedelta, timezone
 
 from sqlalchemy.orm import Session
 
-from app.contexts.auth.repositories import SQLAlchemyUserRepository
 from app.contexts.plan.adaptation import AdaptationService
 from app.models import TrainingPlan
 from app.models.user import User
@@ -55,7 +54,7 @@ def auto_map_and_adjust(
                 vdot_recalibration = recalibrate_zones_only(plan, user.id, db)
             except Exception as e:
                 logger.warning(
-                    f"VDOT recalibration after Strava sync failed for plan {plan.id}: {e}"
+                    f"VDOT recalibration after sync failed for plan {plan.id}: {e}"
                 )
 
             results.append(
@@ -69,42 +68,3 @@ def auto_map_and_adjust(
             logger.warning(f"Auto-adjust failed for plan {plan.id}: {e}")
 
     return results
-
-
-async def initial_sync(
-    user_id: str,
-    strava_service,
-) -> None:
-    """Run the initial Strava sync in a background task with its own DB session."""
-    from app.dependencies import SessionLocal
-    from app.infrastructure.config import settings
-    from app.utils import TimestampAdapter
-
-    sync_db = SessionLocal()
-    try:
-        sync_user = SQLAlchemyUserRepository(sync_db).get_by_id(user_id)
-        if not sync_user:
-            return
-        initial_after = TimestampAdapter.days_ago_utc_epoch(
-            settings.strava_initial_sync_days
-        )
-        result = await strava_service.sync_activities(
-            sync_user, sync_db, after_timestamp=initial_after
-        )
-        logger.info(
-            f"Initial Strava sync for user {user_id}: "
-            f"{result['synced']} synced, {result['total']} total"
-        )
-        if result.get("synced", 0) > 0:
-            adaptation_service = AdaptationService()
-            adjustment_results = auto_map_and_adjust(
-                sync_user, sync_db, adaptation_service
-            )
-            if adjustment_results:
-                logger.info(
-                    f"Auto-adjusted {len(adjustment_results)} plan(s) for user {user_id}"
-                )
-    except Exception as e:
-        logger.error(f"Initial Strava sync failed: {e}")
-    finally:
-        sync_db.close()

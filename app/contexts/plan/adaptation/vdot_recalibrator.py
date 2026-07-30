@@ -93,7 +93,7 @@ def recalibrate_zones_only(
 ) -> Optional[Dict[str, Any]]:
     """Rewrite future workout pace zones when the user's VDOT has shifted.
 
-    Public helper callable from per-run hooks (run logging, Strava sync) and
+    Public helper callable from per-run hooks (run logging, activity sync) and
     from the full plan-adjust flow. Returns the recalibration result dict if
     pace zones were updated, or None if nothing changed.
     """

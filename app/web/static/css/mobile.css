@@ -45,7 +45,7 @@
     color: var(--color-text) !important;
   }
 
-  .strava-chip:active:not(:disabled) {
+  .provider-chip:active:not(:disabled) {
     background: var(--color-surface);
     border-color: var(--color-primary);
     color: var(--color-link);
@@ -60,8 +60,8 @@
 .nav-toggle,
 .nav-brand,
 .nav-theme-toggle,
-.strava-chip,
-.strava-primary-btn,
+.provider-chip,
+.provider-primary-btn,
 [role="button"] {
   user-select: none;
   -webkit-user-select: none;

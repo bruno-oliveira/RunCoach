@@ -1,9 +1,9 @@
 """Infer a run's workout_type from its signals.
 
-Strava rarely sets ``workout_type``; the sync mapper defaults the blank to
-"easy", so tempo, interval, and long sessions all masquerade as easy and
-poison every consumer that reads ``workout_type`` (adaptation volume ratios,
-coaching patterns, profile counts, zone recalibration).
+Imported activities rarely carry a ``workout_type``; the sync mapper defaults
+the blank to "easy", so tempo, interval, and long sessions all masquerade as
+easy and poison every consumer that reads ``workout_type`` (adaptation volume
+ratios, coaching patterns, profile counts, zone recalibration).
 
 This resolves the runner's own VDOT pace zones, HR zones, and distance
 distribution, then defers to the pure ``app.core.training.workout_inference``

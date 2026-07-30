@@ -25,11 +25,9 @@ from app.application.ambient_sync_service import AmbientSyncService
 from app.dependencies import (
     get_db,
     get_intervals_service,
-    get_strava_service,
     require_cron_secret,
 )
 from app.infrastructure.integrations.intervals_service import IntervalsService
-from app.infrastructure.integrations.strava_service import StravaService
 
 logger = logging.getLogger(__name__)
 
@@ -44,7 +42,6 @@ async def run_ambient_sync(
     limit: Optional[int] = None,
     db: Session = Depends(get_db),
     intervals_service: IntervalsService = Depends(get_intervals_service),
-    strava_service: StravaService = Depends(get_strava_service),
 ) -> dict:
     """Import activities, adapt plans, roll watch windows.
 
@@ -53,6 +50,6 @@ async def run_ambient_sync(
     unchanged plan issues no writes. ``limit`` chunks a sweep that has grown
     too slow for one request; ``dry_run`` calls no provider at all.
     """
-    service = AmbientSyncService(db, intervals_service, strava_service)
+    service = AmbientSyncService(db, intervals_service)
     summary = await service.run(dry_run=dry_run, limit=limit)
     return {"ok": True, "dry_run": dry_run, **summary}

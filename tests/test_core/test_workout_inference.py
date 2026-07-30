@@ -205,26 +205,28 @@ class TestCombine:
 class TestResolveEffectiveWorkoutType:
     def test_manual_explicit_wins(self):
         assert (
-            resolve_effective_workout_type("recovery", "tempo", is_strava=False)
+            resolve_effective_workout_type("recovery", "tempo", is_imported=False)
             == "recovery"
         )
 
     def test_manual_blank_falls_back_to_inferred(self):
-        assert resolve_effective_workout_type(None, "tempo", is_strava=False) == "tempo"
+        assert (
+            resolve_effective_workout_type(None, "tempo", is_imported=False) == "tempo"
+        )
 
-    def test_strava_meaningful_tag_wins(self):
+    def test_meaningful_tag_wins(self):
         for tag in ("race", "long", "interval"):
             assert (
                 resolve_effective_workout_type(
-                    tag, "easy", is_strava=True, confidence=0.9
+                    tag, "easy", is_imported=True, confidence=0.9
                 )
                 == tag
             )
 
-    def test_strava_easy_defers_to_confident_inference(self):
+    def test_easy_default_defers_to_confident_inference(self):
         assert (
             resolve_effective_workout_type(
-                "easy", "tempo", is_strava=True, confidence=0.8
+                "easy", "tempo", is_imported=True, confidence=0.8
             )
             == "tempo"
         )
@@ -232,10 +234,10 @@ class TestResolveEffectiveWorkoutType:
     def test_low_confidence_keeps_raw_tag(self):
         assert (
             resolve_effective_workout_type(
-                "easy", "tempo", is_strava=True, confidence=0.3
+                "easy", "tempo", is_imported=True, confidence=0.3
             )
             == "easy"
         )
 
     def test_no_inference_keeps_raw_tag(self):
-        assert resolve_effective_workout_type("easy", None, is_strava=True) == "easy"
+        assert resolve_effective_workout_type("easy", None, is_imported=True) == "easy"

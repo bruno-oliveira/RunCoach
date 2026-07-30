@@ -320,27 +320,27 @@
     line-height: var(--leading-normal);
 }
 
-.plan-insights.plan-insights-strava {
+.plan-insights.plan-insights-imported {
     background: linear-gradient(135deg, #fc4c02 0%, #e8430a 100%);
     color: white;
     border-color: transparent;
 }
 
-.plan-insights.plan-insights-strava h3 {
+.plan-insights.plan-insights-imported h3 {
     color: white;
 }
 
-.plan-insights.plan-insights-strava .insight-item {
+.plan-insights.plan-insights-imported .insight-item {
     background: rgba(255, 255, 255, 0.12);
     border-left-color: rgba(255, 255, 255, 0.4);
 }
 
-.plan-insights.plan-insights-strava .insight-content strong,
-.plan-insights.plan-insights-strava .insight-content span {
+.plan-insights.plan-insights-imported .insight-content strong,
+.plan-insights.plan-insights-imported .insight-content span {
     color: white;
 }
 
-.plan-insights-strava-btn {
+.plan-insights-provider-btn {
     margin-top: var(--space-4);
     background: white;
     color: #fc4c02;
@@ -353,12 +353,12 @@
     transition: all var(--duration-fast) var(--ease-out);
 }
 
-.plan-insights-strava-btn:hover {
+.plan-insights-provider-btn:hover {
     background: rgba(255, 255, 255, 0.9);
     transform: translateY(-1px);
 }
 
-.strava-adapted-badge {
+.provider-adapted-badge {
     display: inline-flex;
     align-items: center;
     gap: 5px;
@@ -375,7 +375,7 @@
     box-shadow: 0 1px 4px rgba(0, 0, 0, 0.12);
 }
 
-.strava-adapted-badge::before {
+.provider-adapted-badge::before {
     content: "\2713";
     font-size: 10px;
     opacity: 0.9;

@@ -5,7 +5,7 @@ import logging
 from app.contexts.auth.repositories import SQLAlchemyUserRepository
 from app.contexts.plan.adaptation import AdaptationService
 from app.infrastructure.config import settings
-from app.infrastructure.integrations.strava_post_sync_service import (
+from app.infrastructure.integrations.post_sync_service import (
     auto_map_and_adjust,
 )
 from app.utils import TimestampAdapter

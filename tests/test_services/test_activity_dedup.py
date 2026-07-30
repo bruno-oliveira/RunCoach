@@ -70,7 +70,7 @@ def user_with_run(test_db):
             user_id="dedup-user",
             date=datetime(2026, 4, 4, 8, 12, 50),
             distance_km=19.02,
-            strava_activity_id="17971015933",
+            source="intervals",
         )
     )
     test_db.commit()

@@ -12,10 +12,8 @@ from app.dependencies import (
     get_auth_service,
     get_current_user,
     get_db,
-    get_strava_service,
 )
 from app.infrastructure.config import settings
-from app.infrastructure.integrations.strava_service import StravaService
 from app.models import User
 from app.rate_limit import account_deletion_limiter, auth_limiter
 from app.schemas import AuthResponse, GoogleAuthRequest, UserResponse
@@ -43,7 +41,6 @@ def _user_response(user: User) -> UserResponse:
         picture=user.picture,
         created_at=user.created_at,
         plans_generated=user.plans_generated,
-        strava_connected=bool(user.strava_athlete_id),
         intervals_connected=bool(user.intervals_athlete_id),
         age=user.age,
         max_hr=user.max_hr,
@@ -222,34 +219,10 @@ async def delete_account(
     response: Response,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
-    strava_service: StravaService = Depends(get_strava_service),
 ):
     """Delete the current user's account and all associated data."""
     account_deletion_limiter.check(request)
     logger.info("Account deletion requested for user %s", current_user.id)
-    if current_user.strava_access_token:
-        # Best-effort revoke: never block account deletion on Strava reachability,
-        # but escalate failures to ERROR so an operator can manually deauthorize
-        # the dangling token.
-        revoke_ok = False
-        try:
-            token = await strava_service.ensure_valid_token(current_user, db)
-            revoke_ok = await strava_service.revoke_token(token)
-        except Exception:
-            logger.error(
-                "Strava token refresh raised during account deletion "
-                "(user_id=%s, strava_athlete_id=%s) — manual deauthorize required",
-                current_user.id,
-                current_user.strava_athlete_id,
-                exc_info=True,
-            )
-        if not revoke_ok:
-            logger.error(
-                "Strava token revocation failed during account deletion "
-                "(user_id=%s, strava_athlete_id=%s) — manual deauthorize required",
-                current_user.id,
-                current_user.strava_athlete_id,
-            )
     db.delete(current_user)
     db.commit()
     response.delete_cookie(key=COOKIE_NAME, samesite="lax")

@@ -35,10 +35,10 @@ def sanitize_user_text(value: Optional[str]) -> Optional[str]:
 
 
 class TimestampAdapter:
-    """Centralizes all timestamp conversions between Strava, the DB, and the UI.
+    """Centralizes all timestamp conversions between the sync API, the DB, and the UI.
 
     Three timestamp contexts must stay consistent:
-    - Strava API  — uses UTC epoch seconds for the ``after`` filter parameter.
+    - Sync API    — uses UTC epoch seconds for the ``after`` filter parameter.
     - DB storage  — stores ``start_date_local`` (runner's local time, no TZ) as a
                     naive datetime.
     - UI display  — filters by local calendar days, using local midnight as the
@@ -54,9 +54,9 @@ class TimestampAdapter:
     def days_ago_utc_epoch(days: int) -> int:
         """Return the UTC epoch for 00:00:00 UTC exactly N calendar days ago.
 
-        Use this for every Strava API ``after`` parameter.  Because Strava's
-        ``after`` is compared against each activity's ``start_date`` (UTC), anchoring
-        to UTC midnight guarantees the complete calendar day is always fetched,
+        Use this for every sync ``after`` parameter.  Because ``after`` is
+        compared against each activity's ``start_date`` (UTC), anchoring to UTC
+        midnight guarantees the complete calendar day is always fetched,
         regardless of what time the sync runs.
 
         Args:
@@ -69,23 +69,6 @@ class TimestampAdapter:
             hour=0, minute=0, second=0, microsecond=0
         )
         return int((midnight_today - timedelta(days=days)).timestamp())
-
-    @staticmethod
-    def parse_strava_local(start_date_local: str) -> datetime:
-        """Parse Strava's ``start_date_local`` into a naive datetime for DB storage.
-
-        Strava encodes the activity start time in the athlete's local timezone as an
-        ISO 8601 string.  The ``Z`` suffix it sometimes appends is misleading — the
-        value is *local*, not UTC — so we strip it before parsing and store a
-        timezone-naive datetime that represents the runner's wall-clock time.
-
-        Args:
-            start_date_local: ISO 8601 string from Strava, e.g. ``"2026-02-25T07:47:53Z"``.
-
-        Returns:
-            Timezone-naive datetime representing the local run start time.
-        """
-        return datetime.fromisoformat(start_date_local.replace("Z", ""))
 
 
 def format_pace_bare(pace_min_per_km: float) -> str:

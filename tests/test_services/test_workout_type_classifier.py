@@ -220,10 +220,10 @@ class TestBackfill:
 
 
 class TestEffectiveWorkoutTypeProperty:
-    def test_strava_untagged_prefers_inference(self, test_db, user):
+    def test_untagged_import_prefers_inference(self, test_db, user):
         run = RunLog(
             user_id="u1",
-            strava_activity_id="abc",
+            source="intervals",
             workout_type="easy",
             inferred_workout_type="tempo",
             inferred_type_confidence=0.8,

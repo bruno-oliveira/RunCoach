@@ -339,7 +339,7 @@
 
     function init() {
         drainStashedToast();
-        // A change applied server-side between sessions (e.g. a Strava sync
+        // A change applied server-side between sessions (e.g. an activity sync
         // auto-adapt) lands here unseen — surface it as the same calm bar,
         // never an interrupting modal.
         var lcp = window.LAST_CHANGE_PLAN;

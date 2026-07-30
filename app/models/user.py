@@ -37,11 +37,6 @@ class User(Base):
     # Zone 3/4 edge sits on it. When null we estimate it from threshold-effort
     # runs, and failing that derive it from max HR (population-average 88%).
     threshold_hr = Column(Integer, nullable=True)
-    strava_athlete_id = Column(String, unique=True, nullable=True, index=True)
-    strava_access_token = Column(EncryptedString, nullable=True)
-    strava_refresh_token = Column(EncryptedString, nullable=True)
-    strava_token_expires_at = Column(Integer, nullable=True)
-    strava_last_synced_at = Column(Integer, nullable=True)
     intervals_athlete_id: Mapped[str | None] = mapped_column(
         String, unique=True, nullable=True, index=True
     )

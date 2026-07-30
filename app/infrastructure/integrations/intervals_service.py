@@ -13,7 +13,10 @@ from sqlalchemy.orm import Session
 from app.contexts.runner.fitness.feedback_service import FeedbackService
 from app.infrastructure.config import settings
 from app.infrastructure.integrations.activity_dedup import find_duplicate_run
-from app.infrastructure.integrations.strava_service import StravaService
+from app.infrastructure.integrations.run_enrichment import (
+    apply_vdot,
+    classify_effort_and_type,
+)
 from app.models.run_log import RunLog
 from app.models.user import User
 
@@ -478,8 +481,11 @@ class IntervalsService:
         errors: list[str] = []
 
         for activity in activities:
-            if activity.get("source") == "STRAVA":
-                continue
+            # Activities Intervals.icu itself pulled from Strava used to be
+            # skipped here, because RunCoach imported those from Strava
+            # directly and would otherwise store them twice. That importer is
+            # gone, so skipping them now just loses runs — and `find_duplicate_run`
+            # below is what keeps the ones we already hold from arriving twice.
             if activity.get("type") not in RUN_ACTIVITY_TYPES:
                 continue
 
@@ -502,15 +508,16 @@ class IntervalsService:
                     db, str(user.id), run_log.date, run_log.distance_km
                 )
                 if duplicate is not None:
-                    # Already imported from Strava — the watch feeds both. Keep
-                    # the id on the row we have so the next sync short-circuits
-                    # on the cheap lookup above instead of re-deriving this.
+                    # Already stored — most of this runner's history arrived
+                    # through the retired Strava import, and a deep backfill
+                    # reaches back into it. Keep the id on the row we have so
+                    # the next sync short-circuits on the cheap lookup above.
                     if duplicate.intervals_activity_id is None:
                         duplicate.intervals_activity_id = activity_id
                     skipped += 1
                     continue
-                StravaService._apply_vdot(run_log)
-                StravaService._classify_effort_and_type(run_log, user, db)
+                apply_vdot(run_log)
+                classify_effort_and_type(run_log, user, db)
                 if not self._persist(run_log, db):
                     skipped += 1
                     continue

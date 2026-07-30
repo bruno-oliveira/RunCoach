@@ -23,38 +23,6 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
-def reclassify_strava_races():
-    """Fix Strava-synced runs that were mapped as 'tempo' instead of 'race'.
-
-    Strava workout_type=1 means 'Race', but was previously mapped to 'tempo'.
-    This only affects Strava-synced runs (strava_activity_id IS NOT NULL).
-    """
-    db = SessionLocal()
-    try:
-        misclassified = (
-            db.query(RunLog)
-            .filter(
-                RunLog.strava_activity_id.isnot(None),
-                RunLog.workout_type == "tempo",
-            )
-            .all()
-        )
-
-        reclassified = len(misclassified)
-        if reclassified == 0:
-            logger.info("No Strava runs need reclassification")
-            return 0
-
-        for run in misclassified:
-            run.workout_type = "race"
-
-        db.commit()
-        logger.info(f"Reclassified {reclassified} Strava runs from 'tempo' to 'race'")
-        return reclassified
-    finally:
-        db.close()
-
-
 def backfill_race_vdot():
     """Backfill VDOT for all existing race-type runs."""
     db = SessionLocal()
@@ -111,5 +79,4 @@ def backfill_race_vdot():
 
 
 if __name__ == "__main__":
-    reclassify_strava_races()
     backfill_race_vdot()

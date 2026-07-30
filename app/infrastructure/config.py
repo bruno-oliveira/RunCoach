@@ -49,12 +49,6 @@ class Settings(BaseSettings):
     session_timeout_minutes: int = 1440  # 24 hours — matches JWT cookie lifespan
     anonymous_cookie_max_age: int = 30 * 24 * 60 * 60
 
-    # Strava OAuth
-    strava_client_id: str = ""
-    strava_client_secret: str = ""
-    strava_redirect_uri: str = "http://localhost:8000/api/strava/callback"
-    strava_initial_sync_days: int = 365
-
     # Intervals.icu OAuth
     intervals_client_id: str = ""
     intervals_client_secret: str = ""

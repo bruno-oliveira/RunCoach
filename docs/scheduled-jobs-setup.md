@@ -23,7 +23,7 @@ document syncs nothing and mails nobody, which is the correct failure mode.
 
 ## Step 1 — what the sync sweep does
 
-For every runner with an Intervals.icu or Strava connection:
+For every runner with an Intervals.icu connection:
 
 1. Import activities since the stored cursor, overlapping it by a day so an
    activity uploaded late doesn't fall in the gap forever.

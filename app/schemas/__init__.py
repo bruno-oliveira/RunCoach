@@ -41,10 +41,6 @@ from app.schemas.run_schemas import (
     RunLogResponse,
     RunLogUpdate,
 )
-from app.schemas.strava_schemas import (
-    StravaStatusResponse,
-    StravaSyncResponse,
-)
 
 __all__ = [
     "AuthResponse",
@@ -70,8 +66,6 @@ __all__ = [
     "RunLogListResponse",
     "RunLogResponse",
     "RunLogUpdate",
-    "StravaStatusResponse",
-    "StravaSyncResponse",
     "Token",
     "UserBase",
     "UserCreate",

@@ -43,7 +43,7 @@ MIN_DAYS_FOR_ACWR = 21
 LOAD_CONFIDENCE_DAYS = 42
 
 # Intensity factors for the load fallback when neither RPE nor HR is logged
-# (common for Strava-imported runs). Keyed on ``effective_workout_type`` so a
+# (common for imported runs). Keyed on ``effective_workout_type`` so a
 # threshold session and an easy jog of equal duration don't score identically
 # (audit B5).
 _TYPE_INTENSITY = {
@@ -83,7 +83,7 @@ class TrainingLoadService:
             # reading can't blow up the load.
             intensity = max(0.5, min(1.8, run.avg_heart_rate / 150))
         else:
-            # No RPE/HR (e.g. a Strava import): derive intensity from the run's
+            # No RPE/HR (e.g. an imported run): derive intensity from the run's
             # workout type instead of a flat 1.0 so a polarized week and an
             # all-hard week produce different CTL/ATL/TSB/ACWR (audit B5).
             wtype = (run.effective_workout_type or "").lower()

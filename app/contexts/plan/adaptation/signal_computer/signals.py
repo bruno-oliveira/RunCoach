@@ -118,7 +118,7 @@ def _effort_signal(
             dated_efforts.append((run_date, run.perceived_effort))
 
     # Sort chronologically so the first/second-half trend split is meaningful
-    # regardless of the order the runs were fetched in (DB rowid order, Strava
+    # regardless of the order the runs were fetched in (DB rowid order, import
     # backfill, and edited dates can otherwise invert the trend).
     dated_efforts.sort(key=lambda t: t[0])
     recent_efforts: List[float] = [e for _, e in dated_efforts]

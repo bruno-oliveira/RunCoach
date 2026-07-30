@@ -134,11 +134,11 @@
     font-weight: var(--weight-semibold);
 }
 
-.nav-link-strava {
+.nav-link-provider {
     color: var(--color-accent);
 }
 
-.nav-link-strava:hover {
+.nav-link-provider:hover {
     color: var(--color-accent-dark);
     background: var(--color-accent-subtle);
 }
@@ -356,34 +356,34 @@
     background: var(--color-bg);
 }
 
-/* ---- Strava dropdown ---- */
-.nav-item-strava {
+/* ---- Activity-provider dropdown ---- */
+.nav-item-provider {
     position: relative;
 }
 
-.strava-trigger {
-    /* inherits .nav-link and .nav-link-strava */
+.provider-trigger {
+    /* inherits .nav-link and .nav-link-provider */
     background: none;
     border: none;
     cursor: pointer;
     gap: 6px;
 }
 
-.strava-icon {
+.provider-icon {
     flex-shrink: 0;
 }
 
-.strava-chevron {
+.provider-chevron {
     flex-shrink: 0;
     transition: transform var(--duration-fast) var(--ease-out);
 }
 
-.strava-trigger[aria-expanded="true"] .strava-chevron {
+.provider-trigger[aria-expanded="true"] .provider-chevron {
     transform: rotate(180deg);
 }
 
 /* Panel */
-.strava-panel {
+.provider-panel {
     display: none;
     position: absolute;
     top: calc(100% + 8px);
@@ -399,16 +399,16 @@
     gap: 12px;
 }
 
-.strava-panel.is-open {
+.provider-panel.is-open {
     display: flex;
 }
 
-[data-theme="dark"] .strava-panel {
+[data-theme="dark"] .provider-panel {
     box-shadow: 0 4px 24px rgba(0, 0, 0, 0.4), 0 1px 4px rgba(0, 0, 0, 0.2);
 }
 
 /* Status row */
-.strava-status {
+.provider-status {
     display: flex;
     align-items: center;
     gap: 6px;
@@ -417,7 +417,7 @@
     font-weight: var(--weight-medium);
 }
 
-.strava-dot {
+.provider-dot {
     width: 8px;
     height: 8px;
     border-radius: var(--radius-full);
@@ -425,21 +425,21 @@
     flex-shrink: 0;
 }
 
-.strava-status-text {
+.provider-status-text {
     color: var(--color-success);
     font-weight: var(--weight-semibold);
 }
 
-.strava-sep {
+.provider-sep {
     color: var(--color-text-muted);
 }
 
-.strava-last-synced {
+.provider-last-synced {
     color: var(--color-text-secondary);
 }
 
 /* Primary sync button */
-.strava-primary-btn {
+.provider-primary-btn {
     display: flex;
     align-items: center;
     justify-content: center;
@@ -458,17 +458,17 @@
                 opacity var(--duration-fast) var(--ease-out);
 }
 
-.strava-primary-btn:hover:not(:disabled) {
+.provider-primary-btn:hover:not(:disabled) {
     background: var(--color-primary-dark);
 }
 
-.strava-primary-btn:disabled {
+.provider-primary-btn:disabled {
     opacity: 0.65;
     cursor: not-allowed;
 }
 
 /* Divider with label */
-.strava-divider {
+.provider-divider {
     display: flex;
     align-items: center;
     gap: 8px;
@@ -477,26 +477,26 @@
     font-weight: var(--weight-medium);
 }
 
-.strava-divider::before,
-.strava-divider::after {
+.provider-divider::before,
+.provider-divider::after {
     content: '';
     flex: 1;
     height: 1px;
     background: var(--color-border);
 }
 
-.strava-divider-label {
+.provider-divider-label {
     white-space: nowrap;
 }
 
 /* Chips row */
-.strava-chips {
+.provider-chips {
     display: inline-flex;
     flex-wrap: wrap;
     gap: 6px;
 }
 
-.strava-chip {
+.provider-chip {
     display: inline-flex;
     align-items: center;
     padding: 5px 10px;
@@ -514,18 +514,18 @@
     white-space: nowrap;
 }
 
-.strava-chip:hover:not(:disabled) {
+.provider-chip:hover:not(:disabled) {
     background: var(--color-surface);
     color: var(--color-text);
 }
 
-.strava-chip:disabled {
+.provider-chip:disabled {
     opacity: 0.5;
     cursor: not-allowed;
 }
 
 /* Feedback area */
-.strava-feedback {
+.provider-feedback {
     font-size: var(--text-xs);
     font-weight: var(--weight-medium);
     padding: 8px 10px;
@@ -533,19 +533,19 @@
     line-height: 1.4;
 }
 
-.strava-feedback.is-success {
+.provider-feedback.is-success {
     background: var(--color-success-subtle);
     color: var(--color-success);
     border: 1px solid var(--color-success-border);
 }
 
-.strava-feedback.is-error {
+.provider-feedback.is-error {
     background: var(--color-error-subtle);
     color: var(--color-error);
     border: 1px solid var(--color-error-border);
 }
 
-.strava-disconnect-btn {
+.provider-disconnect-btn {
     width: 100%;
     padding: 6px 10px;
     font-size: 0.75rem;
@@ -558,11 +558,11 @@
     transition: background 0.15s, color 0.15s;
 }
 
-.strava-disconnect-btn:hover:not(:disabled) {
+.provider-disconnect-btn:hover:not(:disabled) {
     background: var(--color-error-subtle);
 }
 
-.strava-disconnect-btn:disabled {
+.provider-disconnect-btn:disabled {
     opacity: 0.5;
     cursor: not-allowed;
 }
@@ -577,23 +577,23 @@
     opacity: 1;
 }
 
-.strava-spinner {
+.provider-spinner {
     animation: spin 0.8s linear infinite;
 }
 
 /* Mobile: panel is inline, no absolute positioning */
 @media (max-width: 768px) {
-    .nav-item-strava {
+    .nav-item-provider {
         position: static;
         width: 100%;
     }
 
-    .strava-trigger {
+    .provider-trigger {
         width: 100%;
         justify-content: flex-start;
     }
 
-    .strava-panel {
+    .provider-panel {
         position: static;
         top: auto;
         right: auto;
@@ -604,7 +604,7 @@
         margin-top: 4px;
     }
 
-    .strava-chips {
+    .provider-chips {
         width: 100%;
     }
 }

@@ -76,7 +76,7 @@ def get_analytics_runs(
                     "max_heart_rate": run.max_heart_rate,
                     "avg_cadence": run.avg_cadence,
                     "elevation_gain_m": run.elevation_gain_m,
-                    # The effective type: inferred for Strava runs that arrived
+                    # The effective type: inferred for imported runs that arrived
                     # untagged (defaulted to "easy"), the explicit tag otherwise.
                     "workout_type": run.effective_workout_type,
                     "inferred": (

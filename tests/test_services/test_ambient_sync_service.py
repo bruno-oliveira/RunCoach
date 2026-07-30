@@ -249,22 +249,6 @@ async def test_one_broken_runner_does_not_cost_the_others_their_sync(
 
 
 @pytest.mark.asyncio
-async def test_a_strava_failure_leaves_the_intervals_half_alone(
-    test_db, connected, no_watch_roll
-):
-    connected.strava_athlete_id = "s55"
-    test_db.commit()
-
-    intervals = _FakeSync(synced=4)
-    strava = _FakeSync(raises=RuntimeError("strava app deactivated"))
-
-    summary = await AmbientSyncService(test_db, intervals, strava).run()
-
-    assert summary["runs_imported"] == 4
-    assert summary["failed"] == 0
-
-
-@pytest.mark.asyncio
 async def test_a_watch_roll_failure_does_not_abort_the_remaining_plans(
     test_db, connected, plan, monkeypatch
 ):

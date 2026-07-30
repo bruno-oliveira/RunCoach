@@ -21,7 +21,6 @@ class UserResponse(UserBase):
     google_id: Optional[str] = None
     created_at: datetime
     plans_generated: int
-    strava_connected: bool = False
     intervals_connected: bool = False
     age: Optional[int] = None
     max_hr: Optional[int] = None

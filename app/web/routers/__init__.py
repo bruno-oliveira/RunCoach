@@ -15,7 +15,6 @@ from app.web.routers.recipes import router as recipes_router
 from app.web.routers.recipes_pages import router as recipes_page_router
 from app.web.routers.runs import runs_router
 from app.web.routers.scheduled import scheduled_router
-from app.web.routers.strava import strava_router
 
 __all__ = [
     "admin_router",
@@ -33,5 +32,4 @@ __all__ = [
     "performance_page_router",
     "analytics_router",
     "analytics_page_router",
-    "strava_router",
 ]

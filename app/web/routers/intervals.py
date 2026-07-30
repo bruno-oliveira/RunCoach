@@ -49,7 +49,7 @@ from app.infrastructure.integrations.intervals_service import (
     IntervalsAuthorizationError,
     IntervalsService,
 )
-from app.infrastructure.integrations.strava_post_sync_service import (
+from app.infrastructure.integrations.post_sync_service import (
     auto_map_and_adjust,
 )
 from app.models.user import User

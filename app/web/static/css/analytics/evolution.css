@@ -1,6 +1,6 @@
 /* ── Evolution Over Time Tab ── */
 /* Evolution shares the page-level period selector. A local sync indicator
-   sits in its place so users still see Strava activity during reloads. */
+   sits in its place so users still see their activity during reloads. */
 .evolution-sync {
     margin-bottom: 1.25rem;
 }

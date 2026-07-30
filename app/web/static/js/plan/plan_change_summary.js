@@ -319,7 +319,7 @@
         opts = opts || {};
         var headers = authHeaders();
         // Attach the page's current revision so the server can reject
-        // stale writes (409) when another tab / a Strava sync has moved
+        // stale writes (409) when another tab / an activity sync has moved
         // the plan forward.
         if (opts.sendRevision !== false && window.APP_CTX
                 && typeof window.APP_CTX.adaptation_revision === 'number') {

@@ -124,11 +124,11 @@ class TestAnalyticsRouter:
     def test_analytics_runs_exposes_effective_type_and_inferred_flag(
         self, smoke_user, test_db
     ):
-        # Strava run that arrived untagged (defaulted "easy") but inferred tempo.
+        # Imported run that arrived untagged (defaulted "easy") but inferred tempo.
         test_db.add(
             RunLog(
                 user_id=smoke_user.id,
-                strava_activity_id="s1",
+                source="intervals",
                 distance_km=8.0,
                 duration_minutes=36.0,
                 avg_pace_min_km=4.5,
@@ -155,7 +155,7 @@ class TestAnalyticsRouter:
 
         assert resp.status_code == 200
         by_type = {r["workout_type"]: r for r in resp.json()["runs"]}
-        assert by_type["tempo"]["inferred"] is True  # corrected from Strava "easy"
+        assert by_type["tempo"]["inferred"] is True  # corrected from the "easy" default
         assert by_type["long"]["inferred"] is False  # explicit manual tag
 
     def test_get_analytics_runs_unauthenticated(self):

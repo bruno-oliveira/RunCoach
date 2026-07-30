@@ -66,7 +66,7 @@ _DEFAULT_EFFORT_WEIGHT = 0.8
 
 # Multiplier by derived effort_class (see effort_classifier). The classifier
 # infers race/tempo/easy from pace percentile and perceived effort because
-# user-tagged workout_type is unreliable in practice (Strava defaults to easy).
+# user-tagged workout_type is unreliable in practice (imports default to easy).
 _EFFORT_CLASS_WEIGHT: dict[str, float] = {
     "race_effort": 1.5,
     "tempo_effort": 1.2,

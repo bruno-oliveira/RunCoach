@@ -1,7 +1,7 @@
 """Derive an effort class for a run from observable signals.
 
 `workout_type` is the user-tagged label and in practice is dead weight: most
-Strava activities arrive with `type=Run` / no workout flag, and most users
+imported activities arrive with no workout flag, and most users
 never tag manually-logged runs as race/tempo either. So almost every VDOT
 candidate ends up with effort_weight 0.7 (the "easy" weight) -- the very
 distinction VDOT estimation cares about (race vs. easy effort) is collapsed.

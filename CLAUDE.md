@@ -103,11 +103,11 @@ app/
 │   ├── config.py        # pydantic-settings (was app/config.py)
 │   ├── database/        # SQLAlchemy engine, SessionLocal, get_db (engine.py)
 │   ├── export/          # PDF generation (ReportLab)
-│   └── integrations/    # Strava, GPX, FIT
+│   └── integrations/    # Intervals.icu, GPX, FIT
 ├── application/         # Cross-context orchestration
 │   └── cleanup_service.py  # Inactive-account retention task
 ├── web/                 # Web layer
-│   ├── routers/         # FastAPI routers (auth, plans, runs, analytics, strava, etc.)
+│   ├── routers/         # FastAPI routers (auth, plans, runs, analytics, intervals, etc.)
 │   ├── middleware.py    # CSRF, security headers, anonymous-user cookie, size limits
 │   ├── templates/       # Jinja2 HTML templates
 │   └── static/          # CSS + JS
@@ -178,7 +178,7 @@ tests/
 
 - **`app/models/user.py`** - `User` model with Google OAuth fields (`google_id`, `email`, `name`, `picture`) and `plans_generated` counter.
 
-- **`app/models/run_log.py`** - `RunLog` model for tracking runs with fields for distance, duration, pace, heart rate, cadence, elevation, workout type, and perceived effort. The user-entered/Strava `workout_type` is kept separate from `inferred_workout_type` (+ `inferred_type_confidence`), which is filled in from pace/HR/distance/splits by `app/contexts/runner/fitness/workout_type_classifier.py`. Read via the `effective_workout_type` property — it prefers the explicit label when present and falls back to inference for untagged Strava runs. Backfilled on startup by `app/migrations/startup.py` (`backfill_inferred_workout_types`).
+- **`app/models/run_log.py`** - `RunLog` model for tracking runs with fields for distance, duration, pace, heart rate, cadence, elevation, workout type, and perceived effort. The user-entered/imported `workout_type` is kept separate from `inferred_workout_type` (+ `inferred_type_confidence`), which is filled in from pace/HR/distance/splits by `app/contexts/runner/fitness/workout_type_classifier.py`. Read via the `effective_workout_type` property — it prefers the explicit label when present and falls back to inference for untagged imported runs, which `source` (via the `was_imported` property) identifies. Backfilled on startup by `app/migrations/startup.py` (`backfill_inferred_workout_types`).
 
 - **`app/exceptions.py`** - Custom exception hierarchy with user-friendly messages: `RunCoachException` (base), `ValidationException`, `UnrealisticGoalException`, `InsufficientTimeException`, `InadequateBaseException`, `PlanGenerationException`, `DatabaseException`.
 

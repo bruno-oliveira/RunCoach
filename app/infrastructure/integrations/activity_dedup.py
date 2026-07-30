@@ -1,9 +1,9 @@
 """Cross-source duplicate detection for imported activities.
 
-A runner whose watch feeds both Strava and Intervals.icu is offered the same
-physical run twice, under two unrelated provider ids. Each importer deduplicates
-against its own id column only, so without this the second provider inserts a
-second row for a run that already exists and every distance total counts it
+Most of this app's run history was imported by the retired Strava integration
+and carries no Intervals.icu id, so an Intervals backfill reaching that far
+back offers runs that are already stored. Matching on the provider id alone
+would insert a second row for each one and every distance total would count it
 twice.
 
 Matching is on the activity itself: when it started and how far it went.

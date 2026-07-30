@@ -3,7 +3,7 @@
  * Extracted from nav.html inline script.
  *
  * Handles: theme toggle, mobile nav, scroll hide/show,
- * Strava connect/sync panel, Google Sign-In trigger.
+ * Activity-provider connect/sync panel, Google Sign-In trigger.
  */
 
 // ---- Theme toggle ----
@@ -136,10 +136,6 @@ async function connectActivityProvider(provider, label) {
     }
 }
 
-function connectStrava() {
-    connectActivityProvider('strava', 'Strava');
-}
-
 function connectIntervals() {
     connectActivityProvider('intervals', 'Intervals.icu');
 }
@@ -164,20 +160,20 @@ function connectWatch() {
     }
 }
 
-// ---- Strava panel ----
+// ---- Activity-provider panel ----
 
-function toggleStravaPanel() {
-    const trigger = document.getElementById('stravaTrigger');
-    const panel = document.getElementById('stravaPanel');
+function toggleProviderPanel() {
+    const trigger = document.getElementById('providerTrigger');
+    const panel = document.getElementById('providerPanel');
     if (!trigger || !panel) return;
 
     const isOpen = panel.classList.toggle('is-open');
     trigger.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
 }
 
-function closeStravaPanel() {
-    const trigger = document.getElementById('stravaTrigger');
-    const panel = document.getElementById('stravaPanel');
+function closeProviderPanel() {
+    const trigger = document.getElementById('providerTrigger');
+    const panel = document.getElementById('providerPanel');
     if (!trigger || !panel) return;
 
     panel.classList.remove('is-open');
@@ -207,44 +203,44 @@ function formatRelativeTime(ts) {
     return d + ' days ago';
 }
 
-function initStravaPanel() {
-    const panel = document.getElementById('stravaPanel');
+function initProviderPanel() {
+    const panel = document.getElementById('providerPanel');
     if (!panel) return;
 
     // Populate "last synced" text from the data attribute
     const ts = panel.getAttribute('data-ts');
-    const lastSyncedEl = document.getElementById('stravaLastSynced');
+    const lastSyncedEl = document.getElementById('providerLastSynced');
     if (lastSyncedEl) {
         lastSyncedEl.textContent = formatRelativeTime(ts);
     }
 
     // Close panel on outside click
     document.addEventListener('click', (e) => {
-        const trigger = document.getElementById('stravaTrigger');
+        const trigger = document.getElementById('providerTrigger');
         if (!trigger || !panel) return;
         if (!trigger.contains(e.target) && !panel.contains(e.target)) {
-            closeStravaPanel();
+            closeProviderPanel();
         }
     });
 
     // Close panel on Escape key
     document.addEventListener('keydown', (e) => {
         if (e.key === 'Escape') {
-            closeStravaPanel();
+            closeProviderPanel();
         }
     });
 }
 
 async function doActivitySync(forceDays) {
-    const syncBtn = document.getElementById('stravaSyncBtn');
-    const chips = document.querySelectorAll('.strava-chip');
-    const feedback = document.getElementById('stravaFeedback');
-    const refreshIcon = syncBtn ? syncBtn.querySelector('.strava-refresh-icon') : null;
-    const spinner = syncBtn ? syncBtn.querySelector('.strava-spinner') : null;
-    const label = syncBtn ? syncBtn.querySelector('.strava-primary-label') : null;
-    const panel = document.getElementById('stravaPanel');
-    const provider = panel ? panel.dataset.provider : 'strava';
-    const providerLabel = panel ? panel.dataset.providerLabel : 'Strava';
+    const syncBtn = document.getElementById('providerSyncBtn');
+    const chips = document.querySelectorAll('.provider-chip');
+    const feedback = document.getElementById('providerFeedback');
+    const refreshIcon = syncBtn ? syncBtn.querySelector('.provider-refresh-icon') : null;
+    const spinner = syncBtn ? syncBtn.querySelector('.provider-spinner') : null;
+    const label = syncBtn ? syncBtn.querySelector('.provider-primary-label') : null;
+    const panel = document.getElementById('providerPanel');
+    const provider = panel ? panel.dataset.provider : 'intervals';
+    const providerLabel = panel ? panel.dataset.providerLabel : 'Intervals.icu';
 
     // Set loading state
     if (syncBtn) syncBtn.disabled = true;
@@ -265,7 +261,7 @@ async function doActivitySync(forceDays) {
 
         if (response.ok) {
             // Update "last synced" text to now
-            const lastSyncedEl = document.getElementById('stravaLastSynced');
+            const lastSyncedEl = document.getElementById('providerLastSynced');
             if (lastSyncedEl) lastSyncedEl.textContent = 'just now';
             if (panel) panel.setAttribute('data-ts', String(Math.floor(Date.now() / 1000)));
 
@@ -295,7 +291,7 @@ async function doActivitySync(forceDays) {
             }
             if (feedback) {
                 feedback.textContent = message;
-                feedback.className = 'strava-feedback ' + (errorCount > 0 ? 'is-error' : 'is-success');
+                feedback.className = 'provider-feedback ' + (errorCount > 0 ? 'is-error' : 'is-success');
                 feedback.style.display = '';
             }
 
@@ -322,14 +318,14 @@ async function doActivitySync(forceDays) {
             const detail = (data && data.detail) ? data.detail : 'Unknown error';
             if (feedback) {
                 feedback.textContent = 'Sync failed: ' + detail;
-                feedback.className = 'strava-feedback is-error';
+                feedback.className = 'provider-feedback is-error';
                 feedback.style.display = '';
             }
         }
     } catch (err) {
         if (feedback) {
             feedback.textContent = 'Failed to reach ' + providerLabel + '. Please try again.';
-            feedback.className = 'strava-feedback is-error';
+            feedback.className = 'provider-feedback is-error';
             feedback.style.display = '';
         }
     } finally {
@@ -342,22 +338,14 @@ async function doActivitySync(forceDays) {
     }
 }
 
-function syncStrava() {
-    doActivitySync(null);
-}
-
-function syncStravaForDays(days) {
-    doActivitySync(days);
-}
-
 function syncActivityProvider(days) {
     doActivitySync(days === undefined ? null : days);
 }
 
 async function disconnectActivityProvider() {
-    const panel = document.getElementById('stravaPanel');
-    const provider = panel ? panel.dataset.provider : 'strava';
-    const providerLabel = panel ? panel.dataset.providerLabel : 'Strava';
+    const panel = document.getElementById('providerPanel');
+    const provider = panel ? panel.dataset.provider : 'intervals';
+    const providerLabel = panel ? panel.dataset.providerLabel : 'Intervals.icu';
     const ok = await confirmDialog({
         title: 'Disconnect ' + providerLabel + '?',
         body: "We'll stop syncing new activities. The runs you've already imported stay in your log.",
@@ -365,7 +353,7 @@ async function disconnectActivityProvider() {
     });
     if (!ok) return;
 
-    const btn = document.getElementById('stravaDisconnectBtn');
+    const btn = document.getElementById('providerDisconnectBtn');
     if (btn) { btn.disabled = true; btn.textContent = 'Disconnecting…'; }
 
     try {
@@ -384,10 +372,6 @@ async function disconnectActivityProvider() {
         notify("Couldn't disconnect " + providerLabel + ' — give it another try in a moment.', { type: 'error' });
         if (btn) { btn.disabled = false; btn.textContent = 'Disconnect ' + providerLabel; }
     }
-}
-
-function disconnectStrava() {
-    disconnectActivityProvider();
 }
 
 async function deleteAccount() {
@@ -593,7 +577,7 @@ document.addEventListener('keydown', (e) => {
 
 document.addEventListener('DOMContentLoaded', () => {
     initThemeToggle();
-    initStravaPanel();
+    initProviderPanel();
     // Initialise language from localStorage and apply translations
     if (window.RC_I18N) RC_I18N.init();
 });

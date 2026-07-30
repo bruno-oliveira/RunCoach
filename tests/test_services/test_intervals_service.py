@@ -119,20 +119,20 @@ async def test_sync_creates_and_deduplicates_run(
 
 
 @pytest.mark.asyncio
-async def test_sync_skips_a_run_already_imported_from_strava(
+async def test_sync_skips_a_run_that_is_already_stored(
     intervals_service, intervals_user, intervals_activity, test_db
 ):
-    """A watch feeding both platforms must not produce two rows.
+    """A backfill reaching into pre-Intervals history must not duplicate it.
 
-    Intervals.icu only marks an activity ``source: STRAVA`` when Strava was the
-    one that fed it. A Garmin activity that reached Strava independently arrives
-    here looking brand new, so the match has to be on the run itself.
+    Most of this app's run history was imported by the retired Strava
+    integration and carries no Intervals.icu id, so those runs look brand new
+    to a deep backfill. The match has to be on the run itself.
     """
     test_db.add(intervals_user)
     test_db.add(
         RunLog(
             user_id="intervals-user",
-            strava_activity_id="9876543210",
+            source="strava",
             date=datetime(2026, 7, 18, 7, 30),
             distance_km=10.0,
             duration_minutes=50.0,
@@ -157,7 +157,7 @@ async def test_sync_skips_a_run_already_imported_from_strava(
     assert len(runs) == 1
     # The id lands on the row we kept, so the next sync stops at the cheap
     # provider-id lookup instead of re-deriving the match.
-    assert runs[0].strava_activity_id == "9876543210"
+    assert runs[0].source == "strava"
     assert runs[0].intervals_activity_id == "i987654"
 
 
@@ -263,13 +263,12 @@ async def test_push_workout_survives_lookup_failure(intervals_service):
 
 
 @pytest.mark.asyncio
-async def test_sync_ignores_strava_stubs_and_non_runs(
+async def test_sync_ignores_non_run_activities(
     intervals_service, intervals_user, intervals_activity, test_db
 ):
     test_db.add(intervals_user)
     test_db.commit()
     activities = [
-        {**intervals_activity, "id": "strava", "source": "STRAVA"},
         {**intervals_activity, "id": "ride", "type": "Ride"},
     ]
 

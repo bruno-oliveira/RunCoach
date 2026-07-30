@@ -1,7 +1,7 @@
 """The sweep that makes the coach notice you trained without being asked.
 
 Until now `auto_map_and_adjust` — the adaptive engine's only trigger — ran
-inside the manual `/api/intervals/sync` and `/api/strava/sync` handlers. So the
+inside the manual `/api/intervals/sync` handler. So the
 plan re-paced itself only when the runner pressed a button, and the watch
 window (21 days from *today*) only rolled forward when something else happened
 to change the plan. A runner who trained all week and didn't open the app got
@@ -42,7 +42,7 @@ from app.infrastructure.config import settings as default_settings
 from app.infrastructure.integrations.intervals_service import (
     IntervalsAuthorizationError,
 )
-from app.infrastructure.integrations.strava_post_sync_service import (
+from app.infrastructure.integrations.post_sync_service import (
     auto_map_and_adjust,
 )
 from app.models import TrainingPlan, User
@@ -88,12 +88,10 @@ class AmbientSyncService:
         self,
         db: Session,
         intervals_service: Any,
-        strava_service: Any = None,
         config: Optional[Settings] = None,
     ) -> None:
         self.db = db
         self.intervals_service = intervals_service
-        self.strava_service = strava_service
         self.settings = config or default_settings
 
     async def run(
@@ -139,9 +137,7 @@ class AmbientSyncService:
     # ---- phase 1: import and adapt ---------------------------------------
 
     async def _import_and_adapt(self, user: User, summary: AmbientRunSummary) -> None:
-        imported = 0
-        imported += await self._sync_intervals(user, summary)
-        imported += await self._sync_strava(user)
+        imported = await self._sync_intervals(user, summary)
 
         summary.runs_imported += imported
         if imported == 0:
@@ -189,36 +185,11 @@ class AmbientSyncService:
             return 0
         return int(result.get("synced", 0) or 0)
 
-    async def _sync_strava(self, user: User) -> int:
-        if self.strava_service is None or not user.strava_athlete_id:
-            return 0
-        after = (
-            user.strava_last_synced_at - _CURSOR_OVERLAP_SECONDS
-            if user.strava_last_synced_at
-            else TimestampAdapter.days_ago_utc_epoch(
-                self.settings.strava_initial_sync_days
-            )
-        )
-        try:
-            result = await self.strava_service.sync_activities(
-                user, self.db, after_timestamp=after
-            )
-        except Exception:
-            # Strava's failure modes include an app-level deactivation that
-            # affects everyone at once; log it per user and let the Intervals
-            # half of the sweep carry on regardless.
-            logger.warning("Strava sync failed for user %s", user.id, exc_info=True)
-            return 0
-        return int(result.get("synced", 0) or 0)
-
     # ---- candidates -------------------------------------------------------
 
     def _connected_users(self, limit: Optional[int]) -> List[User]:
         """Runners with somewhere to import from."""
-        query = self.db.query(User).filter(
-            (User.intervals_athlete_id.isnot(None))
-            | (User.strava_athlete_id.isnot(None))
-        )
+        query = self.db.query(User).filter(User.intervals_athlete_id.isnot(None))
         if limit:
             query = query.limit(limit)
         return query.all()

@@ -30,7 +30,7 @@
 {% if race_protocol %}
 <link rel="stylesheet" href="{{ static_url('css/plan-raceday.css') }}">
 {% endif %}
-{% if user and not user.strava_athlete_id and not user.intervals_athlete_id %}
+{% if user and not user.intervals_athlete_id %}
 <link rel="stylesheet" href="{{ static_url('css/plan-modal.css') }}">
 {% endif %}
 <link rel="stylesheet" href="{{ static_url('css/share.css') }}">
@@ -184,7 +184,7 @@
                     <span data-i18n="plan.whatnow_signin_desc">Connect your runs and the plan re-paces and adapts to you.</span>
                 </span>
             </button>
-            {% elif not user.intervals_athlete_id and not user.strava_athlete_id %}
+            {% elif not user.intervals_athlete_id %}
             <button type="button" class="whatnow-card" onclick="connectWatch()">
                 <span class="whatnow-card-icon" aria-hidden="true"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg></span>
                 <span class="whatnow-card-body">
@@ -868,7 +868,7 @@
     ↑
 </button>
 
-{% if user and not user.strava_athlete_id and not user.intervals_athlete_id %}
+{% if user and not user.intervals_athlete_id %}
 <!-- Run Logging Modal -->
 <div id="logRunModal" class="modal">
     <div class="modal-content">

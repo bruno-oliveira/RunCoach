@@ -425,7 +425,7 @@
 .badge-unknown  { background: var(--color-bg-sunken);   color: var(--color-text-muted); }
 
 /* Marker shown next to a badge whose type was inferred from pace/HR rather
-   than explicitly tagged (most Strava runs arrive untagged). */
+   than explicitly tagged (most imported runs arrive untagged). */
 .run-type-inferred {
     margin-left: 4px;
     font-size: 9px;

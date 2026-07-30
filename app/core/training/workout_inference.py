@@ -1,6 +1,6 @@
 """Pure run-type inference from pace, HR, distance, and per-km splits.
 
-No I/O, no ORM. Strava leaves ``workout_type`` unset on most activities and the
+No I/O, no ORM. Imported activities arrive with ``workout_type`` unset and the
 sync mapper defaults the blank to ``"easy"`` -- so tempo, interval, and long
 sessions all masquerade as easy and poison every consumer that reads
 ``workout_type`` (adaptation volume ratios, coaching patterns, profile counts,
@@ -38,10 +38,10 @@ _RANK_TIER = {rank: tier for tier, rank in _TIER_RANK.items()}
 # alternate hard reps with float/recovery, pushing the spread up.
 _INTERVAL_PACE_CV = 0.12
 
-# Strava sets workout_type to one of these only when the athlete tagged the
-# activity deliberately (1=race, 2=long, 3=workout/interval). 0/None collapses
-# to "easy" in the sync mapper and is NOT a reliable signal.
-_MEANINGFUL_STRAVA_TAGS = frozenset({"race", "long", "interval"})
+# An imported activity carries one of these only when the athlete tagged it
+# deliberately. Anything else collapses to "easy" in the sync mapper and is NOT
+# a reliable signal.
+_MEANINGFUL_TAGS = frozenset({"race", "long", "interval"})
 
 # Inference below this confidence does not displace the raw tag at read time.
 _MIN_INFERENCE_CONFIDENCE = 0.5
@@ -308,19 +308,19 @@ def resolve_effective_workout_type(
     workout_type: Optional[str],
     inferred_workout_type: Optional[str],
     *,
-    is_strava: bool,
+    is_imported: bool,
     confidence: Optional[float] = None,
 ) -> Optional[str]:
     """The workout type consumers should trust, reconciling tag vs inference.
 
     - Manually logged runs: the user's explicit choice wins; inference only
       fills a blank.
-    - Strava runs: a deliberate Strava tag (race/long/interval) wins; the
-      unreliable "easy" default defers to a confident inference.
+    - Imported runs: a deliberate race/long/interval tag wins; the unreliable
+      "easy" default defers to a confident inference.
     """
-    if not is_strava:
+    if not is_imported:
         return workout_type or inferred_workout_type
-    if workout_type in _MEANINGFUL_STRAVA_TAGS:
+    if workout_type in _MEANINGFUL_TAGS:
         return workout_type
     if inferred_workout_type and (
         confidence is None or confidence >= _MIN_INFERENCE_CONFIDENCE

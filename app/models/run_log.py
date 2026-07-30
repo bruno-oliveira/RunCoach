@@ -8,6 +8,10 @@ from sqlalchemy.types import JSON
 from app.core.training.workout_inference import resolve_effective_workout_type
 from app.models.base import Base
 
+# Runs the runner entered by hand; anything else came from a connected platform.
+MANUAL_SOURCE = "manual"
+INTERVALS_SOURCE = "intervals"
+
 
 class RunLog(Base):
     __tablename__ = "run_logs"
@@ -35,10 +39,12 @@ class RunLog(Base):
     notes = Column(Text, nullable=True)
     workout_type = Column(String, nullable=True)
     perceived_effort = Column(Integer, nullable=True)
-    strava_activity_id = Column(String, unique=True, nullable=True, index=True)
     intervals_activity_id: Mapped[str | None] = mapped_column(
         String, unique=True, nullable=True, index=True
     )
+    # Where the run came from: "intervals", "manual", or "strava" for history
+    # imported before that integration was retired. Read via `was_imported`.
+    source = Column(String(20), nullable=True)
     created_at = Column(
         DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None)
     )
@@ -52,11 +58,11 @@ class RunLog(Base):
     effort_class = Column(String(20), nullable=True)
 
     # Run type inferred from pace/HR/distance/splits. Kept separate from the
-    # raw `workout_type` (which Strava defaults to "easy") so the user/Strava
+    # raw `workout_type` (which imports default to "easy") so the user's own
     # tag is never overwritten; reconciled at read time via the property below.
     inferred_workout_type = Column(String(20), nullable=True)
     inferred_type_confidence = Column(Float, nullable=True)
-    # Compact per-km splits from Strava: [{km, duration_s, pace_min_km, avg_hr}].
+    # Compact per-km splits: [{km, duration_s, pace_min_km, avg_hr}].
     splits = Column(JSON, nullable=True)
 
     user: Mapped["User"] = relationship("User", back_populates="run_logs")
@@ -67,20 +73,29 @@ class RunLog(Base):
     )
 
     @property
+    def was_imported(self) -> bool:
+        """Whether a connected platform supplied this run rather than the runner.
+
+        Rows predating the `source` column are identified by their provider id,
+        which is what the backfill keyed on.
+        """
+        if self.source is not None:
+            return self.source != MANUAL_SOURCE
+        return self.intervals_activity_id is not None
+
+    @property
     def effective_workout_type(self) -> "str | None":
         """Best available workout type: explicit tag or inference.
 
-        Strava leaves most runs untagged (defaulted to "easy"); this prefers
-        the inferred type for those while never overriding a deliberate
-        user-entered or Strava (race/long/interval) label. Consumers that
-        bucket logged runs by type should read this, not `workout_type`.
+        Imported runs arrive untagged or defaulted to "easy"; this prefers the
+        inferred type for those while never overriding a deliberate label —
+        the runner's own, or a meaningful race/long/interval tag that came with
+        the activity. Consumers that bucket logged runs by type should read
+        this, not `workout_type`.
         """
         return resolve_effective_workout_type(
             self.workout_type,
             self.inferred_workout_type,
-            is_strava=(
-                self.strava_activity_id is not None
-                or self.intervals_activity_id is not None
-            ),
+            is_imported=self.was_imported,
             confidence=self.inferred_type_confidence,
         )

@@ -25,72 +25,72 @@
                 <li><a href="/my-plans" class="nav-link {{ 'is-active' if current_page == 'my-plans' else '' }}" data-i18n="nav.my_plans">My Plans</a></li>
                 <li><a href="/analytics" class="nav-link {{ 'is-active' if current_page == 'analytics' else '' }}" data-i18n="nav.coach">Coach</a></li>
                 {% if user.intervals_athlete_id %}
-                <li class="nav-item-strava">
+                <li class="nav-item-provider">
                     <button
-                        class="nav-link nav-link-strava strava-trigger"
-                        id="stravaTrigger"
-                        onclick="toggleStravaPanel(); return false;"
+                        class="nav-link nav-link-provider provider-trigger"
+                        id="providerTrigger"
+                        onclick="toggleProviderPanel(); return false;"
                         aria-expanded="false"
-                        aria-controls="stravaPanel"
+                        aria-controls="providerPanel"
                     >
-                        <span class="strava-icon" aria-hidden="true">↻</span>
+                        <span class="provider-icon" aria-hidden="true">↻</span>
                         <span data-i18n="nav.sync_menu">Sync runs</span>
-                        <svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="strava-chevron" aria-hidden="true">
+                        <svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="provider-chevron" aria-hidden="true">
                             <polyline points="2,3 5,7 8,3"/>
                         </svg>
                     </button>
 
-                    <div class="strava-panel" id="stravaPanel" role="region" aria-label="Intervals.icu sync options" data-provider="intervals" data-provider-label="Intervals.icu" data-ts="{{ user.intervals_last_synced_at or '' }}">
-                        <div class="strava-status">
-                            <span class="strava-dot" aria-hidden="true"></span>
-                            <span class="strava-status-text" data-i18n="nav.connected">Connected</span>
-                            <span class="strava-sep" aria-hidden="true">&middot;</span>
-                            <span class="strava-last-synced" id="stravaLastSynced">Loading…</span>
+                    <div class="provider-panel" id="providerPanel" role="region" aria-label="Intervals.icu sync options" data-provider="intervals" data-provider-label="Intervals.icu" data-ts="{{ user.intervals_last_synced_at or '' }}">
+                        <div class="provider-status">
+                            <span class="provider-dot" aria-hidden="true"></span>
+                            <span class="provider-status-text" data-i18n="nav.connected">Connected</span>
+                            <span class="provider-sep" aria-hidden="true">&middot;</span>
+                            <span class="provider-last-synced" id="providerLastSynced">Loading…</span>
                         </div>
 
                         <button
-                            class="strava-primary-btn"
-                            id="stravaSyncBtn"
+                            class="provider-primary-btn"
+                            id="providerSyncBtn"
                             onclick="syncActivityProvider()"
                             aria-label="Sync new runs from Intervals.icu"
                         >
-                            <svg class="strava-refresh-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                            <svg class="provider-refresh-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                                 <polyline points="23 4 23 10 17 10"/>
                                 <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/>
                             </svg>
-                            <svg class="strava-spinner" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true" style="display:none">
+                            <svg class="provider-spinner" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true" style="display:none">
                                 <path d="M12 2a10 10 0 1 0 10 10" stroke-linecap="round"/>
                             </svg>
-                            <span class="strava-primary-label" data-i18n="nav.sync_runs">Sync new runs</span>
+                            <span class="provider-primary-label" data-i18n="nav.sync_runs">Sync new runs</span>
                         </button>
 
-                        <div class="strava-divider">
-                            <span class="strava-divider-label" data-i18n="nav.fetch_older">Fetch older runs</span>
+                        <div class="provider-divider">
+                            <span class="provider-divider-label" data-i18n="nav.fetch_older">Fetch older runs</span>
                         </div>
 
-                        <div class="strava-chips">
-                            <button class="strava-chip" onclick="syncActivityProvider(1)" aria-label="Fetch runs from yesterday" data-i18n="nav.yesterday">Yesterday</button>
-                            <button class="strava-chip" onclick="syncActivityProvider(7)" aria-label="Fetch runs from the last 7 days" data-i18n="nav.last_7">Last 7 days</button>
-                            <button class="strava-chip" onclick="syncActivityProvider(30)" aria-label="Fetch runs from the last 30 days" data-i18n="nav.last_30">Last 30 days</button>
+                        <div class="provider-chips">
+                            <button class="provider-chip" onclick="syncActivityProvider(1)" aria-label="Fetch runs from yesterday" data-i18n="nav.yesterday">Yesterday</button>
+                            <button class="provider-chip" onclick="syncActivityProvider(7)" aria-label="Fetch runs from the last 7 days" data-i18n="nav.last_7">Last 7 days</button>
+                            <button class="provider-chip" onclick="syncActivityProvider(30)" aria-label="Fetch runs from the last 30 days" data-i18n="nav.last_30">Last 30 days</button>
                         </div>
 
-                        <div class="strava-feedback" id="stravaFeedback" role="status" aria-live="polite" style="display:none"></div>
+                        <div class="provider-feedback" id="providerFeedback" role="status" aria-live="polite" style="display:none"></div>
 
-                        <div class="strava-divider">
-                            <span class="strava-divider-label" data-i18n="nav.connection">Connection</span>
+                        <div class="provider-divider">
+                            <span class="provider-divider-label" data-i18n="nav.connection">Connection</span>
                         </div>
                         <button
-                            class="strava-disconnect-btn"
-                            id="stravaDisconnectBtn"
+                            class="provider-disconnect-btn"
+                            id="providerDisconnectBtn"
                             onclick="disconnectActivityProvider()"
                         >Disconnect Intervals.icu</button>
                     </div>
                 </li>
                 {% else %}
-                <li><a href="#" onclick="connectWatch(); return false;" class="nav-link nav-link-strava" data-i18n="nav.connect_watch">Connect your watch</a></li>
+                <li><a href="#" onclick="connectWatch(); return false;" class="nav-link nav-link-provider" data-i18n="nav.connect_watch">Connect your watch</a></li>
                 {% endif %}
                 {% else %}
-                <li><a href="#" onclick="connectWatch(); return false;" class="nav-link nav-link-strava" data-i18n="nav.connect_watch">Connect your watch</a></li>
+                <li><a href="#" onclick="connectWatch(); return false;" class="nav-link nav-link-provider" data-i18n="nav.connect_watch">Connect your watch</a></li>
                 {% endif %}
             </ul>
 

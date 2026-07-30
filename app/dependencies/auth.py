@@ -40,7 +40,7 @@ async def _resolve_user(
     if payload is None:
         return None
 
-    # Special-purpose tokens (e.g. the short-lived Strava OAuth ``state``) are
+    # Special-purpose tokens (e.g. the short-lived OAuth ``state``) are
     # signed with the same key but must never be accepted as a session
     # credential. Session tokens carry no ``purpose`` claim.
     if payload.get("purpose") is not None:
