@@ -4,7 +4,12 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-RunCoach is a FastAPI web application that generates personalized running training plans with nutrition guidance. Users input their current weekly mileage, target race distance (5K, 10K, Half Marathon, Marathon, or Trail), and training duration to receive a customized multi-week plan. The application supports Google OAuth authentication and adaptive training plans based on user performance data.
+RunCoach is a FastAPI web application that generates personalized running training
+plans with nutrition guidance, then **adapts them to what the runner actually
+does**. Users give their current weekly mileage, target race distance (5K, 10K,
+Half, Marathon, or Trail) and training duration; activities imported from
+Intervals.icu feed an adaptation engine that re-paces future weeks, and the plan
+is mirrored onto the runner's watch calendar. Google OAuth for sign-in.
 
 ## Development Commands
 
@@ -15,25 +20,32 @@ python3 -m uvicorn app.main:app --reload --port 8000
 # Install dependencies
 python3 -m pip install -r requirements.txt
 
-# Run tests
-python3 -m pytest tests/ -v
+# Run the full suite (coverage gate: --cov-fail-under=74 — a passing suite
+# below that still exits non-zero)
+python3 -m pytest tests/
 
-# Run a specific test suite (tests are grouped under tests/test_<area>/)
-python3 -m pytest tests/test_routers/ -v      # API endpoint tests
-python3 -m pytest tests/test_services/ -v     # context-service tests
-python3 -m pytest tests/test_core/ -v         # pure-logic tests
+# Run one layer / file / test
+python3 -m pytest tests/test_core/ -v          # pure-logic tests
+python3 -m pytest tests/test_services/ -v      # context-service tests
+python3 -m pytest tests/test_routers/ -v       # API endpoint tests
+python3 -m pytest tests/test_security/ -v      # CSRF, headers, ownership
+python3 -m pytest tests/test_architecture/ -v  # dependency-direction guardrails
+python3 -m pytest tests/test_core/test_vdot_calculator.py::test_name -v
 
-# Lint, format, and type-check (enforced in CI)
+# Skip the coverage gate when iterating on a single test
+python3 -m pytest tests/test_core/test_foo.py -v --no-cov
+
+# Lint, format, and type-check (all three gate CI)
 ruff check app/ tests/
 ruff format --check app/ tests/
-pyright
+pyright                       # only app/domain + app/core — see pyrightconfig.json
 
 # Smoke-test plan generation
 python3 -c "from app.contexts.plan.generators.plan_generator import TrainingPlanGenerator; TrainingPlanGenerator().generate_plan(20, 10, 8)"
 
 # Browser-verify a UI change (signed-in user + live plan, on a DISPOSABLE db copy)
-python3 scripts/verify_ui.py        # copies runcoach.db, migrates it, prints a session cookie
-python3 scripts/dev_verify.py       # serves :8011 against the copy
+python3 scripts/verify_ui.py          # copies runcoach.db, migrates it, prints a session cookie
+python3 scripts/dev_verify.py         # serves :8011 against the copy
 python3 scripts/verify_ui.py --check  # hash of the real db, to prove it never changed
 ```
 
@@ -56,190 +68,184 @@ Two related traps worth knowing:
   silently wins over the environment, so `DATABASE_URL=... alembic upgrade head`
   would migrate `./runcoach.db` instead of your scratch database.
 
-## Deployment
+## CI and deployment
 
-Deployed to Fly.io (region: sjc). Deploy with `fly deploy`.
+`.github/workflows/ci.yml` runs three parallel jobs — `lint` (ruff check +
+`ruff format --check`, pinned to ruff 0.15.14), `typecheck` (pyright), `test`
+(pytest with the coverage gate) — and then, **only on a push to `main`**,
+deploys to Fly.io with `flyctl deploy --remote-only`. Merging to `main` ships to
+production; there is no manual promotion step.
 
-Docker build: `docker build -t runcoach .`
+CI installs the pinned `requirements.txt` and then `pip install -e . --no-deps`,
+so it exercises the exact versions that ship. If you add a dependency, add it to
+**both** `requirements.txt` (pinned) and `pyproject.toml`.
+
+Manual deploy: `fly deploy` (region `sjc`). Docker build: `docker build -t runcoach .`
 
 ## Architecture
 
-The codebase is organized into **domain-driven bounded contexts** with clean dependency direction (web → application → contexts → core / domain; infrastructure implements interfaces). See `ARCHITECTURAL_IMPROVEMENT.md` for the design rationale.
-
-### Project Structure
+Domain-driven bounded contexts with a strict dependency direction:
+**web → application → contexts → core / domain**, with `infrastructure`
+implementing protocols declared in `domain`.
 
 ```
 app/
-├── __init__.py
-├── main.py              # FastAPI application entry point + factory
-├── dependencies.py      # Per-context DI: lazy service factories + repo factories
-├── exceptions.py        # Custom exception hierarchy
-├── constants.py         # Cross-cutting constants (distances etc.)
-├── utils.py
-├── rate_limit.py
-├── template_helpers.py  # Jinja2 templates + static-URL helpers
-├── domain/              # Pure domain layer (no I/O, no ORM)
-│   ├── coaching.py      # Coaching domain value objects
-│   └── repositories.py  # Repository protocols (IPlanRepository, IRunRepository, IUserRepository)
-├── core/                # Pure calculation libraries (no I/O)
-│   ├── training/        # VDOT, phases, mileage, workout building
-│   ├── coaching/        # Coaching feedback, notes, pattern analysis
-│   └── race/            # Race protocols
-├── contexts/            # Bounded contexts (application + per-context services)
-│   ├── plan/            # Plan generation, adaptation, view, repositories
-│   │   ├── plan_service.py, plan_view_service.py, plan_lifecycle_service.py
-│   │   ├── repositories.py            # SQLAlchemyPlanRepository
-│   │   ├── plan_type_registry.py
-│   │   ├── generators/                # Plan generators (road, beginner, fitness, performance)
-│   │   └── adaptation/                # Adaptation engine (signals, evaluators, adjusters)
-│   ├── runner/          # Runner profile, fitness, run enrichment
-│   │   ├── repositories.py            # SQLAlchemyRunRepository
-│   │   ├── profile/                   # RunnerProfile dataclass + builder
-│   │   ├── fitness/                   # FitnessService, performance, predictions, HR zones
-│   │   └── enrichment/                # Run enrichment + week pulse
-│   ├── nutrition/       # NutritionEngine, meal database
-│   └── auth/            # AuthService, repositories.py (SQLAlchemyUserRepository)
-├── infrastructure/      # I/O + 3rd-party adapters
-│   ├── config.py        # pydantic-settings (was app/config.py)
-│   ├── database/        # SQLAlchemy engine, SessionLocal, get_db (engine.py)
-│   ├── export/          # PDF generation (ReportLab)
-│   └── integrations/    # Intervals.icu, GPX, FIT
-├── application/         # Cross-context orchestration
-│   └── cleanup_service.py  # Inactive-account retention task
-├── web/                 # Web layer
-│   ├── routers/         # FastAPI routers (auth, plans, runs, analytics, intervals, etc.)
-│   ├── middleware.py    # CSRF, security headers, anonymous-user cookie, size limits
-│   ├── templates/       # Jinja2 HTML templates
-│   └── static/          # CSS + JS
-├── models/              # SQLAlchemy ORM models (kept centralized for relationship config)
-│   ├── base.py, user.py, training_plan.py, weekly_plan.py, daily_workout.py,
-│   ├── plan_customization.py, run_log.py, run_feedback.py, readiness_log.py,
-│   ├── favorite_recipe.py, encrypted_type.py
+├── main.py              # create_app() factory: logging, middleware, routers, /health
+├── dependencies/        # DI package: database / services / auth / cron
+├── domain/              # Pure: repository + CoachNarrator + Mailer Protocols, value objects
+├── core/                # Pure calculation libraries — no I/O, no ORM, no SQLAlchemy
+│   ├── training/        # VDOT, phases, mileage progression, workout building, watch_mirror
+│   ├── coaching/        # Coaching notes, recognition, nudges, training tips
+│   └── race/
+├── contexts/            # Bounded contexts: business logic + per-context repositories
+│   ├── plan/            # Generation, adaptation, view, lifecycle, adjustments
+│   │   ├── generators/  # road / beginner / performance plan generators
+│   │   └── adaptation/  # signals, evaluators, adjusters, backtest harness
+│   ├── runner/          # profile/ fitness/ enrichment/ wellness/ (+ queries.py)
+│   ├── nutrition/
+│   └── auth/
+├── application/         # Cross-context orchestration (the only legal path between contexts)
+├── infrastructure/      # config, database/, export/ (ReportLab), integrations/ (Intervals, FIT, GPX, Anthropic)
+├── web/                 # routers/, middleware.py, templates/, static/
+├── models/              # SQLAlchemy ORM (centralized so relationships resolve)
 ├── schemas/             # Pydantic request/response models
-├── migrations/          # Startup data backfills (vdot, effort classes)
-└── data/
-    └── meals.json       # Meal database
-
-tests/
-├── conftest.py
-├── test_core/           # Pure-logic tests
-├── test_services/       # Context-service tests
-├── test_routers/        # API endpoint tests
-└── test_security/       # CSRF, headers, ownership
+└── migrations/          # Startup data backfills (distinct from alembic/)
 ```
 
-### Dependency rule
+### The dependency rule is enforced by tests
+
+`tests/test_architecture/test_context_boundaries.py` parses the AST of every
+file under `app/contexts/` and **fails the build** if one context imports a
+sibling context at module scope. Cross-context collaboration goes through
+`app/application/`, or through a deferred import (inside a function, or under
+`if TYPE_CHECKING:`) — only eager, module-level edges are rejected, because
+those are the ones that couple the import graphs.
+
+The rest of the rule, by convention:
 
 - `web/routers/` → `application/`, `contexts/`, `schemas/`
 - `application/` → `contexts/`, `core/`, `domain/`
-- `contexts/<X>/` → `core/`, `domain/`, sibling context only via `application/` or events
 - `core/` imports nothing from `contexts/`, `infrastructure/`, or SQLAlchemy
-- `infrastructure/` implements protocols defined in `domain/`
+- `infrastructure/` implements the Protocols in `domain/`
 
-### Core Components
+`pyrightconfig.json` type-checks **only `app/domain` and `app/core`** — the pure
+layers. Keeping logic pure is what makes it checkable; pushing calculation down
+into `core/` is the established direction of travel.
 
-- **`app/main.py`** - FastAPI application entry point (`create_app` factory). Sets up logging, runs startup Alembic migrations, mounts static files, registers middleware, routers, and the global exception handler. Includes the `/health` check.
+### Persistence boundary (CQRS-lite)
 
-- **`app/infrastructure/config.py`** - Centralized configuration using `pydantic-settings`. Loads from environment variables and `.env` file. Contains app settings, database URL, logging level, training plan constraints, and OAuth settings (`secret_key`, `google_client_id`).
+Writes go through repositories (`SQLAlchemy{Plan,Run,User,Readiness,FavoriteRecipe}Repository`,
+implementing the Protocols in `app/domain/repositories.py`). Read-heavy paths use
+query modules (`app/contexts/runner/queries.py`, `app/contexts/plan/plan_lookup.py`).
+Routers should carry no raw `db.query` — there is one remaining exception in
+`notifications.py`; don't add more.
 
-- **`app/dependencies/`** - FastAPI dependency injection package, split into `database` / `services` / `auth`. Provides database sessions, cached service factories (`TrainingPlanGenerator`, `NutritionEngine`, `PDFGenerator`, `AuthService`, `FavoritesService`, …), repository factories, and `get_current_user` / `get_optional_user` (Bearer tokens or HTTP-only cookies).
+### Subsystems that span many files
 
-- **`app/schemas/`** - Pydantic request/response models package. Includes `PlanRequest`, `GoogleAuthRequest`, `Token`, `UserResponse`, `RunLogCreate`, `RunLogResponse`, `AdaptivePlanRequest`, and various workout/nutrition schemas.
+- **Plan generation** — `contexts/plan/generators/` orchestrates; the actual
+  math lives in `core/training/` (`phase_calculator`, `mileage_progression`,
+  `long_run_calculator`, `vdot_calculator`, `workout_distribution`,
+  `workout_builders`). `plan_structure_guard.py` and `plan_validator.py` are
+  the post-generation sanity checks.
 
-- **`app/contexts/auth/auth_service.py`** - `AuthService` class for authentication. Handles Google OAuth token verification, JWT creation/verification (`PyJWT`), and user creation/retrieval (via `SQLAlchemyUserRepository`).
+- **Adaptation** — `contexts/plan/adaptation/__init__.py` is a thin
+  `AdaptationService` facade preserving one public API over focused modules:
+  `run_mapper` (match logged runs to planned days), `performance_analyzer`,
+  `skipped_detector`, `plan_adjuster` / `week_adjuster`, `type_swapper`,
+  `vdot_recalibrator`, `safety.py` + `clamps.py` (guardrails), `proactive_nudge`.
+  `backtest.py` replays history against the engine — use it when tuning.
 
-- **`app/web/routers/plans.py`** (and the focused split modules `plan_generation.py`, `plan_view.py`, `plan_list.py`, `plan_sharing.py`, `plan_adjustments.py`) - Plan endpoints: generate, view, customize, share, download.
+- **Watch mirroring** — `application/watch_sync_service.py` keeps the
+  Intervals.icu calendar a *mirror* of the plan, not a log of what was once
+  exported. Decisions are pure (`core/training/watch_mirror.py`); the service is
+  the I/O. Load-bearing detail: a changed day must be **deleted and re-created**,
+  because Intervals only re-triggers the watch export on create, never on update.
 
-- **`app/web/routers/nutrition.py`** - Nutrition endpoints: `/randomize-meals`, `/nutrition-plan/{plan_id}`.
+- **Coach's Note** — `application/coach_narrative_service.py` assembles a
+  deterministic fact pack, then asks an injected `CoachNarrator`
+  (`domain/coaching.py`; Anthropic implementation in
+  `infrastructure/integrations/anthropic_narrator.py`) to voice it. Hard numbers
+  are computed in Python and never taken from model prose. Falls back to a
+  deterministic note when no API key is configured — the feature degrades, it
+  does not fail.
 
-- **`app/web/routers/auth.py`** - Authentication endpoints under `/api/auth`: `POST /google`, `GET /me`, `POST /logout`. Sets HTTP-only cookies for browser navigation.
+- **Run import** — Intervals.icu is the only source since the Strava
+  integration was retired. `run_logs.source` carries provenance, read via the
+  `was_imported` property. `infrastructure/integrations/activity_dedup.py`
+  matches on *start time + distance* rather than provider id, because the large
+  Strava-era backfill has no Intervals id and would otherwise be re-inserted,
+  double-counting every distance total.
 
-- **`app/web/routers/runs.py`** - Run logging CRUD (`/api/runs`) plus adaptive endpoints (`/api/adaptive/*`).
+- **Workout typing** — the user-entered/imported `workout_type` is kept separate
+  from `inferred_workout_type` (+ `inferred_type_confidence`), filled in from
+  pace/HR/distance/splits by `contexts/runner/fitness/workout_type_classifier.py`.
+  Always read via `RunLog.effective_workout_type`, which prefers the explicit
+  label and falls back to inference for untagged imported runs.
 
-- **`app/contexts/plan/plan_service.py`** - `PlanService` encapsulating plan lifecycle (creation, customization, deletion). Delegates queries to `SQLAlchemyPlanRepository`.
+### Timezone: never call `date.today()`
 
-- **`app/contexts/plan/adaptation/`** - `AdaptationService` facade plus focused modules (signal computation, evaluators, adjusters). Analyzes effort trends, pace consistency, adherence; can auto-adjust future weeks.
+The app runs on a UTC clock (Fly.io, single region) while users live elsewhere,
+so a server-side `date.today()` drifts by up to a day around midnight — the
+wrong workout highlighted, readiness logged against the wrong date, "current
+week" flipping late. The web layer captures the browser's IANA zone
+(`X-Timezone` header for API calls, `rc_tz` cookie for page navigations) into a
+`ContextVar`. All "what day is it for this user?" logic must go through
+`app.core.time_utils.local_today()` / `local_now()`.
 
-- **`app/contexts/plan/generators/plan_generator.py`** - `TrainingPlanGenerator`: weekly training schedule orchestrator. Delegates to `core/training/*` for phases, mileage, workout building.
+### Data flow
 
-- **`app/contexts/nutrition/nutrition_engine.py`** - `NutritionEngine` for meal blueprints (scoring-based meal selection with seeded variety).
-
-- **`app/infrastructure/export/pdf_generator.py`** - `PDFGenerator` (ReportLab) producing the downloadable plan PDF. Accepts `PlanExportDTO` so it isn't coupled to the ORM.
-
-- **`app/contexts/plan/generators/performance_plan_generator.py`** - `PerformancePlanGenerator` for VDOT-based plans from a user's actual run data.
-
-- **`app/contexts/plan/repositories.py`** - `SQLAlchemyPlanRepository` (implements `IPlanRepository`).
-- **`app/contexts/runner/repositories.py`** - `SQLAlchemyRunRepository` (implements `IRunRepository`).
-- **`app/contexts/auth/repositories.py`** - `SQLAlchemyUserRepository` (implements `IUserRepository`).
-
-- **`app/infrastructure/database/engine.py`** - SQLAlchemy engine, `SessionLocal`, `get_db` generator dependency. SQLite PRAGMAs (WAL, foreign keys, busy timeout) live here.
-
-- **`app/models/__init__.py`** - Exports all models and configures SQLAlchemy relationships between them.
-
-- **`app/models/user.py`** - `User` model with Google OAuth fields (`google_id`, `email`, `name`, `picture`) and `plans_generated` counter.
-
-- **`app/models/run_log.py`** - `RunLog` model for tracking runs with fields for distance, duration, pace, heart rate, cadence, elevation, workout type, and perceived effort. The user-entered/imported `workout_type` is kept separate from `inferred_workout_type` (+ `inferred_type_confidence`), which is filled in from pace/HR/distance/splits by `app/contexts/runner/fitness/workout_type_classifier.py`. Read via the `effective_workout_type` property — it prefers the explicit label when present and falls back to inference for untagged imported runs, which `source` (via the `was_imported` property) identifies. Backfilled on startup by `app/migrations/startup.py` (`backfill_inferred_workout_types`).
-
-- **`app/exceptions.py`** - Custom exception hierarchy with user-friendly messages: `RunCoachException` (base), `ValidationException`, `UnrealisticGoalException`, `InsufficientTimeException`, `InadequateBaseException`, `PlanGenerationException`, `DatabaseException`.
-
-### Data Flow
-
-1. User authenticates via Google OAuth -> `/api/auth/google` endpoint
-2. User submits form on index.html -> `/generate-plan` endpoint
-3. `PlanRequest` Pydantic model validates input (checks min weeks for distance, base mileage requirements)
-4. `TrainingPlanGenerator.generate_plan()` creates weekly workout schedule
-5. `NutritionEngine.generate_weekly_meal_plan()` creates nutrition blueprint
-6. Data saved to SQLite via SQLAlchemy, rendered to plan.html template
-7. Optional PDF download via `/download-pdf/{plan_id}`
-8. User logs runs via `/api/runs` endpoints
-9. `AdaptivePlanGenerator` analyzes performance and generates personalized recommendations
-
-### Templates
-
-Located under `app/web/templates/`:
-- `base.html`, `index.html`, `plan.html`, `my_plans.html`, `plan_shared.html`, `analytics.html`, `recipes.html`, etc.
-- `components/` - Reusable components (nav, modal, workout_card, change_plan_modal, week_card, etc.)
+1. Google OAuth → `/api/auth/google`; JWT set as an HTTP-only cookie.
+2. Form submit → `/generate-plan`; `PlanRequest` validates (min weeks per
+   distance, base mileage) and raises domain exceptions.
+3. `TrainingPlanGenerator.generate_plan()` builds the weekly schedule;
+   `NutritionEngine` builds the meal blueprint.
+4. Persisted as a normalized tree — `training_plans` → `weekly_plans` →
+   `daily_workouts` — plus a denormalized `plan_data` JSON snapshot for rendering.
+5. Activities arrive from Intervals.icu (manual sync or the scheduled sweep) →
+   `auto_map_and_adjust` (`infrastructure/integrations/post_sync_service.py`,
+   the single entry point both paths share) re-paces future weeks → the watch
+   mirror re-syncs.
 
 ## Testing
 
-Tests use pytest with fixtures defined in `tests/conftest.py`:
+pytest with fixtures in `tests/conftest.py`. Config (`DEBUG`, `SECRET_KEY`,
+`GOOGLE_CLIENT_ID`) is set **hermetically at the top of conftest**, before any
+app module imports the settings singleton — local and CI runs are identical.
 
-- **`test_db`** - In-memory SQLite database session
-- **`client`** - FastAPI TestClient with database override
-- **`plan_generator`** - TrainingPlanGenerator instance
-- **`nutrition_engine`** - NutritionEngine instance
-- **`nutrition_engine_seeded`** - NutritionEngine with fixed seed (42) for reproducibility
-- **Sample parameter fixtures** - `sample_5k_params`, `sample_marathon_params`, `sample_trail_params`
-
-Test layout (grouped by layer):
-- `tests/test_core/` - pure-logic tests (plan generation, nutrition, training math)
-- `tests/test_services/` - context-service tests (adaptation, fitness, favorites, …)
-- `tests/test_routers/` - API endpoint tests
-- `tests/test_security/` - CSRF, security headers, ownership
+- `test_db` — a temp-file SQLite session **migrated with Alembic to head**
+  (not `create_all`), so migrations are exercised on every run
+- `client` — `TestClient` over `create_app(skip_migrations=True)` with `get_db` overridden
+- `plan_generator`, `nutrition_engine`, `nutrition_engine_seeded` (seed 42, for reproducibility)
+- `sample_5k_params`, `sample_marathon_params`, `sample_trail_params`
+- An autouse fixture resets the module-scope rate limiters between tests —
+  without it, tightly-capped limiters (plan generation is 5/min) cascade failures
 
 ## Configuration
 
-Configuration via environment variables or `.env` file:
+Environment variables or `.env` (see `.env.example`). Loaded via
+pydantic-settings in `app/infrastructure/config.py`.
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `APP_NAME` | RunCoach | Application name |
-| `APP_VERSION` | 1.0.0 | Application version |
-| `DEBUG` | False | Debug mode |
-| `DATABASE_URL` | sqlite:///./runcoach.db | Database connection string |
-| `LOG_LEVEL` | INFO | Logging level |
+| `DATABASE_URL` | sqlite:///./runcoach.db | Connection string |
+| `DEBUG` | False | Debug mode; also relaxes cookie `Secure` and lets `ENCRYPTION_KEY` fall back to `SECRET_KEY` |
 | `SECRET_KEY` | (required) | JWT signing key |
 | `GOOGLE_CLIENT_ID` | (required) | Google OAuth client ID |
+| `INTERVALS_CLIENT_ID` / `_SECRET` / `_REDIRECT_URI` | — | Intervals.icu OAuth |
+| `INTERVALS_INITIAL_SYNC_DAYS` | 365 | Backfill window on first connect |
 | `SMTP_HOST` | (empty) | Outbound-nudge mail host. **Empty means send nothing** — the null mailer logs and reports failure rather than pretending |
-| `SMTP_PORT` / `SMTP_USERNAME` / `SMTP_PASSWORD` / `SMTP_FROM` | 587 / empty | SMTP credentials. Port 465 switches to implicit TLS; otherwise STARTTLS unless `SMTP_STARTTLS=false` |
+| `SMTP_PORT` / `SMTP_USERNAME` / `SMTP_PASSWORD` / `SMTP_FROM` | 587 / empty | Port 465 switches to implicit TLS; otherwise STARTTLS unless `SMTP_STARTTLS=false` |
 | `CRON_SECRET` | (empty) | Shared secret for both scheduled endpoints. Empty makes them 404 |
 | `PUBLIC_BASE_URL` | http://localhost:8000 | Absolute origin for links inside emails. Must be set in production |
 | `NUDGE_MIN_INTERVAL_DAYS` | 4 | Floor between two nudge emails to the same runner |
 
+Training constraints live in `app/infrastructure/config.py` (min/max weeks and
+min mileage per distance) and `app/core/training/training_config.py`
+(`DISTANCE_CONSTRAINTS` registry).
+
 ### Scheduled jobs
 
-Two daily jobs, driven by `.github/workflows/ambient-sync.yml`, **in this
-order**:
+Two daily jobs, driven by `.github/workflows/ambient-sync.yml`, **in this order**:
 
 1. `POST /api/scheduled/sync` — import everyone's activities, hand new ones to
    the adaptive engine, roll every mirrored plan's watch window forward.
@@ -251,40 +257,43 @@ since a logged run, so nudging before importing can tell a runner they've gone
 quiet when they came back yesterday. Step 2 inherits GitHub's default "skip if
 the previous step failed" — do not add `if: always()`.
 
-Both are off in every direction until configured (no `CRON_SECRET` → 404 and
-the workflow skips itself; no `SMTP_HOST` → the mailer refuses and says so).
-See `docs/scheduled-jobs-setup.md` for the guards, the setup, and how to check
-what *would* happen with `?dry_run=true` before anything goes out.
+Both are off in every direction until configured (no `CRON_SECRET` → 404 and the
+workflow skips itself; no `SMTP_HOST` → the mailer refuses and says so). See
+`docs/scheduled-jobs-setup.md` for the guards and how to check what *would*
+happen with `?dry_run=true` before anything goes out.
 
-Training constraints are configured in `app/infrastructure/config.py` (settings) and `app/core/training/training_config.py` (`DISTANCE_CONSTRAINTS` registry):
-- Minimum/maximum weeks per distance
-- Minimum mileage requirements per distance
+## Production notes
 
-## Code Style
+Deployed on Fly.io: shared-cpu-1x, 512MB, scale-to-zero
+(`auto_stop_machines = 'stop'`).
 
-- **Imports**: Standard library, third-party, then local. Use absolute imports for app modules (`from app.contexts... import ...`) — the dominant convention across the codebase
-- **Types**: Type hints on all function signatures using `Union[type, type]` or `type | type` syntax
-- **Naming**: snake_case for functions/variables, PascalCase for classes
-- **Line length**: 88 characters max (configured in pyproject.toml via ruff)
-- **Database**: Use dependency injection for sessions, close in `finally` blocks
-- **Validation**: Use Pydantic models with `@field_validator` and `@model_validator` decorators
-- **Logging**: Use `logging.getLogger(__name__)` pattern
-- **Docstrings**: Google style with Args/Returns sections
+**The root filesystem is ephemeral.** With scale-to-zero the container resets to
+the image state on every machine wake, so anything written under `/app/...` is
+lost when the machine idles. The database lives on the mounted volume
+`runcoach_data` at `/data/runcoach.db` (`DATABASE_URL` is overridden in
+`fly.toml`). Alembic migrations run in the FastAPI lifespan via `start.sh`, so a
+first boot creates the schema on the volume with no seed file.
 
-## Key Patterns
+`docs/architecture-evolution-sqlite-volume.md` has the rationale;
+`docs/intervals-sync-setup.md` covers the Intervals OAuth setup.
 
-- **Router-based architecture**: Endpoints organized in `app/web/routers/` with `APIRouter`
-- **Core module separation**: Pure calculation logic in `app/core/` (no I/O, no ORM), separate from the web layer
-- **Model separation**: Each SQLAlchemy model in its own file under `app/models/`
-- **Dependency injection**: Services and database sessions via FastAPI `Depends()`
-- **Bounded contexts**: Business logic lives in per-context services under `app/contexts/` (plan, runner, nutrition, auth)
-- **Persistence boundary (CQRS-lite)**: Writes go through repositories; read-heavy paths use query modules; routers carry no raw `db.query` (see `ARCHITECTURE_PERSISTENCE.md`)
-- **Centralized config**: Settings loaded via pydantic-settings with environment variable support
-- **Custom exceptions**: Domain exceptions with `user_message`/`suggestion`, mapped to HTTP by a global handler registered in `create_app`
-- **Google OAuth authentication**: JWT tokens stored in HTTP-only cookies for browser navigation
-- **Adaptive training**: Plans adjust based on logged run performance data
-- **Training plan validation**: Pydantic validators raise custom exceptions caught by routes
-- **Nutrition engine scoring**: Meals scored by protein/fiber contribution with randomness for variety
-- **PDF generation**: ReportLab "story" list of flowables
-- **Normalized relational schema**: Plans are stored as related tables (`training_plans` → `weekly_plans` → `daily_workouts`), Alembic-managed. A denormalized `plan_data` JSON snapshot is also kept for rendering; `favorite_recipes.recipe_data` uses a proper `JSON` column
-- **Seeded randomization**: `NutritionEngine` accepts `random_seed` for reproducible results
+## Code style
+
+- **Imports**: stdlib, third-party, then local. Absolute imports for app modules
+  (`from app.contexts... import ...`) — the dominant convention
+- **Types**: type hints on all signatures; `X | None` or `Union[...]`
+- **Line length**: 88 (ruff; `E501` itself is ignored, but `ruff format` enforces it)
+- **Validation**: Pydantic `@field_validator` / `@model_validator`
+- **Logging**: `logging.getLogger(__name__)`
+- **Docstrings**: Google style. Module docstrings in this codebase explain *why*
+  a module exists and which constraint shaped it — match that register rather
+  than restating the code
+- **Exceptions**: the `RunCoachException` hierarchy in `app/exceptions.py` carries
+  `user_message` / `suggestion` and is mapped to HTTP by the global handler
+  registered in `create_app` — raise those rather than `HTTPException` from
+  business logic
+- **Secrets at rest**: OAuth tokens use `EncryptedString` (Fernet via
+  `MultiFernet`) — see `app/models/encrypted_type.py`. Production requires
+  `ENCRYPTION_KEY` to be set and **distinct from** `SECRET_KEY`; only in debug
+  does it fall back to `SECRET_KEY`. `ENCRYPTION_KEY_PREVIOUS` is read on
+  decryption only, so keys can be rotated without rewriting rows
