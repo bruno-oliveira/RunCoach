@@ -89,6 +89,7 @@
 .week-rail-dot.wt-time_trial,
 .week-rail-dot.wt-cruise_interval,
 .week-rail-dot.wt-race_pace { background: var(--wt-interval); }
+.week-rail-dot.wt-race { background: var(--wt-race); }
 .week-rail-dot.wt-hill { background: var(--wt-hill); }
 .week-rail-dot.wt-strength { background: var(--wt-strength); }
 .week-rail-dot.wt-run_walk,

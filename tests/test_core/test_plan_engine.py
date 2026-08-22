@@ -377,16 +377,35 @@ class PlanInvariant:
 
 
 class TestEveryWeekHasLongRun(PlanInvariant):
-    """Every week must have exactly one long run."""
+    """Every training week has exactly one long run; race week has the race.
+
+    The final week is the exception by design: its long run is replaced by the
+    goal race, which is the week's long effort. A taper week that kept a
+    near-race-distance long run one or two days before the start line would not
+    be a taper.
+    """
 
     @pytest.mark.parametrize("distance", PlanInvariant.DISTANCES)
     def test_every_week_has_long_run(self, distance):
         plan = self._gen(distance)
-        for week in plan:
+        for week in plan[:-1]:
             longs = [w for w in week["daily_workouts"] if w["type"] == "long"]
             assert len(longs) == 1, (
                 f"W{week['week']} {distance}km: {len(longs)} long runs"
             )
+
+    @pytest.mark.parametrize("distance", PlanInvariant.DISTANCES)
+    def test_race_week_has_the_race_and_no_long_run(self, distance):
+        final = self._gen(distance)[-1]
+        races = [w for w in final["daily_workouts"] if w["type"] == "race"]
+        longs = [
+            w
+            for w in final["daily_workouts"]
+            if w["type"] == "long" and (w.get("distance") or 0) > 0
+        ]
+        assert len(races) == 1, f"{distance}km: {len(races)} race days in race week"
+        assert not longs, f"{distance}km: long run survives alongside the race"
+        assert races[0]["distance"] == pytest.approx(distance, abs=0.05)
 
 
 class TestRunCountMatchesRequest(PlanInvariant):

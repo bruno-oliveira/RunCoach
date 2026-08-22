@@ -171,6 +171,7 @@
 .workout-step-zone-I { background: var(--wt-interval); }
 .workout-step-zone-R { background: var(--wt-hill); }
 .workout-step-zone-5K { background: var(--wt-interval); }
+.workout-step-zone-race { background: var(--wt-race); }
 .workout-step-zone-10K { background: var(--wt-tempo); }
 .workout-step-zone-1 { background: var(--wt-easy); }
 .workout-step-zone-2 { background: var(--wt-long); }

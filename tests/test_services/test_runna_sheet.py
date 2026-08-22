@@ -192,10 +192,27 @@ def test_legend_only_lists_the_kinds_the_plan_uses(half_plan):
     cover = build_sheet(_dto(half_plan), half_plan).cover
     kinds = [chip.kind for chip in cover.legend]
     assert "easy" in kinds and "long" in kinds
-    assert "race" not in kinds  # this plan carries no race-day workout
+    # Every generated plan now ends on its goal race, so "race" is a kind the
+    # sheet really uses — the legend has always had a slot for it (last in the
+    # ordering below), it just had nothing to put there.
+    assert "race" in kinds
     assert kinds == sorted(
         kinds, key=["easy", "long", "quality", "recovery", "strength", "race"].index
     )
+
+
+def test_legend_omits_kinds_the_plan_does_not_use():
+    """The legend is derived from the plan, not a fixed list."""
+    plan = [
+        {
+            "week": 1,
+            "phase": "base",
+            "total_km": 10,
+            "daily_workouts": [{"day": 1, "type": "easy", "distance": 10.0}],
+        }
+    ]
+    kinds = [chip.kind for chip in build_sheet(_dto(plan), plan).cover.legend]
+    assert kinds == ["easy"]
 
 
 def test_trail_cover_names_the_distance(half_plan):

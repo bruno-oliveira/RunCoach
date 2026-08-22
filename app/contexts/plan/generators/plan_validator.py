@@ -67,14 +67,33 @@ def validate_week_plan(
 _EASY_EFFORTS: frozenset = frozenset({"easy", "conversational", ""})
 # Pace zones that represent genuine quality work (not easy/recovery)
 _QUALITY_ZONES: frozenset = frozenset({"T", "I", "M", "R", "10K", "5K"})
-# Key workouts that are intentionally easy-paced despite their slot type.
-# These are legitimately filed under tempo/interval but use easy effort
-# as the primary stimulus (e.g. a fueling-practice long run typed "tempo"
-# so it appears in the quality slot without adding hard aerobic load).
+# Key workouts in a quality slot whose stimulus is deliberately not pace, and
+# which therefore cannot satisfy the pace-zone checks below.
+#
+# This is a narrow exemption, and it is worth saying what it is *not* for. It
+# used to hold ``marathon_easy_long_fueling`` and ``trail_flat_soft_surface``
+# — two 30 km easy long runs that had been typed ``tempo`` by mistake. Listing
+# them here silenced the one check that would have caught the mistake, and
+# both went on quietly occupying 8 km tempo slots, rewritten down to a quarter
+# of their prescribed distance. They are typed ``long`` now, where their
+# distance belongs. A session that is here only because it is too *long* for
+# its slot is mis-typed, not exempt.
+#
+# The two entries below earn it, for opposite reasons:
+#
+# * the night run is easy by design — a 100-mile plan rehearses darkness,
+#   footing and fuelling by feel, and that rehearsal must be run easy. It
+#   takes a quality slot because you do not also run threshold work that week;
+#   its week still carries a second, genuinely hard session.
+# * the power walk is *hard* by design and slow anyway. Max-effort hiking at
+#   9-10 min/km is real muscular work that no pace zone can express, and it is
+#   the flat-terrain twin of ``trail_power_hike`` (typed ``hill``). It has to
+#   sit in a tempo slot to exist at all: flat training converts every hill
+#   slot to tempo/interval, so a hill-typed session would never fire.
 _INTENTIONALLY_EASY_KEY_WORKOUTS: frozenset = frozenset(
     {
-        "marathon_easy_long_fueling",
-        "trail_flat_soft_surface",  # easy-effort soft-surface run
+        "trail_night_run",  # long-ultra darkness rehearsal — easy by design
+        "trail_flat_power_walk",  # max-effort hiking — hard, but slow ground
     }
 )
 

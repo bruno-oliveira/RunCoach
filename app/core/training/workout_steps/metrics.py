@@ -19,6 +19,11 @@ _DEFAULT_PACES = {
     "10K": 6.2,  # 10K race pace (between T and M for an unknown runner)
     "5K": 5.8,  # 5K race pace (slightly slower than I on this scale)
     "WALK": 12.0,  # brisk walk / walk-down recovery - real covered ground
+    # Goal race pace for a target with no 5K/10K label (half, marathon,
+    # trail). Race steps are distance-based so this is never load-bearing
+    # today, but a zone absent from this table prices its reps at zero,
+    # which is exactly how whole sessions used to collapse to warm-up.
+    "race": 6.0,
 }
 
 

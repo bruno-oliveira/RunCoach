@@ -41,6 +41,52 @@ def build_easy_steps(
     return steps
 
 
+# A shakeout's strides are part of its distance, not an extra on top. Four
+# 100 m strides is 0.4 km, reserved out of the run block so the card, the steps
+# and the description all report the same number.
+_SHAKEOUT_STRIDE_REPS = 4
+_SHAKEOUT_STRIDE_M = 100
+
+
+def build_shakeout_steps(
+    distance_km: float,
+    pace_zones: Optional[Dict] = None,
+) -> List[Dict[str, Any]]:
+    """Day-before-race shakeout: easy running plus a few strides.
+
+    The strides are carved *out of* ``distance_km`` rather than added to it, so
+    the priced step total equals the distance on the card exactly. (Reusing
+    ``build_easy_steps(with_strides=True)`` here silently overshot by 0.6 km,
+    which on a 4 km shakeout is a 15% lie.)
+    """
+    if distance_km <= 0:
+        return []
+    total_m = int(round(distance_km * 1000))
+    strides_m = _SHAKEOUT_STRIDE_REPS * _SHAKEOUT_STRIDE_M
+    easy_m = max(500, total_m - strides_m)
+    return [
+        _step(
+            "run",
+            "Easy shakeout",
+            distance_m=easy_m,
+            pace_zone="E",
+            pace_str=_pace_str("E", pace_zones),
+            effort="very easy",
+            note="Slower than you think. Nothing to prove today",
+        ),
+        _step(
+            "strides",
+            f"{_SHAKEOUT_STRIDE_REPS} × {_SHAKEOUT_STRIDE_M} m strides",
+            distance_m=_SHAKEOUT_STRIDE_M,
+            repeat=_SHAKEOUT_STRIDE_REPS,
+            pace_zone="R",
+            pace_str=_pace_str("R", pace_zones),
+            effort="fast, relaxed",
+            note="Full recovery between — these wake the legs up, not tire them",
+        ),
+    ]
+
+
 def build_long_steps(
     distance_km: float,
     pace_zones: Optional[Dict] = None,
@@ -295,5 +341,104 @@ def build_split_long_steps(
             pace_zone=finish_zone,
             pace_str=_pace_str(finish_zone, pace_zones),
             effort="comfortably hard",
+        ),
+    ]
+
+
+# Race-day pacing plan. The race is run in three acts rather than as one
+# undifferentiated block: the opening is the only part a runner can ruin
+# cheaply (going out hard costs far more later than it gains), the middle is
+# where goal pace is simply held, and the closing third is what the taper was
+# for. Fractions are deliberately front-light: a slightly conservative first
+# act is the single most transferable piece of race advice there is.
+_RACE_SPLIT = (0.30, 0.40, 0.30)
+
+
+def race_pace_zone_key(target_distance_km: float, pace_zones: Optional[Dict]) -> str:
+    """Pace-zone key holding the goal race pace for ``target_distance_km``.
+
+    ``VDOTCalculator.get_pace_zones`` files 5K/10K under their own labels and
+    every other target under ``"race"`` — but only when it was given the target
+    distance. Falls back through the zones that bracket race effort (M for
+    long races, T for short) so a race day still carries a usable pace when no
+    race-specific entry was computed.
+    """
+    zones = pace_zones or {}
+    if abs(target_distance_km - 5.0) < 0.5 and "5K" in zones:
+        return "5K"
+    if abs(target_distance_km - 10.0) < 0.5 and "10K" in zones:
+        return "10K"
+    if "race" in zones:
+        return "race"
+    return "M" if target_distance_km > 15.0 else "T"
+
+
+def build_race_steps(
+    distance_km: float,
+    pace_zones: Optional[Dict] = None,
+    target_distance_km: Optional[float] = None,
+    is_trail: bool = False,
+) -> List[Dict[str, Any]]:
+    """Steps for race day: the race itself, as a three-act pacing plan.
+
+    Warm-up and cool-down are deliberately absent from the steps. The step
+    total is what the card reports, and a race day must report the race
+    distance exactly — a 5K that says 7.0 km because it priced in a warm-up
+    is wrong on the one day the number is not an estimate. Warm-up guidance
+    lives in the description instead.
+
+    Trail races are paced by effort, not by a goal pace, so they get a single
+    steady block with a hike-the-climbs cue rather than a split.
+    """
+    if distance_km <= 0:
+        return []
+    total_m = int(round(distance_km * 1000))
+    target = target_distance_km if target_distance_km is not None else distance_km
+
+    if is_trail:
+        return [
+            _step(
+                "run",
+                "Race",
+                distance_m=total_m,
+                pace_zone="E",
+                pace_str=_pace_str("E", pace_zones),
+                effort="steady, sustainable",
+                note="Hike the steep climbs, eat and drink on schedule",
+            )
+        ]
+
+    zone = race_pace_zone_key(target, pace_zones)
+    pace = _pace_str(zone, pace_zones)
+    opening_m = int(round(total_m * _RACE_SPLIT[0]))
+    middle_m = int(round(total_m * _RACE_SPLIT[1]))
+    closing_m = total_m - opening_m - middle_m
+    return [
+        _step(
+            "run",
+            "Opening — settle in",
+            distance_m=opening_m,
+            pace_zone=zone,
+            pace_str=pace,
+            effort="controlled",
+            note="Goal pace or a touch slower. It should feel too easy here",
+        ),
+        _step(
+            "run",
+            "Middle — hold goal pace",
+            distance_m=middle_m,
+            pace_zone=zone,
+            pace_str=pace,
+            effort="goal race pace",
+            note="Lock onto rhythm and stay on your fuelling plan",
+        ),
+        _step(
+            "run",
+            "Closing — race it home",
+            distance_m=closing_m,
+            pace_zone=zone,
+            pace_str=pace,
+            effort="everything left",
+            note="This is what the taper was for",
         ),
     ]

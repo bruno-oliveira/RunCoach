@@ -75,6 +75,7 @@
   --wt-interval: #C25B47;                       /* clay — hard reps */
   --wt-hill: #8467C4;                          /* muted violet — climbing */
   --wt-strength: #5B9E5B;
+  --wt-race: #B3324A;                          /* deep rose — the day it's all for */
   --wt-rest: var(--color-text-muted);
 
   /* ---- Trail / terrain palette ----

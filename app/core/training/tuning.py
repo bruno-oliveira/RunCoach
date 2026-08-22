@@ -46,6 +46,22 @@ MIN_NON_RECOVERY_BUMP = 1.01
 LONG_RUN_GROWTH_PCT = 1.18
 LONG_RUN_GROWTH_ABS_KM = 3.0
 
+# =============================================================================
+# Race week (see plan_generator._install_race_day)
+# =============================================================================
+
+# Running volume in race week *excluding the race itself*, as a fraction of the
+# realized peak week. The taper curve sizes race week as though its long run
+# were still the week's anchor; once the race is installed the anchor is the
+# race, and everything before it is shakeout — a couple of short easy runs plus
+# the sharpener. Holding the pre-race days at the taper total instead would
+# send a runner into a marathon on ~28 km of race-week legs.
+RACE_WEEK_PRERACE_SHARE = 0.25
+
+# Floor on that pre-race volume so a low-volume plan still gets real shakeout
+# runs rather than a week of rest before the race.
+RACE_WEEK_MIN_PRERACE_KM = 6.0
+
 # Base phase ends at this fraction of peak mileage; build phase ramps from
 # here to full peak.
 BASE_PHASE_END_FRACTION = 0.70

@@ -16,6 +16,7 @@ from app.contexts.plan.generators.plan_generator import (
     TrainingPlanGenerator,
     _viable_run_frequency,
 )
+from app.core.training.training_constants import training_km
 from app.schemas import PlanRequest
 
 # ── Configuration: all valid ranges ────────────────────────────────────────
@@ -374,8 +375,14 @@ class TestPlanGenerationAllCombinations:
             max_runs_per_week=runs,
         )
         for week in plan:
-            longs = [w for w in week["daily_workouts"] if w["type"] == "long"]
-            assert len(longs) == 1, f"Week {week['week']}: {len(longs)} long runs"
+            # Race week's long effort is the race; the taper long run is
+            # deliberately replaced by it.
+            anchors = [
+                w for w in week["daily_workouts"] if w["type"] in ("long", "race")
+            ]
+            assert len(anchors) == 1, (
+                f"Week {week['week']}: {len(anchors)} long runs / races"
+            )
 
     @pytest.mark.parametrize(
         "combo", ALL_COMBOS, ids=[_combo_id(c) for c in ALL_COMBOS]
@@ -476,7 +483,9 @@ class TestPlanGenerationAllCombinations:
                 # taper weeks where every workout is flexible. The
                 # invariant (taper < peak by design) still holds —
                 # just with a wider rounding margin.
-                assert tw["total_km"] <= peak_km + 4.0
+                # Measured on training volume: race week's total legitimately
+                # includes the race itself, which is the event, not taper load.
+                assert training_km(tw) <= peak_km + 4.0
 
 
 # ── Boundary Condition Tests ──────────────────────────────────────────────
@@ -720,7 +729,10 @@ class TestMileageProgression:
             runs_list = [
                 w
                 for w in week["daily_workouts"]
-                if w["type"] not in ("rest", "recovery", "strength", "cross_training")
+                # "race" excluded: the 10% rule governs how fast training load
+                # may grow, and the race is the event the growth was for.
+                if w["type"]
+                not in ("rest", "recovery", "strength", "cross_training", "race")
                 and w.get("distance", 0) > 0
             ]
             total = sum(w["distance"] for w in runs_list)

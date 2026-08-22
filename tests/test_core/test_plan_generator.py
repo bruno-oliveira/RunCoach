@@ -9,6 +9,7 @@ from app.core.training import (
     phase_calculator,
     workout_distribution,
 )
+from app.core.training.training_constants import training_km
 
 
 class TestTrainingPlanGenerator:
@@ -140,6 +141,7 @@ class TestTrainingPlanGenerator:
             "hill",
             "strength",
             "recovery",
+            "race",
         }
 
         for week in plan:
@@ -332,12 +334,13 @@ class TestTrainingPlanGenerator:
                 f"expected ~{expected_recovery:.1f} km, got {actual_recovery:.1f} km"
             )
 
-        # Taper weeks should also be well below peak
+        # Taper weeks should also be well below peak. Race week is measured on
+        # its *training* volume: its total_km legitimately includes the race,
+        # which is the event rather than a taper failure.
         taper_weeks = plan[-3:]
         peak_km = max(w["total_km"] for w in plan[:-3])
-        race_week = taper_weeks[-1]
-        assert race_week["total_km"] <= peak_km * 0.8
-        assert race_week["total_km"] >= peak_km * 0.3
+        race_week_training_km = training_km(taper_weeks[-1])
+        assert race_week_training_km <= peak_km * 0.8
 
     def test_long_run_before_rest_day(self, plan_generator: TrainingPlanGenerator):
         """Verify long run is always preceded by rest day."""
@@ -517,10 +520,13 @@ class TestTrainingPlanGenerator:
                 assert run_days == max_runs, (
                     f"Week {week['week']} has {run_days} runs, expected {max_runs}"
                 )
-                long_runs = sum(
-                    1 for w in week["daily_workouts"] if w["type"] == "long"
+                # Race week's long effort is the race itself.
+                anchors = sum(
+                    1 for w in week["daily_workouts"] if w["type"] in ("long", "race")
                 )
-                assert long_runs >= 1, f"Week {week['week']} has no long run"
+                assert anchors >= 1, (
+                    f"Week {week['week']} has neither a long run nor a race"
+                )
 
     def test_workout_distribution_with_different_max_runs(
         self, plan_generator: TrainingPlanGenerator

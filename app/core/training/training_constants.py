@@ -42,3 +42,25 @@ def calculate_week_in_phase(
         return week_number - phases["base"] - phases["build"] - 1
     else:
         return week_number - phases["base"] - phases["build"] - phases["peak"] - 1
+
+
+def training_km(week: Dict) -> float:
+    """Weekly volume excluding race day — the week's *training* load.
+
+    ``week["total_km"]`` is the honest total: on race week it includes the
+    race, because the runner does cover that ground. But every progression
+    rule in the plan — the 10 % cap, the taper drawdown, deload ratios —
+    is about training load, and a marathon dropped into the final week
+    would make race week look like a 60 % spike on top of a taper.
+
+    Use this wherever a week's volume is being compared to another week's;
+    use ``total_km`` wherever the number is being shown to the runner.
+    """
+    return round(
+        sum(
+            w.get("distance", 0) or 0
+            for w in week.get("daily_workouts", [])
+            if w.get("type") != "race"
+        ),
+        1,
+    )

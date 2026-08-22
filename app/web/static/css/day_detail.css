@@ -188,10 +188,10 @@
 .day-hero-swatch.wt-long { background: var(--wt-long); }
 .day-hero-swatch.wt-tempo,
 .day-hero-swatch.wt-threshold { background: var(--wt-tempo); }
+.day-hero-swatch.wt-race { background: var(--wt-race); }
 .day-hero-swatch.wt-interval,
 .day-hero-swatch.wt-fartlek,
 .day-hero-swatch.wt-vo2max,
-.day-hero-swatch.wt-race { background: var(--wt-interval); }
 .day-hero-swatch.wt-hill { background: var(--wt-hill); }
 .day-hero-swatch.wt-rest { background: var(--color-text-muted); }
 

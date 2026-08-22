@@ -192,3 +192,41 @@ def build_back_to_back_steps(
             note="On legs fatigued from yesterday — hold easy effort",
         ),
     ]
+
+
+def build_night_run_steps(
+    distance_km: float,
+    pace_zones: Optional[Dict] = None,
+) -> List[Dict[str, Any]]:
+    """Steps for the long-ultra headlamp night run.
+
+    Deliberately easy throughout — the stimulus is darkness, gear and fuelling
+    by feel, not pace. Split into an opening block (adjust to the beam, shorten
+    the stride) and the body of the run (rehearse the fuelling that will happen
+    at 2am on race day) so the card carries the rehearsal beats instead of one
+    undifferentiated "Easy run" that discards the session's whole identity.
+    """
+    if distance_km <= 0:
+        return []
+    total_m = int(round(distance_km * 1000))
+    settle_m = int(round(total_m * 0.25))
+    return [
+        _step(
+            "run",
+            "Settle into the dark",
+            distance_m=settle_m,
+            pace_zone="E",
+            pace_str=_pace_str("E", pace_zones),
+            effort="easy",
+            note="Find your headlamp beam and shorten your stride",
+        ),
+        _step(
+            "run",
+            "Night miles",
+            distance_m=total_m - settle_m,
+            pace_zone="E",
+            pace_str=_pace_str("E", pace_zones),
+            effort="conversational",
+            note="Eat and drink on a schedule, by feel — not on demand",
+        ),
+    ]

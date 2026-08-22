@@ -42,7 +42,7 @@
 .week-dot.wt-threshold { background: var(--wt-tempo); }
 .week-dot.wt-interval  { background: var(--wt-interval); }
 .week-dot.wt-hill      { background: var(--wt-hill); }
-.week-dot.wt-race      { background: var(--wt-interval); }
+.week-dot.wt-race      { background: var(--wt-race); }
 /* rest days read as hollow */
 .week-dot.wt-rest {
     background: transparent;
@@ -737,8 +737,8 @@ a.week-compact-row:hover {
 .week-compact-swatch.wt-threshold { background: var(--wt-tempo); }
 .week-compact-swatch.wt-interval,
 .week-compact-swatch.wt-fartlek,
-.week-compact-swatch.wt-vo2max,
-.week-compact-swatch.wt-race { background: var(--wt-interval); }
+.week-compact-swatch.wt-vo2max { background: var(--wt-interval); }
+.week-compact-swatch.wt-race { background: var(--wt-race); }
 .week-compact-swatch.wt-hill { background: var(--wt-hill); }
 .week-compact-swatch.wt-strength { background: var(--wt-strength); }
 

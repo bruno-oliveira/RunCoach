@@ -36,6 +36,13 @@ MIN_VIABLE_NON_RECOVERY_KM = 2.0
 # after the plan-level scaling passes, which can move distances again.
 MAX_EASY_VS_LONG = 1.25
 
+# A card's distance and its step list must agree: the steps are what the watch
+# executes and what the runner is actually asked to run, so a divergence means
+# one of the two is lying. Walk-recovery ground is allowed to be excluded from
+# the displayed distance (a hike-run's walk breaks are real ground but not the
+# session's running dose), so the check accepts anything in that band.
+STEPS_DISTANCE_TOLERANCE_KM = 0.5
+
 _NON_RUNNING_TYPES = ("rest", "recovery")
 
 
@@ -92,4 +99,39 @@ def check_plan_structure(training_plan: List[Dict[str, Any]]) -> Dict[str, List[
                         f"exceeds {MAX_EASY_VS_LONG:g}× long run {long_km} km"
                     )
 
+        warnings.extend(_step_distance_warnings(week, num, phase))
+
     return {"fatal": fatal, "warnings": warnings}
+
+
+def _step_distance_warnings(week: Dict[str, Any], num: Any, phase: str) -> List[str]:
+    """Flag workouts whose card distance disagrees with their step list.
+
+    This is the check that would have caught a capped race-rehearsal long run
+    whose prose was re-rendered to 28.8 km while its steps still executed
+    30.7 km: the runner read one session and their watch got another. Priced
+    as a warning rather than a fatal because an unpriceable duration-based
+    step makes the step total a lower bound, not a contradiction.
+    """
+    from app.core.training.workout_steps import compute_distance_from_steps_checked
+    from app.core.training.workout_steps.metrics import _priced_step_km
+
+    out: List[str] = []
+    for w in week.get("daily_workouts", []):
+        distance = w.get("distance") or 0
+        steps = w.get("steps") or []
+        if distance <= 0 or not steps:
+            continue
+        step_km, fully_priced = compute_distance_from_steps_checked(steps)
+        if not fully_priced or step_km <= 0:
+            continue
+        walk_km = sum(_priced_step_km(s) for s in steps if s.get("kind") == "walk")
+        low = step_km - walk_km - STEPS_DISTANCE_TOLERANCE_KM
+        high = step_km + STEPS_DISTANCE_TOLERANCE_KM
+        if not low <= distance <= high:
+            out.append(
+                f"week {num} ({phase}) day {w.get('day')}: {w.get('type')} "
+                f"shows {distance} km but its steps total {step_km:.1f} km"
+                + (f" ({walk_km:.1f} km of it walking)" if walk_km else "")
+            )
+    return out
