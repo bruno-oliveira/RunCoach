@@ -11,6 +11,7 @@ import pytest
 
 from app.constants import DISTANCE_NAMES, SUPPORTED_DISTANCES
 from app.contexts.plan.generators.plan_generator import TrainingPlanGenerator
+from app.core.training.training_constants import training_km
 
 # ── Shared fixtures & helpers ──────────────────────────────────────────────
 
@@ -60,13 +61,22 @@ def _valid_combos():
                 yield distance, mileage, max_runs
 
 
-def _week_runs(week):
-    """Extract running workouts (non-rest, non-recovery, positive distance)."""
+def _week_runs(week, include_race=False):
+    """Extract running workouts (non-rest, non-recovery, positive distance).
+
+    Race day is excluded by default. Every invariant in this module is about
+    *training* load — how fast volume may grow, how much of a week the long
+    run may be — and the race is the event those rules were building toward,
+    not a training session subject to them. A marathon is 66% of race week
+    and 60% above the taper week before it, both by design.
+    """
+    skip = ("rest", "recovery", "strength", "cross_training")
+    if not include_race:
+        skip = skip + ("race",)
     return [
         w
         for w in week.get("daily_workouts", [])
-        if w.get("type") not in ("rest", "recovery", "strength", "cross_training")
-        and w.get("distance", 0) > 0
+        if w.get("type") not in skip and w.get("distance", 0) > 0
     ]
 
 
@@ -195,6 +205,12 @@ class TestLongRunDominance:
             runs = _week_runs(week)
             if not runs:
                 continue
+            # Race week has no long run — the race replaced it, and it is
+            # excluded from `runs`. Taking the max run there would measure the
+            # sharpener's share of a shakeout week, which this rule is not
+            # about.
+            if not any(w.get("type") == "long" for w in runs):
+                continue
             total = sum(w["distance"] for w in runs)
             if total == 0:
                 continue
@@ -264,22 +280,38 @@ class TestLowFreqNoSecondLongEffort:
 class TestTaperDescends:
     """The taper must descend from the realized peak to a genuine race-week
     drawdown — not sit at ~70% of peak because it was scaled from an unrealized
-    high-water target (audit #8)."""
+    high-water target (audit #8).
+
+    Race week is measured on the volume the runner carries *into* the start
+    line, i.e. everything before the race. Its ``total_km`` includes the race
+    itself, which is the event rather than taper load — a marathon plan's race
+    week is ~70% of peak on the honest total and ~25% on training volume, and
+    it is the second number that says whether the runner arrives fresh.
+    """
 
     @pytest.mark.parametrize("combo", ALL_COMBOS, ids=[_id(c) for c in ALL_COMBOS])
     def test_race_week_is_a_real_drawdown(self, combo):
         distance, mileage, max_runs = combo
         plan, _ = _generate_plan(distance, mileage, max_runs)
-        totals = [w["total_km"] for w in plan if not w.get("is_recovery")]
+        totals = [training_km(w) for w in plan if not w.get("is_recovery")]
         if len(totals) < 3:
             return
         peak = max(totals)
-        race_week = plan[-1]["total_km"]
-        # 5K/10K taper to ~55%, marathon to ~50%; allow generous slack but the
-        # race week must be a clear reduction (well under two-thirds of peak).
-        assert race_week <= peak * 0.66, (
-            f"{_id(combo)}: race week {race_week:.1f}km is "
-            f"{race_week / peak:.0%} of peak {peak:.1f}km — taper too shallow"
+        pre_race = training_km(plan[-1])
+        # 5K/10K taper to ~55%, marathon to ~50%; with the race carved out, the
+        # pre-race days are shakeout only, so the bar is well below that.
+        assert pre_race <= peak * 0.45, (
+            f"{_id(combo)}: race week carries {pre_race:.1f}km of training, "
+            f"{pre_race / peak:.0%} of peak {peak:.1f}km — taper too shallow"
+        )
+
+    @pytest.mark.parametrize("combo", ALL_COMBOS, ids=[_id(c) for c in ALL_COMBOS])
+    def test_race_week_still_has_running_in_it(self, combo):
+        """A drawdown, not a shutdown — race week keeps some easy running."""
+        distance, mileage, max_runs = combo
+        plan, _ = _generate_plan(distance, mileage, max_runs)
+        assert training_km(plan[-1]) > 0, (
+            f"{_id(combo)}: race week has no running before the race"
         )
 
 

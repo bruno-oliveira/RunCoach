@@ -37,8 +37,11 @@ from app.core.training.workout_steps.aerobic import (
     build_easy_steps,
     build_fast_finish_long_steps,
     build_long_steps,
+    build_race_steps,
     build_rolling_hills_long_steps,
+    build_shakeout_steps,
     build_split_long_steps,
+    race_pace_zone_key,
 )
 from app.core.training.workout_steps.key_workout_builders import (
     build_compound_rep_steps,
@@ -96,6 +99,7 @@ from app.core.training.workout_steps.trail import (
     build_back_to_back_steps,
     build_hike_run_steps,
     build_ladder_steps,
+    build_night_run_steps,
     build_pyramid_steps,
 )
 
@@ -103,6 +107,10 @@ __all__ = [
     "STEP_KINDS",
     "build_easy_steps",
     "build_long_steps",
+    "build_night_run_steps",
+    "build_race_steps",
+    "build_shakeout_steps",
+    "race_pace_zone_key",
     "build_alternating_mp_long_steps",
     "build_fast_finish_long_steps",
     "build_rolling_hills_long_steps",

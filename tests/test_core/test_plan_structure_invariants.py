@@ -26,6 +26,7 @@ from app.contexts.plan.generators.plan_generator import (
     _viable_run_frequency,
 )
 from app.contexts.plan.generators.plan_structure_guard import check_plan_structure
+from app.core.training.training_constants import training_km
 
 # Distance → (min_weeks, max_weeks, min_mileage, max_mileage).
 _DISTANCES = {
@@ -115,10 +116,15 @@ def test_long_plans_have_a_deload(gen, combo):
 
 @pytest.mark.parametrize("combo", _GRID, ids=_IDS)
 def test_taper_volume_never_climbs(gen, combo):
-    """Taper-week totals are non-increasing toward race day."""
+    """Taper-week training volume is non-increasing toward race day.
+
+    Measured with ``training_km``: race week's ``total_km`` includes the race,
+    so the last taper week rises on the honest total. What must fall
+    monotonically is the training load the runner carries into the start line.
+    """
     dist, weeks, km = combo
     plan = gen.generate_plan(km, dist, weeks)
-    taper_totals = [w["total_km"] for w in plan if w.get("phase") == "taper"]
+    taper_totals = [training_km(w) for w in plan if w.get("phase") == "taper"]
     for earlier, later in zip(taper_totals, taper_totals[1:]):
         assert later <= earlier + 0.05, f"taper climbs: {taper_totals}"
 

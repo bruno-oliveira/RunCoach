@@ -570,7 +570,10 @@ _KEY_WORKOUT_STEP_BUILDERS: Dict[
     ),
     # -- easy continuous trail runs --
     "trail_time_on_feet": lambda d, pz: _steps_mod.build_easy_steps(d, pz),
-    "trail_night_run": lambda d, pz: _steps_mod.build_easy_steps(d, pz),
+    # The night run's whole point is the dark, the gear, and eating by feel —
+    # a single "Easy run" block threw all of that away. Its own builder keeps
+    # the rehearsal beats executable.
+    "trail_night_run": lambda d, pz: _steps_mod.build_night_run_steps(d, pz),
 }
 
 # Sessions installed only by the intensive-weekend post-pass (via ``force_id``).

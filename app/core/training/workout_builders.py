@@ -1,7 +1,8 @@
 """Individual workout generators.
 
 Creates workout dictionaries for each workout type (rest, recovery, easy,
-long, tempo, interval, hill) with appropriate descriptions and pace zones.
+long, tempo, interval, hill, race) with appropriate descriptions and pace
+zones.
 """
 
 from typing import Any, Dict, List, Optional
@@ -414,6 +415,78 @@ def generate_hill_workout(day: int, distance: float = 0) -> Dict[str, Any]:
         else (round(distance, 1) if distance > 0 else 0),
         "intensity": "high",
         "description": hill_workouts[day % len(hill_workouts)],
+        "steps": steps,
+    }
+
+
+# Race-distance labels used in the race-day card title. Anything else is
+# named by its distance ("28 km Race"), so a non-standard target still reads
+# as a race rather than falling back to a generic label.
+_RACE_LABELS = {5.0: "5K", 10.0: "10K", 21.1: "Half Marathon", 42.2: "Marathon"}
+
+
+def race_day_name(target_distance: float, is_trail: bool = False) -> str:
+    """Human-readable name for the goal race."""
+    for km, label in _RACE_LABELS.items():
+        if abs(target_distance - km) < 0.5:
+            return f"{label} Race Day"
+    suffix = "Trail Race Day" if is_trail else "Race Day"
+    return f"{format_km(target_distance)} km {suffix}"
+
+
+def generate_race_day(
+    day: int,
+    target_distance: float,
+    pace_zones: Optional[Dict] = None,
+    is_trail: bool = False,
+) -> Dict[str, Any]:
+    """Generate the goal race as a workout on the plan's final day.
+
+    Every plan is built backwards from a race, but until now the plan stopped
+    at the last taper long run and the runner was left to infer the finish.
+    The race is the one session whose distance is fixed by the event rather
+    than derived from a budget, so it is installed after all scaling passes
+    and never rescaled (``is_prescriptive`` covers it via its type).
+    """
+    steps = workout_steps.build_race_steps(
+        target_distance,
+        pace_zones,
+        target_distance_km=target_distance,
+        is_trail=is_trail,
+    )
+    zone = workout_steps.race_pace_zone_key(target_distance, pace_zones)
+    pace_str = (pace_zones or {}).get(zone, {}).get("pace_str")
+
+    if is_trail:
+        description = (
+            f"Race day — {format_km(target_distance)} km. Start easier than "
+            "feels right, hike the steep climbs from the gun, and eat and "
+            "drink on a schedule rather than on demand. Your race is decided "
+            "in the last quarter, not the first."
+        )
+    else:
+        goal = f" Goal pace {pace_str}." if pace_str else ""
+        description = (
+            f"Race day — {format_km(target_distance)} km.{goal} Warm up "
+            f"{'15-20 min easy with a few strides' if target_distance <= 10.0 else '10 min easy'} "
+            "beforehand, then run the first third controlled, hold goal pace "
+            "through the middle, and empty the tank over the last third."
+        )
+
+    return {
+        "day": day,
+        "type": "race",
+        "distance": round(target_distance, 1),
+        "intensity": "high",
+        "is_race": True,
+        # Every display surface (plan cards, day detail, the PDF sheet, the
+        # Intervals.icu workout name) already reads ``key_workout_name`` as
+        # "the name of this session", falling back to the raw type otherwise.
+        # Without it the biggest day of the plan would render as "Race".
+        # No ``key_workout_id`` is set, so nothing treats it as a library
+        # session — only the label is borrowed.
+        "key_workout_name": race_day_name(target_distance, is_trail),
+        "description": description,
         "steps": steps,
     }
 

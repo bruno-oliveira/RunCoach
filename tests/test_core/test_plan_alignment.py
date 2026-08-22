@@ -229,3 +229,37 @@ class TestWeeklyTotalAligns:
             assert abs(summed - stated) <= 0.1, (
                 f"week {week['week']}: total_km={stated} vs sum={summed}"
             )
+
+
+class TestKeyWorkoutStepsFollowDistance:
+    """Rescaling a key workout must move its steps, not just its prose.
+
+    ``set_distance`` used to call ``reconcile_key_workout_text``, which
+    re-renders description and structure from the new distance but leaves the
+    step list alone — and ``rescale_steps`` deliberately refuses prescriptive
+    sessions. So a capped key workout ended up describing one session over the
+    steps of another: a race-rehearsal long run trimmed from 30.7 km to 28.8 km
+    read "first 17.2 km easy, final 11.5 km at goal pace" while its steps still
+    executed 18.4 + 12.3 km. The steps are what the watch gets.
+    """
+
+    def test_shrinking_a_key_workout_moves_its_steps(self):
+        from app.contexts.plan.generators.workout_scaler import set_distance
+        from app.core.training.key_workout_library import overlay_key_workout
+        from app.core.training.workout_steps import (
+            compute_distance_from_steps_checked,
+        )
+
+        workout = {"day": 6, "type": "long", "distance": 30.0, "steps": []}
+        overlay_key_workout(
+            workout, "long", "peak", 42.2, 0, force_id="race_practice_long"
+        )
+        assert workout.get("key_workout_id") == "race_practice_long"
+
+        set_distance(workout, 24.0)
+
+        step_km, priced = compute_distance_from_steps_checked(workout["steps"])
+        assert priced
+        assert step_km == pytest.approx(workout["distance"], abs=0.35), (
+            f"card says {workout['distance']} km but steps execute {step_km:.1f} km"
+        )

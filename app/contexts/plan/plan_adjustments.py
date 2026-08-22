@@ -15,6 +15,20 @@ from app.core.training.workout_registry import WORKOUT_REGISTRY, build_workout
 from app.core.training.workout_steps import _compute_distance_from_steps
 
 _KNOWN_TYPES = set(WORKOUT_REGISTRY)
+
+# Race day is not editable through the plan-adjustment surface. Its distance is
+# the event's, and it is the one session the whole plan was built to reach —
+# a mis-drop or an idle type change on the final day would delete the goal race
+# and nothing downstream would put it back (the race is installed once, during
+# generation). "race" is also absent from WORKOUT_REGISTRY, so it can never be
+# a swap *target* either.
+_IMMUTABLE_TYPES = frozenset({"race"})
+
+
+def _is_immutable(workout: Optional[dict]) -> bool:
+    return bool(workout) and workout.get("type") in _IMMUTABLE_TYPES
+
+
 _OVERLAY_KEYS = (
     "key_workout_id",
     "key_workout_name",
@@ -172,7 +186,7 @@ def swap_workout(
         wo = next(
             (w for w in week.get("daily_workouts", []) if w.get("day") == day), None
         )
-        if wo is None:
+        if wo is None or _is_immutable(wo):
             continue
         if new_type in ("rest", "recovery"):
             distance = 0.0
@@ -201,6 +215,8 @@ def swap_days(
             workouts = week.get("daily_workouts", [])
             src = next((w for w in workouts if w.get("day") == source_day), None)
             tgt = next((w for w in workouts if w.get("day") == target_day), None)
+            if _is_immutable(src) or _is_immutable(tgt):
+                break
             if src and tgt:
                 src["day"], tgt["day"] = tgt["day"], src["day"]
                 week["daily_workouts"] = sorted(workouts, key=lambda w: w.get("day", 0))
@@ -222,7 +238,7 @@ def adjust_distance(
                 ratio = max(0.0, (current_total + distance_change) / current_total)
 
                 for workout in week.get("daily_workouts", []):
-                    if workout["distance"] > 0:
+                    if workout["distance"] > 0 and not _is_immutable(workout):
                         workout["distance"] = round(workout["distance"] * ratio, 1)
 
                 week["total_km"] = round(

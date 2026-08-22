@@ -27,7 +27,7 @@ from __future__ import annotations
 from typing import Any, Dict, List, Optional
 
 from app.core.training import long_run_calculator, workout_builders
-from app.core.training.key_workout_library import reconcile_key_workout_text
+from app.core.training.key_workout_library import rebuild_key_workout
 from app.core.training.quality_caps import (
     MAX_EASY_RUN_KM,
     MAX_EASY_VS_LONG_RUN,
@@ -132,10 +132,14 @@ def is_prescriptive(workout: Dict[str, Any]) -> bool:
     main_km), so silently changing ``workout['distance']`` would leave the
     description lying about what the runner is asked to do. Only easy and
     long runs are flexible enough to absorb week-budget drift.
+
+    Race day is the hardest prescription of all: its distance is set by the
+    event, so no budget arithmetic — generation *or* adaptation — may move it.
+    A marathon does not become 38 km because the week ran over.
     """
     if workout.get("key_workout_id"):
         return True
-    return workout.get("type") in ("tempo", "interval", "hill")
+    return workout.get("type") in ("tempo", "interval", "hill", "race")
 
 
 def rescale_steps(workout: Dict[str, Any], multiplier: float) -> None:
@@ -191,23 +195,40 @@ def set_distance(
 
     For non-prescriptive workouts, steps are rescaled proportionally. Long
     runs additionally have their description re-rendered (the ``mp_finish``
-    variant cites distance splits). Key-workout text is reconciled via the
-    library's renderers. Prescriptive non-key workouts (tempo / interval /
-    hill) are not expected to flow through here; if they do, ``distance``
-    is updated alone — the caller is responsible for honouring the
-    prescription's invariants.
+    variant cites distance splits). Prescriptive non-key workouts (tempo /
+    interval / hill) are not expected to flow through here; if they do,
+    ``distance`` is updated alone — the caller is responsible for honouring
+    the prescription's invariants.
+
+    Key workouts are regenerated end to end via ``rebuild_key_workout``.
+    Reconciling only the *prose* is not enough: ``rescale_steps`` refuses
+    prescriptive sessions, so the step list — the executable half of the
+    card, and what the watch export ships — would keep the dose it was
+    built at while the description and the distance moved to the new one.
+    A 30.7 km race-rehearsal capped to 28.8 km displayed "17.2 km easy +
+    11.5 km at goal pace" over steps that still read 18.4 + 12.3.
+    Rebuilding re-derives prose, structure and steps from the new distance
+    and snaps ``distance`` onto the executable total, so all three agree.
     """
     old = workout.get("distance", 0) or 0
     rounded = round(new_distance, 1)
     if rounded == old:
         return
+    # Race day is set by the event, not by any budget. Callers are expected to
+    # filter it out via ``is_prescriptive``, but this is the one distance where
+    # a missed filter would be actively harmful — a marathon quietly becoming
+    # 38 km — so it is refused here as well as declared there.
+    if workout.get("type") == "race":
+        return
     if workout.get("type") == "long" and not workout.get("key_workout_id"):
         rebuild_long_run(workout, rounded, pace_zones)
         return
     workout["distance"] = rounded
+    if workout.get("key_workout_id"):
+        rebuild_key_workout(workout, pace_zones)
+        return
     if old > 0 and rounded > 0:
         rescale_steps(workout, rounded / old)
-    reconcile_key_workout_text(workout)
 
 
 def scale_down(

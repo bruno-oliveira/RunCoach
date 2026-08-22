@@ -282,6 +282,10 @@ class TestPlanGenerationQualityRunConsistency:
             (50, 21.1, 12, 4),
             (50, 42.2, 16, 4),
             (20, 5.0, 8, 3),
+            # Five-run weeks open a second quality slot per week, which is
+            # where a same-week duplicate or a mis-slotted session shows up.
+            (60, 42.2, 20, 5),
+            (45, 21.1, 16, 5),
         ],
     )
     def test_all_quality_runs_consistent(self, mileage, race_km, weeks, runs):
@@ -303,5 +307,52 @@ class TestPlanGenerationQualityRunConsistency:
         assert not violations, (
             f"{len(violations)} quality-run consistency violation(s) in "
             f"plan({mileage}km/{race_km}km/{weeks}w/{runs}runs):\n"
+            + "\n".join(violations)
+        )
+
+    # The road-only grid above is how ``trail_night_run`` — an easy-effort run
+    # sitting in a tempo slot — went unnoticed: no trail plan was ever
+    # generated here. Trail and ultra draw from a different half of the
+    # catalog, so they need their own coverage.
+    @pytest.mark.parametrize(
+        "mileage,race_km,elev_m,weeks,runs",
+        [
+            (30, 30.0, 1000, 12, 4),
+            (45, 50.0, 2000, 16, 4),
+            (60, 80.0, 3500, 20, 5),
+            (70, 163.0, 7000, 24, 5),
+            (40, 50.0, 200, 16, 4),  # flat-terrain training for a hilly race
+        ],
+    )
+    def test_all_trail_quality_runs_consistent(
+        self, mileage, race_km, elev_m, weeks, runs
+    ):
+        from app.core.training.trail_profile import classify_trail
+
+        gen = TrainingPlanGenerator()
+        plan = gen.generate_plan(
+            float(mileage),
+            race_km,
+            weeks,
+            runs,
+            vdot=45.0,
+            trail_profile=classify_trail(race_km, float(elev_m)),
+        )
+
+        violations = []
+        for week in plan:
+            for w in week.get("daily_workouts", []):
+                if w.get("type") not in ("interval", "tempo", "hill"):
+                    continue
+                ok, reason = validate_quality_run_steps(w)
+                if not ok:
+                    violations.append(
+                        f"Week {week['week']} Day {w.get('day')} "
+                        f"kid={w.get('key_workout_id', '—')}: {reason}"
+                    )
+
+        assert not violations, (
+            f"{len(violations)} quality-run consistency violation(s) in "
+            f"trail plan({mileage}km/{race_km}km/{elev_m}m/{weeks}w/{runs}runs):\n"
             + "\n".join(violations)
         )

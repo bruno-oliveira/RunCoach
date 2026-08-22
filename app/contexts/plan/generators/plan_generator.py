@@ -18,7 +18,7 @@ from typing import Any, Dict, List, Optional
 from app.contexts.plan.generators.beginner_plan_generator import BeginnerPlanGenerator
 from app.contexts.plan.generators.plan_structure_guard import check_plan_structure
 from app.contexts.plan.generators.weekly_plan_builder import build_weekly_plan
-from app.core.training import mileage_progression
+from app.core.training import mileage_progression, workout_builders, workout_steps
 from app.core.training.key_workout_library import KeyWorkoutRotationState
 
 # Re-export for any code that imports PHASE_DISTRIBUTIONS from here
@@ -92,7 +92,12 @@ class TrainingPlanGenerator:
                 suggestion="Try a 5K or 10K plan with 0 km/week to get started.",
             )
 
-        pace_zones = VDOTCalculator.get_pace_zones(vdot) if vdot else None
+        # Pass the target so the zones carry a ``race`` entry (5K/10K are
+        # always present, longer targets only when the distance is given).
+        # Race day and every goal-pace rehearsal read their pace from it.
+        pace_zones = (
+            VDOTCalculator.get_pace_zones(vdot, target_distance) if vdot else None
+        )
 
         experience_level = derive_experience_level(current_km)
 
@@ -261,6 +266,12 @@ class TrainingPlanGenerator:
             pace_zones,
             trail_profile=trail_profile,
         )
+        _install_race_day(
+            training_plan,
+            target_distance,
+            pace_zones,
+            trail_profile=trail_profile,
+        )
 
         # Plan-level safety net: catch a week that composed into something
         # unrunnable before it ever reaches the runner. Fatal issues fail the
@@ -292,6 +303,167 @@ class TrainingPlanGenerator:
             )
 
         return training_plan
+
+
+# Race day sits on the last day of the final week. The week runs Mon..Sun
+# (day 1..7), and the scheduler anchors the long run on day 6 — so the race
+# lands on the Sunday that every plan was implicitly counting down to.
+RACE_DAY_NUMBER = 7
+
+# Bounds on the day-before-race shakeout. Its job is to keep the legs open,
+# not to add fitness — nothing gained the day before a race survives to the
+# start line, and anything longer costs freshness. The floor keeps it a real
+# run rather than a token one on low-volume plans.
+RACE_WEEK_SHAKEOUT_MAX_KM = 4.0
+RACE_WEEK_SHAKEOUT_MIN_KM = 2.0
+
+
+def _build_shakeout(
+    day: int, distance_km: float, pace_zones: Optional[Dict]
+) -> Dict[str, Any]:
+    """The day-before-race shakeout: a few easy km with strides."""
+    workout = workout_builders.generate_easy_run(
+        day, distance_km, distance_km, pace_zones
+    )
+    workout["is_shakeout"] = True
+    workout["description"] = (
+        f"Shakeout — {distance_km:g} km very easy, finishing with 4 × 100 m "
+        "strides. Just enough to keep the legs open and burn off nerves. "
+        "Everything you feel today is taper legs, not lost fitness."
+    )
+    workout["steps"] = workout_steps.build_shakeout_steps(distance_km, pace_zones)
+    workout["coaching_rationale"] = (
+        "The day before is about staying loose, not proving anything. Strides "
+        "remind your legs what fast feels like without costing you a thing."
+    )
+    return workout
+
+
+def _install_race_day(
+    training_plan: List[Dict[str, Any]],
+    target_distance: float,
+    pace_zones: Optional[Dict],
+    trail_profile: Optional[TrailProfile] = None,
+) -> None:
+    """Replace the final week's long run with the goal race (in place).
+
+    A plan built backwards from a race used to stop one session short of it:
+    the last week ended on a taper long run and the runner was left to infer
+    where the race went. This pass closes the plan on the event itself.
+
+    Three things happen, in order:
+
+    1. The final week's long run becomes a short shakeout. A near-race-distance
+       long run one or two days before the race is not a taper, it is a second
+       race — but going fully sedentary is not the answer either, so the day
+       keeps a few easy kilometres with strides to hold the legs open. This
+       also keeps race week at the runner's requested number of running days.
+    2. Everything still standing before race day is scaled to
+       ``RACE_WEEK_PRERACE_SHARE`` of the realized peak. The taper curve sized
+       race week as though its long run were still the anchor; with the race
+       installed the rest of the week is shakeout, and holding it at the taper
+       total would send the runner to the start line with a normal training
+       week in their legs.
+    3. The race is installed on :data:`RACE_DAY_NUMBER`, displacing whatever
+       easy run the scheduler had put there.
+
+    The race is never rescaled afterwards — its distance is set by the event,
+    not by a weekly budget — so this runs after every smoothing pass.
+    """
+    from app.contexts.plan.generators.weekly_plan_builder import attach_duration_hints
+    from app.contexts.plan.generators.workout_scaler import scale_down as _scale_down
+    from app.core.training.tuning import (
+        RACE_WEEK_MIN_PRERACE_KM,
+        RACE_WEEK_PRERACE_SHARE,
+    )
+
+    if not training_plan or target_distance <= 0:
+        return
+    final_week = training_plan[-1]
+    workouts = final_week.get("daily_workouts") or []
+
+    # Realized peak across every loading week — the same anchor _smooth_taper
+    # uses, so race week is sized against volume the runner actually ran.
+    realized_peak = max(
+        (
+            w.get("total_km", 0) or 0
+            for w in training_plan[:-1]
+            if not w.get("is_recovery")
+        ),
+        default=final_week.get("total_km", 0) or 0,
+    )
+
+    pre_race_target = max(
+        RACE_WEEK_MIN_PRERACE_KM, round(realized_peak * RACE_WEEK_PRERACE_SHARE, 1)
+    )
+
+    # The race consumes one of the week's running slots rather than adding an
+    # extra one, so race week keeps the runner's requested training frequency.
+    # When the scheduler had already put a run on race day the race simply
+    # takes it, and the freed long-run day becomes the day-before shakeout.
+    # When race day was rest, the race is the extra run and the long-run day
+    # rests instead — a marathon plan's race week reading easy / easy / tempo /
+    # race, with the Saturday off.
+    #
+    # Displaced days are rewritten in place rather than dropped: every week in
+    # a generated plan carries seven day entries, and removing one left race
+    # week with a hole where Saturday should be.
+    race_day_was_a_run = any(
+        w.get("day") == RACE_DAY_NUMBER
+        and w.get("type") not in ("rest", "recovery")
+        and (w.get("distance") or 0) > 0
+        for w in workouts
+    )
+    shakeout_km = max(
+        RACE_WEEK_SHAKEOUT_MIN_KM,
+        min(RACE_WEEK_SHAKEOUT_MAX_KM, round(pre_race_target * 0.25, 1)),
+    )
+    kept: List[Dict[str, Any]] = []
+    for w in workouts:
+        if w.get("type") == "long":
+            kept.append(
+                _build_shakeout(w["day"], shakeout_km, pace_zones)
+                if race_day_was_a_run
+                else workout_builders.generate_rest_day(w["day"])
+            )
+        elif w.get("day") == RACE_DAY_NUMBER:
+            kept.append(workout_builders.generate_rest_day(w["day"]))
+        else:
+            kept.append(w)
+
+    # Scale only the days *other than* the shakeout onto the remaining budget —
+    # the shakeout is a fixed, deliberately tiny dose and must not absorb the
+    # week's drawdown.
+    others = [w for w in kept if not w.get("is_shakeout")]
+    _scale_down(
+        others,
+        max(0.0, pre_race_target - shakeout_km),
+        pace_zones=pace_zones,
+        protect_long=False,
+    )
+
+    race = workout_builders.generate_race_day(
+        RACE_DAY_NUMBER,
+        target_distance,
+        pace_zones,
+        is_trail=trail_profile is not None,
+    )
+    race["coaching_rationale"] = (
+        "Everything in this plan was built for today. Trust the taper — "
+        "fresh legs always feel a little restless on the start line."
+    )
+
+    workouts = sorted(
+        [w for w in kept if w.get("day") != RACE_DAY_NUMBER] + [race],
+        key=lambda w: w.get("day", 0),
+    )
+    for w in workouts:
+        w.pop("duration_min", None)
+    attach_duration_hints(workouts, pace_zones)
+
+    final_week["daily_workouts"] = workouts
+    final_week["total_km"] = round(sum(w.get("distance", 0) or 0 for w in workouts), 1)
+    final_week["is_race_week"] = True
 
 
 def _smooth_taper(

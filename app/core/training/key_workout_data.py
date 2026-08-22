@@ -521,7 +521,7 @@ _WORKOUTS_SHORT: List[Dict] = [
     },
     {
         "id": "10k_broken_miles",
-        "distances": [10.0],
+        "distances": [10.0, 21.1],
         "phases": ["build", "peak"],
         "type": "interval",
         "terrain": ["any"],
@@ -569,7 +569,7 @@ _WORKOUTS_SHORT: List[Dict] = [
     },
     {
         "id": "10k_pyramid_intervals",
-        "distances": [10.0],
+        "distances": [10.0, 21.1],
         "phases": ["build", "peak"],
         "type": "interval",
         "terrain": ["any"],
@@ -616,7 +616,7 @@ _WORKOUTS_SHORT: List[Dict] = [
     },
     {
         "id": "10k_thirty_thirties",
-        "distances": [10.0],
+        "distances": [10.0, 21.1],
         "phases": ["build", "peak"],
         "type": "interval",
         "terrain": ["any"],
@@ -663,7 +663,7 @@ _WORKOUTS_SHORT: List[Dict] = [
         "id": "half_progressive_long",
         "distances": [21.1],
         "phases": ["build", "peak"],
-        "type": "tempo",
+        "type": "long",
         "terrain": ["any"],
         "name": "Progressive Long Run",
         "structure": "14-16km: first 10km easy, last 4-6km at marathon pace",
@@ -724,7 +724,7 @@ _WORKOUTS_SHORT: List[Dict] = [
         "id": "half_cutdown_long",
         "distances": [21.1],
         "phases": ["build"],
-        "type": "interval",
+        "type": "long",
         "terrain": ["any"],
         "name": "Cut-Down Long Run",
         "structure": "15km: each 5km segment 15s/km faster than the last",
@@ -742,7 +742,7 @@ _WORKOUTS_SHORT: List[Dict] = [
     },
     {
         "id": "half_km_intervals",
-        "distances": [21.1],
+        "distances": [21.1, 42.2],
         "phases": ["build", "peak"],
         "type": "interval",
         "terrain": ["any"],
@@ -786,7 +786,7 @@ _WORKOUTS_SHORT: List[Dict] = [
     },
     {
         "id": "half_mile_repeats",
-        "distances": [21.1],
+        "distances": [21.1, 42.2],
         "phases": ["build", "peak"],
         "type": "interval",
         "terrain": ["any"],
