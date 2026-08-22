@@ -4,12 +4,11 @@ Each handler encapsulates the behavior that varies by plan kind:
 - ``display_label`` for plan listings / sharing views
 - ``enrich_view_context`` for per-type context augmentation in the plan view
 
-PDF rendering uses a parallel registry: ``app.infrastructure.export.pdf_plan_renderers``
-(``PdfPlanRenderer`` subclasses selected via ``get_renderer_for_plan``).
+PDF export needs no parallel registry: ``app.infrastructure.export.runna``
+renders every plan type from the same weekly structure.
 
 Add a new plan type by writing one handler class and prepending it to
-``PLAN_TYPE_REGISTRY`` (and, if it renders differently, a matching
-``PdfPlanRenderer``).
+``PLAN_TYPE_REGISTRY``.
 """
 
 from __future__ import annotations
