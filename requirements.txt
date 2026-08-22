@@ -33,8 +33,8 @@ cachetools==5.5.2
 gpxpy>=1.6.0
 
 # FIT file generation for Garmin workouts
-fit-tool>=0.9.0
-fitdecode>=0.10.0
+fit-tool==0.9.16
+fitdecode==0.11.0
 
 # Testing (install with: pip install -e ".[test]")
 pytest==8.3.5

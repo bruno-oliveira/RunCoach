@@ -118,6 +118,13 @@ class TestGenerateDailyWorkoutIntervals:
         assert (
             run_step["custom_target_speed_low"] < run_step["custom_target_speed_high"]
         )
+        # Absolute, not just ordered. A relative check passes happily while the
+        # whole field is off by the FIT profile scale, which is exactly how a
+        # 1000x speed error (2666 m/s "easy pace") sat here unnoticed.
+        # 4:30/km (270 s/km) +/- 15 s -> 285 s/km = 3.51 m/s slow bound,
+        # 255 s/km = 3.92 m/s fast bound.
+        assert run_step["custom_target_speed_low"] == pytest.approx(3.51, abs=0.02)
+        assert run_step["custom_target_speed_high"] == pytest.approx(3.92, abs=0.02)
 
         recovery_step = steps[2]
         assert recovery_step["duration_type"] == "time"
@@ -137,3 +144,32 @@ class TestGenerateDailyWorkoutIntervals:
         fit_bytes = FITService.generate_daily_workout(day)
         steps = _decode_steps(fit_bytes)
         assert steps[0]["intensity"] == "active"
+
+
+class TestGenerateRaceWorkout:
+    """The other export path — a per-km race pacing workout.
+
+    Shares the encoding helpers with ``generate_daily_workout`` but had no
+    coverage, so nothing here would have caught the scale drift.
+    """
+
+    def test_segments_encode_as_real_metres_and_speeds(self):
+        segments = [
+            {"start_km": 0, "end_km": 1, "target_pace_min_km": 5.0},
+            {"start_km": 1, "end_km": 2, "target_pace_min_km": 4.9},
+        ]
+        fit_bytes = FITService.generate_race_workout(segments, 3000, "50:00")
+        steps = _decode_steps(fit_bytes)
+
+        assert len(steps) == 2
+        for step in steps:
+            assert step["duration_type"] == "distance"
+            assert step["duration_distance"] == pytest.approx(1000.0)
+            assert step["target_type"] == "speed"
+        # 5:00/km is 3.33 m/s; the +/-15 s band straddles it.
+        first = steps[0]
+        assert (
+            first["custom_target_speed_low"] < 3.34 < first["custom_target_speed_high"]
+        )
+        # A faster segment must map to a faster band, not a slower one.
+        assert steps[1]["custom_target_speed_low"] > first["custom_target_speed_low"]

@@ -3,6 +3,20 @@ revision = 1
 requires-python = ">=3.11"
 
 [[package]]
+name = "alembic"
+version = "1.19.1"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "mako" },
+    { name = "sqlalchemy" },
+    { name = "typing-extensions" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/16/2b/e4153978368de59918115c9e01d3ebf58a558a7285efa7e960c383c4b59a/alembic-1.19.1.tar.gz", hash = "sha256:e0fca0518118c78acc493e31bcb5402f190057aaf6df8b5b95ce94c4789cf648", size = 2070816 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/20/89/e62cc37b69ad357cc8ecd6e7367f5245f523d3cbb338a66197212bdf6749/alembic-1.19.1-py3-none-any.whl", hash = "sha256:b39018cb3d9413a19cbd54cf3c02ad33998641f0538eb77413a488a21c3e14be", size = 265946 },
+]
+
+[[package]]
 name = "annotated-doc"
 version = "0.0.4"
 source = { registry = "https://pypi.org/simple" }
@@ -411,6 +425,33 @@ wheels = [
 ]
 
 [[package]]
+name = "fit-tool"
+version = "0.9.16"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/fc/4f/be06a443553f5e74b4e9360724aaf41d0d09dceb0bc69d8faf3fe0f398f0/fit_tool-0.9.16.tar.gz", hash = "sha256:716b75b2fdfc66ca7b82df65f750c1427fd984c558284753f43e2bf8d2188f61", size = 300961 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/2f/4f/f0b1bfbc260007870aa0b05e07bdcdebc6080bfbc52dd680011ab0daa44b/fit_tool-0.9.16-py3-none-any.whl", hash = "sha256:3403c61663cc205da101a9952edcdc31cf9634dce2eb5c12a397eb24cf4aacf0", size = 497174 },
+]
+
+[[package]]
+name = "fitdecode"
+version = "0.11.0"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/87/19/1bde056f443d8ce890dbc0f0bd8a216cc9ebfda4221619767f80cf1835e2/fitdecode-0.11.0.tar.gz", hash = "sha256:52d920e50eaa76eb065b20bfd4e42f72195e894a079098dacc1cafa908cd4b83", size = 107149 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/7b/7b/75829f9b77b2546f955ec265de10de993939bf3218b5d957ca79803a2d28/fitdecode-0.11.0-py3-none-any.whl", hash = "sha256:a1bdb9b4d1e9ebac0001fc58c22fe07a3f9967ca4e13258c6ef99cdb8d697a78", size = 109961 },
+]
+
+[[package]]
+name = "gpxpy"
+version = "1.6.2"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/20/ad/6f1a34e702c72cb495bb258396f237ded76c00f9fe67054a44d778d24ed9/gpxpy-1.6.2.tar.gz", hash = "sha256:a72c484b97ec42b80834353b029cc8ee1b79f0ffca1179b2210bb3baf26c01ae", size = 111695 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/44/9f/62df6c1e52462bdd04275b36cec49efa9e8af7e7b834499eb288f73dcfbc/gpxpy-1.6.2-py3-none-any.whl", hash = "sha256:289bc2d80f116c988d0a1e763fda22838f83005573ece2bbc6521817b26fb40a", size = 42649 },
+]
+
+[[package]]
 name = "greenlet"
 version = "3.4.0"
 source = { registry = "https://pypi.org/simple" }
@@ -568,6 +609,18 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/df/bf/f7da0350254c0ed7c72f3e33cef02e048281fec7ecec5f032d4aac52226b/jinja2-3.1.6.tar.gz", hash = "sha256:0137fb05990d35f1275a587e9aee6d56da821fc83491a0fb838183be43f66d6d", size = 245115 }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/62/a1/3d680cbfd5f4b8f15abc1d571870c5fc3e594bb582bc3b64ea099db13e56/jinja2-3.1.6-py3-none-any.whl", hash = "sha256:85ece4451f492d0c13c5dd7c13a64681a86afae63a5f347908daf103ce6d2f67", size = 134899 },
+]
+
+[[package]]
+name = "mako"
+version = "1.4.1"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "markupsafe" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/2a/12/b5fa2353e2754cd67fb9f83793fa48ff42c213a5da7e719869d2301f6ab8/mako-1.4.1.tar.gz", hash = "sha256:d7904710b662996425a21627710c4777c45053146942cf8a7aebf757c92b8c27", size = 410165 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/a5/54/12ed58d458474aaab5c3d180173e745a4fe131bb330370596876d19ff60f/mako-1.4.1-py3-none-any.whl", hash = "sha256:a359d9a94a541213958742b2698d0a7757bb83551767bc468a74b9905aba9617", size = 80010 },
 ]
 
 [[package]]
@@ -1046,8 +1099,12 @@ name = "runcoach"
 version = "1.0.0"
 source = { editable = "." }
 dependencies = [
+    { name = "alembic" },
     { name = "cachetools" },
     { name = "fastapi" },
+    { name = "fit-tool" },
+    { name = "fitdecode" },
+    { name = "gpxpy" },
     { name = "httpx" },
     { name = "jinja2" },
     { name = "pydantic" },
@@ -1068,8 +1125,12 @@ test = [
 
 [package.metadata]
 requires-dist = [
+    { name = "alembic", specifier = ">=1.18.4" },
     { name = "cachetools", specifier = ">=5.5.2" },
     { name = "fastapi", specifier = ">=0.115.12" },
+    { name = "fit-tool", specifier = "==0.9.16" },
+    { name = "fitdecode", specifier = "==0.11.0" },
+    { name = "gpxpy", specifier = ">=1.6.0" },
     { name = "httpx", specifier = ">=0.28.1" },
     { name = "jinja2", specifier = ">=3.1.6" },
     { name = "pydantic", specifier = ">=2.11.3" },

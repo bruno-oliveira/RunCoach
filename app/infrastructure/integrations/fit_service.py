@@ -44,17 +44,18 @@ from app.core.training.workout_steps.metrics import _parse_pace_str_to_min_per_k
 
 PACE_TOLERANCE_SEC = 15
 
-# fit-tool's WorkoutStepMessage duration_time/duration_distance/custom_target_speed_*
-# properties don't apply the FIT-profile sub-field scale themselves (confirmed by
-# round-tripping generated files through an independent decoder, fitdecode): the
-# raw bytes end up scaled by 1000 regardless of which of these fields is set, while
-# the FIT spec's own scale differs per field (distance: 100, time: 1000, speed:
-# 1000). These constants are the compensating factors so the bytes written match
-# the spec Garmin Connect expects - not tunable knobs, don't change without
-# re-verifying against fitdecode.
-SPEED_SCALE = 1000
-DISTANCE_SCALE = 10
-TIME_SCALE = 1000
+# fit-tool's WorkoutStepMessage applies each field's FIT-profile scale itself, so
+# these properties take plain SI values: metres, seconds, m/s. Assign the real
+# number and the bytes come out right.
+#
+# This used to be wrapped in compensating SPEED/DISTANCE/TIME_SCALE constants,
+# written when an older fit-tool did *not* apply the profile scale. The
+# dependency was pinned only as ``fit-tool>=0.9.0``, so a newer release quietly
+# started applying it and the compensation became a corruption: every exported
+# workout shipped distances 10x short and times and speeds 1000x long — a 6 km
+# easy run reached the watch as 600 m. Re-verified against fitdecode (an
+# independent decoder) at fit-tool 0.9.16, which is now pinned; re-check
+# ``tests/test_core/test_fit_service.py`` before moving that pin.
 
 _KIND_TO_INTENSITY = {
     "warmup": Intensity.WARMUP,
@@ -182,10 +183,10 @@ class FITService:
             step.workout_step_name = km_label
             step.intensity = Intensity.ACTIVE
             step.duration_type = WorkoutStepDuration.DISTANCE
-            step.duration_distance = 1000.0 / DISTANCE_SCALE
+            step.duration_distance = 1000.0
             step.target_type = WorkoutStepTarget.SPEED
-            step.custom_target_speed_low = slow_ms * SPEED_SCALE
-            step.custom_target_speed_high = fast_ms * SPEED_SCALE
+            step.custom_target_speed_low = slow_ms
+            step.custom_target_speed_high = fast_ms
             builder.add(step)
 
         fit_file = builder.build()
@@ -278,10 +279,10 @@ class FITService:
             duration_s = step.get("duration_s")
             if distance_m:
                 msg.duration_type = WorkoutStepDuration.DISTANCE
-                msg.duration_distance = distance_m / DISTANCE_SCALE
+                msg.duration_distance = distance_m
             elif duration_s:
                 msg.duration_type = WorkoutStepDuration.TIME
-                msg.duration_time = duration_s * TIME_SCALE
+                msg.duration_time = duration_s
             else:
                 msg.duration_type = WorkoutStepDuration.OPEN
 
@@ -295,8 +296,8 @@ class FITService:
                 slow_ms = _pace_min_km_to_speed_ms(slow_sec / 60.0)
                 fast_ms = _pace_min_km_to_speed_ms(fast_sec / 60.0)
                 msg.target_type = WorkoutStepTarget.SPEED
-                msg.custom_target_speed_low = slow_ms * SPEED_SCALE
-                msg.custom_target_speed_high = fast_ms * SPEED_SCALE
+                msg.custom_target_speed_low = slow_ms
+                msg.custom_target_speed_high = fast_ms
             elif hr_band:
                 msg.target_type = WorkoutStepTarget.HEART_RATE
                 msg.custom_target_heart_rate_low = hr_band[0]
