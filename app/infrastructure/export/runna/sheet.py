@@ -219,7 +219,25 @@ def _has_strides(day: Dict[str, Any]) -> bool:
     return "stride" in (day.get("description") or "").lower()
 
 
-def _headline(day: Dict[str, Any], kind: str) -> str:
+def _session_name(day: Dict[str, Any]) -> str:
+    """The title the plan gave this session, or ``""`` for an unnamed one.
+
+    This is the same string the app prints at the top of a workout page and the
+    same string the "Key sessions" reference page leads with. The card has to
+    carry it too, or the sheet can be read on screen but not on paper: a purple
+    card saying "Tempo" gives the reader no way back to the paragraph that
+    describes it.
+    """
+    return str(day.get("key_workout_name") or "").strip()
+
+
+def _headline(day: Dict[str, Any], kind: str, named: bool = False) -> str:
+    """Metric line of a card.
+
+    ``named`` suppresses the character hints (``fast finish``, ``+ strides``):
+    on a named card the label underneath already says it, and repeating it
+    costs the width the name needs.
+    """
     distance = float(day.get("distance") or 0)
     structure = str(day.get("structure") or "")
     name = str(day.get("key_workout_name") or "")
@@ -246,11 +264,11 @@ def _headline(day: Dict[str, Any], kind: str) -> str:
         shape = _rep_shape(structure)
         return f"{km} · {shape}" if shape else km
 
-    if kind == "long":
+    if kind == "long" and not named:
         flavour = _long_flavour(name, structure)
         return f"{km} {flavour}" if flavour else km
 
-    if kind == "easy" and _has_strides(day):
+    if kind == "easy" and not named and _has_strides(day):
         return f"{km} + strides"
 
     return km
@@ -261,10 +279,15 @@ def _card(day: Dict[str, Any]) -> DayCard:
     kind = _KIND_BY_TYPE.get(workout_type, "easy")
     if kind == "rest":
         return REST_CARD
+    # Race day keeps its shouted generic label: the cover already names the
+    # race, and "RACE DAY" reads across the page in a way "Half Marathon Race
+    # Day" wrapped onto two lines does not.
+    name = "" if kind == "race" else _session_name(day)
     return DayCard(
         kind=kind,
-        headline=_headline(day, kind),
-        label=_LABEL_BY_TYPE.get(workout_type, workout_type.replace("_", " ").title()),
+        headline=_headline(day, kind, named=bool(name)),
+        label=name
+        or _LABEL_BY_TYPE.get(workout_type, workout_type.replace("_", " ").title()),
         strength=bool(day.get("strength_session")),
     )
 

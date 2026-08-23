@@ -39,6 +39,12 @@ CARD_PAD_X = 6.0
 # Distance from the card's top edge down to each text baseline.
 CARD_HEADLINE_BASELINE = 22.2
 CARD_LABEL_BASELINE = 34.5
+# Named sessions ("Alternating Marathon-Pace Long") do not fit a 96pt column on
+# one line, so the label may run to a second. The first baseline stays put
+# either way — labels lining up across a week matters more than centring the
+# block inside a card that happens to have two lines.
+CARD_LABEL_LEADING = 8.2
+CARD_LABEL_LINES = 2
 
 # --- Vertical rhythm of a calendar page -----------------------------------
 DAY_HEADER_BASELINE = 54.3  # from page top

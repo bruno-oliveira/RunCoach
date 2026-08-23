@@ -67,6 +67,35 @@ def _wrap(text: str, font: str, size: float, max_width: float) -> List[str]:
     return lines
 
 
+def _fit_lines(
+    text: str, font: str, size: float, max_width: float, min_size: float, max_lines: int
+) -> Tuple[List[str], float]:
+    """Wrap ``text`` into at most ``max_lines``, shrinking before it truncates.
+
+    Session names are the one string on the sheet whose length the layout does
+    not control, so they get room to wrap and a smaller size before an ellipsis
+    is allowed to eat the end of a name.
+    """
+    if not text:
+        return [], size
+    while True:
+        lines = _wrap(text, font, size, max_width)
+        if len(lines) <= max_lines and all(
+            stringWidth(line, font, size) <= max_width for line in lines
+        ):
+            return lines, size
+        if size <= min_size:
+            break
+        size -= 0.25
+    lines = _wrap(text, font, size, max_width)
+    kept = lines[:max_lines]
+    # Fold the overflow back onto the last kept line so the ellipsis marks the
+    # truncation rather than the name simply stopping mid-phrase.
+    kept[-1] = " ".join([kept[-1], *lines[max_lines:]])
+    kept[-1], _ = _shrink_to_fit(kept[-1], font, size, max_width, size)
+    return kept, size
+
+
 class SheetPainter:
     """Low-level drawing primitives shared by every page of the sheet."""
 
@@ -181,17 +210,18 @@ class SheetPainter:
             headline_size,
             accent.fg,
         )
-        label, label_size = _shrink_to_fit(
-            card.label, t.FONT_BOLD, t.SIZE_CARD_LABEL, inner, 5.5
+        label_lines, label_size = _fit_lines(
+            card.label, t.FONT_BOLD, t.SIZE_CARD_LABEL, inner, 5.5, t.CARD_LABEL_LINES
         )
-        self.text(
-            x + t.CARD_PAD_X,
-            top + t.CARD_LABEL_BASELINE,
-            label,
-            t.FONT_BOLD,
-            label_size,
-            accent.fg,
-        )
+        for offset, line in enumerate(label_lines):
+            self.text(
+                x + t.CARD_PAD_X,
+                top + t.CARD_LABEL_BASELINE + offset * t.CARD_LABEL_LEADING,
+                line,
+                t.FONT_BOLD,
+                label_size,
+                accent.fg,
+            )
         if card.strength:
             # A strength session rides along with a run rather than owning a
             # day, so it is marked on the card instead of taking a column.

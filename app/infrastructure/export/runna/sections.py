@@ -165,25 +165,64 @@ def _pace_rows(vdot: float) -> List[DetailRow]:
     return rows
 
 
+def _week_span(weeks: Sequence[int]) -> str:
+    """``[5]`` -> ``Week 5``; ``[3, 4, 5, 9]`` -> ``Weeks 3–5, 9``."""
+    ordered = sorted({week for week in weeks if week})
+    if not ordered:
+        return ""
+    runs: List[List[int]] = [[ordered[0]]]
+    for week in ordered[1:]:
+        if week == runs[-1][-1] + 1:
+            runs[-1].append(week)
+        else:
+            runs.append([week])
+    parts = [
+        f"{run[0]}\u2013{run[-1]}" if len(run) > 2 else ", ".join(str(w) for w in run)
+        for run in runs
+    ]
+    return f"{'Week' if len(ordered) == 1 else 'Weeks'} {', '.join(parts)}"
+
+
 def _key_session_rows(plan_data: Sequence[Dict[str, Any]]) -> List[DetailRow]:
-    rows: List[DetailRow] = []
-    seen: set[str] = set()
+    """One row per named session, in the order the calendar introduces them.
+
+    Keyed by name so a card title looks itself up, but a name is not a single
+    session: the same workout grows across the block, so ``Alternating
+    Marathon-Pace Long`` is 14.5 km in week 5 and 19.1 km in week 10. Printing
+    only the first shape would misdescribe every later week it appears in, so
+    the variants are listed against the weeks they belong to.
+    """
+    variants: Dict[str, Dict[str, List[int]]] = {}
+    kinds: Dict[str, str] = {}
     for week in plan_data:
+        number = int(week.get("week") or 0)
         for day in week.get("daily_workouts") or []:
-            name = day.get("key_workout_name")
-            structure = day.get("structure")
+            name = str(day.get("key_workout_name") or "").strip()
+            structure = str(day.get("structure") or "").strip()
             if not name or not structure:
                 continue
-            if name in seen:
-                continue
-            seen.add(name)
-            rows.append(
-                DetailRow(
-                    lead=str(name),
-                    body=str(structure),
-                    kind="long" if day.get("type") == "long" else "quality",
-                )
+            variants.setdefault(name, {}).setdefault(structure, []).append(number)
+            kinds.setdefault(name, "long" if day.get("type") == "long" else "quality")
+
+    rows: List[DetailRow] = []
+    for name, shapes in variants.items():
+        span = _week_span([week for weeks in shapes.values() for week in weeks])
+        if len(shapes) == 1:
+            body = next(iter(shapes))
+        else:
+            # A visible separator, not whitespace: the renderer re-wraps on
+            # word boundaries and would collapse a double space away.
+            body = " \u00b7 ".join(
+                f"{_week_span(weeks)}: {structure}"
+                for structure, weeks in shapes.items()
             )
+        rows.append(
+            DetailRow(
+                lead=f"{name} \u00b7 {span}" if span else name,
+                body=body,
+                kind=kinds[name],
+            )
+        )
     return rows
 
 
@@ -327,7 +366,10 @@ def build_sections(
             DetailSection(
                 eyebrow="REFERENCE",
                 title="Key sessions",
-                subtitle="What the named workouts on the calendar actually ask for.",
+                subtitle=(
+                    "Every card on the calendar is titled with its session "
+                    "name. This is what each one asks for, and when it lands."
+                ),
                 rows=tuple(key_sessions),
                 columns=2,
             )

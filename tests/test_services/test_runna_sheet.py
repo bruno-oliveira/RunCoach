@@ -13,7 +13,10 @@ from app.contexts.plan.generators.plan_generator import TrainingPlanGenerator
 from app.infrastructure.export.pdf_generator import PDFGenerator
 from app.infrastructure.export.plan_export_dto import PlanExportDTO
 from app.infrastructure.export.runna import build_sheet
-from app.infrastructure.export.runna.sections import build_sections
+from app.infrastructure.export.runna.sections import (
+    _key_session_rows,
+    build_sections,
+)
 from app.infrastructure.export.runna.sheet import DayCard, _card, _week_cards
 
 
@@ -84,6 +87,35 @@ def test_quality_headline_falls_back_to_distance_without_a_shape():
 
 
 def test_long_run_headline_names_its_flavour():
+    """An unnamed long run still says what kind of long run it is."""
+    card = _card(
+        {
+            "day": 6,
+            "type": "long",
+            "distance": 16.8,
+            "structure": "16.8km progressive, last 5km at marathon pace",
+        }
+    )
+    assert card.headline == "16.8K progressive"
+    assert card.label == "Long Run"
+
+
+def test_named_session_is_titled_on_the_card():
+    """The card carries the same title the app shows, so it looks itself up."""
+    card = _card(
+        {
+            "day": 4,
+            "type": "tempo",
+            "distance": 6.9,
+            "key_workout_name": "Threshold Over-Unders",
+            "structure": "2 x (1 km at threshold pace / 1 km easy float)",
+        }
+    )
+    assert card.label == "Threshold Over-Unders"
+    assert card.headline == "6.9K · 2×1km"
+
+
+def test_a_named_card_drops_the_flavour_the_name_already_carries():
     card = _card(
         {
             "day": 6,
@@ -93,7 +125,46 @@ def test_long_run_headline_names_its_flavour():
             "structure": "16.8km with last 3km at threshold pace",
         }
     )
-    assert card.headline == "16.8K fast finish"
+    assert card.headline == "16.8K"
+    assert card.label == "Fast-Finish Long Run"
+
+
+def test_race_day_keeps_its_generic_shout():
+    """The cover already names the race; the card wants the short word."""
+    card = _card(
+        {
+            "day": 7,
+            "type": "race",
+            "distance": 21.1,
+            "key_workout_name": "Half Marathon Race Day",
+        }
+    )
+    assert card.label == "RACE DAY"
+
+
+def test_every_named_session_is_both_titled_and_described(half_plan):
+    """The gap this closes: a card the reference page cannot be reached from."""
+    dto = _dto(half_plan)
+    sheet = build_sheet(dto, half_plan, build_sections(dto, half_plan))
+    named = {
+        str(day["key_workout_name"])
+        for week in half_plan
+        for day in week["daily_workouts"]
+        if day.get("key_workout_name")
+        and day.get("structure")
+        and day.get("type") != "race"
+    }
+    titled = {
+        card.label
+        for phase in sheet.phases
+        for week in phase.weeks
+        for card in week.cards
+    }
+    section = next(s for s in sheet.sections if s.title == "Key sessions")
+    described = {row.lead.split(" · ")[0] for row in section.rows}
+    assert named
+    assert named <= titled, named - titled
+    assert named <= described, named - described
 
 
 def test_zero_distance_recovery_reads_as_cross_training():
@@ -279,3 +350,96 @@ def test_all_sheet_text_is_renderable_by_the_base_fonts(half_plan):
 
     for text in strings:
         text.encode("cp1252")  # raises UnicodeEncodeError on an unmapped glyph
+
+
+# --- key sessions reference ------------------------------------------------
+
+
+def test_key_sessions_say_which_weeks_they_land_in():
+    plan = [
+        {
+            "week": 3,
+            "phase": "build",
+            "total_km": 30,
+            "daily_workouts": [
+                {
+                    "day": 4,
+                    "type": "tempo",
+                    "distance": 8.0,
+                    "key_workout_name": "Cruise Intervals",
+                    "structure": "4 x 1km at threshold",
+                }
+            ],
+        }
+    ]
+    row = _key_session_rows(plan)[0]
+    assert row.lead == "Cruise Intervals · Week 3"
+    assert row.body == "4 x 1km at threshold"
+
+
+def test_a_session_that_grows_lists_every_shape_it_takes():
+    """Deduping on the name alone used to misdescribe every later week."""
+    plan = [
+        {
+            "week": week,
+            "phase": "build",
+            "total_km": 30,
+            "daily_workouts": [
+                {
+                    "day": 6,
+                    "type": "long",
+                    "distance": km,
+                    "key_workout_name": "Alternating Marathon-Pace Long",
+                    "structure": f"{km}km alternating 2km easy / 2km marathon pace",
+                }
+            ],
+        }
+        for week, km in ((5, 14.5), (10, 19.1))
+    ]
+    row = _key_session_rows(plan)[0]
+    assert row.lead == "Alternating Marathon-Pace Long · Weeks 5, 10"
+    assert "Week 5: 14.5km" in row.body
+    assert "Week 10: 19.1km" in row.body
+    assert row.kind == "long"
+
+
+def test_consecutive_weeks_collapse_into_a_range():
+    plan = [
+        {
+            "week": week,
+            "phase": "base",
+            "total_km": 30,
+            "daily_workouts": [
+                {
+                    "day": 4,
+                    "type": "tempo",
+                    "distance": 8.0,
+                    "key_workout_name": "Threshold Run",
+                    "structure": "20 min at threshold",
+                }
+            ],
+        }
+        for week in (2, 3, 4, 5, 9)
+    ]
+    assert _key_session_rows(plan)[0].lead == "Threshold Run · Weeks 2–5, 9"
+
+
+def test_a_named_session_without_a_structure_is_left_off():
+    """Race day is named but has nothing to describe."""
+    plan = [
+        {
+            "week": 1,
+            "phase": "taper",
+            "total_km": 20,
+            "daily_workouts": [
+                {
+                    "day": 7,
+                    "type": "race",
+                    "distance": 21.1,
+                    "key_workout_name": "Half Marathon Race Day",
+                    "structure": "",
+                }
+            ],
+        }
+    ]
+    assert _key_session_rows(plan) == []
