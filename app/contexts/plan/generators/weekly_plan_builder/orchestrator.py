@@ -3,6 +3,9 @@
 from typing import Any, Dict, List, Optional
 
 from app.contexts.plan.generators.plan_validator import validate_week_plan
+from app.contexts.plan.generators.weekly_plan_builder.backyard_week import (
+    apply_backyard_week,
+)
 from app.contexts.plan.generators.weekly_plan_builder.budget import (
     allocate_easy_distances,
     apply_quality_caps,
@@ -34,6 +37,10 @@ from app.contexts.plan.generators.workout_scaler import (
 from app.core.coaching.coaching_notes_generator import generate_coaching_note
 from app.core.training import long_run_calculator, phase_calculator, workout_builders
 from app.core.training import workout_distribution as workout_dist_mod
+from app.core.training.backyard_simulation import (
+    fit_simulation_to_week,
+    weekly_backyard_focus,
+)
 from app.core.training.key_workout_library import (
     KeyWorkoutRotationState,
     overlay_key_workout,
@@ -353,6 +360,8 @@ def build_weekly_plan(
     intensive_weekend_enabled: bool = False,
     prev_long_run_km: Optional[float] = None,
     rotation_state: Optional[KeyWorkoutRotationState] = None,
+    backyard_profile=None,
+    backyard_schedule: Optional[Dict[int, Any]] = None,
 ) -> Dict[str, Any]:
     """Generate a single week's training plan.
 
@@ -362,6 +371,10 @@ def build_weekly_plan(
 
     ``rotation_state`` is the plan-level key-workout memory shared across the
     weeks of one plan (see :func:`generate_daily_workouts`).
+
+    ``backyard_profile`` + ``backyard_schedule`` turn the week into a backyard
+    week: the ladder decides whether this week carries a loop simulation, and
+    the week's own volume gets the final say on how big it is.
     """
     phases = phase_calculator.calculate_phases(
         weeks,
@@ -404,8 +417,40 @@ def build_weekly_plan(
         rotation_state=rotation_state,
     )
 
+    backyard = None
+    if backyard_profile is not None:
+        scheduled = (backyard_schedule or {}).get(week_number)
+        # The simulation takes the long run's slot, so the long run the
+        # scheduler already sized is both the session it replaces and the
+        # floor it must not fall below.
+        displaced_long_km = max(
+            (w.get("distance") or 0 for w in workouts if w.get("type") == "long"),
+            default=0.0,
+        )
+        simulation = (
+            fit_simulation_to_week(scheduled, total_km, displaced_long_km)
+            if scheduled is not None and not is_recovery
+            else None
+        )
+        installed = apply_backyard_week(
+            workouts,
+            phase=phase,
+            is_recovery=is_recovery,
+            week_in_phase=week_in_phase,
+            total_km=total_km,
+            profile=backyard_profile,
+            simulation=simulation,
+            pace_zones=pace_zones,
+        )
+        backyard = weekly_backyard_focus(
+            phase, is_recovery, backyard_profile, simulation
+        )
+        backyard["installed"] = installed
+
     intensive_weekend = None
-    if intensive_weekend_enabled:
+    # A backyard plan already reshapes its own weekend; an ITW on top would
+    # put a threshold session in front of a loop simulation.
+    if intensive_weekend_enabled and backyard_profile is None:
         intensive_weekend = apply_intensive_weekend(
             workouts,
             phase,
@@ -483,6 +528,7 @@ def build_weekly_plan(
         "training_tips": training_tips,
         "vertical_simulation": vertical_simulation,
         "intensive_weekend": intensive_weekend,
+        "backyard": backyard,
         "validation": {"valid": is_valid, "message": validation_message},
         "strength_training": [
             w["strength_session"] for w in workouts if w.get("strength_session")

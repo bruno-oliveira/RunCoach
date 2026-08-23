@@ -491,6 +491,56 @@ def generate_race_day(
     }
 
 
+def generate_backyard_race_day(
+    day: int,
+    profile,
+    pace_zones: Optional[Dict] = None,
+) -> Dict[str, Any]:
+    """Generate a backyard ultra as the goal event on the plan's final weekend.
+
+    A backyard has no finish line to build a countdown to — it ends when the
+    runner stops — so the plan closes on the *target* loop count rather than
+    on a distance the event guarantees. The workout carries the honest total
+    (loops × loop length) because that is what the runner is signing up to
+    cover, and ``fixed_structure`` because a loop is indivisible: no budget
+    arithmetic, in generation or adaptation, gets to shave it.
+    """
+    steps = workout_steps.build_backyard_race_steps(
+        profile.target_loops,
+        profile.loop_km,
+        profile.loop_budget_minutes,
+        profile.turnaround_minutes,
+        pace_zones,
+        loop_pace_min_km=profile.loop_pace_min_km,
+    )
+    budget = round(profile.loop_budget_minutes)
+    description = (
+        f"Race day — {profile.target_loops} loops, one "
+        f"{format_km(profile.loop_km)} km loop on every hour, "
+        f"{format_km(profile.total_distance_km)} km if you get there. Run each "
+        f"loop in about {budget} min and spend the rest of the hour eating, "
+        "drinking and sitting down. The runners who last are not the fast "
+        "ones — they are the ones whose twentieth loop looks like their first."
+    )
+    if profile.crosses_full_night:
+        description += (
+            " Your night kit and your night food are decided before the gun, "
+            "not at 1am."
+        )
+
+    return {
+        "day": day,
+        "type": "race",
+        "distance": round(profile.total_distance_km, 1),
+        "intensity": "high",
+        "is_race": True,
+        "fixed_structure": True,
+        "key_workout_name": f"{profile.target_loops}-Loop Backyard Ultra",
+        "description": description,
+        "steps": steps,
+    }
+
+
 def generate_training_tips(
     week_number: int,
     target_distance: float,

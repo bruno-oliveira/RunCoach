@@ -33,7 +33,9 @@ from app.core.training.key_workout_library.rewrites import (
     reconcile_key_workout_text,
 )
 from app.core.training.key_workout_library.selection import (
+    _BACKYARD_ONLY_IDS,
     _BRACKET_RESTRICTIONS,
+    _FORCE_ONLY_IDS,
     _ITW_ONLY_IDS,
     _KEY_WORKOUT_MIN_DISTANCE_KM,
     _LONG_ULTRA_NIGHT_RUN,
@@ -60,6 +62,8 @@ __all__ = [
     "_LONG_ULTRA_NIGHT_RUN",
     "_BRACKET_RESTRICTIONS",
     "_ITW_ONLY_IDS",
+    "_BACKYARD_ONLY_IDS",
+    "_FORCE_ONLY_IDS",
     "_rewrite_key_workout_description",
     "_derive_structure",
     "_wu_cd",

@@ -56,6 +56,17 @@ class TrainingPlan(Base):
     target_elevation_gain_m = Column(Float, nullable=True)
     training_terrain = Column(String, nullable=True)
 
+    # Backyard ultra parameters. A backyard goal is a loop count, not a distance:
+    # `target_distance` / `target_elevation_gain_m` hold the ultra projection
+    # the engine periodises against (see BackyardProfile), and these three
+    # columns hold what the runner actually signed up for. They are what every
+    # display surface should read — the projection is an implementation detail
+    # and is clamped, so it does not round-trip to a loop count.
+    is_backyard = Column(Boolean, nullable=False, default=False, server_default="0")
+    backyard_target_loops = Column(Integer, nullable=True)
+    backyard_loop_km = Column(Float, nullable=True)
+    backyard_loop_elevation_gain_m = Column(Float, nullable=True)
+
     hr_zones_data = Column(JSON, nullable=True)
     nutrition_phases_data = Column(JSON, nullable=True)
     race_protocol_data = Column(JSON, nullable=True)
@@ -104,6 +115,26 @@ class TrainingPlan(Base):
     weekly_plans: Mapped[list["WeeklyPlan"]] = relationship(
         "WeeklyPlan", back_populates="training_plan", cascade="all, delete-orphan"
     )
+
+    def backyard_profile(self):
+        """Rebuild the stored backyard goal, or ``None`` for other plans.
+
+        Returns a :class:`~app.core.training.backyard_profile.BackyardProfile`.
+        Imported lazily so the ORM layer carries no import-time dependency on
+        the training core.
+        """
+        if not self.is_backyard or not self.backyard_target_loops:
+            return None
+        from app.core.training.backyard_profile import (
+            BACKYARD_LOOP_KM,
+            classify_backyard,
+        )
+
+        return classify_backyard(
+            int(self.backyard_target_loops),
+            float(self.backyard_loop_km or BACKYARD_LOOP_KM),
+            float(self.backyard_loop_elevation_gain_m or 0.0),
+        )
 
     @property
     def target_distance_km(self) -> float:

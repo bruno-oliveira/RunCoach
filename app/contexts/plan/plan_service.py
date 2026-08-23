@@ -131,6 +131,7 @@ class PlanService:
             terrain=plan_request.resolved_training_terrain(),
             trail_profile=trail_profile,
             intensive_weekend_enabled=plan_request.intensive_weekend_enabled,
+            backyard_profile=plan_request.backyard_profile(),
         )
 
         try:

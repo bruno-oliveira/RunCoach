@@ -104,6 +104,12 @@ def plan_view_context(
         ),
         "target_distance": training_plan.target_distance,
         "is_trail": bool(getattr(training_plan, "is_trail", False)),
+        # A backyard plan travels through the engine as a trail plan, so every
+        # `is_trail` branch below would otherwise render its clamped projection
+        # ("160.9 km Trail · 1440 m vert") — a race nobody entered. Templates
+        # branch on this first.
+        "is_backyard": bool(getattr(training_plan, "is_backyard", False)),
+        "backyard": _backyard_summary(training_plan),
         "target_elevation_gain_m": getattr(
             training_plan, "target_elevation_gain_m", None
         ),
@@ -151,6 +157,20 @@ def plan_view_context(
     return ctx
 
 
+def _backyard_summary(training_plan: TrainingPlan) -> Optional[dict]:
+    """Display numbers for a backyard goal, or ``None`` for every other plan."""
+    profile = (
+        training_plan.backyard_profile()
+        if hasattr(training_plan, "backyard_profile")
+        else None
+    )
+    if profile is None:
+        return None
+    from app.core.training.backyard_profile import backyard_summary
+
+    return backyard_summary(profile)
+
+
 def _build_long_run_warning(
     training_plan: TrainingPlan, plan_data: list[dict]
 ) -> Optional[dict]:
@@ -162,6 +182,14 @@ def _build_long_run_warning(
     applies retroactively to plans created before the check existed.
     """
     if getattr(training_plan, "plan_type", "distance") not in ("distance",):
+        return None
+
+    # A backyard plan's longest session is a loop simulation sized by the
+    # ladder, deliberately a fraction of the goal. Measuring it against the
+    # projected race distance would warn every backyard runner that their
+    # long run "falls short of race specificity" — advice that, acted on,
+    # would have them training a 160 km long run.
+    if bool(getattr(training_plan, "is_backyard", False)):
         return None
 
     target_distance = training_plan.target_distance_km

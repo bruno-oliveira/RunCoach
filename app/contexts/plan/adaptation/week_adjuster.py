@@ -344,6 +344,23 @@ def _adjust_one_workout(
     ):
         return False
 
+    pd_wo = pd_workout.get((week_number, workout.day_of_week))
+    # Fixed-structure sessions are whole units, not budgets. A backyard loop
+    # simulation is "six loops, on the hour" — scaling it by 0.9 would leave
+    # the card promising six loops while the distance describes five and a
+    # bit, which is not a session anyone can go and run.
+    if pd_wo is not None and pd_wo.get("fixed_structure"):
+        _record_workout(
+            recorder,
+            week_number,
+            workout,
+            workout.distance_km,
+            workout.distance_km,
+            "protected",
+            None,
+        )
+        return False
+
     base_distance = workout.baseline_distance_km or workout.distance_km
     type_mult = _resolve_type_multiplier(
         workout.workout_type, multiplier, per_type_ratios, phase
@@ -353,7 +370,6 @@ def _adjust_one_workout(
     )
     old_distance = workout.distance_km
 
-    pd_wo = pd_workout.get((week_number, workout.day_of_week))
     new_distance, rebuilt_plain = _rebuild_session_distance(
         workout,
         pd_wo,

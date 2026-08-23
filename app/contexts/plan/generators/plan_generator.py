@@ -19,6 +19,8 @@ from app.contexts.plan.generators.beginner_plan_generator import BeginnerPlanGen
 from app.contexts.plan.generators.plan_structure_guard import check_plan_structure
 from app.contexts.plan.generators.weekly_plan_builder import build_weekly_plan
 from app.core.training import mileage_progression, workout_builders, workout_steps
+from app.core.training.backyard_profile import BackyardProfile
+from app.core.training.backyard_simulation import build_simulation_schedule
 from app.core.training.key_workout_library import KeyWorkoutRotationState
 
 # Re-export for any code that imports PHASE_DISTRIBUTIONS from here
@@ -66,6 +68,7 @@ class TrainingPlanGenerator:
         terrain: Optional[str] = None,
         trail_profile: Optional[TrailProfile] = None,
         intensive_weekend_enabled: bool = False,
+        backyard_profile: Optional[BackyardProfile] = None,
     ) -> List[Dict[str, Any]]:
         """Generate a comprehensive training plan.
 
@@ -75,11 +78,20 @@ class TrainingPlanGenerator:
 
         ``intensive_weekend_enabled`` opts a trail plan into an Intensive
         Training Weekend block on its final peak week (off by default).
+
+        ``backyard_profile`` makes this a backyard plan: the periodisation is
+        still the ultra engine's (which is why the profile also supplies a
+        ``trail_profile`` when the caller hasn't), but the weekends carry a
+        progressive ladder of loop simulations and the plan closes on the
+        goal loop count instead of on a distance.
         """
         # Back-compat: synthesize a TrailProfile for legacy 30 km callers.
         if trail_profile is None and target_distance == TRAIL_SENTINEL_KM:
             elev = 200.0 if terrain == "flat" else 1000.0
             trail_profile = classify_trail(target_distance, elev)
+        # A backyard goal periodises as the ultra it projects onto.
+        if backyard_profile is not None and trail_profile is None:
+            trail_profile = backyard_profile.as_trail_profile()
         if current_km == 0:
             if target_distance in [5.0, 10.0]:
                 beginner_generator = BeginnerPlanGenerator()
@@ -95,9 +107,11 @@ class TrainingPlanGenerator:
         # Pass the target so the zones carry a ``race`` entry (5K/10K are
         # always present, longer targets only when the distance is given).
         # Race day and every goal-pace rehearsal read their pace from it.
-        pace_zones = (
-            VDOTCalculator.get_pace_zones(vdot, target_distance) if vdot else None
-        )
+        # A backyard has no race pace to derive: the loop budget sets it, and
+        # asking the VDOT model for a "race pace" over a 160 km projection just
+        # makes its solver fail loudly on the way to a number nothing reads.
+        zone_target = 0.0 if backyard_profile is not None else target_distance
+        pace_zones = VDOTCalculator.get_pace_zones(vdot, zone_target) if vdot else None
 
         experience_level = derive_experience_level(current_km)
 
@@ -109,6 +123,19 @@ class TrainingPlanGenerator:
         # survives. (This is the same realism line the plan test-grid draws when
         # it skips combos under 2.5 km/run.)
         max_runs_per_week = _viable_run_frequency(current_km, max_runs_per_week)
+
+        # The simulation ladder is a plan-level decision (spacing, deloads, and
+        # where the dress rehearsal lands all depend on the whole shape), so it
+        # is built once here and consulted per week.
+        backyard_schedule = None
+        if backyard_profile is not None:
+            from app.core.training.phase_calculator import calculate_phases
+
+            backyard_schedule = build_simulation_schedule(
+                weeks,
+                calculate_phases(weeks, target_distance, trail_profile=trail_profile),
+                backyard_profile,
+            )
 
         weekly_progression = mileage_progression.calculate_weekly_progression(
             current_km,
@@ -153,6 +180,8 @@ class TrainingPlanGenerator:
                 intensive_weekend_enabled=intensive_weekend_enabled,
                 prev_long_run_km=prev_long_run_km,
                 rotation_state=rotation_state,
+                backyard_profile=backyard_profile,
+                backyard_schedule=backyard_schedule,
             )
 
             # Enforce 10% cap against actual high-water mark.
@@ -266,12 +295,15 @@ class TrainingPlanGenerator:
             pace_zones,
             trail_profile=trail_profile,
         )
-        _install_race_day(
-            training_plan,
-            target_distance,
-            pace_zones,
-            trail_profile=trail_profile,
-        )
+        if backyard_profile is not None:
+            _install_backyard_race_day(training_plan, backyard_profile, pace_zones)
+        else:
+            _install_race_day(
+                training_plan,
+                target_distance,
+                pace_zones,
+                trail_profile=trail_profile,
+            )
 
         # Plan-level safety net: catch a week that composed into something
         # unrunnable before it ever reaches the runner. Fatal issues fail the
@@ -457,6 +489,96 @@ def _install_race_day(
         [w for w in kept if w.get("day") != RACE_DAY_NUMBER] + [race],
         key=lambda w: w.get("day", 0),
     )
+    for w in workouts:
+        w.pop("duration_min", None)
+    attach_duration_hints(workouts, pace_zones)
+
+    final_week["daily_workouts"] = workouts
+    final_week["total_km"] = round(sum(w.get("distance", 0) or 0 for w in workouts), 1)
+    final_week["is_race_week"] = True
+
+
+# A backyard starts on a Saturday morning and runs into Sunday and beyond, so
+# the event sits on day 6 rather than day 7 — the plan's last day belongs to
+# the race, not to the day after it.
+BACKYARD_RACE_DAY_NUMBER = 6
+
+
+def _install_backyard_race_day(
+    training_plan: List[Dict[str, Any]],
+    profile: "BackyardProfile",
+    pace_zones: Optional[Dict],
+) -> None:
+    """Close a backyard plan on the event itself (in place).
+
+    Same intent as :func:`_install_race_day` — a plan built backwards from a
+    race should end on it — with the calendar shifted a day: the race takes
+    Saturday, Sunday is left as rest because for most goals the runner
+    is still out on the course, and the shakeout moves to Friday.
+
+    The race is installed after every smoothing pass and never rescaled: its
+    size is the runner's goal, not the week's budget.
+    """
+    from app.contexts.plan.generators.weekly_plan_builder import attach_duration_hints
+    from app.contexts.plan.generators.workout_scaler import scale_down as _scale_down
+    from app.core.training.tuning import (
+        RACE_WEEK_MIN_PRERACE_KM,
+        RACE_WEEK_PRERACE_SHARE,
+    )
+
+    if not training_plan:
+        return
+    final_week = training_plan[-1]
+    workouts = final_week.get("daily_workouts") or []
+
+    realized_peak = max(
+        (
+            w.get("total_km", 0) or 0
+            for w in training_plan[:-1]
+            if not w.get("is_recovery")
+        ),
+        default=final_week.get("total_km", 0) or 0,
+    )
+    pre_race_target = max(
+        RACE_WEEK_MIN_PRERACE_KM, round(realized_peak * RACE_WEEK_PRERACE_SHARE, 1)
+    )
+    shakeout_day = BACKYARD_RACE_DAY_NUMBER - 1
+    shakeout_km = max(
+        RACE_WEEK_SHAKEOUT_MIN_KM,
+        min(RACE_WEEK_SHAKEOUT_MAX_KM, round(pre_race_target * 0.25, 1)),
+    )
+
+    kept: List[Dict[str, Any]] = []
+    for w in workouts:
+        day = w.get("day")
+        if day == BACKYARD_RACE_DAY_NUMBER:
+            continue  # the race takes this day
+        if day == shakeout_day:
+            kept.append(_build_shakeout(shakeout_day, shakeout_km, pace_zones))
+        elif day is not None and day > BACKYARD_RACE_DAY_NUMBER:
+            # Still on the course, or sleeping it off. Either way, not training.
+            kept.append(workout_builders.generate_rest_day(day))
+        else:
+            kept.append(w)
+
+    others = [w for w in kept if not w.get("is_shakeout")]
+    _scale_down(
+        others,
+        max(0.0, pre_race_target - shakeout_km),
+        pace_zones=pace_zones,
+        protect_long=False,
+    )
+
+    race = workout_builders.generate_backyard_race_day(
+        BACKYARD_RACE_DAY_NUMBER, profile, pace_zones
+    )
+    race["coaching_rationale"] = (
+        "Every simulation in this plan was a rehearsal for the next few hours "
+        "— and then for all the hours after those. Start slow enough that the "
+        "first loop feels like a mistake."
+    )
+
+    workouts = sorted(kept + [race], key=lambda w: w.get("day", 0))
     for w in workouts:
         w.pop("duration_min", None)
     attach_duration_hints(workouts, pace_zones)

@@ -41,6 +41,7 @@ class PDFGenerator(PDFBase):
                 "current_km": training_plan.current_weekly_km,
                 "vdot": training_plan.vdot,
                 "trail": training_plan.is_trail,
+                "loops": training_plan.backyard_target_loops,
                 "nutrition": training_plan.nutrition_plan_data,
             },
         )

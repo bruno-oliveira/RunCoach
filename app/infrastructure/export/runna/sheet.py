@@ -335,6 +335,11 @@ def _build_phases(plan_data: Sequence[Dict[str, Any]]) -> Tuple[PhaseBlock, ...]
 
 
 def _race_name(dto: PlanExportDTO) -> str:
+    # Backyard first: it rides on the trail flag, but its target_distance_km is
+    # a clamped projection — printing that would put "163 km Trail" on the
+    # cover of a 48-loop plan.
+    if dto.is_backyard and dto.backyard_target_loops:
+        return f"{dto.backyard_target_loops}-Loop Backyard"
     if dto.is_trail or dto.target_distance_km == TRAIL_SENTINEL_KM:
         if dto.is_trail and dto.target_distance_km != TRAIL_SENTINEL_KM:
             return f"{dto.target_distance_km:g} km Trail"

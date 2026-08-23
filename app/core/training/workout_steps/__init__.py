@@ -23,6 +23,7 @@ This package splits the builders by concern:
     aerobic    — easy / long / long-run variants
     quality    — tempo / interval / hill + key-workout builders
     trail      — pyramid / ladder / hike-run / back-to-back
+    backyard   — hourly loop simulations / turnaround drills / loop repeats
     metrics    — distance computation, pace parsing, scaling
 
 The names below are re-exported so callers keep importing from
@@ -42,6 +43,12 @@ from app.core.training.workout_steps.aerobic import (
     build_shakeout_steps,
     build_split_long_steps,
     race_pace_zone_key,
+)
+from app.core.training.workout_steps.backyard import (
+    build_backyard_race_steps,
+    build_loop_repeats_steps,
+    build_loop_simulation_steps,
+    build_turnaround_drill_steps,
 )
 from app.core.training.workout_steps.key_workout_builders import (
     build_compound_rep_steps,
@@ -140,6 +147,10 @@ __all__ = [
     "build_ladder_steps",
     "build_hike_run_steps",
     "build_back_to_back_steps",
+    "build_loop_simulation_steps",
+    "build_backyard_race_steps",
+    "build_turnaround_drill_steps",
+    "build_loop_repeats_steps",
     "scale_steps",
     "total_distance_m",
     "fit_steps_to_distance",

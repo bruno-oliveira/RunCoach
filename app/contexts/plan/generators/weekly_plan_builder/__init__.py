@@ -2,10 +2,14 @@
 
 Handles distance budgeting, scaling, fill-up, and ceiling enforcement for a
 single week of training. Split into ``budget`` (leaf helpers), ``intensive_
-weekend`` (ITW reshaping), and ``orchestrator`` (assembly). Names are
-re-exported so callers import from this package unchanged.
+weekend`` (ITW reshaping), ``backyard_week`` (loop-simulation reshaping), and
+``orchestrator`` (assembly). Names are re-exported so callers import from this
+package unchanged.
 """
 
+from app.contexts.plan.generators.weekly_plan_builder.backyard_week import (
+    apply_backyard_week,
+)
 from app.contexts.plan.generators.weekly_plan_builder.budget import (
     _DEFAULT_PACE_MIN_PER_KM,
     _DURATION_HINT_THRESHOLD_KM,
@@ -31,6 +35,7 @@ __all__ = [
     "build_weekly_plan",
     "generate_daily_workouts",
     "apply_intensive_weekend",
+    "apply_backyard_week",
     "attach_duration_hints",
     "resolve_low_budget_quality",
     "apply_quality_caps",

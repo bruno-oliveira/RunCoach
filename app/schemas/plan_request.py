@@ -8,6 +8,20 @@ if TYPE_CHECKING:
     from app.core.training.environment import EnvironmentalConditions
 
 from app.constants import DISTANCE_NAMES, SUPPORTED_DISTANCES
+from app.core.training.backyard_profile import (
+    BACKYARD_LOOP_KM,
+    BACKYARD_LOOP_MAX_ELEVATION_M,
+    BACKYARD_LOOP_MAX_KM,
+    BACKYARD_LOOP_MIN_KM,
+    MAX_TARGET_LOOPS,
+    MIN_TARGET_LOOPS,
+    BackyardProfile,
+    backyard_max_weeks,
+    backyard_min_runs_per_week,
+    backyard_min_weekly_km,
+    backyard_min_weeks,
+    classify_backyard,
+)
 from app.core.training.trail_profile import TRAIL_SENTINEL_KM
 from app.core.training.training_config import get_constraints
 from app.exceptions import (
@@ -61,6 +75,38 @@ class PlanRequestBase(BaseModel):
     terrain: Optional[str] = Field(
         default=None,
         description="DEPRECATED — legacy 'hilly'/'flat' toggle, migrated to target_elevation_gain_m.",
+    )
+
+    # Backyard Ultra mode — set by the form when the user picks "Backyard
+    # Ultra". A backyard goal is stated in hourly loops, not in
+    # kilometres, so ``target_distance`` / ``target_elevation_gain_m`` are
+    # *derived* below rather than supplied: the engine periodises against the
+    # ultra a backyard goal projects onto, while everything the runner sees is
+    # denominated in loops.
+    is_backyard: bool = Field(
+        default=False,
+        description="True for backyard ultra plans (goal stated in hourly loops).",
+    )
+    backyard_target_loops: Optional[int] = Field(
+        default=None,
+        ge=MIN_TARGET_LOOPS,
+        le=MAX_TARGET_LOOPS,
+        description=(
+            "Hourly loops the runner is training to complete. "
+            "Required when is_backyard=True."
+        ),
+    )
+    backyard_loop_km: float = Field(
+        default=BACKYARD_LOOP_KM,
+        ge=BACKYARD_LOOP_MIN_KM,
+        le=BACKYARD_LOOP_MAX_KM,
+        description="Loop length in km. Defaults to the standard 6.706 km.",
+    )
+    backyard_loop_elevation_gain_m: float = Field(
+        default=0.0,
+        ge=0,
+        le=BACKYARD_LOOP_MAX_ELEVATION_M,
+        description="Elevation gain per loop in m (0 for a flat loop).",
     )
 
     # Trail Intensive Training Weekend — opt-in, eligible trail plans only.
@@ -145,6 +191,62 @@ class PlanRequest(PlanRequestBase, RaceInfoMixin):
 
     @model_validator(mode="before")
     @classmethod
+    def _derive_backyard_target(cls, values):
+        """Project a backyard goal onto the distance the engine periodises against.
+
+        A backyard runner states a goal in loops; the plan engine, the
+        duplicate check, the nutrition engine and the stored row all speak
+        kilometres. Deriving the projection here — once, at the edge — means
+        every one of them keeps working unchanged, and nothing downstream has
+        to know that ``target_distance`` came from a loop count.
+        """
+        if not isinstance(values, dict) or not values.get("is_backyard"):
+            return values
+
+        loops = values.get("backyard_target_loops")
+        if loops is None:
+            raise ValueError(
+                "Backyard plans need a target — how many hourly loops are you "
+                "training to complete?"
+            )
+        try:
+            loops_i = int(loops)
+        except (TypeError, ValueError):
+            raise ValueError("Target must be a whole number of loops.")
+        if not MIN_TARGET_LOOPS <= loops_i <= MAX_TARGET_LOOPS:
+            raise ValueError(
+                f"Target must be between {MIN_TARGET_LOOPS} and "
+                f"{MAX_TARGET_LOOPS} loops."
+            )
+
+        loop_km = values.get("backyard_loop_km")
+        loop_km_f = BACKYARD_LOOP_KM if loop_km in (None, "") else float(loop_km)
+        elev = values.get("backyard_loop_elevation_gain_m")
+        elev_f = 0.0 if elev in (None, "") else float(elev)
+        if not BACKYARD_LOOP_MIN_KM <= loop_km_f <= BACKYARD_LOOP_MAX_KM:
+            raise ValueError(
+                f"Loop length must be {BACKYARD_LOOP_MIN_KM:g}–"
+                f"{BACKYARD_LOOP_MAX_KM:g} km. An hourly lap outside that range "
+                "is a different event, not a backyard."
+            )
+        if not 0 <= elev_f <= BACKYARD_LOOP_MAX_ELEVATION_M:
+            raise ValueError(
+                f"Loop elevation gain must be 0–{BACKYARD_LOOP_MAX_ELEVATION_M:g} m."
+            )
+
+        profile = classify_backyard(loops_i, loop_km_f, elev_f)
+        values["backyard_target_loops"] = loops_i
+        values["backyard_loop_km"] = loop_km_f
+        values["backyard_loop_elevation_gain_m"] = elev_f
+        # A backyard periodises as the ultra it projects onto, so it travels
+        # through the rest of the system as a trail plan.
+        values["is_trail"] = True
+        values["target_distance"] = profile.equivalent_distance_km
+        values["target_elevation_gain_m"] = profile.equivalent_elevation_gain_m
+        return values
+
+    @model_validator(mode="before")
+    @classmethod
     def _auto_migrate_legacy_trail(cls, values):
         """Auto-promote legacy form input to the new trail fields.
 
@@ -200,6 +302,11 @@ class PlanRequest(PlanRequestBase, RaceInfoMixin):
             TRAIL_DISTANCE_MIN_KM,
         )
 
+        if self.is_backyard:
+            # The target distance is derived, not entered — the loop count was
+            # already range-checked when it was projected.
+            return self
+
         if self.is_trail:
             if not (
                 TRAIL_DISTANCE_MIN_KM <= self.target_distance <= TRAIL_DISTANCE_MAX_KM
@@ -223,6 +330,16 @@ class PlanRequest(PlanRequestBase, RaceInfoMixin):
                 )
 
         return self
+
+    def backyard_profile(self) -> Optional[BackyardProfile]:
+        """The runner's backyard goal, or ``None`` for every other plan kind."""
+        if not self.is_backyard or self.backyard_target_loops is None:
+            return None
+        return classify_backyard(
+            self.backyard_target_loops,
+            self.backyard_loop_km,
+            self.backyard_loop_elevation_gain_m,
+        )
 
     def resolved_training_terrain(self) -> Optional[str]:
         """Return the terrain to use for workout selection.
@@ -252,6 +369,25 @@ class PlanRequest(PlanRequestBase, RaceInfoMixin):
     def validate_weeks_for_distance(self) -> "PlanRequest":
         """Validate that training duration is appropriate for target distance."""
         weeks = self.weeks
+
+        backyard = self.backyard_profile()
+        if backyard is not None:
+            min_w = backyard_min_weeks(backyard)
+            max_w = backyard_max_weeks(backyard)
+            if weeks < min_w:
+                raise InsufficientTimeException(
+                    f"Training for {backyard.target_loops} loops requires at "
+                    f"least {min_w} weeks",
+                    f"This goal needs {min_w}–{max_w} weeks to build the "
+                    "aerobic base, the loop-pace habit, and enough simulations "
+                    "to rehearse the format.",
+                )
+            if weeks > max_w:
+                raise ValueError(
+                    f"A {backyard.target_loops}-loop plan should not exceed "
+                    f"{max_w} weeks. Consider a shorter, sharper block."
+                )
+            return self
 
         if self.is_trail:
             from app.core.training.trail_profile import (
@@ -308,6 +444,18 @@ class PlanRequest(PlanRequestBase, RaceInfoMixin):
         """
         v = self.max_runs_per_week
 
+        backyard = self.backyard_profile()
+        if backyard is not None:
+            min_runs = backyard_min_runs_per_week(backyard)
+            if v < min_runs:
+                raise ValueError(
+                    f"A {backyard.target_loops}-loop backyard plan needs at "
+                    f"least {min_runs} runs per week. Backyard volume arrives "
+                    "as many medium sessions, not a few big ones — compressing "
+                    "it into fewer days trains the wrong thing."
+                )
+            return self
+
         if self.is_trail:
             from app.core.training.trail_profile import (
                 classify_trail,
@@ -351,11 +499,12 @@ class PlanRequest(PlanRequestBase, RaceInfoMixin):
         if current_km == 0:
             supported_distances = [5.0, 10.0]
             if self.is_trail or target not in supported_distances:
-                target_display = (
-                    f"a {target:g} km trail/ultra"
-                    if self.is_trail
-                    else DISTANCE_NAMES.get(target, f"{target}km")
-                )
+                if self.is_backyard:
+                    target_display = f"a {self.backyard_target_loops}-loop backyard"
+                elif self.is_trail:
+                    target_display = f"a {target:g} km trail/ultra"
+                else:
+                    target_display = DISTANCE_NAMES.get(target, f"{target}km")
                 raise ZeroMileageUnsupportedException(
                     f"Starting from zero for {target_display} is not recommended.",
                     f"Starting from zero mileage for {target_display} requires building a running base first. "
@@ -369,6 +518,20 @@ class PlanRequest(PlanRequestBase, RaceInfoMixin):
                     "Consider extending your training to at least 8 weeks.",
                 )
 
+            return self
+
+        backyard = self.backyard_profile()
+        if backyard is not None:
+            min_km = backyard_min_weekly_km(backyard)
+            if current_km < min_km:
+                raise InadequateBaseException(
+                    f"Current mileage ({current_km:g} km/week) is below the "
+                    f"recommended minimum ({min_km:g} km/week) for a "
+                    f"{backyard.target_loops}-loop goal",
+                    "Build a steady base of easy running first — a backyard "
+                    "asks you to repeat a loop you're already comfortable "
+                    "with, not to discover one.",
+                )
             return self
 
         if self.is_trail:
@@ -414,7 +577,10 @@ class PlanRequest(PlanRequestBase, RaceInfoMixin):
                 self.recent_race_distance_km, self.recent_race_time, "recent_race_time"
             )
 
-        if self.goal_time:
+        # A backyard has no goal time: the goal is a loop count, and its pace is
+        # the rest budget the profile computes. Feeding a 160 km projection to
+        # the VDOT model would produce a number nothing should act on.
+        if self.goal_time and not self.is_backyard:
             self.goal_vdot, self.goal_pace_min_km = compute_vdot_from_time(
                 self.target_distance, self.goal_time, "goal_time"
             )

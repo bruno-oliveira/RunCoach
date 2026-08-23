@@ -116,6 +116,27 @@ class PerformancePlanHandler(PlanTypeHandler):
         return extra
 
 
+class BackyardPlanHandler(PlanTypeHandler):
+    """Backyard plans are labelled by loop count, never by their projection.
+
+    ``target_distance`` on a backyard row holds the ultra the engine
+    periodises against, clamped to the engine's ceiling — so a 36-loop and a
+    48-loop goal both store 163 km, and labelling from the distance would
+    render two very different races identically (and wrongly: neither runner
+    is training for "163km").
+    """
+
+    kind = "backyard"
+
+    def matches(self, plan: "TrainingPlan") -> bool:
+        return bool(getattr(plan, "is_backyard", False)) and bool(
+            getattr(plan, "backyard_target_loops", None)
+        )
+
+    def display_label(self, plan: "TrainingPlan") -> str:
+        return f"{plan.backyard_target_loops}-Loop Backyard"
+
+
 class DistancePlanHandler(PlanTypeHandler):
     """Fallback handler for traditional distance-based plans."""
 
@@ -130,6 +151,7 @@ class DistancePlanHandler(PlanTypeHandler):
 
 
 PLAN_TYPE_REGISTRY: List[PlanTypeHandler] = [
+    BackyardPlanHandler(),
     PerformancePlanHandler(),
     DistancePlanHandler(),
 ]
@@ -148,10 +170,17 @@ def get_handler_for_plan(plan: "TrainingPlan") -> PlanTypeHandler:
 def display_label(plan: "TrainingPlan", *, space_before_km: bool = False) -> str:
     """Resolve the user-facing label for a plan.
 
-    Distance-bearing plans (target_distance_km > 0) always render the distance
-    name regardless of plan_type. Special-purpose plans (performance)
-    fall through to their handler's label.
+    Backyard plans render their loop count. Other distance-bearing plans
+    (target_distance_km > 0) always render the distance name regardless of
+    plan_type. Special-purpose plans (performance) fall through to their
+    handler's label.
     """
+    # Backyard first: its target_distance is a clamped projection, so the
+    # distance shortcut below would label it with a number nobody is racing.
+    backyard = BackyardPlanHandler()
+    if backyard.matches(plan):
+        return backyard.display_label(plan)
+
     td = plan.target_distance_km
     if td and td > 0:
         suffix = " km" if space_before_km else "km"

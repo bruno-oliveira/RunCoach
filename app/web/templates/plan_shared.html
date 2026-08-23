@@ -443,6 +443,23 @@
                 </ul>
             </div>
             {% endif %}
+
+            {% if week.backyard and week.backyard.enabled %}
+            {% set by = week.backyard %}
+            <div class="tips-section">
+                <div class="tips-title">The Hour — {{ by.target_loops }}-loop goal</div>
+                <ul class="tips-list">
+                    <li>Loop budget: {{ by.loop_budget_min }} min ({{ by.loop_pace_str }}), leaving {{ by.turnaround_min }} min of turnaround</li>
+                    {% if by.loop_elevation_gain_m %}
+                    <li>Flat-ground equivalent for this loop's {{ by.loop_elevation_gain_m }} m of climb: {{ by.flat_equivalent_pace_str }}</li>
+                    {% endif %}
+                    {% if by.simulation %}
+                    <li>{{ by.simulation.loops }}-loop simulation this week — {{ by.simulation.distance_km }} km across {{ by.simulation.elapsed_hours }} hours{% if by.simulation.overnight %}, evening start{% endif %}</li>
+                    {% endif %}
+                    <li>{{ by.focus }}</li>
+                </ul>
+            </div>
+            {% endif %}
         </div>
         {% endfor %}
     </div>
@@ -675,6 +692,24 @@
             </div>
             {% endif %}
 
+            {% if race_protocol.corral_routine %}
+            <div class="raceday-card">
+                <h3>The Turnaround</h3>
+                <p class="raceday-strategy">Your only recovery in this race is the {{ race_protocol.turnaround_min }} minutes between crossing the line and the next whistle.</p>
+                <div class="corral-routine">
+                    {% for step in race_protocol.corral_routine %}
+                    <div class="corral-step">
+                        <span class="corral-when">{{ step.when }}</span>
+                        <div class="corral-body">
+                            <strong class="corral-action">{{ step.action }}</strong>
+                            <span class="corral-why">{{ step.why }}</span>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+
             {% if race_protocol.race_morning_timeline %}
             <div class="raceday-card">
                 <h3>Race Morning Timeline</h3>
@@ -683,6 +718,30 @@
                     <div class="timeline-item">
                         <span class="timeline-time">{{ item.time }}</span>
                         <span class="timeline-activity">{{ item.activity }}</span>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+
+            {% if race_protocol.hourly_fuelling %}
+            <div class="raceday-card">
+                <h3>Hourly Fuelling</h3>
+                <p class="raceday-strategy">Intake is on a clock, not on appetite &mdash; and it steps down as the hours pass.</p>
+                <div class="fuel-table">
+                    <div class="fuel-header">
+                        <span>Loops</span><span>Carbs</span><span>Fluid</span><span>Sodium</span>
+                    </div>
+                    {% for row in race_protocol.hourly_fuelling %}
+                    <div class="fuel-row">
+                        <span class="fuel-loops">{{ row.loops }}</span>
+                        <span>{{ row.carbs }}</span>
+                        <span>{{ row.fluid }}</span>
+                        <span>{{ row.sodium }}</span>
+                    </div>
+                    <div class="fuel-note">
+                        <strong>{{ row.focus }}</strong>
+                        <span>{{ row.fuel }}</span>
                     </div>
                     {% endfor %}
                 </div>

@@ -15,6 +15,7 @@ from app.contexts.plan.generators.plan_generator import TrainingPlanGenerator
 from app.contexts.plan.plan_helpers import error_response, get_plan_or_404
 from app.contexts.plan.plan_service import PlanService
 from app.contexts.runner.fitness.performance_service import PerformanceService
+from app.core.training.backyard_profile import BACKYARD_LOOP_KM
 from app.dependencies import (
     get_db,
     get_nutrition_engine,
@@ -117,6 +118,10 @@ def _plan_request_from_form(
     training_terrain: Optional[str],
     trail_distance_km: Optional[str],
     intensive_weekend: Optional[str],
+    is_backyard: Optional[str],
+    backyard_target_loops: Optional[str],
+    backyard_loop_km: Optional[str],
+    backyard_loop_elevation_gain_m: Optional[str],
     body_weight_kg: float,
     recent_race_distance_km: Optional[str],
     recent_race_time: Optional[str],
@@ -130,7 +135,68 @@ def _plan_request_from_form(
     """
     race_dist = float(recent_race_distance_km) if recent_race_distance_km else None
     is_trail_flag = _is_truthy(is_trail)
+    is_backyard_flag = _is_truthy(is_backyard)
     intensive_weekend_flag = _is_truthy(intensive_weekend)
+
+    # A backyard goal is stated in loops; the schema derives the distance the
+    # engine periodises against, so the form's distance field is only ever the
+    # "backyard" sentinel and carries no number of its own.
+    if is_backyard_flag:
+        try:
+            loops = int(backyard_target_loops) if backyard_target_loops else None
+        except ValueError:
+            return error_response(
+                request,
+                current_user,
+                "Target must be a whole number of loops.",
+                "validation",
+            )
+        if loops is None:
+            return error_response(
+                request,
+                current_user,
+                "How many loops are you training to complete?",
+                "validation",
+            )
+        try:
+            loop_km_f = (
+                float(backyard_loop_km) if backyard_loop_km else BACKYARD_LOOP_KM
+            )
+            loop_elev_f = (
+                float(backyard_loop_elevation_gain_m)
+                if backyard_loop_elevation_gain_m
+                else 0.0
+            )
+        except ValueError:
+            return error_response(
+                request,
+                current_user,
+                "Loop length and loop elevation must be numbers.",
+                "validation",
+            )
+        return _build_plan_request(
+            request,
+            current_user,
+            current_km=current_km,
+            # Derived from the loop count by the schema; any value here is
+            # overwritten, so pass the standard loop as a placeholder.
+            target_distance=BACKYARD_LOOP_KM,
+            weeks=weeks,
+            max_runs_per_week=max_runs_per_week,
+            is_trail=True,
+            target_elevation_gain_m=None,
+            training_terrain=training_terrain,
+            terrain=None,
+            intensive_weekend_enabled=False,
+            is_backyard=True,
+            backyard_target_loops=loops,
+            backyard_loop_km=loop_km_f,
+            backyard_loop_elevation_gain_m=loop_elev_f,
+            body_weight_kg=body_weight_kg,
+            recent_race_distance_km=race_dist,
+            recent_race_time=recent_race_time,
+            goal_time=None,
+        )
 
     if is_trail_flag and target_distance == "trail":
         if not trail_distance_km:
@@ -181,22 +247,82 @@ def _plan_request_from_form(
         terrain = None
         intensive_weekend_flag = False
 
-    try:
-        return PlanRequest(
-            current_km=current_km,
-            target_distance=target_distance_f,
-            weeks=weeks,
-            max_runs_per_week=max_runs_per_week,
-            is_trail=is_trail_flag,
-            target_elevation_gain_m=elevation_f,
-            training_terrain=training_terrain,
-            terrain=terrain,
-            intensive_weekend_enabled=intensive_weekend_flag,
-            body_weight_kg=body_weight_kg,
-            recent_race_distance_km=race_dist,
-            recent_race_time=recent_race_time or None,
-            goal_time=goal_time or None,
+    return _build_plan_request(
+        request,
+        current_user,
+        current_km=current_km,
+        target_distance=target_distance_f,
+        weeks=weeks,
+        max_runs_per_week=max_runs_per_week,
+        is_trail=is_trail_flag,
+        target_elevation_gain_m=elevation_f,
+        training_terrain=training_terrain,
+        terrain=terrain,
+        intensive_weekend_enabled=intensive_weekend_flag,
+        is_backyard=False,
+        backyard_target_loops=None,
+        backyard_loop_km=None,
+        backyard_loop_elevation_gain_m=None,
+        body_weight_kg=body_weight_kg,
+        recent_race_distance_km=race_dist,
+        recent_race_time=recent_race_time,
+        goal_time=goal_time,
+    )
+
+
+def _build_plan_request(
+    request: Request,
+    current_user: Optional[User],
+    *,
+    current_km: float,
+    target_distance: float,
+    weeks: int,
+    max_runs_per_week: int,
+    is_trail: bool,
+    target_elevation_gain_m: Optional[float],
+    training_terrain: Optional[str],
+    terrain: Optional[str],
+    intensive_weekend_enabled: bool,
+    is_backyard: bool,
+    backyard_target_loops: Optional[int],
+    backyard_loop_km: Optional[float],
+    backyard_loop_elevation_gain_m: Optional[float],
+    body_weight_kg: float,
+    recent_race_distance_km: Optional[float],
+    recent_race_time: Optional[str],
+    goal_time: Optional[str],
+) -> "PlanRequest | Response":
+    """Build the ``PlanRequest``, mapping every domain error to a page response.
+
+    Split out so the road/trail and backyard paths — which resolve their
+    distances very differently — share one error-handling surface rather than
+    duplicating the eight-way except ladder.
+    """
+    kwargs: dict = {
+        "current_km": current_km,
+        "target_distance": target_distance,
+        "weeks": weeks,
+        "max_runs_per_week": max_runs_per_week,
+        "is_trail": is_trail,
+        "target_elevation_gain_m": target_elevation_gain_m,
+        "training_terrain": training_terrain,
+        "terrain": terrain,
+        "intensive_weekend_enabled": intensive_weekend_enabled,
+        "body_weight_kg": body_weight_kg,
+        "recent_race_distance_km": recent_race_distance_km,
+        "recent_race_time": recent_race_time or None,
+        "goal_time": goal_time or None,
+    }
+    if is_backyard:
+        kwargs.update(
+            is_backyard=True,
+            backyard_target_loops=backyard_target_loops,
+            backyard_loop_km=backyard_loop_km,
+            backyard_loop_elevation_gain_m=backyard_loop_elevation_gain_m,
         )
+
+    try:
+        return PlanRequest(**kwargs)
     except InsufficientTimeException as e:
         return error_response(
             request, current_user, e.user_message, "insufficient_time", e.suggestion
@@ -244,6 +370,10 @@ async def generate_plan(
     training_terrain: Optional[str] = Form(None),
     trail_distance_km: Optional[str] = Form(None),
     intensive_weekend: Optional[str] = Form(None),
+    is_backyard: Optional[str] = Form(None),
+    backyard_target_loops: Optional[str] = Form(None),
+    backyard_loop_km: Optional[str] = Form(None),
+    backyard_loop_elevation_gain_m: Optional[str] = Form(None),
     body_weight_kg: float = Form(70.0),
     recent_race_distance_km: Optional[str] = Form(None),
     recent_race_time: Optional[str] = Form(None),
@@ -303,6 +433,10 @@ async def generate_plan(
         training_terrain=training_terrain,
         trail_distance_km=trail_distance_km,
         intensive_weekend=intensive_weekend,
+        is_backyard=is_backyard,
+        backyard_target_loops=backyard_target_loops,
+        backyard_loop_km=backyard_loop_km,
+        backyard_loop_elevation_gain_m=backyard_loop_elevation_gain_m,
         body_weight_kg=body_weight_kg,
         recent_race_distance_km=recent_race_distance_km,
         recent_race_time=recent_race_time,

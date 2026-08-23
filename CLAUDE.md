@@ -7,7 +7,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 RunCoach is a FastAPI web application that generates personalized running training
 plans with nutrition guidance, then **adapts them to what the runner actually
 does**. Users give their current weekly mileage, target race distance (5K, 10K,
-Half, Marathon, or Trail) and training duration; activities imported from
+Half, Marathon, Trail, or a Backyard Ultra stated in *hourly loops*) and training
+duration; activities imported from
 Intervals.icu feed an adaptation engine that re-paces future weeks, and the plan
 is mirrored onto the runner's watch calendar. Google OAuth for sign-in.
 
@@ -154,6 +155,31 @@ Routers should carry no raw `db.query` — there is one remaining exception in
   `skipped_detector`, `plan_adjuster` / `week_adjuster`, `type_swapper`,
   `vdot_recalibrator`, `safety.py` + `clamps.py` (guardrails), `proactive_nudge`.
   `backtest.py` replays history against the engine — use it when tuning.
+
+- **Backyard Ultra** — a goal stated in *hourly loops*, not in kilometres.
+  (The sport calls a completed loop a "yard"; the UI says **loops** everywhere
+  because "yard" collides with the imperial unit on an otherwise metric page,
+  and glosses the term once in the goal form. Keep new copy on "loops".)
+  `core/training/backyard_profile.py` turns a loop count into the numbers
+  everything reads: the per-hour rest budget, the loop pace that budget
+  implies, tier-aware plan constraints, and — via `as_trail_profile()` — the
+  **clamped** ultra projection the engine actually periodises against. That
+  clamp is why `target_distance` on a backyard row never round-trips to a loop
+  count, and why every display surface must read `backyard_target_loops`
+  instead (plan header, `PlanTypeHandler`, PDF cover).
+  `core/training/backyard_simulation.py` builds the progressive ladder of loop
+  simulations; `generators/weekly_plan_builder/backyard_week.py` installs them
+  (modelled on the trail ITW post-pass) and swaps the midweek tempo for
+  loop-pace repeats or a turnaround drill. Sessions carry
+  **`fixed_structure`**, which is load-bearing: a simulation is a whole number
+  of hourly loops, so `enforce_long_run_ratio_cap`, `reclamp_quality_to_long_run`,
+  `rebuild_key_workout` and the adaptation adjuster all skip it rather than
+  producing five and a half loops. Catalog entries live in
+  `key_workout_data_long/backyard.py` and are gated out of rotation via
+  `_BACKYARD_ONLY_IDS` (they resolve by id only). Race day gets its own
+  protocol in `core/race/backyard_protocol.py` — a timed **corral routine**
+  and an hourly **fuelling schedule** that steps down band by band, in place
+  of the split table and aid-station planning that mean nothing here.
 
 - **Watch mirroring** — `application/watch_sync_service.py` keeps the
   Intervals.icu calendar a *mirror* of the plan, not a log of what was once

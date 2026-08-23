@@ -250,4 +250,50 @@
         </div>
     </details>
     {% endif %}
+
+    {% if week.backyard and week.backyard.enabled %}
+    {% set by = week.backyard %}
+    {% set sim = by.simulation %}
+    <details class="backyard-card collapsible-card"{% if sim %} open{% endif %}>
+        <summary class="collapsible-card-summary backyard-summary">
+            <svg class="collapsible-card-chevron" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg>
+            <svg class="backyard-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>
+            </svg>
+            <span class="backyard-title">The Hour</span>
+            <span class="backyard-badge">
+                {% if sim %}{{ sim.label }}{% else %}{{ by.target_loops }}-loop goal{% endif %}
+            </span>
+        </summary>
+        <div class="collapsible-card-body backyard-body">
+            <div class="backyard-stats">
+                <div class="backyard-stat">
+                    <span class="backyard-stat-label">Loop pace</span>
+                    <span class="backyard-stat-value">{{ by.loop_pace_str }}</span>
+                </div>
+                <div class="backyard-stat">
+                    <span class="backyard-stat-label">Loop budget</span>
+                    <span class="backyard-stat-value">{{ by.loop_budget_min }} min</span>
+                </div>
+                <div class="backyard-stat">
+                    <span class="backyard-stat-label">Turnaround</span>
+                    <span class="backyard-stat-value">{{ by.turnaround_min }} min</span>
+                </div>
+                {% if by.loop_elevation_gain_m %}
+                <div class="backyard-stat">
+                    <span class="backyard-stat-label">Flat equivalent</span>
+                    <span class="backyard-stat-value">{{ by.flat_equivalent_pace_str }}</span>
+                </div>
+                {% endif %}
+            </div>
+            {% if sim %}
+            <div class="backyard-sim">
+                <strong>{{ sim.loops }} loops this week</strong> — {{ sim.distance_km }} km across {{ sim.elapsed_hours }} hours{% if sim.overnight %}, starting in the evening so the later loops run in the dark{% endif %}.
+            </div>
+            {% endif %}
+            <div class="backyard-focus">{{ by.focus }}</div>
+            <div class="backyard-guidance">{{ by.guidance }}</div>
+        </div>
+    </details>
+    {% endif %}
 </div>

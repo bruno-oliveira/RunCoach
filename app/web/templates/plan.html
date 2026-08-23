@@ -60,7 +60,9 @@
             <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M8 12l2.5 2.5L16 9"/></svg>
         </div>
         <h1><span data-i18n="plan.complete_title">Plan Complete!</span></h1>
-        {% if is_trail %}
+        {% if is_backyard %}
+        <p>You conquered {{ weeks }} weeks of building for {{ backyard.target_loops }} loops. That's something to be proud of.</p>
+        {% elif is_trail %}
         <p>You conquered {{ weeks }} weeks of trail running. That's something to be proud of.</p>
         {% else %}
         <p>You finished your {{ target_distance }}km plan. {{ weeks }} weeks of work, done.</p>
@@ -72,6 +74,12 @@
             <span class="badge badge-{{ experience_level }}">{{ experience_level | title }} Plan</span>
             {% if plan and plan[0].is_beginner_plan %}
             <p>A Couch to {{ target_distance|int }}K program designed for new runners</p>
+            {% elif is_backyard %}
+            <p>Built for the hour — your week-by-week build to
+                <span class="trail-profile-badge">
+                    {{ backyard.target_loops }} loops · {{ backyard.loop_pace_str }}
+                </span>
+            </p>
             {% elif is_trail %}
             <p>Built for the climbing — your week-by-week build for
                 <span class="trail-profile-badge">
@@ -90,6 +98,12 @@
             <p>No race on the calendar — just steady gains, paced off your current fitness.</p>
         {% elif training_plan.plan_type == 'performance' %}
             <p>Every session below is paced off your goal time, not just your current fitness.</p>
+        {% elif is_backyard %}
+            <p>Built for the hour — your week-by-week build to
+                <span class="trail-profile-badge">
+                    {{ backyard.target_loops }} loops · {{ backyard.loop_pace_str }}
+                </span>
+            </p>
         {% elif is_trail %}
             <p>Built for the climbing — your week-by-week build for
                 <span class="trail-profile-badge">
@@ -421,6 +435,8 @@
             <span class="plan-reference-chips">
                 {% if training_plan.plan_type == 'fitness' %}
                     {{ fitness_focus_area | title }}
+                {% elif is_backyard %}
+                    {{ backyard.target_loops }} loops · {{ backyard.loop_pace_str }}
                 {% elif is_trail %}
                     {{ target_distance }} km{% if target_elevation_gain_m %} · {{ target_elevation_gain_m | int }} m{% endif %}
                 {% else %}
@@ -443,6 +459,8 @@
                 <strong><span data-i18n="plan.target_distance">Target Distance</span></strong>
                 {% if training_plan.plan_type == 'fitness' %}
                     Fitness — {{ fitness_focus_area | title }} Focus
+                {% elif is_backyard %}
+                    {{ backyard.target_loops }} loops Backyard · {{ backyard.total_distance_km }} km over {{ backyard.target_hours }} h
                 {% elif is_trail %}
                     {{ target_distance }} km Trail{% if target_elevation_gain_m %} · {{ target_elevation_gain_m | int }} m vert{% endif %}
                 {% else %}

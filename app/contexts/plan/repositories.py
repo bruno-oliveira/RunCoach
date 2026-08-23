@@ -86,7 +86,16 @@ class SQLAlchemyPlanRepository:
             TrainingPlan.weeks_duration == request.weeks,
             TrainingPlan.max_runs_per_week == request.max_runs_per_week,
             TrainingPlan.is_trail == request.is_trail,
+            TrainingPlan.is_backyard == request.is_backyard,
         ]
+        # Two backyard plans over the same projected distance can still be
+        # different goals (36 and 48 loops both clamp to 163 km), so the
+        # loop count has to be part of the identity.
+        if request.is_backyard:
+            filters.append(
+                TrainingPlan.backyard_target_loops == request.backyard_target_loops
+            )
+            filters.append(TrainingPlan.backyard_loop_km == request.backyard_loop_km)
         resolved_training_terrain = request.resolved_training_terrain()
         if resolved_training_terrain is not None:
             filters.append(TrainingPlan.training_terrain == resolved_training_terrain)

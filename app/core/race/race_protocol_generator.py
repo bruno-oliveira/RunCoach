@@ -14,6 +14,7 @@ This module orchestrates the pieces and handles distance-agnostic logic
 
 from typing import Any, Dict, List, Optional
 
+from app.core.race.backyard_protocol import build_backyard_protocol
 from app.core.race.race_profiles import RACE_PROFILES, lookup_profile
 
 # Week-before checklist (universal across all distances)
@@ -298,6 +299,7 @@ def generate_race_protocol(
     target_distance: float,
     goal_pace_min_km: Optional[float],
     trail_profile=None,
+    backyard_profile=None,
 ) -> Dict[str, Any]:
     """Generate a complete race-day protocol.
 
@@ -309,10 +311,18 @@ def generate_race_protocol(
             scales mental checkpoints to actual race distance, generates
             duration-aware fueling, and adds ultra-only sections (drop bags,
             pacer plan, night-running gear).
+        backyard_profile: Optional ``BackyardProfile``. Checked first and
+            handled entirely separately: a backyard has no finish line to
+            pace toward, so almost nothing in the road or trail protocol
+            applies. It gets a corral routine and an hourly fuelling schedule
+            in place of splits and aid-station planning.
 
     Returns:
         Dict with all protocol sections for template rendering.
     """
+    if backyard_profile is not None:
+        return build_backyard_protocol(backyard_profile, list(_WEEK_BEFORE))
+
     # Predicted finish time
     predicted_finish = None
     predicted_seconds: Optional[int] = None
@@ -346,6 +356,7 @@ def generate_race_protocol(
             ),
             "mental_checkpoints": _trail_mental_checkpoints(trail_profile.distance_km),
             "is_trail": True,
+            "is_backyard": False,
             "elevation_gain_m": trail_profile.elevation_gain_m,
         }
 
@@ -364,4 +375,5 @@ def generate_race_protocol(
         "nutrition_timing": profile.nutrition_timing,
         "mental_checkpoints": profile.mental_checkpoints,
         "is_trail": False,
+        "is_backyard": False,
     }

@@ -130,8 +130,12 @@ def _blocks(steps: list[dict[str, Any]]) -> list[str]:
     """Group steps into Intervals.icu text blocks, keeping repeats as ``Nx``.
 
     A ``run`` step with ``repeat > 1`` immediately followed by a matching
-    ``recovery``/``walk`` step is emitted as one ``Nx`` block wrapping both,
-    mirroring how the session actually alternates work and rest.
+    ``recovery``/``walk``/``rest`` step is emitted as one ``Nx`` block wrapping
+    both, mirroring how the session actually alternates work and rest. ``rest``
+    belongs in that set for the same reason the other two do: a standing rest
+    between cruise reps, or a backyard turnaround between loops, is part of the
+    repeated unit, and splitting it into a second ``Nx`` block reads as though
+    the runner does every rep and *then* every recovery.
     """
     out: list[str] = []
     i = 0
@@ -144,7 +148,7 @@ def _blocks(steps: list[dict[str, Any]]) -> list[str]:
             repeat > 1
             and nxt is not None
             and (nxt.get("repeat", 1) or 1) > 1
-            and nxt.get("kind") in ("recovery", "walk")
+            and nxt.get("kind") in ("recovery", "walk", "rest")
         ):
             lines = [f"{repeat}x"]
             lines.extend(ln for ln in (_step_line(step), _step_line(nxt)) if ln)

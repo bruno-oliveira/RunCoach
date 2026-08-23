@@ -306,6 +306,7 @@
                                             <option value="21.1">Half Marathon</option>
                                             <option value="42.2">Marathon</option>
                                             <option value="trail">Trail / Ultra (custom)</option>
+                                            <option value="backyard">Backyard Ultra (last one standing)</option>
                                         </select>
                                     </div>
                                 </div>
@@ -342,6 +343,47 @@
                                     </div>
                                     <span class="form-help" id="elevation-classifier">
                                         Enter 0 for fully flat trails. We'll classify the course live.
+                                    </span>
+                                </div>
+                            </div>
+
+                            <!-- Backyard ultra panel: the goal is a loop count, not a
+                                 distance, so this asks for loops and loop shape and
+                                 shows the rest budget those imply. Revealed when
+                                 "Backyard Ultra" is picked above. -->
+                            <div id="backyard-group" style="display: none;">
+                                <input type="hidden" id="is_backyard" name="is_backyard" value="">
+                                <div class="form-row-2">
+                                    <div class="form-group">
+                                        <label for="backyard_target_loops" class="form-label">Target loops</label>
+                                        <div class="input-with-unit">
+                                            <input type="number" id="backyard_target_loops" name="backyard_target_loops"
+                                                   class="form-input" step="1" min="6" max="48" placeholder="24">
+                                            <span class="input-unit">loops</span>
+                                        </div>
+                                        <span class="form-help">One loop = one hour. 24 loops is 100 miles in 24 hours. (Backyard races call a completed loop a &ldquo;yard&rdquo;.)</span>
+                                    </div>
+
+                                    <div class="form-group">
+                                        <label for="backyard_loop_km" class="form-label">Loop length</label>
+                                        <div class="input-with-unit">
+                                            <input type="number" id="backyard_loop_km" name="backyard_loop_km"
+                                                   class="form-input" step="0.001" min="5.5" max="8" value="6.706">
+                                            <span class="input-unit">km</span>
+                                        </div>
+                                        <span class="form-help">The standard backyard loop is 6.706 km (4.167 mi).</span>
+                                    </div>
+                                </div>
+
+                                <div class="form-group">
+                                    <label for="backyard_loop_elevation_gain_m" class="form-label">Elevation gain per loop</label>
+                                    <div class="input-with-unit">
+                                        <input type="number" id="backyard_loop_elevation_gain_m" name="backyard_loop_elevation_gain_m"
+                                               class="form-input" step="1" min="0" max="400" placeholder="0">
+                                        <span class="input-unit">m</span>
+                                    </div>
+                                    <span class="form-help" id="backyard-budget">
+                                        Enter 0 for a flat loop. We'll work out your rest budget live.
                                     </span>
                                 </div>
                             </div>
@@ -652,9 +694,60 @@ function setPlanMode(mode) {
     const trailDistanceField = document.getElementById('trail_distance_km');
     const elevationField = document.getElementById('target_elevation_gain_m');
     const elevationHelp = document.getElementById('elevation-classifier');
+    const backyardGroup = document.getElementById('backyard-group');
+    const isBackyardField = document.getElementById('is_backyard');
+    const loopsField = document.getElementById('backyard_target_loops');
+    const loopKmField = document.getElementById('backyard_loop_km');
+    const loopElevField = document.getElementById('backyard_loop_elevation_gain_m');
+    const backyardBudgetHelp = document.getElementById('backyard-budget');
 
     function isTrailMode() {
         return distSelect.value === 'trail';
+    }
+
+    function isBackyardMode() {
+        return distSelect.value === 'backyard';
+    }
+
+    // Mirrors app/core/training/backyard_profile.py. The server is still the
+    // authority — this only lets the form fail fast and show the rest budget
+    // as the runner types, which is the number that makes the format click.
+    function backyardTier(loops) {
+        if (loops >= 30) return 'multi_day';
+        if (loops >= 18) return 'night';
+        if (loops >= 12) return 'day';
+        return 'first_timer';
+    }
+    const BACKYARD_TURNAROUND = { first_timer: 8, day: 10, night: 12, multi_day: 14 };
+    const BACKYARD_MIN_RUNS = { first_timer: 3, day: 4, night: 5, multi_day: 5 };
+    const BACKYARD_MIN_WEEKS = { first_timer: 8, day: 12, night: 16, multi_day: 20 };
+    const BACKYARD_MAX_WEEKS = { first_timer: 20, day: 28, night: 36, multi_day: 40 };
+
+    function backyardLoops() {
+        const v = parseInt(loopsField.value);
+        return isNaN(v) ? null : v;
+    }
+    function backyardLoopKm() {
+        const v = parseFloat(loopKmField.value);
+        return isNaN(v) ? 6.706 : v;
+    }
+    function backyardMinRuns() {
+        const y = backyardLoops();
+        return y === null ? 3 : BACKYARD_MIN_RUNS[backyardTier(y)];
+    }
+    function backyardMinKm() {
+        const y = backyardLoops();
+        if (y === null) return 0;
+        let base = Math.min(90, Math.max(25, 2.2 * y + 8));
+        const elev = parseFloat(loopElevField.value);
+        const cls = elevationClass(backyardLoopKm(), isNaN(elev) ? 0 : elev);
+        if (cls === 'hilly' || cls === 'mountainous') base *= 1.15;
+        return Math.round(base * 10) / 10;
+    }
+    function formatPace(minPerKm) {
+        const m = Math.floor(minPerKm);
+        const sec = Math.round((minPerKm - m) * 60);
+        return `${m}:${String(sec).padStart(2, '0')}/km`;
     }
 
     function effectiveDistance() {
@@ -696,8 +789,46 @@ function setPlanMode(mode) {
         }
     }
 
+    function updateBackyardBudget() {
+        if (!isBackyardMode()) return;
+        const y = backyardLoops();
+        if (y === null) {
+            backyardBudgetHelp.textContent =
+                "Enter 0 for a flat loop. We'll work out your rest budget live.";
+            return;
+        }
+        const tier = backyardTier(y);
+        const turn = BACKYARD_TURNAROUND[tier];
+        const loopKm = backyardLoopKm();
+        const budget = 60 - turn;
+        const elev = parseFloat(loopElevField.value);
+        const climbCost = (isNaN(elev) ? 0 : elev) / 100 * 0.8;
+        const flatPace = Math.max(3.5, (budget - climbCost) / loopKm);
+        let text =
+            `${y} loops = ${y} h, ${(y * loopKm).toFixed(1)} km. ` +
+            `Run each loop in ~${budget} min (${formatPace(budget / loopKm)}) ` +
+            `and ~${turn} min an hour is yours to eat and sit down.`;
+        if (climbCost > 0.5) {
+            text += ` With that climb it's ${formatPace(flatPace)} of flat fitness.`;
+        }
+        text += ` Needs ${BACKYARD_MIN_WEEKS[tier]}\u2013${BACKYARD_MAX_WEEKS[tier]} weeks ` +
+                `and about ${backyardMinKm()} km/week of base.`;
+        backyardBudgetHelp.textContent = text;
+    }
+
     function updateTrailVisibility() {
         const trail = isTrailMode();
+        const backyard = isBackyardMode();
+        backyardGroup.style.display = backyard ? '' : 'none';
+        isBackyardField.value = backyard ? 'on' : '';
+        // Backyard plans carry their own runs/week floor, so surface the
+        // (otherwise collapsed) runs control the same way trail does.
+        if (backyard) openMoreOptions();
+        [loopsField, loopKmField, loopElevField].forEach(function(el) {
+            el.disabled = !backyard;
+        });
+        // A backyard trains on its own loop, so the terrain question is asked
+        // through the loop's elevation instead.
         trailGroup.style.display = trail ? '' : 'none';
         trainingTerrainGroup.style.display = trail ? '' : 'none';
         // Trail brackets carry stricter runs/week floors, so surface the
@@ -738,6 +869,13 @@ function setPlanMode(mode) {
         updateTrailVisibility();
         updateRunsOptions();
         updateElevationClassifier();
+        updateBackyardBudget();
+    });
+    [loopsField, loopKmField, loopElevField].forEach(function(el) {
+        el.addEventListener('input', () => {
+            updateBackyardBudget();
+            updateRunsOptions();
+        });
     });
     trailDistanceField.addEventListener('input', () => {
         updateRunsOptions();
@@ -746,6 +884,7 @@ function setPlanMode(mode) {
     });
     elevationField.addEventListener('input', updateElevationClassifier);
     updateTrailVisibility();
+    updateBackyardBudget();
 
     const currentKmField = document.getElementById('current_km');
 
@@ -772,14 +911,15 @@ function setPlanMode(mode) {
     }
     function updateRunsOptions() {
         const trail = isTrailMode();
-        const minRuns = trail ? trailMinRuns() : 2;
-        const d = trail ? null : parseFloat(distSelect.value);
+        const backyard = isBackyardMode();
+        const minRuns = backyard ? backyardMinRuns() : (trail ? trailMinRuns() : 2);
+        const d = (trail || backyard) ? null : parseFloat(distSelect.value);
         for (const opt of runsSelect.options) {
             const v = parseInt(opt.value);
             let disabled = false;
-            if (trail && v < minRuns) {
+            if ((trail || backyard) && v < minRuns) {
                 disabled = true;
-            } else if (!trail && !isNaN(d)) {
+            } else if (!trail && !backyard && !isNaN(d)) {
                 if (v === 2 && d >= 21.1) disabled = true;
             }
             opt.disabled = disabled;
@@ -811,10 +951,53 @@ function setPlanMode(mode) {
                 const targetDistance = document.getElementById('target_distance');
                 const weeks = document.getElementById('weeks');
 
-                // Trail/ultra: validate distance + elevation. The dropdown
-                // keeps its "trail" sentinel value; the backend resolves it
-                // using the trail_distance_km form field.
-                if (isTrailMode()) {
+                // Backyard: the dropdown keeps its "backyard" sentinel and the
+                // backend derives the training distance from the loop count.
+                if (isBackyardMode()) {
+                    const y = backyardLoops();
+                    if (y === null || y < 6 || y > 48) {
+                        e.preventDefault();
+                        notify('Pick a target between 6 and 48 loops \u2014 that is how many hourly loops you are training to complete.', { type: 'error' });
+                        loopsField.focus();
+                        return false;
+                    }
+                    const loopKm = parseFloat(loopKmField.value);
+                    if (isNaN(loopKm) || loopKm < 5.5 || loopKm > 8) {
+                        e.preventDefault();
+                        notify('Loop length must be between 5.5 km and 8 km. The standard backyard loop is 6.706 km.', { type: 'error' });
+                        loopKmField.focus();
+                        return false;
+                    }
+                    const loopElev = loopElevField.value === '' ? 0 : parseFloat(loopElevField.value);
+                    if (isNaN(loopElev) || loopElev < 0 || loopElev > 400) {
+                        e.preventDefault();
+                        notify('Enter the climb per loop in metres (0\u2013400). Use 0 for a flat loop.', { type: 'error' });
+                        loopElevField.focus();
+                        return false;
+                    }
+                    const tier = backyardTier(y);
+                    const wk = parseInt(weeks.value);
+                    if (wk < BACKYARD_MIN_WEEKS[tier] || wk > BACKYARD_MAX_WEEKS[tier]) {
+                        e.preventDefault();
+                        notify(`A ${y}-loop goal needs ${BACKYARD_MIN_WEEKS[tier]}\u2013${BACKYARD_MAX_WEEKS[tier]} weeks of training.`, { type: 'error' });
+                        weeks.focus();
+                        return false;
+                    }
+                    const runs = parseInt(runsSelect.value);
+                    if (runs < backyardMinRuns()) {
+                        e.preventDefault();
+                        notify(`A ${y}-loop plan needs at least ${backyardMinRuns()} runs/week \u2014 backyard volume arrives as many medium sessions, not a few big ones.`, { type: 'error' });
+                        runsSelect.focus();
+                        return false;
+                    }
+                    const km = parseFloat(currentKm.value);
+                    if (km < backyardMinKm()) {
+                        e.preventDefault();
+                        notify(`A ${y}-loop goal needs about ${backyardMinKm()} km/week of base to train from. Build that first, then come back.`, { type: 'error' });
+                        currentKm.focus();
+                        return false;
+                    }
+                } else if (isTrailMode()) {
                     const trailKm = parseFloat(trailDistanceField.value);
                     if (isNaN(trailKm) || trailKm < 8 || trailKm > 163) {
                         e.preventDefault();
@@ -954,6 +1137,13 @@ function setPlanMode(mode) {
             hideLongRunHint();
             return;
         }
+        if (isBackyardMode()) {
+            // The hint asks whether the plan can build a race-specific long
+            // run. A backyard's longest session is a loop simulation sized by
+            // the ladder, so there is nothing here to warn about.
+            hideLongRunHint();
+            return;
+        }
         const km = parseFloat(currentKmField.value);
         const dist = effectiveDistance();
         const weeks = parseInt(weeksField.value);
@@ -998,7 +1188,8 @@ function setPlanMode(mode) {
 
     if (longRunHint) {
         [currentKmField, distSelect, weeksField, runsSelect,
-         trailDistanceField, elevationField, trainingTerrainField].forEach(function(el) {
+         trailDistanceField, elevationField, trainingTerrainField,
+         loopsField].forEach(function(el) {
             if (!el) return;
             el.addEventListener('input', scheduleLongRunHint);
             el.addEventListener('change', scheduleLongRunHint);

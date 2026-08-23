@@ -13,6 +13,24 @@
         </div>
         {% endif %}
 
+        {% if race_protocol.corral_routine %}
+        <div class="raceday-card">
+            <h3>The Turnaround</h3>
+            <p class="raceday-strategy">Your only recovery in this race is the {{ race_protocol.turnaround_min }} minutes between crossing the line and the next whistle. Rehearse this until it needs no thinking &mdash; at 3am it won't get any.</p>
+            <div class="corral-routine">
+                {% for step in race_protocol.corral_routine %}
+                <div class="corral-step">
+                    <span class="corral-when">{{ step.when }}</span>
+                    <div class="corral-body">
+                        <strong class="corral-action">{{ step.action }}</strong>
+                        <span class="corral-why">{{ step.why }}</span>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+
         {% if race_protocol.pacing_splits %}
         <div class="raceday-card">
             <h3><span data-i18n="raceday.pacing_splits">Pacing Splits</span></h3>
@@ -43,6 +61,33 @@
                 <div class="timeline-item">
                     <span class="timeline-time">{{ item.time }}</span>
                     <span class="timeline-activity">{{ item.activity }}</span>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+
+        {% if race_protocol.hourly_fuelling %}
+        <div class="raceday-card">
+            <h3>Hourly Fuelling</h3>
+            <p class="raceday-strategy">Hunger disappears somewhere around hour eight and the race keeps going, so intake is on a clock, not on appetite. Targets step down as the hours pass &mdash; that is deliberate, not a mistake.</p>
+            <div class="fuel-table">
+                <div class="fuel-header">
+                    <span>Loops</span>
+                    <span>Carbs</span>
+                    <span>Fluid</span>
+                    <span>Sodium</span>
+                </div>
+                {% for row in race_protocol.hourly_fuelling %}
+                <div class="fuel-row">
+                    <span class="fuel-loops">{{ row.loops }}</span>
+                    <span>{{ row.carbs }}</span>
+                    <span>{{ row.fluid }}</span>
+                    <span>{{ row.sodium }}</span>
+                </div>
+                <div class="fuel-note">
+                    <strong>{{ row.focus }}</strong>
+                    <span>{{ row.fuel }}</span>
                 </div>
                 {% endfor %}
             </div>

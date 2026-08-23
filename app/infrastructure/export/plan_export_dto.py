@@ -37,6 +37,10 @@ class PlanExportDTO:
     vdot: Optional[float] = None
     is_trail: bool = False
     target_elevation_gain_m: Optional[float] = None
+    # A backyard plan is stored as a trail plan over a *clamped* projection, so
+    # the cover has to read the loop count or it prints a race nobody entered.
+    is_backyard: bool = False
+    backyard_target_loops: Optional[int] = None
 
     @classmethod
     def from_orm(
@@ -64,4 +68,6 @@ class PlanExportDTO:
             vdot=plan.vdot,
             is_trail=bool(getattr(plan, "is_trail", False)),
             target_elevation_gain_m=getattr(plan, "target_elevation_gain_m", None),
+            is_backyard=bool(getattr(plan, "is_backyard", False)),
+            backyard_target_loops=getattr(plan, "backyard_target_loops", None),
         )

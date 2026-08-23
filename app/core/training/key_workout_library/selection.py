@@ -213,6 +213,25 @@ _KEY_WORKOUT_MIN_BUDGET_KM: Dict[str, float] = {
 # standalone sessions and to keep existing rotation expectations stable.
 _ITW_ONLY_IDS = frozenset({"trail_hike_run_long", "trail_b2b_day2"})
 
+# Backyard sessions are parameterised by the runner's loop length and rest
+# budget — neither of which the rotation's (distance, phase, terrain)
+# interface can express — so the backyard week post-pass installs them
+# directly. They stay in the catalog for ``get_by_id`` resolution only.
+_BACKYARD_ONLY_IDS = frozenset(
+    {
+        "backyard_loop_simulation",
+        "backyard_night_simulation",
+        "backyard_dress_rehearsal",
+        "backyard_turnaround_drill",
+        "backyard_loop_repeats",
+        "backyard_b2b_day2",
+    }
+)
+
+# Every session the rotation must never surface on its own: both families are
+# installed by a post-pass that already knows which one it wants.
+_FORCE_ONLY_IDS = _ITW_ONLY_IDS | _BACKYARD_ONLY_IDS
+
 
 _BRACKET_RESTRICTIONS: Dict[str, list] = {
     "trail_back_to_back": ["ultra", "long_ultra"],
@@ -307,7 +326,7 @@ def _filter_candidates(
         for w in _trail_aware_distance_filter(target_distance, trail_profile)
         if phase in w["phases"]
         and w["type"] == workout_type
-        and w["id"] not in _ITW_ONLY_IDS
+        and w["id"] not in _FORCE_ONLY_IDS
     ]
 
     # Budget gating — sessions whose fixed reps can't fit the day's allocation
@@ -742,7 +761,7 @@ class KeyWorkoutLibrary:
         workouts = [
             w
             for w in _trail_aware_distance_filter(target_distance, trail_profile)
-            if w["id"] not in _ITW_ONLY_IDS
+            if w["id"] not in _FORCE_ONLY_IDS
         ]
         if terrain == "flat" or (
             terrain is None

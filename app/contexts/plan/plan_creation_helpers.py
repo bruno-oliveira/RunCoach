@@ -56,6 +56,16 @@ def persist_plan_core(
         is_trail=plan_request.is_trail,
         target_elevation_gain_m=plan_request.target_elevation_gain_m,
         training_terrain=plan_request.resolved_training_terrain(),
+        is_backyard=plan_request.is_backyard,
+        backyard_target_loops=plan_request.backyard_target_loops,
+        backyard_loop_km=(
+            plan_request.backyard_loop_km if plan_request.is_backyard else None
+        ),
+        backyard_loop_elevation_gain_m=(
+            plan_request.backyard_loop_elevation_gain_m
+            if plan_request.is_backyard
+            else None
+        ),
     )
     db.add(training_plan)
     db.flush()
@@ -251,10 +261,14 @@ def attach_race_protocol(
             plan_request.target_distance,
             plan_request.target_elevation_gain_m or 0.0,
         )
+    # A backyard's "goal pace" is its loop budget, not a VDOT prediction over
+    # the projected distance — the protocol reads it straight off the profile.
+    backyard_profile = plan_request.backyard_profile()
     race_protocol = generate_race_protocol(
         plan_request.target_distance,
         goal_pace,
         trail_profile=trail_profile,
+        backyard_profile=backyard_profile,
     )
     training_plan.race_protocol_data = race_protocol
 

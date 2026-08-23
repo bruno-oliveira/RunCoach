@@ -111,6 +111,7 @@ def reclamp_quality_to_long_run(workouts: List[Dict[str, Any]]) -> None:
         if (
             w.get("type") in ("tempo", "interval", "hill")
             and w.get("key_workout_id")
+            and not w.get("fixed_structure")
             and (w.get("distance") or 0) > ceiling
             and w.get("steps")
         ):
@@ -428,6 +429,13 @@ def enforce_long_run_ratio_cap(
     if not long_ws:
         return round(sum(w.get("distance", 0) for w in workouts), 1)
     long_w = long_ws[0]
+
+    # A fixed-structure long slot — a backyard loop simulation — is a whole
+    # number of hourly loops, not a share of the week. It is *meant* to
+    # dominate its week; trimming it to a ratio would leave the card promising
+    # six loops while the distance describes five and a half.
+    if long_w.get("fixed_structure"):
+        return round(sum(w.get("distance", 0) for w in workouts), 1)
 
     total = sum(w.get("distance", 0) for w in running)
     if total <= 0:

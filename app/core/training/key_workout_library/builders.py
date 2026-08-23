@@ -705,6 +705,12 @@ def rebuild_key_workout(
     kid = workout.get("key_workout_id")
     if not kid:
         return False
+    # Fixed-structure sessions (backyard loop simulations) are defined by a
+    # whole number of hourly loops, not by a distance budget. Rebuilding one
+    # at an adapted distance would silently produce five and a half loops —
+    # a session the format has no way to run.
+    if workout.get("fixed_structure"):
+        return False
     d = workout.get("distance", 0) or 0
     if d <= 0:
         return False
