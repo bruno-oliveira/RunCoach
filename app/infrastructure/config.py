@@ -57,7 +57,9 @@ class Settings(BaseSettings):
 
     # Admin console — the single operator email allowed to reach /admin and the
     # /api/admin/* endpoints (used to test integrations like send-to-watch).
-    admin_email: str = "olivbruno8@gmail.com"
+    # Empty by default: ``get_admin_user`` fails closed, so an unconfigured
+    # deployment has no admin rather than someone else's.
+    admin_email: str = ""
 
     # Coach AI — the LLM-voiced "Coach's Note". When the API key is unset the
     # feature degrades to a deterministic, rules-based note (no network).

@@ -43,6 +43,7 @@ Thumbs.db
 
 # Claude files
 .claude/
+CLAUDE.local.md
 *.md.backup
 
 # Test outputs
