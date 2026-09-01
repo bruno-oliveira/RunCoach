@@ -41,8 +41,9 @@ Thumbs.db
 # Logs
 *.log
 
-# Claude files
+# Claude / opencode files
 .claude/
+.opencode/
 CLAUDE.local.md
 *.md.backup
 

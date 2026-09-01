@@ -42,8 +42,7 @@ aborting the sweep.
 > **Watch `watch_plans_rolled` against Intervals.icu's rate limits.** N1's
 > content hash means an unchanged plan costs zero API *writes*, but the roll
 > still costs one read per mirrored plan per day. That number is undocumented
-> upstream (open question #2 in `WATCH_AND_ONBOARDING_PLAN.md`) — measure
-> before this grows.
+> upstream — measure before this grows.
 
 ## Step 2 — what gets sent
 

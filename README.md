@@ -59,23 +59,157 @@ type-checks `app/domain` and `app/core` only — keeping those layers free of I/
 is exactly what makes them checkable, which is the argument for pushing more
 logic down into them.
 
-### The LLM gets a voice, never a fact
+### The Coach's Note: the model gets a voice, never a fact
 
-The Coach's Note is written by Claude Haiku, but the model has never stated a
-pace, a distance, or a VDOT value — the architecture doesn't let it.
+The Coach's Note is the two-to-four sentences at the top of the Today tab, and
+it is written by an LLM. It has never stated a pace, a distance, or a VDOT
+value — because the architecture doesn't let it.
 
-Every number is computed in Python into a structured fact pack. The model
-receives that pack as JSON and compresses it into prose. The hard numbers the
-user actually reads are rendered separately from the same pack, never parsed back
-out of the completion. The model is isolated behind a `CoachNarrator` protocol
-declared in `app/domain/coaching.py`, whose contract is *return `None`, never
-raise* — so a missing API key, a rate limit, or a malformed response all fall
-back to a deterministic rules note, and the feature degrades instead of failing.
+**Why that constraint came first.** A training app earns trust on its numbers.
+If the coach says your easy pace has been drifting when it hasn't, or
+congratulates a nine-week streak you never had, the damage isn't one bad
+sentence — it's that every other number on the page becomes suspect.
+Hallucination here doesn't degrade the feature, it discredits the app. And a
+rule in a system prompt is a *request*, not a guarantee: if the only thing
+between a user and a fabricated VDOT is a strongly-worded sentence in the
+prompt, that's a strong preference, not a property.
 
-Cost is bounded at **one model call per plan per day** by a cache keyed on a
-signature of the inputs the note is built from, rather than a TTL.
+So the model is treated like a newsreader. Very good at delivery; not the one
+deciding what the news is.
 
-Full write-up: [Grounding an LLM feature: giving the model a voice, never a fact](https://dev.to/brunooliveira)
+```
+contexts/       read-only assemblers        →  deterministic
+core/           fact pack + focus selection →  pure, unit-tested
+domain/         CoachNarrator (Protocol)    →  the seam
+infrastructure/ AnthropicCoachNarrator      →  the only LLM in the path
+web/            prose + recognition chips   →  chips computed in Python
+```
+
+**1 — The fact pack.** Every number is computed in Python from the runner's own
+logged data: training age, the VDOT journey, per-workout-type pace patterns, the
+adaptation stance, today's prescribed session, this morning's readiness
+check-in. It's a plain JSON-serialisable dict, which makes it loggable and
+diffable when something looks off. A detail that matters more than it looks:
+`vdot_start` and `vdot_now` are pulled over *the same 12-week window* the
+profile uses, because two different horizons produce a "journey" that subtly
+contradicts the rest of the page — the kind of bug you can't catch by reading
+the prose.
+
+**2 — The narrator is a Protocol, not a client.** This is the entire interface
+between the application and any LLM anywhere in the app:
+
+```python
+@runtime_checkable
+class CoachNarrator(Protocol):
+    """Turns a structured fact pack into a short, warm coach's note.
+
+    Implementations must return ``None`` (never raise) when generation is
+    unavailable or fails, so the caller can fall back to a deterministic note.
+    """
+
+    def generate_note(self, context: dict[str, Any]) -> Optional[str]: ...
+```
+
+It lives in `app/domain/coaching.py` and imports nothing but `typing`. The
+application layer never imports an SDK, never sees an API key, and never knows
+which vendor it's talking to. Testing the real assembly logic needs no network,
+no key, no recorded cassettes, and no mocking library — it needs a two-line
+class. The contract in that docstring does real work too: *return `None`, never
+raise* is what lets every caller downstream be written without a `try/except`,
+because failure has a value rather than an exception.
+
+**3 — The adapter converts every failure into `None`.**
+
+```python
+def generate_note(self, context: dict[str, Any]) -> Optional[str]:
+    try:
+        return self._call(context)
+    except Exception:  # never let a coach note break the page
+        logger.warning("Coach note generation failed", exc_info=True)
+        return None
+```
+
+The bare `except Exception` is usually a smell; here it is the design. Rate
+limit, timeout, malformed response, expired key, SDK not installed — all become
+one `None`, logged with a stack trace. No failure of the Anthropic API can
+produce a 500 on the Today tab. The `import anthropic` is lazy inside
+`__init__`, so the app boots and the suite runs on a machine without the SDK.
+
+**4 — The prompt, and the rule that took longest.** The system prompt asks for
+three beats as one flowing note: a short recognition clause, today's purpose and
+how to run it, and — *only when there is one* — a single focus adjustment. The
+recognition beat is deliberately brief because the chips beside the note already
+carry the streak and week count; asking the model to recite stats is both
+redundant and exactly where a hallucination would land.
+
+The hard-won rule is this one:
+
+> If "focus" is null, DO NOT invent a warning, caveat, or adjustment — simply
+> end after today's purpose.
+
+Hand a model a coach persona and a pile of training telemetry, and on a day when
+every signal is green it will *still* find something to caution you about. Not
+because it's broken — because that's what coaches sound like. The result is a
+runner told to watch their fatigue in a week when nothing was wrong, which is
+corrosive precisely because the sentence is plausible.
+
+The fix wasn't a longer prompt. *Whether there is anything to say* is now owned
+by a pure function, `select_today_focus()`, which applies an explicit priority
+order — readiness, then safety, then execution drift, then effort trend, then
+push — against real thresholds, and returns `None` on most days. Judgment in
+Python, phrasing in the model.
+
+**5 — Degrading instead of failing.** No API key is a fully supported state:
+
+```python
+@lru_cache
+def get_coach_narrator() -> CoachNarrator:
+    if settings.is_coach_ai_enabled:
+        from app.infrastructure.integrations.anthropic_narrator import (
+            AnthropicCoachNarrator,
+        )
+        return AnthropicCoachNarrator(
+            api_key=settings.anthropic_api_key, model=settings.coach_ai_model
+        )
+    return _NullCoachNarrator()
+```
+
+Clone the repo, run it with no secrets, and the Today tab renders a perfectly
+reasonable note built by `build_fallback_note()` from the identical fact pack,
+following the identical three beats. The calling code doesn't branch on
+configuration at all — it calls the narrator, and on `None` uses the rules note,
+flipping a `source` field from `"ai"` to `"rules"` so the front end (and the
+logs) always know which path ran. The recognition chips are computed
+unconditionally, *before* the model, and are identical either way.
+
+**6 — Bounding cost with a signature, not a TTL.** A TTL is wrong in both
+directions here: it expires while nothing has changed, and serves stale output
+straight through the run that should have refreshed it. The cache key is instead
+a signature of exactly the inputs the note is built from:
+
+```python
+return f"{plan.id}:{count}:{last_str}:{readiness_str}"
+```
+
+`count` catches a new run; `max(date)` catches a *back-dated* run the count
+alone would miss; the readiness component means logging how you feel this
+morning refreshes the note rather than serving yesterday's stance. A second
+brake sits on top — once an AI note has been generated in the user's *local*
+calendar day it's reused for the rest of that day, which is partly cost and
+mostly product, since a daily note that rewrites itself four times an afternoon
+is jumpier, not better. Together: **at most one model call per plan per day**,
+whatever the sync volume. The cache write is wrapped and rolls back on failure,
+because a cache that can't persist must never take down the page it was meant to
+make cheap.
+
+**What's missing.** There is no eval harness for the prose. The fact pack, the
+focus selection and the fallback are unit-tested; the model's output is verified
+by reading it. The deterministic side of the app *does* have a replay harness —
+`contexts/plan/adaptation/backtest.py` runs real training history back through
+the engine, and tuning against it surfaced three genuine bugs — so the pattern
+exists and applying it here is the obvious next step. The protocol also makes
+swapping vendors a one-line change, but no second implementation exists, so that
+seam is designed rather than exercised.
 
 ### Constraints that shaped the code
 
