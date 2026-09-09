@@ -1,8 +1,8 @@
-"""Static page endpoints (home, privacy)."""
+"""Static page endpoints (home, privacy, post-connect setup)."""
 
 from typing import Optional
 
-from fastapi import APIRouter, Depends, Request
+from fastapi import APIRouter, Depends, Query, Request
 from fastapi.responses import HTMLResponse
 from sqlalchemy.orm import Session
 
@@ -14,7 +14,7 @@ from app.contexts.nutrition.nutrition_content import (
 from app.contexts.plan.plan_helpers import current_active_plan, decorate_plan_status
 from app.contexts.plan.repositories import SQLAlchemyPlanRepository
 from app.core.time_utils import local_today
-from app.dependencies import get_db, get_optional_user
+from app.dependencies import get_current_user, get_db, get_optional_user
 from app.infrastructure.config import settings
 from app.models import User
 from app.template_helpers import create_templates
@@ -71,6 +71,26 @@ def tips_page(
             "trail_fuel_ideas": generate_trail_fuel_ideas(),
             "trail_fuel_phases": TRAIL_FUEL_PHASES,
             "trail_tips": generate_trail_nutrition_tips(),
+        },
+    )
+
+
+@router.get("/setup/watch", response_class=HTMLResponse)
+def setup_watch(
+    request: Request,
+    return_to: str = Query(default="/my-plans"),
+    current_user: User = Depends(get_current_user),
+) -> HTMLResponse:
+    """Post-connect setup: walks the runner through the Intervals.icu toggles."""
+    safe = return_to if return_to.startswith("/") and not return_to.startswith("//") else "/my-plans"
+    return templates.TemplateResponse(
+        request,
+        "setup_watch.html",
+        {
+            "request": request,
+            "user": current_user,
+            "google_client_id": settings.google_client_id or "",
+            "return_to": safe,
         },
     )
 

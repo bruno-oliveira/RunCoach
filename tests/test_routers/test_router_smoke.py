@@ -325,3 +325,32 @@ class TestHomeHero:
             assert "status-pill" not in resp.text
         finally:
             app.dependency_overrides.pop(get_optional_user, None)
+
+
+# ---------------------------------------------------------------------------
+# Setup watch page  (/setup/watch)
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.usefixtures("_override_db")
+class TestSetupWatchPage:
+    def test_setup_watch_renders_for_authenticated_user(self, smoke_user):
+        _set_user(smoke_user)
+        with TestClient(app) as c:
+            resp = c.get("/setup/watch", follow_redirects=False)
+        assert resp.status_code == 200
+        assert "setup-card" in resp.text
+        assert "Intervals.icu" in resp.text
+
+    def test_setup_watch_requires_auth(self):
+        _clear_user()
+        with TestClient(app) as c:
+            resp = c.get("/setup/watch", follow_redirects=False)
+        assert resp.status_code in (401, 403)
+
+    def test_setup_watch_carries_return_to(self, smoke_user):
+        _set_user(smoke_user)
+        with TestClient(app) as c:
+            resp = c.get("/setup/watch?return_to=/plan/abc")
+        assert resp.status_code == 200
+        assert "/plan/abc" in resp.text

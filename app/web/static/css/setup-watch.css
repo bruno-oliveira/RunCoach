@@ -1,0 +1,274 @@
+/* ============================================================================
+   Post-connect watch setup page
+   Shown once after the Intervals.icu OAuth callback. Walks the runner through
+   the two toggles inside Intervals that complete the watch bridge.
+   ========================================================================= */
+
+.setup-page {
+    min-height: calc(100vh - 80px);
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    padding: var(--space-8) var(--space-4);
+}
+
+.setup-card {
+    width: 100%;
+    max-width: 540px;
+    padding: var(--space-6) var(--space-6) var(--space-5);
+    background: var(--color-bg-elevated);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-xl);
+    box-shadow: var(--shadow-md);
+}
+
+/* ---- Connected badge ---- */
+
+.setup-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-2);
+    padding: var(--space-1) var(--space-3);
+    background: var(--color-success-subtle, rgba(16, 185, 129, 0.1));
+    border-radius: var(--radius-full);
+    font-size: var(--text-xs);
+    font-weight: var(--weight-bold);
+    color: var(--color-success);
+    letter-spacing: var(--tracking-wide);
+    text-transform: uppercase;
+    margin-bottom: var(--space-4);
+}
+
+.setup-badge-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: var(--radius-full);
+    background: var(--color-success);
+    animation: setup-pulse 2s ease-in-out infinite;
+}
+
+@keyframes setup-pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.4; }
+}
+
+/* ---- Header ---- */
+
+.setup-title {
+    margin: 0 0 var(--space-2);
+    font-size: var(--text-xl);
+    font-weight: var(--weight-semibold);
+    line-height: var(--leading-snug);
+    color: var(--color-text);
+}
+
+.setup-subtitle {
+    margin: 0 0 var(--space-5);
+    font-size: var(--text-sm);
+    line-height: var(--leading-normal);
+    color: var(--color-text-secondary);
+}
+
+/* ---- Importing note ---- */
+
+.setup-importing {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    padding: var(--space-3) var(--space-4);
+    margin: 0 0 var(--space-5);
+    background: var(--color-bg-sunken);
+    border-radius: var(--radius-lg);
+    font-size: var(--text-sm);
+    color: var(--color-text-secondary);
+    line-height: var(--leading-normal);
+}
+
+.setup-importing-icon {
+    flex-shrink: 0;
+    color: var(--color-link);
+    animation: setup-spin 1.5s linear infinite;
+}
+
+@keyframes setup-spin {
+    to { transform: rotate(360deg); }
+}
+
+/* ---- Divider ---- */
+
+.setup-divider {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    margin: 0 0 var(--space-5);
+    font-size: var(--text-xs);
+    font-weight: var(--weight-semibold);
+    color: var(--color-text-muted);
+    text-transform: uppercase;
+    letter-spacing: var(--tracking-wide);
+}
+
+.setup-divider::before,
+.setup-divider::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--color-border-subtle);
+}
+
+/* ---- Steps ---- */
+
+.setup-steps {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-4);
+    margin: 0 0 var(--space-5);
+    padding: 0;
+    list-style: none;
+}
+
+.setup-step {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--space-3);
+}
+
+.setup-step-num {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    width: 28px;
+    height: 28px;
+    border-radius: var(--radius-full);
+    background: var(--color-primary-subtle);
+    color: var(--color-link);
+    font-size: var(--text-sm);
+    font-weight: var(--weight-bold);
+}
+
+.setup-step-body {
+    flex: 1;
+    padding-top: 3px;
+}
+
+.setup-step-text {
+    display: block;
+    font-size: var(--text-sm);
+    line-height: var(--leading-normal);
+    color: var(--color-text-secondary);
+}
+
+.setup-step-text a {
+    color: var(--color-link);
+    text-decoration: underline;
+    text-underline-offset: 2px;
+    font-weight: var(--weight-semibold);
+}
+
+.setup-step-hint {
+    display: block;
+    margin-top: var(--space-1);
+    font-size: var(--text-xs);
+    color: var(--color-text-muted);
+    line-height: var(--leading-normal);
+}
+
+/* ---- Shortcut tip ---- */
+
+.setup-shortcut {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--space-3);
+    padding: var(--space-3) var(--space-4);
+    margin: 0 0 var(--space-5);
+    background: var(--color-primary-subtle);
+    border-radius: var(--radius-lg);
+    font-size: var(--text-xs);
+    line-height: var(--leading-normal);
+    color: var(--color-text-secondary);
+}
+
+.setup-shortcut-icon {
+    flex-shrink: 0;
+    margin-top: 1px;
+    color: var(--color-link);
+}
+
+.setup-shortcut strong {
+    color: var(--color-text);
+}
+
+/* ---- Actions ---- */
+
+.setup-actions {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+    margin: 0 0 var(--space-4);
+}
+
+.setup-done-btn {
+    width: 100%;
+    padding: var(--space-3) var(--space-4);
+    background: var(--color-success);
+    border: none;
+    border-radius: var(--radius-lg);
+    font-size: var(--text-sm);
+    font-weight: var(--weight-semibold);
+    color: #fff;
+    cursor: pointer;
+    transition: filter var(--duration-fast) var(--ease-out);
+}
+
+.setup-done-btn:hover { filter: brightness(1.08); }
+
+.setup-later-btn {
+    width: 100%;
+    padding: var(--space-2) var(--space-4);
+    background: none;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-lg);
+    font-size: var(--text-sm);
+    color: var(--color-text-secondary);
+    cursor: pointer;
+    transition: border-color var(--duration-fast) var(--ease-out),
+                color var(--duration-fast) var(--ease-out);
+}
+
+.setup-later-btn:hover {
+    border-color: var(--color-text-muted);
+    color: var(--color-text);
+}
+
+/* ---- Footer notes ---- */
+
+.setup-notes {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+    padding-top: var(--space-4);
+    border-top: 1px solid var(--color-border-subtle);
+}
+
+.setup-note {
+    margin: 0;
+    font-size: var(--text-xs);
+    line-height: var(--leading-normal);
+    color: var(--color-text-muted);
+}
+
+.setup-note strong {
+    color: var(--color-text-secondary);
+    font-weight: var(--weight-semibold);
+}
+
+@media (max-width: 640px) {
+    .setup-page {
+        padding: var(--space-5) var(--space-3);
+        align-items: flex-start;
+    }
+    .setup-card {
+        padding: var(--space-5) var(--space-4) var(--space-4);
+    }
+}

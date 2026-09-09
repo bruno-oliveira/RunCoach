@@ -244,12 +244,14 @@
 
     {# ── Watch setup gate ────────────────────────────────────────────────
        Two toggles inside Intervals.icu decide whether a planned workout ever
-       leaves the calendar, and they live on a platform we can't inspect. So
-       this is shown *before* the first send rather than after it: a "sent!"
-       toast to someone whose watch will stay empty is worse than one extra
-       screen. Opened by plan_send_to_watch.js when setup is unconfirmed. #}
+       leaves the calendar, and they live on a platform we can't inspect.
+       Shown proactively when connected but not confirmed, so the runner sees
+       the guidance as soon as they land — not only on first send click. Also
+       opened by plan_send_to_watch.js if somehow dismissed and then a send
+       is attempted. #}
     {% if user %}
-    <div class="watch-setup" id="watch-setup" role="region" aria-label="Finish watch setup" hidden>
+    <div class="watch-setup" id="watch-setup" role="region" aria-label="Finish watch setup"
+         {% if not (intervals_connected and not watch_setup_confirmed) %}hidden{% endif %}>
         <div class="watch-setup-head">
             <span class="watch-setup-eyebrow" data-i18n="watchsetup.eyebrow">Send to your watch</span>
             <button type="button" class="watch-setup-dismiss" onclick="dismissWatchSetup()" aria-label="Dismiss" data-i18n-aria="watchsetup.dismiss">&times;</button>

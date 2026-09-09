@@ -170,14 +170,30 @@ def test_callback_stores_persistent_token(intervals_client, plain_user, test_db)
     response = _run_callback(intervals_client, state)
 
     assert response.status_code == 302
-    # No return_to → default landing page.
-    assert response.headers["location"] == "/my-plans"
+    # New connection (no watch_setup_confirmed_at) → setup page, then default.
+    assert response.headers["location"] == "/setup/watch?return_to=%2Fmy-plans"
     test_db.refresh(plain_user)
     assert plain_user.intervals_athlete_id == "i999"
     assert plain_user.intervals_access_token == "persistent-token"
 
 
 def test_callback_redirects_to_return_to(intervals_client, plain_user):
+    state = _make_state(plain_user.id, "nonce-1", return_to="/plan/abc-123")
+    intervals_client.cookies.set("intervals_oauth_state", "nonce-1")
+
+    response = _run_callback(intervals_client, state)
+
+    assert response.status_code == 302
+    assert response.headers["location"] == "/setup/watch?return_to=%2Fplan%2Fabc-123"
+
+
+def test_callback_skips_setup_for_reconnect(intervals_client, plain_user, test_db):
+    """A reconnection (user already confirmed setup) goes straight back."""
+    from datetime import datetime
+
+    plain_user.watch_setup_confirmed_at = datetime(2026, 1, 1)
+    test_db.commit()
+
     state = _make_state(plain_user.id, "nonce-1", return_to="/plan/abc-123")
     intervals_client.cookies.set("intervals_oauth_state", "nonce-1")
 
@@ -197,4 +213,4 @@ def test_callback_rejects_unsafe_return_to(intervals_client, plain_user):
     response = _run_callback(intervals_client, state)
 
     assert response.status_code == 302
-    assert response.headers["location"] == "/my-plans"
+    assert response.headers["location"] == "/setup/watch?return_to=%2Fmy-plans"

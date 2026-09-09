@@ -4,6 +4,7 @@ import logging
 import secrets
 from datetime import datetime, timedelta
 from typing import Optional
+from urllib.parse import quote
 
 from fastapi import (
     APIRouter,
@@ -213,11 +214,14 @@ async def intervals_callback(
         ) from conflict
 
     background_tasks.add_task(initial_intervals_sync, str(user.id), intervals_service)
-    # Re-validate the return path from the signed state (never trust it raw) and
-    # fall back to the default landing page.
-    redirect_to = _safe_return_to(payload.get("return_to")) or (
-        _DEFAULT_POST_CONNECT_REDIRECT
-    )
+
+    final_dest = _safe_return_to(payload.get("return_to")) or _DEFAULT_POST_CONNECT_REDIRECT
+
+    if user.watch_setup_confirmed_at:
+        redirect_to = final_dest
+    else:
+        redirect_to = f"/setup/watch?return_to={quote(final_dest, safe='')}"
+
     redirect = RedirectResponse(url=redirect_to, status_code=status.HTTP_302_FOUND)
     redirect.delete_cookie(_OAUTH_STATE_COOKIE)
     return redirect
