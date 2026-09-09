@@ -82,7 +82,11 @@ def setup_watch(
     current_user: User = Depends(get_current_user),
 ) -> HTMLResponse:
     """Post-connect setup: walks the runner through the Intervals.icu toggles."""
-    safe = return_to if return_to.startswith("/") and not return_to.startswith("//") else "/my-plans"
+    safe = (
+        return_to
+        if return_to.startswith("/") and not return_to.startswith("//")
+        else "/my-plans"
+    )
     return templates.TemplateResponse(
         request,
         "setup_watch.html",

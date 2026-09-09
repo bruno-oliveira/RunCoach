@@ -215,7 +215,9 @@ async def intervals_callback(
 
     background_tasks.add_task(initial_intervals_sync, str(user.id), intervals_service)
 
-    final_dest = _safe_return_to(payload.get("return_to")) or _DEFAULT_POST_CONNECT_REDIRECT
+    final_dest = (
+        _safe_return_to(payload.get("return_to")) or _DEFAULT_POST_CONNECT_REDIRECT
+    )
 
     if user.watch_setup_confirmed_at:
         redirect_to = final_dest
