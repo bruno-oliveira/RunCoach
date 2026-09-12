@@ -415,6 +415,50 @@ def fill_shortfall(
                 if w["distance"] > cap + 0.05:
                     set_distance(w, cap, pace_zones)
 
+    # Low-frequency weeks (≤3 runs) have no easy run to receive the volume the
+    # distribution budgets for one: the layout is a long run plus a quality
+    # session, so the share allocated to types with no slot is dropped and the
+    # week lands well under its target (measured: a 2-run half marathon delivered
+    # 18.5 km of a 27.5 km week, with the deficit simply unplaced). The two caps
+    # that bound such a week — ``long_run_share_ceiling`` (0.60) plus
+    # ``MAX_QUALITY_DAY_SHARE`` (0.25) — sum to 0.85, exactly the floor the
+    # envelope harness reconciles against, so the remainder must go somewhere.
+    # Let the quality day carry it, bounded by the same
+    # ``MAX_KEY_WORKOUT_VS_LONG_RUN`` ceiling the key-workout overlay fits
+    # sessions to, so quality work still never reaches the long run. The session
+    # is grown through ``set_distance`` → ``rebuild_key_workout``, which
+    # re-derives prose, steps and distance together.
+    #
+    # ``easy_vs_long_ratio`` is how the caller encodes a low-frequency schedule
+    # (``low_freq_easy_vs_long_ratio``): no other input produces a tighter easy
+    # ceiling than the default.
+    low_frequency_schedule = (
+        trail_profile is None
+        and long_w is not None
+        and easy_vs_long_ratio <= MAX_EASY_VS_LONG_RUN - 0.01
+    )
+    if low_frequency_schedule:
+        from app.core.training.tuning import MAX_KEY_WORKOUT_VS_LONG_RUN
+
+        deficit = round(total_km - sum(w.get("distance", 0) for w in workouts), 1)
+        quality_ceiling = round(
+            long_w.get("distance", 0) * MAX_KEY_WORKOUT_VS_LONG_RUN, 1
+        )
+        carriers = [
+            w
+            for w in workouts
+            if w.get("type") in ("tempo", "interval", "hill")
+            and w.get("key_workout_id")
+            and not w.get("fixed_structure")
+            and 0 < (w.get("distance") or 0) < quality_ceiling
+        ]
+        if deficit > 0 and carriers:
+            per_carrier = deficit / len(carriers)
+            for w in carriers:
+                set_distance(
+                    w, min(w["distance"] + per_carrier, quality_ceiling), pace_zones
+                )
+
     return round(sum(w.get("distance", 0) for w in workouts), 1)
 
 
@@ -499,3 +543,205 @@ def enforce_long_run_ratio_cap(
             set_distance(w, long_after, pace_zones)
 
     return round(sum(w.get("distance", 0) for w in workouts), 1)
+
+
+# --- Final long-run contract passes -----------------------------------------
+#
+# These run after every other budget pass, so the ceilings below are the last
+# word on the week's long run. They are needed because three independent
+# mechanisms move it *after* ``enforce_long_run_ratio_cap`` has capped it:
+#
+# * ``fill_shortfall`` inflates a *flexible* long run to place the week's
+#   volume — but only in weeks whose flexible slots fall below 97 % of target,
+#   so a week that happens to clear that threshold keeps a ratio-sized long run
+#   while its neighbour is inflated (measured: 17.8 km then 15.8 km on a 50 km
+#   base half marathon, an 11 % regression between loading weeks);
+# * ``set_distance`` routes a *pinned* long run through ``rebuild_key_workout``,
+#   which restores the prescription — silently undoing the cap;
+# * ``reclamp_quality_to_long_run`` shrinks the quality day, which *raises* the
+#   long run's share of the week.
+#
+# Road only: a trail plan's back-to-back long days are governed by the bracket
+# cap and the Intensive Training Weekend, and these passes are written for the
+# road per-run ceilings.
+
+
+def _resizable_long_run(
+    workouts: List[Dict[str, Any]],
+) -> Optional[Dict[str, Any]]:
+    """The week's long run, or ``None`` when it must not be resized.
+
+    A ``fixed_structure`` long slot is a backyard loop simulation: a whole
+    number of hourly loops, not a share of the week (see
+    ``enforce_long_run_ratio_cap``).
+    """
+    for w in workouts:
+        if w.get("type") == "long" and (w.get("distance") or 0) > 0:
+            if w.get("fixed_structure"):
+                return None
+            return w
+    return None
+
+
+def _running_total_km(workouts: List[Dict[str, Any]]) -> float:
+    """The week's running volume, on the same basis the ratio cap uses."""
+    return round(
+        sum(
+            w.get("distance", 0)
+            for w in workouts
+            if w.get("type") not in ("rest", "recovery")
+        ),
+        1,
+    )
+
+
+def _resize_long_run(
+    workout: Dict[str, Any],
+    distance: float,
+    pace_zones: Optional[Dict],
+) -> None:
+    """Resize a long run, including one that a key-workout overlay pins.
+
+    ``set_distance`` deliberately routes a key-workout long run through
+    ``rebuild_key_workout``, whose job is to re-derive the prescription from the
+    new distance — so a cap that *shrinks* it comes back at its original length
+    (measured: a half-marathon plan's peak week held a 15.3 km long run where
+    the 55 % share ceiling allowed 14.85 km). Clearing the overlay first is what
+    makes the cap take effect; the session becomes a plain long run at the
+    capped distance, which is the session the runner is actually being asked to
+    run.
+    """
+    if workout.get("key_workout_id") or workout.get("fixed_structure"):
+        for key in [k for k in workout if k.startswith("key_workout")]:
+            workout.pop(key, None)
+        workout.pop("fixed_structure", None)
+    rebuild_long_run(workout, distance, pace_zones)
+
+
+def enforce_long_run_progression_floor(
+    workouts: List[Dict[str, Any]],
+    prev_long_run_km: Optional[float],
+    pace_zones: Optional[Dict] = None,
+    tolerance: float = 0.02,
+) -> float:
+    """Stop a loading week's long run regressing below the previous one.
+
+    ``calculate_long_run_distance`` bounds how fast the long run may *grow* but
+    nothing bounds how far it may *fall*, and two mechanisms drop it mid-block
+    (see the section comment above). Neither drop is a legitimate drawdown: the
+    weekly total is still ramping up, so a shrinking long run is a shape fault,
+    not a deload — which is why the envelope harness reads it as a progression
+    fault. The contract and share caps that run after this one still win.
+    """
+    long_w = _resizable_long_run(workouts)
+    if not prev_long_run_km or prev_long_run_km <= 0 or long_w is None:
+        return _running_total_km(workouts)
+    floor = round(prev_long_run_km * (1 - tolerance), 1)
+    if (long_w.get("distance") or 0) < floor:
+        _resize_long_run(long_w, floor, pace_zones)
+    return _running_total_km(workouts)
+
+
+def enforce_contract_long_run_cap(
+    workouts: List[Dict[str, Any]],
+    target_distance: float,
+    experience_level: str,
+    trail_profile=None,
+    pace_zones: Optional[Dict] = None,
+) -> float:
+    """Hold the long run to its contracted cap at the volume actually delivered.
+
+    ``fill_shortfall`` sizes its spill cap from the week's *target*
+    (``weekly_km=total_km``), and ``long_run_cap`` is volume-aware — so a target
+    the layout cannot reach inflates the cap that then governs the delivered
+    long run. Measured: a half-marathon plan targeting 66 km a week delivered 55
+    and carried a 19.8 km long run against a contract cap of 19.0 at the volume
+    it delivered. The surplus is spilled to the easy runs while they have
+    headroom and dropped otherwise, exactly as ``fill_shortfall`` does.
+    """
+    long_w = _resizable_long_run(workouts)
+    if long_w is None:
+        return _running_total_km(workouts)
+    cap = long_run_calculator.long_run_cap(
+        target_distance,
+        experience_level,
+        weekly_km=_running_total_km(workouts),
+        trail_profile=trail_profile,
+    )
+    current = long_w.get("distance") or 0
+    if cap <= 0 or current <= cap + 0.05:
+        return _running_total_km(workouts)
+
+    excess = round(current - cap, 1)
+    _resize_long_run(long_w, cap, pace_zones)
+    easy_runs = [
+        w for w in workouts if w.get("type") == "easy" and (w.get("distance") or 0) > 0
+    ]
+    if easy_runs:
+        limit = easy_run_cap(cap, MAX_EASY_RUN_KM)
+        per_easy = excess / len(easy_runs)
+        for w in easy_runs:
+            set_distance(w, min((w.get("distance") or 0) + per_easy, limit), pace_zones)
+    return _running_total_km(workouts)
+
+
+def enforce_long_run_share_cap(
+    workouts: List[Dict[str, Any]],
+    phase: str,
+    training_terrain: Optional[str] = None,
+    trail_profile=None,
+    max_runs: Optional[int] = None,
+    pace_zones: Optional[Dict] = None,
+) -> float:
+    """Last word on the long run's share of its own week.
+
+    ``enforce_long_run_ratio_cap`` applies the same ceiling earlier, but a
+    pinned long run escapes it (``set_distance`` → ``rebuild_key_workout``
+    restores the prescription) and ``reclamp_quality_to_long_run`` can raise the
+    share afterwards by shrinking the quality day. Applying the ceiling last is
+    what makes it hold. As at low frequency, the excess is *dropped* rather than
+    redistributed: a slightly short week is a better answer than a second long
+    effort.
+    """
+    long_w = _resizable_long_run(workouts)
+    if long_w is None:
+        return _running_total_km(workouts)
+    total = _running_total_km(workouts)
+    if total <= 0:
+        return total
+    ceiling = long_run_calculator.get_weekly_long_run_ratio_cap(
+        phase,
+        trail_profile=trail_profile,
+        training_terrain=training_terrain,
+        max_runs=max_runs,
+    )
+    # Solve against the *rest* of the week, not the pre-clamp total. The excess
+    # is dropped rather than redistributed, so shrinking the long run shrinks the
+    # denominator too: capping the long run at ``ceiling * total`` leaves the
+    # share above the ceiling (measured: 12.4 km against a 6.1 km quality day is
+    # a 0.67 share where 0.60 was asked for). ``L / (L + rest) <= ceiling``
+    # rearranges to ``L <= ceiling * rest / (1 - ceiling)``. The result is
+    # floored to the 0.1 km plans are stored in, because rounding *up* breaches
+    # the ceiling on small weeks (3.7 / 6.1 = 0.607 against 0.60).
+    rest = round(
+        sum(
+            w.get("distance", 0)
+            for w in workouts
+            if w.get("type") not in ("rest", "recovery", "long")
+        ),
+        1,
+    )
+    max_long = _floor_to_100m(ceiling * rest / (1 - ceiling)) if ceiling < 1 else rest
+    if (long_w.get("distance") or 0) > max_long + 0.05:
+        _resize_long_run(long_w, max_long, pace_zones)
+    return _running_total_km(workouts)
+
+
+def _floor_to_100m(value: float) -> float:
+    """Round a distance *down* to the 0.1 km granularity plans are stored in.
+
+    Used for ceilings, not targets: rounding a cap to the nearest 0.1 km can
+    push the result back over it on small weeks (a 2-run week's 3.66 km cap
+    rounds to 3.7, which is 0.607 of a 6.1 km week against a 0.60 ceiling).
+    """
+    return int(value * 10) / 10

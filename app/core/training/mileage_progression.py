@@ -347,6 +347,48 @@ def _trail_run_ceilings(profile: TrailProfile) -> tuple[float, float]:
     return run_ceiling, q_cap
 
 
+def contracted_long_run_slot(
+    target_distance: float,
+    current_km: float,
+    candidate_peak: float,
+    easy_slots: int,
+    q_cap: float,
+    quality_slots: int,
+) -> float:
+    """Capacity of the long-run slot, from the cap the plan is *contracted* to.
+
+    The week's long run is sized by
+    ``long_run_calculator.calculate_long_run_distance`` and clamped by
+    ``long_run_cap`` — the experience-tiered, volume-aware cap the plan actually
+    enforces (18-19 km for a half marathon, not 28). The progression model used
+    to size this slot from a free-standing per-distance table instead, so the
+    modelled target asked for volume the week builder could not place. That
+    over-statement was the residual shortfall the envelope harness measures, and
+    it compounded: ``fill_shortfall`` derives its own spill cap from the same
+    inflated target (``weekly_km=total_km``), so the delivered long run could
+    exceed the contract cap computed at the volume the week actually delivered.
+
+    The cap is volume-aware, so its argument is the week's own total — a fixed
+    point. Two iterations converge: the first evaluates the cap at the total
+    implied by the *static* tier cap, the second at the total that result
+    implies. ``candidate_peak`` bounds the slot, so this only ever tightens the
+    target, never raises it.
+
+    Nothing moves where the static tier cap already binds: below
+    ``base_cap / LONG_RUN_VOLUME_RATIO`` weekly km the volume term cannot exceed
+    the tier cap, so both iterations return it and the slot is the tier value.
+    """
+    from app.core.training.long_run_calculator import long_run_cap
+    from app.core.training.strength_plan import derive_experience_level
+
+    experience = derive_experience_level(current_km)
+    rest = MAX_EASY_RUN_KM * easy_slots + q_cap * quality_slots
+    slot = long_run_cap(target_distance, experience, weekly_km=0.0)
+    for _ in range(2):
+        slot = long_run_cap(target_distance, experience, weekly_km=slot + rest)
+    return min(slot, candidate_peak)
+
+
 def calculate_weekly_progression(
     current_km: float,
     target_distance: float,
@@ -412,34 +454,25 @@ def calculate_weekly_progression(
     if trail_profile is not None:
         run_ceiling, q_cap = _trail_run_ceilings(trail_profile)
     else:
-        _CEILINGS = {5.0: 14.0, 10.0: 22.0, 21.1: 28.0, 30.0: 32.0, 42.2: 38.0}
         _Q_CAPS = {5.0: 5.0, 10.0: 8.0, 21.1: 10.0, 30.0: 12.0, 42.2: 12.0}
-        run_ceiling = _CEILINGS.get(target_distance, target_distance * 0.9)
         q_cap = _Q_CAPS.get(target_distance, 8.0)
-    # NOTE: clamping ``run_ceiling`` down to the experience-tiered long-run cap
-    # was tried here and reverted. It did not reduce the tracked gap set (it
-    # moved cells between ``peak_shortfall`` and ``no_quality_session``) and it
-    # shrank the 2-run target enough that ``resolve_low_budget_quality`` dropped
-    # the quality session — breaking the protected invariant that a 2-run plan
-    # always carries one quality session in build/peak. The real fix for the
-    # target being unreachable at low frequency is workstream C0 (derive the
-    # target from the builder's primitives), not a tighter ceiling guess.
     quality_slots = 1 if max_runs >= 2 else 0
     easy_slots = max(0, max_runs - quality_slots - 1)
     if trail_profile is None:
         # Road: a week is one long run, one quality session, and ``easy_slots``
-        # easy runs. The long run may occupy the generous ``run_ceiling`` (even
-        # a low-frequency runner has ample recovery between sessions for a
-        # substantial long run), but every easy slot is bounded by the absolute
-        # ``MAX_EASY_RUN_KM`` cap that ``fill_shortfall`` enforces. Sizing each
-        # easy slot at ``run_ceiling`` instead — which the 4+ run branch used to
-        # do — over-estimated capacity by ``(run_ceiling - MAX_EASY_RUN_KM) *
+        # easy runs. Every easy slot is bounded by the absolute
+        # ``MAX_EASY_RUN_KM`` cap that ``fill_shortfall`` enforces — sizing each
+        # one at the long run's ceiling instead (which the 4+ run branch used to
+        # do) over-estimated capacity by ``(run_ceiling - MAX_EASY_RUN_KM) *
         # easy_slots`` every week: 0 km for a 5K (the two caps coincide), 16 km
-        # for a 10K, 28 km for a half, 48 km for a 4-run marathon. The plan then
-        # targeted volume the builder could not place, delivered only 65-78% of
-        # it, and — because the shortfall is *dropped* rather than prescribed —
-        # nothing downstream noticed. One formula for every frequency, so the
-        # target reflects what the week can actually hold.
+        # for a 10K, 28 km for a half, 48 km for a 4-run marathon. The long-run
+        # slot is then sized from the cap the plan is actually contracted to
+        # (see ``contracted_long_run_slot``), so the modelled target is what the
+        # week builder can place rather than a free-standing table's guess. One
+        # formula for every frequency.
+        run_ceiling = contracted_long_run_slot(
+            target_distance, current_km, peak_km, easy_slots, q_cap, quality_slots
+        )
         distributable = (
             run_ceiling + MAX_EASY_RUN_KM * easy_slots + q_cap * quality_slots
         )

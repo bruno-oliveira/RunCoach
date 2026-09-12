@@ -18,7 +18,16 @@ from app.contexts.plan.generators.weekly_plan_builder.intensive_weekend import (
     apply_intensive_weekend,
 )
 from app.contexts.plan.generators.workout_scaler import (
+    enforce_contract_long_run_cap as _enforce_contract_long_run_cap,
+)
+from app.contexts.plan.generators.workout_scaler import (
+    enforce_long_run_progression_floor as _enforce_long_run_progression_floor,
+)
+from app.contexts.plan.generators.workout_scaler import (
     enforce_long_run_ratio_cap as _enforce_long_run_ratio_cap,
+)
+from app.contexts.plan.generators.workout_scaler import (
+    enforce_long_run_share_cap as _enforce_long_run_share_cap,
 )
 from app.contexts.plan.generators.workout_scaler import (
     enforce_long_run_time_cap as _enforce_long_run_time_cap,
@@ -510,6 +519,30 @@ def build_weekly_plan(
     # ... and re-fit key quality sessions against the long run's final length,
     # which the ratio/time caps above may have shrunk since overlay time.
     _reclamp_quality_to_long_run(workouts)
+
+    # Final long-run contract, in increasing authority: restore the cross-week
+    # progression shape first, then re-assert the two ceilings the passes above
+    # cannot guarantee on their own — and which ``reclamp_quality_to_long_run``
+    # has just perturbed by shrinking the quality day. Road only; a trail plan's
+    # long days are governed by the bracket cap and the ITW.
+    if trail_profile is None and backyard_profile is None:
+        if not is_recovery:
+            _enforce_long_run_progression_floor(
+                workouts, prev_long_run_km, pace_zones=pace_zones
+            )
+        _enforce_contract_long_run_cap(
+            workouts,
+            target_distance,
+            experience_level,
+            pace_zones=pace_zones,
+        )
+        _enforce_long_run_share_cap(
+            workouts,
+            phase,
+            terrain,
+            max_runs=max_runs_per_week,
+            pace_zones=pace_zones,
+        )
     actual_total_km = round(sum(w.get("distance", 0) for w in workouts), 1)
 
     attach_duration_hints(workouts, pace_zones)

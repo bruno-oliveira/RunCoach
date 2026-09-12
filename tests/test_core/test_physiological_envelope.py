@@ -59,52 +59,39 @@ QUALITY_TYPES = ("tempo", "interval", "hill")
 # kind -> distance -> frequencies where the gap is known to exist today.
 # Every entry is a measured deviation, not a guess.
 KNOWN_GAPS: Dict[str, Dict[float, FrozenSet[int]]] = {
-    # D5 — PARTIALLY FIXED (workstream D). The ratio no longer restarts at a
-    # phase boundary (it used to drop the long run 26-28%, putting the plan's
-    # *longest* run in the base phase). What remains is a smaller wobble from
-    # the phase-boundary week-total step (``MIN_NON_RECOVERY_BUMP`` allows the
-    # ramp to step down ~10%), which the long run follows.
+    # D5 — what is left after the cross-phase ratio floor and the final
+    # progression floor (``workout_scaler.enforce_long_run_progression_floor``).
+    # Every remaining cell is a *2-run* week, where the week is one long run plus
+    # one quality session and the two are pinned against each other: the long run
+    # is capped by the weekly share ceiling and the quality session by
+    # ``MAX_KEY_WORKOUT_VS_LONG_RUN``, so a week whose flexible long run was
+    # inflated to place volume can still sit 12-16 % above the next.
     "long_run_material_drop": {
-        5.0: frozenset({2, 3, 4, 5, 6}),
-        10.0: frozenset({2}),
-        21.1: frozenset({2, 4}),
-        42.2: frozenset({2, 3, 4}),
-    },
-    # FIXED (workstream C) — the long run used to spill to the *hard* ceiling
-    # rather than the contracted cap, so a 5K plan prescribed a 14 km long run
-    # and a marathon 40 km. Now measured against ``long_run_cap`` (the bound the
-    # builder enforces), a handful of cells remain where a prescriptive long-run
-    # overlay slips past the fill-time clamp.
-    "long_run_over_contract_cap": {
-        5.0: frozenset({3}),
-        10.0: frozenset({4}),
-        21.1: frozenset({4, 5}),
-    },
-    # D4 — with 2-3 runs there is nowhere to put the week's volume but the long
-    # run, which is why the low-frequency share cap is deliberately looser than
-    # the published band. At 3 runs this also bites at the half's minimum base,
-    # where the week is small enough that the long run dominates it.
-    "share_over_ceiling": {
         5.0: frozenset({2}),
         10.0: frozenset({2}),
-        21.1: frozenset({2, 3}),
+        21.1: frozenset({2}),
         42.2: frozenset({2}),
     },
-    # C0 — investigated, **not** a code fix. The low-frequency gap is a roughly
-    # *constant fraction* of the target (the week's non-long slots are capped and
-    # the leftover is dropped by design), not a capacity ceiling, so rescaling
-    # the modelled target moves the gap without closing it: at 2 runs it cut
-    # prescribed volume ~25% for no gain. No target is reachable while the week
-    # can only place ~90% of it, so the fix is a product decision about the 2-run
-    # per-slot caps, or accepting the advisory. Two attempts were measured and
-    # reverted: the analytic fixed point (fixes 3 runs, overshoots 2 runs by
-    # ~100%) and probing the builder (lowers prescribed volume without improving
-    # the ratio).
+    # FIXED (workstream C, closed by the contracted slot plus
+    # ``workout_scaler.enforce_contract_long_run_cap``) — the long run used to
+    # spill to the *hard* ceiling rather than the contracted cap, so a 5K plan
+    # prescribed a 14 km long run and a marathon 40 km. One cell remains, at 5
+    # runs on the half, where the pinning overlay's own prescription lands just
+    # past the cap computed at the volume the week delivers.
+    "long_run_over_contract_cap": {
+        21.1: frozenset({5}),
+    },
+    # C0 — the low-frequency remainder, now down to the 5 km-base corridor at
+    # every frequency plus two 2-run cells. Both are corners the product already
+    # explains rather than miscalculations: at a 5 km/week base the plan is
+    # *faithful* to what the runner actually runs (and the frequency advisory
+    # fires), and at 2 runs the week is structurally one long run plus one
+    # quality session. Climbing further means raising that session's ceiling
+    # (``MAX_KEY_WORKOUT_VS_LONG_RUN``) or the 5K minimum base.
     "peak_shortfall": {
         5.0: frozenset({2, 3, 4, 5, 6}),
-        10.0: frozenset({2, 3}),
-        21.1: frozenset({2, 3, 4}),
-        42.2: frozenset({2, 3}),
+        21.1: frozenset({2}),
+        42.2: frozenset({2}),
     },
 }
 

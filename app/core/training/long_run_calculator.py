@@ -243,7 +243,13 @@ def get_weekly_long_run_ratio_cap(
         return 0.65
     if trail_profile is None and max_runs is not None:
         if max_runs <= 2:
-            return 0.62
+            # Aligned with ``physiological_envelope.long_run_share_ceiling``.
+            # At 2 runs the week is one long run plus one other session, so the
+            # long run is legitimately the bigger share — but the generator and
+            # the envelope harness must measure against one number. Two tables
+            # that disagreed by 0.02 (0.62 here, 0.60 there) had the harness
+            # reporting breaches the generator believed it had already capped.
+            return 0.60
         if max_runs == 3:
             return 0.55
     return 0.55
