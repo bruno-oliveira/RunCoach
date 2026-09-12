@@ -157,10 +157,12 @@ def assess_long_run_adequacy(
 # the runner can add a day instead of silently losing established volume.
 FREQUENCY_DETRAINING_THRESHOLD = 0.90
 
-# Only low-frequency schedules are flagged: at 4+ runs/week weekly volume is
-# governed by the race/fitness target and the 10% ramp, not by how much fits
-# into each run.
-FREQUENCY_WARNING_MAX_RUNS = 3
+# Frequency at or below which the per-run caps are the binding constraint on
+# weekly volume. Kept at 6 (the app's maximum) so a high-base runner is told why
+# their plan holds under their base *whatever* frequency they chose: with the
+# absolute ceiling now applied last, a 100 km/week runner asking for a 5K is
+# held near 50 km and used to be told nothing at all.
+FREQUENCY_WARNING_MAX_RUNS = 6
 
 
 def assess_frequency_volume_adequacy(
@@ -203,6 +205,11 @@ def assess_frequency_volume_adequacy(
         "Add a training day (4-5 runs/week) so the same weekly volume spreads "
         "across more, shorter runs — your peak mileage will track your fitness "
         "instead of being capped by how much fits into each run."
+        if max_runs < 5
+        else "You're already running most days, so more volume can't come from "
+        "the plan's layout — the race distance is what caps the peak here. "
+        "Holding a little under your habitual mileage for one block is the "
+        "intended trade-off, not lost fitness."
     )
     return {
         "realized_peak_km": realized_peak_km,
@@ -329,7 +336,27 @@ def calculate_long_run_ratio(
     else:
         progression = 0.0
 
-    ratio = min_ratio + (max_ratio - min_ratio) * progression
+    # The ratio must not restart downward at a phase boundary. ``progression``
+    # is phase-local, so without a floor the build phase opened below where the
+    # base phase finished (marathon: 0.38 -> 0.35) and the *longest run of the
+    # plan* landed in base, then dropped ~28% in the first build week. Carry the
+    # previous phase's closing ratio forward as this phase's floor. Taper is
+    # deliberately exempt — its drawdown is the point.
+    floor = min_ratio
+    if phase in ("build", "peak"):
+        _order = ("base", "build", "peak")
+        previous = _order[_order.index(phase) - 1]
+        if previous in phases:
+            _, previous_max = get_long_run_ratio_range(
+                previous,
+                target_distance,
+                total_weeks,
+                trail_profile=trail_profile,
+                max_runs=max_runs,
+            )
+            floor = min(max_ratio, max(min_ratio, previous_max))
+
+    ratio = floor + (max_ratio - floor) * progression
 
     if is_recovery_week:
         ratio = ratio * 0.85  # Fixed 15% reduction for deterministic recovery
@@ -360,6 +387,27 @@ def _trail_long_run_cap(profile: TrailProfile, experience_level: str) -> float:
     cap = base_cap * multiplier
     cap = max(TRAIL_LR_CAP_MIN_KM, min(TRAIL_LR_CAP_MAX_KM, cap))
     return round(cap, 1)
+
+
+def long_run_cap(
+    target_distance: float,
+    experience_level: str = "intermediate",
+    weekly_km: float = 0,
+    trail_profile: Optional[TrailProfile] = None,
+) -> float:
+    """Public name for the experience-tiered single-long-run cap.
+
+    This is the cap a plan is *contracted* to respect: ``ROAD_LONG_RUN_CAPS`` by
+    experience tier (8 km for a 5K, 34 km for an intermediate marathon), or the
+    bracket curve for trail. ``get_hard_ceiling`` is a separate, looser absolute
+    safety net — it exists so nothing ever prescribes an insane single run, not
+    as a progression target. Callers that redistribute weekly volume into the
+    long run (``workout_scaler.fill_shortfall``) must spill to *this* cap, or a
+    5K plan ends up prescribing a long run 2.8x its race distance.
+    """
+    return _get_long_run_cap(
+        target_distance, experience_level, weekly_km, trail_profile
+    )
 
 
 def _get_long_run_cap(

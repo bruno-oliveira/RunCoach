@@ -31,6 +31,17 @@ _QUALITY_DEMOTE_THRESHOLD_KM = 1.5
 # Workouts shorter than this get an "≈ X min" UX hint alongside the km value.
 _DURATION_HINT_THRESHOLD_KM = 3.0
 
+_QUALITY_TYPES = ("tempo", "interval", "hill")
+
+
+def _is_last_quality_slot(quality_distances: Dict[str, float], qtype: str) -> bool:
+    """True when ``qtype`` is the week's only remaining quality session."""
+    return not any(
+        other != qtype and quality_distances.get(other, 0) > 0
+        for other in _QUALITY_TYPES
+    )
+
+
 _PACE_ZONE_FOR_TYPE = {
     "easy": "E",
     "long": "E",
@@ -150,6 +161,20 @@ def resolve_low_budget_quality(
         )
         if can_afford:
             quality_distances[qtype] = capped_floor
+        elif phase in ("build", "peak") and _is_last_quality_slot(
+            quality_distances, qtype
+        ):
+            # Never strip a build/peak week of its only quality session. A
+            # build/peak week is defined by carrying real intensity: demoting
+            # the last slot leaves easy + long and nothing else, which is not
+            # the training the phase exists for. The session stays at its
+            # (small) budget and the week's volume arithmetic absorbs the
+            # difference — an under-dose quality day still beats no quality day,
+            # which is the rule this function's docstring states and this branch
+            # used to contradict (it only held when an easy run existed to
+            # borrow from, so 2-run and small-base weeks lost intensity
+            # entirely).
+            continue
         elif budget < _QUALITY_DEMOTE_THRESHOLD_KM:
             # True token sliver that can't be grown — demote to easy.
             distribution[qtype] -= 1

@@ -57,6 +57,53 @@ def _viable_run_frequency(current_km: float, max_runs: int) -> int:
     return runs
 
 
+# A delivered peak this far below the modelled target peak is worth a log line.
+# Below it the gap is rounding and per-run cap interaction; above it the model
+# is promising volume the week layout cannot hold at the requested frequency.
+PEAK_TARGET_SHORTFALL_RATIO = 0.85
+
+
+def _log_peak_shortfall(
+    training_plan: List[Dict[str, Any]],
+    weekly_progression: List[float],
+) -> None:
+    """Report when the delivered peak falls materially short of the target.
+
+    The weekly builder drops volume it cannot place inside the per-run caps
+    rather than inflating a run past its ceiling (``workout_scaler.fill_shortfall``),
+    so the delivered peak may legitimately sit under the periodisation target —
+    most often on low-frequency or high-base plans, where the timeline, the
+    long-run ratio and the per-run caps leave no room. The trade-off is
+    intended, but a *material* gap should be visible rather than silent.
+
+    Never mutates the plan and never raises: this is telemetry over a deliberate
+    trade-off, not a guardrail. The fatal check is ``check_plan_structure``.
+    """
+    candidates = [
+        (i, weekly_progression[i])
+        for i, week in enumerate(training_plan)
+        if i < len(weekly_progression)
+        and not week.get("is_recovery")
+        and not week.get("is_race_week")
+    ]
+    if not candidates:
+        return
+    index, target = max(candidates, key=lambda pair: pair[1])
+    if target <= 0:
+        return
+    delivered = training_plan[index].get("total_km") or 0
+    if delivered >= target * PEAK_TARGET_SHORTFALL_RATIO:
+        return
+    logger.warning(
+        "Plan week %s peaks at %.1f km against a %.1f km model target (%.0f%%): "
+        "the week layout cannot place the modelled volume at this frequency",
+        training_plan[index].get("week", index + 1),
+        delivered,
+        target,
+        delivered / target * 100,
+    )
+
+
 class TrainingPlanGenerator:
     def generate_plan(
         self,
@@ -154,6 +201,17 @@ class TrainingPlanGenerator:
             if terrain is not None
             else (trail_profile.elevation_class if trail_profile is not None else None)
         )
+
+        # NOTE: a pass that probed the builder and rescaled the modelled peak to
+        # what it delivered was implemented here and **reverted**. The gap at low
+        # frequency is a roughly *constant fraction* of the target (the week's
+        # non-long slots are capped and the leftover is dropped by design), not a
+        # capacity ceiling — so rescaling the target moved it without changing the
+        # ratio, and at 2 runs it cut prescribed volume ~25% for no gain
+        # (42.2/45base/2r delivered 45.0 -> 33.7 km). Measuring it is still the
+        # right shape of fix; the missing piece is a *product* decision about the
+        # 2-run per-slot caps, because no target is reachable while the week can
+        # only place ~90% of it. See REVAMP_DEEPSEEK.md §11.
 
         training_plan = []
         actual_high_water = current_km
@@ -304,6 +362,12 @@ class TrainingPlanGenerator:
                 pace_zones,
                 trail_profile=trail_profile,
             )
+
+        # Model-vs-builder reconciliation: the builder may legitimately deliver
+        # less than the periodisation model asked for (it drops volume it cannot
+        # place inside the per-run caps rather than inflating a run). Report a
+        # *material* shortfall once per plan instead of letting it pass silently.
+        _log_peak_shortfall(training_plan, weekly_progression)
 
         # Plan-level safety net: catch a week that composed into something
         # unrunnable before it ever reaches the runner. Fatal issues fail the
@@ -636,6 +700,15 @@ def _smooth_taper(
             # Taper the long run down in proportion too (protect_long=False) so a
             # deliberately light race-week isn't left with a dominant long run
             # while its easy runs collapse to the floor.
+            #
+            # Clear the display-only ``duration_min`` hints first: ``scale_down``
+            # skips any workout carrying one, and ``attach_duration_hints`` gives
+            # every run under 3 km one — so on a small week the *only* run left
+            # able to absorb the drawdown was the long run, which then took the
+            # whole scaling and broke the easy-to-long ratio. The hints are
+            # re-attached from the final distances immediately below.
+            for w in workouts:
+                w.pop("duration_min", None)
             _scale_down(workouts, target, pace_zones=pace_zones, protect_long=False)
             weekly_plan["total_km"] = round(
                 sum(w.get("distance", 0) for w in workouts), 1
@@ -672,6 +745,11 @@ def _smooth_recovery_dips(
                 )
                 if weekly_plan["total_km"] > target + 0.05:
                     workouts = weekly_plan["daily_workouts"]
+                    # See the note in ``_smooth_taper``: ``scale_down`` skips
+                    # workouts carrying a display-only ``duration_min`` hint, so
+                    # they must be cleared before the drawdown is distributed.
+                    for w in workouts:
+                        w.pop("duration_min", None)
                     _scale_down(workouts, target, pace_zones=pace_zones)
                     weekly_plan["total_km"] = round(
                         sum(w.get("distance", 0) for w in workouts), 1

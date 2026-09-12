@@ -41,6 +41,34 @@ class TestResolveLowBudgetQuality:
 
     def test_demotes_token_sliver_when_unaffordable(self):
         # A true token sliver (< hard floor) that can't be grown → demote.
+        #
+        # Exercises the base *tempo* slot: base interval / hill slots are
+        # deliberately introductory (strides, short hill sprints) and are skipped
+        # earlier in the function, and a build/peak week now keeps its last
+        # quality slot whatever its size (see the test below).
+        distribution = {"easy": 1, "tempo": 1, "long": 1}
+        quality = {"tempo": 1.2}
+        resolve_low_budget_quality(
+            distribution,
+            quality,
+            remaining_km=4.5,
+            long_run_distance=8.0,
+            target_distance=10.0,
+            phase="base",
+        )
+        assert "tempo" not in quality  # slot dropped
+        assert distribution["tempo"] == 0
+        assert distribution["easy"] == 2  # flowed back to easy
+
+    def test_build_peak_keeps_its_only_quality_slot_however_thin(self):
+        """A build/peak week is never stripped of its last quality session.
+
+        An under-dose quality day beats easy + long and nothing else — the rule
+        this function's docstring states. The demotion branch used to contradict
+        it whenever no easy run existed to borrow from, i.e. on every 2-run plan
+        and every small-base week, so those weeks lost intensity entirely. The
+        sliver stays at its budget instead.
+        """
         distribution = {"easy": 1, "interval": 1, "long": 1}
         quality = {"interval": 1.2}
         resolve_low_budget_quality(
@@ -51,9 +79,8 @@ class TestResolveLowBudgetQuality:
             target_distance=10.0,
             phase="build",
         )
-        assert "interval" not in quality  # slot dropped
-        assert distribution["interval"] == 0
-        assert distribution["easy"] == 2  # flowed back to easy
+        assert quality["interval"] == 1.2  # kept at its (thin) budget
+        assert distribution["interval"] == 1
 
     def test_keeps_modest_session_when_unaffordable(self):
         # Under-dose but above the token floor, with no easy budget to borrow:

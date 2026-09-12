@@ -155,6 +155,15 @@ def get_peak_mileage(
 
     # Never force more than 10% detraining below the runner's current base.
     # A high-base runner targeting a shorter race still needs meaningful volume.
+    #
+    # NOTE: applying the ceiling *after* this floor (making it absolute) was
+    # implemented and reverted. It fixes a real inconsistency — a 200 km/week
+    # base targeted 126 km for a marathon against a documented 100 km ceiling,
+    # and 180 km for a 5K against 50 — but it overrides a deliberate P1 safety
+    # rule (``tests/test_security/test_p1_bugs.py::TestHighBaseDetraining``):
+    # a high-base runner must not be taken more than 10% below what they already
+    # run. The two invariants genuinely conflict, so resolving it is a product
+    # call, not a silent swap. See REVAMP_DEEPSEEK.md §11.
     if current_km > peak:
         peak = max(current_km * 0.90, peak)
 
@@ -407,25 +416,37 @@ def calculate_weekly_progression(
         _Q_CAPS = {5.0: 5.0, 10.0: 8.0, 21.1: 10.0, 30.0: 12.0, 42.2: 12.0}
         run_ceiling = _CEILINGS.get(target_distance, target_distance * 0.9)
         q_cap = _Q_CAPS.get(target_distance, 8.0)
+    # NOTE: clamping ``run_ceiling`` down to the experience-tiered long-run cap
+    # was tried here and reverted. It did not reduce the tracked gap set (it
+    # moved cells between ``peak_shortfall`` and ``no_quality_session``) and it
+    # shrank the 2-run target enough that ``resolve_low_budget_quality`` dropped
+    # the quality session — breaking the protected invariant that a 2-run plan
+    # always carries one quality session in build/peak. The real fix for the
+    # target being unreachable at low frequency is workstream C0 (derive the
+    # target from the builder's primitives), not a tighter ceiling guess.
     quality_slots = 1 if max_runs >= 2 else 0
-    if trail_profile is None and max_runs <= 3:
-        # Low-frequency accuracy: a 2-3 run week is one long run, at most one
-        # easy run, and one quality session. The long run can occupy the
-        # generous ``run_ceiling`` (a low-frequency runner has ample recovery
-        # between sessions for a substantial long run), but the easy slot is
-        # bounded by the absolute easy-run cap and quality by its own cap.
-        # Using ``run_ceiling`` for *every* slot over-estimated capacity, so the
-        # peak target sat above what the week could hold: loading weeks cratered
-        # to their real ceiling while the deload — taken from the inflated
-        # high-water mark — landed *above* them. Sizing the easy/quality slots
-        # at their true caps keeps the peak realistic and the curve monotonic.
-        # Higher-frequency plans keep the generous formula (the absolute
-        # MAX_PEAK_MILEAGE ceiling binds there instead).
-        easy_slots = max(0, max_runs - quality_slots - 1)
+    easy_slots = max(0, max_runs - quality_slots - 1)
+    if trail_profile is None:
+        # Road: a week is one long run, one quality session, and ``easy_slots``
+        # easy runs. The long run may occupy the generous ``run_ceiling`` (even
+        # a low-frequency runner has ample recovery between sessions for a
+        # substantial long run), but every easy slot is bounded by the absolute
+        # ``MAX_EASY_RUN_KM`` cap that ``fill_shortfall`` enforces. Sizing each
+        # easy slot at ``run_ceiling`` instead — which the 4+ run branch used to
+        # do — over-estimated capacity by ``(run_ceiling - MAX_EASY_RUN_KM) *
+        # easy_slots`` every week: 0 km for a 5K (the two caps coincide), 16 km
+        # for a 10K, 28 km for a half, 48 km for a 4-run marathon. The plan then
+        # targeted volume the builder could not place, delivered only 65-78% of
+        # it, and — because the shortfall is *dropped* rather than prescribed —
+        # nothing downstream noticed. One formula for every frequency, so the
+        # target reflects what the week can actually hold.
         distributable = (
             run_ceiling + MAX_EASY_RUN_KM * easy_slots + q_cap * quality_slots
         )
     else:
+        # Trail/ultra easy runs are bounded by the long run itself rather than
+        # by ``MAX_EASY_RUN_KM`` — back-to-back doubles are intentionally long —
+        # so there every non-quality slot may carry up to the run ceiling.
         distributable = run_ceiling * (max_runs - quality_slots) + q_cap * quality_slots
     peak_km = min(peak_km, distributable)
     # Floor the base target at the runner's current volume: when current_km

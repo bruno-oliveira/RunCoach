@@ -309,9 +309,10 @@ def fill_shortfall(
     pace_zones: Optional[Dict] = None,
     trail_profile=None,
     easy_vs_long_ratio: float = MAX_EASY_VS_LONG_RUN,
+    experience_level: Optional[str] = None,
 ) -> float:
     """Fill shortfall by expanding easy runs; reshape long run when its
-    distance must change for safety (hard ceiling) or balance against easy.
+    distance must change for safety (its cap) or balance against easy.
 
     Prescriptive workouts are never expanded — their distance is the
     prescription. Long-run mutations rebuild description + steps via
@@ -324,6 +325,12 @@ def fill_shortfall(
     The long run keeps carrying the week's volume; the overflow the tighter
     easy cap can't hold is dropped, so the week falls slightly short rather
     than prescribing two near-equal long runs (audit G3).
+
+    ``experience_level`` selects the long-run cap the overflow spills into.
+    Without it the looser ``get_hard_ceiling`` is used, which is only a safety
+    net: spilling to it let a 5K plan prescribe a 14 km long run (2.8x race
+    distance) and a marathon plan 40 km, both past the tier the runner's own
+    base puts them in.
     """
     if actual_total_km >= total_km * 0.97 or actual_total_km <= 0:
         actual_total_km = round(sum(w.get("distance", 0) for w in workouts), 1)
@@ -345,15 +352,30 @@ def fill_shortfall(
                     set_distance(w, w["distance"] + share, pace_zones)
 
     hard_ceiling = get_hard_ceiling(target_distance, trail_profile=trail_profile)
+    # The cap the plan is contracted to respect. ``get_hard_ceiling`` is only an
+    # absolute safety net; spilling to it made a 5K plan prescribe a 14 km long
+    # run and a marathon 40 km. Keep the hard ceiling as the outer bound so a
+    # mis-derived tier can never loosen it.
+    spill_cap = hard_ceiling
+    if experience_level:
+        spill_cap = min(
+            hard_ceiling,
+            long_run_calculator.long_run_cap(
+                target_distance,
+                experience_level,
+                weekly_km=total_km,
+                trail_profile=trail_profile,
+            ),
+        )
     long_ws = [
         w for w in workouts if w.get("type") == "long" and w.get("distance", 0) > 0
     ]
     long_w = long_ws[0] if long_ws else None
     long_is_prescriptive = bool(long_w and long_w.get("key_workout_id"))
 
-    if long_w and long_w["distance"] > hard_ceiling and not long_is_prescriptive:
-        excess = round(long_w["distance"] - hard_ceiling, 1)
-        set_distance(long_w, hard_ceiling, pace_zones)
+    if long_w and long_w["distance"] > spill_cap and not long_is_prescriptive:
+        excess = round(long_w["distance"] - spill_cap, 1)
+        set_distance(long_w, spill_cap, pace_zones)
         easy_ws = [
             w for w in workouts if w.get("type") == "easy" and w.get("distance", 0) > 0
         ]
@@ -367,7 +389,7 @@ def fill_shortfall(
 
         # On road plans easy runs are capped at an absolute ceiling so they
         # don't become second long runs; excess volume above the cap spills
-        # into the long run (up to its hard ceiling) and anything beyond that
+        # into the long run (up to its contracted cap) and anything beyond that
         # is dropped — the week falls short rather than prescribing a second
         # long effort (audit G3). Trail back-to-back days are intentionally
         # long, so there the easy run is only bounded by the long run itself.
@@ -383,7 +405,7 @@ def fill_shortfall(
             if w.get("type") == "easy" and w.get("distance", 0) > cap:
                 if not long_is_prescriptive:
                     transferable = w["distance"] - cap
-                    headroom = hard_ceiling - long_d
+                    headroom = spill_cap - long_d
                     transfer = min(transferable, max(0, headroom))
                     if transfer > 0:
                         set_distance(w, w["distance"] - transfer, pace_zones)

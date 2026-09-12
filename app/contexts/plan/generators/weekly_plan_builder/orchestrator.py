@@ -1,5 +1,6 @@
 """Weekly plan orchestration: assemble one week's daily workouts and metadata."""
 
+import logging
 from typing import Any, Dict, List, Optional
 
 from app.contexts.plan.generators.plan_validator import validate_week_plan
@@ -58,6 +59,15 @@ from app.core.training.tuning import (
     QUALITY_PROGRESSION_STEP,
 )
 from app.core.training.vertical_simulation import attach_treadmill_prescriptions
+
+logger = logging.getLogger(__name__)
+
+# A week whose *fixed* slots (a prescriptive long run, the easy runs at their
+# absolute cap, and the quality sessions) can only reach this fraction of the
+# week's target must keep the long run flexible — otherwise the volume the
+# builder cannot place is silently dropped and the week craters. See the
+# volume-carrier guard in ``generate_daily_workouts``.
+PINNED_LONG_RUN_FILL_FLOOR = 0.90
 
 
 def _vertical_simulation_targets(
@@ -291,16 +301,25 @@ def generate_daily_workouts(
             if workout_type in ("tempo", "interval", "hill")
             else None
         )
-        # Volume-carrier guard: when the week has no easy run, the long run is
-        # the only flexible slot that can absorb the week's volume budget.
-        # Overlaying a prescriptive key workout (e.g. a fast-finish long) pins
-        # its distance, so ``fill_shortfall`` has nowhere to place the
-        # remaining km. At low training frequencies (2 runs/week) a quality
-        # session plus a pinned long run collapses build/peak weeks far below
-        # their target — a 30 km/week runner can crater to ~12 km mid-plan.
-        # Keep the long run flexible in that case; the week's dedicated quality
-        # session still supplies the intensity.
-        skip_overlay = workout_type == "long" and easy_runs == 0
+        # Volume-carrier guard: the long run is the only slot left to absorb the
+        # week's volume once the easy runs sit at their cap, and
+        # ``fill_shortfall`` cannot expand a *prescriptive* long run at all
+        # (``is_prescriptive`` is true for anything carrying a ``key_workout_id``).
+        # Overlaying a key long workout therefore pins the week's largest flexible
+        # slot, and whatever the easy runs cannot hold is silently dropped: at
+        # 2-3 runs/week a quality session plus a pinned long run collapses
+        # build/peak weeks far below their target — measured at 49 km against a
+        # 64 km target, and a 30 km/week runner cratering to ~12 km mid-plan.
+        # Keep the long run flexible whenever pinning it would leave the week
+        # materially short of its target; the week's dedicated quality session
+        # still supplies the intensity. A long-run overlay is only affordable
+        # when the easy runs plus the pinned long run can still reach the target.
+        pinned_capacity = (
+            long_run_distance + easy_runs * MAX_EASY_RUN_KM + quality_total
+        )
+        skip_overlay = workout_type == "long" and (
+            easy_runs == 0 or pinned_capacity < total_km * PINNED_LONG_RUN_FILL_FLOOR
+        )
         if not skip_overlay:
             # 0-based count of same-type quality slots already overlaid this
             # week: a second tempo/interval slot must rotate to a different
@@ -474,6 +493,7 @@ def build_weekly_plan(
         pace_zones=pace_zones,
         trail_profile=trail_profile,
         easy_vs_long_ratio=easy_vs_long_ratio,
+        experience_level=experience_level,
     )
     actual_total_km = _enforce_long_run_ratio_cap(
         workouts,
@@ -497,6 +517,23 @@ def build_weekly_plan(
     is_valid, validation_message = validate_week_plan(
         workouts, actual_total_km, total_km, phase
     )
+    # This verdict is a *model-consistency* signal, not a plan-quality one: the
+    # builder deliberately drops volume it cannot place inside the per-run caps
+    # (see ``workout_scaler.fill_shortfall``), so a week can land under the
+    # volume the periodisation model asked for while still being a sound,
+    # runnable week. It is therefore logged per week at DEBUG for diagnosis,
+    # and the *material, plan-level* shortfall is reported once per plan by
+    # ``plan_generator`` — otherwise a real regression would be lost in the
+    # noise of an expected one.
+    if not is_valid:
+        logger.debug(
+            "Week %s (%s): delivered %.1f km against a %.1f km target — %s",
+            week_number,
+            phase,
+            actual_total_km,
+            total_km,
+            validation_message,
+        )
 
     training_tips = workout_builders.generate_training_tips(
         week_number,

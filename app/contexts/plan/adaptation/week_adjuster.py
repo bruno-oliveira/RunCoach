@@ -338,10 +338,29 @@ def _adjust_one_workout(
 ) -> bool:
     """Adjust a single workout's distance in place. Returns True if it changed."""
     if (
-        workout.workout_type == "rest"
+        workout.workout_type == "race"
+        or workout.workout_type == "rest"
         or not workout.distance_km
         or workout.distance_km <= 0
     ):
+        # Race day is set by the event, not by any budget — the same contract
+        # ``workout_scaler.is_prescriptive`` declares for generation. Skipping it
+        # is also load-bearing for correctness: ``_sync_workout_notes_and_steps``
+        # rebuilds the session through ``build_workout``, and the workout
+        # registry has no ``race`` builder, so adjusting race day raised
+        # ``ValueError: Unknown workout_type: race``. Any week-number range that
+        # included the final week — a "scale back the next three weeks" intent
+        # with the race at the end of it — crashed on an unhandled 500.
+        if workout.workout_type == "race":
+            _record_workout(
+                recorder,
+                week_number,
+                workout,
+                workout.distance_km,
+                workout.distance_km,
+                "protected",
+                "race day is set by the event",
+            )
         return False
 
     pd_wo = pd_workout.get((week_number, workout.day_of_week))

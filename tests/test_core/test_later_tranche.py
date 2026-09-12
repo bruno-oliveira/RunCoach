@@ -284,11 +284,31 @@ def test_frequency_quiet_when_volume_holds():
     )
 
 
-def test_frequency_quiet_for_four_plus_runs():
-    # At 4+ runs/week frequency isn't the binding constraint — never warns.
+def test_frequency_advisory_fires_at_four_plus_runs_when_volume_is_held_down():
+    # This used to assert the advisory was silent at 4+ runs/week, on the theory
+    # that frequency stops being the binding constraint there. Frequency isn't
+    # the only reason a plan can land well below a runner's base, though — the
+    # per-run caps and the race's own ceiling do it too — and a 60 km/week runner
+    # was being held at 45 km with nothing said. It fires now, with advice that
+    # adapts to how many days the runner already trains.
+    advisory = long_run_calculator.assess_frequency_volume_adequacy(
+        60.0, 45.0, max_runs=4, weeks=12
+    )
+    assert advisory is not None
+    assert advisory["pct_of_base"] == 75
+    assert "Add a training day" in advisory["suggestion"]
+
+    # At 5-6 runs/week "add a day" is no longer coherent advice.
+    high_frequency = long_run_calculator.assess_frequency_volume_adequacy(
+        60.0, 45.0, max_runs=6, weeks=12
+    )
+    assert high_frequency is not None
+    assert "Add a training day" not in high_frequency["suggestion"]
+
+    # And it stays quiet when the plan does hold the runner's base.
     assert (
         long_run_calculator.assess_frequency_volume_adequacy(
-            60.0, 45.0, max_runs=4, weeks=12
+            60.0, 58.0, max_runs=4, weeks=12
         )
         is None
     )
