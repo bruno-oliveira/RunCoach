@@ -211,7 +211,7 @@ class TrainingPlanGenerator:
         # (42.2/45base/2r delivered 45.0 -> 33.7 km). Measuring it is still the
         # right shape of fix; the missing piece is a *product* decision about the
         # 2-run per-slot caps, because no target is reachable while the week can
-        # only place ~90% of it. See REVAMP_DEEPSEEK.md §11.
+        # only place ~90% of it.
 
         training_plan = []
         actual_high_water = current_km

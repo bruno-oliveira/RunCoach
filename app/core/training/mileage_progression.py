@@ -163,7 +163,7 @@ def get_peak_mileage(
     # rule (``tests/test_security/test_p1_bugs.py::TestHighBaseDetraining``):
     # a high-base runner must not be taken more than 10% below what they already
     # run. The two invariants genuinely conflict, so resolving it is a product
-    # call, not a silent swap. See REVAMP_DEEPSEEK.md §11.
+    # call, not a silent swap.
     if current_km > peak:
         peak = max(current_km * 0.90, peak)
 

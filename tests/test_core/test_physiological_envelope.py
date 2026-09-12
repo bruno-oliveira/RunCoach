@@ -12,9 +12,9 @@ Two tiers, deliberately separated:
   volume past the envelope's upper band.
 * **Tracked gaps** — known, measured deviations pinned per
   ``(distance, runs/week)`` cell and named after the workstream that closes
-  them (see ``REVAMP_DEEPSEEK.md``). The suite fails on any *new* violation, so
-  a regression is caught while the tracked gaps are worked through, and the
-  ``KNOWN_GAPS`` table is the honest inventory of what is still wrong.
+  them. The suite fails on any *new* violation, so a regression is caught while
+  the tracked gaps are worked through, and the ``KNOWN_GAPS`` table is the
+  honest inventory of what is still wrong.
 
 The matrix here is the *accepted* domain — the same bounds the request schema
 and ``DISTANCE_CONSTRAINTS`` allow — not just the happy middle of it.
@@ -57,7 +57,7 @@ QUALITY_TYPES = ("tempo", "interval", "hill")
 
 # --- Tracked gaps -----------------------------------------------------------
 # kind -> distance -> frequencies where the gap is known to exist today.
-# Every entry is a measured deviation, not a guess; see REVAMP_DEEPSEEK.md §3.
+# Every entry is a measured deviation, not a guess.
 KNOWN_GAPS: Dict[str, Dict[float, FrozenSet[int]]] = {
     # D5 — PARTIALLY FIXED (workstream D). The ratio no longer restarts at a
     # phase boundary (it used to drop the long run 26-28%, putting the plan's
@@ -96,8 +96,10 @@ KNOWN_GAPS: Dict[str, Dict[float, FrozenSet[int]]] = {
     # the modelled target moves the gap without closing it: at 2 runs it cut
     # prescribed volume ~25% for no gain. No target is reachable while the week
     # can only place ~90% of it, so the fix is a product decision about the 2-run
-    # per-slot caps, or accepting the advisory. Both failed attempts (analytic
-    # fixed point, builder probe) are recorded in REVAMP_DEEPSEEK.md §11.
+    # per-slot caps, or accepting the advisory. Two attempts were measured and
+    # reverted: the analytic fixed point (fixes 3 runs, overshoots 2 runs by
+    # ~100%) and probing the builder (lowers prescribed volume without improving
+    # the ratio).
     "peak_shortfall": {
         5.0: frozenset({2, 3, 4, 5, 6}),
         10.0: frozenset({2, 3}),
@@ -355,7 +357,8 @@ def test_no_new_envelope_violations():
     assert not unexpected, (
         f"{len(unexpected)} untracked envelope violation(s):\n  "
         + "\n  ".join(unexpected[:40])
-        + f"\n({tracked_cells} tracked gap cells remain — see REVAMP_DEEPSEEK.md)"
+        + f"\n({tracked_cells} tracked gap cells remain — add them to KNOWN_GAPS "
+        "with the change that will close them, or fix them)"
     )
 
 
