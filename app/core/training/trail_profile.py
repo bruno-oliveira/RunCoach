@@ -149,7 +149,12 @@ def is_trail_target(
 # floors that scale with race demands. Brackets defined above.
 
 _BRACKET_MIN_WEEKS = {
-    "short": 5,
+    # 6, not 5: ``phase_calculator.MIN_WEEKS_FOR_PHASES`` refuses anything
+    # shorter (a 5-week plan cannot hold base + build + peak + taper without
+    # collapsing a phase), so a 5 here meant ``PlanRequest`` accepted a request
+    # the generator then threw on. Matches the road 5K/10K floor, which is the
+    # same distance range.
+    "short": 6,
     "standard": 6,
     "ultra": 12,
     "long_ultra": 16,

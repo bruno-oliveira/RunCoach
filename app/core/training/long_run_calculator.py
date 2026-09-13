@@ -405,11 +405,13 @@ def long_run_cap(
 
     This is the cap a plan is *contracted* to respect: ``ROAD_LONG_RUN_CAPS`` by
     experience tier (8 km for a 5K, 34 km for an intermediate marathon), or the
-    bracket curve for trail. ``get_hard_ceiling`` is a separate, looser absolute
-    safety net — it exists so nothing ever prescribes an insane single run, not
-    as a progression target. Callers that redistribute weekly volume into the
-    long run (``workout_scaler.fill_shortfall``) must spill to *this* cap, or a
-    5K plan ends up prescribing a long run 2.8x its race distance.
+    bracket curve for trail. ``get_hard_ceiling`` is the absolute backstop — it
+    exists so nothing ever prescribes an insane single run, not as a progression
+    target. For trail the two are not independent any more: the curve is clamped
+    to the bracket's hard ceiling, so this cap can never exceed it. Callers that
+    redistribute weekly volume into the long run
+    (``workout_scaler.fill_shortfall``) must spill to *this* cap, or a 5K plan
+    ends up prescribing a long run 2.8x its race distance.
     """
     return _get_long_run_cap(
         target_distance, experience_level, weekly_km, trail_profile
@@ -427,13 +429,20 @@ def _get_long_run_cap(
     When weekly volume is high enough that the static cap would prevent
     filling target volume, the cap scales up to a hard ceiling. Trail /
     ultra plans use a bracket-aware cap that scales with race distance,
-    topping out around 46 km for 100-mile prep.
+    clamped to the bracket ceiling — so it tops out at 38 km in the
+    ``ultra`` bracket (42.2-80 km races) and 42 km in ``long_ultra``
+    (80-163 km).
     """
     if trail_profile is not None:
-        # Bracket cap is authoritative for trail. Weekly volume can't push
-        # above it — additional long-day load belongs in back-to-back doubles
-        # rather than ever-bigger single runs.
-        return _trail_long_run_cap(trail_profile, experience_level)
+        # Bracket cap is authoritative for trail, and the curve is clamped to
+        # the bracket's hard ceiling. Weekly volume can't push above it —
+        # additional long-day load belongs in back-to-back doubles rather than
+        # ever-bigger single runs. The clamp is what keeps
+        # ``_trail_long_run_cap``'s curve and ``get_hard_ceiling``'s contract
+        # from drifting apart: they used to disagree by up to 10 km, and the
+        # generator prescribed to the looser of the two.
+        curve = _trail_long_run_cap(trail_profile, experience_level)
+        return min(curve, get_hard_ceiling(target_distance, trail_profile))
 
     tier = ROAD_LONG_RUN_CAPS.get(target_distance)
     if tier:

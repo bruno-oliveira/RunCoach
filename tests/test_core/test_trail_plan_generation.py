@@ -196,12 +196,12 @@ class TestLongRunCap:
 
     def test_long_ultra_cap_scales_up_but_stays_bounded(self):
         # 100-mile prep gets a genuinely long peak run, but the continuous
-        # curve is clamped at the absolute ceiling (48 km).
+        # curve is clamped to the long_ultra bracket ceiling (42 km).
         profile = classify_trail(163.0, 6000.0)
         cap = _get_long_run_cap(
             163.0, "advanced", weekly_km=120.0, trail_profile=profile
         )
-        assert 40.0 <= cap <= 48.0
+        assert 40.0 <= cap <= 42.0
 
     def test_cap_scales_continuously_with_distance(self):
         # A longer race earns a longer single-run cap, all else equal.
@@ -303,8 +303,8 @@ class TestEndToEnd:
         ]
         max_long = max(w["distance"] for w in long_runs)
         # 100-mile prep earns a long peak run, but the continuous cap is
-        # clamped at the 48 km absolute ceiling.
-        assert max_long <= 48.0, f"Single long run was {max_long} km — cap blown"
+        # clamped to the long_ultra bracket ceiling (42 km).
+        assert max_long <= 42.0, f"Single long run was {max_long} km — cap blown"
         assert max_long >= 38.0, (
             f"Single long run was only {max_long} km — should scale up for 100mi"
         )
@@ -437,9 +437,10 @@ class TestPeakLongRunRaceFraction:
             experience_level="advanced",
             trail_profile=profile,
         )
-        # 100-mile prep: the continuous cap is clamped at 48 km, so even a
-        # 120 km/wk runner's long run tops out at the ceiling.
-        assert peak_lr <= 48.0
+        # 100-mile prep: the continuous cap is clamped to the long_ultra
+        # bracket ceiling (42 km), so even a 120 km/wk runner's long run tops
+        # out there.
+        assert peak_lr <= 42.0
 
     def test_flat_training_peak_can_reach_85_percent_for_28k(self):
         profile = classify_trail(28.0, 1050.0)

@@ -13,13 +13,21 @@ LONG_RUN_HARD_CEILINGS: Dict[float, float] = {
 DEFAULT_HARD_CEILING_RATIO = 0.9
 
 # Trail / ultra hard ceilings by bracket. The single long run plateaus at
-# ~38 km even for 100-mile prep — the rest of the long-day volume goes into
+# ~42 km even for 100-mile prep — the rest of the long-day volume goes into
 # back-to-back doubles, not a single 50 km grind.
+#
+# These are the *outer bound* on a single long day, and they must stay above
+# ``long_run_calculator._trail_long_run_cap`` — the curve a plan is contracted
+# to. They did not: the curve reached 48 km for 100-mile prep against a 38 km
+# ceiling here, so the "safety net" was tighter than the cap it was bounding and
+# the generator prescribed straight past it. The two met in the middle at 38/42,
+# and ``_get_long_run_cap`` now clamps the curve to the bracket value, so the
+# pair cannot drift apart again.
 _TRAIL_HARD_CEILINGS: Dict[str, float] = {
     "short": 20.0,
     "standard": 32.0,
-    "ultra": 36.0,
-    "long_ultra": 38.0,
+    "ultra": 38.0,
+    "long_ultra": 42.0,
 }
 
 

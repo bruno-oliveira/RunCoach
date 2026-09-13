@@ -226,10 +226,16 @@ ROAD_LONG_RUN_CAPS = {
 #     cap_km(d) = TRAIL_LR_CAP_LOG_A * ln(d) + TRAIL_LR_CAP_LOG_B
 #
 # tuned so an intermediate runner gets ~16 km @ 15 km, ~25 km @ 30 km,
-# ~32 km @ 55 km, ~40 km @ 100 km, and ~46 km @ 160 km. The fraction of race
-# distance necessarily falls as the race grows — nobody runs a whole 100-miler
-# in training — and the remaining long-day load comes from back-to-back doubles
-# (the Intensive Training Weekend), not one ever-bigger grind.
+# ~32 km @ 55 km, ~40 km @ 100 km. The fraction of race distance necessarily
+# falls as the race grows — nobody runs a whole 100-miler in training — and the
+# remaining long-day load comes from back-to-back doubles (the Intensive
+# Training Weekend), not one ever-bigger grind.
+#
+# The curve is *not* the last word: ``_get_long_run_cap`` clamps it to the
+# bracket's ``_TRAIL_HARD_CEILINGS`` value, which is the outer bound the rest of
+# the engine (``workout_scaler.fill_shortfall``) already treats as binding. The
+# absolute clamp below is only a backstop; the per-bracket clamp is what makes
+# the contract hold.
 TRAIL_LR_CAP_LOG_A = 12.67
 TRAIL_LR_CAP_LOG_B = -18.3
 
@@ -237,7 +243,10 @@ TRAIL_LR_CAP_LOG_B = -18.3
 # applied to the curve so beginners stay conservative and advanced runners get
 # a longer peak run.
 TRAIL_LR_CAP_MIN_KM = 12.0
-TRAIL_LR_CAP_MAX_KM = 48.0
+# Matches the highest per-bracket ceiling, so the curve's own bound and the
+# bracket bound agree instead of advertising a 48 km single run that no bracket
+# permits.
+TRAIL_LR_CAP_MAX_KM = 42.0
 TRAIL_LR_CAP_EXPERIENCE = {
     "beginner": 0.90,
     "intermediate": 1.0,

@@ -6,6 +6,7 @@ from typing import Any, Dict, List, Optional
 from app.contexts.plan.generators.plan_validator import validate_week_plan
 from app.contexts.plan.generators.weekly_plan_builder.backyard_week import (
     apply_backyard_week,
+    weekend_budget_km,
 )
 from app.contexts.plan.generators.weekly_plan_builder.budget import (
     allocate_easy_distances,
@@ -455,8 +456,17 @@ def build_weekly_plan(
             (w.get("distance") or 0 for w in workouts if w.get("type") == "long"),
             default=0.0,
         )
+        # The weekend and the rest of the week come out of one budget. Sized
+        # against the whole week at a 70 % share, the simulation crowded the
+        # easy runs out entirely on marginal plans — a 40 km week reached 44 km
+        # with two 0.0 km "easy" cards left behind and a 23 % jump. Sized
+        # against what is left after everything else has taken its *floor*, the
+        # weekend is funded from the week's slack instead: the midweek work
+        # keeps a real distance and the weekend still gets its room.
+        other_floor_km = weekend_budget_km(workouts)
+        simulation_budget = max(0.0, total_km - other_floor_km)
         simulation = (
-            fit_simulation_to_week(scheduled, total_km, displaced_long_km)
+            fit_simulation_to_week(scheduled, simulation_budget, displaced_long_km)
             if scheduled is not None and not is_recovery
             else None
         )

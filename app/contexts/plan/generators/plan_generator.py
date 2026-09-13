@@ -43,6 +43,13 @@ MIN_VIABLE_RUN_KM = 2.5
 # session, and an easy run, so frequency is never reduced below this.
 MIN_RUNNING_DAYS = 3
 
+# How far the 10 % weekly cap may shrink a flexible session before it stops.
+# A ratio rather than an absolute distance: an absolute floor disables the cap
+# on the low-base high-frequency plans that sit *at* that floor, while a ratio
+# can never reach zero — so the cap keeps working and no session is ever
+# deleted into a 0.0 km card.
+FLEXIBLE_TRIM_FLOOR_RATIO = 0.5
+
 
 def _viable_run_frequency(current_km: float, max_runs: int) -> int:
     """Reduce running frequency when the weekly budget can't fill every run.
@@ -283,18 +290,38 @@ class TrainingPlanGenerator:
                     if flexible and flexible_km > 0 and target_flexible < flexible_km:
                         scale = target_flexible / flexible_km
                         for w in flexible:
-                            _set_distance(w, w["distance"] * scale, pace_zones)
+                            scaled = w["distance"] * scale
+                            # The cap may shrink a session; it may not delete
+                            # one. When the week's *prescriptive* content
+                            # already exceeds the ceiling this target lands at
+                            # zero, and scaling to it left the runner a 0.0 km
+                            # "easy" card on the calendar while the week still
+                            # jumped 23 % — the worst of both.
+                            #
+                            # A ratio, not an absolute floor. An absolute
+                            # ``MIN_VIABLE_RUN_KM`` floor also stopped the cap
+                            # trimming *ordinary* weeks, because a low-base
+                            # high-frequency plan already sits at 2.5 km a run:
+                            # it let a trail plan sit at 12.04 %/week against
+                            # the 10 % the cap allows. A ratio can never reach
+                            # zero, so it fixes the deletion without disabling
+                            # the cap.
+                            floor = w["distance"] * FLEXIBLE_TRIM_FLOOR_RATIO
+                            _set_distance(w, max(floor, scaled), pace_zones)
                     # If rounding still leaves a tiny overage, trim from the
-                    # largest flexible workout to respect the 10% cap.
+                    # largest flexible workout to respect the 10% cap — stopping
+                    # at the floor rather than shaving a session away.
                     new_total_exact = sum(
                         w.get("distance", 0) for w in weekly_plan["daily_workouts"]
                     )
                     if new_total_exact > ceiling + 0.01 and flexible:
                         largest = max(flexible, key=lambda w: w.get("distance", 0))
                         trim = new_total_exact - ceiling
+                        current = largest.get("distance", 0)
+                        trim_floor = current * FLEXIBLE_TRIM_FLOOR_RATIO
                         _set_distance(
                             largest,
-                            max(0.1, largest.get("distance", 0) - trim),
+                            max(trim_floor, current - trim),
                             pace_zones,
                         )
                     new_total = round(

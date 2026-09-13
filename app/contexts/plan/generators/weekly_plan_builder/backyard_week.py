@@ -27,6 +27,7 @@ from typing import Any, Dict, List, Optional
 from app.contexts.plan.generators.weekly_plan_builder.budget import (
     build_workout_for_type,
 )
+from app.contexts.plan.generators.workout_scaler import is_prescriptive
 from app.core.training import workout_builders
 from app.core.training.backyard_profile import BackyardProfile
 from app.core.training.backyard_simulation import LoopSimulation
@@ -296,6 +297,53 @@ def _replace_day(
     workouts.sort(key=lambda w: w.get("day", 0))
 
 
+def non_long_running_km(workouts: List[Dict[str, Any]]) -> float:
+    """Weekly volume already claimed by everything except the long-day slot.
+
+    The long weekend and the rest of the week draw on one budget. Sizing the
+    simulation against the whole week ignores that, and funded the weekend out
+    of money the midweek sessions had already spent — which is how a 40 km week
+    reached 44 km with two 0.0 km "easy" cards left behind.
+    """
+    return round(
+        sum(
+            (w.get("distance") or 0)
+            for w in workouts
+            if w.get("type") not in ("rest", "recovery", "long")
+        ),
+        1,
+    )
+
+
+# The least a flexible session can be squeezed to before it stops being a
+# session at all. Mirrors ``plan_generator.MIN_VIABLE_RUN_KM``.
+_MIN_SESSION_KM = 2.5
+
+
+def weekend_budget_km(workouts: List[Dict[str, Any]]) -> float:
+    """Least volume the week's non-long sessions can be squeezed to.
+
+    Prescriptive sessions count in full — their distance is authored, and their
+    steps and prose describe it, so the week-budget passes cannot shrink them.
+    Flexible ones count at the floor a session can drop to without becoming a
+    token.
+
+    The simulation is sized against this rather than against the week's whole
+    total, so the weekend is funded from the week's *slack*: the midweek work
+    keeps a real distance, the easy runs never collapse to 0.0 km, and the
+    weekend still gets the room the format needs. Where even that is not enough,
+    ``fit_simulation_to_week`` drops rungs — the documented veto — rather than
+    blowing the week's progression open.
+    """
+    total = 0.0
+    for w in workouts:
+        if w.get("type") in ("rest", "recovery", "long"):
+            continue
+        distance = w.get("distance") or 0
+        total += distance if is_prescriptive(w) else min(distance, _MIN_SESSION_KM)
+    return round(total, 1)
+
+
 def _apply_simulation(
     workouts: List[Dict[str, Any]],
     simulation: LoopSimulation,
@@ -328,7 +376,12 @@ def _apply_simulation(
             workouts, _SECOND_DAY, workout_builders.generate_rest_day(_SECOND_DAY)
         )
     else:
-        headroom = total_km - simulation.distance_km
+        # Only what is *left* funds the second long day. The weekend's second
+        # half is the last thing in the week to be paid for, not the first: a
+        # headroom measured against the simulation alone ignored the midweek
+        # quality and easy work that share the same budget, and bought a second
+        # long day the week could not afford.
+        headroom = total_km - simulation.distance_km - non_long_running_km(workouts)
         if headroom >= profile.loop_km * _SECOND_DAY_HEADROOM_FACTOR:
             two_loops_affordable = (
                 headroom
