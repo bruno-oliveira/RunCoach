@@ -1,0 +1,383 @@
+/* =============================================================================
+   RunCoach — Mobile App Shell
+
+   The layer that makes the browser on a phone feel like an installed app:
+   a persistent bottom tab bar, a compact translucent app bar, bottom-sheet
+   modals, safe-area insets, snackbar-style toasts and touch-first feedback.
+
+   This file is loaded LAST, after every page stylesheet (see base.html), so
+   its plain rules win over page-level ones at equal specificity. Everything
+   structural is gated behind `max-width: 768px` — the same breakpoint nav.css
+   uses — so the desktop layout is untouched. The only rules outside that
+   query are the touch-feedback ones, which are no-ops with a mouse.
+   ========================================================================= */
+
+:root {
+  /* Height of the tab bar's own row, excluding the home-indicator inset. */
+  --tab-bar-height: 54px;
+  /* What bottom-anchored UI must clear: the bar plus the device inset. */
+  --tab-bar-total: calc(var(--tab-bar-height) + env(safe-area-inset-bottom, 0px));
+  /* Compact top app bar on phones. */
+  --app-bar-height: 54px;
+  --sheet-radius: 20px;
+  --sheet-max-height: 90dvh;
+}
+
+/* ---------------------------------------------------------------------------
+   1. Touch feedback
+   A tap-highlight rectangle is the single strongest "this is a web page"
+   signal, so it goes everywhere. `touch-action: manipulation` drops the
+   300ms double-tap-zoom wait on every control.
+   --------------------------------------------------------------------------- */
+html {
+  -webkit-tap-highlight-color: transparent;
+}
+
+a,
+button,
+[role="button"],
+label,
+summary,
+select,
+.tab-item {
+  touch-action: manipulation;
+}
+
+/* Horizontal rails: momentum scrolling and no visible scrollbar, like a
+   native carousel. */
+@media (max-width: 768px) {
+  .week-rail,
+  .week-day-rail,
+  [class*="rail"],
+  [class*="carousel"] {
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+
+  .week-rail::-webkit-scrollbar,
+  .week-day-rail::-webkit-scrollbar,
+  [class*="rail"]::-webkit-scrollbar,
+  [class*="carousel"]::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+/* ---------------------------------------------------------------------------
+   2. Compact app bar
+   A phone app bar is shorter and tighter than the desktop navbar, and stays
+   translucent so content scrolling underneath reads as depth.
+   --------------------------------------------------------------------------- */
+@media (max-width: 768px) {
+  .nav-container {
+    height: var(--app-bar-height);
+    padding: 0 var(--space-4);
+  }
+
+  .nav-brand {
+    gap: var(--space-2);
+  }
+
+  .nav-brand-mark {
+    width: 28px;
+    height: 28px;
+    font-size: var(--text-sm);
+  }
+
+  .nav-brand-text {
+    font-size: var(--text-lg);
+  }
+
+  .nav-toggle {
+    min-width: 40px;
+    min-height: 40px;
+  }
+}
+
+/* ---------------------------------------------------------------------------
+   3. Bottom tab bar
+   The navigation itself. Hidden on desktop, and on any page that opts out
+   with an empty `{% block tabbar %}{% endblock %}`.
+   --------------------------------------------------------------------------- */
+.tab-bar {
+  display: none;
+}
+
+@media (max-width: 768px) {
+  .tab-bar {
+    display: block;
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: var(--z-sticky);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+    background: rgba(250, 250, 247, 0.9);
+    -webkit-backdrop-filter: blur(16px) saturate(180%);
+    backdrop-filter: blur(16px) saturate(180%);
+    border-top: 1px solid var(--color-border-subtle);
+    /* Own compositing layer: the bar must not repaint as content scrolls. */
+    transform: translateZ(0);
+  }
+
+  [data-theme="dark"] .tab-bar {
+    background: rgba(15, 14, 19, 0.94);
+    border-top-color: var(--color-border);
+  }
+
+  .tab-bar-list {
+    display: flex;
+    align-items: stretch;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .tab-bar-list > li {
+    flex: 1 1 0;
+    min-width: 0;
+    display: flex;
+  }
+
+  .tab-item {
+    position: relative;
+    flex: 1 1 0;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 3px;
+    min-height: 48px;
+    padding: 7px 2px 5px;
+    border: 0;
+    background: none;
+    color: var(--color-text-muted);
+    font-family: var(--font-body);
+    font-size: 0.6875rem; /* 11px — the iOS tab-label size */
+    font-weight: var(--weight-semibold);
+    line-height: 1.1;
+    letter-spacing: 0.01em;
+    text-align: center;
+    cursor: pointer;
+    transition: color var(--duration-fast) var(--ease-out);
+  }
+
+  .tab-icon {
+    display: block;
+    flex-shrink: 0;
+    width: 24px;
+    height: 24px;
+  }
+
+  .tab-label {
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .tab-item.is-active {
+    color: var(--color-primary);
+  }
+
+  /* Hairline indicator over the active tab, as in a native tab bar. */
+  .tab-item.is-active::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 22px;
+    height: 2px;
+    border-radius: 0 0 var(--radius-full) var(--radius-full);
+    background: var(--color-primary);
+  }
+
+  .tab-item:active {
+    color: var(--color-text);
+    transform: scale(0.94);
+  }
+
+  .tab-item.is-active:active {
+    color: var(--color-primary);
+  }
+}
+
+/* ---------------------------------------------------------------------------
+   4. Clearance
+   Nothing may hide behind the tab bar: the page gets bottom padding, and
+   every bottom-anchored surface is lifted clear of the bar.
+   --------------------------------------------------------------------------- */
+@media (max-width: 768px) {
+  body {
+    padding-bottom: var(--tab-bar-total);
+  }
+
+  .cookie-consent {
+    bottom: var(--tab-bar-total);
+  }
+
+  /* Snackbars, toasts and the floating scroll-to-top button. */
+  .adapt-toast-host,
+  .share-toast,
+  .race-predictions-toast,
+  .scroll-to-top {
+    bottom: calc(var(--tab-bar-total) + var(--space-4));
+  }
+
+  /* The global toast stack moves from the top-right corner — cramped on a
+     phone, and tucked under the app bar — to a full-width snackbar above
+     the tabs, matching every other toast in the app. */
+  .toast-container {
+    top: auto;
+    bottom: calc(var(--tab-bar-total) + var(--space-4));
+    left: var(--space-4);
+    right: var(--space-4);
+    align-items: stretch;
+  }
+
+  .toast {
+    width: 100%;
+    min-width: 0;
+    max-width: none;
+  }
+}
+
+/* ---------------------------------------------------------------------------
+   5. Modals become bottom sheets
+   Six modal families exist (components.css, the components/modal.html macro,
+   plan-modal.css, plan-change-summary.css, performance.css, share.css) plus
+   the settings overlay. Rather than re-implement each, they are all anchored
+   to the bottom edge on phones and shaped like a sheet.
+
+   Visibility differs per family, so the rules below name only the class that
+   is added on open — never a container's resting state, or a closed modal
+   would render.
+   --------------------------------------------------------------------------- */
+@media (max-width: 768px) {
+  .modal.is-open,
+  .modal-overlay.active,
+  .modal-overlay.is-open,
+  .settings-overlay.is-open,
+  .perf-modal,
+  .share-modal {
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+  }
+
+  .modal,
+  .settings-overlay {
+    padding: 0;
+  }
+
+  .modal-content,
+  .modal-overlay .modal,
+  .change-plan-modal .modal,
+  .settings-modal,
+  .share-modal-panel {
+    width: 100%;
+    max-width: 100%;
+    max-height: var(--sheet-max-height);
+    margin: 0;
+    border-radius: var(--sheet-radius) var(--sheet-radius) 0 0;
+    border-bottom: 0;
+    /* Sheets own the home-indicator area. */
+    padding-bottom: max(var(--space-4), env(safe-area-inset-bottom, 0px));
+    animation: sheet-up var(--duration-slow) var(--ease-out);
+  }
+
+  /* Grab handle — the affordance that says "drag me down". A flex child
+     rather than an absolutely positioned bar, so it cannot overlap a sheet
+     header that carries its own padding. */
+  .modal-content::before,
+  .modal-overlay .modal::before,
+  .change-plan-modal .modal::before,
+  .settings-modal::before,
+  .share-modal-panel::before {
+    content: "";
+    display: block;
+    flex-shrink: 0;
+    width: 36px;
+    height: 4px;
+    margin: 8px auto;
+    border-radius: var(--radius-full);
+    background: var(--color-border);
+  }
+}
+
+@keyframes sheet-up {
+  from {
+    transform: translateY(100%);
+    opacity: 0.6;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .modal-content,
+  .modal-overlay .modal,
+  .change-plan-modal .modal,
+  .settings-modal,
+  .share-modal-panel {
+    animation: none;
+  }
+}
+
+/* ---------------------------------------------------------------------------
+   6. Content rhythm on a phone
+   --------------------------------------------------------------------------- */
+@media (max-width: 768px) {
+  .container {
+    padding-inline: var(--space-4);
+  }
+
+  .site-footer {
+    margin-top: var(--space-10);
+    padding-bottom: var(--space-4);
+  }
+
+  .footer-inner {
+    flex-direction: column;
+    gap: var(--space-3);
+    text-align: center;
+  }
+}
+
+/* Viewport units: `vh` on a phone is the *tallest* the viewport ever gets, so
+   a hero sized with it always overflows behind the browser chrome and the tab
+   bar. `svh` (the smallest) keeps the first screen whole. */
+@media (max-width: 768px) {
+  .hero {
+    min-height: calc(100svh - var(--app-bar-height) - var(--tab-bar-total));
+    padding-top: var(--space-8);
+    padding-bottom: var(--space-12);
+  }
+
+  .tips-page,
+  .setup-page {
+    min-height: calc(100svh - var(--app-bar-height) - var(--tab-bar-total));
+  }
+}
+
+/* ---------------------------------------------------------------------------
+   7. Installed (standalone) mode
+   Launched from the home screen there is no browser chrome, so pull-to-
+   refresh and rubber-banding just look like a bug.
+   --------------------------------------------------------------------------- */
+@media (display-mode: standalone), (display-mode: fullscreen) {
+  html,
+  body {
+    overscroll-behavior-y: none;
+  }
+}
+
+/* iOS Safari reports standalone through navigator.standalone rather than
+   display-mode; the inline bootstrap in base.html mirrors that onto <html>. */
+html.is-standalone,
+html.is-standalone body {
+  overscroll-behavior-y: none;
+}

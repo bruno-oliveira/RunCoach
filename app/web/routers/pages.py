@@ -3,7 +3,7 @@
 from typing import Optional
 
 from fastapi import APIRouter, Depends, Query, Request
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, JSONResponse
 from sqlalchemy.orm import Session
 
 from app.contexts.nutrition.nutrition_content import (
@@ -112,4 +112,59 @@ def privacy_policy(
             "user": current_user,
             "google_client_id": settings.google_client_id or "",
         },
+    )
+
+
+@router.get("/manifest.webmanifest", include_in_schema=False)
+def web_manifest() -> JSONResponse:
+    """The web app manifest — what makes RunCoach installable to a home screen.
+
+    Served from a route rather than dropped in the static tree for two
+    reasons. The content type has to be exactly ``application/manifest+json``
+    (the global ``X-Content-Type-Options: nosniff`` header means a guessed
+    type would make the browser refuse the manifest outright), and the
+    manifest must not be cached behind a content hash while the icons it
+    points at legitimately are.
+
+    ``start_url`` is the plain root on purpose: every other surface is one
+    more thing that can be stale in a cold launch.
+    """
+    return JSONResponse(
+        {
+            "name": "RunCoach",
+            "short_name": "RunCoach",
+            "description": (
+                "Personalised running plans that adapt to what you actually run."
+            ),
+            "start_url": "/",
+            "scope": "/",
+            "display": "standalone",
+            "background_color": "#FBFBFA",
+            "theme_color": "#0E7C5A",
+            "icons": [
+                {
+                    "src": "/static/icons/icon-192.png",
+                    "sizes": "192x192",
+                    "type": "image/png",
+                },
+                {
+                    "src": "/static/icons/icon-512.png",
+                    "sizes": "512x512",
+                    "type": "image/png",
+                },
+                {
+                    "src": "/static/icons/icon-maskable-512.png",
+                    "sizes": "512x512",
+                    "type": "image/png",
+                    "purpose": "maskable",
+                },
+            ],
+            # Long-press the home-screen icon and these are the next steps.
+            "shortcuts": [
+                {"name": "My plans", "url": "/my-plans"},
+                {"name": "Coach", "url": "/analytics"},
+                {"name": "Recipes", "url": "/recipes"},
+            ],
+        },
+        media_type="application/manifest+json",
     )

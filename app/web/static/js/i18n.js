@@ -43,6 +43,10 @@ window.RC_I18N = (function () {
             'nav.connection':         'Connection',
             'nav.sign_in_google':     'Sign in with Google',
 
+            /* ── Bottom tab bar ── */
+            'tab.more':               'More',
+            'tab.sign_in':            'Sign in',
+
             /* ── Settings modal ── */
             'settings.title':         'Settings',
             'settings.auto_label':    'Apply weekly adjustments automatically',
@@ -659,6 +663,10 @@ window.RC_I18N = (function () {
             'nav.fetch_older':        'Buscar corridas anteriores',
             'nav.connection':         'Ligação',
             'nav.sign_in_google':     'Entrar com Google',
+
+            /* ── Bottom tab bar ── */
+            'tab.more':               'Mais',
+            'tab.sign_in':            'Entrar',
 
             /* ── Settings modal ── */
             'settings.title':         'Definições',

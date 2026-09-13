@@ -4,6 +4,21 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <meta http-equiv="Cross-Origin-Opener-Policy" content="same-origin-allow-popups">
+
+    <!-- Installable app: own window, home-screen icon, themed status bar -->
+    <meta name="theme-color" content="#FBFBFA">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="RunCoach">
+    <!-- iOS auto-links anything that looks like a phone number, and a training
+         app is full of numbers that must not become tel: links. -->
+    <meta name="format-detection" content="telephone=no">
+    <link rel="manifest" href="/manifest.webmanifest">
+    <link rel="icon" href="{{ static_url('icons/favicon.ico') }}" sizes="any">
+    <link rel="icon" type="image/png" href="{{ static_url('icons/icon-192.png') }}">
+    <link rel="apple-touch-icon" href="{{ static_url('icons/apple-touch-icon.png') }}">
+
     <title>{% block title %}RunCoach{% endblock %}</title>
 
     <!-- Typography: Space Grotesk (display) + DM Sans (body) + JetBrains Mono (data) -->
@@ -28,6 +43,38 @@
                         (location.protocol === 'https:' ? '; Secure' : '');
                 }
             } catch (e) { /* older browsers: server falls back to UTC */ }
+        })();
+    </script>
+
+    <!-- App shell: flags a home-screen launch (iOS reports it through
+         navigator.standalone rather than display-mode) and keeps the
+         status-bar colour in step with the toggle, which flips data-theme
+         on <html> rather than following prefers-color-scheme. -->
+    <script>
+        (function() {
+            var root = document.documentElement;
+            var meta = document.querySelector('meta[name="theme-color"]');
+
+            var standalone = false;
+            try {
+                standalone = (window.matchMedia &&
+                    window.matchMedia('(display-mode: standalone)').matches) ||
+                    window.navigator.standalone === true;
+            } catch (e) { /* older browsers: treated as an ordinary tab */ }
+            if (standalone) root.classList.add('is-standalone');
+
+            function paintThemeColor() {
+                if (!meta) return;
+                meta.setAttribute('content',
+                    root.getAttribute('data-theme') === 'dark' ? '#0F0E13' : '#FBFBFA');
+            }
+            paintThemeColor();
+            if (window.MutationObserver) {
+                new MutationObserver(paintThemeColor).observe(root, {
+                    attributes: true,
+                    attributeFilter: ['data-theme'],
+                });
+            }
         })();
     </script>
 
@@ -56,12 +103,23 @@
 
     <!-- Page-specific styles -->
     {% block styles %}{% endblock %}
+
+    <!-- Mobile app shell. Deliberately last: it overrides page stylesheets
+         (bottom-anchored toasts, the modal sheet shape, viewport units) at
+         equal specificity, which only works if it wins the cascade. -->
+    <link rel="stylesheet" href="{{ static_url('css/mobile-app.css') }}">
 </head>
 <body data-authed="{{ 'true' if user else 'false' }}">
     {% from "components/nav.html" import render as nav %}
     <!-- Navigation -->
     {% block navigation %}
     {{ nav(user=user, current_page=current_page) }}
+    {% endblock %}
+
+    <!-- Bottom tab bar — the primary navigation on a phone (mobile-app.css) -->
+    {% block tabbar %}
+    {% from "components/tab_bar.html" import render as tab_bar %}
+    {{ tab_bar(user=user, path=request.url.path if request else '/') }}
     {% endblock %}
 
     <!-- Main content -->
