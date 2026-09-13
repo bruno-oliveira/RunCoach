@@ -201,5 +201,166 @@
             "Pinch of sea salt"
         ],
         "dietary_tags": ["vegetarian", "high_fiber", "meal_prep"]
+    },
+    {
+        "name": "Peanut-Stuffed Dates",
+        "meal_type": "trail",
+        "description": "No-cook fuel that goes straight from the packet into a vest pocket: sweet dates split and filled with salted peanut butter. Carb-dense, soft and effortless to chew mid-effort.",
+        "instructions": "Slice each date lengthwise and pull out the stone. Spoon a little peanut butter into the opening, pinch the date closed and press a few flakes of sea salt on top. They travel best packed snugly in a small tub or wrapped in pairs so the filling stays put.",
+        "prep_time": 10,
+        "cook_time": 0,
+        "calories": 160,
+        "protein": 4,
+        "fiber": 4,
+        "carbs": 24,
+        "fat": 6,
+        "ingredients": [
+            "6 medjool dates",
+            "2 tbsp natural peanut butter",
+            "Pinch of flaky sea salt"
+        ],
+        "dietary_tags": ["vegan", "gluten_free", "quick", "portable"]
+    },
+    {
+        "name": "Banana and Oat Trail Cookies",
+        "meal_type": "trail",
+        "description": "Two-ingredient cookies that are almost all carbohydrate and hold together on the move. Naturally sweet from ripe bananas, no added sugar, and soft enough to eat while climbing.",
+        "instructions": "Heat the oven to 180C and line a tray. Mash the bananas in a bowl, stir in the oats, cinnamon and a pinch of salt until the mixture is thick and evenly combined. Spoon into 10 small mounds on the tray, flatten slightly with the back of a spoon and bake for 15 minutes until set and lightly golden. Cool before stacking.",
+        "prep_time": 5,
+        "cook_time": 15,
+        "calories": 100,
+        "protein": 2,
+        "fiber": 2,
+        "carbs": 18,
+        "fat": 2,
+        "ingredients": [
+            "2 ripe bananas",
+            "1.5 cups rolled oats",
+            "1 tsp cinnamon",
+            "Pinch of sea salt"
+        ],
+        "dietary_tags": ["vegan", "gluten_free", "high_carb", "portable"]
+    },
+    {
+        "name": "Puffed Rice and Honey Bars",
+        "meal_type": "trail",
+        "description": "Light, airy rice bars that are nearly pure fast carbohydrate. Cheaper than shop energy bars and easy to eat when your appetite is flagging late in a race.",
+        "instructions": "Warm the honey and peanut butter in a pan over low heat until runny, then take off the heat. Stir in the puffed rice and a pinch of salt until every grain is coated. Press the mixture firmly into a lined loaf tin and chill for an hour until set, then cut into 8 bars. Keep them cool and they will not fall apart in a pocket.",
+        "prep_time": 10,
+        "cook_time": 5,
+        "calories": 150,
+        "protein": 3,
+        "fiber": 1,
+        "carbs": 28,
+        "fat": 4,
+        "ingredients": [
+            "3 cups puffed rice",
+            "1/2 cup honey",
+            "1/3 cup natural peanut butter",
+            "Pinch of sea salt"
+        ],
+        "dietary_tags": ["vegetarian", "gluten_free", "high_carb", "meal_prep"]
+    },
+    {
+        "name": "Coconut Sticky Rice Bites",
+        "meal_type": "trail",
+        "description": "Chewy parcels of glutinous rice sweetened with coconut milk and maple. A gentle, easily digested carb hit that suits a tired stomach on long climbs.",
+        "instructions": "Soak the sticky rice for at least an hour, then steam or simmer until tender. Warm the coconut milk with the maple syrup and salt and stir it through the cooked rice. Leave to absorb for 10 minutes, then shape into 8 small balls with damp hands and roll in toasted coconut. Wrap each one in a little cling film so they stay moist in the vest.",
+        "prep_time": 20,
+        "cook_time": 20,
+        "calories": 110,
+        "protein": 2,
+        "fiber": 1,
+        "carbs": 22,
+        "fat": 2,
+        "ingredients": [
+            "1 cup glutinous (sticky) rice",
+            "1/2 cup coconut milk",
+            "2 tbsp maple syrup",
+            "2 tbsp toasted coconut",
+            "Pinch of sea salt"
+        ],
+        "dietary_tags": ["vegan", "gluten_free", "high_carb", "portable"]
+    },
+    {
+        "name": "Rice Pudding Pouch",
+        "meal_type": "trail",
+        "description": "Comforting, spoonable carbs in a squeeze pouch for the point in a race when chewing is too much effort. Real food with almost no fibre to slow it down.",
+        "instructions": "Simmer the cooked rice with the milk, honey, cinnamon and a pinch of salt for 8-10 minutes, stirring until thick and creamy. Blend briefly if you want it completely smooth, then cool and spoon into reusable pouches or a soft flask. Chill until needed and eat straight from the pouch on the move.",
+        "prep_time": 5,
+        "cook_time": 10,
+        "calories": 190,
+        "protein": 5,
+        "fiber": 1,
+        "carbs": 36,
+        "fat": 4,
+        "ingredients": [
+            "1 cup cooked short-grain rice",
+            "1 cup milk or oat milk",
+            "2 tbsp honey",
+            "1/2 tsp cinnamon",
+            "Pinch of sea salt"
+        ],
+        "dietary_tags": ["vegetarian", "gluten_free", "quick", "high_carb"]
+    },
+    {
+        "name": "Miso Rice Balls",
+        "meal_type": "trail",
+        "description": "Savoury onigiri-style rice balls for when sweet fuel stops going down. Salty, plain carbs that are easy to eat with cold hands and taste like real food at hour five.",
+        "instructions": "While the rice is still warm, stir the miso through it with a pinch of salt. With damp hands, press the rice into 6 compact triangles or balls, tucking a few sesame seeds into the middle of each. Wrap each one in cling film and keep them cool until you set off. Reach for these when you cannot face another sweet bite.",
+        "prep_time": 15,
+        "cook_time": 0,
+        "calories": 140,
+        "protein": 3,
+        "fiber": 1,
+        "carbs": 28,
+        "fat": 2,
+        "ingredients": [
+            "2 cups cooked sushi rice",
+            "1 tbsp white miso",
+            "1 tsp sesame seeds",
+            "Flaky sea salt"
+        ],
+        "dietary_tags": ["vegan", "high_carb", "portable"]
+    },
+    {
+        "name": "Mashed Potato Salt Flask",
+        "meal_type": "trail",
+        "description": "Ultra-running staple: soft, salty potato you can squeeze straight from a flask. No chewing, no crumbs and carbs that sit calmly on a churning stomach.",
+        "instructions": "Boil the potatoes until completely soft, then mash with the olive oil, salt and enough warm water to make a smooth, spoonable paste. Push it through a sieve for a truly lump-free texture, then spoon into a reusable pouch or soft flask while still warm. Sip slowly and steadily rather than taking big mouthfuls.",
+        "prep_time": 10,
+        "cook_time": 20,
+        "calories": 130,
+        "protein": 3,
+        "fiber": 3,
+        "carbs": 27,
+        "fat": 1,
+        "ingredients": [
+            "3 medium potatoes",
+            "1 tbsp olive oil",
+            "1 tsp sea salt",
+            "Splash of warm water"
+        ],
+        "dietary_tags": ["vegan", "gluten_free", "quick", "high_carb"]
+    },
+    {
+        "name": "Maple Lemon Carb Drink",
+        "meal_type": "trail",
+        "description": "A homemade carbohydrate bottle built for 60g-plus per hour when solid food is too much. Natural sugar, a pinch of salt and nothing you cannot pronounce.",
+        "instructions": "In a 500ml bottle, dissolve the maple syrup and salt in the water, then add the lemon juice for flavour. Shake well before each sip so the sugar stays mixed. Sip steadily through the hour alongside solid food, and test the concentration on training runs before race day.",
+        "prep_time": 5,
+        "cook_time": 0,
+        "calories": 240,
+        "protein": 0,
+        "fiber": 0,
+        "carbs": 60,
+        "fat": 0,
+        "ingredients": [
+            "500ml water",
+            "60g maple syrup",
+            "Juice of 1/2 lemon",
+            "Pinch of sea salt"
+        ],
+        "dietary_tags": ["vegan", "gluten_free", "quick", "high_carb"]
     }
 ]
