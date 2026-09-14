@@ -576,8 +576,7 @@ def _install_race_day(
     running = [
         w
         for w in kept
-        if w.get("type") not in ("rest", "recovery")
-        and (w.get("distance", 0) or 0) > 0
+        if w.get("type") not in ("rest", "recovery") and (w.get("distance", 0) or 0) > 0
     ]
     if len(running) > RACE_WEEK_MAX_PRERACE_RUNS:
 

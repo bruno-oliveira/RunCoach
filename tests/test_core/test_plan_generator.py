@@ -503,7 +503,9 @@ class TestTrainingPlanGenerator:
             if week.get("is_race_week"):
                 assert run_days <= 4, f"Race week has {run_days} runs, expected <= 4"
             else:
-                assert run_days == 4, f"Week {week['week']} has {run_days} runs, expected 4"
+                assert run_days == 4, (
+                    f"Week {week['week']} has {run_days} runs, expected 4"
+                )
 
     def test_max_runs_per_week_constraint(self, plan_generator: TrainingPlanGenerator):
         """Test that max_runs_per_week constraint is respected for all values."""

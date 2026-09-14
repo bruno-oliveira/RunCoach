@@ -74,8 +74,7 @@ _NOTES: Dict[str, str] = {
         "pace when it gets hard in the closing stretch."
     ),
     "interval_taper": (
-        "Short, sharp strides to keep your neuromuscular system primed "
-        "for {race} day."
+        "Short, sharp strides to keep your neuromuscular system primed for {race} day."
     ),
     # ── Long runs ─────────────────────────────────────────────────────────
     "long_base": (
