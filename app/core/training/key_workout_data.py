@@ -125,6 +125,54 @@ _WORKOUTS_SHORT: List[Dict] = [
             "speed work to come."
         ),
     },
+    {
+        "id": "base_progression_run",
+        "distances": [5.0, 10.0, 21.1, 42.2],
+        "phases": ["base"],
+        "type": "tempo",
+        "terrain": ["any"],
+        "name": "Easy Progression Run",
+        "structure": "easy run, last 10 min at marathon effort",
+        "description": (
+            "Run easy for the bulk of the session, then lift the effort for "
+            "the last 10 minutes to settle around marathon pace — controlled, "
+            "not racing. You should finish feeling like you could keep going, "
+            "not like you just did a workout."
+        ),
+        "intensity": "low",
+        "target_zone": 3,
+        "pace_zone": "M",
+        "rationale": (
+            "Progression runs teach you to run faster on tired legs without "
+            "the sharp intensity of a threshold session. In the base phase "
+            "the gentle close primes muscular endurance while keeping the "
+            "overall session aerobic."
+        ),
+    },
+    {
+        "id": "base_tempo_strides",
+        "distances": [5.0, 10.0, 21.1, 42.2],
+        "phases": ["base"],
+        "type": "tempo",
+        "terrain": ["any"],
+        "name": "Tempo Strides",
+        "structure": "easy run + 3 × 2 min at comfortably hard effort",
+        "description": (
+            "Warm up easy, then run 3 × 2 minutes at comfortably hard "
+            "effort (roughly threshold feel) with 2 minutes easy between. "
+            "Cool down easy. Short enough to stay controlled, long enough "
+            "to introduce the tempo sensation."
+        ),
+        "intensity": "medium",
+        "target_zone": 3,
+        "pace_zone": "T",
+        "rationale": (
+            "Brief threshold touches introduce faster sustained running "
+            "while the short duration keeps it base-safe. This bridges the "
+            "gap between pure easy running and the longer tempo blocks that "
+            "come in the build phase."
+        ),
+    },
     # -- Taper sharpeners ----------------------------------------------------
     # One per race-distance family so the taper isn't the same generic cruise
     # template for every plan. Deliberately duration-based (no literal

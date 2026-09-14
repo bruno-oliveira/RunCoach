@@ -44,7 +44,7 @@
     <div class="workout-structure">{{ workout.structure }}</div>
     {% endif %}
 
-    {% set has_details = (workout.description or workout.notes) or workout.treadmill_prescription or (workout.steps and workout.type not in ['rest', 'recovery']) or (workout.segments and workout.type not in ['rest', 'recovery']) or workout.key_workout_rationale or workout.coaching_rationale %}
+    {% set has_details = (workout.description or workout.notes) or workout.treadmill_prescription or (workout.steps and workout.type not in ['rest', 'recovery']) or (workout.segments and workout.type not in ['rest', 'recovery']) or workout.coaching_rationale %}
     {% if has_details %}
     <details class="workout-details">
         <summary class="workout-details-toggle">
@@ -100,14 +100,10 @@
         </ol>
     </div>
     {% endif %}
-    {% if workout.key_workout_rationale %}
-    <div class="workout-rationale-line"><span class="workout-rationale-label"><span data-i18n="workout.why">Why:</span></span> {{ workout.key_workout_rationale }}</div>
-    {% endif %}
-
     {% if workout.coaching_rationale %}
     {% set overlay = (today_workout_overlay or {}).get(week.week ~ '-' ~ workout.day) %}
     <div class="coaching-note-content workout-coach-line{% if overlay and overlay.is_fatigue_softened %} coaching-note-fatigued{% endif %}">
-        <span class="workout-rationale-label"><span data-i18n="workout.coach">Coach:</span></span>
+        <span class="workout-rationale-label"><span data-i18n="workout.why">Why:</span></span>
         {% if overlay and overlay.is_fatigue_softened %}<span class="fatigue-icon" title="Recent runs have been costly — consider easing this one">⚠️</span> Consider easing this one — your last few runs have been costly. {% endif %}{% if overlay and overlay.rationale_prefix %}{{ overlay.rationale_prefix }}{{ workout.coaching_rationale[0]|lower }}{{ workout.coaching_rationale[1:] }}{% else %}{{ workout.coaching_rationale }}{% endif %}
     </div>
     {% endif %}

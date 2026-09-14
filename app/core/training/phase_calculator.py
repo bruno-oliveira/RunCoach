@@ -90,31 +90,31 @@ def _build_phase_distributions() -> Dict[str, Dict[str, Dict[str, float]]]:
         "base": {
             "5K": {
                 "long": 0.35,
-                "tempo": 0.0,
-                "interval": 0.05,
-                "hill": 0.0,
-                "easy": 0.60,
-            },
-            "10K": {
-                "long": 0.40,
-                "tempo": 0.0,
+                "tempo": 0.05,
                 "interval": 0.05,
                 "hill": 0.0,
                 "easy": 0.55,
             },
+            "10K": {
+                "long": 0.40,
+                "tempo": 0.05,
+                "interval": 0.05,
+                "hill": 0.0,
+                "easy": 0.50,
+            },
             "Half": {
                 "long": 0.45,
                 "tempo": 0.05,
-                "interval": 0.0,
+                "interval": 0.05,
                 "hill": 0.0,
-                "easy": 0.50,
+                "easy": 0.45,
             },
             "Marathon": {
                 "long": 0.45,
                 "tempo": 0.05,
-                "interval": 0.0,
+                "interval": 0.05,
                 "hill": 0.0,
-                "easy": 0.50,
+                "easy": 0.45,
             },
         },
         "build": {

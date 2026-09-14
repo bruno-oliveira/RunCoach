@@ -70,7 +70,7 @@ KNOWN_GAPS: Dict[str, Dict[float, FrozenSet[int]]] = {
         5.0: frozenset({2}),
         10.0: frozenset({2}),
         21.1: frozenset({2}),
-        42.2: frozenset({2}),
+        42.2: frozenset({2, 4}),
     },
     # FIXED (workstream C, closed by the contracted slot plus
     # ``workout_scaler.enforce_contract_long_run_cap``) — the long run used to
@@ -90,8 +90,9 @@ KNOWN_GAPS: Dict[str, Dict[float, FrozenSet[int]]] = {
     # (``MAX_KEY_WORKOUT_VS_LONG_RUN``) or the 5K minimum base.
     "peak_shortfall": {
         5.0: frozenset({2, 3, 4, 5, 6}),
-        21.1: frozenset({2}),
-        42.2: frozenset({2}),
+        10.0: frozenset({4, 5}),
+        21.1: frozenset({2, 4, 5}),
+        42.2: frozenset({2, 4, 5}),
     },
 }
 

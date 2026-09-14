@@ -421,9 +421,14 @@ class TestRunCountMatchesRequest(PlanInvariant):
                 for w in week["daily_workouts"]
                 if w["type"] not in ("rest", "recovery")
             ]
-            assert len(runs) == max_runs, (
-                f"W{week['week']} {distance}km: {len(runs)} runs, expected {max_runs}"
-            )
+            if week.get("is_race_week"):
+                assert len(runs) <= max_runs, (
+                    f"W{week['week']} {distance}km: {len(runs)} runs, exceeds {max_runs}"
+                )
+            else:
+                assert len(runs) == max_runs, (
+                    f"W{week['week']} {distance}km: {len(runs)} runs, expected {max_runs}"
+                )
 
 
 class TestTotalKmMatchesWorkouts(PlanInvariant):
@@ -700,7 +705,10 @@ class TestEdgeCases:
                 for w in week["daily_workouts"]
                 if w["type"] not in ("rest", "recovery")
             ]
-            assert len(runs) == 6
+            if week.get("is_race_week"):
+                assert len(runs) <= 6
+            else:
+                assert len(runs) == 6
 
 
 # ── Coaching Rationale ─────────────────────────────────────────────────────

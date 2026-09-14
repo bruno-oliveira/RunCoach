@@ -125,16 +125,9 @@
     </section>
     {% endif %}
 
-    {% if workout.key_workout_rationale %}
+    {% if workout.coaching_rationale %}
     <section class="day-card day-card--why">
         <h2 class="day-card-title"><span data-i18n="day.why_workout">Why this workout</span></h2>
-        <p class="day-notes">{{ workout.key_workout_rationale }}</p>
-    </section>
-    {% endif %}
-
-    {% if workout.coaching_rationale %}
-    <section class="day-card day-card--coach">
-        <h2 class="day-card-title"><span data-i18n="day.coaches_note">Coach's note</span></h2>
         <p class="day-notes">{{ workout.coaching_rationale }}</p>
     </section>
     {% endif %}

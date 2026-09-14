@@ -103,20 +103,34 @@ class TestNothingMayRescaleTheRace:
 
 class TestRaceWeekKeepsTheRunnersFrequency:
     @pytest.mark.parametrize("runs", [3, 4, 5])
-    def test_run_count_is_unchanged_in_race_week(self, runs):
-        """The race consumes a running slot rather than adding one."""
+    def test_non_race_weeks_keep_the_runners_frequency(self, runs):
+        """Non-race weeks use the runner's requested frequency."""
         plan = TrainingPlanGenerator().generate_plan(40.0, 21.1, 12, runs, vdot=45.0)
-        counts = {
-            len(
+        for wk in plan[:-1]:
+            count = len(
                 [
                     w
                     for w in wk["daily_workouts"]
                     if w["type"] not in ("rest", "recovery")
                 ]
             )
-            for wk in plan
-        }
-        assert counts == {runs}
+            assert count == runs
+
+    @pytest.mark.parametrize("runs", [3, 4, 5])
+    def test_race_week_has_at_most_three_running_sessions(self, runs):
+        """Race week converts extra easy runs to rest for a sharper taper."""
+        plan = TrainingPlanGenerator().generate_plan(40.0, 21.1, 12, runs, vdot=45.0)
+        race_week = plan[-1]
+        run_count = len(
+            [
+                w
+                for w in race_week["daily_workouts"]
+                if w["type"] not in ("rest", "recovery")
+            ]
+        )
+        # At most 2 pre-race runs + the race itself
+        assert run_count <= 3
+        assert run_count >= 2  # at least shakeout + race
 
 
 class TestTrailRaceDay:

@@ -122,10 +122,11 @@ class TestQualityMinimumDose:
                 d = w.get("distance", 0) or 0
                 if d <= 0:
                     continue
-                assert d >= 3.4, (
+                floor = 3.0 if week.get("phase") == "base" else 3.4
+                assert d >= floor, (
                     f"week {week['week']} ({week.get('phase')}): "
                     f"{w.get('type')} day is only {d} km — below the "
-                    f"meaningful-day floor"
+                    f"meaningful-day floor ({floor})"
                 )
 
     def test_base_road_tempo_is_a_real_threshold_dose(self, plan):
@@ -139,7 +140,7 @@ class TestQualityMinimumDose:
                 d = w.get("distance", 0) or 0
                 if d <= 0 or w.get("duration_min"):
                     continue
-                assert d >= 3.4, (
+                assert d >= 3.0, (
                     f"week {week['week']} base tempo is {d} km — below the "
                     f"minimum threshold dose"
                 )

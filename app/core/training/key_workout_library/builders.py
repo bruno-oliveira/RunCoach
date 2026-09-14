@@ -234,6 +234,12 @@ _KEY_WORKOUT_STEP_BUILDERS: Dict[
     "base_relaxed_cruise": lambda d, pz: _steps_mod.build_fartlek_steps(
         d, pz, reps=2, on_s=360, off_s=120, on_zone="M", work_effort="steady"
     ),
+    "base_tempo_strides": lambda d, pz: _steps_mod.build_fartlek_steps(
+        d, pz, reps=3, on_s=120, off_s=120, on_zone="T", work_effort="comfortably hard"
+    ),
+    "base_progression_run": lambda d, pz: _steps_mod.build_progression_block_steps(
+        d, pz, block_zone="M", label="Finish at marathon effort", effort="controlled"
+    ),
     # -- taper sharpeners: easy bulk + race-effort touches (+ strides) --
     "taper_5k10k_sharpener": lambda d, pz: _steps_mod.build_sharpener_steps(
         d, pz, touches=4, touch_s=60, touch_zone="10K", strides=4

@@ -440,6 +440,11 @@ RACE_DAY_NUMBER = 7
 RACE_WEEK_SHAKEOUT_MAX_KM = 4.0
 RACE_WEEK_SHAKEOUT_MIN_KM = 2.0
 
+# Race week keeps at most this many pre-race running sessions (shakeout +
+# one quality or easy).  Any additional easy runs are converted to rest so
+# the runner arrives at the start line genuinely fresh.
+RACE_WEEK_MAX_PRERACE_RUNS = 2
+
 
 def _build_shakeout(
     day: int, distance_km: float, pace_zones: Optional[Dict]
@@ -564,6 +569,29 @@ def _install_race_day(
         pace_zones=pace_zones,
         protect_long=False,
     )
+
+    # Sharper race-week taper: keep at most RACE_WEEK_MAX_PRERACE_RUNS
+    # running sessions before the race.  Shakeout and quality sessions are
+    # kept first; extra easy runs are converted to rest days.
+    running = [
+        w
+        for w in kept
+        if w.get("type") not in ("rest", "recovery")
+        and (w.get("distance", 0) or 0) > 0
+    ]
+    if len(running) > RACE_WEEK_MAX_PRERACE_RUNS:
+
+        def _keep_priority(w: Dict[str, Any]) -> int:
+            if w.get("is_shakeout"):
+                return 0
+            if w.get("type") in ("tempo", "interval", "hill"):
+                return 1
+            return 2
+
+        running.sort(key=_keep_priority)
+        for w in running[RACE_WEEK_MAX_PRERACE_RUNS:]:
+            idx = kept.index(w)
+            kept[idx] = workout_builders.generate_rest_day(w["day"])
 
     race = workout_builders.generate_race_day(
         RACE_DAY_NUMBER,

@@ -225,13 +225,16 @@ class PerformancePlanGenerator(BasePlanGenerator):
                 )
             wtype = str(workout["type"])
             coaching_type = _COACHING_TYPE_MAP.get(wtype, wtype)
-            workout["coaching_rationale"] = generate_coaching_note(
-                coaching_type,
-                phase,
-                week_number,
-                target_distance,
-                is_recovery,
-                pace_zones=vdot_zones,
+            workout["coaching_rationale"] = (
+                workout.get("key_workout_rationale")
+                or generate_coaching_note(
+                    coaching_type,
+                    phase,
+                    week_number,
+                    target_distance,
+                    is_recovery,
+                    pace_zones=vdot_zones,
+                )
             )
 
         # Unify the representation: the formulaic base/easy/long/fartlek

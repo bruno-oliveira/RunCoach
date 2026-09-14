@@ -353,13 +353,16 @@ def generate_daily_workouts(
                 week_number=week_number,
             )
 
-        workout["coaching_rationale"] = generate_coaching_note(
-            workout_type,
-            phase,
-            week_number,
-            target_distance,
-            is_recovery_week,
-            pace_zones=pace_zones,
+        workout["coaching_rationale"] = (
+            workout.get("key_workout_rationale")
+            or generate_coaching_note(
+                workout_type,
+                phase,
+                week_number,
+                target_distance,
+                is_recovery_week,
+                pace_zones=pace_zones,
+            )
         )
         workouts.append(workout)
 

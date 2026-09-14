@@ -106,8 +106,12 @@ def _phase_quality_count(
     if max_runs <= 2:
         return 1 if phase in ("build", "peak") else 0
     if phase == "base":
+        if max_runs < 4:
+            return 0
         base_quality_km = total_km * 0.05
-        return 1 if (max_runs >= 4 and base_quality_km >= 1.0) else 0
+        if base_quality_km < 1.0:
+            return 0
+        return 2
     if phase == "build":
         week_in_build = week_number - phases["base"] if phases else week_number
         if week_in_build <= 2:
@@ -329,15 +333,12 @@ def _build_quality_distribution(
     profile_name = _profile_for(target_distance, terrain, trail_profile=trail_profile)
 
     if phase == "base":
-        base_quality = dict(_BASE_PHASE_QUALITY[profile_name])
-        # Half/marathon base used to pin the slot to tempo every week, and the
-        # base catalog has exactly one base tempo session (relaxed cruise) —
-        # so identical sessions repeated for the whole base phase. Alternate
-        # the slot type so even weeks draw from the strides/fartlek interval
-        # pool instead (the selection-side no-repeat window then rotates
-        # within each pool).
-        if profile_name in ("road_half", "road_marathon") and week_number % 2 == 0:
-            base_quality = {"interval": 1}
+        if quality_workouts >= 2:
+            base_quality: Dict[str, int] = {"interval": 1, "tempo": 1}
+        else:
+            base_quality = dict(_BASE_PHASE_QUALITY[profile_name])
+            if profile_name in ("road_half", "road_marathon") and week_number % 2 == 0:
+                base_quality = {"interval": 1}
         distribution.update(base_quality)
         _substitute_hills_for_flat_training(
             distribution,

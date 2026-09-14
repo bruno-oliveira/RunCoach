@@ -1,190 +1,161 @@
 """Coaching notes generator — explains *why* each workout was assigned.
 
-Generates 2-3 sentence rationales that explain the physiological benefit,
-the training-phase context, and a brief execution tip.
+Generates a one-line rationale tying each session to the runner's race
+distance and current training phase.  When a key workout overlay supplies
+its own rationale (from the catalog), that takes priority — callers merge
+the two fields into ``coaching_rationale``.
 """
 
 from typing import Any, Dict, Optional
 
-# Coaching rationale templates keyed by (workout_type, phase)
-# Each value is a string; {distance_name} and {phase} are interpolated if present.
+_DISTANCE_NAMES: Dict[float, str] = {
+    5.0: "5K",
+    10.0: "10K",
+    21.1: "half marathon",
+    42.2: "marathon",
+}
+
+
+def _distance_name(target_distance: float) -> str:
+    for km, label in _DISTANCE_NAMES.items():
+        if abs(target_distance - km) < 0.5:
+            return label
+    return f"{target_distance:g} km"
+
+
+# Coaching rationale templates keyed by ``{type}_{phase}``.
+# ``{race}`` is interpolated with the race-distance label at render time.
 _NOTES: Dict[str, str] = {
     # ── Easy runs ─────────────────────────────────────────────────────────
     "easy_base": (
-        "Building your aerobic engine. This easy run strengthens your heart, "
-        "increases capillary density, and teaches your body to burn fat efficiently "
-        "— all without adding meaningful stress. "
-        "Keep the pace genuinely conversational: if you can't speak in full sentences, slow down."
+        "Building the aerobic base that everything in your {race} build sits on — "
+        "keep the pace genuinely conversational."
     ),
     "easy_build": (
-        "Staying aerobically active between quality sessions. "
-        "Easy runs in the Build phase help you recover from harder workouts while "
-        "maintaining your weekly mileage and reinforcing good running economy. "
-        "Resist the temptation to push — saving energy here pays off on your quality days."
+        "Aerobic maintenance between quality sessions — saving energy here "
+        "pays off on your hard days."
     ),
     "easy_peak": (
-        "Active recovery at peak training load. "
-        "With your hardest weeks behind you, these easy runs keep your legs moving "
-        "without adding fatigue. "
-        "Focus on relaxed form and controlled breathing — your speed comes from rest, not extra effort here."
+        "Active recovery at peak load — your {race} speed comes from rest, "
+        "not extra effort here."
     ),
     "easy_taper": (
-        "Maintaining feel for the road while letting your body supercompensate. "
-        "Research shows that even a 50% volume reduction preserves fitness for 2-3 weeks. "
-        "Run easy, stay fresh, trust your training."
+        "Staying loose while your body supercompensates for {race} day — "
+        "run easy, stay fresh, trust your training."
     ),
     # ── Tempo runs ────────────────────────────────────────────────────────
     "tempo_base": (
-        "Light introduction to sustained effort. "
-        "Even in the Base phase, brief tempo work teaches your body where the lactate threshold is. "
-        "Focus on comfortably hard — challenging but controlled, never a sprint."
+        "Light introduction to sustained effort — teaching your body where "
+        "the lactate threshold is before the {race} build begins."
     ),
     "tempo_build": (
-        "Raising your lactate threshold — the single biggest predictor of race performance. "
-        "Running at tempo pace trains your body to clear lactate faster, "
-        "so you can sustain a harder effort on race day. "
-        "Classic rule: you should be able to speak 3–4 words at a time, not hold a conversation."
+        "Raising your lactate threshold so you can hold a harder effort "
+        "across the full {race} distance."
     ),
     "tempo_peak": (
-        "Race-sharpening threshold work at peak fitness. "
-        "Your aerobic base is fully built; these sessions are converting fitness into race-day speed. "
-        "Aim for a pace that feels controlled-hard — if it feels easy, you're too slow; if you're gasping, back off."
+        "Race-sharpening threshold work — converting your fitness into "
+        "{race} race-day speed."
     ),
     "tempo_taper": (
-        "A brief sharpener to keep your legs snappy before race day. "
-        "Short tempo efforts maintain neuromuscular activation without building fatigue. "
-        "Keep the volume low but the effort genuine — one or two quality minutes is enough."
+        "A brief sharpener to keep your legs snappy before your {race} — "
+        "low volume, genuine effort."
     ),
     # ── Intervals ─────────────────────────────────────────────────────────
     "interval_base": (
-        "Short strides to reinforce running form and leg turnover. "
-        "Even in base building, brief accelerations teach your body efficient mechanics "
-        "without imposing hard physiological stress. "
-        "Focus on quick, light feet rather than maximal effort."
+        "Short strides to reinforce running form and leg turnover — "
+        "efficient mechanics now pay off across your {race} build."
     ),
     "interval_build": (
-        "VO₂max development — improving your ceiling for oxygen use. "
-        "These high-intensity intervals push your cardiovascular system to near its maximum, "
-        "triggering the most powerful aerobic adaptations. "
-        "Full recovery between reps is essential: you're training quality, not accumulating fatigue."
+        "VO₂max development — raising the aerobic ceiling you'll draw on "
+        "in the late kilometres of your {race}."
     ),
     "interval_peak": (
-        "Final VO₂max stimulus at peak fitness. "
-        "Your aerobic ceiling is at its highest; these sessions sharpen your ability to "
-        "maintain race pace when it gets hard in the final kilometres. "
-        "Execute with purpose — controlled aggression, not desperation."
+        "Final VO₂max stimulus — sharpening your ability to hold {race} "
+        "pace when it gets hard in the closing stretch."
     ),
     "interval_taper": (
-        "Short, sharp strides to keep your neuromuscular system primed. "
-        "A few fast reps remind your legs of race pace without creating meaningful fatigue. "
-        "Short, controlled, and confident."
+        "Short, sharp strides to keep your neuromuscular system primed "
+        "for {race} day."
     ),
     # ── Long runs ─────────────────────────────────────────────────────────
     "long_base": (
-        "The cornerstone of endurance training. "
-        "Long runs develop mitochondrial density, fat oxidation, and mental toughness — "
-        "adaptations that nothing else can replicate. "
-        "Run it slow enough that you could run for another hour after you finish. If you can't, you're going too fast."
+        "The cornerstone of {race} training — building mitochondrial density "
+        "and fat oxidation that nothing else replicates."
     ),
     "long_build": (
-        "Progressive endurance: your long run is growing to match your race demands. "
-        "Today's session is training your body's fuel system and your mind's ability to push through discomfort. "
-        "Practise your race-day nutrition and hydration strategy during this run."
+        "Progressive endurance toward {race} distance — practise your "
+        "race-day fuelling and hydration here."
     ),
     "long_peak": (
-        "Your longest training run — the confidence-builder. "
-        "Completing today's distance at a controlled effort is the clearest evidence "
-        "that you're ready for race day. "
-        "Treat the final 20% of the run as race practice: focus on form when fatigue arrives."
+        "Your longest training run — completing this at controlled effort "
+        "is the clearest evidence you're ready for {race} day."
     ),
     "long_taper": (
-        "A reduced long run to maintain endurance without digging into your reserves. "
-        "Your fitness is locked in — this run reinforces it without creating new fatigue. "
-        "Think of it as a dress rehearsal: similar route, similar fueling, easy effort."
+        "A reduced long run to maintain endurance without digging into your "
+        "{race} reserves — dress rehearsal effort."
     ),
     # ── Hill workouts ─────────────────────────────────────────────────────
     "hill_base": (
-        "Hill strides to build leg strength and power economically. "
-        "Running uphill forces a stronger push-off, activating glutes and calves in ways "
-        "that flat running doesn't. "
-        "Focus on driving your arms and lifting your knees — the effort is natural on the incline."
+        "Hill strides to build leg strength and power economically — "
+        "a stronger push-off now pays dividends across your {race} build."
     ),
     "hill_build": (
-        "Hill repeats: the safest form of speed work. "
-        "Incline running delivers interval-like cardiovascular stimulus at a lower injury risk "
-        "because ground impact forces are reduced. "
-        "Attack each hill with short, quick strides; jog or walk back down for full recovery."
+        "Hill repeats: interval-like cardiovascular stimulus at lower injury "
+        "risk — building the strength your {race} demands."
     ),
     "hill_peak": (
-        "Race-specific strength and power at peak fitness. "
-        "For trail runners especially, hill strength late in training translates directly to "
-        "race performance on climbs. "
-        "Run uphill aggressively but efficiently — lean into the grade, short steps, high cadence."
+        "Race-specific hill strength at peak fitness — translates directly "
+        "to {race} performance on climbs and surges."
     ),
     "hill_taper": (
-        "A brief hill session to maintain leg power going into race week. "
-        "A few quality repeats keep your fast-twitch fibres awake without accumulating fatigue. "
-        "Short, punchy, and relaxed."
+        "A few quality hill reps to keep fast-twitch fibres awake going "
+        "into your {race}."
     ),
     # ── Rest days ─────────────────────────────────────────────────────────
     "rest_base": (
-        "Adaptation happens during rest, not during the run. "
-        "Your muscles repair micro-tears, your glycogen stores refill, and your cardiovascular "
-        "system rebuilds stronger than before. "
-        "Treat rest days as seriously as training days — they're part of the programme."
+        "Adaptation happens during rest, not during the run — treat this "
+        "day as seriously as any training day."
     ),
     "rest_build": (
-        "Strategic recovery between hard sessions. "
-        "Skipping rest days doesn't make you fitter faster — it extends fatigue and increases "
-        "injury risk. "
-        "Light mobility work, adequate sleep, and good nutrition today will amplify tomorrow's training."
+        "Strategic recovery between hard sessions — good sleep and "
+        "nutrition today amplify tomorrow's {race} training."
     ),
     "rest_peak": (
-        "Essential recovery at your highest training load. "
-        "Your body is absorbing the most demanding weeks of the programme. "
-        "Protect this day: prioritise sleep, nutrition, and stress management."
+        "Essential recovery at your highest training load — protect this "
+        "day to absorb the work."
     ),
     "rest_taper": (
-        "Rest is now your most important training tool. "
-        "Glycogen stores are topping up, minor niggles are fading, and your central nervous "
-        "system is recharging for race day. "
-        "Stay off your feet, stay hydrated, and trust the process."
+        "Rest is your most important tool now — glycogen stores are topping "
+        "up and your body is recharging for {race} day."
     ),
     # ── Recovery (active recovery day — swim/walk) ─────────────────────
     "recovery_base": (
-        "Active recovery with zero impact on your joints. "
-        "Swimming or easy walking promotes blood flow and speeds muscle repair "
-        "without adding running stress to the week. "
-        "This is not a lost training day — it's a deliberate recovery tool."
+        "Zero-impact active recovery — swimming or walking promotes blood "
+        "flow without adding running stress."
     ),
     "recovery_build": (
-        "Low-impact movement to flush out training fatigue. "
-        "A swim or easy walk keeps your cardiovascular system ticking over while giving "
-        "your legs a complete break from pounding. "
-        "Keep the effort light — this is recovery, not fitness work."
+        "Low-impact movement to flush training fatigue — keep the effort "
+        "light, this is recovery, not fitness work."
     ),
     "recovery_peak": (
-        "Complete break from running stress at peak load. "
-        "Your legs need this impact-free day more than ever right now. "
-        "Even 20 minutes of easy swimming will accelerate recovery for tomorrow's session."
+        "Complete break from running stress at peak load — even 20 minutes "
+        "of easy swimming accelerates recovery."
     ),
     "recovery_taper": (
-        "Gentle movement to stay loose without accumulating fatigue. "
-        "An easy swim or short walk is ideal in taper week: "
-        "it keeps you active, reduces pre-race anxiety, and doesn't cost you anything physiologically."
+        "Gentle movement to stay loose without accumulating fatigue — "
+        "ideal for the days before your {race}."
     ),
 }
 
-# Fallback notes for any missing combination
 _FALLBACK: Dict[str, str] = {
-    "easy": "Easy aerobic run. Keep the effort genuinely conversational to build your aerobic base without accumulating fatigue.",
-    "tempo": "Threshold work. Run at comfortably hard effort — sustainable but challenging — to raise your lactate threshold.",
-    "interval": "High-intensity intervals to develop VO₂max. Full recovery between reps is as important as the reps themselves.",
-    "long": "Long endurance run. The most important session of the week for building race-specific endurance.",
-    "hill": "Hill repeats to build strength and power. Focus on form and full recovery between efforts.",
-    "rest": "Rest day. Adaptation happens during recovery — protect this day.",
-    "recovery": "Active recovery. Low-impact movement to promote blood flow and speed muscle repair.",
-    "strength": "Strength training to support your running. Focus on quality movement over heavy loads.",
+    "easy": "Easy aerobic run — keep the effort conversational to build your base without fatigue.",
+    "tempo": "Threshold work — comfortably hard effort to raise your lactate threshold for {race} day.",
+    "interval": "High-intensity intervals to develop your VO₂max ceiling for {race} performance.",
+    "long": "Long endurance run — the most important session for building {race}-specific endurance.",
+    "hill": "Hill repeats to build strength and power for your {race} — form and full recovery between efforts.",
+    "rest": "Rest day — adaptation happens during recovery, not during the run.",
+    "recovery": "Active recovery — low-impact movement to promote blood flow and speed repair.",
+    "strength": "Strength training to support your {race} running — quality movement over heavy loads.",
 }
 
 
@@ -272,19 +243,7 @@ def generate_coaching_note(
     is_recovery_week: bool = False,
     pace_zones: Optional[Dict[str, Any]] = None,
 ) -> Optional[str]:
-    """Generate a coaching rationale for a given workout.
-
-    Args:
-        workout_type: 'easy', 'tempo', 'interval', 'long', 'hill', 'rest', 'recovery'
-        phase: 'base', 'build', 'peak', 'taper'
-        week_number: 1-based week number within the plan
-        target_distance: Target race distance in km
-        is_recovery_week: Whether this is a planned recovery/down week
-        pace_zones: Optional VDOT pace zones; when supplied, a concrete
-            pace/rep cue is appended (audit E2)
-
-    Returns:
-        2-3 sentence coaching note, or None for unknown types
+    """One-line coaching rationale tied to race distance and phase.
 
     The "after yesterday's…" render-time prefix is applied by the single live
     implementation in ``plan_template_context._coaching_prefix``; persisted
@@ -299,12 +258,11 @@ def generate_coaching_note(
     if not note:
         return None
 
-    # Append recovery-week context where relevant
+    race = _distance_name(target_distance)
+    note = note.replace("{race}", race)
+
     if is_recovery_week and workout_type in ("easy", "long", "tempo"):
-        note += (
-            " Note: this is a planned recovery week — "
-            "distances are intentionally reduced to let your body absorb recent training."
-        )
+        note += " (recovery week — distances intentionally reduced)"
 
     cue = build_pace_cue(workout_type, phase, pace_zones)
     if cue:

@@ -342,16 +342,9 @@
                         </details>
                         {% endif %}
 
-                        {% if workout.key_workout_rationale %}
-                        <details class="coaching-note key-workout-rationale">
-                            <summary class="coaching-note-toggle">Why this workout</summary>
-                            <div class="coaching-note-content">{{ workout.key_workout_rationale }}</div>
-                        </details>
-                        {% endif %}
-
                         {% if workout.coaching_rationale %}
                         <details class="coaching-note">
-                            <summary class="coaching-note-toggle">Coach says</summary>
+                            <summary class="coaching-note-toggle">Why this workout</summary>
                             <div class="coaching-note-content">{{ workout.coaching_rationale }}</div>
                         </details>
                         {% endif %}
