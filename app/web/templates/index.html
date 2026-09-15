@@ -936,6 +936,10 @@ function setPlanMode(mode) {
     const submitBtn = form?.querySelector('.form-submit');
 
     if (form && submitBtn) {
+        // Idle markup captured at submit time, so a bfcache restore can undo the
+        // "Generating…" state below.
+        let submitBtnIdleHTML = null;
+
         form.addEventListener('submit', function(e) {
             const currentKm = document.getElementById('current_km');
             var planMode = document.getElementById('plan_mode').value;
@@ -1111,9 +1115,25 @@ function setPlanMode(mode) {
 
             // Disable button after form starts submitting (prevents blocking submission)
             setTimeout(function() {
+                // Remember the idle button as it is *now* (already translated by
+                // i18n) so a bfcache restore can put it back verbatim.
+                submitBtnIdleHTML = submitBtn.innerHTML;
                 submitBtn.disabled = true;
                 submitBtn.innerHTML = '<span class="spinner spinner-sm"></span> Generating\u2026';
             }, 50);
+        });
+
+        // This POST answers 303 -> /plan/{id}, so pressing Back lands here from
+        // the bfcache with the frozen DOM: the button still disabled and still
+        // reading "Generating…", and the inline script never re-running to clear
+        // it — the form is then unusable for good. (The missing arrow icon also
+        // made a later setPlanMode() throw.) Undo the pending state whenever the
+        // page is restored; on a normal load nothing was captured, so this is a
+        // no-op.
+        window.addEventListener('pageshow', function() {
+            if (submitBtnIdleHTML === null) return;
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = submitBtnIdleHTML;
         });
     }
 
