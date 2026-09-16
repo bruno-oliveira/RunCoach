@@ -100,7 +100,11 @@ def _auto_adapt(
     """
     from app.contexts.plan.adaptation.adjustment_results import (
         build_signal_snapshot as _build_signal_snapshot,
+    )
+    from app.contexts.plan.adaptation.adjustment_results import (
         build_signals_summary as _build_signals_summary,
+    )
+    from app.contexts.plan.adaptation.adjustment_results import (
         record_adaptation_event as _record,
     )
     from app.contexts.plan.adaptation.change_plan_builder import build_change_plan
@@ -110,17 +114,13 @@ def _auto_adapt(
     result: Dict[str, Any] = {"vdot_recalibration": None, "auto_adjusted": False}
 
     if _recently_adjusted(plan):
-        result["vdot_recalibration"] = _try_recalibrate_and_record(
-            plan, user_id, db
-        )
+        result["vdot_recalibration"] = _try_recalibrate_and_record(plan, user_id, db)
         return result
 
     gathered = gather_signals(plan.id, user_id, db, run_map=False)
 
     if gathered is None:
-        result["vdot_recalibration"] = _try_recalibrate_and_record(
-            plan, user_id, db
-        )
+        result["vdot_recalibration"] = _try_recalibrate_and_record(plan, user_id, db)
         return result
 
     signals = gathered["signals"]
@@ -128,9 +128,7 @@ def _auto_adapt(
     adjustable_weeks = gathered["adjustable_weeks"]
 
     if abs(multiplier - 1.0) < _AUTO_ADJUST_MIN_DELTA or not adjustable_weeks:
-        result["vdot_recalibration"] = _try_recalibrate_and_record(
-            plan, user_id, db
-        )
+        result["vdot_recalibration"] = _try_recalibrate_and_record(plan, user_id, db)
         return result
 
     # --- full adaptation: volume + VDOT ---
@@ -149,9 +147,7 @@ def _auto_adapt(
         )
     except Exception as e:
         logger.warning("Auto-adjust apply stage failed for plan %s: %s", plan.id, e)
-        result["vdot_recalibration"] = _try_recalibrate_and_record(
-            plan, user_id, db
-        )
+        result["vdot_recalibration"] = _try_recalibrate_and_record(plan, user_id, db)
         return result
 
     vdot_change = _extract_vdot_change(ar.vdot_result)
@@ -335,6 +331,5 @@ def _recalibrate_headline(vdot_change: Optional[Dict[str, Any]]) -> str:
             f"(VDOT {old_v} → {new_v})."
         )
     return (
-        f"Adjusted your pace targets to match current fitness "
-        f"(VDOT {old_v} → {new_v})."
+        f"Adjusted your pace targets to match current fitness (VDOT {old_v} → {new_v})."
     )
