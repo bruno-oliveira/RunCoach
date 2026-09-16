@@ -29,10 +29,10 @@ from typing import Any, Dict, List, Optional
 from app.core.training import long_run_calculator, workout_builders
 from app.core.training.key_workout_library import rebuild_key_workout
 from app.core.training.quality_caps import (
-    MAX_EASY_RUN_KM,
     MAX_EASY_VS_LONG_RUN,
     MIN_EASY_PER_RUN_KM,
     easy_run_cap,
+    volume_scaled_easy_cap,
 )
 from app.core.training.training_constants import get_hard_ceiling
 
@@ -336,20 +336,42 @@ def fill_shortfall(
         actual_total_km = round(sum(w.get("distance", 0) for w in workouts), 1)
     else:
         deficit = total_km - actual_total_km
-        flexible = [
+        easy_ws = [
             w
             for w in workouts
-            if w.get("type") in ("easy", "long")
+            if w.get("type") == "easy"
             and not is_prescriptive(w)
             and w.get("distance", 0) > 0
             and not w.get("duration_min")
         ]
-        if flexible:
-            total_flex = sum(w["distance"] for w in flexible)
-            if total_flex > 0:
-                for w in flexible:
-                    share = deficit * (w["distance"] / total_flex)
-                    set_distance(w, w["distance"] + share, pace_zones)
+        long_ws = [
+            w
+            for w in workouts
+            if w.get("type") == "long"
+            and not is_prescriptive(w)
+            and w.get("distance", 0) > 0
+            and not w.get("duration_min")
+        ]
+        # Distribute deficit to easy runs first — the long run was sized by
+        # its ratio for a reason, and inflating it to fill a volume gap creates
+        # oversized long runs (e.g. 42% of weekly volume in base phase).
+        if easy_ws:
+            total_easy = sum(w["distance"] for w in easy_ws)
+            if total_easy > 0:
+                per_easy = deficit / len(easy_ws)
+                for w in easy_ws:
+                    set_distance(w, w["distance"] + per_easy, pace_zones)
+            deficit = round(total_km - sum(w.get("distance", 0) for w in workouts), 1)
+        # Only spill to the long run what easy runs could not absorb, and
+        # never inflate it past 45% of the weekly target — beyond that the
+        # week should fall short rather than concentrate risk in one session.
+        if deficit > 0.1 and long_ws:
+            max_long_share = 0.45
+            for w in long_ws:
+                headroom = max(0, total_km * max_long_share - w["distance"])
+                spill = min(deficit, headroom)
+                if spill > 0.1:
+                    set_distance(w, w["distance"] + spill, pace_zones)
 
     hard_ceiling = get_hard_ceiling(target_distance, trail_profile=trail_profile)
     # The cap the plan is contracted to respect. ``get_hard_ceiling`` is only an
@@ -396,24 +418,13 @@ def fill_shortfall(
         def _easy_cap(_long_d: float) -> float:
             if trail_profile is not None:
                 return _long_d
-            return easy_run_cap(
-                _long_d, MAX_EASY_RUN_KM, max_vs_long=easy_vs_long_ratio
-            )
+            abs_cap = volume_scaled_easy_cap(total_km)
+            return easy_run_cap(_long_d, abs_cap, max_vs_long=easy_vs_long_ratio)
 
         cap = _easy_cap(long_d)
         for w in workouts:
-            if w.get("type") == "easy" and w.get("distance", 0) > cap:
-                if not long_is_prescriptive:
-                    transferable = w["distance"] - cap
-                    headroom = spill_cap - long_d
-                    transfer = min(transferable, max(0, headroom))
-                    if transfer > 0:
-                        set_distance(w, w["distance"] - transfer, pace_zones)
-                        set_distance(long_w, long_w["distance"] + transfer, pace_zones)
-                        long_d = long_w["distance"]
-                        cap = _easy_cap(long_d)
-                if w["distance"] > cap + 0.05:
-                    set_distance(w, cap, pace_zones)
+            if w.get("type") == "easy" and w.get("distance", 0) > cap + 0.05:
+                set_distance(w, cap, pace_zones)
 
     # Low-frequency weeks (≤3 runs) have no easy run to receive the volume the
     # distribution budgets for one: the layout is a long run plus a quality
@@ -678,7 +689,8 @@ def enforce_contract_long_run_cap(
         w for w in workouts if w.get("type") == "easy" and (w.get("distance") or 0) > 0
     ]
     if easy_runs:
-        limit = easy_run_cap(cap, MAX_EASY_RUN_KM)
+        wk_km = _running_total_km(workouts)
+        limit = easy_run_cap(cap, volume_scaled_easy_cap(wk_km))
         per_easy = excess / len(easy_runs)
         for w in easy_runs:
             set_distance(w, min((w.get("distance") or 0) + per_easy, limit), pace_zones)

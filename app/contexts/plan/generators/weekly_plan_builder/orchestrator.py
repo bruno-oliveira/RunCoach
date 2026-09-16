@@ -58,9 +58,9 @@ from app.core.training.key_workout_library import (
 )
 from app.core.training.quality_caps import (
     LOW_FREQ_EASY_VS_LONG_RUN,
-    MAX_EASY_RUN_KM,
     MAX_EASY_VS_LONG_RUN,
     QUALITY_MIN_DOSE_KM,
+    volume_scaled_easy_cap,
 )
 from app.core.training.training_constants import calculate_week_in_phase
 from app.core.training.tuning import (
@@ -266,7 +266,9 @@ def generate_daily_workouts(
         quality_total,
         long_run_distance,
         easy_runs,
-        max_easy_abs_km=float("inf") if trail_profile is not None else MAX_EASY_RUN_KM,
+        max_easy_abs_km=float("inf")
+        if trail_profile is not None
+        else volume_scaled_easy_cap(total_km),
         easy_vs_long_ratio=low_freq_easy_vs_long_ratio(max_runs, trail_profile),
     )
 
@@ -325,7 +327,9 @@ def generate_daily_workouts(
         # still supplies the intensity. A long-run overlay is only affordable
         # when the easy runs plus the pinned long run can still reach the target.
         pinned_capacity = (
-            long_run_distance + easy_runs * MAX_EASY_RUN_KM + quality_total
+            long_run_distance
+            + easy_runs * volume_scaled_easy_cap(total_km)
+            + quality_total
         )
         skip_overlay = workout_type == "long" and (
             easy_runs == 0 or pinned_capacity < total_km * PINNED_LONG_RUN_FILL_FLOOR

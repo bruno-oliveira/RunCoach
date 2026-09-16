@@ -111,7 +111,7 @@ def _phase_quality_count(
         base_quality_km = total_km * 0.05
         if base_quality_km < 1.0:
             return 0
-        return 2
+        return 1
     if phase == "build":
         week_in_build = week_number - phases["base"] if phases else week_number
         if week_in_build <= 2:
@@ -333,12 +333,9 @@ def _build_quality_distribution(
     profile_name = _profile_for(target_distance, terrain, trail_profile=trail_profile)
 
     if phase == "base":
-        if quality_workouts >= 2:
-            base_quality: Dict[str, int] = {"interval": 1, "tempo": 1}
-        else:
-            base_quality = dict(_BASE_PHASE_QUALITY[profile_name])
-            if profile_name in ("road_half", "road_marathon") and week_number % 2 == 0:
-                base_quality = {"interval": 1}
+        base_quality = dict(_BASE_PHASE_QUALITY[profile_name])
+        if profile_name in ("road_half", "road_marathon") and week_number % 2 == 0:
+            base_quality = {"interval": 1}
         distribution.update(base_quality)
         _substitute_hills_for_flat_training(
             distribution,

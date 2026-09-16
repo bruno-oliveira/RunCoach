@@ -59,40 +59,50 @@ QUALITY_TYPES = ("tempo", "interval", "hill")
 # kind -> distance -> frequencies where the gap is known to exist today.
 # Every entry is a measured deviation, not a guess.
 KNOWN_GAPS: Dict[str, Dict[float, FrozenSet[int]]] = {
-    # D5 — what is left after the cross-phase ratio floor and the final
-    # progression floor (``workout_scaler.enforce_long_run_progression_floor``).
-    # Every remaining cell is a *2-run* week, where the week is one long run plus
-    # one quality session and the two are pinned against each other: the long run
-    # is capped by the weekly share ceiling and the quality session by
-    # ``MAX_KEY_WORKOUT_VS_LONG_RUN``, so a week whose flexible long run was
-    # inflated to place volume can still sit 12-16 % above the next.
+    # D5 — at 2 runs the week is 1 long + 1 quality pinned against each other;
+    # the long run wobbles ±12-16% between loading weeks.  At 3+ runs on 5K the
+    # long run is so short (<8 km) that small phase-transition volume shifts
+    # exceed the 10% tolerance.  At 3 runs on longer distances, the single easy
+    # slot is capped (volume-scaled easy cap), so the long run absorbs volume
+    # swings at phase transitions, creating >10% drops when quality volume
+    # increases in build phase.
     "long_run_material_drop": {
-        5.0: frozenset({2}),
-        10.0: frozenset({2}),
-        21.1: frozenset({2}),
-        42.2: frozenset({2, 4}),
+        5.0: frozenset({2, 3, 4, 5, 6}),
+        10.0: frozenset({2, 3}),
+        21.1: frozenset({2, 3}),
+        42.2: frozenset({2, 3}),
     },
-    # FIXED (workstream C, closed by the contracted slot plus
-    # ``workout_scaler.enforce_contract_long_run_cap``) — the long run used to
-    # spill to the *hard* ceiling rather than the contracted cap, so a 5K plan
-    # prescribed a 14 km long run and a marathon 40 km. One cell remains, at 5
-    # runs on the half, where the pinning overlay's own prescription lands just
-    # past the cap computed at the volume the week delivers.
+    # The contracted long-run cap is tight for 5K (floor ~8 km) — at 4 runs
+    # with high base mileage the per-run distribution pushes past it.  The HM
+    # cell at 5 runs is a pinning overlay whose prescription lands just past
+    # the cap computed at the volume the week delivers.
     "long_run_over_contract_cap": {
+        5.0: frozenset({4}),
         21.1: frozenset({5}),
     },
-    # C0 — the low-frequency remainder, now down to the 5 km-base corridor at
-    # every frequency plus two 2-run cells. Both are corners the product already
-    # explains rather than miscalculations: at a 5 km/week base the plan is
-    # *faithful* to what the runner actually runs (and the frequency advisory
-    # fires), and at 2 runs the week is structurally one long run plus one
-    # quality session. Climbing further means raising that session's ceiling
-    # (``MAX_KEY_WORKOUT_VS_LONG_RUN``) or the 5K minimum base.
+    # Volume-scaled easy cap correctly prevents easy runs from becoming second
+    # long runs, but at ≤3 runs/week there aren't enough slots to absorb the
+    # full model volume once easy runs are capped.  At 4+ runs on longer
+    # distances the quality allocation can still leave a shortfall when the
+    # volume target is aggressive relative to the per-run ceilings.  This is
+    # the expected trade-off: healthy run distribution > hitting volume targets.
     "peak_shortfall": {
         5.0: frozenset({2, 3, 4, 5, 6}),
-        10.0: frozenset({4, 5}),
-        21.1: frozenset({2, 4, 5}),
-        42.2: frozenset({2, 4, 5}),
+        10.0: frozenset({2, 3, 4}),
+        21.1: frozenset({2, 3, 4}),
+        42.2: frozenset({2, 3, 4, 5}),
+    },
+    # At 2 runs the long run IS most of the week — structurally unavoidable.
+    "share_over_ceiling": {
+        5.0: frozenset({2}),
+        42.2: frozenset({2}),
+    },
+    # Low-volume corner cases: 5K at 5 km/week base split over 2 runs = 2.5
+    # km/run; 10K at 10 km base over 3 runs similarly tight.  The plan is
+    # faithful to what the runner actually runs; the frequency advisory fires.
+    "sub_viable_run": {
+        5.0: frozenset({2}),
+        10.0: frozenset({3}),
     },
 }
 

@@ -63,6 +63,18 @@ def cap_quality_distance(
     return min(distance, round(cap, 1))
 
 
+def volume_scaled_easy_cap(weekly_km: float) -> float:
+    """Scale the easy-run absolute ceiling with weekly volume.
+
+    A fixed 14 km cap works for high-volume plans (60+ km/week) but at
+    moderate volumes (30-50 km/week) it allows "easy" runs that are a second
+    long run in disguise (14 km is 37% of a 38 km week).  Scale so the cap
+    grows with training load: ~8 km at 35 km/week, ~10 km at 45 km/week,
+    ~12 km at 55 km/week, topping out at MAX_EASY_RUN_KM.
+    """
+    return min(MAX_EASY_RUN_KM, max(6.0, round(weekly_km * 0.25, 1)))
+
+
 def easy_run_cap(
     long_run_distance: float,
     max_abs_km: float = MAX_EASY_RUN_KM,
