@@ -131,7 +131,8 @@ def _run_signature(plan: TrainingPlan, user_id: str, db: Session) -> str:
     readiness_str = (
         f"{readiness.date.isoformat()}:{readiness.score}" if readiness else "none"
     )
-    return f"{plan.id}:{count}:{last_str}:{readiness_str}"
+    rev = plan.adaptation_revision or 0
+    return f"{plan.id}:{count}:{last_str}:{readiness_str}:{rev}"
 
 
 def _generated_today(cache: dict[str, Any]) -> bool:
@@ -208,6 +209,8 @@ def _assemble_facts(
 
     readiness_facts = _today_readiness_facts(user_id, db)
 
+    adaptation_facts = _recent_adaptation(plan)
+
     signals = {
         "overreach": summary.get("overreach_detected", False),
         "direction": summary.get("direction"),
@@ -220,6 +223,7 @@ def _assemble_facts(
         "today_readiness_band": readiness_facts.get("band"),
         "today_readiness_score": readiness_facts.get("score"),
         "today_readiness_drivers": readiness_facts.get("drivers"),
+        "adaptation": adaptation_facts,
     }
     focus = select_today_focus(signals)
 
@@ -255,6 +259,7 @@ def _assemble_facts(
         },
         "week_pulse": week_pulse_msg,
         "readiness": readiness_facts,
+        "adaptation": adaptation_facts,
         "focus": focus,
     }
 
@@ -310,3 +315,28 @@ def _today_pattern(
         if p.get("workout_type") == workout_type:
             return p.get("message")
     return None
+
+
+def _recent_adaptation(plan: TrainingPlan) -> Optional[dict[str, Any]]:
+    """Extract the latest unseen adaptation for the Coach's Note focus beat.
+
+    Returns a compact dict when the plan has an unseen ``last_change_plan``
+    produced by auto-adjust or VDOT recalibration, so the AI voice can narrate
+    *why* the plan changed.  Returns ``None`` otherwise (manual intents are
+    already explained by the toast bar).
+    """
+    lcp = plan.last_change_plan
+    if not isinstance(lcp, dict):
+        return None
+    action = lcp.get("action")
+    if action not in ("auto_adjust", "recalibrate"):
+        return None
+    summary = lcp.get("summary") or {}
+    return {
+        "action": action,
+        "reason": lcp.get("reason"),
+        "vdot_change": summary.get("vdot_change"),
+        "multiplier": summary.get("multiplier"),
+        "total_km_delta": summary.get("total_km_delta"),
+        "workouts_changed": summary.get("workouts_changed_count", 0),
+    }

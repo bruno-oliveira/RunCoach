@@ -223,6 +223,47 @@ def _select_readiness_focus(signals: dict[str, Any]) -> Optional[dict[str, str]]
     return None
 
 
+def _select_adaptation_focus(
+    adaptation: Optional[dict[str, Any]],
+) -> Optional[dict[str, str]]:
+    """Voice a recent auto-adaptation so the runner understands what changed."""
+    if not adaptation:
+        return None
+    action = adaptation.get("action")
+    reason = adaptation.get("reason")
+    if not reason:
+        return None
+
+    if action == "auto_adjust":
+        return {"kind": "adaptation", "message": reason}
+
+    if action == "recalibrate":
+        vdot = adaptation.get("vdot_change")
+        if vdot:
+            old_v, new_v = vdot.get("old_vdot"), vdot.get("new_vdot")
+            direction = vdot.get("direction", "changed")
+            if direction == "improved":
+                return {
+                    "kind": "adaptation",
+                    "message": (
+                        f"Your recent efforts show real improvement — I've updated "
+                        f"your pace targets from VDOT {old_v} to {new_v}. Today's "
+                        f"paces reflect where you actually are now."
+                    ),
+                }
+            return {
+                "kind": "adaptation",
+                "message": (
+                    f"I've adjusted your pace targets (VDOT {old_v} → {new_v}) "
+                    f"to match your current fitness — today's session runs at the "
+                    f"right effort for where you are now."
+                ),
+            }
+        return {"kind": "adaptation", "message": reason}
+
+    return None
+
+
 def select_today_focus(signals: dict[str, Any]) -> Optional[dict[str, str]]:
     """Pick the single most important coaching adjustment for today, or None.
 
@@ -237,6 +278,12 @@ def select_today_focus(signals: dict[str, Any]) -> Optional[dict[str, str]]:
     readiness_focus = _select_readiness_focus(signals)
     if readiness_focus is not None:
         return readiness_focus
+
+    # 0.5. Recent adaptation — voice *why* the plan just changed so the runner
+    # understands the coach's decision rather than seeing distances silently shift.
+    adaptation_focus = _select_adaptation_focus(signals.get("adaptation"))
+    if adaptation_focus is not None:
+        return adaptation_focus
 
     overreach = signals.get("overreach")
     direction = signals.get("direction")
@@ -340,7 +387,13 @@ def build_fallback_note(facts: dict[str, Any]) -> str:
         sentences.append(purpose)
 
     # 3. Focus — the single signal-driven adjustment, only if one fired.
-    if focus.get("message"):
+    # For adaptation focus, shorten the message in the deterministic note.
+    if focus.get("kind") == "adaptation":
+        adapt = facts.get("adaptation") or {}
+        reason = adapt.get("reason")
+        if reason:
+            sentences.append(reason)
+    elif focus.get("message"):
         sentences.append(focus["message"])
 
     if not sentences and week_pulse:

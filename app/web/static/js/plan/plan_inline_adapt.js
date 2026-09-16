@@ -344,7 +344,7 @@
         // never an interrupting modal.
         var lcp = window.LAST_CHANGE_PLAN;
         if (lcp && lcp.summary && lcp.seen === false
-            && lcp.summary.workouts_changed_count > 0) {
+            && (lcp.summary.workouts_changed_count > 0 || lcp.summary.vdot_change)) {
             addPanelUndo();
             showToast({
                 reason: lcp.reason || 'Your plan adapted to your recent training.',

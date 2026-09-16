@@ -140,6 +140,7 @@ def plan_view_context(
         "today_card": today_card,
         "adaptation_state": adaptation_state,
         "adaptation_revision": training_plan.adaptation_revision or 0,
+        "workout_adapt_reasons": _build_workout_adapt_reasons(training_plan),
         "long_run_warning": long_run_warning,
         "frequency_warning": frequency_warning,
         "intervals_connected": bool(current_user and current_user.intervals_athlete_id),
@@ -155,6 +156,29 @@ def plan_view_context(
     }
     ctx.update(extra)
     return ctx
+
+
+def _build_workout_adapt_reasons(
+    training_plan: TrainingPlan,
+) -> dict[str, str]:
+    """Map ``"week-day"`` → user-friendly reason from the last change_plan.
+
+    The template uses this to show *why* a workout was adjusted directly on
+    the adjusted chip, instead of just "adjusted from X km".
+    """
+    lcp = training_plan.last_change_plan
+    if not isinstance(lcp, dict):
+        return {}
+    reasons: dict[str, str] = {}
+    for week_block in lcp.get("weeks") or []:
+        wk = week_block.get("week")
+        for wo in week_block.get("workouts") or []:
+            reason = wo.get("reason")
+            if reason and wo.get("status") == "changed":
+                day_num = wo.get("day_num")
+                if wk and day_num:
+                    reasons[f"{wk}-{day_num}"] = reason
+    return reasons
 
 
 def _backyard_summary(training_plan: TrainingPlan) -> Optional[dict]:

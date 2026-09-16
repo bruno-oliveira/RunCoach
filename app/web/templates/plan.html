@@ -666,6 +666,8 @@
                         {{ lcp_summary.workouts_changed_count }} workout{{ '' if lcp_summary.workouts_changed_count == 1 else 's' }} changed across {{ lcp_summary.weeks_affected|length }} week{{ '' if lcp_summary.weeks_affected|length == 1 else 's' }}
                         {% if lcp_summary.workouts_protected_count %} · {{ lcp_summary.workouts_protected_count }} protected{% endif %}
                         {% if lcp_summary.total_km_delta %} · {{ '+' if lcp_summary.total_km_delta > 0 else '' }}{{ "%.1f"|format(lcp_summary.total_km_delta) }} km total{% endif %}
+                    {% elif lcp_summary.vdot_change %}
+                        Pace targets updated (VDOT {{ lcp_summary.vdot_change.old_vdot }} → {{ lcp_summary.vdot_change.new_vdot }})
                     {% else %}
                         No distances were changed.
                         {% if lcp.no_change_reasons %} {{ lcp.no_change_reasons[0] }}{% endif %}
@@ -695,13 +697,21 @@
                     <div class="timeline-dot"></div>
                     <div class="timeline-content">
                         <span class="timeline-date">{{ event.date }}</span>
-                        {% if event.type == 'adjust' %}
+                        {% if event.type == 'auto_adjust' %}
+                        <span class="timeline-badge timeline-badge-adjust">
+                            Auto-adjusted
+                        </span>
+                        {% elif event.type == 'adjust' %}
                         <span class="timeline-badge timeline-badge-adjust">
                             {% if event.get('overreach', false) %}Overreach detected{% elif event.get('direction') == 'increased' %}Adjusted up{% elif event.get('direction') == 'reduced' %}Adjusted down{% else %}Reviewed{% endif %}
                         </span>
+                        {% elif event.type == 'intent' %}
+                        <span class="timeline-badge timeline-badge-adjust">
+                            {{ event.get('intent', 'Adapted')|replace('_', ' ')|title }}
+                        </span>
                         {% elif event.type == 'recalibrate' %}
                         <span class="timeline-badge timeline-badge-recalibrate">
-                            {% if event.get('strategy') == 'recovery_insertion' %}Recovery inserted{% elif event.get('strategy') == 'missed_week' %}Missed week{% elif event.get('strategy') == 'time_off' %}Time off{% elif event.get('strategy') == 'ahead' %}Ahead of plan{% else %}Recalibrated{% endif %}
+                            {% if event.get('strategy') == 'recovery_insertion' %}Recovery inserted{% elif event.get('strategy') == 'missed_week' %}Missed week{% elif event.get('strategy') == 'time_off' %}Time off{% elif event.get('strategy') == 'ahead' %}Ahead of plan{% else %}Paces updated{% endif %}
                         </span>
                         {% elif event.type == 'reset' %}
                         <span class="timeline-badge timeline-badge-reset"><span data-i18n="plan.reset_original">Reset to original</span></span>
