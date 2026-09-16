@@ -108,19 +108,22 @@ def reclamp_quality_to_long_run(workouts: List[Dict[str, Any]]) -> None:
     if ceiling <= 0:
         return
     for w in workouts:
-        if (
-            w.get("type") in ("tempo", "interval", "hill")
-            and w.get("key_workout_id")
-            and not w.get("fixed_structure")
-            and (w.get("distance") or 0) > ceiling
-            and w.get("steps")
-        ):
+        if w.get("type") not in ("tempo", "interval", "hill"):
+            continue
+        if w.get("fixed_structure"):
+            continue
+        dist = w.get("distance") or 0
+        if dist <= ceiling:
+            continue
+        if w.get("key_workout_id") and w.get("steps"):
             w["steps"] = _steps_mod.fit_steps_to_distance(w["steps"], ceiling)
             km, priced = _steps_mod.compute_distance_from_steps_checked(w["steps"])
             if priced and km > 0:
-                w["distance"] = round(km, 1)
+                w["distance"] = round(min(km, ceiling), 1)
             else:
-                w["distance"] = min(w["distance"], ceiling)
+                w["distance"] = round(min(dist, ceiling), 1)
+        else:
+            set_distance(w, ceiling)
 
 
 def is_prescriptive(workout: Dict[str, Any]) -> bool:
@@ -542,7 +545,7 @@ def enforce_long_run_ratio_cap(
 
     recipients = [w for w in running if w is not long_w and w.get("type") == "easy"]
     if not recipients:
-        recipients = [w for w in running if w is not long_w]
+        recipients = [w for w in running if w is not long_w and not is_prescriptive(w)]
     if recipients:
         per = excess / len(recipients)
         for w in recipients:

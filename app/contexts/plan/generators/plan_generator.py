@@ -744,6 +744,10 @@ def _smooth_taper(
     if realized_peak <= 0:
         return
 
+    from app.contexts.plan.generators.workout_scaler import (
+        reclamp_quality_to_long_run as _reclamp_quality,
+    )
+
     curve = _get_taper_curve(taper_weeks, target_distance, trail_profile=trail_profile)
     taper_plans = training_plan[len(training_plan) - taper_weeks :]
     for i, weekly_plan in enumerate(taper_plans):
@@ -751,19 +755,10 @@ def _smooth_taper(
         target = round(realized_peak * fraction, 1)
         if weekly_plan["total_km"] > target + 0.05:
             workouts = weekly_plan["daily_workouts"]
-            # Taper the long run down in proportion too (protect_long=False) so a
-            # deliberately light race-week isn't left with a dominant long run
-            # while its easy runs collapse to the floor.
-            #
-            # Clear the display-only ``duration_min`` hints first: ``scale_down``
-            # skips any workout carrying one, and ``attach_duration_hints`` gives
-            # every run under 3 km one — so on a small week the *only* run left
-            # able to absorb the drawdown was the long run, which then took the
-            # whole scaling and broke the easy-to-long ratio. The hints are
-            # re-attached from the final distances immediately below.
             for w in workouts:
                 w.pop("duration_min", None)
             _scale_down(workouts, target, pace_zones=pace_zones, protect_long=False)
+            _reclamp_quality(workouts)
             weekly_plan["total_km"] = round(
                 sum(w.get("distance", 0) for w in workouts), 1
             )

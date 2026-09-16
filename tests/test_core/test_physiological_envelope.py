@@ -95,7 +95,6 @@ KNOWN_GAPS: Dict[str, Dict[float, FrozenSet[int]]] = {
     # At 2 runs the long run IS most of the week — structurally unavoidable.
     "share_over_ceiling": {
         5.0: frozenset({2}),
-        42.2: frozenset({2}),
     },
     # Low-volume corner cases: 5K at 5 km/week base split over 2 runs = 2.5
     # km/run; 10K at 10 km base over 3 runs similarly tight.  The plan is

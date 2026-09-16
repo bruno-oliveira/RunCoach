@@ -559,6 +559,7 @@ def build_weekly_plan(
             max_runs=max_runs_per_week,
             pace_zones=pace_zones,
         )
+        _reclamp_quality_to_long_run(workouts)
     actual_total_km = round(sum(w.get("distance", 0) for w in workouts), 1)
 
     attach_duration_hints(workouts, pace_zones)
