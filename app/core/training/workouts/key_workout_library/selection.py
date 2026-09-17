@@ -8,6 +8,16 @@ and steps onto a generated workout slot.
 import logging
 from typing import Any, Dict, List, Optional
 
+from app.core.training.physiology.vdot_calculator import VDOTCalculator
+from app.core.training.profiles.road_profile import classify_road
+from app.core.training.profiles.trail_profile import is_trail_target
+from app.core.training.tuning import (
+    KEY_WORKOUT_MAX_USES_PER_PLAN,
+    KEY_WORKOUT_NO_REPEAT_WINDOW_WEEKS,
+    MAX_QUALITY_DAY_SHARE,
+    MIN_QUALITY_DAY_CAP_KM,
+    PEAK_WORK_FLOOR_TOLERANCE_KM,
+)
 from app.core.training.workouts import workout_steps as _steps_mod
 from app.core.training.workouts.key_workout_data import WORKOUTS
 from app.core.training.workouts.key_workout_library.builders import (
@@ -20,16 +30,6 @@ from app.core.training.workouts.key_workout_library.rewrites import (
     _derive_structure,
     _rewrite_key_workout_description,
 )
-from app.core.training.profiles.road_profile import classify_road
-from app.core.training.profiles.trail_profile import is_trail_target
-from app.core.training.tuning import (
-    KEY_WORKOUT_MAX_USES_PER_PLAN,
-    KEY_WORKOUT_NO_REPEAT_WINDOW_WEEKS,
-    MAX_QUALITY_DAY_SHARE,
-    MIN_QUALITY_DAY_CAP_KM,
-    PEAK_WORK_FLOOR_TOLERANCE_KM,
-)
-from app.core.training.physiology.vdot_calculator import VDOTCalculator
 
 _logger = logging.getLogger(__name__)
 

@@ -11,7 +11,9 @@ from __future__ import annotations
 
 from typing import Dict, Iterable, List
 
-from app.core.training.periodization.long_run_calculator import get_weekly_long_run_ratio_cap
+from app.core.training.periodization.long_run_calculator import (
+    get_weekly_long_run_ratio_cap,
+)
 from app.core.training.periodization.quality_caps import enforce_week_caps
 from app.core.training.profiles.trail_profile import classify_trail
 from app.core.training.tuning import WEEK_OVER_WEEK_CAP

@@ -113,7 +113,9 @@ def _step_distance_warnings(week: Dict[str, Any], num: Any, phase: str) -> List[
     as a warning rather than a fatal because an unpriceable duration-based
     step makes the step total a lower bound, not a contradiction.
     """
-    from app.core.training.workouts.workout_steps import compute_distance_from_steps_checked
+    from app.core.training.workouts.workout_steps import (
+        compute_distance_from_steps_checked,
+    )
     from app.core.training.workouts.workout_steps.metrics import _priced_step_km
 
     out: List[str] = []

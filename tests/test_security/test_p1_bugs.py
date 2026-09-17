@@ -96,7 +96,9 @@ class TestHighBaseDetraining:
     def test_base_phase_does_not_ramp_down_below_current(self):
         """G5: a high-base runner's base phase holds (not detrains) — no
         loading week below ~90% of current volume during base/build."""
-        from app.core.training.periodization.mileage_progression import calculate_weekly_progression
+        from app.core.training.periodization.mileage_progression import (
+            calculate_weekly_progression,
+        )
         from app.core.training.periodization.phase_calculator import calculate_phases
 
         current_km = 70.0

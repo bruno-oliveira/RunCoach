@@ -7,10 +7,6 @@ and edge cases. This is the safety net for RunCoach's unique feature.
 import pytest
 
 from app.contexts.plan.generators.plan_generator import TrainingPlanGenerator
-from app.core.training.workouts.key_workout_library import (
-    _DISTANCE_REWRITES,
-    _rewrite_key_workout_description,
-)
 from app.core.training.periodization.long_run_calculator import (
     _get_long_run_cap,
     calculate_long_run_ratio,
@@ -22,6 +18,10 @@ from app.core.training.periodization.quality_caps import (
     cap_easy_distance,
     cap_quality_distance,
     get_quality_caps,
+)
+from app.core.training.workouts.key_workout_library import (
+    _DISTANCE_REWRITES,
+    _rewrite_key_workout_description,
 )
 from app.core.training.workouts.workout_builders import (
     generate_easy_run,

@@ -79,6 +79,10 @@ from app.contexts.plan.plan_creation_helpers import (
     persist_weekly_workouts,
 )
 from app.core.training.adaptation import physiological_envelope as env
+from app.core.training.periodization.training_constants import (
+    get_hard_ceiling,
+    training_km,
+)
 from app.core.training.profiles.backyard_profile import (
     _TIER_MAX_WEEKS,
     _TIER_MIN_RUNS_PER_WEEK,
@@ -94,7 +98,6 @@ from app.core.training.profiles.trail_profile import (
     TrailProfile,
     classify_trail,
 )
-from app.core.training.periodization.training_constants import get_hard_ceiling, training_km
 from app.exceptions import (
     InadequateBaseException,
     InsufficientTimeException,

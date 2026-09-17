@@ -394,7 +394,9 @@ class TestStepDistanceMatchesWorkout:
 
     @classmethod
     def _primary_km(cls, steps):
-        from app.core.training.workouts.workout_steps import _parse_pace_str_to_min_per_km
+        from app.core.training.workouts.workout_steps import (
+            _parse_pace_str_to_min_per_km,
+        )
 
         total_m = 0.0
         for s in steps:
@@ -479,7 +481,10 @@ class TestTaperRetainsSharpener:
         [(42.2, 50, 4), (21.1, 45, 4), (10.0, 45, 4)],
     )
     def test_taper_has_a_sharpener(self, distance, mileage, max_runs):
-        from app.core.training.periodization.phase_calculator import calculate_phases, get_phase
+        from app.core.training.periodization.phase_calculator import (
+            calculate_phases,
+            get_phase,
+        )
 
         plan, weeks = _generate_plan(distance, mileage, max_runs)
         phases = calculate_phases(weeks, distance)

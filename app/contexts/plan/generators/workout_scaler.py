@@ -27,8 +27,6 @@ from __future__ import annotations
 from typing import Any, Dict, List, Optional
 
 from app.core.training.periodization import long_run_calculator
-from app.core.training.workouts import workout_builders
-from app.core.training.workouts.key_workout_library import rebuild_key_workout
 from app.core.training.periodization.quality_caps import (
     MAX_EASY_VS_LONG_RUN,
     MIN_EASY_PER_RUN_KM,
@@ -37,6 +35,8 @@ from app.core.training.periodization.quality_caps import (
 )
 from app.core.training.periodization.training_constants import get_hard_ceiling
 from app.core.training.tuning import MAX_QUALITY_DAY_SHARE, MIN_QUALITY_DAY_CAP_KM
+from app.core.training.workouts import workout_builders
+from app.core.training.workouts.key_workout_library import rebuild_key_workout
 
 
 def long_run_pace_min_km(pace_zones: Optional[Dict]) -> Optional[float]:
@@ -99,8 +99,8 @@ def reclamp_quality_to_long_run(workouts: List[Dict[str, Any]]) -> None:
     total. A session whose steps can't be priced is clamped to the ceiling
     directly.
     """
-    from app.core.training.workouts import workout_steps as _steps_mod
     from app.core.training.tuning import MAX_KEY_WORKOUT_VS_LONG_RUN
+    from app.core.training.workouts import workout_steps as _steps_mod
 
     long_km = max(
         (w.get("distance") or 0 for w in workouts if w.get("type") == "long"),

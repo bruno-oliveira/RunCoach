@@ -6,9 +6,9 @@ from typing import Any, Dict, List, Optional, Tuple
 
 from sqlalchemy.orm import Session
 
+from app.core.training.physiology.vdot_calculator import VDOTCalculator
 from app.core.training.workouts import key_workout_library as _kwlib
 from app.core.training.workouts import workout_steps as _steps_mod
-from app.core.training.physiology.vdot_calculator import VDOTCalculator
 from app.core.training.workouts.workout_registry import build_workout
 from app.models import TrainingPlan, WeeklyPlan
 from app.utils import persist_json

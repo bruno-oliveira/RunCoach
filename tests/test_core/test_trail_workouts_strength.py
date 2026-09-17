@@ -2,13 +2,13 @@
 selection of trail key workouts."""
 
 from app.contexts.plan.generators.plan_generator import TrainingPlanGenerator
-from app.core.training.workouts.key_workout_library import KeyWorkoutLibrary
 from app.core.training.periodization.strength_plan import (
     PHASE_FOCUS_ROTATIONS,
     TRAIL_FOCUS_ROTATIONS,
     get_phase_focus_rotation,
 )
 from app.core.training.profiles.trail_profile import classify_trail
+from app.core.training.workouts.key_workout_library import KeyWorkoutLibrary
 
 
 def _build_plan(distance, elevation, weeks, runs, current_km, terrain=None):

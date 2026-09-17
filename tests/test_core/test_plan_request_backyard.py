@@ -8,7 +8,10 @@ own numbers survive alongside it so nothing downstream has to guess.
 import pytest
 from pydantic import ValidationError
 
-from app.core.training.profiles.backyard_profile import BACKYARD_LOOP_KM, classify_backyard
+from app.core.training.profiles.backyard_profile import (
+    BACKYARD_LOOP_KM,
+    classify_backyard,
+)
 from app.core.training.profiles.trail_profile import TRAIL_DISTANCE_MAX_KM
 from app.exceptions import (
     InadequateBaseException,

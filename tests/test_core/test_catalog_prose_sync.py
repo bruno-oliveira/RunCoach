@@ -12,7 +12,9 @@ import re
 import pytest
 
 from app.core.training.workouts.key_workout_data import WORKOUTS
-from app.core.training.workouts.key_workout_library.builders import build_key_workout_steps
+from app.core.training.workouts.key_workout_library.builders import (
+    build_key_workout_steps,
+)
 from app.core.training.workouts.key_workout_library.rewrites import (
     _DISTANCE_REWRITES,
     _rewrite_key_workout_description,

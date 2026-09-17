@@ -12,13 +12,13 @@ from typing import Any, Dict, List, Optional
 
 from app.core.coaching.coaching_notes_generator import generate_coaching_note
 from app.core.training.periodization import mileage_progression, phase_calculator
+from app.core.training.periodization.strength_plan import derive_experience_level
+from app.core.training.periodization.training_constants import calculate_week_in_phase
 from app.core.training.physiology.goal_pace_model import (
     GoalPaceContext,
     goal_vdot_from_time,
     progressive_pace_zones,
 )
-from app.core.training.periodization.strength_plan import derive_experience_level
-from app.core.training.periodization.training_constants import calculate_week_in_phase
 from app.core.training.physiology.vdot_calculator import VDOTCalculator
 from app.core.training.workouts.workout_builders import attach_strength_sessions
 

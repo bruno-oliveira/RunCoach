@@ -10,7 +10,9 @@ import pytest
 
 from app.contexts.plan.generators.plan_generator import TrainingPlanGenerator
 from app.contexts.plan.generators.plan_validator import validate_quality_run_steps
-from app.core.training.workouts.key_workout_library.builders import build_key_workout_steps
+from app.core.training.workouts.key_workout_library.builders import (
+    build_key_workout_steps,
+)
 from app.core.training.workouts.key_workout_library.selection import KeyWorkoutLibrary
 
 # ---------------------------------------------------------------------------
@@ -102,7 +104,9 @@ class TestPreviouslyBrokenKeyWorkoutsHaveConsistentSteps:
     @pytest.mark.parametrize("kid", PREVIOUSLY_BROKEN_IDS)
     def test_steps_produce_nonzero_distance(self, kid: str) -> None:
         """Every fixed-structure key workout must produce a non-zero step distance."""
-        from app.core.training.workouts.workout_steps import compute_distance_from_steps_checked
+        from app.core.training.workouts.workout_steps import (
+            compute_distance_from_steps_checked,
+        )
 
         wk = KeyWorkoutLibrary.get_by_id(kid)
         wtype = wk["type"]

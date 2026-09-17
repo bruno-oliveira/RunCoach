@@ -17,7 +17,9 @@ from app.core.training.workouts.key_workout_library.rewrites import (
     _rewrite_key_workout_description,
 )
 from app.core.training.workouts.key_workout_library.selection import KeyWorkoutLibrary
-from app.core.training.workouts.workout_steps.metrics import _compute_distance_from_steps
+from app.core.training.workouts.workout_steps.metrics import (
+    _compute_distance_from_steps,
+)
 
 NEW_IDS = [
     "5k_thirty_thirties",

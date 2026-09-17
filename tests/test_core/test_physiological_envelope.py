@@ -26,8 +26,8 @@ import pytest
 
 from app.contexts.plan.generators.plan_generator import TrainingPlanGenerator
 from app.contexts.plan.generators.plan_structure_guard import check_plan_structure
-from app.core.training.periodization import long_run_calculator, mileage_progression
 from app.core.training.adaptation import physiological_envelope as env
+from app.core.training.periodization import long_run_calculator, mileage_progression
 from app.core.training.periodization.strength_plan import derive_experience_level
 from app.core.training.tuning import ROAD_LONG_RUN_CAPS
 

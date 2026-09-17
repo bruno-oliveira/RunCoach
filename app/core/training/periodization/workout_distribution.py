@@ -13,10 +13,12 @@ from typing import TYPE_CHECKING, Dict, Optional
 from app.core.training.periodization.distribution_validator import (
     validate_polarized_ratio as _validate_polarized_ratio,
 )
+from app.core.training.periodization.week_scheduler import (
+    schedule_workout_types,  # noqa: F401
+)
 from app.core.training.profiles.road_profile import classify_road
 from app.core.training.profiles.trail_profile import TrailProfile, is_trail_target
 from app.core.training.tuning import SECOND_QUALITY_MIN_WEEK_KM
-from app.core.training.periodization.week_scheduler import schedule_workout_types  # noqa: F401
 
 if TYPE_CHECKING:
     from app.domain.frequency import FrequencyComposer

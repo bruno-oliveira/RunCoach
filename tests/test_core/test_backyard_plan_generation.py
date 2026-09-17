@@ -13,11 +13,11 @@ from app.contexts.plan.generators.plan_generator import (
     TrainingPlanGenerator,
 )
 from app.core.training.profiles.backyard_profile import classify_backyard
+from app.core.training.profiles.trail_profile import classify_trail
 from app.core.training.workouts.key_workout_library import (
     _BACKYARD_ONLY_IDS,
     KeyWorkoutLibrary,
 )
-from app.core.training.profiles.trail_profile import classify_trail
 from app.core.training.workouts.workout_steps import _compute_distance_from_steps
 
 

@@ -18,8 +18,11 @@ import re
 import pytest
 
 from app.contexts.plan.generators.plan_generator import TrainingPlanGenerator
-from app.core.training.workouts.key_workout_library import _WORKOUTS, overlay_key_workout
 from app.core.training.profiles.trail_profile import classify_trail
+from app.core.training.workouts.key_workout_library import (
+    _WORKOUTS,
+    overlay_key_workout,
+)
 from app.core.training.workouts.workout_steps import _compute_distance_from_steps
 
 

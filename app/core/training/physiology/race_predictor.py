@@ -6,13 +6,16 @@ Binary-search solver and confidence ranges extracted from VDOTCalculator.
 import logging
 from typing import Dict, Optional
 
-from app.core.training.physiology.environment import EnvironmentalConditions, adjust_seconds
-from app.core.training.profiles.trail_profile import TRAIL_SENTINEL_KM
+from app.core.training.physiology.environment import (
+    EnvironmentalConditions,
+    adjust_seconds,
+)
 from app.core.training.physiology.vdot_calculator import (
     STANDARD_RACE_DISTANCES,
     _pct_vo2max_at_time,
     _vo2_at_velocity,
 )
+from app.core.training.profiles.trail_profile import TRAIL_SENTINEL_KM
 
 logger = logging.getLogger(__name__)
 

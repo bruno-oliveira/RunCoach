@@ -30,7 +30,10 @@ from app.contexts.runner.fitness.hr_zone_service import (
 )
 from app.contexts.runner.fitness.race_predictor_service import RacePredictorService
 from app.core.training.physiology.hr_zone_calculator import HRZoneCalculator
-from app.core.training.physiology.vdot_calculator import TRAIL_ELEVATION_M_PER_KM, VDOTCalculator
+from app.core.training.physiology.vdot_calculator import (
+    TRAIL_ELEVATION_M_PER_KM,
+    VDOTCalculator,
+)
 from app.core.training.physiology.workout_inference import (
     combine,
     hr_to_tier,

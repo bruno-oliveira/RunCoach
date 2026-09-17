@@ -160,7 +160,9 @@ class VDOTCalculator:
         Returns:
             Dict with zone names mapping to pace info
         """
-        from app.core.training.physiology.race_predictor import predict_time_for_distance
+        from app.core.training.physiology.race_predictor import (
+            predict_time_for_distance,
+        )
 
         # Floor/ceiling the input so a degenerate VDOT from a non-calculator
         # source can never produce nonsensical training paces downstream.
@@ -335,7 +337,9 @@ class VDOTCalculator:
         endurance_factor: Optional[float] = None,
         conditions: Optional["EnvironmentalConditions"] = None,
     ) -> Optional[int]:
-        from app.core.training.physiology.race_predictor import predict_time_for_distance
+        from app.core.training.physiology.race_predictor import (
+            predict_time_for_distance,
+        )
 
         return predict_time_for_distance(
             vdot,

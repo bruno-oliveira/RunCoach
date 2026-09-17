@@ -12,7 +12,9 @@ import re
 
 import pytest
 
-from app.core.training.workouts.key_workout_library.builders import build_key_workout_steps
+from app.core.training.workouts.key_workout_library.builders import (
+    build_key_workout_steps,
+)
 from app.core.training.workouts.key_workout_library.rewrites import (
     _CANONICAL_REP_LADDERS,
     _CANONICAL_SPECS,

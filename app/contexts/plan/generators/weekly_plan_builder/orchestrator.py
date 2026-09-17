@@ -52,16 +52,7 @@ from app.contexts.plan.generators.workout_scaler import (
 )
 from app.core.coaching.coaching_notes_generator import generate_coaching_note
 from app.core.training.periodization import long_run_calculator, phase_calculator
-from app.core.training.workouts import workout_builders
 from app.core.training.periodization import workout_distribution as workout_dist_mod
-from app.core.training.profiles.backyard_simulation import (
-    fit_simulation_to_week,
-    weekly_backyard_focus,
-)
-from app.core.training.workouts.key_workout_library import (
-    KeyWorkoutRotationState,
-    overlay_key_workout,
-)
 from app.core.training.periodization.quality_caps import (
     LOW_FREQ_EASY_VS_LONG_RUN,
     MAX_EASY_VS_LONG_RUN,
@@ -69,12 +60,23 @@ from app.core.training.periodization.quality_caps import (
     volume_scaled_easy_cap,
 )
 from app.core.training.periodization.training_constants import calculate_week_in_phase
+from app.core.training.profiles.backyard_simulation import (
+    fit_simulation_to_week,
+    weekly_backyard_focus,
+)
+from app.core.training.profiles.vertical_simulation import (
+    attach_treadmill_prescriptions,
+)
 from app.core.training.tuning import (
     MAX_KEY_WORKOUT_VS_LONG_RUN,
     QUALITY_PROGRESSION_MAX,
     QUALITY_PROGRESSION_STEP,
 )
-from app.core.training.profiles.vertical_simulation import attach_treadmill_prescriptions
+from app.core.training.workouts import workout_builders
+from app.core.training.workouts.key_workout_library import (
+    KeyWorkoutRotationState,
+    overlay_key_workout,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -294,7 +296,9 @@ def generate_daily_workouts(
     )
 
     if composer is not None:
-        from app.core.training.periodization.week_scheduler import schedule_from_composer
+        from app.core.training.periodization.week_scheduler import (
+            schedule_from_composer,
+        )
 
         quality_types = {
             k: distribution.get(k, 0) for k in ("tempo", "interval", "hill")

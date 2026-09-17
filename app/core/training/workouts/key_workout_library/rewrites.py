@@ -8,8 +8,8 @@ the prose never drift apart.
 import re
 from typing import Any, Callable, Dict, Optional
 
-from app.core.training.workouts.key_workout_data import WORKOUTS as _CATALOG
 from app.core.training.physiology.vdot_calculator import VDOTCalculator
+from app.core.training.workouts.key_workout_data import WORKOUTS as _CATALOG
 from app.core.training.workouts.workout_steps.primitives import _wucd_m, wucd_profile
 from app.utils import format_km, truncate_km
 

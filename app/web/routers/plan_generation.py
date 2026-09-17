@@ -604,7 +604,9 @@ def assess_long_run(
     """
     from fastapi.responses import JSONResponse
 
-    from app.core.training.periodization.long_run_calculator import assess_long_run_adequacy
+    from app.core.training.periodization.long_run_calculator import (
+        assess_long_run_adequacy,
+    )
     from app.core.training.periodization.strength_plan import derive_experience_level
 
     try:

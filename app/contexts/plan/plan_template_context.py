@@ -240,7 +240,9 @@ def _build_long_run_warning(
             getattr(training_plan, "target_elevation_gain_m", None) or 0.0,
         )
 
-    from app.core.training.periodization.long_run_calculator import assess_long_run_adequacy
+    from app.core.training.periodization.long_run_calculator import (
+        assess_long_run_adequacy,
+    )
 
     return assess_long_run_adequacy(
         peak_long_run,

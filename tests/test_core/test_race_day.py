@@ -13,8 +13,8 @@ from app.contexts.plan.generators.plan_generator import (
     TrainingPlanGenerator,
 )
 from app.contexts.plan.generators.workout_scaler import is_prescriptive, set_distance
-from app.core.training.profiles.trail_profile import classify_trail
 from app.core.training.periodization.training_constants import training_km
+from app.core.training.profiles.trail_profile import classify_trail
 from app.core.training.workouts.workout_steps import compute_distance_from_steps_checked
 
 ROAD = [(5.0, 8, 20, 3), (10.0, 12, 30, 4), (21.1, 12, 35, 4), (42.2, 16, 50, 5)]

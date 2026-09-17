@@ -28,9 +28,9 @@ from app.contexts.plan.generators.weekly_plan_builder.budget import (
     build_workout_for_type,
 )
 from app.contexts.plan.generators.workout_scaler import is_prescriptive
-from app.core.training.workouts import workout_builders
 from app.core.training.profiles.backyard_profile import BackyardProfile
 from app.core.training.profiles.backyard_simulation import LoopSimulation
+from app.core.training.workouts import workout_builders
 from app.core.training.workouts.workout_steps.backyard import (
     build_loop_repeats_steps,
     build_loop_simulation_steps,

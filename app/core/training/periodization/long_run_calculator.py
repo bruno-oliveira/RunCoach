@@ -17,11 +17,11 @@ from app.core.training.periodization.phase_calculator import (
     calculate_phases,
     get_distance_category,
 )
-from app.core.training.profiles.trail_profile import TrailProfile
 from app.core.training.periodization.training_constants import (
     calculate_week_in_phase,
     get_hard_ceiling,
 )
+from app.core.training.profiles.trail_profile import TrailProfile
 from app.core.training.tuning import (
     FALLBACK_LONG_RUN_CAP_RATIO,
     LONG_RUN_GROWTH_ABS_KM,

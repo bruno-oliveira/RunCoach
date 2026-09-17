@@ -12,16 +12,16 @@ from app.contexts.plan.generators.performance_plan_generator import (
     PerformancePlanGenerator,
 )
 from app.contexts.plan.generators.plan_generator import TrainingPlanGenerator
-from app.core.training.workouts.key_workout_library.rewrites import (
-    _rolling_400_reps,
-    _thirty_thirty_reps,
-)
 from app.core.training.tuning import (
     MAX_QUALITY_DAY_SHARE,
     MAX_WORK_ABS_KM_BY_ZONE,
     MAX_WORK_SHARE_BY_ZONE,
     MIN_CAPPED_WORK_KM,
     MIN_QUALITY_DAY_CAP_KM,
+)
+from app.core.training.workouts.key_workout_library.rewrites import (
+    _rolling_400_reps,
+    _thirty_thirty_reps,
 )
 from app.core.training.workouts.workout_steps.metrics import (
     exempt_work_km,

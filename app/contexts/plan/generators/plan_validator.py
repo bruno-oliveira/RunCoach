@@ -113,7 +113,9 @@ def validate_quality_run_steps(workout: dict) -> tuple[bool, str]:
 
     Returns ``(True, "Valid")`` or ``(False, <reason>)``.
     """
-    from app.core.training.workouts.workout_steps import compute_distance_from_steps_checked
+    from app.core.training.workouts.workout_steps import (
+        compute_distance_from_steps_checked,
+    )
 
     wtype = workout.get("type")
     if wtype not in ("interval", "tempo", "hill"):

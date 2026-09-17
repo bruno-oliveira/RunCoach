@@ -15,8 +15,8 @@ it carries no back-reference to the adjusters that import it.
 
 from typing import Any, Dict, Optional
 
-from app.core.training.workouts import workout_steps as _steps_mod
 from app.core.training.physiology.vdot_calculator import VDOTCalculator
+from app.core.training.workouts import workout_steps as _steps_mod
 from app.core.training.workouts.workout_registry import WORKOUT_REGISTRY, build_workout
 
 _PLAIN_QUALITY_TYPES = ("tempo", "interval", "hill")

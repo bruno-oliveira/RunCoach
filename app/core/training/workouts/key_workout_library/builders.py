@@ -722,7 +722,9 @@ def rebuild_key_workout(
         return False
     # Local import breaks the builders <-> selection cycle (selection imports
     # build_key_workout_steps at module load; only this path needs the library).
-    from app.core.training.workouts.key_workout_library.selection import KeyWorkoutLibrary
+    from app.core.training.workouts.key_workout_library.selection import (
+        KeyWorkoutLibrary,
+    )
 
     key_wk = KeyWorkoutLibrary.get_by_id(kid)
     if not key_wk:

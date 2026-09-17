@@ -21,8 +21,8 @@ from app.contexts.runner.queries import (
     TRAIL_ELEVATION_M_PER_KM,
     count_prior_trail_runs,
 )
-from app.core.training.workouts.quality_scorer import calculate_quality_score
 from app.core.training.physiology.vdot_calculator import VDOTCalculator
+from app.core.training.workouts.quality_scorer import calculate_quality_score
 from app.dependencies import validate_plan_ownership
 from app.models import DailyWorkout, RunLog, User
 from app.schemas import RunLogCreate, RunLogResponse

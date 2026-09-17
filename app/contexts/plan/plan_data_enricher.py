@@ -5,7 +5,10 @@ from typing import Any
 
 from sqlalchemy.orm import Session
 
-from app.core.training.adaptation.baseline_recovery import recover_baseline, strip_annotations
+from app.core.training.adaptation.baseline_recovery import (
+    recover_baseline,
+    strip_annotations,
+)
 from app.core.training.workouts.key_workout_library import (
     _KEY_WORKOUT_MIN_DISTANCE_KM,
     KeyWorkoutLibrary,
