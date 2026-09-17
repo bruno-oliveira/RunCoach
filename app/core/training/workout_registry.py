@@ -107,6 +107,19 @@ def _build_hill(*, day: int, distance: float, **_: Any) -> Dict[str, Any]:
     return workout_builders.generate_hill_workout(day, distance)
 
 
+def _build_medium_long(
+    *,
+    day: int,
+    distance: float,
+    total_km: float,
+    pace_zones: Optional[Dict[str, Any]],
+    **_: Any,
+) -> Dict[str, Any]:
+    return workout_builders.generate_medium_long_run(
+        day, distance, total_km, pace_zones=pace_zones
+    )
+
+
 WORKOUT_REGISTRY: Dict[str, WorkoutTypeSpec] = {
     "rest": WorkoutTypeSpec("rest", "rest", "Rest day", _build_rest),
     "recovery": WorkoutTypeSpec(
@@ -122,6 +135,12 @@ WORKOUT_REGISTRY: Dict[str, WorkoutTypeSpec] = {
     ),
     "hill": WorkoutTypeSpec(
         "hill", "high", "Hill repeats and strength training", _build_hill
+    ),
+    "medium_long": WorkoutTypeSpec(
+        "medium_long",
+        "low_medium",
+        "Medium-long aerobic endurance run",
+        _build_medium_long,
     ),
 }
 

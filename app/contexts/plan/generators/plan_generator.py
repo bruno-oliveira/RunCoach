@@ -178,6 +178,16 @@ class TrainingPlanGenerator:
         # it skips combos under 2.5 km/run.)
         max_runs_per_week = _viable_run_frequency(current_km, max_runs_per_week)
 
+        # Select the frequency composer: drives structural decisions (quality
+        # count, long-run ratios, day scheduling) while the existing math
+        # (VDOT, mileage progression, caps) stays in core/training.
+        # Trail and backyard plans keep the legacy path for now (Phase 4).
+        composer = None
+        if trail_profile is None and backyard_profile is None:
+            from app.core.training.frequency import get_composer
+
+            composer = get_composer(max_runs_per_week)
+
         # The simulation ladder is a plan-level decision (spacing, deloads, and
         # where the dress rehearsal lands all depend on the whole shape), so it
         # is built once here and consulted per week.
@@ -247,6 +257,7 @@ class TrainingPlanGenerator:
                 rotation_state=rotation_state,
                 backyard_profile=backyard_profile,
                 backyard_schedule=backyard_schedule,
+                composer=composer,
             )
 
             # Enforce 10% cap against actual high-water mark.

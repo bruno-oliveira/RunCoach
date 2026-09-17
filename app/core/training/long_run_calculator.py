@@ -4,8 +4,13 @@ Handles long run ratio progression, distance caps, and phase-based
 quality workout distance allocation.
 """
 
+from __future__ import annotations
+
 import math
-from typing import Dict, Optional
+from typing import TYPE_CHECKING, Dict, Optional
+
+if TYPE_CHECKING:
+    from app.domain.frequency import FrequencyComposer
 
 from app.core.training.phase_calculator import (
     PHASE_DISTRIBUTIONS,
@@ -261,6 +266,7 @@ def get_long_run_ratio_range(
     weeks: int,
     trail_profile: Optional[TrailProfile] = None,
     max_runs: Optional[int] = None,
+    composer: Optional[FrequencyComposer] = None,
 ) -> tuple[float, float]:
     """
     Get the long run ratio range (min, max) for a phase.
@@ -273,8 +279,31 @@ def get_long_run_ratio_range(
             trail ratio table (ultras pull a higher long-run share).
         max_runs: Runs/week. Low-frequency road plans raise the long-run
             floor so the few runs can carry the prescribed weekly volume.
+        composer: When provided, the composer's long-run ratios are used
+            instead of the tuning tables.
     """
-    if trail_profile is not None:
+    if composer is not None:
+        min_ratio, max_ratio = composer.long_run_pct(phase)
+        # The composer's ratios are frequency-appropriate but distance-
+        # agnostic.  Marathon / half long runs need a higher share than a
+        # 10K at the same frequency.  Lift the floor to the distance-based
+        # minimum — but only when there is no medium-long slot, because
+        # long + medium_long already supplies the endurance stimulus at 5+
+        # runs and lifting the long ratio there squeezes easy runs below
+        # zero.
+        from app.domain.frequency import SlotType
+
+        has_medium_long = any(
+            s.slot_type == SlotType.MEDIUM_LONG for s in composer.slots(phase)
+        )
+        if not has_medium_long:
+            category = get_distance_category(target_distance)
+            if category in _ROAD_LONG_RUN_RATIOS:
+                dist_min, _ = _ROAD_LONG_RUN_RATIOS[category][phase]
+                if dist_min > min_ratio:
+                    min_ratio = dist_min
+                    max_ratio = max(max_ratio, min_ratio + 0.04)
+    elif trail_profile is not None:
         min_ratio, max_ratio = _TRAIL_LONG_RUN_RATIOS[trail_profile.bracket][phase]
     else:
         category = get_distance_category(target_distance)
@@ -291,7 +320,9 @@ def get_long_run_ratio_range(
 
     # Low-frequency road plans: lift the long-run floor so 2-3 runs can hold
     # the week's volume (the other runs are bounded relative to the long run).
-    if trail_profile is None and max_runs is not None:
+    # Skip when a composer is present — the composer's ratios already encode
+    # frequency-appropriate bounds.
+    if composer is None and trail_profile is None and max_runs is not None:
         floor = LOW_FREQ_LONG_RUN_RATIO_FLOOR.get(max_runs, {}).get(phase)
         if floor is not None:
             min_ratio = max(min_ratio, floor)
@@ -309,6 +340,7 @@ def calculate_long_run_ratio(
     total_weeks: int,
     trail_profile: Optional[TrailProfile] = None,
     max_runs: Optional[int] = None,
+    composer: Optional[FrequencyComposer] = None,
 ) -> float:
     """
     Calculate long run ratio with progression within phase.
@@ -322,6 +354,7 @@ def calculate_long_run_ratio(
         total_weeks: Total weeks in plan
         trail_profile: Optional trail profile — bracket-aware ratios.
         max_runs: Runs/week — lifts the long-run floor on low-frequency plans.
+        composer: When provided, ratios come from the composer.
 
     Returns:
         Long run ratio as a decimal (e.g., 0.35 for 35%)
@@ -332,6 +365,7 @@ def calculate_long_run_ratio(
         total_weeks,
         trail_profile=trail_profile,
         max_runs=max_runs,
+        composer=composer,
     )
 
     week_in_phase = calculate_week_in_phase(week_number, phase, phases)
@@ -359,6 +393,7 @@ def calculate_long_run_ratio(
                 total_weeks,
                 trail_profile=trail_profile,
                 max_runs=max_runs,
+                composer=composer,
             )
             floor = min(max_ratio, max(min_ratio, previous_max))
 
@@ -473,6 +508,7 @@ def calculate_long_run_distance(
     long_run_pace_min_km: Optional[float] = None,
     max_runs: Optional[int] = None,
     prev_long_run_km: Optional[float] = None,
+    composer: Optional[FrequencyComposer] = None,
 ) -> float:
     """
     Calculate long run distance with proper progression and phase-specific percentage.
@@ -488,6 +524,7 @@ def calculate_long_run_distance(
         weeks,
         trail_profile=trail_profile,
         max_runs=max_runs,
+        composer=composer,
     )
 
     long_run_base = total_km * long_run_ratio

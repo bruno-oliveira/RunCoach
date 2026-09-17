@@ -227,6 +227,35 @@ def generate_easy_run(
     }
 
 
+def generate_medium_long_run(
+    day: int, distance: float, total_km: float, pace_zones: Optional[Dict] = None
+) -> Dict[str, Any]:
+    """Generate medium-long run — aerobic bridge between easy and long."""
+    if pace_zones:
+        e_zone = pace_zones["E"]
+        easy_sub = e_zone.get("sub_zones", {}).get("easy")
+        easy_pace = easy_sub["pace_str"] if easy_sub else e_zone["pace_str"]
+        description = (
+            f"Medium-long run at {easy_pace} (easy pace). "
+            "Builds aerobic endurance without the recovery cost of a full long run."
+        )
+    else:
+        description = (
+            "Medium-long run at easy-to-moderate effort. "
+            "Builds aerobic endurance without the recovery cost of a full long run."
+        )
+    steps = workout_steps.build_easy_steps(round(distance, 1), pace_zones)
+    actual_km = round(workout_steps.total_distance_m(steps) / 1000.0, 1)
+    return {
+        "day": day,
+        "type": "medium_long",
+        "distance": actual_km if actual_km > 0 else round(distance, 1),
+        "intensity": "low_medium",
+        "description": description,
+        "steps": steps,
+    }
+
+
 def generate_tempo_run(
     day: int, distance: float, total_km: float, pace_zones: Optional[Dict] = None
 ) -> Dict[str, Any]:

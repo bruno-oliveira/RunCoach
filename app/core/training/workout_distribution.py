@@ -6,7 +6,9 @@ Day scheduling is handled by week_scheduler; ratio validation by
 distribution_validator.
 """
 
-from typing import Dict, Optional
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, Dict, Optional
 
 from app.core.training.distribution_validator import (
     validate_polarized_ratio as _validate_polarized_ratio,
@@ -15,6 +17,9 @@ from app.core.training.road_profile import classify_road
 from app.core.training.trail_profile import TrailProfile, is_trail_target
 from app.core.training.tuning import SECOND_QUALITY_MIN_WEEK_KM
 from app.core.training.week_scheduler import schedule_workout_types  # noqa: F401
+
+if TYPE_CHECKING:
+    from app.domain.frequency import FrequencyComposer
 
 
 def get_workout_distribution(
@@ -27,14 +32,20 @@ def get_workout_distribution(
     target_distance: float = 10.0,
     terrain: Optional[str] = None,
     trail_profile: Optional[TrailProfile] = None,
+    composer: Optional[FrequencyComposer] = None,
 ) -> Dict[str, int]:
-    """Calculate how many of each workout type per week."""
+    """Calculate how many of each workout type per week.
+
+    When ``composer`` is provided, the quality count and slot structure come
+    from the composer instead of the built-in ``_phase_quality_count`` logic.
+    """
     is_backward_compatible_call = (
         phase == "build"
         and not is_recovery_week
         and week_number == 1
         and phases is None
         and target_distance == 10.0
+        and composer is None
     )
 
     if is_backward_compatible_call:
@@ -42,16 +53,39 @@ def get_workout_distribution(
 
     long_runs = 1
 
-    quality_workouts = _phase_quality_count(
-        phase, max_runs, total_km, week_number, phases, is_recovery_week
-    )
+    if composer is not None:
+        quality_workouts = 0 if is_recovery_week else composer.quality_budget(phase)
+    else:
+        quality_workouts = _phase_quality_count(
+            phase, max_runs, total_km, week_number, phases, is_recovery_week
+        )
 
-    # Recovery is an additional non-running day, does NOT count towards max_runs
+    # Count medium-long and recovery slots from composer (they are separate
+    # from the easy/quality/long categories the legacy path knows about).
+    medium_long_runs = 0
+    recovery_runs = 0
+    if composer is not None:
+        from app.domain.frequency import SlotType
+
+        for slot in composer.slots(phase):
+            if slot.slot_type == SlotType.MEDIUM_LONG:
+                medium_long_runs += 1
+            elif slot.slot_type == SlotType.RECOVERY:
+                recovery_runs += 1
+
     actual_run_slots = max_runs
-    running_days = actual_run_slots - long_runs - quality_workouts
+    # Recovery is non-running (cross-training): it occupies a day but doesn't
+    # count against max_runs the way easy/quality/long do.  The legacy path
+    # always places recovery on day 2 outside of max_runs; the composer path
+    # declares a RECOVERY slot explicitly, but the semantics are the same —
+    # max_runs is the running-day count.
+    running_days = actual_run_slots - long_runs - quality_workouts - medium_long_runs
     easy_runs = max(0, running_days)
     max_runs = min(max_runs, 6)
-    rest_days = 7 - (max_runs + 1)
+    # rest = 7 minus running days minus non-running activity days (recovery).
+    # Legacy path always has 1 recovery day; composer path has recovery_runs.
+    non_running_activity = recovery_runs if composer is not None else 1
+    rest_days = 7 - max_runs - non_running_activity
 
     distribution = _build_quality_distribution(
         target_distance,
@@ -64,6 +98,11 @@ def get_workout_distribution(
         week_number,
         trail_profile=trail_profile,
     )
+
+    if medium_long_runs > 0:
+        distribution["medium_long"] = medium_long_runs
+    if recovery_runs > 0 and "recovery" not in distribution:
+        distribution["recovery"] = recovery_runs
 
     if not is_recovery_week and max_runs > 2:
         in_build_on_ramp = False

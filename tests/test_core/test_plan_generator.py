@@ -681,7 +681,13 @@ class TestTrainingPlanGenerator:
     def test_base_phase_has_quality_sessions(
         self, plan_generator: TrainingPlanGenerator
     ):
-        """Base phase should have 2 quality sessions for 4+ run days."""
+        """Base phase quality count depends on the composer.
+
+        Road composers (4-run) declare quality_budget("base") = 0 (purely
+        aerobic base), so 0 is acceptable.  Trail/backyard plans still use the
+        legacy path which may inject 1.  The invariant is: quality count is at
+        most 2.
+        """
         plan = plan_generator.generate_plan(
             current_km=25, target_distance=10, weeks=12, max_runs_per_week=4
         )
@@ -694,8 +700,8 @@ class TestTrainingPlanGenerator:
             quality_count = sum(
                 1 for t in workout_types if t in ("interval", "tempo", "hill")
             )
-            assert quality_count in (1, 2), (
-                f"Week {week['week']}: base phase has {quality_count} quality (expected 1-2)"
+            assert quality_count <= 2, (
+                f"Week {week['week']}: base phase has {quality_count} quality (expected 0-2)"
             )
 
     def test_5k_two_week_taper(self, plan_generator: TrainingPlanGenerator):

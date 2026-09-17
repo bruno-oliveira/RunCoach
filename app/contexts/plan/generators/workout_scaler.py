@@ -231,7 +231,10 @@ def set_distance(
     if workout.get("key_workout_id"):
         rebuild_key_workout(workout, pace_zones)
         return
-    if old > 0 and rounded > 0:
+    if rounded <= 0:
+        workout["steps"] = []
+        return
+    if old > 0:
         rescale_steps(workout, rounded / old)
 
 

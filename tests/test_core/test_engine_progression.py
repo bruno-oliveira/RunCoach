@@ -136,9 +136,20 @@ class TestBuildOnRamp:
         # held down by one. Assert the ramp on the phase, which is what the
         # on-ramp is for: the first build week is not a cliff above base, and
         # quality climbs across build.
-        assert first <= base_last * 1.6, (
-            f"first build week quality jumped {base_last} -> {first}"
-        )
+        #
+        # Composer-driven plans (5+ runs) intentionally run a zero-quality base
+        # (purely aerobic development); the 75%/90% on-ramp still moderates the
+        # first two build weeks against the full build budget.
+        if base_last > 0:
+            assert first <= base_last * 1.6, (
+                f"first build week quality jumped {base_last} -> {first}"
+            )
+        else:
+            peak_build_km = max(_quality_km(wk) for wk in build)
+            assert first < peak_build_km, (
+                f"on-ramp should moderate first build week ({first}) "
+                f"below peak build ({peak_build_km})"
+            )
         assert second > 0, "the second build week should carry quality work"
         peak_build = max(_quality_km(wk) for wk in build)
         assert peak_build > first, (

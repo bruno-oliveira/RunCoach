@@ -67,10 +67,10 @@ KNOWN_GAPS: Dict[str, Dict[float, FrozenSet[int]]] = {
     # swings at phase transitions, creating >10% drops when quality volume
     # increases in build phase.
     "long_run_material_drop": {
-        5.0: frozenset({2, 3, 4, 5, 6}),
-        10.0: frozenset({2, 3}),
-        21.1: frozenset({2, 3}),
-        42.2: frozenset({2, 3}),
+        5.0: frozenset({2, 4}),
+        10.0: frozenset({2, 5}),
+        21.1: frozenset({2, 3, 5}),
+        42.2: frozenset({2}),
     },
     # The contracted long-run cap is tight for 5K (floor ~8 km) — at 4 runs
     # with high base mileage the per-run distribution pushes past it.  The HM
@@ -88,20 +88,17 @@ KNOWN_GAPS: Dict[str, Dict[float, FrozenSet[int]]] = {
     # the expected trade-off: healthy run distribution > hitting volume targets.
     "peak_shortfall": {
         5.0: frozenset({2, 3, 4, 5, 6}),
-        10.0: frozenset({2, 3, 4}),
-        21.1: frozenset({2, 3, 4}),
-        42.2: frozenset({2, 3, 4, 5}),
+        10.0: frozenset({2}),
+        21.1: frozenset({2, 3}),
+        42.2: frozenset({2, 3, 4}),
     },
-    # At 2 runs the long run IS most of the week — structurally unavoidable.
-    "share_over_ceiling": {
-        5.0: frozenset({2}),
-    },
-    # Low-volume corner cases: 5K at 5 km/week base split over 2 runs = 2.5
-    # km/run; 10K at 10 km base over 3 runs similarly tight.  The plan is
-    # faithful to what the runner actually runs; the frequency advisory fires.
+    # Low-volume corner cases: at low base mileage split over many runs the
+    # per-run distance falls below the viable floor.  The plan is faithful to
+    # what the runner actually runs; the frequency advisory fires.
     "sub_viable_run": {
         5.0: frozenset({2}),
         10.0: frozenset({3}),
+        21.1: frozenset({5, 6}),
     },
 }
 

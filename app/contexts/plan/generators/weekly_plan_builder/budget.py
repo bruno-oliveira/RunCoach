@@ -45,6 +45,7 @@ def _is_last_quality_slot(quality_distances: Dict[str, float], qtype: str) -> bo
 _PACE_ZONE_FOR_TYPE = {
     "easy": "E",
     "long": "E",
+    "medium_long": "E",
     "tempo": "T",
     "interval": "I",
     "hill": "I",
@@ -52,6 +53,7 @@ _PACE_ZONE_FOR_TYPE = {
 _DEFAULT_PACE_MIN_PER_KM = {
     "easy": 7.0,
     "long": 7.0,
+    "medium_long": 6.8,
     "tempo": 5.5,
     "interval": 4.8,
     "hill": 5.0,

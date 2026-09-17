@@ -1,7 +1,12 @@
 """Weekly plan orchestration: assemble one week's daily workouts and metadata."""
 
+from __future__ import annotations
+
 import logging
-from typing import Any, Dict, List, Optional
+from typing import TYPE_CHECKING, Any, Dict, List, Optional
+
+if TYPE_CHECKING:
+    from app.domain.frequency import FrequencyComposer
 
 from app.contexts.plan.generators.plan_validator import validate_week_plan
 from app.contexts.plan.generators.weekly_plan_builder.backyard_week import (
@@ -169,6 +174,7 @@ def generate_daily_workouts(
     max_runs: Optional[int] = None,
     prev_long_run_km: Optional[float] = None,
     rotation_state: Optional[KeyWorkoutRotationState] = None,
+    composer: Optional[FrequencyComposer] = None,
 ) -> List[Dict[str, Any]]:
     """Generate daily workouts for one week.
 
@@ -190,6 +196,7 @@ def generate_daily_workouts(
         long_run_pace_min_km=_long_run_pace_min_km(pace_zones),
         max_runs=max_runs,
         prev_long_run_km=prev_long_run_km,
+        composer=composer,
     )
     quality_distances = long_run_calculator.calculate_quality_distances(
         total_km,
@@ -251,14 +258,34 @@ def generate_daily_workouts(
         phase=phase,
     )
 
-    workout_types = workout_dist_mod.schedule_workout_types(
-        distribution.copy(),
-        phase,
-        week_number,
-        is_recovery_week,
-    )
+    if composer is not None:
+        from app.core.training.week_scheduler import schedule_from_composer
 
-    remaining_km = total_km - long_run_distance
+        quality_types = {
+            k: distribution.get(k, 0) for k in ("tempo", "interval", "hill")
+        }
+        workout_types = schedule_from_composer(
+            composer, phase, quality_types, is_recovery_week
+        )
+    else:
+        workout_types = workout_dist_mod.schedule_workout_types(
+            distribution.copy(),
+            phase,
+            week_number,
+            is_recovery_week,
+        )
+
+    # Medium-long distance: sized from the composer's volume percentage.
+    medium_long_distance = 0.0
+    if composer is not None and any(wt == "medium_long" for wt in workout_types):
+        from app.domain.frequency import SlotType
+
+        for slot in composer.slots(phase):
+            if slot.slot_type == SlotType.MEDIUM_LONG:
+                medium_long_distance = round(total_km * slot.volume_pct, 1)
+                break
+
+    remaining_km = total_km - long_run_distance - medium_long_distance
     quality_total = sum(quality_distances.values())
     easy_runs = sum(1 for wt in workout_types if wt == "easy")
     easy_distances = allocate_easy_distances(
@@ -286,11 +313,13 @@ def generate_daily_workouts(
             distance = (
                 easy_distances[easy_run_idx]
                 if easy_run_idx < len(easy_distances)
-                else easy_distances[0]
+                else (easy_distances[0] if easy_distances else 0)
             )
             easy_run_idx += 1
         elif workout_type == "long":
             distance = long_run_distance
+        elif workout_type == "medium_long":
+            distance = medium_long_distance
         elif workout_type in ("tempo", "interval", "hill"):
             distance = quality_distances.get(workout_type, 0)
         else:
@@ -397,6 +426,7 @@ def build_weekly_plan(
     rotation_state: Optional[KeyWorkoutRotationState] = None,
     backyard_profile=None,
     backyard_schedule: Optional[Dict[int, Any]] = None,
+    composer: Optional[FrequencyComposer] = None,
 ) -> Dict[str, Any]:
     """Generate a single week's training plan.
 
@@ -431,6 +461,7 @@ def build_weekly_plan(
         target_distance,
         terrain=terrain,
         trail_profile=trail_profile,
+        composer=composer,
     )
 
     workouts = generate_daily_workouts(
@@ -450,6 +481,7 @@ def build_weekly_plan(
         max_runs=max_runs_per_week,
         prev_long_run_km=prev_long_run_km,
         rotation_state=rotation_state,
+        composer=composer,
     )
 
     backyard = None
