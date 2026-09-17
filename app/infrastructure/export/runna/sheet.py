@@ -287,6 +287,7 @@ def _card(day: Dict[str, Any]) -> DayCard:
         kind=kind,
         headline=_headline(day, kind, named=bool(name)),
         label=name
+        or day.get("slot_label")
         or _LABEL_BY_TYPE.get(workout_type, workout_type.replace("_", " ").title()),
         strength=bool(day.get("strength_session")),
     )

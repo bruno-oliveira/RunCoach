@@ -30,6 +30,7 @@ class TrainingPlan(Base):
     target_distance = Column(String)
     weeks_duration = Column(Integer)
     max_runs_per_week = Column(Integer, default=4)
+    frequency_composer = Column(String, nullable=True)
     created_at = Column(
         DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None)
     )

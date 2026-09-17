@@ -144,6 +144,40 @@ def _vertical_simulation_targets(
     }
 
 
+def _build_slot_labels(
+    composer: "FrequencyComposer",
+    phase: str,
+    workout_types: List[Optional[str]],
+) -> Dict[int, str]:
+    """Map day indices to the composer slot labels for the PDF and UI."""
+    from app.domain.frequency import SlotType
+
+    _SLOT_TYPE_MAP = {
+        "easy": SlotType.EASY,
+        "long": SlotType.LONG,
+        "medium_long": SlotType.MEDIUM_LONG,
+        "recovery": SlotType.RECOVERY,
+        "tempo": SlotType.QUALITY,
+        "interval": SlotType.QUALITY,
+        "hill": SlotType.QUALITY,
+    }
+    slots = list(composer.slots(phase))
+    slot_cursor: Dict[SlotType, int] = {}
+    labels: Dict[int, str] = {}
+    for day_idx, wtype in enumerate(workout_types):
+        if wtype is None:
+            continue
+        stype = _SLOT_TYPE_MAP.get(wtype)
+        if stype is None:
+            continue
+        idx = slot_cursor.get(stype, 0)
+        matching = [s for s in slots if s.slot_type == stype]
+        if idx < len(matching) and matching[idx].label:
+            labels[day_idx] = matching[idx].label
+        slot_cursor[stype] = idx + 1
+    return labels
+
+
 def low_freq_easy_vs_long_ratio(max_runs: Optional[int], trail_profile) -> float:
     """Easy-vs-long fraction: tighter for low-frequency road plans.
 
@@ -299,6 +333,8 @@ def generate_daily_workouts(
         easy_vs_long_ratio=low_freq_easy_vs_long_ratio(max_runs, trail_profile),
     )
 
+    slot_labels = _build_slot_labels(composer, phase, workout_types) if composer else {}
+
     easy_run_idx = 0
     quality_slot_counts: Dict[str, int] = {}
     workouts: List[Dict[str, Any]] = []
@@ -333,6 +369,8 @@ def generate_daily_workouts(
             phase,
             pace_zones,
         )
+        if day in slot_labels:
+            workout["slot_label"] = slot_labels[day]
 
         # The key-workout ceiling caps a *quality* session against the long run;
         # the long run itself (also overlaid) must not be clamped against its

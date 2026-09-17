@@ -211,6 +211,8 @@ def _assemble_facts(
 
     adaptation_facts = _recent_adaptation(plan)
 
+    freq_suggestion = _frequency_suggestion(plan, summary)
+
     signals = {
         "overreach": summary.get("overreach_detected", False),
         "direction": summary.get("direction"),
@@ -224,6 +226,7 @@ def _assemble_facts(
         "today_readiness_score": readiness_facts.get("score"),
         "today_readiness_drivers": readiness_facts.get("drivers"),
         "adaptation": adaptation_facts,
+        "frequency_suggestion": freq_suggestion,
     }
     focus = select_today_focus(signals)
 
@@ -314,6 +317,42 @@ def _today_pattern(
     for p in patterns.get("patterns") or []:
         if p.get("workout_type") == workout_type:
             return p.get("message")
+    return None
+
+
+def _frequency_suggestion(
+    plan: TrainingPlan, summary: dict[str, Any]
+) -> Optional[dict[str, str]]:
+    """Suggest a frequency change when the runner consistently over/under-performs."""
+    composer_name = getattr(plan, "frequency_composer", None)
+    if not composer_name:
+        return None
+    try:
+        from app.core.training.frequency import get_composer
+
+        composer = get_composer(plan.max_runs_per_week or 4)
+    except (ValueError, ImportError):
+        return None
+    policy = composer.adaptation_policy()
+    if not policy.can_suggest_frequency_change:
+        return None
+    direction = summary.get("direction")
+    if direction == "exceeding" and policy.frequency_change_direction == 1:
+        new_freq = composer.frequency + 1
+        if new_freq <= 6:
+            return {
+                "direction": "increase",
+                "current": str(composer.frequency),
+                "suggested": str(new_freq),
+            }
+    elif direction == "struggling" and policy.frequency_change_direction == -1:
+        new_freq = composer.frequency - 1
+        if new_freq >= 2:
+            return {
+                "direction": "decrease",
+                "current": str(composer.frequency),
+                "suggested": str(new_freq),
+            }
     return None
 
 

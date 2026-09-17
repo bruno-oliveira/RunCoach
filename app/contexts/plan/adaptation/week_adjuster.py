@@ -462,6 +462,9 @@ def _finalize_week(
             training_terrain=getattr(training_plan, "training_terrain", None),
         )
 
+    if week_changed:
+        _enforce_composer_policy(training_plan, workouts, phase)
+
     if not week_changed:
         return False
 
@@ -474,6 +477,61 @@ def _finalize_week(
             if pd_wo is not None:
                 pd_wo["distance"] = workout.distance_km
     return True
+
+
+def _enforce_composer_policy(
+    training_plan: TrainingPlan,
+    workouts: List,
+    phase: str,
+) -> None:
+    """Apply frequency-specific constraints from the plan's composer policy."""
+    composer_name = getattr(training_plan, "frequency_composer", None)
+    if not composer_name:
+        return
+    try:
+        from app.core.training.frequency import get_composer
+
+        max_runs = training_plan.max_runs_per_week or 4
+        composer = get_composer(max_runs)
+    except (ValueError, ImportError):
+        return
+
+    policy = composer.adaptation_policy()
+    running = [
+        w
+        for w in workouts
+        if w.workout_type not in ("rest", "recovery") and (w.distance_km or 0) > 0
+    ]
+    if not running:
+        return
+    total = sum(w.distance_km for w in running)
+    if total <= 0:
+        return
+
+    long_ws = [w for w in running if w.workout_type == "long"]
+    if long_ws:
+        long_w = long_ws[0]
+        share = long_w.distance_km / total
+        if share > policy.long_run_pct_cap + 0.02:
+            new_long = round(total * policy.long_run_pct_cap, 1)
+            excess = long_w.distance_km - new_long
+            long_w.distance_km = new_long
+            easy_ws = [w for w in running if w.workout_type == "easy"]
+            if easy_ws:
+                per = round(excess / len(easy_ws), 1)
+                for w in easy_ws:
+                    w.distance_km = round(w.distance_km + per, 1)
+        elif share < policy.long_run_pct_floor - 0.02 and len(running) >= 3:
+            new_long = round(total * policy.long_run_pct_floor, 1)
+            deficit = new_long - long_w.distance_km
+            easy_ws = [w for w in running if w.workout_type == "easy"]
+            easy_total = sum(w.distance_km for w in easy_ws)
+            if easy_total > deficit:
+                for w in easy_ws:
+                    w.distance_km = round(
+                        w.distance_km - deficit * (w.distance_km / easy_total), 1
+                    )
+                long_w.distance_km = new_long
 
 
 def _apply_future_growth_cap(

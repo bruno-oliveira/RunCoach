@@ -28,6 +28,20 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 
+_COMPOSER_BY_RUNS = {
+    2: "two_run",
+    3: "three_run",
+    4: "four_run",
+    5: "five_run",
+    6: "six_run",
+}
+
+
+def _composer_name(plan_request: PlanRequest) -> str | None:
+    if plan_request.is_trail or plan_request.is_backyard:
+        return None
+    return _COMPOSER_BY_RUNS.get(plan_request.max_runs_per_week or 4, "four_run")
+
 
 def persist_plan_core(
     plan_request: PlanRequest,
@@ -66,6 +80,7 @@ def persist_plan_core(
             if plan_request.is_backyard
             else None
         ),
+        frequency_composer=_composer_name(plan_request),
     )
     db.add(training_plan)
     db.flush()
