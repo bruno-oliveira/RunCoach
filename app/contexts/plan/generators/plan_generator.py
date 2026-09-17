@@ -581,6 +581,26 @@ def _install_race_day(
         protect_long=False,
     )
 
+    # Convert sub-threshold easy runs to rest — scaling can crush them to a
+    # fraction of a kilometre, which isn't worth lacing up for. But never
+    # eliminate ALL pre-race running: low-volume short-distance plans may
+    # have only one tiny run before the race, and rest-only → race is worse
+    # than a short shakeout jog.
+    prerace_running = sum(
+        1
+        for w in kept
+        if w.get("type") not in ("rest", "recovery") and (w.get("distance") or 0) > 0
+    )
+    for i, w in enumerate(kept):
+        if (
+            prerace_running > 1
+            and w.get("type") == "easy"
+            and not w.get("is_shakeout")
+            and 0 < (w.get("distance") or 0) < RACE_WEEK_SHAKEOUT_MIN_KM
+        ):
+            kept[i] = workout_builders.generate_rest_day(w["day"])
+            prerace_running -= 1
+
     # Sharper race-week taper: keep at most RACE_WEEK_MAX_PRERACE_RUNS
     # running sessions before the race.  Shakeout and quality sessions are
     # kept first; extra easy runs are converted to rest days.

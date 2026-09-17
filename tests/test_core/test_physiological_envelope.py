@@ -69,7 +69,7 @@ KNOWN_GAPS: Dict[str, Dict[float, FrozenSet[int]]] = {
     "long_run_material_drop": {
         5.0: frozenset({2, 4}),
         10.0: frozenset({2, 5}),
-        21.1: frozenset({2, 3, 5}),
+        21.1: frozenset({2, 5}),
         42.2: frozenset({2}),
     },
     # The contracted long-run cap is tight for 5K (floor ~8 km) — at 4 runs
@@ -90,7 +90,7 @@ KNOWN_GAPS: Dict[str, Dict[float, FrozenSet[int]]] = {
         5.0: frozenset({2, 3, 4, 5, 6}),
         10.0: frozenset({2}),
         21.1: frozenset({2, 3}),
-        42.2: frozenset({2, 3, 4}),
+        42.2: frozenset({2, 4}),
     },
     # Low-volume corner cases: at low base mileage split over many runs the
     # per-run distance falls below the viable floor.  The plan is faithful to

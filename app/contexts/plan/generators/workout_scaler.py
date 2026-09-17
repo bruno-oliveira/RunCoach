@@ -35,6 +35,7 @@ from app.core.training.quality_caps import (
     volume_scaled_easy_cap,
 )
 from app.core.training.training_constants import get_hard_ceiling
+from app.core.training.tuning import MAX_QUALITY_DAY_SHARE, MIN_QUALITY_DAY_CAP_KM
 
 
 def long_run_pace_min_km(pace_zones: Optional[Dict]) -> Optional[float]:
@@ -440,9 +441,9 @@ def fill_shortfall(
     # that bound such a week — ``long_run_share_ceiling`` (0.60) plus
     # ``MAX_QUALITY_DAY_SHARE`` (0.25) — sum to 0.85, exactly the floor the
     # envelope harness reconciles against, so the remainder must go somewhere.
-    # Let the quality day carry it, bounded by the same
-    # ``MAX_KEY_WORKOUT_VS_LONG_RUN`` ceiling the key-workout overlay fits
-    # sessions to, so quality work still never reaches the long run. The session
+    # Let the quality day carry it, bounded by the day-share cap
+    # (``MAX_QUALITY_DAY_SHARE``) and the key-workout ceiling, whichever is
+    # tighter — so the session stays a reasonable quality day. The session
     # is grown through ``set_distance`` → ``rebuild_key_workout``, which
     # re-derives prose, steps and distance together.
     #
@@ -458,8 +459,13 @@ def fill_shortfall(
         from app.core.training.tuning import MAX_KEY_WORKOUT_VS_LONG_RUN
 
         deficit = round(total_km - sum(w.get("distance", 0) for w in workouts), 1)
+        day_share_cap = max(MIN_QUALITY_DAY_CAP_KM, total_km * MAX_QUALITY_DAY_SHARE)
         quality_ceiling = round(
-            long_w.get("distance", 0) * MAX_KEY_WORKOUT_VS_LONG_RUN, 1
+            min(
+                long_w.get("distance", 0) * MAX_KEY_WORKOUT_VS_LONG_RUN,
+                day_share_cap,
+            ),
+            1,
         )
         carriers = [
             w
