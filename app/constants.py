@@ -7,7 +7,7 @@ fall out automatically.
 """
 
 from app.core.training.training_config import DISTANCE_CONSTRAINTS
-from app.core.training.workout_registry import (
+from app.core.training.workouts.workout_registry import (
     ALL_WORKOUT_TYPE_NAMES as _ALL_WORKOUT_TYPE_NAMES,
 )
 

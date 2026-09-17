@@ -26,7 +26,7 @@ from app.contexts.runner.fitness.race_predictor_service import RacePredictorServ
 from app.contexts.runner.fitness.training_load_service import TrainingLoadService
 from app.contexts.runner.profile.profile_builder import build_profile
 from app.contexts.runner.repositories import SQLAlchemyRunRepository
-from app.core.training.vdot_calculator import VDOTCalculator
+from app.core.training.physiology.vdot_calculator import VDOTCalculator
 from app.dependencies import get_coach_narrator, get_current_user, get_db
 from app.domain.coaching import CoachNarrator
 from app.models import User

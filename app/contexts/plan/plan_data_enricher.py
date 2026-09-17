@@ -5,14 +5,14 @@ from typing import Any
 
 from sqlalchemy.orm import Session
 
-from app.core.training.baseline_recovery import recover_baseline, strip_annotations
-from app.core.training.key_workout_library import (
+from app.core.training.adaptation.baseline_recovery import recover_baseline, strip_annotations
+from app.core.training.workouts.key_workout_library import (
     _KEY_WORKOUT_MIN_DISTANCE_KM,
     KeyWorkoutLibrary,
     build_key_workout_steps,
     reconcile_key_workout_text,
 )
-from app.core.training.workout_steps import (
+from app.core.training.workouts.workout_steps import (
     _compute_distance_from_steps,
     _parse_pace_str_to_min_per_km,
 )

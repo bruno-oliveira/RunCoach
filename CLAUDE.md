@@ -95,7 +95,13 @@ app/
 ├── dependencies/        # DI package: database / services / auth / cron
 ├── domain/              # Pure: repository + CoachNarrator + Mailer Protocols, value objects
 ├── core/                # Pure calculation libraries — no I/O, no ORM, no SQLAlchemy
-│   ├── training/        # VDOT, phases, mileage progression, workout building, watch_mirror
+│   ├── training/        # Chapter-structured training science (read top→bottom):
+│   │   ├── physiology/      # The runner's engine: VDOT, zones, HR, race predictions
+│   │   ├── profiles/        # What you're training for: road, trail, backyard
+│   │   ├── frequency/       # How many days you run (2→6): per-frequency composers
+│   │   ├── periodization/   # Shaping the block: phases, mileage, long-run, quality caps
+│   │   ├── workouts/        # What you do each day: builders, catalog, steps
+│   │   └── adaptation/      # How the plan bends: baseline recovery, envelope
 │   ├── coaching/        # Coaching notes, recognition, nudges, training tips
 │   └── race/
 ├── contexts/            # Bounded contexts: business logic + per-context repositories
@@ -144,10 +150,10 @@ Routers should carry no raw `db.query` — there is one remaining exception in
 ### Subsystems that span many files
 
 - **Plan generation** — `contexts/plan/generators/` orchestrates; the actual
-  math lives in `core/training/` (`phase_calculator`, `mileage_progression`,
-  `long_run_calculator`, `vdot_calculator`, `workout_distribution`,
-  `workout_builders`). `plan_structure_guard.py` and `plan_validator.py` are
-  the post-generation sanity checks.
+  math lives in `core/training/periodization/` (phases, mileage, long-run,
+  quality caps), `core/training/workouts/` (builders, catalog, steps), and
+  `core/training/physiology/` (VDOT, zones). `plan_structure_guard.py` and
+  `plan_validator.py` are the post-generation sanity checks.
 
 - **Adaptation** — `contexts/plan/adaptation/__init__.py` is a thin
   `AdaptationService` facade preserving one public API over focused modules:
@@ -160,14 +166,14 @@ Routers should carry no raw `db.query` — there is one remaining exception in
   (The sport calls a completed loop a "yard"; the UI says **loops** everywhere
   because "yard" collides with the imperial unit on an otherwise metric page,
   and glosses the term once in the goal form. Keep new copy on "loops".)
-  `core/training/backyard_profile.py` turns a loop count into the numbers
+  `core/training/profiles/backyard_profile.py` turns a loop count into the numbers
   everything reads: the per-hour rest budget, the loop pace that budget
   implies, tier-aware plan constraints, and — via `as_trail_profile()` — the
   **clamped** ultra projection the engine actually periodises against. That
   clamp is why `target_distance` on a backyard row never round-trips to a loop
   count, and why every display surface must read `backyard_target_loops`
   instead (plan header, `PlanTypeHandler`, PDF cover).
-  `core/training/backyard_simulation.py` builds the progressive ladder of loop
+  `core/training/profiles/backyard_simulation.py` builds the progressive ladder of loop
   simulations; `generators/weekly_plan_builder/backyard_week.py` installs them
   (modelled on the trail ITW post-pass) and swaps the midweek tempo for
   loop-pace repeats or a turnaround drill. Sessions carry
@@ -175,7 +181,7 @@ Routers should carry no raw `db.query` — there is one remaining exception in
   of hourly loops, so `enforce_long_run_ratio_cap`, `reclamp_quality_to_long_run`,
   `rebuild_key_workout` and the adaptation adjuster all skip it rather than
   producing five and a half loops. Catalog entries live in
-  `key_workout_data_long/backyard.py` and are gated out of rotation via
+  `workouts/key_workout_data_long/backyard.py` and are gated out of rotation via
   `_BACKYARD_ONLY_IDS` (they resolve by id only). Race day gets its own
   protocol in `core/race/backyard_protocol.py` — a timed **corral routine**
   and an hourly **fuelling schedule** that steps down band by band, in place

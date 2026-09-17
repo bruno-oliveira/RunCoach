@@ -1,7 +1,7 @@
 """Unit tests for the pure run-type inference math."""
 
-from app.core.training.hr_zone_calculator import HRZoneCalculator
-from app.core.training.workout_inference import (
+from app.core.training.physiology.hr_zone_calculator import HRZoneCalculator
+from app.core.training.physiology.workout_inference import (
     EASY,
     INTERVAL,
     MODERATE,

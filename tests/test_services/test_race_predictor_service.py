@@ -271,7 +271,7 @@ class TestPredictTimeWithEnduranceFactor:
     """The endurance_factor parameter on predict_time_for_distance."""
 
     def test_factor_one_is_noop(self):
-        from app.core.training.vdot_calculator import VDOTCalculator
+        from app.core.training.physiology.vdot_calculator import VDOTCalculator
 
         plain = VDOTCalculator.predict_time_for_distance(40.0, 21.1)
         with_factor = VDOTCalculator.predict_time_for_distance(
@@ -280,7 +280,7 @@ class TestPredictTimeWithEnduranceFactor:
         assert plain == with_factor
 
     def test_factor_above_one_lengthens_prediction(self):
-        from app.core.training.vdot_calculator import VDOTCalculator
+        from app.core.training.physiology.vdot_calculator import VDOTCalculator
 
         plain = VDOTCalculator.predict_time_for_distance(40.0, 21.1)
         slower = VDOTCalculator.predict_time_for_distance(
@@ -292,7 +292,7 @@ class TestPredictTimeWithEnduranceFactor:
         assert 1.18 < ratio < 1.22
 
     def test_factor_applies_after_elevation(self):
-        from app.core.training.vdot_calculator import VDOTCalculator
+        from app.core.training.physiology.vdot_calculator import VDOTCalculator
 
         elev_only = VDOTCalculator.predict_time_for_distance(
             40.0, 21.1, elevation_gain_m=500
@@ -428,7 +428,7 @@ class TestPredictionsAndGaps:
         assert "faster than" in result["gap_label"]
 
     def test_analyze_gap_goal_slower_than_fitness(self, test_db):
-        from app.core.training.vdot_calculator import VDOTCalculator
+        from app.core.training.physiology.vdot_calculator import VDOTCalculator
 
         predicted = VDOTCalculator.predict_time_for_distance(45.0, 10.0)
         # Goal slightly slower than predicted → current fitness already meets
@@ -610,7 +610,7 @@ class TestCalibrationFactorService:
         data = RacePredictorService.get_predictions_for_user(user.id, test_db)
         assert data["calibration_factor"] == factor
         # The 10K prediction should be slower than the same VDOT predicts raw.
-        from app.core.training.vdot_calculator import VDOTCalculator
+        from app.core.training.physiology.vdot_calculator import VDOTCalculator
 
         raw = VDOTCalculator.predict_time_for_distance(data["current_vdot"], 10.0)
         assert data["predictions"]["10K"]["seconds"] > raw

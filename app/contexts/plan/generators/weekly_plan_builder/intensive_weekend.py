@@ -8,8 +8,8 @@ from app.contexts.plan.generators.weekly_plan_builder.budget import (
 from app.contexts.plan.generators.workout_scaler import (
     set_distance as _set_distance,
 )
-from app.core.training import phase_calculator
-from app.core.training.key_workout_library import overlay_key_workout
+from app.core.training.periodization import phase_calculator
+from app.core.training.workouts.key_workout_library import overlay_key_workout
 
 # Intensive Training Weekend (ITW) shaping: the Saturday trail-quality budget is
 # a fraction of the displaced long run, capped; Thu/Fri easy days are trimmed so

@@ -6,7 +6,7 @@ from typing import Dict, List
 from sqlalchemy.orm import Session
 
 from app.contexts.plan.repositories import SQLAlchemyPlanRepository
-from app.core.training.plan_calendar import compute_current_week
+from app.core.training.periodization.plan_calendar import compute_current_week
 from app.models import RunLog
 from app.utils import to_date as _to_date
 

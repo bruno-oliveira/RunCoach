@@ -7,7 +7,7 @@ the test (not slip through on rounding).
 
 import pytest
 
-from app.core.training.trail_profile import (
+from app.core.training.profiles.trail_profile import (
     TRAIL_DISTANCE_MAX_KM,
     TRAIL_DISTANCE_MIN_KM,
     TRAIL_ELEVATION_MAX_M,

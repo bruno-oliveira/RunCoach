@@ -2,13 +2,13 @@
 
 import pytest
 
-from app.core.training.environment import (
+from app.core.training.physiology.environment import (
     EnvironmentalConditions,
     altitude_vdot_factor,
     dew_point_c,
     heat_pace_factor,
 )
-from app.core.training.race_predictor import predict_time_for_distance
+from app.core.training.physiology.race_predictor import predict_time_for_distance
 
 
 class TestDewPoint:

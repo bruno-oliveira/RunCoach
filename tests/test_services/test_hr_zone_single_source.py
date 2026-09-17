@@ -15,8 +15,8 @@ from app.contexts.runner.fitness.hr_zone_service import (
     get_user_resting_hr,
     get_user_threshold_hr,
 )
-from app.core.training.hr_zone_calculator import HRZoneCalculator
-from app.core.training.zone_calculator import calculate_zones
+from app.core.training.physiology.hr_zone_calculator import HRZoneCalculator
+from app.core.training.physiology.zone_calculator import calculate_zones
 from app.infrastructure.integrations.intervals_service import (
     apply_hr_settings_to_user,
     parse_athlete_hr_settings,

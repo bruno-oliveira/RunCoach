@@ -5,7 +5,7 @@ from sqlalchemy import Column, DateTime, Float, ForeignKey, Index, Integer, Stri
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.types import JSON
 
-from app.core.training.workout_inference import resolve_effective_workout_type
+from app.core.training.physiology.workout_inference import resolve_effective_workout_type
 from app.models.base import Base
 
 # Runs the runner entered by hand; anything else came from a connected platform.

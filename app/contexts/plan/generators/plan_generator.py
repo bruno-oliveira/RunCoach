@@ -18,20 +18,21 @@ from typing import Any, Dict, List, Optional
 from app.contexts.plan.generators.beginner_plan_generator import BeginnerPlanGenerator
 from app.contexts.plan.generators.plan_structure_guard import check_plan_structure
 from app.contexts.plan.generators.weekly_plan_builder import build_weekly_plan
-from app.core.training import mileage_progression, workout_builders, workout_steps
-from app.core.training.backyard_profile import BackyardProfile
-from app.core.training.backyard_simulation import build_simulation_schedule
-from app.core.training.key_workout_library import KeyWorkoutRotationState
+from app.core.training.periodization import mileage_progression
+from app.core.training.workouts import workout_builders, workout_steps
+from app.core.training.profiles.backyard_profile import BackyardProfile
+from app.core.training.profiles.backyard_simulation import build_simulation_schedule
+from app.core.training.workouts.key_workout_library import KeyWorkoutRotationState
 
 # Re-export for any code that imports PHASE_DISTRIBUTIONS from here
-from app.core.training.phase_calculator import PHASE_DISTRIBUTIONS  # noqa: F401
-from app.core.training.strength_plan import derive_experience_level
-from app.core.training.trail_profile import (
+from app.core.training.periodization.phase_calculator import PHASE_DISTRIBUTIONS  # noqa: F401
+from app.core.training.periodization.strength_plan import derive_experience_level
+from app.core.training.profiles.trail_profile import (
     TRAIL_SENTINEL_KM,
     TrailProfile,
     classify_trail,
 )
-from app.core.training.vdot_calculator import VDOTCalculator
+from app.core.training.physiology.vdot_calculator import VDOTCalculator
 from app.exceptions import PlanGenerationException, ZeroMileageUnsupportedException
 
 logger = logging.getLogger(__name__)
@@ -193,7 +194,7 @@ class TrainingPlanGenerator:
         # is built once here and consulted per week.
         backyard_schedule = None
         if backyard_profile is not None:
-            from app.core.training.phase_calculator import calculate_phases
+            from app.core.training.periodization.phase_calculator import calculate_phases
 
             backyard_schedule = build_simulation_schedule(
                 weeks,
@@ -759,8 +760,8 @@ def _smooth_taper(
     """
     from app.contexts.plan.generators.weekly_plan_builder import attach_duration_hints
     from app.contexts.plan.generators.workout_scaler import scale_down as _scale_down
-    from app.core.training.mileage_progression import _get_taper_curve
-    from app.core.training.phase_calculator import calculate_phases
+    from app.core.training.periodization.mileage_progression import _get_taper_curve
+    from app.core.training.periodization.phase_calculator import calculate_phases
 
     phases = calculate_phases(weeks, target_distance, trail_profile=trail_profile)
     taper_weeks = phases.get("taper", 0)

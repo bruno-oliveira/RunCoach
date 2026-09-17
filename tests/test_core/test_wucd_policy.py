@@ -12,13 +12,13 @@ import re
 
 import pytest
 
-from app.core.training.key_workout_data import WORKOUTS
-from app.core.training.key_workout_library.builders import build_key_workout_steps
-from app.core.training.key_workout_library.rewrites import (
+from app.core.training.workouts.key_workout_data import WORKOUTS
+from app.core.training.workouts.key_workout_library.builders import build_key_workout_steps
+from app.core.training.workouts.key_workout_library.rewrites import (
     _DISTANCE_REWRITES,
     _rewrite_key_workout_description,
 )
-from app.core.training.workout_steps.primitives import (
+from app.core.training.workouts.workout_steps.primitives import (
     HARD_SESSION_TYPES,
     _wucd_m,
     _wucd_m_for_work,

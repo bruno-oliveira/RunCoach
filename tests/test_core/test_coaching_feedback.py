@@ -7,7 +7,7 @@ from app.core.coaching.coaching_feedback_engine import CoachingFeedbackEngine
 from app.core.coaching.hr_feedback import hr_zone_feedback
 from app.core.coaching.pace_feedback import pace_feedback
 from app.core.coaching.sentiment_classifier import determine_sentiment
-from app.core.training.hr_zone_calculator import HRZoneCalculator
+from app.core.training.physiology.hr_zone_calculator import HRZoneCalculator
 
 
 def _make_run_log(**kwargs):

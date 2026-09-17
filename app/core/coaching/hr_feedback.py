@@ -2,7 +2,7 @@
 
 from typing import Optional
 
-from app.core.training.hr_zone_calculator import HRZoneCalculator
+from app.core.training.physiology.hr_zone_calculator import HRZoneCalculator
 
 # Quality session types where a below-target HR genuinely means "you didn't
 # reach the intended hard effort". On easy / long / recovery runs a low HR is

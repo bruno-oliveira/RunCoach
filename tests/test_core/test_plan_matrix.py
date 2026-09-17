@@ -78,8 +78,8 @@ from app.contexts.plan.plan_creation_helpers import (
     persist_plan_core,
     persist_weekly_workouts,
 )
-from app.core.training import physiological_envelope as env
-from app.core.training.backyard_profile import (
+from app.core.training.adaptation import physiological_envelope as env
+from app.core.training.profiles.backyard_profile import (
     _TIER_MAX_WEEKS,
     _TIER_MIN_RUNS_PER_WEEK,
     _TIER_MIN_WEEKS,
@@ -87,14 +87,14 @@ from app.core.training.backyard_profile import (
     backyard_min_weekly_km,
     classify_backyard,
 )
-from app.core.training.trail_profile import (
+from app.core.training.profiles.trail_profile import (
     _BRACKET_MAX_WEEKS,
     _BRACKET_MIN_RUNS,
     _BRACKET_MIN_WEEKS,
     TrailProfile,
     classify_trail,
 )
-from app.core.training.training_constants import get_hard_ceiling, training_km
+from app.core.training.periodization.training_constants import get_hard_ceiling, training_km
 from app.exceptions import (
     InadequateBaseException,
     InsufficientTimeException,

@@ -7,7 +7,7 @@ from app.contexts.plan.generators.plan_generator import TrainingPlanGenerator
 from app.contexts.plan.generators.weekly_plan_builder import (
     resolve_low_budget_quality,
 )
-from app.core.training.quality_caps import QUALITY_MIN_DOSE_KM
+from app.core.training.periodization.quality_caps import QUALITY_MIN_DOSE_KM
 
 
 def _is_duration_defined(workout: dict) -> bool:

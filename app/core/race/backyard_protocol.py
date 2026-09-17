@@ -30,7 +30,7 @@ from __future__ import annotations
 
 from typing import Any, Dict, List, Optional
 
-from app.core.training.backyard_profile import BackyardProfile
+from app.core.training.profiles.backyard_profile import BackyardProfile
 
 # Whistles before each start. Universal enough across race directors to plan
 # against; the runner is *in* the corral at the two-minute whistle, not

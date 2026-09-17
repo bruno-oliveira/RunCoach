@@ -19,7 +19,7 @@ from datetime import date, datetime, timedelta
 from typing import Any, NamedTuple, Optional
 
 from app.core.time_utils import local_today
-from app.core.training.workout_steps.intervals_export import build_intervals_workout
+from app.core.training.workouts.workout_steps.intervals_export import build_intervals_workout
 
 # How far ahead we mirror. Intervals.icu only forwards about the next week to
 # the device, so a longer window costs nothing on the wrist — but it covers a

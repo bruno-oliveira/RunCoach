@@ -40,7 +40,7 @@ from fit_tool.profile.profile_type import (
     WorkoutStepTarget,
 )
 
-from app.core.training.workout_steps.metrics import _parse_pace_str_to_min_per_km
+from app.core.training.workouts.workout_steps.metrics import _parse_pace_str_to_min_per_km
 
 PACE_TOLERANCE_SEC = 15
 

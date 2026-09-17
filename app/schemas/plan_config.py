@@ -35,7 +35,7 @@ def compute_vdot_from_time(
     Raises ValueError if the time string is unparseable. Centralised so plan and
     fitness request schemas share one VDOT-derivation path.
     """
-    from app.core.training.vdot_calculator import VDOTCalculator
+    from app.core.training.physiology.vdot_calculator import VDOTCalculator
 
     seconds = VDOTCalculator.parse_time_to_seconds(time_str)
     if not seconds or seconds <= 0:
@@ -56,7 +56,7 @@ def get_mileage_warning(
 ) -> Optional[str]:
     """Get warning message if mileage is unusually high for target distance."""
     if is_trail:
-        from app.core.training.trail_profile import (
+        from app.core.training.profiles.trail_profile import (
             classify_trail,
             trail_max_weekly_mileage,
         )

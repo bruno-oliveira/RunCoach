@@ -3,13 +3,13 @@
 import pytest
 
 from app.contexts.plan.generators.plan_generator import TrainingPlanGenerator
-from app.core.training import (
+from app.core.training.periodization import (
     long_run_calculator,
     mileage_progression,
     phase_calculator,
     workout_distribution,
 )
-from app.core.training.training_constants import training_km
+from app.core.training.periodization.training_constants import training_km
 
 
 class TestTrainingPlanGenerator:

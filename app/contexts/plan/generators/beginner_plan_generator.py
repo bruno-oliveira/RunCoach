@@ -2,7 +2,7 @@
 
 from typing import Any, Dict, List
 
-from app.core.training.workout_builders import attach_strength_sessions
+from app.core.training.workouts.workout_builders import attach_strength_sessions
 
 # Strength is introduced once the running habit is established, not in the
 # first couple of weeks when an absolute beginner is barely running.

@@ -5,7 +5,7 @@ from datetime import datetime, timedelta, timezone
 from app.contexts.runner.fitness.gap_analysis_service import _compute_elevation_gap
 from app.contexts.runner.fitness.readiness_scoring import build_scenarios
 from app.core.coaching.training_tips import get_tips_for_week
-from app.core.training.trail_profile import classify_trail
+from app.core.training.profiles.trail_profile import classify_trail
 from app.models import RunLog, TrainingPlan
 
 # --- Coaching tips ----------------------------------------------------------

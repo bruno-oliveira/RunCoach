@@ -1,8 +1,8 @@
 """Tests for the trail Intensive Training Weekend (ITW) feature."""
 
 from app.contexts.plan.generators.plan_generator import TrainingPlanGenerator
-from app.core.training import phase_calculator
-from app.core.training.trail_profile import classify_trail
+from app.core.training.periodization import phase_calculator
+from app.core.training.profiles.trail_profile import classify_trail
 
 
 def _gen(distance, gain, weeks=16, current_km=45, terrain=None, enabled=True):

@@ -6,8 +6,8 @@ and target race distance.
 
 from typing import List
 
-from app.core.training.road_profile import classify_road
-from app.core.training.trail_profile import is_trail_target
+from app.core.training.profiles.road_profile import classify_road
+from app.core.training.profiles.trail_profile import is_trail_target
 
 TRAINING_TIP_DATABASE = {
     "foundation": [

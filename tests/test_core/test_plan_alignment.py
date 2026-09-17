@@ -18,9 +18,9 @@ import re
 import pytest
 
 from app.contexts.plan.generators.plan_generator import TrainingPlanGenerator
-from app.core.training.key_workout_library import _WORKOUTS, overlay_key_workout
-from app.core.training.trail_profile import classify_trail
-from app.core.training.workout_steps import _compute_distance_from_steps
+from app.core.training.workouts.key_workout_library import _WORKOUTS, overlay_key_workout
+from app.core.training.profiles.trail_profile import classify_trail
+from app.core.training.workouts.workout_steps import _compute_distance_from_steps
 
 
 def _build_road_plan(target_distance, weeks, runs, current_km):
@@ -245,8 +245,8 @@ class TestKeyWorkoutStepsFollowDistance:
 
     def test_shrinking_a_key_workout_moves_its_steps(self):
         from app.contexts.plan.generators.workout_scaler import set_distance
-        from app.core.training.key_workout_library import overlay_key_workout
-        from app.core.training.workout_steps import (
+        from app.core.training.workouts.key_workout_library import overlay_key_workout
+        from app.core.training.workouts.workout_steps import (
             compute_distance_from_steps_checked,
         )
 

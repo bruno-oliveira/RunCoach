@@ -10,7 +10,7 @@ descriptions prescribed ~5 km of running, for 7 of 10 weeks of a 10K plan.
 import pytest
 
 from app.contexts.plan.generators.plan_generator import TrainingPlanGenerator
-from app.core.training.workout_steps import compute_distance_from_steps_checked
+from app.core.training.workouts.workout_steps import compute_distance_from_steps_checked
 
 _QUALITY_TYPES = ("tempo", "interval", "hill")
 

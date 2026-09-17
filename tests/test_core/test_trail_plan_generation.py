@@ -11,14 +11,14 @@ Verifies that distance + elevation produce structurally different plans:
 import pytest
 
 from app.contexts.plan.generators.plan_generator import TrainingPlanGenerator
-from app.core.training import mileage_progression, phase_calculator
-from app.core.training.long_run_calculator import (
+from app.core.training.periodization import mileage_progression, phase_calculator
+from app.core.training.periodization.long_run_calculator import (
     _get_long_run_cap,
     calculate_long_run_distance,
     get_long_run_ratio_range,
 )
-from app.core.training.trail_profile import classify_trail
-from app.core.training.workout_steps import _compute_distance_from_steps
+from app.core.training.profiles.trail_profile import classify_trail
+from app.core.training.workouts.workout_steps import _compute_distance_from_steps
 
 
 def _build_plan(distance, elevation, weeks, runs, current_km, terrain=None):

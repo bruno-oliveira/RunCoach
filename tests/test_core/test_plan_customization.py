@@ -17,8 +17,8 @@ from app.contexts.plan.plan_adjustments import (
     apply_ai_suggestions,
     swap_workout,
 )
-from app.core.training.vdot_calculator import VDOTCalculator
-from app.core.training.workout_steps import _compute_distance_from_steps
+from app.core.training.physiology.vdot_calculator import VDOTCalculator
+from app.core.training.workouts.workout_steps import _compute_distance_from_steps
 
 
 @pytest.fixture(scope="module")

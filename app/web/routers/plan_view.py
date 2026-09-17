@@ -194,7 +194,7 @@ def view_workout_day(
 
         # Per-day calendar label + week date range, mirroring the plan view.
         from app.core.time_utils import local_today
-        from app.core.training.plan_calendar import (
+        from app.core.training.periodization.plan_calendar import (
             build_week_dates,
             compute_current_week,
             workout_dates,

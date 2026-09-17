@@ -12,19 +12,19 @@ import re
 
 import pytest
 
-from app.core.training.key_workout_library.builders import build_key_workout_steps
-from app.core.training.key_workout_library.rewrites import (
+from app.core.training.workouts.key_workout_library.builders import build_key_workout_steps
+from app.core.training.workouts.key_workout_library.rewrites import (
     _CANONICAL_REP_LADDERS,
     _CANONICAL_SPECS,
     _rewrite_key_workout_description,
     canonical_reps,
 )
-from app.core.training.key_workout_library.selection import (
+from app.core.training.workouts.key_workout_library.selection import (
     _KEY_WORKOUT_MIN_BUDGET_KM,
     KeyWorkoutLibrary,
     _filter_candidates,
 )
-from app.core.training.workout_steps import (
+from app.core.training.workouts.workout_steps import (
     build_tempo_steps,
     compute_distance_from_steps_checked,
     tempo_cruise_plan,

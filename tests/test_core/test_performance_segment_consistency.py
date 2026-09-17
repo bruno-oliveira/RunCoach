@@ -21,7 +21,7 @@ from app.contexts.plan.generators.performance_workout_builders import (
     generate_vo2max_workout,
     reconcile_workout_after_cap,
 )
-from app.core.training.workout_steps.metrics import _compute_distance_from_steps
+from app.core.training.workouts.workout_steps.metrics import _compute_distance_from_steps
 
 
 @pytest.fixture

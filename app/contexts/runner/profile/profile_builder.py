@@ -13,7 +13,7 @@ from sqlalchemy.orm import Session
 from app.contexts.runner.fitness.race_predictor_service import RacePredictorService
 from app.contexts.runner.fitness.training_load_service import TrainingLoadService
 from app.contexts.runner.profile.runner_profile import RunnerProfile
-from app.core.training.vdot_calculator import VDOTCalculator
+from app.core.training.physiology.vdot_calculator import VDOTCalculator
 from app.models import RunLog
 
 # A run averaging this many meters of climb per km is treated as a trail run.

@@ -12,13 +12,13 @@ from app.contexts.plan.generators.plan_generator import (
     BACKYARD_RACE_DAY_NUMBER,
     TrainingPlanGenerator,
 )
-from app.core.training.backyard_profile import classify_backyard
-from app.core.training.key_workout_library import (
+from app.core.training.profiles.backyard_profile import classify_backyard
+from app.core.training.workouts.key_workout_library import (
     _BACKYARD_ONLY_IDS,
     KeyWorkoutLibrary,
 )
-from app.core.training.trail_profile import classify_trail
-from app.core.training.workout_steps import _compute_distance_from_steps
+from app.core.training.profiles.trail_profile import classify_trail
+from app.core.training.workouts.workout_steps import _compute_distance_from_steps
 
 
 def _build(loops, current_km, weeks, runs=5, loop_elev=0.0, vdot=45):

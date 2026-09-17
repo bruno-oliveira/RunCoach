@@ -31,7 +31,7 @@ from app.contexts.plan.plan_creation_helpers import (
     persist_plan_core,
     persist_weekly_workouts,
 )
-from app.core.training.training_constants import training_km
+from app.core.training.periodization.training_constants import training_km
 from app.infrastructure.integrations.post_sync_service import auto_map_and_adjust
 from app.models import RunLog, TrainingPlan, User
 from app.schemas.plan_request import PlanRequest

@@ -15,9 +15,9 @@ from app.contexts.plan.generators.plan_generator import TrainingPlanGenerator
 from app.contexts.plan.generators.workout_scaler import long_run_pace_min_km
 from app.contexts.runner.fitness.readiness_scoring import score_taper
 from app.core.coaching.coaching_notes_generator import build_pace_cue
-from app.core.training import long_run_calculator
-from app.core.training.vdot_calculator import VDOTCalculator
-from app.core.training.workout_builders import attach_strength_sessions
+from app.core.training.periodization import long_run_calculator
+from app.core.training.physiology.vdot_calculator import VDOTCalculator
+from app.core.training.workouts.workout_builders import attach_strength_sessions
 
 # ── G8 — strength across all 4 generators ──────────────────────────────────
 
@@ -143,7 +143,7 @@ def test_long_run_time_cap_skipped_without_pace():
 
 
 def test_long_run_growth_cap_bounds_single_week_jump():
-    from app.core.training.trail_profile import classify_trail
+    from app.core.training.profiles.trail_profile import classify_trail
 
     tp = classify_trail(28.0, 1000.0)
     prev = 15.3
@@ -165,7 +165,7 @@ def test_long_run_growth_cap_bounds_single_week_jump():
 
 def test_long_run_growth_cap_skipped_on_recovery_week():
     # Recovery weeks dip by design and must not be bounded by the growth cap.
-    from app.core.training.trail_profile import classify_trail
+    from app.core.training.profiles.trail_profile import classify_trail
 
     tp = classify_trail(28.0, 1000.0)
     rec = long_run_calculator.calculate_long_run_distance(
@@ -205,7 +205,7 @@ def test_long_run_growth_cap_small_runs_allow_absolute_step():
 
 def test_trail_plan_has_no_long_run_spike():
     from app.contexts.plan.generators.plan_generator import TrainingPlanGenerator
-    from app.core.training.trail_profile import classify_trail
+    from app.core.training.profiles.trail_profile import classify_trail
 
     tp = classify_trail(28.0, 1000.0)
     plan = TrainingPlanGenerator().generate_plan(
@@ -315,7 +315,7 @@ def test_frequency_advisory_fires_at_four_plus_runs_when_volume_is_held_down():
 
 
 def test_long_run_adequacy_trail_uses_race_fraction():
-    from app.core.training.trail_profile import classify_trail
+    from app.core.training.profiles.trail_profile import classify_trail
 
     tp = classify_trail(28.0, 1000.0)
     # Short 8-week-from-low-base trail long run (~13 km) is short of ~20 km.

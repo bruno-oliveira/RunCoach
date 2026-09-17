@@ -10,7 +10,7 @@ from __future__ import annotations
 
 from typing import Any, Dict, List, Sequence
 
-from app.core.training.vdot_calculator import VDOTCalculator
+from app.core.training.physiology.vdot_calculator import VDOTCalculator
 from app.infrastructure.export.plan_export_dto import PlanExportDTO
 from app.infrastructure.export.runna.sheet import DetailRow, DetailSection
 

@@ -8,7 +8,7 @@ from app.contexts.runner.fitness.hr_zone_service import (
     get_user_resting_hr,
     get_user_threshold_hr,
 )
-from app.core.training.hr_zone_calculator import HRZoneCalculator
+from app.core.training.physiology.hr_zone_calculator import HRZoneCalculator
 
 
 class _FakeDB:
@@ -108,14 +108,14 @@ class TestWorkoutZone:
         assert HRZoneCalculator.get_workout_zone("race_pace") == 3
 
     def test_no_session_targets_zone_5(self):
-        from app.core.training.hr_zone_calculator import WORKOUT_ZONE_MAP
+        from app.core.training.physiology.hr_zone_calculator import WORKOUT_ZONE_MAP
 
         assert all(z <= 4 for z in WORKOUT_ZONE_MAP.values())
 
     def test_workout_targets_match_pace_table_bands(self):
         # The personal HR zones and the pace-zone table must be the same
         # banding so "Zone 3" means one thing everywhere on the plan page.
-        from app.core.training.hr_zone_calculator import (
+        from app.core.training.physiology.hr_zone_calculator import (
             TRAINING_ZONE_HR_PERCENTAGES,
             ZONE_DEFINITIONS,
         )

@@ -11,16 +11,16 @@ import logging
 from typing import Any, Dict, List, Optional
 
 from app.core.coaching.coaching_notes_generator import generate_coaching_note
-from app.core.training import mileage_progression, phase_calculator
-from app.core.training.goal_pace_model import (
+from app.core.training.periodization import mileage_progression, phase_calculator
+from app.core.training.physiology.goal_pace_model import (
     GoalPaceContext,
     goal_vdot_from_time,
     progressive_pace_zones,
 )
-from app.core.training.strength_plan import derive_experience_level
-from app.core.training.training_constants import calculate_week_in_phase
-from app.core.training.vdot_calculator import VDOTCalculator
-from app.core.training.workout_builders import attach_strength_sessions
+from app.core.training.periodization.strength_plan import derive_experience_level
+from app.core.training.periodization.training_constants import calculate_week_in_phase
+from app.core.training.physiology.vdot_calculator import VDOTCalculator
+from app.core.training.workouts.workout_builders import attach_strength_sessions
 
 from .base_plan_generator import BasePlanGenerator
 from .performance_workout_builders import (
@@ -107,7 +107,7 @@ class PerformancePlanGenerator(BasePlanGenerator):
         anchors the stored HR zones used) keep the pace panel's BPM bands
         identical to the HR-zones panel.
         """
-        from app.core.training.zone_calculator import calculate_zones
+        from app.core.training.physiology.zone_calculator import calculate_zones
 
         return calculate_zones(
             vdot_zones=vdot_zones,

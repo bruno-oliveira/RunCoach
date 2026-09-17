@@ -2,7 +2,7 @@
 
 import pytest
 
-from app.core.training.zone_calculator import calculate_zones
+from app.core.training.physiology.zone_calculator import calculate_zones
 
 _ORDER = [
     "zone_1_recovery",

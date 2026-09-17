@@ -25,7 +25,7 @@ from sqlalchemy.orm import Session
 
 from app.contexts.runner.fitness.hr_zone_service import resolve_zones_for_user
 from app.contexts.runner.repositories import SQLAlchemyRunRepository
-from app.core.training.hr_zone_calculator import HRZoneCalculator
+from app.core.training.physiology.hr_zone_calculator import HRZoneCalculator
 from app.models import RunLog, User
 
 # One opinionated window. ~6 calendar months; bucketing only emits months that
