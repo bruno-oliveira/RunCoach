@@ -8,12 +8,12 @@ opening week to the deload cadence.
 """
 
 from app.contexts.plan.generators.plan_generator import TrainingPlanGenerator
-from app.core.training.distribution_validator import hard_volume_share
-from app.core.training.mileage_progression import (
+from app.core.training.periodization.distribution_validator import hard_volume_share
+from app.core.training.periodization.mileage_progression import (
     _runs_per_week_factor,
     calculate_weekly_progression,
 )
-from app.core.training.phase_calculator import recovery_week_set
+from app.core.training.periodization.phase_calculator import recovery_week_set
 from app.core.training.tuning import MAX_PEAK_MILEAGE, RUNS_PER_WEEK_REFERENCE
 
 _QUALITY = ("tempo", "interval", "hill")

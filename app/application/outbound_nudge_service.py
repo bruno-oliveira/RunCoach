@@ -37,7 +37,7 @@ from app.core.coaching.outbound_nudge import (
     render_email,
 )
 from app.core.time_utils import local_today
-from app.core.training.plan_calendar import compute_current_week
+from app.core.training.periodization.plan_calendar import compute_current_week
 from app.domain.notifications import EmailMessage, Mailer
 from app.infrastructure.config import Settings
 from app.infrastructure.config import settings as default_settings

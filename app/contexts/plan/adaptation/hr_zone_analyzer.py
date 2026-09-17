@@ -3,7 +3,7 @@
 from collections import defaultdict
 from typing import Any, Dict, List
 
-from app.core.training.hr_zone_calculator import HRZoneCalculator
+from app.core.training.physiology.hr_zone_calculator import HRZoneCalculator
 from app.utils import to_date as _to_date
 
 

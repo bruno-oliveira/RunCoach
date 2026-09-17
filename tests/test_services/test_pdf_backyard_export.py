@@ -11,7 +11,7 @@ import datetime
 import pytest
 
 from app.contexts.plan.generators.plan_generator import TrainingPlanGenerator
-from app.core.training.backyard_profile import classify_backyard
+from app.core.training.profiles.backyard_profile import classify_backyard
 from app.infrastructure.export.pdf_generator import PDFGenerator
 from app.infrastructure.export.plan_export_dto import PlanExportDTO
 from app.infrastructure.export.runna.sheet import _race_name

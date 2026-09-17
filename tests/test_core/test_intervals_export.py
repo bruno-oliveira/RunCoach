@@ -2,7 +2,7 @@
 
 import pytest
 
-from app.core.training.workout_steps.intervals_export import build_intervals_workout
+from app.core.training.workouts.workout_steps.intervals_export import build_intervals_workout
 
 
 def _interval_day() -> dict:

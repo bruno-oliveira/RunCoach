@@ -21,8 +21,8 @@ from app.contexts.runner.enrichment import completion_stats as _cs
 from app.contexts.runner.enrichment import week_pulse_generator as _pulse
 from app.contexts.runner.fitness.hr_zone_service import HRZoneService
 from app.core.time_utils import local_today
-from app.core.training.plan_calendar import compute_current_week
-from app.core.training.vertical_simulation import compute_weekly_vertical_actuals
+from app.core.training.periodization.plan_calendar import compute_current_week
+from app.core.training.profiles.vertical_simulation import compute_weekly_vertical_actuals
 from app.models import DailyWorkout, TrainingPlan, User, WeeklyPlan
 
 logger = logging.getLogger(__name__)

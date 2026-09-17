@@ -8,9 +8,9 @@ final veto over how many loops it can actually carry.
 
 import pytest
 
-from app.core.training import phase_calculator
-from app.core.training.backyard_profile import classify_backyard
-from app.core.training.backyard_simulation import (
+from app.core.training.periodization import phase_calculator
+from app.core.training.profiles.backyard_profile import classify_backyard
+from app.core.training.profiles.backyard_simulation import (
     _SIM_SPACING_WEEKS,
     LoopSimulation,
     build_simulation_schedule,

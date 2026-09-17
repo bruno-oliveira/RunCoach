@@ -11,7 +11,7 @@ import uuid
 from datetime import datetime, timezone
 
 from app.contexts.runner.fitness.hr_zone_service import get_user_threshold_hr
-from app.core.training.hr_zone_calculator import HRZoneCalculator
+from app.core.training.physiology.hr_zone_calculator import HRZoneCalculator
 from app.models import RunLog, User
 
 

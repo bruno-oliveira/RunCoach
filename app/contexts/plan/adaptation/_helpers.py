@@ -6,7 +6,7 @@ from typing import Dict, List, Tuple
 
 from sqlalchemy.orm import Session
 
-from app.core.training.baseline_recovery import (
+from app.core.training.adaptation.baseline_recovery import (
     ANNOTATION_RE,
     parse_adjustment_multiplier,
     recover_baseline,

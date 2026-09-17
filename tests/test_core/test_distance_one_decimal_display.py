@@ -147,7 +147,7 @@ class TestKeyWorkoutOverlayRendering:
         return [round(1.5 + i * 0.1, 1) for i in range(0, 226)]
 
     def test_no_overlay_description_has_multi_decimal_distance(self):
-        from app.core.training.key_workout_library import (
+        from app.core.training.workouts.key_workout_library import (
             _WORKOUTS,
             overlay_key_workout,
         )

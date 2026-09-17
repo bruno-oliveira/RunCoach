@@ -8,7 +8,7 @@ from typing import Any, Dict, List
 
 from sqlalchemy.orm import Session
 
-from app.core.training.vdot_calculator import VDOTCalculator
+from app.core.training.physiology.vdot_calculator import VDOTCalculator
 from app.models import RunLog
 from app.utils import format_pace, format_pace_bare
 

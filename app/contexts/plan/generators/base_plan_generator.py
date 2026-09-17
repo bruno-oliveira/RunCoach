@@ -26,10 +26,10 @@ from app.contexts.plan.generators.workout_builder_base import (
     generate_easy_run,
     reconcile_workout_after_cap,
 )
-from app.core.training.key_workout_library import (
+from app.core.training.workouts.key_workout_library import (
     overlay_key_workout as _overlay_key_workout_shared,
 )
-from app.core.training.quality_caps import enforce_week_caps
+from app.core.training.periodization.quality_caps import enforce_week_caps
 from app.core.training.tuning import MAX_KEY_WORKOUT_VS_LONG_RUN
 
 

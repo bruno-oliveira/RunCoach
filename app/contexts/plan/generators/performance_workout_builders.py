@@ -12,8 +12,8 @@ from app.contexts.plan.generators.workout_builder_base import (
     generate_easy_run,
     reconcile_workout_after_cap,
 )
-from app.core.training.road_profile import classify_road
-from app.core.training.workout_steps import _wucd_m_for_work
+from app.core.training.profiles.road_profile import classify_road
+from app.core.training.workouts.workout_steps import _wucd_m_for_work
 from app.utils import format_km
 from app.utils import format_pace as _shared_format_pace
 

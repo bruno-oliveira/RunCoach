@@ -8,8 +8,8 @@ from typing import TYPE_CHECKING, Optional
 from sqlalchemy.orm import Session
 
 from app.core.race.race_protocol_generator import generate_race_protocol
-from app.core.training.road_profile import classify_road
-from app.core.training.vdot_calculator import VDOTCalculator
+from app.core.training.profiles.road_profile import classify_road
+from app.core.training.physiology.vdot_calculator import VDOTCalculator
 from app.models import DailyWorkout, RunLog, TrainingPlan, User, WeeklyPlan
 from app.schemas import PlanRequest
 from app.utils import parse_race_time_to_seconds
@@ -270,7 +270,7 @@ def attach_race_protocol(
     )
     trail_profile = None
     if plan_request.is_trail:
-        from app.core.training.trail_profile import classify_trail
+        from app.core.training.profiles.trail_profile import classify_trail
 
         trail_profile = classify_trail(
             plan_request.target_distance,

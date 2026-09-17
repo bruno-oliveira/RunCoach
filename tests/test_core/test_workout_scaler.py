@@ -120,7 +120,7 @@ class TestEnforceLongRunRatioCap:
     def test_low_frequency_ratio_looser_than_high_frequency(self):
         # A 2-run week tolerates a bigger long-run share than a 3-run week,
         # which in turn is no looser than the 4+ run default.
-        from app.core.training.long_run_calculator import (
+        from app.core.training.periodization.long_run_calculator import (
             get_weekly_long_run_ratio_cap,
         )
 

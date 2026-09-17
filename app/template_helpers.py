@@ -9,7 +9,7 @@ from pathlib import Path
 
 from fastapi.templating import Jinja2Templates
 
-from app.core.training.plan_calendar import next_monday
+from app.core.training.periodization.plan_calendar import next_monday
 from app.infrastructure.config import settings
 from app.utils import format_km, format_pace
 

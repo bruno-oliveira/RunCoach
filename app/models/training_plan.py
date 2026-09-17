@@ -126,7 +126,7 @@ class TrainingPlan(Base):
         """
         if not self.is_backyard or not self.backyard_target_loops:
             return None
-        from app.core.training.backyard_profile import (
+        from app.core.training.profiles.backyard_profile import (
             BACKYARD_LOOP_KM,
             classify_backyard,
         )

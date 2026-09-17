@@ -8,7 +8,7 @@ from app.contexts.runner.fitness.workout_type_classifier import (
     backfill_inferred_workout_types,
     classify_workout_type,
 )
-from app.core.training.vdot_calculator import VDOTCalculator
+from app.core.training.physiology.vdot_calculator import VDOTCalculator
 from app.models.run_log import RunLog
 from app.models.user import User
 

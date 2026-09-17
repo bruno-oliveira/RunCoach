@@ -4,7 +4,7 @@ import logging
 
 from sqlalchemy.orm import Session
 
-from app.core.training.vdot_calculator import VDOTCalculator
+from app.core.training.physiology.vdot_calculator import VDOTCalculator
 from app.models.run_log import RunLog
 
 logger = logging.getLogger(__name__)

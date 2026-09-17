@@ -7,7 +7,7 @@ projection the engine periodises against.
 
 import pytest
 
-from app.core.training.backyard_profile import (
+from app.core.training.profiles.backyard_profile import (
     BACKYARD_CORRAL_MINUTES,
     BACKYARD_LOOP_KM,
     MAX_TARGET_LOOPS,
@@ -19,7 +19,7 @@ from app.core.training.backyard_profile import (
     backyard_min_weeks,
     classify_backyard,
 )
-from app.core.training.trail_profile import TRAIL_DISTANCE_MAX_KM
+from app.core.training.profiles.trail_profile import TRAIL_DISTANCE_MAX_KM
 
 
 class TestTierClassification:

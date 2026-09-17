@@ -7,7 +7,7 @@ attach duration hints. No back-reference to the orchestrator.
 
 from typing import Any, Dict, List, Optional
 
-from app.core.training.quality_caps import (
+from app.core.training.periodization.quality_caps import (
     BASE_QUALITY_MIN_DOSE_KM,
     MAX_EASY_RUN_KM,
     MAX_EASY_VS_LONG_RUN,
@@ -16,11 +16,11 @@ from app.core.training.quality_caps import (
     QUALITY_MIN_DOSE_KM,
     cap_easy_distance,
 )
-from app.core.training.quality_caps import (
+from app.core.training.periodization.quality_caps import (
     get_quality_caps as _get_quality_caps,
 )
 from app.core.training.tuning import MAX_QUALITY_DAY_SHARE, MIN_QUALITY_DAY_KM
-from app.core.training.workout_steps import _parse_pace_str_to_min_per_km
+from app.core.training.workouts.workout_steps import _parse_pace_str_to_min_per_km
 
 # Quality slots with capped distance below this floor are demoted to easy
 # rather than scheduled as a thin-stimulus workout. Set just below the
@@ -278,7 +278,7 @@ def build_workout_for_type(
     pace_zones: Optional[Dict],
 ) -> Dict[str, Any]:
     """Dispatch workout creation to the registered builder."""
-    from app.core.training.workout_registry import build_workout
+    from app.core.training.workouts.workout_registry import build_workout
 
     return build_workout(
         workout_type,

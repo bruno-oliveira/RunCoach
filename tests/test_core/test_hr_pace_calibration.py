@@ -1,6 +1,6 @@
 """Tests for the pace<->heart-rate calibration."""
 
-from app.core.training.hr_pace_calibration import (
+from app.core.training.physiology.hr_pace_calibration import (
     PaceHRModel,
     PaceHRSample,
     attach_calibrated_paces,

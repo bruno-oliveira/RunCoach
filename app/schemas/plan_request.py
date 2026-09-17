@@ -5,10 +5,10 @@ from typing import TYPE_CHECKING, Optional
 from pydantic import BaseModel, Field, model_validator
 
 if TYPE_CHECKING:
-    from app.core.training.environment import EnvironmentalConditions
+    from app.core.training.physiology.environment import EnvironmentalConditions
 
 from app.constants import DISTANCE_NAMES, SUPPORTED_DISTANCES
-from app.core.training.backyard_profile import (
+from app.core.training.profiles.backyard_profile import (
     BACKYARD_LOOP_KM,
     BACKYARD_LOOP_MAX_ELEVATION_M,
     BACKYARD_LOOP_MAX_KM,
@@ -22,7 +22,7 @@ from app.core.training.backyard_profile import (
     backyard_min_weeks,
     classify_backyard,
 )
-from app.core.training.trail_profile import TRAIL_SENTINEL_KM
+from app.core.training.profiles.trail_profile import TRAIL_SENTINEL_KM
 from app.core.training.training_config import get_constraints
 from app.exceptions import (
     InadequateBaseException,
@@ -153,7 +153,7 @@ class PlanRequestBase(BaseModel):
         Returns ``None`` when nothing actionable was supplied so callers can
         treat "no conditions" uniformly.
         """
-        from app.core.training.environment import EnvironmentalConditions
+        from app.core.training.physiology.environment import EnvironmentalConditions
 
         return EnvironmentalConditions.from_inputs(
             temp_c=self.race_temp_c,
@@ -297,7 +297,7 @@ class PlanRequest(PlanRequestBase, RaceInfoMixin):
     @model_validator(mode="after")
     def _validate_trail_or_road_distance(self) -> "PlanRequest":
         """Branch validation: trail accepts 8–163 km + elevation; road uses presets."""
-        from app.core.training.trail_profile import (
+        from app.core.training.profiles.trail_profile import (
             TRAIL_DISTANCE_MAX_KM,
             TRAIL_DISTANCE_MIN_KM,
         )
@@ -358,7 +358,7 @@ class PlanRequest(PlanRequestBase, RaceInfoMixin):
         if self.terrain:
             return "flat" if self.terrain == "flat" else "hilly"
 
-        from app.core.training.trail_profile import classify_trail
+        from app.core.training.profiles.trail_profile import classify_trail
 
         profile = classify_trail(
             self.target_distance, self.target_elevation_gain_m or 0.0
@@ -390,7 +390,7 @@ class PlanRequest(PlanRequestBase, RaceInfoMixin):
             return self
 
         if self.is_trail:
-            from app.core.training.trail_profile import (
+            from app.core.training.profiles.trail_profile import (
                 classify_trail,
                 trail_max_weeks,
                 trail_min_weeks,
@@ -457,7 +457,7 @@ class PlanRequest(PlanRequestBase, RaceInfoMixin):
             return self
 
         if self.is_trail:
-            from app.core.training.trail_profile import (
+            from app.core.training.profiles.trail_profile import (
                 classify_trail,
                 trail_min_runs_per_week,
             )
@@ -535,7 +535,7 @@ class PlanRequest(PlanRequestBase, RaceInfoMixin):
             return self
 
         if self.is_trail:
-            from app.core.training.trail_profile import (
+            from app.core.training.profiles.trail_profile import (
                 classify_trail,
                 trail_min_weekly_mileage,
             )

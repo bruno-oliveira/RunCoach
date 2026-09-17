@@ -10,9 +10,9 @@ the structured ``steps`` (and, for generated plans that use ``description`` not
 
 from typing import Any, Optional
 
-from app.core.training import key_workout_library as _kwlib
-from app.core.training.workout_registry import WORKOUT_REGISTRY, build_workout
-from app.core.training.workout_steps import _compute_distance_from_steps
+from app.core.training.workouts import key_workout_library as _kwlib
+from app.core.training.workouts.workout_registry import WORKOUT_REGISTRY, build_workout
+from app.core.training.workouts.workout_steps import _compute_distance_from_steps
 
 _KNOWN_TYPES = set(WORKOUT_REGISTRY)
 

@@ -14,7 +14,7 @@ from app.contexts.nutrition.nutrition_engine import (
 )
 from app.contexts.plan.plan_data_enricher import nutrition_for_template
 from app.core.race.race_protocol_generator import generate_race_protocol
-from app.core.training.trail_profile import classify_trail
+from app.core.training.profiles.trail_profile import classify_trail
 
 # --- Race protocol -----------------------------------------------------------
 

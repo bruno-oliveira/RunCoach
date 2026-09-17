@@ -13,7 +13,7 @@ from app.contexts.runner.enrichment.run_enrichment_service import run_to_respons
 from app.contexts.runner.fitness.feedback_service import FeedbackService
 from app.contexts.runner.fitness.race_predictor_service import RacePredictorService
 from app.contexts.runner.repositories import SQLAlchemyRunRepository
-from app.core.training.vdot_calculator import VDOTCalculator
+from app.core.training.physiology.vdot_calculator import VDOTCalculator
 from app.dependencies import get_current_user, get_db, get_run_repository
 from app.models import User
 from app.schemas import (

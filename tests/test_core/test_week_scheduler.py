@@ -1,7 +1,7 @@
 """Tests for week day scheduling: hard-day spacing and slot rotation."""
 
-from app.core.training.key_workout_library import KeyWorkoutLibrary
-from app.core.training.week_scheduler import schedule_workout_types
+from app.core.training.workouts.key_workout_library import KeyWorkoutLibrary
+from app.core.training.periodization.week_scheduler import schedule_workout_types
 
 _QUALITY = ("interval", "tempo", "hill")
 

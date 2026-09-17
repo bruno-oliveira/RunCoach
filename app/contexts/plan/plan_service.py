@@ -115,7 +115,7 @@ class PlanService:
 
         trail_profile = None
         if plan_request.is_trail:
-            from app.core.training.trail_profile import classify_trail
+            from app.core.training.profiles.trail_profile import classify_trail
 
             trail_profile = classify_trail(
                 plan_request.target_distance,

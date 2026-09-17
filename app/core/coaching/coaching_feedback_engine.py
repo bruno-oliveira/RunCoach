@@ -16,7 +16,7 @@ from app.core.coaching.pace_feedback import pace_feedback
 from app.core.coaching.pattern_analyzer import pattern_feedback
 from app.core.coaching.sentiment_classifier import determine_sentiment
 from app.core.coaching.volume_tracker import volume_feedback
-from app.core.training.quality_scorer import calculate_quality_score
+from app.core.training.workouts.quality_scorer import calculate_quality_score
 
 logger = logging.getLogger(__name__)
 

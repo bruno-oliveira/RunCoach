@@ -36,7 +36,7 @@ from app.contexts.plan.adaptation.fitness_signals import FitnessSignalsProvider
 from app.contexts.plan.adaptation.tuning import PHASE_WEIGHTS
 from app.contexts.plan.generators.plan_generator import TrainingPlanGenerator
 from app.contexts.plan.plan_creation_helpers import persist_weekly_workouts
-from app.core.training.hr_zone_calculator import (
+from app.core.training.physiology.hr_zone_calculator import (
     WORKOUT_ZONE_MAP,
     HRZoneCalculator,
 )

@@ -69,8 +69,8 @@ class PerformancePlanHandler(PlanTypeHandler):
         from app.contexts.plan.generators.performance_plan_generator import (
             PerformancePlanGenerator,
         )
-        from app.core.training.goal_pace_model import goal_vdot_from_time
-        from app.core.training.vdot_calculator import VDOTCalculator
+        from app.core.training.physiology.goal_pace_model import goal_vdot_from_time
+        from app.core.training.physiology.vdot_calculator import VDOTCalculator
         from app.utils import format_pace
 
         try:

@@ -26,7 +26,7 @@ from app.contexts.plan.generators.plan_generator import (
     _viable_run_frequency,
 )
 from app.contexts.plan.generators.plan_structure_guard import check_plan_structure
-from app.core.training.training_constants import training_km
+from app.core.training.periodization.training_constants import training_km
 
 # Distance → (min_weeks, max_weeks, min_mileage, max_mileage).
 _DISTANCES = {

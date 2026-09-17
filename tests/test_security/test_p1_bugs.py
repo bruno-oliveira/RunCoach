@@ -9,13 +9,13 @@ P1-D: 1000m repeats require 50 km/week base, not 40 km/week
 
 import pytest
 
-from app.core.training.mileage_progression import get_peak_mileage
-from app.core.training.phase_calculator import (
+from app.core.training.periodization.mileage_progression import get_peak_mileage
+from app.core.training.periodization.phase_calculator import (
     MIN_WEEKS_FOR_PHASES,
     calculate_phases,
     is_recovery_week,
 )
-from app.core.training.workout_builders import generate_interval_run
+from app.core.training.workouts.workout_builders import generate_interval_run
 from app.exceptions import InsufficientTimeException
 
 # ---------------------------------------------------------------------------
@@ -96,8 +96,8 @@ class TestHighBaseDetraining:
     def test_base_phase_does_not_ramp_down_below_current(self):
         """G5: a high-base runner's base phase holds (not detrains) — no
         loading week below ~90% of current volume during base/build."""
-        from app.core.training.mileage_progression import calculate_weekly_progression
-        from app.core.training.phase_calculator import calculate_phases
+        from app.core.training.periodization.mileage_progression import calculate_weekly_progression
+        from app.core.training.periodization.phase_calculator import calculate_phases
 
         current_km = 70.0
         weeks = 16
@@ -133,7 +133,7 @@ class TestRecoveryWeekGlobalCadence:
 
     def test_global_cadence_every_fourth_week(self):
         """Deloads land on weeks 4, 8, 12... regardless of phase boundaries."""
-        from app.core.training.phase_calculator import get_phase
+        from app.core.training.periodization.phase_calculator import get_phase
 
         phases = {"base": 6, "build": 6, "peak": 3, "taper": 2}
         recovery = [
@@ -143,7 +143,7 @@ class TestRecoveryWeekGlobalCadence:
 
     def test_short_plans_get_a_mid_plan_deload(self):
         """8-12 week plans must get at least one mid-plan deload (the G1 fix)."""
-        from app.core.training.phase_calculator import (
+        from app.core.training.periodization.phase_calculator import (
             calculate_phases,
             get_phase,
             recovery_week_set,
@@ -170,7 +170,7 @@ class TestRecoveryWeekGlobalCadence:
     def test_very_short_non_taper_span_has_no_deload(self):
         """A non-taper span under 4 loading weeks gets no deload."""
         phases = {"base": 2, "build": 1, "peak": 0, "taper": 1}
-        from app.core.training.phase_calculator import recovery_week_set
+        from app.core.training.periodization.phase_calculator import recovery_week_set
 
         assert recovery_week_set(phases) == frozenset()
 

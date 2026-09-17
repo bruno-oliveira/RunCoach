@@ -12,7 +12,7 @@ from fastapi.responses import HTMLResponse
 from sqlalchemy.orm import Session
 
 from app.contexts.plan.repositories import SQLAlchemyPlanRepository
-from app.core.training.workout_steps.intervals_export import build_intervals_workout
+from app.core.training.workouts.workout_steps.intervals_export import build_intervals_workout
 from app.dependencies import get_admin_user, get_db
 from app.schemas import IntervalsPushRequest
 from app.template_helpers import create_templates

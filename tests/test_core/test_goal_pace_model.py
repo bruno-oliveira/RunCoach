@@ -1,6 +1,6 @@
 """Tests for the goal-aware progressive pace model."""
 
-from app.core.training.goal_pace_model import (
+from app.core.training.physiology.goal_pace_model import (
     GoalPaceContext,
     blend_fraction,
     blended_vdot,
@@ -9,7 +9,7 @@ from app.core.training.goal_pace_model import (
     race_pace_min_km,
     race_pace_zone_label,
 )
-from app.core.training.vdot_calculator import VDOTCalculator
+from app.core.training.physiology.vdot_calculator import VDOTCalculator
 
 
 class TestGoalVdot:

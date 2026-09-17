@@ -8,8 +8,8 @@ from datetime import date, datetime
 from typing import Optional
 
 from app.contexts.plan.plan_type_registry import display_label as plan_display_label
-from app.core.training.plan_calendar import compute_current_week
-from app.core.training.strength_plan import derive_experience_level
+from app.core.training.periodization.plan_calendar import compute_current_week
+from app.core.training.periodization.strength_plan import derive_experience_level
 from app.models import TrainingPlan
 
 

@@ -18,7 +18,7 @@ from app.contexts.runner.fitness.race_predictor_service.vdot_math import (
     _vdot_outlier_threshold,
     calibration_factor_from_samples,
 )
-from app.core.training.vdot_calculator import VDOTCalculator
+from app.core.training.physiology.vdot_calculator import VDOTCalculator
 from app.models import RunLog
 
 # Minimum distance (km) for a run to be useful for VDOT estimation.
@@ -429,7 +429,7 @@ class RacePredictorService:
         calibration = RacePredictorService.compute_calibration_factor(user_id, db)
 
         predictions: Dict[str, Dict[str, Any]] = {}
-        from app.core.training.vdot_calculator import STANDARD_RACE_DISTANCES
+        from app.core.training.physiology.vdot_calculator import STANDARD_RACE_DISTANCES
 
         for name, distance in STANDARD_RACE_DISTANCES.items():
             elev = None

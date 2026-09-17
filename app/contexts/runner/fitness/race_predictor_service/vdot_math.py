@@ -8,7 +8,7 @@ primitives and lists so it stays trivially testable.
 import statistics
 from typing import Any, Dict, List, Optional
 
-from app.core.training.vdot_calculator import VDOTCalculator
+from app.core.training.physiology.vdot_calculator import VDOTCalculator
 
 # How many top VDOTs to consider when estimating current fitness.
 # Using the median of the top N is robust to 1-2 outliers while

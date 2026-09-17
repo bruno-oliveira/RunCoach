@@ -24,10 +24,10 @@ from app.contexts.plan.adaptation.week_adjuster import (
     apply_adjustment_to_future_weeks,
 )
 from app.contexts.plan.plan_data_enricher import enrich_plan_data_with_ids
-from app.core.training.key_workout_library import overlay_key_workout
-from app.core.training.vdot_calculator import VDOTCalculator
-from app.core.training.workout_registry import build_workout
-from app.core.training.workout_steps import _compute_distance_from_steps
+from app.core.training.workouts.key_workout_library import overlay_key_workout
+from app.core.training.physiology.vdot_calculator import VDOTCalculator
+from app.core.training.workouts.workout_registry import build_workout
+from app.core.training.workouts.workout_steps import _compute_distance_from_steps
 from app.models import Base, DailyWorkout, TrainingPlan, User, WeeklyPlan
 
 

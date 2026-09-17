@@ -24,7 +24,7 @@ from app.contexts.runner.fitness.coaching_data import fetch_pattern_candidates
 from app.contexts.runner.fitness.readiness_service import ReadinessService
 from app.core.coaching.pattern_analyzer import pattern_feedback
 from app.core.time_utils import local_today
-from app.core.training.plan_calendar import compute_current_week
+from app.core.training.periodization.plan_calendar import compute_current_week
 from app.models import RunLog, TrainingPlan
 from app.utils import to_date as _to_date
 

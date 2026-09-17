@@ -15,7 +15,7 @@ from app.contexts.plan.generators.plan_generator import TrainingPlanGenerator
 from app.contexts.plan.plan_helpers import error_response, get_plan_or_404
 from app.contexts.plan.plan_service import PlanService
 from app.contexts.runner.fitness.performance_service import PerformanceService
-from app.core.training.backyard_profile import BACKYARD_LOOP_KM
+from app.core.training.profiles.backyard_profile import BACKYARD_LOOP_KM
 from app.dependencies import (
     get_db,
     get_nutrition_engine,
@@ -604,8 +604,8 @@ def assess_long_run(
     """
     from fastapi.responses import JSONResponse
 
-    from app.core.training.long_run_calculator import assess_long_run_adequacy
-    from app.core.training.strength_plan import derive_experience_level
+    from app.core.training.periodization.long_run_calculator import assess_long_run_adequacy
+    from app.core.training.periodization.strength_plan import derive_experience_level
 
     try:
         if current_km <= 0 or target_distance <= 0 or weeks <= 0:
@@ -613,7 +613,7 @@ def assess_long_run(
 
         trail_profile = None
         if is_trail:
-            from app.core.training.trail_profile import classify_trail
+            from app.core.training.profiles.trail_profile import classify_trail
 
             trail_profile = classify_trail(
                 target_distance, target_elevation_gain_m or 0.0

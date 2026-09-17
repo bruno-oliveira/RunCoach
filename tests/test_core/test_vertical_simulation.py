@@ -3,8 +3,8 @@
 from datetime import date, datetime, timedelta
 from types import SimpleNamespace
 
-from app.core.training.trail_profile import classify_trail
-from app.core.training.vertical_simulation import (
+from app.core.training.profiles.trail_profile import classify_trail
+from app.core.training.profiles.vertical_simulation import (
     attach_treadmill_prescriptions,
     compute_weekly_vertical_actuals,
 )

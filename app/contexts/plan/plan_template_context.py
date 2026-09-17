@@ -9,14 +9,14 @@ from sqlalchemy import func
 from app.core.coaching.readiness_checkin import score_checkin
 from app.core.coaching.today_card import TodayCard, build_today_card
 from app.core.time_utils import local_today
-from app.core.training.plan_calendar import (
+from app.core.training.periodization.plan_calendar import (
     build_week_dates,
     compute_current_week,
     ensure_seven_days,
     next_monday,
     workout_dates,
 )
-from app.core.training.strength_plan import derive_experience_level
+from app.core.training.periodization.strength_plan import derive_experience_level
 from app.core.training.watch_mirror import sessions_behind, synced_day_keys
 from app.infrastructure.config import settings
 from app.models import (
@@ -190,7 +190,7 @@ def _backyard_summary(training_plan: TrainingPlan) -> Optional[dict]:
     )
     if profile is None:
         return None
-    from app.core.training.backyard_profile import backyard_summary
+    from app.core.training.profiles.backyard_profile import backyard_summary
 
     return backyard_summary(profile)
 
@@ -233,14 +233,14 @@ def _build_long_run_warning(
 
     trail_profile = None
     if bool(getattr(training_plan, "is_trail", False)):
-        from app.core.training.trail_profile import classify_trail
+        from app.core.training.profiles.trail_profile import classify_trail
 
         trail_profile = classify_trail(
             target_distance,
             getattr(training_plan, "target_elevation_gain_m", None) or 0.0,
         )
 
-    from app.core.training.long_run_calculator import assess_long_run_adequacy
+    from app.core.training.periodization.long_run_calculator import assess_long_run_adequacy
 
     return assess_long_run_adequacy(
         peak_long_run,
@@ -281,7 +281,7 @@ def _build_frequency_warning(
     if realized_peak <= 0:
         return None
 
-    from app.core.training.long_run_calculator import (
+    from app.core.training.periodization.long_run_calculator import (
         assess_frequency_volume_adequacy,
     )
 

@@ -61,7 +61,7 @@ def customize_plan(
     pace_zones = None
     if training_plan.vdot:
         try:
-            from app.core.training.vdot_calculator import VDOTCalculator
+            from app.core.training.physiology.vdot_calculator import VDOTCalculator
 
             pace_zones = VDOTCalculator.get_pace_zones(training_plan.vdot)
         except Exception:  # pragma: no cover - defensive; never block customize

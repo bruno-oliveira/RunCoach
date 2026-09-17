@@ -18,8 +18,8 @@ import re
 
 import pytest
 
-from app.core.training.key_workout_library import _WORKOUTS
-from app.core.training.key_workout_library.selection import _filter_candidates
+from app.core.training.workouts.key_workout_library import _WORKOUTS
+from app.core.training.workouts.key_workout_library.selection import _filter_candidates
 
 QUALITY_TYPES = ("tempo", "interval", "hill")
 

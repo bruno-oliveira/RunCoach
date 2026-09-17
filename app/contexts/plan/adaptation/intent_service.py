@@ -32,7 +32,7 @@ from typing import Any, Callable, Dict, List, Optional, Tuple
 from sqlalchemy.orm import Session
 
 from app.contexts.plan.repositories import SQLAlchemyPlanRepository
-from app.core.training.plan_calendar import compute_current_week
+from app.core.training.periodization.plan_calendar import compute_current_week
 from app.models import DailyWorkout, TrainingPlan, WeeklyPlan
 from app.utils import persist_json
 from app.utils import to_date as _to_date

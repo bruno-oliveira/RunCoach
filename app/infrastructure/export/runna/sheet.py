@@ -12,7 +12,7 @@ import re
 from dataclasses import dataclass
 from typing import Any, Dict, Iterable, List, Optional, Sequence, Tuple
 
-from app.core.training.trail_profile import TRAIL_SENTINEL_KM
+from app.core.training.profiles.trail_profile import TRAIL_SENTINEL_KM
 from app.infrastructure.export.plan_export_dto import PlanExportDTO
 
 # --- Layout model ---------------------------------------------------------

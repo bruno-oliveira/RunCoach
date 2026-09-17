@@ -1,6 +1,6 @@
 """Tests for the pure baseline-recovery helpers."""
 
-from app.core.training.baseline_recovery import (
+from app.core.training.adaptation.baseline_recovery import (
     parse_adjustment_multiplier,
     recover_baseline,
     strip_annotations,

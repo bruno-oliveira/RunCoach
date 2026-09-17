@@ -12,7 +12,7 @@ from app.contexts.runner.fitness.effort_classifier import (
 from app.contexts.runner.fitness.race_predictor_service import RacePredictorService
 from app.contexts.runner.fitness.workout_type_classifier import classify_workout_type
 from app.contexts.runner.queries import count_prior_trail_runs
-from app.core.training.vdot_calculator import VDOTCalculator
+from app.core.training.physiology.vdot_calculator import VDOTCalculator
 from app.models import RunLog
 from app.schemas import RunLogResponse
 

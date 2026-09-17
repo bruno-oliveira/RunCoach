@@ -19,7 +19,7 @@ part of the performance builders' distance budget.
 
 from typing import Any, Dict, List, Optional
 
-from app.core.training.workout_steps.primitives import _step
+from app.core.training.workouts.workout_steps.primitives import _step
 
 # Performance zone identifier -> canonical pace-zone badge letter (E/M/T/I/R),
 # matching the road generator's structured steps so the same zone colours and

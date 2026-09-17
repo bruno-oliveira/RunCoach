@@ -12,7 +12,7 @@ from app.contexts.plan.generators.performance_plan_generator import (
     PerformancePlanGenerator,
 )
 from app.contexts.plan.generators.plan_generator import TrainingPlanGenerator
-from app.core.training.key_workout_library.rewrites import (
+from app.core.training.workouts.key_workout_library.rewrites import (
     _rolling_400_reps,
     _thirty_thirty_reps,
 )
@@ -23,12 +23,12 @@ from app.core.training.tuning import (
     MIN_CAPPED_WORK_KM,
     MIN_QUALITY_DAY_CAP_KM,
 )
-from app.core.training.workout_steps.metrics import (
+from app.core.training.workouts.workout_steps.metrics import (
     exempt_work_km,
     fit_steps_to_intensity_caps,
     work_km_by_group,
 )
-from app.core.training.workout_steps.primitives import _step
+from app.core.training.workouts.workout_steps.primitives import _step
 
 QUALITY_TYPES = {"tempo", "interval", "hill", "vo2max", "race_pace", "fartlek"}
 

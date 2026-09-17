@@ -1,6 +1,6 @@
 """Tests for VDOT calculator prediction methods."""
 
-from app.core.training.vdot_calculator import VDOTCalculator
+from app.core.training.physiology.vdot_calculator import VDOTCalculator
 
 
 class TestVDOTCalculator:

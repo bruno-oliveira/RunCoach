@@ -42,7 +42,7 @@ import httpx
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from app.core.training.workout_steps.intervals_export import build_intervals_workout
+from app.core.training.workouts.workout_steps.intervals_export import build_intervals_workout
 
 logging.basicConfig(level=logging.INFO, format="%(levelname)s - %(message)s")
 logger = logging.getLogger(__name__)

@@ -6,7 +6,7 @@ in particular that hill reps are scored on effort alone (average pace on a
 40/60 effort/pace split.
 """
 
-from app.core.training.quality_scorer import (
+from app.core.training.workouts.quality_scorer import (
     EXPECTED_EFFORT,
     calculate_quality_score,
 )

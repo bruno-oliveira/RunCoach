@@ -5,12 +5,12 @@ from typing import Optional
 
 from sqlalchemy.orm import Session
 
-from app.core.training.hr_pace_calibration import (
+from app.core.training.physiology.hr_pace_calibration import (
     PaceHRSample,
     attach_calibrated_paces,
     fit_pace_hr_model,
 )
-from app.core.training.hr_zone_calculator import (
+from app.core.training.physiology.hr_zone_calculator import (
     DEFAULT_MAX_HR,
     HR_ZONES_VERSION,
     MAX_HR_SPIKE_TOLERANCE_BPM,
@@ -176,7 +176,7 @@ def estimate_threshold_hr_from_pace_hr_fit(user_id: str, db: Session) -> Optiona
     from app.contexts.runner.fitness.race_predictor_service import (
         RacePredictorService,
     )
-    from app.core.training.vdot_calculator import VDOTCalculator
+    from app.core.training.physiology.vdot_calculator import VDOTCalculator
 
     vdot = RacePredictorService.get_best_recent_vdot(user_id, db=db)
     if not vdot:

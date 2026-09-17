@@ -7,7 +7,7 @@ from typing import Any, Dict, List, Optional, Tuple
 from sqlalchemy.orm import Session
 
 from app.contexts.plan.repositories import SQLAlchemyPlanRepository
-from app.core.training.plan_calendar import compute_current_week
+from app.core.training.periodization.plan_calendar import compute_current_week
 from app.models import (
     DailyWorkout,
     ReadinessLog,

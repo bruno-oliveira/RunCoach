@@ -1,6 +1,6 @@
 """Tests for the trail intensive-weekend workout step builders."""
 
-from app.core.training.workout_steps import (
+from app.core.training.workouts.workout_steps import (
     _compute_distance_from_steps,
     build_hike_run_steps,
     build_ladder_steps,

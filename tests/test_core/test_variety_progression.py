@@ -9,9 +9,9 @@ and a taper sharpener specific to the race distance.
 import pytest
 
 from app.contexts.plan.generators.plan_generator import TrainingPlanGenerator
-from app.core.training import workout_steps
-from app.core.training.key_workout_library import KeyWorkoutLibrary
-from app.core.training.key_workout_library.selection import (
+from app.core.training.workouts import workout_steps
+from app.core.training.workouts.key_workout_library import KeyWorkoutLibrary
+from app.core.training.workouts.key_workout_library.selection import (
     KeyWorkoutRotationState,
     _apply_variety_filter,
     _filter_candidates,
