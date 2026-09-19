@@ -244,15 +244,15 @@ class TestTrainingPlanGenerator:
         plan_12 = plan_generator.generate_plan(
             current_km=10, target_distance=10, weeks=12
         )
-        plan_17 = plan_generator.generate_plan(
-            current_km=10, target_distance=10, weeks=17
+        plan_16 = plan_generator.generate_plan(
+            current_km=10, target_distance=10, weeks=16
         )
 
         peak_8 = max(w["total_km"] for w in plan_8)
         peak_12 = max(w["total_km"] for w in plan_12)
-        peak_17 = max(w["total_km"] for w in plan_17)
+        peak_16 = max(w["total_km"] for w in plan_16)
 
-        assert peak_17 > peak_12 > peak_8, (
+        assert peak_16 > peak_12 > peak_8, (
             "Peak mileage should increase with longer plans"
         )
 
@@ -309,7 +309,7 @@ class TestTrainingPlanGenerator:
         mileage reduction vs the previous week (modern deload depth).
         """
         plan = plan_generator.generate_plan(
-            current_km=20,
+            current_km=25,
             target_distance=42.2,
             weeks=16,
             max_runs_per_week=5,

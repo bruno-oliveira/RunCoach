@@ -17,7 +17,10 @@ from typing import Any, Dict, List, Optional
 
 from app.contexts.plan.generators.beginner_plan_generator import BeginnerPlanGenerator
 from app.contexts.plan.generators.plan_structure_guard import check_plan_structure
-from app.contexts.plan.generators.weekly_plan_builder import build_weekly_plan
+from app.contexts.plan.generators.weekly_plan_builder import (
+    attach_duration_hints,
+    build_weekly_plan,
+)
 from app.core.training.periodization import mileage_progression
 
 # Re-export for any code that imports PHASE_DISTRIBUTIONS from here
@@ -26,16 +29,30 @@ from app.core.training.periodization.phase_calculator import (
 )
 from app.core.training.periodization.strength_plan import derive_experience_level
 from app.core.training.physiology.vdot_calculator import VDOTCalculator
-from app.core.training.profiles.backyard_profile import BackyardProfile
+from app.core.training.profiles.backyard_profile import (
+    BackyardProfile,
+    backyard_max_weeks,
+    backyard_min_weekly_km,
+    backyard_min_weeks,
+)
 from app.core.training.profiles.backyard_simulation import build_simulation_schedule
 from app.core.training.profiles.trail_profile import (
     TRAIL_SENTINEL_KM,
     TrailProfile,
     classify_trail,
+    trail_min_weekly_mileage,
+    trail_min_weeks,
 )
+from app.core.training.training_config import DISTANCE_CONSTRAINTS, get_constraints
 from app.core.training.workouts import workout_builders, workout_steps
 from app.core.training.workouts.key_workout_library import KeyWorkoutRotationState
-from app.exceptions import PlanGenerationException, ZeroMileageUnsupportedException
+from app.exceptions import (
+    InadequateBaseException,
+    InsufficientTimeException,
+    PlanGenerationException,
+    ValidationException,
+    ZeroMileageUnsupportedException,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -45,6 +62,22 @@ MIN_VIABLE_RUN_KM = 2.5
 # Floor on running days: a real training week still wants a long run, a quality
 # session, and an easy run, so frequency is never reduced below this.
 MIN_RUNNING_DAYS = 3
+
+# Card types that ask the runner to run. A card of one of these types whose
+# distance has drained to 0 is not a session — it renders as an easy run with
+# no distance on it — and every pass that tidies a week should be allowed to
+# turn it into the rest day it effectively is.
+RUNNING_CARD_TYPES = ("easy", "medium_long", "tempo", "interval", "hill")
+
+# Floors for the trivial-session sweep. A *quality* card below this dose
+# cannot hold warm-up, work, and cool-down and is relabelled as the easy run
+# it effectively was. An *easy* card below the coherence floor is not a run by
+# any measure (worst case observed: 0.3 km) and is rendered as rest. Between
+# the coherence floor and a real session sits honest territory — a 1.5 km jog
+# in a small week — which the sweep must leave alone: converting it erodes
+# frequency and deflates the ramp baseline for no coaching gain.
+MIN_VIABLE_QUALITY_KM = 2.5
+MIN_COHERENT_RUN_KM = 1.0
 
 # How far the 10 % weekly cap may shrink a flexible session before it stops.
 # A ratio rather than an absolute distance: an absolute floor disables the cap
@@ -159,6 +192,111 @@ class TrainingPlanGenerator:
                 f"A {target_distance} km race requires an existing running base. "
                 "Please start with a 5K or 10K beginner plan to build your fitness first.",
                 suggestion="Try a 5K or 10K plan with 0 km/week to get started.",
+            )
+
+        # ── Engine-level input floors ────────────────────────────────────
+        # ``PlanRequest`` enforces these for web traffic, but the generator is
+        # also called directly (backtests, scripts, future endpoints). The
+        # sweep that motivated these guards produced a +21 % ramp breach and
+        # a 0.0 km easy card on a *loading* week from a base the schema would
+        # have refused — below-floor inputs don't just make conservative
+        # plans, they compose into broken ones. Raise the same domain
+        # exceptions the schema raises rather than inventing a second
+        # vocabulary for the same refusal.
+        if trail_profile is None and backyard_profile is None:
+            constraints = get_constraints(target_distance)
+            if constraints is None:
+                # 30.0 never reaches here: the legacy branch above already
+                # promoted it to a trail profile.
+                road_names = ", ".join(
+                    c.name
+                    for d, c in DISTANCE_CONSTRAINTS.items()
+                    if d != TRAIL_SENTINEL_KM
+                )
+                raise ValidationException(
+                    f"Unsupported road target distance: {target_distance} km",
+                    user_message=(
+                        "Please select a valid distance: "
+                        f"{road_names}, or pick Trail/Ultra for a custom goal."
+                    ),
+                )
+            if current_km < constraints.min_mileage:
+                raise InadequateBaseException(
+                    f"Current mileage ({current_km:g} km/week) is below the "
+                    f"recommended minimum ({constraints.min_mileage:g} km/week) "
+                    f"for {constraints.name} training",
+                    suggestion=constraints.low_mileage_msg,
+                )
+            if weeks < constraints.min_weeks:
+                raise InsufficientTimeException(
+                    f"Training for {constraints.name} requires at least "
+                    f"{constraints.min_weeks} weeks",
+                    suggestion=(
+                        f"Consider extending your training to "
+                        f"{constraints.min_weeks} weeks. "
+                        f"{constraints.insufficient_time_reason}"
+                    ),
+                )
+            if weeks > constraints.max_weeks:
+                raise ValidationException(
+                    f"{constraints.name} plans are capped at "
+                    f"{constraints.max_weeks} weeks; requested {weeks}",
+                    user_message=(
+                        f"{constraints.excessive_time_reason}. "
+                        "Consider a shorter training period."
+                    ),
+                )
+            # NOTE: runs-per-week floors (HM ≥ 3, marathon ≥ 4) are *product
+            # policy* and stay schema-only. The engine is deliberately
+            # permissive here — it composes gracefully at 2-3 runs (the
+            # frequency composers, the envelope grid, and the physiological
+            # envelope ledger all exercise that space) — so refusing would
+            # break the engine's contract, not protect it.
+        elif backyard_profile is not None:
+            min_km = backyard_min_weekly_km(backyard_profile)
+            if current_km < min_km:
+                raise InadequateBaseException(
+                    f"Current mileage ({current_km:g} km/week) is below the "
+                    f"recommended minimum ({min_km:g} km/week) for a "
+                    f"{backyard_profile.target_loops}-loop goal",
+                    suggestion=(
+                        "Build a steady base of easy running first — a backyard "
+                        "asks you to repeat a loop you're already comfortable "
+                        "with, not to discover one."
+                    ),
+                )
+            min_w = backyard_min_weeks(backyard_profile)
+            max_w = backyard_max_weeks(backyard_profile)
+            if weeks < min_w:
+                raise InsufficientTimeException(
+                    f"Training for {backyard_profile.target_loops} loops requires "
+                    f"at least {min_w} weeks",
+                    suggestion=(
+                        f"This goal needs {min_w}–{max_w} weeks to build the "
+                        "aerobic base, the loop-pace habit, and enough "
+                        "simulations to rehearse the format."
+                    ),
+                )
+        elif current_km < trail_min_weekly_mileage(trail_profile):
+            min_km = trail_min_weekly_mileage(trail_profile)
+            raise InadequateBaseException(
+                f"Current mileage ({current_km:g} km/week) is below the "
+                f"recommended minimum ({min_km:g} km/week) for a "
+                f"{trail_profile.distance_km:g} km trail/ultra",
+                suggestion=(
+                    "Build a steady base of easy running first — "
+                    "trail-specific volume and elevation work compounds "
+                    "the load quickly."
+                ),
+            )
+        elif weeks < trail_min_weeks(trail_profile):
+            raise InsufficientTimeException(
+                f"Training for a {trail_profile.distance_km:g} km trail/ultra "
+                f"requires at least {trail_min_weeks(trail_profile)} weeks",
+                suggestion=(
+                    "This bracket needs time to build trail-specific "
+                    "strength, time-on-feet, and fueling habits."
+                ),
             )
 
         # Pass the target so the zones carry a ``race`` entry (5K/10K are
@@ -396,6 +534,7 @@ class TrainingPlanGenerator:
             pace_zones,
             trail_profile=trail_profile,
         )
+        _sweep_trivial_sessions(training_plan, pace_zones)
         if backyard_profile is not None:
             _install_backyard_race_day(training_plan, backyard_profile, pace_zones)
         else:
@@ -572,6 +711,14 @@ def _install_race_day(
             )
         elif w.get("day") == RACE_DAY_NUMBER:
             kept.append(workout_builders.generate_rest_day(w["day"]))
+        elif w.get("type") in RUNNING_CARD_TYPES and (w.get("distance") or 0) <= 0:
+            # A drained running card is rest, not a session. The
+            # sub-threshold conversion below only sees positive distances,
+            # so without this branch a 0.0 km "easy" card survives onto the
+            # race-week calendar. (``duration_min`` here is a display hint
+            # attached to *short* cards — a 0.0 km card gets a 1-minute one —
+            # so it marks the junk, it cannot protect it.)
+            kept.append(workout_builders.generate_rest_day(w["day"]))
         else:
             kept.append(w)
 
@@ -587,7 +734,9 @@ def _install_race_day(
     )
 
     # Convert sub-threshold easy runs to rest — scaling can crush them to a
-    # fraction of a kilometre, which isn't worth lacing up for. But never
+    # fraction of a kilometre, which isn't worth lacing up for — and drained
+    # (0.0 km) cards to rest unconditionally: a card with no distance is not
+    # a session, and it was never counted as prerace running. But never
     # eliminate ALL pre-race running: low-volume short-distance plans may
     # have only one tiny run before the race, and rest-only → race is worse
     # than a short shakeout jog.
@@ -597,14 +746,15 @@ def _install_race_day(
         if w.get("type") not in ("rest", "recovery") and (w.get("distance") or 0) > 0
     )
     for i, w in enumerate(kept):
-        if (
-            prerace_running > 1
-            and w.get("type") == "easy"
-            and not w.get("is_shakeout")
-            and 0 < (w.get("distance") or 0) < RACE_WEEK_SHAKEOUT_MIN_KM
-        ):
+        dist = w.get("distance") or 0
+        if w.get("type") != "easy" or w.get("is_shakeout"):
+            continue
+        drained = dist <= 0
+        thin = 0 < dist < RACE_WEEK_SHAKEOUT_MIN_KM
+        if drained or (thin and prerace_running > 1):
             kept[i] = workout_builders.generate_rest_day(w["day"])
-            prerace_running -= 1
+            if thin:
+                prerace_running -= 1
 
     # Sharper race-week taper: keep at most RACE_WEEK_MAX_PRERACE_RUNS
     # running sessions before the race.  Shakeout and quality sessions are
@@ -709,6 +859,9 @@ def _install_backyard_race_day(
             continue  # the race takes this day
         if day == shakeout_day:
             kept.append(_build_shakeout(shakeout_day, shakeout_km, pace_zones))
+        elif w.get("type") in RUNNING_CARD_TYPES and (w.get("distance") or 0) <= 0:
+            # Same rule as the road race week: a drained card is rest.
+            kept.append(workout_builders.generate_rest_day(day))
         elif day is not None and day > BACKYARD_RACE_DAY_NUMBER:
             # Still on the course, or sleeping it off. Either way, not training.
             kept.append(workout_builders.generate_rest_day(day))
@@ -722,6 +875,14 @@ def _install_backyard_race_day(
         pace_zones=pace_zones,
         protect_long=False,
     )
+    # Scaling can crush a pre-race session to 0.0 km; render the drained card
+    # as the rest day it effectively is (same rule as the road race week).
+    kept = [
+        workout_builders.generate_rest_day(w.get("day"))
+        if w.get("type") in RUNNING_CARD_TYPES and (w.get("distance") or 0) <= 0
+        else w
+        for w in kept
+    ]
 
     race = workout_builders.generate_backyard_race_day(
         BACKYARD_RACE_DAY_NUMBER, profile, pace_zones
@@ -844,3 +1005,107 @@ def _smooth_recovery_dips(
                     attach_duration_hints(workouts, pace_zones)
         else:
             prev_load_total = weekly_plan["total_km"]
+
+
+def _sweep_trivial_sessions(
+    training_plan: List[Dict[str, Any]],
+    pace_zones: Optional[Dict],
+) -> None:
+    """Render sub-viable running cards as the sessions they effectively are.
+
+    Three ways a week can end up carrying a card no runner should execute:
+
+    - a **zero**-distance running card — scaling passes can drain a flexible
+      session to 0.0 km while the card stays typed ``easy``, so the calendar
+      shows an easy run with no distance on it (observed on 5K/10K race weeks
+      and, off the schema's guarded path, on a build week). Rendered as rest:
+      it was never a run.
+    - a **token quality** session — the taper and deload smoothing draws weeks
+      down proportionally, and a 2.2 km "tempo" cannot hold warm-up, work, and
+      cool-down. Rebuilt as an *easy* run at the same distance: the session
+      was already jogging duration, and relabelling keeps the runner's
+      frequency intact.
+    - a **token easy** run — worst case observed: a 0.3 km easy card in a 10K
+      peak week. Rendered as rest, but only when it is not even coherent
+      (under a kilometre) *and* the week's median running dose shows the week
+      can sustain real sessions — the crushed card is a scaling artifact, not
+      the plan's honest shape. A 1.5 km jog in a small week is small-but-real
+      and stays: converting it erodes frequency and deflates the ramp
+      baseline for no coaching gain.
+
+    The race week itself is skipped: its pre-race days are sized by
+    :func:`_install_race_day`, which applies the same rules to its own cards.
+    Long runs are never converted — the week's long anchor is load-bearing
+    for the plan's invariants, and a sub-viable long run does not occur on the
+    grid (the long-run rebuild path resizes it rather than shrinking it to a
+    token).
+
+    A week is never left without a runnable session: converting the last one
+    would trade a trivial card for a fatal structure-guard failure.
+    """
+    for weekly_plan in training_plan[:-1]:
+        workouts = weekly_plan.get("daily_workouts") or []
+        running = [
+            w
+            for w in workouts
+            if w.get("type") in RUNNING_CARD_TYPES and (w.get("distance") or 0) > 0
+        ]
+        doses = sorted((w.get("distance") or 0) for w in running)
+        median_dose = doses[len(doses) // 2] if doses else 0.0
+        shedding_week = weekly_plan.get("phase") == "taper" or weekly_plan.get(
+            "is_recovery"
+        )
+        changed = False
+        for i, w in enumerate(workouts):
+            wtype = w.get("type")
+            if wtype not in RUNNING_CARD_TYPES:
+                continue
+            distance = w.get("distance") or 0
+            if wtype in ("tempo", "interval", "hill"):
+                if distance < 0:
+                    continue
+                if distance == 0:
+                    # A drained quality card is not a stimulus and not a run.
+                    workouts[i] = workout_builders.generate_rest_day(w.get("day"))
+                    changed = True
+                    continue
+                if distance >= MIN_VIABLE_QUALITY_KM:
+                    continue
+                if not shedding_week:
+                    # A loading week keeps its intensity stimulus, however
+                    # small: on a micro plan the token session is the plan's
+                    # *only* quality work, and relabelling it as easy strips
+                    # the plan of intensity entirely.
+                    continue
+                # A token quality session in a taper/deload week was already
+                # jogging duration: relabel it as the easy run it effectively
+                # was. Intensity is being shed by design.
+                workouts[i] = workout_builders.generate_easy_run(
+                    w.get("day"), distance, distance, pace_zones
+                )
+                changed = True
+                continue
+            if distance > 0 and distance >= MIN_COHERENT_RUN_KM:
+                continue
+            if distance > 0 and (
+                median_dose < MIN_VIABLE_QUALITY_KM or len(running) <= 1
+            ):
+                # Not junk: either a borderline-but-real jog in a week that
+                # cannot sustain bigger doses, or the week's only run. Both
+                # stay — converting them trades a small card for frequency
+                # erosion and a deflated ramp baseline.
+                continue
+            workouts[i] = workout_builders.generate_rest_day(w.get("day"))
+            running = [r for r in running if r is not w]
+            changed = True
+        if changed:
+            # The rebuild swaps in fresh cards, so the week's display hints
+            # must be refreshed from the final distances — a downgraded
+            # token tempo is now an easy run under the 3 km hint threshold.
+            for w in workouts:
+                w.pop("duration_min", None)
+            attach_duration_hints(workouts, pace_zones)
+            weekly_plan["daily_workouts"] = workouts
+            weekly_plan["total_km"] = round(
+                sum(w.get("distance", 0) or 0 for w in workouts), 1
+            )

@@ -376,8 +376,11 @@ def _invariant_failures(combo: Combo, plan: List[Dict[str, Any]]) -> List[str]:
         # backyard week flexes by one either way: its peak weekends add a
         # session for the second long day, and a peak week at 6 runs may drop
         # one rather than stretch the remaining runs past their per-run cap.
+        # Any week may also sit one below the request when the trivial-session
+        # sweep traded a sub-viable card for the rest day it effectively was —
+        # a 0.3 km "easy" is not a running day held onto at all costs.
         run_days = [w for w in days if w.get("type") not in NON_RUNNING]
-        allowed_runs = {expected_runs}
+        allowed_runs = {expected_runs, expected_runs - 1}
         if combo.goal.kind == "backyard":
             allowed_runs.update({expected_runs - 1, expected_runs + 1})
         # Race week deliberately reduces frequency for a sharper taper —
@@ -408,15 +411,38 @@ def _invariant_failures(combo: Combo, plan: List[Dict[str, Any]]) -> List[str]:
             if (w.get("distance") or 0) < 0:
                 note(f"week {num} day {w.get('day')}: negative distance")
 
-        # A running day that prescribes nothing is a hole in the week. Race week
-        # is exempt: the shakeout and the race are sized by other rules.
-        if not is_final:
-            for w in days:
-                if w.get("type") in ("easy", "long", "tempo", "interval", "hill"):
-                    if (w.get("distance") or 0) <= 0:
-                        note(
-                            f"week {num} day {w.get('day')}: {w['type']} with no distance"
-                        )
+        # A running day that prescribes nothing is a hole in the week — and
+        # so is a session the runner cannot actually execute. Race week used
+        # to be exempt while its shakeout and race were sized by other rules;
+        # the race-day pass now renders drained cards as rest, so the rule
+        # holds everywhere. Time-priced cards are exempt: they are legitimate
+        # sessions without a distance by design.
+        for w in days:
+            wtype = w.get("type")
+            if wtype not in (
+                "easy",
+                "long",
+                "medium_long",
+                "tempo",
+                "interval",
+                "hill",
+            ):
+                continue
+            if w.get("duration_min"):
+                continue
+            dist = w.get("distance") or 0
+            if dist <= 0:
+                note(f"week {num} day {w.get('day')}: {wtype} with no distance")
+            elif wtype in ("easy", "medium_long") and dist < 1.0:
+                note(
+                    f"week {num} day {w.get('day')}: {wtype} of {dist} km is "
+                    "not a coherent run"
+                )
+            elif wtype in QUALITY_TYPES and dist < 2.5:
+                note(
+                    f"week {num} day {w.get('day')}: {wtype} of {dist} km is "
+                    "below the viable quality dose"
+                )
 
         # Measured against the *longest* of the week's long days: on a backyard
         # back-to-back weekend the second one is the bigger, and it is the

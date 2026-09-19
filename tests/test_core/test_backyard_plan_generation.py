@@ -177,7 +177,8 @@ class TestTheWeekendShape:
 
 class TestBackyardSpecificQuality:
     def test_a_plan_installs_the_specific_midweek_sessions(self):
-        _, plan = _build(36, 85, 28)
+        # 90 km/week clears the 36-loop base floor (87.2).
+        _, plan = _build(36, 90, 28)
         installed = {
             w["key_workout_id"]
             for week in plan
@@ -189,7 +190,7 @@ class TestBackyardSpecificQuality:
 
     def test_interval_work_survives_the_specific_sessions(self):
         """Loop pace sits under an aerobic ceiling somebody has to build."""
-        _, plan = _build(36, 85, 28)
+        _, plan = _build(36, 90, 28)
         generic_quality = [
             w
             for week in plan
