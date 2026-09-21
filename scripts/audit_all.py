@@ -139,12 +139,13 @@ def _targets_for(plan_type, base, distance, runs, weeks, vdot, plan=None):
         eff_weeks = len(plan["weekly_plans"])
         implied_seconds = int(PERF_CURRENT_PACE * distance * 60)
         plan_vdot = VDOTCalculator.calculate_vdot(distance, implied_seconds)
-        return mileage_progression.calculate_weekly_progression(
+        progression = mileage_progression.calculate_weekly_progression(
             base, distance, eff_weeks, runs, plan_vdot
         )
+        return _apply_reachability_gate(progression, base, runs, trail=None)
     if plan_type == "backyard":
         profile = classify_backyard(backyard_loops_for_distance(distance))
-        return mileage_progression.calculate_weekly_progression(
+        progression = mileage_progression.calculate_weekly_progression(
             base,
             profile.equivalent_distance_km,
             weeks,
@@ -152,14 +153,43 @@ def _targets_for(plan_type, base, distance, runs, weeks, vdot, plan=None):
             vdot,
             trail_profile=profile.as_trail_profile(),
         )
+        return _apply_reachability_gate(
+            progression, base, runs, trail=profile.as_trail_profile()
+        )
     if plan_type == "transformation":
         profile = classify_trail(distance, 1500.0)
-        return mileage_progression.calculate_weekly_progression(
+        progression = mileage_progression.calculate_weekly_progression(
             base, distance, weeks, runs, vdot, trail_profile=profile
         )
-    return mileage_progression.calculate_weekly_progression(
+        return _apply_reachability_gate(progression, base, runs, trail=profile)
+    progression = mileage_progression.calculate_weekly_progression(
         base, distance, weeks, runs, vdot
     )
+    return _apply_reachability_gate(progression, base, runs, trail=None)
+
+
+def _apply_reachability_gate(progression, base, runs, trail):
+    """Replicate the engine's reachability gate on re-derived targets.
+
+    ``generate_plan`` caps the progression's peak at what the schedule can
+    deliver (``resolve_reachable_target`` + ``cap_progression_to_peak``)
+    before any week is built; the harness must measure against the capped
+    targets or it reports shortfalls the engine already reconciled away.
+    """
+    from app.core.training.periodization.mileage_progression import (
+        cap_progression_to_peak,
+        resolve_reachable_target,
+        typical_session_length_km,
+    )
+
+    session_km = typical_session_length_km(trail)
+    peak_target = max(progression, default=0.0)
+    reachable_peak, cap_reason, _diag = resolve_reachable_target(
+        peak_target, runs, session_km, base_km=base
+    )
+    if cap_reason is not None:
+        return cap_progression_to_peak(progression, reachable_peak, base)
+    return progression
 
 
 def _generate(plan_type, base, distance, runs, weeks, vdot):

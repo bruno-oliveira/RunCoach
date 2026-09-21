@@ -323,8 +323,14 @@ def calculate_phases(
 
     profile = _phase_profile_for(target_distance, trail_profile)
 
-    # Taper is prescribed by distance (marathon = 3 weeks, 5K = 1 week)
-    taper = min(profile["taper"], max(1, weeks // 4))
+    # Taper is prescribed by distance (marathon = 3 weeks, 5K = 2). Short
+    # blocks scale the taper down, but never below a 2-week drawdown when the
+    # block allows one: at ``weeks // 4`` a 6-week plan got a 1-week taper that
+    # WAS race week — the runner went from a peak week straight to the start
+    # line with no taper at all (audit G7). Rounding up (``-(-weeks // 4)``)
+    # gives 6-7 week plans their 2-week taper, one real drawdown week plus
+    # race week, while 4-5 week blocks still get the 1-week minimum.
+    taper = min(profile["taper"], max(1, -(-weeks // 4)))
 
     # Distribute remaining weeks among base/build/peak
     remaining = weeks - taper

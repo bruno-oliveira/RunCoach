@@ -29,6 +29,7 @@ from typing import Any, Dict, List, Optional
 from app.core.training.periodization import long_run_calculator
 from app.core.training.periodization.quality_caps import (
     MAX_EASY_VS_LONG_RUN,
+    MAX_QUALITY_VS_LONG_RUN,
     MIN_EASY_PER_RUN_KM,
     easy_run_cap,
     volume_scaled_easy_cap,
@@ -125,7 +126,23 @@ def reclamp_quality_to_long_run(workouts: List[Dict[str, Any]]) -> None:
             else:
                 w["distance"] = round(min(dist, ceiling), 1)
         else:
+            # A formulaic quality session (no key overlay): ``set_distance``
+            # (and ``rescale_steps``) deliberately refuse to touch prescriptive
+            # steps, so calling them here would move the card's distance while
+            # the steps kept promising the old dose. Rescale the steps directly
+            # instead — the builder derived them from the distance in the
+            # first place, so the same ratio keeps them a faithful rendering
+            # of the new one.
             set_distance(w, ceiling)
+            if dist > 0 and w.get("steps"):
+                ratio = ceiling / dist
+                new_steps = []
+                for s in w["steps"]:
+                    ns = dict(s)
+                    if ns.get("distance_m"):
+                        ns["distance_m"] = max(1, int(round(ns["distance_m"] * ratio)))
+                    new_steps.append(ns)
+                w["steps"] = new_steps
 
 
 def is_prescriptive(workout: Dict[str, Any]) -> bool:
@@ -318,6 +335,7 @@ def fill_shortfall(
     trail_profile=None,
     easy_vs_long_ratio: float = MAX_EASY_VS_LONG_RUN,
     experience_level: Optional[str] = None,
+    max_runs: Optional[int] = None,
 ) -> float:
     """Fill shortfall by expanding easy runs; reshape long run when its
     distance must change for safety (its cap) or balance against easy.
@@ -373,8 +391,21 @@ def fill_shortfall(
         # Only spill to the long run what easy runs could not absorb, and
         # never inflate it past 45% of the weekly target — beyond that the
         # week should fall short rather than concentrate risk in one session.
+        # At ≤ 2 runs the week is one long run plus at most one other session,
+        # so the frequency-aware share ceiling (0.65) — not the 4+-run 0.45 —
+        # is the honest bound; the static 0.45 blocked the fill on exactly the
+        # low-frequency weeks the rest of this branch exists for. 3+ runs keep
+        # the conservative 0.45: at 5 runs the looser bound inflated loading
+        # weeks' long runs past the contract cap at the following (lower-
+        # volume) week's capacity, producing a week-over-week long-run drop.
         if deficit > 0.1 and long_ws:
-            max_long_share = 0.45
+            max_long_share = (
+                long_run_calculator.get_weekly_long_run_ratio_cap(
+                    phase="build", max_runs=max_runs
+                )
+                if trail_profile is None and max_runs is not None and max_runs <= 2
+                else 0.45
+            )
             for w in long_ws:
                 headroom = max(0, total_km * max_long_share - w["distance"])
                 spill = min(deficit, headroom)
@@ -395,6 +426,7 @@ def fill_shortfall(
                 experience_level,
                 weekly_km=total_km,
                 trail_profile=trail_profile,
+                max_runs=max_runs,
             ),
         )
     long_ws = [
@@ -426,6 +458,16 @@ def fill_shortfall(
         def _easy_cap(_long_d: float) -> float:
             if trail_profile is not None:
                 return _long_d
+            # At 2 runs the easy slot is the week's only other session, and
+            # the easy-vs-long ratio (0.68) already keeps it a supporting run.
+            # The absolute 14 km ceiling would bind first on marathon-scale
+            # long runs (0.68 × 27 = 18.4) and strand a fifth of the week's
+            # volume with no slot to live in — the ratio alone does the
+            # polarization work here (audit G1).
+            if max_runs is not None and max_runs <= 2:
+                return easy_run_cap(
+                    _long_d, float("inf"), max_vs_long=easy_vs_long_ratio
+                )
             abs_cap = volume_scaled_easy_cap(total_km)
             return easy_run_cap(_long_d, abs_cap, max_vs_long=easy_vs_long_ratio)
 
@@ -460,11 +502,28 @@ def fill_shortfall(
         from app.core.training.tuning import MAX_KEY_WORKOUT_VS_LONG_RUN
 
         deficit = round(total_km - sum(w.get("distance", 0) for w in workouts), 1)
-        day_share_cap = max(MIN_QUALITY_DAY_CAP_KM, total_km * MAX_QUALITY_DAY_SHARE)
+        # On a ≤3-run week the single quality slot is the only non-long carrier,
+        # and the day-share cap (0.25 × weekly) plus the long-run share ceiling
+        # (0.60) together hold the week to ~85 % of its target — a structural
+        # shortfall the reachability gate cannot see because it is *layout*,
+        # not volume. The day-share cap's purpose is keeping a quality day
+        # from rivaling the long run; ``MAX_QUALITY_VS_LONG_RUN`` (0.85 × long)
+        # preserves exactly that while letting the two sessions jointly carry
+        # the prescribed volume. Measured: a 2-run marathon week targeted 48 km
+        # and delivered 20.4 (long 12.2 + tempo 8.2); with the lift the same
+        # layout reaches its target with the long run still clearly dominant.
+        single_quality_slot = (
+            sum(1 for w in workouts if w.get("type") in ("tempo", "interval", "hill"))
+            == 1
+        )
         quality_ceiling = round(
             min(
                 long_w.get("distance", 0) * MAX_KEY_WORKOUT_VS_LONG_RUN,
-                day_share_cap,
+                (
+                    long_w.get("distance", 0) * MAX_QUALITY_VS_LONG_RUN
+                    if single_quality_slot
+                    else max(MIN_QUALITY_DAY_CAP_KM, total_km * MAX_QUALITY_DAY_SHARE)
+                ),
             ),
             1,
         )
@@ -672,6 +731,8 @@ def enforce_contract_long_run_cap(
     experience_level: str,
     trail_profile=None,
     pace_zones: Optional[Dict] = None,
+    max_runs: Optional[int] = None,
+    floor_km: Optional[float] = None,
 ) -> float:
     """Hold the long run to its contracted cap at the volume actually delivered.
 
@@ -682,6 +743,11 @@ def enforce_contract_long_run_cap(
     and carried a 19.8 km long run against a contract cap of 19.0 at the volume
     it delivered. The surplus is spilled to the easy runs while they have
     headroom and dropped otherwise, exactly as ``fill_shortfall`` does.
+
+    ``floor_km`` optionally bounds how far the cap may shrink the long run —
+    the final re-pass uses the cross-week progression floor so a shrinking
+    week's volume-aware cap cannot manufacture a material week-over-week
+    long-run drop.
     """
     long_w = _resizable_long_run(workouts)
     if long_w is None:
@@ -691,7 +757,10 @@ def enforce_contract_long_run_cap(
         experience_level,
         weekly_km=_running_total_km(workouts),
         trail_profile=trail_profile,
+        max_runs=max_runs,
     )
+    if floor_km is not None:
+        cap = max(cap, floor_km)
     current = long_w.get("distance") or 0
     if cap <= 0 or current <= cap + 0.05:
         return _running_total_km(workouts)
@@ -717,6 +786,9 @@ def enforce_long_run_share_cap(
     trail_profile=None,
     max_runs: Optional[int] = None,
     pace_zones: Optional[Dict] = None,
+    target_km: Optional[float] = None,
+    target_distance: Optional[float] = None,
+    experience_level: Optional[str] = None,
 ) -> float:
     """Last word on the long run's share of its own week.
 
@@ -727,6 +799,13 @@ def enforce_long_run_share_cap(
     what makes it hold. As at low frequency, the excess is *dropped* rather than
     redistributed: a slightly short week is a better answer than a second long
     effort.
+
+    ``target_km``/``target_distance``/``experience_level`` are accepted so the
+    orchestrator can pass full context; the ceiling itself stays purely
+    share-based — a volume-driven stretch here would let the long run past the
+    0.65 envelope bound the moment the quality partner sits physiologically
+    capped (a high-base 2-run 5K week), which the envelope harness correctly
+    reads as one session plus filler.
     """
     long_w = _resizable_long_run(workouts)
     if long_w is None:

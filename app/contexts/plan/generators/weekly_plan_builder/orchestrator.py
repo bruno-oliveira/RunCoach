@@ -91,6 +91,26 @@ logger = logging.getLogger(__name__)
 PINNED_LONG_RUN_FILL_FLOOR = 0.90
 
 
+def _resizable_long_run_local(workouts: List[Dict[str, Any]]):
+    """The week's long run, or ``None`` when it must not be resized.
+
+    Mirrors ``workout_scaler._resizable_long_run``: a ``fixed_structure``
+    long slot (a backyard loop simulation) is out of scope for budget passes.
+    """
+    from app.contexts.plan.generators.workout_scaler import _resizable_long_run
+
+    return _resizable_long_run(workouts)
+
+
+def _resize_long_run_growth(
+    workout: Dict[str, Any], distance: float, pace_zones: Optional[Dict]
+) -> None:
+    """Resize the long run for the growth clamp via the shared resizer."""
+    from app.contexts.plan.generators.workout_scaler import _resize_long_run
+
+    _resize_long_run(workout, distance, pace_zones)
+
+
 def _vertical_simulation_targets(
     week_total_km: float,
     phase: str,
@@ -409,6 +429,29 @@ def generate_daily_workouts(
         skip_overlay = workout_type == "long" and (
             easy_runs == 0 or pinned_capacity < total_km * PINNED_LONG_RUN_FILL_FLOOR
         )
+        # Low-frequency quality slots: at ≤ 2 runs/week the week is one long
+        # run plus ONE quality session, and that session is the only carrier
+        # of both intensity and volume besides the long run. A key-workout
+        # overlay installs a fixed library prescription (e.g. "2 km + 1 km +
+        # 1 km + floats" → 8.2 km) whose price cannot grow with the weekly
+        # budget — ``rebuild_key_workout`` snaps the distance back to the
+        # prescription's own step total — so a 48 km target delivered 20.4 km:
+        # tempo pinned at 8.2, long run crushed to the 0.60 share of the
+        # remainder. The formulaic quality builders scale with weekly volume,
+        # so at ≤ 2 runs the slot keeps the formulaic session and the overlay
+        # is skipped. 3-run weeks keep overlays: their easy slot absorbs the
+        # drift the fixed prescription leaves behind.
+        if (
+            max_runs is not None
+            and max_runs <= 2
+            and workout_type
+            in (
+                "tempo",
+                "interval",
+                "hill",
+            )
+        ):
+            skip_overlay = True
         if not skip_overlay:
             # 0-based count of same-type quality slots already overlaid this
             # week: a second tempo/interval slot must rotate to a different
@@ -598,6 +641,7 @@ def build_weekly_plan(
         trail_profile=trail_profile,
         easy_vs_long_ratio=easy_vs_long_ratio,
         experience_level=experience_level,
+        max_runs=max_runs_per_week,
     )
     actual_total_km = _enforce_long_run_ratio_cap(
         workouts,
@@ -619,7 +663,9 @@ def build_weekly_plan(
     # progression shape first, then re-assert the two ceilings the passes above
     # cannot guarantee on their own — and which ``reclamp_quality_to_long_run``
     # has just perturbed by shrinking the quality day. Road only; a trail plan's
-    # long days are governed by the bracket cap and the ITW.
+    # long days are governed by the bracket cap and the ITW. The share cap runs
+    # after every growth/fill pass below, so it stays the true last word on the
+    # long run's share of its own week.
     if trail_profile is None and backyard_profile is None:
         if not is_recovery:
             _enforce_long_run_progression_floor(
@@ -630,14 +676,195 @@ def build_weekly_plan(
             target_distance,
             experience_level,
             pace_zones=pace_zones,
+            max_runs=max_runs_per_week,
         )
+
+        # Long-run growth clamp (audit G3): ``fill_shortfall`` and the passes
+        # above can grow the long run past the cross-week growth ceiling
+        # (max(+18%, +3 km)) that ``calculate_long_run_distance`` enforced at
+        # sizing time — a +31-41% single-step jump in the longest, highest-risk
+        # session. Clamp before the low-frequency fill below, so the fill's
+        # growth is bounded by the same ceiling instead of being cut by it
+        # after the fact.
+        growth_ceiling_km = None
+        if not is_recovery and prev_long_run_km:
+            from app.core.training.tuning import (
+                LONG_RUN_GROWTH_ABS_KM,
+                LONG_RUN_GROWTH_PCT,
+            )
+
+            growth_ceiling_km = max(
+                prev_long_run_km * LONG_RUN_GROWTH_PCT,
+                prev_long_run_km + LONG_RUN_GROWTH_ABS_KM,
+            )
+            growth_long = _resizable_long_run_local(workouts)
+            if growth_long is not None:
+                if (growth_long.get("distance") or 0) > growth_ceiling_km + 0.05:
+                    _resize_long_run_growth(growth_long, growth_ceiling_km, pace_zones)
+
+        # Low-frequency final fill: after every cap has had its word, a ≤2-run
+        # week may still sit below its target because the single quality
+        # partner is physiologically capped (Daniels work-share, per-distance
+        # caps) and nothing re-grows the long run *after* the caps spoke. The
+        # long run takes what the capped partner leaves of the target, bounded
+        # by its contracted cap and — so the fill never manufactures the very
+        # session-spike the growth clamp exists to prevent — by the cross-week
+        # growth ceiling when one applies. The plan-level 10% pass still bounds
+        # the week-over-week total.
+        if max_runs_per_week is not None and max_runs_per_week <= 2 and not is_recovery:
+            from app.contexts.plan.generators.workout_scaler import (
+                _floor_to_100m as _floor100,
+            )
+            from app.contexts.plan.generators.workout_scaler import (
+                _resizable_long_run as _resizable_long,
+            )
+            from app.contexts.plan.generators.workout_scaler import (
+                _resize_long_run as _resize_lr,
+            )
+
+            fill_long = _resizable_long(workouts)
+            if fill_long is not None:
+                rest_km = round(
+                    sum(
+                        w.get("distance", 0) or 0
+                        for w in workouts
+                        if w.get("type") not in ("rest", "recovery", "long")
+                    ),
+                    1,
+                )
+                volume_bound = _floor100(
+                    long_run_calculator.long_run_cap(
+                        target_distance,
+                        experience_level,
+                        weekly_km=total_km,
+                        max_runs=max_runs_per_week,
+                    )
+                )
+                # The share ceiling still rules: the grown pair must satisfy
+                # long / (long + rest) <= the frequency ceiling, i.e.
+                # long <= ceiling * rest / (1 - ceiling).
+                share_ceiling = long_run_calculator.get_weekly_long_run_ratio_cap(
+                    phase, max_runs=max_runs_per_week
+                )
+                share_bound = (
+                    _floor100(share_ceiling * rest_km / (1 - share_ceiling))
+                    if share_ceiling < 1
+                    else rest_km
+                )
+                desired = min(total_km - rest_km, volume_bound, share_bound)
+                if growth_ceiling_km is not None:
+                    desired = min(desired, growth_ceiling_km)
+                current = fill_long.get("distance") or 0
+                if desired > current + 0.1:
+                    _resize_lr(fill_long, desired, pace_zones)
+                    # The quality day must stay subordinate to the grown long
+                    # run (its phys caps were computed against the old value).
+                    _reclamp_quality_to_long_run(workouts)
+
+            # The transition into build at 2 runs swaps the easy slot for a
+            # quality slot, and the formulaic quality session is sized from the
+            # week's (reachable-capped) target through the Daniels work-share —
+            # which is computed against the week's *volume*. A collapsed week
+            # therefore permits only a tiny interval, which keeps the week
+            # collapsed: a self-reinforcing fixed point (measured: 11.4 km in a
+            # 16.5 km week at the base→build boundary). Grow the single
+            # formulaic quality slot toward its physiological cap computed at
+            # the week's TARGET volume, breaking the loop; the plan-level 10%
+            # pass still bounds the weekly total.
+            from app.core.training.tuning import (
+                MAX_WORK_ABS_KM_BY_ZONE,
+                MAX_WORK_SHARE_BY_ZONE,
+                WORK_ZONE_GROUP,
+            )
+
+            for qw in workouts:
+                if qw.get("type") not in ("tempo", "interval", "hill"):
+                    continue
+                if qw.get("key_workout_id") or qw.get("fixed_structure"):
+                    continue
+                qd = qw.get("distance") or 0
+                if qd <= 0:
+                    continue
+
+                work_m = sum(
+                    (s.get("distance_m") or 0) * s.get("repeat", 1)
+                    for s in (qw.get("steps") or [])
+                    if s.get("kind") in ("run", "walk", "strides")
+                    and s.get("pace_zone") in WORK_ZONE_GROUP
+                )
+                work_km = work_m / 1000.0
+                zone = next(
+                    (
+                        s.get("pace_zone")
+                        for s in (qw.get("steps") or [])
+                        if s.get("pace_zone") in WORK_ZONE_GROUP
+                    ),
+                    None,
+                )
+                if zone is None or work_km <= 0:
+                    continue
+                group = WORK_ZONE_GROUP[zone]
+                work_cap_target = min(
+                    MAX_WORK_ABS_KM_BY_ZONE.get(group, 99.0),
+                    MAX_WORK_SHARE_BY_ZONE.get(group, 1.0) * total_km,
+                )
+                if work_km >= work_cap_target - 0.05:
+                    continue
+                # Scale the session up so its work set reaches the cap the
+                # target volume allows; bookends grow proportionally.
+                scale = min(1.4, work_cap_target / work_km)
+                from app.contexts.plan.generators.workout_scaler import set_distance
+
+                set_distance(qw, round(qd * scale, 1), pace_zones)
+
+        # The share cap is the true last word: it runs after the progression
+        # floor, the contract cap, the growth clamp and the low-frequency fill,
+        # so no pass above can leave the long run over its share of the week.
         _enforce_long_run_share_cap(
             workouts,
             phase,
             terrain,
             max_runs=max_runs_per_week,
             pace_zones=pace_zones,
+            target_km=total_km,
+            target_distance=target_distance,
+            experience_level=experience_level,
         )
+        # ... and the contract cap re-asserts itself after that: the reclamps
+        # above shrink the quality day, which lowers the week's delivered
+        # volume and with it the volume-aware cap the contract solves for —
+        # a long run legal at the pre-clamp volume can sit past the cap at
+        # the final one (measured: 12.9 km against a 12.2 cap on a 5K week).
+        # It runs after the final reclamp (so no later pass shrinks the week
+        # under it). At ≤ 3 runs it never takes the long run below the previous
+        # loading week's minus the material-drop tolerance: there the volume
+        # cap and the cross-week progression floor genuinely conflict (a 2-run
+        # week's volume swings with its single partner), and a 10 %+ single-
+        # step long-run drop is the worse fault. At 4+ runs the volume cap
+        # rules — protecting the long there let loading-week longs ratchet
+        # past the published band (a 19 km long run for a 10K).
+        contract_floor_km = (
+            round(prev_long_run_km * 0.90, 1)
+            if (
+                not is_recovery
+                and prev_long_run_km
+                and max_runs_per_week is not None
+                and max_runs_per_week <= 3
+            )
+            else None
+        )
+        _reclamp_quality_to_long_run(workouts)
+        _enforce_contract_long_run_cap(
+            workouts,
+            target_distance,
+            experience_level,
+            pace_zones=pace_zones,
+            max_runs=max_runs_per_week,
+            floor_km=contract_floor_km,
+        )
+        # The contract pass may have shrunk the long run below what the
+        # quality sessions were fitted against — refit them so the step list
+        # never promises more than the card says.
         _reclamp_quality_to_long_run(workouts)
     actual_total_km = round(sum(w.get("distance", 0) for w in workouts), 1)
 

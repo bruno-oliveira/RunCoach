@@ -375,8 +375,23 @@ class TrainingPlanGenerator:
         # a viable dose — a deliberately more "templated" shape at the low end.
         # Floored at MIN_RUNNING_DAYS so the long + quality + easy structure
         # survives. (This is the same realism line the plan test-grid draws when
-        # it skips combos under 2.5 km/run.)
-        max_runs_per_week = _viable_run_frequency(current_km, max_runs_per_week)
+        # it skips combos under 2.5 km/run.) The reduction is surfaced — logged
+        # here and recorded on the instance as ``last_resolved_runs_per_week``
+        # — so a caller (or the web layer) can tell the runner the plan carries
+        # fewer running days than they asked for instead of silently under-
+        # delivering the requested schedule (audit G8).
+        resolved_runs = _viable_run_frequency(current_km, max_runs_per_week)
+        if resolved_runs < max_runs_per_week:
+            logger.warning(
+                "Requested %d runs/week resolved to %d for a %.1f km/week base: "
+                "each run needs at least %.1f km to be a real session",
+                max_runs_per_week,
+                resolved_runs,
+                current_km,
+                MIN_VIABLE_RUN_KM,
+            )
+        self.last_resolved_runs_per_week = resolved_runs
+        max_runs_per_week = resolved_runs
 
         # Select the frequency composer: drives structural decisions (quality
         # count, long-run ratios, day scheduling) while the existing math
@@ -538,26 +553,57 @@ class TrainingPlanGenerator:
                     flexible_km = sum(w["distance"] for w in flexible)
                     target_flexible = max(0.0, ceiling - fixed_km)
                     if flexible and flexible_km > 0 and target_flexible < flexible_km:
-                        scale = target_flexible / flexible_km
-                        for w in flexible:
-                            scaled = w["distance"] * scale
-                            # The cap may shrink a session; it may not delete
-                            # one. When the week's *prescriptive* content
-                            # already exceeds the ceiling this target lands at
-                            # zero, and scaling to it left the runner a 0.0 km
-                            # "easy" card on the calendar while the week still
-                            # jumped 23 % — the worst of both.
-                            #
-                            # A ratio, not an absolute floor. An absolute
-                            # ``MIN_VIABLE_RUN_KM`` floor also stopped the cap
-                            # trimming *ordinary* weeks, because a low-base
-                            # high-frequency plan already sits at 2.5 km a run:
-                            # it let a trail plan sit at 12.04 %/week against
-                            # the 10 % the cap allows. A ratio can never reach
-                            # zero, so it fixes the deletion without disabling
-                            # the cap.
-                            floor = w["distance"] * FLEXIBLE_TRIM_FLOOR_RATIO
-                            _set_distance(w, max(floor, scaled), pace_zones)
+                        # At ≤ 3 runs drain the easy runs first, holding the
+                        # long run: it is the week's anchor, the weekly builder
+                        # just enforced its cross-week progression floor, and
+                        # scaling both proportionally pushed the long run back
+                        # below that floor (measured: 10.6 → 8.9 across a build
+                        # week — the progression fault the floor exists to
+                        # prevent). Only when the easy budget alone cannot
+                        # absorb the overage do both flexible sessions scale
+                        # together, exactly as ``workout_scaler.scale_down``'s
+                        # ``protect_long`` branch behaves. At 4+ runs the
+                        # original proportional scaling stands: protecting the
+                        # long run there let loading-week longs compound past
+                        # the contract cap and the envelope's published band
+                        # (a 19 km "long run" for a 10K).
+                        easy_ws = [w for w in flexible if w.get("type") == "easy"]
+                        easy_km = sum(w["distance"] for w in easy_ws)
+                        easy_floor_km = sum(
+                            w["distance"] * FLEXIBLE_TRIM_FLOOR_RATIO for w in easy_ws
+                        )
+                        overage = flexible_km - target_flexible
+                        if (
+                            max_runs_per_week <= 3
+                            and easy_ws
+                            and overage <= (easy_km - easy_floor_km)
+                        ):
+                            scale_easy = (easy_km - overage) / easy_km
+                            for w in easy_ws:
+                                scaled = w["distance"] * scale_easy
+                                floor = w["distance"] * FLEXIBLE_TRIM_FLOOR_RATIO
+                                _set_distance(w, max(floor, scaled), pace_zones)
+                        else:
+                            scale = target_flexible / flexible_km
+                            for w in flexible:
+                                scaled = w["distance"] * scale
+                                # The cap may shrink a session; it may not delete
+                                # one. When the week's *prescriptive* content
+                                # already exceeds the ceiling this target lands at
+                                # zero, and scaling to it left the runner a 0.0 km
+                                # "easy" card on the calendar while the week still
+                                # jumped 23 % — the worst of both.
+                                #
+                                # A ratio, not an absolute floor. An absolute
+                                # ``MIN_VIABLE_RUN_KM`` floor also stopped the cap
+                                # trimming *ordinary* weeks, because a low-base
+                                # high-frequency plan already sits at 2.5 km a run:
+                                # it let a trail plan sit at 12.04 %/week against
+                                # the 10 % the cap allows. A ratio can never reach
+                                # zero, so it fixes the deletion without disabling
+                                # the cap.
+                                floor = w["distance"] * FLEXIBLE_TRIM_FLOOR_RATIO
+                                _set_distance(w, max(floor, scaled), pace_zones)
                     # If rounding still leaves a tiny overage, trim from the
                     # largest flexible workout to respect the 10% cap — stopping
                     # at the floor rather than shaving a session away.
@@ -580,6 +626,57 @@ class TrainingPlanGenerator:
                         ),
                         1,
                     )
+                    # The easy-first drain preserves the long run — which can
+                    # push its *share* of the now-smaller week past the
+                    # frequency ceiling (a 5.6 km week with long 3.8 = 0.68
+                    # against 0.65; a 3-run marathon week drained to 0.56
+                    # against 0.55). Re-solve the share here so no pass leaves
+                    # the envelope breached: the long run gives back what its
+                    # share requires, bounded by the same trim floor.
+                    from app.core.training.periodization.long_run_calculator import (
+                        get_weekly_long_run_ratio_cap as _share_cap,
+                    )
+
+                    share_ceiling = _share_cap(phase="base", max_runs=max_runs_per_week)
+                    lw = next(
+                        (
+                            w
+                            for w in weekly_plan["daily_workouts"]
+                            if w.get("type") == "long" and (w.get("distance") or 0) > 0
+                        ),
+                        None,
+                    )
+                    if lw is not None:
+                        rest_km2 = round(
+                            sum(
+                                w.get("distance", 0)
+                                for w in weekly_plan["daily_workouts"]
+                                if w.get("type") not in ("rest", "recovery", "long")
+                            ),
+                            1,
+                        )
+                        share_max = (
+                            int(share_ceiling * rest_km2 / (1 - share_ceiling) * 10)
+                            / 10
+                            if share_ceiling < 1
+                            else rest_km2
+                        )
+                        if (lw.get("distance") or 0) > share_max + 0.05:
+                            _set_distance(
+                                lw,
+                                max(
+                                    lw["distance"] * FLEXIBLE_TRIM_FLOOR_RATIO,
+                                    share_max,
+                                ),
+                                pace_zones,
+                            )
+                            new_total = round(
+                                sum(
+                                    w.get("distance", 0)
+                                    for w in weekly_plan["daily_workouts"]
+                                ),
+                                1,
+                            )
                     weekly_plan["total_km"] = new_total
                     # This pass is the 10% invariant being *enforced*, not dead
                     # code: it fires whenever the assembled week overshoots the
@@ -685,17 +782,66 @@ class TrainingPlanGenerator:
         for weekly_plan in training_plan:
             weekly_plan["training_km"] = training_km(weekly_plan)
 
+        # Stamp each week's modelled target onto the week dict (audit G2).
+        # The periodisation model deliberately budgets race week as a taper
+        # week *excluding* the race — but the rendered week's ``total_km``
+        # includes the race card, so any surface comparing target vs delivered
+        # saw a phantom ~2x overshoot on the most psychologically loaded week
+        # (a marathon taper target of 24 km against 49 km rendered). The race
+        # week's stamped target is therefore the target ``_install_race_day``
+        # actually built to — pre-race running at ``RACE_WEEK_PRERACE_SHARE``
+        # of the realized peak plus the race distance itself — so every reader
+        # of ``weekly_target_km`` compares like with like.
+        realized_peak = max(
+            (
+                w.get("total_km", 0) or 0
+                for w in training_plan[:-1]
+                if not w.get("is_recovery")
+            ),
+            default=0.0,
+        )
+        for i, weekly_plan in enumerate(training_plan):
+            if weekly_plan.get("is_race_week"):
+                from app.core.training.tuning import (
+                    RACE_WEEK_MIN_PRERACE_KM,
+                    RACE_WEEK_PRERACE_SHARE,
+                )
+
+                target = (
+                    max(
+                        RACE_WEEK_MIN_PRERACE_KM,
+                        round(realized_peak * RACE_WEEK_PRERACE_SHARE, 1),
+                    )
+                    + target_distance
+                )
+            else:
+                target = weekly_progression[i] if i < len(weekly_progression) else 0.0
+            weekly_plan["weekly_target_km"] = round(target, 1)
+
         # Plan-level safety net: catch a week that composed into something
         # unrunnable before it ever reaches the runner. Fatal issues fail the
         # generation loudly; softer inconsistencies are logged for telemetry.
+        # The weekly builder's own ``validate_week_plan`` verdicts — stored on
+        # each week as ``validation`` and previously only logged at DEBUG — are
+        # aggregated here so a plan that shipped with model-consistency
+        # failures is visible in one line next to the structural warnings,
+        # instead of lost in per-week debug noise (audit G9).
+        week_validation_failures = [
+            f"wk{w.get('week', i + 1)}: {w['validation'].get('message', 'invalid')}"
+            for i, w in enumerate(training_plan)
+            if not w.get("validation", {}).get("valid", True)
+        ]
         issues = check_plan_structure(training_plan)
-        if issues["warnings"]:
+        all_warnings = issues["warnings"] + [
+            f"week validation: {msg}" for msg in week_validation_failures
+        ]
+        if all_warnings:
             logger.warning(
                 "Plan structure warnings (%.0f km base, %.1f km target, %d wks): %s",
                 current_km,
                 target_distance,
                 weeks,
-                "; ".join(issues["warnings"]),
+                "; ".join(all_warnings),
             )
         if issues["fatal"]:
             logger.error(

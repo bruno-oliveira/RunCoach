@@ -250,11 +250,13 @@ def get_weekly_long_run_ratio_cap(
         if max_runs <= 2:
             # Aligned with ``physiological_envelope.long_run_share_ceiling``.
             # At 2 runs the week is one long run plus one other session, so the
-            # long run is legitimately the bigger share — but the generator and
-            # the envelope harness must measure against one number. Two tables
-            # that disagreed by 0.02 (0.62 here, 0.60 there) had the harness
-            # reporting breaches the generator believed it had already capped.
-            return 0.60
+            # long run is legitimately the bigger share — but it must never
+            # become the whole week. 0.65 (up from 0.60) because the single
+            # quality partner is physiologically capped: at 0.60 the pair could
+            # only ever reach ~83 % of the weekly target (audit G1). The
+            # envelope harness and the generator must measure against one
+            # number, so the two tables move together.
+            return 0.65
         if max_runs == 3:
             return 0.55
     return 0.55
@@ -435,6 +437,7 @@ def long_run_cap(
     experience_level: str = "intermediate",
     weekly_km: float = 0,
     trail_profile: Optional[TrailProfile] = None,
+    max_runs: Optional[int] = None,
 ) -> float:
     """Public name for the experience-tiered single-long-run cap.
 
@@ -447,9 +450,13 @@ def long_run_cap(
     redistribute weekly volume into the long run
     (``workout_scaler.fill_shortfall``) must spill to *this* cap, or a 5K plan
     ends up prescribing a long run 2.8x its race distance.
+
+    ``max_runs`` lets a low-frequency road plan lift the tier cap toward the
+    weekly share ceiling (see ``_get_long_run_cap``); callers that don't know
+    the frequency keep the conservative tier behaviour.
     """
     return _get_long_run_cap(
-        target_distance, experience_level, weekly_km, trail_profile
+        target_distance, experience_level, weekly_km, trail_profile, max_runs
     )
 
 
@@ -458,6 +465,7 @@ def _get_long_run_cap(
     experience_level: str = "intermediate",
     weekly_km: float = 0,
     trail_profile: Optional[TrailProfile] = None,
+    max_runs: Optional[int] = None,
 ) -> float:
     """Experience-tiered long run distance caps, with volume-aware scaling.
 
@@ -484,6 +492,31 @@ def _get_long_run_cap(
         base_cap = tier.get(experience_level, tier["intermediate"])
     else:
         base_cap = target_distance * FALLBACK_LONG_RUN_CAP_RATIO
+
+    # Low-frequency road plans: the tier caps are calibrated for 4+-run weeks,
+    # where the long run holds ~30-50 % of a volume spread across many slots.
+    # At 2 runs the week is one long run plus ONE other session, so a static
+    # 5K cap of 8 km held a 22.5 km/week runner to a 13 km week — 58 % of their
+    # established volume (audit G6, enforced detraining). The runner's own
+    # volume is the honest floor for what their long run must be able to
+    # carry: lift the cap toward the weekly share ceiling (0.65) when the tier
+    # cap would hold them below it. 3-run plans are excluded: their LOW_FREQ
+    # ratio floors (0.34-0.40 × weekly) already let the three slots jointly
+    # hold ~100 % of the target, so lifting their cap only inflates the long
+    # run past what the share cap then trims back (a week-over-week long-run
+    # drop — the exact fault the progression floor guards against). The lift
+    # never exceeds the share ceiling, so the long run still cannot become
+    # the whole week.
+    if (
+        trail_profile is None
+        and weekly_km > 0
+        and max_runs is not None
+        and max_runs <= 2
+    ):
+        share_ceiling = get_weekly_long_run_ratio_cap(phase="base", max_runs=max_runs)
+        share_cap = share_ceiling * weekly_km
+        if share_cap > base_cap:
+            base_cap = min(share_cap, get_hard_ceiling(target_distance))
 
     if weekly_km <= 0:
         return base_cap
@@ -718,5 +751,19 @@ def calculate_quality_distances(
             pct = effective_pct.get(qtype, 0)
             dist = remaining_km * (pct / non_long_pct) if pct > 0 else 0
             quality_distances[qtype] = round(max(dist, 1.0), 1)
+
+    # A low-frequency week with no easy slot has nowhere for the leftover
+    # volume to live: the phase distribution sizes the single quality session
+    # as a *percentage* of the remainder (a marathon build week gave the tempo
+    # ~10% of it — 4-5 km of a 19 km remainder), but with only two running
+    # slots the long run plus that percentage sums to ~60% of the weekly
+    # target and the rest is simply unplaceable. The distribution percentages
+    # assume the slots they split across; with one quality slot and zero easy
+    # runs, that slot must carry the whole remainder. The quality caps
+    # (long-run-relative and per-distance physiological) still bound it
+    # downstream — this only fixes the sizing, not the ceilings.
+    granted = [q for q in ("tempo", "interval", "hill") if distribution.get(q, 0) > 0]
+    if len(granted) == 1 and distribution.get("easy", 0) == 0:
+        quality_distances[granted[0]] = round(max(remaining_km, 1.0), 1)
 
     return quality_distances

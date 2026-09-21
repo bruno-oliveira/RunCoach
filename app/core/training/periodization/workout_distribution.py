@@ -257,8 +257,16 @@ def _quality_for_trail_flat(
 def _quality_for_road_5k(
     quality_workouts: int, week_number: int, phase: str
 ) -> Dict[str, int]:
-    """5K: VO2max emphasis — intervals dominate."""
-    return {"interval": 2 if quality_workouts >= 2 else 1}
+    """5K: VO2max emphasis — intervals dominate.
+
+    A two-slot week pairs one interval day with one tempo day rather than two
+    interval days: two VO2max sessions in one week is more than a recreational
+    runner can absorb between recoveries, and the tempo slot keeps the
+    threshold stimulus that supports the VO2max work (audit G5).
+    """
+    if quality_workouts >= 2:
+        return {"interval": 1, "tempo": 1}
+    return {"interval": 1}
 
 
 def _quality_for_road_10k(

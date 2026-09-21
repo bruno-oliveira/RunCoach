@@ -73,12 +73,13 @@ KNOWN_GAPS: Dict[str, Dict[float, FrozenSet[int]]] = {
         42.2: frozenset({2}),
     },
     # The contracted long-run cap is tight for 5K (floor ~8 km) — at 4 runs
-    # with high base mileage the per-run distribution pushes past it. The HM
-    # cell at 5 runs used to be here too: its pinning overlay landed just past
-    # the cap computed at the volume the week delivers, but the reachability
-    # gate (plan_generator) lowered that plan's volume target enough that the
-    # overlay now fits — the gap closed, so the entry is gone rather than
-    # pinned forever.
+    # with high base mileage the per-run distribution pushes past it. (At 5
+    # runs the entry used to be here too: the final contract re-pass with a
+    # progression floor closed that gap, so it is gone rather than pinned
+    # forever.) The HM cell at 5 runs used to be here as well: its pinning
+    # overlay landed just past the cap computed at the volume the week
+    # delivers, but the reachability gate (plan_generator) lowered that plan's
+    # volume target enough that the overlay now fits.
     "long_run_over_contract_cap": {
         5.0: frozenset({4}),
     },
@@ -88,11 +89,14 @@ KNOWN_GAPS: Dict[str, Dict[float, FrozenSet[int]]] = {
     # distances the quality allocation can still leave a shortfall when the
     # volume target is aggressive relative to the per-run ceilings.  This is
     # the expected trade-off: healthy run distribution > hitting volume targets.
+    # (The 5K@5-6 and marathon@2 cells used to be here too: the low-frequency
+    # layout work — the single-quality remainder sizing, the ≤2-run cap lifts
+    # and the final fill — now lets those layouts reach their targets.)
     "peak_shortfall": {
-        5.0: frozenset({2, 3, 4, 5, 6}),
+        5.0: frozenset({2, 3, 4}),
         10.0: frozenset({2}),
         21.1: frozenset({2, 3}),
-        42.2: frozenset({2, 4}),
+        42.2: frozenset({4}),
     },
     # Low-volume corner cases: at low base mileage split over many runs the
     # per-run distance falls below the viable floor.  The plan is faithful to

@@ -199,6 +199,40 @@ class PerformancePlanGenerator(BasePlanGenerator):
         self._fill_easy_runs(daily_workouts, zones, runs_per_week, remaining_km)
         self._fill_rest_days(daily_workouts)
 
+        # The easy-fill floors each easy run at ``max(3, 0.2 x long)`` km, so
+        # at high frequencies (7 runs/week) the floored sum can overshoot the
+        # week's target by 40-90% (measured: +89% on a 7-run plan). Trim the
+        # easy runs proportionally back to the target — they are the flexible
+        # filler; the prescribed long/quality sessions keep their distance.
+        # (audit G10)
+        easy_total = sum(
+            w["distance"]
+            for w in daily_workouts
+            if w["type"] == "easy" and w["distance"] > 0
+        )
+        current_total = sum(w["distance"] for w in daily_workouts)
+        overage = current_total - weekly_km
+        if overage > 0.2 and easy_total > 0:
+            # Never trim an easy run below a runnable ~2 km.
+            trimmable = max(
+                0.0,
+                easy_total
+                - len(
+                    [
+                        w
+                        for w in daily_workouts
+                        if w["type"] == "easy" and w["distance"] > 0
+                    ]
+                )
+                * 2.0,
+            )
+            effective = min(overage, trimmable)
+            if effective > 0:
+                scale = (easy_total - effective) / easy_total
+                for w in daily_workouts:
+                    if w["type"] == "easy" and w["distance"] > 0:
+                        w["distance"] = round(w["distance"] * scale, 1)
+
         # Overlay key workouts and coaching rationale.
         # _enforce_quality_caps above already synced segments and description;
         # overlay then replaces description + steps with curated key-workout
@@ -351,7 +385,21 @@ class PerformancePlanGenerator(BasePlanGenerator):
         if improvement > 0.15:
             raise ValueError("Goal pace improvement >15% is not realistic")
 
-        weeks = max(6, min(16, weeks))
+        # The performance block is calibrated to 6-16 weeks; outside that band
+        # the request is clamped — loudly, so a caller asking for 20 weeks
+        # learns the plan is 16 rather than discovering it in the UI (audit
+        # G10). The road generator raises for the same situation; this
+        # generator's contract has always been a clamp, so the warning keeps
+        # the behaviour while removing the silence.
+        if weeks < 6 or weeks > 16:
+            clamped_from = weeks
+            weeks = max(6, min(16, weeks))
+            logger.warning(
+                "Performance plan weeks clamped: requested %d, generated %d "
+                "(the performance block is calibrated to 6-16 weeks)",
+                clamped_from,
+                weeks,
+            )
 
         # --- Shared modules: phase calculation & mileage progression ---
         phase_durations = phase_calculator.calculate_phases(weeks, target_distance)

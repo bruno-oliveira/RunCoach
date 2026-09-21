@@ -259,13 +259,18 @@ def test_weekly_shortfall_is_logged_with_week_target_and_actual():
     logger.setLevel(logging.WARNING)
     logger.addHandler(handler)
     try:
-        plan = TrainingPlanGenerator().generate_plan(20.0, 21.1, 12, 2)
+        # A cell the layout genuinely cannot serve (a 5 km/week base at 2
+        # runs/week): the plan is faithful to the runner's volume and still
+        # lands >25% short of the reachable target, which is exactly what the
+        # telemetry exists to surface. (The former HM@2-runs cell stopped
+        # shortfaling — the low-frequency layout work closed its gap.)
+        plan = TrainingPlanGenerator().generate_plan(5.0, 5.0, 8, 2)
     finally:
         logger.removeHandler(handler)
         logger.setLevel(was_level)
         logger.disabled = was_disabled
 
-    targets = _weekly_targets(20.0, 21.1, 12, 2)
+    targets = _weekly_targets(5.0, 5.0, 8, 2)
     shortfalls = [
         (i + 1, targets[i], w.get("total_km") or 0)
         for i, w in enumerate(plan)
@@ -289,4 +294,4 @@ def test_weekly_shortfall_is_logged_with_week_target_and_actual():
         )
         assert f"{actual:.1f} km" in matching[0]
         assert f"{target:.1f} km" in matching[0]
-        assert "20 km base" in matching[0]
+        assert "5 km base" in matching[0]

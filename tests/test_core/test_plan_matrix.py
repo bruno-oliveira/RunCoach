@@ -565,24 +565,33 @@ _ENVELOPE_SLACK_KM = 0.6
 # there is nowhere else for the volume to live.
 _ENVELOPE_CENSUS: Dict[str, Tuple[int, int, int, int]] = {
     # goal: (combos, peak_over, long_over, share_over)
-    "backyard-11loops/first_timer": (36, 0, 13, 3),
+    # Drift notes (low-frequency layout work, 2026-09): the 2-run capacity fixes
+    # (single-quality remainder sizing, ≤2-run cap lifts, final fill) and the
+    # ≥2-week taper for short blocks (phase_calculator) moved several counts.
+    # Share_over fell across backyard and trail (the caps and the share re-solve
+    # now hold the long run to its frequency ceiling); road-5km share_over and
+    # one long_over closed. road-10km long_over rose 5 -> 7: the two new cells
+    # are 6-week blocks whose 2-week taper (audit G7) shifts the peak-loading
+    # week later; their breach magnitude matches the 11/16-week cells already
+    # pinned here.
+    "backyard-11loops/first_timer": (36, 0, 13, 1),
     "backyard-12loops/day": (27, 0, 18, 0),
     "backyard-17loops/day": (27, 6, 25, 2),
     "backyard-18loops/night": (18, 0, 18, 0),
     "backyard-29loops/night": (18, 0, 18, 12),
     "backyard-30loops/multi_day": (18, 0, 18, 0),
     "backyard-48loops/multi_day": (18, 0, 18, 12),
-    "backyard-6loops/first_timer": (36, 0, 10, 9),
-    "road-10km": (80, 0, 5, 0),
+    "backyard-6loops/first_timer": (36, 0, 9, 7),
+    "road-10km": (80, 0, 7, 0),
     "road-21.1km": (64, 0, 16, 0),
     "road-42.2km": (48, 0, 12, 0),
-    "road-5km": (80, 0, 9, 1),
+    "road-5km": (80, 0, 8, 0),
     "trail-100km/long_ultra": (12, 0, 0, 0),
     "trail-12km/short": (48, 0, 0, 0),
     "trail-163km/long_ultra": (12, 0, 0, 0),
     "trail-30km/standard": (36, 0, 6, 0),
-    "trail-50km/ultra": (24, 0, 0, 4),
-    "trail-60km/ultra": (24, 0, 0, 2),
+    "trail-50km/ultra": (24, 0, 0, 0),
+    "trail-60km/ultra": (24, 0, 0, 0),
     "trail-80km/long_ultra": (12, 0, 0, 0),
 }
 
