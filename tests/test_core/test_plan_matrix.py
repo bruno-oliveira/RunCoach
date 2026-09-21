@@ -554,6 +554,11 @@ _ENVELOPE_SLACK_KM = 0.6
 # sized by the format). The envelope's docstring calls the tier table
 # authoritative, so this column is a drift detector, not a defect.
 #
+# The road-42.2km long_over count dropped 24 -> 12 when the reachability gate
+# (plan_generator) began capping marathon peaks at the frequency capacity:
+# fewer plans now fund a long run past the envelope's reference band. That is
+# the cap working as designed, recorded here so the ledger stays honest.
+#
 # `share_over` is the frequency-aware 0.55 ceiling from
 # ``long_run_share_ceiling`` — deliberately not the published 25-35 % band, which
 # a 2-3 run week cannot honour. Non-zero on the lowest-frequency weeks, where
@@ -570,7 +575,7 @@ _ENVELOPE_CENSUS: Dict[str, Tuple[int, int, int, int]] = {
     "backyard-6loops/first_timer": (36, 0, 10, 9),
     "road-10km": (80, 0, 5, 0),
     "road-21.1km": (64, 0, 16, 0),
-    "road-42.2km": (48, 0, 24, 0),
+    "road-42.2km": (48, 0, 12, 0),
     "road-5km": (80, 0, 9, 1),
     "trail-100km/long_ultra": (12, 0, 0, 0),
     "trail-12km/short": (48, 0, 0, 0),

@@ -49,3 +49,9 @@ CLAUDE.local.md
 
 # Test outputs
 test_*.html
+# Generated audit artifacts (scripts/audit_all.py)
+scripts/audit_report.json
+
+# reasonix task-runner state
+.reasonix/
+reasonix.toml

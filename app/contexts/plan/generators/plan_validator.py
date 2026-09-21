@@ -1,13 +1,56 @@
 """Week plan validation.
 
 Checks that generated weekly workout plans follow training principles.
+
+The volume tolerances live in :class:`ValidatorTolerance` rather than as
+bare literals so that callers can widen them for weeks whose target was
+*clamped* (the capacity model may cap a week well below what the
+periodisation model asked for, and a clamped week is delivered-on-purpose,
+not a mismatch).
 """
 
-from typing import Any, Dict, List
+from dataclasses import dataclass
+from typing import Any, Dict, List, Optional
+
+
+@dataclass(frozen=True)
+class ValidatorTolerance:
+    """How far delivered weekly volume may sit from its target.
+
+    ``allowed_deviation_km`` is the union of a flat band (``absolute_km``)
+    and a proportional band (``relative`` of the target) — the flat band
+    keeps tiny weeks judgeable (5% of 8 km is under rounding noise) while
+    the proportional band keeps big weeks from failing on small drifts.
+
+    The defaults reproduce the historical hardcoded behaviour (pure ±5% of
+    target). :data:`CLAMPED_TARGET_TOLERANCE` is for callers who know the
+    week's target was clamped to a capacity ceiling and want the validator
+    to judge against the *delivered-intent*, not the pre-clamp wish.
+    """
+
+    absolute_km: float = 0.0
+    relative: float = 0.05
+
+    def allowed_deviation_km(self, target_km: float) -> float:
+        """Return the tolerated |delivered - target| for a target of ``target_km``."""
+        return self.absolute_km + abs(target_km) * self.relative
+
+
+#: The historical hardcoded tolerance (±5% of target). The implicit default.
+DEFAULT_TOLERANCE = ValidatorTolerance()
+
+#: For weeks whose target was clamped to a capacity ceiling: the delivery is
+#: judged against a much lower number than the original model target, so the
+#: proportional band must widen and a small flat band absorbs rounding.
+CLAMPED_TARGET_TOLERANCE = ValidatorTolerance(absolute_km=2.0, relative=0.15)
 
 
 def validate_week_plan(
-    workouts: List[Dict[str, Any]], total_km: float, target_total_km: float, phase: str
+    workouts: List[Dict[str, Any]],
+    total_km: float,
+    target_total_km: float,
+    phase: str,
+    tolerance: Optional[ValidatorTolerance] = None,
 ) -> tuple[bool, str]:
     """Validate week plan follows training principles.
 
@@ -15,9 +58,11 @@ def validate_week_plan(
     - All workouts have 'description' field
     - Recovery day has label 'recovery' (not 'recovery_rest')
     - No easy run > 125% of long run distance
-    - Total distance matches target (+/-5% tolerance)
+    - Total distance matches target within ``tolerance`` (default ±5%)
     - Recovery days have zero distance
     """
+    if tolerance is None:
+        tolerance = DEFAULT_TOLERANCE
     for workout in workouts:
         if "description" not in workout:
             return (
@@ -44,11 +89,12 @@ def validate_week_plan(
                         f"Easy run ({workout.get('distance')}km) > 125% of long run ({long_run_dist}km) on day {workout['day']}",
                     )
 
-    tolerance = target_total_km * 0.05
-    if abs(total_km - target_total_km) > tolerance:
+    allowed_km = tolerance.allowed_deviation_km(target_total_km)
+    if abs(total_km - target_total_km) > allowed_km:
         return (
             False,
-            f"Total distance mismatch: expected {target_total_km}km, got {total_km}km",
+            f"Total distance mismatch: expected {target_total_km}km, "
+            f"got {total_km}km (tolerance ±{allowed_km:.2f}km)",
         )
 
     for workout in workouts:

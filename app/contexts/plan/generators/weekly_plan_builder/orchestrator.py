@@ -59,7 +59,10 @@ from app.core.training.periodization.quality_caps import (
     QUALITY_MIN_DOSE_KM,
     volume_scaled_easy_cap,
 )
-from app.core.training.periodization.training_constants import calculate_week_in_phase
+from app.core.training.periodization.training_constants import (
+    calculate_week_in_phase,
+    workouts_training_km,
+)
 from app.core.training.profiles.backyard_simulation import (
     fit_simulation_to_week,
     weekly_backyard_focus,
@@ -560,6 +563,7 @@ def build_weekly_plan(
             profile=backyard_profile,
             simulation=simulation,
             pace_zones=pace_zones,
+            max_runs=max_runs_per_week,
         )
         backyard = weekly_backyard_focus(
             phase, is_recovery, backyard_profile, simulation
@@ -686,6 +690,11 @@ def build_weekly_plan(
         "phase": phase,
         "is_recovery": is_recovery,
         "total_km": actual_total_km,
+        # Derived from the workouts by the shared helper (not carried over
+        # from the modelled target): a week dict always reports the volume
+        # its own sessions sum to, so every reader of this field — persistence,
+        # rendering, audits — agrees with the day cards underneath it.
+        "training_km": workouts_training_km(workouts),
         "daily_workouts": workouts,
         "training_tips": training_tips,
         "vertical_simulation": vertical_simulation,
