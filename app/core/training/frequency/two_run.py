@@ -44,9 +44,9 @@ _PHASE_SLOTS = {
 }
 
 _LONG_RUN_PCT = {
-    "base": (0.50, 0.55),
-    "build": (0.55, 0.60),
-    "peak": (0.52, 0.55),
+    "base": (0.52, 0.58),
+    "build": (0.56, 0.62),
+    "peak": (0.56, 0.60),
     "taper": (0.45, 0.50),
 }
 
@@ -87,6 +87,10 @@ class TwoRunComposer:
         long_idx = next((i for i, t in enumerate(types) if t == "long"), None)
         if long_idx is not None:
             pct = distances[long_idx] / total
-            if pct > 0.62:
-                violations.append(f"Long run is {pct:.0%} of volume (max 60%)")
+            # 0.65 matches the frequency-aware share ceiling (physiological
+            # envelope + long_run_calculator): the single quality partner is
+            # physiologically capped, so the long run legitimately carries the
+            # rest of a well-formed 2-run week.
+            if pct > 0.65:
+                violations.append(f"Long run is {pct:.0%} of volume (max 65%)")
         return violations

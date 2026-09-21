@@ -126,14 +126,22 @@ def long_run_share_ceiling(max_runs: int) -> float:
     else for the volume to live, and a plan that honoured 35 % there would have
     to drop the volume entirely rather than put it in the long run. So the
     ceiling sits at the point where the week stops being a week and becomes one
-    session plus filler: 0.60 at 2 runs, 0.55 above.
+    session plus filler: 0.65 at 2 runs, 0.55 above.
+
+    The 2-run value sits above the 0.60 it used to be because the single
+    quality partner on such a week is physiologically capped (Daniels work
+    shares, per-distance caps): holding 0.60 strictly held the *pair* to ~83 %
+    of the weekly target on every build/peak week — a permanent shortfall no
+    amount of layout work could close. At 0.65 the long run plus its capped
+    partner can reach the target while the week still reads as one anchor run
+    plus one supporting session.
 
     The retired ``LONG_RUN_SHARE_HI = 0.35`` constant used to sit next to this
     and claim the published band was enforced here. It never was — nothing read
     it — so the module advertised a stricter bound than it applied.
     """
     if max_runs <= 2:
-        return 0.60
+        return 0.65
     return 0.55
 
 

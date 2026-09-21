@@ -344,6 +344,15 @@ def weekend_budget_km(workouts: List[Dict[str, Any]]) -> float:
     return round(total, 1)
 
 
+def _running_session_count(workouts: List[Dict[str, Any]]) -> int:
+    """How many of the week's cards are actual running sessions."""
+    return sum(
+        1
+        for w in workouts
+        if w.get("type") not in ("rest", "recovery") and (w.get("distance") or 0) > 0
+    )
+
+
 def _apply_simulation(
     workouts: List[Dict[str, Any]],
     simulation: LoopSimulation,
@@ -351,6 +360,7 @@ def _apply_simulation(
     total_km: float,
     phase: str,
     pace_zones: Optional[Dict],
+    max_runs: Optional[int] = None,
 ) -> Dict[str, Any]:
     """Install the simulation and reshape the day after it."""
     long_run = next((w for w in workouts if w.get("type") == "long"), None)
@@ -382,7 +392,21 @@ def _apply_simulation(
         # quality and easy work that share the same budget, and bought a second
         # long day the week could not afford.
         headroom = total_km - simulation.distance_km - non_long_running_km(workouts)
-        if headroom >= profile.loop_km * _SECOND_DAY_HEADROOM_FACTOR:
+        # The frequency budget is a hard cap, and the second day is the one
+        # backyard session that can spend a *slot* the week never had: when
+        # day 7 was already a run it merely rewrites one, but when day 7 was
+        # rest it adds a session. It is only allowed to do that when the
+        # runner's running-day budget still has room.
+        day_after = next((w for w in workouts if w.get("day") == _SECOND_DAY), None)
+        day_after_is_run = (
+            day_after is not None
+            and day_after.get("type") not in ("rest", "recovery")
+            and (day_after.get("distance") or 0) > 0
+        )
+        slot_available = day_after_is_run or (
+            max_runs is None or _running_session_count(workouts) < max_runs
+        )
+        if headroom >= profile.loop_km * _SECOND_DAY_HEADROOM_FACTOR and slot_available:
             two_loops_affordable = (
                 headroom
                 >= profile.loop_km
@@ -498,6 +522,7 @@ def apply_backyard_week(
     profile: BackyardProfile,
     simulation: Optional[LoopSimulation],
     pace_zones: Optional[Dict],
+    max_runs: Optional[int] = None,
 ) -> Optional[Dict[str, Any]]:
     """Reshape one week for a backyard goal (in place).
 
@@ -506,6 +531,9 @@ def apply_backyard_week(
     none. Returns a week-level summary of what was installed, or ``None`` if
     the week was left as an ordinary ultra week (deloads always are: a deload
     with a simulation in it is not a deload).
+
+    ``max_runs`` is the runner's running-day budget for the week: the second
+    day after a simulation never spends a session beyond it.
     """
     if is_recovery:
         return None
@@ -515,7 +543,13 @@ def apply_backyard_week(
     if simulation is not None:
         summary.update(
             _apply_simulation(
-                workouts, simulation, profile, total_km, phase, pace_zones
+                workouts,
+                simulation,
+                profile,
+                total_km,
+                phase,
+                pace_zones,
+                max_runs=max_runs,
             )
         )
         return summary

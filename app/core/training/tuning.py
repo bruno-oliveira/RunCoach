@@ -128,7 +128,16 @@ TRAIL_BRACKET_PEAK_TARGETS = {
 # (get_weekly_long_run_ratio_cap) still bounds the top so the long run never
 # dominates. Taper is excluded — volume is intentionally low there.
 LOW_FREQ_LONG_RUN_RATIO_FLOOR = {
-    2: {"base": 0.46, "build": 0.50, "peak": 0.52},
+    # At 2 runs the week is one long run plus one supporting session, and the
+    # supporting session is bounded relative to the long run (easy ≤ 0.68 ×
+    # long, quality ≤ 0.85 × long), so the week's *structural* capacity is
+    # ``floor × (1 + ratio)`` of the long run. With the floors at ~0.50 that
+    # product was ~0.84 of the weekly target: a quarter of the modelled volume
+    # had no slot to live in, on every 2-run plan, in every phase. The floors
+    # below sit just under the weekly share ceiling (0.60) — long + supporting
+    # ≈ 0.95-1.01 × target — while keeping the long run clearly dominant
+    # (audit G1).
+    2: {"base": 0.52, "build": 0.56, "peak": 0.58},
     3: {"base": 0.34, "build": 0.38, "peak": 0.40},
 }
 

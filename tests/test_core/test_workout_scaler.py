@@ -114,8 +114,10 @@ class TestEnforceLongRunRatioCap:
         total_before = sum(w["distance"] for w in workouts)
         enforce_long_run_ratio_cap(workouts, phase="build", max_runs=2)
         long_w_after = next(w for w in workouts if w["type"] == "long")
-        # 2-run weeks are inherently long-run-centric, so the ceiling is looser.
-        assert long_w_after["distance"] <= total_before * 0.62 + 0.05
+        # 2-run weeks are inherently long-run-centric, so the ceiling is looser
+        # (0.65 — the single quality/easy partner is physiologically capped, so
+        # the long run legitimately carries the rest of a well-formed week).
+        assert long_w_after["distance"] <= total_before * 0.65 + 0.05
 
     def test_low_frequency_ratio_looser_than_high_frequency(self):
         # A 2-run week tolerates a bigger long-run share than a 3-run week,

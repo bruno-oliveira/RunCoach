@@ -2,6 +2,7 @@
 
 from typing import Any, Dict, List
 
+from app.core.training.periodization.training_constants import workouts_training_km
 from app.core.training.workouts.workout_builders import attach_strength_sessions
 
 # Strength is introduced once the running habit is established, not in the
@@ -347,6 +348,7 @@ class BeginnerPlanGenerator:
         return {
             "week": display,
             "total_km": total_km,
+            "training_km": workouts_training_km(workouts),
             "phase": "beginner",
             "daily_workouts": workouts,
             "training_tips": self._get_beginner_tips(week_number, target_distance),
@@ -417,6 +419,7 @@ class BeginnerPlanGenerator:
         return {
             "week": week_number,
             "total_km": round(sum(w.get("distance", 0) for w in workouts), 1),
+            "training_km": workouts_training_km(workouts),
             "phase": phase,
             "daily_workouts": workouts,
             "training_tips": self._get_beginner_tips(week_number, target_distance),

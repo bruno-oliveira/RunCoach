@@ -76,6 +76,17 @@ def get_workout_distribution(
                 recovery_runs += 1
 
     actual_run_slots = max_runs
+    # Frequency hard cap: the week's running slots (long + quality +
+    # medium-long) can never exceed the runner's running-day budget. The
+    # phase policy above hands out a quality slot in build/peak even at
+    # 1-2 runs/week, where long + quality oversubscribed the week — a
+    # backyard or trail plan at 1 run/week came out as two running days —
+    # so the excess quality dose is dropped here rather than emitted as a
+    # session the frequency budget has no room for.
+    quality_workouts = min(
+        quality_workouts,
+        max(0, actual_run_slots - long_runs - medium_long_runs),
+    )
     # Recovery is non-running (cross-training): it occupies a day but doesn't
     # count against max_runs the way easy/quality/long do.  The legacy path
     # always places recovery on day 2 outside of max_runs; the composer path
@@ -246,8 +257,16 @@ def _quality_for_trail_flat(
 def _quality_for_road_5k(
     quality_workouts: int, week_number: int, phase: str
 ) -> Dict[str, int]:
-    """5K: VO2max emphasis — intervals dominate."""
-    return {"interval": 2 if quality_workouts >= 2 else 1}
+    """5K: VO2max emphasis — intervals dominate.
+
+    A two-slot week pairs one interval day with one tempo day rather than two
+    interval days: two VO2max sessions in one week is more than a recreational
+    runner can absorb between recoveries, and the tempo slot keeps the
+    threshold stimulus that supports the VO2max work (audit G5).
+    """
+    if quality_workouts >= 2:
+        return {"interval": 1, "tempo": 1}
+    return {"interval": 1}
 
 
 def _quality_for_road_10k(

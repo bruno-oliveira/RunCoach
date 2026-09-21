@@ -634,7 +634,11 @@ class TestVDOTIntegration:
         )
         peak_low = max(w["total_km"] for w in plan_low)
         peak_high = max(w["total_km"] for w in plan_high)
-        assert peak_high >= peak_low, (
+        # Since the reachability gate, both plans' modelled peaks cap at the
+        # same frequency capacity (4 runs x typical session), so the delivered
+        # peaks differ only by builder rounding (~0.4 km). Higher VDOT may no
+        # longer buy extra volume at the cap — it must not LOSE volume.
+        assert peak_high >= peak_low - 0.5, (
             f"Higher VDOT should not reduce peak: {peak_high} < {peak_low}"
         )
 

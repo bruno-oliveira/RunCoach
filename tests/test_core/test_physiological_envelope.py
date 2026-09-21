@@ -73,12 +73,15 @@ KNOWN_GAPS: Dict[str, Dict[float, FrozenSet[int]]] = {
         42.2: frozenset({2}),
     },
     # The contracted long-run cap is tight for 5K (floor ~8 km) — at 4 runs
-    # with high base mileage the per-run distribution pushes past it.  The HM
-    # cell at 5 runs is a pinning overlay whose prescription lands just past
-    # the cap computed at the volume the week delivers.
+    # with high base mileage the per-run distribution pushes past it. (At 5
+    # runs the entry used to be here too: the final contract re-pass with a
+    # progression floor closed that gap, so it is gone rather than pinned
+    # forever.) The HM cell at 5 runs used to be here as well: its pinning
+    # overlay landed just past the cap computed at the volume the week
+    # delivers, but the reachability gate (plan_generator) lowered that plan's
+    # volume target enough that the overlay now fits.
     "long_run_over_contract_cap": {
         5.0: frozenset({4}),
-        21.1: frozenset({5}),
     },
     # Volume-scaled easy cap correctly prevents easy runs from becoming second
     # long runs, but at ≤3 runs/week there aren't enough slots to absorb the
@@ -86,11 +89,14 @@ KNOWN_GAPS: Dict[str, Dict[float, FrozenSet[int]]] = {
     # distances the quality allocation can still leave a shortfall when the
     # volume target is aggressive relative to the per-run ceilings.  This is
     # the expected trade-off: healthy run distribution > hitting volume targets.
+    # (The 5K@5-6 and marathon@2 cells used to be here too: the low-frequency
+    # layout work — the single-quality remainder sizing, the ≤2-run cap lifts
+    # and the final fill — now lets those layouts reach their targets.)
     "peak_shortfall": {
-        5.0: frozenset({2, 3, 4, 5, 6}),
+        5.0: frozenset({2, 3, 4}),
         10.0: frozenset({2}),
         21.1: frozenset({2, 3}),
-        42.2: frozenset({2, 4}),
+        42.2: frozenset({4}),
     },
     # Low-volume corner cases: at low base mileage split over many runs the
     # per-run distance falls below the viable floor.  The plan is faithful to
@@ -248,9 +254,19 @@ def collect_gaps(distance_km: float, runs: int, base: float, weeks: int) -> Set[
                 found.add("sub_viable_run")
                 break
 
-    target = mileage_progression.calculate_weekly_progression(
+    raw_target = mileage_progression.calculate_weekly_progression(
         base, distance_km, weeks, runs
     )
+    # Fidelity is measured against the target the generator was *actually
+    # given*. Since the reachability gate (plan_generator), the model's raw
+    # peak is capped at what the requested frequency can carry before any week
+    # is built — comparing delivered volume against the uncapped raw target
+    # would penalise plans for the cap working as designed.
+    session_km = mileage_progression.typical_session_length_km()
+    reachable, _reason, _diag = mileage_progression.resolve_reachable_target(
+        max(raw_target, default=0.0), runs, session_km, base_km=base
+    )
+    target = mileage_progression.cap_progression_to_peak(raw_target, reachable, base)
     candidates = [
         (i, target[i])
         for i, week in enumerate(plan)

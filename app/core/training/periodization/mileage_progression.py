@@ -4,7 +4,7 @@ Handles peak mileage calculation and week-over-week progression
 with 10% rule enforcement and phase-aware periodization.
 """
 
-from typing import List, Optional
+from typing import Dict, List, Optional, Tuple
 
 from app.core.training.periodization.phase_calculator import (
     calculate_phases,
@@ -45,6 +45,136 @@ _ROAD_PEAK_PARAMS = {
     "half": (48, 2.1),
     "marathon": (64, 2.25),
 }
+
+
+def typical_session_length_km(trail_profile: Optional[TrailProfile] = None) -> float:
+    """The per-session distance (km) a plan's slots can typically hold.
+
+    The reachability model needs a "typical session" to multiply by frequency,
+    and inventing one would create a second set of magic numbers that drifts
+    from the constants the week builder actually enforces. Road weeks are
+    assembled from easy runs explicitly bounded by the absolute
+    ``MAX_EASY_RUN_KM`` ceiling (~70-80 min of easy running) — that ceiling is
+    the honest per-slot dose a schedule can assume. Trail/ultra sessions run
+    longer by design (back-to-back long days carry the volume a road plan
+    spreads across easy slots), so the discipline's own single-run ceiling
+    stands in instead.
+
+    Pure: a lookup over existing tuning constants, nothing more.
+    """
+    if trail_profile is not None:
+        run_ceiling, _q_cap = _trail_run_ceilings(trail_profile)
+        return run_ceiling
+    return MAX_EASY_RUN_KM
+
+
+def weekly_capacity(frequency: int, typical_session_length: float) -> float:
+    """Weekly km the requested frequency can carry at typical session lengths.
+
+    The capacity model in one line: a week is worth what its
+    ``frequency`` sessions can each hold. Kept public so callers and tests
+    reason about capacity with the same arithmetic the resolver uses.
+    """
+    return max(0, int(frequency)) * max(0.0, typical_session_length)
+
+
+def resolve_reachable_target(
+    target: float,
+    frequency: int,
+    typical_session_length: float,
+    base_km: float = 0.0,
+) -> Tuple[float, Optional[str], Dict[str, float]]:
+    """Cap a modelled weekly target at what the schedule can actually deliver.
+
+    The progression model derives its peak from the runner's base and the
+    race's ideal volume; it is blind to how many sessions the runner has
+    offered to carry that volume in. When the implied peak exceeds the week's
+    capacity, the target is not a plan, it is a wish — downstream trimming
+    produces a week that overshoots what its slots can hold or craters below
+    the target it was sized from. This resolver makes reachability a
+    first-class constraint *before* any week is built.
+
+    Capacity is the larger of two honest floors:
+
+    - ``typical_session_length x frequency`` — what the schedule can hold at
+      the per-session dose the discipline's tuning assumes; and
+    - ``base_km`` — what the runner already demonstrably runs. Their
+      demonstrated per-session length is ``base / frequency``, which they have
+      proven they can hold, so an established base raises the capacity floor
+      (and keeps the cap from prescribing enforced detraining — the P1 rule).
+
+    Semantics:
+
+    - ``target <= capacity``: returned unchanged with ``cap_reason=None`` —
+      the progression model is already reachable.
+    - otherwise the target is capped at capacity, with the reason naming the
+      binding floor: ``"frequency_capacity"`` when the typical-session term
+      binds (the low-frequency case the capacity model exists for) and
+      ``"base_volume_ceiling"`` when the runner's own base binds (a
+      high-volume runner whose frequency cannot carry even their current
+      week — the peak is pinned at the base rather than ramped past it). The
+      ramp above the base is compressed proportionally by
+      :func:`cap_progression_to_peak`.
+
+    The result never drops below ``0.5 x typical_session_length`` (a week
+    smaller than half a session is not a training week) nor above the
+    requested target (this is a cap, never a raise).
+
+    Returns ``(reachable, cap_reason, diagnostics)``. ``cap_reason`` is
+    ``None`` when the requested target stands. The diagnostics dict carries
+    ``requested``, ``reachable``, ``capacity``, ``scaled_from_start`` (the
+    ramp's start after scaling — the runner's base, never above the reachable
+    peak) and ``scaled_from_peak`` (the peak after scaling), so callers can
+    log target fidelity without recomputing it.
+
+    Deterministic and side-effect-free: no I/O, no clocks, no randomness.
+    """
+    frequency_capacity = weekly_capacity(frequency, typical_session_length)
+    capacity = max(frequency_capacity, base_km)
+    if target <= capacity:
+        reachable, cap_reason = target, None
+    elif base_km > frequency_capacity:
+        reachable, cap_reason = base_km, "base_volume_ceiling"
+    else:
+        reachable, cap_reason = frequency_capacity, "frequency_capacity"
+    # A week under half a session is not a training week; a cap must never
+    # raise the target above what was asked for.
+    reachable = max(reachable, min(target, 0.5 * typical_session_length))
+    diagnostics = {
+        "requested": target,
+        "reachable": reachable,
+        "capacity": capacity,
+        "scaled_from_start": min(base_km, reachable),
+        "scaled_from_peak": reachable,
+    }
+    return reachable, cap_reason, diagnostics
+
+
+def cap_progression_to_peak(
+    weekly_progression: List[float],
+    reachable_peak: float,
+    base_km: float,
+) -> List[float]:
+    """Rescale a weekly progression so its peak lands on ``reachable_peak``.
+
+    The ramp's shape above the runner's established base is preserved: weeks
+    at or below ``base_km`` pass through untouched (a reachability cap may
+    never detrain an established base), and the excess above the base is
+    compressed linearly so base maps to base and peak maps to the reachable
+    peak — proportional spacing, one common factor. Pure: returns a new list.
+    """
+    if not weekly_progression:
+        return []
+    peak = max(weekly_progression)
+    if peak <= reachable_peak or peak <= base_km or reachable_peak <= base_km:
+        # Nothing above the base to compress, or the cap would pin the ramp
+        # below the runner's current volume — leave the shape alone.
+        return list(weekly_progression)
+    factor = (reachable_peak - base_km) / (peak - base_km)
+    return [
+        round(w, 1) if w <= base_km else round(base_km + (w - base_km) * factor, 1)
+        for w in weekly_progression
+    ]
 
 
 def runs_per_week_volume_factor(max_runs: int) -> float:

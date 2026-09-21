@@ -28,6 +28,7 @@ from app.exceptions import (
     DatabaseException,
     InadequateBaseException,
     InsufficientTimeException,
+    PlanGenerationError,
     PlanGenerationException,
     RunCoachException,
     ValidationException,
@@ -346,8 +347,8 @@ def _build_plan_request(
             _extract_validation_message(e) or "Please check your values and try again."
         )
         return error_response(request, current_user, message, "validation")
-    except Exception:
-        logger.exception("Plan request validation failed")
+    except Exception as e:
+        logger.exception("Plan request validation failed (%s)", type(e).__name__)
         return error_response(
             request,
             current_user,
@@ -480,6 +481,15 @@ async def generate_plan(
 
         return RedirectResponse(url=f"/plan/{training_plan.id}", status_code=303)
 
+    except PlanGenerationError as e:
+        # A diagnosable infeasibility, not a crash: name the subclass and
+        # carry its measured fields so ops can tell frequency-infeasible from
+        # distance-infeasible from invalid-config without opening a debugger.
+        db.rollback()
+        logger.warning(
+            "Plan generation infeasible: %s %s", type(e).__name__, e.diagnostics()
+        )
+        return error_response(request, current_user, e.user_message, "plan_generation")
     except PlanGenerationException as e:
         db.rollback()
         return error_response(request, current_user, e.user_message, "plan_generation")
@@ -491,8 +501,8 @@ async def generate_plan(
             "Database error occurred. Please try again.",
             "database",
         )
-    except Exception:
-        logger.exception("Plan generation failed")
+    except Exception as e:
+        logger.exception("Plan generation failed (%s)", type(e).__name__)
         db.rollback()
         return error_response(
             request,
@@ -573,8 +583,8 @@ async def _generate_time_goal_plan(
         )
     except ValueError as e:
         return error_response(request, current_user, str(e), "validation")
-    except Exception:
-        logger.exception("Time-goal plan generation failed")
+    except Exception as e:
+        logger.exception("Time-goal plan generation failed (%s)", type(e).__name__)
         return error_response(
             request,
             current_user,

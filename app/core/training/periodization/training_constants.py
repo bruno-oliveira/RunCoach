@@ -1,6 +1,6 @@
 """Shared training constants used across plan generation modules."""
 
-from typing import Dict
+from typing import Any, Dict, List
 
 LONG_RUN_HARD_CEILINGS: Dict[float, float] = {
     5.0: 14.0,
@@ -52,6 +52,20 @@ def calculate_week_in_phase(
         return week_number - phases["base"] - phases["build"] - phases["peak"] - 1
 
 
+def workouts_training_km(workouts: List[Dict[str, Any]]) -> float:
+    """Sum a list of workout dicts into the week's *training* volume.
+
+    Race-day cards are excluded — see :func:`training_km` for why. This is the
+    single arithmetic every surface that derives a week's volume reads, so a
+    number shown in one place can never disagree with the same number
+    computed somewhere else.
+    """
+    return round(
+        sum(w.get("distance", 0) or 0 for w in workouts if w.get("type") != "race"),
+        1,
+    )
+
+
 def training_km(week: Dict) -> float:
     """Weekly volume excluding race day — the week's *training* load.
 
@@ -64,11 +78,4 @@ def training_km(week: Dict) -> float:
     Use this wherever a week's volume is being compared to another week's;
     use ``total_km`` wherever the number is being shown to the runner.
     """
-    return round(
-        sum(
-            w.get("distance", 0) or 0
-            for w in week.get("daily_workouts", [])
-            if w.get("type") != "race"
-        ),
-        1,
-    )
+    return workouts_training_km(week.get("daily_workouts", []))

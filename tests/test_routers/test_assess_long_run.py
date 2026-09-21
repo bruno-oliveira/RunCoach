@@ -25,7 +25,20 @@ class TestAssessLongRun:
         assert "42.2 km race" in warning["message"]
         assert warning["suggestion"]
 
-    def test_quiet_for_healthy_marathon(self, client: TestClient):
+    def test_warns_when_frequency_capacity_limits_the_long_run(
+        self, client: TestClient
+    ):
+        """A 4-run marathon week cannot fund the static long-run aim.
+
+        Since the reachability gate (plan_generator), this plan's peak week
+        caps at 4 runs x typical session, and its long run tops out around
+        72% of the static ~36 km aim. The banner is now *honest* about that
+        trade-off instead of silent: the old quiet expectation encoded the
+        pre-cap model, whose 76 km peak week was exactly the over-prescription
+        the envelope census flagged (road-42.2km long_over 24 -> 12). The
+        banner pairs with the frequency advisory ("add a training day"), which
+        is the lever that actually buys the long run back.
+        """
         r = client.get(
             "/assess-long-run",
             params={
@@ -36,7 +49,10 @@ class TestAssessLongRun:
             },
         )
         assert r.status_code == 200
-        assert r.json()["long_run_warning"] is None
+        warning = r.json()["long_run_warning"]
+        assert warning is not None
+        assert warning["pct_of_recommended"] < 85
+        assert warning["suggestion"]
 
     def test_warns_for_short_trail_runway(self, client: TestClient):
         r = client.get(
