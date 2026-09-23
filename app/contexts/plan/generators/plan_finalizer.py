@@ -94,9 +94,7 @@ def reconcile_card_distances(training_plan: List[Dict[str, Any]]) -> int:
                             for step in fitted
                             if step.get("kind") == "walk"
                         )
-                        fitted_running = round(
-                            max(0.0, fitted_km - fitted_walk_km), 1
-                        )
+                        fitted_running = round(max(0.0, fitted_km - fitted_walk_km), 1)
                         if abs(fitted_running - displayed) > _RECONCILE_TOLERANCE_KM:
                             workout["distance"] = fitted_running
 
