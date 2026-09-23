@@ -36,7 +36,7 @@ from app.core.coaching.outbound_nudge import (
     detect_outbound_nudge,
     render_email,
 )
-from app.core.time_utils import local_today
+from app.core.time_utils import local_today, use_timezone
 from app.core.training.periodization.plan_calendar import compute_current_week
 from app.domain.notifications import EmailMessage, Mailer
 from app.infrastructure.config import Settings
@@ -110,7 +110,6 @@ class OutboundNudgeService:
         who *would* be mailed without touching an SMTP server.
         """
         summary = NudgeRunSummary()
-        today = local_today()
 
         query = self.db.query(User).filter(
             User.nudge_email_enabled.is_(True),
@@ -122,6 +121,10 @@ class OutboundNudgeService:
         for user in query.all():
             summary.candidates += 1
             try:
+                # Each runner's own "today": the gone-quiet and missed-session
+                # guards count days, and UTC's day is not theirs.
+                with use_timezone(user.timezone):
+                    today = local_today()
                 self._process_user(user, today, summary, dry_run=dry_run)
             except Exception:
                 # One runner's bad data must not abort the batch.

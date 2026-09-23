@@ -8,9 +8,11 @@ can move a distance without rescaling the structured steps, and the view-time
 enricher then recomputes the rendered distance back from those stale steps
 (>0.2 km drift), so the per-workout cards no longer sum to the weekly chip.
 
-This module is the single source of truth for that reconciliation so all three
-flows stay in lockstep. It depends only on the plan builders and step maths, so
-it carries no back-reference to the adjusters that import it.
+This module is the single source of truth for that reconciliation. The weekly
+adjuster calls it directly; every other writer (intents, undo, reset, swaps)
+reaches it through ``finalize.finalize_plan_mutation``. It depends only on the
+plan builders and step maths, so it carries no back-reference to the adjusters
+that import it.
 """
 
 from typing import Any, Dict, Optional

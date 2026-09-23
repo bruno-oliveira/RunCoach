@@ -37,6 +37,7 @@ from sqlalchemy.orm import Session
 
 from app.application.watch_sync_service import resync_plan_to_watch
 from app.contexts.plan.adaptation import AdaptationService
+from app.core.time_utils import use_timezone
 from app.infrastructure.config import Settings
 from app.infrastructure.config import settings as default_settings
 from app.infrastructure.integrations.intervals_service import (
@@ -113,7 +114,8 @@ class AmbientSyncService:
 
         for user in users:
             try:
-                await self._import_and_adapt(user, summary)
+                with use_timezone(user.timezone):
+                    await self._import_and_adapt(user, summary)
             except Exception:
                 # One revoked token or malformed activity must not cost every
                 # other runner their sync.
@@ -123,9 +125,11 @@ class AmbientSyncService:
 
         for plan in self._mirrored_plans(limit):
             try:
-                summary.watch_events_written += await resync_plan_to_watch(
-                    str(plan.id), str(plan.user_id), self.intervals_service
-                )
+                owner = plan.user
+                with use_timezone(owner.timezone if owner else None):
+                    summary.watch_events_written += await resync_plan_to_watch(
+                        str(plan.id), str(plan.user_id), self.intervals_service
+                    )
                 summary.watch_plans_rolled += 1
             except Exception:
                 logger.exception("Watch window roll failed for plan %s", plan.id)

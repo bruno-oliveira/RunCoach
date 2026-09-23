@@ -142,6 +142,11 @@ def enrich_plan_data_with_ids(
     )
     id_map = {(wn, dow): wid for wn, dow, wid, _ in rows}
     baseline_map = {(wn, dow): bl for wn, dow, _, bl in rows}
+    # Every writer now ends in finalize_plan_mutation, so a repair here means
+    # a stored card still disagrees with its steps — legacy data, or a new
+    # writer that skipped the finalizer. Count them so it shows up in logs
+    # instead of being silently papered over on every page view.
+    repaired: list[tuple[Any, Any]] = []
 
     for week in plan_data:
         week_num = week.get("week")
@@ -194,6 +199,8 @@ def enrich_plan_data_with_ids(
                         or abs(current_distance - rounded_steps_km) > 0.2
                     ):
                         workout["distance"] = rounded_steps_km
+                        if current_distance > 0:
+                            repaired.append(key)
 
                 distance = workout.get("distance", 0) or 0
                 if 0 < distance < _DURATION_HINT_THRESHOLD_KM:
@@ -212,6 +219,14 @@ def enrich_plan_data_with_ids(
             # floor bump, steps-derived recompute) must not trigger it.
             if bl is not None and bl != original_distance:
                 workout["baseline_distance"] = bl
+
+    if repaired:
+        logger.info(
+            "Plan %s: view re-derived %d card distance(s) from steps: %s",
+            training_plan_id,
+            len(repaired),
+            repaired[:5],
+        )
 
     # Reconcile each week's chip with the daily distances we will actually
     # render. The per-workout `distance` can be rewritten above (steps-

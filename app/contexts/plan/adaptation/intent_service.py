@@ -12,6 +12,7 @@ the user declares *what's going on* and the plan reshapes itself:
     sick_injured    – rest the next few days, then ramp back gently
     busy_week       – trim the rest of this week's volume
     missed_today    – recover a single missed run: reschedule / lighten / skip
+    ease_today      – soften just today's run after a rough morning check-in
 
 Every intent produces a ``ChangePlan`` and rides the existing preview → apply
 modal, so the UX is identical regardless of intent. Intents are *repeatable
@@ -23,6 +24,7 @@ restores the baseline.
 
 from __future__ import annotations
 
+import copy
 import logging
 from dataclasses import dataclass
 from datetime import date as date_cls
@@ -33,8 +35,8 @@ from sqlalchemy.orm import Session
 
 from app.contexts.plan.repositories import SQLAlchemyPlanRepository
 from app.core.training.periodization.plan_calendar import compute_current_week
+from app.core.training.workouts.workout_registry import WORKOUT_REGISTRY, build_workout
 from app.models import DailyWorkout, TrainingPlan, WeeklyPlan
-from app.utils import persist_json
 from app.utils import to_date as _to_date
 
 from ._helpers import (
@@ -46,6 +48,8 @@ from ._helpers import (
 )
 from .adjustment_results import record_adaptation_event
 from .change_plan_builder import build_change_plan, empty_change_plan, snapshot_workouts
+from .finalize import clear_session_payload, finalize_plan_mutation
+from .reconcile import pace_zones_for
 from .week_adjuster import apply_adjustment_to_future_weeks
 
 logger = logging.getLogger(__name__)
@@ -72,6 +76,10 @@ _STRONG_FACTOR = 1.08
 # all, not just easing a day that's still going ahead).
 _MISSED_EASE_FACTOR = 0.6
 
+# A rough morning check-in softens today only: readiness is a daily signal, so
+# one bad morning shouldn't reshape the rest of the week.
+_LOW_READINESS_FACTOR = 0.75
+
 _DAY_NAMES = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
 
 # Gentle return ramp after illness/injury: only the first couple of weeks back
@@ -93,6 +101,7 @@ VALID_INTENTS = (
     "sick_injured",
     "busy_week",
     "missed_today",
+    "ease_today",
 )
 
 
@@ -138,11 +147,16 @@ def apply_intent(
 def _build_undo_records(
     before: Dict[str, Dict[str, Any]],
     after: Dict[str, Dict[str, Any]],
+    pd_before: Optional[Dict[Tuple[int, int], Dict[str, Any]]] = None,
 ) -> List[Dict[str, Any]]:
     """Pre-image of every workout the intent actually changed.
 
     Keyed by workout id and holding the fields an undo must restore. Only
     genuinely-mutated workouts are recorded so undo touches nothing else.
+
+    The plan_data card is captured whole: distance and type alone cannot
+    bring back an eased tempo's reps, and restoring a card without its steps
+    left the page and the watch on the adjusted session.
     """
     records: List[Dict[str, Any]] = []
     for wid, b in before.items():
@@ -151,16 +165,25 @@ def _build_undo_records(
             continue
         if b["distance_km"] == a["distance_km"] and b["type"] == a["type"]:
             continue
-        records.append(
-            {
-                "id": wid,
-                "distance_km": b["distance_km"],
-                "workout_type": b["type"],
-                "intensity": b["intensity"],
-                "notes": b["notes"],
-            }
-        )
+        record = {
+            "id": wid,
+            "distance_km": b["distance_km"],
+            "workout_type": b["type"],
+            "intensity": b["intensity"],
+            "notes": b["notes"],
+            "key_workout_id": b.get("key_workout_id"),
+        }
+        card = (pd_before or {}).get((b["week"], b["day"]))
+        if card is not None:
+            record["plan_data_workout"] = card
+        records.append(record)
     return records
+
+
+def _snapshot_plan_data_cards(plan: TrainingPlan) -> Dict[Tuple[int, int], Any]:
+    """Deep copy of every plan_data card, keyed by (week, day)."""
+    _plan_data, _pd_week, pd_workout = parse_plan_data_lookups(plan)
+    return {key: copy.deepcopy(card) for key, card in pd_workout.items()}
 
 
 def undo_last_change(plan_id: str, user_id: str, db: Session) -> Dict[str, Any]:
@@ -202,7 +225,7 @@ def undo_last_change(plan_id: str, user_id: str, db: Session) -> Dict[str, Any]:
     affected_weeks = sorted({wk for (_wo, wk) in workouts})
     before = snapshot_workouts(plan, db, week_numbers=affected_weeks)
 
-    plan_data, pd_week, pd_workout = parse_plan_data_lookups(plan)
+    _plan_data, _pd_week, pd_workout = parse_plan_data_lookups(plan)
     for workout, week_number in workouts:
         rec = by_id.get(workout.id)
         if rec is None:
@@ -211,37 +234,30 @@ def undo_last_change(plan_id: str, user_id: str, db: Session) -> Dict[str, Any]:
         workout.workout_type = rec["workout_type"]
         workout.intensity = rec["intensity"]
         workout.notes = rec["notes"]
+        if "key_workout_id" in rec:
+            workout.key_workout_id = rec["key_workout_id"]
         pd_wo = pd_workout.get((week_number, workout.day_of_week))
-        if pd_wo is not None:
+        if pd_wo is None:
+            continue
+        card = rec.get("plan_data_workout")
+        if card is not None:
+            # Restore the whole card — steps, prose, key-workout overlay —
+            # so the watch gets back the session the runner had before.
+            pd_wo.clear()
+            pd_wo.update(copy.deepcopy(card))
+            pd_wo["day"] = workout.day_of_week
+        else:
+            # Records written before cards were captured: restore the scalars
+            # and let the finalizer re-project steps onto the distance.
             pd_wo["distance"] = rec["distance_km"]
             pd_wo["type"] = rec["workout_type"]
             pd_wo["intensity"] = rec["intensity"]
             pd_wo["notes"] = rec["notes"]
 
-    # Recompute totals for every touched week from the restored distances.
-    week_rows = {
-        wp.week_number: wp
-        for wp in db.query(WeeklyPlan)
-        .filter(
-            WeeklyPlan.training_plan_id == plan.id,
-            WeeklyPlan.week_number.in_(affected_weeks),
-        )
-        .all()
-    }
-    workouts_by_week = batch_workouts_by_week([wp.id for wp in week_rows.values()], db)
-    for wk_num, weekly_plan in week_rows.items():
-        rows = workouts_by_week.get(weekly_plan.id, [])
-        new_total = round(sum(w.distance_km or 0 for w in rows), 1)
-        weekly_plan.total_km = new_total
-        if wk_num in pd_week:
-            pd_week[wk_num]["total_km"] = new_total
-
-    plan.plan_data = plan_data
-    persist_json(plan, "plan_data")
     # Bump before building the change plan so the patch carries the new
     # revision — otherwise the client keeps a stale revision and its next
     # action 409s against the now-incremented server value.
-    plan.adaptation_revision = (plan.adaptation_revision or 0) + 1
+    finalize_plan_mutation(plan, db, week_numbers=affected_weeks)
 
     after = snapshot_workouts(plan, db, week_numbers=affected_weeks)
     change_plan = build_change_plan(
@@ -326,6 +342,7 @@ def _run_intent(
     # regardless of which weeks the intent ends up touching.
     snapshot_weeks = list(range(current_week, (total_weeks or current_week) + 1))
     before = snapshot_workouts(plan, db, week_numbers=snapshot_weeks)
+    pd_before = _snapshot_plan_data_cards(plan) if mode == "applied" else None
 
     recorder: List[Dict[str, Any]] = []
     handler = _HANDLERS[intent]
@@ -351,7 +368,7 @@ def _run_intent(
             # Capture the pre-mutation state of every workout this intent
             # touched so a one-tap Undo can restore it exactly (distance, type,
             # intensity and note), rather than the coarser reset-to-baseline.
-            change_plan["undo"] = _build_undo_records(before, after)
+            change_plan["undo"] = _build_undo_records(before, after, pd_before)
             plan.last_adjusted_at = datetime.now(timezone.utc).replace(tzinfo=None)
             plan.last_change_plan = change_plan
             record_adaptation_event(
@@ -392,6 +409,21 @@ def _handle_busy_week(
     edits = _ease_rest_of_week(ctx, _BUSY_FACTOR, "Trimmed — busy week.")
     _edit_workouts(ctx, edits, recorder)
     return "Trimmed the rest of this week's volume so it fits a busy stretch."
+
+
+def _handle_ease_today(
+    ctx: _IntentContext, params: Dict[str, Any], recorder: List[Dict[str, Any]]
+) -> str:
+    changed_before = len(recorder)
+    edits = {
+        (ctx.current_week, ctx.current_dow): _EaseEdit(
+            _LOW_READINESS_FACTOR, "Eased — rough morning check-in."
+        )
+    }
+    _edit_workouts(ctx, edits, recorder)
+    if len(recorder) == changed_before:
+        return "Nothing to ease — today is already a rest day."
+    return "Eased today's run and kept it easy — the rest of your week is unchanged."
 
 
 def _handle_skip_run(
@@ -490,6 +522,9 @@ def _reschedule_missed_workout(
             distance_km=float(missed.distance_km or 0),
             workout_type=str(missed.workout_type),
             reason=f"Moved from {from_name} — you missed that run.",
+            intensity=str(missed.intensity or "low"),
+            key_workout_id=missed.key_workout_id,
+            card=_card_copy(ctx.plan, week, day),
         ),
     }
     _edit_workouts(ctx, edits, recorder)
@@ -583,6 +618,7 @@ _HANDLERS: Dict[
     "sick_injured": _handle_sick_injured,
     "feeling_strong": _handle_feeling_strong,
     "missed_today": _handle_missed_today,
+    "ease_today": _handle_ease_today,
 }
 
 
@@ -617,7 +653,17 @@ class _SetEdit:
     workout_type: str
     reason: str
     intensity: str = "low"
+    key_workout_id: Optional[str] = None
+    # The moved session's plan_data card, copied before any edit runs, so the
+    # new day carries the same steps and prose rather than a bare distance.
+    card: Optional[Dict[str, Any]] = None
     kind: str = "set"
+
+
+def _card_copy(plan: TrainingPlan, week: int, day: int) -> Optional[Dict[str, Any]]:
+    _plan_data, _pd_week, pd_workout = parse_plan_data_lookups(plan)
+    card = pd_workout.get((week, day))
+    return copy.deepcopy(card) if card is not None else None
 
 
 def _ease_rest_of_week(
@@ -646,7 +692,7 @@ def _edit_workouts(
 
     plan = ctx.plan
     db = ctx.db
-    plan_data, pd_week, pd_workout = parse_plan_data_lookups(plan)
+    _plan_data, pd_week, pd_workout = parse_plan_data_lookups(plan)
     week_numbers = {wk for (wk, _day) in edits}
     weekly_plans = {
         wp.week_number: wp
@@ -661,10 +707,10 @@ def _edit_workouts(
         [wp.id for wp in weekly_plans.values()], db
     )
 
-    any_changed = False
+    pace_zones = pace_zones_for(plan)
+    changed_weeks: set[int] = set()
     for wk_num, weekly_plan in weekly_plans.items():
         workouts = workouts_by_week.get(weekly_plan.id, [])
-        week_changed = False
         for workout in workouts:
             edit = edits.get((wk_num, workout.day_of_week))
             if edit is None:
@@ -675,19 +721,13 @@ def _edit_workouts(
                 pd_workout.get((wk_num, workout.day_of_week)),
                 wk_num,
                 recorder,
+                pd_week=pd_week.get(wk_num) or {},
+                pace_zones=pace_zones,
             ):
-                week_changed = True
-                any_changed = True
-        if week_changed:
-            new_total = round(sum(w.distance_km or 0 for w in workouts), 1)
-            weekly_plan.total_km = new_total
-            if wk_num in pd_week:
-                pd_week[wk_num]["total_km"] = new_total
+                changed_weeks.add(wk_num)
 
-    plan.plan_data = plan_data
-    persist_json(plan, "plan_data")
-    if any_changed:
-        plan.adaptation_revision = (plan.adaptation_revision or 0) + 1
+    if changed_weeks:
+        finalize_plan_mutation(plan, db, week_numbers=changed_weeks)
 
 
 def _apply_single_edit(
@@ -696,6 +736,9 @@ def _apply_single_edit(
     pd_wo: Optional[Dict[str, Any]],
     week_number: int,
     recorder: List[Dict[str, Any]],
+    *,
+    pd_week: Optional[Dict[str, Any]] = None,
+    pace_zones: Optional[Dict[str, Any]] = None,
 ) -> bool:
     """Mutate one workout in place. Returns True if anything changed."""
     if workout.baseline_distance_km is None and workout.distance_km:
@@ -734,6 +777,14 @@ def _apply_single_edit(
     workout.notes = note
 
     if pd_wo is not None:
+        _rewrite_card(
+            workout,
+            edit,
+            pd_wo,
+            type_changed=new_type != old_type,
+            pd_week=pd_week or {},
+            pace_zones=pace_zones,
+        )
         pd_wo["distance"] = new_dist
         pd_wo["type"] = new_type
         pd_wo["intensity"] = new_intensity
@@ -752,6 +803,58 @@ def _apply_single_edit(
         }
     )
     return True
+
+
+def _rewrite_card(
+    workout: DailyWorkout,
+    edit: Any,
+    pd_wo: Dict[str, Any],
+    *,
+    type_changed: bool,
+    pd_week: Dict[str, Any],
+    pace_zones: Optional[Dict[str, Any]],
+) -> None:
+    """Make the card describe the session the edit actually leaves behind.
+
+    Distance changes on an unchanged session are left to the finalizer, which
+    rescales steps; this handles the cases where the *session itself* changes
+    — a rest day, a hard day eased to easy, a missed run moved elsewhere.
+    """
+    if edit.kind == "rest":
+        workout.key_workout_id = None
+        clear_session_payload(pd_wo)
+        pd_wo["description"] = edit.reason
+        return
+
+    if edit.kind == "set":
+        workout.key_workout_id = edit.key_workout_id
+        clear_session_payload(pd_wo)
+        if edit.card:
+            moved = copy.deepcopy(edit.card)
+            moved.pop("day", None)
+            moved.pop("id", None)
+            pd_wo.update(moved)
+        return
+
+    if not type_changed:
+        return
+    # A hard session eased to easy: its reps, key-workout overlay and prose
+    # describe the session that is no longer happening.
+    workout.key_workout_id = None
+    clear_session_payload(pd_wo)
+    new_type = str(workout.workout_type or "easy")
+    if new_type in WORKOUT_REGISTRY:
+        rebuilt = build_workout(
+            new_type,
+            day=int(workout.day_of_week),
+            distance=float(workout.distance_km or 0),
+            total_km=pd_week.get("total_km") or 0.0,
+            phase=pd_week.get("phase", "build"),
+            pace_zones=pace_zones,
+        )
+        pd_wo["steps"] = rebuilt.get("steps") or []
+        if rebuilt.get("description"):
+            pd_wo["description"] = rebuilt["description"]
 
 
 def _ramp_future_weeks(ctx: _IntentContext, recorder: List[Dict[str, Any]]) -> None:

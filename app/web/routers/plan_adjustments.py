@@ -17,13 +17,14 @@ from app.application.watch_sync_service import resync_plan_to_watch
 from app.contexts.plan.adaptation import AdaptationService, type_swapper
 from app.contexts.plan.adaptation.missed_week_handler import detect_missed_weeks
 from app.contexts.plan.plan_helpers import get_plan_or_404
-from app.contexts.plan.repositories import SQLAlchemyPlanRepository
-from app.contexts.plan.week_adjustment_service import apply_week_action
+from app.contexts.plan.week_adjustment_service import (
+    apply_week_action,
+    swap_week_days,
+)
 from app.contexts.runner.fitness.gap_analysis_service import GapAnalysisService
 from app.contexts.runner.fitness.readiness_service import ReadinessService
 from app.dependencies import get_current_user, get_db, get_intervals_service
 from app.models import TrainingPlan, User
-from app.utils import persist_json
 
 logger = logging.getLogger(__name__)
 
@@ -371,12 +372,14 @@ def apply_type_swap(
     plan_id: str,
     body: SwapTypeRequest,
     background_tasks: BackgroundTasks,
+    if_match: str | None = Header(default=None, alias="If-Match"),
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
     intervals_service=Depends(get_intervals_service),
 ):
     """Apply an accepted workout type swap to a specific workout."""
-    get_plan_or_404(plan_id, db, current_user, require_user_match=True)
+    training_plan = get_plan_or_404(plan_id, db, current_user, require_user_match=True)
+    _check_revision(training_plan, if_match)
     result = type_swapper.apply_swap(
         body.workout_id, plan_id, current_user.id, body.to_type, db
     )
@@ -402,44 +405,23 @@ def swap_plan_days(
     week_number: int,
     body: SwapDaysRequest,
     background_tasks: BackgroundTasks,
+    if_match: str | None = Header(default=None, alias="If-Match"),
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
     intervals_service=Depends(get_intervals_service),
 ):
     """Swap two workouts within the same week."""
-    from app.contexts.plan.plan_adjustments import swap_days
-
     training_plan = get_plan_or_404(plan_id, db, current_user, require_user_match=True)
-
+    _check_revision(training_plan, if_match)
     if body.source_day == body.target_day:
-        return {"ok": True}
+        return {
+            "ok": True,
+            "adaptation_revision": training_plan.adaptation_revision or 0,
+        }
 
-    plan_data = training_plan.plan_data if training_plan.plan_data else []
-    week_data = next((w for w in plan_data if w.get("week") == week_number), None)
-    if not week_data:
-        raise HTTPException(status_code=404, detail="Week not found in plan")
-
-    plan_data = swap_days(plan_data, week_number, body.source_day, body.target_day)
-
-    plan_repo = SQLAlchemyPlanRepository(db)
-    weekly_plan = plan_repo.get_weekly_plan(plan_id, week_number)
-    if weekly_plan:
-        db_workouts = plan_repo.list_daily_workouts(weekly_plan.id)
-        src_db = next(
-            (wo for wo in db_workouts if wo.day_of_week == body.source_day), None
-        )
-        tgt_db = next(
-            (wo for wo in db_workouts if wo.day_of_week == body.target_day), None
-        )
-        if src_db and tgt_db:
-            src_db.day_of_week, tgt_db.day_of_week = (
-                tgt_db.day_of_week,
-                src_db.day_of_week,
-            )
-
-    training_plan.plan_data = plan_data
-    persist_json(training_plan, "plan_data")
+    payload = swap_week_days(
+        training_plan, week_number, body.source_day, body.target_day, db
+    )
     db.commit()
     _resync_watch(background_tasks, plan_id, current_user.id, intervals_service)
-
-    return {"ok": True}
+    return {"ok": True, **payload}

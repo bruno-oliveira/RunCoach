@@ -7,6 +7,11 @@ module only filters by workout type and weights by recency.
 
 from typing import List, Optional
 
+from app.core.training.adaptation.thresholds import (
+    PACE_FAST_DEVIATION,
+    PACE_SLOW_DEVIATION,
+)
+
 
 def pattern_feedback(run_log, candidate_runs: List) -> Optional[str]:
     """Detect repeated pace patterns with 14-day-half-life recency weighting.
@@ -53,11 +58,11 @@ def pattern_feedback(run_log, candidate_runs: List) -> Optional[str]:
         deviation = (r.avg_pace_min_km - r.planned_pace_min_km) / r.planned_pace_min_km
 
         total_weight += weight
-        if deviation < -0.05:
+        if deviation < PACE_FAST_DEVIATION:
             weighted_fast += weight
             streak_fast += 1
             streak_slow = 0
-        elif deviation > 0.08:
+        elif deviation > PACE_SLOW_DEVIATION:
             weighted_slow += weight
             streak_fast = 0
             streak_slow += 1

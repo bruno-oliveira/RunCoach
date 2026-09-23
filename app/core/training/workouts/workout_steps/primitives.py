@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from contextlib import contextmanager
 from contextvars import ContextVar
-from typing import Any, Dict, Iterator, Optional
+from typing import Any, Dict, Iterator, List, Optional
 
 from app.utils import format_km
 
@@ -65,6 +65,38 @@ def _pace_str(zone_key: Optional[str], pace_zones: Optional[Dict]) -> Optional[s
     if not pace_zones or not zone_key or zone_key not in pace_zones:
         return None
     return pace_zones[zone_key].get("pace_str")
+
+
+def repace_steps(
+    steps: List[Dict[str, Any]],
+    old_zones: Optional[Dict],
+    new_zones: Optional[Dict],
+) -> int:
+    """Move zone-derived step paces from ``old_zones`` onto ``new_zones``.
+
+    Steps are what the watch executes, so a fitness recalibration that only
+    rewrote the card's headline pace left every rep targeting the old paces.
+    A step is re-paced only when its current pace is exactly the one the old
+    zone would have injected: a pace set from something else (a backyard
+    loop budget, a goal race pace) was never zone-derived and must stay.
+
+    Returns:
+        How many steps changed. Mutates ``steps`` in place.
+    """
+    if not steps or not old_zones or not new_zones:
+        return 0
+    changed = 0
+    for step in steps:
+        zone = step.get("pace_zone")
+        current = step.get("pace_str")
+        if not zone or not current:
+            continue
+        before = _pace_str(zone, old_zones)
+        after = _pace_str(zone, new_zones)
+        if before and after and current == before and after != current:
+            step["pace_str"] = after
+            changed += 1
+    return changed
 
 
 def _step(

@@ -261,12 +261,9 @@
     /* ------------------------------------------------------------------ */
     /*  Workout-type distribution                                          */
     /* ------------------------------------------------------------------ */
-    AD.WORKOUT_MIX_COLORS = {
-        easy: '#0D9488', recovery: '#5EEAD4', long: '#1D4ED8', tempo: '#F59E0B',
-        threshold: '#F59E0B', interval: '#EF4444', vo2max: '#EF4444',
-        fartlek: '#7C3AED', hill: '#B45309', race_pace: '#DB2777', race: '#DB2777',
-        run_walk: '#0D9488',
-    };
+    // Colours come from the shared type registry (ui/workout_types.js), so the
+    // mix bar uses the same palette as the plan's day dots.
+    const typeColor = (t) => (window.RCWorkoutTypes ? window.RCWorkoutTypes.color(t) : '#A09A93');
 
     AD.renderWorkoutMix = function() {
         const el = document.getElementById('workoutMix');
@@ -286,12 +283,12 @@
         const ordered = Object.entries(counts).sort((a, b) => b[1] - a[1]);
         const seg = ordered.map(([t, n]) => {
             const pct = (n / total) * 100;
-            const color = this.WORKOUT_MIX_COLORS[t] || '#A09A93';
+            const color = typeColor(t);
             return `<span class="workout-mix-seg" style="width:${pct}%;background:${color}" title="${this._esc(t)}: ${n}"></span>`;
         }).join('');
         const legend = ordered.map(([t, n]) => {
             const pct = Math.round((n / total) * 100);
-            const color = this.WORKOUT_MIX_COLORS[t] || '#A09A93';
+            const color = typeColor(t);
             const label = t.charAt(0).toUpperCase() + t.slice(1).replace(/_/g, ' ');
             return (
                 '<div class="workout-mix-legend-row">' +

@@ -13,11 +13,6 @@
     AD.todayLoadedPlanId = undefined;
     AD.coachNoteLoadedPlanId = undefined;
 
-    const WORKOUT_ICONS = {
-        easy: '🟢', recovery: '🟢', long: '🔵', tempo: '🟠', threshold: '🟠',
-        interval: '🔴', vo2max: '🔴', fartlek: '🟣', hill: '⛰️', race_pace: '🏁',
-        race: '🏁', run_walk: '🟢', rest: '😴', strength: '💪',
-    };
 
     const STATUS_GLYPH = {
         done: '✓', today: '→', missed: '✗', upcoming: '', rest: '·',
@@ -165,7 +160,7 @@
             return;
         }
 
-        const icon = WORKOUT_ICONS[w.workout_type] || '🏃';
+        const icon = window.RCWorkoutTypes ? window.RCWorkoutTypes.icon(w.workout_type) : '🏃';
         const type = this._titleCase((w.workout_type || '').replace(/_/g, ' '));
         const dist = w.distance_km > 0 ? `${w.distance_km.toFixed(1)} km` : '';
         const dur = w.duration_min ? `≈ ${w.duration_min} min` : '';

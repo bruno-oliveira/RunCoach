@@ -248,9 +248,12 @@
    dot only — rows are flat, no fills or borders. */
 .workout-item.easy::before,
 .workout-item.run_walk::before,
+.workout-item.warmup::before,
+.workout-item.cooldown::before,
 .workout-item.main::before { background: var(--wt-easy); }
 .workout-item.recovery::before { background: var(--wt-recovery); }
 .workout-item.tempo::before,
+.workout-item.threshold::before,
 .workout-item.cruise_interval::before,
 .workout-item.race_pace::before { background: var(--wt-tempo); }
 .workout-item.interval::before,
@@ -259,7 +262,9 @@
 .workout-item.vo2max_ladder::before,
 .workout-item.time_trial::before { background: var(--wt-interval); }
 .workout-item.hill::before { background: var(--wt-hill); }
-.workout-item.long::before { background: var(--wt-long); }
+.workout-item.long::before,
+.workout-item.medium_long::before { background: var(--wt-long); }
+.workout-item.race::before { background: var(--wt-race); }
 .workout-item.rest::before { background: transparent; box-shadow: inset 0 0 0 1px var(--color-border); }
 .workout-item.strength::before { background: var(--wt-strength); }
 
