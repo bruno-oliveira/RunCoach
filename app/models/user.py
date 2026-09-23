@@ -25,6 +25,9 @@ class User(Base):
         nullable=True,
     )
     plans_generated = Column(Integer, default=0)
+    # Last IANA timezone the runner's browser reported. Requests carry their
+    # own zone; this is for the scheduled jobs, which have no browser to ask.
+    timezone = Column(String(64), nullable=True)
     age = Column(Integer, nullable=True)
     # Optional max heart rate (BPM). When set it anchors the top of the HR
     # zones directly; otherwise we detect it from run data, then fall back to an

@@ -15,10 +15,10 @@ from app.contexts.plan.repositories import SQLAlchemyPlanRepository
 from app.core.training.periodization.plan_calendar import compute_current_week
 from app.core.training.workouts.workout_registry import WORKOUT_REGISTRY
 from app.models import DailyWorkout, RunLog, WeeklyPlan
-from app.utils import persist_json
 from app.utils import to_date as _to_date
 
 from ._helpers import today_date
+from .finalize import clear_session_payload, finalize_plan_mutation
 from .reconcile import pace_zones_for, rebuild_plain_quality
 
 logger = logging.getLogger(__name__)
@@ -229,15 +229,21 @@ def apply_swap(
     if not training_plan:
         return None
 
+    # Scoped to this plan: the plan's ownership was checked by the caller, so
+    # an id lookup alone would let one runner rewrite another runner's day.
     workout = (
         db.query(DailyWorkout)
+        .join(WeeklyPlan, DailyWorkout.weekly_plan_id == WeeklyPlan.id)
         .filter(
             DailyWorkout.id == workout_id,
+            WeeklyPlan.training_plan_id == training_plan.id,
         )
         .first()
     )
     if not workout:
         return None
+    if workout.workout_type == "race" or to_type == "race":
+        return {"swapped": False, "reason": "Race day can't be swapped."}
 
     if training_plan.training_terrain == "flat" and to_type == "hill":
         return {
@@ -247,6 +253,8 @@ def apply_swap(
 
     old_type = workout.workout_type
     workout.workout_type = to_type
+    # A different session is no longer the curated key workout it replaced.
+    workout.key_workout_id = None
 
     # Update description to reflect the swap
     swap_note = f"(Swapped from {old_type}: coach suggestion)"
@@ -267,6 +275,7 @@ def apply_swap(
                     if w.get("day") != workout.day_of_week:
                         continue
                     w["type"] = to_type
+                    clear_session_payload(w)
                     if to_type in WORKOUT_REGISTRY:
                         # Regenerate structured steps/description/distance for
                         # the new type so the card stays in lockstep.
@@ -290,10 +299,9 @@ def apply_swap(
                         w["description"] = workout.notes
                     break
             training_plan.plan_data = plan_data
-            # In-place JSON mutation + same-reference reassignment is not
-            # flagged dirty by SQLAlchemy; force the column to persist (same
-            # pattern as the adjustment/recalibration flows).
-            persist_json(training_plan, "plan_data")
+            finalize_plan_mutation(
+                training_plan, db, week_numbers=[week_plan.week_number]
+            )
     except Exception as e:
         logger.warning("Failed to update plan_data JSON for type swap: %s", e)
 

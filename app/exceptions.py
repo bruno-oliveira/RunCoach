@@ -16,6 +16,18 @@ class ValidationException(RunCoachException):
     pass
 
 
+class NotFoundException(RunCoachException):
+    """The thing a request names (a plan week, a workout) does not exist."""
+
+    pass
+
+
+class ConflictException(RunCoachException):
+    """The request is well-formed but would leave the plan inconsistent."""
+
+    pass
+
+
 class UnrealisticGoalException(ValidationException):
     """Exception when training goals are unrealistic."""
 

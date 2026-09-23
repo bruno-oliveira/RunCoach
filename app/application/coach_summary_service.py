@@ -24,6 +24,7 @@ from app.contexts.runner.fitness.coaching_data import fetch_pattern_candidates
 from app.contexts.runner.fitness.readiness_service import ReadinessService
 from app.core.coaching.pattern_analyzer import pattern_feedback
 from app.core.time_utils import local_today
+from app.core.training.adaptation.thresholds import HOLD_DEADBAND
 from app.core.training.periodization.plan_calendar import compute_current_week
 from app.models import RunLog, TrainingPlan
 from app.utils import to_date as _to_date
@@ -32,9 +33,9 @@ from app.utils import to_date as _to_date
 # the plan's start_date (conventionally a Monday).
 _DAY_NAMES = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
 
-# Dead-zone around 1.0 below which an adjustment is treated as "hold" — mirrors
-# the ±2% hysteresis the recommendation evaluator uses.
-_HOLD_BAND = 0.02
+# Dead-zone around 1.0 below which an adjustment is treated as "hold" — the
+# engine's own dead-zone, so the summary never labels a change it held.
+_HOLD_BAND = HOLD_DEADBAND
 
 _EVENT_LABELS = {
     "adjust": "Plan adjusted",

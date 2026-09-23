@@ -7,9 +7,15 @@ from typing import Any, Dict, Optional
 
 from sqlalchemy.orm import Session
 
+from app.core.training.adaptation.thresholds import (
+    PACE_FAST_DEVIATION,
+    PACE_SLOW_DEVIATION,
+)
 from app.core.training.periodization.plan_calendar import compute_current_week
 from app.core.training.physiology.vdot_calculator import VDOTCalculator
+from app.core.training.workouts.workout_steps import repace_steps
 from app.models import RunLog, TrainingPlan
+from app.utils import persist_json
 from app.utils import to_date as _to_date
 
 from ._helpers import parse_plan_data_lookups, today_date
@@ -26,8 +32,8 @@ _VDOT_RECALIBRATION_THRESHOLD = 1.0
 # "slower" band is wider and its VDOT sensitivity gentler.
 _PACE_HIT_MIN_SAMPLE = 4
 _PACE_HIT_LOOKBACK_WEEKS = 6
-_PACE_HIT_FAST_DEV = -0.05
-_PACE_HIT_SLOW_DEV = 0.08
+_PACE_HIT_FAST_DEV = PACE_FAST_DEVIATION
+_PACE_HIT_SLOW_DEV = PACE_SLOW_DEVIATION
 _PACE_HIT_FAST_SENSITIVITY = 20.0
 _PACE_HIT_SLOW_SENSITIVITY = 12.0
 _PACE_HIT_MAX_DELTA = 2.0
@@ -149,6 +155,10 @@ def recalibrate_zones_only(
         if week_num < current_week:
             continue
 
+        # The watch runs the steps, not the card: without this the page said
+        # "paces updated" while every rep still targeted the old zones.
+        pace_updates += repace_steps(workout.get("steps") or [], old_zones, new_zones)
+
         if workout.get("target_pace") and old_zones:
             zone = workout.get("zone", "")
             zone_map = {
@@ -190,6 +200,10 @@ def recalibrate_zones_only(
         return None
 
     training_plan.plan_data = plan_data
+    persist_json(training_plan, "plan_data")
+    # Paces changed, so the watch mirror's content hashes will too; bump the
+    # revision so an open page doesn't apply a stale edit on top.
+    training_plan.adaptation_revision = (training_plan.adaptation_revision or 0) + 1
     old_vdot = training_plan.vdot
     training_plan.vdot = round(current_vdot, 1)
 

@@ -256,3 +256,15 @@ class AuthService:
                 return
         user.last_activity = now
         db.commit()
+
+    def remember_timezone(
+        self, db: Session, user: User, tz_name: Optional[str]
+    ) -> None:
+        """Store the browser's timezone so scheduled jobs can use it.
+
+        Only writes when it changed, so the steady state costs nothing.
+        """
+        if not tz_name or user.timezone == tz_name:
+            return
+        user.timezone = tz_name
+        db.commit()

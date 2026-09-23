@@ -17,6 +17,8 @@ from typing import Any, Dict, Optional
 from sqlalchemy.orm import Session
 
 from app.contexts.plan.adaptation import AdaptationService
+from app.core.time_utils import local_today
+from app.core.training.adaptation.thresholds import AUTO_ADJUST_MIN_DELTA
 from app.models import TrainingPlan
 from app.models.user import User
 from app.utils import to_date as _to_date
@@ -27,7 +29,7 @@ logger = logging.getLogger(__name__)
 # HOLD_DEADBAND (0.05).  This secondary gate exists for the overreach path,
 # where the deadband is bypassed — a 2% overreach tweak applied silently would
 # churn the plan without any noticeable coaching signal.
-_AUTO_ADJUST_MIN_DELTA = 0.03
+_AUTO_ADJUST_MIN_DELTA = AUTO_ADJUST_MIN_DELTA
 
 # A manual intent ("feeling tired", "feeling strong", …) sets the direction
 # the runner chose; the ambient engine should not override it immediately.
@@ -43,7 +45,7 @@ def auto_map_and_adjust(
 
     Returns a list of per-plan result dicts suitable for the sync response.
     """
-    today = datetime.now(timezone.utc).date()
+    today = local_today()
 
     active_plans = (
         db.query(TrainingPlan)

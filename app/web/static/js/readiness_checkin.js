@@ -211,9 +211,17 @@
                 (drivers.length
                     ? `<div class="rc-drivers">${drivers.map((d) => `<span class="rc-driver">${this._esc(d)}</span>`).join('')}</div>`
                     : '') +
+                (this._canEaseToday(checkin)
+                    ? '<button type="button" class="rc-edit rc-ease" id="rcEaseToday">Ease today\'s run</button>'
+                    : '') +
                 '<button type="button" class="rc-edit" id="rcEdit">Update check-in</button>' +
                 (justSaved ? '<span class="rc-saved" role="status">Saved ✓</span>' : '') +
                 '</div>';
+
+            const ease = document.getElementById('rcEaseToday');
+            if (ease) ease.onclick = () => window.PlanInlineAdapt.applyIntent(
+                'ease_today', {}, { planId: this.planId, button: ease }
+            );
 
             const edit = document.getElementById('rcEdit');
             if (edit) edit.onclick = () => this._renderForm({
@@ -223,6 +231,13 @@
                 soreness: checkin.soreness,
                 stress: checkin.stress,
             });
+        },
+
+        /* A rough morning gets a one-tap way to act on it — the same intent
+           flow (in-place morph + Undo) as Adjust my plan, scoped to today. */
+        _canEaseToday(checkin) {
+            const low = checkin.band === 'run_down' || checkin.band === 'depleted';
+            return low && !!this.planId && !!window.PlanInlineAdapt;
         },
 
         /* One line under the verdict. Two constraints, both learned by putting

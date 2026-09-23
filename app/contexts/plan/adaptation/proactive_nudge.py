@@ -39,6 +39,7 @@ from sqlalchemy.orm import Session
 
 from app.contexts.plan.repositories import SQLAlchemyPlanRepository
 from app.core.coaching.readiness_checkin import ReadinessAssessment, score_checkin
+from app.core.training.adaptation.thresholds import HOLD_DEADBAND
 from app.models import DailyWorkout, ReadinessLog, TrainingPlan
 
 from ._helpers import today_date
@@ -59,8 +60,10 @@ logger = logging.getLogger(__name__)
 #                       (same pace, higher HR — running hot / fatigued).
 #   _MIN_COMPLETION     only bump runners who are genuinely hitting sessions.
 #   _MISSED_COMPLETION  weighted completion at/below this reads as "skipping".
-_MULTIPLIER_MIN = 1.04
-_MULTIPLIER_REDUCE = 0.97
+# Derived from the engine's hold band: a nudge offers a move only when the
+# engine itself would make one.
+_MULTIPLIER_MIN = 1.0 + HOLD_DEADBAND
+_MULTIPLIER_REDUCE = 1.0 - HOLD_DEADBAND
 _HR_DRIFT_BELOW = -0.5
 _HR_DRIFT_ABOVE = 0.5
 _MIN_COMPLETION = 0.6
@@ -208,7 +211,7 @@ def _detect_low_readiness(
             _bucket(readiness.score),
             len(remaining_hard),
         ),
-        "headline": "Rough morning — ease today",
+        "headline": "Rough morning — ease off this week",
         "detail": (
             f"{reason} With a hard session still on the plan this week, forcing "
             "it now risks more than it builds. Want to ease the rest of this "

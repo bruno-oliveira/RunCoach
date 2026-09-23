@@ -460,7 +460,7 @@
                 : '';
             
             return `
-                <div class="recipe-card ${isFavorite ? 'favorited-card' : ''}" data-recipe-name="${recipe.name}" onclick="goToRecipeDetail('${recipe.name.replace(/'/g, "\\'").replace(/ /g, '-')}')">
+                <div class="recipe-card ${isFavorite ? 'favorited-card' : ''}" data-recipe-name="${recipe.name}" role="link" tabindex="0" onclick="goToRecipeDetail('${recipe.name.replace(/'/g, "\\'").replace(/ /g, '-')}')" onkeydown="if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); this.click(); }">
                     <div class="recipe-header">
                         <div class="meal-type-badge">${getMealTypeEmoji(recipe.meal_type)} ${recipe.meal_type}</div>
                         ${favoriteBtn}

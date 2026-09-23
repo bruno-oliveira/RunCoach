@@ -14,6 +14,8 @@ Values are unchanged from their previous in-module definitions; this is a
 relocation, not a re-tuning.
 """
 
+from app.core.training.adaptation import thresholds as _thresholds
+
 # =============================================================================
 # Signal weighting (see signal_computer.py)
 # =============================================================================
@@ -71,7 +73,7 @@ HYSTERESIS_BAND = 0.05
 # missed easy run quietly rewrote the whole plan. Treating small moves as "stay
 # the course" keeps isolated blips from rippling, while real, sustained
 # deviations (which push the multiplier well past the band) still adjust the plan.
-HOLD_DEADBAND = 0.05
+HOLD_DEADBAND = _thresholds.HOLD_DEADBAND
 
 # =============================================================================
 # Overreach + training-load clamps (see signal_computer._apply_clamps)

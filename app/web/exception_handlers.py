@@ -14,7 +14,9 @@ from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 
 from app.exceptions import (
+    ConflictException,
     DatabaseException,
+    NotFoundException,
     PlanGenerationException,
     RunCoachException,
     UnverifiedEmailException,
@@ -28,6 +30,10 @@ def _status_for(exc: RunCoachException) -> int:
     """Map a domain exception to an HTTP status code."""
     if isinstance(exc, UnverifiedEmailException):
         return 403
+    if isinstance(exc, NotFoundException):
+        return 404
+    if isinstance(exc, ConflictException):
+        return 409
     if isinstance(exc, ValidationException):
         return 400
     if isinstance(exc, (DatabaseException, PlanGenerationException)):

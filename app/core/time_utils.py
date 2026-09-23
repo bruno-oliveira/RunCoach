@@ -17,9 +17,10 @@ Outside a request (scripts, startup tasks, tests that don't set a tz) it falls
 back to UTC, matching the previous server-clock behaviour.
 """
 
+from contextlib import contextmanager
 from contextvars import ContextVar, Token
 from datetime import date, datetime, timezone
-from typing import Optional
+from typing import Iterator, Optional
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 _MAX_TZ_NAME_LEN = 64
@@ -71,3 +72,24 @@ def local_today() -> date:
     training week, today's workout, readiness log dates, adherence windows.
     """
     return local_now().date()
+
+
+def current_timezone_name() -> Optional[str]:
+    """IANA name of the timezone bound to this context, if one was sent."""
+    tz = _request_tz.get()
+    return tz.key if tz is not None else None
+
+
+@contextmanager
+def use_timezone(name: Optional[str]) -> Iterator[None]:
+    """Bind a stored timezone outside a request (scheduled jobs, scripts).
+
+    Background sweeps have no browser to ask, so they bind each runner's
+    last-seen zone (``User.timezone``) around that runner's work — otherwise
+    "today" in the adaptive engine and the nudge guards is UTC's today.
+    """
+    token = set_request_timezone(name)
+    try:
+        yield
+    finally:
+        reset_request_timezone(token)

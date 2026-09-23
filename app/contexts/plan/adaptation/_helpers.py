@@ -1,11 +1,12 @@
 """Shared helpers for the adaptation sub-package."""
 
 from collections import defaultdict
-from datetime import date, datetime, timedelta, timezone
+from datetime import date, datetime, timedelta
 from typing import Dict, List, Tuple
 
 from sqlalchemy.orm import Session
 
+from app.core.time_utils import local_today
 from app.core.training.adaptation.baseline_recovery import (
     ANNOTATION_RE,
     parse_adjustment_multiplier,
@@ -19,9 +20,14 @@ from app.models import DailyWorkout, RunLog, TrainingPlan, WeeklyPlan
 _ = ANNOTATION_RE  # re-export marker
 
 
-def today_date():
-    """Return today's date in UTC, timezone-naive (for SQLite compat)."""
-    return datetime.now(timezone.utc).replace(tzinfo=None).date()
+def today_date() -> date:
+    """Today as the runner experiences it.
+
+    Was UTC's today, which put "current week", "missed today" and the
+    time-off window a day off around midnight for anyone not on UTC. Requests
+    bind the browser's zone; scheduled jobs bind ``User.timezone``.
+    """
+    return local_today()
 
 
 def backfill_baselines(training_plan: TrainingPlan, db: Session) -> None:

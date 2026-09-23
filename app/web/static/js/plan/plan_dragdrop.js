@@ -22,7 +22,16 @@
         });
     }
 
+    function isRaceCard(el) {
+        return el.classList.contains('race');
+    }
+
     function handleDragStart(e) {
+        // Race day is fixed; the server refuses the swap too.
+        if (isRaceCard(this)) {
+            e.preventDefault();
+            return;
+        }
         dragSource = this;
         e.dataTransfer.effectAllowed = 'move';
         e.dataTransfer.setData('text/plain', ''); // required for Firefox
@@ -40,6 +49,7 @@
     function handleDragOver(e) {
         if (!dragSource || dragSource === this) return;
         if (dragSource.dataset.weekNum !== this.dataset.weekNum) return;
+        if (isRaceCard(this)) return;
         e.preventDefault();
         e.dataTransfer.dropEffect = 'move';
         this.classList.add('drag-over');
@@ -67,24 +77,35 @@
         var targetDay = parseInt(this.dataset.dayNum);
         var target = this;
 
+        var headers = window.authHeaders({ 'Content-Type': 'application/json' });
+        if (typeof window.APP_CTX.adaptation_revision === 'number') {
+            headers['If-Match'] = String(window.APP_CTX.adaptation_revision);
+        }
+
         try {
             var resp = await fetch(
                 '/api/plan/' + planId + '/week/' + weekNum + '/swap-days',
                 {
                     method: 'POST',
-                    headers: window.authHeaders({ 'Content-Type': 'application/json' }),
+                    headers: headers,
                     credentials: 'same-origin',
                     body: JSON.stringify({ source_day: sourceDay, target_day: targetDay })
                 }
             );
 
+            var payload = await resp.json().catch(function () { return {}; });
             if (!resp.ok) {
-                var err = await resp.json().catch(function () { return {}; });
-                ApiClient.showError(err.detail || 'Failed to swap workouts.');
+                var detail = payload.detail;
+                if (detail && typeof detail === 'object') detail = detail.message;
+                ApiClient.showError(detail || 'Failed to swap workouts.');
                 return;
             }
 
             swapWorkoutDomElements(source, target);
+            if (typeof payload.adaptation_revision === 'number') {
+                window.APP_CTX.adaptation_revision = payload.adaptation_revision;
+            }
+            if (payload.warning) ApiClient.showWarning(payload.warning);
         } catch (err) {
             ApiClient.showError('Error: ' + err.message);
         }

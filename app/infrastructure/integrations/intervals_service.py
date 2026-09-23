@@ -3,7 +3,7 @@
 import logging
 import time
 from datetime import datetime, timezone
-from typing import Any
+from typing import Any, Optional
 from urllib.parse import urlencode
 
 import httpx
@@ -41,9 +41,25 @@ ACTIVITY_FIELDS = ",".join(
         "max_heartrate",
         "average_cadence",
         "total_elevation_gain",
+        "icu_rpe",
         "source",
     )
 )
+
+
+def _rpe_from_activity(activity: dict[str, Any]) -> Optional[int]:
+    """Intervals' 1–10 session RPE, when the runner (or their watch) set one.
+
+    The adaptive engine weighs perceived effort heavily (overreach clamps fire
+    on it), but only manually logged runs ever carried it — so for imported
+    runs, i.e. nearly all of them, that signal was silently absent.
+    """
+    raw = activity.get("icu_rpe")
+    try:
+        value = int(round(float(raw)))
+    except (TypeError, ValueError):
+        return None
+    return value if 1 <= value <= 10 else None
 
 
 class IntervalsAuthorizationError(RuntimeError):
@@ -428,6 +444,7 @@ class IntervalsService:
                 if activity.get("total_elevation_gain") is not None
                 else None
             ),
+            perceived_effort=_rpe_from_activity(activity),
             workout_type=None,
             notes=activity.get("name"),
         )
