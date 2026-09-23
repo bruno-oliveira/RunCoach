@@ -100,10 +100,11 @@ def resolve_low_budget_quality(
     blocks in half/marathon base weeks — a session that costs a quality day yet
     delivers no threshold adaptation. Flooring to the lighter base dose keeps
     the slot worth running while staying introductory, rather than the
-    build-grade ~20-min effort the full dose would produce. The taper sharpener
-    is kept short — never floored up — but a token sliver that the week is too
-    small to support is demoted to easy so tiny / low-volume taper weeks don't
-    carry a malformed sub-floor session (audit G2).
+    build-grade ~20-min effort the full dose would produce. A taper sharpener
+    may begin as a compact 1.5 km allocation; the final cleanup demotes it when
+    it remains sub-viable on an ordinary taper week, while race-week assembly
+    can combine it with the pre-race budget and promote it to an executable
+    2.5 km sharpener.
     """
     if phase not in ("base", "build", "peak", "taper"):
         return
@@ -141,10 +142,22 @@ def resolve_low_budget_quality(
             continue  # already a meaningful dose
 
         if phase == "taper":
-            # Keep the short sharpener as-is, but demote a token sliver the
-            # week can't support back to easy (no flooring — sharpeners stay
-            # short).
-            if budget < _QUALITY_DEMOTE_THRESHOLD_KM:
+            # A taper's one sharpener is part of the phase contract, especially
+            # for short races. Give a token percentage-budget sliver the
+            # compact allocation needed to preserve the slot through race-week
+            # assembly instead of silently turning every short-race taper
+            # entirely aerobic.
+            taper_floor = round(
+                min(
+                    _QUALITY_DEMOTE_THRESHOLD_KM,
+                    phys_caps.get(qtype, ceiling),
+                    ceiling,
+                ),
+                1,
+            )
+            if taper_floor >= 1.0:
+                quality_distances[qtype] = max(budget, taper_floor)
+            else:
                 distribution[qtype] -= 1
                 distribution["easy"] = distribution.get("easy", 0) + 1
                 quality_distances.pop(qtype, None)

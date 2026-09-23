@@ -16,7 +16,11 @@ import logging
 from typing import Any, Dict, List, Optional
 
 from app.contexts.plan.generators.beginner_plan_generator import BeginnerPlanGenerator
-from app.contexts.plan.generators.plan_structure_guard import check_plan_structure
+from app.contexts.plan.generators.plan_finalizer import (
+    finalize_plan,
+    reconcile_card_distances,
+    refresh_plan_fields,
+)
 from app.contexts.plan.generators.weekly_plan_builder import (
     attach_duration_hints,
     build_weekly_plan,
@@ -234,6 +238,8 @@ class TrainingPlanGenerator:
         progressive ladder of loop simulations and the plan closes on the
         goal loop count instead of on a distance.
         """
+        self.last_generation_adjustments: List[Dict[str, Any]] = []
+
         # Back-compat: synthesize a TrailProfile for legacy 30 km callers.
         if trail_profile is None and target_distance == TRAIL_SENTINEL_KM:
             elev = 200.0 if terrain == "flat" else 1000.0
@@ -244,9 +250,14 @@ class TrainingPlanGenerator:
         if current_km == 0:
             if target_distance in [5.0, 10.0]:
                 beginner_generator = BeginnerPlanGenerator()
-                return beginner_generator.generate_plan(
+                beginner_plan = beginner_generator.generate_plan(
                     target_distance, weeks, max_runs_per_week
                 )
+                self.last_requested_runs_per_week = max_runs_per_week
+                self.last_resolved_runs_per_week = (
+                    beginner_generator.last_resolved_runs_per_week
+                )
+                return beginner_plan
             raise ZeroMileageUnsupportedException(
                 f"A {target_distance} km race requires an existing running base. "
                 "Please start with a 5K or 10K beginner plan to build your fitness first.",
@@ -380,6 +391,7 @@ class TrainingPlanGenerator:
         # — so a caller (or the web layer) can tell the runner the plan carries
         # fewer running days than they asked for instead of silently under-
         # delivering the requested schedule (audit G8).
+        self.last_requested_runs_per_week = max_runs_per_week
         resolved_runs = _viable_run_frequency(current_km, max_runs_per_week)
         if resolved_runs < max_runs_per_week:
             logger.warning(
@@ -541,7 +553,7 @@ class TrainingPlanGenerator:
                     flexible = [
                         w
                         for w in weekly_plan["daily_workouts"]
-                        if w.get("type") in ("easy", "long")
+                        if w.get("type") in ("easy", "long", "medium_long")
                         and not _is_prescriptive(w)
                         and w.get("distance", 0) > 0
                     ]
@@ -712,6 +724,55 @@ class TrainingPlanGenerator:
                 1,
             )
 
+            # Trail weeks can lose a small amount when the final quality/long
+            # relationship is clamped. Return that released volume to the
+            # non-prescriptive aerobic slots while respecting both the weekly
+            # ramp ceiling and the long-run anchor. Without this transfer, the
+            # same 30 km trail target delivered 31.7 km at four runs but only
+            # 30.7 km at five — offering another day reduced the prescription.
+            if (
+                trail_profile is not None
+                and backyard_profile is None
+                and not is_recovery
+            ):
+                refill_ceiling = (
+                    actual_high_water * mileage_progression.WEEK_OVER_WEEK_CAP
+                    if actual_high_water > 0
+                    else week_km
+                )
+                refill_target = min(week_km, refill_ceiling)
+                deficit = refill_target - weekly_plan["total_km"]
+                long_distance = max(
+                    (
+                        w.get("distance", 0) or 0
+                        for w in weekly_plan["daily_workouts"]
+                        if w.get("type") == "long"
+                    ),
+                    default=0.0,
+                )
+                receivers = [
+                    w
+                    for w in weekly_plan["daily_workouts"]
+                    if w.get("type") in ("easy", "medium_long")
+                    and not _is_prescriptive(w)
+                    and 0 < (w.get("distance") or 0) < long_distance
+                ]
+                headrooms = [long_distance - w["distance"] for w in receivers]
+                total_headroom = sum(headrooms)
+                if deficit > 0.05 and total_headroom > 0:
+                    for workout, headroom in zip(receivers, headrooms):
+                        addition = min(headroom, deficit * headroom / total_headroom)
+                        _set_distance(
+                            workout, workout["distance"] + addition, pace_zones
+                        )
+                    weekly_plan["total_km"] = round(
+                        sum(
+                            w.get("distance", 0) or 0
+                            for w in weekly_plan["daily_workouts"]
+                        ),
+                        1,
+                    )
+
             # Week-level scaling above can move a workout across the 3 km
             # display boundary; refresh duration hints from final distances.
             for w in weekly_plan["daily_workouts"]:
@@ -757,12 +818,65 @@ class TrainingPlanGenerator:
                 max_runs=max_runs_per_week,
             )
 
+        # Reconcile executable steps and card budgets before deriving the
+        # delivered peak and race-aware targets.
+        reconcile_card_distances(training_plan)
+        refresh_plan_fields(training_plan)
+
+        # Stamp each week's modelled target onto the week dict (audit G2).
+        # The periodisation model deliberately budgets race week as a taper
+        # week *excluding* the race — but the rendered week's ``total_km``
+        # includes the race card, so any surface comparing target vs delivered
+        # saw a phantom ~2x overshoot on the most psychologically loaded week
+        # (a marathon taper target of 24 km against 49 km rendered). The race
+        # week's stamped target is therefore the final race-week card total,
+        # so every reader of ``weekly_target_km`` compares like with like.
+        final_targets: List[float] = []
+        for i, weekly_plan in enumerate(training_plan):
+            if weekly_plan.get("is_race_week"):
+                # Frequency/coherence caps may intentionally keep less than
+                # the aspirational pre-race share. Stamp the final cards so the
+                # stored target and delivered race week compare like with like.
+                target = sum(
+                    workout.get("distance", 0) or 0
+                    for workout in weekly_plan.get("daily_workouts", [])
+                )
+            else:
+                target = weekly_progression[i] if i < len(weekly_progression) else 0.0
+            final_targets.append(round(target, 1))
+
+        # Recompute every derived field and validation verdict from the fully
+        # mutated output, then run the same structural guard over what will be
+        # persisted/exported.  No intermediate builder verdict survives here.
+        issues = finalize_plan(training_plan, final_targets)
+
+        delivered_peak = max(
+            (
+                week.get("training_km", 0) or 0
+                for week in training_plan
+                if not week.get("is_recovery") and not week.get("is_race_week")
+            ),
+            default=0.0,
+        )
+        if current_km > 0 and delivered_peak < current_km * 0.90:
+            adjustment = {
+                "code": "frequency_volume_cap",
+                "requested_base_km": round(current_km, 1),
+                "delivered_peak_km": round(delivered_peak, 1),
+                "resolved_runs_per_week": max_runs_per_week,
+                "message": (
+                    "The selected run frequency cannot preserve the current "
+                    "weekly volume inside the plan's per-session safety limits."
+                ),
+            }
+            self.last_generation_adjustments.append(adjustment)
+            training_plan[0].setdefault("generation_adjustments", []).append(adjustment)
+
         # Model-vs-builder reconciliation: the builder may legitimately deliver
         # less than the periodisation model asked for (it drops volume it cannot
         # place inside the per-run caps rather than inflating a run). Report a
         # *material* shortfall once per plan instead of letting it pass silently.
         _log_peak_shortfall(training_plan, weekly_progression)
-        # Per-week fidelity telemetry against the now-reachable targets.
         _log_weekly_shortfalls(
             training_plan,
             weekly_progression,
@@ -771,52 +885,6 @@ class TrainingPlanGenerator:
             weeks,
             max_runs_per_week,
         )
-
-        # Every pass above mutates workouts after the weekly builder stamped
-        # its derived fields, so the week-level numbers are recomputed here
-        # from the final day cards — one shared helper, so a week's
-        # ``training_km`` always equals what its own sessions sum to (and a
-        # race-day card never counts as training load).
-        from app.core.training.periodization.training_constants import training_km
-
-        for weekly_plan in training_plan:
-            weekly_plan["training_km"] = training_km(weekly_plan)
-
-        # Stamp each week's modelled target onto the week dict (audit G2).
-        # The periodisation model deliberately budgets race week as a taper
-        # week *excluding* the race — but the rendered week's ``total_km``
-        # includes the race card, so any surface comparing target vs delivered
-        # saw a phantom ~2x overshoot on the most psychologically loaded week
-        # (a marathon taper target of 24 km against 49 km rendered). The race
-        # week's stamped target is therefore the target ``_install_race_day``
-        # actually built to — pre-race running at ``RACE_WEEK_PRERACE_SHARE``
-        # of the realized peak plus the race distance itself — so every reader
-        # of ``weekly_target_km`` compares like with like.
-        realized_peak = max(
-            (
-                w.get("total_km", 0) or 0
-                for w in training_plan[:-1]
-                if not w.get("is_recovery")
-            ),
-            default=0.0,
-        )
-        for i, weekly_plan in enumerate(training_plan):
-            if weekly_plan.get("is_race_week"):
-                from app.core.training.tuning import (
-                    RACE_WEEK_MIN_PRERACE_KM,
-                    RACE_WEEK_PRERACE_SHARE,
-                )
-
-                target = (
-                    max(
-                        RACE_WEEK_MIN_PRERACE_KM,
-                        round(realized_peak * RACE_WEEK_PRERACE_SHARE, 1),
-                    )
-                    + target_distance
-                )
-            else:
-                target = weekly_progression[i] if i < len(weekly_progression) else 0.0
-            weekly_plan["weekly_target_km"] = round(target, 1)
 
         # Plan-level safety net: catch a week that composed into something
         # unrunnable before it ever reaches the runner. Fatal issues fail the
@@ -829,9 +897,13 @@ class TrainingPlanGenerator:
         week_validation_failures = [
             f"wk{w.get('week', i + 1)}: {w['validation'].get('message', 'invalid')}"
             for i, w in enumerate(training_plan)
-            if not w.get("validation", {}).get("valid", True)
+            if w.get("validation", {}).get("status") == "error"
         ]
-        issues = check_plan_structure(training_plan)
+        degraded_weeks = [
+            w.get("week", i + 1)
+            for i, w in enumerate(training_plan)
+            if w.get("validation", {}).get("status") == "degraded"
+        ]
         all_warnings = issues["warnings"] + [
             f"week validation: {msg}" for msg in week_validation_failures
         ]
@@ -842,6 +914,17 @@ class TrainingPlanGenerator:
                 target_distance,
                 weeks,
                 "; ".join(all_warnings),
+            )
+        if degraded_weeks:
+            logger.info(
+                "Plan volume degraded in %d week(s) %s (%.0f km base, %.1f km "
+                "target, %d wks, %d runs/week)",
+                len(degraded_weeks),
+                degraded_weeks,
+                current_km,
+                target_distance,
+                weeks,
+                max_runs_per_week,
             )
         if issues["fatal"]:
             logger.error(
@@ -875,9 +958,9 @@ RACE_DAY_NUMBER = 7
 RACE_WEEK_SHAKEOUT_MAX_KM = 4.0
 RACE_WEEK_SHAKEOUT_MIN_KM = 2.0
 
-# Race week keeps at most this many pre-race running sessions (shakeout +
-# one quality or easy).  Any additional easy runs are converted to rest so
-# the runner arrives at the start line genuinely fresh.
+# Race week keeps a shakeout plus at most one other session.  Selection now
+# happens before sizing, so this freshness rule no longer causes the later
+# trivial-session sweep to discard most of the pre-race budget by accident.
 RACE_WEEK_MAX_PRERACE_RUNS = 2
 
 
@@ -936,6 +1019,9 @@ def _install_race_day(
     """
     from app.contexts.plan.generators.weekly_plan_builder import attach_duration_hints
     from app.contexts.plan.generators.workout_scaler import scale_down as _scale_down
+    from app.contexts.plan.generators.workout_scaler import (
+        set_distance as _set_distance,
+    )
     from app.core.training.tuning import (
         RACE_WEEK_MIN_PRERACE_KM,
         RACE_WEEK_PRERACE_SHARE,
@@ -972,12 +1058,6 @@ def _install_race_day(
     # Displaced days are rewritten in place rather than dropped: every week in
     # a generated plan carries seven day entries, and removing one left race
     # week with a hole where Saturday should be.
-    race_day_was_a_run = any(
-        w.get("day") == RACE_DAY_NUMBER
-        and w.get("type") not in ("rest", "recovery")
-        and (w.get("distance") or 0) > 0
-        for w in workouts
-    )
     shakeout_km = max(
         RACE_WEEK_SHAKEOUT_MIN_KM,
         min(RACE_WEEK_SHAKEOUT_MAX_KM, round(pre_race_target * 0.25, 1)),
@@ -985,11 +1065,7 @@ def _install_race_day(
     kept: List[Dict[str, Any]] = []
     for w in workouts:
         if w.get("type") == "long":
-            kept.append(
-                _build_shakeout(w["day"], shakeout_km, pace_zones)
-                if race_day_was_a_run
-                else workout_builders.generate_rest_day(w["day"])
-            )
+            kept.append(_build_shakeout(w["day"], shakeout_km, pace_zones))
         elif w.get("day") == RACE_DAY_NUMBER:
             kept.append(workout_builders.generate_rest_day(w["day"]))
         elif w.get("type") in RUNNING_CARD_TYPES and (w.get("distance") or 0) <= 0:
@@ -1003,6 +1079,35 @@ def _install_race_day(
         else:
             kept.append(w)
 
+    # Choose the sessions that survive before sizing them.  The previous order
+    # scaled every card and then discarded the thin results, silently throwing
+    # away most of the pre-race budget.
+    prerace_cap = max(
+        1,
+        min(
+            RACE_WEEK_MAX_PRERACE_RUNS,
+            max_runs - 1,
+            max(1, int(pre_race_target // RACE_WEEK_SHAKEOUT_MIN_KM)),
+        ),
+    )
+    running = [
+        w
+        for w in kept
+        if w.get("type") not in ("rest", "recovery") and (w.get("distance", 0) or 0) > 0
+    ]
+
+    def _keep_priority(w: Dict[str, Any]) -> tuple[int, float]:
+        if w.get("is_shakeout"):
+            return (0, 0.0)
+        if w.get("type") in ("tempo", "interval", "hill"):
+            return (1, -(w.get("distance") or 0))
+        return (2, -(w.get("distance") or 0))
+
+    running.sort(key=_keep_priority)
+    for w in running[prerace_cap:]:
+        idx = kept.index(w)
+        kept[idx] = workout_builders.generate_rest_day(w["day"])
+
     # Scale only the days *other than* the shakeout onto the remaining budget —
     # the shakeout is a fixed, deliberately tiny dose and must not absorb the
     # week's drawdown.
@@ -1013,6 +1118,17 @@ def _install_race_day(
         pace_zones=pace_zones,
         protect_long=False,
     )
+
+    # A selected taper sharpener must remain an executable quality session.
+    # Earlier long-run-relative clamping can leave it at 1-2 km; race week has
+    # a six-kilometre pre-race floor, so a 2.5 km sharpener plus the shakeout
+    # fits without violating the taper budget.
+    for w in kept:
+        if (
+            w.get("type") in ("tempo", "interval", "hill")
+            and 0 < (w.get("distance") or 0) < MIN_VIABLE_QUALITY_KM
+        ):
+            _set_distance(w, MIN_VIABLE_QUALITY_KM, pace_zones)
 
     # Convert sub-threshold easy runs to rest — scaling can crush them to a
     # fraction of a kilometre, which isn't worth lacing up for — and drained
@@ -1032,36 +1148,44 @@ def _install_race_day(
             continue
         drained = dist <= 0
         thin = 0 < dist < RACE_WEEK_SHAKEOUT_MIN_KM
+        if thin and prerace_cap >= 2:
+            # Selection already guaranteed room for this second session. Keep
+            # it at the same coherent floor as the shakeout instead of deleting
+            # it after sizing and collapsing a nominal 25%-of-peak race week to
+            # one token jog.
+            _set_distance(w, RACE_WEEK_SHAKEOUT_MIN_KM, pace_zones)
+            continue
         if drained or (thin and prerace_running > 1):
             kept[i] = workout_builders.generate_rest_day(w["day"])
             if thin:
                 prerace_running -= 1
 
-    # Sharper race-week taper: keep at most RACE_WEEK_MAX_PRERACE_RUNS
-    # running sessions before the race — and never so many that the race
-    # itself pushes the week past the runner's requested frequency: the race
-    # consumes one of the week's running slots, so the prerace budget is
-    # max_runs - 1. Shakeout and quality sessions are kept first; extra easy
-    # runs are converted to rest days.
-    prerace_cap = max(0, min(RACE_WEEK_MAX_PRERACE_RUNS, max_runs - 1))
-    running = [
-        w
+    # Guarantee the minimum contract after every conversion.  If the second
+    # retained stimulus is deliberately short, grow the shakeout (still capped
+    # at four kilometres) so race week contains at least a shakeout plus one
+    # minimum coherent session's worth of running.
+    desired_floor = min(
+        pre_race_target,
+        RACE_WEEK_SHAKEOUT_MIN_KM * (2 if prerace_cap >= 2 else 1),
+    )
+    current_prerace = sum(
+        w.get("distance", 0) or 0
         for w in kept
-        if w.get("type") not in ("rest", "recovery") and (w.get("distance", 0) or 0) > 0
-    ]
-    if len(running) > prerace_cap:
-
-        def _keep_priority(w: Dict[str, Any]) -> int:
-            if w.get("is_shakeout"):
-                return 0
-            if w.get("type") in ("tempo", "interval", "hill"):
-                return 1
-            return 2
-
-        running.sort(key=_keep_priority)
-        for w in running[prerace_cap:]:
-            idx = kept.index(w)
-            kept[idx] = workout_builders.generate_rest_day(w["day"])
+        if w.get("type") not in ("rest", "recovery")
+    )
+    if current_prerace < desired_floor - 0.05:
+        shakeout_index = next(
+            (i for i, w in enumerate(kept) if w.get("is_shakeout")), None
+        )
+        if shakeout_index is not None:
+            shakeout = kept[shakeout_index]
+            grown = min(
+                RACE_WEEK_SHAKEOUT_MAX_KM,
+                (shakeout.get("distance") or 0) + desired_floor - current_prerace,
+            )
+            kept[shakeout_index] = _build_shakeout(
+                shakeout["day"], round(grown, 1), pace_zones
+            )
 
     race = workout_builders.generate_race_day(
         RACE_DAY_NUMBER,

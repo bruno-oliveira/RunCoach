@@ -166,7 +166,7 @@ def cap_progression_to_peak(
     if not weekly_progression:
         return []
     peak = max(weekly_progression)
-    if peak <= reachable_peak or peak <= base_km or reachable_peak <= base_km:
+    if peak <= reachable_peak or peak <= base_km or reachable_peak < base_km:
         # Nothing above the base to compress, or the cap would pin the ramp
         # below the runner's current volume — leave the shape alone.
         return list(weekly_progression)
@@ -244,8 +244,13 @@ def get_peak_mileage(
     trail_profile: Optional[TrailProfile] = None,
 ) -> float:
     """
-    Determine peak weekly mileage with length-based multipliers and optional VDOT adjustment.
-    Higher VDOT runners can absorb slightly more volume (better aerobic fitness / recovery).
+    Determine peak weekly mileage with length-based multipliers and an optional
+    bounded VDOT adjustment.
+
+    VDOT primarily drives pace zones elsewhere. Its volume adjustment here is
+    deliberately secondary and is often absorbed by race, duration, capacity,
+    or absolute ceilings; callers must not interpret similar weekly totals as
+    VDOT having no effect on the prescribed workout paces.
 
     Trail / ultra plans bypass the per-distance ``MAX_PEAK_MILEAGE`` lookup
     in favour of the continuous ceiling derived from distance + elevation.
@@ -574,6 +579,17 @@ def calculate_weekly_progression(
                 cap = MAX_PEAK_MILEAGE.get(target_distance)
                 if cap is not None:
                     peak_km = min(peak_km, cap)
+    else:
+        # Apply the same absolute ceiling at the neutral four-run reference.
+        # Previously it only re-applied when the frequency factor was above
+        # one, so a high-base 48-loop plan targeted 153 km at four runs and
+        # dropped to the safe 140 km ceiling when a fifth day was added.
+        if trail_profile is not None:
+            peak_km = min(peak_km, trail_max_weekly_mileage(trail_profile))
+        else:
+            cap = MAX_PEAK_MILEAGE.get(target_distance)
+            if cap is not None:
+                peak_km = min(peak_km, cap)
 
     # Cap peak at what can physically be distributed across max_runs
     # within per-run structural limits (long run ceiling + quality caps).

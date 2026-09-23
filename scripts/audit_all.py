@@ -6,12 +6,16 @@ plan deliver the weekly mileage it promises the runner, how much of a week
 rides on the long run, and where does the builder silently over- or
 under-deliver against the model's own weekly targets?
 
-For every cell of the matrix — plan type × base mileage × goal distance ×
-runs/week × block length — the harness generates a plan, reconstructs each
-week's actual km from the day cards, and diffs it against the weekly target
-the periodisation model computed for the same inputs (the number the user is
-shown). Overshoot and shortfall are recorded per week and rolled up per
-(plan type, frequency bucket).
+The default ``product`` mode first validates every cell through the public
+request schema and treats any accepted-but-unbuildable plan as a failure. The
+``robustness`` mode reports only rejected inputs and their rejection messages;
+``all`` retains the legacy direct-generator sweep for exploratory work.
+
+For every generated cell — plan type × base mileage × goal distance ×
+runs/week × block length — the harness reconstructs each week's actual km from
+the day cards and diffs it against the target stamped on the final week.
+Overshoot, shortfall, final-guard findings, ramp breaches, race presence, and
+resolved metadata are recorded and rolled up per (plan type, frequency bucket).
 
 The plan types are the audit's own taxonomy over what the engine can build;
 the engine has no such enum:
@@ -29,6 +33,8 @@ dropped: the skip *pattern* is itself an audit finding.
 
 Usage:
     python3 scripts/audit_all.py                     # full matrix
+    python3 scripts/audit_all.py --mode robustness   # schema rejection report
+    python3 scripts/audit_all.py --mode all          # legacy direct sweep
     python3 scripts/audit_all.py --plan-types base,performance
     python3 scripts/audit_all.py --frequencies 2,3 --bases 20,30
     python3 scripts/audit_all.py --output /tmp/report.json --max-plans 200
@@ -44,10 +50,13 @@ from app.contexts.plan.generators.performance_plan_generator import (
     PerformancePlanGenerator,
 )
 from app.contexts.plan.generators.plan_generator import TrainingPlanGenerator
+from app.contexts.plan.generators.plan_structure_guard import check_plan_structure
 from app.core.training.periodization import mileage_progression
 from app.core.training.physiology.vdot_calculator import VDOTCalculator
 from app.core.training.profiles.backyard_profile import classify_backyard
 from app.core.training.profiles.trail_profile import classify_trail
+from app.schemas import PlanRequest
+from app.schemas.performance_request import PerformancePlanRequest
 
 # The audit runs the engine, not the web schema: one fixed fitness anchor so
 # cells differ only by the axis under test (same convention as eval_lowfreq).
@@ -67,18 +76,16 @@ BUILDER_LOGGER = "app.contexts.plan.generators.plan_generator"
 
 PLAN_TYPE_SPECS = {
     "recovery": {
-        "distances": [10.0, 21.1, 42.2],
+        "distances": [5.0, 10.0, 21.1, 42.2],
         "max_base": 30.0,
         "description": "road distance-goal on a rebuilding base (<= 30 km/wk)",
     },
     "base": {
-        "distances": [10.0, 21.1, 42.2],
+        "distances": [5.0, 10.0, 21.1, 42.2],
         "description": "road distance-goal, any base",
     },
     "performance": {
-        "distances": [10.0, 21.1, 42.2],
-        # The performance generator silently clamps weeks to [6, 16]; weeks
-        # outside that band never produce the requested duration.
+        "distances": [5.0, 10.0, 21.1, 42.2],
         "weeks": [8, 12, 16],
         "description": "time-goal road plans",
     },
@@ -128,13 +135,7 @@ class _BuilderWarningCollector(logging.Handler):
 
 
 def _targets_for(plan_type, base, distance, runs, weeks, vdot, plan=None):
-    """Recompute the weekly model targets the generator aimed at.
-
-    The targets are not stored on the generated weeks, so the harness
-    re-derives them with the exact arguments each generator passes to
-    ``calculate_weekly_progression``. For performance plans the block length
-    is whatever the plan actually contains (the generator clamps weeks).
-    """
+    """Recompute targets only for legacy output without stamped targets."""
     if plan_type == "performance":
         eff_weeks = len(plan["weekly_plans"])
         implied_seconds = int(PERF_CURRENT_PACE * distance * 60)
@@ -234,6 +235,10 @@ def _generate(plan_type, base, distance, runs, weeks, vdot):
             targets = _targets_for(plan_type, base, distance, runs, weeks, vdot)
     finally:
         logger.removeHandler(collector)
+    plan_weeks = plan if isinstance(plan, list) else plan["weekly_plans"]
+    stamped = [week.get("weekly_target_km") for week in plan_weeks]
+    if stamped and all(target is not None for target in stamped):
+        targets = stamped
     return plan, targets, collector.messages
 
 
@@ -248,10 +253,12 @@ def _week_sessions(week):
 
 def extract_plan_record(config, plan, targets, builder_warnings):
     """Normalize one generated plan into per-week metrics and roll-ups."""
+    plan_weeks = plan if isinstance(plan, list) else plan["weekly_plans"]
+    guard = check_plan_structure(plan_weeks)
     weekly = []
-    for idx, week in enumerate(
-        plan if isinstance(plan, list) else plan["weekly_plans"]
-    ):
+    delivered_high_water = config["base_km"]
+    ramp_breaches = []
+    for idx, week in enumerate(plan_weeks):
         workouts = week["daily_workouts"]
         sessions = _week_sessions(week)
         workout_sum = sum((w.get("distance") or 0) for w in workouts)
@@ -264,9 +271,11 @@ def extract_plan_record(config, plan, targets, builder_warnings):
             ((w.get("distance") or 0) for w in sessions if w.get("type") == "long"),
             default=0.0,
         )
-        is_race_week = (
-            idx == len(plan if isinstance(plan, list) else plan["weekly_plans"]) - 1
-        )
+        is_race_week = bool(week.get("is_race_week"))
+        if not week.get("is_recovery") and not is_race_week:
+            if actual > delivered_high_water * 1.12 + 0.05:
+                ramp_breaches.append(week.get("week", idx + 1))
+            delivered_high_water = max(delivered_high_water, actual)
         overshoot = max(0.0, actual - target)
         shortfall = max(0.0, target - actual)
         weekly.append(
@@ -296,6 +305,7 @@ def extract_plan_record(config, plan, targets, builder_warnings):
                 ),
                 "long_km": round(long_km, 2),
                 "long_share": round(long_km / actual, 4) if actual > 0 else None,
+                "validation_status": (week.get("validation") or {}).get("status"),
             }
         )
 
@@ -320,6 +330,12 @@ def extract_plan_record(config, plan, targets, builder_warnings):
     ]
     peak_actual = max((w["actual_km"] for w in weekly), default=0.0)
     peak_target = max((w["target_km"] for w in weekly), default=0.0)
+    first_week = plan_weeks[0] if plan_weeks else {}
+    race_present = any(
+        workout.get("type") == "race"
+        for week in plan_weeks
+        for workout in week.get("daily_workouts", [])
+    )
 
     return {
         "config": config,
@@ -350,6 +366,22 @@ def extract_plan_record(config, plan, targets, builder_warnings):
             ),
             "builder_warnings": len(builder_warnings),
             "builder_warning_samples": builder_warnings[:2],
+            "guard_fatal": guard["fatal"],
+            "guard_warnings": guard["warnings"],
+            "ramp_breach_weeks": ramp_breaches,
+            "race_present": race_present,
+            "validation_errors": sum(
+                1 for w in weekly if w["validation_status"] == "error"
+            ),
+            "validation_degraded": sum(
+                1 for w in weekly if w["validation_status"] == "degraded"
+            ),
+            "requested_runs_per_week": first_week.get(
+                "requested_runs_per_week", config["runs_per_week"]
+            ),
+            "resolved_runs_per_week": first_week.get(
+                "resolved_runs_per_week", config["runs_per_week"]
+            ),
         },
     }
 
@@ -377,6 +409,11 @@ def _percentile(xs, q):
 def iter_configs(args):
     """Yield audit configs across the matrix, honouring per-type distance sets."""
     plan_types = _parse_list(args.plan_types, list(PLAN_TYPE_SPECS), str)
+    # ``recovery`` and ``base`` call the same road generator over overlapping
+    # low-base rows. Keep the alias available when explicitly selected, but do
+    # not double-count it in the default product report.
+    if getattr(args, "mode", "product") == "product" and "base" in plan_types:
+        plan_types = [plan_type for plan_type in plan_types if plan_type != "recovery"]
     bases = _parse_list(args.bases, DEFAULT_BASES, float)
     frequencies = _parse_list(args.frequencies, DEFAULT_FREQUENCIES, int)
     all_weeks = _parse_list(args.weeks, DEFAULT_WEEKS, int)
@@ -410,8 +447,46 @@ def _parse_list(raw, defaults, cast):
     return [cast(x) for x in str(raw).split(",") if x.strip()]
 
 
+def _validate_product_config(config):
+    """Validate an audit cell through the same public schema as production."""
+    common = {
+        "current_km": config["base_km"],
+        "weeks": config["weeks"],
+        "max_runs_per_week": config["runs_per_week"],
+    }
+    plan_type = config["plan_type"]
+    distance = config["distance_km"]
+    if plan_type == "performance":
+        return PerformancePlanRequest(
+            target_distance=distance,
+            current_pace=PERF_CURRENT_PACE,
+            goal_pace=PERF_GOAL_PACE,
+            current_time="current pace",
+            goal_time="goal pace",
+            weeks=config["weeks"],
+            current_weekly_km=config["base_km"],
+            runs_per_week=config["runs_per_week"],
+        )
+    if plan_type == "backyard":
+        return PlanRequest(
+            **common,
+            target_distance=1.0,  # replaced by the backyard schema projection
+            is_backyard=True,
+            backyard_target_loops=backyard_loops_for_distance(distance),
+        )
+    if plan_type == "transformation":
+        return PlanRequest(
+            **common,
+            target_distance=distance,
+            is_trail=True,
+            target_elevation_gain_m=1500.0,
+        )
+    return PlanRequest(**common, target_distance=distance)
+
+
 def run_audit(args):
     vdot = args.vdot
+    mode = getattr(args, "mode", "product")
     records = []
     skips = defaultdict(int)
     started = time.time()
@@ -419,6 +494,28 @@ def run_audit(args):
     for config in iter_configs(args):
         if args.max_plans and count >= args.max_plans:
             break
+        try:
+            _validate_product_config(config)
+            schema_error = None
+        except Exception as exc:  # noqa: BLE001 - rejection is audit evidence
+            schema_error = f"{type(exc).__name__}: {exc}"
+
+        if mode == "product" and schema_error:
+            continue
+        if mode == "robustness":
+            if schema_error is None:
+                continue
+            count += 1
+            skips[schema_error[:120]] += 1
+            records.append(
+                {
+                    "config": config,
+                    "status": "rejected",
+                    "rejection": schema_error,
+                }
+            )
+            continue
+
         count += 1
         try:
             plan, targets, warnings_ = _generate(
@@ -429,12 +526,12 @@ def run_audit(args):
                 config["weeks"],
                 vdot,
             )
-        except Exception as exc:  # noqa: BLE001 - the refusal IS the record
+        except Exception as exc:  # noqa: BLE001 - failure/refusal is the record
             skips[f"{type(exc).__name__}: {str(exc)[:60]}"] += 1
             records.append(
                 {
                     "config": config,
-                    "status": "skipped",
+                    "status": "failed" if mode == "product" else "skipped",
                     "skip_reason": f"{type(exc).__name__}: {exc}",
                 }
             )
@@ -447,11 +544,14 @@ def run_audit(args):
     report = {
         "meta": {
             "generated_at": time.strftime("%Y-%m-%dT%H:%M:%S"),
+            "mode": mode,
             "vdot": vdot,
             "perf_current_pace": PERF_CURRENT_PACE,
             "perf_goal_pace": PERF_GOAL_PACE,
             "configs_requested": count,
             "plans_generated": sum(1 for r in records if r["status"] == "ok"),
+            "failed": sum(1 for r in records if r["status"] == "failed"),
+            "rejected": sum(1 for r in records if r["status"] == "rejected"),
             "skipped": sum(1 for r in records if r["status"] == "skipped"),
             "duration_secs": round(time.time() - started, 1),
             "plan_type_specs": PLAN_TYPE_SPECS,
@@ -489,6 +589,16 @@ def summarize(records):
         long_shares = [w["long_share"] for w in weeks if w["long_share"] is not None]
         mismatches = sum(1 for r in rs for w in r["weeks"] if w["total_km_mismatch"])
         warn_plans = sum(1 for r in rs if r["aggregates"]["builder_warnings"] > 0)
+        fatal_plans = sum(1 for r in rs if r["aggregates"]["guard_fatal"])
+        guard_warn_plans = sum(1 for r in rs if r["aggregates"]["guard_warnings"])
+        ramp_breaches = sum(len(r["aggregates"]["ramp_breach_weeks"]) for r in rs)
+        missing_races = sum(1 for r in rs if not r["aggregates"]["race_present"])
+        resolved_frequency = sum(
+            1
+            for r in rs
+            if r["aggregates"]["requested_runs_per_week"]
+            != r["aggregates"]["resolved_runs_per_week"]
+        )
         rows.append(
             {
                 "plan_type": plan_type,
@@ -507,6 +617,11 @@ def summarize(records):
                 "max_long_share": round(max(long_shares), 3) if long_shares else None,
                 "total_km_field_mismatches": mismatches,
                 "plans_with_builder_warnings": warn_plans,
+                "plans_with_guard_fatal": fatal_plans,
+                "plans_with_guard_warnings": guard_warn_plans,
+                "ramp_breaches": ramp_breaches,
+                "plans_missing_race": missing_races,
+                "plans_with_resolved_frequency": resolved_frequency,
             }
         )
     return rows
@@ -516,7 +631,8 @@ def print_summary(summary, report):
     meta = report["meta"]
     print("=" * 108)
     print(
-        f"PLAN GENERATION AUDIT — {meta['plans_generated']} plans, "
+        f"PLAN GENERATION AUDIT ({meta['mode']}) — {meta['plans_generated']} plans, "
+        f"{meta['failed']} failed, {meta['rejected']} rejected, "
         f"{meta['skipped']} skipped, {meta['duration_secs']}s, "
         f"vdot {meta['vdot']}"
     )
@@ -556,6 +672,12 @@ def print_summary(summary, report):
 def main():
     parser = argparse.ArgumentParser(
         description="Audit plan generation across the full config matrix."
+    )
+    parser.add_argument(
+        "--mode",
+        choices=("product", "robustness", "all"),
+        default="product",
+        help="product schema matrix, rejected-input report, or legacy direct sweep",
     )
     parser.add_argument(
         "--plan-types",

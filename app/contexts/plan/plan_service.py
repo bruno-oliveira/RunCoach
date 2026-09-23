@@ -134,17 +134,51 @@ class PlanService:
             backyard_profile=plan_request.backyard_profile(),
         )
 
+        # The generator may reduce an unviable requested frequency (including
+        # the beginner engine's deliberate three-run cap).  Persist what was
+        # actually scheduled and retain both values in plan data so the UI,
+        # exports, and diagnostics do not disagree with the calendar.
+        requested_runs = plan_request.max_runs_per_week
+        resolved_runs = getattr(
+            plan_generator, "last_resolved_runs_per_week", requested_runs
+        )
+        for week in plan_data:
+            week["requested_runs_per_week"] = requested_runs
+            week["resolved_runs_per_week"] = resolved_runs
+        resolved_request = (
+            plan_request.model_copy(update={"max_runs_per_week": resolved_runs})
+            if resolved_runs != requested_runs
+            else plan_request
+        )
+
+        # Duplicate identity follows the schedule that is actually stored.
+        # A five-day beginner request resolves to three days; without this
+        # second lookup, the persisted three-day plan could never match the
+        # original five-day request on the next submission.
+        if resolved_request is not plan_request:
+            existing = self.find_duplicate(resolved_request, user.id, db)
+            if existing:
+                logger.info(
+                    "Duplicate plan detected after frequency resolution for "
+                    "user %s — returning existing plan %s",
+                    user.id,
+                    existing.id,
+                )
+                return existing, existing.plan_data if existing.plan_data else []
+
         try:
-            training_plan = _create.persist_plan_core(plan_request, user, plan_data, db)
+            training_plan = _create.persist_plan_core(
+                resolved_request, user, plan_data, db
+            )
             _create.persist_weekly_workouts(training_plan, plan_data, db)
             # Persist the stated race before zones so the LTHR estimate and the
             # stored HR zones are grounded on the number the runner gave us.
-            _create.persist_race_effort_run(plan_request, user, db)
+            _create.persist_race_effort_run(resolved_request, user, db)
             _create.attach_hr_zones(training_plan, user, plan_data, db)
             _create.attach_nutrition(
-                training_plan, plan_request, plan_data, nutrition_engine
+                training_plan, resolved_request, plan_data, nutrition_engine
             )
-            _create.attach_race_protocol(training_plan, plan_request)
+            _create.attach_race_protocol(training_plan, resolved_request)
             db.commit()
         except Exception:
             db.rollback()

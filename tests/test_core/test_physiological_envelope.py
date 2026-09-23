@@ -89,14 +89,13 @@ KNOWN_GAPS: Dict[str, Dict[float, FrozenSet[int]]] = {
     # distances the quality allocation can still leave a shortfall when the
     # volume target is aggressive relative to the per-run ceilings.  This is
     # the expected trade-off: healthy run distribution > hitting volume targets.
-    # (The 5K@5-6 and marathon@2 cells used to be here too: the low-frequency
-    # layout work — the single-quality remainder sizing, the ≤2-run cap lifts
-    # and the final fill — now lets those layouts reach their targets.)
+    # (The 5K@5-6, marathon@2, and marathon@4 cells used to be here too: the
+    # low-frequency layout work plus the final frequency/reachability cap now
+    # lets those layouts reach their resolved targets.)
     "peak_shortfall": {
         5.0: frozenset({2, 3, 4}),
         10.0: frozenset({2}),
         21.1: frozenset({2, 3}),
-        42.2: frozenset({4}),
     },
     # Low-volume corner cases: at low base mileage split over many runs the
     # per-run distance falls below the viable floor.  The plan is faithful to

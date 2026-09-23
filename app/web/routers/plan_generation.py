@@ -37,7 +37,7 @@ from app.exceptions import (
 from app.infrastructure.config import settings
 from app.models import TrainingPlan, User
 from app.rate_limit import plan_generation_limiter
-from app.schemas import PlanRequest
+from app.schemas import PerformancePlanRequest, PlanRequest
 from app.template_helpers import create_templates
 from app.utils import parse_time_to_pace
 
@@ -556,18 +556,30 @@ async def _generate_time_goal_plan(
         goal_pace = parse_time_to_pace(goal_time, target_distance)
         current_pace = parse_time_to_pace(current_time, target_distance)
 
+        validated = PerformancePlanRequest(
+            target_distance=target_distance,
+            current_pace=current_pace,
+            goal_pace=goal_pace,
+            current_time=current_time,
+            goal_time=goal_time,
+            weeks=weeks,
+            current_weekly_km=current_km,
+            runs_per_week=runs_per_week,
+            max_heart_rate=max_heart_rate,
+        )
+
         service = PerformanceService(db)
         training_plan, _ = service.create_performance_plan(
             user=current_user,
-            target_distance=target_distance,
-            goal_pace=goal_pace,
-            weeks=weeks,
-            current_pace=current_pace,
-            current_weekly_km=current_km if current_km > 0 else None,
-            goal_time=goal_time,
-            current_time=current_time,
-            runs_per_week=runs_per_week,
-            max_heart_rate=max_heart_rate,
+            target_distance=validated.target_distance,
+            goal_pace=validated.goal_pace,
+            weeks=validated.weeks,
+            current_pace=validated.current_pace,
+            current_weekly_km=validated.current_weekly_km,
+            goal_time=validated.goal_time,
+            current_time=validated.current_time,
+            runs_per_week=validated.runs_per_week,
+            max_heart_rate=validated.max_heart_rate,
         )
         _apply_start_date(training_plan, start_date, db)
 
@@ -580,6 +592,13 @@ async def _generate_time_goal_plan(
             e.user_message,
             "validation",
             getattr(e, "suggestion", None),
+        )
+    except ValidationError as e:
+        return error_response(
+            request,
+            current_user,
+            _extract_validation_message(e) or "Please check your values and try again.",
+            "validation",
         )
     except ValueError as e:
         return error_response(request, current_user, str(e), "validation")

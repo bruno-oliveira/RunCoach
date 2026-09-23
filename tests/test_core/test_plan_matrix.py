@@ -558,6 +558,9 @@ _ENVELOPE_SLACK_KM = 0.6
 # (plan_generator) began capping marathon peaks at the frequency capacity:
 # fewer plans now fund a long run past the envelope's reference band. That is
 # the cap working as designed, recorded here so the ledger stays honest.
+# The frequency-monotonicity repair later reduced that row from 12 -> 8 by
+# correctly mapping a reachability ceiling equal to the runner's base onto a
+# flat hold instead of leaving an unreachable ramp above it.
 #
 # `share_over` is the frequency-aware 0.55 ceiling from
 # ``long_run_share_ceiling`` — deliberately not the published 25-35 % band, which
@@ -584,7 +587,7 @@ _ENVELOPE_CENSUS: Dict[str, Tuple[int, int, int, int]] = {
     "backyard-6loops/first_timer": (36, 0, 9, 7),
     "road-10km": (80, 0, 7, 0),
     "road-21.1km": (64, 0, 16, 0),
-    "road-42.2km": (48, 0, 12, 0),
+    "road-42.2km": (48, 0, 8, 0),
     "road-5km": (80, 0, 8, 0),
     "trail-100km/long_ultra": (12, 0, 0, 0),
     "trail-12km/short": (48, 0, 0, 0),

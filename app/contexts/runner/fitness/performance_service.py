@@ -15,6 +15,7 @@ from app.contexts.runner.fitness.performance_progress import (
     get_todays_workout,
 )
 from app.models import DailyWorkout, RunLog, TrainingPlan, User, WeeklyPlan
+from app.schemas.performance_request import PerformancePlanRequest
 
 if TYPE_CHECKING:
     from app.application.ports import (
@@ -176,30 +177,46 @@ class PerformanceService:
         if current_pace is None or current_weekly_km is None:
             raise ValueError("Please provide your current pace and weekly mileage.")
 
-        # Generate the performance plan
-        plan_data = self.performance_generator.generate_plan(
+        # This service is also called outside the HTML route (tests, scripts,
+        # and future API adapters), so the product boundary belongs here too.
+        # No caller can bypass the distance, duration, frequency, pace, or
+        # distance-specific base requirements by skipping the web schema.
+        validated = PerformancePlanRequest(
             target_distance=target_distance,
             current_pace=current_pace,
             goal_pace=goal_pace,
+            current_time=current_time,
+            goal_time=goal_time or "derived from goal pace",
             weeks=weeks,
             current_weekly_km=current_weekly_km,
             runs_per_week=runs_per_week,
             max_heart_rate=max_heart_rate,
         )
 
+        # Generate the performance plan
+        plan_data = self.performance_generator.generate_plan(
+            target_distance=validated.target_distance,
+            current_pace=validated.current_pace,
+            goal_pace=validated.goal_pace,
+            weeks=validated.weeks,
+            current_weekly_km=validated.current_weekly_km,
+            runs_per_week=validated.runs_per_week,
+            max_heart_rate=validated.max_heart_rate,
+        )
+
         # Create training plan record
         training_plan = TrainingPlan(
             user_id=user.id,
-            current_weekly_km=current_weekly_km,
-            target_distance=str(target_distance),
-            weeks_duration=weeks,
+            current_weekly_km=validated.current_weekly_km,
+            target_distance=str(validated.target_distance),
+            weeks_duration=plan_data["weeks"],
             plan_type="performance",
-            current_pace=current_pace,
-            goal_pace=goal_pace,
-            current_time=current_time,
+            current_pace=validated.current_pace,
+            goal_pace=validated.goal_pace,
+            current_time=validated.current_time,
             goal_time=goal_time,
-            max_runs_per_week=runs_per_week,
-            max_heart_rate=max_heart_rate,
+            max_runs_per_week=validated.runs_per_week,
+            max_heart_rate=validated.max_heart_rate,
             plan_data=plan_data["weekly_plans"],
         )
 
@@ -211,7 +228,7 @@ class PerformanceService:
 
         # Generate and save nutrition plan
         nutrition_plan = self.nutrition_engine.generate_weekly_meal_plan(
-            current_weekly_km, target_distance
+            validated.current_weekly_km, validated.target_distance
         )
         training_plan.nutrition_plan_data = nutrition_plan
 

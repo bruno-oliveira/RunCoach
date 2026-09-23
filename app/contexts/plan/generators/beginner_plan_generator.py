@@ -1,9 +1,13 @@
 """Couch to 5K style beginner plan generator for true beginners."""
 
+import logging
 from typing import Any, Dict, List
 
 from app.core.training.periodization.training_constants import workouts_training_km
+from app.core.training.workouts import workout_builders
 from app.core.training.workouts.workout_builders import attach_strength_sessions
+
+logger = logging.getLogger(__name__)
 
 # Strength is introduced once the running habit is established, not in the
 # first couple of weeks when an absolute beginner is barely running.
@@ -142,6 +146,15 @@ class BeginnerPlanGenerator:
             List of weekly plan dictionaries
         """
         max_runs = min(max_runs_per_week, 3)
+        self.last_requested_runs_per_week = max_runs_per_week
+        self.last_resolved_runs_per_week = max_runs
+        if max_runs < max_runs_per_week:
+            logger.warning(
+                "Beginner plan frequency resolved from %d to %d runs/week: "
+                "run/walk progression is capped at three sessions",
+                max_runs_per_week,
+                max_runs,
+            )
         self._pace_min_km = max(4.0, min(15.0, estimated_pace_min_km))
         plan = []
 
@@ -164,6 +177,14 @@ class BeginnerPlanGenerator:
             c25k_sequence = list(
                 range(c25k_total - c25k_weeks_needed + 1, c25k_total + 1)
             )
+        elif c25k_weeks_needed > c25k_total:
+            # Longer 5K beginner blocks repeat selected progression stages
+            # instead of silently returning only the ten template weeks while
+            # persistence records the requested 12-16 week duration.
+            c25k_sequence = [
+                min(c25k_total, 1 + i * c25k_total // c25k_weeks_needed)
+                for i in range(c25k_weeks_needed)
+            ]
         else:
             c25k_sequence = list(range(1, c25k_total + 1))
 
@@ -185,9 +206,45 @@ class BeginnerPlanGenerator:
             plan.append(week_plan)
 
         self._enforce_monotonic_volume(plan, target_distance)
+        self._install_beginner_race_day(plan, target_distance, max_runs)
+        for week in plan:
+            week["requested_runs_per_week"] = max_runs_per_week
+            week["resolved_runs_per_week"] = max_runs
         self._attach_beginner_strength(plan, target_distance)
 
         return plan
+
+    @staticmethod
+    def _install_beginner_race_day(
+        plan: List[Dict[str, Any]], target_distance: float, max_runs: int
+    ) -> None:
+        """Close a beginner block on the event, consuming one running slot."""
+        if not plan:
+            return
+        final_week = plan[-1]
+        workouts = sorted(final_week.get("daily_workouts", []), key=lambda w: w["day"])
+        running = [w for w in workouts if (w.get("distance") or 0) > 0]
+        # Keep the earliest easy/shakeout work and let the race consume the last
+        # scheduled running slot.  This avoids silently turning a requested
+        # three-run beginner week into four runs when race day is added.
+        keep_ids = {id(w) for w in running[: max(0, max_runs - 1)]}
+        kept = [w for w in workouts if not (w in running and id(w) not in keep_ids)]
+        kept = [w for w in kept if w.get("day") != 7]
+        race = workout_builders.generate_race_day(7, target_distance, None)
+        race["coaching_rationale"] = (
+            "Start gently, use walk breaks whenever you need them, and celebrate "
+            "finishing the distance your plan has prepared you for."
+        )
+        kept.append(race)
+        final_week["daily_workouts"] = sorted(kept, key=lambda w: w["day"])
+        final_week["is_race_week"] = True
+        final_week["total_km"] = round(sum(w.get("distance", 0) or 0 for w in kept), 1)
+        final_week["training_km"] = workouts_training_km(kept)
+        final_week["workout_distribution"] = {
+            "race": 1,
+            "easy": max(0, len(keep_ids)),
+            "rest": 7 - max_runs,
+        }
 
     def _enforce_monotonic_volume(
         self, plan: List[Dict[str, Any]], target_distance: float
@@ -372,7 +429,16 @@ class BeginnerPlanGenerator:
         extension_week = week_number - c25k_length
         is_taper = week_number == total_weeks
 
-        base_duration = min(60, 25 + (extension_week - 1) * 5)
+        # The compressed C25K portion ends with a ~5 km endurance run.  Build
+        # from that actual hand-off toward an 80%-of-race peak instead of
+        # restarting at 25 minutes (which the monotonic repair pass merely
+        # flattened back to 5.8 km for every extension week).
+        loading_extensions = max(1, total_weeks - c25k_length - 1)
+        progress = min(1.0, extension_week / loading_extensions)
+        peak_long_km = target_distance * 0.8
+        long_km = 5.0 + (peak_long_km - 5.0) * progress
+        base_duration = int(round(long_km * self._pace_min_km))
+        base_duration = min(75, base_duration)
         if is_taper:
             base_duration = int(base_duration * 0.6)
 

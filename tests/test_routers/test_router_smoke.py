@@ -266,6 +266,49 @@ class TestTimeGoalPlan:
         finally:
             app.dependency_overrides.pop(get_optional_user, None)
 
+    @pytest.mark.parametrize(
+        ("distance", "current_km", "current_time", "goal_time", "required_km"),
+        [
+            ("5", 10.0, "27:30", "25:00", 20),
+            ("10", 10.0, "55:00", "50:00", 25),
+            ("21.1", 20.0, "1:56:03", "1:45:30", 35),
+            ("42.2", 30.0, "3:52:06", "3:31:00", 50),
+        ],
+    )
+    def test_time_goal_plan_enforces_performance_base_in_live_route(
+        self,
+        smoke_user,
+        test_db,
+        distance,
+        current_km,
+        current_time,
+        goal_time,
+        required_km,
+    ):
+        """The unified form must not bypass PerformancePlanRequest."""
+        _set_user(smoke_user)
+        app.dependency_overrides[get_optional_user] = lambda: smoke_user
+        before = test_db.query(TrainingPlan).count()
+        try:
+            with TestClient(app) as c:
+                resp = c.post(
+                    "/generate-plan",
+                    data={
+                        "current_km": current_km,
+                        "target_distance": distance,
+                        "weeks": 8,
+                        "max_runs_per_week": 4,
+                        "plan_mode": "time",
+                        "goal_time_required": goal_time,
+                        "current_time": current_time,
+                    },
+                )
+            assert resp.status_code == 200
+            assert f"{required_km} km/week" in resp.text
+            assert test_db.query(TrainingPlan).count() == before
+        finally:
+            app.dependency_overrides.pop(get_optional_user, None)
+
 
 # ---------------------------------------------------------------------------
 # Home page  (/)  — auth-aware hero

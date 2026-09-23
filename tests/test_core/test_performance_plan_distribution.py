@@ -71,6 +71,11 @@ class TestPerformancePlanDayDistribution:
             runs_per_week=runs_per_week,
         )
         for week in plan["weekly_plans"]:
+            if week.get("is_race_week"):
+                race = [d for d in week["daily_workouts"] if d["type"] == "race"]
+                assert len(race) == 1
+                assert race[0]["day"] == 7
+                continue
             long_runs = [d for d in week["daily_workouts"] if d["type"] == "long"]
             assert len(long_runs) == 1, f"Expected 1 long run, got {len(long_runs)}"
             assert long_runs[0]["day"] == 6, (

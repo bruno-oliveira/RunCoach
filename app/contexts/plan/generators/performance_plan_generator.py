@@ -10,6 +10,7 @@ segment-based workout structure.
 import logging
 from typing import Any, Dict, List, Optional
 
+from app.constants import SUPPORTED_DISTANCES
 from app.core.coaching.coaching_notes_generator import generate_coaching_note
 from app.core.training.periodization import mileage_progression, phase_calculator
 from app.core.training.periodization.strength_plan import derive_experience_level
@@ -21,6 +22,7 @@ from app.core.training.physiology.goal_pace_model import (
 )
 from app.core.training.physiology.vdot_calculator import VDOTCalculator
 from app.core.training.workouts.workout_builders import attach_strength_sessions
+from app.exceptions import PlanGenerationException
 
 from .base_plan_generator import BasePlanGenerator
 from .performance_workout_builders import (
@@ -31,6 +33,8 @@ from .performance_workout_builders import (
     generate_vo2max_workout,
 )
 from .phase_scaffold import build_phases_rich
+from .plan_finalizer import finalize_plan
+from .plan_generator import _install_race_day
 from .segment_steps import apply_steps_model
 
 logger = logging.getLogger(__name__)
@@ -89,6 +93,48 @@ class PerformancePlanGenerator(BasePlanGenerator):
         "taper": ["race_pace", "tempo"],
     }
 
+    @staticmethod
+    def _rebalance_easy_and_long(daily_workouts: List[Dict[str, Any]]) -> None:
+        """Keep an easy filler from becoming the week's de-facto long run.
+
+        At three runs/week the authored long and quality sessions used to leave
+        the whole residual budget in one easy slot.  Transfer only the amount
+        needed to satisfy the shared 1.25x relationship, preserving the week's
+        total and the relative size of multiple easy runs.
+        """
+        from app.contexts.plan.generators.workout_builder_base import (
+            reconcile_workout_after_cap,
+        )
+
+        long_run = next((w for w in daily_workouts if w.get("type") == "long"), None)
+        easy_runs = [
+            w
+            for w in daily_workouts
+            if w.get("type") == "easy" and (w.get("distance") or 0) > 0
+        ]
+        if not long_run or not easy_runs:
+            return
+        long_km = long_run.get("distance") or 0.0
+        easy_total = sum(w["distance"] for w in easy_runs)
+        largest_easy = max(w["distance"] for w in easy_runs)
+        # Aim a shade inside the public 1.25x guard so one-decimal rounding
+        # cannot put the finished card back over the boundary.
+        ratio_limit = 1.22
+        if long_km <= 0 or largest_easy <= long_km * ratio_limit:
+            return
+
+        transfer = (largest_easy * easy_total - ratio_limit * long_km * easy_total) / (
+            largest_easy + ratio_limit * easy_total
+        )
+        transfer = max(0.0, min(transfer, easy_total))
+        new_easy_total = easy_total - transfer
+        scale = new_easy_total / easy_total if easy_total else 1.0
+        long_run["distance"] = round(long_km + transfer, 1)
+        reconcile_workout_after_cap(long_run)
+        for workout in easy_runs:
+            workout["distance"] = round(workout["distance"] * scale, 1)
+            reconcile_workout_after_cap(workout)
+
     def calculate_training_zones(
         self,
         goal_pace: float,
@@ -135,6 +181,7 @@ class PerformancePlanGenerator(BasePlanGenerator):
         vdot_zones: Optional[Dict] = None,
         week_in_phase: int = 0,
         experience_level: str = "intermediate",
+        weekly_ceiling: Optional[float] = None,
     ) -> Dict[str, Any]:
         quality_percent = phases_rich[phase]["quality_percent"]
 
@@ -233,6 +280,8 @@ class PerformancePlanGenerator(BasePlanGenerator):
                     if w["type"] == "easy" and w["distance"] > 0:
                         w["distance"] = round(w["distance"] * scale, 1)
 
+        self._rebalance_easy_and_long(daily_workouts)
+
         # Overlay key workouts and coaching rationale.
         # _enforce_quality_caps above already synced segments and description;
         # overlay then replaces description + steps with curated key-workout
@@ -270,12 +319,48 @@ class PerformancePlanGenerator(BasePlanGenerator):
                 pace_zones=vdot_zones,
             )
 
+        # Key-workout overlays can replace a formulaic quality card with a
+        # slightly longer authored session. Enforce the delivered high-water
+        # ceiling after that replacement, while the flexible easy/long cards
+        # still carry segments that can be reconciled cleanly.
+        if weekly_ceiling and weekly_ceiling > 0:
+            current_total = sum(w.get("distance", 0) or 0 for w in daily_workouts)
+            if current_total > weekly_ceiling + 0.05:
+                from app.contexts.plan.generators.workout_builder_base import (
+                    reconcile_workout_after_cap,
+                )
+
+                flexible = [
+                    w
+                    for w in daily_workouts
+                    if w.get("type") in ("easy", "long")
+                    and (w.get("distance") or 0) > 0
+                ]
+                fixed_km = sum(
+                    w.get("distance", 0) or 0
+                    for w in daily_workouts
+                    if w not in flexible
+                )
+                flexible_km = sum(w["distance"] for w in flexible)
+                target_flexible = max(0.0, weekly_ceiling - fixed_km)
+                if flexible_km > 0 and target_flexible < flexible_km:
+                    scale = target_flexible / flexible_km
+                    for workout in flexible:
+                        workout["distance"] = round(workout["distance"] * scale, 1)
+                        reconcile_workout_after_cap(workout)
+                    self._rebalance_easy_and_long(daily_workouts)
+
         # Unify the representation: the formulaic base/easy/long/fartlek
         # sessions are still segment-based at this point (caps and prose were
         # reconciled against segments above); project them onto the same
         # structured steps model the curated overlay and road generator emit so
         # every stored workout renders, enriches, and adapts identically.
         apply_steps_model(daily_workouts, target_distance)
+        from app.contexts.plan.generators.workout_scaler import (
+            reclamp_quality_to_long_run,
+        )
+
+        reclamp_quality_to_long_run(daily_workouts)
 
         strength_sessions = attach_strength_sessions(
             daily_workouts,
@@ -385,21 +470,16 @@ class PerformancePlanGenerator(BasePlanGenerator):
         if improvement > 0.15:
             raise ValueError("Goal pace improvement >15% is not realistic")
 
-        # The performance block is calibrated to 6-16 weeks; outside that band
-        # the request is clamped — loudly, so a caller asking for 20 weeks
-        # learns the plan is 16 rather than discovering it in the UI (audit
-        # G10). The road generator raises for the same situation; this
-        # generator's contract has always been a clamp, so the warning keeps
-        # the behaviour while removing the silence.
-        if weeks < 6 or weeks > 16:
-            clamped_from = weeks
-            weeks = max(6, min(16, weeks))
-            logger.warning(
-                "Performance plan weeks clamped: requested %d, generated %d "
-                "(the performance block is calibrated to 6-16 weeks)",
-                clamped_from,
-                weeks,
-            )
+        if target_distance not in [d for d in SUPPORTED_DISTANCES if d != 30.0]:
+            raise ValueError("Performance plans support road race distances only")
+        if not 6 <= weeks <= 16:
+            raise ValueError("Performance plans require 6-16 weeks")
+        # The public performance schema requires 3-6.  Keep the lower-level
+        # generator reusable at two runs for internal robustness probes.
+        if not 2 <= runs_per_week <= 6:
+            raise ValueError("Performance plans require 2-6 runs per week")
+        if current_weekly_km <= 0:
+            raise ValueError("Performance plans require a positive weekly base")
 
         # --- Shared modules: phase calculation & mileage progression ---
         phase_durations = phase_calculator.calculate_phases(weeks, target_distance)
@@ -451,6 +531,7 @@ class PerformancePlanGenerator(BasePlanGenerator):
         experience_level = derive_experience_level(current_weekly_km)
 
         weekly_plans = []
+        actual_high_water = current_weekly_km
         for week_num in range(1, weeks + 1):
             phase = phase_calculator.get_phase(week_num, phase_durations)
             is_recovery = phase_calculator.is_recovery_week(
@@ -472,12 +553,62 @@ class PerformancePlanGenerator(BasePlanGenerator):
                 vdot_zones=week_vdot_zones,
                 week_in_phase=week_in_phase,
                 experience_level=experience_level,
+                weekly_ceiling=(
+                    None
+                    if is_recovery
+                    else actual_high_water * mileage_progression.WEEK_OVER_WEEK_CAP
+                ),
             )
             weekly_plans.append(weekly_plan)
+            if not is_recovery and weekly_plan["total_km"] > actual_high_water:
+                actual_high_water = weekly_plan["total_km"]
 
         # Representative zone table for the generate-response / summary: the
         # final week's zones, i.e. paces at full goal fitness.
-        zones, _ = _zones_for_week(weeks)
+        zones, final_vdot_zones = _zones_for_week(weeks)
+
+        _install_race_day(
+            weekly_plans,
+            target_distance,
+            final_vdot_zones,
+            max_runs=runs_per_week,
+        )
+
+        final_targets = list(km_progression)
+        if final_targets:
+            final_targets[-1] = sum(
+                workout.get("distance", 0) or 0
+                for workout in weekly_plans[-1].get("daily_workouts", [])
+            )
+        issues = finalize_plan(weekly_plans, final_targets)
+        degraded = [
+            f"wk{week['week']}: {week['validation']['message']}"
+            for week in weekly_plans
+            if week.get("validation", {}).get("status") == "degraded"
+        ]
+        if issues["warnings"]:
+            logger.warning(
+                "Performance plan warnings (%.1f km target, %d weeks): %s",
+                target_distance,
+                weeks,
+                "; ".join(issues["warnings"]),
+            )
+        if degraded:
+            logger.info(
+                "Performance plan volume degraded (%.1f km target, %d weeks): %s",
+                target_distance,
+                weeks,
+                "; ".join(degraded),
+            )
+        if issues["fatal"]:
+            raise PlanGenerationException(
+                "Performance plan generation produced an unusable week: "
+                + "; ".join(issues["fatal"]),
+                user_message=(
+                    "We couldn't build a sound time-goal plan from these inputs. "
+                    "Try a higher current mileage or a longer training window."
+                ),
+            )
 
         total_km = sum(week["total_km"] for week in weekly_plans)
         total_quality_workouts = sum(week["quality_workouts"] for week in weekly_plans)

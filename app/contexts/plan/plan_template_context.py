@@ -268,6 +268,20 @@ def _build_frequency_warning(
 
     max_runs = getattr(training_plan, "max_runs_per_week", None)
     current_km = training_plan.current_weekly_km or 0
+    first_week = plan_data[0] if plan_data else {}
+    requested_runs = first_week.get("requested_runs_per_week")
+    resolved_runs = first_week.get("resolved_runs_per_week", max_runs)
+    if requested_runs and resolved_runs and requested_runs > resolved_runs:
+        return {
+            "message": (
+                f"You requested {requested_runs} runs per week; this plan schedules "
+                f"{resolved_runs} so every run remains a meaningful, recoverable session."
+            ),
+            "suggestion": (
+                "The saved plan and calendar use the resolved frequency. Add another "
+                "day only after your weekly volume can support it."
+            ),
+        }
     if not max_runs or current_km <= 0:
         return None
 
@@ -287,12 +301,26 @@ def _build_frequency_warning(
         assess_frequency_volume_adequacy,
     )
 
-    return assess_frequency_volume_adequacy(
+    adequacy_warning = assess_frequency_volume_adequacy(
         current_km,
         realized_peak,
         max_runs,
         weeks=training_plan.weeks_duration,
     )
+    if adequacy_warning:
+        return adequacy_warning
+    if max_runs <= 2:
+        return {
+            "message": (
+                "With two runs per week, the long run necessarily carries a large "
+                "share of your weekly training."
+            ),
+            "suggestion": (
+                "If your schedule allows it, adding a short easy day spreads the "
+                "load more evenly without making the long run harder."
+            ),
+        }
+    return None
 
 
 def _build_adaptation_state(training_plan: TrainingPlan) -> dict:
