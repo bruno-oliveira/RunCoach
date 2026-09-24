@@ -1,28 +1,54 @@
-{# Renders the structured steps of a workout.
-   Expected context: workout (dict with optional 'steps' array) #}
-{% if workout.steps %}
-<ol class="workout-steps" aria-label="Workout steps">
-    {% for step in workout.steps %}
-    <li class="workout-step workout-step-{{ step.kind }}">
-        <span class="workout-step-dot" aria-hidden="true"></span>
-        <div class="workout-step-body">
-            <div class="workout-step-head">
-                <span class="workout-step-label">{{ step.label }}</span>
-                {% if step.pace_zone %}<span class="workout-step-zone workout-step-zone-{{ step.pace_zone }}">{{ step.pace_zone }}</span>{% endif %}
-            </div>
-            {% set meta = [] %}
-            {% if step.distance_m and step.distance_m >= 1000 %}{% set _ = meta.append((step.distance_m / 1000) | format_km + ' km') %}{% elif step.distance_m %}{% set _ = meta.append(step.distance_m ~ ' m') %}{% endif %}
-            {% if step.duration_s %}{% if step.duration_s >= 60 %}{% set _ = meta.append((step.duration_s // 60) ~ ':' ~ '%02d'|format(step.duration_s % 60)) %}{% else %}{% set _ = meta.append(step.duration_s ~ ' s') %}{% endif %}{% endif %}
-            {% if step.pace_str %}{% set _ = meta.append(step.pace_str) %}{% endif %}
-            {% if step.effort %}{% set _ = meta.append(step.effort) %}{% endif %}
-            {% if meta %}
-            <div class="workout-step-meta">{{ meta | join(' · ') }}</div>
-            {% endif %}
-            {% if step.note %}
-            <div class="workout-step-note">{{ step.note }}</div>
-            {% endif %}
+{# Renders a workout's structured steps as grouped blocks with an effort
+   profile. The grouping and paces come from core presentation.session_view —
+   the same model the watch export uses — so this is what the watch will run.
+   Expected context: workout (dict with optional 'steps' array).
+   Optional: steps_compact (bool) — week-card density, notes hidden. #}
+{% set sv = workout.steps | session_view %}
+{% if sv %}
+{% macro step_row(st) -%}
+<li class="session-step lvl-{{ st.level }}{% if st.is_recovery %} is-recovery{% endif %}">
+    <span class="session-step-bar" aria-hidden="true"></span>
+    <div class="session-step-main">
+        <div class="session-step-line">
+            {% if st.amount %}<span class="session-step-amount">{{ st.amount }}</span>{% endif %}
+            <span class="session-step-name">{{ st.name }}</span>
         </div>
-    </li>
-    {% endfor %}
-</ol>
+        {% if st.effort %}<div class="session-step-cue">{{ st.effort }}</div>{% endif %}
+        {% if st.note %}<div class="session-step-note">{{ st.note }}</div>{% endif %}
+    </div>
+    <div class="session-step-target">
+        {% if st.pace %}<span class="session-step-pace">{{ st.pace }}</span>{% elif st.by_feel %}<span class="session-step-feel">by feel</span>{% endif %}
+        {% if st.zone %}<span class="workout-step-zone workout-step-zone-{{ st.zone }}" title="Pace zone">{{ st.zone }}</span>{% endif %}
+    </div>
+</li>
+{%- endmacro %}
+<div class="session{% if steps_compact %} session--compact{% endif %}">
+    {% if sv.profile | length > 1 %}
+    <div class="session-profile" role="img" aria-label="Effort profile: taller and warmer bars are harder, width is time">
+        {% for seg in sv.profile %}<span class="session-seg lvl-{{ seg.level }}" style="flex-grow: {{ seg.share }}" title="{{ seg.title }}"></span>{% endfor %}
+    </div>
+    <div class="session-summary">
+        <span>{% if sv.total %}≈ {{ sv.total }}{% endif %}</span>
+        <span>easy &rarr; hard</span>
+    </div>
+    {% endif %}
+    <ol class="session-blocks" aria-label="Workout steps">
+        {% for block in sv.blocks %}
+        {% if block.repeat > 1 %}
+        <li class="session-repeat">
+            <div class="session-repeat-head">
+                <span class="session-repeat-count">{{ block.repeat }}&times;</span>
+                <span class="session-repeat-label">Repeat</span>
+                {% if block.skip_last_recovery %}<span class="session-repeat-hint">no recovery after the last one</span>{% endif %}
+            </div>
+            <ol class="session-repeat-steps">
+                {% for st in block.steps %}{{ step_row(st) }}{% endfor %}
+            </ol>
+        </li>
+        {% else %}
+        {{ step_row(block.steps[0]) }}
+        {% endif %}
+        {% endfor %}
+    </ol>
+</div>
 {% endif %}

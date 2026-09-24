@@ -108,10 +108,17 @@
             <span class="week-compact-day">{{ day_names[workout.day - 1] }}</span>
             <span class="week-compact-detail">
                 <span class="week-compact-main">{{ workout.key_workout_name or (workout.type | replace('_', ' ') | title) }}{% if workout.distance and workout.distance > 0 %} <span class="week-compact-dot">·</span> {{ '%.1f'|format(workout.distance) }}km{% elif workout.duration_min %} <span class="week-compact-dot">·</span> {{ workout.duration_min }}m{% endif %}{% if workout.structure and 'hill' in workout.structure | lower %} <span class="week-compact-dot">·</span> Hilly{% elif workout.type == 'hill' %} <span class="week-compact-dot">·</span> Hilly{% endif %}</span>
+                {% set wsv = workout.steps | session_view if workout.steps else None %}
+                {% if wsv and wsv.formula %}
+                <span class="week-compact-formula">{{ wsv.formula }}</span>
+                {% endif %}
                 {% if workout.strength_session %}
                 <span class="week-compact-strength">+ {{ (workout.strength_session.focus or workout.strength_session.type) | replace('_', ' ') | title }} <span class="week-compact-dot">·</span> {{ workout.strength_session.duration }}</span>
                 {% endif %}
             </span>
+            {% if wsv and wsv.has_repeats %}
+            <span class="session week-compact-profile" aria-hidden="true"><span class="session-profile session-profile--mini">{% for seg in wsv.profile %}<span class="session-seg lvl-{{ seg.level }}" style="flex-grow: {{ seg.share }}"></span>{% endfor %}</span></span>
+            {% endif %}
             {% if logged_run %}
             <svg class="week-compact-check" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-label="Completed"><polyline points="20 6 9 17 4 12"/></svg>
             {% endif %}

@@ -20,6 +20,7 @@ from app.core.training.workouts.key_workout_library.selection import KeyWorkoutL
 from app.core.training.workouts.workout_steps.metrics import (
     _compute_distance_from_steps,
 )
+from app.utils import format_km
 
 NEW_IDS = [
     "5k_thirty_thirties",
@@ -239,3 +240,44 @@ class TestRoadDistanceBucketing:
             f"road sessions leaked into the 30km trail sentinel: "
             f"{reachable & road_only}"
         )
+
+
+def test_on_off_ks_prose_cites_the_float_the_steps_run():
+    w = _BY_ID["half_on_off_ks"]
+    for d in (6.0, 7.2, 9.8, 12.0):
+        steps = build_key_workout_steps(w, w["structure"], d, w["type"], None)
+        desc = _rewrite_key_workout_description(w["description"], w["id"], d)
+        float_step = next(s for s in steps if s["kind"] == "recovery")
+        float_km = format_km(float_step["distance_m"] / 1000)
+        assert f"/ {float_km} km easy float" in desc
+        assert "~1 km" not in float_step["label"]
+
+
+@pytest.mark.parametrize("wid", ["10k_broken_miles", "trail_flat_broken_miles"])
+def test_broken_miles_split_each_mile_as_the_prose_says(wid):
+    from app.core.training.workouts.key_workout_library.rewrites import (
+        canonical_plan,
+    )
+    from app.core.training.workouts.workout_steps import (
+        compute_distance_from_steps_checked,
+    )
+
+    w = _BY_ID[wid]
+    for d in (6.4, 9.0, 12.0):
+        steps = build_key_workout_steps(w, w["structure"], d, w["type"], None)
+        _, miles = canonical_plan(wid, d)
+        efforts = [
+            s["distance_m"]
+            for s in steps
+            for _ in range(s["repeat"])
+            if s["kind"] == "run"
+        ]
+        assert efforts == [800, 400, 400] * miles
+        rests = sum(s["repeat"] for s in steps if s["kind"] == "rest")
+        assert rests == 2 * miles
+        jogs = [s for s in steps if s["kind"] == "recovery"]
+        assert len(jogs) == miles - 1  # between miles, never after the last
+        km, _ = compute_distance_from_steps_checked(steps)
+        assert abs(km - d) < 0.05
+        desc = _rewrite_key_workout_description(w["description"], w["id"], d)
+        assert "800m, 400m and 400m" in desc

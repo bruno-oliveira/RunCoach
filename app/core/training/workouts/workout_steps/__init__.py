@@ -51,6 +51,7 @@ from app.core.training.workouts.workout_steps.backyard import (
     build_turnaround_drill_steps,
 )
 from app.core.training.workouts.workout_steps.key_workout_builders import (
+    build_broken_mile_steps,
     build_compound_rep_steps,
     build_continuous_quality_steps,
     build_distance_ladder_steps,
@@ -138,6 +139,7 @@ __all__ = [
     "build_over_under_steps",
     "build_strides_steps",
     "build_progression_block_steps",
+    "build_broken_mile_steps",
     "build_compound_rep_steps",
     "build_continuous_quality_steps",
     "build_distance_ladder_steps",

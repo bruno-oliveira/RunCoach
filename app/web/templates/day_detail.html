@@ -54,10 +54,15 @@
                 <span class="day-stat-unit">km</span>
             </div>
             {% endif %}
+            {% set hero_sv = workout.steps | session_view if workout.steps else None %}
             {% if workout.duration_min %}
             <div class="day-stat">
                 <span class="day-stat-value">{{ workout.duration_min }}</span>
                 <span class="day-stat-unit">min</span>
+            </div>
+            {% elif hero_sv and hero_sv.total %}
+            <div class="day-stat" title="Estimated from the steps and your paces">
+                <span class="day-stat-value">≈ {{ hero_sv.total }}</span>
             </div>
             {% endif %}
             {% if workout.hr_zone_target %}
@@ -69,36 +74,27 @@
         </div>
     </header>
 
-    {# What this kind of session is for #}
-    <section class="day-card">
-        <h2 class="day-card-title"><span data-i18n="day.what_this_is">What this is</span></h2>
-        <p class="day-explainer">{{ explainer }}</p>
-    </section>
-
-    {% if workout.run_min and workout.walk_min %}
-    <section class="day-card">
-        <h2 class="day-card-title">Intervals</h2>
-        <p class="day-rw">Run <strong>{{ workout.run_min }} min</strong> / Walk <strong>{{ workout.walk_min }} min</strong>
-            {% if workout.repeats %}× {{ workout.repeats }}{% endif %}
-            {% if workout.duration_min %}<span class="day-muted">— {{ workout.duration_min }} min total</span>{% endif %}
-        </p>
-    </section>
-    {% endif %}
-
-    {% if workout.description or workout.notes %}
-    <section class="day-card">
-        <h2 class="day-card-title"><span data-i18n="day.todays_session">Today's session</span></h2>
-        <p class="day-notes">{{ workout.description or workout.notes }}</p>
-        {% if workout.structure %}<p class="day-structure">{{ workout.structure }}</p>{% endif %}
+    {% if logged_run %}
+    <section class="day-card day-card--logged">
+        <h2 class="day-card-title">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:4px;"><polyline points="20 6 9 17 4 12"/></svg>
+            Completed
+        </h2>
+        <div class="day-logged-grid">
+            <div class="day-logged-stat"><span class="day-logged-value">{{ '%.1f'|format(logged_run.distance_km) }}</span><span class="day-logged-label">km</span></div>
+            {% if logged_run.duration_minutes %}<div class="day-logged-stat"><span class="day-logged-value">{{ '%.0f'|format(logged_run.duration_minutes) }}</span><span class="day-logged-label">min</span></div>{% endif %}
+            {% if logged_run.avg_pace_min_km %}<div class="day-logged-stat"><span class="day-logged-value">{{ logged_run.avg_pace_min_km | format_pace }}</span><span class="day-logged-label">pace</span></div>{% endif %}
+            {% if logged_run.avg_heart_rate %}<div class="day-logged-stat"><span class="day-logged-value">{{ logged_run.avg_heart_rate }}</span><span class="day-logged-label">bpm</span></div>{% endif %}
+        </div>
     </section>
     {% endif %}
 
     {% if workout.steps and workout.type not in ['rest', 'recovery'] %}
     <section class="day-card">
         <h2 class="day-card-title"><span data-i18n="day.step_by_step">Step by step</span></h2>
-        <div class="workout-steps-wrap">
-            {% include 'components/workout_steps.html' %}
-        </div>
+        {% set steps_compact = false %}
+        {% include 'components/workout_steps.html' %}
+        <p class="day-steps-foot">Same steps, paces and repeats your watch gets. Steps marked <em>by feel</em> have no pace alarm — walks, rests and hills are run on effort.</p>
     </section>
     {% elif workout.segments and workout.type not in ['rest', 'recovery'] %}
     <section class="day-card">
@@ -125,6 +121,32 @@
     </section>
     {% endif %}
 
+    {% if workout.run_min and workout.walk_min %}
+    <section class="day-card">
+        <h2 class="day-card-title">Intervals</h2>
+        <p class="day-rw">Run <strong>{{ workout.run_min }} min</strong> / Walk <strong>{{ workout.walk_min }} min</strong>
+            {% if workout.repeats %}× {{ workout.repeats }}{% endif %}
+            {% if workout.duration_min %}<span class="day-muted">— {{ workout.duration_min }} min total</span>{% endif %}
+        </p>
+    </section>
+    {% endif %}
+
+    {% if workout.description or workout.notes %}
+    <section class="day-card">
+        <h2 class="day-card-title"><span data-i18n="day.todays_session">Today's session</span></h2>
+        <p class="day-notes">{{ workout.description or workout.notes }}</p>
+        {# The structure line usually restates the description; print it only
+           when it adds something. #}
+        {% if workout.structure and workout.structure not in (workout.description or workout.notes or '') %}<p class="day-structure">{{ workout.structure }}</p>{% endif %}
+    </section>
+    {% endif %}
+
+    {# What this kind of session is for #}
+    <section class="day-card">
+        <h2 class="day-card-title"><span data-i18n="day.what_this_is">What this is</span></h2>
+        <p class="day-explainer">{{ explainer }}</p>
+    </section>
+
     {% if workout.coaching_rationale %}
     <section class="day-card day-card--why">
         <h2 class="day-card-title"><span data-i18n="day.why_workout">Why this workout</span></h2>
@@ -141,19 +163,23 @@
     </section>
     {% endif %}
 
-    {% if logged_run %}
-    <section class="day-card day-card--logged">
-        <h2 class="day-card-title">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:4px;"><polyline points="20 6 9 17 4 12"/></svg>
-            Completed
-        </h2>
-        <div class="day-logged-grid">
-            <div class="day-logged-stat"><span class="day-logged-value">{{ '%.1f'|format(logged_run.distance_km) }}</span><span class="day-logged-label">km</span></div>
-            {% if logged_run.duration_minutes %}<div class="day-logged-stat"><span class="day-logged-value">{{ '%.0f'|format(logged_run.duration_minutes) }}</span><span class="day-logged-label">min</span></div>{% endif %}
-            {% if logged_run.avg_pace_min_km %}<div class="day-logged-stat"><span class="day-logged-value">{{ logged_run.avg_pace_min_km | format_pace }}</span><span class="day-logged-label">pace</span></div>{% endif %}
-            {% if logged_run.avg_heart_rate %}<div class="day-logged-stat"><span class="day-logged-value">{{ logged_run.avg_heart_rate }}</span><span class="day-logged-label">bpm</span></div>{% endif %}
-        </div>
-    </section>
+    {% if prev_day or next_day %}
+    <nav class="day-pager" aria-label="Other sessions">
+        {% if prev_day %}
+        <a class="day-pager-link day-pager-prev" href="/plan/{{ plan_id }}/day/{{ prev_day.id }}">
+            <span class="day-pager-dir">&larr; Previous</span>
+            <span class="day-pager-name">{{ prev_day.label }}</span>
+            <span class="day-pager-when">{{ prev_day.when }}</span>
+        </a>
+        {% else %}<span></span>{% endif %}
+        {% if next_day %}
+        <a class="day-pager-link day-pager-next" href="/plan/{{ plan_id }}/day/{{ next_day.id }}">
+            <span class="day-pager-dir">Next &rarr;</span>
+            <span class="day-pager-name">{{ next_day.label }}</span>
+            <span class="day-pager-when">{{ next_day.when }}</span>
+        </a>
+        {% endif %}
+    </nav>
     {% endif %}
 </div>
 {% endblock %}

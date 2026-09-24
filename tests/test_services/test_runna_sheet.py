@@ -443,3 +443,73 @@ def test_a_named_session_without_a_structure_is_left_off():
         }
     ]
     assert _key_session_rows(plan) == []
+
+
+# --- Step breakdowns -------------------------------------------------------
+
+
+def _over_under_day() -> dict:
+    return {
+        "type": "tempo",
+        "distance": 8.2,
+        "key_workout_name": "Threshold Over-Unders",
+        "structure": "6 x (90 sec over / 2.5 min under)",
+        "steps": [
+            {
+                "kind": "warmup",
+                "distance_m": 1200,
+                "pace_zone": "E",
+                "pace_str": "5:26/km–4:50/km",
+            },
+            {
+                "kind": "run",
+                "label": "6 × 1.5 min over",
+                "duration_s": 90,
+                "repeat": 6,
+                "pace_zone": "I",
+                "pace_str": "3:54/km",
+            },
+            {
+                "kind": "run",
+                "label": "6 × 2.5 min under",
+                "duration_s": 150,
+                "repeat": 6,
+                "pace_zone": "T",
+                "pace_str": "4:20/km",
+            },
+            {
+                "kind": "cooldown",
+                "distance_m": 1200,
+                "pace_zone": "E",
+                "pace_str": "5:26/km–4:50/km",
+            },
+        ],
+    }
+
+
+def test_repeated_session_card_carries_a_profile():
+    card = _card(_over_under_day())
+    # warm-up + 6 × (over, under) + cool-down, drawn rep by rep
+    assert len(card.profile) == 14
+
+
+def test_single_block_card_has_no_profile():
+    card = _card(
+        {
+            "type": "easy",
+            "distance": 8.0,
+            "steps": [{"kind": "run", "distance_m": 8000, "pace_zone": "E"}],
+        }
+    )
+    assert card.profile == ()
+
+
+def test_key_session_rows_print_the_watch_steps():
+    plan = [{"week": 5, "daily_workouts": [_over_under_day()]}]
+    (row,) = _key_session_rows(plan)
+    header = next(line for line in row.steps if line.header)
+    assert header.amount == "6×"
+    inside = [line for line in row.steps if line.depth == 1]
+    assert [line.pace for line in inside] == ["3:54 /km", "4:20 /km"]
+    # Paces print fast-first, whatever order the zone table stored them in.
+    assert row.steps[0].pace == "4:50–5:26 /km"

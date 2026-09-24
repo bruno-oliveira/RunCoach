@@ -151,6 +151,31 @@ ACCENTS: dict[str, Accent] = {
 
 DAY_HEADERS = ("MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN")
 
+#: Effort level (0 standing .. 5 hard) -> bar colour, easy-cool to hard-warm.
+#: The same ramp the web session view uses, so a printed profile reads like
+#: the one on screen.
+LEVEL_COLORS = (
+    HexColor("#CFCFCF"),
+    HexColor("#8FD3C9"),
+    HexColor("#3FA9A0"),
+    HexColor("#4A72C4"),
+    HexColor("#C98A2E"),
+    HexColor("#C25B47"),
+)
+#: Bar height per level as a fraction of the profile's full height.
+LEVEL_HEIGHTS = (0.16, 0.3, 0.46, 0.62, 0.8, 1.0)
+
+# Mini profile along the bottom of a calendar card (from the card's top).
+CARD_PROFILE_TOP = 40.0
+CARD_PROFILE_H = 7.5
+
+# Session breakdowns on the Key sessions page.
+SIZE_STEP = 7.8
+STEP_LEADING = 10.6
+STEP_INDENT = 12.0
+SESSION_PROFILE_H = 14.0
+SESSION_PROFILE_GAP = 6.0
+
 
 def accent_for(kind: str) -> Accent:
     return ACCENTS.get(kind, NEUTRAL)

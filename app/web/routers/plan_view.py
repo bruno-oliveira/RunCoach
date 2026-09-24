@@ -155,6 +155,41 @@ def _find_workout_in_plan(
     return None, None
 
 
+def _neighbour_sessions(
+    plan_data: list, workout_id: str, day_names: list[str]
+) -> tuple[Optional[dict], Optional[dict]]:
+    """The previous and next *sessions* around a workout, skipping rest days.
+
+    Lets the day page step through the plan without a round trip to the week
+    view — the way a runner actually reads it ("what's after this?").
+    """
+    sessions = [
+        (week.get("week"), workout)
+        for week in plan_data
+        for workout in week.get("daily_workouts", [])
+        if workout.get("id") and workout.get("type") != "rest"
+    ]
+    index = next(
+        (i for i, (_, w) in enumerate(sessions) if w.get("id") == workout_id), None
+    )
+    if index is None:
+        return None, None
+
+    def _link(i: int) -> Optional[dict]:
+        if not 0 <= i < len(sessions):
+            return None
+        week_num, w = sessions[i]
+        day = w.get("day") or 0
+        name = (
+            w.get("key_workout_name")
+            or str(w.get("type") or "").replace("_", " ").title()
+        )
+        when = day_names[day - 1] if 1 <= day <= 7 else ""
+        return {"id": w["id"], "label": name, "when": f"Week {week_num} · {when}"}
+
+    return _link(index - 1), _link(index + 1)
+
+
 @router.get("/plan/{plan_id}/day/{workout_id}", response_class=HTMLResponse)
 def view_workout_day(
     plan_id: str,
@@ -220,6 +255,8 @@ def view_workout_day(
         else:
             week_dates = None
 
+        prev_day, next_day = _neighbour_sessions(plan_data, workout_id, day_names)
+
         # Surface a logged run for this workout, if one is mapped.
         logged_runs_map, _ = plan_view_service.get_logged_runs_map(training_plan.id, db)
         logged_run = logged_runs_map.get(workout_id)
@@ -239,6 +276,8 @@ def view_workout_day(
             "week_dates": week_dates,
             "logged_run": logged_run,
             "is_trail": bool(getattr(training_plan, "is_trail", False)),
+            "prev_day": prev_day,
+            "next_day": next_day,
         }
         return templates.TemplateResponse(request, "day_detail.html", ctx)
 

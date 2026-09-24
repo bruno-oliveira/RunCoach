@@ -10,6 +10,9 @@ from typing import Any, Callable, Dict, Optional
 
 from app.core.training.physiology.vdot_calculator import VDOTCalculator
 from app.core.training.workouts.key_workout_data import WORKOUTS as _CATALOG
+from app.core.training.workouts.workout_steps.key_workout_builders import (
+    TIGHT_BUDGET_RECOVERY_S,
+)
 from app.core.training.workouts.workout_steps.primitives import _wucd_m, wucd_profile
 from app.utils import format_km, truncate_km
 
@@ -387,6 +390,37 @@ def _on_off_k_reps(d: float) -> int:
     return max(2, min(5, _main_m(d) // 2000))
 
 
+def _on_off_float_m(d: float) -> int:
+    """Float length between on-kilometres, in metres.
+
+    The couplet count is floored, so the float is whatever the budget leaves
+    per rep — often 1.3-1.6 km, not the 1 km the old prose promised. Prose
+    and steps both read this, so the text states the float the watch runs.
+    """
+    reps = _on_off_k_reps(d)
+    return int(round(max(0, _main_m(d) - reps * 1000) / reps))
+
+
+def _on_off_float_txt(d: float) -> str:
+    """The float as the prose cites it.
+
+    On a budget too small to leave any float, the step builder falls back to a
+    timed jog between reps (it can't count toward the distance), so the prose
+    names that time rather than printing "0.0 km".
+    """
+    float_m = _on_off_float_m(d)
+    if float_m <= 0:
+        return f"{TIGHT_BUDGET_RECOVERY_S} sec"
+    if float_m < 100:
+        return "a short"
+    return f"{format_km(float_m / 1000)} km"
+
+
+# A broken mile: three efforts inside each 1600 m with a short standing rest.
+BROKEN_MILE_SPLITS_M = (800, 400, 400)
+BROKEN_MILE_REST_S = 30
+
+
 def _rolling_400_reps(d: float) -> int:
     """Rolling-400 couplets (400 m surge + 600 m float = 1 km per rep)."""
     return max(4, min(8, _main_m(d) // 1000))
@@ -642,7 +676,8 @@ _DISTANCE_REWRITES: Dict[str, Callable[[float], str]] = {
     # -- Runna-inspired build/peak sessions --
     "half_on_off_ks": lambda d: (
         f"Warm up {format_km(_wu_cd(d)[0])}km easy. Run {_on_off_k_reps(d)} x "
-        f"(1 km at threshold pace / 1 km easy float) as one continuous block — "
+        f"(1 km at threshold pace / {_on_off_float_txt(d)} easy float) as one "
+        f"continuous block — "
         f"the float is genuinely easy, reset and go again. "
         f"Cool down {format_km(_wu_cd(d)[1])}km easy."
     ),
@@ -796,8 +831,9 @@ _DISTANCE_REWRITES: Dict[str, Callable[[float], str]] = {
     ),
     "10k_broken_miles": lambda d: (
         f"Easy warm-up, then run {canonical_plan('10k_broken_miles', d)[1]} broken "
-        f"miles (1600m): within each, run 3 hard efforts at 5K pace with a short "
-        f"rest between them, then an easy jog between miles. Easy cool-down."
+        f"miles (1600m): within each, run 800m, 400m and 400m at 5K pace with "
+        f"{BROKEN_MILE_REST_S} sec standing rest between them, then an easy jog "
+        f"between miles. Easy cool-down."
     ),
     "10k_200m_repeats": lambda d: (
         f"Easy warm-up, then run {_vo2max_400_reps(d)} short fast efforts "
@@ -876,8 +912,9 @@ _DISTANCE_REWRITES: Dict[str, Callable[[float], str]] = {
     ),
     "trail_flat_broken_miles": lambda d: (
         f"Easy warm-up. Run {canonical_plan('trail_flat_broken_miles', d)[1]} broken "
-        f"miles (1600m): each is 3 hard efforts at strong trail pace with a short "
-        f"rest between, then an easy jog between miles. Easy cool-down."
+        f"miles (1600m): each is 800m, 400m and 400m at strong trail pace with "
+        f"{BROKEN_MILE_REST_S} sec standing rest between, then an easy jog between "
+        f"miles. Easy cool-down."
     ),
     "trail_flat_vo2max_intervals": lambda d: (
         f"Easy warm-up. Run "

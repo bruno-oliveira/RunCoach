@@ -11,6 +11,8 @@ from app.core.training.workouts import workout_steps as _steps_mod
 from app.core.training.workouts.key_workout_library.rewrites import (
     _FLAT_PYRAMID_PATTERNS,
     _HILL_PYRAMID_PATTERNS,
+    BROKEN_MILE_REST_S,
+    BROKEN_MILE_SPLITS_M,
     _compound_400_200_reps,
     _compound_800_400_reps,
     _duration_pyramid_min,
@@ -65,6 +67,27 @@ def _canonical_meter_reps(
             rep_m=rep_m,
             work_zone=work_zone,
             recovery_label=recovery_label,
+        )
+
+    return _build
+
+
+def _broken_miles(
+    wid: str, work_zone: str
+) -> Callable[[float, Optional[Dict]], List[Dict[str, Any]]]:
+    """Step builder for broken-mile sessions: the mile count is canonical
+    (shared with the prose), each mile split into the efforts the prose names.
+    """
+
+    def _build(d: float, pz: Optional[Dict]) -> List[Dict[str, Any]]:
+        _, miles = canonical_plan(wid, d)
+        return _steps_mod.build_broken_mile_steps(
+            d,
+            pz,
+            miles=miles,
+            splits_m=BROKEN_MILE_SPLITS_M,
+            rest_s=BROKEN_MILE_REST_S,
+            work_zone=work_zone,
         )
 
     return _build
@@ -159,7 +182,9 @@ _KEY_WORKOUT_STEP_BUILDERS: Dict[
         reps=_on_off_k_reps(d),
         rep_m=1000,
         work_zone="T",
-        recovery_label="~1 km easy float between",
+        # No distance in the label: the float is whatever the budget leaves
+        # (_on_off_float_m), and the step's own distance already says it.
+        recovery_label="Easy float between",
     ),
     "rolling_400s": lambda d, pz: _steps_mod.build_meter_rep_steps(
         d,
@@ -346,9 +371,7 @@ _KEY_WORKOUT_STEP_BUILDERS: Dict[
         work_zone="10K",
         recovery_label="200m easy jog",
     ),
-    "10k_broken_miles": _canonical_meter_reps(
-        "10k_broken_miles", "I", recovery_label="easy jog between miles"
-    ),
+    "10k_broken_miles": _broken_miles("10k_broken_miles", "5K"),
     "10k_200m_repeats": lambda d, pz: _steps_mod.build_meter_rep_steps(
         d,
         pz,
@@ -454,9 +477,7 @@ _KEY_WORKOUT_STEP_BUILDERS: Dict[
         work_zone="T",
         recovery_label="200m easy jog",
     ),
-    "trail_flat_broken_miles": _canonical_meter_reps(
-        "trail_flat_broken_miles", "I", recovery_label="easy jog between miles"
-    ),
+    "trail_flat_broken_miles": _broken_miles("trail_flat_broken_miles", "I"),
     "trail_flat_pyramid": lambda d, pz: _steps_mod.build_duration_pyramid_steps(
         d,
         pz,
