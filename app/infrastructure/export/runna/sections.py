@@ -11,8 +11,13 @@ from __future__ import annotations
 from typing import Any, Dict, List, Sequence
 
 from app.core.training.physiology.vdot_calculator import VDOTCalculator
+from app.core.training.workouts.workout_steps.presentation import format_pace_range
 from app.infrastructure.export.plan_export_dto import PlanExportDTO
-from app.infrastructure.export.runna.sheet import DetailRow, DetailSection
+from app.infrastructure.export.runna.sheet import (
+    DetailRow,
+    DetailSection,
+    session_breakdown,
+)
 
 # --- Static guidance ------------------------------------------------------
 
@@ -147,17 +152,15 @@ def _pace_rows(vdot: float) -> List[DetailRow]:
         zone = zones.get(key)
         if not zone:
             continue
-        rows.append(
-            DetailRow(
-                lead=f"{name} · {zone.get('pace_str', '')}", body=meaning, kind=kind
-            )
-        )
+        pace = format_pace_range(zone.get("pace_str")) or zone.get("pace_str", "")
+        rows.append(DetailRow(lead=f"{name} · {pace}", body=meaning, kind=kind))
     for key, label in (("5K", "5K race pace"), ("10K", "10K race pace")):
         zone = zones.get(key)
         if zone:
+            pace = format_pace_range(zone.get("pace_str")) or zone.get("pace_str", "")
             rows.append(
                 DetailRow(
-                    lead=f"{label} · {zone.get('pace_str', '')}",
+                    lead=f"{label} · {pace}",
                     body="Reference effort for pacing a race or a race-pace segment.",
                     kind="neutral",
                 )
@@ -194,6 +197,7 @@ def _key_session_rows(plan_data: Sequence[Dict[str, Any]]) -> List[DetailRow]:
     """
     variants: Dict[str, Dict[str, List[int]]] = {}
     kinds: Dict[str, str] = {}
+    first_steps: Dict[str, tuple[int, List[Dict[str, Any]]]] = {}
     for week in plan_data:
         number = int(week.get("week") or 0)
         for day in week.get("daily_workouts") or []:
@@ -203,6 +207,8 @@ def _key_session_rows(plan_data: Sequence[Dict[str, Any]]) -> List[DetailRow]:
                 continue
             variants.setdefault(name, {}).setdefault(structure, []).append(number)
             kinds.setdefault(name, "long" if day.get("type") == "long" else "quality")
+            if day.get("steps") and name not in first_steps:
+                first_steps[name] = (number, day["steps"])
 
     rows: List[DetailRow] = []
     for name, shapes in variants.items():
@@ -216,11 +222,22 @@ def _key_session_rows(plan_data: Sequence[Dict[str, Any]]) -> List[DetailRow]:
                 f"{_week_span(weeks)}: {structure}"
                 for structure, weeks in shapes.items()
             )
+        # The step-by-step breakdown is the session as the watch runs it. It
+        # is printed for the first time the session lands; later weeks grow
+        # the same shape, which the prose above already lists by week.
+        profile, steps = (), ()
+        if name in first_steps:
+            first_week, day_steps = first_steps[name]
+            profile, steps = session_breakdown(day_steps)
+            if steps and len(shapes) > 1:
+                body = f"{body} \u00b7 Steps below: week {first_week}."
         rows.append(
             DetailRow(
                 lead=f"{name} \u00b7 {span}" if span else name,
                 body=body,
                 kind=kinds[name],
+                steps=steps,
+                profile=profile,
             )
         )
     return rows
@@ -367,8 +384,9 @@ def build_sections(
                 eyebrow="REFERENCE",
                 title="Key sessions",
                 subtitle=(
-                    "Every card on the calendar is titled with its session "
-                    "name. This is what each one asks for, and when it lands."
+                    "Every card on the calendar is titled with its session name. "
+                    "This is what each one asks for, when it lands, and the exact "
+                    "steps your watch will run."
                 ),
                 rows=tuple(key_sessions),
                 columns=2,

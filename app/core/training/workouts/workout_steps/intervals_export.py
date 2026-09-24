@@ -20,6 +20,10 @@ Syntax notes (Intervals.icu workout builder):
     was generated without VDOT and a step has only a ``pace_zone``, we fall back
     to a default pace for that zone so a concrete target is always emitted.
   * A repeated block is a ``Nx`` header followed by its indented ``- `` steps.
+    Header text becomes a per-rep counter on the watch (``Rep 3/5``).
+  * Text before a step's duration is the cue the watch announces for it
+    (``- Recovery 90s``). Walks, rests and hill reps carry a cue but no pace
+    target: they are run by feel, and a pace alarm on them only ever beeps.
 """
 
 from __future__ import annotations
@@ -29,6 +33,10 @@ from typing import Any, Optional
 from app.core.training.workouts.workout_steps.metrics import (
     _DEFAULT_PACES,
     _parse_pace_str_to_min_per_km,
+)
+from app.core.training.workouts.workout_steps.structure import (
+    group_steps,
+    is_recovery,
 )
 
 # Fallback for legacy plans whose workouts carry no ``steps`` list: map the
@@ -56,10 +64,11 @@ def _format_distance_km(distance_m: float) -> str:
 
 
 def _format_duration(duration_s: int) -> str:
-    """Seconds -> Intervals.icu duration token ('10m' minutes, else '90s')."""
-    if duration_s % 60 == 0:
-        return f"{duration_s // 60}m"
-    return f"{duration_s}s"
+    """Seconds -> Intervals.icu duration token ('10m', '2m30s', '45s')."""
+    minutes, seconds = divmod(duration_s, 60)
+    if not minutes:
+        return f"{seconds}s"
+    return f"{minutes}m{seconds}s" if seconds else f"{minutes}m"
 
 
 def _fmt_pace(min_per_km: float) -> str:
@@ -85,33 +94,124 @@ def _parse_pace_bounds(pace_str: Optional[str]) -> list[float]:
 
 
 def _fallback_pace(step: dict[str, Any]) -> Optional[float]:
-    """Default min/km for a step with no pace_str (pre-VDOT plans)."""
+    """Default min/km for a work/bookend step with no pace_str (pre-VDOT plans)."""
     zone = step.get("pace_zone")
     if zone and zone in _DEFAULT_PACES:
         return _DEFAULT_PACES[zone]
-    kind = step.get("kind")
-    if kind == "walk":
-        return _DEFAULT_PACES["WALK"]
-    if kind in ("warmup", "cooldown", "recovery"):
+    if step.get("kind") in ("warmup", "cooldown"):
         return _DEFAULT_PACES["E"]
     return None
 
 
-def _pace_target(step: dict[str, Any]) -> Optional[str]:
-    """Absolute Intervals.icu pace target for a step, or None for an open step."""
+def is_hill(step: dict[str, Any]) -> bool:
+    text = f"{step.get('label') or ''} {step.get('effort') or ''}".lower()
+    return "hill" in text
+
+
+def is_walk(step: dict[str, Any]) -> bool:
+    effort = (step.get("effort") or "").lower()
+    return (
+        step.get("kind") == "walk"
+        or step.get("pace_zone") == "WALK"
+        or effort.startswith("walk")
+    )
+
+
+def is_open_effort(step: dict[str, Any]) -> bool:
+    """Steps run by feel, where an absolute pace alarm would be wrong.
+
+    Walks and rests have no running pace; a hill rep's pace depends on the
+    gradient, so a flat-ground number beeps "too slow" all the way up; and an
+    implied stride recovery is a walk/jog back.
+    """
+    return (
+        step.get("kind") == "rest"
+        or step.get("implied", False)
+        or is_walk(step)
+        or is_hill(step)
+    )
+
+
+def resolve_pace_bounds(
+    step: dict[str, Any],
+    zone_paces: dict[str, str],
+    *,
+    allow_default: bool = True,
+) -> Optional[list[float]]:
+    """The min/km bounds a step targets, or None when it is run by feel.
+
+    A recovery with a zone but no pace of its own borrows the runner's pace for
+    that zone from a sibling step (the warm-up's easy range). With nothing to
+    borrow it stays open: an 8:00/km default is not the runner's number, and a
+    recovery jog that beeps "slow down" every rep is worse than no target.
+    ``allow_default=False`` also refuses the zone defaults for work steps — the
+    screens use that, so they never print a generic pace as if it were yours.
+    """
+    if is_open_effort(step):
+        return None
     bounds = _parse_pace_bounds(step.get("pace_str"))
+    zone = step.get("pace_zone")
+    if not bounds and zone in zone_paces:
+        bounds = _parse_pace_bounds(zone_paces[zone])
+    if bounds:
+        return bounds
+    if step.get("kind") == "recovery" or not allow_default:
+        return None
+    fallback = _fallback_pace(step)
+    return [fallback] if fallback is not None else None
+
+
+def _pace_target(step: dict[str, Any], zone_paces: dict[str, str]) -> Optional[str]:
+    """Absolute Intervals.icu pace target for a step, or None for an open step."""
+    bounds = resolve_pace_bounds(step, zone_paces)
     if not bounds:
-        fallback = _fallback_pace(step)
-        if fallback is None:
-            return None
-        bounds = [fallback]
+        return None
     if len(bounds) == 1:
         return f"{_fmt_pace(bounds[0])} Pace"
     return f"{_fmt_pace(min(bounds))}-{_fmt_pace(max(bounds))} Pace"
 
 
-def _step_line(step: dict[str, Any]) -> Optional[str]:
-    """Render one step as a ``- <amount> [<pace> Pace]`` line.
+# Step cue text: everything before the duration becomes the prompt the watch
+# shows for the step. Kept free of digits so Intervals.icu can never read part
+# of the cue as the duration ("10K pace" would be a gamble).
+_ZONE_CUES = {
+    "E": "Easy",
+    "M": "Marathon pace",
+    "T": "Threshold",
+    "I": "Interval",
+    "R": "Fast",
+    "5K": "Five-K pace",
+    "10K": "Ten-K pace",
+    "race": "Race pace",
+}
+
+
+def step_cue(step: dict[str, Any]) -> str:
+    """Short, digit-free name for a step, as the watch should announce it."""
+    kind = step.get("kind")
+    if step.get("implied"):
+        return "Jog back"
+    if kind == "warmup":
+        return "Warmup"
+    if kind == "cooldown":
+        return "Cooldown"
+    if kind == "rest":
+        return "Rest"
+    if kind == "walk":
+        return "Power hike" if "hike" in (step.get("effort") or "") else "Walk"
+    if kind == "recovery":
+        return "Walk" if is_walk(step) else "Recovery"
+    if kind == "strides":
+        return "Stride"
+    if is_hill(step):
+        return "Hill"
+    if (step.get("label") or "").startswith("Loop"):
+        return "Loop"
+    return _ZONE_CUES.get(step.get("pace_zone") or "", "Run")
+
+
+def _step_line(step: dict[str, Any], zone_paces: dict[str, str]) -> Optional[str]:
+    """Render one step as a ``- <cue> <amount> [<pace> Pace]`` line.
 
     Returns None for open steps (no distance and no duration), which have no
     Intervals.icu duration token and are skipped.
@@ -122,48 +222,59 @@ def _step_line(step: dict[str, Any]) -> Optional[str]:
         amount = _format_duration(int(step["duration_s"]))
     else:
         return None
-    target = _pace_target(step)
-    return f"- {amount} {target}" if target else f"- {amount}"
+    parts = [f"- {step_cue(step)} {amount}"]
+    target = _pace_target(step, zone_paces)
+    if target:
+        parts.append(target)
+    return " ".join(parts)
+
+
+def zone_paces_of(steps: list[dict[str, Any]]) -> dict[str, str]:
+    """The first concrete pace each zone carries anywhere in the session."""
+    paces: dict[str, str] = {}
+    for step in steps:
+        zone, pace = step.get("pace_zone"), step.get("pace_str")
+        if zone and pace and zone not in paces:
+            paces[zone] = pace
+    return paces
 
 
 def _blocks(steps: list[dict[str, Any]]) -> list[str]:
-    """Group steps into Intervals.icu text blocks, keeping repeats as ``Nx``.
+    """Render the grouped session as Intervals.icu text blocks.
 
-    A ``run`` step with ``repeat > 1`` immediately followed by a matching
-    ``recovery``/``walk``/``rest`` step is emitted as one ``Nx`` block wrapping
-    both, mirroring how the session actually alternates work and rest. ``rest``
-    belongs in that set for the same reason the other two do: a standing rest
-    between cruise reps, or a backyard turnaround between loops, is part of the
-    repeated unit, and splitting it into a second ``Nx`` block reads as though
-    the runner does every rep and *then* every recovery.
+    Grouping is :func:`group_steps`' job, shared with every screen that shows
+    the session, so the watch runs the structure the runner reads. A repeat
+    header is written ``Rep Nx`` because Intervals turns header text into a
+    per-rep counter on the watch ("Rep 3/5"). A block whose last recovery is
+    skipped goes up as ``(N-1)x`` rep+recovery followed by one bare rep —
+    Intervals has no "skip the last recovery" syntax, and the expansion is
+    exactly what the runner does.
     """
+    zone_paces = zone_paces_of(steps)
     out: list[str] = []
-    i = 0
-    n = len(steps)
-    while i < n:
-        step = steps[i]
-        repeat = step.get("repeat", 1) or 1
-        nxt = steps[i + 1] if i + 1 < n else None
-        if (
-            repeat > 1
-            and nxt is not None
-            and (nxt.get("repeat", 1) or 1) > 1
-            and nxt.get("kind") in ("recovery", "walk", "rest")
-        ):
-            lines = [f"{repeat}x"]
-            lines.extend(ln for ln in (_step_line(step), _step_line(nxt)) if ln)
-            out.append("\n".join(lines))
-            i += 2
-        elif repeat > 1:
-            line = _step_line(step)
-            if line:
-                out.append(f"{repeat}x\n{line}")
-            i += 1
+    for block in group_steps(steps):
+        lines = [ln for ln in (_step_line(s, zone_paces) for s in block["steps"]) if ln]
+        if not lines:
+            continue
+        reps = block["repeat"]
+        if reps <= 1:
+            out.extend(lines)
+            continue
+        if not block["skip_last_recovery"]:
+            out.append("\n".join([f"Rep {reps}x", *lines]))
+            continue
+        work = [
+            ln
+            for ln in (
+                _step_line(s, zone_paces) for s in block["steps"] if not is_recovery(s)
+            )
+            if ln
+        ]
+        if reps - 1 > 1:
+            out.append("\n".join([f"Rep {reps - 1}x", *lines]))
         else:
-            line = _step_line(step)
-            if line:
-                out.append(line)
-            i += 1
+            out.extend(lines)
+        out.extend(work)
     return out
 
 

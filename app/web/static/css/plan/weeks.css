@@ -292,7 +292,11 @@
     color: var(--color-text-muted);
     text-transform: uppercase;
     letter-spacing: var(--tracking-wide);
-    flex: 0 0 2.4rem;
+    /* Sized to its date ("MON, SEP 24") rather than a fixed 2.4rem, which
+       broke every dated label onto three stacked lines. */
+    flex: 0 0 auto;
+    min-width: 2.4rem;
+    white-space: nowrap;
 }
 
 .workout-type {
@@ -325,6 +329,7 @@
 /* Upcoming-day controls break onto their own full-width line */
 .workout-item > .run-walk-intervals,
 .workout-item > .workout-structure,
+.workout-item > .workout-card-profile,
 .workout-item > .workout-details,
 .workout-item > .workout-strength-tag,
 .workout-item > .coaching-feedback,
@@ -781,9 +786,28 @@ a.week-compact-row:hover {
     color: var(--color-text-secondary);
 }
 
+/* The main set in one line ("5 × 400 m / 90 s") and a thumbnail of the
+   session's shape, so a quality day reads at a glance without opening it. */
+.week-compact-formula {
+    font-size: var(--text-xs);
+    color: var(--color-text-secondary);
+    font-variant-numeric: tabular-nums;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.week-compact-profile {
+    margin-left: auto;
+    flex: 0 0 72px;
+    align-self: center;
+}
+.week-compact-profile .session-profile--mini { margin-top: 0; height: 20px; border-bottom: 0; }
+.week-compact-profile + .week-compact-check { margin-left: 0; }
+
 @media (max-width: 480px) {
     .week-compact-main { font-size: var(--text-sm); }
     .week-compact-swatch { width: 20px; height: 20px; }
+    .week-compact-profile { flex-basis: 52px; }
 }
 
 /* Expand-all toggle */

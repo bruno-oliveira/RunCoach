@@ -19,7 +19,7 @@ logger = logging.getLogger(__name__)
 
 #: Bumped whenever the layout changes, so a redesign invalidates cached renders
 #: instead of serving the previous design until the TTL expires.
-LAYOUT_VERSION = "runna-1"
+LAYOUT_VERSION = "runna-2"
 
 
 class PDFGenerator(PDFBase):

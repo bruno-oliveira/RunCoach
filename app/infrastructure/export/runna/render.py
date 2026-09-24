@@ -19,9 +19,12 @@ from app.infrastructure.export.runna import theme as t
 from app.infrastructure.export.runna.sheet import (
     Chip,
     DayCard,
+    DetailRow,
     DetailSection,
     PhaseBlock,
+    Profile,
     Sheet,
+    StepLine,
     WeekRow,
 )
 
@@ -210,8 +213,14 @@ class SheetPainter:
             headline_size,
             accent.fg,
         )
+        # A card with a profile gives its second label line to the bars.
         label_lines, label_size = _fit_lines(
-            card.label, t.FONT_BOLD, t.SIZE_CARD_LABEL, inner, 5.5, t.CARD_LABEL_LINES
+            card.label,
+            t.FONT_BOLD,
+            t.SIZE_CARD_LABEL,
+            inner,
+            5.5,
+            1 if card.profile else t.CARD_LABEL_LINES,
         )
         for offset, line in enumerate(label_lines):
             self.text(
@@ -222,12 +231,91 @@ class SheetPainter:
                 label_size,
                 accent.fg,
             )
+        if card.profile:
+            self.profile(
+                x + t.CARD_PAD_X,
+                top + t.CARD_PROFILE_TOP,
+                inner,
+                t.CARD_PROFILE_H,
+                card.profile,
+                gap=0.6,
+            )
         if card.strength:
             # A strength session rides along with a run rather than owning a
             # day, so it is marked on the card instead of taking a column.
             canvas = self.canvas
             canvas.setFillColor(t.STRENGTH.fg)
             canvas.circle(x + t.COL_W - 8.0, _y(top + 8.0), 2.4, stroke=0, fill=1)
+
+    def profile(
+        self,
+        x: float,
+        top: float,
+        width: float,
+        height: float,
+        profile: Profile,
+        gap: float = 1.0,
+    ) -> None:
+        """Effort bars bottom-aligned in a box: width is time, height effort."""
+        if not profile:
+            return
+        canvas = self.canvas
+        canvas.setDash()
+        usable = width - gap * (len(profile) - 1)
+        min_w = 0.8
+        cursor = x
+        for level, share in profile:
+            level = max(0, min(5, level))
+            bar_w = max(min_w, usable * share / 100.0)
+            bar_h = height * t.LEVEL_HEIGHTS[level]
+            canvas.setFillColor(t.LEVEL_COLORS[level])
+            canvas.rect(cursor, _y(top + height), bar_w, bar_h, stroke=0, fill=1)
+            cursor += bar_w + gap
+
+    def step_lines(
+        self, x: float, top: float, width: float, lines: Sequence[StepLine]
+    ) -> None:
+        """A session breakdown: repeats bracketed, paces right-aligned."""
+        canvas = self.canvas
+        bracket_start = None
+        for index, line in enumerate(lines):
+            baseline = top + (index + 1) * t.STEP_LEADING - 2.5
+            if line.header:
+                bracket_start = baseline + 2.5
+                self.text(x, baseline, line.amount, t.FONT_BOLD, t.SIZE_STEP, t.INK)
+                self.text(
+                    x + _width(line.amount, t.FONT_BOLD, t.SIZE_STEP) + 4,
+                    baseline,
+                    line.name.upper(),
+                    t.FONT_BOLD,
+                    t.SIZE_STEP - 1.6,
+                    t.MUTED,
+                    0.4,
+                )
+                continue
+            left = x + (t.STEP_INDENT if line.depth else 0.0)
+            canvas.setFillColor(t.LEVEL_COLORS[max(0, min(5, line.level))])
+            canvas.rect(left, _y(baseline + 1.0), 2.4, 7.6, stroke=0, fill=1)
+            cursor = left + 6.0
+            self.text(cursor, baseline, line.amount, t.FONT_BOLD, t.SIZE_STEP, t.INK)
+            cursor += _width(line.amount, t.FONT_BOLD, t.SIZE_STEP) + 4
+            pace_w = _width(line.pace, t.FONT, t.SIZE_STEP)
+            name, size = _shrink_to_fit(
+                line.name, t.FONT, t.SIZE_STEP, x + width - pace_w - 8 - cursor, 6.0
+            )
+            self.text(cursor, baseline, name, t.FONT, size, t.BODY)
+            if line.pace:
+                self.text(
+                    x + width - pace_w, baseline, line.pace, t.FONT, t.SIZE_STEP, t.INK
+                )
+            last_in_repeat = line.depth and (
+                index + 1 == len(lines) or not lines[index + 1].depth
+            )
+            if bracket_start is not None and last_in_repeat:
+                canvas.setStrokeColor(t.FAINT)
+                canvas.setLineWidth(0.8)
+                canvas.line(x + 3, _y(bracket_start + 1), x + 3, _y(baseline + 2))
+                bracket_start = None
 
     def chip(
         self,
@@ -491,6 +579,16 @@ SECTION_BODY_TOP = 140.0
 SECTION_GUTTER = 26.0
 
 
+def _breakdown_height(row: DetailRow) -> float:
+    """Extra height a row's profile + step lines take below its prose."""
+    if not row.steps:
+        return 0.0
+    height = 6.0 + len(row.steps) * t.STEP_LEADING
+    if len(row.profile) > 1:
+        height += t.SESSION_PROFILE_H + t.SESSION_PROFILE_GAP
+    return height
+
+
 def _section_header(painter: SheetPainter, section: DetailSection) -> None:
     painter.text(
         t.MARGIN_L,
@@ -527,7 +625,8 @@ def _flow_section(painter: SheetPainter, section: DetailSection) -> None:
         for row in section.rows
     ]
     heights = [
-        SECTION_LEAD_GAP + len(lines) * SECTION_BODY_LEADING for _, lines in rows
+        SECTION_LEAD_GAP + len(lines) * SECTION_BODY_LEADING + _breakdown_height(row)
+        for row, lines in rows
     ]
 
     index = 0
@@ -574,6 +673,14 @@ def _flow_section(painter: SheetPainter, section: DetailSection) -> None:
                     SECTION_BODY_SIZE,
                     t.BODY,
                 )
+            if row.steps:
+                block_top = cursor + len(lines) * SECTION_BODY_LEADING + 8.0
+                if len(row.profile) > 1:
+                    painter.profile(
+                        x, block_top, column_width, t.SESSION_PROFILE_H, row.profile
+                    )
+                    block_top += t.SESSION_PROFILE_H + t.SESSION_PROFILE_GAP
+                painter.step_lines(x, block_top, column_width, row.steps)
             cursor += heights[index] + SECTION_ROW_GAP
             index += 1
         painter.page_footer()

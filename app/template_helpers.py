@@ -10,6 +10,7 @@ from pathlib import Path
 from fastapi.templating import Jinja2Templates
 
 from app.core.training.periodization.plan_calendar import next_monday
+from app.core.training.workouts.workout_steps.presentation import session_view
 from app.infrastructure.config import settings
 from app.utils import format_km, format_pace
 
@@ -50,4 +51,7 @@ def create_templates(directory: str = "app/web/templates") -> Jinja2Templates:
     tpl.env.globals["next_monday"] = next_monday
     tpl.env.filters["format_pace"] = format_pace
     tpl.env.filters["format_km"] = format_km
+    # Grouped steps + effort profile, shared with the watch export so every
+    # screen shows the structure the watch will run.
+    tpl.env.filters["session_view"] = session_view
     return tpl

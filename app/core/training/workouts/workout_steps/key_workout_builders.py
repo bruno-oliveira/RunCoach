@@ -29,6 +29,10 @@ def _dur_label(seconds: int) -> str:
     return f"{minutes:g} min"
 
 
+# Recovery between rep-builder reps when the distance budget leaves none.
+TIGHT_BUDGET_RECOVERY_S = 90
+
+
 def build_meter_rep_steps(
     distance_km: float,
     pace_zones: Optional[Dict] = None,
@@ -86,7 +90,111 @@ def build_meter_rep_steps(
                 effort="easy jog",
             )
         )
+    elif reps > 1:
+        # The reps filled the whole budget, leaving no ground for the jog. The
+        # recovery still happens — it just can't count toward the distance, so
+        # it goes in as time with no zone (the cruise-rest convention) rather
+        # than vanishing and sending the watch through the reps back to back.
+        steps.append(
+            _step(
+                "recovery",
+                f"{_dur_label(TIGHT_BUDGET_RECOVERY_S)} jog between reps",
+                duration_s=TIGHT_BUDGET_RECOVERY_S,
+                repeat=reps - 1,
+                effort="jog",
+            )
+        )
     steps.append(_cooldown(pace_zones, cd_m))
+    return steps
+
+
+def build_broken_mile_steps(
+    distance_km: float,
+    pace_zones: Optional[Dict] = None,
+    *,
+    miles: int,
+    splits_m: tuple[int, ...],
+    rest_s: int,
+    work_zone: str = "I",
+) -> List[Dict[str, Any]]:
+    """Warm-up + N broken miles + cool-down.
+
+    Each mile is split into efforts (``splits_m``) with a short standing rest
+    between them; an easy jog separates the miles. Flattened into the step
+    model's single level of repeats: a mile's equal-length efforts share one
+    repeated step (so ``400, 400`` runs as ``2 × 400 m`` with a rest between),
+    and the jog appears between miles only — never after the last.
+
+    The standing rests carry no zone, so they add no distance; the leftover
+    work budget becomes the between-mile jogs, keeping the session on its
+    assigned distance exactly as :func:`build_meter_rep_steps` does.
+    """
+    if distance_km <= 0 or miles <= 0 or not splits_m:
+        return []
+    total_m = int(round(distance_km * 1000))
+    wu_m = _wucd_m(total_m)
+    work_budget = max(0, total_m - 2 * wu_m)
+    mile_m = sum(splits_m)
+    jog_total = max(0, work_budget - miles * mile_m)
+    jog_m = int(round(jog_total / (miles - 1))) if miles > 1 else 0
+
+    # Run-length encode the splits: (800, 400, 400) -> [(800, 1), (400, 2)].
+    runs: List[List[int]] = []
+    for split in splits_m:
+        if runs and runs[-1][0] == split:
+            runs[-1][1] += 1
+        else:
+            runs.append([split, 1])
+
+    def _rest(repeat: int = 1) -> Dict[str, Any]:
+        return _step(
+            "rest",
+            f"{rest_s} s standing rest",
+            duration_s=rest_s,
+            repeat=repeat,
+            effort="stand, shake out",
+        )
+
+    steps: List[Dict[str, Any]] = [_warmup(pace_zones, wu_m)]
+    for mile in range(1, miles + 1):
+        for index, (split, count) in enumerate(runs):
+            steps.append(
+                _step(
+                    "run",
+                    f"Mile {mile}: {split} m",
+                    distance_m=split,
+                    repeat=count,
+                    pace_zone=work_zone,
+                    pace_str=_pace_str(work_zone, pace_zones),
+                    effort="hard",
+                )
+            )
+            if count > 1:
+                steps.append(_rest(count - 1))
+            if index < len(runs) - 1:
+                steps.append(_rest())
+        if mile < miles:
+            if jog_m > 0:
+                steps.append(
+                    _step(
+                        "recovery",
+                        "Easy jog between miles",
+                        distance_m=jog_m,
+                        pace_zone="E",
+                        pace_str=_pace_str("E", pace_zones),
+                        effort="easy jog",
+                    )
+                )
+            else:
+                steps.append(
+                    _step(
+                        "recovery",
+                        "2 min jog between miles",
+                        duration_s=120,
+                        effort="jog",
+                    )
+                )
+    steps.append(_cooldown(pace_zones, wu_m))
     return steps
 
 

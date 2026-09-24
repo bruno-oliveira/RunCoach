@@ -13,9 +13,14 @@ from dataclasses import dataclass
 from typing import Any, Dict, Iterable, List, Optional, Sequence, Tuple
 
 from app.core.training.profiles.trail_profile import TRAIL_SENTINEL_KM
+from app.core.training.workouts.workout_steps.presentation import session_view
 from app.infrastructure.export.plan_export_dto import PlanExportDTO
 
 # --- Layout model ---------------------------------------------------------
+
+
+#: A session's effort profile: ``(level 0-5, share of time in %)`` per segment.
+Profile = Tuple[Tuple[int, float], ...]
 
 
 @dataclass(frozen=True)
@@ -26,6 +31,22 @@ class DayCard:
     headline: str = ""
     label: str = ""
     strength: bool = False
+    profile: Profile = ()  # only for sessions with a repeated main set
+
+
+@dataclass(frozen=True)
+class StepLine:
+    """One printed line of a session breakdown.
+
+    ``header`` lines open a repeat (``6×``); ``depth`` 1 lines sit inside it.
+    """
+
+    amount: str
+    name: str = ""
+    pace: str = ""
+    level: int = 2
+    depth: int = 0
+    header: bool = False
 
 
 REST_CARD = DayCard(kind="rest")
@@ -68,6 +89,8 @@ class DetailRow:
     lead: str
     body: str
     kind: str = "neutral"
+    steps: Tuple[StepLine, ...] = ()
+    profile: Profile = ()
 
 
 @dataclass(frozen=True)
@@ -201,6 +224,21 @@ def _rep_shape(structure: str) -> str:
     return ""
 
 
+def _steps_shape(day: Dict[str, Any]) -> str:
+    """``6×90s`` from the first repeated block, when the prose has no shape."""
+    view = session_view(list(day.get("steps") or []))
+    if view is None:
+        return ""
+    for block in view["blocks"]:
+        if block["repeat"] > 1:
+            amount = next(
+                (s["amount"] for s in block["steps"] if not s["is_recovery"]), None
+            )
+            if amount:
+                return f"{block['repeat']}×{amount.replace(' ', '')}"
+    return ""
+
+
 def _trim(value: str) -> str:
     return f"{float(value):g}"
 
@@ -261,7 +299,7 @@ def _headline(day: Dict[str, Any], kind: str, named: bool = False) -> str:
     km = _fmt_km(distance)
 
     if kind == "quality":
-        shape = _rep_shape(structure)
+        shape = _rep_shape(structure) or _steps_shape(day)
         return f"{km} · {shape}" if shape else km
 
     if kind == "long" and not named:
@@ -272,6 +310,50 @@ def _headline(day: Dict[str, Any], kind: str, named: bool = False) -> str:
         return f"{km} + strides"
 
     return km
+
+
+def session_breakdown(
+    steps: Optional[Sequence[Dict[str, Any]]],
+) -> Tuple[Profile, Tuple[StepLine, ...]]:
+    """Effort profile and printable step lines for a session.
+
+    Built on the same grouping as the watch export and the web views, so the
+    paper, the screen and the wrist agree on what repeats.
+    """
+    view = session_view(list(steps or []))
+    if view is None:
+        return (), ()
+    profile = tuple((seg["level"], seg["share"]) for seg in view["profile"])
+    lines: List[StepLine] = []
+    for block in view["blocks"]:
+        depth = 0
+        if block["repeat"] > 1:
+            hint = " · last rep: no recovery" if block["skip_last_recovery"] else ""
+            lines.append(
+                StepLine(
+                    amount=f"{block['repeat']}×", name=f"repeat{hint}", header=True
+                )
+            )
+            depth = 1
+        for step in block["steps"]:
+            pace = step["pace"] or ("by feel" if step["by_feel"] else "")
+            lines.append(
+                StepLine(
+                    amount=step["amount"] or "",
+                    name=step["name"],
+                    pace=pace,
+                    level=step["level"],
+                    depth=depth,
+                )
+            )
+    return profile, tuple(lines)
+
+
+def _card_profile(day: Dict[str, Any]) -> Profile:
+    view = session_view(list(day.get("steps") or []))
+    if view is None or not view["has_repeats"]:
+        return ()
+    return tuple((seg["level"], seg["share"]) for seg in view["profile"])
 
 
 def _card(day: Dict[str, Any]) -> DayCard:
@@ -290,6 +372,7 @@ def _card(day: Dict[str, Any]) -> DayCard:
         or day.get("slot_label")
         or _LABEL_BY_TYPE.get(workout_type, workout_type.replace("_", " ").title()),
         strength=bool(day.get("strength_session")),
+        profile=_card_profile(day),
     )
 
 

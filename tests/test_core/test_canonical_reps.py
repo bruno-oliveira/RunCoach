@@ -18,6 +18,7 @@ from app.core.training.workouts.key_workout_library.builders import (
 from app.core.training.workouts.key_workout_library.rewrites import (
     _CANONICAL_REP_LADDERS,
     _CANONICAL_SPECS,
+    BROKEN_MILE_SPLITS_M,
     _rewrite_key_workout_description,
     canonical_reps,
 )
@@ -67,6 +68,25 @@ class TestCanonicalRepsHelper:
         assert count == 2
 
 
+def _rep_and_count(wid, steps):
+    """The canonical (rep_m, count) a session's steps execute.
+
+    Broken miles are the one converted family whose canonical rep is split:
+    each 1600 m mile runs as 800/400/400 with rests, so the rep is the whole
+    split mile and the count is how many of them the steps hold.
+    """
+    if "broken_miles" in wid:
+        efforts = [
+            s["distance_m"]
+            for s in steps
+            for _ in range(s["repeat"])
+            if s["kind"] == "run"
+        ]
+        return sum(BROKEN_MILE_SPLITS_M), len(efforts) // len(BROKEN_MILE_SPLITS_M)
+    work = _work_step(steps)
+    return work["distance_m"], work["repeat"]
+
+
 class TestConvertedSessionsUseCanonicalReps:
     @pytest.mark.parametrize("wid", sorted(_CANONICAL_SPECS))
     def test_steps_use_canonical_rep_and_price_to_budget(self, wid):
@@ -79,12 +99,11 @@ class TestConvertedSessionsUseCanonicalReps:
         )
         for d in _sample_distances(wid):
             steps = build_key_workout_steps(wk, wk["structure"], d, wk["type"], None)
-            work = _work_step(steps)
-            assert work["distance_m"] in allowed, (
-                f"{wid} at {d}km: rep {work['distance_m']}m is not canonical "
-                f"({sorted(allowed)})"
+            rep_m, count = _rep_and_count(wid, steps)
+            assert rep_m in allowed, (
+                f"{wid} at {d}km: rep {rep_m}m is not canonical ({sorted(allowed)})"
             )
-            assert spec["min_reps"] <= work["repeat"] <= spec["max_reps"]
+            assert spec["min_reps"] <= count <= spec["max_reps"]
             km, priced = compute_distance_from_steps_checked(steps)
             assert priced, f"{wid} at {d}km: steps not fully priced"
             assert abs(km - d) <= 0.3, f"{wid} at {d}km: steps total {km:.2f} != budget"
@@ -94,12 +113,11 @@ class TestConvertedSessionsUseCanonicalReps:
         wk = KeyWorkoutLibrary.get_by_id(wid)
         for d in _sample_distances(wid):
             steps = build_key_workout_steps(wk, wk["structure"], d, wk["type"], None)
-            work = _work_step(steps)
+            rep_m, count = _rep_and_count(wid, steps)
             desc = _rewrite_key_workout_description(wk["description"], wid, d)
-            assert f"{work['repeat']} " in desc and (
-                f"{work['repeat']} x" in desc or f"{work['repeat']} broken" in desc
-            ), f"{wid} at {d}km: prose does not cite {work['repeat']} reps: {desc}"
-            rep_m = work["distance_m"]
+            assert f"{count} " in desc and (
+                f"{count} x" in desc or f"{count} broken" in desc
+            ), f"{wid} at {d}km: prose does not cite {count} reps: {desc}"
             accepted = {f"{rep_m}m", f"{rep_m / 1000:.1f}km"}
             assert any(t in desc for t in accepted), (
                 f"{wid} at {d}km: prose cites none of {accepted}: {desc}"

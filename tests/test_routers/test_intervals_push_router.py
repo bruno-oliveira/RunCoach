@@ -122,8 +122,10 @@ def test_push_success_sends_structured_event(push_client, owner, plan):
     assert event["category"] == "WORKOUT"
     assert event["type"] == "Run"
     assert event["external_id"] == "runcoach-push-plan-1-1-3"
-    assert "4x" in event["description"]
-    assert "- 1km 4:00/km Pace" in event["description"]
+    # 4 reps, 3 recoveries: 3 rep+recovery units, then the last rep bare.
+    assert "Rep 3x" in event["description"]
+    assert event["description"].count("- Interval 1km 4:00/km Pace") == 2
+    assert "- Interval 1km 4:00/km Pace" in event["description"]
 
 
 def test_push_requires_connection(push_client, plain_user, plan):

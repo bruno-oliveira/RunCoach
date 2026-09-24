@@ -280,51 +280,36 @@ def _build_interval_steps_high_base(
     rec_1000: int = 400,
 ) -> List[Dict[str, Any]]:
     if variant == 1:
-        return [
-            _warmup(pace_zones, wu_m),
-            _step(
-                "run",
-                "400 m",
-                distance_m=400,
-                pace_zone="I",
-                pace_str=_pace_str("I", pace_zones),
-                effort="hard",
-            ),
-            _step(
-                "run",
-                "800 m",
-                distance_m=800,
-                pace_zone="I",
-                pace_str=_pace_str("I", pace_zones),
-                effort="hard",
-            ),
-            _step(
-                "run",
-                "1200 m",
-                distance_m=1200,
-                pace_zone="I",
-                pace_str=_pace_str("I", pace_zones),
-                effort="hard",
-            ),
-            _step(
-                "run",
-                "800 m",
-                distance_m=800,
-                pace_zone="I",
-                pace_str=_pace_str("I", pace_zones),
-                effort="hard",
-            ),
-            _step(
-                "run",
-                "400 m",
-                distance_m=400,
-                pace_zone="I",
-                pace_str=_pace_str("I", pace_zones),
-                effort="hard",
-            ),
-            _step("recovery", "Equal-distance recovery jog", effort="jog"),
-            _cooldown(pace_zones, cd_m),
-        ]
+        # 400-800-1200-800-400 pyramid. Each rung is followed by a jog of
+        # 15 s per 100 m (a minute per 400) except the last, which runs into
+        # the cool-down. Time with no zone, so the recoveries — which a single
+        # trailing "recovery" step used to stand in for, leaving the watch to
+        # run all five rungs back to back — add no distance to the session.
+        rungs = (400, 800, 1200, 800, 400)
+        steps: List[Dict[str, Any]] = [_warmup(pace_zones, wu_m)]
+        for idx, rung_m in enumerate(rungs):
+            steps.append(
+                _step(
+                    "run",
+                    f"{rung_m} m",
+                    distance_m=rung_m,
+                    pace_zone="I",
+                    pace_str=_pace_str("I", pace_zones),
+                    effort="hard",
+                )
+            )
+            if idx < len(rungs) - 1:
+                jog_s = rung_m * 15 // 100
+                steps.append(
+                    _step(
+                        "recovery",
+                        f"{jog_s // 60} min jog",
+                        duration_s=jog_s,
+                        effort="jog",
+                    )
+                )
+        steps.append(_cooldown(pace_zones, cd_m))
+        return steps
 
     if variant == 2:
         return [
