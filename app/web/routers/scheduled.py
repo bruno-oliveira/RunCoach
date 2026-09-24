@@ -22,6 +22,8 @@ from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
 from app.application.ambient_sync_service import AmbientSyncService
+from app.application.push_notification_service import get_push_notifier
+from app.application.scheduled_push_service import ScheduledPushService
 from app.dependencies import (
     get_db,
     get_intervals_service,
@@ -52,4 +54,21 @@ async def run_ambient_sync(
     """
     service = AmbientSyncService(db, intervals_service)
     summary = await service.run(dry_run=dry_run, limit=limit)
+    return {"ok": True, "dry_run": dry_run, **summary}
+
+
+@scheduled_router.post("/api/scheduled/hourly")
+async def run_hourly_pushes(
+    dry_run: bool = False,
+    db: Session = Depends(get_db),
+    intervals_service: IntervalsService = Depends(get_intervals_service),
+) -> dict:
+    """Morning briefs and week reviews for whoever's local hour it is.
+
+    Driven hourly by ``.github/workflows/hourly-push.yml``. Cheap when nobody
+    is due: only runners with a push device are even considered, and the
+    ledger makes a re-run within the same hour a no-op.
+    """
+    service = ScheduledPushService(db, intervals_service, get_push_notifier(db))
+    summary = await service.run(dry_run=dry_run)
     return {"ok": True, "dry_run": dry_run, **summary}

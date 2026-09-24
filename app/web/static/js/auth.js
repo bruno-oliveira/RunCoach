@@ -247,6 +247,16 @@
             }
         });
 
+        // Before the session goes: unsubscribing this device needs it, and the
+        // cached plan pages must not outlive the runner they belong to.
+        if (window.RunCoachPWA) {
+            try {
+                await window.RunCoachPWA.onSignOut();
+            } catch (e) {
+                console.warn('Push/offline cleanup on sign-out failed:', e);
+            }
+        }
+
         try {
             // Call server to clear the cookie
             await fetch('/api/auth/logout', {

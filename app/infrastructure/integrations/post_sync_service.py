@@ -81,6 +81,12 @@ def auto_map_and_adjust(
         except Exception as e:
             logger.warning(f"Auto-adjust failed for plan {plan.id}: {e}")
 
+    # `_auto_adapt` only flushes. The run mapper commits as it goes, so every
+    # plan but the last used to ride along on the next plan's commit — and the
+    # last one's re-pacing was rolled back when the manual-sync request (or the
+    # initial-import task) closed its session. Committing here is what makes
+    # "the single entry point both paths share" actually persist for all of them.
+    db.commit()
     return results
 
 
@@ -221,10 +227,27 @@ def _auto_adapt(
     return result
 
 
+def recalibrate_from_race(
+    plan: TrainingPlan,
+    user_id: str,
+    db: Session,
+    race_vdot: float,
+) -> Optional[Dict[str, Any]]:
+    """Re-pace the plan from a run the runner marked as a race.
+
+    Records the change exactly like an automatic recalibration (change plan,
+    adaptation history), so the page, the push and the week review all tell
+    the same story. Flushes; the caller commits.
+    """
+    return _try_recalibrate_and_record(plan, user_id, db, race_vdot=race_vdot)
+
+
 def _try_recalibrate_and_record(
     plan: TrainingPlan,
     user_id: str,
     db: Session,
+    *,
+    race_vdot: Optional[float] = None,
 ) -> Optional[Dict[str, Any]]:
     """VDOT-only recalibration with change_plan + adaptation event recording."""
     from app.contexts.plan.adaptation.adjustment_results import (
@@ -234,7 +257,7 @@ def _try_recalibrate_and_record(
     from app.contexts.plan.adaptation.vdot_recalibrator import recalibrate_zones_only
 
     try:
-        vdot_result = recalibrate_zones_only(plan, user_id, db)
+        vdot_result = recalibrate_zones_only(plan, user_id, db, race_vdot=race_vdot)
     except Exception as e:
         logger.warning(
             "VDOT recalibration after sync failed for plan %s: %s", plan.id, e
@@ -252,7 +275,11 @@ def _try_recalibrate_and_record(
         before={},
         after={},
         vdot_change=vdot_change,
-        headline_reason=_recalibrate_headline(vdot_change),
+        headline_reason=(
+            _race_headline(vdot_change)
+            if vdot_result.get("source") == "race"
+            else _recalibrate_headline(vdot_change)
+        ),
     )
 
     now = datetime.now(timezone.utc).replace(tzinfo=None)
@@ -334,4 +361,19 @@ def _recalibrate_headline(vdot_change: Optional[Dict[str, Any]]) -> str:
         )
     return (
         f"Adjusted your pace targets to match current fitness (VDOT {old_v} → {new_v})."
+    )
+
+
+def _race_headline(vdot_change: Optional[Dict[str, Any]]) -> str:
+    if not vdot_change:
+        return "Updated your paces from your race."
+    old_v, new_v = vdot_change["old_vdot"], vdot_change["new_vdot"]
+    if vdot_change["direction"] == "improved":
+        return (
+            f"Race result in — your paces now train the runner you are "
+            f"(VDOT {old_v} → {new_v})."
+        )
+    return (
+        f"Race result in — paces eased to match it (VDOT {old_v} → {new_v}). "
+        "One race is one day; they'll move back if training says otherwise."
     )

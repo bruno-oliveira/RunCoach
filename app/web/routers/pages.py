@@ -1,9 +1,15 @@
 """Static page endpoints (home, privacy, post-connect setup)."""
 
+from pathlib import Path
 from typing import Optional
 
 from fastapi import APIRouter, Depends, Query, Request
-from fastapi.responses import HTMLResponse, JSONResponse
+from fastapi.responses import (
+    FileResponse,
+    HTMLResponse,
+    JSONResponse,
+    RedirectResponse,
+)
 from sqlalchemy.orm import Session
 
 from app.contexts.nutrition.nutrition_content import (
@@ -115,6 +121,51 @@ def privacy_policy(
     )
 
 
+@router.get("/today", include_in_schema=False)
+def today(
+    current_user: Optional[User] = Depends(get_optional_user),
+    db: Session = Depends(get_db),
+) -> RedirectResponse:
+    """Where the installed app opens: today's session, if there is one.
+
+    The home screen icon is tapped on the way out of the door, so it should
+    land on the Today card of the plan in progress — not on the marketing hero
+    one tap away from it. Anyone without a running plan gets the home page,
+    which is the right place to start one.
+    """
+    if current_user is not None:
+        plans = SQLAlchemyPlanRepository(db).list_by_user_recent_first(current_user.id)
+        local = local_today()
+        for plan in plans:
+            decorate_plan_status(plan, local)
+        plan = current_active_plan(plans)
+        if (
+            plan is not None
+            and plan.start_date is not None
+            and getattr(plan, "status_label", None) != "Completed"
+        ):
+            return RedirectResponse(f"/plan/{plan.id}#today-card", status_code=302)
+    return RedirectResponse("/", status_code=302)
+
+
+_SERVICE_WORKER = Path(__file__).resolve().parents[1] / "static" / "js" / "sw.js"
+
+
+@router.get("/sw.js", include_in_schema=False)
+def service_worker() -> FileResponse:
+    """The service worker, from the site root so its scope is the whole site.
+
+    ``no-cache`` because browsers only pick up a new worker when the script's
+    bytes change — a day-long static cache would pin every device to the old
+    push handler for a day after each deploy.
+    """
+    return FileResponse(
+        _SERVICE_WORKER,
+        media_type="application/javascript",
+        headers={"Cache-Control": "no-cache"},
+    )
+
+
 @router.get("/manifest.webmanifest", include_in_schema=False)
 def web_manifest() -> JSONResponse:
     """The web app manifest — what makes RunCoach installable to a home screen.
@@ -126,8 +177,9 @@ def web_manifest() -> JSONResponse:
     manifest must not be cached behind a content hash while the icons it
     points at legitimately are.
 
-    ``start_url`` is the plain root on purpose: every other surface is one
-    more thing that can be stale in a cold launch.
+    ``start_url`` is ``/today``, a redirect resolved on every launch: the
+    installed app opens on the plan in progress, and a stale or missing plan
+    falls back to the root rather than a dead link.
     """
     return JSONResponse(
         {
@@ -136,7 +188,7 @@ def web_manifest() -> JSONResponse:
             "description": (
                 "Personalised running plans that adapt to what you actually run."
             ),
-            "start_url": "/",
+            "start_url": "/today",
             "scope": "/",
             "display": "standalone",
             "background_color": "#FBFBFA",
@@ -161,6 +213,7 @@ def web_manifest() -> JSONResponse:
             ],
             # Long-press the home-screen icon and these are the next steps.
             "shortcuts": [
+                {"name": "Today", "url": "/today"},
                 {"name": "My plans", "url": "/my-plans"},
                 {"name": "Coach", "url": "/analytics"},
                 {"name": "Recipes", "url": "/recipes"},

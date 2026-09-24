@@ -74,11 +74,77 @@
                 if (res.ok) data = await res.json();
             } catch (e) { /* fall through to the empty form */ }
 
-            if (data && data.logged && data.checkin) {
+            // A watch-only row (self_reported === false) is the watch's opinion,
+            // not the runner's: still ask, pre-filled, with the watch's verdict
+            // shown alongside. Older servers omit the flag — treat as reported.
+            if (data && data.logged && data.checkin && data.self_reported !== false) {
                 this._renderLogged(data.checkin);
-            } else {
-                this._renderForm();
+                return;
             }
+            const watch = await this._fetchPrefill();
+            const watchVerdict = data && data.logged && data.checkin ? data.checkin : null;
+            this._renderForm(this._prefillValues(watch), { watch: watch, verdict: watchVerdict });
+        },
+
+        /* What the watch recorded overnight. Bounded wait: the server may call
+           Intervals.icu first, and an empty form now beats a full one late. */
+        async _fetchPrefill() {
+            try {
+                const timeout = new Promise((resolve) => setTimeout(() => resolve(null), 4000));
+                const req = fetch('/api/readiness/prefill', { credentials: 'same-origin' })
+                    .then((res) => (res.ok ? res.json() : null))
+                    .catch(() => null);
+                return await Promise.race([req, timeout]);
+            } catch (e) {
+                return null;
+            }
+        },
+
+        /* Watch sleep → the nearest hours chip. Only sleep is pre-filled: the
+           felt scales are exactly what a sensor can't know. */
+        _prefillValues(watch) {
+            if (!watch || !watch.available || watch.sleep_hours == null) return {};
+            const h = Number(watch.sleep_hours);
+            const snapped = h < 4.5 ? 4 : Math.min(9, Math.max(5, Math.round(h)));
+            return { sleep_hours: snapped };
+        },
+
+        _watchStrip(ctx) {
+            const watch = ctx && ctx.watch;
+            const verdict = ctx && ctx.verdict;
+            if (watch && watch.reconnect_for_wellness) {
+                return '<div class="rc-watch rc-watch--reconnect">' +
+                    '<span>Reconnect Intervals.icu to pre-fill this from your watch\'s sleep and HRV.</span>' +
+                    '<button type="button" class="rc-edit" id="rcReconnect">Reconnect</button>' +
+                    '</div>';
+            }
+            if (!watch || !watch.available) return '';
+            const bits = [];
+            if (watch.sleep_hours != null) bits.push(`${this._esc(watch.sleep_hours)}h sleep`);
+            if (watch.hrv_ratio != null) {
+                const pct = Math.round((watch.hrv_ratio - 1) * 100);
+                bits.push(pct <= -5 ? `HRV ${Math.abs(pct)}% below usual`
+                    : pct >= 5 ? `HRV ${pct}% above usual` : 'HRV normal');
+            } else if (watch.hrv != null) {
+                bits.push(`HRV ${Math.round(watch.hrv)} ms`);
+            }
+            if (watch.rhr_delta != null && Math.abs(watch.rhr_delta) >= 3) {
+                const d = Math.round(watch.rhr_delta);
+                bits.push(`resting HR ${d > 0 ? '+' : ''}${d}`);
+            } else if (watch.resting_hr != null) {
+                bits.push(`resting HR ${watch.resting_hr}`);
+            }
+            if (!bits.length) return '';
+            const label = verdict && verdict.label
+                ? ` — <strong>${this._esc(verdict.label)}</strong>`
+                : '';
+            const baselineNote = watch.has_baseline ? ''
+                : '<span class="rc-watch-note">Comparisons start after about a week of watch data.</span>';
+            return '<div class="rc-watch">' +
+                `<span class="rc-eyebrow">From your watch${label}</span>` +
+                `<span class="rc-watch-facts">${bits.join(' · ')}</span>` +
+                baselineNote +
+                '</div>';
         },
 
         _skeleton() {
@@ -87,9 +153,10 @@
         },
 
         /* ---------- capture form ---------- */
-        _renderForm(prefill) {
+        _renderForm(prefill, ctx) {
             const card = this._card();
             this._values = Object.assign({}, prefill || {});
+            this._ctx = ctx || this._ctx || null;
 
             const hoursChips = SLEEP_HOURS.map((h) => (
                 `<button type="button" class="rc-chip" data-hours="${h.value}"` +
@@ -118,6 +185,7 @@
                 '<h3 class="rc-title">How do you feel this morning?</h3>' +
                 '<p class="rc-sub">A few taps lets your coach adapt today to how you actually feel — not just what you ran.</p>' +
                 '</div>' +
+                this._watchStrip(this._ctx) +
                 '<div class="rc-sleep">' +
                 '<div class="rc-scale-label">Hours slept</div>' +
                 `<div class="rc-chips" role="group" aria-label="Hours slept">${hoursChips}</div>` +
@@ -157,6 +225,10 @@
             });
             const submit = document.getElementById('rcSubmit');
             if (submit) submit.onclick = () => this._submit();
+            const reconnect = document.getElementById('rcReconnect');
+            if (reconnect) reconnect.onclick = () => {
+                if (typeof window.connectWatch === 'function') window.connectWatch();
+            };
         },
 
         _syncSubmit() {

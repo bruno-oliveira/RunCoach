@@ -425,17 +425,7 @@ def _build_today_card(
         )
         .first()
     )
-    assessment = (
-        score_checkin(
-            sleep_hours=readiness.sleep_hours,
-            sleep_quality=readiness.sleep_quality,
-            energy=readiness.energy,
-            soreness=readiness.soreness,
-            stress=readiness.stress,
-        )
-        if readiness is not None
-        else None
-    )
+    assessment = _assess_readiness(db, readiness) if readiness is not None else None
 
     return build_today_card(
         today=today_obj,
@@ -454,6 +444,26 @@ def _build_today_card(
             )
         ),
     )
+
+
+def _assess_readiness(db: Any, readiness: ReadinessLog):
+    """This morning's readiness verdict — the runner's check-in, or their watch's.
+
+    The runner context owns readiness, so it is reached through the
+    application ports seam (see tests/test_architecture).
+    """
+    try:
+        from app.application.ports import assess_readiness_log
+
+        return assess_readiness_log(db, readiness)
+    except Exception:
+        return score_checkin(
+            sleep_hours=readiness.sleep_hours,
+            sleep_quality=readiness.sleep_quality,
+            energy=readiness.energy,
+            soreness=readiness.soreness,
+            stress=readiness.stress,
+        )
 
 
 _QUALITY_WORKOUT_TYPES = frozenset({"tempo", "interval", "vo2max", "hill", "long"})

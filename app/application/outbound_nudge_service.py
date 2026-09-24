@@ -29,6 +29,7 @@ from dataclasses import dataclass
 from datetime import date, datetime, timedelta, timezone
 from typing import Any, Dict, List, Optional
 
+from sqlalchemy import and_, or_
 from sqlalchemy.orm import Session
 
 from app.core.coaching.outbound_nudge import (
@@ -41,7 +42,7 @@ from app.core.training.periodization.plan_calendar import compute_current_week
 from app.domain.notifications import EmailMessage, Mailer
 from app.infrastructure.config import Settings
 from app.infrastructure.config import settings as default_settings
-from app.models import ReadinessLog, RunLog, TrainingPlan, User
+from app.models import PushSubscription, ReadinessLog, RunLog, TrainingPlan, User
 
 logger = logging.getLogger(__name__)
 
@@ -94,10 +95,14 @@ class OutboundNudgeService:
         db: Session,
         mailer: Mailer,
         config: Optional[Settings] = None,
+        push: Optional[Any] = None,
     ) -> None:
         self.db = db
         self.mailer = mailer
         self.settings = config or default_settings
+        # A PushNotifier, when push is wired: runners who granted a device
+        # permission are reachable without ever opting into email.
+        self.push = push
 
     # ---- entry point ----------------------------------------------------
 
@@ -111,10 +116,16 @@ class OutboundNudgeService:
         """
         summary = NudgeRunSummary()
 
-        query = self.db.query(User).filter(
-            User.nudge_email_enabled.is_(True),
-            User.email.isnot(None),
-        )
+        email_opt_in = and_(User.nudge_email_enabled.is_(True), User.email.isnot(None))
+        if self.push is not None and self.push.configured:
+            has_device = (
+                self.db.query(PushSubscription.id)
+                .filter(PushSubscription.user_id == User.id)
+                .exists()
+            )
+            query = self.db.query(User).filter(or_(email_opt_in, has_device))
+        else:
+            query = self.db.query(User).filter(email_opt_in)
         if limit:
             query = query.limit(limit)
 
@@ -309,9 +320,15 @@ class OutboundNudgeService:
         they never told us about.
         """
         since = today - timedelta(days=_READINESS_WINDOW)
+        # Self-reported mornings only: the nudge says "you've checked in
+        # run-down N mornings", which a watch-derived row would make untrue.
         rows = (
             self.db.query(ReadinessLog.date, ReadinessLog.score)
-            .filter(ReadinessLog.user_id == user.id, ReadinessLog.date >= since)
+            .filter(
+                ReadinessLog.user_id == user.id,
+                ReadinessLog.date >= since,
+                ReadinessLog.source != "wearable",
+            )
             .all()
         )
         by_day = {_to_date(row[0]): row[1] for row in rows if row[0] is not None}
@@ -346,7 +363,37 @@ class OutboundNudgeService:
     # ---- delivery --------------------------------------------------------
 
     def _send(self, user: User, nudge: OutboundNudge) -> bool:
-        assert user.email is not None  # guaranteed by the candidate query
+        """Deliver on every channel the runner chose; True if any landed.
+
+        The rate limit and repeat guard are shared across channels — they are
+        about how often the coach interrupts, not which device buzzes.
+        """
+        delivered = False
+        if self.push is not None:
+            from app.application.push_notification_service import KIND_NUDGE
+            from app.core.coaching import notification_prefs as prefs
+            from app.domain.notifications import PushMessage
+
+            delivered = self.push.notify(
+                user,
+                PushMessage(
+                    title=nudge.headline,
+                    body=nudge.body,
+                    url=nudge.cta_path,
+                    tag="nudge",
+                ),
+                category=prefs.COACHING_NUDGES,
+                kind=KIND_NUDGE,
+                # Per day, not per signature forever: the same situation
+                # returning weeks later is worth saying again.
+                key=f"{nudge.signature}:{_utcnow().date().isoformat()}",
+            )
+        if user.nudge_email_enabled and user.email:
+            delivered = self._send_email(user, nudge) or delivered
+        return delivered
+
+    def _send_email(self, user: User, nudge: OutboundNudge) -> bool:
+        assert user.email is not None
         text, html = render_email(
             nudge,
             base_url=self.settings.public_base_url,

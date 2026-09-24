@@ -55,7 +55,8 @@ class TestWebManifest:
         assert data["name"] == "RunCoach"
         assert data["short_name"] == "RunCoach"
         assert data["display"] == "standalone"
-        assert data["start_url"] == "/"
+        # The installed app opens on the plan in progress (see /today).
+        assert data["start_url"] == "/today"
         assert data["scope"] == "/"
         assert data["theme_color"]
 

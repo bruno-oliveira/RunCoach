@@ -87,7 +87,7 @@ def test_get_today_returns_the_days_log(db, user):
 def test_assess_recovers_band_and_drivers(db, user):
     svc = CheckInService(db)
     log = svc.record(user.id, sleep_hours=5, soreness=4, energy=2, on_date=DAY)
-    assessment = CheckInService.assess(log)
+    assessment = svc.assess(log)
     assert assessment.is_low is True
     assert "your legs are heavy" in assessment.drivers
 

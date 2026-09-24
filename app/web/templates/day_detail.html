@@ -86,6 +86,18 @@
             {% if logged_run.avg_pace_min_km %}<div class="day-logged-stat"><span class="day-logged-value">{{ logged_run.avg_pace_min_km | format_pace }}</span><span class="day-logged-label">pace</span></div>{% endif %}
             {% if logged_run.avg_heart_rate %}<div class="day-logged-stat"><span class="day-logged-value">{{ logged_run.avg_heart_rate }}</span><span class="day-logged-label">bpm</span></div>{% endif %}
         </div>
+        {#- A race is the most honest fitness test there is, but an imported one
+            looks like any other hard run. One tap tells the coach, and the plan
+            re-paces from it (POST /api/runs/{id}/race, day_race.js). #}
+        {% if user and logged_run.id %}
+        {% set is_race = logged_run.workout_type == 'race' %}
+        <div class="day-race" id="dayRace" data-run-id="{{ logged_run.id }}" data-is-race="{{ 'true' if is_race else 'false' }}">
+            <button type="button" class="btn btn-secondary btn-sm" id="dayRaceBtn">
+                {% if is_race %}Marked as a race &middot; Undo{% else %}This was a race{% endif %}
+            </button>
+            <p class="day-race-note" id="dayRaceNote" role="status" aria-live="polite">{% if not is_race %}Raced it? Your paces will be re-set from this result.{% endif %}</p>
+        </div>
+        {% endif %}
     </section>
     {% endif %}
 
@@ -182,4 +194,8 @@
     </nav>
     {% endif %}
 </div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ static_url('js/day_race.js') }}" defer></script>
 {% endblock %}

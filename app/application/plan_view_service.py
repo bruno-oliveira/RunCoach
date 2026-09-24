@@ -20,6 +20,7 @@ from app.contexts.plan.adaptation import AdaptationService
 from app.contexts.runner.enrichment import completion_stats as _cs
 from app.contexts.runner.enrichment import week_pulse_generator as _pulse
 from app.contexts.runner.fitness.hr_zone_service import HRZoneService
+from app.core.race.recovery import recovery_guidance
 from app.core.time_utils import local_today
 from app.core.training.periodization.plan_calendar import compute_current_week
 from app.core.training.profiles.vertical_simulation import (
@@ -95,6 +96,7 @@ class PlanViewService:
 
         comp_stats = None
         next_plan_cta = None
+        recovery = None
         if training_plan.start_date and current_user:
             from datetime import datetime as _datetime
 
@@ -104,6 +106,10 @@ class PlanViewService:
             if current_wk > training_plan.weeks_duration:
                 comp_stats = self.get_completion_stats(training_plan, db)
                 next_plan_cta = self.get_next_plan_cta(training_plan.target_distance_km)
+                recovery = recovery_guidance(
+                    training_plan.target_distance_km,
+                    (comp_stats or {}).get("peak_km_per_week"),
+                )
 
         overridden_week_rows = (
             db.query(WeeklyPlan.week_number)
@@ -122,12 +128,11 @@ class PlanViewService:
 
         week_pulse = None
         if current_user and training_plan.start_date:
-            from datetime import date as _d2
             from datetime import datetime as _dt2
 
             sd2 = training_plan.start_date
             start_d2 = sd2.date() if isinstance(sd2, _dt2) else sd2
-            cw = compute_current_week(start_d2, _d2.today(), pre_start=0)
+            cw = compute_current_week(start_d2, local_today(), pre_start=0)
             if 1 <= cw <= (training_plan.weeks_duration or 0):
                 try:
                     week_pulse = self.get_week_pulse(training_plan, cw, db)
@@ -164,7 +169,20 @@ class PlanViewService:
                 logger.warning("Weekly vertical actuals failed: %s", e)
                 partial_errors.append("vertical_actuals")
 
+        week_review = None
+        if current_user and training_plan.start_date:
+            try:
+                from app.application.week_review_service import due_review
+
+                week_review = due_review(
+                    training_plan, str(current_user.id), db, local_today()
+                )
+            except Exception as e:
+                logger.warning("Week review failed: %s", e)
+                partial_errors.append("week_review")
+
         return {
+            "week_review": week_review,
             "performance_analysis": performance_analysis,
             "logged_runs": logged_runs_map,
             "progress_data": progress_data,
@@ -173,6 +191,7 @@ class PlanViewService:
             "feedback_map": self.get_feedback_map(logged_runs, db),
             "completion_stats": comp_stats,
             "next_plan_cta": next_plan_cta,
+            "recovery_guidance": recovery,
             "overridden_weeks": overridden_weeks,
             "adaptation_timeline": adaptation_timeline,
             "week_evolution": week_evolution,

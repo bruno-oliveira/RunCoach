@@ -36,3 +36,54 @@ class Mailer(Protocol):
     """Sends an :class:`EmailMessage`. Returns ``True`` only on delivery."""
 
     def send(self, message: EmailMessage) -> bool: ...
+
+
+# ---------------------------------------------------------------------------
+# Push
+# ---------------------------------------------------------------------------
+
+
+@dataclass(frozen=True)
+class PushTarget:
+    """One browser's subscription, as the sender needs it (no ORM)."""
+
+    endpoint: str
+    p256dh: str
+    auth: str
+
+
+@dataclass(frozen=True)
+class PushMessage:
+    """One notification. ``url`` is where a tap lands (a same-site path).
+
+    ``tag`` collapses notifications on the device: a second "plan adjusted"
+    replaces the first instead of stacking, which is what a runner wants from
+    a coach rather than a feed.
+    """
+
+    title: str
+    body: str
+    url: str = "/"
+    tag: Optional[str] = None
+
+
+class PushOutcome:
+    """What the push service said. ``GONE`` means delete the subscription."""
+
+    DELIVERED = "delivered"
+    GONE = "gone"
+    FAILED = "failed"
+
+
+class PushSender(Protocol):
+    """Delivers a :class:`PushMessage` to one :class:`PushTarget`.
+
+    Returns a :class:`PushOutcome` value. Like :class:`Mailer`, an unconfigured
+    sender reports ``FAILED`` rather than pretending — the ledger that stops a
+    phone buzzing twice is only written for real deliveries.
+    """
+
+    @property
+    def configured(self) -> bool: ...
+
+    def send(self, target: PushTarget, message: PushMessage) -> str: ...

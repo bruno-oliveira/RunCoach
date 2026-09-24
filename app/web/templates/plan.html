@@ -11,6 +11,7 @@
 <link rel="stylesheet" href="{{ static_url('css/plan/banners.css') }}">
 <link rel="stylesheet" href="{{ static_url('css/plan/hr-zones.css') }}">
 <link rel="stylesheet" href="{{ static_url('css/plan/structured.css') }}">
+<link rel="stylesheet" href="{{ static_url('css/plan/week-review.css') }}">
 <link rel="stylesheet" href="{{ static_url('css/plan/intent-menu.css') }}">
 <link rel="stylesheet" href="{{ static_url('css/plan/today-card.css') }}">
 <link rel="stylesheet" href="{{ static_url('css/readiness-checkin.css') }}">
@@ -164,6 +165,13 @@
             </div>
         </div>
 
+        {% if recovery_guidance %}
+        <div class="complete-recovery">
+            <strong>Recover first</strong>
+            <p>{{ recovery_guidance.line }}</p>
+        </div>
+        {% endif %}
+
         {% if next_plan_cta %}
         <div class="complete-next-cta">
             <div class="complete-next-cta-text">
@@ -234,6 +242,10 @@
        whether it reached the wrist. Falls back to the bare watch-mirror row
        when there is no "today" to fold it into (no start date, or a plan
        that has run out). #}
+    {% if user and week_review and not plan_completed %}
+    {% include 'components/week_review.html' %}
+    {% endif %}
+
     {% if user and not plan_completed %}
         {% if today_card %}
         {% include 'components/today_card.html' %}

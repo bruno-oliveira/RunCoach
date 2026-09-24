@@ -30,6 +30,7 @@ from app.web.routers import (
     pages_router,
     performance_page_router,
     plans_router,
+    push_router,
     readiness_router,
     recipes_page_router,
     recipes_router,
@@ -56,6 +57,7 @@ _ROUTERS = (
     intervals_router,
     admin_router,
     notifications_router,
+    push_router,
     scheduled_router,
     pages_router,
 )

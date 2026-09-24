@@ -122,6 +122,12 @@
     {{ tab_bar(user=user, path=request.url.path if request else '/') }}
     {% endblock %}
 
+    {# Shown by pwa.js when the browser is offline — the page may be the copy
+       the service worker saved, and the runner should know it's a snapshot. #}
+    <div class="offline-banner" id="offlineBanner" role="status" hidden>
+        Offline &mdash; showing the plan as it was last loaded on this device.
+    </div>
+
     <!-- Main content -->
     <main>
         {% block content %}{% endblock %}
@@ -160,6 +166,7 @@
     <script src="{{ static_url('js/modal.js') }}" defer></script>
     <script src="{{ static_url('js/api.js') }}" defer></script>
     <script src="{{ static_url('js/auth.js') }}" defer></script>
+    <script src="{{ static_url('js/pwa.js') }}" defer></script>
 
     <script>
     (function() {

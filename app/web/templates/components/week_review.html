@@ -1,0 +1,36 @@
+{# ── Week review ──────────────────────────────────────────────────────────
+   Planned vs done for the week that is ending (its last day) or just ended
+   (the first day of the next), from application/week_review_service.py —
+   the same numbers the Sunday push carries, so the lock screen and the page
+   can't disagree. Rendered only when `week_review` is set. #}
+{% set r = week_review.review %}
+<section class="week-review week-review--{{ r.verdict }}" id="week-review" aria-labelledby="week-review-heading">
+    <header class="week-review-head">
+        <span class="week-review-eyebrow">Week {{ r.week_number }} review</span>
+        <h2 class="week-review-title" id="week-review-heading">
+            {{ '%g'|format(r.done_km) }} <span class="week-review-of">of {{ '%g'|format(r.planned_km) }} km</span>
+        </h2>
+    </header>
+
+    <div class="week-review-bar" role="img" aria-label="{{ r.completion_pct }}% of planned distance">
+        <span class="week-review-bar-fill" style="width: {{ [r.completion_pct, 100]|min }}%"></span>
+    </div>
+
+    <dl class="week-review-stats">
+        <div>
+            <dt>Sessions</dt>
+            <dd>{{ r.sessions_done }} / {{ r.sessions_planned }}</dd>
+        </div>
+        {% if r.next_week_km is not none %}
+        <div>
+            <dt>Next week</dt>
+            <dd>{{ '%g'|format(r.next_week_km) }} km</dd>
+        </div>
+        {% endif %}
+    </dl>
+
+    <p class="week-review-line">{{ r.line }}{% if r.missed_days and r.verdict != 'on_plan' %} Missed: {{ r.missed_days|join(', ') }}.{% endif %}</p>
+    {% if week_review.change_headline %}
+    <p class="week-review-change"><strong>What changed:</strong> {{ week_review.change_headline }}</p>
+    {% endif %}
+</section>

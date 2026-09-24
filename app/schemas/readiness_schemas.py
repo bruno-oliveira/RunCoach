@@ -76,3 +76,6 @@ class ReadinessCheckInResponse(BaseModel):
     band: str = "unknown"
     label: str = "No check-in"
     drivers: List[str] = Field(default_factory=list)
+    # "checkin" (the runner filled the card) or "wearable" (derived from their
+    # watch's overnight HRV / resting HR / sleep because they didn't).
+    source: str = "checkin"

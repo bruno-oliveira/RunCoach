@@ -54,6 +54,10 @@ class Settings(BaseSettings):
     intervals_client_secret: str = ""
     intervals_redirect_uri: str = "http://localhost:8000/api/intervals/callback"
     intervals_initial_sync_days: int = 365
+    # Shared secret Intervals.icu puts in every webhook body (set it in the
+    # app's "Manage App" page alongside the callback URL). Empty makes the
+    # webhook endpoint 404 — the daily sweep still imports, just not live.
+    intervals_webhook_secret: str = ""
 
     # Admin console — the single operator email allowed to reach /admin and the
     # /api/admin/* endpoints (used to test integrations like send-to-watch).
@@ -121,6 +125,15 @@ class Settings(BaseSettings):
     # Floor between two nudge emails to the same runner. A coach who mails
     # daily is spam, not a coach.
     nudge_min_interval_days: int = 4
+    # Web Push (VAPID). The private key is a raw base64url P-256 scalar — run
+    # ``python3 scripts/generate_vapid_keys.py`` once and store it as a secret;
+    # the public key is derived from it. Empty disables push: the subscribe
+    # endpoints report "not configured" and the sender refuses to deliver.
+    # Rotating it invalidates every existing browser subscription.
+    vapid_private_key: str = ""
+    # Contact the push services may use (``mailto:`` or ``https:``). Falls back
+    # to PUBLIC_BASE_URL.
+    vapid_subject: str = ""
 
     @model_validator(mode="after")
     def _require_secret_key(self) -> "Settings":

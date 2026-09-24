@@ -701,3 +701,41 @@
         font-size: 20px;
     }
 }
+
+/* ── Push notification categories (settings modal) ─────────────────────── */
+.push-categories {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-top: 12px;
+    padding-top: 12px;
+    border-top: 1px solid var(--color-border);
+}
+
+.push-category {
+    align-items: flex-start;
+    gap: 10px;
+}
+
+.push-category > span {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+/* ── Offline banner (base.html, toggled by pwa.js) ─────────────────────── */
+.offline-banner {
+    position: sticky;
+    top: 0;
+    z-index: 900;
+    padding: 8px 16px;
+    text-align: center;
+    font-size: 0.875rem;
+    background: var(--color-warning-subtle);
+    color: var(--color-text);
+    border-bottom: 1px solid var(--color-warning-border);
+}
+
+.offline-banner[hidden] {
+    display: none;
+}

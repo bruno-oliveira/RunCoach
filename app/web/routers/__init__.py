@@ -10,6 +10,7 @@ from app.web.routers.nutrition import router as nutrition_router
 from app.web.routers.pages import router as pages_router
 from app.web.routers.performance_pages import router as performance_page_router
 from app.web.routers.plans import router as plans_router
+from app.web.routers.push import push_router
 from app.web.routers.readiness import readiness_router
 from app.web.routers.recipes import router as recipes_router
 from app.web.routers.recipes_pages import router as recipes_page_router
@@ -21,6 +22,7 @@ __all__ = [
     "auth_router",
     "intervals_router",
     "plans_router",
+    "push_router",
     "notifications_router",
     "nutrition_router",
     "pages_router",
