@@ -15,6 +15,12 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import List, Optional
 
+from app.core.coaching.wellness import (
+    ObjectiveMarkers,
+    objective_delta,
+    wearable_score,
+)
+
 
 @dataclass(frozen=True)
 class ReadinessAssessment:
@@ -93,8 +99,15 @@ def score_checkin(
     energy: Optional[int] = None,
     soreness: Optional[int] = None,
     stress: Optional[int] = None,
+    objective: Optional[ObjectiveMarkers] = None,
 ) -> ReadinessAssessment:
-    """Score a morning check-in into a :class:`ReadinessAssessment`."""
+    """Score a morning check-in into a :class:`ReadinessAssessment`.
+
+    ``objective`` is what the runner's watch recorded overnight, already placed
+    against their own baseline (see :mod:`app.core.coaching.wellness`). With a
+    check-in it nudges the felt score at half weight — the runner's own word
+    leads. With no check-in at all it becomes the whole score.
+    """
     subscores: dict[str, float] = {}
     if sleep_quality is not None:
         subscores["sleep_quality"] = _likert_up(sleep_quality)
@@ -108,25 +121,34 @@ def score_checkin(
         subscores["sleep_hours"] = _sleep_hours_subscore(sleep_hours)
 
     if not subscores:
-        return ReadinessAssessment(score=None, band="unknown", label="No check-in")
+        watch_score = wearable_score(objective) if objective is not None else None
+        if watch_score is None or objective is None:
+            return ReadinessAssessment(score=None, band="unknown", label="No check-in")
+        band, label = _band_for(watch_score)
+        return ReadinessAssessment(
+            score=watch_score,
+            band=band,
+            label=label,
+            drivers=objective_delta(objective, include_sleep=True).drivers,
+        )
 
     weight_sum = sum(_WEIGHTS[k] for k in subscores)
     weighted = sum(_WEIGHTS[k] * v for k, v in subscores.items())
     score = round((weighted / weight_sum) * 100, 1)
+    drivers = _drivers(
+        sleep_hours=sleep_hours,
+        sleep_quality=sleep_quality,
+        energy=energy,
+        soreness=soreness,
+        stress=stress,
+    )
+    if objective is not None and objective.has_signal:
+        verdict = objective_delta(objective, include_sleep=False)
+        score = round(max(0.0, min(100.0, score + 0.5 * verdict.delta)), 1)
+        drivers = drivers + [d for d in verdict.drivers if d not in drivers]
 
     band, label = _band_for(score)
-    return ReadinessAssessment(
-        score=score,
-        band=band,
-        label=label,
-        drivers=_drivers(
-            sleep_hours=sleep_hours,
-            sleep_quality=sleep_quality,
-            energy=energy,
-            soreness=soreness,
-            stress=stress,
-        ),
-    )
+    return ReadinessAssessment(score=score, band=band, label=label, drivers=drivers)
 
 
 def _band_for(score: float) -> tuple[str, str]:

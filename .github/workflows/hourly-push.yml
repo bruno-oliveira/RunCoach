@@ -1,0 +1,56 @@
+name: Hourly push
+
+# Morning briefs and Sunday week reviews are pinned to each runner's *local*
+# hour (07:00 and 19:00), and runners live in every timezone — so the endpoint
+# runs hourly and only acts on whoever it is currently that hour for.
+#
+# Independent of the daily ambient sync: the brief pulls last night's wellness
+# itself, and it never reads anything the daily import would change in a way
+# that matters within the hour.
+#
+# Cost note: each run wakes the scaled-to-zero Fly machine, which then idles
+# back down after a few minutes. The request is a no-op for anyone not due, and
+# for every runner without a push device.
+#
+# Same switch as ambient sync: no CRON_SECRET, nothing is called. Push itself
+# is also off until VAPID_PRIVATE_KEY is set on the app (the endpoint then
+# answers {"configured": false}).
+
+on:
+  schedule:
+    # Minute 5 rather than 0 — GitHub queues top-of-hour jobs heavily.
+    - cron: "5 * * * *"
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Decide who is due, send nothing"
+        type: boolean
+        default: true
+
+concurrency:
+  group: hourly-push
+  cancel-in-progress: false
+
+jobs:
+  push:
+    runs-on: ubuntu-latest
+    env:
+      CRON_SECRET: ${{ secrets.CRON_SECRET }}
+      BASE_URL: ${{ vars.PUBLIC_BASE_URL || 'https://runcoach.fly.dev' }}
+      DRY_RUN: ${{ github.event_name == 'workflow_dispatch' && inputs.dry_run || false }}
+    steps:
+      - name: Check the schedule is configured
+        if: env.CRON_SECRET == ''
+        run: echo "CRON_SECRET is not set; hourly pushes are off."
+
+      - name: Morning briefs and week reviews
+        if: env.CRON_SECRET != ''
+        run: |
+          set -euo pipefail
+          curl -sS --fail-with-body \
+            --retry 3 --retry-all-errors --retry-delay 10 \
+            --max-time 300 \
+            -X POST "$BASE_URL/api/scheduled/hourly?dry_run=$DRY_RUN" \
+            -H "X-Cron-Secret: $CRON_SECRET" \
+            | tee hourly.json
+          echo

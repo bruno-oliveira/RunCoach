@@ -201,3 +201,34 @@
 @media (max-width: 640px) {
   .rc-scales { grid-template-columns: 1fr; }
 }
+
+/* ── "From your watch" strip: last night's markers, pre-filled sleep ─────── */
+.rc-watch {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    margin: 12px 0 4px;
+    padding: 10px 12px;
+    border-radius: var(--radius-lg, 10px);
+    background: var(--color-surface-subtle, var(--color-surface));
+    border: 1px solid var(--color-border);
+    font-size: 0.875rem;
+}
+
+.rc-watch-facts {
+    color: var(--color-text);
+    font-variant-numeric: tabular-nums;
+}
+
+.rc-watch-note {
+    color: var(--color-text-muted);
+    font-size: 0.8rem;
+}
+
+.rc-watch--reconnect {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    color: var(--color-text-muted);
+}

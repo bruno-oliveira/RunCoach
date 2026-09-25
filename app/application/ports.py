@@ -110,6 +110,10 @@ _LAZY: dict[str, tuple[str, str]] = {
         "app.contexts.runner.fitness.training_load_service",
         "TrainingLoadService",
     ),
+    "assess_readiness_log": (
+        "app.contexts.runner.wellness.checkin_service",
+        "assess_log",
+    ),
 }
 
 __all__ = list(_LAZY)

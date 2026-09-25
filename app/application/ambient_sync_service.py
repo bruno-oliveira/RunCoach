@@ -30,12 +30,14 @@ disable `cleanup_inactive_accounts`.
 from __future__ import annotations
 
 import logging
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional
 
 from sqlalchemy.orm import Session
 
+from app.application.push_notification_service import get_push_notifier
 from app.application.watch_sync_service import resync_plan_to_watch
+from app.application.wellness_sync_service import refresh_wellness
 from app.contexts.plan.adaptation import AdaptationService
 from app.core.time_utils import use_timezone
 from app.infrastructure.config import Settings
@@ -51,9 +53,37 @@ from app.utils import TimestampAdapter
 
 logger = logging.getLogger(__name__)
 
+
+class _ReconnectNeeded(Exception):
+    """The runner's grant is gone; only they can fix it by reconnecting."""
+
+
 # Overlap the previous cursor by a day, exactly as the manual sync does: an
 # activity edited or uploaded late would otherwise fall in the gap forever.
 _CURSOR_OVERLAP_SECONDS = 86400
+
+
+@dataclass
+class RunnerSync:
+    """What importing one runner did — the unit the sweep and the webhook share.
+
+    ``adjustments`` is ``auto_map_and_adjust``'s per-plan result list, so a
+    caller can tell which plans the engine actually re-paced (and so which
+    watch calendars and which runners need to hear about it).
+    """
+
+    imported: int = 0
+    adjustments: List[Dict[str, Any]] = field(default_factory=list)
+    reconnect_needed: bool = False
+
+    @property
+    def adapted_plan_ids(self) -> List[str]:
+        return [
+            str(r["plan_id"])
+            for r in self.adjustments
+            if r.get("plan_id")
+            and (r.get("auto_adjusted") or r.get("vdot_recalibration"))
+        ]
 
 
 @dataclass
@@ -112,10 +142,16 @@ class AmbientSyncService:
             logger.info("Ambient sync dry run: %s", summary.as_dict())
             return summary.as_dict()
 
+        notifier = get_push_notifier(self.db)
         for user in users:
             try:
                 with use_timezone(user.timezone):
-                    await self._import_and_adapt(user, summary)
+                    result = await self._import_and_adapt(user, summary)
+                    if result.imported:
+                        # Runs the webhook missed (or runners on a deploy
+                        # without one). The ledger keys on the run, so a run
+                        # the webhook already announced stays silent here.
+                        self._announce(notifier, user, result)
             except Exception:
                 # One revoked token or malformed activity must not cost every
                 # other runner their sync.
@@ -140,21 +176,52 @@ class AmbientSyncService:
 
     # ---- phase 1: import and adapt ---------------------------------------
 
-    async def _import_and_adapt(self, user: User, summary: AmbientRunSummary) -> None:
-        imported = await self._sync_intervals(user, summary)
+    async def _import_and_adapt(
+        self, user: User, summary: AmbientRunSummary
+    ) -> RunnerSync:
+        result = await self.sync_runner(user)
+        if result.reconnect_needed:
+            summary.reconnect_needed += 1
+        summary.runs_imported += result.imported
+        if result.imported:
+            summary.users_with_new_runs += 1
+        summary.plans_adapted += len(result.adjustments)
+        return result
 
-        summary.runs_imported += imported
-        if imported == 0:
-            return
+    def _announce(self, notifier: Any, user: User, result: RunnerSync) -> None:
+        try:
+            notifier.after_sync(user, result)
+        except Exception:
+            logger.warning("Post-sync push failed for user %s", user.id, exc_info=True)
 
-        summary.users_with_new_runs += 1
+    async def sync_runner(self, user: User) -> RunnerSync:
+        """Import one runner's new activities and let the engine see them.
+
+        Shared by the daily sweep and the Intervals.icu webhook, so a run that
+        arrives live and one the sweep picks up next morning go through exactly
+        the same import, dedupe, and re-pacing. The caller owns the commit.
+        """
+        result = RunnerSync()
+        try:
+            result.imported = await self._sync_intervals(user)
+        except _ReconnectNeeded:
+            result.reconnect_needed = True
+            return result
+        # Before the engine runs, so its readiness signal sees this morning's
+        # watch-derived check-in rather than yesterday's.
+        await refresh_wellness(user, self.db, self.intervals_service)
+        if result.imported == 0:
+            # The engine walks every plan and every run; firing it for a sync
+            # that brought nothing new is pure waste.
+            return result
         # Exactly what the manual sync does on the way back — same engine, same
         # re-pacing, just nobody had to press anything.
-        summary.plans_adapted += len(
+        result.adjustments = list(
             auto_map_and_adjust(user, self.db, AdaptationService()) or []
         )
+        return result
 
-    async def _sync_intervals(self, user: User, summary: AmbientRunSummary) -> int:
+    async def _sync_intervals(self, user: User) -> int:
         if not user.intervals_athlete_id:
             return 0
         if not user.intervals_access_token:
@@ -165,8 +232,7 @@ class AmbientSyncService:
             logger.warning(
                 "Intervals.icu token missing for user %s — skipping", user.id
             )
-            summary.reconnect_needed += 1
-            return 0
+            raise _ReconnectNeeded
         after = (
             user.intervals_last_synced_at - _CURSOR_OVERLAP_SECONDS
             if user.intervals_last_synced_at
@@ -185,8 +251,7 @@ class AmbientSyncService:
             logger.warning(
                 "Intervals.icu authorization expired for user %s — skipping", user.id
             )
-            summary.reconnect_needed += 1
-            return 0
+            raise _ReconnectNeeded from None
         return int(result.get("synced", 0) or 0)
 
     # ---- candidates -------------------------------------------------------

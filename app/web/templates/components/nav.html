@@ -278,6 +278,27 @@
                     </label>
                 </div>
             </div>
+            {# Push is per device (each browser subscribes itself) while the
+               categories are per runner. pwa.js fills this in on open: a
+               switch where push works, install steps on iOS Safari (which
+               only pushes to Home Screen apps), nothing on a deploy with no
+               VAPID key. #}
+            <div class="settings-field" id="pushSettings" hidden>
+                <label class="settings-field-label" for="pushDeviceToggle">
+                    <strong>Notifications on this device</strong>
+                    <span class="toggle-help">After a run, when your plan moves, and a short morning brief. Tap any of them to land on the right page.</span>
+                </label>
+                <div class="settings-field-row" id="pushDeviceRow">
+                    <label class="settings-toggle">
+                        <input type="checkbox" id="pushDeviceToggle" onchange="togglePushDevice()">
+                        <span>Notify me here</span>
+                    </label>
+                    <button class="btn btn-secondary btn-sm" type="button" id="pushTestBtn" onclick="sendPushTest()" hidden>Send a test</button>
+                </div>
+                <p class="toggle-help" id="pushInstallHint" hidden>On iPhone, notifications need RunCoach on your Home Screen: tap <strong>Share</strong> &rarr; <strong>Add to Home Screen</strong>, open it from there, then come back here.</p>
+                <p class="toggle-help" id="pushBlockedHint" hidden>Notifications are blocked for this site in your browser settings. Allow them there, then switch this on.</p>
+                <div class="push-categories" id="pushCategories" hidden></div>
+            </div>
         </div>
         <div class="settings-modal-footer">
             <span class="settings-modal-feedback" id="settingsFeedback" role="status" aria-live="polite"></span>

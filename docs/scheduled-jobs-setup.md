@@ -216,3 +216,26 @@ preference is a bug the runner never sees.
 | Consent toggle | `app/web/templates/components/nav.html`, `app/web/static/js/nav.js` |
 | Tests — sweep | `tests/test_services/test_ambient_sync_service.py`, `tests/test_routers/test_scheduled_router.py` |
 | Tests — nudges | `tests/test_core/test_outbound_nudge.py`, `tests/test_services/test_outbound_nudge_service.py`, `tests/test_routers/test_notifications_router.py` |
+
+## Hourly pushes (morning brief, week review)
+
+`.github/workflows/hourly-push.yml` calls `POST /api/scheduled/hourly` at
+minute 5 of every hour, with the same `CRON_SECRET`. For each runner with at
+least one push device it checks their local time (from the timezone their
+browser last reported):
+
+- **07:00** — morning brief: pulls last night's wellness from Intervals.icu,
+  then pushes today's session and how recovered the watch says they are.
+  Silent on rest days and days they've already run.
+- **19:00 on the last day of a plan week** — week review: planned vs done
+  kilometres and sessions, and next week's total or what changed.
+
+Push itself needs `VAPID_PRIVATE_KEY` (generate with
+`python3 scripts/generate_vapid_keys.py`, then `fly secrets set`). Without it
+the endpoint answers `{"configured": false}` and sends nothing. Every push is
+recorded in `notification_log` before it is sent, so re-running the workflow
+in the same hour is a no-op. `?dry_run=true` reports who *would* be pushed.
+
+Coaching nudges (`/api/notifications/run`) now also go out by push to runners
+with a device and the "Coaching nudges" category on, in addition to email for
+those opted in; the rate limit and repeat guard are shared across channels.

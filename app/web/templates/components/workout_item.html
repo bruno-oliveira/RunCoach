@@ -37,6 +37,11 @@
         <span class="workout-adjusted-chip-arrow" aria-hidden="true">{% if workout.distance > workout.baseline_distance %}↑{% else %}↓{% endif %}</span>
         adjusted from {{ '%.1f'|format(workout.baseline_distance) }} km
     </span>{% endif %}</div>
+    {#- The why, visibly: a hover title is invisible on the phone this is
+        mostly read on, and "adjusted" with no reason reads as arbitrary. #}
+    {% if workout.baseline_distance and workout.baseline_distance != workout.distance and adapt_reason %}
+    <div class="workout-adjusted-reason">{{ adapt_reason }}</div>
+    {% endif %}
     {% elif workout.duration_min and workout.type != 'run_walk' %}
     <div class="workout-distance">{{ workout.duration_min }} min</div>
     {% endif %}

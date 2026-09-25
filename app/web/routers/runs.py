@@ -4,18 +4,28 @@ import logging
 from datetime import datetime
 from typing import Optional
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, status
+from pydantic import BaseModel
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
+from app.application.watch_sync_service import resync_plan_to_watch
 from app.contexts.runner.enrichment.run_creation_service import RunCreationService
 from app.contexts.runner.enrichment.run_enrichment_service import run_to_response
 from app.contexts.runner.fitness.feedback_service import FeedbackService
 from app.contexts.runner.fitness.race_predictor_service import RacePredictorService
 from app.contexts.runner.repositories import SQLAlchemyRunRepository
 from app.core.training.physiology.vdot_calculator import VDOTCalculator
-from app.dependencies import get_current_user, get_db, get_run_repository
-from app.models import User
+from app.dependencies import (
+    get_current_user,
+    get_db,
+    get_intervals_service,
+    get_run_repository,
+)
+from app.infrastructure.integrations.intervals_service import IntervalsService
+from app.infrastructure.integrations.post_sync_service import recalibrate_from_race
+from app.infrastructure.integrations.run_enrichment import apply_vdot
+from app.models import TrainingPlan, User
 from app.schemas import (
     RunLogCreate,
     RunLogListResponse,
@@ -255,6 +265,99 @@ def update_run_log(
     logger.info("Run log %s updated for user %s", run_id, current_user.id)
 
     return run_to_response(run)
+
+
+class RaceMarkRequest(BaseModel):
+    is_race: bool = True
+
+
+@runs_router.post("/{run_id}/race")
+def mark_run_as_race(
+    run_id: str,
+    payload: RaceMarkRequest,
+    background_tasks: BackgroundTasks,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+    run_repo: SQLAlchemyRunRepository = Depends(get_run_repository),
+    intervals_service: IntervalsService = Depends(get_intervals_service),
+) -> dict:
+    """Tell the coach a run was a race — and re-pace the plan from it.
+
+    A tune-up race is the most honest fitness test a runner does, but imported
+    races arrive looking like any other hard run. Marking one tags it
+    ``race`` (which the race predictor already weights above training
+    efforts) and immediately recalibrates the plan in progress from that
+    run's VDOT, then re-mirrors the watch. Unmarking only removes the tag;
+    paces then drift back through the normal recalibration if training
+    disagrees with the race.
+    """
+    run = run_repo.get_for_user(run_id, current_user.id)
+    if not run:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Run log not found"
+        )
+
+    if not payload.is_race:
+        if run.workout_type == "race":
+            run.workout_type = None
+        db.commit()
+        return {"ok": True, "is_race": False, "recalibration": None}
+
+    run.workout_type = "race"
+    if run.vdot is None:
+        apply_vdot(run)
+
+    recalibration = None
+    plan = _plan_for_run(db, current_user, run)
+    if plan is not None and run.vdot:
+        recalibration = recalibrate_from_race(
+            plan, str(current_user.id), db, float(run.vdot)
+        )
+    db.commit()
+
+    if recalibration and plan is not None:
+        background_tasks.add_task(
+            resync_plan_to_watch, str(plan.id), str(current_user.id), intervals_service
+        )
+    return {
+        "ok": True,
+        "is_race": True,
+        "run_vdot": run.vdot,
+        "recalibration": (
+            {
+                "old_vdot": recalibration["old_vdot"],
+                "new_vdot": recalibration["new_vdot"],
+                "direction": recalibration["direction"],
+                "reason": (plan.last_change_plan or {}).get("reason"),
+            }
+            if recalibration and plan is not None
+            else None
+        ),
+    }
+
+
+def _plan_for_run(db: Session, user: User, run) -> Optional[TrainingPlan]:
+    """The plan this run belongs to, or the one in progress."""
+    from app.contexts.plan.plan_helpers import (
+        current_active_plan,
+        decorate_plan_status,
+    )
+    from app.contexts.plan.repositories import SQLAlchemyPlanRepository
+    from app.core.time_utils import local_today
+
+    repo = SQLAlchemyPlanRepository(db)
+    if run.training_plan_id:
+        plan = repo.get_for_user(run.training_plan_id, user.id)
+        if plan is not None:
+            return plan
+    plans = repo.list_by_user_recent_first(user.id)
+    today = local_today()
+    for candidate in plans:
+        decorate_plan_status(candidate, today)
+    plan = current_active_plan(plans)
+    if plan is None or getattr(plan, "status_label", None) == "Completed":
+        return None
+    return plan
 
 
 @runs_router.delete("/{run_id}", status_code=status.HTTP_204_NO_CONTENT)

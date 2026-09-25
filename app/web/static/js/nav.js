@@ -407,6 +407,120 @@ function openSettingsModal() {
     document.body.style.overflow = 'hidden';
     const firstField = document.getElementById('ageInput');
     if (firstField) firstField.focus();
+    renderPushSettings();
+}
+
+/* ── Push notifications (this device) ─────────────────────────────────────
+   The switch reflects *this browser's* subscription; the category checkboxes
+   are the runner's, shared by all their devices. Everything degrades to
+   hidden: no service worker, or a server without a VAPID key, and the whole
+   field stays out of the way. */
+function _pushFeedback(text, isError) {
+    const feedback = document.getElementById('settingsFeedback');
+    if (!feedback) return;
+    feedback.textContent = text;
+    feedback.classList.toggle('is-error', !!isError);
+    feedback.classList.toggle('is-saved', !isError);
+}
+
+function _applyPushState(state) {
+    const field = document.getElementById('pushSettings');
+    if (!field || !state) return;
+    if (!state.configured || (!state.supported && !state.needsInstall)) {
+        field.hidden = true;
+        return;
+    }
+    field.hidden = false;
+    const row = document.getElementById('pushDeviceRow');
+    const toggle = document.getElementById('pushDeviceToggle');
+    const testBtn = document.getElementById('pushTestBtn');
+    const installHint = document.getElementById('pushInstallHint');
+    const blockedHint = document.getElementById('pushBlockedHint');
+    const cats = document.getElementById('pushCategories');
+
+    installHint.hidden = !state.needsInstall;
+    row.hidden = state.needsInstall;
+    blockedHint.hidden = state.permission !== 'denied';
+    toggle.checked = !!state.subscribed;
+    toggle.disabled = state.permission === 'denied';
+    testBtn.hidden = !state.subscribed;
+
+    cats.hidden = !state.subscribed;
+    cats.innerHTML = '';
+    (state.categories || []).forEach(function (cat) {
+        const label = document.createElement('label');
+        label.className = 'settings-toggle push-category';
+        const input = document.createElement('input');
+        input.type = 'checkbox';
+        input.checked = !!(state.prefs || {})[cat.key];
+        input.addEventListener('change', function () {
+            const update = {};
+            update[cat.key] = input.checked;
+            window.RunCoachPWA.savePrefs(update)
+                .then(function () { _pushFeedback('Notification settings saved.'); })
+                .catch(function () {
+                    input.checked = !input.checked;
+                    _pushFeedback('Could not save. Please try again.', true);
+                });
+        });
+        const text = document.createElement('span');
+        const strong = document.createElement('strong');
+        strong.textContent = cat.label;
+        const help = document.createElement('span');
+        help.className = 'toggle-help';
+        help.textContent = cat.help;
+        text.appendChild(strong);
+        text.appendChild(help);
+        label.appendChild(input);
+        label.appendChild(text);
+        cats.appendChild(label);
+    });
+}
+
+function renderPushSettings() {
+    if (!window.RunCoachPWA) return;
+    window.RunCoachPWA.pushState().then(_applyPushState).catch(function () {
+        const field = document.getElementById('pushSettings');
+        if (field) field.hidden = true;
+    });
+}
+
+function togglePushDevice() {
+    const toggle = document.getElementById('pushDeviceToggle');
+    if (!toggle || !window.RunCoachPWA) return;
+    const wanted = toggle.checked;
+    toggle.disabled = true;
+    _pushFeedback(wanted ? 'Asking your browser…' : 'Turning off…');
+    const action = wanted
+        ? window.RunCoachPWA.enablePush()
+        : window.RunCoachPWA.disablePush();
+    action.then(function (state) {
+        _applyPushState(state);
+        _pushFeedback(wanted
+            ? 'Notifications on for this device.'
+            : 'Notifications off for this device.');
+    }).catch(function (err) {
+        toggle.checked = !wanted;
+        const denied = err && err.message === 'denied';
+        _pushFeedback(denied
+            ? 'Your browser blocked notifications for RunCoach.'
+            : 'Could not change notifications. Please try again.', true);
+        renderPushSettings();
+    }).finally(function () {
+        toggle.disabled = false;
+    });
+}
+
+function sendPushTest() {
+    if (!window.RunCoachPWA) return;
+    _pushFeedback('Sending…');
+    window.RunCoachPWA.sendTest().then(function (res) {
+        _pushFeedback(res && res.delivered
+            ? 'Sent — check your notifications.'
+            : 'Nothing was delivered. Try switching notifications off and on.', !(res && res.delivered));
+    }).catch(function () {
+        _pushFeedback('Could not send a test right now.', true);
+    });
 }
 
 function closeSettingsModal() {

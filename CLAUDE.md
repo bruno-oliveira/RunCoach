@@ -201,6 +201,29 @@ Routers should carry no raw `db.query` — there is one remaining exception in
   deterministic note when no API key is configured — the feature degrades, it
   does not fail.
 
+- **Live loop** — `application/intervals_webhook_service.py` receives
+  Intervals.icu's activity webhooks and runs the *same* per-runner unit the
+  daily sweep uses (`AmbientSyncService.sync_runner`): import → wellness →
+  adapt → commit → re-mirror → one push. It deliberately ignores the activity
+  in the body and does the cursor-overlapping sync instead, so live and daily
+  imports share one importer and one dedupe. Pushes go through
+  `application/push_notification_service.PushNotifier`, which checks the
+  runner's per-category prefs and claims a `(user, kind, key)` row in
+  `notification_log` *before* sending — that ledger is what makes retried
+  webhooks and double-fired crons silent. Web Push itself (RFC 8291 + VAPID)
+  is hand-rolled in `infrastructure/notifications/webpush.py` on
+  `cryptography`/PyJWT; its test pins the RFC's worked example byte for byte.
+
+- **Watch wellness** — HRV / resting HR / sleep come from Intervals.icu
+  (`WELLNESS:READ`; older grants are pinned to `LEGACY_SCOPES` on their first
+  403 and offered a reconnect). `core/coaching/wellness.py` judges each morning
+  against the runner's own 28-day median, never absolute values. With a
+  check-in it nudges the felt score at half weight; with none, a
+  `readiness_logs` row with `source="wearable"` stands in (centred on 65, just
+  above the engine's neutral) so the adaptation readiness signal has data. A
+  runner's check-in always overwrites a wearable row, never the reverse, and
+  the outbound "you've checked in run-down" nudge only counts real check-ins.
+
 - **Run import** — Intervals.icu is the only source since the Strava
   integration was retired. `run_logs.source` carries provenance, read via the
   `was_imported` property. `infrastructure/integrations/activity_dedup.py`
@@ -265,9 +288,11 @@ pydantic-settings in `app/infrastructure/config.py`.
 | `GOOGLE_CLIENT_ID` | (required) | Google OAuth client ID |
 | `INTERVALS_CLIENT_ID` / `_SECRET` / `_REDIRECT_URI` | — | Intervals.icu OAuth |
 | `INTERVALS_INITIAL_SYNC_DAYS` | 365 | Backfill window on first connect |
+| `INTERVALS_WEBHOOK_SECRET` | (empty) | Secret in Intervals.icu webhook bodies. Empty makes `/api/intervals/webhook` 404 |
+| `VAPID_PRIVATE_KEY` / `VAPID_SUBJECT` | (empty) | Web Push. Empty disables push; generate with `scripts/generate_vapid_keys.py`. Rotating it drops every browser subscription |
 | `SMTP_HOST` | (empty) | Outbound-nudge mail host. **Empty means send nothing** — the null mailer logs and reports failure rather than pretending |
 | `SMTP_PORT` / `SMTP_USERNAME` / `SMTP_PASSWORD` / `SMTP_FROM` | 587 / empty | Port 465 switches to implicit TLS; otherwise STARTTLS unless `SMTP_STARTTLS=false` |
-| `CRON_SECRET` | (empty) | Shared secret for both scheduled endpoints. Empty makes them 404 |
+| `CRON_SECRET` | (empty) | Shared secret for the scheduled endpoints. Empty makes them 404 |
 | `PUBLIC_BASE_URL` | http://localhost:8000 | Absolute origin for links inside emails. Must be set in production |
 | `NUDGE_MIN_INTERVAL_DAYS` | 4 | Floor between two nudge emails to the same runner |
 
@@ -289,7 +314,13 @@ since a logged run, so nudging before importing can tell a runner they've gone
 quiet when they came back yesterday. Step 2 inherits GitHub's default "skip if
 the previous step failed" — do not add `if: always()`.
 
-Both are off in every direction until configured (no `CRON_SECRET` → 404 and the
+Plus one hourly job, `.github/workflows/hourly-push.yml` →
+`POST /api/scheduled/hourly`: the morning brief (07:00 local) and the week
+review (19:00 local on a plan week's last day), each only for runners with a
+push device, in the timezone their browser last reported. It wakes the
+scaled-to-zero machine once an hour.
+
+All of them are off in every direction until configured (no `CRON_SECRET` → 404 and the
 workflow skips itself; no `SMTP_HOST` → the mailer refuses and says so). See
 `docs/scheduled-jobs-setup.md` for the guards and how to check what *would*
 happen with `?dry_run=true` before anything goes out.

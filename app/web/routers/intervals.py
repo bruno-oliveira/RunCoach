@@ -20,6 +20,11 @@ from fastapi.responses import RedirectResponse
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
+from app.application.intervals_webhook_service import (
+    WebhookRejected,
+    parse_webhook,
+    process_athlete,
+)
 from app.application.watch_sync_service import (
     ERROR_AUTH,
     record_pushed_events,
@@ -204,6 +209,10 @@ async def intervals_callback(
     user.intervals_athlete_id = athlete_id
     user.intervals_access_token = access_token
     user.intervals_last_synced_at = None
+    # What the runner actually granted (they can untick scopes on the consent
+    # screen). Unknown stays NULL and is probed optimistically.
+    granted = token_data.get("scope") if isinstance(token_data, dict) else None
+    user.intervals_scopes = str(granted) if granted else None
     try:
         db.commit()
     except IntegrityError as conflict:
@@ -297,6 +306,41 @@ async def intervals_sync(
         **result,
         adjustment_results=adjustment_results,
     )
+
+
+@intervals_router.post("/webhook", include_in_schema=False)
+async def intervals_webhook(
+    request: Request,
+    background_tasks: BackgroundTasks,
+    intervals_service: IntervalsService = Depends(get_intervals_service),
+):
+    """Receive Intervals.icu's activity webhooks and re-sync those runners live.
+
+    No session and no cookie: the shared secret in the body is the credential.
+    404 until ``INTERVALS_WEBHOOK_SECRET`` is set, like the cron endpoints — an
+    unconfigured deploy should not advertise a write path. Answers 200 at once
+    (Intervals re-fires on anything else) and does the work in the background.
+    """
+    secret = settings.intervals_webhook_secret
+    if not secret:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Not found")
+    try:
+        payload = await request.json()
+    except ValueError as bad_json:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid JSON"
+        ) from bad_json
+    try:
+        batch = parse_webhook(payload, secret)
+    except WebhookRejected as rejected:
+        logger.warning("Rejected Intervals.icu webhook: %s", rejected)
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN, detail="Invalid webhook"
+        ) from rejected
+
+    for athlete_id in batch.athlete_ids:
+        background_tasks.add_task(process_athlete, athlete_id, intervals_service)
+    return {"ok": True, "accepted": len(batch.athlete_ids)}
 
 
 def _require_connected(current_user: User) -> None:

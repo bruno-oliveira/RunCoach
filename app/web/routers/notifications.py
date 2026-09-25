@@ -25,6 +25,7 @@ from app.application.outbound_nudge_service import (
     OutboundNudgeService,
     verify_unsubscribe_token,
 )
+from app.application.push_notification_service import get_push_notifier
 from app.dependencies import get_db, require_cron_secret
 from app.infrastructure.notifications import get_mailer
 from app.models import User
@@ -53,7 +54,7 @@ def run_outbound_nudges(
     it has been since a logged run, so nudging before importing can tell a
     runner they have gone quiet when they came back yesterday.
     """
-    service = OutboundNudgeService(db, get_mailer())
+    service = OutboundNudgeService(db, get_mailer(), push=get_push_notifier(db))
     summary = service.run(dry_run=dry_run, limit=limit)
     logger.info("Outbound nudge run: %s", summary)
     return {"ok": True, "dry_run": dry_run, **summary}

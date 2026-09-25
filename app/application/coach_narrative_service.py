@@ -276,7 +276,7 @@ def _today_readiness_facts(user_id: str, db: Session) -> dict[str, Any]:
     log = CheckInService(db).get_today(user_id)
     if log is None or log.score is None:
         return {"available": False, "band": None, "score": None, "drivers": []}
-    assessment = CheckInService.assess(log)
+    assessment = CheckInService(db).assess(log)
     return {
         "available": True,
         "band": assessment.band,

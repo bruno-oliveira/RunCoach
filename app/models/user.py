@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime, timezone
 
-from sqlalchemy import Boolean, Column, DateTime, Integer, String, text
+from sqlalchemy import JSON, Boolean, Column, DateTime, Integer, String, text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models.base import Base
@@ -47,6 +47,11 @@ class User(Base):
         EncryptedString(), nullable=True
     )
     intervals_last_synced_at: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    # The scopes Intervals.icu actually granted, as its token response lists
+    # them. NULL for connections made before we recorded it — those are tried
+    # optimistically and pinned to their legacy scopes on the first 403, so the
+    # UI can ask for a reconnect instead of silently importing nothing.
+    intervals_scopes: Mapped[str | None] = mapped_column(String, nullable=True)
     # HR anchors as configured in Intervals.icu, refreshed on every sync. Kept
     # separate from the manual ``max_hr`` / ``threshold_hr`` / ``resting_hr``
     # above so a runner's own entry always wins and a re-sync never clobbers it;
@@ -76,6 +81,11 @@ class User(Base):
     last_nudge_email_signature: Mapped[str | None] = mapped_column(
         String, nullable=True
     )
+    # Which push categories this runner wants (``app.core.coaching.
+    # notification_prefs`` owns the keys and defaults). NULL means "defaults":
+    # granting a browser push permission is itself the opt-in, so a runner who
+    # subscribed gets the useful ones without a second form.
+    notification_prefs: Mapped[dict | None] = mapped_column(JSON, nullable=True)
 
     training_plans: Mapped[list["TrainingPlan"]] = relationship(
         "TrainingPlan", back_populates="user", cascade="all, delete-orphan"
@@ -91,4 +101,7 @@ class User(Base):
     )
     readiness_logs: Mapped[list["ReadinessLog"]] = relationship(
         "ReadinessLog", back_populates="user", cascade="all, delete-orphan"
+    )
+    push_subscriptions: Mapped[list["PushSubscription"]] = relationship(
+        "PushSubscription", back_populates="user", cascade="all, delete-orphan"
     )

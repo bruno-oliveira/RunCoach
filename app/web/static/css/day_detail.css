@@ -251,3 +251,18 @@
     white-space: nowrap;
 }
 .day-pager-when { font-size: var(--text-xs); color: var(--color-text-muted); }
+
+/* "This was a race" on a logged run */
+.day-race {
+    margin-top: 12px;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
+}
+
+.day-race-note {
+    margin: 0;
+    font-size: 0.85rem;
+    color: var(--color-text-muted);
+}

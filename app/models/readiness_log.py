@@ -59,6 +59,12 @@ class ReadinessLog(Base):
 
     notes = Column(Text, nullable=True)
 
+    # "checkin" when the runner filled the card; "wearable" when we wrote the
+    # row ourselves from their watch's overnight HRV / resting HR / sleep
+    # because they didn't. A later check-in the same day overwrites a wearable
+    # row (the runner's own word wins) and flips this back to "checkin".
+    source = Column(String(20), nullable=False, default="checkin")
+
     # Derived 0–100 readiness score. Persisted (not computed at read time) so the
     # adaptation signal reads a stable value and old check-ins keep the score
     # they were logged with even if the scoring formula later changes.

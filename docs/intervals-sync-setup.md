@@ -72,3 +72,32 @@ revoked.
 - Garmin generally forwards activities recorded on Garmin devices, not files
   uploaded to Garmin by another third party.
 - Automatic per-workout webhooks are not enabled yet; manual sync is one click.
+
+## Live import (webhook)
+
+Without a webhook, new activities arrive on the daily sweep or when the runner
+presses sync. With one, a run reaches the plan a minute or two after the watch
+uploads it: import → wellness → adapt → re-mirror → one push notification.
+
+1. Pick a long random secret and set it on the app:
+   `fly secrets set INTERVALS_WEBHOOK_SECRET=...`
+2. In Intervals.icu → Settings → your app → **Manage App**, set the webhook URL
+   to `https://<your-host>/api/intervals/webhook`, paste the same secret, and
+   subscribe to `ACTIVITY_UPLOADED` and `ACTIVITY_ANALYZED` (optionally
+   `SPORT_SETTINGS_UPDATED`, which refreshes HR anchors).
+3. Check it: the endpoint answers `404` while the secret is unset, `403` for a
+   wrong secret, and `{"ok": true, "accepted": N}` for a real delivery. The
+   work runs after the response; look for `Intervals webhook for user …` in the
+   logs.
+
+Intervals does not deliver activity webhooks for activities it pulled from
+Strava — those still arrive on the daily sweep.
+
+## Wellness scope
+
+RunCoach now requests `ACTIVITY:READ,WELLNESS:READ,CALENDAR:WRITE`. Wellness
+(overnight HRV, resting HR, sleep) pre-fills the morning check-in and stands in
+for it when the runner doesn't check in. Connections made before this change
+keep working for activities and the watch mirror; the first wellness call
+403s, the grant is recorded as legacy, and the check-in card offers a one-tap
+reconnect.

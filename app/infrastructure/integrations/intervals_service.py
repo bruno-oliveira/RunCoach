@@ -66,6 +66,84 @@ class IntervalsAuthorizationError(RuntimeError):
     """Raised when an Intervals.icu token is invalid or lacks activity scope."""
 
 
+class IntervalsScopeMissing(RuntimeError):
+    """The grant is valid but doesn't cover this data (e.g. WELLNESS:READ).
+
+    Distinct from :class:`IntervalsAuthorizationError` on purpose: a runner who
+    connected before we asked for wellness still has a perfectly good activity
+    import, and must not be told their whole connection has expired.
+    """
+
+
+# What RunCoach asks for today. ACTIVITY:READ powers the import, CALENDAR:WRITE
+# the watch mirror, WELLNESS:READ the overnight HRV / resting HR / sleep that
+# lets readiness come from the watch instead of a form.
+REQUESTED_SCOPES = "ACTIVITY:READ,WELLNESS:READ,CALENDAR:WRITE"
+# What a connection made before wellness existed was granted — recorded when a
+# legacy token 403s on wellness, so we stop asking and the UI can offer a
+# reconnect instead.
+LEGACY_SCOPES = "ACTIVITY:READ,CALENDAR:WRITE"
+
+
+def has_wellness_scope(user: User) -> bool:
+    """Whether to try the wellness endpoint for this runner.
+
+    Unknown (a pre-recording connection) counts as yes: the first 403 pins it.
+    """
+    scopes = user.intervals_scopes
+    return scopes is None or "WELLNESS" in scopes.upper()
+
+
+def parse_wellness_rows(rows: Any) -> list[dict[str, Any]]:
+    """Keep the objective markers from Intervals' wellness records.
+
+    Each record's ``id`` is its ISO date. Values are plausibility-checked the
+    same way the HR anchors are, so a sensor glitch (HRV 0, RHR 250) is dropped
+    instead of becoming someone's "baseline".
+    """
+    from app.core.coaching.wellness import sleep_hours_from_seconds
+
+    out: list[dict[str, Any]] = []
+    if not isinstance(rows, list):
+        return out
+    for row in rows:
+        if not isinstance(row, dict):
+            continue
+        try:
+            day = datetime.strptime(str(row.get("id", ""))[:10], "%Y-%m-%d").date()
+        except ValueError:
+            continue
+        hrv = row.get("hrv")
+        hrv_value = (
+            float(hrv)
+            if isinstance(hrv, (int, float))
+            and not isinstance(hrv, bool)
+            and 5 <= hrv <= 300
+            else None
+        )
+        sleep_score = row.get("sleepScore")
+        parsed = {
+            "date": day,
+            "hrv": hrv_value,
+            "resting_hr": _plausible(
+                row.get("restingHR"),
+                _MIN_PLAUSIBLE_RESTING_HR,
+                _MAX_PLAUSIBLE_RESTING_HR,
+            ),
+            "sleep_hours": sleep_hours_from_seconds(row.get("sleepSecs")),
+            "sleep_score": (
+                float(sleep_score)
+                if isinstance(sleep_score, (int, float))
+                and not isinstance(sleep_score, bool)
+                and 0 <= sleep_score <= 100
+                else None
+            ),
+        }
+        if any(parsed[k] is not None for k in ("hrv", "resting_hr", "sleep_hours")):
+            out.append(parsed)
+    return out
+
+
 def raise_for_intervals_status(response: httpx.Response) -> None:
     if response.status_code in (httpx.codes.UNAUTHORIZED, httpx.codes.FORBIDDEN):
         raise IntervalsAuthorizationError(
@@ -162,9 +240,7 @@ class IntervalsService:
         params = {
             "client_id": settings.intervals_client_id,
             "redirect_uri": settings.intervals_redirect_uri,
-            # ACTIVITY:READ powers the activity import; CALENDAR:WRITE lets us
-            # push planned workouts to the athlete's calendar (send to watch).
-            "scope": "ACTIVITY:READ,CALENDAR:WRITE",
+            "scope": REQUESTED_SCOPES,
             "state": state,
         }
         return f"{INTERVALS_AUTH_URL}?{urlencode(params)}"
@@ -200,6 +276,30 @@ class IntervalsService:
             )
             raise_for_intervals_status(response)
             return response.json()
+
+    async def fetch_wellness(
+        self,
+        access_token: str,
+        athlete_id: str,
+        oldest: str,
+        newest: str,
+    ) -> list[dict[str, Any]]:
+        """Overnight HRV / resting HR / sleep between two ISO dates (inclusive).
+
+        Raises:
+            IntervalsScopeMissing: the grant predates WELLNESS:READ (403).
+            IntervalsAuthorizationError: the token itself is dead (401).
+        """
+        async with httpx.AsyncClient(timeout=INTERVALS_TIMEOUT) as client:
+            response = await client.get(
+                f"{INTERVALS_API_BASE}/athlete/{athlete_id}/wellness",
+                headers={"Authorization": f"Bearer {access_token}"},
+                params={"oldest": oldest, "newest": newest},
+            )
+            if response.status_code == httpx.codes.FORBIDDEN:
+                raise IntervalsScopeMissing("Intervals.icu grant lacks WELLNESS:READ")
+            raise_for_intervals_status(response)
+            return parse_wellness_rows(response.json())
 
     async def fetch_athlete_settings(
         self,
@@ -516,6 +616,13 @@ class IntervalsService:
                 .first()
             )
             if existing:
+                # A runner often sets RPE on Intervals after the watch upload
+                # (the ANALYZED webhook fires again when they do). Backfill it
+                # rather than keep the effort-blind copy we imported first;
+                # never overwrite a value they entered in RunCoach.
+                rpe = _rpe_from_activity(activity)
+                if rpe is not None and existing.perceived_effort is None:
+                    existing.perceived_effort = rpe
                 skipped += 1
                 continue
 

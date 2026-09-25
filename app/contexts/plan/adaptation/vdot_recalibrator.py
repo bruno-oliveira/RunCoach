@@ -23,6 +23,10 @@ from ._helpers import parse_plan_data_lookups, today_date
 logger = logging.getLogger(__name__)
 
 _VDOT_RECALIBRATION_THRESHOLD = 1.0
+# A tagged race may move the plan at most this far in one recalibration.
+_RACE_MAX_STEP = 4.0
+_MIN_PLAUSIBLE_VDOT = 20.0
+_MAX_PLAUSIBLE_VDOT = 85.0
 
 # Session-hit-rate recalibration (audit E5) — Runna-style "Pace Insights".
 # Pace deviation thresholds mirror the coaching pattern analyzer so the two
@@ -96,17 +100,36 @@ def recalibrate_zones_only(
     training_plan: TrainingPlan,
     user_id: str,
     db: Session,
+    *,
+    race_vdot: Optional[float] = None,
 ) -> Optional[Dict[str, Any]]:
     """Rewrite future workout pace zones when the user's VDOT has shifted.
 
     Public helper callable from per-run hooks (run logging, activity sync) and
     from the full plan-adjust flow. Returns the recalibration result dict if
     pace zones were updated, or None if nothing changed.
+
+    ``race_vdot`` is the VDOT of a run the runner has told us was a race. A
+    race is the one effort Daniels' tables are built on, so it outranks the
+    blended estimate from training runs — but only within ``_RACE_MAX_STEP``
+    of the current plan, because a mis-measured course or a GPS glitch must
+    not rewrite every pace in the plan in one go.
     """
     from app.application.ports import RacePredictorService
 
     plan_vdot = training_plan.vdot
     if not plan_vdot:
+        return None
+
+    if (
+        race_vdot is not None
+        and _MIN_PLAUSIBLE_VDOT <= race_vdot <= _MAX_PLAUSIBLE_VDOT
+    ):
+        step = max(-_RACE_MAX_STEP, min(_RACE_MAX_STEP, race_vdot - plan_vdot))
+        if abs(step) >= _VDOT_RECALIBRATION_THRESHOLD:
+            return _apply_recalibration(
+                training_plan, user_id, db, plan_vdot + step, plan_vdot, "race"
+            )
         return None
 
     # Primary signal: best recent race-like efforts.
@@ -135,6 +158,20 @@ def recalibrate_zones_only(
     if target_vdot is None:
         return None
 
+    return _apply_recalibration(
+        training_plan, user_id, db, target_vdot, plan_vdot, source
+    )
+
+
+def _apply_recalibration(
+    training_plan: TrainingPlan,
+    user_id: str,
+    db: Session,
+    target_vdot: float,
+    plan_vdot: float,
+    source: str,
+) -> Optional[Dict[str, Any]]:
+    """Re-pace future weeks to ``target_vdot`` (shared by every source)."""
     current_vdot = target_vdot
     delta = current_vdot - plan_vdot
 

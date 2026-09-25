@@ -68,3 +68,9 @@ intervals_push_limiter = RateLimiter(max_requests=30, window_seconds=60)
 # real "check for new runs" tap happens a handful of times a day at most — cap
 # per-IP so an accidental polling loop (or abuse) can't hammer their API.
 intervals_sync_limiter = RateLimiter(max_requests=12, window_seconds=60)
+# Registering a push subscription is a row per call; a test push is a real
+# outbound request to Apple/Google/Mozilla on the runner's behalf.
+push_subscribe_limiter = RateLimiter(max_requests=20, window_seconds=60)
+push_test_limiter = RateLimiter(max_requests=3, window_seconds=60)
+# The check-in prefill may call Intervals.icu's wellness endpoint.
+wellness_prefill_limiter = RateLimiter(max_requests=12, window_seconds=60)
