@@ -163,8 +163,17 @@
                             </div>
                             <div class="recipe-section">
                                 <h5><span data-i18n="nutrition.instructions">Instructions</span></h5>
+                                {% if meal.steps %}
+                                <ol class="recipe-steps">
+                                    {% for step in meal.steps %}<li>{{ step }}</li>{% endfor %}
+                                </ol>
+                                {% else %}
                                 <p class="recipe-instructions">{{ meal.instructions }}</p>
+                                {% endif %}
                             </div>
+                            {% if meal.name %}
+                            <a class="recipe-full-link" href="/recipes/{{ meal.name | recipe_slug }}"><span data-i18n="nutrition.full_recipe">Full recipe, nutrition and tips</span> &rarr;</a>
+                            {% endif %}
                         </div>
                     </div>
                     {% endfor %}

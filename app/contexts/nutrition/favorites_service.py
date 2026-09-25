@@ -11,6 +11,7 @@ from typing import Any, Callable, Dict, List, Optional
 
 from sqlalchemy.orm import Session
 
+from app.contexts.nutrition.meal_database import get_meal_database
 from app.contexts.nutrition.repositories import SQLAlchemyFavoriteRecipeRepository
 from app.domain.repositories import IFavoriteRecipeRepository
 from app.models import FavoriteRecipe
@@ -28,19 +29,28 @@ class FavoritesService:
         repo_factory: Callable[
             [Session], IFavoriteRecipeRepository
         ] = SQLAlchemyFavoriteRecipeRepository,
+        catalog_lookup: Optional[Callable[[str], Optional[Dict[str, Any]]]] = None,
     ) -> None:
         self._repo_factory = repo_factory
+        self._catalog_lookup = catalog_lookup or (
+            lambda name: get_meal_database().get_meal_by_name(name)
+        )
 
     def list_favorites(self, user_id: str, db: Session) -> List[Dict[str, Any]]:
         """Return the user's favorited recipe payloads, newest first.
 
-        Each payload is the stored ``recipe_data`` with the ``favorite_id``
-        injected so the client can later remove it.
+        A favourite stores a snapshot of the recipe as it was when saved, so a
+        recipe that has since been rewritten would keep showing its old steps.
+        When the recipe still exists in the catalogue, its current version is
+        returned instead; the snapshot is only a fallback for recipes that
+        have been removed. Each payload carries ``favorite_id`` so the client
+        can later remove it.
         """
         favorites = self._repo_factory(db).list_for_user(user_id)
         recipes: List[Dict[str, Any]] = []
         for fav in favorites:
-            recipe_data = dict(fav.recipe_data)
+            live = self._catalog_lookup(fav.recipe_name)
+            recipe_data = dict(live if live else fav.recipe_data)
             recipe_data["favorite_id"] = fav.id
             recipes.append(recipe_data)
         return recipes
@@ -51,6 +61,9 @@ class FavoritesService:
         """Add a recipe to favorites, deduplicating by recipe name."""
         repo = self._repo_factory(db)
         recipe_name = recipe_data.get("name")
+        # Store the catalogue's copy, not whatever the client posted, so a
+        # favourite can't carry fields (or markup) the recipe never had.
+        recipe_data = self._catalog_lookup(recipe_name or "") or recipe_data
         meal_type = recipe_data.get("meal_type")
 
         existing = repo.get_by_user_and_name(user_id, recipe_name)

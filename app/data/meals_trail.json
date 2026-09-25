@@ -2,365 +2,1075 @@
     {
         "name": "No-Bake Maple Oat Energy Balls",
         "meal_type": "trail",
-        "description": "Soft, poppable energy balls that travel well in a vest pocket. Fast-digesting carbs from oats and maple with just enough fat and protein to hold together.",
-        "instructions": "In a bowl, stir together the rolled oats, nut butter, maple syrup and a pinch of salt until a sticky dough forms. Fold in the mini chocolate chips. Chill the mixture for 15 minutes so it firms up, then roll into 12 walnut-sized balls. Store in the fridge for up to a week, or pack into a zip bag for race day.",
+        "description": "Soft, poppable oat, nut butter and maple balls with mini chocolate chips. They travel well in a vest pocket.",
+        "servings": 12,
+        "serving_size": "1 ball (about 16 g carbs)",
         "prep_time": 15,
         "cook_time": 0,
-        "calories": 120,
+        "calories": 130,
         "protein": 3,
-        "fiber": 2,
-        "carbs": 17,
+        "carbs": 16,
         "fat": 5,
+        "fiber": 2,
         "ingredients": [
-            "1.5 cups rolled oats",
-            "1/2 cup natural peanut or almond butter",
-            "1/3 cup maple syrup",
-            "1/4 cup mini dark chocolate chips",
-            "Pinch of sea salt"
+            "90 g smooth peanut or almond butter",
+            "100 g (5 tbsp) maple syrup",
+            "135 g (1.5 cups) rolled oats",
+            "1/4 tsp salt",
+            "40 g mini dark chocolate chips (or raisins in hot weather)"
         ],
-        "dietary_tags": ["vegetarian", "high_fiber", "quick"]
+        "steps": [
+            "Warm the nut butter and maple syrup in the microwave for 20 seconds so they blend easily.",
+            "Stir in the oats and salt until you have a sticky dough. Add a spoonful of oats if it's too wet, or a splash of water if it's too dry.",
+            "Once the dough is cool, fold in the chocolate chips so they don't melt.",
+            "Chill for 15 minutes, then roll into 12 balls of about 30 g each with damp hands.",
+            "Wrap them in pairs in foil or baking paper for the trail."
+        ],
+        "tip": "Eat one every 20-30 minutes with water. Two or three an hour covers part of a 30-60 g/hour carb target; add drink carbs on top.",
+        "storage": "Keeps for 1 week in the fridge, and 1-2 days in a vest in cool weather.",
+        "dietary_tags": [
+            "vegetarian",
+            "portable"
+        ]
     },
     {
         "name": "Date and Almond Energy Bars",
         "meal_type": "trail",
-        "description": "A homemade answer to shop-bought fruit-and-nut bars: dense, chewy, naturally sweet and entirely real-food. Cut into squares and wrap individually for the trail.",
-        "instructions": "Pit the dates and soak in warm water for 10 minutes, then drain. Blitz the dates and almonds in a food processor until a sticky paste forms. Pulse in the oats, cocoa and a pinch of salt. Press the mixture firmly into a parchment-lined loaf tin, chill for 30 minutes, then cut into 10 bars. Wrap each in foil or parchment.",
+        "description": "A homemade take on shop-bought fruit-and-nut bars: dense, chewy, naturally sweet, made from real food, and gluten-free.",
+        "servings": 10,
+        "serving_size": "1 bar",
         "prep_time": 20,
         "cook_time": 0,
         "calories": 180,
         "protein": 4,
-        "fiber": 4,
-        "carbs": 28,
+        "carbs": 24,
         "fat": 7,
+        "fiber": 4,
         "ingredients": [
-            "2 cups pitted Medjool dates",
-            "1 cup raw almonds",
-            "1/2 cup rolled oats",
+            "140 g raw almonds",
+            "300 g pitted Medjool dates",
+            "45 g gluten-free rolled oats",
             "1 tbsp cocoa powder",
             "Pinch of sea salt"
         ],
-        "dietary_tags": ["vegan", "gluten_free", "high_fiber"]
+        "steps": [
+            "If the dates are firm, soak them in hot water for 10 minutes, then drain and pat them dry.",
+            "Pulse the almonds in a food processor to coarse crumbs and tip them out. This keeps some texture in the bars.",
+            "Blitz the dates for 1-2 minutes to a sticky paste.",
+            "Add the almonds, oats, cocoa and salt and pulse until the mixture clumps together.",
+            "Press it very firmly into a 450 g (1 lb) loaf tin lined with baking paper and chill for at least 30 minutes.",
+            "Cut into 10 bars and wrap each one in foil or baking paper."
+        ],
+        "tip": "The almonds add fat and fibre, so these suit long, steady efforts and the first half of an ultra better than hard racing.",
+        "storage": "Keeps for 2 weeks in the fridge.",
+        "dietary_tags": [
+            "vegan",
+            "gluten_free",
+            "portable",
+            "meal_prep"
+        ]
     },
     {
         "name": "Nut Butter Rice Cakes",
         "meal_type": "trail",
-        "description": "The portable savory-sweet rice cake long popular in pro cycling. Soft, easy on the stomach during long efforts, and quick to assemble the night before.",
-        "instructions": "Cook the sushi rice with the water until soft and sticky. While still warm, stir through the nut butter, honey and a pinch of salt until evenly coated. Press firmly into a parchment-lined tray to about 2cm thick and chill for an hour. Cut into squares and wrap each one in foil so they stay easy to open mid-run.",
+        "description": "Sticky rice pressed with nut butter, honey and salt, in the style long popular in pro cycling. Soft and easy on the stomach.",
+        "servings": 8,
+        "serving_size": "1 square (about 25 g carbs)",
         "prep_time": 10,
-        "cook_time": 20,
-        "calories": 160,
-        "protein": 4,
+        "cook_time": 25,
+        "calories": 140,
+        "protein": 3,
+        "carbs": 25,
+        "fat": 3,
         "fiber": 1,
-        "carbs": 30,
-        "fat": 4,
         "ingredients": [
-            "1 cup uncooked sushi/short-grain rice",
-            "1.5 cups water",
+            "200 g sushi or short-grain rice",
+            "300 ml water",
             "3 tbsp almond or peanut butter",
             "2 tbsp honey",
-            "Pinch of sea salt"
+            "1/2 tsp sea salt"
         ],
-        "dietary_tags": ["vegetarian", "comfort"]
+        "steps": [
+            "Rinse the rice, then bring it to the boil with the water. Cover and cook on the lowest heat for 15 minutes, then rest it off the heat, lid on, for 10 minutes.",
+            "While it's still hot, stir through the nut butter, honey and salt until evenly coated.",
+            "Press it firmly into a 20 cm tin lined with baking paper, about 2 cm thick, using a damp spatula.",
+            "Cool, then chill for 1 hour.",
+            "Cut into 8 squares and wrap each one in foil, twisting the ends so it's easy to open mid-run."
+        ],
+        "tip": "Rice is low in fibre and gentle on the gut, which makes it a good first solid food in a long race.",
+        "storage": "Keeps for 2 days in the fridge.",
+        "dietary_tags": [
+            "vegetarian",
+            "gluten_free",
+            "portable"
+        ]
     },
     {
         "name": "Salted Sweet Potato Bites",
         "meal_type": "trail",
-        "description": "Whole-food carbohydrate that sits gently in the gut when sweet gels stop working. Roasted soft, salted generously, and easy to pop one at a time.",
-        "instructions": "Heat the oven to 200C. Peel and dice the sweet potato into 2cm cubes. Toss with the olive oil and a generous pinch of sea salt. Roast for 25-30 minutes until soft and caramelised at the edges, turning once. Cool completely, then pack into a zip bag. They keep for two days in the fridge.",
+        "description": "Soft roasted sweet potato cubes, salted generously. Whole-food carbs that sit gently when sweet gels stop working.",
+        "servings": 4,
+        "serving_size": "1 bag",
         "prep_time": 10,
         "cook_time": 30,
-        "calories": 90,
+        "calories": 140,
         "protein": 2,
-        "fiber": 3,
-        "carbs": 18,
-        "fat": 2,
+        "carbs": 25,
+        "fat": 3,
+        "fiber": 4,
         "ingredients": [
-            "2 medium sweet potatoes",
+            "2 medium sweet potatoes (about 500 g)",
             "1 tbsp olive oil",
             "Generous pinch of sea salt"
         ],
-        "dietary_tags": ["vegan", "gluten_free", "anti_inflammatory"]
+        "steps": [
+            "Heat the oven to 200°C fan (220°C / 425°F).",
+            "Peel the sweet potatoes and cut them into 2 cm cubes.",
+            "Toss with the oil and a generous pinch of salt and spread them in a single layer on a lined tray.",
+            "Roast for 25-30 minutes, turning once, until soft inside and caramelised at the edges.",
+            "Cool completely before bagging them; packed warm, they steam and go mushy."
+        ],
+        "tip": "Savoury-sweet real food for the stage when gels stop going down. Eat a few cubes every 20-30 minutes.",
+        "storage": "Keeps for 2 days in the fridge.",
+        "dietary_tags": [
+            "vegan",
+            "gluten_free",
+            "portable"
+        ]
     },
     {
         "name": "Honey Nut Butter Tortilla Roll",
         "meal_type": "trail",
-        "description": "Sixty seconds to make, endlessly stomachable: a soft tortilla wrapped around nut butter and honey. The ultra-runner's reliable real-food fallback.",
-        "instructions": "Lay the tortilla flat and spread the nut butter edge to edge. Drizzle over the honey and sprinkle with a small pinch of salt. Roll up tightly, then wrap in foil and twist the ends. Slice into two if you want smaller portions on the move.",
+        "description": "A soft tortilla spread with nut butter, honey and salt, rolled tight and sliced into pinwheels for the trail.",
+        "servings": 1,
+        "serving_size": "1 roll (4 pinwheels)",
         "prep_time": 5,
         "cook_time": 0,
-        "calories": 320,
+        "calories": 350,
         "protein": 9,
+        "carbs": 52,
+        "fat": 13,
         "fiber": 3,
-        "carbs": 42,
-        "fat": 14,
         "ingredients": [
             "1 large soft flour tortilla",
-            "2 tbsp peanut or almond butter",
+            "1 tbsp peanut or almond butter",
             "1 tbsp honey",
             "Small pinch of salt"
         ],
-        "dietary_tags": ["vegetarian", "quick"]
+        "steps": [
+            "Lay the tortilla flat and spread the nut butter thinly right to the edges.",
+            "Drizzle over the honey and sprinkle with the salt.",
+            "Roll it up tightly.",
+            "Either wrap the whole roll in foil and twist the ends, or cut it into 4 pinwheels and pack them in a small box."
+        ],
+        "tip": "Pinwheels let you eat a quarter at a time. The fat and protein make it slower-burning, better for long, easy miles than hard racing.",
+        "dietary_tags": [
+            "vegetarian",
+            "portable"
+        ]
     },
     {
         "name": "Peanut Butter Banana Sushi",
         "meal_type": "trail",
-        "description": "A whole banana coated in peanut butter and oats, sliced into rounds. Sweet, soft and ready in minutes for the start line or a mid-run boost.",
-        "instructions": "Peel the banana and coat it all over in a thin layer of peanut butter. Roll the coated banana in the rolled oats until covered. Slice into 2cm rounds. Pack flat in a small container so they don't squash. Best eaten within a few hours.",
+        "description": "A banana coated in peanut butter, rolled in oats and sliced into bite-size rounds. Pre-run, mid-hike or post-run.",
+        "servings": 1,
         "prep_time": 5,
         "cook_time": 0,
-        "calories": 250,
+        "calories": 255,
         "protein": 7,
-        "fiber": 5,
-        "carbs": 34,
-        "fat": 11,
+        "carbs": 39,
+        "fat": 9,
+        "fiber": 6,
         "ingredients": [
             "1 large ripe banana",
-            "2 tbsp peanut butter",
-            "3 tbsp rolled oats"
+            "1 tbsp peanut butter",
+            "15 g rolled oats or puffed rice"
         ],
-        "dietary_tags": ["vegetarian", "quick", "high_fiber"]
+        "steps": [
+            "Peel the banana and coat it all over in a thin layer of peanut butter.",
+            "Roll it in the oats until covered.",
+            "Slice it into 2 cm rounds.",
+            "Pack them flat in a small container so they don't squash."
+        ],
+        "tip": "Best eaten within a few hours. It's ideal for hikes and long, easy runs rather than racing.",
+        "dietary_tags": [
+            "vegan",
+            "portable"
+        ]
     },
     {
         "name": "DIY Trail Mix",
         "meal_type": "trail",
-        "description": "Build-your-own gorp with a deliberate balance of fast carbs, salt and slow-burning fat. Mix a big batch and portion into snack bags for every long run.",
-        "instructions": "Combine the raisins, salted peanuts, pretzels and chocolate chips in a large bowl. Add a small pinch of extra salt if your peanuts are unsalted. Toss well, then divide into six small zip bags of roughly a handful each. Store in a cool, dry place.",
+        "description": "The salty-sweet classic: raisins, salted peanuts, mini pretzels and dark chocolate, portioned into small bags.",
+        "servings": 8,
+        "serving_size": "1 small bag (about 55 g)",
         "prep_time": 5,
         "cook_time": 0,
-        "calories": 210,
-        "protein": 6,
+        "calories": 260,
+        "protein": 7,
+        "carbs": 31,
+        "fat": 13,
         "fiber": 3,
-        "carbs": 24,
-        "fat": 11,
         "ingredients": [
-            "1 cup raisins",
-            "1 cup salted peanuts",
-            "1 cup mini pretzels",
-            "1/2 cup dark chocolate chips"
+            "150 g raisins",
+            "150 g salted peanuts",
+            "60 g mini pretzels",
+            "90 g dairy-free dark chocolate chips"
         ],
-        "dietary_tags": ["vegan", "healthy_fats"]
+        "steps": [
+            "Combine everything in a large bowl. If your peanuts are unsalted, add a small pinch of salt.",
+            "Toss well so the salt and chocolate are evenly spread.",
+            "Divide into 8 small zip bags of about 55 g each."
+        ],
+        "tip": "The salted peanuts and pretzels bring sodium, and the raisins bring quick carbs. The fat means it's better on long, slow days than in a fast race.",
+        "storage": "Keeps for 1 month in a cool, dry place.",
+        "dietary_tags": [
+            "vegan",
+            "portable"
+        ]
     },
     {
         "name": "Salted Boiled Potatoes",
         "meal_type": "trail",
-        "description": "The classic ultra aid-station food. Plain boiled baby potatoes rolled in salt deliver carbohydrate and sodium with almost no chance of stomach upset.",
-        "instructions": "Scrub the baby potatoes and boil in well-salted water for 12-15 minutes until just tender. Drain and let them steam-dry. While still warm, toss with the olive oil and roll in the flaky sea salt. Cool, then pack into a container or bag. They keep a day at room temperature.",
+        "description": "Baby potatoes boiled until tender and rolled in flaky salt. The classic ultra aid-station food.",
+        "servings": 4,
+        "serving_size": "1 bag (about 125 g)",
         "prep_time": 5,
         "cook_time": 15,
-        "calories": 130,
-        "protein": 3,
-        "fiber": 3,
-        "carbs": 26,
-        "fat": 2,
+        "calories": 105,
+        "protein": 2,
+        "carbs": 21,
+        "fat": 1,
+        "fiber": 2,
         "ingredients": [
-            "500g baby potatoes",
+            "500 g baby potatoes",
             "1 tsp olive oil",
             "1-2 tsp flaky sea salt"
         ],
-        "dietary_tags": ["vegan", "gluten_free"]
+        "steps": [
+            "Scrub the potatoes and boil them in well-salted water for 12-15 minutes until just tender.",
+            "Drain and let them steam-dry for 5 minutes.",
+            "While they're still warm, toss them with the oil and roll them in the flaky salt.",
+            "Cool, then pack them into a container or bags."
+        ],
+        "tip": "About 20 g of carbs and a good dose of sodium per bag. Rotate them with sweet foods to beat flavour fatigue.",
+        "storage": "Keeps for 1 day at room temperature or 3 days in the fridge.",
+        "dietary_tags": [
+            "vegan",
+            "gluten_free",
+            "portable"
+        ]
     },
     {
         "name": "Homemade Electrolyte Drink",
         "meal_type": "trail",
-        "description": "A make-it-yourself sports drink with real carbohydrate and sodium, dialled to your taste instead of a fixed shop formula. Mix into a bottle before you head out.",
-        "instructions": "In a 750ml bottle, combine the water, fruit juice, sugar or honey and salt. Add a squeeze of fresh citrus for flavour. Seal and shake hard until everything dissolves. Aim for roughly 30-60g of carbohydrate and a clear pinch of salt per bottle, and adjust strength to taste on long runs.",
+        "description": "A simple homemade sports drink with fruit juice, sugar and salt. About 40 g carbs and 575 mg sodium per 750 ml bottle.",
+        "servings": 1,
+        "serving_size": "750 ml bottle",
         "prep_time": 5,
         "cook_time": 0,
-        "calories": 150,
-        "protein": 0,
-        "fiber": 0,
-        "carbs": 38,
+        "calories": 170,
+        "protein": 1,
+        "carbs": 41,
         "fat": 0,
+        "fiber": 0,
         "ingredients": [
-            "600ml water",
-            "150ml orange or apple juice",
-            "1 tbsp sugar or honey",
-            "1/4 tsp salt",
+            "100 ml warm water",
+            "2 tbsp (25 g) sugar or maple syrup",
+            "1/4 tsp fine salt",
+            "150 ml orange or apple juice",
+            "500 ml cold water",
             "Squeeze of fresh lemon or lime"
         ],
-        "dietary_tags": ["vegan", "gluten_free", "quick"]
+        "steps": [
+            "Dissolve the sugar and salt in the warm water first, so there's no grit.",
+            "Pour it into a 750 ml bottle with the juice and cold water.",
+            "Add a squeeze of citrus, seal and shake well.",
+            "Chill it before you head out."
+        ],
+        "tip": "A solid starting point for hot or long efforts. A trained gut can handle a stronger mix (up to about 60 g carbs per bottle), but test it in training first.",
+        "dietary_tags": [
+            "vegan",
+            "gluten_free"
+        ]
     },
     {
         "name": "Pumpkin Seed Cranberry Oat Bars",
         "meal_type": "trail",
-        "description": "A lightly baked flapjack-style bar with chewy cranberries and crunchy pumpkin seeds. Sturdy enough to survive a hydration vest without crumbling.",
-        "instructions": "Heat the oven to 180C and line a square tin. Gently melt the butter and honey together in a pan, then stir in the oats, pumpkin seeds, dried cranberries and a pinch of salt until evenly coated. Press firmly into the tin and bake for 20-22 minutes until golden at the edges. Cool fully in the tin before cutting into 9 bars.",
+        "description": "Chewy baked oat bars with pumpkin seeds and cranberries, bound with honey and butter.",
+        "servings": 9,
+        "serving_size": "1 bar",
         "prep_time": 10,
         "cook_time": 22,
-        "calories": 200,
-        "protein": 5,
-        "fiber": 3,
+        "calories": 195,
+        "protein": 4,
         "carbs": 27,
-        "fat": 9,
+        "fat": 8,
+        "fiber": 3,
         "ingredients": [
-            "2 cups rolled oats",
-            "1/3 cup pumpkin seeds",
-            "1/3 cup dried cranberries",
-            "1/3 cup honey",
-            "3 tbsp butter or coconut oil",
-            "Pinch of sea salt"
+            "45 g butter or coconut oil",
+            "110 g honey",
+            "Pinch of sea salt",
+            "180 g (2 cups) rolled oats",
+            "45 g pumpkin seeds",
+            "50 g dried cranberries"
         ],
-        "dietary_tags": ["vegetarian", "high_fiber", "meal_prep"]
+        "steps": [
+            "Heat the oven to 170°C fan (190°C / 375°F) and line a 20 cm square tin with baking paper.",
+            "Gently melt the butter, honey and salt together without letting it boil.",
+            "Stir in the oats, pumpkin seeds and cranberries until every oat is coated.",
+            "Press the mixture very firmly into the tin; loosely packed flapjack crumbles.",
+            "Bake for 20-22 minutes, until golden at the edges.",
+            "Score into 9 while warm, then let it cool completely in the tin before cutting through."
+        ],
+        "tip": "Sturdy enough for a vest pocket. Eat half a bar every 30 minutes on long, steady runs.",
+        "storage": "Keeps for 1 week in an airtight tin.",
+        "dietary_tags": [
+            "vegetarian",
+            "meal_prep",
+            "portable"
+        ]
     },
     {
         "name": "Peanut-Stuffed Dates",
         "meal_type": "trail",
-        "description": "No-cook fuel that goes straight from the packet into a vest pocket: sweet dates split and filled with salted peanut butter. Carb-dense, soft and effortless to chew mid-effort.",
-        "instructions": "Slice each date lengthwise and pull out the stone. Spoon a little peanut butter into the opening, pinch the date closed and press a few flakes of sea salt on top. They travel best packed snugly in a small tub or wrapped in pairs so the filling stays put.",
-        "prep_time": 10,
+        "description": "Soft Medjool dates filled with peanut butter and topped with flaky salt. Two ingredients, three minutes.",
+        "servings": 2,
+        "serving_size": "3 dates",
+        "prep_time": 8,
         "cook_time": 0,
-        "calories": 160,
-        "protein": 4,
-        "fiber": 4,
-        "carbs": 24,
-        "fat": 6,
+        "calories": 300,
+        "protein": 5,
+        "carbs": 56,
+        "fat": 8,
+        "fiber": 6,
         "ingredients": [
-            "6 medjool dates",
+            "6 Medjool dates",
             "2 tbsp natural peanut butter",
             "Pinch of flaky sea salt"
         ],
-        "dietary_tags": ["vegan", "gluten_free", "quick", "portable"]
+        "steps": [
+            "Slice each date lengthways and pull out the stone.",
+            "Spoon a little peanut butter into each opening.",
+            "Pinch it closed and press a few flakes of salt on top.",
+            "Pack them snugly in a small tub, or wrap them in pairs, so the filling stays put."
+        ],
+        "tip": "Each date is about 18 g of carbs. They're easy to chew and swallow on the move, and the salt and peanut butter stop them tasting sickly.",
+        "dietary_tags": [
+            "vegan",
+            "gluten_free",
+            "portable"
+        ]
     },
     {
         "name": "Banana and Oat Trail Cookies",
         "meal_type": "trail",
-        "description": "Two-ingredient cookies that are almost all carbohydrate and hold together on the move. Naturally sweet from ripe bananas, no added sugar, and soft enough to eat while climbing.",
-        "instructions": "Heat the oven to 180C and line a tray. Mash the bananas in a bowl, stir in the oats, cinnamon and a pinch of salt until the mixture is thick and evenly combined. Spoon into 10 small mounds on the tray, flatten slightly with the back of a spoon and bake for 15 minutes until set and lightly golden. Cool before stacking.",
+        "description": "Three-ingredient soft cookies of banana, oats and raisins with cinnamon. No added sugar, and they don't crumble.",
+        "servings": 10,
+        "serving_size": "1 cookie",
         "prep_time": 5,
         "cook_time": 15,
-        "calories": 100,
+        "calories": 85,
         "protein": 2,
+        "carbs": 17,
+        "fat": 1,
         "fiber": 2,
-        "carbs": 18,
-        "fat": 2,
         "ingredients": [
             "2 ripe bananas",
-            "1.5 cups rolled oats",
-            "1 tsp cinnamon",
+            "135 g (1.5 cups) gluten-free rolled oats",
+            "40 g raisins",
+            "1 tsp ground cinnamon",
             "Pinch of sea salt"
         ],
-        "dietary_tags": ["vegan", "gluten_free", "high_carb", "portable"]
+        "steps": [
+            "Heat the oven to 180°C fan (200°C / 400°F) and line a tray.",
+            "Mash the bananas thoroughly, then stir in the oats, raisins, cinnamon and salt until thick and evenly combined.",
+            "Spoon 10 mounds onto the tray and flatten them slightly with the back of a spoon.",
+            "Bake for 15 minutes, until set and lightly golden.",
+            "Cool completely before stacking them."
+        ],
+        "tip": "Low-fat, gentle carbs. Two cookies make roughly one gel's worth of carbohydrate.",
+        "storage": "Keeps for 3 days in a tin or 1 month in the freezer.",
+        "dietary_tags": [
+            "vegan",
+            "gluten_free",
+            "portable"
+        ]
     },
     {
         "name": "Puffed Rice and Honey Bars",
         "meal_type": "trail",
-        "description": "Light, airy rice bars that are nearly pure fast carbohydrate. Cheaper than shop energy bars and easy to eat when your appetite is flagging late in a race.",
-        "instructions": "Warm the honey and peanut butter in a pan over low heat until runny, then take off the heat. Stir in the puffed rice and a pinch of salt until every grain is coated. Press the mixture firmly into a lined loaf tin and chill for an hour until set, then cut into 8 bars. Keep them cool and they will not fall apart in a pocket.",
+        "description": "Light, crisp bars of puffed rice bound with honey and peanut butter. Like a grown-up crispy cake.",
+        "servings": 8,
+        "serving_size": "1 bar",
         "prep_time": 10,
         "cook_time": 5,
-        "calories": 150,
+        "calories": 165,
         "protein": 3,
-        "fiber": 1,
         "carbs": 28,
-        "fat": 4,
+        "fat": 5,
+        "fiber": 1,
         "ingredients": [
-            "3 cups puffed rice",
-            "1/2 cup honey",
-            "1/3 cup natural peanut butter",
-            "Pinch of sea salt"
+            "170 g honey",
+            "85 g natural peanut butter",
+            "Pinch of sea salt",
+            "75 g (3 cups) plain puffed rice"
         ],
-        "dietary_tags": ["vegetarian", "gluten_free", "high_carb", "meal_prep"]
+        "steps": [
+            "Warm the honey and peanut butter in a pan over a low heat for 1-2 minutes, until runny and just bubbling at the edges. The brief simmer helps the bars set firm.",
+            "Take it off the heat and stir in the salt.",
+            "Fold in the puffed rice until every grain is coated.",
+            "Press it firmly into a lined loaf tin and chill for 1 hour.",
+            "Cut into 8 bars and wrap them individually."
+        ],
+        "tip": "Low in fibre and quick to digest: a good mid-race bar. Keep them cool and they won't fall apart in a pocket.",
+        "storage": "Keeps for 1 week in the fridge.",
+        "dietary_tags": [
+            "vegetarian",
+            "gluten_free",
+            "meal_prep",
+            "portable"
+        ]
     },
     {
         "name": "Coconut Sticky Rice Bites",
         "meal_type": "trail",
-        "description": "Chewy parcels of glutinous rice sweetened with coconut milk and maple. A gentle, easily digested carb hit that suits a tired stomach on long climbs.",
-        "instructions": "Soak the sticky rice for at least an hour, then steam or simmer until tender. Warm the coconut milk with the maple syrup and salt and stir it through the cooked rice. Leave to absorb for 10 minutes, then shape into 8 small balls with damp hands and roll in toasted coconut. Wrap each one in a little cling film so they stay moist in the vest.",
+        "description": "Chewy glutinous rice balls soaked in sweet, salty coconut milk and rolled in toasted coconut. A welcome change from gels.",
+        "servings": 8,
+        "serving_size": "1 ball",
         "prep_time": 20,
-        "cook_time": 20,
-        "calories": 110,
+        "cook_time": 25,
+        "calories": 145,
         "protein": 2,
+        "carbs": 24,
+        "fat": 4,
         "fiber": 1,
-        "carbs": 22,
-        "fat": 2,
         "ingredients": [
-            "1 cup glutinous (sticky) rice",
-            "1/2 cup coconut milk",
+            "200 g glutinous (sticky) rice",
+            "120 ml coconut milk",
             "2 tbsp maple syrup",
-            "2 tbsp toasted coconut",
-            "Pinch of sea salt"
+            "Pinch of sea salt",
+            "15 g desiccated coconut, toasted"
         ],
-        "dietary_tags": ["vegan", "gluten_free", "high_carb", "portable"]
+        "steps": [
+            "Soak the rice in cold water for at least 1 hour, or overnight, then drain.",
+            "Steam it in a steamer or sieve lined with muslin over simmering water for 20-25 minutes, until translucent and chewy. Or simmer it as the packet says.",
+            "Warm the coconut milk with the maple syrup and salt and stir it into the hot rice. Cover and leave for 10 minutes to absorb.",
+            "With damp hands, shape the rice into 8 balls and roll them in the toasted coconut.",
+            "Wrap each ball in cling film so it stays moist in your vest."
+        ],
+        "tip": "A flavour change for hour three onwards, when everything sweet starts to taste the same.",
+        "storage": "Best eaten within 24 hours. Keep them cool.",
+        "dietary_tags": [
+            "vegan",
+            "gluten_free",
+            "portable"
+        ]
     },
     {
         "name": "Rice Pudding Pouch",
         "meal_type": "trail",
-        "description": "Comforting, spoonable carbs in a squeeze pouch for the point in a race when chewing is too much effort. Real food with almost no fibre to slow it down.",
-        "instructions": "Simmer the cooked rice with the milk, honey, cinnamon and a pinch of salt for 8-10 minutes, stirring until thick and creamy. Blend briefly if you want it completely smooth, then cool and spoon into reusable pouches or a soft flask. Chill until needed and eat straight from the pouch on the move.",
+        "description": "Smooth, cinnamon-scented rice pudding spooned into reusable pouches. Carbs you can squeeze when chewing feels like work.",
+        "servings": 2,
+        "serving_size": "1 pouch",
         "prep_time": 5,
         "cook_time": 10,
-        "calories": 190,
-        "protein": 5,
-        "fiber": 1,
-        "carbs": 36,
-        "fat": 4,
+        "calories": 240,
+        "protein": 6,
+        "carbs": 49,
+        "fat": 2,
+        "fiber": 0,
         "ingredients": [
-            "1 cup cooked short-grain rice",
-            "1 cup milk or oat milk",
+            "180 g cooked short-grain rice",
+            "250 ml milk or oat milk",
             "2 tbsp honey",
-            "1/2 tsp cinnamon",
+            "1/2 tsp ground cinnamon",
             "Pinch of sea salt"
         ],
-        "dietary_tags": ["vegetarian", "gluten_free", "quick", "high_carb"]
+        "steps": [
+            "Simmer the rice with the milk, honey, cinnamon and salt for 8-10 minutes, stirring, until thick and creamy.",
+            "Blend it briefly until smooth so it squeezes easily.",
+            "Cool it completely.",
+            "Spoon it into reusable pouches or a soft flask (a funnel or piping bag helps) and chill until needed."
+        ],
+        "tip": "Keep it in a cool pocket and eat it within about 4 hours of leaving the fridge; it's dairy.",
+        "dietary_tags": [
+            "vegetarian",
+            "gluten_free"
+        ]
     },
     {
         "name": "Miso Rice Balls",
         "meal_type": "trail",
-        "description": "Savoury onigiri-style rice balls for when sweet fuel stops going down. Salty, plain carbs that are easy to eat with cold hands and taste like real food at hour five.",
-        "instructions": "While the rice is still warm, stir the miso through it with a pinch of salt. With damp hands, press the rice into 6 compact triangles or balls, tucking a few sesame seeds into the middle of each. Wrap each one in cling film and keep them cool until you set off. Reach for these when you cannot face another sweet bite.",
+        "description": "Onigiri-style rice balls seasoned with miso and salt. A savoury, easy-to-swallow fuel for when you can't face another sweet bite.",
+        "servings": 6,
+        "serving_size": "1 rice ball",
         "prep_time": 15,
         "cook_time": 0,
-        "calories": 140,
-        "protein": 3,
-        "fiber": 1,
-        "carbs": 28,
-        "fat": 2,
+        "calories": 95,
+        "protein": 2,
+        "carbs": 20,
+        "fat": 1,
+        "fiber": 0,
         "ingredients": [
-            "2 cups cooked sushi rice",
+            "370 g warm cooked sushi rice (from 150 g uncooked)",
             "1 tbsp white miso",
+            "1 tbsp hot water",
+            "Fine salt, for your hands",
             "1 tsp sesame seeds",
-            "Flaky sea salt"
+            "Nori strips (optional)"
         ],
-        "dietary_tags": ["vegan", "high_carb", "portable"]
+        "steps": [
+            "Dissolve the miso in the hot water and stir it through the warm rice.",
+            "Wet your hands and rub a little salt over your palms.",
+            "Take about 60 g of rice, tuck a few sesame seeds into the middle, and press it firmly into a compact triangle or ball.",
+            "Wrap a nori strip around it if you like (it softens over time), then wrap each ball tightly in cling film.",
+            "Keep them cool and eat them the same day."
+        ],
+        "tip": "Salty, savoury carbs that go down easily late in a race. Make them the night before.",
+        "dietary_tags": [
+            "vegan",
+            "portable"
+        ]
     },
     {
         "name": "Mashed Potato Salt Flask",
         "meal_type": "trail",
-        "description": "Ultra-running staple: soft, salty potato you can squeeze straight from a flask. No chewing, no crumbs and carbs that sit calmly on a churning stomach.",
-        "instructions": "Boil the potatoes until completely soft, then mash with the olive oil, salt and enough warm water to make a smooth, spoonable paste. Push it through a sieve for a truly lump-free texture, then spoon into a reusable pouch or soft flask while still warm. Sip slowly and steadily rather than taking big mouthfuls.",
+        "description": "Silky salted mashed potato in a squeezable pouch. Real-food carbs and sodium without any chewing.",
+        "servings": 2,
+        "serving_size": "1 pouch",
         "prep_time": 10,
         "cook_time": 20,
-        "calories": 130,
-        "protein": 3,
+        "calories": 235,
+        "protein": 4,
+        "carbs": 38,
+        "fat": 7,
         "fiber": 3,
-        "carbs": 27,
-        "fat": 1,
         "ingredients": [
-            "3 medium potatoes",
+            "3 medium potatoes (about 450 g), peeled and chunked",
             "1 tbsp olive oil",
             "1 tsp sea salt",
             "Splash of warm water"
         ],
-        "dietary_tags": ["vegan", "gluten_free", "quick", "high_carb"]
+        "steps": [
+            "Boil the potatoes for 15-20 minutes until completely soft, then drain.",
+            "Mash them with the oil, salt and enough warm water to make a smooth, spoonable paste.",
+            "Push it through a sieve for a truly lump-free texture; lumps block pouch spouts.",
+            "While it's still warm, spoon it into reusable pouches or soft flasks. Sip it slowly rather than taking big mouthfuls."
+        ],
+        "tip": "One of the best late-race foods when your stomach is rebelling. It's savoury and salty and needs no chewing.",
+        "storage": "Keeps for 1 day in the fridge.",
+        "dietary_tags": [
+            "vegan",
+            "gluten_free"
+        ]
     },
     {
         "name": "Maple Lemon Carb Drink",
         "meal_type": "trail",
-        "description": "A homemade carbohydrate bottle built for 60g-plus per hour when solid food is too much. Natural sugar, a pinch of salt and nothing you cannot pronounce.",
-        "instructions": "In a 500ml bottle, dissolve the maple syrup and salt in the water, then add the lemon juice for flavour. Shake well before each sip so the sugar stays mixed. Sip steadily through the hour alongside solid food, and test the concentration on training runs before race day.",
-        "prep_time": 5,
+        "description": "A simple maple syrup, lemon and salt drink with about 60 g of carbohydrate per 500 ml bottle.",
+        "servings": 1,
+        "serving_size": "500 ml bottle (about 60 g carbs)",
+        "prep_time": 3,
         "cook_time": 0,
-        "calories": 240,
+        "calories": 235,
         "protein": 0,
-        "fiber": 0,
         "carbs": 60,
         "fat": 0,
+        "fiber": 0,
         "ingredients": [
-            "500ml water",
-            "60g maple syrup",
+            "90 g (6 tbsp) maple syrup",
+            "500 ml water",
             "Juice of 1/2 lemon",
             "Pinch of sea salt"
         ],
-        "dietary_tags": ["vegan", "gluten_free", "quick", "high_carb"]
+        "steps": [
+            "Dissolve the maple syrup and salt in a little warm water in a 500 ml bottle.",
+            "Top it up with cold water and add the lemon juice.",
+            "Shake well before each sip, because the syrup settles."
+        ],
+        "tip": "Sip it steadily through an hour alongside solid food. At this strength, rehearse it in training before race day.",
+        "dietary_tags": [
+            "vegan",
+            "gluten_free"
+        ]
+    },
+    {
+        "name": "Carb-Load Tomato Rice",
+        "meal_type": "trail",
+        "description": "A slightly soupy, mild tomato rice for the night before a long race. Lots of carbs, very little fibre or spice.",
+        "servings": 2,
+        "prep_time": 5,
+        "cook_time": 25,
+        "calories": 540,
+        "protein": 13,
+        "carbs": 93,
+        "fat": 10,
+        "fiber": 2,
+        "ingredients": [
+            "1 tbsp olive oil",
+            "1 small onion, very finely chopped",
+            "1 garlic clove, crushed",
+            "1/2 tsp smoked paprika",
+            "200 g long-grain white rice",
+            "400 g passata",
+            "400 ml vegetable stock",
+            "1 tsp sugar",
+            "1/2 tsp salt",
+            "20 g Parmesan, grated",
+            "Handful of basil"
+        ],
+        "steps": [
+            "Soften the onion in the oil for 5 minutes without letting it brown.",
+            "Add the garlic and paprika for 30 seconds.",
+            "Stir in the rice for 1 minute.",
+            "Add the passata, stock, sugar and salt. Bring to a simmer, cover and cook on a low heat for 15-18 minutes, stirring once or twice and adding a splash of water if it dries out. You want it slightly soupy.",
+            "Stir in the Parmesan and basil."
+        ],
+        "tip": "Eat it early enough to digest; finish at least 12 hours before the start. Rehearse it before a long training run.",
+        "dietary_tags": [
+            "vegetarian",
+            "gluten_free",
+            "carb_load"
+        ]
+    },
+    {
+        "name": "Beetroot and Feta Pre-Race Rice",
+        "meal_type": "trail",
+        "description": "Basmati rice turned pink with balsamic-warmed beetroot, finished with feta, dill and lemon.",
+        "servings": 2,
+        "prep_time": 5,
+        "cook_time": 15,
+        "calories": 500,
+        "protein": 12,
+        "carbs": 83,
+        "fat": 12,
+        "fiber": 4,
+        "ingredients": [
+            "180 g basmati rice",
+            "250 g cooked beetroot (vacuum-packed, not in vinegar), diced",
+            "1 tbsp olive oil",
+            "1 tbsp balsamic vinegar",
+            "50 g feta",
+            "Small handful of dill or mint",
+            "1/2 lemon",
+            "Salt"
+        ],
+        "steps": [
+            "Rinse the rice and cook it with 270 ml water and a pinch of salt: bring it to the boil, cover, cook on a low heat for 10 minutes, then rest it for 5.",
+            "Meanwhile, warm the beetroot with the oil and balsamic in a pan for 3 minutes.",
+            "Stir the beetroot through the rice until it turns pink.",
+            "Crumble over the feta, scatter with herbs and squeeze over the lemon."
+        ],
+        "tip": "Beetroot is rich in dietary nitrate, which has modest evidence for improving endurance efficiency. Many runners eat it daily for several days before a race. Harmless side effect: pink urine.",
+        "dietary_tags": [
+            "vegetarian",
+            "gluten_free",
+            "carb_load"
+        ]
+    },
+    {
+        "name": "Race-Morning Overnight Oats",
+        "meal_type": "trail",
+        "description": "Low-fibre, low-fat overnight oats with banana, honey and raisins, made the night before so there's nothing to cook at 4 a.m.",
+        "servings": 1,
+        "prep_time": 5,
+        "cook_time": 0,
+        "calories": 400,
+        "protein": 12,
+        "carbs": 73,
+        "fat": 6,
+        "fiber": 6,
+        "ingredients": [
+            "1/2 ripe banana",
+            "50 g rolled oats",
+            "150 ml milk",
+            "1 tbsp honey",
+            "10 g raisins",
+            "Pinch of salt",
+            "Pinch of ground cinnamon"
+        ],
+        "steps": [
+            "Mash the banana in a jar.",
+            "Stir in the oats, milk, honey, raisins, salt and cinnamon.",
+            "Put the lid on and refrigerate overnight.",
+            "Eat it cold, straight from the jar, 2.5-3 hours before the start."
+        ],
+        "tip": "No chia, nuts or protein powder, on purpose: keep race-morning fibre and fat low. It has about 70 g of carbs; for bigger runners or longer races, add a slice of toast with honey.",
+        "dietary_tags": [
+            "vegetarian",
+            "pre_run",
+            "carb_load"
+        ]
+    },
+    {
+        "name": "Date and Cocoa Trail Balls",
+        "meal_type": "trail",
+        "description": "Nut-free, almost fat-free balls of dates, oats and cocoa. Soft to chew and quick to digest on the move.",
+        "servings": 12,
+        "serving_size": "1 ball (about 18 g carbs)",
+        "prep_time": 15,
+        "cook_time": 0,
+        "calories": 86,
+        "protein": 2,
+        "carbs": 18,
+        "fat": 1,
+        "fiber": 2,
+        "ingredients": [
+            "250 g pitted dates",
+            "80 g gluten-free rolled oats",
+            "2 tbsp (10 g) cocoa powder",
+            "1/4 tsp salt",
+            "1 tbsp orange juice or water"
+        ],
+        "steps": [
+            "If the dates are firm, soak them in hot water for 10 minutes and drain them well.",
+            "Blitz the oats in a food processor to a coarse flour.",
+            "Add the dates, cocoa, salt and orange juice and process until the mixture forms a ball.",
+            "Roll it into 12 balls with damp hands, and dust them in extra cocoa if you like.",
+            "Chill for 20 minutes, then wrap them in pairs."
+        ],
+        "tip": "Being nut-free and very low in fat, they digest faster than most bars. One every 20-30 minutes is a good rhythm.",
+        "storage": "Keeps for 2 weeks in the fridge.",
+        "dietary_tags": [
+            "vegan",
+            "gluten_free",
+            "portable",
+            "meal_prep"
+        ]
+    },
+    {
+        "name": "Salted Maple Rice Cakes",
+        "meal_type": "trail",
+        "description": "Sticky rice pressed with maple syrup, lemon zest and flaky salt. Nut-free, fat-free and very gentle on the gut.",
+        "servings": 8,
+        "serving_size": "1 square (about 24 g carbs)",
+        "prep_time": 10,
+        "cook_time": 25,
+        "calories": 107,
+        "protein": 2,
+        "carbs": 24,
+        "fat": 0,
+        "fiber": 0,
+        "ingredients": [
+            "200 g sushi or short-grain rice",
+            "300 ml water",
+            "3 tbsp (60 g) maple syrup",
+            "Zest of 1/2 lemon",
+            "1/2 tsp flaky sea salt"
+        ],
+        "steps": [
+            "Rinse the rice and cook it with the water: bring it to the boil, cover and cook on the lowest heat for 15 minutes, then rest it for 10.",
+            "While it's hot, stir through the maple syrup, lemon zest and half the salt.",
+            "Press it firmly into a lined 20 cm tin, about 2 cm thick, and sprinkle over the remaining salt.",
+            "Chill for 1 hour, cut into 8 squares, and wrap each one in foil or rice paper."
+        ],
+        "tip": "A great first solid food of a race when your stomach is unsettled.",
+        "storage": "Keeps for 2 days in the fridge.",
+        "dietary_tags": [
+            "vegan",
+            "gluten_free",
+            "portable"
+        ]
+    },
+    {
+        "name": "Salted Banana Bread Bites",
+        "meal_type": "trail",
+        "description": "Dense banana bread with extra salt baked in, cut into cubes. Real food that still feels like a treat deep into a long run.",
+        "servings": 16,
+        "serving_size": "1 cube (1/16 of the loaf)",
+        "prep_time": 15,
+        "cook_time": 55,
+        "calories": 120,
+        "protein": 2,
+        "carbs": 20,
+        "fat": 4,
+        "fiber": 1,
+        "ingredients": [
+            "3 very ripe bananas",
+            "60 g butter, melted",
+            "80 g light brown sugar",
+            "2 large eggs",
+            "200 g plain flour",
+            "1 tsp bicarbonate of soda",
+            "1 tsp fine salt",
+            "1 tsp ground cinnamon",
+            "Flaky sea salt, to finish"
+        ],
+        "steps": [
+            "Heat the oven to 160°C fan (180°C / 350°F) and line a 900 g (2 lb) loaf tin.",
+            "Mash the bananas well, then whisk in the melted butter, sugar and eggs.",
+            "Fold in the flour, bicarbonate of soda, salt and cinnamon until no streaks of flour remain.",
+            "Pour it into the tin and bake for 50-60 minutes, until a skewer comes out clean. Cover it loosely with foil after 35 minutes if it's browning fast.",
+            "Cool completely, then cut into 16 cubes, press a few salt flakes onto each, and wrap them in pairs."
+        ],
+        "tip": "The extra salt is intentional: about 150 mg of sodium per bite on top of about 20 g of carbs.",
+        "storage": "Keeps for 3 days wrapped, or 1 month in the freezer. Take them straight from the freezer for a morning long run.",
+        "dietary_tags": [
+            "vegetarian",
+            "meal_prep",
+            "portable"
+        ]
+    },
+    {
+        "name": "Apricot and Almond Energy Bars",
+        "meal_type": "trail",
+        "description": "No-bake bars of dried apricot, almonds, oats, honey and orange zest. They hold their shape in a hot vest pocket.",
+        "servings": 10,
+        "serving_size": "1 bar",
+        "prep_time": 15,
+        "cook_time": 0,
+        "calories": 140,
+        "protein": 4,
+        "carbs": 19,
+        "fat": 5,
+        "fiber": 3,
+        "ingredients": [
+            "100 g almonds",
+            "200 g soft dried apricots",
+            "2 tbsp honey",
+            "Zest of 1 orange",
+            "60 g rolled oats",
+            "Pinch of salt"
+        ],
+        "steps": [
+            "Pulse the almonds to coarse crumbs and tip them out.",
+            "Process the apricots, honey and orange zest to a sticky paste.",
+            "Add the almonds, oats and salt and pulse until combined.",
+            "Press the mixture firmly into a lined loaf tin and chill for 1 hour.",
+            "Cut into 10 bars and wrap them individually."
+        ],
+        "tip": "Apricots are one of the best dried fruits for potassium. These pack a lot of carbs per gram.",
+        "storage": "Keeps for 2 weeks in the fridge.",
+        "dietary_tags": [
+            "vegetarian",
+            "meal_prep",
+            "portable"
+        ]
+    },
+    {
+        "name": "Savoury Mini Wraps",
+        "meal_type": "trail",
+        "description": "Soft tortillas rolled with cream cheese, cheddar and a whisper of yeast extract, then sliced into pinwheels. For when sweet food is the last thing you want.",
+        "servings": 2,
+        "serving_size": "1 wrap (4 pinwheels)",
+        "prep_time": 10,
+        "cook_time": 0,
+        "calories": 315,
+        "protein": 12,
+        "carbs": 33,
+        "fat": 15,
+        "fiber": 2,
+        "ingredients": [
+            "2 large soft flour tortillas",
+            "2 tbsp (30 g) cream cheese",
+            "1 tsp yeast extract (optional; it adds salt)",
+            "40 g mild cheddar, finely grated"
+        ],
+        "steps": [
+            "Spread each tortilla thinly with cream cheese, plus a very thin layer of yeast extract if you like it.",
+            "Scatter over the cheddar.",
+            "Roll each one up tightly, wrap it in foil, and chill for 30 minutes so it firms up and the slices hold together.",
+            "Cut each roll into 4 pinwheels."
+        ],
+        "tip": "For the back half of a long day. Cheese keeps for several hours in cool weather; in heat, swap it for salted nut butter.",
+        "dietary_tags": [
+            "vegetarian",
+            "portable"
+        ]
+    },
+    {
+        "name": "Maple Espresso Gel",
+        "meal_type": "trail",
+        "description": "A homemade caffeinated gel of maple syrup, espresso and salt. About 25 g carbs per serving.",
+        "servings": 2,
+        "serving_size": "1 gel (about 25 g carbs and 30-40 mg caffeine)",
+        "prep_time": 5,
+        "cook_time": 0,
+        "calories": 105,
+        "protein": 0,
+        "carbs": 27,
+        "fat": 0,
+        "fiber": 0,
+        "ingredients": [
+            "1 shot (30 ml) espresso, or 1/2 tsp instant coffee in 30 ml hot water",
+            "1/8 tsp fine salt",
+            "4 tbsp (80 g) maple syrup"
+        ],
+        "steps": [
+            "Stir the salt into the warm espresso until it dissolves.",
+            "Mix it with the maple syrup.",
+            "Cool, then pour it into a small reusable soft flask or gel pouch. A 50 ml flask holds both servings.",
+            "Shake before sipping."
+        ],
+        "tip": "Save caffeine for the second half of a long race. Around 3 mg per kg of body weight is the upper useful dose for most people; rehearse it in training, never for the first time on race day.",
+        "dietary_tags": [
+            "vegan",
+            "gluten_free"
+        ]
+    },
+    {
+        "name": "Maple Oat Flapjacks",
+        "meal_type": "trail",
+        "description": "Classic chewy flapjacks of oats, butter, brown sugar and maple, cut into bars that travel without crumbling.",
+        "servings": 12,
+        "serving_size": "1 flapjack",
+        "prep_time": 10,
+        "cook_time": 25,
+        "calories": 183,
+        "protein": 3,
+        "carbs": 24,
+        "fat": 8,
+        "fiber": 2,
+        "ingredients": [
+            "100 g butter",
+            "80 g light brown sugar",
+            "4 tbsp (80 g) maple syrup",
+            "1/2 tsp salt",
+            "250 g rolled oats"
+        ],
+        "steps": [
+            "Heat the oven to 160°C fan (180°C / 350°F) and line a 20 cm square tin.",
+            "Gently melt the butter, sugar, maple syrup and salt together until the sugar dissolves.",
+            "Stir in the oats until they're evenly coated.",
+            "Press the mixture firmly into the tin and bake for 22-25 minutes, until golden at the edges but still slightly soft in the centre. It firms as it cools, and overbaking makes it rock hard.",
+            "Score into 12 while warm and cool completely in the tin before cutting."
+        ],
+        "tip": "Dense, chewy carbs for long, steady efforts. Half a flapjack every 30 minutes is a good starting point.",
+        "storage": "Keeps for 1 week in an airtight tin.",
+        "dietary_tags": [
+            "vegetarian",
+            "meal_prep",
+            "portable"
+        ]
+    },
+    {
+        "name": "Sweet Potato Mash Pouch",
+        "meal_type": "trail",
+        "description": "Silky sweet potato blended with maple, cinnamon and salt, then squeezed into reusable pouches. Real-food carbs with no chewing.",
+        "servings": 2,
+        "serving_size": "1 pouch",
+        "prep_time": 10,
+        "cook_time": 10,
+        "calories": 210,
+        "protein": 3,
+        "carbs": 49,
+        "fat": 0,
+        "fiber": 5,
+        "ingredients": [
+            "400 g sweet potato, peeled and cubed",
+            "1 tbsp maple syrup",
+            "1/2 tsp salt",
+            "1/2 tsp ground cinnamon",
+            "50 ml orange juice or water"
+        ],
+        "steps": [
+            "Steam the sweet potato, or microwave it covered with a splash of water, for 8-10 minutes until very soft.",
+            "Blend it with the maple syrup, salt, cinnamon and orange juice until completely smooth. Push it through a sieve if needed; fibrous bits block pouch spouts.",
+            "Cool it, then fill the pouches."
+        ],
+        "tip": "For when the effort is high and chewing is hard, such as long climbs or the last hour.",
+        "storage": "Keeps for 2 days in the fridge.",
+        "dietary_tags": [
+            "vegan",
+            "gluten_free"
+        ]
+    },
+    {
+        "name": "Pretzel Nut Butter Bites",
+        "meal_type": "trail",
+        "description": "Mini pretzels sandwiched with salted peanut butter and frozen until firm. Crunchy, salty carbs that cut through sweetness fatigue.",
+        "servings": 4,
+        "serving_size": "5 bites",
+        "prep_time": 15,
+        "cook_time": 0,
+        "calories": 220,
+        "protein": 7,
+        "carbs": 24,
+        "fat": 11,
+        "fiber": 2,
+        "ingredients": [
+            "100 g mini pretzels",
+            "80 g salted smooth peanut butter"
+        ],
+        "steps": [
+            "Pair up the pretzels by size.",
+            "Spoon or pipe about 1/2 tsp of peanut butter onto one of each pair and sandwich it with the other.",
+            "Freeze them on a tray for 20 minutes until firm.",
+            "Pack them in a hard box so they don't get crushed."
+        ],
+        "tip": "Salty and crunchy, which is exactly what your mouth wants after hours of sweet food.",
+        "storage": "Keeps for 2 weeks in the freezer. Eat them straight from frozen or within a few hours.",
+        "dietary_tags": [
+            "vegan",
+            "portable"
+        ]
+    },
+    {
+        "name": "Fig and Sea Salt Rolls",
+        "meal_type": "trail",
+        "description": "Blended dried figs and oats rolled in sesame and flaky salt, then sliced into rounds. Naturally sweet and chewy.",
+        "servings": 10,
+        "serving_size": "1 round",
+        "prep_time": 15,
+        "cook_time": 0,
+        "calories": 78,
+        "protein": 2,
+        "carbs": 15,
+        "fat": 1,
+        "fiber": 3,
+        "ingredients": [
+            "200 g dried figs, stalks removed",
+            "60 g rolled oats",
+            "Zest of 1 orange",
+            "Pinch of salt",
+            "1 tbsp sesame seeds",
+            "Flaky sea salt"
+        ],
+        "steps": [
+            "If the figs are very dry, soak them in hot water for 10 minutes, then drain and dry them.",
+            "Process the figs, oats, orange zest and salt to a thick, sticky paste.",
+            "Roll it into a log 3 cm thick, then roll the log in the sesame seeds and press on some flaky salt.",
+            "Chill for 30 minutes and slice into 10 rounds."
+        ],
+        "tip": "Figs are fairly high in fibre, so save these for easy long runs or early in a race rather than the final push.",
+        "storage": "Keeps for 2 weeks in the fridge.",
+        "dietary_tags": [
+            "vegan",
+            "meal_prep",
+            "portable"
+        ]
+    },
+    {
+        "name": "Miso Noodle Broth for Crew Stops",
+        "meal_type": "trail",
+        "description": "A hot, salty flask of miso broth with soft rice vermicelli. For crew stops, night sections and cold backyard-ultra corrals.",
+        "servings": 1,
+        "serving_size": "1 flask (500 ml)",
+        "prep_time": 5,
+        "cook_time": 5,
+        "calories": 260,
+        "protein": 6,
+        "carbs": 47,
+        "fat": 4,
+        "fiber": 1,
+        "ingredients": [
+            "50 g thin rice vermicelli",
+            "1.5 tbsp white miso",
+            "500 ml hot water",
+            "1 tsp soy sauce",
+            "1/2 tsp sesame oil",
+            "1 spring onion, finely sliced"
+        ],
+        "steps": [
+            "Soak the vermicelli in just-boiled water for 3-4 minutes, drain, and snip it into short lengths with scissors so it's easier to drink.",
+            "Whisk the miso with a little hot (not boiling) water into a paste; boiling water dulls its flavour.",
+            "Top it up with the rest of the hot water and add the soy sauce and sesame oil.",
+            "Add the noodles and spring onion and pour everything into an insulated flask. Ask your crew to shake it before pouring."
+        ],
+        "tip": "Hot, salty broth replaces sodium (about 1,000 mg here) and is often the one thing a turned stomach will accept.",
+        "dietary_tags": [
+            "vegan"
+        ]
     }
 ]

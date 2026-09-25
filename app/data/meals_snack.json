@@ -1,355 +1,790 @@
 [
-  {
-    "name": "Apple with Almond Butter",
-    "meal_type": "snack",
-    "description": "Crunchy apple with protein-rich almond butter",
-    "instructions": "Using a sharp knife, carefully slice the main ingredient into uniform pieces. Arrange on a plate or in a container. Add 1 medium apple, 2 tbsp almond butter as specified. For enhanced flavor, let sit for 5 minutes before serving. Perfect for satisfying hunger between meals and maintaining steady energy levels.",
-    "prep_time": 3,
-    "cook_time": 0,
-    "calories": 220,
-    "protein": 6,
-    "fiber": 5,
-    "carbs": 24,
-    "fat": 12,
-    "ingredients": [
-      "1 medium apple",
-      "2 tbsp almond butter"
-    ],
-    "dietary_tags": [
-      "high_fiber",
-      "quick",
-      "portable"
-    ]
-  },
-  {
-    "name": "Hard-Boiled Eggs with Avocado",
-    "meal_type": "snack",
-    "description": "Protein-packed eggs with healthy fats from avocado",
-    "instructions": "Using a sharp knife, carefully slice the main ingredient into uniform pieces. Arrange on a plate or in a container. Add 2 hard-boiled eggs, 1/4 avocado, salt as specified. For enhanced flavor, let sit for 5 minutes before serving. Perfect for satisfying hunger between meals and maintaining steady energy levels.",
-    "prep_time": 5,
-    "cook_time": 0,
-    "calories": 240,
-    "protein": 14,
-    "fiber": 4,
-    "carbs": 8,
-    "fat": 18,
-    "ingredients": [
-      "2 hard-boiled eggs",
-      "1/4 avocado",
-      "salt",
-      "pepper"
-    ],
-    "dietary_tags": [
-      "high_protein",
-      "high_fiber",
-      "quick"
-    ]
-  },
-  {
-    "name": "Trail Mix with Nuts and Seeds",
-    "meal_type": "snack",
-    "description": "Energy-dense mix with protein, fiber, and healthy fats",
-    "instructions": "In a small bowl, gently combine 1/4 cup almonds, 1 tbsp pumpkin seeds, 1 tbsp dried cranberries until well distributed. For best flavor, let the mixture sit for 5-10 minutes before serving to allow flavors to meld. Store in an airtight container for up to 3 days. Perfect for satisfying hunger between meals and maintaining steady energy levels.",
-    "prep_time": 2,
-    "cook_time": 0,
-    "calories": 280,
-    "protein": 8,
-    "fiber": 4,
-    "carbs": 24,
-    "fat": 18,
-    "ingredients": [
-      "1/4 cup almonds",
-      "1 tbsp pumpkin seeds",
-      "1 tbsp dried cranberries",
-      "1 tbsp dark chocolate chips"
-    ],
-    "dietary_tags": [
-      "high_protein",
-      "high_fiber",
-      "portable"
-    ]
-  },
-  {
-    "name": "Edamame with Sea Salt",
-    "meal_type": "snack",
-    "description": "Steamed edamame pods with sea salt",
-    "instructions": "Prepare the base ingredient and arrange it on a serving plate. Evenly distribute 1 cup edamame pods, sea salt over the top. Garnish with optional herbs or spices if desired. Serve immediately for best texture and flavor. Perfect for satisfying hunger between meals and maintaining steady energy levels.",
-    "prep_time": 5,
-    "cook_time": 5,
-    "calories": 180,
-    "protein": 16,
-    "fiber": 8,
-    "carbs": 16,
-    "fat": 8,
-    "ingredients": [
-      "1 cup edamame pods",
-      "sea salt"
-    ],
-    "dietary_tags": [
-      "high_protein",
-      "high_fiber",
-      "vegetarian"
-    ]
-  },
-  {
-    "name": "Greek Yogurt with Honey",
-    "meal_type": "snack",
-    "description": "Creamy Greek yogurt drizzled with honey and nuts",
-    "instructions": "Prepare the base ingredient and arrange it on a serving plate. Evenly distribute 1 cup Greek yogurt, 1 tbsp honey, 2 tbsp almonds over the top. Garnish with optional herbs or spices if desired. Serve immediately for best texture and flavor. Perfect for satisfying hunger between meals and maintaining steady energy levels.",
-    "prep_time": 3,
-    "cook_time": 0,
-    "calories": 280,
-    "protein": 24,
-    "fiber": 6,
-    "carbs": 22,
-    "fat": 12,
-    "ingredients": [
-      "1 cup Greek yogurt",
-      "1 tbsp honey",
-      "2 tbsp almonds",
-      "1/2 cup berries"
-    ],
-    "dietary_tags": [
-      "high_protein",
-      "high_fiber",
-      "quick"
-    ]
-  },
-  {
-    "name": "Protein Bar",
-    "meal_type": "snack",
-    "description": "Homemade protein bar with oats and peanut butter",
-    "instructions": "In a small bowl, gently combine 1 cup oats, 1/2 cup protein powder, 1/2 cup peanut butter until well distributed. For best flavor, let the mixture sit for 5-10 minutes before serving to allow flavors to meld. Store in an airtight container for up to 3 days. Perfect for satisfying hunger between meals and maintaining steady energy levels.",
-    "prep_time": 15,
-    "cook_time": 0,
-    "calories": 320,
-    "protein": 20,
-    "fiber": 8,
-    "carbs": 28,
-    "fat": 16,
-    "ingredients": [
-      "1 cup oats",
-      "1/2 cup protein powder",
-      "1/2 cup peanut butter",
-      "1/4 cup honey",
-      "1/4 cup chocolate chips",
-      "1 tsp vanilla"
-    ],
-    "dietary_tags": [
-      "high_protein",
-      "high_fiber",
-      "meal_prep"
-    ]
-  },
-  {
-    "name": "Veggies and Hummus",
-    "meal_type": "snack",
-    "description": "Fresh vegetable sticks with protein-rich hummus",
-    "instructions": "Using a sharp knife, carefully slice the main ingredient into uniform pieces. Arrange on a plate or in a container. Add 1 cup hummus, 1 cup carrot sticks, 1 cup cucumber sticks as specified. For enhanced flavor, let sit for 5 minutes before serving. Perfect for satisfying hunger between meals and maintaining steady energy levels.",
-    "prep_time": 10,
-    "cook_time": 0,
-    "calories": 240,
-    "protein": 8,
-    "fiber": 10,
-    "carbs": 28,
-    "fat": 12,
-    "ingredients": [
-      "1 cup hummus",
-      "1 cup carrot sticks",
-      "1 cup cucumber sticks",
-      "1 cup bell pepper strips",
-      "1 cup celery sticks"
-    ],
-    "dietary_tags": [
-      "high_fiber",
-      "vegetarian",
-      "quick"
-    ]
-  },
-  {
-    "name": "Banana with Peanut Butter",
-    "meal_type": "snack",
-    "description": "Simple banana with protein-rich peanut butter",
-    "instructions": "Using a sharp knife, carefully slice the main ingredient into uniform pieces. Arrange on a plate or in a container. Add 1 banana, 2 tbsp peanut butter, 1 tsp chia seeds as specified. For enhanced flavor, let sit for 5 minutes before serving. Perfect for satisfying hunger between meals and maintaining steady energy levels.",
-    "prep_time": 2,
-    "cook_time": 0,
-    "calories": 300,
-    "protein": 10,
-    "fiber": 8,
-    "carbs": 35,
-    "fat": 16,
-    "ingredients": [
-      "1 banana",
-      "2 tbsp peanut butter",
-      "1 tsp chia seeds"
-    ],
-    "dietary_tags": [
-      "high_fiber",
-      "quick"
-    ]
-  },
-  {
-    "name": "Roasted Chickpeas",
-    "meal_type": "snack",
-    "description": "Crispy roasted chickpeas with spices",
-    "instructions": "Prepare 1 can chickpeas, 1 tbsp olive oil, 1 tsp paprika as directed in the ingredient list. Combine in a serving dish. For optimal flavor and texture, allow to sit for a few minutes before enjoying. This snack is perfect for quick energy and satisfies hunger between meals. Perfect for satisfying hunger between meals and maintaining steady energy levels.",
-    "prep_time": 5,
-    "cook_time": 20,
-    "calories": 200,
-    "protein": 12,
-    "fiber": 10,
-    "carbs": 28,
-    "fat": 6,
-    "ingredients": [
-      "1 can chickpeas",
-      "1 tbsp olive oil",
-      "1 tsp paprika",
-      "1/2 tsp salt",
-      "1/2 tsp garlic powder",
-      "1/4 tsp cayenne"
-    ],
-    "dietary_tags": [
-      "high_fiber",
-      "vegetarian",
-      "meal_prep"
-    ]
-  },
-  {
-    "name": "Cheese and Whole Grain Crackers",
-    "meal_type": "snack",
-    "description": "Aged cheese with fiber-rich whole grain crackers",
-    "instructions": "Using a sharp knife, carefully slice the main ingredient into uniform pieces. Arrange on a plate or in a container. Add 2 oz cheese, 6 whole grain crackers, 1/2 cup grapes as specified. For enhanced flavor, let sit for 5 minutes before serving. Perfect for satisfying hunger between meals and maintaining steady energy levels.",
-    "prep_time": 3,
-    "cook_time": 0,
-    "calories": 280,
-    "protein": 14,
-    "fiber": 6,
-    "carbs": 24,
-    "fat": 16,
-    "ingredients": [
-      "2 oz cheese",
-      "6 whole grain crackers",
-      "1/2 cup grapes",
-      "1 tsp honey"
-    ],
-    "dietary_tags": [
-      "high_fiber",
-      "quick"
-    ]
-  },
-  {
-    "name": "Hard-Boiled Eggs",
-    "meal_type": "snack",
-    "description": "Simple protein-packed hard-boiled eggs with seasoning",
-    "instructions": "Prepare 2 hard-boiled eggs, salt, pepper as directed in the ingredient list. Combine in a serving dish. For optimal flavor and texture, allow to sit for a few minutes before enjoying. This snack is perfect for quick energy and satisfies hunger between meals. Perfect for satisfying hunger between meals and maintaining steady energy levels.",
-    "prep_time": 2,
-    "cook_time": 12,
-    "calories": 180,
-    "protein": 18,
-    "fiber": 2,
-    "carbs": 4,
-    "fat": 12,
-    "ingredients": [
-      "2 hard-boiled eggs",
-      "salt",
-      "pepper",
-      "paprika",
-      "hot sauce"
-    ],
-    "dietary_tags": [
-      "high_protein",
-      "quick"
-    ]
-  },
-  {
-    "name": "Turkey Jerky",
-    "meal_type": "snack",
-    "description": "High-protein turkey jerky for portable snacking",
-    "instructions": "Using a sharp knife, carefully slice the main ingredient into uniform pieces. Arrange on a plate or in a container. Add 2 oz turkey jerky, 1 apple slice as specified. For enhanced flavor, let sit for 5 minutes before serving. Perfect for satisfying hunger between meals and maintaining steady energy levels.",
-    "prep_time": 1,
-    "cook_time": 0,
-    "calories": 160,
-    "protein": 24,
-    "fiber": 2,
-    "carbs": 8,
-    "fat": 4,
-    "ingredients": [
-      "2 oz turkey jerky",
-      "1 apple slice"
-    ],
-    "dietary_tags": [
-      "high_protein",
-      "quick"
-    ]
-  },
-  {
-    "name": "Peanut Butter Celery Sticks",
-    "meal_type": "snack",
-    "description": "Crunchy celery with protein-rich peanut butter",
-    "instructions": "Prepare the base ingredient and arrange it on a serving plate. Evenly distribute 3 celery stalks, 2 tbsp peanut butter, 1 tbsp raisins over the top. Garnish with optional herbs or spices if desired. Serve immediately for best texture and flavor. Perfect for satisfying hunger between meals and maintaining steady energy levels.",
-    "prep_time": 5,
-    "cook_time": 0,
-    "calories": 240,
-    "protein": 10,
-    "fiber": 6,
-    "carbs": 18,
-    "fat": 16,
-    "ingredients": [
-      "3 celery stalks",
-      "2 tbsp peanut butter",
-      "1 tbsp raisins",
-      "1 tsp chia seeds"
-    ],
-    "dietary_tags": [
-      "high_fiber",
-      "quick"
-    ]
-  },
-  {
-    "name": "Dark Chocolate and Almonds",
-    "meal_type": "snack",
-    "description": "Dark chocolate squares with roasted almonds",
-    "instructions": "Prepare 2 squares dark chocolate, 10 almonds, sea salt as directed in the ingredient list. Combine in a serving dish. For optimal flavor and texture, allow to sit for a few minutes before enjoying. This snack is perfect for quick energy and satisfies hunger between meals. Perfect for satisfying hunger between meals and maintaining steady energy levels.",
-    "prep_time": 1,
-    "cook_time": 0,
-    "calories": 220,
-    "protein": 6,
-    "fiber": 6,
-    "carbs": 18,
-    "fat": 16,
-    "ingredients": [
-      "2 squares dark chocolate",
-      "10 almonds",
-      "sea salt"
-    ],
-    "dietary_tags": [
-      "high_fiber",
-      "quick"
-    ]
-  },
-  {
-    "name": "Rice Cakes with Avocado",
-    "meal_type": "snack",
-    "description": "Brown rice cakes topped with mashed avocado",
-    "instructions": "Prepare the base ingredient and arrange it on a serving plate. Evenly distribute 2 brown rice cakes, 1/2 avocado, lemon juice over the top. Garnish with optional herbs or spices if desired. Serve immediately for best texture and flavor. Perfect for satisfying hunger between meals and maintaining steady energy levels.",
-    "prep_time": 3,
-    "cook_time": 0,
-    "calories": 200,
-    "protein": 6,
-    "fiber": 8,
-    "carbs": 24,
-    "fat": 12,
-    "ingredients": [
-      "2 brown rice cakes",
-      "1/2 avocado",
-      "lemon juice",
-      "red pepper flakes",
-      "salt"
-    ],
-    "dietary_tags": [
-      "high_fiber",
-      "vegetarian",
-      "quick"
-    ]
-  }
+    {
+        "name": "Apple with Almond Butter",
+        "meal_type": "snack",
+        "description": "Crisp apple wedges with almond butter and a dusting of cinnamon. The easiest between-meal snack there is.",
+        "servings": 1,
+        "prep_time": 3,
+        "cook_time": 0,
+        "calories": 185,
+        "protein": 4,
+        "carbs": 24,
+        "fat": 9,
+        "fiber": 5,
+        "ingredients": [
+            "1 medium apple",
+            "1 tbsp almond butter",
+            "Pinch of ground cinnamon",
+            "Squeeze of lemon (if packing it)"
+        ],
+        "steps": [
+            "Core the apple and cut it into 8 wedges. If you're packing it, toss the wedges with a squeeze of lemon so they don't brown.",
+            "Stir the almond butter well (the oil separates) and spoon it into a small pot.",
+            "Dust with cinnamon and dip."
+        ],
+        "tip": "A steady mid-afternoon snack before an evening run. Eat it 60-90 minutes before you head out.",
+        "dietary_tags": [
+            "vegan",
+            "gluten_free",
+            "portable"
+        ]
+    },
+    {
+        "name": "Hard-Boiled Eggs with Avocado",
+        "meal_type": "snack",
+        "description": "Quick devilled eggs: the yolks mashed with avocado, lime and salt and spooned back into the whites.",
+        "servings": 1,
+        "prep_time": 5,
+        "cook_time": 10,
+        "calories": 210,
+        "protein": 13,
+        "carbs": 4,
+        "fat": 16,
+        "fiber": 2,
+        "ingredients": [
+            "2 large eggs",
+            "1/4 ripe avocado",
+            "Squeeze of lime",
+            "Pinch of chilli flakes or paprika",
+            "Salt and black pepper"
+        ],
+        "steps": [
+            "Lower the eggs into boiling water and cook for 9 minutes, then cool them in iced water for 5 minutes and peel.",
+            "Halve them lengthways and scoop the yolks into a bowl.",
+            "Mash the yolks with the avocado, lime, salt and pepper until smooth.",
+            "Spoon the mixture back into the whites and sprinkle with chilli or paprika."
+        ],
+        "tip": "Protein and healthy fats keep you full between meals, but there are very few carbs here, so don't rely on it before a run.",
+        "dietary_tags": [
+            "vegetarian",
+            "gluten_free"
+        ]
+    },
+    {
+        "name": "Trail Mix with Nuts and Seeds",
+        "meal_type": "snack",
+        "description": "Almonds, pumpkin seeds, dried cranberries and dark chocolate in a pocket-sized bag.",
+        "servings": 1,
+        "serving_size": "1 small bag (about 55 g)",
+        "prep_time": 2,
+        "cook_time": 0,
+        "calories": 280,
+        "protein": 7,
+        "carbs": 21,
+        "fat": 18,
+        "fiber": 5,
+        "ingredients": [
+            "20 g almonds",
+            "10 g pumpkin seeds",
+            "15 g dried cranberries",
+            "10 g dark chocolate chips"
+        ],
+        "steps": [
+            "Mix everything together in a small bowl.",
+            "Tip it into a small bag or tub.",
+            "Make a week's worth at once: weigh out five bags on Sunday so portions stay honest."
+        ],
+        "tip": "Calorie-dense, so it's easy to overeat from a big bag. Pre-portioned bags keep it a snack rather than a meal.",
+        "storage": "Keeps for 2 weeks in an airtight container.",
+        "dietary_tags": [
+            "vegetarian",
+            "gluten_free",
+            "portable"
+        ]
+    },
+    {
+        "name": "Edamame with Sea Salt",
+        "meal_type": "snack",
+        "description": "Warm edamame pods tossed with sesame oil, flaky salt and chilli. Pop the beans straight out with your teeth.",
+        "servings": 1,
+        "prep_time": 2,
+        "cook_time": 5,
+        "calories": 180,
+        "protein": 14,
+        "carbs": 12,
+        "fat": 9,
+        "fiber": 6,
+        "ingredients": [
+            "200 g frozen edamame in their pods",
+            "1/2 tsp sesame oil",
+            "Flaky sea salt",
+            "Pinch of chilli flakes (optional)",
+            "1/2 small garlic clove, grated (optional)"
+        ],
+        "steps": [
+            "Bring a pan of salted water to the boil and cook the frozen pods for 4-5 minutes.",
+            "Drain them well.",
+            "Toss with the sesame oil, flaky salt and the chilli and garlic, if using.",
+            "To eat, squeeze the beans out of the pods with your teeth and discard the pods."
+        ],
+        "tip": "One of the highest-protein plant snacks, and the salt helps after a sweaty session.",
+        "dietary_tags": [
+            "vegan",
+            "gluten_free"
+        ]
+    },
+    {
+        "name": "Greek Yogurt with Honey",
+        "meal_type": "snack",
+        "description": "Creamy Greek yogurt with honey, toasted almonds and a handful of berries.",
+        "servings": 1,
+        "prep_time": 3,
+        "cook_time": 0,
+        "calories": 325,
+        "protein": 23,
+        "carbs": 32,
+        "fat": 12,
+        "fiber": 3,
+        "ingredients": [
+            "200 g Greek yogurt",
+            "1 tbsp honey",
+            "15 g almonds, roughly chopped",
+            "50 g berries"
+        ],
+        "steps": [
+            "Spoon the yogurt into a bowl.",
+            "Toast the almonds in a dry pan for 2 minutes if you have time; it makes a big difference.",
+            "Top the yogurt with the berries and almonds and drizzle with honey."
+        ],
+        "tip": "A high-protein snack that works just as well as a light dessert.",
+        "dietary_tags": [
+            "vegetarian",
+            "gluten_free"
+        ]
+    },
+    {
+        "name": "Protein Bar",
+        "meal_type": "snack",
+        "description": "No-bake peanut butter, oat and honey protein bars with a dark chocolate drizzle. Cheaper and tastier than shop-bought.",
+        "servings": 8,
+        "serving_size": "1 bar",
+        "prep_time": 15,
+        "cook_time": 0,
+        "calories": 230,
+        "protein": 12,
+        "carbs": 22,
+        "fat": 10,
+        "fiber": 3,
+        "ingredients": [
+            "120 g smooth peanut butter",
+            "80 g honey",
+            "60 g (2 scoops) vanilla or chocolate protein powder",
+            "1 tsp vanilla extract",
+            "Pinch of salt",
+            "100 g rolled oats",
+            "1-3 tbsp milk, if needed",
+            "40 g dark chocolate chips"
+        ],
+        "steps": [
+            "Line a 20 cm (8 in) square tin with baking paper.",
+            "Warm the peanut butter and honey in the microwave for 30 seconds until runny.",
+            "Stir in the protein powder, vanilla and salt, then the oats. It should become a firm dough that holds together when pressed; add milk 1 tbsp at a time if it's crumbly.",
+            "Press it very firmly into the tin. The bottom of a glass works well.",
+            "Melt the chocolate chips in 30-second bursts, drizzle over the top, and chill for 1 hour before cutting into 8 bars."
+        ],
+        "tip": "Wrap them individually and they survive a gym bag.",
+        "storage": "Keeps for 1 week in the fridge or 2 months in the freezer.",
+        "dietary_tags": [
+            "vegetarian",
+            "meal_prep",
+            "portable"
+        ]
+    },
+    {
+        "name": "Veggies and Hummus",
+        "meal_type": "snack",
+        "description": "Crunchy carrot, cucumber, pepper and celery sticks with hummus. There's a five-minute homemade version if you have a blender.",
+        "servings": 1,
+        "prep_time": 8,
+        "cook_time": 0,
+        "calories": 220,
+        "protein": 7,
+        "carbs": 22,
+        "fat": 10,
+        "fiber": 9,
+        "ingredients": [
+            "60 g hummus",
+            "1 carrot",
+            "1/2 cucumber",
+            "1/2 red pepper",
+            "1 celery stick"
+        ],
+        "steps": [
+            "Cut the vegetables into batons about the size of your finger.",
+            "Spoon the hummus into a small pot.",
+            "To make your own hummus: blitz a drained 400 g tin of chickpeas with 2 tbsp tahini, the juice of 1 lemon, 1 garlic clove, 1/2 tsp salt and 3-4 tbsp ice-cold water until very smooth (2-3 minutes). It keeps for 4 days."
+        ],
+        "tip": "High in fibre and low in calories. A great snack on rest days; skip it just before a run.",
+        "dietary_tags": [
+            "vegan",
+            "gluten_free",
+            "portable"
+        ]
+    },
+    {
+        "name": "Banana with Peanut Butter",
+        "meal_type": "snack",
+        "description": "A banana with a spoonful of peanut butter, chia and cinnamon. Classic, cheap pre-run fuel.",
+        "servings": 1,
+        "prep_time": 2,
+        "cook_time": 0,
+        "calories": 225,
+        "protein": 6,
+        "carbs": 32,
+        "fat": 9,
+        "fiber": 6,
+        "ingredients": [
+            "1 ripe banana",
+            "1 tbsp peanut butter",
+            "1 tsp chia seeds",
+            "Pinch of ground cinnamon"
+        ],
+        "steps": [
+            "Peel the banana and slice it lengthways, or into coins.",
+            "Spread or dollop the peanut butter over it.",
+            "Sprinkle with the chia seeds and cinnamon."
+        ],
+        "tip": "Eat it 45-60 minutes before a run. Leave out the chia if your stomach is sensitive.",
+        "dietary_tags": [
+            "vegan",
+            "gluten_free",
+            "portable",
+            "pre_run"
+        ]
+    },
+    {
+        "name": "Roasted Chickpeas",
+        "meal_type": "snack",
+        "description": "Crunchy paprika and cayenne chickpeas, roasted in the oven or air-fried. A savoury crisp swap.",
+        "servings": 2,
+        "prep_time": 5,
+        "cook_time": 25,
+        "calories": 225,
+        "protein": 9,
+        "carbs": 23,
+        "fat": 9,
+        "fiber": 7,
+        "ingredients": [
+            "400 g tin chickpeas, drained",
+            "1 tbsp olive oil",
+            "1 tsp paprika",
+            "1/2 tsp garlic powder",
+            "1/4 tsp cayenne pepper",
+            "1/2 tsp salt"
+        ],
+        "steps": [
+            "Heat the oven to 200°C fan (220°C / 425°F), or an air fryer to 190°C.",
+            "Rinse the chickpeas, then dry them thoroughly in a tea towel, rubbing off any loose skins.",
+            "Toss with the oil, spices and salt.",
+            "Roast on a tray for 20-25 minutes, shaking every 10 minutes, or air-fry for 12-15 minutes, shaking twice, until crunchy.",
+            "Cool completely before storing; they crisp up as they cool."
+        ],
+        "tip": "Fibre and plant protein. Keep a jar at your desk for afternoon cravings.",
+        "storage": "Keeps for 3 days in an airtight jar.",
+        "dietary_tags": [
+            "vegan",
+            "gluten_free",
+            "meal_prep",
+            "portable"
+        ]
+    },
+    {
+        "name": "Cheese and Whole Grain Crackers",
+        "meal_type": "snack",
+        "description": "Mature cheddar on oatcakes with sweet grapes and a spoonful of chutney. A proper British ploughman's-style snack.",
+        "servings": 1,
+        "prep_time": 3,
+        "cook_time": 0,
+        "calories": 330,
+        "protein": 11,
+        "carbs": 37,
+        "fat": 15,
+        "fiber": 3,
+        "ingredients": [
+            "30 g mature cheddar, sliced",
+            "3 oatcakes or wholegrain crackers",
+            "80 g grapes",
+            "1 tsp fruit chutney"
+        ],
+        "steps": [
+            "Slice the cheddar thinly.",
+            "Top each oatcake with cheese and a little chutney.",
+            "Serve with the grapes."
+        ],
+        "tip": "Balanced carbs, protein and fat. A good 3pm snack before an after-work run.",
+        "dietary_tags": [
+            "vegetarian",
+            "portable"
+        ]
+    },
+    {
+        "name": "Hard-Boiled Eggs",
+        "meal_type": "snack",
+        "description": "Perfect boiled eggs every time: jammy, fudgy or firm. With easy-peel tricks and seasoning ideas.",
+        "servings": 1,
+        "serving_size": "2 eggs",
+        "prep_time": 2,
+        "cook_time": 10,
+        "calories": 145,
+        "protein": 13,
+        "carbs": 1,
+        "fat": 10,
+        "fiber": 0,
+        "ingredients": [
+            "2 large eggs, straight from the fridge",
+            "Flaky salt",
+            "Smoked paprika or a sesame-and-garlic seasoning",
+            "Hot sauce (optional)"
+        ],
+        "steps": [
+            "Bring a small pan of water to a rolling boil.",
+            "Lower in the cold eggs gently with a spoon.",
+            "Cook for 6.5 minutes for jammy yolks, 8 minutes for fudgy, or 10 minutes for firm.",
+            "Move them straight into iced water for 5 minutes.",
+            "Peel them from the fat end under cold running water, then season with salt and paprika or a dash of hot sauce."
+        ],
+        "tip": "Boil a batch on Sunday and you have high-quality protein ready all week.",
+        "storage": "Unpeeled, they keep for 5 days in the fridge.",
+        "dietary_tags": [
+            "vegetarian",
+            "gluten_free",
+            "portable",
+            "meal_prep"
+        ]
+    },
+    {
+        "name": "Turkey Jerky",
+        "meal_type": "snack",
+        "description": "Homemade oven-dried turkey jerky with smoked paprika, soy and black pepper. Lean, chewy and packed with protein.",
+        "servings": 5,
+        "serving_size": "40 g jerky plus 1 small apple",
+        "prep_time": 15,
+        "cook_time": 210,
+        "calories": 170,
+        "protein": 24,
+        "carbs": 16,
+        "fat": 1,
+        "fiber": 2,
+        "ingredients": [
+            "500 g turkey breast",
+            "3 tbsp soy sauce",
+            "1 tbsp Worcestershire sauce",
+            "1 tsp honey",
+            "1 tsp smoked paprika",
+            "1 tsp black pepper",
+            "1/2 tsp garlic powder",
+            "5 small apples, to serve"
+        ],
+        "steps": [
+            "Freeze the turkey for 30 minutes to firm it up, then slice it as thinly as you can (3-4 mm) along the grain.",
+            "Mix the soy sauce, Worcestershire sauce, honey and spices, then toss the turkey in the mixture. Marinate it in the fridge for at least 4 hours, or overnight.",
+            "Heat the oven to its lowest setting (70-80°C). Pat the strips dry and lay them on a wire rack set over a tray, not touching.",
+            "Dry them for 3-4 hours, with the oven door propped slightly open with a wooden spoon to let moisture escape, until dry and leathery. They should bend and crack but not snap.",
+            "Cool completely and store with a small apple per portion for carbs."
+        ],
+        "tip": "A compact, high-protein snack for long days out. Commercial jerky is often very salty and sweet, so check the label if you buy it.",
+        "storage": "Keeps for 1 week in an airtight container in the fridge.",
+        "dietary_tags": [
+            "meal_prep",
+            "portable"
+        ]
+    },
+    {
+        "name": "Peanut Butter Celery Sticks",
+        "meal_type": "snack",
+        "description": "Ants on a log: crunchy celery filled with peanut butter and dotted with raisins and chia.",
+        "servings": 1,
+        "prep_time": 5,
+        "cook_time": 0,
+        "calories": 225,
+        "protein": 7,
+        "carbs": 20,
+        "fat": 13,
+        "fiber": 6,
+        "ingredients": [
+            "3 celery sticks",
+            "1.5 tbsp peanut butter",
+            "15 g raisins",
+            "1 tsp chia seeds"
+        ],
+        "steps": [
+            "Trim the celery and cut each stick into 3 pieces.",
+            "Fill the groove of each piece with peanut butter.",
+            "Press the raisins along the top and sprinkle with chia seeds."
+        ],
+        "tip": "Crunchy, satisfying and hard to get tired of. A good one for rest days.",
+        "dietary_tags": [
+            "vegan",
+            "gluten_free"
+        ]
+    },
+    {
+        "name": "Dark Chocolate and Almonds",
+        "meal_type": "snack",
+        "description": "Salted dark chocolate clusters with toasted almonds and chewy apricot. A treat that actually satisfies.",
+        "servings": 6,
+        "serving_size": "2 clusters",
+        "prep_time": 10,
+        "cook_time": 5,
+        "calories": 205,
+        "protein": 4,
+        "carbs": 14,
+        "fat": 14,
+        "fiber": 4,
+        "ingredients": [
+            "80 g almonds",
+            "100 g dark chocolate (70%), broken up",
+            "60 g dried apricots, chopped",
+            "Flaky sea salt"
+        ],
+        "steps": [
+            "Toast the almonds in a dry pan for 4-5 minutes until fragrant, then cool and chop them roughly.",
+            "Melt the chocolate in a heatproof bowl over simmering water, or in 20-second bursts in the microwave, stirring between each.",
+            "Stir in the almonds and apricots.",
+            "Spoon 12 clusters onto a sheet of baking paper and sprinkle each with a few flakes of salt.",
+            "Chill for 20 minutes until set."
+        ],
+        "tip": "Two clusters is a satisfying portion. Dark chocolate brings magnesium and iron as well as flavour.",
+        "storage": "Keeps for 2 weeks in a cool, airtight tin.",
+        "dietary_tags": [
+            "vegan",
+            "gluten_free",
+            "portable"
+        ]
+    },
+    {
+        "name": "Rice Cakes with Avocado",
+        "meal_type": "snack",
+        "description": "Crispy rice cakes with lemony smashed avocado, cherry tomatoes and chilli flakes.",
+        "servings": 1,
+        "prep_time": 3,
+        "cook_time": 0,
+        "calories": 165,
+        "protein": 3,
+        "carbs": 20,
+        "fat": 9,
+        "fiber": 5,
+        "ingredients": [
+            "2 brown rice cakes",
+            "1/3 ripe avocado",
+            "Squeeze of lemon juice",
+            "2 cherry tomatoes, sliced",
+            "Pinch of red pepper flakes",
+            "Salt"
+        ],
+        "steps": [
+            "Mash the avocado with the lemon and a pinch of salt.",
+            "Spread it over the rice cakes.",
+            "Top with the tomato slices and chilli flakes."
+        ],
+        "tip": "A light, gluten-free snack. Add a boiled egg or some cottage cheese for protein.",
+        "dietary_tags": [
+            "vegan",
+            "gluten_free"
+        ]
+    },
+    {
+        "name": "Banana Oat Muffins",
+        "meal_type": "snack",
+        "description": "Soft, lightly sweet muffins made with oats, ripe banana, Greek yogurt and blueberries. Freezer-friendly grab-and-go fuel.",
+        "servings": 12,
+        "serving_size": "1 muffin",
+        "prep_time": 15,
+        "cook_time": 22,
+        "calories": 170,
+        "protein": 5,
+        "carbs": 23,
+        "fat": 7,
+        "fiber": 3,
+        "ingredients": [
+            "200 g rolled oats",
+            "3 very ripe bananas",
+            "2 large eggs",
+            "150 g Greek yogurt",
+            "60 ml maple syrup",
+            "60 ml olive or rapeseed oil",
+            "1 tsp vanilla extract",
+            "2 tsp baking powder",
+            "1 tsp ground cinnamon",
+            "Pinch of salt",
+            "75 g blueberries (or dark chocolate chips)"
+        ],
+        "steps": [
+            "Heat the oven to 180°C fan (200°C / 400°F) and line a 12-hole muffin tin with cases.",
+            "Blitz half the oats to a flour.",
+            "Mash the bananas in a large bowl, then whisk in the eggs, yogurt, maple syrup, oil and vanilla.",
+            "Fold in the oat flour, whole oats, baking powder, cinnamon and salt until just combined. Overmixing makes them tough.",
+            "Fold in the blueberries and divide the mixture between the cases.",
+            "Bake for 20-22 minutes, until golden and a skewer comes out clean. Cool in the tin for 10 minutes."
+        ],
+        "tip": "One muffin is a good pre-run snack an hour before an easy run. Two make a portable breakfast.",
+        "storage": "Keeps for 3 days in an airtight tin or 3 months in the freezer. Defrost overnight or microwave for 30 seconds.",
+        "dietary_tags": [
+            "vegetarian",
+            "meal_prep",
+            "portable"
+        ]
+    },
+    {
+        "name": "Rice Cakes with Cottage Cheese and Jam",
+        "meal_type": "snack",
+        "description": "Rice cakes topped with cottage cheese, a spoonful of jam and berries. Sweet, light and surprisingly high in protein.",
+        "servings": 1,
+        "prep_time": 3,
+        "cook_time": 0,
+        "calories": 190,
+        "protein": 13,
+        "carbs": 30,
+        "fat": 2,
+        "fiber": 1,
+        "ingredients": [
+            "2 rice cakes",
+            "100 g low-fat cottage cheese",
+            "1 tbsp jam",
+            "A few fresh berries"
+        ],
+        "steps": [
+            "Spread the cottage cheese over the rice cakes.",
+            "Add a little jam to each.",
+            "Top with the berries."
+        ],
+        "tip": "Low in fat and fibre, which makes it a good light snack 60-90 minutes before a run.",
+        "dietary_tags": [
+            "vegetarian",
+            "gluten_free",
+            "pre_run"
+        ]
+    },
+    {
+        "name": "Spiced Roasted Almonds",
+        "meal_type": "snack",
+        "description": "Almonds slow-roasted with smoked paprika, cumin, rosemary and a touch of maple. Addictively savoury.",
+        "servings": 8,
+        "serving_size": "small handful (25 g)",
+        "prep_time": 5,
+        "cook_time": 15,
+        "calories": 148,
+        "protein": 5,
+        "carbs": 3,
+        "fat": 13,
+        "fiber": 3,
+        "ingredients": [
+            "200 g whole almonds",
+            "1 tsp olive oil",
+            "1 tsp maple syrup",
+            "1 tsp smoked paprika",
+            "1/2 tsp ground cumin",
+            "1 tsp finely chopped rosemary",
+            "1/2 tsp flaky salt",
+            "Pinch of cayenne"
+        ],
+        "steps": [
+            "Heat the oven to 160°C fan (180°C / 350°F). The low heat toasts them all the way through without scorching.",
+            "Toss the almonds with the oil, maple syrup, spices, rosemary and salt.",
+            "Spread them on a tray in a single layer and roast for 12-15 minutes, stirring halfway. Bite one: the inside should be a shade darker and fragrant.",
+            "Cool on the tray; they crisp as they cool."
+        ],
+        "tip": "Rich in vitamin E and magnesium. Keep portions to a small handful; almonds are calorie-dense.",
+        "storage": "Keeps for 2 weeks in an airtight jar.",
+        "dietary_tags": [
+            "vegan",
+            "gluten_free",
+            "meal_prep",
+            "portable"
+        ]
+    },
+    {
+        "name": "Chocolate Protein Skyr Pudding",
+        "meal_type": "snack",
+        "description": "A mousse-like chocolate pudding from skyr, protein powder and cocoa, topped with raspberries. Ready in two minutes.",
+        "servings": 1,
+        "prep_time": 3,
+        "cook_time": 0,
+        "calories": 230,
+        "protein": 34,
+        "carbs": 17,
+        "fat": 2,
+        "fiber": 3,
+        "ingredients": [
+            "200 g skyr or 0% Greek yogurt",
+            "1/2 scoop (15 g) chocolate protein powder",
+            "1 tsp cocoa powder",
+            "1 tsp maple syrup",
+            "Splash of milk",
+            "50 g raspberries"
+        ],
+        "steps": [
+            "Whisk the skyr, protein powder, cocoa and maple syrup until smooth.",
+            "Add a splash of milk if it's too thick to whisk.",
+            "Top with the raspberries. Chill it for 10 minutes if you like it firmer."
+        ],
+        "tip": "A high-protein evening snack that feels like dessert. Good before bed on heavy training days.",
+        "dietary_tags": [
+            "vegetarian",
+            "gluten_free"
+        ]
+    },
+    {
+        "name": "Hummus and Cucumber Toast",
+        "meal_type": "snack",
+        "description": "Toasted sourdough spread with hummus and topped with cucumber, tomato, za'atar and lemon.",
+        "servings": 1,
+        "prep_time": 4,
+        "cook_time": 2,
+        "calories": 210,
+        "protein": 7,
+        "carbs": 27,
+        "fat": 8,
+        "fiber": 5,
+        "ingredients": [
+            "1 slice sourdough or rye bread",
+            "40 g hummus",
+            "1/4 cucumber, thinly sliced",
+            "2 cherry tomatoes, sliced",
+            "Pinch of za'atar or chilli flakes",
+            "Squeeze of lemon"
+        ],
+        "steps": [
+            "Toast the bread.",
+            "Spread it thickly with the hummus.",
+            "Layer the cucumber and tomato on top, sprinkle with za'atar and finish with a squeeze of lemon."
+        ],
+        "tip": "A plant-based savoury snack. On a busy day, two slices make a light lunch.",
+        "dietary_tags": [
+            "vegan"
+        ]
+    },
+    {
+        "name": "Frozen Yogurt Berry Bark",
+        "meal_type": "snack",
+        "description": "Honey-sweetened Greek yogurt spread thin, scattered with berries and pistachios, then frozen and snapped into shards.",
+        "servings": 6,
+        "serving_size": "2 shards",
+        "prep_time": 10,
+        "cook_time": 0,
+        "calories": 125,
+        "protein": 9,
+        "carbs": 13,
+        "fat": 4,
+        "fiber": 1,
+        "ingredients": [
+            "500 g Greek yogurt",
+            "2 tbsp honey",
+            "1/2 tsp vanilla extract",
+            "150 g mixed berries",
+            "30 g pistachios, roughly chopped"
+        ],
+        "steps": [
+            "Line a baking tray with baking paper.",
+            "Stir the honey and vanilla into the yogurt.",
+            "Spread it over the paper about 1 cm thick.",
+            "Scatter over the berries, pressing them in lightly, then the pistachios.",
+            "Freeze for at least 2 hours until solid, then break into 12 shards."
+        ],
+        "tip": "A cooling summer snack after a hot run. Eat it straight from the freezer; it softens quickly.",
+        "storage": "Keeps for 1 month in a freezer bag.",
+        "dietary_tags": [
+            "vegetarian",
+            "gluten_free",
+            "meal_prep"
+        ]
+    },
+    {
+        "name": "Tzatziki with Warm Pitta",
+        "meal_type": "snack",
+        "description": "Thick, garlicky homemade tzatziki with grated cucumber, dill and mint, served with toasted pitta strips.",
+        "servings": 2,
+        "prep_time": 10,
+        "cook_time": 2,
+        "calories": 260,
+        "protein": 16,
+        "carbs": 35,
+        "fat": 5,
+        "fiber": 4,
+        "ingredients": [
+            "1/2 cucumber",
+            "Pinch of salt",
+            "200 g Greek yogurt",
+            "1 small garlic clove, grated",
+            "1 tsp olive oil",
+            "1 tsp lemon juice",
+            "1 tbsp chopped dill or mint",
+            "2 wholemeal pittas"
+        ],
+        "steps": [
+            "Coarsely grate the cucumber, toss it with the salt and leave it for 5 minutes.",
+            "Squeeze it hard in a clean tea towel to remove the water; otherwise the tzatziki turns watery.",
+            "Mix the cucumber with the yogurt, garlic, oil, lemon juice and herbs.",
+            "Toast the pittas and cut them into strips for dipping."
+        ],
+        "tip": "Yogurt protein plus pitta carbs: a light recovery snack after an easy run.",
+        "storage": "The tzatziki keeps for 3 days in the fridge.",
+        "dietary_tags": [
+            "vegetarian"
+        ]
+    },
+    {
+        "name": "Air-Popped Parmesan Popcorn",
+        "meal_type": "snack",
+        "description": "A big bowl of wholegrain popcorn with finely grated Parmesan, black pepper and a pinch of smoked paprika.",
+        "servings": 1,
+        "prep_time": 2,
+        "cook_time": 4,
+        "calories": 195,
+        "protein": 7,
+        "carbs": 22,
+        "fat": 9,
+        "fiber": 4,
+        "ingredients": [
+            "30 g popcorn kernels",
+            "1 tsp olive oil",
+            "10 g Parmesan, very finely grated",
+            "Pinch of salt",
+            "Black pepper or smoked paprika"
+        ],
+        "steps": [
+            "Put the kernels in a paper bag and fold the top over twice. Microwave on high for 2-3 minutes, stopping when the pops are about 2 seconds apart. (Or pop them in a lidded pan with the oil, shaking often.)",
+            "Tip into a bowl and toss with the oil so the cheese sticks.",
+            "Add the Parmesan, salt and pepper or paprika and toss again."
+        ],
+        "tip": "A large, satisfying volume for relatively few calories. Popcorn is a wholegrain.",
+        "dietary_tags": [
+            "vegetarian",
+            "gluten_free"
+        ]
+    },
+    {
+        "name": "Tuna Cucumber Bites",
+        "meal_type": "snack",
+        "description": "Thick cucumber rounds topped with lemony tuna, chives and paprika. A light, crunchy, high-protein canapé.",
+        "servings": 1,
+        "prep_time": 8,
+        "cook_time": 0,
+        "calories": 215,
+        "protein": 30,
+        "carbs": 10,
+        "fat": 5,
+        "fiber": 1,
+        "ingredients": [
+            "1 tin (145 g) tuna in spring water, drained",
+            "1 tbsp Greek yogurt",
+            "1 tsp mayonnaise",
+            "Squeeze of lemon",
+            "1 tbsp snipped chives",
+            "1 cucumber, cut into 1.5 cm rounds",
+            "Pinch of paprika",
+            "Black pepper"
+        ],
+        "steps": [
+            "Press as much liquid out of the tuna as you can.",
+            "Mix it with the yogurt, mayonnaise, lemon, chives and pepper.",
+            "Pat the cucumber rounds dry with kitchen paper so the topping doesn't slide off.",
+            "Spoon a little tuna onto each round and dust with paprika."
+        ],
+        "tip": "Around 30 g of protein for about 200 kcal. A great snack in the evening or on a rest day.",
+        "dietary_tags": [
+            "gluten_free",
+            "omega_3"
+        ]
+    }
 ]

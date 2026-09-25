@@ -54,6 +54,24 @@ def test_remove_favorite(service, user, test_db):
     assert service.list_favorites(user.id, test_db) == []
 
 
+def test_list_serves_the_live_recipe_over_a_stale_snapshot(user, test_db):
+    live = {"name": "Oatmeal", "meal_type": "breakfast", "steps": ["New step."]}
+    service = FavoritesService(catalog_lookup=lambda name: live)
+    added = service.add_favorite(user.id, _recipe(), test_db)
+
+    [favorite] = service.list_favorites(user.id, test_db)
+    assert favorite["steps"] == ["New step."]
+    assert favorite["favorite_id"] == added["id"]
+
+
+def test_list_falls_back_to_snapshot_for_removed_recipes(user, test_db):
+    service = FavoritesService(catalog_lookup=lambda name: None)
+    service.add_favorite(user.id, _recipe(), test_db)
+
+    [favorite] = service.list_favorites(user.id, test_db)
+    assert favorite["calories"] == 300
+
+
 def test_remove_missing_returns_false(service, user, test_db):
     assert service.remove_favorite("does-not-exist", user.id, test_db) is False
 

@@ -1,671 +1,1230 @@
 [
-  {
-    "name": "Quinoa Power Bowl",
-    "meal_type": "lunch",
-    "description": "Nutrient-dense quinoa bowl with roasted vegetables and chickpeas",
-    "instructions": "Prepare 1 cup quinoa, 1 cup chickpeas, 2 cups roasted vegetables as directed in the ingredient list. Combine in a serving dish. For optimal flavor and texture, allow to sit for a few minutes before enjoying. This lunch provides balanced nutrition to power you through the afternoon.",
-    "prep_time": 15,
-    "cook_time": 25,
-    "calories": 480,
-    "protein": 22,
-    "fiber": 16,
-    "carbs": 58,
-    "fat": 18,
-    "ingredients": [
-      "1 cup quinoa",
-      "1 cup chickpeas",
-      "2 cups roasted vegetables",
-      "2 oz feta cheese",
-      "2 tbsp tahini",
-      "1 lemon",
-      "fresh herbs"
-    ],
-    "dietary_tags": [
-      "high_protein",
-      "high_fiber",
-      "vegetarian",
-      "meal_prep"
-    ]
-  },
-  {
-    "name": "Grilled Chicken Salad",
-    "meal_type": "lunch",
-    "description": "Lean grilled chicken over mixed greens with high-fiber vegetables",
-    "instructions": "Preheat grill or grill pan to medium-high heat. Season chicken breasts with salt, pepper, and a little olive oil. Grill chicken for 6-7 minutes per side until internal temperature reaches 165\u00b0F (74\u00b0C) and chicken has nice grill marks. Let chicken rest for 5 minutes, then slice into strips. Meanwhile, toss mixed greens with halved cherry tomatoes, sliced cucumber, and pumpkin seeds. Arrange greens on plates, top with sliced chicken, and drizzle with your favorite olive oil vinaigrette. Serve immediately.",
-    "prep_time": 12,
-    "cook_time": 15,
-    "calories": 420,
-    "protein": 38,
-    "fiber": 8,
-    "carbs": 18,
-    "fat": 20,
-    "ingredients": [
-      "6 oz grilled chicken",
-      "3 cups mixed greens",
-      "1 cup cherry tomatoes",
-      "1/2 cucumber",
-      "2 tbsp pumpkin seeds",
-      "olive oil vinaigrette"
-    ],
-    "dietary_tags": [
-      "high_protein",
-      "low_carb",
-      "gluten_free"
-    ]
-  },
-  {
-    "name": "Lentil and Vegetable Soup",
-    "meal_type": "lunch",
-    "description": "Hearty lentil soup packed with fiber and plant-based protein",
-    "instructions": "Heat olive oil in a large pot over medium heat. Add diced onion, carrot, and celery, cooking for 5-6 minutes until softened. Add minced garlic and cook for 30 seconds until fragrant. Add rinsed red lentils, vegetable broth, and bring to a boil. Reduce heat to low, cover, and simmer for 25-30 minutes until lentils are tender. Add chopped spinach and stir until wilted (about 2 minutes). Season with salt, pepper, and dried thyme. Serve hot, optionally with a squeeze of lemon and a drizzle of olive oil.",
-    "prep_time": 10,
-    "cook_time": 35,
-    "calories": 380,
-    "protein": 20,
-    "fiber": 18,
-    "carbs": 52,
-    "fat": 8,
-    "ingredients": [
-      "1 cup red lentils",
-      "2 cups vegetable broth",
-      "1 carrot",
-      "1 celery",
-      "1 onion",
-      "2 cups spinach",
-      "herbs and spices"
-    ],
-    "dietary_tags": [
-      "high_protein",
-      "high_fiber",
-      "vegetarian",
-      "meal_prep"
-    ]
-  },
-  {
-    "name": "Turkey and Avocado Wrap",
-    "meal_type": "lunch",
-    "description": "Lean turkey with avocado and vegetables in a high-fiber wrap",
-    "instructions": "Prepare 6 oz turkey breast, whole grain wrap, 1/2 avocado as directed in the ingredient list. Combine in a serving dish. For optimal flavor and texture, allow to sit for a few minutes before enjoying. This lunch provides balanced nutrition to power you through the afternoon.",
-    "prep_time": 10,
-    "cook_time": 0,
-    "calories": 440,
-    "protein": 32,
-    "fiber": 12,
-    "carbs": 35,
-    "fat": 18,
-    "ingredients": [
-      "6 oz turkey breast",
-      "whole grain wrap",
-      "1/2 avocado",
-      "1/4 cup hummus",
-      "mixed greens",
-      "tomato",
-      "onion"
-    ],
-    "dietary_tags": [
-      "high_protein",
-      "high_fiber",
-      "quick"
-    ]
-  },
-  {
-    "name": "Spaghetti Bolognese",
-    "meal_type": "lunch",
-    "description": "Classic pasta with rich meat sauce and parmesan cheese",
-    "instructions": "Cook spaghetti in salted water according to package directions until al dente (usually 8-10 minutes), then drain well. While pasta cooks, heat olive oil in a large pan over medium heat. Add diced onion and cook for 5 minutes until translucent. Add minced garlic and cook for 30 seconds until fragrant. Add ground beef and cook, breaking it up with a spoon, until browned (5-7 minutes). Pour in tomato sauce and add dried basil and oregano. Reduce heat to low and simmer for 15 minutes to develop flavors. Season with salt and pepper. Serve sauce over spaghetti with parmesan cheese sprinkled on top.",
-    "prep_time": 15,
-    "cook_time": 30,
-    "calories": 580,
-    "protein": 32,
-    "fiber": 8,
-    "carbs": 72,
-    "fat": 18,
-    "ingredients": [
-      "3 oz spaghetti",
-      "4 oz ground beef",
-      "1/2 cup tomato sauce",
-      "1/4 cup onion",
-      "2 cloves garlic",
-      "2 tbsp parmesan",
-      "1 tbsp olive oil",
-      "basil",
-      "oregano"
-    ],
-    "dietary_tags": [
-      "high_protein",
-      "high_carb"
-    ]
-  },
-  {
-    "name": "Pasta Carbonara",
-    "meal_type": "lunch",
-    "description": "Creamy pasta with bacon, eggs, and parmesan cheese",
-    "instructions": "Cook fettuccine or spaghetti in salted water according to package directions until al dente, then drain well, reserving 1/2 cup of pasta water. While pasta cooks, fry bacon in a large pan over medium heat until crispy (4-5 minutes), then remove and set aside on paper towels. In a bowl, whisk eggs with grated parmesan and plenty of black pepper. Remove pan from heat and add a splash of olive oil. Immediately pour in drained pasta (not the reserved water yet), tossing to coat slightly. Add bacon and egg-cheese mixture to the pasta, tossing vigorously off heat to create a creamy sauce using the hot pasta. If too thick, add reserved pasta water 1 tablespoon at a time until smooth. Serve immediately with extra parmesan and black pepper.",
-    "prep_time": 10,
-    "cook_time": 15,
-    "calories": 620,
-    "protein": 28,
-    "fiber": 4,
-    "carbs": 68,
-    "fat": 28,
-    "ingredients": [
-      "3 oz spaghetti",
-      "2 slices bacon",
-      "2 eggs",
-      "1/4 cup parmesan",
-      "2 cloves garlic",
-      "black pepper",
-      "1 tbsp olive oil"
-    ],
-    "dietary_tags": [
-      "high_protein",
-      "high_carb"
-    ]
-  },
-  {
-    "name": "Chicken Caesar Wrap",
-    "meal_type": "lunch",
-    "description": "Grilled chicken, romaine, and caesar dressing in a whole wheat wrap",
-    "instructions": "Prepare 4 oz grilled chicken, whole wheat tortilla, 2 cups romaine as directed in the ingredient list. Combine in a serving dish. For optimal flavor and texture, allow to sit for a few minutes before enjoying. This lunch provides balanced nutrition to power you through the afternoon.",
-    "prep_time": 12,
-    "cook_time": 8,
-    "calories": 450,
-    "protein": 34,
-    "fiber": 6,
-    "carbs": 32,
-    "fat": 22,
-    "ingredients": [
-      "4 oz grilled chicken",
-      "whole wheat tortilla",
-      "2 cups romaine",
-      "2 tbsp caesar dressing",
-      "2 tbsp parmesan",
-      "croutons"
-    ],
-    "dietary_tags": [
-      "high_protein",
-      "quick"
-    ]
-  },
-  {
-    "name": "Tuna Salad Sandwich",
-    "meal_type": "lunch",
-    "description": "Classic tuna salad with celery and onion on whole grain bread",
-    "instructions": "In a large bowl, combine all ingredients using a gentle folding motion to maintain texture. Mix until just combined - avoid overmixing which can make the dish tough or watery. Let rest for 5-10 minutes before serving to allow flavors to meld.",
-    "prep_time": 10,
-    "cook_time": 0,
-    "calories": 420,
-    "protein": 32,
-    "fiber": 8,
-    "carbs": 28,
-    "fat": 18,
-    "ingredients": [
-      "1 can tuna",
-      "2 tbsp mayo",
-      "1/4 cup celery",
-      "2 tbsp onion",
-      "2 slices whole grain bread",
-      "lettuce",
-      "tomato"
-    ],
-    "dietary_tags": [
-      "high_protein",
-      "quick"
-    ]
-  },
-  {
-    "name": "Egg Salad Sandwich",
-    "meal_type": "lunch",
-    "description": "Creamy egg salad with herbs on whole grain bread",
-    "instructions": "In a large bowl, combine all ingredients using a gentle folding motion to maintain texture. Mix until just combined - avoid overmixing which can make the dish tough or watery. Let rest for 5-10 minutes before serving to allow flavors to meld.",
-    "prep_time": 12,
-    "cook_time": 10,
-    "calories": 380,
-    "protein": 22,
-    "fiber": 8,
-    "carbs": 25,
-    "fat": 20,
-    "ingredients": [
-      "3 hard-boiled eggs",
-      "2 tbsp mayo",
-      "1 tsp mustard",
-      "1 tbsp chives",
-      "2 slices whole grain bread",
-      "lettuce",
-      "tomato"
-    ],
-    "dietary_tags": [
-      "high_protein",
-      "high_fiber",
-      "quick"
-    ]
-  },
-  {
-    "name": "Stuffed Bell Peppers",
-    "meal_type": "lunch",
-    "description": "Bell peppers stuffed with ground turkey, rice, and tomatoes",
-    "instructions": "Prepare 2 bell peppers, 4 oz ground turkey, 1/2 cup cooked rice as directed in the ingredient list. Combine in a serving dish. For optimal flavor and texture, allow to sit for a few minutes before enjoying. This lunch provides balanced nutrition to power you through the afternoon.",
-    "prep_time": 20,
-    "cook_time": 25,
-    "calories": 420,
-    "protein": 28,
-    "fiber": 10,
-    "carbs": 38,
-    "fat": 16,
-    "ingredients": [
-      "2 bell peppers",
-      "4 oz ground turkey",
-      "1/2 cup cooked rice",
-      "1/4 cup tomato sauce",
-      "1/4 cup cheese",
-      "1/4 cup onion",
-      "garlic powder"
-    ],
-    "dietary_tags": [
-      "high_protein",
-      "high_fiber"
-    ]
-  },
-  {
-    "name": "Shrimp Scampi Pasta",
-    "meal_type": "lunch",
-    "description": "Garlic shrimp with pasta in white wine and butter sauce",
-    "instructions": "Heat a large skillet or pan over medium-high heat. Add oil and allow it to get hot. Cook the protein according to recipe instructions until browned and cooked through. Add vegetables and cook until tender-crisp. Combine with sauce and serve immediately.",
-    "prep_time": 10,
-    "cook_time": 12,
-    "calories": 480,
-    "protein": 26,
-    "fiber": 4,
-    "carbs": 58,
-    "fat": 18,
-    "ingredients": [
-      "3 oz pasta",
-      "4 oz shrimp",
-      "2 cloves garlic",
-      "2 tbsp butter",
-      "1/4 cup white wine",
-      "1/4 cup parsley",
-      "1/4 cup parmesan"
-    ],
-    "dietary_tags": [
-      "high_protein",
-      "high_carb"
-    ]
-  },
-  {
-    "name": "Falafel Wrap",
-    "meal_type": "lunch",
-    "description": "Crispy falafel with tahini sauce and vegetables in whole wheat wrap",
-    "instructions": "Prepare 4 falafel balls, whole wheat wrap, 2 tbsp tahini as directed in the ingredient list. Combine in a serving dish. For optimal flavor and texture, allow to sit for a few minutes before enjoying. This lunch provides balanced nutrition to power you through the afternoon.",
-    "prep_time": 8,
-    "cook_time": 5,
-    "calories": 440,
-    "protein": 18,
-    "fiber": 12,
-    "carbs": 52,
-    "fat": 20,
-    "ingredients": [
-      "4 falafel balls",
-      "whole wheat wrap",
-      "2 tbsp tahini",
-      "lettuce",
-      "tomato",
-      "cucumber",
-      "pickled onions"
-    ],
-    "dietary_tags": [
-      "high_fiber",
-      "vegetarian",
-      "quick"
-    ]
-  },
-  {
-    "name": "Greek Chicken Gyro",
-    "meal_type": "lunch",
-    "description": "Seasoned chicken with tzatziki sauce in pita bread",
-    "instructions": "Heat a large skillet or pan over medium-high heat. Add oil and allow it to get hot. Cook the protein according to recipe instructions until browned and cooked through. Add vegetables and cook until tender-crisp. Combine with sauce and serve immediately.",
-    "prep_time": 12,
-    "cook_time": 10,
-    "calories": 460,
-    "protein": 32,
-    "fiber": 6,
-    "carbs": 42,
-    "fat": 18,
-    "ingredients": [
-      "4 oz chicken",
-      "pita bread",
-      "2 tbsp tzatziki",
-      "tomato",
-      "red onion",
-      "1 tsp oregano",
-      "1 tbsp lemon juice"
-    ],
-    "dietary_tags": [
-      "high_protein",
-      "quick"
-    ]
-  },
-  {
-    "name": "Sushi Bowl",
-    "meal_type": "lunch",
-    "description": "Deconstructed sushi with salmon, avocado, and vegetables over rice",
-    "instructions": "Prepare 1 cup sushi rice, 4 oz salmon, 1/2 avocado as directed in the ingredient list. Combine in a serving dish. For optimal flavor and texture, allow to sit for a few minutes before enjoying. This lunch provides balanced nutrition to power you through the afternoon.",
-    "prep_time": 15,
-    "cook_time": 20,
-    "calories": 480,
-    "protein": 24,
-    "fiber": 8,
-    "carbs": 58,
-    "fat": 16,
-    "ingredients": [
-      "1 cup sushi rice",
-      "4 oz salmon",
-      "1/2 avocado",
-      "1/4 cucumber",
-      "1/4 cup edamame",
-      "2 tbsp soy sauce",
-      "1 tsp sriracha"
-    ],
-    "dietary_tags": [
-      "high_protein",
-      "high_carb"
-    ]
-  },
-  {
-    "name": "Chicken Noodle Soup",
-    "meal_type": "lunch",
-    "description": "Comforting soup with chicken, vegetables, and egg noodles",
-    "instructions": "Heat a large skillet or pan over medium-high heat. Add oil and allow it to get hot. Cook the protein according to recipe instructions until browned and cooked through. Add vegetables and cook until tender-crisp. Combine with sauce and serve immediately.",
-    "prep_time": 12,
-    "cook_time": 20,
-    "calories": 360,
-    "protein": 24,
-    "fiber": 6,
-    "carbs": 32,
-    "fat": 12,
-    "ingredients": [
-      "4 oz chicken",
-      "2 cups chicken broth",
-      "1 cup egg noodles",
-      "1 cup mixed vegetables",
-      "1 carrot",
-      "1 celery stalk",
-      "1/2 onion",
-      "parsley"
-    ],
-    "dietary_tags": [
-      "high_protein",
-      "high_fiber"
-    ]
-  },
-  {
-    "name": "Korean Beef Bowl with Fermented Vegetables",
-    "meal_type": "lunch",
-    "description": "Quick ground beef bowl with kimchi, pickled vegetables, and sesame",
-    "instructions": "Heat a large skillet over medium-high heat with sesame oil. Add ground beef, breaking it up with a spoon. Cook until browned (6-8 minutes). Add minced garlic, ginger, and soy sauce, stirring for 1 minute. Add gochujang and mix well. Remove from heat. In a bowl, layer steamed rice, beef mixture, kimchi, and quick-pickled cucumber and radish. Top with a fried egg and sprinkle sesame seeds. Drizzle with extra gochujang if desired. Mix thoroughly before eating.",
-    "prep_time": 15,
-    "cook_time": 15,
-    "calories": 540,
-    "protein": 32,
-    "fiber": 8,
-    "carbs": 52,
-    "fat": 24,
-    "ingredients": [
-      "4 oz ground beef",
-      "1 cup cooked rice",
-      "1 cup kimchi",
-      "1/2 cucumber, sliced and pickled",
-      "1/4 radish, sliced and pickled",
-      "2 tbsp gochujang",
-      "1 tbsp soy sauce",
-      "1 tbsp sesame oil",
-      "2 cloves garlic, minced",
-      "1 inch ginger, grated",
-      "1 egg",
-      "1 tbsp sesame seeds"
-    ],
-    "dietary_tags": [
-      "high_protein",
-      "anti_inflammatory",
-      "fermented",
-      "quick"
-    ]
-  },
-  {
-    "name": "BBQ Pulled Chicken Sandwich",
-    "meal_type": "lunch",
-    "description": "Tender BBQ chicken on a brioche bun with coleslaw",
-    "instructions": "Slow cook chicken in BBQ sauce until tender. Toast brioche buns. Assemble sandwiches with pulled chicken, coleslaw, and pickles.",
-    "prep_time": 10,
-    "cook_time": 25,
-    "calories": 580,
-    "protein": 38,
-    "fiber": 4,
-    "carbs": 55,
-    "fat": 20,
-    "ingredients": [
-      "8 oz chicken breast",
-      "1/4 cup BBQ sauce",
-      "2 brioche buns",
-      "1/2 cup coleslaw",
-      "pickles"
-    ],
-    "dietary_tags": [
-      "high_protein"
-    ]
-  },
-  {
-    "name": "Salmon Ni\u00e7oise Salad",
-    "meal_type": "lunch",
-    "description": "Classic French salad with grilled salmon and boiled eggs",
-    "instructions": "Grill salmon and flake. Boil eggs and potatoes. Arrange greens, green beans, olives, tomatoes, and hard-boiled eggs. Top with salmon and vinaigrette.",
-    "prep_time": 20,
-    "cook_time": 15,
-    "calories": 520,
-    "protein": 34,
-    "fiber": 8,
-    "carbs": 28,
-    "fat": 28,
-    "ingredients": [
-      "6 oz salmon",
-      "2 hard-boiled eggs",
-      "1 cup mixed greens",
-      "1/2 cup green beans",
-      "1/2 cup potatoes",
-      "olives",
-      "vinaigrette"
-    ],
-    "dietary_tags": [
-      "high_protein",
-      "high_fiber"
-    ]
-  },
-  {
-    "name": "Thai Peanut Noodle Bowl",
-    "meal_type": "lunch",
-    "description": "Rice noodles with peanut sauce and grilled chicken",
-    "instructions": "Cook rice noodles. Grill chicken and slice. Whisk peanut sauce. Combine noodles, chicken, vegetables, and peanut sauce. Top with peanuts and cilantro.",
-    "prep_time": 15,
-    "cook_time": 15,
-    "calories": 560,
-    "protein": 32,
-    "fiber": 6,
-    "carbs": 65,
-    "fat": 20,
-    "ingredients": [
-      "6 oz chicken",
-      "2 oz rice noodles",
-      "1/4 cup peanut sauce",
-      "1 cup vegetables",
-      "peanuts",
-      "cilantro"
-    ],
-    "dietary_tags": [
-      "high_protein",
-      "asian"
-    ]
-  },
-  {
-    "name": "Curried Chickpea Bowl",
-    "meal_type": "lunch",
-    "description": "Aromatic curried chickpeas over basmati rice",
-    "instructions": "Saut\u00e9 onions and garlic. Add spices and chickpeas. Simmer until flavorful. Serve over basmati rice with yogurt and cilantro.",
-    "prep_time": 10,
-    "cook_time": 20,
-    "calories": 480,
-    "protein": 18,
-    "fiber": 16,
-    "carbs": 72,
-    "fat": 10,
-    "ingredients": [
-      "1.5 cups chickpeas",
-      "1 cup basmati rice",
-      "onion",
-      "garlic",
-      "curry spices",
-      "yogurt"
-    ],
-    "dietary_tags": [
-      "vegetarian",
-      "high_fiber"
-    ]
-  },
-  {
-    "name": "Chicken Shawarma Bowl",
-    "meal_type": "lunch",
-    "description": "Spiced chicken shawarma over rice with garlic sauce",
-    "instructions": "Season chicken with shawarma spices and grill until cooked. Slice chicken. Serve over rice with garlic sauce, pickles, tomatoes, and parsley.",
-    "prep_time": 12,
-    "cook_time": 18,
-    "calories": 540,
-    "protein": 36,
-    "fiber": 4,
-    "carbs": 52,
-    "fat": 22,
-    "ingredients": [
-      "8 oz chicken thighs",
-      "1 cup rice",
-      "garlic sauce",
-      "pickles",
-      "tomatoes",
-      "parsley"
-    ],
-    "dietary_tags": [
-      "high_protein",
-      "mediterranean"
-    ]
-  },
-  {
-    "name": "Mexican Chipotle Chicken Bowl",
-    "meal_type": "lunch",
-    "description": "Spiced chicken in chipotle sauce over rice",
-    "instructions": "Season chicken with chipotle and grill until cooked. Slice and mix with chipotle sauce. Serve over rice with black beans and corn.",
-    "prep_time": 10,
-    "cook_time": 18,
-    "calories": 540,
-    "protein": 38,
-    "fiber": 8,
-    "carbs": 52,
-    "fat": 20,
-    "ingredients": [
-      "8 oz chicken",
-      "1 cup rice",
-      "chipotle sauce",
-      "black beans",
-      "corn",
-      "sour cream"
-    ],
-    "dietary_tags": [
-      "high_protein"
-    ]
-  },
-  {
-    "name": "Mediterranean Quinoa Salad",
-    "meal_type": "lunch",
-    "description": "Fresh quinoa salad with Mediterranean vegetables and feta cheese",
-    "instructions": "Cook 1 cup quinoa according to package directions and let cool completely. In a large bowl, combine cooled quinoa, 1 cup cherry tomatoes (halved), 1/2 cucumber (diced), 1/4 cup red onion (thinly sliced), 1/2 cup Kalamata olives, and 1/2 cup crumbled feta cheese. In a small bowl, whisk together 3 tbsp olive oil, 1 tbsp red wine vinegar, 1 tsp dried oregano, salt, and pepper to make dressing. Pour dressing over salad and toss gently to combine. Let salad marinate for 15 minutes before serving. Garnish with fresh parsley.",
-    "prep_time": 20,
-    "cook_time": 15,
-    "calories": 440,
-    "protein": 18,
-    "fiber": 12,
-    "carbs": 48,
-    "fat": 20,
-    "ingredients": [
-      "1 cup quinoa",
-      "1 cup cherry tomatoes",
-      "1/2 cucumber",
-      "1/2 cup Kalamata olives",
-      "1/2 cup feta cheese",
-      "3 tbsp olive oil",
-      "1 tbsp red wine vinegar",
-      "1 tsp dried oregano",
-      "fresh parsley"
-    ],
-    "dietary_tags": [
-      "high_protein",
-      "high_fiber",
-      "vegetarian",
-      "mediterranean"
-    ]
-  },
-  {
-    "name": "Asian Chicken Lettuce Wraps",
-    "meal_type": "lunch",
-    "description": "Crispy lettuce cups filled with seasoned chicken and vegetables",
-    "instructions": "Heat 1 tbsp sesame oil in a large skillet over medium-high heat. Add 6 oz ground chicken and cook, breaking up with a spoon, until browned (5-6 minutes). Add 2 cloves minced garlic, 1 tsp grated ginger, and 1/4 cup diced water chestnuts. Cook for 2 minutes until fragrant. In a small bowl, mix 2 tbsp soy sauce, 1 tbsp rice vinegar, and 1 tsp honey. Add sauce to chicken and stir until coated. Remove from heat and stir in 2 sliced green onions and 1/4 cup chopped cilantro. Spoon mixture into butter lettuce cups and serve immediately.",
-    "prep_time": 15,
-    "cook_time": 10,
-    "calories": 380,
-    "protein": 34,
-    "fiber": 6,
-    "carbs": 18,
-    "fat": 22,
-    "ingredients": [
-      "6 oz ground chicken",
-      "butter lettuce leaves",
-      "2 tbsp soy sauce",
-      "1 tbsp rice vinegar",
-      "1 tbsp sesame oil",
-      "2 cloves garlic",
-      "1 tsp ginger",
-      "green onions",
-      "cilantro"
-    ],
-    "dietary_tags": [
-      "high_protein",
-      "low_carb",
-      "gluten_free",
-      "quick"
-    ]
-  },
-  {
-    "name": "Vietnamese Pho with Beef",
-    "meal_type": "lunch",
-    "description": "Traditional Vietnamese noodle soup with beef and herbs",
-    "instructions": "In a large pot, bring 6 cups beef broth to a simmer. Add 1 star anise, 1 cinnamon stick, 2 cloves, and 1 slice ginger. Simmer for 15 minutes. Cook 6 oz rice noodles according to package directions. In bowls, arrange 4 oz thinly sliced beef, cooked noodles, bean sprouts, and basil. Pour hot broth over beef (it will cook from the heat). Top with sliced green onions, cilantro, and a squeeze of lime. Serve with hoisin sauce and sriracha.",
-    "prep_time": 20,
-    "cook_time": 20,
-    "calories": 480,
-    "protein": 28,
-    "fiber": 6,
-    "carbs": 52,
-    "fat": 16,
-    "ingredients": [
-      "6 oz beef sirloin",
-      "6 oz rice noodles",
-      "6 cups beef broth",
-      "1 star anise",
-      "1 cinnamon stick",
-      "bean sprouts",
-      "fresh basil",
-      "lime wedges"
-    ],
-    "dietary_tags": [
-      "vietnamese",
-      "high_protein",
-      "hearty",
-      "aromatic"
-    ]
-  }
+    {
+        "name": "Quinoa Power Bowl",
+        "meal_type": "lunch",
+        "description": "Fluffy quinoa with roasted vegetables, crispy chickpeas, feta and a lemony tahini dressing. Built for the lunch box.",
+        "servings": 2,
+        "prep_time": 15,
+        "cook_time": 25,
+        "calories": 630,
+        "protein": 24,
+        "carbs": 70,
+        "fat": 27,
+        "fiber": 15,
+        "ingredients": [
+            "1 courgette, cut into 2 cm chunks",
+            "1 red pepper, cut into 2 cm chunks",
+            "1 red onion, cut into wedges",
+            "1 tbsp olive oil",
+            "1 tsp ground cumin",
+            "400 g tin chickpeas, drained and patted dry",
+            "100 g quinoa",
+            "250 ml water",
+            "2 tbsp tahini",
+            "1/2 lemon, juiced",
+            "1 small garlic clove, grated",
+            "60 g feta",
+            "Handful of parsley or mint",
+            "Salt"
+        ],
+        "steps": [
+            "Heat the oven to 200°C fan (220°C / 425°F). Toss the courgette, pepper and onion with the oil, cumin and a pinch of salt on a large tray. Roast for 25 minutes, adding the chickpeas for the last 15 so they crisp.",
+            "Meanwhile, rinse the quinoa in a sieve; this washes off its bitter coating. Put it in a pan with the water and a pinch of salt, bring to the boil, cover and simmer for 12 minutes. Take it off the heat and leave it covered for 5 minutes, then fluff with a fork.",
+            "For the dressing, whisk the tahini with the lemon juice, garlic and 3-4 tbsp cold water. It will seize and thicken at first; keep whisking and it turns smooth and pourable.",
+            "Divide the quinoa, vegetables and chickpeas between two bowls or boxes. Crumble over the feta, drizzle with dressing and scatter with herbs."
+        ],
+        "tip": "Plant protein plus steady carbs, and it tastes good cold, so it's a reliable lunch box in a heavy training week.",
+        "storage": "Keeps for 3 days in the fridge. Keep the dressing in a separate pot.",
+        "dietary_tags": [
+            "vegetarian",
+            "gluten_free",
+            "meal_prep"
+        ]
+    },
+    {
+        "name": "Grilled Chicken Salad",
+        "meal_type": "lunch",
+        "description": "Juicy griddled chicken over crisp leaves, tomatoes, cucumber and new potatoes, tossed in a mustard vinaigrette with toasted pumpkin seeds.",
+        "servings": 1,
+        "prep_time": 10,
+        "cook_time": 15,
+        "calories": 575,
+        "protein": 43,
+        "carbs": 37,
+        "fat": 28,
+        "fiber": 7,
+        "ingredients": [
+            "1 chicken breast (about 150 g)",
+            "1 tsp olive oil",
+            "1/2 tsp dried oregano",
+            "150 g new potatoes, halved (or leftover cooked potatoes)",
+            "1 tbsp extra-virgin olive oil",
+            "1 tsp Dijon mustard",
+            "1 tsp red wine vinegar",
+            "Pinch of sugar",
+            "90 g mixed salad leaves",
+            "100 g cherry tomatoes, halved",
+            "1/2 cucumber, sliced",
+            "15 g pumpkin seeds, toasted",
+            "Salt and black pepper"
+        ],
+        "steps": [
+            "If the potatoes are raw, boil them in salted water for 12-15 minutes until tender, then drain.",
+            "Meanwhile, put the chicken between two sheets of baking paper and bash it with a rolling pin to an even 2 cm thickness, so it cooks through without drying out. Rub it with the oil, oregano, salt and pepper.",
+            "Heat a griddle or frying pan over a medium-high heat until very hot. Cook the chicken for 4-5 minutes each side, until cooked through (74°C / 165°F in the thickest part). Rest for 5 minutes, then slice.",
+            "Whisk the extra-virgin olive oil, mustard, vinegar, sugar and a pinch of salt in the bottom of a salad bowl.",
+            "Add the leaves, tomatoes, cucumber and potatoes and toss in the dressing. Top with the chicken and pumpkin seeds."
+        ],
+        "tip": "The potatoes make this a proper training-day salad rather than a light one. Leave them out on a rest day.",
+        "dietary_tags": [
+            "gluten_free"
+        ]
+    },
+    {
+        "name": "Lentil and Vegetable Soup",
+        "meal_type": "lunch",
+        "description": "A thick, warming red lentil soup with carrot, celery, tomato and spinach. No soaking, one pot, freezes brilliantly.",
+        "servings": 4,
+        "prep_time": 10,
+        "cook_time": 35,
+        "calories": 310,
+        "protein": 18,
+        "carbs": 47,
+        "fat": 5,
+        "fiber": 10,
+        "ingredients": [
+            "1 tbsp olive oil",
+            "1 onion, diced",
+            "2 carrots, diced",
+            "2 celery sticks, diced",
+            "2 garlic cloves, crushed",
+            "1 tsp ground cumin",
+            "1/2 tsp smoked paprika",
+            "250 g red lentils, rinsed",
+            "400 g tin chopped tomatoes",
+            "1.2 litres vegetable stock (gluten-free if needed)",
+            "100 g spinach",
+            "1/2 lemon, juiced",
+            "Salt and black pepper"
+        ],
+        "steps": [
+            "Heat the oil in a large pot over a medium heat. Add the onion, carrots and celery with a pinch of salt and cook for 8 minutes until soft.",
+            "Stir in the garlic, cumin and paprika for 1 minute.",
+            "Add the lentils, tomatoes and stock. Bring to the boil, then simmer, partly covered, for 20-25 minutes until the lentils have collapsed. Stir now and then so they don't catch.",
+            "Stir in the spinach for 1-2 minutes until wilted.",
+            "Add the lemon juice and season. For a creamier soup, blend half of it and stir it back in."
+        ],
+        "tip": "Carbs, protein and plenty of fibre. It's better on rest and easy days than the night before a race.",
+        "storage": "Keeps for 4 days in the fridge or 3 months in the freezer.",
+        "dietary_tags": [
+            "vegan",
+            "gluten_free",
+            "meal_prep"
+        ]
+    },
+    {
+        "name": "Turkey and Avocado Wrap",
+        "meal_type": "lunch",
+        "description": "Sliced turkey, avocado, hummus and crunchy salad rolled in a wholegrain wrap. A ten-minute packed lunch.",
+        "servings": 1,
+        "prep_time": 8,
+        "cook_time": 0,
+        "calories": 410,
+        "protein": 30,
+        "carbs": 36,
+        "fat": 15,
+        "fiber": 10,
+        "ingredients": [
+            "1 large wholegrain wrap",
+            "2 tbsp (30 g) hummus",
+            "Handful of mixed leaves",
+            "100 g sliced cooked turkey breast",
+            "1/4 avocado, sliced",
+            "1 small tomato, sliced",
+            "A few thin slices of red onion",
+            "Black pepper"
+        ],
+        "steps": [
+            "Warm the wrap for 10 seconds in the microwave or a dry pan so it rolls without cracking.",
+            "Spread the hummus right to the edges. It acts as glue and stops the wrap going soggy.",
+            "Lay the leaves down the centre, then the turkey, avocado, tomato and onion. Season with pepper.",
+            "Fold the bottom up, fold in the sides and roll tightly. Cut in half.",
+            "If you're packing it, wrap it tightly in foil or baking paper."
+        ],
+        "tip": "On the light side for carbs. If you're running after work, add a banana or a bag of pretzels.",
+        "dietary_tags": [
+            "portable"
+        ]
+    },
+    {
+        "name": "Spaghetti Bolognese",
+        "meal_type": "lunch",
+        "description": "A rich, slow-simmered beef and tomato ragu over spaghetti with Parmesan. The sauce freezes perfectly.",
+        "servings": 4,
+        "prep_time": 15,
+        "cook_time": 35,
+        "calories": 605,
+        "protein": 43,
+        "carbs": 75,
+        "fat": 15,
+        "fiber": 7,
+        "ingredients": [
+            "1 tbsp olive oil",
+            "1 onion, finely diced",
+            "1 carrot, finely diced",
+            "1 celery stick, finely diced",
+            "500 g lean (5%) beef mince",
+            "2 garlic cloves, crushed",
+            "2 tbsp tomato purée",
+            "400 g tin chopped tomatoes",
+            "1 tsp dried oregano",
+            "360 g spaghetti",
+            "40 g Parmesan, grated",
+            "Fresh basil",
+            "Salt and black pepper"
+        ],
+        "steps": [
+            "Heat the oil in a large pan over a medium heat and soften the onion, carrot and celery for 8 minutes.",
+            "Turn the heat up to high and add the mince in two batches, breaking it up. Let it brown properly before stirring; a crowded pan steams the meat grey.",
+            "Stir in the garlic and tomato purée for 1 minute, then add the tomatoes, oregano and a splash of water. Simmer with the lid ajar for 25 minutes until thick, and season.",
+            "Meanwhile, cook the spaghetti in plenty of well-salted boiling water according to the packet. Scoop out a mugful of the cooking water before you drain it.",
+            "Toss the spaghetti through the sauce with a splash of the pasta water so it clings.",
+            "Serve with the Parmesan and basil."
+        ],
+        "tip": "Lots of carbs and protein, so it refuels well after a hard session. Keep a few portions of sauce in the freezer for busy weeks.",
+        "storage": "Keeps for 3 days in the fridge, or freeze the sauce for up to 3 months.",
+        "dietary_tags": [
+            "meal_prep"
+        ]
+    },
+    {
+        "name": "Pasta Carbonara",
+        "meal_type": "lunch",
+        "description": "The real thing: crisp bacon, eggs, Parmesan and black pepper emulsified into a glossy sauce with pasta water. No cream.",
+        "servings": 1,
+        "prep_time": 5,
+        "cook_time": 12,
+        "calories": 655,
+        "protein": 41,
+        "carbs": 64,
+        "fat": 26,
+        "fiber": 3,
+        "ingredients": [
+            "90 g spaghetti",
+            "2 rashers smoked back bacon (or 40 g pancetta), diced",
+            "1 large egg plus 1 yolk",
+            "20 g Parmesan or Pecorino, finely grated",
+            "Lots of freshly ground black pepper"
+        ],
+        "steps": [
+            "Cook the spaghetti in well-salted boiling water.",
+            "Meanwhile, fry the bacon in a dry frying pan over a medium heat for 5-6 minutes until crisp and the fat has rendered. Take the pan off the heat.",
+            "Whisk the egg, yolk, most of the cheese and plenty of pepper in a bowl.",
+            "Scoop out a mugful of pasta water, then drain the pasta and tip it into the bacon pan, off the heat. Toss it in the fat and let it cool for 30 seconds; too hot and the eggs scramble.",
+            "Pour in the egg mixture with 2 tbsp of the pasta water and toss vigorously for 1 minute, until a glossy sauce coats every strand. Add more water a splash at a time if it's thick.",
+            "Serve straight away with the rest of the cheese and more pepper."
+        ],
+        "tip": "Quick, carb-heavy food after an evening run. It's rich in fat, so it works better as recovery than as a pre-race meal.",
+        "dietary_tags": []
+    },
+    {
+        "name": "Chicken Caesar Wrap",
+        "meal_type": "lunch",
+        "description": "Cooked chicken, crisp romaine, croutons and Parmesan in a light yogurt Caesar dressing, rolled in a wholewheat wrap.",
+        "servings": 1,
+        "prep_time": 10,
+        "cook_time": 0,
+        "calories": 490,
+        "protein": 40,
+        "carbs": 37,
+        "fat": 19,
+        "fiber": 5,
+        "ingredients": [
+            "2 tbsp Greek yogurt",
+            "1 tsp mayonnaise",
+            "1 tsp lemon juice",
+            "1/2 tsp Dijon mustard",
+            "1 small garlic clove, grated",
+            "10 g Parmesan, finely grated",
+            "60 g romaine lettuce, shredded",
+            "100 g cooked chicken breast (leftover or shop-bought), sliced",
+            "1 large wholewheat tortilla",
+            "Small handful (10 g) of croutons, lightly crushed",
+            "Black pepper"
+        ],
+        "steps": [
+            "Stir together the yogurt, mayonnaise, lemon juice, mustard, garlic, half the Parmesan and plenty of black pepper.",
+            "Toss the lettuce in the dressing with the rest of the Parmesan.",
+            "Warm the tortilla for 10 seconds so it's pliable.",
+            "Pile the dressed lettuce, chicken and croutons down the middle, fold in the sides and roll up tightly. Cut in half."
+        ],
+        "tip": "Eat it soon after making it, or pack the dressing separately; the lettuce wilts after a couple of hours.",
+        "dietary_tags": []
+    },
+    {
+        "name": "Tuna Salad Sandwich",
+        "meal_type": "lunch",
+        "description": "Classic tuna mayo lightened with yogurt, with crunchy celery and red onion on wholegrain bread.",
+        "servings": 1,
+        "prep_time": 8,
+        "cook_time": 0,
+        "calories": 430,
+        "protein": 36,
+        "carbs": 33,
+        "fat": 15,
+        "fiber": 6,
+        "ingredients": [
+            "1 tin (145 g) tuna in spring water",
+            "1 tbsp mayonnaise",
+            "1 tbsp Greek yogurt",
+            "1 tsp lemon juice",
+            "1 celery stick, finely diced",
+            "1 tbsp red onion, finely diced",
+            "2 slices wholegrain bread",
+            "A few lettuce leaves",
+            "1 small tomato, sliced",
+            "Black pepper"
+        ],
+        "steps": [
+            "Drain the tuna thoroughly, pressing it against the lid with a fork. Watery tuna makes a soggy sandwich.",
+            "Mix the mayonnaise, yogurt, lemon juice and pepper in a bowl, then fold in the tuna, celery and onion.",
+            "Lay lettuce on one slice of bread as a barrier, then add the tuna and tomato.",
+            "Top with the second slice, press down gently and cut in half."
+        ],
+        "tip": "Putting lettuce between the bread and the filling keeps a packed sandwich from going soggy by lunchtime.",
+        "dietary_tags": [
+            "omega_3"
+        ]
+    },
+    {
+        "name": "Egg Salad Sandwich",
+        "meal_type": "lunch",
+        "description": "Creamy, herby egg mayo with mustard and chives on wholegrain bread. Perfectly cooked eggs with no grey rings.",
+        "servings": 1,
+        "prep_time": 10,
+        "cook_time": 10,
+        "calories": 390,
+        "protein": 22,
+        "carbs": 32,
+        "fat": 18,
+        "fiber": 5,
+        "ingredients": [
+            "2 large eggs",
+            "1 tbsp light mayonnaise",
+            "1 tbsp Greek yogurt",
+            "1 tsp Dijon mustard",
+            "1 tbsp snipped chives",
+            "2 slices wholegrain bread",
+            "A few lettuce leaves",
+            "1 small tomato, sliced",
+            "Salt and black pepper"
+        ],
+        "steps": [
+            "Lower the eggs into a pan of boiling water and cook for 10 minutes.",
+            "Move them straight into iced water for 5 minutes. This stops the cooking, which prevents the grey ring, and makes them easier to peel.",
+            "Peel and chop the eggs, then mix with the mayonnaise, yogurt, mustard, chives, salt and pepper.",
+            "Layer the lettuce, egg mixture and tomato on one slice of bread, top with the other and cut in half."
+        ],
+        "tip": "Boil a batch of eggs on Sunday; peeled or unpeeled, they keep 5 days in the fridge.",
+        "dietary_tags": [
+            "vegetarian"
+        ]
+    },
+    {
+        "name": "Stuffed Bell Peppers",
+        "meal_type": "lunch",
+        "description": "Roasted pepper halves packed with smoky turkey, rice and tomato, baked under melted cheese.",
+        "servings": 2,
+        "prep_time": 15,
+        "cook_time": 35,
+        "calories": 470,
+        "protein": 38,
+        "carbs": 45,
+        "fat": 13,
+        "fiber": 6,
+        "ingredients": [
+            "2 large red peppers",
+            "1 tsp olive oil",
+            "1 onion, finely diced",
+            "250 g lean turkey mince",
+            "2 garlic cloves, crushed",
+            "1 tsp smoked paprika",
+            "1 tsp ground cumin",
+            "200 g cooked rice",
+            "200 g passata",
+            "40 g cheddar, grated",
+            "Salt and black pepper"
+        ],
+        "steps": [
+            "Heat the oven to 190°C fan (210°C / 410°F). Halve the peppers lengthways through the stalk and remove the seeds. Put them cut-side up in a baking dish, rub with a little of the oil and roast for 10 minutes. Skip this and the peppers stay crunchy.",
+            "Meanwhile, heat the rest of the oil in a frying pan and soften the onion for 5 minutes. Add the turkey and cook over a high heat for 5-6 minutes, breaking it up, until browned. Stir in the garlic and spices for 1 minute.",
+            "Stir in the rice and passata, season, and simmer for 2-3 minutes until thick.",
+            "Pack the filling into the pepper halves and top with the cheese. Pour 3 tbsp water into the dish, cover with foil and bake for 15 minutes.",
+            "Uncover and bake for 10 minutes more, until the cheese is golden."
+        ],
+        "tip": "Lean, high-protein and easy to reheat, which makes this a good make-ahead lunch.",
+        "storage": "Keeps for 3 days in the fridge. Reheat covered.",
+        "dietary_tags": [
+            "gluten_free",
+            "meal_prep"
+        ]
+    },
+    {
+        "name": "Shrimp Scampi Pasta",
+        "meal_type": "lunch",
+        "description": "Linguine tossed with garlicky prawns, white wine, butter, lemon and parsley. Restaurant-quality in fifteen minutes.",
+        "servings": 1,
+        "prep_time": 8,
+        "cook_time": 12,
+        "calories": 540,
+        "protein": 33,
+        "carbs": 60,
+        "fat": 15,
+        "fiber": 3,
+        "ingredients": [
+            "80 g linguine or spaghetti",
+            "10 g butter",
+            "1 tsp olive oil",
+            "2 garlic cloves, thinly sliced",
+            "Pinch of chilli flakes",
+            "125 g raw peeled prawns",
+            "50 ml dry white wine",
+            "1/2 lemon, zested and juiced",
+            "Handful of parsley, chopped",
+            "Salt and black pepper"
+        ],
+        "steps": [
+            "Cook the pasta in well-salted boiling water.",
+            "About 3 minutes before it's ready, heat the butter and oil in a frying pan over a medium heat. Add the garlic and chilli and cook for 1 minute without letting the garlic brown.",
+            "Add the prawns and cook for 1-2 minutes each side until just pink; overcooked prawns turn rubbery. Lift them out onto a plate.",
+            "Pour the wine into the pan and bubble for 2 minutes until reduced by half.",
+            "Add the drained pasta, 3 tbsp of its cooking water and the lemon juice, and toss until glossy.",
+            "Return the prawns and add the parsley, lemon zest and plenty of pepper."
+        ],
+        "tip": "Lean protein and fast carbs for a quick lunch between sessions.",
+        "dietary_tags": []
+    },
+    {
+        "name": "Falafel Wrap",
+        "meal_type": "lunch",
+        "description": "Crisped-up falafel with tahini sauce, quick-pickled onions and crunchy salad in a warm wholewheat wrap.",
+        "servings": 1,
+        "prep_time": 10,
+        "cook_time": 10,
+        "calories": 470,
+        "protein": 16,
+        "carbs": 55,
+        "fat": 21,
+        "fiber": 10,
+        "ingredients": [
+            "4 baked falafel (shop-bought or homemade)",
+            "1/4 red onion, thinly sliced",
+            "2 tbsp vinegar",
+            "Pinch each of sugar and salt",
+            "1 tbsp tahini",
+            "1 tsp lemon juice",
+            "1 large wholewheat wrap",
+            "Handful of shredded lettuce",
+            "1 small tomato, diced",
+            "1/4 cucumber, diced"
+        ],
+        "steps": [
+            "Reheat the falafel in the oven at 200°C for 8-10 minutes, or in an air fryer at 180°C for 5-6 minutes. The microwave makes them soggy.",
+            "Meanwhile, toss the onion with the vinegar, sugar and salt and leave it for 10 minutes to quick-pickle.",
+            "Whisk the tahini with the lemon juice, a pinch of salt and 1-2 tbsp water until pourable.",
+            "Warm the wrap. Layer the lettuce, tomato, cucumber and lightly crushed falafel, then the drained onions, and drizzle with the tahini sauce.",
+            "Roll up tightly and cut in half."
+        ],
+        "tip": "A plant-based lunch with a good carb load. Eat it at least 2-3 hours before running; chickpeas can be gassy.",
+        "dietary_tags": [
+            "vegan"
+        ]
+    },
+    {
+        "name": "Greek Chicken Gyro",
+        "meal_type": "lunch",
+        "description": "Lemon, garlic and oregano chicken, charred on a griddle and wrapped in warm pitta with tzatziki, tomato and onion.",
+        "servings": 1,
+        "prep_time": 20,
+        "cook_time": 8,
+        "calories": 480,
+        "protein": 37,
+        "carbs": 44,
+        "fat": 15,
+        "fiber": 6,
+        "ingredients": [
+            "130 g boneless, skinless chicken thigh, cut into strips",
+            "1 tbsp Greek yogurt",
+            "1 tsp olive oil",
+            "1 tsp lemon juice",
+            "1 garlic clove, crushed",
+            "1 tsp dried oregano",
+            "1/2 tsp paprika",
+            "1 large wholemeal pitta",
+            "3 tbsp (50 g) tzatziki",
+            "1 small tomato, sliced",
+            "A few slices of red onion",
+            "Shredded lettuce",
+            "Salt"
+        ],
+        "steps": [
+            "Mix the chicken with the yogurt, oil, lemon juice, garlic, oregano, paprika and a pinch of salt. Marinate for at least 15 minutes, or overnight in the fridge.",
+            "Heat a griddle or frying pan over a high heat. Cook the chicken for 3-4 minutes each side, until charred at the edges and cooked through. Rest for 2 minutes.",
+            "Warm the pitta in the pan or toaster.",
+            "Spread it with tzatziki, pile on the chicken, tomato, onion and lettuce, and fold. Wrapping the bottom in baking paper makes it easier to eat."
+        ],
+        "tip": "Marinate the chicken the night before and this comes together in ten minutes.",
+        "dietary_tags": []
+    },
+    {
+        "name": "Sushi Bowl",
+        "meal_type": "lunch",
+        "description": "Seasoned sushi rice topped with salmon, avocado, edamame, cucumber and nori. A deconstructed sushi roll in a bowl.",
+        "servings": 1,
+        "prep_time": 15,
+        "cook_time": 25,
+        "calories": 620,
+        "protein": 32,
+        "carbs": 62,
+        "fat": 25,
+        "fiber": 7,
+        "ingredients": [
+            "65 g sushi rice",
+            "90 ml water",
+            "1 tbsp rice vinegar",
+            "1 tsp sugar",
+            "Pinch of salt",
+            "100 g salmon: sushi-grade raw, or a fillet to bake",
+            "1 tbsp soy sauce",
+            "50 g frozen shelled edamame",
+            "1/4 avocado, sliced",
+            "1/4 cucumber, sliced",
+            "1 tsp sesame seeds",
+            "1/2 sheet nori, cut into strips",
+            "Sriracha, to taste"
+        ],
+        "steps": [
+            "Rinse the rice until the water runs clear. Put it in a small pan with the water, bring to the boil, cover and cook on the lowest heat for 12 minutes. Leave it covered, off the heat, for 10 minutes.",
+            "Stir the vinegar, sugar and salt until dissolved, then fold it gently through the warm rice.",
+            "If the salmon is sushi-grade, cut it into cubes and toss with 1 tsp of the soy sauce. Otherwise, bake the fillet at 180°C fan for 12 minutes and flake it.",
+            "Cook the edamame in boiling water for 2 minutes and drain.",
+            "Build the bowl: rice, salmon, avocado, cucumber and edamame. Finish with nori, sesame seeds, the remaining soy sauce and sriracha."
+        ],
+        "tip": "Only eat salmon raw if it's labelled sushi or sashimi grade (previously frozen). Otherwise bake it. The recipe works just as well.",
+        "dietary_tags": [
+            "omega_3"
+        ]
+    },
+    {
+        "name": "Chicken Noodle Soup",
+        "meal_type": "lunch",
+        "description": "Gently poached chicken, vegetables and egg noodles in a thyme-scented broth. The run-down-day classic.",
+        "servings": 4,
+        "prep_time": 15,
+        "cook_time": 35,
+        "calories": 350,
+        "protein": 27,
+        "carbs": 34,
+        "fat": 9,
+        "fiber": 4,
+        "ingredients": [
+            "1 tbsp olive oil",
+            "1 onion, diced",
+            "2 carrots, sliced",
+            "2 celery sticks, sliced",
+            "2 garlic cloves, crushed",
+            "400 g boneless, skinless chicken thighs",
+            "1.5 litres low-salt chicken stock",
+            "2 sprigs thyme",
+            "1 bay leaf",
+            "150 g dried egg noodles",
+            "100 g frozen peas",
+            "Handful of parsley, chopped",
+            "Squeeze of lemon",
+            "Salt and black pepper"
+        ],
+        "steps": [
+            "Heat the oil in a large pot over a medium heat and cook the onion, carrots and celery for 6-8 minutes until softening. Add the garlic for 1 minute.",
+            "Add the whole chicken thighs, stock, thyme and bay leaf. Bring to a gentle simmer; a rolling boil makes chicken tough.",
+            "Simmer gently for 15-20 minutes until the chicken is cooked through. Lift it out and shred it with two forks.",
+            "Add the noodles to the pot and cook for 4-5 minutes, or as the packet says, adding the peas for the last 2 minutes.",
+            "Return the chicken, add the parsley and lemon, and season to taste."
+        ],
+        "tip": "Salty broth and plenty of fluid make this a good choice after a long, sweaty run, or when you're feeling run-down.",
+        "storage": "Keeps for 4 days in the fridge. For meal prep, cook the noodles separately; they soak up the broth overnight.",
+        "dietary_tags": [
+            "meal_prep"
+        ]
+    },
+    {
+        "name": "Korean Beef Bowl with Fermented Vegetables",
+        "meal_type": "lunch",
+        "description": "Sticky gochujang beef over rice with kimchi, quick-pickled cucumber and radish, and a crispy fried egg.",
+        "servings": 1,
+        "prep_time": 15,
+        "cook_time": 12,
+        "calories": 555,
+        "protein": 38,
+        "carbs": 58,
+        "fat": 19,
+        "fiber": 5,
+        "ingredients": [
+            "1/2 cucumber, thinly sliced",
+            "3 radishes, thinly sliced",
+            "2 tbsp rice vinegar",
+            "1 tsp sugar",
+            "Pinch of salt",
+            "1 tsp sesame oil",
+            "125 g lean beef mince",
+            "1 garlic clove, crushed",
+            "1 tsp grated ginger",
+            "1 tbsp gochujang (Korean chilli paste)",
+            "1 tsp soy sauce",
+            "1 large egg",
+            "150 g cooked rice, warmed",
+            "80 g kimchi",
+            "1 spring onion, sliced",
+            "1 tsp sesame seeds"
+        ],
+        "steps": [
+            "Toss the cucumber and radish with the vinegar, sugar and salt and set aside for 10 minutes to quick-pickle.",
+            "Heat the sesame oil in a frying pan over a high heat. Add the beef and cook for 5-6 minutes, breaking it up, until browned and crisp at the edges.",
+            "Add the garlic and ginger for 1 minute, then stir in the gochujang, soy sauce and 1 tbsp water and toss until glossy. Tip into a bowl.",
+            "Fry the egg in the same pan until the edges are crispy and the yolk still runny.",
+            "Build the bowl: rice, beef, kimchi and drained pickles, with the egg on top. Scatter with spring onion and sesame seeds, and mix it all together before eating."
+        ],
+        "tip": "Kimchi and quick pickles add crunch and acidity. The gochujang is punchy, so skip it before a race.",
+        "dietary_tags": []
+    },
+    {
+        "name": "BBQ Pulled Chicken Sandwich",
+        "meal_type": "lunch",
+        "description": "Chicken thighs braised in smoky BBQ sauce until they pull apart, piled into toasted buns with a crunchy yogurt slaw.",
+        "servings": 2,
+        "prep_time": 10,
+        "cook_time": 25,
+        "calories": 480,
+        "protein": 36,
+        "carbs": 50,
+        "fat": 14,
+        "fiber": 3,
+        "ingredients": [
+            "300 g boneless, skinless chicken thighs",
+            "1 tsp smoked paprika",
+            "1/2 tsp garlic powder",
+            "1 tsp olive oil",
+            "4 tbsp BBQ sauce",
+            "1 tbsp apple cider vinegar, plus 1 tsp for the slaw",
+            "100 g white cabbage, finely shredded",
+            "1 carrot, grated",
+            "2 tbsp Greek yogurt",
+            "1 tsp mayonnaise",
+            "2 brioche or wholemeal buns",
+            "Pickles, to serve",
+            "Salt"
+        ],
+        "steps": [
+            "Rub the chicken with the paprika, garlic powder, a pinch of salt and the oil. Sear it in a small pan over a medium-high heat for 3 minutes each side.",
+            "Add the BBQ sauce, 1 tbsp of vinegar and 100 ml water. Bring to a simmer, cover and cook gently for 20 minutes, until very tender. Thighs stay juicy here; breasts would dry out.",
+            "Meanwhile, make the slaw: toss the cabbage and carrot with the yogurt, mayonnaise, the remaining vinegar and a pinch of salt.",
+            "Shred the chicken in the pan with two forks, then simmer uncovered for 2-3 minutes until the sauce clings.",
+            "Toast the buns cut-side down, then fill them with chicken, slaw and pickles."
+        ],
+        "tip": "The pulled chicken freezes well, so double the batch for quick post-run lunches.",
+        "storage": "The chicken keeps for 3 days in the fridge or 3 months in the freezer.",
+        "dietary_tags": [
+            "meal_prep"
+        ]
+    },
+    {
+        "name": "Salmon Niçoise Salad",
+        "meal_type": "lunch",
+        "description": "Crisp-skinned salmon with new potatoes, green beans, a jammy egg, olives and tomatoes in a Dijon dressing.",
+        "servings": 1,
+        "prep_time": 10,
+        "cook_time": 20,
+        "calories": 585,
+        "protein": 36,
+        "carbs": 35,
+        "fat": 32,
+        "fiber": 7,
+        "ingredients": [
+            "150 g new potatoes, halved",
+            "80 g green beans, trimmed",
+            "1 large egg",
+            "1 salmon fillet (about 120 g)",
+            "1 tsp olive oil",
+            "2 tsp extra-virgin olive oil",
+            "1 tsp Dijon mustard",
+            "1 tsp red wine vinegar",
+            "60 g salad leaves",
+            "80 g cherry tomatoes, halved",
+            "6 black olives",
+            "Salt and black pepper"
+        ],
+        "steps": [
+            "Put the potatoes in a pan of cold salted water, bring to the boil and cook for 12-15 minutes until tender. Add the green beans for the last 3 minutes, then lift everything out with a slotted spoon.",
+            "Lower the egg into the same water and cook for 8 minutes for a jammy yolk, then cool it in cold water.",
+            "Meanwhile, season the salmon. Heat the oil in a frying pan over a medium-high heat and cook it skin-side down for 4 minutes until crisp, then flip it for 2-3 minutes. You can roast it instead, at 200°C for 12 minutes.",
+            "Whisk the extra-virgin olive oil, mustard, vinegar and a pinch of salt.",
+            "Toss the leaves, potatoes, beans, tomatoes and olives with most of the dressing. Top with the flaked salmon and the peeled, quartered egg, and drizzle with the rest."
+        ],
+        "tip": "Omega-3s from the salmon plus potatoes for carbs: a balanced recovery lunch that holds up in a lunch box.",
+        "dietary_tags": [
+            "gluten_free",
+            "omega_3"
+        ]
+    },
+    {
+        "name": "Thai Peanut Noodle Bowl",
+        "meal_type": "lunch",
+        "description": "Rice noodles, crunchy vegetables and stir-fried chicken in a lime, ginger and peanut sauce, topped with peanuts and coriander.",
+        "servings": 1,
+        "prep_time": 15,
+        "cook_time": 10,
+        "calories": 670,
+        "protein": 42,
+        "carbs": 70,
+        "fat": 24,
+        "fiber": 6,
+        "ingredients": [
+            "60 g dried rice noodles",
+            "1.5 tbsp smooth peanut butter",
+            "1 tbsp soy sauce",
+            "1 tsp honey",
+            "1/2 lime, juiced, plus a wedge to serve",
+            "1 tsp grated ginger",
+            "1 tsp sriracha",
+            "120 g chicken breast, thinly sliced",
+            "1 tsp vegetable oil",
+            "1 carrot, cut into matchsticks",
+            "1/2 red pepper, thinly sliced",
+            "1/4 cucumber, cut into matchsticks",
+            "Handful of bean sprouts",
+            "10 g roasted peanuts, chopped",
+            "Fresh coriander",
+            "Salt"
+        ],
+        "steps": [
+            "Cook or soak the noodles as the packet says (usually 4-5 minutes in just-boiled water). Drain, rinse under cold water and toss with a few drops of oil so they don't stick.",
+            "Whisk the peanut butter, soy sauce, honey, lime juice, ginger and sriracha with 2-3 tbsp warm water until smooth and pourable.",
+            "Season the chicken and stir-fry it in the oil over a high heat for 5-6 minutes until cooked through.",
+            "Toss the noodles, carrot, pepper, cucumber and bean sprouts with the sauce.",
+            "Top with the chicken, peanuts and coriander, and serve with a lime wedge."
+        ],
+        "tip": "Good hot or cold, so it packs well for a lunch after a midday run.",
+        "dietary_tags": []
+    },
+    {
+        "name": "Curried Chickpea Bowl",
+        "meal_type": "lunch",
+        "description": "Chickpeas and spinach simmered in a fragrant tomato curry, served over basmati with cooling yogurt.",
+        "servings": 2,
+        "prep_time": 10,
+        "cook_time": 25,
+        "calories": 545,
+        "protein": 21,
+        "carbs": 85,
+        "fat": 11,
+        "fiber": 12,
+        "ingredients": [
+            "120 g basmati rice",
+            "1 tbsp vegetable oil",
+            "1 onion, finely chopped",
+            "2 garlic cloves, crushed",
+            "1 tbsp grated ginger",
+            "1.5 tbsp mild curry powder (or 1 tsp each cumin, coriander and garam masala plus 1/2 tsp turmeric)",
+            "400 g tin chopped tomatoes",
+            "400 g tin chickpeas, drained",
+            "100 g spinach",
+            "1/2 lemon, juiced",
+            "4 tbsp Greek yogurt",
+            "Fresh coriander",
+            "Salt"
+        ],
+        "steps": [
+            "Rinse the rice. Put it in a pan with 180 ml water and a pinch of salt, bring to the boil, cover and cook on a low heat for 10 minutes. Rest, covered, for 5 minutes.",
+            "Meanwhile, heat the oil in a frying pan over a medium heat and cook the onion for 6-8 minutes until soft and golden.",
+            "Add the garlic, ginger and curry powder and stir for 1 minute. Frying the spices in oil is where the flavour comes from.",
+            "Add the tomatoes, chickpeas and 100 ml water and simmer for 12-15 minutes until thick. Lightly crush a few chickpeas to thicken the sauce.",
+            "Stir in the spinach until wilted, then add the lemon juice and season.",
+            "Serve over the rice with the yogurt and coriander."
+        ],
+        "tip": "Plenty of carbs and fibre. Tastes even better the next day.",
+        "storage": "The curry keeps for 4 days in the fridge or 3 months in the freezer.",
+        "dietary_tags": [
+            "vegetarian",
+            "gluten_free",
+            "meal_prep"
+        ]
+    },
+    {
+        "name": "Chicken Shawarma Bowl",
+        "meal_type": "lunch",
+        "description": "Warm-spiced roasted chicken thighs over rice with garlic yogurt sauce, pickles and a chopped salad.",
+        "servings": 2,
+        "prep_time": 15,
+        "cook_time": 25,
+        "calories": 505,
+        "protein": 39,
+        "carbs": 52,
+        "fat": 15,
+        "fiber": 2,
+        "ingredients": [
+            "300 g boneless, skinless chicken thighs",
+            "1 tbsp olive oil",
+            "1/2 lemon, juiced",
+            "2 garlic cloves, crushed (1 for the sauce)",
+            "1 tsp ground cumin",
+            "1 tsp paprika",
+            "1/2 tsp ground turmeric",
+            "1/2 tsp ground cinnamon",
+            "120 g basmati rice",
+            "100 g Greek yogurt",
+            "2 tomatoes, diced",
+            "1/2 cucumber, diced",
+            "Pickled cucumbers or turnips",
+            "Parsley, chopped",
+            "Salt"
+        ],
+        "steps": [
+            "Mix the chicken with the oil, lemon juice, 1 garlic clove, the spices and 1/2 tsp salt. Marinate for at least 30 minutes, or overnight in the fridge.",
+            "Heat the oven to 220°C fan (240°C / 465°F). Spread the chicken on a lined tray and roast for 20-25 minutes until charred at the edges. Rest for 5 minutes, then slice thinly.",
+            "Meanwhile, rinse the rice and put it in a pan with 180 ml water and a pinch of salt. Bring to the boil, cover and cook on a low heat for 10 minutes, then rest, covered, for 5 minutes.",
+            "Stir the other garlic clove and a pinch of salt into the yogurt.",
+            "Serve the chicken over the rice with the tomato and cucumber salad, pickles, garlic yogurt and parsley."
+        ],
+        "tip": "High protein with moderate carbs. Double the rice after a long run.",
+        "dietary_tags": [
+            "gluten_free",
+            "meal_prep"
+        ]
+    },
+    {
+        "name": "Mexican Chipotle Chicken Bowl",
+        "meal_type": "lunch",
+        "description": "Smoky chipotle-lime chicken with lime rice, cumin black beans, charred corn, avocado and salsa. A homemade burrito bowl.",
+        "servings": 2,
+        "prep_time": 15,
+        "cook_time": 20,
+        "calories": 635,
+        "protein": 48,
+        "carbs": 73,
+        "fat": 16,
+        "fiber": 14,
+        "ingredients": [
+            "2 chicken breasts (about 300 g)",
+            "1 tbsp chipotle paste",
+            "2 tsp olive oil",
+            "1 lime, zested and juiced",
+            "1 tsp ground cumin",
+            "1/2 tsp dried oregano",
+            "100 g basmati rice",
+            "400 g tin black beans, drained",
+            "140 g sweetcorn",
+            "1/2 avocado, sliced",
+            "4 tbsp fresh salsa",
+            "2 tbsp light soured cream",
+            "Fresh coriander",
+            "Salt"
+        ],
+        "steps": [
+            "Flatten the chicken slightly and coat it in the chipotle paste, 1 tsp of the oil, half the lime juice, half the cumin, the oregano and a pinch of salt.",
+            "Cook the rice (rinse it, then use 150 ml water, 10 minutes covered and 5 minutes resting) and stir through the lime zest.",
+            "Griddle the chicken over a medium-high heat for 5-6 minutes each side until cooked through. Rest for 5 minutes and slice.",
+            "Warm the beans with the remaining cumin, a pinch of salt and a splash of water. Char the corn in a dry pan for 3-4 minutes.",
+            "Build the bowls with the rice, beans, corn, chicken, avocado, salsa and soured cream. Finish with coriander and the rest of the lime juice."
+        ],
+        "tip": "Big carbs and big protein: a great post-long-run lunch. The components keep separately for 3 days.",
+        "dietary_tags": [
+            "gluten_free",
+            "meal_prep"
+        ]
+    },
+    {
+        "name": "Mediterranean Quinoa Salad",
+        "meal_type": "lunch",
+        "description": "Quinoa and chickpeas with tomatoes, cucumber, olives, red onion and feta in an oregano vinaigrette. Improves as it sits.",
+        "servings": 3,
+        "prep_time": 20,
+        "cook_time": 15,
+        "calories": 535,
+        "protein": 19,
+        "carbs": 55,
+        "fat": 24,
+        "fiber": 10,
+        "ingredients": [
+            "170 g quinoa",
+            "400 ml water",
+            "2 tbsp extra-virgin olive oil",
+            "1 tbsp red wine vinegar",
+            "1 tsp dried oregano",
+            "1/4 red onion, thinly sliced",
+            "400 g tin chickpeas, drained",
+            "150 g cherry tomatoes, halved",
+            "1/2 cucumber, diced",
+            "60 g Kalamata olives, halved",
+            "100 g feta, crumbled",
+            "Handful of parsley, chopped",
+            "Salt and black pepper"
+        ],
+        "steps": [
+            "Rinse the quinoa, then simmer it, covered, in the salted water for 12 minutes. Leave it off the heat for 5 minutes, then spread it on a tray to cool quickly. Warm quinoa wilts the vegetables and melts the feta.",
+            "Whisk the oil, vinegar, oregano, salt and pepper in a large bowl. Add the red onion and leave it for 5 minutes; the dressing softens its raw bite.",
+            "Add the cooled quinoa, chickpeas, tomatoes, cucumber and olives and toss well.",
+            "Fold in the feta and parsley and leave for 15 minutes before serving."
+        ],
+        "tip": "A reliable make-ahead lunch that's still good on day three.",
+        "storage": "Keeps for 3 days in the fridge.",
+        "dietary_tags": [
+            "vegetarian",
+            "gluten_free",
+            "meal_prep"
+        ]
+    },
+    {
+        "name": "Asian Chicken Lettuce Wraps",
+        "meal_type": "lunch",
+        "description": "Sticky ginger-garlic chicken with crunchy water chestnuts, spooned into crisp butter lettuce cups.",
+        "servings": 1,
+        "prep_time": 10,
+        "cook_time": 10,
+        "calories": 425,
+        "protein": 35,
+        "carbs": 22,
+        "fat": 22,
+        "fiber": 4,
+        "ingredients": [
+            "2 tbsp tamari (gluten-free soy sauce)",
+            "1 tbsp rice vinegar",
+            "1 tsp honey",
+            "2 tsp sesame oil",
+            "170 g chicken mince",
+            "2 garlic cloves, crushed",
+            "1 tsp grated ginger",
+            "50 g water chestnuts, finely diced",
+            "1/2 carrot, grated",
+            "2 spring onions, sliced",
+            "Handful of coriander, chopped",
+            "8 butter lettuce leaves"
+        ],
+        "steps": [
+            "Mix the tamari, vinegar and honey in a small bowl.",
+            "Heat the sesame oil in a frying pan over a high heat. Add the chicken and cook for 5-6 minutes, breaking it up, until browned with no pink left.",
+            "Add the garlic, ginger, water chestnuts and carrot and cook for 2 minutes.",
+            "Pour in the sauce and toss for 1 minute until sticky.",
+            "Take the pan off the heat, stir in the spring onions and coriander, and spoon into the lettuce cups."
+        ],
+        "tip": "Light on carbs. On a training day, serve it with 150 g cooked rice or rice noodles.",
+        "dietary_tags": [
+            "gluten_free"
+        ]
+    },
+    {
+        "name": "Vietnamese Pho with Beef",
+        "meal_type": "lunch",
+        "description": "A shortcut pho: stock simmered with charred onion, ginger and whole spices, poured boiling over rice noodles and thin raw beef.",
+        "servings": 2,
+        "prep_time": 20,
+        "cook_time": 25,
+        "calories": 515,
+        "protein": 32,
+        "carbs": 73,
+        "fat": 8,
+        "fiber": 3,
+        "ingredients": [
+            "1 onion, halved",
+            "5 cm piece of ginger, halved lengthways",
+            "2 star anise",
+            "1 cinnamon stick",
+            "3 cloves",
+            "1 tsp coriander seeds",
+            "1 litre good beef stock",
+            "1 tbsp fish sauce",
+            "1 tsp sugar",
+            "200 g beef sirloin steak, trimmed",
+            "150 g dried flat rice noodles",
+            "Bean sprouts, Thai basil, coriander and sliced spring onion",
+            "Lime wedges and sliced red chilli",
+            "Hoisin sauce and sriracha, to serve"
+        ],
+        "steps": [
+            "Char the onion and ginger cut-side down in a dry pan for about 5 minutes, until blackened in patches. This gives the broth its smoky depth.",
+            "In a pot, toast the star anise, cinnamon, cloves and coriander seeds for 1 minute until fragrant. Add the stock, onion, ginger, fish sauce and sugar and simmer gently for 20 minutes, then strain. The longer it simmers, the better.",
+            "Meanwhile, freeze the steak for 15 minutes to firm it up, then slice it as thinly as you can against the grain.",
+            "Cook the noodles as the packet says, drain, and divide between two deep bowls. Lay the raw beef on top.",
+            "Bring the broth back to a rolling boil and ladle it straight over the beef. The heat cooks it to pink in seconds.",
+            "Serve with the herbs, sprouts, lime, chilli, hoisin and sriracha at the table."
+        ],
+        "tip": "Hot, salty broth and easy carbs: excellent after a cold, wet long run.",
+        "dietary_tags": []
+    },
+    {
+        "name": "Chickpea and Tuna Salad",
+        "meal_type": "lunch",
+        "description": "A Portuguese lunch-box classic (salada de grão com atum): chickpeas, tuna, boiled egg, red pepper and onion in a garlicky olive oil dressing.",
+        "servings": 2,
+        "prep_time": 15,
+        "cook_time": 10,
+        "calories": 440,
+        "protein": 30,
+        "carbs": 28,
+        "fat": 22,
+        "fiber": 9,
+        "ingredients": [
+            "2 large eggs",
+            "1/2 red onion, finely chopped",
+            "1 tbsp white wine vinegar",
+            "2 tbsp extra-virgin olive oil",
+            "1/2 small garlic clove, grated",
+            "400 g tin chickpeas, drained and rinsed",
+            "1 red pepper, diced",
+            "1 tin (145 g) tuna in spring water, drained",
+            "Big handful of parsley, chopped",
+            "Salt and black pepper"
+        ],
+        "steps": [
+            "Boil the eggs for 9 minutes, cool them in cold water, then peel and quarter them.",
+            "Put the onion in a large bowl with the vinegar and leave it for 5 minutes to mellow.",
+            "Whisk in the oil, garlic, salt and pepper.",
+            "Add the chickpeas, pepper, flaked tuna and parsley and toss well.",
+            "Top with the eggs."
+        ],
+        "tip": "Beans and fish cover your protein. After a hard session, add a bread roll for carbs.",
+        "storage": "Keeps for 2 days in the fridge (add the eggs on the day).",
+        "dietary_tags": [
+            "gluten_free",
+            "meal_prep"
+        ]
+    },
+    {
+        "name": "Soba Noodle Salad with Edamame",
+        "meal_type": "lunch",
+        "description": "Chilled buckwheat noodles with edamame and crunchy vegetables in a sesame, ginger and peanut dressing.",
+        "servings": 2,
+        "prep_time": 15,
+        "cook_time": 8,
+        "calories": 530,
+        "protein": 23,
+        "carbs": 72,
+        "fat": 18,
+        "fiber": 8,
+        "ingredients": [
+            "150 g soba noodles",
+            "150 g frozen shelled edamame",
+            "2 tbsp soy sauce",
+            "1 tbsp rice vinegar",
+            "1 tbsp sesame oil",
+            "1 tbsp smooth peanut butter",
+            "1 tsp honey",
+            "1 tsp grated ginger",
+            "1/2 lime, juiced",
+            "1 carrot, cut into matchsticks",
+            "1/2 cucumber, cut into matchsticks",
+            "80 g red cabbage, finely shredded",
+            "2 spring onions, sliced",
+            "1 tbsp sesame seeds"
+        ],
+        "steps": [
+            "Cook the soba for 4-5 minutes, or as the packet says. Drain and rinse under cold water, rubbing the noodles with your hands to wash off the starch; this stops them clumping.",
+            "Cook the edamame in boiling water for 3 minutes, then drain and cool.",
+            "Whisk the soy sauce, vinegar, sesame oil, peanut butter, honey, ginger and lime juice with 1-2 tbsp warm water.",
+            "Toss the noodles, edamame and vegetables with the dressing and scatter with sesame seeds."
+        ],
+        "tip": "Soba holds up cold, so this is an ideal make-ahead lunch.",
+        "storage": "Keeps for 2 days in the fridge. Toss with a splash of water before eating.",
+        "dietary_tags": [
+            "vegetarian",
+            "meal_prep"
+        ]
+    },
+    {
+        "name": "Lemon Chicken Orzo Soup",
+        "meal_type": "lunch",
+        "description": "A bright, Greek-inspired chicken soup with orzo, spinach, lemon and dill. Lighter than a stew, more filling than a broth.",
+        "servings": 4,
+        "prep_time": 15,
+        "cook_time": 35,
+        "calories": 330,
+        "protein": 31,
+        "carbs": 34,
+        "fat": 6,
+        "fiber": 3,
+        "ingredients": [
+            "1 tbsp olive oil",
+            "1 onion, diced",
+            "2 carrots, diced",
+            "2 celery sticks, diced",
+            "2 garlic cloves, crushed",
+            "1.5 litres chicken stock",
+            "2 chicken breasts (about 400 g)",
+            "150 g orzo",
+            "100 g spinach",
+            "1 lemon, zested and juiced",
+            "Small bunch of dill, chopped",
+            "Salt and black pepper"
+        ],
+        "steps": [
+            "Heat the oil in a large pot and soften the onion, carrots and celery for 6-8 minutes. Add the garlic for 1 minute.",
+            "Add the stock and the whole chicken breasts and simmer gently for 15 minutes, until the chicken is cooked through. Lift it out and shred it.",
+            "Add the orzo to the pot and simmer for 8-10 minutes, stirring now and then so it doesn't stick to the bottom.",
+            "Stir in the spinach, the shredded chicken, and the lemon zest and juice. Add the dill and season."
+        ],
+        "tip": "Lean protein, easy carbs and fluid. A good lunch in a heavy training week, or when you're a little under the weather.",
+        "storage": "Keeps for 3 days in the fridge. Orzo thickens as it sits, so loosen with stock or water when reheating.",
+        "dietary_tags": [
+            "meal_prep"
+        ]
+    },
+    {
+        "name": "Halloumi Couscous with Roasted Vegetables",
+        "meal_type": "lunch",
+        "description": "Golden, squeaky halloumi on herby lemon couscous with smoky roasted peppers, courgette and red onion.",
+        "servings": 2,
+        "prep_time": 10,
+        "cook_time": 25,
+        "calories": 525,
+        "protein": 22,
+        "carbs": 52,
+        "fat": 23,
+        "fiber": 7,
+        "ingredients": [
+            "1 red pepper, cut into chunks",
+            "1 courgette, cut into chunks",
+            "1 red onion, cut into wedges",
+            "1 tbsp olive oil",
+            "1 tsp smoked paprika",
+            "120 g wholewheat couscous",
+            "200 ml hot vegetable stock",
+            "120 g halloumi, sliced 1 cm thick",
+            "1/2 lemon, juiced",
+            "Handful each of mint and parsley, chopped",
+            "2 tbsp pomegranate seeds",
+            "Salt"
+        ],
+        "steps": [
+            "Heat the oven to 200°C fan (220°C / 425°F). Toss the vegetables with the oil, paprika and a pinch of salt and roast for 25 minutes.",
+            "Put the couscous in a bowl, pour over the hot stock, cover with a plate and leave for 5 minutes. Fluff it with a fork.",
+            "Dry-fry the halloumi in a non-stick pan over a medium-high heat for 1-2 minutes each side, until golden. It needs no oil.",
+            "Fold the roasted vegetables, herbs and lemon juice through the couscous.",
+            "Top with the halloumi and pomegranate seeds."
+        ],
+        "tip": "Halloumi is salty, which helps after sweaty summer sessions. Eat it warm; it goes rubbery as it cools.",
+        "dietary_tags": [
+            "vegetarian"
+        ]
+    },
+    {
+        "name": "Green Lentil Salad with Feta and Roasted Peppers",
+        "meal_type": "lunch",
+        "description": "Earthy Puy lentils tossed with sweet roasted peppers, rocket, feta and toasted walnuts in a balsamic dressing. No cooking needed.",
+        "servings": 2,
+        "prep_time": 10,
+        "cook_time": 0,
+        "calories": 390,
+        "protein": 18,
+        "carbs": 33,
+        "fat": 20,
+        "fiber": 12,
+        "ingredients": [
+            "1 tbsp extra-virgin olive oil",
+            "1 tbsp balsamic vinegar",
+            "1 tsp Dijon mustard",
+            "1/2 red onion, thinly sliced",
+            "250 g pouch cooked Puy or green lentils",
+            "2 roasted red peppers from a jar, drained and sliced",
+            "50 g rocket",
+            "Handful of parsley, chopped",
+            "60 g feta, crumbled",
+            "20 g walnuts, toasted and chopped",
+            "Salt and black pepper"
+        ],
+        "steps": [
+            "Whisk the oil, vinegar, mustard, salt and pepper in a large bowl, then add the onion and let it soften in the dressing while you prepare the rest.",
+            "Warm the lentils as the pouch says, or use them at room temperature.",
+            "Toast the walnuts in a dry pan for 3 minutes.",
+            "Fold the lentils, peppers, rocket and parsley through the dressing.",
+            "Top with the feta and walnuts."
+        ],
+        "tip": "Light on its own. Add a slice of sourdough or a baked potato to make it a full training-day lunch.",
+        "dietary_tags": [
+            "vegetarian",
+            "gluten_free"
+        ]
+    },
+    {
+        "name": "Minestrone with White Beans",
+        "meal_type": "lunch",
+        "description": "A thick Italian vegetable soup with cannellini beans, small pasta, kale and Parmesan. Better on day two.",
+        "servings": 4,
+        "prep_time": 15,
+        "cook_time": 35,
+        "calories": 285,
+        "protein": 13,
+        "carbs": 37,
+        "fat": 7,
+        "fiber": 7,
+        "ingredients": [
+            "1 tbsp olive oil",
+            "1 onion, diced",
+            "2 carrots, diced",
+            "2 celery sticks, diced",
+            "2 garlic cloves, crushed",
+            "1 courgette, diced",
+            "400 g tin chopped tomatoes",
+            "1.2 litres vegetable stock",
+            "400 g tin cannellini beans, drained",
+            "1 tsp dried oregano",
+            "100 g small pasta (ditalini or broken spaghetti)",
+            "100 g kale or cabbage, shredded",
+            "40 g Parmesan or vegetarian hard cheese, grated",
+            "Salt and black pepper"
+        ],
+        "steps": [
+            "Heat the oil in a large pot over a medium heat and cook the onion, carrots and celery for 8 minutes.",
+            "Add the garlic and courgette and cook for 3 minutes.",
+            "Add the tomatoes, stock, beans and oregano and simmer for 15 minutes.",
+            "Add the pasta and cook for 8-10 minutes, stirring now and then, adding the kale for the last 3.",
+            "Season and serve with the cheese and a drizzle of olive oil."
+        ],
+        "tip": "A big bowl of vegetables, beans and pasta for rest and easy days.",
+        "storage": "Keeps for 4 days in the fridge. The pasta softens but it still tastes great.",
+        "dietary_tags": [
+            "vegetarian",
+            "meal_prep"
+        ]
+    },
+    {
+        "name": "Chicken Pesto Pasta Salad",
+        "meal_type": "lunch",
+        "description": "Fusilli, sliced chicken, cherry tomatoes and rocket in a pesto-yogurt dressing. Carb-rich, high-protein and made for lunch boxes.",
+        "servings": 2,
+        "prep_time": 10,
+        "cook_time": 12,
+        "calories": 595,
+        "protein": 51,
+        "carbs": 58,
+        "fat": 16,
+        "fiber": 4,
+        "ingredients": [
+            "150 g fusilli",
+            "3 tbsp green pesto",
+            "1 tbsp Greek yogurt",
+            "1 tsp lemon juice",
+            "250 g cooked chicken breast, sliced",
+            "150 g cherry tomatoes, halved",
+            "50 g rocket or spinach",
+            "Salt and black pepper"
+        ],
+        "steps": [
+            "Cook the pasta for 1 minute less than the packet says; it softens as it sits. Rinse it briefly under cold water to stop the cooking, then drain well.",
+            "Mix the pesto with the yogurt and lemon juice to loosen it.",
+            "Toss the pasta with the dressing, chicken, tomatoes and rocket, and season."
+        ],
+        "tip": "Plenty of carbs and protein in one box. A good lunch before an evening run, if you eat it 3 or more hours ahead.",
+        "storage": "Keeps for 3 days in the fridge.",
+        "dietary_tags": [
+            "meal_prep"
+        ]
+    }
 ]

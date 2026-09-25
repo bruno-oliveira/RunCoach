@@ -1,849 +1,1539 @@
 [
-  {
-    "name": "Salmon with Roasted Vegetables",
-    "meal_type": "dinner",
-    "description": "Omega-rich salmon with fiber-packed roasted vegetables",
-    "instructions": "Preheat oven to 400\u00b0F (200\u00b0C). Pat salmon fillets dry and season with salt, pepper, olive oil, herbs, and garlic. Place broccoli florets and cubed sweet potato on a baking sheet. Drizzle vegetables with olive oil and season with salt and pepper. Arrange salmon on top. Bake for 15-20 minutes until salmon is cooked through and flakes easily with a fork, and vegetables are tender. Squeeze fresh lemon over the dish before serving.",
-    "prep_time": 10,
-    "cook_time": 20,
-    "calories": 480,
-    "protein": 36,
-    "fiber": 10,
-    "carbs": 28,
-    "fat": 24,
-    "ingredients": [
-      "6 oz salmon fillet",
-      "2 cups broccoli florets",
-      "1 sweet potato",
-      "1 tbsp olive oil",
-      "lemon",
-      "herbs",
-      "garlic"
-    ],
-    "dietary_tags": [
-      "high_protein",
-      "high_fiber",
-      "gluten_free",
-      "omega_3"
-    ]
-  },
-  {
-    "name": "Black Bean and Sweet Potato Bowl",
-    "meal_type": "dinner",
-    "description": "Plant-based power bowl with black beans and roasted sweet potato",
-    "instructions": "Preheat oven to the specified temperature. Prepare baking dish with cooking spray or parchment paper. Combine ingredients as directed and spread evenly in the dish. Bake for the time specified, or until golden brown and bubbly. Let cool for 5-10 minutes before serving.",
-    "prep_time": 12,
-    "cook_time": 25,
-    "calories": 460,
-    "protein": 18,
-    "fiber": 20,
-    "carbs": 68,
-    "fat": 14,
-    "ingredients": [
-      "1.5 cups black beans",
-      "1 medium sweet potato",
-      "1/2 cup corn",
-      "1/4 avocado",
-      "cilantro",
-      "lime",
-      "Greek yogurt"
-    ],
-    "dietary_tags": [
-      "high_protein",
-      "high_fiber",
-      "vegetarian"
-    ]
-  },
-  {
-    "name": "Chicken Parmesan",
-    "meal_type": "dinner",
-    "description": "Breaded chicken breast with marinara sauce and melted cheese",
-    "instructions": "Preheat oven to 400\u00b0F (200\u00b0C). Set up 3 shallow bowls: one with flour, one with 2 beaten eggs, and one with breadcrumbs mixed with 1/4 cup parmesan. Season chicken breasts with salt and pepper. Dredge each chicken breast in flour, shaking off excess. Dip into eggs, letting excess drip off. Press into breadcrumb-parmesan mixture, coating well. Heat olive oil in a large oven-safe skillet over medium-high heat. Add chicken and cook for 3-4 minutes per side until golden brown. Remove chicken from pan and set aside. In the same pan (without cleaning), pour marinara sauce and bring to a simmer. Arrange chicken back in the pan, spoon sauce over the top. Sprinkle remaining parmesan and mozzarella over chicken. Transfer to oven and bake for 15-20 minutes until cheese is melted and bubbly. Meanwhile, cook pasta according to package directions. Serve chicken and sauce over pasta with extra parmesan.",
-    "prep_time": 15,
-    "cook_time": 20,
-    "calories": 580,
-    "protein": 42,
-    "fiber": 6,
-    "carbs": 52,
-    "fat": 22,
-    "ingredients": [
-      "6 oz chicken breast",
-      "2 oz pasta",
-      "1/2 cup marinara",
-      "2 oz mozzarella",
-      "1/4 cup breadcrumbs",
-      "1/4 cup parmesan",
-      "egg",
-      "flour"
-    ],
-    "dietary_tags": [
-      "high_protein",
-      "high_carb"
-    ]
-  },
-  {
-    "name": "Chicken Tikka Masala",
-    "meal_type": "dinner",
-    "description": "Tender chicken in creamy tomato sauce with basmati rice",
-    "instructions": "Preheat your cooking surface (oven, stovetop, or grill) to the specified temperature. Season ingredients as directed and cook according to timing in the recipe. Use a meat thermometer to ensure proper internal temperature. Let rest for 5-10 minutes before serving to allow juices to redistribute.",
-    "prep_time": 25,
-    "cook_time": 20,
-    "calories": 580,
-    "protein": 38,
-    "fiber": 8,
-    "carbs": 62,
-    "fat": 18,
-    "ingredients": [
-      "6 oz chicken",
-      "1 cup basmati rice",
-      "1 cup tomato sauce",
-      "1/2 cup yogurt",
-      "1/4 cup cream",
-      "2 tbsp tikka masala spice",
-      "ginger",
-      "garlic"
-    ],
-    "dietary_tags": [
-      "high_protein",
-      "high_carb"
-    ]
-  },
-  {
-    "name": "Beef Tacos",
-    "meal_type": "dinner",
-    "description": "Seasoned ground beef tacos with all the fixings",
-    "instructions": "Prepare 4 oz ground beef, 3 corn tortillas, 1/4 cup cheese as directed in the ingredient list. Combine in a serving dish. For optimal flavor and texture, allow to sit for a few minutes before enjoying. This dinner provides satisfying nutrition to end your day and support overnight recovery.",
-    "prep_time": 15,
-    "cook_time": 10,
-    "calories": 520,
-    "protein": 28,
-    "fiber": 10,
-    "carbs": 42,
-    "fat": 24,
-    "ingredients": [
-      "4 oz ground beef",
-      "3 corn tortillas",
-      "1/4 cup cheese",
-      "lettuce",
-      "tomato",
-      "sour cream",
-      "taco seasoning",
-      "onion"
-    ],
-    "dietary_tags": [
-      "high_protein",
-      "high_fiber"
-    ]
-  },
-  {
-    "name": "Shrimp Pad Thai",
-    "meal_type": "dinner",
-    "description": "Stir-fried rice noodles with shrimp, eggs, and peanut sauce",
-    "instructions": "Prepare 3 oz rice noodles, 4 oz shrimp, 1 egg as directed in the ingredient list. Combine in a serving dish. For optimal flavor and texture, allow to sit for a few minutes before enjoying. This dinner provides satisfying nutrition to end your day and support overnight recovery.",
-    "prep_time": 20,
-    "cook_time": 12,
-    "calories": 520,
-    "protein": 24,
-    "fiber": 6,
-    "carbs": 68,
-    "fat": 18,
-    "ingredients": [
-      "3 oz rice noodles",
-      "4 oz shrimp",
-      "1 egg",
-      "1/4 cup peanuts",
-      "2 tbsp fish sauce",
-      "1 tbsp tamarind",
-      "bean sprouts",
-      "lime"
-    ],
-    "dietary_tags": [
-      "high_carb"
-    ]
-  },
-  {
-    "name": "Vegetarian Chili",
-    "meal_type": "dinner",
-    "description": "Hearty three-bean chili with vegetables and spices",
-    "instructions": "Prepare 1 cup kidney beans, 1 cup black beans, 1 cup pinto beans as directed in the ingredient list. Combine in a serving dish. For optimal flavor and texture, allow to sit for a few minutes before enjoying. This dinner provides satisfying nutrition to end your day and support overnight recovery.",
-    "prep_time": 15,
-    "cook_time": 60,
-    "calories": 420,
-    "protein": 20,
-    "fiber": 18,
-    "carbs": 52,
-    "fat": 12,
-    "ingredients": [
-      "1 cup kidney beans",
-      "1 cup black beans",
-      "1 cup pinto beans",
-      "1 cup tomatoes",
-      "1 onion",
-      "2 bell peppers",
-      "chili powder",
-      "cumin",
-      "1/4 cup cheese"
-    ],
-    "dietary_tags": [
-      "high_fiber",
-      "high_protein",
-      "vegetarian"
-    ]
-  },
-  {
-    "name": "Lamb Chops with Mint",
-    "meal_type": "dinner",
-    "description": "Grilled lamb chops with mint sauce and roasted vegetables",
-    "instructions": "Prepare 6 oz lamb chops, 1 cup roasted vegetables, 2 tbsp mint sauce as directed in the ingredient list. Combine in a serving dish. For optimal flavor and texture, allow to sit for a few minutes before enjoying. This dinner provides satisfying nutrition to end your day and support overnight recovery.",
-    "prep_time": 15,
-    "cook_time": 12,
-    "calories": 520,
-    "protein": 38,
-    "fiber": 8,
-    "carbs": 28,
-    "fat": 26,
-    "ingredients": [
-      "6 oz lamb chops",
-      "1 cup roasted vegetables",
-      "2 tbsp mint sauce",
-      "1 tbsp olive oil",
-      "garlic",
-      "rosemary",
-      "lemon"
-    ],
-    "dietary_tags": [
-      "high_protein",
-      "high_fiber"
-    ]
-  },
-  {
-    "name": "Chicken Enchiladas",
-    "meal_type": "dinner",
-    "description": "Rolled tortillas with chicken, cheese, and enchilada sauce",
-    "instructions": "Prepare 4 oz chicken, 3 corn tortillas, 1/2 cup cheese as directed in the ingredient list. Combine in a serving dish. For optimal flavor and texture, allow to sit for a few minutes before enjoying. This dinner provides satisfying nutrition to end your day and support overnight recovery.",
-    "prep_time": 20,
-    "cook_time": 25,
-    "calories": 540,
-    "protein": 32,
-    "fiber": 8,
-    "carbs": 48,
-    "fat": 22,
-    "ingredients": [
-      "4 oz chicken",
-      "3 corn tortillas",
-      "1/2 cup cheese",
-      "1/2 cup enchilada sauce",
-      "1/4 cup onion",
-      "sour cream",
-      "cilantro",
-      "lime"
-    ],
-    "dietary_tags": [
-      "high_protein",
-      "high_fiber"
-    ]
-  },
-  {
-    "name": "Moussaka",
-    "meal_type": "dinner",
-    "description": "Greek layered casserole with eggplant, meat sauce, and b\u00e9chamel",
-    "instructions": "Prepare 1 eggplant, 4 oz ground lamb, 1/2 cup b\u00e9chamel as directed in the ingredient list. Combine in a serving dish. For optimal flavor and texture, allow to sit for a few minutes before enjoying. This dinner provides satisfying nutrition to end your day and support overnight recovery.",
-    "prep_time": 30,
-    "cook_time": 45,
-    "calories": 520,
-    "protein": 28,
-    "fiber": 12,
-    "carbs": 42,
-    "fat": 26,
-    "ingredients": [
-      "1 eggplant",
-      "4 oz ground lamb",
-      "1/2 cup b\u00e9chamel",
-      "1/4 cup cheese",
-      "tomato sauce",
-      "onion",
-      "cinnamon",
-      "oregano"
-    ],
-    "dietary_tags": [
-      "high_protein",
-      "high_fiber"
-    ]
-  },
-  {
-    "name": "Paella",
-    "meal_type": "dinner",
-    "description": "Spanish rice dish with seafood, chicken, and saffron",
-    "instructions": "Preheat your cooking surface (oven, stovetop, or grill) to the specified temperature. Season ingredients as directed and cook according to timing in the recipe. Use a meat thermometer to ensure proper internal temperature. Let rest for 5-10 minutes before serving to allow juices to redistribute.",
-    "prep_time": 25,
-    "cook_time": 30,
-    "calories": 580,
-    "protein": 32,
-    "fiber": 8,
-    "carbs": 68,
-    "fat": 18,
-    "ingredients": [
-      "1 cup rice",
-      "4 oz chicken",
-      "4 oz shrimp",
-      "4 oz mussels",
-      "saffron",
-      "1/4 cup peas",
-      "1/4 cup bell pepper",
-      "paprika"
-    ],
-    "dietary_tags": [
-      "high_protein",
-      "high_carb"
-    ]
-  },
-  {
-    "name": "Ratatouille",
-    "meal_type": "dinner",
-    "description": "French vegetable stew with eggplant, zucchini, and tomatoes",
-    "instructions": "Prepare 1 eggplant, 1 zucchini, 1 bell pepper as directed in the ingredient list. Combine in a serving dish. For optimal flavor and texture, allow to sit for a few minutes before enjoying. This dinner provides satisfying nutrition to end your day and support overnight recovery.",
-    "prep_time": 25,
-    "cook_time": 40,
-    "calories": 320,
-    "protein": 12,
-    "fiber": 14,
-    "carbs": 42,
-    "fat": 14,
-    "ingredients": [
-      "1 eggplant",
-      "1 zucchini",
-      "1 bell pepper",
-      "1 cup tomatoes",
-      "1 onion",
-      "herbs de provence",
-      "2 tbsp olive oil",
-      "garlic"
-    ],
-    "dietary_tags": [
-      "high_fiber",
-      "vegetarian"
-    ]
-  },
-  {
-    "name": "Eggplant Parmesan",
-    "meal_type": "dinner",
-    "description": "Breaded eggplant with marinara sauce and melted cheese",
-    "instructions": "Prepare 1 eggplant, 1 cup marinara, 1 cup mozzarella as directed in the ingredient list. Combine in a serving dish. For optimal flavor and texture, allow to sit for a few minutes before enjoying. This dinner provides satisfying nutrition to end your day and support overnight recovery.",
-    "prep_time": 25,
-    "cook_time": 30,
-    "calories": 480,
-    "protein": 22,
-    "fiber": 12,
-    "carbs": 42,
-    "fat": 22,
-    "ingredients": [
-      "1 eggplant",
-      "1 cup marinara",
-      "1 cup mozzarella",
-      "1/4 cup parmesan",
-      "1/2 cup breadcrumbs",
-      "egg",
-      "flour",
-      "basil"
-    ],
-    "dietary_tags": [
-      "high_fiber",
-      "vegetarian"
-    ]
-  },
-  {
-    "name": "Baked Ziti",
-    "meal_type": "dinner",
-    "description": "Ziti pasta with meat sauce and cheese baked until bubbly",
-    "instructions": "Prepare 3 oz ziti, 4 oz ground beef, 1 cup marinara as directed in the ingredient list. Combine in a serving dish. For optimal flavor and texture, allow to sit for a few minutes before enjoying. This dinner provides satisfying nutrition to end your day and support overnight recovery.",
-    "prep_time": 15,
-    "cook_time": 30,
-    "calories": 580,
-    "protein": 32,
-    "fiber": 8,
-    "carbs": 68,
-    "fat": 20,
-    "ingredients": [
-      "3 oz ziti",
-      "4 oz ground beef",
-      "1 cup marinara",
-      "1 cup mozzarella",
-      "1/4 cup parmesan",
-      "1 egg",
-      "italian herbs",
-      "garlic"
-    ],
-    "dietary_tags": [
-      "high_protein",
-      "high_carb"
-    ]
-  },
-  {
-    "name": "Korean Bibimbap with Beef",
-    "meal_type": "dinner",
-    "description": "Korean rice bowl with seasoned beef, fresh vegetables, gochujang sauce, and a fried egg",
-    "instructions": "Prepare steamed jasmine rice. Thinly slice beef and marinate in soy sauce, sesame oil, garlic, and sugar for 15 minutes. Stir-fry beef until browned (4-5 minutes). Blanch spinach, julienne carrots, zucchini, and cucumber. Steam bean sprouts. Saut\u00e9 each vegetable separately with sesame oil and salt. Arrange rice in a bowl, top with beef, vegetables, and a fried egg. Serve with gochujang sauce on side. Mix everything together before eating.",
-    "prep_time": 20,
-    "cook_time": 25,
-    "calories": 550,
-    "protein": 32,
-    "fiber": 8,
-    "carbs": 62,
-    "fat": 20,
-    "ingredients": [
-      "1 cup jasmine rice",
-      "6 oz beef ribeye or sirloin",
-      "2 tbsp soy sauce",
-      "1 tbsp sesame oil",
-      "2 cloves garlic, minced",
-      "1 tsp sugar",
-      "2 cups spinach",
-      "1 carrot, julienned",
-      "1/2 zucchini, julienned",
-      "1 cucumber, sliced",
-      "1 cup bean sprouts",
-      "2 eggs",
-      "3 tbsp gochujang (Korean chili paste)",
-      "1 tbsp sesame seeds",
-      "vegetable oil"
-    ],
-    "dietary_tags": [
-      "high_protein",
-      "anti_inflammatory",
-      "high_fiber"
-    ]
-  },
-  {
-    "name": "Korean Kimchi Stew",
-    "meal_type": "dinner",
-    "description": "Hearty stew with kimchi, tofu, pork, and vegetables",
-    "instructions": "Cut kimchi into bite-sized pieces. Slice pork belly thinly. Drain and cut tofu into cubes. Heat a pot over medium heat, add sesame oil and pork. Cook pork until fat renders (5 minutes). Add garlic and kimchi, stir-fry for 3 minutes. Add kimchi juice, water or anchovy broth, and gochugaru (Korean chili flakes). Bring to a boil, then reduce heat to medium-low. Simmer for 15 minutes to develop flavors. Add tofu cubes, zucchini, and green onions. Simmer for another 10 minutes. Season with fish sauce if needed. Serve hot in a bowl, garnished with green onions.",
-    "prep_time": 15,
-    "cook_time": 30,
-    "calories": 440,
-    "protein": 26,
-    "fiber": 8,
-    "carbs": 28,
-    "fat": 24,
-    "ingredients": [
-      "1.5 cups kimchi",
-      "4 oz pork belly, sliced",
-      "14 oz firm tofu",
-      "1/2 zucchini, sliced",
-      "3 cloves garlic, minced",
-      "1 tbsp sesame oil",
-      "1 tbsp gochugaru",
-      "2 tbsp fish sauce",
-      "1 cup kimchi juice",
-      "1 cup water or anchovy broth",
-      "2 green onions, sliced"
-    ],
-    "dietary_tags": [
-      "high_protein",
-      "anti_inflammatory",
-      "high_fiber",
-      "fermented"
-    ]
-  },
-  {
-    "name": "Cod with Garlic and Herbs",
-    "meal_type": "dinner",
-    "description": "Baked cod with garlic, herbs, and lemon served with roasted vegetables",
-    "instructions": "Preheat oven to 400\u00b0F (200\u00b0C). Pat cod fillets dry and season with salt and pepper. Mix minced garlic, chopped parsley, lemon zest, olive oil, and oregano in a small bowl. Coat each cod fillet with garlic-herb mixture. Place cod on a baking sheet. Arrange chopped carrots, zucchini, and red onion around fish. Drizzle vegetables with olive oil and season with salt and pepper. Bake for 15-18 minutes until cod is opaque and flakes easily. Squeeze fresh lemon over fish before serving.",
-    "prep_time": 15,
-    "cook_time": 18,
-    "calories": 420,
-    "protein": 36,
-    "fiber": 8,
-    "carbs": 18,
-    "fat": 18,
-    "ingredients": [
-      "6 oz cod fillet",
-      "4 cloves garlic, minced",
-      "2 tbsp fresh parsley, chopped",
-      "1 lemon, zested and juiced",
-      "2 tbsp olive oil",
-      "1 tsp dried oregano",
-      "1 carrot, chopped",
-      "1 zucchini, chopped",
-      "1/2 red onion, chopped",
-      "salt",
-      "pepper"
-    ],
-    "dietary_tags": [
-      "high_protein",
-      "anti_inflammatory",
-      "gluten_free",
-      "high_fiber"
-    ]
-  },
-  {
-    "name": "Mediterranean Chicken Roast",
-    "meal_type": "dinner",
-    "description": "Roasted chicken with Mediterranean vegetables and olive oil",
-    "instructions": "Preheat oven to 400\u00b0F (200\u00b0C). Cut vegetables into large chunks: zucchini, bell peppers, red onion, and cherry tomatoes. Toss vegetables with 3 tablespoons olive oil, dried oregano, garlic powder, salt, and pepper. Spread on a large baking sheet in a single layer. Season chicken thighs with salt, pepper, and a little olive oil. Arrange chicken on top of vegetables. Roast for 35-40 minutes, turning chicken halfway through, until skin is crispy and chicken reaches 165\u00b0F (74\u00b0C) internally. Remove from oven and let rest for 5 minutes. Squeeze fresh lemon over chicken and vegetables. Serve with crusty bread or over quinoa.",
-    "prep_time": 20,
-    "cook_time": 40,
-    "calories": 580,
-    "protein": 40,
-    "fiber": 10,
-    "carbs": 32,
-    "fat": 30,
-    "ingredients": [
-      "6 oz chicken thighs",
-      "2 zucchini, chunked",
-      "2 bell peppers, chunked",
-      "1 red onion, quartered",
-      "2 cups cherry tomatoes",
-      "3 tbsp olive oil",
-      "2 tsp dried oregano",
-      "1 tsp garlic powder",
-      "1 lemon",
-      "salt",
-      "pepper",
-      "crusty bread or quinoa"
-    ],
-    "dietary_tags": [
-      "high_protein",
-      "anti_inflammatory",
-      "high_fiber"
-    ]
-  },
-  {
-    "name": "Chicken and Vegetable Curry Stew",
-    "meal_type": "dinner",
-    "description": "Aromatic curry-style chicken stew with root vegetables and turmeric",
-    "instructions": "Cut chicken into serving pieces. Heat 2 tablespoons coconut oil in a large Dutch oven over medium heat. Add chicken pieces and cook for 6-8 minutes until lightly browned on all sides. Remove chicken and set aside. In the same pot, add diced onion, carrots, celery root, and cubed sweet potatoes. Cook for 6-7 minutes until vegetables begin to soften. Add minced garlic, grated ginger, turmeric, cumin, and coriander. Stir for 2 minutes until fragrant. Stir in 2 tablespoons tomato paste and cook for 1 minute. Return chicken to the pot. Pour in coconut milk and 2 cups chicken broth. Add bay leaves and bring to a simmer. Reduce heat to low, cover, and cook for 40-45 minutes until chicken is tender and vegetables are cooked. Remove bay leaves. Stir in fresh spinach and cook for 2 minutes until wilted. Season with salt and pepper. Serve hot over basmati rice or with naan bread.",
-    "prep_time": 20,
-    "cook_time": 60,
-    "calories": 600,
-    "protein": 38,
-    "fiber": 14,
-    "carbs": 38,
-    "fat": 32,
-    "ingredients": [
-      "6 oz chicken breast",
-      "2 cups coconut milk",
-      "2 cups chicken broth",
-      "2 medium sweet potatoes, cubed",
-      "2 carrots, cubed",
-      "1 celery root, cubed",
-      "1 large onion, diced",
-      "3 cups spinach",
-      "3 tbsp coconut oil",
-      "3 cloves garlic, minced",
-      "2 inch ginger, grated",
-      "2 tbsp turmeric powder",
-      "1 tsp cumin",
-      "1 tsp coriander",
-      "2 tbsp tomato paste",
-      "2 bay leaves",
-      "1 cup basmati rice or naan bread",
-      "salt",
-      "pepper"
-    ],
-    "dietary_tags": [
-      "high_protein",
-      "anti_inflammatory",
-      "high_fiber"
-    ]
-  },
-  {
-    "name": "Braised Chicken with Root Vegetables",
-    "meal_type": "dinner",
-    "description": "Slow-braised chicken with carrots, parsnips, and aromatic herbs",
-    "instructions": "Cut chicken thighs into serving pieces (bone-in or bone-out). Pat chicken dry with paper towels. Heat 2 tablespoons olive oil in a large Dutch oven or heavy pot over medium-high heat. Add chicken pieces, skin-side down, and cook for 5-6 minutes until golden brown. Flip and cook for another 3-4 minutes until browned on all sides. Remove chicken and set aside. Reduce heat to medium. Add diced onion, carrots, and parsnips to the pot. Cook for 6-7 minutes until vegetables begin to soften. Add tomato paste, 2 tablespoons turmeric, minced garlic, and fresh thyme. Stir for 2 minutes until fragrant. Pour in 2 cups chicken broth and 1/2 cup white wine (or additional broth). Return chicken to the pot. Bring to a simmer, reduce heat to low, cover, and cook for 45-55 minutes until chicken is tender and vegetables are cooked. Remove chicken and vegetables, increase heat to high, and simmer cooking liquid for 5-8 minutes until reduced by half. Season with salt and pepper. Serve chicken and vegetables with the reduced sauce spooned over top. Serve with boiled potatoes or crusty bread.",
-    "prep_time": 20,
-    "cook_time": 70,
-    "calories": 560,
-    "protein": 42,
-    "fiber": 10,
-    "carbs": 28,
-    "fat": 28,
-    "ingredients": [
-      "8 oz chicken thighs",
-      "3 cups chicken broth",
-      "2 carrots, cubed",
-      "2 parsnips, cubed",
-      "1 large onion, diced",
-      "3 tbsp tomato paste",
-      "2 tbsp turmeric powder",
-      "4 cloves garlic, minced",
-      "3 sprigs fresh thyme",
-      "2 tbsp olive oil",
-      "1/2 cup white wine",
-      "salt",
-      "pepper",
-      "boiled potatoes or crusty bread"
-    ],
-    "dietary_tags": [
-      "high_protein",
-      "anti_inflammatory",
-      "high_fiber"
-    ]
-  },
-  {
-    "name": "Honey Garlic Glazed Salmon",
-    "meal_type": "dinner",
-    "description": "Salmon fillets with sweet honey garlic glaze",
-    "instructions": "Mix honey, garlic, and soy sauce. Glaze salmon. Bake at 400\u00b0F for 12-15 minutes. Broil for 2 minutes to caramelize. Serve with steamed vegetables.",
-    "prep_time": 10,
-    "cook_time": 18,
-    "calories": 480,
-    "protein": 36,
-    "fiber": 4,
-    "carbs": 22,
-    "fat": 28,
-    "ingredients": [
-      "6 oz salmon fillet",
-      "2 tbsp honey",
-      "3 garlic cloves",
-      "2 tbsp soy sauce",
-      "1 tbsp butter",
-      "vegetables"
-    ],
-    "dietary_tags": [
-      "high_protein",
-      "omega_3"
-    ]
-  },
-  {
-    "name": "Pork Tenderloin with Apple Cider Glaze",
-    "meal_type": "dinner",
-    "description": "Roasted pork tenderloin with sweet apple glaze",
-    "instructions": "Season pork and sear on all sides. Roast at 400\u00b0F for 20-25 minutes. Make glaze with apple cider and maple syrup. Brush on pork and serve.",
-    "prep_time": 15,
-    "cook_time": 30,
-    "calories": 480,
-    "protein": 40,
-    "fiber": 2,
-    "carbs": 18,
-    "fat": 24,
-    "ingredients": [
-      "8 oz pork tenderloin",
-      "1/2 cup apple cider",
-      "2 tbsp maple syrup",
-      "fresh thyme",
-      "apples"
-    ],
-    "dietary_tags": [
-      "high_protein"
-    ]
-  },
-  {
-    "name": "Indian Butter Chicken",
-    "meal_type": "dinner",
-    "description": "Creamy tomato-based curry with tender chicken",
-    "instructions": "Marinate and grill chicken. Make sauce with tomatoes, cream, garam masala, and butter. Add chicken and simmer. Serve with naan and rice.",
-    "prep_time": 20,
-    "cook_time": 35,
-    "calories": 580,
-    "protein": 38,
-    "fiber": 4,
-    "carbs": 42,
-    "fat": 32,
-    "ingredients": [
-      "8 oz chicken",
-      "1/2 cup heavy cream",
-      "tomatoes",
-      "garam masala",
-      "butter",
-      "naan bread"
-    ],
-    "dietary_tags": [
-      "high_protein",
-      "asian"
-    ]
-  },
-  {
-    "name": "Moroccan Chicken Tagine with Preserved Lemons",
-    "meal_type": "dinner",
-    "description": "Slow-cooked chicken with preserved lemons and olives",
-    "instructions": "Brown chicken in tagine pot. Add onions, garlic, spices, preserved lemons, and olives. Simmer slowly until chicken is tender.",
-    "prep_time": 20,
-    "cook_time": 90,
-    "calories": 540,
-    "protein": 38,
-    "fiber": 4,
-    "carbs": 28,
-    "fat": 32,
-    "ingredients": [
-      "10 oz chicken",
-      "2 preserved lemons",
-      "1/2 cup olives",
-      "Moroccan spices",
-      "onion",
-      "fresh cilantro"
-    ],
-    "dietary_tags": [
-      "high_protein"
-    ]
-  },
-  {
-    "name": "Mushroom Risotto",
-    "meal_type": "dinner",
-    "description": "Creamy arborio rice with saut\u00e9ed mushrooms and parmesan cheese",
-    "instructions": "Heat 2 tbsp olive oil in a large saucepan over medium heat. Add 1 finely chopped onion and cook for 5 minutes until soft. Add 2 cloves minced garlic and cook for 1 minute. Add 2 cups sliced mushrooms and cook until golden and tender (5-7 minutes). Add 1 cup arborio rice and stir for 2 minutes until grains are coated and translucent. Add 1/2 cup white wine and cook, stirring constantly, until absorbed. Begin adding 4 cups warm vegetable broth one ladle at a time, stirring constantly and waiting for each addition to be absorbed before adding the next. Continue for 20-25 minutes until rice is creamy and al dente. Remove from heat and stir in 1/4 cup grated parmesan cheese and 2 tbsp butter. Season with salt and pepper. Let rest for 2 minutes before serving.",
-    "prep_time": 15,
-    "cook_time": 30,
-    "calories": 480,
-    "protein": 14,
-    "fiber": 4,
-    "carbs": 68,
-    "fat": 18,
-    "ingredients": [
-      "1 cup arborio rice",
-      "2 cups mushrooms",
-      "4 cups vegetable broth",
-      "1/2 cup white wine",
-      "1/4 cup parmesan cheese",
-      "2 tbsp butter",
-      "1 onion",
-      "2 cloves garlic"
-    ],
-    "dietary_tags": [
-      "vegetarian",
-      "comfort",
-      "high_carb"
-    ]
-  },
-  {
-    "name": "Grilled Pork Tenderloin",
-    "meal_type": "dinner",
-    "description": "Juicy grilled pork tenderloin with apple glaze and roasted vegetables",
-    "instructions": "Trim 8 oz pork tenderloin of excess fat and silver skin. In a small bowl, mix 2 tbsp olive oil, 1 tbsp apple cider vinegar, 1 tsp Dijon mustard, 1 minced garlic clove, salt, and pepper to make marinade. Place pork in a resealable bag with marinade and refrigerate for at least 30 minutes (up to 4 hours). Preheat grill to medium-high heat. Remove pork from marinade and grill for 12-15 minutes, turning occasionally, until internal temperature reaches 145\u00b0F. Let rest for 5 minutes before slicing. Meanwhile, toss 2 cups mixed vegetables (broccoli, bell peppers, zucchini) with olive oil, salt, and pepper. Grill vegetables for 8-10 minutes until tender and charred. Serve sliced pork with grilled vegetables.",
-    "prep_time": 15,
-    "cook_time": 20,
-    "calories": 420,
-    "protein": 38,
-    "fiber": 6,
-    "carbs": 18,
-    "fat": 24,
-    "ingredients": [
-      "8 oz pork tenderloin",
-      "2 cups mixed vegetables",
-      "2 tbsp olive oil",
-      "1 tbsp apple cider vinegar",
-      "1 tsp Dijon mustard",
-      "1 clove garlic",
-      "salt and pepper"
-    ],
-    "dietary_tags": [
-      "high_protein",
-      "low_carb",
-      "gluten_free"
-    ]
-  },
-  {
-    "name": "Coconut Curry with Tofu",
-    "meal_type": "dinner",
-    "description": "Creamy Thai curry with tofu and vegetables",
-    "instructions": "Press 1 block firm tofu to remove excess water, then cut into 1-inch cubes. Heat 1 tbsp coconut oil in a large pot over medium heat. Add 1 diced onion and cook for 5 minutes until soft. Add 2 cloves minced garlic and 1 tbsp grated ginger, cook for 1 minute. Add 1 tbsp red curry paste and cook for 30 seconds. Add 1 can (13.5 oz) coconut milk, 1 cup vegetable broth, 2 cups mixed vegetables (broccoli, bell peppers, snap peas), and tofu cubes. Simmer for 10-15 minutes until vegetables are tender. Season with soy sauce and lime juice. Serve over jasmine rice.",
-    "prep_time": 15,
-    "cook_time": 20,
-    "calories": 480,
-    "protein": 24,
-    "fiber": 8,
-    "carbs": 42,
-    "fat": 28,
-    "ingredients": [
-      "1 block firm tofu",
-      "1 can coconut milk",
-      "1 tbsp red curry paste",
-      "2 cups mixed vegetables",
-      "1 onion",
-      "2 cloves garlic",
-      "1 tbsp ginger",
-      "soy sauce",
-      "lime juice"
-    ],
-    "dietary_tags": [
-      "vegetarian",
-      "high_fiber",
-      "anti_inflammatory"
-    ]
-  },
-  {
-    "name": "Lemon Herb Grilled Chicken",
-    "meal_type": "dinner",
-    "description": "Juicy grilled chicken with bright lemon and herbs",
-    "instructions": "In a bowl, mix 1/4 cup olive oil, juice of 1 lemon, 2 tbsp fresh parsley (chopped), 1 tbsp fresh thyme, 2 cloves minced garlic, salt, and pepper. Add 4 chicken breasts and marinate for at least 30 minutes (up to 4 hours). Preheat grill to medium-high heat. Grill chicken for 6-8 minutes per side until internal temperature reaches 165\u00b0F. Let rest for 5 minutes before slicing. Serve with grilled vegetables and a side of quinoa.",
-    "prep_time": 15,
-    "cook_time": 20,
-    "calories": 420,
-    "protein": 38,
-    "fiber": 4,
-    "carbs": 12,
-    "fat": 24,
-    "ingredients": [
-      "4 chicken breasts",
-      "1/4 cup olive oil",
-      "1 lemon",
-      "2 tbsp fresh parsley",
-      "1 tbsp fresh thyme",
-      "2 cloves garlic",
-      "salt and pepper"
-    ],
-    "dietary_tags": [
-      "high_protein",
-      "low_carb",
-      "gluten_free"
-    ]
-  },
-  {
-    "name": "Beef and Broccoli Stir-Fry",
-    "meal_type": "dinner",
-    "description": "Classic Chinese takeout made healthy at home",
-    "instructions": "Slice 1 lb beef sirloin into thin strips against the grain. In a bowl, toss beef with 1 tbsp soy sauce and 1 tbsp cornstarch. Heat 1 tbsp vegetable oil in a wok over high heat. Add beef and stir-fry for 2-3 minutes until browned. Remove beef and set aside. Add 1 tbsp oil to wok, add 3 cloves minced garlic and 1 tbsp ginger, stir-fry for 30 seconds. Add 4 cups broccoli florets and 1 sliced red bell pepper, stir-fry for 3-4 minutes until crisp-tender. Return beef to wok with sauce mixture (2 tbsp soy sauce, 1 tbsp oyster sauce, 1 tsp sesame oil). Toss for 1 minute. Serve over brown rice.",
-    "prep_time": 20,
-    "cook_time": 15,
-    "calories": 520,
-    "protein": 42,
-    "fiber": 8,
-    "carbs": 48,
-    "fat": 20,
-    "ingredients": [
-      "1 lb beef sirloin",
-      "4 cups broccoli",
-      "1 red bell pepper",
-      "2 tbsp soy sauce",
-      "1 tbsp oyster sauce",
-      "1 tbsp cornstarch",
-      "3 cloves garlic",
-      "1 tbsp ginger"
-    ],
-    "dietary_tags": [
-      "high_protein",
-      "high_fiber",
-      "quick"
-    ]
-  },
-  {
-    "name": "Filipino Adobo with Chicken",
-    "meal_type": "dinner",
-    "description": "Tangy Filipino chicken stewed in soy and vinegar",
-    "instructions": "In a pot, combine 1 lb chicken pieces, 1/2 cup soy sauce, 1/2 cup vinegar, 1/2 cup water, 4 cloves garlic, 1 bay leaf, and 1 tsp black peppercorns. Bring to a boil, then reduce heat and simmer for 30 minutes. Remove chicken and fry in 2 tbsp oil until golden. Return to pot and simmer for 10 more minutes until sauce reduces and thickens. Serve over steamed rice.",
-    "prep_time": 10,
-    "cook_time": 50,
-    "calories": 480,
-    "protein": 36,
-    "fiber": 4,
-    "carbs": 18,
-    "fat": 28,
-    "ingredients": [
-      "1 lb chicken",
-      "1/2 cup soy sauce",
-      "1/2 cup vinegar",
-      "4 cloves garlic",
-      "1 bay leaf",
-      "1 tsp black peppercorns",
-      "steamed rice"
-    ],
-    "dietary_tags": [
-      "filipino",
-      "tangy",
-      "high_protein",
-      "savory"
-    ]
-  }
+    {
+        "name": "Salmon with Roasted Vegetables",
+        "meal_type": "dinner",
+        "description": "A one-tray dinner: lemon and garlic salmon roasted with sweet potato and broccoli. Minimal washing up.",
+        "servings": 1,
+        "prep_time": 10,
+        "cook_time": 27,
+        "calories": 620,
+        "protein": 37,
+        "carbs": 52,
+        "fat": 30,
+        "fiber": 10,
+        "ingredients": [
+            "1 medium sweet potato (about 200 g), cut into 2 cm cubes",
+            "2 tsp olive oil",
+            "1/2 tsp smoked paprika",
+            "150 g broccoli, in florets",
+            "1 garlic clove, crushed",
+            "1 salmon fillet (about 150 g)",
+            "1/2 lemon, sliced, plus a wedge",
+            "Fresh dill or parsley",
+            "Pinch of chilli flakes",
+            "Salt and black pepper"
+        ],
+        "steps": [
+            "Heat the oven to 200°C fan (220°C / 425°F).",
+            "Toss the sweet potato with half the oil, the paprika and a pinch of salt on a lined tray. Roast for 15 minutes first; it needs longer than the salmon.",
+            "Toss the broccoli with the remaining oil and the garlic and add it to the tray.",
+            "Make space in the middle and lay the salmon skin-side down. Season it and top with the lemon slices.",
+            "Roast for 12 minutes more, until the salmon just flakes. For moist salmon, take it out at 52-55°C in the centre.",
+            "Squeeze over the lemon wedge and scatter with herbs and chilli flakes."
+        ],
+        "tip": "Omega-3 fats, quality protein and slow-release carbs make this an ideal recovery dinner after a key session.",
+        "dietary_tags": [
+            "gluten_free",
+            "omega_3"
+        ]
+    },
+    {
+        "name": "Black Bean and Sweet Potato Bowl",
+        "meal_type": "dinner",
+        "description": "Roasted cumin sweet potato, garlicky black beans and charred corn with avocado and lime yogurt.",
+        "servings": 2,
+        "prep_time": 10,
+        "cook_time": 30,
+        "calories": 500,
+        "protein": 17,
+        "carbs": 73,
+        "fat": 16,
+        "fiber": 19,
+        "ingredients": [
+            "2 medium sweet potatoes (about 400 g), cut into 2 cm cubes",
+            "1 tbsp olive oil",
+            "1 tsp ground cumin",
+            "1 tsp smoked paprika",
+            "400 g tin black beans, drained",
+            "1 garlic clove, crushed",
+            "140 g sweetcorn",
+            "100 g Greek yogurt",
+            "1 lime, zested and juiced",
+            "1/2 avocado, sliced",
+            "Fresh coriander",
+            "Salt"
+        ],
+        "steps": [
+            "Heat the oven to 200°C fan (220°C / 425°F). Toss the sweet potato with the oil, half the cumin, the paprika and a pinch of salt. Roast for 25-30 minutes, tossing halfway, until soft and caramelised.",
+            "Warm the beans in a pan with the garlic, the remaining cumin and a splash of water, lightly crushing a few.",
+            "Char the corn in a dry frying pan over a high heat for 3 minutes.",
+            "Stir the lime zest, half the juice and a pinch of salt into the yogurt.",
+            "Divide everything between two bowls, top with the avocado, lime yogurt and coriander, and squeeze over the rest of the lime."
+        ],
+        "tip": "Very high in fibre. It's a great rest-day dinner, but have something gentler the night before a race.",
+        "dietary_tags": [
+            "vegetarian",
+            "gluten_free"
+        ]
+    },
+    {
+        "name": "Chicken Parmesan",
+        "meal_type": "dinner",
+        "description": "Crisp Parmesan-crumbed chicken escalopes baked under marinara and mozzarella, served over spaghetti.",
+        "servings": 2,
+        "prep_time": 15,
+        "cook_time": 20,
+        "calories": 770,
+        "protein": 57,
+        "carbs": 73,
+        "fat": 27,
+        "fiber": 4,
+        "ingredients": [
+            "2 chicken breasts (about 300 g)",
+            "2 tbsp plain flour",
+            "1 large egg, beaten",
+            "40 g panko breadcrumbs",
+            "20 g Parmesan, finely grated",
+            "4 tsp olive oil",
+            "200 g marinara sauce, plus extra for the pasta",
+            "60 g mozzarella, torn",
+            "120 g spaghetti",
+            "Fresh basil",
+            "Salt and black pepper"
+        ],
+        "steps": [
+            "Heat the oven to 200°C fan (220°C / 425°F). Slice each chicken breast in half horizontally into two thin escalopes, or bash it to 1 cm thick, so it cooks fast and stays juicy.",
+            "Set out three plates: the flour seasoned with salt and pepper, the beaten egg, and the panko mixed with the Parmesan. Coat each escalope in flour, then egg, then press it firmly into the crumbs.",
+            "Heat the oil in an ovenproof frying pan over a medium-high heat and fry the chicken for 2-3 minutes each side until golden.",
+            "Spoon the marinara over each piece, top with mozzarella and move the pan to the oven for 8-10 minutes, until the cheese bubbles and the chicken reaches 74°C.",
+            "Meanwhile, cook the spaghetti and toss it with a little extra warm marinara.",
+            "Serve the chicken on the pasta, scattered with basil."
+        ],
+        "tip": "A big, carb-rich dinner. Save it for after your longest run of the week.",
+        "dietary_tags": []
+    },
+    {
+        "name": "Chicken Tikka Masala",
+        "meal_type": "dinner",
+        "description": "Yogurt-marinated chicken charred under the grill, then simmered in a spiced tomato and cream sauce. Served with basmati.",
+        "servings": 4,
+        "prep_time": 15,
+        "cook_time": 35,
+        "calories": 605,
+        "protein": 47,
+        "carbs": 64,
+        "fat": 18,
+        "fiber": 3,
+        "ingredients": [
+            "600 g chicken breast, cut into 3 cm chunks",
+            "150 g Greek yogurt",
+            "2 tsp garam masala",
+            "1 tsp ground turmeric",
+            "1 tsp chilli powder",
+            "1 tsp salt",
+            "1/2 lemon, juiced",
+            "280 g basmati rice",
+            "1 tbsp vegetable oil",
+            "20 g butter",
+            "1 large onion, finely chopped",
+            "3 garlic cloves, crushed",
+            "Thumb-size piece of ginger, grated",
+            "2 tbsp tikka masala paste",
+            "400 g tin chopped tomatoes",
+            "100 ml single cream",
+            "Fresh coriander"
+        ],
+        "steps": [
+            "Mix the chicken with the yogurt, garam masala, turmeric, chilli powder, salt and lemon juice. Marinate for 30 minutes, or overnight in the fridge.",
+            "Heat the grill to high. Spread the chicken on a foil-lined tray and grill for 10-12 minutes, turning once, until charred at the edges. It finishes cooking in the sauce.",
+            "Meanwhile, cook the rice.",
+            "For the sauce, heat the oil and butter in a large pan and fry the onion for 8-10 minutes until deep golden. Add the garlic and ginger for 1 minute, then the paste for 1 minute.",
+            "Add the tomatoes and 100 ml water and simmer for 10 minutes. Blend until smooth, if you like.",
+            "Stir in the cream, then the chicken and any juices. Simmer for 5 minutes, scatter with coriander and serve with the rice."
+        ],
+        "tip": "Lots of protein and carbs for recovery. The curry tastes even better the next day.",
+        "storage": "The curry keeps for 3 days in the fridge or 3 months in the freezer.",
+        "dietary_tags": [
+            "meal_prep"
+        ]
+    },
+    {
+        "name": "Beef Tacos",
+        "meal_type": "dinner",
+        "description": "Juicy spiced beef in warm corn tortillas with cheddar, crisp lettuce, tomato and soured cream. Homemade taco seasoning, no packet.",
+        "servings": 2,
+        "serving_size": "3 tacos",
+        "prep_time": 10,
+        "cook_time": 15,
+        "calories": 510,
+        "protein": 37,
+        "carbs": 45,
+        "fat": 20,
+        "fiber": 7,
+        "ingredients": [
+            "1 tsp olive oil",
+            "1 onion, finely chopped",
+            "250 g lean (5%) beef mince",
+            "1 tsp chilli powder",
+            "1 tsp ground cumin",
+            "1/2 tsp smoked paprika",
+            "1/2 tsp dried oregano",
+            "1/4 tsp garlic powder",
+            "2 tbsp tomato purée",
+            "6 small corn tortillas",
+            "40 g cheddar, grated",
+            "Shredded lettuce and diced tomato",
+            "4 tbsp light soured cream",
+            "Lime wedges and salsa",
+            "Salt"
+        ],
+        "steps": [
+            "Heat the oil in a frying pan over a medium heat and soften the onion for 5 minutes.",
+            "Turn the heat to high, add the mince and cook for 6-8 minutes, breaking it up, until browned.",
+            "Stir in the spices, 1/2 tsp salt and the tomato purée for 1 minute, then add 100 ml water and simmer for 5 minutes until saucy.",
+            "Warm the tortillas in a dry pan for 20-30 seconds each side and stack them in a tea towel to keep soft.",
+            "Fill with the beef, cheese, lettuce, tomato, soured cream and salsa, and serve with lime."
+        ],
+        "tip": "Corn tortillas make this gluten-free. For more carbs after a long run, add a side of rice and beans.",
+        "dietary_tags": [
+            "gluten_free"
+        ]
+    },
+    {
+        "name": "Shrimp Pad Thai",
+        "meal_type": "dinner",
+        "description": "Wok-tossed rice noodles with prawns, egg and bean sprouts in a sweet-sour tamarind sauce, topped with peanuts and lime.",
+        "servings": 2,
+        "prep_time": 15,
+        "cook_time": 10,
+        "calories": 655,
+        "protein": 35,
+        "carbs": 78,
+        "fat": 21,
+        "fiber": 4,
+        "ingredients": [
+            "150 g flat rice noodles",
+            "2 tbsp tamarind paste",
+            "2 tbsp fish sauce",
+            "1.5 tbsp brown sugar",
+            "1/2 tsp chilli flakes",
+            "1 tbsp vegetable oil",
+            "2 garlic cloves, finely chopped",
+            "1 shallot, finely sliced",
+            "200 g raw peeled prawns",
+            "2 large eggs",
+            "100 g bean sprouts",
+            "4 spring onions, cut into 3 cm lengths",
+            "30 g roasted peanuts, chopped",
+            "Lime wedges and coriander"
+        ],
+        "steps": [
+            "Soak the noodles in hot (not boiling) water for 8-10 minutes, until pliable but still firm; they finish cooking in the wok. Drain.",
+            "Mix the tamarind, fish sauce, sugar and chilli with 2 tbsp water. Taste it: it should be sweet, sour and salty in balance.",
+            "Heat the oil in a wok over a very high heat. Stir-fry the garlic and shallot for 30 seconds, then the prawns for 1-2 minutes until pink.",
+            "Push everything to one side, crack in the eggs and scramble them for 30 seconds.",
+            "Add the noodles and sauce and toss with tongs for 2-3 minutes, until the sauce is absorbed. Add a splash of water if they stick.",
+            "Toss in the bean sprouts, spring onions and half the peanuts for 30 seconds. Serve with the remaining peanuts, lime and coriander."
+        ],
+        "tip": "Rice noodles are easy to digest, so this is a good carb-rich dinner the night before a long run.",
+        "dietary_tags": [
+            "gluten_free"
+        ]
+    },
+    {
+        "name": "Vegetarian Chili",
+        "meal_type": "dinner",
+        "description": "A thick, smoky three-bean chilli with peppers and warm spices, topped with cheddar. Makes enough for the freezer.",
+        "servings": 4,
+        "prep_time": 15,
+        "cook_time": 45,
+        "calories": 345,
+        "protein": 18,
+        "carbs": 41,
+        "fat": 10,
+        "fiber": 14,
+        "ingredients": [
+            "1 tbsp olive oil",
+            "1 onion, diced",
+            "2 peppers, diced",
+            "3 garlic cloves, crushed",
+            "2 tsp chilli powder",
+            "2 tsp ground cumin",
+            "1 tsp smoked paprika",
+            "1 tsp dried oregano",
+            "1 tbsp tomato purée",
+            "2 x 400 g tins chopped tomatoes",
+            "400 g tin kidney beans, drained",
+            "400 g tin black beans, drained",
+            "400 g tin pinto beans, drained",
+            "250 ml vegetable stock",
+            "1 tsp sugar",
+            "60 g cheddar, grated",
+            "Lime wedges, to serve",
+            "Salt"
+        ],
+        "steps": [
+            "Heat the oil in a large pot and cook the onion and peppers for 8 minutes until soft.",
+            "Add the garlic and spices for 1 minute, then the tomato purée for 1 minute more.",
+            "Add the tomatoes, beans, stock and sugar. Simmer uncovered for 30-40 minutes, stirring occasionally, until thick.",
+            "Season, add a squeeze of lime, and top with the cheddar."
+        ],
+        "tip": "Serve it over rice or a baked potato to turn it into a proper training-day dinner.",
+        "storage": "Keeps for 4 days in the fridge or 3 months in the freezer.",
+        "dietary_tags": [
+            "vegetarian",
+            "gluten_free",
+            "meal_prep"
+        ]
+    },
+    {
+        "name": "Lamb Chops with Mint",
+        "meal_type": "dinner",
+        "description": "Rosemary and garlic lamb chops seared pink, with minty crushed new potatoes and peas.",
+        "servings": 2,
+        "prep_time": 15,
+        "cook_time": 20,
+        "calories": 580,
+        "protein": 38,
+        "carbs": 45,
+        "fat": 25,
+        "fiber": 7,
+        "ingredients": [
+            "4 lamb loin chops",
+            "1 tbsp olive oil",
+            "2 garlic cloves, crushed",
+            "1 tbsp chopped rosemary",
+            "1/2 lemon, zested",
+            "400 g new potatoes",
+            "160 g frozen peas",
+            "Small bunch of mint, chopped",
+            "2 tbsp mint sauce, to serve",
+            "Salt and black pepper"
+        ],
+        "steps": [
+            "Rub the chops with half the oil, the garlic, rosemary, lemon zest, salt and pepper. Leave them at room temperature for 15 minutes.",
+            "Boil the potatoes in salted water for 15 minutes, adding the peas for the last 3. Drain, then roughly crush them with a fork, the remaining oil and the chopped mint.",
+            "Heat a griddle pan until very hot. Stand the chops on their fat edge for 2 minutes to render and crisp it.",
+            "Cook for 3 minutes each side for pink (about 60°C). Rest for 5 minutes.",
+            "Serve with the crushed potatoes and mint sauce."
+        ],
+        "tip": "Lamb is rich in iron and B12, both important for runners, especially women in heavy training.",
+        "dietary_tags": [
+            "gluten_free"
+        ]
+    },
+    {
+        "name": "Chicken Enchiladas",
+        "meal_type": "dinner",
+        "description": "Corn tortillas rolled around chicken and black beans, baked in a smoky chipotle tomato sauce under melted cheddar.",
+        "servings": 4,
+        "prep_time": 25,
+        "cook_time": 35,
+        "calories": 510,
+        "protein": 45,
+        "carbs": 41,
+        "fat": 17,
+        "fiber": 9,
+        "ingredients": [
+            "500 g chicken breast",
+            "400 g passata",
+            "1 tbsp chipotle paste",
+            "2 tsp ground cumin",
+            "1 tsp dried oregano",
+            "1 tbsp olive oil",
+            "1 onion, diced",
+            "1 pepper, diced",
+            "2 garlic cloves, crushed",
+            "1 tsp smoked paprika",
+            "400 g tin black beans, drained",
+            "8 small corn tortillas",
+            "100 g cheddar, grated",
+            "4 tbsp light soured cream",
+            "Fresh coriander and lime",
+            "Salt"
+        ],
+        "steps": [
+            "Put the chicken in a pan, cover with water, bring to a gentle simmer and poach for 12-15 minutes until cooked. Rest, then shred. Leftover cooked chicken works too.",
+            "For the sauce, simmer the passata with the chipotle, 1 tsp of the cumin, the oregano and a pinch of salt for 5 minutes.",
+            "Heat the oil and cook the onion and pepper for 6 minutes. Add the garlic, paprika and remaining cumin for 1 minute, then stir in the beans, chicken and 4 tbsp of the sauce.",
+            "Heat the oven to 190°C fan (210°C / 410°F). Wrap the tortillas in damp kitchen paper and microwave for 30 seconds; cold corn tortillas crack when you roll them.",
+            "Fill and roll each tortilla, then lay them seam-side down in a baking dish. Pour over the remaining sauce and scatter with cheese.",
+            "Bake for 20 minutes until bubbling. Serve with soured cream, coriander and lime."
+        ],
+        "tip": "Assemble them the day before and bake after your run. Dinner's ready in 20 minutes.",
+        "storage": "Keeps for 3 days in the fridge; also freezes well, unbaked.",
+        "dietary_tags": [
+            "gluten_free",
+            "meal_prep"
+        ]
+    },
+    {
+        "name": "Moussaka",
+        "meal_type": "dinner",
+        "description": "A lighter moussaka: roasted aubergine and potato layered with cinnamon-spiced lamb under a golden Greek yogurt topping.",
+        "servings": 4,
+        "prep_time": 30,
+        "cook_time": 75,
+        "calories": 475,
+        "protein": 36,
+        "carbs": 32,
+        "fat": 22,
+        "fiber": 8,
+        "ingredients": [
+            "2 large aubergines, sliced 1 cm thick",
+            "2 tbsp olive oil",
+            "300 g potatoes, peeled and thinly sliced",
+            "400 g lean (10%) lamb mince",
+            "1 onion, finely chopped",
+            "2 garlic cloves, crushed",
+            "1 tsp ground cinnamon",
+            "1 tsp dried oregano",
+            "2 tbsp tomato purée",
+            "400 g tin chopped tomatoes",
+            "250 g Greek yogurt",
+            "1 large egg",
+            "40 g Parmesan, grated",
+            "Pinch of nutmeg",
+            "Salt and black pepper"
+        ],
+        "steps": [
+            "Heat the oven to 200°C fan (220°C / 425°F). Brush the aubergine slices with the oil, season, and roast on two trays for 20-25 minutes until soft and golden. Roasting instead of frying saves a lot of oil. Meanwhile, parboil the potato slices for 5 minutes and drain.",
+            "Brown the lamb in a dry pan over a high heat for 6-8 minutes and pour off excess fat. Add the onion for 5 minutes, then the garlic, cinnamon and oregano for 1 minute.",
+            "Stir in the tomato purée and tomatoes and simmer for 15 minutes until thick. Season.",
+            "Whisk the yogurt, egg, half the Parmesan and the nutmeg.",
+            "In a baking dish, layer the potatoes, half the aubergine, the lamb sauce and the rest of the aubergine. Spread the yogurt topping over and scatter with the remaining Parmesan.",
+            "Turn the oven down to 180°C fan and bake for 35-40 minutes until golden and set. Rest for 10 minutes before cutting; it slices cleanly once it settles."
+        ],
+        "tip": "A weekend cook that gives you four dinners. Pair it with crusty bread for extra carbs.",
+        "storage": "Keeps for 3 days in the fridge or 3 months in the freezer, in portions.",
+        "dietary_tags": [
+            "gluten_free",
+            "meal_prep"
+        ]
+    },
+    {
+        "name": "Paella",
+        "meal_type": "dinner",
+        "description": "Saffron rice with chicken, prawns, mussels and peas, cooked in one wide pan until a crisp crust forms underneath.",
+        "servings": 4,
+        "prep_time": 20,
+        "cook_time": 35,
+        "calories": 565,
+        "protein": 39,
+        "carbs": 68,
+        "fat": 13,
+        "fiber": 4,
+        "ingredients": [
+            "1 litre hot chicken stock",
+            "Good pinch of saffron",
+            "500 g mussels",
+            "2 tbsp olive oil",
+            "400 g boneless, skinless chicken thighs, in chunks",
+            "1 onion, diced",
+            "1 red pepper, sliced",
+            "3 garlic cloves, crushed",
+            "1 tsp smoked paprika",
+            "200 g chopped tomatoes",
+            "300 g paella rice (bomba or calasparra)",
+            "200 g raw peeled prawns",
+            "100 g frozen peas",
+            "Lemon wedges and parsley",
+            "Salt"
+        ],
+        "steps": [
+            "Put the saffron in the hot stock and keep it warm. Scrub the mussels and pull off the beards; throw away any that are open and don't close when tapped.",
+            "Heat the oil in a paella pan or wide frying pan and brown the chicken for 6-8 minutes. Push it aside, soften the onion and pepper for 5 minutes, then add the garlic and paprika for 1 minute and the tomatoes for 3 minutes.",
+            "Stir in the rice to coat it, then pour in the hot stock with a good pinch of salt. Stir once to spread everything evenly, then don't stir again; that's how the crust (socarrat) forms.",
+            "Simmer on a medium heat for 10 minutes. Press the prawns and mussels (hinge down) into the rice and scatter over the peas. Cook for 8-10 minutes more, until the rice has absorbed the liquid, the mussels have opened and the prawns are pink.",
+            "Turn up the heat for the last minute and listen for crackling: that's the crust.",
+            "Take it off the heat, cover with a tea towel for 5 minutes, and throw away any mussels that haven't opened. Serve with lemon and parsley."
+        ],
+        "tip": "A carb-rich celebration meal. It fits the night before a long run or the evening after a race.",
+        "dietary_tags": [
+            "gluten_free"
+        ]
+    },
+    {
+        "name": "Ratatouille",
+        "meal_type": "dinner",
+        "description": "Provençal vegetable stew with aubergine, courgette, peppers and tomato, plus butter beans to make it a meal. Better the next day.",
+        "servings": 4,
+        "prep_time": 20,
+        "cook_time": 45,
+        "calories": 255,
+        "protein": 9,
+        "carbs": 31,
+        "fat": 11,
+        "fiber": 12,
+        "ingredients": [
+            "3 tbsp olive oil",
+            "1 aubergine, cut into 2 cm chunks",
+            "2 courgettes, cut into 2 cm chunks",
+            "1 onion, diced",
+            "2 peppers, cut into 2 cm chunks",
+            "3 garlic cloves, crushed",
+            "2 tsp herbes de Provence",
+            "2 tbsp tomato purée",
+            "400 g tin chopped tomatoes",
+            "400 g tin butter beans, drained",
+            "Handful of basil",
+            "Salt and black pepper"
+        ],
+        "steps": [
+            "Cut all the vegetables to the same size so they cook evenly.",
+            "Heat 1.5 tbsp of the oil in a large pan over a high heat. Fry the aubergine for 5-6 minutes until golden, then lift it out. Cooking it separately lets it brown instead of steam.",
+            "Fry the courgettes in the same pan for 4 minutes and lift them out.",
+            "Add the remaining oil and cook the onion and peppers for 6-8 minutes. Add the garlic and herbs for 1 minute.",
+            "Add the tomato purée, tomatoes, beans and the reserved vegetables. Simmer, partly covered, on a low heat for 25-30 minutes until tender but still holding their shape.",
+            "Season and tear in the basil."
+        ],
+        "tip": "Serve with crusty bread, quinoa or polenta; on its own it's light on carbs for a training day.",
+        "storage": "Keeps for 4 days in the fridge; the flavour improves overnight.",
+        "dietary_tags": [
+            "vegan",
+            "gluten_free",
+            "meal_prep"
+        ]
+    },
+    {
+        "name": "Eggplant Parmesan",
+        "meal_type": "dinner",
+        "description": "Baked, not fried: roasted aubergine layered with garlicky tomato sauce, mozzarella and Parmesan under a crisp crumb.",
+        "servings": 4,
+        "prep_time": 20,
+        "cook_time": 55,
+        "calories": 355,
+        "protein": 17,
+        "carbs": 30,
+        "fat": 18,
+        "fiber": 6,
+        "ingredients": [
+            "2 large aubergines, sliced 1 cm thick",
+            "2 tbsp olive oil",
+            "700 g passata",
+            "2 garlic cloves, crushed",
+            "Pinch each of salt and sugar",
+            "Handful of basil",
+            "190 g mozzarella, torn",
+            "50 g Parmesan or vegetarian hard cheese, grated",
+            "60 g panko breadcrumbs"
+        ],
+        "steps": [
+            "Heat the oven to 200°C fan (220°C / 425°F). Brush the aubergine slices with most of the oil and roast for 20-25 minutes until soft and golden.",
+            "Meanwhile, simmer the passata with the garlic, salt, sugar and a few basil leaves for 10 minutes.",
+            "In a baking dish, layer sauce, aubergine, mozzarella and a little Parmesan three times.",
+            "Mix the panko with the remaining Parmesan and oil and scatter it over the top.",
+            "Turn the oven down to 180°C fan and bake for 25-30 minutes until bubbling and golden. Rest for 10 minutes before serving."
+        ],
+        "tip": "Serve with pasta or garlic bread to make it a proper training-day dinner.",
+        "dietary_tags": [
+            "vegetarian"
+        ]
+    },
+    {
+        "name": "Baked Ziti",
+        "meal_type": "dinner",
+        "description": "Pasta tubes in a beefy tomato sauce with pockets of ricotta, baked under bubbling mozzarella. Family-size comfort food.",
+        "servings": 4,
+        "prep_time": 15,
+        "cook_time": 40,
+        "calories": 640,
+        "protein": 47,
+        "carbs": 68,
+        "fat": 20,
+        "fiber": 4,
+        "ingredients": [
+            "300 g ziti or penne",
+            "1 tsp olive oil",
+            "400 g lean (5%) beef mince",
+            "1 onion, diced",
+            "2 garlic cloves, crushed",
+            "1 tsp dried oregano",
+            "700 g passata",
+            "250 g ricotta",
+            "30 g Parmesan, grated",
+            "125 g mozzarella, torn",
+            "Fresh basil",
+            "Salt and black pepper"
+        ],
+        "steps": [
+            "Heat the oven to 200°C fan (220°C / 425°F). Cook the pasta for 3 minutes less than the packet says; it finishes in the oven.",
+            "Meanwhile, heat the oil and brown the mince with the onion for 8 minutes. Add the garlic and oregano for 1 minute, then the passata, and simmer for 10 minutes. Season.",
+            "Season the ricotta with half the Parmesan and some pepper.",
+            "Mix the drained pasta into the sauce. Spoon half into a baking dish, dot with the ricotta, then add the rest of the pasta.",
+            "Top with the mozzarella and the remaining Parmesan and bake for 20-25 minutes until bubbling and browned. Scatter with basil."
+        ],
+        "tip": "Plenty of carbs and protein. Leftovers reheat well for a post-run lunch.",
+        "storage": "Keeps for 3 days in the fridge or 2 months in the freezer.",
+        "dietary_tags": [
+            "meal_prep"
+        ]
+    },
+    {
+        "name": "Korean Bibimbap with Beef",
+        "meal_type": "dinner",
+        "description": "Rice topped with marinated beef, seasoned vegetables and a fried egg, stirred together with a sweet-spicy gochujang sauce.",
+        "servings": 2,
+        "prep_time": 25,
+        "cook_time": 20,
+        "calories": 685,
+        "protein": 39,
+        "carbs": 77,
+        "fat": 22,
+        "fiber": 6,
+        "ingredients": [
+            "140 g short-grain or jasmine rice",
+            "200 g beef sirloin",
+            "2 tbsp soy sauce",
+            "2 tsp sesame oil",
+            "1 tsp sugar",
+            "2 garlic cloves, crushed",
+            "2 tsp vegetable oil",
+            "1 carrot, cut into matchsticks",
+            "1 courgette, cut into matchsticks",
+            "150 g spinach",
+            "100 g bean sprouts",
+            "2 large eggs",
+            "2 tbsp gochujang",
+            "1 tsp honey",
+            "1 tsp rice vinegar",
+            "1 tsp sesame seeds",
+            "Salt"
+        ],
+        "steps": [
+            "Cook the rice. Freeze the beef for 15 minutes, slice it thinly, and marinate it in the soy sauce, half the sesame oil, the sugar and garlic for 15 minutes.",
+            "Cook the vegetables separately, each seasoned with a pinch of salt: stir-fry the carrot, then the courgette, in a little vegetable oil for 1-2 minutes each. Blanch the spinach and bean sprouts in boiling water for 30-60 seconds, squeeze them dry and toss with the remaining sesame oil.",
+            "Stir-fry the beef in a very hot pan for 2-3 minutes until browned.",
+            "Fry the eggs sunny-side up.",
+            "Mix the gochujang, honey, vinegar and 1 tbsp water to make the sauce.",
+            "Arrange the rice in bowls with the vegetables and beef in sections and the egg on top. Sprinkle with sesame seeds and stir everything together with the sauce before eating."
+        ],
+        "tip": "A generous carb and protein refuel. Make it the evening after a long or hard run.",
+        "dietary_tags": []
+    },
+    {
+        "name": "Korean Kimchi Stew",
+        "meal_type": "dinner",
+        "description": "Kimchi jjigae: a bubbling, spicy stew of well-fermented kimchi, pork and silken-soft tofu, served with rice.",
+        "servings": 2,
+        "prep_time": 10,
+        "cook_time": 30,
+        "calories": 630,
+        "protein": 44,
+        "carbs": 52,
+        "fat": 24,
+        "fiber": 5,
+        "ingredients": [
+            "2 tsp sesame oil",
+            "150 g pork shoulder, thinly sliced",
+            "3 garlic cloves, crushed",
+            "300 g well-fermented kimchi, chopped",
+            "1 tbsp gochugaru (Korean chilli flakes)",
+            "1 tbsp gochujang",
+            "100 ml kimchi juice (from the jar)",
+            "500 ml water or anchovy stock",
+            "1 tsp fish sauce",
+            "300 g firm tofu, cubed",
+            "1/2 courgette, sliced",
+            "2 spring onions, sliced",
+            "100 g short-grain rice, cooked, to serve"
+        ],
+        "steps": [
+            "Heat the sesame oil in a pot over a medium heat and cook the pork for 4-5 minutes until browned at the edges.",
+            "Add the garlic and kimchi and fry for 3-4 minutes. Frying the kimchi deepens the flavour; older, sourer kimchi works best.",
+            "Stir in the gochugaru and gochujang for 30 seconds.",
+            "Add the water or stock, kimchi juice and fish sauce. Bring to the boil, then simmer for 15 minutes.",
+            "Add the tofu and courgette and simmer for 8 minutes more.",
+            "Scatter with spring onions and serve bubbling, with the rice."
+        ],
+        "tip": "Spicy and salty. Great on a cold evening, but not the night before a race.",
+        "dietary_tags": []
+    },
+    {
+        "name": "Cod with Garlic and Herbs",
+        "meal_type": "dinner",
+        "description": "Flaky cod under a lemon, garlic and parsley crust, roasted on a tray of new potatoes, courgette and tomatoes.",
+        "servings": 2,
+        "prep_time": 15,
+        "cook_time": 37,
+        "calories": 445,
+        "protein": 33,
+        "carbs": 44,
+        "fat": 15,
+        "fiber": 6,
+        "ingredients": [
+            "400 g new potatoes, halved",
+            "2 tbsp olive oil",
+            "1 carrot, sliced",
+            "1 courgette, chopped",
+            "1/2 red onion, cut into wedges",
+            "200 g cherry tomatoes",
+            "4 garlic cloves, minced",
+            "2 tbsp chopped parsley",
+            "1 lemon, zested and juiced",
+            "1 tsp dried oregano",
+            "2 cod fillets (about 150 g each)",
+            "Salt and black pepper"
+        ],
+        "steps": [
+            "Heat the oven to 200°C fan (220°C / 425°F). Toss the potatoes with 1 tbsp of the oil and some salt and roast for 15 minutes.",
+            "Add the carrot, courgette, onion and tomatoes to the tray and roast for 10 minutes more.",
+            "Mix the garlic, parsley, lemon zest, oregano and the remaining oil.",
+            "Nestle the cod among the vegetables, season it, and spread the herb mixture over the top.",
+            "Roast for 10-12 minutes, until the cod is opaque and flakes easily. Squeeze over the lemon juice."
+        ],
+        "tip": "Lean protein with moderate carbs. It's light, so it's a good choice the evening before a morning session.",
+        "dietary_tags": [
+            "gluten_free"
+        ]
+    },
+    {
+        "name": "Mediterranean Chicken Roast",
+        "meal_type": "dinner",
+        "description": "Oregano and lemon chicken thighs roasted over peppers, courgettes, tomatoes and chickpeas, finished with olives and feta.",
+        "servings": 4,
+        "prep_time": 15,
+        "cook_time": 35,
+        "calories": 530,
+        "protein": 48,
+        "carbs": 22,
+        "fat": 25,
+        "fiber": 7,
+        "ingredients": [
+            "2 courgettes, cut into chunks",
+            "2 peppers, cut into chunks",
+            "1 red onion, cut into wedges",
+            "300 g cherry tomatoes",
+            "400 g tin chickpeas, drained",
+            "2 tbsp olive oil",
+            "2 tsp dried oregano",
+            "3 garlic cloves, crushed",
+            "8 boneless, skinless chicken thighs (about 800 g)",
+            "1 lemon, zested and juiced",
+            "1 tsp paprika",
+            "60 g Kalamata olives",
+            "100 g feta, crumbled",
+            "Salt and black pepper"
+        ],
+        "steps": [
+            "Heat the oven to 200°C fan (220°C / 425°F).",
+            "On a large tray, toss the vegetables and chickpeas with 1.5 tbsp of the oil, half the oregano, the garlic and some salt.",
+            "Season the chicken with the remaining oil and oregano, the lemon zest, the paprika, salt and pepper, and lay it on top of the vegetables.",
+            "Roast for 30-35 minutes, until the chicken reaches 74°C and the vegetables are charred at the edges.",
+            "For the last 5 minutes, scatter over the olives and feta. Squeeze over the lemon juice to serve."
+        ],
+        "tip": "Serve it with crusty bread or couscous to soak up the juices and add carbs.",
+        "storage": "Keeps for 3 days in the fridge.",
+        "dietary_tags": [
+            "gluten_free",
+            "meal_prep"
+        ]
+    },
+    {
+        "name": "Chicken and Vegetable Curry Stew",
+        "meal_type": "dinner",
+        "description": "A gently spiced turmeric and coconut stew of chicken, sweet potato and carrot, finished with spinach and lime.",
+        "servings": 4,
+        "prep_time": 20,
+        "cook_time": 35,
+        "calories": 580,
+        "protein": 43,
+        "carbs": 69,
+        "fat": 14,
+        "fiber": 6,
+        "ingredients": [
+            "1 tbsp coconut oil",
+            "600 g chicken breast, cut into chunks",
+            "1 large onion, diced",
+            "3 garlic cloves, crushed",
+            "Thumb-size piece of ginger, grated",
+            "2 tsp ground turmeric",
+            "2 tsp ground cumin",
+            "2 tsp ground coriander",
+            "1 tsp garam masala",
+            "2 tbsp tomato purée",
+            "400 ml tin light coconut milk",
+            "300 ml chicken stock",
+            "2 sweet potatoes (about 400 g), cubed",
+            "2 carrots, sliced",
+            "100 g spinach",
+            "1 lime, juiced",
+            "200 g basmati rice, to serve",
+            "Fresh coriander",
+            "Salt"
+        ],
+        "steps": [
+            "Heat the oil in a large pot over a medium-high heat and brown the chicken for 5 minutes. Lift it out.",
+            "Soften the onion for 6-8 minutes, then add the garlic and ginger for 1 minute.",
+            "Add the spices and tomato purée and stir for 1 minute.",
+            "Pour in the coconut milk and stock, add the sweet potato and carrots, and simmer for 15 minutes.",
+            "Return the chicken and simmer for 10 minutes, until the potato is tender and the chicken cooked through. Meanwhile, cook the rice.",
+            "Stir in the spinach and lime juice, season, and serve with the rice and coriander."
+        ],
+        "tip": "Turmeric and ginger give it an anti-inflammatory edge, and it's gentle enough for a hard training week.",
+        "storage": "Keeps for 3 days in the fridge or 3 months in the freezer.",
+        "dietary_tags": [
+            "gluten_free",
+            "meal_prep",
+            "anti_inflammatory"
+        ]
+    },
+    {
+        "name": "Braised Chicken with Root Vegetables",
+        "meal_type": "dinner",
+        "description": "Crisp-skinned chicken thighs braised in white wine and thyme with carrots, parsnips and new potatoes. One pot, big flavour.",
+        "servings": 4,
+        "prep_time": 20,
+        "cook_time": 75,
+        "calories": 600,
+        "protein": 42,
+        "carbs": 42,
+        "fat": 27,
+        "fiber": 7,
+        "ingredients": [
+            "8 bone-in, skin-on chicken thighs",
+            "1 tbsp olive oil",
+            "1 onion, sliced",
+            "3 carrots, in chunks",
+            "2 parsnips, in chunks",
+            "3 garlic cloves, sliced",
+            "4 sprigs thyme",
+            "2 tbsp tomato purée",
+            "150 ml dry white wine",
+            "500 ml chicken stock",
+            "2 bay leaves",
+            "500 g new potatoes, halved",
+            "Chopped parsley",
+            "Salt and black pepper"
+        ],
+        "steps": [
+            "Heat the oven to 160°C fan (180°C / 350°F). Season the thighs well.",
+            "Heat the oil in a casserole over a medium-high heat. Brown the chicken skin-side down for 6-8 minutes, until deep golden and crisp, then flip it for 2 minutes and lift it out.",
+            "Pour off all but 1 tbsp of the fat. Soften the onion for 5 minutes, then add the carrots, parsnips, garlic and thyme for 3 minutes, and the tomato purée for 1 minute.",
+            "Pour in the wine and bubble for 2 minutes, scraping up the browned bits. Add the stock, bay leaves and potatoes.",
+            "Return the chicken skin-side up, with the skin above the liquid so it stays crisp. Cover and cook in the oven for 45 minutes, then uncover for 15 minutes until tender and reduced.",
+            "Rest for 5 minutes and scatter with parsley."
+        ],
+        "tip": "Hands-off Sunday cooking that covers two post-run dinners in the week.",
+        "storage": "Keeps for 3 days in the fridge.",
+        "dietary_tags": [
+            "gluten_free",
+            "meal_prep"
+        ]
+    },
+    {
+        "name": "Honey Garlic Glazed Salmon",
+        "meal_type": "dinner",
+        "description": "Salmon baked and then grilled under a sticky honey, garlic and ginger glaze, with rice and green vegetables.",
+        "servings": 2,
+        "prep_time": 10,
+        "cook_time": 20,
+        "calories": 620,
+        "protein": 35,
+        "carbs": 72,
+        "fat": 20,
+        "fiber": 4,
+        "ingredients": [
+            "120 g basmati rice",
+            "2 tbsp honey",
+            "2 tbsp soy sauce",
+            "2 garlic cloves, grated",
+            "1 tsp grated ginger",
+            "1 tsp rice vinegar",
+            "2 salmon fillets (about 130 g each)",
+            "1 tsp vegetable oil",
+            "250 g green beans or tenderstem broccoli"
+        ],
+        "steps": [
+            "Cook the rice. Whisk the honey, soy sauce, garlic, ginger and vinegar together to make the glaze.",
+            "Heat the oven to 200°C fan (220°C / 425°F). Line a tray with foil, because the honey burns and sticks. Lay the salmon on it skin-side down, brush with oil and spoon over half the glaze.",
+            "Bake for 10-12 minutes.",
+            "Meanwhile, simmer the remaining glaze in a small pan for 1-2 minutes until syrupy. Steam the greens for 4 minutes.",
+            "Switch the grill to high, spoon the thickened glaze over the salmon and grill for 1-2 minutes, watching closely, until caramelised.",
+            "Serve with the rice and greens."
+        ],
+        "tip": "Omega-3s plus fast carbs. It's a strong choice the evening after a key workout.",
+        "dietary_tags": [
+            "omega_3"
+        ]
+    },
+    {
+        "name": "Pork Tenderloin with Apple Cider Glaze",
+        "meal_type": "dinner",
+        "description": "Juicy roast pork tenderloin with buttery apples in a sticky cider, maple and mustard glaze, served with mash.",
+        "servings": 4,
+        "prep_time": 15,
+        "cook_time": 30,
+        "calories": 400,
+        "protein": 31,
+        "carbs": 44,
+        "fat": 10,
+        "fiber": 5,
+        "ingredients": [
+            "600 g potatoes, peeled and chunked",
+            "50 ml milk",
+            "1 pork tenderloin (about 500 g)",
+            "1 tbsp olive oil",
+            "10 g butter",
+            "2 apples, cored and sliced",
+            "1 shallot, finely chopped",
+            "200 ml dry cider or unsweetened apple juice",
+            "1 tbsp maple syrup",
+            "1 tsp Dijon mustard",
+            "2 sprigs thyme",
+            "Salt and black pepper"
+        ],
+        "steps": [
+            "Heat the oven to 200°C fan (220°C / 425°F). Boil the potatoes in salted water for 15 minutes until tender.",
+            "Season the pork. Heat the oil in an ovenproof pan and sear it on all sides for 5-6 minutes.",
+            "Roast for 12-15 minutes, to 63°C (just pink), then rest it under foil for 8 minutes. Tenderloin is lean and dries out fast above 65°C.",
+            "Put the same pan on the hob. Melt the butter and fry the apple slices for 3-4 minutes until golden, then add the shallot for 1 minute.",
+            "Add the cider, maple syrup, mustard and thyme and bubble for 4-5 minutes until syrupy. Stir in the pork's resting juices.",
+            "Mash the potatoes with the milk and season. Slice the pork and spoon over the glaze and apples."
+        ],
+        "tip": "Pork tenderloin is one of the leanest proteins around, which makes this a light but satisfying recovery dinner.",
+        "dietary_tags": [
+            "gluten_free"
+        ]
+    },
+    {
+        "name": "Indian Butter Chicken",
+        "meal_type": "dinner",
+        "description": "Tender marinated chicken in a silky, gently spiced tomato and butter sauce (murgh makhani), served with basmati.",
+        "servings": 4,
+        "prep_time": 20,
+        "cook_time": 35,
+        "calories": 550,
+        "protein": 36,
+        "carbs": 57,
+        "fat": 17,
+        "fiber": 2,
+        "ingredients": [
+            "600 g boneless, skinless chicken thighs, in chunks",
+            "100 g Greek yogurt",
+            "2 tsp garam masala",
+            "1 tsp chilli powder",
+            "1/2 lemon, juiced",
+            "240 g basmati rice",
+            "30 g butter",
+            "1 onion, finely chopped",
+            "3 garlic cloves, crushed",
+            "Thumb-size piece of ginger, grated",
+            "1 tsp ground cumin",
+            "1 tsp paprika",
+            "1/2 tsp ground cinnamon",
+            "400 g passata",
+            "1 tsp sugar",
+            "80 ml single cream",
+            "1 tsp dried fenugreek leaves (optional)",
+            "Salt"
+        ],
+        "steps": [
+            "Marinate the chicken in the yogurt, half the garam masala, the chilli powder, lemon juice and 1 tsp salt for at least 20 minutes.",
+            "Sear the chicken in a hot pan for 5-6 minutes until browned, then lift it out. Cook the rice.",
+            "Melt the butter in the same pan and cook the onion for 8 minutes. Add the garlic, ginger, cumin, paprika, cinnamon and the remaining garam masala for 1 minute.",
+            "Add the passata and sugar and simmer for 10 minutes, then blend until smooth.",
+            "Stir in the cream and chicken and simmer for 10 minutes until cooked through. Crumble in the fenugreek, if using, and serve with the rice."
+        ],
+        "tip": "Milder than tikka masala, so it's a crowd-pleaser, with a solid protein and carb refuel.",
+        "storage": "Keeps for 3 days in the fridge or 3 months in the freezer.",
+        "dietary_tags": [
+            "gluten_free",
+            "meal_prep"
+        ]
+    },
+    {
+        "name": "Moroccan Chicken Tagine with Preserved Lemons",
+        "meal_type": "dinner",
+        "description": "Chicken thighs slow-simmered with ras el hanout, saffron, preserved lemon and green olives, served over fluffy couscous.",
+        "servings": 4,
+        "prep_time": 20,
+        "cook_time": 50,
+        "calories": 530,
+        "protein": 45,
+        "carbs": 46,
+        "fat": 16,
+        "fiber": 4,
+        "ingredients": [
+            "8 boneless, skinless chicken thighs (about 800 g)",
+            "2 tsp ras el hanout (or 1 tsp each cumin, ground ginger and paprika, plus 1/2 tsp each cinnamon and turmeric)",
+            "1 tbsp olive oil",
+            "2 onions, sliced",
+            "3 garlic cloves, crushed",
+            "1 tsp grated ginger",
+            "Pinch of saffron in 400 ml hot chicken stock",
+            "1 tbsp honey",
+            "2 preserved lemons, rind only, sliced",
+            "80 g green olives",
+            "200 g couscous",
+            "Coriander and parsley, chopped",
+            "Salt"
+        ],
+        "steps": [
+            "Toss the chicken with the spices and a pinch of salt. Heat the oil in a tagine or heavy casserole and brown the chicken for 5 minutes, then lift it out.",
+            "Cook the onions for 8-10 minutes until soft and golden. Add the garlic and ginger for 1 minute.",
+            "Add the saffron stock and honey, return the chicken, cover and simmer gently for 30 minutes.",
+            "Add the preserved lemon and olives and simmer uncovered for 10 minutes to thicken. Taste before adding salt; the lemons are salty.",
+            "Put the couscous in a bowl, pour over 250 ml boiling water or stock with a pinch of salt, cover for 5 minutes, then fluff with a fork.",
+            "Serve the tagine over the couscous, scattered with herbs."
+        ],
+        "tip": "The salty sauce is welcome after hot-weather training.",
+        "storage": "Keeps for 3 days in the fridge.",
+        "dietary_tags": [
+            "meal_prep"
+        ]
+    },
+    {
+        "name": "Mushroom Risotto",
+        "meal_type": "dinner",
+        "description": "Creamy arborio rice with golden mushrooms, white wine, thyme and Parmesan, stirred until it flows like lava.",
+        "servings": 3,
+        "prep_time": 10,
+        "cook_time": 30,
+        "calories": 440,
+        "protein": 13,
+        "carbs": 57,
+        "fat": 14,
+        "fiber": 3,
+        "ingredients": [
+            "900 ml vegetable stock",
+            "1 tbsp olive oil",
+            "20 g butter",
+            "1 onion, finely chopped",
+            "300 g chestnut mushrooms, sliced",
+            "2 garlic cloves, crushed",
+            "1 tsp thyme leaves",
+            "200 g arborio rice",
+            "100 ml dry white wine",
+            "40 g Parmesan or vegetarian hard cheese, grated",
+            "Chopped parsley",
+            "Salt and black pepper"
+        ],
+        "steps": [
+            "Keep the stock at a simmer in a separate pan; cold stock stalls the rice.",
+            "Heat the oil and half the butter in a wide pan and cook the onion for 6 minutes until soft.",
+            "Turn up the heat, add the mushrooms and cook for 6-8 minutes until golden and their liquid has gone. Salt them only once they've browned. Add the garlic and thyme for 1 minute.",
+            "Add the rice and stir for 2 minutes until the edges look translucent. Pour in the wine and stir until it's absorbed.",
+            "Add the stock a ladle at a time, stirring often and waiting until each ladleful is mostly absorbed. After 18-20 minutes the rice should be creamy and just tender, with a slight bite.",
+            "Take it off the heat, beat in the remaining butter and the cheese, cover for 2 minutes, then season and scatter with parsley."
+        ],
+        "tip": "Rice-based comfort food with lots of carbs and little fibre. It makes a good pre-long-run dinner.",
+        "dietary_tags": [
+            "vegetarian",
+            "gluten_free",
+            "carb_load"
+        ]
+    },
+    {
+        "name": "Grilled Pork Tenderloin",
+        "meal_type": "dinner",
+        "description": "Dijon and cider-vinegar marinated pork tenderloin with charred griddled vegetables and new potatoes.",
+        "servings": 3,
+        "prep_time": 15,
+        "cook_time": 25,
+        "calories": 480,
+        "protein": 42,
+        "carbs": 37,
+        "fat": 17,
+        "fiber": 5,
+        "ingredients": [
+            "1 pork tenderloin (about 500 g), silver skin trimmed",
+            "2 tbsp olive oil",
+            "1 tbsp apple cider vinegar",
+            "1 tbsp Dijon mustard",
+            "1 tsp honey",
+            "2 garlic cloves, crushed",
+            "1 tsp chopped rosemary",
+            "450 g new potatoes",
+            "2 peppers, cut into strips",
+            "2 courgettes, sliced lengthways",
+            "1 red onion, cut into wedges",
+            "1 tsp olive oil, for the vegetables",
+            "Salt and black pepper"
+        ],
+        "steps": [
+            "Whisk the oil, vinegar, mustard, honey, garlic, rosemary, salt and pepper. Set 1 tbsp aside to dress the finished dish (never reuse marinade that has touched raw meat).",
+            "Coat the pork in the rest and marinate it in the fridge for 30 minutes to 4 hours.",
+            "Boil the potatoes for 12 minutes, drain and halve them.",
+            "Heat a griddle or barbecue to high. Cook the pork for 12-15 minutes, turning every 3 minutes, to 63°C in the centre. Rest for 8 minutes.",
+            "Toss the vegetables and potatoes with the oil and griddle them for 3-4 minutes each side.",
+            "Slice the pork and drizzle it with the reserved dressing."
+        ],
+        "tip": "Lean and high in protein. It's a good summer dinner on the barbecue after an evening run.",
+        "dietary_tags": [
+            "gluten_free"
+        ]
+    },
+    {
+        "name": "Coconut Curry with Tofu",
+        "meal_type": "dinner",
+        "description": "Crisp golden tofu and vegetables in a fragrant Thai red curry and coconut sauce with lime and basil, over jasmine rice.",
+        "servings": 3,
+        "prep_time": 15,
+        "cook_time": 25,
+        "calories": 610,
+        "protein": 28,
+        "carbs": 63,
+        "fat": 26,
+        "fiber": 5,
+        "ingredients": [
+            "400 g firm tofu",
+            "1 tbsp coconut oil",
+            "1 onion, sliced",
+            "2 garlic cloves, crushed",
+            "1 tbsp grated ginger",
+            "2 tbsp vegan Thai red curry paste (many contain shrimp paste, so check the label)",
+            "400 ml tin light coconut milk",
+            "200 ml vegetable stock",
+            "300 g mixed vegetables (broccoli, pepper, green beans)",
+            "1 tbsp soy sauce",
+            "1 tsp sugar",
+            "1 lime, juiced",
+            "Thai basil or coriander",
+            "180 g jasmine rice"
+        ],
+        "steps": [
+            "Press the tofu between kitchen paper under something heavy for 10 minutes, then cut it into cubes. Start the rice.",
+            "Heat half the oil in a large pan and fry the tofu for 8 minutes, turning, until golden on several sides. Lift it out.",
+            "Add the remaining oil and cook the onion for 5 minutes. Add the garlic and ginger for 1 minute, then the curry paste for 1 minute until fragrant.",
+            "Pour in the coconut milk and stock, add the vegetables (the hardest ones first) and simmer for 6-8 minutes.",
+            "Return the tofu and add the soy sauce, sugar and lime juice. Scatter with basil and serve with the rice."
+        ],
+        "tip": "A plant-based recovery dinner with a good carb load. Make it milder with less paste if spice upsets your stomach.",
+        "dietary_tags": [
+            "vegan"
+        ]
+    },
+    {
+        "name": "Lemon Herb Grilled Chicken",
+        "meal_type": "dinner",
+        "description": "Chicken marinated in lemon, garlic, parsley and thyme, griddled until juicy, with rosemary roast potatoes and salad.",
+        "servings": 4,
+        "prep_time": 15,
+        "cook_time": 35,
+        "calories": 390,
+        "protein": 40,
+        "carbs": 32,
+        "fat": 12,
+        "fiber": 4,
+        "ingredients": [
+            "700 g new potatoes, halved",
+            "1 tbsp olive oil, plus 3 tbsp for the marinade",
+            "1 tsp chopped rosemary",
+            "4 chicken breasts (about 600 g)",
+            "1 lemon, juiced",
+            "2 tbsp chopped parsley",
+            "1 tbsp thyme leaves",
+            "2 garlic cloves, crushed",
+            "300 g green salad or vegetables",
+            "Salt and black pepper"
+        ],
+        "steps": [
+            "Mix 3 tbsp oil with the lemon juice, parsley, thyme, garlic, salt and pepper. Flatten the chicken to an even thickness and marinate it for 30 minutes to 4 hours. Any longer and the lemon turns the texture mushy.",
+            "Heat the oven to 200°C fan (220°C / 425°F). Toss the potatoes with 1 tbsp oil, the rosemary and salt, and roast for 35 minutes.",
+            "Heat a griddle over a medium-high heat and cook the chicken for 5-6 minutes each side, to 74°C.",
+            "Rest the chicken for 5 minutes, then slice. Serve with the potatoes and salad."
+        ],
+        "tip": "Grill all four breasts and use the leftovers for lunches: salads, wraps and pasta boxes.",
+        "dietary_tags": [
+            "gluten_free",
+            "meal_prep"
+        ]
+    },
+    {
+        "name": "Beef and Broccoli Stir-Fry",
+        "meal_type": "dinner",
+        "description": "Silky, tender beef and crisp broccoli in a glossy garlic, ginger and oyster sauce, over jasmine rice. Faster than a takeaway.",
+        "servings": 3,
+        "prep_time": 20,
+        "cook_time": 15,
+        "calories": 640,
+        "protein": 42,
+        "carbs": 70,
+        "fat": 21,
+        "fiber": 5,
+        "ingredients": [
+            "450 g beef sirloin, thinly sliced against the grain",
+            "1 tbsp soy sauce, plus 1 tbsp for the sauce",
+            "1 tbsp cornflour, plus 1 tsp for the sauce",
+            "1/4 tsp bicarbonate of soda",
+            "2 tbsp vegetable oil",
+            "200 g jasmine rice",
+            "400 g broccoli, in florets",
+            "1 red pepper, sliced",
+            "3 garlic cloves, finely chopped",
+            "1 tbsp grated ginger",
+            "2 tbsp oyster sauce",
+            "1 tsp sugar",
+            "1 tsp sesame oil"
+        ],
+        "steps": [
+            "Toss the beef with 1 tbsp soy sauce, 1 tbsp cornflour, the bicarbonate of soda and 1 tsp of the oil. Leave it for 15 minutes; this velveting keeps it tender. Start the rice.",
+            "Mix the oyster sauce, remaining soy sauce, sugar, 1 tsp cornflour and 100 ml water.",
+            "Blanch the broccoli in boiling water for 1 minute and drain. It stays tender without steaming the wok.",
+            "Heat a wok until smoking and add 1 tbsp of oil. Lay the beef in a single layer and leave it for 1 minute, then flip and cook for 1 minute more. Lift it out.",
+            "Add the remaining oil and stir-fry the garlic and ginger for 20 seconds, then the broccoli and pepper for 2 minutes.",
+            "Add the sauce and beef and toss for 1 minute until glossy. Drizzle with the sesame oil and serve over the rice."
+        ],
+        "tip": "Iron-rich beef with plenty of carbs. Batch the sliced, marinated beef in the freezer for quick midweek dinners.",
+        "dietary_tags": []
+    },
+    {
+        "name": "Filipino Adobo with Chicken",
+        "meal_type": "dinner",
+        "description": "Chicken braised in soy, vinegar, garlic and bay, then browned and glazed in the reduced sauce. The Philippines' national dish.",
+        "servings": 4,
+        "prep_time": 10,
+        "cook_time": 45,
+        "calories": 535,
+        "protein": 45,
+        "carbs": 56,
+        "fat": 13,
+        "fiber": 1,
+        "ingredients": [
+            "800 g boneless, skinless chicken thighs",
+            "120 ml soy sauce",
+            "1 head of garlic, cloves peeled and crushed",
+            "3 bay leaves",
+            "1 tsp whole black peppercorns",
+            "120 ml cane or cider vinegar",
+            "1 tbsp brown sugar",
+            "1 tbsp vegetable oil",
+            "250 g jasmine rice"
+        ],
+        "steps": [
+            "Combine the chicken, soy sauce, garlic, bay leaves and peppercorns in a pan. Marinate for 30 minutes if you have time.",
+            "Add the vinegar and 120 ml water and bring to the boil. Don't stir for the first 5 minutes; this lets the vinegar's sharpness cook off.",
+            "Cover and simmer for 25 minutes. Meanwhile, cook the rice.",
+            "Lift out the chicken and pat it dry. Fry it in the oil in a separate pan for 3-4 minutes each side until browned.",
+            "Meanwhile, boil the sauce hard with the sugar for 5 minutes until syrupy. Return the chicken and turn it to coat. Serve with the rice."
+        ],
+        "tip": "High in sodium, which is handy after a hot, sweaty session. Go easy on the sauce otherwise. Even better the next day.",
+        "storage": "Keeps for 4 days in the fridge.",
+        "dietary_tags": [
+            "meal_prep"
+        ]
+    },
+    {
+        "name": "Bacalhau à Brás",
+        "meal_type": "dinner",
+        "description": "A Portuguese favourite: flaked cod, soft onions and crisp matchstick potatoes bound with barely set eggs, finished with olives and parsley.",
+        "servings": 2,
+        "prep_time": 20,
+        "cook_time": 30,
+        "calories": 595,
+        "protein": 45,
+        "carbs": 40,
+        "fat": 27,
+        "fiber": 5,
+        "ingredients": [
+            "250 g salt cod, soaked (or fresh cod)",
+            "400 g floury potatoes, peeled",
+            "2 tbsp olive oil",
+            "1 large onion, thinly sliced",
+            "3 garlic cloves, sliced",
+            "4 large eggs",
+            "Handful of parsley, chopped",
+            "12 black olives",
+            "Black pepper"
+        ],
+        "steps": [
+            "If you're using salt cod, soak it in cold water in the fridge for 24-48 hours, changing the water 3-4 times. Poach it for 5 minutes, then flake it, removing the skin and bones. For fresh cod, season it with salt and poach for 5 minutes.",
+            "Heat the oven to 220°C fan (240°C / 465°F). Cut the potatoes into very thin matchsticks (a julienne peeler or mandoline helps). Rinse and dry them thoroughly in a tea towel, toss with 1 tbsp oil and salt, and spread thinly over two lined trays. Bake for 15-20 minutes, tossing halfway, until golden and crisp.",
+            "Meanwhile, cook the onion slowly in the remaining oil for 10 minutes until soft and sweet. Add the garlic for 1 minute, then the cod, and warm it through for 2 minutes.",
+            "Beat the eggs with pepper. If you used salt cod, don't add salt.",
+            "Turn the heat to low, add the potatoes to the pan, pour in the eggs and stir gently for 1-2 minutes, until just creamy. They should be soft, not dry.",
+            "Take it off the heat and finish with the parsley and olives."
+        ],
+        "tip": "Essentially an egg-and-potato scramble: easy protein and carbs that go down well after a long run.",
+        "dietary_tags": [
+            "gluten_free"
+        ]
+    },
+    {
+        "name": "Turkey and Lentil Bolognese",
+        "meal_type": "dinner",
+        "description": "A lighter ragu of turkey mince and red lentils in tomato, over spaghetti. Lentils add fibre and iron, and nobody notices they're there.",
+        "servings": 4,
+        "prep_time": 15,
+        "cook_time": 35,
+        "calories": 610,
+        "protein": 44,
+        "carbs": 81,
+        "fat": 11,
+        "fiber": 7,
+        "ingredients": [
+            "1 tbsp olive oil",
+            "1 onion, finely diced",
+            "1 carrot, finely diced",
+            "1 celery stick, finely diced",
+            "400 g lean turkey mince",
+            "2 garlic cloves, crushed",
+            "1 tsp dried oregano",
+            "2 tbsp tomato purée",
+            "100 g red lentils, rinsed",
+            "400 g tin chopped tomatoes",
+            "300 ml stock",
+            "320 g spaghetti",
+            "40 g Parmesan, grated",
+            "Salt and black pepper"
+        ],
+        "steps": [
+            "Heat the oil in a large pan and soften the onion, carrot and celery for 8 minutes.",
+            "Turn up the heat, add the turkey and cook for 6 minutes until browned.",
+            "Stir in the garlic, oregano and tomato purée for 1 minute.",
+            "Add the lentils, tomatoes and stock. Simmer for 20-25 minutes, stirring occasionally and adding water if it gets thick, until the lentils melt into the sauce. Season.",
+            "Meanwhile, cook the spaghetti. Toss it with the sauce and a splash of the pasta water, and serve with the Parmesan."
+        ],
+        "tip": "High-carb and high-protein, with more fibre than a classic bolognese. A dependable weeknight refuel.",
+        "storage": "The sauce keeps for 3 days in the fridge or 3 months in the freezer.",
+        "dietary_tags": [
+            "meal_prep"
+        ]
+    },
+    {
+        "name": "Carb-Load Tomato and Basil Pasta",
+        "meal_type": "dinner",
+        "description": "A simple, low-fibre, low-fat pasta in a garlicky tomato sauce, built for the days before a long race.",
+        "servings": 1,
+        "prep_time": 5,
+        "cook_time": 12,
+        "calories": 610,
+        "protein": 22,
+        "carbs": 102,
+        "fat": 11,
+        "fiber": 5,
+        "ingredients": [
+            "125 g white spaghetti or penne",
+            "1 tsp olive oil",
+            "1 garlic clove, thinly sliced",
+            "200 g passata",
+            "Pinch each of salt and sugar",
+            "Handful of basil",
+            "15 g Parmesan, grated"
+        ],
+        "steps": [
+            "Cook the pasta in well-salted boiling water.",
+            "Meanwhile, warm the oil in a small pan and cook the garlic gently for 1 minute, without letting it colour.",
+            "Add the passata with the salt and sugar and simmer for 8 minutes.",
+            "Drain the pasta, keeping a splash of the water, and toss it in the sauce with that water.",
+            "Tear over the basil and finish with the Parmesan."
+        ],
+        "tip": "For the 36-48 hours before a long race: lots of carbohydrate, not much fat or fibre, nothing spicy. Scale the pasta up to your needs. A full carb-load is roughly 8-10 g of carbs per kg of body weight per day, spread across several meals. Try it before a long training run first.",
+        "dietary_tags": [
+            "vegetarian",
+            "carb_load"
+        ]
+    },
+    {
+        "name": "Chicken and Chorizo Rice",
+        "meal_type": "dinner",
+        "description": "A one-pan Spanish-style rice with smoky chorizo, chicken thighs, peppers and peas. Portugal's arroz de frango meets paella.",
+        "servings": 4,
+        "prep_time": 15,
+        "cook_time": 30,
+        "calories": 570,
+        "protein": 36,
+        "carbs": 70,
+        "fat": 14,
+        "fiber": 4,
+        "ingredients": [
+            "1 tbsp olive oil",
+            "70 g cooking chorizo, diced (check it's gluten-free if needed)",
+            "500 g boneless, skinless chicken thighs, in chunks",
+            "1 onion, diced",
+            "1 red pepper, diced",
+            "2 garlic cloves, crushed",
+            "1 tsp smoked paprika",
+            "300 g long-grain rice",
+            "400 g tin chopped tomatoes",
+            "700 ml hot chicken stock",
+            "150 g frozen peas",
+            "Parsley and lemon wedges",
+            "Salt"
+        ],
+        "steps": [
+            "Fry the chorizo in the oil in a wide, lidded pan for 3 minutes until it releases its red oil.",
+            "Add the chicken and brown it for 5 minutes.",
+            "Add the onion and pepper for 5 minutes, then the garlic and paprika for 1 minute.",
+            "Stir in the rice for 1 minute to coat it, then add the tomatoes, hot stock and a pinch of salt. Bring to a simmer, cover and cook on a low heat for 15 minutes.",
+            "Scatter over the peas, cover again, and cook for 5 minutes more until the rice is tender.",
+            "Rest for 5 minutes, then serve with parsley and lemon."
+        ],
+        "tip": "Carb-rich and easy to batch. It makes a good dinner two nights before a long race.",
+        "storage": "Keeps for 3 days in the fridge. Reheat until piping hot.",
+        "dietary_tags": [
+            "gluten_free",
+            "meal_prep"
+        ]
+    },
+    {
+        "name": "Red Lentil Dal with Spinach",
+        "meal_type": "dinner",
+        "description": "Silky turmeric and ginger red lentils finished with a sizzling cumin, mustard seed and tomato tarka, served with basmati.",
+        "servings": 4,
+        "prep_time": 10,
+        "cook_time": 30,
+        "calories": 520,
+        "protein": 21,
+        "carbs": 90,
+        "fat": 8,
+        "fiber": 9,
+        "ingredients": [
+            "250 g red lentils",
+            "1 litre water",
+            "1 tsp ground turmeric",
+            "1 tbsp grated ginger",
+            "240 g basmati rice",
+            "2 tbsp vegetable oil",
+            "1 tsp cumin seeds",
+            "1 tsp black mustard seeds",
+            "1 onion, finely chopped",
+            "3 garlic cloves, sliced",
+            "1 green chilli, sliced",
+            "1 tsp garam masala",
+            "200 g chopped tomatoes",
+            "100 g spinach",
+            "1/2 lemon, juiced",
+            "Fresh coriander",
+            "Salt"
+        ],
+        "steps": [
+            "Rinse the lentils until the water runs clearer. Simmer them with the water, turmeric and ginger for 20-25 minutes, skimming off any foam and stirring occasionally, until they collapse.",
+            "Meanwhile, cook the rice.",
+            "For the tarka, heat the oil in a frying pan and add the cumin and mustard seeds. When they pop (about 30 seconds), add the onion and cook for 8 minutes until golden.",
+            "Add the garlic, chilli and garam masala for 1 minute, then the tomatoes for 3 minutes.",
+            "Stir the tarka and spinach into the dal. Add the lemon juice and season with salt.",
+            "Serve over the rice with coriander."
+        ],
+        "tip": "Cheap, plant-based and carb-rich. Lentils are a good iron source for vegan runners; eat them with vitamin C, like the tomato and lemon here.",
+        "storage": "Keeps for 4 days in the fridge or 3 months in the freezer.",
+        "dietary_tags": [
+            "vegan",
+            "gluten_free",
+            "meal_prep"
+        ]
+    },
+    {
+        "name": "Sheet-Pan Chicken Fajitas",
+        "meal_type": "dinner",
+        "description": "Smoky spiced chicken, peppers and onions roasted on one tray, wrapped in warm tortillas with avocado, salsa and yogurt.",
+        "servings": 3,
+        "prep_time": 10,
+        "cook_time": 20,
+        "calories": 635,
+        "protein": 53,
+        "carbs": 54,
+        "fat": 22,
+        "fiber": 12,
+        "ingredients": [
+            "500 g chicken breast, cut into strips",
+            "3 peppers, sliced",
+            "1 red onion, sliced",
+            "1.5 tbsp olive oil",
+            "2 tsp smoked paprika",
+            "1 tsp ground cumin",
+            "1 tsp chilli powder",
+            "1/2 tsp garlic powder",
+            "1/2 tsp dried oregano",
+            "1 lime, zested and juiced",
+            "6 small wholewheat tortillas",
+            "1 avocado, sliced",
+            "100 g Greek yogurt",
+            "Salsa and coriander",
+            "Salt"
+        ],
+        "steps": [
+            "Heat the oven to 220°C fan (240°C / 465°F).",
+            "On a large tray, toss the chicken, peppers and onion with the oil, spices, lime zest and 1/2 tsp salt. Spread them in one layer; use two trays if it's crowded, because packed vegetables steam instead of charring.",
+            "Roast for 20 minutes, stirring halfway, until the chicken is cooked and the peppers are charred at the edges.",
+            "Wrap the tortillas in foil and warm them in the oven for the last 5 minutes.",
+            "Squeeze the lime juice over the tray and serve with the tortillas, avocado, yogurt, salsa and coriander."
+        ],
+        "tip": "Twenty minutes, one tray, and more than 50 g of protein per serving.",
+        "dietary_tags": []
+    },
+    {
+        "name": "Teriyaki Tofu Rice Bowl",
+        "meal_type": "dinner",
+        "description": "Crispy cornflour-coated tofu in a sticky homemade teriyaki sauce, over jasmine rice with broccoli and carrot.",
+        "servings": 2,
+        "prep_time": 15,
+        "cook_time": 20,
+        "calories": 665,
+        "protein": 33,
+        "carbs": 82,
+        "fat": 21,
+        "fiber": 6,
+        "ingredients": [
+            "300 g extra-firm tofu",
+            "1 tbsp cornflour, plus 1 tsp for the sauce",
+            "1 tbsp vegetable oil",
+            "150 g jasmine rice",
+            "200 g broccoli, in florets",
+            "1 carrot, sliced",
+            "3 tbsp soy sauce",
+            "1 tbsp maple syrup",
+            "1 tbsp rice vinegar",
+            "1 tsp grated ginger",
+            "1 garlic clove, grated",
+            "1 tsp sesame seeds",
+            "2 spring onions, sliced",
+            "Salt"
+        ],
+        "steps": [
+            "Press the tofu for 10 minutes, cut it into cubes, and toss with 1 tbsp cornflour and a pinch of salt.",
+            "Meanwhile, rinse the rice and cook it with 225 ml water: bring to the boil, cover and cook on a low heat for 12 minutes, then rest for 5.",
+            "Fry the tofu in the oil over a medium-high heat for 8-10 minutes, turning, until crisp all over.",
+            "Steam the broccoli and carrot for 4 minutes.",
+            "Mix the soy sauce, maple syrup, vinegar, ginger, garlic, 1 tsp cornflour and 3 tbsp water. Pour it over the tofu in the pan and bubble for 1-2 minutes until thick and glossy.",
+            "Serve over the rice with the vegetables, sesame seeds and spring onions."
+        ],
+        "tip": "A vegan recovery bowl with a big carb load. Leftover tofu is good cold in a lunch box.",
+        "dietary_tags": [
+            "vegan"
+        ]
+    },
+    {
+        "name": "Sausage and Bean Casserole",
+        "meal_type": "dinner",
+        "description": "Browned sausages simmered with two kinds of beans, peppers and smoked paprika in a rich tomato sauce. Proper winter comfort.",
+        "servings": 4,
+        "prep_time": 15,
+        "cook_time": 45,
+        "calories": 345,
+        "protein": 20,
+        "carbs": 32,
+        "fat": 12,
+        "fiber": 9,
+        "ingredients": [
+            "1 tbsp olive oil",
+            "8 reduced-fat pork sausages",
+            "1 onion, diced",
+            "2 carrots, diced",
+            "1 red pepper, diced",
+            "2 garlic cloves, crushed",
+            "1 tsp smoked paprika",
+            "1 tsp dried thyme",
+            "1 tbsp tomato purée",
+            "400 g tin chopped tomatoes",
+            "400 g tin cannellini beans, drained",
+            "400 g tin butter beans, drained",
+            "300 ml chicken or vegetable stock",
+            "1 tsp Worcestershire sauce",
+            "Salt and black pepper"
+        ],
+        "steps": [
+            "Heat the oil in a casserole over a medium heat and brown the sausages for 8-10 minutes until golden all over; they finish cooking in the sauce. Lift them out and halve them.",
+            "Cook the onion, carrots and pepper for 6-8 minutes.",
+            "Stir in the garlic, paprika, thyme and tomato purée for 1 minute.",
+            "Add the tomatoes, beans, stock and Worcestershire sauce, then return the sausages.",
+            "Simmer covered for 20 minutes, then uncovered for 10 minutes until thick. Season."
+        ],
+        "tip": "Serve with mash, a baked potato or crusty bread to make it a full training-day dinner.",
+        "storage": "Keeps for 3 days in the fridge or 3 months in the freezer.",
+        "dietary_tags": [
+            "meal_prep"
+        ]
+    }
 ]

@@ -231,6 +231,17 @@ Routers should carry no raw `db.query` — there is one remaining exception in
   Strava-era backfill has no Intervals id and would otherwise be re-inserted,
   double-counting every distance total.
 
+- **Recipe catalogue** — `app/data/meals_*.json`, one file per meal type,
+  loaded by `contexts/nutrition/meal_database.py`. Authors write numbered
+  `steps`, a runner-facing `tip`, per-serving macros and *judgement* tags
+  (`vegan`, `pre_run`, `carb_load`…). Nutrient tags (`quick`, `high_protein`,
+  `high_carb`…), `slug` and the legacy joined `instructions` string are
+  **derived at load time**, never hand-entered: hand copies drifted from the
+  numbers. `tests/test_core/test_recipe_catalog.py` enforces the contract
+  (calories vs macros, diet labels vs ingredients, no boilerplate steps). Every
+  Tips-page fuel idea names its `recipe`, and its carb label is read from it.
+  Favourites store a snapshot but are served from the live catalogue.
+
 - **Workout typing** — the user-entered/imported `workout_type` is kept separate
   from `inferred_workout_type` (+ `inferred_type_confidence`), filled in from
   pace/HR/distance/splits by `contexts/runner/fitness/workout_type_classifier.py`.

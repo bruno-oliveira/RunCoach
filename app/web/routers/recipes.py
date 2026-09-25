@@ -6,7 +6,10 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
 from app.contexts.nutrition.favorites_service import FavoritesService
-from app.contexts.nutrition.meal_database import get_meal_database
+from app.contexts.nutrition.meal_database import (
+    get_meal_database,
+    meal_matches_query,
+)
 from app.dependencies import (
     get_current_user,
     get_db,
@@ -28,7 +31,7 @@ def search_recipes(
     query: str = "",
     meal_type: str = "",
     min_protein: int = 0,
-    max_calories: int = 1000,
+    max_calories: int = 2000,
     dietary_tags: str = "",
     page: int = Query(1, ge=1),
     page_size: int = Query(50, ge=1, le=200),
@@ -36,48 +39,39 @@ def search_recipes(
     """Search and filter recipes from the meals database with pagination.
 
     Args:
-        query: Free-text search term matched against recipe names.
-        meal_type: Filter by meal type (e.g. "breakfast", "lunch", "dinner", "snacks").
-        min_protein: Minimum protein in grams.
+        query: Free text; every word must appear in the name, description or
+            ingredients.
+        meal_type: Filter by meal type (e.g. "breakfast", "trail").
+        min_protein: Minimum protein in grams per serving.
         max_calories: Maximum calories per serving.
-        dietary_tags: Comma-separated dietary tags (e.g. "vegetarian,gluten-free").
+        dietary_tags: Comma-separated tags; a recipe must carry all of them.
         page: Page number (1-indexed).
         page_size: Number of recipes per page.
 
     Returns:
-        Dictionary with paginated recipe list, total count, and page metadata.
+        The page of recipes, the total, page metadata, and ``counts`` — how
+        many recipes each meal type would return with the *other* filters
+        applied, so the category chips can show live counts.
     """
-    all_recipes = meal_db.meals
+    selected_tags = [tag.strip() for tag in dietary_tags.split(",") if tag.strip()]
 
-    # Parse dietary tags from comma-separated string
-    selected_dietary_tags = (
-        [tag.strip() for tag in dietary_tags.split(",") if tag.strip()]
-        if dietary_tags
-        else []
-    )
-
-    filtered_recipes = []
-
-    for recipe in all_recipes:
-        matches_query = query.lower() in recipe.get("name", "").lower()
-        matches_meal_type = not meal_type or recipe.get("meal_type") == meal_type
-        matches_protein = recipe.get("protein", 0) >= min_protein
-        matches_calories = recipe.get("calories", 0) <= max_calories
-
-        # Check dietary tags
-        recipe_dietary_tags = recipe.get("dietary_tags", [])
-        matches_dietary_tags = not selected_dietary_tags or all(
-            tag in recipe_dietary_tags for tag in selected_dietary_tags
+    def passes_other_filters(recipe: dict) -> bool:
+        tags = recipe.get("dietary_tags", [])
+        return (
+            meal_matches_query(recipe, query)
+            and recipe.get("protein", 0) >= min_protein
+            and recipe.get("calories", 0) <= max_calories
+            and all(tag in tags for tag in selected_tags)
         )
 
-        if (
-            matches_query
-            and matches_meal_type
-            and matches_protein
-            and matches_calories
-            and matches_dietary_tags
-        ):
-            filtered_recipes.append(recipe)
+    candidates = [r for r in meal_db.meals if passes_other_filters(r)]
+    counts: dict[str, int] = {}
+    for recipe in candidates:
+        counts[recipe["meal_type"]] = counts.get(recipe["meal_type"], 0) + 1
+
+    filtered_recipes = [
+        r for r in candidates if not meal_type or r.get("meal_type") == meal_type
+    ]
 
     total = len(filtered_recipes)
     total_pages = (total + page_size - 1) // page_size
@@ -90,6 +84,7 @@ def search_recipes(
         "page": page,
         "page_size": page_size,
         "total_pages": total_pages,
+        "counts": counts,
     }
 
 

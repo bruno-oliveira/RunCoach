@@ -3,11 +3,11 @@
 import logging
 
 from fastapi import APIRouter, Depends, HTTPException, Request
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, RedirectResponse, Response
 from sqlalchemy.orm import Session
 
 from app.contexts.nutrition.favorites_service import FavoritesService
-from app.contexts.nutrition.meal_database import get_meal_database
+from app.contexts.nutrition.meal_database import get_meal_database, meal_type_label
 from app.dependencies import get_db, get_favorites_service, get_optional_user
 from app.infrastructure.config import settings
 from app.template_helpers import create_templates
@@ -15,6 +15,7 @@ from app.template_helpers import create_templates
 logger = logging.getLogger(__name__)
 
 router = APIRouter(tags=["recipes-pages"])
+
 templates = create_templates()
 meal_db = get_meal_database()
 
@@ -41,6 +42,7 @@ def recipes_page(
             "user": current_user,
             "google_client_id": settings.google_client_id,
             "current_page": "recipes",
+            "recipe_total": len(meal_db.meals),
         },
     )
 
@@ -52,12 +54,13 @@ def recipe_detail(
     db: Session = Depends(get_db),
     current_user=Depends(get_optional_user),
     favorites_service: FavoritesService = Depends(get_favorites_service),
-) -> HTMLResponse:
+) -> Response:
     """Render a single recipe detail page with a shareable URL.
 
     Args:
         request: The incoming HTTP request.
-        recipe_name: URL-slug of the recipe (e.g. "chicken-stir-fry").
+        recipe_name: URL slug of the recipe (e.g. "chicken-stir-fry"). A legacy
+            slug is redirected to the canonical one.
         db: Database session.
         current_user: The currently authenticated user, if any.
 
@@ -67,15 +70,13 @@ def recipe_detail(
     Raises:
         HTTPException: 404 if the recipe is not found.
     """
-    # Find recipe by name (case-insensitive search)
-    recipe = None
-    for meal in meal_db.meals:
-        if meal.get("name", "").lower().replace(" ", "-") == recipe_name.lower():
-            recipe = meal
-            break
-
+    recipe = meal_db.get_meal_by_slug(recipe_name)
     if not recipe:
         raise HTTPException(status_code=404, detail="Recipe not found")
+    # Old links used the raw lower-cased name ("salmon-niçoise-salad"); send
+    # them to the canonical ASCII slug so every recipe has one shareable URL.
+    if recipe["slug"] != recipe_name:
+        return RedirectResponse(f"/recipes/{recipe['slug']}", status_code=301)
 
     # Check if recipe is in user's favorites
     favorite_id = None
@@ -91,6 +92,8 @@ def recipe_detail(
         {
             "request": request,
             "recipe": recipe,
+            "related": meal_db.related_meals(recipe),
+            "meal_type_label": meal_type_label(recipe["meal_type"]),
             "user": current_user,
             "is_favorite": is_favorite,
             "favorite_id": favorite_id,

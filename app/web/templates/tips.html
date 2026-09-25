@@ -45,6 +45,9 @@
                                 <span class="nutrition-badge">🍝 {{ item.carbs }}</span>
                             </div>
                             <div class="meal-option-description">{{ item.note }}</div>
+                            {% if item.recipe %}
+                            <a class="trail-fuel-recipe-link" href="/recipes/{{ item.recipe | recipe_slug }}"><span data-i18n="tips.see_recipe">See the recipe</span> &rarr;</a>
+                            {% endif %}
                         </div>
                         {% endfor %}
                     </div>

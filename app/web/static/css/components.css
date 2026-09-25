@@ -82,6 +82,12 @@
   background: var(--color-secondary-dark);
 }
 
+/* Dark mode flips --color-secondary to near-white, so the white label would
+   vanish; switch the text to the dark ink instead. */
+[data-theme="dark"] .btn-secondary {
+  color: #1C1E21;
+}
+
 /* Danger */
 .btn-danger {
   background: var(--color-error);

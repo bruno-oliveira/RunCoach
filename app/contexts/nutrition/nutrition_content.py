@@ -2,6 +2,8 @@
 
 from typing import Any, Dict, List
 
+from app.contexts.nutrition.meal_database import get_meal_database
+
 
 def generate_general_nutrition_tips(
     weekly_km: float, target_distance: float
@@ -128,238 +130,292 @@ def generate_trail_fuel_ideas() -> List[Dict[str, Any]]:
     a ``category`` (sweet / savoury / drink) used as a badge. Carb figures are
     per-serving estimates for a typical home recipe — a starting point, not
     gospel.
+
+    Each idea also names the catalogue ``recipe`` that makes it, so the Tips
+    page can link to the full method. Where that recipe exists its per-serving
+    carbs replace the hand-written estimate, so the card and the recipe page
+    never quote different numbers.
     """
-    return [
-        # --- Before: carb-load + race morning -------------------------------
-        {
-            "name": "Tomato rice, carb-load edition",
-            "phase": "before",
-            "category": "savoury",
-            "carbs": "~70 g per bowl",
-            "note": (
-                "A slightly soupy tomato rice the night before. Easy to digest "
-                "and tops up glycogen without sitting heavy."
-            ),
-        },
-        {
-            "name": "Beetroot & feta pre-race rice",
-            "phase": "before",
-            "category": "savoury",
-            "carbs": "~65 g per bowl",
-            "note": (
-                "Nitrate-rich beetroot stirred through rice the night before — "
-                "carbs plus a small endurance edge from the beets."
-            ),
-        },
-        {
-            "name": "Race-morning overnight oats",
-            "phase": "before",
-            "category": "sweet",
-            "carbs": "~60 g per bowl",
-            "note": (
-                "Mixed the night before so there's nothing to cook at 4 a.m. "
-                "Eat 2.5–3 hours before the start to settle the gut."
-            ),
-        },
-        {
-            "name": "Honey & salt toast",
-            "phase": "before",
-            "category": "sweet",
-            "carbs": "~40 g per serving",
-            "note": (
-                "Quick race-morning carbs with a little salt; add banana "
-                "slices if you can stomach more. Simple and reliable."
-            ),
-        },
-        # --- During: on the move --------------------------------------------
-        {
-            "name": "Date & cocoa trail balls",
-            "phase": "during",
-            "category": "sweet",
-            "carbs": "~25 g each",
-            "note": (
-                "Blended dates, oats and cocoa rolled into bite-size balls. "
-                "Soft, easy to chew on the move, and a clean source of carbs."
-            ),
-        },
-        {
-            "name": "Salted maple rice cakes",
-            "phase": "during",
-            "category": "sweet",
-            "carbs": "~30 g each",
-            "note": (
-                "Sticky rice pressed with maple syrup and a pinch of salt. "
-                "Gentle on the gut and a welcome change from gels."
-            ),
-        },
-        {
-            "name": "Peanut butter & honey pinwheels",
-            "phase": "during",
-            "category": "sweet",
-            "carbs": "~20 g each",
-            "note": (
-                "A thin tortilla spread with PB and honey, rolled and sliced. "
-                "Adds a little fat and protein for slower-burning energy."
-            ),
-        },
-        {
-            "name": "Salted banana bread bites",
-            "phase": "during",
-            "category": "sweet",
-            "carbs": "~22 g each",
-            "note": (
-                "Dense banana bread cut into cubes with extra salt baked in. "
-                "Real food that still feels like a treat deep into a long run."
-            ),
-        },
-        {
-            "name": "Apricot & almond energy bars",
-            "phase": "during",
-            "category": "sweet",
-            "carbs": "~28 g each",
-            "note": (
-                "No-bake bars of dried apricot, almonds and oats. Hold their "
-                "shape in a hot vest pocket and pack a lot of carbs per gram."
-            ),
-        },
-        {
-            "name": "Salty boiled potato bites",
-            "phase": "during",
-            "category": "savoury",
-            "carbs": "~15 g each",
-            "note": (
-                "Small boiled potatoes rolled in salt. The classic ultra "
-                "savoury swap once sweetness fatigue sets in around hour four."
-            ),
-        },
-        {
-            "name": "Savoury mini wraps",
-            "phase": "during",
-            "category": "savoury",
-            "carbs": "~25 g each",
-            "note": (
-                "Small wraps with salted nut butter or a little cheese. Save "
-                "these for the back half when you can't face another gel."
-            ),
-        },
-        {
-            "name": "Homemade sports drink",
-            "phase": "during",
-            "category": "drink",
-            "carbs": "~60 g per bottle",
-            "note": (
-                "Water, ~60 g sugar, a pinch of salt and a squeeze of lemon. "
-                "One bottle per hour alongside solid food covers fluid, carbs "
-                "and some sodium in a single flask."
-            ),
-        },
-        {
-            "name": "Maple espresso gel",
-            "phase": "during",
-            "category": "drink",
-            "carbs": "~25 g each",
-            "note": (
-                "Maple syrup with a shot of espresso and a pinch of salt. A "
-                "homemade caffeinated option — save it for the race's second "
-                "half and rehearse the dose in training first."
-            ),
-        },
-        {
-            "name": "Salted rice balls (onigiri)",
-            "phase": "during",
-            "category": "savoury",
-            "carbs": "~35 g each",
-            "note": (
-                "Sushi rice pressed around a little miso or umeboshi and rolled "
-                "in salt. Cook a batch the night before — they hold their shape "
-                "in a vest and go down easily late in a race."
-            ),
-        },
-        {
-            "name": "Maple oat flapjacks",
-            "phase": "during",
-            "category": "sweet",
-            "carbs": "~35 g each",
-            "note": (
-                "Baked oats bound with maple and butter, cut into bars. Dense, "
-                "chewy carbs that travel well and don't crumble in a pocket."
-            ),
-        },
-        {
-            "name": "Sweet potato & salt mash pouch",
-            "phase": "during",
-            "category": "savoury",
-            "carbs": "~30 g per pouch",
-            "note": (
-                "Roast and mash sweet potato with salt, then squeeze into a "
-                "reusable pouch. Real-food carbs you can take on the move "
-                "without chewing when the effort is high."
-            ),
-        },
-        {
-            "name": "Pretzel & nut butter bites",
-            "phase": "during",
-            "category": "savoury",
-            "carbs": "~20 g each",
-            "note": (
-                "Mini pretzels sandwiched with salted nut butter. Crunchy, "
-                "salty carbs that cut through sweetness fatigue and add a "
-                "little protein and fat."
-            ),
-        },
-        {
-            "name": "Fig & sea-salt rolls",
-            "phase": "during",
-            "category": "sweet",
-            "carbs": "~24 g each",
-            "note": (
-                "Blended dried figs and oats rolled in sesame and flaky salt. "
-                "Naturally sweet, fibre-light and gentle on a tired stomach."
-            ),
-        },
-        {
-            "name": "Coconut & cocoa rice squares",
-            "phase": "during",
-            "category": "sweet",
-            "carbs": "~28 g each",
-            "note": (
-                "Sticky rice pressed with coconut, cocoa and a pinch of salt, "
-                "cut into squares. A no-bake change of flavour for hour three "
-                "onwards."
-            ),
-        },
-        # --- After: recovery ------------------------------------------------
-        {
-            "name": "Recovery smoothie",
-            "phase": "after",
-            "category": "drink",
-            "carbs": "~50 g per glass",
-            "note": (
-                "Roughly a 3:1 carbs-to-protein blend within ~45 minutes of "
-                "finishing — milk or yoghurt, banana, oats and berries."
-            ),
-        },
-        {
-            "name": "Protein rice pudding",
-            "phase": "after",
-            "category": "sweet",
-            "carbs": "~55 g per bowl",
-            "note": (
-                "A warm recovery dessert that pairs comforting carbs with "
-                "protein when a cold smoothie doesn't appeal post-race."
-            ),
-        },
-        {
-            "name": "Cottage cheese & berry bowl",
-            "phase": "after",
-            "category": "sweet",
-            "carbs": "~25 g per bowl",
-            "note": (
-                "Slow-digesting casein with berries before bed — supports "
-                "overnight repair after a long day on the trails."
-            ),
-        },
-    ]
+    return [_with_recipe_carbs(idea) for idea in _TRAIL_FUEL_IDEAS]
+
+
+def _with_recipe_carbs(idea: Dict[str, Any]) -> Dict[str, Any]:
+    """Copy of ``idea`` whose ``carbs`` label comes from its linked recipe."""
+    recipe = get_meal_database().get_meal_by_name(idea.get("recipe", ""))
+    if not recipe:
+        return dict(idea)
+    serving = recipe.get("serving_size")
+    unit = serving.split(" (")[0].removeprefix("1 ") if serving else "serving"
+    return {**idea, "carbs": f"~{recipe['carbs']} g per {unit}"}
+
+
+_TRAIL_FUEL_IDEAS: List[Dict[str, Any]] = [
+    # --- Before: carb-load + race morning -------------------------------
+    {
+        "name": "Tomato rice, carb-load edition",
+        "recipe": "Carb-Load Tomato Rice",
+        "phase": "before",
+        "category": "savoury",
+        "carbs": "~70 g per bowl",
+        "note": (
+            "A slightly soupy tomato rice the night before. Easy to digest "
+            "and tops up glycogen without sitting heavy."
+        ),
+    },
+    {
+        "name": "Beetroot & feta pre-race rice",
+        "recipe": "Beetroot and Feta Pre-Race Rice",
+        "phase": "before",
+        "category": "savoury",
+        "carbs": "~65 g per bowl",
+        "note": (
+            "Nitrate-rich beetroot stirred through rice the night before — "
+            "carbs plus a small endurance edge from the beets."
+        ),
+    },
+    {
+        "name": "Race-morning overnight oats",
+        "recipe": "Race-Morning Overnight Oats",
+        "phase": "before",
+        "category": "sweet",
+        "carbs": "~60 g per bowl",
+        "note": (
+            "Mixed the night before so there's nothing to cook at 4 a.m. "
+            "Eat 2.5–3 hours before the start to settle the gut."
+        ),
+    },
+    {
+        "name": "Honey, banana & salt toast",
+        "recipe": "Pre-Run Banana and Honey Toast",
+        "phase": "before",
+        "category": "sweet",
+        "carbs": "~40 g per serving",
+        "note": (
+            "White toast, banana, honey and a pinch of salt 60–90 minutes "
+            "before the start. Low fibre on purpose, so it's simple and reliable."
+        ),
+    },
+    # --- During: on the move --------------------------------------------
+    {
+        "name": "Date & cocoa trail balls",
+        "recipe": "Date and Cocoa Trail Balls",
+        "phase": "during",
+        "category": "sweet",
+        "carbs": "~25 g each",
+        "note": (
+            "Blended dates, oats and cocoa rolled into bite-size balls. "
+            "Soft, easy to chew on the move, and a clean source of carbs."
+        ),
+    },
+    {
+        "name": "Salted maple rice cakes",
+        "recipe": "Salted Maple Rice Cakes",
+        "phase": "during",
+        "category": "sweet",
+        "carbs": "~30 g each",
+        "note": (
+            "Sticky rice pressed with maple syrup and a pinch of salt. "
+            "Gentle on the gut and a welcome change from gels."
+        ),
+    },
+    {
+        "name": "Peanut butter & honey pinwheels",
+        "recipe": "Honey Nut Butter Tortilla Roll",
+        "phase": "during",
+        "category": "sweet",
+        "carbs": "~20 g each",
+        "note": (
+            "A thin tortilla spread with PB and honey, rolled and sliced. "
+            "Adds a little fat and protein for slower-burning energy."
+        ),
+    },
+    {
+        "name": "Salted banana bread bites",
+        "recipe": "Salted Banana Bread Bites",
+        "phase": "during",
+        "category": "sweet",
+        "carbs": "~22 g each",
+        "note": (
+            "Dense banana bread cut into cubes with extra salt baked in. "
+            "Real food that still feels like a treat deep into a long run."
+        ),
+    },
+    {
+        "name": "Apricot & almond energy bars",
+        "recipe": "Apricot and Almond Energy Bars",
+        "phase": "during",
+        "category": "sweet",
+        "carbs": "~28 g each",
+        "note": (
+            "No-bake bars of dried apricot, almonds and oats. Hold their "
+            "shape in a hot vest pocket and pack a lot of carbs per gram."
+        ),
+    },
+    {
+        "name": "Salty boiled potato bites",
+        "recipe": "Salted Boiled Potatoes",
+        "phase": "during",
+        "category": "savoury",
+        "carbs": "~15 g each",
+        "note": (
+            "Small boiled potatoes rolled in salt. The classic ultra "
+            "savoury swap once sweetness fatigue sets in around hour four."
+        ),
+    },
+    {
+        "name": "Savoury mini wraps",
+        "recipe": "Savoury Mini Wraps",
+        "phase": "during",
+        "category": "savoury",
+        "carbs": "~25 g each",
+        "note": (
+            "Small wraps with salted nut butter or a little cheese. Save "
+            "these for the back half when you can't face another gel."
+        ),
+    },
+    {
+        "name": "Homemade sports drink",
+        "recipe": "Homemade Electrolyte Drink",
+        "phase": "during",
+        "category": "drink",
+        "carbs": "~60 g per bottle",
+        "note": (
+            "Juice, sugar, salt and water: ~40 g carbs and ~575 mg sodium "
+            "per 750 ml. One bottle per hour alongside solid food covers "
+            "fluid, carbs and sodium in a single flask."
+        ),
+    },
+    {
+        "name": "Maple espresso gel",
+        "recipe": "Maple Espresso Gel",
+        "phase": "during",
+        "category": "drink",
+        "carbs": "~25 g each",
+        "note": (
+            "Maple syrup with a shot of espresso and a pinch of salt. A "
+            "homemade caffeinated option — save it for the race's second "
+            "half and rehearse the dose in training first."
+        ),
+    },
+    {
+        "name": "Salted rice balls (onigiri)",
+        "recipe": "Miso Rice Balls",
+        "phase": "during",
+        "category": "savoury",
+        "carbs": "~35 g each",
+        "note": (
+            "Sushi rice pressed around a little miso or umeboshi and rolled "
+            "in salt. Cook a batch the night before — they hold their shape "
+            "in a vest and go down easily late in a race."
+        ),
+    },
+    {
+        "name": "Maple oat flapjacks",
+        "recipe": "Maple Oat Flapjacks",
+        "phase": "during",
+        "category": "sweet",
+        "carbs": "~35 g each",
+        "note": (
+            "Baked oats bound with maple and butter, cut into bars. Dense, "
+            "chewy carbs that travel well and don't crumble in a pocket."
+        ),
+    },
+    {
+        "name": "Sweet potato & salt mash pouch",
+        "recipe": "Sweet Potato Mash Pouch",
+        "phase": "during",
+        "category": "savoury",
+        "carbs": "~30 g per pouch",
+        "note": (
+            "Roast and mash sweet potato with salt, then squeeze into a "
+            "reusable pouch. Real-food carbs you can take on the move "
+            "without chewing when the effort is high."
+        ),
+    },
+    {
+        "name": "Pretzel & nut butter bites",
+        "recipe": "Pretzel Nut Butter Bites",
+        "phase": "during",
+        "category": "savoury",
+        "carbs": "~20 g each",
+        "note": (
+            "Mini pretzels sandwiched with salted nut butter. Crunchy, "
+            "salty carbs that cut through sweetness fatigue and add a "
+            "little protein and fat."
+        ),
+    },
+    {
+        "name": "Fig & sea-salt rolls",
+        "recipe": "Fig and Sea Salt Rolls",
+        "phase": "during",
+        "category": "sweet",
+        "carbs": "~24 g each",
+        "note": (
+            "Blended dried figs and oats rolled in sesame and flaky salt. "
+            "Naturally sweet; figs carry some fibre, so use them early in "
+            "a race or on easy long runs."
+        ),
+    },
+    {
+        "name": "Coconut sticky rice bites",
+        "recipe": "Coconut Sticky Rice Bites",
+        "phase": "during",
+        "category": "sweet",
+        "carbs": "~28 g each",
+        "note": (
+            "Glutinous rice soaked in sweet, salty coconut milk and rolled "
+            "in toasted coconut. A chewy change of flavour for hour three "
+            "onwards."
+        ),
+    },
+    {
+        "name": "Miso noodle broth",
+        "recipe": "Miso Noodle Broth for Crew Stops",
+        "phase": "during",
+        "category": "drink",
+        "carbs": "~45 g per flask",
+        "note": (
+            "Hot, salty miso broth with soft rice vermicelli in a flask for "
+            "crew stops, night sections and cold backyard corrals. Often "
+            "the one thing a turned stomach will accept."
+        ),
+    },
+    # --- After: recovery ------------------------------------------------
+    {
+        "name": "Recovery smoothie",
+        "recipe": "3:1 Recovery Smoothie",
+        "phase": "after",
+        "category": "drink",
+        "carbs": "~50 g per glass",
+        "note": (
+            "A 3:1 carbs-to-protein blend within ~45 minutes of finishing: "
+            "milk, yoghurt, banana, oats and berries (~85 g carbs, 28 g "
+            "protein)."
+        ),
+    },
+    {
+        "name": "Protein rice pudding",
+        "recipe": "Protein Rice Pudding",
+        "phase": "after",
+        "category": "sweet",
+        "carbs": "~55 g per bowl",
+        "note": (
+            "A warm recovery dessert that pairs comforting carbs with "
+            "protein when a cold smoothie doesn't appeal post-race."
+        ),
+    },
+    {
+        "name": "Cottage cheese & fruit bowl",
+        "recipe": "Cottage Cheese with Fruit",
+        "phase": "after",
+        "category": "sweet",
+        "carbs": "~25 g per bowl",
+        "note": (
+            "Slow-digesting casein with fruit before bed — supports "
+            "overnight repair after a long day on the trails."
+        ),
+    },
+]
 
 
 def generate_trail_nutrition_tips() -> List[Dict[str, str]]:

@@ -9,6 +9,7 @@ from pathlib import Path
 
 from fastapi.templating import Jinja2Templates
 
+from app.contexts.nutrition.meal_database import meal_type_label, recipe_slug
 from app.core.training.periodization.plan_calendar import next_monday
 from app.core.training.workouts.workout_steps.presentation import session_view
 from app.infrastructure.config import settings
@@ -54,4 +55,8 @@ def create_templates(directory: str = "app/web/templates") -> Jinja2Templates:
     # Grouped steps + effort profile, shared with the watch export so every
     # screen shows the structure the watch will run.
     tpl.env.filters["session_view"] = session_view
+    # Recipe links from plan snapshots and the Tips page, which store names
+    # rather than slugs.
+    tpl.env.filters["recipe_slug"] = recipe_slug
+    tpl.env.filters["meal_type_label"] = meal_type_label
     return tpl

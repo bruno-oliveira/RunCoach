@@ -1,400 +1,803 @@
 [
-  {
-    "name": "Protein Power Oatmeal",
-    "meal_type": "breakfast",
-    "description": "Hearty oatmeal packed with protein and fiber for sustained energy",
-    "instructions": "Combine rolled oats and 1 cup of water or milk in a microwave-safe bowl. Microwave on high for 2-3 minutes until oats are cooked and creamy (or cook on stovetop for 5 minutes). Stir in protein powder, mixing well to combine. Add chia seeds and stir for 1 minute until they absorb some liquid. Top with fresh berries and chopped nuts. Serve immediately while warm.",
-    "prep_time": 5,
-    "cook_time": 10,
-    "calories": 450,
-    "protein": 35,
-    "fiber": 12,
-    "carbs": 45,
-    "fat": 12,
-    "ingredients": [
-      "1 cup rolled oats",
-      "1 scoop vanilla protein powder",
-      "1 tbsp chia seeds",
-      "1 cup mixed berries",
-      "2 tbsp chopped almonds",
-      "1 cup almond milk"
-    ],
-    "dietary_tags": [
-      "high_protein",
-      "high_fiber",
-      "vegetarian"
-    ]
-  },
-  {
-    "name": "Greek Yogurt Parfait",
-    "meal_type": "breakfast",
-    "description": "Creamy Greek yogurt layered with fruits and high-fiber granola",
-    "instructions": "In a clear glass or bowl, layer 1/2 cup of Greek yogurt on the bottom. Add a layer of mixed berries, followed by another layer of yogurt. Sprinkle high-fiber granola over the top. Drizzle honey evenly across the parfait. Serve chilled with a long spoon to enjoy all layers together.",
-    "prep_time": 8,
-    "cook_time": 0,
-    "calories": 380,
-    "protein": 28,
-    "fiber": 10,
-    "carbs": 42,
-    "fat": 8,
-    "ingredients": [
-      "1.5 cups Greek yogurt",
-      "1 cup mixed berries",
-      "1/2 cup high-fiber granola",
-      "1 tbsp honey",
-      "2 tbsp chia seeds"
-    ],
-    "dietary_tags": [
-      "high_protein",
-      "high_fiber",
-      "vegetarian",
-      "quick"
-    ]
-  },
-  {
-    "name": "Veggie Scramble Wrap",
-    "meal_type": "breakfast",
-    "description": "Fluffy eggs with vegetables and cheese wrapped in a whole grain tortilla",
-    "instructions": "Heat a non-stick skillet over medium heat with a little oil or cooking spray. Crack 3 eggs into the pan, add a splash of milk or water, and whisk lightly. Add spinach, diced bell pepper, and onion. Scramble with a spatula for 3-4 minutes until eggs are set but still moist. Stir in shredded cheese and remove from heat. Warm the tortilla for 10 seconds in a dry pan or microwave. Scoop the egg mixture into the center of the tortilla, add sliced avocado, and roll tightly from one side to the other. Cut in half diagonally before serving.",
-    "prep_time": 10,
-    "cook_time": 8,
-    "calories": 420,
-    "protein": 26,
-    "fiber": 8,
-    "carbs": 28,
-    "fat": 22,
-    "ingredients": [
-      "3 large eggs",
-      "1 cup spinach",
-      "1/2 bell pepper",
-      "1/4 cup onions",
-      "2 oz cheese",
-      "whole grain tortilla",
-      "1/4 avocado"
-    ],
-    "dietary_tags": [
-      "high_protein",
-      "high_fiber",
-      "vegetarian"
-    ]
-  },
-  {
-    "name": "Overnight Protein Oats",
-    "meal_type": "breakfast",
-    "description": "No-cook oatmeal soaked overnight with protein powder and fruits",
-    "instructions": "In a mason jar or container, combine rolled oats, protein powder, milk, and chia seeds. Stir well until protein powder is fully dissolved. Cover and refrigerate overnight for at least 8 hours. In the morning, stir well and top with fresh berries and chopped walnuts. Can be eaten cold or warmed in the microwave for 30 seconds.",
-    "prep_time": 5,
-    "cook_time": 0,
-    "calories": 410,
-    "protein": 30,
-    "fiber": 11,
-    "carbs": 52,
-    "fat": 8,
-    "ingredients": [
-      "1 cup rolled oats",
-      "1 scoop vanilla protein powder",
-      "1.5 cups almond milk",
-      "1 tbsp chia seeds",
-      "1 cup mixed berries",
-      "1 tbsp chopped walnuts"
-    ],
-    "dietary_tags": [
-      "high_protein",
-      "high_fiber",
-      "vegetarian",
-      "meal_prep"
-    ]
-  },
-  {
-    "name": "Breakfast Burrito",
-    "meal_type": "breakfast",
-    "description": "Scrambled eggs, black beans, and cheese in a whole wheat tortilla",
-    "instructions": "Prepare 3 eggs, 1/2 cup black beans, 2 oz cheese as directed in the ingredient list. Combine in a serving dish. For optimal flavor and texture, allow to sit for a few minutes before enjoying. This breakfast provides the perfect start to fuel your day and support your training goals. Start your day with this nutritious breakfast to fuel your morning activities and support your training goals.",
-    "prep_time": 12,
-    "cook_time": 8,
-    "calories": 460,
-    "protein": 28,
-    "fiber": 9,
-    "carbs": 35,
-    "fat": 20,
-    "ingredients": [
-      "3 eggs",
-      "1/2 cup black beans",
-      "2 oz cheese",
-      "whole wheat tortilla",
-      "1/4 avocado",
-      "2 tbsp salsa"
-    ],
-    "dietary_tags": [
-      "high_protein",
-      "high_fiber"
-    ]
-  },
-  {
-    "name": "Cottage Cheese Bowl",
-    "meal_type": "breakfast",
-    "description": "High-protein cottage cheese with fruits, nuts, and honey",
-    "instructions": "Prepare 1.5 cups cottage cheese, 1 cup sliced peaches, 2 tbsp chopped pecans as directed in the ingredient list. Combine in a serving dish. For optimal flavor and texture, allow to sit for a few minutes before enjoying. This breakfast provides the perfect start to fuel your day and support your training goals. Start your day with this nutritious breakfast to fuel your morning activities and support your training goals.",
-    "prep_time": 5,
-    "cook_time": 0,
-    "calories": 380,
-    "protein": 34,
-    "fiber": 8,
-    "carbs": 28,
-    "fat": 12,
-    "ingredients": [
-      "1.5 cups cottage cheese",
-      "1 cup sliced peaches",
-      "2 tbsp chopped pecans",
-      "1 tbsp honey",
-      "1 tbsp flax seeds"
-    ],
-    "dietary_tags": [
-      "high_protein",
-      "high_fiber",
-      "quick"
-    ]
-  },
-  {
-    "name": "Protein Pancakes",
-    "meal_type": "breakfast",
-    "description": "Fluffy pancakes made with protein powder and topped with berries",
-    "instructions": "In a medium bowl, combine all ingredients using a whisk or spoon. Mix until just combined - be careful not to overmix. Let the mixture rest for 5-10 minutes to allow flavors to develop. Cook or serve as directed in the recipe. Start your day with this nutritious breakfast to fuel your morning activities and support your training goals.",
-    "prep_time": 10,
-    "cook_time": 8,
-    "calories": 440,
-    "protein": 32,
-    "fiber": 7,
-    "carbs": 55,
-    "fat": 10,
-    "ingredients": [
-      "1 scoop vanilla protein powder",
-      "1 cup pancake mix",
-      "1 cup milk",
-      "1 cup mixed berries",
-      "2 tbsp maple syrup",
-      "1 tbsp butter"
-    ],
-    "dietary_tags": [
-      "high_protein",
-      "vegetarian"
-    ]
-  },
-  {
-    "name": "Tofu Scramble",
-    "meal_type": "breakfast",
-    "description": "Plant-based scrambled tofu with vegetables and turmeric",
-    "instructions": "Heat a non-stick pan or skillet over medium heat. Add a small amount of oil or butter if needed. Cook the main ingredient according to recipe instructions, turning occasionally until golden brown and cooked through. Remove from heat and let rest for 2-3 minutes before serving. Start your day with this nutritious breakfast to fuel your morning activities and support your training goals.",
-    "prep_time": 12,
-    "cook_time": 10,
-    "calories": 390,
-    "protein": 24,
-    "fiber": 10,
-    "carbs": 25,
-    "fat": 18,
-    "ingredients": [
-      "1 block firm tofu",
-      "1 cup spinach",
-      "1/2 bell pepper",
-      "1/4 cup onions",
-      "1 tsp turmeric",
-      "2 tbsp nutritional yeast",
-      "whole grain toast"
-    ],
-    "dietary_tags": [
-      "high_protein",
-      "high_fiber",
-      "vegan"
-    ]
-  },
-  {
-    "name": "Egg Muffins",
-    "meal_type": "breakfast",
-    "description": "Baked egg muffins with vegetables and cheese, perfect for meal prep",
-    "instructions": "Place all ingredients in a blender in the order listed (liquids first). Start blending on low speed, gradually increase to high, and blend for 45-60 seconds until completely smooth. Pour into a glass or bowl and serve immediately. Add optional toppings before serving. Start your day with this nutritious breakfast to fuel your morning activities and support your training goals.",
-    "prep_time": 15,
-    "cook_time": 20,
-    "calories": 350,
-    "protein": 26,
-    "fiber": 6,
-    "carbs": 18,
-    "fat": 20,
-    "ingredients": [
-      "6 eggs",
-      "1 cup diced vegetables",
-      "1/2 cup cheese",
-      "1/4 cup milk",
-      "salt and pepper"
-    ],
-    "dietary_tags": [
-      "high_protein",
-      "meal_prep"
-    ]
-  },
-  {
-    "name": "Chia Seed Pudding",
-    "meal_type": "breakfast",
-    "description": "Creamy pudding made with chia seeds, milk, and protein powder",
-    "instructions": "In a medium bowl, combine all ingredients using a whisk or spoon. Mix until just combined - be careful not to overmix. Let the mixture rest for 5-10 minutes to allow flavors to develop. Cook or serve as directed in the recipe. Start your day with this nutritious breakfast to fuel your morning activities and support your training goals.",
-    "prep_time": 5,
-    "cook_time": 0,
-    "calories": 360,
-    "protein": 28,
-    "fiber": 15,
-    "carbs": 32,
-    "fat": 12,
-    "ingredients": [
-      "3 tbsp chia seeds",
-      "1.5 cups almond milk",
-      "1 scoop vanilla protein powder",
-      "1 cup berries",
-      "1 tbsp almond butter"
-    ],
-    "dietary_tags": [
-      "high_protein",
-      "high_fiber",
-      "vegetarian",
-      "meal_prep"
-    ]
-  },
-  {
-    "name": "Spinach and Feta Omelette",
-    "meal_type": "breakfast",
-    "description": "Fluffy omelette filled with spinach, feta cheese, and tomatoes",
-    "instructions": "Heat 1 tsp olive oil in a non-stick skillet over medium heat. Add 2 cups fresh spinach and cook until wilted (1-2 minutes). Remove spinach and set aside. In a bowl, whisk 4 eggs with 2 tbsp milk, salt, and pepper. Pour eggs into the same skillet and cook, gently pushing cooked portions toward center and tilting pan to allow uncooked egg to flow underneath (2-3 minutes). When eggs are mostly set but still slightly moist on top, sprinkle wilted spinach, 2 oz crumbled feta cheese, and 1/4 cup diced tomatoes over one half. Fold other half over filling and cook for 1 more minute. Slide onto plate and serve immediately.",
-    "prep_time": 8,
-    "cook_time": 8,
-    "calories": 340,
-    "protein": 26,
-    "fiber": 4,
-    "carbs": 8,
-    "fat": 22,
-    "ingredients": [
-      "4 eggs",
-      "2 cups fresh spinach",
-      "2 oz feta cheese",
-      "1/4 cup diced tomatoes",
-      "2 tbsp milk",
-      "1 tsp olive oil",
-      "salt and pepper"
-    ],
-    "dietary_tags": [
-      "high_protein",
-      "low_carb",
-      "quick",
-      "vegetarian"
-    ]
-  },
-  {
-    "name": "Smoked Salmon Bagel",
-    "meal_type": "breakfast",
-    "description": "Classic bagel with smoked salmon, cream cheese, and capers",
-    "instructions": "Toast 1 whole grain bagel until golden and crisp. Spread 2 tbsp cream cheese evenly on both halves. Layer 3 oz smoked salmon on one half. Top with thinly sliced red onion, 1 tbsp capers, and fresh dill sprigs. Squeeze fresh lemon juice over salmon. Season with black pepper. Close sandwich and cut in half. Serve immediately while bagel is still warm.",
-    "prep_time": 5,
-    "cook_time": 3,
-    "calories": 380,
-    "protein": 22,
-    "fiber": 6,
-    "carbs": 42,
-    "fat": 16,
-    "ingredients": [
-      "1 whole grain bagel",
-      "3 oz smoked salmon",
-      "2 tbsp cream cheese",
-      "1 tbsp capers",
-      "red onion",
-      "fresh dill",
-      "lemon"
-    ],
-    "dietary_tags": [
-      "high_protein",
-      "omega_3",
-      "quick"
-    ]
-  },
-  {
-    "name": "Avocado Toast with Everything Seasoning",
-    "meal_type": "breakfast",
-    "description": "Creamy avocado on toasted bread with everything bagel seasoning",
-    "instructions": "Toast 2 slices of whole grain bread until golden and crisp. In a small bowl, mash 1/2 avocado with 1 tbsp lemon juice, salt, and pepper until mostly smooth but still slightly chunky. Spread mashed avocado evenly over toast. Sprinkle generously with everything bagel seasoning. For extra protein, top with 2 sliced hard-boiled eggs or smoked salmon. Garnish with red pepper flakes and fresh microgreens. Serve immediately.",
-    "prep_time": 8,
-    "cook_time": 3,
-    "calories": 340,
-    "protein": 12,
-    "fiber": 10,
-    "carbs": 32,
-    "fat": 20,
-    "ingredients": [
-      "2 slices whole grain bread",
-      "1/2 avocado",
-      "1 tbsp lemon juice",
-      "everything bagel seasoning",
-      "red pepper flakes",
-      "microgreens",
-      "2 hard-boiled eggs (optional)"
-    ],
-    "dietary_tags": [
-      "high_fiber",
-      "vegetarian",
-      "quick",
-      "healthy_fats"
-    ]
-  },
-  {
-    "name": "Savory Oatmeal Bowl",
-    "meal_type": "breakfast",
-    "description": "Savory oatmeal topped with egg, cheese, and vegetables",
-    "instructions": "In a saucepan, bring 1 cup water or vegetable broth to a boil. Add 1/2 cup rolled oats and reduce heat to medium-low. Cook for 5-7 minutes, stirring occasionally, until oats are tender and creamy. Stir in 1 tbsp nutritional yeast, 1/4 tsp garlic powder, salt, and pepper. Transfer to a bowl and top with a fried egg, 2 oz shredded cheddar cheese, saut\u00e9ed mushrooms, and fresh chives. The savory flavors make this a satisfying alternative to sweet oatmeal.",
-    "prep_time": 8,
-    "cook_time": 10,
-    "calories": 380,
-    "protein": 20,
-    "fiber": 8,
-    "carbs": 42,
-    "fat": 16,
-    "ingredients": [
-      "1/2 cup rolled oats",
-      "1 cup water or vegetable broth",
-      "1 egg",
-      "2 oz cheddar cheese",
-      "1/2 cup mushrooms",
-      "1 tbsp nutritional yeast",
-      "fresh chives"
-    ],
-    "dietary_tags": [
-      "high_protein",
-      "high_fiber",
-      "vegetarian",
-      "savory"
-    ]
-  },
-  {
-    "name": "Berry Protein Smoothie Bowl",
-    "meal_type": "breakfast",
-    "description": "Thick smoothie bowl topped with fresh fruits and granola",
-    "instructions": "Add 1.5 scoops vanilla protein powder, 1 frozen banana, 1 cup mixed frozen berries, 1/2 cup Greek yogurt, and 1/4 cup almond milk to a high-speed blender. Blend on high until thick and creamy, adding more almond milk if needed to achieve desired consistency. Pour into a bowl and arrange toppings in rows: 1/4 cup granola, 1/2 cup fresh berries, 1 tbsp chia seeds, 1 tbsp coconut flakes, and fresh mint leaves. Drizzle with 1 tsp honey if desired.",
-    "prep_time": 8,
-    "cook_time": 0,
-    "calories": 400,
-    "protein": 32,
-    "fiber": 10,
-    "carbs": 48,
-    "fat": 12,
-    "ingredients": [
-      "1.5 scoops vanilla protein powder",
-      "1 frozen banana",
-      "1 cup mixed frozen berries",
-      "1/2 cup Greek yogurt",
-      "1/4 cup almond milk",
-      "1/4 cup granola",
-      "1/2 cup fresh berries",
-      "1 tbsp chia seeds"
-    ],
-    "dietary_tags": [
-      "high_protein",
-      "high_fiber",
-      "vegetarian",
-      "quick"
-    ]
-  }
+    {
+        "name": "Protein Power Oatmeal",
+        "meal_type": "breakfast",
+        "description": "Creamy stovetop porridge with protein powder stirred through, topped with berries and toasted almonds for steady morning energy.",
+        "servings": 1,
+        "prep_time": 5,
+        "cook_time": 6,
+        "calories": 480,
+        "protein": 36,
+        "carbs": 50,
+        "fat": 15,
+        "fiber": 11,
+        "ingredients": [
+            "50 g (1/2 cup) rolled oats",
+            "250 ml water or unsweetened almond milk",
+            "Pinch of salt",
+            "1 scoop (30 g) vanilla protein powder",
+            "1 tbsp chia seeds",
+            "100 g (2/3 cup) mixed berries, fresh or frozen",
+            "1 tbsp chopped almonds"
+        ],
+        "steps": [
+            "Put the oats, water or almond milk and a pinch of salt in a small pan.",
+            "Bring to a simmer and cook for 4-5 minutes, stirring often, until thick and creamy. (Microwave: 2-3 minutes on high in a large bowl, stirring halfway so it doesn't boil over.)",
+            "Take the pan off the heat and let it stand for 1 minute. Protein powder added to boiling porridge turns grainy.",
+            "Whisk the protein powder with 2-3 tbsp water or milk into a smooth paste, then stir it through the oats. Loosen with a splash more liquid if it's too thick.",
+            "Stir in the chia seeds, then top with the berries and chopped almonds."
+        ],
+        "tip": "Good 2-3 hours before an easy or steady run. Before a hard session or race, leave out the chia and almonds to cut the fibre and fat so it sits lighter.",
+        "dietary_tags": [
+            "vegetarian"
+        ]
+    },
+    {
+        "name": "Greek Yogurt Parfait",
+        "meal_type": "breakfast",
+        "description": "Thick Greek yogurt layered with berries and crunchy high-fibre granola. Ready in five minutes and easy to pack in a jar.",
+        "servings": 1,
+        "prep_time": 5,
+        "cook_time": 0,
+        "calories": 400,
+        "protein": 30,
+        "carbs": 50,
+        "fat": 9,
+        "fiber": 10,
+        "ingredients": [
+            "250 g 0% Greek yogurt",
+            "1 tbsp chia seeds",
+            "100 g (2/3 cup) mixed berries",
+            "30 g high-fibre granola",
+            "1 tsp honey"
+        ],
+        "steps": [
+            "Stir the chia seeds into the yogurt and leave for 5 minutes to thicken slightly. This is optional, but it stops the seeds sticking in your teeth.",
+            "Spoon a third of the yogurt into a glass or jar, then add a layer of berries.",
+            "Repeat the layers, finishing with yogurt.",
+            "Scatter the granola on top just before eating so it stays crunchy, then drizzle with the honey."
+        ],
+        "tip": "Protein-dense and quick, so it's a solid breakfast after an early easy run. For a packed breakfast, keep the granola in a separate bag.",
+        "storage": "Assembled without the granola, it keeps for 24 hours in the fridge.",
+        "dietary_tags": [
+            "vegetarian"
+        ]
+    },
+    {
+        "name": "Veggie Scramble Wrap",
+        "meal_type": "breakfast",
+        "description": "Soft-scrambled eggs with peppers, spinach and melted cheddar, rolled in a warm wholewheat tortilla with avocado.",
+        "servings": 1,
+        "prep_time": 8,
+        "cook_time": 8,
+        "calories": 540,
+        "protein": 30,
+        "carbs": 32,
+        "fat": 32,
+        "fiber": 8,
+        "ingredients": [
+            "3 large eggs",
+            "1 tbsp milk or water",
+            "1 tsp olive oil",
+            "1/4 onion, finely diced",
+            "1/2 red pepper, diced",
+            "Large handful (30 g) spinach",
+            "20 g cheddar, grated",
+            "1 large wholewheat tortilla",
+            "1/4 avocado, sliced",
+            "Salt and black pepper"
+        ],
+        "steps": [
+            "Beat the eggs with the milk or water and a pinch of salt and pepper.",
+            "Heat the oil in a non-stick pan over a medium heat. Soften the onion and pepper for 3 minutes, then add the spinach and stir until it wilts.",
+            "Turn the heat to medium-low and pour in the eggs. Stir slowly with a spatula, pulling the set egg from the edges into the middle. Take the pan off the heat after 2-3 minutes, while the eggs still look slightly glossy; they keep cooking.",
+            "Scatter the cheese over so it melts.",
+            "Warm the tortilla in a dry pan for 15 seconds each side, or 10 seconds in the microwave, so it folds without cracking.",
+            "Spoon the eggs down the centre and add the avocado. Fold in the ends, roll up tightly and cut in half on the diagonal."
+        ],
+        "tip": "Wrapped in foil it travels well, so it makes a protein-rich refuel to eat after a morning run.",
+        "dietary_tags": [
+            "vegetarian"
+        ]
+    },
+    {
+        "name": "Overnight Protein Oats",
+        "meal_type": "breakfast",
+        "description": "No-cook oats soaked overnight with protein powder and chia. Make three jars on Sunday and breakfast is done until Wednesday.",
+        "servings": 1,
+        "prep_time": 5,
+        "cook_time": 0,
+        "calories": 460,
+        "protein": 33,
+        "carbs": 50,
+        "fat": 14,
+        "fiber": 11,
+        "ingredients": [
+            "1 scoop (30 g) vanilla protein powder",
+            "200 ml milk of your choice",
+            "50 g (1/2 cup) rolled oats",
+            "1 tbsp chia seeds",
+            "100 g (2/3 cup) mixed berries",
+            "1 tbsp chopped walnuts"
+        ],
+        "steps": [
+            "In a jar or container, whisk the protein powder into the milk until smooth. Added straight to dry oats, it clumps.",
+            "Stir in the oats and chia seeds. It will look runny; the oats and chia absorb the liquid overnight.",
+            "Cover and refrigerate for at least 6 hours, or overnight.",
+            "In the morning, stir well and loosen with a splash of milk if it's too thick. Top with the berries and walnuts.",
+            "Eat it cold, or microwave it for 60-90 seconds (without the berries) if you prefer it warm."
+        ],
+        "tip": "The best breakfast for mornings when there's no time before an early run. The fibre is high, so eat it at least 2 hours before you head out.",
+        "storage": "Keeps for 3 days in the fridge. Add the toppings on the day.",
+        "dietary_tags": [
+            "vegetarian",
+            "meal_prep"
+        ]
+    },
+    {
+        "name": "Breakfast Burrito",
+        "meal_type": "breakfast",
+        "description": "Softly scrambled eggs, cumin-spiced black beans, cheddar and salsa, rolled up and toasted to seal. Batch-make and freeze.",
+        "servings": 1,
+        "prep_time": 8,
+        "cook_time": 8,
+        "calories": 560,
+        "protein": 30,
+        "carbs": 40,
+        "fat": 30,
+        "fiber": 10,
+        "ingredients": [
+            "60 g tinned black beans, drained and rinsed",
+            "1/2 tsp ground cumin",
+            "2 large eggs",
+            "1 tsp olive oil",
+            "1 large wholewheat tortilla",
+            "25 g cheddar, grated",
+            "2 tbsp salsa",
+            "1/4 avocado, sliced",
+            "Salt"
+        ],
+        "steps": [
+            "Warm the beans in a small pan with the cumin and a splash of water for 2-3 minutes, lightly crushing about half of them with a fork so they hold together.",
+            "Beat the eggs with a pinch of salt. Heat the oil in a non-stick pan over a medium-low heat and softly scramble the eggs for about 2 minutes, taking them off while still a little wet.",
+            "Warm the tortilla in a dry pan for 15 seconds each side.",
+            "Spread the beans down the middle, then add the eggs, cheese, salsa and avocado.",
+            "Fold the bottom edge up over the filling, fold in the sides, then roll away from you to close.",
+            "Put it back in the hot pan seam-side down for 1 minute to seal and crisp."
+        ],
+        "tip": "The beans add fibre, which makes this a great recovery breakfast. Before a hard run, eat it at least 3 hours ahead.",
+        "storage": "Make four without the avocado, wrap each in foil and freeze. Reheat from frozen in the foil at 180°C for 25 minutes, or unwrap and microwave for 2 minutes.",
+        "dietary_tags": [
+            "vegetarian",
+            "meal_prep"
+        ]
+    },
+    {
+        "name": "Cottage Cheese Bowl",
+        "meal_type": "breakfast",
+        "description": "High-protein cottage cheese with juicy peaches, toasted pecans, flaxseed and a drizzle of honey.",
+        "servings": 1,
+        "prep_time": 5,
+        "cook_time": 2,
+        "calories": 400,
+        "protein": 33,
+        "carbs": 28,
+        "fat": 17,
+        "fiber": 6,
+        "ingredients": [
+            "250 g low-fat cottage cheese",
+            "150 g sliced peaches, fresh or tinned in juice and drained",
+            "15 g pecans",
+            "1 tbsp ground flaxseed",
+            "1 tsp honey"
+        ],
+        "steps": [
+            "Spoon the cottage cheese into a bowl. If you dislike the curds, blitz it with a stick blender for 20 seconds for a smooth, yogurt-like base.",
+            "Top with the sliced peaches.",
+            "Toast the pecans in a dry pan for 2-3 minutes until fragrant, then roughly chop them and scatter them over.",
+            "Sprinkle with the flaxseed and finish with the honey."
+        ],
+        "tip": "Cottage cheese is mostly casein, a slow-release protein, so this also works as a pre-bed snack on heavy training days.",
+        "dietary_tags": [
+            "vegetarian",
+            "gluten_free"
+        ]
+    },
+    {
+        "name": "Protein Pancakes",
+        "meal_type": "breakfast",
+        "description": "Fluffy oat-flour pancakes made in the blender with protein powder, stacked with berries and maple syrup.",
+        "servings": 1,
+        "serving_size": "about 6 small pancakes",
+        "prep_time": 8,
+        "cook_time": 8,
+        "calories": 550,
+        "protein": 40,
+        "carbs": 60,
+        "fat": 16,
+        "fiber": 7,
+        "ingredients": [
+            "50 g (1/2 cup) rolled oats",
+            "1 scoop (30 g) vanilla protein powder",
+            "1 tsp baking powder",
+            "Pinch of salt",
+            "1 large egg",
+            "100 ml milk",
+            "1 tsp butter, for the pan",
+            "80 g (1/2 cup) mixed berries",
+            "1 tbsp maple syrup"
+        ],
+        "steps": [
+            "Blitz the oats in a blender for 30 seconds to a fine flour. Add the protein powder, baking powder and salt and pulse to mix.",
+            "Add the egg and milk and blend until smooth. Rest the batter for 5 minutes while the oats hydrate. It should drop slowly off a spoon; add a splash of milk if it's stiff.",
+            "Heat a non-stick pan over a medium-low heat and wipe it with a little butter. Protein batter burns quickly, so keep the heat lower than for normal pancakes.",
+            "Pour in 2-3 tbsp of batter per pancake. Cook for 1.5-2 minutes, until bubbles appear on the surface and the edges look set, then flip and cook for 1 minute more.",
+            "Stack them up, top with the berries and drizzle with the maple syrup."
+        ],
+        "tip": "A weekend long-run breakfast: plenty of carbs plus protein. Eat it 2-3 hours before, or straight after as your recovery meal.",
+        "dietary_tags": [
+            "vegetarian"
+        ]
+    },
+    {
+        "name": "Tofu Scramble",
+        "meal_type": "breakfast",
+        "description": "Golden crumbled tofu with turmeric, nutritional yeast, peppers and spinach. A plant-based take on scrambled eggs, served on toast.",
+        "servings": 1,
+        "prep_time": 8,
+        "cook_time": 10,
+        "calories": 480,
+        "protein": 36,
+        "carbs": 26,
+        "fat": 24,
+        "fiber": 8,
+        "ingredients": [
+            "200 g firm tofu",
+            "1 tsp olive oil",
+            "1/4 onion, diced",
+            "1/2 red pepper, diced",
+            "1/2 tsp ground turmeric",
+            "1 tbsp nutritional yeast",
+            "Salt (or kala namak black salt) and black pepper",
+            "2 tbsp water or plant milk",
+            "Large handful (30 g) spinach",
+            "1 slice wholegrain toast"
+        ],
+        "steps": [
+            "Drain the tofu and press it between sheets of kitchen paper for a few minutes. Wet tofu steams instead of browning.",
+            "Heat the oil in a non-stick pan over a medium heat. Cook the onion and pepper for 3-4 minutes until soft.",
+            "Crumble the tofu into the pan in uneven, bite-size pieces. Cook for 4-5 minutes, turning occasionally, until lightly golden.",
+            "Sprinkle over the turmeric, nutritional yeast, a pinch of salt and some pepper. Kala namak gives an eggy flavour. Add the water or plant milk and stir until evenly yellow and creamy.",
+            "Fold in the spinach until just wilted and serve on the toast."
+        ],
+        "tip": "Iron from the tofu and spinach, plus vitamin C from the pepper to help absorb it: useful if you run on a plant-based diet.",
+        "dietary_tags": [
+            "vegan"
+        ]
+    },
+    {
+        "name": "Egg Muffins",
+        "meal_type": "breakfast",
+        "description": "Baked egg cups packed with vegetables and cheddar. Make six on Sunday and grab two or three on the way out the door.",
+        "servings": 2,
+        "serving_size": "3 muffins",
+        "prep_time": 10,
+        "cook_time": 20,
+        "calories": 340,
+        "protein": 27,
+        "carbs": 5,
+        "fat": 24,
+        "fiber": 1,
+        "ingredients": [
+            "Oil, for greasing",
+            "150 g diced vegetables (peppers, spinach, spring onion, mushrooms)",
+            "50 g cheddar, grated",
+            "6 large eggs",
+            "50 ml milk",
+            "1/4 tsp salt",
+            "Black pepper"
+        ],
+        "steps": [
+            "Heat the oven to 180°C fan (200°C / 400°F). Grease 6 holes of a muffin tin well with oil, or use silicone cases; egg sticks badly to bare metal.",
+            "Divide the vegetables and half the cheese between the holes.",
+            "Whisk the eggs with the milk, salt and plenty of pepper, then pour the mixture over the vegetables until each hole is three-quarters full.",
+            "Top with the remaining cheese and bake for 18-20 minutes, until puffed and just set in the centre. A knife pushed into the middle should come out clean.",
+            "Cool in the tin for 5 minutes, then run a knife around each one to release it."
+        ],
+        "tip": "Low in carbs on their own. On a training day, pair them with toast or fruit so you actually refuel.",
+        "storage": "Keeps for 4 days in the fridge or a month in the freezer. Reheat for 30-40 seconds in the microwave.",
+        "dietary_tags": [
+            "vegetarian",
+            "gluten_free",
+            "meal_prep",
+            "portable"
+        ]
+    },
+    {
+        "name": "Chia Seed Pudding",
+        "meal_type": "breakfast",
+        "description": "Thick vanilla chia pudding boosted with protein powder and topped with berries. Five minutes tonight, breakfast tomorrow.",
+        "servings": 1,
+        "prep_time": 5,
+        "cook_time": 0,
+        "calories": 370,
+        "protein": 30,
+        "carbs": 31,
+        "fat": 13,
+        "fiber": 13,
+        "ingredients": [
+            "1 scoop (30 g) vanilla protein powder",
+            "250 ml unsweetened almond milk",
+            "3 tbsp (30 g) chia seeds",
+            "1 tsp maple syrup",
+            "100 g (2/3 cup) berries"
+        ],
+        "steps": [
+            "In a jar, whisk the protein powder into the milk until completely smooth.",
+            "Add the chia seeds and maple syrup and whisk for 30 seconds.",
+            "Leave it for 5 minutes, then whisk again. The second stir breaks up the clumps that form as the seeds start to swell.",
+            "Cover and refrigerate for at least 4 hours, or overnight, until thick and spoonable.",
+            "Stir, loosen with a splash of milk if needed, and top with the berries."
+        ],
+        "tip": "Very high in fibre, which makes it ideal on a rest or easy day. Skip it on the morning of a race or a hard session.",
+        "storage": "Keeps for 4 days in the fridge.",
+        "dietary_tags": [
+            "vegetarian",
+            "gluten_free",
+            "meal_prep"
+        ]
+    },
+    {
+        "name": "Spinach and Feta Omelette",
+        "meal_type": "breakfast",
+        "description": "A soft, folded omelette filled with wilted spinach, salty feta and tomatoes. On the table in ten minutes.",
+        "servings": 1,
+        "prep_time": 4,
+        "cook_time": 6,
+        "calories": 360,
+        "protein": 26,
+        "carbs": 6,
+        "fat": 26,
+        "fiber": 2,
+        "ingredients": [
+            "1 tsp olive oil",
+            "60 g (2 big handfuls) fresh spinach",
+            "3 large eggs",
+            "1 tbsp milk",
+            "30 g feta, crumbled",
+            "4 cherry tomatoes, quartered",
+            "Salt and black pepper"
+        ],
+        "steps": [
+            "Heat the oil in a non-stick frying pan over a medium heat. Add the spinach and stir for 1-2 minutes until wilted, then tip it onto a plate and squeeze out any water.",
+            "Whisk the eggs with the milk, a small pinch of salt (feta is salty) and some pepper.",
+            "Pour the eggs into the same pan. As the base sets, push the cooked edges towards the centre with a spatula and tilt the pan so raw egg runs underneath. This takes 2-3 minutes.",
+            "When the top is almost set but still slightly moist, scatter the spinach, feta and tomatoes over one half.",
+            "Fold the other half over the filling, cook for 1 minute more, then slide it onto a plate."
+        ],
+        "tip": "High protein, but almost no carbs. Add a slice or two of toast if you're training later that day.",
+        "dietary_tags": [
+            "vegetarian",
+            "gluten_free"
+        ]
+    },
+    {
+        "name": "Smoked Salmon Bagel",
+        "meal_type": "breakfast",
+        "description": "A toasted wholegrain bagel with cream cheese, smoked salmon, capers, red onion and dill. The classic weekend brunch.",
+        "servings": 1,
+        "prep_time": 5,
+        "cook_time": 3,
+        "calories": 400,
+        "protein": 26,
+        "carbs": 50,
+        "fat": 10,
+        "fiber": 5,
+        "ingredients": [
+            "1 wholegrain bagel",
+            "30 g light cream cheese",
+            "75 g smoked salmon",
+            "A few thin slices of red onion",
+            "1 tsp capers, drained",
+            "Fresh dill",
+            "Lemon wedge",
+            "Black pepper"
+        ],
+        "steps": [
+            "Split the bagel and toast it until golden and crisp.",
+            "Spread the cream cheese over both halves.",
+            "Drape the smoked salmon over the bottom half, then add the red onion, capers and a few sprigs of dill.",
+            "Squeeze over the lemon, grind over black pepper and put the top on."
+        ],
+        "tip": "Salmon brings omega-3s and quality protein. It makes a good post-long-run brunch; if you're eating it before a run, halve the cream cheese.",
+        "dietary_tags": [
+            "omega_3"
+        ]
+    },
+    {
+        "name": "Avocado Toast with Everything Seasoning",
+        "meal_type": "breakfast",
+        "description": "Lemony smashed avocado on wholegrain toast with a crunchy homemade everything-bagel seasoning.",
+        "servings": 1,
+        "prep_time": 6,
+        "cook_time": 3,
+        "calories": 320,
+        "protein": 10,
+        "carbs": 36,
+        "fat": 15,
+        "fiber": 10,
+        "ingredients": [
+            "2 slices wholegrain bread",
+            "1/2 ripe avocado",
+            "1 tbsp lemon juice",
+            "1 tsp everything-bagel seasoning (or mix sesame seeds, poppy seeds, dried garlic, dried onion and flaky salt)",
+            "Pinch of red pepper flakes",
+            "Handful of microgreens or rocket",
+            "Salt and black pepper"
+        ],
+        "steps": [
+            "Toast the bread until golden and crisp.",
+            "Mash the avocado with the lemon juice, salt and pepper, leaving it slightly chunky.",
+            "Spread it thickly over the toast.",
+            "Sprinkle generously with the everything seasoning and red pepper flakes, then top with the microgreens."
+        ],
+        "tip": "On its own it's light on protein. Adding two sliced boiled eggs brings about 150 kcal and 12 g protein, which turns it into a proper post-run breakfast.",
+        "dietary_tags": [
+            "vegan"
+        ]
+    },
+    {
+        "name": "Savory Oatmeal Bowl",
+        "meal_type": "breakfast",
+        "description": "Oats cooked in stock with nutritional yeast and cheddar, topped with golden mushrooms and a fried egg. Porridge, but savoury.",
+        "servings": 1,
+        "prep_time": 5,
+        "cook_time": 10,
+        "calories": 440,
+        "protein": 24,
+        "carbs": 34,
+        "fat": 22,
+        "fiber": 7,
+        "ingredients": [
+            "250 ml vegetable stock",
+            "50 g (1/2 cup) rolled oats",
+            "1 tsp olive oil",
+            "80 g mushrooms, sliced",
+            "1 large egg",
+            "1 tbsp nutritional yeast",
+            "25 g cheddar, grated",
+            "Fresh chives, snipped",
+            "Black pepper"
+        ],
+        "steps": [
+            "Bring the stock to the boil in a small pan. Stir in the oats, turn the heat down and simmer for 5 minutes, stirring occasionally, until creamy.",
+            "Meanwhile, heat the oil in a frying pan over a medium-high heat and cook the mushrooms for 4-5 minutes until golden. Push them to one side and fry the egg in the same pan.",
+            "Stir the nutritional yeast and half the cheese into the oats and season with pepper.",
+            "Tip into a bowl, top with the mushrooms, egg, remaining cheese and chives."
+        ],
+        "tip": "A savoury change when sweet breakfasts get old in a big training block. The salty stock also helps replace sodium after a sweaty morning run.",
+        "dietary_tags": [
+            "vegetarian"
+        ]
+    },
+    {
+        "name": "Berry Protein Smoothie Bowl",
+        "meal_type": "breakfast",
+        "description": "A spoon-thick berry and banana smoothie bowl with Greek yogurt and protein, topped with granola, chia and fresh fruit.",
+        "servings": 1,
+        "prep_time": 8,
+        "cook_time": 0,
+        "calories": 500,
+        "protein": 40,
+        "carbs": 66,
+        "fat": 9,
+        "fiber": 12,
+        "ingredients": [
+            "1 frozen banana, in chunks",
+            "150 g frozen mixed berries",
+            "100 g 0% Greek yogurt",
+            "1 scoop (30 g) vanilla protein powder",
+            "60 ml almond milk, plus extra if needed",
+            "20 g granola",
+            "1 tbsp chia seeds",
+            "A few fresh berries"
+        ],
+        "steps": [
+            "Put the frozen banana, frozen berries, yogurt, protein powder and 60 ml of milk in a blender.",
+            "Pulse, then blend, stopping to scrape down the sides. Keep it thick: add more milk only 1 tbsp at a time, and only if the blades can't move.",
+            "Scoop it into a chilled bowl.",
+            "Top with the granola, chia seeds and fresh berries, and eat straight away before it melts."
+        ],
+        "tip": "Frozen banana is what makes it thick enough to eat with a spoon, so freeze ripe bananas in chunks. A strong recovery breakfast after a morning session.",
+        "dietary_tags": [
+            "vegetarian"
+        ]
+    },
+    {
+        "name": "Pre-Run Banana and Honey Toast",
+        "meal_type": "breakfast",
+        "description": "White toast with a thin smear of peanut butter, sliced banana, honey and a pinch of salt. Quick-digesting fuel for race mornings.",
+        "servings": 1,
+        "prep_time": 3,
+        "cook_time": 3,
+        "calories": 370,
+        "protein": 9,
+        "carbs": 72,
+        "fat": 6,
+        "fiber": 4,
+        "ingredients": [
+            "2 slices white bread or white sourdough",
+            "1 tsp smooth peanut butter (optional)",
+            "1 small ripe banana",
+            "1 tbsp honey",
+            "Pinch of flaky sea salt"
+        ],
+        "steps": [
+            "Toast the bread lightly.",
+            "Spread a very thin layer of peanut butter, if using.",
+            "Slice the banana over the toast.",
+            "Drizzle with the honey and finish with a pinch of flaky salt."
+        ],
+        "tip": "Eat it 60-90 minutes before a long run or race. The white bread is deliberate: less fibre means less gut trouble once you start running. Try it before a long training run first.",
+        "dietary_tags": [
+            "vegetarian",
+            "pre_run",
+            "carb_load"
+        ]
+    },
+    {
+        "name": "Shakshuka with Chickpeas",
+        "meal_type": "breakfast",
+        "description": "Eggs poached in a smoky spiced tomato and chickpea sauce, finished with feta and herbs. A brunch you eat straight from the pan.",
+        "servings": 2,
+        "prep_time": 10,
+        "cook_time": 25,
+        "calories": 610,
+        "protein": 31,
+        "carbs": 57,
+        "fat": 28,
+        "fiber": 12,
+        "ingredients": [
+            "1 tbsp olive oil",
+            "1 onion, thinly sliced",
+            "1 red pepper, thinly sliced",
+            "2 garlic cloves, crushed",
+            "1 tsp ground cumin",
+            "1 tsp smoked paprika",
+            "Pinch of chilli flakes",
+            "400 g tin chopped tomatoes",
+            "400 g tin chickpeas, drained",
+            "4 large eggs",
+            "60 g feta",
+            "Handful of parsley or coriander",
+            "2 slices crusty bread, to serve",
+            "Salt and black pepper"
+        ],
+        "steps": [
+            "Heat the oil in a wide frying pan that has a lid, over a medium heat. Cook the onion and pepper for 6-8 minutes until soft and sweet.",
+            "Add the garlic, cumin, paprika and chilli flakes and stir for 1 minute until fragrant.",
+            "Tip in the tomatoes and chickpeas, season, and simmer for 8-10 minutes, stirring now and then, until thick enough that a spoon leaves a trail.",
+            "Make 4 wells in the sauce with the back of a spoon and crack an egg into each.",
+            "Cover and cook on a low heat for 5-7 minutes, until the whites are set but the yolks are still runny.",
+            "Crumble over the feta, scatter with herbs and serve from the pan with bread for dipping."
+        ],
+        "tip": "A weekend brunch after the long run: protein from the eggs and chickpeas, carbs from the bread, and potassium from the tomatoes.",
+        "dietary_tags": [
+            "vegetarian"
+        ]
+    },
+    {
+        "name": "Apple Cinnamon Bircher Muesli",
+        "meal_type": "breakfast",
+        "description": "Swiss-style soaked oats with grated apple, yogurt, raisins and cinnamon, topped with toasted hazelnuts.",
+        "servings": 2,
+        "prep_time": 10,
+        "cook_time": 0,
+        "calories": 430,
+        "protein": 20,
+        "carbs": 60,
+        "fat": 12,
+        "fiber": 8,
+        "ingredients": [
+            "1 apple",
+            "1 tsp lemon juice",
+            "90 g (1 cup) rolled oats",
+            "200 g Greek yogurt",
+            "150 ml milk",
+            "20 g raisins",
+            "1 tsp ground cinnamon",
+            "20 g hazelnuts, chopped",
+            "2 tsp honey"
+        ],
+        "steps": [
+            "Coarsely grate three-quarters of the apple, skin on, into a bowl and toss with the lemon juice so it doesn't brown.",
+            "Add the oats, yogurt, milk, raisins and cinnamon and stir well.",
+            "Cover and refrigerate overnight, or for at least 4 hours.",
+            "In the morning, loosen with a splash of milk. Divide between two bowls and top with the rest of the apple, cut into matchsticks, the hazelnuts and the honey."
+        ],
+        "tip": "Soaked oats are gentler on the stomach than dry muesli. Make it the night before a morning run.",
+        "storage": "Keeps for 2 days in the fridge.",
+        "dietary_tags": [
+            "vegetarian",
+            "meal_prep"
+        ]
+    },
+    {
+        "name": "Blueberry Baked Oats",
+        "meal_type": "breakfast",
+        "description": "Banana-sweetened oats baked with juicy blueberries until golden and cake-like. Serve warm with yogurt.",
+        "servings": 2,
+        "prep_time": 5,
+        "cook_time": 25,
+        "calories": 450,
+        "protein": 24,
+        "carbs": 64,
+        "fat": 10,
+        "fiber": 8,
+        "ingredients": [
+            "1 ripe banana",
+            "1 large egg",
+            "250 ml milk",
+            "2 tsp maple syrup",
+            "1 tsp ground cinnamon",
+            "1 tsp baking powder",
+            "Pinch of salt",
+            "100 g (1 cup) rolled oats",
+            "120 g blueberries",
+            "200 g Greek yogurt, to serve"
+        ],
+        "steps": [
+            "Heat the oven to 180°C fan (200°C / 400°F).",
+            "Mash the banana in a small baking dish (about 20 x 15 cm), then whisk in the egg, milk, maple syrup, cinnamon, baking powder and salt.",
+            "Stir in the oats, then fold through the blueberries.",
+            "Bake for 25 minutes, until golden and just firm in the middle.",
+            "Rest for 5 minutes, then serve with the yogurt."
+        ],
+        "tip": "Good fuel for a long run: eat it 2-3 hours before you set off, or after as your recovery meal.",
+        "storage": "Keeps for 3 days in the fridge. Reheat a portion for 1 minute in the microwave.",
+        "dietary_tags": [
+            "vegetarian",
+            "meal_prep"
+        ]
+    },
+    {
+        "name": "Sweet Potato and Egg Breakfast Hash",
+        "meal_type": "breakfast",
+        "description": "Crisp-edged sweet potato with peppers, onion and smoked paprika, with eggs cooked into the pan. Naturally gluten-free.",
+        "servings": 1,
+        "prep_time": 8,
+        "cook_time": 15,
+        "calories": 440,
+        "protein": 17,
+        "carbs": 49,
+        "fat": 20,
+        "fiber": 8,
+        "ingredients": [
+            "200 g sweet potato, cut into 1.5 cm cubes",
+            "2 tsp olive oil",
+            "1/2 red onion, sliced",
+            "1/2 red pepper, diced",
+            "1/2 tsp smoked paprika",
+            "Handful of spinach",
+            "2 large eggs",
+            "Snipped chives",
+            "Salt and black pepper"
+        ],
+        "steps": [
+            "Put the sweet potato in a bowl with 1 tbsp water, cover and microwave for 3 minutes to par-cook it. This halves the time in the pan.",
+            "Heat the oil in a non-stick frying pan over a medium-high heat. Add the sweet potato in a single layer and leave it undisturbed for 4 minutes to brown.",
+            "Add the onion, pepper and paprika and cook for 5 minutes, stirring occasionally, until everything is tender and crisp at the edges. Stir in the spinach until it wilts.",
+            "Make two wells, crack in the eggs, cover the pan and cook for 3-4 minutes until the whites are set.",
+            "Season and scatter with chives."
+        ],
+        "tip": "Gluten-free carbs for long-run weekends. Add a slice of ham or a sausage for more protein.",
+        "dietary_tags": [
+            "vegetarian",
+            "gluten_free"
+        ]
+    },
+    {
+        "name": "Sweet Rice Porridge with Maple and Banana",
+        "meal_type": "breakfast",
+        "description": "Cooked rice simmered in milk with cinnamon until creamy, sweetened with maple and topped with banana. Gentle, carb-rich race-morning food.",
+        "servings": 1,
+        "prep_time": 2,
+        "cook_time": 10,
+        "calories": 390,
+        "protein": 12,
+        "carbs": 77,
+        "fat": 4,
+        "fiber": 2,
+        "ingredients": [
+            "150 g cooked white rice (leftover, or a microwave pouch)",
+            "200 ml milk",
+            "Pinch of salt",
+            "Pinch of ground cinnamon",
+            "1 tbsp maple syrup",
+            "1/2 banana, sliced"
+        ],
+        "steps": [
+            "Put the rice, milk, salt and cinnamon in a small pan.",
+            "Simmer for 6-8 minutes, stirring often, until thick and creamy.",
+            "Stir in the maple syrup.",
+            "Top with the banana, or mash half of it into the porridge if you like it sweeter."
+        ],
+        "tip": "One of the gentlest pre-race breakfasts there is: lots of carbohydrate and almost no fibre. Eat it 2-3 hours before the start. If you use leftover rice, it must have been cooled quickly and refrigerated within an hour.",
+        "dietary_tags": [
+            "vegetarian",
+            "gluten_free",
+            "pre_run",
+            "carb_load"
+        ]
+    },
+    {
+        "name": "Turkish Eggs with Garlic Yogurt",
+        "meal_type": "breakfast",
+        "description": "Soft poached eggs on cool garlicky yogurt with a sizzling paprika butter and dill (cilbir). Serve with toasted sourdough.",
+        "servings": 1,
+        "prep_time": 5,
+        "cook_time": 8,
+        "calories": 475,
+        "protein": 33,
+        "carbs": 35,
+        "fat": 22,
+        "fiber": 2,
+        "ingredients": [
+            "150 g Greek yogurt",
+            "1 small garlic clove, finely grated",
+            "1 tsp white wine vinegar",
+            "2 very fresh large eggs",
+            "10 g butter",
+            "1/2 tsp Aleppo pepper or sweet paprika",
+            "Pinch of ground cumin",
+            "Fresh dill",
+            "1 thick slice sourdough, toasted",
+            "Salt"
+        ],
+        "steps": [
+            "Mix the yogurt with the garlic and a pinch of salt. Spread it in a shallow bowl and let it come up towards room temperature while you cook; cold yogurt chills the eggs.",
+            "Bring a deep pan of water to a bare simmer and add the vinegar. Crack each egg into a cup. Stir the water into a gentle whirlpool and slide the eggs in one at a time.",
+            "Poach for 3 minutes for runny yolks, then lift out with a slotted spoon onto kitchen paper.",
+            "Melt the butter in a small pan until foaming, take it off the heat and stir in the Aleppo pepper and cumin.",
+            "Sit the eggs on the yogurt, spoon over the spiced butter, scatter with dill and serve with the toast."
+        ],
+        "tip": "More than 30 g of protein with very little effort: a restaurant-style recovery brunch.",
+        "dietary_tags": [
+            "vegetarian"
+        ]
+    },
+    {
+        "name": "Smoked Salmon Scrambled Eggs on Rye",
+        "meal_type": "breakfast",
+        "description": "Slow-cooked creamy scrambled eggs folded with smoked salmon and chives, piled onto toasted rye.",
+        "servings": 1,
+        "prep_time": 4,
+        "cook_time": 5,
+        "calories": 480,
+        "protein": 34,
+        "carbs": 33,
+        "fat": 22,
+        "fiber": 4,
+        "ingredients": [
+            "3 large eggs",
+            "1 tbsp milk",
+            "1 tsp butter",
+            "50 g smoked salmon, cut into strips",
+            "1 tbsp snipped chives",
+            "2 slices rye bread",
+            "Lemon wedge",
+            "Black pepper"
+        ],
+        "steps": [
+            "Beat the eggs with the milk and plenty of black pepper. Skip the salt; the salmon is salty.",
+            "Put the rye in the toaster.",
+            "Melt the butter in a non-stick pan over a low heat. Add the eggs and stir constantly with a spatula for 3-4 minutes, until they form soft, creamy curds.",
+            "Take the pan off the heat and fold in the salmon and chives.",
+            "Pile onto the toast and finish with a squeeze of lemon."
+        ],
+        "tip": "Low and slow is the secret to creamy eggs. The rye adds fibre and releases its carbs more slowly, which suits a rest-day breakfast.",
+        "dietary_tags": [
+            "omega_3"
+        ]
+    }
 ]

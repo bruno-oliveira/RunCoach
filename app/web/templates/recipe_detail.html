@@ -1,200 +1,257 @@
 {% extends "base.html" %}
 
-{% block title %}{{ recipe.name }} - RunCoach{% endblock %}
+{% block title %}{{ recipe.name }} - RunCoach Recipes{% endblock %}
 
 {% block styles %}
 <link rel="stylesheet" href="{{ static_url('css/recipe_detail.css') }}">
 {% endblock %}
+
+{% macro duration(minutes) -%}
+{%- if minutes >= 60 -%}{{ minutes // 60 }} h{% if minutes % 60 %} {{ minutes % 60 }} min{% endif %}{%- else -%}{{ minutes }} min{%- endif -%}
+{%- endmacro %}
+
+{% set TAG_LABELS = {
+    'vegetarian': ('recipes.vegetarian', 'Vegetarian'), 'vegan': ('recipes.vegan', 'Vegan'),
+    'gluten_free': ('recipes.gluten_free', 'Gluten-free'), 'pre_run': ('recipes.pre_run', 'Pre-run'),
+    'carb_load': ('recipes.carb_load', 'Carb-loading'), 'high_carb': ('recipes.high_carb', 'High carb'),
+    'high_protein': ('recipes.high_protein', 'High protein'), 'high_fiber': ('recipes.high_fiber', 'High fibre'),
+    'low_carb': ('recipes.low_carb', 'Low carb'), 'omega_3': ('recipes.omega3', 'Omega-3'),
+    'anti_inflammatory': ('recipes.anti_inflam', 'Anti-inflammatory'), 'quick': ('recipes.quick', 'Quick (15 min or less)'),
+    'meal_prep': ('recipes.meal_prep', 'Meal prep'), 'portable': ('recipes.portable', 'Portable')
+} %}
+
 {% block content %}
-<div class="recipe-detail-container">
-    <!-- Recipe Header -->
-    <div class="recipe-header">
-        <h1 class="recipe-title">{{ recipe.name }}</h1>
-        <span class="recipe-meal-type">{{ recipe.meal_type.title() }}</span>
-        {% if recipe.description %}
-        <p class="recipe-description">{{ recipe.description }}</p>
-        {% endif %}
-    </div>
+<article class="rd rd--{{ recipe.meal_type }}">
+    <nav class="rd-crumbs" aria-label="Breadcrumb">
+        <a href="/recipes" data-i18n="nav.recipes">Recipes</a>
+        <span aria-hidden="true">/</span>
+        <a href="/recipes?meal_type={{ recipe.meal_type }}">{{ meal_type_label }}</a>
+    </nav>
 
-    <!-- Dietary Tags -->
-    {% if recipe.dietary_tags %}
-    <div class="dietary-tags">
-        {% for tag in recipe.dietary_tags %}
-        <span class="dietary-tag">{{ tag }}</span>
-        {% endfor %}
-    </div>
-    {% endif %}
+    <header class="rd-head">
+        <h1 class="rd-title">{{ recipe.name }}</h1>
+        {% if recipe.description %}<p class="rd-desc">{{ recipe.description }}</p>{% endif %}
 
-    <!-- Nutrition Information -->
-    <div class="nutrition-grid">
-        <div class="nutrition-item">
-            <div class="nutrition-value">{{ recipe.calories }}</div>
-            <div class="nutrition-label"><span data-i18n="recipe.calories">Calories</span></div>
-        </div>
-        <div class="nutrition-item">
-            <div class="nutrition-value">{{ recipe.protein }}g</div>
-            <div class="nutrition-label"><span data-i18n="recipe.protein">Protein</span></div>
-        </div>
-        <div class="nutrition-item">
-            <div class="nutrition-value">{{ recipe.carbs }}g</div>
-            <div class="nutrition-label"><span data-i18n="recipe.carbs">Carbs</span></div>
-        </div>
-        <div class="nutrition-item">
-            <div class="nutrition-value">{{ recipe.fat }}g</div>
-            <div class="nutrition-label">Fat</div>
-        </div>
-    </div>
+        <ul class="rd-meta">
+            {% if recipe.prep_time %}<li><span class="rd-meta-label" data-i18n="recipe.prep">Prep</span><span class="rd-meta-value">{{ duration(recipe.prep_time) }}</span></li>{% endif %}
+            {% if recipe.cook_time %}<li><span class="rd-meta-label" data-i18n="recipe.cook">Cook</span><span class="rd-meta-value">{{ duration(recipe.cook_time) }}</span></li>{% endif %}
+            <li><span class="rd-meta-label" data-i18n="recipe.total">Total</span><span class="rd-meta-value">{{ duration(recipe.total_time) }}</span></li>
+            <li><span class="rd-meta-label" data-i18n="recipe.makes">Makes</span><span class="rd-meta-value">{{ recipe.servings }} {% if recipe.servings == 1 %}<span data-i18n="recipe.serving">serving</span>{% else %}<span data-i18n="recipe.servings">servings</span>{% endif %}</span></li>
+        </ul>
 
-    <!-- Ingredients -->
-    <div class="recipe-section">
-        <h2 class="section-title">
-            <svg class="section-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path>
-            </svg>
-            Ingredients
-        </h2>
-        <ul class="ingredients-list">
-            {% for ingredient in recipe.ingredients %}
-            <li class="ingredient-item">{{ ingredient }}</li>
+        {% if recipe.dietary_tags %}
+        <ul class="rd-tags">
+            {% for tag in recipe.dietary_tags if not (tag == 'vegetarian' and 'vegan' in recipe.dietary_tags) %}
+            {% set pair = TAG_LABELS.get(tag, (tag, tag.replace('_', ' ').capitalize())) %}
+            <li><a href="/recipes?tags={{ tag }}" data-i18n="{{ pair[0] }}">{{ pair[1] }}</a></li>
             {% endfor %}
         </ul>
-    </div>
-
-    <!-- Instructions -->
-    <div class="recipe-section">
-        <h2 class="section-title">
-            <svg class="section-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"></path>
-            </svg>
-            Instructions
-        </h2>
-        <div class="instructions-text">
-            {{ recipe.instructions }}
-        </div>
-    </div>
-
-    <!-- Action Buttons -->
-    <div class="action-buttons">
-        {% if user %}
-        <button class="btn btn-favorite {% if is_favorite %}is-favorite{% endif %}" onclick="toggleFavorite()">
-            <svg width="20" height="20" fill="currentColor" viewBox="0 0 20 20">
-                <path fill-rule="evenodd" d="M3.172 5.172a4 4 0 015.656 0L10 6.343l1.172-1.171a4 4 0 115.656 5.656L10 17.657l-6.828-6.829a4 4 0 010-5.656z" clip-rule="evenodd"></path>
-            </svg>
-            {% if is_favorite %}Favorited{% else %}Add to Favorites{% endif %}
-        </button>
         {% endif %}
-        <a href="/recipes" class="btn btn-secondary">
-            <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
-            </svg>
-            Back to Recipes
-        </a>
-    </div>
 
-    <!-- Share Section -->
-    <div class="share-section">
-        <h3 class="share-title"><span data-i18n="recipe.share">Share this recipe</span></h3>
-        <div class="share-buttons">
-            <a href="https://twitter.com/intent/tweet?text={{ recipe.name }}&url={{ request.url }}" target="_blank" class="share-btn share-twitter">
-                Twitter
-            </a>
-            <a href="https://www.facebook.com/sharer/sharer.php?u={{ request.url }}" target="_blank" class="share-btn share-facebook">
-                Facebook
-            </a>
-            <a href="https://www.linkedin.com/sharing/share-offsite/?url={{ request.url }}" target="_blank" class="share-btn share-linkedin">
-                LinkedIn
-            </a>
-            <button class="share-btn share-copy" onclick="copyLink()">
-                Copy Link
+        <div class="rd-actions">
+            {% if user %}
+            <button type="button" class="rd-btn rd-btn--save{% if is_favorite %} is-saved{% endif %}" id="saveBtn" aria-pressed="{{ 'true' if is_favorite else 'false' }}">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 17.3 6.2 20.6l1.1-6.5L2.6 9.5l6.5-.9L12 2.7l2.9 5.9 6.5.9-4.7 4.6 1.1 6.5z"/></svg>
+                <span id="saveLabel" data-i18n="{{ 'recipe.favorited' if is_favorite else 'recipe.favorite' }}">{{ 'Saved' if is_favorite else 'Save recipe' }}</span>
+            </button>
+            {% endif %}
+            <button type="button" class="rd-btn" id="shareBtn">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M4 12v7a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-7M16 6l-4-4-4 4M12 2v14" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                <span id="shareLabel" data-i18n="recipe.share">Share</span>
+            </button>
+            <button type="button" class="rd-btn" id="printBtn">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M6 9V3h12v6M6 18H4a1 1 0 0 1-1-1v-6a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v6a1 1 0 0 1-1 1h-2M6 14h12v7H6z" stroke-linejoin="round"/></svg>
+                <span data-i18n="recipe.print">Print</span>
             </button>
         </div>
+    </header>
+
+    <section class="rd-nutrition" aria-labelledby="nutritionHeading">
+        <h2 id="nutritionHeading" class="rd-section-title">
+            <span data-i18n="recipe.nutrition">Nutrition</span>
+            <span class="rd-per">
+                {%- if recipe.serving_size %}<span data-i18n="recipe.per">per</span> {{ recipe.serving_size }}
+                {%- else %}<span data-i18n="recipe.per_serving">per serving</span>{% endif -%}
+            </span>
+        </h2>
+        <dl class="rd-nutrition-grid">
+            <div><dt data-i18n="recipe.calories">Calories</dt><dd>{{ recipe.calories }}<small>kcal</small></dd></div>
+            <div><dt data-i18n="recipe.protein">Protein</dt><dd>{{ recipe.protein }}<small>g</small></dd></div>
+            <div><dt data-i18n="recipe.carbs">Carbs</dt><dd>{{ recipe.carbs }}<small>g</small></dd></div>
+            <div><dt data-i18n="recipe.fat">Fat</dt><dd>{{ recipe.fat }}<small>g</small></dd></div>
+            <div><dt data-i18n="recipe.fiber">Fibre</dt><dd>{{ recipe.fiber }}<small>g</small></dd></div>
+        </dl>
+        <p class="rd-footnote" data-i18n="recipe.estimate_note">Estimated from typical ingredients; brands vary.</p>
+    </section>
+
+    {% if recipe.tip %}
+    <aside class="rd-tip">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M13 2 4 14h7l-1 8 9-12h-7z" stroke-linejoin="round"/></svg>
+        <div>
+            <p class="rd-tip-label" data-i18n="recipe.runner_note">Runner's note</p>
+            <p class="rd-tip-text">{{ recipe.tip }}</p>
+        </div>
+    </aside>
+    {% endif %}
+
+    <div class="rd-body">
+        <section class="rd-ingredients" aria-labelledby="ingredientsHeading">
+            <h2 id="ingredientsHeading" class="rd-section-title">
+                <span data-i18n="recipe.ingredients">Ingredients</span>
+                <span class="rd-per">{{ recipe.ingredients | length }} <span data-i18n="recipe.items">items</span></span>
+            </h2>
+            <p class="rd-hint" data-i18n="recipe.tick_hint">Tap to tick off as you go.</p>
+            <ul class="rd-checklist" id="ingredientList">
+                {% for ingredient in recipe.ingredients %}
+                <li>
+                    <label>
+                        <input type="checkbox">
+                        <span>{{ ingredient }}</span>
+                    </label>
+                </li>
+                {% endfor %}
+            </ul>
+        </section>
+
+        <section class="rd-method" aria-labelledby="methodHeading">
+            <h2 id="methodHeading" class="rd-section-title">
+                <span data-i18n="recipe.method">Method</span>
+                <span class="rd-per">{{ recipe.steps | length }} <span data-i18n="recipe.steps">steps</span></span>
+            </h2>
+            {% if recipe.steps %}
+            <ol class="rd-steps" id="stepList">
+                {% for step in recipe.steps %}
+                <li>
+                    <button type="button" class="rd-step" aria-pressed="false">
+                        <span class="rd-step-num" aria-hidden="true">{{ loop.index }}</span>
+                        <span class="rd-step-text">{{ step }}</span>
+                    </button>
+                </li>
+                {% endfor %}
+            </ol>
+            {% else %}
+            <p class="rd-step-text">{{ recipe.instructions }}</p>
+            {% endif %}
+
+            {% if recipe.storage %}
+            <div class="rd-storage">
+                <p class="rd-tip-label" data-i18n="recipe.storage">Storage</p>
+                <p>{{ recipe.storage }}</p>
+            </div>
+            {% endif %}
+        </section>
     </div>
-</div>
+
+    {% if related %}
+    <section class="rd-related" aria-labelledby="relatedHeading">
+        <h2 id="relatedHeading" class="rd-section-title"><span data-i18n="recipe.more_like">More like this</span></h2>
+        <ul class="rd-related-grid">
+            {% for item in related %}
+            <li>
+                <a href="/recipes/{{ item.slug }}" class="rd-related-card">
+                    <span class="rd-related-name">{{ item.name }}</span>
+                    <span class="rd-related-meta">{{ item.calories }} kcal · {{ item.protein }} g <span data-i18n="recipe.protein_lc">protein</span> · {{ duration(item.total_time) }}</span>
+                </a>
+            </li>
+            {% endfor %}
+        </ul>
+    </section>
+    {% endif %}
+
+    <p class="rd-back"><a href="/recipes" class="rd-back-link">&larr; <span data-i18n="recipe.back">All recipes</span></a></p>
+</article>
 {% endblock %}
 
-{% block extra_js %}
+{% block scripts %}
 <script>
-let currentFavoriteId = {{ favorite_id | tojson }};
+(function () {
+    'use strict';
+    var recipeName = {{ recipe.name | tojson }};
+    var favoriteId = {{ favorite_id | tojson }};
 
-function toggleFavorite() {
-    const btn = document.querySelector('.btn-favorite');
-    const isFavorited = btn.classList.contains('is-favorite');
+    function tr(key, fallback) {
+        if (window.RC_I18N) { var v = window.RC_I18N.t(key); if (v && v !== key) return v; }
+        return fallback;
+    }
+    function toast(message, type) { if (window.notify) window.notify(message, { type: type || 'success' }); }
 
-    const recipeData = {
-        name: "{{ recipe.name }}",
-        meal_type: "{{ recipe.meal_type }}",
-        calories: {{ recipe.calories }},
-        protein: {{ recipe.protein }},
-        carbs: {{ recipe.carbs }},
-        fat: {{ recipe.fat }},
-        ingredients: {{ recipe.ingredients | tojson }},
-        instructions: {{ recipe.instructions | tojson }},
-        dietary_tags: {{ recipe.dietary_tags | tojson }}
-    };
+    // Tick-off ingredients and steps. Remembered per recipe for this browser so
+    // a page reload mid-cook doesn't lose your place; storage may be blocked.
+    var storeKey = 'rc-recipe-progress:' + {{ recipe.slug | tojson }};
+    var progress = {};
+    try { progress = JSON.parse(localStorage.getItem(storeKey) || '{}') || {}; } catch (e) { progress = {}; }
+    function save() { try { localStorage.setItem(storeKey, JSON.stringify(progress)); } catch (e) {} }
 
-    if (isFavorited) {
-        // Remove from favorites
-        fetch(`/api/recipes/favorite/${currentFavoriteId}`, {
-            method: 'DELETE',
-            headers: {
-                'Content-Type': 'application/json',
-            }
-        })
-        .then(response => {
-            if (!response.ok) throw new Error('Failed to remove favorite');
-            return response.json();
-        })
-        .then(data => {
-            currentFavoriteId = null;
-            btn.classList.remove('is-favorite');
-            btn.innerHTML = `
-                <svg width="20" height="20" fill="currentColor" viewBox="0 0 20 20">
-                    <path fill-rule="evenodd" d="M3.172 5.172a4 4 0 015.656 0L10 6.343l1.172-1.171a4 4 0 115.656 5.656L10 17.657l-6.828-6.829a4 4 0 010-5.656z" clip-rule="evenodd"></path>
-                </svg>
-                Add to Favorites
-            `;
-        })
-        .catch(error => {
-            console.error('Error removing favorite:', error);
+    document.querySelectorAll('#ingredientList input').forEach(function (box, i) {
+        box.checked = !!(progress.i && progress.i[i]);
+        box.addEventListener('change', function () {
+            progress.i = progress.i || {};
+            progress.i[i] = box.checked;
+            save();
         });
-    } else {
-        // Add to favorites
-        fetch('/api/recipes/favorite', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify(recipeData)
-        })
-        .then(response => {
-            if (!response.ok) throw new Error('Failed to add favorite');
-            return response.json();
-        })
-        .then(data => {
-            currentFavoriteId = data.id;
-            btn.classList.add('is-favorite');
-            btn.innerHTML = `
-                <svg width="20" height="20" fill="currentColor" viewBox="0 0 20 20">
-                    <path fill-rule="evenodd" d="M3.172 5.172a4 4 0 015.656 0L10 6.343l1.172-1.171a4 4 0 115.656 5.656L10 17.657l-6.828-6.829a4 4 0 010-5.656z" clip-rule="evenodd"></path>
-                </svg>
-                Favorited
-            `;
-        })
-        .catch(error => {
-            console.error('Error adding favorite:', error);
+    });
+    document.querySelectorAll('#stepList .rd-step').forEach(function (btn, i) {
+        var done = !!(progress.s && progress.s[i]);
+        btn.setAttribute('aria-pressed', done ? 'true' : 'false');
+        btn.addEventListener('click', function () {
+            var now = btn.getAttribute('aria-pressed') !== 'true';
+            btn.setAttribute('aria-pressed', now ? 'true' : 'false');
+            progress.s = progress.s || {};
+            progress.s[i] = now;
+            save();
+        });
+    });
+
+    // Save / unsave
+    var saveBtn = document.getElementById('saveBtn');
+    function paintSave() {
+        var saved = !!favoriteId;
+        saveBtn.classList.toggle('is-saved', saved);
+        saveBtn.setAttribute('aria-pressed', saved ? 'true' : 'false');
+        var labelEl = document.getElementById('saveLabel');
+        labelEl.setAttribute('data-i18n', saved ? 'recipe.favorited' : 'recipe.favorite');
+        labelEl.textContent = saved ? tr('recipe.favorited', 'Saved') : tr('recipe.favorite', 'Save recipe');
+    }
+    if (saveBtn) {
+        saveBtn.addEventListener('click', function () {
+            saveBtn.disabled = true;
+            var req = favoriteId
+                ? fetch('/api/recipes/favorite/' + encodeURIComponent(favoriteId), { method: 'DELETE' })
+                : fetch('/api/recipes/favorite', {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name: recipeName })
+                });
+            req.then(function (r) {
+                if (!r.ok) throw new Error(r.status);
+                return r.json();
+            }).then(function (data) {
+                var wasSaved = !!favoriteId;
+                favoriteId = wasSaved ? null : (data.id || favoriteId);
+                paintSave();
+                toast(wasSaved ? tr('recipes.removed_toast', 'Removed from saved.') : tr('recipes.saved_toast', 'Saved to your recipes.'));
+            }).catch(function () {
+                toast(tr('recipes.save_error', "Couldn't update your saved recipes. Please try again."), 'error');
+            }).finally(function () { saveBtn.disabled = false; });
         });
     }
-}
 
-function copyLink() {
-    navigator.clipboard.writeText(window.location.href).then(() => {
-        const btn = document.querySelector('.share-copy');
-        const originalText = btn.textContent;
-        btn.textContent = 'Copied!';
-        setTimeout(() => {
-            btn.textContent = originalText;
-        }, 2000);
+    // Share: native share sheet where available, otherwise copy the link.
+    document.getElementById('shareBtn').addEventListener('click', function () {
+        var url = window.location.href.split('?')[0];
+        if (navigator.share) {
+            navigator.share({ title: recipeName, url: url }).catch(function () {});
+            return;
+        }
+        if (navigator.clipboard) {
+            navigator.clipboard.writeText(url).then(function () {
+                toast(tr('recipe.link_copied', 'Link copied.'));
+            }, function () { window.prompt(tr('recipe.copy_link', 'Copy link'), url); });
+        } else {
+            window.prompt(tr('recipe.copy_link', 'Copy link'), url);
+        }
     });
-}
+
+    document.getElementById('printBtn').addEventListener('click', function () { window.print(); });
+})();
 </script>
 {% endblock %}
