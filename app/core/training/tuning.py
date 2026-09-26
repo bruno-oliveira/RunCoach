@@ -310,6 +310,16 @@ LOW_FREQ_EASY_VS_LONG_RUN = 0.68
 # than prescribing a second long effort (audit G3).
 MAX_EASY_RUN_KM = 14.0
 
+# Trail counterpart. Trail used to have no absolute ceiling at all, on the
+# grounds that back-to-back long days are intentional there — but those are the
+# weekend long/back-to-back sessions, not the weekday easy slots, which grew
+# into 15-19 km "easy" runs beside a 4 km quality day on 4-run 50K plans (and
+# kept growing into the taper as the long run shrank). Weekday easy runs cap at
+# this, or at TRAIL_EASY_WEEKLY_SHARE of the week for high-volume ultra
+# runners, whichever is larger.
+TRAIL_MAX_EASY_RUN_KM = 16.0
+TRAIL_EASY_WEEKLY_SHARE = 0.15
+
 # Base phase reduces quality caps by this factor.
 BASE_PHASE_QUALITY_REDUCTION = 0.80
 

@@ -20,6 +20,8 @@ from app.core.training.tuning import (
     MIN_EASY_PER_RUN_KM,
     QUALITY_CAPS_BY_DISTANCE,
     QUALITY_MIN_DOSE_KM,
+    TRAIL_EASY_WEEKLY_SHARE,
+    TRAIL_MAX_EASY_RUN_KM,
 )
 
 __all__ = [
@@ -36,6 +38,7 @@ __all__ = [
     "get_quality_caps",
     "cap_quality_distance",
     "easy_run_cap",
+    "trail_easy_cap",
     "cap_easy_distance",
     "enforce_week_caps",
 ]
@@ -73,6 +76,16 @@ def volume_scaled_easy_cap(weekly_km: float) -> float:
     ~12 km at 55 km/week, topping out at MAX_EASY_RUN_KM.
     """
     return min(MAX_EASY_RUN_KM, max(6.0, round(weekly_km * 0.25, 1)))
+
+
+def trail_easy_cap(weekly_km: float) -> float:
+    """Absolute ceiling for one weekday easy run on a trail/ultra plan.
+
+    Looser than the road cap — ultra weeks carry more volume at slower paces —
+    but still a ceiling: ``TRAIL_MAX_EASY_RUN_KM``, rising with the week for
+    high-volume runners (~20 km at 130+ km/week).
+    """
+    return max(TRAIL_MAX_EASY_RUN_KM, round(weekly_km * TRAIL_EASY_WEEKLY_SHARE, 1))
 
 
 def easy_run_cap(

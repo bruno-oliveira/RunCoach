@@ -32,6 +32,7 @@ from app.core.training.periodization.quality_caps import (
     MAX_QUALITY_VS_LONG_RUN,
     MIN_EASY_PER_RUN_KM,
     easy_run_cap,
+    trail_easy_cap,
     volume_scaled_easy_cap,
 )
 from app.core.training.periodization.training_constants import get_hard_ceiling
@@ -336,6 +337,7 @@ def fill_shortfall(
     easy_vs_long_ratio: float = MAX_EASY_VS_LONG_RUN,
     experience_level: Optional[str] = None,
     max_runs: Optional[int] = None,
+    is_backyard: bool = False,
 ) -> float:
     """Fill shortfall by expanding easy runs; reshape long run when its
     distance must change for safety (its cap) or balance against easy.
@@ -449,15 +451,17 @@ def fill_shortfall(
     if long_w:
         long_d = long_w["distance"]
 
-        # On road plans easy runs are capped at an absolute ceiling so they
-        # don't become second long runs; excess volume above the cap spills
-        # into the long run (up to its contracted cap) and anything beyond that
-        # is dropped — the week falls short rather than prescribing a second
-        # long effort (audit G3). Trail back-to-back days are intentionally
-        # long, so there the easy run is only bounded by the long run itself.
+        # Easy runs are capped at an absolute ceiling so they don't become
+        # second long runs; excess volume above the cap spills into the long
+        # run (up to its contracted cap) and anything beyond that is dropped —
+        # the week falls short rather than prescribing a second long effort
+        # (audit G3). Trail gets its own, looser ceiling: its back-to-back
+        # long days are weekend sessions, not these weekday easy slots.
         def _easy_cap(_long_d: float) -> float:
-            if trail_profile is not None:
+            if is_backyard:
                 return _long_d
+            if trail_profile is not None:
+                return min(_long_d, trail_easy_cap(total_km))
             # At 2 runs the easy slot is the week's only other session, and
             # the easy-vs-long ratio (0.68) already keeps it a supporting run.
             # The absolute 14 km ceiling would bind first on marathon-scale
