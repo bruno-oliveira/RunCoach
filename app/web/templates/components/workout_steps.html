@@ -2,7 +2,9 @@
    profile. The grouping and paces come from core presentation.session_view —
    the same model the watch export uses — so this is what the watch will run.
    Expected context: workout (dict with optional 'steps' array).
-   Optional: steps_compact (bool) — week-card density, notes hidden. #}
+   Optional: steps_compact (bool) — week-card density, notes hidden.
+             steps_hide_profile (bool) — the caller already drew the effort
+             profile, so show only the estimated total here. #}
 {% set sv = workout.steps | session_view %}
 {% if sv %}
 {% macro step_row(st) -%}
@@ -23,7 +25,9 @@
 </li>
 {%- endmacro %}
 <div class="session{% if steps_compact %} session--compact{% endif %}">
-    {% if sv.profile | length > 1 %}
+    {% if steps_hide_profile %}
+    {% if sv.total %}<div class="session-summary"><span>≈ {{ sv.total }}</span></div>{% endif %}
+    {% elif sv.profile | length > 1 %}
     <div class="session-profile" role="img" aria-label="Effort profile: taller and warmer bars are harder, width is time">
         {% for seg in sv.profile %}<span class="session-seg lvl-{{ seg.level }}" style="flex-grow: {{ seg.share }}" title="{{ seg.title }}"></span>{% endfor %}
     </div>

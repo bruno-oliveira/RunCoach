@@ -90,6 +90,9 @@
     {% if workout.steps and workout.type not in ['rest', 'recovery'] %}
     <div class="workout-steps-wrap">
         {% set steps_compact = true %}
+        {#- The card already shows this session's shape above Details;
+            drawing it again inside reads as two different sessions. #}
+        {% set steps_hide_profile = card_sv and card_sv.has_repeats %}
         {% include 'components/workout_steps.html' %}
     </div>
     {% elif workout.segments and workout.type not in ['rest', 'recovery'] %}

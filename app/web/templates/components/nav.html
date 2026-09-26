@@ -141,7 +141,6 @@
                     data-i18n="nav.settings"
                 >Settings</button>
                 <button class="btn btn-ghost btn-sm nav-signout" onclick="logout()" data-i18n="nav.sign_out">Sign Out</button>
-                <button class="btn btn-ghost btn-sm nav-delete-account" onclick="deleteAccount()" data-i18n="nav.delete_account">Delete Account</button>
             </div>
             {% else %}
             <div class="nav-auth" id="nav-auth-container">
@@ -298,6 +297,17 @@
                 <p class="toggle-help" id="pushInstallHint" hidden>On iPhone, notifications need RunCoach on your Home Screen: tap <strong>Share</strong> &rarr; <strong>Add to Home Screen</strong>, open it from there, then come back here.</p>
                 <p class="toggle-help" id="pushBlockedHint" hidden>Notifications are blocked for this site in your browser settings. Allow them there, then switch this on.</p>
                 <div class="push-categories" id="pushCategories" hidden></div>
+            </div>
+            {# Irreversible, so it lives here behind Settings and a confirm
+               dialog rather than beside Sign Out in the top bar. #}
+            <div class="settings-field settings-danger-zone">
+                <label class="settings-field-label">
+                    <strong data-i18n="settings.delete_label">Delete account</strong>
+                    <span class="toggle-help" data-i18n="settings.delete_help">Permanently erases your plans, logged runs and saved recipes.</span>
+                </label>
+                <div class="settings-field-row">
+                    <button class="btn btn-ghost btn-sm settings-delete-account" type="button" onclick="deleteAccount()" data-i18n="nav.delete_account">Delete Account</button>
+                </div>
             </div>
         </div>
         <div class="settings-modal-footer">

@@ -567,14 +567,18 @@
     cursor: not-allowed;
 }
 
-.nav-delete-account {
-    color: var(--color-error) !important;
-    font-size: 0.75rem;
-    opacity: 0.7;
+.settings-danger-zone {
+    padding-top: var(--space-3);
+    border-top: 1px solid var(--color-border-subtle);
 }
 
-.nav-delete-account:hover {
-    opacity: 1;
+.settings-delete-account {
+    color: var(--color-error) !important;
+    border: 1px solid currentColor;
+}
+
+.settings-delete-account:hover {
+    background: var(--color-error-subtle);
 }
 
 .provider-spinner {

@@ -92,7 +92,7 @@
             {% elif training_plan.plan_type == 'performance' %}
             <p>Every session below is paced off your goal time, not just your current fitness.</p>
             {% else %}
-            <p>Your week-by-week build to {{ target_distance }}K — every session here has a reason.</p>
+            <p>Your week-by-week {{ target_distance | race_name }} build — every session here has a reason.</p>
             {% endif %}
         </div>
         {% elif training_plan.plan_type == 'fitness' %}
@@ -112,7 +112,7 @@
                 </span>
             </p>
         {% else %}
-            <p>Your week-by-week build to {{ target_distance }}K — every session here has a reason.</p>
+            <p>Your week-by-week {{ target_distance | race_name }} build — every session here has a reason.</p>
         {% endif %}
         {% endif %}
     </div>
