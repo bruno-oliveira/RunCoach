@@ -8,14 +8,18 @@ observability output (e.g. that the readiness signal folds to zero weight when
 no readiness logs exist), which is itself a finding worth guarding.
 """
 
+import dataclasses
+
 import pytest
 from sqlalchemy import create_engine, event
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 
+from app.application.coach_summary_service import _direction
 from app.contexts.plan.adaptation import backtest as bt
 from app.contexts.plan.adaptation.tuning import (
     OVERREACH_OVERRIDE_CLAMP,
+    PROGRESS_MULTIPLIER,
     STANDARD_MIN,
 )
 from app.models import Base
@@ -63,6 +67,36 @@ def test_strong_adherent_is_not_pushed_into_a_reduction(db):
     assert rep.overreach_rate == 0.0
     assert min(rep.multipliers) >= 0.95
     assert max(rep.multipliers) >= 1.0  # at least one hold-or-increase
+
+
+def test_strong_adherent_earns_a_small_increase(db):
+    """Consistently over plan at an easy effort is evidence to build, not hold.
+
+    The engine used to hold this runner forever: the symmetric deadband ate
+    their ~+4 % raw multiplier, and today's not-yet-run session was scored as
+    missed, capping completion at ~0.9.
+    """
+    rep = _report(db, "strong_adherent")
+    assert rep.multipliers
+    assert all(m == PROGRESS_MULTIPLIER for m in rep.multipliers)
+    assert all(o.completion_rate == pytest.approx(1.0) for o in rep.evaluated)
+    # Every surface that labels a multiplier reads the step as an increase.
+    assert _direction(PROGRESS_MULTIPLIER) == "increase"
+
+
+@pytest.mark.parametrize(
+    "overrides",
+    [
+        {"effort": 7},  # over plan, but working hard for it
+        {"volume_mult": 1.01},  # on plan, not over it
+        {"completion_prob": 0.8},  # over plan on the runs logged, missing others
+    ],
+)
+def test_progress_step_needs_every_condition(db, overrides):
+    archetype = dataclasses.replace(_ARCH["strong_adherent"], **overrides)
+    rep = bt.ArchetypeReport(archetype, bt.replay(db, archetype))
+    assert rep.multipliers
+    assert PROGRESS_MULTIPLIER not in rep.multipliers, (overrides, rep.multipliers)
 
 
 def test_overreacher_trips_overreach_clamp_and_is_capped(db):
