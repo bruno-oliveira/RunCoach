@@ -126,7 +126,9 @@
         {% if overlay and overlay.is_fatigue_softened %}<span class="fatigue-icon" title="Recent runs have been costly — consider easing this one">⚠️</span> Consider easing this one — your last few runs have been costly. {% endif %}{% if overlay and overlay.rationale_prefix %}{{ overlay.rationale_prefix }}{{ workout.coaching_rationale[0]|lower }}{{ workout.coaching_rationale[1:] }}{% else %}{{ workout.coaching_rationale }}{% endif %}
     </div>
     {% endif %}
-    {% if workout.id and plan_id %}
+    {#- Only sessions with something to run get a day page link; a rest or
+        0 km recovery day has nothing more to show than the card itself. #}
+    {% if workout.id and plan_id and workout.type not in ['rest', 'recovery'] and ((workout.distance or 0) > 0 or workout.duration_min) %}
     <a class="workout-open-day" href="/plan/{{ plan_id }}/day/{{ workout.id }}"><span data-i18n="workout.open_day">Open full session</span> <span aria-hidden="true">&rarr;</span></a>
     {% endif %}
     </div>

@@ -61,8 +61,11 @@ _NOTES: Dict[str, str] = {
         "low volume, genuine effort."
     ),
     # ── Intervals ─────────────────────────────────────────────────────────
+    # Base-phase interval slots carry fartleks, short reps and strides alike,
+    # so the note names the purpose, not one session: this used to promise
+    # "short strides" on a fartlek or a 3 x 800 m.
     "interval_base": (
-        "Short strides to reinforce running form and leg turnover — "
+        "Short, controlled faster efforts to sharpen form and leg turnover — "
         "efficient mechanics now pay off across your {race} build."
     ),
     "interval_build": (
@@ -232,6 +235,31 @@ def build_pace_cue(
         )
 
     return None
+
+
+# Older generators stamped a strides rationale on every base-phase interval
+# slot, so stored plans show it under fartleks and VO2max reps. Rewritten at
+# view time (``heal_legacy_rationale``); new plans no longer produce it.
+_LEGACY_STRIDES_PREFIX = "Short strides to reinforce running form"
+_HEALED_BASE_INTERVAL_NOTE = (
+    "Short, controlled faster efforts to sharpen form and leg turnover — "
+    "efficient mechanics now pay off later in your build."
+)
+
+
+def heal_legacy_rationale(rationale: Optional[str], session_text: str) -> Optional[str]:
+    """Replace the legacy strides rationale on a session that isn't strides.
+
+    ``session_text`` is whatever names the session (its key-workout name and
+    description); a session that really is strides keeps its note.
+    """
+    if (
+        rationale
+        and rationale.startswith(_LEGACY_STRIDES_PREFIX)
+        and "stride" not in session_text.lower()
+    ):
+        return _HEALED_BASE_INTERVAL_NOTE
+    return rationale
 
 
 def generate_coaching_note(

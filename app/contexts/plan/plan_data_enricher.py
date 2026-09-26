@@ -5,6 +5,7 @@ from typing import Any
 
 from sqlalchemy.orm import Session
 
+from app.core.coaching.coaching_notes_generator import heal_legacy_rationale
 from app.core.training.adaptation.baseline_recovery import (
     recover_baseline,
     strip_annotations,
@@ -187,6 +188,12 @@ def enrich_plan_data_with_ids(
                 workout["description"] = strip_annotations(workout["notes"]) or ""
 
             _repair_key_workout_steps(workout)
+            if workout.get("coaching_rationale"):
+                workout["coaching_rationale"] = heal_legacy_rationale(
+                    workout["coaching_rationale"],
+                    f"{workout.get('key_workout_name') or ''} "
+                    f"{workout.get('description') or ''}",
+                )
 
             steps = workout.get("steps")
             if isinstance(steps, list) and steps:
