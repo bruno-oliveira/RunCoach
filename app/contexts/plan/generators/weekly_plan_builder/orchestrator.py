@@ -57,6 +57,7 @@ from app.core.training.periodization.quality_caps import (
     LOW_FREQ_EASY_VS_LONG_RUN,
     MAX_EASY_VS_LONG_RUN,
     QUALITY_MIN_DOSE_KM,
+    trail_easy_cap,
     volume_scaled_easy_cap,
 )
 from app.core.training.periodization.training_constants import (
@@ -235,8 +236,13 @@ def generate_daily_workouts(
     prev_long_run_km: Optional[float] = None,
     rotation_state: Optional[KeyWorkoutRotationState] = None,
     composer: Optional[FrequencyComposer] = None,
+    is_backyard: bool = False,
 ) -> List[Dict[str, Any]]:
     """Generate daily workouts for one week.
+
+    ``is_backyard`` keeps weekday easy runs uncapped: backyard volume is bounded
+    by the goal's own weekly min/max, and its highest-volume runners carry it in
+    weekday easy runs that the trail ceiling would clip.
 
     ``rotation_state`` is the plan-level key-workout memory (one instance per
     generated plan): it powers the no-repeat selection window, the per-plan
@@ -350,14 +356,18 @@ def generate_daily_workouts(
     remaining_km = total_km - long_run_distance - medium_long_distance
     quality_total = sum(quality_distances.values())
     easy_runs = sum(1 for wt in workout_types if wt == "easy")
+    if is_backyard:
+        easy_abs_cap = float("inf")
+    elif trail_profile is not None:
+        easy_abs_cap = trail_easy_cap(total_km)
+    else:
+        easy_abs_cap = volume_scaled_easy_cap(total_km)
     easy_distances = allocate_easy_distances(
         remaining_km,
         quality_total,
         long_run_distance,
         easy_runs,
-        max_easy_abs_km=float("inf")
-        if trail_profile is not None
-        else volume_scaled_easy_cap(total_km),
+        max_easy_abs_km=easy_abs_cap,
         easy_vs_long_ratio=low_freq_easy_vs_long_ratio(max_runs, trail_profile),
     )
 
@@ -421,10 +431,11 @@ def generate_daily_workouts(
         # materially short of its target; the week's dedicated quality session
         # still supplies the intensity. A long-run overlay is only affordable
         # when the easy runs plus the pinned long run can still reach the target.
+        pinned_easy_cap = (
+            volume_scaled_easy_cap(total_km) if is_backyard else easy_abs_cap
+        )
         pinned_capacity = (
-            long_run_distance
-            + easy_runs * volume_scaled_easy_cap(total_km)
-            + quality_total
+            long_run_distance + easy_runs * pinned_easy_cap + quality_total
         )
         skip_overlay = workout_type == "long" and (
             easy_runs == 0 or pinned_capacity < total_km * PINNED_LONG_RUN_FILL_FLOOR
@@ -569,6 +580,7 @@ def build_weekly_plan(
         trail_profile=trail_profile,
         max_runs=max_runs_per_week,
         prev_long_run_km=prev_long_run_km,
+        is_backyard=backyard_profile is not None,
         rotation_state=rotation_state,
         composer=composer,
     )
@@ -642,6 +654,7 @@ def build_weekly_plan(
         easy_vs_long_ratio=easy_vs_long_ratio,
         experience_level=experience_level,
         max_runs=max_runs_per_week,
+        is_backyard=backyard_profile is not None,
     )
     actual_total_km = _enforce_long_run_ratio_cap(
         workouts,

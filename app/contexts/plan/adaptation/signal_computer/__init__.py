@@ -59,6 +59,21 @@ from app.contexts.plan.adaptation.tuning import (
     PHASE_WEIGHTS as _PHASE_WEIGHTS,
 )
 from app.contexts.plan.adaptation.tuning import (
+    PROGRESS_MAX_EFFORT as _PROGRESS_MAX_EFFORT,
+)
+from app.contexts.plan.adaptation.tuning import (
+    PROGRESS_MIN_COMPLETION as _PROGRESS_MIN_COMPLETION,
+)
+from app.contexts.plan.adaptation.tuning import (
+    PROGRESS_MIN_RUNS as _PROGRESS_MIN_RUNS,
+)
+from app.contexts.plan.adaptation.tuning import (
+    PROGRESS_MIN_VOLUME_RATIO as _PROGRESS_MIN_VOLUME_RATIO,
+)
+from app.contexts.plan.adaptation.tuning import (
+    PROGRESS_MULTIPLIER as _PROGRESS_MULTIPLIER,
+)
+from app.contexts.plan.adaptation.tuning import (
     STANDARD_MAX as _STANDARD_MAX,
 )
 from app.contexts.plan.adaptation.tuning import (
@@ -227,6 +242,17 @@ def compute_adjustment_signals(
     # reduction, not noise — so a genuine fatigue signal still eases the plan.
     if not overreach_detected and abs(multiplier - 1.0) <= _HOLD_DEADBAND:
         multiplier = 1.0
+        if raw_multiplier > 1.0 and _sustained_progress(
+            volume=volume,
+            effort=effort,
+            completion=completion,
+            hr=hr,
+            readiness=readiness,
+            run_count=len(all_plan_runs),
+            vdot_trend=vdot_trend,
+            current_phase=current_phase,
+        ):
+            multiplier = min(clamp_max, _PROGRESS_MULTIPLIER)
 
     return _assemble_result(
         multiplier=multiplier,
@@ -245,6 +271,37 @@ def compute_adjustment_signals(
         vdot_trend=vdot_trend,
         consecutive_same_direction=consecutive_same_direction,
         expanded_range=expanded_range,
+    )
+
+
+def _sustained_progress(
+    *,
+    volume: SignalContribution,
+    effort: SignalContribution,
+    completion: SignalContribution,
+    hr: SignalContribution,
+    readiness: SignalContribution,
+    run_count: int,
+    vdot_trend: str,
+    current_phase: str,
+) -> bool:
+    """Consistent, easy over-delivery — evidence enough to build, not hold.
+
+    Every condition has to hold: the runner is over plan and near-complete on
+    enough runs, reports easy efforts, and nothing that reads recovery (HR
+    drift, readiness, a falling VDOT) says otherwise. Never in a taper.
+    """
+    avg_effort = effort.extras.get("avg_effort")
+    return (
+        current_phase != "taper"
+        and run_count >= _PROGRESS_MIN_RUNS
+        and volume.extras.get("volume_ratio", 0.0) >= _PROGRESS_MIN_VOLUME_RATIO
+        and completion.extras.get("completion_rate", 0.0) >= _PROGRESS_MIN_COMPLETION
+        and avg_effort is not None
+        and avg_effort <= _PROGRESS_MAX_EFFORT
+        and (not hr.has_data or hr.factor >= 1.0)
+        and (not readiness.has_data or readiness.factor >= 1.0)
+        and vdot_trend != "declining"
     )
 
 

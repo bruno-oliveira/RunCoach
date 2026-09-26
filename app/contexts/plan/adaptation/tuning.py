@@ -75,6 +75,19 @@ HYSTERESIS_BAND = 0.05
 # deviations (which push the multiplier well past the band) still adjust the plan.
 HOLD_DEADBAND = _thresholds.HOLD_DEADBAND
 
+# Sustained progress. The deadband is symmetric, so a runner who logged every
+# session a few percent long at an easy effort sat inside it forever: the
+# engine could cut but never build. When the evidence is consistent — over
+# plan, near-complete, easy, enough runs, nothing flagging fatigue — the hold
+# becomes one small step up, placed just outside the deadband so every surface
+# that labels a multiplier (coach summary, nudges) reads it as the increase it
+# is.
+PROGRESS_MIN_VOLUME_RATIO = 1.03
+PROGRESS_MIN_COMPLETION = 0.90
+PROGRESS_MAX_EFFORT = 5.0
+PROGRESS_MIN_RUNS = 6
+PROGRESS_MULTIPLIER = round(1.0 + HOLD_DEADBAND + 0.01, 2)
+
 # =============================================================================
 # Overreach + training-load clamps (see signal_computer._apply_clamps)
 # =============================================================================

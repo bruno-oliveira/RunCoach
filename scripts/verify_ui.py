@@ -111,6 +111,30 @@ def _template_plan(conn: sqlite3.Connection) -> dict | None:
     return dict(row) if row else None
 
 
+def persist_workout_rows(target: Path) -> None:
+    """Build the weekly_plans → daily_workouts tree the real generator writes.
+
+    Cloning ``plan_data`` alone renders the week grid, but every workout id the
+    plan view hands out comes from these rows — without them there are no
+    "Open full session" links and no day pages to verify.
+    """
+    guard_target(target)
+    from sqlalchemy import create_engine
+    from sqlalchemy.orm import Session
+
+    from app.contexts.plan.plan_creation_helpers import persist_weekly_workouts
+    from app.models import TrainingPlan
+
+    engine = create_engine(f"sqlite:///{target}")
+    with Session(engine) as db:
+        plan = db.get(TrainingPlan, PLAN_ID)
+        if plan is None or not plan.plan_data:
+            return
+        persist_weekly_workouts(plan, plan.plan_data, db)
+        db.commit()
+    engine.dispose()
+
+
 def seed(target: Path, weeks_in: int) -> str:
     """Add the throwaway user and plan; return a session token for them."""
     guard_target(target)
@@ -126,6 +150,13 @@ def seed(target: Path, weeks_in: int) -> str:
     now = datetime.now(timezone.utc).replace(tzinfo=None)
     # last_activity must be recent or _resolve_user rejects the session as timed
     # out and every page 403s — the least obvious part of this setup.
+    # Child rows first: a stale week/day tree would double every workout.
+    conn.execute(
+        "delete from daily_workouts where weekly_plan_id in "
+        "(select id from weekly_plans where training_plan_id = ?)",
+        (PLAN_ID,),
+    )
+    conn.execute("delete from weekly_plans where training_plan_id = ?", (PLAN_ID,))
     conn.execute("delete from training_plans where id = ?", (PLAN_ID,))
     conn.execute("delete from users where id = ?", (USER_ID,))
     # created_at / plans_generated are NOT NULL as far as ``UserResponse`` is
@@ -169,9 +200,11 @@ def seed(target: Path, weeks_in: int) -> str:
     conn.commit()
     conn.close()
 
+    os.environ["DATABASE_URL"] = f"sqlite:///{target}"
+    persist_workout_rows(target)
+
     # Signed with the same SECRET_KEY the server reads from .env, so the cookie
     # is accepted by a server started from this project root.
-    os.environ["DATABASE_URL"] = f"sqlite:///{target}"
     from app.contexts.auth.auth_service import AuthService
 
     return AuthService().create_access_token({"sub": USER_ID})

@@ -730,10 +730,14 @@ class TrainingPlanGenerator:
             # ramp ceiling and the long-run anchor. Without this transfer, the
             # same 30 km trail target delivered 31.7 km at four runs but only
             # 30.7 km at five — offering another day reduced the prescription.
+            # Never refill a taper: its shortfall is the point. Topping it up
+            # moved the km the shortened long run gave back into the weekday
+            # easy runs, which grew into the taper instead of shrinking.
             if (
                 trail_profile is not None
                 and backyard_profile is None
                 and not is_recovery
+                and weekly_plan.get("phase") != "taper"
             ):
                 refill_ceiling = (
                     actual_high_water * mileage_progression.WEEK_OVER_WEEK_CAP
@@ -750,14 +754,26 @@ class TrainingPlanGenerator:
                     ),
                     default=0.0,
                 )
+                # Easy runs refill only up to the trail easy ceiling. Bounded by
+                # the long run alone, this pass turned every weekday easy run of
+                # a 100K peak week into a 42 km copy of the long run.
+                from app.core.training.periodization.quality_caps import (
+                    trail_easy_cap,
+                )
+
+                easy_ceiling = min(long_distance, trail_easy_cap(week_km))
+
+                def _refill_ceiling(w: Dict[str, Any]) -> float:
+                    return easy_ceiling if w.get("type") == "easy" else long_distance
+
                 receivers = [
                     w
                     for w in weekly_plan["daily_workouts"]
                     if w.get("type") in ("easy", "medium_long")
                     and not _is_prescriptive(w)
-                    and 0 < (w.get("distance") or 0) < long_distance
+                    and 0 < (w.get("distance") or 0) < _refill_ceiling(w)
                 ]
-                headrooms = [long_distance - w["distance"] for w in receivers]
+                headrooms = [_refill_ceiling(w) - w["distance"] for w in receivers]
                 total_headroom = sum(headrooms)
                 if deficit > 0.05 and total_headroom > 0:
                     for workout, headroom in zip(receivers, headrooms):

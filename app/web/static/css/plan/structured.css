@@ -608,7 +608,7 @@
 
 /* Card-level shape + formula (week grid) and the link to the drill-down. */
 .workout-card-profile { margin-top: var(--space-2); }
-.workout-card-profile .session-profile--mini { margin-top: 0; max-width: 360px; height: 22px; }
+.workout-card-profile .session-profile--mini { margin-top: 0; height: 24px; }
 .workout-card-formula {
     margin-top: 4px;
     font-size: 11px;

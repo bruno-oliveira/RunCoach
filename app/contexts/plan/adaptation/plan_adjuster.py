@@ -116,6 +116,14 @@ def gather_signals(
         .all()
     )
 
+    # Today's session is due only once it's been run. Counting it from
+    # midnight scored every morning evaluation (the daily sweep, a webhook for
+    # yesterday's activity) as if the runner had already skipped today, which
+    # held even a perfect adherent's completion at ~0.9 and their volume under
+    # plan — enough to block every increase.
+    logged_workout_ids = {
+        run.daily_workout_id for run in all_plan_runs if run.daily_workout_id
+    }
     past_workouts: List[Tuple] = []
     past_workout_ids: set = set()
     for workout, week_number in all_workouts_with_week:
@@ -123,7 +131,9 @@ def gather_signals(
             weeks=(week_number - 1),
             days=(workout.day_of_week - 1),
         )
-        if scheduled_date <= today:
+        if scheduled_date < today or (
+            scheduled_date == today and workout.id in logged_workout_ids
+        ):
             past_workouts.append((workout, scheduled_date))
             past_workout_ids.add(workout.id)
 

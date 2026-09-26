@@ -86,9 +86,60 @@ _SLOT_DAY_MAP: dict[str, list[int]] = {
     "long": [5],
     "recovery": [1],
     "quality": [0, 3],
-    "medium_long": [4],
-    "easy": [2, 6, 0, 1, 3, 4],
+    "medium_long": [2, 1, 3, 4],
+    "easy": [2, 0, 3, 1, 6, 4],
 }
+
+# Sessions that load the legs. Easy days are placed away from these.
+_QUALITY = frozenset({"interval", "tempo", "hill"})
+_LOADED = _QUALITY | {"long", "medium_long"}
+
+
+def _longest_streak(running: set[int]) -> int:
+    """Longest run of consecutive running days, wrapping Sunday into Monday."""
+    if len(running) == 7:
+        return 7
+    best = 0
+    for start in running:
+        if (start - 1) % 7 in running:
+            continue
+        length = 1
+        while (start + length) % 7 in running:
+            length += 1
+        best = max(best, length)
+    return best
+
+
+def _pick_easy_days(schedule: List[Optional[str]], count: int) -> List[int]:
+    """Choose ``count`` free days for easy runs, spreading the week.
+
+    A fixed fill order stacks the easy days wherever the order starts — the
+    4-run plan ran Mon/Tue/Wed and then rested until Saturday. Greedily, each
+    easy run goes on the free day that, in order of priority, leaves the
+    shortest streak of consecutive running days, touches the fewest loaded
+    sessions, touches the fewest runs at all, and isn't the eve of the long
+    run; the preference order in ``_SLOT_DAY_MAP`` breaks what ties remain.
+    """
+    order = _SLOT_DAY_MAP["easy"]
+    chosen: List[int] = []
+    for _ in range(count):
+        running = {
+            d for d in range(7) if schedule[d] not in (None, "recovery", "rest")
+        } | set(chosen)
+        free = [d for d in order if schedule[d] is None and d not in chosen]
+        if not free:
+            break
+
+        def cost(day: int) -> tuple[int, int, int, int, int]:
+            neighbours = ((day - 1) % 7, (day + 1) % 7)
+            loaded = sum(1 for n in neighbours if schedule[n] in _LOADED)
+            touching = sum(1 for n in neighbours if n in running)
+            eve_of_long = int(schedule[(day + 1) % 7] == "long")
+            streak = _longest_streak(running | {day})
+            return (streak, loaded, touching, eve_of_long, order.index(day))
+
+        chosen.append(min(free, key=cost))
+    return chosen
 
 
 def schedule_from_composer(
@@ -148,12 +199,25 @@ def schedule_from_composer(
         if _claim(d, label):
             qi += 1
 
-    # Pass 4: place medium-long runs
+    # Pass 4: place medium-long runs mid-week. Friday was the old first
+    # choice, which stacked quality, medium-long and long on Thu/Fri/Sat.
+    # With two quality days plus the long run, one loaded pair can't be
+    # avoided; the medium-long then follows a quality day rather than
+    # preceding one, so the quality session is run on fresh legs.
     for slot in slots:
         if slot.slot_type == SlotType.MEDIUM_LONG:
-            for d in (4, 3, 2):
-                if _claim(d, "medium_long"):
-                    break
+            free = [d for d in _SLOT_DAY_MAP["medium_long"] if schedule[d] is None]
+            if not free:
+                continue
+
+            def ml_cost(day: int) -> tuple[int, int, int]:
+                neighbours = (schedule[(day - 1) % 7], schedule[(day + 1) % 7])
+                loaded = sum(1 for n in neighbours if n in _LOADED)
+                precedes_quality = int(schedule[(day + 1) % 7] in _QUALITY)
+                order = _SLOT_DAY_MAP["medium_long"].index(day)
+                return (loaded, precedes_quality, order)
+
+            _claim(min(free, key=ml_cost), "medium_long")
 
     # Pass 5: fill remaining with easy runs.
     # frequency is the running-day count; recovery is extra (non-running).
@@ -164,12 +228,8 @@ def schedule_from_composer(
         if schedule[d] is not None and schedule[d] not in ("recovery",)
     )
     easy_needed = max(0, composer.frequency - placed_running)
-    filled_easy = 0
-    for d in (2, 0, 1, 3, 4, 6):
-        if filled_easy >= easy_needed:
-            break
-        if _claim(d, "easy"):
-            filled_easy += 1
+    for d in _pick_easy_days(schedule, easy_needed):
+        _claim(d, "easy")
 
     # Pass 6: rest days
     for d in range(7):
