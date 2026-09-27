@@ -12,16 +12,25 @@ This keeps the proactivity the user asked for without re-creating the
 recalibrate modal) that were deliberately consolidated into the single
 "Adjust my plan" intent menu. One surface, one decision, fully reversible.
 
-Three guards, checked in priority order (safety first, opportunity last):
+Guards, checked in priority order (safety first, opportunity last):
 
-    overtraining   – easy runs drifting *above* their zones (same pace, higher
-                     HR) or an overreach flag → ease this week (feeling_tired).
-    missed_session – recent skipped sessions with a hard workout coming up →
-                     ease back in instead of jumping into intervals cold
-                     (feeling_tired).
-    fitness_jump   – rising VDOT and/or easy-run HR drifting *below* their
-                     zones (same pace, lower HR) → bump upcoming volume
-                     (feeling_strong).
+    low_readiness   – a wrecked check-in *this morning* with a hard session
+                      still ahead → ease this week (feeling_tired).
+    wellness_strain – the watch showing a *run* of off-mornings, not just one,
+                      with a hard session still ahead → ease this week
+                      (feeling_tired). Catches the runner who never fills in a
+                      check-in but whose recovery markers have been suppressed
+                      for days — a case ``low_readiness`` structurally cannot
+                      see, because it reads one morning and only when the
+                      runner reported it.
+    overtraining    – easy runs drifting *above* their zones (same pace, higher
+                      HR) or an overreach flag → ease this week (feeling_tired).
+    missed_session  – recent skipped sessions with a hard workout coming up →
+                      ease back in instead of jumping into intervals cold
+                      (feeling_tired).
+    fitness_jump    – rising VDOT and/or easy-run HR drifting *below* their
+                      zones (same pace, lower HR) → bump upcoming volume
+                      (feeling_strong).
 
 Only the highest-priority firing guard is shown. Safety guards (ease back)
 always win over the opportunistic bump, so a tired runner is never told to
@@ -33,14 +42,17 @@ from __future__ import annotations
 import hashlib
 import logging
 from datetime import date as date_cls
+from datetime import timedelta
 from typing import Any, Dict, List, Optional
 
 from sqlalchemy.orm import Session
 
 from app.contexts.plan.repositories import SQLAlchemyPlanRepository
 from app.core.coaching.readiness_checkin import ReadinessAssessment, score_checkin
+from app.core.coaching.strain_signal import StrainVerdict, detect_strain
+from app.core.coaching.wellness import BASELINE_WINDOW_DAYS
 from app.core.training.adaptation.thresholds import HOLD_DEADBAND
-from app.models import DailyWorkout, ReadinessLog, TrainingPlan
+from app.models import DailyWorkout, ReadinessLog, TrainingPlan, WellnessDay
 
 from ._helpers import today_date
 from .intent_service import _HARD_TYPES
@@ -105,11 +117,15 @@ def get_nudge(plan_id: str, user_id: str, db: Session) -> Optional[Dict[str, Any
     remaining_hard = [w for w in remaining if (w.workout_type or "") in _HARD_TYPES]
 
     # Priority: safety guards (ease back) before the opportunistic bump. A
-    # wrecked morning is the most immediate, session-specific reason to ease,
-    # so it's checked first.
+    # wrecked morning is the most immediate, session-specific reason to ease, so
+    # it's checked first — then the multi-day pattern behind it, which catches
+    # the runner who never reported a morning at all.
     readiness = _today_readiness(user_id, db)
     nudge = (
         _detect_low_readiness(readiness, current_week, remaining_hard)
+        or _detect_wellness_strain(
+            _wellness_strain(user_id, db), current_week, remaining_hard
+        )
         or _detect_overtraining(signals, current_week, bool(remaining))
         or _detect_missed_session(signals, current_week, remaining_hard)
         or _detect_fitness_jump(signals, current_week, has_future_weeks)
@@ -236,6 +252,84 @@ def _readiness_reason(drivers: List[str]) -> str:
     else:
         joined = ", ".join(drivers[:-1]) + " and " + drivers[-1]
     return joined[0].upper() + joined[1:] + "."
+
+
+def _wellness_strain(user_id: str, db: Session) -> StrainVerdict:
+    """The run of off-mornings ending today, straight from the model.
+
+    Queries ``WellnessDay`` directly and judges with the pure core detector, for
+    the same reason ``_today_readiness`` reads ``ReadinessLog`` itself: this
+    module stays within the plan context's allowed deps (core + models) rather
+    than importing the runner context.
+    """
+    today = today_date()
+    since = today - timedelta(days=BASELINE_WINDOW_DAYS)
+    rows = (
+        db.query(WellnessDay.date, WellnessDay.hrv, WellnessDay.resting_hr)
+        .filter(
+            WellnessDay.user_id == user_id,
+            WellnessDay.date >= since,
+            WellnessDay.date <= today,
+        )
+        .all()
+    )
+    return detect_strain([(row[0], row[1], row[2]) for row in rows], today)
+
+
+def _detect_wellness_strain(
+    strain: StrainVerdict,
+    current_week: Optional[int],
+    remaining_hard: List[DailyWorkout],
+) -> Optional[Dict[str, Any]]:
+    """A *run* of off-mornings, not one → ease the rest of this week.
+
+    The difference from :func:`_detect_low_readiness` is reach, not emphasis:
+    that guard reads one morning, and only the one the runner reported, so a
+    runner who never checks in gets nothing however badly their watch has read
+    all week. Requiring a pattern is also the point — one bad morning is a bad
+    night, and acting on it is how a nudge starts crying wolf.
+
+    Gated on a hard session still being ahead, so easing would change something.
+    """
+    if not strain.is_strain or not remaining_hard:
+        return None
+
+    # ``strain.drivers`` carries the shared vocabulary's reasons and is empty
+    # when every morning was off only *just*, so the sentence must be able to
+    # stand on the run itself rather than depend on phrasing existing.
+    if strain.drivers:
+        reason = _readiness_reason(strain.drivers)
+    else:
+        reason = (
+            "Your recovery markers have been below your usual for "
+            f"{strain.strain_days} mornings running."
+        )
+
+    return {
+        "kind": "wellness_strain",
+        "intent": _INTENT_TIRED,
+        "signature": _signature(
+            "wellness_strain",
+            current_week,
+            strain.strain_days,
+            strain.severity,
+            len(remaining_hard),
+        ),
+        "headline": f"{strain.strain_days} rough mornings running — ease off this week",
+        "detail": (
+            f"{reason} That is a pattern rather than one bad night, and you "
+            "still have a hard session on the plan this week. Want to ease the "
+            "rest of the week so you rebuild before you sharpen?"
+        ),
+        "cta": "Review the ease-off",
+        "tone": "caution",
+        "evidence": {
+            "strain_days": strain.strain_days,
+            "strain_severity": strain.severity,
+            "strain_mean_delta": strain.mean_delta,
+            "hard_sessions_remaining": len(remaining_hard),
+        },
+    }
 
 
 def _detect_overtraining(
