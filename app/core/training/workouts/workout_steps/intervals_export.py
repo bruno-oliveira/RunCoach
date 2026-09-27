@@ -24,6 +24,12 @@ Syntax notes (Intervals.icu workout builder):
   * Text before a step's duration is the cue the watch announces for it
     (``- Recovery 90s``). Walks, rests and hill reps carry a cue but no pace
     target: they are run by feel, and a pace alarm on them only ever beeps.
+  * A couch-to-5K day carries its shape in the day's own fields
+    (``run_min``/``walk_min``/``repeats``) rather than in a ``steps`` list. It is
+    expanded below into an alternating run/walk block, because the day's
+    ``distance`` is only a placeholder: pricing the session from it sent the
+    watch a 1 km, 8-minute easy run where the runner had a 20-minute run/walk
+    session, and dropped the walks that are the point of the programme.
 """
 
 from __future__ import annotations
@@ -301,8 +307,57 @@ def _workout_name(day: dict[str, Any]) -> str:
     return name[:60] or "Workout"
 
 
+def _run_walk_steps(day: dict[str, Any]) -> list[dict[str, Any]]:
+    """The alternating run/walk steps of a couch-to-5K day, or ``[]``.
+
+    Both portions are deliberately zone-less: a one-minute beginner jog is run
+    by feel, and ``_fallback_pace`` returns nothing for a work step with no zone
+    (no pace alarm on a step that would only ever beep at a beginner). Each step
+    carries the day's repeat count so ``group_steps`` folds them into one
+    ``Rep Nx`` block.
+    """
+    if (day.get("type") or "").lower() != "run_walk":
+        return []
+
+    run_min = day.get("run_min")
+    repeats = day.get("repeats")
+    if not run_min or not repeats or int(repeats) < 1:
+        return []
+
+    reps = int(repeats)
+    steps = [
+        {
+            "kind": "run",
+            "duration_s": int(round(float(run_min) * 60)),
+            "repeat": reps,
+        }
+    ]
+    walk_min = day.get("walk_min")
+    if walk_min:
+        steps.append(
+            {
+                "kind": "walk",
+                "duration_s": int(round(float(walk_min) * 60)),
+                "repeat": reps,
+            }
+        )
+    return steps
+
+
 def _fallback_steps(day: dict[str, Any]) -> list[dict[str, Any]]:
-    """Single continuous step for legacy workouts lacking a ``steps`` list."""
+    """Steps for a day that carries no ``steps`` list of its own.
+
+    Two shapes arrive here. A legacy road day is one continuous run, which is
+    what its ``distance`` describes. A couch-to-5K day is not: the beginner
+    generator describes it in the day's own fields (``run_min`` / ``walk_min`` /
+    ``repeats``), so treating it as one continuous easy run sent the watch a
+    ~1 km, 8-minute card for what is really a 20-minute run/walk session — and
+    dropped the walks that are the entire point of the programme.
+    """
+    run_walk = _run_walk_steps(day)
+    if run_walk:
+        return run_walk
+
     distance_km = day.get("distance") or 0
     if distance_km and distance_km > 0:
         zone = _TYPE_TO_ZONE.get((day.get("type") or "").lower(), "E")
