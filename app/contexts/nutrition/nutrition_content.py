@@ -195,6 +195,18 @@ _TRAIL_FUEL_IDEAS: List[Dict[str, Any]] = [
             "before the start. Low fibre on purpose, so it's simple and reliable."
         ),
     },
+    {
+        "name": "Pre-run rice cake stack",
+        "recipe": "Pre-Run Rice Cake Stack",
+        "phase": "before",
+        "category": "sweet",
+        "carbs": "~68 g per stack",
+        "note": (
+            "Rice cakes, banana, honey and a pinch of salt: all carbs, almost "
+            "no fibre or fat, so it's gone from your stomach by the start. "
+            "Eat it 60–90 minutes before a morning race."
+        ),
+    },
     # --- During: on the move --------------------------------------------
     {
         "name": "Date & cocoa trail balls",
@@ -380,6 +392,150 @@ _TRAIL_FUEL_IDEAS: List[Dict[str, Any]] = [
             "the one thing a turned stomach will accept."
         ),
     },
+    {
+        "name": "Date paste gel",
+        "recipe": "Date Paste Soft-Flask Gel",
+        "phase": "during",
+        "category": "drink",
+        "carbs": "~30 g each",
+        "note": (
+            "Blended dates, lemon and salt in a reusable flask. It gives you "
+            "the carbs of a gel from real food. Wash it down with water, as "
+            "dates carry a little fibre."
+        ),
+    },
+    {
+        "name": "Honey, lemon & ginger gel",
+        "recipe": "Honey Lemon Ginger Gel",
+        "phase": "during",
+        "category": "drink",
+        "carbs": "~26 g each",
+        "note": (
+            "Honey's glucose–fructose mix absorbs quickly, and ginger helps "
+            "when your stomach starts to complain late in the race."
+        ),
+    },
+    {
+        "name": "Mango fruit leather",
+        "recipe": "Mango Fruit Leather Strips",
+        "phase": "during",
+        "category": "sweet",
+        "carbs": "~13 g per strip",
+        "note": (
+            "Nothing to melt, crumble or squash, so it's ideal for summer. "
+            "Two strips give you about the carbs of one gel."
+        ),
+    },
+    {
+        "name": "Applesauce squeeze pouch",
+        "recipe": "Applesauce Cinnamon Squeeze Pouch",
+        "phase": "during",
+        "category": "sweet",
+        "carbs": "~21 g per pouch",
+        "note": (
+            "Apple purée with maple and a pinch of salt in a reusable pouch. "
+            "Nothing to chew when your mouth is dry or you're breathing hard."
+        ),
+    },
+    {
+        "name": "Orange juice gummies",
+        "recipe": "Orange Juice Gummies",
+        "phase": "during",
+        "category": "sweet",
+        "carbs": "~19 g per 6",
+        "note": (
+            "Homemade chews: orange juice, honey and gelatine. Chew one at a "
+            "time on the flats and the carbs add up without a sugar crash."
+        ),
+    },
+    {
+        "name": "Jam sandwich quarters",
+        "recipe": "Aid-Station Jam Sandwich Quarters",
+        "phase": "during",
+        "category": "sweet",
+        "carbs": "~15 g per quarter",
+        "note": (
+            "The classic aid-station food. Soft white bread goes down easily "
+            "at hour five, and quarters are small enough to eat while walking."
+        ),
+    },
+    {
+        "name": "Pizza pinwheels",
+        "recipe": "Pizza Pinwheels",
+        "phase": "during",
+        "category": "savoury",
+        "carbs": "~17 g per 3",
+        "note": (
+            "Salty and cheesy, for when you can't face another sweet thing. "
+            "Bake a batch at the weekend and freeze them for long runs."
+        ),
+    },
+    {
+        "name": "Cheese & chive mini scones",
+        "recipe": "Cheese and Chive Mini Scones",
+        "phase": "during",
+        "category": "savoury",
+        "carbs": "~15 g each",
+        "note": (
+            "Small savoury scones that hold together in a pocket. The cheese "
+            "and salt add sodium to what you're already getting from fluids."
+        ),
+    },
+    {
+        "name": "Bean & rice mini burritos",
+        "recipe": "Bean and Rice Mini Burritos",
+        "phase": "during",
+        "category": "savoury",
+        "carbs": "~40 g each",
+        "note": (
+            "Real food for ultras and long days in the hills. Eat half at a "
+            "time on a hike section, after the first few hours."
+        ),
+    },
+    {
+        "name": "Watermelon salt slush",
+        "recipe": "Watermelon Salt Slush Flask",
+        "phase": "during",
+        "category": "drink",
+        "carbs": "~43 g per flask",
+        "note": (
+            "Freeze it overnight in a soft flask. It thaws into an ice slush "
+            "that cools your core and brings carbs and sodium on hot days."
+        ),
+    },
+    {
+        "name": "Chia fresca",
+        "recipe": "Chia Fresca Soft Flask",
+        "phase": "during",
+        "category": "drink",
+        "carbs": "~34 g per flask",
+        "note": (
+            "A light lime and maple drink thickened with chia. Best on steady "
+            "long runs; try it in training before racing with it."
+        ),
+    },
+    {
+        "name": "Banana pancake roll-ups",
+        "recipe": "Banana Pancake Roll-Ups",
+        "phase": "during",
+        "category": "sweet",
+        "carbs": "~22 g each",
+        "note": (
+            "Thin banana pancakes rolled around jam. Soft, sweet, and easy to "
+            "eat with one hand while holding poles."
+        ),
+    },
+    {
+        "name": "Ginger & apricot settler mix",
+        "recipe": "Ginger Apricot Settler Mix",
+        "phase": "during",
+        "category": "sweet",
+        "carbs": "~36 g per bag",
+        "note": (
+            "Crystallised ginger, dried apricots and salted banana chips. Try a "
+            "piece at the first hint of nausea, before you stop eating."
+        ),
+    },
     # --- After: recovery ------------------------------------------------
     {
         "name": "Recovery smoothie",
@@ -413,6 +569,17 @@ _TRAIL_FUEL_IDEAS: List[Dict[str, Any]] = [
         "note": (
             "Slow-digesting casein with fruit before bed — supports "
             "overnight repair after a long day on the trails."
+        ),
+    },
+    {
+        "name": "Kefir berry recovery smoothie",
+        "recipe": "Kefir Berry Recovery Smoothie",
+        "phase": "after",
+        "category": "drink",
+        "carbs": "~80 g per glass",
+        "note": (
+            "Kefir, yogurt, banana and berries give you roughly 3:1 carbs to "
+            "protein, plus live cultures for a gut that's had a hard day."
         ),
     },
 ]
@@ -553,6 +720,90 @@ def generate_trail_nutrition_tips() -> List[Dict[str, str]]:
                 "Pre-open wrappers and repack fuel into easy-tear baggies "
                 "before the start — fiddly packaging costs you food when your "
                 "hands are cold or tired."
+            ),
+        },
+        {
+            "topic": "Fueling",
+            "text": (
+                "Match the dose to the day: 30–60 g of carbs per hour for runs "
+                "up to about 2.5 hours, and 60–90 g beyond that from mixed "
+                "sugars (maple, honey, fruit, dates)."
+            ),
+        },
+        {
+            "topic": "Strategy",
+            "text": (
+                "Pack each hour's fuel in its own labelled bag the night "
+                "before. At hour three you'll eat what's in the bag instead of "
+                "doing sums."
+            ),
+        },
+        {
+            "topic": "Fueling",
+            "text": (
+                "Cut real food into bite-sized pieces. A quarter sandwich goes "
+                "down while walking a climb; a whole one usually doesn't."
+            ),
+        },
+        {
+            "topic": "Sodium",
+            "text": (
+                "Salty real food counts: potatoes, broth, scones and pretzels "
+                "all add sodium, so count them before reaching for another "
+                "electrolyte tab."
+            ),
+        },
+        {
+            "topic": "Heat",
+            "text": (
+                "Chocolate and nut butter melt in a summer vest. On hot days, "
+                "switch to fruit leather, gummies, jam sandwiches or dates."
+            ),
+        },
+        {
+            "topic": "Hydration",
+            "text": (
+                "Weigh yourself before and after a long run. Losing more than "
+                "2% of your body weight means you under-drank, so plan a bit "
+                "more next time."
+            ),
+        },
+        {
+            "topic": "Stomach",
+            "text": (
+                "If your stomach turns, walk easy for 10 minutes and sip water "
+                "or flat cola. Your gut shuts down when the effort runs too "
+                "high."
+            ),
+        },
+        {
+            "topic": "Strategy",
+            "text": (
+                "Keep fibre, fat and protein low in the day before a race and "
+                "in the first hours of it. They slow how quickly food leaves "
+                "your stomach."
+            ),
+        },
+        {
+            "topic": "Night",
+            "text": (
+                "Set fuel alarms for night sections. Tiredness hides hunger, "
+                "and many runners stop eating after midnight without noticing."
+            ),
+        },
+        {
+            "topic": "Recovery",
+            "text": (
+                "In the first hour after a long run, aim for about 1–1.2 g of "
+                "carbs per kg of body weight and 20–30 g of protein, then eat "
+                "a normal meal within two hours."
+            ),
+        },
+        {
+            "topic": "Strategy",
+            "text": (
+                "Treat your weekly long run as a fuelling rehearsal: the same "
+                "breakfast, fuel and timings you plan to use on race day."
             ),
         },
     ]

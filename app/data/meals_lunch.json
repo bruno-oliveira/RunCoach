@@ -1226,5 +1226,191 @@
         "dietary_tags": [
             "meal_prep"
         ]
+    },
+    {
+        "name": "Smashed Chickpea and Avocado Sandwich",
+        "meal_type": "lunch",
+        "description": "Chickpeas crushed with avocado, lemon and chilli flakes on wholemeal bread with rocket. It won't go soggy in a lunchbox.",
+        "servings": 1,
+        "prep_time": 10,
+        "cook_time": 0,
+        "calories": 430,
+        "protein": 17,
+        "carbs": 55,
+        "fat": 16,
+        "fiber": 16,
+        "ingredients": [
+            "120 g tinned chickpeas, drained",
+            "1/2 ripe avocado",
+            "Juice of 1/2 lemon",
+            "Pinch of chilli flakes",
+            "2 slices wholemeal bread",
+            "Handful of rocket",
+            "Salt and black pepper"
+        ],
+        "steps": [
+            "Crush the chickpeas roughly with a fork, leaving some whole for texture.",
+            "Mash in the avocado, lemon juice and chilli flakes, and season well.",
+            "Spread thickly on one slice of bread and top with the rocket.",
+            "Close the sandwich, press it down gently and cut it in half."
+        ],
+        "tip": "Lots of fibre, which makes this a good rest-day or easy-day lunch. On the day before a race, pick something lower in fibre.",
+        "dietary_tags": [
+            "vegan",
+            "portable"
+        ]
+    },
+    {
+        "name": "Smoked Mackerel, Beetroot and Quinoa Salad",
+        "meal_type": "lunch",
+        "description": "Flaked smoked mackerel with quinoa, beetroot and rocket in a horseradish yogurt dressing.",
+        "servings": 1,
+        "prep_time": 10,
+        "cook_time": 15,
+        "calories": 575,
+        "protein": 26,
+        "carbs": 52,
+        "fat": 29,
+        "fiber": 8,
+        "ingredients": [
+            "60 g quinoa, rinsed",
+            "75 g smoked mackerel fillet, skin removed",
+            "150 g cooked beetroot, cubed",
+            "40 g rocket",
+            "2 tbsp Greek yogurt",
+            "1 tsp grated horseradish",
+            "Juice of 1/2 lemon",
+            "Black pepper"
+        ],
+        "steps": [
+            "Simmer the quinoa for 12-15 minutes, drain well and spread it out to cool.",
+            "Mix the yogurt, horseradish and lemon juice with plenty of pepper to make the dressing.",
+            "Toss the quinoa with the rocket and beetroot.",
+            "Flake the mackerel over the top and spoon over the dressing."
+        ],
+        "tip": "Mackerel is one of the richest sources of omega-3, and beetroot provides dietary nitrate. The dressing keeps in a separate pot if you're making it for tomorrow.",
+        "storage": "Keeps for 2 days in the fridge with the dressing kept apart.",
+        "dietary_tags": [
+            "gluten_free",
+            "omega_3",
+            "meal_prep"
+        ]
+    },
+    {
+        "name": "Peanut Tofu Rice Paper Rolls",
+        "meal_type": "lunch",
+        "description": "Fresh rice paper rolls packed with crisp tofu, vermicelli, crunchy vegetables and mint, with a peanut-lime dip.",
+        "servings": 2,
+        "prep_time": 25,
+        "cook_time": 5,
+        "calories": 425,
+        "protein": 20,
+        "carbs": 50,
+        "fat": 16,
+        "fiber": 3,
+        "ingredients": [
+            "8 rice paper sheets",
+            "200 g firm tofu, pressed and cut into strips",
+            "50 g rice vermicelli",
+            "1 carrot, cut into matchsticks",
+            "1/2 cucumber, cut into matchsticks",
+            "Handful of fresh mint",
+            "2 tbsp smooth peanut butter",
+            "1 tbsp tamari",
+            "1 tbsp lime juice",
+            "1 tsp maple syrup"
+        ],
+        "steps": [
+            "Soak the vermicelli in just-boiled water for 3 minutes, drain and rinse under cold water.",
+            "Brown the tofu strips in a hot non-stick pan for 4-5 minutes, turning, until golden.",
+            "Whisk the peanut butter, tamari, lime juice, maple syrup and 2-3 tbsp warm water into a dipping sauce.",
+            "Dip a rice paper sheet in warm water for 10 seconds, lay it flat, and fill the lower third with noodles, tofu, vegetables and mint.",
+            "Fold in the sides and roll it up tightly. Repeat to make 8 rolls."
+        ],
+        "tip": "Balanced carbs and plant protein that won't weigh you down before an afternoon session. Cover the rolls with a damp cloth so they don't dry out.",
+        "storage": "Best on the day; keep covered in the fridge for up to 6 hours.",
+        "dietary_tags": [
+            "vegan",
+            "gluten_free",
+            "portable"
+        ]
+    },
+    {
+        "name": "Roasted Pumpkin and Red Lentil Soup",
+        "meal_type": "lunch",
+        "description": "Silky roasted pumpkin and red lentil soup with ginger, turmeric and a little coconut milk.",
+        "servings": 4,
+        "prep_time": 10,
+        "cook_time": 40,
+        "calories": 270,
+        "protein": 11,
+        "carbs": 39,
+        "fat": 8,
+        "fiber": 6,
+        "ingredients": [
+            "800 g pumpkin or squash, peeled and cubed",
+            "150 g red lentils, rinsed",
+            "1 onion, chopped",
+            "2 garlic cloves, crushed",
+            "1 tbsp grated fresh ginger",
+            "1 tsp ground turmeric",
+            "1 tsp ground cumin",
+            "1 tbsp olive oil",
+            "1 litre vegetable stock",
+            "200 ml light coconut milk",
+            "Juice of 1 lime"
+        ],
+        "steps": [
+            "Heat the oven to 200°C, toss the pumpkin with half the oil, and roast for 25-30 minutes until caramelised at the edges.",
+            "Meanwhile, soften the onion in the rest of the oil for 6-8 minutes, then add the garlic, ginger, turmeric and cumin for 1 minute.",
+            "Add the lentils and stock and simmer for 15 minutes until the lentils collapse.",
+            "Add the roasted pumpkin and coconut milk and blend until smooth.",
+            "Season and stir in the lime juice."
+        ],
+        "tip": "Lentils give it protein and fibre, and turmeric and ginger add anti-inflammatory spice. Portion it into jars for a week of lunches.",
+        "storage": "Keeps for 4 days in the fridge or 3 months in the freezer.",
+        "dietary_tags": [
+            "vegan",
+            "gluten_free",
+            "meal_prep",
+            "anti_inflammatory"
+        ]
+    },
+    {
+        "name": "Chicken, Quinoa and Roasted Veg Boxes",
+        "meal_type": "lunch",
+        "description": "Paprika chicken with lemony quinoa, roasted peppers and courgettes, and a spoonful of hummus. Four lunches from one tray.",
+        "servings": 4,
+        "prep_time": 15,
+        "cook_time": 30,
+        "calories": 490,
+        "protein": 44,
+        "carbs": 42,
+        "fat": 16,
+        "fiber": 7,
+        "ingredients": [
+            "600 g chicken breast",
+            "200 g quinoa, rinsed",
+            "2 courgettes, chopped",
+            "2 red peppers, chopped",
+            "1 red onion, cut into wedges",
+            "2 tbsp olive oil",
+            "2 tsp smoked paprika",
+            "Juice of 1 lemon",
+            "4 tbsp hummus"
+        ],
+        "steps": [
+            "Heat the oven to 200°C. Toss the vegetables with half the oil and a pinch of salt on one tray.",
+            "Rub the chicken with the rest of the oil, the paprika and some salt, and put it on a second tray.",
+            "Roast both for 22-25 minutes, until the chicken reaches 75°C in the thickest part and the vegetables char at the edges.",
+            "Meanwhile, simmer the quinoa for 12-15 minutes, drain, and stir in the lemon juice.",
+            "Slice the chicken and divide everything between four boxes with a spoonful of hummus in each."
+        ],
+        "tip": "About 44 g of protein per box, which helps recovery during high-mileage weeks. Cool it quickly and refrigerate within an hour.",
+        "storage": "Keeps for 4 days in the fridge.",
+        "dietary_tags": [
+            "gluten_free",
+            "meal_prep"
+        ]
     }
 ]
