@@ -786,5 +786,179 @@
             "gluten_free",
             "omega_3"
         ]
+    },
+    {
+        "name": "Edamame Hummus with Carrot Sticks",
+        "meal_type": "snack",
+        "description": "A bright green hummus made from edamame, tahini and lemon, with crunchy carrot sticks for dipping.",
+        "servings": 4,
+        "prep_time": 10,
+        "cook_time": 3,
+        "calories": 165,
+        "protein": 7,
+        "carbs": 12,
+        "fat": 10,
+        "fiber": 4,
+        "ingredients": [
+            "200 g frozen shelled edamame",
+            "2 tbsp tahini",
+            "1 garlic clove",
+            "Juice of 1 lemon",
+            "1 tbsp olive oil",
+            "3-4 tbsp cold water",
+            "Salt",
+            "4 carrots, cut into sticks"
+        ],
+        "steps": [
+            "Boil the edamame for 3 minutes, then drain and cool them under cold water.",
+            "Blend them with the tahini, garlic, lemon juice, oil and a good pinch of salt.",
+            "Add the water a spoonful at a time until the hummus is smooth and creamy.",
+            "Serve with the carrot sticks, or pack it into small pots for the week."
+        ],
+        "tip": "Edamame have more protein than chickpeas, which makes this a more filling snack than regular hummus.",
+        "storage": "Keeps for 4 days in the fridge.",
+        "dietary_tags": [
+            "vegan",
+            "gluten_free",
+            "meal_prep"
+        ]
+    },
+    {
+        "name": "Oven Cinnamon Apple Chips",
+        "meal_type": "snack",
+        "description": "Thin apple slices baked slowly with cinnamon until crisp. A crunchy snack with nothing added.",
+        "servings": 2,
+        "serving_size": "1 bag (half the batch)",
+        "prep_time": 10,
+        "cook_time": 120,
+        "calories": 150,
+        "protein": 0,
+        "carbs": 37,
+        "fat": 0,
+        "fiber": 6,
+        "ingredients": [
+            "3 crisp apples",
+            "1 tsp ground cinnamon",
+            "Juice of 1/2 lemon"
+        ],
+        "steps": [
+            "Heat the oven to 100°C and line two trays with baking paper.",
+            "Slice the apples as thinly as you can, about 2 mm, across the core; a mandoline makes this easy. Flick out any pips.",
+            "Toss the slices in the lemon juice, lay them out in a single layer, and dust with cinnamon.",
+            "Bake for 1 hour, flip them, and bake for another 45-60 minutes until dry.",
+            "Leave them in the switched-off oven to cool; they crisp up as they cool."
+        ],
+        "tip": "A light, portable snack. Pair it with a handful of nuts or a yogurt if you need something that lasts longer.",
+        "storage": "Keeps for 1 week in an airtight tin.",
+        "dietary_tags": [
+            "vegan",
+            "gluten_free",
+            "portable"
+        ]
+    },
+    {
+        "name": "Spiced Pear with Yogurt and Walnuts",
+        "meal_type": "snack",
+        "description": "Warm cinnamon pear over thick Greek yogurt with toasted walnuts and a drizzle of honey.",
+        "servings": 1,
+        "prep_time": 5,
+        "cook_time": 5,
+        "calories": 320,
+        "protein": 18,
+        "carbs": 39,
+        "fat": 10,
+        "fiber": 6,
+        "ingredients": [
+            "1 ripe pear, cored and sliced",
+            "150 g 0% fat Greek yogurt",
+            "15 g walnuts",
+            "1 tsp runny honey",
+            "1/2 tsp ground cinnamon"
+        ],
+        "steps": [
+            "Warm the pear slices in a small pan with the cinnamon and a splash of water for 4-5 minutes, until soft.",
+            "Toast the walnuts in a dry pan for 2 minutes, then chop them roughly.",
+            "Spoon the yogurt into a bowl and top with the warm pear.",
+            "Finish with the walnuts and honey."
+        ],
+        "tip": "Nearly 18 g of protein. A good evening snack on a heavy training day, and a warm alternative to plain yogurt in winter.",
+        "dietary_tags": [
+            "vegetarian",
+            "gluten_free"
+        ]
+    },
+    {
+        "name": "Seeded Oatcakes",
+        "meal_type": "snack",
+        "description": "Crisp homemade oatcakes packed with seeds. Top them with cheese, hummus or nut butter.",
+        "servings": 10,
+        "serving_size": "1 oatcake",
+        "prep_time": 15,
+        "cook_time": 20,
+        "calories": 120,
+        "protein": 4,
+        "carbs": 13,
+        "fat": 6,
+        "fiber": 2,
+        "ingredients": [
+            "200 g rolled oats",
+            "50 g mixed seeds (sunflower, pumpkin, sesame)",
+            "2 tbsp olive oil",
+            "1/2 tsp salt",
+            "1/4 tsp bicarbonate of soda",
+            "100 ml hot water"
+        ],
+        "steps": [
+            "Heat the oven to 180°C and line a tray with baking paper.",
+            "Blitz three-quarters of the oats to a coarse flour, then mix with the rest of the oats, the seeds, salt and bicarbonate.",
+            "Stir in the oil and hot water to make a firm dough; leave it for 5 minutes to firm up.",
+            "Roll it out 4 mm thick between two sheets of baking paper and cut out 10 rounds.",
+            "Bake for 18-20 minutes, turning halfway, until golden and crisp."
+        ],
+        "tip": "Oats release their energy slowly. Two oatcakes with cheese or hummus make a filling snack between meals.",
+        "storage": "Keeps for 1 week in an airtight tin.",
+        "dietary_tags": [
+            "vegan",
+            "portable",
+            "meal_prep"
+        ]
+    },
+    {
+        "name": "Greek Yogurt Herb Dip with Crunchy Veg",
+        "meal_type": "snack",
+        "description": "Thick yogurt whipped with garlic, dill, chives and lemon, served with cucumber, carrot, pepper and radishes.",
+        "servings": 2,
+        "prep_time": 10,
+        "cook_time": 0,
+        "calories": 165,
+        "protein": 16,
+        "carbs": 18,
+        "fat": 3,
+        "fiber": 4,
+        "ingredients": [
+            "300 g 0% fat Greek yogurt",
+            "1 small garlic clove, grated",
+            "1 tbsp chopped dill",
+            "1 tbsp snipped chives",
+            "Juice of 1/2 lemon",
+            "1 tsp olive oil",
+            "Salt",
+            "1 cucumber",
+            "2 carrots",
+            "1 red pepper",
+            "Handful of radishes"
+        ],
+        "steps": [
+            "Stir the garlic, herbs, lemon juice and a pinch of salt into the yogurt.",
+            "Spoon it into a bowl and drizzle over the olive oil.",
+            "Cut the cucumber, carrots and pepper into sticks and halve the radishes.",
+            "Serve the dip with the vegetables, or pack both into a lunchbox."
+        ],
+        "tip": "About 16 g of protein a portion for very few calories. Good for keeping protein up on lower-volume days.",
+        "storage": "The dip keeps for 3 days in the fridge.",
+        "dietary_tags": [
+            "vegetarian",
+            "gluten_free"
+        ]
     }
 ]

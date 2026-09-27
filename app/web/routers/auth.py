@@ -8,6 +8,7 @@ from fastapi import APIRouter, Cookie, Depends, HTTPException, Request, Response
 from sqlalchemy.orm import Session
 
 from app.contexts.auth.auth_service import AuthService
+from app.contexts.runner.fitness.hr_zone_service import refresh_active_plan_zones
 from app.dependencies import (
     get_auth_service,
     get_current_user,
@@ -155,6 +156,16 @@ def update_user_settings(
         current_user.nudge_email_enabled = payload.nudge_email_enabled
     db.commit()
     db.refresh(current_user)
+    anchors = (payload.age, payload.max_hr, payload.resting_hr, payload.threshold_hr)
+    if any(value is not None for value in anchors):
+        # The plan stores its zones; without this a corrected max HR or LTHR
+        # only reached the plan's BPM targets when a new plan was built.
+        try:
+            refresh_active_plan_zones(current_user, db)
+            db.commit()
+        except Exception as e:
+            db.rollback()
+            logger.warning("HR zone refresh after settings change failed: %s", e)
     return _user_response(current_user)
 
 

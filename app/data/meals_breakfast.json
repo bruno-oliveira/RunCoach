@@ -799,5 +799,173 @@
         "dietary_tags": [
             "omega_3"
         ]
+    },
+    {
+        "name": "Buckwheat Porridge with Berries and Almond Butter",
+        "meal_type": "breakfast",
+        "description": "Creamy buckwheat groats simmered in almond milk, topped with berries and almond butter. A naturally gluten-free change from oats.",
+        "servings": 1,
+        "prep_time": 5,
+        "cook_time": 15,
+        "calories": 380,
+        "protein": 11,
+        "carbs": 52,
+        "fat": 14,
+        "fiber": 9,
+        "ingredients": [
+            "50 g buckwheat groats",
+            "250 ml unsweetened almond milk",
+            "80 g mixed berries",
+            "1 tbsp almond butter",
+            "1 tsp maple syrup",
+            "Pinch of ground cinnamon"
+        ],
+        "steps": [
+            "Rinse the buckwheat in a sieve until the water runs clear.",
+            "Simmer it with the almond milk and cinnamon for 12-15 minutes, stirring often, until soft and creamy. Add a splash of water if it thickens too quickly.",
+            "Spoon into a bowl and top with the berries.",
+            "Finish with the almond butter and maple syrup."
+        ],
+        "tip": "Despite the name, buckwheat isn't wheat. It's rich in magnesium and fibre, so it suits a rest day or an easy morning better than just before a hard session.",
+        "dietary_tags": [
+            "vegan",
+            "gluten_free"
+        ]
+    },
+    {
+        "name": "Spinach, Pea and Feta Frittata",
+        "meal_type": "breakfast",
+        "description": "A thick oven frittata with new potatoes, peas, spinach and feta. Make it on Sunday for four quick high-protein breakfasts.",
+        "servings": 4,
+        "prep_time": 10,
+        "cook_time": 25,
+        "calories": 300,
+        "protein": 20,
+        "carbs": 17,
+        "fat": 17,
+        "fiber": 3,
+        "ingredients": [
+            "8 large eggs",
+            "300 g cooked new potatoes, sliced",
+            "150 g frozen peas",
+            "100 g baby spinach",
+            "100 g feta, crumbled",
+            "4 spring onions, sliced",
+            "1 tsp olive oil",
+            "Black pepper"
+        ],
+        "steps": [
+            "Heat the oven to 190°C.",
+            "Warm the oil in a 24 cm ovenproof pan and wilt the spinach with the spring onions for 2 minutes.",
+            "Add the potatoes and peas and spread everything out evenly.",
+            "Beat the eggs with plenty of pepper, pour them over, and scatter over the feta.",
+            "Cook on the hob for 3 minutes until the edges set, then bake for 15-18 minutes until just firm in the middle."
+        ],
+        "tip": "About 20 g of protein a slice. Eat it cold with fruit on a busy morning, or warm with toast after an early run.",
+        "storage": "Keeps for 4 days in the fridge.",
+        "dietary_tags": [
+            "vegetarian",
+            "gluten_free",
+            "meal_prep"
+        ]
+    },
+    {
+        "name": "Black Bean Breakfast Tacos",
+        "meal_type": "breakfast",
+        "description": "Warm corn tortillas filled with soft scrambled eggs, cumin black beans, avocado and salsa.",
+        "servings": 1,
+        "prep_time": 5,
+        "cook_time": 8,
+        "calories": 495,
+        "protein": 23,
+        "carbs": 51,
+        "fat": 22,
+        "fiber": 12,
+        "ingredients": [
+            "3 small corn tortillas",
+            "2 eggs",
+            "100 g tinned black beans, drained",
+            "1/4 avocado, sliced",
+            "2 tbsp tomato salsa",
+            "1 tsp olive oil",
+            "1/2 tsp ground cumin",
+            "Lime wedge and fresh coriander"
+        ],
+        "steps": [
+            "Warm the beans with the cumin and a splash of water, then crush them lightly with a fork.",
+            "Warm the oil in a pan over a low heat and softly scramble the eggs.",
+            "Heat the tortillas in a dry pan for 20 seconds on each side.",
+            "Spread the beans on the tortillas and top with the eggs, avocado, salsa and coriander.",
+            "Squeeze over the lime just before eating."
+        ],
+        "tip": "Protein, fibre and slow carbs in one plate. A good breakfast after an early easy run; it's too much fibre to eat right before a hard one.",
+        "dietary_tags": [
+            "vegetarian",
+            "gluten_free"
+        ]
+    },
+    {
+        "name": "Quinoa Breakfast Bowl with Apple and Walnuts",
+        "meal_type": "breakfast",
+        "description": "Quinoa simmered in soy milk with grated apple and cinnamon, finished with toasted walnuts. Warm and filling.",
+        "servings": 1,
+        "prep_time": 5,
+        "cook_time": 15,
+        "calories": 495,
+        "protein": 17,
+        "carbs": 66,
+        "fat": 18,
+        "fiber": 9,
+        "ingredients": [
+            "60 g quinoa, rinsed",
+            "200 ml unsweetened soy milk",
+            "1 apple, grated",
+            "15 g walnuts, roughly chopped",
+            "1 tsp maple syrup",
+            "1/2 tsp ground cinnamon"
+        ],
+        "steps": [
+            "Simmer the quinoa in the soy milk with the cinnamon for 12-15 minutes, stirring now and then, until soft.",
+            "Stir in the grated apple for the last 2 minutes so it softens but keeps some bite.",
+            "Toast the walnuts in a dry pan for 2-3 minutes.",
+            "Spoon into a bowl and finish with the walnuts and maple syrup."
+        ],
+        "tip": "Quinoa and soy milk together give plant protein with all the essential amino acids. Cook a double batch of quinoa and it's ready in 5 minutes the next day.",
+        "dietary_tags": [
+            "vegan",
+            "gluten_free"
+        ]
+    },
+    {
+        "name": "Pre-Run Rice Cake Stack",
+        "meal_type": "breakfast",
+        "description": "Rice cakes layered with banana, honey, cinnamon and a pinch of salt. Easy carbs that sit lightly before a morning run.",
+        "servings": 1,
+        "prep_time": 3,
+        "cook_time": 0,
+        "calories": 295,
+        "protein": 3,
+        "carbs": 68,
+        "fat": 1,
+        "fiber": 3,
+        "ingredients": [
+            "3 plain rice cakes",
+            "1 ripe banana, sliced",
+            "1 tbsp runny honey",
+            "Pinch of ground cinnamon",
+            "Pinch of fine salt"
+        ],
+        "steps": [
+            "Lay out the rice cakes and cover them with the banana slices.",
+            "Drizzle with the honey.",
+            "Finish with the cinnamon and a small pinch of salt.",
+            "Eat it 60-90 minutes before running, with a glass of water."
+        ],
+        "tip": "Low in fibre and fat, so it leaves your stomach quickly. About 68 g carbs tops up your liver glycogen after the overnight fast before a long run or race.",
+        "dietary_tags": [
+            "vegetarian",
+            "gluten_free",
+            "pre_run"
+        ]
     }
 ]

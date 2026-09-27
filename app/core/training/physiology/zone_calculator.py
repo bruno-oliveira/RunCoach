@@ -24,6 +24,10 @@ from app.utils import format_pace, format_pace_bare
 
 _FALLBACK_PACE_MIN_KM = 5.5
 
+# Slow edge of the recovery band when the VDOT zones carry no recovery
+# sub-zone: about the gap between the recovery sub-zone's slow edge and E_slow.
+_RECOVERY_SLOWDOWN = 1.08
+
 # The pace-zone slugs in zone order (1-5). The keys of
 # TRAINING_ZONE_HR_PERCENTAGES are these slugs in order, so canonical HR zones
 # (a list, zone 1..5) map onto the pace-zone table 1:1.
@@ -78,6 +82,8 @@ def calculate_zones(
         t_pace = vdot_zones["T"]["pace_min_km"]
         i_pace = vdot_zones["I"]["pace_min_km"]
         r_pace = vdot_zones["R"]["pace_min_km"]
+        recovery = vdot_zones["E"].get("sub_zones", {}).get("recovery", {})
+        recovery_slow = recovery.get("pace_min_km_slow") or e_slow * _RECOVERY_SLOWDOWN
 
         if goal_pace is not None:
             zone_5_anchor = goal_pace
@@ -91,41 +97,53 @@ def calculate_zones(
             zone_5_anchor = r_pace
             zone_5_description = "Speed: short fast reps at near-max effort"
 
+        # Each band's pace range is the pace that produces its HR band, so the
+        # edges follow the HR model rather than the Daniels labels: threshold
+        # pace is where HR reaches LTHR -- the Zone 3/4 line, and the very point
+        # the LTHR estimate reads off the pace<->HR fit -- so T is the *fast*
+        # edge of Zone 3, not its slow edge. Easy pace (E) is Zone 2, where
+        # every easy run's HR target sits, and recovery pace is slower than it.
+        # Every anchor (`pace`) is the fast edge of its own band; the workout
+        # builders read those anchors, so prescribed paces are unchanged.
         zones: Dict[str, Dict[str, Any]] = {
             "zone_1_recovery": {
                 "pace": e_slow,
-                "pace_range": (e_slow, e_fast),
+                "pace_range": (recovery_slow, e_slow),
                 "hr_range": "60-70%",
                 "description": "Recovery: truly easy, conversational pace",
                 "color": "#4ade80",
             },
             "zone_2_aerobic": {
                 "pace": e_fast,
-                "pace_range": (e_fast, t_pace),
+                "pace_range": (e_slow, e_fast),
                 "hr_range": "70-80%",
                 "description": "Aerobic: moderate effort, can still hold a conversation",
                 "color": "#60a5fa",
             },
             "zone_3_tempo": {
                 "pace": t_pace,
-                # Span T→I so the zones are a contiguous partition: the old
-                # T→T*0.97 band was an 8 s sliver and left the whole
-                # threshold-to-VO2max region (T..I) mapped to no zone (G6).
-                "pace_range": (t_pace, i_pace),
+                # Spans the steady-to-threshold region (marathon pace sits
+                # inside it) and ends on threshold pace -- a band, not the old
+                # ~8 s sliver around T (G6).
+                "pace_range": (e_fast, t_pace),
                 "hr_range": "80-88%",
-                "description": "Tempo: comfortably hard, threshold to cruise effort",
+                "description": "Tempo: steady up to threshold, comfortably hard",
                 "color": "#facc15",
             },
             "zone_4_vo2max": {
                 "pace": i_pace,
-                "pace_range": (i_pace, r_pace),
+                "pace_range": (t_pace, i_pace),
                 "hr_range": "88-95%",
-                "description": "VO2max: hard effort, 3-5 min intervals",
+                "description": "VO2max: above threshold, 3-5 min intervals",
                 "color": "#f97316",
             },
             "zone_5_race": {
                 "pace": zone_5_anchor,
-                "pace_range": (zone_5_anchor, zone_5_anchor * 0.98),
+                "pace_range": (
+                    (i_pace, r_pace)
+                    if goal_pace is None
+                    else (zone_5_anchor, zone_5_anchor * 0.98)
+                ),
                 "hr_range": "95-100%",
                 "description": zone_5_description,
                 "color": "#ef4444",

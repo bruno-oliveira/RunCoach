@@ -1072,5 +1072,450 @@
         "dietary_tags": [
             "vegan"
         ]
+    },
+    {
+        "name": "Date Paste Soft-Flask Gel",
+        "meal_type": "trail",
+        "description": "Blended dates, lemon and salt thinned into a squeezable gel. Real-food carbs from a reusable flask instead of a foil sachet.",
+        "servings": 4,
+        "serving_size": "1 gel (about 30 g carbs)",
+        "prep_time": 10,
+        "cook_time": 0,
+        "calories": 125,
+        "protein": 1,
+        "carbs": 30,
+        "fat": 0,
+        "fiber": 3,
+        "ingredients": [
+            "8 Medjool dates (about 160 g), pitted",
+            "120 ml hot water",
+            "Juice of 1/2 lemon",
+            "1/4 tsp fine salt"
+        ],
+        "steps": [
+            "Soak the dates in the hot water for 10 minutes until very soft.",
+            "Blend the dates with their soaking water, the lemon juice and the salt until completely smooth, with no skins left.",
+            "Add water a teaspoon at a time until it drips slowly off a spoon; too thick and it won't squeeze out on the run.",
+            "Spoon 45 ml portions into reusable gel flasks or small squeeze pouches and chill."
+        ],
+        "tip": "About 30 g carbs a portion, like a standard gel. Dates carry a little fibre, so wash each one down with a few mouthfuls of water and try it on a long run before race day.",
+        "storage": "Keeps for 5 days in the fridge; carry it for up to a day.",
+        "dietary_tags": [
+            "vegan",
+            "gluten_free",
+            "portable"
+        ]
+    },
+    {
+        "name": "Honey Lemon Ginger Gel",
+        "meal_type": "trail",
+        "description": "Runny honey sharpened with lemon and fresh ginger, with a pinch of salt. Gentle on a queasy stomach.",
+        "servings": 4,
+        "serving_size": "1 gel (about 26 g carbs)",
+        "prep_time": 5,
+        "cook_time": 0,
+        "calories": 105,
+        "protein": 0,
+        "carbs": 26,
+        "fat": 0,
+        "fiber": 0,
+        "ingredients": [
+            "6 tbsp (about 125 g) runny honey",
+            "Juice of 1 lemon",
+            "1 tsp finely grated fresh ginger",
+            "1/4 tsp fine salt",
+            "2 tbsp warm water"
+        ],
+        "steps": [
+            "Stir the honey, lemon juice and warm water together until the honey loosens.",
+            "Push the grated ginger through a fine sieve into the honey so you get the juice without the fibres.",
+            "Stir in the salt until it dissolves completely.",
+            "Divide between four small squeeze pouches or one soft flask marked into quarters."
+        ],
+        "tip": "Honey is roughly half glucose and half fructose, the mix the gut absorbs fastest. Ginger helps when the stomach turns late in a race.",
+        "storage": "Keeps for 2 weeks in a sealed jar in the fridge.",
+        "dietary_tags": [
+            "vegetarian",
+            "gluten_free",
+            "portable"
+        ]
+    },
+    {
+        "name": "Mango Fruit Leather Strips",
+        "meal_type": "trail",
+        "description": "Oven-dried mango purée with lime, cut into chewy strips that don't melt, crumble or squash in a hot vest.",
+        "servings": 8,
+        "serving_size": "1 strip (about 13 g carbs)",
+        "prep_time": 10,
+        "cook_time": 180,
+        "calories": 55,
+        "protein": 1,
+        "carbs": 13,
+        "fat": 0,
+        "fiber": 2,
+        "ingredients": [
+            "2 large ripe mangoes (about 600 g flesh)",
+            "1 tbsp maple syrup",
+            "Juice of 1 lime"
+        ],
+        "steps": [
+            "Heat the oven to its lowest setting (70-80°C, fan off if you can) and line a large baking tray with baking paper.",
+            "Blend the mango, maple syrup and lime juice until completely smooth.",
+            "Spread the purée thinly and evenly over the paper, about 3 mm deep; thin edges burn, so keep them the same depth as the middle.",
+            "Dry for 3-4 hours until it is no longer tacky in the centre.",
+            "Cool, then cut into 8 strips with scissors and roll each strip up in its baking paper."
+        ],
+        "tip": "Good summer fuel: nothing to melt and easy to chew on a climb. Two strips make about one gel's worth of carbs.",
+        "storage": "Keeps for 2 weeks in an airtight tin.",
+        "dietary_tags": [
+            "vegan",
+            "gluten_free",
+            "portable",
+            "meal_prep"
+        ]
+    },
+    {
+        "name": "Applesauce Cinnamon Squeeze Pouch",
+        "meal_type": "trail",
+        "description": "Smooth apple purée with maple, cinnamon and salt in a reusable pouch. Fruit-based fuel that's almost as quick as a gel.",
+        "servings": 4,
+        "serving_size": "1 pouch (about 21 g carbs)",
+        "prep_time": 5,
+        "cook_time": 0,
+        "calories": 85,
+        "protein": 0,
+        "carbs": 21,
+        "fat": 0,
+        "fiber": 2,
+        "ingredients": [
+            "400 g unsweetened apple purée",
+            "3 tbsp maple syrup",
+            "1/2 tsp ground cinnamon",
+            "1/4 tsp fine salt"
+        ],
+        "steps": [
+            "Stir the apple purée, maple syrup, cinnamon and salt together until the salt has dissolved.",
+            "Taste it; it should be sweet with a faint salty edge. Add a little more maple syrup for a harder race.",
+            "Fill four reusable squeeze pouches with about 110 g each and seal them.",
+            "Chill overnight; a cold pouch tastes fresher on a warm day."
+        ],
+        "tip": "Easy to swallow when chewing feels like work. Take a pouch every 30-40 minutes with water, and add drink carbs for longer efforts.",
+        "storage": "Keeps for 3 days in the fridge, or freeze pouches for up to a month.",
+        "dietary_tags": [
+            "vegan",
+            "gluten_free",
+            "portable"
+        ]
+    },
+    {
+        "name": "Orange Juice Gummies",
+        "meal_type": "trail",
+        "description": "Chewy orange and honey gummies set with gelatine. Like shop-bought chews, but you control the sugar and salt.",
+        "servings": 4,
+        "serving_size": "6 gummies (about 19 g carbs)",
+        "prep_time": 10,
+        "cook_time": 5,
+        "calories": 100,
+        "protein": 6,
+        "carbs": 19,
+        "fat": 0,
+        "fiber": 0,
+        "ingredients": [
+            "250 ml smooth orange juice",
+            "60 g runny honey",
+            "4 tbsp (about 28 g) powdered gelatin",
+            "Pinch of fine salt"
+        ],
+        "steps": [
+            "Pour half the juice into a small pan, sprinkle the gelatin over it and leave for 5 minutes to swell.",
+            "Warm it over a low heat, stirring, until the gelatin dissolves. Don't let it boil or it won't set as firmly.",
+            "Take it off the heat and stir in the rest of the juice, the honey and the salt.",
+            "Pour into a silicone mould or a small lined tin and chill for 2 hours until firm.",
+            "Pop out 24 gummies (or cut into cubes) and pack them in sixes."
+        ],
+        "tip": "Six gummies give roughly 19 g carbs. Chew them one at a time on the flats; the protein from the gelatin is a small bonus, not a recovery dose.",
+        "storage": "Keeps for 1 week in the fridge; carry them for a few hours in cool weather.",
+        "dietary_tags": [
+            "gluten_free",
+            "portable"
+        ]
+    },
+    {
+        "name": "Aid-Station Jam Sandwich Quarters",
+        "meal_type": "trail",
+        "description": "Soft white bread with jam and a thin scrape of peanut butter, cut into quarters. The classic ultra aid-station food.",
+        "servings": 4,
+        "serving_size": "1 quarter (about 15 g carbs)",
+        "prep_time": 5,
+        "cook_time": 0,
+        "calories": 95,
+        "protein": 2,
+        "carbs": 15,
+        "fat": 3,
+        "fiber": 1,
+        "ingredients": [
+            "2 slices soft white bread",
+            "2 tbsp strawberry jam",
+            "1 tbsp smooth peanut butter",
+            "Pinch of fine salt"
+        ],
+        "steps": [
+            "Spread one slice thinly with the peanut butter and sprinkle over the salt.",
+            "Spread the jam on the other slice and press the two together.",
+            "Cut off the crusts, which are the dry, hard-to-swallow part, then cut into four squares.",
+            "Wrap each quarter in baking paper or put them in a small zip bag."
+        ],
+        "tip": "White bread is the point: it's low in fibre and goes down easily at hour five. Eat one quarter every 20-30 minutes.",
+        "storage": "Best on the day it is made.",
+        "dietary_tags": [
+            "vegetarian",
+            "portable"
+        ]
+    },
+    {
+        "name": "Pizza Pinwheels",
+        "meal_type": "trail",
+        "description": "Tortillas spread with tomato, mozzarella and oregano, rolled, sliced and baked. A savoury bite for when sweet fuel stops working.",
+        "servings": 4,
+        "serving_size": "3 pinwheels (about 17 g carbs)",
+        "prep_time": 10,
+        "cook_time": 10,
+        "calories": 165,
+        "protein": 8,
+        "carbs": 17,
+        "fat": 7,
+        "fiber": 1,
+        "ingredients": [
+            "2 large flour tortillas",
+            "3 tbsp tomato purée",
+            "60 g grated mozzarella",
+            "20 g grated vegetarian hard cheese",
+            "1 tsp dried oregano",
+            "Pinch of salt"
+        ],
+        "steps": [
+            "Heat the oven to 200°C and line a tray with baking paper.",
+            "Spread the tortillas with the tomato purée right to the edges, then scatter over the cheeses, oregano and salt.",
+            "Roll each tortilla up tightly and cut it into 6 slices with a sharp knife.",
+            "Lay the slices flat on the tray and bake for 8-10 minutes until the cheese bubbles and the edges crisp.",
+            "Cool completely before packing so they don't go soggy."
+        ],
+        "tip": "Salty, savoury and small enough to eat on the move. They suit the later hours of a long run, when a turned stomach wants anything but sugar.",
+        "storage": "Keeps for 3 days in the fridge or 1 month frozen.",
+        "dietary_tags": [
+            "vegetarian",
+            "portable",
+            "meal_prep"
+        ]
+    },
+    {
+        "name": "Cheese and Chive Mini Scones",
+        "meal_type": "trail",
+        "description": "Small, soft cheddar and chive scones with a pinch of mustard. A savoury, salty snack that stays intact in a pocket.",
+        "servings": 12,
+        "serving_size": "1 scone (about 15 g carbs)",
+        "prep_time": 15,
+        "cook_time": 12,
+        "calories": 130,
+        "protein": 4,
+        "carbs": 15,
+        "fat": 6,
+        "fiber": 1,
+        "ingredients": [
+            "225 g self-raising flour",
+            "50 g cold butter, cubed",
+            "75 g mature cheddar, grated",
+            "1 tbsp snipped chives",
+            "1/2 tsp salt",
+            "1/2 tsp mustard powder",
+            "125 ml milk"
+        ],
+        "steps": [
+            "Heat the oven to 220°C and line a tray with baking paper.",
+            "Rub the butter into the flour, salt and mustard powder with your fingertips until it looks like breadcrumbs.",
+            "Stir in most of the cheese and the chives, then add the milk and bring it together into a soft dough with a knife.",
+            "Pat it out 2 cm thick and cut out 12 small rounds with a 4 cm cutter.",
+            "Top with the rest of the cheese and bake for 10-12 minutes until risen and golden."
+        ],
+        "tip": "Savoury food keeps a tired runner eating when gels have stopped working. The cheese and salt also add sodium.",
+        "storage": "Keeps for 2 days in a tin or 1 month frozen; thaw overnight.",
+        "dietary_tags": [
+            "vegetarian",
+            "portable",
+            "meal_prep"
+        ]
+    },
+    {
+        "name": "Bean and Rice Mini Burritos",
+        "meal_type": "trail",
+        "description": "Small tortillas rolled around rice, refried beans and cheese. A proper savoury meal to eat in bites on long days.",
+        "servings": 4,
+        "serving_size": "1 burrito (about 40 g carbs)",
+        "prep_time": 15,
+        "cook_time": 5,
+        "calories": 280,
+        "protein": 10,
+        "carbs": 40,
+        "fat": 9,
+        "fiber": 3,
+        "ingredients": [
+            "4 small flour tortillas",
+            "200 g cooked rice",
+            "200 g refried beans",
+            "60 g grated cheddar",
+            "1/2 tsp ground cumin",
+            "2 tbsp mild salsa",
+            "Pinch of salt"
+        ],
+        "steps": [
+            "Warm the refried beans with the cumin, salsa and salt until spreadable.",
+            "Warm the tortillas for 10 seconds in the microwave so they roll without cracking.",
+            "Spread each tortilla with the beans, add the rice and cheese in a line, fold in the sides and roll up tightly.",
+            "Toast them seam-side down in a dry pan for 1-2 minutes so they stay closed.",
+            "Cool, cut each one in half, and wrap tightly in foil."
+        ],
+        "tip": "Save these for ultras and long training days, after the first few hours. Eat half at a time while walking a climb.",
+        "storage": "Keeps for 2 days in the fridge or 1 month frozen; carry them for up to 6 hours in cool weather.",
+        "dietary_tags": [
+            "vegetarian",
+            "portable",
+            "meal_prep"
+        ]
+    },
+    {
+        "name": "Watermelon Salt Slush Flask",
+        "meal_type": "trail",
+        "description": "Blended watermelon, lime and salt frozen in a soft flask. It thaws into an ice-cold slush over the first hour of a hot run.",
+        "servings": 1,
+        "serving_size": "1 flask (500 ml, about 43 g carbs)",
+        "prep_time": 5,
+        "cook_time": 0,
+        "calories": 180,
+        "protein": 2,
+        "carbs": 43,
+        "fat": 0,
+        "fiber": 1,
+        "ingredients": [
+            "400 g watermelon flesh",
+            "Juice of 1 lime",
+            "1 tbsp maple syrup",
+            "1/4 tsp fine salt"
+        ],
+        "steps": [
+            "Blend the watermelon, lime juice, maple syrup and salt until smooth.",
+            "Push it through a sieve to remove the seeds and pulp, which can block a soft-flask valve.",
+            "Fill a 500 ml soft flask about three-quarters full to leave room for it to expand.",
+            "Freeze it lying flat for at least 4 hours, or overnight."
+        ],
+        "tip": "Ice slush lowers your core temperature better than cold water. It also carries about 575 mg of sodium and 43 g of carbs, for the first hour of a hot run.",
+        "storage": "Keeps for 1 month frozen.",
+        "dietary_tags": [
+            "vegan",
+            "gluten_free",
+            "portable"
+        ]
+    },
+    {
+        "name": "Chia Fresca Soft Flask",
+        "meal_type": "trail",
+        "description": "Water, lime, maple syrup and salt, thickened slightly with chia seeds. A light, lemonade-style drink that also carries carbs and sodium.",
+        "servings": 1,
+        "serving_size": "1 flask (500 ml, about 34 g carbs)",
+        "prep_time": 12,
+        "cook_time": 0,
+        "calories": 180,
+        "protein": 2,
+        "carbs": 34,
+        "fat": 4,
+        "fiber": 4,
+        "ingredients": [
+            "500 ml cold water",
+            "1 tbsp chia seeds",
+            "2 tbsp maple syrup",
+            "Juice of 1 lime",
+            "1/4 tsp fine salt"
+        ],
+        "steps": [
+            "Stir the chia seeds into the water and leave for 10 minutes, stirring twice so they don't clump.",
+            "Add the maple syrup, lime juice and salt and stir until everything dissolves.",
+            "Pour it into a soft flask through a wide funnel.",
+            "Shake the flask before each sip; the seeds settle."
+        ],
+        "tip": "Chia adds fibre, so try it on training runs first. It suits steady efforts better than hard racing.",
+        "storage": "Best within a day, kept cold.",
+        "dietary_tags": [
+            "vegan",
+            "gluten_free",
+            "portable"
+        ]
+    },
+    {
+        "name": "Banana Pancake Roll-Ups",
+        "meal_type": "trail",
+        "description": "Thin banana pancakes spread with jam and rolled up. Soft, sweet and easy to eat one-handed.",
+        "servings": 4,
+        "serving_size": "1 roll-up (about 22 g carbs)",
+        "prep_time": 10,
+        "cook_time": 10,
+        "calories": 125,
+        "protein": 3,
+        "carbs": 22,
+        "fat": 3,
+        "fiber": 1,
+        "ingredients": [
+            "1 ripe banana",
+            "1 egg",
+            "40 g plain flour",
+            "60 ml milk",
+            "1 tsp vegetable oil",
+            "2 tbsp raspberry jam",
+            "Pinch of salt"
+        ],
+        "steps": [
+            "Mash the banana until smooth, then whisk in the egg, milk, flour and salt to make a thin batter.",
+            "Heat a non-stick pan over a medium heat and wipe it with a little oil.",
+            "Pour in a quarter of the batter, swirl it thin and cook for about 1 minute on each side. Make four pancakes.",
+            "Spread each cooled pancake with jam and roll it up tightly.",
+            "Wrap each roll in baking paper and twist the ends like a sweet wrapper."
+        ],
+        "tip": "Soft food like this is easy to get down when your mouth is dry. Make them the night before, and eat one every 30-40 minutes.",
+        "storage": "Keeps for 2 days in the fridge.",
+        "dietary_tags": [
+            "vegetarian",
+            "portable"
+        ]
+    },
+    {
+        "name": "Ginger Apricot Settler Mix",
+        "meal_type": "trail",
+        "description": "Dried apricots, crystallised ginger and banana chips with a pinch of sea salt. A pocket mix for when your stomach starts to complain.",
+        "servings": 2,
+        "serving_size": "1 bag (about 36 g carbs)",
+        "prep_time": 5,
+        "cook_time": 0,
+        "calories": 185,
+        "protein": 1,
+        "carbs": 36,
+        "fat": 4,
+        "fiber": 3,
+        "ingredients": [
+            "60 g soft dried apricots",
+            "25 g crystallised ginger, chopped",
+            "20 g banana chips",
+            "Pinch of flaky sea salt"
+        ],
+        "steps": [
+            "Snip the apricots in half so they are bite-sized.",
+            "Chop the ginger into small pieces; it's strong, so small pieces are easier to take.",
+            "Toss the apricots, ginger and banana chips with the salt.",
+            "Divide between two small zip bags."
+        ],
+        "tip": "Ginger can settle nausea, and the apricots add potassium. Try a piece of ginger at the first sign of trouble, before you stop eating.",
+        "storage": "Keeps for 1 month in an airtight container.",
+        "dietary_tags": [
+            "vegan",
+            "gluten_free",
+            "portable"
+        ]
     }
 ]

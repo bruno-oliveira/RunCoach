@@ -1535,5 +1535,191 @@
         "dietary_tags": [
             "meal_prep"
         ]
+    },
+    {
+        "name": "Sheet-Pan Salmon with Potatoes and Broccoli",
+        "meal_type": "dinner",
+        "description": "Lemon-garlic salmon roasted on one tray with crispy baby potatoes and charred broccoli.",
+        "servings": 2,
+        "prep_time": 10,
+        "cook_time": 30,
+        "calories": 505,
+        "protein": 34,
+        "carbs": 40,
+        "fat": 23,
+        "fiber": 7,
+        "ingredients": [
+            "2 salmon fillets (about 130 g each)",
+            "400 g baby potatoes, halved",
+            "1 head broccoli (about 300 g), cut into florets",
+            "1 tbsp olive oil",
+            "2 garlic cloves, crushed",
+            "1 lemon",
+            "1 tbsp chopped dill",
+            "Salt and black pepper"
+        ],
+        "steps": [
+            "Heat the oven to 210°C. Toss the potatoes with half the oil and some salt and roast for 15 minutes.",
+            "Add the broccoli, tossed in the rest of the oil, to the tray.",
+            "Nestle the salmon in the middle, rub it with the garlic and grated lemon zest, and season.",
+            "Roast for 12-15 minutes more, until the salmon flakes easily.",
+            "Squeeze over the lemon juice and scatter with dill."
+        ],
+        "tip": "Omega-3s, good-quality protein and potato carbs, with one tray to wash. A good dinner the night after a long run.",
+        "dietary_tags": [
+            "gluten_free",
+            "omega_3"
+        ]
+    },
+    {
+        "name": "Turkey Meatballs with Wholewheat Spaghetti",
+        "meal_type": "dinner",
+        "description": "Lean turkey and parmesan meatballs simmered in a garlicky tomato sauce, served over wholewheat spaghetti.",
+        "servings": 4,
+        "prep_time": 20,
+        "cook_time": 25,
+        "calories": 585,
+        "protein": 45,
+        "carbs": 61,
+        "fat": 18,
+        "fiber": 9,
+        "ingredients": [
+            "500 g lean turkey breast mince",
+            "1 egg",
+            "30 g parmesan, finely grated",
+            "2 garlic cloves, crushed",
+            "1 tsp dried oregano",
+            "1 onion, finely chopped",
+            "1 tbsp olive oil",
+            "2 x 400 g tins chopped tomatoes",
+            "320 g wholewheat spaghetti",
+            "Handful of basil"
+        ],
+        "steps": [
+            "Mix the turkey, egg, parmesan, half the garlic and the oregano with some salt and pepper, and roll into 20 meatballs.",
+            "Brown the meatballs in the oil for 6-8 minutes, turning, then lift them out.",
+            "Soften the onion in the same pan for 5 minutes, add the rest of the garlic, then the tomatoes. Simmer for 10 minutes.",
+            "Return the meatballs to the sauce and simmer, covered, for 10 minutes until cooked through.",
+            "Meanwhile, cook the spaghetti, drain, and serve topped with the meatballs, sauce and basil."
+        ],
+        "tip": "About 45 g of protein and 60 g of carbs a plate, a good ratio for heavy training weeks. The meatballs freeze well in their sauce.",
+        "storage": "Meatballs in sauce keep for 3 days in the fridge or 3 months frozen.",
+        "dietary_tags": [
+            "meal_prep"
+        ]
+    },
+    {
+        "name": "Chickpea, Spinach and Sweet Potato Curry",
+        "meal_type": "dinner",
+        "description": "A mild, creamy curry of sweet potato, chickpeas and spinach in spiced tomato and coconut.",
+        "servings": 4,
+        "prep_time": 15,
+        "cook_time": 30,
+        "calories": 405,
+        "protein": 14,
+        "carbs": 56,
+        "fat": 14,
+        "fiber": 12,
+        "ingredients": [
+            "2 sweet potatoes (about 600 g), peeled and cubed",
+            "2 x 400 g tins chickpeas, drained",
+            "1 onion, chopped",
+            "3 garlic cloves, crushed",
+            "1 tbsp grated fresh ginger",
+            "2 tsp garam masala",
+            "1 tsp ground turmeric",
+            "1 tsp ground cumin",
+            "1 tbsp vegetable oil",
+            "400 g tin chopped tomatoes",
+            "400 ml light coconut milk",
+            "200 g baby spinach"
+        ],
+        "steps": [
+            "Soften the onion in the oil for 6-8 minutes, then add the garlic, ginger and spices for 1 minute until fragrant.",
+            "Add the sweet potato, tomatoes and coconut milk, bring to a simmer, and cook covered for 15 minutes.",
+            "Add the chickpeas and simmer uncovered for 10 minutes until the sweet potato is tender and the sauce thickens.",
+            "Stir in the spinach until it wilts, and season well."
+        ],
+        "tip": "Serve it with rice to make it a carb-rich training dinner. It tastes even better the next day.",
+        "storage": "Keeps for 4 days in the fridge or 3 months frozen.",
+        "dietary_tags": [
+            "vegan",
+            "gluten_free",
+            "meal_prep",
+            "anti_inflammatory"
+        ]
+    },
+    {
+        "name": "Prawn and Vegetable Brown Rice Stir-Fry",
+        "meal_type": "dinner",
+        "description": "King prawns stir-fried with broccoli, peppers and sugar snaps in a ginger, honey and tamari glaze, over brown rice.",
+        "servings": 2,
+        "prep_time": 15,
+        "cook_time": 30,
+        "calories": 520,
+        "protein": 34,
+        "carbs": 74,
+        "fat": 10,
+        "fiber": 8,
+        "ingredients": [
+            "250 g raw king prawns",
+            "150 g brown rice",
+            "200 g broccoli, cut into small florets",
+            "1 red pepper, sliced",
+            "100 g sugar snap peas",
+            "2 garlic cloves, sliced",
+            "1 tbsp grated fresh ginger",
+            "2 tbsp tamari",
+            "1 tsp runny honey",
+            "1 tbsp rapeseed oil",
+            "1 tsp sesame seeds",
+            "Lime wedges"
+        ],
+        "steps": [
+            "Cook the brown rice for 25-30 minutes until tender, then drain.",
+            "Mix the tamari, honey and 2 tbsp water to make the glaze.",
+            "Heat the oil in a wok over a high heat and stir-fry the broccoli, pepper and sugar snaps for 3-4 minutes.",
+            "Add the garlic, ginger and prawns and stir-fry for 2-3 minutes until the prawns turn pink.",
+            "Pour in the glaze, toss for 30 seconds, and serve over the rice with sesame seeds and lime."
+        ],
+        "tip": "Prawns are lean and cook in minutes. Cook the rice the day before and the whole meal takes 10 minutes.",
+        "dietary_tags": [
+            "gluten_free"
+        ]
+    },
+    {
+        "name": "Black Bean Stuffed Sweet Potatoes",
+        "meal_type": "dinner",
+        "description": "Baked sweet potatoes filled with smoky black beans and sweetcorn, topped with yogurt, feta and lime.",
+        "servings": 2,
+        "prep_time": 10,
+        "cook_time": 45,
+        "calories": 480,
+        "protein": 23,
+        "carbs": 79,
+        "fat": 8,
+        "fiber": 17,
+        "ingredients": [
+            "2 medium sweet potatoes (about 250 g each)",
+            "400 g tin black beans, drained",
+            "100 g sweetcorn",
+            "1 tsp smoked paprika",
+            "1/2 tsp ground cumin",
+            "1 tsp olive oil",
+            "100 g 0% fat Greek yogurt",
+            "40 g feta, crumbled",
+            "Lime and fresh coriander"
+        ],
+        "steps": [
+            "Heat the oven to 200°C, prick the sweet potatoes and bake for 40-45 minutes until soft. (Or microwave for 8-10 minutes.)",
+            "Warm the oil in a pan and cook the beans, sweetcorn, paprika and cumin with a splash of water for 5 minutes.",
+            "Split the potatoes open and fluff the insides with a fork.",
+            "Pile in the bean mix and top with the yogurt, feta, coriander and a squeeze of lime."
+        ],
+        "tip": "Slow-release carbs, plant protein and nearly 17 g of fibre. Better on an easy day than the night before a race.",
+        "dietary_tags": [
+            "vegetarian",
+            "gluten_free"
+        ]
     }
 ]

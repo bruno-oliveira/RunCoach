@@ -260,6 +260,49 @@ class TestUserSettings:
         finally:
             app.dependency_overrides.pop(get_current_user, None)
 
+    def test_threshold_change_refreshes_active_plan_zones(self, auth_client, test_db):
+        """A corrected LTHR reaches the plan's stored bands, not just the user row."""
+        from datetime import datetime
+
+        from app.contexts.runner.fitness.hr_zone_service import HRZoneService
+        from app.core.time_utils import local_today
+        from app.models import TrainingPlan
+
+        user = User(
+            google_id="zones-user",
+            email="zones@example.com",
+            name="Zones User",
+            max_hr=190,
+            threshold_hr=160,
+        )
+        test_db.add(user)
+        test_db.flush()
+        plan = TrainingPlan(
+            user_id=user.id,
+            current_weekly_km=30,
+            target_distance="10",
+            weeks_duration=6,
+            start_date=datetime.combine(local_today(), datetime.min.time()),
+            plan_data=[],
+        )
+        test_db.add(plan)
+        test_db.flush()
+        HRZoneService.compute_and_store_zones(plan, user, test_db)
+        test_db.commit()
+
+        async def _override():
+            return user
+
+        app.dependency_overrides[get_current_user] = _override
+        try:
+            res = auth_client.patch("/api/auth/me/settings", json={"threshold_hr": 172})
+            assert res.status_code == 200
+            test_db.refresh(plan)
+            assert plan.hr_zones_data["lthr"] == 172
+            assert plan.hr_zones_data["zones"][2]["max_bpm"] == 172
+        finally:
+            app.dependency_overrides.pop(get_current_user, None)
+
     def test_settings_requires_auth(self, auth_client):
         res = auth_client.patch(
             "/api/auth/me/settings",

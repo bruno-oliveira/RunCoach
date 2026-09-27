@@ -872,5 +872,178 @@
         "dietary_tags": [
             "gluten_free"
         ]
+    },
+    {
+        "name": "Kefir Berry Recovery Smoothie",
+        "meal_type": "post_workout",
+        "description": "Kefir, Greek yogurt, banana, berries and flaxseed blended with honey. Carbs, protein and live cultures in one glass.",
+        "servings": 1,
+        "prep_time": 5,
+        "cook_time": 0,
+        "calories": 500,
+        "protein": 25,
+        "carbs": 80,
+        "fat": 9,
+        "fiber": 11,
+        "ingredients": [
+            "300 ml semi-skimmed kefir",
+            "100 g 0% fat Greek yogurt",
+            "150 g frozen mixed berries",
+            "1 ripe banana",
+            "1 tbsp ground flaxseed",
+            "1 tbsp runny honey"
+        ],
+        "steps": [
+            "Pour the kefir into the blender first so the blades turn freely.",
+            "Add the yogurt, banana, berries, flaxseed and honey.",
+            "Blend for 45-60 seconds until completely smooth.",
+            "Drink within 30-45 minutes of finishing your run."
+        ],
+        "tip": "About 80 g carbs and 25 g protein, the roughly 3:1 ratio that refills glycogen and starts muscle repair. Kefir also adds probiotics.",
+        "dietary_tags": [
+            "vegetarian",
+            "gluten_free"
+        ]
+    },
+    {
+        "name": "Tofu and Veg Rice Noodle Stir-Fry",
+        "meal_type": "post_workout",
+        "description": "Crispy tofu with rice noodles, pak choi, peppers and beansprouts in a sweet chilli-lime tamari sauce. Ready in 15 minutes.",
+        "servings": 2,
+        "prep_time": 10,
+        "cook_time": 10,
+        "calories": 565,
+        "protein": 25,
+        "carbs": 76,
+        "fat": 18,
+        "fiber": 3,
+        "ingredients": [
+            "280 g firm tofu, pressed and cubed",
+            "150 g flat rice noodles",
+            "1 pak choi, quartered",
+            "1 red pepper, sliced",
+            "100 g beansprouts",
+            "2 garlic cloves, sliced",
+            "1 tbsp grated fresh ginger",
+            "2 tbsp tamari",
+            "1 tbsp maple syrup",
+            "1 tbsp lime juice",
+            "1 tbsp rapeseed oil",
+            "1 red chilli, sliced",
+            "2 spring onions, sliced"
+        ],
+        "steps": [
+            "Soak or cook the noodles according to the packet, then drain and rinse them.",
+            "Fry the tofu in half the oil over a high heat for 5-6 minutes, until golden on all sides, then set aside.",
+            "Stir-fry the pepper and pak choi in the rest of the oil for 2 minutes, then add the garlic, ginger and chilli for 1 minute.",
+            "Mix the tamari, maple syrup and lime juice, then add the noodles, tofu, beansprouts and sauce to the wok and toss for 1-2 minutes.",
+            "Scatter over the spring onions."
+        ],
+        "tip": "Rice noodles digest easily and refill glycogen fast. A good vegan recovery dinner after a long or hard session.",
+        "dietary_tags": [
+            "vegan",
+            "gluten_free"
+        ]
+    },
+    {
+        "name": "Tuna, Sweetcorn and Pasta Recovery Salad",
+        "meal_type": "post_workout",
+        "description": "Wholewheat fusilli with tuna, sweetcorn, peppers and tomatoes in a light lemon-yogurt dressing. Travels well to the gym or the office.",
+        "servings": 2,
+        "prep_time": 10,
+        "cook_time": 12,
+        "calories": 540,
+        "protein": 44,
+        "carbs": 73,
+        "fat": 8,
+        "fiber": 10,
+        "ingredients": [
+            "160 g wholewheat fusilli",
+            "2 x 145 g tins tuna in spring water, drained",
+            "150 g sweetcorn",
+            "1 red pepper, diced",
+            "150 g cherry tomatoes, halved",
+            "3 tbsp Greek yogurt",
+            "1 tbsp light mayonnaise",
+            "Juice of 1/2 lemon",
+            "2 spring onions, sliced"
+        ],
+        "steps": [
+            "Cook the pasta for 10-12 minutes, drain, and rinse it under cold water to cool.",
+            "Mix the yogurt, mayonnaise and lemon juice with some black pepper.",
+            "Flake the tuna into the pasta and add the sweetcorn, pepper, tomatoes and spring onions.",
+            "Fold through the dressing and divide between two boxes."
+        ],
+        "tip": "About 44 g of protein and 73 g of carbs. Make it the night before so recovery food is ready as soon as you get back.",
+        "storage": "Keeps for 2 days in the fridge.",
+        "dietary_tags": [
+            "portable",
+            "meal_prep"
+        ]
+    },
+    {
+        "name": "Skyr Recovery Overnight Oats",
+        "meal_type": "post_workout",
+        "description": "Oats soaked overnight with skyr and milk, topped with raspberries and maple syrup. Recovery food that's ready when you get home.",
+        "servings": 1,
+        "prep_time": 5,
+        "cook_time": 0,
+        "calories": 405,
+        "protein": 28,
+        "carbs": 58,
+        "fat": 7,
+        "fiber": 12,
+        "ingredients": [
+            "50 g rolled oats",
+            "150 g plain skyr",
+            "100 ml semi-skimmed milk",
+            "80 g frozen raspberries",
+            "1 tbsp maple syrup",
+            "1 tsp chia seeds"
+        ],
+        "steps": [
+            "Stir the oats, skyr, milk and chia seeds together in a jar.",
+            "Top with the frozen raspberries; they thaw overnight and release their juice.",
+            "Seal the jar and refrigerate overnight, or for at least 4 hours.",
+            "Stir in the maple syrup just before eating."
+        ],
+        "tip": "Skyr gives about 28 g of protein in one jar. Make two on Sunday for your hardest mornings of the week.",
+        "storage": "Keeps for 2 days in the fridge.",
+        "dietary_tags": [
+            "vegetarian",
+            "meal_prep"
+        ]
+    },
+    {
+        "name": "Chicken and Hummus Pitta Pocket",
+        "meal_type": "post_workout",
+        "description": "A wholemeal pitta stuffed with sliced chicken, hummus, spinach, cucumber and tomatoes. Assembled in 5 minutes.",
+        "servings": 1,
+        "prep_time": 5,
+        "cook_time": 0,
+        "calories": 425,
+        "protein": 40,
+        "carbs": 41,
+        "fat": 11,
+        "fiber": 7,
+        "ingredients": [
+            "1 wholemeal pitta",
+            "100 g cooked chicken breast, sliced",
+            "2 tbsp hummus",
+            "Handful of baby spinach",
+            "1/4 cucumber, sliced",
+            "3 cherry tomatoes, halved",
+            "Squeeze of lemon"
+        ],
+        "steps": [
+            "Toast the pitta lightly, then cut it open along one side to make a pocket.",
+            "Spread the hummus inside.",
+            "Fill it with the spinach, chicken, cucumber and tomatoes.",
+            "Add a squeeze of lemon and wrap it tightly in foil if you're taking it with you."
+        ],
+        "tip": "About 40 g of protein. Add a banana or a glass of juice to bring the carbs up after long or hard sessions.",
+        "dietary_tags": [
+            "portable"
+        ]
     }
 ]
