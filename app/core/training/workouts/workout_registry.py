@@ -159,6 +159,33 @@ LOG_ONLY_TYPES: Tuple[str, ...] = (
 
 ALL_WORKOUT_TYPE_NAMES: List[str] = [*WORKOUT_REGISTRY.keys(), *LOG_ONLY_TYPES]
 
+# Workout types whose training stimulus *is* the intensity: the session's value
+# is work the runner can only get by doing it, so it cannot be substituted by
+# volume elsewhere in the week.
+#
+# This answers "was this session's stimulus delivered?" and is deliberately
+# broader than the narrower quality tuples elsewhere in the codebase, which
+# answer different questions and must keep diverging from it:
+# ``budget._QUALITY_TYPES`` / ``distribution_validator._QUALITY_TYPES`` are the
+# three the day-level scheduler places, ``reconcile._PLAIN_QUALITY_TYPES`` the
+# ones ``build_workout`` can regenerate steps for, and
+# ``vdot_recalibrator._PACE_HIT_QUALITY_TYPES`` only those carrying a
+# measurable pace target.
+QUALITY_STIMULUS_TYPES: frozenset[str] = frozenset(
+    {
+        "tempo",
+        "interval",
+        "hill",
+        "vo2max",
+        "vo2max_ladder",
+        "cruise_interval",
+        "fartlek",
+        "time_trial",
+        "race_pace",
+        "race",
+    }
+)
+
 
 def build_workout(
     workout_type: str,
