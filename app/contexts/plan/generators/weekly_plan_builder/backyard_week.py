@@ -30,6 +30,7 @@ from app.contexts.plan.generators.weekly_plan_builder.budget import (
 from app.contexts.plan.generators.workout_scaler import is_prescriptive
 from app.core.training.profiles.backyard_profile import BackyardProfile
 from app.core.training.profiles.backyard_simulation import LoopSimulation
+from app.core.training.training_config import MIN_VIABLE_RUN_KM
 from app.core.training.workouts import workout_builders
 from app.core.training.workouts.workout_steps.backyard import (
     build_loop_repeats_steps,
@@ -316,8 +317,15 @@ def non_long_running_km(workouts: List[Dict[str, Any]]) -> float:
 
 
 # The least a flexible session can be squeezed to before it stops being a
-# session at all. Mirrors ``plan_generator.MIN_VIABLE_RUN_KM``.
-_MIN_SESSION_KM = 2.5
+# session at all. Bound to the canonical constant rather than a second literal:
+# this was a hand-copied 2.5 claiming to "mirror" the generator's, which is
+# exactly the drift a single shared constant exists to prevent.
+#
+# NOTE: the basis here is arguably the *per-run* floor (one flexible session,
+# not a week's average), which would make ``MIN_VIABLE_PER_RUN_KM`` the honest
+# binding. That would change how far a backyard week may squeeze a session, so
+# the average-basis value is kept deliberately.
+_MIN_SESSION_KM = MIN_VIABLE_RUN_KM
 
 
 def weekend_budget_km(workouts: List[Dict[str, Any]]) -> float:

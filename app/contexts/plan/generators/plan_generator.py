@@ -47,7 +47,11 @@ from app.core.training.profiles.trail_profile import (
     trail_min_weekly_mileage,
     trail_min_weeks,
 )
-from app.core.training.training_config import DISTANCE_CONSTRAINTS, get_constraints
+from app.core.training.training_config import (
+    DISTANCE_CONSTRAINTS,
+    MIN_VIABLE_RUN_KM,
+    get_constraints,
+)
 from app.core.training.workouts import workout_builders, workout_steps
 from app.core.training.workouts.key_workout_library import KeyWorkoutRotationState
 from app.exceptions import (
@@ -60,9 +64,6 @@ from app.exceptions import (
 
 logger = logging.getLogger(__name__)
 
-# Below this per-run distance a plan reads as unrealistic (trivially short runs);
-# the generator drops running frequency rather than emit such runs.
-MIN_VIABLE_RUN_KM = 2.5
 # Floor on running days: a real training week still wants a long run, a quality
 # session, and an easy run, so frequency is never reduced below this.
 MIN_RUNNING_DAYS = 3

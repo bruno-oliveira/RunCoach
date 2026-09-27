@@ -241,13 +241,13 @@ def collect_gaps(distance_km: float, runs: int, base: float, weeks: int) -> Set[
     # allows for 5K/10K) would be worse, not better. The generator already
     # reduces frequency toward that floor; where it cannot reach it, the honest
     # answer is a product decision about the 5K minimum base, not a bug.
-    base_can_fill_every_slot = base >= env.MIN_VIABLE_RUN_KM * runs
+    base_can_fill_every_slot = base >= env.MIN_VIABLE_PER_RUN_KM * runs
     if base_can_fill_every_slot:
         for week in plan:
             if week.get("is_recovery") or week.get("phase") == "taper":
                 continue
             if any(
-                (w.get("distance") or 0) < env.MIN_VIABLE_RUN_KM - 0.05
+                (w.get("distance") or 0) < env.MIN_VIABLE_PER_RUN_KM - 0.05
                 for w in _running(week)
             ):
                 found.add("sub_viable_run")

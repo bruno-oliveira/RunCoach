@@ -34,6 +34,10 @@ import it.
 
 from typing import Dict, Tuple
 
+from app.core.training.training_config import (
+    MIN_VIABLE_PER_RUN_KM as MIN_VIABLE_PER_RUN_KM,
+)
+
 # --- The reference bands ----------------------------------------------------
 
 # Peak *weekly volume* band, km, for a 4-run plan (`FREQUENCY_VOLUME_FACTORS`
@@ -96,9 +100,10 @@ FREQUENCY_VOLUME_FACTORS: Dict[int, float] = {
 # weekly volume does.
 PER_RUN_EASY_CAP_KM = 21.0
 
-# Below this a run is not a training dose at all. The walk/run sessions of a
-# genuine couch-to-5K plan are the one legitimate exception.
-MIN_VIABLE_RUN_KM = 2.0
+# The per-run viability floor (``MIN_VIABLE_PER_RUN_KM``) is imported above from
+# ``training_config``, where it sits next to the average-basis floor it must
+# stay below. This module only reads it — the plan-matrix audit flags a card
+# under it as sub-viable.
 
 
 def peak_week_band(distance_km: float, max_runs: int) -> Tuple[float, float]:

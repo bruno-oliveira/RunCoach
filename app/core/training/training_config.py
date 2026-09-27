@@ -117,6 +117,25 @@ DISTANCE_CONSTRAINTS: Dict[float, DistanceConstraints] = {
 }
 
 
+# --- Per-run viability floors ----------------------------------------------
+
+# *Average* per-run distance below which a week's budget is spread over more
+# runs than it can support: the generator sheds a running day rather than emit
+# runs this short. This is an average-basis trigger, not a floor that any
+# individual card must clear — see ``MIN_VIABLE_PER_RUN_KM`` for why the two
+# are not, and must not be, the same number.
+MIN_VIABLE_RUN_KM = 2.5
+
+# *Individual* card floor. A single run below this is not a training dose at
+# all; the walk/run sessions of a genuine couch-to-5K plan are the one
+# legitimate exception. It sits deliberately below ``MIN_VIABLE_RUN_KM``
+# because individual runs scatter around the week's mean: at exactly
+# ``MIN_VIABLE_RUN_KM`` per run the long run takes more than its share and the
+# easy runs take less, so a per-run floor set at the average would flag every
+# plan that merely meets the average.
+MIN_VIABLE_PER_RUN_KM = 2.0
+
+
 def get_constraints(distance_km: float) -> Optional[DistanceConstraints]:
     """Return the constraints for a target distance, or None if unsupported."""
     return DISTANCE_CONSTRAINTS.get(distance_km)
