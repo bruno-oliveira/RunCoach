@@ -17,6 +17,7 @@ from typing import Any, Dict, Optional
 from sqlalchemy.orm import Session
 
 from app.contexts.plan.adaptation import AdaptationService
+from app.contexts.runner.fitness.hr_zone_service import HRZoneService
 from app.core.time_utils import local_today
 from app.core.training.adaptation.thresholds import AUTO_ADJUST_MIN_DELTA
 from app.models import TrainingPlan
@@ -67,6 +68,14 @@ def auto_map_and_adjust(
 
         try:
             map_result = adaptation_service.map_runs_to_plan(plan.id, user.id, db)
+
+            # Before adapting, so the zone-adherence signal judges today's runs
+            # against the anchors the sync just brought in (a new LTHR from
+            # Intervals.icu, or a pace<->HR fit moved by the new runs).
+            try:
+                HRZoneService.refresh_zones(plan, user, db)
+            except Exception as e:
+                logger.warning(f"HR zone refresh failed for plan {plan.id}: {e}")
 
             adapt = _auto_adapt(plan, user.id, db)
 

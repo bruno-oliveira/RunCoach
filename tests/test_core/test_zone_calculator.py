@@ -49,7 +49,7 @@ def test_zones_are_a_contiguous_partition(kwargs):
 
 
 def test_tempo_band_is_not_a_sliver():
-    """G6: the tempo band spans a meaningful range (T..I), not an ~8 s sliver."""
+    """G6: the tempo band spans a meaningful range, not an ~8 s sliver."""
     z = calculate_zones(vdot=50)
     slow, fast = z["zone_3_tempo"]["pace_range"]
     assert slow - fast > 0.2, f"tempo band too thin: {slow}..{fast}"
@@ -81,3 +81,42 @@ def test_race_pace_hr_label_untouched_without_distance():
     """Omitting race_distance_km leaves the legacy zone-5 HR label intact."""
     z = calculate_zones(vdot=50, goal_pace=4.5, max_hr=190)
     assert z["zone_5_race"]["hr_range"] == "95-100%"
+
+
+@pytest.mark.parametrize("vdot", [35, 50, 65])
+def test_threshold_pace_sits_on_the_zone_3_4_line(vdot):
+    """Threshold pace is where HR reaches LTHR, and LTHR is the Zone 3/4 edge
+    of the HR bands -- so T must be the fast edge of zone 3 and the slow edge of
+    zone 4. It used to open zone 3, labelling T..I paces with a band that ends
+    at LTHR: half a zone below the HR those paces actually produce."""
+    from app.core.training.physiology.vdot_calculator import VDOTCalculator
+
+    t_pace = VDOTCalculator.get_pace_zones(vdot)["T"]["pace_min_km"]
+    z = calculate_zones(vdot=vdot, max_hr=190, lthr=170)
+    assert z["zone_3_tempo"]["pace_range"][1] == t_pace
+    assert z["zone_4_vo2max"]["pace_range"][0] == t_pace
+    # ...alongside the BPM band that ends / starts on LTHR.
+    assert z["zone_3_tempo"]["hr_bpm_range"].endswith("-170 BPM")
+    assert z["zone_4_vo2max"]["hr_bpm_range"].startswith("170-")
+
+
+def test_easy_pace_is_zone_2():
+    """Easy runs target HR zone 2, so the E band is zone 2's pace range."""
+    from app.core.training.physiology.vdot_calculator import VDOTCalculator
+
+    e = VDOTCalculator.get_pace_zones(50)["E"]
+    z = calculate_zones(vdot=50)
+    assert z["zone_2_aerobic"]["pace_range"] == (
+        e["pace_min_km_slow"],
+        e["pace_min_km_fast"],
+    )
+
+
+@pytest.mark.parametrize("vdot", [40, 60])
+def test_each_anchor_is_the_fast_edge_of_its_band(vdot):
+    """The workout builders read `pace`; it must lie on its own band."""
+    z = calculate_zones(vdot=vdot)
+    for slug in _ORDER:
+        slow, fast = z[slug]["pace_range"]
+        assert slow > fast
+        assert z[slug]["pace"] == fast

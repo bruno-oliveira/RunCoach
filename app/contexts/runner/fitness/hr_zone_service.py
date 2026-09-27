@@ -1,10 +1,13 @@
 """Heart rate zone service — orchestrates zone computation and persistence."""
 
 import logging
+from datetime import timedelta
 from typing import Optional
 
 from sqlalchemy.orm import Session
 
+from app.core.time_utils import local_today
+from app.core.training.periodization.plan_calendar import compute_current_week
 from app.core.training.physiology.hr_pace_calibration import (
     PaceHRSample,
     attach_calibrated_paces,
@@ -23,6 +26,7 @@ from app.core.training.physiology.hr_zone_calculator import (
 )
 from app.models.training_plan import TrainingPlan
 from app.models.user import User
+from app.utils import persist_json, to_date
 
 logger = logging.getLogger(__name__)
 
@@ -260,6 +264,29 @@ def resolve_zones_for_user(user: User, db: Session) -> list[dict]:
     return HRZoneCalculator.calculate_zones(max_hr, resting_hr=resting_hr, lthr=lthr)
 
 
+def refresh_active_plan_zones(user: User, db: Session) -> int:
+    """Refresh the stored zones on every plan the runner is still training on.
+
+    Returns how many plans had their BPM bands change.
+    """
+    today = local_today()
+    changed = 0
+    for plan in db.query(TrainingPlan).filter(TrainingPlan.user_id == user.id):
+        start = to_date(plan.start_date)
+        if start and today > start + timedelta(weeks=plan.weeks_duration or 0):
+            continue
+        if HRZoneService.refresh_zones(plan, user, db):
+            changed += 1
+    return changed
+
+
+def _bpm_bands(zones: object) -> list[tuple[object, object]]:
+    """The ``(min_bpm, max_bpm)`` pairs a runner actually sees, in zone order."""
+    if not isinstance(zones, list):
+        return []
+    return [(z.get("min_bpm"), z.get("max_bpm")) for z in zones if isinstance(z, dict)]
+
+
 def gather_pace_hr_samples(user_id: str, db: Session) -> list[PaceHRSample]:
     """Collect ``(pace, heart rate)`` observations from a user's recent runs.
 
@@ -318,6 +345,76 @@ class HRZoneService:
         Returns:
             List of zone dicts with BPM ranges.
         """
+        zones, record = HRZoneService._build_zone_record(user, db)
+        plan.hr_zones_data = record
+        plan.max_heart_rate = record["max_hr"]
+
+        logger.info(
+            "HR zones computed for plan %s: max_hr=%s (%s), resting_hr=%s (%s), "
+            "lthr=%s (%s), lthr_anchored=%s, pace_calibrated=%s",
+            plan.id,
+            record["max_hr"],
+            record["source"],
+            record["resting_hr"],
+            record["resting_source"],
+            record["lthr"],
+            record["lthr_source"],
+            record["lthr_anchored"],
+            record["pace_calibration"] is not None,
+        )
+        return zones
+
+    @staticmethod
+    def refresh_zones(plan: TrainingPlan, user: User, db: Session) -> bool:
+        """Bring a plan's stored zones back in line with the runner's anchors.
+
+        Zones are stored on the plan when it is built, but the anchors under them
+        keep moving: every sync can bring a new max HR / LTHR from Intervals.icu,
+        the runner can type a new value into settings, and each new run shifts
+        the pace<->HR fit the LTHR estimate reads. Without this the plan kept its
+        creation-day bands while run classification (which resolves anchors
+        live) used new ones, so one run could be "Zone 2" on the home page and
+        off-target against the plan.
+
+        When the BPM bands moved, the per-workout labels are rewritten from the
+        current week on. Past weeks keep the target they were prescribed.
+
+        Returns:
+            True when the BPM bands changed.
+        """
+        zones, record = HRZoneService._build_zone_record(user, db)
+        stored = plan.hr_zones_data or {}
+        if record == stored:
+            return False
+
+        bands_changed = _bpm_bands(stored.get("zones")) != _bpm_bands(zones)
+        plan.hr_zones_data = record
+        plan.max_heart_rate = record["max_hr"]
+
+        if bands_changed and plan.plan_data:
+            start = to_date(plan.start_date)
+            from_week = (
+                compute_current_week(start, local_today(), clamp_min=1, pre_start=1)
+                if start
+                else 1
+            )
+            HRZoneService.inject_hr_zones_into_plan_data(
+                plan.plan_data, zones, from_week=from_week or 1
+            )
+            persist_json(plan, "plan_data")
+            logger.info(
+                "HR zones refreshed for plan %s from week %s: max_hr=%s lthr=%s (%s)",
+                plan.id,
+                from_week,
+                record["max_hr"],
+                record["lthr"],
+                record["lthr_source"],
+            )
+        return bands_changed
+
+    @staticmethod
+    def _build_zone_record(user: User, db: Session) -> tuple[list[dict], dict]:
+        """Resolve the anchors and build the zones plus the record stored on a plan."""
         max_hr, source = get_user_max_hr(
             user.id, db, user_age=user.age, user_max_hr=getattr(user, "max_hr", None)
         )
@@ -330,7 +427,6 @@ class HRZoneService:
         # whether that threshold came from the runner's real data (a measured or
         # supplied LTHR) rather than the population-average fallback derived from
         # max HR.
-        method = "lthr"
         lthr_anchored = lthr is not None and _lthr_is_usable(max_hr, lthr)
 
         # Calibrate each zone's BPM band to the pace this runner actually holds
@@ -339,7 +435,7 @@ class HRZoneService:
         # consistent data to trust a fit.
         calibration = HRZoneService._calibrate_zone_paces(user.id, db, zones)
 
-        plan.hr_zones_data = {
+        record = {
             "max_hr": max_hr,
             "source": source,
             "resting_hr": resting_hr,
@@ -347,20 +443,12 @@ class HRZoneService:
             "lthr": lthr if lthr_anchored else None,
             "lthr_source": lthr_source,
             "lthr_anchored": lthr_anchored,
-            "method": method,
+            "method": "lthr",
             "zones": zones,
             "pace_calibration": calibration,
             "version": HR_ZONES_VERSION,
         }
-        plan.max_heart_rate = max_hr
-
-        logger.info(
-            f"HR zones computed for plan {plan.id}: max_hr={max_hr} ({source}), "
-            f"resting_hr={resting_hr} ({resting_source}), method={method}, "
-            f"lthr={lthr} ({lthr_source}), lthr_anchored={lthr_anchored}, "
-            f"pace_calibrated={calibration is not None}"
-        )
-        return zones
+        return zones, record
 
     @staticmethod
     def _calibrate_zone_paces(
@@ -393,12 +481,16 @@ class HRZoneService:
     def inject_hr_zones_into_plan_data(
         plan_data: list[dict],
         zones: list[dict],
+        from_week: int = 1,
     ) -> list[dict]:
         """Annotate each workout dict with its target HR zone info.
 
-        Mutates plan_data in place and returns it for convenience.
+        Weeks before ``from_week`` are left as they were. Mutates plan_data in
+        place and returns it for convenience.
         """
         for week in plan_data:
+            if (week.get("week") or from_week) < from_week:
+                continue
             for workout in week.get("daily_workouts", []):
                 wtype = workout.get("type", "easy")
                 target_zone = HRZoneCalculator.get_workout_zone(wtype)
