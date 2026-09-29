@@ -4,6 +4,7 @@ All public methods match the original AdaptationService API so that
 existing callers (routers, other services, tests) work unchanged.
 """
 
+from datetime import datetime
 from typing import Any, Dict, Optional
 
 from sqlalchemy.orm import Session
@@ -30,7 +31,10 @@ class AdaptationService:
         plan_id: str,
         db: Session,
         *,
-        since: Optional[object] = None,
+        # `datetime`, not `object`: this is forwarded straight to
+        # `skipped_detector.detect_skipped_workouts`, which compares it against
+        # `RunLog.date`. The loose annotation let a non-datetime through.
+        since: Optional[datetime] = None,
     ) -> Dict[str, int]:
         return _detect_skipped(plan_id, db, since=since)
 

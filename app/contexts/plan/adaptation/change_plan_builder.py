@@ -72,7 +72,7 @@ def snapshot_workouts(
     return snap
 
 
-def _classify_unchanged(in_window: bool) -> Dict[str, Optional[str]]:
+def _classify_unchanged(in_window: bool) -> Dict[str, str | None]:
     """Pick a default status/reason for an unchanged workout when no
     recorder hint is available.
 
@@ -120,7 +120,14 @@ def _classify_workout_change(
         and day < current_day_of_week
     )
     classification = _classify_unchanged(in_window)
-    return classification["status"], classification["reason"], old_dist, new_dist
+    # `status` is always one of the two literals above; `or "unchanged"` keeps the
+    # declared return type honest without widening it to match the shared dict.
+    return (
+        classification["status"] or "unchanged",
+        classification["reason"],
+        old_dist,
+        new_dist,
+    )
 
 
 def _compute_no_change_reasons(
@@ -319,7 +326,13 @@ def _build_patch(
         for wp in (
             training_plan.weekly_plans if training_plan.weekly_plans is not None else []
         ):
-            if wp.week_number in affected and wp.total_km is not None:
+            # `week_number` is nullable and keys an int map; a row without one
+            # cannot be placed on the timeline.
+            if (
+                wp.week_number is not None
+                and wp.week_number in affected
+                and wp.total_km is not None
+            ):
                 true_totals[wp.week_number] = round(float(wp.total_km), 1)
     # A day that gained a workout where there was none (a rest day now carrying
     # a rescheduled run) can't be repainted from a flat patch — its card has no

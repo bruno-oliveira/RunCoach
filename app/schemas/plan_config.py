@@ -44,6 +44,17 @@ def compute_vdot_from_time(
             "Use HH:MM:SS or MM:SS format (e.g. '42:15' or '1:45:30')."
         )
     vdot = VDOTCalculator.calculate_vdot(distance_km, seconds)
+    if vdot is None:
+        # calculate_vdot rejects a pace that is physically implausible — a typo,
+        # or a distance/time mismatch (30 seconds for a 5K). Returning it would
+        # hand the plan generator a VDOT of None and pace the whole block off a
+        # fallback while telling the runner nothing; pyright caught this only
+        # once the model layer was typed.
+        raise ValueError(
+            f"Could not derive a fitness estimate from {field_name} '{time_str}' "
+            f"over {distance_km:g} km — the implied pace is not physically "
+            "plausible. Check the distance and the time."
+        )
     pace_min_km = (seconds / 60) / distance_km
     return vdot, pace_min_km
 

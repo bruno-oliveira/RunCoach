@@ -1,10 +1,11 @@
 import uuid
-from datetime import datetime, timezone
+from datetime import datetime
+from typing import TYPE_CHECKING, Any
 
-from sqlalchemy import Column, DateTime, Float, ForeignKey, Index, Integer, String, Text
+from sqlalchemy import JSON, DateTime, Float, ForeignKey, Index, Integer, String, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
-from sqlalchemy.types import JSON
 
+from app.core.time_utils import utcnow_naive
 from app.core.training.physiology.workout_inference import (
     resolve_effective_workout_type,
 )
@@ -13,6 +14,13 @@ from app.models.base import Base
 # Runs the runner entered by hand; anything else came from a connected platform.
 MANUAL_SOURCE = "manual"
 INTERVALS_SOURCE = "intervals"
+
+
+if TYPE_CHECKING:
+    from app.models.daily_workout import DailyWorkout
+    from app.models.run_feedback import RunFeedback
+    from app.models.training_plan import TrainingPlan
+    from app.models.user import User
 
 
 class RunLog(Base):
@@ -24,48 +32,50 @@ class RunLog(Base):
         Index("idx_run_log_training_plan", "training_plan_id"),
     )
 
-    id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
-    user_id = Column(String, ForeignKey("users.id"), nullable=False)
-    training_plan_id = Column(String, ForeignKey("training_plans.id"), nullable=True)
-    daily_workout_id = Column(String, ForeignKey("daily_workouts.id"), nullable=True)
-    date = Column(
-        DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None)
+    id: Mapped[str] = mapped_column(
+        String, primary_key=True, default=lambda: str(uuid.uuid4())
     )
-    distance_km = Column(Float)
-    duration_minutes = Column(Float)
-    avg_pace_min_km = Column(Float)
-    avg_heart_rate = Column(Integer, nullable=True)
-    max_heart_rate = Column(Integer, nullable=True)
-    avg_cadence = Column(Integer, nullable=True)
-    elevation_gain_m = Column(Integer, nullable=True)
-    notes = Column(Text, nullable=True)
-    workout_type = Column(String, nullable=True)
-    perceived_effort = Column(Integer, nullable=True)
+    user_id: Mapped[str] = mapped_column(String, ForeignKey("users.id"))
+    training_plan_id: Mapped[str | None] = mapped_column(
+        String, ForeignKey("training_plans.id")
+    )
+    daily_workout_id: Mapped[str | None] = mapped_column(
+        String, ForeignKey("daily_workouts.id")
+    )
+    date: Mapped[datetime | None] = mapped_column(DateTime, default=utcnow_naive)
+    distance_km: Mapped[float | None] = mapped_column(Float)
+    duration_minutes: Mapped[float | None] = mapped_column(Float)
+    avg_pace_min_km: Mapped[float | None] = mapped_column(Float)
+    avg_heart_rate: Mapped[int | None] = mapped_column(Integer)
+    max_heart_rate: Mapped[int | None] = mapped_column(Integer)
+    avg_cadence: Mapped[int | None] = mapped_column(Integer)
+    elevation_gain_m: Mapped[int | None] = mapped_column(Integer)
+    notes: Mapped[str | None] = mapped_column(Text)
+    workout_type: Mapped[str | None] = mapped_column(String)
+    perceived_effort: Mapped[int | None] = mapped_column(Integer)
     intervals_activity_id: Mapped[str | None] = mapped_column(
         String, unique=True, nullable=True, index=True
     )
     # Where the run came from: "intervals", "manual", or "strava" for history
     # imported before that integration was retired. Read via `was_imported`.
-    source = Column(String(20), nullable=True)
-    created_at = Column(
-        DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None)
-    )
+    source: Mapped[str | None] = mapped_column(String(20))
+    created_at: Mapped[datetime | None] = mapped_column(DateTime, default=utcnow_naive)
 
-    effort_quality_score = Column(Float, nullable=True)
-    quality_label = Column(String(20), nullable=True)
-    planned_pace_min_km = Column(Float, nullable=True)
-    vdot = Column(Float, nullable=True)
-    predicted_time_seconds = Column(Float, nullable=True)
-    hr_zone_deviation = Column(Integer, nullable=True)
-    effort_class = Column(String(20), nullable=True)
+    effort_quality_score: Mapped[float | None] = mapped_column(Float)
+    quality_label: Mapped[str | None] = mapped_column(String(20))
+    planned_pace_min_km: Mapped[float | None] = mapped_column(Float)
+    vdot: Mapped[float | None] = mapped_column(Float)
+    predicted_time_seconds: Mapped[float | None] = mapped_column(Float)
+    hr_zone_deviation: Mapped[int | None] = mapped_column(Integer)
+    effort_class: Mapped[str | None] = mapped_column(String(20))
 
     # Run type inferred from pace/HR/distance/splits. Kept separate from the
     # raw `workout_type` (which imports default to "easy") so the user's own
     # tag is never overwritten; reconciled at read time via the property below.
-    inferred_workout_type = Column(String(20), nullable=True)
-    inferred_type_confidence = Column(Float, nullable=True)
+    inferred_workout_type: Mapped[str | None] = mapped_column(String(20))
+    inferred_type_confidence: Mapped[float | None] = mapped_column(Float)
     # Compact per-km splits: [{km, duration_s, pace_min_km, avg_hr}].
-    splits = Column(JSON, nullable=True)
+    splits: Mapped[Any | None] = mapped_column(JSON)
 
     user: Mapped["User"] = relationship("User", back_populates="run_logs")
     training_plan: Mapped["TrainingPlan"] = relationship("TrainingPlan")

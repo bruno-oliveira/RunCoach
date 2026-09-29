@@ -1,45 +1,53 @@
 import uuid
-from datetime import datetime, timezone
+from datetime import datetime
+from typing import TYPE_CHECKING
 
-from sqlalchemy import JSON, Boolean, Column, DateTime, Integer, String, text
+from sqlalchemy import JSON, Boolean, DateTime, Integer, String, text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
+from app.core.time_utils import utcnow_naive
 from app.models.base import Base
 from app.models.encrypted_type import EncryptedString
+
+if TYPE_CHECKING:
+    from app.models.favorite_recipe import FavoriteRecipe
+    from app.models.push_subscription import PushSubscription
+    from app.models.readiness_log import ReadinessLog
+    from app.models.refresh_token import RefreshToken
+    from app.models.run_log import RunLog
+    from app.models.training_plan import TrainingPlan
 
 
 class User(Base):
     __tablename__ = "users"
 
-    id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
-    google_id = Column(String, unique=True, nullable=True, index=True)
-    email = Column(String, unique=True, nullable=True, index=True)
-    name = Column(String, nullable=True)
-    picture = Column(String, nullable=True)
-    created_at = Column(
-        DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None)
+    id: Mapped[str] = mapped_column(
+        String, primary_key=True, default=lambda: str(uuid.uuid4())
     )
-    last_activity = Column(
-        DateTime,
-        default=lambda: datetime.now(timezone.utc).replace(tzinfo=None),
-        nullable=True,
+    google_id: Mapped[str | None] = mapped_column(String, unique=True, index=True)
+    email: Mapped[str | None] = mapped_column(String, unique=True, index=True)
+    name: Mapped[str | None] = mapped_column(String)
+    picture: Mapped[str | None] = mapped_column(String)
+    created_at: Mapped[datetime | None] = mapped_column(DateTime, default=utcnow_naive)
+    last_activity: Mapped[datetime | None] = mapped_column(
+        DateTime, default=utcnow_naive
     )
-    plans_generated = Column(Integer, default=0)
+    plans_generated: Mapped[int | None] = mapped_column(Integer, default=0)
     # Last IANA timezone the runner's browser reported. Requests carry their
     # own zone; this is for the scheduled jobs, which have no browser to ask.
-    timezone = Column(String(64), nullable=True)
-    age = Column(Integer, nullable=True)
+    timezone: Mapped[str | None] = mapped_column(String(64))
+    age: Mapped[int | None] = mapped_column(Integer)
     # Optional max heart rate (BPM). When set it anchors the top of the HR
     # zones directly; otherwise we detect it from run data, then fall back to an
     # age formula and a conservative default.
-    max_hr = Column(Integer, nullable=True)
+    max_hr: Mapped[int | None] = mapped_column(Integer)
     # Optional resting heart rate (BPM). In the LTHR-anchored model it only
     # raises the Zone 1 (recovery) floor; left null we omit that refinement.
-    resting_hr = Column(Integer, nullable=True)
+    resting_hr: Mapped[int | None] = mapped_column(Integer)
     # Optional lactate-threshold heart rate (BPM). The primary zone anchor: the
     # Zone 3/4 edge sits on it. When null we estimate it from threshold-effort
     # runs, and failing that derive it from max HR (population-average 88%).
-    threshold_hr = Column(Integer, nullable=True)
+    threshold_hr: Mapped[int | None] = mapped_column(Integer)
     intervals_athlete_id: Mapped[str | None] = mapped_column(
         String, unique=True, nullable=True, index=True
     )

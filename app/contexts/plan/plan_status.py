@@ -26,8 +26,14 @@ def decorate_plan_status(plan: TrainingPlan, today: date) -> TrainingPlan:
     if plan.start_date:
         sd = plan.start_date
         start_d = sd.date() if isinstance(sd, datetime) else sd
+        # `pre_start=0` makes this a plain `int` (see the overloads on
+        # `compute_current_week`): a not-yet-started plan comes back as 0.
         current_wk = compute_current_week(start_d, today, pre_start=0)
-        if current_wk > plan.weeks_duration:
+        # `weeks_duration` is a nullable column, though: comparing it directly
+        # raised TypeError, which took out the home hero and the My Plans list for
+        # a plan with no duration. A plan we cannot measure against its length is
+        # not claimed to be finished.
+        if plan.weeks_duration is not None and current_wk > plan.weeks_duration:
             plan.status_label = "Completed"
         elif current_wk >= 1:
             plan.status_label = f"Week {current_wk} of {plan.weeks_duration}"
@@ -47,6 +53,6 @@ def current_active_plan(plans: list[TrainingPlan]) -> Optional[TrainingPlan]:
     plan has already been through `decorate_plan_status`.
     """
     for plan in plans:
-        if getattr(plan, "status_label", None) != "Completed":
+        if plan.status_label != "Completed":
             return plan
     return plans[0] if plans else None

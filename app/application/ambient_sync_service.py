@@ -35,7 +35,10 @@ from typing import Any, Dict, List, Optional
 
 from sqlalchemy.orm import Session
 
-from app.application.push_notification_service import get_push_notifier
+from app.application.push_notification_service import (
+    after_sync_off_loop,
+    get_push_notifier,
+)
 from app.application.watch_sync_service import resync_plan_to_watch
 from app.application.wellness_sync_service import refresh_wellness
 from app.contexts.plan.adaptation import AdaptationService
@@ -151,7 +154,7 @@ class AmbientSyncService:
                         # Runs the webhook missed (or runners on a deploy
                         # without one). The ledger keys on the run, so a run
                         # the webhook already announced stays silent here.
-                        self._announce(notifier, user, result)
+                        await self._announce(notifier, user, result)
             except Exception:
                 # One revoked token or malformed activity must not cost every
                 # other runner their sync.
@@ -188,9 +191,9 @@ class AmbientSyncService:
         summary.plans_adapted += len(result.adjustments)
         return result
 
-    def _announce(self, notifier: Any, user: User, result: RunnerSync) -> None:
+    async def _announce(self, notifier: Any, user: User, result: RunnerSync) -> None:
         try:
-            notifier.after_sync(user, result)
+            await after_sync_off_loop(notifier, user, result)
         except Exception:
             logger.warning("Post-sync push failed for user %s", user.id, exc_info=True)
 

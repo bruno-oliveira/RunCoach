@@ -61,6 +61,12 @@ def auto_map_and_adjust(
         start = _to_date(plan.start_date)
         if start is None:
             continue
+        if plan.weeks_duration is None:
+            # Cannot say whether the plan has finished without a duration, and
+            # guessing either way is worse than leaving it alone: this used to
+            # raise TypeError, which failed the whole sync for the runner. Same
+            # shape as the missing start_date above.
+            continue
         end_date = start + timedelta(weeks=plan.weeks_duration)
         if today > end_date:
             continue

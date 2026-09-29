@@ -20,10 +20,15 @@ def detect_missed_weeks(
 ) -> List[int]:
     training_plan = SQLAlchemyPlanRepository(db).get_for_user(plan_id, user_id)
 
-    if not training_plan or not training_plan.start_date:
+    if not training_plan:
         return []
 
+    # Guard on the resolved date rather than the raw column, so the value the
+    # week arithmetic uses is provably present.
     start_date = _to_date(training_plan.start_date)
+    if start_date is None:
+        return []
+
     today = today_date()
     total_weeks = training_plan.weeks_duration or 0
     current_week = compute_current_week(

@@ -1,7 +1,7 @@
 """Date utilities for training plan week tracking."""
 
 from datetime import date, timedelta
-from typing import Optional
+from typing import Optional, overload
 
 from app.core.time_utils import local_today
 
@@ -23,6 +23,28 @@ def build_week_dates(start_date: date, num_weeks: int) -> list[dict]:
     return week_dates
 
 
+@overload
+def compute_current_week(
+    start_date: date,
+    today: date,
+    *,
+    total_weeks: Optional[int] = None,
+    pre_start: int,
+    clamp_min: Optional[int] = None,
+) -> int: ...
+
+
+@overload
+def compute_current_week(
+    start_date: date,
+    today: date,
+    *,
+    total_weeks: Optional[int] = None,
+    pre_start: Optional[int] = None,
+    clamp_min: Optional[int] = None,
+) -> Optional[int]: ...
+
+
 def compute_current_week(
     start_date: date,
     today: date,
@@ -39,9 +61,19 @@ def compute_current_week(
         total_weeks: If set, clamp the result to at most ``total_weeks``.
         pre_start: Value to return when ``today`` is before ``start_date``.
             Defaults to ``None`` (plan not yet started).
-        clamp_min: If set, clamp the result to at least this value. Use
-            ``clamp_min=1`` to guarantee a positive week index in callers
-            that don't separately gate on the pre-start case.
+        clamp_min: If set, clamp the result to at least this value. It applies
+            *after* the pre-start early return, so it floors a computed week but
+            not the sentinel — pass ``pre_start`` too when you need a concrete
+            value before the plan starts. ``tests/test_services/
+            test_plan_date_utils.py`` pins both behaviours.
+
+    The overloads exist because the return type is conditional on one argument:
+    pass a concrete ``pre_start`` and every path yields an ``int``; leave it out
+    and a not-yet-started plan yields the ``None`` sentinel. The single
+    ``Optional`` signature this used to carry made every caller that *had*
+    supplied a sentinel re-prove it, which mostly meant operators applied to a
+    value the checker insisted might be ``None`` — the largest cluster of type
+    errors in ``app/contexts`` before this.
     """
     delta_days = (today - start_date).days
     if delta_days < 0:

@@ -25,6 +25,12 @@ class Settings(BaseSettings):
 
     # Database
     database_url: str = "sqlite:///./runcoach.db"
+    # Whether the app factory applies Alembic migrations and the startup
+    # backfills in its lifespan. On for the real deploy (the container runs
+    # `start.sh`, then uvicorn, and the volume's schema must be current before
+    # the first request is served); the test session pins it off so the ~100
+    # `TestClient(app)` entries do not each replay the migration chain.
+    run_startup_migrations: bool = True
 
     # Logging
     log_level: Literal["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"] = "INFO"
@@ -71,7 +77,6 @@ class Settings(BaseSettings):
     coach_ai_model: str = "claude-haiku-4-5"
 
     # Security
-    enable_debug_endpoints: bool = False
     encryption_key: str = ""
     # Previous ENCRYPTION_KEY used during a rotation window. Encryption is
     # always performed with ``encryption_key``; on decryption we fall back to

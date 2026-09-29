@@ -12,6 +12,7 @@ from datetime import date, datetime, timedelta
 import pytest
 
 from app.application.watch_sync_service import resync_plan_to_watch
+from app.core.time_utils import utcnow_naive
 from app.core.training import watch_mirror
 from app.core.training.watch_mirror import event_hash, events_in_window, owns_event
 from app.models import TrainingPlan, User
@@ -103,7 +104,7 @@ def pushed_plan(test_db, synced_user) -> TrainingPlan:
         weeks_duration=4,
         start_date=datetime.combine(date.today(), datetime.min.time()),
         plan_data=[_week(1), _week(2), _week(3), _week(4)],
-        watch_synced_at=datetime.utcnow(),
+        watch_synced_at=utcnow_naive(),
         watch_sync_enabled=True,
     )
     test_db.add(plan)
@@ -185,7 +186,7 @@ def test_window_excludes_days_already_in_the_past(test_db, synced_user):
             date.today() - timedelta(days=21), datetime.min.time()
         ),
         plan_data=[_week(1), _week(2), _week(3), _week(4)],
-        watch_synced_at=datetime.utcnow(),
+        watch_synced_at=utcnow_naive(),
         watch_sync_enabled=True,
     )
     test_db.add(plan)

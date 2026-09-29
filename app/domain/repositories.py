@@ -53,9 +53,15 @@ class IPlanRepository(Protocol):
 class IRunRepository(Protocol):
     """Persistence interface for logged runs."""
 
-    def get_by_id(self, run_id: int) -> Optional["RunLog"]: ...
+    # ``run_id`` is a UUID string (``RunLog.id``), not an int. It was annotated
+    # ``int``, which the SQLAlchemy implementation could not honour — it filters
+    # ``RunLog.id == run_id`` — so the annotation invited a caller to pass an
+    # integer that could never match a row. Every real caller passes the string
+    # from the URL path, so nothing was broken; the type was simply lying about
+    # the contract. Surfaced once the model layer became type-checked.
+    def get_by_id(self, run_id: str) -> Optional["RunLog"]: ...
 
-    def get_for_user(self, run_id: int, user_id: str) -> Optional["RunLog"]: ...
+    def get_for_user(self, run_id: str, user_id: str) -> Optional["RunLog"]: ...
 
     def list_by_user(self, user_id: str) -> List["RunLog"]: ...
 

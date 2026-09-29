@@ -1,12 +1,19 @@
 """Local-only FIT file validation using Garmin's FitCSVTool.jar.
 
-This tool is intended for local development use only and is NOT used
-on the production server. It validates that generated FIT files are
-correctly structured according to the Garmin FIT protocol.
+Validates that generated FIT files are correctly structured according to the
+Garmin FIT protocol, by shelling out to Garmin's own decoder.
+
+Lives in ``scripts/`` rather than inside ``app/`` because it runs a Java jar
+from a local SDK checkout and is never imported at runtime — the production
+image copies ``app/`` wholesale, so a module here would ship a tool that
+cannot work on Fly.io (no JRE) and exists only on a developer's machine.
+
+Requires ``tools/fit-sdk/FitCSVTool.jar`` (not vendored — download it from
+Garmin's FIT SDK) and a JRE on PATH.
 
 Usage:
-    python -m app.services.fit_validation_local
-    python -m app.services.fit_validation_local --generate-test
+    python scripts/validate_fit_local.py --generate-test
+    python scripts/validate_fit_local.py --file /path/to/workout.fit
 """
 
 import argparse
@@ -17,9 +24,11 @@ import tempfile
 from dataclasses import dataclass
 from pathlib import Path
 
-FITCSV_TOOL = (
-    Path(__file__).parent.parent.parent / "tools" / "fit-sdk" / "FitCSVTool.jar"
-)
+sys.path.insert(0, str(Path(__file__).parent.parent))
+
+_REPO_ROOT = Path(__file__).parent.parent
+FITCSV_TOOL = _REPO_ROOT / "tools" / "fit-sdk" / "FitCSVTool.jar"
+_DEFAULT_OUTPUT = _REPO_ROOT / "test_output" / "race_plan_test.fit"
 
 
 @dataclass
@@ -114,6 +123,12 @@ def main():
         help="Generate a test FIT file and validate it",
     )
     parser.add_argument("--file", type=str, help="Validate an existing .fit file")
+    parser.add_argument(
+        "--out",
+        type=str,
+        default=str(_DEFAULT_OUTPUT),
+        help=f"Where --generate-test writes the sample file (default: {_DEFAULT_OUTPUT})",
+    )
     args = parser.parse_args()
 
     if args.generate_test:
@@ -121,10 +136,8 @@ def main():
         fit_bytes = generate_test_fit()
         print(f"Generated {len(fit_bytes)} bytes")
 
-        output_path = (
-            Path(__file__).parent.parent.parent / "test_output" / "race_plan_test.fit"
-        )
-        output_path.parent.mkdir(exist_ok=True)
+        output_path = Path(args.out)
+        output_path.parent.mkdir(parents=True, exist_ok=True)
         output_path.write_bytes(fit_bytes)
         print(f"Saved to: {output_path}")
         print()

@@ -2,7 +2,7 @@
 
 import logging
 
-from fastapi import APIRouter, Depends, Request
+from fastapi import APIRouter, Depends, Request, Response
 from fastapi.responses import HTMLResponse, RedirectResponse
 
 from app.dependencies import get_optional_user
@@ -19,6 +19,6 @@ templates = create_templates()
 def performance_training_page(
     request: Request,
     current_user: User = Depends(get_optional_user),
-) -> HTMLResponse:
+) -> Response:
     """Redirect to unified home with time-goal mode."""
     return RedirectResponse(url="/?mode=time", status_code=302)

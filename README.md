@@ -11,7 +11,7 @@ result onto your watch calendar so the session shows up on your wrist.
 Built with FastAPI, SQLAlchemy and SQLite, deployed on Fly.io.
 
 ```
-56,471 lines  ·  274 modules  ·  1,805 tests  ·  74% coverage gate
+app/  ·  66,517 lines  ·  308 modules  ·  12,600+ tests  ·  85% coverage gate
 ```
 
 > Personal project, running in production for its author. Not accepting
@@ -55,9 +55,20 @@ are rejected, because those are the ones that couple the import graphs.
 
 `core/` imports nothing from `contexts/`, `infrastructure/`, or SQLAlchemy. It is
 pure calculation: VDOT, phases, mileage progression, workout building. Pyright
-type-checks `app/domain` and `app/core` only — keeping those layers free of I/O
-is exactly what makes them checkable, which is the argument for pushing more
-logic down into them.
+type-checks `app/domain`, `app/core`, `app/models`, `app/schemas`,
+`app/dependencies`, `app/infrastructure`, `app/application` and `app/web` —
+keeping logic pure is what makes it checkable, which is the argument for pushing
+more of it down into `core/`.
+
+The scope is a **ratchet**. The ORM models were converted to `Mapped[...]`
+annotations, which dropped the whole-app error count from 1033 to 237 and let the
+surrounding packages join the checked set; working through the errors those
+annotations *exposed* then cleared `app/infrastructure`, `app/application` and
+`app/web` as well. Only `app/contexts` remains — staged work, not a blanket
+exclusion, because each remaining error is a nullable value reaching code that
+assumed it was present, and deciding what the None case should do is training
+logic. Several were live bugs: a plan with no `weeks_duration` used to 500 the
+plan page, the nudge sweep and the status label.
 
 ### The Coach's Note: the model gets a voice, never a fact
 
@@ -270,11 +281,11 @@ the Coach's Note is produced by the deterministic rules engine; with no
 ## Tests and quality gates
 
 ```bash
-python3 -m pytest tests/              # full suite (coverage gate: 74%)
+python3 -m pytest tests/              # full suite (coverage gate: 85%)
 python3 -m pytest tests/test_core/    # pure-logic tests
 ruff check app/ tests/                # lint
 ruff format --check app/ tests/       # formatting
-pyright                               # types (app/domain + app/core)
+pyright                               # types (ratcheted scope)
 ```
 
 Test layers mirror the architecture: `test_core/` (pure logic), `test_services/`,

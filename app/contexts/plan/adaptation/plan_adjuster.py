@@ -65,7 +65,14 @@ def gather_signals(
     provider = fitness_provider or default_provider()
     training_plan = SQLAlchemyPlanRepository(db).get_for_user(plan_id, user_id)
 
-    if not training_plan or not training_plan.start_date:
+    if not training_plan:
+        return None
+
+    # Resolved here rather than further down so the guard is on the value the
+    # week arithmetic actually consumes — `_to_date` returns None for a plan with
+    # no start date, and `compute_current_week` cannot work from that.
+    start_date = _to_date(training_plan.start_date)
+    if start_date is None:
         return None
 
     if run_map:
@@ -79,7 +86,6 @@ def gather_signals(
         except (AttributeError, TypeError):
             pass
 
-    start_date = _to_date(training_plan.start_date)
     today = today_date()
     current_week = compute_current_week(start_date, today, clamp_min=1, pre_start=1)
 

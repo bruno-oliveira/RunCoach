@@ -154,7 +154,10 @@ class FITService:
 
         file_id = FileIdMessage()
         file_id.type = FileType.WORKOUT
-        file_id.manufacturer = Manufacturer.GARMIN
+        # fit-tool's setter is annotated `value: int`, but its own
+        # `Field.encode_value` branches on `isinstance(value, Enum)` and
+        # takes `.value` — passing the enum member is the intended usage.
+        file_id.manufacturer = Manufacturer.GARMIN  # type: ignore[assignment]
         file_id.time_created = int(time.time() * 1000)
         builder.add(file_id)
 
@@ -254,7 +257,10 @@ class FITService:
 
         file_id = FileIdMessage()
         file_id.type = FileType.WORKOUT
-        file_id.manufacturer = Manufacturer.GARMIN
+        # fit-tool's setter is annotated `value: int`, but its own
+        # `Field.encode_value` branches on `isinstance(value, Enum)` and
+        # takes `.value` — passing the enum member is the intended usage.
+        file_id.manufacturer = Manufacturer.GARMIN  # type: ignore[assignment]
         file_id.time_created = int(time.time() * 1000)
         builder.add(file_id)
 

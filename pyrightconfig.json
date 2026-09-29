@@ -1,10 +1,18 @@
 {
   "include": [
     "app/domain",
-    "app/core"
+    "app/core",
+    "app/models",
+    "app/schemas",
+    "app/dependencies",
+    "app/infrastructure",
+    "app/application",
+    "app/web"
   ],
   "pythonVersion": "3.11",
   "typeCheckingMode": "basic",
   "reportMissingImports": true,
-  "reportMissingModuleSource": false
+  "reportMissingModuleSource": false,
+  "reportUnsupportedDunderAll": false,
+  "//reportUnsupportedDunderAll": "The cross-context boundary shims (app/application/ports.py and the package __init__ files under app/contexts) publish a computed `__all__ = list(_MAPPING)` so the lazy re-export list has one source of truth. Pyright cannot statically verify a computed __all__, so it warns on those files; the pattern is deliberate — it is what keeps sibling contexts from importing each other eagerly — not a defect to code around."
 }

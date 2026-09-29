@@ -24,11 +24,21 @@ MIN_VDOT_DISTANCE_KM = 2.0
 
 
 def apply_vdot(run_log: RunLog) -> None:
-    """Set the run's VDOT when it is long enough to support one."""
-    if run_log.distance_km >= MIN_VDOT_DISTANCE_KM and run_log.duration_minutes > 0:
+    """Set the run's VDOT when it is long enough to support one.
+
+    A row with no distance or duration is simply not eligible. The guard below
+    used to compare against ``None``, which raised ``TypeError`` — and since
+    importers call this per activity inside a broad ``except``, the effect was
+    that such a run silently lost its VDOT rather than that anything surfaced.
+    """
+    distance_km = run_log.distance_km
+    duration_minutes = run_log.duration_minutes
+    if distance_km is None or duration_minutes is None:
+        return
+    if distance_km >= MIN_VDOT_DISTANCE_KM and duration_minutes > 0:
         vdot = VDOTCalculator.calculate_vdot(
-            run_log.distance_km,
-            int(run_log.duration_minutes * 60),
+            distance_km,
+            int(duration_minutes * 60),
             elevation_gain_m=run_log.elevation_gain_m,
         )
         if vdot:
@@ -43,11 +53,19 @@ def classify_effort_and_type(run_log: RunLog, user: User, db: Session) -> None:
     class and workout type. Each is guarded separately so one failing never
     blocks the other or the import itself.
     """
+    distance_km = run_log.distance_km
+    if distance_km is None:
+        # Both classifiers are distance-driven; there is nothing to infer from
+        # without it, and the calls below would raise inside the per-classifier
+        # handlers — reading as "classification failed" when the truth is
+        # "nothing to classify".
+        return
+
     try:
         from app.contexts.runner.fitness.effort_classifier import classify_effort
 
         effort_class = classify_effort(
-            distance_km=run_log.distance_km,
+            distance_km=distance_km,
             avg_pace_min_km=run_log.avg_pace_min_km,
             perceived_effort=run_log.perceived_effort,
             user_id=user.id,
@@ -67,7 +85,7 @@ def classify_effort_and_type(run_log: RunLog, user: User, db: Session) -> None:
         )
 
         wt_result = classify_workout_type(
-            distance_km=run_log.distance_km,
+            distance_km=distance_km,
             duration_minutes=run_log.duration_minutes,
             avg_pace_min_km=run_log.avg_pace_min_km,
             avg_heart_rate=run_log.avg_heart_rate,

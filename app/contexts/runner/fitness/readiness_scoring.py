@@ -35,7 +35,10 @@ def compute_weekly_volumes(
             continue
         week_idx = delta // 7
         if week_idx < num_weeks:
-            volumes[week_idx] += run.distance_km
+            # Nullable column: a run with no recorded distance contributes
+            # nothing to its week's volume. Adding it directly raised TypeError,
+            # which lost the whole readiness report for that runner.
+            volumes[week_idx] += run.distance_km or 0.0
     return volumes
 
 
@@ -107,9 +110,15 @@ def score_consistency(
 def score_long_run(
     longest_actual: float,
     longest_planned: float,
-    target_distance_str: str,
+    target_distance_str: Optional[str],
 ) -> tuple[float, str]:
-    """Score long run readiness against the target race distance."""
+    """Score long run readiness against the target race distance.
+
+    ``target_distance_str`` is Optional because the plan column is: ``parse_float``
+    already answered ``None`` with ``0.0`` at runtime, and the fallbacks below
+    handle a zero benchmark. Passing the annotation honestly beats forcing every
+    caller to invent a placeholder distance.
+    """
     target = parse_float(target_distance_str)
 
     benchmark = target * 0.75
@@ -215,7 +224,7 @@ def vdot_for_goal_time(
 
 def score_vdot(
     user_id: str,
-    target_distance_str: str,
+    target_distance_str: Optional[str],
     db: Session,
     *,
     goal_time: Optional[str] = None,
@@ -477,7 +486,7 @@ def score_mountain_simulation(
 
 def build_scenarios(
     vdot_data: Dict,
-    target_distance_str: str,
+    target_distance_str: Optional[str],
     target_elevation_gain_m: Optional[float] = None,
     trail_runs_count: Optional[int] = None,
 ) -> List[Dict[str, Any]]:

@@ -19,7 +19,10 @@ class UserCreate(UserBase):
 class UserResponse(UserBase):
     id: str
     google_id: Optional[str] = None
-    created_at: datetime
+    # Optional because the column is: a row inserted outside the ORM can carry a
+    # NULL. Widened here rather than coerced to "now" at the boundary, since that
+    # would assert a join date the database never recorded.
+    created_at: Optional[datetime] = None
     plans_generated: int
     intervals_connected: bool = False
     age: Optional[int] = None

@@ -53,7 +53,8 @@ def randomize_meals(
 
         # Generate new meal blueprint with different randomization
         new_nutrition_plan = random_nutrition_engine.generate_weekly_meal_plan(
-            training_plan.current_weekly_km,
+            # Nullable column, non-optional parameter; see plan_view.py.
+            training_plan.current_weekly_km or 0.0,
             training_plan.target_distance_km,
         )
 

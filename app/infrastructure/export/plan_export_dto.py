@@ -10,6 +10,8 @@ from dataclasses import dataclass
 from datetime import datetime
 from typing import TYPE_CHECKING, Any, Dict, List, Optional
 
+from app.core.time_utils import utcnow_naive
+
 if TYPE_CHECKING:
     from app.models.training_plan import TrainingPlan
 
@@ -55,11 +57,19 @@ class PlanExportDTO:
         return cls(
             id=plan.id,
             plan_type=getattr(plan, "plan_type", "distance") or "distance",
-            target_distance=plan.target_distance,
+            # These four are structurally required for an export to mean
+            # anything, but every one of the columns behind them is nullable, so
+            # the DTO's non-Optional typing only holds if the boundary collapses
+            # a NULL. Coerced rather than widened to Optional — the renderer
+            # should not have to reason about a plan with no duration — and in
+            # the same style as `plan_type` above. A degenerate value on the
+            # cover is the right failure mode for a row that cannot describe a
+            # real plan, and it beats printing "None" or refusing the download.
+            target_distance=plan.target_distance or "",
             target_distance_km=plan.target_distance_km,
-            weeks_duration=plan.weeks_duration,
-            current_weekly_km=plan.current_weekly_km,
-            created_at=plan.created_at,
+            weeks_duration=plan.weeks_duration or 0,
+            current_weekly_km=plan.current_weekly_km or 0.0,
+            created_at=plan.created_at or utcnow_naive(),
             plan_data=data,
             nutrition_plan_data=plan.nutrition_plan_data,
             max_heart_rate=plan.max_heart_rate,

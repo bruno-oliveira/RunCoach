@@ -30,7 +30,10 @@ from dataclasses import dataclass
 from typing import Any, Dict, List, Optional
 
 from app.application.ambient_sync_service import AmbientSyncService, RunnerSync
-from app.application.push_notification_service import get_push_notifier
+from app.application.push_notification_service import (
+    after_sync_off_loop,
+    get_push_notifier,
+)
 from app.application.watch_sync_service import resync_plan_to_watch
 from app.core.time_utils import use_timezone
 
@@ -154,7 +157,7 @@ async def _process_locked(
 
             if notify and result.imported:
                 try:
-                    get_push_notifier(db).after_sync(user, result)
+                    await after_sync_off_loop(get_push_notifier(db), user, result)
                     db.commit()
                 except Exception:
                     logger.exception("Post-sync notification failed for %s", user_id)

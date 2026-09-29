@@ -5,12 +5,13 @@ rich signal-reshape logic is covered by tests/test_services/
 test_coach_summary_service.py with a frozen clock.
 """
 
-from datetime import datetime, timedelta
+from datetime import timedelta
 
 import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy.orm import Session
 
+from app.core.time_utils import utcnow_naive
 from app.dependencies import get_current_user, get_db
 from app.main import app
 from app.models import TrainingPlan, User
@@ -33,7 +34,7 @@ def plan(test_db: Session, owner: User) -> TrainingPlan:
         target_distance="10",
         weeks_duration=8,
         vdot=45.0,
-        start_date=datetime.utcnow() - timedelta(weeks=2),
+        start_date=utcnow_naive() - timedelta(weeks=2),
         plan_data=[
             {"week": 1, "total_km": 30.0, "phase": "build", "daily_workouts": []}
         ],

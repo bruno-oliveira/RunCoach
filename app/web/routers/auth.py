@@ -40,7 +40,9 @@ def _user_response(user: User) -> UserResponse:
         name=user.name,
         picture=user.picture,
         created_at=user.created_at,
-        plans_generated=user.plans_generated,
+        # A NULL counter means "none recorded", for which 0 is the neutral value,
+        # so this one is coerced rather than widened.
+        plans_generated=user.plans_generated or 0,
         intervals_connected=bool(user.intervals_athlete_id),
         age=user.age,
         max_hr=user.max_hr,

@@ -1,19 +1,30 @@
-"""Simple in-memory rate limiting for authentication endpoints."""
+"""Simple in-memory rate limiting for authentication endpoints.
+
+Per-process state, by design and by limitation: the counters live in this
+module's dicts, so they bound abuse against *one* machine. That is true today
+(Fly runs a single scale-to-zero machine) but silently stops being true the
+moment the app scales out — two machines would each grant the full budget. If
+that ever happens, this needs a shared store rather than a bigger dict.
+"""
 
 import time
-from collections import defaultdict
 from threading import Lock
 
 from fastapi import HTTPException, Request, status
 
 from app.infrastructure.config import settings
 
+# Buckets for IPs that never come back are swept out every this many calls, so
+# a long-lived machine does not retain one entry per IP that has ever called.
+_SWEEP_EVERY = 256
+
 
 class RateLimiter:
     def __init__(self, max_requests: int, window_seconds: int):
         self._max = max_requests
         self._window = window_seconds
-        self._hits: dict[str, list[float]] = defaultdict(list)
+        self._hits: dict[str, list[float]] = {}
+        self._calls_since_sweep = 0
         self._lock = Lock()
 
     def _client_ip(self, request: Request) -> str:
@@ -36,20 +47,41 @@ class RateLimiter:
                 return chain[-hops]
         return request.client.host if request.client else "unknown"
 
+    def _sweep(self, cutoff: float) -> None:
+        """Drop buckets with nothing left in the window. Caller holds the lock.
+
+        Without this the dict grew monotonically: every distinct IP kept its
+        list forever, including the single timestamp of an IP that called once
+        months ago and never returned. Pruning the *current* IP alone would not
+        help — the abandoned ones are exactly the ones that never call again to
+        trigger their own cleanup.
+        """
+        expired = [
+            ip for ip, hits in self._hits.items() if not any(h > cutoff for h in hits)
+        ]
+        for ip in expired:
+            del self._hits[ip]
+
     def check(self, request: Request) -> None:
         ip = self._client_ip(request)
         now = time.monotonic()
         cutoff = now - self._window
 
         with self._lock:
-            timestamps = self._hits[ip]
-            self._hits[ip] = [t for t in timestamps if t > cutoff]
-            if len(self._hits[ip]) >= self._max:
+            self._calls_since_sweep += 1
+            if self._calls_since_sweep >= _SWEEP_EVERY:
+                self._calls_since_sweep = 0
+                self._sweep(cutoff)
+
+            timestamps = [t for t in self._hits.get(ip, ()) if t > cutoff]
+            if len(timestamps) >= self._max:
+                self._hits[ip] = timestamps
                 raise HTTPException(
                     status_code=status.HTTP_429_TOO_MANY_REQUESTS,
                     detail="Too many requests. Please try again later.",
                 )
-            self._hits[ip].append(now)
+            timestamps.append(now)
+            self._hits[ip] = timestamps
 
 
 auth_limiter = RateLimiter(max_requests=10, window_seconds=60)

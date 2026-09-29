@@ -9,7 +9,7 @@ constraints as generated plans:
 
 from __future__ import annotations
 
-from typing import Dict, Iterable, List
+from typing import Any, Dict, Iterable, List
 
 from app.core.training.periodization.long_run_calculator import (
     get_weekly_long_run_ratio_cap,
@@ -113,7 +113,9 @@ def enforce_week_structure(
 
 def enforce_future_growth_cap(
     ordered_week_numbers: List[int],
-    weekly_plans_by_number: Dict[int, object],
+    # `Any`, not `object`: this reads `.id` and writes `.total_km`, and the
+    # tests pass a duck-typed stub rather than a real WeeklyPlan.
+    weekly_plans_by_number: Dict[int, Any],
     workouts_by_week_id: Dict[str, List],
     pd_week: Dict[int, Dict],
     *,

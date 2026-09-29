@@ -63,7 +63,10 @@ def view_plan(
 
         if not training_plan.nutrition_plan_data:
             nutrition_plan_raw = nutrition_engine.generate_weekly_meal_plan(
-                training_plan.current_weekly_km,
+                # The column is nullable but the engine needs a number; a NULL
+                # volume has a neutral equivalent, so it is coerced rather than
+                # widening a signature the engine uses for calorie scaling.
+                training_plan.current_weekly_km or 0.0,
                 training_plan.target_distance_km,
             )
             training_plan.nutrition_plan_data = nutrition_plan_raw
@@ -245,9 +248,15 @@ def view_workout_day(
 
             sd = training_plan.start_date
             start_d = sd.date() if isinstance(sd, _dt) else sd
-            num_weeks = len(plan_data) if plan_data else training_plan.weeks_duration
+            num_weeks = (
+                len(plan_data) if plan_data else (training_plan.weeks_duration or 0)
+            )
             labels = workout_dates(start_d, num_weeks)
-            date_label = labels.get((week_num, day_num))
+            # `week`/`day` come out of the plan_data JSON, so either can be absent;
+            # the label lookup is keyed by (int, int) and simply has no entry for a
+            # workout that is missing one.
+            if week_num is not None and day_num is not None:
+                date_label = labels.get((week_num, day_num))
             week_dates = build_week_dates(start_d, num_weeks)
             current_week_number = compute_current_week(start_d, local_today())
             current_day = local_today().isoweekday()

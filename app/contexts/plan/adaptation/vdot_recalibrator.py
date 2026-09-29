@@ -184,6 +184,9 @@ def _apply_recalibration(
     plan_data, pd_week, pd_workout = parse_plan_data_lookups(training_plan)
 
     start_date = _to_date(training_plan.start_date)
+    if start_date is None:
+        # No start date, no week index — and no future weeks to re-pace.
+        return None
     today = today_date()
     current_week = compute_current_week(start_date, today, clamp_min=1, pre_start=1)
 

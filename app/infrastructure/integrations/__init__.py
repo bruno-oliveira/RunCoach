@@ -1,13 +1,12 @@
-"""External integration services (Intervals.icu, FIT)."""
+"""External integration services (Intervals.icu, FIT).
 
-__all__ = [
-    "FitService",
-]
+Import implementations from their own modules —
+``app.infrastructure.integrations.intervals_service``,
+``app.infrastructure.integrations.fit_service``.
 
-
-def __getattr__(name: str):
-    if name == "FitService":
-        from app.infrastructure.integrations.fit_service import FitService
-
-        return FitService
-    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
+This package used to re-export ``FitService`` through a ``__getattr__`` shim, but
+the class is ``FITService``, so the shim could only ever raise ``ImportError``,
+and nothing imported the alias anyway. Removed rather than corrected: a lazy
+second name for a class nobody reaches for is a name waiting to disagree with the
+first one.
+"""
