@@ -11,6 +11,11 @@ primary_region = 'sjc'
 
 [deploy]
   strategy = 'immediate'
+  # Apply schema + backfill migrations once per release, on a temporary machine
+  # with the volume attached and before traffic moves. A failing migration
+  # aborts the deploy and leaves the previous release serving, instead of
+  # leaving a machine that can never pass its health check.
+  release_command = 'python -m app.migrations'
 
 [checks.liveness]
   port = 8000
@@ -24,6 +29,10 @@ primary_region = 'sjc'
 [env]
   DATABASE_URL = 'sqlite:////data/runcoach.db'
    # SECRET_KEY and GOOGLE_CLIENT_ID are set via Fly.io secrets
+   # Migrations belong to release_command above: with scale-to-zero, leaving
+   # this on would re-run the Alembic chain plus the startup backfills every
+   # time the machine woke.
+  RUN_STARTUP_MIGRATIONS = 'false'
 
 [mounts]
   source = "runcoach_data"

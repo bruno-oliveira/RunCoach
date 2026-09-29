@@ -43,10 +43,10 @@ per-session watch state without joining through ``weekly_plans``.
 """
 
 import logging
-from datetime import datetime, timedelta
+from datetime import timedelta
 from typing import Any
 
-from app.core.time_utils import local_today
+from app.core.time_utils import local_today, utcnow_naive
 from app.core.training.watch_mirror import (
     WINDOW_DAYS,
     diff_window,
@@ -77,7 +77,7 @@ def record_pushed_events(training_plan, events: list[dict[str, Any]], db) -> Non
         if external_id is not None:
             hashes[str(external_id)] = event_hash(event)
     training_plan.watch_event_hashes = hashes
-    training_plan.watch_synced_at = datetime.utcnow()
+    training_plan.watch_synced_at = utcnow_naive()
     training_plan.watch_sync_enabled = True
     training_plan.watch_sync_error = None
     db.commit()
@@ -146,7 +146,7 @@ async def resync_plan_to_watch(plan_id: str, user_id: str, intervals_service) ->
             )
 
         training_plan.watch_event_hashes = diff.next_hashes
-        training_plan.watch_synced_at = datetime.utcnow()
+        training_plan.watch_synced_at = utcnow_naive()
         training_plan.watch_sync_error = None
         db.commit()
         if diff.to_create or diff.to_delete_ids:

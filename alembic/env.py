@@ -14,7 +14,17 @@ from app.models import Base
 config = context.config
 
 if config.config_file_name is not None:
-    fileConfig(config.config_file_name)
+    # disable_existing_loggers=False is load-bearing, not tidiness.
+    #
+    # fileConfig() defaults it to True, and this line runs on every `upgrade` —
+    # including the in-process run in the FastAPI lifespan. The default sets
+    # `disabled = True` on every logger that already existed, so booting the app
+    # would silently switch off every `app.*` logger created before that point:
+    # no crash, no warning, the logging simply stops. On a single small machine
+    # where logs are the only signal, that is the difference between a
+    # diagnosable incident and a blind one. It also made log-assertion tests
+    # depend on test order.
+    fileConfig(config.config_file_name, disable_existing_loggers=False)
 
 target_metadata = Base.metadata
 

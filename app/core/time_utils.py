@@ -74,6 +74,24 @@ def local_today() -> date:
     return local_now().date()
 
 
+def utcnow_naive() -> datetime:
+    """Naive UTC 'now' — the storage convention for every ``DateTime`` column.
+
+    Every model column is a naive ``sa.DateTime`` holding UTC, because SQLite
+    has no timezone-aware type and a mixed naive/aware column is the classic
+    source of a ``TypeError`` on comparison. This is the one place that decision
+    lives, so the call sites that used to spell out
+    ``datetime.now(timezone.utc).replace(tzinfo=None)`` agree by construction
+    rather than by copy-paste, and a future move to tz-aware storage changes one
+    function.
+
+    Not to be confused with :func:`local_now`, which is *aware* and follows the
+    requesting user's timezone. Anything user-facing ("what day is it for this
+    runner?") wants that one; this is for stamping a row.
+    """
+    return datetime.now(timezone.utc).replace(tzinfo=None)
+
+
 def current_timezone_name() -> Optional[str]:
     """IANA name of the timezone bound to this context, if one was sent."""
     tz = _request_tz.get()

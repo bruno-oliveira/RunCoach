@@ -55,6 +55,11 @@ def _rpe_from_activity(activity: dict[str, Any]) -> Optional[int]:
     runs, i.e. nearly all of them, that signal was silently absent.
     """
     raw = activity.get("icu_rpe")
+    if raw is None:
+        # Guarded explicitly instead of leaning on float(None) raising TypeError
+        # into the handler below: "the runner didn't record an RPE" is the common
+        # case, not an error, and the checker rightly flags a None reaching float.
+        return None
     try:
         value = int(round(float(raw)))
     except (TypeError, ValueError):

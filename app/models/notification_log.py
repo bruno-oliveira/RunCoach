@@ -8,10 +8,12 @@ phone buzz twice for the same thing.
 """
 
 import uuid
-from datetime import datetime, timezone
+from datetime import datetime
 
-from sqlalchemy import Column, DateTime, ForeignKey, String, UniqueConstraint
+from sqlalchemy import DateTime, ForeignKey, String, UniqueConstraint
+from sqlalchemy.orm import Mapped, mapped_column
 
+from app.core.time_utils import utcnow_naive
 from app.models.base import Base
 
 
@@ -21,12 +23,12 @@ class NotificationLog(Base):
         UniqueConstraint("user_id", "kind", "key", name="uq_notification_once"),
     )
 
-    id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
-    user_id = Column(
-        String, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True
+    id: Mapped[str] = mapped_column(
+        String, primary_key=True, default=lambda: str(uuid.uuid4())
     )
-    kind = Column(String(40), nullable=False)
-    key = Column(String(120), nullable=False)
-    sent_at = Column(
-        DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None)
+    user_id: Mapped[str] = mapped_column(
+        String, ForeignKey("users.id", ondelete="CASCADE"), index=True
     )
+    kind: Mapped[str] = mapped_column(String(40))
+    key: Mapped[str] = mapped_column(String(120))
+    sent_at: Mapped[datetime | None] = mapped_column(DateTime, default=utcnow_naive)

@@ -176,9 +176,11 @@ def get_race_predictions(
             result["predicted_time"] = (
                 VDOTCalculator.format_duration(predicted) if predicted else None
             )
+            fast = _calibrated(range_data["fast"])
+            slow = _calibrated(range_data["slow"])
             result["range"] = {
-                "fast": VDOTCalculator.format_duration(_calibrated(range_data["fast"])),
-                "slow": VDOTCalculator.format_duration(_calibrated(range_data["slow"])),
+                "fast": VDOTCalculator.format_duration(fast) if fast else None,
+                "slow": VDOTCalculator.format_duration(slow) if slow else None,
             }
             result["message"] = "Log a goal time to see gap analysis"
     else:
@@ -257,7 +259,12 @@ def update_run_log(
         setattr(run, field, value)
 
     if "distance_km" in update_data or "duration_minutes" in update_data:
-        run.avg_pace_min_km = run.duration_minutes / run.distance_km
+        # Both columns are nullable, and the values may come from an existing row
+        # rather than the payload, so recompute only when both are usable. The
+        # truthiness check also rules out a zero distance: this used to be a bare
+        # division that turned a partial edit of an incomplete row into a 500.
+        if run.distance_km and run.duration_minutes:
+            run.avg_pace_min_km = run.duration_minutes / run.distance_km
 
     db.commit()
     db.refresh(run)

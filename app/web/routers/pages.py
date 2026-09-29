@@ -45,6 +45,8 @@ def home(
         for plan in plans:
             decorate_plan_status(plan, today)
         current_plan = current_active_plan(plans)
+        # `status_label` is declared on `TrainingPlan` (view-only, default None)
+        # and set by `decorate_plan_status` above, so this is a checked read.
         plan_count = sum(1 for p in plans if p.status_label != "Completed")
 
     return templates.TemplateResponse(

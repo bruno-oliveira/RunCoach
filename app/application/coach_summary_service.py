@@ -237,6 +237,8 @@ def build_today(plan: TrainingPlan, user_id: str, db: Session) -> Dict[str, Any]
 
     today = local_today()
     total_weeks = len(plan_data)
+    # `pre_start=1` makes the return type a plain `int` (see the overloads on
+    # `compute_current_week`), so no None-check is owed here.
     current_week = compute_current_week(
         start, today, clamp_min=1, total_weeks=total_weeks, pre_start=1
     )
@@ -341,7 +343,18 @@ def build_training_age(user_id: str, db: Session) -> Dict[str, Any]:
     def _monday(d: date) -> date:
         return d - timedelta(days=d.weekday())
 
-    dates = [(r.date.date() if isinstance(r.date, datetime) else r.date) for r in runs]
+    # The query filters `date IS NOT NULL`, but the column is nullable so its
+    # type is `datetime | None` — drop the Nones here as well, so the calendar
+    # maths below never sees one and the invariant is visible locally rather than
+    # resting on a filter written ten lines up. This used to pass `None` into
+    # `_monday`, which raised TypeError and lost the whole training-age summary.
+    dates = [
+        run.date.date() if isinstance(run.date, datetime) else run.date
+        for run in runs
+        if run.date is not None
+    ]
+    if not dates:
+        return {"available": False}
     today = local_today()
     first = dates[0]
     first_monday = _monday(first)
@@ -413,8 +426,9 @@ def build_coach_patterns(
             patterns.append({"workout_type": wtype, "message": message})
 
     week_pulse = None
-    if plan.start_date:
-        start = _to_date(plan.start_date)
+    start = _to_date(plan.start_date)
+    if start is not None:
+        # `pre_start=1` again: the overload gives this a concrete `int`.
         current_week = compute_current_week(
             start, local_today(), clamp_min=1, pre_start=1
         )

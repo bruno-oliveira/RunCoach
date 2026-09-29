@@ -4,7 +4,7 @@ Extracted from PerformanceService to keep the main service under 500 lines.
 """
 
 import logging
-from datetime import datetime, timedelta, timezone
+from datetime import date, datetime, timedelta, timezone
 from typing import Any, Dict, Optional, Tuple
 
 from sqlalchemy.orm import Session
@@ -12,6 +12,20 @@ from sqlalchemy.orm import Session
 from app.models import RunLog, TrainingPlan
 
 logger = logging.getLogger(__name__)
+
+
+def _plan_start_date(plan: TrainingPlan) -> Optional[date]:
+    """The plan's start date, falling back to when the row was created.
+
+    Neither column is NOT NULL, so both can be absent on a row written outside
+    the ORM. Callers must handle ``None``: the arithmetic below used to subtract
+    from it directly, which raised ``TypeError`` and took out the whole progress
+    view for that plan.
+    """
+    start = plan.start_date or plan.created_at
+    if start is None:
+        return None
+    return start.date() if isinstance(start, datetime) else start
 
 
 def get_plan_with_data(
@@ -71,9 +85,13 @@ def get_todays_workout(db: Session, plan: TrainingPlan) -> Dict[str, Any]:
     Returns:
         Dictionary with status and workout details if applicable.
     """
-    start = plan.start_date or plan.created_at
+    start_d = _plan_start_date(plan)
+    if start_d is None:
+        # No start date and no created_at: there is no calendar to place this
+        # plan on, so it has no "today's workout".
+        return {"status": "unknown"}
+
     today = datetime.now(timezone.utc).replace(tzinfo=None).date()
-    start_d = start.date() if isinstance(start, datetime) else start
     days_elapsed = (today - start_d).days
 
     if days_elapsed < 0:
@@ -140,8 +158,9 @@ def get_plan_progress(db: Session, plan: TrainingPlan) -> Dict[str, Any]:
         Dictionary with progress stats.
     """
     plan_data = plan.plan_data if plan.plan_data else []
-    start = plan.start_date or plan.created_at
-    start_date = start.date() if isinstance(start, datetime) else start
+    start_date = _plan_start_date(plan)
+    if start_date is None:
+        return {"available": False, "reason": "Plan has no start date."}
     total_weeks = len(plan_data)
     end_date = start_date + timedelta(days=total_weeks * 7)
 
@@ -175,6 +194,10 @@ def get_plan_progress(db: Session, plan: TrainingPlan) -> Dict[str, Any]:
 
     for run in runs:
         run_date = run.date.date() if isinstance(run.date, datetime) else run.date
+        if run_date is None:
+            # The query filters RunLog.date, but the column is nullable so the
+            # checker cannot see it, and a run with no date has no week.
+            continue
         days_from_start = (run_date - start_date).days
         if days_from_start < 0:
             continue

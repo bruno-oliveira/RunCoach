@@ -103,7 +103,17 @@ class PlanViewService:
             sd = training_plan.start_date
             start_d = sd.date() if isinstance(sd, _datetime) else sd
             current_wk = compute_current_week(start_d, local_today(), pre_start=0)
-            if current_wk > training_plan.weeks_duration:
+            weeks_duration = training_plan.weeks_duration
+            # Both sides are legitimately optional: `compute_current_week` is
+            # typed Optional (it returns its pre-start sentinel) and the column is
+            # nullable. Comparing them directly raised TypeError here, which took
+            # the whole plan page down for a row with no duration. Without a
+            # duration we cannot claim the plan has finished, so we do not.
+            if (
+                current_wk is not None
+                and weeks_duration is not None
+                and current_wk > weeks_duration
+            ):
                 comp_stats = self.get_completion_stats(training_plan, db)
                 next_plan_cta = self.get_next_plan_cta(training_plan.target_distance_km)
                 recovery = recovery_guidance(
@@ -133,7 +143,7 @@ class PlanViewService:
             sd2 = training_plan.start_date
             start_d2 = sd2.date() if isinstance(sd2, _dt2) else sd2
             cw = compute_current_week(start_d2, local_today(), pre_start=0)
-            if 1 <= cw <= (training_plan.weeks_duration or 0):
+            if cw is not None and 1 <= cw <= (training_plan.weeks_duration or 0):
                 try:
                     week_pulse = self.get_week_pulse(training_plan, cw, db)
                 except Exception as e:
@@ -217,6 +227,11 @@ class PlanViewService:
 
         evolution: dict[int, dict[str, Any]] = {}
         for wp in weekly_plans:
+            if wp.week_number is None:
+                # Nullable in the schema, but required to key a per-week map. A
+                # row without one is malformed and cannot be placed on a
+                # timeline, so it is skipped rather than keyed as None.
+                continue
             workouts = wp.daily_workouts
             original_total = sum(
                 w.baseline_distance_km or w.distance_km or 0

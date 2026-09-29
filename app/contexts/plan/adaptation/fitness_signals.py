@@ -23,7 +23,11 @@ class FitnessSignalsProvider:
     get_vdot_history: Callable[..., List[Dict[str, Any]]]
     calculate_vdot_trend: Callable[[List[Dict[str, Any]]], str]
     get_training_load: Callable[..., Optional[Dict[str, Any]]]
-    score_mountain_simulation: Callable[..., int]
+    # `Optional[Dict[str, Any]]`, not `int`: the real
+    # `readiness_scoring.score_mountain_simulation` returns the simulation
+    # verdict dict (or None when the plan is not a mountain goal), and the
+    # consumer in `signal_computer` reads it as one.
+    score_mountain_simulation: Callable[..., Optional[Dict[str, Any]]]
 
 
 def default_provider() -> FitnessSignalsProvider:

@@ -1,9 +1,10 @@
 import uuid
-from datetime import datetime, timezone
+from datetime import datetime
+from typing import TYPE_CHECKING, Any
 
 from sqlalchemy import (
+    JSON,
     Boolean,
-    Column,
     DateTime,
     Float,
     ForeignKey,
@@ -11,10 +12,14 @@ from sqlalchemy import (
     Integer,
     String,
 )
-from sqlalchemy.orm import Mapped, relationship
-from sqlalchemy.types import JSON
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
+from app.core.time_utils import utcnow_naive
 from app.models.base import Base
+
+if TYPE_CHECKING:
+    from app.models.user import User
+    from app.models.weekly_plan import WeeklyPlan
 
 
 class TrainingPlan(Base):
@@ -23,39 +28,47 @@ class TrainingPlan(Base):
         Index("idx_training_plan_user_id", "user_id"),
         Index("idx_training_plan_created_at", "created_at"),
     )
+    # The three attributes at the bottom of this class are plain Python
+    # attributes, not columns, and SQLAlchemy's annotated-declarative form
+    # rejects an un-`Mapped` annotation without this opt-in. It is scoped to this
+    # class (not `Base`) because the cost is real: a future column annotation that
+    # *forgets* its `Mapped[]` would silently become a non-column rather than
+    # raising. `tests/test_core/test_model_annotations.py` is the tripwire that
+    # keeps that from happening quietly.
+    __allow_unmapped__ = True
 
-    id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
-    user_id = Column(String, ForeignKey("users.id"), nullable=False)
-    current_weekly_km = Column(Float)
-    target_distance = Column(String)
-    weeks_duration = Column(Integer)
-    max_runs_per_week = Column(Integer, default=4)
-    frequency_composer = Column(String, nullable=True)
-    created_at = Column(
-        DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None)
+    id: Mapped[str] = mapped_column(
+        String, primary_key=True, default=lambda: str(uuid.uuid4())
     )
-    plan_data = Column(JSON)
-    nutrition_plan_data = Column(JSON)
+    user_id: Mapped[str] = mapped_column(String, ForeignKey("users.id"))
+    current_weekly_km: Mapped[float | None] = mapped_column(Float)
+    target_distance: Mapped[str | None] = mapped_column(String)
+    weeks_duration: Mapped[int | None] = mapped_column(Integer)
+    max_runs_per_week: Mapped[int | None] = mapped_column(Integer, default=4)
+    frequency_composer: Mapped[str | None] = mapped_column(String)
+    created_at: Mapped[datetime | None] = mapped_column(DateTime, default=utcnow_naive)
+    plan_data: Mapped[Any | None] = mapped_column(JSON)
+    nutrition_plan_data: Mapped[Any | None] = mapped_column(JSON)
 
-    plan_type = Column(String, default="distance")
-    current_pace = Column(Float)
-    goal_pace = Column(Float)
-    current_time = Column(String)
-    goal_time = Column(String)
+    plan_type: Mapped[str | None] = mapped_column(String, default="distance")
+    current_pace: Mapped[float | None] = mapped_column(Float)
+    goal_pace: Mapped[float | None] = mapped_column(Float)
+    current_time: Mapped[str | None] = mapped_column(String)
+    goal_time: Mapped[str | None] = mapped_column(String)
 
-    max_heart_rate = Column(Integer, nullable=True)
-    start_date = Column(DateTime, nullable=True)
-    adjustment_multiplier = Column(Float, nullable=True)
+    max_heart_rate: Mapped[int | None] = mapped_column(Integer)
+    start_date: Mapped[datetime | None] = mapped_column(DateTime)
+    adjustment_multiplier: Mapped[float | None] = mapped_column(Float)
 
-    body_weight_kg = Column(Float, nullable=True)
-    recent_race_distance_km = Column(Float, nullable=True)
-    recent_race_time_seconds = Column(Integer, nullable=True)
-    vdot = Column(Float, nullable=True)
+    body_weight_kg: Mapped[float | None] = mapped_column(Float)
+    recent_race_distance_km: Mapped[float | None] = mapped_column(Float)
+    recent_race_time_seconds: Mapped[int | None] = mapped_column(Integer)
+    vdot: Mapped[float | None] = mapped_column(Float)
 
     # Trail / ultra parameters (replaces the legacy `terrain` request field).
-    is_trail = Column(Boolean, nullable=False, default=False)
-    target_elevation_gain_m = Column(Float, nullable=True)
-    training_terrain = Column(String, nullable=True)
+    is_trail: Mapped[bool] = mapped_column(Boolean, default=False)
+    target_elevation_gain_m: Mapped[float | None] = mapped_column(Float)
+    training_terrain: Mapped[str | None] = mapped_column(String)
 
     # Backyard ultra parameters. A backyard goal is a loop count, not a distance:
     # `target_distance` / `target_elevation_gain_m` hold the ultra projection
@@ -63,59 +76,79 @@ class TrainingPlan(Base):
     # columns hold what the runner actually signed up for. They are what every
     # display surface should read — the projection is an implementation detail
     # and is clamped, so it does not round-trip to a loop count.
-    is_backyard = Column(Boolean, nullable=False, default=False, server_default="0")
-    backyard_target_loops = Column(Integer, nullable=True)
-    backyard_loop_km = Column(Float, nullable=True)
-    backyard_loop_elevation_gain_m = Column(Float, nullable=True)
+    is_backyard: Mapped[bool] = mapped_column(
+        Boolean, default=False, server_default="0"
+    )
+    backyard_target_loops: Mapped[int | None] = mapped_column(Integer)
+    backyard_loop_km: Mapped[float | None] = mapped_column(Float)
+    backyard_loop_elevation_gain_m: Mapped[float | None] = mapped_column(Float)
 
-    hr_zones_data = Column(JSON, nullable=True)
-    nutrition_phases_data = Column(JSON, nullable=True)
-    race_protocol_data = Column(JSON, nullable=True)
+    hr_zones_data: Mapped[Any | None] = mapped_column(JSON)
+    nutrition_phases_data: Mapped[Any | None] = mapped_column(JSON)
+    race_protocol_data: Mapped[Any | None] = mapped_column(JSON)
 
     CURRENT_SCHEMA_VERSION = 1
-    plan_data_version = Column(Integer, default=CURRENT_SCHEMA_VERSION)
+    plan_data_version: Mapped[int | None] = mapped_column(
+        Integer, default=CURRENT_SCHEMA_VERSION
+    )
 
-    adaptation_history = Column(JSON, nullable=True)
-    last_adjusted_at = Column(DateTime, nullable=True)
-    last_recalibrated_at = Column(DateTime, nullable=True)
-    last_change_plan = Column(JSON, nullable=True)
+    adaptation_history: Mapped[Any | None] = mapped_column(JSON)
+    last_adjusted_at: Mapped[datetime | None] = mapped_column(DateTime)
+    last_recalibrated_at: Mapped[datetime | None] = mapped_column(DateTime)
+    last_change_plan: Mapped[Any | None] = mapped_column(JSON)
     # Last proactive adaptation nudge surfaced to the user (suggest-only). Shape:
     # {"signature": str, "kind": str, "dismissed": bool, ...}. A nudge is only
     # re-shown when its signature changes, so a dismissed suggestion stays quiet
     # until the underlying situation materially moves.
-    last_proactive_nudge = Column(JSON, nullable=True)
+    last_proactive_nudge: Mapped[Any | None] = mapped_column(JSON)
     # Write-through cache for the AI Coach's Note: {"signature": str, "payload": dict}.
     # Regenerated only when the run signature changes (a new run is logged), so the
     # note survives scale-to-zero cold starts instead of being rebuilt each wake.
-    coach_note_cache = Column(JSON, nullable=True)
+    coach_note_cache: Mapped[Any | None] = mapped_column(JSON)
     # Monotonic counter bumped on every distance-mutating apply. Clients send
     # the revision they rendered with so the server can reject stale writes.
-    adaptation_revision = Column(Integer, nullable=False, default=0, server_default="0")
+    adaptation_revision: Mapped[int] = mapped_column(
+        Integer, default=0, server_default="0"
+    )
     # When we last mirrored this plan onto the athlete's Intervals.icu calendar.
     # Display only — `watch_sync_enabled` is what authorises a mirror.
-    watch_synced_at = Column(DateTime, nullable=True)
+    watch_synced_at: Mapped[datetime | None] = mapped_column(DateTime)
     # The runner's standing "keep my watch in sync" opt-in, set on the first
     # send. It authorises the reconciler to create *and delete* events on their
     # calendar, so an adaptation reaches the wrist instead of leaving the watch
     # beeping out a session we've since changed.
-    watch_sync_enabled = Column(
-        Boolean, nullable=False, default=False, server_default="0"
+    watch_sync_enabled: Mapped[bool] = mapped_column(
+        Boolean, default=False, server_default="0"
     )
     # {external_id: hash of the event body we last pushed}. Two jobs: it makes
     # re-mirroring idempotent (unchanged days cost no API writes), and it is our
     # record of which calendar events are ours — the only events the reconciler
     # is ever allowed to delete.
-    watch_event_hashes = Column(JSON, nullable=True)
+    watch_event_hashes: Mapped[Any | None] = mapped_column(JSON)
     # Why the last mirror failed ("auth" | "provider"), or None when it worked.
     # The mirror runs in the background, so without this a revoked token is just
     # a log line and a watch that quietly stops updating.
-    watch_sync_error = Column(String, nullable=True)
-    share_token = Column(String, unique=True, nullable=True, index=True)
+    watch_sync_error: Mapped[str | None] = mapped_column(String)
+    share_token: Mapped[str | None] = mapped_column(String, unique=True, index=True)
 
     user: Mapped["User"] = relationship("User", back_populates="training_plans")
     weekly_plans: Mapped[list["WeeklyPlan"]] = relationship(
         "WeeklyPlan", back_populates="training_plan", cascade="all, delete-orphan"
     )
+
+    # ---- view-only decoration (NOT columns) --------------------------------
+    # Filled in per request by
+    # ``app.contexts.plan.plan_status.decorate_plan_status``. These used to be
+    # attached to the instance at runtime, which made them invisible to the
+    # checker — so every read had to be a defensive ``getattr`` and every write
+    # was an unverifiable assignment. Declaring them with a ``None`` default
+    # makes the contract real: a read on an undecorated plan yields ``None``
+    # instead of raising ``AttributeError``, and both writes and reads
+    # type-check. Deliberately not ``ClassVar`` — that would forbid the
+    # per-instance assignment the decorator exists to perform.
+    status_label: str | None = None
+    target_distance_display: str | None = None
+    experience_level: str | None = None
 
     def backyard_profile(self):
         """Rebuild the stored backyard goal, or ``None`` for other plans.

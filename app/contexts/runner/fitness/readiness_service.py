@@ -177,7 +177,11 @@ class ReadinessService:
         actual_weekly_km = compute_weekly_volumes(
             all_runs_in_range, start_date, current_week
         )
-        longest_run_km = max((r.distance_km for r in all_runs_in_range), default=0)
+        # A run with no distance cannot be the longest one; a 0 floor is the
+        # neutral value for the comparison.
+        longest_run_km = max(
+            (r.distance_km or 0.0 for r in all_runs_in_range), default=0.0
+        )
 
         volume_score, volume_detail = score_volume(
             actual_weekly_km, planned_weekly_km, current_week
@@ -304,5 +308,5 @@ class ReadinessService:
             "peak_planned_long_run_km": round(planned_long_run_km, 1),
             "peak_week_km": round(peak_week_km, 1),
             "total_runs": len(all_runs_in_range),
-            "total_km": round(sum(r.distance_km for r in all_runs_in_range), 1),
+            "total_km": round(sum(r.distance_km or 0.0 for r in all_runs_in_range), 1),
         }

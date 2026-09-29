@@ -2,7 +2,7 @@
 
 import logging
 import secrets
-from datetime import datetime, timedelta
+from datetime import timedelta
 from typing import Optional
 from urllib.parse import quote
 
@@ -34,7 +34,7 @@ from app.contexts.auth.auth_service import AuthService
 from app.contexts.auth.repositories import SQLAlchemyUserRepository
 from app.contexts.plan.adaptation import AdaptationService
 from app.contexts.plan.plan_helpers import get_plan_or_404
-from app.core.time_utils import local_today
+from app.core.time_utils import local_today, utcnow_naive
 from app.core.training.watch_mirror import (
     WINDOW_DAYS,
     build_event,
@@ -343,13 +343,23 @@ async def intervals_webhook(
     return {"ok": True, "accepted": len(batch.athlete_ids)}
 
 
-def _require_connected(current_user: User) -> None:
-    """400 unless the runner has a usable Intervals.icu connection."""
-    if not current_user.intervals_athlete_id or not current_user.intervals_access_token:
+def _require_connected(current_user: User) -> tuple[str, str]:
+    """The runner's Intervals.icu ``(access_token, athlete_id)``, or 400 if absent.
+
+    Returns the credentials rather than only asserting they exist. Both are
+    nullable columns, so a caller that validated with a plain statement then
+    re-read ``current_user.intervals_access_token`` still hands the API layer an
+    ``Optional[str]``. Returning the narrowed values puts the proof and the use in
+    the same place.
+    """
+    access_token = current_user.intervals_access_token
+    athlete_id = current_user.intervals_athlete_id
+    if not access_token or not athlete_id:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Connect Intervals.icu first to send workouts to your watch.",
         )
+    return access_token, athlete_id
 
 
 def _week_data(training_plan, week: int) -> dict:
@@ -375,7 +385,7 @@ async def intervals_push_workout(
     app's "send to watch" action.
     """
     intervals_push_limiter.check(request)
-    _require_connected(current_user)
+    access_token, athlete_id = _require_connected(current_user)
 
     training_plan = get_plan_or_404(
         payload.plan_id, db, current_user, require_user_match=True
@@ -396,8 +406,8 @@ async def intervals_push_workout(
 
     try:
         created = await intervals_service.push_workout(
-            current_user.intervals_access_token,
-            current_user.intervals_athlete_id,
+            access_token,
+            athlete_id,
             event,
         )
     except IntervalsAuthorizationError as authorization_error:
@@ -443,7 +453,7 @@ async def intervals_push_week(
     batch — a week is normally a mix of both.
     """
     intervals_push_limiter.check(request)
-    _require_connected(current_user)
+    access_token, athlete_id = _require_connected(current_user)
 
     training_plan = get_plan_or_404(
         payload.plan_id, db, current_user, require_user_match=True
@@ -472,8 +482,8 @@ async def intervals_push_week(
 
     try:
         created = await intervals_service.push_workouts(
-            current_user.intervals_access_token,
-            current_user.intervals_athlete_id,
+            access_token,
+            athlete_id,
             events,
         )
     except IntervalsAuthorizationError as authorization_error:
@@ -559,7 +569,7 @@ def intervals_confirm_watch_setup(
     the first send, instead of firing a "sent!" toast at someone whose watch is
     about to stay empty.
     """
-    current_user.watch_setup_confirmed_at = datetime.utcnow()
+    current_user.watch_setup_confirmed_at = utcnow_naive()
     db.commit()
     return {"ok": True, "confirmed": True}
 
@@ -615,25 +625,27 @@ async def intervals_watch_status(
     workout reaching the watch, and the runner deserves the difference.
     """
     training_plan = get_plan_or_404(plan_id, db, current_user, require_user_match=True)
-    connected = bool(
-        current_user.intervals_athlete_id and current_user.intervals_access_token
-    )
+    # Read once so the guard below narrows the same values the call uses. The
+    # previous form computed a `connected` bool and then re-read the two nullable
+    # columns, which told the checker nothing.
+    athlete_id = current_user.intervals_athlete_id
+    access_token = current_user.intervals_access_token
     synced_at = training_plan.watch_synced_at
     base = WatchStatusResponse(
-        connected=connected,
+        connected=bool(athlete_id and access_token),
         sync_enabled=bool(training_plan.watch_sync_enabled),
         sessions_behind=sessions_behind(training_plan),
         last_synced_at=synced_at.isoformat() if synced_at else None,
         error=training_plan.watch_sync_error,
     )
-    if not connected or not training_plan.watch_sync_enabled:
+    if not athlete_id or not access_token or not training_plan.watch_sync_enabled:
         return base
 
     today = local_today()
     try:
         remote = await intervals_service.fetch_events(
-            current_user.intervals_access_token,
-            current_user.intervals_athlete_id,
+            access_token,
+            athlete_id,
             today.isoformat(),
             (today + timedelta(days=WINDOW_DAYS)).isoformat(),
         )

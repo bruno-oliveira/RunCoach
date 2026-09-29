@@ -21,7 +21,7 @@ python3 -m uvicorn app.main:app --reload --port 8000
 # Install dependencies
 python3 -m pip install -r requirements.txt
 
-# Run the full suite (coverage gate: --cov-fail-under=74 — a passing suite
+# Run the full suite (coverage gate: --cov-fail-under=85 — a passing suite
 # below that still exits non-zero)
 python3 -m pytest tests/
 
@@ -39,7 +39,7 @@ python3 -m pytest tests/test_core/test_foo.py -v --no-cov
 # Lint, format, and type-check (all three gate CI)
 ruff check app/ tests/
 ruff format --check app/ tests/
-pyright                       # only app/domain + app/core — see pyrightconfig.json
+pyright                       # ratcheted scope — see pyrightconfig.json
 
 # Smoke-test plan generation
 python3 -c "from app.contexts.plan.generators.plan_generator import TrainingPlanGenerator; TrainingPlanGenerator().generate_plan(20, 10, 8)"
@@ -79,7 +79,15 @@ production; there is no manual promotion step.
 
 CI installs the pinned `requirements.txt` and then `pip install -e . --no-deps`,
 so it exercises the exact versions that ship. If you add a dependency, add it to
-**both** `requirements.txt` (pinned) and `pyproject.toml`.
+**both** `requirements.txt` (pinned with `==`) and `pyproject.toml` —
+`tests/test_architecture/test_dependency_pins.py` fails the build otherwise.
+
+That invariant earns its keep: `anthropic>=0.40.0` once resolved to a 1.x release
+that had removed `Messages.create`'s `temperature` parameter, so the Coach's Note
+raised inside a broad `except` and silently fell back to its deterministic text.
+`tests/test_services/test_anthropic_sdk_contract.py` now checks the adapter's
+call against the *real* SDK (skipped where it isn't installed; CI installs it),
+so an incompatible upgrade fails CI rather than production.
 
 Manual deploy: `fly deploy` (region `sjc`). Docker build: `docker build -t runcoach .`
 
@@ -135,9 +143,46 @@ The rest of the rule, by convention:
 - `core/` imports nothing from `contexts/`, `infrastructure/`, or SQLAlchemy
 - `infrastructure/` implements the Protocols in `domain/`
 
-`pyrightconfig.json` type-checks **only `app/domain` and `app/core`** — the pure
-layers. Keeping logic pure is what makes it checkable; pushing calculation down
-into `core/` is the established direction of travel.
+`pyrightconfig.json` type-checks `app/domain`, `app/core`, `app/models`,
+`app/schemas` and `app/dependencies` — the pure layers plus the type surfaces
+everything else depends on. Keeping logic pure is what makes it checkable;
+pushing calculation down into `core/` is the established direction of travel.
+
+**The scope is a ratchet, and it has moved twice.** First the models were
+converted from `Column(...)` to SQLAlchemy 2.0 `Mapped[...]`/`mapped_column(...)`
+annotations, which took the whole-app error count from 1033 to 237 and let
+`app/models`, `app/schemas` and `app/dependencies` join the checked set for free.
+Then the errors those annotations *exposed* were worked through in
+`app/infrastructure`, `app/application` and `app/web`, which are now clean too.
+
+To extend it again: run pyright over a package, get it to zero, **then** add the
+path above — never add a package that is still failing. One package is left:
+
+| Package | Errors | What they are |
+|---|---|---|
+| `app/contexts` | 79 | the training-science core |
+
+`docs/remaining-hardening-work.md` has the per-file breakdown, the two rules for
+deciding what a `NULL` should do, and the other follow-ups that were deliberately
+deferred (the liveness/readiness split, the per-process rate limiter, the
+`uv.lock`/`requirements.txt` drift).
+
+What is left is overwhelmingly `reportArgumentType` (82) plus
+`reportOptionalOperand`/`reportOperatorIssue` (44): a nullable column reaching
+code that assumed it was present. That is the *point* of the migration, not
+noise — every one is a place where a NULL could already have raised `TypeError`
+at runtime, and several in `app/application` and `app/web` did exactly that (a
+plan with no `weeks_duration` took out the plan page, the nudge sweep and the
+status label). Fixing them means deciding what the None case should *do*, which
+in `app/contexts` is training logic — so it is deliberate, staged work rather
+than a sweep. Two rules cover most of the remaining decisions:
+
+- **Coerce** where absence has an obvious neutral equivalent (a NULL counter is
+  `0`, a NULL weekly volume is `0.0`).
+- **Widen the contract** where it does not — or guard and skip, when the caller
+  genuinely cannot proceed. Never fabricate a *plausible* value (converting a
+  missing `created_at` to "now" would assert a join date the database never
+  recorded).
 
 ### Persistence boundary (CQRS-lite)
 
@@ -345,8 +390,21 @@ Deployed on Fly.io: shared-cpu-1x, 512MB, scale-to-zero
 the image state on every machine wake, so anything written under `/app/...` is
 lost when the machine idles. The database lives on the mounted volume
 `runcoach_data` at `/data/runcoach.db` (`DATABASE_URL` is overridden in
-`fly.toml`). Alembic migrations run in the FastAPI lifespan via `start.sh`, so a
-first boot creates the schema on the volume with no seed file.
+`fly.toml`), so a first boot creates the schema on the volume with no seed file.
+
+Migrations run as Fly's **release command** (`python -m app.migrations`, see the
+`[deploy]` block in `fly.toml`): one throwaway machine, volume attached, before
+traffic moves — so a bad migration aborts the deploy instead of leaving a
+machine that never passes its health check. `fly.toml` therefore sets
+`RUN_STARTUP_MIGRATIONS=false`, because with scale-to-zero the lifespan path
+would replay the Alembic chain *and* the startup backfills on every wake. That
+flag defaults to **on** for local `uvicorn` runs and plain `docker run`, where
+there is no release hook; `tests/conftest.py` pins it off.
+
+`/health` runs a real `SELECT 1` and answers 503 when it fails, so a machine
+whose volume did not mount gets cycled rather than silently serving 500s. The
+probe is a FastAPI dependency (`app.infrastructure.health.get_health_probe`) so
+tests can substitute a failing one.
 
 `docs/architecture-evolution-sqlite-volume.md` has the rationale;
 `docs/intervals-sync-setup.md` covers the Intervals OAuth setup.

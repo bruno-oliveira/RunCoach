@@ -22,10 +22,10 @@ class SQLAlchemyRunRepository:
     def __init__(self, session: Session) -> None:
         self.session = session
 
-    def get_by_id(self, run_id: int) -> Optional[RunLog]:
+    def get_by_id(self, run_id: str) -> Optional[RunLog]:
         return self.session.query(RunLog).filter(RunLog.id == run_id).first()
 
-    def get_for_user(self, run_id: int, user_id: str) -> Optional[RunLog]:
+    def get_for_user(self, run_id: str, user_id: str) -> Optional[RunLog]:
         return (
             self.session.query(RunLog)
             .filter(RunLog.id == run_id, RunLog.user_id == user_id)

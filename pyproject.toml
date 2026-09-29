@@ -19,6 +19,11 @@ dependencies = [
     "gpxpy>=1.6.0",
     "fit-tool==0.9.16",
     "fitdecode==0.11.0",
+    # Optional at runtime (the Coach's Note falls back to a deterministic note
+    # without a key), but declared here and pinned in requirements.txt — the
+    # adapter's call signature is version-sensitive. See
+    # tests/test_services/test_anthropic_sdk_contract.py.
+    "anthropic>=1.9.0",
 ]
 
 [project.optional-dependencies]
@@ -33,7 +38,7 @@ testpaths = ["tests"]
 python_files = ["test_*.py"]
 python_functions = ["test_*"]
 python_classes = ["Test*"]
-addopts = "-v --tb=short --cov=app --cov-report=term-missing --cov-fail-under=74"
+addopts = "-v --tb=short --cov=app --cov-report=term-missing --cov-fail-under=85"
 asyncio_mode = "auto"
 
 [tool.coverage.run]
@@ -60,12 +65,6 @@ target-version = "py311"
 [tool.ruff.lint]
 select = ["E", "F", "I", "W"]
 ignore = ["E501"]
-
-[tool.ruff.lint.per-file-ignores]
-# SQLAlchemy declarative models use string forward-refs in Mapped["Model"]
-# relationship annotations; ruff flags these as F821 (undefined name) even
-# though SQLAlchemy resolves them via its registry at mapper-config time.
-"app/models/*.py" = ["F821"]
 
 [build-system]
 requires = ["hatchling"]

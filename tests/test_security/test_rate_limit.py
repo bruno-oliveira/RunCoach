@@ -5,6 +5,7 @@ the limiter can trust; any IPs further left were sent by the client and
 could be spoofed to split a rate-limit budget.
 """
 
+import time
 from types import SimpleNamespace
 
 import pytest
@@ -102,3 +103,68 @@ def test_spoofed_left_ips_cannot_split_budget(limiter):
     with pytest.raises(HTTPException) as exc:
         limiter.check(_request(header="spoof-3, 198.51.100.42"))
     assert exc.value.status_code == 429
+
+
+class TestBucketPruning:
+    """Buckets for IPs that never return must not accumulate forever.
+
+    The dict previously grew with every distinct IP that ever called: an IP's
+    timestamps were only ever filtered when *that* IP made another request, so
+    the one-off callers — precisely the ones that never come back to trigger
+    their own cleanup — were the ones retained.
+    """
+
+    def test_an_abandoned_bucket_is_swept_away(self, limiter):
+        from app.rate_limit import _SWEEP_EVERY
+
+        settings.trusted_proxy_hops = 1
+        limiter.check(_request(header="203.0.113.9"))
+        assert "203.0.113.9" in limiter._hits
+
+        # Age the bucket past the window, then drive enough unrelated traffic
+        # to trigger a sweep (deterministic: no sleeping).
+        limiter._hits["203.0.113.9"] = [time.monotonic() - limiter._window - 1]
+        for i in range(_SWEEP_EVERY):
+            limiter.check(_request(header=f"198.51.100.{i % 250}"))
+
+        assert "203.0.113.9" not in limiter._hits
+
+    def test_a_live_bucket_survives_the_sweep(self, limiter):
+        from app.rate_limit import _SWEEP_EVERY
+
+        settings.trusted_proxy_hops = 1
+        limiter.check(_request(header="203.0.113.9"))
+        for i in range(_SWEEP_EVERY):
+            limiter.check(_request(header=f"198.51.100.{i % 250}"))
+
+        assert "203.0.113.9" in limiter._hits
+
+    def test_the_sweep_bounds_the_number_of_tracked_ips(self, limiter):
+        """Distinct one-shot IPs must not be retained across sweeps."""
+        from app.rate_limit import _SWEEP_EVERY
+
+        settings.trusted_proxy_hops = 1
+        limit = _SWEEP_EVERY * 3
+        for i in range(limit):
+            limiter.check(_request(header=f"10.0.{i // 250}.{i % 250}"))
+            # Every bucket ages out immediately, so each sweep clears the map.
+            for ip in limiter._hits:
+                limiter._hits[ip] = [time.monotonic() - limiter._window - 1]
+
+        assert len(limiter._hits) <= _SWEEP_EVERY
+
+    def test_pruning_does_not_weaken_the_limit(self, limiter):
+        """A full bucket must still 429 after a sweep has run."""
+        from fastapi import HTTPException
+
+        from app.rate_limit import _SWEEP_EVERY
+
+        settings.trusted_proxy_hops = 1
+        for i in range(_SWEEP_EVERY):
+            limiter.check(_request(header=f"172.16.0.{i % 250}"))
+
+        limiter.check(_request(header="172.16.9.9"))
+        limiter.check(_request(header="172.16.9.9"))
+        with pytest.raises(HTTPException) as exc:
+            limiter.check(_request(header="172.16.9.9"))
+        assert exc.value.status_code == 429

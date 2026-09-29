@@ -31,6 +31,7 @@ from app.application.push_notification_service import (
     KIND_MORNING_BRIEF,
     KIND_WEEK_REVIEW,
     PushNotifier,
+    notify_off_loop,
 )
 from app.application.week_review_service import due_review
 from app.application.wellness_sync_service import refresh_wellness
@@ -104,7 +105,7 @@ class ScheduledPushService:
                         user, local.date(), dry_run=dry_run
                     ):
                         summary.briefs_sent += 1
-                    if local.hour == REVIEW_HOUR and self._week_review(
+                    if local.hour == REVIEW_HOUR and await self._week_review(
                         user, local.date(), dry_run=dry_run
                     ):
                         summary.reviews_sent += 1
@@ -150,7 +151,8 @@ class ScheduledPushService:
         if dry_run:
             logger.info("Dry run: morning brief for %s: %s", user.id, message.title)
             return True
-        return self.notifier.notify(
+        return await notify_off_loop(
+            self.notifier,
             user,
             message,
             category=prefs.MORNING_BRIEF,
@@ -160,7 +162,7 @@ class ScheduledPushService:
 
     # ---- week review ------------------------------------------------------
 
-    def _week_review(self, user: User, today: date, *, dry_run: bool) -> bool:
+    async def _week_review(self, user: User, today: date, *, dry_run: bool) -> bool:
         if not prefs.wants(user.notification_prefs, prefs.WEEK_REVIEW):
             return False
         plan = self._active_plan(user)
@@ -189,7 +191,8 @@ class ScheduledPushService:
         if dry_run:
             logger.info("Dry run: week review for %s: %s", user.id, message.title)
             return True
-        return self.notifier.notify(
+        return await notify_off_loop(
+            self.notifier,
             user,
             message,
             category=prefs.WEEK_REVIEW,

@@ -12,10 +12,10 @@ of 45 is a great morning for one person and a warning for another.
 """
 
 import uuid
-from datetime import datetime, timezone
+from datetime import date as date_type
+from datetime import datetime
 
 from sqlalchemy import (
-    Column,
     Date,
     DateTime,
     Float,
@@ -24,7 +24,9 @@ from sqlalchemy import (
     String,
     UniqueConstraint,
 )
+from sqlalchemy.orm import Mapped, mapped_column
 
+from app.core.time_utils import utcnow_naive
 from app.models.base import Base
 
 
@@ -34,18 +36,22 @@ class WellnessDay(Base):
         UniqueConstraint("user_id", "date", name="uq_wellness_user_date"),
     )
 
-    id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
-    user_id = Column(
-        String, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True
+    id: Mapped[str] = mapped_column(
+        String, primary_key=True, default=lambda: str(uuid.uuid4())
     )
-    date = Column(Date, nullable=False)
-    hrv = Column(Float, nullable=True)  # rMSSD, ms
-    resting_hr = Column(Integer, nullable=True)
-    sleep_hours = Column(Float, nullable=True)
-    sleep_score = Column(Float, nullable=True)  # device score, 0–100
-    source = Column(String(20), nullable=False, default="intervals")
-    updated_at = Column(
+    user_id: Mapped[str] = mapped_column(
+        String, ForeignKey("users.id", ondelete="CASCADE"), index=True
+    )
+    # The type is imported as `date_type` because a bare `date` here would
+    # resolve to this very column inside the class body.
+    date: Mapped[date_type] = mapped_column(Date)
+    hrv: Mapped[float | None] = mapped_column(Float)
+    resting_hr: Mapped[int | None] = mapped_column(Integer)
+    sleep_hours: Mapped[float | None] = mapped_column(Float)
+    sleep_score: Mapped[float | None] = mapped_column(Float)
+    source: Mapped[str] = mapped_column(String(20), default="intervals")
+    updated_at: Mapped[datetime | None] = mapped_column(
         DateTime,
-        default=lambda: datetime.now(timezone.utc).replace(tzinfo=None),
-        onupdate=lambda: datetime.now(timezone.utc).replace(tzinfo=None),
+        default=utcnow_naive,
+        onupdate=utcnow_naive,
     )

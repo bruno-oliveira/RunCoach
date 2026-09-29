@@ -64,11 +64,18 @@ class RacePredictorService:
         Hilly runs (>20m of elevation gain per km) are skipped -- VDOT assumes
         flat ground and would otherwise underestimate the runner's true fitness.
         """
-        if run.distance_km < MIN_DISTANCE_KM or run.duration_minutes <= 0:
+        distance_km = run.distance_km
+        duration_minutes = run.duration_minutes
+        # Nullable columns: an ineligible run is a `None` result, not a TypeError.
+        # Comparing them directly used to raise, and every caller treats this as
+        # "no VDOT available", so the failure was invisible.
+        if distance_km is None or duration_minutes is None:
+            return None
+        if distance_km < MIN_DISTANCE_KM or duration_minutes <= 0:
             return None
         return VDOTCalculator.calculate_vdot(
-            run.distance_km,
-            int(run.duration_minutes * 60),
+            distance_km,
+            int(duration_minutes * 60),
             elevation_gain_m=run.elevation_gain_m,
         )
 
@@ -303,10 +310,15 @@ class RacePredictorService:
             )
             .all()
         )
+        # The query already filters both columns, but they are nullable so the
+        # checker cannot see it; re-stating the filter here makes the invariant
+        # local and keeps a None out of the arithmetic.
         samples = [
             (float(run.predicted_time_seconds), run.duration_minutes * 60.0)
             for run in runs
             if RacePredictorService._is_race_effort(run)
+            and run.predicted_time_seconds is not None
+            and run.duration_minutes
         ]
         return calibration_factor_from_samples(samples)
 
@@ -343,15 +355,27 @@ class RacePredictorService:
         if not top_runs:
             return None
 
-        # Pick the run closest to the median VDOT of the top N
-        vdots = [r.vdot for r in top_runs]
-        median_vdot = statistics.median(vdots)
-        best_run = min(top_runs, key=lambda r: abs(r.vdot - median_vdot))
+        # Pick the run closest to the median VDOT of the top N. Pairing the value
+        # with its run keeps it non-None through both the median and the `min`
+        # key — `vdot` is nullable, and comparing a None against the median would
+        # have raised (the query filters it, but the checker cannot see that).
+        candidates = [(r.vdot, r) for r in top_runs if r.vdot is not None]
+        if not candidates:
+            return None
+        median_vdot = statistics.median([vdot for vdot, _ in candidates])
+        _, best_run = min(candidates, key=lambda pair: abs(pair[0] - median_vdot))
 
+        duration_minutes = best_run.duration_minutes
         return {
             "date": best_run.date.isoformat() if best_run.date else None,
             "distance_km": best_run.distance_km,
-            "time": VDOTCalculator.format_duration(int(best_run.duration_minutes * 60)),
+            # A stored VDOT implies a duration, but "unknown" is the honest answer
+            # if one is ever missing — not a fabricated 0:00.
+            "time": (
+                VDOTCalculator.format_duration(int(duration_minutes * 60))
+                if duration_minutes
+                else None
+            ),
             "vdot": best_run.vdot,
             "workout_type": best_run.workout_type,
         }
@@ -458,17 +482,20 @@ class RacePredictorService:
                 endurance_factor=endurance_factor,
             )
             seconds = _apply_calibration(seconds, calibration)
+            fast = _apply_calibration(range_data["fast"], calibration)
+            slow = _apply_calibration(range_data["slow"], calibration)
             predictions[name] = {
                 "seconds": seconds,
-                "formatted": VDOTCalculator.format_duration(seconds),
+                # `_apply_calibration` passes a falsy input straight through, so
+                # each of these can be None; format only what exists rather than
+                # handing `format_duration` a None or printing a bogus 0:00.
+                "formatted": VDOTCalculator.format_duration(seconds)
+                if seconds
+                else None,
                 "distance_km": distance,
                 "range": {
-                    "fast": VDOTCalculator.format_duration(
-                        _apply_calibration(range_data["fast"], calibration)
-                    ),
-                    "slow": VDOTCalculator.format_duration(
-                        _apply_calibration(range_data["slow"], calibration)
-                    ),
+                    "fast": VDOTCalculator.format_duration(fast) if fast else None,
+                    "slow": VDOTCalculator.format_duration(slow) if slow else None,
                 },
             }
 
@@ -542,6 +569,13 @@ class RacePredictorService:
         enriched = []
 
         for run in all_runs:
+            distance_km = run.distance_km
+            if distance_km is None:
+                # The query filters `distance_km >= MIN_DISTANCE_KM`, but the
+                # column is nullable so the checker cannot see it. A run with no
+                # distance has no place on the pace/VDOT curve.
+                continue
+
             actual_seconds = (
                 int(run.duration_minutes * 60) if run.duration_minutes else None
             )
@@ -556,14 +590,14 @@ class RacePredictorService:
                 predicted_seconds = int(run.predicted_time_seconds)
             elif rolling_vdot:
                 pred = VDOTCalculator.predict_time_for_distance(
-                    rolling_vdot, run.distance_km
+                    rolling_vdot, distance_km
                 )
                 if pred:
                     predicted_seconds = pred
 
             comparison = _prediction_comparison(actual_seconds, predicted_seconds)
 
-            distance_name = RacePredictorService._closest_distance_name(run.distance_km)
+            distance_name = RacePredictorService._closest_distance_name(distance_km)
 
             enriched.append(
                 {

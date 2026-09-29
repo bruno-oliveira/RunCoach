@@ -90,10 +90,15 @@ def get_swap_proposals(
     """
     training_plan = SQLAlchemyPlanRepository(db).get_for_user(plan_id, user_id)
 
-    if not training_plan or not training_plan.start_date:
+    if not training_plan:
         return []
 
+    # Guarded on the resolved date, not on the raw column: `_to_date` is what the
+    # week arithmetic consumes, and it returns None for a plan with no start date.
     start_date = _to_date(training_plan.start_date)
+    if start_date is None:
+        return []
+
     today = today_date()
     current_week = compute_current_week(start_date, today, clamp_min=1, pre_start=1)
 

@@ -1,6 +1,7 @@
 """Pytest fixtures for RunCoach tests."""
 
 import os
+import tempfile
 
 # Hermetic test config — must be set BEFORE any app module imports the
 # settings singleton. Tests run in debug mode: no separate ENCRYPTION_KEY is
@@ -11,7 +12,21 @@ os.environ.setdefault("DEBUG", "true")
 os.environ.setdefault("SECRET_KEY", "test-secret-key-for-tests-only-not-production")
 os.environ.setdefault("GOOGLE_CLIENT_ID", "test-client-id.apps.googleusercontent.com")
 
-import tempfile  # noqa: E402
+# Migrations stay off for the whole session. The test app factory reads this
+# instead of sniffing for pytest in sys.modules (which also used to disable
+# production-secret validation); every TestClient(app) lifespan would otherwise
+# replay the Alembic chain.
+os.environ.setdefault("RUN_STARTUP_MIGRATIONS", "false")
+
+# The app-level engine must never point at the developer's real database.
+# `.env` sets DATABASE_URL=sqlite:///./runcoach.db, and any test that exercises
+# the production app directly (not the `client` fixture, whose get_db is
+# overridden) resolves dependencies through that engine — so a stray write in a
+# test would land in runcoach.db, which has no seed file and no backup.
+# os.environ outranks the dotenv file in pydantic-settings, so this wins.
+os.environ.setdefault(
+    "DATABASE_URL", f"sqlite:///{tempfile.mkdtemp(prefix='runcoach-tests-')}/app.db"
+)
 
 import pytest  # noqa: E402
 from alembic.config import Config  # noqa: E402

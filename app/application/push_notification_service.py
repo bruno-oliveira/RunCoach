@@ -19,14 +19,16 @@ this module resolves the facts and does the I/O.
 from __future__ import annotations
 
 import logging
-from datetime import datetime, timedelta, timezone
+from datetime import timedelta
 from typing import TYPE_CHECKING, Any, List, Optional
 
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
+from starlette.concurrency import run_in_threadpool
 
 from app.core.coaching import notification_prefs as prefs
 from app.core.coaching.push_messages import RunFacts, after_sync_message
+from app.core.time_utils import utcnow_naive
 from app.domain.notifications import (
     PushMessage,
     PushOutcome,
@@ -57,9 +59,51 @@ KIND_WEEK_REVIEW = "week_review"
 KIND_NUDGE = "nudge"
 KIND_TEST = "test"
 
+# ---- off-loop entry points -------------------------------------------------
+#
+# Push delivery is synchronous ``httpx`` (see
+# ``infrastructure/notifications/webpush.WebPushSender`` — the sender is also
+# reachable from sync callers, so it cannot be a coroutine), while the daily
+# sweep, the hourly scheduler and the live webhook are all ``async def``.
+# Calling ``notify``/``after_sync`` straight from those puts a blocking socket
+# round-trip on the event loop, with a 10s timeout per subscription: one
+# unresponsive push service would stall every other request on the machine,
+# including the health check Fly uses to decide whether to keep it.
+#
+# These wrappers are therefore the only way *async* code should reach a push.
+# Sync callers — the "send me a test" button and the outbound nudge sweep —
+# already run in a worker thread and call the methods directly.
+#
+# They also hand the caller's ``Session`` to that worker thread, which is the one
+# place in this codebase a request-scoped session is used off the event loop. It
+# is safe because the handoff is *sequential*: every caller awaits the wrapper,
+# so two threads never hold the session at once, SQLAlchemy's ``autoflush`` is
+# off, and the SQLite engine sets ``check_same_thread=False``. The exactly-once
+# ledger depends on the claim being written on the connection the next read uses,
+# so ``test_push_notifier.py`` pins that a claim made through the wrapper is
+# visible to the caller afterwards. Do not make these fire-and-forget.
 
-def _utcnow() -> datetime:
-    return datetime.now(timezone.utc).replace(tzinfo=None)
+
+async def notify_off_loop(
+    notifier: "PushNotifier",
+    user: User,
+    message: PushMessage,
+    *,
+    category: Optional[str],
+    kind: str,
+    key: str,
+) -> bool:
+    """``PushNotifier.notify``, run in a worker thread. See the note above."""
+    return await run_in_threadpool(
+        notifier.notify, user, message, category=category, kind=kind, key=key
+    )
+
+
+async def after_sync_off_loop(
+    notifier: "PushNotifier", user: User, result: "RunnerSync"
+) -> bool:
+    """``PushNotifier.after_sync``, run in a worker thread. See the note above."""
+    return await run_in_threadpool(notifier.after_sync, user, result)
 
 
 class PushNotifier:
@@ -118,7 +162,7 @@ class PushNotifier:
             )
             if outcome == PushOutcome.DELIVERED:
                 delivered = True
-                subscription.last_success_at = _utcnow()
+                subscription.last_success_at = utcnow_naive()
                 subscription.failure_count = 0
             elif outcome == PushOutcome.GONE:
                 self.db.delete(subscription)
@@ -184,8 +228,8 @@ class PushNotifier:
         )
         if newest is None or newest.date is None:
             return False
-        created = newest.created_at or _utcnow()
-        if _utcnow() - created > _LIVE_RUN_MAX_AGE:
+        created = newest.created_at or utcnow_naive()
+        if utcnow_naive() - created > _LIVE_RUN_MAX_AGE:
             return False
 
         headline = None

@@ -49,6 +49,8 @@ CLAUDE.local.md
 
 # Test outputs
 test_*.html
+# Sample artifacts written by scripts/validate_fit_local.py --generate-test
+test_output/
 # Generated audit artifacts (scripts/audit_all.py)
 scripts/audit_report.json
 

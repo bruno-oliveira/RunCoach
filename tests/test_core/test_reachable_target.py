@@ -241,10 +241,15 @@ def test_weekly_shortfall_is_logged_with_week_target_and_actual():
     week index, the target and the actual are all in the message, along with
     the plan's generation signature.
 
-    The capture attaches its own handler to the generator's logger rather than
-    using ``caplog``: the ``test_db`` fixture runs Alembic, whose
-    ``fileConfig`` disables already-created loggers for the rest of the
-    session, which silently empties ``caplog`` depending on test order.
+    The capture attaches its own handler rather than using ``caplog``, so the
+    assertion does not depend on global capture state.
+
+    It used to *have* to: the ``test_db`` fixture runs Alembic, whose ``env.py``
+    called ``fileConfig`` with the default ``disable_existing_loggers=True``,
+    which set ``disabled = True`` on every logger that already existed — emptying
+    ``caplog`` depending on test order, and (the real damage) switching off every
+    ``app.*`` logger created before boot in production. Fixed in ``alembic/env.py``
+    and guarded by ``test_migration_bootstrap.py``.
     """
     logger = logging.getLogger("app.contexts.plan.generators.plan_generator")
     records: list[logging.LogRecord] = []

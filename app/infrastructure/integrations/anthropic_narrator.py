@@ -10,8 +10,19 @@ deterministic note.
 Caching is the caller's responsibility: ``coach_narrative_service`` persists the
 generated payload on the plan keyed by a run signature, so this adapter just
 generates on demand and is only invoked when the note actually needs rebuilding.
+
+**The SDK is a moving target and this call is version-sensitive.** ``Messages.
+create`` dropped its ``temperature`` parameter in the 1.x SDK (the replacement
+``output_config`` carries ``effort``/``format``, not sampling), so passing it
+raises ``TypeError``. Because ``generate_note`` swallows every exception by
+design — a note must never break a page — that failure mode is *silent*: the
+note would quietly centre on the deterministic fallback forever. The adapter
+therefore probes the signature once and omits the parameter when unsupported,
+and ``tests/test_services/test_anthropic_sdk_contract.py`` pins the whole call
+against the real SDK so an incompatible upgrade fails CI rather than production.
 """
 
+import inspect
 import json
 import logging
 from typing import Any, Optional
@@ -48,6 +59,27 @@ distances, dates, VDOT values, streaks, zones, or any metric not present.
 - No emojis, no markdown, no headings, no preamble such as "Here is your note". \
 Output only the note itself."""
 
+# See the note in ``AnthropicCoachNarrator.__init__``: the SDK's 600s default is
+# unsuitable for a call made inside a page request.
+_REQUEST_TIMEOUT_SECONDS = 20.0
+_MAX_RETRIES = 1
+# Moderate sampling variance: warm prose should not be identical every day, but
+# the fact pack is what carries the meaning, so this is flavour, not accuracy.
+_TEMPERATURE = 0.7
+
+
+def _accepts_temperature(messages_api: Any) -> bool:
+    """Whether this SDK's ``Messages.create`` still takes ``temperature``.
+
+    Probed rather than assumed, because the failure mode is silent (see the
+    module docstring). Returns False on an unreadable signature: dropping a
+    flavour parameter is the harmless direction to guess in.
+    """
+    try:
+        return "temperature" in inspect.signature(messages_api.create).parameters
+    except (TypeError, ValueError):  # pragma: no cover - defensive
+        return False
+
 
 class AnthropicCoachNarrator:
     """Generates the Coach's Note via Claude Haiku (stateless; caller caches)."""
@@ -57,29 +89,52 @@ class AnthropicCoachNarrator:
         # SDK unless an AI narrator is actually constructed.
         import anthropic
 
-        self._client = anthropic.Anthropic(api_key=api_key)
+        # The SDK defaults are 600s with 2 internal retries, which is the wrong
+        # shape for this call: it runs inside ``GET /api/coach-note``, and the
+        # route is a sync ``def`` (Starlette's threadpool), so one hung request
+        # holds a worker thread for ten minutes and enough of them starve every
+        # other sync endpoint on the machine. A coach's note is a nicety —
+        # bound it to something a page load can absorb and let the deterministic
+        # fallback in ``coach_narrative_service`` cover the rest.
+        self._client = anthropic.Anthropic(
+            api_key=api_key,
+            timeout=_REQUEST_TIMEOUT_SECONDS,
+            max_retries=_MAX_RETRIES,
+        )
         self._model = model
+        # Probed once at construction; see the module docstring for why this is
+        # not simply passed and allowed to fail.
+        self._supports_temperature = _accepts_temperature(self._client.messages)
 
     def generate_note(self, context: dict[str, Any]) -> Optional[str]:
         try:
             return self._call(context)
         except Exception:  # never let a coach note break the page
-            logger.warning("Coach note generation failed", exc_info=True)
+            # ERROR, not warning: this is the only signal that the AI path is
+            # down. Left at warning, a silent SDK incompatibility (see the module
+            # docstring) would look like normal noise in the logs.
+            logger.error("Coach note generation failed", exc_info=True)
             return None
 
-    def _call(self, context: dict[str, Any]) -> Optional[str]:
-        response = self._client.messages.create(
-            model=self._model,
-            max_tokens=300,
-            temperature=0.7,
-            system=[
+    def _build_request(self, context: dict[str, Any]) -> dict[str, Any]:
+        """The exact kwargs sent to ``Messages.create``.
+
+        Split out from ``_call`` so the SDK-contract test can check the payload
+        against the installed SDK's real signature (``Signature.bind``) without
+        making a request — an unexpected keyword is precisely the failure this
+        adapter must not hit twice.
+        """
+        request: dict[str, Any] = {
+            "model": self._model,
+            "max_tokens": 300,
+            "system": [
                 {
                     "type": "text",
                     "text": _SYSTEM_PROMPT,
                     "cache_control": {"type": "ephemeral"},
                 }
             ],
-            messages=[
+            "messages": [
                 {
                     "role": "user",
                     "content": (
@@ -89,7 +144,13 @@ class AnthropicCoachNarrator:
                     ),
                 }
             ],
-        )
+        }
+        if self._supports_temperature:
+            request["temperature"] = _TEMPERATURE
+        return request
+
+    def _call(self, context: dict[str, Any]) -> Optional[str]:
+        response = self._client.messages.create(**self._build_request(context))
         text = next(
             (b.text for b in response.content if getattr(b, "type", None) == "text"),
             "",

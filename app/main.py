@@ -2,13 +2,14 @@
 
 import logging
 from contextlib import asynccontextmanager
+from typing import Optional
 
-from fastapi import FastAPI
+from fastapi import Depends, FastAPI, Response
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
 from app.infrastructure.config import settings, setup_logging
-from app.infrastructure.health import HealthResponse
+from app.infrastructure.health import HealthProbe, HealthResponse, get_health_probe
 from app.infrastructure.secrets import validate_production_secrets
 from app.migrations.startup import run_startup_migrations
 from app.web.exception_handlers import register_exception_handlers
@@ -40,8 +41,6 @@ from app.web.routers import (
 
 setup_logging(settings)
 logger = logging.getLogger(__name__)
-
-_is_test_mode = "pytest" in __import__("sys").modules
 
 _ROUTERS = (
     plans_router,
@@ -76,9 +75,26 @@ class CachedStaticFiles(StaticFiles):
         return response
 
 
-def create_app(skip_migrations: bool = False) -> FastAPI:
-    """Application factory — creates and configures the FastAPI app."""
-    effective_skip = skip_migrations or _is_test_mode
+def create_app(skip_migrations: Optional[bool] = None) -> FastAPI:
+    """Application factory — creates and configures the FastAPI app.
+
+    ``skip_migrations`` defaults to the inverse of ``RUN_STARTUP_MIGRATIONS``
+    (on in production, pinned off for the whole test session in conftest). It is
+    deliberately *not* inferred from ``"pytest" in sys.modules``: any process
+    that happened to import pytest — a plugin, a profiler — would silently boot
+    without migrations, and the old form also skipped
+    ``validate_production_secrets``, so a production process could come up with
+    a weak JWT key and no complaint.
+
+    Production-secret validation is therefore unconditional: it is pure config
+    checking with no I/O, and it is exactly the check that must never be
+    skippable.
+    """
+    effective_skip = (
+        not settings.run_startup_migrations
+        if skip_migrations is None
+        else skip_migrations
+    )
 
     @asynccontextmanager
     async def lifespan(application: FastAPI):
@@ -91,8 +107,8 @@ def create_app(skip_migrations: bool = False) -> FastAPI:
                 "Google Client ID is not configured — Google Sign-In will not work"
             )
 
+        validate_production_secrets()
         if not effective_skip:
-            validate_production_secrets()
             run_startup_migrations()
 
         yield
@@ -135,9 +151,29 @@ def create_app(skip_migrations: bool = False) -> FastAPI:
 
     register_exception_handlers(app)
 
-    @app.get("/health", response_model=HealthResponse, tags=["health"])
-    async def health_check() -> HealthResponse:
-        return HealthResponse()
+    @app.get(
+        "/health",
+        response_model=HealthResponse,
+        responses={503: {"model": HealthResponse}},
+        tags=["health"],
+    )
+    async def health_check(
+        response: Response,
+        probe: HealthProbe = Depends(get_health_probe),
+    ) -> HealthResponse:
+        """Report whether this machine can serve a request.
+
+        503 (not 200) when a dependency is down, so Fly's checks cycle the
+        machine and the failure is visible to anything watching the endpoint
+        rather than only to the users hitting 500s.
+        """
+        reason = probe()
+        if reason is None:
+            return HealthResponse(checks={"database": "ok"})
+
+        logger.warning("Health check degraded: database probe failed: %s", reason)
+        response.status_code = 503
+        return HealthResponse(status="degraded", checks={"database": reason})
 
     return app
 

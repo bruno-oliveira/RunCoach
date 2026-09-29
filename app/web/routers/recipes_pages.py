@@ -80,9 +80,12 @@ def recipe_detail(
 
     # Check if recipe is in user's favorites
     favorite_id = None
-    if current_user:
+    catalogue_name = recipe.get("name")
+    # `name` is only guaranteed by the catalogue contract, not by the dict's type,
+    # so the lookup is skipped rather than passing a possible None as the key.
+    if current_user and catalogue_name:
         favorite_id = favorites_service.favorite_id_for(
-            current_user.id, recipe.get("name"), db
+            current_user.id, catalogue_name, db
         )
     is_favorite = favorite_id is not None
 

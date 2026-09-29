@@ -4,7 +4,7 @@ Finds best performances across standard race distances, tracks PR
 progression over time, and computes improvement deltas.
 """
 
-from typing import Any, Dict, List
+from typing import Any, Callable, Dict, List, Optional
 
 from sqlalchemy.orm import Session
 
@@ -71,15 +71,41 @@ class PersonalRecordsService:
         }
 
 
+def _extreme_by(
+    runs: List[RunLog],
+    getter: Callable[[RunLog], Optional[float]],
+    *,
+    largest: bool,
+) -> tuple[Optional[float], Optional[RunLog]]:
+    """The run with the largest/smallest non-None value of ``getter``, and it.
+
+    Every caller here used to hand ``max``/``min`` a key function returning
+    ``float | None`` — the columns behind these attributes are nullable, so any
+    single run missing a distance, pace or VDOT made the comparison raise
+    ``TypeError`` and lost the entire records payload. Filtering the Nones first
+    also means the value comes back narrowed, so no caller has to re-prove it.
+    """
+    candidates = [(value, run) for run in runs if (value := getter(run)) is not None]
+    if not candidates:
+        return None, None
+    value, run = (max if largest else min)(candidates, key=lambda pair: pair[0])
+    return value, run
+
+
 def _build_distance_records(runs: List[RunLog]) -> List[Dict[str, Any]]:
     """Find best time for each standard distance bucket."""
     records = []
 
     for bucket in DISTANCE_BUCKETS:
+        # A bucket needs both a distance and a duration: the comparisons below
+        # and the pace arithmetic raise if either is missing (both are nullable
+        # columns, so any imported run without a distance broke the page).
         matching = [
             r
             for r in runs
-            if abs(r.distance_km - bucket["target_km"]) <= bucket["tolerance"]
+            if r.distance_km is not None
+            and r.duration_minutes is not None
+            and abs(r.distance_km - bucket["target_km"]) <= bucket["tolerance"]
             and r.distance_km >= bucket["min_km"]
         ]
         if not matching:
@@ -90,14 +116,18 @@ def _build_distance_records(runs: List[RunLog]) -> List[Dict[str, Any]]:
         pr_history: List[Dict] = []
 
         for run in matching:
-            pace = run.duration_minutes / run.distance_km
+            distance_km = run.distance_km
+            duration_minutes = run.duration_minutes
+            if distance_km is None or duration_minutes is None:
+                continue  # excluded above; restated so the checker can see it
+            pace = duration_minutes / distance_km
             if pace < best_pace:
                 prev_pace = best_pace if best_pace < float("inf") else None
                 best_pace = pace
-                total_secs = int(run.duration_minutes * 60)
+                total_secs = int(duration_minutes * 60)
                 entry: Dict[str, Any] = {
                     "date": run.date.isoformat() if run.date else None,
-                    "distance_km": round(run.distance_km, 2),
+                    "distance_km": round(distance_km, 2),
                     "duration_seconds": total_secs,
                     "duration_formatted": VDOTCalculator.format_duration(total_secs),
                     "pace_min_km": round(pace, 2),
@@ -105,7 +135,7 @@ def _build_distance_records(runs: List[RunLog]) -> List[Dict[str, Any]]:
                     "vdot": run.vdot,
                 }
                 if prev_pace is not None:
-                    improvement_secs = (prev_pace - pace) * run.distance_km * 60
+                    improvement_secs = (prev_pace - pace) * distance_km * 60
                     entry["improvement_seconds"] = round(improvement_secs, 1)
                 pr_history.append(entry)
 
@@ -132,48 +162,56 @@ def _build_general_records(runs: List[RunLog]) -> List[Dict[str, Any]]:
     """Longest run, fastest overall pace, best VDOT."""
     general = []
 
-    longest = max(runs, key=lambda r: r.distance_km)
-    general.append(
-        {
-            "type": "longest_run",
-            "label": "Longest Run",
-            "value": round(longest.distance_km, 1),
-            "unit": "km",
-            "date": longest.date.isoformat() if longest.date else None,
-            "formatted": f"{round(longest.distance_km, 1)} km",
-        }
-    )
+    longest_km, longest = _extreme_by(runs, lambda r: r.distance_km, largest=True)
+    if longest is not None and longest_km is not None:
+        general.append(
+            {
+                "type": "longest_run",
+                "label": "Longest Run",
+                "value": round(longest_km, 1),
+                "unit": "km",
+                "date": longest.date.isoformat() if longest.date else None,
+                "formatted": f"{round(longest_km, 1)} km",
+            }
+        )
 
+    # Pace only means something over a few km, so short runs are excluded along
+    # with any run missing a pace or a distance.
     pace_runs = [
         r
         for r in runs
-        if r.avg_pace_min_km and r.avg_pace_min_km > 0 and r.distance_km >= 3.0
+        if r.avg_pace_min_km
+        and r.avg_pace_min_km > 0
+        and r.distance_km is not None
+        and r.distance_km >= 3.0
     ]
-    if pace_runs:
-        fastest = min(pace_runs, key=lambda r: r.avg_pace_min_km)
+    fastest_pace, fastest = _extreme_by(
+        pace_runs, lambda r: r.avg_pace_min_km, largest=False
+    )
+    if fastest is not None and fastest_pace is not None:
+        fastest_km = fastest.distance_km or 0.0
         general.append(
             {
                 "type": "fastest_pace",
                 "label": "Fastest Pace",
-                "value": round(fastest.avg_pace_min_km, 2),
+                "value": round(fastest_pace, 2),
                 "unit": "min/km",
                 "date": fastest.date.isoformat() if fastest.date else None,
-                "formatted": format_pace(fastest.avg_pace_min_km),
-                "distance_km": round(fastest.distance_km, 1),
+                "formatted": format_pace(fastest_pace),
+                "distance_km": round(fastest_km, 1),
             }
         )
 
-    vdot_runs = [r for r in runs if r.vdot]
-    if vdot_runs:
-        best = max(vdot_runs, key=lambda r: r.vdot)
+    best_vdot, best = _extreme_by(runs, lambda r: r.vdot, largest=True)
+    if best is not None and best_vdot:
         general.append(
             {
                 "type": "highest_vdot",
                 "label": "Best VDOT",
-                "value": best.vdot,
+                "value": best_vdot,
                 "unit": "",
                 "date": best.date.isoformat() if best.date else None,
-                "formatted": str(best.vdot),
+                "formatted": str(best_vdot),
             }
         )
 
@@ -186,7 +224,8 @@ def _build_general_records(runs: List[RunLog]) -> List[Dict[str, Any]]:
         # ISO week key
         iso = d.isocalendar()
         key = f"{iso[0]}-W{iso[1]:02d}"
-        week_buckets[key] = week_buckets.get(key, 0) + r.distance_km
+        # A run with no distance adds nothing to its week.
+        week_buckets[key] = week_buckets.get(key, 0.0) + (r.distance_km or 0.0)
     if week_buckets:
         best_week_km = max(week_buckets.values())
         general.append(

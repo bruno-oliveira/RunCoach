@@ -56,20 +56,26 @@ def backfill_baselines(training_plan: TrainingPlan, db: Session) -> None:
 
     dirty = False
     for workout in workouts:
+        distance_km = workout.distance_km
+        if distance_km is None:
+            # The query filters `distance_km IS NOT NULL AND > 0`, but the column
+            # is nullable so the checker cannot see it — and backfilling a
+            # baseline from a missing distance used to divide by None.
+            continue
         if workout.baseline_distance_km is None:
             multiplier = parse_adjustment_multiplier(workout.notes)
             if multiplier and multiplier != 1.0:
-                true_value = round(workout.distance_km / multiplier, 1)
+                true_value = round(distance_km / multiplier, 1)
                 workout.baseline_distance_km = true_value
                 workout.distance_km = true_value
                 workout.notes = strip_annotations(workout.notes)
             else:
-                workout.baseline_distance_km = workout.distance_km
+                workout.baseline_distance_km = distance_km
             dirty = True
             continue
 
         true_baseline, true_distance, recovered = recover_baseline(
-            workout.distance_km,
+            distance_km,
             workout.baseline_distance_km,
             workout.notes,
         )

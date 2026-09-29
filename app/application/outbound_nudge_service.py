@@ -26,7 +26,7 @@ import hashlib
 import hmac
 import logging
 from dataclasses import dataclass
-from datetime import date, datetime, timedelta, timezone
+from datetime import date, datetime, timedelta
 from typing import Any, Dict, List, Optional
 
 from sqlalchemy import and_, or_
@@ -37,7 +37,7 @@ from app.core.coaching.outbound_nudge import (
     detect_outbound_nudge,
     render_email,
 )
-from app.core.time_utils import local_today, use_timezone
+from app.core.time_utils import local_today, use_timezone, utcnow_naive
 from app.core.training.periodization.plan_calendar import compute_current_week
 from app.domain.notifications import EmailMessage, Mailer
 from app.infrastructure.config import Settings
@@ -181,7 +181,7 @@ class OutboundNudgeService:
 
         if self._send(user, nudge):
             summary.delivered += 1
-            user.last_nudge_email_at = _utcnow()
+            user.last_nudge_email_at = utcnow_naive()
             user.last_nudge_email_signature = nudge.signature
         else:
             summary.failed += 1
@@ -190,7 +190,7 @@ class OutboundNudgeService:
         last = user.last_nudge_email_at
         if last is None:
             return False
-        floor = _utcnow() - timedelta(days=self.settings.nudge_min_interval_days)
+        floor = utcnow_naive() - timedelta(days=self.settings.nudge_min_interval_days)
         return last > floor
 
     def _active_plan(self, user: User, today: date) -> Optional[TrainingPlan]:
@@ -213,7 +213,10 @@ class OutboundNudgeService:
             if start is None:
                 continue
             week = compute_current_week(start, today, pre_start=0)
-            if week and 1 <= week <= plan.weeks_duration:
+            # `plan.weeks_duration` is nullable, and a plan with no duration
+            # cannot be judged "still running" — comparing it directly raised
+            # TypeError, which failed the whole nudge sweep for that runner.
+            if week and plan.weeks_duration and 1 <= week <= plan.weeks_duration:
                 return plan
         return None
 
@@ -386,7 +389,7 @@ class OutboundNudgeService:
                 kind=KIND_NUDGE,
                 # Per day, not per signature forever: the same situation
                 # returning weeks later is worth saying again.
-                key=f"{nudge.signature}:{_utcnow().date().isoformat()}",
+                key=f"{nudge.signature}:{utcnow_naive().date().isoformat()}",
             )
         if user.nudge_email_enabled and user.email:
             delivered = self._send_email(user, nudge) or delivered
@@ -442,7 +445,3 @@ def _to_date(value: Any) -> Optional[date]:
     if isinstance(value, date):
         return value
     return None
-
-
-def _utcnow() -> datetime:
-    return datetime.now(timezone.utc).replace(tzinfo=None)
