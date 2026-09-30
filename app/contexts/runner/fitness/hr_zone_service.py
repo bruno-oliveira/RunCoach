@@ -1,13 +1,15 @@
 """Heart rate zone service — orchestrates zone computation and persistence."""
 
 import logging
-from datetime import timedelta
 from typing import Optional
 
 from sqlalchemy.orm import Session
 
 from app.core.time_utils import local_today
-from app.core.training.periodization.plan_calendar import compute_current_week
+from app.core.training.periodization.plan_calendar import (
+    compute_current_week,
+    plan_has_ended,
+)
 from app.core.training.physiology.hr_pace_calibration import (
     PaceHRSample,
     attach_calibrated_paces,
@@ -273,7 +275,7 @@ def refresh_active_plan_zones(user: User, db: Session) -> int:
     changed = 0
     for plan in db.query(TrainingPlan).filter(TrainingPlan.user_id == user.id):
         start = to_date(plan.start_date)
-        if start and today > start + timedelta(weeks=plan.weeks_duration or 0):
+        if plan_has_ended(start, plan.weeks_duration, today):
             continue
         if HRZoneService.refresh_zones(plan, user, db):
             changed += 1

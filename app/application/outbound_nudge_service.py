@@ -38,7 +38,6 @@ from app.core.coaching.outbound_nudge import (
     render_email,
 )
 from app.core.time_utils import local_today, use_timezone, utcnow_naive
-from app.core.training.periodization.plan_calendar import compute_current_week
 from app.domain.notifications import EmailMessage, Mailer
 from app.infrastructure.config import Settings
 from app.infrastructure.config import settings as default_settings
@@ -199,26 +198,11 @@ class OutboundNudgeService:
         A finished plan has nothing to be behind on, and an unstarted one has
         nothing to have missed — neither is worth an email.
         """
-        plans = (
-            self.db.query(TrainingPlan)
-            .filter(
-                TrainingPlan.user_id == user.id,
-                TrainingPlan.start_date.isnot(None),
-            )
-            .order_by(TrainingPlan.created_at.desc())
-            .all()
-        )
-        for plan in plans:
-            start = _to_date(plan.start_date)
-            if start is None:
-                continue
-            week = compute_current_week(start, today, pre_start=0)
-            # `plan.weeks_duration` is nullable, and a plan with no duration
-            # cannot be judged "still running" — comparing it directly raised
-            # TypeError, which failed the whole nudge sweep for that runner.
-            if week and plan.weeks_duration and 1 <= week <= plan.weeks_duration:
-                return plan
-        return None
+        from app.contexts.plan.plan_helpers import in_progress_plan
+        from app.contexts.plan.repositories import SQLAlchemyPlanRepository
+
+        plans = SQLAlchemyPlanRepository(self.db).list_by_user_recent_first(user.id)
+        return in_progress_plan(plans, today)
 
     def _detect(
         self, user: User, plan: TrainingPlan, today: date

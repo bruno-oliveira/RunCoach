@@ -177,11 +177,11 @@ class PushNotifier:
         return delivered
 
     def _subscriptions(self, user: User) -> List[PushSubscription]:
-        return (
-            self.db.query(PushSubscription)
-            .filter(PushSubscription.user_id == user.id)
-            .all()
+        from app.contexts.auth.repositories import (
+            SQLAlchemyPushSubscriptionRepository,
         )
+
+        return SQLAlchemyPushSubscriptionRepository(self.db).list_for_user(user.id)
 
     def _claim(self, user: User, kind: str, key: str) -> Optional[NotificationLog]:
         entry = NotificationLog(user_id=user.id, kind=kind, key=key[:120])

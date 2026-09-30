@@ -65,6 +65,8 @@
         <p>You conquered {{ weeks }} weeks of building for {{ backyard.target_loops }} loops. That's something to be proud of.</p>
         {% elif is_trail %}
         <p>You conquered {{ weeks }} weeks of trail running. That's something to be proud of.</p>
+        {% elif training_plan.plan_type == 'recovery' %}
+        <p>Recovery done. Your legs have absorbed the race — you're ready for the next goal.</p>
         {% else %}
         <p>You finished your {{ target_distance }}km plan. {{ weeks }} weeks of work, done.</p>
         {% endif %}
@@ -87,6 +89,8 @@
                     {{ target_distance }} km{% if target_elevation_gain_m is not none %} · {{ target_elevation_gain_m | int }} m vert{% endif %}
                 </span>
             </p>
+            {% elif training_plan.plan_type == 'recovery' %}
+            <p>Easy running only while your race settles — the volume comes back week by week, with no hard sessions until it has.</p>
             {% elif training_plan.plan_type == 'fitness' %}
             <p>No race on the calendar — just steady gains, paced off your current fitness.</p>
             {% elif training_plan.plan_type == 'performance' %}
@@ -95,6 +99,8 @@
             <p>Your week-by-week {{ target_distance | race_name }} build — every session here has a reason.</p>
             {% endif %}
         </div>
+        {% elif training_plan.plan_type == 'recovery' %}
+            <p>Easy running only while your race settles — the volume comes back week by week, with no hard sessions until it has.</p>
         {% elif training_plan.plan_type == 'fitness' %}
             <p>No race on the calendar — just steady gains, paced off your current fitness.</p>
         {% elif training_plan.plan_type == 'performance' %}
@@ -172,13 +178,39 @@
         </div>
         {% endif %}
 
+        {# The block after the race: prepared from this plan, started only on
+           the runner's say-so (see recovery_block_service). #}
+        {% if recovery_offer %}
+        <div class="complete-next-cta complete-next-cta--recovery" id="recovery-offer">
+            <div class="complete-next-cta-text">
+                <strong><span data-i18n="plan.recovery_ready">Your recovery block is ready</span></strong>
+                <p>{{ recovery_offer.weeks }} weeks of easy running from {{ recovery_offer.start_date.strftime('%a %b') }} {{ recovery_offer.start_date.day }}: {{ recovery_offer.first_week_km }} km in the first week, back to {{ recovery_offer.last_week_km }} km a week by the end. No hard sessions for the first {{ recovery_offer.easy_days }} days.</p>
+                <p class="complete-next-cta-error" id="recovery-offer-error" role="alert" hidden></p>
+            </div>
+            <button type="button" class="btn btn-primary" id="recovery-offer-btn" onclick="startRecoveryBlock(this)">
+                <span data-i18n="plan.recovery_start">Start recovery block</span>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-1px;margin-left:4px;"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+            </button>
+        </div>
+        {% elif recovery_block %}
+        <div class="complete-next-cta complete-next-cta--recovery">
+            <div class="complete-next-cta-text">
+                <strong><span data-i18n="plan.recovery_started">Your recovery block</span></strong>
+                <p>Easy running while this race settles, then back to steady volume.</p>
+            </div>
+            <a href="/plan/{{ recovery_block.id }}" class="btn btn-primary">
+                <span data-i18n="plan.recovery_view">View recovery block</span>
+            </a>
+        </div>
+        {% endif %}
+
         {% if next_plan_cta %}
         <div class="complete-next-cta">
             <div class="complete-next-cta-text">
                 <strong><span data-i18n="plan.whats_next">What's Next?</span></strong>
                 <p>{{ next_plan_cta.message }}</p>
             </div>
-            <a href="{{ next_plan_cta.url }}" class="btn btn-primary">
+            <a href="{{ next_plan_cta.url }}" class="btn {% if recovery_offer or recovery_block %}btn-ghost{% else %}btn-primary{% endif %}">
                 Start {{ next_plan_cta.label }} Plan
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-1px;margin-left:4px;"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
             </a>
@@ -1012,6 +1044,26 @@
         t.textContent = msg;
         t.classList.add('visible');
         setTimeout(function() { t.classList.remove('visible'); }, 2500);
+    }
+
+    async function startRecoveryBlock(btn) {
+        var err = document.getElementById('recovery-offer-error');
+        btn.disabled = true;
+        err.hidden = true;
+        try {
+            var resp = await fetch('/api/plan/' + APP_CTX.plan_id + '/recovery-block', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: '{}',
+            });
+            var data = await resp.json().catch(function() { return {}; });
+            if (!resp.ok || !data.plan_id) throw new Error(typeof data.detail === 'string' ? data.detail : '');
+            window.location.href = '/plan/' + data.plan_id;
+        } catch (e) {
+            err.textContent = (e && e.message) || 'Could not start the recovery block. Please try again.';
+            err.hidden = false;
+            btn.disabled = false;
+        }
     }
 
     async function toggleSharePlan() {

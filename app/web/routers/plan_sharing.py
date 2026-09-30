@@ -1,4 +1,4 @@
-"""Plan sharing, start date, save/claim, delete, and PDF download endpoints."""
+"""Plan sharing, start date, recovery block, save/claim, delete and PDF endpoints."""
 
 import logging
 import os
@@ -6,21 +6,32 @@ import secrets
 from datetime import date, datetime
 from typing import Optional
 
-from fastapi import APIRouter, Cookie, Depends, HTTPException, Request
+from fastapi import (
+    APIRouter,
+    BackgroundTasks,
+    Cookie,
+    Depends,
+    HTTPException,
+    Request,
+)
 from fastapi.concurrency import run_in_threadpool
 from fastapi.responses import FileResponse, HTMLResponse, Response
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
 from app.application.plan_view_service import PlanViewService
+from app.application.watch_sync_service import resync_plan_to_watch
 from app.contexts.auth.repositories import SQLAlchemyUserRepository
 from app.contexts.plan.plan_helpers import get_plan_or_404, plan_view_context
 from app.contexts.plan.plan_service import PlanService
 from app.contexts.plan.plan_type_registry import display_label as plan_display_label
+from app.contexts.plan.recovery_block_service import start_recovery_block
 from app.contexts.plan.repositories import SQLAlchemyPlanRepository
+from app.core.time_utils import local_today
 from app.dependencies import (
     get_current_user,
     get_db,
+    get_intervals_service,
     get_optional_user,
     get_pdf_generator,
     get_plan_service,
@@ -60,6 +71,35 @@ def set_plan_start_date(
     training_plan.start_date = datetime.combine(body.start_date, datetime.min.time())
     db.commit()
     return {"ok": True, "start_date": body.start_date.isoformat()}
+
+
+# ---------------------------------------------------------------------------
+# Recovery block
+# ---------------------------------------------------------------------------
+
+
+@router.post("/api/plan/{plan_id}/recovery-block")
+def start_plan_recovery_block(
+    plan_id: str,
+    background_tasks: BackgroundTasks,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+    intervals_service=Depends(get_intervals_service),
+):
+    """Start the recovery block offered after a finished plan.
+
+    Idempotent — a double tap returns the block the first one created. When the
+    finished plan was mirrored to the watch, the block inherits that opt-in, so
+    its first week is pushed after the response.
+    """
+    training_plan = get_plan_or_404(plan_id, db, current_user, require_user_match=True)
+    plans = SQLAlchemyPlanRepository(db).list_by_user(current_user.id)
+    block = start_recovery_block(training_plan, plans, db, local_today())
+    if block.watch_sync_enabled:
+        background_tasks.add_task(
+            resync_plan_to_watch, block.id, str(current_user.id), intervals_service
+        )
+    return {"ok": True, "plan_id": block.id}
 
 
 # ---------------------------------------------------------------------------

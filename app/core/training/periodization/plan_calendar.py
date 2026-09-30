@@ -86,6 +86,23 @@ def compute_current_week(
     return week
 
 
+def plan_has_ended(
+    start_date: Optional[date], weeks_duration: Optional[int], today: date
+) -> bool:
+    """Whether a plan's training window is over as of ``today``.
+
+    The single rule every surface shares: over once ``today`` falls in the week
+    after the last one — the Monday after race day for a Monday start. Four
+    call sites used to derive this separately and disagreed by a day
+    (``today > start + weeks`` versus ``current_week > weeks``), so on that
+    Monday the plan page said "Completed" while the sync still adapted the plan.
+    A plan with no start date or no duration is never claimed to be over.
+    """
+    if start_date is None or weeks_duration is None:
+        return False
+    return (today - start_date).days >= 7 * weeks_duration
+
+
 def next_monday() -> str:
     """Return the ISO date string of the next Monday."""
     today = local_today()

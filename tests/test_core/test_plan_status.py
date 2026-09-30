@@ -10,6 +10,7 @@ from datetime import date, datetime, timedelta
 from app.contexts.plan.plan_status import (
     PlanStatus,
     current_active_plan,
+    in_progress_plan,
     plan_status,
     plan_statuses,
 )
@@ -113,3 +114,30 @@ class TestCurrentActivePlan:
 
     def test_returns_none_without_plans(self):
         assert current_active_plan([], {}) is None
+
+
+# -- in_progress_plan: the plan with a "today" ------------------------------
+
+
+def test_in_progress_skips_a_newer_plan_that_has_not_started():
+    # The runner built their next plan (no start date yet) mid-block: the
+    # nudge and the morning brief must keep talking about the running one.
+    running = _plan("running", start_date=TODAY - timedelta(weeks=2), weeks_duration=8)
+    unstarted = _plan("next", weeks_duration=10)
+    future = _plan("later", start_date=TODAY + timedelta(days=5), weeks_duration=10)
+
+    assert in_progress_plan([unstarted, future, running], TODAY) is running
+
+
+def test_in_progress_ignores_finished_plans():
+    done = _plan("done", start_date=TODAY - timedelta(weeks=9), weeks_duration=8)
+    assert in_progress_plan([done], TODAY) is None
+
+
+def test_in_progress_hands_over_on_the_monday_after_the_last_week():
+    start = TODAY - timedelta(weeks=8)
+    finished = _plan("race", start_date=start, weeks_duration=8)
+    block = _plan("block", start_date=TODAY, weeks_duration=5)
+
+    assert in_progress_plan([block, finished], TODAY) is block
+    assert in_progress_plan([finished], TODAY - timedelta(days=1)) is finished

@@ -137,6 +137,18 @@ class BackyardPlanHandler(PlanTypeHandler):
         return f"{plan.backyard_target_loops}-Loop Backyard"
 
 
+class RecoveryPlanHandler(PlanTypeHandler):
+    """The easy block after a race. It has no race of its own, so no distance."""
+
+    kind = "recovery"
+
+    def matches(self, plan: "TrainingPlan") -> bool:
+        return getattr(plan, "plan_type", "") == "recovery"
+
+    def display_label(self, plan: "TrainingPlan") -> str:
+        return "Recovery"
+
+
 class DistancePlanHandler(PlanTypeHandler):
     """Fallback handler for traditional distance-based plans."""
 
@@ -152,6 +164,7 @@ class DistancePlanHandler(PlanTypeHandler):
 
 PLAN_TYPE_REGISTRY: List[PlanTypeHandler] = [
     BackyardPlanHandler(),
+    RecoveryPlanHandler(),
     PerformancePlanHandler(),
     DistancePlanHandler(),
 ]

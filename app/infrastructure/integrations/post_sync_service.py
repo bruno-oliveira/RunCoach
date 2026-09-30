@@ -20,6 +20,7 @@ from app.contexts.plan.adaptation import AdaptationService
 from app.contexts.runner.fitness.hr_zone_service import HRZoneService
 from app.core.time_utils import local_today
 from app.core.training.adaptation.thresholds import AUTO_ADJUST_MIN_DELTA
+from app.core.training.periodization.plan_calendar import plan_has_ended
 from app.models import TrainingPlan
 from app.models.user import User
 from app.utils import to_date as _to_date
@@ -68,8 +69,7 @@ def auto_map_and_adjust(
             # raise TypeError, which failed the whole sync for the runner. Same
             # shape as the missing start_date above.
             continue
-        end_date = start + timedelta(weeks=plan.weeks_duration)
-        if today > end_date:
+        if plan_has_ended(start, plan.weeks_duration, today):
             continue
 
         try:

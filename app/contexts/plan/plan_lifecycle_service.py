@@ -1,11 +1,12 @@
 """Plan lifecycle operations — limit checking, customization, deletion."""
 
 import logging
-from datetime import date, datetime, timedelta
+from datetime import date, datetime
 
 from sqlalchemy.orm import Session
 
 from app.core.time_utils import local_today
+from app.core.training.periodization.plan_calendar import plan_has_ended
 from app.infrastructure.config import settings
 from app.models import (
     DailyWorkout,
@@ -36,17 +37,9 @@ def has_reached_plan_limit(user_id: str, db: Session) -> bool:
 
 
 def _is_plan_completed(plan: TrainingPlan, today: date) -> bool:
-    if not plan.start_date or not plan.weeks_duration:
-        # Without a start date or a duration there is no end date to compare
-        # against, so the plan is not claimed to be finished.
-        return False
-    start_d = (
-        plan.start_date.date()
-        if isinstance(plan.start_date, datetime)
-        else plan.start_date
-    )
-    end_date = start_d + timedelta(weeks=plan.weeks_duration)
-    return today > end_date
+    start = plan.start_date
+    start_d = start.date() if isinstance(start, datetime) else start
+    return plan_has_ended(start_d, plan.weeks_duration, today)
 
 
 def customize_plan(
@@ -133,6 +126,12 @@ def delete_plan(training_plan: TrainingPlan, db: Session) -> None:
     db.query(PlanCustomization).filter(
         PlanCustomization.training_plan_id == plan_id
     ).delete()
+
+    # A recovery block outlives the race plan it followed; it just stops
+    # pointing at it.
+    db.query(TrainingPlan).filter(TrainingPlan.follows_plan_id == plan_id).update(
+        {TrainingPlan.follows_plan_id: None}, synchronize_session="fetch"
+    )
 
     db.delete(training_plan)
     db.commit()

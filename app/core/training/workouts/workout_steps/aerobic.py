@@ -87,6 +87,55 @@ def build_shakeout_steps(
     ]
 
 
+def build_recovery_block_steps(
+    distance_km: float,
+    pace_zones: Optional[Dict] = None,
+    *,
+    very_easy: bool = False,
+    strides: int = 0,
+) -> List[Dict[str, Any]]:
+    """An easy run from the post-race recovery block.
+
+    ``very_easy`` paces it off the E zone's *recovery* sub-zone — the days
+    straight after a race, when the legs are still repairing. Strides are carved
+    out of ``distance_km`` (as in :func:`build_shakeout_steps`) so the card and
+    the steps agree on the distance.
+    """
+    if distance_km <= 0:
+        return []
+    total_m = int(round(distance_km * 1000))
+    strides_m = strides * _SHAKEOUT_STRIDE_M
+    pace_str = _pace_str("E", pace_zones)
+    if very_easy and pace_zones:
+        sub = (pace_zones.get("E") or {}).get("sub_zones") or {}
+        pace_str = (sub.get("recovery") or {}).get("pace_str") or pace_str
+    steps = [
+        _step(
+            "run",
+            "Recovery run" if very_easy else "Easy run",
+            distance_m=max(500, total_m - strides_m),
+            pace_zone="E",
+            pace_str=pace_str,
+            effort="very easy" if very_easy else "conversational",
+            note="Slower than feels necessary" if very_easy else None,
+        )
+    ]
+    if strides:
+        steps.append(
+            _step(
+                "strides",
+                f"{strides} × {_SHAKEOUT_STRIDE_M} m strides",
+                distance_m=_SHAKEOUT_STRIDE_M,
+                repeat=strides,
+                pace_zone="R",
+                pace_str=_pace_str("R", pace_zones),
+                effort="quick, relaxed",
+                note="Full recovery between — form, not fitness",
+            )
+        )
+    return steps
+
+
 def build_long_steps(
     distance_km: float,
     pace_zones: Optional[Dict] = None,

@@ -1,5 +1,6 @@
 """Plan viewing endpoint."""
 
+import copy
 import logging
 from typing import Optional
 
@@ -87,10 +88,15 @@ def view_plan(
                     zones = HRZoneService.compute_and_store_zones(
                         training_plan, user, db
                     )
-                    HRZoneService.inject_hr_zones_into_plan_data(plan_data, zones)
-                    training_plan.plan_data = plan_data
+                    # Backfill the *stored* plan, not the enriched view copy:
+                    # persisting that wrote display-only fields (ids, re-derived
+                    # distances, total_minutes) into the plan itself.
+                    stored = copy.deepcopy(training_plan.plan_data or [])
+                    HRZoneService.inject_hr_zones_into_plan_data(stored, zones)
+                    training_plan.plan_data = stored
                     persist_json(training_plan, "plan_data")
                     db.commit()
+                    HRZoneService.inject_hr_zones_into_plan_data(plan_data, zones)
             except Exception as e:
                 logger.warning("Retroactive HR zone computation failed: %s", e)
 

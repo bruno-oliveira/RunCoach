@@ -22,6 +22,7 @@ from app.contexts.plan.plan_helpers import (
     current_active_plan,
     plan_statuses,
 )
+from app.contexts.plan.recovery_block_service import RecoveryOffer, recovery_offer
 from app.contexts.plan.repositories import SQLAlchemyPlanRepository
 from app.core.time_utils import local_today
 from app.dependencies import get_current_user, get_db, get_optional_user
@@ -44,11 +45,17 @@ def home(
     current_plan = None
     plan_count = 0
     statuses: dict[str, PlanStatus] = {}
+    offer: Optional[RecoveryOffer] = None
     if current_user is not None:
+        today = local_today()
         plans = SQLAlchemyPlanRepository(db).list_by_user_recent_first(current_user.id)
-        statuses = plan_statuses(plans, local_today())
+        statuses = plan_statuses(plans, today)
         current_plan = current_active_plan(plans, statuses)
         plan_count = sum(1 for s in statuses.values() if not s.completed)
+        # Every plan finished: the one just completed may have a recovery
+        # block waiting, which is a better next step than "View this week".
+        if current_plan is not None and statuses[current_plan.id].completed:
+            offer = recovery_offer(current_plan, plans, today)
 
     return templates.TemplateResponse(
         request,
@@ -60,6 +67,7 @@ def home(
             "current_plan": current_plan,
             "plan_statuses": statuses,
             "plan_count": plan_count,
+            "recovery_offer": offer,
         },
     )
 

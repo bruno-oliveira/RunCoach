@@ -17,12 +17,17 @@ from sqlalchemy.orm import Session, selectinload
 
 from app.contexts.plan import plan_data_enricher as _enricher
 from app.contexts.plan.adaptation import AdaptationService
+from app.contexts.plan.recovery_block_service import existing_block, recovery_offer
+from app.contexts.plan.repositories import SQLAlchemyPlanRepository
 from app.contexts.runner.enrichment import completion_stats as _cs
 from app.contexts.runner.enrichment import week_pulse_generator as _pulse
 from app.contexts.runner.fitness.hr_zone_service import HRZoneService
 from app.core.race.recovery import recovery_guidance
 from app.core.time_utils import local_today
-from app.core.training.periodization.plan_calendar import compute_current_week
+from app.core.training.periodization.plan_calendar import (
+    compute_current_week,
+    plan_has_ended,
+)
 from app.core.training.profiles.vertical_simulation import (
     compute_weekly_vertical_actuals,
 )
@@ -97,29 +102,29 @@ class PlanViewService:
         comp_stats = None
         next_plan_cta = None
         recovery = None
+        recovery_offer = None
+        recovery_block = None
         if training_plan.start_date and current_user:
             from datetime import datetime as _datetime
 
             sd = training_plan.start_date
             start_d = sd.date() if isinstance(sd, _datetime) else sd
-            current_wk = compute_current_week(start_d, local_today(), pre_start=0)
-            weeks_duration = training_plan.weeks_duration
-            # Both sides are legitimately optional: `compute_current_week` is
-            # typed Optional (it returns its pre-start sentinel) and the column is
-            # nullable. Comparing them directly raised TypeError here, which took
-            # the whole plan page down for a row with no duration. Without a
-            # duration we cannot claim the plan has finished, so we do not.
-            if (
-                current_wk is not None
-                and weeks_duration is not None
-                and current_wk > weeks_duration
-            ):
+            if plan_has_ended(start_d, training_plan.weeks_duration, local_today()):
                 comp_stats = self.get_completion_stats(training_plan, db)
-                next_plan_cta = self.get_next_plan_cta(training_plan.target_distance_km)
+                next_plan_cta = self.get_next_plan_cta(
+                    self._goal_distance_km(training_plan, db)
+                )
                 recovery = recovery_guidance(
                     training_plan.target_distance_km,
                     (comp_stats or {}).get("peak_km_per_week"),
                 )
+                try:
+                    recovery_offer, recovery_block = self._recovery_block_state(
+                        training_plan, db
+                    )
+                except Exception as e:
+                    logger.warning("Recovery block offer failed: %s", e)
+                    partial_errors.append("recovery_block")
 
         overridden_week_rows = (
             db.query(WeeklyPlan.week_number)
@@ -202,6 +207,8 @@ class PlanViewService:
             "completion_stats": comp_stats,
             "next_plan_cta": next_plan_cta,
             "recovery_guidance": recovery,
+            "recovery_offer": recovery_offer,
+            "recovery_block": recovery_block,
             "overridden_weeks": overridden_weeks,
             "adaptation_timeline": adaptation_timeline,
             "week_evolution": week_evolution,
@@ -210,6 +217,28 @@ class PlanViewService:
             "weekly_vertical_actuals": weekly_vertical_actuals,
             "partial_errors": partial_errors,
         }
+
+    def _goal_distance_km(self, training_plan: TrainingPlan, db: Session) -> float:
+        """The race distance to suggest a next plan from.
+
+        A recovery block has no race of its own; the one it recovered from is
+        what "what's next" should step up from.
+        """
+        if training_plan.follows_plan_id:
+            parent = SQLAlchemyPlanRepository(db).get_by_id(
+                training_plan.follows_plan_id
+            )
+            if parent is not None:
+                return parent.target_distance_km
+        return training_plan.target_distance_km
+
+    def _recovery_block_state(self, training_plan: TrainingPlan, db: Session):
+        """The recovery block on offer after this plan, or the one started."""
+        plans = SQLAlchemyPlanRepository(db).list_by_user(training_plan.user_id)
+        block = existing_block(training_plan, plans)
+        if block is not None:
+            return None, block
+        return recovery_offer(training_plan, plans, local_today()), None
 
     def _compute_week_evolution(
         self,
