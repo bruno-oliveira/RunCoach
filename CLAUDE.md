@@ -180,9 +180,6 @@ cover it:
   missing `created_at` to "now" would assert a join date the database never
   recorded).
 
-`docs/remaining-hardening-work.md` records how the sweep was done, the two rules
-above, and the few things still deliberately open.
-
 ### Persistence boundary (CQRS-lite)
 
 Writes go through repositories (`SQLAlchemy{Plan,Run,User,Readiness,FavoriteRecipe}Repository`,
