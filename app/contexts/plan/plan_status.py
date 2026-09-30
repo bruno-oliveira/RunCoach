@@ -19,7 +19,10 @@ from datetime import date, datetime
 from typing import Iterable, Optional
 
 from app.contexts.plan.plan_type_registry import display_label as plan_display_label
-from app.core.training.periodization.plan_calendar import compute_current_week
+from app.core.training.periodization.plan_calendar import (
+    compute_current_week,
+    plan_has_ended,
+)
 from app.core.training.periodization.strength_plan import derive_experience_level
 from app.models import TrainingPlan
 
@@ -70,7 +73,7 @@ def plan_status(plan: TrainingPlan, today: date) -> PlanStatus:
     # TypeError, which took out the home hero and the My Plans list for a plan
     # with no duration. A plan we cannot measure against its length is not
     # claimed to be finished.
-    if plan.weeks_duration is not None and current_wk > plan.weeks_duration:
+    if plan_has_ended(start_d, plan.weeks_duration, today):
         label: Optional[str] = _COMPLETED_LABEL
     elif current_wk >= 1:
         # A plan with no recorded duration still has a current week, so report
@@ -112,3 +115,31 @@ def current_active_plan(
         if not statuses[plan.id].completed:
             return plan
     return plans[0] if plans else None
+
+
+def in_progress_plan(
+    plans: Iterable[TrainingPlan], today: date
+) -> Optional[TrainingPlan]:
+    """The plan the runner is training on today: started, and not yet over.
+
+    Distinct from :func:`current_active_plan`, which picks what to *show*
+    (an unstarted or a just-finished plan is still worth a home-page hero). The
+    nudge email and the scheduled pushes talk about today's training, so they
+    need the plan that has a today: each used to re-derive that separately, and
+    they disagreed — one returned nothing when the newest plan had no start date
+    even though an older plan was mid-block, the other returned a future plan
+    that hadn't begun.
+
+    Args:
+        plans: The runner's plans, newest first.
+        today: The runner's local date.
+    """
+    for plan in plans:
+        sd = plan.start_date
+        start = sd.date() if isinstance(sd, datetime) else sd
+        if start is None or start > today:
+            continue
+        if plan_has_ended(start, plan.weeks_duration, today):
+            continue
+        return plan
+    return None

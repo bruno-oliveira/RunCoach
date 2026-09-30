@@ -508,3 +508,44 @@ def test_enricher_total_km_follows_steps_distance_overwrite(test_db):
     assert workout["distance"] != 2.0
     # Chip must match the rewritten distance.
     assert enriched[0]["total_km"] == round(workout["distance"], 1)
+
+
+def test_enricher_returns_a_view_copy_and_leaves_the_stored_plan_alone(test_db):
+    """The enriched copy carries ids and reconciled totals; the plan does not.
+
+    Mutating the plan's own JSON leaked display values into everything else in
+    the request, and the plan page's HR-zone backfill then persisted them.
+    """
+    plan, week = _seed_plan(test_db)
+    dw = DailyWorkout(
+        weekly_plan_id=week.id,
+        day_of_week=3,
+        workout_type="easy",
+        distance_km=8.0,
+        intensity="low",
+        baseline_distance_km=8.0,
+    )
+    test_db.add(dw)
+    test_db.commit()
+    stored = [
+        {
+            "week": 1,
+            "total_km": 20.0,
+            "daily_workouts": [{"day": 3, "type": "easy", "distance": 8.0}],
+        }
+    ]
+    plan.plan_data = stored
+    test_db.commit()
+
+    enriched = enrich_plan_data_with_ids(plan.plan_data, plan.id, test_db)
+
+    assert enriched[0]["daily_workouts"][0]["id"] == dw.id
+    assert enriched[0]["total_km"] == 8.0
+    assert "id" not in plan.plan_data[0]["daily_workouts"][0]
+    assert plan.plan_data[0]["total_km"] == 20.0
+    assert "total_minutes" not in plan.plan_data[0]
+
+
+def test_enricher_tolerates_a_plan_with_no_data(test_db):
+    plan, _ = _seed_plan(test_db)
+    assert enrich_plan_data_with_ids(None, plan.id, test_db) == []

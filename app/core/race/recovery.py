@@ -23,7 +23,9 @@ from typing import Optional
 _KM_PER_MILE = 1.609
 _MIN_EASY_DAYS = 3
 _MAX_EASY_DAYS = 28
-_NEXT_BLOCK_FRACTION = 0.7
+# Shared with the recovery block (``core.training.periodization.recovery_block``),
+# which steps volume back up to exactly this share of the peak.
+NEXT_BLOCK_FRACTION = 0.7
 
 
 @dataclass(frozen=True)
@@ -33,16 +35,19 @@ class RecoveryGuidance:
     line: str
 
 
+def easy_days_after(race_km: float) -> int:
+    """Days of easy-only running after racing ``race_km`` (one per mile)."""
+    return int(max(_MIN_EASY_DAYS, min(_MAX_EASY_DAYS, round(race_km / _KM_PER_MILE))))
+
+
 def recovery_guidance(
     race_km: Optional[float], peak_week_km: Optional[float]
 ) -> Optional[RecoveryGuidance]:
     if not race_km or race_km <= 0:
         return None
-    easy_days = int(
-        max(_MIN_EASY_DAYS, min(_MAX_EASY_DAYS, round(race_km / _KM_PER_MILE)))
-    )
+    easy_days = easy_days_after(race_km)
     next_base = (
-        int(round(peak_week_km * _NEXT_BLOCK_FRACTION))
+        int(round(peak_week_km * NEXT_BLOCK_FRACTION))
         if peak_week_km and peak_week_km > 0
         else None
     )

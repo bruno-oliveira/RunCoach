@@ -102,10 +102,22 @@ def get_completion_stats(
     training_plan: TrainingPlan,
     db: Session,
 ) -> dict[str, Any]:
+    plan_data = training_plan.plan_data if training_plan.plan_data else []
+    peak_km = max((w.get("total_km", 0) for w in plan_data), default=0)
+    # The volume the plan *scheduled* is known with or without logged runs.
+    # Returning only ``has_data`` here took the whole completed-plan page down
+    # (the mileage-growth bar reads these unconditionally) for every runner who
+    # followed the plan without logging — and left "Recover first" without a
+    # peak to size the next block from.
+    volume = {
+        "start_km_per_week": training_plan.current_weekly_km or 0,
+        "peak_km_per_week": round(peak_km, 1),
+    }
+
     runs = db.query(RunLog).filter(RunLog.training_plan_id == training_plan.id).all()
 
     if not runs:
-        return {"has_data": False}
+        return {"has_data": False, **volume}
 
     distances = [r.distance_km for r in runs if r.distance_km]
     total_km = sum(distances) if distances else 0
@@ -117,9 +129,6 @@ def get_completion_stats(
     efforts = [r.perceived_effort for r in runs if r.perceived_effort]
     avg_effort = round(sum(efforts) / len(efforts), 1) if efforts else None
 
-    plan_data = training_plan.plan_data if training_plan.plan_data else []
-    peak_km = max((w.get("total_km", 0) for w in plan_data), default=0)
-
     return {
         "has_data": bool(distances),
         "total_km": round(total_km, 1),
@@ -127,8 +136,7 @@ def get_completion_stats(
         "longest_run_km": round(longest_run, 1),
         "best_pace_min_km": best_pace,
         "avg_effort": avg_effort,
-        "start_km_per_week": training_plan.current_weekly_km,
-        "peak_km_per_week": round(peak_km, 1),
+        **volume,
     }
 
 
@@ -136,7 +144,9 @@ def get_next_plan_cta(target_distance_km: float) -> dict[str, str]:
     return _NEXT_PLAN_MAP.get(
         target_distance_km,
         {
-            "label": "New Plan",
+            # The button reads "Start {label} Plan" — "New Plan" rendered as
+            # "Start New Plan Plan" for every distance not in the map.
+            "label": "Your Next",
             "url": "/",
             "message": "Keep the momentum going -- start your next training plan.",
         },

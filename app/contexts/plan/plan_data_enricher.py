@@ -1,7 +1,8 @@
 """DB ID enrichment, nutrition format conversion, and logged-run mapping."""
 
+import copy
 import logging
-from typing import Any
+from typing import Any, Optional
 
 from sqlalchemy.orm import Session
 
@@ -130,10 +131,21 @@ def _estimate_duration_min_from_steps(
 
 
 def enrich_plan_data_with_ids(
-    plan_data: list[dict],
+    plan_data: Optional[list[dict]],
     training_plan_id: str,
     db: Session,
 ) -> list[dict]:
+    """Return a *view copy* of ``plan_data``: DB ids, healed prose, reconciled
+    distances and week totals.
+
+    Works on a deep copy. It used to mutate the plan's own JSON in place, which
+    had two effects nobody intended: everything later in the same request that
+    read ``training_plan.plan_data`` (completion stats, the recovery-block
+    offer) saw display values instead of the stored plan, and any write-back
+    in that request (the plan page's HR-zone backfill) persisted the view model
+    — ids, display-only distances, ``total_minutes`` — as if it were the plan.
+    """
+    plan_data = copy.deepcopy(plan_data or [])
     rows = (
         db.query(
             WeeklyPlan.week_number,

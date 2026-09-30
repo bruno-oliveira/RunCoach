@@ -17,6 +17,7 @@ if TYPE_CHECKING:
     from datetime import date as date_cls
 
     from app.models.favorite_recipe import FavoriteRecipe
+    from app.models.push_subscription import PushSubscription
     from app.models.readiness_log import ReadinessLog
     from app.models.run_log import RunLog
     from app.models.training_plan import TrainingPlan
@@ -116,3 +117,17 @@ class IFavoriteRecipeRepository(Protocol):
     def save(self, favorite: "FavoriteRecipe") -> None: ...
 
     def delete(self, favorite: "FavoriteRecipe") -> None: ...
+
+
+class IPushSubscriptionRepository(Protocol):
+    """Persistence contract for a runner's browser push subscriptions."""
+
+    def list_for_user(self, user_id: str) -> List["PushSubscription"]: ...
+
+    def count_for_user(self, user_id: str) -> int: ...
+
+    def get_by_endpoint(self, endpoint: str) -> Optional["PushSubscription"]: ...
+
+    def delete_for_user(self, endpoint: str, user_id: str) -> int: ...
+
+    def save(self, subscription: "PushSubscription") -> None: ...

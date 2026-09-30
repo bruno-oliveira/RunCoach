@@ -27,6 +27,7 @@ class TrainingPlan(Base):
     __table_args__ = (
         Index("idx_training_plan_user_id", "user_id"),
         Index("idx_training_plan_created_at", "created_at"),
+        Index("idx_training_plan_follows_plan_id", "follows_plan_id"),
     )
     id: Mapped[str] = mapped_column(
         String, primary_key=True, default=lambda: str(uuid.uuid4())
@@ -120,6 +121,10 @@ class TrainingPlan(Base):
     # The mirror runs in the background, so without this a revoked token is just
     # a log line and a watch that quietly stops updating.
     watch_sync_error: Mapped[str | None] = mapped_column(String)
+    # The plan this one follows on from — set on a recovery block, pointing at
+    # the race plan it was built from. Not a foreign key: deleting the race plan
+    # leaves the block standing, and ``delete_plan`` clears the pointer.
+    follows_plan_id: Mapped[str | None] = mapped_column(String)
     share_token: Mapped[str | None] = mapped_column(String, unique=True, index=True)
 
     user: Mapped["User"] = relationship("User", back_populates="training_plans")

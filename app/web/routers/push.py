@@ -21,6 +21,7 @@ from app.application.push_notification_service import (
     KIND_TEST,
     get_push_notifier,
 )
+from app.contexts.auth.repositories import SQLAlchemyPushSubscriptionRepository
 from app.core.coaching import notification_prefs as prefs
 from app.dependencies import get_current_user, get_db
 from app.domain.notifications import PushMessage
@@ -61,11 +62,7 @@ class PrefsUpdate(BaseModel):
 
 def _config(user: User, db: Session) -> Dict[str, Any]:
     sender = get_push_sender()
-    devices = (
-        db.query(PushSubscription.id)
-        .filter(PushSubscription.user_id == user.id)
-        .count()
-    )
+    devices = SQLAlchemyPushSubscriptionRepository(db).count_for_user(user.id)
     return {
         "configured": sender.configured,
         "public_key": sender.public_key,
@@ -116,14 +113,11 @@ def push_subscribe(
             status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid subscription keys."
         ) from bad_keys
 
-    existing = (
-        db.query(PushSubscription)
-        .filter(PushSubscription.endpoint == payload.endpoint)
-        .first()
-    )
+    subscriptions = SQLAlchemyPushSubscriptionRepository(db)
+    existing = subscriptions.get_by_endpoint(payload.endpoint)
     if existing is None:
         existing = PushSubscription(endpoint=payload.endpoint)
-        db.add(existing)
+        subscriptions.save(existing)
     # A shared family laptop that signs in as someone else re-homes the device
     # rather than keeping the previous runner's notifications flowing to it.
     existing.user_id = current_user.id
@@ -142,10 +136,9 @@ def push_unsubscribe(
     current_user: User = Depends(get_current_user),
 ) -> Dict[str, Any]:
     """Forget this browser (only if it's the current runner's)."""
-    db.query(PushSubscription).filter(
-        PushSubscription.endpoint == payload.endpoint,
-        PushSubscription.user_id == current_user.id,
-    ).delete(synchronize_session=False)
+    SQLAlchemyPushSubscriptionRepository(db).delete_for_user(
+        payload.endpoint, current_user.id
+    )
     db.commit()
     return {"ok": True, **_config(current_user, db)}
 
