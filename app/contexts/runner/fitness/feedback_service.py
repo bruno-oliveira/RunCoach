@@ -175,6 +175,8 @@ class FeedbackService:
         run_id_to_week = {}
         for run in runs:
             run_date = run.date
+            if run_date is None:
+                continue  # a run with no date cannot be assigned a week
             if isinstance(run_date, _datetime):
                 run_date = run_date.date()
             delta = (run_date - start_date).days

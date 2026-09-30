@@ -25,7 +25,7 @@ HealthProbe = Callable[[], Optional[str]]
 
 
 class HealthResponse(BaseModel):
-    """Health-check response."""
+    """Readiness response."""
 
     status: str = "healthy"
     version: str = Field(default_factory=lambda: settings.app_version)
@@ -33,6 +33,20 @@ class HealthResponse(BaseModel):
     # so a failing check names the broken dependency instead of just saying
     # "unhealthy" and leaving ops to guess.
     checks: dict[str, str] = Field(default_factory=dict)
+
+
+class LivenessResponse(BaseModel):
+    """Liveness response: the process is up, and nothing else is asserted.
+
+    Deliberately separate from :class:`HealthResponse` because the two answer
+    different questions. A liveness probe that consults the database cannot
+    tell a wedged process from a missing volume — and the action a failed
+    liveness check triggers (restart the machine) does not fix a missing
+    volume. So liveness does no I/O; readiness is where the dependency lives.
+    """
+
+    status: str = "healthy"
+    version: str = Field(default_factory=lambda: settings.app_version)
 
 
 def probe_database() -> Optional[str]:

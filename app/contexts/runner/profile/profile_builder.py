@@ -159,11 +159,15 @@ def _compute_efficiency(profile: RunnerProfile, runs: List[RunLog]) -> None:
     if len(eff_runs) < 4:
         return
 
-    def _eff(r: RunLog) -> float:
-        speed_kmh = 60 / r.avg_pace_min_km
-        return speed_kmh / r.avg_heart_rate * 100
-
-    efficiencies = [_eff(r) for r in eff_runs]
+    # ``eff_runs`` is filtered to runs that carry both a pace and an HR; the
+    # explicit guards make that visible to the type checker.
+    efficiencies: List[float] = []
+    for r in eff_runs:
+        pace = r.avg_pace_min_km
+        hr = r.avg_heart_rate
+        if not pace or not hr:
+            continue
+        efficiencies.append((60 / pace) / hr * 100)
     profile.avg_efficiency = round(sum(efficiencies) / len(efficiencies), 2)
 
     mid = len(efficiencies) // 2

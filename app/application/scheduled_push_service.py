@@ -205,17 +205,15 @@ class ScheduledPushService:
     def _active_plan(self, user: User) -> Optional[TrainingPlan]:
         from app.contexts.plan.plan_helpers import (
             current_active_plan,
-            decorate_plan_status,
+            plan_statuses,
         )
         from app.contexts.plan.repositories import SQLAlchemyPlanRepository
         from app.core.time_utils import local_today
 
         plans = SQLAlchemyPlanRepository(self.db).list_by_user_recent_first(user.id)
-        today = local_today()
-        for plan in plans:
-            decorate_plan_status(plan, today)
-        plan = current_active_plan(plans)
-        if plan is None or getattr(plan, "status_label", None) == "Completed":
+        statuses = plan_statuses(plans, local_today())
+        plan = current_active_plan(plans, statuses)
+        if plan is None or statuses[plan.id].completed:
             return None
         if plan.start_date is None:
             return None

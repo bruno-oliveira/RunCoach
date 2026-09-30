@@ -52,6 +52,11 @@ def detect_skipped_workouts(
 
     sd = training_plan.start_date or training_plan.created_at
     plan_start_date = _to_date(sd)
+    # Both columns are nullable: with neither a start date nor a created_at
+    # there is no calendar to judge a session against, so report nothing
+    # skipped rather than dating the plan from an invented origin.
+    if plan_start_date is None:
+        return {"skipped": 0, "rescheduled": 0}
     today = today_date()
 
     daily_workouts = (

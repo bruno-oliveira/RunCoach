@@ -17,7 +17,11 @@ from app.contexts.nutrition.nutrition_content import (
     generate_trail_fuel_ideas,
     generate_trail_nutrition_tips,
 )
-from app.contexts.plan.plan_helpers import current_active_plan, decorate_plan_status
+from app.contexts.plan.plan_helpers import (
+    PlanStatus,
+    current_active_plan,
+    plan_statuses,
+)
 from app.contexts.plan.repositories import SQLAlchemyPlanRepository
 from app.core.time_utils import local_today
 from app.dependencies import get_current_user, get_db, get_optional_user
@@ -39,15 +43,12 @@ def home(
     # pitch, driven by their current plan. Anonymous visitors skip the query.
     current_plan = None
     plan_count = 0
+    statuses: dict[str, PlanStatus] = {}
     if current_user is not None:
         plans = SQLAlchemyPlanRepository(db).list_by_user_recent_first(current_user.id)
-        today = local_today()
-        for plan in plans:
-            decorate_plan_status(plan, today)
-        current_plan = current_active_plan(plans)
-        # `status_label` is declared on `TrainingPlan` (view-only, default None)
-        # and set by `decorate_plan_status` above, so this is a checked read.
-        plan_count = sum(1 for p in plans if p.status_label != "Completed")
+        statuses = plan_statuses(plans, local_today())
+        current_plan = current_active_plan(plans, statuses)
+        plan_count = sum(1 for s in statuses.values() if not s.completed)
 
     return templates.TemplateResponse(
         request,
@@ -57,6 +58,7 @@ def home(
             "user": current_user,
             "google_client_id": settings.google_client_id or "",
             "current_plan": current_plan,
+            "plan_statuses": statuses,
             "plan_count": plan_count,
         },
     )
@@ -137,14 +139,12 @@ def today(
     """
     if current_user is not None:
         plans = SQLAlchemyPlanRepository(db).list_by_user_recent_first(current_user.id)
-        local = local_today()
-        for plan in plans:
-            decorate_plan_status(plan, local)
-        plan = current_active_plan(plans)
+        statuses = plan_statuses(plans, local_today())
+        plan = current_active_plan(plans, statuses)
         if (
             plan is not None
             and plan.start_date is not None
-            and getattr(plan, "status_label", None) != "Completed"
+            and not statuses[plan.id].completed
         ):
             return RedirectResponse(f"/plan/{plan.id}#today-card", status_code=302)
     return RedirectResponse("/", status_code=302)

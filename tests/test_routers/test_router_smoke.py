@@ -371,6 +371,67 @@ class TestHomeHero:
 
 
 # ---------------------------------------------------------------------------
+# My Plans page  (/my-plans)
+#
+# The page splits plans into "active" and "completed" and renders each from its
+# PlanStatus view model, so this exercises the mapping/plan-id wiring between the
+# router and the template (templates are not type-checked).
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.usefixtures("_override_db")
+class TestMyPlansPage:
+    def test_splits_active_from_completed_plans(self, smoke_user, test_db):
+        test_db.add_all(
+            [
+                TrainingPlan(
+                    id="my-plans-active",
+                    user_id=smoke_user.id,
+                    current_weekly_km=30,
+                    target_distance="10",
+                    weeks_duration=8,
+                    start_date=local_today() - timedelta(weeks=3),
+                ),
+                TrainingPlan(
+                    id="my-plans-done",
+                    user_id=smoke_user.id,
+                    current_weekly_km=30,
+                    target_distance="21.1",
+                    weeks_duration=8,
+                    start_date=local_today() - timedelta(weeks=20),
+                ),
+            ]
+        )
+        test_db.commit()
+
+        app.dependency_overrides[get_optional_user] = lambda: smoke_user
+        try:
+            with TestClient(app) as c:
+                resp = c.get("/my-plans")
+        finally:
+            app.dependency_overrides.pop(get_optional_user, None)
+
+        assert resp.status_code == 200
+        # The active card carries its status label and distance label…
+        assert "Week 4 of 8" in resp.text
+        assert "10K Training Plan" in resp.text
+        # …and the completed one is filed under the completed section.
+        assert "Half Marathon Training Plan" in resp.text
+        assert "Completed Plans" in resp.text
+
+    def test_renders_without_plans(self, smoke_user, test_db):
+        app.dependency_overrides[get_optional_user] = lambda: smoke_user
+        try:
+            with TestClient(app) as c:
+                resp = c.get("/my-plans")
+        finally:
+            app.dependency_overrides.pop(get_optional_user, None)
+
+        assert resp.status_code == 200
+        assert "myplans.none_title" in resp.text
+
+
+# ---------------------------------------------------------------------------
 # Setup watch page  (/setup/watch)
 # ---------------------------------------------------------------------------
 

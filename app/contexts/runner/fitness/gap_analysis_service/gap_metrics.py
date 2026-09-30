@@ -41,7 +41,8 @@ def _compute_volume_gap(
             continue
         wk_idx = delta // 7
         if wk_idx < len(actual_weekly):
-            actual_weekly[wk_idx] += run.distance_km
+            # A run with no recorded distance contributes 0 km (neutral).
+            actual_weekly[wk_idx] += run.distance_km or 0.0
 
     weeks_to_check = min(current_week, len(planned_weekly))
     if weeks_to_check == 0:
@@ -134,7 +135,7 @@ def _compute_long_run_gap(
         # Fallback: ~75% of race distance
         planned_long = target_distance_km * 0.75
 
-    actual_longest = max((r.distance_km for r in runs), default=0)
+    actual_longest = max(((r.distance_km or 0.0) for r in runs), default=0)
 
     if planned_long <= 0:
         return {
@@ -184,7 +185,9 @@ def _compute_pace_gap(
             "verdict": "insufficient_data",
         }
 
-    current_pace = sum(r.avg_pace_min_km for r in recent_runs) / len(recent_runs)
+    # ``recent_runs`` is filtered to runs with a positive pace, so the ``or 0``
+    # never fires; it only keeps the sum's element type non-optional.
+    current_pace = sum((r.avg_pace_min_km or 0) for r in recent_runs) / len(recent_runs)
     gap_seconds = round((current_pace - target_pace) * 60)
     verdict = verdict_from_thresholds(gap_seconds, _PACE_GAP_THRESHOLDS)
 

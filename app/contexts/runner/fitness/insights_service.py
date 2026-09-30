@@ -123,7 +123,9 @@ def _generate_insights(p: RunnerProfile) -> list:
 
     # -- Race readiness (VDOT-based prediction context) --
     if p.current_vdot and p.weeks_of_data >= 4:
-        insights.append(race_readiness_insight(p))
+        race_readiness = race_readiness_insight(p)
+        if race_readiness is not None:
+            insights.append(race_readiness)
 
     return insights
 

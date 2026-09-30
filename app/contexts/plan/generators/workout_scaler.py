@@ -497,12 +497,11 @@ def fill_shortfall(
     # ``easy_vs_long_ratio`` is how the caller encodes a low-frequency schedule
     # (``low_freq_easy_vs_long_ratio``): no other input produces a tighter easy
     # ceiling than the default.
-    low_frequency_schedule = (
+    if (
         trail_profile is None
         and long_w is not None
         and easy_vs_long_ratio <= MAX_EASY_VS_LONG_RUN - 0.01
-    )
-    if low_frequency_schedule:
+    ):
         from app.core.training.tuning import MAX_KEY_WORKOUT_VS_LONG_RUN
 
         deficit = round(total_km - sum(w.get("distance", 0) for w in workouts), 1)

@@ -36,7 +36,9 @@ def has_reached_plan_limit(user_id: str, db: Session) -> bool:
 
 
 def _is_plan_completed(plan: TrainingPlan, today: date) -> bool:
-    if not plan.start_date:
+    if not plan.start_date or not plan.weeks_duration:
+        # Without a start date or a duration there is no end date to compare
+        # against, so the plan is not claimed to be finished.
         return False
     start_d = (
         plan.start_date.date()

@@ -89,14 +89,33 @@ class RunLogUpdate(BaseModel):
 
 
 class RunLogResponse(RunLogBase):
+    """A stored run as the API reports it.
+
+    These four columns are nullable in the database, so the response mirrors the
+    row rather than re-asserting the contract ``RunLogCreate`` enforces.
+
+    Both paths that *create* a row are already strict: ``RunLogCreate`` requires
+    a positive ``distance_km`` and ``duration_minutes``, and the Intervals
+    importer raises ``ValueError`` on an activity missing distance, duration or
+    start time. The one way in today is ``PUT /api/runs/{id}`` — every field on
+    ``RunLogUpdate`` is optional and the router writes whatever was explicitly
+    sent, so an explicit ``null`` sets the column to NULL — plus any row that
+    predates those guards.
+
+    Widening lives here and not on the shared base, so *creating* a run is still
+    required to carry a distance and a duration.
+    """
+
     id: str
-    date: datetime
+    distance_km: Optional[float] = None
+    duration_minutes: Optional[float] = None
+    date: Optional[datetime] = None
     avg_pace_min_km: Optional[float] = None
     effort_quality_score: Optional[float] = None
     quality_label: Optional[str] = None
     vdot: Optional[float] = None
     predicted_time_seconds: Optional[float] = None
-    created_at: datetime
+    created_at: Optional[datetime] = None
     predictions: Optional[Dict[str, Dict]] = None
     race_comparison: Optional[Dict[str, Any]] = None
     vdot_recalibration: Optional[Dict[str, Any]] = None

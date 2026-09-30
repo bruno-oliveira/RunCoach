@@ -1,10 +1,12 @@
 """Custom exception classes for RunCoach application."""
 
+from typing import Optional
+
 
 class RunCoachException(Exception):
     """Base exception for RunCoach application."""
 
-    def __init__(self, message: str, user_message: str = None):
+    def __init__(self, message: str, user_message: Optional[str] = None):
         self.message = message
         self.user_message = user_message or message
         super().__init__(self.message)
@@ -31,7 +33,7 @@ class ConflictException(RunCoachException):
 class UnrealisticGoalException(ValidationException):
     """Exception when training goals are unrealistic."""
 
-    def __init__(self, message: str, suggestion: str = None):
+    def __init__(self, message: str, suggestion: Optional[str] = None):
         self.suggestion = suggestion
         super().__init__(message, message)  # Don't duplicate suggestion in user_message
 

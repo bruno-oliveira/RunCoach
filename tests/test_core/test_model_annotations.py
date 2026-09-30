@@ -1,19 +1,20 @@
-"""Every model attribute must be either a mapped column or a documented extra.
+"""Every model attribute must be either a mapped column or a relationship.
 
-`TrainingPlan` sets `__allow_unmapped__ = True` so it can carry three view-only
-decorated attributes (`status_label`, `target_distance_display`,
-`experience_level`) that `app.contexts.plan.plan_status` fills in per request.
-That opt-in is necessary — SQLAlchemy's annotated-declarative form rejects a bare
-annotation without it, and `ClassVar` would forbid the per-instance write.
+`TrainingPlan` used to set `__allow_unmapped__ = True` so it could carry three
+view-only attributes (`status_label`, `target_distance_display`,
+`experience_level`) written per request by a decorator. That flag is gone: the
+display fields now live in a `PlanStatus` view model
+(`app.contexts.plan.plan_status`), so the ORM class is all columns and
+relationships, and SQLAlchemy rejects an un-`Mapped` annotation outright.
 
-It is also a small hole: with the flag on, a future *column* annotation that
-forgets its `Mapped[]` silently becomes a plain attribute instead of raising.
-Nothing else would catch it — the test suite builds its schema from Alembic
-migrations rather than from the model metadata, so a column that exists in the
-database but is not mapped would just never be written to.
+The flag was a real hole while it existed — with it on, a future *column*
+annotation that forgets its `Mapped[]` silently becomes a plain attribute instead
+of raising. Nothing else would catch it, because the suite builds its schema from
+Alembic migrations rather than from the model metadata, so a column that exists
+in the database but is not mapped would just never be written to.
 
-This test closes the hole by asserting the allow-list is exactly as long as it is
-supposed to be. A new bare annotation fails here, with the fix named.
+These tests keep both directions honest: no annotated attribute that is neither a
+column nor a relationship, and no `Mapped[]` annotation without a backing column.
 """
 
 import typing
@@ -52,13 +53,11 @@ MODELS = [
     PushSubscription,
 ]
 
-# The only attributes allowed to be un-`Mapped`, with the reason. Adding to this
-# list is a deliberate act; forgetting `Mapped[]` on a column is not.
-VIEW_ONLY_ATTRIBUTES: dict[str, str] = {
-    "status_label": "decorated per request by plan_status.decorate_plan_status",
-    "target_distance_display": "decorated per request by plan_status.decorate_plan_status",
-    "experience_level": "decorated per request by plan_status.decorate_plan_status",
-}
+# Un-`Mapped` annotations allowed on a model. It is empty on purpose: the only
+# three that ever existed were `TrainingPlan`'s view-only display fields, and
+# those moved to the `PlanStatus` view model. Adding an entry here is a
+# deliberate act; forgetting `Mapped[]` on a column is not.
+VIEW_ONLY_ATTRIBUTES: dict[str, str] = {}
 
 _IGNORED = {
     "__table_args__",
@@ -86,14 +85,15 @@ def _unmapped_annotations(model: type) -> set[str]:
 
 
 @pytest.mark.parametrize("model", MODELS, ids=lambda m: m.__name__)
-def test_only_documented_view_attributes_are_unmapped(model):
+def test_no_model_has_an_unmapped_annotation(model):
     undeclared = _unmapped_annotations(model) - set(VIEW_ONLY_ATTRIBUTES)
 
     assert not undeclared, (
         f"{model.__name__} has annotated attribute(s) that are neither "
-        f"`Mapped[...]` columns nor documented view-only extras: "
-        f"{sorted(undeclared)}. Add `Mapped[...]` (and a migration) if it is a "
-        f"column, or add it to VIEW_ONLY_ATTRIBUTES with a reason if it is not."
+        f"`Mapped[...]` columns nor documented extras: {sorted(undeclared)}. "
+        f"Add `Mapped[...]` (and a migration) if it is a column; view state "
+        f"belongs in a view model (see app.contexts.plan.plan_status), not on "
+        f"the ORM class."
     )
 
 
@@ -115,35 +115,21 @@ def test_no_mapped_annotation_lost_its_column(model):
     )
 
 
-def test_the_allow_list_stays_honest():
-    """Each documented extra must really exist and really be unmapped."""
-    declared = _unmapped_annotations(TrainingPlan)
-
-    assert set(VIEW_ONLY_ATTRIBUTES) <= declared, (
-        "an attribute in VIEW_ONLY_ATTRIBUTES is no longer unmapped — remove it "
-        "from the list rather than leaving a stale exemption"
-    )
+def test_the_allow_list_is_empty():
+    """The only exemption that ever existed was for the view fields; both are gone."""
+    assert VIEW_ONLY_ATTRIBUTES == {}
+    assert not _unmapped_annotations(TrainingPlan)
 
 
-def test_view_only_attributes_default_to_none():
-    """An undecorated plan must read None, not raise AttributeError."""
+def test_training_plan_carries_no_view_state():
+    """Display fields belong to the PlanStatus view model, not to the ORM class."""
     plan = TrainingPlan(id="x", user_id="u")
 
-    assert plan.status_label is None
-    assert plan.target_distance_display is None
-    assert plan.experience_level is None
+    for field in ("status_label", "target_distance_display", "experience_level"):
+        assert not hasattr(plan, field), (
+            f"TrainingPlan.{field} is view state again — read it from "
+            f"app.contexts.plan.plan_status.plan_status(plan, today) instead"
+        )
 
-
-def test_decorating_a_plan_does_not_add_columns():
-    """The decorator writes instance attributes; the schema must not move."""
-    columns_before = set(TrainingPlan.__table__.columns.keys())
-
-    plan = TrainingPlan(id="x", user_id="u")
-    plan.status_label = "Week 3 of 12"
-    plan.target_distance_display = "10K"
-    plan.experience_level = "intermediate"
-
-    assert plan.status_label == "Week 3 of 12"
-    assert set(TrainingPlan.__table__.columns.keys()) == columns_before
-    # A fresh instance is unaffected — these are per-instance, not class state.
-    assert TrainingPlan(id="y", user_id="u").status_label is None
+    # And the opt-in that made room for it is gone with it.
+    assert not getattr(TrainingPlan, "__allow_unmapped__", False)

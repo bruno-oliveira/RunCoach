@@ -84,3 +84,21 @@ def test_remove_other_users_favorite_is_denied(service, user, test_db):
     # Another user cannot remove someone else's favorite.
     assert service.remove_favorite(added["id"], other.id, test_db) is False
     assert len(service.list_favorites(user.id, test_db)) == 1
+
+
+@pytest.mark.parametrize(
+    "payload", [{}, {"name": ""}, {"name": None}, {"meal_type": "lunch"}]
+)
+def test_a_recipe_with_no_name_is_refused(service, user, test_db, payload):
+    """`recipe_name` is the dedupe key and a non-null column.
+
+    A favourite without one cannot be stored or looked up, so the service refuses
+    it with a 400-able domain error instead of persisting a nameless row (which
+    is what an untyped request body used to produce).
+    """
+    from app.exceptions import ValidationException
+
+    with pytest.raises(ValidationException):
+        service.add_favorite(user.id, payload, test_db)
+
+    assert service.list_favorites(user.id, test_db) == []

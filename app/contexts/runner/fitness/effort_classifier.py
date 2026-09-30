@@ -211,6 +211,10 @@ def backfill_effort_classes(db: Session, *, batch_size: int = 500) -> int:
             .all()
         )
         for run in runs:
+            if run.distance_km is None:
+                # The query filters ``distance_km > 0``, which excludes NULLs;
+                # this only makes that guarantee visible to the type checker.
+                continue
             effort = classify_effort(
                 distance_km=run.distance_km,
                 avg_pace_min_km=run.avg_pace_min_km,

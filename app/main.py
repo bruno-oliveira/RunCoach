@@ -9,7 +9,12 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
 from app.infrastructure.config import settings, setup_logging
-from app.infrastructure.health import HealthProbe, HealthResponse, get_health_probe
+from app.infrastructure.health import (
+    HealthProbe,
+    HealthResponse,
+    LivenessResponse,
+    get_health_probe,
+)
 from app.infrastructure.secrets import validate_production_secrets
 from app.migrations.startup import run_startup_migrations
 from app.web.exception_handlers import register_exception_handlers
@@ -151,6 +156,19 @@ def create_app(skip_migrations: Optional[bool] = None) -> FastAPI:
 
     register_exception_handlers(app)
 
+    def _readiness_verdict(response: Response, probe: HealthProbe) -> HealthResponse:
+        """Run the dependency probe and turn its verdict into a status code.
+
+        Shared by ``/health`` and ``/health/ready`` so the two cannot drift.
+        """
+        reason = probe()
+        if reason is None:
+            return HealthResponse(checks={"database": "ok"})
+
+        logger.warning("Readiness check degraded: database probe failed: %s", reason)
+        response.status_code = 503
+        return HealthResponse(status="degraded", checks={"database": reason})
+
     @app.get(
         "/health",
         response_model=HealthResponse,
@@ -161,19 +179,47 @@ def create_app(skip_migrations: Optional[bool] = None) -> FastAPI:
         response: Response,
         probe: HealthProbe = Depends(get_health_probe),
     ) -> HealthResponse:
-        """Report whether this machine can serve a request.
+        """Readiness, kept at this path for existing monitors.
 
-        503 (not 200) when a dependency is down, so Fly's checks cycle the
-        machine and the failure is visible to anything watching the endpoint
-        rather than only to the users hitting 500s.
+        Reports whether this machine can actually serve a request, not merely
+        that the process is up: 503 (not 200) when a dependency is down, so the
+        proxy takes the machine out of rotation and the failure is visible to
+        anything watching the endpoint rather than only to the users hitting
+        500s. ``/health/ready`` is the same check under its canonical name.
         """
-        reason = probe()
-        if reason is None:
-            return HealthResponse(checks={"database": "ok"})
+        return _readiness_verdict(response, probe)
 
-        logger.warning("Health check degraded: database probe failed: %s", reason)
-        response.status_code = 503
-        return HealthResponse(status="degraded", checks={"database": reason})
+    @app.get(
+        "/health/ready",
+        response_model=HealthResponse,
+        responses={503: {"model": HealthResponse}},
+        tags=["health"],
+    )
+    async def readiness_check(
+        response: Response,
+        probe: HealthProbe = Depends(get_health_probe),
+    ) -> HealthResponse:
+        """Can this machine serve a request? Consults every dependency.
+
+        This is the check the Fly proxy reads, so a machine whose volume failed
+        to mount is taken out of rotation instead of answering 500s.
+        """
+        return _readiness_verdict(response, probe)
+
+    @app.get(
+        "/health/live",
+        response_model=LivenessResponse,
+        tags=["health"],
+    )
+    async def liveness_check() -> LivenessResponse:
+        """Is this process up? Deliberately does no I/O.
+
+        Fly restarts a machine whose liveness check fails, which is the right
+        response to a wedged process and the wrong one to a missing volume — so
+        this endpoint must not consult the database, or a storage outage would
+        cycle the fleet instead of draining it.
+        """
+        return LivenessResponse()
 
     return app
 

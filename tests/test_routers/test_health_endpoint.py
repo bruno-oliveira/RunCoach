@@ -96,3 +96,54 @@ class TestProbeDatabase:
         assert reason is not None
         assert "OperationalError" in reason
         assert "unable to open database file" in reason
+
+
+# ---------------------------------------------------------------------------
+# Liveness vs readiness
+#
+# Fly restarts a machine whose liveness check fails and drops one whose
+# readiness check fails. Those are different remedies, so the endpoints must be
+# different too: liveness asserts only that the process is up (no I/O), and
+# readiness is the one that consults the database.
+# ---------------------------------------------------------------------------
+
+
+def test_liveness_is_200_even_when_the_database_is_down(health_client, override_probe):
+    override_probe(lambda: "OperationalError: unable to open database file")
+
+    response = health_client.get("/health/live")
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["status"] == "healthy"
+    # No dependency verdicts: liveness asserts nothing about the database, or a
+    # storage outage would restart the fleet instead of draining it.
+    assert "checks" not in body
+
+
+def test_liveness_never_calls_the_dependency_probe(health_client, override_probe):
+    def _explode():
+        raise AssertionError("liveness must not run a dependency probe")
+
+    override_probe(_explode)
+
+    assert health_client.get("/health/live").status_code == 200
+
+
+def test_readiness_is_503_when_the_database_is_down(health_client, override_probe):
+    reason = "OperationalError: unable to open database file"
+    override_probe(lambda: reason)
+
+    response = health_client.get("/health/ready")
+
+    assert response.status_code == 503
+    assert response.json()["checks"]["database"] == reason
+
+
+def test_readiness_answers_like_health(health_client, override_probe):
+    """``/health`` stays a readiness check, so existing monitors keep working."""
+    override_probe(lambda: None)
+
+    assert (
+        health_client.get("/health/ready").json() == health_client.get("/health").json()
+    )

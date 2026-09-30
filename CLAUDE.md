@@ -143,39 +143,35 @@ The rest of the rule, by convention:
 - `core/` imports nothing from `contexts/`, `infrastructure/`, or SQLAlchemy
 - `infrastructure/` implements the Protocols in `domain/`
 
-`pyrightconfig.json` type-checks `app/domain`, `app/core`, `app/models`,
-`app/schemas` and `app/dependencies` — the pure layers plus the type surfaces
-everything else depends on. Keeping logic pure is what makes it checkable;
-pushing calculation down into `core/` is the established direction of travel.
+`pyrightconfig.json` type-checks the whole `app` package — `domain`, `core`,
+`models`, `schemas`, `dependencies`, `infrastructure`, `application`, `web`,
+`contexts` and the loose modules at the root of `app/` (`main.py`, `utils.py`,
+`rate_limit.py`, …). Keeping logic pure is what makes it checkable; pushing
+calculation down into `core/` is the established direction of travel. `tests/`
+and `scripts/` are deliberately outside it.
 
-**The scope is a ratchet, and it has moved twice.** First the models were
-converted from `Column(...)` to SQLAlchemy 2.0 `Mapped[...]`/`mapped_column(...)`
+**The scope was a ratchet, and it has closed.** First the models were converted
+from `Column(...)` to SQLAlchemy 2.0 `Mapped[...]`/`mapped_column(...)`
 annotations, which took the whole-app error count from 1033 to 237 and let
 `app/models`, `app/schemas` and `app/dependencies` join the checked set for free.
 Then the errors those annotations *exposed* were worked through in
-`app/infrastructure`, `app/application` and `app/web`, which are now clean too.
+`app/infrastructure`, `app/application`, `app/web`, and finally `app/contexts` —
+the training-science core, whose 79 errors were the last package — plus the loose
+modules at the root of `app/` that the per-package list had never named.
+`pyright` now reports **0 errors for all of `app`**, so `include` is a single
+entry (`"app"`) and a new module cannot be added without being checked.
 
-To extend it again: run pyright over a package, get it to zero, **then** add the
-path above — never add a package that is still failing. One package is left:
+If it ever needs extending: get a subtree to zero, **then** widen `include` —
+never add a path that is still failing.
 
-| Package | Errors | What they are |
-|---|---|---|
-| `app/contexts` | 79 | the training-science core |
-
-`docs/remaining-hardening-work.md` has the per-file breakdown, the two rules for
-deciding what a `NULL` should do, and the other follow-ups that were deliberately
-deferred (the liveness/readiness split, the per-process rate limiter, the
-`uv.lock`/`requirements.txt` drift).
-
-What is left is overwhelmingly `reportArgumentType` (82) plus
-`reportOptionalOperand`/`reportOperatorIssue` (44): a nullable column reaching
-code that assumed it was present. That is the *point* of the migration, not
-noise — every one is a place where a NULL could already have raised `TypeError`
-at runtime, and several in `app/application` and `app/web` did exactly that (a
-plan with no `weeks_duration` took out the plan page, the nudge sweep and the
-status label). Fixing them means deciding what the None case should *do*, which
-in `app/contexts` is training logic — so it is deliberate, staged work rather
-than a sweep. Two rules cover most of the remaining decisions:
+What the migration exposed is overwhelmingly `reportArgumentType` plus
+`reportOptionalOperand`/`reportOperatorIssue`: a nullable column reaching code
+that assumed it was present. That is the *point* of the migration, not noise —
+every one is a place where a NULL could already have raised `TypeError` at
+runtime, and several in `app/application` and `app/web` did exactly that (a plan
+with no `weeks_duration` took out the plan page, the nudge sweep and the status
+label). Fixing them means deciding what the None case should *do*. Two rules
+cover it:
 
 - **Coerce** where absence has an obvious neutral equivalent (a NULL counter is
   `0`, a NULL weekly volume is `0.0`).
@@ -183,6 +179,9 @@ than a sweep. Two rules cover most of the remaining decisions:
   genuinely cannot proceed. Never fabricate a *plausible* value (converting a
   missing `created_at` to "now" would assert a join date the database never
   recorded).
+
+`docs/remaining-hardening-work.md` records how the sweep was done, the two rules
+above, and the few things still deliberately open.
 
 ### Persistence boundary (CQRS-lite)
 
@@ -401,10 +400,15 @@ would replay the Alembic chain *and* the startup backfills on every wake. That
 flag defaults to **on** for local `uvicorn` runs and plain `docker run`, where
 there is no release hook; `tests/conftest.py` pins it off.
 
-`/health` runs a real `SELECT 1` and answers 503 when it fails, so a machine
-whose volume did not mount gets cycled rather than silently serving 500s. The
-probe is a FastAPI dependency (`app.infrastructure.health.get_health_probe`) so
-tests can substitute a failing one.
+Health is split along the liveness/readiness line, because Fly's two remedies
+differ. `/health/live` asserts only that the process is up and does **no I/O** —
+a failed liveness check *restarts* the machine, which fixes a wedged process and
+not a missing volume. `/health/ready` (and `/health`, kept at that path for
+existing monitors) runs a real `SELECT 1` and answers 503 when it fails, so the
+proxy drains a machine whose volume did not mount instead of letting it serve
+500s. The probe is a FastAPI dependency
+(`app.infrastructure.health.get_health_probe`) so tests can substitute a failing
+one.
 
 `docs/architecture-evolution-sqlite-volume.md` has the rationale;
 `docs/intervals-sync-setup.md` covers the Intervals OAuth setup.

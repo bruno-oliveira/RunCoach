@@ -27,10 +27,13 @@
             <h1 class="hero-title status-hero-title">
                 <span data-i18n="home.back_greeting">Welcome back</span>{% if user.name %}, {{ user.name.split(' ')[0] }}{% endif %}.
             </h1>
+            {# PlanStatus is a view model (see plan_status.plan_statuses), so the
+               display fields are read off it rather than off the ORM object. #}
+            {% set current_status = plan_statuses[current_plan.id] %}
             <div class="status-plan">
-                <span class="status-plan-distance">{{ current_plan.target_distance_display }}</span>
-                {% if current_plan.status_label %}
-                <span class="status-pill">{{ current_plan.status_label }}</span>
+                <span class="status-plan-distance">{{ current_status.distance_display }}</span>
+                {% if current_status.label %}
+                <span class="status-pill">{{ current_status.label }}</span>
                 {% endif %}
             </div>
             <div class="status-hero-actions">

@@ -348,7 +348,9 @@ class TrainingPlanGenerator:
                         "simulations to rehearse the format."
                     ),
                 )
-        elif current_km < trail_min_weekly_mileage(trail_profile):
+        elif trail_profile is not None and current_km < (
+            trail_min_weekly_mileage(trail_profile)
+        ):
             min_km = trail_min_weekly_mileage(trail_profile)
             raise InadequateBaseException(
                 f"Current mileage ({current_km:g} km/week) is below the "
@@ -360,7 +362,7 @@ class TrainingPlanGenerator:
                     "the load quickly."
                 ),
             )
-        elif weeks < trail_min_weeks(trail_profile):
+        elif trail_profile is not None and weeks < trail_min_weeks(trail_profile):
             raise InsufficientTimeException(
                 f"Training for a {trail_profile.distance_km:g} km trail/ultra "
                 f"requires at least {trail_min_weeks(trail_profile)} weeks",
@@ -1302,14 +1304,22 @@ def _install_backyard_race_day(
         pace_zones=pace_zones,
         protect_long=False,
     )
+
     # Scaling can crush a pre-race session to 0.0 km; render the drained card
     # as the rest day it effectively is (same rule as the road race week).
-    kept = [
-        workout_builders.generate_rest_day(w.get("day"))
-        if w.get("type") in RUNNING_CARD_TYPES and (w.get("distance") or 0) <= 0
-        else w
-        for w in kept
-    ]
+    def _drained_to_rest(card: dict[str, Any]) -> dict[str, Any]:
+        # A drained card needs a concrete day to become a rest day; without
+        # one, leave the card as-is rather than inventing a day.
+        day = card.get("day")
+        if (
+            isinstance(day, int)
+            and card.get("type") in RUNNING_CARD_TYPES
+            and (card.get("distance") or 0) <= 0
+        ):
+            return workout_builders.generate_rest_day(day)
+        return card
+
+    kept = [_drained_to_rest(w) for w in kept]
 
     # Frequency budget: the race consumes one of the week's running slots, so
     # at most max_runs - 1 sessions may precede it — shakeout first, then the

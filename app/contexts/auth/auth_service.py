@@ -2,7 +2,7 @@
 
 import logging
 from datetime import datetime, timedelta, timezone
-from typing import Callable, Optional
+from typing import Any, Callable, Optional
 
 import httpx
 import jwt as pyjwt
@@ -12,7 +12,7 @@ from sqlalchemy.orm import Session
 
 from app.contexts.auth.repositories import SQLAlchemyUserRepository
 from app.domain.repositories import IUserRepository
-from app.exceptions import UnverifiedEmailException
+from app.exceptions import UnverifiedEmailException, ValidationException
 from app.infrastructure.config import settings
 from app.models import User
 from app.models.refresh_token import RefreshToken, _generate_raw_token, hash_token
@@ -139,7 +139,7 @@ class AuthService:
             )
             return certs
 
-    async def verify_google_token(self, id_token: str) -> Optional[dict]:
+    async def verify_google_token(self, id_token: str) -> Optional[dict[str, Any]]:
         """Verify Google ID token using Google's public keys."""
         try:
             if not settings.google_client_id:
@@ -182,7 +182,7 @@ class AuthService:
     def get_or_create_user(
         self,
         db: Session,
-        google_user_data: dict,
+        google_user_data: dict[str, Any],
         anonymous_user_id: Optional[str] = None,
     ) -> User:
         """Get existing user or create new one from Google data.
@@ -193,6 +193,13 @@ class AuthService:
             anonymous_user_id: Optional anonymous user ID to merge from
         """
         google_id = google_user_data.get("sub")
+        if not isinstance(google_id, str) or not google_id:
+            # A verified Google ID token always carries `sub`. Without it we
+            # cannot identify the runner, and creating a row with no
+            # google_id would silently mint an unauthenticated account.
+            raise ValidationException(
+                "Google token is missing the required 'sub' claim"
+            )
         email = google_user_data.get("email")
         name = google_user_data.get("name")
         picture = google_user_data.get("picture")

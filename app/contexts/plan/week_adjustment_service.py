@@ -127,7 +127,9 @@ def _select_weeks(
         )
         .all()
     )
-    rows.sort(key=lambda w: w.week_number)
+    # ``week_number`` is nullable; order rows without one last rather than
+    # inventing a number for them.
+    rows.sort(key=lambda w: (w.week_number is None, w.week_number or 0))
     return rows
 
 
@@ -136,6 +138,8 @@ def _current_week_pos(training_plan: TrainingPlan) -> Tuple[int | None, int | No
     if not training_plan.start_date:
         return None, None
     start = _to_date(training_plan.start_date)
+    if start is None:
+        return None, None
     today = today_date()
     week = compute_current_week(start, today, clamp_min=1)
     if week is None:
@@ -201,7 +205,7 @@ def _extend_long_run(
         return _build_response(training_plan, weeks, [], 0, False)
 
     base = long_wo.baseline_distance_km or long_wo.distance_km
-    if base <= 0:
+    if base is None or base <= 0:
         return _build_response(training_plan, weeks, [], 0, False)
 
     ratio = 1.0 + (_EXTEND_LONG_RUN_KM / base)

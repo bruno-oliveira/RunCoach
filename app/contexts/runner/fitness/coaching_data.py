@@ -58,8 +58,10 @@ def fetch_volume_inputs(run_log, db: Session) -> Optional[Tuple[int, float, floa
 
     week_start = plan.start_date + timedelta(weeks=week_num - 1)
     week_end = week_start + timedelta(days=7)
+    # A run with no recorded distance contributes 0 km — the neutral
+    # equivalent — rather than poisoning the sum with a None.
     logged_km = sum(
-        r.distance_km
+        (r.distance_km or 0)
         for r in db.query(RunLog)
         .filter(
             RunLog.training_plan_id == plan.id,

@@ -244,7 +244,7 @@ A few decisions that look odd until you know why:
 
 ## Quickstart
 
-Requires Python 3.11+.
+Requires Python 3.12+.
 
 ```bash
 git clone https://github.com/bruno-oliveira/RunCoach.git

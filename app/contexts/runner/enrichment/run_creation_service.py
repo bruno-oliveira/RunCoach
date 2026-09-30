@@ -170,14 +170,17 @@ class RunCreationService:
         if new_run.vdot:
             elevation_map = None
             trail_count = None
+            # ``distance_km`` is nullable; a run with none has no gradient to
+            # judge, so treat it as 0 (the neutral equivalent) rather than
+            # crashing on the comparison.
+            distance_km = new_run.distance_km or 0.0
             if (
                 new_run.elevation_gain_m
-                and new_run.distance_km > 0
-                and new_run.elevation_gain_m / new_run.distance_km
-                >= TRAIL_ELEVATION_M_PER_KM
+                and distance_km > 0
+                and new_run.elevation_gain_m / distance_km >= TRAIL_ELEVATION_M_PER_KM
             ):
                 trail_count = count_prior_trail_runs(current_user.id, db)
-                elevation_map = {"trail": new_run.elevation_gain_m}
+                elevation_map = {"trail": float(new_run.elevation_gain_m)}
             response_data.predictions = VDOTCalculator.predict_times(
                 new_run.vdot,
                 trail_runs_count=trail_count,

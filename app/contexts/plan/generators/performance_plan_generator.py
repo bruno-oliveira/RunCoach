@@ -137,7 +137,7 @@ class PerformancePlanGenerator(BasePlanGenerator):
 
     def calculate_training_zones(
         self,
-        goal_pace: float,
+        goal_pace: Optional[float],
         max_hr: Optional[int] = None,
         vdot_zones: Optional[Dict] = None,
         race_distance_km: Optional[float] = None,
@@ -152,6 +152,11 @@ class PerformancePlanGenerator(BasePlanGenerator):
         effort that distance is actually run at. `resting_hr`/`lthr` (the same
         anchors the stored HR zones used) keep the pace panel's BPM bands
         identical to the HR-zones panel.
+
+        ``goal_pace`` is optional: the plan column is nullable, and the zone
+        table can still come from ``vdot_zones`` (or max HR) without it, so the
+        contract matches ``calculate_zones`` rather than demanding a pace the
+        row may not have.
         """
         from app.core.training.physiology.zone_calculator import calculate_zones
 

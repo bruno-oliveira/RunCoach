@@ -52,9 +52,17 @@ def map_runs_to_plan(
         }
 
     start_date = _to_date(training_plan.start_date)
+    num_weeks = training_plan.weeks_duration
+    # Both are nullable columns, and without either there is no week grid to
+    # place a run on — refuse rather than invent a span.
+    if start_date is None or not num_weeks:
+        return {
+            "mapped": 0,
+            "proposals": [],
+            "error": "Plan has no start date or duration. Set both first.",
+        }
     today = today_date()
     tomorrow = today + timedelta(days=1)
-    num_weeks = training_plan.weeks_duration
     plan_end_date = start_date + timedelta(weeks=num_weeks)
     upper_bound = min(tomorrow, plan_end_date + timedelta(days=1))
     logger.info(
@@ -137,6 +145,8 @@ def map_runs_to_plan(
     runs_by_week: Dict[int, list] = defaultdict(list)
     for run in unlinked_runs:
         run_date = _to_date(run.date)
+        if run_date is None:
+            continue  # a run with no date cannot be assigned to a week
         delta_days = (run_date - start_date).days
         week_number = (delta_days // 7) + 1
         week_number = max(1, min(week_number, num_weeks))

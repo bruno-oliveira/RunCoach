@@ -39,6 +39,12 @@ def _name(spec: str) -> str:
     return re.split(r"[=<>!\[]", spec, maxsplit=1)[0].strip()
 
 
+def _pin(spec: str) -> str | None:
+    """The exact version in ``spec``, or None when it is not an exact pin."""
+    match = re.search(r"==\s*([^,\s]+)", spec)
+    return match.group(1) if match else None
+
+
 class TestRequirementsArePinned:
     def test_every_requirement_is_an_exact_pin(self):
         """`==` only. A `>=` means CI installs something nobody tested."""
@@ -86,10 +92,46 @@ class TestRequirementsAndPyprojectAgree:
 
         assert {"fastapi", "sqlalchemy", "anthropic", "gpxpy"} <= names
 
-    def test_pyproject_requires_python_matches_the_classifiers(self):
+    def test_pyproject_requires_python_matches_the_shipped_runtime(self):
+        """CI, the Dockerfile and Fly all run 3.12, so that is the floor."""
         data = tomllib.loads(PYPROJECT.read_text())
 
-        assert data["project"]["requires-python"] == ">=3.11"
+        assert data["project"]["requires-python"] == ">=3.12"
+
+    @staticmethod
+    def _pyproject_specs() -> dict[str, str]:
+        data = tomllib.loads(PYPROJECT.read_text())
+        specs = list(data["project"]["dependencies"])
+        for extra in data["project"].get("optional-dependencies", {}).values():
+            specs.extend(extra)
+        return {_name(spec).lower(): spec for spec in specs}
+
+    def test_pyproject_pins_the_same_versions_as_requirements(self):
+        """A lock is only useful if it describes what actually ships.
+
+        requirements.txt is what CI and the Docker image install with pip, so it
+        is authoritative; pyproject must pin the same versions or `uv lock`
+        resolves to a set nobody runs — which is exactly how `uv.lock` came to
+        hold `fastapi` 0.136.0 while CI installed 0.115.12, and how it ended up
+        with no `anthropic` entry at all.
+        """
+        pyproject = self._pyproject_specs()
+        mismatches = []
+        for _, spec in _requirement_lines():
+            name = _name(spec).lower()
+            declared = pyproject.get(name)
+            if declared is None:
+                mismatches.append(f"{name}: in requirements.txt, not pyproject.toml")
+            elif _pin(declared) != _pin(spec):
+                mismatches.append(
+                    f"{name}: pyproject.toml says {_pin(declared)!r}, "
+                    f"requirements.txt says {_pin(spec)!r}"
+                )
+
+        assert not mismatches, (
+            "requirements.txt is authoritative — mirror it in pyproject.toml: "
+            f"{mismatches}"
+        )
 
     @pytest.mark.parametrize(
         "package",

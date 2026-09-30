@@ -1,15 +1,8 @@
 {
   "include": [
-    "app/domain",
-    "app/core",
-    "app/models",
-    "app/schemas",
-    "app/dependencies",
-    "app/infrastructure",
-    "app/application",
-    "app/web"
+    "app"
   ],
-  "pythonVersion": "3.11",
+  "pythonVersion": "3.12",
   "typeCheckingMode": "basic",
   "reportMissingImports": true,
   "reportMissingModuleSource": false,

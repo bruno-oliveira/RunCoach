@@ -52,18 +52,20 @@ def _run_alembic_migrations(engine) -> None:
 
 @pytest.fixture(autouse=True)
 def _reset_rate_limiters():
-    """Reset in-memory rate limiter state between tests.
+    """Reset rate limiter state between tests.
 
     The limiters live at module scope so per-IP counts persist across
     tests in the same process; without this, tightly-capped limiters
     (e.g. plan_generation_limiter at 5/min) cause cascading failures.
+    ``clear()`` reaches through to the limiter's store, so it works
+    whether that store is the in-memory default or a shared one.
     """
     from app import rate_limit
 
     for name in dir(rate_limit):
         obj = getattr(rate_limit, name)
         if isinstance(obj, rate_limit.RateLimiter):
-            obj._hits.clear()
+            obj.clear()
     yield
 
 

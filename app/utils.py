@@ -179,6 +179,10 @@ def to_date(value: Union[datetime, date, None]) -> Optional[date]:
     """
     if value is None:
         return None
-    if hasattr(value, "date") and callable(value.date):
+    # `datetime` is a subclass of `date`, and the parameter is annotated as one
+    # of the two, so this is the whole truth — the previous `hasattr(value,
+    # "date")` duck-check also let a plain `date` through to `value.date()`,
+    # which `date` does not have.
+    if isinstance(value, datetime):
         return value.date()
     return value

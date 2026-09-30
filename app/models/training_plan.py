@@ -28,15 +28,6 @@ class TrainingPlan(Base):
         Index("idx_training_plan_user_id", "user_id"),
         Index("idx_training_plan_created_at", "created_at"),
     )
-    # The three attributes at the bottom of this class are plain Python
-    # attributes, not columns, and SQLAlchemy's annotated-declarative form
-    # rejects an un-`Mapped` annotation without this opt-in. It is scoped to this
-    # class (not `Base`) because the cost is real: a future column annotation that
-    # *forgets* its `Mapped[]` would silently become a non-column rather than
-    # raising. `tests/test_core/test_model_annotations.py` is the tripwire that
-    # keeps that from happening quietly.
-    __allow_unmapped__ = True
-
     id: Mapped[str] = mapped_column(
         String, primary_key=True, default=lambda: str(uuid.uuid4())
     )
@@ -135,20 +126,6 @@ class TrainingPlan(Base):
     weekly_plans: Mapped[list["WeeklyPlan"]] = relationship(
         "WeeklyPlan", back_populates="training_plan", cascade="all, delete-orphan"
     )
-
-    # ---- view-only decoration (NOT columns) --------------------------------
-    # Filled in per request by
-    # ``app.contexts.plan.plan_status.decorate_plan_status``. These used to be
-    # attached to the instance at runtime, which made them invisible to the
-    # checker — so every read had to be a defensive ``getattr`` and every write
-    # was an unverifiable assignment. Declaring them with a ``None`` default
-    # makes the contract real: a read on an undecorated plan yields ``None``
-    # instead of raising ``AttributeError``, and both writes and reads
-    # type-check. Deliberately not ``ClassVar`` — that would forbid the
-    # per-instance assignment the decorator exists to perform.
-    status_label: str | None = None
-    target_distance_display: str | None = None
-    experience_level: str | None = None
 
     def backyard_profile(self):
         """Rebuild the stored backyard goal, or ``None`` for other plans.

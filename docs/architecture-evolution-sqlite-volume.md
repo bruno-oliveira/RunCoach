@@ -2,11 +2,16 @@
 
 *A war story about a bug that took three debugging sessions to pin down — and a five-minute fix that solved it for good.*
 
+> **Currency.** The bug, the volume and the fix are all still accurate. Two things
+> have moved on since: the sync provider is now Intervals.icu (Strava was retired),
+> and `start.sh` no longer seeds the volume from an image snapshot — a first boot
+> builds the schema with Alembic instead. Both are called out where they appear.
+
 ---
 
 ## The Setup
 
-RunCoach is a FastAPI app that generates personalised running training plans. Users connect their Strava account, and the app syncs their run history to power an analytics dashboard.
+RunCoach is a FastAPI app that generates personalised running training plans. Users connect their Intervals.icu account, and the app syncs their run history to power an analytics dashboard.
 
 The stack is deliberately simple:
 
@@ -96,55 +101,62 @@ fly volumes create runcoach_data --region sjc --size 1
 
 Four slashes in the SQLite URL: three for the `sqlite://` scheme, one for the absolute path.
 
-### 3. A startup script to seed the volume on first boot
+### 3. A first boot that builds its own schema
 
-The tricky part: on the very first deployment with a volume, the volume is empty. SQLAlchemy would create a fresh empty database — losing all existing users and training plans.
+The tricky part: on the very first deployment with a volume, the volume is empty. Nothing creates the schema unless something explicitly does.
 
-The solution: bake the current database into the image as a *seed snapshot*, and copy it to the volume only if the volume is empty.
+The original fix baked the *current database* into the image as a seed snapshot and copied it onto the volume whenever the volume was empty:
 
-**`start.sh`:**
 ```sh
-#!/bin/sh
+# REMOVED — kept here only so the history reads honestly.
 DB_PATH="/data/runcoach.db"
 SEED_PATH="/app/runcoach.db.seed"
-
 if [ ! -f "$DB_PATH" ]; then
     echo "[start.sh] Volume is empty — seeding from image snapshot..."
     cp "$SEED_PATH" "$DB_PATH"
-else
-    echo "[start.sh] Database found on volume — skipping seed."
 fi
-
-exec uvicorn app.main:app --host 0.0.0.0 --port 8000
 ```
 
-**Updated `Dockerfile`:**
-```dockerfile
-# Seed snapshot — used only on first boot when volume is empty
-COPY runcoach.db ./runcoach.db.seed
+That has since been deleted, for three reasons:
 
-COPY start.sh ./start.sh
-RUN chmod +x /app/start.sh
+- It works exactly once. The second time you change the schema, the snapshot is a lie — the volume gets an old schema and a fresh deploy of a *new* image would too.
+- It makes the image a carrier of one developer's local database. `/app/runcoach.db` was never a production artifact.
+- Alembic already knows how to build the schema from nothing, on the volume, before traffic moves.
 
-CMD ["/app/start.sh"]
+First boot with an empty volume is therefore a plain migration run, as Fly's **release command**:
+
+```toml
+# fly.toml
+[deploy]
+  # One throwaway machine, volume attached, before traffic moves: a failing
+  # migration aborts the deploy instead of shipping a machine that can never
+  # pass its health check.
+  release_command = 'python -m app.migrations'
 ```
 
-On first boot the logs showed exactly what we hoped:
+`start.sh` is now only the entrypoint:
+
+```sh
+#!/bin/sh
+exec uvicorn app.main:app --host 0.0.0.0 --port 8000 --timeout-graceful-shutdown 30
+```
+
+Migrations deliberately do *not* run there. With `auto_stop_machines = 'stop'` the
+machine wakes on the next request after idling, and replaying the Alembic chain
+plus the startup backfills on every wake is pure waste — so `fly.toml` sets
+`RUN_STARTUP_MIGRATIONS=false`. That flag defaults to **on** for local `uvicorn`
+runs and plain `docker run`, where no release hook exists to do the work.
+
+What the logs actually show, separated by where the work happens:
 
 ```
+# the release machine, once per deploy (empty volume → full schema)
+INFO  [alembic.runtime.migration] Running upgrade  -> 001_initial_schema, Initial migration - capture current schema state.
+
+# the app machine, first boot and every wake after it
 INFO  Mounting /dev/vdc at /data w/ uid: 1000, gid: 1000
-[start.sh] Volume is empty — seeding database from image snapshot...
-[start.sh] Database seeded at /data/runcoach.db
-INFO:     Application startup complete.
+INFO:  Application startup complete.
 Health check 'servicecheck-00-http-8000' is now passing.
-```
-
-On every subsequent boot:
-
-```
-INFO  Mounting /dev/vdc at /data
-[start.sh] Database found on volume — skipping seed.
-INFO:     Application startup complete.
 ```
 
 ---
@@ -156,7 +168,7 @@ INFO:     Application startup complete.
 | DB location | `/app/runcoach.db` (container root fs) | `/data/runcoach.db` (persistent volume) |
 | Survives machine idle | ❌ No | ✅ Yes |
 | Survives redeploy | ❌ No | ✅ Yes |
-| Strava sync on every page load | ✅ Re-syncs everything (wasteful) | ✅ Incremental (only new runs) |
+| Provider sync on every page load | ✅ Re-syncs everything (wasteful) | ✅ Incremental (only new runs) |
 | Cost | Free | Free (1 GB within free tier) |
 
 ---
@@ -167,7 +179,7 @@ INFO:     Application startup complete.
 
 **2. SQLite on Fly.io works great — with a volume.** The combination of scale-to-zero machines + a 1 GB volume is genuinely an excellent fit for small apps. No separate database service to manage, no connection pools, no network latency between app and DB.
 
-**3. Bake a seed snapshot, don't just rely on SQLAlchemy's `create_all()`.** `create_all()` creates empty tables. That's fine for brand-new apps, but if you have existing users you need to carry them over. A one-shot copy at first boot is the simplest possible migration strategy.
+**3. Let migrations own the schema — not a seed snapshot, and not `create_all()`.** The first version of this fix copied a baked-in database onto the empty volume, because "existing users need carrying over". That is a trap: it works once, and after that the snapshot is an old schema wearing a new image's tag. `create_all()` is the other dead end here — it creates *empty* tables, so the schema it builds is whatever the models happen to say today and quietly diverges from the migrations. One tool builds the schema, on the volume, before traffic moves: Alembic, via `release_command`.
 
 **4. Test persistence explicitly, not just correctness.** The Strava sync code was correct all along. We kept fixing code that wasn't broken because we didn't yet know that persistence was the issue. A simple "insert a row, restart the machine, check if the row is still there" test would have caught this immediately.
 
@@ -177,8 +189,8 @@ INFO:     Application startup complete.
 
 With a persistent database, a few things become possible that weren't before:
 
-- **Incremental Strava sync** works as intended — the cursor (`strava_last_synced_at`) is preserved across restarts, so page loads only fetch genuinely new activities
-- **Offline-first analytics** — the dashboard can load from the local DB instantly, without waiting for a Strava API call on every visit
+- **Incremental sync** works as intended — the cursor is preserved across restarts, so page loads only fetch genuinely new activities (this was `strava_last_synced_at`; Intervals.icu owns the cursor now)
+- **Offline-first analytics** — the dashboard can load from the local DB instantly, without waiting on a provider API call on every visit
 - **Backups** — Fly.io snapshots the volume daily automatically; add `fly volumes snapshots` to your runbook
 
 ---

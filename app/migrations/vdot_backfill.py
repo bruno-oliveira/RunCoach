@@ -29,6 +29,11 @@ def backfill_vdot(session: Session) -> int:
 
     updated = 0
     for run in runs:
+        # Both columns are nullable, though the query's floors (distance >= 2.0,
+        # duration > 0) already exclude the NULLs — this just makes that
+        # guarantee visible to the type checker rather than implied.
+        if run.distance_km is None or run.duration_minutes is None:
+            continue
         vdot = VDOTCalculator.calculate_vdot(
             run.distance_km,
             int(run.duration_minutes * 60),

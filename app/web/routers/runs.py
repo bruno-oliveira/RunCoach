@@ -22,6 +22,7 @@ from app.dependencies import (
     get_intervals_service,
     get_run_repository,
 )
+from app.exceptions import ValidationException
 from app.infrastructure.integrations.intervals_service import IntervalsService
 from app.infrastructure.integrations.post_sync_service import recalibrate_from_race
 from app.infrastructure.integrations.run_enrichment import apply_vdot
@@ -255,14 +256,31 @@ def update_run_log(
         )
 
     update_data = run_update.model_dump(exclude_unset=True)
+
+    # ``exclude_unset`` means "sent" == "write", so an explicit null would write
+    # NULL into a column a run cannot do without: no distance or duration makes
+    # it un-scorable, and no date makes it unplaceable on the plan calendar. A
+    # client that wants to leave one of these alone should omit it.
+    cleared = [
+        field
+        for field in ("distance_km", "duration_minutes", "date")
+        if field in update_data and update_data[field] is None
+    ]
+    if cleared:
+        raise ValidationException(
+            "These fields cannot be cleared once a run has them: " + ", ".join(cleared)
+        )
+
     for field, value in update_data.items():
         setattr(run, field, value)
 
     if "distance_km" in update_data or "duration_minutes" in update_data:
         # Both columns are nullable, and the values may come from an existing row
-        # rather than the payload, so recompute only when both are usable. The
-        # truthiness check also rules out a zero distance: this used to be a bare
-        # division that turned a partial edit of an incomplete row into a 500.
+        # Recompute only when both are usable. The rule above keeps *this*
+        # endpoint from clearing either, but a row written before it — or
+        # straight to the database — can still be incomplete, and this used to be
+        # a bare division that turned such a row into a 500 on a partial edit.
+        # The truthiness check also rules out a zero distance.
         if run.distance_km and run.duration_minutes:
             run.avg_pace_min_km = run.duration_minutes / run.distance_km
 
@@ -347,7 +365,7 @@ def _plan_for_run(db: Session, user: User, run) -> Optional[TrainingPlan]:
     """The plan this run belongs to, or the one in progress."""
     from app.contexts.plan.plan_helpers import (
         current_active_plan,
-        decorate_plan_status,
+        plan_statuses,
     )
     from app.contexts.plan.repositories import SQLAlchemyPlanRepository
     from app.core.time_utils import local_today
@@ -358,11 +376,9 @@ def _plan_for_run(db: Session, user: User, run) -> Optional[TrainingPlan]:
         if plan is not None:
             return plan
     plans = repo.list_by_user_recent_first(user.id)
-    today = local_today()
-    for candidate in plans:
-        decorate_plan_status(candidate, today)
-    plan = current_active_plan(plans)
-    if plan is None or getattr(plan, "status_label", None) == "Completed":
+    statuses = plan_statuses(plans, local_today())
+    plan = current_active_plan(plans, statuses)
+    if plan is None or statuses[plan.id].completed:
         return None
     return plan
 

@@ -93,7 +93,11 @@ class PerformanceService:
 
         if len(runs) >= 5:
             # Use 98th percentile to avoid outliers (need at least 10 for meaningful percentile)
-            hr_values = sorted([r.max_heart_rate for r in runs])
+            # The query filters ``max_heart_rate IS NOT NULL``; dropping Nones
+            # here just makes that guarantee visible to the type checker.
+            hr_values = sorted(
+                r.max_heart_rate for r in runs if r.max_heart_rate is not None
+            )
             if len(hr_values) >= 10:
                 percentile_98_idx = min(int(len(hr_values) * 0.98), len(hr_values) - 1)
                 max_hr = hr_values[percentile_98_idx]
@@ -194,12 +198,15 @@ class PerformanceService:
         )
 
         # Generate the performance plan
+        # ``current_pace``/``current_weekly_km`` were proved non-None above and
+        # the request schema never rewrites them, so the narrowed locals carry
+        # exactly what the validated request holds.
         plan_data = self.performance_generator.generate_plan(
             target_distance=validated.target_distance,
-            current_pace=validated.current_pace,
+            current_pace=current_pace,
             goal_pace=validated.goal_pace,
             weeks=validated.weeks,
-            current_weekly_km=validated.current_weekly_km,
+            current_weekly_km=current_weekly_km,
             runs_per_week=validated.runs_per_week,
             max_heart_rate=validated.max_heart_rate,
         )
@@ -228,7 +235,7 @@ class PerformanceService:
 
         # Generate and save nutrition plan
         nutrition_plan = self.nutrition_engine.generate_weekly_meal_plan(
-            validated.current_weekly_km, validated.target_distance
+            current_weekly_km, validated.target_distance
         )
         training_plan.nutrition_plan_data = nutrition_plan
 

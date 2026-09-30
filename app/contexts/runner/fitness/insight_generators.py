@@ -4,6 +4,8 @@ Each function takes a RunnerProfile and returns an Insight dataclass instance.
 Extracted from insights_service.py for single-responsibility.
 """
 
+from typing import Optional
+
 from app.contexts.runner.fitness.insights_service import Insight
 from app.contexts.runner.profile.runner_profile import RunnerProfile
 
@@ -387,8 +389,12 @@ def run_length_insight(p: RunnerProfile) -> Insight:
     )
 
 
-def race_readiness_insight(p: RunnerProfile) -> Insight:
+def race_readiness_insight(p: RunnerProfile) -> Optional[Insight]:
     vdot = p.current_vdot
+    if vdot is None:
+        # Without a VDOT there is no race-fitness level to describe; the caller
+        # only asks when one exists, so skip rather than inventing a level.
+        return None
     if vdot >= 55:
         level = "advanced"
         desc = "competitive"

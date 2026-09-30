@@ -67,7 +67,9 @@ def _load_gap_context(
     current_week = compute_current_week(
         start_date, local_today(), total_weeks=total_weeks
     )
-    if current_week < 1:
+    # ``compute_current_week`` returns None for a plan that has not started;
+    # such a plan has no current week to analyse.
+    if current_week is None or current_week < 1:
         return None
 
     plan_data = plan.plan_data if plan.plan_data else []
@@ -109,8 +111,11 @@ def _bucket_runs_by_week(
         wk = delta // 7 + 1
         if wk > current_week:
             continue
-        weekly_km[wk] = weekly_km.get(wk, 0) + run.distance_km
-        weekly_longest[wk] = max(weekly_longest.get(wk, 0), run.distance_km)
+        # A run with no recorded distance contributes 0 km (the neutral
+        # equivalent) rather than poisoning the bucket with a None.
+        run_km = run.distance_km or 0.0
+        weekly_km[wk] = weekly_km.get(wk, 0) + run_km
+        weekly_longest[wk] = max(weekly_longest.get(wk, 0), run_km)
 
     return weekly_km, weekly_longest
 

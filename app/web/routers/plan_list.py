@@ -6,7 +6,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import RedirectResponse
 from sqlalchemy.orm import Session
 
-from app.contexts.plan.plan_helpers import decorate_plan_status
+from app.contexts.plan.plan_helpers import plan_statuses
 from app.contexts.plan.repositories import SQLAlchemyPlanRepository
 from app.core.time_utils import local_today
 from app.dependencies import get_db, get_optional_user
@@ -32,9 +32,12 @@ def list_my_plans(
     try:
         plans = SQLAlchemyPlanRepository(db).list_by_user_recent_first(current_user.id)
 
-        today = local_today()
-        for plan in plans:
-            decorate_plan_status(plan, today)
+        statuses = plan_statuses(plans, local_today())
+        # Split here rather than in the template: the template would have to
+        # reach into the statuses mapping to do it, and this list is what the
+        # page actually renders.
+        active_plans = [p for p in plans if not statuses[p.id].completed]
+        completed_plans = [p for p in plans if statuses[p.id].completed]
 
         return templates.TemplateResponse(
             request,
@@ -44,7 +47,10 @@ def list_my_plans(
                 "user": current_user,
                 "google_client_id": settings.google_client_id,
                 "plans": plans,
-                "plan_count": sum(1 for p in plans if p.status_label != "Completed"),
+                "active_plans": active_plans,
+                "completed_plans": completed_plans,
+                "plan_statuses": statuses,
+                "plan_count": len(active_plans),
                 "max_plans": 3,
             },
         )

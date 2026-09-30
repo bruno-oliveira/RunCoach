@@ -59,13 +59,17 @@ def plan_view_context(
             if isinstance(sd, date)
             else sd
         )
+        # A plan with neither a plan_data snapshot nor a stored duration has no
+        # week grid to lay out; leave the calendar fields empty rather than
+        # inferring a length (and never claim such a plan is completed).
         num_weeks = len(plan_data) if plan_data else training_plan.weeks_duration
-        week_dates = build_week_dates(start_date_val, num_weeks)
-        current_week_number = compute_current_week(start_date_val, today_obj)
-        if current_week_number and current_week_number > num_weeks:
-            current_week_number = None
-            plan_completed = True
-        workout_date_labels = workout_dates(start_date_val, num_weeks)
+        if num_weeks is not None:
+            week_dates = build_week_dates(start_date_val, num_weeks)
+            current_week_number = compute_current_week(start_date_val, today_obj)
+            if current_week_number and current_week_number > num_weeks:
+                current_week_number = None
+                plan_completed = True
+            workout_date_labels = workout_dates(start_date_val, num_weeks)
 
     pace_zones_updated_recent = _compute_pace_zone_badge(db, training_plan.id)
     adaptation_state = _build_adaptation_state(training_plan)
@@ -353,7 +357,7 @@ def today_card_for_plan(
     today_obj = local_today()
     num_weeks = len(plan_data) if plan_data else training_plan.weeks_duration
     current_week_number = compute_current_week(start_date_val, today_obj)
-    if not current_week_number or current_week_number > num_weeks:
+    if num_weeks is None or not current_week_number or current_week_number > num_weeks:
         return None
 
     overlay = _build_today_workout_overlay(
@@ -557,11 +561,8 @@ def _detect_fatigue_softening(runs: list, db: Any) -> bool:
     """Recent runs averaged ≥8 effort with ≥2 warning feedbacks → soften today."""
     if len(runs) < 3:
         return False
-    efforts = [
-        getattr(r, "perceived_effort", None)
-        for r in runs
-        if getattr(r, "perceived_effort", None) is not None
-    ]
+    raw_efforts = [getattr(r, "perceived_effort", None) for r in runs]
+    efforts = [float(e) for e in raw_efforts if e is not None]
     if len(efforts) < 3 or sum(efforts) / len(efforts) < 8:
         return False
     run_ids = [r.id for r in runs]

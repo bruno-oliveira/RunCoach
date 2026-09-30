@@ -14,6 +14,7 @@ from sqlalchemy.orm import Session
 from app.contexts.nutrition.meal_database import get_meal_database
 from app.contexts.nutrition.repositories import SQLAlchemyFavoriteRecipeRepository
 from app.domain.repositories import IFavoriteRecipeRepository
+from app.exceptions import ValidationException
 from app.models import FavoriteRecipe
 
 
@@ -61,6 +62,11 @@ class FavoritesService:
         """Add a recipe to favorites, deduplicating by recipe name."""
         repo = self._repo_factory(db)
         recipe_name = recipe_data.get("name")
+        if not isinstance(recipe_name, str) or not recipe_name:
+            # ``recipe_name`` is a non-null column and is the dedupe key; a
+            # favourite without one is not storable or retrievable, so refuse
+            # it rather than persisting a nameless row.
+            raise ValidationException("Recipe name is required")
         # Store the catalogue's copy, not whatever the client posted, so a
         # favourite can't carry fields (or markup) the recipe never had.
         recipe_data = self._catalog_lookup(recipe_name or "") or recipe_data

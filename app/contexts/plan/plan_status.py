@@ -1,58 +1,114 @@
-"""Human-facing status decoration for training plans.
+"""Human-facing status for training plans, as a view model.
 
-Shared by the My Plans list and the logged-in home hero so both surfaces
-compute "Week 4 of 12" / "Completed" / "Starts Aug 3" the same way.
+Shared by the My Plans list, the logged-in home hero, the /today redirect and the
+scheduled push, so every surface computes "Week 4 of 12" / "Completed" / "Starts
+Aug 3" the same way.
+
+This is deliberately a *view model* rather than state on the ORM object.
+``TrainingPlan`` used to carry ``status_label`` / ``target_distance_display`` /
+``experience_level`` as plain attributes written per request by a decorator,
+which forced ``TrainingPlan.__allow_unmapped__ = True`` — and under that flag a
+future column annotation that forgets its ``Mapped[]`` silently becomes a plain
+attribute instead of raising. Building a :class:`PlanStatus` per plan keeps the
+ORM class a database object and the display logic a pure function of it, so the
+model no longer needs the opt-in at all.
 """
 
+from dataclasses import dataclass
 from datetime import date, datetime
-from typing import Optional
+from typing import Iterable, Optional
 
 from app.contexts.plan.plan_type_registry import display_label as plan_display_label
 from app.core.training.periodization.plan_calendar import compute_current_week
 from app.core.training.periodization.strength_plan import derive_experience_level
 from app.models import TrainingPlan
 
+# The one label that means "this plan's training window is over". Read through
+# ``PlanStatus.completed`` rather than comparing labels by hand.
+_COMPLETED_LABEL = "Completed"
 
-def decorate_plan_status(plan: TrainingPlan, today: date) -> TrainingPlan:
-    """Attach display fields (`target_distance_display`, `experience_level`,
-    `status_label`) to a plan in place, and return it.
 
-    `status_label` is one of "Completed", "Week {n} of {total}",
-    "Starts {Mon} {day}", or None when the plan has no start date.
-    """
-    plan.target_distance_display = plan_display_label(plan)
-    plan.experience_level = derive_experience_level(plan.current_weekly_km or 0)
+@dataclass(frozen=True)
+class PlanStatus:
+    """How one plan should be described to the runner looking at it."""
 
-    if plan.start_date:
-        sd = plan.start_date
-        start_d = sd.date() if isinstance(sd, datetime) else sd
-        # `pre_start=0` makes this a plain `int` (see the overloads on
-        # `compute_current_week`): a not-yet-started plan comes back as 0.
-        current_wk = compute_current_week(start_d, today, pre_start=0)
-        # `weeks_duration` is a nullable column, though: comparing it directly
-        # raised TypeError, which took out the home hero and the My Plans list for
-        # a plan with no duration. A plan we cannot measure against its length is
-        # not claimed to be finished.
-        if plan.weeks_duration is not None and current_wk > plan.weeks_duration:
-            plan.status_label = "Completed"
-        elif current_wk >= 1:
-            plan.status_label = f"Week {current_wk} of {plan.weeks_duration}"
-        else:
-            plan.status_label = f"Starts {start_d.strftime('%b')} {start_d.day}"
+    # "Completed", "Week {n} of {total}", "Starts {Mon} {day}", or None when the
+    # plan has no start date.
+    label: Optional[str]
+    distance_display: str
+    experience_level: str
+
+    @property
+    def completed(self) -> bool:
+        """Whether the plan's training window is over.
+
+        Only the "Completed" label counts. A plan with no start date — or one we
+        cannot measure against a ``weeks_duration`` it does not have — is not
+        claimed to be finished.
+        """
+        return self.label == _COMPLETED_LABEL
+
+
+def plan_status(plan: TrainingPlan, today: date) -> PlanStatus:
+    """Describe ``plan`` as of ``today``."""
+    distance_display = plan_display_label(plan)
+    experience_level = derive_experience_level(plan.current_weekly_km or 0)
+
+    if not plan.start_date:
+        return PlanStatus(
+            label=None,
+            distance_display=distance_display,
+            experience_level=experience_level,
+        )
+
+    sd = plan.start_date
+    start_d = sd.date() if isinstance(sd, datetime) else sd
+    # `pre_start=0` makes this a plain `int` (see the overloads on
+    # `compute_current_week`): a not-yet-started plan comes back as 0.
+    current_wk = compute_current_week(start_d, today, pre_start=0)
+    # `weeks_duration` is a nullable column: comparing it directly raised
+    # TypeError, which took out the home hero and the My Plans list for a plan
+    # with no duration. A plan we cannot measure against its length is not
+    # claimed to be finished.
+    if plan.weeks_duration is not None and current_wk > plan.weeks_duration:
+        label: Optional[str] = _COMPLETED_LABEL
+    elif current_wk >= 1:
+        # A plan with no recorded duration still has a current week, so report
+        # that much rather than rendering "Week 3 of None" at the runner.
+        label = (
+            f"Week {current_wk} of {plan.weeks_duration}"
+            if plan.weeks_duration is not None
+            else f"Week {current_wk}"
+        )
     else:
-        plan.status_label = None
+        label = f"Starts {start_d.strftime('%b')} {start_d.day}"
 
-    return plan
+    return PlanStatus(
+        label=label,
+        distance_display=distance_display,
+        experience_level=experience_level,
+    )
 
 
-def current_active_plan(plans: list[TrainingPlan]) -> Optional[TrainingPlan]:
+def plan_statuses(plans: Iterable[TrainingPlan], today: date) -> dict[str, PlanStatus]:
+    """Status for a batch of plans, keyed by plan id.
+
+    A mapping rather than a list so a template can render a plan card with the
+    status computed for it (``plan_statuses[plan.id]``) without a parallel
+    ordering contract.
+    """
+    return {plan.id: plan_status(plan, today) for plan in plans}
+
+
+def current_active_plan(
+    plans: list[TrainingPlan], statuses: dict[str, PlanStatus]
+) -> Optional[TrainingPlan]:
     """Pick the plan to surface as "your current training".
 
-    Prefers the first non-completed plan (the list is newest-first); falls
-    back to the most recent plan when every plan is completed. Assumes each
-    plan has already been through `decorate_plan_status`.
+    Prefers the first non-completed plan (the list is newest-first); falls back
+    to the most recent plan when every plan is completed.
     """
     for plan in plans:
-        if plan.status_label != "Completed":
+        if not statuses[plan.id].completed:
             return plan
     return plans[0] if plans else None

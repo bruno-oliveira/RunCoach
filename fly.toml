@@ -24,7 +24,10 @@ primary_region = 'sjc'
   timeout = "5s"
   grace_period = "15s"
   method = "GET"
-  path = "/health"
+  # Liveness only: a failed check restarts the machine, which fixes a wedged
+  # process and not a missing database volume. So this reads the endpoint that
+  # does no I/O; the readiness check below is the one that consults the DB.
+  path = "/health/live"
 
 [env]
   DATABASE_URL = 'sqlite:////data/runcoach.db'
@@ -45,12 +48,14 @@ primary_region = 'sjc'
   auto_start_machines = true
   grace_period = '60s'
 
+  # The proxy reads this one: a machine that cannot reach its database is
+  # dropped from rotation (but not restarted) until it recovers.
   [[http_service.checks]]
     interval = '30s'
     timeout = '10s'
     grace_period = '30s'
     method = 'GET'
-    path = '/health'
+    path = '/health/ready'
 
 [[vm]]
   cpu_kind = 'shared'

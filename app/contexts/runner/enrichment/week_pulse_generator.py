@@ -81,6 +81,10 @@ def _load_week_runs(
         if isinstance(training_plan.start_date, datetime)
         else training_plan.start_date
     )
+    if start_date is None:
+        # No start date means no week to pulse on (the caller checks this too,
+        # but the column is nullable, so prove it here).
+        return None
 
     week_start = start_date + timedelta(weeks=current_week - 1)
     prev_week_start = start_date + timedelta(weeks=max(0, current_week - 2))

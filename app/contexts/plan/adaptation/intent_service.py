@@ -694,15 +694,20 @@ def _edit_workouts(
     db = ctx.db
     _plan_data, pd_week, pd_workout = parse_plan_data_lookups(plan)
     week_numbers = {wk for (wk, _day) in edits}
-    weekly_plans = {
-        wp.week_number: wp
-        for wp in db.query(WeeklyPlan)
+    # ``week_number`` is nullable at the column level. A row without one can
+    # never match an ``edits`` key (which is a concrete ``(week, day)``), so
+    # drop it here rather than keying the map on ``None``.
+    weekly_plans: dict[int, WeeklyPlan] = {}
+    for wp in (
+        db.query(WeeklyPlan)
         .filter(
             WeeklyPlan.training_plan_id == plan.id,
             WeeklyPlan.week_number.in_(week_numbers),
         )
         .all()
-    }
+    ):
+        if wp.week_number is not None:
+            weekly_plans[wp.week_number] = wp
     workouts_by_week = batch_workouts_by_week(
         [wp.id for wp in weekly_plans.values()], db
     )
@@ -712,13 +717,18 @@ def _edit_workouts(
     for wk_num, weekly_plan in weekly_plans.items():
         workouts = workouts_by_week.get(weekly_plan.id, [])
         for workout in workouts:
-            edit = edits.get((wk_num, workout.day_of_week))
+            day = workout.day_of_week
+            # ``day_of_week`` is nullable too; a workout with no day cannot
+            # match any per-day edit, so skip it.
+            if day is None:
+                continue
+            edit = edits.get((wk_num, day))
             if edit is None:
                 continue
             if _apply_single_edit(
                 workout,
                 edit,
-                pd_workout.get((wk_num, workout.day_of_week)),
+                pd_workout.get((wk_num, day)),
                 wk_num,
                 recorder,
                 pd_week=pd_week.get(wk_num) or {},
@@ -843,10 +853,12 @@ def _rewrite_card(
     workout.key_workout_id = None
     clear_session_payload(pd_wo)
     new_type = str(workout.workout_type or "easy")
-    if new_type in WORKOUT_REGISTRY:
+    # ``day_of_week`` is nullable; a rebuild carries a day, so with none we
+    # cannot build one and leave the card cleared rather than inventing a day.
+    if new_type in WORKOUT_REGISTRY and workout.day_of_week is not None:
         rebuilt = build_workout(
             new_type,
-            day=int(workout.day_of_week),
+            day=workout.day_of_week,
             distance=float(workout.distance_km or 0),
             total_km=pd_week.get("total_km") or 0.0,
             phase=pd_week.get("phase", "build"),
@@ -868,6 +880,8 @@ def _ramp_future_weeks(ctx: _IntentContext, recorder: List[Dict[str, Any]]) -> N
     if not weeks:
         return
     for week in weeks:
+        if week.week_number is None:  # cannot be inside the easing window
+            continue
         idx = week.week_number - ctx.current_week - 1  # 0 = first week back
         if idx < 0 or idx >= len(_SICK_RETURN_RAMP):
             continue  # outside the easing window — leave at baseline

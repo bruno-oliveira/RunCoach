@@ -11,7 +11,18 @@ from types import SimpleNamespace
 import pytest
 
 from app.infrastructure.config import settings
-from app.rate_limit import RateLimiter
+from app.rate_limit import InMemoryRateLimitStore, RateLimiter, use_shared_store
+
+
+def _buckets(limiter: RateLimiter) -> dict:
+    """The default store's raw buckets.
+
+    These tests exercise the in-memory store directly; the key namespace is
+    whatever the limiter was constructed with (bare IPs for an unscoped one).
+    """
+    store = limiter._store
+    assert isinstance(store, InMemoryRateLimitStore)
+    return store._hits
 
 
 def _request(*, header=None, client_host="1.2.3.4"):
@@ -119,15 +130,15 @@ class TestBucketPruning:
 
         settings.trusted_proxy_hops = 1
         limiter.check(_request(header="203.0.113.9"))
-        assert "203.0.113.9" in limiter._hits
+        assert "203.0.113.9" in _buckets(limiter)
 
         # Age the bucket past the window, then drive enough unrelated traffic
         # to trigger a sweep (deterministic: no sleeping).
-        limiter._hits["203.0.113.9"] = [time.monotonic() - limiter._window - 1]
+        _buckets(limiter)["203.0.113.9"] = [time.monotonic() - limiter._window - 1]
         for i in range(_SWEEP_EVERY):
             limiter.check(_request(header=f"198.51.100.{i % 250}"))
 
-        assert "203.0.113.9" not in limiter._hits
+        assert "203.0.113.9" not in _buckets(limiter)
 
     def test_a_live_bucket_survives_the_sweep(self, limiter):
         from app.rate_limit import _SWEEP_EVERY
@@ -137,7 +148,7 @@ class TestBucketPruning:
         for i in range(_SWEEP_EVERY):
             limiter.check(_request(header=f"198.51.100.{i % 250}"))
 
-        assert "203.0.113.9" in limiter._hits
+        assert "203.0.113.9" in _buckets(limiter)
 
     def test_the_sweep_bounds_the_number_of_tracked_ips(self, limiter):
         """Distinct one-shot IPs must not be retained across sweeps."""
@@ -148,10 +159,10 @@ class TestBucketPruning:
         for i in range(limit):
             limiter.check(_request(header=f"10.0.{i // 250}.{i % 250}"))
             # Every bucket ages out immediately, so each sweep clears the map.
-            for ip in limiter._hits:
-                limiter._hits[ip] = [time.monotonic() - limiter._window - 1]
+            for ip in _buckets(limiter):
+                _buckets(limiter)[ip] = [time.monotonic() - limiter._window - 1]
 
-        assert len(limiter._hits) <= _SWEEP_EVERY
+        assert len(_buckets(limiter)) <= _SWEEP_EVERY
 
     def test_pruning_does_not_weaken_the_limit(self, limiter):
         """A full bucket must still 429 after a sweep has run."""
@@ -168,3 +179,56 @@ class TestBucketPruning:
         with pytest.raises(HTTPException) as exc:
             limiter.check(_request(header="172.16.9.9"))
         assert exc.value.status_code == 429
+
+
+class TestRateLimitStoreSeam:
+    """The store is injectable, so scaling past one process is a swap.
+
+    The default store keeps its counters in-process: it bounds abuse against
+    one machine and is blind across many. These tests pin the seam that lets a
+    shared backend take its place without touching any call site.
+    """
+
+    def test_limiters_share_a_store_without_spending_each_others_budget(self):
+        """Distinct scopes must not collide in a shared store."""
+        shared = InMemoryRateLimitStore()
+        auth = RateLimiter(1, 60, scope="auth", store=shared)
+        pdf = RateLimiter(1, 60, scope="pdf", store=shared)
+
+        auth.check(_request())  # spends auth's only slot
+        pdf.check(_request())  # pdf still has its own
+
+        from fastapi import HTTPException
+
+        with pytest.raises(HTTPException):
+            auth.check(_request())
+
+    def test_a_shared_store_can_be_installed_on_every_module_limiter(self):
+        """``use_shared_store`` is the one-line scale-out switch."""
+        from app import rate_limit
+
+        shared = InMemoryRateLimitStore()
+        try:
+            use_shared_store(shared)
+            assert rate_limit.auth_limiter._store is shared
+            assert rate_limit.plan_generation_limiter._store is shared
+
+            from fastapi import HTTPException
+
+            rate_limit.push_test_limiter.check(_request())
+            rate_limit.push_test_limiter.check(_request())
+            rate_limit.push_test_limiter.check(_request())  # cap is 3/min
+            with pytest.raises(HTTPException):
+                rate_limit.push_test_limiter.check(_request())
+        finally:
+            # Restore the per-process default so the rest of the session is
+            # not left sharing one store.
+            rate_limit.use_shared_store(InMemoryRateLimitStore())
+
+    def test_clear_forgets_every_counter(self):
+        limiter = RateLimiter(1, 60)
+        limiter.check(_request())
+
+        limiter.clear()
+
+        limiter.check(_request())  # would 429 if the first hit were remembered

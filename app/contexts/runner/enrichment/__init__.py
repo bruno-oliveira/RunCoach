@@ -1,27 +1,12 @@
-"""Run logging & enrichment services."""
+"""Run logging & enrichment services.
 
-__all__ = [
-    "RunEnrichmentService",
-    "CompletionStats",
-    "WeekPulseGenerator",
-]
-
-
-def __getattr__(name: str):
-    if name == "RunEnrichmentService":
-        from app.contexts.runner.enrichment.run_enrichment_service import (
-            RunEnrichmentService,
-        )
-
-        return RunEnrichmentService
-    if name == "CompletionStats":
-        from app.contexts.runner.enrichment.completion_stats import CompletionStats
-
-        return CompletionStats
-    if name == "WeekPulseGenerator":
-        from app.contexts.runner.enrichment.week_pulse_generator import (
-            WeekPulseGenerator,
-        )
-
-        return WeekPulseGenerator
-    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
+Nothing is re-exported here. This package used to lazily alias three names —
+``RunEnrichmentService``, ``CompletionStats`` and ``WeekPulseGenerator`` — all
+of which had been refactored into module-level functions and no longer existed
+in their modules, so importing either name would fail for the first caller that
+tried. Nothing imported them; callers reach the submodules directly (``from
+app.contexts.runner.enrichment import completion_stats``). Removed rather than
+corrected, for the same reason ``app/contexts/plan/__init__.py`` dropped its dead
+aliases: a name for an abstraction nobody uses is a name waiting to disagree
+with reality.
+"""

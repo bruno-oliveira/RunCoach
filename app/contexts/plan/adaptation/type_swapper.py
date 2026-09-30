@@ -272,40 +272,55 @@ def apply_swap(
         week_plan = (
             db.query(WeeklyPlan).filter(WeeklyPlan.id == workout.weekly_plan_id).first()
         )
+        # ``day_of_week`` is nullable; a workout without one cannot match a
+        # plan_data card (those carry a concrete day), so there is nothing to
+        # rewrite — but the ORM change above still needs finalizing below.
+        day_of_week = workout.day_of_week
         if week_plan:
-            for week in plan_data:
-                if week.get("week") != week_plan.week_number:
-                    continue
-                for w in week.get("daily_workouts", []):
-                    if w.get("day") != workout.day_of_week:
+            if day_of_week is not None:
+                for week in plan_data:
+                    if week.get("week") != week_plan.week_number:
                         continue
-                    w["type"] = to_type
-                    clear_session_payload(w)
-                    if to_type in WORKOUT_REGISTRY:
-                        # Regenerate structured steps/description/distance for
-                        # the new type so the card stays in lockstep.
-                        authoritative = rebuild_plain_quality(
-                            w,
-                            distance=workout.distance_km or w.get("distance") or 0.0,
-                            day=int(workout.day_of_week),
-                            total_km=week.get("total_km") or 0.0,
-                            phase=week.get("phase", "build"),
-                            pace_zones=pace_zones_for(training_plan),
-                        )
-                        workout.distance_km = authoritative
-                        w["description"] = (
-                            f"{w.get('description') or ''} {swap_note}".strip()
-                        )
-                    else:
-                        # No day-level builder for the target type — drop the
-                        # old type's steps so the enricher falls back to the
-                        # stored distance + prose instead of stale reps.
-                        w["steps"] = []
-                        w["description"] = workout.notes
-                    break
+                    for w in week.get("daily_workouts", []):
+                        if w.get("day") != day_of_week:
+                            continue
+                        w["type"] = to_type
+                        clear_session_payload(w)
+                        if to_type in WORKOUT_REGISTRY:
+                            # Regenerate structured steps/description/distance
+                            # for the new type so the card stays in lockstep.
+                            authoritative = rebuild_plain_quality(
+                                w,
+                                distance=(
+                                    workout.distance_km or w.get("distance") or 0.0
+                                ),
+                                day=day_of_week,
+                                total_km=week.get("total_km") or 0.0,
+                                phase=week.get("phase", "build"),
+                                pace_zones=pace_zones_for(training_plan),
+                            )
+                            workout.distance_km = authoritative
+                            w["description"] = (
+                                f"{w.get('description') or ''} {swap_note}".strip()
+                            )
+                        else:
+                            # No day-level builder for the target type — drop the
+                            # old type's steps so the enricher falls back to the
+                            # stored distance + prose instead of stale reps.
+                            w["steps"] = []
+                            w["description"] = workout.notes
+                        break
             training_plan.plan_data = plan_data
+            # ``week_number`` is nullable too; a week we cannot name is
+            # reconciled by ``None`` (every week), which is correct if heavier.
             finalize_plan_mutation(
-                training_plan, db, week_numbers=[week_plan.week_number]
+                training_plan,
+                db,
+                week_numbers=(
+                    [week_plan.week_number]
+                    if week_plan.week_number is not None
+                    else None
+                ),
             )
     except Exception as e:
         logger.warning("Failed to update plan_data JSON for type swap: %s", e)

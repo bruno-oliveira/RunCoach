@@ -16,17 +16,14 @@
     </div>
 
     {% if plans %}
-    {# Separate active from completed #}
-    {% set active_plans = plans | selectattr("status_label", "ne", "Completed") | list %}
-    {% set completed_plans = plans | selectattr("status_label", "equalto", "Completed") | list %}
-
     {% if active_plans %}
     <div class="plans-grid">
         {% for plan in active_plans %}
-        {% set is_completed = plan.status_label == 'Completed' %}
+        {# PlanStatus is a view model (plan_status.plan_statuses), keyed by plan id. #}
+        {% set status = plan_statuses[plan.id] %}
         <div class="plan-card {% if plan.is_trail %}plan-card--trail{% else %}plan-card--road{% endif %}" id="plan-{{ plan.id }}">
             <div class="plan-card-header">
-                <h3>{{ plan.target_distance_display }} Training Plan</h3>
+                <h3>{{ status.distance_display }} Training Plan</h3>
                 {% if plan.is_trail %}
                 <span class="plan-badge badge-trail" title="Trail / Ultra"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"><path d="M3 20 L9 8 L13 14 L16 9 L21 20 Z"/></svg>Trail</span>
                 {% else %}
@@ -39,7 +36,7 @@
                 {% else %}
                 <span class="plan-badge badge-distance">Distance</span>
                 {% endif %}
-                <span class="tier-dot tier-dot-{{ plan.experience_level }}" title="{{ plan.experience_level | title }}"></span>
+                <span class="tier-dot tier-dot-{{ status.experience_level }}" title="{{ status.experience_level | title }}"></span>
                 {% if plan.adjustment_multiplier %}
                 <span class="plan-badge badge-auto-adapted" title="Auto-adapted from your runs">
                     <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" style="vertical-align:-1px;margin-right:4px;"><path d="M15.387 17.944l-2.089-4.116h-3.065L15.387 24l5.15-10.172h-3.066m-7.008-5.599l2.836 5.598h4.172L10.463 0l-7 13.828h4.169"/></svg>Adapted
@@ -49,7 +46,7 @@
             <div class="plan-details">
                 <div class="plan-detail-row">
                     <span class="plan-detail-label"><span data-i18n="myplans.target_dist">Target Distance:</span></span>
-                    <span class="plan-detail-value">{{ plan.target_distance_display }}</span>
+                    <span class="plan-detail-value">{{ status.distance_display }}</span>
                 </div>
                 {% if plan.plan_type == 'performance' and plan.goal_time %}
                 <div class="plan-detail-row">
@@ -72,8 +69,8 @@
             </div>
             <div class="created-date">
                 Created: {{ plan.created_at.strftime('%B %d, %Y') }}
-                {% if plan.status_label %}
-                <span class="plan-status-badge">{{ plan.status_label }}</span>
+                {% if status.label %}
+                <span class="plan-status-badge">{{ status.label }}</span>
                 {% else %}
                 <span class="plan-status-badge plan-status-not-started"><span data-i18n="myplans.not_started">Not started</span></span>
                 {% endif %}
@@ -105,9 +102,10 @@
     </div>
     <div class="plans-grid" id="completed-plans-grid">
         {% for plan in completed_plans %}
+        {% set status = plan_statuses[plan.id] %}
         <div class="plan-card plan-card-completed {% if plan.is_trail %}plan-card--trail{% else %}plan-card--road{% endif %}" id="plan-{{ plan.id }}">
             <div class="plan-card-header">
-                <h3>{{ plan.target_distance_display }} Training Plan</h3>
+                <h3>{{ status.distance_display }} Training Plan</h3>
                 {% if plan.is_trail %}
                 <span class="plan-badge badge-trail" title="Trail / Ultra"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"><path d="M3 20 L9 8 L13 14 L16 9 L21 20 Z"/></svg>Trail</span>
                 {% else %}
@@ -121,7 +119,7 @@
             <div class="plan-details">
                 <div class="plan-detail-row">
                     <span class="plan-detail-label"><span data-i18n="myplans.target_dist">Target Distance:</span></span>
-                    <span class="plan-detail-value">{{ plan.target_distance_display }}</span>
+                    <span class="plan-detail-value">{{ status.distance_display }}</span>
                 </div>
                 {% if plan.plan_type == 'performance' and plan.goal_time %}
                 <div class="plan-detail-row">

@@ -89,7 +89,7 @@ def _repair_key_workout_steps(workout: dict[str, Any]) -> None:
 
 
 def _estimate_duration_min_from_steps(
-    steps: list[dict],
+    steps: list[dict[str, Any]],
     workout_type: str,
 ) -> int | None:
     total_seconds = 0.0
@@ -109,13 +109,17 @@ def _estimate_duration_min_from_steps(
         if not distance_m:
             continue
 
+        # The step dict is a JSON blob, so its zone is `Any | None`; a missing
+        # zone has the neutral equivalent "" (no lookup key) rather than a
+        # fabricated zone.
+        pace_zone = step.get("pace_zone") or ""
         pace_min_per_km = _parse_pace_str_to_min_per_km(
             step.get("pace_str"),
-            step.get("pace_zone"),
+            pace_zone,
         )
         if not pace_min_per_km:
             pace_min_per_km = _DEFAULT_PACE_MIN_PER_KM_BY_ZONE.get(
-                step.get("pace_zone")
+                pace_zone
             ) or _DEFAULT_PACE_MIN_PER_KM_BY_TYPE.get(workout_type, 7.0)
 
         total_seconds += (float(distance_m) / 1000.0) * pace_min_per_km * 60.0 * repeat

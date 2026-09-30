@@ -244,7 +244,10 @@ def _apply_recalibration(
     # Paces changed, so the watch mirror's content hashes will too; bump the
     # revision so an open page doesn't apply a stale edit on top.
     training_plan.adaptation_revision = (training_plan.adaptation_revision or 0) + 1
-    old_vdot = training_plan.vdot
+    # ``training_plan.vdot`` is nullable, but ``plan_vdot`` *is* the VDOT being
+    # recalibrated from (the caller already proved it non-null), so it is the
+    # honest "before" value — no need to read a column that may now be unset.
+    old_vdot = plan_vdot
     training_plan.vdot = round(current_vdot, 1)
 
     weekly_updates = _sync_future_weekly_plans(

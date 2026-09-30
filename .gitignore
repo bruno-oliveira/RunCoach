@@ -4,6 +4,10 @@
 # Database files
 *.db
 *.db.backup
+# SQLite WAL sidecars. `*.db` does not cover these, and merely opening the dev
+# database — even read-only — can create them, so they must never be committed.
+*.db-wal
+*.db-shm
 
 # Throwaway DB copy + server for UI verification (scripts/verify_ui.py)
 .verify/

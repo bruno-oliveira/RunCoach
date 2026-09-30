@@ -373,6 +373,10 @@ def _run_reset(
 
             workout.notes = _strip_annotations(workout.notes) or None
 
+            # Both halves of the plan_data key are nullable columns; without
+            # them there is no card to mirror the restored distance onto.
+            if week.week_number is None or workout.day_of_week is None:
+                continue
             pd_wo = pd_workout.get((week.week_number, workout.day_of_week))
             if pd_wo is not None:
                 pd_wo["distance"] = workout.baseline_distance_km

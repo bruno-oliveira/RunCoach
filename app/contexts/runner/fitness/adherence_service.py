@@ -80,11 +80,13 @@ def compute_adherence_heatmap(
             elif wk_num <= current_week:
                 week_start = start_date + timedelta(weeks=wk_num - 1)
                 week_end = week_start + timedelta(days=7)
-                week_runs = [
-                    r
-                    for r in runs
-                    if r.date and week_start <= _to_date(r.date) < week_end
-                ]
+                # ``RunLog.date`` is nullable; a run with no date cannot fall
+                # inside any window, so it is simply not counted.
+                week_runs = []
+                for r in runs:
+                    run_date = _to_date(r.date)
+                    if run_date is not None and week_start <= run_date < week_end:
+                        week_runs.append(r)
                 if week_runs:
                     row["cells"][wo_type] = "rescheduled"
 
