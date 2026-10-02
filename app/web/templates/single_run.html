@@ -6,6 +6,21 @@
 <link rel="stylesheet" href="{{ static_url('css/single-run.css') }}">
 {% endblock %}
 
+{% set pick_reasons = {
+    'rest_day': 'It is a rest day, so this is deliberately short and easy. Skipping it is just as good a choice.',
+    'rest_day_low': 'It is a rest day and your check-in says you are run-down. We would rest — if you do go, keep it this short.',
+    'low_readiness': 'Your check-in says you are run-down today. Keep it short and easy.',
+    'no_history': 'We have no recent runs from you yet, so start with something short and easy.',
+    'coming_back': 'You have not run for a while. Ease back in before anything hard.',
+    'hard_recently': 'You ran hard in the last couple of days. Today is for absorbing it.',
+    'plan_today': 'Your plan already has a run today, so an extra one should be short and easy.',
+    'too_hard': 'Too much of your recent running has been hard. Make this one easy.',
+    'plan_owns_quality': 'Your plan takes care of the hard sessions. Anything extra should be easy.',
+    'long_due': 'You have not had a long run this week, and your volume supports one.',
+    'quality_due': 'Your recent running has been mostly easy and you are fresh — a good day for some quality.',
+    'steady': 'Nothing stands out in your recent training. An easy run is always a good answer.'
+} %}
+
 {% block content %}
 <div class="single-page">
     <div class="container">
@@ -18,6 +33,22 @@
               data-plan-overlaps='{{ plan_overlaps | tojson }}'
               data-similar-share="{{ similar_distance.share }}"
               data-similar-min-km="{{ similar_distance.min_km }}">
+            <div class="single-pick single-type--{{ suggestion.run_type }}">
+                <span class="single-pick-eyebrow" data-i18n="single.pick">Coach's pick for today</span>
+                <p class="single-pick-what">
+                    <span data-i18n="single.type_{{ suggestion.run_type }}">{{ suggestion.run_type | title }}</span>
+                    · {{ suggestion.distance_km | format_km }} km
+                </p>
+                <p class="single-pick-why" data-i18n="single.pick_{{ suggestion.reason }}">{{ pick_reasons[suggestion.reason] }}</p>
+                {% if split %}
+                <p class="single-pick-split single-pick-split--{{ split.verdict }}">
+                    <span data-i18n="single.split_label">Easy running, last 4 weeks:</span>
+                    <strong>{{ split.easy_pct }}%</strong>
+                    <span class="single-pick-target">(<span data-i18n="single.split_target">aim for about</span> {{ split.target_pct }}%)</span>
+                </p>
+                {% endif %}
+            </div>
+
             <fieldset class="single-field">
                 <legend class="form-label" data-i18n="single.type">What kind of run?</legend>
                 <div class="single-types" role="radiogroup">
@@ -25,7 +56,7 @@
                     <label class="single-type single-type--{{ t.key }}">
                         <input type="radio" name="run_type" value="{{ t.key }}"
                                data-min-km="{{ t.min_km }}" data-max-km="{{ t.max_km }}"
-                               {% if loop.first %}checked{% endif %}>
+                               {% if t.key == suggestion.run_type %}checked{% endif %}>
                         <span data-i18n="single.type_{{ t.key }}">{{ t.key | title }}</span>
                     </label>
                     {% endfor %}
@@ -48,7 +79,8 @@
                         </div>
                         <div class="single-amount">
                             <input type="number" id="singleAmount" class="form-input" inputmode="decimal"
-                                   step="0.5" min="2" max="50" value="6" required aria-labelledby="singleUnit">
+                                   step="0.5" min="2" max="50" value="{{ suggestion.distance_km }}"
+                                   data-default="{{ suggestion.distance_km }}" required aria-labelledby="singleUnit">
                             <span class="single-unit" id="singleUnit" data-i18n="single.unit_km">km</span>
                         </div>
                         {% if not has_paces %}
@@ -128,6 +160,41 @@
                     </li>
                     {% endfor %}
                 </ol>
+                {% endif %}
+
+                {% set review = view.review %}
+                {% if review %}
+                {% set steady = not review.is_session_average %}
+                <div class="single-review single-review--{{ review.pace_verdict }}">
+                    <p class="single-review-line">
+                        {% if steady %}
+                        <span data-i18n="single.review_target">Target</span>
+                        {% else %}
+                        <span data-i18n="single.review_target_avg">Planned average</span>
+                        {% endif %}
+                        <strong>{% if review.target_slow != review.target_fast %}{{ review.target_slow | format_pace_bare }}–{% endif %}{{ review.target_fast | format_pace }}</strong>
+                        · <span data-i18n="single.review_ran">you ran</span>
+                        <strong>{{ review.actual_pace | format_pace }}</strong>
+                    </p>
+                    <p class="single-review-verdict">
+                        {% if review.pace_verdict == 'on_target' %}
+                        <span data-i18n="single.review_on_target">Right on it.</span>
+                        {% elif review.pace_verdict == 'faster' and steady %}
+                        <span data-i18n="single.review_faster_easy">Quicker than the range. Easy days only work when they stay easy — hold back next time.</span>
+                        {% elif review.pace_verdict == 'faster' %}
+                        <span data-i18n="single.review_faster">Quicker than planned overall. Fine if the hard parts felt controlled.</span>
+                        {% elif steady %}
+                        <span data-i18n="single.review_slower_easy">Slower than the range, which costs nothing on an easy day.</span>
+                        {% else %}
+                        <span data-i18n="single.review_slower">Slower than planned overall. The work pace may have been out of reach today.</span>
+                        {% endif %}
+                        {% if review.distance_verdict == 'short' %}
+                        <span data-i18n="single.review_short">You stopped short of the planned distance.</span>
+                        {% elif review.distance_verdict == 'over' %}
+                        <span data-i18n="single.review_over">You went past the planned distance.</span>
+                        {% endif %}
+                    </p>
+                </div>
                 {% endif %}
 
                 <footer class="single-item-foot">

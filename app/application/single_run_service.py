@@ -22,7 +22,7 @@ read and re-send, not an error page.
 
 import logging
 from dataclasses import dataclass
-from datetime import date, timedelta
+from datetime import date, datetime, time, timedelta
 from typing import Any, Optional
 
 from sqlalchemy.orm import Session
@@ -30,10 +30,17 @@ from sqlalchemy.orm import Session
 from app.contexts.plan.plan_status import in_progress_plan
 from app.contexts.plan.repositories import SQLAlchemyPlanRepository
 from app.contexts.runner.fitness.race_predictor_service import RacePredictorService
+from app.contexts.runner.repositories import SQLAlchemyRunRepository
 from app.contexts.runner.single_runs import (
     SQLAlchemySingleRunRepository,
     planned_runs_between,
     recent_weekly_km,
+)
+from app.contexts.runner.wellness.repository import SQLAlchemyReadinessRepository
+from app.core.coaching.intensity_split import (
+    IntensitySplit,
+    intensity_split,
+    is_hard_session,
 )
 from app.core.time_utils import local_today, utcnow_naive
 from app.core.training.physiology.vdot_calculator import VDOTCalculator
@@ -48,6 +55,15 @@ from app.core.training.workouts.single_run import (
     estimated_minutes,
     single_run_family,
 )
+from app.core.training.workouts.single_run_review import (
+    SingleRunReview,
+    review_single_run,
+)
+from app.core.training.workouts.single_run_suggestion import (
+    RecentRun,
+    Suggestion,
+    suggest_single_run,
+)
 from app.exceptions import ValidationException
 from app.models import RunLog, SingleRun, User
 
@@ -61,6 +77,9 @@ MAX_DAYS_AHEAD = 14
 # How much history the page shows.
 HISTORY_DAYS = 60
 
+# The window the easy/hard split and the pick are read over.
+SPLIT_WINDOW_DAYS = 28
+
 WATCH_NOT_CONNECTED = "not_connected"
 WATCH_AUTH = "auth"
 WATCH_PROVIDER = "provider"
@@ -73,6 +92,9 @@ class SingleRunView:
     single_run: SingleRun
     completed_run: Optional[RunLog]
     estimated_minutes: Optional[int]
+    # Prescribed vs done; None until it has been run, or when the session was
+    # prescribed by effort and there is no pace to compare with.
+    review: Optional[SingleRunReview] = None
 
     @property
     def on_watch(self) -> bool:
@@ -112,6 +134,61 @@ def plan_overlaps(user: User, db: Session, today: date) -> list[dict[str, Any]]:
             }
         )
     return overlaps
+
+
+def _recent_runs(user: User, db: Session, today: date) -> list[RunLog]:
+    since = datetime.combine(today - timedelta(days=SPLIT_WINDOW_DAYS), time.min)
+    return SQLAlchemyRunRepository(db).list_recent_for_user(user.id, since=since)
+
+
+def recent_intensity_split(
+    user: User, db: Session, today: date
+) -> Optional[IntensitySplit]:
+    """The runner's easy/hard split over the last four weeks, if there is one."""
+    return intensity_split(
+        (run.effective_workout_type, run.distance_km)
+        for run in _recent_runs(user, db, today)
+    )
+
+
+def suggest_for_today(
+    user: User, db: Session, today: date, *, rest_day: bool = False
+) -> Suggestion:
+    """The single run the form should open on.
+
+    Reads everything the pick weighs — recent runs, the split, this morning's
+    readiness, and what the plan has today — and leaves the judgement to the
+    pure ``suggest_single_run``.
+    """
+    logged = _recent_runs(user, db, today)
+    runs = [
+        RecentRun(
+            day=run.date.date(),
+            distance_km=run.distance_km,
+            family=single_run_family(run.effective_workout_type),
+            hard=is_hard_session(run.effective_workout_type),
+        )
+        for run in logged
+        if run.date is not None and run.distance_km
+    ]
+    readiness = SQLAlchemyReadinessRepository(db).get_for_user_on(user.id, today)
+    plans = SQLAlchemyPlanRepository(db).list_by_user_recent_first(user.id)
+    planned_today = any(
+        not planned.completed
+        for planned in planned_runs_between(user.id, db, today, today)
+    )
+    return suggest_single_run(
+        today=today,
+        runs=runs,
+        weekly_km=recent_weekly_km(user.id, db, today),
+        split=intensity_split(
+            (run.effective_workout_type, run.distance_km) for run in logged
+        ),
+        readiness_score=readiness.score if readiness is not None else None,
+        has_plan=in_progress_plan(plans, today) is not None,
+        planned_today=planned_today,
+        rest_day=rest_day,
+    )
 
 
 def create_single_run(
@@ -194,14 +271,24 @@ def list_views(single_runs: list[SingleRun], db: Session) -> list[SingleRunView]
     completed = SQLAlchemySingleRunRepository(db).completed_runs(
         [single_run.id for single_run in single_runs]
     )
-    return [
-        SingleRunView(
-            single_run=single_run,
-            completed_run=completed.get(single_run.id),
-            estimated_minutes=estimated_minutes(single_run.workout),
+    views = []
+    for single_run in single_runs:
+        run = completed.get(single_run.id)
+        views.append(
+            SingleRunView(
+                single_run=single_run,
+                completed_run=run,
+                estimated_minutes=estimated_minutes(single_run.workout),
+                review=(
+                    review_single_run(
+                        single_run.workout, run.distance_km, run.avg_pace_min_km
+                    )
+                    if run is not None
+                    else None
+                ),
+            )
         )
-        for single_run in single_runs
-    ]
+    return views
 
 
 def recent_views(user: User, db: Session) -> list[SingleRunView]:
@@ -236,7 +323,7 @@ async def send_to_watch(
         # push_workout removes any earlier event with this external_id first:
         # Intervals only re-triggers the watch export on create, so a re-send
         # has to be a delete and a create.
-        await intervals_service.push_workout(access_token, athlete_id, event)
+        created = await intervals_service.push_workout(access_token, athlete_id, event)
     except IntervalsAuthorizationError:
         logger.warning("Single run push unauthorized for user %s", user.id)
         return WATCH_AUTH
@@ -246,6 +333,10 @@ async def send_to_watch(
 
     single_run.watch_event_hash = event_hash(event)
     single_run.watch_synced_at = utcnow_naive()
+    # What the claim joins on once the run comes back (see `claiming`). A
+    # re-send replaces the event, so this is overwritten rather than kept.
+    event_id = created.get("id") if isinstance(created, dict) else None
+    single_run.watch_event_id = str(event_id) if event_id is not None else None
     db.commit()
     logger.info("Single run %s pushed to the watch calendar", single_run.id)
     return None

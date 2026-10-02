@@ -10,6 +10,9 @@ Powers the discreet right-rail panel on the signed-in home page — the quiet
     runner's *canonical* HR zones (the one source of truth), classified from each
     run's average HR weighted by its duration.
 
+Plus one figure that is about *now* rather than a trend: the **easy/hard split**
+of the last four weeks, the one number here a runner can act on tomorrow.
+
 No configuration: one opinionated 6-month window that naturally shows fewer
 months for newer runners. Both series degrade honestly — too little data yields a
 ``has_data: False`` block with a plain-English reason, never an empty axis.
@@ -25,6 +28,12 @@ from sqlalchemy.orm import Session
 
 from app.contexts.runner.fitness.hr_zone_service import resolve_zones_for_user
 from app.contexts.runner.repositories import SQLAlchemyRunRepository
+from app.core.coaching.intensity_split import (
+    MOSTLY_EASY,
+    TARGET_EASY_SHARE,
+    TOO_HARD,
+    intensity_split,
+)
 from app.core.training.physiology.hr_zone_calculator import HRZoneCalculator
 from app.models import RunLog, User
 
@@ -32,6 +41,8 @@ from app.models import RunLog, User
 # actually have runs, so a newer runner simply sees a shorter line.
 WINDOW_MONTHS = 6
 _WINDOW_DAYS = 31 * WINDOW_MONTHS
+# The split is a statement about current habits, so it reads a short window.
+_SPLIT_WINDOW_DAYS = 28
 
 # A line needs at least two month points to say anything.
 _MIN_MONTHS_FOR_CHART = 2
@@ -88,6 +99,44 @@ class HomeStatsService:
             "window_months": WINDOW_MONTHS,
             "pace_evolution": HomeStatsService._pace_evolution(runs),
             "hr_zone_evolution": HomeStatsService._hr_zone_evolution(runs, user, db),
+            "intensity_split": HomeStatsService._intensity_split(runs),
+        }
+
+    # -- Easy / hard --------------------------------------------------------
+
+    @staticmethod
+    def _intensity_split(runs: list[RunLog]) -> dict:
+        since = _now_naive() - timedelta(days=_SPLIT_WINDOW_DAYS)
+        split = intensity_split(
+            (run.effective_workout_type, run.distance_km)
+            for run in runs
+            if run.date is not None and run.date >= since
+        )
+        if split is None:
+            return {"has_data": False}
+        easy_pct = round(split.easy_share * 100)
+        target_pct = round(TARGET_EASY_SHARE * 100)
+        if split.verdict == TOO_HARD:
+            summary = (
+                f"Only {easy_pct}% of your last four weeks was easy running. "
+                "Make your next run an easy one."
+            )
+        elif split.verdict == MOSTLY_EASY:
+            summary = (
+                f"{easy_pct}% of your last four weeks was easy — there is room "
+                "for a harder session."
+            )
+        else:
+            summary = (
+                f"{easy_pct}% of your last four weeks was easy, right around "
+                f"the {target_pct}% that works."
+            )
+        return {
+            "has_data": True,
+            "easy_pct": easy_pct,
+            "target_pct": target_pct,
+            "verdict": split.verdict,
+            "summary": summary,
         }
 
     # -- Pace ---------------------------------------------------------------

@@ -216,13 +216,40 @@
     return card;
   }
 
+  // Easy vs hard over the last four weeks: one bar, a tick where the target
+  // sits, and a sentence that says what to do about it. No chart library —
+  // two numbers do not need one.
+  function renderSplit(split) {
+    var card = cardShell("Easy / hard", "last 4 weeks");
+    card.appendChild(el("p", "home-stat-takeaway", split.summary));
+    var bar = el("div", "home-split-bar home-split-bar--" + split.verdict);
+    bar.setAttribute("role", "img");
+    bar.setAttribute(
+      "aria-label",
+      split.easy_pct + "% easy, target about " + split.target_pct + "%"
+    );
+    var fill = el("span", "home-split-fill");
+    fill.style.width = split.easy_pct + "%";
+    var target = el("span", "home-split-target");
+    target.style.left = split.target_pct + "%";
+    bar.appendChild(fill);
+    bar.appendChild(target);
+    card.appendChild(bar);
+    var link = el("a", "home-split-link", "Build today's run");
+    link.href = "/run";
+    card.appendChild(link);
+    return card;
+  }
+
   function render(stats) {
     var pace = stats.pace_evolution || {};
     var hr = stats.hr_zone_evolution || {};
+    var split = stats.intensity_split || {};
     // Nothing worth showing at all -> stay invisible, keep the hero clean.
-    if (!pace.has_data && !hr.has_data) return;
+    if (!pace.has_data && !hr.has_data && !split.has_data) return;
 
     panel.appendChild(el("span", "home-stats-eyebrow", "Your trends"));
+    if (split.has_data) panel.appendChild(renderSplit(split));
     panel.appendChild(renderPace(pace));
     panel.appendChild(renderHrZones(hr));
 

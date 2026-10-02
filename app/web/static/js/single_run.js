@@ -51,7 +51,10 @@
       amount.step = 0.5;
       unit.textContent = t('single.unit_km', 'km');
       var current = parseFloat(amount.value);
-      if (amount.dataset.mode === 'time' || isNaN(current)) current = 6;
+      // Back to the coach's pick, not a number of ours.
+      if (amount.dataset.mode === 'time' || isNaN(current)) {
+        current = parseFloat(amount.dataset.default) || 6;
+      }
       amount.value = Math.min(max, Math.max(min, current));
     }
     amount.dataset.mode = byTime ? 'time' : 'distance';

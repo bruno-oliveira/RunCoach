@@ -61,6 +61,9 @@ class RunLog(Base):
     intervals_activity_id: Mapped[str | None] = mapped_column(
         String, unique=True, nullable=True, index=True
     )
+    # The Intervals.icu calendar event this activity was recorded against, when
+    # the runner ran it from a session we sent to their watch.
+    intervals_paired_event_id: Mapped[str | None] = mapped_column(String)
     # Where the run came from: "intervals", "manual", or "strava" for history
     # imported before that integration was retired. Read via `was_imported`.
     source: Mapped[str | None] = mapped_column(String(20))

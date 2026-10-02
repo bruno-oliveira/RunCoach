@@ -60,6 +60,11 @@
             <a class="today-session-action is-primary" href="/plan/{{ training_plan.id }}/day/{{ session.workout_id }}" data-i18n="today.open_session">Open session</a>
             {% endif %}
             <button type="button" class="today-session-action" onclick="scrollToThisWeek()" data-i18n="today.see_week">See the week</button>
+            {% if session.is_rest and not session.logged %}
+            {# Sized by /run so it cannot undo the rest: short, easy, and the
+               page says skipping it is just as good. #}
+            <a class="today-session-action" href="/run?from=rest" data-i18n="today.rest_run">Fancy a short easy run?</a>
+            {% endif %}
             {% if not session.is_rest and not session.logged %}
             <button type="button" class="today-session-action" id="today-missed-cta" data-i18n="today.missed">Missed it?</button>
             {% endif %}

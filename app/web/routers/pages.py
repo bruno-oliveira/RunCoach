@@ -17,7 +17,9 @@ from app.application.single_run_service import (
     MAX_DAYS_AHEAD,
     current_vdot,
     plan_overlaps,
+    recent_intensity_split,
     recent_views,
+    suggest_for_today,
 )
 from app.contexts.nutrition.nutrition_content import (
     TRAIL_FUEL_PHASES,
@@ -32,6 +34,7 @@ from app.contexts.plan.plan_helpers import (
 )
 from app.contexts.plan.recovery_block_service import RecoveryOffer, recovery_offer
 from app.contexts.plan.repositories import SQLAlchemyPlanRepository
+from app.core.coaching.intensity_split import TARGET_EASY_SHARE
 from app.core.time_utils import local_today
 from app.core.training.workouts.single_run import (
     SIMILAR_DISTANCE_MIN_KM,
@@ -111,6 +114,7 @@ def tips_page(
 @router.get("/run", response_class=HTMLResponse)
 def single_run_page(
     request: Request,
+    source: Optional[str] = Query(default=None, alias="from"),
     current_user: Optional[User] = Depends(get_optional_user),
     db: Session = Depends(get_db),
 ):
@@ -120,6 +124,7 @@ def single_run_page(
 
     today = local_today()
     plans = SQLAlchemyPlanRepository(db).list_by_user_recent_first(current_user.id)
+    split = recent_intensity_split(current_user, db, today)
     return templates.TemplateResponse(
         request,
         "single_run.html",
@@ -148,6 +153,21 @@ def single_run_page(
                 "min_km": SIMILAR_DISTANCE_MIN_KM,
             },
             "single_runs": recent_views(current_user, db),
+            # The form opens on the coach's pick rather than a blank choice.
+            # `?from=rest` is the plan's rest-day card, which promised a run
+            # small enough not to undo the rest.
+            "suggestion": suggest_for_today(
+                current_user, db, today, rest_day=source == "rest"
+            ),
+            "split": (
+                {
+                    "easy_pct": round(split.easy_share * 100),
+                    "target_pct": round(TARGET_EASY_SHARE * 100),
+                    "verdict": split.verdict,
+                }
+                if split is not None
+                else None
+            ),
         },
     )
 
