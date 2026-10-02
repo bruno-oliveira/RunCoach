@@ -20,6 +20,7 @@ if TYPE_CHECKING:
     from app.models.push_subscription import PushSubscription
     from app.models.readiness_log import ReadinessLog
     from app.models.run_log import RunLog
+    from app.models.single_run import SingleRun
     from app.models.training_plan import TrainingPlan
     from app.models.user import User
     from app.schemas import PlanRequest
@@ -117,6 +118,24 @@ class IFavoriteRecipeRepository(Protocol):
     def save(self, favorite: "FavoriteRecipe") -> None: ...
 
     def delete(self, favorite: "FavoriteRecipe") -> None: ...
+
+
+class ISingleRunRepository(Protocol):
+    """Persistence interface for one-off workouts outside a plan."""
+
+    def get_for_user(
+        self, single_run_id: str, user_id: str
+    ) -> Optional["SingleRun"]: ...
+
+    def list_for_user(
+        self, user_id: str, *, since: "date_cls | None" = None, limit: int | None = None
+    ) -> List["SingleRun"]: ...
+
+    def completed_runs(self, single_run_ids: List[str]) -> dict[str, "RunLog"]: ...
+
+    def save(self, single_run: "SingleRun") -> None: ...
+
+    def delete(self, single_run: "SingleRun") -> None: ...
 
 
 class IPushSubscriptionRepository(Protocol):

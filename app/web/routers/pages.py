@@ -1,5 +1,6 @@
 """Static page endpoints (home, privacy, post-connect setup)."""
 
+from datetime import timedelta
 from pathlib import Path
 from typing import Optional
 
@@ -12,6 +13,12 @@ from fastapi.responses import (
 )
 from sqlalchemy.orm import Session
 
+from app.application.single_run_service import (
+    MAX_DAYS_AHEAD,
+    current_vdot,
+    plan_overlaps,
+    recent_views,
+)
 from app.contexts.nutrition.nutrition_content import (
     TRAIL_FUEL_PHASES,
     generate_trail_fuel_ideas,
@@ -20,11 +27,19 @@ from app.contexts.nutrition.nutrition_content import (
 from app.contexts.plan.plan_helpers import (
     PlanStatus,
     current_active_plan,
+    in_progress_plan,
     plan_statuses,
 )
 from app.contexts.plan.recovery_block_service import RecoveryOffer, recovery_offer
 from app.contexts.plan.repositories import SQLAlchemyPlanRepository
 from app.core.time_utils import local_today
+from app.core.training.workouts.single_run import (
+    SIMILAR_DISTANCE_MIN_KM,
+    SIMILAR_DISTANCE_SHARE,
+    SINGLE_RUN_TYPES,
+    max_distance_km,
+    min_distance_km,
+)
 from app.dependencies import get_current_user, get_db, get_optional_user
 from app.infrastructure.config import settings
 from app.models import User
@@ -89,6 +104,50 @@ def tips_page(
             "trail_fuel_ideas": generate_trail_fuel_ideas(),
             "trail_fuel_phases": TRAIL_FUEL_PHASES,
             "trail_tips": generate_trail_nutrition_tips(),
+        },
+    )
+
+
+@router.get("/run", response_class=HTMLResponse)
+def single_run_page(
+    request: Request,
+    current_user: Optional[User] = Depends(get_optional_user),
+    db: Session = Depends(get_db),
+):
+    """Single run — one generated workout, with no plan around it."""
+    if current_user is None:
+        return RedirectResponse(url="/", status_code=302)
+
+    today = local_today()
+    plans = SQLAlchemyPlanRepository(db).list_by_user_recent_first(current_user.id)
+    return templates.TemplateResponse(
+        request,
+        "single_run.html",
+        {
+            "request": request,
+            "user": current_user,
+            "google_client_id": settings.google_client_id or "",
+            "current_page": "run",
+            "today": today,
+            "has_plan": in_progress_plan(plans, today) is not None,
+            # Sizing by time needs a pace to convert with; the form disables
+            # the option up front rather than letting the request fail.
+            "has_paces": current_vdot(current_user, db, today) is not None,
+            "max_date": today + timedelta(days=MAX_DAYS_AHEAD),
+            "run_types": [
+                {
+                    "key": run_type,
+                    "min_km": min_distance_km(run_type),
+                    "max_km": max_distance_km(run_type),
+                }
+                for run_type in SINGLE_RUN_TYPES
+            ],
+            "plan_overlaps": plan_overlaps(current_user, db, today),
+            "similar_distance": {
+                "share": SIMILAR_DISTANCE_SHARE,
+                "min_km": SIMILAR_DISTANCE_MIN_KM,
+            },
+            "single_runs": recent_views(current_user, db),
         },
     )
 

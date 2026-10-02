@@ -70,6 +70,8 @@
                 <a href="/my-plans" class="status-hero-link" data-i18n="home.back_all_plans">All my plans</a>
                 <span class="status-hero-sep" aria-hidden="true">·</span>
                 <a href="#build-plan" onclick="scrollToBuild(); return false;" class="status-hero-link" data-i18n="home.back_start_another">Start another plan</a>
+                <span class="status-hero-sep" aria-hidden="true">·</span>
+                <a href="/run" class="status-hero-link" data-i18n="home.back_single_run">Just one run today</a>
             </p>
             {% else %}
             <!-- Signed in, no plan yet: nudge the next step, no marketing pitch -->
@@ -111,6 +113,9 @@
                 </button>
             </div>
             {% endif %}
+            <p class="status-hero-note">
+                <a href="/run" class="status-hero-link" data-i18n="home.back_single_run_noplan">Not ready for a plan? Get one run for today</a>
+            </p>
             {% endif %}
         </div>
         <aside class="home-stats" id="homeStats" aria-label="Your recent training trends" hidden></aside>

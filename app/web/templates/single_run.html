@@ -1,0 +1,167 @@
+{% extends "base.html" %}
+
+{% block title %}RunCoach — Single run{% endblock %}
+
+{% block styles %}
+<link rel="stylesheet" href="{{ static_url('css/single-run.css') }}">
+{% endblock %}
+
+{% block content %}
+<div class="single-page">
+    <div class="container">
+        <div class="single-header">
+            <h1 class="single-title" data-i18n="single.title">Single run</h1>
+            <p class="single-subtitle" data-i18n="single.subtitle">One workout, no plan attached. Pick what you feel like — we set the paces from your current fitness, and it still counts in your stats.</p>
+        </div>
+
+        <form class="single-card single-form" id="singleRunForm" novalidate
+              data-plan-overlaps='{{ plan_overlaps | tojson }}'
+              data-similar-share="{{ similar_distance.share }}"
+              data-similar-min-km="{{ similar_distance.min_km }}">
+            <fieldset class="single-field">
+                <legend class="form-label" data-i18n="single.type">What kind of run?</legend>
+                <div class="single-types" role="radiogroup">
+                    {% for t in run_types %}
+                    <label class="single-type single-type--{{ t.key }}">
+                        <input type="radio" name="run_type" value="{{ t.key }}"
+                               data-min-km="{{ t.min_km }}" data-max-km="{{ t.max_km }}"
+                               {% if loop.first %}checked{% endif %}>
+                        <span data-i18n="single.type_{{ t.key }}">{{ t.key | title }}</span>
+                    </label>
+                    {% endfor %}
+                </div>
+            </fieldset>
+
+            <div class="single-row">
+                <fieldset class="single-field">
+                    <legend class="form-label" data-i18n="single.size">How much?</legend>
+                    <div class="single-size">
+                        <div class="single-mode" role="radiogroup">
+                            <label class="single-mode-opt">
+                                <input type="radio" name="size_mode" value="distance" checked>
+                                <span data-i18n="single.by_distance">Distance</span>
+                            </label>
+                            <label class="single-mode-opt">
+                                <input type="radio" name="size_mode" value="time"{% if not has_paces %} disabled{% endif %}>
+                                <span data-i18n="single.by_time">Time</span>
+                            </label>
+                        </div>
+                        <div class="single-amount">
+                            <input type="number" id="singleAmount" class="form-input" inputmode="decimal"
+                                   step="0.5" min="2" max="50" value="6" required aria-labelledby="singleUnit">
+                            <span class="single-unit" id="singleUnit" data-i18n="single.unit_km">km</span>
+                        </div>
+                        {% if not has_paces %}
+                        <p class="single-note" data-i18n="single.time_needs_paces">Sizing by time unlocks once we know your paces — log a few runs first.</p>
+                        {% endif %}
+                    </div>
+                </fieldset>
+
+                <div class="single-field">
+                    <label class="form-label" for="singleDate" data-i18n="single.when">When?</label>
+                    <input type="date" id="singleDate" class="form-input"
+                           value="{{ today.isoformat() }}" min="{{ today.isoformat() }}" max="{{ max_date.isoformat() }}">
+                </div>
+            </div>
+
+            {% if user.intervals_athlete_id %}
+            <label class="single-check">
+                <input type="checkbox" id="singleSendWatch" checked>
+                <span data-i18n="single.send_watch">Send it to my watch</span>
+            </label>
+            {% endif %}
+
+            <p class="single-overlap" id="singleOverlap" role="status" hidden>
+                <span data-i18n="single.overlap">Your plan already has this run that day:</span>
+                <strong id="singleOverlapWhat"></strong>.
+                <a href="#" id="singleOverlapLink" data-i18n="single.overlap_link">See the planned session</a>
+            </p>
+
+            {% if has_plan %}
+            <p class="single-note" data-i18n="single.with_plan">This is an extra session. It counts toward your weekly load, but it will not replace a day in your plan.</p>
+            {% endif %}
+
+            <button type="submit" class="btn btn-accent btn-lg" id="singleSubmit">
+                <span data-i18n="single.create">Build my run</span>
+            </button>
+        </form>
+
+        <h2 class="single-section" data-i18n="single.list_title">Your single runs</h2>
+
+        {% if not single_runs %}
+        <p class="single-empty" data-i18n="single.empty">Nothing here yet. Build a run above and it will show up here — and in your stats once you have run it.</p>
+        {% endif %}
+
+        <div class="single-list">
+            {% for view in single_runs %}
+            {% set sr = view.single_run %}
+            {% set done = view.completed_run %}
+            <article class="single-card single-item single-item--{{ sr.run_type }}{% if done %} is-done{% endif %}"
+                     data-single-run-id="{{ sr.id }}">
+                <header class="single-item-head">
+                    <div>
+                        <span class="single-item-date">{{ sr.date.strftime('%a %b') }} {{ sr.date.day }}</span>
+                        <h3 class="single-item-name">{{ sr.workout.get('key_workout_name') or (sr.run_type | title) }}</h3>
+                    </div>
+                    <div class="single-item-figures">
+                        <span class="single-item-km">{{ sr.distance_km | format_km }} km</span>
+                        {% if view.estimated_minutes %}
+                        <span class="single-item-min">~{{ view.estimated_minutes }} min</span>
+                        {% endif %}
+                    </div>
+                </header>
+
+                <p class="single-item-desc">{{ sr.workout.get('description', '') }}</p>
+                {% if not sr.vdot %}
+                <p class="single-note" data-i18n="single.by_effort">Paced by effort — log a few runs and we will set real paces.</p>
+                {% endif %}
+
+                {% set steps = sr.workout.get('steps') or [] %}
+                {% if steps | length > 1 %}
+                <ol class="single-steps">
+                    {% for step in steps %}
+                    <li class="single-step">
+                        <span class="single-step-label">{{ step.get('label') or step.get('kind') }}</span>
+                        {% if step.get('pace_str') %}
+                        <span class="single-step-pace">{{ step.get('pace_str') }}</span>
+                        {% endif %}
+                    </li>
+                    {% endfor %}
+                </ol>
+                {% endif %}
+
+                <footer class="single-item-foot">
+                    {% if done %}
+                    <span class="single-badge single-badge--done">
+                        <span data-i18n="single.done">Done</span>
+                        {% if done.distance_km %}· {{ done.distance_km | format_km }} km{% endif %}
+                        {% if done.avg_pace_min_km %}· {{ done.avg_pace_min_km | format_pace }}{% endif %}
+                    </span>
+                    {% else %}
+                        {% if view.on_watch %}
+                        <span class="single-badge" data-i18n="single.on_watch">On your watch</span>
+                        {% endif %}
+                        {% if user.intervals_athlete_id and sr.date >= today %}
+                        <button type="button" class="btn btn-ghost btn-sm" data-action="send">
+                            {% if view.on_watch %}
+                            <span data-i18n="single.resend">Send again</span>
+                            {% else %}
+                            <span data-i18n="single.send">Send to watch</span>
+                            {% endif %}
+                        </button>
+                        {% endif %}
+                    {% endif %}
+                    <button type="button" class="btn btn-ghost btn-sm single-delete" data-action="delete">
+                        <span data-i18n="single.delete">Delete</span>
+                    </button>
+                </footer>
+            </article>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ static_url('js/single_run.js') }}" defer></script>
+{% endblock %}

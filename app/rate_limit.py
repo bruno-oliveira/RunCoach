@@ -194,6 +194,9 @@ plan_generation_limiter = _limiter("plan_generation", max_requests=5, window_sec
 # FIT files are cheap to build and downloaded in batches (a week of workouts
 # at a time), so they get their own, more generous budget than PDF/plan gen.
 fit_download_limiter = _limiter("fit_download", max_requests=30, window_seconds=60)
+# Generating a workout is cheap, but each one is a row and possibly a calendar
+# write; nobody needs more than a handful a minute.
+single_run_limiter = _limiter("single_run", max_requests=10, window_seconds=60)
 # Pushing a workout to Intervals.icu hits their API; keep it generous enough to
 # send a week of workouts one tap at a time, but capped to avoid abuse.
 intervals_push_limiter = _limiter("intervals_push", max_requests=30, window_seconds=60)
