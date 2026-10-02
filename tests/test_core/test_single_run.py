@@ -93,7 +93,9 @@ def test_event_is_dated_directly_and_namespaced():
     event = build_single_run_event("abc", date(2026, 10, 3), workout)
 
     assert event["start_date_local"] == "2026-10-03T00:00:00"
-    assert event["external_id"] == single_run_external_id("abc") == "runcoach-single-abc"
+    assert (
+        event["external_id"] == single_run_external_id("abc") == "runcoach-single-abc"
+    )
     assert event["category"] == "WORKOUT" and event["type"] == "Run"
     assert event["name"] == "Intervals"
     assert event["moving_time"] > 0

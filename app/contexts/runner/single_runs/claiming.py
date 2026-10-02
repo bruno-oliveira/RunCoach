@@ -44,9 +44,7 @@ logger = logging.getLogger(__name__)
 _LOOKBACK_DAYS = 7
 
 
-def _is_the_single_run(
-    run: RunLog, single_run: SingleRun, planned: PlannedRun
-) -> bool:
+def _is_the_single_run(run: RunLog, single_run: SingleRun, planned: PlannedRun) -> bool:
     """Whether a lone run was the single run rather than the planned session."""
     wanted = single_run.run_type
     planned_family = single_run_family(planned.workout_type)
@@ -64,9 +62,7 @@ def _is_the_single_run(
     # The run's type says nothing either way; fall back to which prescription
     # it is closer to, the single run on a tie (it is the more recent intent).
     distance = run.distance_km or 0.0
-    return abs(distance - single_run.distance_km) <= abs(
-        distance - planned.distance_km
-    )
+    return abs(distance - single_run.distance_km) <= abs(distance - planned.distance_km)
 
 
 def claim_completed_single_runs(user_id: str, db: Session, today: date) -> int:

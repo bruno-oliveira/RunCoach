@@ -65,7 +65,7 @@ class SQLAlchemySingleRunRepository:
         The run itself stays — the runner did run it — and with the pointer
         cleared it becomes an ordinary unplanned run again.
         """
-        self.session.query(RunLog).filter(
-            RunLog.single_run_id == single_run.id
-        ).update({RunLog.single_run_id: None}, synchronize_session=False)
+        self.session.query(RunLog).filter(RunLog.single_run_id == single_run.id).update(
+            {RunLog.single_run_id: None}, synchronize_session=False
+        )
         self.session.delete(single_run)

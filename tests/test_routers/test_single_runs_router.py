@@ -145,7 +145,9 @@ def test_requires_authentication(api):
     assert _create(api, distance_km=6).status_code == 401
 
 
-def test_list_shows_only_the_callers_runs_with_completion(api, owner, stranger, test_db):
+def test_list_shows_only_the_callers_runs_with_completion(
+    api, owner, stranger, test_db
+):
     _as(stranger)
     _create(api, distance_km=5)
     _as(owner)
@@ -244,8 +246,11 @@ def test_page_hands_the_form_the_planned_runs_it_could_duplicate(api, owner, tes
             ),
             WeeklyPlan(id="srr-week", training_plan_id="srr-plan", week_number=1),
             DailyWorkout(
-                id="srr-day", weekly_plan_id="srr-week", day_of_week=1,
-                workout_type="easy", distance_km=8.0,
+                id="srr-day",
+                weekly_plan_id="srr-week",
+                day_of_week=1,
+                workout_type="easy",
+                distance_km=8.0,
             ),
         ]
     )

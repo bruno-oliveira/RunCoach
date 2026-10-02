@@ -14,11 +14,11 @@ from app.application.single_run_service import (
     WATCH_PROVIDER,
     create_single_run,
     delete_single_run,
+    plan_overlaps,
     send_to_watch,
     view_of,
 )
 from app.contexts.plan.adaptation.run_mapper import map_runs_to_plan
-from app.application.single_run_service import plan_overlaps
 from app.contexts.runner.single_runs import (
     claim_completed_single_runs,
     planned_runs_between,
@@ -97,8 +97,11 @@ def _plan_with_day(
     )
     week = WeeklyPlan(id="sr-week", training_plan_id=plan.id, week_number=1)
     day = DailyWorkout(
-        id="sr-day", weekly_plan_id=week.id, day_of_week=1,
-        workout_type=workout_type, distance_km=km,
+        id="sr-day",
+        weekly_plan_id=week.id,
+        day_of_week=1,
+        workout_type=workout_type,
+        distance_km=km,
     )
     db.add_all([plan, week, day])
     db.commit()
@@ -110,7 +113,11 @@ def _plan_with_day(
 
 def test_create_without_fitness_is_by_effort(test_db, runner):
     single_run = create_single_run(
-        runner, test_db, run_type="easy", distance_km=5, duration_minutes=None,
+        runner,
+        test_db,
+        run_type="easy",
+        distance_km=5,
+        duration_minutes=None,
         on_date=None,
     )
 
@@ -124,7 +131,11 @@ def test_create_uses_the_in_progress_plans_paces(test_db, runner):
     _plan_with_day(test_db, runner, 8.0)
 
     single_run = create_single_run(
-        runner, test_db, run_type="tempo", distance_km=8, duration_minutes=None,
+        runner,
+        test_db,
+        run_type="tempo",
+        distance_km=8,
+        duration_minutes=None,
         on_date=None,
     )
 
@@ -142,7 +153,11 @@ def test_create_falls_back_to_recent_runs(test_db, runner, monkeypatch):
     )
 
     single_run = create_single_run(
-        runner, test_db, run_type="easy", distance_km=None, duration_minutes=40,
+        runner,
+        test_db,
+        run_type="easy",
+        distance_km=None,
+        duration_minutes=40,
         on_date=None,
     )
 
@@ -153,7 +168,11 @@ def test_create_falls_back_to_recent_runs(test_db, runner, monkeypatch):
 def test_duration_without_fitness_is_refused_not_guessed(test_db, runner):
     with pytest.raises(ValidationException, match="distance"):
         create_single_run(
-            runner, test_db, run_type="easy", distance_km=None, duration_minutes=40,
+            runner,
+            test_db,
+            run_type="easy",
+            distance_km=None,
+            duration_minutes=40,
             on_date=None,
         )
     assert test_db.query(SingleRun).count() == 0
@@ -163,7 +182,11 @@ def test_duration_without_fitness_is_refused_not_guessed(test_db, runner):
 def test_date_outside_the_window_is_refused(test_db, runner, offset):
     with pytest.raises(ValidationException):
         create_single_run(
-            runner, test_db, run_type="easy", distance_km=5, duration_minutes=None,
+            runner,
+            test_db,
+            run_type="easy",
+            distance_km=5,
+            duration_minutes=None,
             on_date=local_today() + timedelta(days=offset),
         )
 
@@ -171,8 +194,12 @@ def test_date_outside_the_window_is_refused(test_db, runner, offset):
 def test_out_of_range_distance_is_a_validation_error(test_db, runner):
     with pytest.raises(ValidationException):
         create_single_run(
-            runner, test_db, run_type="interval", distance_km=2,
-            duration_minutes=None, on_date=None,
+            runner,
+            test_db,
+            run_type="interval",
+            distance_km=2,
+            duration_minutes=None,
+            on_date=None,
         )
 
 
@@ -250,9 +277,12 @@ def test_claimed_run_counts_as_volume_but_never_fills_a_planned_day(test_db, run
     run = _log_run(test_db, runner, today, 8.0)
 
     # Without the claim this run is a perfect match for the planned easy day.
-    assert map_runs_to_plan(plan.id, runner.id, test_db, dry_run=True)["proposals"][0][
-        "match_type"
-    ] == "workout"
+    assert (
+        map_runs_to_plan(plan.id, runner.id, test_db, dry_run=True)["proposals"][0][
+            "match_type"
+        ]
+        == "workout"
+    )
 
     claim_completed_single_runs(runner.id, test_db, today)
     result = map_runs_to_plan(plan.id, runner.id, test_db)
@@ -261,9 +291,7 @@ def test_claimed_run_counts_as_volume_but_never_fills_a_planned_day(test_db, run
     test_db.refresh(run)
     assert run.training_plan_id == plan.id  # counted toward the plan week
     assert run.daily_workout_id is None  # the planned day is still open
-    assert day_id not in {
-        r.daily_workout_id for r in test_db.query(RunLog).all()
-    }
+    assert day_id not in {r.daily_workout_id for r in test_db.query(RunLog).all()}
 
 
 # --- one run, two sessions --------------------------------------------------
@@ -299,8 +327,12 @@ def test_planned_family_counts_as_the_same_kind(test_db, runner):
 
 def test_a_run_that_looks_like_the_single_run_is_claimed(test_db, runner):
     claimed, run, single_run = _lone_run_case(
-        test_db, runner, planned_type="easy", single_type="tempo",
-        inferred_workout_type="tempo", inferred_type_confidence=0.9,
+        test_db,
+        runner,
+        planned_type="easy",
+        single_type="tempo",
+        inferred_workout_type="tempo",
+        inferred_type_confidence=0.9,
     )
 
     assert claimed == 1 and run.single_run_id == single_run.id
@@ -308,8 +340,12 @@ def test_a_run_that_looks_like_the_single_run_is_claimed(test_db, runner):
 
 def test_a_run_that_looks_like_the_planned_session_is_left_for_it(test_db, runner):
     claimed, run, _ = _lone_run_case(
-        test_db, runner, planned_type="easy", single_type="tempo",
-        inferred_workout_type="easy", inferred_type_confidence=0.9,
+        test_db,
+        runner,
+        planned_type="easy",
+        single_type="tempo",
+        inferred_workout_type="easy",
+        inferred_type_confidence=0.9,
     )
 
     assert claimed == 0 and run.single_run_id is None
@@ -349,12 +385,20 @@ def test_with_several_runs_the_one_that_looks_right_is_preferred(test_db, runner
     today = local_today()
     single_run = _single_run(test_db, runner, today, 8.0, "tempo")
     closer_but_easy = _log_run(
-        test_db, runner, today, 8.0,
-        inferred_workout_type="easy", inferred_type_confidence=0.9,
+        test_db,
+        runner,
+        today,
+        8.0,
+        inferred_workout_type="easy",
+        inferred_type_confidence=0.9,
     )
     tempo = _log_run(
-        test_db, runner, today, 9.0,
-        inferred_workout_type="tempo", inferred_type_confidence=0.9,
+        test_db,
+        runner,
+        today,
+        9.0,
+        inferred_workout_type="tempo",
+        inferred_type_confidence=0.9,
     )
 
     claim_completed_single_runs(runner.id, test_db, today)
@@ -383,26 +427,32 @@ def test_planned_runs_are_dated_and_skip_rest_days(test_db, runner):
     test_db.add_all(
         [
             DailyWorkout(
-                id="sr-rest", weekly_plan_id="sr-week", day_of_week=2,
-                workout_type="rest", distance_km=0,
+                id="sr-rest",
+                weekly_plan_id="sr-week",
+                day_of_week=2,
+                workout_type="rest",
+                distance_km=0,
             ),
             DailyWorkout(
-                id="sr-day3", weekly_plan_id="sr-week", day_of_week=3,
-                workout_type="long", distance_km=16.0,
+                id="sr-day3",
+                weekly_plan_id="sr-week",
+                day_of_week=3,
+                workout_type="long",
+                distance_km=16.0,
             ),
         ]
     )
     test_db.commit()
 
-    planned = planned_runs_between(
-        runner.id, test_db, today, today + timedelta(days=6)
-    )
+    planned = planned_runs_between(runner.id, test_db, today, today + timedelta(days=6))
 
     assert [(p.workout_id, p.on_date, p.completed) for p in planned] == [
         (day_id, today, False),
         ("sr-day3", today + timedelta(days=2), False),
     ]
-    assert planned_runs_between(runner.id, test_db, today, today)[0].workout_id == day_id
+    assert (
+        planned_runs_between(runner.id, test_db, today, today)[0].workout_id == day_id
+    )
 
 
 def test_overlaps_offer_only_open_sessions_with_a_single_run_equivalent(
@@ -412,8 +462,11 @@ def test_overlaps_offer_only_open_sessions_with_a_single_run_equivalent(
     _, day_id = _plan_with_day(test_db, runner, 8.0, "cruise_interval")
     test_db.add(
         DailyWorkout(
-            id="sr-hill", weekly_plan_id="sr-week", day_of_week=2,
-            workout_type="hill", distance_km=7.0,
+            id="sr-hill",
+            weekly_plan_id="sr-week",
+            day_of_week=2,
+            workout_type="hill",
+            distance_km=7.0,
         )
     )
     test_db.commit()
@@ -436,7 +489,11 @@ def test_overlaps_offer_only_open_sessions_with_a_single_run_equivalent(
 
 def _real_single_run(db, user) -> SingleRun:
     return create_single_run(
-        user, db, run_type="interval", distance_km=8, duration_minutes=None,
+        user,
+        db,
+        run_type="interval",
+        distance_km=8,
+        duration_minutes=None,
         on_date=None,
     )
 
@@ -467,7 +524,10 @@ def test_send_without_a_connection_reports_it(test_db, runner):
 
 @pytest.mark.parametrize(
     "raised, reason",
-    [(IntervalsAuthorizationError("no"), WATCH_AUTH), (RuntimeError("down"), WATCH_PROVIDER)],
+    [
+        (IntervalsAuthorizationError("no"), WATCH_AUTH),
+        (RuntimeError("down"), WATCH_PROVIDER),
+    ],
 )
 def test_a_failed_push_is_reported_and_leaves_the_run_unsent(
     test_db, connected, raised, reason
@@ -476,7 +536,9 @@ def test_a_failed_push_is_reported_and_leaves_the_run_unsent(
     intervals = AsyncMock()
     intervals.push_workout.side_effect = raised
 
-    assert asyncio.run(send_to_watch(single_run, connected, test_db, intervals)) == reason
+    assert (
+        asyncio.run(send_to_watch(single_run, connected, test_db, intervals)) == reason
+    )
     assert single_run.watch_event_hash is None
 
 

@@ -26,9 +26,7 @@ logger = logging.getLogger(__name__)
 single_runs_router = APIRouter(prefix="/api/single-runs", tags=["single-runs"])
 
 
-def _response(
-    view: SingleRunView, watch_error: str | None = None
-) -> SingleRunResponse:
+def _response(view: SingleRunView, watch_error: str | None = None) -> SingleRunResponse:
     single_run, run = view.single_run, view.completed_run
     workout = single_run.workout
     return SingleRunResponse(
