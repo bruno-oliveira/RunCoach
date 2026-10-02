@@ -549,6 +549,32 @@
     position: relative;
     height: 128px;
 }
+.home-split-bar {
+    position: relative;
+    height: 8px;
+    border-radius: var(--radius-full);
+    background: var(--color-bg-sunken);
+    margin-bottom: var(--space-3);
+}
+.home-split-fill {
+    display: block;
+    height: 100%;
+    border-radius: var(--radius-full);
+    background: var(--color-success);
+}
+.home-split-bar--too_hard .home-split-fill { background: var(--color-error); }
+.home-split-target {
+    position: absolute;
+    top: -3px;
+    width: 2px;
+    height: 14px;
+    background: var(--color-text);
+}
+.home-split-link {
+    font-size: var(--text-sm);
+    font-weight: var(--weight-semibold);
+}
+
 .home-stat-empty {
     margin: 0;
     font-size: var(--text-sm);

@@ -1,6 +1,6 @@
 """Endpoint tests for single runs: the API, the page, and data isolation."""
 
-from datetime import datetime, time
+from datetime import datetime, time, timedelta
 from unittest.mock import AsyncMock, patch
 
 import pytest
@@ -262,3 +262,83 @@ def test_page_hands_the_form_the_planned_runs_it_could_duplicate(api, owner, tes
     assert page.status_code == 200
     assert 'id="singleOverlap"' in page.text
     assert "/plan/srr-plan/day/srr-day" in page.text
+
+
+def test_page_opens_on_the_coachs_pick(api, owner, test_db):
+    _as(owner)
+    page = api.get("/run")
+    assert "Coach's pick for today" in page.text
+    assert 'data-i18n="single.pick_no_history"' in page.text
+    # The pick is what the form is pre-filled with.
+    assert 'value="easy"' in page.text
+    assert "single-pick-split" not in page.text  # too little running to judge
+
+    rest = api.get("/run?from=rest")
+    assert 'data-i18n="single.pick_rest_day"' in rest.text
+
+
+def test_page_shows_the_split_and_the_review_of_a_finished_run(api, owner, test_db):
+    _as(owner)
+    today = local_today()
+    for days_ago in (2, 4, 6, 8):
+        test_db.add(
+            RunLog(
+                user_id=owner.id,
+                date=datetime.combine(today, time(7)) - timedelta(days=days_ago),
+                distance_km=8.0,
+                duration_minutes=44.0,
+                avg_pace_min_km=5.5,
+            )
+        )
+    test_db.commit()
+    with patch("app.application.single_run_service.current_vdot", return_value=45.0):
+        created = _create(api, run_type="easy", distance_km=6).json()
+    test_db.add(
+        RunLog(
+            user_id=owner.id,
+            date=datetime.combine(today, time(7)),
+            distance_km=6.0,
+            duration_minutes=28.8,
+            avg_pace_min_km=4.8,
+        )
+    )
+    test_db.commit()
+    claim_completed_single_runs(owner.id, test_db, today)
+    test_db.commit()
+
+    page = api.get("/run")
+    assert "single-pick-split" in page.text and "100%" in page.text
+    assert 'data-i18n="single.review_faster_easy"' in page.text
+
+    listed = api.get("/api/single-runs").json()["single_runs"]
+    review = next(item for item in listed if item["id"] == created["id"])["review"]
+    assert review["pace_verdict"] == "faster" and not review["is_session_average"]
+
+
+def test_home_stats_report_the_easy_hard_split(api, owner, test_db):
+    _as(owner)
+    assert api.get("/api/analytics/home-stats").json()["intensity_split"] == {
+        "has_data": False
+    }
+
+    today = local_today()
+    for days_ago, kind in ((2, "tempo"), (4, "interval"), (6, None), (8, None)):
+        test_db.add(
+            RunLog(
+                user_id=owner.id,
+                date=datetime.combine(today, time(7)) - timedelta(days=days_ago),
+                distance_km=8.0,
+                duration_minutes=44.0,
+                avg_pace_min_km=5.5,
+                workout_type=kind,
+            )
+        )
+    test_db.commit()
+
+    split = api.get("/api/analytics/home-stats").json()["intensity_split"]
+    assert (split["easy_pct"], split["target_pct"], split["verdict"]) == (
+        50,
+        80,
+        "too_hard",
+    )
+    assert "easy" in split["summary"]

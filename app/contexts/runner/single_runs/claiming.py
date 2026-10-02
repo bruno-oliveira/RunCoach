@@ -8,9 +8,16 @@ so an unclaimed single run on a plan day would be spent on that day's workout
 and the adaptation engine would judge a one-off tempo against a planned easy
 run.
 
-Matching is by calendar day and distance, the same evidence the mapper itself
-uses. Intervals.icu does pair activities to calendar events, but only for
-sessions that were sent to the watch, and a single run does not have to be.
+**Exact first.** A single run that was sent to the watch has a calendar event,
+and an activity recorded from that event comes back from Intervals.icu carrying
+its id. When the two ids match there is nothing to decide: that run was this
+session, whatever its distance turned out to be and whatever the plan had on
+the day. The same evidence works in reverse — a run paired with some *other*
+event (the plan's session) is never guessed to be the single run.
+
+**Otherwise by day and distance**, the same evidence the mapper itself uses,
+because a single run does not have to be sent to the watch and a runner does
+not have to start the session from it.
 
 **One run, two sessions.** When the plan also had a run that day and the runner
 ran once, day and distance cannot say which session it was. Getting it wrong
@@ -65,6 +72,38 @@ def _is_the_single_run(run: RunLog, single_run: SingleRun, planned: PlannedRun) 
     return abs(distance - single_run.distance_km) <= abs(distance - planned.distance_km)
 
 
+def _claim(run: RunLog, single_run: SingleRun, db: Session) -> None:
+    run.single_run_id = single_run.id
+    # Imports arrive untagged. The runner told us what this session was, which
+    # beats inferring it from pace — but never over a label that came with the
+    # activity or that they set themselves.
+    if run.workout_type is None:
+        run.workout_type = single_run.run_type
+    # Flushed per claim so the next single run's candidate query (a second one
+    # on the same day) no longer sees this run.
+    db.flush()
+
+
+def _claim_by_pairing(single_run: SingleRun, user_id: str, db: Session) -> bool:
+    """Claim the run Intervals.icu paired with this single run's event."""
+    if not single_run.watch_event_id:
+        return False
+    run = (
+        db.query(RunLog)
+        .filter(
+            RunLog.user_id == user_id,
+            RunLog.intervals_paired_event_id == single_run.watch_event_id,
+            RunLog.single_run_id.is_(None),
+            RunLog.daily_workout_id.is_(None),
+        )
+        .first()
+    )
+    if run is None:
+        return False
+    _claim(run, single_run, db)
+    return True
+
+
 def claim_completed_single_runs(user_id: str, db: Session, today: date) -> int:
     """Mark the logged runs that completed this runner's pending single runs.
 
@@ -100,6 +139,10 @@ def claim_completed_single_runs(user_id: str, db: Session, today: date) -> int:
 
     claimed = 0
     for single_run in pending:
+        if _claim_by_pairing(single_run, user_id, db):
+            claimed += 1
+            continue
+
         day_start = datetime.combine(single_run.date, time.min)
         day_runs = (
             db.query(RunLog)
@@ -116,6 +159,8 @@ def claim_completed_single_runs(user_id: str, db: Session, today: date) -> int:
             run
             for run in day_runs
             if is_similar_distance(single_run.distance_km, run.distance_km or 0.0)
+            # Recorded from a different calendar event: it is that session.
+            and run.intervals_paired_event_id is None
         ]
         if not candidates:
             continue
@@ -139,15 +184,7 @@ def claim_completed_single_runs(user_id: str, db: Session, today: date) -> int:
         ):
             continue
 
-        run.single_run_id = single_run.id
-        # Imports arrive untagged. The runner told us what this session was,
-        # which beats inferring it from pace — but never over a label that
-        # came with the activity or that they set themselves.
-        if run.workout_type is None:
-            run.workout_type = single_run.run_type
-        # Flushed per claim so the next single run's candidate query (a second
-        # one on the same day) no longer sees this run.
-        db.flush()
+        _claim(run, single_run, db)
         claimed += 1
 
     if claimed:

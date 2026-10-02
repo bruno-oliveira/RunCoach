@@ -247,7 +247,20 @@ Routers should carry no raw `db.query` — there is one remaining exception in
   plan adapt to a skip that never happened. The form warns about that
   duplicate up front (`plan_overlaps`). Its watch event lives in its own `runcoach-single-<id>`
   namespace, is pushed once on request (not mirrored), and no plan reconcile
-  can reach it.
+  can reach it. **Exact pairing comes first:** a sent single run stores the
+  Intervals event id (`single_runs.watch_event_id`), an imported activity keeps
+  the event it was recorded from (`run_logs.intervals_paired_event_id`), and
+  when the two match the claim skips every heuristic — while a run paired with
+  some *other* event is never guessed to be the single run.
+  The page opens on a **coach's pick** (`core/training/workouts/single_run_suggestion.py`,
+  ordered rules, first match wins, every doubt resolves to easy; a plan in
+  progress owns the quality, so an extra is always easy). One of its inputs is
+  the **easy/hard split** (`core/coaching/intensity_split.py`): whole sessions
+  by distance over 28 days, also shown on the home trends rail. A finished run
+  carries a **review** (`single_run_review.py`): steady sessions against their
+  pace range, structured ones against the *whole-session planned average* —
+  never per step, because the Intervals import stores one average per run and
+  `run_logs.splits` is empty for those rows.
 
 - **Watch mirroring** — `application/watch_sync_service.py` keeps the
   Intervals.icu calendar a *mirror* of the plan, not a log of what was once

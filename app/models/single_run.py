@@ -55,6 +55,10 @@ class SingleRun(Base):
     # Hash of the calendar event we last pushed; NULL until it has been sent.
     watch_event_hash: Mapped[str | None] = mapped_column(String(32))
     watch_synced_at: Mapped[datetime | None] = mapped_column(DateTime)
+    # Intervals.icu's id for that event. An activity recorded from it comes
+    # back carrying the same id, which is the one exact way to know a run was
+    # this session. Replaced on every re-send (a re-send is delete + create).
+    watch_event_id: Mapped[str | None] = mapped_column(String)
 
     created_at: Mapped[datetime | None] = mapped_column(DateTime, default=utcnow_naive)
 

@@ -34,6 +34,17 @@ class SingleRunCompletedRun(BaseModel):
     avg_pace_min_km: Optional[float] = None
 
 
+class SingleRunReviewOut(BaseModel):
+    """Prescribed vs done for a completed single run (paces in min/km)."""
+
+    target_slow: float
+    target_fast: float
+    actual_pace: float
+    pace_verdict: str
+    distance_verdict: str
+    is_session_average: bool
+
+
 class SingleRunResponse(BaseModel):
     id: str
     date: date_cls
@@ -47,6 +58,7 @@ class SingleRunResponse(BaseModel):
     estimated_minutes: Optional[int] = None
     on_watch: bool
     completed_run: Optional[SingleRunCompletedRun] = None
+    review: Optional[SingleRunReviewOut] = None
     # Set only on a response to a send: why the watch push did not happen
     # ("not_connected" | "auth" | "provider"). The workout itself was saved.
     watch_error: Optional[str] = None

@@ -15,7 +15,9 @@ from app.application.single_run_service import (
     create_single_run,
     delete_single_run,
     plan_overlaps,
+    recent_intensity_split,
     send_to_watch,
+    suggest_for_today,
     view_of,
 )
 from app.contexts.plan.adaptation.run_mapper import map_runs_to_plan
@@ -28,8 +30,17 @@ from app.core.time_utils import local_today
 from app.exceptions import ValidationException
 from app.infrastructure.integrations.intervals_service import (
     IntervalsAuthorizationError,
+    IntervalsService,
 )
-from app.models import DailyWorkout, RunLog, SingleRun, TrainingPlan, User, WeeklyPlan
+from app.models import (
+    DailyWorkout,
+    ReadinessLog,
+    RunLog,
+    SingleRun,
+    TrainingPlan,
+    User,
+    WeeklyPlan,
+)
 
 
 @pytest.fixture
@@ -583,3 +594,129 @@ def test_delete_of_an_unsent_run_never_touches_the_calendar(test_db, connected):
     asyncio.run(delete_single_run(single_run, connected, test_db, intervals))
 
     intervals.fetch_events.assert_not_awaited()
+
+
+# --- exact pairing through the calendar event --------------------------------
+
+
+def test_send_remembers_the_calendar_event_it_created(test_db, connected):
+    single_run = _real_single_run(test_db, connected)
+    intervals = AsyncMock()
+    intervals.push_workout.return_value = {"id": 9001}
+
+    asyncio.run(send_to_watch(single_run, connected, test_db, intervals))
+
+    assert single_run.watch_event_id == "9001"
+
+
+def test_the_imported_activity_keeps_the_event_it_was_recorded_from():
+    activity = {
+        "id": "i1",
+        "distance": 8000,
+        "moving_time": 2400,
+        "start_date_local": "2026-10-02T07:30:00",
+    }
+    mapped = IntervalsService.map_activity_to_run_log
+    assert (
+        mapped({**activity, "paired_event_id": 9001}, "u").intervals_paired_event_id
+        == "9001"
+    )
+    assert mapped(activity, "u").intervals_paired_event_id is None
+
+
+def test_a_paired_run_is_claimed_even_when_the_plan_had_the_same_session(
+    test_db, runner
+):
+    # Without the pairing this is the undecidable case the plan wins: same kind
+    # of run, same day, one activity. The calendar event settles it.
+    today = local_today()
+    _plan_with_day(test_db, runner, 8.0, "tempo")
+    single_run = _single_run(test_db, runner, today, 8.0, "tempo")
+    single_run.watch_event_id = "9001"
+    run = _log_run(test_db, runner, today, 8.0, intervals_paired_event_id="9001")
+
+    assert claim_completed_single_runs(runner.id, test_db, today) == 1
+    assert run.single_run_id == single_run.id
+
+
+def test_pairing_claims_a_run_whatever_its_distance(test_db, runner):
+    today = local_today()
+    single_run = _single_run(test_db, runner, today, 8.0, "tempo")
+    single_run.watch_event_id = "9001"
+    run = _log_run(test_db, runner, today, 3.0, intervals_paired_event_id="9001")
+
+    assert claim_completed_single_runs(runner.id, test_db, today) == 1
+    assert run.single_run_id == single_run.id
+
+
+def test_a_run_recorded_from_another_event_is_never_guessed(test_db, runner):
+    # Right day, right distance — but the watch says it was the plan's session.
+    today = local_today()
+    _single_run(test_db, runner, today, 8.0, "tempo")
+    run = _log_run(test_db, runner, today, 8.0, intervals_paired_event_id="555")
+
+    assert claim_completed_single_runs(runner.id, test_db, today) == 0
+    assert run.single_run_id is None
+
+
+# --- the coach's pick, the split and the review ------------------------------
+
+
+def test_the_pick_reads_the_runners_own_history(test_db, runner):
+    today = local_today()
+    assert suggest_for_today(runner, test_db, today).reason == "no_history"
+
+    for days_ago in (1, 3, 5, 8, 10, 12):
+        _log_run(test_db, runner, today - timedelta(days=days_ago), 8.0)
+    _log_run(test_db, runner, today - timedelta(days=2), 14.0, workout_type="long")
+
+    pick = suggest_for_today(runner, test_db, today)
+    assert (pick.run_type, pick.reason) == ("tempo", "quality_due")
+    assert suggest_for_today(runner, test_db, today, rest_day=True).reason == "rest_day"
+
+
+def test_the_pick_defers_to_a_plan_and_to_a_bad_morning(test_db, runner):
+    today = local_today()
+    for days_ago in (3, 5, 8, 10, 12):
+        _log_run(test_db, runner, today - timedelta(days=days_ago), 8.0)
+    _plan_with_day(test_db, runner, 8.0, "easy")
+    assert suggest_for_today(runner, test_db, today).reason == "plan_today"
+
+    test_db.add(ReadinessLog(user_id=runner.id, date=today, score=30.0))
+    test_db.commit()
+    assert suggest_for_today(runner, test_db, today).reason == "low_readiness"
+
+
+def test_the_split_covers_only_the_last_four_weeks(test_db, runner):
+    today = local_today()
+    assert recent_intensity_split(runner, test_db, today) is None
+
+    for days_ago in (2, 4, 6):
+        _log_run(test_db, runner, today - timedelta(days=days_ago), 10.0)
+    _log_run(test_db, runner, today - timedelta(days=8), 10.0, workout_type="tempo")
+    _log_run(test_db, runner, today - timedelta(days=40), 30.0, workout_type="tempo")
+
+    split = recent_intensity_split(runner, test_db, today)
+    assert split is not None and (split.easy_km, split.hard_km) == (30.0, 10.0)
+
+
+def test_a_finished_single_run_carries_its_review(test_db, runner, monkeypatch):
+    monkeypatch.setattr(single_run_service, "current_vdot", lambda *_: 45.0)
+    today = local_today()
+    single_run = create_single_run(
+        runner,
+        test_db,
+        run_type="easy",
+        distance_km=6,
+        duration_minutes=None,
+        on_date=None,
+    )
+    assert view_of(single_run, test_db).review is None
+
+    run = _log_run(test_db, runner, today, 6.0)
+    run.avg_pace_min_km = 4.8
+    claim_completed_single_runs(runner.id, test_db, today)
+    test_db.commit()
+
+    review = view_of(single_run, test_db).review
+    assert review is not None and review.pace_verdict == "faster"

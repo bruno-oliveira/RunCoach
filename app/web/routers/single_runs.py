@@ -1,6 +1,7 @@
 """Single runs: one generated workout, outside any training plan."""
 
 import logging
+from dataclasses import asdict
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy.orm import Session
@@ -19,7 +20,10 @@ from app.infrastructure.integrations.intervals_service import IntervalsService
 from app.models import SingleRun, User
 from app.rate_limit import intervals_push_limiter, single_run_limiter
 from app.schemas import SingleRunCreate, SingleRunListResponse, SingleRunResponse
-from app.schemas.single_run_schemas import SingleRunCompletedRun
+from app.schemas.single_run_schemas import (
+    SingleRunCompletedRun,
+    SingleRunReviewOut,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -48,6 +52,11 @@ def _response(view: SingleRunView, watch_error: str | None = None) -> SingleRunR
                 avg_pace_min_km=run.avg_pace_min_km,
             )
             if run is not None
+            else None
+        ),
+        review=(
+            SingleRunReviewOut(**asdict(view.review))
+            if view.review is not None
             else None
         ),
         watch_error=watch_error,

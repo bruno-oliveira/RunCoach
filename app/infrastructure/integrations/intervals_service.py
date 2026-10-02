@@ -47,6 +47,17 @@ ACTIVITY_FIELDS = ",".join(
 )
 
 
+def _paired_event_id(activity: dict[str, Any]) -> Optional[str]:
+    """The calendar event Intervals.icu paired this activity with, if any.
+
+    Present when the runner recorded the activity from a planned session —
+    which is how a run can be tied to the exact workout we sent, rather than
+    to whichever prescription its day and distance happen to resemble.
+    """
+    paired = activity.get("paired_event_id")
+    return str(paired) if paired not in (None, "", 0) else None
+
+
 def _rpe_from_activity(activity: dict[str, Any]) -> Optional[int]:
     """Intervals' 1–10 session RPE, when the runner (or their watch) set one.
 
@@ -552,6 +563,7 @@ class IntervalsService:
             perceived_effort=_rpe_from_activity(activity),
             workout_type=None,
             notes=activity.get("name"),
+            intervals_paired_event_id=_paired_event_id(activity),
         )
 
     @staticmethod
@@ -628,6 +640,11 @@ class IntervalsService:
                 rpe = _rpe_from_activity(activity)
                 if rpe is not None and existing.perceived_effort is None:
                     existing.perceived_effort = rpe
+                # Same for the pairing: Intervals can link the activity to its
+                # planned event after the first webhook has already fired.
+                paired = _paired_event_id(activity)
+                if paired is not None and existing.intervals_paired_event_id is None:
+                    existing.intervals_paired_event_id = paired
                 skipped += 1
                 continue
 
