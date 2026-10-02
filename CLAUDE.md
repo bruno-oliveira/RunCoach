@@ -409,14 +409,16 @@ lost when the machine idles. The database lives on the mounted volume
 `runcoach_data` at `/data/runcoach.db` (`DATABASE_URL` is overridden in
 `fly.toml`), so a first boot creates the schema on the volume with no seed file.
 
-Migrations run as Fly's **release command** (`python -m app.migrations`, see the
-`[deploy]` block in `fly.toml`): one throwaway machine, volume attached, before
-traffic moves — so a bad migration aborts the deploy instead of leaving a
-machine that never passes its health check. `fly.toml` therefore sets
-`RUN_STARTUP_MIGRATIONS=false`, because with scale-to-zero the lifespan path
-would replay the Alembic chain *and* the startup backfills on every wake. That
-flag defaults to **on** for local `uvicorn` runs and plain `docker run`, where
-there is no release hook; `tests/conftest.py` pins it off.
+Migrations run in **`start.sh`, on the app machine** (`python -m app.migrations`,
+then uvicorn) — the only machine that has the volume. **Do not move them to a
+Fly `release_command`**: a release machine does not mount the volume, so it
+migrated an empty throwaway database, exited 0, and left `/data/runcoach.db`
+behind; the first schema change shipped that way (034) took production down
+with `no such column`. A failed migration exits non-zero before uvicorn starts,
+so the machine does not serve a stale schema. `fly.toml` sets
+`RUN_STARTUP_MIGRATIONS=false` so the lifespan does not repeat the work in the
+same boot. That flag defaults to **on** for local `uvicorn` runs;
+`tests/conftest.py` pins it off.
 
 Health is split along the liveness/readiness line, because Fly's two remedies
 differ. `/health/live` asserts only that the process is up and does **no I/O** —
