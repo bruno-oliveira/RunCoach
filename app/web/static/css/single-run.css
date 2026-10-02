@@ -283,9 +283,26 @@
     font-weight: var(--weight-semibold);
 }
 
+.single-badge--watch {
+    color: var(--color-success-dark);
+    font-weight: var(--weight-semibold);
+}
+
+.single-badge--watch::before {
+    content: "\2713\00a0";
+}
+
+/* Destructive, and it has to read as clickable: muted grey on a ghost button
+   looked disabled. */
 .single-delete {
     margin-left: auto;
-    color: var(--color-text-muted);
+    color: var(--color-error);
+    border-color: var(--color-error-border);
+}
+
+.single-delete:hover:not(:disabled) {
+    background: var(--color-error-subtle);
+    border-color: var(--color-error);
 }
 
 .single-badge + .single-delete,

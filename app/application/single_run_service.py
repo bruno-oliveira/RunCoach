@@ -247,6 +247,7 @@ async def send_to_watch(
     single_run.watch_event_hash = event_hash(event)
     single_run.watch_synced_at = utcnow_naive()
     db.commit()
+    logger.info("Single run %s pushed to the watch calendar", single_run.id)
     return None
 
 
