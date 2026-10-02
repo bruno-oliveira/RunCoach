@@ -228,6 +228,27 @@ Routers should carry no raw `db.query` — there is one remaining exception in
   and an hourly **fuelling schedule** that steps down band by band, in place
   of the split table and aid-station planning that mean nothing here.
 
+- **Single runs** — one generated workout with no plan around it (`/run`,
+  `/api/single-runs`). `core/training/workouts/single_run.py` drives the *same*
+  builders the plan generators use, pinning the canonical variant per type and
+  a floor/ceiling per type (quality sessions take `DEFAULT_QUALITY_CAPS`).
+  `application/single_run_service.py` picks the paces — the in-progress plan's
+  VDOT when there is one, else recent runs, else **none**: the session is then
+  prescribed by effort and `vdot` stays NULL rather than guessed, and sizing by
+  time is refused. Load-bearing: `claim_completed_single_runs`
+  (`contexts/runner/single_runs/claiming.py`) runs at the top of
+  `auto_map_and_adjust`, **before** the run mapper, and stamps
+  `run_logs.single_run_id` on the imported activity. The mapper gives such a
+  run no day-matching edges, so it counts as weekly volume but never fills a
+  planned day. When the plan also had a run that day and the runner ran
+  **once**, the claim arbitrates by what the run looked like
+  (`single_run_family` over `effective_workout_type`), and leaves it for the
+  plan when both sessions are the same kind — a wrong claim would make the
+  plan adapt to a skip that never happened. The form warns about that
+  duplicate up front (`plan_overlaps`). Its watch event lives in its own `runcoach-single-<id>`
+  namespace, is pushed once on request (not mirrored), and no plan reconcile
+  can reach it.
+
 - **Watch mirroring** — `application/watch_sync_service.py` keeps the
   Intervals.icu calendar a *mirror* of the plan, not a log of what was once
   exported. Decisions are pure (`core/training/watch_mirror.py`); the service is

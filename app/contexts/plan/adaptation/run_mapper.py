@@ -189,6 +189,12 @@ def _greedy_match(
 
         edges: list = []
         for run in week_runs:
+            # A run that completed a one-off single run was never an attempt
+            # at a planned day. Giving it no edges leaves it for the
+            # weekly-volume pass below: it counts as load, and the day it
+            # happened to land on stays open for the session that was planned.
+            if run.single_run_id is not None:
+                continue
             run_date = _to_date(run.date)
             for workout, workout_date in week_workouts:
                 date_penalty = abs((run_date - workout_date).days)

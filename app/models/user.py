@@ -15,6 +15,7 @@ if TYPE_CHECKING:
     from app.models.readiness_log import ReadinessLog
     from app.models.refresh_token import RefreshToken
     from app.models.run_log import RunLog
+    from app.models.single_run import SingleRun
     from app.models.training_plan import TrainingPlan
 
 
@@ -109,6 +110,9 @@ class User(Base):
     )
     readiness_logs: Mapped[list["ReadinessLog"]] = relationship(
         "ReadinessLog", back_populates="user", cascade="all, delete-orphan"
+    )
+    single_runs: Mapped[list["SingleRun"]] = relationship(
+        "SingleRun", back_populates="user", cascade="all, delete-orphan"
     )
     push_subscriptions: Mapped[list["PushSubscription"]] = relationship(
         "PushSubscription", back_populates="user", cascade="all, delete-orphan"

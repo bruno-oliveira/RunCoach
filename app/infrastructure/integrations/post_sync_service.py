@@ -18,6 +18,7 @@ from sqlalchemy.orm import Session
 
 from app.contexts.plan.adaptation import AdaptationService
 from app.contexts.runner.fitness.hr_zone_service import HRZoneService
+from app.contexts.runner.single_runs import claim_completed_single_runs
 from app.core.time_utils import local_today
 from app.core.training.adaptation.thresholds import AUTO_ADJUST_MIN_DELTA
 from app.core.training.periodization.plan_calendar import plan_has_ended
@@ -48,6 +49,15 @@ def auto_map_and_adjust(
     Returns a list of per-plan result dicts suitable for the sync response.
     """
     today = local_today()
+
+    # Before any mapping: a run that completed a one-off single run has to be
+    # marked as such while it is still unlinked, or the mapper below spends it
+    # on whatever the plan had that day. Runs for runners with no plan at all
+    # are claimed here too — this is the only pass every import goes through.
+    try:
+        claim_completed_single_runs(user.id, db, today)
+    except Exception as e:
+        logger.warning(f"Single run claim failed for user {user.id}: {e}")
 
     active_plans = (
         db.query(TrainingPlan)

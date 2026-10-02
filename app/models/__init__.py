@@ -8,6 +8,7 @@ from app.models.readiness_log import ReadinessLog
 from app.models.refresh_token import RefreshToken
 from app.models.run_feedback import RunFeedback
 from app.models.run_log import RunLog
+from app.models.single_run import SingleRun
 from app.models.training_plan import TrainingPlan
 from app.models.user import User
 from app.models.weekly_plan import WeeklyPlan
@@ -22,6 +23,7 @@ __all__ = [
     "PlanCustomization",
     "RunLog",
     "RunFeedback",
+    "SingleRun",
     "ReadinessLog",
     "FavoriteRecipe",
     "RefreshToken",

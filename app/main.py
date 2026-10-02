@@ -42,6 +42,7 @@ from app.web.routers import (
     recipes_router,
     runs_router,
     scheduled_router,
+    single_runs_router,
 )
 
 setup_logging(settings)
@@ -63,6 +64,7 @@ _ROUTERS = (
     notifications_router,
     push_router,
     scheduled_router,
+    single_runs_router,
     pages_router,
 )
 

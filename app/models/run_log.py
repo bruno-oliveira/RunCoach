@@ -30,6 +30,7 @@ class RunLog(Base):
         Index("idx_run_log_date", "date"),
         Index("idx_run_log_user_date", "user_id", "date"),
         Index("idx_run_log_training_plan", "training_plan_id"),
+        Index("idx_run_log_single_run", "single_run_id"),
     )
 
     id: Mapped[str] = mapped_column(
@@ -42,6 +43,10 @@ class RunLog(Base):
     daily_workout_id: Mapped[str | None] = mapped_column(
         String, ForeignKey("daily_workouts.id")
     )
+    # Set when this activity completed a one-off `SingleRun`. The run mapper
+    # reads it to keep the run out of day-matching (it still counts as weekly
+    # volume). A plain pointer, not a foreign key — see migration 035.
+    single_run_id: Mapped[str | None] = mapped_column(String)
     date: Mapped[datetime | None] = mapped_column(DateTime, default=utcnow_naive)
     distance_km: Mapped[float | None] = mapped_column(Float)
     duration_minutes: Mapped[float | None] = mapped_column(Float)

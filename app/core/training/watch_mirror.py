@@ -111,6 +111,40 @@ def build_event(
     }
 
 
+# Single runs live outside any plan, so they get their own id space. No plan
+# reconcile can reach them: ``owns_event`` matches ``runcoach-<plan id>-``, and
+# a plan id is a UUID, never the word "single".
+SINGLE_RUN_EXTERNAL_ID_PREFIX = "runcoach-single-"
+
+
+def single_run_external_id(single_run_id: str) -> str:
+    """The ``external_id`` of the calendar event for one single run."""
+    return f"{SINGLE_RUN_EXTERNAL_ID_PREFIX}{single_run_id}"
+
+
+def build_single_run_event(
+    single_run_id: str, on_date: date, workout: dict[str, Any]
+) -> dict[str, Any]:
+    """Build the Intervals.icu calendar event for a one-off workout.
+
+    The plan-less sibling of :func:`build_event`: same payload, but dated
+    directly rather than derived from a plan's (week, day) grid.
+
+    Raises:
+        ValueError: The workout has nothing sendable.
+    """
+    payload = build_intervals_workout(workout)
+    return {
+        "category": "WORKOUT",
+        "type": "Run",
+        "start_date_local": f"{on_date.isoformat()}T00:00:00",
+        "name": payload["name"],
+        "description": payload["description"],
+        "moving_time": payload["moving_time"],
+        "external_id": single_run_external_id(single_run_id),
+    }
+
+
 def _plan_days(training_plan):
     """Yield ``(week, day, day_data)`` for every well-formed day in the plan."""
     for week_data in training_plan.plan_data or []:

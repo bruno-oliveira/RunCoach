@@ -23,6 +23,7 @@
                 <li><a href="/tips" class="nav-link {{ 'is-active' if current_page == 'tips' else '' }}" data-i18n="nav.tips">Tips</a></li>
                 {% if user %}
                 <li><a href="/my-plans" class="nav-link {{ 'is-active' if current_page == 'my-plans' else '' }}" data-i18n="nav.my_plans">My Plans</a></li>
+                <li><a href="/run" class="nav-link {{ 'is-active' if current_page == 'run' else '' }}" data-i18n="nav.single_run">Single run</a></li>
                 <li><a href="/analytics" class="nav-link {{ 'is-active' if current_page == 'analytics' else '' }}" data-i18n="nav.coach">Coach</a></li>
                 {% if user.intervals_athlete_id %}
                 <li class="nav-item-provider">
