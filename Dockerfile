@@ -21,9 +21,8 @@ COPY app/ ./app/
 COPY alembic.ini ./alembic.ini
 COPY alembic/ ./alembic/
 
-# Entrypoint script — starts uvicorn. Migrations do not run here: in production
-# they run as Fly's release_command (see fly.toml), and locally the app's startup
-# hook applies them unless RUN_STARTUP_MIGRATIONS is false.
+# Entrypoint script — applies migrations, then starts uvicorn. It has to be the
+# app machine that migrates: it is the only one with the volume mounted.
 COPY start.sh ./start.sh
 
 # Create non-root user, prepare directories with restrictive permissions

@@ -11,11 +11,10 @@ primary_region = 'sjc'
 
 [deploy]
   strategy = 'immediate'
-  # Apply schema + backfill migrations once per release, on a temporary machine
-  # with the volume attached and before traffic moves. A failing migration
-  # aborts the deploy and leaves the previous release serving, instead of
-  # leaving a machine that can never pass its health check.
-  release_command = 'python -m app.migrations'
+  # No release_command, on purpose. A release machine does NOT get the volume:
+  # `python -m app.migrations` there migrated an empty throwaway database and
+  # reported success while /data/runcoach.db was never touched. Migrations run
+  # in start.sh instead, on the machine that owns the volume.
 
 [checks.liveness]
   port = 8000
@@ -32,9 +31,8 @@ primary_region = 'sjc'
 [env]
   DATABASE_URL = 'sqlite:////data/runcoach.db'
    # SECRET_KEY and GOOGLE_CLIENT_ID are set via Fly.io secrets
-   # Migrations belong to release_command above: with scale-to-zero, leaving
-   # this on would re-run the Alembic chain plus the startup backfills every
-   # time the machine woke.
+   # start.sh applies migrations before uvicorn starts; leaving this on would
+   # make the lifespan repeat the same work in the same boot.
   RUN_STARTUP_MIGRATIONS = 'false'
 
 [mounts]
