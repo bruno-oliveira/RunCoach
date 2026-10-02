@@ -103,6 +103,22 @@
     .forEach(function (input) { input.addEventListener('change', syncAmount); });
   syncAmount();
 
+  // A successful send used to be silent — the page just reloaded — which read
+  // as "nothing happened". The confirmation has to survive that reload, so it
+  // is parked in sessionStorage and shown by the next page load.
+  var SENT_FLAG = 'rc_single_run_sent';
+
+  function rememberSent() {
+    try { window.sessionStorage.setItem(SENT_FLAG, '1'); } catch (e) { /* private mode */ }
+  }
+
+  try {
+    if (window.sessionStorage.getItem(SENT_FLAG)) {
+      window.sessionStorage.removeItem(SENT_FLAG);
+      window.api.showSuccess(t('single.sent', 'Sent. It shows up when your watch next syncs with its app.'));
+    }
+  } catch (e) { /* private mode */ }
+
   function reportWatch(result) {
     if (result && result.watch_error) {
       window.api.showWarning(WATCH_ERRORS[result.watch_error] || WATCH_ERRORS.provider);
@@ -130,7 +146,9 @@
     window.api.post('/api/single-runs', payload)
       .then(function (result) {
         // Let a "saved, but not on your watch" toast be read before reloading.
-        var delay = reportWatch(result) ? 0 : 2500;
+        var sent = reportWatch(result);
+        if (sent && payload.send_to_watch) rememberSent();
+        var delay = sent ? 0 : 2500;
         setTimeout(function () { window.location.reload(); }, delay);
       })
       .catch(function () { submit.disabled = false; });  // api.js already toasted
@@ -147,8 +165,12 @@
           : window.api.post('/api/single-runs/' + id + '/send-to-watch');
         request
           .then(function (result) {
-            if (reportWatch(result)) window.location.reload();
-            else button.disabled = false;
+            if (!reportWatch(result)) {
+              button.disabled = false;
+              return;
+            }
+            if (button.dataset.action === 'send') rememberSent();
+            window.location.reload();
           })
           .catch(function () { button.disabled = false; });
       });
