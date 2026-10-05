@@ -26,6 +26,10 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 
+# How far back logged runs speak for current fitness — the window the
+# recalibrator reads, so a new plan starts where its first sync would put it.
+LOGGED_FITNESS_WEEKS = 12
+
 
 def _default_user_repo_factory(db: Session) -> IUserRepository:
     """Lazy default so the plan context carries no static edge to the auth
@@ -33,6 +37,27 @@ def _default_user_repo_factory(db: Session) -> IUserRepository:
     from app.application.ports import SQLAlchemyUserRepository
 
     return SQLAlchemyUserRepository(db)
+
+
+def _with_logged_fitness(
+    plan_request: PlanRequest, user: User, db: Session
+) -> PlanRequest:
+    """Anchor a goal-only plan on what the runner's logged runs show.
+
+    A goal time with no recent race used to pace the whole block at goal
+    fitness. Their history is a better witness to where they are today; a
+    runner with none keeps the goal as the only anchor there is.
+    """
+    if not plan_request.is_paced_by_goal_alone:
+        return plan_request
+    from app.application.ports import RacePredictorService
+
+    logged_vdot = RacePredictorService.get_best_recent_vdot(
+        user.id, weeks=LOGGED_FITNESS_WEEKS, db=db
+    )
+    if not logged_vdot:
+        return plan_request
+    return plan_request.model_copy(update={"logged_vdot": logged_vdot})
 
 
 class PlanService:
@@ -110,6 +135,8 @@ class PlanService:
                 existing.id,
             )
             return existing, existing.plan_data if existing.plan_data else []
+
+        plan_request = _with_logged_fitness(plan_request, user, db)
 
         trail_profile = None
         if plan_request.is_trail:

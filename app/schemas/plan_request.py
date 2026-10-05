@@ -186,6 +186,9 @@ class PlanRequest(PlanRequestBase, RaceInfoMixin):
     # Auto-computed — not user inputs
     vdot: Optional[float] = Field(default=None, exclude=True)
     goal_vdot: Optional[float] = Field(default=None, exclude=True)
+    # Fitness read from the runner's logged runs. Not derivable here (it needs
+    # their history), so plan creation fills it in — see ``pacing_vdot``.
+    logged_vdot: Optional[float] = Field(default=None, exclude=True)
     goal_pace_min_km: Optional[float] = Field(default=None, exclude=True)
     current_pace_min_km: Optional[float] = Field(default=None, exclude=True)
 
@@ -568,12 +571,18 @@ class PlanRequest(PlanRequestBase, RaceInfoMixin):
     def pacing_vdot(self) -> Optional[float]:
         """VDOT the plan's training paces are built from.
 
-        Fitness the runner has shown comes first: pacing a block off the goal
+        Fitness the runner has shown comes first — a race they told us about,
+        then what their logged runs say: pacing a block off the goal
         prescribes, from week one, the easy and threshold paces of a runner
         they have not become yet. The goal stands in only when it is the sole
-        anchor we were given.
+        anchor there is.
         """
-        return self.vdot or self.goal_vdot
+        return self.vdot or self.logged_vdot or self.goal_vdot
+
+    @property
+    def is_paced_by_goal_alone(self) -> bool:
+        """Whether the goal time is the only fitness anchor the form gave us."""
+        return self.vdot is None and self.goal_vdot is not None
 
     @model_validator(mode="after")
     def compute_vdot(self) -> "PlanRequest":

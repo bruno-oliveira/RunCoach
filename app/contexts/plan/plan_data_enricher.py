@@ -20,6 +20,8 @@ from app.core.training.workouts.key_workout_library import (
 from app.core.training.workouts.workout_steps import (
     _compute_distance_from_steps,
     _parse_pace_str_to_min_per_km,
+    prose_contradicts_steps,
+    sync_prose_to_steps,
 )
 from app.models import DailyWorkout, RunLog, WeeklyPlan
 
@@ -70,12 +72,34 @@ def _repair_key_workout_steps(workout: dict[str, Any]) -> None:
         distance_km = min_km
         workout["distance"] = distance_km
 
-    reconcile_key_workout_text(workout)
-
     steps = workout.get("steps")
     if isinstance(steps, list) and _has_volume_steps(steps):
+        _settle_key_workout_text(workout)
         return
 
+    reconcile_key_workout_text(workout)
+    _rebuild_missing_key_workout_steps(workout, key_id, distance_km)
+
+
+def _settle_key_workout_text(workout: dict[str, Any]) -> None:
+    """Leave the card's prose describing the steps it sits above.
+
+    The steps are what gets run, so the stored text only needs its rep counts
+    brought up to date. Re-rendering it from the distance is reserved for text
+    that still contradicts the steps afterwards (plans stored before the
+    rewrites existed): the distance on a card is the steps' priced total, not
+    the budget they were built from, so a re-render sizes a different warm-up
+    and a different main set than the ones below it.
+    """
+    sync_prose_to_steps(workout)
+    if prose_contradicts_steps(workout):
+        reconcile_key_workout_text(workout)
+        sync_prose_to_steps(workout)
+
+
+def _rebuild_missing_key_workout_steps(
+    workout: dict[str, Any], key_id: str, distance_km: float
+) -> None:
     structure = workout.get("structure")
     key_wk = KeyWorkoutLibrary.get_by_id(key_id)
     if key_wk is None or not structure:

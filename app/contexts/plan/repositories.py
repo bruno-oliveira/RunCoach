@@ -121,10 +121,14 @@ class SQLAlchemyPlanRepository:
             filters.append(TrainingPlan.recent_race_time_seconds == race_time_seconds)
         else:
             filters.append(TrainingPlan.recent_race_time_seconds.is_(None))
-        if request.vdot is not None:
-            filters.append(TrainingPlan.vdot == request.vdot)
+        # The goal itself, not ``vdot``: that column holds the VDOT the plan was
+        # paced from, which for a goal-only plan is the goal's or the runner's
+        # history's — never the (absent) race VDOT a request carries. The race
+        # is already compared above, by distance and time.
+        if request.goal_time is not None:
+            filters.append(TrainingPlan.goal_time == request.goal_time)
         else:
-            filters.append(TrainingPlan.vdot.is_(None))
+            filters.append(TrainingPlan.goal_time.is_(None))
         return self.session.query(TrainingPlan).filter(*filters).first()
 
     def save(self, plan: TrainingPlan) -> None:

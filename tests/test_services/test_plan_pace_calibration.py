@@ -6,6 +6,7 @@ different places: a number derived from the *goal* presented as a target for
 the runner as they are now.
 """
 
+import uuid
 from datetime import timedelta
 from types import SimpleNamespace
 
@@ -16,13 +17,15 @@ from app.contexts.plan.generators.performance_plan_generator import (
     PerformancePlanGenerator,
 )
 from app.contexts.plan.generators.plan_generator import TrainingPlanGenerator
+from app.contexts.plan.plan_service import PlanService
 from app.contexts.plan.plan_type_registry import _current_week_pace_zones
-from app.core.time_utils import local_today
+from app.core.time_utils import local_today, utcnow_naive
 from app.core.training.physiology.vdot_calculator import VDOTCalculator
 from app.core.training.physiology.zone_calculator import calculate_zones
 from app.core.training.workouts.key_workout_library.builders import (
     _KEY_WORKOUT_STEP_BUILDERS,
 )
+from app.models import RunLog, User
 from app.schemas.plan_request import PlanRequest
 
 CURRENT_PACE = 28 / 5
@@ -150,6 +153,28 @@ class TestDistancePlanWithAGoalTime:
         )
         assert request.pacing_vdot == GOAL_VDOT
 
+    def test_logged_fitness_outranks_the_goal(self):
+        request = PlanRequest(
+            current_km=20,
+            target_distance=5.0,
+            weeks=8,
+            max_runs_per_week=4,
+            goal_time="25:00",
+        ).model_copy(update={"logged_vdot": 38.5})
+        assert request.pacing_vdot == 38.5
+
+    def test_a_recent_race_outranks_logged_fitness(self):
+        request = PlanRequest(
+            current_km=20,
+            target_distance=5.0,
+            weeks=8,
+            max_runs_per_week=4,
+            recent_race_distance_km=5.0,
+            recent_race_time="28:00",
+            goal_time="25:00",
+        ).model_copy(update={"logged_vdot": 38.5})
+        assert request.pacing_vdot == CURRENT_VDOT
+
     def test_race_day_runs_at_the_goal_and_easy_days_at_current_fitness(self):
         plan = TrainingPlanGenerator().generate_plan(
             20, 5.0, 8, 4, vdot=CURRENT_VDOT, goal_pace_min_km=GOAL_PACE
@@ -160,6 +185,114 @@ class TestDistancePlanWithAGoalTime:
         assert {s["pace_str"] for s in _work_steps(race)} == {"5:00/km"}
         easy = next(w for w in workouts if w["type"] == "easy")
         assert _work_steps(easy)[0]["pace_str"] == current["E"]["pace_str"]
+
+
+class TestGoalOnlyPlanIsPacedFromLoggedRuns:
+    """A goal time with no recent race: the runner's history sets the paces."""
+
+    LOGGED_VDOT = 36.0
+
+    def _request(self, **overrides) -> PlanRequest:
+        fields = {
+            "current_km": 20,
+            "target_distance": 5.0,
+            "weeks": 8,
+            "max_runs_per_week": 4,
+            "goal_time": "25:00",
+        }
+        return PlanRequest(**{**fields, **overrides})
+
+    def _runner(self, db, *, logged_runs: int) -> User:
+        user = User(id=str(uuid.uuid4()), email=f"{uuid.uuid4().hex[:8]}@test.com")
+        db.add(user)
+        for days_ago in range(1, logged_runs + 1):
+            db.add(
+                RunLog(
+                    id=str(uuid.uuid4()),
+                    user_id=user.id,
+                    date=utcnow_naive() - timedelta(days=days_ago),
+                    distance_km=8.0,
+                    duration_minutes=46.0,
+                    avg_pace_min_km=46.0 / 8.0,
+                    vdot=self.LOGGED_VDOT,
+                )
+            )
+        db.flush()
+        return user
+
+    def _create(self, db, user, request, plan_generator, nutrition_engine):
+        plan, plan_data = PlanService().create_plan(
+            request, user, db, plan_generator, nutrition_engine
+        )
+        return plan, [w for week in plan_data for w in week["daily_workouts"]]
+
+    def test_training_paces_come_from_the_logged_runs(
+        self, test_db, plan_generator, nutrition_engine_seeded
+    ):
+        user = self._runner(test_db, logged_runs=6)
+        plan, workouts = self._create(
+            test_db, user, self._request(), plan_generator, nutrition_engine_seeded
+        )
+        assert plan.vdot == self.LOGGED_VDOT
+        logged = VDOTCalculator.get_pace_zones(self.LOGGED_VDOT)
+        easy = next(w for w in workouts if w["type"] == "easy")
+        assert _work_steps(easy)[0]["pace_str"] == logged["E"]["pace_str"]
+
+    def test_race_day_still_runs_at_the_goal(
+        self, test_db, plan_generator, nutrition_engine_seeded
+    ):
+        user = self._runner(test_db, logged_runs=6)
+        plan, workouts = self._create(
+            test_db, user, self._request(), plan_generator, nutrition_engine_seeded
+        )
+        race = next(w for w in workouts if w["type"] == "race")
+        assert {s["pace_str"] for s in _work_steps(race)} == {"5:00/km"}
+        assert plan.goal_time == "25:00"
+
+    def test_a_runner_with_no_history_keeps_the_goal_as_the_anchor(
+        self, test_db, plan_generator, nutrition_engine_seeded
+    ):
+        user = self._runner(test_db, logged_runs=0)
+        plan, _ = self._create(
+            test_db, user, self._request(), plan_generator, nutrition_engine_seeded
+        )
+        assert plan.vdot == GOAL_VDOT
+
+    def test_a_recent_race_is_not_second_guessed_by_the_history(
+        self, test_db, plan_generator, nutrition_engine_seeded
+    ):
+        user = self._runner(test_db, logged_runs=6)
+        request = self._request(recent_race_distance_km=5.0, recent_race_time="28:00")
+        plan, _ = self._create(
+            test_db, user, request, plan_generator, nutrition_engine_seeded
+        )
+        assert plan.vdot == CURRENT_VDOT
+
+    def test_no_goal_time_derives_no_paces_from_the_history(
+        self, test_db, plan_generator, nutrition_engine_seeded
+    ):
+        user = self._runner(test_db, logged_runs=6)
+        plan, _ = self._create(
+            test_db,
+            user,
+            self._request(goal_time=None),
+            plan_generator,
+            nutrition_engine_seeded,
+        )
+        assert plan.vdot is None
+
+    def test_resubmitting_the_same_goal_returns_the_plan_already_made(
+        self, test_db, plan_generator, nutrition_engine_seeded
+    ):
+        user = self._runner(test_db, logged_runs=6)
+        first, _ = self._create(
+            test_db, user, self._request(), plan_generator, nutrition_engine_seeded
+        )
+        test_db.flush()
+        service = PlanService()
+        assert service.find_duplicate(self._request(), user.id, test_db) is first
+        other_goal = self._request(goal_time="24:00")
+        assert service.find_duplicate(other_goal, user.id, test_db) is None
 
 
 class TestRebuiltWorkoutsUseThePlansOwnZones:

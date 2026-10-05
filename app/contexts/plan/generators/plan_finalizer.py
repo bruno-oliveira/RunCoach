@@ -21,6 +21,7 @@ from app.core.training.periodization.training_constants import workouts_training
 from app.core.training.workouts.workout_steps import (
     compute_distance_from_steps_checked,
     fit_steps_to_distance,
+    sync_prose_to_steps,
 )
 from app.core.training.workouts.workout_steps.metrics import _priced_step_km
 
@@ -85,6 +86,7 @@ def reconcile_card_distances(training_plan: List[Dict[str, Any]]) -> int:
                     # adopt the irreducible executable dose.
                     fitted = fit_steps_to_distance(steps, displayed + walk_km)
                     workout["steps"] = fitted
+                    sync_prose_to_steps(workout)
                     fitted_km, fitted_priced = compute_distance_from_steps_checked(
                         fitted
                     )

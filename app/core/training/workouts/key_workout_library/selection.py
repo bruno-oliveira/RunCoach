@@ -599,6 +599,10 @@ def _install_key_workout(
                 workout["steps"], round(day_cap, 1)
             )
 
+    # The prose above was rendered from the budget; the ceilings just applied
+    # may have dropped reps from the steps it describes.
+    _steps_mod.sync_prose_to_steps(workout)
+
     # Reconcile displayed total with what the runner will actually cover —
     # duration-based reps (e.g. 6 × 3 min hard) contributed nothing to the
     # phase-allocated budget, so the pre-overlay ``distance`` undercounts

@@ -121,6 +121,7 @@ def reclamp_quality_to_long_run(workouts: List[Dict[str, Any]]) -> None:
             continue
         if w.get("key_workout_id") and w.get("steps"):
             w["steps"] = _steps_mod.fit_steps_to_distance(w["steps"], ceiling)
+            _steps_mod.sync_prose_to_steps(w)
             km, priced = _steps_mod.compute_distance_from_steps_checked(w["steps"])
             if priced and km > 0:
                 w["distance"] = round(min(km, ceiling), 1)

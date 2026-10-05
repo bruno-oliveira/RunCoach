@@ -93,6 +93,11 @@ from app.core.training.workouts.workout_steps.primitives import (
     repace_steps,
     wucd_profile,
 )
+from app.core.training.workouts.workout_steps.prose_reps import (
+    prose_contradicts_steps,
+    recount_reps,
+    sync_prose_to_steps,
+)
 from app.core.training.workouts.workout_steps.quality import (
     _build_interval_steps_high_base,
     _build_interval_steps_low_base,
@@ -161,6 +166,9 @@ __all__ = [
     "total_distance_m",
     "fit_steps_to_distance",
     "fit_steps_to_intensity_caps",
+    "prose_contradicts_steps",
+    "recount_reps",
+    "sync_prose_to_steps",
     "work_km_by_group",
     "exempt_work_km",
     "wucd_profile",
