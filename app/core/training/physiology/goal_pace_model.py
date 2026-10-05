@@ -42,6 +42,9 @@ RACE_PACE_ZONE_BY_DISTANCE = [
     (float("inf"), "M"),  # marathon and ultra: marathon pace
 ]
 
+# Zones run as reps shorter than any race-pace rep.
+_REP_ZONES = ("I", "R")
+
 
 @dataclass(frozen=True)
 class GoalPaceContext:
@@ -178,6 +181,9 @@ def pin_goal_race_pace(
     current race pace, not the one they told us they are chasing. Other
     distance labels (a 10K plan's "5K" reference) stay predicted.
 
+    The pin must not invert the ladder it sits in, so the rep zones are held
+    to it — see ``_hold_rep_zones_to_goal``.
+
     Mutates and returns *zones*; a no-op without a goal pace.
     """
     if not goal_pace_min_km:
@@ -192,7 +198,28 @@ def pin_goal_race_pace(
     label = _target_distance_label(target_distance_km)
     if label in zones:
         zones[label] = {**zones[label], **goal_entry}
+    _hold_rep_zones_to_goal(zones, goal_entry)
     return zones
+
+
+def _hold_rep_zones_to_goal(zones: Dict[str, Dict], goal_entry: Dict) -> None:
+    """Keep interval and repetition paces from sitting slower than the goal.
+
+    A goal well ahead of current fitness is faster than the VO2max pace that
+    fitness predicts, which prescribed "VO2max 400s" slower than the goal-pace
+    kilometres of the week before. Reps in these zones are shorter than any
+    race-pace rep, so running them at the goal pace asks nothing the race-pace
+    sessions do not already ask for longer. Threshold and easy paces are
+    sustained efforts and keep following fitness.
+    """
+    for key in _REP_ZONES:
+        entry = zones.get(key)
+        if entry and entry["pace_min_km"] > goal_entry["pace_min_km"]:
+            zones[key] = {
+                **entry,
+                "pace_min_km": goal_entry["pace_min_km"],
+                "pace_str": goal_entry["pace_str"],
+            }
 
 
 def _target_distance_label(target_distance_km: float) -> str:

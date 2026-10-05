@@ -93,6 +93,16 @@ def _broken_miles(
     return _build
 
 
+def _goal_race_zone(pace_zones: Optional[Dict], fallback: str) -> str:
+    """Zone key for "goal race effort" in a session several distances share.
+
+    A plan with a goal carries its pace under ``"race"``; without one there is
+    no goal to touch, and ``fallback`` names the effort the session was
+    authored at.
+    """
+    return "race" if pace_zones and "race" in pace_zones else fallback
+
+
 # Structured-first step builders, keyed by workout id. Where present, steps are
 # generated directly from the distance (mirroring the description rewrite)
 # instead of being reverse-engineered from prose. Currently covers the
@@ -267,7 +277,7 @@ _KEY_WORKOUT_STEP_BUILDERS: Dict[
     ),
     # -- taper sharpeners: easy bulk + race-effort touches (+ strides) --
     "taper_5k10k_sharpener": lambda d, pz: _steps_mod.build_sharpener_steps(
-        d, pz, touches=4, touch_s=60, touch_zone="10K", strides=4
+        d, pz, touches=4, touch_s=60, touch_zone=_goal_race_zone(pz, "10K"), strides=4
     ),
     "taper_half_sharpener": lambda d, pz: _steps_mod.build_sharpener_steps(
         d,

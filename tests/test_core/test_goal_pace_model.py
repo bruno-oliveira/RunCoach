@@ -142,9 +142,25 @@ class TestPinGoalRacePace:
         pinned = pin_goal_race_pace(VDOTCalculator.get_pace_zones(vdot, 5.0), 5.0, 5.0)
         assert pinned["5K"]["pace_str"] == "5:00/km"
         assert pinned["race"]["pace_min_km"] == 5.0
-        # Fitness, not the goal, still sets every training pace.
-        for key in ("E", "M", "T", "I", "R", "10K"):
+        # Fitness, not the goal, still sets every sustained training pace.
+        for key in ("E", "M", "T", "10K"):
             assert pinned[key] == plain[key]
+
+    def test_rep_zones_are_never_slower_than_the_goal(self):
+        # 28:00 fitness predicts VO2max reps at ~5:22/km — slower than the
+        # 5:00/km the same plan asks for in its goal-pace kilometres.
+        vdot = goal_vdot_from_time(5.0, 28 * 60)
+        pinned = pin_goal_race_pace(VDOTCalculator.get_pace_zones(vdot, 5.0), 5.0, 5.0)
+        assert pinned["I"]["pace_str"] == "5:00/km"
+        assert pinned["R"]["pace_str"] == "5:00/km"
+        assert pinned["I"]["pace_min_km"] == pinned["R"]["pace_min_km"] == 5.0
+
+    def test_rep_zones_already_faster_than_the_goal_are_left_alone(self):
+        vdot = goal_vdot_from_time(5.0, 25 * 60)
+        plain = VDOTCalculator.get_pace_zones(vdot, 5.0)
+        pinned = pin_goal_race_pace(VDOTCalculator.get_pace_zones(vdot, 5.0), 5.0, 5.0)
+        assert pinned["I"] == plain["I"]
+        assert pinned["R"] == plain["R"]
 
     def test_longer_targets_pin_the_race_entry(self):
         zones = VDOTCalculator.get_pace_zones(40.0, 21.1)

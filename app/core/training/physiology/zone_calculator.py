@@ -214,11 +214,13 @@ def calculate_zones(
     # That holds once fitness has caught up with the goal. Early in a time-goal
     # block the goal pace can still be faster than the runner's VO2max pace, and
     # there it *is* a near-max effort: the band keeps its own 95-100% label
-    # rather than borrowing a zone the pace sits outside of.
+    # rather than borrowing a zone the pace sits outside of. Zones pinned to
+    # the goal hold their interval pace *at* it until fitness passes it, so an
+    # interval pace equal to the goal is that same early-block case.
     beyond_vo2max = bool(
         goal_pace is not None
         and vdot_zones
-        and goal_pace < vdot_zones["I"]["pace_min_km"]
+        and round(goal_pace, 2) <= vdot_zones["I"]["pace_min_km"]
     )
     if goal_pace is not None and race_distance_km and not beyond_vo2max:
         from app.core.training.physiology.goal_pace_model import race_pace_zone_label

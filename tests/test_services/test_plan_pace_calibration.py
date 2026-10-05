@@ -20,11 +20,13 @@ from app.contexts.plan.generators.plan_generator import TrainingPlanGenerator
 from app.contexts.plan.plan_service import PlanService
 from app.contexts.plan.plan_type_registry import _current_week_pace_zones
 from app.core.time_utils import local_today, utcnow_naive
+from app.core.training.physiology.goal_pace_model import pin_goal_race_pace
 from app.core.training.physiology.vdot_calculator import VDOTCalculator
 from app.core.training.physiology.zone_calculator import calculate_zones
 from app.core.training.workouts.key_workout_library.builders import (
     _KEY_WORKOUT_STEP_BUILDERS,
 )
+from app.core.training.workouts.workout_steps import _parse_pace_str_to_min_per_km
 from app.models import RunLog, User
 from app.schemas.plan_request import PlanRequest
 
@@ -66,6 +68,36 @@ class TestGoalPaceSession:
             assert [s["pace_str"] for s in _work_steps(session)] == ["5:00/km"]
 
 
+class TestEveryFastSessionAgreesOnTheGoal:
+    """One plan, one goal: no fast rep is prescribed slower than the goal pace."""
+
+    def test_interval_reps_are_never_slower_than_the_goal_pace(self, time_goal_plan):
+        rep_paces = [
+            step["pace_str"]
+            for week in time_goal_plan["weekly_plans"]
+            for workout in week["daily_workouts"]
+            for step in _work_steps(workout)
+            if step.get("pace_zone") in ("I", "R")
+        ]
+        assert rep_paces, "expected interval sessions in an 8-week 5K block"
+        slower = [p for p in rep_paces if _parse_pace_str_to_min_per_km(p) > GOAL_PACE]
+        assert not slower
+
+    def test_taper_touches_of_goal_race_effort_run_at_the_goal(self):
+        zones = pin_goal_race_pace(
+            VDOTCalculator.get_pace_zones(CURRENT_VDOT, 5.0), GOAL_PACE, 5.0
+        )
+        steps = _KEY_WORKOUT_STEP_BUILDERS["taper_5k10k_sharpener"](4.0, zones)
+        touch = next(s for s in steps if s.get("effort") == "goal race effort")
+        assert touch["pace_str"] == "5:00/km"
+
+    def test_taper_touches_without_a_goal_keep_their_authored_effort(self):
+        zones = VDOTCalculator.get_pace_zones(CURRENT_VDOT, 5.0)
+        steps = _KEY_WORKOUT_STEP_BUILDERS["taper_5k10k_sharpener"](4.0, zones)
+        touch = next(s for s in steps if s.get("effort") == "goal race effort")
+        assert touch["pace_str"] == zones["10K"]["pace_str"]
+
+
 class TestEasyRunsSitInTheirHeartRateZone:
     def test_easy_and_long_runs_carry_the_easy_band(self, time_goal_plan):
         week_one = time_goal_plan["weekly_plans"][0]
@@ -86,6 +118,15 @@ class TestRaceBandEffort:
         )
         assert zones["zone_5_race"]["hr_range"] == "95-100%"
         assert zones["zone_5_race"]["pace"] < zones["zone_4_vo2max"]["pace"]
+
+    def test_pinned_zones_keep_the_near_max_label_while_the_goal_is_ahead(self):
+        pinned = pin_goal_race_pace(
+            VDOTCalculator.get_pace_zones(CURRENT_VDOT, 5.0), GOAL_PACE, 5.0
+        )
+        zones = calculate_zones(
+            vdot_zones=pinned, goal_pace=GOAL_PACE, max_hr=185, race_distance_km=5.0
+        )
+        assert zones["zone_5_race"]["hr_range"] == "95-100%"
 
     def test_goal_pace_within_reach_borrows_the_vo2max_band(self):
         zones = calculate_zones(
