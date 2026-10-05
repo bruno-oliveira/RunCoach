@@ -116,6 +116,10 @@ def calculate_zones(
             "zone_2_aerobic": {
                 "pace": e_fast,
                 "pace_range": (e_slow, e_fast),
+                # The E band exactly as every E-paced step prints it, so an
+                # easy run and a warm-up in the same week cannot differ by a
+                # rounding second.
+                "pace_str": vdot_zones["E"]["pace_str"],
                 "hr_range": "70-80%",
                 "description": "Aerobic: moderate effort, can still hold a conversation",
                 "color": "#60a5fa",
@@ -206,7 +210,17 @@ def calculate_zones(
     # band's HR/percentage to the matching training zone so the panel doesn't
     # claim every goal pace is a 95-100% max-HR effort. The pace itself is left
     # untouched (the runner's literal target).
-    if goal_pace is not None and race_distance_km:
+    #
+    # That holds once fitness has caught up with the goal. Early in a time-goal
+    # block the goal pace can still be faster than the runner's VO2max pace, and
+    # there it *is* a near-max effort: the band keeps its own 95-100% label
+    # rather than borrowing a zone the pace sits outside of.
+    beyond_vo2max = bool(
+        goal_pace is not None
+        and vdot_zones
+        and goal_pace < vdot_zones["I"]["pace_min_km"]
+    )
+    if goal_pace is not None and race_distance_km and not beyond_vo2max:
         from app.core.training.physiology.goal_pace_model import race_pace_zone_label
 
         # Daniels pace zone closest to race pace -> the display band whose HR

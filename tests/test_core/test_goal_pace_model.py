@@ -4,7 +4,9 @@ from app.core.training.physiology.goal_pace_model import (
     GoalPaceContext,
     blend_fraction,
     blended_vdot,
+    goal_pace_context,
     goal_vdot_from_time,
+    pin_goal_race_pace,
     progressive_pace_zones,
     race_pace_min_km,
     race_pace_zone_label,
@@ -118,3 +120,37 @@ class TestProgressivePaceZones:
         late = progressive_pace_zones(ctx, 12, 12)
         assert early["10K"]["pace_min_km"] == 4.8
         assert late["10K"]["pace_min_km"] == 4.8
+
+
+class TestGoalPaceContext:
+    def test_anchors_come_from_the_two_paces(self):
+        ctx = goal_pace_context(5.0, 28 / 5, 25 / 5)
+        assert ctx.current_vdot == goal_vdot_from_time(5.0, 28 * 60)
+        assert ctx.goal_vdot == goal_vdot_from_time(5.0, 25 * 60)
+        assert ctx.goal_pace_min_km == 5.0
+
+    def test_missing_current_pace_leaves_only_the_goal_anchor(self):
+        ctx = goal_pace_context(5.0, None, 5.0)
+        assert ctx.current_vdot is None
+        assert ctx.goal_vdot is not None
+
+
+class TestPinGoalRacePace:
+    def test_pins_the_target_distance_and_leaves_training_paces(self):
+        vdot = goal_vdot_from_time(5.0, 28 * 60)
+        plain = VDOTCalculator.get_pace_zones(vdot, 5.0)
+        pinned = pin_goal_race_pace(VDOTCalculator.get_pace_zones(vdot, 5.0), 5.0, 5.0)
+        assert pinned["5K"]["pace_str"] == "5:00/km"
+        assert pinned["race"]["pace_min_km"] == 5.0
+        # Fitness, not the goal, still sets every training pace.
+        for key in ("E", "M", "T", "I", "R", "10K"):
+            assert pinned[key] == plain[key]
+
+    def test_longer_targets_pin_the_race_entry(self):
+        zones = VDOTCalculator.get_pace_zones(40.0, 21.1)
+        pin_goal_race_pace(zones, 5.45, 21.1)
+        assert zones["race"]["pace_min_km"] == 5.45
+
+    def test_no_goal_pace_is_a_no_op(self):
+        zones = VDOTCalculator.get_pace_zones(40.0, 5.0)
+        assert pin_goal_race_pace(dict(zones), None, 5.0) == zones

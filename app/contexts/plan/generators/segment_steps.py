@@ -25,6 +25,8 @@ from app.core.training.workouts.workout_steps.primitives import _step
 # matching the road generator's structured steps so the same zone colours and
 # legend apply. "mixed" (fartlek) deliberately maps to no letter. zone_5 (race
 # pace) is resolved per goal distance — see ``_race_pace_badge``.
+# zone_1 and zone_2 both read "E": the builders pace every easy block, warm-up
+# and cool-down across the whole easy band.
 _ZONE_LETTER: Dict[str, str] = {
     "zone_1": "E",
     "zone_2": "E",
@@ -38,20 +40,19 @@ _KIND_BY_SEGMENT_TYPE = {"warmup": "warmup", "cooldown": "cooldown"}
 def _race_pace_badge(target_distance: Optional[float]) -> str:
     """Badge for the goal-race-pace block, scaled to the target distance.
 
-    Race pace means very different efforts across distances, so a single fixed
-    letter (the old "M") mislabels a 5K/10K time-goal session. These reuse the
-    distance-specific badge keys the step legend already styles (5K / 10K / T /
-    M), so the colour and label match the effort the runner is actually at.
+    The block is run at the runner's literal goal pace, so the badge must be
+    the key that pace is filed under — ``5K`` / ``10K`` for those goals,
+    ``race`` for every other. Borrowing the nearest training zone (the old "T"
+    for a half, "M" for a marathon) labelled a goal pace with a zone whose own
+    pace is a different number, so the legend and the step disagreed.
     """
     if not target_distance:
-        return "M"
+        return "race"
     if target_distance <= 6:
         return "5K"
     if target_distance <= 12:
         return "10K"
-    if target_distance <= 30:
-        return "T"
-    return "M"
+    return "race"
 
 
 def _letter(seg: Dict[str, Any], race_pace_badge: str) -> Optional[str]:

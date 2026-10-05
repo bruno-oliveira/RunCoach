@@ -8,6 +8,8 @@ from app.contexts.plan.generators.workout_builder_base import (
     _warmup_segment,
     build_fartlek_workout,
     build_tempo_workout,
+    easy_pace_band,
+    easy_segment,
     estimate_duration_min,
     generate_easy_run,
     reconcile_workout_after_cap,
@@ -113,10 +115,9 @@ def generate_vo2max_workout(
     # longer bookends (sized from the work block — see _wucd_m_for_work).
     warmup_km = _wucd_m_for_work(int(round(total_interval_km * 1000)), hard=True) / 1000
     cooldown_km = warmup_km
-    warmup_pace = zones["zone_1_recovery"]["pace"]
 
     segments = [
-        _warmup_segment(warmup_km, warmup_pace),
+        _warmup_segment(warmup_km, zones),
         {
             "name": "Intervals",
             "distance_km": round(total_interval_km, 1),
@@ -131,7 +132,7 @@ def generate_vo2max_workout(
                 "recovery_min": recovery_time,
             },
         },
-        _cooldown_segment(cooldown_km, warmup_pace),
+        _cooldown_segment(cooldown_km, zones),
     ]
 
     total_km = round(sum(s["distance_km"] for s in segments), 1)
@@ -174,10 +175,9 @@ def generate_race_pace_workout(
 
     warmup_km = _wucd_m_for_work(int(round(race_km * 1000)), hard=True) / 1000
     cooldown_km = warmup_km
-    warmup_pace = zones["zone_1_recovery"]["pace"]
 
     segments = [
-        _warmup_segment(warmup_km, warmup_pace),
+        _warmup_segment(warmup_km, zones),
         {
             "name": "Race Pace",
             "distance_km": race_km,
@@ -187,7 +187,7 @@ def generate_race_pace_workout(
             "zone_label": "Zone 5",
             "type": "main",
         },
-        _cooldown_segment(cooldown_km, warmup_pace),
+        _cooldown_segment(cooldown_km, zones),
     ]
 
     total_km = round(sum(s["distance_km"] for s in segments), 1)
@@ -225,7 +225,7 @@ def generate_long_run(
     zones: Dict, weekly_km: float, week: int, phase: str, distance_km: float
 ) -> Dict:
     """Generate a long run with optional race pace finish."""
-    easy_pace = zones["zone_1_recovery"]["pace"]
+    easy_pace, easy_band = easy_pace_band(zones)
     race_pace = zones["zone_5_race"]["pace"]
 
     long_run_km = weekly_km * 0.30
@@ -240,15 +240,7 @@ def generate_long_run(
         race_pace_km = round(min(4, distance_km * 0.3), 1)
         easy_km = round(long_run_km - race_pace_km, 1)
         segments = [
-            {
-                "name": "Easy",
-                "distance_km": easy_km,
-                "pace_formatted": _shared_format_pace(easy_pace),
-                "pace_raw": easy_pace,
-                "zone": "zone_1",
-                "zone_label": "Zone 1",
-                "type": "main",
-            },
+            easy_segment("Easy", easy_km, zones),
             {
                 "name": "Race Pace Finish",
                 "distance_km": race_pace_km,
@@ -260,29 +252,17 @@ def generate_long_run(
             },
         ]
         long_run_km = round(sum(s["distance_km"] for s in segments), 1)
-        description = f"{format_km(long_run_km)}km long run: {format_km(segments[0]['distance_km'])}km easy at {_shared_format_pace(easy_pace)}, last {format_km(segments[1]['distance_km'])}km at {_shared_format_pace(race_pace)}"
+        description = f"{format_km(long_run_km)}km long run: {format_km(segments[0]['distance_km'])}km easy at {easy_band}, last {format_km(segments[1]['distance_km'])}km at {_shared_format_pace(race_pace)}"
     else:
-        description = (
-            f"{format_km(long_run_km)}km long run at {_shared_format_pace(easy_pace)}"
-        )
-        segments = [
-            {
-                "name": "Easy Long Run",
-                "distance_km": long_run_km,
-                "pace_formatted": _shared_format_pace(easy_pace),
-                "pace_raw": easy_pace,
-                "zone": "zone_1",
-                "zone_label": "Zone 1",
-                "type": "main",
-            },
-        ]
+        description = f"{format_km(long_run_km)}km long run at {easy_band}"
+        segments = [easy_segment("Easy Long Run", long_run_km, zones)]
 
     return {
         "type": "long",
         "intensity": "medium",
-        "zone": "zone_1",
+        "zone": "zone_2",
         "target_pace": easy_pace,
-        "target_pace_formatted": _shared_format_pace(easy_pace),
+        "target_pace_formatted": easy_band,
         "description": description,
         "distance": round(long_run_km, 1),
         "quality": False,

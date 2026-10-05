@@ -111,8 +111,6 @@ class PlanService:
             )
             return existing, existing.plan_data if existing.plan_data else []
 
-        effective_vdot = plan_request.goal_vdot or plan_request.vdot
-
         trail_profile = None
         if plan_request.is_trail:
             from app.core.training.profiles.trail_profile import classify_trail
@@ -127,11 +125,12 @@ class PlanService:
             plan_request.target_distance,
             plan_request.weeks,
             plan_request.max_runs_per_week,
-            vdot=effective_vdot,
+            vdot=plan_request.pacing_vdot,
             terrain=plan_request.resolved_training_terrain(),
             trail_profile=trail_profile,
             intensive_weekend_enabled=plan_request.intensive_weekend_enabled,
             backyard_profile=plan_request.backyard_profile(),
+            goal_pace_min_km=plan_request.goal_pace_min_km,
         )
 
         # The generator may reduce an unviable requested frequency (including

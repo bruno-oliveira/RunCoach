@@ -16,8 +16,7 @@ from app.core.training.periodization import mileage_progression, phase_calculato
 from app.core.training.periodization.strength_plan import derive_experience_level
 from app.core.training.periodization.training_constants import calculate_week_in_phase
 from app.core.training.physiology.goal_pace_model import (
-    GoalPaceContext,
-    goal_vdot_from_time,
+    goal_pace_context,
     progressive_pace_zones,
 )
 from app.core.training.physiology.vdot_calculator import VDOTCalculator
@@ -497,22 +496,9 @@ class PerformancePlanGenerator(BasePlanGenerator):
         # threshold, interval — sharpens toward the goal across the block rather
         # than sitting at the runner's current fitness. Race-pace work stays
         # pinned to the exact goal pace (handled in calculate_training_zones).
-        vdot = None
-        vdot_zones = None
-        if current_pace:
-            implied_seconds = int(current_pace * target_distance * 60)
-            vdot = VDOTCalculator.calculate_vdot(target_distance, implied_seconds)
-            if vdot:
-                vdot_zones = VDOTCalculator.get_pace_zones(vdot)
-
-        goal_seconds = int(goal_pace * target_distance * 60)
-        goal_vdot = goal_vdot_from_time(target_distance, goal_seconds)
-        goal_ctx = GoalPaceContext(
-            current_vdot=vdot,
-            goal_vdot=goal_vdot,
-            goal_pace_min_km=goal_pace,
-            target_distance_km=target_distance,
-        )
+        goal_ctx = goal_pace_context(target_distance, current_pace, goal_pace)
+        vdot = goal_ctx.current_vdot
+        vdot_zones = VDOTCalculator.get_pace_zones(vdot) if vdot else None
 
         def _zones_for_week(week_num: int):
             """Blended VDOT zones (and 5-band table) for a given plan week."""
@@ -520,7 +506,10 @@ class PerformancePlanGenerator(BasePlanGenerator):
                 progressive_pace_zones(goal_ctx, week_num, weeks) or vdot_zones
             )
             week_zones = self.calculate_training_zones(
-                goal_pace, max_heart_rate, vdot_zones=week_vdot_zones
+                goal_pace,
+                max_heart_rate,
+                vdot_zones=week_vdot_zones,
+                race_distance_km=target_distance,
             )
             return week_zones, week_vdot_zones
 

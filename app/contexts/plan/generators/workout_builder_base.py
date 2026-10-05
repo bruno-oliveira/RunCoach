@@ -22,54 +22,66 @@ def estimate_duration_min(segments: list) -> int:
     return round(total)
 
 
-def _warmup_segment(warmup_km: float, pace: float) -> dict:
-    return {
-        "name": "Warm-up",
-        "distance_km": warmup_km,
-        "pace_formatted": _shared_format_pace(pace),
-        "pace_raw": pace,
-        "zone": "zone_1",
-        "zone_label": "Zone 1",
-        "type": "warmup",
-    }
+def _warmup_segment(warmup_km: float, zones: Dict) -> dict:
+    return easy_segment("Warm-up", warmup_km, zones, seg_type="warmup")
 
 
-def _cooldown_segment(cooldown_km: float, pace: float) -> dict:
+def _cooldown_segment(cooldown_km: float, zones: Dict) -> dict:
+    return easy_segment("Cool-down", cooldown_km, zones, seg_type="cooldown")
+
+
+def easy_pace_band(zones: Dict) -> Tuple[float, str]:
+    """Easy pace as ``(midpoint, band string)``.
+
+    Easy running is a band, not a pace, and the band is Zone 2 — the zone every
+    easy run's heart-rate target names. Prescribing the single slowest pace of
+    it (the Zone 1/2 edge) asked for a recovery jog while the HR badge asked
+    for aerobic running; the two could not both be followed. The midpoint is
+    for duration estimates; the string is what the runner and the watch see,
+    in the same form the road generator's easy steps use.
+    """
+    aerobic = zones["zone_2_aerobic"]
+    slow, fast = aerobic["pace_range"]
+    band = aerobic.get("pace_str") or (
+        f"{_shared_format_pace(slow)}–{_shared_format_pace(fast)}"
+    )
+    return (slow + fast) / 2, band
+
+
+def easy_segment(
+    name: str, distance_km: float, zones: Dict, seg_type: str = "main"
+) -> dict:
+    """An easy block: the body of an easy or long run, a warm-up, a cool-down.
+
+    All of them carry the same band, so an easy day and the warm-up of the
+    quality day beside it never quote two different "easy" paces.
+    """
+    pace, band = easy_pace_band(zones)
     return {
-        "name": "Cool-down",
-        "distance_km": cooldown_km,
-        "pace_formatted": _shared_format_pace(pace),
+        "name": name,
+        "distance_km": distance_km,
+        "pace_formatted": band,
         "pace_raw": pace,
-        "zone": "zone_1",
-        "zone_label": "Zone 1",
-        "type": "cooldown",
+        "zone": "zone_2",
+        "zone_label": "Zone 2",
+        "type": seg_type,
     }
 
 
 def generate_easy_run(zones: Dict, distance_km: float) -> Dict:
-    """Generate an easy recovery run."""
-    easy_pace = zones["zone_1_recovery"]["pace"]
+    """Generate an easy aerobic run."""
+    easy_pace, easy_band = easy_pace_band(zones)
     rounded_km = round(distance_km, 1)
 
-    segments = [
-        {
-            "name": "Easy Run",
-            "distance_km": rounded_km,
-            "pace_formatted": _shared_format_pace(easy_pace),
-            "pace_raw": easy_pace,
-            "zone": "zone_1",
-            "zone_label": "Zone 1",
-            "type": "main",
-        },
-    ]
+    segments = [easy_segment("Easy Run", rounded_km, zones)]
 
     return {
         "type": "easy",
         "intensity": "low",
-        "zone": "zone_1",
+        "zone": "zone_2",
         "target_pace": easy_pace,
-        "target_pace_formatted": _shared_format_pace(easy_pace),
-        "description": f"{format_km(rounded_km)}km easy at {_shared_format_pace(easy_pace)}",
+        "target_pace_formatted": easy_band,
+        "description": f"{format_km(rounded_km)}km easy at {easy_band}",
         "distance": rounded_km,
         "quality": False,
         "segments": segments,
@@ -102,10 +114,9 @@ def build_tempo_workout(
     # plans and road plans prescribe identical warm-ups for identical work.
     warmup_km = _wucd_m_for_work(int(round(tempo_km * 1000)), hard=False) / 1000
     cooldown_km = warmup_km
-    warmup_pace = zones["zone_1_recovery"]["pace"]
 
     segments = [
-        _warmup_segment(warmup_km, warmup_pace),
+        _warmup_segment(warmup_km, zones),
         {
             "name": "Tempo",
             "distance_km": tempo_km,
@@ -115,7 +126,7 @@ def build_tempo_workout(
             "zone_label": "Zone 3",
             "type": "main",
         },
-        _cooldown_segment(cooldown_km, warmup_pace),
+        _cooldown_segment(cooldown_km, zones),
     ]
 
     total_km = round(sum(s["distance_km"] for s in segments), 1)
@@ -163,11 +174,10 @@ def build_fartlek_workout(
     warmup_km = _wucd_m(int(round(total_km * 1000)), hard=False) / 1000
     cooldown_km = warmup_km
     main_km = max(1, total_km - warmup_km - cooldown_km)
-    warmup_pace = zones["zone_1_recovery"]["pace"]
     fartlek_avg_pace = (tempo_pace + hard_pace) / 2
 
     segments = [
-        _warmup_segment(warmup_km, warmup_pace),
+        _warmup_segment(warmup_km, zones),
         {
             "name": "Fartlek",
             "distance_km": round(main_km, 1),
@@ -182,7 +192,7 @@ def build_fartlek_workout(
                 "recovery_min": None,
             },
         },
-        _cooldown_segment(cooldown_km, warmup_pace),
+        _cooldown_segment(cooldown_km, zones),
     ]
 
     total_km = round(sum(s["distance_km"] for s in segments), 1)

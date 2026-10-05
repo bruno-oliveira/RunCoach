@@ -63,7 +63,9 @@ def persist_plan_core(
             if plan_request.recent_race_time
             else None
         ),
-        vdot=plan_request.vdot,
+        # The VDOT the steps were paced from, so a later recalibration can
+        # recognise (and move) the paces it is replacing.
+        vdot=plan_request.pacing_vdot,
         goal_time=plan_request.goal_time,
         goal_pace=plan_request.goal_pace_min_km,
         current_pace=plan_request.current_pace_min_km,

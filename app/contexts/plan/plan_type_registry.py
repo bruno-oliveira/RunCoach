@@ -15,11 +15,18 @@ from __future__ import annotations
 
 import logging
 from abc import ABC, abstractmethod
-from typing import TYPE_CHECKING, Any, Dict, List
+from typing import TYPE_CHECKING, Any, Dict, List, Optional
 
 from sqlalchemy.orm import Session
 
 from app.constants import DISTANCE_NAMES
+from app.core.time_utils import local_today
+from app.core.training.periodization.plan_calendar import compute_current_week
+from app.core.training.physiology.goal_pace_model import (
+    goal_pace_context,
+    progressive_pace_zones,
+)
+from app.utils import to_date
 
 if TYPE_CHECKING:
     from app.models.training_plan import TrainingPlan
@@ -49,6 +56,31 @@ class PlanTypeHandler(ABC):
         return extra
 
 
+def _current_week_pace_zones(plan: "TrainingPlan") -> Optional[Dict[str, Dict]]:
+    """Daniels zones for the week the runner is in — the paces on its cards.
+
+    A time-goal plan trains off a VDOT that ramps from current fitness to goal
+    fitness, so its paces change every week. Showing the *final* week's paces
+    from day one put goal-fitness paces beside heart-rate bands that describe
+    the runner as they are now: an "aerobic" pace that would in fact have them
+    at threshold, and a panel that disagreed with every card under it.
+    """
+    target_km = plan.target_distance_km
+    if not plan.goal_pace or not target_km:
+        return None
+    total_weeks = plan.weeks_duration or 1
+    start = to_date(plan.start_date)
+    week = (
+        compute_current_week(
+            start, local_today(), total_weeks=total_weeks, pre_start=1, clamp_min=1
+        )
+        if start
+        else 1
+    )
+    ctx = goal_pace_context(target_km, plan.current_pace, plan.goal_pace)
+    return progressive_pace_zones(ctx, week, total_weeks) or None
+
+
 class PerformancePlanHandler(PlanTypeHandler):
     kind = "performance"
 
@@ -69,26 +101,12 @@ class PerformancePlanHandler(PlanTypeHandler):
         from app.contexts.plan.generators.performance_plan_generator import (
             PerformancePlanGenerator,
         )
-        from app.core.training.physiology.goal_pace_model import goal_vdot_from_time
-        from app.core.training.physiology.vdot_calculator import VDOTCalculator
         from app.utils import format_pace
 
         try:
             perf_service = PerformanceService(db)
             gen = PerformancePlanGenerator()
-            # Display the runner's goal-fitness Daniels zones (the paces they
-            # are training toward), not a crude goal-pace×multiplier fallback.
             target_km = plan.target_distance_km
-            goal_vdot = None
-            if plan.goal_pace and target_km:
-                goal_vdot = goal_vdot_from_time(
-                    target_km, int(plan.goal_pace * target_km * 60)
-                )
-            goal_vdot_zones = (
-                VDOTCalculator.get_pace_zones(goal_vdot, target_km)
-                if goal_vdot
-                else None
-            )
             # Anchor the pace panel's HR bands on the SAME resting/LTHR the
             # stored canonical zones used, so the "your training paces" BPM band
             # matches the "Heart Rate Training Zones" panel exactly.
@@ -96,7 +114,7 @@ class PerformancePlanHandler(PlanTypeHandler):
             zones = gen.calculate_training_zones(
                 plan.goal_pace,
                 plan.max_heart_rate,
-                vdot_zones=goal_vdot_zones,
+                vdot_zones=_current_week_pace_zones(plan),
                 race_distance_km=target_km or None,
                 resting_hr=stored_zones.get("resting_hr"),
                 lthr=stored_zones.get("lthr"),

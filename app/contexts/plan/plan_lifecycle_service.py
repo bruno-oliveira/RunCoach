@@ -53,14 +53,12 @@ def customize_plan(
 
     # Pace zones let the structured builders inject the runner's actual paces
     # when regenerating a customised workout (falls back to generic cues).
-    pace_zones = None
-    if training_plan.vdot:
-        try:
-            from app.core.training.physiology.vdot_calculator import VDOTCalculator
+    try:
+        from app.contexts.plan.adaptation.reconcile import pace_zones_for
 
-            pace_zones = VDOTCalculator.get_pace_zones(training_plan.vdot)
-        except Exception:  # pragma: no cover - defensive; never block customize
-            pace_zones = None
+        pace_zones = pace_zones_for(training_plan)
+    except Exception:  # pragma: no cover - defensive; never block customize
+        pace_zones = None
 
     if adjustment_type == "intensity":
         plan_data = adjust_intensity(

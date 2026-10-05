@@ -32,6 +32,7 @@ from app.core.training.periodization.phase_calculator import (
     PHASE_DISTRIBUTIONS,  # noqa: F401
 )
 from app.core.training.periodization.strength_plan import derive_experience_level
+from app.core.training.physiology.goal_pace_model import pin_goal_race_pace
 from app.core.training.physiology.vdot_calculator import VDOTCalculator
 from app.core.training.profiles.backyard_profile import (
     BackyardProfile,
@@ -223,8 +224,14 @@ class TrainingPlanGenerator:
         trail_profile: Optional[TrailProfile] = None,
         intensive_weekend_enabled: bool = False,
         backyard_profile: Optional[BackyardProfile] = None,
+        goal_pace_min_km: Optional[float] = None,
     ) -> List[Dict[str, Any]]:
         """Generate a comprehensive training plan.
+
+        ``vdot`` is the fitness the training paces are built from — what the
+        runner can do now. ``goal_pace_min_km`` is what they are chasing: on a
+        road plan it sets the pace of race day and every goal-pace rehearsal,
+        and nothing else.
 
         Trail/ultra plans pass ``trail_profile``; legacy callsites that pass
         ``target_distance=30.0`` (with optional ``terrain``) get a default
@@ -380,6 +387,10 @@ class TrainingPlanGenerator:
         # makes its solver fail loudly on the way to a number nothing reads.
         zone_target = 0.0 if backyard_profile is not None else target_distance
         pace_zones = VDOTCalculator.get_pace_zones(vdot, zone_target) if vdot else None
+        # Road only: a trail goal pace is climbing and terrain as much as
+        # fitness, so it says nothing about the flat pace a rehearsal targets.
+        if pace_zones and trail_profile is None:
+            pin_goal_race_pace(pace_zones, goal_pace_min_km, target_distance)
 
         experience_level = derive_experience_level(current_km)
 

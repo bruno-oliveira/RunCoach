@@ -149,7 +149,9 @@ def _race_pace_workout():
 
 
 def test_race_pace_badge_scales_with_goal_distance():
-    cases = {5.0: "5K", 10.0: "10K", 21.1: "T", 42.2: "M"}
+    # A half or marathon goal pace is filed under "race": borrowing "T"/"M"
+    # labelled the goal pace with a zone whose own pace is a different number.
+    cases = {5.0: "5K", 10.0: "10K", 21.1: "race", 42.2: "race"}
     for target, expected in cases.items():
         wo = _race_pace_workout()
         segments_to_steps(wo, target_distance=target)
@@ -159,11 +161,11 @@ def test_race_pace_badge_scales_with_goal_distance():
         )
 
 
-def test_race_pace_badge_defaults_to_marathon_when_unknown():
+def test_race_pace_badge_defaults_to_race_when_unknown():
     wo = _race_pace_workout()
     segments_to_steps(wo)  # no target distance
     main = next(s for s in wo["steps"] if s["label"] == "Race Pace")
-    assert main["pace_zone"] == "M"
+    assert main["pace_zone"] == "race"
 
 
 def test_rest_day_without_segments_is_noop():

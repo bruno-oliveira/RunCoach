@@ -128,7 +128,7 @@ _KEY_WORKOUT_STEP_BUILDERS: Dict[
     "10k_vo2max_1000s": _canonical_meter_reps("10k_vo2max_1000s", "I"),
     "half_km_intervals": _canonical_meter_reps("half_km_intervals", "10K"),
     "marathon_km_intervals": _canonical_meter_reps("marathon_km_intervals", "10K"),
-    "5k_race_pace_3km": _canonical_meter_reps("5k_race_pace_3km", "T"),
+    "5k_race_pace_3km": _canonical_meter_reps("5k_race_pace_3km", "5K"),
     "half_race_pace_segments": _canonical_meter_reps("half_race_pace_segments", "M"),
     "marathon_tempo_cutdown": _canonical_meter_reps("marathon_tempo_cutdown", "T"),
     # -- easy-start / faster-finish split long runs --

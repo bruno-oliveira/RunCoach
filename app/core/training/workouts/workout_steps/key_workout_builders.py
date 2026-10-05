@@ -75,7 +75,7 @@ def build_meter_rep_steps(
             repeat=reps,
             pace_zone=work_zone,
             pace_str=_pace_str(work_zone, pace_zones),
-            effort="hard" if work_zone in ("I", "R") else work_effort,
+            effort="hard" if work_zone in ("I", "R", "5K") else work_effort,
         ),
     ]
     if rec_m > 0:

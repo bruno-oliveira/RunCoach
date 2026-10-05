@@ -17,6 +17,7 @@ that import it.
 
 from typing import Any, Dict, Optional
 
+from app.core.training.physiology.goal_pace_model import pin_goal_race_pace
 from app.core.training.physiology.vdot_calculator import VDOTCalculator
 from app.core.training.workouts import workout_steps as _steps_mod
 from app.core.training.workouts.workout_registry import WORKOUT_REGISTRY, build_workout
@@ -25,10 +26,29 @@ _PLAIN_QUALITY_TYPES = ("tempo", "interval", "hill")
 
 
 def pace_zones_for(training_plan) -> Optional[Dict[str, Any]]:
-    """Derive VDOT pace zones for a plan, or ``None`` when no VDOT is set."""
-    if getattr(training_plan, "vdot", None):
-        return VDOTCalculator.get_pace_zones(training_plan.vdot)
-    return None
+    """The pace zones a plan's steps were built from, or ``None`` with no VDOT.
+
+    Mirrors the generator exactly — same VDOT, same race entry, same goal-pace
+    pin — because every caller rebuilds a workout that sits beside untouched
+    ones. Zones from the bare VDOT drop the race entry and the pin, so an
+    adjusted week quietly swapped the runner's goal pace for a predicted one.
+    """
+    vdot = getattr(training_plan, "vdot", None)
+    if not vdot:
+        return None
+    # A backyard has no race pace to derive: the loop budget sets it.
+    is_backyard = bool(getattr(training_plan, "is_backyard", False))
+    target_km = 0.0 if is_backyard else _target_km(training_plan)
+    zones = VDOTCalculator.get_pace_zones(vdot, target_km)
+    if not getattr(training_plan, "is_trail", False):
+        goal_pace = getattr(training_plan, "goal_pace", None)
+        pin_goal_race_pace(zones, goal_pace, target_km)
+    return zones
+
+
+def _target_km(training_plan) -> float:
+    """The plan's race distance in km, or 0.0 when it has none."""
+    return float(getattr(training_plan, "target_distance_km", None) or 0.0)
 
 
 def rebuild_plain_quality(

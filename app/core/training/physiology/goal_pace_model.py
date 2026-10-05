@@ -69,6 +69,36 @@ def goal_vdot_from_time(
     return VDOTCalculator.calculate_vdot(target_distance_km, goal_seconds)
 
 
+def _vdot_at_pace(
+    target_distance_km: float, pace_min_km: Optional[float]
+) -> Optional[float]:
+    """VDOT implied by holding *pace_min_km* for the whole target distance."""
+    if not pace_min_km:
+        return None
+    return goal_vdot_from_time(
+        target_distance_km, int(pace_min_km * target_distance_km * 60)
+    )
+
+
+def goal_pace_context(
+    target_distance_km: float,
+    current_pace_min_km: Optional[float],
+    goal_pace_min_km: Optional[float],
+) -> GoalPaceContext:
+    """Fitness anchors for a time-goal plan, resolved from its two paces.
+
+    The generator (pacing each week) and the plan page (showing the paces for
+    the week the runner is in) must resolve the *same* anchors, or the zone
+    panel describes a different plan from the one on the workout cards.
+    """
+    return GoalPaceContext(
+        current_vdot=_vdot_at_pace(target_distance_km, current_pace_min_km),
+        goal_vdot=_vdot_at_pace(target_distance_km, goal_pace_min_km),
+        goal_pace_min_km=goal_pace_min_km,
+        target_distance_km=target_distance_km,
+    )
+
+
 def blend_fraction(week: int, total_weeks: int) -> float:
     """Fraction of the current->goal VDOT gap closed by a given week.
 
@@ -132,28 +162,41 @@ def progressive_pace_zones(
         return {}
 
     zones = VDOTCalculator.get_pace_zones(vdot, ctx.target_distance_km)
+    return pin_goal_race_pace(zones, ctx.goal_pace_min_km, ctx.target_distance_km)
 
-    if ctx.goal_pace_min_km:
-        goal_entry = {
-            "pace_min_km": round(ctx.goal_pace_min_km, 2),
-            "pace_str": VDOTCalculator.format_pace(ctx.goal_pace_min_km),
-            "description": "Goal race pace",
-            "zone_label": race_pace_zone_label(ctx.target_distance_km),
-        }
-        zones["race"] = goal_entry
-        # Pin the target distance's race-pace label to the *exact* goal pace so
-        # goal-pace REHEARSAL sessions (e.g. "10K goal pace segments") render
-        # the runner's literal target every week, not the blended-VDOT predicted
-        # race pace which only converges to the goal in the final week. Other
-        # distance labels (a 10K plan's "5K" reference) stay predicted.
-        label = _target_distance_label(ctx.target_distance_km)
-        if label and label in zones:
-            zones[label] = {**zones[label], **goal_entry}
+
+def pin_goal_race_pace(
+    zones: Dict[str, Dict],
+    goal_pace_min_km: Optional[float],
+    target_distance_km: float,
+) -> Dict[str, Dict]:
+    """Pin the race-pace entries of *zones* to the runner's exact goal pace.
+
+    Training paces follow fitness; the race pace follows the goal. Without the
+    pin a goal-pace REHEARSAL (e.g. "10K goal pace segments") and race day
+    itself render the pace the active VDOT *predicts*, which is the runner's
+    current race pace, not the one they told us they are chasing. Other
+    distance labels (a 10K plan's "5K" reference) stay predicted.
+
+    Mutates and returns *zones*; a no-op without a goal pace.
+    """
+    if not goal_pace_min_km:
+        return zones
+    goal_entry = {
+        "pace_min_km": round(goal_pace_min_km, 2),
+        "pace_str": VDOTCalculator.format_pace(goal_pace_min_km),
+        "description": "Goal race pace",
+        "zone_label": race_pace_zone_label(target_distance_km),
+    }
+    zones["race"] = goal_entry
+    label = _target_distance_label(target_distance_km)
+    if label in zones:
+        zones[label] = {**zones[label], **goal_entry}
     return zones
 
 
-def _target_distance_label(target_distance_km: float) -> Optional[str]:
-    """Race-pace dict key that names the plan's target distance, if standard."""
+def _target_distance_label(target_distance_km: float) -> str:
+    """Race-pace dict key that names the plan's target distance."""
     if abs(target_distance_km - 5.0) < 0.5:
         return "5K"
     if abs(target_distance_km - 10.0) < 0.5:

@@ -564,6 +564,17 @@ class PlanRequest(PlanRequestBase, RaceInfoMixin):
 
         return self
 
+    @property
+    def pacing_vdot(self) -> Optional[float]:
+        """VDOT the plan's training paces are built from.
+
+        Fitness the runner has shown comes first: pacing a block off the goal
+        prescribes, from week one, the easy and threshold paces of a runner
+        they have not become yet. The goal stands in only when it is the sole
+        anchor we were given.
+        """
+        return self.vdot or self.goal_vdot
+
     @model_validator(mode="after")
     def compute_vdot(self) -> "PlanRequest":
         """Calculate current and goal VDOT from optional inputs.
@@ -581,9 +592,17 @@ class PlanRequest(PlanRequestBase, RaceInfoMixin):
         # the rest budget the profile computes. Feeding a 160 km projection to
         # the VDOT model would produce a number nothing should act on.
         if self.goal_time and not self.is_backyard:
-            self.goal_vdot, self.goal_pace_min_km = compute_vdot_from_time(
+            goal_vdot, self.goal_pace_min_km = compute_vdot_from_time(
                 self.target_distance, self.goal_time, "goal_time"
             )
+            # A trail finish time is climbing, descending and footing as much
+            # as fitness. Read through a flat-road formula it lands far below
+            # what the runner can do (30 km with 1200 m of gain in 4:00 is the
+            # VDOT floor) and paced every easy run minutes per km too slow. The
+            # pace is kept — the race protocol plans around it — but no fitness
+            # is derived from it.
+            if not self.is_trail:
+                self.goal_vdot = goal_vdot
 
             if self.vdot and self.goal_vdot and self.goal_vdot > self.vdot:
                 improvement = (self.goal_vdot - self.vdot) / self.vdot

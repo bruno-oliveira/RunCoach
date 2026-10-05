@@ -6,7 +6,6 @@ from typing import Any, Dict, List, Optional, Tuple
 
 from sqlalchemy.orm import Session
 
-from app.core.training.physiology.vdot_calculator import VDOTCalculator
 from app.core.training.workouts import key_workout_library as _kwlib
 from app.core.training.workouts import workout_steps as _steps_mod
 from app.core.training.workouts.workout_registry import build_workout
@@ -18,6 +17,7 @@ from ._helpers import ANNOTATION_RE, batch_workouts_by_week, parse_plan_data_loo
 from .change_plan_builder import snapshot_workouts
 from .reconcile import (
     _PLAIN_QUALITY_TYPES,
+    pace_zones_for,
     reconcile_plan_data_to_orm,
 )
 from .reconcile import (
@@ -110,10 +110,8 @@ def _resolve_pace_zones(training_plan: TrainingPlan) -> Optional[Dict[str, Any]]
     Falls back to ``None`` (generic labels) when VDOT is unknown or lookup
     fails — never blocks an adjustment.
     """
-    if not training_plan.vdot:
-        return None
     try:
-        return VDOTCalculator.get_pace_zones(training_plan.vdot)
+        return pace_zones_for(training_plan)
     except Exception:  # pragma: no cover - defensive; never block adjust
         return None
 
