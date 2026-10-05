@@ -80,15 +80,6 @@ class SQLAlchemyRunRepository:
         )
         return runs, total
 
-    def list_for_analytics(
-        self, user_id: str, *, plan_id: Optional[str] = None, limit: int = 5000
-    ) -> List[RunLog]:
-        """Chronological run history, optionally scoped to a plan."""
-        q = self.session.query(RunLog).filter(RunLog.user_id == user_id)
-        if plan_id is not None:
-            q = q.filter(RunLog.training_plan_id == plan_id)
-        return q.order_by(RunLog.date.asc()).limit(limit).all()
-
     def save(self, run: RunLog) -> None:
         self.session.add(run)
 

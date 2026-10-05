@@ -1,0 +1,223 @@
+{% extends "base.html" %}
+
+{% block title %}RunCoach — Coach{% endblock %}
+
+{% block styles %}
+<link rel="stylesheet" href="{{ static_url('css/coach.css') }}">
+{% endblock %}
+
+{# =============================================================================
+   Coach — two questions, one answer.
+
+   "Is what I am doing enough for my goal?" and "what does my recent running
+   say I should change?" The judgement is app/core/coaching/training_read.py;
+   this page only words it. Every sentence is keyed (`coach.<key>`) so i18n.js
+   can translate it, and every number is rendered outside the keyed element so
+   a translation never swallows it.
+
+   No selectors, no tabs, no charts library: the page has nothing to configure.
+   ========================================================================= #}
+
+{% set headlines = {
+    'no_runs': 'Nothing to read yet.',
+    'early_days': 'Early days. A few more runs and there is something to read.',
+    'steady': 'Your training is in good shape.',
+    'tune': 'Your training is solid. One thing would make it better.',
+    'attention': 'One thing in your training needs to change.',
+    'goal_too_early': 'Your plan has only just started. Nothing to judge yet.',
+    'goal_on_track': 'You are doing what your goal needs.',
+    'goal_on_track_but': 'You are doing what your goal needs, with one thing to watch.',
+    'goal_drifting': 'You are a little off what your goal needs.',
+    'goal_behind': 'You are falling behind what your goal needs.'
+} %}
+
+{# key: [what we see, what to do about it] #}
+{% set findings = {
+    'gone_quiet': ['You have stopped running.', 'Start back with something short and easy. Fitness comes back faster than it left.'],
+    'patchy': ['Some weeks have no running in them.', 'A short run in a thin week does more than a big week after a blank one. Regular beats big.'],
+    'light': ['There is room for one more run a week.', 'A third easy run, even twenty minutes, is the cheapest fitness you can add.'],
+    'steady': ['You run regularly.', 'Everything else is built on this.'],
+    'too_hard': ['Too much of your running is hard.', 'Hard days only work when the days between them are easy. Make your next few runs properly easy.'],
+    'all_easy': ['Almost all of your running is at one easy speed.', 'That is a strong base. It now has room for one faster session a week: a tempo, or some intervals.'],
+    'easy_by_plan': ['Nearly all of your running is easy.', 'Your plan decides when the hard days come. Nothing to add.'],
+    'balanced': ['Your easy and hard running are in balance.', 'Mostly easy, a little hard. That is the mix that works.'],
+    'load_jump': ['Your volume has jumped.', 'A step this size is how most running injuries start. Hold this level for a week or two before adding more.'],
+    'load_drop': ['Your volume has dropped.', 'Fine if you meant it. If not, build back over two or three weeks, not in one.'],
+    'load_steady': ['Your volume is steady.', 'No sudden jumps. That is the safe way to build.'],
+    'same_length': ['Every run is about the same length.', 'Make one run a week longer, a couple of kilometres at a time. It builds an endurance the others cannot.'],
+    'long_too_big': ['Your long run is most of your week.', 'Spread the distance out. A longer midweek run makes the long one safer.'],
+    'long_ok': ['Your runs vary in length.', 'One longer run with shorter ones around it.'],
+    'fitness_up': ['You are getting fitter.', 'Your recent runs point to a faster race than a few weeks ago. What you are doing is working.'],
+    'fitness_down': ['Your fitness has dipped.', 'Usually tiredness, heat or a rough patch. If it lasts, take an easier week.'],
+    'sessions_ok': ['You are getting the planned runs done.', 'A plan only works if it is run. You are running it.'],
+    'sessions_slipping': ['You are missing some planned runs.', 'One missed run is nothing; a habit of them is. If the week does not fit your life, change the plan, not the habit.'],
+    'sessions_missed': ['You are missing most of the planned runs.', 'The plan no longer matches your weeks. Adjust it to the days you can actually run.'],
+    'volume_ok': ['You are running the distance the plan asks for.', 'Nothing to change here.'],
+    'volume_light': ['You are a little short on distance.', 'Not worth chasing. Run the coming week as written.'],
+    'volume_short': ['You are well short on distance.', 'Do not make it up in one week. Run the next sessions as planned; the plan re-paces itself to what you actually do.'],
+    'volume_over': ['You are running more than the plan asks.', 'Extra distance is extra risk before it is extra fitness. Trust the plan\'s numbers.'],
+    'long_on_plan': ['Your long runs are where the plan wants them.', 'For your goal this is the session that matters most.'],
+    'long_light': ['Your long run is a little short.', 'Finish the next one at the planned distance, however slowly.'],
+    'time_ahead': ['Your runs already point to your goal time.', 'You are fit enough for it today. The plan is now about arriving fresh.'],
+    'time_reachable': ['Your goal time is within reach.', 'The gap is the size a training block closes. Run the sessions at the paces set, not faster.'],
+    'time_stretch': ['Your goal time is a stretch from here.', 'It can still come, but it needs everything to go right. Decide on race morning, from how the last weeks went.'],
+    'time_far': ['Your goal time is out of reach on current form.', 'Training for a time you cannot yet run makes every session too hard. Set a goal nearer what your runs show, and move it as you improve.'],
+    'long_short': ['Your long runs are falling short.', 'For your goal this is the session that matters most. Protect it before any other.']
+} %}
+
+{# Findings whose fix starts with a run the runner can go and do. #}
+{% set run_fixes = ['gone_quiet', 'patchy', 'light', 'too_hard', 'all_easy', 'same_length'] %}
+{% set goal_areas = ['sessions', 'volume', 'long_run', 'race_time'] %}
+
+{% macro figure(f) %}
+    {%- if f.area == 'rhythm' and f.key == 'gone_quiet' -%}
+        {{ f.figures[0] | int }} <span data-i18n="coach.fig_days_quiet">days since your last run</span>
+    {%- elif f.area == 'rhythm' -%}
+        {{ '%g' | format(f.figures[0]) }} <span data-i18n="coach.fig_runs_week">runs a week</span>
+    {%- elif f.area == 'balance' -%}
+        {{ f.figures[0] | int }}% <span data-i18n="coach.fig_easy">easy · aim for about 80%</span>
+    {%- elif f.area == 'load' -%}
+        {{ '%g' | format(f.figures[0]) }} km <span data-i18n="coach.fig_last_week">last week</span> · {{ '%g' | format(f.figures[1]) }} km <span data-i18n="coach.fig_before">a week before that</span>
+    {%- elif f.area == 'length' -%}
+        <span data-i18n="coach.fig_longest">longest</span> {{ '%g' | format(f.figures[0]) }} km · <span data-i18n="coach.fig_typical">typical</span> {{ '%g' | format(f.figures[1]) }} km
+    {%- elif f.area == 'sessions' -%}
+        {{ f.figures[0] | int }} <span data-i18n="coach.fig_of">of</span> {{ f.figures[1] | int }} <span data-i18n="coach.fig_planned_runs">planned runs</span>
+    {%- elif f.area == 'volume' -%}
+        {{ f.figures[0] | int }} <span data-i18n="coach.fig_of">of</span> {{ f.figures[1] | int }} km
+    {%- elif f.area == 'long_run' -%}
+        <span data-i18n="coach.fig_longest">longest</span> {{ '%g' | format(f.figures[0]) }} km · <span data-i18n="coach.fig_plan_asked">plan asked for</span> {{ '%g' | format(f.figures[1]) }} km
+    {%- elif f.area == 'race_time' -%}
+        <span data-i18n="coach.fig_runs_point_to">your runs point to</span> {{ page.goal.predicted_time }} · <span data-i18n="coach.fig_your_goal">your goal is</span> {{ page.goal.goal_time }}
+    {%- endif -%}
+{% endmacro %}
+
+{% macro finding_row(f) %}
+<li class="coach-finding coach-finding--{{ f.status }}">
+    <span class="coach-finding-mark" aria-hidden="true"></span>
+    <div class="coach-finding-body">
+        <p class="coach-finding-what" data-i18n="coach.{{ f.key }}">{{ findings[f.key][0] }}</p>
+        {% if f.figures %}<p class="coach-finding-figure">{{ figure(f) }}</p>{% endif %}
+        <p class="coach-finding-do" data-i18n="coach.{{ f.key }}_do">{{ findings[f.key][1] }}</p>
+    </div>
+</li>
+{% endmacro %}
+
+{% block content %}
+{% set read = page.read %}
+{% set goal = page.goal %}
+{% set focus = read.focus %}
+<div class="coach-page">
+    <div class="container">
+        <header class="coach-header">
+            <h1 class="coach-title" data-i18n="coach.title">Coach</h1>
+            <p class="coach-subtitle" data-i18n="coach.subtitle">How your training is going, and the one thing worth changing.</p>
+        </header>
+
+        {# ── The read: one sentence, then one change ─────────────────────── #}
+        <section class="coach-card coach-read coach-read--{{ focus.status if focus else 'good' }}" aria-labelledby="coachHeadline">
+            {% if goal %}
+            <p class="coach-eyebrow">{{ goal.label }}{% if goal.position %} · {{ goal.position }}{% endif %}</p>
+            {% endif %}
+            <h2 class="coach-headline" id="coachHeadline" data-i18n="coach.head_{{ read.headline }}">{{ headlines[read.headline] }}</h2>
+
+            {% if focus %}
+            <div class="coach-focus">
+                <p class="coach-eyebrow" data-i18n="coach.one_change">The one change</p>
+                <p class="coach-focus-what" data-i18n="coach.{{ focus.key }}">{{ findings[focus.key][0] }}</p>
+                <p class="coach-focus-do" data-i18n="coach.{{ focus.key }}_do">{{ findings[focus.key][1] }}</p>
+                {% if goal and (focus.area in goal_areas or focus.key in run_fixes) %}
+                <a class="btn btn-accent" href="{{ goal.url }}" data-i18n="coach.open_plan">Open your plan</a>
+                {% elif focus.key in run_fixes %}
+                <a class="btn btn-accent" href="/run" data-i18n="coach.build_run">Build today's run</a>
+                {% endif %}
+            </div>
+            {% elif read.state == 'no_runs' %}
+            <p class="coach-read-note" data-i18n="coach.no_runs_note">Once a few runs are in, this page tells you how your training is going and what to change.</p>
+            {% if user.intervals_athlete_id %}
+            <a class="btn btn-accent" href="/run" data-i18n="coach.build_run">Build today's run</a>
+            {% else %}
+            <button type="button" class="btn btn-accent" onclick="connectWatch()" data-i18n="nav.connect_watch">Connect your watch</button>
+            {% endif %}
+            {% elif read.state == 'early_days' %}
+            <p class="coach-read-note" data-i18n="coach.early_days_note">It takes four runs in four weeks to say anything honest about your training.</p>
+            {% else %}
+            <p class="coach-read-note" data-i18n="coach.nothing_to_change">Nothing to change. Keep doing what you are doing.</p>
+            {% endif %}
+        </section>
+
+        {# ── Question one: is it enough for the goal? ────────────────────── #}
+        <section class="coach-section" aria-labelledby="coachGoalTitle">
+            <h2 class="coach-section-title" id="coachGoalTitle" data-i18n="coach.goal_title">For your goal</h2>
+            {% if not goal %}
+            <div class="coach-card coach-quiet">
+                <p data-i18n="coach.no_goal">You are not training for anything in particular, and that is fine. Everything below is read from your runs alone.</p>
+                <a href="/#plan-form" data-i18n="coach.set_goal">Got a race in mind? Build a plan for it</a>
+            </div>
+            {% elif not read.goal_findings %}
+            <div class="coach-card coach-quiet">
+                <p data-i18n="coach.goal_too_early">Finish the first week of your plan and this fills in: what it asked for, and what you ran.</p>
+                <a href="{{ goal.url }}" data-i18n="coach.open_plan">Open your plan</a>
+            </div>
+            {% else %}
+            {% if not goal.weeks_judged %}
+            <p class="coach-section-note" data-i18n="coach.goal_too_early">Finish the first week of your plan and this fills in: what it asked for, and what you ran.</p>
+            {% else %}
+            <p class="coach-section-note">
+                <span data-i18n="coach.goal_window">What your plan asked for against what you ran, over its last</span>
+                {{ goal.weeks_judged }}
+                <span data-i18n="coach.goal_window_weeks">completed week(s). Every run counts, whichever day you did it.</span>
+            </p>
+            {% endif %}
+            <ul class="coach-card coach-findings">
+                {% for f in read.goal_findings %}{{ finding_row(f) }}{% endfor %}
+            </ul>
+            <a class="coach-more" href="{{ goal.url }}" data-i18n="coach.goal_more">Race readiness and predicted times are on your plan</a>
+            {% endif %}
+        </section>
+
+        {# ── Question two: what does the running itself say? ─────────────── #}
+        {% if read.state != 'no_runs' %}
+        <section class="coach-section" aria-labelledby="coachRecentTitle">
+            <h2 class="coach-section-title" id="coachRecentTitle" data-i18n="coach.recent_title">From your last four weeks</h2>
+
+            <div class="coach-card coach-weeks">
+                <ol class="coach-bars" aria-label="Distance per week">
+                    {% for week in page.weeks %}
+                    <li class="coach-bar{% if week.in_progress %} is-current{% endif %}">
+                        <span class="coach-bar-km">{{ week.km | round | int if week.km else '' }}</span>
+                        <span class="coach-bar-fill" style="--pct: {{ week.height_pct }}"></span>
+                        <span class="coach-bar-label">{{ week.label }}</span>
+                    </li>
+                    {% endfor %}
+                </ol>
+                <p class="coach-weeks-note" data-i18n="coach.weeks_note">Kilometres a week. The last bar is this week so far.</p>
+            </div>
+
+            {% if read.recent_findings %}
+            <ul class="coach-card coach-findings">
+                {% for f in read.recent_findings %}{{ finding_row(f) }}{% endfor %}
+            </ul>
+            {% endif %}
+        </section>
+        {% endif %}
+
+        {% if page.records %}
+        <details class="coach-records">
+            <summary data-i18n="coach.records">Your best times</summary>
+            <table class="coach-records-table">
+                <tbody>
+                    {% for record in page.records %}
+                    <tr>
+                        <th scope="row">{{ record.distance }}</th>
+                        <td class="coach-records-time">{{ record.time }}</td>
+                        <td>{{ record.pace }} /km</td>
+                        <td class="coach-records-date">{{ record.date }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </details>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

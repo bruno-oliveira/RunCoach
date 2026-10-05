@@ -9,10 +9,8 @@ __all__ = [
     "ReadinessService",
     "PersonalRecordsService",
     "TrainingLoadService",
-    "AdherenceService",
     "HRZoneService",
     "FeedbackService",
-    "InsightsService",
 ]
 
 # Public name → (submodule, attribute). Imports stay lazy so importing this
@@ -24,10 +22,8 @@ _LAZY_EXPORTS = {
     "ReadinessService": ("readiness_service", "ReadinessService"),
     "PersonalRecordsService": ("personal_records_service", "PersonalRecordsService"),
     "TrainingLoadService": ("training_load_service", "TrainingLoadService"),
-    "AdherenceService": ("adherence_service", "AdherenceService"),
     "HRZoneService": ("hr_zone_service", "HRZoneService"),
     "FeedbackService": ("feedback_service", "FeedbackService"),
-    "InsightsService": ("insights_service", "InsightsService"),
 }
 
 

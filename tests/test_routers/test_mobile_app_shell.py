@@ -108,13 +108,13 @@ class TestAppShellMarkup:
         # No account-only surfaces, and nothing to expand into.
         assert 'data-i18n="tab.more"' not in bar
         assert 'href="/my-plans"' not in bar
-        assert 'href="/analytics"' not in bar
+        assert 'href="/coach"' not in bar
 
     def test_signed_in_tab_bar_carries_the_daily_surfaces(self, signed_in_user):
         bar = _render_tab_bar(user=signed_in_user, path="/")
 
         assert 'href="/my-plans"' in bar
-        assert 'href="/analytics"' in bar
+        assert 'href="/coach"' in bar
         assert 'href="/recipes"' in bar
         assert 'data-i18n="tab.more"' in bar
         # Signed in, so there is nothing to sign into.

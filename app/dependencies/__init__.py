@@ -28,7 +28,6 @@ from app.dependencies.database import (
 from app.dependencies.services import (
     get_adaptation_service,
     get_auth_service,
-    get_coach_narrator,
     get_favorites_service,
     get_intervals_service,
     get_nutrition_engine,
@@ -47,7 +46,6 @@ __all__ = [
     "engine",
     "get_adaptation_service",
     "get_auth_service",
-    "get_coach_narrator",
     "get_admin_user",
     "get_current_user",
     "get_favorites_service",

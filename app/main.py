@@ -27,9 +27,9 @@ from app.web.middleware import (
 )
 from app.web.routers import (
     admin_router,
-    analytics_page_router,
     analytics_router,
     auth_router,
+    coach_page_router,
     intervals_router,
     notifications_router,
     nutrition_router,
@@ -58,7 +58,7 @@ _ROUTERS = (
     readiness_router,
     performance_page_router,
     analytics_router,
-    analytics_page_router,
+    coach_page_router,
     intervals_router,
     admin_router,
     notifications_router,

@@ -15,13 +15,13 @@ from sqlalchemy import create_engine, event
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 
-from app.application.coach_summary_service import _direction
 from app.contexts.plan.adaptation import backtest as bt
 from app.contexts.plan.adaptation.tuning import (
     OVERREACH_OVERRIDE_CLAMP,
     PROGRESS_MULTIPLIER,
     STANDARD_MIN,
 )
+from app.core.training.adaptation.thresholds import HOLD_DEADBAND
 from app.models import Base
 
 _ARCH = {a.name: a for a in bt.ARCHETYPES}
@@ -80,8 +80,8 @@ def test_strong_adherent_earns_a_small_increase(db):
     assert rep.multipliers
     assert all(m == PROGRESS_MULTIPLIER for m in rep.multipliers)
     assert all(o.completion_rate == pytest.approx(1.0) for o in rep.evaluated)
-    # Every surface that labels a multiplier reads the step as an increase.
-    assert _direction(PROGRESS_MULTIPLIER) == "increase"
+    # The step clears the engine's hold dead-band, so it reads as an increase.
+    assert PROGRESS_MULTIPLIER > 1.0 + HOLD_DEADBAND
 
 
 @pytest.mark.parametrize(

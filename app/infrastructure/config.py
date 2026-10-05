@@ -71,11 +71,6 @@ class Settings(BaseSettings):
     # deployment has no admin rather than someone else's.
     admin_email: str = ""
 
-    # Coach AI — the LLM-voiced "Coach's Note". When the API key is unset the
-    # feature degrades to a deterministic, rules-based note (no network).
-    anthropic_api_key: str = ""
-    coach_ai_model: str = "claude-haiku-4-5"
-
     # Security
     encryption_key: str = ""
     # Previous ENCRYPTION_KEY used during a rotation window. Encryption is
@@ -188,11 +183,6 @@ class Settings(BaseSettings):
     def is_enabled(self, flag: str) -> bool:
         """Return True if the named feature flag is enabled."""
         return self.feature_flags.get(flag, False)
-
-    @property
-    def is_coach_ai_enabled(self) -> bool:
-        """True when an Anthropic API key is configured for the Coach's Note."""
-        return bool(self.anthropic_api_key.strip())
 
     @property
     def is_google_client_id_configured(self) -> bool:

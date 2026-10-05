@@ -304,7 +304,7 @@ def web_manifest() -> JSONResponse:
             "shortcuts": [
                 {"name": "Today", "url": "/today"},
                 {"name": "My plans", "url": "/my-plans"},
-                {"name": "Coach", "url": "/analytics"},
+                {"name": "Coach", "url": "/coach"},
                 {"name": "Recipes", "url": "/recipes"},
             ],
         },

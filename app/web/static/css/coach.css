@@ -1,0 +1,329 @@
+
+/* Coach — the read of a runner's training (/coach). One column, no controls. */
+
+.coach-page {
+    padding: var(--space-10) 0 var(--space-16);
+}
+
+.coach-page .container {
+    max-width: 760px;
+}
+
+.coach-header {
+    margin-bottom: var(--space-6);
+}
+
+.coach-title {
+    font-family: var(--font-display);
+    font-size: var(--text-3xl);
+    font-weight: var(--weight-bold);
+    margin-bottom: var(--space-2);
+}
+
+.coach-subtitle {
+    color: var(--color-text-secondary);
+    font-size: var(--text-base);
+}
+
+.coach-card {
+    background: var(--color-bg-elevated);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-xl);
+    box-shadow: var(--shadow-sm);
+    padding: var(--space-6);
+}
+
+.coach-eyebrow {
+    margin: 0;
+    font-size: var(--text-xs);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--color-text-muted);
+    font-weight: var(--weight-semibold);
+}
+
+/* ── The read ─────────────────────────────────────────────────────────── */
+
+.coach-read {
+    --coach-tone: var(--color-primary);
+    border-left: 4px solid var(--coach-tone);
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--space-3);
+}
+
+.coach-read--watch {
+    --coach-tone: var(--color-warning);
+}
+
+.coach-read--change {
+    --coach-tone: var(--color-error);
+}
+
+.coach-headline {
+    margin: 0;
+    font-family: var(--font-display);
+    font-size: var(--text-2xl);
+    font-weight: var(--weight-semibold);
+    line-height: var(--leading-snug);
+}
+
+.coach-read-note {
+    margin: 0;
+    color: var(--color-text-secondary);
+}
+
+.coach-focus {
+    align-self: stretch;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--space-1);
+    background: var(--color-bg-sunken);
+    border-radius: var(--radius-lg);
+    padding: var(--space-4);
+}
+
+.coach-focus-what {
+    margin: 0;
+    font-family: var(--font-display);
+    font-size: var(--text-lg);
+    font-weight: var(--weight-semibold);
+}
+
+.coach-focus-do {
+    margin: 0 0 var(--space-2);
+    color: var(--color-text-secondary);
+}
+
+/* ── Sections ─────────────────────────────────────────────────────────── */
+
+.coach-section {
+    margin-top: var(--space-8);
+}
+
+.coach-section-title {
+    font-family: var(--font-display);
+    font-size: var(--text-xl);
+    font-weight: var(--weight-semibold);
+    margin-bottom: var(--space-2);
+}
+
+.coach-section-note {
+    margin: 0 0 var(--space-3);
+    font-size: var(--text-sm);
+    color: var(--color-text-secondary);
+}
+
+.coach-quiet {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+    color: var(--color-text-secondary);
+}
+
+.coach-quiet p {
+    margin: 0;
+}
+
+.coach-quiet a,
+.coach-more {
+    font-size: var(--text-sm);
+    font-weight: var(--weight-medium);
+    color: var(--color-accent-strong);
+}
+
+.coach-more {
+    display: inline-block;
+    margin-top: var(--space-3);
+}
+
+/* ── Findings ─────────────────────────────────────────────────────────── */
+
+.coach-findings {
+    list-style: none;
+    margin: 0;
+    padding: 0 var(--space-6);
+}
+
+.coach-finding {
+    --coach-tone: var(--color-success);
+    display: flex;
+    gap: var(--space-3);
+    padding: var(--space-4) 0;
+}
+
+.coach-finding + .coach-finding {
+    border-top: 1px solid var(--color-border-subtle);
+}
+
+.coach-finding--watch {
+    --coach-tone: var(--color-warning);
+}
+
+.coach-finding--change {
+    --coach-tone: var(--color-error);
+}
+
+.coach-finding-mark {
+    flex: none;
+    width: 8px;
+    height: 8px;
+    margin-top: 0.45em;
+    border-radius: 50%;
+    background: var(--coach-tone);
+}
+
+.coach-finding-body {
+    min-width: 0;
+}
+
+.coach-finding-what {
+    margin: 0;
+    font-weight: var(--weight-semibold);
+}
+
+.coach-finding-figure {
+    margin: var(--space-1) 0 0;
+    font-family: var(--font-mono);
+    font-size: var(--text-sm);
+    color: var(--color-text);
+}
+
+.coach-finding-figure span {
+    font-family: var(--font-body);
+    color: var(--color-text-secondary);
+}
+
+.coach-finding-do {
+    margin: var(--space-1) 0 0;
+    font-size: var(--text-sm);
+    color: var(--color-text-secondary);
+}
+
+/* ── Weekly distance strip ────────────────────────────────────────────── */
+
+.coach-weeks {
+    margin-bottom: var(--space-3);
+}
+
+.coach-bars {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    grid-template-columns: repeat(8, 1fr);
+    gap: var(--space-2);
+    height: 132px;
+}
+
+.coach-bar {
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    align-items: center;
+    gap: var(--space-1);
+    min-width: 0;
+}
+
+.coach-bar-km {
+    font-family: var(--font-mono);
+    font-size: var(--text-xs);
+    color: var(--color-text-secondary);
+    min-height: 1em;
+}
+
+.coach-bar-fill {
+    flex: none;
+    width: 100%;
+    max-width: 44px;
+    /* The tallest week is 88px; the labels above and below take the rest. */
+    height: calc(var(--pct, 0) * 0.88px);
+    min-height: 2px;
+    border-radius: var(--radius-sm) var(--radius-sm) 0 0;
+    background: var(--color-primary);
+}
+
+/* The week in progress is unfinished, so it is drawn as one. */
+.coach-bar.is-current .coach-bar-fill {
+    background: var(--color-primary-subtle);
+    border: 1px dashed var(--color-primary);
+    border-bottom: 0;
+}
+
+.coach-bar-label {
+    font-size: var(--text-xs);
+    color: var(--color-text-muted);
+    white-space: nowrap;
+}
+
+.coach-weeks-note {
+    margin: var(--space-3) 0 0;
+    font-size: var(--text-xs);
+    color: var(--color-text-muted);
+}
+
+/* ── Records ──────────────────────────────────────────────────────────── */
+
+.coach-records {
+    margin-top: var(--space-8);
+    border-top: 1px solid var(--color-border);
+    padding-top: var(--space-4);
+}
+
+.coach-records summary {
+    cursor: pointer;
+    font-weight: var(--weight-medium);
+    color: var(--color-text-secondary);
+}
+
+.coach-records-table {
+    width: 100%;
+    margin-top: var(--space-3);
+    border-collapse: collapse;
+    font-size: var(--text-sm);
+}
+
+.coach-records-table th,
+.coach-records-table td {
+    padding: var(--space-2) 0;
+    text-align: left;
+    border-top: 1px solid var(--color-border-subtle);
+}
+
+.coach-records-table th {
+    font-weight: var(--weight-medium);
+}
+
+.coach-records-time {
+    font-family: var(--font-mono);
+}
+
+.coach-records-date {
+    color: var(--color-text-muted);
+    text-align: right;
+}
+
+@media (max-width: 600px) {
+    .coach-card {
+        padding: var(--space-4);
+    }
+
+    .coach-findings {
+        padding: 0 var(--space-4);
+    }
+
+    .coach-headline {
+        font-size: var(--text-xl);
+    }
+
+    .coach-bars {
+        gap: var(--space-1);
+    }
+
+    /* Eight date labels do not fit a phone; every other one is enough. */
+    .coach-bar:nth-child(odd) .coach-bar-label {
+        visibility: hidden;
+    }
+}

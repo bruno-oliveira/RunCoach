@@ -80,7 +80,7 @@ def after_sync_message(
     else:
         body = "It's on your plan. Tap to see how it fits the week."
 
-    url = f"/plan/{plan_id}#today-card" if plan_id else "/analytics"
+    url = f"/plan/{plan_id}#today-card" if plan_id else "/coach"
     tag = f"plan-{plan_id}" if plan_id else "run"
     return PushMessage(title=title, body=_clip(body), url=url, tag=tag)
 

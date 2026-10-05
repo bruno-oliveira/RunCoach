@@ -387,7 +387,7 @@
             '</div>' +
             '<div class="toast-actions">' +
                 '<button class="toast-btn toast-btn-secondary" onclick="dismissRaceToast()">Dismiss</button>' +
-                '<a href="/analytics" class="toast-btn toast-btn-primary">View</a>' +
+                '<a href="/coach" class="toast-btn toast-btn-primary">View</a>' +
             '</div>' +
             '<button class="toast-close" onclick="dismissRaceToast()">&times;</button>';
 
@@ -460,7 +460,7 @@
             '</div>' +
             '<div class="toast-actions">' +
                 '<button class="toast-btn toast-btn-secondary" onclick="dismissRaceToast()">Dismiss</button>' +
-                '<a href="/analytics" class="toast-btn toast-btn-primary">View Analytics</a>' +
+                '<a href="/coach" class="toast-btn toast-btn-primary">Open Coach</a>' +
             '</div>' +
             '<button class="toast-close" onclick="dismissRaceToast()">&times;</button>';
 

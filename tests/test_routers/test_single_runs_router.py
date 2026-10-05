@@ -192,8 +192,8 @@ def test_delete_removes_it(api, owner, test_db):
     assert test_db.query(SingleRun).count() == 0
 
 
-def test_completed_single_run_shows_up_in_analytics(api, owner, test_db):
-    """The point of the feature: a plan-less run still reaches the dashboards."""
+def test_completed_single_run_tags_the_run_that_did_it(api, owner, test_db):
+    """The point of the feature: a plan-less run is still read as what it was."""
     _as(owner)
     _create(api, run_type="tempo", distance_km=8)
     today = local_today()
@@ -210,13 +210,11 @@ def test_completed_single_run_shows_up_in_analytics(api, owner, test_db):
     claim_completed_single_runs(owner.id, test_db, today)
     test_db.commit()
 
-    response = api.get("/api/analytics/runs")
+    run = test_db.query(RunLog).one()
 
-    assert response.status_code == 200
-    runs = response.json()["runs"]
-    assert len(runs) == 1
-    # Tagged from the single run, so type-bucketed charts file it correctly.
-    assert runs[0]["workout_type"] == "tempo"
+    assert run.single_run_id is not None
+    # Tagged from the single run, so the easy/hard split files it correctly.
+    assert run.effective_workout_type == "tempo"
 
 
 def test_page_renders_for_a_runner_and_redirects_a_visitor(api, owner):

@@ -40,7 +40,7 @@ def test_a_plain_run_carries_its_feedback():
     )
     assert msg.title == "10 km logged"
     assert msg.body == "Right in zone 2."
-    assert msg.url == "/analytics"
+    assert msg.url == "/coach"
 
 
 def test_long_bodies_are_clipped_on_a_word_boundary():

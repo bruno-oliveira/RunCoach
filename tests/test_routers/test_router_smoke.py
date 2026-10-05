@@ -1,7 +1,7 @@
 """Smoke tests: one authenticated success + one 401 per router.
 
 Covers routers that previously had no test coverage:
-runs, analytics, performance, adaptive, recipes.
+runs, performance, adaptive, recipes.
 """
 
 from datetime import timedelta
@@ -13,7 +13,6 @@ from sqlalchemy.orm import Session
 from app.core.time_utils import local_today
 from app.dependencies import get_current_user, get_db, get_optional_user
 from app.main import app
-from app.models.run_log import RunLog
 from app.models.training_plan import TrainingPlan
 from app.models.user import User
 
@@ -105,63 +104,6 @@ class TestRunsRouter:
                     "duration_minutes": 30.0,
                 },
             )
-        assert resp.status_code == 401
-
-
-# ---------------------------------------------------------------------------
-# Analytics router  (/api/analytics)
-# ---------------------------------------------------------------------------
-
-
-@pytest.mark.usefixtures("_override_db")
-class TestAnalyticsRouter:
-    def test_get_analytics_runs_authenticated(self, smoke_user):
-        _set_user(smoke_user)
-        with TestClient(app) as c:
-            resp = c.get("/api/analytics/runs")
-        assert resp.status_code == 200
-
-    def test_analytics_runs_exposes_effective_type_and_inferred_flag(
-        self, smoke_user, test_db
-    ):
-        # Imported run that arrived untagged (defaulted "easy") but inferred tempo.
-        test_db.add(
-            RunLog(
-                user_id=smoke_user.id,
-                source="intervals",
-                distance_km=8.0,
-                duration_minutes=36.0,
-                avg_pace_min_km=4.5,
-                workout_type="easy",
-                inferred_workout_type="tempo",
-                inferred_type_confidence=0.8,
-            )
-        )
-        # Manually tagged run: the explicit choice stands, not flagged inferred.
-        test_db.add(
-            RunLog(
-                user_id=smoke_user.id,
-                distance_km=10.0,
-                duration_minutes=55.0,
-                avg_pace_min_km=5.5,
-                workout_type="long",
-            )
-        )
-        test_db.commit()
-
-        _set_user(smoke_user)
-        with TestClient(app) as c:
-            resp = c.get("/api/analytics/runs")
-
-        assert resp.status_code == 200
-        by_type = {r["workout_type"]: r for r in resp.json()["runs"]}
-        assert by_type["tempo"]["inferred"] is True  # corrected from the "easy" default
-        assert by_type["long"]["inferred"] is False  # explicit manual tag
-
-    def test_get_analytics_runs_unauthenticated(self):
-        _clear_user()
-        with TestClient(app) as c:
-            resp = c.get("/api/analytics/runs")
         assert resp.status_code == 401
 
 

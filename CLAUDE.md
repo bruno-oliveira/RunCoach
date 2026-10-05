@@ -82,12 +82,10 @@ so it exercises the exact versions that ship. If you add a dependency, add it to
 **both** `requirements.txt` (pinned with `==`) and `pyproject.toml` —
 `tests/test_architecture/test_dependency_pins.py` fails the build otherwise.
 
-That invariant earns its keep: `anthropic>=0.40.0` once resolved to a 1.x release
-that had removed `Messages.create`'s `temperature` parameter, so the Coach's Note
-raised inside a broad `except` and silently fell back to its deterministic text.
-`tests/test_services/test_anthropic_sdk_contract.py` now checks the adapter's
-call against the *real* SDK (skipped where it isn't installed; CI installs it),
-so an incompatible upgrade fails CI rather than production.
+That invariant earns its keep: a floating `anthropic>=0.40.0` once resolved to a
+1.x release that had removed a parameter the app passed, so the feature using it
+(the Coach's Note, since removed together with the SDK) raised inside a broad
+`except` and silently fell back forever — green CI, dead feature.
 
 Manual deploy: `fly deploy` (region `sjc`). Docker build: `docker build -t runcoach .`
 
@@ -101,7 +99,7 @@ implementing protocols declared in `domain`.
 app/
 ├── main.py              # create_app() factory: logging, middleware, routers, /health
 ├── dependencies/        # DI package: database / services / auth / cron
-├── domain/              # Pure: repository + CoachNarrator + Mailer Protocols, value objects
+├── domain/              # Pure: repository + Mailer Protocols, value objects
 ├── core/                # Pure calculation libraries — no I/O, no ORM, no SQLAlchemy
 │   ├── training/        # Chapter-structured training science (read top→bottom):
 │   │   ├── physiology/      # The runner's engine: VDOT, zones, HR, race predictions
@@ -116,11 +114,11 @@ app/
 │   ├── plan/            # Generation, adaptation, view, lifecycle, adjustments
 │   │   ├── generators/  # road / beginner / performance plan generators
 │   │   └── adaptation/  # signals, evaluators, adjusters, backtest harness
-│   ├── runner/          # profile/ fitness/ enrichment/ wellness/ (+ queries.py)
+│   ├── runner/          # fitness/ enrichment/ wellness/ single_runs/ (+ queries.py)
 │   ├── nutrition/
 │   └── auth/
 ├── application/         # Cross-context orchestration (the only legal path between contexts)
-├── infrastructure/      # config, database/, export/ (ReportLab), integrations/ (Intervals, FIT, GPX, Anthropic)
+├── infrastructure/      # config, database/, export/ (ReportLab), integrations/ (Intervals, FIT, GPX)
 ├── web/                 # routers/, middleware.py, templates/, static/
 ├── models/              # SQLAlchemy ORM (centralized so relationships resolve)
 ├── schemas/             # Pydantic request/response models
@@ -262,19 +260,33 @@ Routers should carry no raw `db.query` — there is one remaining exception in
   never per step, because the Intervals import stores one average per run and
   `run_logs.splits` is empty for those rows.
 
+- **Coach page** (`/coach`; `/analytics` redirects) — answers two questions and
+  nothing else: *is what I am doing enough for my goal?* and *what does my
+  recent running say I should change?* It takes **no input** — no plan picker,
+  no period picker, no tabs: the goal is whichever plan is in progress, and
+  "recent" is a fixed window. `core/coaching/training_read.py` turns the facts
+  into **findings** (a stable key plus its figures, never prose) and picks the
+  **one change** the page leads with through a single ordered list,
+  `FOCUS_ORDER` — safety, then the goal, then refinements — which is where the
+  tension between the two questions is settled (a runner behind on distance who
+  has just jumped their volume is told to hold, not to catch up). A plan in
+  progress owns the hard sessions, the long run and its own deloads, so the
+  recent read stops suggesting any of them. `application/coach_read_service.py`
+  gathers the facts; **every run in the window counts toward the goal**,
+  matched to a planned day or not — do not reintroduce a "runs linked to this
+  plan" scope. A road goal with a time also gets a **goal-time** finding: the
+  calibrated prediction the plan's readiness tab shows, against the goal, judged
+  by how much of the gap the weeks left can close (about half a percent a week).
+  Trail and backyard goals get none — a flat-road prediction says nothing
+  honest about them. The page is server-rendered (`templates/coach.html`), words each
+  finding itself, and keeps every number outside the `data-i18n` element so a
+  translation cannot swallow it. No score, no chart library.
+
 - **Watch mirroring** — `application/watch_sync_service.py` keeps the
   Intervals.icu calendar a *mirror* of the plan, not a log of what was once
   exported. Decisions are pure (`core/training/watch_mirror.py`); the service is
   the I/O. Load-bearing detail: a changed day must be **deleted and re-created**,
   because Intervals only re-triggers the watch export on create, never on update.
-
-- **Coach's Note** — `application/coach_narrative_service.py` assembles a
-  deterministic fact pack, then asks an injected `CoachNarrator`
-  (`domain/coaching.py`; Anthropic implementation in
-  `infrastructure/integrations/anthropic_narrator.py`) to voice it. Hard numbers
-  are computed in Python and never taken from model prose. Falls back to a
-  deterministic note when no API key is configured — the feature degrades, it
-  does not fail.
 
 - **Live loop** — `application/intervals_webhook_service.py` receives
   Intervals.icu's activity webhooks and runs the *same* per-runner unit the

@@ -18,7 +18,7 @@
 {% set path = path or '/' %}
 {% set is_home    = path == '/' %}
 {% set is_plans   = path.startswith('/my-plans') or path.startswith('/plan/') %}
-{% set is_coach   = path.startswith('/analytics') %}
+{% set is_coach   = path.startswith('/coach') %}
 {% set is_recipes = path.startswith('/recipes') %}
 {% set is_tips    = path.startswith('/tips') %}
 
@@ -52,7 +52,7 @@
         </li>
         <li>
             <a class="tab-item {{ 'is-active' if is_coach else '' }}"
-               href="/analytics"
+               href="/coach"
                {% if is_coach %}aria-current="page"{% endif %}>
                 <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                      stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">

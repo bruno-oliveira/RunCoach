@@ -20,14 +20,6 @@ pydantic-settings==2.9.1
 # HTTP client
 httpx==0.28.1
 
-# LLM — Coach's Note (optional; feature degrades gracefully without a key).
-# PINNED, not floating: this SDK removed `temperature` from Messages.create in
-# 1.x, and the adapter passed it unconditionally — the TypeError was swallowed
-# and the feature silently fell back to the deterministic note. Keep the pin in
-# step with tests/test_services/test_anthropic_sdk_contract.py, which goes red on
-# drift.
-anthropic==1.9.0
-
 # Authentication
 PyJWT[crypto]==2.12.1
 

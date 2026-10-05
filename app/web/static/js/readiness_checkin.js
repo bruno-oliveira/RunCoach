@@ -252,7 +252,6 @@
                 if (!res.ok) throw new Error('save failed');
                 const checkin = await res.json();
                 this._renderLogged(checkin, true);
-                this._refreshCoachNote();
                 if (typeof this.onSaved === 'function') {
                     try { this.onSaved(checkin); } catch (e) { console.error('[checkin] onSaved', e); }
                 }
@@ -334,14 +333,6 @@
             }
         },
 
-        /* Force the Coach's Note to re-fetch so it reflects the new check-in. */
-        _refreshCoachNote() {
-            const AD = window.AnalyticsDashboard;
-            if (AD && typeof AD._loadCoachNote === 'function' && this.planId) {
-                AD.coachNoteLoadedPlanId = undefined;
-                AD._loadCoachNote(this.planId);
-            }
-        },
     };
 
     window.ReadinessCheckIn = RC;

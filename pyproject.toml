@@ -25,11 +25,6 @@ dependencies = [
     "gpxpy==1.6.2",
     "fit-tool==0.9.16",
     "fitdecode==0.11.0",
-    # Optional at runtime (the Coach's Note falls back to a deterministic note
-    # without a key), but declared here and pinned in requirements.txt — the
-    # adapter's call signature is version-sensitive. See
-    # tests/test_services/test_anthropic_sdk_contract.py.
-    "anthropic==1.9.0",
 ]
 
 [project.optional-dependencies]

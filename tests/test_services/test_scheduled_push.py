@@ -125,6 +125,11 @@ async def test_week_review_fires_at_the_runners_evening_once(test_db, setup):
 async def test_morning_brief_names_todays_session_once(test_db, setup):
     user, plan, _sunday = setup
     today = datetime.now(timezone.utc).date()
+    # The fixture's run falls on the Monday of the current week. On a Monday
+    # that is today, and a day already run gets no brief — so the test failed
+    # one day in seven. The brief does not need the run; drop it.
+    test_db.query(RunLog).delete()
+    test_db.commit()
     sender = FakeSender()
     service = ScheduledPushService(test_db, NoWellness(), PushNotifier(test_db, sender))
 
