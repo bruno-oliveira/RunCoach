@@ -101,6 +101,8 @@ class TestPlanGeneration:
         html = response.text.lower()
         assert "week" in html
         assert "error" in html or "insufficient" in html or "minimum" in html
+        # The alert's title is a translatable key, not hard-coded English.
+        assert 'class="alert-title" data-i18n="home.err_too_short"' in response.text
 
     def test_inadequate_base_mileage_error(self, client: TestClient):
         """Test error when base mileage is too low."""

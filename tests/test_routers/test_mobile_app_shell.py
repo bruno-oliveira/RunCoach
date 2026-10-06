@@ -100,6 +100,10 @@ class TestAppShellMarkup:
         assert 'class="tab-bar"' in html
         assert 'data-i18n="nav.today"' in html
 
+    def test_guest_home_drops_nav_links_but_public_pages_keep_them(self, client):
+        assert 'class="nav-links"' not in client.get("/").text
+        assert 'class="nav-links"' in client.get("/recipes").text
+
     def test_anonymous_tab_bar_offers_only_public_surfaces(self):
         bar = _render_tab_bar(path="/")
 

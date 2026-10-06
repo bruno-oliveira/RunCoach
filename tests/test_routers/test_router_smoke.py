@@ -268,14 +268,16 @@ class TestHomeHero:
             assert resp.status_code == 200
             assert "hero--status" not in resp.text
             # The form is rendered in place, exactly once, ahead of the sample
-            # week and of the page's own connect button (the nav keeps its link).
-            assert resp.text.count('id="plan-form"') == 1
-            page = resp.text[resp.text.index('class="hero hero--guest"') :]
+            # week and of the only connect button on the page.
+            page = resp.text
+            assert page.count('id="plan-form"') == 1
             form = page.index('id="plan-form"')
             sample = page.index('id="preview-title"')
             connect = page.index('id="home-connect"')
             assert form < sample < connect
             assert "connectWatch()" not in page[:connect]
+            # Nothing in the navbar competes with it: no section links here.
+            assert 'class="nav-links"' not in page
         finally:
             app.dependency_overrides.pop(get_optional_user, None)
 

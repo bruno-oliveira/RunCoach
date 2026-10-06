@@ -1,4 +1,6 @@
-{% macro render(user=None, show_logo=True, current_page='') %}
+{# `show_links` is off for a visitor on the landing page: that page has one job
+   (build a plan), and it carries its own connect button further down. #}
+{% macro render(user=None, show_logo=True, current_page='', show_links=True) %}
 <nav class="navbar" id="mainNav">
     <div class="nav-container">
         {% if show_logo %}
@@ -17,6 +19,7 @@
         </button>
 
         <div class="nav-menu" id="navMenu">
+            {% if show_links %}
             <ul class="nav-links">
                 <li><a href="/" class="nav-link {{ 'is-active' if current_page == 'home' else '' }}" data-i18n="nav.home">Home</a></li>
                 <li><a href="/recipes" class="nav-link {{ 'is-active' if current_page == 'recipes' else '' }}" data-i18n="nav.recipes">Recipes</a></li>
@@ -94,6 +97,7 @@
                 <li><a href="#" onclick="connectWatch(); return false;" class="nav-link nav-link-provider" data-i18n="nav.connect_watch">Connect your watch</a></li>
                 {% endif %}
             </ul>
+            {% endif %}
 
             <!-- Controls row: language toggle + theme toggle, always side-by-side -->
             <div class="nav-controls">

@@ -124,6 +124,12 @@ select,
     border-top-color: var(--color-border);
   }
 
+  /* The menu sheet (#navMenu) runs to the bottom of the screen, underneath
+     this bar, so its last rows — Sign Out among them — must scroll clear. */
+  .nav-menu {
+    padding-bottom: calc(var(--tab-bar-total) + var(--space-6));
+  }
+
   .tab-bar-list {
     display: flex;
     align-items: stretch;

@@ -114,7 +114,7 @@
     {% from "components/nav.html" import render as nav %}
     <!-- Navigation -->
     {% block navigation %}
-    {{ nav(user=user, current_page=current_page) }}
+    {{ nav(user=user, current_page=current_page, show_links=user or request.url.path != '/') }}
     {% endblock %}
 
     <!-- Bottom tab bar — the primary navigation on a phone (mobile-app.css) -->
