@@ -205,6 +205,11 @@ Routers should carry no raw `db.query` — there is one remaining exception in
   `day % 3`, so moving a quality session to another weekday changes the
   session itself (rep length, then the week's volume) — quality stays on
   Monday and Thursday for that reason.
+  **Paces need a VDOT, and it is never guessed.** `PlanRequest.pacing_vdot` is
+  a stated race, else the runner's logged runs (`_with_logged_fitness`), else
+  the goal time, else none — and then every step carries its zone and an
+  effort cue but no pace. Such a plan is not stuck that way: the recalibrator
+  seeds the weeks ahead (`_seed_paces`) on the first sync that yields a VDOT.
 
 - **Adaptation** — `contexts/plan/adaptation/__init__.py` is a thin
   `AdaptationService` facade preserving one public API over focused modules:
@@ -312,6 +317,23 @@ Routers should carry no raw `db.query` — there is one remaining exception in
   webhooks and double-fired crons silent. Web Push itself (RFC 8291 + VAPID)
   is hand-rolled in `infrastructure/notifications/webpush.py` on
   `cryptography`/PyJWT; its test pins the RFC's worked example byte for byte.
+
+- **Sign-in, sessions and the installed app** — the access token lives 15
+  minutes and the refresh cookie is scoped to `/api/auth`, so the server cannot
+  renew a session during a page load: `static/js/auth.js` does it
+  (`renewSession`, on a timer and on return to view), steered by a
+  `localStorage` hint because the refresh cookie is HttpOnly. `/api/auth/refresh`
+  counts as activity — otherwise the 24 h idle check in `_resolve_user` rejects
+  the token it just minted. An app installed to a home screen cannot use
+  Google's popup, so there `auth.js` switches to `ux_mode: 'redirect'`; Google
+  POSTs to `/api/auth/google/redirect`, which only checks the double-submit
+  token and renders a relay page that calls the ordinary `/api/auth/google`
+  same-origin (a cross-site POST carries no `SameSite=Lax` cookies, so signing
+  in there would lose the anonymous plan). **That URL must be listed under
+  "Authorized redirect URIs" on the Google OAuth client.** `sw.js` stamps any
+  page it serves from cache with `data-rc-snapshot`; `pwa.js` reads the stamp,
+  shows the banner, and reloads once `/health/live` answers — `navigator.onLine`
+  is not trusted. Saved pages are dropped on sign-in and sign-out.
 
 - **Watch wellness** — HRV / resting HR / sleep come from Intervals.icu
   (`WELLNESS:READ`; older grants are pinned to `LEGACY_SCOPES` on their first
