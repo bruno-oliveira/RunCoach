@@ -14,6 +14,7 @@
 <link rel="stylesheet" href="{{ static_url('css/plan/week-review.css') }}">
 <link rel="stylesheet" href="{{ static_url('css/plan/intent-menu.css') }}">
 <link rel="stylesheet" href="{{ static_url('css/plan/today-card.css') }}">
+<link rel="stylesheet" href="{{ static_url('css/home-product.css') }}">
 <link rel="stylesheet" href="{{ static_url('css/readiness-checkin.css') }}">
 <link rel="stylesheet" href="{{ static_url('css/plan/adapt-toast.css') }}">
 <link rel="stylesheet" href="{{ static_url('css/plan/fitness.css') }}">
@@ -284,6 +285,11 @@
         {% else %}
         {% include 'components/watch_mirror.html' %}
         {% endif %}
+    {% endif %}
+
+    {% if user and training_plan.last_change_plan and training_plan.last_change_plan.get('did_change') and not plan_completed %}
+    {% set current_plan = training_plan %}
+    {% include 'components/change_receipt.html' %}
     {% endif %}
 
     {# ── Watch setup gate ────────────────────────────────────────────────
@@ -1023,6 +1029,15 @@
 
 {% block scripts %}
 <script>
+    if (location.hash === '#latest-changes-panel') {
+        window.addEventListener('DOMContentLoaded', function () {
+            var panel = document.getElementById('latest-changes-panel');
+            if (!panel) return;
+            var details = panel.closest('details');
+            if (details) details.open = true;
+            panel.scrollIntoView();
+        });
+    }
     // Bootstrap dynamic data for plan.js
     window.APP_CTX = {
         plan_id: {{ plan_id | tojson }},

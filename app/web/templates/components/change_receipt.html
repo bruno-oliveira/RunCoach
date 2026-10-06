@@ -1,0 +1,32 @@
+{# The latest applied change, using the engine's own before/after snapshot. #}
+{% set change = current_plan.last_change_plan if current_plan else None %}
+{% if change and change.get('did_change') %}
+{% set ns = namespace(workout=None) %}
+{% for week in change.get('weeks', []) %}
+    {% for workout in week.get('workouts', []) %}
+        {% if workout.get('status') == 'changed' and not ns.workout %}
+            {% set ns.workout = workout %}
+        {% endif %}
+    {% endfor %}
+{% endfor %}
+<section class="change-receipt" aria-labelledby="change-receipt-title">
+    <div class="change-receipt-top">
+        <div>
+            <p class="change-receipt-eyebrow" data-i18n="change.eyebrow">Your plan noticed</p>
+            <h2 id="change-receipt-title" data-i18n="change.title">Here is what changed</h2>
+        </div>
+        <a href="/plan/{{ current_plan.id }}#latest-changes-panel" data-i18n="change.details">See all changes</a>
+    </div>
+    {% if change.get('reason') %}<p class="change-receipt-reason">{{ change.reason }}</p>{% endif %}
+    {% if ns.workout %}
+    <p class="change-receipt-example">
+        <strong>{{ ns.workout.day }} · {{ ns.workout.type | replace('_', ' ') | title }}</strong>
+        <span>{{ '%g'|format(ns.workout.old_distance_km) }} km <span aria-hidden="true">→</span> {{ '%g'|format(ns.workout.new_distance_km) }} km</span>
+    </p>
+    {% elif change.get('summary', {}).get('vdot_change') %}
+    <p class="change-receipt-reason" data-i18n="change.paces">Your pace targets were updated from your recent running.</p>
+    {% endif %}
+    {% if ns.workout and ns.workout.reason %}<p class="change-receipt-note">{{ ns.workout.reason }}</p>{% endif %}
+    <p class="change-receipt-next" data-i18n="change.next">Your next sessions use the updated plan. Check calendar status before relying on your watch.</p>
+</section>
+{% endif %}

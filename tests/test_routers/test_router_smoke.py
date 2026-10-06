@@ -260,7 +260,7 @@ class TestTimeGoalPlan:
 @pytest.mark.usefixtures("_override_db")
 class TestHomeHero:
     def test_anonymous_home_shows_marketing_hero(self):
-        """Anonymous visitors see the connect card, not a training-status hero."""
+        """Anonymous visitors can build before connecting and see a real sample week."""
         app.dependency_overrides[get_optional_user] = lambda: None
         try:
             with TestClient(app) as c:
@@ -269,8 +269,41 @@ class TestHomeHero:
             assert "hero--status" not in resp.text
             # Single action surface: the connect card is present.
             assert "connect-card" in resp.text
+            card = resp.text.split('id="home-connect-card"', 1)[1].split(
+                "<!-- Prerequisites collapsed", 1
+            )[0]
+            assert card.index("scrollToBuild()") < card.index("connectWatch()")
+            assert 'id="preview-title"' in resp.text
+            assert 'id="plan-form"' in resp.text
         finally:
             app.dependency_overrides.pop(get_optional_user, None)
+
+    def test_public_sample_week_still_matches_generator(self):
+        """The week labelled as real on the landing page must track the engine."""
+        from app.contexts.plan.generators.plan_generator import TrainingPlanGenerator
+
+        week = TrainingPlanGenerator().generate_plan(25, 10, 12, 4)[3]
+        assert [(day["type"], day["distance"]) for day in week["daily_workouts"]] == [
+            ("easy", 6.7),
+            ("rest", 0),
+            ("easy", 6.7),
+            ("easy", 6.7),
+            ("rest", 0),
+            ("long", 7.5),
+            ("rest", 0),
+        ]
+
+    def test_public_adjustment_example_still_matches_engine(self, test_db):
+        """Pin the before/after values used as product proof on the landing page."""
+        from tests.test_services.test_adaptation_behaviour import _applied_scenario
+
+        result = _applied_scenario(test_db, 0.9)
+        before, after = result["before"][6], result["after"][6]
+        assert (before["total_km"], after["total_km"]) == (43.6, 39.8)
+        assert (
+            before["daily_workouts"][0]["distance"],
+            after["daily_workouts"][0]["distance"],
+        ) == (5.4, 4.0)
 
     def test_signed_in_with_plan_shows_status_hero(self, smoke_user, test_db):
         """A runner mid-plan gets the status hero + a link to their plan."""
@@ -308,6 +341,56 @@ class TestHomeHero:
             assert "hero--status" in resp.text
             assert "back_noplan_title" in resp.text
             assert "status-pill" not in resp.text
+        finally:
+            app.dependency_overrides.pop(get_optional_user, None)
+
+    def test_signed_in_home_shows_today_week_and_applied_change(
+        self, smoke_user, test_db
+    ):
+        from app.contexts.plan.generators.plan_generator import TrainingPlanGenerator
+
+        plan = TrainingPlan(
+            id="home-daily-plan",
+            user_id=smoke_user.id,
+            current_weekly_km=25,
+            target_distance="10",
+            weeks_duration=12,
+            start_date=local_today() - timedelta(weeks=3),
+            plan_data=TrainingPlanGenerator().generate_plan(25, 10, 12, 4),
+            last_change_plan={
+                "did_change": True,
+                "computed_at": local_today().isoformat(),
+                "reason": "Recent training called for an easier week.",
+                "weeks": [
+                    {
+                        "week": 4,
+                        "workouts": [
+                            {
+                                "day": "Mon",
+                                "type": "easy",
+                                "status": "changed",
+                                "old_distance_km": 8.0,
+                                "new_distance_km": 6.7,
+                                "reason": "Keep the build gradual.",
+                            }
+                        ],
+                    }
+                ],
+            },
+        )
+        test_db.add(plan)
+        test_db.commit()
+        app.dependency_overrides[get_optional_user] = lambda: smoke_user
+        try:
+            with TestClient(app) as c:
+                resp = c.get("/")
+            assert resp.status_code == 200
+            assert "home-today" in resp.text
+            assert 'id="readinessCheckinCard"' in resp.text
+            assert "Runs not connected" in resp.text
+            assert "home-week-preview" in resp.text
+            assert "8 km" in resp.text and "6.7 km" in resp.text
+            assert "Recent training called for an easier week." in resp.text
         finally:
             app.dependency_overrides.pop(get_optional_user, None)
 

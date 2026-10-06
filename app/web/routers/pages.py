@@ -1,6 +1,6 @@
 """Static page endpoints (home, privacy, post-connect setup)."""
 
-from datetime import timedelta
+from datetime import date, timedelta
 from pathlib import Path
 from typing import Optional
 
@@ -21,6 +21,7 @@ from app.application.single_run_service import (
     recent_views,
     suggest_for_today,
 )
+from app.application.week_review_service import due_review
 from app.contexts.nutrition.nutrition_content import (
     TRAIL_FUEL_PHASES,
     generate_trail_fuel_ideas,
@@ -31,6 +32,7 @@ from app.contexts.plan.plan_helpers import (
     current_active_plan,
     in_progress_plan,
     plan_statuses,
+    today_card_for_plan,
 )
 from app.contexts.plan.recovery_block_service import RecoveryOffer, recovery_offer
 from app.contexts.plan.repositories import SQLAlchemyPlanRepository
@@ -47,6 +49,7 @@ from app.dependencies import get_current_user, get_db, get_optional_user
 from app.infrastructure.config import settings
 from app.models import User
 from app.template_helpers import create_templates
+from app.utils import to_date
 
 router = APIRouter(tags=["pages"])
 templates = create_templates()
@@ -64,6 +67,11 @@ def home(
     plan_count = 0
     statuses: dict[str, PlanStatus] = {}
     offer: Optional[RecoveryOffer] = None
+    today_card = None
+    week_review = None
+    current_week = None
+    home_week_days = []
+    recent_change = False
     if current_user is not None:
         today = local_today()
         plans = SQLAlchemyPlanRepository(db).list_by_user_recent_first(current_user.id)
@@ -74,6 +82,43 @@ def home(
         # block waiting, which is a better next step than "View this week".
         if current_plan is not None and statuses[current_plan.id].completed:
             offer = recovery_offer(current_plan, plans, today)
+        elif current_plan is not None and current_plan.plan_data:
+            today_card = today_card_for_plan(db, current_user, current_plan)
+            if today_card and today_card.week_number:
+                current_week = next(
+                    (
+                        week
+                        for week in current_plan.plan_data
+                        if week.get("week") == today_card.week_number
+                    ),
+                    None,
+                )
+                start = to_date(current_plan.start_date)
+                if start is not None and current_week is not None:
+                    week_start = start + timedelta(weeks=today_card.week_number - 1)
+                    home_week_days = [
+                        {
+                            "label": (
+                                week_start + timedelta(days=workout["day"] - 1)
+                            ).strftime("%a"),
+                            "workout": workout,
+                        }
+                        for workout in sorted(
+                            current_week.get("daily_workouts", []),
+                            key=lambda item: item["day"],
+                        )
+                    ]
+            week_review = due_review(current_plan, current_user.id, db, today)
+        if current_plan is not None and current_plan.last_change_plan:
+            changed_at = current_plan.last_change_plan.get("computed_at")
+            try:
+                recent_change = bool(
+                    changed_at
+                    and date.fromisoformat(str(changed_at)[:10])
+                    >= today - timedelta(days=14)
+                )
+            except ValueError:
+                recent_change = False
 
     return templates.TemplateResponse(
         request,
@@ -86,6 +131,11 @@ def home(
             "plan_statuses": statuses,
             "plan_count": plan_count,
             "recovery_offer": offer,
+            "today_card": today_card,
+            "current_week": current_week,
+            "home_week_days": home_week_days,
+            "week_review": week_review,
+            "recent_change": recent_change,
         },
     )
 

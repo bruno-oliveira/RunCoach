@@ -1,9 +1,11 @@
 {% extends "base.html" %}
 
-{% block title %}RunCoach — Your Personal Running Plan{% endblock %}
+{% block title %}RunCoach — a running plan that adapts to your runs{% endblock %}
 
 {% block styles %}
 <link rel="stylesheet" href="{{ static_url('css/index.css') }}">
+<link rel="stylesheet" href="{{ static_url('css/home-product.css') }}">
+{% if user %}<link rel="stylesheet" href="{{ static_url('css/readiness-checkin.css') }}">{% endif %}
 {% endblock %}
 
 {% block content %}
@@ -25,7 +27,7 @@
                 <span data-i18n="home.back_eyebrow">Your training</span>
             </div>
             <h1 class="hero-title status-hero-title">
-                <span data-i18n="home.back_greeting">Welcome back</span>{% if user.name %}, {{ user.name.split(' ')[0] }}{% endif %}.
+                <span data-i18n="home.today_heading">Today</span>{% if user.name %}, {{ user.name.split(' ')[0] }}{% endif %}.
             </h1>
             {# PlanStatus is a view model (see plan_status.plan_statuses), so the
                display fields are read off it rather than off the ORM object. #}
@@ -36,6 +38,53 @@
                 <span class="status-pill">{{ current_status.label }}</span>
                 {% endif %}
             </div>
+            {% if today_card %}
+            <section class="home-today" aria-labelledby="home-today-title">
+                <div class="home-today-header">
+                    <span class="home-today-date">{{ today_card.date_label }}</span>
+                    <span class="home-today-week">Week {{ today_card.week_number }} of {{ today_card.total_weeks }}{% if today_card.phase %} · {{ today_card.phase | replace('_', ' ') | title }}{% endif %}</span>
+                </div>
+                {% if today_card.session %}
+                {% set session = today_card.session %}
+                <div class="home-today-session home-today-session--{{ session.workout_type }}">
+                    <div>
+                        <h2 id="home-today-title">{{ session.title }}</h2>
+                        <p class="home-today-detail">{{ session.detail }}{% if session.logged %} · <span data-i18n="home.logged">Logged</span>{% endif %}</p>
+                        {% if session.description %}<p class="home-today-description">{{ session.description }}</p>{% endif %}
+                    </div>
+                    <a href="/plan/{{ current_plan.id }}#today-card" class="btn btn-accent" data-i18n="home.open_today">View today on your plan</a>
+                </div>
+                <p class="home-today-advice"{% if not today_card.advisory %} hidden{% endif %}>{{ today_card.advisory or '' }}</p>
+                {% else %}
+                <h2 id="home-today-title" data-i18n="home.no_session">Nothing scheduled for today.</h2>
+                {% endif %}
+                <details class="home-checkin">
+                    <summary>
+                        {% if today_card.readiness_label %}<span>{{ today_card.readiness_label }}</span>{% else %}<span data-i18n="home.checkin_prompt">How are you feeling today?</span>{% endif %}
+                        <span data-i18n="home.checkin_action">Check in</span>
+                    </summary>
+                    <div class="readiness-checkin" id="readinessCheckinCard"></div>
+                </details>
+                <div class="home-calendar-status">
+                    {% if user.intervals_athlete_id %}
+                        {% if current_plan.watch_sync_error %}<span data-i18n="home.calendar_problem">Calendar sync needs attention</span>
+                        {% elif current_plan.watch_sync_enabled %}<span data-i18n="home.calendar_on">Calendar sync enabled</span>
+                        {% else %}<span data-i18n="home.calendar_off">Calendar sync is off</span>{% endif %}
+                        <a href="/plan/{{ current_plan.id }}#watch-mirror" data-i18n="home.calendar_status">Check calendar status</a>
+                    {% else %}
+                        <span data-i18n="home.runs_unconnected">Runs not connected</span>
+                        <button type="button" class="home-calendar-action" onclick="connectWatch()" data-i18n="home.cta_connect">Connect your runs</button>
+                    {% endif %}
+                </div>
+            </section>
+            {% endif %}
+            {% if week_review %}
+            <div class="home-week-review">
+                <strong data-i18n="home.week_review">Last week</strong>
+                <span>{{ '%g'|format(week_review.review.done_km) }} / {{ '%g'|format(week_review.review.planned_km) }} km · {{ week_review.review.line }}</span>
+            </div>
+            {% endif %}
+            {% if recent_change %}{% include 'components/change_receipt.html' %}{% endif %}
             {% if recovery_offer %}
             <p class="hero-subtitle">
                 <span data-i18n="home.recovery_ready">Race done. Your recovery block is ready</span> &mdash; {{ recovery_offer.weeks }} easy weeks from {{ recovery_offer.start_date.strftime('%a %b') }} {{ recovery_offer.start_date.day }}.
@@ -56,7 +105,7 @@
                 {% if user.intervals_athlete_id %}
                 <span class="status-conn status-conn--ok"{% if user.intervals_last_synced_at %} data-ts="{{ user.intervals_last_synced_at }}"{% endif %}>
                     <span class="status-conn-dot" aria-hidden="true"></span>
-                    <span data-i18n="home.back_connected">Connected</span>
+                    <span data-i18n="home.back_connected">Runs connected</span>
                     <span class="status-conn-sync" id="statusConnSync"></span>
                 </span>
                 {% else %}
@@ -66,6 +115,18 @@
                 </button>
                 {% endif %}
             </div>
+            {% if home_week_days %}
+            <div class="home-week-preview" aria-label="This week's training">
+                {% for day in home_week_days %}
+                {% set workout = day.workout %}
+                <a href="/plan/{{ current_plan.id }}#pinned-current-week" class="home-week-day">
+                    <span>{{ day.label }}</span>
+                    <strong>{{ workout.type | replace('_', ' ') | title }}</strong>
+                    <small>{% if workout.distance %}{{ '%g'|format(workout.distance) }} km{% else %}—{% endif %}</small>
+                </a>
+                {% endfor %}
+            </div>
+            {% endif %}
             <p class="status-hero-note">
                 <a href="/my-plans" class="status-hero-link" data-i18n="home.back_all_plans">All my plans</a>
                 <span class="status-hero-sep" aria-hidden="true">·</span>
@@ -86,7 +147,7 @@
             {# Already connected, still no plan — the only thing left to do is
                build one, so don't offer the connect button they just used. #}
             <p class="hero-subtitle">
-                <span data-i18n="home.back_noplan_connected_sub">Your watch is connected — we'll set every pace from your real fitness. Three questions and your plan is ready.</span>
+                <span data-i18n="home.back_noplan_connected_sub">Your runs are connected — we'll set every pace from your real fitness. Three fields and your plan is ready.</span>
             </p>
             <div class="status-hero-actions">
                 <button type="button" class="btn btn-accent btn-lg status-hero-cta" onclick="scrollToBuild()">
@@ -95,21 +156,20 @@
                 </button>
                 <span class="status-conn status-conn--ok"{% if user.intervals_last_synced_at %} data-ts="{{ user.intervals_last_synced_at }}"{% endif %}>
                     <span class="status-conn-dot" aria-hidden="true"></span>
-                    <span data-i18n="home.back_connected">Connected</span>
+                    <span data-i18n="home.back_connected">Runs connected</span>
                     <span class="status-conn-sync" id="statusConnSync"></span>
                 </span>
             </div>
             {% else %}
             <p class="hero-subtitle">
-                <span data-i18n="home.back_noplan_sub">Connect your watch so every pace comes from your real fitness — or build a plan from three questions right now.</span>
+                <span data-i18n="home.back_noplan_sub">Build your plan from three fields. Connect your runs afterwards to set paces from your fitness and adapt future weeks.</span>
             </p>
             <div class="status-hero-actions">
-                <button type="button" class="btn btn-accent btn-lg status-hero-cta" onclick="connectWatch()">
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="6" width="12" height="12" rx="3"/><path d="M9 6l.5-3h5l.5 3"/><path d="M9 18l.5 3h5l.5-3"/><path d="M12 10v2.5l1.5 1"/></svg>
-                    <span data-i18n="home.cta_connect">Connect your watch</span>
+                <button type="button" class="btn btn-accent btn-lg status-hero-cta" onclick="scrollToBuild()">
+                    <span data-i18n="home.back_noplan_build">Build my plan</span>
                 </button>
-                <button type="button" class="btn btn-ghost btn-lg" onclick="scrollToBuild()">
-                    <span data-i18n="home.connect_build">Build a plan without connecting</span>
+                <button type="button" class="btn btn-ghost btn-lg" onclick="connectWatch()">
+                    <span data-i18n="home.cta_connect">Connect your runs</span>
                 </button>
             </div>
             {% endif %}
@@ -137,23 +197,23 @@
             <div class="hero-content stagger">
                 <div class="hero-badge">
                     <span class="hero-badge-dot"></span>
-                    <span data-i18n="home.badge">Free personalized training</span>
+                <span data-i18n="home.badge">Free, adaptive running plans</span>
                 </div>
 
                 <h1 class="hero-title">
-                    <span data-i18n="home.hero_title1">Your watch knows your fitness.</span><br>
-                    <span class="hero-title-accent"><span data-i18n="home.hero_title2">We turn it into a plan.</span></span>
+                    <span data-i18n="home.hero_title1">A running plan that</span><br>
+                    <span class="hero-title-accent"><span data-i18n="home.hero_title2">keeps up with you.</span></span>
                 </h1>
 
                 <p class="hero-subtitle">
-                    <span data-i18n="home.hero_sub">Connect your runs and RunCoach reads your real fitness, sets every pace, and pushes each session back to your watch — then reshapes the plan as you run.</span>
+                    <span data-i18n="home.hero_sub">Build a full plan from your goal and weekly mileage. Connect your runs later and it adapts to what you actually do.</span>
                 </p>
 
                 <!-- The loop: watch in → real paces → plan out → back to watch → adapts -->
                 <ol class="hero-loop" aria-label="How RunCoach works">
                     <li class="hero-loop-step">
                         <span class="hero-loop-num">1</span>
-                        <span class="hero-loop-text" data-i18n="home.loop_runs">Your runs come in from your watch</span>
+                        <span class="hero-loop-text" data-i18n="home.loop_runs">Your runs come in through Intervals.icu</span>
                     </li>
                     <li class="hero-loop-step">
                         <span class="hero-loop-num">2</span>
@@ -165,7 +225,7 @@
                     </li>
                     <li class="hero-loop-step">
                         <span class="hero-loop-num">4</span>
-                        <span class="hero-loop-text" data-i18n="home.loop_watch">Each session pushes back to your watch</span>
+                        <span class="hero-loop-text" data-i18n="home.loop_watch">Your sessions reach your training calendar</span>
                     </li>
                     <li class="hero-loop-step hero-loop-step--cycle">
                         <span class="hero-loop-num" aria-hidden="true">↻</span>
@@ -176,25 +236,23 @@
 
             <!-- Right: connect card — the single "Start here" action surface. -->
             <div class="hero-form-wrap">
-                <div class="connect-card">
+                <div class="connect-card" id="home-connect-card">
                     <span class="connect-card-eyebrow" data-i18n="home.connect_eyebrow">Start here</span>
-                    <h2 class="connect-card-title" data-i18n="home.connect_title">Bring your runs in</h2>
-                    <p class="connect-card-desc" data-i18n="home.connect_desc">RunCoach reads your real fitness to set every pace — and can send each session back to your watch.</p>
+                    <h2 class="connect-card-title" data-i18n="home.connect_title">See your plan first</h2>
+                    <p class="connect-card-desc" data-i18n="home.connect_desc">Your mileage, goal and weeks. No account needed to see the whole block.</p>
 
-                    <button type="button" class="btn btn-accent btn-full connect-card-btn" onclick="connectWatch()">
+                    <button type="button" class="btn btn-accent btn-full connect-card-btn" onclick="scrollToBuild()" data-i18n="home.cta_build">Build my plan</button>
+
+                    <div class="connect-card-or"><span data-i18n="home.connect_or">then, if you want</span></div>
+
+                    <button type="button" class="btn btn-ghost btn-full" onclick="connectWatch()">
                         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="6" width="12" height="12" rx="3"/><path d="M9 6l.5-3h5l.5 3"/><path d="M9 18l.5 3h5l.5-3"/><path d="M12 10v2.5l1.5 1"/></svg>
-                        <span data-i18n="home.cta_connect">Connect your watch</span>
+                        <span data-i18n="home.cta_connect">Connect your runs</span>
                     </button>
                     <p class="connect-card-mechanism" data-i18n="home.connect_mechanism">Through a free Intervals.icu account &mdash; a one-time bridge between your watch and RunCoach.</p>
                     <p class="connect-card-signup"><a href="https://intervals.icu/signup" target="_blank" rel="noopener" data-i18n="home.connect_signup">New to Intervals.icu? Sign up with your Garmin account and both the watch link and the account are done in one step.</a></p>
 
-                    <div class="connect-card-or"><span data-i18n="home.connect_or">or</span></div>
-
-                    <button type="button" class="connect-card-manual" onclick="scrollToBuild()">
-                        <span data-i18n="home.connect_build">Build a plan without connecting</span>
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
-                    </button>
-                    <p class="connect-card-manual-note" data-i18n="home.cta_nowatch">No watch? The manual plan takes three questions.</p>
+                    <p class="connect-card-manual-note" data-i18n="home.cta_nowatch">Intervals.icu brings in your runs and can send planned workouts to a compatible watch.</p>
 
                     <!-- Prerequisites collapsed: only needed to send workouts BACK to
                          the watch. Importing runs + paces works with just the connection. -->
@@ -232,14 +290,14 @@
 <section class="build-section" id="build-plan">
     <div class="container">
         <div class="build-section-header">
-            <h2 class="build-section-title" data-i18n="home.build_title">Or build a plan from three questions</h2>
+            <h2 class="build-section-title" data-i18n="home.build_title">Build your plan</h2>
             <p class="build-section-desc" data-i18n="home.build_desc">No connection needed. Answer three questions and get a full plan — connect later to make it adapt to your runs.</p>
         </div>
         <div class="hero-form-wrap build-form-wrap">
             <div class="form-card">
                 <div class="form-card-header">
                     <h2 class="form-card-title"><span data-i18n="home.form_title">Create your plan</span></h2>
-                    <p class="form-card-desc"><span data-i18n="home.form_desc">Fill in your details to get started</span></p>
+                    <p class="form-card-desc"><span data-i18n="home.form_desc">Start with your mileage, race goal and weeks. The rest is optional.</span></p>
                 </div>
 
                     {% if error %}
@@ -294,7 +352,7 @@
                     </div>
                     {% endif %}
 
-                    <form method="post" action="/generate-plan" class="plan-form" id="plan-form">
+                    <form method="post" action="/generate-plan" class="plan-form{% if not user %} anon-plan-form{% endif %}" id="plan-form">
                         <!-- Plan mode toggle -->
                         <div class="mode-toggle-wrap">
                             <input type="hidden" id="plan_mode" name="plan_mode" value="{{ request.query_params.get('mode', 'distance') }}">
@@ -303,6 +361,7 @@
                         </div>
                         <p class="mode-description" id="mode-description"><span data-i18n="home.goal_distance_desc">Build a structured plan to finish a race at a specific distance.</span></p>
 
+                        <p class="form-essentials-label" data-i18n="home.essentials">The three essentials</p>
                         <!-- Shared: Weekly mileage (always visible) -->
                         <div class="form-group">
                             <label for="current_km" class="form-label"><span data-i18n="home.weekly_mileage">Weekly mileage</span></label>
@@ -592,7 +651,7 @@
                         </div>
 
                         <button type="submit" class="btn btn-accent btn-lg btn-full form-submit" id="form-submit-btn">
-                            <span data-i18n="home.generate">Generate my plan</span>
+                            <span data-i18n="home.generate">Build my plan</span>
                             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
                         </button>
                     </form>
@@ -602,25 +661,45 @@
     </div>
 </section>
 
-<!-- Social proof / stats strip -->
-<section class="stats-strip">
+{% if not user %}
+{# Generated by TrainingPlanGenerator().generate_plan(25, 10, 12, 4)[3].
+   This is a real engine output, kept as a static specimen for a fast landing page. #}
+<section class="product-preview" aria-labelledby="preview-title">
     <div class="container">
-        <div class="stats-grid stagger">
-            <div class="stat-card">
-                <span class="stat-card-value">5K &ndash; 42K</span>
-                <span class="stat-card-label"><span data-i18n="home.stat_dist_label">5K to marathon, plus trail & ultra</span></span>
+        <p class="product-preview-eyebrow" data-i18n="home.preview_eyebrow">A real week from the plan engine</p>
+        <h2 id="preview-title" data-i18n="home.preview_title">See what your plan looks like</h2>
+        <p data-i18n="home.preview_setup">Example: a runner at 25 km a week training for a 10K over 12 weeks. This is week 4, an easier recovery week.</p>
+        <div class="product-preview-week">
+            {% set sample_days = [
+                ('Mon', 'mon', 'Easy + strides', 'strides', '6.7 km', 'easy'),
+                ('Tue', 'tue', 'Rest', 'rest', '—', 'rest'),
+                ('Wed', 'wed', 'Easy', 'easy', '6.7 km', 'easy'),
+                ('Thu', 'thu', 'Easy + strides', 'strides', '6.7 km', 'easy'),
+                ('Fri', 'fri', 'Rest', 'rest', '—', 'rest'),
+                ('Sat', 'sat', 'Long run', 'long', '7.5 km', 'long'),
+                ('Sun', 'sun', 'Rest', 'rest', '—', 'rest')
+            ] %}
+            {% for day, day_key, title, title_key, distance, kind in sample_days %}
+            <div class="product-preview-day product-preview-day--{{ kind }}">
+                <span data-i18n="home.preview_{{ day_key }}">{{ day }}</span><strong data-i18n="home.preview_{{ title_key }}">{{ title }}</strong><small>{{ distance }}</small>
             </div>
-            <div class="stat-card">
-                <span class="stat-card-value">4 &ndash; 24</span>
-                <span class="stat-card-label"><span data-i18n="home.stat_weeks_label">Weeks, base through taper</span></span>
+            {% endfor %}
+        </div>
+        <p class="product-preview-note" data-i18n="home.preview_why">Monday's easy run builds the aerobic base; Friday's rest protects Saturday's long run. Each session in your plan explains its purpose.</p>
+        <div class="product-adaptation">
+            <div>
+                <span class="product-preview-eyebrow" data-i18n="home.adapt_eyebrow">A real plan adjustment</span>
+                <h3 data-i18n="home.adapt_title">An easier week, with the numbers shown</h3>
+                <p data-i18n="home.adapt_desc">In a 12-week 10K plan, applying a 10% easier future block changed week 7 from 43.6 to 39.8 km. Monday's interval session changed from 5.4 to 4.0 km.</p>
             </div>
-            <div class="stat-card">
-                <span class="stat-card-value"><span data-i18n="home.stat_adaptive">VDOT-paced</span></span>
-                <span class="stat-card-label"><span data-i18n="home.stat_adaptive_label">Real Daniels math, not a lookup table</span></span>
+            <div class="product-adaptation-numbers" aria-label="Week 7 before and after" data-i18n-aria="home.adapt_aria">
+                <span>43.6 km</span><span aria-hidden="true">→</span><strong>39.8 km</strong>
             </div>
         </div>
+        <p class="product-preview-caption" data-i18n="home.preview_adapt">Connect your runs afterwards and RunCoach can update future weeks from what you actually ran. When a distance changes, you can see the reason and the before and after values.</p>
     </div>
 </section>
+{% endif %}
 {% endblock %}
 
 {% block scripts %}
@@ -660,8 +739,27 @@ function openMoreOptions() { setCollapsibleOpen('more-options-fields', true); }
 
 // Smooth-scroll from the hero CTAs / connect card to the manual plan form.
 function scrollToBuild() {
-    const el = document.getElementById('build-plan');
+    const el = document.getElementById('plan-form') || document.getElementById('build-plan');
     if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+// Move the real plan form into the first screen. Keeping it in the document
+// below the hero means the same route remains useful if scripting is blocked.
+if (!{{ 'true' if user else 'false' }}) {
+    const form = document.querySelector('.build-form-wrap');
+    const slot = document.querySelector('.hero-form-wrap');
+    const card = document.getElementById('home-connect-card');
+    const section = document.getElementById('build-plan');
+    if (form && slot && card && section) {
+        slot.insertBefore(form, card);
+        section.classList.add('is-moved');
+        card.querySelector('.connect-card-title').setAttribute('data-i18n', 'home.connect_after');
+        card.querySelector('.connect-card-title').textContent = 'Make your plan adapt';
+        card.querySelector('.connect-card-desc').setAttribute('data-i18n', 'home.connect_after_desc');
+        card.querySelector('.connect-card-desc').textContent = 'Connect your runs through Intervals.icu so future weeks can follow what you actually do.';
+        card.querySelector('.connect-card-btn').hidden = true;
+        card.querySelector('.connect-card-or').hidden = true;
+    }
 }
 
 function setPlanMode(mode) {
@@ -1243,6 +1341,30 @@ function setPlanMode(mode) {
     })();
 </script>
 {% if user %}
+{% if current_plan and today_card %}
+<script src="{{ static_url('js/readiness_checkin.js') }}" defer></script>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    if (!window.ReadinessCheckIn) return;
+    var planId = {{ current_plan.id | tojson }};
+    window.ReadinessCheckIn.onSaved = function () {
+        fetch('/api/plan/' + encodeURIComponent(planId) + '/today-card', { credentials: 'same-origin' })
+            .then(function (res) { return res.ok ? res.json() : null; })
+            .then(function (data) {
+                if (!data) return;
+                var line = document.querySelector('.home-today-advice');
+                if (!line) return;
+                line.textContent = data.advisory || '';
+                line.hidden = !data.advisory;
+            }).catch(function () {});
+    };
+    var checkin = document.querySelector('.home-checkin');
+    if (checkin) checkin.addEventListener('toggle', function () {
+        if (checkin.open) window.ReadinessCheckIn.load(planId);
+    });
+});
+</script>
+{% endif %}
 <!-- Discreet home stats: pace + HR-zone evolution. Chart.js first (defer keeps
      order), then our renderer, which no-ops when there's nothing to show. -->
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4" defer></script>

@@ -40,7 +40,7 @@
 {% block content %}
 <div class="privacy-container">
     <h1><span data-i18n="privacy.title">Privacy Policy</span></h1>
-    <p class="last-updated">Last updated: July 2026</p>
+    <p class="last-updated">Last updated: October 2026</p>
 
     <h2>1. What We Collect</h2>
     <p>RunCoach collects the following data when you use the application:</p>
@@ -63,26 +63,27 @@
     <h2>3. Third-Party Services</h2>
     <ul>
         <li><strong>Google Sign-In:</strong> We use Google OAuth for authentication. Google receives your sign-in request; we receive your name, email, and profile picture.</li>
-        <li><strong>Intervals.icu:</strong> If you connect Intervals.icu, we access your activity data (runs) via the Intervals.icu API. You can disconnect it at any time from your account settings, which removes all stored Intervals.icu credentials.</li>
-        <li><strong>Intervals.icu:</strong> If you connect Intervals.icu, we access read-only activity data that you have synced from Garmin or another original source. You can disconnect it at any time, which removes the stored OAuth credential.</li>
+        <li><strong>Intervals.icu:</strong> If you connect Intervals.icu, we read the activity data you authorise. If you turn on calendar sync, we also create and update planned workouts on your Intervals.icu calendar. You can disconnect at any time, which removes the stored connection credentials.</li>
     </ul>
 
     <h2>4. Cookies &amp; Consent</h2>
     <ul>
         <li><strong>access_token:</strong> An HTTP-only session cookie for authentication. Strictly necessary for the application to function.</li>
+        <li><strong>refresh_token:</strong> An HTTP-only cookie used to renew your signed-in session.</li>
         <li><strong>anonymous_user_id:</strong> Used to associate training plans with your browser session before you sign in. This cookie is only set when you interact with plan generation or API features — not on your first page visit.</li>
+        <li><strong>rc_tz:</strong> Stores your browser's time zone so “today” and your training week match your local day.</li>
+        <li><strong>intervals_oauth_state:</strong> A short-lived security cookie used while connecting Intervals.icu.</li>
     </ul>
-    <p>RunCoach does not use analytics or advertising cookies. A cookie notice is displayed on your first visit to inform you about cookie usage. By using RunCoach's plan generation and health tracking features, you consent to the collection and processing of the health-related data described in section 1.</p>
+    <p>RunCoach does not use analytics or advertising cookies. It uses the cookies above to keep your session and your anonymous plan available. You choose whether to enter health-related details or connect a training account.</p>
 
     <h2>5. Data Storage &amp; Security</h2>
-    <p>Your data is stored in an encrypted database. Sensitive provider credentials are encrypted at rest using Fernet symmetric encryption. All connections to RunCoach are served over HTTPS.</p>
+    <p>Sensitive provider credentials are encrypted at rest using Fernet symmetric encryption. Connections to RunCoach are served over HTTPS.</p>
 
     <h2>6. Your Rights</h2>
     <ul>
         <li><strong>Access:</strong> You can view all your data through the application (plans, runs, analytics).</li>
         <li><strong>Deletion:</strong> You can delete your account and all associated data at any time. Go to your account settings or send a request to the contact below. Account deletion is permanent and removes all plans, run logs, readiness logs, saved recipes, and provider credentials.</li>
         <li><strong>Intervals.icu disconnect:</strong> You can disconnect Intervals.icu at any time, which clears all stored tokens and credentials.</li>
-        <li><strong>Intervals.icu disconnect:</strong> You can disconnect Intervals.icu at any time, which clears its stored OAuth token.</li>
     </ul>
 
     <h2>7. Data Retention</h2>

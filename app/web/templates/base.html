@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="description" content="RunCoach builds a running plan for your goal, then adapts it to the runs you actually do. Start with a free plan; connect your runs later.">
     <meta http-equiv="Cross-Origin-Opener-Policy" content="same-origin-allow-popups">
 
     <!-- Installable app: own window, home-screen icon, themed status bar -->
@@ -109,7 +110,7 @@
          equal specificity, which only works if it wins the cascade. -->
     <link rel="stylesheet" href="{{ static_url('css/mobile-app.css') }}">
 </head>
-<body data-authed="{{ 'true' if user else 'false' }}">
+<body data-authed="{{ 'true' if user else 'false' }}"{% if not user and request.url.path == '/' %} class="guest-home"{% endif %}>
     {% from "components/nav.html" import render as nav %}
     <!-- Navigation -->
     {% block navigation %}
@@ -118,8 +119,18 @@
 
     <!-- Bottom tab bar — the primary navigation on a phone (mobile-app.css) -->
     {% block tabbar %}
+    {% if user or request.url.path != '/' %}
     {% from "components/tab_bar.html" import render as tab_bar %}
-    {{ tab_bar(user=user, path=request.url.path if request else '/') }}
+    {% set primary_plan_id = None %}
+    {% if current_plan is defined and current_plan %}
+        {% set primary_plan_id = current_plan.id %}
+    {% elif training_plan is defined and training_plan %}
+        {% set primary_plan_id = training_plan.id %}
+    {% elif page is defined and page.goal is defined and page.goal %}
+        {% set primary_plan_id = page.goal.plan_id %}
+    {% endif %}
+    {{ tab_bar(user=user, path=request.url.path if request else '/', active_plan_id=primary_plan_id) }}
+    {% endif %}
     {% endblock %}
 
     {# Shown by pwa.js when the browser is offline — the page may be the copy
@@ -147,17 +158,6 @@
     </footer>
     {% endblock %}
 
-    <!-- Cookie consent banner -->
-    <div id="cookie-consent" class="cookie-consent" style="display:none;">
-        <div class="cookie-consent-inner">
-            <p><span data-i18n="cookie.text">RunCoach uses strictly necessary cookies for authentication and session management, and collects health-related data (training, readiness) to personalize your plans. See our</span> <a href="/privacy" data-i18n="cookie.privacy_link">Privacy Policy</a>.</p>
-            <div class="cookie-consent-actions">
-                <button id="cookie-accept" class="btn btn-primary btn-sm" data-i18n="cookie.accept">Accept</button>
-                <button id="cookie-decline" class="btn btn-outline btn-sm" data-i18n="cookie.decline">Decline non-essential</button>
-            </div>
-        </div>
-    </div>
-
     <!-- Base scripts -->
     <script src="{{ static_url('js/i18n.js') }}" defer></script>
     <script src="{{ static_url('js/ui/notify.js') }}" defer></script>
@@ -167,22 +167,6 @@
     <script src="{{ static_url('js/api.js') }}" defer></script>
     <script src="{{ static_url('js/auth.js') }}" defer></script>
     <script src="{{ static_url('js/pwa.js') }}" defer></script>
-
-    <script>
-    (function() {
-        if (!localStorage.getItem('runcoach-cookie-consent')) {
-            var banner = document.getElementById('cookie-consent');
-            if (banner) banner.style.display = 'flex';
-        }
-        document.addEventListener('click', function(e) {
-            if (e.target.id === 'cookie-accept' || e.target.id === 'cookie-decline') {
-                localStorage.setItem('runcoach-cookie-consent', e.target.id === 'cookie-accept' ? 'accepted' : 'declined');
-                var banner = document.getElementById('cookie-consent');
-                if (banner) banner.style.display = 'none';
-            }
-        });
-    })();
-    </script>
 
     <!-- Page-specific scripts -->
     {% block scripts %}{% endblock %}

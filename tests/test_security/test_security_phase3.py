@@ -195,6 +195,8 @@ class TestPrivacyPage:
         assert "What We Collect" in body
         assert "Your Rights" in body
         assert "Data Retention" in body
+        assert 'id="cookie-consent"' not in body
+        assert "Your data is stored in an encrypted database" not in body
 
 
 # ---------------------------------------------------------------------------
