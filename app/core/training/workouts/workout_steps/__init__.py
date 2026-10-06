@@ -90,6 +90,7 @@ from app.core.training.workouts.workout_steps.primitives import (
     _warmup,
     _wucd_m,
     _wucd_m_for_work,
+    fill_step_paces,
     repace_steps,
     wucd_profile,
 )
@@ -162,6 +163,7 @@ __all__ = [
     "build_turnaround_drill_steps",
     "build_loop_repeats_steps",
     "scale_steps",
+    "fill_step_paces",
     "repace_steps",
     "total_distance_m",
     "fit_steps_to_distance",

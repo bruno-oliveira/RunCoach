@@ -228,8 +228,8 @@ class TestDistancePlanWithAGoalTime:
         assert _work_steps(easy)[0]["pace_str"] == current["E"]["pace_str"]
 
 
-class TestGoalOnlyPlanIsPacedFromLoggedRuns:
-    """A goal time with no recent race: the runner's history sets the paces."""
+class TestPlanWithNoStatedRaceIsPacedFromLoggedRuns:
+    """No recent race on the form: the runner's history sets the paces."""
 
     LOGGED_VDOT = 36.0
 
@@ -309,11 +309,27 @@ class TestGoalOnlyPlanIsPacedFromLoggedRuns:
         )
         assert plan.vdot == CURRENT_VDOT
 
-    def test_no_goal_time_derives_no_paces_from_the_history(
+    def test_a_plan_with_no_goal_time_is_paced_from_the_history_too(
         self, test_db, plan_generator, nutrition_engine_seeded
     ):
         user = self._runner(test_db, logged_runs=6)
-        plan, _ = self._create(
+        plan, workouts = self._create(
+            test_db,
+            user,
+            self._request(goal_time=None),
+            plan_generator,
+            nutrition_engine_seeded,
+        )
+        assert plan.vdot == self.LOGGED_VDOT
+        logged = VDOTCalculator.get_pace_zones(self.LOGGED_VDOT)
+        easy = next(w for w in workouts if w["type"] == "easy")
+        assert _work_steps(easy)[0]["pace_str"] == logged["E"]["pace_str"]
+
+    def test_no_goal_and_no_history_stays_prescribed_by_effort(
+        self, test_db, plan_generator, nutrition_engine_seeded
+    ):
+        user = self._runner(test_db, logged_runs=0)
+        plan, workouts = self._create(
             test_db,
             user,
             self._request(goal_time=None),
@@ -321,6 +337,8 @@ class TestGoalOnlyPlanIsPacedFromLoggedRuns:
             nutrition_engine_seeded,
         )
         assert plan.vdot is None
+        paces = {s.get("pace_str") for w in workouts for s in w.get("steps") or []}
+        assert paces == {None}
 
     def test_resubmitting_the_same_goal_returns_the_plan_already_made(
         self, test_db, plan_generator, nutrition_engine_seeded

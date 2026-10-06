@@ -25,15 +25,20 @@ from app.core.training.workouts.workout_registry import WORKOUT_REGISTRY, build_
 _PLAIN_QUALITY_TYPES = ("tempo", "interval", "hill")
 
 
-def pace_zones_for(training_plan) -> Optional[Dict[str, Any]]:
+def pace_zones_for(
+    training_plan, *, vdot: Optional[float] = None
+) -> Optional[Dict[str, Any]]:
     """The pace zones a plan's steps were built from, or ``None`` with no VDOT.
 
     Mirrors the generator exactly — same VDOT, same race entry, same goal-pace
     pin — because every caller rebuilds a workout that sits beside untouched
     ones. Zones from the bare VDOT drop the race entry and the pin, so an
     adjusted week quietly swapped the runner's goal pace for a predicted one.
+
+    ``vdot`` stands in for the plan's own when the plan has none yet: the
+    zones it *would* be built from at that fitness.
     """
-    vdot = getattr(training_plan, "vdot", None)
+    vdot = vdot or getattr(training_plan, "vdot", None)
     if not vdot:
         return None
     # A backyard has no race pace to derive: the loop budget sets it.

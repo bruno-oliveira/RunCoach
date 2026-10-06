@@ -42,13 +42,16 @@ def _default_user_repo_factory(db: Session) -> IUserRepository:
 def _with_logged_fitness(
     plan_request: PlanRequest, user: User, db: Session
 ) -> PlanRequest:
-    """Anchor a goal-only plan on what the runner's logged runs show.
+    """Anchor a plan with no stated race on what the runner's logged runs show.
 
     A goal time with no recent race used to pace the whole block at goal
-    fitness. Their history is a better witness to where they are today; a
-    runner with none keeps the goal as the only anchor there is.
+    fitness, and a plan with neither was prescribed by effort alone — heart
+    rate zones and no pace — however much running the account had on record.
+    Their history is a better witness to where they are today than either. A
+    recent race they told us about still outranks it, and a runner with no
+    history keeps the goal as the only anchor, or no pace at all.
     """
-    if not plan_request.is_paced_by_goal_alone:
+    if plan_request.vdot is not None:
         return plan_request
     from app.application.ports import RacePredictorService
 

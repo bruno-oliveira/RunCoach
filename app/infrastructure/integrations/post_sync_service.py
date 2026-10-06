@@ -359,15 +359,14 @@ def _auto_adjust_headline(
     pct = abs(round((multiplier - 1.0) * 100))
 
     if vdot_change:
-        old_v, new_v = vdot_change["old_vdot"], vdot_change["new_vdot"]
+        paces = _paces_clause(vdot_change)
         if direction == "up":
             return (
-                f"You're running stronger — bumped upcoming volume ~{pct}% "
-                f"and updated your paces (VDOT {old_v} → {new_v})."
+                f"You're running stronger — bumped upcoming volume ~{pct}% and {paces}."
             )
         return (
-            f"Eased upcoming volume ~{pct}% and updated your paces "
-            f"(VDOT {old_v} → {new_v}) — your recent runs suggest dialing back."
+            f"Eased upcoming volume ~{pct}% and {paces} — your recent runs "
+            "suggest dialing back."
         )
 
     if direction == "up":
@@ -375,9 +374,27 @@ def _auto_adjust_headline(
     return f"Eased upcoming volume ~{pct}% — your recent runs suggest dialing back."
 
 
+def _is_first_paces(vdot_change: Dict[str, Any]) -> bool:
+    """Whether this change gave an effort-only plan its first pace targets."""
+    return vdot_change.get("old_vdot") is None
+
+
+def _paces_clause(vdot_change: Dict[str, Any]) -> str:
+    """How a volume headline mentions the pace change that came with it."""
+    new_v = vdot_change["new_vdot"]
+    if _is_first_paces(vdot_change):
+        return f"set your pace targets (VDOT {new_v})"
+    return f"updated your paces (VDOT {vdot_change['old_vdot']} → {new_v})"
+
+
 def _recalibrate_headline(vdot_change: Optional[Dict[str, Any]]) -> str:
     if not vdot_change:
         return "Updated your pace targets based on recent performance."
+    if _is_first_paces(vdot_change):
+        return (
+            "Your recent runs gave us enough to set pace targets "
+            f"(VDOT {vdot_change['new_vdot']}) — upcoming sessions now carry them."
+        )
     old_v, new_v = vdot_change["old_vdot"], vdot_change["new_vdot"]
     if vdot_change["direction"] == "improved":
         return (
@@ -392,6 +409,11 @@ def _recalibrate_headline(vdot_change: Optional[Dict[str, Any]]) -> str:
 def _race_headline(vdot_change: Optional[Dict[str, Any]]) -> str:
     if not vdot_change:
         return "Updated your paces from your race."
+    if _is_first_paces(vdot_change):
+        return (
+            "Race result in — your pace targets are now set from it "
+            f"(VDOT {vdot_change['new_vdot']})."
+        )
     old_v, new_v = vdot_change["old_vdot"], vdot_change["new_vdot"]
     if vdot_change["direction"] == "improved":
         return (

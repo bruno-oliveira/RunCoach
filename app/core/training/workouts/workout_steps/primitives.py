@@ -99,6 +99,30 @@ def repace_steps(
     return changed
 
 
+def fill_step_paces(steps: List[Dict[str, Any]], pace_zones: Optional[Dict]) -> int:
+    """Give zone-labelled steps that carry no pace the one ``pace_zones`` implies.
+
+    A plan built with no fitness on record still labels every step with its
+    zone; only the pace is missing. Once the runner's own runs yield a VDOT,
+    filling those gaps reproduces what the generator would have written had it
+    known — without touching a pace that came from anything else.
+
+    Returns:
+        How many steps gained a pace. Mutates ``steps`` in place.
+    """
+    if not steps or not pace_zones:
+        return 0
+    filled = 0
+    for step in steps:
+        if step.get("pace_str"):
+            continue
+        pace = _pace_str(step.get("pace_zone"), pace_zones)
+        if pace:
+            step["pace_str"] = pace
+            filled += 1
+    return filled
+
+
 def _step(
     kind: str,
     label: str,

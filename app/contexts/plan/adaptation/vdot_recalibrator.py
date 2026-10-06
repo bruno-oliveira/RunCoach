@@ -13,12 +13,13 @@ from app.core.training.adaptation.thresholds import (
 )
 from app.core.training.periodization.plan_calendar import compute_current_week
 from app.core.training.physiology.vdot_calculator import VDOTCalculator
-from app.core.training.workouts.workout_steps import repace_steps
+from app.core.training.workouts.workout_steps import fill_step_paces, repace_steps
 from app.models import RunLog, TrainingPlan
 from app.utils import persist_json
 from app.utils import to_date as _to_date
 
 from ._helpers import parse_plan_data_lookups, today_date
+from .reconcile import pace_zones_for
 
 logger = logging.getLogger(__name__)
 
@@ -27,6 +28,11 @@ _VDOT_RECALIBRATION_THRESHOLD = 1.0
 _RACE_MAX_STEP = 4.0
 _MIN_PLAUSIBLE_VDOT = 20.0
 _MAX_PLAUSIBLE_VDOT = 85.0
+# How far back logged runs speak for current fitness.
+_RECENT_FITNESS_WEEKS = 12
+# ``direction`` of a result that gave a plan its first paces: there was no
+# earlier VDOT for it to have improved on or decreased from.
+DIRECTION_SET = "set"
 
 # Session-hit-rate recalibration (audit E5) — Runna-style "Pace Insights".
 # Pace deviation thresholds mirror the coaching pattern analyzer so the two
@@ -119,12 +125,9 @@ def recalibrate_zones_only(
 
     plan_vdot = training_plan.vdot
     if not plan_vdot:
-        return None
+        return _seed_paces(training_plan, user_id, db, race_vdot=race_vdot)
 
-    if (
-        race_vdot is not None
-        and _MIN_PLAUSIBLE_VDOT <= race_vdot <= _MAX_PLAUSIBLE_VDOT
-    ):
+    if race_vdot is not None and _is_plausible(race_vdot):
         step = max(-_RACE_MAX_STEP, min(_RACE_MAX_STEP, race_vdot - plan_vdot))
         if abs(step) >= _VDOT_RECALIBRATION_THRESHOLD:
             return _apply_recalibration(
@@ -135,7 +138,7 @@ def recalibrate_zones_only(
     # Primary signal: best recent race-like efforts.
     recent_vdot = RacePredictorService.get_best_recent_vdot(
         user_id,
-        weeks=12,
+        weeks=_RECENT_FITNESS_WEEKS,
         db=db,
     )
 
@@ -163,6 +166,106 @@ def recalibrate_zones_only(
     )
 
 
+def _is_plausible(vdot: Optional[float]) -> bool:
+    return vdot is not None and _MIN_PLAUSIBLE_VDOT <= vdot <= _MAX_PLAUSIBLE_VDOT
+
+
+def _current_week(training_plan: TrainingPlan) -> Optional[int]:
+    """The plan week today falls in, or ``None`` for a plan with no start date."""
+    start_date = _to_date(training_plan.start_date)
+    if start_date is None:
+        return None
+    return compute_current_week(start_date, today_date(), clamp_min=1, pre_start=1)
+
+
+def _seed_paces(
+    training_plan: TrainingPlan,
+    user_id: str,
+    db: Session,
+    *,
+    race_vdot: Optional[float],
+) -> Optional[Dict[str, Any]]:
+    """Give a plan that started with no fitness on record its first paces.
+
+    Such a plan is prescribed by effort: every step names its zone and carries
+    no pace. It used to stay that way for the whole block, because there was no
+    VDOT to recalibrate *from* — so a runner who connected their watch in week
+    two still had no pace in week ten. The first sync that yields a VDOT now
+    fills the weeks still ahead, exactly as the generator would have. A tagged
+    race is taken at its word; otherwise the estimate is the one a new plan
+    would start from. Weeks already run are left as they were prescribed.
+    """
+    from app.application.ports import RacePredictorService
+
+    vdot, source = race_vdot, "race"
+    if not _is_plausible(vdot):
+        vdot = RacePredictorService.get_best_recent_vdot(
+            user_id, weeks=_RECENT_FITNESS_WEEKS, db=db
+        )
+        source = "logged_runs"
+    current_week = _current_week(training_plan)
+    if vdot is None or not _is_plausible(vdot) or current_week is None:
+        return None
+    zones = pace_zones_for(training_plan, vdot=vdot)
+    if not zones:
+        return None
+
+    plan_data, _, pd_workout = parse_plan_data_lookups(training_plan)
+    pace_updates = sum(
+        fill_step_paces(workout.get("steps") or [], zones)
+        for (week_num, _day), workout in pd_workout.items()
+        if week_num >= current_week
+    )
+    if pace_updates == 0:
+        return None
+
+    weekly_updates = _store_new_paces(
+        training_plan, plan_data, vdot, current_week, zones, db
+    )
+    logger.info(
+        "VDOT seed: plan=%s new=%.1f source=%s pace_updates=%d weekly_updates=%d",
+        training_plan.id,
+        vdot,
+        source,
+        pace_updates,
+        weekly_updates,
+    )
+    return {
+        "recalibrated": True,
+        "old_vdot": None,
+        "new_vdot": round(vdot, 1),
+        "delta": None,
+        "direction": DIRECTION_SET,
+        "source": source,
+        "pace_updates": pace_updates,
+        "weekly_plans_updated": weekly_updates,
+    }
+
+
+def _store_new_paces(
+    training_plan: TrainingPlan,
+    plan_data: Any,
+    vdot: float,
+    current_week: int,
+    zones: Dict[str, Any],
+    db: Session,
+) -> int:
+    """Persist re-paced ``plan_data`` and the VDOT it now reflects.
+
+    Returns:
+        How many future weeks were stamped as re-paced.
+    """
+    training_plan.plan_data = plan_data
+    persist_json(training_plan, "plan_data")
+    # Paces changed, so the watch mirror's content hashes will too; bump the
+    # revision so an open page doesn't apply a stale edit on top.
+    training_plan.adaptation_revision = (training_plan.adaptation_revision or 0) + 1
+    training_plan.vdot = round(vdot, 1)
+    weekly_updates = _sync_future_weekly_plans(training_plan, current_week, zones, db)
+    db.flush()
+    return weekly_updates
+
+
 def _apply_recalibration(
     training_plan: TrainingPlan,
     user_id: str,
@@ -183,12 +286,10 @@ def _apply_recalibration(
 
     plan_data, pd_week, pd_workout = parse_plan_data_lookups(training_plan)
 
-    start_date = _to_date(training_plan.start_date)
-    if start_date is None:
+    current_week = _current_week(training_plan)
+    if current_week is None:
         # No start date, no week index — and no future weeks to re-pace.
         return None
-    today = today_date()
-    current_week = compute_current_week(start_date, today, clamp_min=1, pre_start=1)
 
     pace_updates = 0
     for (week_num, day_num), workout in pd_workout.items():
@@ -239,22 +340,13 @@ def _apply_recalibration(
     if pace_updates == 0:
         return None
 
-    training_plan.plan_data = plan_data
-    persist_json(training_plan, "plan_data")
-    # Paces changed, so the watch mirror's content hashes will too; bump the
-    # revision so an open page doesn't apply a stale edit on top.
-    training_plan.adaptation_revision = (training_plan.adaptation_revision or 0) + 1
     # ``training_plan.vdot`` is nullable, but ``plan_vdot`` *is* the VDOT being
     # recalibrated from (the caller already proved it non-null), so it is the
     # honest "before" value — no need to read a column that may now be unset.
     old_vdot = plan_vdot
-    training_plan.vdot = round(current_vdot, 1)
-
-    weekly_updates = _sync_future_weekly_plans(
-        training_plan, current_week, new_zones, db
+    weekly_updates = _store_new_paces(
+        training_plan, plan_data, current_vdot, current_week, new_zones, db
     )
-
-    db.flush()
 
     direction = "improved" if delta > 0 else "decreased"
     logger.info(

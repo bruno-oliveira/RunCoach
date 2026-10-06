@@ -579,11 +579,6 @@ class PlanRequest(PlanRequestBase, RaceInfoMixin):
         """
         return self.vdot or self.logged_vdot or self.goal_vdot
 
-    @property
-    def is_paced_by_goal_alone(self) -> bool:
-        """Whether the goal time is the only fitness anchor the form gave us."""
-        return self.vdot is None and self.goal_vdot is not None
-
     @model_validator(mode="after")
     def compute_vdot(self) -> "PlanRequest":
         """Calculate current and goal VDOT from optional inputs.

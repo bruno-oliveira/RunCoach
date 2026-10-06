@@ -20,12 +20,14 @@ from typing import TYPE_CHECKING, Any, Dict, List, Optional
 from sqlalchemy.orm import Session
 
 from app.constants import DISTANCE_NAMES
+from app.contexts.plan.adaptation.reconcile import pace_zones_for
 from app.core.time_utils import local_today
 from app.core.training.periodization.plan_calendar import compute_current_week
 from app.core.training.physiology.goal_pace_model import (
     goal_pace_context,
     progressive_pace_zones,
 )
+from app.core.training.physiology.zone_calculator import calculate_zones
 from app.utils import to_date
 
 if TYPE_CHECKING:
@@ -52,8 +54,43 @@ class PlanTypeHandler(ABC):
         extra: Dict[str, Any],
         plan_data: List[Dict[str, Any]],
     ) -> Dict[str, Any]:
-        """Mutate / augment plan view context. Default: no-op."""
+        """Mutate / augment plan view context.
+
+        Default: the pace-zone table, for any plan paced off a single VDOT.
+        """
+        zones = _single_vdot_training_zones(plan)
+        if zones:
+            extra["training_zones"] = zones
         return extra
+
+
+def _single_vdot_training_zones(
+    plan: "TrainingPlan",
+) -> Optional[Dict[str, Dict[str, Any]]]:
+    """The pace-zone table for a plan paced off one VDOT, or ``None`` without one.
+
+    A time-goal plan ramps its VDOT week by week and builds its own table
+    (``PerformancePlanHandler``). Every other plan is paced off the single
+    VDOT its steps were built from, and used to show a pace on each session
+    with no table to read it against — only heart-rate bands. The table comes
+    from those same zones, so it cannot disagree with the cards under it; a
+    plan with no VDOT still gets none rather than a guessed one.
+    """
+    vdot_zones = pace_zones_for(plan)
+    if not vdot_zones:
+        return None
+    # A trail goal pace is climbing and terrain as much as fitness, so it is
+    # never shown as a flat race-pace band.
+    goal_pace = None if getattr(plan, "is_trail", False) else plan.goal_pace
+    stored_zones = plan.hr_zones_data or {}
+    return calculate_zones(
+        vdot_zones=vdot_zones,
+        goal_pace=goal_pace,
+        max_hr=plan.max_heart_rate,
+        resting_hr=stored_zones.get("resting_hr"),
+        lthr=stored_zones.get("lthr"),
+        race_distance_km=plan.target_distance_km or None,
+    )
 
 
 def _current_week_pace_zones(plan: "TrainingPlan") -> Optional[Dict[str, Dict]]:

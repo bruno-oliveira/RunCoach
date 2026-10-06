@@ -718,7 +718,11 @@
                         {% if lcp_summary.workouts_protected_count %} · {{ lcp_summary.workouts_protected_count }} protected{% endif %}
                         {% if lcp_summary.total_km_delta %} · {{ '+' if lcp_summary.total_km_delta > 0 else '' }}{{ "%.1f"|format(lcp_summary.total_km_delta) }} km total{% endif %}
                     {% elif lcp_summary.vdot_change %}
+                        {% if lcp_summary.vdot_change.old_vdot %}
                         Pace targets updated (VDOT {{ lcp_summary.vdot_change.old_vdot }} → {{ lcp_summary.vdot_change.new_vdot }})
+                        {% else %}
+                        Pace targets set from your recent runs (VDOT {{ lcp_summary.vdot_change.new_vdot }})
+                        {% endif %}
                     {% else %}
                         No distances were changed.
                         {% if lcp.no_change_reasons %} {{ lcp.no_change_reasons[0] }}{% endif %}
