@@ -9,7 +9,15 @@ from fastapi.responses import JSONResponse
 from app.core.time_utils import reset_request_timezone, set_request_timezone
 from app.infrastructure.config import settings
 
-_CSRF_EXEMPT = {"/api/auth/google", "/api/auth/logout", "/api/auth/refresh", "/health"}
+# ``/api/auth/google/redirect`` is posted cross-site by Google by design; it
+# carries its own double-submit token, checked in the route.
+_CSRF_EXEMPT = {
+    "/api/auth/google",
+    "/api/auth/google/redirect",
+    "/api/auth/logout",
+    "/api/auth/refresh",
+    "/health",
+}
 _STATE_CHANGING_METHODS = {"POST", "PUT", "PATCH", "DELETE"}
 
 # Inline <script> and style="" blocks exist in templates (theme-init, cookie banner,

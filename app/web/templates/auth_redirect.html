@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+{# Landing page of the redirect sign-in flow (installed app). Standalone on
+   purpose: it must not render the nav, whose Google button would start a
+   second sign-in on a page that exists to finish the first. auth.js reads the
+   credential and exchanges it; see google_auth_redirect in routers/auth.py. #}
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="robots" content="noindex">
+    <title>Signing in · RunCoach</title>
+    <style>
+        body { font-family: system-ui, -apple-system, sans-serif; background: #FBFBFA; color: #1a1a1a;
+               display: flex; min-height: 100vh; align-items: center; justify-content: center; margin: 0; padding: 24px; }
+        main { max-width: 340px; text-align: center; }
+        h1 { font-size: 1.25rem; margin: 0 0 8px; }
+        p { color: #555; line-height: 1.5; }
+        a { color: #0E7C5A; font-weight: 600; }
+        @media (prefers-color-scheme: dark) { body { background: #111; color: #eee; } p { color: #aaa; } }
+    </style>
+</head>
+<body>
+    <main id="auth-relay"{% if credential %} data-credential="{{ credential }}"{% endif %}>
+        <h1>RunCoach</h1>
+        <p data-relay-status role="status">{{ error or "Signing you in…" }}</p>
+        <p><a href="/" data-relay-back{% if not error %} hidden{% endif %}>Back to RunCoach</a></p>
+    </main>
+    <script src="{{ static_url('js/pwa.js') }}" defer></script>
+    <script src="{{ static_url('js/auth.js') }}" defer></script>
+</body>
+</html>

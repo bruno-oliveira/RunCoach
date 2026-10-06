@@ -24,6 +24,9 @@ function initThemeToggle() {
 }
 
 function triggerGoogleSignIn() {
+    // Installed to a home screen, One Tap cannot complete: auth.js shows
+    // Google's own button instead, which starts the redirect flow.
+    if (window.RunCoachAuth && window.RunCoachAuth.openInstalledAppSignIn()) return;
     if (window.google && google.accounts && google.accounts.id) {
         google.accounts.id.prompt();
     } else {

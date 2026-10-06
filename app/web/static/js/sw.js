@@ -16,13 +16,23 @@
  *    stale-while-revalidate. The JSON API is never cached: a stale "today"
  *    answer is worse than an honest failure.
  *
- * Signing out posts "clear-pages" so the next person on a shared device can't
- * open the previous runner's plan from cache.
+ * A page served from the cache is stamped with a `data-rc-snapshot` attribute
+ * on <html>. A failed fetch is not the same as being offline — an installed
+ * iPhone app resumes before its network does — so pwa.js reads the stamp,
+ * says the page is a snapshot, and reloads as soon as the server answers.
+ * Without it a momentary failure left a days-old plan on screen with nothing
+ * to say so, and an installed app has no reload button to recover with.
+ *
+ * Saved pages are per-runner and per-session: pwa.js deletes them on sign-in
+ * and sign-out (every cache named rc-pages-*), so a page saved signed-out is
+ * never the fallback for a signed-in runner, nor one runner's plan the next's.
  */
 'use strict';
 
-var PAGE_CACHE = 'rc-pages-v1';
+// v2: v1 could hold pages saved while signed out, served back as if current.
+var PAGE_CACHE = 'rc-pages-v2';
 var ASSET_CACHE = 'rc-assets-v1';
+var SNAPSHOT_ATTR = 'data-rc-snapshot';
 var KEEP = [PAGE_CACHE, ASSET_CACHE];
 var MAX_PAGES = 25;
 var NO_CACHE_PREFIXES = ['/api/', '/admin', '/unsubscribe', '/sw.js'];
@@ -39,7 +49,13 @@ var OFFLINE_HTML =
   '</style></head><body><main><h1>You’re offline</h1>' +
   '<p>This page hasn’t been saved on this device yet. Your plan opens offline ' +
   'once you’ve viewed it with a connection.</p>' +
-  '<p><a href="/">Try again</a></p></main></body></html>';
+  '<p><a href="/">Try again</a></p></main>' +
+  // An installed app has no reload button: come back by itself once the
+  // server answers, rather than waiting on a link the runner has to find.
+  '<script>(function retry(){setTimeout(function(){' +
+  'fetch("/health/live",{cache:"no-store"}).then(function(r){' +
+  'if(r.ok){location.reload()}else{retry()}}).catch(retry)},4000)})()</script>' +
+  '</body></html>';
 
 self.addEventListener('install', function () {
   self.skipWaiting();
@@ -67,6 +83,16 @@ function trimPages(cache) {
   return cache.keys().then(function (keys) {
     if (keys.length <= MAX_PAGES) return;
     return cache.delete(keys[0]).then(function () { return trimPages(cache); });
+  });
+}
+
+// Stamp a cached page so the document can tell it is not a live response.
+function asSnapshot(response) {
+  return response.text().then(function (html) {
+    return new Response(html.replace(/<html\b/i, '<html ' + SNAPSHOT_ATTR), {
+      status: 200,
+      headers: { 'Content-Type': 'text/html; charset=utf-8' },
+    });
   });
 }
 
@@ -98,7 +124,7 @@ function networkFirstPage(request) {
         }
         return null;
       }).then(function (hit) {
-        return hit || new Response(OFFLINE_HTML, {
+        return hit ? asSnapshot(hit) : new Response(OFFLINE_HTML, {
           status: 503,
           headers: { 'Content-Type': 'text/html; charset=utf-8' },
         });

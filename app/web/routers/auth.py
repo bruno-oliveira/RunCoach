@@ -1,10 +1,21 @@
 """Authentication router with Google OAuth support."""
 
 import logging
+import secrets
 from datetime import timedelta
 from typing import Optional
 
-from fastapi import APIRouter, Cookie, Depends, HTTPException, Request, Response, status
+from fastapi import (
+    APIRouter,
+    Cookie,
+    Depends,
+    Form,
+    HTTPException,
+    Request,
+    Response,
+    status,
+)
+from fastapi.responses import HTMLResponse, RedirectResponse
 from sqlalchemy.orm import Session
 
 from app.contexts.auth.auth_service import AuthService
@@ -19,6 +30,7 @@ from app.models import User
 from app.rate_limit import account_deletion_limiter, auth_limiter
 from app.schemas import AuthResponse, GoogleAuthRequest, UserResponse
 from app.schemas.auth_schemas import UserSettingsUpdate
+from app.template_helpers import create_templates
 from app.web.middleware import _cookie_secure
 
 logger = logging.getLogger(__name__)
@@ -29,6 +41,11 @@ auth_router = APIRouter(prefix="/api/auth", tags=["authentication"])
 COOKIE_NAME = "access_token"
 REFRESH_COOKIE_NAME = "refresh_token"
 COOKIE_MAX_AGE = 24 * 60 * 60  # 1 day in seconds
+# Set by Google Identity Services on our origin before it redirects away, and
+# echoed in the form it posts back: the double-submit pair for that POST.
+GOOGLE_CSRF_COOKIE = "g_csrf_token"
+
+templates = create_templates()
 
 
 def _user_response(user: User) -> UserResponse:
@@ -123,6 +140,61 @@ async def google_auth(
     return AuthResponse(user=_user_response(user))
 
 
+def _relay_page(
+    request: Request, *, credential: Optional[str] = None, error: Optional[str] = None
+) -> HTMLResponse:
+    """The page an installed app lands on after Google's redirect.
+
+    ``no-store``: it carries a one-time credential and must never be the page
+    a back gesture or the service worker brings back.
+    """
+    return templates.TemplateResponse(
+        request,
+        "auth_redirect.html",
+        {"credential": credential, "error": error},
+        status_code=status.HTTP_400_BAD_REQUEST if error else status.HTTP_200_OK,
+        headers={"Cache-Control": "no-store"},
+    )
+
+
+@auth_router.post("/google/redirect", include_in_schema=False)
+def google_auth_redirect(
+    request: Request,
+    credential: str = Form(""),
+    g_csrf_token: str = Form(""),
+    csrf_cookie: Optional[str] = Cookie(None, alias=GOOGLE_CSRF_COOKIE),
+) -> HTMLResponse:
+    """Where Google posts the credential when sign-in runs as a redirect.
+
+    An app installed to a home screen cannot use the popup flow: on iOS the
+    popup opens outside the app and its answer never comes back, so the button
+    did nothing. There the browser is sent to Google and back to this route.
+
+    It deliberately does not sign anyone in. The POST arrives cross-site, so
+    the browser withholds our ``SameSite=Lax`` cookies — including the
+    anonymous id a guest's plan hangs off, which sign-in adopts. Instead it
+    checks Google's double-submit token and renders a relay page that hands
+    the credential to ``POST /api/auth/google`` from our own origin, leaving
+    one code path that verifies a token and opens a session.
+    """
+    auth_limiter.check(request)
+    token_matches = bool(csrf_cookie) and secrets.compare_digest(
+        (csrf_cookie or "").encode(), g_csrf_token.encode()
+    )
+    if not token_matches or not credential:
+        logger.warning("Google redirect sign-in rejected: unverified request")
+        return _relay_page(
+            request, error="We couldn't verify that sign-in. Please try again."
+        )
+    return _relay_page(request, credential=credential)
+
+
+@auth_router.get("/google/redirect", include_in_schema=False)
+def google_auth_redirect_revisit() -> RedirectResponse:
+    """Reopening the landing URL (a restored tab, a reload) goes home."""
+    return RedirectResponse("/", status_code=status.HTTP_303_SEE_OTHER)
+
+
 @auth_router.get("/me", response_model=UserResponse)
 def get_current_user_info(current_user: User = Depends(get_current_user)):
     """
@@ -195,6 +267,12 @@ def refresh_session(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid refresh token",
         )
+
+    # Presenting a valid refresh token is activity. Without this the idle
+    # timeout in ``_resolve_user`` rejected the access token minted below for
+    # anyone away longer than a day, so the 30-day refresh token could never
+    # actually bring a runner back.
+    auth_service.update_user_activity(db, user)
 
     access_token = auth_service.create_access_token(
         data={"sub": user.id, "email": user.email},
