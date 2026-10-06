@@ -210,9 +210,10 @@ class PerformancePlanGenerator(BasePlanGenerator):
             }
         )
 
-        # Quality workouts on Tuesday (day 2) and Friday (day 5)
+        # Quality on Monday (day 1) and Thursday (day 4), the days the road
+        # generator uses: Tuesday and Friday carry no run.
         if quality_workouts_needed > 0:
-            quality_days = [2, 4] if runs_per_week >= 4 else [2]
+            quality_days = [1, 4] if runs_per_week >= 4 else [1]
             quality_types = self.PHASE_QUALITY_PRIORITY.get(phase, ["tempo", "vo2max"])
 
             _generators = {

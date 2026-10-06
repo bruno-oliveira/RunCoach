@@ -453,3 +453,17 @@ POLARIZED_DEFICIT_THRESHOLD = 0.10
 # quality session is standard coaching at these volumes regardless of run
 # frequency.
 SECOND_QUALITY_MIN_WEEK_KM = 40.0
+
+# =============================================================================
+# Free weekdays (see week_scheduler.py)
+# =============================================================================
+
+# Weekdays no generator schedules a run on — Tuesday and Friday — numbered as
+# the ``day`` every plan row carries (1 = Monday … 7 = Sunday). The rule is one
+# constant so the road, trail, performance, beginner and recovery layouts
+# cannot drift apart again: each had its own day table, and a three-run week
+# was Mon/Wed/Sat in one generator and Tue/Thu/Sat in another.
+#
+# Five runs fit in what is left. A denser week needs a free day back, and the
+# schedulers hand over Friday, last.
+FREE_WEEKDAYS = frozenset({2, 5})

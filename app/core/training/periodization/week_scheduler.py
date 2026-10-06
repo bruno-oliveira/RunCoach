@@ -1,22 +1,56 @@
 """Week day scheduling.
 
-Assigns workout types to specific days of the week.
+Assigns workout types to specific days of the week. Tuesday and Friday
+(``FREE_WEEKDAYS``) carry no run: every pass below reaches for them only once
+the other five days are taken.
 """
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Dict, List, Optional
+from typing import TYPE_CHECKING, Dict, Iterable, List, Optional
+
+from app.core.training.tuning import FREE_WEEKDAYS
 
 if TYPE_CHECKING:
     from app.domain.frequency import FrequencyComposer
 
+# ``FREE_WEEKDAYS`` as the 0-based indices this module schedules in.
+_FREE_DAY_IDXS = frozenset(day - 1 for day in FREE_WEEKDAYS)
+
+
+def _open_days(
+    order: Iterable[int],
+    schedule: List[Optional[str]],
+    reserved: frozenset[int] = frozenset(),
+) -> List[int]:
+    """Unclaimed days from ``order``, free weekdays only once nothing else is.
+
+    ``reserved`` days are held back longer still: they are given up only after
+    the free weekdays are.
+    """
+    unclaimed = [d for d in order if schedule[d] is None]
+    for held_back in (_FREE_DAY_IDXS | reserved, reserved):
+        open_days = [d for d in unclaimed if d not in held_back]
+        if open_days:
+            return open_days
+    return unclaimed
+
 
 def schedule_workout_types(
-    distribution: Dict[str, int], phase: str, week_number: int, is_recovery_week: bool
+    distribution: Dict[str, int],
+    phase: str,
+    week_number: int,
+    is_recovery_week: bool,
+    reserved_days: frozenset[int] = frozenset(),
 ) -> List[Optional[str]]:
     """Assign workout types to specific days.
 
     Recovery is always on Day 2 and does NOT count towards max_runs.
+
+    ``reserved_days`` (0-based) belong to a later pass — the day after a
+    backyard simulation — so an easy run goes there only as a last resort,
+    after even the free weekdays. An easy run parked on such a day is
+    overwritten, and its distance lands on the runs that are left.
     """
     workout_types: List[Optional[str]] = [None] * 7
 
@@ -65,12 +99,12 @@ def schedule_workout_types(
         workout_types[2] = "easy"
         distribution["easy"] -= 1
 
-    for day_idx in range(7):
-        if workout_types[day_idx] is not None:
-            continue
-        if distribution["easy"] > 0:
-            workout_types[day_idx] = "easy"
-            distribution["easy"] -= 1
+    while distribution["easy"] > 0:
+        open_days = _open_days(range(7), workout_types, reserved_days)
+        if not open_days:
+            break
+        workout_types[open_days[0]] = "easy"
+        distribution["easy"] -= 1
 
     for day_idx in range(7):
         if workout_types[day_idx] is None:
@@ -111,34 +145,35 @@ def _longest_streak(running: set[int]) -> int:
 
 
 def _pick_easy_days(schedule: List[Optional[str]], count: int) -> List[int]:
-    """Choose ``count`` free days for easy runs, spreading the week.
+    """Choose ``count`` open days for easy runs, spreading the week.
 
     A fixed fill order stacks the easy days wherever the order starts — the
     4-run plan ran Mon/Tue/Wed and then rested until Saturday. Greedily, each
-    easy run goes on the free day that, in order of priority, leaves the
+    easy run goes on the open day that, in order of priority, leaves the
     shortest streak of consecutive running days, touches the fewest loaded
     sessions, touches the fewest runs at all, and isn't the eve of the long
     run; the preference order in ``_SLOT_DAY_MAP`` breaks what ties remain.
     """
     order = _SLOT_DAY_MAP["easy"]
+    week = list(schedule)
     chosen: List[int] = []
     for _ in range(count):
-        running = {
-            d for d in range(7) if schedule[d] not in (None, "recovery", "rest")
-        } | set(chosen)
-        free = [d for d in order if schedule[d] is None and d not in chosen]
-        if not free:
+        running = {d for d in range(7) if week[d] not in (None, "recovery", "rest")}
+        candidates = _open_days(order, week)
+        if not candidates:
             break
 
         def cost(day: int) -> tuple[int, int, int, int, int]:
             neighbours = ((day - 1) % 7, (day + 1) % 7)
-            loaded = sum(1 for n in neighbours if schedule[n] in _LOADED)
+            loaded = sum(1 for n in neighbours if week[n] in _LOADED)
             touching = sum(1 for n in neighbours if n in running)
-            eve_of_long = int(schedule[(day + 1) % 7] == "long")
+            eve_of_long = int(week[(day + 1) % 7] == "long")
             streak = _longest_streak(running | {day})
             return (streak, loaded, touching, eve_of_long, order.index(day))
 
-        chosen.append(min(free, key=cost))
+        day = min(candidates, key=cost)
+        week[day] = "easy"
+        chosen.append(day)
     return chosen
 
 
@@ -190,6 +225,10 @@ def schedule_from_composer(
     if is_recovery_week:
         quality_slots_needed = 0
 
+    # Monday then Thursday, and not the other way round or a day either side:
+    # the formulaic tempo builder picks its variant from the day number, so
+    # moving a quality day changes which session the runner is given. Friday
+    # stays last — it is a free weekday.
     quality_day_preferences = [0, 3, 2, 4]
     qi = 0
     for d in quality_day_preferences:
@@ -203,10 +242,12 @@ def schedule_from_composer(
     # choice, which stacked quality, medium-long and long on Thu/Fri/Sat.
     # With two quality days plus the long run, one loaded pair can't be
     # avoided; the medium-long then follows a quality day rather than
-    # preceding one, so the quality session is run on fresh legs.
+    # preceding one where it has the choice, so the quality session is run on
+    # fresh legs. A five-run week has none: with Tuesday and Friday free,
+    # Wednesday is the only open midweek day, on the eve of Thursday's session.
     for slot in slots:
         if slot.slot_type == SlotType.MEDIUM_LONG:
-            free = [d for d in _SLOT_DAY_MAP["medium_long"] if schedule[d] is None]
+            free = _open_days(_SLOT_DAY_MAP["medium_long"], schedule)
             if not free:
                 continue
 

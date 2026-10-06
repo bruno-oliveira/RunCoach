@@ -193,6 +193,18 @@ Routers should carry no raw `db.query` — there is one remaining exception in
   quality caps), `core/training/workouts/` (builders, catalog, steps), and
   `core/training/physiology/` (VDOT, zones). `plan_structure_guard.py` and
   `plan_validator.py` are the post-generation sanity checks.
+  **Tuesday and Friday carry no run** — `FREE_WEEKDAYS` in
+  `core/training/tuning.py`, read by every day-placement site (the week
+  scheduler, the performance and beginner generators, the recovery block)
+  because each used to own a day table and they disagreed. Five runs fit; a
+  six-run week gives Friday back and keeps Tuesday. Backyard is the exception
+  from five runs up, and on the eve of its Saturday start: the simulation owns
+  the whole weekend, so the scheduler is told Sunday is reserved.
+  `tests/test_core/test_free_weekdays.py` pins it per generator. Trap when
+  touching the layout: `generate_tempo_run` picks its variant from
+  `day % 3`, so moving a quality session to another weekday changes the
+  session itself (rep length, then the week's volume) — quality stays on
+  Monday and Thursday for that reason.
 
 - **Adaptation** — `contexts/plan/adaptation/__init__.py` is a thin
   `AdaptationService` facade preserving one public API over focused modules:

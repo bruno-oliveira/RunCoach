@@ -10,6 +10,7 @@ if TYPE_CHECKING:
 
 from app.contexts.plan.generators.plan_validator import validate_week_plan
 from app.contexts.plan.generators.weekly_plan_builder.backyard_week import (
+    SECOND_DAY_INDEX,
     apply_backyard_week,
     weekend_budget_km,
 )
@@ -341,6 +342,7 @@ def generate_daily_workouts(
             phase,
             week_number,
             is_recovery_week,
+            reserved_days=frozenset({SECOND_DAY_INDEX}) if is_backyard else frozenset(),
         )
 
     # Medium-long distance: sized from the composer's volume percentage.

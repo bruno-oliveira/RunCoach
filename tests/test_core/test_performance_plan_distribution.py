@@ -83,8 +83,12 @@ class TestPerformancePlanDayDistribution:
             )
 
     @pytest.mark.parametrize("phase", ["base", "build", "peak", "taper"])
-    def test_quality_workouts_on_tuesday_thursday(self, generator, phase):
-        """Quality workouts should be on Tuesday (2) and Thursday (4) for 4x/week."""
+    def test_quality_workouts_on_monday_thursday(self, generator, phase):
+        """Quality workouts should be on Monday (1) and Thursday (4) for 4x/week.
+
+        Tuesday is a free weekday (``FREE_WEEKDAYS``), so the first session
+        moved to Monday.
+        """
         plan = generator.generate_plan(
             target_distance=10.0,
             current_pace=5.5,
@@ -99,7 +103,7 @@ class TestPerformancePlanDayDistribution:
                 quality_days = [
                     d["day"] for d in week["daily_workouts"] if d.get("quality", False)
                 ]
-                assert 2 in quality_days, "Quality workout missing on Tuesday"
+                assert 1 in quality_days, "Quality workout missing on Monday"
                 if len(quality_days) >= 2:
                     assert 4 in quality_days, (
                         "Second quality workout should be on Thursday"

@@ -46,20 +46,22 @@ _MIN_RUN_KM = 3.0
 _LONG_RATIO = 1.4
 
 # Weekday layouts (1 = first day of the block's week). The first week keeps the
-# days straight after the race free; in later weeks the last run — the long
-# one, once it returns — lands on day 6, matching the generators so the
-# runner's rhythm carries over.
+# days straight after the race free; in later weeks the last run listed — the
+# long one, once it returns — lands on day 6, matching the generators so the
+# runner's rhythm carries over. Tuesday and Friday stay free (``FREE_WEEKDAYS``
+# in tuning.py) wherever the week has room; six runs need one of them back and
+# take Friday.
 _FIRST_WEEK_DAYS: Dict[int, tuple[int, ...]] = {
     2: (3, 6),
-    3: (3, 5, 6),
+    3: (3, 4, 6),
     4: (3, 4, 6, 7),
 }
 _WEEK_DAYS: Dict[int, tuple[int, ...]] = {
     2: (3, 6),
-    3: (2, 4, 6),
-    4: (2, 3, 5, 6),
-    5: (1, 2, 4, 5, 6),
-    6: (1, 2, 3, 4, 5, 6),
+    3: (1, 3, 6),
+    4: (1, 3, 4, 6),
+    5: (1, 3, 4, 7, 6),
+    6: (1, 3, 4, 5, 7, 6),
 }
 
 

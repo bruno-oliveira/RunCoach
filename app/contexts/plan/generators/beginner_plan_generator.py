@@ -498,12 +498,16 @@ class BeginnerPlanGenerator:
         }
 
     def _get_workout_days(self, max_runs: int) -> List[int]:
-        """Get optimal workout days for beginners (spread throughout week)."""
+        """Get optimal workout days for beginners (spread throughout week).
+
+        Tuesday and Friday stay free (``FREE_WEEKDAYS``), so three runs are
+        Mon/Wed/Sat and a fourth takes Thursday.
+        """
         if max_runs == 3:
-            return [1, 3, 5]
+            return [1, 3, 6]
         elif max_runs == 2:
             return [1, 4]
-        return [1, 3, 5, 7][:max_runs]
+        return [1, 3, 4, 6][:max_runs]
 
     def _get_beginner_tips(
         self, week_number: int, target_distance: float = 5.0

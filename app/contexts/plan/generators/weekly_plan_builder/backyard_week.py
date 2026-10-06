@@ -44,6 +44,13 @@ from app.utils import format_km, format_pace
 _SIMULATION_DAY = 6
 _SECOND_DAY = 7
 
+# The second day as the 0-based index the week scheduler works in. It is
+# handed over as reserved so no easy run is parked where this pass will
+# overwrite it: with Tuesday and Friday free, Sunday is otherwise the next open
+# day, and an overnight rehearsal then dropped that run and pushed its distance
+# onto the midweek ones (a 38 km "easy" Wednesday).
+SECOND_DAY_INDEX = _SECOND_DAY - 1
+
 # Loops for the day after a simulation. One is a genuine second start on
 # stiff legs; two is worth doing only when the simulation itself was big
 # enough that the runner is rehearsing the back half of a race rather than

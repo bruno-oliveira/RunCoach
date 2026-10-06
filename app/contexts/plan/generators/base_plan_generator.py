@@ -27,7 +27,7 @@ from app.contexts.plan.generators.workout_builder_base import (
     reconcile_workout_after_cap,
 )
 from app.core.training.periodization.quality_caps import enforce_week_caps
-from app.core.training.tuning import MAX_KEY_WORKOUT_VS_LONG_RUN
+from app.core.training.tuning import FREE_WEEKDAYS, MAX_KEY_WORKOUT_VS_LONG_RUN
 from app.core.training.workouts.key_workout_library import (
     overlay_key_workout as _overlay_key_workout_shared,
 )
@@ -72,7 +72,8 @@ class BasePlanGenerator:
 
         Each easy run gets an even share of ``remaining_km`` (floored to a
         meaningful minimum relative to the long run) and is placed to avoid
-        three consecutive run days when possible.
+        three consecutive run days when possible. Tuesday and Friday
+        (``FREE_WEEKDAYS``) are taken only once every other day is.
         """
         scheduled_days = {w["day"] for w in daily_workouts}
         # Prefer the well-spaced odd days, but fall back to any open day so the
@@ -96,13 +97,17 @@ class BasePlanGenerator:
         easy_run_km = max(easy_run_km, min_easy_km)
 
         for _ in range(easy_runs_needed):
+            # Past five runs a free day has to go. Friday goes first, so
+            # Tuesday survives a six-run week here as it does on the composer
+            # path, where it carries the non-running recovery slot.
+            open_days = [d for d in available_days if d not in FREE_WEEKDAYS] or sorted(
+                available_days, reverse=True
+            )[:1]
             safe_days = [
                 d
-                for d in available_days
+                for d in open_days
                 if not self._would_create_three_consecutive(d, scheduled_days)
-            ]
-            if not safe_days:
-                safe_days = available_days
+            ] or open_days
             if not safe_days:
                 break
             chosen = safe_days[0]
