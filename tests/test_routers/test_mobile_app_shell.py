@@ -93,11 +93,12 @@ class TestAppShellMarkup:
         assert (STATIC_ROOT / "css" / "mobile-app.css").is_file()
         assert "/static/css/mobile-app.css" in client.get("/").text
 
-    def test_tab_bar_renders_for_anonymous_visitors(self, client):
-        html = client.get("/").text
+    def test_guest_home_hides_tab_bar_but_public_pages_show_it(self, client):
+        assert 'class="tab-bar"' not in client.get("/").text
 
+        html = client.get("/recipes").text
         assert 'class="tab-bar"' in html
-        assert 'data-i18n="nav.home"' in html
+        assert 'data-i18n="nav.today"' in html
 
     def test_anonymous_tab_bar_offers_only_public_surfaces(self):
         bar = _render_tab_bar(path="/")
@@ -115,8 +116,9 @@ class TestAppShellMarkup:
 
         assert 'href="/my-plans"' in bar
         assert 'href="/coach"' in bar
-        assert 'href="/recipes"' in bar
+        assert 'href="/run"' in bar
         assert 'data-i18n="tab.more"' in bar
+        assert 'href="/recipes"' not in bar
         # Signed in, so there is nothing to sign into.
         assert 'data-i18n="tab.sign_in"' not in bar
 
