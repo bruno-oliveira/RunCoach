@@ -260,21 +260,22 @@ class TestTimeGoalPlan:
 @pytest.mark.usefixtures("_override_db")
 class TestHomeHero:
     def test_anonymous_home_shows_marketing_hero(self):
-        """Anonymous visitors can build before connecting and see a real sample week."""
+        """A visitor meets the form and a real sample week before any ask to connect."""
         app.dependency_overrides[get_optional_user] = lambda: None
         try:
             with TestClient(app) as c:
                 resp = c.get("/")
             assert resp.status_code == 200
             assert "hero--status" not in resp.text
-            # Single action surface: the connect card is present.
-            assert "connect-card" in resp.text
-            card = resp.text.split('id="home-connect-card"', 1)[1].split(
-                "<!-- Prerequisites collapsed", 1
-            )[0]
-            assert card.index("scrollToBuild()") < card.index("connectWatch()")
-            assert 'id="preview-title"' in resp.text
-            assert 'id="plan-form"' in resp.text
+            # The form is rendered in place, exactly once, ahead of the sample
+            # week and of the page's own connect button (the nav keeps its link).
+            assert resp.text.count('id="plan-form"') == 1
+            page = resp.text[resp.text.index('class="hero hero--guest"') :]
+            form = page.index('id="plan-form"')
+            sample = page.index('id="preview-title"')
+            connect = page.index('id="home-connect"')
+            assert form < sample < connect
+            assert "connectWatch()" not in page[:connect]
         finally:
             app.dependency_overrides.pop(get_optional_user, None)
 
@@ -282,16 +283,25 @@ class TestHomeHero:
         """The week labelled as real on the landing page must track the engine."""
         from app.contexts.plan.generators.plan_generator import TrainingPlanGenerator
 
-        week = TrainingPlanGenerator().generate_plan(25, 10, 12, 4)[3]
+        week = TrainingPlanGenerator().generate_plan(25, 10, 12, 4)[5]
+        assert week["total_km"] == 36.0
         assert [(day["type"], day["distance"]) for day in week["daily_workouts"]] == [
-            ("easy", 6.7),
+            ("interval", 5.6),
             ("rest", 0),
-            ("easy", 6.7),
-            ("easy", 6.7),
+            ("easy", 8.6),
+            ("easy", 8.6),
             ("rest", 0),
-            ("long", 7.5),
+            ("long", 13.2),
             ("rest", 0),
         ]
+        # The page quotes Saturday's rationale as the engine's own words.
+        app.dependency_overrides[get_optional_user] = lambda: None
+        try:
+            with TestClient(app) as c:
+                page = c.get("/").text
+        finally:
+            app.dependency_overrides.pop(get_optional_user, None)
+        assert week["daily_workouts"][5]["coaching_rationale"] in page
 
     def test_public_adjustment_example_still_matches_engine(self, test_db):
         """Pin the before/after values used as product proof on the landing page."""

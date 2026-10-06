@@ -183,110 +183,64 @@
     </div>
 </div>
 {% else %}
-<!-- Anonymous: marketing hero. One action surface (the card), no duplicate CTAs. -->
-<div class="hero">
-    <div class="hero-bg" aria-hidden="true">
-        <div class="hero-orb hero-orb-1"></div>
-        <div class="hero-orb hero-orb-2"></div>
-        <div class="hero-orb hero-orb-3"></div>
-    </div>
-
+<!-- Anonymous: the first screen is the action (the form) beside the thing it
+     produces (a real week). Everything about connecting comes after the plan. -->
+<div class="hero hero--guest">
     <div class="container">
-        <div class="hero-layout">
-            <!-- Left: the loop (thesis). Narrative only — the action lives in the card. -->
-            <div class="hero-content stagger">
-                <div class="hero-badge">
-                    <span class="hero-badge-dot"></span>
-                <span data-i18n="home.badge">Free, adaptive running plans</span>
-                </div>
-
+        <div class="guest-layout">
+            <div class="guest-intro">
                 <h1 class="hero-title">
                     <span data-i18n="home.hero_title1">A running plan that</span><br>
                     <span class="hero-title-accent"><span data-i18n="home.hero_title2">keeps up with you.</span></span>
                 </h1>
+                <p class="hero-subtitle" data-i18n="home.hero_sub">Build a full plan from your goal and weekly mileage. Connect your runs later and it adapts to what you actually do.</p>
+            </div>
 
-                <p class="hero-subtitle">
-                    <span data-i18n="home.hero_sub">Build a full plan from your goal and weekly mileage. Connect your runs later and it adapts to what you actually do.</span>
-                </p>
+            <div class="hero-form-wrap guest-form" id="build-plan">
+                {% include 'components/plan_form.html' %}
+            </div>
 
-                <!-- The loop: watch in → real paces → plan out → back to watch → adapts -->
-                <ol class="hero-loop" aria-label="How RunCoach works">
-                    <li class="hero-loop-step">
-                        <span class="hero-loop-num">1</span>
-                        <span class="hero-loop-text" data-i18n="home.loop_runs">Your runs come in through Intervals.icu</span>
+            {# plan[5] of TrainingPlanGenerator().generate_plan(25, 10, 12, 4): real
+               engine output kept as a static specimen, pinned by
+               test_public_sample_week_still_matches_generator. #}
+            {% set sample_days = [
+                ('mon', 'Mon', 'interval', 'intervals', 'Intervals', '5.6', 'mon_detail', '2 × 800 m hard, then 3 × 400 m quicker'),
+                ('tue', 'Tue', 'rest', 'rest', 'Rest', '', '', ''),
+                ('wed', 'Wed', 'easy', 'easy', 'Easy', '8.6', 'wed_detail', 'Conversational pace'),
+                ('thu', 'Thu', 'easy', 'strides', 'Easy + strides', '8.6', 'thu_detail', '6 × 100 m strides to finish'),
+                ('fri', 'Fri', 'rest', 'rest', 'Rest', '', '', ''),
+                ('sat', 'Sat', 'long', 'long', 'Long run', '13.2', 'sat_detail', 'Easy, with the last 2 km at threshold'),
+                ('sun', 'Sun', 'rest', 'rest', 'Rest', '', '', '')
+            ] %}
+            <section class="guest-sample" aria-labelledby="preview-title">
+                <p class="guest-eyebrow" data-i18n="home.preview_eyebrow">What you get</p>
+                <h2 id="preview-title" class="guest-sample-title" data-i18n="home.preview_title">Week 6 of a 12-week 10K plan</h2>
+                <p class="guest-sample-setup" data-i18n="home.preview_setup">Built from three answers: 25 km a week, a 10K, 12 weeks.</p>
+                <ol class="guest-week">
+                    {% for key, day, kind, title_key, title, km, detail_key, detail in sample_days %}
+                    <li class="guest-week-day guest-week-day--{{ kind }}">
+                        <span class="guest-week-dow" data-i18n="home.preview_{{ key }}">{{ day }}</span>
+                        <span class="guest-week-session">
+                            <strong data-i18n="home.preview_{{ title_key }}">{{ title }}</strong>
+                            {% if detail %}<span data-i18n="home.preview_{{ detail_key }}">{{ detail }}</span>{% endif %}
+                        </span>
+                        {% if km %}<span class="guest-week-km">{{ km }} km</span>{% endif %}
                     </li>
-                    <li class="hero-loop-step">
-                        <span class="hero-loop-num">2</span>
-                        <span class="hero-loop-text" data-i18n="home.loop_paces">Every pace is set from your real fitness</span>
-                    </li>
-                    <li class="hero-loop-step">
-                        <span class="hero-loop-num">3</span>
-                        <span class="hero-loop-text" data-i18n="home.loop_plan">You get a week-by-week plan</span>
-                    </li>
-                    <li class="hero-loop-step">
-                        <span class="hero-loop-num">4</span>
-                        <span class="hero-loop-text" data-i18n="home.loop_watch">Your sessions reach your training calendar</span>
-                    </li>
-                    <li class="hero-loop-step hero-loop-step--cycle">
-                        <span class="hero-loop-num" aria-hidden="true">↻</span>
-                        <span class="hero-loop-text" data-i18n="home.loop_adapts">And it adapts as you keep running</span>
-                    </li>
+                    {% endfor %}
                 </ol>
-            </div>
-
-            <!-- Right: connect card — the single "Start here" action surface. -->
-            <div class="hero-form-wrap">
-                <div class="connect-card" id="home-connect-card">
-                    <span class="connect-card-eyebrow" data-i18n="home.connect_eyebrow">Start here</span>
-                    <h2 class="connect-card-title" data-i18n="home.connect_title">See your plan first</h2>
-                    <p class="connect-card-desc" data-i18n="home.connect_desc">Your mileage, goal and weeks. No account needed to see the whole block.</p>
-
-                    <button type="button" class="btn btn-accent btn-full connect-card-btn" onclick="scrollToBuild()" data-i18n="home.cta_build">Build my plan</button>
-
-                    <div class="connect-card-or"><span data-i18n="home.connect_or">then, if you want</span></div>
-
-                    <button type="button" class="btn btn-ghost btn-full" onclick="connectWatch()">
-                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="6" width="12" height="12" rx="3"/><path d="M9 6l.5-3h5l.5 3"/><path d="M9 18l.5 3h5l.5-3"/><path d="M12 10v2.5l1.5 1"/></svg>
-                        <span data-i18n="home.cta_connect">Connect your runs</span>
-                    </button>
-                    <p class="connect-card-mechanism" data-i18n="home.connect_mechanism">Through a free Intervals.icu account &mdash; a one-time bridge between your watch and RunCoach.</p>
-                    <p class="connect-card-signup"><a href="https://intervals.icu/signup" target="_blank" rel="noopener" data-i18n="home.connect_signup">New to Intervals.icu? Sign up with your Garmin account and both the watch link and the account are done in one step.</a></p>
-
-                    <p class="connect-card-manual-note" data-i18n="home.cta_nowatch">Intervals.icu brings in your runs and can send planned workouts to a compatible watch.</p>
-
-                    <!-- Prerequisites collapsed: only needed to send workouts BACK to
-                         the watch. Importing runs + paces works with just the connection. -->
-                    <details class="connect-prereqs">
-                        <summary class="connect-prereqs-toggle">
-                            <span data-i18n="home.check_title">What you'll need to send workouts to your watch</span>
-                            <svg class="chevron-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
-                        </summary>
-                        <div class="connect-prereqs-body">
-                            <ul class="connect-checklist-list">
-                                <li class="connect-checklist-item">
-                                    <svg class="connect-check-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>
-                                    <span data-i18n="home.check_1">A free Intervals.icu account</span>
-                                </li>
-                                <li class="connect-checklist-item">
-                                    <svg class="connect-check-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>
-                                    <span data-i18n-html="home.check_2">Your watch platform linked inside Intervals.icu &mdash; Garmin, COROS, Wahoo, Suunto or Zwift <em>(only to send workouts back)</em></span>
-                                </li>
-                                <li class="connect-checklist-item">
-                                    <svg class="connect-check-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>
-                                    <span data-i18n-html="home.check_3">Planned-workout upload enabled <em>(only to send workouts back)</em></span>
-                                </li>
-                            </ul>
-                            <p class="connect-checklist-note" data-i18n="home.check_note">Importing runs and paces needs only the connection. The watch steps are one-time — and signing up to Intervals with Garmin covers the first two at once. Polar and Apple Watch can’t receive planned workouts from any app.</p>
-                        </div>
-                    </details>
-                </div>
-            </div>
+                <p class="guest-week-total"><span data-i18n="home.preview_total">Week total</span> <strong>36 km</strong></p>
+                <blockquote class="guest-why">
+                    <p class="guest-why-label" data-i18n="home.preview_why_label">Every session says why. Saturday's:</p>
+                    <p data-i18n="home.preview_why">Short fast-finish long runs develop the 10K-specific skill of holding form when tired — exactly what you need in the final 2 km.</p>
+                </blockquote>
+            </section>
         </div>
     </div>
 </div>
 {% endif %}
 
-<!-- Build-a-plan section: the manual, anonymous-friendly form (moved below the hero) -->
+{% if user %}
+<!-- Signed in: the same form, below the status hero. -->
 <section class="build-section" id="build-plan">
     <div class="container">
         <div class="build-section-header">
@@ -294,409 +248,95 @@
             <p class="build-section-desc" data-i18n="home.build_desc">No connection needed. Answer three questions and get a full plan — connect later to make it adapt to your runs.</p>
         </div>
         <div class="hero-form-wrap build-form-wrap">
-            <div class="form-card">
-                <div class="form-card-header">
-                    <h2 class="form-card-title"><span data-i18n="home.form_title">Create your plan</span></h2>
-                    <p class="form-card-desc"><span data-i18n="home.form_desc">Start with your mileage, race goal and weeks. The rest is optional.</span></p>
-                </div>
-
-                    {% if error %}
-                    <div class="form-alert">
-                        {% if error_type == 'insufficient_time' %}
-                        <div class="alert alert-warning">
-                            <span class="alert-icon">
-                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-                            </span>
-                            <div class="alert-content">
-                                <div class="alert-title">Training Duration Too Short</div>
-                                <div class="alert-message">{{ error }}</div>
-                                {% if suggestion %}
-                                <div class="alert-message" style="margin-top:4px; font-style: italic;">{{ suggestion }}</div>
-                                {% endif %}
-                            </div>
-                        </div>
-                        {% elif error_type == 'inadequate_base' %}
-                        <div class="alert alert-info">
-                            <span class="alert-icon">
-                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
-                            </span>
-                            <div class="alert-content">
-                                <div class="alert-title">Build Your Base First</div>
-                                <div class="alert-message">{{ error }}</div>
-                                {% if suggestion %}
-                                <div class="alert-message" style="margin-top:4px; font-style: italic;">{{ suggestion }}</div>
-                                {% endif %}
-                            </div>
-                        </div>
-                        {% elif error_type == 'validation' %}
-                        <div class="alert alert-warning">
-                            <span class="alert-icon">
-                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-                            </span>
-                            <div class="alert-content">
-                                <div class="alert-title">Please Check Your Input</div>
-                                <div class="alert-message">{{ error }}</div>
-                            </div>
-                        </div>
-                        {% else %}
-                        <div class="alert alert-error">
-                            <span class="alert-icon">
-                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
-                            </span>
-                            <div class="alert-content">
-                                <div class="alert-title">Something went wrong</div>
-                                <div class="alert-message">{{ error }}</div>
-                            </div>
-                        </div>
-                        {% endif %}
-                    </div>
-                    {% endif %}
-
-                    <form method="post" action="/generate-plan" class="plan-form{% if not user %} anon-plan-form{% endif %}" id="plan-form">
-                        <!-- Plan mode toggle -->
-                        <div class="mode-toggle-wrap">
-                            <input type="hidden" id="plan_mode" name="plan_mode" value="{{ request.query_params.get('mode', 'distance') }}">
-                            <button type="button" class="mode-btn mode-btn-active" id="mode-distance-btn" onclick="setPlanMode('distance')"><span data-i18n="home.goal_distance">Distance Goal</span></button>
-                            <button type="button" class="mode-btn" id="mode-time-btn" onclick="setPlanMode('time')" {% if not user %}disabled title="Sign in to use Time Goal"{% endif %}><span data-i18n="home.goal_time">Time Goal</span></button>
-                        </div>
-                        <p class="mode-description" id="mode-description"><span data-i18n="home.goal_distance_desc">Build a structured plan to finish a race at a specific distance.</span></p>
-
-                        <p class="form-essentials-label" data-i18n="home.essentials">The three essentials</p>
-                        <!-- Shared: Weekly mileage (always visible) -->
-                        <div class="form-group">
-                            <label for="current_km" class="form-label"><span data-i18n="home.weekly_mileage">Weekly mileage</span></label>
-                            <div class="input-with-unit">
-                                <input type="number" id="current_km" name="current_km" class="form-input" step="0.1" min="0" max="200" required placeholder="20">
-                                <span class="input-unit">km</span>
-                            </div>
-                            <span class="form-help" id="km-help"><span data-i18n="home.weekly_mileage_desc">Your current weekly running distance.</span> <strong><span data-i18n="home.weekly_mileage_hint">Enter 0 if just starting out (5K/10K only, 8+ weeks)</span></strong></span>
-                        </div>
-
-                        <!-- Distance Goal fields -->
-                        <div id="distance-mode-fields">
-                            <div class="form-row-2">
-                                <div class="form-group">
-                                    <label for="target_distance" class="form-label"><span data-i18n="home.race_goal">Race goal</span></label>
-                                    <div class="select-wrap">
-                                        <select id="target_distance" name="target_distance" class="form-select" required>
-                                            <option value="">Select distance</option>
-                                            <option value="5">5K</option>
-                                            <option value="10">10K</option>
-                                            <option value="21.1">Half Marathon</option>
-                                            <option value="42.2">Marathon</option>
-                                            <option value="trail">Trail / Ultra (custom)</option>
-                                            <option value="backyard">Backyard Ultra (last one standing)</option>
-                                        </select>
-                                    </div>
-                                </div>
-
-                                <div class="form-group">
-                                    <label for="weeks" class="form-label"><span data-i18n="home.duration">Duration</span></label>
-                                    <div class="input-with-unit">
-                                        <input type="number" id="weeks" name="weeks" class="form-input" min="4" max="40" required placeholder="12">
-                                        <span class="input-unit">weeks</span>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <!-- Trail / ultra panel: distance + elevation. Revealed
-                                 when "Trail / Ultra (custom)" is picked above. -->
-                            <div class="form-row-2" id="trail-group" style="display: none;">
-                                <input type="hidden" id="is_trail" name="is_trail" value="">
-                                <div class="form-group">
-                                    <label for="trail_distance_km" class="form-label"><span data-i18n="home.trail_distance">Trail distance</span></label>
-                                    <div class="input-with-unit">
-                                        <input type="number" id="trail_distance_km" name="trail_distance_km" class="form-input"
-                                               step="0.1" min="8" max="163" placeholder="50">
-                                        <span class="input-unit">km</span>
-                                    </div>
-                                    <span class="form-help">8 km up to 163 km (100 mi). Examples: 50, 80, 163.</span>
-                                </div>
-
-                                <div class="form-group">
-                                    <label for="target_elevation_gain_m" class="form-label"><span data-i18n="home.elevation_gain">Total elevation gain</span></label>
-                                    <div class="input-with-unit">
-                                        <input type="number" id="target_elevation_gain_m" name="target_elevation_gain_m"
-                                               class="form-input" step="1" min="0" max="10000" placeholder="1500">
-                                        <span class="input-unit">m</span>
-                                    </div>
-                                    <span class="form-help" id="elevation-classifier">
-                                        Enter 0 for fully flat trails. We'll classify the course live.
-                                    </span>
-                                </div>
-                            </div>
-
-                            <!-- Backyard ultra panel: the goal is a loop count, not a
-                                 distance, so this asks for loops and loop shape and
-                                 shows the rest budget those imply. Revealed when
-                                 "Backyard Ultra" is picked above. -->
-                            <div id="backyard-group" style="display: none;">
-                                <input type="hidden" id="is_backyard" name="is_backyard" value="">
-                                <div class="form-row-2">
-                                    <div class="form-group">
-                                        <label for="backyard_target_loops" class="form-label">Target loops</label>
-                                        <div class="input-with-unit">
-                                            <input type="number" id="backyard_target_loops" name="backyard_target_loops"
-                                                   class="form-input" step="1" min="6" max="48" placeholder="24">
-                                            <span class="input-unit">loops</span>
-                                        </div>
-                                        <span class="form-help">One loop = one hour. 24 loops is 100 miles in 24 hours. (Backyard races call a completed loop a &ldquo;yard&rdquo;.)</span>
-                                    </div>
-
-                                    <div class="form-group">
-                                        <label for="backyard_loop_km" class="form-label">Loop length</label>
-                                        <div class="input-with-unit">
-                                            <input type="number" id="backyard_loop_km" name="backyard_loop_km"
-                                                   class="form-input" step="0.001" min="5.5" max="8" value="6.706">
-                                            <span class="input-unit">km</span>
-                                        </div>
-                                        <span class="form-help">The standard backyard loop is 6.706 km (4.167 mi).</span>
-                                    </div>
-                                </div>
-
-                                <div class="form-group">
-                                    <label for="backyard_loop_elevation_gain_m" class="form-label">Elevation gain per loop</label>
-                                    <div class="input-with-unit">
-                                        <input type="number" id="backyard_loop_elevation_gain_m" name="backyard_loop_elevation_gain_m"
-                                               class="form-input" step="1" min="0" max="400" placeholder="0">
-                                        <span class="input-unit">m</span>
-                                    </div>
-                                    <span class="form-help" id="backyard-budget">
-                                        Enter 0 for a flat loop. We'll work out your rest budget live.
-                                    </span>
-                                </div>
-                            </div>
-
-                            <div class="form-group" id="training-terrain-group" style="display: none;">
-                                <label for="training_terrain" class="form-label"><span data-i18n="home.where_train">Where you train</span></label>
-                                <div class="select-wrap">
-                                    <select id="training_terrain" name="training_terrain" class="form-select">
-                                        <option value="">Select terrain access</option>
-                                        <option value="flat">Mostly flat (city / canal paths)</option>
-                                        <option value="rolling">Rolling hills available</option>
-                                        <option value="hilly">Regular steep hills available</option>
-                                        <option value="mountainous">Mountain terrain available</option>
-                                    </select>
-                                </div>
-                                <span class="form-help">This adjusts sessions to your local terrain while still preparing for your race profile.</span>
-                            </div>
-
-                            <!-- Intensive Training Weekend — opt-in, eligible trail brackets only
-                                 (standard / ultra / long-ultra). Shown by JS when the trail
-                                 distance qualifies. -->
-                            <div class="form-group" id="intensive-weekend-group" style="display: none;">
-                                <label class="toggle-label" for="intensive_weekend">
-                                    <span class="toggle-wrap">
-                                        <input type="checkbox" id="intensive_weekend" name="intensive_weekend" class="toggle-input" value="on" disabled>
-                                        <span class="toggle-track"><span class="toggle-thumb"></span></span>
-                                    </span>
-                                    <span class="toggle-text">
-                                        <strong>Add an Intensive Training Weekend</strong>
-                                        <span class="form-help">A demanding peak-phase block ~2–3 weeks out: a Saturday trail-quality session plus a Sunday long run on fatigued legs, with lighter lead-in days. Triggers overcompensation. Choose this only if you can absorb a big back-to-back weekend.</span>
-                                    </span>
-                                </label>
-                            </div>
-
-                            <!-- Progressive disclosure: both fields have safe
-                                 server defaults (runs=4, weight=70kg), so they
-                                 start collapsed. Trail selection auto-opens this
-                                 so the runs/week floor stays visible. -->
-                            <div class="form-group form-collapsible" id="more-options-collapsible">
-                                <button type="button" class="form-collapsible-toggle" onclick="toggleMoreOptions()" aria-expanded="false" aria-controls="more-options-fields">
-                                    <span data-i18n="home.more_options">More options (runs per week, body weight)</span>
-                                    <svg class="chevron-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
-                                </button>
-                                <div id="more-options-fields" class="form-collapsible-content" style="display:none;">
-                                    <div class="form-row-2">
-                                        <div class="form-group">
-                                            <label for="max_runs_per_week" class="form-label"><span data-i18n="home.runs_per_week">Runs per week</span></label>
-                                            <div class="select-wrap">
-                                                <select id="max_runs_per_week" name="max_runs_per_week" class="form-select">
-                                                    <option value="2">2 runs &mdash; Minimum dose</option>
-                                                    <option value="3">3 runs &mdash; Classic starter</option>
-                                                    <option value="4" selected>4 runs &mdash; Recommended</option>
-                                                    <option value="5">5 runs &mdash; Sweet spot</option>
-                                                    <option value="6">6 runs &mdash; Serious training</option>
-                                                </select>
-                                            </div>
-                                        </div>
-
-                                        <div class="form-group">
-                                            <label for="body_weight_kg" class="form-label"><span data-i18n="home.body_weight">Body weight</span></label>
-                                            <div class="input-with-unit">
-                                                <input type="number" id="body_weight_kg" name="body_weight_kg" class="form-input" step="0.1" min="30" max="250" placeholder="70" value="70">
-                                                <span class="input-unit">kg</span>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div class="form-group form-collapsible">
-                                <button type="button" class="form-collapsible-toggle" onclick="toggleRaceFields()">
-                                    <span>Got a recent race result? (optional)</span>
-                                    <svg class="chevron-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
-                                </button>
-                                <div id="race-fields" class="form-collapsible-content" style="display:none;">
-                                    <span class="form-help" style="margin-bottom: 8px; display:block;">We'll calculate your VDOT and set personalised pace zones</span>
-                                    <div class="form-row-2">
-                                        <div class="form-group">
-                                            <label for="recent_race_distance_km" class="form-label"><span data-i18n="home.race_distance">Race distance</span></label>
-                                            <div class="select-wrap">
-                                                <select id="recent_race_distance_km" name="recent_race_distance_km" class="form-select">
-                                                    <option value="">Select</option>
-                                                    <option value="5">5K</option>
-                                                    <option value="10">10K</option>
-                                                    <option value="21.1">Half Marathon</option>
-                                                    <option value="42.2">Marathon</option>
-                                                </select>
-                                            </div>
-                                        </div>
-                                        <div class="form-group">
-                                            <label for="recent_race_time" class="form-label"><span data-i18n="home.finish_time">Finish time</span></label>
-                                            <input type="text" id="recent_race_time" name="recent_race_time" class="form-input" placeholder="HH:MM:SS or MM:SS">
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div class="form-group form-collapsible" id="goal-collapsible">
-                                <button type="button" class="form-collapsible-toggle" onclick="toggleGoalFields()">
-                                    <span>Chasing a goal time? (optional)</span>
-                                    <svg class="chevron-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
-                                </button>
-                                <div id="goal-fields" class="form-collapsible-content" style="display:none;">
-                                    <span class="form-help" style="margin-bottom: 8px; display:block;">Every quality session will be paced off your goal, not your current fitness</span>
-                                    <div class="form-group">
-                                        <label for="goal_time" class="form-label"><span data-i18n="home.goal_finish_time">Goal finish time</span></label>
-                                        <input type="text" id="goal_time" name="goal_time" class="form-input" placeholder="HH:MM:SS or MM:SS">
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Time Goal mode fields (hidden by default) -->
-                        <div id="time-mode-fields" style="display:none;">
-                            <div class="form-row-2">
-                                <div class="form-group">
-                                    <label for="target_distance_time" class="form-label">Race goal</label>
-                                    <div class="select-wrap">
-                                        <select id="target_distance_time" name="target_distance" class="form-select" required>
-                                            <option value="">Select distance</option>
-                                            <option value="5">5K</option>
-                                            <option value="10">10K</option>
-                                            <option value="21.1">Half Marathon</option>
-                                            <option value="42.2">Marathon</option>
-                                        </select>
-                                    </div>
-                                </div>
-
-                                <div class="form-group">
-                                    <label for="weeks_time" class="form-label">Duration</label>
-                                    <div class="input-with-unit">
-                                        <input type="number" id="weeks_time" name="weeks" class="form-input" min="6" max="16" required placeholder="10">
-                                        <span class="input-unit">weeks</span>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div class="form-group">
-                                <label for="max_runs_per_week_time" class="form-label">Runs per week</label>
-                                <div class="select-wrap">
-                                    <select id="max_runs_per_week_time" name="max_runs_per_week" class="form-select" required>
-                                        <option value="3">3 runs &mdash; Classic starter</option>
-                                        <option value="4">4 runs</option>
-                                        <option value="5" selected>5 runs &mdash; Recommended</option>
-                                        <option value="6">6 runs &mdash; Serious training</option>
-                                    </select>
-                                </div>
-                            </div>
-
-                            <div class="form-group">
-                                <label for="goal_time_required" class="form-label">Goal finish time</label>
-                                <input type="text" id="goal_time_required" name="goal_time_required" class="form-input" placeholder="HH:MM:SS or MM:SS" pattern="^(\d{1,2}:\d{2}|\d{1,2}:\d{2}:\d{2})$" required>
-                                <span class="form-help">Your target race time &mdash; all workouts will be paced from this goal</span>
-                            </div>
-
-                            <div class="form-row-2">
-                                <div class="form-group">
-                                    <label for="current_time" class="form-label"><span data-i18n="home.current_finish">Current finish time</span></label>
-                                    <input type="text" id="current_time" name="current_time" class="form-input" placeholder="HH:MM:SS or MM:SS" pattern="^(\d{1,2}:\d{2}|\d{1,2}:\d{2}:\d{2})$" required>
-                                    <span class="form-help">Your current race time at this distance</span>
-                                </div>
-                                <div class="form-group">
-                                    <label for="max_heart_rate" class="form-label"><span data-i18n="home.max_hr">Max heart rate</span> <span class="form-optional"><span data-i18n="home.optional">(optional)</span></span></label>
-                                    <div class="input-with-unit">
-                                        <input type="number" id="max_heart_rate_time" name="max_heart_rate" class="form-input" min="120" max="220" step="1" placeholder="185">
-                                        <span class="input-unit">bpm</span>
-                                    </div>
-                                    <span class="form-help">Enables heart rate zones</span>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Shared across both plan modes. Asked here rather than
-                             from a banner after the fact: without a start date a
-                             plan has no calendar at all — no "This Week", no run
-                             mapping, no adaptation, and nothing to put on a watch. -->
-                        <div class="form-group">
-                            <label for="start_date" class="form-label"><span data-i18n="home.start_date">Start date</span></label>
-                            <input type="date" id="start_date" name="start_date" class="form-input" value="{{ next_monday() }}">
-                            <span class="form-help" data-i18n="home.start_date_help">Week 1 begins here. You can move it later.</span>
-                        </div>
-
-                        <div id="long-run-hint" class="long-run-hint" role="status" aria-live="polite" style="display:none;">
-                            <span class="long-run-hint-icon" aria-hidden="true">⚠</span>
-                            <span class="long-run-hint-text"></span>
-                        </div>
-
-                        <button type="submit" class="btn btn-accent btn-lg btn-full form-submit" id="form-submit-btn">
-                            <span data-i18n="home.generate">Build my plan</span>
-                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
-                        </button>
-                    </form>
-                </div>
-            </div>
+            {% include 'components/plan_form.html' %}
         </div>
     </div>
 </section>
+{% else %}
+<!-- What connecting buys, shown with a real adjustment — and only here the ask. -->
+<section class="guest-section" aria-labelledby="adapt-title">
+    <div class="container guest-adapt">
+        <div class="guest-adapt-story">
+            <p class="guest-eyebrow" data-i18n="home.adapt_eyebrow">Once your runs are connected</p>
+            <h2 id="adapt-title" data-i18n="home.adapt_title">When the week doesn't go to plan, the plan moves</h2>
+            <p data-i18n="home.adapt_desc">RunCoach checks every run you log against what was planned. Skip sessions, or run well ahead of your paces, and it re-paces the weeks you haven't run yet.</p>
+            <p data-i18n="home.adapt_receipt">Nothing changes silently. Each adjustment comes with its reason and the numbers before and after.</p>
 
-{% if not user %}
-{# Generated by TrainingPlanGenerator().generate_plan(25, 10, 12, 4)[3].
-   This is a real engine output, kept as a static specimen for a fast landing page. #}
-<section class="product-preview" aria-labelledby="preview-title">
+            <div class="guest-connect" id="home-connect">
+                <button type="button" class="btn btn-ghost" onclick="connectWatch()">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="6" y="6" width="12" height="12" rx="3"/><path d="M9 6l.5-3h5l.5 3"/><path d="M9 18l.5 3h5l.5-3"/><path d="M12 10v2.5l1.5 1"/></svg>
+                    <span data-i18n="home.cta_connect">Connect your runs</span>
+                </button>
+                <p class="guest-connect-note"><span data-i18n="home.connect_mechanism">You sign in with Google, then link a free Intervals.icu account. It reads your runs and can put each session on a compatible watch.</span> <a href="https://intervals.icu/signup" target="_blank" rel="noopener" data-i18n="home.connect_signup">New to Intervals.icu? Sign up with Garmin and your watch is linked in the same step.</a></p>
+
+                <!-- Prerequisites collapsed: only needed to send workouts BACK to
+                     the watch. Importing runs + paces works with just the connection. -->
+                <details class="connect-prereqs">
+                    <summary class="connect-prereqs-toggle">
+                        <span data-i18n="home.check_title">What you'll need to send workouts to your watch</span>
+                        <svg class="chevron-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+                    </summary>
+                    <div class="connect-prereqs-body">
+                        <ul class="connect-checklist-list">
+                            <li class="connect-checklist-item">
+                                <svg class="connect-check-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>
+                                <span data-i18n="home.check_1">A free Intervals.icu account</span>
+                            </li>
+                            <li class="connect-checklist-item">
+                                <svg class="connect-check-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>
+                                <span data-i18n-html="home.check_2">Your watch platform linked inside Intervals.icu &mdash; Garmin, COROS, Wahoo, Suunto or Zwift <em>(only to send workouts back)</em></span>
+                            </li>
+                            <li class="connect-checklist-item">
+                                <svg class="connect-check-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>
+                                <span data-i18n-html="home.check_3">Planned-workout upload enabled <em>(only to send workouts back)</em></span>
+                            </li>
+                        </ul>
+                        <p class="connect-checklist-note" data-i18n="home.check_note">Importing runs and paces needs only the connection. The watch steps are one-time — and signing up to Intervals with Garmin covers the first two at once.</p>
+                    </div>
+                </details>
+            </div>
+        </div>
+
+        {# Pinned by test_public_adjustment_example_still_matches_engine. #}
+        <figure class="guest-receipt">
+            <figcaption>
+                <span class="guest-eyebrow" data-i18n="home.receipt_eyebrow">A real adjustment</span>
+                <strong data-i18n="home.receipt_title">The weeks ahead, eased by 10%</strong>
+            </figcaption>
+            <dl class="guest-receipt-rows">
+                <div>
+                    <dt data-i18n="home.receipt_week">Week 7 total</dt>
+                    <dd><span>43.6 km</span> <span aria-hidden="true">→</span> <strong>39.8 km</strong></dd>
+                </div>
+                <div>
+                    <dt data-i18n="home.receipt_session">Monday's intervals</dt>
+                    <dd><span>5.4 km</span> <span aria-hidden="true">→</span> <strong>4.0 km</strong></dd>
+                </div>
+            </dl>
+            <p data-i18n="home.receipt_note">From a 12-week 10K plan.</p>
+        </figure>
+    </div>
+</section>
+
+<!-- The three things a runner asks before starting. -->
+<section class="guest-section guest-section--facts" aria-labelledby="facts-title">
     <div class="container">
-        <p class="product-preview-eyebrow" data-i18n="home.preview_eyebrow">A real week from the plan engine</p>
-        <h2 id="preview-title" data-i18n="home.preview_title">See what your plan looks like</h2>
-        <p data-i18n="home.preview_setup">Example: a runner at 25 km a week training for a 10K over 12 weeks. This is week 4, an easier recovery week.</p>
-        <div class="product-preview-week">
-            {% set sample_days = [
-                ('Mon', 'mon', 'Easy + strides', 'strides', '6.7 km', 'easy'),
-                ('Tue', 'tue', 'Rest', 'rest', '—', 'rest'),
-                ('Wed', 'wed', 'Easy', 'easy', '6.7 km', 'easy'),
-                ('Thu', 'thu', 'Easy + strides', 'strides', '6.7 km', 'easy'),
-                ('Fri', 'fri', 'Rest', 'rest', '—', 'rest'),
-                ('Sat', 'sat', 'Long run', 'long', '7.5 km', 'long'),
-                ('Sun', 'sun', 'Rest', 'rest', '—', 'rest')
-            ] %}
-            {% for day, day_key, title, title_key, distance, kind in sample_days %}
-            <div class="product-preview-day product-preview-day--{{ kind }}">
-                <span data-i18n="home.preview_{{ day_key }}">{{ day }}</span><strong data-i18n="home.preview_{{ title_key }}">{{ title }}</strong><small>{{ distance }}</small>
-            </div>
-            {% endfor %}
-        </div>
-        <p class="product-preview-note" data-i18n="home.preview_why">Monday's easy run builds the aerobic base; Friday's rest protects Saturday's long run. Each session in your plan explains its purpose.</p>
-        <div class="product-adaptation">
+        <h2 id="facts-title" data-i18n="home.facts_title">Before you start</h2>
+        <div class="guest-facts">
             <div>
-                <span class="product-preview-eyebrow" data-i18n="home.adapt_eyebrow">A real plan adjustment</span>
-                <h3 data-i18n="home.adapt_title">An easier week, with the numbers shown</h3>
-                <p data-i18n="home.adapt_desc">In a 12-week 10K plan, applying a 10% easier future block changed week 7 from 43.6 to 39.8 km. Monday's interval session changed from 5.4 to 4.0 km.</p>
+                <h3 data-i18n="home.fact_race_title">Does it do my race?</h3>
+                <p data-i18n="home.fact_race">5K, 10K, half and marathon. Trail and ultra up to 163 km, with the climb counted. Backyard ultras, planned in hourly loops rather than kilometres.</p>
             </div>
-            <div class="product-adaptation-numbers" aria-label="Week 7 before and after" data-i18n-aria="home.adapt_aria">
-                <span>43.6 km</span><span aria-hidden="true">→</span><strong>39.8 km</strong>
+            <div>
+                <h3 data-i18n="home.fact_watch_title">Do I need a watch?</h3>
+                <p data-i18n="home.fact_watch">No. The plan stands on its own, and every session is described by effort. With one, Garmin, COROS, Wahoo and Suunto can receive each session. Polar and Apple Watch can't receive planned workouts from any app.</p>
+            </div>
+            <div>
+                <h3 data-i18n="home.fact_free_title">What does it cost?</h3>
+                <p data-i18n="home.fact_free">Nothing. One person builds RunCoach and there is no paid tier. If it earns its place in your training, the coffee link is at the bottom of the page.</p>
             </div>
         </div>
-        <p class="product-preview-caption" data-i18n="home.preview_adapt">Connect your runs afterwards and RunCoach can update future weeks from what you actually ran. When a distance changes, you can see the reason and the before and after values.</p>
+        <button type="button" class="btn btn-accent guest-facts-cta" onclick="scrollToBuild()" data-i18n="home.cta_build">Build my plan</button>
     </div>
 </section>
 {% endif %}
@@ -737,29 +377,10 @@ function toggleGoalFields() { toggleCollapsibleFields('goal-fields'); }
 function toggleMoreOptions() { toggleCollapsibleFields('more-options-fields'); }
 function openMoreOptions() { setCollapsibleOpen('more-options-fields', true); }
 
-// Smooth-scroll from the hero CTAs / connect card to the manual plan form.
+// Smooth-scroll to the plan form (status hero CTAs, landing-page footer CTA).
 function scrollToBuild() {
     const el = document.getElementById('plan-form') || document.getElementById('build-plan');
     if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
-}
-
-// Move the real plan form into the first screen. Keeping it in the document
-// below the hero means the same route remains useful if scripting is blocked.
-if (!{{ 'true' if user else 'false' }}) {
-    const form = document.querySelector('.build-form-wrap');
-    const slot = document.querySelector('.hero-form-wrap');
-    const card = document.getElementById('home-connect-card');
-    const section = document.getElementById('build-plan');
-    if (form && slot && card && section) {
-        slot.insertBefore(form, card);
-        section.classList.add('is-moved');
-        card.querySelector('.connect-card-title').setAttribute('data-i18n', 'home.connect_after');
-        card.querySelector('.connect-card-title').textContent = 'Make your plan adapt';
-        card.querySelector('.connect-card-desc').setAttribute('data-i18n', 'home.connect_after_desc');
-        card.querySelector('.connect-card-desc').textContent = 'Connect your runs through Intervals.icu so future weeks can follow what you actually do.';
-        card.querySelector('.connect-card-btn').hidden = true;
-        card.querySelector('.connect-card-or').hidden = true;
-    }
 }
 
 function setPlanMode(mode) {
