@@ -29,6 +29,7 @@ from sqlalchemy.orm import Session
 
 from app.contexts.plan.plan_status import in_progress_plan
 from app.contexts.plan.repositories import SQLAlchemyPlanRepository
+from app.contexts.runner.fitness.easy_pace_service import current_easy_pace
 from app.contexts.runner.fitness.race_predictor_service import RacePredictorService
 from app.contexts.runner.repositories import SQLAlchemyRunRepository
 from app.contexts.runner.single_runs import (
@@ -43,6 +44,7 @@ from app.core.coaching.intensity_split import (
     is_hard_session,
 )
 from app.core.time_utils import local_today, utcnow_naive
+from app.core.training.physiology.personal_easy_band import with_personal_easy_band
 from app.core.training.physiology.vdot_calculator import VDOTCalculator
 from app.core.training.watch_mirror import (
     build_single_run_event,
@@ -108,6 +110,21 @@ def current_vdot(user: User, db: Session, today: date) -> Optional[float]:
     if plan is not None and plan.vdot:
         return float(plan.vdot)
     return RacePredictorService.get_best_recent_vdot(user.id, weeks=12, db=db)
+
+
+def current_pace_zones(
+    vdot: Optional[float], user: User, db: Session
+) -> Optional[dict[str, Any]]:
+    """The zones a single run is paced from: ``vdot``'s, on the runner's easy pace.
+
+    The easy pace is measured afresh rather than read off a plan — a single
+    run is generated for today, and most of them are easy runs.
+    """
+    if not vdot:
+        return None
+    return with_personal_easy_band(
+        VDOTCalculator.get_pace_zones(vdot), current_easy_pace(user.id, db)
+    )
 
 
 def plan_overlaps(user: User, db: Session, today: date) -> list[dict[str, Any]]:
@@ -218,7 +235,7 @@ def create_single_run(
         )
 
     vdot = current_vdot(user, db, today)
-    pace_zones = VDOTCalculator.get_pace_zones(vdot) if vdot else None
+    pace_zones = current_pace_zones(vdot, user, db)
     weekly_km = recent_weekly_km(user.id, db, today)
 
     try:

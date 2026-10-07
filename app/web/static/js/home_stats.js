@@ -82,6 +82,9 @@
     if (pace.trend && pace.trend.summary) {
       card.appendChild(el("p", "home-stat-takeaway", pace.trend.summary));
     }
+    if (pace.easy_now) {
+      card.appendChild(el("p", "home-stat-takeaway", pace.easy_now));
+    }
     var canvas = chartHost(card);
 
     var accent = cssVar("--color-accent", "#4f7cff");

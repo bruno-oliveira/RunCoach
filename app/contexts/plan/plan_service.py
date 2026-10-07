@@ -50,17 +50,24 @@ def _with_logged_fitness(
     Their history is a better witness to where they are today than either. A
     recent race they told us about still outranks it, and a runner with no
     history keeps the goal as the only anchor, or no pace at all.
-    """
-    if plan_request.vdot is not None:
-        return plan_request
-    from app.application.ports import RacePredictorService
 
-    logged_vdot = RacePredictorService.get_best_recent_vdot(
-        user.id, weeks=LOGGED_FITNESS_WEEKS, db=db
-    )
-    if not logged_vdot:
-        return plan_request
-    return plan_request.model_copy(update={"logged_vdot": logged_vdot})
+    The pace they jog at an easy heart rate is read here too, and no stated
+    race outranks that one: a race says how fast a runner is, not how fast
+    they should be going on the days in between.
+    """
+    from app.application.ports import RacePredictorService, current_easy_pace
+
+    logged: dict[str, float] = {}
+    easy_pace = current_easy_pace(user.id, db)
+    if easy_pace:
+        logged["logged_easy_pace"] = easy_pace
+    if plan_request.vdot is None:
+        logged_vdot = RacePredictorService.get_best_recent_vdot(
+            user.id, weeks=LOGGED_FITNESS_WEEKS, db=db
+        )
+        if logged_vdot:
+            logged["logged_vdot"] = logged_vdot
+    return plan_request.model_copy(update=logged) if logged else plan_request
 
 
 class PlanService:
@@ -161,6 +168,7 @@ class PlanService:
             intensive_weekend_enabled=plan_request.intensive_weekend_enabled,
             backyard_profile=plan_request.backyard_profile(),
             goal_pace_min_km=plan_request.goal_pace_min_km,
+            easy_pace_min_km=plan_request.logged_easy_pace,
         )
 
         # The generator may reduce an unviable requested frequency (including

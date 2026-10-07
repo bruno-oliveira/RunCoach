@@ -210,6 +210,22 @@ Routers should carry no raw `db.query` — there is one remaining exception in
   the goal time, else none — and then every step carries its zone and an
   effort cue but no pace. Such a plan is not stuck that way: the recalibrator
   seeds the weeks ahead (`_seed_paces`) on the first sync that yields a VDOT.
+  **The easy band is measured, not derived.** VDOT is read off the runner's
+  hardest efforts, so its easy slice says what easy *would* be for a runner of
+  that speed. `core/training/physiology/personal_easy_band.py` replaces that
+  band with the median pace of the last six weeks' runs whose average heart
+  rate sat in the runner's own Zone 1–2, ±15 s — heart rate decides *which*
+  runs count, never the pace, and a ceiling that is only an age formula counts
+  for nothing (`easy_pace_service.easy_hr_ceiling`). Only `E` moves: quality
+  paces stay on VDOT, and the band's fast edge is held 10 s clear of threshold
+  (no coherent band → the VDOT band stays). The plan remembers the pace its
+  steps were written from (`training_plans.easy_pace_min_km`), and
+  `pace_zones_for` applies it, so every rebuilt day matches its neighbours —
+  build zones through that, not `VDOTCalculator.get_pace_zones`, anywhere a
+  plan's paces are printed. `adaptation/easy_band_refresh.py` re-paces the
+  weeks ahead on each sync once the measured pace has moved 5 s/km; it runs
+  *after* the adaptation, is separate from the VDOT recalibrator on purpose,
+  and a lost measurement never clears a band.
 
 - **Adaptation** — `contexts/plan/adaptation/__init__.py` is a thin
   `AdaptationService` facade preserving one public API over focused modules:

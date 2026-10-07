@@ -768,6 +768,8 @@
                         <span class="timeline-badge timeline-badge-recalibrate">
                             {% if event.get('strategy') == 'recovery_insertion' %}Recovery inserted{% elif event.get('strategy') == 'missed_week' %}Missed week{% elif event.get('strategy') == 'time_off' %}Time off{% elif event.get('strategy') == 'ahead' %}Ahead of plan{% else %}Paces updated{% endif %}
                         </span>
+                        {% elif event.type == 'easy_pace' %}
+                        <span class="timeline-badge timeline-badge-recalibrate">Easy pace updated</span>
                         {% elif event.type == 'reset' %}
                         <span class="timeline-badge timeline-badge-reset"><span data-i18n="plan.reset_original">Reset to original</span></span>
                         {% endif %}

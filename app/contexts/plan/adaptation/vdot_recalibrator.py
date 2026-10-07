@@ -12,6 +12,10 @@ from app.core.training.adaptation.thresholds import (
     PACE_SLOW_DEVIATION,
 )
 from app.core.training.periodization.plan_calendar import compute_current_week
+from app.core.training.physiology.personal_easy_band import (
+    has_personal_easy_band,
+    with_personal_easy_band,
+)
 from app.core.training.physiology.vdot_calculator import VDOTCalculator
 from app.core.training.workouts.workout_steps import fill_step_paces, repace_steps
 from app.models import RunLog, TrainingPlan
@@ -194,8 +198,11 @@ def _seed_paces(
     fills the weeks still ahead, exactly as the generator would have. A tagged
     race is taken at its word; otherwise the estimate is the one a new plan
     would start from. Weeks already run are left as they were prescribed.
+
+    The easy band is seeded in the same pass, from the pace the runner jogs at
+    an easy heart rate when they have shown one.
     """
-    from app.application.ports import RacePredictorService
+    from app.application.ports import RacePredictorService, current_easy_pace
 
     vdot, source = race_vdot, "race"
     if not _is_plausible(vdot):
@@ -206,7 +213,8 @@ def _seed_paces(
     current_week = _current_week(training_plan)
     if vdot is None or not _is_plausible(vdot) or current_week is None:
         return None
-    zones = pace_zones_for(training_plan, vdot=vdot)
+    easy_pace = current_easy_pace(user_id, db)
+    zones = pace_zones_for(training_plan, vdot=vdot, easy_pace=easy_pace)
     if not zones:
         return None
 
@@ -219,6 +227,8 @@ def _seed_paces(
     if pace_updates == 0:
         return None
 
+    if easy_pace and has_personal_easy_band(zones):
+        training_plan.easy_pace_min_km = easy_pace
     weekly_updates = _store_new_paces(
         training_plan, plan_data, vdot, current_week, zones, db
     )
@@ -278,11 +288,19 @@ def _apply_recalibration(
     current_vdot = target_vdot
     delta = current_vdot - plan_vdot
 
-    new_zones = VDOTCalculator.get_pace_zones(current_vdot)
+    # A fitness change moves the quality paces. The easy band stays where the
+    # runner's own easy pace put it — both sides carry it, so an easy step is
+    # recognised as zone-derived and left on the band it already has.
+    easy_pace = training_plan.easy_pace_min_km
+    new_zones = with_personal_easy_band(
+        VDOTCalculator.get_pace_zones(current_vdot), easy_pace
+    )
     if not new_zones:
         return None
 
-    old_zones = VDOTCalculator.get_pace_zones(plan_vdot)
+    old_zones = with_personal_easy_band(
+        VDOTCalculator.get_pace_zones(plan_vdot), easy_pace
+    )
 
     plan_data, pd_week, pd_workout = parse_plan_data_lookups(training_plan)
 

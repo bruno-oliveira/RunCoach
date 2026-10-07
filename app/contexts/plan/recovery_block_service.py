@@ -162,9 +162,16 @@ def start_recovery_block(
 
     pace_zones = None
     if plan.vdot:
+        from app.core.training.physiology.personal_easy_band import (
+            with_personal_easy_band,
+        )
         from app.core.training.physiology.vdot_calculator import VDOTCalculator
 
-        pace_zones = VDOTCalculator.get_pace_zones(plan.vdot)
+        # A recovery block is all easy running, so the runner's own easy pace
+        # matters here more than anywhere.
+        pace_zones = with_personal_easy_band(
+            VDOTCalculator.get_pace_zones(plan.vdot), plan.easy_pace_min_km
+        )
 
     plan_data = build_recovery_block(
         race_km=_race_km(plan),
@@ -186,6 +193,7 @@ def start_recovery_block(
         plan_data=plan_data,
         start_date=datetime.combine(offer.start_date, datetime.min.time()),
         vdot=plan.vdot,
+        easy_pace_min_km=plan.easy_pace_min_km,
         max_heart_rate=plan.max_heart_rate,
         body_weight_kg=plan.body_weight_kg,
         hr_zones_data=plan.hr_zones_data,

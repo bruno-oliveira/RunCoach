@@ -26,6 +26,7 @@ from typing import Optional
 
 from sqlalchemy.orm import Session
 
+from app.contexts.runner.fitness.easy_pace_service import current_easy_pace
 from app.contexts.runner.fitness.hr_zone_service import resolve_zones_for_user
 from app.contexts.runner.repositories import SQLAlchemyRunRepository
 from app.core.coaching.intensity_split import (
@@ -36,6 +37,7 @@ from app.core.coaching.intensity_split import (
 )
 from app.core.training.physiology.hr_zone_calculator import HRZoneCalculator
 from app.models import RunLog, User
+from app.utils import format_pace
 
 # One opinionated window. ~6 calendar months; bucketing only emits months that
 # actually have runs, so a newer runner simply sees a shorter line.
@@ -95,9 +97,12 @@ class HomeStatsService:
     def build(user: User, db: Session) -> dict:
         since = _now_naive() - timedelta(days=_WINDOW_DAYS)
         runs = SQLAlchemyRunRepository(db).list_recent_for_user(user.id, since=since)
+        pace = HomeStatsService._pace_evolution(runs)
+        if pace["has_data"]:
+            pace["easy_now"] = _easy_now(current_easy_pace(user.id, db))
         return {
             "window_months": WINDOW_MONTHS,
-            "pace_evolution": HomeStatsService._pace_evolution(runs),
+            "pace_evolution": pace,
             "hr_zone_evolution": HomeStatsService._hr_zone_evolution(runs, user, db),
             "intensity_split": HomeStatsService._intensity_split(runs),
         }
@@ -215,6 +220,21 @@ class HomeStatsService:
             "series": series,
             "takeaway": _hr_zone_takeaway(present_months, month_totals, minutes),
         }
+
+
+def _easy_now(easy_pace: Optional[float]) -> Optional[str]:
+    """The measured easy pace plans are built around, in a sentence.
+
+    The chart beside it is a six-month trend; this is the one figure from it
+    that prescribes anything, read through the same function the plan uses so
+    the two cannot disagree.
+    """
+    if easy_pace is None:
+        return None
+    return (
+        f"At an easy heart rate you now run about {format_pace(easy_pace)} — "
+        "your easy days are paced around it."
+    )
 
 
 def _pace_trend(points: list[tuple[str, float]], basis: str) -> dict:

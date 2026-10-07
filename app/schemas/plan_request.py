@@ -189,6 +189,9 @@ class PlanRequest(PlanRequestBase, RaceInfoMixin):
     # Fitness read from the runner's logged runs. Not derivable here (it needs
     # their history), so plan creation fills it in — see ``pacing_vdot``.
     logged_vdot: Optional[float] = Field(default=None, exclude=True)
+    # The pace their recent easy-heart-rate runs were run at, filled in the
+    # same way. Sets the easy band only; the quality paces stay on the VDOT.
+    logged_easy_pace: Optional[float] = Field(default=None, exclude=True)
     goal_pace_min_km: Optional[float] = Field(default=None, exclude=True)
     current_pace_min_km: Optional[float] = Field(default=None, exclude=True)
 
