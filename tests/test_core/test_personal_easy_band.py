@@ -142,7 +142,7 @@ class TestGeneratedPlan:
     @staticmethod
     def _steps(plan):
         return [
-            (week["week"], workout["day"], step["pace_zone"], step["pace_str"])
+            (step["kind"], step["pace_zone"], step["pace_str"], week["week"])
             for week in plan
             for workout in week["daily_workouts"]
             for step in workout.get("steps") or []
@@ -154,12 +154,57 @@ class TestGeneratedPlan:
         personal = self._steps(
             TrainingPlanGenerator().generate_plan(*args, vdot=45, easy_pace_min_km=6.0)
         )
-        band = "6:15/km–5:45/km"
-        easy = [pace for _, _, zone, pace in personal if zone == "E"]
-        assert easy and set(easy) == {band}
-        assert [s for s in personal if s[2] != "E"] == [
-            s for s in vdot_only if s[2] != "E"
+        easy = {
+            pace
+            for kind, zone, pace, _ in personal
+            if (kind, zone) != ("recovery", "E") and zone == "E"
+        }
+        assert easy == {"6:15/km–5:45/km"}
+        assert [s for s in personal if s[1] != "E"] == [
+            s for s in vdot_only if s[1] != "E"
         ]
+
+    @pytest.mark.parametrize("easy_pace, jog", [(6.0, "6:45/km–6:15/km"), (None, None)])
+    def test_a_jog_between_reps_is_slower_than_the_easy_band(self, easy_pace, jog):
+        """Recovering between hard efforts is not an easy run."""
+        plan = TrainingPlanGenerator().generate_plan(
+            40, 21.1, 12, 4, vdot=45, easy_pace_min_km=easy_pace
+        )
+        zones = with_personal_easy_band(VDOTCalculator.get_pace_zones(45), easy_pace)
+        expected = jog or zones["E"]["sub_zones"]["recovery"]["pace_str"]
+        jogs = {
+            pace
+            for kind, zone, pace, _ in self._steps(plan)
+            if (kind, zone) == ("recovery", "E")
+        }
+        assert jogs == {expected}
+        assert expected != zones["E"]["pace_str"]
 
     def test_the_band_width_is_the_documented_one(self):
         assert EASY_BAND_HALF_WIDTH * 60 == 15
+
+
+class TestJogOnTheWatch:
+    """A stored jog with no pace of its own borrows, and jogs slower."""
+
+    def test_an_open_jog_targets_the_stretch_past_the_easy_band(self):
+        from app.core.training.workouts.workout_steps.intervals_export import (
+            resolve_pace_bounds,
+            zone_paces_of,
+        )
+
+        warmup = {"kind": "warmup", "pace_zone": "E", "pace_str": "6:15/km–5:45/km"}
+        jog = {"kind": "recovery", "pace_zone": "E", "pace_str": None}
+        zone_paces = zone_paces_of([warmup, jog])
+
+        assert resolve_pace_bounds(warmup, zone_paces) == [6.25, 5.75]
+        assert resolve_pace_bounds(jog, zone_paces) == [6.75, 6.25]
+
+    def test_a_jog_s_own_pace_never_speaks_for_the_easy_zone(self):
+        from app.core.training.workouts.workout_steps.intervals_export import (
+            zone_paces_of,
+        )
+
+        jog = {"kind": "recovery", "pace_zone": "E", "pace_str": "6:45/km–6:15/km"}
+        run = {"kind": "run", "pace_zone": "E", "pace_str": "6:15/km–5:45/km"}
+        assert zone_paces_of([jog, run]) == {"E": "6:15/km–5:45/km"}

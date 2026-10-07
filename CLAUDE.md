@@ -225,7 +225,15 @@ Routers should carry no raw `db.query` — there is one remaining exception in
   plan's paces are printed. `adaptation/easy_band_refresh.py` re-paces the
   weeks ahead on each sync once the measured pace has moved 5 s/km; it runs
   *after* the adaptation, is separate from the VDOT recalibrator on purpose,
-  and a lost measurement never clears a band.
+  and a lost measurement never clears a band. **A jog between reps is not an
+  easy run:** `kind == "recovery"` steps are zone `E` but take the recovery
+  range just below the band (`_jog_pace_str`), so the watch does not beep
+  "speed up" at a runner catching their breath. Resolve a step's pace through
+  `_step_pace_str`, never the bare zone — `repace_steps` and `fill_step_paces`
+  do, and `repace_steps` also recognises a jog stored on the whole easy band
+  (plans written before this). A stored jog with no pace of its own reaches
+  the watch through `intervals_export._borrowed_bounds`, which applies the
+  same rule.
   **Logged fitness reads held-back runs through heart rate.** Every run is
   scored as a race (`run_logs.vdot`), so the best-efforts blend under-rates a
   runner with no all-out effort in the window — about three points when they

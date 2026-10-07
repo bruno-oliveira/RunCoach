@@ -11,6 +11,7 @@ from typing import Any, Dict, List, Optional
 
 from app.core.training.workouts.workout_steps.primitives import (
     _cooldown,
+    _jog_pace_str,
     _pace_str,
     _step,
     _warmup,
@@ -86,7 +87,7 @@ def build_meter_rep_steps(
                 distance_m=rec_m,
                 repeat=reps,
                 pace_zone="E",
-                pace_str=_pace_str("E", pace_zones),
+                pace_str=_jog_pace_str(pace_zones),
                 effort="easy jog",
             )
         )
@@ -181,7 +182,7 @@ def build_broken_mile_steps(
                         "Easy jog between miles",
                         distance_m=jog_m,
                         pace_zone="E",
-                        pace_str=_pace_str("E", pace_zones),
+                        pace_str=_jog_pace_str(pace_zones),
                         effort="easy jog",
                     )
                 )
@@ -311,7 +312,7 @@ def build_distance_ladder_steps(
                     f"{float_m} m easy float",
                     distance_m=float_m,
                     pace_zone="E",
-                    pace_str=_pace_str("E", pace_zones),
+                    pace_str=_jog_pace_str(pace_zones),
                     effort="easy float",
                 )
             )
@@ -359,7 +360,7 @@ def build_compound_rep_steps(
                 distance_m=rec_m,
                 repeat=reps,
                 pace_zone="E",
-                pace_str=_pace_str("E", pace_zones),
+                pace_str=_jog_pace_str(pace_zones),
                 effort="easy jog",
             )
         )
@@ -437,7 +438,7 @@ def build_fartlek_steps(
             duration_s=off_s,
             repeat=reps,
             pace_zone="E",
-            pace_str=_pace_str("E", pace_zones),
+            pace_str=_jog_pace_str(pace_zones),
             effort="easy jog",
         ),
         _cooldown(pace_zones, wu_m),
@@ -499,7 +500,7 @@ def build_strides_steps(
             duration_s=recovery_s,
             repeat=reps,
             pace_zone="E",
-            pace_str=_pace_str("E", pace_zones),
+            pace_str=_jog_pace_str(pace_zones),
             effort="full recovery",
         ),
     ]
@@ -561,7 +562,7 @@ def build_sharpener_steps(
             duration_s=touch_recovery_s,
             repeat=touches,
             pace_zone="E",
-            pace_str=_pace_str("E", pace_zones),
+            pace_str=_jog_pace_str(pace_zones),
             effort="easy jog",
         ),
     ]
@@ -583,7 +584,7 @@ def build_sharpener_steps(
                     duration_s=60,
                     repeat=strides,
                     pace_zone="E",
-                    pace_str=_pace_str("E", pace_zones),
+                    pace_str=_jog_pace_str(pace_zones),
                     effort="full recovery",
                 ),
             ]
@@ -817,7 +818,7 @@ def build_duration_pyramid_steps(
                     recovery_label,
                     duration_s=secs,
                     pace_zone="E",
-                    pace_str=_pace_str("E", pace_zones),
+                    pace_str=_jog_pace_str(pace_zones),
                     effort="jog",
                 )
             )

@@ -89,8 +89,9 @@ def test_session_view_expands_profile_rep_by_rep():
     assert rep["amount"] == "400 m"
     assert rep["pace"] == "4:00 /km"
     assert rep["name"] == "Interval pace"  # "5 × 400 m" is only an amount
-    # The zone-E recovery borrows the runner's easy pace, as the watch does.
-    assert view["blocks"][1]["steps"][1]["pace"] == "6:00 /km"
+    # The zone-E recovery borrows the runner's easy pace and jogs just slower
+    # than it, as the watch does.
+    assert view["blocks"][1]["steps"][1]["pace"] == "6:00–6:30 /km"
 
 
 def test_session_view_never_prints_a_default_pace_as_yours():

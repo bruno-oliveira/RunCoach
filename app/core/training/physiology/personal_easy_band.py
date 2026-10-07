@@ -45,7 +45,7 @@ _THRESHOLD_GAP = 10 / 60
 # A band squeezed thinner than this by the threshold guard is not a band.
 _MIN_BAND_WIDTH = EASY_BAND_HALF_WIDTH
 # Recovery sits below easy; this is how far it reaches past the slow edge.
-_RECOVERY_WIDTH = 0.5
+RECOVERY_WIDTH = 0.5
 
 
 @dataclass(frozen=True)
@@ -160,7 +160,7 @@ def with_personal_easy_band(
     if edges is None:
         return pace_zones
     slow, fast = edges
-    recovery_slow = round(slow + _RECOVERY_WIDTH, 2)
+    recovery_slow = round(slow + RECOVERY_WIDTH, 2)
     easy_zone = {
         **_band(slow, fast, "Easy — the pace you run at an easy heart rate"),
         "personal": True,

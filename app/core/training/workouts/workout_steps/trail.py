@@ -6,6 +6,7 @@ from typing import Any, Dict, List, Optional
 
 from app.core.training.workouts.workout_steps.primitives import (
     _cooldown,
+    _jog_pace_str,
     _pace_str,
     _step,
     _warmup,
@@ -48,7 +49,7 @@ def _build_rung_steps(
                     f"{rec_m} m jog recovery",
                     distance_m=rec_m,
                     pace_zone="E",
-                    pace_str=_pace_str("E", pace_zones),
+                    pace_str=_jog_pace_str(pace_zones),
                     effort="jog",
                 )
             )

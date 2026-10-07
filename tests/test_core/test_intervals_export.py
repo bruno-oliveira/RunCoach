@@ -145,8 +145,9 @@ def test_two_reps_with_one_recovery_expand_without_header():
     lines = build_intervals_workout(day)["description"].split("\n\n")
     assert lines[:3] == [
         "- Threshold 0.8km 5:46/km Pace",
-        # A zone-E recovery borrows the runner's own easy range from a sibling.
-        "- Recovery 1m30s 6:26/km-7:12/km Pace",
+        # A zone-E recovery borrows the runner's own easy range from a sibling
+        # and jogs just slower than it: recovering is not an easy run.
+        "- Recovery 1m30s 7:12/km-7:42/km Pace",
         "- Threshold 0.8km 5:46/km Pace",
     ]
 

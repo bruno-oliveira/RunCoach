@@ -66,15 +66,25 @@ def _plan(db, user, *, easy_pace=None, vdot=VDOT) -> TrainingPlan:
     return plan
 
 
-def _easy_paces(plan, *, from_week=1, to_week=99) -> set:
+def _easy_zone_paces(plan, *, jogs: bool, from_week=1, to_week=99) -> set:
     return {
         step["pace_str"]
         for week in plan.plan_data
         if from_week <= week["week"] <= to_week
         for workout in week["daily_workouts"]
         for step in workout.get("steps") or []
-        if step["pace_zone"] == "E"
+        if step["pace_zone"] == "E" and (step["kind"] == "recovery") is jogs
     }
+
+
+def _easy_paces(plan, **weeks) -> set:
+    """Paces of the easy-zone steps that are runs, warm-ups and cool-downs."""
+    return _easy_zone_paces(plan, jogs=False, **weeks)
+
+
+def _jog_paces(plan, **weeks) -> set:
+    """Paces of the jogs between reps, which sit below the easy band."""
+    return _easy_zone_paces(plan, jogs=True, **weeks)
 
 
 def _other_paces(plan) -> list:
@@ -154,7 +164,23 @@ class TestFollowingTheRunner:
         assert plan.easy_pace_min_km == 5.8
         assert _easy_paces(plan, to_week=2) == {"6:15/km–5:45/km"}
         assert _easy_paces(plan, from_week=3) == {"6:03/km–5:33/km"}
+        assert _jog_paces(plan, from_week=3) == {"6:33/km–6:03/km"}
         assert _other_paces(plan) == quality_before
+
+    def test_jogs_stored_on_the_easy_band_move_to_the_recovery_range(self, test_db):
+        """Plans written before jogs had their own pace carry the easy band."""
+        user = _runner(test_db, max_hr=185, threshold_hr=THRESHOLD_HR)
+        plan = _plan(test_db, user, easy_pace=6.0)
+        for week in plan.plan_data:
+            for workout in week["daily_workouts"]:
+                for step in workout.get("steps") or []:
+                    if step["kind"] == "recovery" and step["pace_zone"] == "E":
+                        step["pace_str"] = "6:15/km–5:45/km"
+        _log_easy_runs(test_db, user, 5.8)
+
+        refresh_easy_band(plan, user.id, test_db)
+
+        assert _jog_paces(plan, from_week=3) == {"6:33/km–6:03/km"}
 
     def test_the_prose_is_re_paced_with_the_steps(self, test_db):
         user = _runner(test_db, max_hr=185, threshold_hr=THRESHOLD_HR)
