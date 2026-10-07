@@ -14,7 +14,14 @@ runner has already made:
   after that the race is absorbed and "recovery" is the wrong word;
 * never once the runner has **another plan on the go**: they have moved on;
 * never twice: once a block exists, the offer becomes a link to it
-  (``TrainingPlan.follows_plan_id`` is the record).
+  (``TrainingPlan.follows_plan_id`` is the record);
+* never once the runner has **turned it down** — resting, or recovering their
+  own way, is their call (``TrainingPlan.recovery_dismissed_at``; clearing it
+  brings the offer back).
+
+The runner also picks the Monday it starts on, anywhere in that window: the
+week after a race is when a holiday or a few days off are most likely, and a
+block that started without them would open by marking sessions missed.
 """
 
 from __future__ import annotations
@@ -22,18 +29,19 @@ from __future__ import annotations
 import logging
 from dataclasses import dataclass
 from datetime import date, datetime, timedelta
-from typing import Optional, Sequence
+from typing import Any, Optional, Sequence
 
 from sqlalchemy.orm import Session
 
 from app.core.race.recovery import easy_days_after
+from app.core.time_utils import utcnow_naive
 from app.core.training.periodization.plan_calendar import plan_has_ended
 from app.core.training.periodization.recovery_block import (
     build_recovery_block,
     peak_weekly_km,
     recovery_prescription,
 )
-from app.exceptions import ConflictException
+from app.exceptions import ConflictException, ValidationException
 from app.models import TrainingPlan
 
 from .plan_creation_helpers import persist_weekly_workouts
@@ -55,7 +63,10 @@ class RecoveryOffer:
 
     race_name: str
     weeks: int
+    # The earliest Monday it can start on — the one it starts on by default.
     start_date: date
+    # Every Monday the runner may pick instead, ``start_date`` first.
+    start_options: tuple[date, ...]
     first_week_km: float
     last_week_km: float
     easy_days: int
@@ -85,6 +96,17 @@ def block_start_date(plan_end: date, today: date) -> date:
     return start
 
 
+def block_start_options(plan_end: date, today: date) -> tuple[date, ...]:
+    """Every Monday the block may start on, earliest first.
+
+    From :func:`block_start_date` to the last Monday inside the offer window:
+    a block started later than that would not be recovering from anything.
+    """
+    first = block_start_date(plan_end, today)
+    later_weeks = max(0, (plan_end + _OFFER_WINDOW - first).days // 7)
+    return tuple(first + timedelta(weeks=i) for i in range(later_weeks + 1))
+
+
 def existing_block(
     plan: TrainingPlan, plans: Sequence[TrainingPlan]
 ) -> Optional[TrainingPlan]:
@@ -93,7 +115,11 @@ def existing_block(
 
 
 def recovery_offer(
-    plan: TrainingPlan, plans: Sequence[TrainingPlan], today: date
+    plan: TrainingPlan,
+    plans: Sequence[TrainingPlan],
+    today: date,
+    *,
+    honour_dismissal: bool = True,
 ) -> Optional[RecoveryOffer]:
     """What the runner would get by starting a recovery block from ``plan``.
 
@@ -101,11 +127,16 @@ def recovery_offer(
         plan: The (possibly) finished race plan.
         plans: All of the runner's plans, ``plan`` included.
         today: The runner's local date.
+        honour_dismissal: ``False`` answers "what would undoing the dismissal
+            bring back?" — the plan page asks, so it offers the undo only
+            while there is still a block to restore.
 
     Returns:
         The preview, or ``None`` when no block should be offered.
     """
     if plan.plan_type == RECOVERY_PLAN_TYPE:
+        return None
+    if honour_dismissal and plan.recovery_dismissed_at is not None:
         return None
     race_km = _race_km(plan)
     start = _start_of(plan)
@@ -128,27 +159,65 @@ def recovery_offer(
         return None
 
     prescription = recovery_prescription(race_km)
+    start_options = block_start_options(plan_end, today)
     return RecoveryOffer(
         race_name=display_label(plan),
         weeks=prescription.weeks,
-        start_date=block_start_date(plan_end, today),
+        start_date=start_options[0],
+        start_options=start_options,
         first_week_km=round(peak * prescription.volume_fractions[0]),
         last_week_km=round(peak * prescription.volume_fractions[-1]),
         easy_days=easy_days_after(race_km),
     )
 
 
+def _chosen_start(offer: RecoveryOffer, start_date: Optional[date]) -> date:
+    if start_date is None:
+        return offer.start_date
+    if start_date not in offer.start_options:
+        raise ValidationException(
+            f"Recovery block start {start_date} is not one of the offered Mondays",
+            user_message="Pick one of the Mondays offered for your recovery block.",
+        )
+    return start_date
+
+
+def _block_pace_zones(plan: TrainingPlan) -> Optional[dict[str, Any]]:
+    if not plan.vdot:
+        return None
+    from app.core.training.physiology.personal_easy_band import (
+        with_personal_easy_band,
+    )
+    from app.core.training.physiology.vdot_calculator import VDOTCalculator
+
+    # A recovery block is all easy running, so the runner's own easy pace
+    # matters here more than anywhere.
+    return with_personal_easy_band(
+        VDOTCalculator.get_pace_zones(plan.vdot), plan.easy_pace_min_km
+    )
+
+
 def start_recovery_block(
-    plan: TrainingPlan, plans: Sequence[TrainingPlan], db: Session, today: date
+    plan: TrainingPlan,
+    plans: Sequence[TrainingPlan],
+    db: Session,
+    today: date,
+    start_date: Optional[date] = None,
 ) -> TrainingPlan:
     """Build and persist the recovery block that follows ``plan``.
 
     Idempotent: a second tap (or a retried request) returns the block the first
     one created rather than stacking up a duplicate.
 
+    Args:
+        start_date: The Monday the runner picked, one of the offer's
+            ``start_options``; ``None`` takes the earliest.
+
     Raises:
         ConflictException: when no block is on offer for ``plan`` — it has not
-            finished, the offer window has passed, or another plan is active.
+            finished, the offer window has passed, another plan is active, or
+            the runner dismissed it.
+        ValidationException: when ``start_date`` is not an offered Monday.
     """
     already = existing_block(plan, plans)
     if already is not None:
@@ -159,26 +228,14 @@ def start_recovery_block(
             f"No recovery block on offer for plan {plan.id}",
             user_message="A recovery block isn't available for this plan any more.",
         )
-
-    pace_zones = None
-    if plan.vdot:
-        from app.core.training.physiology.personal_easy_band import (
-            with_personal_easy_band,
-        )
-        from app.core.training.physiology.vdot_calculator import VDOTCalculator
-
-        # A recovery block is all easy running, so the runner's own easy pace
-        # matters here more than anywhere.
-        pace_zones = with_personal_easy_band(
-            VDOTCalculator.get_pace_zones(plan.vdot), plan.easy_pace_min_km
-        )
+    start = _chosen_start(offer, start_date)
 
     plan_data = build_recovery_block(
         race_km=_race_km(plan),
         race_name=offer.race_name,
         peak_km=peak_weekly_km(plan.plan_data or []),
         runs_per_week=plan.max_runs_per_week or 3,
-        pace_zones=pace_zones,
+        pace_zones=_block_pace_zones(plan),
     )
     block = TrainingPlan(
         user_id=plan.user_id,
@@ -191,7 +248,7 @@ def start_recovery_block(
         weeks_duration=len(plan_data),
         max_runs_per_week=plan.max_runs_per_week,
         plan_data=plan_data,
-        start_date=datetime.combine(offer.start_date, datetime.min.time()),
+        start_date=datetime.combine(start, datetime.min.time()),
         vdot=plan.vdot,
         easy_pace_min_km=plan.easy_pace_min_km,
         max_heart_rate=plan.max_heart_rate,
@@ -216,3 +273,17 @@ def start_recovery_block(
         plan.id,
     )
     return block
+
+
+def dismiss_recovery_offer(plan: TrainingPlan, db: Session) -> None:
+    """Stop offering a recovery block after ``plan``. Idempotent."""
+    if plan.recovery_dismissed_at is None:
+        plan.recovery_dismissed_at = utcnow_naive()
+        db.commit()
+
+
+def restore_recovery_offer(plan: TrainingPlan, db: Session) -> None:
+    """Undo :func:`dismiss_recovery_offer`; the offer's other gates still apply."""
+    if plan.recovery_dismissed_at is not None:
+        plan.recovery_dismissed_at = None
+        db.commit()

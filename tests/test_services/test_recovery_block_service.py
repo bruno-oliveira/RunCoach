@@ -16,12 +16,14 @@ from app.contexts.plan.plan_lifecycle_service import delete_plan
 from app.contexts.plan.plan_type_registry import display_label
 from app.contexts.plan.recovery_block_service import (
     block_start_date,
+    dismiss_recovery_offer,
     recovery_offer,
+    restore_recovery_offer,
     start_recovery_block,
 )
 from app.core.time_utils import local_today
 from app.dependencies import get_current_user, get_db, get_optional_user
-from app.exceptions import ConflictException
+from app.exceptions import ConflictException, ValidationException
 from app.main import app
 from app.models import TrainingPlan, User, WeeklyPlan
 
@@ -123,6 +125,48 @@ def test_block_never_starts_before_the_race_plan_ended():
     assert block_start_date(date(2026, 9, 29), date(2026, 9, 30)) == date(2026, 10, 5)
 
 
+def test_the_runner_may_pick_any_monday_inside_the_offer_window():
+    offer = recovery_offer(_race_plan(), [_race_plan()], TODAY)
+
+    assert offer is not None
+    # The race plan ended Mon Sep 28; the window closes six weeks later.
+    assert offer.start_options[0] == offer.start_date == date(2026, 9, 28)
+    assert offer.start_options[-1] == date(2026, 11, 9)
+    assert len(offer.start_options) == 7
+    assert all(monday.weekday() == 0 for monday in offer.start_options)
+
+
+def test_late_in_the_window_the_offer_still_has_a_monday_to_start_on():
+    # Thursday, 39 days after the plan ended: the next Monday is past the
+    # window, and is still the one start on offer.
+    thursday = date(2026, 10, 1)
+    plan = _race_plan(ended_days_ago=39, today=thursday)
+
+    offer = recovery_offer(plan, [plan], thursday)
+
+    assert offer is not None
+    assert offer.start_options == (date(2026, 10, 5),)
+
+
+def test_a_dismissed_offer_is_withdrawn_until_restored(test_db, runner):
+    plan = _race_plan()
+    test_db.add(plan)
+    test_db.commit()
+
+    dismiss_recovery_offer(plan, test_db)
+
+    assert plan.recovery_dismissed_at is not None
+    assert recovery_offer(plan, [plan], TODAY) is None
+    assert recovery_offer(plan, [plan], TODAY, honour_dismissal=False) is not None
+    with pytest.raises(ConflictException):
+        start_recovery_block(plan, [plan], test_db, TODAY)
+
+    restore_recovery_offer(plan, test_db)
+
+    assert plan.recovery_dismissed_at is None
+    assert recovery_offer(plan, [plan], TODAY) is not None
+
+
 # -- Starting it ------------------------------------------------------------
 
 
@@ -150,6 +194,37 @@ def test_starting_persists_a_linked_block(test_db, runner):
     weeks = test_db.query(WeeklyPlan).filter_by(training_plan_id=block.id).all()
     assert len(weeks) == 5
     assert all(len(w.daily_workouts) == 7 for w in weeks)
+
+
+def test_starting_on_a_later_monday_the_runner_picked(test_db, runner):
+    plan = _race_plan()
+    test_db.add(plan)
+    test_db.commit()
+
+    block = start_recovery_block(
+        plan, [plan], test_db, TODAY, start_date=date(2026, 10, 19)
+    )
+
+    assert block.start_date == datetime(2026, 10, 19)
+
+
+@pytest.mark.parametrize(
+    "start",
+    [
+        date(2026, 10, 20),  # a Tuesday: the block's days are laid out Monday-first
+        date(2026, 9, 21),  # before the race plan ended
+        date(2026, 11, 16),  # past the offer window
+    ],
+)
+def test_a_start_that_was_not_offered_is_refused(test_db, runner, start):
+    plan = _race_plan()
+    test_db.add(plan)
+    test_db.commit()
+
+    with pytest.raises(ValidationException):
+        start_recovery_block(plan, [plan], test_db, TODAY, start_date=start)
+
+    assert test_db.query(TrainingPlan).filter_by(plan_type="recovery").count() == 0
 
 
 def test_starting_twice_returns_the_same_block(test_db, runner):
@@ -240,6 +315,62 @@ def test_home_hero_points_at_the_offer(test_db, signed_in):
 
     assert home.status_code == 200
     assert f"/plan/{plan.id}#recovery-offer" in home.text
+
+
+def test_endpoint_starts_the_block_on_the_picked_monday(test_db, signed_in):
+    plan = _finished_plan(test_db)
+    offer = recovery_offer(plan, [plan], local_today())
+    assert offer is not None
+    later = offer.start_options[1]
+
+    page = signed_in.get(f"/plan/{plan.id}")
+    assert f'value="{later.isoformat()}"' in page.text
+
+    resp = signed_in.post(
+        f"/api/plan/{plan.id}/recovery-block", json={"start_date": later.isoformat()}
+    )
+
+    assert resp.status_code == 200
+    block = test_db.get(TrainingPlan, resp.json()["plan_id"])
+    assert block is not None
+    assert block.start_date == datetime.combine(later, datetime.min.time())
+
+
+def test_dismissing_hides_the_offer_everywhere_until_undone(test_db, signed_in):
+    plan = _finished_plan(test_db)
+
+    resp = signed_in.post(f"/api/plan/{plan.id}/recovery-block/dismiss")
+    assert resp.status_code == 200
+
+    page = signed_in.get(f"/plan/{plan.id}")
+    assert 'id="recovery-offer"' not in page.text
+    assert 'id="recovery-dismissed"' in page.text
+    assert 'id="recovery-dismissed" hidden' not in page.text
+    assert "#recovery-offer" not in signed_in.get("/").text
+    started = signed_in.post(f"/api/plan/{plan.id}/recovery-block", json={})
+    assert started.status_code == 409
+
+    resp = signed_in.delete(f"/api/plan/{plan.id}/recovery-block/dismiss")
+    assert resp.status_code == 200
+
+    page = signed_in.get(f"/plan/{plan.id}")
+    assert 'id="recovery-offer"' in page.text
+    assert 'id="recovery-dismissed" hidden' in page.text
+
+
+def test_no_undo_once_the_offer_window_has_closed(test_db, signed_in):
+    plan = _race_plan(
+        today=local_today(),
+        ended_days_ago=60,
+        recovery_dismissed_at=datetime(2026, 1, 1),
+    )
+    test_db.add(plan)
+    test_db.commit()
+
+    page = signed_in.get(f"/plan/{plan.id}")
+
+    assert page.status_code == 200
+    assert 'id="recovery-dismissed"' not in page.text
 
 
 def test_endpoint_refuses_a_plan_still_running(test_db, signed_in):

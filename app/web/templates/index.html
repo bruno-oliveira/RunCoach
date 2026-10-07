@@ -87,7 +87,7 @@
             {% if recent_change %}{% include 'components/change_receipt.html' %}{% endif %}
             {% if recovery_offer %}
             <p class="hero-subtitle">
-                <span data-i18n="home.recovery_ready">Race done. Your recovery block is ready</span> &mdash; {{ recovery_offer.weeks }} easy weeks from {{ recovery_offer.start_date.strftime('%a %b') }} {{ recovery_offer.start_date.day }}.
+                <span data-i18n="home.recovery_ready">Race done. Your recovery block is ready</span> &mdash; {{ recovery_offer.weeks }} easy weeks, starting the Monday you pick.
             </p>
             {% endif %}
             <div class="status-hero-actions">

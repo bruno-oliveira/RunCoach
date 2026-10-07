@@ -104,6 +104,7 @@ class PlanViewService:
         recovery = None
         recovery_offer = None
         recovery_block = None
+        recovery_dismissed = False
         if training_plan.start_date and current_user:
             from datetime import datetime as _datetime
 
@@ -119,9 +120,11 @@ class PlanViewService:
                     (comp_stats or {}).get("peak_km_per_week"),
                 )
                 try:
-                    recovery_offer, recovery_block = self._recovery_block_state(
-                        training_plan, db
-                    )
+                    (
+                        recovery_offer,
+                        recovery_block,
+                        recovery_dismissed,
+                    ) = self._recovery_block_state(training_plan, db)
                 except Exception as e:
                     logger.warning("Recovery block offer failed: %s", e)
                     partial_errors.append("recovery_block")
@@ -209,6 +212,7 @@ class PlanViewService:
             "recovery_guidance": recovery,
             "recovery_offer": recovery_offer,
             "recovery_block": recovery_block,
+            "recovery_dismissed": recovery_dismissed,
             "overridden_weeks": overridden_weeks,
             "adaptation_timeline": adaptation_timeline,
             "week_evolution": week_evolution,
@@ -233,12 +237,18 @@ class PlanViewService:
         return training_plan.target_distance_km
 
     def _recovery_block_state(self, training_plan: TrainingPlan, db: Session):
-        """The recovery block on offer after this plan, or the one started."""
+        """The block on offer after this plan, the one started, and whether the
+        runner dismissed one they could still bring back."""
         plans = SQLAlchemyPlanRepository(db).list_by_user(training_plan.user_id)
         block = existing_block(training_plan, plans)
         if block is not None:
-            return None, block
-        return recovery_offer(training_plan, plans, local_today()), None
+            return None, block, False
+        offer = recovery_offer(
+            training_plan, plans, local_today(), honour_dismissal=False
+        )
+        if offer is not None and training_plan.recovery_dismissed_at is not None:
+            return None, None, True
+        return offer, None, False
 
     def _compute_week_evolution(
         self,

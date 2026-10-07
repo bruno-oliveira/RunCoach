@@ -241,6 +241,10 @@ window.RC_I18N = (function () {
             'plan.recovery_start':    'Start recovery block',
             'plan.recovery_started':  'Your recovery block',
             'plan.recovery_view':     'View recovery block',
+            'plan.recovery_starts':   'Starts',
+            'plan.recovery_dismiss':  'No thanks',
+            'plan.recovery_dismissed': 'No recovery block for this race.',
+            'plan.recovery_restore':  'Offer it again',
             /* "What now" onboarding strip */
             'plan.whatnow_eyebrow':      'Make this plan yours',
             'plan.whatnow_dismiss':      'Dismiss',
@@ -1008,6 +1012,10 @@ window.RC_I18N = (function () {
             'plan.recovery_start':    'Começar bloco de recuperação',
             'plan.recovery_started':  'O teu bloco de recuperação',
             'plan.recovery_view':     'Ver bloco de recuperação',
+            'plan.recovery_starts':   'Começa',
+            'plan.recovery_dismiss':  'Não, obrigado',
+            'plan.recovery_dismissed': 'Sem bloco de recuperação para esta prova.',
+            'plan.recovery_restore':  'Voltar a sugerir',
             /* "What now" onboarding strip */
             'plan.whatnow_eyebrow':      'Torne este plano seu',
             'plan.whatnow_dismiss':      'Dispensar',
