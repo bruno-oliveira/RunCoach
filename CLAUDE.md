@@ -226,6 +226,19 @@ Routers should carry no raw `db.query` — there is one remaining exception in
   weeks ahead on each sync once the measured pace has moved 5 s/km; it runs
   *after* the adaptation, is separate from the VDOT recalibrator on purpose,
   and a lost measurement never clears a band.
+  **Logged fitness reads held-back runs through heart rate.** Every run is
+  scored as a race (`run_logs.vdot`), so the best-efforts blend under-rates a
+  runner with no all-out effort in the window — about three points when they
+  train up to threshold, nearer nine when they only jog.
+  `RacePredictorService.get_best_recent_vdot` therefore lifts that blend toward
+  `core/training/physiology/submaximal_vdot.py`'s reading: the *median* (never
+  the best — the top of a noisy set is the noise) of each Zone 2-to-threshold
+  run's oxygen cost over the intensity its heart rate implies, using the zone
+  table's own pairing (easy pace is Zone 2, threshold pace is LTHR). The lift
+  is capped at 4 VDOT points and can only raise. It needs a **measured** LTHR
+  (`aerobic_fitness_service.measured_threshold_hr`): the estimated one is read
+  off this very VDOT, and its estimator calls back into the fitness estimate —
+  using it would recurse. A stated or tagged race still outranks all of it.
 
 - **Adaptation** — `contexts/plan/adaptation/__init__.py` is a thin
   `AdaptationService` facade preserving one public API over focused modules:

@@ -49,6 +49,16 @@ def _pct_vo2max_at_time(t: float) -> float:
     )
 
 
+def oxygen_cost_at_pace(pace_min_km: float) -> float:
+    """Oxygen cost (ml/kg/min) of running at ``pace_min_km`` on the flat."""
+    return _vo2_at_velocity(1000.0 / pace_min_km)
+
+
+def sustainable_fraction(minutes: float) -> float:
+    """Fraction of VO2max a runner can hold flat out for ``minutes``."""
+    return _pct_vo2max_at_time(minutes)
+
+
 def _velocity_at_pct_vdot(vdot: float, pct: float) -> float:
     """Velocity in m/min at a given fraction of VDOT.
 

@@ -10,6 +10,7 @@ from typing import Any, Dict, List, Optional
 
 from sqlalchemy.orm import Session
 
+from app.contexts.runner.fitness.aerobic_fitness_service import aerobic_vdot_for
 from app.contexts.runner.fitness.race_predictor_service.vdot_math import (
     TOP_N_VDOTS,
     _effort_weight,
@@ -17,6 +18,9 @@ from app.contexts.runner.fitness.race_predictor_service.vdot_math import (
     _rolling_window_vdot,
     _vdot_outlier_threshold,
     calibration_factor_from_samples,
+)
+from app.core.training.physiology.submaximal_vdot import (
+    lifted_for_held_back_training,
 )
 from app.core.training.physiology.vdot_calculator import VDOTCalculator
 from app.models import RunLog
@@ -114,7 +118,25 @@ class RacePredictorService:
     def get_best_recent_vdot(
         user_id: str, weeks: int = 12, *, db: Session
     ) -> Optional[float]:
-        """Get a confidence-weighted VDOT estimate from recent runs.
+        """The runner's current fitness, from what they ran and how hard it was.
+
+        The best-efforts blend scores every run as a race, which under-rates a
+        runner whose window holds no all-out effort. Where their threshold
+        heart rate is known, the same runs read through heart rate lift the
+        estimate — by a bounded amount, and never below what pace alone shows.
+        """
+        best_efforts = RacePredictorService._best_efforts_vdot(user_id, weeks, db=db)
+        if best_efforts is None:
+            return None
+        return lifted_for_held_back_training(
+            best_efforts, aerobic_vdot_for(user_id, weeks, db)
+        )
+
+    @staticmethod
+    def _best_efforts_vdot(
+        user_id: str, weeks: int = 12, *, db: Session
+    ) -> Optional[float]:
+        """Confidence-weighted VDOT from the best recent runs, each taken as a race.
 
         Fetches a pool of top-VDOT candidates and weights each by:
         - Distance (longer runs yield more reliable VDOT estimates)

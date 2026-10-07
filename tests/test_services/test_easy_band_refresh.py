@@ -241,7 +241,8 @@ class TestFirstPaces:
 
         result = recalibrate_zones_only(plan, user.id, test_db)
 
-        assert result["new_vdot"] == 40.0
+        assert result["direction"] == "set"
+        assert plan.vdot == result["new_vdot"]
         assert plan.easy_pace_min_km == 6.0
         assert _easy_paces(plan, from_week=3) == {"6:15/km–5:45/km"}
         assert _easy_paces(plan, to_week=2) == {None}
