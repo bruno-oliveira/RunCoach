@@ -25,7 +25,11 @@ from app.contexts.auth.repositories import SQLAlchemyUserRepository
 from app.contexts.plan.plan_helpers import get_plan_or_404, plan_view_context
 from app.contexts.plan.plan_service import PlanService
 from app.contexts.plan.plan_type_registry import display_label as plan_display_label
-from app.contexts.plan.recovery_block_service import start_recovery_block
+from app.contexts.plan.recovery_block_service import (
+    dismiss_recovery_offer,
+    restore_recovery_offer,
+    start_recovery_block,
+)
 from app.contexts.plan.repositories import SQLAlchemyPlanRepository
 from app.core.time_utils import local_today
 from app.dependencies import (
@@ -78,10 +82,16 @@ def set_plan_start_date(
 # ---------------------------------------------------------------------------
 
 
+class RecoveryBlockRequest(BaseModel):
+    # One of the offer's Mondays; omitted means the earliest.
+    start_date: Optional[date] = None
+
+
 @router.post("/api/plan/{plan_id}/recovery-block")
 def start_plan_recovery_block(
     plan_id: str,
     background_tasks: BackgroundTasks,
+    body: RecoveryBlockRequest = RecoveryBlockRequest(),
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
     intervals_service=Depends(get_intervals_service),
@@ -94,12 +104,38 @@ def start_plan_recovery_block(
     """
     training_plan = get_plan_or_404(plan_id, db, current_user, require_user_match=True)
     plans = SQLAlchemyPlanRepository(db).list_by_user(current_user.id)
-    block = start_recovery_block(training_plan, plans, db, local_today())
+    block = start_recovery_block(
+        training_plan, plans, db, local_today(), start_date=body.start_date
+    )
     if block.watch_sync_enabled:
         background_tasks.add_task(
             resync_plan_to_watch, block.id, str(current_user.id), intervals_service
         )
     return {"ok": True, "plan_id": block.id}
+
+
+@router.post("/api/plan/{plan_id}/recovery-block/dismiss")
+def dismiss_plan_recovery_block(
+    plan_id: str,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Stop offering the recovery block after this plan."""
+    training_plan = get_plan_or_404(plan_id, db, current_user, require_user_match=True)
+    dismiss_recovery_offer(training_plan, db)
+    return {"ok": True}
+
+
+@router.delete("/api/plan/{plan_id}/recovery-block/dismiss")
+def restore_plan_recovery_block(
+    plan_id: str,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Undo a dismissal: offer the recovery block again, if still in its window."""
+    training_plan = get_plan_or_404(plan_id, db, current_user, require_user_match=True)
+    restore_recovery_offer(training_plan, db)
+    return {"ok": True}
 
 
 # ---------------------------------------------------------------------------

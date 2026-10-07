@@ -128,6 +128,9 @@ class TrainingPlan(Base):
     # the race plan it was built from. Not a foreign key: deleting the race plan
     # leaves the block standing, and ``delete_plan`` clears the pointer.
     follows_plan_id: Mapped[str | None] = mapped_column(String)
+    # When the runner turned down the recovery block offered after this plan.
+    # Set on the race plan, not on a block; clearing it brings the offer back.
+    recovery_dismissed_at: Mapped[datetime | None] = mapped_column(DateTime)
     share_token: Mapped[str | None] = mapped_column(String, unique=True, index=True)
 
     user: Mapped["User"] = relationship("User", back_populates="training_plans")

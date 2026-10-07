@@ -185,15 +185,37 @@
         <div class="complete-next-cta complete-next-cta--recovery" id="recovery-offer">
             <div class="complete-next-cta-text">
                 <strong><span data-i18n="plan.recovery_ready">Your recovery block is ready</span></strong>
-                <p>{{ recovery_offer.weeks }} weeks of easy running from {{ recovery_offer.start_date.strftime('%a %b') }} {{ recovery_offer.start_date.day }}: {{ recovery_offer.first_week_km }} km in the first week, back to {{ recovery_offer.last_week_km }} km a week by the end. No hard sessions for the first {{ recovery_offer.easy_days }} days.</p>
+                <p>{{ recovery_offer.weeks }} weeks of easy running: {{ recovery_offer.first_week_km }} km in the first week, back to {{ recovery_offer.last_week_km }} km a week by the end. No hard sessions for the first {{ recovery_offer.easy_days }} days.</p>
+                <label class="recovery-start-field">
+                    <span data-i18n="plan.recovery_starts">Starts</span>
+                    <select id="recovery-start-date" class="form-select">
+                        {% for monday in recovery_offer.start_options %}
+                        <option value="{{ monday.isoformat() }}">{{ monday.strftime('%a %b') }} {{ monday.day }}</option>
+                        {% endfor %}
+                    </select>
+                </label>
                 <p class="complete-next-cta-error" id="recovery-offer-error" role="alert" hidden></p>
             </div>
-            <button type="button" class="btn btn-primary" id="recovery-offer-btn" onclick="startRecoveryBlock(this)">
-                <span data-i18n="plan.recovery_start">Start recovery block</span>
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-1px;margin-left:4px;"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
-            </button>
+            <div class="recovery-offer-actions">
+                <button type="button" class="btn btn-ghost" onclick="dismissRecoveryBlock(this)">
+                    <span data-i18n="plan.recovery_dismiss">No thanks</span>
+                </button>
+                <button type="button" class="btn btn-primary" id="recovery-offer-btn" onclick="startRecoveryBlock(this)">
+                    <span data-i18n="plan.recovery_start">Start recovery block</span>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-1px;margin-left:4px;"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+                </button>
+            </div>
         </div>
-        {% elif recovery_block %}
+        {% endif %}
+        {% if recovery_offer or recovery_dismissed %}
+        <p class="recovery-dismissed" id="recovery-dismissed" {% if not recovery_dismissed %}hidden{% endif %}>
+            <span data-i18n="plan.recovery_dismissed">No recovery block for this race.</span>
+            <button type="button" class="btn btn-ghost btn-sm" onclick="restoreRecoveryBlock(this)">
+                <span data-i18n="plan.recovery_restore">Offer it again</span>
+            </button>
+        </p>
+        {% endif %}
+        {% if recovery_block %}
         <div class="complete-next-cta complete-next-cta--recovery">
             <div class="complete-next-cta-text">
                 <strong><span data-i18n="plan.recovery_started">Your recovery block</span></strong>
@@ -1075,7 +1097,7 @@
             var resp = await fetch('/api/plan/' + APP_CTX.plan_id + '/recovery-block', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: '{}',
+                body: JSON.stringify({ start_date: document.getElementById('recovery-start-date').value }),
             });
             var data = await resp.json().catch(function() { return {}; });
             if (!resp.ok || !data.plan_id) throw new Error(typeof data.detail === 'string' ? data.detail : '');
@@ -1084,6 +1106,36 @@
             err.textContent = (e && e.message) || 'Could not start the recovery block. Please try again.';
             err.hidden = false;
             btn.disabled = false;
+        }
+    }
+
+    // Turning the block down swaps the card for a one-line undo in place;
+    // bringing it back reloads, since the offer is rebuilt for today.
+    async function dismissRecoveryBlock(btn) {
+        var err = document.getElementById('recovery-offer-error');
+        btn.disabled = true;
+        err.hidden = true;
+        try {
+            var resp = await fetch('/api/plan/' + APP_CTX.plan_id + '/recovery-block/dismiss', { method: 'POST' });
+            if (!resp.ok) throw new Error('');
+            document.getElementById('recovery-offer').hidden = true;
+            document.getElementById('recovery-dismissed').hidden = false;
+        } catch (e) {
+            err.textContent = 'Could not dismiss the recovery block. Please try again.';
+            err.hidden = false;
+            btn.disabled = false;
+        }
+    }
+
+    async function restoreRecoveryBlock(btn) {
+        btn.disabled = true;
+        try {
+            var resp = await fetch('/api/plan/' + APP_CTX.plan_id + '/recovery-block/dismiss', { method: 'DELETE' });
+            if (!resp.ok) throw new Error('');
+            window.location.reload();
+        } catch (e) {
+            btn.disabled = false;
+            showShareToast('Could not bring the recovery block back. Please try again.');
         }
     }
 
