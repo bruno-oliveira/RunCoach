@@ -56,6 +56,9 @@ class TrainingPlan(Base):
     recent_race_distance_km: Mapped[float | None] = mapped_column(Float)
     recent_race_time_seconds: Mapped[int | None] = mapped_column(Integer)
     vdot: Mapped[float | None] = mapped_column(Float)
+    # The runner's measured easy pace the easy band was built around; NULL
+    # while there is none, and the band is then the one ``vdot`` implies.
+    easy_pace_min_km: Mapped[float | None] = mapped_column(Float)
 
     # Trail / ultra parameters (replaces the legacy `terrain` request field).
     is_trail: Mapped[bool] = mapped_column(Boolean, default=False)

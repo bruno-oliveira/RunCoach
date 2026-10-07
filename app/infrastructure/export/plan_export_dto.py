@@ -37,6 +37,7 @@ class PlanExportDTO:
     current_pace: Optional[float] = None
     goal_pace: Optional[float] = None
     vdot: Optional[float] = None
+    easy_pace_min_km: Optional[float] = None
     is_trail: bool = False
     target_elevation_gain_m: Optional[float] = None
     # A backyard plan is stored as a trail plan over a *clamped* projection, so
@@ -76,6 +77,7 @@ class PlanExportDTO:
             current_pace=plan.current_pace,
             goal_pace=plan.goal_pace,
             vdot=plan.vdot,
+            easy_pace_min_km=getattr(plan, "easy_pace_min_km", None),
             is_trail=bool(getattr(plan, "is_trail", False)),
             target_elevation_gain_m=getattr(plan, "target_elevation_gain_m", None),
             is_backyard=bool(getattr(plan, "is_backyard", False)),

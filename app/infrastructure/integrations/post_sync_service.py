@@ -101,6 +101,7 @@ def auto_map_and_adjust(
                     "runs_mapped": map_result.get("mapped", 0),
                     "vdot_recalibration": adapt.get("vdot_recalibration"),
                     "auto_adjusted": adapt.get("auto_adjusted", False),
+                    "easy_band": _refresh_easy_band_and_record(plan, user.id, db),
                 }
             )
         except Exception as e:
@@ -330,6 +331,44 @@ def _try_recalibrate_and_record(
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
+
+
+def _refresh_easy_band_and_record(
+    plan: TrainingPlan, user_id: str, db: Session
+) -> Optional[Dict[str, Any]]:
+    """Follow the runner's easy pace, and note the move in the plan's history.
+
+    After the adaptation, not inside it: a volume or fitness change rebuilds
+    days from the band the plan already has, and this then moves that band
+    once. Recorded in the history only — a few seconds on the easy pace is not
+    worth a push, and the re-paced weeks are already badged on the page.
+    """
+    from app.contexts.plan.adaptation.adjustment_results import (
+        record_adaptation_event as _record,
+    )
+    from app.contexts.plan.adaptation.easy_band_refresh import refresh_easy_band
+
+    try:
+        moved = refresh_easy_band(plan, user_id, db)
+    except Exception as e:
+        logger.warning("Easy band refresh failed for plan %s: %s", plan.id, e)
+        return None
+    if not moved:
+        return None
+    _record(
+        plan,
+        {
+            "type": "easy_pace",
+            "old_easy_pace": moved["old_easy_pace"],
+            "new_easy_pace": moved["new_easy_pace"],
+            "reason": (
+                f"Easy pace set from your recent easy runs: {moved['new_band']} "
+                f"(was {moved['old_band']})."
+            ),
+        },
+    )
+    db.flush()
+    return moved
 
 
 def _recently_adjusted(plan: TrainingPlan) -> bool:

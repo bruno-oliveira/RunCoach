@@ -48,6 +48,9 @@ if TYPE_CHECKING:
     from app.contexts.plan.repositories import (
         SQLAlchemyPlanRepository as SQLAlchemyPlanRepository,
     )
+    from app.contexts.runner.fitness.easy_pace_service import (
+        current_easy_pace as current_easy_pace,
+    )
     from app.contexts.runner.fitness.hr_zone_service import (
         HRZoneService as HRZoneService,
     )
@@ -89,6 +92,10 @@ _LAZY: dict[str, tuple[str, str]] = {
     "SQLAlchemyPlanRepository": (
         "app.contexts.plan.repositories",
         "SQLAlchemyPlanRepository",
+    ),
+    "current_easy_pace": (
+        "app.contexts.runner.fitness.easy_pace_service",
+        "current_easy_pace",
     ),
     "HRZoneService": (
         "app.contexts.runner.fitness.hr_zone_service",

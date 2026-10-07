@@ -8,8 +8,12 @@ the same visual language so the document reads as one piece.
 
 from __future__ import annotations
 
-from typing import Any, Dict, List, Sequence
+from typing import Any, Dict, List, Optional, Sequence
 
+from app.core.training.physiology.personal_easy_band import (
+    has_personal_easy_band,
+    with_personal_easy_band,
+)
 from app.core.training.physiology.vdot_calculator import VDOTCalculator
 from app.core.training.workouts.workout_steps.presentation import format_pace_range
 from app.infrastructure.export.plan_export_dto import PlanExportDTO
@@ -145,8 +149,25 @@ _ZONE_ORDER = (
 )
 
 
-def _pace_rows(vdot: float) -> List[DetailRow]:
+def _pace_zones(vdot: float, easy_pace: Optional[float]) -> Dict[str, Any]:
+    """The zones the plan's steps were paced from, personal easy band included."""
     zones = VDOTCalculator.get_pace_zones(vdot)
+    return with_personal_easy_band(zones, easy_pace) or zones
+
+
+def _pace_subtitle(vdot: float, zones: Dict[str, Any]) -> str:
+    easy = (
+        " Easy is the pace you run at an easy heart rate."
+        if has_personal_easy_band(zones)
+        else ""
+    )
+    return (
+        f"Derived from a VDOT of {vdot:g}.{easy} Every pace in the plan "
+        "comes from this table, and it moves as your runs come in."
+    )
+
+
+def _pace_rows(zones: Dict[str, Any]) -> List[DetailRow]:
     rows: List[DetailRow] = []
     for key, name, kind, meaning in _ZONE_ORDER:
         zone = zones.get(key)
@@ -364,15 +385,13 @@ def build_sections(
     sections: List[DetailSection] = []
 
     if dto.vdot:
+        zones = _pace_zones(dto.vdot, dto.easy_pace_min_km)
         sections.append(
             DetailSection(
                 eyebrow="REFERENCE",
                 title="Your training paces",
-                subtitle=(
-                    f"Derived from a VDOT of {dto.vdot:g}. Every pace in the plan "
-                    "comes from this table, and it moves as your runs come in."
-                ),
-                rows=tuple(_pace_rows(dto.vdot)),
+                subtitle=_pace_subtitle(dto.vdot, zones),
+                rows=tuple(_pace_rows(zones)),
                 columns=2,
             )
         )

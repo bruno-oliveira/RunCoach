@@ -18,6 +18,7 @@ that import it.
 from typing import Any, Dict, Optional
 
 from app.core.training.physiology.goal_pace_model import pin_goal_race_pace
+from app.core.training.physiology.personal_easy_band import with_personal_easy_band
 from app.core.training.physiology.vdot_calculator import VDOTCalculator
 from app.core.training.workouts import workout_steps as _steps_mod
 from app.core.training.workouts.workout_registry import WORKOUT_REGISTRY, build_workout
@@ -26,17 +27,23 @@ _PLAIN_QUALITY_TYPES = ("tempo", "interval", "hill")
 
 
 def pace_zones_for(
-    training_plan, *, vdot: Optional[float] = None
+    training_plan,
+    *,
+    vdot: Optional[float] = None,
+    easy_pace: Optional[float] = None,
 ) -> Optional[Dict[str, Any]]:
     """The pace zones a plan's steps were built from, or ``None`` with no VDOT.
 
     Mirrors the generator exactly — same VDOT, same race entry, same goal-pace
-    pin — because every caller rebuilds a workout that sits beside untouched
-    ones. Zones from the bare VDOT drop the race entry and the pin, so an
-    adjusted week quietly swapped the runner's goal pace for a predicted one.
+    pin, same personal easy band — because every caller rebuilds a workout
+    that sits beside untouched ones. Zones from the bare VDOT drop all three,
+    so an adjusted week quietly swapped the runner's goal pace for a predicted
+    one and their own easy pace for a table's.
 
-    ``vdot`` stands in for the plan's own when the plan has none yet: the
-    zones it *would* be built from at that fitness.
+    ``vdot`` and ``easy_pace`` stand in for the plan's own when it is about to
+    be re-paced: the zones it *would* be built from at that fitness. Passing
+    ``easy_pace`` cannot clear a stored one — a re-pace only ever follows a
+    measurement.
     """
     vdot = vdot or getattr(training_plan, "vdot", None)
     if not vdot:
@@ -48,7 +55,8 @@ def pace_zones_for(
     if not getattr(training_plan, "is_trail", False):
         goal_pace = getattr(training_plan, "goal_pace", None)
         pin_goal_race_pace(zones, goal_pace, target_km)
-    return zones
+    easy_pace = easy_pace or getattr(training_plan, "easy_pace_min_km", None)
+    return with_personal_easy_band(zones, easy_pace)
 
 
 def _target_km(training_plan) -> float:

@@ -33,6 +33,7 @@ from app.core.training.periodization.phase_calculator import (
 )
 from app.core.training.periodization.strength_plan import derive_experience_level
 from app.core.training.physiology.goal_pace_model import pin_goal_race_pace
+from app.core.training.physiology.personal_easy_band import with_personal_easy_band
 from app.core.training.physiology.vdot_calculator import VDOTCalculator
 from app.core.training.profiles.backyard_profile import (
     BackyardProfile,
@@ -225,13 +226,16 @@ class TrainingPlanGenerator:
         intensive_weekend_enabled: bool = False,
         backyard_profile: Optional[BackyardProfile] = None,
         goal_pace_min_km: Optional[float] = None,
+        easy_pace_min_km: Optional[float] = None,
     ) -> List[Dict[str, Any]]:
         """Generate a comprehensive training plan.
 
         ``vdot`` is the fitness the training paces are built from — what the
         runner can do now. ``goal_pace_min_km`` is what they are chasing: on a
         road plan it sets the pace of race day and every goal-pace rehearsal,
-        and nothing else.
+        and nothing else. ``easy_pace_min_km`` is the pace they have been
+        jogging at an easy heart rate: it replaces the VDOT's easy band, and
+        nothing else.
 
         Trail/ultra plans pass ``trail_profile``; legacy callsites that pass
         ``target_distance=30.0`` (with optional ``terrain``) get a default
@@ -391,6 +395,7 @@ class TrainingPlanGenerator:
         # fitness, so it says nothing about the flat pace a rehearsal targets.
         if pace_zones and trail_profile is None:
             pin_goal_race_pace(pace_zones, goal_pace_min_km, target_distance)
+        pace_zones = with_personal_easy_band(pace_zones, easy_pace_min_km)
 
         experience_level = derive_experience_level(current_km)
 

@@ -66,6 +66,8 @@ def persist_plan_core(
         # The VDOT the steps were paced from, so a later recalibration can
         # recognise (and move) the paces it is replacing.
         vdot=plan_request.pacing_vdot,
+        # Likewise the easy pace the easy band was built around.
+        easy_pace_min_km=plan_request.logged_easy_pace,
         goal_time=plan_request.goal_time,
         goal_pace=plan_request.goal_pace_min_km,
         current_pace=plan_request.current_pace_min_km,
