@@ -67,6 +67,28 @@ def _pace_str(zone_key: Optional[str], pace_zones: Optional[Dict]) -> Optional[s
     return pace_zones[zone_key].get("pace_str")
 
 
+def _jog_pace_str(pace_zones: Optional[Dict]) -> Optional[str]:
+    """Pace for a jog between reps: the recovery range, not the easy band.
+
+    The easy band is where the runner does their easy *runs*; the float
+    between two hard efforts is slower than that. Pacing it off the band put a
+    target on the watch that beeped "speed up" at a runner catching their
+    breath — tolerable while the band was a wide slice of VDOT, wrong once it
+    became the fifteen seconds either side of their real easy pace.
+    """
+    easy = (pace_zones or {}).get("E") or {}
+    recovery = (easy.get("sub_zones") or {}).get("recovery") or {}
+    return recovery.get("pace_str") or easy.get("pace_str")
+
+
+def _step_pace_str(step: Dict[str, Any], pace_zones: Optional[Dict]) -> Optional[str]:
+    """The pace ``pace_zones`` gives ``step``: its zone's, or a jog's."""
+    zone = step.get("pace_zone")
+    if step.get("kind") == "recovery" and zone == "E":
+        return _jog_pace_str(pace_zones)
+    return _pace_str(zone, pace_zones)
+
+
 def repace_steps(
     steps: List[Dict[str, Any]],
     old_zones: Optional[Dict],
@@ -91,9 +113,11 @@ def repace_steps(
         current = step.get("pace_str")
         if not zone or not current:
             continue
-        before = _pace_str(zone, old_zones)
-        after = _pace_str(zone, new_zones)
-        if before and after and current == before and after != current:
+        # A jog written before jogs had their own range carries the whole
+        # easy band; either is recognised as zone-derived.
+        before = (_step_pace_str(step, old_zones), _pace_str(zone, old_zones))
+        after = _step_pace_str(step, new_zones)
+        if after and current in before and after != current:
             step["pace_str"] = after
             changed += 1
     return changed
@@ -116,7 +140,7 @@ def fill_step_paces(steps: List[Dict[str, Any]], pace_zones: Optional[Dict]) -> 
     for step in steps:
         if step.get("pace_str"):
             continue
-        pace = _pace_str(step.get("pace_zone"), pace_zones)
+        pace = _step_pace_str(step, pace_zones)
         if pace:
             step["pace_str"] = pace
             filled += 1

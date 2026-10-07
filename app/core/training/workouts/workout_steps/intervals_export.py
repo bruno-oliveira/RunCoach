@@ -36,6 +36,7 @@ from __future__ import annotations
 
 from typing import Any, Optional
 
+from app.core.training.physiology.personal_easy_band import RECOVERY_WIDTH
 from app.core.training.workouts.workout_steps.metrics import (
     _DEFAULT_PACES,
     _parse_pace_str_to_min_per_km,
@@ -138,6 +139,20 @@ def is_open_effort(step: dict[str, Any]) -> bool:
     )
 
 
+def _borrowed_bounds(step: dict[str, Any], zone_bounds: list[float]) -> list[float]:
+    """``zone_bounds`` as ``step`` should target them when it has no pace of its own.
+
+    A jog between reps is slower than the easy run the bounds were written
+    for, so it takes the stretch just past their slow edge — the recovery
+    range a newly built session writes onto the step itself. Plans stored
+    before jogs carried their own pace reach the watch through here.
+    """
+    if step.get("kind") != "recovery" or not zone_bounds:
+        return zone_bounds
+    slow = max(zone_bounds)
+    return [slow + RECOVERY_WIDTH, slow]
+
+
 def resolve_pace_bounds(
     step: dict[str, Any],
     zone_paces: dict[str, str],
@@ -146,8 +161,8 @@ def resolve_pace_bounds(
 ) -> Optional[list[float]]:
     """The min/km bounds a step targets, or None when it is run by feel.
 
-    A recovery with a zone but no pace of its own borrows the runner's pace for
-    that zone from a sibling step (the warm-up's easy range). With nothing to
+    A recovery with a zone but no pace of its own borrows from a sibling step
+    (the warm-up's easy range) and jogs just slower than it. With nothing to
     borrow it stays open: an 8:00/km default is not the runner's number, and a
     recovery jog that beeps "slow down" every rep is worse than no target.
     ``allow_default=False`` also refuses the zone defaults for work steps — the
@@ -158,7 +173,7 @@ def resolve_pace_bounds(
     bounds = _parse_pace_bounds(step.get("pace_str"))
     zone = step.get("pace_zone")
     if not bounds and zone in zone_paces:
-        bounds = _parse_pace_bounds(zone_paces[zone])
+        bounds = _borrowed_bounds(step, _parse_pace_bounds(zone_paces[zone]))
     if bounds:
         return bounds
     if step.get("kind") == "recovery" or not allow_default:
@@ -239,6 +254,9 @@ def zone_paces_of(steps: list[dict[str, Any]]) -> dict[str, str]:
     """The first concrete pace each zone carries anywhere in the session."""
     paces: dict[str, str] = {}
     for step in steps:
+        if step.get("kind") == "recovery":
+            # A jog is paced slower than its zone; it cannot speak for it.
+            continue
         zone, pace = step.get("pace_zone"), step.get("pace_str")
         if zone and pace and zone not in paces:
             paces[zone] = pace
