@@ -145,6 +145,15 @@ class TestScriptsAndServerAgree:
         assert "options.ux_mode = 'redirect'" in auth
         assert "/api/auth/refresh" in auth
 
+    def test_sign_in_affordances_never_rely_on_one_tap(self):
+        # One Tap stays hidden after a dismissal and under Safari's tracking
+        # protection; a phone browser then had no way to sign in at all.
+        nav, auth = self._js("nav.js"), self._js("auth.js")
+        assert "RunCoachAuth.openSignInSheet()" in nav
+        assert "openSignInSheet: openSignInSheet" in auth
+        for source in (nav, auth):
+            assert "accounts.id.prompt(" not in source
+
     def test_worker_and_page_share_the_snapshot_stamp(self):
         stamp = "'data-rc-snapshot'"
         assert f"SNAPSHOT_ATTR = {stamp}" in self._js("sw.js")

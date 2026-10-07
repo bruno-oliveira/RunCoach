@@ -329,7 +329,10 @@ Routers should carry no raw `db.query` — there is one remaining exception in
   POSTs to `/api/auth/google/redirect`, which only checks the double-submit
   token and renders a relay page that calls the ordinary `/api/auth/google`
   same-origin (a cross-site POST carries no `SameSite=Lax` cookies, so signing
-  in there would lose the anonymous plan). **That URL must be listed under
+  in there would lose the anonymous plan). Every "Sign in" other than the navbar's
+  Google button opens a sheet holding Google's rendered button — **never One
+  Tap** (`prompt()`): it hides for weeks after one dismissal and under Safari's
+  tracking protection, and a phone browser was then left with no way in. **That URL must be listed under
   "Authorized redirect URIs" on the Google OAuth client.** `sw.js` stamps any
   page it serves from cache with `data-rc-snapshot`; `pwa.js` reads the stamp,
   shows the banner, and reloads once `/health/live` answers — `navigator.onLine`

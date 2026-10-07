@@ -24,19 +24,9 @@ function initThemeToggle() {
 }
 
 function triggerGoogleSignIn() {
-    // Installed to a home screen, One Tap cannot complete: auth.js shows
-    // Google's own button instead, which starts the redirect flow.
-    if (window.RunCoachAuth && window.RunCoachAuth.openInstalledAppSignIn()) return;
-    if (window.google && google.accounts && google.accounts.id) {
-        google.accounts.id.prompt();
-    } else {
-        // GSI not loaded yet — wait briefly and retry
-        setTimeout(() => {
-            if (window.google && google.accounts && google.accounts.id) {
-                google.accounts.id.prompt();
-            }
-        }, 500);
-    }
+    // Never One Tap: it stays hidden after a dismissal, and then the tap did
+    // nothing. auth.js opens a sheet with Google's own button instead.
+    if (window.RunCoachAuth) window.RunCoachAuth.openSignInSheet();
 }
 
 // ---- Mobile nav toggle ----

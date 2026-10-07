@@ -358,7 +358,12 @@
         errorDiv.appendChild(strong);
         errorDiv.appendChild(document.createTextNode(message));
 
-        // Insert near the sign-in button
+        // In the sheet when it is open; otherwise near the navbar's button.
+        const sheetStatus = document.querySelector('#signin-sheet .signin-sheet-status');
+        if (sheetStatus) {
+            sheetStatus.textContent = message;
+            return;
+        }
         const navAuth = document.querySelector('.nav-auth');
         if (navAuth) {
             navAuth.appendChild(errorDiv);
@@ -400,20 +405,45 @@
     function closeSignInSheet() {
         const sheet = document.getElementById('signin-sheet');
         if (sheet) sheet.remove();
+        document.removeEventListener('keydown', closeSheetOnEscape);
+    }
+
+    function closeSheetOnEscape(event) {
+        if (event.key === 'Escape') closeSignInSheet();
+    }
+
+    function renderSheetButton(slot, status, attemptsLeft) {
+        if (!slot.isConnected) return;
+        if (!gsiInitialized) initGoogleSignIn();
+        if (gsiInitialized) {
+            status.textContent = '';
+            google.accounts.id.renderButton(
+                slot, Object.assign({ size: 'large', width: 280 }, GSI_BUTTON_OPTIONS)
+            );
+            return;
+        }
+        if (attemptsLeft <= 0) {
+            status.textContent = "Couldn't reach Google sign-in. Check your connection " +
+                'or content blocker, then try again.';
+            return;
+        }
+        setTimeout(() => renderSheetButton(slot, status, attemptsLeft - 1), 100);
     }
 
     /**
-     * In the installed app, every "Sign in" affordance opens this sheet.
+     * Every "Sign in" affordance other than Google's own navbar button opens
+     * this sheet, which holds that button.
      *
-     * They used to call Google's One Tap prompt, which an installed app cannot
-     * complete and which Google stops showing after a dismissal — so the tab
-     * bar's Sign in did nothing at all. Only a tap on Google's own button can
-     * start the redirect flow, so the sheet puts that button in reach.
-     *
-     * @returns {boolean} false when not installed (the caller keeps its flow).
+     * They used to call Google's One Tap prompt. One Tap is not a sign-in
+     * button: Google stops showing it for hours, then weeks, after a single
+     * dismissal, Safari's tracking protection often keeps it from appearing,
+     * and an installed app cannot complete it at all. Whenever it stayed
+     * hidden the tap did nothing — which, on a phone, where the navbar's
+     * Google button is replaced by our own, meant no way to sign in. A tap on
+     * Google's rendered button always starts a sign-in: the popup in a
+     * browser tab, the redirect flow in the installed app.
      */
-    function openInstalledAppSignIn() {
-        if (!isInstalledApp() || !gsiInitialized) return false;
+    function openSignInSheet() {
         closeSignInSheet();
 
         const sheet = document.createElement('div');
@@ -433,20 +463,24 @@
         title.textContent = 'Sign in to RunCoach';
         const button = document.createElement('div');
         button.className = 'signin-sheet-button';
+        const status = document.createElement('p');
+        status.className = 'signin-sheet-status';
+        status.setAttribute('role', 'status');
+        status.textContent = 'Loading Google sign-in…';
         const cancel = document.createElement('button');
         cancel.type = 'button';
         cancel.className = 'signin-sheet-cancel';
         cancel.textContent = 'Not now';
         cancel.addEventListener('click', closeSignInSheet);
 
-        panel.append(title, button, cancel);
+        panel.append(title, button, status, cancel);
         sheet.appendChild(panel);
         document.body.appendChild(sheet);
+        document.addEventListener('keydown', closeSheetOnEscape);
 
-        google.accounts.id.renderButton(
-            button, Object.assign({ size: 'large', width: 280 }, GSI_BUTTON_OPTIONS)
-        );
-        return true;
+        // GSI loads async: a tap in the first moments of a page view would
+        // otherwise find nothing to render.
+        renderSheetButton(button, status, 50);
     }
 
     /**
@@ -595,7 +629,7 @@
 
     window.RunCoachAuth = {
         renewIfDue: renewIfDue,
-        openInstalledAppSignIn: openInstalledAppSignIn,
+        openSignInSheet: openSignInSheet,
     };
 
     // Retry initialization on window load (in case GSI wasn't ready)
