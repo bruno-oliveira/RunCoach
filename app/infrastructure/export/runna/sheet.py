@@ -173,9 +173,23 @@ _PHASE_META = {
     "peak": ("Peak", "race-specific sessions at your sharpest"),
     "sharpen": ("Sharpening", "short, fast work on a rested body"),
     "taper": ("Taper & Race", "volume drops, intensity stays — arrive fresh"),
+    # The post-race block, whose weeks are all phase "recovery". Without an
+    # entry here it fell back to the title alone and printed its span with no
+    # explanation.
+    "recovery": (
+        "Recovery",
+        "easy running while the race settles — the volume comes back week by week",
+    ),
 }
 
 _RACE_NAMES = {5.0: "5K", 10.0: "10K", 21.1: "Half Marathon", 42.2: "Marathon"}
+
+#: ``plan_type`` of the easy block scheduled after a race plan
+#: (:data:`app.contexts.plan.recovery_block_service.RECOVERY_PLAN_TYPE`). It is
+#: duplicated as a literal rather than imported: this package renders from the
+#: DTO alone, and reaching into a bounded context for a string would be the
+#: wrong direction for an edge to point.
+_RECOVERY_PLAN_TYPE = "recovery"
 
 
 def _fmt_km(km: float) -> str:
@@ -402,7 +416,12 @@ def _has_race(week: Dict[str, Any]) -> bool:
 def _week_row(week: Dict[str, Any]) -> WeekRow:
     if _has_race(week):
         tag = "(RACE)"
-    elif week.get("is_recovery"):
+    elif week.get("is_recovery") and _phase_label(week) != _RECOVERY_PLAN_TYPE:
+        # In a race plan ``is_recovery`` marks the deload weeks. Every week of
+        # the block that follows a race is *phase* "recovery" and sets the same
+        # flag, so reading the flag alone stamped DELOAD down a ladder whose
+        # whole point is that the volume climbs — 21 km in week 1, 42 by the
+        # last. The phase is what tells the two apart.
         tag = "DELOAD"
     else:
         tag = ""
@@ -441,8 +460,18 @@ def _build_phases(plan_data: Sequence[Dict[str, Any]]) -> Tuple[PhaseBlock, ...]
 # --- Cover ----------------------------------------------------------------
 
 
+def _is_recovery_block(dto: PlanExportDTO) -> bool:
+    """Whether the plan is the easy block scheduled after a race plan."""
+    return dto.plan_type == _RECOVERY_PLAN_TYPE
+
+
 def _race_name(dto: PlanExportDTO) -> str:
-    # Backyard first: it rides on the trail flag, but its target_distance_km is
+    # A recovery block follows a race plan but races nothing itself: its
+    # target_distance column is NULL, so reading the distance put "0 km" where
+    # the goal belongs. It is named for what it is instead.
+    if _is_recovery_block(dto):
+        return "Recovery Block"
+    # Backyard next: it rides on the trail flag, but its target_distance_km is
     # a clamped projection — printing that would put "163 km Trail" on the
     # cover of a 48-loop plan.
     if dto.is_backyard and dto.backyard_target_loops:
@@ -452,6 +481,11 @@ def _race_name(dto: PlanExportDTO) -> str:
             return f"{dto.target_distance_km:g} km Trail"
         return "Trail Race"
     return _RACE_NAMES.get(dto.target_distance_km, f"{dto.target_distance_km:g} km")
+
+
+def _goal_text(dto: PlanExportDTO) -> str:
+    """The GOAL chip's value — no race to name on a recovery block."""
+    return "RECOVERY" if _is_recovery_block(dto) else _race_name(dto).upper()
 
 
 def _peak_km(plan_data: Sequence[Dict[str, Any]]) -> float:
@@ -471,8 +505,18 @@ def _run_days(plan_data: Sequence[Dict[str, Any]]) -> int:
 
 
 def _description(dto: PlanExportDTO, plan_data: Sequence[Dict[str, Any]]) -> str:
-    race = _race_name(dto)
     peak = _peak_km(plan_data)
+    # The recovery block is the one plan with no race behind it, so the
+    # build-shaped blurb would promise a long run and "the quality session it
+    # supports" that no week of it contains — no quality at all, and no long
+    # run until the second week. It reads as what the plan page says instead.
+    if _is_recovery_block(dto):
+        return (
+            f"Easy running only while your race settles: {dto.weeks_duration} weeks "
+            f"from {dto.current_weekly_km:g} km a week back up to a {peak:g} km week, "
+            "with no hard sessions until it has. Strides return as the legs clear."
+        )
+    race = _race_name(dto)
     return (
         f"A {dto.weeks_duration}-week build from {dto.current_weekly_km:g} km a week "
         f"to a {peak:g} km peak, aimed at your {race}. Every week is written "
@@ -485,7 +529,12 @@ def _stat_chips(
     dto: PlanExportDTO, plan_data: Sequence[Dict[str, Any]]
 ) -> Tuple[Chip, ...]:
     chips = [
-        Chip(f"GOAL: {_race_name(dto).upper()}", "quality"),
+        # Every session in a recovery block is easy running, so its goal chip
+        # carries the recovery accent rather than the one a race gets.
+        Chip(
+            f"GOAL: {_goal_text(dto)}",
+            "recovery" if _is_recovery_block(dto) else "quality",
+        ),
         Chip(f"{dto.weeks_duration} WEEKS", "long"),
         Chip(f"PEAK {_peak_km(plan_data):g} KM/WK", "easy"),
     ]
