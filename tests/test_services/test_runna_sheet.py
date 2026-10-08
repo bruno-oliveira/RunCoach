@@ -10,6 +10,7 @@ import pytest
 
 from app.contexts.plan.generators.beginner_plan_generator import BeginnerPlanGenerator
 from app.contexts.plan.generators.plan_generator import TrainingPlanGenerator
+from app.core.training.periodization.recovery_block import build_recovery_block
 from app.infrastructure.export.pdf_generator import PDFGenerator
 from app.infrastructure.export.plan_export_dto import PlanExportDTO
 from app.infrastructure.export.runna import build_sheet
@@ -40,6 +41,25 @@ def _dto(plan_data: list, **overrides) -> PlanExportDTO:
 def half_plan() -> list:
     return TrainingPlanGenerator().generate_plan(
         30.0, 21.1, 12, max_runs_per_week=5, vdot=45.0
+    )
+
+
+@pytest.fixture(scope="module")
+def recovery_block() -> list:
+    """The block scheduled after a marathon: easy running only, no race of its own."""
+    return build_recovery_block(
+        race_km=42.2, race_name="Marathon", peak_km=60.0, runs_per_week=5
+    )
+
+
+def _recovery_dto(plan_data: list) -> PlanExportDTO:
+    """A recovery block as the export sees it — its target distance is NULL."""
+    return _dto(
+        plan_data,
+        plan_type="recovery",
+        target_distance="",
+        target_distance_km=0.0,
+        current_weekly_km=21.0,
     )
 
 
@@ -227,6 +247,26 @@ def test_recovery_week_is_tagged_deload(half_plan):
     assert tagged
 
 
+def test_recovery_block_weeks_are_not_tagged_deload(recovery_block):
+    """Every week of the block sets ``is_recovery``, but none of them is a deload.
+
+    The flag means "deload week" inside a race plan and "recovery-block week"
+    here, so the tag has to read the phase too — reading the flag alone stamped
+    DELOAD down a ladder whose whole point is that the volume climbs.
+    """
+    sheet = build_sheet(_recovery_dto(recovery_block), recovery_block)
+    weeks = [week for phase in sheet.phases for week in phase.weeks]
+    assert all(week.get("is_recovery") for week in recovery_block)  # the trap
+    assert [week.tag for week in weeks] == [""] * len(recovery_block)
+
+
+def test_recovery_phase_explains_itself(recovery_block):
+    sheet = build_sheet(_recovery_dto(recovery_block), recovery_block)
+    phase = sheet.phases[0]
+    assert phase.title == "Recovery"
+    assert phase.subtitle.startswith("Weeks 1–5 · easy running")
+
+
 def test_race_week_is_tagged():
     plan = [
         {
@@ -291,6 +331,32 @@ def test_trail_cover_names_the_distance(half_plan):
     assert build_sheet(dto, half_plan).cover.title_lines[0] == "50 km Trail"
 
 
+def test_recovery_cover_claims_no_race(recovery_block):
+    """A block with no target distance must not print "0 km" where the goal goes.
+
+    Its ``target_distance`` column is NULL, and reading the distance through to
+    the cover labelled a five-week build "0 km" in the title, the goal chip and
+    the footer.
+    """
+    sheet = build_sheet(_recovery_dto(recovery_block), recovery_block)
+    assert sheet.cover.title_lines == ("Recovery Block", "5-Week Plan")
+    assert [chip.text for chip in sheet.cover.stats][0] == "GOAL: RECOVERY"
+    assert "0 KM" not in sheet.footer.upper()
+
+
+def test_recovery_goal_chip_takes_the_recovery_accent(recovery_block):
+    cover = build_sheet(_recovery_dto(recovery_block), recovery_block).cover
+    goal = next(chip for chip in cover.stats if chip.text.startswith("GOAL:"))
+    assert goal.kind == "recovery"
+
+
+def test_recovery_cover_does_not_promise_a_quality_session(recovery_block):
+    """The block is all easy running — its blurb was the race-plan build one."""
+    cover = build_sheet(_recovery_dto(recovery_block), recovery_block).cover
+    assert "quality session" not in cover.description
+    assert "no hard sessions" in cover.description
+
+
 # --- rendering ------------------------------------------------------------
 
 
@@ -325,10 +391,16 @@ def test_beginner_plan_renders(tmp_path):
     assert open(path, "rb").read().startswith(b"%PDF-")
 
 
-def test_all_sheet_text_is_renderable_by_the_base_fonts(half_plan):
-    """Helvetica is WinAnsi-encoded — an unmapped glyph would print as a box."""
-    dto = _dto(half_plan)
-    sheet = build_sheet(dto, half_plan, build_sections(dto, half_plan))
+def test_recovery_block_renders(tmp_path, recovery_block):
+    dto = _recovery_dto(recovery_block)
+    path = PDFGenerator(cache_dir=str(tmp_path / "cache")).generate_pdf(
+        recovery_block, dto
+    )
+    assert open(path, "rb").read().startswith(b"%PDF-")
+
+
+def _all_sheet_text(sheet) -> list:
+    """Every string the renderer will paint, cover to reference pages."""
     strings = [
         sheet.footer,
         sheet.cover.eyebrow,
@@ -347,9 +419,24 @@ def test_all_sheet_text_is_renderable_by_the_base_fonts(half_plan):
         strings += [section.eyebrow, section.title, section.subtitle]
         for row in section.rows:
             strings += [row.lead, row.body]
+    return strings
+
+
+def test_all_sheet_text_is_renderable_by_the_base_fonts(half_plan):
+    """Helvetica is WinAnsi-encoded — an unmapped glyph would print as a box."""
+    dto = _dto(half_plan)
+    sheet = build_sheet(dto, half_plan, build_sections(dto, half_plan))
+    strings = _all_sheet_text(sheet)
 
     for text in strings:
         text.encode("cp1252")  # raises UnicodeEncodeError on an unmapped glyph
+
+
+def test_recovery_block_text_is_renderable_by_the_base_fonts(recovery_block):
+    dto = _recovery_dto(recovery_block)
+    sheet = build_sheet(dto, recovery_block, build_sections(dto, recovery_block))
+    for text in _all_sheet_text(sheet):
+        text.encode("cp1252")
 
 
 # --- key sessions reference ------------------------------------------------
